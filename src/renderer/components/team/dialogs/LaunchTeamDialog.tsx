@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
+import { RetainedLegacyLaunchScope, useRetainedLegacyLaunch, useRetainedLegacyRuntimeStatus } from '@features/agent-backend/renderer';
 import {
   reconcileAnthropicRuntimeSelections,
   resolveAnthropicFastMode,
@@ -43,7 +44,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@renderer/components/ui/dialog';
-import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
 import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
@@ -68,6 +68,7 @@ import { normalizeExplicitTeamModelForUi } from '@renderer/utils/teamModelAvaila
 import { isTeamProviderRuntimeStatusLoading } from '@renderer/utils/teamProviderRuntimeStatusLoading';
 import { isEphemeralProjectPath } from '@shared/utils/ephemeralProjectPath';
 import { getAnthropicRuntimeDefaultLaunchModel } from '@shared/utils/providerDefaultModel';
+import { supportsScheduleExecutionLimits } from '@shared/utils/scheduleLimits';
 import { isTeamProviderId, normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import { bindTeamProvisioningContext } from '@shared/utils/teamProvisioningContext';
 import {
@@ -83,6 +84,7 @@ import {
   markScheduleProviderSwitch,
   resolveScheduleLaunchConfig,
 } from '../schedule/resolveScheduleLaunchConfig';
+import { ScheduleExecutionLimits } from '../schedule/ScheduleExecutionLimits';
 import { SmartScheduleFields } from '../schedule/SmartScheduleFields';
 import { useSavedPromptReview } from '../schedule/useSavedPromptReview';
 import { validateScheduleForm } from '../schedule/validateScheduleForm';
@@ -116,6 +118,7 @@ import {
   resolveMemberDraftRuntime,
   resolveResolvedMemberRuntime,
 } from './launchTeamDialogHelpers';
+import { LaunchTeamProjectSelector } from './LaunchTeamProjectSelector';
 import {
   clearInheritedMemberModelsUnavailableForProvider,
   getDialogMemberModelIssues,
@@ -133,7 +136,6 @@ import {
   resolvePreferredProjectPathSelection,
 } from './projectPathOptions';
 import { loadProjectPathProjects, syntheticProjectFromPath } from './projectPathProjects';
-import { ProjectPathSelector } from './ProjectPathSelector';
 import { createLaunchGuard, useAuthorityGatedCliStatus } from './providerLaunchAuthority';
 import { ProviderLaunchAuthorityNotice } from './ProviderLaunchAuthorityNotice';
 import { isSameProviderPrepareAttempt } from './providerPrepareAttemptIdentity';
@@ -214,17 +216,27 @@ const LAUNCH_AUTHORITY_BLOCKER_ID = 'launch-team-launch-authority-blocker';
 
 export type { LaunchTeamDialogProps, TeamLaunchDialogMode } from './LaunchTeamDialog.types';
 
-export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Element => {
+export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Element => (
+  <RetainedLegacyLaunchScope choice={props.mode === 'schedule' ? undefined : props.retainedLegacyLaunch}>
+    <LaunchTeamDialogContent {...props} />
+  </RetainedLegacyLaunchScope>
+);
+const LaunchTeamDialogContent = (props: LaunchTeamDialogProps): React.JSX.Element => {
   const { open, onClose } = props;
+  const retained = useRetainedLegacyLaunch();
+  const originalStatus = useRetainedLegacyRuntimeStatus(retained?.choice.projectPath ?? (props.mode === 'schedule' ? null : props.defaultProjectPath), open);
   const { isLight } = useTheme();
   const { t } = useAppTranslation('team');
   const multimodelEnabled = useStore((s) => s.appConfig?.general?.multimodelEnabled ?? true);
   const anthropicProviderFastModeDefault = useStore(
     (s) => s.appConfig?.providerConnections?.anthropic.fastModeDefault ?? false
   );
-  const cliStatus = useStore((s) => s.cliStatus);
-  const cliStatusLoading = useStore((s) => s.cliStatusLoading);
-  const cliProviderStatusLoading = useStore((s) => s.cliProviderStatusLoading);
+  const storedCliStatus = useStore((s) => s.cliStatus);
+  const cliStatus = retained ? originalStatus.status : storedCliStatus;
+  const storedCliStatusLoading = useStore((s) => s.cliStatusLoading);
+  const cliStatusLoading = retained ? originalStatus.loading : storedCliStatusLoading;
+  const storedProviderLoading = useStore((s) => s.cliProviderStatusLoading);
+  const cliProviderStatusLoading = useMemo(() => retained ? {} : storedProviderLoading, [retained, storedProviderLoading]);
   const isLaunchMode = props.mode === 'launch' || props.mode === 'relaunch';
   const isRelaunch = props.mode === 'relaunch';
   const loadingCliStatus = useMemo(
@@ -233,28 +245,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         ? createLoadingMultimodelCliStatus()
         : cliStatus,
     [cliStatus, cliStatusLoading, multimodelEnabled]
-  );
-  const codexAccount = useCodexAccountSnapshot({
-    enabled:
-      multimodelEnabled &&
-      loadingCliStatus?.flavor === 'agent_teams_orchestrator' &&
-      Boolean(loadingCliStatus?.providers.some((provider) => provider.providerId === 'codex')),
-  });
-  const effectiveCliStatus = useAuthorityGatedCliStatus(loadingCliStatus, codexAccount.snapshot);
-  const codexSnapshotPending =
-    isCodexAccountSnapshotPending(
-      codexAccount.loading,
-      codexAccount.snapshot,
-      codexAccount.error
-    ) && Boolean(loadingCliStatus?.providers.some((provider) => provider.providerId === 'codex'));
-  const globalRuntimeProviderStatusById = useMemo(
-    () =>
-      new Map(
-        (effectiveCliStatus?.providers ?? []).map(
-          (provider) => [provider.providerId, provider] as const
-        )
-      ),
-    [effectiveCliStatus?.providers]
   );
   const isSchedule = props.mode === 'schedule';
   const schedule = isSchedule ? (props.schedule ?? null) : null;
@@ -326,7 +316,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     mode: continuationMode,
     onModeChange: setContinuationMode,
   });
-
   const [selectedProviderId, setSelectedProviderIdRaw] = useState<TeamProviderId>(() =>
     isLaunchMode
       ? normalizeLeadProviderForMode(getStoredTeamProvider(), multimodelEnabled)
@@ -421,6 +410,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const isTeamSchedule = isSchedule && scheduleExecutionMode === 'team';
   const isTaskFirstSchedule = isSchedule && (schedule?.taskFirst === true || !isEditing);
   const usesSavedTeamRuntime = isTeamSchedule || isTaskFirstSchedule;
+  const supportsScheduleLimits = supportsScheduleExecutionLimits(isHostTeamSelectionKey(effectiveTeamName), selectedProviderId);
   const scheduleRuntimeEditedRef = useRef({ provider: false, model: false, effort: false, fastMode: false, skipPermissions: false });
   const [savedPromptReview, setSavedPromptReview] = useSavedPromptReview({
     open, enabled: isTaskFirstSchedule, teamName: effectiveTeamName,
@@ -467,6 +457,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     defaultProjectPath,
     appliedDefaultProjectPath: appliedDefaultProjectPathRef.current,
   });
+  const providerControlsReady = !retained || (open && launchPreflightSelectionReady);
   const { scope: openCodeLocalModelScope, gatewayBindings } = useDialogMemberModelScope({
     enabled: open,
     teamName: isLaunchMode ? effectiveTeamName : undefined,
@@ -474,10 +465,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     selectedProviderId,
     members: membersDrafts,
   });
-  const memberModelNormalizationDeferredProviderIds = useMemo<ReadonlySet<TeamProviderId>>(
-    () => (codexSnapshotPending ? new Set<TeamProviderId>(['codex']) : new Set()),
-    [codexSnapshotPending]
-  );
   const requestedMemberProviders = useMemo<TeamProviderId[]>(
     () =>
       collectDialogMemberProviderIds(
@@ -486,6 +473,33 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         syncModelsWithLead ? [] : membersDrafts
       ),
     [membersDrafts, multimodelEnabled, selectedProviderId, syncModelsWithLead]
+  );
+  const codexAccount = useCodexAccountSnapshot({
+    enabled:
+      multimodelEnabled &&
+      (!retained || (providerControlsReady && requestedMemberProviders.includes('codex'))) &&
+      loadingCliStatus?.flavor === 'agent_teams_orchestrator' &&
+      Boolean(loadingCliStatus?.providers.some((provider) => provider.providerId === 'codex')),
+  });
+  const effectiveCliStatus = useAuthorityGatedCliStatus(loadingCliStatus, codexAccount.snapshot);
+  const codexSnapshotPending =
+    isCodexAccountSnapshotPending(
+      codexAccount.loading,
+      codexAccount.snapshot,
+      codexAccount.error
+    ) && Boolean(loadingCliStatus?.providers.some((provider) => provider.providerId === 'codex'));
+  const globalRuntimeProviderStatusById = useMemo(
+    () =>
+      new Map(
+        (effectiveCliStatus?.providers ?? []).map(
+          (provider) => [provider.providerId, provider] as const
+        )
+      ),
+    [effectiveCliStatus?.providers]
+  );
+  const memberModelNormalizationDeferredProviderIds = useMemo<ReadonlySet<TeamProviderId>>(
+    () => (codexSnapshotPending ? new Set<TeamProviderId>(['codex']) : new Set()),
+    [codexSnapshotPending]
   );
   const { projectScopedCliStatus, projectScopedOpenCodeStatus, runtimeProviderStatusById } =
     useProjectScopedRuntimeProviderStatuses(
@@ -836,7 +850,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       setCronExpression(schedule.cronExpression);
       setTimezone(schedule.timezone);
       setWarmUpMinutes(schedule.warmUpMinutes);
-      setMaxTurns(schedule.maxTurns);
+      setMaxTurns(schedule.maxTurns ?? 50);
       setMaxBudgetUsd(schedule.maxBudgetUsd != null ? String(schedule.maxBudgetUsd) : '');
       promptDraft.setValueRaw(schedule.launchConfig.prompt);
       setCustomCwd(schedule.launchConfig.cwd);
@@ -994,7 +1008,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       savedRequest?.skipPermissions ??
         (isHostSavedRequest(savedRequest) ? true : storedSkipPermissions)
     );
-    if (savedRequest && isHostSavedRequest(savedRequest)) {
+    if (savedRequest && savedLaunchSource.host) {
       hydrateOwnerPrompt(savedRequest.prompt ?? '');
       hydrateAdvancedSettings(savedRequest);
       setCustomCwd(savedRequest.cwd);
@@ -1482,8 +1496,11 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     else setAllowExperimentalLocalModels(false);
   }, [effectiveCwd, selectedModelChecksByProviderSignature, localOverrideHydration]);
   const shortLivedModelIssueReasons = useMemo(
-    () =>
-      readLaunchPrepareModelIssues({
+    () => {
+      void prepareChecks;
+      void selectedModelChecksByProviderSignature;
+      return readLaunchPrepareModelIssues({
+        context: { kind: 'team', teamName: effectiveTeamName },
         isLaunchMode,
         selectedMemberProviders,
         runtimeBackendSummaryByProvider,
@@ -1491,12 +1508,16 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         selectedModelChecksByProvider,
         cwd: effectiveCwd,
         limitContext: effectiveAnthropicRuntimeLimitContext,
-      }),
+        invalidationEpochByProviderId: prepareProviderInvalidationEpochById,
+      });
+    },
     [
       effectiveAnthropicRuntimeLimitContext,
       effectiveCwd,
+      effectiveTeamName,
       isLaunchMode,
       prepareChecks,
+      prepareProviderInvalidationEpochById,
       runtimeBackendSummaryByProvider,
       runtimeProviderStatusById,
       selectedModelChecksByProvider,
@@ -1573,7 +1594,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       return;
     }
 
-    if (typeof api.teams.prepareProvisioning !== 'function') {
+    if (typeof (retained?.prepareProvisioning ?? api.teams.prepareProvisioning) !== 'function') {
       prepareRequestSeqRef.current += 1;
       lastPrepareProviderSignatureByIdRef.current.clear();
       prepareProviderRequestSeqByIdRef.current.clear();
@@ -1607,6 +1628,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       limitContext: effectiveAnthropicRuntimeLimitContext,
       runtimeProviderStatusById,
       cachedModelResultsByCacheKey: prepareModelResultsCacheRef.current,
+      invalidationEpochByProviderId: prepareProviderInvalidationEpochById,
     }).map(qualifyPlan);
     const changedPlans = providerPlans.filter(
       (plan) =>
@@ -1728,7 +1750,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
               providerId: plan.providerId,
               selectedModelIds: plan.selectedModelIds,
               selectedModelChecks: plan.selectedModelChecks,
-              prepareProvisioning: bindTeamProvisioningContext(api.teams.prepareProvisioning, {
+              prepareProvisioning: bindTeamProvisioningContext(retained?.prepareProvisioning ?? api.teams.prepareProvisioning, {
                 kind: 'team',
                 teamName: effectiveTeamName,
                 selectedModelChecks: plan.selectedModelChecks,
@@ -1804,6 +1826,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       );
     })();
   }, [
+    retained,
     open,
     isLaunchMode,
     continuationMode,
@@ -2279,7 +2302,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             () =>
               submitTeam(
                 props,
-                launchSubmission.request,
+                capturedReadiness.captureForSubmit(launchSubmission.request),
                 launchSubmission.members,
                 effectiveSelectedModel,
                 api.teams.replaceMembers,
@@ -2356,6 +2379,10 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             },
           });
 
+          if (!usesSavedTeamRuntime && !supportsScheduleLimits) {
+            launchConfig.allowedTools = []; launchConfig.disallowedTools = [];
+          }
+
           if (isEditing && schedule) {
             const patch: UpdateSchedulePatch = {
               ...(scheduleExecutionMode !== 'legacy'
@@ -2365,8 +2392,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
               cronExpression: cronExpression.trim(),
               timezone,
               warmUpMinutes: scheduleExecutionMode === 'legacy' ? warmUpMinutes : 0,
-              maxTurns: isTaskFirstSchedule ? schedule.maxTurns : maxTurns,
-              maxBudgetUsd: isTaskFirstSchedule ? schedule.maxBudgetUsd : parsedBudget,
+              maxTurns: usesSavedTeamRuntime ? schedule.maxTurns : supportsScheduleLimits ? maxTurns : null,
+              maxBudgetUsd: usesSavedTeamRuntime ? schedule.maxBudgetUsd : supportsScheduleLimits ? parsedBudget ?? null : null,
               launchConfig,
               ...(reviewedSavedPrompt && { reviewedSavedPrompt: true as const }),
             };
@@ -2382,8 +2409,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
               cronExpression: cronExpression.trim(),
               timezone,
               warmUpMinutes: scheduleExecutionMode === 'legacy' ? warmUpMinutes : 0,
-              maxTurns: isTaskFirstSchedule ? 50 : maxTurns,
-              maxBudgetUsd: isTaskFirstSchedule ? undefined : parsedBudget,
+              maxTurns: isTaskFirstSchedule ? 50 : supportsScheduleLimits ? maxTurns : undefined,
+              maxBudgetUsd: isTaskFirstSchedule || !supportsScheduleLimits ? undefined : parsedBudget,
               launchConfig,
             };
             await createSchedule(input);
@@ -2476,7 +2503,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         }
       }}
     >
-      <OpenCodeSourceDirectoryProvider enabled={open && isLaunchMode && multimodelEnabled} projectPath={effectiveCwd}>
+      <OpenCodeSourceDirectoryProvider deferDiscovery enabled={open && isLaunchMode && multimodelEnabled} projectPath={effectiveCwd}>
       <DialogContent
         className={isSchedule ? 'max-h-[90vh] max-w-[52rem] overflow-y-auto' : 'max-w-[52rem]'}
       >
@@ -2624,27 +2651,12 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
               onConfirmedChange={(confirmed) => setSavedPromptReview((current) => current && ({ ...current, confirmed }))} />
           ) : null}
 
-          {!usesSavedTeamRuntime ? <ProjectPathSelector
-            cwdMode={cwdMode}
-            onCwdModeChange={(value) => {
-              markLaunchEdited();
-              setCwdMode(value);
-            }}
-            selectedProjectPath={selectedProjectPath}
-            onSelectedProjectPathChange={(value) => {
-              markLaunchEdited();
-              setSelectedProjectPath(value);
-            }}
-            customCwd={customCwd}
-            onCustomCwdChange={(value) => {
-              markLaunchEdited();
-              setCustomCwd(value);
-            }}
-            projects={projects}
-            projectsLoading={projectsLoading}
-            projectsError={projectsError}
-            onProjectsDropdownOpen={requestProjectListLoad}
-            customFolder={customProjectFolder}
+          {!usesSavedTeamRuntime ? <LaunchTeamProjectSelector
+            cwdMode={cwdMode} onCwdModeChange={setCwdMode}
+            selectedProjectPath={selectedProjectPath} onSelectedProjectPathChange={setSelectedProjectPath}
+            customCwd={customCwd} onCustomCwdChange={setCustomCwd} markEdited={markLaunchEdited}
+            projects={projects} projectsLoading={projectsLoading} projectsError={projectsError}
+            onProjectsDropdownOpen={requestProjectListLoad} customFolder={customProjectFolder}
           /> : null}
 
           {isLaunchMode ? (
@@ -2662,7 +2674,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
               summary={launchOptionalSummary}
             >
               <div className="space-y-4">
-                {selectedProviderId === 'anthropic' ? (
+                {providerControlsReady && selectedProviderId === 'anthropic' ? (
                   <div className="space-y-2">
                     <AnthropicFastModeSelector
                       value={selectedFastMode}
@@ -2681,7 +2693,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                     ) : null}
                   </div>
                 ) : null}
-                {selectedProviderId === 'codex' ? (
+                {providerControlsReady && selectedProviderId === 'codex' ? (
                   <div className="space-y-2">
                     <CodexFastModeSelector
                       value={selectedFastMode}
@@ -2702,8 +2714,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                     ) : null}
                   </div>
                 ) : null}
-
-                <TeamRosterEditorSection
+                {providerControlsReady ? <TeamRosterEditorSection
                   runtimeSelectionUnresolved={runtimeSelectionUnresolved}
                   members={membersDrafts}
                   onMembersChange={setMembersDraftsFromUser}
@@ -2780,7 +2791,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                       </div>
                     ) : null
                   }
-                />
+                /> : null}
 
                 <div className="space-y-1.5">
                   <Label htmlFor="dialog-prompt" className="label-optional">
@@ -2971,50 +2982,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           )}
 
           {isSchedule && !usesSavedTeamRuntime ? (
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label
-                  htmlFor="schedule-max-turns"
-                  className="text-[11px] text-[var(--color-text-muted)]"
-                >
-                  {t('launch.schedule.maxTurns')}
-                </Label>
-                <Input
-                  id="schedule-max-turns"
-                  type="number"
-                  min={1}
-                  max={500}
-                  className="h-8 text-xs"
-                  value={maxTurns}
-                  onChange={(e) => setMaxTurns(Math.max(1, parseInt(e.target.value) || 50))}
-                />
-              </div>
-
-              <div className="space-y-1">
-                <Label
-                  htmlFor="schedule-max-budget"
-                  className="text-[11px] text-[var(--color-text-muted)]"
-                >
-                  {t('launch.schedule.maxBudgetUsd')}
-                </Label>
-                <Input
-                  id="schedule-max-budget"
-                  type="number"
-                  min={0}
-                  step={0.5}
-                  className="h-8 text-xs"
-                  value={maxBudgetUsd}
-                  onChange={(e) => setMaxBudgetUsd(e.target.value)}
-                  placeholder={t('launch.schedule.noLimit')}
-                />
-              </div>
-              <p className="col-span-2 text-[11px] leading-relaxed text-[var(--color-text-muted)]">
-                {t('launch.schedule.executionLimitsNote', {
-                  defaultValue:
-                    'These limits apply only to standalone one-shot runs. Tasks assigned to a running team do not use them.',
-                })}
-              </p>
-            </div>
+            <ScheduleExecutionLimits supported={supportsScheduleLimits} maxTurns={maxTurns}
+              maxBudgetUsd={maxBudgetUsd} onMaxTurns={setMaxTurns} onMaxBudgetUsd={setMaxBudgetUsd} />
           ) : null}
         </fieldset>
         {/* Error display */}
@@ -3042,6 +3011,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                 cliProviderStatusLoading={cliProviderStatusLoading}
                 multimodelEnabled={multimodelEnabled}
                 codexSnapshotPending={codexSnapshotPending}
+                hasCapturedTeamReadiness={capturedReadiness.permits}
                 openCodePreparationEvidence={openCodePreparationEvidence}
                 providerIds={selectedMemberProviders}
                 label="Selected providers"
@@ -3235,7 +3205,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       </DialogContent>
       </OpenCodeSourceDirectoryProvider>
       <ProvisioningProviderRuntimeSettingsDialog
-        openProviderId={providerSettingsProviderId}
+        openProviderId={retained ? null : providerSettingsProviderId}
         onOpenProviderIdChange={(providerId) => setProviderSettingsProviderId(providerId)}
         providers={effectiveCliStatus?.providers ?? []}
         projectPath={effectiveCwd || null}

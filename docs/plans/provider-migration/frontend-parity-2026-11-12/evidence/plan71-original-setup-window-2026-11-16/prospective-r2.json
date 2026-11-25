@@ -1,0 +1,263 @@
+{
+  "kind": "INDEPENDENT_PLAN71_PROSPECTIVE_R2",
+  "reviewer": "/root/p09_review",
+  "verdict": "GO_PROSPECTIVE_EXACT_TWO_PATH_SELECTION_ONLY",
+  "blockers": [],
+  "baseCommit": "12d01df13271def88d7a1dd86da6ec70ca243902",
+  "baseTree": "8d778f4f6f4b0aa4043ae3348b91208e701be452",
+  "selectedPlan": {
+    "path": "/tmp/e2e-original-artifacts/reviews/plan71-original-setup-window/plan.md",
+    "bytes": 9374,
+    "physicalLines": 51,
+    "gitBlob": "f71a56bccb29bfa198309209eb16c895b88b671f",
+    "sha256": "054d2af3bb3e84329e461c2bb1dc327965408a8125d3c34a9561b00a1222c356"
+  },
+  "rootProspectiveR1ReadInFull": {
+    "path": "/tmp/e2e-original-artifacts/reviews/plan71-original-setup-window/prospective-r1.json",
+    "bytes": 5971,
+    "physicalLines": 100,
+    "gitBlob": "a0879118334cac4cdd615a43929b8b9b56c14bca",
+    "sha256": "be8b4a1a1a177f286c3a87f604b94d1a3d18a1c3516cbc42076432866c34b408"
+  },
+  "preimageBindings": {
+    "path": "/tmp/e2e-original-artifacts/reviews/plan71-original-setup-window/preimage-bindings.json",
+    "bytes": 1356,
+    "physicalLines": 39,
+    "gitBlob": "fa54ff2b9b08853d17086cf05f05efc74122818d",
+    "sha256": "780919d01d73ee3feb6bf12885a817e9bb08331eedfaafd091f4f99a213e0bc9"
+  },
+  "additionalReadOnlyBindings": {
+    "path": "/tmp/e2e-original-artifacts/reviews/plan71-original-setup-window/additional-readonly-bindings.json",
+    "bytes": 4918,
+    "physicalLines": 77,
+    "gitBlob": "5c849797fef8275cbc19bd440f62ba5a478caab3",
+    "sha256": "64ff2c9bd1774f0a7bca96ab61a65fc3051a83c69b76b5f956befedaef7b26e9"
+  },
+  "selectedFiles": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-stop-fixture.ts",
+      "mode": "100644",
+      "bytes": 30369,
+      "physicalLines": 563,
+      "gitBlob": "a1a2b6d5a55b1e6ae777220034d92e178e734150",
+      "sha256": "02338ed06fddbb38eb60aee237c2bba6968ac988de655fb016f921d00a067ad7"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "mode": "100644",
+      "bytes": 167406,
+      "physicalLines": 2777,
+      "gitBlob": "fb5a5cff107473b047a67f7b69f5d59a3b102bee",
+      "sha256": "0e820d5520b58e19e8fe2576371774c91ea12311fbf57c3b195579e6cbbda8be"
+    }
+  ],
+  "unchangedTypeAndTransportReferences": [
+    {
+      "path": "scripts/e2e/comment-notification/cdp.mjs",
+      "bytes": 3704,
+      "physicalLines": 119,
+      "gitBlob": "9397505b7889db88ef103dca62287e3d02a88cc9",
+      "sha256": "8e70fecbb1f2107abffa91d78644ee74f8e34546c8117587661f8376c27998aa"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+      "bytes": 49613,
+      "physicalLines": 787,
+      "gitBlob": "865494ab5f5e45c5158fbf74ac858987fb322608",
+      "sha256": "ce4d59cc5285eb78ed108dae13a44fae21d33cd73c544c720d512134f23b7f73"
+    }
+  ],
+  "additionalBudgetSourceReferences": [
+    {
+      "repositoryPath": "packages/legacy-agent-host/src/composition/ProviderManagementCoordinator.ts",
+      "bytes": 36898,
+      "gitBlob": "3e0d1ae7a3aa852fb5772821f7df1059edd7cead",
+      "sha256": "e54fda9c30ec3d53f20027d59faf81f59c75fd3ad3987593bd4cd64315a17d3a"
+    },
+    {
+      "repositoryPath": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ManagementHost.ts",
+      "bytes": 21535,
+      "gitBlob": "f050499bc5ef2191460e1d22fa6cda4825a0b000",
+      "sha256": "12ed489a313f075d4d5807f2d232fb6d5ff4cfbfa198a6159f685be5ce99f977"
+    },
+    {
+      "repositoryPath": "src/features/agent-backend/main/infrastructure/CapturedHostClient.ts",
+      "bytes": 32706,
+      "gitBlob": "c4389ac113de03138fd6a9b4b0c6070fb2f06d86",
+      "sha256": "33e65a4aa30e2edce5eba2e7354c55f89700e15c437611f42c5d06f49cf74b87"
+    },
+    {
+      "repositoryPath": "src/features/agent-backend/main/infrastructure/CapturedProviderManagement.ts",
+      "bytes": 5433,
+      "gitBlob": "60b08011e5aa2df1a6d2215155d7dabf0b2b15af",
+      "sha256": "8ea983e9aec5c56ca5e2438a39e4272c0133ae6c2d4839bbcb6926afb605b760"
+    }
+  ],
+  "baseAndScopeProof": {
+    "basePacketSHA256": "c26ff4d1b00fee822ce607cf2b5c4e616fd781bc1e5ab03000e1fe2d59321739",
+    "actual70SourceGateAlreadyClosed": true,
+    "sameBaseFullTreeIndependentlyRevalidatedDuringRecovery": {
+      "leaves": 11152,
+      "directoriesIncludingRoot": 1708,
+      "recursiveEntries": 12859,
+      "root": "8d778f4f6f4b0aa4043ae3348b91208e701be452"
+    },
+    "selectedTwoAndAllSixReferenceBlobJoinsIndependentlyChecked": true,
+    "planPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/71-original-setup-observation-window-2026-11-16.md",
+    "evidenceRoot": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan71-original-setup-window-2026-11-16",
+    "bothRepositoryDestinationsAbsent": true,
+    "sourceAfterimages": 0,
+    "onlyTwoWritableSourcePathsSelected": true,
+    "noImplicitFourthTypePathOrProductChange": true
+  },
+  "sourceFacts": {
+    "cdpDefault": {
+      "path": "scripts/e2e/comment-notification/cdp.mjs",
+      "lines": "51-80",
+      "finding": "send defaults timeoutMs to 30000 and requires a positive safe integer; evaluate forwards its optional second argument to send. An omitted/undefined override therefore uses the existing 30s observer."
+    },
+    "currentSetup": {
+      "path": "scripts/legacy-agent-host/desktop-native-stop-fixture.ts",
+      "lines": "41-61,94-118,139-168",
+      "finding": "remainingSetupMs is undefined until setupDeadline is assigned inside the original start try. Global metadata runs first with no timeout argument; initial team.launch.read follows; project loadModels also omits an override; selected project lineage is observed; preparation is armed; only then is the OpenCode180s cutoff created before start."
+    },
+    "currentAcceptanceGaps": {
+      "lines": "172-241",
+      "finding": "Opening checks the existing common cutoff around session/native observation but computes fileDigest inline in accepted evidence with no later cutoff check. Ready checks progress but has no common post-native or post-digest acceptance check. Moving the cutoff earlier and guarding those selected successful completions is a concrete bounded source repair independent of proving the old native timeout cause."
+    },
+    "globalHelper": {
+      "lines": "479-498",
+      "finding": "The actual global helper has original pre/post ownership checks, catalog predicates, source selection, physical-lineage observation and runtime digest. It has no timeout override or end-to-end remaining callback today. All original predicates/read order remain selected for preservation."
+    },
+    "unchangedPhysicalObservation": {
+      "lines": "378-405,414-465,501-514",
+      "finding": "Existing lineage observation has its own 5s loop and original file/census/digest oracles. The plan does not turn those into deadline-cancellation primitives, remove them or extend their budgets."
+    }
+  },
+  "productBudgetQualification": {
+    "originalInputs": {
+      "descriptor": {
+        "sha256": "5c98844162a8ab35a03483142455bf6f307faeccc6ee003d3c68114f945f0de8",
+        "path": "original75-evidence/desktop-descriptor.json",
+        "field": "owners.0.profile.requestTimeoutMs",
+        "value": 180000
+      },
+      "profile": {
+        "sha256": "a0bdb17c041edef6f793e9b194fab1936c6e488e2fda4d8726105e259acdfbff",
+        "path": "original75-evidence/host-profile.json",
+        "field": "management.0.timeoutMs",
+        "value": 120000
+      }
+    },
+    "hostCoordinator": "ProviderManagementCoordinator.catalog599-686 derives deadline=Date.now()+profile.timeoutMs before the per-profile previous-read chain; admission after that wait refuses expired work, and the same deadline is passed to the V2 host.",
+    "hostNativeRead": "OpenCodeV2ManagementHost153-246 and291-319 preserves its own startup/custody/read/abort/cleanup lifecycle. The read admission computes min(profile.timeoutMs,deadline-now), creates the original abort signal and propagates failures after original disposal/close behavior.",
+    "mainRpc": "CapturedHostClient274-365 starts from profile.requestTimeoutMs and can clamp a supplied remainingMs callback. CapturedProviderManagement101-161 passes its existing control option, not such a remaining callback, and its public request signature exposes no end-to-end remaining catalog budget.",
+    "interpretation": "The 120s and180s values are the captured original profile/descriptor settings consumed by these exact current owners, not universal hard-coded product defaults. They neither sum to a guaranteed loadModels duration nor establish a native completion deadline available to the TEST helper. Plan71 reuses an existing TEST observation cutoff without modifying or inventing product remaining authority."
+  },
+  "selectedSemanticsAssessment": {
+    "oneCutoff": "The single OpenCode180000ms absolute cutoff begins before the original global helper and is never recreated before initial read, project loadModels, selected lineage, arm/start, progress, opening sessions, native observation or digest acceptance.",
+    "requestBudgets": "The one global catalog, one project catalog and one original launch.start receive live remaining setup time. Ordinary OpenCode team.launch.read/progress retain min(30000,remaining); no ordinary read receives the full180s. Without the OpenCode cutoff the original undefined overrides remain.",
+    "guardPlacement": "Compute remaining after each existing ownership guard and immediately before its selected evaluate. Successful awaits must be checked before a next request or accepted setup evidence, including after a tick. A guard that consumes the final remainder must not permit a dispatch.",
+    "rejectionIdentity": "New deadline checks belong after successful awaits, not in catch/finally that would replace an original rejected Error. Existing rejection and disarm finally precedence must remain; the plan specifically forbids replacement by a newly observed timeout, not the original finally behavior.",
+    "armLifetime": "Global/project metadata and lineage stay before arm. A pre-arm failure must leave arm/disarm at0. After successful arm, all newly throwing guards/start/post-await checks remain inside the original start try/finally. Successful start and all its failures disarm once before readiness polling. No expanded preparation lifetime is selected.",
+    "acceptedEvidence": "Retain exact ready count/member/run/native predicates and opening phase/nativeReady=false/sealed=false/empty-input/single-actor predicates. Obtain the original executable digest once, then check the common cutoff, then assign nativeSetup. Late native or digest success must not publish accepted setup evidence.",
+    "legacyDefaults": "Non-OpenCode keeps its existing45s window created after start and undefined CDP overrides. Optional remaining callback is absent for other global-helper callers, preserving their default30s CDP observation behavior. Do not silently apply the OpenCode cutoff to legacy/default paths.",
+    "physicalLimit": "This is an observation/acceptance cutoff. An already issued read-only lineage/file/CDP operation can settle late and then be refused. It is not a hard physical cancellation wall, a cleanup deadline, or proof the underlying native operation finishes within180s.",
+    "typeBoundary": "Use the already-imported DesktopCdpPort evaluate signature with optional timeoutMs; a narrow Pick of that existing interface is sufficient. Remove now-unused UiCdpPort type import only as selected. No new runtime import/cycle, interface path or product API is needed."
+  },
+  "existingTestSeamAndMeaningfulCoverage": {
+    "existingSeam": "Current suite already reads uniquely delimited actual source, normalizes CRLF, strips TypeScript syntax, removes export when needed and constructs an injected environment. Its actual poll/BOOT/terminal cases demonstrate injected finite Date.now/setTimeout, recorded CDP budgets, deferred replies and reference-equal original Errors.",
+    "readAnchors": [
+      "1863-1977 selectionStoppedConvergence",
+      "2110-2169 originalLiveMembershipPoll",
+      "2376-2405 originalReviewCorrectionStage",
+      "2460-2479 and2620-2656 actual shared-BOOT/finite-function seam",
+      "2735-2777 terminal finally precedence"
+    ],
+    "feasibility": "Both actual prepareDesktopNativeStop and actual captureDesktopOpenCodeGlobalMetadata can be selected by unique ordered source boundaries, alongside actual object/tick locals. Type stripping removes their type-only names; IO/census/digest/preparation dependencies can be injected at unchanged interfaces. Do not replace the global helper with a budget-shaped stub or import the full native fixture module.",
+    "dependencyDisclosure": "The finite environment must provide assert, Date, setTimeout, process.env, join, desktopJsLiteral, ownership guard, source/lineage observation helpers, session/native readers, processTable/command where used and fileDigest. These are original dependencies, not new production seams. Fakes model results/timing only and cannot qualify physical lineage or native custody.",
+    "requiredFamilies": [
+      "Timely global call lasting beyond30s: assert its explicit remaining override, subsequent shrinking budgets and no fresh180s at project/start; ordinary reads remain capped30s. The old source fails because the actual global helper omits the override and starts the cutoff later.",
+      "At-cutoff and after-cutoff successful global/project/start/read/progress results: refuse before next request/evidence. Include completion of global metadata and selected project lineage, native observation and final digest.",
+      "Opening path: original session identities and no-input predicates remain necessary; late session/native/digest results do not become pending-open acceptance.",
+      "Guard consumes remainder and100ms tick crosses cutoff: no following evaluate/progress/session read. No negative or zero timeout is dispatched.",
+      "Rejected awaits at an expired clock preserve the identical original Error with no action/read/start replay. Check pre-arm and armed-start paths; do not rewrite original disarm finally precedence.",
+      "Arm/disarm counts and ordering: 0/0 before arm; exactly1 disarm after successful arm on timely success or failure, before polling. The finite start reply must also satisfy existing consumed/probe/model assertions.",
+      "Legacy non-OpenCode45s post-start/default overrides and standalone global helper without callback remain unchanged."
+    ],
+    "preservationRequirement": "Append tests after the complete current2777-line test preimage. Preserve every prior byte, including Plan70 above/below case and the existing error/finally cases. A new helper inside this existing test file may compose the actual source seam; no new test framework/file or duplicated timing implementation is selected.",
+    "executionNotClaimed": "No stripTypeScriptTypes, Function/VM fixture, compiler, test or project code was executed in this review. Test-source feasibility and required distinctions are prospective; actual frozen tests still require separate source R2 and original CI."
+  },
+  "validationClosure": {
+    "sourceVectorUnchanged": 1783,
+    "fastLintUniqueOperandsIndependentlyCounted": 136,
+    "bothSelectedPathsInFastLint": true,
+    "existingSafeNodeTestCommandFileCount": 8,
+    "existingSafeNodeTestIncludesSelectedSuite": true,
+    "fixtureSourcePin": "desktop-proof-sources.ts current a8be2617b2c765091cecce789f028ef2bf67af60 line110 explicitly includes desktop-native-stop-fixture.ts.",
+    "testSourcePin": "desktop-proof-supplementary-sources.ts current eb917dd3cf76a917430b3a0cb3b20ea387307f99 line64 explicitly includes desktop-team-ui-smoke.test.ts.",
+    "workflow": "bd50fd9636f7b63bf8501bca0c6c5a296e2e21bb; actual safe command line127, selected fast operands lines159/169.",
+    "noWorkflowOrRosterEditSelected": true,
+    "sourceCap": "Fixture563 lines leaves room for the selected local changes; final source must remain naturally below800. Do not pack lines, split unrelated logic or add a cap exemption.",
+    "futureSourceGate": "Verify exact two-file delta, entire old test prefix, strict numbered forward/inverse patch and complete resulting-tree preservation before publication."
+  },
+  "historicalEvidenceBoundary": {
+    "original75Job": 133621515713,
+    "sameOriginalRawAndReceiptFullHashesRechecked": true,
+    "rawSHA256": "1d0f42d99db006a88d0508b54e50b940b00d53c40221a997238bdd4674277338",
+    "receiptSHA256": "3e84f6d80be56ea4ae3ed42f65ae1ba621a222519cb391415bff89b77de58484",
+    "selectedReceiptFacts": "The restored original receipt is INCOMPLETE/native-quit-ui with CDP command timed out: Runtime.evaluate and no nativeSetup/nativeLaunchResponse/nativeConfiguredPreparation field. Its exact bytes match the pre-reset evidence.",
+    "notReperformed": "This turn did not redo a complete raw/receipt/PNG actual runtime audit. Product descriptor/profile budget fields and selected failure fields were read; full original byte identities were checked.",
+    "unrestoredOldBudgetReview": "SHA048100e17d54b656728519d1b299ea2d9a653d304d142577b7deae866105a8ec remains a historical full-read reference, not a currently recovered body or independently reread causal proof.",
+    "causalLimit": "No original expression/caller frame identifies the uniquely pending evaluate. Early global metadata is a source-order inference, not a proven exclusive native cause. Neither longer observation nor source selection establishes successful repair."
+  },
+  "readCoverage": {
+    "fullLiteralRead": [
+      "Plan71 document (51 lines)",
+      "prospectiveR1 100lines",
+      "preimage bindings39lines",
+      "additional readonly bindings",
+      "native-stop-fixture563lines",
+      "CDP119lines"
+    ],
+    "completeBytesHashedButTargetedSemanticRead": [
+      "test2777lines: imports and specified actual extraction/clock/Error seams; prior reviewed prefix retained",
+      "DesktopCdpPort file787lines:1-80 including interface22-27",
+      "four budget owners96572bytes: exact windows documented below",
+      "current workflow/rosters: explicit validation/membership sections"
+    ],
+    "budgetWindows": {
+      "ProviderManagementCoordinator.ts": [
+        "599-686"
+      ],
+      "OpenCodeV2ManagementHost.ts": [
+        "153-246",
+        "291-319"
+      ],
+      "CapturedHostClient.ts": [
+        "274-365"
+      ],
+      "CapturedProviderManagement.ts": [
+        "101-161"
+      ]
+    },
+    "truncatedDisplayRecovery": "The small truncated test excerpts were reread in bounded calls; no unrecovered excerpt is used as reviewed content.",
+    "delegation": "A bounded followup to the prior validation child was unavailable due agent thread limit. No independent child opinion is claimed."
+  },
+  "disposition": {
+    "prospectiveSelection": "GO for this exact plan and its two existing source paths only.",
+    "mandatoryNextGate": "Ordinary documentary publication and full independent actual-document readback before source afterimages.",
+    "sourceAndRuntime": "Future exact source R1/R2, actual-source readback and resulting-head original tests/types/lint/affected journeys remain unqualified.",
+    "primary": "No primary/ref or CI action was taken. Root and sole CI observer retain execution decisions and useful original executions."
+  },
+  "limits": {
+    "sourceAfterimages": 0,
+    "repositoryEdits": false,
+    "networkOrActionsQueries": false,
+    "gitOrApiMutation": false,
+    "projectVmCompilerTestsLintNativeProviderGuiExecution": false,
+    "runtimeQualified": false,
+    "newProductBudgetsOrApi": false,
+    "P09Plan40M16W01ProducerAdoptionReleaseTransfer": false
+  }
+}

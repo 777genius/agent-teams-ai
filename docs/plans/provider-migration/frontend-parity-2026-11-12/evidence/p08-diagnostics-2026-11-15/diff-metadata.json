@@ -1,0 +1,29 @@
+{
+  "stage": "diff",
+  "sourceHead": "e935176e908d99c73de18964aac02fc5f86e3497",
+  "sourceTree": "a0fa8b21dbff5efc3656bf6ec9d51117ed2be59b",
+  "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+  "argv": [
+    "git",
+    "diff",
+    "--check",
+    "8c6ef8fdbb792debe18e6bbe6734648d24aa2fbe..e935176e908d99c73de18964aac02fc5f86e3497",
+    "--",
+    "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+    "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+    ".github/workflows/host-emulated-acceptance.yml"
+  ],
+  "nodeVersion": "v24.21.0",
+  "nodeSHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "startedAtUTC": "2026-11-15T18:57:10.483902+00:00",
+  "finishedAtUTC": "2026-11-15T18:57:10.487853+00:00",
+  "elapsedSeconds": 0.0039341189985862,
+  "exitCode": 0,
+  "preflightMetadataSHA256": "75966263a7da6b4ea8ad36f7e2ed3363ca6154cc0dcbf053fa4fcbca002691a0",
+  "logBytes": 0,
+  "logSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "sourceHeadAfter": "e935176e908d99c73de18964aac02fc5f86e3497",
+  "statusAfter": "",
+  "selectedLeavesUnchanged": true,
+  "selectedDependencyInputsUnchanged": true
+}

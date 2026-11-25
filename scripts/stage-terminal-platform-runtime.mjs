@@ -9,6 +9,7 @@ import { Readable } from 'node:stream';
 import { fileURLToPath } from 'node:url';
 
 import { formatGitHubReleaseDownloadError } from './lib/github-release-download-error.mjs';
+import { extractArchive as extractRuntimeArchive } from './lib/runtime-payload-cache.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, '..');
@@ -78,11 +79,12 @@ function parseArgs(argv) {
   return parsed;
 }
 
-function runOrThrow(command, args) {
+function runOrThrow(command, args, options = {}) {
   const result = spawnSync(command, args, {
     cwd: repoRoot,
     shell: false,
     stdio: 'inherit',
+    ...options,
   });
 
   if (result.error) {
@@ -229,28 +231,7 @@ function downloadReleaseAssetWithGh(lock, releaseTag, asset, destinationPath) {
 }
 
 function extractArchive(archivePath, extractDir, archiveKind) {
-  fs.mkdirSync(extractDir, { recursive: true });
-
-  if (archiveKind === 'tar.gz') {
-    runOrThrow('tar', ['-xzf', archivePath, '-C', extractDir]);
-    return;
-  }
-
-  if (archiveKind === 'zip') {
-    if (process.platform === 'win32') {
-      runOrThrow('powershell', [
-        '-NoProfile',
-        '-Command',
-        `Expand-Archive -LiteralPath '${archivePath.replace(/'/g, "''")}' -DestinationPath '${extractDir.replace(/'/g, "''")}' -Force`,
-      ]);
-      return;
-    }
-
-    runOrThrow('unzip', ['-oq', archivePath, '-d', extractDir]);
-    return;
-  }
-
-  throw new Error(`Unsupported terminal-platform archive kind: ${archiveKind}`);
+  extractRuntimeArchive(archivePath, extractDir, archiveKind, runOrThrow);
 }
 
 function findRuntimePayloadDir(extractDir, asset) {

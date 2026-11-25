@@ -1,0 +1,47 @@
+{
+  "archive": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/process-darwin-arm64/artifact-14194928223.zip",
+  "bytes": 12562,
+  "sha256": "ab67b5526e19b46119c486a627086bd1c5e2b72464c1ec4a07baf0c18576fdac",
+  "CRC": true,
+  "safeNames": true,
+  "uniqueNames": true,
+  "noSymlinks": true,
+  "members": [
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+      "bytes": 20700,
+      "blob": "a2969c53b0adfbb902e9634f83f6a831d977aa3f",
+      "sha256": "2b0ccdf79dc5cf01f3c12737394603e2893eaaf6b7b4eb788f89ecb187a66d28"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/posix-lifecycle.log",
+      "bytes": 5165,
+      "blob": "229ddaa3509fad0327b09dafb63a3e7904af2651",
+      "sha256": "2cbec4a39bf30d214a05ff2293db534b71bbb938e665f52989c460875a532cb1"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+      "bytes": 771,
+      "blob": "e6fe45e5e48b141e404aad77a79a65321a41fdb2",
+      "sha256": "db7691063f3c391cb666950cc42413cc4b59a081a7f1f5a586aaed3ddcb1ee2c"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+      "bytes": 6776,
+      "blob": "99f279d202c3de1c621ef69b024c8f685205fbbd",
+      "sha256": "d32b1405f85a07fbda95aed3be5fa1b3744bbbe0a5f48ada9fb401492193e64a"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/scope.json",
+      "bytes": 495,
+      "blob": "eb737228b1b37ffe943c01c16005569564aee763",
+      "sha256": "fdd732c2146eacca9065fd2abf79d1afe20e85ed3664595b0e14cc31f687d13c"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+      "bytes": 41,
+      "blob": "be97df2fc9507103b59b5c76c03140090125d47e",
+      "sha256": "55ebeb3ecde1ac537ee3bb8238ac10d02f5041edea9c57cea414712bd32b5487"
+    }
+  ]
+}

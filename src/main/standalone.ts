@@ -185,6 +185,7 @@ async function start(): Promise<void> {
         ? { path: descriptorPath ?? '', sha256: descriptorHash ?? '' }
         : null,
     bindingDirectory: join(getClaudeBasePath(), 'agent-backend', 'http-bindings'),
+    reviewFlowDefaultsDirectory: getClaudeBasePath(),
     commandRunner: () => commandRunner,
   });
 

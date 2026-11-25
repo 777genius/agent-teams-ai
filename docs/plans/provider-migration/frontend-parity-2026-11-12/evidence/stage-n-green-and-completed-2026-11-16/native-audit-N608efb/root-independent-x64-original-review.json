@@ -1,0 +1,924 @@
+{
+  "schema": "root-independent-current-N608-x64-original-evidence/v1",
+  "source": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "reviewer": "/root",
+  "verdict": "APPROVE for exactly scoped original Windows x64 Process and V2 evidence",
+  "archives": [
+    {
+      "artifact": 14194361871,
+      "run": 43795234913,
+      "members": 19,
+      "bytes": 71811,
+      "blob": "a4b4f9dc61f4c5280eefec95f6c2f0a0ccedcb79",
+      "sha256": "1b32ea9a443b91f9a2a1251dc0a91c5c1d04cbd71a5217cf0fb011331c96d56c"
+    },
+    {
+      "artifact": 14194840850,
+      "run": 43795234721,
+      "members": 4,
+      "bytes": 13219,
+      "blob": "170b8bf173a612d14ce04d4454a923ba32420da6",
+      "sha256": "ec3bc002e8fcb96f0a554f63a1328c987e05fbbd8d5a2a729a38470cd10b01bb"
+    }
+  ],
+  "verifiedMetadataFiles": {
+    ".github/workflows/host-process-acceptance.yml": {
+      "bytes": 30399,
+      "blob": "123e52f461e42790ddf5fb8b1ea653b9e32c30db",
+      "sha256": "a7e59eb17ee93d15ffad248322d79e536d9d9c0b02c83a30a31687fd6e618ce0"
+    },
+    "tools/owned-process-broker/nativeGate.ts": {
+      "bytes": 22330,
+      "blob": "17f5e7b66605bd4d28cf3935b7fa73ea2933a21d",
+      "sha256": "3b549e313e3ca43b76232282b7dbe9e7a1dfcec594ad93bc81c047f740851197"
+    },
+    "tools/owned-process-broker/nativeDebugServiceScenario.ts": {
+      "bytes": 20067,
+      "blob": "e3cb3ac88b3b46c8935f64bc2f2b0060e163676b",
+      "sha256": "3da229429f0dfa6c53449078a1b8125715130be2165986f2d4cc1fab31a53951"
+    },
+    "tools/owned-process-broker/debugServiceTest.h": {
+      "bytes": 7271,
+      "blob": "f8a03669780c34de68010184ad6ca03a8440a2e4",
+      "sha256": "ec0665d1f6289492ea103bce13821c2a06847a2599396c8b47de21dde4e4f2a4"
+    },
+    "tools/owned-process-broker/nativeEmulatedSourceScenario.ts": {
+      "bytes": 56556,
+      "blob": "296e4ccab2d1aea5d9eb88629c1fdf56a9c88329",
+      "sha256": "3cba93b8d78463415511f25e2b86132801fd5a0059d168072e39e03a0ad624b0"
+    },
+    "process-source-pin-audit-x64.json": {
+      "bytes": 36175,
+      "blob": "877d2454840fca215844a862ccca763e93c4adb8",
+      "sha256": "03a133d46606097641d36cc7ee5276522f22c2d3ec588be8184dbf79c016ea4a"
+    },
+    "process-win32-x64/job-133062439990.log": {
+      "bytes": 418292,
+      "blob": "2837889b471effc5fa63b1ef164bcdeb6055c91b",
+      "sha256": "48fc6a47973686705e0a8f961fb3a58ec2913a2d4e813decf2d223a4b3da82d1"
+    },
+    "process-win32-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/scope.json": {
+      "bytes": 137868,
+      "blob": "1acaeb28bc276094adec4394f973e96dd49e95c9",
+      "sha256": "45b1e93a276741c21ddf9dd7283eed27f0584b8c07a8a97ff2f632a9771ca9b9"
+    },
+    "process-win32-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-node24.log": {
+      "bytes": 89103,
+      "blob": "e2d11cb7c3de68dff94735824809eab138715afe",
+      "sha256": "afd2bdf2fba4599967dd7e3b36393e7185960ee6d6ac28c42c332dee4ec6f561"
+    },
+    "process-win32-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-electron.log": {
+      "bytes": 89136,
+      "blob": "567841d885b6720d9adf59fcf3c1b331e8d33df6",
+      "sha256": "552f53fc7e21e2d3db90db0df5f8baac145bd1161a68ea441a3d390baf60d615"
+    },
+    "process-win32-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-codex-receipt.json": {
+      "bytes": 60395,
+      "blob": "8b64efa6a1c5acfbffd50871961ff2b40216ae38",
+      "sha256": "c627ff601f4768e3a1a6800994c33bf50fb21c31fd0362a26d3bbf188f950897"
+    },
+    "process-win32-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-claude-receipt.json": {
+      "bytes": 27679,
+      "blob": "b606b9f0d9f72c099d7b3d983d8afa915143a1c1",
+      "sha256": "9d88f4594ff44d5579708b4439aa55d4b84cc06ba2e6eabd72adcfbd6c074ba9"
+    },
+    "process-win32-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-opencode-receipt.json": {
+      "bytes": 26003,
+      "blob": "0bd0ed5e36d5286a12ce9c6ca23627926f5c5d1d",
+      "sha256": "36e5453630940d75ef02526c2bfe91c2b179325d4ad5c8af1a45a4d69a44b9fc"
+    },
+    "process-win32-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-emulated-provider-receipt.json": {
+      "bytes": 2900,
+      "blob": "393aa10dc245413b324bdb140923e401eac8ed9c",
+      "sha256": "5d0dc6a0f740f1a2b9fe6d03e8eef9f9b9ecdd3dcb43d204b5c85414a1beedb9"
+    },
+    "host-source-N608efb-git-audit.json": {
+      "bytes": 163123,
+      "blob": "9c8472f84db2ee0615314b9fd05df207e2c7d112",
+      "sha256": "30dbbf806666206c905b346f15e475646c2840d0c29f326a953fb3202d595ea0"
+    },
+    ".github/workflows/opencode-v2-stage1-preflight.yml": {
+      "bytes": 36013,
+      "blob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+      "sha256": "fddd1aface758ef115a5e904151cb61dd78dca04d8f52fb99f4326ddaff53a14"
+    },
+    "packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts": {
+      "bytes": 33259,
+      "blob": "e4fd10d1c969bb5bf8a75e9789599a04dc0fc190",
+      "sha256": "e7a295816da293ff4e26a775f898f1bc144ece55e995c3d05bed8e543f2803ff"
+    },
+    "packages/legacy-agent-host/tests/opencode-v1-version-source.ts": {
+      "bytes": 9765,
+      "blob": "78cb6f0026821785b1d0c0c1ad21ddfe76cdaee4",
+      "sha256": "0ff252732bedb1807cf428370e41628922a4d719090f479a41f25117d7227979"
+    },
+    "packages/legacy-agent-host/tests/fixtures/native-host.ts": {
+      "bytes": 15303,
+      "blob": "bea17f976f5db7e9d6b471751ff7d871cd8ebcd5",
+      "sha256": "ea11710ab1833e4cad906bad58def351b852c89ba1dee834c69849b3a1995d01"
+    },
+    "v2-win32-x64/job-133062438882.log": {
+      "bytes": 89327,
+      "blob": "453a5e16ab67e80851fd47be4b442c1f3228a5cd",
+      "sha256": "8dd1f64ac7e4dc57f89d23aeac046d4fe695f71b15781a9d05f595db21be2c47"
+    },
+    "v2-win32-x64/extracted/opencode-v2-embedded-inputs.json": {
+      "bytes": 780,
+      "blob": "aaf147b4bce577e96259e6b7c4e133b9e7a4b35e",
+      "sha256": "5453053cc216f3e7d88b314a91d3edcc0155fb0a2bae5c5944960ca719844046"
+    },
+    "v2-win32-x64/extracted/opencode-v2-windows-custody.json": {
+      "bytes": 907,
+      "blob": "b191b3b7c6a633db47c75e77f1c88b066a2e2b2e",
+      "sha256": "21a9e05861376784020a142b67037578153b029f521b499fbe635c69ac98131b"
+    },
+    "v2-win32-x64/extracted/opencode-v2-embedded-host.json": {
+      "bytes": 95069,
+      "blob": "a52a63ea637e3d1957c4c734b841e638e59a1079",
+      "sha256": "3f51bd0a342007e60bb2537f1116f5813209b74fdd28c17e4dc5579caa7cd840"
+    },
+    "v2-win32-x64/extracted/opencode-v2-embedded-host-auto.json": {
+      "bytes": 94881,
+      "blob": "8ef15bc27a12c2858a86d664433f50bcd63637e1",
+      "sha256": "41b7a8b87bf3afcb26f4ce687e7cda4e01bdb2680c5cf40d3a95c8796ccc8d40"
+    }
+  },
+  "gitSourceObjectsRead": 637,
+  "hostSourceFiles": 619,
+  "hostSourceDigests": {
+    "LF": "4a97065f4e44d4dd380638100abb11769cf1290d61eaac64a9e3bf6e956041d9",
+    "CRLF": "c78da4032309d11e82c24bde6143d738a31a863701f55d7bf9b769500f11945f"
+  },
+  "sourcePinOccurrences": 38,
+  "sourcePinPaths": 14,
+  "originalFullJobs": [
+    {
+      "job": 133062439990,
+      "fullLog": {
+        "path": "process-win32-x64/job-133062439990.log",
+        "bytes": 418292,
+        "blob": "2837889b471effc5fa63b1ef164bcdeb6055c91b",
+        "sha256": "48fc6a47973686705e0a8f961fb3a58ec2913a2d4e813decf2d223a4b3da82d1"
+      },
+      "actualCounts": {
+        "tests": [
+          167
+        ],
+        "pass": [
+          164
+        ],
+        "fail": [
+          0
+        ],
+        "cancelled": [
+          0
+        ],
+        "skipped": [
+          3
+        ]
+      },
+      "originalCommands": [
+        "actions/checkout@v7.0.1",
+        "actions/setup-node@v7.0.0",
+        "set -euo pipefail",
+        "actions/setup-node@v7.0.0",
+        "set -euo pipefail",
+        "node scripts/ci/install-dependencies-with-retry.mjs",
+        "set -euo pipefail",
+        "set -euo pipefail",
+        "set -euo pipefail",
+        "$build = Join-Path $env:RUNNER_TEMP 'TEST-process-build-x64'",
+        "$build = $env:HOST_PROCESS_NATIVE_BUILD",
+        "$build = $env:HOST_PROCESS_NATIVE_BUILD",
+        "$build = $env:HOST_PROCESS_NATIVE_BUILD",
+        "$build = $env:HOST_PROCESS_NATIVE_BUILD",
+        "$build = $env:HOST_PROCESS_NATIVE_BUILD",
+        "$build = $env:HOST_PROCESS_NATIVE_BUILD",
+        "set -euo pipefail",
+        "actions/upload-artifact@v4"
+      ],
+      "runId": 43795234913,
+      "originalRunApi": "../ci-n-608efb/process-run-0304.json"
+    },
+    {
+      "job": 133062438882,
+      "fullLog": {
+        "path": "v2-win32-x64/job-133062438882.log",
+        "bytes": 89327,
+        "blob": "453a5e16ab67e80851fd47be4b442c1f3228a5cd",
+        "sha256": "8dd1f64ac7e4dc57f89d23aeac046d4fe695f71b15781a9d05f595db21be2c47"
+      },
+      "actualCounts": {
+        "tests": [
+          58,
+          1,
+          1,
+          1
+        ],
+        "pass": [
+          57,
+          1,
+          1,
+          1
+        ],
+        "fail": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "cancelled": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "skipped": [
+          1,
+          0,
+          0,
+          0
+        ]
+      },
+      "originalCommands": [
+        "actions/checkout@v6",
+        "set -euo pipefail",
+        "pnpm/action-setup@v6",
+        "actions/setup-node@v6",
+        "node ./scripts/ci/install-dependencies-with-retry.mjs",
+        "pnpm --filter @agent-teams/legacy-agent-host build",
+        "node --test packages/legacy-agent-host/tests/opencode-v2-embedded-graph.test.ts packages/legacy-agent-host/tests/registered-process-build-selection.test.ts packages/legacy-agent-host/tests/windows-job-custody.test.ts packages/legacy-agent-host/tests/opencode-v2-native-paths.test.ts packages/legacy-agent-host/tests/owner-scoped-backup.test.ts packages/legacy-agent-host/tests/member-attachment-delivery.test.ts",
+        "node scripts/stage-runtime.mjs --platform win32-x64",
+        "node --import tsx scripts/legacy-agent-host/prepare-opencode-v2-native.ts",
+        "node --test packages/legacy-agent-host/tests/windows-job-custody.native.ts",
+        "node --input-type=module -e \"",
+        "node --test packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts",
+        "node --test packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts",
+        "node --input-type=module -e \"",
+        "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
+      ],
+      "runId": 43795234721,
+      "originalRunApi": "../ci-n-608efb/v2-run-0304.json"
+    }
+  ],
+  "nativeInvocations": [
+    {
+      "versions": {
+        "node": "24.21.0",
+        "acorn": "8.18.0",
+        "ada": "4.0.0",
+        "amaro": "1.1.11",
+        "ares": "1.34.8",
+        "brotli": "1.2.0",
+        "cldr": "48.0",
+        "icu": "78.3",
+        "llhttp": "9.4.3",
+        "merve": "1.2.2",
+        "modules": "137",
+        "napi": "10",
+        "nbytes": "0.1.4",
+        "ncrypto": "0.0.1",
+        "nghttp2": "1.70.0",
+        "nghttp3": "",
+        "ngtcp2": "",
+        "openssl": "3.5.8",
+        "simdjson": "4.6.7",
+        "simdutf": "6.4.0",
+        "sqlite": "3.53.4",
+        "tz": "2026c",
+        "undici": "7.29.1",
+        "unicode": "17.0",
+        "uv": "1.52.1",
+        "uvwasi": "0.0.23",
+        "v8": "13.6.233.17-node.53",
+        "zlib": "1.3.2.1-motley-8002e91",
+        "zstd": "1.5.7"
+      },
+      "named": 25,
+      "phases": 31,
+      "pendingCreate": {
+        "rootExited": false,
+        "activeProcesses": 0,
+        "queryError": 0,
+        "dispatchError": 0,
+        "stopReplied": false
+      },
+      "beforeCleanupClosed": 63,
+      "afterCleanupClosed": 64,
+      "retainedCapabilities": 9,
+      "negativeOrSignalled": [
+        {
+          "slot": 0,
+          "scenario": "sentinel",
+          "exit": {
+            "code": null,
+            "signal": "SIGTERM"
+          },
+          "cleanupRequested": true
+        },
+        {
+          "slot": 48,
+          "scenario": "terminal-race",
+          "exit": {
+            "code": 74,
+            "signal": null
+          },
+          "cleanupRequested": false
+        },
+        {
+          "slot": 50,
+          "scenario": "owner-eof",
+          "exit": {
+            "code": 70,
+            "signal": null
+          },
+          "cleanupRequested": false
+        },
+        {
+          "slot": 52,
+          "scenario": "broker-crash",
+          "exit": {
+            "code": null,
+            "signal": "SIGTERM"
+          },
+          "cleanupRequested": true
+        },
+        {
+          "slot": 54,
+          "scenario": "wrong-generation",
+          "exit": {
+            "code": 75,
+            "signal": null
+          },
+          "cleanupRequested": false
+        },
+        {
+          "slot": 56,
+          "scenario": "lost-prepared",
+          "exit": {
+            "code": 70,
+            "signal": null
+          },
+          "cleanupRequested": false
+        },
+        {
+          "slot": 58,
+          "scenario": "malformed",
+          "exit": {
+            "code": 75,
+            "signal": null
+          },
+          "cleanupRequested": false
+        },
+        {
+          "slot": 60,
+          "scenario": "truncated",
+          "exit": {
+            "code": 75,
+            "signal": null
+          },
+          "cleanupRequested": false
+        }
+      ],
+      "controller": {
+        "gateController": "drained",
+        "rootExitCode": 0,
+        "activeProcesses": 0
+      }
+    },
+    {
+      "versions": {
+        "node": "24.22.1",
+        "acorn": "8.18.0",
+        "ada": "4.0.0",
+        "amaro": "1.1.11",
+        "ares": "1.34.9",
+        "brotli": "1.2.0",
+        "cldr": "48.0",
+        "icu": "78.2",
+        "llhttp": "9.4.3",
+        "merve": "1.2.2",
+        "modules": "149",
+        "napi": "10",
+        "nbytes": "0.1.4",
+        "ncrypto": "0.0.1",
+        "nghttp2": "1.70.0",
+        "nghttp3": "",
+        "ngtcp2": "",
+        "openssl": "0.0.0",
+        "simdjson": "4.6.11",
+        "simdutf": "7.7.0",
+        "sqlite": "3.53.4",
+        "tz": "2026e",
+        "undici": "7.30.1",
+        "unicode": "17.0",
+        "uv": "1.52.1",
+        "uvwasi": "0.0.23",
+        "v8": "15.2.124.45-electron.0",
+        "zlib": "1.3.2.1-motley",
+        "zstd": "1.6.0",
+        "electron": "44.10.1",
+        "chrome": "152.0.7977.169"
+      },
+      "named": 25,
+      "phases": 31,
+      "pendingCreate": {
+        "rootExited": false,
+        "activeProcesses": 0,
+        "queryError": 0,
+        "dispatchError": 0,
+        "stopReplied": false
+      },
+      "beforeCleanupClosed": 63,
+      "afterCleanupClosed": 64,
+      "retainedCapabilities": 9,
+      "negativeOrSignalled": [
+        {
+          "slot": 0,
+          "scenario": "sentinel",
+          "exit": {
+            "code": null,
+            "signal": "SIGTERM"
+          },
+          "cleanupRequested": true
+        },
+        {
+          "slot": 48,
+          "scenario": "terminal-race",
+          "exit": {
+            "code": 74,
+            "signal": null
+          },
+          "cleanupRequested": false
+        },
+        {
+          "slot": 50,
+          "scenario": "owner-eof",
+          "exit": {
+            "code": 70,
+            "signal": null
+          },
+          "cleanupRequested": false
+        },
+        {
+          "slot": 52,
+          "scenario": "broker-crash",
+          "exit": {
+            "code": null,
+            "signal": "SIGTERM"
+          },
+          "cleanupRequested": true
+        },
+        {
+          "slot": 54,
+          "scenario": "wrong-generation",
+          "exit": {
+            "code": 75,
+            "signal": null
+          },
+          "cleanupRequested": false
+        },
+        {
+          "slot": 56,
+          "scenario": "lost-prepared",
+          "exit": {
+            "code": 70,
+            "signal": null
+          },
+          "cleanupRequested": false
+        },
+        {
+          "slot": 58,
+          "scenario": "malformed",
+          "exit": {
+            "code": 75,
+            "signal": null
+          },
+          "cleanupRequested": false
+        },
+        {
+          "slot": 60,
+          "scenario": "truncated",
+          "exit": {
+            "code": 75,
+            "signal": null
+          },
+          "cleanupRequested": false
+        }
+      ],
+      "controller": {
+        "gateController": "drained",
+        "rootExitCode": 0,
+        "activeProcesses": 0
+      }
+    }
+  ],
+  "providers": [
+    {
+      "provider": "codex",
+      "epochs": [
+        {
+          "mainEpoch": "5aa765db-8e4c-43bb-b64f-468a3a50ede3",
+          "pending": {
+            "admitted": 2,
+            "revoked": 2
+          },
+          "jobs": 25,
+          "allFiveCustodyFields": true
+        },
+        {
+          "mainEpoch": "3e6ac474-2744-47c4-b9a4-ab20c3fecf1b",
+          "pending": {
+            "admitted": 1,
+            "revoked": 1
+          },
+          "jobs": 0,
+          "allFiveCustodyFields": true
+        }
+      ],
+      "cold": {
+        "currentB": true,
+        "retainedA": true,
+        "lookup": true,
+        "physicalReplayAllocations": 0,
+        "sourcePublishPendingAdmission": {
+          "admitted": 1,
+          "revoked": 1
+        },
+        "originalInputsReplayed": false,
+        "sdkPeerCheckpointRestored": false
+      },
+      "management": {
+        "source": {
+          "sourceId": "0baf28b4582267022db38771f045064226c28bef143296519914ddaee7b969fb",
+          "revision": "a8ef6771eaae7e802a9873f61a440d52120f5a1ea39bf80507d0e9efc49be42e"
+        },
+        "metadataRead": true,
+        "modelProbeCompleted": true,
+        "modelProbeReplayAllocated": false,
+        "modelProbeInputs": 1,
+        "metadataHostRetained": false
+      },
+      "standalone": {
+        "phase": "completed",
+        "source": {
+          "sourceId": "0baf28b4582267022db38771f045064226c28bef143296519914ddaee7b969fb",
+          "revision": "a8ef6771eaae7e802a9873f61a440d52120f5a1ea39bf80507d0e9efc49be42e"
+        },
+        "inputDigest": "ea1228dfce2602ba309728f64e1fa1305ef3cd32b89e50f00585ceb02f7247eb",
+        "limits": null,
+        "ephemeral": true,
+        "replayAllocated": false
+      },
+      "lastStandaloneCompletionPresent": true,
+      "lastStandaloneCompletion": {
+        "source": {
+          "sourceId": "0baf28b4582267022db38771f045064226c28bef143296519914ddaee7b969fb",
+          "revision": "a8ef6771eaae7e802a9873f61a440d52120f5a1ea39bf80507d0e9efc49be42e"
+        },
+        "runId": "TEST-source-standalone-B",
+        "scheduleId": "TEST-source-schedule-B",
+        "readCount": 103,
+        "elapsedMs": 8328.542999999998,
+        "lastRunRead": {
+          "phase": "completed",
+          "cleanup": "confirmed",
+          "exitCode": 0
+        }
+      },
+      "lastLaunchReadiness": {
+        "source": {
+          "sourceId": "0baf28b4582267022db38771f045064226c28bef143296519914ddaee7b969fb",
+          "revision": "a8ef6771eaae7e802a9873f61a440d52120f5a1ea39bf80507d0e9efc49be42e"
+        },
+        "image": "B",
+        "launchId": "eca13de8-3599-5b26-bdf8-ae13b6dfa550",
+        "readCount": 83,
+        "elapsedMs": 8010.617200000001,
+        "lastRuntimeRead": {
+          "viewDigest": "322d611415d1de09975bb832e4f366a34c8a315a2594c0d6f7e9444463a1c6a9",
+          "memberId": "alice-id",
+          "generation": "capture-83ed1d4d-5f5f-53aa-bb2b-02b0d7bbc36c",
+          "phase": "allocated",
+          "sealed": false,
+          "custody": "owned",
+          "nativeReady": true,
+          "attached": true
+        }
+      }
+    },
+    {
+      "provider": "claude",
+      "epochs": [
+        {
+          "mainEpoch": "b6488b50-d030-439a-ad77-f73f40e5229a",
+          "pending": {
+            "admitted": 2,
+            "revoked": 2
+          },
+          "jobs": 8,
+          "allFiveCustodyFields": true
+        },
+        {
+          "mainEpoch": "19824051-9a43-48e1-977d-181d9ff08d5b",
+          "pending": {
+            "admitted": 1,
+            "revoked": 1
+          },
+          "jobs": 1,
+          "allFiveCustodyFields": true
+        }
+      ],
+      "cold": {
+        "currentB": true,
+        "retainedA": true,
+        "lookup": true,
+        "physicalReplayAllocations": 0,
+        "sourcePublishPendingAdmission": {
+          "admitted": 1,
+          "revoked": 1
+        },
+        "originalInputsReplayed": false,
+        "sdkPeerCheckpointRestored": true,
+        "originalNativeSessionRetained": true,
+        "restoredGeneration": "restore-c0bba3c555756aaa70ae7886d83a9a8b9c2dcca284a3d06c995a29c5b6468962",
+        "newInputId": "13ba6d01-8ac3-5c1c-aaff-065be33615b3",
+        "source": {
+          "sourceId": "dd47268aa68abdd281722075dde0df59731cda90b44785c8fccb298d92f4bbd7",
+          "revision": "92e813f2d4dea0126a3414bea77b21914d305bae0f86f0383e78c5b7af6109ac"
+        }
+      },
+      "management": {
+        "source": {
+          "sourceId": "dd47268aa68abdd281722075dde0df59731cda90b44785c8fccb298d92f4bbd7",
+          "revision": "d41dac8160e63f3d7d7f2e704d0b16e027c97ff44c2f8bde06d9b873b45e9003"
+        },
+        "metadataRead": true,
+        "modelProbeCompleted": true,
+        "modelProbeReplayAllocated": false,
+        "modelProbeInputs": 1,
+        "metadataHostRetained": false
+      },
+      "standalone": {
+        "phase": "completed",
+        "source": {
+          "sourceId": "dd47268aa68abdd281722075dde0df59731cda90b44785c8fccb298d92f4bbd7",
+          "revision": "d41dac8160e63f3d7d7f2e704d0b16e027c97ff44c2f8bde06d9b873b45e9003"
+        },
+        "inputDigest": "c0bbd3063a0ad7b0ff3b418ffb36a597c9d66afc1d658746bdc67adc0cbcd969",
+        "limits": {
+          "maxTurns": 6,
+          "maxBudgetUsd": 0.25
+        },
+        "ephemeral": true,
+        "replayAllocated": false
+      },
+      "lastStandaloneCompletionPresent": true,
+      "lastStandaloneCompletion": {
+        "source": {
+          "sourceId": "dd47268aa68abdd281722075dde0df59731cda90b44785c8fccb298d92f4bbd7",
+          "revision": "d41dac8160e63f3d7d7f2e704d0b16e027c97ff44c2f8bde06d9b873b45e9003"
+        },
+        "runId": "TEST-source-standalone-B",
+        "scheduleId": "TEST-source-schedule-B",
+        "readCount": 20,
+        "elapsedMs": 1223.9559000000008,
+        "lastRunRead": {
+          "phase": "completed",
+          "cleanup": "confirmed",
+          "exitCode": 0
+        }
+      },
+      "lastLaunchReadiness": {
+        "source": {
+          "sourceId": "dd47268aa68abdd281722075dde0df59731cda90b44785c8fccb298d92f4bbd7",
+          "revision": "d41dac8160e63f3d7d7f2e704d0b16e027c97ff44c2f8bde06d9b873b45e9003"
+        },
+        "image": "B",
+        "launchId": "eca13de8-3599-5b26-bdf8-ae13b6dfa550",
+        "readCount": 24,
+        "elapsedMs": 2670.4858999999997,
+        "lastRuntimeRead": {
+          "viewDigest": "e9c711bebe8d482154970603455182c2f6ea79e5fe18e55d8428109bec781af6",
+          "memberId": "alice-id",
+          "generation": "capture-83ed1d4d-5f5f-53aa-bb2b-02b0d7bbc36c",
+          "phase": "allocated",
+          "sealed": false,
+          "custody": "owned",
+          "nativeReady": true,
+          "attached": true
+        }
+      }
+    },
+    {
+      "provider": "opencode",
+      "epochs": [
+        {
+          "mainEpoch": "e025a726-a1b3-4565-be79-6288eb92910a",
+          "pending": {
+            "admitted": 2,
+            "revoked": 2
+          },
+          "jobs": 7,
+          "allFiveCustodyFields": true
+        },
+        {
+          "mainEpoch": "b1d1b713-e014-4afc-a7b4-2b135ede255b",
+          "pending": {
+            "admitted": 1,
+            "revoked": 1
+          },
+          "jobs": 0,
+          "allFiveCustodyFields": true
+        }
+      ],
+      "cold": {
+        "currentB": true,
+        "retainedA": true,
+        "lookup": true,
+        "physicalReplayAllocations": 0,
+        "sourcePublishPendingAdmission": {
+          "admitted": 1,
+          "revoked": 1
+        },
+        "originalInputsReplayed": false,
+        "sdkPeerCheckpointRestored": false
+      },
+      "management": {
+        "source": {
+          "sourceId": "b0cd1f2aced9e8d922e23450b2955e5a6cf78b277a5d5d0a6fb93011a5e9d4ca",
+          "revision": "8ef8eb56411f9970635d3c598d9c80b8733ef1a117d5e08dbc2878ecd74b8e44"
+        },
+        "metadataRead": true,
+        "modelProbeCompleted": true,
+        "modelProbeReplayAllocated": false,
+        "modelProbeInputs": 1,
+        "metadataHostRetained": true
+      },
+      "standalone": {
+        "supported": false,
+        "reason": "Original scheduledRunProfile rejects OpenCode"
+      },
+      "lastStandaloneCompletionPresent": false,
+      "lastStandaloneCompletion": null,
+      "lastLaunchReadiness": {
+        "source": {
+          "sourceId": "b0cd1f2aced9e8d922e23450b2955e5a6cf78b277a5d5d0a6fb93011a5e9d4ca",
+          "revision": "8ef8eb56411f9970635d3c598d9c80b8733ef1a117d5e08dbc2878ecd74b8e44"
+        },
+        "image": "B",
+        "launchId": "eca13de8-3599-5b26-bdf8-ae13b6dfa550",
+        "readCount": 15,
+        "elapsedMs": 19422.8255,
+        "lastRuntimeRead": {
+          "viewDigest": "b511010e8e3f029298d97c17493cf8e1ef1803d003f90c2eaea9a76f8931d929",
+          "memberId": "alice-id",
+          "generation": "capture-83ed1d4d-5f5f-53aa-bb2b-02b0d7bbc36c",
+          "phase": "allocated",
+          "sealed": false,
+          "custody": "owned",
+          "nativeReady": true,
+          "attached": true
+        }
+      }
+    }
+  ],
+  "v2": [
+    {
+      "mode": "manual",
+      "steps": [
+        "original_host_embedded_native_and_mcp_ready",
+        "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+        "changed_project_config_did_not_retarget_running_native_session",
+        "original_uploaded_PNG_native_image_inference_and_public_readback",
+        "checkpoint_and_original_host_native_cleanup_confirmed",
+        "cold_host_restored_native_history_without_model_or_tool_replay"
+      ],
+      "hosts": [
+        {
+          "exitCode": 0,
+          "signalCode": null,
+          "stdoutValid": true
+        },
+        {
+          "exitCode": 0,
+          "signalCode": null,
+          "stdoutValid": true
+        }
+      ],
+      "modelRequests": 11,
+      "modelFailures": [],
+      "hostSource": "c78da4032309d11e82c24bde6143d738a31a863701f55d7bf9b769500f11945f",
+      "traceRows": 254,
+      "traceLast": {
+        "epoch": 1,
+        "event": "trace-limit",
+        "atMs": 46034,
+        "child": null,
+        "request": null,
+        "route": null,
+        "method": null,
+        "durationMs": null,
+        "status": null,
+        "contentEncoding": null,
+        "stage": null,
+        "code": null,
+        "exitCode": null,
+        "signal": null
+      },
+      "coordination": {
+        "status": "unqualified",
+        "cleanup": null
+      },
+      "cleanup": true
+    },
+    {
+      "mode": "auto",
+      "steps": [
+        "original_host_embedded_native_and_mcp_ready",
+        "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+        "changed_project_config_did_not_retarget_running_native_session",
+        "original_uploaded_PNG_native_image_inference_and_public_readback",
+        "checkpoint_and_original_host_native_cleanup_confirmed",
+        "cold_host_restored_native_history_without_model_or_tool_replay"
+      ],
+      "hosts": [
+        {
+          "exitCode": 0,
+          "signalCode": null,
+          "stdoutValid": true
+        },
+        {
+          "exitCode": 0,
+          "signalCode": null,
+          "stdoutValid": true
+        }
+      ],
+      "modelRequests": 11,
+      "modelFailures": [],
+      "hostSource": "c78da4032309d11e82c24bde6143d738a31a863701f55d7bf9b769500f11945f",
+      "traceRows": 254,
+      "traceLast": {
+        "epoch": 1,
+        "event": "trace-limit",
+        "atMs": 45697,
+        "child": null,
+        "request": null,
+        "route": null,
+        "method": null,
+        "durationMs": null,
+        "status": null,
+        "contentEncoding": null,
+        "stage": null,
+        "code": null,
+        "exitCode": null,
+        "signal": null
+      },
+      "coordination": {
+        "status": "unqualified",
+        "cleanup": null
+      },
+      "cleanup": true
+    }
+  ],
+  "originalCustody": {
+    "kind": "TEST_WINDOWS_ORIGINAL_JOB_CUSTODY",
+    "status": "PASS",
+    "cleanup": true,
+    "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+    "platform": "win32-x64",
+    "nodeVersion": "v24.21.0",
+    "bunSha256": "095db4abae203d42f29fdec26da4a882fcde6333cdd84e40c0c7828c0cf543f6",
+    "manifestSha256": "b15576ab97dca04f002f3b07972e49290f0933e0f66c51b7332703a5b76ad628",
+    "hostBuild": {
+      "hostSourceDigest": "c78da4032309d11e82c24bde6143d738a31a863701f55d7bf9b769500f11945f",
+      "hostDistDigest": "2bf4a98b1ee3d93e2d22cca4b93e4b75349ecf0a79d67165369da6daa5fe9b07",
+      "providerDigest": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267"
+    },
+    "productQualified": false,
+    "desktopQualified": false,
+    "captureBeforeInput": true,
+    "descendantSurvivedRootExit": true,
+    "originalJobCleanup": "confirmed",
+    "neighborSurvivedTargetStop": true,
+    "neighborJobCleanup": "confirmed"
+  },
+  "limits": [
+    "Current pending-CREATE operands do not recover historical missing rootExited/ACK values.",
+    "25 named native results differ from31 complete internal phase rows.",
+    "Natural zero, negative-case codes and deliberate SIGTERM remain separate in all64 helper records.",
+    "Receipt source pins14unique/38occurrences matched exactGit; six built-output path hashes are original receipt observations, without independent rebuild/full output closure or any other-architecture claim.",
+    "Zero-job cold epochs alone are not no-replay proof; original cold/source-generation assertions and retained admitted/revoked counts are preserved.",
+    "Current readiness/standalone timing and changed TEST policy do not qualify old15-second runs.",
+    "No repository tests, compiler, provider/native process or CI action executed for this read-only artifact audit.",
+    "Original source608efb N Windows x64 manual/automatic native flow only; no transfer to other architectures or historical sources.",
+    "Controlled localhost-scripted OpenCode2.1.4, not real vendor authentication or desktop/release qualification.",
+    "The254-row passive traces end at trace-limit and are not a complete event or cleanup chronology; the physical custody and cleanup receipt assertions remain separate.",
+    "Coordination remains unqualified with cleanup:null in both original full-flow receipts.",
+    "The619-source Git CRLF digest independently matches both manual/automatic receipts; hostDist and provider equality are original harness assertions, not reviewer rebuilt output.",
+    "No tests, compilers, provider/native actors, reruns, cancellation or ref changes performed."
+  ],
+  "noProjectExecution": true,
+  "noCIAction": true,
+  "noSourceMutation": true
+}

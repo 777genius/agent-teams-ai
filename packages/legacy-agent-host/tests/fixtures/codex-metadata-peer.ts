@@ -1,7 +1,10 @@
-import { appendFileSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 
+const desktopLogin = process.env.TEST_LOGIN === 'desktop-pending';
+if (desktopLogin && JSON.stringify(process.argv.slice(2)) !== JSON.stringify(['app-server', '--listen', 'stdio://']))
+  throw new Error('TEST Desktop login peer refuses any other invocation');
 const nativeOption = (key: string) => {
   const selected = process.argv.slice(2).find((arg) => arg.startsWith(key + '='));
   return selected === undefined
@@ -13,6 +16,31 @@ if (process.env.TEST_PROBE)
     mode: 0o600,
   });
 const lines = createInterface({ input: process.stdin });
+const loginCase = process.env.TEST_LOGIN;
+const loginAccount = join(process.env.CODEX_HOME!, 'TEST-login-account.json');
+let loginId: string | undefined;
+const notifyLogin = (id: string | null, success = true) =>
+  process.stdout.write(
+    JSON.stringify({
+      jsonrpc: '2.0',
+      method: 'account/login/completed',
+      params: { loginId: id, success, error: success ? null : 'TEST-PRIVATE-NATIVE-ERROR' },
+    }) + '\n'
+  );
+const saveLogin = () => writeFileSync(loginAccount, 'true', { mode: 0o600 });
+if (loginCase) {
+  appendFileSync(
+    join(process.env.HOME!, 'TEST-login-processes.ndjson'),
+    JSON.stringify({ pid: process.pid, ...(desktopLogin ? { args: process.argv.slice(2) } : {}) }) + '\n',
+    { mode: 0o600 }
+  );
+  if (!desktopLogin) setInterval(() => {
+    if (!loginId || !existsSync(join(process.env.HOME!, 'TEST-complete-login'))) return;
+    saveLogin();
+    notifyLogin(loginId);
+    loginId = undefined;
+  }, 20).unref();
+}
 lines.on('line', (line) => {
   const message = JSON.parse(line) as {
     id?: string;
@@ -21,10 +49,14 @@ lines.on('line', (line) => {
   };
   appendFileSync(
     join(process.env.HOME!, 'TEST-wire.ndjson'),
-    JSON.stringify({ method: message.method, params: message.params }) + '\n',
+    JSON.stringify({ method: message.method, params: message.params, ...(desktopLogin ? { pid: process.pid } : {}) }) + '\n',
     { mode: 0o600 }
   );
+  if (desktopLogin && !['initialize', 'initialized', 'account/read', 'account/rateLimits/read',
+    'config/read', 'model/list', 'account/login/start', 'account/login/cancel'].includes(message.method))
+    throw new Error('TEST Desktop login peer refuses non-management operations');
   let result: unknown;
+  if (message.method === 'initialize' && loginCase === 'cancel-before-login') return;
   if (message.method === 'initialize')
     result = {
       codexHome: process.env.TEST_WRONG_NAMESPACE ? '/TEST-foreign' : process.env.CODEX_HOME,
@@ -32,7 +64,49 @@ lines.on('line', (line) => {
       platformOs: process.platform,
     };
   else if (message.method === 'initialized') return;
-  else if (process.env.TEST_PROBE && message.method === 'thread/start')
+  else if (loginCase && message.method === 'account/login/start') {
+    if (desktopLogin && (loginId !== undefined ||
+      !['chatgpt', 'chatgptDeviceCode'].includes(String(message.params?.type))))
+      throw new Error('TEST Desktop login peer requires one original browser or device authorization');
+    loginId = 'TEST-native-login-' + process.pid;
+    if (loginCase === 'overflow') {
+      for (let index = 0; index < 9; index++) notifyLogin('TEST-foreign-' + index);
+    } else {
+      notifyLogin('TEST-foreign');
+      notifyLogin(null);
+      if (loginCase === 'rejected' ||
+        (loginCase === 'rejected-then-pending' && !existsSync(join(process.env.HOME!, 'TEST-rejected-once')))) {
+        writeFileSync(join(process.env.HOME!, 'TEST-rejected-once'), 'true', { mode: 0o600 });
+        notifyLogin(loginId, false);
+      }
+      if (['early', 'wrong-account', 'reply-lost'].includes(loginCase)) {
+        if (loginCase !== 'wrong-account') saveLogin();
+        notifyLogin(loginId);
+      }
+    }
+    if (loginCase === 'reply-lost') return;
+    result =
+      message.params?.type === 'chatgptDeviceCode'
+        ? {
+            type: 'chatgptDeviceCode',
+            loginId,
+            verificationUrl: desktopLogin ? 'https://auth.openai.com/TEST-device' : 'https://example.invalid/device',
+            userCode: 'TEST-PRIVATE-CODE',
+          }
+        : {
+            type: 'chatgpt',
+            loginId,
+            authUrl: desktopLogin ? 'https://auth.openai.com/TEST-login?state=TEST-private-state' : 'https://example.invalid/login?state=TEST-private-state',
+          };
+  } else if (loginCase && message.method === 'account/login/cancel') {
+    if (message.params?.loginId !== loginId)
+      throw new Error('Fixture cancel must keep original loginId');
+    loginId = undefined;
+    result = { status: 'canceled' };
+  } else if (loginCase && message.method === 'account/logout') {
+    writeFileSync(loginAccount, 'false', { mode: 0o600 });
+    result = {};
+  } else if (process.env.TEST_PROBE && message.method === 'thread/start')
     result = {
       thread: { id: 'TEST-thread' },
       model:
@@ -77,10 +151,15 @@ lines.on('line', (line) => {
     return;
   } else if (message.method === 'account/read')
     result = {
-      account: process.env.TEST_CHATGPT
-        ? { type: 'chatgpt', email: 'test@example.invalid', planType: 'plus' }
-        : null,
+      account:
+        process.env.TEST_CHATGPT ||
+        (existsSync(loginAccount) && readFileSync(loginAccount, 'utf8') === 'true')
+          ? process.env.TEST_CODEX_0169
+            ? { type: 'chatgpt', email: null, planType: 'sci_plus', workspaceName: 'TEST-private-workspace' }
+            : { type: 'chatgpt', email: 'test@example.invalid', planType: 'plus' }
+          : null,
       requiresOpenaiAuth: true,
+      ...(process.env.TEST_CODEX_0169 ? { userId: 'TEST-private-user' } : {}),
     };
   else if (message.method === 'account/rateLimits/read')
     result = {

@@ -51,6 +51,11 @@ test('trash/restore is one original product decision; restore retains Task bytes
   const input = { commandId: 'TEST-trash', operation: 'trash', expectedRevision: current.revision };
   const receipt = f.lifecycle.execute('human', input);
   assert.equal(receipt.phase, 'completed');
+  assert.deepEqual(receipt.targets, []);
+  assert.deepEqual(receipt.runtimeBindings, []);
+  const stateBeforePresence = JSON.stringify(f.state());
+  assert.equal(f.owner.hasRetainedRuntime(), false, 'product-only pending cleanup is not native history');
+  assert.equal(JSON.stringify(f.state()), stateBeforePresence, 'presence cannot settle original cleanup');
   assert.equal(f.lifecycle.view('human').deleted, true);
   assert.equal(f.lifecycle.view('human').cleanupPending, true);
   assert.equal(JSON.parse(readFileSync(join(f.root, 'teams/TEST-team/config.json'), 'utf8')).deletedAt, receipt.after.deletedAt);
@@ -61,6 +66,13 @@ test('trash/restore is one original product decision; restore retains Task bytes
   assert.deepEqual(f.owner.connect('human').listTasks(), tasksBefore);
   assert.deepEqual(f.state().grants, grants);
   assert.equal(JSON.parse(readFileSync(join(f.root, 'teams/TEST-team/config.json'), 'utf8')).deletedAt, undefined);
+  assert.equal(f.owner.hasRetainedRuntime(), false, 'Restore retains the same empty original cleanup receipt');
+  f.store.fenced(() => f.store.write(teamCommandPath(receipt.commandId), {
+    ...receipt, captureDigest: '0'.repeat(64),
+  }));
+  assert.throws(() => f.owner.hasRetainedRuntime(), { code: 'hold' },
+    'a corrupt original cleanup receipt cannot prove product-only presence');
+  assert.equal(f.state().lifecycle!.cleanupPending, true);
 });
 test('crash after owner tombstone commit recovers original config/receipt without another product decision', t => {
   const f = fixture(t);
@@ -102,6 +114,7 @@ test('revocation preserves only the exact original trash cancellation scope, nev
   const api = f.owner.lifecycleCommands('human');
   api.execute({ commandId: 'TEST-revoked-trash', operation: 'trash', expectedRevision: api.view().revision });
   f.store.fenced(() => { const state = f.state(); state.grants[0]!.revoked = true; f.store.write('state.json', state); });
+  assert.equal(f.owner.hasRetainedRuntime(), true, 'original retained targets still require Runtime after revoke');
   assert.equal(f.owner.authorizeDeliveryIntent(intent, 'control'), true);
   assert.equal(f.owner.authorizeDeliveryIntent(intent, 'read'), true);
   assert.equal(f.owner.authorizeDeliveryIntent(intent, 'admit'), false);

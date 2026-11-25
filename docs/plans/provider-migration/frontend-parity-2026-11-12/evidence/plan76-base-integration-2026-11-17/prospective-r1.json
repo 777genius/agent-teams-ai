@@ -1,0 +1,2036 @@
+{
+  "schemaVersion": 1,
+  "plan": 76,
+  "author": "/root",
+  "decision": "PROSPECTIVE_R1_SELECTED_FOR_INDEPENDENT_R2_ONLY",
+  "sourceAfterimages": 0,
+  "planIdentity": {
+    "bytes": 12742,
+    "physicalLines": 68,
+    "gitBlob": "0b02400bac5b2ed2540bec03f9ce1ca576298862",
+    "sha256": "5438a25fc1ddcbdd5538f534a98e47daa5faaede7bc89dd2ed5cfc2f1997c1f1"
+  },
+  "anchors": {
+    "old": "def734338f13bcc3209e78079a0cedbc48f05a5b",
+    "liveBase": "301d00f46db3389ff6e3042afd04c5b064a26270",
+    "head": "3fc8054864c320c0489782cf1ab829b06dceea73"
+  },
+  "trees": {
+    "old": {
+      "sha": "845f7a051367d7413412e3d7b83013590acd29a6",
+      "leaves": 9042,
+      "directories": 1383
+    },
+    "base": {
+      "sha": "038c5405acb894fe5272df611f1e9b979f1b6745",
+      "leaves": 9086,
+      "directories": 1396
+    },
+    "head": {
+      "sha": "49b5f8337248f272fcdc98b17885130e242ad339",
+      "leaves": 11169,
+      "directories": 1713
+    }
+  },
+  "incomingCounts": {
+    "paths": 102,
+    "baseOnly": 67,
+    "bothChanged": 35,
+    "additions": 44,
+    "modifications": 58,
+    "deletions": 0
+  },
+  "inputTextBlobsVerified": 170,
+  "inputBodyManifest": {
+    "bytes": 20017,
+    "physicalLines": 0,
+    "gitBlob": "2f55bd979bddae3bd4d065b0d32bcfaedc61db25",
+    "sha256": "f81d94995254f1b04cbe393d714c3eefbe3e781530dd7d5ee6ad6a575e82b9d3"
+  },
+  "incomingTuples": [
+    {
+      "path": ".gitignore",
+      "kind": "both-changed",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e9dbcbf74f1b56a852e90a9ab1171bee7d3f958f"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ab489752eaac245bb51ad430ad8c748fe70efeb7"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "777569b186effad3a2bcbcb09cd770180c8c5e2c"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/package.json",
+      "kind": "both-changed",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "063d101c59bbdcc9a6bb9d9961d12b468a5a944b"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "68e238d351ba5579df9af2f9a95a6a74e818c8b2"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "72bcb2ef993c43e8f5199b090ee3df8440d758b9"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/ClaudeMemberProvider.ts",
+      "kind": "both-changed",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "8abff59c53f971272e48c48db1c6523f97c297be"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "38522ef257fd1707ff0e5a0ccda5bc97375fe353"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a2158e62d439c0ee0b29ffd28df64cf848cee99f"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts",
+      "kind": "both-changed",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c486cd5130baa3f3d2c889f223e847a77fc40e2d"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "29605ca2395f0af234617b83bc6cc12c69fef159"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "167e9748a1ff8f39ee73e4cfaf2e08d7f7a34a51"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/MemberProvider.ts",
+      "kind": "both-changed",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "6c3f4b02101544619ab9fad7d98f494d2c7c070e"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "d89c8ee6961d0922d9c47efb011bae0fb83ae4a8"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "1fc098d27f67825b7cf48318329d1a809e41e1f4"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/src/cli.ts",
+      "kind": "base-only",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "255c0952a3a58e511c7bd790b1b34dd0d1330393"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ed2b6f201a74c19800d0570977f36258e2c64cc8"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "255c0952a3a58e511c7bd790b1b34dd0d1330393"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts",
+      "kind": "both-changed",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "31c7eab1b5db7e78b975c96d55312296382bd08d"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "982a9903105430b2906f5b9316cf96513c4fd114"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0f5e2258b2af33c55673aa0fdc4c660e3629e784"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/TeamHost.ts",
+      "kind": "both-changed",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "aeb48a5573d50c266115867875667cbaa853ccca"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ad9dcdd1ef34bf04450d0aef24c1ca71b0378cf9"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "6145e95c323207893e55b20daf1fa2e74e0cee97"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+      "kind": "both-changed",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "733d5cff8e132a566fe7e99cb476ee38942b9a18"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "5a0107c04bcb9b1af26ea24df00da641ace55bd7"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ff8389cb7c44d3116c17a9826f1daf9c17551c7d"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/executeCapturedRuntimeControl.ts",
+      "kind": "both-changed",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9ddf4c26833061e40bff59010b01972bff8d4059"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "29ddb0cab858655b6ca30a90b32d4e9998a8df0b"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "76a6cc219ac606a44e9b26f0198be85096f6a34a"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/runtimeControlValues.ts",
+      "kind": "base-only",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2415f5141bd1607f9b6d0ef938c1ff9ec8cab6a4"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "8301805145a53fa205f676f8657c37c018a51747"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2415f5141bd1607f9b6d0ef938c1ff9ec8cab6a4"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/src/team/TeamDeliveryAuthority.ts",
+      "kind": "both-changed",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "aa43ff4bd83f0f1c70fe1f547a727a6697179d8e"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "986976c1ce92c85c41468a8b89444f86de91eecb"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "fe83bc67a4cbaf4f97175f29b8ce04564ea309ab"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/src/team/TeamOwner.ts",
+      "kind": "both-changed",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9f8a1cb399906d95a1faf34f0e6f7308ba682b03"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "eb405d4b29a185932bc90af4a2ddf874c52b0241"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "d00e6006bab718d7ed27e21db87ee1c2773a9858"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts",
+      "kind": "base-only",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "11d49084acac8195e7e84b1962ec271fbba8cba6"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "7bd361956a65caf622bc3483769189fac34e3436"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "11d49084acac8195e7e84b1962ec271fbba8cba6"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-codex-team/driver.ts",
+      "kind": "base-only",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "fb93be67d913118c822b600b2efc4556c6f7aa25"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "fe7b8efdf0926b4345f222e9d6331c13a2a826f5"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "fb93be67d913118c822b600b2efc4556c6f7aa25"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts",
+      "kind": "base-only",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "7f9ea9b1ac8804ece51735e23f169ea4db86f97e"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "65e1110cf1cc2436046a0eb61859739b2529bc2e"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "7f9ea9b1ac8804ece51735e23f169ea4db86f97e"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-host.ts",
+      "kind": "both-changed",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "429d9dbcfe93733647aacd4da6973e3f2f07631b"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "bfa5398536f7471081734e5562ce4c71f0a6e4aa"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "bea17f976f5db7e9d6b471751ff7d871cd8ebcd5"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/native-codex-team.native.ts",
+      "kind": "both-changed",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "23fac76661c04db7514e5f7cb5cb7f0fefe89ab9"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "8842db9c236cee3d105088547b4d2544b4d342e9"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0b179a8b5fcf089de2f42dd90f8eef9a9160b992"
+      }
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "kind": "both-changed",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "1d2de1cff41f77932e3fbc6e88a3c4cfdb697cb7"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "97175acfcee148b4c94fa25896c41b683a7bdee2"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b709c1ecdf6a29532ebaefca35b75ed44b2428af"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+      "kind": "both-changed",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "fbb1629ec8611d7eef2408d3f18c8f24f92f439b"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "6fcbf60efb1e5c6a65b5ffeca9046c6cb3970c5d"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "495118ecb0d895dcc87f5782f8a4b0ccd35d3587"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+      "kind": "both-changed",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "14b396fe37c201b848dd89a9babc3b05c3087124"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "8b0dcf9ec1e698187a7bb7a05231478d881f353c"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ed93d7422ab7a846a568a2b72437ec75931ba03b"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "kind": "both-changed",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "acb8b89285d17c647145f524df7d6a677d16933a"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4727b990b56f662b9d0e2c920786d39ddc2b5206"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9c724c3895e467bc1db062e5015ded70c30e65e4"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+      "kind": "both-changed",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "11915e0d9fd425620b8c975901bd4dc65e6b8f27"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "db1ea24052e029bc934f2294832f70206ce5153d"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "865494ab5f5e45c5158fbf74ac858987fb322608"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-composer-ui-smoke.ts",
+      "kind": "base-only",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "6f82097909474e95a34608338753251cb9c087c2"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "d4e04c55adc2ef44500832922d956ece50eb0928"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "6f82097909474e95a34608338753251cb9c087c2"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-mode.ts",
+      "kind": "both-changed",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "682c625a67cc83e47c867bdfa0bd6823e076302d"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "57764638397c18667bccee73a2c913f4fdcef64d"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e2e7029c56de6343eb4ad2a2395044efd009ae0b"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-sources.ts",
+      "kind": "both-changed",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c342769de51939b1ca67e0c99908fc0fef3ed6b4"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "45e30ebeafcfc495635185de77e6297989a3f7fb"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a8be2617b2c765091cecce789f028ef2bf67af60"
+      }
+    },
+    {
+      "path": "src/features/agent-backend/contracts/operations.ts",
+      "kind": "both-changed",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "31db672efac0bf96cbb00bb8a8b3a319afd17023"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "28026c05349ce67660a0b0f9b7e3beb9625d70f5"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "788c1ff6bb4a2a737c0a8d1399ffd43e134e6a38"
+      }
+    },
+    {
+      "path": "src/features/agent-backend/main/adapters/input/runtimeOperationValues.ts",
+      "kind": "base-only",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "8a88898521625495586e399defda1c6c121f402d"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "812fd0774e77931648be54c072db5fff26c3e6cc"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "8a88898521625495586e399defda1c6c121f402d"
+      }
+    },
+    {
+      "path": "src/features/agent-backend/main/adapters/output/projectBackendResult.ts",
+      "kind": "both-changed",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "87ca79e7a3d0d1bc219ad79385f231f2ffe4dd0b"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "09e82cb2296eafcf7b762a8e5da9c9ea5b0e4bc4"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "dbeb14ba7d4a0de1ae97662e74d2929a51f9106c"
+      }
+    },
+    {
+      "path": "src/features/agent-backend/main/composition/DesktopBackendFeature.ts",
+      "kind": "both-changed",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "86d3761e741c0c210485365112f49dbfda7f907b"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "aa5ffd7aed64a77074f6f74d44cd063934ffde18"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ecde3d53f56e879a52abd7312e646c9497bff106"
+      }
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/CapturedHostClient.ts",
+      "kind": "both-changed",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "55ba1f24741dd9acc5fcd3e92b2cc2d58325c615"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0c0420c708a948954f95a976510586f659bca05a"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c4389ac113de03138fd6a9b4b0c6070fb2f06d86"
+      }
+    },
+    {
+      "path": "src/features/agent-backend/renderer/createHostTeamsApi.ts",
+      "kind": "both-changed",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c69c98f1ab47b5a118225fb30fa23e7df3d653f6"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "8741afc519cc189f54575c74ec564b49e520488c"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "506b1c56e2fda091040c1864ed3b3b1258208543"
+      }
+    },
+    {
+      "path": "src/features/localization/renderer/locales/en/settings.json",
+      "kind": "base-only",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "1939c512975b255126cf385b89e09361fd103d04"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f96cc2b6bb33c40fd7a6a941462f9501fecfe113"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "1939c512975b255126cf385b89e09361fd103d04"
+      }
+    },
+    {
+      "path": "src/features/localization/renderer/locales/en/team.json",
+      "kind": "both-changed",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4af842a88121c56738bbf5f5eaf9942c75748611"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "283fac1ccf6b8f9eb23f4433f43e60934260aae0"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "8f11205931a67a90e14c312811953509988fbf18"
+      }
+    },
+    {
+      "path": "src/features/localization/renderer/locales/ru/settings.json",
+      "kind": "base-only",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "caff2baf89c104b2cb34d7acc1ab06030367d9ea"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "bdddd7e92afc76504cbc133c1f236251d381266d"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "caff2baf89c104b2cb34d7acc1ab06030367d9ea"
+      }
+    },
+    {
+      "path": "src/features/localization/renderer/locales/ru/team.json",
+      "kind": "both-changed",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "6c962718268acf8796b8e44c969be13b73d96d62"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "121e04f16e1a614821ad44703bc5d1c48e96b92a"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "d05a9c3b8088a089a59a55bf02a4575b1033dc8a"
+      }
+    },
+    {
+      "path": "src/features/localization/renderer/locales/uk/settings.json",
+      "kind": "base-only",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2acc44b794f133d17955891584b1529eb84ca855"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f856b6d05b71af5dacd86cb1c891110e6869bdc2"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2acc44b794f133d17955891584b1529eb84ca855"
+      }
+    },
+    {
+      "path": "src/features/localization/renderer/locales/uk/team.json",
+      "kind": "both-changed",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "8d8247fe5e256be29ed35d0ff634770f0ee10e7f"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "af33ba1f2f77f369682ef75a247c842828773bcf"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e8f1b448383482bb2cec5bf2c948bc433d4f55dc"
+      }
+    },
+    {
+      "path": "src/features/localization/renderer/resources.d.ts",
+      "kind": "both-changed",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "3220d7556e8e8287da0bf60b8af8be4da52ada24"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e1080869cbb24189ed273b74a987b750a40916b1"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "129d05e2374aacdb365c9b8de50de101cb95d8a6"
+      }
+    },
+    {
+      "path": "src/main/index.ts",
+      "kind": "base-only",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "6ac0ff69ee9fce5be4b4de185b0355bdda469462"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9f0d0d75b25e7a15f185ec8b51fa747d99def240"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "6ac0ff69ee9fce5be4b4de185b0355bdda469462"
+      }
+    },
+    {
+      "path": "src/main/ipc/agentBackend.ts",
+      "kind": "base-only",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "084739af2f190dd10565b41f76f592a7b49ea36a"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "3a6f138e2c2e271b0464ad216124778d79f58c8b"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "084739af2f190dd10565b41f76f592a7b49ea36a"
+      }
+    },
+    {
+      "path": "src/main/ipc/configValidation.ts",
+      "kind": "base-only",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "db88672ac9135062640be2f98364d0ef9aa8ff89"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "df249ef8282b30268d876d2a3487e7ce5fd1a39c"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "db88672ac9135062640be2f98364d0ef9aa8ff89"
+      }
+    },
+    {
+      "path": "src/main/ipc/handlers.ts",
+      "kind": "base-only",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "71dbd147d41f9c59df856c078d139e070eb3a665"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "dc4c9a1cd9fd5a9c43b5c48805b242de83d321ef"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "71dbd147d41f9c59df856c078d139e070eb3a665"
+      }
+    },
+    {
+      "path": "src/main/services/infrastructure/ConfigManager.ts",
+      "kind": "base-only",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c82abd7bc8ce92c8a82e48ea01af686a5759c475"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c6a44b41a37c2ef819aad6ec3179e2f91a1b8d45"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c82abd7bc8ce92c8a82e48ea01af686a5759c475"
+      }
+    },
+    {
+      "path": "src/preload/index.ts",
+      "kind": "base-only",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "5e976c46991bac5ede80f4148a4328e6dccfd001"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ce9b8d04996aa26addbc74493a0dd8a0644d8294"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "5e976c46991bac5ede80f4148a4328e6dccfd001"
+      }
+    },
+    {
+      "path": "src/renderer/api/httpClient.ts",
+      "kind": "base-only",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "16f8394f6c18c561d3daa1858afd96d987ec74a7"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "862936a32ec1bc8f3f5f58f59cf3337f4ae86175"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "16f8394f6c18c561d3daa1858afd96d987ec74a7"
+      }
+    },
+    {
+      "path": "src/renderer/components/settings/components/SettingsToggle.tsx",
+      "kind": "base-only",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "1af5117971c1e89d27c90f10d8a8e5524b7af228"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "347848d6d8a515b7d488870297e45ebb9ed24b1f"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "1af5117971c1e89d27c90f10d8a8e5524b7af228"
+      }
+    },
+    {
+      "path": "src/renderer/components/settings/hooks/useSettingsConfig.ts",
+      "kind": "base-only",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a3cfd279697d68a78aba55414ab305d7906cd427"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f68e9e71ffaf3f6e07e2fc1b208433723d568f8a"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a3cfd279697d68a78aba55414ab305d7906cd427"
+      }
+    },
+    {
+      "path": "src/renderer/components/settings/sections/GeneralSection.tsx",
+      "kind": "base-only",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2f43d9d75c98472d9ad2c8ce678f934993d9be65"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "5611eaf498b1ae691a5d9f4e3af63093a16d13b2"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2f43d9d75c98472d9ad2c8ce678f934993d9be65"
+      }
+    },
+    {
+      "path": "src/renderer/components/team/messages/MessageComposer.tsx",
+      "kind": "base-only",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "be2e439b2483c3aaeda2f4a11fc698ac4517ce80"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "d28edae4bf4bd6b37cb597bf7f595ff6dcfdfa36"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "be2e439b2483c3aaeda2f4a11fc698ac4517ce80"
+      }
+    },
+    {
+      "path": "src/renderer/components/ui/MentionableTextarea.tsx",
+      "kind": "both-changed",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "d35f05006fed50a3e4e4694e8289e5062451fb8d"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "6ab638971768f5fba99ab544e5c1f18f60fd00e9"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "17de0f929ba013629b6a94a36688f705147673d4"
+      }
+    },
+    {
+      "path": "src/shared/types/api.ts",
+      "kind": "both-changed",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2755fe3b7adf82cbb4da2f3172d2ec3c670b5e57"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b22506c9a8bdf32bc5caf03333abf5ec2ce81225"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "8927959700ad3b58b1f59e27e6d00789c42aab92"
+      }
+    },
+    {
+      "path": "src/shared/types/notifications.ts",
+      "kind": "base-only",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "3cdb506a6dfd89dd431514ce46e502cc3090c13e"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "344a1a1643eae270cf71ee60d1538e2eec670b49"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "3cdb506a6dfd89dd431514ce46e502cc3090c13e"
+      }
+    },
+    {
+      "path": "src/shared/types/team.ts",
+      "kind": "both-changed",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f7fbf294b6ddf4a5426468948e5532926a3b52d9"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "95f318ecde2d5540bbeb9b7f4f3c046ed47a6156"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "08d705482a123a98f6b2d554c5e10d15780b9f68"
+      }
+    },
+    {
+      "path": "test/features/agent-backend/runtimeActivityFacade.test.ts",
+      "kind": "both-changed",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "1d4234277f3cc2a6f096e4c1ced16d41ef3b1269"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a904b1c26ad0df34f51fa5b4f284c4adc2d0f442"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "8aef5576630d01c091f1514bd2896ef415130d13"
+      }
+    },
+    {
+      "path": "test/renderer/components/settings/NotificationsRecoverySettings.test.tsx",
+      "kind": "base-only",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e732d7c871314eae654d3b333999c93e78b14d4b"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4c003fbaa7603b2fae5c0eea0249ea59e97f4295"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e732d7c871314eae654d3b333999c93e78b14d4b"
+      }
+    },
+    {
+      "path": "test/workflows/runSupersession.mts",
+      "kind": "both-changed",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "aa5c7c1c5233cc8dc6efede81caa98ddbf9dce6e"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "5a68f39ad9c7aa29f0bc9744db2d083981c0012f"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "958006e504fa87e9b6a1cfc738929f77fbee7d74"
+      }
+    },
+    {
+      "path": "tsconfig.legacy-agent-host-scripts.json",
+      "kind": "both-changed",
+      "old": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "cc479baf31482568a34f7ec4971f45070437777d"
+      },
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f7d94d78e4f61e48cdc6738377f0115e06527860"
+      },
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "538fdfe23d7aa6bac6f18a483d5d364aef644a39"
+      }
+    },
+    {
+      "path": ".github/workflows/native-prompt-suggestions-host.yml",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "6ce6165679aa52148ff8faca0f9e3ad16b62c690"
+      },
+      "head": null
+    },
+    {
+      "path": ".github/workflows/native-prompt-suggestions-vendor-once.yml",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "8e0a122bf28b77104e53e24f13afd9f20af8efd5"
+      },
+      "head": null
+    },
+    {
+      "path": "docs/plans/provider-migration/native-prompt-suggestions-consumer-2026-11-14.md",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "93cc9266a8b0b5dddc073ab7001140187fac7e20"
+      },
+      "head": null
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/checkCapturedPromptOperation.ts",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "33b5495bbce5daa1315239bb990f52dd05ebcb82"
+      },
+      "head": null
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/createCapturedPromptSuggestionBinding.ts",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "bdb1945768fea646c824c885995d2a9f1be51f28"
+      },
+      "head": null
+    },
+    {
+      "path": "packages/legacy-agent-host/src/team/verifiedHumanDirectSuggestionSource.ts",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "fac0bb146909374570920f5dd35309eb95ec1f38"
+      },
+      "head": null
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-codex-team/suggestion-config.ts",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2fcd01e72a0c8fa887e16d4637ed865c30291913"
+      },
+      "head": null
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-codex-team/suggestion-model.ts",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ccec1f01eab1525c1b1840785d9b4d5fcdc18af9"
+      },
+      "head": null
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/native-prompt-suggestions-binding.test.ts",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "33d2df3b870823a632c4b595939d162ec77602f3"
+      },
+      "head": null
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/native-prompt-suggestions-codex-host.native.ts",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "390d08efef186bc6999de39d147726aac4390197"
+      },
+      "head": null
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/native-prompt-suggestions-host.native.ts",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b23661abf4d205be415daba642d03c0e2d952c41"
+      },
+      "head": null
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/team/verifiedHumanDirectSuggestionSource.test.ts",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ccd04fdd8fd7056939f2d2e0fbdaecd8c7da96f3"
+      },
+      "head": null
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-next-prompt-edit-guards-ui.ts",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "788538685b9a65ae6be760499d7243c0fc14d84c"
+      },
+      "head": null
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-next-prompt-mixed-fixture.ts",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "88ec37055348a0afb32d9a721e9329c9744612e9"
+      },
+      "head": null
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-next-prompt-mixed-ui.ts",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "be964869f632f0bccad9c8d7b4de51dee6d0f6ff"
+      },
+      "head": null
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-next-prompt-sources.ts",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9c1472f6e111af15c4e31bca86519885b946c987"
+      },
+      "head": null
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-next-prompt-ui.ts",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e68665d84b1ca523ba4dd789bf7259ae61b0df99"
+      },
+      "head": null
+    },
+    {
+      "path": "scripts/legacy-agent-host/verify-native-suggestions-adopted-pin.mts",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a12e61d506823991b91ae70c5e7e0344ca8052f4"
+      },
+      "head": null
+    },
+    {
+      "path": "src/features/native-prompt-suggestions/README.md",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ddc1a077dffd11f2b2ea85b6dffaf894d920a1fe"
+      },
+      "head": null
+    },
+    {
+      "path": "src/features/native-prompt-suggestions/contracts/channel.ts",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e984cdc71ccd724b0a51c24edf9161f2e52a32fd"
+      },
+      "head": null
+    },
+    {
+      "path": "src/features/native-prompt-suggestions/contracts/index.ts",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "cea63a6f93c40db7fbf4fc6bf18af8904c381453"
+      },
+      "head": null
+    },
+    {
+      "path": "src/features/native-prompt-suggestions/core/domain/ownerHandle.ts",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2dd52d1f635981334e49e85f6c5eb63179cc73ef"
+      },
+      "head": null
+    },
+    {
+      "path": "src/features/native-prompt-suggestions/core/domain/policy.ts",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "51a8ca1f003497da88968553676d318b8c833536"
+      },
+      "head": null
+    },
+    {
+      "path": "src/features/native-prompt-suggestions/main/index.ts",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2786b1a99a454678b3abd9087944359ed322dca4"
+      },
+      "head": null
+    },
+    {
+      "path": "src/features/native-prompt-suggestions/main/projectHostPromptSuggestion.ts",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "09c7f6cd8f874f022d01a758d513901eb4166de9"
+      },
+      "head": null
+    },
+    {
+      "path": "src/features/native-prompt-suggestions/preload/createNativeNextPromptBridge.ts",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "883d19979a56388b351100df73c26192e220cd60"
+      },
+      "head": null
+    },
+    {
+      "path": "src/features/native-prompt-suggestions/preload/index.ts",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "5e9019dd0d17d4938564f1568ae114b9715443e3"
+      },
+      "head": null
+    },
+    {
+      "path": "src/features/native-prompt-suggestions/renderer/hooks/useComposerNativeNextPrompt.tsx",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2435ad2154d6a631976c61b8982f1b517189356f"
+      },
+      "head": null
+    },
+    {
+      "path": "src/features/native-prompt-suggestions/renderer/hooks/useNativeNextPrompt.ts",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a4f9839568948cfafc62ee4fddb0fe6e4458edc8"
+      },
+      "head": null
+    },
+    {
+      "path": "src/features/native-prompt-suggestions/renderer/hooks/verifyCurrentNativeSuggestion.ts",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "8c34174e718ec81a0960581a836859686a9dc758"
+      },
+      "head": null
+    },
+    {
+      "path": "src/features/native-prompt-suggestions/renderer/index.ts",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "14ae005f55cdec39f8a88d04f5950b46568f4088"
+      },
+      "head": null
+    },
+    {
+      "path": "src/features/native-prompt-suggestions/renderer/ui/NativeNextPromptRow.tsx",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "49134f5c297e58fbf746cc476658a522feeda029"
+      },
+      "head": null
+    },
+    {
+      "path": "src/renderer/components/team/messages/useFileRestrictionNotice.ts",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2b2c2ac7d67eb3583a7c7744eb47850cf28bda53"
+      },
+      "head": null
+    },
+    {
+      "path": "src/renderer/components/ui/mentionableSegments.ts",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "107e093413ecdcb01c5f6d62d9bec2af9a62ffed"
+      },
+      "head": null
+    },
+    {
+      "path": "test/features/native-prompt-suggestions/hostRuntimeReadOperation.test.ts",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b87e7ac68c7f1ac6206cdcf3b22a305ec81c3587"
+      },
+      "head": null
+    },
+    {
+      "path": "test/features/native-prompt-suggestions/nativeNextPromptHook.test.tsx",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "fcce2044c2faac242c12dbb523b7d9a98302b3b7"
+      },
+      "head": null
+    },
+    {
+      "path": "test/features/native-prompt-suggestions/nativeNextPromptPolicy.test.ts",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "436fe77873d67da3d484eaf9957e35e9fe58b4e2"
+      },
+      "head": null
+    },
+    {
+      "path": "test/features/native-prompt-suggestions/nativeNextPromptSettings.test.ts",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "d0f505085b7d8129aaf59b63a3dfcc020c1bc315"
+      },
+      "head": null
+    },
+    {
+      "path": "test/features/native-prompt-suggestions/projectHostPromptSuggestion.test.ts",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "6995c0638a7796976fb58ceb914b2a4b2d5651bd"
+      },
+      "head": null
+    },
+    {
+      "path": "test/features/native-prompt-suggestions/verifyCurrentNativeSuggestion.test.ts",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "7ff1aefb99f790824b726b8b01d90cf77779ea19"
+      },
+      "head": null
+    },
+    {
+      "path": "vendor/provider-migration/native-prompt-suggestions-18a1c276/agent-teams-provider-implementations-0.0.0.tgz",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "efd2ad9ecf49858564d99fe4c1ac45add21b6e55"
+      },
+      "head": null
+    },
+    {
+      "path": "vendor/provider-migration/native-prompt-suggestions-18a1c276/source-receipt.json",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "38fad10f15470ec3d2d566f5b5b0c701a04575c1"
+      },
+      "head": null
+    },
+    {
+      "path": "vendor/provider-migration/native-prompt-suggestions-74991c21/agent-teams-provider-implementations-0.0.0.tgz",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "37144bb9ea187787bcc29b38b1382d68c279fdf8"
+      },
+      "head": null
+    },
+    {
+      "path": "vendor/provider-migration/native-prompt-suggestions-74991c21/source-receipt.json",
+      "kind": "base-only",
+      "old": null,
+      "base": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "8c552bf4a3ff4c49b19a644d1be9b0b8aa729c70"
+      },
+      "head": null
+    }
+  ],
+  "extraPaths": [
+    {
+      "path": "packages/legacy-agent-host/src/composition/teamHostProfile.ts",
+      "head": null,
+      "identity": null
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/CapturedHostNotificationBuffer.ts",
+      "head": null,
+      "identity": null
+    },
+    {
+      "path": "src/features/agent-backend/main/composition/captureHostPromptSuggestions.ts",
+      "head": null,
+      "identity": null
+    },
+    {
+      "path": "src/features/agent-backend/main/composition/recoverCapturedHost.ts",
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "91a5862903f8a32c067ae0cff00eb166ed7eff62"
+      },
+      "identity": {
+        "bytes": 3835,
+        "physicalLines": 76,
+        "gitBlob": "91a5862903f8a32c067ae0cff00eb166ed7eff62",
+        "sha256": "d6aa188569187aba0eb0182828f89b220152b9af458eb3ffdfa258fd5e299566"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "141fc6641b6084c6f3ea6932e4eb728137debcc5"
+      },
+      "identity": {
+        "bytes": 23054,
+        "physicalLines": 354,
+        "gitBlob": "141fc6641b6084c6f3ea6932e4eb728137debcc5",
+        "sha256": "3d045b160687a2c41aab42990d27501d931cb447fd1911fe561d2422117e0aa6"
+      }
+    },
+    {
+      "path": "test/features/agent-backend/capturedHostClient.test.ts",
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "272e7c3f6ca10d890148fa16080464b395535125"
+      },
+      "identity": {
+        "bytes": 52301,
+        "physicalLines": 1046,
+        "gitBlob": "272e7c3f6ca10d890148fa16080464b395535125",
+        "sha256": "a974eadfc088aa488412b34840a138ef4187e5382592b19493af4a4eeb66d86f"
+      }
+    },
+    {
+      "path": "test/features/agent-backend/desktopBackendFeature.test.ts",
+      "head": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "1bd21c24852ebfade85b23b425342e6665f447e7"
+      },
+      "identity": {
+        "bytes": 56748,
+        "physicalLines": 1121,
+        "gitBlob": "1bd21c24852ebfade85b23b425342e6665f447e7",
+        "sha256": "a6540bd6c68165b7b0d782768cc7303d00cb609083df4baacdaad81d51e3f810"
+      }
+    },
+    {
+      "path": "test/features/agent-backend/recoverCapturedHost.test.ts",
+      "head": null,
+      "identity": null
+    }
+  ],
+  "selectedChangedPaths": [
+    ".github/workflows/native-prompt-suggestions-host.yml",
+    ".github/workflows/native-prompt-suggestions-vendor-once.yml",
+    ".gitignore",
+    "docs/plans/provider-migration/native-prompt-suggestions-consumer-2026-11-14.md",
+    "packages/legacy-agent-host/package.json",
+    "packages/legacy-agent-host/src/adapters/providers/ClaudeMemberProvider.ts",
+    "packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts",
+    "packages/legacy-agent-host/src/adapters/providers/MemberProvider.ts",
+    "packages/legacy-agent-host/src/cli.ts",
+    "packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts",
+    "packages/legacy-agent-host/src/composition/TeamHost.ts",
+    "packages/legacy-agent-host/src/composition/checkCapturedPromptOperation.ts",
+    "packages/legacy-agent-host/src/composition/createCapturedPromptSuggestionBinding.ts",
+    "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+    "packages/legacy-agent-host/src/composition/executeCapturedRuntimeControl.ts",
+    "packages/legacy-agent-host/src/composition/runtimeControlValues.ts",
+    "packages/legacy-agent-host/src/composition/teamHostProfile.ts",
+    "packages/legacy-agent-host/src/team/TeamDeliveryAuthority.ts",
+    "packages/legacy-agent-host/src/team/TeamOwner.ts",
+    "packages/legacy-agent-host/src/team/verifiedHumanDirectSuggestionSource.ts",
+    "packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts",
+    "packages/legacy-agent-host/tests/fixtures/native-codex-team/driver.ts",
+    "packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts",
+    "packages/legacy-agent-host/tests/fixtures/native-codex-team/suggestion-config.ts",
+    "packages/legacy-agent-host/tests/fixtures/native-codex-team/suggestion-model.ts",
+    "packages/legacy-agent-host/tests/fixtures/native-host.ts",
+    "packages/legacy-agent-host/tests/native-codex-team.native.ts",
+    "packages/legacy-agent-host/tests/native-prompt-suggestions-binding.test.ts",
+    "packages/legacy-agent-host/tests/native-prompt-suggestions-codex-host.native.ts",
+    "packages/legacy-agent-host/tests/native-prompt-suggestions-host.native.ts",
+    "packages/legacy-agent-host/tests/team/verifiedHumanDirectSuggestionSource.test.ts",
+    "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+    "scripts/legacy-agent-host/desktop-backend-observations.ts",
+    "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+    "scripts/legacy-agent-host/desktop-captured-app.ts",
+    "scripts/legacy-agent-host/desktop-composer-ui-smoke.ts",
+    "scripts/legacy-agent-host/desktop-native-next-prompt-edit-guards-ui.ts",
+    "scripts/legacy-agent-host/desktop-native-next-prompt-mixed-fixture.ts",
+    "scripts/legacy-agent-host/desktop-native-next-prompt-mixed-ui.ts",
+    "scripts/legacy-agent-host/desktop-native-next-prompt-sources.ts",
+    "scripts/legacy-agent-host/desktop-native-next-prompt-ui.ts",
+    "scripts/legacy-agent-host/desktop-proof-mode.ts",
+    "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+    "scripts/legacy-agent-host/verify-native-suggestions-adopted-pin.mts",
+    "src/features/agent-backend/contracts/operations.ts",
+    "src/features/agent-backend/main/adapters/input/runtimeOperationValues.ts",
+    "src/features/agent-backend/main/adapters/output/projectBackendResult.ts",
+    "src/features/agent-backend/main/composition/DesktopBackendFeature.ts",
+    "src/features/agent-backend/main/composition/captureHostPromptSuggestions.ts",
+    "src/features/agent-backend/main/composition/recoverCapturedHost.ts",
+    "src/features/agent-backend/main/infrastructure/CapturedHostClient.ts",
+    "src/features/agent-backend/main/infrastructure/CapturedHostNotificationBuffer.ts",
+    "src/features/agent-backend/renderer/createHostTeamsApi.ts",
+    "src/features/localization/renderer/locales/en/settings.json",
+    "src/features/localization/renderer/locales/en/team.json",
+    "src/features/localization/renderer/locales/ru/settings.json",
+    "src/features/localization/renderer/locales/ru/team.json",
+    "src/features/localization/renderer/locales/uk/settings.json",
+    "src/features/localization/renderer/locales/uk/team.json",
+    "src/features/localization/renderer/resources.d.ts",
+    "src/features/native-prompt-suggestions/README.md",
+    "src/features/native-prompt-suggestions/contracts/channel.ts",
+    "src/features/native-prompt-suggestions/contracts/index.ts",
+    "src/features/native-prompt-suggestions/core/domain/ownerHandle.ts",
+    "src/features/native-prompt-suggestions/core/domain/policy.ts",
+    "src/features/native-prompt-suggestions/main/index.ts",
+    "src/features/native-prompt-suggestions/main/projectHostPromptSuggestion.ts",
+    "src/features/native-prompt-suggestions/preload/createNativeNextPromptBridge.ts",
+    "src/features/native-prompt-suggestions/preload/index.ts",
+    "src/features/native-prompt-suggestions/renderer/hooks/useComposerNativeNextPrompt.tsx",
+    "src/features/native-prompt-suggestions/renderer/hooks/useNativeNextPrompt.ts",
+    "src/features/native-prompt-suggestions/renderer/hooks/verifyCurrentNativeSuggestion.ts",
+    "src/features/native-prompt-suggestions/renderer/index.ts",
+    "src/features/native-prompt-suggestions/renderer/ui/NativeNextPromptRow.tsx",
+    "src/main/index.ts",
+    "src/main/ipc/agentBackend.ts",
+    "src/main/ipc/configValidation.ts",
+    "src/main/ipc/handlers.ts",
+    "src/main/services/infrastructure/ConfigManager.ts",
+    "src/preload/index.ts",
+    "src/renderer/api/httpClient.ts",
+    "src/renderer/components/settings/components/SettingsToggle.tsx",
+    "src/renderer/components/settings/hooks/useSettingsConfig.ts",
+    "src/renderer/components/settings/sections/GeneralSection.tsx",
+    "src/renderer/components/team/messages/MessageComposer.tsx",
+    "src/renderer/components/team/messages/useFileRestrictionNotice.ts",
+    "src/renderer/components/ui/MentionableTextarea.tsx",
+    "src/renderer/components/ui/mentionableSegments.ts",
+    "src/shared/types/api.ts",
+    "src/shared/types/notifications.ts",
+    "src/shared/types/team.ts",
+    "test/features/agent-backend/capturedHostClient.test.ts",
+    "test/features/agent-backend/desktopBackendFeature.test.ts",
+    "test/features/agent-backend/recoverCapturedHost.test.ts",
+    "test/features/agent-backend/runtimeActivityFacade.test.ts",
+    "test/features/native-prompt-suggestions/hostRuntimeReadOperation.test.ts",
+    "test/features/native-prompt-suggestions/nativeNextPromptHook.test.tsx",
+    "test/features/native-prompt-suggestions/nativeNextPromptPolicy.test.ts",
+    "test/features/native-prompt-suggestions/nativeNextPromptSettings.test.ts",
+    "test/features/native-prompt-suggestions/projectHostPromptSuggestion.test.ts",
+    "test/features/native-prompt-suggestions/verifyCurrentNativeSuggestion.test.ts",
+    "test/renderer/components/settings/NotificationsRecoverySettings.test.tsx",
+    "test/workflows/runSupersession.mts",
+    "tsconfig.legacy-agent-host-scripts.json",
+    "vendor/provider-migration/native-prompt-suggestions-18a1c276/agent-teams-provider-implementations-0.0.0.tgz",
+    "vendor/provider-migration/native-prompt-suggestions-18a1c276/source-receipt.json",
+    "vendor/provider-migration/native-prompt-suggestions-74991c21/agent-teams-provider-implementations-0.0.0.tgz",
+    "vendor/provider-migration/native-prompt-suggestions-74991c21/source-receipt.json"
+  ],
+  "selectedCounts": {
+    "paths": 108,
+    "additions": 48,
+    "modifications": 60
+  },
+  "headExactExceptions": [
+    {
+      "path": "pnpm-lock.yaml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b709c1ecdf6a29532ebaefca35b75ed44b2428af"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-sources.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a8be2617b2c765091cecce789f028ef2bf67af60"
+    }
+  ],
+  "baseExactBodies": [
+    "packages/legacy-agent-host/src/cli.ts",
+    "packages/legacy-agent-host/src/composition/runtimeControlValues.ts",
+    "packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts",
+    "packages/legacy-agent-host/tests/fixtures/native-codex-team/driver.ts",
+    "packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts",
+    "scripts/legacy-agent-host/desktop-composer-ui-smoke.ts",
+    "src/features/agent-backend/main/adapters/input/runtimeOperationValues.ts",
+    "src/features/localization/renderer/locales/en/settings.json",
+    "src/features/localization/renderer/locales/ru/settings.json",
+    "src/features/localization/renderer/locales/uk/settings.json",
+    "src/main/index.ts",
+    "src/main/ipc/agentBackend.ts",
+    "src/main/ipc/configValidation.ts",
+    "src/main/ipc/handlers.ts",
+    "src/main/services/infrastructure/ConfigManager.ts",
+    "src/preload/index.ts",
+    "src/renderer/api/httpClient.ts",
+    "src/renderer/components/settings/components/SettingsToggle.tsx",
+    "src/renderer/components/settings/hooks/useSettingsConfig.ts",
+    "src/renderer/components/settings/sections/GeneralSection.tsx",
+    "src/renderer/components/team/messages/MessageComposer.tsx",
+    "src/shared/types/notifications.ts",
+    "test/renderer/components/settings/NotificationsRecoverySettings.test.tsx",
+    ".github/workflows/native-prompt-suggestions-vendor-once.yml",
+    "docs/plans/provider-migration/native-prompt-suggestions-consumer-2026-11-14.md",
+    "packages/legacy-agent-host/src/composition/checkCapturedPromptOperation.ts",
+    "packages/legacy-agent-host/src/composition/createCapturedPromptSuggestionBinding.ts",
+    "packages/legacy-agent-host/src/team/verifiedHumanDirectSuggestionSource.ts",
+    "packages/legacy-agent-host/tests/fixtures/native-codex-team/suggestion-config.ts",
+    "packages/legacy-agent-host/tests/fixtures/native-codex-team/suggestion-model.ts",
+    "packages/legacy-agent-host/tests/native-prompt-suggestions-binding.test.ts",
+    "packages/legacy-agent-host/tests/native-prompt-suggestions-codex-host.native.ts",
+    "packages/legacy-agent-host/tests/native-prompt-suggestions-host.native.ts",
+    "packages/legacy-agent-host/tests/team/verifiedHumanDirectSuggestionSource.test.ts",
+    "scripts/legacy-agent-host/desktop-native-next-prompt-edit-guards-ui.ts",
+    "scripts/legacy-agent-host/desktop-native-next-prompt-mixed-fixture.ts",
+    "scripts/legacy-agent-host/desktop-native-next-prompt-mixed-ui.ts",
+    "scripts/legacy-agent-host/desktop-native-next-prompt-sources.ts",
+    "scripts/legacy-agent-host/desktop-native-next-prompt-ui.ts",
+    "scripts/legacy-agent-host/verify-native-suggestions-adopted-pin.mts",
+    "src/features/native-prompt-suggestions/README.md",
+    "src/features/native-prompt-suggestions/contracts/channel.ts",
+    "src/features/native-prompt-suggestions/contracts/index.ts",
+    "src/features/native-prompt-suggestions/core/domain/ownerHandle.ts",
+    "src/features/native-prompt-suggestions/core/domain/policy.ts",
+    "src/features/native-prompt-suggestions/main/index.ts",
+    "src/features/native-prompt-suggestions/main/projectHostPromptSuggestion.ts",
+    "src/features/native-prompt-suggestions/preload/createNativeNextPromptBridge.ts",
+    "src/features/native-prompt-suggestions/preload/index.ts",
+    "src/features/native-prompt-suggestions/renderer/hooks/useComposerNativeNextPrompt.tsx",
+    "src/features/native-prompt-suggestions/renderer/hooks/useNativeNextPrompt.ts",
+    "src/features/native-prompt-suggestions/renderer/hooks/verifyCurrentNativeSuggestion.ts",
+    "src/features/native-prompt-suggestions/renderer/index.ts",
+    "src/features/native-prompt-suggestions/renderer/ui/NativeNextPromptRow.tsx",
+    "src/renderer/components/team/messages/useFileRestrictionNotice.ts",
+    "src/renderer/components/ui/mentionableSegments.ts",
+    "test/features/native-prompt-suggestions/hostRuntimeReadOperation.test.ts",
+    "test/features/native-prompt-suggestions/nativeNextPromptHook.test.tsx",
+    "test/features/native-prompt-suggestions/nativeNextPromptPolicy.test.ts",
+    "test/features/native-prompt-suggestions/nativeNextPromptSettings.test.ts",
+    "test/features/native-prompt-suggestions/projectHostPromptSuggestion.test.ts",
+    "test/features/native-prompt-suggestions/verifyCurrentNativeSuggestion.test.ts",
+    "vendor/provider-migration/native-prompt-suggestions-18a1c276/agent-teams-provider-implementations-0.0.0.tgz",
+    "vendor/provider-migration/native-prompt-suggestions-18a1c276/source-receipt.json",
+    "vendor/provider-migration/native-prompt-suggestions-74991c21/agent-teams-provider-implementations-0.0.0.tgz",
+    "vendor/provider-migration/native-prompt-suggestions-74991c21/source-receipt.json"
+  ],
+  "sourceGuardBaseline": {
+    "path": "scripts/ci/source-file-size-baseline.json",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "8f5deeed4e406894e1ee587ed541014bcb7dde77"
+  },
+  "pinDecision": {
+    "implementations": "c930d3c8b9a213762528d6e28c9ed0172ab1fa27",
+    "contracts": "host-logs-thinking-9423f600",
+    "packageBaseTestOperandOnly": "tests/team/*.test.ts",
+    "lockExactHead": "b709c1ecdf6a29532ebaefca35b75ed44b2428af",
+    "newProducerAdoption": false,
+    "nativeQualification": false,
+    "nativeCodexCandidate": {
+      "true": "26f8fc7083dbc470dd9d3a656e24873b73c78af3da3ffeea802a09a98f253e3c",
+      "false": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+      "bothGenuineAndUnselected": true
+    }
+  },
+  "nativeJobExclusion": {
+    "path": ".github/workflows/native-prompt-suggestions-host.yml",
+    "job": "captured-original-host",
+    "level": "job",
+    "onlyIfAll": {
+      "event": "pull_request",
+      "repository": "777genius/agent-teams-ai",
+      "number": 1192,
+      "headRepository": "777genius/agent-teams-ai",
+      "baseRepository": "777genius/agent-teams-ai",
+      "headRef": "fix/frontend-parity-completion-20261113",
+      "baseRef": "feat/provider-host-frontend-parity-20261112"
+    },
+    "skippedIncludesBindingStep": true,
+    "skipIsPass": false,
+    "otherEventsJobsBodiesOraclesBudgetsChanged": false
+  },
+  "compositionDecision": {
+    "clientFirstThreeArgumentsPreserved": true,
+    "fourthOptionsCapturedAtConstruction": true,
+    "callback": "(raw: unknown, source: CapturedHostClient) => void; fresh raw-only wrapper bound to this",
+    "sourceUse": "internal identity comparison with current owner client only; never IPC/DTO",
+    "sharedFactoryCaptures": [
+      "enabled === true",
+      "publisher",
+      "owner key"
+    ],
+    "recovery": "same captured feature factory; new client wrapper; preserve custody and exact remaining callback",
+    "notificationMoveOnly": [
+      "array",
+      "bytes",
+      "gap",
+      "accept",
+      "take",
+      "auxiliary prompt branch"
+    ],
+    "noLifecycleNativeOwnerRouterChange": true,
+    "noAddedAuthorityApi": true
+  },
+  "rosters": {
+    "oldCommon": 266,
+    "incomingNative": 22,
+    "newAdditionalPins": 5,
+    "expectedCommon": 293,
+    "oldMain": 1788,
+    "expectedMain": 1815,
+    "originalRelativeOrderPreserved": true,
+    "processBodyExact": 27,
+    "windowsRetryBodyExact": 46,
+    "fastScopeExact": 141,
+    "newAdditionalPaths": [
+      "packages/legacy-agent-host/src/composition/teamHostProfile.ts",
+      "src/features/agent-backend/main/infrastructure/CapturedHostNotificationBuffer.ts",
+      "src/features/agent-backend/main/composition/captureHostPromptSuggestions.ts",
+      "src/features/native-prompt-suggestions/main/index.ts",
+      "test/features/agent-backend/recoverCapturedHost.test.ts"
+    ]
+  },
+  "diagnoses": [
+    {
+      "file": "independent-base-integration-findings.json",
+      "bytes": 13357,
+      "physicalLines": 216,
+      "gitBlob": "278aef17fbb641bbfd3d3d6addf9ed3b48b3fd80",
+      "sha256": "3890386b326bf4d0087df6db24f247c77bf7d7c08be822f3e4d599925f774df9",
+      "rootFullyRead": true
+    },
+    {
+      "file": "independent-base-contract-findings.json",
+      "bytes": 11983,
+      "physicalLines": 264,
+      "gitBlob": "8b2b288acd58c52570820dd8bdf749937e98c958",
+      "sha256": "689c9680fb4f3acb7f5a121dcba22706bb862fbcdef1184830f8ff6aee368b08",
+      "rootFullyRead": true
+    }
+  ],
+  "transportProposal": "qualification_audit full message reviewed: bounded two helpers and three suites; actual stdio+recovery origin checks; no router edits; source feasibility only",
+  "documentPublication": {
+    "newPaths": [
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/76-incorporate-native-suggestions-base-2026-11-17.md",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan76-base-integration-2026-11-17/prospective-r1.json",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan76-base-integration-2026-11-17/prospective-r2.json"
+    ],
+    "sourceStartsOnlyAfterActualDocumentR2": true
+  },
+  "sourceDelivery": {
+    "firstParent": "actual reviewed document head",
+    "secondParent": "301d00f46db3389ff6e3042afd04c5b064a26270",
+    "branch": "fix/frontend-parity-e2e-bounds-20261116",
+    "immediateCasPush": true,
+    "force": false,
+    "primaryOnlyAfterActualSourceR2AndFreshUsefulJobGuard": true
+  },
+  "runtimeStatus": "UNQUALIFIED; no local project/compiler/lint/test/native/GUI execution",
+  "unselected": [
+    "Plan40 writer contract A/B",
+    "genuine Claude/Codex qualification",
+    "new producer adoption",
+    "Stage2",
+    "release",
+    "Ready",
+    "PR merge",
+    "main writes"
+  ]
+}

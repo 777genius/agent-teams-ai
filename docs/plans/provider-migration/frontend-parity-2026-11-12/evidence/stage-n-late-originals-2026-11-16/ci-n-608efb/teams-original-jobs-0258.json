@@ -1,0 +1,45 @@
+{
+  "observedAt": "2026-11-16 02:58:21 UTC",
+  "kind": "teams",
+  "runId": 43795234704,
+  "response": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Action completed."
+      }
+    ],
+    "structuredContent": {
+      "jobs": [
+        {
+          "id": 133062439206,
+          "name": "Creation page (windows-latest)",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234704,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133062439396,
+          "name": "Creation page (ubuntu-latest)",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234704,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133062439418,
+          "name": "Creation page (macos-latest)",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234704,
+          "logs_url": null,
+          "steps": null
+        }
+      ]
+    },
+    "isError": false
+  }
+}

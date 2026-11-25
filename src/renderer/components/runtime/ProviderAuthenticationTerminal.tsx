@@ -4,6 +4,7 @@ import { getRuntimeDisplayName } from '@renderer/utils/runtimeDisplayName';
 
 import {
   getProviderTerminalCommand,
+  getProviderTerminalCommandById,
   getProviderTerminalLogoutCommand,
 } from './providerTerminalCommands';
 
@@ -30,7 +31,7 @@ export const ProviderAuthenticationTerminal = ({
     ? request.action === 'login'
       ? getProviderTerminalCommand(provider)
       : getProviderTerminalLogoutCommand(provider)
-    : null;
+    : getProviderTerminalCommandById(request.providerId, request.action);
   return (
     <TerminalModal
       title={`${getRuntimeDisplayName(status, multimodelEnabled)} ${request.action === 'login' ? t('cliRuntime.providerTerminal.login') : t('cliRuntime.providerTerminal.logout')}: ${label}`}

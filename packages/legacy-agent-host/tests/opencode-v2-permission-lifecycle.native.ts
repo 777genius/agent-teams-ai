@@ -16,6 +16,7 @@ import {
 } from './fixtures/native-opencode-v2-permissions.ts';
 import { assertNativeV1Build, buildNativeV1Host } from './opencode-v1-version-source.ts';
 import type { PermissionTurn } from './fixtures/native-opencode-v2-permissions.ts';
+import { captureInitialRuntimeModelAdmission } from '../dist/composition/initialRuntimeModelAdmission.js';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 
 async function endpoint(): Promise<string> {
@@ -237,10 +238,6 @@ test(
         ],
         runtime: { members },
       };
-      const path = join(root, 'profile.json');
-      await writeFile(path, JSON.stringify(profile), { mode: 0o600 });
-      const profileHash = await fileHash(path);
-      const start = () => startHost({ node, entry, root, profile: path, profileHash });
       const binding = { schemaVersion: 1, handleId: 'TEST-policy-handle', owner, scope };
       let counter = 0;
       const envelope = (payload: unknown, commandId = 'TEST-control-' + ++counter) => ({
@@ -248,6 +245,18 @@ test(
         binding,
         payload,
       });
+      const initialOpens = ['deny', 'ask', 'sibling'].map(memberId => {
+        const payload = { memberId };
+        return { ...envelope(payload), payload };
+      });
+      profile.runtime!.initialModelAdmissions = initialOpens.map(({ commandId, payload }) =>
+        captureInitialRuntimeModelAdmission(profile, {
+          method: 'runtime.open', teamId: scope.teamId, commandId, payload,
+        }));
+      const path = join(root, 'profile.json');
+      await writeFile(path, JSON.stringify(profile), { mode: 0o600 });
+      const profileHash = await fileHash(path);
+      const start = () => startHost({ node, entry, root, profile: path, profileHash });
       const control = async (operation: string, payload: unknown) =>
         host!.rpc('runtime.' + operation, envelope(payload));
       const state = async (memberId: string) => value(await control('read', { memberId }));
@@ -314,7 +323,9 @@ test(
       host = start();
       await host.rpc('host.handshake', { protocolVersion: 1 });
       for (const memberId of ['deny', 'ask', 'sibling']) {
-        const opened = value(await control('open', { memberId }));
+        const initialOpen = initialOpens.find(command => command.payload.memberId === memberId);
+        assert.ok(initialOpen, 'the original member Open was captured before profile serialization');
+        const opened = value(await host.rpc('runtime.open', initialOpen));
         assert.equal(opened.nativeReady, true, JSON.stringify(opened));
         const children = await directChildren(host.facts().pid!);
         const fresh = children.filter((pid) => ![...nativePids.values()].includes(pid));

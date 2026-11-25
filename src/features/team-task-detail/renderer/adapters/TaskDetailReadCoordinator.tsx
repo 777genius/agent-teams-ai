@@ -41,6 +41,12 @@ export const TaskDetailReadCoordinator = (): null => {
 
   useEffect(() => {
     for (const key of keys) {
+      if (
+        !selectTaskDetailReadDemands(useStore.getState()).some(
+          (demand) => demand.key === key && demand.needsRead
+        )
+      )
+        continue;
       const [contextId, teamName, taskId] = JSON.parse(key) as [string, string, string];
       void ensureTaskDetail({
         contextId,

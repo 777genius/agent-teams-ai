@@ -1,0 +1,9 @@
+$ node node_modules/@typescript/native/bin/tsc -p tsconfig.test.json
+tests/runtime-activity.test.ts(226,70): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type 'number | undefined' is not assignable to parameter of type 'number'.
+      Type 'undefined' is not assignable to type 'number'.
+tests/team-snapshot.test.ts(74,13): error TS7022: 'before' implicitly has type 'any' because it does not have a type annotation and is referenced directly or indirectly in its own initializer.
+/workspace/scratch/391e21b06e24/reconcile-base0543/packages/legacy-agent-host:
+[ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @agent-teams/legacy-agent-host@0.1.0 typecheck:test: `node node_modules/@typescript/native/bin/tsc -p tsconfig.test.json`
+Exit status 1

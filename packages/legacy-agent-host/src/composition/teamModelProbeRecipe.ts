@@ -1,10 +1,15 @@
 import { runtimeDigest } from '../runtime/identity.js';
 import { TeamLaunchError } from '../team-launch/contracts.js';
-import { resolveRuntimeRecipe, runtimeProviderId } from './runtimeRecipe.js';
+import { resolveCapturedRuntimeRecipe, resolveRuntimeRecipe, runtimeProviderId } from './runtimeRecipe.js';
 import { applyLaunchConfiguration } from './launchConfiguration.js';
+import { selectedOpenCodeManagedLimits } from './openCodeManagedPreferences.js';
+import { withOpenCodeModelLimits } from '../adapters/providers/withOpenCodeModelLimits.js';
+import { captureRecipeProcessOrigin } from './captureRuntimeProcessOrigin.js';
 import type { HostedTeam } from './MemberEntry.js';
 import type { RuntimeMemberProfile, RuntimeProfile } from './runtimeProfile.js';
 import type { TeamModelProbeSelection } from './teamLaunchModelProbe.js';
+import type { RuntimeRecipeSources, RuntimeSourceReference } from './runtimeSourceContracts.js';
+import type { RuntimeSourceProcessOrigin } from './runtimeSourceProcessOrigin.js';
 
 /** Model-only draft selection. It creates no roster, grants, capture or conversation bindings. */
 export function resolveTeamModelProbeRecipe(options: {
@@ -12,11 +17,16 @@ export function resolveTeamModelProbeRecipe(options: {
   team: HostedTeam;
   input: TeamModelProbeSelection;
   saved: RuntimeMemberProfile | undefined;
+  sources?: RuntimeRecipeSources;
+  sourceReference?: RuntimeSourceReference | undefined;
+  sourceProjectPath?: string | undefined;
+  onProcessOrigin?(origin: RuntimeSourceProcessOrigin | undefined): void;
 }): RuntimeMemberProfile {
   const { input, saved, team } = options;
   const draft = input.draft;
   if (!draft) {
     if (!saved) throw new TeamLaunchError('invalid', 'probe-member');
+    savedOrigin(saved);
     return saved;
   }
   const desiredProviderId = draft.providerId;
@@ -40,7 +50,10 @@ export function resolveTeamModelProbeRecipe(options: {
     throw new TeamLaunchError('conflict', 'probe-draft-target');
   const sameProvider = saved && runtimeProviderId(saved) === draft.providerId;
   const recipe = sameProvider ? structuredClone(saved) : privateRecipe();
-  if (sameProvider && (input.model === '__provider_default__' || input.effort === undefined)) {
+  if (sameProvider) savedOrigin(saved);
+  const savedV1Preferences = sameProvider && saved.provider === 'opencode' &&
+    saved.nativeGeneration !== 'v2' && saved.managedPreferences;
+  if (sameProvider && (input.model === '__provider_default__' || input.effort === undefined || savedV1Preferences)) {
     const defaults = privateRecipe();
     const identity = (profile: RuntimeMemberProfile) =>
       runtimeDigest({
@@ -55,26 +68,55 @@ export function resolveTeamModelProbeRecipe(options: {
         ...(profile.provider === 'opencode'
           ? {
               endpoint: profile.endpoint,
+              ...(profile.managedPreferences ? { managedPreferences: profile.managedPreferences } : {}),
               ...(profile.nativeGeneration === 'v2'
                 ? {
                     nativeGeneration: profile.nativeGeneration,
                     protocolRevision: profile.protocolRevision,
-                    nativeProviderId: profile.nativeOptions.providerId,
-                    model: profile.model,
-                    nativeVariant: profile.nativeOptions.variant,
-                    ...(profile.embedded ? { embedded: profile.embedded } : {}),
+                    ...(profile.embedded ? { embedded: {
+                      version: profile.embedded.version,
+                      directory: profile.embedded.directory,
+                      manifestSha256: profile.embedded.manifestSha256,
+                      platform: profile.embedded.platform,
+                      arch: profile.embedded.arch,
+                      externalDirectory: profile.embedded.externalDirectory,
+                    } } : {
+                      nativeProviderId: profile.nativeOptions.providerId,
+                      model: profile.model,
+                      nativeVariant: profile.nativeOptions.variant,
+                    }),
                   }
                 : {}),
             }
           : {}),
       });
-    if (identity(defaults) !== identity(saved))
+    let expected = defaults;
+    if (savedV1Preferences && saved.provider === 'opencode' && defaults.provider === 'opencode') {
+      const modelId = `${saved.nativeOptions.providerId}/${saved.model}`;
+      const limits = selectedOpenCodeManagedLimits(defaults.managedPreferences, modelId);
+      if (limits) expected = withOpenCodeModelLimits(defaults, {
+        providerId: saved.nativeOptions.providerId, modelId, limits,
+      });
+    }
+    if (identity(expected) !== identity(saved))
       throw new TeamLaunchError('conflict', 'probe-default-recipe');
-    // A V2 native session has already bound its model; a draft Default
-    // must not replace it with a template's separate model identity.
+    // Rebase only a proven derived V1 limit overlay, so changing the selected
+    // model never carries the previous model's application override forward.
+    if (savedV1Preferences) recipe.environment = structuredClone(defaults.environment);
+    // An externally owned old V2 session cannot change its pair. A fresh embedded
+    // probe uses the original private default without rebinding the account/engine.
     if (input.model === '__provider_default__' &&
-        !(recipe.provider === 'opencode' && recipe.nativeGeneration === 'v2'))
+        !(recipe.provider === 'opencode' && recipe.nativeGeneration === 'v2' && !recipe.embedded))
       recipe.model = defaults.model;
+    if (input.model === '__provider_default__' && recipe.provider === 'opencode' &&
+        defaults.provider === 'opencode' &&
+        (recipe.nativeGeneration !== 'v2' || (recipe.embedded && defaults.embedded))) {
+      recipe.nativeOptions.providerId = defaults.nativeOptions.providerId;
+      if (defaults.embedded) recipe.embedded = structuredClone(defaults.embedded);
+      delete recipe.nativeOptions.variant;
+      if (defaults.nativeOptions.variant !== undefined)
+        recipe.nativeOptions.variant = defaults.nativeOptions.variant;
+    }
     // Default resets only the requested application override. Other selected
     // native settings and the captured account/namespace remain unchanged.
     if (input.effort === undefined) {
@@ -97,7 +139,7 @@ export function resolveTeamModelProbeRecipe(options: {
   }
   function privateRecipe() {
     // A new member never borrows an existing member's native account/session.
-    return resolveRuntimeRecipe(
+    const seed = resolveRuntimeRecipe(
       row
         ? options.runtime
         : {
@@ -110,6 +152,22 @@ export function resolveTeamModelProbeRecipe(options: {
       input.memberId,
       desiredProviderId
     );
+    const projectPath = roster.savedSettings?.cwd ?? team.definition.savedSettings?.cwd ?? seed.cwd;
+    const reference = sameProvider ? options.sourceReference :
+      options.sources?.currentForRecipe(team.definition.scope, projectPath, seed);
+    if (options.onProcessOrigin && seed.windowsBroker && !sameProvider)
+      options.onProcessOrigin(captureRecipeProcessOrigin({ runtime: options.runtime,
+        sources: options.sources, reference, scope: team.definition.scope, projectPath,
+        teamId: team.definition.binding.teamId, memberId: input.memberId, provider: seed.provider }));
+    return resolveCapturedRuntimeRecipe(seed, reference, team.definition.scope, projectPath, options.sources);
+  }
+  function savedOrigin(profile: RuntimeMemberProfile): void {
+    if (!options.onProcessOrigin || !profile.windowsBroker) return;
+    options.onProcessOrigin(captureRecipeProcessOrigin({ runtime: options.runtime,
+      sources: options.sources, reference: options.sourceReference, scope: team.definition.scope,
+      projectPath: options.sourceProjectPath ?? team.connection.readRoster().savedSettings?.cwd ??
+        team.definition.savedSettings?.cwd ?? profile.cwd,
+      teamId: team.definition.binding.teamId, memberId: input.memberId, provider: profile.provider }));
   }
   if (draft.workspace !== undefined) recipe.cwd = draft.workspace;
   return recipe;
@@ -125,9 +183,8 @@ export function applyTeamModelProbeSelection(
     recipe.provider === 'opencode' && recipe.nativeGeneration === 'v2'
       ? {}
       : { model: input.model === '__provider_default__' ? recipe.model : input.model }),
-    // A saved V2 variant is an immutable selection, not a launch-time effort
-    // override. Preserve an unchanged selection for native attestation, but
-    // send any changed effort through the existing fail-closed V2 gate.
+    // Preserve unchanged historical options; fresh embedded choices additionally
+    // attest their named variant from the native catalog before creating a session.
     ...(input.effort === undefined ||
       (recipe.provider === 'opencode' && recipe.nativeGeneration === 'v2' &&
        input.effort === recipe.nativeOptions.variant) ? {} : { effort: input.effort }),

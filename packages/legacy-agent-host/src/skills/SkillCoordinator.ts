@@ -62,6 +62,12 @@ export class SkillCoordinator {
     this.options.managementTarget(profileId, configRevision);
     return profile;
   }
+  admitProfile(profile: ProviderManagementProfile): void {
+    this.options.assertCurrent();
+    const original = this.profiles.get(profile.profileId);
+    if (original && skillDigest(original) !== skillDigest(profile)) throw new ManagementCommandError('conflict');
+    if (!original) this.profiles.set(profile.profileId, structuredClone(profile));
+  }
   capture(raw: unknown) {
     const { targetId: _, ...fields } = skillSelection;
     const input = z.object(fields).strict().parse(raw);

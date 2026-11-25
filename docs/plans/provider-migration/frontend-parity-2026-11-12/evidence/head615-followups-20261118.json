@@ -1,0 +1,3737 @@
+{
+  "schemaVersion": 1,
+  "kind": "NEW reviewed follow-up source with exact predecessor CI evidence",
+  "recordedAt": "2026-11-18 10:18:13 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "pullRequest": 1192,
+  "branch": "fix/frontend-parity-completion-20261113",
+  "parentCommit": "615a264fcd168a5643fde4ec39ab173075e4d6c9",
+  "targetBase": "8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+  "finalSourceTreeWithoutThisReport": "f24a0f817349025d561c477f235213cdea3c9327",
+  "files": [
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5fbd19d5a85a99a01b72fe64a4426e0ba5931641",
+      "sha256": "0d6574dc3764efddba8101d705d72e6c9015421bca324a1b513f372ec48d8238",
+      "baseSha256": "e5deaa201004680be5fa6c8c149b24d8220e67a5fe7a6dca2d3e0d46db164cf8",
+      "group": "finite-ci-gates"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1ca631e4148e1e8b831d5309add399dccbfd4cf8",
+      "sha256": "9350fd6c1f6e74fc4389ce0603d9479459d3f399f6132d6b668fb57e21f6021b",
+      "baseSha256": "bc94a81846c9c6a58d98923f63b47e05cbcf688efa6b7e3d1b3a3b229f6559cc",
+      "group": "runtime-diagnostics"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/diagnostics/runtimeOpenDiagnostic.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ce6d3a391af0946c7d41e0dec2d1c40fd3872aad",
+      "sha256": "d0112372d04b4d7edcb12c37089c870ba53fe119594b9ca2cf567fc27969db2d",
+      "baseSha256": null,
+      "group": "runtime-diagnostics"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "26b56c5a842fc59054aef11052a205f7dfeb2428",
+      "sha256": "b62e758155cdbd20a4759e1d41c1e678b652d391f40185952317eccb7ebc2821",
+      "baseSha256": "478bead841e1344f55a77ff16852f7359826b459f6d5986859c5a454f3fc476d",
+      "group": "runtime-diagnostics"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-open-diagnostic.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "125be0048b21e047a69863e2c42e541e624fdd2e",
+      "sha256": "a1a4c2074d2c886742224db3707d58f0a5db5dc090f781ff5f937e4e109a3848",
+      "baseSha256": null,
+      "group": "runtime-diagnostics"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "46bf5b82f12ce83b18053bd9f45a8bf3747b3c34",
+      "sha256": "108c83ce331b1960321ee06804992de2c56e0d361012f1e813a8e83fbb728785",
+      "baseSha256": "b9e03f92727d6230c6b057c67f6981cb844807e36172729f47842dbc88682878",
+      "group": "epoch-natural-exit"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-quit-ui-smoke.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "cce4088737ff0eb4174746bf6fff49a22aded264",
+      "sha256": "32976b9f60b2047eb4036d0b7c84aa5f60db5caa0ce607940820053546b6754a",
+      "baseSha256": "4f3c5460147352c8bbc472bac0e74ae54c646425d23ffb3a97bc0a8d9886b40e",
+      "group": "quit-shape-diagnostics"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-stop-fixture.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c88245e9a25cfc5a2bdac08ef80645065e1dae6d",
+      "sha256": "16b9146a629e7e7c396a7ae4fbfdd690dc360536f1ce48cc242c9719be508c8a",
+      "baseSha256": "fea58cd45c947cea5b9adad9cac8db7285bb59bbc34429205e6ee10888effb06",
+      "group": "metadata-readiness"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3b071a531010c01d3d7de34e8bc86c749f4ae03f",
+      "sha256": "440d4838aedaaad774b311e8dc94e9300feb811c975723c7367954d2f1ed6480",
+      "baseSha256": "33f1b7ec5aa889f4e563cf2de0ee829d9329a81d0a6708509b6be54ff1d718b4",
+      "group": "metadata-readiness"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-lifecycle.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6e3184a3b5e1c73e0cb6ba9e7260509d0d5d61c4",
+      "sha256": "0eb4ae847375c0aee475c6557800214e0b615a685b35fbc99acd97cab693d38e",
+      "baseSha256": "9ad8df35210da6b12afb72aaa146f0bb58b4985d50ec9a035868efbef32df388",
+      "group": "metadata-readiness"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-review-ui-smoke.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3072ae13064749fc89812b425995a742daa3a0c1",
+      "sha256": "420af7899047a5e32553a8678a28f8fb3baa2681dc8b80b2ebd49aefc3083a9b",
+      "baseSha256": "6b807423bd9ff2a1887c18417ee52dbd0c270c0f30bf24f33eb51236e392f4a1",
+      "group": "metadata-readiness"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-owner-routing-epoch.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "eebabc3f91e246bf5185c81670a2e074b7063496",
+      "sha256": "263775946e4f2ce4cb0c26b06088c81ae0899d23fd313f9be4dfe1cc06277b7b",
+      "baseSha256": "0be302b884538c6156fd20b6ef8e6a27d73a525058c503f5a2b685b89be76aec",
+      "group": "epoch-natural-exit"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-retained-opencode-launch.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b2c207e5ae291725935339bd34d80ba846ca5f28",
+      "sha256": "a78eda0db10f58e850a8652cfde6b8094c9824b736fdc1c74e5b0ee4eee06df0",
+      "baseSha256": "4055c8b1e18f9618938c524aeafaa4772f82e4a91ac3118a7ecde331133c8d62",
+      "group": "retained-refusal-diagnostics"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-retained-opencode-launch.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7dc63697a68c7b1042feb48c44c2af0f6d76a267",
+      "sha256": "06e430063b3976537a6831b75b5c514225ffb552c30c86fd8c3304a853c46475",
+      "baseSha256": "0200b764e1dd13abbdfe3219297aaadb0c9d6b15dadfda3a0f3b17662e5f0a1e",
+      "group": "retained-refusal-diagnostics"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0c20e8e418d52f1bd34c13e41000e3a2e763fd0a",
+      "sha256": "57baad0952cf1ea284fae822da29c551835cc6ba602ccff46093218bc139617f",
+      "baseSha256": "5ed969d8b659717800cff5e2becf5656994a4bef9c91a8b105fad1bdc8b51ff4",
+      "group": "controls-diagnostics"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "379641206d68196083db1b009443fd0347806faa",
+      "sha256": "1fc46b4fe474221b947f92cc2b690760885503baa51f5bae1247f52cf7b8c97a",
+      "baseSha256": "13326dde673bd6d0827d76fc84b9c0cc00600d314c504d1437aed9c40be9ff21",
+      "group": "controls-diagnostics"
+    },
+    {
+      "path": "src/features/agent-backend/main/application/importStoppedLegacyTeam.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "51db08f3b4216caac8280505b71eb8270954ed18",
+      "sha256": "db06686931695fc352f4a4826d26601a6c8c817c0db230bf25ecd8d7cbc0c9ab",
+      "baseSha256": "f74b18345128f7e234990f85223b31058ccc4c03b5df3d5b3c66eb5ee8df2d3e",
+      "group": "stopped-import-diagnostics"
+    },
+    {
+      "path": "src/features/agent-backend/main/index.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b841a23f7e30459ae4c72c44b18844f52a729ce3",
+      "sha256": "57714b3e959172b042191e8986a41c94fa1903767b6543e8c788601e33331483",
+      "baseSha256": "ef7d93bb7ca601c07721794939d59f4cd24aebbe3f595cb0967f5d0029e667ec",
+      "group": "stopped-import-diagnostics"
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/createCapturedHostDiagnostics.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c27d121a94a9e4e4b403c9478d6ba071fceec01c",
+      "sha256": "2391db2fb9f90a265bd82c10ea3c2a0db080270319fd19b85bedad0d88e6f315",
+      "baseSha256": "c5e86e72819f6ca62c6f43ca5fafb89b2ecda2e2a8a633a57885cd42b1873e15",
+      "group": "runtime-diagnostics"
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/decodeClaudeCloseDiagnostics.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6c0b5186f8f4c2aabab97cb76319c7f637e21e94",
+      "sha256": "d31349999f215639a0ea7d43981ec52629825ad32ec708d196fb0a5f59fe8e8d",
+      "baseSha256": "c5ec2885948753fcbbaeb2af99e07b36827460e4a28dee2f7a4156c422db905f",
+      "group": "runtime-diagnostics"
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/stopped-import/createStoppedImportDiagnostic.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "91c3ad1a90cbdc1da7e08bdf9d9d63121548f50d",
+      "sha256": "d0743a080503a79ab8726abefa69cf665284cd7b2247bf36a0f4a7775d2df0cf",
+      "baseSha256": null,
+      "group": "stopped-import-diagnostics"
+    },
+    {
+      "path": "src/main/composition/createDesktopStoppedTeamOperations.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "75269a5eeb73a74df4bdc3d0c26d5de141283a5a",
+      "sha256": "8b6c333c5d3a7b1b171315fc9dc265b6d92a92a28721c2efe1ee23b4db4603d5",
+      "baseSha256": "bbaab527fe583fb64b5ccf7529e32adbdbcf79e8f0e676aa3c1e827ed11844e2",
+      "group": "stopped-import-diagnostics"
+    },
+    {
+      "path": "src/renderer/utils/memberRuntimeSummary.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "41a2cd3f49b56d64b1c03b541d1da7fdd8b4c428",
+      "sha256": "a64428d8c4ec3ede2300d3c40024d6b5ed081c4bf7e0bbea4decbcf90709d317",
+      "baseSha256": "f03e7a25450ffb268a2d4b7038e3fad55d4c743ed50a3de9285e74f4c23e6738",
+      "group": "member-labels"
+    },
+    {
+      "path": "test/features/agent-backend/retainedLegacyMainAdmission.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "004236e38c5520c75d94e2c6043b0d43796c4f98",
+      "sha256": "45c537394d93221eaac21b4c63b3036e7ddc767e7010f0e5cb17a485b890e009",
+      "baseSha256": "5683a9604fbd03ec26f0e2d0b81a4bd3964dbe2f1f0dba41fef3b5d7e4b75947",
+      "group": "stopped-import-diagnostics"
+    },
+    {
+      "path": "test/features/agent-backend/runtimeOpenDiagnostics.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a576eb0e660d8ecda302700aa6d0db92e9da207b",
+      "sha256": "09d399d9b41a207adf4bc9270aa8ebeee72a768e0afc1a15b44d470cadfbdd51",
+      "baseSha256": null,
+      "group": "runtime-diagnostics"
+    },
+    {
+      "path": "test/features/agent-backend/stoppedImportDiagnostics.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "40e61ff788d4b3b9ac678cc351dad05b9e371164",
+      "sha256": "c4b114ddb7d0cb04d50778a38168432a36e8c71e859ab7b3a15de23c0347f89b",
+      "baseSha256": null,
+      "group": "stopped-import-diagnostics"
+    },
+    {
+      "path": "test/renderer/utils/memberRuntimeSummary.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d19e3bb08f6fc241b2e2e0ff8245a2b6c7a1bc06",
+      "sha256": "381cbaf4187226c95c4474c19c77da45d7a99432a719215bb9a85c4756e6428d",
+      "baseSha256": "49fd18501707532f3f2a4c963645d98ddeb6e2c365493159279dc055705c2ede",
+      "group": "member-labels"
+    }
+  ],
+  "sourcePreimages": [
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "base": "e1087d9fffff1c86cc19c41713ba0fdaf37cb10d",
+      "sha256": "e5deaa201004680be5fa6c8c149b24d8220e67a5fe7a6dca2d3e0d46db164cf8",
+      "mode": "100644",
+      "verified": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+      "base": "8b27881946e95a38d2d15d0e6593da9118f7c810",
+      "sha256": "bc94a81846c9c6a58d98923f63b47e05cbcf688efa6b7e3d1b3a3b229f6559cc",
+      "mode": "100644",
+      "verified": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/diagnostics/runtimeOpenDiagnostic.ts",
+      "base": null,
+      "expected": "absent",
+      "verified": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+      "base": "a566efc5987b6859d004a8531cb8e6bac80bec30",
+      "sha256": "478bead841e1344f55a77ff16852f7359826b459f6d5986859c5a454f3fc476d",
+      "mode": "100644",
+      "verified": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-open-diagnostic.test.ts",
+      "base": null,
+      "expected": "absent",
+      "verified": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "base": "b4d6d95fdbc8d76a79419a7b6813efbe5389ffc0",
+      "sha256": "b9e03f92727d6230c6b057c67f6981cb844807e36172729f47842dbc88682878",
+      "mode": "100644",
+      "verified": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-quit-ui-smoke.ts",
+      "base": "4415bad7752c91a0c0fbad789f5c712908643425",
+      "sha256": "4f3c5460147352c8bbc472bac0e74ae54c646425d23ffb3a97bc0a8d9886b40e",
+      "mode": "100644",
+      "verified": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-stop-fixture.ts",
+      "base": "809ab441a0c8e44edcae623b5601eeb9c69be582",
+      "sha256": "fea58cd45c947cea5b9adad9cac8db7285bb59bbc34429205e6ee10888effb06",
+      "mode": "100644",
+      "verified": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts",
+      "base": "c2bc4d3323e2030bd293b9ae16da0f822be04c17",
+      "sha256": "33f1b7ec5aa889f4e563cf2de0ee829d9329a81d0a6708509b6be54ff1d718b4",
+      "mode": "100644",
+      "verified": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-lifecycle.test.ts",
+      "base": "1e2653c7bcad520a5d92f39a5130bee9ff6e63b0",
+      "sha256": "9ad8df35210da6b12afb72aaa146f0bb58b4985d50ec9a035868efbef32df388",
+      "mode": "100644",
+      "verified": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-review-ui-smoke.ts",
+      "base": "a914d3808022289da5f994d60ad4bb7cca5eac38",
+      "sha256": "6b807423bd9ff2a1887c18417ee52dbd0c270c0f30bf24f33eb51236e392f4a1",
+      "mode": "100644",
+      "verified": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-owner-routing-epoch.ts",
+      "base": "be0e7434575a22d4d15230aa997009f50695181c",
+      "sha256": "0be302b884538c6156fd20b6ef8e6a27d73a525058c503f5a2b685b89be76aec",
+      "mode": "100644",
+      "verified": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-retained-opencode-launch.test.ts",
+      "base": "f0d244198b09be1b401a34710874d7f5b067d2cf",
+      "sha256": "4055c8b1e18f9618938c524aeafaa4772f82e4a91ac3118a7ecde331133c8d62",
+      "mode": "100644",
+      "verified": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-retained-opencode-launch.ts",
+      "base": "55b25da6fb7922c7beabe464fdba9572787ac774",
+      "sha256": "0200b764e1dd13abbdfe3219297aaadb0c9d6b15dadfda3a0f3b17662e5f0a1e",
+      "mode": "100644",
+      "verified": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+      "base": "6fbcd807657a2e320fb2ca39bcd3b14d9cfbd100",
+      "sha256": "5ed969d8b659717800cff5e2becf5656994a4bef9c91a8b105fad1bdc8b51ff4",
+      "mode": "100644",
+      "verified": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "base": "d7db921d41c439906f39d8b074f140e1a1aa111b",
+      "sha256": "13326dde673bd6d0827d76fc84b9c0cc00600d314c504d1437aed9c40be9ff21",
+      "mode": "100644",
+      "verified": true
+    },
+    {
+      "path": "src/features/agent-backend/main/application/importStoppedLegacyTeam.ts",
+      "base": "b181572fe0ba6d40f42d001954b2f89a56c1f10e",
+      "sha256": "f74b18345128f7e234990f85223b31058ccc4c03b5df3d5b3c66eb5ee8df2d3e",
+      "mode": "100644",
+      "verified": true
+    },
+    {
+      "path": "src/features/agent-backend/main/index.ts",
+      "base": "09b95f5c7f118ea730eed81c96ce08412e1b232e",
+      "sha256": "ef7d93bb7ca601c07721794939d59f4cd24aebbe3f595cb0967f5d0029e667ec",
+      "mode": "100644",
+      "verified": true
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/createCapturedHostDiagnostics.ts",
+      "base": "07dba6d757252cfc64df44c11bcd8eda6104ec75",
+      "sha256": "c5e86e72819f6ca62c6f43ca5fafb89b2ecda2e2a8a633a57885cd42b1873e15",
+      "mode": "100644",
+      "verified": true
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/decodeClaudeCloseDiagnostics.ts",
+      "base": "2f89194faf6ace73649db95c0cc9bf63894b7420",
+      "sha256": "c5ec2885948753fcbbaeb2af99e07b36827460e4a28dee2f7a4156c422db905f",
+      "mode": "100644",
+      "verified": true
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/stopped-import/createStoppedImportDiagnostic.ts",
+      "base": null,
+      "expected": "absent",
+      "verified": true
+    },
+    {
+      "path": "src/main/composition/createDesktopStoppedTeamOperations.ts",
+      "base": "9baff3846dac98345d2ead6b8a4a631013bec1a0",
+      "sha256": "bbaab527fe583fb64b5ccf7529e32adbdbcf79e8f0e676aa3c1e827ed11844e2",
+      "mode": "100644",
+      "verified": true
+    },
+    {
+      "path": "src/renderer/utils/memberRuntimeSummary.ts",
+      "base": "98a99d86b0a32cbf0a04c1ff759002077c309901",
+      "sha256": "f03e7a25450ffb268a2d4b7038e3fad55d4c743ed50a3de9285e74f4c23e6738",
+      "mode": "100644",
+      "verified": true
+    },
+    {
+      "path": "test/features/agent-backend/retainedLegacyMainAdmission.test.ts",
+      "base": "574c2daa973c20f97f873e7021e489a4d06f674c",
+      "sha256": "5683a9604fbd03ec26f0e2d0b81a4bd3964dbe2f1f0dba41fef3b5d7e4b75947",
+      "mode": "100644",
+      "verified": true
+    },
+    {
+      "path": "test/features/agent-backend/runtimeOpenDiagnostics.test.ts",
+      "base": null,
+      "expected": "absent",
+      "verified": true
+    },
+    {
+      "path": "test/features/agent-backend/stoppedImportDiagnostics.test.ts",
+      "base": null,
+      "expected": "absent",
+      "verified": true
+    },
+    {
+      "path": "test/renderer/utils/memberRuntimeSummary.test.ts",
+      "base": "af32b9f9496b8df1b0a2ed6c591b2f103e62c1ef",
+      "sha256": "49fd18501707532f3f2a4c963645d98ddeb6e2c365493159279dc055705c2ede",
+      "mode": "100644",
+      "verified": true
+    }
+  ],
+  "sourceReview": {
+    "overall": "PASS_SOURCE_REVIEW_ONLY",
+    "combined21ReceiptSHA256": "1f474033c4b9efdbded04082f7588e89547ff43329aaad25f716d35dab943f29",
+    "metadataEpochRootReview": {
+      "reviewer": "root",
+      "base": "615a264fcd168a5643fde4ec39ab173075e4d6c9",
+      "decision": "PASS_SOURCE_REVIEW_ONLY",
+      "metadata": {
+        "manifestBlob": "2f377a2fac2e17fb4f9b0a1b464a8a4075a74ac6",
+        "readbacks": "Three edited production files and exact bases verified",
+        "findings": [
+          "Passive lifecycle count admits zero/one during original setup transition but never changes the existing physical birth/retired-absence/Runtime0 oracle.",
+          "Unknown release, foreign scope, duplicate live owner and PID reuse still throw in lifecycle outside retry catch.",
+          "Budget opt-in is the original setup180s remainder or original review120s preflight boundary; no-budget global/cold remain original.",
+          "Owner/source/Host and retained event prefix checks surround passive awaits; final owner cost occurs before final remaining budget check.",
+          "No extra catalog, model probe, native operation, Launch or retry added."
+        ],
+        "scopeLimit": "Does not explain current615 earlier after-hover V2Review refusal."
+      },
+      "epoch": {
+        "sourceBlob": "eebabc3f91e246bf5185c81670a2e074b7063496",
+        "sha256": "263775946e4f2ce4cb0c26b06088c81ae0899d23fd313f9be4dfe1cc06277b7b",
+        "findings": [
+          "Fallback is reached only after changed invocation failed old reap/zombie authority; it cannot authorize signals.",
+          "Passive eligibility binds original retained ChildProcess, original Node dev:mcp invocation, same birth, parent and unique captured PID set.",
+          "Success requires original child exit0/no signal and fresh absence of all initial PIDs, original Host PIDs and full group.",
+          "The same original3s cutoff covers passive loop, final complete census and original port observation including post-await check.",
+          "Existing legitimate signal branch and its authority predicates remain unchanged."
+        ],
+        "scopeLimit": "No historical MainThread cleanup qualification or new actual-process execution claimed."
+      },
+      "execution": "All NEW tests/types/lint/build/desktop gates NOT RUN; source review only."
+    },
+    "additionalRootReviews": {
+      "controls": {
+        "decision": "PASS_SOURCE_REVIEW_ONLY",
+        "root": "Exact base/post readbacks; original clock/owner/prepare/evaluate/context/pause order preserved. No extra calls, guards or deadlines. Closed facts are same-evaluate and do not assert full internal gate state.",
+        "nativeReceipt": "bc7ed085bd04d196c72270a70e38cda6597a79fc",
+        "providerReceiptSHA256": "328954038bfabd44b0e6998741af34974a508e0880fcccaf116329341dec9102"
+      },
+      "quit": {
+        "decision": "PASS_SOURCE_REVIEW_ONLY",
+        "root": "Same original assertion and error object; failure-only existing Dirent sample<=256 with count sentinel257. No reads, clock, await or retry added; no entry names forwarded.",
+        "nativeReceipt": "366693371cb69455b8aba7e6073c1fd38242f167"
+      },
+      "retained": {
+        "decision": "PASS_SOURCE_REVIEW_ONLY",
+        "root": "Same failing value check and control flow; own-data public9reason/2outcome labels only; generic prefix/intent/receiver/roster/cleanup/6awaits unchanged;7 new real serialized-helper cases preserve1open1closeIntent0launch.",
+        "nativeReceipt": "7d7e3fe317a1e30bb6e496915e8c987c99122d3a"
+      },
+      "workflow": {
+        "decision": "PASS_SOURCE_REVIEW_ONLY",
+        "root": "Exact inverse for1finite test arg+8 lint rows; original Node24/build/actions/conditions/permissions/timeouts unchanged; deadline tests already imported transitively, not duplicated.",
+        "nativeReceipt": "93c87b4743c7103d36dad0b36275cc1a94f0196a"
+      },
+      "allExecution": "NOT RUN"
+    },
+    "groups": {
+      "memberLabels": {
+        "schemaVersion": 1,
+        "revision": "new-member-labels-after-workspace-loss",
+        "base": "615a264fcd168a5643fde4ec39ab173075e4d6c9",
+        "status": "Source review PASS; new execution gates NOT RUN",
+        "author": "root",
+        "distinction": "Production6line guard exactly matches previously reviewed source; regression file is newly authored and has a NEW hash. Old33PASS is not validation of this new test file.",
+        "files": [
+          {
+            "path": "src/renderer/utils/memberRuntimeSummary.ts",
+            "blob": "41a2cd3f49b56d64b1c03b541d1da7fdd8b4c428",
+            "baseSHA256": "f03e7a25450ffb268a2d4b7038e3fad55d4c743ed50a3de9285e74f4c23e6738",
+            "sha256": "a64428d8c4ec3ede2300d3c40024d6b5ed081c4bf7e0bbea4decbcf90709d317",
+            "lines": 230
+          },
+          {
+            "path": "test/renderer/utils/memberRuntimeSummary.test.ts",
+            "blob": "d19e3bb08f6fc241b2e2e0ff8245a2b6c7a1bc06",
+            "baseSHA256": "49fd18501707532f3f2a4c963645d98ddeb6e2c365493159279dc055705c2ede",
+            "sha256": "381cbaf4187226c95c4474c19c77da45d7a99432a719215bb9a85c4756e6428d",
+            "lines": 676
+          }
+        ],
+        "regressionCases": 8,
+        "intendedInvariants": [
+          "Missing captured Host configuration does not invent lead defaults in idle or pending state.",
+          "Stale provider/model/runtime snapshot does not substitute unavailable captured configuration.",
+          "Resolved empty settings still permit original inheritance in idle or pending state.",
+          "Explicit Codex and OpenCode presentation remains independent of Anthropic lead settings.",
+          "Legacy member inheritance remains unchanged."
+        ],
+        "checks": {
+          "tests": "NOT RUN",
+          "types": "NOT RUN",
+          "lint": "NOT RUN",
+          "canonicalSourceCap": "NOT RUN",
+          "manualProductionLineCount": "230; below800; no frozen production file grows",
+          "diffReview": "root exact production diff and all added tests read; no other base text modified"
+        },
+        "newCodeExecution": false,
+        "publicationHold": "Current615 useful original attempt1 CI still running; no commit/ref update.",
+        "independentSourceReview": {
+          "reviewer": "ci_host_ui_37",
+          "decision": "PASS; execution still NOT RUN",
+          "evidence": "Exact hashes checked; current MemberList passes undefined unchanged. MemberCard starting state uses existing skeleton; idle keeps role-only row; telemetry prop unchanged. Empty config/explicit providers/legacy cases match existing formatters; base25tests preserved plus8new cases."
+        },
+        "validationReadback": {
+          "prod": true,
+          "test": true,
+          "allExact": true
+        }
+      },
+      "runtimeDiagnostics": {
+        "manifest": {
+          "schemaVersion": 1,
+          "kind": "NEW runtime-open diagnostic authoring",
+          "repository": "777genius/agent-teams-ai",
+          "baseCommit": "615a264fcd168a5643fde4ec39ab173075e4d6c9",
+          "createdAt": "2026-11-18T09:17:09.651Z",
+          "revision": "new615-review1",
+          "recovered": false,
+          "provenance": "Fresh source authoring after environment outage; immutable615 originals re-read. No tested lost-candidate bytes or results are transferred.",
+          "files": [
+            {
+              "path": "packages/legacy-agent-host/src/diagnostics/runtimeOpenDiagnostic.ts",
+              "blob": "ce6d3a391af0946c7d41e0dec2d1c40fd3872aad",
+              "baseSha256": null,
+              "sha256": "d0112372d04b4d7edcb12c37089c870ba53fe119594b9ca2cf567fc27969db2d",
+              "lines": 76,
+              "readback": true
+            },
+            {
+              "path": "packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+              "blob": "26b56c5a842fc59054aef11052a205f7dfeb2428",
+              "baseSha256": "478bead841e1344f55a77ff16852f7359826b459f6d5986859c5a454f3fc476d",
+              "sha256": "b62e758155cdbd20a4759e1d41c1e678b652d391f40185952317eccb7ebc2821",
+              "lines": 771,
+              "readback": true
+            },
+            {
+              "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+              "blob": "1ca631e4148e1e8b831d5309add399dccbfd4cf8",
+              "baseSha256": "bc94a81846c9c6a58d98923f63b47e05cbcf688efa6b7e3d1b3a3b229f6559cc",
+              "sha256": "9350fd6c1f6e74fc4389ce0603d9479459d3f399f6132d6b668fb57e21f6021b",
+              "lines": 367,
+              "readback": true
+            },
+            {
+              "path": "src/features/agent-backend/main/infrastructure/decodeClaudeCloseDiagnostics.ts",
+              "blob": "6c0b5186f8f4c2aabab97cb76319c7f637e21e94",
+              "baseSha256": "c5ec2885948753fcbbaeb2af99e07b36827460e4a28dee2f7a4156c422db905f",
+              "sha256": "d31349999f215639a0ea7d43981ec52629825ad32ec708d196fb0a5f59fe8e8d",
+              "lines": 310,
+              "readback": true
+            },
+            {
+              "path": "src/features/agent-backend/main/infrastructure/createCapturedHostDiagnostics.ts",
+              "blob": "c27d121a94a9e4e4b403c9478d6ba071fceec01c",
+              "baseSha256": "c5e86e72819f6ca62c6f43ca5fafb89b2ecda2e2a8a633a57885cd42b1873e15",
+              "sha256": "2391db2fb9f90a265bd82c10ea3c2a0db080270319fd19b85bedad0d88e6f315",
+              "lines": 37,
+              "readback": true
+            },
+            {
+              "path": "packages/legacy-agent-host/tests/runtime-open-diagnostic.test.ts",
+              "blob": "125be0048b21e047a69863e2c42e541e624fdd2e",
+              "baseSha256": null,
+              "sha256": "a1a4c2074d2c886742224db3707d58f0a5db5dc090f781ff5f937e4e109a3848",
+              "lines": 332,
+              "readback": true
+            },
+            {
+              "path": "test/features/agent-backend/runtimeOpenDiagnostics.test.ts",
+              "blob": "a576eb0e660d8ecda302700aa6d0db92e9da207b",
+              "baseSha256": null,
+              "sha256": "09d399d9b41a207adf4bc9270aa8ebeee72a768e0afc1a15b44d470cadfbdd51",
+              "lines": 300,
+              "readback": true
+            }
+          ],
+          "authoredRegressionCases": {
+            "host": 7,
+            "main": 15,
+            "executed": 0
+          },
+          "validation": {
+            "immutableBlobReadback": "PASS: exact UTF-8 contents and SHA256",
+            "sourceOnlyInverse": "PASS: removing declared changes and wrapper indentation reproduces all four immutable615 base files exactly",
+            "tests": "NOT RUN",
+            "typescript": "NOT RUN",
+            "lint": "NOT RUN",
+            "build": "NOT RUN",
+            "repositorySourceCapGate": "NOT RUN; source line counts recorded only",
+            "native": "NOT RUN",
+            "desktop": "NOT RUN",
+            "e2e": "NOT RUN",
+            "prior22PassingTests": "NOT APPLICABLE to this new revision"
+          },
+          "productionContract": {
+            "fields": [
+              "profileHash",
+              "configurationHash",
+              "source",
+              "phase",
+              "category",
+              "observedAtMs"
+            ],
+            "recordPrefix": "legacy-agent-host: runtime-open ",
+            "hashSemantics": "runtimeDigest of captured profileId and original configuration, eagerly captured once; hash failures remain diagnostic loss",
+            "errorClassification": "Fixed own-data code/name labels only. No Error.message, raw code, path, token, environment, argv or stack forwarded",
+            "framing": "Original shared8192-byte decoder/framing loop remains byte-identical",
+            "writer": "Private node:console Console with ignoreErrors:true and colorMode:false; no global console replacement or permanent stderr listener",
+            "factory": "First failure record before original endpoint.revoke/await endpoint.close/throw. Original cleanup-error precedence preserved; outer catch does not repeat first factory record",
+            "runtime": "Original held/nativeReady=false/custody=unknown/open-unknown publication remains unchanged",
+            "sideEffects": "Adds bounded eager hashes, phase assignments and a best-effort refusal write; no zero-cost/performance claim. No new await, retry, action, admission, custody or deadline change",
+            "main": "Fifth optional private decoder sink uses unchanged caller-supplied Host PID callback; record supplies no PID authority"
+          },
+          "knownLimits": [
+            "Execution environment unavailable. These files are review candidates until root review and original CI validation.",
+            "Actual Console callback/error lifetime and full composition tests are authored, not executed.",
+            "No Windows readiness, Restore cause, cleanup, native vendor or E2E qualification is claimed by this diagnostic channel."
+          ],
+          "sourceOnlyInverse": [
+            {
+              "path": "packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+              "baseSha256": "478bead841e1344f55a77ff16852f7359826b459f6d5986859c5a454f3fc476d",
+              "exact": true
+            },
+            {
+              "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+              "baseSha256": "bc94a81846c9c6a58d98923f63b47e05cbcf688efa6b7e3d1b3a3b229f6559cc",
+              "exact": true
+            },
+            {
+              "path": "src/features/agent-backend/main/infrastructure/decodeClaudeCloseDiagnostics.ts",
+              "baseSha256": "c5ec2885948753fcbbaeb2af99e07b36827460e4a28dee2f7a4156c422db905f",
+              "exact": true
+            },
+            {
+              "path": "src/features/agent-backend/main/infrastructure/createCapturedHostDiagnostics.ts",
+              "baseSha256": "c5e86e72819f6ca62c6f43ca5fafb89b2ecda2e2a8a633a57885cd42b1873e15",
+              "exact": true
+            }
+          ],
+          "independentReview": {
+            "parserSinkHelperAndMainTests": "UI source review received on exact immutable blobs; execution NOT RUN",
+            "factoryRuntimeAndHostTests": "PENDING root source review"
+          },
+          "mutations": {
+            "immutableBlobsOnly": true,
+            "commit": false,
+            "ref": false,
+            "pullRequest": false,
+            "workflow": false
+          }
+        },
+        "finalRootReview": {
+          "reviewer": "root",
+          "revision": "new615-review1",
+          "base": "615a264fcd168a5643fde4ec39ab173075e4d6c9",
+          "manifestBlob": "da82c7d8af78822cf7954215f9386f72c5100973",
+          "decision": "PASS_SOURCE_REVIEW_ONLY",
+          "readbacks": "All seven exact SHA256",
+          "factoryInverse": {
+            "exact": true,
+            "baseSHA256": "bc94a81846c9c6a58d98923f63b47e05cbcf688efa6b7e3d1b3a3b229f6559cc",
+            "postSHA256": "9350fd6c1f6e74fc4389ce0603d9479459d3f399f6132d6b668fb57e21f6021b"
+          },
+          "runtimeInverse": {
+            "exact": true,
+            "baseSHA256": "478bead841e1344f55a77ff16852f7359826b459f6d5986859c5a454f3fc476d",
+            "postSHA256": "b62e758155cdbd20a4759e1d41c1e678b652d391f40185952317eccb7ebc2821"
+          },
+          "findings": [
+            "Factory initial selection, all original authority and allocation guards, awaits and endpoint cleanup order remain unchanged after removing only diagnostic additions.",
+            "The first factory failure is observed before original endpoint revoke/close; one-shot observer keeps any cleanup failure from replacing the factory diagnostic while original cleanup failure still reaches Runtime.",
+            "Runtime driver attachment, readiness, held publication, nativeReady and custody results remain original.",
+            "Seven authored Host tests use actual FileRuntimeStore/RuntimeOwner and real TeamHost/factory with finite provider sessions, including actual HTTP close callback fault after server closure.",
+            "Diagnostic hashes add synchronous work; no performance or timing qualification claimed.",
+            "Existing canonical Host tests glob and Vitest include newly authored tests, without workflow changes."
+          ],
+          "execution": "NOT RUN; prior frozen22PASS inapplicable"
+        }
+      },
+      "metadata": {
+        "version": 1,
+        "kind": "NEW_CANDIDATE_NOT_EXECUTED",
+        "base": "615a264fcd168a5643fde4ec39ab173075e4d6c9",
+        "files": [
+          {
+            "path": "scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts",
+            "baseBlob": "c2bc4d3323e2030bd293b9ae16da0f822be04c17",
+            "baseSha256": "33f1b7ec5aa889f4e563cf2de0ee829d9329a81d0a6708509b6be54ff1d718b4",
+            "blobSha": "3b071a531010c01d3d7de34e8bc86c749f4ae03f",
+            "sha256": "440d4838aedaaad774b311e8dc94e9300feb811c975723c7367954d2f1ed6480",
+            "bytes": 21742,
+            "lines": 387
+          },
+          {
+            "path": "scripts/legacy-agent-host/desktop-native-stop-fixture.ts",
+            "baseBlob": "809ab441a0c8e44edcae623b5601eeb9c69be582",
+            "baseSha256": "fea58cd45c947cea5b9adad9cac8db7285bb59bbc34429205e6ee10888effb06",
+            "blobSha": "c88245e9a25cfc5a2bdac08ef80645065e1dae6d",
+            "sha256": "16b9146a629e7e7c396a7ae4fbfdd690dc360536f1ce48cc242c9719be508c8a",
+            "bytes": 35399,
+            "lines": 673
+          },
+          {
+            "path": "scripts/legacy-agent-host/desktop-opencode-v2-review-ui-smoke.ts",
+            "baseBlob": "a914d3808022289da5f994d60ad4bb7cca5eac38",
+            "baseSha256": "6b807423bd9ff2a1887c18417ee52dbd0c270c0f30bf24f33eb51236e392f4a1",
+            "blobSha": "3072ae13064749fc89812b425995a742daa3a0c1",
+            "sha256": "420af7899047a5e32553a8678a28f8fb3baa2681dc8b80b2ebd49aefc3083a9b",
+            "bytes": 17114,
+            "lines": 196
+          },
+          {
+            "path": "scripts/legacy-agent-host/desktop-opencode-v2-lifecycle.test.ts",
+            "baseBlob": "1e2653c7bcad520a5d92f39a5130bee9ff6e63b0",
+            "baseSha256": "9ad8df35210da6b12afb72aaa146f0bb58b4985d50ec9a035868efbef32df388",
+            "blobSha": "6e3184a3b5e1c73e0cb6ba9e7260509d0d5d61c4",
+            "sha256": "0eb4ae847375c0aee475c6557800214e0b615a685b35fbc99acd97cab693d38e",
+            "bytes": 45758,
+            "lines": 706
+          }
+        ],
+        "executionGates": {
+          "tests": "NOT RUN",
+          "types": "NOT RUN",
+          "lint": "NOT RUN",
+          "sourceCapCommand": "NOT RUN",
+          "app": "NOT RUN"
+        },
+        "staticProductionLineCounts": [
+          {
+            "path": "scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts",
+            "lines": 387,
+            "limit": 800
+          },
+          {
+            "path": "scripts/legacy-agent-host/desktop-native-stop-fixture.ts",
+            "lines": 673,
+            "limit": 800
+          },
+          {
+            "path": "scripts/legacy-agent-host/desktop-opencode-v2-review-ui-smoke.ts",
+            "lines": 196,
+            "limit": 800
+          }
+        ],
+        "scope": [
+          "Only caller-supplied original setup180s remainder or review120s cutoff at original preflight boundary",
+          "No-budget global review/cold paths retain existing behavior",
+          "Passive log lifecycle count is not qualification",
+          "Existing physical oracle still requires original native births/retired absence and runtime0; budgeted physical window capped min(5s,remaining)",
+          "Unchanged original catalog/input/Launch/Stop/Quit actions; only file/process/DOM observations added",
+          "All tests are newly authored, prior local draft PASS claims explicitly inapplicable"
+        ],
+        "limitations": [
+          "No current filesystem/runtime available; no execution gate performed",
+          "Earlier unbudgeted Review global capture remains outside the new passive wait"
+        ]
+      },
+      "epoch": {
+        "files": [
+          {
+            "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+            "mode": "100644",
+            "type": "blob",
+            "sha": "46bf5b82f12ce83b18053bd9f45a8bf3747b3c34",
+            "sha256": "108c83ce331b1960321ee06804992de2c56e0d361012f1e813a8e83fbb728785",
+            "baseSha256": "b9e03f92727d6230c6b057c67f6981cb844807e36172729f47842dbc88682878",
+            "group": "epoch-natural-exit"
+          },
+          {
+            "path": "scripts/legacy-agent-host/desktop-owner-routing-epoch.ts",
+            "mode": "100644",
+            "type": "blob",
+            "sha": "eebabc3f91e246bf5185c81670a2e074b7063496",
+            "sha256": "263775946e4f2ce4cb0c26b06088c81ae0899d23fd313f9be4dfe1cc06277b7b",
+            "baseSha256": "0be302b884538c6156fd20b6ef8e6a27d73a525058c503f5a2b685b89be76aec",
+            "group": "epoch-natural-exit"
+          }
+        ],
+        "revision": 2,
+        "newCases": 21,
+        "sourceReviewers": [
+          "root",
+          "ci_host_ui_37",
+          "ci_native_37"
+        ],
+        "execution": "NOT RUN",
+        "nativeReceiptSHA256": "5ce1eda8b5a20c3a5324dabafd601ad60176dc58e84a12cf1e0652f2fe4c45df"
+      },
+      "stoppedImport": {
+        "schemaVersion": 1,
+        "kind": "NEW private stopped-import diagnostics",
+        "revision": "new615-review1",
+        "base": "615a264fcd168a5643fde4ec39ab173075e4d6c9",
+        "recovered": false,
+        "files": [
+          {
+            "path": "src/features/agent-backend/main/infrastructure/stopped-import/createStoppedImportDiagnostic.ts",
+            "blob": "91c3ad1a90cbdc1da7e08bdf9d9d63121548f50d",
+            "sha256": "d0743a080503a79ab8726abefa69cf665284cd7b2247bf36a0f4a7775d2df0cf",
+            "lines": 171,
+            "baseSha256": null
+          },
+          {
+            "path": "src/features/agent-backend/main/application/importStoppedLegacyTeam.ts",
+            "blob": "51db08f3b4216caac8280505b71eb8270954ed18",
+            "sha256": "db06686931695fc352f4a4826d26601a6c8c817c0db230bf25ecd8d7cbc0c9ab",
+            "lines": 156,
+            "baseSha256": "f74b18345128f7e234990f85223b31058ccc4c03b5df3d5b3c66eb5ee8df2d3e"
+          },
+          {
+            "path": "src/main/composition/createDesktopStoppedTeamOperations.ts",
+            "blob": "75269a5eeb73a74df4bdc3d0c26d5de141283a5a",
+            "sha256": "8b6c333c5d3a7b1b171315fc9dc265b6d92a92a28721c2efe1ee23b4db4603d5",
+            "lines": 298,
+            "baseSha256": "bbaab527fe583fb64b5ccf7529e32adbdbcf79e8f0e676aa3c1e827ed11844e2"
+          },
+          {
+            "path": "src/features/agent-backend/main/index.ts",
+            "blob": "b841a23f7e30459ae4c72c44b18844f52a729ce3",
+            "sha256": "57714b3e959172b042191e8986a41c94fa1903767b6543e8c788601e33331483",
+            "lines": 102,
+            "baseSha256": "ef7d93bb7ca601c07721794939d59f4cd24aebbe3f595cb0967f5d0029e667ec"
+          },
+          {
+            "path": "test/features/agent-backend/stoppedImportDiagnostics.test.ts",
+            "blob": "40e61ff788d4b3b9ac678cc351dad05b9e371164",
+            "sha256": "c4b114ddb7d0cb04d50778a38168432a36e8c71e859ab7b3a15de23c0347f89b",
+            "lines": 327,
+            "baseSha256": null
+          },
+          {
+            "path": "test/features/agent-backend/retainedLegacyMainAdmission.test.ts",
+            "blob": "004236e38c5520c75d94e2c6043b0d43796c4f98",
+            "sha256": "45c537394d93221eaac21b4c63b3036e7ddc767e7010f0e5cb17a485b890e009",
+            "lines": 295,
+            "baseSha256": "5683a9604fbd03ec26f0e2d0b81a4bd3964dbe2f1f0dba41fef3b5d7e4b75947"
+          }
+        ],
+        "sourceOnlyInverse": {
+          "application": {
+            "exact": true,
+            "sha256": "f74b18345128f7e234990f85223b31058ccc4c03b5df3d5b3c66eb5ee8df2d3e",
+            "originalAwaitCount": 8,
+            "newAwaitCount": 8
+          },
+          "desktop": {
+            "exact": true,
+            "sha256": "bbaab527fe583fb64b5ccf7529e32adbdbcf79e8f0e676aa3c1e827ed11844e2",
+            "originalAwaitCount": 9,
+            "newAwaitCount": 9,
+            "missingSourceReturnUnchanged": true
+          },
+          "existingMainTests": {
+            "exact": true,
+            "sha256": "5683a9604fbd03ec26f0e2d0b81a4bd3964dbe2f1f0dba41fef3b5d7e4b75947"
+          }
+        },
+        "intendedContract": [
+          "Preserve all original guards, awaits, effect=true placement, result reasons/outcomes and missing-source return run().",
+          "Observe failures with closed source/phase/category/outcome fields only; never pass raw error/request/team/context/path/environment/token/message/stack/cause to a sink.",
+          "Use the existing Main private diagnostic sink, never console, warn or error; expected native-custody-unverified remains the existing original-runtime choice.",
+          "One diagnostic per boundary; callbacks including throwing getters and rejected promises cannot change refusal or uncertainty.",
+          "Success and successful lost-ACK reconciliation produce no final refusal diagnostic.",
+          "No added RPC, provider run, Launch, retry, deadline, custody admission or cleanup change."
+        ],
+        "authoredRegressionCases": {
+          "applicationAndHelper": 15,
+          "actualMainComposition": 2,
+          "executed": 0
+        },
+        "validation": {
+          "immutableReadbacks": "PASS exact",
+          "sourceInverse": "PASS",
+          "tests": "NOT RUN",
+          "types": "NOT RUN",
+          "lint": "NOT RUN",
+          "formatCommand": "NOT RUN; manual review only",
+          "sourceCapCommand": "NOT RUN; all4 production files statically below800",
+          "build": "NOT RUN",
+          "desktop": "NOT RUN",
+          "e2e": "NOT RUN"
+        },
+        "limitations": [
+          "Execution environment still unavailable at09:21:43UTC; no local execution of this NEW revision.",
+          "This diagnostic does not itself resolve the held-import cause; current615 modal contents remain uninspected.",
+          "No prior frozen source, test or E2E result qualifies these NEW files."
+        ],
+        "independentReview": {
+          "provider": {
+            "decision": "PASS_SCOPED_SOURCE_REVIEW_ONLY",
+            "receiptSHA256": "a2daa4d3a87751061d4bc0797a4dece36fcafa109a778d80059dbaf1a041b7c0",
+            "scope": "All six postimages; exact inverse four bases; original8/9awaits, effects, reconciliation, missing-source return, guards and outcomes;17 authored tests."
+          },
+          "ui": {
+            "decision": "PASS_SCOPED_SOURCE_REVIEW_ONLY",
+            "receiptSHA256": "5f625031cc31458313970d0cf529f6492a97d794979aae7b1d855a4130e2259b",
+            "scope": "Helper privacy, one-shot sink lifetime and15 actual-application/helper cases."
+          },
+          "executed": false
+        },
+        "publicationHold": "Useful615 original attempt1 CI still active; immutable blobs only, no commit/ref update."
+      },
+      "controls": {
+        "version": 2,
+        "kind": "NEW_unexecuted_harness_diagnostics_candidate",
+        "base": "615a264fcd168a5643fde4ec39ab173075e4d6c9",
+        "repository": "777genius/agent-teams-ai",
+        "scope": "Original waitRead failure-only counters and exact finite-source Create same-evaluate DOM facts",
+        "files": [
+          {
+            "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+            "baseBlob": "d7db921d41c439906f39d8b074f140e1a1aa111b",
+            "baseSha256": "13326dde673bd6d0827d76fc84b9c0cc00600d314c504d1437aed9c40be9ff21",
+            "blob": "379641206d68196083db1b009443fd0347806faa",
+            "sha256": "1fc46b4fe474221b947f92cc2b690760885503baa51f5bae1247f52cf7b8c97a",
+            "bytes": 44275,
+            "lines": 759
+          },
+          {
+            "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+            "baseBlob": "6fbcd807657a2e320fb2ca39bcd3b14d9cfbd100",
+            "baseSha256": "5ed969d8b659717800cff5e2becf5656994a4bef9c91a8b105fad1bdc8b51ff4",
+            "blob": "0c20e8e418d52f1bd34c13e41000e3a2e763fd0a",
+            "sha256": "57baad0952cf1ea284fae822da29c551835cc6ba602ccff46093218bc139617f",
+            "bytes": 33888,
+            "lines": 675
+          }
+        ],
+        "staticChecks": {
+          "immutableBlobReadback": "both exact",
+          "originalWaitBoundarySequence": [
+            "Date.now()",
+            "Date.now()",
+            "options.assertOwnedRenderer()",
+            "await readOptions.beforeRead()",
+            "options.assertOwnedRenderer()",
+            "Date.now()",
+            "await cdp.evaluate(expression)",
+            "Date.now()",
+            "isReady(value)",
+            "String(error)",
+            "setTimeout(done, 100)"
+          ],
+          "boundarySequenceIdentical": true,
+          "threeClockChecksReplacedOneForOne": true,
+          "fullInverseTo615": true,
+          "existingDeadlineTestPrefix": "byte-identical",
+          "productionLinesBelow800": true
+        },
+        "design": [
+          "No new CDP/evaluate/RPC/actions/guards/poll timers or time windows. Original return/refusal/context-retry conditions, 100ms cadence, owner order and click path remain.",
+          "Closed phase and counters capped at4096; timestamps only from existing clock checks, not extra observations. Original timeout and error identities remain; diagnostic output cannot replace the original refusal.",
+          "Exact finite-source selector+label+text controls same-evaluate Create facts. The original target element supplies only fixed booleans and capped33 counts; no form values/text/path/token or validity method reads.",
+          "The Create facts describe present DOM, not every internal disabled predicate or cause. Missing/malformed observations stay absent.",
+          "Frozen metadata4 candidate is separate and unchanged."
+        ],
+        "newAuthoredTests": {
+          "count": 13,
+          "scope": [
+            "after-hover late result versus already exhausted remainder, with zero extra input",
+            "existing context retry versus late fulfilled response without readiness",
+            "original owner/preparation/transport failure identity despite broken reporter",
+            "preparation and owner costs under original cutoff",
+            "timely original value unchanged and silent",
+            "actual generated Create DOM expression, private getter traps, optional diagnostic failure, exact-scope refusal and bounded facts"
+          ]
+        },
+        "executionGates": {
+          "tests": "NOT_RUN",
+          "types": "NOT_RUN",
+          "lint": "NOT_RUN",
+          "runtime": "NOT_RUN",
+          "historicalPassReused": false
+        },
+        "supersedes": {
+          "manifestBlob": "de95ec303a90f116198f874c791e904174d1a72e",
+          "reason": "CI command omission was only direct; existing team-ui test imports deadline tests transitively. Source and test blobs unchanged."
+        },
+        "ciWiring": {
+          "workflow": ".github/workflows/host-emulated-acceptance.yml",
+          "currentSource": "615a264fcd168a5643fde4ec39ab173075e4d6c9",
+          "originalNodeCommandLine": 127,
+          "deadlineTestDirectArgument": false,
+          "transitiveExecution": {
+            "from": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+            "blob": "65fa2a436575a1351badd4bc785cd9a1e887f8b0",
+            "sha256": "e37c61a2fde42f8ec26f15f62df807b3104ad2a632a344d8a2febd611cee2f35",
+            "line": 4264,
+            "import": "./desktop-ui-controls-deadline.test.ts"
+          },
+          "deadlineTestInOriginalNodeGate": true,
+          "deadlineTestInExplicitLintList": false,
+          "workflowEdited": false,
+          "note": "Do not add a duplicate Node test argument. Root can add the existing test path to the explicit lint list in the coordinated batch; execution of new tests remains NOT_RUN."
+        }
+      },
+      "retainedRefusal": {
+        "schemaVersion": 1,
+        "kind": "NEW retained renderer refusal diagnostics",
+        "revision": "new615-review1",
+        "createdAt": "2026-11-18T10:05:44.481Z",
+        "repository": "777genius/agent-teams-ai",
+        "base": "615a264fcd168a5643fde4ec39ab173075e4d6c9",
+        "recovered": false,
+        "files": [
+          {
+            "path": "scripts/legacy-agent-host/desktop-retained-opencode-launch.ts",
+            "baseBlob": "55b25da6fb7922c7beabe464fdba9572787ac774",
+            "baseSha256": "0200b764e1dd13abbdfe3219297aaadb0c9d6b15dadfda3a0f3b17662e5f0a1e",
+            "blob": "7dc63697a68c7b1042feb48c44c2af0f6d76a267",
+            "sha256": "06e430063b3976537a6831b75b5c514225ffb552c30c86fd8c3304a853c46475",
+            "lines": 117
+          },
+          {
+            "path": "scripts/legacy-agent-host/desktop-retained-opencode-launch.test.ts",
+            "baseBlob": "f0d244198b09be1b401a34710874d7f5b067d2cf",
+            "baseSha256": "4055c8b1e18f9618938c524aeafaa4772f82e4a91ac3118a7ecde331133c8d62",
+            "blob": "b2c207e5ae291725935339bd34d80ba846ca5f28",
+            "sha256": "a78eda0db10f58e850a8652cfde6b8094c9824b736fdc1c74e5b0ee4eee06df0",
+            "lines": 355
+          }
+        ],
+        "intendedContract": [
+          "Only the existing serialized value(raw,action) failure branch changes; original ok/action predicate and generic message prefix retained.",
+          "Read only own data descriptors of the already captured public reason/outcome. Nine reasons exactly match immutable615 RetainedLegacyLaunchFailure; outcomes are not-dispatched or unknown. Unknown/missing/accessor/inherited values become null.",
+          "No raw result, error message, path, token, scope capability, Team, project, environment or input is serialized. Descriptor/serialization failure leaves the original generic refusal.",
+          "Same original six awaits, bound renderer receiver, one intent/Open, preparation/roster/Launch order,240s cutoff and stop-only cleanup. No app/caller/Main/contract/workflow or admission change.",
+          "Existing primary/cleanup failure ordering remains. The unchanged AggregateError outer message can still mask inner diagnostic details if both original work and cleanup fail."
+        ],
+        "observedTrigger": {
+          "head": "615a264fcd168a5643fde4ec39ab173075e4d6c9",
+          "job": 134704545354,
+          "logSha256": "3d03aa6dec2494e6d6bb69506e4501350d689ef28979a37e39b3ee57a796ac2e",
+          "message": "Original runtime open was not confirmed",
+          "underlyingPublicReason": "not shown; not inferred"
+        },
+        "staticVerification": {
+          "immutableReadbacks": true,
+          "inverseToBase": true,
+          "originalTestPrefixPreserved": true,
+          "awaitCount": {
+            "before": 6,
+            "after": 6
+          },
+          "publicReasonDomainExact": true,
+          "contractSha256": "7cdffffdb5fb220618391067ba90b8e5cb6824fe577ebe650854bb99bd56981c",
+          "productionLines": 117
+        },
+        "authoredCases": {
+          "new": 7,
+          "existingLaunchCasesPreserved": 22,
+          "scope": [
+            "Known not-dispatched and unknown outcome with no private payload",
+            "Unknown, inherited and throwing accessor labels discarded",
+            "Throwing descriptor observation preserves generic primary error",
+            "Primary/cleanup ordering retained",
+            "Every new refusal case asserts one original Open and one same-intent closeIntent, no Launch and no transport replacement"
+          ]
+        },
+        "ciRoute": {
+          "workflow": ".github/workflows/ci.yml",
+          "existingCommand": "node --test scripts/legacy-agent-host/desktop-retained-opencode-model.test.ts scripts/legacy-agent-host/desktop-retained-opencode-launch.test.ts",
+          "directTestAlreadyIncluded": true,
+          "workflowChanged": false
+        },
+        "validation": {
+          "sourceInverse": "PASS",
+          "hashReadbacks": "PASS",
+          "testExecution": "NOT RUN",
+          "types": "NOT RUN",
+          "lint": "NOT RUN",
+          "build": "NOT RUN",
+          "sourceCapCommand": "NOT RUN",
+          "desktop": "NOT RUN",
+          "e2e": "NOT RUN",
+          "priorCurrent35Pass": "Applies only to published615 preimages; not validation of these NEW postimages."
+        },
+        "independentReview": "PENDING native read-only review",
+        "mutations": {
+          "immutableBlobsOnly": true,
+          "commit": false,
+          "ref": false,
+          "pullRequest": false,
+          "workflow": false
+        }
+      },
+      "quitShape": {
+        "version": 1,
+        "kind": "NEW_unexecuted_passive_directory_shape_diagnostic",
+        "base": "615a264fcd168a5643fde4ec39ab173075e4d6c9",
+        "repository": "777genius/agent-teams-ai",
+        "files": [
+          {
+            "path": "scripts/legacy-agent-host/desktop-native-quit-ui-smoke.ts",
+            "baseBlob": "4415bad7752c91a0c0fbad789f5c712908643425",
+            "baseSha256": "4f3c5460147352c8bbc472bac0e74ae54c646425d23ffb3a97bc0a8d9886b40e",
+            "blob": "cce4088737ff0eb4174746bf6fff49a22aded264",
+            "sha256": "32976b9f60b2047eb4036d0b7c84aa5f60db5caa0ce607940820053546b6754a",
+            "bytes": 21332,
+            "lines": 478
+          }
+        ],
+        "scope": [
+          "Wrap only the existing strict files() assertion. Predicate, short-circuit order and original error object are preserved.",
+          "On that original refusal, sample at most256 already-read Dirents. Fixed counts distinguish regular files, valid JSON names, their intersection, directories, symlinks and other types.",
+          "Total count is capped257; sample truncation explicit. No names, paths, content, errors or request identifiers emitted.",
+          "No new filesystem read, clock, await, retry, deadline, input or cleanup action. Reporting is best effort and the same original exception is rethrown."
+        ],
+        "staticChecks": {
+          "inverseToPinnedBase": true,
+          "productionLinesBelow800": true
+        },
+        "executionGates": {
+          "tests": "NOT_RUN",
+          "types": "NOT_RUN",
+          "lint": "NOT_RUN",
+          "runtime": "NOT_RUN",
+          "newTests": "NONE_AUTHORED: observation-only change, as directed",
+          "historicalPassReused": false
+        },
+        "limits": [
+          "The actual615 offending entry/count/type remains unknown; this does not establish or fix its cause.",
+          "No temporary-file exception or directory admission weakening is introduced."
+        ]
+      },
+      "finiteCiGates": {
+        "schemaVersion": 1,
+        "kind": "Existing finite CI gate inclusion",
+        "base": "615a264fcd168a5643fde4ec39ab173075e4d6c9",
+        "files": [
+          {
+            "path": ".github/workflows/host-emulated-acceptance.yml",
+            "blob": "5fbd19d5a85a99a01b72fe64a4426e0ba5931641",
+            "baseSha256": "e5deaa201004680be5fa6c8c149b24d8220e67a5fe7a6dca2d3e0d46db164cf8",
+            "sha256": "0d6574dc3764efddba8101d705d72e6c9015421bca324a1b513f372ec48d8238",
+            "lines": 1931
+          }
+        ],
+        "changes": {
+          "nodeGateAdded": [
+            "scripts/legacy-agent-host/desktop-opencode-v2-lifecycle.test.ts"
+          ],
+          "deadlineTestAlreadyTransitivelyIncluded": "desktop-team-ui-smoke.test.ts:4264; no duplicate node argument",
+          "explicitLintAdded": [
+            "scripts/legacy-agent-host/desktop-native-quit-ui-smoke.ts",
+            "scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts",
+            "scripts/legacy-agent-host/desktop-opencode-v2-lifecycle.test.ts",
+            "scripts/legacy-agent-host/desktop-opencode-v2-review-ui-smoke.ts",
+            "scripts/legacy-agent-host/desktop-owner-routing-epoch.ts",
+            "scripts/legacy-agent-host/desktop-retained-opencode-launch.ts",
+            "scripts/legacy-agent-host/desktop-retained-opencode-launch.test.ts",
+            "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts"
+          ]
+        },
+        "sourceChecks": {
+          "inverseExact": true,
+          "sourceNode24_21": "unchanged",
+          "triggersJobsConditionsPermissionsSecretsRunnersTimeouts": "byte-identical",
+          "existingNodeArguments": "same original sequence plus one previously unimported finite lifecycle file",
+          "buildOrder": "original Host/controller/MCP builds precede same existing node gate"
+        },
+        "validation": {
+          "yamlCommand": "NOT RUN",
+          "tests": "NOT RUN",
+          "types": "NOT RUN",
+          "lint": "NOT RUN"
+        },
+        "independentReview": "PENDING",
+        "sourceBranchesChanged": false
+      }
+    },
+    "authoringSnapshotNote": "Group authoring manifests are historical freeze records. Their PENDING or publication-hold text records the earlier state; the final integration source-review decision and validationOfNewSource above are authoritative. No earlier executable PASS is transferred.",
+    "finalIndependentDecisions": {
+      "combined21": {
+        "reviewer": "ci_provider_scope_37",
+        "decision": "PASS_SCOPED_SOURCE_REVIEW_ONLY",
+        "receiptSHA256": "1f474033c4b9efdbded04082f7588e89547ff43329aaad25f716d35dab943f29"
+      },
+      "controls": {
+        "reviewers": [
+          "ci_native_37",
+          "ci_provider_scope_37"
+        ],
+        "decision": "PASS_SCOPED_SOURCE_REVIEW_ONLY",
+        "nativeReceipt": "bc7ed085bd04d196c72270a70e38cda6597a79fc"
+      },
+      "quit": {
+        "reviewer": "ci_native_37",
+        "decision": "PASS_SCOPED_SOURCE_REVIEW_ONLY",
+        "receipt": "366693371cb69455b8aba7e6073c1fd38242f167"
+      },
+      "retained": {
+        "reviewer": "ci_native_37",
+        "decision": "PASS_SCOPED_SOURCE_REVIEW_ONLY",
+        "receipt": "7d7e3fe317a1e30bb6e496915e8c987c99122d3a"
+      },
+      "workflow": {
+        "reviewer": "ci_native_37",
+        "decision": "PASS_SCOPED_SOURCE_REVIEW_ONLY",
+        "receipt": "93c87b4743c7103d36dad0b36275cc1a94f0196a"
+      }
+    }
+  },
+  "validationOfNewSource": {
+    "tests": "NOT RUN",
+    "types": "NOT RUN",
+    "lint": "NOT RUN",
+    "build": "NOT RUN",
+    "sourceCapCommand": "NOT RUN; recorded production TypeScript linecounts <=771; tests/workflow are separate",
+    "native": "NOT RUN",
+    "desktop": "NOT RUN",
+    "e2e": "NOT RUN",
+    "sourceOnlyGitDiff": "PASS exact27 paths and100644 modes",
+    "baseContentAndNewAbsence": "PASS22 preimages+5 absent targets",
+    "currentOrOldPassTransferred": false
+  },
+  "executionEnvironment": {
+    "lostAround": "2026-11-18T08:10:00Z",
+    "lastReadOnlyAvailabilityCheck": "2026-11-18T09:21:43Z",
+    "lastResult": "No usable execution environment is available.",
+    "newCodeExecution": false,
+    "toolchainSubstitution": false,
+    "dependencyInstall": false,
+    "sqliteRebuild": false,
+    "localAppRetry": false
+  },
+  "predecessorCi": {
+    "source": "615a264fcd168a5643fde4ec39ab173075e4d6c9",
+    "event": "pull_request",
+    "attempt": 1,
+    "all29FirstTerminalObserved": true,
+    "allPermanentlyRetired": true,
+    "workflowCounts": {
+      "total": 29,
+      "success": 9,
+      "failure": 6,
+      "skipped": 14
+    },
+    "teams": {
+      "version": 1,
+      "kind": "original-ci-terminal-summary",
+      "repository": "777genius/agent-teams-ai",
+      "repositoryId": 1163183284,
+      "pullRequest": 1192,
+      "head": "615a264fcd168a5643fde4ec39ab173075e4d6c9",
+      "base": "8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+      "event": "pull_request",
+      "runId": 44269678658,
+      "attempt": 1,
+      "workflow": "Teams creation page Electron E2E",
+      "runStatus": "completed",
+      "conclusion": "success",
+      "firstTerminalObservedAt": "2026-11-18T09:02:19Z",
+      "permanentlyRetired": true,
+      "runUrl": "https://github.com/777genius/agent-teams-ai/actions/runs/44269678658",
+      "counts": {
+        "jobs": 3,
+        "success": 3,
+        "failure": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "jobs": [
+        {
+          "id": 134682858184,
+          "name": "Creation page (windows-latest)",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-11-18T08:47:46Z",
+          "completedAt": "2026-11-18T08:53:30Z"
+        },
+        {
+          "id": 134682858552,
+          "name": "Creation page (ubuntu-latest)",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-11-18T08:45:39Z",
+          "completedAt": "2026-11-18T08:50:54Z"
+        },
+        {
+          "id": 134682858725,
+          "name": "Creation page (macos-latest)",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-11-18T08:46:46Z",
+          "completedAt": "2026-11-18T09:00:45Z"
+        }
+      ],
+      "usefulPositiveGates": [
+        {
+          "jobId": 134682858184,
+          "platform": "Creation page (windows-latest)",
+          "applicationTypecheck": {
+            "name": "Typecheck application before Electron startup",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9,
+            "started_at": "2026-11-18T08:49:56Z",
+            "completed_at": "2026-11-18T08:50:23Z"
+          },
+          "originalElectronJourney": {
+            "name": "Exercise actual Electron Create/Back/Resume/Copy/Launch",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 13,
+            "started_at": "2026-11-18T08:50:35Z",
+            "completed_at": "2026-11-18T08:53:26Z"
+          }
+        },
+        {
+          "jobId": 134682858552,
+          "platform": "Creation page (ubuntu-latest)",
+          "applicationTypecheck": {
+            "name": "Typecheck application before Electron startup",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9,
+            "started_at": "2026-11-18T08:46:53Z",
+            "completed_at": "2026-11-18T08:47:33Z"
+          },
+          "originalElectronJourney": {
+            "name": "Exercise actual Electron Create/Back/Resume/Copy/Launch",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 13,
+            "started_at": "2026-11-18T08:47:38Z",
+            "completed_at": "2026-11-18T08:50:51Z"
+          }
+        },
+        {
+          "jobId": 134682858725,
+          "platform": "Creation page (macos-latest)",
+          "applicationTypecheck": {
+            "name": "Typecheck application before Electron startup",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9,
+            "started_at": "2026-11-18T08:49:00Z",
+            "completed_at": "2026-11-18T08:55:44Z"
+          },
+          "originalElectronJourney": {
+            "name": "Exercise actual Electron Create/Back/Resume/Copy/Launch",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 13,
+            "started_at": "2026-11-18T08:55:59Z",
+            "completed_at": "2026-11-18T09:00:31Z"
+          }
+        }
+      ],
+      "failedLogs": [],
+      "artifacts": [
+        {
+          "id": 14412815511,
+          "name": "teams-create-page-windows-latest-615a264fcd168a5643fde4ec39ab173075e4d6c9",
+          "sizeInBytes": 1865942,
+          "serverDigest": "sha256:e91d37afbf19923c01aee6614ee2e6861448ff50abede786ece48090857a1c1d",
+          "expiredAtObservation": false,
+          "scope": "metadata-only; archive not downloaded or inspected"
+        },
+        {
+          "id": 14412591083,
+          "name": "teams-create-page-ubuntu-latest-615a264fcd168a5643fde4ec39ab173075e4d6c9",
+          "sizeInBytes": 2898486,
+          "serverDigest": "sha256:9002338e72820f4bc57a6e6e0b48be12a2dff9417654b1e8a857386f1d31b6de",
+          "expiredAtObservation": false,
+          "scope": "metadata-only; archive not downloaded or inspected"
+        },
+        {
+          "id": 14412522790,
+          "name": "teams-create-page-macos-latest-615a264fcd168a5643fde4ec39ab173075e4d6c9",
+          "sizeInBytes": 2278571,
+          "serverDigest": "sha256:b63126780b96be789a85dfe6057964be288ac1dff65dc97db74280e99d7c5f0c",
+          "expiredAtObservation": false,
+          "scope": "metadata-only; archive not downloaded or inspected"
+        }
+      ],
+      "sourceSnapshotHashes": {
+        "observedAt": "2026-11-18T09:02:19Z",
+        "runJsonSha256": "d1adfce694ebaab4edaa8c0ebdd6cf669d68ce736fde85737f05078c539ab83d",
+        "jobsPageJsonSha256": [
+          "69d9b20bcaa65f8e6bc6c739fb230481a318105dcf6793b3420ac9012090601f"
+        ],
+        "artifactPageJsonSha256": [
+          "2a8cf3eff5ed751e6d32249f7bfdd3707ee20109e371cd66b0d027dde3deac60"
+        ]
+      },
+      "limits": [
+        "Job and step status evidence only; artifact receipt content, source-freeze maps, screenshots and cleanup details were not inspected because the execution environment is unavailable.",
+        "No full Host/provider/front-end aggregate qualification is inferred.",
+        "No API requests were made to this run after its first terminal observation; this summary was assembled only from retained snapshots.",
+        "No successful job log was requested."
+      ]
+    },
+    "hostEmulated": {
+      "version": 1,
+      "kind": "original-ci-terminal-summary",
+      "repository": "777genius/agent-teams-ai",
+      "repositoryId": 1163183284,
+      "pullRequest": 1192,
+      "head": "615a264fcd168a5643fde4ec39ab173075e4d6c9",
+      "base": "8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+      "event": "pull_request",
+      "runId": 44269678482,
+      "attempt": 1,
+      "workflow": "Host Emulated Acceptance",
+      "runStatus": "completed",
+      "conclusion": "failure",
+      "firstTerminalObservedAt": "2026-11-18T10:08:30Z",
+      "permanentlyRetired": true,
+      "runUrl": "https://github.com/777genius/agent-teams-ai/actions/runs/44269678482",
+      "counts": {
+        "jobs": 30,
+        "success": 21,
+        "failure": 9,
+        "actualMatrixAndFrontendJobs": 29,
+        "failedUiLanes": 8,
+        "failedAggregateJobs": 1
+      },
+      "jobs": [
+        {
+          "id": 134682865469,
+          "name": "Offline frontend tests (2/4)",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-11-18T08:45:54Z",
+          "completedAt": "2026-11-18T08:52:09Z"
+        },
+        {
+          "id": 134682865844,
+          "name": "Offline Host Desktop (linux-x64, retained-original)",
+          "status": "completed",
+          "conclusion": "failure",
+          "startedAt": "2026-11-18T08:58:22Z",
+          "completedAt": "2026-11-18T09:02:32Z"
+        },
+        {
+          "id": 134682865863,
+          "name": "Offline frontend tests (3/4)",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-11-18T08:52:23Z",
+          "completedAt": "2026-11-18T08:58:42Z"
+        },
+        {
+          "id": 134682865869,
+          "name": "Offline Host Desktop (linux-x64, claude-lifecycle)",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-11-18T08:58:50Z",
+          "completedAt": "2026-11-18T09:03:54Z"
+        },
+        {
+          "id": 134682865873,
+          "name": "Offline Host Desktop (linux-x64, extensions)",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-11-18T08:46:50Z",
+          "completedAt": "2026-11-18T08:50:25Z"
+        },
+        {
+          "id": 134682865898,
+          "name": "Offline frontend tests (4/4)",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-11-18T09:32:20Z",
+          "completedAt": "2026-11-18T09:40:49Z"
+        },
+        {
+          "id": 134682865902,
+          "name": "Offline Host Desktop (linux-x64, cross-team)",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-11-18T09:27:54Z",
+          "completedAt": "2026-11-18T09:40:33Z"
+        },
+        {
+          "id": 134682865904,
+          "name": "Offline Host Desktop (linux-x64, team)",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-11-18T09:17:08Z",
+          "completedAt": "2026-11-18T09:34:17Z"
+        },
+        {
+          "id": 134682865914,
+          "name": "Offline Host Desktop (linux-x64, claude)",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-11-18T09:27:53Z",
+          "completedAt": "2026-11-18T09:35:10Z"
+        },
+        {
+          "id": 134682865925,
+          "name": "Offline Host Desktop (linux-x64, selection)",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-11-18T08:54:43Z",
+          "completedAt": "2026-11-18T09:00:02Z"
+        },
+        {
+          "id": 134682865936,
+          "name": "Offline Host Desktop (linux-x64, import)",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-11-18T09:46:13Z",
+          "completedAt": "2026-11-18T09:50:08Z"
+        },
+        {
+          "id": 134682865945,
+          "name": "Offline Host Desktop (darwin-arm64, installer)",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-11-18T09:48:22Z",
+          "completedAt": "2026-11-18T09:55:57Z"
+        },
+        {
+          "id": 134682865957,
+          "name": "Offline Host Desktop (linux-x64, skills)",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-11-18T09:49:15Z",
+          "completedAt": "2026-11-18T09:53:37Z"
+        },
+        {
+          "id": 134682865974,
+          "name": "Offline Host Desktop (darwin-arm64, opencode-v2-chat-attachments)",
+          "status": "completed",
+          "conclusion": "failure",
+          "startedAt": "2026-11-18T09:22:54Z",
+          "completedAt": "2026-11-18T09:33:46Z"
+        },
+        {
+          "id": 134682865986,
+          "name": "Offline Host Desktop (linux-x64, taskboard)",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-11-18T09:34:37Z",
+          "completedAt": "2026-11-18T09:39:31Z"
+        },
+        {
+          "id": 134682865988,
+          "name": "Offline Host Desktop (linux-x64, collaboration)",
+          "status": "completed",
+          "conclusion": "failure",
+          "startedAt": "2026-11-18T09:39:25Z",
+          "completedAt": "2026-11-18T09:46:01Z"
+        },
+        {
+          "id": 134682865994,
+          "name": "Offline Host Desktop (linux-x64, codex)",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-11-18T09:35:04Z",
+          "completedAt": "2026-11-18T09:41:25Z"
+        },
+        {
+          "id": 134682865997,
+          "name": "Offline Host Desktop (linux-x64, review)",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-11-18T09:34:19Z",
+          "completedAt": "2026-11-18T09:39:16Z"
+        },
+        {
+          "id": 134682866001,
+          "name": "Offline Host Desktop (linux-x64, management)",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-11-18T09:53:38Z",
+          "completedAt": "2026-11-18T09:57:37Z"
+        },
+        {
+          "id": 134682866003,
+          "name": "Offline Host Desktop (darwin-arm64, opencode-v2-review)",
+          "status": "completed",
+          "conclusion": "failure",
+          "startedAt": "2026-11-18T08:49:15Z",
+          "completedAt": "2026-11-18T08:58:59Z"
+        },
+        {
+          "id": 134682866009,
+          "name": "Offline Host Desktop (linux-x64, opencode-v2-management)",
+          "status": "completed",
+          "conclusion": "failure",
+          "startedAt": "2026-11-18T09:14:03Z",
+          "completedAt": "2026-11-18T09:27:17Z"
+        },
+        {
+          "id": 134682866034,
+          "name": "Offline Host Desktop (linux-x64, codex-login)",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-11-18T09:44:39Z",
+          "completedAt": "2026-11-18T09:48:39Z"
+        },
+        {
+          "id": 134682866035,
+          "name": "Offline Host Desktop (darwin-arm64, opencode-v2-quit-pending-open)",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-11-18T09:27:17Z",
+          "completedAt": "2026-11-18T09:37:24Z"
+        },
+        {
+          "id": 134682866054,
+          "name": "Offline Host Desktop (linux-x64, import-lifecycle)",
+          "status": "completed",
+          "conclusion": "failure",
+          "startedAt": "2026-11-18T09:24:59Z",
+          "completedAt": "2026-11-18T09:29:58Z"
+        },
+        {
+          "id": 134682866064,
+          "name": "Offline Host Desktop (darwin-arm64, opencode-v2-quit-active)",
+          "status": "completed",
+          "conclusion": "failure",
+          "startedAt": "2026-11-18T09:46:33Z",
+          "completedAt": "2026-11-18T09:55:45Z"
+        },
+        {
+          "id": 134682866109,
+          "name": "Offline Host Desktop (linux-x64, processes)",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-11-18T09:42:24Z",
+          "completedAt": "2026-11-18T09:46:28Z"
+        },
+        {
+          "id": 134682866307,
+          "name": "Offline frontend tests (1/4)",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-11-18T09:55:48Z",
+          "completedAt": "2026-11-18T10:03:29Z"
+        },
+        {
+          "id": 134682866349,
+          "name": "Offline Host Desktop (linux-x64, opencode)",
+          "status": "completed",
+          "conclusion": "success",
+          "startedAt": "2026-11-18T09:56:10Z",
+          "completedAt": "2026-11-18T10:02:19Z"
+        },
+        {
+          "id": 134682866399,
+          "name": "Offline Host Desktop (darwin-arm64, opencode-v2-resume)",
+          "status": "completed",
+          "conclusion": "failure",
+          "startedAt": "2026-11-18T09:57:37Z",
+          "completedAt": "2026-11-18T10:07:37Z"
+        },
+        {
+          "id": 134726213328,
+          "name": "Offline Host Desktop",
+          "status": "completed",
+          "conclusion": "failure",
+          "startedAt": "2026-11-18T10:08:18Z",
+          "completedAt": "2026-11-18T10:08:21Z"
+        }
+      ],
+      "positiveGateScopes": [
+        {
+          "jobId": 134682865469,
+          "stepNumber": 8,
+          "name": "Run the complete safe frontend shard",
+          "startedAt": "2026-11-18T08:47:14Z",
+          "completedAt": "2026-11-18T08:52:05Z"
+        },
+        {
+          "jobId": 134682865863,
+          "stepNumber": 8,
+          "name": "Run the complete safe frontend shard",
+          "startedAt": "2026-11-18T08:54:10Z",
+          "completedAt": "2026-11-18T08:58:37Z"
+        },
+        {
+          "jobId": 134682865869,
+          "stepNumber": 21,
+          "name": "Exercise original cold Claude Resume and active Quit with the finite SDK peer",
+          "startedAt": "2026-11-18T09:01:42Z",
+          "completedAt": "2026-11-18T09:03:47Z"
+        },
+        {
+          "jobId": 134682865869,
+          "stepNumber": 38,
+          "name": "Verify exact source, original screenshots, receipts and cleanup",
+          "startedAt": "2026-11-18T09:03:47Z",
+          "completedAt": "2026-11-18T09:03:48Z"
+        },
+        {
+          "jobId": 134682865873,
+          "stepNumber": 19,
+          "name": "Exercise original collaboration, Extensions and import controls through finite peers",
+          "startedAt": "2026-11-18T08:49:14Z",
+          "completedAt": "2026-11-18T08:50:22Z"
+        },
+        {
+          "jobId": 134682865873,
+          "stepNumber": 38,
+          "name": "Verify exact source, original screenshots, receipts and cleanup",
+          "startedAt": "2026-11-18T08:50:22Z",
+          "completedAt": "2026-11-18T08:50:23Z"
+        },
+        {
+          "jobId": 134682865898,
+          "stepNumber": 8,
+          "name": "Run the complete safe frontend shard",
+          "startedAt": "2026-11-18T09:33:37Z",
+          "completedAt": "2026-11-18T09:40:45Z"
+        },
+        {
+          "jobId": 134682865902,
+          "stepNumber": 17,
+          "name": "Exercise original Skills and cross-Team controls",
+          "startedAt": "2026-11-18T09:30:32Z",
+          "completedAt": "2026-11-18T09:40:24Z"
+        },
+        {
+          "jobId": 134682865902,
+          "stepNumber": 38,
+          "name": "Verify exact source, original screenshots, receipts and cleanup",
+          "startedAt": "2026-11-18T09:40:24Z",
+          "completedAt": "2026-11-18T09:40:26Z"
+        },
+        {
+          "jobId": 134682865904,
+          "stepNumber": 11,
+          "name": "Verify original Runtime and Team conversation contracts",
+          "startedAt": "2026-11-18T09:19:33Z",
+          "completedAt": "2026-11-18T09:21:17Z"
+        },
+        {
+          "jobId": 134682865904,
+          "stepNumber": 12,
+          "name": "Verify complete workspace types and original typed lint scopes",
+          "startedAt": "2026-11-18T09:21:17Z",
+          "completedAt": "2026-11-18T09:32:50Z"
+        },
+        {
+          "jobId": 134682865904,
+          "stepNumber": 15,
+          "name": "Exercise ordinary Team controls and renderer reload",
+          "startedAt": "2026-11-18T09:32:53Z",
+          "completedAt": "2026-11-18T09:34:12Z"
+        },
+        {
+          "jobId": 134682865904,
+          "stepNumber": 38,
+          "name": "Verify exact source, original screenshots, receipts and cleanup",
+          "startedAt": "2026-11-18T09:34:12Z",
+          "completedAt": "2026-11-18T09:34:13Z"
+        },
+        {
+          "jobId": 134682865914,
+          "stepNumber": 22,
+          "name": "Exercise original provider conversations and schedules through pinned TEST peers",
+          "startedAt": "2026-11-18T09:30:18Z",
+          "completedAt": "2026-11-18T09:35:05Z"
+        },
+        {
+          "jobId": 134682865914,
+          "stepNumber": 38,
+          "name": "Verify exact source, original screenshots, receipts and cleanup",
+          "startedAt": "2026-11-18T09:35:05Z",
+          "completedAt": "2026-11-18T09:35:06Z"
+        },
+        {
+          "jobId": 134682865925,
+          "stepNumber": 25,
+          "name": "Exercise saved next-launch selection while the original Team remains live",
+          "startedAt": "2026-11-18T08:57:21Z",
+          "completedAt": "2026-11-18T08:59:56Z"
+        },
+        {
+          "jobId": 134682865925,
+          "stepNumber": 38,
+          "name": "Verify exact source, original screenshots, receipts and cleanup",
+          "startedAt": "2026-11-18T08:59:56Z",
+          "completedAt": "2026-11-18T08:59:57Z"
+        },
+        {
+          "jobId": 134682865936,
+          "stepNumber": 19,
+          "name": "Exercise original collaboration, Extensions and import controls through finite peers",
+          "startedAt": "2026-11-18T09:48:25Z",
+          "completedAt": "2026-11-18T09:50:02Z"
+        },
+        {
+          "jobId": 134682865936,
+          "stepNumber": 38,
+          "name": "Verify exact source, original screenshots, receipts and cleanup",
+          "startedAt": "2026-11-18T09:50:02Z",
+          "completedAt": "2026-11-18T09:50:03Z"
+        },
+        {
+          "jobId": 134682865945,
+          "stepNumber": 27,
+          "name": "Exercise stock Codex Update while the original Team retains its captured source",
+          "startedAt": "2026-11-18T09:51:50Z",
+          "completedAt": "2026-11-18T09:55:40Z"
+        },
+        {
+          "jobId": 134682865945,
+          "stepNumber": 38,
+          "name": "Verify exact source, original screenshots, receipts and cleanup",
+          "startedAt": "2026-11-18T09:55:40Z",
+          "completedAt": "2026-11-18T09:55:43Z"
+        },
+        {
+          "jobId": 134682865957,
+          "stepNumber": 17,
+          "name": "Exercise original Skills and cross-Team controls",
+          "startedAt": "2026-11-18T09:52:13Z",
+          "completedAt": "2026-11-18T09:53:30Z"
+        },
+        {
+          "jobId": 134682865957,
+          "stepNumber": 38,
+          "name": "Verify exact source, original screenshots, receipts and cleanup",
+          "startedAt": "2026-11-18T09:53:30Z",
+          "completedAt": "2026-11-18T09:53:31Z"
+        },
+        {
+          "jobId": 134682865986,
+          "stepNumber": 16,
+          "name": "Exercise ordinary Taskboard controls and persistence",
+          "startedAt": "2026-11-18T09:37:02Z",
+          "completedAt": "2026-11-18T09:39:25Z"
+        },
+        {
+          "jobId": 134682865986,
+          "stepNumber": 38,
+          "name": "Verify exact source, original screenshots, receipts and cleanup",
+          "startedAt": "2026-11-18T09:39:25Z",
+          "completedAt": "2026-11-18T09:39:26Z"
+        },
+        {
+          "jobId": 134682865994,
+          "stepNumber": 22,
+          "name": "Exercise original provider conversations and schedules through pinned TEST peers",
+          "startedAt": "2026-11-18T09:37:29Z",
+          "completedAt": "2026-11-18T09:41:19Z"
+        },
+        {
+          "jobId": 134682865994,
+          "stepNumber": 38,
+          "name": "Verify exact source, original screenshots, receipts and cleanup",
+          "startedAt": "2026-11-18T09:41:19Z",
+          "completedAt": "2026-11-18T09:41:20Z"
+        },
+        {
+          "jobId": 134682865997,
+          "stepNumber": 23,
+          "name": "Exercise original Review Keep, Reject, Undo, Redo and reload",
+          "startedAt": "2026-11-18T09:36:37Z",
+          "completedAt": "2026-11-18T09:38:11Z"
+        },
+        {
+          "jobId": 134682865997,
+          "stepNumber": 24,
+          "name": "Exercise original Review after a cold Host and app restart",
+          "startedAt": "2026-11-18T09:38:11Z",
+          "completedAt": "2026-11-18T09:39:11Z"
+        },
+        {
+          "jobId": 134682865997,
+          "stepNumber": 38,
+          "name": "Verify exact source, original screenshots, receipts and cleanup",
+          "startedAt": "2026-11-18T09:39:11Z",
+          "completedAt": "2026-11-18T09:39:12Z"
+        },
+        {
+          "jobId": 134682866001,
+          "stepNumber": 18,
+          "name": "Exercise model, effort and credential controls with the pinned TEST peer",
+          "startedAt": "2026-11-18T09:55:57Z",
+          "completedAt": "2026-11-18T09:57:32Z"
+        },
+        {
+          "jobId": 134682866001,
+          "stepNumber": 38,
+          "name": "Verify exact source, original screenshots, receipts and cleanup",
+          "startedAt": "2026-11-18T09:57:32Z",
+          "completedAt": "2026-11-18T09:57:33Z"
+        },
+        {
+          "jobId": 134682866009,
+          "stepNumber": 30,
+          "name": "Exercise original OpenCode V2 credential and scoped model Settings",
+          "startedAt": "2026-11-18T09:16:56Z",
+          "completedAt": "2026-11-18T09:23:53Z"
+        },
+        {
+          "jobId": 134682866009,
+          "stepNumber": 31,
+          "name": "Verify original OpenCode V2 UI receipts and physical cleanup",
+          "startedAt": "2026-11-18T09:23:53Z",
+          "completedAt": "2026-11-18T09:23:58Z"
+        },
+        {
+          "jobId": 134682866034,
+          "stepNumber": 20,
+          "name": "Exercise original Codex browser and device login controls through the finite TEST peer",
+          "startedAt": "2026-11-18T09:47:16Z",
+          "completedAt": "2026-11-18T09:48:35Z"
+        },
+        {
+          "jobId": 134682866034,
+          "stepNumber": 38,
+          "name": "Verify exact source, original screenshots, receipts and cleanup",
+          "startedAt": "2026-11-18T09:48:35Z",
+          "completedAt": "2026-11-18T09:48:36Z"
+        },
+        {
+          "jobId": 134682866035,
+          "stepNumber": 34,
+          "name": "Exercise original OpenCode V2 native Desktop journey",
+          "startedAt": "2026-11-18T09:31:15Z",
+          "completedAt": "2026-11-18T09:35:05Z"
+        },
+        {
+          "jobId": 134682866035,
+          "stepNumber": 36,
+          "name": "Read original V2 journey after cold app and Host restart",
+          "startedAt": "2026-11-18T09:35:10Z",
+          "completedAt": "2026-11-18T09:37:08Z"
+        },
+        {
+          "jobId": 134682866035,
+          "stepNumber": 37,
+          "name": "Verify original V2 journey receipts, source binding and cleanup",
+          "startedAt": "2026-11-18T09:37:08Z",
+          "completedAt": "2026-11-18T09:37:11Z"
+        },
+        {
+          "jobId": 134682866109,
+          "stepNumber": 26,
+          "name": "Exercise original cold Processes Stop with an independently retained neighbor",
+          "startedAt": "2026-11-18T09:45:18Z",
+          "completedAt": "2026-11-18T09:46:21Z"
+        },
+        {
+          "jobId": 134682866109,
+          "stepNumber": 38,
+          "name": "Verify exact source, original screenshots, receipts and cleanup",
+          "startedAt": "2026-11-18T09:46:21Z",
+          "completedAt": "2026-11-18T09:46:22Z"
+        },
+        {
+          "jobId": 134682866307,
+          "stepNumber": 8,
+          "name": "Run the complete safe frontend shard",
+          "startedAt": "2026-11-18T09:56:57Z",
+          "completedAt": "2026-11-18T10:03:26Z"
+        },
+        {
+          "jobId": 134682866349,
+          "stepNumber": 22,
+          "name": "Exercise original provider conversations and schedules through pinned TEST peers",
+          "startedAt": "2026-11-18T09:58:19Z",
+          "completedAt": "2026-11-18T10:02:14Z"
+        },
+        {
+          "jobId": 134682866349,
+          "stepNumber": 38,
+          "name": "Verify exact source, original screenshots, receipts and cleanup",
+          "startedAt": "2026-11-18T10:02:14Z",
+          "completedAt": "2026-11-18T10:02:14Z"
+        }
+      ],
+      "failedLogs": [
+        {
+          "jobId": 134682865844,
+          "firstTerminalObservedAt": "2026-11-18T09:04:59Z",
+          "firstRefusalAt": "2026-11-18T09:02:27.9315017Z",
+          "decodedLogSha256": "3579773311dd0bc745ec9e07d9be69a2af056ddfb7394072ec037ec49f021f8d",
+          "decodedLogBytes": 237766,
+          "rawResponseJsonSha256": "46c17e5bcb60baec25fe659a485f29fc8e353c1bf867e3686c9cc16a166e36a1",
+          "logFetches": 1,
+          "scope": {
+            "refusal": "Original-runtime choice was not observed after the original Detail Launch click",
+            "source": "scripts/legacy-agent-host/desktop-retained-original-ui.ts",
+            "line": 97,
+            "input": "Original Detail Launch click returned; expected original-runtime choice text not observed",
+            "notQualified": "Original retained runtime Launch/reply/Stop",
+            "uncertainty": "No current held modal contents or primary Main refusal available"
+          },
+          "firstRefusalAnalysisSha256": "771c571491681ecc8a6c73cb86b5728b93e65f967451183de56b7084a6fdb76b"
+        },
+        {
+          "jobId": 134682865974,
+          "firstTerminalObservedAt": "2026-11-18T09:35:52Z",
+          "firstRefusalAt": "2026-11-18T09:33:22.6532240Z",
+          "decodedLogSha256": "f8381bd26ceb503275d5741e9747581c1172cb5ea1618829f027bb93b1ddf422",
+          "decodedLogBytes": 196855,
+          "rawResponseJsonSha256": "6079bf3affe4787528bf4a1d0dc890be5728e47163b558b7f71be378e2684f56",
+          "logFetches": 1,
+          "scope": {
+            "refusal": "Initial global metadata lineage lacked exactly one live owner for each selected scope",
+            "source": "scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts",
+            "line": 155,
+            "input": "Failure during original native setup global metadata capture",
+            "notQualified": "Attachment UI and later lifecycle",
+            "uncertainty": "No lifecycle events, physical births or original remaining-budget facts inspected",
+            "cleanup": "Original captured-group cleanup debt retained"
+          },
+          "firstRefusalAnalysisSha256": "5e8fe990472594453540cdc379703086bfe6a089a87d6f23fc4fc32de70b9a7d"
+        },
+        {
+          "jobId": 134682865988,
+          "firstTerminalObservedAt": "2026-11-18T09:48:13Z",
+          "firstRefusalAt": "2026-11-18T09:45:53.9335238Z",
+          "decodedLogSha256": "77153698abf682c86c59054cc957dc933baed53176e49a313417c17e29514d82",
+          "decodedLogBytes": 236454,
+          "rawResponseJsonSha256": "b9851c0e7165bfa1b221c965fb7035691501ea1165474a5b51abf9309840313c",
+          "logFetches": 1,
+          "scope": {
+            "refusal": "Original Restore completion not observed within original75-second poll cutoff",
+            "source": "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts",
+            "line": 313,
+            "input": "Original Carol Restore click returned after earlier Add/Remove control flow",
+            "notQualified": "Fresh restored generation/readiness/reply",
+            "uncertainty": "Only non-atomic closed post-failure terms are available; no exact factory cause",
+            "partialObservation": {
+              "configReady": true,
+              "messageTerms": [
+                "runtime",
+                "unavailable"
+              ],
+              "peerCleanupAbsent": true,
+              "atomicWithFailedWait": false
+            }
+          },
+          "firstRefusalAnalysisSha256": "4b0fdc27c919a788f89493c2fa72987683cac31325f30363e94bc60440ed9edc"
+        },
+        {
+          "jobId": 134682866003,
+          "firstTerminalObservedAt": "2026-11-18T08:59:12Z",
+          "firstRefusalAt": "2026-11-18T08:58:34.1085050Z",
+          "decodedLogSha256": "ff4e3a3eeb40c98bc33e03fe462683f9c4db2d4166f04f5a163b06352d2aea36",
+          "decodedLogBytes": 194137,
+          "rawResponseJsonSha256": "ca25f3b15b0030b2c33681930e59161217484a4df758101203c211619da0fe11",
+          "logFetches": 1,
+          "scope": {
+            "refusal": "After-hover target read timed out within original click budget",
+            "source": "scripts/legacy-agent-host/desktop-opencode-v2-review-ui-smoke.ts",
+            "line": 64,
+            "input": "Original hover returned; this click's press/release was not reached",
+            "notQualified": "Saved Launch and later Review lifecycle",
+            "uncertainty": "No current DOM/geometry/context cause established",
+            "cleanup": "Original outer cleanup-debt assertion retained"
+          },
+          "firstRefusalAnalysisSha256": "d328f833b65d955a9b3a305513dfa54318f642e9f6505bbe24a3a136034f1e35"
+        },
+        {
+          "jobId": 134682866009,
+          "firstTerminalObservedAt": "2026-11-18T09:29:42Z",
+          "firstRefusalAt": "2026-11-18T09:27:10.1033426Z",
+          "decodedLogSha256": "945a7a5fc4dd944658337649c6ae628ddbed931dc7e106f17c1ca69a85f90a4c",
+          "decodedLogBytes": 163439,
+          "rawResponseJsonSha256": "7cf563af74ab925286c55202968775b38b529aee7770f33ceadb7e7928e7f895",
+          "logFetches": 1,
+          "scope": {
+            "refusal": "Original live Add completion not observed within its original90-second post-read cutoff",
+            "source": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+            "line": 497,
+            "input": "Add selector, form interaction and one Add-member submit returned",
+            "notQualified": "Add completion, later Remove/Restore",
+            "uncertainty": "No exact roster command or runtime/session phase inspected",
+            "positiveSubscope": "Original OpenCode V2 credential/scoped-model Settings step succeeded"
+          },
+          "firstRefusalAnalysisSha256": "862017c84a1d4105d68371b39adec0447768ca755fd2c66175457590fbd03c26"
+        },
+        {
+          "jobId": 134682866054,
+          "firstTerminalObservedAt": "2026-11-18T09:35:52Z",
+          "firstRefusalAt": "2026-11-18T09:29:53.6005891Z",
+          "decodedLogSha256": "8082465c537fad231dc606aeb8ad47512ad74de8a9d35927db496d7f48e64874",
+          "decodedLogBytes": 237671,
+          "rawResponseJsonSha256": "47f3317864f53f824dfb2fbd06ab787a65e6e258e96ad483f408b0cc61555e16",
+          "logFetches": 1,
+          "scope": {
+            "refusal": "Original Create-and-Launch target remained disabled",
+            "source": "scripts/legacy-agent-host/desktop-finite-stopped-import-producer.ts",
+            "line": 150,
+            "input": "Initial target read failed before this call's hover/press/release",
+            "notQualified": "Source launch/reply/Stop release, cold import and fresh Host generation",
+            "uncertainty": "Disabled-predicate cause unavailable; no preflight/model cause inferred"
+          },
+          "firstRefusalAnalysisSha256": "f941ebc5db96c2c63af4ec8e2c10e5731f6935be9696bed0797dfdc72c9a9a6e"
+        },
+        {
+          "jobId": 134682866064,
+          "firstTerminalObservedAt": "2026-11-18T09:55:49Z",
+          "firstRefusalAt": "2026-11-18T09:55:31.4901990Z",
+          "decodedLogSha256": "623a7694b7516af29ec8e708d108608a3267af603e87f356ab10c2807431bedd",
+          "decodedLogBytes": 194281,
+          "rawResponseJsonSha256": "5ceb10547acd9f22b52d257474a41032ae24bde906506588e6e6216c9e2a93eb",
+          "logFetches": 1,
+          "scope": {
+            "refusal": "Original command-directory shape assertion rejected its already-read entries",
+            "source": "scripts/legacy-agent-host/desktop-native-quit-ui-smoke.ts",
+            "line": 38,
+            "input": "Original Send and empty Composer acknowledgement preceded the file read",
+            "notQualified": "Same turn's matching command/outbox receipt and later active Quit/cold journey",
+            "uncertainty": "Offending name/count/type and which of the two turns failed are unavailable"
+          },
+          "firstRefusalAnalysisSha256": "e16ded9c2d73f22a2b59b93c87ba043409c7104b04ed1bb927c70643595b8a3e"
+        },
+        {
+          "jobId": 134682866399,
+          "firstTerminalObservedAt": "2026-11-18T10:08:30Z",
+          "firstRefusalAt": "2026-11-18T10:07:14.9927740Z",
+          "decodedLogSha256": "bc9ebbaad3a63071a7b053d04e20ed0e7fb786069bb41d516fb1fd533d5132aa",
+          "decodedLogBytes": 193354,
+          "rawResponseJsonSha256": "05cf6f13af37b983e06bb5d7285c763a5494cf9edb52dae2aa03c67171ea2e27",
+          "logFetches": 1,
+          "scope": {
+            "refusal": "Original OpenCode preflight observation expired; no replacement probe",
+            "source": "scripts/legacy-agent-host/desktop-launch-ui-smoke.ts",
+            "line": 562,
+            "input": "Original final Launch target read refused before this call's hover/press/release",
+            "notQualified": "Original Team Launch and later Resume journey",
+            "uncertainty": "Exact original cutoff, journal phase timings, DOM state and cleanup receipt not inspected",
+            "earlierControlFlow": "Original preflight observation, scroll, project metadata capture and pre-submit readiness capture returned"
+          },
+          "firstRefusalAnalysisSha256": "6a734442f908ff47d218cfc361d22c13e8049250bab2c97daeac323aad5fd563"
+        },
+        {
+          "jobId": 134726213328,
+          "firstTerminalObservedAt": "2026-11-18T10:08:30Z",
+          "firstRefusalAt": "2026-11-18T10:08:19.5314061Z",
+          "decodedLogSha256": "1b9f70da977d24b2cecabd7abd31abd1d91deabbe0f866f601d31100316f3d66",
+          "decodedLogBytes": 2388,
+          "rawResponseJsonSha256": "a37abed6e120976f1890fc877b88e93c29a6bad53f7ba2ac9af30f3ad59fab83",
+          "logFetches": 1,
+          "scope": {
+            "refusal": "Final aggregate gate requires every original UI lane and frontend shard to pass",
+            "source": ".github/workflows/host-emulated-acceptance.yml",
+            "input": "No runtime action; aggregate status gate only",
+            "notQualified": "Overall Host Emulated Acceptance",
+            "uncertainty": "No independent runtime cause; this gate reflects eight failed UI lanes",
+            "positiveSubscope": "All four original frontend shard jobs succeeded"
+          },
+          "firstRefusalAnalysisSha256": "4b7f591a5b8bb157d9c98274d478f13a24c5d4e10215863ed903738c12928113"
+        }
+      ],
+      "artifacts": [
+        {
+          "id": 14418030826,
+          "name": "host-emulated-darwin-arm64-615a264fcd168a5643fde4ec39ab173075e4d6c9-opencode-v2-resume",
+          "sizeInBytes": 316693,
+          "serverDigest": "sha256:f7fe27d43c2ae4d614e30af3dff2c14ad72df1492f172cd8eae16efa5b243050",
+          "expiredAtObservation": false
+        },
+        {
+          "id": 14417310519,
+          "name": "host-emulated-linux-x64-615a264fcd168a5643fde4ec39ab173075e4d6c9-management",
+          "sizeInBytes": 1142431,
+          "serverDigest": "sha256:fd5079e21a055081636d0070cf55967561d25e0f36aad9a227443c6230aefeeb",
+          "expiredAtObservation": false
+        },
+        {
+          "id": 14417246856,
+          "name": "host-emulated-linux-x64-615a264fcd168a5643fde4ec39ab173075e4d6c9-opencode",
+          "sizeInBytes": 2486271,
+          "serverDigest": "sha256:79b16e77fd76f53ecf610f1d892f03edeb445e4d32eb623af3aeb0bf34e1d7c6",
+          "expiredAtObservation": false
+        },
+        {
+          "id": 14417167232,
+          "name": "host-offline-tests-615a264fcd168a5643fde4ec39ab173075e4d6c9-1",
+          "sizeInBytes": 298123,
+          "serverDigest": "sha256:fbf881615ba5d450703944b9b5ce161761a62aa024ec3546e4f455d4d8d13ff4",
+          "expiredAtObservation": false
+        },
+        {
+          "id": 14417125767,
+          "name": "host-emulated-linux-x64-615a264fcd168a5643fde4ec39ab173075e4d6c9-skills",
+          "sizeInBytes": 1415517,
+          "serverDigest": "sha256:7cb6f837385277a894b2d42b702566a0cf846a7ce1083680c36251ae6d2c0ace",
+          "expiredAtObservation": false
+        },
+        {
+          "id": 14416840742,
+          "name": "host-emulated-linux-x64-615a264fcd168a5643fde4ec39ab173075e4d6c9-codex-login",
+          "sizeInBytes": 700478,
+          "serverDigest": "sha256:6a5d317b9d39a180daa63b9043ab2143bdf66065b53deb758a5fe13dac200b5a",
+          "expiredAtObservation": false
+        },
+        {
+          "id": 14416485383,
+          "name": "host-emulated-linux-x64-615a264fcd168a5643fde4ec39ab173075e4d6c9-codex",
+          "sizeInBytes": 2976017,
+          "serverDigest": "sha256:0980c56128e48ac6e6d72fdcb585b4fc72ccfd381c1a7fadb9b24cbf25a3ebd7",
+          "expiredAtObservation": false
+        },
+        {
+          "id": 14416432263,
+          "name": "host-emulated-darwin-arm64-615a264fcd168a5643fde4ec39ab173075e4d6c9-installer",
+          "sizeInBytes": 1169612,
+          "serverDigest": "sha256:e152262f20f3a991ddb2f20d44260aebec1625d456b95902297dc363d6f118a8",
+          "expiredAtObservation": false
+        },
+        {
+          "id": 14415559403,
+          "name": "host-emulated-darwin-arm64-615a264fcd168a5643fde4ec39ab173075e4d6c9-opencode-v2-quit-active",
+          "sizeInBytes": 351314,
+          "serverDigest": "sha256:46a29cf17652743b6c44929a8ec35f71fe6784f00334d049d0c69e0f03a20532",
+          "expiredAtObservation": false
+        },
+        {
+          "id": 14415482491,
+          "name": "host-emulated-linux-x64-615a264fcd168a5643fde4ec39ab173075e4d6c9-cross-team",
+          "sizeInBytes": 2807428,
+          "serverDigest": "sha256:0be08c387b1d29368cf04e9bc2abb34e58fd92ea0b9575a07eb7310b34bd608a",
+          "expiredAtObservation": false
+        },
+        {
+          "id": 14415390338,
+          "name": "host-emulated-linux-x64-615a264fcd168a5643fde4ec39ab173075e4d6c9-opencode-v2-management",
+          "sizeInBytes": 1403353,
+          "serverDigest": "sha256:5a34d7658bd1f503a280eb249c5035d4def962937191679bfea4d4ac94fb6a77",
+          "expiredAtObservation": false
+        },
+        {
+          "id": 14415237397,
+          "name": "host-offline-tests-615a264fcd168a5643fde4ec39ab173075e4d6c9-4",
+          "sizeInBytes": 323045,
+          "serverDigest": "sha256:34a84fe82cf64ed069d4e824b64f66c0d9dc1ccba8d05baf065569b942bced25",
+          "expiredAtObservation": false
+        },
+        {
+          "id": 14415234999,
+          "name": "host-emulated-linux-x64-615a264fcd168a5643fde4ec39ab173075e4d6c9-import",
+          "sizeInBytes": 1128465,
+          "serverDigest": "sha256:b48a4ca0dff2ac4e1757e20896ff04a1a9c3f7a00b98c195042184d0ae714c59",
+          "expiredAtObservation": false
+        },
+        {
+          "id": 14415232933,
+          "name": "host-emulated-linux-x64-615a264fcd168a5643fde4ec39ab173075e4d6c9-taskboard",
+          "sizeInBytes": 1639545,
+          "serverDigest": "sha256:fa689e18399da09fc3e63816ee95e744566fb4980ab53458c2acf6c4d03133cc",
+          "expiredAtObservation": false
+        },
+        {
+          "id": 14415084390,
+          "name": "host-emulated-linux-x64-615a264fcd168a5643fde4ec39ab173075e4d6c9-processes",
+          "sizeInBytes": 738242,
+          "serverDigest": "sha256:53b6fa0e35db7782931abe19e4b9b6cc89f6248a62ada1152b103666082fd642",
+          "expiredAtObservation": false
+        },
+        {
+          "id": 14415016454,
+          "name": "host-emulated-linux-x64-615a264fcd168a5643fde4ec39ab173075e4d6c9-import-lifecycle",
+          "sizeInBytes": 580705,
+          "serverDigest": "sha256:2cb87b6ef67b5fefda8ed3e19c4122fc25cce509ad1b888a64a81135f789bfb2",
+          "expiredAtObservation": false
+        },
+        {
+          "id": 14415008609,
+          "name": "host-emulated-linux-x64-615a264fcd168a5643fde4ec39ab173075e4d6c9-collaboration",
+          "sizeInBytes": 1438006,
+          "serverDigest": "sha256:ac2efa951f897f7d3628e1a92c506fab8157894c89b5c4eb46e5b45b23b426db",
+          "expiredAtObservation": false
+        },
+        {
+          "id": 14414826937,
+          "name": "host-emulated-linux-x64-615a264fcd168a5643fde4ec39ab173075e4d6c9-team",
+          "sizeInBytes": 665427,
+          "serverDigest": "sha256:24d95202838c54f4b094439f3749715b8ae3e7dfb03c58879536d978fd1330f1",
+          "expiredAtObservation": false
+        },
+        {
+          "id": 14414703135,
+          "name": "host-emulated-linux-x64-615a264fcd168a5643fde4ec39ab173075e4d6c9-claude",
+          "sizeInBytes": 3752772,
+          "serverDigest": "sha256:b923ea295f47538babddb768d961b333a4d4a3388fd203e843c0d4d2466fe27b",
+          "expiredAtObservation": false
+        },
+        {
+          "id": 14414374473,
+          "name": "host-emulated-darwin-arm64-615a264fcd168a5643fde4ec39ab173075e4d6c9-opencode-v2-chat-attachments",
+          "sizeInBytes": 264032,
+          "serverDigest": "sha256:8c4c7e8305c8462e833b9fb79be4818d44ba0d650f09d956ab77859bd64762fb",
+          "expiredAtObservation": false
+        },
+        {
+          "id": 14414289621,
+          "name": "host-emulated-darwin-arm64-615a264fcd168a5643fde4ec39ab173075e4d6c9-opencode-v2-quit-pending-open",
+          "sizeInBytes": 549085,
+          "serverDigest": "sha256:755a4de0f2edc21148ae2a700b94b773df48893f82ee7702a13d6e0db5d032ae",
+          "expiredAtObservation": false
+        },
+        {
+          "id": 14414014836,
+          "name": "host-emulated-linux-x64-615a264fcd168a5643fde4ec39ab173075e4d6c9-review",
+          "sizeInBytes": 1021446,
+          "serverDigest": "sha256:3ff11bcdf4765112b15994f1710e106e094c5a50e217d156094390aa453de02a",
+          "expiredAtObservation": false
+        },
+        {
+          "id": 14413670753,
+          "name": "host-emulated-linux-x64-615a264fcd168a5643fde4ec39ab173075e4d6c9-claude-lifecycle",
+          "sizeInBytes": 4262287,
+          "serverDigest": "sha256:89d5750e20387af09d39161d928e40d5ad5269b2ad9b1742865b1d5f949fe1eb",
+          "expiredAtObservation": false
+        },
+        {
+          "id": 14412771858,
+          "name": "host-offline-tests-615a264fcd168a5643fde4ec39ab173075e4d6c9-3",
+          "sizeInBytes": 300993,
+          "serverDigest": "sha256:e40e3354341ad2ad8d2632769db4af1ee6a4351b63de1fb5eb42ba045a0d2d52",
+          "expiredAtObservation": false
+        },
+        {
+          "id": 14412647457,
+          "name": "host-emulated-linux-x64-615a264fcd168a5643fde4ec39ab173075e4d6c9-selection",
+          "sizeInBytes": 1345103,
+          "serverDigest": "sha256:aaf8aa275a4d97e3aab405a4f274aa7dd36f04dc8a5a4df16ae466e1fc4917c8",
+          "expiredAtObservation": false
+        },
+        {
+          "id": 14412633006,
+          "name": "host-emulated-linux-x64-615a264fcd168a5643fde4ec39ab173075e4d6c9-retained-original",
+          "sizeInBytes": 663606,
+          "serverDigest": "sha256:a33ee272391c453ac3d55c77bb380ffd7b60ea0c8872e35bb3abb9fbfdfc36e2",
+          "expiredAtObservation": false
+        },
+        {
+          "id": 14412396578,
+          "name": "host-offline-tests-615a264fcd168a5643fde4ec39ab173075e4d6c9-2",
+          "sizeInBytes": 319523,
+          "serverDigest": "sha256:6ac338ec4e83d8924829762205fbbd28d6a4367b42fa37b7d5d96ead9bb0c41c",
+          "expiredAtObservation": false
+        },
+        {
+          "id": 14412356579,
+          "name": "host-emulated-linux-x64-615a264fcd168a5643fde4ec39ab173075e4d6c9-extensions",
+          "sizeInBytes": 1003681,
+          "serverDigest": "sha256:dd1a0f7b8fa2c6c53b5b4ef729ce2300a17ebc27f1ec053c5bdc6d977e94fd45",
+          "expiredAtObservation": false
+        },
+        {
+          "id": 14411569608,
+          "name": "host-emulated-darwin-arm64-615a264fcd168a5643fde4ec39ab173075e4d6c9-opencode-v2-review",
+          "sizeInBytes": 296337,
+          "serverDigest": "sha256:bdec4af9a9911d94ca68c0c9db8c3bd72250ed1c05594591a76a3098aabaec0f",
+          "expiredAtObservation": false
+        }
+      ],
+      "sourceSnapshotHashes": {
+        "observedAt": "2026-11-18T10:08:30Z",
+        "runJsonSha256": "e86ee821564bbe68a8d16276d152358fd1a991f47f1807ee9833d895b6010aa2",
+        "jobsPageJsonSha256": [
+          "6603b5de77ca01b33d5872ee57b148dea788139326e39dce84b859b47cc6336b"
+        ],
+        "artifactPageJsonSha256": [
+          "08ddd8dcba9352cf6bfa7fced439b267e9e52b1fdb95865ae10137c2f1fec8f8"
+        ]
+      },
+      "limits": [
+        "All results belong only to original attempt1 of this exact615 head; no historical or unpublished-source result is transferred.",
+        "Positive evidence is original job/step status. No ZIP receipt, source-freeze map, screenshot or physical cleanup was independently inspected during environment outage.",
+        "Frontend shard job success does not supply current assertion counts or skip details; historical totals are not reused.",
+        "Every failed job log was fetched exactly once after its first terminal observation. This blob contains only hashes and bounded source-backed refusal summaries, no raw logs or environment.",
+        "Closed post-failure projections are not atomic with the failed operation and do not establish a factory cause.",
+        "Workflow failure remains failure; no complete Host/provider/native/paid-vendor qualification is asserted.",
+        "Run is permanently retired after this first terminal snapshot; no subsequent run/job/artifact query is authorized."
+      ],
+      "positiveGateInterpretation": "All listed steps have original CI conclusion success; this records step status only. Artifacts and physical proof were not inspected.",
+      "artifactInterpretation": "Metadata only for all29 archives; none downloaded or inspected."
+    },
+    "hostProcess": {
+      "schemaVersion": 1,
+      "kind": "ORIGINAL_CI_FIRST_TERMINAL_METADATA_AND_LOG_SUMMARY",
+      "repository": "777genius/agent-teams-ai",
+      "repositoryId": 1163183284,
+      "pr": 1192,
+      "prId": 5299966773,
+      "head": "615a264fcd168a5643fde4ec39ab173075e4d6c9",
+      "base": "8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+      "event": "pull_request",
+      "branch": "fix/frontend-parity-completion-20261113",
+      "runId": 44269678470,
+      "attempt": 1,
+      "workflowId": 417565613,
+      "workflowPath": ".github/workflows/host-process-acceptance.yml",
+      "firstTerminalObservedAt": "2026-11-18T09:51:24.550Z",
+      "status": "completed",
+      "conclusion": "failure",
+      "retiredPermanently": true,
+      "jobs": [
+        {
+          "id": 134682857701,
+          "name": "Host process fixtures (win32-x64)",
+          "status": "completed",
+          "conclusion": "failure"
+        },
+        {
+          "id": 134682858086,
+          "name": "Host process fixtures (win32-arm64)",
+          "status": "completed",
+          "conclusion": "failure"
+        },
+        {
+          "id": 134682858159,
+          "name": "Host process fixtures (linux-x64)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 134682858163,
+          "name": "Host process fixtures (darwin-arm64)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 134682858296,
+          "name": "Host process fixtures (darwin-x64)",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "failures": [
+        {
+          "jobId": 134682857701,
+          "jobName": "Host process fixtures (win32-x64)",
+          "conclusion": "failure",
+          "decodedLog": {
+            "fetchedOnce": true,
+            "sha256": "24dcad07284a57bfe02673246515656cecfabc5dfce3ed6223a71230c022f37d",
+            "utf8Bytes": 442349,
+            "fetchedAt": "2026-11-18T09:03:35.979Z"
+          },
+          "firstRefusal": {
+            "status": "OBSERVED_FIRST_REFUSAL; ROOT CAUSE UNESTABLISHED",
+            "provider": "OpenCode finite TEST peer",
+            "assertion": "Original source Team readiness",
+            "source": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+            "observedRefusal": {
+              "kind": "consumer",
+              "phase": "cutoff",
+              "reason": "held",
+              "cutoff": 1794992416057,
+              "observedAt": 1794992416179,
+              "lateByMs": 122,
+              "nextPhase": "opencode-open/startup-authority/threw",
+              "clockLimit": "Recorded consumer cutoff; no unsupported reconstruction of its admission timestamp"
+            },
+            "readiness": {
+              "elapsedMs": 14977.7285,
+              "readCount": 65,
+              "phase": "held",
+              "custody": "unknown",
+              "nativeReady": false,
+              "diagnostic": "open-unknown",
+              "limit": "Sample timestamp does not date the later refusal"
+            },
+            "currentness": {
+              "count": 35,
+              "totalMs": 9550,
+              "referenceCount": 34,
+              "referenceMs": 8110
+            },
+            "cleanup": {
+              "loggedJobs": 3,
+              "allLoggedStopDrainRelease": true,
+              "originalHandleAbsentMeaning": "Logged before original witness wait; false is not established post-cleanup debt",
+              "aggregateCleanupAssertionPresent": false
+            },
+            "qualification": "Failure remains; no timeout, cache or authority change; artifact contents uninspected",
+            "originalTeamReadinessObservationBudgetMs": 15000
+          },
+          "logRequestCount": 1
+        },
+        {
+          "jobId": 134682858086,
+          "jobName": "Host process fixtures (win32-arm64)",
+          "conclusion": "failure",
+          "decodedLog": {
+            "fetchedOnce": true,
+            "sha256": "a74364594f0e2faa532b96909ce419bc84148415358fd9848bc814b77e96888e",
+            "utf8Bytes": 440815,
+            "fetchedAt": "2026-11-18T09:06:18.011Z"
+          },
+          "firstRefusal": {
+            "status": "OBSERVED_FIRST_REFUSAL_AND_CLEANUP_DEBT; ROOT CAUSE UNESTABLISHED",
+            "provider": "Codex finite TEST peer",
+            "assertion": "Original standalone completion",
+            "source": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+            "originalDeadlineMs": 15000,
+            "deadlineOrigin": "Original schedule.run.start ACK plus captured-source checks; no fresh budget per read",
+            "priorTeamSamples": [
+              {
+                "image": "A",
+                "elapsedMs": 14682.5532,
+                "nativeReady": true
+              },
+              {
+                "image": "B",
+                "elapsedMs": 14940.5112,
+                "nativeReady": true
+              }
+            ],
+            "standalone": {
+              "readCount": 124,
+              "elapsedMs": 14988.2735,
+              "phase": "running",
+              "cleanup": "unresolved"
+            },
+            "firstRefusal": {
+              "phase": "native/prepare",
+              "reason": "unknown",
+              "jobSlot": 24,
+              "dispatched": true,
+              "staged": true,
+              "rootCaptured": false,
+              "deadlineExpired": null,
+              "checkSite": null
+            },
+            "cleanup": {
+              "loggedJobs": 25,
+              "uncertainJobSlot": 24,
+              "rootCaptured": false,
+              "witnessCaptured": false,
+              "resumed": false,
+              "stopped": true,
+              "drained": true,
+              "released": true,
+              "prepareCalls": 1,
+              "prepareSettled": 1,
+              "prepareReturned": 0,
+              "resumeCalls": 0,
+              "strictOriginalPhysicalAssertionFailed": true,
+              "noLocalDispatchExemptionApplicable": false
+            },
+            "qualification": "Earlier Team samples do not qualify this failed scenario; original physical cleanup debt remains"
+          },
+          "logRequestCount": 1
+        }
+      ],
+      "artifacts": [
+        {
+          "id": 14415523486,
+          "name": "host-process-fixtures-darwin-x64-615a264fcd168a5643fde4ec39ab173075e4d6c9",
+          "sha256": "sha256:c470c1d5ec091366efe9d6e59913d147143e5c458c15d09d164d3b53eaaecd91",
+          "sizeBytes": 15447,
+          "expired": false,
+          "inspected": "METADATA ONLY; archive bytes not downloaded"
+        },
+        {
+          "id": 14414820416,
+          "name": "host-process-fixtures-linux-x64-615a264fcd168a5643fde4ec39ab173075e4d6c9",
+          "sha256": "sha256:ae7501d0a0e24dde2b83322b51ebfff73ecdaedef7aba8eff7f2cf54edbfaa7d",
+          "sizeBytes": 1524528,
+          "expired": false,
+          "inspected": "METADATA ONLY; archive bytes not downloaded"
+        },
+        {
+          "id": 14412842229,
+          "name": "host-process-fixtures-win32-arm64-615a264fcd168a5643fde4ec39ab173075e4d6c9",
+          "sha256": "sha256:f92c39dfe11e8cb4969b73e318d03f7f5ec5adffeef84b0223adbf548b4c7534",
+          "sizeBytes": 53102,
+          "expired": false,
+          "inspected": "METADATA ONLY; archive bytes not downloaded"
+        },
+        {
+          "id": 14411623756,
+          "name": "host-process-fixtures-darwin-arm64-615a264fcd168a5643fde4ec39ab173075e4d6c9",
+          "sha256": "sha256:29c136d1cd0345bcd9e23da804cb50838d6dfaf60694deb1c4ee991403bab1f6",
+          "sizeBytes": 15101,
+          "expired": false,
+          "inspected": "METADATA ONLY; archive bytes not downloaded"
+        },
+        {
+          "id": 14411564853,
+          "name": "host-process-fixtures-win32-x64-615a264fcd168a5643fde4ec39ab173075e4d6c9",
+          "sha256": "sha256:187108ecfffb2d5e9abd2945322395df5544f658e786ee644d8283d42a75d54e",
+          "sizeBytes": 69457,
+          "expired": false,
+          "inspected": "METADATA ONLY; archive bytes not downloaded"
+        }
+      ],
+      "pagination": {
+        "jobPages": 1,
+        "artifactPages": 1
+      },
+      "observationErrorCount": 0,
+      "originalSnapshotHashes": {
+        "metadata": "09caaab33317a4ce46134f148571b148357414c334c0d1ff019f1e01fc7041ad",
+        "jobs": [
+          "ca2404ff5419ddf701e4a066b8c36e05e5ed20671f01259882dbbe34320f612c"
+        ],
+        "artifacts": [
+          "89b3bdf50932c307f037d185516a95db39da3bec0805c4522a97dafd32fe80b8"
+        ]
+      },
+      "limitations": [
+        "Observed through exact immutable head/attempt/repository/PR guards; run metadata and jobs are non-atomic API observations.",
+        "Job SUCCESS is status only and does not qualify full native, packaged Desktop, release, paid vendor or E2E behavior.",
+        "Original failed logs were fetched once and kept privately; this compact summary contains no raw logs, environment, tokens or arbitrary error data.",
+        "Artifact metadata only; archive contents were unavailable for inspection in this environment.",
+        "No CI rerun/cancel/dispatch, native/vendor/app execution or reads after first-terminal retirement."
+      ],
+      "qualifiedScopes": []
+    },
+    "packaged": {
+      "schemaVersion": 1,
+      "kind": "ORIGINAL_CI_FIRST_TERMINAL_METADATA_AND_LOG_SUMMARY",
+      "repository": "777genius/agent-teams-ai",
+      "repositoryId": 1163183284,
+      "pr": 1192,
+      "prId": 5299966773,
+      "head": "615a264fcd168a5643fde4ec39ab173075e4d6c9",
+      "base": "8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+      "event": "pull_request",
+      "branch": "fix/frontend-parity-completion-20261113",
+      "runId": 44269678454,
+      "attempt": 1,
+      "workflowId": 368482949,
+      "workflowPath": ".github/workflows/electron-packaged-ci.yml",
+      "firstTerminalObservedAt": "2026-11-18T10:13:15.823Z",
+      "status": "completed",
+      "conclusion": "success",
+      "retiredPermanently": true,
+      "jobs": [
+        {
+          "id": 134682856449,
+          "name": "classify packaged smoke",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 134683220568,
+          "name": "packaged smoke (linux-x64)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 134683220582,
+          "name": "packaged smoke (darwin-x64)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 134683220613,
+          "name": "packaged smoke (darwin-arm64)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 134683220616,
+          "name": "packaged smoke (win32-x64)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 134683220666,
+          "name": "packaged smoke (win32-arm64)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 134727684364,
+          "name": "packaged full gate",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "failures": [],
+      "artifacts": [
+        {
+          "id": 14417847012,
+          "name": "packaged-v2-host-win32-arm64-615a264fcd168a5643fde4ec39ab173075e4d6c9",
+          "sha256": "sha256:92c651bb2c32b892eb7bff97f348d9fa6527b92e419d3cd75f98f3c65ecb4e87",
+          "sizeBytes": 826159,
+          "expired": false,
+          "inspected": "METADATA ONLY; archive bytes not downloaded"
+        },
+        {
+          "id": 14416333788,
+          "name": "packaged-v2-host-linux-x64-615a264fcd168a5643fde4ec39ab173075e4d6c9",
+          "sha256": "sha256:8e1e2da1a9b99bd6214518fa52b31c102c7b31751168d924e07e5144bdef2639",
+          "sizeBytes": 347775,
+          "expired": false,
+          "inspected": "METADATA ONLY; archive bytes not downloaded"
+        },
+        {
+          "id": 14416132556,
+          "name": "packaged-v2-host-darwin-x64-615a264fcd168a5643fde4ec39ab173075e4d6c9",
+          "sha256": "sha256:13ed39da9d5191898baec2e03e2718f23c9e69727bb55db77271da06c13bc3e9",
+          "sizeBytes": 812691,
+          "expired": false,
+          "inspected": "METADATA ONLY; archive bytes not downloaded"
+        },
+        {
+          "id": 14415216776,
+          "name": "packaged-v2-host-win32-x64-615a264fcd168a5643fde4ec39ab173075e4d6c9",
+          "sha256": "sha256:b0e65f786cf61b9ee1876826b3e72bc8cfc8ddb0b8fda9ce2b6eca4d79b703f1",
+          "sizeBytes": 817161,
+          "expired": false,
+          "inspected": "METADATA ONLY; archive bytes not downloaded"
+        },
+        {
+          "id": 14412481598,
+          "name": "packaged-v2-host-darwin-arm64-615a264fcd168a5643fde4ec39ab173075e4d6c9",
+          "sha256": "sha256:90118c30dc7d1a80dd03db4a12c139943055d9d2d29ec0bb3d912e4b5bbec245",
+          "sizeBytes": 1078078,
+          "expired": false,
+          "inspected": "METADATA ONLY; archive bytes not downloaded"
+        }
+      ],
+      "pagination": {
+        "jobPages": 1,
+        "artifactPages": 1
+      },
+      "observationErrorCount": 0,
+      "originalSnapshotHashes": {
+        "metadata": "d2cad2a0de6ea100b0204e929c1b68b640212dfc8b051a5096ed8f2829b05a20",
+        "jobs": [
+          "dfe1bc71eecda3d3c7918819ea13caac909fd7a4ab4d8a7efc12ff9cbd064ad9"
+        ],
+        "artifacts": [
+          "cd0bdb6d8930229208950e49713ee1419e05ac5942530e7ee0693e1f256a8106"
+        ]
+      },
+      "limitations": [
+        "Observed through exact immutable head/attempt/repository/PR guards; run metadata and jobs are non-atomic API observations.",
+        "Job SUCCESS is status only and does not qualify full native, packaged Desktop, release, paid vendor or E2E behavior.",
+        "Original failed logs were fetched once and kept privately; this compact summary contains no raw logs, environment, tokens or arbitrary error data.",
+        "Artifact metadata only; archive contents were unavailable for inspection in this environment.",
+        "No CI rerun/cancel/dispatch, native/vendor/app execution or reads after first-terminal retirement."
+      ],
+      "qualifiedScopes": []
+    },
+    "mainAndStage1": {
+      "schemaVersion": 1,
+      "kind": "615 original Main and Stage1 first-terminal evidence",
+      "repository": {
+        "fullName": "777genius/agent-teams-ai",
+        "id": 1163183284
+      },
+      "pullRequest": 1192,
+      "head": "615a264fcd168a5643fde4ec39ab173075e4d6c9",
+      "tree": "1831600e998e29b18d97d5350c7b377c5a4e5e62",
+      "base": "8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+      "event": "pull_request",
+      "attempt": 1,
+      "capturedAt": "2026-11-18T09:54:21.203Z",
+      "allOwnedRunsPermanentlyRetired": true,
+      "counts": {
+        "runs": 2,
+        "jobs": 24,
+        "success": 8,
+        "failure": 5,
+        "skipped": 11
+      },
+      "main": {
+        "runId": 44269678601,
+        "path": ".github/workflows/ci.yml",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44269678601",
+        "status": "completed",
+        "conclusion": "failure",
+        "firstTerminalObservedAt": "2026-11-18T09:52:05.546Z",
+        "completedMetadataAt": "2026-11-18T09:51:30Z",
+        "jobsEnumeration": {
+          "pages": 1,
+          "total": 15,
+          "complete": true
+        },
+        "counts": {
+          "success": 2,
+          "failure": 2,
+          "skipped": 11
+        },
+        "jobs": [
+          {
+            "id": 134682859416,
+            "name": "plan",
+            "status": "completed",
+            "conclusion": "success",
+            "startedAt": "2026-11-18T09:26:58Z",
+            "completedAt": "2026-11-18T09:27:38Z",
+            "runnerId": 1000391635,
+            "labels": [
+              "ubuntu-24.04"
+            ]
+          },
+          {
+            "id": 134682862091,
+            "name": "Stage 1 current-tuple process and packed qualification",
+            "status": "completed",
+            "conclusion": "skipped",
+            "startedAt": "2026-11-18T08:45:07Z",
+            "completedAt": "2026-11-18T08:45:07Z",
+            "runnerId": null,
+            "labels": [
+              "namespace-profile-macos-15"
+            ]
+          },
+          {
+            "id": 134682862297,
+            "name": "Stage 1 process tuple diagnostic (unqualified)",
+            "status": "completed",
+            "conclusion": "skipped",
+            "startedAt": "2026-11-18T08:45:07Z",
+            "completedAt": "2026-11-18T08:45:07Z",
+            "runnerId": null,
+            "labels": [
+              "namespace-profile-macos-15"
+            ]
+          },
+          {
+            "id": 134682862445,
+            "name": "Stage 1 source Desktop (${{ matrix.label }})",
+            "status": "completed",
+            "conclusion": "skipped",
+            "startedAt": "2026-11-18T08:45:07Z",
+            "completedAt": "2026-11-18T08:45:07Z",
+            "runnerId": null,
+            "labels": [
+              "namespace-profile-macos-15"
+            ]
+          },
+          {
+            "id": 134704545151,
+            "name": "Fast feedback",
+            "status": "completed",
+            "conclusion": "success",
+            "startedAt": "2026-11-18T09:48:19Z",
+            "completedAt": "2026-11-18T09:51:29Z",
+            "runnerId": 1000391712,
+            "labels": [
+              "ubuntu-24.04"
+            ]
+          },
+          {
+            "id": 134704545354,
+            "name": "Retained OpenCode V1 and Host V2 original Desktop",
+            "status": "completed",
+            "conclusion": "failure",
+            "startedAt": "2026-11-18T09:41:36Z",
+            "completedAt": "2026-11-18T09:49:11Z",
+            "runnerId": 1000391688,
+            "labels": [
+              "ubuntu-24.04"
+            ]
+          },
+          {
+            "id": 134704547725,
+            "name": "Renderer source validation",
+            "status": "completed",
+            "conclusion": "skipped",
+            "startedAt": "2026-11-18T09:27:39Z",
+            "completedAt": "2026-11-18T09:27:38Z",
+            "runnerId": null,
+            "labels": [
+              "ubuntu-24.04"
+            ]
+          },
+          {
+            "id": 134704548465,
+            "name": "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata Windows smoke' || 'Task change ledger Windows smoke'",
+            "status": "completed",
+            "conclusion": "skipped",
+            "startedAt": "2026-11-18T09:27:39Z",
+            "completedAt": "2026-11-18T09:27:38Z",
+            "runnerId": null,
+            "labels": [
+              "windows-latest"
+            ]
+          },
+          {
+            "id": 134704548619,
+            "name": "Codex login Desktop (Linux x64)",
+            "status": "completed",
+            "conclusion": "skipped",
+            "startedAt": "2026-11-18T09:27:39Z",
+            "completedAt": "2026-11-18T09:27:38Z",
+            "runnerId": null,
+            "labels": [
+              "ubuntu-24.04"
+            ]
+          },
+          {
+            "id": 134704548717,
+            "name": "${{ (((github.event_name == 'pull_request') && (github.event.action == 'edited') && (((needs.plan.result != 'success') || (needs.plan.outputs.metadata != 'false'))) && 'Metadata lint') || 'lint') }} (${{ matrix.scope }})",
+            "status": "completed",
+            "conclusion": "skipped",
+            "startedAt": "2026-11-18T09:27:39Z",
+            "completedAt": "2026-11-18T09:27:38Z",
+            "runnerId": null,
+            "labels": [
+              "ubuntu-24.04"
+            ]
+          },
+          {
+            "id": 134704548845,
+            "name": "Focused documentation and asset validation",
+            "status": "completed",
+            "conclusion": "skipped",
+            "startedAt": "2026-11-18T09:27:39Z",
+            "completedAt": "2026-11-18T09:27:38Z",
+            "runnerId": null,
+            "labels": [
+              "ubuntu-24.04"
+            ]
+          },
+          {
+            "id": 134704549092,
+            "name": "macOS DMG artwork end-to-end",
+            "status": "completed",
+            "conclusion": "skipped",
+            "startedAt": "2026-11-18T09:27:39Z",
+            "completedAt": "2026-11-18T09:27:38Z",
+            "runnerId": null,
+            "labels": [
+              "macos-latest"
+            ]
+          },
+          {
+            "id": 134704549128,
+            "name": "${{ (((github.event_name == 'pull_request') && (github.event.action == 'edited') && (((needs.plan.result != 'success') || (needs.plan.outputs.metadata != 'false'))) && 'Metadata test') || 'test') }} (${{ matrix.shard }}/4)",
+            "status": "completed",
+            "conclusion": "skipped",
+            "startedAt": "2026-11-18T09:27:39Z",
+            "completedAt": "2026-11-18T09:27:38Z",
+            "runnerId": null,
+            "labels": [
+              "ubuntu-24.04"
+            ]
+          },
+          {
+            "id": 134704549266,
+            "name": "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata validate' || 'validate'",
+            "status": "completed",
+            "conclusion": "skipped",
+            "startedAt": "2026-11-18T09:27:39Z",
+            "completedAt": "2026-11-18T09:27:38Z",
+            "runnerId": null,
+            "labels": [
+              "ubuntu-24.04"
+            ]
+          },
+          {
+            "id": 134716085317,
+            "name": "Full qualification",
+            "status": "completed",
+            "conclusion": "failure",
+            "startedAt": "2026-11-18T09:49:24Z",
+            "completedAt": "2026-11-18T09:49:53Z",
+            "runnerId": 1000391718,
+            "labels": [
+              "ubuntu-24.04"
+            ]
+          }
+        ],
+        "executedGates": [
+          {
+            "jobId": 134704545151,
+            "step": 10,
+            "name": "Typecheck workspace",
+            "conclusion": "success",
+            "startedAt": "2026-11-18T09:49:21Z",
+            "completedAt": "2026-11-18T09:50:06Z",
+            "command": "pnpm typecheck:workspace",
+            "expansion": "pnpm typecheck && pnpm typecheck:legacy-host-scripts && pnpm --filter @agent-teams/legacy-agent-host typecheck:test && pnpm --filter agent-teams-mcp typecheck && pnpm --filter agent-teams-mcp typecheck:test",
+            "rootTypecheck": "node ./node_modules/@typescript/native/bin/tsc --noEmit && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.updater-e2e.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.release-tooling.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-e2e.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-sdk-e2e.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-sdk-preload.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-sdk-renderer.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.desktop-e2e.json",
+            "pretypecheck": "pnpm --filter @agent-teams/legacy-agent-host build",
+            "commandSourceSha256": {
+              "workflow": "9f9f20715e69dcecb8c84ee55f7420796ad4c1b17dffd4fe771a3606023f65c6",
+              "package": "eef83d66950dc58d3482924f591815ffb76d6d536060e665e80e24fcf134839e"
+            },
+            "evidence": "exact original step success metadata plus immutable command source"
+          },
+          {
+            "jobId": 134704545151,
+            "step": 11,
+            "name": "Fast lint",
+            "conclusion": "success",
+            "startedAt": "2026-11-18T09:50:06Z",
+            "completedAt": "2026-11-18T09:51:27Z",
+            "command": "pnpm lint:fast",
+            "evidence": "original step success metadata"
+          },
+          {
+            "jobId": 134704545354,
+            "step": 9,
+            "name": "Check existing strict retained script project and changed files",
+            "conclusion": "success",
+            "startedAt": "2026-11-18T09:44:06Z",
+            "completedAt": "2026-11-18T09:44:10Z",
+            "command": "pnpm typecheck:legacy-host-scripts; then original changed-file lint",
+            "evidence": "original step success metadata plus immutable command source"
+          },
+          {
+            "jobId": 134704545354,
+            "step": 20,
+            "command": "node --test scripts/legacy-agent-host/desktop-retained-opencode-model.test.ts scripts/legacy-agent-host/desktop-retained-opencode-launch.test.ts",
+            "tests": 35,
+            "pass": 35,
+            "fail": 0,
+            "skipped": 0,
+            "launchCases": 22,
+            "modelCases": 13,
+            "evidence": "once-fetched decoded log, individual22 launch cases and35 summary lines"
+          }
+        ],
+        "skippedGateScope": [
+          "validate job",
+          "frontend test shard matrix",
+          "renderer source validation",
+          "scoped lint matrix",
+          "three Main Stage1 qualifier jobs",
+          "Codex login Desktop",
+          "Task change ledger Windows smoke",
+          "focused docs/assets",
+          "macOS DMG artwork"
+        ],
+        "failedJobs": [
+          {
+            "at": "2026-11-18T09:50:13.916Z",
+            "runId": 44269678601,
+            "jobId": 134704545354,
+            "head": "615a264fcd168a5643fde4ec39ab173075e4d6c9",
+            "attempt": 1,
+            "logSha256": "3d03aa6dec2494e6d6bb69506e4501350d689ef28979a37e39b3ee57a796ac2e",
+            "firstFailure": {
+              "message": "Original runtime open was not confirmed",
+              "actual": "failed",
+              "expected": "done",
+              "path": "scripts/legacy-agent-host/desktop-retained-opencode-app.ts",
+              "line": 214,
+              "caller": "desktop-retained-opencode-coexistence.native.ts:312"
+            },
+            "tests": {
+              "modelAndLaunch": {
+                "tests": 35,
+                "pass": 35,
+                "fail": 0,
+                "skipped": 0
+              },
+              "originalDesktop": {
+                "tests": 1,
+                "pass": 0,
+                "fail": 1,
+                "skipped": 0
+              },
+              "launch": {
+                "tests": 22,
+                "pass": 22,
+                "fail": 0,
+                "skipped": 0,
+                "source": "once-fetched original log lines1758-1779",
+                "coordinatorCasesIncluded": true
+              },
+              "model": {
+                "tests": 13,
+                "pass": 13,
+                "fail": 0,
+                "skipped": 0
+              }
+            },
+            "diagnosis": "Current renderer retained scope open did not confirm; exact returned reason is not shown by this first assertion.",
+            "artifactContentInspected": false,
+            "noRetry": true,
+            "qualification": {
+              "desktop": false,
+              "full": false
+            },
+            "dependentFailures": [
+              {
+                "step": 23,
+                "reason": "missing retained-opencode-v2-source-selection.json"
+              },
+              {
+                "step": 24,
+                "reason": "missing retained-opencode-source-selection.json"
+              },
+              {
+                "step": 25,
+                "reason": "original receipt status FAIL instead of PASS"
+              }
+            ]
+          },
+          {
+            "head": "615a264fcd168a5643fde4ec39ab173075e4d6c9",
+            "attempt": 1,
+            "runId": 44269678601,
+            "jobId": 134716085317,
+            "logSha256": "d69f2aec3d0d407f2393aafd592c609c8d254e563bbfd5b79d222ef785245548",
+            "firstFailure": "required selected retained coexistence result=failure; original equality to success exited1",
+            "newProductCause": false
+          }
+        ],
+        "skippedRetainedSteps": [
+          {
+            "number": 21,
+            "name": "Exercise original OpenCode Install Refresh and Update controls once"
+          },
+          {
+            "number": 22,
+            "name": "Exercise original V2 download support Install Update and healthy Repair once"
+          },
+          {
+            "number": 50,
+            "name": "Post Run actions/setup-node@v6"
+          }
+        ],
+        "artifacts": {
+          "pages": 1,
+          "total": 1,
+          "metadataOnly": true,
+          "downloaded": 0,
+          "contentInspected": 0,
+          "items": [
+            {
+              "id": 14416246640,
+              "name": "retained-opencode-coexistence-615a264fcd168a5643fde4ec39ab173075e4d6c9",
+              "sizeBytes": 367904,
+              "reportedDigest": "sha256:65d1b38a3372c0bafefee96b1e05fc30436393b99bd8e5d1c9c8dbd7c4986129",
+              "runId": 44269678601,
+              "head": "615a264fcd168a5643fde4ec39ab173075e4d6c9"
+            }
+          ]
+        }
+      },
+      "stage1": {
+        "runId": 44269678565,
+        "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44269678565",
+        "status": "completed",
+        "conclusion": "failure",
+        "firstTerminalObservedAt": "2026-11-18T09:39:02.951Z",
+        "completedMetadataAt": "2026-11-18T09:37:19Z",
+        "detail": {
+          "immutableBlob": "c06f992474e0b9dc922dda2590030b54e74cc685",
+          "sha256": "b457db42d97e7450528c3ed8bc7e6632af09d262e68eeb89e596e633737d8bf8",
+          "contains": "all9 exact job states, every step status including skips, complete8 artifact metadata"
+        },
+        "counts": {
+          "success": 6,
+          "failure": 3,
+          "skipped": 0,
+          "cancelled": 0
+        },
+        "jobs": [
+          {
+            "id": 134682859228,
+            "name": "Native V2.0.21 Host SPI instructions (Ubuntu TEST only)",
+            "status": "completed",
+            "conclusion": "success",
+            "startedAt": "2026-11-18T08:52:28Z",
+            "completedAt": "2026-11-18T08:53:39Z"
+          },
+          {
+            "id": 134682859544,
+            "name": "Embedded V2.1.4 original Host (win32-arm64)",
+            "status": "completed",
+            "conclusion": "success",
+            "startedAt": "2026-11-18T09:02:52Z",
+            "completedAt": "2026-11-18T09:20:22Z"
+          },
+          {
+            "id": 134682859558,
+            "name": "Static V01 source test (windows-2022)",
+            "status": "completed",
+            "conclusion": "success",
+            "startedAt": "2026-11-18T09:04:16Z",
+            "completedAt": "2026-11-18T09:07:12Z"
+          },
+          {
+            "id": 134682859694,
+            "name": "Embedded V2.1.4 original Host (darwin-x64)",
+            "status": "completed",
+            "conclusion": "failure",
+            "startedAt": "2026-11-18T08:47:03Z",
+            "completedAt": "2026-11-18T09:03:14Z"
+          },
+          {
+            "id": 134682859716,
+            "name": "Static V01 source test (ubuntu-24.04)",
+            "status": "completed",
+            "conclusion": "success",
+            "startedAt": "2026-11-18T09:10:33Z",
+            "completedAt": "2026-11-18T09:15:21Z"
+          },
+          {
+            "id": 134682859745,
+            "name": "Embedded V2.1.4 original Host (linux-x64)",
+            "status": "completed",
+            "conclusion": "failure",
+            "startedAt": "2026-11-18T09:27:30Z",
+            "completedAt": "2026-11-18T09:35:00Z"
+          },
+          {
+            "id": 134682859874,
+            "name": "Published V2.0.21 durable HTTP process (TEST discovery only)",
+            "status": "completed",
+            "conclusion": "success",
+            "startedAt": "2026-11-18T09:35:10Z",
+            "completedAt": "2026-11-18T09:36:54Z"
+          },
+          {
+            "id": 134682859887,
+            "name": "Embedded V2.1.4 original Host (win32-x64)",
+            "status": "completed",
+            "conclusion": "success",
+            "startedAt": "2026-11-18T09:27:43Z",
+            "completedAt": "2026-11-18T09:37:19Z"
+          },
+          {
+            "id": 134682860050,
+            "name": "Embedded V2.1.4 original Host (darwin-arm64)",
+            "status": "completed",
+            "conclusion": "failure",
+            "startedAt": "2026-11-18T08:45:48Z",
+            "completedAt": "2026-11-18T08:51:30Z"
+          }
+        ],
+        "failedLogs": [
+          {
+            "jobId": 134682860050,
+            "fetches": 1,
+            "decodedUtf8Sha256": "d072d35407f50380ff152c488ceeaaf0e511345af0d6fb1bad1a48269b8eac39",
+            "firstFailure": {
+              "path": "packages/legacy-agent-host/tests/registered-process-executable.native.ts",
+              "line": 496,
+              "assertion": "no selected library or payload constructor may run after byte mutation",
+              "expected": "",
+              "actual": "LIB\nBIN:A\nMAIN:A\n"
+            },
+            "scope": "Strict original-path source mutation gate failed; prior native business steps do not close this gate."
+          },
+          {
+            "jobId": 134682859694,
+            "fetches": 1,
+            "decodedUtf8Sha256": "a79810942bb9b16eeead0b9f1f3572bfbab6b8db40c8de66d6f8c799538d84b3",
+            "firstFailure": {
+              "path": "packages/legacy-agent-host/tests/registered-process-executable.native.ts",
+              "line": 476,
+              "assertion": "fact.errno equals zero",
+              "expected": 0,
+              "actual": 13,
+              "case": "compiler-default:baseline",
+              "stage": "kernel-image-validity",
+              "codeSigningError": -67062
+            },
+            "additionalObserved": "Two separate adhoc mutation diagnostic cases emitted three markers each; first assertion was errno13, not line496."
+          },
+          {
+            "jobId": 134682859745,
+            "fetches": 1,
+            "decodedUtf8Sha256": "00559bbba99b4b4e977482aa9f1e3d50e4165e4b2fb9df799e386e27fee48850",
+            "firstFailure": {
+              "path": "packages/legacy-agent-host/tests/fixtures/native-host.ts",
+              "line": 347,
+              "caller": "opencode-v2-credentials.native.ts:464,606",
+              "assertion": "Host exit zero confirms Runtime/provider cleanup completed",
+              "expected": 0,
+              "actual": 1
+            },
+            "inlineFailureReceipt": {
+              "sha256": "911ff80f1a364653f1a44bfd3159587d1d084313db1339f4efcb91cc24034938",
+              "digestVerified": true,
+              "status": "INCOMPLETE",
+              "cleanup": false,
+              "hostExitCodes": [
+                0,
+                0,
+                1
+              ],
+              "timeoutJournal": {
+                "phase": "held",
+                "resourceHeld": true,
+                "nativePhase": "probe-intent",
+                "verificationOk": null
+              },
+              "lastDiagnostics": [
+                {
+                  "event": "read-cut-failed",
+                  "stage": "after-log",
+                  "code": "transport_failure",
+                  "deadlineExpired": false
+                },
+                {
+                  "event": "host-probe-close-failed",
+                  "stage": "driver-close",
+                  "code": "unconfirmed"
+                }
+              ]
+            },
+            "causeLimit": "Observed Host cleanup failure; underlying transport cause not established."
+          }
+        ],
+        "executedScope": {
+          "hostTestTypes": {
+            "source": "successful step metadata",
+            "jobs": [
+              134682859558,
+              134682859716
+            ],
+            "step": "Typecheck Host TEST contracts"
+          },
+          "skippedGates": "All skipped steps are explicit in each job's step tuples. Windows success does not include Linux-only native key/permission/captured-MCP gates; Linux permission/captured-MCP/product-path proof steps were skipped after its credential failure.",
+          "retained22Tests": "Outside Stage1; subsequently executed and passed in Main as documented above.",
+          "newUnpublishedCandidates": "Not present in this source head; no execution claim for newly authored epoch/import/runtime diagnostic candidates."
+        },
+        "artifacts": {
+          "enumerationPages": 1,
+          "total": 8,
+          "metadataOnly": true,
+          "downloaded": 0,
+          "contentInspected": 0,
+          "reportedDigestsIndependentlyVerified": false,
+          "items": [
+            {
+              "id": 14415610878,
+              "name": "opencode-v2-embedded-native-linux-x64",
+              "sizeBytes": 21275,
+              "reportedDigest": "sha256:9d75faa74c2bb485113e5259052aee4cd57a5fa5266570e8753c1caf9c184782",
+              "expired": false,
+              "runId": 44269678565,
+              "head": "615a264fcd168a5643fde4ec39ab173075e4d6c9"
+            },
+            {
+              "id": 14415217582,
+              "name": "opencode-v2-embedded-native-win32-x64",
+              "sizeBytes": 13386,
+              "reportedDigest": "sha256:f55518fe0535345dcd2d5444922e6113445a311772d55508545bca167d168361",
+              "expired": false,
+              "runId": 44269678565,
+              "head": "615a264fcd168a5643fde4ec39ab173075e4d6c9"
+            },
+            {
+              "id": 14415002820,
+              "name": "opencode-v2-published-http-persist-ubuntu",
+              "sizeBytes": 875,
+              "reportedDigest": "sha256:c3cebaed1712e3b0eeaa31d9ec41765a951e81d98260ec1728314e2ca47ad3c9",
+              "expired": false,
+              "runId": 44269678565,
+              "head": "615a264fcd168a5643fde4ec39ab173075e4d6c9"
+            },
+            {
+              "id": 14414131087,
+              "name": "opencode-v1-version-host-linux",
+              "sizeBytes": 3986,
+              "reportedDigest": "sha256:16d49324b9cfe26470b94697e363c90d1aea776f12a29547a749a0e105247895",
+              "expired": false,
+              "runId": 44269678565,
+              "head": "615a264fcd168a5643fde4ec39ab173075e4d6c9"
+            },
+            {
+              "id": 14413873166,
+              "name": "opencode-v2-embedded-native-win32-arm64",
+              "sizeBytes": 12480,
+              "reportedDigest": "sha256:7b3f7a7ecf47531b68f2be7d96a0c1f972af3ad1636b1b0e3392a86ce2596d6d",
+              "expired": false,
+              "runId": 44269678565,
+              "head": "615a264fcd168a5643fde4ec39ab173075e4d6c9"
+            },
+            {
+              "id": 14413515987,
+              "name": "opencode-v2-embedded-native-darwin-x64",
+              "sizeBytes": 10689,
+              "reportedDigest": "sha256:5b40d7338be25b6804acd37eaaabd82e25647c932abedd97bae7599b08a09add",
+              "expired": false,
+              "runId": 44269678565,
+              "head": "615a264fcd168a5643fde4ec39ab173075e4d6c9"
+            },
+            {
+              "id": 14412546226,
+              "name": "opencode-v2-embedded-native-darwin-arm64",
+              "sizeBytes": 10531,
+              "reportedDigest": "sha256:04a62d87212becb4a0c88dad60111441c182b7835216a7f611cb5b10b591da80",
+              "expired": false,
+              "runId": 44269678565,
+              "head": "615a264fcd168a5643fde4ec39ab173075e4d6c9"
+            },
+            {
+              "id": 14411778855,
+              "name": "opencode-v2-stage1-host-native-instructions-ubuntu",
+              "sizeBytes": 3154,
+              "reportedDigest": "sha256:1c994f97ddad444c1c0c8913724baa0ef94dc8bae6e757e76b96ae15f2c9eb89",
+              "expired": false,
+              "runId": 44269678565,
+              "head": "615a264fcd168a5643fde4ec39ab173075e4d6c9"
+            }
+          ]
+        }
+      },
+      "boundaries": {
+        "fullMainQualification": false,
+        "fullStage1Qualification": false,
+        "fullDesktop": false,
+        "release": false,
+        "currentSourceTypesQualified": "Actual published615 workspace typecheck succeeded; this does not qualify different/new source postimages.",
+        "sourceCandidateExecution": "New combined21 source-only candidate and pending UI controls diagnostics are absent from615; tests/types/lint/build/E2E for them NOT RUN.",
+        "paidClaudeCodexExecutedByAgent": false,
+        "manualCIMutation": false,
+        "sourceContractOrOracleChanged": false,
+        "artifactLimit": "All9 artifact entries are metadata only. Reported ZIP digests were not independently checked because no downloads/content inspection were performed.",
+        "logLimit": "Five failed job logs fetched once and retained in session store. Only hashes and bounded conclusions included here; no raw logs, environments or credential contents.",
+        "successLimit": "Successful job/step metadata plus exact source command is not native business proof. Only35 finite test results were directly observed in the retained failure log."
+      }
+    },
+    "ancillary": {
+      "schemaVersion": 1,
+      "kind": "original615 ancillary terminal observations",
+      "repository": "777genius/agent-teams-ai",
+      "pullRequest": 1192,
+      "source": "615a264fcd168a5643fde4ec39ab173075e4d6c9",
+      "base": "8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+      "event": "pull_request",
+      "attempt": 1,
+      "counts": {
+        "runs": 23,
+        "success": 7,
+        "failure": 2,
+        "skipped": 14
+      },
+      "runs": [
+        {
+          "id": 44269678606,
+          "name": "Kanban Table Desktop E2E",
+          "conclusion": "skipped",
+          "firstTerminalObservedAt": "2026-11-18T08:46:58Z",
+          "permanentlyRetired": true,
+          "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44269678606"
+        },
+        {
+          "id": 44269678516,
+          "name": "OpenCode V2 cold Dashboard packaged E2E",
+          "conclusion": "skipped",
+          "firstTerminalObservedAt": "2026-11-18T08:46:58Z",
+          "permanentlyRetired": true,
+          "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44269678516"
+        },
+        {
+          "id": 44269678675,
+          "name": "Sentry owned process native gates",
+          "conclusion": "skipped",
+          "firstTerminalObservedAt": "2026-11-18T08:46:58Z",
+          "permanentlyRetired": true,
+          "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44269678675"
+        },
+        {
+          "id": 44269678630,
+          "name": "OpenCode diagnostics desktop E2E",
+          "conclusion": "skipped",
+          "firstTerminalObservedAt": "2026-11-18T08:46:58Z",
+          "permanentlyRetired": true,
+          "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44269678630"
+        },
+        {
+          "id": 44269678571,
+          "name": "Native prompt suggestions - Host ownership TEST E2E",
+          "conclusion": "skipped",
+          "firstTerminalObservedAt": "2026-11-18T08:46:58Z",
+          "permanentlyRetired": true,
+          "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44269678571"
+        },
+        {
+          "id": 44269678576,
+          "name": "Real Runtime Provider Count E2E",
+          "conclusion": "skipped",
+          "firstTerminalObservedAt": "2026-11-18T08:46:58Z",
+          "permanentlyRetired": true,
+          "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44269678576"
+        },
+        {
+          "id": 44269678661,
+          "name": "Anthropic compatible status packaged Windows E2E",
+          "conclusion": "skipped",
+          "firstTerminalObservedAt": "2026-11-18T08:46:58Z",
+          "permanentlyRetired": true,
+          "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44269678661"
+        },
+        {
+          "id": 44269678617,
+          "name": "OpenCode packaged Windows E2E",
+          "conclusion": "skipped",
+          "firstTerminalObservedAt": "2026-11-18T08:46:58Z",
+          "permanentlyRetired": true,
+          "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44269678617"
+        },
+        {
+          "id": 44269678552,
+          "name": "Codex Runtime Smoke",
+          "conclusion": "skipped",
+          "firstTerminalObservedAt": "2026-11-18T08:46:58Z",
+          "permanentlyRetired": true,
+          "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44269678552"
+        },
+        {
+          "id": 44269678909,
+          "name": "CodeQL",
+          "conclusion": "skipped",
+          "firstTerminalObservedAt": "2026-11-18T08:46:58Z",
+          "permanentlyRetired": true,
+          "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44269678909"
+        },
+        {
+          "id": 44269678537,
+          "name": "Anthropic environment portability",
+          "conclusion": "skipped",
+          "firstTerminalObservedAt": "2026-11-18T08:46:58Z",
+          "permanentlyRetired": true,
+          "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44269678537"
+        },
+        {
+          "id": 44269678390,
+          "name": "Public Runtime Bootstrap Smoke",
+          "conclusion": "skipped",
+          "firstTerminalObservedAt": "2026-11-18T08:46:58Z",
+          "permanentlyRetired": true,
+          "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44269678390"
+        },
+        {
+          "id": 44269678496,
+          "name": "Native prompt suggestions exact vendor staging (TEST only)",
+          "conclusion": "skipped",
+          "firstTerminalObservedAt": "2026-11-18T08:46:58Z",
+          "permanentlyRetired": true,
+          "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44269678496"
+        },
+        {
+          "id": 44269678424,
+          "name": "Windows packaged backfill diagnostic",
+          "conclusion": "skipped",
+          "firstTerminalObservedAt": "2026-11-18T08:46:58Z",
+          "permanentlyRetired": true,
+          "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44269678424"
+        },
+        {
+          "id": 44269678582,
+          "name": "Native Linux package updater",
+          "conclusion": "success",
+          "firstTerminalObservedAt": "2026-11-18T08:46:58Z",
+          "detailsInspected": true,
+          "permanentlyRetired": true,
+          "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44269678582"
+        },
+        {
+          "id": 44269678385,
+          "name": "Prepare immutable Windows native updater inputs",
+          "conclusion": "success",
+          "firstTerminalObservedAt": "2026-11-18T08:46:58Z",
+          "detailsInspected": true,
+          "permanentlyRetired": true,
+          "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44269678385"
+        },
+        {
+          "id": 44269679303,
+          "name": "Dependency Review",
+          "conclusion": "success",
+          "firstTerminalObservedAt": "2026-11-18T08:46:58Z",
+          "detailsInspected": true,
+          "permanentlyRetired": true,
+          "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44269679303"
+        },
+        {
+          "id": 44269678411,
+          "name": "Announcements Content",
+          "conclusion": "success",
+          "firstTerminalObservedAt": "2026-11-18T08:46:58Z",
+          "detailsInspected": true,
+          "permanentlyRetired": true,
+          "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44269678411"
+        },
+        {
+          "id": 44269678575,
+          "name": "Build Hetzner landing and docs release",
+          "conclusion": "failure",
+          "firstTerminalObservedAt": "2026-11-18T08:46:58Z",
+          "detailsInspected": true,
+          "permanentlyRetired": true,
+          "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44269678575"
+        },
+        {
+          "id": 44269678461,
+          "name": "Windows official installer fresh and native OTA",
+          "conclusion": "success",
+          "firstTerminalObservedAt": "2026-11-18T08:51:27Z",
+          "detailsInspected": true,
+          "scope": "tooling successful; native updater steps skipped",
+          "permanentlyRetired": true,
+          "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44269678461"
+        },
+        {
+          "id": 44269678579,
+          "name": "Deploy Landing to GitHub Pages",
+          "conclusion": "failure",
+          "firstTerminalObservedAt": "2026-11-18T08:51:27Z",
+          "detailsInspected": true,
+          "scope": "dependency audit failure; actual high advisory verified",
+          "permanentlyRetired": true,
+          "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44269678579"
+        },
+        {
+          "id": 44269678437,
+          "name": "Windows native updater predecessor feasibility",
+          "conclusion": "success",
+          "firstTerminalObservedAt": "2026-11-18T08:51:27Z",
+          "detailsInspected": true,
+          "scope": "tooling successful; native updater steps skipped",
+          "permanentlyRetired": true,
+          "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44269678437"
+        },
+        {
+          "id": 44269678392,
+          "name": "Native updater feasibility (Linux predecessor)",
+          "conclusion": "success",
+          "firstTerminalObservedAt": "2026-11-18T09:10:41Z",
+          "detailsInspected": true,
+          "scope": "see recorded original job status; no native qualification transferred",
+          "permanentlyRetired": true,
+          "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44269678392"
+        }
+      ],
+      "scopeNotes": [
+        "Native Linux package updater: tooling succeeded; native updater jobs skipped.",
+        "Windows immutable inputs: producer-quality check succeeded; prepare-native-input job skipped.",
+        "Windows OTA and Windows/Linux predecessor runs succeeded at tooling gates; actual native updater lanes skipped.",
+        "Dependency Review and Announcements statuses do not establish Host/native/Desktop acceptance.",
+        "Fourteen skipped workflow runs are explicitly unexecuted; paid Claude/Codex/manual lanes were not triggered."
+      ],
+      "audit": {
+        "affectedRuns": [
+          44269678575,
+          44269678579
+        ],
+        "failedJobs": [
+          134682858204,
+          134682858459
+        ],
+        "logSHA256": [
+          "6236fceb1fcc4eba5e37a4ca9c354cb0112eab03656bfa5ca2d1e4e5ef6ae8cb",
+          "7a9a60b7c5fee26850e0bb7ed2b3ed483aca97c70181f27c5dfd0623eed4543f"
+        ],
+        "parsedVulnerableEntries": 79,
+        "severities": {
+          "low": 1,
+          "moderate": 17,
+          "high": 61
+        },
+        "distinctAdvisories": 21,
+        "highAdvisory": "GHSA-fc5q-39xc-vjpf",
+        "package": "picomatch",
+        "lockVersions": [
+          "2.3.2",
+          "4.0.4"
+        ],
+        "officialAdvisory": "https://github.com/advisories/GHSA-fc5q-39xc-vjpf",
+        "officialCheckedAtApprox": "2026-11-18T08:53:00Z",
+        "patchedVersionAtCheck": "None",
+        "mutations": "No dependency install/lock change/blanket Nuxt major upgrade/waiver/unpublished version."
+      },
+      "limits": [
+        "Status and selected once-fetched failed-log evidence only; no current artifact archives downloaded or inspected.",
+        "No retired run requested again; assembled from preserved original snapshots.",
+        "No native, Desktop, release or complete parity qualification inferred."
+      ]
+    }
+  },
+  "interpretation": [
+    "These are newly authored postimages after execution-environment loss, not a recovery of all tested lost files.",
+    "The production member-label guard matches earlier source; its test file is newly authored. Prior33PASS does not qualify this version.",
+    "Published61535/35 finite retained/model tests and workspace types/lint apply only to615 preimages.",
+    "Source-only review and byte comparisons do not establish executable behavior.",
+    "Successful job/step statuses are retained as such. Current ZIP, screenshot, source-freeze and physical cleanup receipt bytes were not inspected.",
+    "Unknown original outcomes and physical debts remain explicit. No timeout, positive cache, command retry, signal permission, P09 oracle or vendor scope was weakened.",
+    "P09 source-writer contract decision and the unpatched picomatch advisory remain open; neither is closed by this patch."
+  ],
+  "authorization": {
+    "existingDraftOnly": true,
+    "commitThenImmediateGuardedPush": true,
+    "newPullRequest": false,
+    "merge": false,
+    "main": false,
+    "release": false,
+    "defaultActivation": false,
+    "stage2": false,
+    "ciRerun": false,
+    "ciCancel": false,
+    "ciManualDispatch": false,
+    "realClaudeCodex": false
+  }
+}

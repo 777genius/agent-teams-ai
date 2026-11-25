@@ -1,0 +1,479 @@
+{
+  "schemaVersion": 1,
+  "kind": "frontend-parity-reviewed-restart-lint-and-native-media-roster-followup",
+  "repository": "777genius/agent-teams-ai",
+  "pr": 1192,
+  "branch": "fix/frontend-parity-completion-20261113",
+  "fixedPrBase": "8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+  "parentHead": "547e603c555be471394e9c6e4b6a53092a33a6d7",
+  "parentTree": "47ac6f88dbe6726e7f6fe83ba0a4497975969eb9",
+  "createdAt": "2026-11-18T21:58:17.607071+00:00",
+  "sourceEntries": [
+    {
+      "path": "src/features/agent-backend/renderer/createHostReviewFlowApi.ts",
+      "mode": "100644",
+      "type": "blob",
+      "preimageGitBlob": "f7d138abec3e44b6ed2cc720e880da2612c0cc56",
+      "preimageSha256": "231ad4589a47dc582d00fab686627295cd72d937f7598f84cd58d93cb80a97eb",
+      "postimageGitBlob": "e5044eb33cda7dda3be51415e6f94d6c265d03fa",
+      "postimageSha256": "f0fe5d12f1e5cd0e8069e81e914b6b6a725cf783f346ddb61b0c71e6747e24a1",
+      "physicalLinesBefore": 116,
+      "physicalLinesAfter": 116
+    },
+    {
+      "path": "src/features/agent-backend/renderer/index.ts",
+      "mode": "100644",
+      "type": "blob",
+      "preimageGitBlob": "241e69441ad9c944c5b97d31b3cf0a664c5741c5",
+      "preimageSha256": "daf3ed19ed112e48fe0624211b7eb0a0b18ad0b0d5bb9d456537248386c633e3",
+      "postimageGitBlob": "021024bb4890779c3565931391993e08cc577be6",
+      "postimageSha256": "240827e8dcafe4cf846f134c962ae980b8cf788c8112ca5b68b4271951102a70",
+      "physicalLinesBefore": 42,
+      "physicalLinesAfter": 42
+    },
+    {
+      "path": "src/features/member-work-sync/main/composition/createMemberWorkSyncPersistence.ts",
+      "mode": "100644",
+      "type": "blob",
+      "preimageGitBlob": "24375e09c65253c0fc99b3b0b879b9f02ea88477",
+      "preimageSha256": "7eb7f824ee83d0ca2a5b27ab73ed16994667f556cab4b35af466f4fb776de5b6",
+      "postimageGitBlob": "b346b22478aafd5f938fecedb15f835378c8305b",
+      "postimageSha256": "0c0df1106d20727d8b5f3405097cebb711ad850319499fa1e69684720ce672d6",
+      "physicalLinesBefore": 186,
+      "physicalLinesAfter": 186
+    },
+    {
+      "type": "blob",
+      "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+      "mode": "100644",
+      "preimageGitBlob": "6564afa0153446efef60a7dc20e23fcd1f466514",
+      "preimageSha256": "6eddff59c94ed0d9639d7066a0e2ce3aaf2954753f2370496c8cb793620b6e69",
+      "postimageGitBlob": "a47682f91e49ace6ea4dd80d1cd6280a421a6a4e",
+      "postimageSha256": "f92b0a41feaf0de8085b118f1642b514b4340cdcf6551b65fac48f153caaaa38",
+      "physicalLinesBefore": 367,
+      "physicalLinesAfter": 371,
+      "sourceReadbackExact": true
+    },
+    {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "mode": "100644",
+      "type": "blob",
+      "preimageGitBlob": "7ccbfb3cf20349d35087798b66e369c95e91a71e",
+      "preimageSha256": "6db4370dc3ee5521847cef9c039f21bddfcfc412b6dabba49dda73585985996a",
+      "postimageGitBlob": "25aa41fbcad0d5758e1e6a697f602d15a05468af",
+      "postimageSha256": "01a7b3829567d0be7d83bb2dad81e25d7523d4ce54bcf891a45f05b12caa5cc1",
+      "physicalLinesBefore": 630,
+      "physicalLinesAfter": 631,
+      "scope": "Exactone-line expectedproof roster update, no producer or native behavior change"
+    }
+  ],
+  "trackedEvidence": [
+    {
+      "id": "lint-three",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/parity-lint-three-20261118.json",
+      "gitBlob": "0256fc22a2b2b7d496a6dcd46ca9275d4814d35f",
+      "sha256": "e619b5b0662fa52c746c65025f278c2db34a2902cddeb6a4e3aff0c48b30cb09",
+      "bytes": 11742,
+      "localContentVerified": true
+    },
+    {
+      "id": "lint-three-r2",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/parity-lint-three-r2-20261118.json",
+      "gitBlob": "6b5faf4bc93166a4bc7b5c7e082fb5855e559a9f",
+      "sha256": "67243af8057c9b5de8f5d41e60664cf8b0a0fe456fc1f29d2af79e7ab1eb7c10",
+      "bytes": 4143,
+      "localContentVerified": true
+    },
+    {
+      "id": "native-restart-red",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/parity-native-restart-red-20261118.json",
+      "gitBlob": "b8601a668ab5686dea67213cccbbfd22c3d5fd2f",
+      "sha256": "a0b38d895bf3b67124d527efb793f11697b99876d3c68c5cb5836447196be0c1",
+      "bytes": 258498,
+      "localContentVerified": true
+    },
+    {
+      "id": "native-restart-diagnostic",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/parity-native-restart-diagnostic-20261118.json",
+      "gitBlob": "a007f2749134b1abac66483d63193b3b24f36042",
+      "sha256": "b823a0df85e1136b9cfb5e93b060bc8c8eea9dfacfd7b57bb08369aca7f3f0c2",
+      "bytes": 12709,
+      "localContentVerified": true
+    },
+    {
+      "id": "native-restart-green",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/parity-native-restart-green-20261118.json",
+      "gitBlob": "e0b88a3f3c5a479b79e7a4a3876aa516c91e84e2",
+      "sha256": "6b38af89b7a57350af366e70d485b9d113a4d94d344ad497c4be41f8319f397e",
+      "bytes": 15485,
+      "localContentVerified": true
+    },
+    {
+      "id": "native-restart-negative",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/parity-native-restart-negative-20261118.json",
+      "gitBlob": "42c3883afb0240d05e8631a70f93c40479c15a67",
+      "sha256": "a81f3264d6c7da6acdff3fc6fb32f483b31b3416ddbd2bc49c956d48f926b8a2",
+      "bytes": 7022,
+      "localContentVerified": true
+    },
+    {
+      "id": "native-restart-r2",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/parity-native-restart-r2-20261118.json",
+      "gitBlob": "e5491b6ae09b99106b44b7225c554b75aa69fc6c",
+      "sha256": "69c2647b33366ad4ae9582928cbee8f4248bad73a1c90e61c706faa6168feab6",
+      "bytes": 10788,
+      "localContentVerified": true
+    },
+    {
+      "id": "native-restart-final",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/parity-native-restart-final-20261118.json",
+      "gitBlob": "73594cd741ed5414c78bc8e4210180b7dbb2a17f",
+      "sha256": "ae8fcee7e5283762a8395d3aab3376531396466d1a132cb5ada675e22a3d96ab",
+      "bytes": 3833,
+      "localContentVerified": true
+    },
+    {
+      "id": "adoption-4f",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/parity-restart-lint-adoption-4f-20261118.json",
+      "gitBlob": "c13a5cfb2eeaadfdb43470de21e6ee599c0ff938",
+      "sha256": "3c7e879a4d533c2c85ee02f0688fb21a2d6296dc5f147f953b43fdf3387a685e",
+      "bytes": 48706,
+      "localContentVerified": true
+    },
+    {
+      "id": "adoption-f60",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/parity-restart-lint-adoption-f60-20261118.json",
+      "gitBlob": "df54d302d58a26e3474b0163cc137cbb185953cb",
+      "sha256": "8a43c6ad8bfea2707ebeb09a2c0eb107ffe1b2aca213ce01b8f13d1f4f3afd45",
+      "bytes": 142936,
+      "localContentVerified": true
+    },
+    {
+      "id": "original-4f-ui-terminal",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/parity-original-4f-ui-terminal-20261118.json",
+      "gitBlob": "2f74c1f895c40a2277a1ca06d9f42a4812ca6c0f",
+      "sha256": "bc3a4ccf466e695f1ca838577bbd9efe69acf8eeea61fbb3dec159a4f7029cad",
+      "bytes": 40212,
+      "localContentVerified": true
+    },
+    {
+      "id": "original-4f-ui-static-qa",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/parity-original-4f-ui-static-qa-20261118.json",
+      "gitBlob": "7954e8fadc499a9c9e5af0e3169ba5fb8241f362",
+      "sha256": "46f4986df4b563a7e1cd1ee336e55537f32c124c5b75baf2b43f9f287fdf59c7",
+      "bytes": 6012,
+      "localContentVerified": true
+    },
+    {
+      "id": "original-f60-ubuntu-gui",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/parity-original-f60-ubuntu-gui-20261118.json",
+      "gitBlob": "5976d592cb3ebde3a7fd5d090ee0799e988877b0",
+      "sha256": "fea2670aa26e2693fa9953e1b12a602b1902c6917a1cb3137c799ff105498614",
+      "bytes": 3343,
+      "localContentVerified": true
+    },
+    {
+      "id": "original-f60-skipped-terminal",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/parity-original-f60-skipped-terminal-20261118.json",
+      "gitBlob": "4b98919d2f3f5212181f2ace96829aee88d28094",
+      "sha256": "6023274b0450e30f30f7442cc8f2d51b5ff95160f283d310d7eda78de3bcb4fd",
+      "bytes": 27423,
+      "localContentVerified": true
+    },
+    {
+      "id": "workflow-media-roster",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/parity-native-media-workflow-roster-20261118.json",
+      "gitBlob": "db2fe5772a071447553fb2acde1c8afa7c7e4335",
+      "sha256": "4fa4e892bcf06e56c53413096600bfebcf6b7b7cff3a9d6d262479bffd407a0b",
+      "bytes": 26958,
+      "localContentVerified": true
+    },
+    {
+      "id": "original-native-823-win32-x64-zip",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/native-v2-win32-x64-823-original-20261118.zip",
+      "gitBlob": "5733640c2891e80ee2f17e5c047b16ea351401bc",
+      "sha256": "4fc52d30bada51617ed2c2eef3a2c2db36d2fece528639ce90511a78aa727613",
+      "bytes": 13580,
+      "localContentVerified": true
+    },
+    {
+      "id": "adoption-547",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/parity-restart-lint-adoption-547-20261118.json",
+      "gitBlob": "5e514658c89c1e49113a999853e09f7be3673f1a",
+      "sha256": "69276fed1e840ebd9614e538c8c9814b4fc496bfd0a8d5f2a0f72811d68e6a01",
+      "bytes": 4978,
+      "localContentVerified": true
+    },
+    {
+      "id": "candidate-823-r2",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/parity-restart-lint-candidate-823-r2-20261118.json",
+      "gitBlob": "055b509c0d7f007ca991d719dea68c7cc54c97a3",
+      "sha256": "3d392adf5a8c9f631164cc6a2bb9404f1a66136ae8ec99a1407d34c8a7609e3a",
+      "bytes": 4896,
+      "localContentVerified": true
+    },
+    {
+      "id": "original-f60-taskboard-visual-review",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/parity-f60-taskboard-visual-review-20261118.json",
+      "gitBlob": "a6d12ab3e6a6e665ca9d78360562fc0f398a3e31",
+      "sha256": "69da86e92a4f6f22b65806137c36fcf96e816f080543d32ab814f12f87114650",
+      "bytes": 31077,
+      "localContentVerified": true
+    },
+    {
+      "id": "p09-baseline-classification",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/parity-p09-baseline-classification-20261118.json",
+      "gitBlob": "e642da2d64dda055d10836826b53ebbb4cc538be",
+      "sha256": "061cc0edb43ddcbe735838b9beef1da33505240b70903bfb86708e71e9c70b67",
+      "bytes": 7356,
+      "localContentVerified": true
+    },
+    {
+      "id": "original-823-native-terminal",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/parity-original-823-native-terminal-20261118.json",
+      "gitBlob": "ee5dd214dc83cbf64e1f3fa71a743075d6dc0ded",
+      "sha256": "dd4a0641b42e5704ab4e1ee48cc0be39e824ca9f7953f915694051271bd6aecb",
+      "bytes": 362962,
+      "localContentVerified": true
+    },
+    {
+      "id": "workflow-media-roster-r2",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/parity-native-media-workflow-roster-r2-20261118.json",
+      "gitBlob": "8ede611d1fe38f37e8cc6f10cda7dd6f37ec9a0b",
+      "sha256": "ebdd10b1ae8f9eb6c4bb5d74e73d28f6f4523116976304b21613a04a9eeefea1",
+      "bytes": 7993,
+      "localContentVerified": true
+    },
+    {
+      "id": "original-823-windows-first-refusals",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/parity-original-823-windows-first-refusals-20261118.json",
+      "gitBlob": "1a584cd30314014728cc632fa7db43ae20539b35",
+      "sha256": "537bac43d3a5e589aca0c5021e5dd334b46befadd41b3cd55ca91b99652ea1cc",
+      "bytes": 40947,
+      "localContentVerified": true
+    }
+  ],
+  "livingPlan": {
+    "baseHead": "547e603c555be471394e9c6e4b6a53092a33a6d7",
+    "baseBlob": "6a5386e3b0359c5093235f0d5c5f12fe84f64f8c",
+    "baseSha256": "d44a65e21646c5b21ff9ccff6cd7642663b3b8b2171058651cdcc1b585782318",
+    "candidateSha256": "8ceedf23022a60b2aee43ca2fd124c9b6f9fcc6c2c1fa11d60c492349c71ceca",
+    "candidateBytes": 37154,
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/STATUS.md",
+    "replacedRows": [
+      "E1",
+      "D1"
+    ],
+    "replacedBlock": "Outdated823 queued snapshot replaced by exact completed original scopes;547 remains open",
+    "appendOnlyElsewhere": true
+  },
+  "validation": {
+    "originalRestart": {
+      "redFailed": 1,
+      "greenPassed": 1,
+      "unchangedTestSha256": "57da5343062b7137560514d60762800369e9d173fbb4eaf8e33ef5a77316789f",
+      "originalGreenBase": "9f63bec37c2596676bd1761e74a41b272b0ef956",
+      "scope": "Finite exact TS source plus reviewed factory and one pinned prepared policy resource; no current compiled/native claim"
+    },
+    "existingNegativeCases": {
+      "baseHead": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "trackedFiles": 804,
+      "unchangedCurrentTrackedFiles": 803,
+      "candidateFiles": 1
+    },
+    "featureLint": {
+      "scopedSourceBase": "9f63bec37c2596676bd1761e74a41b272b0ef956",
+      "unchangedPreimagesAndRulesAdoptedTo": "547e603c555be471394e9c6e4b6a53092a33a6d7",
+      "actualFastBeforeErrors": 2,
+      "actualFastAfterErrors": 0,
+      "actualFastAfterWarnings": 0,
+      "actualFeatureBoundaryBeforeErrors": 1,
+      "actualFeatureBoundaryAfterErrors": 0,
+      "fullTypedLintQualified": false
+    },
+    "sourceSize": {
+      "actualCompleteEvaluator": true,
+      "productionPaths": 5162,
+      "frozenExceptions": 141,
+      "limit": 800,
+      "violations": 0,
+      "receiptSha256": "c3a3e6b29097142044d84ad635dc94c34e0dad66bbdf2b5545dfe26815c6bec9",
+      "sourceHead": "f60dcc107c00c58c0a577f2661f9f0eaf80a596f",
+      "candidateSourceFiles": 4,
+      "containingReportGitBlob": "df54d302d58a26e3474b0163cc137cbb185953cb",
+      "subsequentBoundedAdoption": {
+        "head": "547e603c555be471394e9c6e4b6a53092a33a6d7",
+        "fullEvaluatorRerun": false,
+        "productionChanges": {
+          "reviewFlowHelper": [
+            223,
+            226
+          ],
+          "backendObservations": [
+            720,
+            720
+          ],
+          "finiteNodeOptions": [
+            84,
+            85
+          ]
+        },
+        "workflowChange": [
+          630,
+          631
+        ],
+        "newFrozenExceptions": 0,
+        "reviewBlob": "5e514658c89c1e49113a999853e09f7be3673f1a"
+      }
+    },
+    "independentReviews": [
+      "lint3 exact diff and public type entrypoint",
+      "factory exact diff and owner pins, all-branch read/control, source/account/probe/expiry/equality/final authority",
+      "current parent composition, full source-size policy and living-plan precision"
+    ],
+    "workflowVerifier": {
+      "originalReceiptsHead": "823ef00a5cd081ccc3efdad85faf41e1cd888a27",
+      "originalRefusalReproduced": 1,
+      "fullVerifierPass": 1,
+      "unchangedOriginalReceiptsChecked": 2,
+      "exactStepNegativeRefusals": 3,
+      "scope": "Actual inline verifier in explicitWindows VM/read-only files; no native/app/workflow execution",
+      "evidenceGitBlob": "db2fe5772a071447553fb2acde1c8afa7c7e4335",
+      "independentReviewGitBlob": "8ede611d1fe38f37e8cc6f10cda7dd6f37ec9a0b"
+    }
+  },
+  "preservedExternalChanges": {
+    "earlier22SourcePostimages": "21 exact, supplementary source roster extended only by the exact 4f readiness facade pin",
+    "narrowReadinessFacade": "packages/legacy-agent-host/src/composition/teamHostReadiness.ts",
+    "packageExport": "./team-host/readiness",
+    "mainConsumer": "src/features/agent-backend/main/infrastructure/CapturedLocalModelReadiness.ts",
+    "frozenProductionBodies": "All141 inherited frozen blobs unchanged by this follow-up"
+  },
+  "limits": [
+    "No deadline, test expectation, runtime custody policy or global Team fence reentrancy was relaxed.",
+    "The initial missing-resource failure and the unchanged original refusal are both retained; no performance claim is drawn from duration.",
+    "No local application, browser, native provider, dependency install or Host build was run for these follow-ups.",
+    "Real Claude and Codex were not launched, including version probes.",
+    "Existing M1 native result remains bound to 2f33; P09 original-path/writer contract remains unresolved.",
+    "Current full original CI and full GUI/platform acceptance remain separate; no skipped/cancelled scope is promoted to PASS."
+  ],
+  "publication": "Prepared evidence records pre-commit review. Publication requires immediate expected-head nonforce push after a fresh lease shows no useful current original job executing; branch/PR and resulting commit verification are recorded separately.",
+  "parentAdoptionHistory": [
+    {
+      "head": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+      "tree": "b38de5383b881aa47fc38f6ad0a0f783eec0d5b0",
+      "statusSha256": "6df817905528291fdb642e57dd205013ff9d288e5f2742f1e8b6e8a5461aea3a",
+      "independentReviewBlob": "c13a5cfb2eeaadfdb43470de21e6ee599c0ff938",
+      "independentReviewSha256": "3c7e879a4d533c2c85ee02f0688fb21a2d6296dc5f147f953b43fdf3387a685e"
+    },
+    {
+      "head": "f60dcc107c00c58c0a577f2661f9f0eaf80a596f",
+      "tree": "10d775966f685afd58b750d2a78f775627cc8c5a",
+      "candidateTree": "2b17b2285e54b82223a69c1f0a5f6d7c6caf93a8",
+      "independentReviewBlob": "df54d302d58a26e3474b0163cc137cbb185953cb",
+      "independentReviewSha256": "8a43c6ad8bfea2707ebeb09a2c0eb107ffe1b2aca213ce01b8f13d1f4f3afd45"
+    },
+    {
+      "head": "823ef00a5cd081ccc3efdad85faf41e1cd888a27",
+      "tree": "d1c7d5e1e541b65f348b1c5bef9e92d42016ad5f",
+      "candidateTree": "a50141c0f0a80723aefc51aefd7303e54cec0087",
+      "approvalBlob": "055b509c0d7f007ca991d719dea68c7cc54c97a3",
+      "approvalSha256": "3d392adf5a8c9f631164cc6a2bb9404f1a66136ae8ec99a1407d34c8a7609e3a"
+    }
+  ],
+  "newDependencyAdoption": {
+    "providerSourceCommit": "b19494fd2de47538a1c9315e338199ff41bbe497",
+    "archivePath": "vendor/provider-migration/captured-config-b19494fd/agent-teams-provider-implementations-0.0.0.tgz",
+    "archiveSha256": "ad05bd8c799c4d2c366a6eab72f937466355a5994eac6bd201ee754217cf5aa7",
+    "archiveBytes": 191145,
+    "unchangedPriorCompiledOutputs": 252,
+    "newFacadeFiles": 4,
+    "runtimeQualificationTransferred": false,
+    "allFourPreimagesStillExact": true,
+    "independentReviewBlob": "df54d302d58a26e3474b0163cc137cbb185953cb",
+    "independentReviewSha256": "8a43c6ad8bfea2707ebeb09a2c0eb107ffe1b2aca213ce01b8f13d1f4f3afd45"
+  },
+  "originalCiObservations": [
+    {
+      "sourceHead": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+      "teamsRun": 44393169922,
+      "windowsJob": 135115972105,
+      "ubuntuJob": 135115971473,
+      "windowsConclusion": "success",
+      "ubuntuConclusion": "success",
+      "windowsExcerptBlob": "4e2b6fccf475432570bac3b00fb1e838585281ac",
+      "windowsExcerptSha256": "72ad36cbc7467a14bdb2d5c90c69b20d493ed3781f87cec506974e96a12803b6",
+      "windowsRawLogSha256": "9529b7cc98205f45bca102c5060c61ff3f24dc3d185959ed92f3b2ec869bb9ce",
+      "ubuntuExcerptBlob": "70b4823cd2076740eaba733f021173a768159b07",
+      "ubuntuExcerptSha256": "d38214960ceed5ab313a9bef83c56fc0cd651200eb5c3d25cf490ef3cfcf4848",
+      "ubuntuRawLogSha256": "147125c1d9549485e183947e59812d0368a90ee702e8d481e20e092cf6f85d18",
+      "logEndpointsPermanentlyRetired": true,
+      "wholeWorkflowQualified": false,
+      "screenshotsVisuallyInspectedAtIndexCreation": true,
+      "scope": "Original 4f GUI jobs only; future follow-up commit qualification remains separate",
+      "boundedStaticReview": {
+        "availablePngs": 80,
+        "actuallyViewedFrames": 8,
+        "fullVisualMatrixQualified": false,
+        "receiptGitBlob": "7954e8fadc499a9c9e5af0e3169ba5fb8241f362",
+        "qualification": "Narrow Windows1024x720 200% one-line label crop recorded; Ubuntu1280x900 200% fits. No baseline regression claim or CSS patch."
+      }
+    },
+    {
+      "sourceHead": "f60dcc107c00c58c0a577f2661f9f0eaf80a596f",
+      "teamsRun": 44397525936,
+      "ubuntuJob": 135131327248,
+      "conclusion": "success",
+      "event": "pull_request",
+      "runAttempt": 1,
+      "excerptBlob": "5976d592cb3ebde3a7fd5d090ee0799e988877b0",
+      "excerptSha256": "fea2670aa26e2693fa9953e1b12a602b1902c6917a1cb3137c799ff105498614",
+      "rawLogBlob": "168fa849a923a2e9db17e9fce6a57b34b1594aeb",
+      "rawLogSha256": "2f01b446ff3afa0f5b754330398796d83384ea4fada7ff22644a966f5f5d66e1",
+      "censusTeardownPassed": 28,
+      "censusTeardownFailed": 0,
+      "processGroupAbsent": true,
+      "temporaryProfileRemoved": true,
+      "logEndpointPermanentlyRetired": true,
+      "wholeWorkflowQualified": false,
+      "followupCommitQualified": false,
+      "screenshotsVisuallyInspected": false,
+      "scope": "One original f60 Ubuntu GUI job; other required jobs remain independently gated."
+    }
+  ],
+  "incrementalParentChanges": {
+    "from": "f60dcc107c00c58c0a577f2661f9f0eaf80a596f",
+    "to": "823ef00a5cd081ccc3efdad85faf41e1cd888a27",
+    "changes": [
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/STATUS.md",
+        "before": "5e6a9507ed08c398973d14f1995edcf97c9912b4",
+        "after": "241883388d80bb022b02f1a64efd03593fa70bd6"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-review-flow-ui-smoke.ts",
+        "before": "71812d1b277b21b4da288716ec52ea1021c2e581",
+        "after": "8dca9bf839500f454f72e7a848dec904001d6a9b"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/gui-taskboard-f60dcc10-fixed1536-20261118.json",
+        "before": null,
+        "after": "e66507f7b0e35f03936795ef248a26e92af072c1"
+      }
+    ],
+    "qualification": "External bounded trusted-scroll TEST helper, its exact earlier GUI evidence and updated living plan preserved; no rerun or new GUI qualification claimed by this adoption."
+  },
+  "incrementalParentChanges547": {
+    "from": "823ef00a5cd081ccc3efdad85faf41e1cd888a27",
+    "to": "547e603c555be471394e9c6e4b6a53092a33a6d7",
+    "exactExternalPaths": 6,
+    "preLeaves": 11451,
+    "postLeaves": 11452,
+    "providerPackageLockUnchanged": true,
+    "reviewBlob": "5e514658c89c1e49113a999853e09f7be3673f1a",
+    "reviewSha256": "69276fed1e840ebd9614e538c8c9814b4fc496bfd0a8d5f2a0f72811d68e6a01"
+  }
+}

@@ -6,11 +6,23 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const hoisted = vi.hoisted(() => ({
   spawn: vi.fn(),
   loggerWarn: vi.fn(),
+  linuxErrorName: undefined as ((errno: number) => string) | undefined,
 }));
 
-vi.mock('child_process', () => ({
+vi.mock('child_process', async (importOriginal) => ({
+  ...await importOriginal<typeof import('child_process')>(),
   spawn: hoisted.spawn,
 }));
+
+// Synthetic selected Linux frames use Linux errno values even on Windows test runners.
+vi.mock('node:util', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:util')>();
+  return {
+    ...actual,
+    getSystemErrorName: (errno: number) => hoisted.linuxErrorName === undefined
+      ? actual.getSystemErrorName(errno) : hoisted.linuxErrorName(errno),
+  };
+});
 
 vi.mock('@main/utils/pathDecoder', () => ({
   getHomeDir: () => '/Users/tester',
@@ -160,6 +172,49 @@ describe('shellEnv', () => {
       ['-ic', expect.stringContaining(' && env -0 && ')],
       expect.objectContaining({ windowsHide: true })
     );
+
+    const selection = await import('@main/utils/linuxChildLaunchSelection');
+    const selected = vi.spyOn(selection, 'selectedLinuxChildExecutable').mockReturnValue('/TEST/helper');
+    try {
+      shellEnv.clearShellEnvCache();
+      const isolated = createChild(), status = new EventEmitter();
+      Object.assign(isolated, { pid: 901, stdio: [null, isolated.stdout, null, status] });
+      hoisted.spawn.mockReturnValue(isolated).mockImplementation(() => isolated);
+      const resolved = shellEnv.resolveInteractiveShellEnv();
+      const args = hoisted.spawn.mock.calls.at(-1)![1] as string[];
+      expect(args.slice(0, 4)).toEqual(['--linux-child-exec-v1', '/bin/zsh', '/bin/zsh', '-lic']);
+      const markers = [...args[4].matchAll(/'(AGENT_TEAMS_SHELL_ENV_[0-9a-f-]+_(?:START|END))'/g)];
+      expect(markers).toHaveLength(2);
+      status.emit('end');
+      isolated.stdout.emit('data', Buffer.from(
+        '\0' + markers[0][1] + '\0PATH=/original/captured/bin\0\0' + markers[1][1] + '\0'));
+      isolated.emit('close', 0, null);
+      await expect(resolved).resolves.toMatchObject({ PATH: '/original/captured/bin' });
+
+      shellEnv.clearShellEnvCache();
+      const refused = createChild(), refusalPipe = new EventEmitter();
+      Object.assign(refused, { pid: 902, stdio: [null, refused.stdout, null, refusalPipe] });
+      hoisted.spawn.mockImplementation(() => refused);
+      const callCount = hoisted.spawn.mock.calls.length;
+      const linuxErrorName = vi.fn((errno: number) => {
+        if (errno !== -2) throw new Error('Unexpected TEST Linux errno');
+        return 'ENOENT';
+      });
+      hoisted.linuxErrorName = linuxErrorName;
+      const failed = shellEnv.resolveInteractiveShellEnv();
+      const rejected = expect(failed).rejects.toMatchObject({ code: 'ENOENT', errno: -2, allocated: true });
+      let settled = false; void failed.then(() => { settled = true; }, () => { settled = true; });
+      const frame = Buffer.alloc(12);
+      frame.writeUInt32BE(0x41544c58, 0); frame[4] = 1; frame[5] = 3; frame.writeUInt32LE(2, 8);
+      refusalPipe.emit('data', frame); refusalPipe.emit('end');
+      await Promise.resolve(); expect(settled).toBe(false);
+      expect(refused.kill).toHaveBeenCalledOnce();
+      refused.emit('close', 111, null);
+      await rejected;
+      expect(linuxErrorName).toHaveBeenCalledExactlyOnceWith(-2);
+      expect(hoisted.spawn).toHaveBeenCalledTimes(callCount + 1); // No interactive replay after selected refusal.
+      expect(shellEnv.getCachedShellEnv()).toBeNull();
+    } finally { hoisted.linuxErrorName = undefined; selected.mockRestore(); }
   });
 
   it('adds a sanitized source label to strict shell failure diagnostics', async () => {

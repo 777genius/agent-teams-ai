@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "sourceRepository": "agent-teams-ai/old-provider-implementations",
+  "sourceCommit": "56afd2454368e484b804a21e7784aceabdf2c742",
+  "sourceTree": "962da1adf03a99203881c632ffd5b85774cf60f9",
+  "sourceParent": "45a569bd70607480e650fb12be5c0cce6884f9da",
+  "qualification": "source-and-packed-consumer-only",
+  "nativeHostQualified": false,
+  "packagedElectronQualified": false,
+  "packages": {
+    "agent-teams-provider-implementations-0.0.0.tgz": {
+      "file": "agent-teams-provider-implementations-0.0.0.tgz",
+      "bytes": 191526,
+      "sha256": "ab18b535ef17d42c6033b29205e6f0a8748bbc1df5b2b889acf8c081c18cf1db",
+      "integrity": "sha512-qN5agOLAidMbJpTHM6JmcFDj2dsbieh3dCx01h3YXHNogm8tMw/5y8hSeQUAvGYj4fED8kiryRfBIHrR+6B3JQ==",
+      "gitBlob": "7472524c55db79adabe20d9b922c4435b78f6598"
+    },
+    "agent-teams-provider-session-contracts-0.0.0.tgz": {
+      "existingPath": "../v2-media-aad5c2f8/agent-teams-provider-session-contracts-0.0.0.tgz",
+      "bytes": 6230,
+      "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc",
+      "byteIdentical": true
+    }
+  },
+  "previousAppConsumer": {
+    "sourceCommit": "45a569bd70607480e650fb12be5c0cce6884f9da",
+    "appCommit": "1c855accaea0fd21aa239d744bc2424378acf332",
+    "path": "vendor/provider-migration/v2-admission-45a569bd/agent-teams-provider-implementations-0.0.0.tgz",
+    "sha256": "ee1ed16c939dbdab4ee6b31941b4bff5d7e1e423224f8ca32e65f3a6ec25aed4"
+  },
+  "checkedConsumer": {
+    "controlCommit": "5fd2166ab76dde26f824b01fe35502e2e5f6f676",
+    "sourceCommit": "56afd2454368e484b804a21e7784aceabdf2c742",
+    "runId": 45255224167,
+    "runAttempt": 1,
+    "runUrl": "https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/45255224167",
+    "jobs": [
+      {
+        "node": "24.21.0",
+        "jobId": 137975157750,
+        "url": "https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/45255224167/job/137975157750",
+        "conclusion": "success",
+        "testSummaries": [
+          {
+            "group": "source",
+            "tests": 608,
+            "pass": 608,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "duration_ms": 51062.17202
+          },
+          {
+            "group": "contracts-consumer",
+            "tests": 1,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "duration_ms": 1054.117933
+          },
+          {
+            "group": "implementation-consumer",
+            "tests": 1,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "duration_ms": 5177.533631
+          }
+        ],
+        "logSha256": "88b3e9877c143545c0ee1e9644f50465b3e35d2931bca31f85fa78025304d351"
+      },
+      {
+        "node": "26.11.1",
+        "jobId": 137975158073,
+        "url": "https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/45255224167/job/137975158073",
+        "conclusion": "success",
+        "testSummaries": [
+          {
+            "group": "source",
+            "tests": 608,
+            "pass": 608,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "duration_ms": 66561.3124
+          },
+          {
+            "group": "contracts-consumer",
+            "tests": 1,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "duration_ms": 1520.149939
+          },
+          {
+            "group": "implementation-consumer",
+            "tests": 1,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "duration_ms": 7842.927832
+          }
+        ],
+        "logSha256": "bea8f9801c14475215f7c869e33c0ee079da75061d1302728e0d0cab4ec88955"
+      }
+    ],
+    "custodySha256": "59ec36214b4ea73b1ed9aac2279703729021dfce13b803a869d4f211aeaf5f77",
+    "checkedReceiptSha256": "f87ca86e53109390b36e7b64159db99c77a5708d010d0f9df5d17e1ed1967efe",
+    "archiveZipSha256": "d863b318f1fdfdd007f4872eaf6adda1020c0db895b7ff025ce99219a7064f9f"
+  },
+  "archiveCompatibility": {
+    "regularFiles": 259,
+    "addedMembers": [],
+    "removedMembers": [],
+    "changedMembers": [
+      "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-owned-catalog.js"
+    ],
+    "publicExportsAndDependenciesByteIdentical": true
+  },
+  "scope": "Native model activation barrier precedes provider snapshot. Three original guarded catalog reads remain; no deadline or custody relaxation. Native Host/Desktop E2E qualification remains separate."
+}

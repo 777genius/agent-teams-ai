@@ -26,6 +26,37 @@ export function timeout<T>(promise: Promise<T>, ms = 10000): Promise<T> {
     );
   });
 }
+
+/** Gate-owned neighbor stays alive until original parent EOF, inside the fixed outer Job deadline. */
+export function capturedGateSentinel(fixture: string) {
+  const child = spawn(fixture, ['source-sentinel'], {
+    stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true,
+  });
+  const exited = new Promise<number | null>((resolveExit, reject) => {
+    child.once('exit', resolveExit); child.once('error', reject);
+  });
+  const closed = new Promise<{ code: number | null; signal: NodeJS.Signals | null }>((resolveClose, reject) => {
+    child.once('close', (code, signal) => resolveClose({ code, signal })); child.once('error', reject);
+  });
+  const ready = new Promise<void>((resolveReady, reject) => {
+    child.stdout.once('data', () => resolveReady()); child.once('error', reject);
+    child.once('exit', () => reject(new Error('Original gate sentinel exited before readiness')));
+  });
+  for (const pending of [exited, closed, ready]) void pending.catch(() => undefined);
+  let closing: Promise<void> | undefined;
+  return { process: child, ready, close() {
+    closing ??= (async () => {
+      const liveBeforeEof = child.exitCode === null && child.signalCode === null;
+      child.stdin.end();
+      // One original cleanup budget includes both child exit and stdio close.
+      const [code, close] = await timeout(Promise.all([exited, closed]));
+      assert.equal(liveBeforeEof, true, 'Original gate sentinel remains alive until owned EOF');
+      assert.equal(code, 0); assert.deepEqual(close, { code: 0, signal: null });
+    })();
+    return closing;
+  } };
+}
+
 export async function waitFor(
   check: () => boolean,
   ms = 10000,
@@ -43,15 +74,17 @@ export async function capturedWitness(
   pid: number,
   birth: string,
   track: (child: ChildProcess) => void,
-  events: NativeGateEvents
+  events: NativeGateEvents,
+  mode: 'wait-gated' | 'vendor-wait-gated' = 'wait-gated'
 ): Promise<{ process: ChildProcess; exit: Promise<number | null> }> {
   const guardedTimeout = <T>(operation: Promise<T>, ms?: number): Promise<T> =>
     timeout(events.wait(operation), ms);
-  const process = spawn(fixture, ['wait', String(pid), birth], {
-    stdio: ['ignore', 'pipe', 'pipe'],
+  const process = spawn(fixture, [mode, String(pid), birth], {
+    stdio: ['pipe', 'pipe', 'pipe'],
     windowsHide: true,
   });
   track(process);
+  process.stdin.on('error', events.guard(() => { throw new Error('Witness acknowledgement failed'); }));
   const exit = new Promise<number | null>((resolveExit, reject) => {
     process.on('exit', resolveExit);
     process.on('error', reject);
@@ -71,8 +104,85 @@ export async function capturedWitness(
       process.once('error', reject);
     })
   );
+  // Keep the witness alive until its HANDLE capture is observed, even when the
+  // original target has already exited and the first native wait returns at once.
+  await guardedTimeout(new Promise<void>((resolveAck, reject) => {
+    process.stdin.end('1', (error?: Error | null) => error ? reject(error) : resolveAck());
+  }));
   return { process, exit };
 }
+
+/** TEST-only fresh zero-time observations of one HANDLE retained before provider resume. */
+export async function capturedQueryableWitness(
+  fixture: string, pid: number, birth: string, track: (child: ChildProcess) => void,
+  events: NativeGateEvents,
+  mode: 'vendor-query-wait-gated' | 'query-wait-gated' = 'vendor-query-wait-gated'
+): Promise<{
+  process: ChildProcess;
+  observe(): Promise<'alive' | 'absent'>;
+  wait(): Promise<number | null>;
+}> {
+  const child = spawn(fixture, [mode, String(pid), birth], {
+    stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true,
+  });
+  track(child);
+  let pending: { resolve(value: string): void; reject(error: Error): void } | undefined;
+  let buffer = '', queries = 0, querying = false;
+  let waiting: Promise<number | null> | undefined;
+  const failure = () => new Error('Original HANDLE witness unavailable');
+  child.stdout.on('data', events.guard((bytes: Buffer) => {
+    buffer += bytes.toString('ascii');
+    assert.ok(buffer.length <= 64, 'Bounded original witness output');
+    const end = buffer.indexOf('\n');
+    if (end < 0) return;
+    const line = buffer.slice(0, end).replace(/\r$/, '');
+    buffer = buffer.slice(end + 1);
+    assert.ok(pending && !buffer.length, 'Exactly one original witness reply');
+    const original = pending; pending = undefined; original.resolve(line);
+  }));
+  child.stdin.on('error', events.guard(() => { throw failure(); }));
+  const exit = new Promise<number | null>((resolveExit, reject) => {
+    child.once('exit', code => { pending?.reject(failure()); pending = undefined; resolveExit(code); });
+    child.once('error', error => { pending?.reject(failure()); pending = undefined; reject(error); });
+  });
+  void exit.catch(() => undefined);
+  const line = () => {
+    assert.equal(pending, undefined);
+    assert.equal(child.exitCode, null);
+    return new Promise<string>((resolveLine, reject) => {
+      pending = { resolve: resolveLine, reject };
+    });
+  };
+  assert.equal(await timeout(events.wait(line())), 'captured');
+  return {
+    process: child,
+    async observe() {
+      assert.ok(!querying && !waiting && queries++ < 4, 'Finite sequential original HANDLE observations');
+      querying = true;
+      try {
+        const response = line();
+        void response.catch(() => undefined);
+        await timeout(events.wait(new Promise<void>((done, reject) => {
+          child.stdin.write('Q', error => error ? reject(error) : done());
+        })));
+        const result = await timeout(events.wait(response));
+        assert.ok(result === 'alive' || result === 'absent', 'Closed original HANDLE facts only');
+        return result;
+      } finally { querying = false; }
+    },
+    wait() {
+      assert.equal(querying, false);
+      waiting ??= (async () => {
+        await timeout(events.wait(new Promise<void>((done, reject) => {
+          child.stdin.end('W', (error?: Error | null) => error ? reject(error) : done());
+        })));
+        return timeout(events.wait(exit));
+      })();
+      return waiting;
+    },
+  };
+}
+
 export function preparationError(failure: Extract<Preparation, { kind: 'failed' }>): Error {
   console.error(
     JSON.stringify({

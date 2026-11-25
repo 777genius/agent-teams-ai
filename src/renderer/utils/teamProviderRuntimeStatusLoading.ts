@@ -78,7 +78,8 @@ export function isTeamProviderRuntimeStatusLoading(
   providerId: SupportedProviderId | undefined,
   providerStatus?: TeamModelRuntimeProviderStatus | null,
   providerLoading = false,
-  openCodeEvidence?: OpenCodeScopedPreparationEvidence
+  openCodeEvidence?: OpenCodeScopedPreparationEvidence,
+  now?: number
 ): boolean {
   if (!providerId) {
     return false;
@@ -107,7 +108,8 @@ export function isTeamProviderRuntimeStatusLoading(
       providerId !== 'opencode' ||
       !hasSettledOpenCodeScopedPreparation(
         providerStatus as CliProviderStatus | null | undefined,
-        openCodeEvidence
+        openCodeEvidence,
+        now
       )
     ) {
       return true;

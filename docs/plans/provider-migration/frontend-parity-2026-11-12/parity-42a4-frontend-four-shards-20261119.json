@@ -1,0 +1,197 @@
+{
+  "schemaVersion": 1,
+  "sourceHead": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+  "event": "pull_request",
+  "runAttempt": 1,
+  "runId": 44434982606,
+  "createdAt": "2026-11-19T03:28:09.747860+00:00",
+  "allFourOriginalFrontendShards": "PASS",
+  "shards": [
+    {
+      "shard": 1,
+      "jobId": 135261470581,
+      "summary": {
+        "Test Files": {
+          "passed": 552,
+          "skipped": 0,
+          "total": 552
+        },
+        "Tests": {
+          "passed": 6362,
+          "skipped": 6,
+          "total": 6368
+        }
+      },
+      "originalShardCommandLines": [],
+      "evidence": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/job-135261470581-evidence.json",
+        "bytes": 3138,
+        "sha256": "cf4c9a9d89b7fab1274addfc62b6e5c1f9674205d111390af0a280464f925a84",
+        "computedGitBlobSha": "ef159a826e2ecd4c48e963b62193d4b1fcf20eb9",
+        "publishedBlobSha": "ef159a826e2ecd4c48e963b62193d4b1fcf20eb9",
+        "exactReadback": true
+      },
+      "rawLog": {
+        "phase": "permanently-retired",
+        "jobId": 135261470581,
+        "head": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+        "runId": 44434982606,
+        "runAttempt": 1,
+        "conclusion": "success",
+        "requestedAt": "2026-11-19 02:34:14 UTC",
+        "bytes": 175939,
+        "sha256": "27ed965c7cdd8d55f7843e5e89bc16228bdd92ebaaec7cf3914f763cb0c5bd1e",
+        "computedGitBlobSha": "23b300bab5681d1ff9f7ca13c6ddb0a162c886ba",
+        "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/job-135261470581-terminal.log",
+        "rawToolResponseLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/job-135261470581-log-response-raw.json",
+        "rawResponsePersistedBeforeDecode": true,
+        "endpointRetired": true,
+        "publishedBlobSha": "23b300bab5681d1ff9f7ca13c6ddb0a162c886ba",
+        "exactReadback": true
+      }
+    },
+    {
+      "shard": 2,
+      "jobId": 135261470422,
+      "summary": {
+        "Test Files": {
+          "passed": 550,
+          "skipped": 2,
+          "total": 552
+        },
+        "Tests": {
+          "passed": 6891,
+          "skipped": 18,
+          "total": 6909
+        }
+      },
+      "originalShardCommandLines": [],
+      "evidence": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/job-135261470422-evidence.json",
+        "bytes": 4151,
+        "sha256": "7e0bc60e225b067a4ad7a8966ea2ba9dbbb67f5a3bec731e95ae65890350b186",
+        "computedGitBlobSha": "770327d15a55e3a7d172dd60e8e6d125f0f42c16",
+        "publishedBlobSha": "770327d15a55e3a7d172dd60e8e6d125f0f42c16",
+        "exactReadback": true
+      },
+      "rawLog": {
+        "phase": "permanently-retired",
+        "jobId": 135261470422,
+        "head": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+        "runId": 44434982606,
+        "runAttempt": 1,
+        "conclusion": "success",
+        "requestedAt": "2026-11-19 01:51:05 UTC",
+        "bytes": 267102,
+        "sha256": "e8d87da2a79527ce5fee61a60e9e623c21f608bb8402910a5eae4c636c924b93",
+        "computedGitBlobSha": "c3e519c955f2de38d6241a528b29df36ce4760b3",
+        "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/job-135261470422-terminal.log",
+        "rawToolResponseLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/job-135261470422-log-response-raw.json",
+        "rawResponsePersistedBeforeDecode": true,
+        "endpointRetired": true,
+        "publishedBlobSha": "c3e519c955f2de38d6241a528b29df36ce4760b3",
+        "exactReadback": true
+      }
+    },
+    {
+      "shard": 3,
+      "jobId": 135261470570,
+      "summary": {
+        "Test Files": {
+          "passed": 549,
+          "skipped": 3,
+          "total": 552
+        },
+        "Tests": {
+          "passed": 6401,
+          "skipped": 7,
+          "total": 6408
+        }
+      },
+      "originalShardCommandLines": [],
+      "evidence": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/job-135261470570-evidence.json",
+        "bytes": 2975,
+        "sha256": "fd5d497991756ed15a63be9ebdbe89efe61e90ac74b64edcbd5ce46fb4a10939",
+        "computedGitBlobSha": "9ac2da89c21fb40857d72035d28b3cd1b0309635",
+        "publishedBlobSha": "9ac2da89c21fb40857d72035d28b3cd1b0309635",
+        "exactReadback": true
+      },
+      "rawLog": {
+        "phase": "permanently-retired",
+        "jobId": 135261470570,
+        "head": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+        "runId": 44434982606,
+        "runAttempt": 1,
+        "conclusion": "success",
+        "requestedAt": "2026-11-19 02:20:43 UTC",
+        "bytes": 194179,
+        "sha256": "c9d089a8ab87c04618f766e6ec3dd04568a40de2b3e8d047a26526ed3bb018cc",
+        "computedGitBlobSha": "28fbb8e1e688ab9a2acd1624e42e5b80223a3c4e",
+        "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/job-135261470570-terminal.log",
+        "rawToolResponseLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/job-135261470570-log-response-raw.json",
+        "rawResponsePersistedBeforeDecode": true,
+        "endpointRetired": true,
+        "publishedBlobSha": "28fbb8e1e688ab9a2acd1624e42e5b80223a3c4e",
+        "exactReadback": true
+      }
+    },
+    {
+      "shard": 4,
+      "jobId": 135261470831,
+      "summary": {
+        "Test Files": {
+          "passed": 548,
+          "skipped": 2,
+          "total": 550
+        },
+        "Tests": {
+          "passed": 6756,
+          "skipped": 7,
+          "total": 6763
+        }
+      },
+      "originalShardCommandLines": [],
+      "evidence": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/job-135261470831-evidence.json",
+        "bytes": 2793,
+        "sha256": "a7dae0ba60b62e6975e059ee7dc143e8eef923c2913d7cf60a8557a2a7b21424",
+        "computedGitBlobSha": "20db3dbf12347fa587d9723261f934231c34eca9",
+        "publishedBlobSha": "20db3dbf12347fa587d9723261f934231c34eca9",
+        "exactReadback": true
+      },
+      "rawLog": {
+        "phase": "permanently-retired",
+        "jobId": 135261470831,
+        "head": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+        "runId": 44434982606,
+        "runAttempt": 1,
+        "conclusion": "success",
+        "requestedAt": "2026-11-19 03:25:00 UTC",
+        "bytes": 196351,
+        "sha256": "e30a84b93cc13813f340c2843b37085a6621edcc24dfdf67dbfcff8ea29a8fb8",
+        "computedGitBlobSha": "fc7bed650bde857afd4a7a2e875254d43e5ac916",
+        "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/job-135261470831-terminal.log",
+        "rawToolResponseLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/job-135261470831-log-response-raw.json",
+        "rawResponsePersistedBeforeDecode": true,
+        "endpointRetired": true,
+        "publishedBlobSha": "fc7bed650bde857afd4a7a2e875254d43e5ac916",
+        "exactReadback": true
+      }
+    }
+  ],
+  "aggregate": {
+    "Test Files": {
+      "passed": 2199,
+      "skipped": 7,
+      "total": 2206
+    },
+    "Tests": {
+      "passed": 26410,
+      "skipped": 38,
+      "total": 26448
+    }
+  },
+  "scope": "Aggregate only the complete four original safe frontend Vitest shards. Repeating common514+7 unit suites from UI lanes and extra per-lane contracts are not added here. Root application typecheck, actual renderer/native business scenarios and real vendor qualification remain separate.",
+  "failureCount": 0
+}

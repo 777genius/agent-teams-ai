@@ -311,6 +311,14 @@ describe('packaged Agent Teams MCP launch integration', () => {
       process,
       'resourcesPath'
     );
+    const electronRuntimeDescriptors = [
+      { object: process, property: 'type' },
+      { object: process.versions, property: 'electron' },
+    ].map(({ object, property }) => ({
+      object,
+      property,
+      descriptor: Object.getOwnPropertyDescriptor(object, property),
+    }));
     const nodeBinary = process.execPath;
     const installDir = path.join(tempDir!, 'Program Files', 'Agent Teams AI');
     const resourcesDir = path.join(installDir, 'resources');
@@ -364,6 +372,9 @@ describe('packaged Agent Teams MCP launch integration', () => {
         }
         return originalModuleLoad(request, parent, isMain);
       }) as ModuleLoad;
+      // Model Electron Main's runtime identity as well as its optional app API.
+      Object.defineProperty(process, 'type', { configurable: true, value: 'browser' });
+      Object.defineProperty(process.versions, 'electron', { configurable: true, value: 'TEST' });
       Object.defineProperty(process, 'execPath', {
         value: electronBinary,
         configurable: true,
@@ -444,6 +455,10 @@ describe('packaged Agent Teams MCP launch integration', () => {
     } finally {
       clearResolvedNodePathForTests();
       setAppDataBasePath(null);
+      for (const { object, property, descriptor } of electronRuntimeDescriptors) {
+        if (descriptor) Object.defineProperty(object, property, descriptor);
+        else Reflect.deleteProperty(object, property);
+      }
       moduleInternal._load = originalModuleLoad;
       if (originalExecPathDescriptor) {
         Object.defineProperty(process, 'execPath', originalExecPathDescriptor);

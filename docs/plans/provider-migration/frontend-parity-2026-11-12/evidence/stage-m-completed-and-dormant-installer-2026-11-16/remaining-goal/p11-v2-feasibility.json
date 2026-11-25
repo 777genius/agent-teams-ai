@@ -1,0 +1,282 @@
+{
+  "schema": "p11-v2-live-roster-scope-and-feasibility/v1",
+  "reviewedAtUtc": "2026-11-16T00:55:57.245625+00:00",
+  "reviewer": "migration_scope",
+  "head": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "tree": "e70ccffc6d55ad42c2249518bf142e2ed32ddf91",
+  "result": "CONCRETE_REUSE_SEAMS_FOUND; EXACT_TEST_ONLY_CANDIDATE_AND_AUTHORIZATION_STILL_REQUIRED",
+  "featureInRetainedGoal": true,
+  "genuineClaudeCodexNotAuthorized": true,
+  "currentFiniteCollaboration": "mixed-v1/nativeQualification:false",
+  "runtimeRestoreNotTeamRoster": true,
+  "proposedDirection": "Reuse separate existing two-input P11 live driver and actual V2 recipe/model; controlled zero-input initial peers; existing V2-management job, separate original TEST root and receipt; no new workflow/matrix/owner/RPC",
+  "exactCandidatePrepared": false,
+  "publishedR1ForThisComposition": false,
+  "sourceMutated": false,
+  "projectExecuted": false,
+  "providerExecuted": false,
+  "CIQueried": false,
+  "report": {
+    "path": "/workspace/scratch/82d3f9ba6b85/remaining-goal-0660/p11-v2-feasibility.md",
+    "bytes": 12842,
+    "blob": "fca0b81170b65db1ec123eda0cb61a47cc35aad4",
+    "sha256": "5129b35f53e97bbf1e3d5f37a597832088a6ce136cd7a1b97e92bd064a61385a",
+    "lines": 57
+  },
+  "pins": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/README.md",
+      "bytes": 28605,
+      "blob": "06bdc52cfc184c24a24b91c2f9adc479c9575f9d",
+      "sha256": "3463ecfaccbb5d7918e59663c1b55815500cdc7354bb4962e1484afb1722f6e1",
+      "lines": 259
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/11-live-membership.md",
+      "bytes": 96787,
+      "blob": "34db5e8df6bd05286fa9387ee8db67c9c13e8dc1",
+      "sha256": "2fa155205ee26ca63dff0cd424255cb38deb95ae9a350eb0b96404e671bf02b0",
+      "lines": 471
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/completion-2026-11-13.md",
+      "bytes": 52191,
+      "blob": "b4388507ea00bb808461175b4163230fcb0cbe18",
+      "sha256": "92d375284b3b707df92dae22cb3d41308b1cf6b98bc3059d304f5cf6a1fc1a7e",
+      "lines": 533
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "bytes": 1278823,
+      "blob": "22f00c40d0da9b6b2b1354424270d78b1484af63",
+      "sha256": "c2d4bb45b780de5caa980a5455579d476feeee00032b645ce419deec673e050d",
+      "lines": 5652
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "bytes": 175238,
+      "blob": "de7e1b4d8388065a15345cca434f1868ec694fc5",
+      "sha256": "cf3fe1c70142669f97143a354b178e55c07cad9dd0a534de885280fe0cec7dce",
+      "lines": 2633
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "bytes": 101741,
+      "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+      "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b",
+      "lines": 1312
+    },
+    {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "bytes": 36013,
+      "blob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+      "sha256": "fddd1aface758ef115a5e904151cb61dd78dca04d8f52fb99f4326ddaff53a14",
+      "lines": 622
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "bytes": 54778,
+      "blob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+      "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+      "lines": 791
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+      "bytes": 33173,
+      "blob": "ed93d7422ab7a846a568a2b72437ec75931ba03b",
+      "sha256": "79c793a3005c691c367317ea26c12a7629602fa9d46fd920eeccb5579e4faf23",
+      "lines": 690
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "bytes": 52461,
+      "blob": "b7fe4566d34dd638cf5fc7072a3ed6cf9e88fb33",
+      "sha256": "ba8020eff1bc7bf80914b3d32cf7673d7a0ed763bb50e0aba7509b98d15bdcf7",
+      "lines": 996
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+      "bytes": 33737,
+      "blob": "495118ecb0d895dcc87f5782f8a4b0ccd35d3587",
+      "sha256": "58279362c05f6645881e4850807f78183eee5dc51dfb32f355ff4ded7e7c3589",
+      "lines": 770
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-fixture.ts",
+      "bytes": 11248,
+      "blob": "4f26fd0f9654dd40f4591c5078a5cf7dc119e769",
+      "sha256": "6c75fec75d81407cec6d1552d4a6a3a87ccac3145cdaa0aca7fb0187308f8db0",
+      "lines": 223
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-mode.ts",
+      "bytes": 26007,
+      "blob": "e2e7029c56de6343eb4ad2a2395044efd009ae0b",
+      "sha256": "e96f15e68a59f991034d68ca37b0125d4c798cd06eb34d58ceeb2f3e537966de",
+      "lines": 536
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+      "bytes": 49613,
+      "blob": "865494ab5f5e45c5158fbf74ac858987fb322608",
+      "sha256": "ce4d59cc5285eb78ed108dae13a44fae21d33cd73c544c720d512134f23b7f73",
+      "lines": 787
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "bytes": 45707,
+      "blob": "bd8bc728808eda00a45b300fd328d49e4e919bc2",
+      "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159",
+      "lines": 570
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-mixed-native-fixture.ts",
+      "bytes": 33161,
+      "blob": "426c45f6236a3aaf8b3f5e14b4cf21e4ce000c8f",
+      "sha256": "1e495ee7b244fa471f2a6a4039d7110db6ff2760260c23f89123703810d0bfad",
+      "lines": 660
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-mixed-native-fixture.test.ts",
+      "bytes": 51908,
+      "blob": "7dad16baa21403a6c3e0289ddf3750f56fd025d4",
+      "sha256": "6799732c302c43a4cfafbb3299b678ca3e4117d82c790d6ea53d40fa8300f709",
+      "lines": 1304
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-fixture.ts",
+      "bytes": 7577,
+      "blob": "9d6a158fe27134c6f0559ea058f2ecfa5ad478d1",
+      "sha256": "22a46aa137e87c4f1a282aae5518e9aada69ce8b947169457d3aadde3b2ace1d",
+      "lines": 177
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-fixture.ts",
+      "bytes": 8880,
+      "blob": "35518a67d9e6e9c987395bef9b4cb1012ac77bb2",
+      "sha256": "cc7a6d5aaf57a1a35608025819847b43f43a418558858e95baf4a39bcc564112",
+      "lines": 107
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-smoke.ts",
+      "bytes": 12302,
+      "blob": "6f8e3da7ba0cda6a13d5cfbafd1ecaf58ac738dd",
+      "sha256": "91bfb3b90c18e38af200e23d167811e526b339d1525ccc502db43759a5e6bf77",
+      "lines": 168
+    },
+    {
+      "path": "scripts/legacy-agent-host/prepare-opencode-v2-native.ts",
+      "bytes": 9450,
+      "blob": "b6fef813e23b8f18d7f8ebae5b14f5c0a104a30c",
+      "sha256": "40c7b16a40c3efaf859dffcaa762d927d630d84945810782da2ca172c06fe16e",
+      "lines": 215
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+      "bytes": 16555,
+      "blob": "97e14385a298a38a9b81b8805dc3f6d2da66545c",
+      "sha256": "8340911817fb4228e8d948425a1f85796fba16d244b6763b04e307ed6f290713",
+      "lines": 199
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-records.ts",
+      "bytes": 13266,
+      "blob": "c73049b7a3d7fb946b3804d365bae83b4efce430",
+      "sha256": "b3c42f1dcd906c5392350bddd9bb96746fed50e79ca79eb3c73bdac0b27b3c50",
+      "lines": 147
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts",
+      "bytes": 34086,
+      "blob": "aff6e19ec4cf492841aa667442c1b7d71541c7c5",
+      "sha256": "d02a551bd97ea876b20bf39bd5c66fc6eda109198aad61f4c9dcf2a65981e29f",
+      "lines": 377
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "bytes": 20996,
+      "blob": "f1bfeb0235ed6fc4f80daba16aefda0364ee7e9d",
+      "sha256": "7789d31cd807d8e71fd40d45038ed3266eff98e9c877cc738fcae688e3b5e37b",
+      "lines": 323
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts",
+      "bytes": 38584,
+      "blob": "ff0aeba42e3a4e845428146969360dff91c25de8",
+      "sha256": "f25659fe4c89e30072e9c2bc923fcdf6f1a3dd2efdca81387659e485170c74c3",
+      "lines": 753
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.test.ts",
+      "bytes": 29487,
+      "blob": "7223d94d77bf47897baa0202682a3b72257e62aa",
+      "sha256": "259a718054049b86282a4d27dbd07a82bfd794d89d09937b55e966c175689449",
+      "lines": 578
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts",
+      "bytes": 33259,
+      "blob": "e4fd10d1c969bb5bf8a75e9789599a04dc0fc190",
+      "sha256": "e7a295816da293ff4e26a775f898f1bc144ece55e995c3d05bed8e543f2803ff",
+      "lines": 499
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "bytes": 32221,
+      "blob": "920b40fa594f7aa65e11d1ec1f31d2aa69581a01",
+      "sha256": "c443b410efbe4910839b02662fa1767b60e428936c012d729b26eeb82f182a87",
+      "lines": 463
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/providerPeer.mjs",
+      "bytes": 9569,
+      "blob": "44c8cba99e4932905da77539a59c904a39da4e36",
+      "sha256": "e34c78358e85d3e841e4f9fb7941e77ce9b5f8b757dac434c3fe5ec5dbfdccdd",
+      "lines": 153
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+      "bytes": 39026,
+      "blob": "76f5d1953816fd125f576a966c42caefcfc297e2",
+      "sha256": "94cc5c1faed9d9d6d82d6db8e5fb7e36f292fa7335ff60ffc0648009a0d2b43a",
+      "lines": 562
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/providerCollaboration.mjs",
+      "bytes": 7075,
+      "blob": "bc9b7f5d3aaaa44b9e144e210bd6a8391dd9a449",
+      "sha256": "c82248007e55ae6d28608d965d72f93dadf9993cec28f294524464fe111b5ee9",
+      "lines": 97
+    }
+  ],
+  "originalP11Counts": {
+    "explicitInputs": 2,
+    "targetModelProbePosts": 2,
+    "targetBusinessModelPosts": 4,
+    "runtimeGenerations": 4,
+    "removeActions": 1,
+    "restoreActions": 1,
+    "teamStopActions": 1,
+    "appEpochs": 2
+  },
+  "unchangedJobBudgetMinutes": 45,
+  "existingDriverPoll": {
+    "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+    "lines": [
+      89,
+      94
+    ],
+    "budgetMs": 90000,
+    "pauseMs": 100,
+    "sourceCounterexample": "true after awaited read may be accepted without post-read cutoff rejection",
+    "observedExecutionCauseClaimed": false,
+    "prospectiveRequirement": "same-cutoff post-read refusal with meaningful negative; no deadline extension"
+  },
+  "limits": [
+    "No exact candidate/path count is approved by this seam inventory.",
+    "The old Ready/manual route is not authorized.",
+    "Current V2 management receipt remains management-only.",
+    "Finite peer protocol/custody does not become genuine vendor qualification.",
+    "P09 mechanism survey is not reopened."
+  ]
+}

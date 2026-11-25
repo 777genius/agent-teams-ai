@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "kind": "current-original-teams-test-compilation-failure",
+  "sourceHead": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+  "event": "pull_request",
+  "runAttempt": 1,
+  "runId": 44434982317,
+  "job": {
+    "id": 135261468613,
+    "name": "Creation page (macos-latest)",
+    "status": "completed",
+    "conclusion": "failure",
+    "head_sha": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+    "run_id": 44434982317,
+    "run_attempt": 1,
+    "started_at": "2026-11-19T01:57:11Z",
+    "completed_at": "2026-11-19T02:04:19Z",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44434982317/job/135261468613"
+  },
+  "rawLog": {
+    "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/job-135261468613-terminal.log",
+    "bytes": 49748,
+    "sha256": "c28596a2fecebb270ed336ae604a8a9d692d3267d518475256cee368ddd60feb",
+    "gitBlob": "756cdb85e636f2006021a6a5c254f2d943d17736"
+  },
+  "terminalMetadata": {
+    "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/job-135261468613-terminal-metadata.json",
+    "bytes": 5768,
+    "sha256": "e0c5a73f4270f703828ba17b1ab432cdc03115ec28fa7682531629bdec796109",
+    "gitBlob": "ce1d6e841ed0931a4d28888634b0e0aec00434fd"
+  },
+  "failedSteps": [
+    {
+      "name": "Typecheck application before Electron startup",
+      "status": "completed",
+      "conclusion": "failure",
+      "number": 9,
+      "started_at": "2026-11-19T01:59:12Z",
+      "completed_at": "2026-11-19T02:04:04Z"
+    }
+  ],
+  "successfulHostBuild": [
+    {
+      "name": "Build isolated Host before Electron startup",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 8,
+      "started_at": "2026-11-19T01:59:07Z",
+      "completed_at": "2026-11-19T01:59:12Z"
+    }
+  ],
+  "laterSkippedSteps": [
+    {
+      "name": "Stage pinned terminal-platform runtime before Electron startup",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 10,
+      "started_at": "2026-11-19T02:04:04Z",
+      "completed_at": "2026-11-19T02:04:04Z"
+    },
+    {
+      "name": "Ensure Electron binary before UI E2E",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 11,
+      "started_at": "2026-11-19T02:04:04Z",
+      "completed_at": "2026-11-19T02:04:04Z"
+    },
+    {
+      "name": "Verify owned Windows process census and fail-closed teardown invariants",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 12,
+      "started_at": "2026-11-19T02:04:04Z",
+      "completed_at": "2026-11-19T02:04:04Z"
+    },
+    {
+      "name": "Exercise actual Electron Create/Back/Resume/Copy/Launch",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 13,
+      "started_at": "2026-11-19T02:04:04Z",
+      "completed_at": "2026-11-19T02:04:04Z"
+    }
+  ],
+  "diagnostic": "src/main/services/team/provisioning/__tests__/TeamProvisioningPersistenceReconcileFacade.test.ts(607,15): TS2540 Cannot assign to 'exitCode' because it is a read-only property.",
+  "artifactUpload": {
+    "noneFound": true,
+    "artifactInventoryTotal": 0
+  },
+  "scope": "Application typecheck failure before Electron E2E; isolated Host production build succeeds. No actual Create/Back/Resume/Copy/Launch, screenshot or UI receipt qualification.",
+  "jobLogEndpointRetired": true
+}

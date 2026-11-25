@@ -1,0 +1,80 @@
+diff --git a/.github/workflows/host-emulated-acceptance.yml b/.github/workflows/host-emulated-acceptance.yml
+index 405656361d2804c00265c46129b66cd86fac4677..8915f1490bc9e223011690dbc1f207ce3ae80f35 100644
+--- a/.github/workflows/host-emulated-acceptance.yml
++++ b/.github/workflows/host-emulated-acceptance.yml
+@@ -218,7 +218,8 @@
+             scripts/legacy-agent-host/desktop-live-membership-controlled.ts \
+             scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts \
+             scripts/legacy-agent-host/desktop-mixed-native-fixture.ts \
+-            scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts
++            scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts \
++            scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts
+           pnpm typecheck:workspace
+           node node_modules/@typescript/native/bin/tsc --noEmit -p test/features/agent-backend/tsconfig.json
+           pnpm lint:ci:files src/main src/preload src/shared src/types --cache-location .eslintcache-main
+diff --git a/scripts/legacy-agent-host/desktop-backend-smoke.ts b/scripts/legacy-agent-host/desktop-backend-smoke.ts
+index 4eabaf832901bf3ea82bc9761f1208207343b8a0..9c724c3895e467bc1db062e5015ded70c30e65e4 100644
+--- a/scripts/legacy-agent-host/desktop-backend-smoke.ts
++++ b/scripts/legacy-agent-host/desktop-backend-smoke.ts
+@@ -775,8 +775,8 @@
+     console.log(JSON.stringify(projectDesktopProofReceiptSummary(evidence, { receiptPath, mode, mixedMode })));
+     assertDesktopProofCompleted(evidence, { packed: Boolean(packed), emulatedOnly, controlledProcessMode,
+       mode, scheduleUiMode, capturedMcpUiMode, cleanupFailure, remaining });
+-    if (finiteMembership) assert.equal(evidence.status, 'PASS', 'original finite-peer V2 membership and cleanup must both pass');
+   }
++  if (finiteMembership) assert.equal(evidence.status, 'PASS', 'original finite-peer V2 membership and cleanup must both pass');
+   if (mode === 'task-board-cross-team-ui') {
+     assert.equal(evidence.status, 'PASS', 'original Taskboard proof and cleanup must finish before owner continuation');
+     return { fixture, repo, invocation, cdpLibrary, evidence, receiptPath, frozenSources: desktopProofSources, selectedSourceHashes };
+diff --git a/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts b/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts
+index d882c5b62655ea55ddaa9f73e74212a97afda697..b7fda498b1e50856211616a3c062ca65a148cc26 100644
+--- a/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts
++++ b/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts
+@@ -2643,3 +2643,47 @@
+   for (const variant of ['ready', 'no-host', 'changed-birth', 'foreign-executable', 'foreign-wrapper', 'wrong-parent'] as const)
+     await exercise(variant);
+ });
++
++async function finiteMembershipTerminalCompletion() {
++  const source = (await readFile(new URL('./desktop-backend-smoke.ts', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
++  const begin = '    assertDesktopProofCompleted(evidence, {', end = "  if (mode === 'task-board-cross-team-ui') {";
++  for (const marker of [begin, end]) assert.equal(source.split(marker).length, 2, 'one original terminal completion boundary');
++  const actual = source.slice(source.indexOf(begin), source.indexOf(end));
++  const invoke = Function('assert', 'options', `'use strict';
++    const { evidence, finiteMembership, primaryError, finalError } = options;
++    const packed = false, emulatedOnly = false, controlledProcessMode = false;
++    const mode = 'native-mixed-create-launch-ui', scheduleUiMode = false, capturedMcpUiMode = false;
++    const cleanupFailure = undefined, remaining = [];
++    let originalCompletions = 0;
++    const assertDesktopProofCompleted = () => {
++      originalCompletions++;
++      if (finalError) throw finalError;
++    };
++    try { if (primaryError) throw primaryError; }
++    catch (error) { throw error; }
++    finally {
++      ${actual}
++    return originalCompletions;
++  `);
++  return (options: { evidence: { status: string }; finiteMembership: boolean; primaryError?: Error; finalError?: Error }) =>
++    invoke(assert, options) as number;
++}
++
++test('finite V2 terminal completion retains the original scenario Error after successful original final assertions', async () => {
++  const complete = await finiteMembershipTerminalCompletion();
++  const original = new Error('original finite membership scenario failure');
++  assert.throws(() => complete({ evidence: { status: 'INCOMPLETE' }, finiteMembership: true, primaryError: original }),
++    error => error === original);
++});
++
++test('finite V2 terminal completion retains original finally precedence and refuses incomplete successful work', async () => {
++  const complete = await finiteMembershipTerminalCompletion();
++  const original = new Error('original body failure'), finalError = new Error('original final assertion failure');
++  assert.throws(() => complete({ evidence: { status: 'INCOMPLETE' }, finiteMembership: true, primaryError: original, finalError }),
++    error => error === finalError);
++  assert.throws(() => complete({ evidence: { status: 'INCOMPLETE' }, finiteMembership: true }), {
++    name: 'AssertionError', message: /original finite-peer V2 membership and cleanup must both pass/u,
++  });
++  assert.equal(complete({ evidence: { status: 'PASS' }, finiteMembership: true }), 1);
++  assert.equal(complete({ evidence: { status: 'INCOMPLETE' }, finiteMembership: false }), 1);
++});

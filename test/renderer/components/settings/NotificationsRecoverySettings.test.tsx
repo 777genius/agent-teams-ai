@@ -138,6 +138,7 @@ function makeSafeConfig(): SafeConfig & AppConfig {
       anthropic: {
         authMode: 'auto',
         fastModeDefault: false,
+        nativeNextPromptSuggestionsEnabled: true,
         compatibleEndpoint: {
           enabled: false,
           baseUrl: '',
@@ -145,6 +146,7 @@ function makeSafeConfig(): SafeConfig & AppConfig {
       },
       codex: {
         preferredAuthMode: 'auto',
+        nativeNextPromptSuggestionsEnabled: true,
         customProvider: {
           enabled: false,
           baseUrl: '',

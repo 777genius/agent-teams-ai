@@ -1,0 +1,202 @@
+{
+  "schema": "N608-original-tool-response-supplement/v1",
+  "createdAt": "2026-11-16T03:34:27.428727+00:00",
+  "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "retrieval": "The original successful MCP CallToolResult objects were retained in functions.store from the original completed-job log calls and are serialized in full here without another GitHub request. This is exact stored object serialization, not a claim about byte encoding of the MCP transport JSON envelope.",
+  "calls": [
+    {
+      "jobId": 133062439990,
+      "runId": 43795234913,
+      "originalReturnedObject": {
+        "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/tool-response-supplement/job-133062439990-original-full-response.json",
+        "bytes": 462414,
+        "blob": "41013b769bf99f24fb1afbb37c9e2e638d51cd08",
+        "sha256": "8c698f79c5044fdaa3e1df824b18ee9f7311c58c92ba46b7ab834ff73c758762"
+      },
+      "rawLog": {
+        "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/process-win32-x64/job-133062439990.log",
+        "bytes": 418292,
+        "blob": "2837889b471effc5fa63b1ef164bcdeb6055c91b",
+        "sha256": "48fc6a47973686705e0a8f961fb3a58ec2913a2d4e813decf2d223a4b3da82d1"
+      },
+      "fullReturnedStructuredContentUTF8EqualsRawLog": true,
+      "contentCharacters": 417836,
+      "retainedCRCharacters": 2203
+    },
+    {
+      "jobId": 133062438882,
+      "runId": 43795234721,
+      "originalReturnedObject": {
+        "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/tool-response-supplement/job-133062438882-original-full-response.json",
+        "bytes": 93138,
+        "blob": "117fd3483ea1ba8881035423a8bdc8d068bd5c3a",
+        "sha256": "b04298237a246afa3a416e14f3fb892f26b8549570c6f09e8e4654340993388e"
+      },
+      "rawLog": {
+        "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/v2-win32-x64/job-133062438882.log",
+        "bytes": 89327,
+        "blob": "453a5e16ab67e80851fd47be4b442c1f3228a5cd",
+        "sha256": "8dd1f64ac7e4dc57f89d23aeac046d4fe695f71b15781a9d05f595db21be2c47"
+      },
+      "fullReturnedStructuredContentUTF8EqualsRawLog": true,
+      "contentCharacters": 89137,
+      "retainedCRCharacters": 1024
+    },
+    {
+      "jobId": 133062438887,
+      "runId": 43795234721,
+      "originalReturnedObject": {
+        "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/tool-response-supplement/job-133062438887-original-full-response.json",
+        "bytes": 108209,
+        "blob": "58a1415dd08086b46cb75bb1ca01a8f4d95ba58f",
+        "sha256": "9f3b50aa60a114d5e755b3ab6acb2d201ed66001f01373659bfe80372a725d92"
+      },
+      "rawLog": {
+        "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/static-windows/job-133062438887.log",
+        "bytes": 104364,
+        "blob": "1dcc29f97f80bc28e5279267987e45cc808cb551",
+        "sha256": "268429c4dabcd86d247037f9c40c50a4d0e18e4be18d3c1426adaa4714192d86"
+      },
+      "fullReturnedStructuredContentUTF8EqualsRawLog": true,
+      "contentCharacters": 103762,
+      "retainedCRCharacters": 1123
+    },
+    {
+      "jobId": 133062439989,
+      "runId": 43795234913,
+      "originalReturnedObject": {
+        "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/tool-response-supplement/job-133062439989-original-full-response.json",
+        "bytes": 140261,
+        "blob": "52c1a4d5389a4b6cd738a236df282dec193fd189",
+        "sha256": "67143daf7b36fe98a819662d7e692699395658885525cbe2f1ec246a2665b241"
+      },
+      "rawLog": {
+        "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/process-darwin-x64/job-133062439989.log",
+        "bytes": 133910,
+        "blob": "d3ec6cfdbc1e9904177faa66ac26cc964b646421",
+        "sha256": "d3cc7755a545290d9ff2b6db7b945a318828ceac2e07932f1e617f0991e9ef44"
+      },
+      "fullReturnedStructuredContentUTF8EqualsRawLog": true,
+      "contentCharacters": 133372,
+      "retainedCRCharacters": 0
+    },
+    {
+      "jobId": 133062439089,
+      "runId": 43795234721,
+      "originalReturnedObject": {
+        "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/tool-response-supplement/job-133062439089-original-full-response.json",
+        "bytes": 111478,
+        "blob": "028db342727aeb6f7a63b92fb5f32c2f44e03b1e",
+        "sha256": "31e3d0e7c67d3aaa9c3d65c16b3651aefb235ccce5f39213dede7d52bb68026f"
+      },
+      "rawLog": {
+        "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/v2-darwin-x64/job-133062439089.log",
+        "bytes": 109150,
+        "blob": "a8f58f3d18b14dd8dabf22625c978624d29971ff",
+        "sha256": "2c8458c589296778fa0770de230ab7e79f1b2100df260ea015d5c71ee64ace3e"
+      },
+      "fullReturnedStructuredContentUTF8EqualsRawLog": true,
+      "contentCharacters": 108936,
+      "retainedCRCharacters": 0
+    },
+    {
+      "jobId": 133062440000,
+      "runId": 43795234913,
+      "originalReturnedObject": {
+        "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/tool-response-supplement/job-133062440000-original-full-response.json",
+        "bytes": 496289,
+        "blob": "24ebd82a20b827a8e4f39fdfc39b69eda67a90cd",
+        "sha256": "13d077e182bf308be0919f1287104e451bf0e33895b9303774eeea790d959c8c"
+      },
+      "rawLog": {
+        "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/process-win32-arm64/job-133062440000.log",
+        "bytes": 450975,
+        "blob": "8cca1336af0ca8e4f7075597eced808ffcad363a",
+        "sha256": "77cfe0f157d407abf397de0315f831617716ac33e884e553879e1e0d276363f6"
+      },
+      "fullReturnedStructuredContentUTF8EqualsRawLog": true,
+      "contentCharacters": 450513,
+      "retainedCRCharacters": 2510
+    },
+    {
+      "jobId": 133062439921,
+      "runId": 43795234913,
+      "originalReturnedObject": {
+        "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/tool-response-supplement/job-133062439921-original-full-response.json",
+        "bytes": 123881,
+        "blob": "bd1540c63a3e53ccd5e2134d2aa171fc4ff5361f",
+        "sha256": "1a9978f8ade59e8635beea63f55e1368687fbf3eedf1bb17d9b8bb5790b559bc"
+      },
+      "rawLog": {
+        "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/process-darwin-arm64/job-133062439921.log",
+        "bytes": 118573,
+        "blob": "6e5f285d08c5a74a3c7389891ae647e527c775cf",
+        "sha256": "2f9aaab93ff43bf4df44e3b97025a785343990b07579a9e07a2da59dece3f867"
+      },
+      "fullReturnedStructuredContentUTF8EqualsRawLog": true,
+      "contentCharacters": 118071,
+      "retainedCRCharacters": 0
+    },
+    {
+      "jobId": 133062439001,
+      "runId": 43795234721,
+      "originalReturnedObject": {
+        "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/tool-response-supplement/job-133062439001-original-full-response.json",
+        "bytes": 109082,
+        "blob": "c68b5300016cbaabc0e6369a5ddb347f338a1dae",
+        "sha256": "534c8014b440a389b958e57284c054ffa4cb69816713ab967715bc7b3249b579"
+      },
+      "rawLog": {
+        "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/v2-darwin-arm64/job-133062439001.log",
+        "bytes": 106797,
+        "blob": "a1a2f673b653e674ffa775eaf3315eebfe8f7ced",
+        "sha256": "05f1dfcccea0abd7566e563e3cffa57001245526f99b6b41ea6ccc53c22845b9"
+      },
+      "fullReturnedStructuredContentUTF8EqualsRawLog": true,
+      "contentCharacters": 106583,
+      "retainedCRCharacters": 0
+    },
+    {
+      "jobId": 133062438907,
+      "runId": 43795234721,
+      "originalReturnedObject": {
+        "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/tool-response-supplement/job-133062438907-original-full-response.json",
+        "bytes": 117098,
+        "blob": "c375363d64cd8f3ff8d1d9af5cc130d2aacddee0",
+        "sha256": "3f2fab2af3a60684e773b273ea6d6f7c225c2bcd22fa5aa0d3142595b96b3b91"
+      },
+      "rawLog": {
+        "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/v2-win32-arm64/job-133062438907.log",
+        "bytes": 112775,
+        "blob": "1b56d4ad781b09afda04c5d2396c8fdaaf704f08",
+        "sha256": "9f88fac3ef794b80cc5539e7ebc9ec08000f5d4cc26db34f18bf72d74169f3f5"
+      },
+      "fullReturnedStructuredContentUTF8EqualsRawLog": true,
+      "contentCharacters": 112585,
+      "retainedCRCharacters": 1275
+    }
+  ],
+  "fullResponseCount": 9,
+  "fullResponseBytes": 1761850,
+  "rawLogBytes": 1644163,
+  "earlierCheckpointsUnchanged": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/checkpoint-x64-static-0316.json",
+      "bytes": 6277,
+      "blob": "13559ac7a0e122389f53f64615614bdd3475213b",
+      "sha256": "771f3ad62589723bd1ef19c0ae862742991f95d0fc7be15b27e6f6ecf01ccdf5"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/checkpoint-arm-process-darwin-x64-0323.json",
+      "bytes": 7126,
+      "blob": "184bec027cc1051d2d51a4bb40fef10619f910f7",
+      "sha256": "b94fd7c54364467518ba883de96d1f260a9c2848d579705ba66f11c1864afe19"
+    }
+  ],
+  "limits": [
+    "All nine complete structuredContent.content strings encode byte-exactly to the already retained full raw log files, including Windows CRLF.",
+    "Call source/job identity is joined by the retained original request assignment, raw checkout, job snapshots and artifact metadata; the log tool response itself contains only the content string.",
+    "No refetch, CI poll/rerun/cancel, project/native/provider execution, source/ref mutation, signed URL or historical failure reinterpretation.",
+    "This supplement changes neither frozen checkpoint nor current130-file documentation cut."
+  ]
+}

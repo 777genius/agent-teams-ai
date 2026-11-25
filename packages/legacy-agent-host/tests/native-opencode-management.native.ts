@@ -8,7 +8,7 @@ import { test } from 'node:test';
 import { CapturedProcess } from '../dist/adapters/providers/CapturedProcess.js';
 import { OpenCodeManagementHost } from '../dist/adapters/providers/OpenCodeManagementHost.js';
 import { fileHash, treeHash } from './fixtures/native-host.ts';
-import type { ChildProcessWithoutNullStreams } from 'node:child_process';
+import type { ObservableNativeProcess } from '../dist/owned-process/processFacade.js';
 import type { OpenCodeManagementProfile } from '../src/adapters/providers/OpenCodeManagementHost.ts';
 
 test(
@@ -98,7 +98,7 @@ test(
       },
     };
     await writeFile(join(root, 'profile.json'), JSON.stringify(profile, null, 2), { mode: 0o600 });
-    let child: ChildProcessWithoutNullStreams | undefined;
+    let child: ObservableNativeProcess | undefined;
     const requests: { path: string; method: string; status?: number }[] = [];
     const facts: Record<string, boolean> = {};
     let passed = false,

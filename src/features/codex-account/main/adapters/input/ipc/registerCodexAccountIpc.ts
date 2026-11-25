@@ -62,7 +62,7 @@ function parseLoginOptions(value: unknown): CodexStartChatgptLoginOptions | unde
 }
 
 export function registerCodexAccountIpc(
-  ipcMain: IpcMain,
+  ipcMain: Pick<IpcMain, 'handle'>,
   feature: CodexAccountFeatureFacade,
   captureGuard?: (event: IpcMainInvokeEvent) => (() => boolean) | null
 ): void {

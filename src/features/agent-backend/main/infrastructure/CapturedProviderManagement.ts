@@ -23,6 +23,8 @@ const methods = [
   'extension.pending',
   'credential',
   'credential.lookup',
+  'credential.pending',
+  'credential.resume',
   'oauth.start',
   'oauth.read',
   'oauth.authorization',
@@ -43,6 +45,8 @@ export interface CapturedProviderManagement {
   readonly profileId: string;
   readonly configRevision: string;
   readonly preferences?: CapturedProviderPreferencePaths;
+  /** Explicit Save/Refresh may publish new settings through this same original descriptor. */
+  refreshConfiguration?(): Promise<CapturedProviderManagement>;
   isCurrent(): boolean;
   request(
     operation: ProviderManagementOperation,
@@ -56,6 +60,7 @@ export function captureProviderManagement(options: {
   profileId: string;
   configRevision: string;
   preferences?: CapturedProviderPreferencePaths;
+  refreshConfiguration?(): Promise<CapturedProviderManagement>;
   client: Pick<CapturedHostClient, 'request'>;
   start(): Promise<unknown>;
   ownerAvailable(): boolean;
@@ -86,6 +91,12 @@ export function captureProviderManagement(options: {
     profileId,
     configRevision,
     ...(options.preferences ? { preferences: Object.freeze({ ...options.preferences }) } : {}),
+    ...(options.refreshConfiguration ? { refreshConfiguration: async () => {
+      check(false, 'not-dispatched');
+      const target = await options.refreshConfiguration!();
+      check(false, 'unknown');
+      return target;
+    } } : {}),
     isCurrent: current,
     async request(operation: ProviderManagementOperation, payload: Record<string, JsonValue>) {
       if (
@@ -116,7 +127,9 @@ export function captureProviderManagement(options: {
         operation === 'oauth.read' ||
         operation === 'probe.read' ||
         operation === 'probe.cancel' ||
-        operation === 'credential.lookup';
+        operation === 'credential.lookup' ||
+        operation === 'credential.pending' ||
+        operation === 'credential.resume';
       check(retained, 'not-dispatched');
       await start();
       check(retained, 'not-dispatched');

@@ -1,0 +1,94 @@
+{
+  "schema": 1,
+  "scope": "Evidence-only content manifest for the two actual local renderer reset runs; no execution or implementation authority.",
+  "sourceHeads": {
+    "red": "89c0e99f1a7d570ec4e3517d64264f95fbaf24c2",
+    "green": "b8a9d3d16db8cf50b3c3a43fa495fe08fc3dd978",
+    "subsequentWorkflowOnly": "09ca13a2c36de1a40bf39fa78fdd6ea97e633d5d"
+  },
+  "sourceTrees": {
+    "red": "be4e3c446dfd995937f990d3542fcb9904482ef7",
+    "green": "331f6e4f64cdea8a4827f2c48df45a6d94255636",
+    "subsequentWorkflowOnly": "95d4caf8814bcc0d9d4a4be38025c7af34c919fe"
+  },
+  "recordedLocalVenuePlan29Prefix": "6fe84917238abf4ed3a3f1edf92d3d4104447f33",
+  "localDirectory": "/workspace/scratch/82d3f9ba6b85/reconciliation-local",
+  "contentIdentityNote": "gitBlob values are independently computed content identities. This draft does not claim those objects were uploaded; publication must create/reuse and read back every raw blob and this manifest before citing availability.",
+  "counts": {
+    "files": 9,
+    "rawBytes": 60917,
+    "uniqueRawBlobs": 8
+  },
+  "files": [
+    {
+      "name": "renderer-reset-red.log",
+      "bytes": 35321,
+      "sha256": "ff125fda326082031758435b051706fa1c13ea1d566db86ee4474b3c52963379",
+      "gitBlob": "a4e7bf30f14ff79481fac09a9d49497565cd360e",
+      "role": "Complete six-file local functional RED stdout/stderr."
+    },
+    {
+      "name": "renderer-reset-red-metadata.json",
+      "bytes": 2446,
+      "sha256": "177d593280c9dfa12774ea512ad09192447b378979d3c85c94b7e9d7f6310c5f",
+      "gitBlob": "b722f67cda963d3d3ae017c110fb7ff51230d8ab",
+      "role": "Exact RED source, argv, runtime version, build exit records, outcome and raw-log/preflight joins."
+    },
+    {
+      "name": "stage1-source-preflight.json",
+      "bytes": 9517,
+      "sha256": "538b2987519e3b2f7e3ff598ea7c8466daf270b5f83956680f092120fc47b551",
+      "gitBlob": "ae27b7ecdf31a1e78a01d8fc561044facb8ecbf1",
+      "role": "Complete 26-leaf first-stage source and selected dependency/configuration joins before RED."
+    },
+    {
+      "name": "renderer-reset-green.log",
+      "bytes": 697,
+      "sha256": "a13a858c720c5f869ddbfcf0da73a02f24bad1f793284ee4cd0e62047c299b9e",
+      "gitBlob": "8927bf4afa7062b9b1b31ffe0f566ab4cdfcf0ea",
+      "role": "Complete same-six-file local GREEN stdout/stderr."
+    },
+    {
+      "name": "renderer-reset-green-metadata.json",
+      "bytes": 1354,
+      "sha256": "84ae1d13e7cb5d96d0e3ddc8e9900dffbd14434dbbd93a6b60400bca06e7ce74",
+      "gitBlob": "457c2636505ac2cdcfa4aaab118e9dafb77ed8a3",
+      "role": "Exact GREEN source, argv, runtime digest, outcome and raw-log/preflight joins."
+    },
+    {
+      "name": "green-source-preflight.json",
+      "bytes": 9931,
+      "sha256": "f859183eb9741560687b477201bc0576df2166b8e60af14e363486ee5fcc2f01",
+      "gitBlob": "43bdeca35f06f8aafc64e398a977473868ea914e",
+      "role": "Complete 26-leaf GREEN source/dependency joins and unchanged development-build fingerprint records."
+    },
+    {
+      "name": "stage1-ledger-build.log",
+      "bytes": 1651,
+      "sha256": "d8f0ff6ebced5ca33327f215e00d01fa37c93c0e7a0ca8999ff1ac2737327be2",
+      "gitBlob": "82a498704a15920c99a6ac2d8cb5b7fc088c47bf",
+      "role": "Unqualified aborted pnpm bootstrap; landing install-hook refusal; metadata records exit130."
+    },
+    {
+      "name": "stage1-ledger-direct-build.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "role": "Empty raw output of direct ledger build; explicit exit0 is retained in RED metadata, not inferred from emptiness."
+    },
+    {
+      "name": "stage1-host-direct-build.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "role": "Empty raw output of direct Host build; explicit exit0 is retained in RED metadata, not inferred from emptiness."
+    }
+  ],
+  "limits": [
+    "RED352PASS/2FAIL/0SKIP and GREEN354PASS/0FAIL/0SKIP are overlapping six-suite local runs, not708 distinct tests.",
+    "The aborted bootstrap is unqualified. Empty build logs do not establish completion; explicit recorded exit codes are in RED metadata.",
+    "RED metadata retains Node24.21.0/path but not a Node binary SHA256. GREEN retains and independently rehashes the executable digest.",
+    "The manifest proves content identity, not past execution independently of the retained command/completion records.",
+    "No resulting-source CI, native/E2E/physical-cleanup or historical dedicated-compiler qualification is supplied by these local renderer results."
+  ]
+}

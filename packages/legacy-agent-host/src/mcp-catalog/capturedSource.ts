@@ -5,14 +5,14 @@ import { CapturedClaudeMcpCatalogReader } from './captureClaudeCatalog.js';
 import { selectMcpCatalog } from './catalog.js';
 import { normalizeTeamMemberMcpPolicy } from './memberPolicy.js';
 import { captureSelectedMcpServers } from './capturedServer.js';
+import { isNativeProfilePath } from '../owned-process/nativePath.js';
 import type { CapturedMcpServers } from './capturedServer.js';
 
 const path = z
   .string()
   .min(1)
   .max(8192)
-  .startsWith('/')
-  .refine((value) => !/[\0\r\n]/u.test(value));
+  .refine((value) => isNativeProfilePath(value) && !/[\r\n]/u.test(value));
 /** Private original selection input. Renderer/capture source retains only its artifact digest. */
 export const capturedMcpSourceSchema = z
   .object({ userConfigPath: path, projectPath: path, policy: memberSettingsSchema.shape.mcpPolicy })

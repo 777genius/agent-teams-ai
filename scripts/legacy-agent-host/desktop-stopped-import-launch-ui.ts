@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { readFile, readdir } from 'node:fs/promises';
+import { lstat, readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { command, processTable } from './desktop-backend-observations.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
@@ -10,9 +10,12 @@ import {
 } from './desktop-mixed-dialog-settings.ts';
 import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
 import { revealDesktopReply } from './desktop-reply-visibility.ts';
-import { stoppedImportSourceBytes } from './desktop-stopped-import-fixture.ts';
+import {
+  expectedStoppedImportNativeEffort,
+  stoppedImportSourceBytes,
+} from './desktop-stopped-import-fixture.ts';
 import { createDesktopUiControls, desktopJsLiteral } from './desktop-ui-controls.ts';
-import type { StoppedImportUiSeed } from './desktop-stopped-import-fixture.ts';
+import type { DesktopStoppedImportSeed } from './desktop-stopped-import-fixture.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
 import type { prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
 import type { startNativeTeamModel } from '../../packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts';
@@ -28,7 +31,7 @@ export async function runStoppedImportLaunchUi(
   cdp: UiCdpPort,
   options: {
     fixture: Awaited<ReturnType<typeof prepareDesktopBackendFixture>>;
-    seed: StoppedImportUiSeed;
+    seed: DesktopStoppedImportSeed;
     selection: string;
     handleId: string;
     model: Awaited<ReturnType<typeof startNativeTeamModel>>;
@@ -41,17 +44,29 @@ export async function runStoppedImportLaunchUi(
   }
 ) {
   const { fixture, seed, model } = options;
-  assert.equal(seed.sourceKind, 'captured-stopped-solo');
+  assert.ok(
+    seed.sourceKind === 'captured-stopped-solo' || seed.sourceKind === 'actual-current-native-solo'
+  );
   assert.ok(seed.priorRun);
   assert.equal(await fileDigest(seed.priorRun.path), seed.priorRun.sha256);
   const source = await read(seed.priorRun.path);
+  if (seed.sourceKind === 'actual-current-native-solo') {
+    assert.equal(source.status, 'PASS');
+    assert.equal(source.sourceNativeInputs, 1);
+    assert.equal(source.sourceFrozen, true);
+    assert.equal(record(source.ordinaryQuit).originalGroupAbsent, true);
+    assert.deepEqual(record(source.nativeChildren).remaining, []);
+    assert.deepEqual(record(source.nativeChildren).unmatched, []);
+  }
   const proof: Record<string, unknown> = {
     status: 'INCOMPLETE',
     sourcePreparation: source,
     scope:
-      'Synthetic stopped legacy solo product/run records plus actual captured source-owned TEST child Stop; original imported Launch dialog creates a fresh actual SDK/CLI conversation, task/Bash/reply, original Stop and reload',
+      seed.sourceKind === 'actual-current-native-solo'
+        ? 'Actual current legacy solo Claude turn, original Stop and saved UI Task; imported Launch creates a fresh Host SDK/CLI conversation, task/Bash/reply, original Stop and reload'
+        : 'Synthetic stopped legacy solo product/run records plus actual captured source-owned TEST child Stop; original imported Launch dialog creates a fresh actual SDK/CLI conversation, task/Bash/reply, original Stop and reload',
     excluded: [
-      'old provider inference/history qualification',
+      'donor4a native history qualification',
       'native resume/adoption',
       'vendor credentials/inference',
       'multi-member prior-run import',
@@ -161,7 +176,7 @@ export async function runStoppedImportLaunchUi(
       (row) =>
         row.contextEffective &&
         row.requestedModel === seed.savedSettings.model &&
-        row.requestedEffort === seed.savedSettings.effort
+        row.requestedEffort === expectedStoppedImportNativeEffort(seed.savedSettings)
     )
   );
   assert.ok(model.observations.some((row) => row.toolResultError));
@@ -267,6 +282,8 @@ export async function runStoppedImportLaunchUi(
     'source archive stays byte-identical through new target work'
   );
   assert.equal(model.observations.length, 8, 'reopen never replays imported or new input');
+  if (seed.sourceKind === 'actual-current-native-solo')
+    for (const path of seed.absentRoots) await assert.rejects(lstat(path), { code: 'ENOENT' });
   Object.assign(proof, {
     status: 'PASS',
     capture,

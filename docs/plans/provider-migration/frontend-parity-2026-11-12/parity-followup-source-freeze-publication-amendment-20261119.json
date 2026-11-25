@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "kind": "final-publication-retained-observer-six-literal-source-freeze-amendment",
+  "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "targetPath": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+  "targetArray": "desktopProofSupplementarySources",
+  "original030Preimage": "b42cee83d3526df26ce749e3b7b6c076b48a9257",
+  "historical22Postimage": {
+    "gitBlob": "4d6636e83415012b511f22273dc8068d1e3e9c5f",
+    "sha256": "120bccf5b98f8f596c4a69c7a780f8048187bf274b550a52f1c45770edb02d10",
+    "bytes": 25735,
+    "lines": 397
+  },
+  "publicationPostimage": {
+    "gitBlob": "566b24275d634a213d732564fc3319631f2de0d1",
+    "sha256": "67d52fa4e5e0fcf56dcaa5a07184c8eaeb5f04c27e33be87ba40fd7887987fe4",
+    "bytes": 26283,
+    "lines": 403
+  },
+  "literalAdditions": [
+    "src/features/agent-backend/main/application/createRetainedLegacyLaunchScope.ts",
+    "src/main/composition/createDesktopStoppedTeamOperations.ts",
+    "src/features/agent-backend/main/infrastructure/stopped-import/createRetainedLegacyOpenDiagnostic.ts",
+    "src/features/agent-backend/main/infrastructure/stopped-import/retainedLegacyOpenDiagnosticContract.ts",
+    "src/features/agent-backend/main/infrastructure/stopped-import/createStoppedImportDiagnostic.ts",
+    "src/features/agent-backend/main/application/validateRetainedLegacyLaunchRequest.ts"
+  ],
+  "reviewerProposal": {
+    "relativeFile": "parity-retained-eligibility-source-freeze-proposal-20261119.json",
+    "gitBlob": "77c592c113b0e570179aabf5ae14e9add0fc769e",
+    "sha256": "5931e9e0d4c91ddf0a56a0cd52e8947b89fb0ed4fbee908f72abd44594378fd1",
+    "bytes": 4857,
+    "lines": 99
+  },
+  "diff": "--- historical22/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts\n+++ publication/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts\n@@ -343,6 +343,12 @@\n   'src/renderer/components/team/members/TeamRosterEditorSection.tsx',\n   'src/features/localization/renderer/locales/en/team.json',\n   'scripts/legacy-agent-host/desktop-retained-opencode-authority.ts',\n+  'src/features/agent-backend/main/application/createRetainedLegacyLaunchScope.ts',\n+  'src/main/composition/createDesktopStoppedTeamOperations.ts',\n+  'src/features/agent-backend/main/infrastructure/stopped-import/createRetainedLegacyOpenDiagnostic.ts',\n+  'src/features/agent-backend/main/infrastructure/stopped-import/retainedLegacyOpenDiagnosticContract.ts',\n+  'src/features/agent-backend/main/infrastructure/stopped-import/createStoppedImportDiagnostic.ts',\n+  'src/features/agent-backend/main/application/validateRetainedLegacyLaunchRequest.ts',\n   'src/features/review-flow/renderer/http/index.ts',\n ];\n \n",
+  "preserved": "All historical22 literals and executable bodies; only six literal rows inside the shared platform-neutral supplementary array",
+  "createdAt": "2026-11-19T00:58:55.210863+00:00"
+}

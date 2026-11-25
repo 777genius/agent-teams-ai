@@ -51,7 +51,7 @@ function compactResult(receipt: CommandReceipt): JsonValue | undefined {
       ...(result.task === undefined ? {} : { task: compactTask(result.task) }),
     };
   }
-  if (operation === 'task.board.order') return undefined;
+  if (operation === 'task.board.order' || operation === 'task.board.review-flow') return undefined;
   if (operation === 'message.send') return receipt.result;
   return compactTask(receipt.result!);
 }
@@ -61,12 +61,13 @@ function compactResult(receipt: CommandReceipt): JsonValue | undefined {
  * This never fabricates a success phase or a new product outcome.
  */
 export function boundProductCommandReceipt(receipt: CommandReceipt): JsonValue {
-  const full = json(receipt);
+  const { hostCommand: _hostCommand, ...publicReceipt } = receipt;
+  const full = json(publicReceipt);
   if (bytes(full) <= MAX_PRODUCT_RECEIPT_BYTES) return full;
   if (receipt.phase !== 'completed') throw new TeamOwnerError('hold');
   const result = compactResult(receipt);
   const projected = json({
-    ...receipt,
+    ...publicReceipt,
     ...(result === undefined ? { result: undefined } : { result }),
   });
   if (bytes(projected) > MAX_PRODUCT_RECEIPT_BYTES)

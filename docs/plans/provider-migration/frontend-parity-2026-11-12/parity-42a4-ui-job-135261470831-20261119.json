@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "kind": "current-head-original-frontend-shard-success",
+  "sourceHead": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+  "event": "pull_request",
+  "runAttempt": 1,
+  "runId": 44434982606,
+  "job": {
+    "id": 135261470831,
+    "name": "Offline frontend tests (4/4)",
+    "head_sha": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+    "run_id": 44434982606,
+    "run_attempt": 1,
+    "status": "completed",
+    "conclusion": "success",
+    "started_at": "2026-11-19T03:16:14Z",
+    "completed_at": "2026-11-19T03:23:09Z",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44434982606/job/135261470831",
+    "runner_name": "GitHub Actions 1000396497"
+  },
+  "rawLog": {
+    "phase": "permanently-retired",
+    "jobId": 135261470831,
+    "head": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+    "runId": 44434982606,
+    "runAttempt": 1,
+    "conclusion": "success",
+    "requestedAt": "2026-11-19 03:25:00 UTC",
+    "bytes": 196351,
+    "sha256": "e30a84b93cc13813f340c2843b37085a6621edcc24dfdf67dbfcff8ea29a8fb8",
+    "computedGitBlobSha": "fc7bed650bde857afd4a7a2e875254d43e5ac916",
+    "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/job-135261470831-terminal.log",
+    "rawToolResponseLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/job-135261470831-log-response-raw.json",
+    "rawResponsePersistedBeforeDecode": true,
+    "endpointRetired": true,
+    "publishedBlobSha": "fc7bed650bde857afd4a7a2e875254d43e5ac916",
+    "exactReadback": true
+  },
+  "summary": {
+    "testFilesPassed": 548,
+    "testFilesSkipped": 2,
+    "testFilesTotal": 550,
+    "testsPassed": 6756,
+    "testsSkipped": 7,
+    "testsTotal": 6763,
+    "failures": 0,
+    "originalLines": [
+      " Test Files  548 passed | 2 skipped (550)",
+      "      Tests  6756 passed | 7 skipped (6763)"
+    ]
+  },
+  "sourceSteps": [
+    {
+      "name": "Verify source and capture the original Host test runtime",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 5,
+      "started_at": "2026-11-19T03:16:34Z",
+      "completed_at": "2026-11-19T03:16:34Z"
+    },
+    {
+      "name": "Run the complete safe frontend shard",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 8,
+      "started_at": "2026-11-19T03:17:15Z",
+      "completed_at": "2026-11-19T03:23:04Z"
+    }
+  ],
+  "artifactFromOriginalUploadLog": {
+    "artifactId": 14495667002,
+    "bytes": 324789,
+    "sha256": "903a125035e10b9e745724e4bf51dcbcf0d7eef9502f96f963b52bb6d35b2109",
+    "downloaded": false
+  },
+  "scope": "Entire original safe frontend shard4 passed on exact42a4. These unit/safe fixture results do not qualify root application typecheck or original renderer/native UI scenarios.",
+  "jobLogEndpointRetired": true
+}

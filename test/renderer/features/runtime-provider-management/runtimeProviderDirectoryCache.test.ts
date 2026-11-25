@@ -80,6 +80,31 @@ describe('runtimeProviderDirectoryCache', () => {
     expect(getRuntimeProviderConnectedCountEvidence('/tmp/global-invalidation').checking).toBe(false);
   });
 
+  it('preserves an active count check when a full directory supersedes an observation', () => {
+    const revision = 'runtime-ready';
+    const fetchedAt = new Date().toISOString();
+    observeRuntimeProviderDirectoryRevision(revision);
+    publishRuntimeProviderConnectedCount({
+      readToken: getRuntimeProviderDirectoryReadToken(null),
+      connected: 1,
+      runtimeRevision: revision,
+      fetchedAt,
+      source: 'summary-connected',
+    });
+    const stop = beginRuntimeProviderConnectedCountCheck(null);
+    publishRuntimeProviderDirectoryCache({
+      entries: [providerEntry],
+      authoritative: true,
+      totalCount: 1,
+      nextCursor: null,
+      runtimeRevision: revision,
+      fetchedAt,
+    });
+    expect(getRuntimeProviderConnectedCountEvidence(null).checking).toBe(true);
+    stop();
+    expect(getRuntimeProviderConnectedCountEvidence(null).checking).not.toBe(true);
+  });
+
   it('fences count-only observations across project switches, credential writes and global logout', () => {
     const revision = JSON.stringify(['ready', '1.2.3', '/bin/opencode']);
     observeRuntimeProviderDirectoryRevision(revision);

@@ -2,6 +2,7 @@ import { HostTeamOperationError } from './createHostTeamMutations';
 import { readHostActivityLogs } from './readHostActivityLogs';
 
 import type { HostActivityReadOptions } from './readHostActivityLogs';
+import type { TeamTaskWithKanban } from '@shared/types/team';
 import type {
   HostMemberActivityLog,
   HostTaskActivityView,
@@ -17,12 +18,13 @@ async function inputLogs(logs: readonly HostMemberActivityLog[]) {
     const ids = [...new Set(log.events.flatMap((event) => (event.inputId ? [event.inputId] : [])))];
     return ids.map((inputId) => {
       const events = log.events.filter((event) => event.inputId === inputId);
-      const text = events.filter((event) => event.data.kind === 'text');
       const selected: HostMemberActivityLog = {
         ...log,
         events,
         messageCount: new Set(
-          text.map((event) => (event.data.kind === 'text' ? event.data.messageRef : ''))
+          events.flatMap(({ data }) =>
+            data.kind === 'text' || data.kind === 'thinking' ? [data.messageRef] : []
+          )
         ).size,
       };
       delete selected.lastOutputPreview;
@@ -61,12 +63,21 @@ async function inputLogs(logs: readonly HostMemberActivityLog[]) {
     })
   );
 }
-export function createHostTaskActivityApi(options: HostActivityReadOptions) {
+interface HostTaskActivityReadOptions extends HostActivityReadOptions {
+  readTask(
+    key: string,
+    taskId: string,
+    current: () => boolean,
+    assertCurrent: () => void
+  ): Promise<TeamTaskWithKanban | null>;
+}
+
+export function createHostTaskActivityApi(options: HostTaskActivityReadOptions) {
   async function selected(key: string) {
     const current = options.captureScope(),
       scope = await options.resolve(key, current);
     scope.assertCurrent();
-    return { backend: options.backend, handle: scope.handle, assertCurrent: scope.assertCurrent };
+    return { backend: options.backend, handle: scope.handle, current, assertCurrent: scope.assertCurrent };
   }
   async function read(key: string, taskId: string) {
     const scope = await selected(key),
@@ -100,26 +111,20 @@ export function createHostTaskActivityApi(options: HostActivityReadOptions) {
   return {
     async getTaskActivity(key: string, taskId: string): Promise<HostTaskActivityView> {
       const value = await read(key, taskId);
-      const task = await options.backend.invoke({
-        handle: value.scope.handle,
-        commandId: crypto.randomUUID(),
-        operation: 'task.get',
-        payload: { taskId },
-      });
+      const task = await options.readTask(key, taskId, value.scope.current, value.scope.assertCurrent);
       value.scope.assertCurrent();
-      if (!task.ok) throw new HostTeamOperationError(task.code, task.outcome);
-      if (!task.value || !('id' in task.value) || task.value.id !== taskId)
+      if (!task || task.id !== taskId)
         throw new HostTeamOperationError('invalid-result', 'unknown');
       return {
         kind: 'host_task_activity',
         taskId,
         items: value.inputs.map((row) => row.summary),
-        ...(task.value.historyEvents === undefined
+        ...(task.historyEvents === undefined
           ? {}
-          : { historyEvents: task.value.historyEvents }),
+          : { historyEvents: task.historyEvents }),
         gaps: [
           ...value.gaps,
-          ...(task.value.historyEvents === undefined
+          ...(task.historyEvents === undefined
             ? ['Canonical task history is unavailable.']
             : []),
         ],

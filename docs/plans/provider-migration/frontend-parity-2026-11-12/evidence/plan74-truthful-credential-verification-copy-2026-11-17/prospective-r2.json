@@ -1,0 +1,352 @@
+{
+  "kind": "PLAN74_INDEPENDENT_PROSPECTIVE_DOCUMENT_AND_SOURCE_SCOPE_R2",
+  "verdict": "GO_EXACT_SIX_PATH_PROSPECTIVE_SELECTION",
+  "reviewer": "/root/qualification_audit; not the author of Plan74 plan or source",
+  "scope": "Independent documentary/source-feasibility R2 only. No source afterimages exist or were generated; this is not actual-source, test, native or runtime qualification.",
+  "documents": {
+    "plan.md": {
+      "bytes": 11339,
+      "physicalLines": 67,
+      "gitBlob": "3600ab86bd3e979bf0a3fc0ef614fdf241dce73a",
+      "sha256": "e9d050a1a0ba6b0bc736bdc52db80de427f3ba78071487d3b3fef134a0bb8ae4"
+    },
+    "prospective-r1.json": {
+      "bytes": 20546,
+      "physicalLines": 402,
+      "gitBlob": "d014e99acb034d71fae6711d6ff2a9f1cf5b8113",
+      "sha256": "1b8c9d59be797dddd7788ca13000463588972dd25c8ea585577d96633a455a8b"
+    },
+    "preimage-bindings.json": {
+      "bytes": 16196,
+      "physicalLines": 366,
+      "gitBlob": "dbb1c06a1731c68968941b002da3c4d608d7952e",
+      "sha256": "b052c4d48fa020ce42ad80295e4073a269cfc3b9969c804dd9d25f4064ef4237"
+    }
+  },
+  "dataProof": {
+    "path": "/workspace/scratch/b87c90489dab/e2e-recovery/plan74/independent-r2/data-proof.json",
+    "bytes": 15935,
+    "physicalLines": 387,
+    "gitBlob": "df2f3932b2df5fd9f6b241176b4b1f601658af26",
+    "sha256": "9aeb9a61ead610e2827fcec7a149f18826996fe8aa698ce47ae29e67b84b3e49"
+  },
+  "baseBinding": {
+    "plannedBase": "b3ddf344cbfdb13b152036f5a865c0d3c29365b4",
+    "plannedTree": "1150bc2c4e9d6a2b7dda0e4215fe138092402a86",
+    "currentHeldApprovedDocumentaryDescendant": "73d4faf441cfe23ef2cb979cf1b04d33a6c3e4f7",
+    "currentHeldTree": "9903963cf4379503a0fb0df7a76fd2bca61a72ac",
+    "fullTrees": [
+      {
+        "path": "/tmp/e2e-original-artifacts/reviews/plan71-original-setup-window/actual-document/official-packet.json",
+        "packet": {
+          "bytes": 3785051,
+          "physicalLines": 1,
+          "gitBlob": "2e489158e23f06d46f8a00b53903258c8fc6c505",
+          "sha256": "ff9f4d47065aaa05bd51806c448e519315d9f0d5fd808c9c7469245a8ba88284"
+        },
+        "commit": "b3ddf344cbfdb13b152036f5a865c0d3c29365b4",
+        "tree": "1150bc2c4e9d6a2b7dda0e4215fe138092402a86",
+        "entries": 12863,
+        "leafCount": 11155,
+        "directoryCountIncludingRoot": 1709
+      },
+      {
+        "path": "/tmp/e2e-original-artifacts/reviews/plan72-finite-cold-resume-fresh/actual-document/official-packet.json",
+        "packet": {
+          "bytes": 3828177,
+          "physicalLines": 1,
+          "gitBlob": "f8bd6b70ca3e155a148672613ed32cf48aefb260",
+          "sha256": "32d3450bf6c79dcebf4ab13782cfa5ca0ef5c637f411b9dc07e67c74e0323ccf"
+        },
+        "commit": "73d4faf441cfe23ef2cb979cf1b04d33a6c3e4f7",
+        "tree": "9903963cf4379503a0fb0df7a76fd2bca61a72ac",
+        "entries": 12867,
+        "leafCount": 11158,
+        "directoryCountIncludingRoot": 1710
+      }
+    ],
+    "allRecordedSubtreeMerklesRecomputed": true,
+    "allSixPreimagesAndElevenReferencesExactAtBoth": true,
+    "extraReadOnlyJoins": "Feature CLAUDE, Feature Architecture Standard, feature README, and exact existing V2 management smoke source pinner add four reviewed immutable references; no extra write path.",
+    "planAndEvidenceAbsentAtBoth": true,
+    "publicationCondition": "Rebind documentary bytes and all selected/source-closure tuples to the actual approved parent after queued71/72/73 work. This GO never authorizes stale whole-file overwrite or adoption of an external branch."
+  },
+  "readRecord": {
+    "complete": "Plan67L, root-owned prospectiveR1402L, bindings366L; complete formatter161L and its only runtime dependency108L; complete native UI278L; AGENTS/CLAUDE/guardrails/Git policy/feature instructions and full source-size guard.",
+    "focused": "Panel selected-method/verifiesWithModel predicates and full busy/error rendering block; both complete existing selected test cases; exact UI five-intent/rejection/replacement and cleanup relationships; source roster declarations/ordering and workflow validation blocks.",
+    "wholeFileIntegrity": "All six full preimage bytes plus references hashed to both complete immutable Git trees. The large panel/test files were not executed, and hashing their unchanged full bodies is not represented as semantic re-review of every unrelated test.",
+    "noNewRetrieval": "Only already-held local source/official packets used. No CI reads, artifact download or immutable API retrieval was necessary."
+  },
+  "findings": [
+    {
+      "id": "presentation-only-cause",
+      "result": "GO",
+      "source": "runtimeProviderManagementPresentation.ts108–132 and RuntimeProviderManagementPanelView.ts409–410/783–798",
+      "reason": "Three formatter branches promise that the new credential was not kept solely from error.message/code; the busy branch promises removal/restoration solely from API method and model-request form. Neither observes a retention result. The current native UI explicitly requires the rejected TEST key in storage until its later explicit replacement. Removing these unsupported promises is justified without selecting a storage behavior."
+    },
+    {
+      "id": "three-formatter-literals",
+      "result": "GO",
+      "reason": "Each selected old return literal is unique. Deleting only the fixed sentence retains invalid-key/security/auth-failed predicates and order, provider display name, concrete rejection reason/guidance, and generic raw error suffix. The original single backslash+n source escape before error.message is preserved in both plan and R1. Existing-key replacement refusal, fallback passthrough, success/cancellation and all other functions remain outside scope."
+    },
+    {
+      "id": "busy-literal",
+      "result": "GO",
+      "reason": "The exact saving-then-minimal-model-request text reports the existing in-progress operation without promising rollback. The API/model-request branch, busy/non-OAuth visibility, heading, spinner, aria roles, save-only branch and quota warnings remain intact. One literal replacement naturally retains the frozen2584-line body."
+    },
+    {
+      "id": "two-existing-regressions",
+      "result": "GO",
+      "reason": "The panel case already supplies API/model-request verification and busy state. Keeping its two positive heading/model-request assertions while replacing only the false restoration assertion with the selected negative regex prevents a vacuous empty-status success. The hook case already drives one connect failure and asserts exact payload, draft retention and telemetry; changing only its formatted string expectation preserves those oracles. No new case or framework is needed."
+    },
+    {
+      "id": "same-native-rejection-observation",
+      "result": "GO",
+      "reason": "One existing waitRead after the rejected-key intent and before the private auth assertion is the narrow insertion point. Requiring that same error element and absence of the three fixed false-copy phrases strengthens its current observation. Query the element exactly once inside that same evaluation. Preserve its deadline, action order, one explicit later replacement, all storage checks, five-intent count, source/epoch and final owner/cleanup assertions.",
+      "precision": "The existing polling loop can continue until its original deadline if false copy is present. No additional evaluation call site/RPC route, second waiter, new action or new budget is selected; identical total poll count in a failing run is not claimed."
+    },
+    {
+      "id": "credential-behavior-boundary",
+      "result": "GO",
+      "reason": "The selected change never calls save/forget/restore, does not reinterpret cancellation/replacement, and adds no DTO/state. It also does not replace deletion promises with universal retention promises. Original terminal-rejection/held/resource release facts and subsequent explicit replacement remain exactly as originally asserted."
+    },
+    {
+      "id": "source-closure",
+      "result": "GO",
+      "reason": "All four new common entries are absent from every current main input roster. The formatter has one existing runtime import, pure opencodeModelRef with no imports; pinning that helper closes the selected direct dependency without editing it. Independent literal-array expansion matches all four expected ordered hashes,261→265 common and1783→1787 main; removing just the four additions recovers the full old order.",
+      "importantJoin": "The native UI path is absent from the common main vector but is already explicitly generated by the existing V2-specific smoke source vector. Exact ba950ee03787427aaa837a0b77608c6a8760cab9 lines61–69 includes ui, captures hashes before app execution, and line152 verifies source freeze after cleanup. Therefore no fifth common source addition is required."
+    },
+    {
+      "id": "caps-and-architecture",
+      "result": "GO",
+      "reason": "The current guard excludes the two existing test paths; the panel frozen cap is2584 and its literal edit can retain it exactly. Formatter161, UI278 and supplementary349+4 remain naturally below800; no baseline/exception/compression is selected. This remains a renderer presentation change in its existing feature shape, with no new cross-process boundary, transport import, helper owner or business policy."
+    },
+    {
+      "id": "existing-validation",
+      "result": "GO",
+      "reason": "The existing136 fast command already covers native UI, supplementary roster and hook test; workspace types and typed src/features lint cover renderer production paths. The original complete safe frontend shard command retains both ordinary test filenames outside its three live/native exclusion patterns. The existing V2 Settings lane and its own source pinner cover the strengthened UI observation. No new workflow or manual route is required.",
+      "limit": "This establishes unchanged available source routes, not that the new bytes have collected or passed those routes. Resulting-head execution is mandatory."
+    }
+  ],
+  "sourceSelection": {
+    "count": 6,
+    "newSourcePaths": 0,
+    "paths": [
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+        "localPath": "/workspace/scratch/b87c90489dab/e2e-recovery/plan74/before/src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+        "selected": true,
+        "bytes": 6481,
+        "physicalLines": 161,
+        "gitBlob": "907fb16a613785324fdbd342c2993e08c8209a55",
+        "sha256": "5e1015def1c50a2c2982617336d7e8ed46495295b5769aed8a5b2b885f53f1a0",
+        "matchesBothTrees": true
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+        "localPath": "/workspace/scratch/b87c90489dab/e2e-recovery/plan74/before/src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+        "selected": true,
+        "bytes": 97366,
+        "physicalLines": 2584,
+        "gitBlob": "176344903eaee49ced9607a29f28a3c556e59f6e",
+        "sha256": "11871dd43b1c704230c83e722577ba4cdd4f4fd6c2eebce89cab02457b52b81a",
+        "matchesBothTrees": true
+      },
+      {
+        "path": "test/renderer/features/runtime-provider-management/RuntimeProviderManagementPanelView.test.ts",
+        "localPath": "/workspace/scratch/b87c90489dab/e2e-recovery/plan74/before/test/renderer/features/runtime-provider-management/RuntimeProviderManagementPanelView.test.ts",
+        "selected": true,
+        "bytes": 183020,
+        "physicalLines": 5126,
+        "gitBlob": "162fb1fccf81b97d1c2b9c741189584016ff3667",
+        "sha256": "3057f23d318ec62a902bb869c288108f27800bdd354952faba21a875b4d97d6b",
+        "matchesBothTrees": true
+      },
+      {
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "localPath": "/workspace/scratch/b87c90489dab/e2e-recovery/plan74/before/test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "selected": true,
+        "bytes": 195789,
+        "physicalLines": 6034,
+        "gitBlob": "c9e19b14b433c58494c10b06eac9f82d5f5cd118",
+        "sha256": "008d47eafc5f9113af654cd42c29bdc398ed1969695d15c3650898b281cbb195",
+        "matchesBothTrees": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+        "localPath": "/workspace/scratch/b87c90489dab/e2e-recovery/plan74/before/scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+        "selected": true,
+        "bytes": 20435,
+        "physicalLines": 278,
+        "gitBlob": "7f224d52e429bbdecb173d65b470a2ac154de475",
+        "sha256": "4aa1e0c6944d0154f4cee2eaa3cef4390ffdcc25cad93cac40488c1d7c2fa8d6",
+        "matchesBothTrees": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+        "localPath": "/workspace/scratch/b87c90489dab/e2e-recovery/plan74/before/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+        "selected": true,
+        "bytes": 22669,
+        "physicalLines": 349,
+        "gitBlob": "eb917dd3cf76a917430b3a0cb3b20ea387307f99",
+        "sha256": "94ba59ade125b165474fa54bb108a2784b24b332ba2cf286a1082c7299a21448",
+        "matchesBothTrees": true
+      }
+    ],
+    "exactFutureEditBudget": {
+      "formatterReturnLiterals": 3,
+      "panelBusyLiteral": 1,
+      "existingTestAssertions": 2,
+      "existingUiPredicate": 1,
+      "commonRosterEntries": 4
+    },
+    "unchangedOperations": "No auth/storage/provider/transport operation, source publication semantic, deadline, retry, model authority, cleanup owner or workflow change.",
+    "noSourceAfterimagesCreated": true
+  },
+  "preservationProofs": {
+    "uniqueSites": {
+      "formatterFalseSentence": 3,
+      "busyFalseLiteral": 1,
+      "panelExistingAssertion": 1,
+      "hookExistingExpectedText": 1,
+      "sameUiWait": 1,
+      "sameFiveIntents": 1
+    },
+    "originalUiActionOrder": [
+      {
+        "marker": "await originalStep('reject-key'",
+        "line": 206
+      },
+      {
+        "marker": "'original key rejection visible'",
+        "line": 207
+      },
+      {
+        "marker": "key: desktopV2RejectedKey",
+        "line": 208
+      },
+      {
+        "marker": "proof.rejectionScreenshot",
+        "line": 209
+      },
+      {
+        "marker": "await replace(cdp, ui, input, desktopV2SelectedKey",
+        "line": 210
+      },
+      {
+        "marker": "await originalStep('connect-key'",
+        "line": 211
+      },
+      {
+        "marker": "key: desktopV2SelectedKey",
+        "line": 213
+      },
+      {
+        "marker": "proof.connectedScreenshot",
+        "line": 217
+      }
+    ],
+    "rosters": {
+      "currentCommonCount": 261,
+      "currentCommonOrderedSha256": "4460cc1dbcb1ff3ccdf0ae89d727b3a5158e37afadd1118bfd54268f645fe7de",
+      "selectedResultCommonCount": 265,
+      "selectedResultCommonOrderedSha256": "eafffa09aae67652da558043f55c0f33b833123964c95ed9c0711b459deb2820",
+      "currentMainVectorCount": 1783,
+      "currentMainOrderedSha256": "ef73662d6baadbb38ee4c7b382c716c87387aa1353ad24939497685c3ce2ed55",
+      "selectedResultMainVectorCount": 1787,
+      "selectedResultMainOrderedSha256": "4d50aac95c4fc8f2e746f60baa22e598f8366339d70a7a0d09b2071579da40c2",
+      "prospectiveMainIndicesZeroBased": [
+        1014,
+        1015,
+        1016,
+        1017
+      ],
+      "appendExactly": [
+        "src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+        "src/shared/utils/opencodeModelRef.ts",
+        "test/renderer/features/runtime-provider-management/RuntimeProviderManagementPanelView.test.ts",
+        "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts"
+      ],
+      "fourAbsentFromAllOldMainInputs": true,
+      "inverseRemovalRecoversFullOrder": true,
+      "commonBlock": {
+        "bytes": 17938,
+        "physicalLines": 267,
+        "gitBlob": "47a7ec3dd28588245acce0d505047a207be6b0e2",
+        "sha256": "7ded3243864a1dd55ad49316df6f862e292099bd184a4965ace0a1aba4ebf453"
+      },
+      "processBlock": {
+        "bytes": 1747,
+        "physicalLines": 29,
+        "gitBlob": "92a2d585c8351022aca0674692431922013c715d",
+        "sha256": "b0b9a8e47246e2488adc4431e1177ee2ab19bce12e08fde479de11d33fb165c5"
+      },
+      "retryBlock": {
+        "bytes": 2701,
+        "physicalLines": 48,
+        "gitBlob": "a902fbc0d0955c2283aa96e0d8c04b392c9e62ed",
+        "sha256": "717c0d65009fcada4128fb907daa2aaffb2165f8f5647143a2fbfea8d5623a60"
+      }
+    },
+    "nativeUiSourceClosure": {
+      "notInMainVector": true,
+      "existingSeparatePinner": "scripts/legacy-agent-host/desktop-opencode-v2-management-smoke.ts",
+      "pinnerBlob": "ba950ee03787427aaa837a0b77608c6a8760cab9",
+      "beforeAppCaptureLines": [
+        61,
+        69
+      ],
+      "afterCleanupFreezeLine": 152,
+      "noAdditionalCommonEntryNeeded": true
+    },
+    "validation": {
+      "existingFastCount": 136,
+      "alreadyPresentFastPaths": [
+        "scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+        "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+        "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts"
+      ],
+      "workspaceTypesAndTypedFeaturesPresent": true,
+      "ordinarySafeFrontendShardsPresent": true,
+      "nativeUiOwnSourcePinPresent": true,
+      "workflowEditsSelected": 0
+    },
+    "caps": {
+      "default": 800,
+      "panelLegacy": 2584,
+      "panelProspectiveGrowth": 0,
+      "twoTestsExcludedByExistingRules": true
+    }
+  },
+  "conditionsForSourceR2": [
+    "Documentary publication and actual-document R2 must close before any separately authorized source afterimages.",
+    "Exactly the selected six paths; full before/after and strict forward/inverse patch must show only3 formatter literals,1 busy literal,2 existing assertion changes,1 existing wait predicate and4 roster entries.",
+    "Preserve current common261 entries in exact order, Process27 and WindowsRetry46 blocks byte-for-byte, then append the four selected paths once. Recompute against current parent if Plan71/72/73 or another accepted cut alters a source roster.",
+    "Retain the original generic auth error source newline escape, precise regex conditions, panel guard and all existing mocks/actions/positive assertions.",
+    "Keep the native wait at its original position with one query inside one evaluation, require error existence, and reject the selected false phrases. No new waiter/action/timeout or weaker private-file predicate.",
+    "Actual source readback must bind the complete official current tree/compare/body/ref. The known external23255 copy changes are not a substitute for these gates or authorization to adopt its branch.",
+    "Only original resulting-head frontend/type/lint/Settings/cleanup results may qualify execution. All broader native-first, W05/W07/P09/M16/default/release boundaries remain separate."
+  ],
+  "risksAndLimits": [
+    "This source contradiction is sufficient to remove unsupported promises, but it does not establish retention behavior for every provider, cancellation, error path or credential method.",
+    "The plan intentionally retains raw error passthrough and unselected success/cancellation wording; it is not a universal audit or rewriting of all provider messages.",
+    "The error predicate retains the original element-selection policy and original positive rejection/effect receipts; it adds only the selected false-copy refusal. It does not invent a new complete credential outcome model.",
+    "No runtime screenshot or credential storage was reacquired or inspected as current evidence for this proposal. Historical75 outcomes remain source-scoped history, not qualification of future74 bytes.",
+    "No proof of the separate catalogue failure cause, Plan40 A/B contract or finite owner-loss/cold-resume/native qualification is transferred.",
+    "Publication base can advance; this prospective GO requires exact later rebind and must preserve all independently selected work."
+  ],
+  "blockers": [],
+  "operations": {
+    "readOnlySourceAndTreeInspection": true,
+    "inertHashAndLiteralListCalculations": true,
+    "sourceAfterimages": 0,
+    "projectOrVmExecution": 0,
+    "testsOrCompilerOrLint": 0,
+    "nativeVendorGuiExecution": 0,
+    "ciPollingOrDownloads": 0,
+    "newApiReads": 0,
+    "gitApiMutations": 0
+  },
+  "runtimeQualified": false,
+  "conclusion": "Independent prospective R2 GO for the exact six-path presentation/test/predicate/closure plan. No concrete blocker remains after closing the separate V2 UI source-pin join. Documentary, source-publication and execution gates remain distinct."
+}

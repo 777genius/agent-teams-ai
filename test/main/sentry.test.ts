@@ -13,6 +13,14 @@ const electronMock = vi.hoisted(() => ({
 vi.mock('electron', () => electronMock);
 
 const requireFromTest = createRequire(import.meta.url);
+const electronRuntimeDescriptors = [
+  { object: process, property: 'type' },
+  { object: process.versions, property: 'electron' },
+].map(({ object, property }) => ({
+  object,
+  property,
+  descriptor: Object.getOwnPropertyDescriptor(object, property),
+}));
 let restoreCommonJsStubs: (() => void)[] = [];
 
 function stubCommonJsModule(specifier: string, exports: unknown): void {
@@ -55,6 +63,9 @@ describe('main Sentry telemetry gate', () => {
   let previousDsn: string | undefined;
 
   beforeEach(() => {
+    // The existing Electron API fixture models an actual Main process.
+    Object.defineProperty(process, 'type', { configurable: true, value: 'browser' });
+    Object.defineProperty(process.versions, 'electron', { configurable: true, value: 'TEST' });
     previousDsn = process.env.SENTRY_DSN;
     process.env.SENTRY_DSN = 'https://public@example.com/1';
     vi.resetModules();
@@ -66,6 +77,10 @@ describe('main Sentry telemetry gate', () => {
     restoreCommonJsStubs.reverse();
     for (const restore of restoreCommonJsStubs) {
       restore();
+    }
+    for (const { object, property, descriptor } of electronRuntimeDescriptors) {
+      if (descriptor) Object.defineProperty(object, property, descriptor);
+      else Reflect.deleteProperty(object, property);
     }
     if (previousDsn === undefined) {
       delete process.env.SENTRY_DSN;

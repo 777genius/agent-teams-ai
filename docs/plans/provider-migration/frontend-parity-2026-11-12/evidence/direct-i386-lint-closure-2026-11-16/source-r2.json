@@ -1,0 +1,84 @@
+{
+  "kind": "independent-static-R2-exact-three-operand-lint-closure",
+  "disposition": "APPROVE exact inert one-workflow candidate and prospective prose; final actual parent/full Plan prefix/publication remain root-bound. No lint/test/native execution or PASS claimed.",
+  "reviewedContext": {
+    "commit": "a07e2d68ece77d08e152d7b0de1eb4b85d72ca06",
+    "tree": "56b61eca335f951e6b53bd5c768bd586c5ec6c7b",
+    "workflow": {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "bdafbc763a97fee129c0ee576beddf402b4faf4a",
+      "size": 104865
+    }
+  },
+  "inputManifest": {
+    "path": "/tmp/migration-evidence-20261116/migration-scope/a07-scoped-lint-three-inert-proposal/manifest.json",
+    "bytes": 10689,
+    "gitBlob": "46620a7aa4546f777a638c3f85aa5a26133a0d0a",
+    "sha256": "6a38d5849bc110c5458524158cd4dc17c22b01b6b3b913616ede1145ca7b4314"
+  },
+  "patch": {
+    "path": "/tmp/migration-evidence-20261116/migration-scope/a07-scoped-lint-three-inert-proposal/candidate.patch",
+    "bytes": 952,
+    "gitBlob": "2d45fdf5e50fe219917b2dc747200bb31022113c",
+    "sha256": "e999f0c261f59a50baddf5bc1edc969dd232192b7ec6bdc9e3075633470cda94"
+  },
+  "prospectiveText": {
+    "path": "/tmp/migration-evidence-20261116/migration-scope/a07-scoped-lint-three-inert-proposal/plan29-r1-proposal.md",
+    "bytes": 5074,
+    "gitBlob": "1357ee3a857ee8bae2192bf0a005182b2293cfc6",
+    "sha256": "a6192f0de77997bb9975c4801b73307848d0bc7eba7663766ba568423710d885"
+  },
+  "before": {
+    "path": "/tmp/migration-evidence-20261116/migration-scope/a07-scoped-lint-three-inert-proposal/before/.github/workflows/host-emulated-acceptance.yml",
+    "bytes": 104865,
+    "gitBlob": "bdafbc763a97fee129c0ee576beddf402b4faf4a",
+    "sha256": "e0485c1eca76a0617cb96e0446415d69b7650d56b30c7d94ea3bd7c1fc0925a6"
+  },
+  "after": {
+    "path": "/tmp/migration-evidence-20261116/migration-scope/a07-scoped-lint-three-inert-proposal/after/.github/workflows/host-emulated-acceptance.yml",
+    "bytes": 105052,
+    "gitBlob": "94a3d304b8d07213c4b568d95cfe569fc7e82f88",
+    "sha256": "e4f90921912ac4b83ca23005b50ed3bfb8cc726e09e2182a82bacfa39464c40f"
+  },
+  "references": [
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/a07-scoped-lint-three-inert-proposal/reference/broker-tsconfig-4936675a.json",
+      "bytes": 557,
+      "gitBlob": "4936675ad8af5a71d8c001a414836e90250a5daf",
+      "sha256": "9692a10f0691d73cd929940768cd38b084fce81f705b9561d8b1af2ba9a2daef"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/a07-scoped-lint-three-inert-proposal/reference/eslint.fast.config-8a6d66ce.js",
+      "bytes": 7268,
+      "gitBlob": "8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb",
+      "sha256": "f9d2fc0a4724b04fa231487a1bf0b4e470809d3f79e01315bee4ba236f161c88"
+    }
+  ],
+  "independentFindings": [
+    "All full source/preimage/prose/patch/reference bytes were independently rehashed. The whole before-image is byte-identical to actual retained e384 workflowbdaf; the a07 full leaf map retains that same current leaf.",
+    "Exactly three filenames are appended to the existing pnpm lint:fast:files command. The former final TaskReview filename gains only its continuation; each new filename has the correct same indentation and only the first two gain continuation. The following typecheck command is still a separate shell command.",
+    "Parsed as inert lines, the original108 operands are distinct and the after111 operands equal that complete ordered prefix plus nativeGate.ts, nativeGateDiagnostics.ts, nativeGateEvents.test.ts. No nativeDebugServiceScenario duplicate is introduced.",
+    "Exact inverse of the187-byte/3-line insertion restores the entire104865-byte original workflow. Independent unified diff equals the frozen952-byte patch. Thus every unrelated job, condition, environment, action, source check, full8 admission/retry, full10 Runtime/Team, five-file harness, compiler/type-lint, business action, deadline and upload stays byte-identical.",
+    "The unchanged fast config8a6 uses its existing TypeScript glob including these tools paths; its global ignores do not exclude them. projectService:false and its configured rule boundary are unchanged. This routes fast lint only and does not turn it into typed lint.",
+    "The unchanged broker compiler493 includes *.ts and does not exclude any of the three new operands. That is existing compiler reachability, distinct from lint execution; no tsconfig/rule/dependency/module/test changes are proposed.",
+    "The R1 correctly treats the omission as an invocation gap rather than a prior observed lint failure. The additional lint work has real unmeasured cost inside the original45-minute Team ceiling. Neither static review nor an ignored/skipped/setup-failed invocation counts as qualification.",
+    "The proposal is one positive existing-command closure. It adds no job, runner, command, test registration, absent-operand RED-only cycle, local project action or manual Actions mutation. Current native jobs must still be preserved before any parent-approved primary advancement.",
+    "Final actual parent is deliberately null. Root must bind the fresh actual parent, complete unchanged Plan prefix and exact union, publish/read back documentation first and then the one workflow source. This review does not approve unseen rebinding bytes or infer earlier external review chronology."
+  ],
+  "remainingGates": [
+    "Original resulting-source Team invocation and exit outcome",
+    "Original dedicated compilers and full broker tests",
+    "All four selected Windows x64/ARM Host/Electron native direct-root venues with source/cleanup receipts",
+    "Unchanged separate P08/P09/15s/Linux/M16/vendor/Desktop/package requirements"
+  ],
+  "prohibitedActionsPerformed": {
+    "sourceApplication": false,
+    "projectImportOrExecution": false,
+    "compilerTestsLintParser": false,
+    "gitIndexRefMutation": false,
+    "actionsMutation": false,
+    "nativeOrVendorExecution": false
+  }
+}

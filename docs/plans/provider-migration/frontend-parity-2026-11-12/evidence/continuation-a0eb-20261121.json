@@ -1,0 +1,646 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUtc": "2026-11-21T19:50:09.212920+00:00",
+  "parentHead": "a0eb98f0775ca8499815c20d459e1c1037ef363d",
+  "archive": {
+    "file": "continuation-a0eb-20261121.tar.gz",
+    "bytes": 19563877,
+    "sha256": "1012766999eec5e7bc3b9163d9faf3cf4fecf60189ef64d5ef9e5e1438e9f857"
+  },
+  "entries": 1294,
+  "omittedObjects": 9782,
+  "originalRunSummary": {
+    "kind": "ORIGINAL_SIX_FAMILY_TERMINAL_SUMMARY",
+    "sourceHead": "a0eb98f0775ca8499815c20d459e1c1037ef363d",
+    "baseSha": "8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+    "mergeSha": "79ca55a62312144054c1b629f560dfba77402b78",
+    "sourceTreeSha": "b08ca7c9a618b0ace7896fbc94e0a0b0efe07f82",
+    "event": "pull_request",
+    "action": "synchronize",
+    "draft": true,
+    "attempt": 1,
+    "recordedAtUtc": "2026-11-21T19:31:21.591311+00:00",
+    "allSixTerminal": true,
+    "status": "COMPLETE_ORIGINAL_OBSERVATION_WITH_SIX_PRIMARY_FAILURES",
+    "allSelectedPrimaryPassed": false,
+    "mergeQualified": false,
+    "totals": {
+      "runs": 6,
+      "successfulRuns": 4,
+      "failedRuns": 2,
+      "jobs": 69,
+      "success": 50,
+      "failure": 8,
+      "skipped": 11,
+      "cancelled": 0,
+      "queued": 0,
+      "inProgress": 0,
+      "primaryFailures": 6,
+      "derivedAggregateFailures": 2
+    },
+    "families": [
+      {
+        "family": "Host",
+        "runId": 44926249301,
+        "attempt": 1,
+        "event": "pull_request",
+        "headSha": "a0eb98f0775ca8499815c20d459e1c1037ef363d",
+        "status": "completed",
+        "conclusion": "failure",
+        "workflowPath": ".github/workflows/host-emulated-acceptance.yml",
+        "runUrl": "https://github.com/777genius/agent-teams-ai/actions/runs/44926249301",
+        "jobs": {
+          "total": 30,
+          "success": 24,
+          "failure": 6,
+          "skipped": 0,
+          "cancelled": 0,
+          "queued": 0,
+          "inProgress": 0
+        },
+        "primaryFailures": 5,
+        "derivedAggregateFailures": 1,
+        "terminalMetadata": {
+          "path": "ci-audit-run-44926249301-terminal.json",
+          "bytes": 395507,
+          "sha256": "6fd87e93aa3c691c1fb0fcab6167cc1a793cce5bf7922611750edae5d7ae462d"
+        },
+        "artifactListing": {
+          "path": "ci-audit-run-44926249301-artifacts.json",
+          "bytes": 27640,
+          "sha256": "d8d65b61a97b185b0e975a6f75310ad5f827ef3dda28f999506ce7e2124b3c2b"
+        },
+        "readback": {
+          "path": "host-artifacts/qualification.json",
+          "bytes": 42620,
+          "sha256": "51660590ff80cfb7a424540d4dc2666f283a06f5feb9a30647c952206956264c"
+        }
+      },
+      {
+        "family": "Source",
+        "runId": 44926249295,
+        "attempt": 1,
+        "event": "pull_request",
+        "headSha": "a0eb98f0775ca8499815c20d459e1c1037ef363d",
+        "status": "completed",
+        "conclusion": "failure",
+        "workflowPath": ".github/workflows/ci.yml",
+        "runUrl": "https://github.com/777genius/agent-teams-ai/actions/runs/44926249295",
+        "jobs": {
+          "total": 15,
+          "success": 2,
+          "failure": 2,
+          "skipped": 11,
+          "cancelled": 0,
+          "queued": 0,
+          "inProgress": 0
+        },
+        "primaryFailures": 1,
+        "derivedAggregateFailures": 1,
+        "terminalMetadata": {
+          "path": "ci-audit-run-44926249295-terminal.json",
+          "bytes": 57321,
+          "sha256": "b751f3bcbc6a76ed8466efc8bb5f3c6661fb47723a21319e4950c9ec096cf2a1"
+        },
+        "artifactListing": {
+          "path": "ci-audit-run-44926249295-artifacts.json",
+          "bytes": 989,
+          "sha256": "c3b53ea1e024ee836b35c9883e0260f35e81dc5806732ec79edc8df59c32aea7"
+        },
+        "readback": {
+          "path": "source-family-qualification.json",
+          "bytes": 6901,
+          "sha256": "4eb7269391816621473e74b92b5060a98eb0b8a817e3a68d8b203cd6bb7f7fbe"
+        }
+      },
+      {
+        "family": "Packaged",
+        "runId": 44926249318,
+        "attempt": 1,
+        "event": "pull_request",
+        "headSha": "a0eb98f0775ca8499815c20d459e1c1037ef363d",
+        "status": "completed",
+        "conclusion": "success",
+        "workflowPath": ".github/workflows/electron-packaged-ci.yml",
+        "runUrl": "https://github.com/777genius/agent-teams-ai/actions/runs/44926249318",
+        "jobs": {
+          "total": 7,
+          "success": 7,
+          "failure": 0,
+          "skipped": 0,
+          "cancelled": 0,
+          "queued": 0,
+          "inProgress": 0
+        },
+        "primaryFailures": 0,
+        "derivedAggregateFailures": 0,
+        "terminalMetadata": {
+          "path": "ci-audit-run-44926249318-terminal.json",
+          "bytes": 96420,
+          "sha256": "3ed9aff46abccd1e286313688e5535b825e0292f715d4460681601b5590953b6"
+        },
+        "artifactListing": {
+          "path": "ci-audit-run-44926249318-artifacts.json",
+          "bytes": 4760,
+          "sha256": "d3a6c76eb2e3c4917530a79bf990b403b490a9bcf0d2a4ef5eb91dc874eebe1c"
+        },
+        "readback": {
+          "path": "packaged-five-platforms-index.json",
+          "bytes": 25780,
+          "sha256": "aca2ca77ffc09065142db3846616728d7fdbec855a236c40fa8962749ccf4da5"
+        }
+      },
+      {
+        "family": "Process",
+        "runId": 44926249189,
+        "attempt": 1,
+        "event": "pull_request",
+        "headSha": "a0eb98f0775ca8499815c20d459e1c1037ef363d",
+        "status": "completed",
+        "conclusion": "success",
+        "workflowPath": ".github/workflows/host-process-acceptance.yml",
+        "runUrl": "https://github.com/777genius/agent-teams-ai/actions/runs/44926249189",
+        "jobs": {
+          "total": 5,
+          "success": 5,
+          "failure": 0,
+          "skipped": 0,
+          "cancelled": 0,
+          "queued": 0,
+          "inProgress": 0
+        },
+        "primaryFailures": 0,
+        "derivedAggregateFailures": 0,
+        "terminalMetadata": {
+          "path": "ci-audit-run-44926249189-terminal.json",
+          "bytes": 63743,
+          "sha256": "4f592bf3929042d9724d58ea8b290421df99a1bc62f9b864bab9817221a50ee3"
+        },
+        "artifactListing": {
+          "path": "ci-audit-run-44926249189-artifacts.json",
+          "bytes": 4784,
+          "sha256": "b1e0b57dc12e100384754078ce7161afa2ebcb45a920b5790c6d226f40190209"
+        },
+        "readback": {
+          "path": "process-artifacts/qualification.json",
+          "bytes": 19494,
+          "sha256": "563760a7cbfaaecb5a5ab8ff35497e167a10ffd651b0ae84ce233a66fa858695"
+        }
+      },
+      {
+        "family": "Teams",
+        "runId": 44926249185,
+        "attempt": 1,
+        "event": "pull_request",
+        "headSha": "a0eb98f0775ca8499815c20d459e1c1037ef363d",
+        "status": "completed",
+        "conclusion": "success",
+        "workflowPath": ".github/workflows/teams-create-page-desktop-e2e.yml",
+        "runUrl": "https://github.com/777genius/agent-teams-ai/actions/runs/44926249185",
+        "jobs": {
+          "total": 3,
+          "success": 3,
+          "failure": 0,
+          "skipped": 0,
+          "cancelled": 0,
+          "queued": 0,
+          "inProgress": 0
+        },
+        "primaryFailures": 0,
+        "derivedAggregateFailures": 0,
+        "terminalMetadata": {
+          "path": "ci-audit-run-44926249185-terminal.json",
+          "bytes": 35334,
+          "sha256": "55f2182ab018748ac426217f5ee609cd1b4d5ad5feb0a55ce943616d9efbfbbb"
+        },
+        "artifactListing": {
+          "path": "ci-audit-run-44926249185-artifacts.json",
+          "bytes": 2888,
+          "sha256": "0816745e1f4f91d31aa4aca515f786493c7ab4c8964bb12ad3c4521560da7499"
+        },
+        "readback": {
+          "path": "teams-artifacts/qualification.json",
+          "bytes": 37794,
+          "sha256": "5867bcf369e123f325a8045997a6e1bff12ed11685b632b63df7ef2981135bab"
+        }
+      },
+      {
+        "family": "Native V2",
+        "runId": 44926249322,
+        "attempt": 1,
+        "event": "pull_request",
+        "headSha": "a0eb98f0775ca8499815c20d459e1c1037ef363d",
+        "status": "completed",
+        "conclusion": "success",
+        "workflowPath": ".github/workflows/opencode-v2-stage1-preflight.yml",
+        "runUrl": "https://github.com/777genius/agent-teams-ai/actions/runs/44926249322",
+        "jobs": {
+          "total": 9,
+          "success": 9,
+          "failure": 0,
+          "skipped": 0,
+          "cancelled": 0,
+          "queued": 0,
+          "inProgress": 0
+        },
+        "primaryFailures": 0,
+        "derivedAggregateFailures": 0,
+        "terminalMetadata": {
+          "path": "ci-audit-run-44926249322-terminal.json",
+          "bytes": 95965,
+          "sha256": "bfd44d3c569eb401607f63d8f9aac8804abdbda4f60ede872128afbbd72f829c"
+        },
+        "artifactListing": {
+          "path": "ci-audit-run-44926249322-artifacts.json",
+          "bytes": 7344,
+          "sha256": "cf37551f8287204dabe90061824033a34bcda37c9f3bdbce308b9be09c382391"
+        },
+        "readback": {
+          "path": "native-artifacts/qualification.json",
+          "bytes": 12410,
+          "sha256": "c2cb164a6cd97dab5cf263e27671a73d6763b6e77516ad9e122ceb287102ec39"
+        }
+      }
+    ],
+    "sourceTuple": {
+      "path": "source-tuple-and-original-runs.json",
+      "bytes": 1582,
+      "sha256": "b009e512a6360a9f6e58b8217a2a854ba258f1a955384c891a10e6eaab0bd5df"
+    },
+    "mergeSourceTreeProof": {
+      "path": "source-fast-feedback-tree-supplement.json",
+      "bytes": 1371,
+      "sha256": "9fb9493e73ac30444bbd0c06595d203c116e1741c2d56db0112ccf25c4ea1db7"
+    },
+    "failureBoundaries": {
+      "path": "failure-boundaries-final.json",
+      "bytes": 8390,
+      "sha256": "4c777aab2577bca3f3e06efc8550b801fbbcafde585a81d5675ad741fb271ff4"
+    },
+    "packagedFivePlatforms": {
+      "path": "packaged-five-platforms-index.json",
+      "bytes": 25780,
+      "sha256": "aca2ca77ffc09065142db3846616728d7fdbec855a236c40fa8962749ccf4da5"
+    },
+    "limits": [
+      "Terminal observation is complete; E2E is not fully green. Host and Source remain failed for the exact a0eb original attempt.",
+      "No skipped, cancelled, queued or not-selected scope counts as success. Eleven Source jobs are explicitly skipped.",
+      "All declared artifact readbacks bind to this original run set. No prior 4ec/e8 PASS is transferred.",
+      "Source Fast feedback checked the original PR merge SHA with the exact same Git tree as a0eb. Checkout identity remains merge, and no runtime/output pin proof is added.",
+      "Successes have their own finite-peer, trusted-writer, native binary availability, custody and release limitations in referenced qualifications."
+    ],
+    "observerPolicy": {
+      "soleStatusObserver": true,
+      "minimumStatusCadenceMs": 305000,
+      "reruns": 0,
+      "dispatches": 0,
+      "cancellations": 0,
+      "githubMessagesOrPrMutations": 0,
+      "productProviderNativeExecutions": 0,
+      "artifactListingReuse": "Packaged complete-producer listing read once; queued aggregate was proven not an artifact producer; exact original five producer jobs rebound at terminal."
+    },
+    "finalizer": {
+      "path": "finalize-original-runs.py",
+      "bytes": 11601,
+      "sha256": "4f7c7d085517207a9a2f335b29bf65d0cc319497c7c46fc87497de2782b00c24"
+    }
+  },
+  "sourcePins": {
+    ".github/workflows/ci.yml": {
+      "bytes": 200305,
+      "sha256": "2a83808852f92a202a899316ce0963eef5502bc4b02865a93615beff4a3fd4a7"
+    },
+    ".github/workflows/host-emulated-acceptance.yml": {
+      "bytes": 151149,
+      "sha256": "3fb5489ad460b944e5c2100350d66bbae1032fc0461523a2409e91d04d328691"
+    },
+    "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ManagementHost.ts": {
+      "bytes": 21783,
+      "sha256": "4b833982ade46aec6a5243cde39662180432edf02ca70cfe056e0e7423b96e7c"
+    },
+    "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2SessionCredential.ts": {
+      "bytes": 6108,
+      "sha256": "a1181f28e9a6ad3b4ca559aeed253713c2da523997a299e11f106b7ebe277abe"
+    },
+    "packages/legacy-agent-host/tests/opencode-v2-credential-scope.test.ts": {
+      "bytes": 41421,
+      "sha256": "6cbb0cb7755fc39afdb99a4e411bc8b67eadc0903c75d2f9825aa735971bf151"
+    },
+    "packages/legacy-agent-host/tests/opencode-v2-management-recovery.test.ts": {
+      "bytes": 20327,
+      "sha256": "5e39426da3c9248d902846ac00d3970b92839eeb916f3a9782f6526234170572"
+    },
+    "scripts/legacy-agent-host/desktop-backend-observations.test.ts": {
+      "bytes": 192399,
+      "sha256": "ba66ff77ad3cf87e96aff2497a70ce8de01e832fb938abce3cd224530e194926"
+    },
+    "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts": {
+      "bytes": 53051,
+      "sha256": "652a83efa6313175fb94d1784a3dbee8072ed629768956c1abdee7f352b4ecbd"
+    },
+    "scripts/legacy-agent-host/desktop-proof-integrated-sources.ts": {
+      "bytes": 45788,
+      "sha256": "0e84d27946a6c1f82028971106d0481705c8d94958e591afeedb2281059f2218"
+    },
+    "scripts/legacy-agent-host/desktop-retained-opencode-app.ts": {
+      "bytes": 53361,
+      "sha256": "354d15adea2b31966639ef72572249cdadafe808d3442dd0ed1ecdb3e98557ee"
+    },
+    "scripts/legacy-agent-host/desktop-runtime-source-fixture.ts": {
+      "bytes": 17958,
+      "sha256": "6ead8b6635f89075d7c53863a1423784b781ee832382bfe426b74e7e669b9cfb"
+    },
+    "scripts/lib/desktop-finite-node-options.ts": {
+      "bytes": 5636,
+      "sha256": "0caaa6849c4752d00b559f52a4633c5d81b9efea944add6fb0d7e12b03b1a9a2"
+    },
+    "src/renderer/components/team/TeamDetailView.tsx": {
+      "bytes": 138117,
+      "sha256": "cb49077e29b062d4a4d5f644abf7d90e63b6377fdb70a1de682d8c62aa6c132d"
+    },
+    "test/renderer/components/team/members/MemberDetailDialog.test.ts": {
+      "bytes": 31153,
+      "sha256": "9ac8e39671ce6e76f6ac2883ab3224837780100802284020e7bb698f516012b5"
+    },
+    "test/renderer/hooks/useMemberStats.test.tsx": {
+      "bytes": 2781,
+      "sha256": "ecdb798a20fce19f9e50c1d40ef5903cb51b2e71e5f0c3f7a52f6e235b759304"
+    },
+    "test/scripts/retainedDonorFailureDiagnostics.test.ts": {
+      "bytes": 7243,
+      "sha256": "3c69b82ff42af6c4f2979e26b251449812e9620be7eab65a80c2aa7df60c3343"
+    }
+  },
+  "compiledPins": {
+    "packages/legacy-agent-host/dist/adapters/providers/OpenCodeV2SessionCredential.js": {
+      "bytes": 5162,
+      "sha256": "87f7109f502cb96efa9253c1840788cc9fa17e987ee49062922afb6876348380"
+    },
+    "packages/legacy-agent-host/dist/adapters/providers/OpenCodeV2ManagementHost.js": {
+      "bytes": 22787,
+      "sha256": "5c48ae041d93bb1c0ca9bae9cbba9c9b5c236feae90c92192c6df820882e2aed"
+    }
+  },
+  "statusPin": {
+    "bytes": 205554,
+    "sha256": "15c0b57fc17f40c31e7657fbce464731fcb1a8ae5054c91a9d1e26f1f5c2ecd8"
+  },
+  "finalPublicationPlan": {
+    "bytes": 26233,
+    "sha256": "85ca1b623e633e0b4e33201a74f9c138d6f695259eff678cdd56e6ad8a5708aa"
+  },
+  "newOriginalE2EQualified": false,
+  "rootReview": {
+    "schemaVersion": 1,
+    "reviewer": "/root",
+    "recordedAtUtc": "2026-11-21T19:11:17.426677+00:00",
+    "parentHead": "a0eb98f0775ca8499815c20d459e1c1037ef363d",
+    "verdict": "ROOT_R1_COMPLETE_FOR_FROZEN_SOURCE_CANDIDATE_NOT_ORIGINAL_E2E",
+    "sourcePins": {
+      ".github/workflows/ci.yml": {
+        "bytes": 200305,
+        "sha256": "2a83808852f92a202a899316ce0963eef5502bc4b02865a93615beff4a3fd4a7"
+      },
+      ".github/workflows/host-emulated-acceptance.yml": {
+        "bytes": 151149,
+        "sha256": "3fb5489ad460b944e5c2100350d66bbae1032fc0461523a2409e91d04d328691"
+      },
+      "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ManagementHost.ts": {
+        "bytes": 21783,
+        "sha256": "4b833982ade46aec6a5243cde39662180432edf02ca70cfe056e0e7423b96e7c"
+      },
+      "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2SessionCredential.ts": {
+        "bytes": 6108,
+        "sha256": "a1181f28e9a6ad3b4ca559aeed253713c2da523997a299e11f106b7ebe277abe"
+      },
+      "packages/legacy-agent-host/tests/opencode-v2-credential-scope.test.ts": {
+        "bytes": 41421,
+        "sha256": "6cbb0cb7755fc39afdb99a4e411bc8b67eadc0903c75d2f9825aa735971bf151"
+      },
+      "packages/legacy-agent-host/tests/opencode-v2-management-recovery.test.ts": {
+        "bytes": 20327,
+        "sha256": "5e39426da3c9248d902846ac00d3970b92839eeb916f3a9782f6526234170572"
+      },
+      "scripts/legacy-agent-host/desktop-backend-observations.test.ts": {
+        "bytes": 192399,
+        "sha256": "ba66ff77ad3cf87e96aff2497a70ce8de01e832fb938abce3cd224530e194926"
+      },
+      "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts": {
+        "bytes": 53051,
+        "sha256": "652a83efa6313175fb94d1784a3dbee8072ed629768956c1abdee7f352b4ecbd"
+      },
+      "scripts/legacy-agent-host/desktop-proof-integrated-sources.ts": {
+        "bytes": 45788,
+        "sha256": "0e84d27946a6c1f82028971106d0481705c8d94958e591afeedb2281059f2218"
+      },
+      "scripts/legacy-agent-host/desktop-retained-opencode-app.ts": {
+        "bytes": 53361,
+        "sha256": "354d15adea2b31966639ef72572249cdadafe808d3442dd0ed1ecdb3e98557ee"
+      },
+      "scripts/legacy-agent-host/desktop-runtime-source-fixture.ts": {
+        "bytes": 17958,
+        "sha256": "6ead8b6635f89075d7c53863a1423784b781ee832382bfe426b74e7e669b9cfb"
+      },
+      "scripts/lib/desktop-finite-node-options.ts": {
+        "bytes": 5636,
+        "sha256": "0caaa6849c4752d00b559f52a4633c5d81b9efea944add6fb0d7e12b03b1a9a2"
+      },
+      "src/renderer/components/team/TeamDetailView.tsx": {
+        "bytes": 138117,
+        "sha256": "cb49077e29b062d4a4d5f644abf7d90e63b6377fdb70a1de682d8c62aa6c132d"
+      },
+      "test/renderer/components/team/members/MemberDetailDialog.test.ts": {
+        "bytes": 31153,
+        "sha256": "9ac8e39671ce6e76f6ac2883ab3224837780100802284020e7bb698f516012b5"
+      },
+      "test/renderer/hooks/useMemberStats.test.tsx": {
+        "bytes": 2781,
+        "sha256": "ecdb798a20fce19f9e50c1d40ef5903cb51b2e71e5f0c3f7a52f6e235b759304"
+      },
+      "test/scripts/retainedDonorFailureDiagnostics.test.ts": {
+        "bytes": 7243,
+        "sha256": "3c69b82ff42af6c4f2979e26b251449812e9620be7eab65a80c2aa7df60c3343"
+      }
+    },
+    "compiledPins": {
+      "packages/legacy-agent-host/dist/adapters/providers/OpenCodeV2SessionCredential.js": {
+        "bytes": 5162,
+        "sha256": "87f7109f502cb96efa9253c1840788cc9fa17e987ee49062922afb6876348380"
+      },
+      "packages/legacy-agent-host/dist/adapters/providers/OpenCodeV2ManagementHost.js": {
+        "bytes": 22787,
+        "sha256": "5c48ae041d93bb1c0ca9bae9cbba9c9b5c236feae90c92192c6df820882e2aed"
+      }
+    },
+    "independentExactReviews": [
+      {
+        "path": "ci-a0eb/catalog-owner-reuse-final-r2.json",
+        "bytes": 23383,
+        "sha256": "022e5ef12d791416319cc121dc748a7cc45c21ebe3ee0e9fcababfa756825ec6"
+      },
+      {
+        "path": "membership-ready-plan/exact-r2-ci-audit.json",
+        "bytes": 3891,
+        "sha256": "5960a4afa021cebef6b2520ce9ac17fcc6da43a94a0cad045ec66fcf115777ab"
+      },
+      {
+        "path": "installer-sourcemap-plan/exact-r2-ci-audit.json",
+        "bytes": 4197,
+        "sha256": "0057488d2b46b7b9c51ec2804f67e3c1d5f469a6f2b7f6ec87c6d7362f5849b0"
+      },
+      {
+        "path": "team-import-graph/final-r2-test-oracle.json",
+        "bytes": 14084,
+        "sha256": "8b0397e9a3cde5c6a2acf3369708aed25c5656fbb60a299ff183fe9e5844c7e8"
+      },
+      {
+        "path": "retained-donor-analysis/final-r2-test-oracle.json",
+        "bytes": 7533,
+        "sha256": "9cf61803c44a6cfb858fed229abe67211049123dfe35442af59d48daa01ed6e7"
+      }
+    ],
+    "finalStaticChecks": [
+      {
+        "path": "ci-a0eb/next-final-source-size.json",
+        "bytes": 643,
+        "sha256": "2e2c5fbc6d9db8421fc55ecb28d3db8e77bcb2db2bbc2b5e1eafcdceb70f3f66"
+      },
+      {
+        "path": "ci-a0eb/next-final-provisioning.json",
+        "bytes": 658,
+        "sha256": "0995225869dc8174beced483d8d8655e29110a5e2b9809d16b04a89d5822c31b"
+      },
+      {
+        "path": "ci-a0eb/next-final-manifest-lint.json",
+        "bytes": 810,
+        "sha256": "f6c7cdf6c452aaf8012c48eb3acde6f0ea7242dc4ea8beffd743f6e9a8b9fbbd"
+      },
+      {
+        "path": "ci-a0eb/next-final-diff.json",
+        "bytes": 597,
+        "sha256": "c8e135e1754331f9d154a1205ffc42e59e11d2beba84b4ca78e3894f7f2025ff"
+      }
+    ],
+    "manifest": {
+      "path": "ci-a0eb/next-source-manifest-final.json",
+      "bytes": 396720,
+      "sha256": "50f1a2446b7a26be7a5cf9787204edb4eaead7e2b9d51c9cba61f3c3e698401b"
+    },
+    "sliceReadbacks": [
+      {
+        "path": "catalog-owner-reuse/verification.json",
+        "bytes": 7825,
+        "sha256": "58d423767319f34a615cb76d9d0ced6db785155ecf47249cc9ebf72ee2bf40ab"
+      },
+      {
+        "path": "membership-ready-plan/verification.json",
+        "bytes": 1797,
+        "sha256": "870ed761835cb5c1943d723af374e4c5ad9127d69a30d89ad0c027d268250492"
+      },
+      {
+        "path": "installer-sourcemap-plan/final-handoff.json",
+        "bytes": 2943,
+        "sha256": "701961004419035d08d3e80b6ae8b0e3dea36699ba18d9d685b1d97077b185fb"
+      },
+      {
+        "path": "team-import-graph/final-handoff.json",
+        "bytes": 1666,
+        "sha256": "10e82e867deefcf129863983651558f3e9b76674f42764b7310956accaccef3b"
+      },
+      {
+        "path": "retained-donor-analysis/final-handoff.json",
+        "bytes": 4382,
+        "sha256": "6668ec85513328ebb830255c10589fbf5981b403e6fbf25538b2f933659a7522"
+      }
+    ],
+    "assessment": {
+      "metadata": "Only one-way absent-credential original default-provider owner reuse; exact/reverse/keyed/retained/expired guards retained.12/12 finite; nativeHTTPtriplet not claimed.",
+      "membership": "Two original source-scoped owners ready before Create inside same90s; all later strict physical oracles unchanged.22/22 unchanged lifecycle finite tests.",
+      "installer": "Existing map-disable knob in exactDarwinARMfiniteInstalleronly.12PASS1platformskip; no measured speedup; optionalMainoffline symbolication omitted.",
+      "ui": "Two optional panels lazy with localSuspense; existing hooks/state retain contracts.19/19 actual lifecycle cases; capped3746, no factorycount/colddeadline proof.",
+      "retained": "Exact793line diagnosticv2+133line9case finite tests. Initial5/9mockfixturefailure retained. Originalerror/finalthrow/cleanup source-preserved; late physicalwrite notcancelled; donor causeUNKNOWN.",
+      "manifest": "Four exact test-file additions to existing array only; all14changedruntime/code-testpaths selected among1985. Two workflows remain separately Git-pinned."
+    },
+    "noFurtherProductionCandidate": "Darwin Review first saved-readiness cutoff crosses originalsecondHTTPcatalog custody. No authority cache, guard coalescing, native-realpath replacement, serial HTTP bypass or graph guard removal. Rejected warmupcontrol failure retained without candidateexecution.",
+    "historicalFailuresRemain": [
+      "DarwinARMResume",
+      "DarwinARMInstaller",
+      "DarwinARMquit-activecoldAlice",
+      "DarwinARMReview",
+      "LinuxV2membership",
+      "Source retained donorCreate"
+    ],
+    "boundaries": [
+      "No genuineClaude/Codex execution includingversion probes; finiteTEST only, pinnedOpenCode localhostfixture allowed.",
+      "Original60/90/120action,30CDP,120metadata,180Host/devstartup,240retained budgets unchanged.",
+      "No app-main merge/release/defaultHost/Stage2; selected1192→1186→982 route retained.",
+      "Currentoriginal runs unchanged; no rerun/dispatch/cancel; allsixterminal required before publication.",
+      "No original E2E/fullworkspace pass for these candidatebytes follows from scoped checks.",
+      "Originalsource/dist worktree remains frozen for a0eb readbacks; candidateworktree separate, shareddependencies notinstalled/mutated."
+    ],
+    "publication": {
+      "originalAllSixTerminal": true,
+      "newOriginalE2EQualified": false,
+      "exactArchiveReviewPending": true,
+      "expectedHeadNonForcePublicationPending": true
+    },
+    "newOriginalE2EQualified": false,
+    "sourceReviewReceipt": {
+      "path": "ci-a0eb/next-root-source-review.json",
+      "bytes": 8749,
+      "sha256": "a2c64b260dbe5ab36b67181ae9d4d3f566b8d77b36cb9f14b78f4cafbebcbf27"
+    },
+    "integrationReviewReceipt": {
+      "path": "ci-a0eb/next-integration-r2.json",
+      "bytes": 17952,
+      "sha256": "197d8a0a7e7d63ab26bde6fd5bdaf3cde164c867ada0af8e2e31722f5b3aa557"
+    },
+    "archiveScannerRevision": {
+      "rootR1": "GO_EXACT_V2_FULL_BUNDLE_BINDING_AFTER_INDEPENDENT_R2",
+      "review": {
+        "path": "a0eb-archive-input-inventory/archive-scanner-v2-r2.json",
+        "bytes": 8701,
+        "sha256": "3cdf287c53dbc1dbb874a3e1bbe252d5ee4f0015159af0fb64c4cf0f42338ae8"
+      },
+      "scope": "One unchanged original Main bundle containing an exact static ssh2@1.17.0 local capability self-test and two parser/serializer markers. Entry/bytes/fullSHA/completeUTF8byteOffsets fixed; other patterns unchanged; file must be included.",
+      "controls": {
+        "path": "a0eb-archive-input-inventory/archive-marker-guard-controls.json",
+        "bytes": 2048,
+        "sha256": "f85383ace09df442061612d6b3929132e03506ec5a772bcf45dcbad0d4c2a051"
+      },
+      "noProductSourceChanges": true
+    }
+  },
+  "publicDependencyMarkerException": {
+    "path": "ci-a0eb/host-artifacts/14718303773/TEST-desktop-backend-WfLmbW/emulated-cold-resume-epoch1-bundles/main/index.cjs",
+    "bytes": 11548308,
+    "sha256": "15a39d77213c230469a1e72bf09f0a3fc8688881db1e7fe3bbb00b2cdff77060",
+    "byteOffsets": [
+      6592490,
+      6707192,
+      7165141
+    ]
+  },
+  "publicDependencyMarkerProofs": [
+    "a0eb-archive-input-inventory/private-key-marker-inventory.json",
+    "a0eb-archive-input-inventory/private-key-marker-provenance.json",
+    "a0eb-archive-input-inventory/archive-scanner-v2-r2.json"
+  ],
+  "limitations": [
+    "Six terminal original workflows belong to a0eb; their successes do not qualify the new source candidate.",
+    "Original primary failures, derived aggregate failures and skipped jobs retain their original status.",
+    "Local candidate checks are scoped and independently reviewed; no new original E2E/full-workspace success is claimed.",
+    "Darwin Review retains its original90s readiness failure with no safe additional authority/currentness optimization selected.",
+    "Retained donor Create cause remains UNKNOWN; the added observer is diagnostic-only and cannot turn that failure into success.",
+    "Bounded diagnostics do not cancel an already-started file write; a late physical PNG with an unavailable receipt is unqualified.",
+    "Installer source-map omission is exact finiteDarwinARM-only; no measured startup speedup, optionalMainoffline symbolication omitted.",
+    "UI source graph reduction is static; actual cold/lazy-open latency and factory execution counts remain unqualified.",
+    "The rejected Vite warmup control failed; candidate was not run, no warmup source config was applied.",
+    "Archive contains selected UTF8 evidence/source/logs. Binary artifacts, screenshots, ZIPs and reproducible caches are omitted with explicit hashes or object metadata.",
+    "Source/digest/structural closure observations do not substitute for unavailable native executable bytes or custody/natural-exit evidence.",
+    "Fast feedback ran on merge79ca55 with the same complete tree as a0eb; checkout identity remains merge and missing runtime/compiler pins remain missing.",
+    "No genuineClaude/Codex execution, new UI retry, widened original deadline, app-main merge, release, defaultHost or Stage2 is authorized here.",
+    "PR remains Draft; subsequent full qualification and selected merge route retain their independent gates and execution restrictions.",
+    "One exact captured Main bundle contains a verified static ssh2 capability-test key and parser/serializer markers. Only its full path/bytes/SHA/offset set is excepted from the private-key-marker check; this is not a general secret-free certification. Initial archive build failure is retained."
+  ]
+}

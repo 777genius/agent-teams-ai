@@ -6,12 +6,22 @@ import { createOpenCodeV2OwnedSessionClient,
   readOpenCodeV2CheckpointSessionId } from '@agent-teams/provider-implementations/opencode';
 import { createOpenCodeV2MemberProvider } from './OpenCodeV2MemberProvider.js';
 import { createOpenCodeV2EmbeddedServer } from './OpenCodeV2EmbeddedServer.js';
+import { readOpenCodeV2Snapshot } from './OpenCodeV2ReadOnlySnapshot.js';
+import type { OpenCodeV2ReadOnlyClient } from './OpenCodeV2ReadOnlySnapshot.js';
+import type { OpenCodeV2EmbeddedReady } from './OpenCodeV2EmbeddedServer.js';
 import { openCodeV2EmbeddedConfig } from './OpenCodeV2EmbeddedConfig.js';
+import { attestOpenCodeV2ModelSelection } from './OpenCodeV2ModelSelection.js';
+import { captureOpenCodeV2SessionCredential } from './OpenCodeV2SessionCredential.js';
+import { captureOpenCodeV2Configuration } from './OpenCodeV2CapturedConfiguration.js';
 import { runtimeDigest } from '../../runtime/identity.js';
+import { capturedMcpSourceCurrent } from '../../mcp-catalog/capturedSource.js';
 import { hasUntrustedOpenCodeBinaryOverride } from '../../composition/openCodeV2Environment.js';
+import { openCodeV2ImageMimes, openCodeV2MediaMimes, openCodeV2MediaRevision } from './OpenCodeV2MediaReceipt.js';
+import type { NativeAttachmentCapabilities } from '../../attachments/attachmentTypes.js';
 import type { MemberProvider, MemberProviderContext } from './MemberProvider.js';
 import type { OpenCodeV2OwnedSession } from './OpenCodeV2OwnedSession.js';
 import type { NativeInitialContextCapture } from './OpenCodeV2InitialContextReadback.js';
+import type { OpenCodeV2OwnedSessionSelection, OpenCodeV2TransportConfig } from '@agent-teams/provider-implementations/opencode';
 
 const unavailable = (): never => { throw new Error('OpenCode V2 embedded session unavailable'); };
 type OwnedClient = ReturnType<typeof createOpenCodeV2OwnedSessionClient>;
@@ -26,61 +36,99 @@ export function createOpenCodeV2EmbeddedMemberProvider(context: MemberProviderCo
       selected.protocolRevision !== '2.1.4' || !selected.embedded ||
       hasUntrustedOpenCodeBinaryOverride(selected.environment) ||
       hasUntrustedOpenCodeBinaryOverride(process.env) || selected.mcpPolicyPlugin ||
-      selected.capturedMcpServers || selected.capturedMcpSource || selected.mcpCatalogSource ||
       (selected.extraArgs?.length ?? 0) !== 0) return unavailable();
   const profile = selected, embedded = selected.embedded;
   const capturedRequest = runtimeDigest(context.request), capturedProfile = runtimeDigest(context.profile);
   const capturedEndpoint = runtimeDigest(context.endpoint.binding), instructions = context.instructions;
-  const { config, selection, requiredToolNames } = openCodeV2EmbeddedConfig(context);
   const abort = new AbortController();
-  let sealed = false, opened = false, cleanupUnknown = false, nativeImages = false;
+  let sealed = false, opened = false, cleanupUnknown = false, nativeImages = false, nativeDocuments = false;
   let delegate: MemberProvider | undefined;
   let server: ReturnType<typeof createOpenCodeV2EmbeddedServer> | undefined;
-  let nativePin: Readonly<{ pid: number; startIdentity: string }> | undefined;
+  let nativePin: Readonly<OpenCodeV2EmbeddedReady> | undefined;
   let nativeSessionId: string | undefined;
   let startup: Promise<void> | undefined;
   let initialAttempt: Promise<Awaited<ReturnType<OpenCodeV2OwnedSession['installAndAttestInitialContext']>>> | undefined;
-  const current = () => !sealed && !cleanupUnknown && !abort.signal.aborted && context.isCurrent() &&
+  const contextCurrent = () => !sealed && !cleanupUnknown && !abort.signal.aborted && context.isCurrent() &&
     runtimeDigest(context.request) === capturedRequest && runtimeDigest(context.profile) === capturedProfile &&
     runtimeDigest(context.endpoint.binding) === capturedEndpoint && context.instructions === instructions &&
-    !hasUntrustedOpenCodeBinaryOverride(process.env);
+    !hasUntrustedOpenCodeBinaryOverride(process.env) && capturedMcpSourceCurrent(profile);
+  const configuration = captureOpenCodeV2Configuration(profile,
+    { providerId: profile.nativeOptions.providerId, modelId: profile.model }, contextCurrent);
+  const { config, selection, requiredToolNames, requiredServerNames } =
+    openCodeV2EmbeddedConfig(context, configuration.configuration);
+  const credential = captureOpenCodeV2SessionCredential(profile, profile.nativeOptions.providerId,
+    configuration.isCurrent, configuration.key, configuration.selectedFile);
+  const selectedFile = configuration.selectedFile;
+  const current = credential.isCurrent;
+  let nativeCredential: OpenCodeV2OwnedSessionSelection['credential'];
+  const matchesSelection = (observed: Awaited<ReturnType<OwnedClient['readSession']>>) =>
+    runtimeDigest({ agent: observed.agent, model: observed.model, permissions: observed.permissions,
+      ...(observed.credential ? { credential: observed.credential } : {}) }) ===
+    runtimeDigest({ ...selection, ...(nativeCredential ? { credential: nativeCredential } : {}) });
   const assertCurrent = () => { if (!current()) unavailable(); };
-  async function withClient<T>(signal: AbortSignal, callback: (client: OwnedClient) => Promise<T>): Promise<T> {
-    assertCurrent();
-    if (!nativeSessionId || !server || !nativePin) return unavailable();
-    const client = createOpenCodeV2OwnedSessionClient({
-      endpoint: profile.endpoint, directory: profile.cwd, version: '2.1.4', nativeSessionId,
-      readPassword: () => { assertCurrent(); return server!.readPassword(); },
-      beforeRequest: async requestSignal => {
-        assertCurrent();
-        const custody = await server!.readNativeCustody(requestSignal);
-        assertCurrent(); requestSignal.throwIfAborted();
-        if (!custody || custody.pid !== nativePin!.pid ||
-            custody.startIdentity !== nativePin!.startIdentity ||
-            custody.version !== '2.1.4' || custody.executablePath !== profile.executable.path ||
-            custody.executableSha256 !== profile.executable.sha256) return unavailable();
-      },
-      signal: AbortSignal.any([signal, abort.signal]), deadline: Date.now() + profile.limits.timeoutMs,
-    });
+  function captureClient(signal: AbortSignal, deadline: number) {
+    assertCurrent(); signal.throwIfAborted();
+    if (!nativeSessionId || !server || !nativePin || !Number.isSafeInteger(deadline)) return unavailable();
+    const originalServer = server, originalPin = nativePin, sessionId = nativeSessionId;
+    const check = () => {
+      assertCurrent(); signal.throwIfAborted();
+      if (Date.now() >= deadline || server !== originalServer || nativePin !== originalPin ||
+          nativeSessionId !== sessionId || originalPin.endpoint !== profile.endpoint ||
+          !originalServer.isOriginalLive(originalPin)) return unavailable();
+    };
+    const attest = async (requestSignal: AbortSignal) => {
+      check(); requestSignal.throwIfAborted();
+      const custody = await originalServer.readNativeCustody(requestSignal);
+      check(); requestSignal.throwIfAborted();
+      if (!custody || custody.pid !== originalPin.pid ||
+          custody.startIdentity !== originalPin.startIdentity ||
+          custody.version !== '2.1.4' || custody.executablePath !== profile.executable.path ||
+          custody.executableSha256 !== profile.executable.sha256) return unavailable();
+    };
+    const wire: OpenCodeV2TransportConfig = {
+      endpoint: originalPin.endpoint, directory: profile.cwd, version: '2.1.4', nativeSessionId: sessionId,
+      readPassword: () => { check(); return originalServer.readPassword(); },
+      beforeRequest: attest,
+      signal: AbortSignal.any([signal, abort.signal]), deadline,
+    };
+    check();
+    return { wire, check, attest };
+  }
+  async function withClient<T>(signal: AbortSignal, callback: (client: OwnedClient, config: OpenCodeV2TransportConfig) => Promise<T>,
+    deadline = Date.now() + profile.limits.timeoutMs): Promise<T> {
+    const captured = captureClient(signal, deadline);
+    const client = createOpenCodeV2OwnedSessionClient(captured.wire);
     let failed = false, failure: unknown, result!: T;
-    try { result = await callback(client); assertCurrent(); }
+    try { result = await callback(client, captured.wire); captured.check(); }
     catch (error) { failed = true; failure = error; }
     try { await client.dispose(); }
     catch (error) { cleanupUnknown = true; if (!failed) { failed = true; failure = error; } }
     if (failed) throw failure;
-    assertCurrent(); signal.throwIfAborted(); return result;
+    captured.check(); return result;
+  }
+  async function withReadOnlyClient<T>(signal: AbortSignal, deadline: number,
+    callback: (client: OpenCodeV2ReadOnlyClient) => Promise<T>): Promise<T> {
+    const captured = captureClient(signal, deadline);
+    return readOpenCodeV2Snapshot(captured.wire, {
+      assertCurrent: captured.check, assertCustody: captured.attest,
+      cleanupUnknown: () => { cleanupUnknown = true; },
+    }, callback);
   }
   const attachmentSource = context.attachments, attachmentResolve = attachmentSource?.resolve,
     attachmentModel = attachmentSource?.model, attachmentRevision = attachmentSource?.revision,
     attachmentMimes = attachmentSource?.mimeTypes;
-  const attachments = attachmentMimes?.includes('image/png') && attachmentResolve &&
+  const imageMimes = openCodeV2ImageMimes.filter(mime => attachmentMimes?.includes(mime));
+  const mediaMimes = openCodeV2MediaMimes.filter(mime => attachmentMimes?.includes(mime));
+  const attachments = mediaMimes.length && attachmentResolve &&
     attachmentModel === `${profile.nativeOptions.providerId}/${profile.model}` && attachmentRevision ? {
-      model: attachmentModel, revision: attachmentRevision, mimeTypes: ['image/png'],
+      model: attachmentModel, revision: attachmentRevision, mimeTypes: mediaMimes,
       async resolve(binding: Parameters<NonNullable<MemberProviderContext['attachments']>['resolve']>[0], signal: AbortSignal) {
         assertCurrent(); signal.throwIfAborted();
-        const catalog = await withClient(signal, client => client.readCatalog(profile.nativeOptions.providerId));
+        const deadline = Date.now() + profile.limits.timeoutMs;
+        const catalog = await withReadOnlyClient(signal, deadline, client => client.readCatalog(profile.nativeOptions.providerId));
         const model = catalog.models.find(row => row.id === profile.model);
-        if (!model?.enabled || !model.inputModalities.includes('image')) return undefined;
+        const modality = binding.reference.mimeType === 'application/pdf' ? 'pdf' : 'image';
+        if (!model?.enabled || !model.inputModalities.includes(modality)) return undefined;
         assertCurrent(); signal.throwIfAborted();
         const value = await Reflect.apply(attachmentResolve, attachmentSource, [binding, signal]);
         assertCurrent(); signal.throwIfAborted(); return value;
@@ -96,9 +144,10 @@ export function createOpenCodeV2EmbeddedMemberProvider(context: MemberProviderCo
     if (await realpath(directory) !== directory || !(await lstat(directory)).isDirectory()) return unavailable();
     return directory;
   }
-  async function start(signal: AbortSignal): Promise<void> {
+  async function start(signal: AbortSignal, deadline: number): Promise<void> {
     return startup ??= (async () => {
-      assertCurrent();
+      const check = () => { assertCurrent(); signal.throwIfAborted(); if (Date.now() >= deadline) unavailable(); };
+      check();
       if (!context.canAllocate() || !nativeSessionId) return unavailable();
       const namespaceId = 'agent-teams-v2-' + runtimeDigest({
         teamId: profile.teamId, memberId: profile.memberId, sessionId: profile.sessionId,
@@ -112,25 +161,42 @@ export function createOpenCodeV2EmbeddedMemberProvider(context: MemberProviderCo
       });
       // An uncertain earlier create is never adopted as a new allocation.
       if (context.request.checkpointRef ? !existing?.isFile() : existing !== undefined) return unavailable();
-      assertCurrent();
+      check();
       server = createOpenCodeV2EmbeddedServer({
         profile, embedded, databasePath, configDirectory: configuration, config,
+        ...(attachments ? { mediaSessionId: nativeSessionId } : {}),
         endpoint: profile.endpoint, canAllocate: () => current() && context.canAllocate(),
         canCaptureRegisteredProcess: () => current() &&
           (context.canCaptureRegisteredProcess?.() ?? context.isCurrent()),
         ...(context.processCustody ? { processCustody: context.processCustody } : {}),
+        ...(selectedFile ? { selectedFile: { source: selectedFile,
+          mode: context.request.checkpointRef ? 'restore' as const : 'fresh' as const } } : {}),
       });
       const ready = await server.start(AbortSignal.any([signal, abort.signal]));
-      assertCurrent();
-      nativePin = Object.freeze({ pid: ready.pid, startIdentity: ready.startIdentity });
-      await withClient(signal, async client => {
+      check();
+      nativePin = ready;
+      const restored = await withReadOnlyClient(signal, deadline, async client => {
         const identity = await client.identity();
         if (identity.pid !== ready.pid || identity.version !== embedded.version) return unavailable();
-        const selected = context.request.checkpointRef
-          ? await client.readSession() : await client.createSession(selection);
-        if (runtimeDigest({ agent: selected.agent, model: selected.model, permissions: selected.permissions }) !==
-            runtimeDigest(selection)) return unavailable();
+        return context.request.checkpointRef ? await client.readSession() : undefined;
       });
+      // Credential import and session creation retain their full-before-request
+      // mutation transport; the read-only port cannot reach these methods.
+      nativeCredential = await withClient(signal,
+        (client, wire) => credential.prepare(wire, client, restored,
+          integrationId => server!.selectedFileKey(ready, integrationId)), deadline);
+      if (context.assertReadinessCredential) {
+        if (!nativeCredential) return unavailable();
+        context.assertReadinessCredential(nativeCredential.scopeDigest);
+        check();
+      }
+      await attestOpenCodeV2ModelSelection({
+        readCatalog: providerId => withReadOnlyClient(signal, deadline, client => client.readCatalog(providerId)),
+      }, selection.model, { signal, deadline, isCurrent: current, requireTools: true });
+      const selected = restored ?? await withClient(signal, client => client.createSession({ ...selection,
+        ...(nativeCredential ? { credential: nativeCredential } : {}) }), deadline);
+      check();
+      if (!matchesSelection(selected)) return unavailable();
     })();
   }
   async function readContext(capture: NativeInitialContextCapture, signal: AbortSignal) {
@@ -148,51 +214,65 @@ export function createOpenCodeV2EmbeddedMemberProvider(context: MemberProviderCo
       configRevision: capture.configRevision, generation: capture.generation };
   }
   const owned: OpenCodeV2OwnedSession = {
+    verifyMediaReceipt(proof) {
+      return current() && nativePin !== undefined && nativeSessionId === proof.sessionId &&
+        server?.verifyMediaReceipt(nativePin, proof) === true;
+    },
     requiredExternalDirectory: embedded.externalDirectory,
     readPassword: () => { assertCurrent(); if (!server) return unavailable(); return server.readPassword(); },
     async probe(signal) {
-      await start(signal);
       const deadline = Date.now() + profile.limits.timeoutMs;
+      const scoped = AbortSignal.any([signal, abort.signal,
+        AbortSignal.timeout(Math.max(0, deadline - Date.now()))]);
+      await start(scoped, deadline);
+      nativeImages = false; nativeDocuments = false;
       for (;;) {
-        const accepted = await withClient(signal, async client => {
+        if (scoped.aborted || !current() || Date.now() >= deadline) return false;
+        const accepted = await withReadOnlyClient(scoped, deadline, async client => {
           const identity = await client.identity();
-          const custody = await server!.readNativeCustody(signal);
-          if (!custody || identity.pid !== custody.pid || identity.version !== custody.version) return false;
+          if (identity.pid !== nativePin?.pid || identity.version !== embedded.version) return undefined;
           const session = await client.readSession();
-          if (runtimeDigest({ agent: session.agent, model: session.model, permissions: session.permissions }) !==
-              runtimeDigest(selection) || !await client.savedPermissionsEmpty() ||
-              !await client.builtinPluginsOnly()) return false;
+          if (!matchesSelection(session) || !await client.savedPermissionsEmpty() ||
+              !await client.builtinPluginsOnly()) return undefined;
           const mcp = await client.readMcp();
           const receipt = context.endpoint.getCatalogReceipt?.();
-          return mcp.length === 1 && mcp[0]?.name === 'agent-teams' && mcp[0].status === 'connected' &&
-            receipt !== undefined && receipt.sequence > 0 &&
-            runtimeDigest(receipt.binding) === capturedEndpoint &&
-            runtimeDigest([...receipt.toolNames].sort()) === runtimeDigest(requiredToolNames);
+          // Missing tools/list may still be warming up, but a refused original
+          // allocation cannot become current through more native polling.
+          if (receipt === undefined && context.canAllocate() !== true) return unavailable();
+          if (!mcp.every(row => row.status === 'connected') ||
+              !isDeepStrictEqual(mcp.map(row => row.name).sort(), requiredServerNames) ||
+              receipt === undefined || receipt.sequence <= 0 ||
+              runtimeDigest(receipt.binding) !== capturedEndpoint ||
+              runtimeDigest([...receipt.toolNames].sort()) !== runtimeDigest(requiredToolNames)) return undefined;
+          const catalog = attachments ? await client.readCatalog(profile.nativeOptions.providerId) : undefined;
+          const model = catalog?.models.find(model => model.id === profile.model && model.enabled);
+          return { images: model?.inputModalities.includes('image') ?? false,
+            documents: model?.inputModalities.includes('pdf') ?? false };
         });
+        // The result is detached and fully re-attested. A late successful read
+        // cannot renew the original absolute launch/probe budget.
+        if (scoped.aborted || !current() || Date.now() >= deadline) return false;
         if (accepted) {
-          if (attachments) {
-            const catalog = await withClient(signal, client => client.readCatalog(profile.nativeOptions.providerId));
-            assertCurrent(); signal.throwIfAborted();
-            nativeImages = catalog.models.some(model => model.id === profile.model && model.enabled && model.inputModalities.includes('image'));
-          }
+          configuration.bindRunningSession();
+          nativeImages = accepted.images; nativeDocuments = accepted.documents;
           return true;
         }
-        if (signal.aborted || !current() || Date.now() >= deadline) return false;
-        await delay(50, undefined, { signal });
+        await delay(50, undefined, { signal: scoped });
       }
     },
     readNativeCustody: signal => server?.readNativeCustody(signal) ?? Promise.resolve(undefined),
     async readNativeEffectivePermissions(signal) {
-      return withClient(signal, async client => {
+      const deadline = Date.now() + profile.limits.timeoutMs, pin = nativePin;
+      if (!pin) return undefined;
+      return withReadOnlyClient(signal, deadline, async client => {
         const session = await client.readSession();
-        const custody = await server!.readNativeCustody(signal);
-        if (!custody || !await client.savedPermissionsEmpty() ||
+        if (!matchesSelection(session) || !await client.savedPermissionsEmpty() ||
             !await client.builtinPluginsOnly()) return undefined;
         return { nativeSessionId: session.id, directory: session.directory,
           modelProviderId: session.model.providerID, modelId: session.model.id,
-          modelVariant: session.model.variant ?? null, pid: custody.pid,
-          startIdentity: custody.startIdentity, rules: session.permissions,
-          policyIsolation: 'builtin-only-empty-saved' };
+          modelVariant: session.model.variant ?? null, pid: pin.pid,
+          startIdentity: pin.startIdentity, rules: session.permissions,
+          policyIsolation: 'builtin-only-empty-saved' as const };
       });
     },
     installAndAttestInitialContext(capture, signal) {
@@ -210,8 +290,13 @@ export function createOpenCodeV2EmbeddedMemberProvider(context: MemberProviderCo
     async confirmStopped() { const stopped = await (server?.confirmStopped() ?? Promise.resolve(true)); return stopped && !cleanupUnknown; },
   };
   return {
-    get attachmentCapabilities() {
-      return { images: !!attachments && current() && nativeImages, documents: false, textFiles: false };
+    get attachmentCapabilities(): NativeAttachmentCapabilities {
+      const images = !!attachments && current() && nativeImages && imageMimes.length > 0;
+      const documents = !!attachments && current() && nativeDocuments && mediaMimes.includes('application/pdf');
+      return { images, documents, textFiles: false,
+        ...(attachments ? { nativeMedia: { revision: openCodeV2MediaRevision,
+          mimeTypes: [...(images ? imageMimes : []), ...(documents ? ['application/pdf' as const] : [])],
+          maxBytes: 4 * 1024 * 1024, maxCount: 5, maxTotalBytes: 8 * 1024 * 1024, videos: false as const } } : {}) };
     },
     factory: { async open(request) {
       if (opened || runtimeDigest(request) !== capturedRequest || !context.canAllocate()) return unavailable();

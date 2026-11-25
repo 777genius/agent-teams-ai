@@ -1,18 +1,42 @@
 import { initialContextDigest } from '../dist/team-launch/context.js';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { channel } from 'node:diagnostics_channel';
+import fs from 'node:fs';
+import { lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { syncBuiltinESMExports } from 'node:module';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join, parse as parsePath, sep } from 'node:path';
 import { PassThrough } from 'node:stream';
 import { test } from 'node:test';
+import { runInNewContext } from 'node:vm';
 
 import { FileRuntimeStore } from '../dist/adapters/runtime/FileRuntimeStore.js';
+import { FileTeamRuntimeBindings } from '../dist/adapters/team/FileTeamRuntimeBindings.js';
+import { TeamOwnerStore } from '../dist/adapters/team/TeamOwnerStore.js';
 import { createTeamHost } from '../dist/composition/TeamHost.js';
-import { runtimeDigest } from '../dist/runtime/identity.js';
+import { RuntimeTeamCoordinator } from '../dist/composition/RuntimeTeamCoordinator.js';
+import { RuntimeOwner } from '../dist/runtime/RuntimeOwner.js';
+import { TeamOwner } from '../dist/team/TeamOwner.js';
+import { TeamLiveRosterMembership } from '../dist/team/liveRosterMembership.js';
+import { projectRuntimeMember } from '../dist/composition/projectRuntimeMember.js';
+import { normalizeBinding, runtimeDigest } from '../dist/runtime/identity.js';
 import { ClaudeManagementCoordinator } from '../dist/composition/ClaudeManagementCoordinator.js';
+import { ProviderManagementCoordinator } from '../dist/composition/ProviderManagementCoordinator.js';
 import { teamModelProbeProfile } from '../dist/composition/teamLaunchModelProbe.js';
+import { captureInitialRuntimeModelAdmission } from '../dist/composition/initialRuntimeModelAdmission.js';
+import { captureOpenCodeConfigurationSource } from '../dist/adapters/providers/OpenCodeConfigurationSource.js';
+import { FileManagementCommandStore } from '../dist/adapters/providers/FileManagementCommandStore.js';
+import { localModelReadinessPreparationSchema } from '../dist/management/commandRecords.js';
+import { managementDigest } from '../dist/management/identity.js';
+import { RetainedWindowsCustody, createWindowsOwnedLaunchPort, sameOwner } from '../dist/owned-process/index.js';
+import type { HostCustodyCall, HostCustodyOwner, HostCustodyResult, PendingOwnedProcess, TreeReceipt } from '../dist/owned-process/index.js';
 
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
+import type { HostedTeam, MemberEntry } from '../dist/composition/MemberEntry.js';
+import type { OpenCodeMemberProfile } from '../dist/composition/runtimeProfile.js';
+import type { OwnerState } from '../dist/team/ownerState.js';
+import type { LocalModelReadinessOrigin, ReadinessSourceReference } from '../dist/management/commandRecords.js';
 import type {
   MemberProvider,
   MemberProviderContext,
@@ -20,6 +44,8 @@ import type {
 import type { CommandReceipt } from '../dist/team/contracts.js';
 import type { TeamRosterConfiguration } from '../dist/team/rosterContracts.js';
 import type { RuntimeBinding } from '../dist/runtime/contracts.js';
+import type { TeamLaunchRecord } from '../dist/team-launch/contracts.js';
+import type { LiveRosterResponse, LiveRosterPrivateInput } from '../dist/team/liveRosterMembership.js';
 import type {
   CloseReceipt,
   DriverFactory,
@@ -28,8 +54,170 @@ import type {
   Session,
 } from '@agent-teams/provider-session-contracts';
 import type { TestContext } from 'node:test';
+import { checkDefaultFreshAuthority } from './default-fresh-authority-observer.ts';
 
 const tick = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
+test('ordinary lead replies replace their original signed conversation row without inbox writes or product feed churn', async t => {
+  const f = await fixture(t, { changeProfile(value) { value.teams[0]!.members[0]!.role = 'lead'; } });
+  assert.equal((await f.rpc('runtime.open', { memberId: 'alice-id' }) as { ok: boolean }).ok, true);
+  const command = { operation: 'message.send', payload: { to: 'alice', text: 'TEST original conversation input' } };
+  const original = await f.rpc('team.execute', command, { commandId: 'TEST-original-conversation' });
+  assert.equal((original as { ok: boolean }).ok, true);
+  await eventually(() => f.session().submits.length === 1, 'original input reaches the controlled native boundary');
+  const input = f.session().submits[0]!;
+  const product = await f.rpc('team.changes.read', {}) as { value: { cursor: string; sequence: number } };
+  const source = { sessionRef: f.session().sessionRef, inputId: input.inputId, operationRef: input.operationRef };
+  f.session().emit({ ...source, kind: 'text', messageRef: 'TEST-original-reply', block: 0,
+    phase: 'snapshot', text: 'TEST boot' });
+  await eventually(() => new FileRuntimeStore(f.root).readActivity(f.runtimeBinding)?.events.some(
+    row => row.data.kind === 'text' && row.data.text === 'TEST boot') === true, 'original text is durably observed');
+  type MessagePage = { ok: boolean; value: { messages: { text: string; source?: string;
+    messageId?: string; timestamp: string; leadSessionId?: string }[];
+    conversation?: { revision: string; gaps: string[] } } };
+  const partial = await f.rpc('team.messages.page', {}) as MessagePage;
+  assert.equal(partial.ok, true);
+  const reply = partial.value.messages.find(row => row.source === 'lead_session');
+  assert.ok(reply, 'ordinary paired Runtime text must reach the original conversation page');
+  assert.equal(reply.text, 'TEST boot');
+  assert.match(reply.leadSessionId!, /^host-lead-[a-f0-9]{64}$/u);
+  f.session().emit({ ...source, kind: 'text', messageRef: 'TEST-original-reply', block: 0,
+    phase: 'complete', text: 'TEST boot ready' });
+  await eventually(() => new FileRuntimeStore(f.root).readActivity(f.runtimeBinding)?.events.some(
+    row => row.data.kind === 'text' && row.data.text === 'TEST boot ready') === true, 'complete original text is observed');
+  const completed = await f.rpc('team.messages.page', {}) as MessagePage;
+  const rows = completed.value.messages.filter(row => row.source === 'lead_session');
+  assert.equal(rows.length, 1);
+  assert.deepEqual(rows[0], { ...reply, text: 'TEST boot ready' });
+  assert.notEqual(completed.value.conversation?.revision, partial.value.conversation?.revision);
+  const changed = await f.rpc('team.changes.read', { cursor: product.value.cursor }) as {
+    value: { sequence: number; events: unknown[]; conversation: { revision: string } } };
+  assert.equal(changed.value.sequence, product.value.sequence);
+  assert.deepEqual(changed.value.events, [], 'derived replies are not product writes');
+  assert.equal(changed.value.conversation.revision, completed.value.conversation?.revision);
+  const snapshot = await f.rpc('team.snapshot', {}) as { value: { messages: { source?: string }[] } };
+  assert.equal(snapshot.value.messages.some(row => row.source === 'lead_session'), false);
+  for (const secret of [f.root, f.session().sessionRef, 'PRIVATE-config-session', input.operationRef])
+    assert.equal(JSON.stringify(completed).includes(secret), false);
+  assert.equal(f.session().submits.length, 1);
+  f.session().finish(0);
+  await eventually(() => new FileRuntimeStore(f.root).fenced(f.runtimeBinding,
+    tx => tx.get()?.inputs[0]?.terminal === 'succeeded'), 'original native terminal remains authoritative');
+  const path = join(f.root, 'runtime-events', runtimeDigest(f.runtimeBinding) + '.conversation.json');
+  const bytes = readFileSync(path), opens = f.opens();
+  await f.restart();
+  const cold = await f.rpc('team.messages.page', {}) as MessagePage;
+  assert.equal(cold.ok, true);
+  assert.deepEqual(cold.value.messages.filter(row => row.source === 'lead_session'), rows);
+  assert.deepEqual(cold.value.conversation, completed.value.conversation);
+  assert.deepEqual(await f.rpc('team.execute', command, { commandId: 'TEST-original-conversation' }), original);
+  assert.deepEqual(readFileSync(path), bytes, 'cold page and original-ID replay perform no derived writes');
+  assert.equal(f.opens(), opens); assert.equal(f.session().submits.length, 1, 'cold reads never replay native input');
+  const member = { backendId: f.runtimeBinding.backendId, teamId: f.runtimeBinding.teamId,
+    memberId: f.runtimeBinding.memberId };
+  const originals = [join(f.root, 'runtime-sessions', runtimeDigest(member), runtimeDigest(f.runtimeBinding) + '.json'),
+    join(f.root, 'runtime-events', runtimeDigest(f.runtimeBinding) + '.json'), path]
+    .map(file => ({ file, bytes: readFileSync(file) }));
+  try {
+    for (const original of originals) rmSync(original.file);
+    for (const operation of ['team.messages.page', 'team.changes.read'])
+      assert.deepEqual(await f.rpc(operation, {}), { ok: false, code: 'hold', outcome: 'unknown' },
+        'original proven-ready launch cannot reinterpret deleted authority as a never-opened empty conversation');
+  } finally { for (const original of originals) writeFileSync(original.file, original.bytes); }
+  assert.equal(f.opens(), opens);
+});
+
+test('never-opened lead and an original no-allocation Skip retain an empty conversation without creating Runtime state', async t => {
+  const f = await fixture(t, { changeProfile(value) { value.teams[0]!.members[0]!.role = 'lead'; } });
+  const empty = async () => {
+    const page = await f.rpc('team.messages.page', {}) as {
+      ok: boolean; value: { messages: unknown[]; conversation: { gaps: string[] } };
+    };
+    assert.equal(page.ok, true, JSON.stringify(page));
+    assert.deepEqual(page.value.messages, []); assert.deepEqual(page.value.conversation.gaps, []);
+    assert.equal(new FileRuntimeStore(f.root).fenced(f.runtimeBinding, tx => tx.get()), undefined);
+    assert.equal(f.opens(), 0);
+  };
+  await empty();
+  const launch = await f.rpc('team.launch.read', {}) as { value: { launchId: string; rosterRevision: string } };
+  const skip = { launchId: launch.value.launchId, rosterRevision: launch.value.rosterRevision,
+    memberId: 'alice-id', expectedGeneration: f.runtimeBinding.generation, action: 'skip' };
+  for (const operation of ['prepare', 'execute']) {
+    const selected = await f.rpc('team.member.action.' + operation, skip,
+      { commandId: 'TEST-unallocated-conversation-skip' }) as { ok: boolean };
+    assert.equal(selected.ok, true, JSON.stringify(selected));
+  }
+  await empty();
+});
+
+test('ordinary long replies preserve 30 KiB snapshots and 300 KiB Unicode through signed fragments and cold reads', async t => {
+  const f = await fixture(t, { changeProfile(value) { value.teams[0]!.members[0]!.role = 'lead'; } });
+  assert.equal((await f.rpc('runtime.open', { memberId: 'alice-id' }) as { ok: boolean }).ok, true);
+  await f.rpc('team.execute', { operation: 'message.send', payload: { to: 'alice', text: 'TEST long original input' } });
+  await eventually(() => f.session().submits.length === 1, 'the original controlled input is consumed');
+  const input = f.session().submits[0]!, store = new FileRuntimeStore(f.root);
+  const source = { sessionRef: f.session().sessionRef, inputId: input.inputId, operationRef: input.operationRef };
+  const emit = async (text: string, phase: 'snapshot' | 'complete') => {
+    const before = store.fenced(f.runtimeBinding, tx => tx.get()!.activitySequence!);
+    f.session().emit({ ...source, kind: 'text', messageRef: 'TEST-long-original-reply', block: 0, text, phase });
+    await eventually(() => store.readActivity(f.runtimeBinding)?.events.some(row =>
+      row.sequence > before && row.inputId === input.inputId && row.data.kind === 'gap' && row.data.reason === 'oversized') === true,
+    'original diagnostic ring retains its unchanged oversized event');
+  };
+  type Reply = { messageId: string; text: string; timestamp: string; source?: string; leadSessionId?: string };
+  type Page = { revision: string; messages: Reply[]; nextCursor: string | null;
+    conversation: { revision: string; gaps: string[] };
+    messageParts?: { index: number; part: number; total: number }[] };
+  const read = async () => {
+    let cursor: string | undefined, first: Reply | undefined, revision: string | undefined, total = 1, pages = 0;
+    const parts = new Map<number, string>(), visited = new Set<string>();
+    do {
+      const result = await f.rpc('team.messages.page', { limit: 1, ...(cursor ? { cursor } : {}) }) as { ok: boolean; value: Page };
+      assert.equal(result.ok, true, JSON.stringify(result));
+      const page = result.value; pages++;
+      assert.ok(Buffer.byteLength(JSON.stringify(page)) <= 384 * 1024);
+      assert.deepEqual(page.conversation.gaps, [], 'activity-only size gaps cannot taint fully retained conversation');
+      if (revision) assert.equal(page.revision, revision); else revision = page.revision;
+      for (const [index, row] of page.messages.entries()) {
+        if (row.source !== 'lead_session') continue;
+        if (!first) first = row;
+        assert.equal(row.messageId, first.messageId); assert.equal(row.timestamp, first.timestamp);
+        assert.equal(row.source, first.source); assert.equal(row.leadSessionId, first.leadSessionId);
+        const part = page.messageParts?.[index]; total = part?.total ?? 1;
+        assert.equal(parts.has(part?.part ?? 0), false);
+        parts.set(part?.part ?? 0, row.text);
+      }
+      cursor = page.nextCursor ?? undefined;
+      if (cursor) { assert.equal(visited.has(cursor), false); visited.add(cursor); }
+      assert.ok(pages < 128, 'original finite continuation budget');
+    } while (cursor);
+    assert.ok(first, 'ordinary long paired text must reach the original signed page');
+    assert.equal(parts.size, total);
+    return { ...first, text: [...parts].sort(([a], [b]) => a - b).map(([, text]) => text).join(''), pages };
+  };
+  const partialText = '漢"\\\n'.repeat(5 * 1024);
+  assert.equal(Buffer.byteLength(partialText), 30 * 1024);
+  await emit(partialText, 'snapshot');
+  const partial = await read(); assert.equal(partial.text, partialText);
+  await emit(partialText + ' complete', 'complete');
+  const complete = await read();
+  assert.equal(complete.text, partialText + ' complete');
+  assert.equal(complete.messageId, partial.messageId); assert.equal(complete.timestamp, partial.timestamp);
+  const largeText = '漢"\\\n'.repeat(50 * 1024);
+  assert.equal(Buffer.byteLength(largeText), 300 * 1024);
+  await emit(largeText, 'complete');
+  const large = await read();
+  assert.equal(large.text, largeText); assert.ok(large.pages > 1);
+  assert.equal(large.messageId, partial.messageId); assert.equal(large.timestamp, partial.timestamp);
+  assert.ok(Buffer.byteLength(JSON.stringify(store.readActivity(f.runtimeBinding), null, 2)) <= 1024 * 1024);
+  f.session().finish(0);
+  await eventually(() => store.fenced(f.runtimeBinding, tx => tx.get()?.inputs[0]?.terminal === 'succeeded'), 'original terminal settled');
+  const path = join(f.root, 'runtime-events', runtimeDigest(f.runtimeBinding) + '.conversation.json');
+  const bytes = readFileSync(path), opens = f.opens();
+  await f.restart();
+  assert.deepEqual(await read(), large);
+  assert.deepEqual(readFileSync(path), bytes);
+  assert.equal(f.opens(), opens); assert.equal(f.session().submits.length, 1);
+});
 test('task recovery never returns a prior receipt for a changed command with unavailable attachments', async t => {
   const f = await fixture(t);
   const original = { operation: 'task.create', payload: { subject: 'TEST exact retained command' } };
@@ -102,6 +290,162 @@ test('mixed Host boots V2 Session SPI profile without invoking V1 management reg
   const opened = await f.rpc('runtime.open', { memberId: 'alice-id' }) as { ok: boolean };
   assert.equal(opened.ok, true, 'unrelated Claude runtime remains operable');
   assert.equal(f.opens(), 1, 'only the explicitly opened Claude TEST provider is allocated');
+  const unprepared = await f.rpc('runtime.open', { memberId: 'bob-id', expectedGeneration: '1' }) as { ok: boolean };
+  assert.equal(unprepared.ok, false, 'old external V2 capture cannot invent a retained allocation proof');
+  assert.equal(f.opens(), 1, 'missing original preparation refuses before the OpenCode provider factory');
+
+  const originalCommand = 'TEST-original-native-open';
+  const initial = await fixture(t, { independentProviders: true, changeProfile(selected) {
+    const member = structuredClone(f.selected.runtime!.members[1]!);
+    assert.equal(member.provider, 'opencode'); if (member.provider !== 'opencode') assert.fail();
+    const root = selected.owner.storageRoot, team = selected.teams[0]!;
+    const platform = process.platform, arch = process.arch;
+    if ((platform !== 'linux' && platform !== 'darwin' && platform !== 'win32') ||
+        (arch !== 'x64' && arch !== 'arm64')) assert.fail();
+    member.cwd = root; member.protocolRevision = '2.1.4';
+    member.environment = { HOME: join(root, 'home'), XDG_CONFIG_HOME: join(root, 'config'),
+      XDG_DATA_HOME: join(root, 'data'), XDG_CACHE_HOME: join(root, 'cache') };
+    for (const directory of Object.values(member.environment)) mkdirSync(directory);
+    member.embedded = { directory: join(root, 'engine'), manifestSha256: 'e'.repeat(64),
+      version: '2.1.4', platform, arch, externalDirectory: 'deny' };
+    writeFileSync(join(root, 'opencode.json'), JSON.stringify({ provider: { 'TEST-v2-provider': {
+      npm: '@ai-sdk/openai-compatible', options: { apiKey: 'TEST-key', baseURL: 'http://127.0.0.1:9/v1' },
+      models: { 'TEST-v2-native-model': { name: 'TEST exact original model' } },
+    } } }), { mode: 0o600 });
+    member.embedded.configurationSource = captureOpenCodeConfigurationSource(member).reference;
+    team.members.find(row => row.memberId === member.memberId)!.delivery = {
+      ...team.binding, runId: team.scope.runId, memberId: member.memberId, generation: '1' };
+    team.grants.push({ principalId: member.principalId, memberName: 'bob',
+      permissions: ['read', 'task.write', 'message.write'] });
+    selected.runtime!.members.push(member);
+    selected.runtime!.initialModelAdmissions = [captureInitialRuntimeModelAdmission(selected, {
+      method: 'runtime.open', teamId: member.teamId, commandId: originalCommand,
+      payload: { memberId: member.memberId },
+    })];
+  } });
+  const target = { memberId: 'bob-id' }, command = { commandId: originalCommand };
+  const first = await initial.rpc('team.launch.read', {}) as { value: { launchId: string; rosterRevision: string } };
+  // Structurally valid, explicitly untrusted Main input must reach the original owner/selection check.
+  const foreignMain = localModelReadinessPreparationSchema.parse({ remainingMs: 1000, origin: {
+    schemaVersion: 1, kind: 'team', ownerDigest: 'f'.repeat(64), contextId: initial.binding.handleId,
+    commandId: originalCommand, selectionDigest: 'f'.repeat(64),
+    workspaces: [{ path: initial.root, project: { selectedPath: null, invalid: true,
+      selectorFailure: 'project-required', providers: [],
+      sources: ['opencode.json', 'opencode.jsonc', '.opencode/opencode.json', '.opencode/opencode.jsonc']
+        .map(name => ({ root: initial.root, path: join(initial.root, name), present: false, digest: 'f'.repeat(64) })) },
+      global: { notConsulted: 'project-precedence' } }], approval: { notConsulted: 'no-private-target' },
+  } });
+  for (const [method, payload, envelope] of [
+    ['runtime.open', target, { commandId: 'TEST-another-open' }],
+    ['runtime.open', { ...target, expectedGeneration: 'foreign' }, command],
+    ['runtime.open', { ...target, model: 'TEST-foreign-model' }, command],
+    ['runtime.open', { ...target, cwd: '/TEST/foreign-workspace' }, command],
+    ['team.launch.start', { launchId: first.value.launchId, rosterRevision: first.value.rosterRevision }, command],
+    ['runtime.open', { ...target, expectedGeneration: '1' }, { ...command, localModelReadinessOrigin: foreignMain }],
+  ] as const) {
+    assert.equal((await initial.rpc(method, payload, envelope) as { ok: boolean }).ok, false,
+      'a different action or supplied Main origin cannot borrow the initial private source');
+    assert.equal(initial.opens(), 0);
+  }
+  const configPath = join(initial.root, 'opencode.json'), originalConfig = readFileSync(configPath, 'utf8');
+  writeFileSync(configPath, originalConfig.replace('TEST-key', 'TEST-changed-key'));
+  assert.equal((await initial.rpc('runtime.open', target, command) as { ok: boolean }).ok, false,
+    'changed original native configuration cannot allocate');
+  assert.equal(initial.opens(), 0);
+  writeFileSync(configPath, originalConfig);
+  const admitted = await initial.rpc('runtime.open', target, command) as { ok: boolean };
+  assert.equal(admitted.ok, true, JSON.stringify(admitted));
+  assert.equal(initial.opens(), 1, 'only the original captured Open invokes its controlled native provider');
+  const launchStore = new TeamOwnerStore(initial.root, initial.selected.teams[0]!.binding.teamName);
+  const launchPath = 'launches/' + runtimeDigest(first.value.launchId) + '.json';
+  const retained = launchStore.read<TeamLaunchRecord>(launchPath)!;
+  const consumer = retained.readiness!.consumers.find(row => row.memberId === target.memberId)!;
+  assert.equal(consumer.disposition, 'consumed'); assert.equal(consumer.initialProfile?.commandId, originalCommand);
+  assert.equal(consumer.cutoff, undefined); assert.equal(consumer.groupCommandId, undefined);
+  assert.deepEqual(retained.readiness!.groups, [], 'ordinary initial provenance is not a fabricated successful probe');
+  const attempt = retained.members.find(row => row.memberId === target.memberId)!.attempts[0]!;
+  assert.equal(attempt.deadlineMs - attempt.startedAtMs, 1000, 'the sole clock is the original business claim');
+  assert.equal((await initial.rpc('runtime.open', target, command) as { ok: boolean }).ok, true);
+  assert.equal(initial.opens(), 1, 'same original Open does not allocate twice');
+  const firstMessage = await initial.rpc('team.execute', {
+    operation: 'message.send', payload: { to: 'bob', text: 'TEST initial native input' },
+  }, { commandId: 'TEST-initial-message' }) as { ok: boolean; value: CommandReceipt };
+  assert.equal(firstMessage.ok, true); assert.equal(firstMessage.value.phase, 'completed');
+  await eventually(() => initial.session().submits.length === 1,
+    'the original OpenCode input must dispatch under the Runtime fence');
+  assert.equal(initial.session().submits[0]!.inputId, firstMessage.value.effects.deliveryId);
+  assert.equal(initial.session().submits[0]!.content, 'TEST initial native input');
+  initial.session().finish(0);
+  await eventually(() => new FileRuntimeStore(initial.root).fenced(initial.contexts[0]!.endpoint.binding,
+    tx => tx.get()?.inputs[0]?.phase === 'terminal'), 'the original OpenCode input must settle');
+  initial.session().checkpoint = () => ({ ok: true, value: { text: 'TEST original controlled checkpoint' } });
+  const checkpoint = await initial.rpc('runtime.checkpoint', { ...target, checkpointId: 'TEST-initial-checkpoint' }) as {
+    ok: boolean; value: { status: string; reference: string } };
+  assert.equal(checkpoint.ok, true); assert.equal(checkpoint.value.status, 'published');
+  assert.equal((await initial.rpc('runtime.stop', target) as { ok: boolean }).ok, true);
+  const originalBinding = initial.contexts[0]!.endpoint.binding;
+  assert.equal(new FileRuntimeStore(initial.root).fenced(originalBinding, tx => tx.get()?.custody), 'released');
+  const originalLaunch = JSON.stringify(launchStore.read<TeamLaunchRecord>(launchPath));
+  await initial.restart();
+  assert.equal(initial.opens(), 1, 'cold reconstruction performs no initial admission or native work');
+  assert.equal(JSON.stringify(launchStore.read<TeamLaunchRecord>(launchPath)), originalLaunch);
+  const resumed = await initial.rpc('runtime.restore', { ...target, expectedGeneration: originalBinding.generation,
+    reference: checkpoint.value.reference }, { commandId: 'TEST-original-checkpoint-restore' }) as { ok: boolean; value: { generation: string } };
+  assert.equal(resumed.ok, true, JSON.stringify(resumed));
+  assert.equal(initial.opens(), 2, 'the existing validated checkpoint continuation needs no fresh model preparation');
+  assert.equal([...new FileManagementCommandStore(initial.root).list()].length, 0,
+    'neither ordinary initial allocation nor checkpoint continuation creates a model probe');
+  assert.equal((await initial.rpc('runtime.stop', { ...target, expectedGeneration: resumed.value.generation }) as { ok: boolean }).ok, true);
+  const restoredLaunch = JSON.stringify(launchStore.read<TeamLaunchRecord>(launchPath));
+  await initial.restart();
+  assert.equal(initial.opens(), 2, 'a selected cold entry retains source provenance without minting initial admission');
+  assert.equal(JSON.stringify(launchStore.read<TeamLaunchRecord>(launchPath)), restoredLaunch);
+});
+
+test('default fresh OpenCode launch retains every provider and allocation observation under one Team fence', async t => {
+  const commandId = 'TEST-default-fresh-authority';
+  let checked = false, failure: unknown;
+  const f = await fixture(t, { independentProviders: true, changeProfile(selected) {
+    const original = selected.runtime!.members[0]!, root = selected.owner.storageRoot;
+    const team = selected.teams[0]!;
+    team.members = team.members.slice(0, 1); team.members[0]!.role = 'lead';
+    const platform = process.platform, arch = process.arch;
+    if ((platform !== 'linux' && platform !== 'darwin' && platform !== 'win32') ||
+        (arch !== 'x64' && arch !== 'arm64')) assert.fail();
+    const environment = { HOME: join(root, 'home'), XDG_CONFIG_HOME: join(root, 'config'),
+      XDG_DATA_HOME: join(root, 'data'), XDG_CACHE_HOME: join(root, 'cache') };
+    for (const directory of Object.values(environment)) mkdirSync(directory);
+    writeFileSync(join(root, 'opencode.json'), JSON.stringify({ provider: { 'TEST-provider': {
+      npm: '@ai-sdk/openai-compatible', options: { apiKey: 'TEST-key', baseURL: 'http://127.0.0.1:9/v1' },
+      models: { 'TEST-model': { name: 'TEST original model' } },
+    } } }), { mode: 0o600 });
+    const member: OpenCodeMemberProfile = {
+      provider: 'opencode' as const, nativeGeneration: 'v2' as const, protocolRevision: '2.1.4' as const,
+      teamId: original.teamId, memberId: original.memberId, principalId: original.principalId,
+      sessionId: original.sessionId, generation: original.generation, configRevision: original.configRevision,
+      cwd: root, model: 'TEST-model', accountBinding: 'TEST-account', executable: original.executable,
+      environment, endpoint: 'http://127.0.0.1:19181', nativeOptions: { providerId: 'TEST-provider', agent: 'build' },
+      limits: { ...original.limits, timeoutMs: 30000 },
+      embedded: { directory: join(root, 'engine'), manifestSha256: 'e'.repeat(64), version: '2.1.4' as const,
+        platform, arch, externalDirectory: 'deny' as const },
+    };
+    member.embedded!.configurationSource = captureOpenCodeConfigurationSource(member).reference;
+    selected.runtime!.members = [member];
+    selected.runtime!.initialModelAdmissions = [captureInitialRuntimeModelAdmission(selected, {
+      method: 'team.launch.start', teamId: member.teamId, commandId, payload: {},
+    })];
+  }, onProvider(context) {
+    try { checkDefaultFreshAuthority(t, context, f.root, f.selected.teams[0]!.binding.teamName, f.selected.principalId); checked = true; }
+    catch (error) { failure = error; throw error; }
+  } });
+  const launch = await f.rpc('team.launch.read', {}) as { value: { launchId: string; rosterRevision: string } };
+  assert.equal((await f.rpc('team.launch.start', {
+    launchId: launch.value.launchId, rosterRevision: launch.value.rosterRevision,
+  }, { commandId }) as { ok: boolean }).ok, true);
+  await eventually(() => checked || failure !== undefined, 'the actual default fresh provider boundary is reached');
+  if (failure) throw failure;
+  assert.equal(checked, true);
+  await eventually(() => f.opens() === 1, 'only the controlled original provider is opened');
 });
 
 test('two captured teams may share an original run ID without sharing launch ownership', async (t) => {
@@ -130,6 +474,134 @@ test('two captured teams may share an original run ID without sharing launch own
   );
   assert.equal(f.opens(), 1);
   assert.equal(f.contexts[0]!.profile.teamId, 'TEST-second-team');
+});
+
+test('cold unavailable Team history retains original resources while an independent Team still captures and runs', async (t) => {
+  const f = await fixture(t, { changeProfile(selected) {
+    const first = selected.teams[0]!;
+    first.members = first.members.slice(0, 1);
+    first.members[0]!.role = 'lead';
+    const second = structuredClone(first);
+    second.binding = { ...second.binding, teamId: 'TEST-available-team', teamName: 'test-available-team' };
+    second.scope = { ...second.scope, teamId: second.binding.teamId };
+    for (const member of second.members)
+      if (member.delivery) Object.assign(member.delivery, second.binding);
+    selected.teams.push(second);
+    selected.runtime!.members.push({ ...structuredClone(selected.runtime!.members[0]!),
+      teamId: second.binding.teamId, sessionId: 'TEST-available-session' });
+  } });
+  type Captured = { ok: boolean; value: { launch: {
+    launchId: string; rosterRevision: string; members: { binding: RuntimeBinding }[];
+  } } };
+  const originalRuntime = structuredClone(f.selected.runtime!);
+  const prepare = async (binding: typeof f.binding, name: string): Promise<Captured> => {
+    const roster = await f.rpc('team.roster.read', {}, { binding }) as { value: TeamRosterConfiguration };
+    const saved = await f.rpc('team.roster.replace', {
+      expectedRevision: roster.value.revision, members: [],
+      savedSettings: { cwd: f.root, providerId: 'anthropic', model: 'TEST-model-' + name,
+        prompt: 'TEST retained prompt ' + name },
+    }, { binding, commandId: 'TEST-roster-' + name }) as { ok: boolean };
+    assert.equal(saved.ok, true, JSON.stringify(saved));
+    const captured = await f.rpc('team.launch.capture', { rosterCommandId: 'TEST-roster-' + name },
+      { binding, commandId: 'TEST-capture-' + name }) as Captured;
+    assert.equal(captured.ok, true, JSON.stringify(captured));
+    return captured;
+  };
+  const start = async (binding: typeof f.binding, captured: Captured, name: string, opens: number) => {
+    const opened = await f.rpc('team.launch.start', {
+      launchId: captured.value.launch.launchId, rosterRevision: captured.value.launch.rosterRevision,
+    }, { binding, commandId: 'TEST-start-' + name }) as { ok: boolean };
+    assert.equal(opened.ok, true, JSON.stringify(opened));
+    await eventually(() => f.opens() === opens && f.session().submits.length === 1,
+      'one original controlled prompt dispatches for ' + name);
+    assert.equal(f.session().submits[0]!.content, 'TEST retained prompt ' + name);
+    const original = f.contexts[opens - 1]!.endpoint.binding;
+    f.session().finish(0);
+    await eventually(() => new FileRuntimeStore(f.root).fenced(original,
+      tx => tx.get()?.inputs[0]?.phase === 'terminal'), 'original input settles for ' + name);
+    return original;
+  };
+  const a = await prepare(f.binding, 'A');
+  const originalBinding = await start(f.binding, a, 'A', 1);
+  f.session().checkpoint = () => ({ ok: true, value: { text: 'TEST controlled original opaque' } });
+  const checkpoint = await f.rpc('runtime.checkpoint', { memberId: 'alice-id',
+    expectedGeneration: originalBinding.generation, checkpointId: 'TEST-retained-checkpoint' }) as {
+    ok: boolean; value: { status: string; reference: string };
+  };
+  assert.equal(checkpoint.ok, true, JSON.stringify(checkpoint));
+  assert.equal(checkpoint.value.status, 'published');
+  const stop = await f.rpc('runtime.stop', { memberId: 'alice-id',
+    expectedGeneration: originalBinding.generation }) as { ok: boolean };
+  assert.equal(stop.ok, true, JSON.stringify(stop));
+  const runtime = new FileRuntimeStore(f.root);
+  assert.equal(runtime.fenced(originalBinding, tx => tx.get()?.custody), 'released');
+  const originalOpaque = JSON.stringify(runtime.readCheckpointPayload(checkpoint.value.reference));
+  const ownerStore = new TeamOwnerStore(f.root, f.selected.teams[0]!.binding.teamName);
+  const launchPath = join(ownerStore.directory, 'launches', runtimeDigest(a.value.launch.launchId) + '.json');
+  const source = JSON.parse(readFileSync(launchPath, 'utf8')).definition.capture;
+  const artifactPath = join(ownerStore.directory, 'launches/mcp-recipes',
+    runtimeDigest([source.commandId, source.members[0].memberId]) + '.json');
+  const artifactBytes = readFileSync(artifactPath, 'utf8');
+  const runtimePath = join(f.root, 'runtime-sessions', runtimeDigest({
+    backendId: originalBinding.backendId, teamId: originalBinding.teamId, memberId: originalBinding.memberId,
+  }), runtimeDigest(normalizeBinding(originalBinding)) + '.json');
+  f.selected.runtime!.members = f.selected.runtime!.members.filter(row => row.teamId !== originalBinding.teamId);
+  await f.restart();
+  const retainedLaunch = readFileSync(launchPath, 'utf8');
+  const retainedRuntime = readFileSync(runtimePath, 'utf8');
+  assert.equal(f.opens(), 1, 'unavailable original A cannot allocate under B or a replacement seed');
+  assert.equal((await f.rpc('team.snapshot', {}) as { ok: boolean }).ok, true);
+  assert.equal((await f.rpc('team.tasks.list', {}) as { ok: boolean }).ok, true);
+  const rosterA = await f.rpc('team.roster.read', {}) as { ok: boolean; value: TeamRosterConfiguration };
+  assert.equal(rosterA.ok, true, 'ordinary saved configuration remains readable');
+  for (const [method, payload] of [
+    ['runtime.open', { memberId: 'alice-id' }],
+    ['team.launch.capture', { rosterCommandId: 'TEST-roster-A' }],
+    ['team.launch.start', { launchId: a.value.launch.launchId, rosterRevision: a.value.launch.rosterRevision }],
+    ['team.activity.stats.read', { memberName: 'alice' }],
+    ['team.roster.replace', { expectedRevision: rosterA.value.revision,
+      members: [{ name: 'bob', workflow: 'TEST refused unavailable history mutation' }] }],
+  ] as const) {
+    assert.deepEqual(await f.rpc(method, payload), { ok: false, code: 'hold', outcome: 'unknown' },
+      'unavailable history cannot become a fresh executable target: ' + method);
+  }
+  const bindingB = { ...f.binding, scope: f.selected.teams[1]!.scope };
+  const b = await prepare(bindingB, 'B');
+  const bindingBRun = await start(bindingB, b, 'B', 2);
+  assert.equal(f.contexts[1]!.profile.teamId, bindingB.scope.teamId);
+  assert.equal((await f.rpc('runtime.stop', { memberId: 'alice-id',
+    expectedGeneration: bindingBRun.generation }, { binding: bindingB }) as { ok: boolean }).ok, true);
+  assert.equal(readFileSync(launchPath, 'utf8'), retainedLaunch);
+  assert.equal(readFileSync(runtimePath, 'utf8'), retainedRuntime);
+  assert.equal(readFileSync(artifactPath, 'utf8'), artifactBytes);
+  assert.equal(JSON.stringify(runtime.readCheckpointPayload(checkpoint.value.reference)), originalOpaque);
+  assert.equal((await f.dispose()).cleanup, 'completed', 'genuine settled originals allow shutdown');
+
+  // TEST fault removes a previously real, claimed Runtime record only after its owner finished cleanup.
+  await f.restart('completed', () => rmSync(runtimePath));
+  assert.equal(f.opens(), 2);
+  assert.equal((await f.dispose()).cleanup, 'failed', 'missing claimed custody makes Host cleanup fail');
+  assert.equal(runtime.fenced(originalBinding, tx => tx.get()), undefined,
+    'cleanup must not create an empty Runtime record to replace missing evidence');
+  assert.equal(readFileSync(launchPath, 'utf8'), retainedLaunch);
+  await f.restart('failed', () => {
+    writeFileSync(runtimePath, retainedRuntime);
+    f.selected.runtime = structuredClone(originalRuntime);
+  });
+  assert.equal(f.opens(), 2, 'restoring exact private bytes does not replay the old launch');
+  const original = await f.rpc('team.launch.read', { launchId: a.value.launch.launchId }) as {
+    ok: boolean; value: { launchId: string };
+  };
+  assert.equal(original.ok, true, JSON.stringify(original));
+  assert.equal(original.value.launchId, a.value.launch.launchId);
+  assert.equal(JSON.stringify(runtime.readCheckpointPayload(checkpoint.value.reference)), originalOpaque);
+
+  // Unavailable A must not mask a damaged original MCP artifact from structural preflight.
+  await assert.rejects(f.restart('completed', () => {
+    f.selected.runtime!.members = f.selected.runtime!.members.filter(row => row.teamId !== originalBinding.teamId);
+    writeFileSync(artifactPath, artifactBytes + 'TEST-corrupt');
+  }), 'corrupt retained MCP artifact remains a full restore refusal');
+  assert.equal(f.opens(), 2);
 });
 
 test('a superseded unstarted capture cannot inject its prompt into a newer launch with the same product revision', async (t) => {
@@ -279,6 +751,15 @@ test('saved configuration captures fresh native identities, preserves historical
     1,
     'original start replay cannot duplicate the launch prompt'
   );
+  const firstInput = f.session().submits[0]!;
+  f.session().emit({
+    kind: 'usage',
+    sessionRef: f.session().sessionRef,
+    inputId: firstInput.inputId,
+    operationRef: firstInput.operationRef,
+    inputTokens: 17,
+    outputTokens: 9,
+  });
   f.session().finish(0);
   await eventually(
     () =>
@@ -299,6 +780,20 @@ test('saved configuration captures fresh native identities, preserves historical
     assert.equal(context.profile.nativeOptions!.permissionMode, 'default');
     assert.equal(context.profile.nativeOptions!.fastMode, false);
   }
+  const readStats = async () => {
+    const result = (await f.rpc('team.activity.stats.read', { memberName: 'alice' })) as {
+      ok: boolean;
+      value: { stats: { generations: number; inputTokens: number | null; outputTokens: number | null } };
+    };
+    assert.equal(result.ok, true, JSON.stringify(result));
+    return {
+      generations: result.value.stats.generations,
+      inputTokens: result.value.stats.inputTokens,
+      outputTokens: result.value.stats.outputTokens,
+    };
+  };
+  const originalStats = { generations: 1, inputTokens: 17, outputTokens: 9 };
+  assert.deepEqual(await readStats(), originalStats, 'unused configured recipe is not activity');
   // A second capture while this exact native session is live must hold without switching selection.
   const denied = await f.rpc('team.launch.capture', input, { commandId: 'TEST-second-capture' });
   assert.deepEqual(denied, { ok: false, code: 'hold', outcome: 'unknown' });
@@ -316,6 +811,10 @@ test('saved configuration captures fresh native identities, preserves historical
   assert.equal(next.ok, true, JSON.stringify(next));
   assert.notEqual(next.value.launch.launchId, start.launchId);
   assert.equal(context.isCurrent(), false, 'new grants cannot revive the original member context');
+  assert.deepEqual(
+    await readStats(), originalStats,
+    'original closed activity remains readable after a new capture replaces delivery'
+  );
   assert.equal(
     (
       (await f.rpc('team.launch.read', { launchId: start.launchId })) as {
@@ -326,6 +825,7 @@ test('saved configuration captures fresh native identities, preserves historical
   );
   await f.restart();
   assert.equal(f.opens(), 1, 'cold reconstruction does not allocate a provider');
+  assert.deepEqual(await readStats(), originalStats, 'cold reconstruction retains original activity');
   const replay = (await f.rpc('team.launch.capture', input, {
     commandId: 'TEST-second-capture',
   })) as typeof capture;
@@ -568,6 +1068,438 @@ test('NDJSON roster replacement refuses live allocation, then saves only after c
     'TEST-new-model'
   );
   assert.equal(f.opens(), 1);
+
+  const live = await fixture(t, {
+    independentProviders: true,
+    changeProfile(selected) {
+      const team = selected.teams[0]!, original = selected.runtime!.members[0]!;
+      original.capturedMcpServers = {}; // Original empty allowlist is captured before the live owner.
+      team.members[0]!.role = 'lead';
+      team.savedSettings = { cwd: original.cwd, providerId: 'anthropic' };
+      team.members[1]!.delivery = { ...team.members[0]!.delivery!, memberId: 'bob-id' };
+      team.grants.push({ principalId: 'TEST-bob-session', memberName: 'bob',
+        permissions: ['read', 'task.write', 'message.write'] });
+      selected.runtime!.members.push({ ...structuredClone(original), memberId: 'bob-id',
+        principalId: 'TEST-bob-session', sessionId: 'TEST-bob-session' });
+      selected.runtime!.providerTemplates = [structuredClone(original)];
+    },
+  });
+  for (const memberId of ['alice-id', 'bob-id'])
+    assert.equal((await live.rpc('runtime.open', { memberId }) as { ok: boolean }).ok, true);
+  const originalPeers = live.contexts.map(context => ({ binding: normalizeBinding(context.endpoint.binding),
+    config: structuredClone(context.request), profile: structuredClone(context.profile) }));
+  const roster = async () => (await live.rpc('team.roster.read', {}) as { value: TeamRosterConfiguration }).value;
+  const first = await roster(), initialOpens = live.opens();
+  const member = { name: 'charlie', model: 'TEST-live-model', role: 'TEST reviewer', workflow: 'TEST live workflow' };
+  const replacement = (value: TeamRosterConfiguration, include: boolean) => ({ expectedRevision: value.revision,
+    members: [...value.members.filter(row => row.role !== 'lead' && row.name !== member.name)
+      .map(row => ({ name: row.name, ...row.settings })), ...(include ? [member] : [])] });
+  const command = async (commandId: string, payload: unknown, liveRoster: LiveRosterPrivateInput) =>
+    await live.rpc(liveRoster.phase === 'read' ? 'team.roster.lookup' : 'team.roster.replace',
+      liveRoster.phase === 'read' ? { expected: payload } : payload, { commandId, liveRoster }) as LiveRosterResponse;
+  const addPayload = replacement(first, true), addId = 'TEST-live-add';
+  const captured = await command(addId, addPayload, { phase: 'capture', remainingMs: 100_000 });
+  assert.ok(captured.ok && 'liveRosterCapture' in captured);
+  assert.equal(live.opens(), initialOpens, 'actual target capture precedes every new provider allocation');
+  assert.deepEqual(await roster(), first);
+  const originalStore = new TeamOwnerStore(live.root, live.selected.teams[0]!.binding.teamName);
+  const originalLaunchPath = join(originalStore.directory, 'launches',
+    runtimeDigest(captured.liveRosterCapture.launchId) + '.json');
+  const capturedBytes = readFileSync(originalLaunchPath, 'utf8');
+  const capturedRecord = JSON.parse(capturedBytes) as TeamLaunchRecord;
+  const capturedMember = capturedRecord.liveMembership!.find(value => value.intent.commandId === addId)!.selected!;
+  const capturedBinding = normalizeBinding(capturedMember.binding!);
+  const originalBindings = new FileTeamRuntimeBindings(originalStore);
+  assert.deepEqual(originalBindings.current(capturedBinding), {
+    binding: capturedBinding, skipped: false, workAllowed: false, generation: capturedMember.runtimeGeneration,
+    configurationDigest: capturedMember.configurationDigest, baseConfigurationDigest: capturedMember.baseConfigurationDigest,
+  });
+  for (const key of ['backendId', 'teamId', 'generation'] as const)
+    assert.throws(() => originalBindings.current({ ...capturedBinding, [key]: 'TEST-foreign' }), { code: 'hold' });
+  assert.throws(() => originalBindings.current(capturedBinding, 'cp1-' + 'a'.repeat(64)), { code: 'hold' });
+  assert.equal(readFileSync(originalLaunchPath, 'utf8'), capturedBytes);
+  assert.equal(live.opens(), initialOpens, 'captured metadata reads confer no factory authority');
+  const pending = await command(addId, addPayload, { phase: 'capture', remainingMs: 100_000 });
+  assert.ok(pending.ok && 'liveRosterPending' in pending);
+  assert.deepEqual(await command(addId, addPayload, { phase: 'continue', captureDigest: 'f'.repeat(64), remainingMs: 100_000 }), pending);
+  const accepted = await command(addId, addPayload, { phase: 'continue',
+    captureDigest: captured.liveRosterCapture.captureDigest, remainingMs: 100_000 });
+  if (!(accepted.ok && 'value' in accepted)) {
+    const directory = join(live.root, 'teams', live.selected.teams[0]!.binding.teamName, '.host-owner');
+    const originalState = JSON.parse(readFileSync(join(directory, 'state.json'), 'utf8'));
+    const originalLaunch = JSON.parse(readFileSync(join(directory, 'launches',
+      runtimeDigest(captured.liveRosterCapture.launchId) + '.json'), 'utf8'));
+    const decision = originalState.rosterCommands.find((value: { commandId: string }) => value.commandId === addId)?.liveMembership;
+    const selection = originalLaunch.liveMembership?.find((value: { intent: { commandId: string } }) => value.intent.commandId === addId);
+    const target = originalLaunch.members.find((value: { memberId: string }) => value.memberId === captured.liveRosterCapture.target.memberId);
+    const attempt = target?.attempts.at(-1);
+    t.diagnostic(JSON.stringify({ liveAdd: { response: accepted, opens: live.opens(), providers: live.contexts.length,
+      ownerPhase: decision?.phase, publication: !!decision?.publication, compensation: !!decision?.compensation,
+      rejection: decision?.rejection, launchPhase: selection?.phase, targetAttempt: attempt && {
+        status: attempt.status, reason: attempt.reason, claimed: attempt.claimed, nativeReady: attempt.nativeReady,
+        contextApplied: attempt.contextApplied, usable: attempt.usable } } }));
+  }
+  assert.ok(accepted.ok && 'value' in accepted, JSON.stringify(accepted));
+  assert.equal(originalBindings.current(capturedBinding)!.workAllowed, true);
+  assert.equal(live.opens(), initialOpens + 1);
+  assert.deepEqual(await command(addId, addPayload, { phase: 'continue',
+    captureDigest: captured.liveRosterCapture.captureDigest, remainingMs: 100_000 }), accepted);
+  const added = await roster(), target = added.members.find(row => row.name === member.name)!;
+  assert.equal(target.memberId, captured.liveRosterCapture.target.memberId);
+  const firstTarget = live.contexts.at(-1)!, oldBinding = normalizeBinding(firstTarget.endpoint.binding);
+  const firstDriver = live.session();
+  assert.equal(firstTarget.profile.model, member.model);
+  await live.rpc('team.execute', { operation: 'message.send', payload: { to: member.name, text: 'TEST live target input' } });
+  await eventually(() => firstDriver.submits.length === 1, 'only the new target consumes its original input');
+  firstDriver.finish(0);
+  const store = new FileRuntimeStore(live.root);
+  await eventually(() => store.fenced(oldBinding, tx => tx.get()?.inputs[0]?.phase === 'terminal'), 'target input is terminal before Remove');
+  const removed = await command('TEST-live-remove', replacement(added, false), { phase: 'capture', remainingMs: 100_000 });
+  assert.ok(removed.ok && 'value' in removed);
+  const afterRemove = await roster();
+  assert.equal(afterRemove.members.some(row => row.memberId === target.memberId), false);
+  assert.equal(afterRemove.removedMembers.find(row => row.name === member.name)?.memberId, target.memberId);
+  assert.equal(firstDriver.closeCalls, 1);
+  assert.equal(store.fenced(oldBinding, tx => tx.get()?.custody), 'released');
+  assert.equal(live.opens(), initialOpens + 1, 'Remove allocates no replacement');
+  const configuration = await live.rpc('team.launch.configuration.read', {}) as {
+    value: { members: { memberId: string; selected: unknown }[] } };
+  assert.equal(configuration.value.members.find(row => row.memberId === target.memberId)?.selected, null);
+  assert.equal(configuration.value.members.length, 3, 'historical row is retained without a runnable selection');
+  for (const peer of originalPeers)
+    assert.ok(configuration.value.members.find(row => row.memberId === peer.binding.memberId)?.selected,
+      'an allocated original peer retains its current selectable configuration');
+  const restorePayload = replacement(afterRemove, true), restoreId = 'TEST-live-restore';
+  const restoreCapture = await command(restoreId, restorePayload, { phase: 'capture', remainingMs: 100_000 });
+  assert.ok(restoreCapture.ok && 'liveRosterCapture' in restoreCapture);
+  const restored = await command(restoreId, restorePayload, { phase: 'continue',
+    captureDigest: restoreCapture.liveRosterCapture.captureDigest, remainingMs: 100_000 });
+  assert.ok(restored.ok && 'value' in restored);
+  assert.equal(live.opens(), initialOpens + 2);
+  const restoredTarget = live.contexts.at(-1)!, newBinding = normalizeBinding(restoredTarget.endpoint.binding);
+  assert.equal(newBinding.memberId, oldBinding.memberId);
+  assert.notEqual(newBinding.generation, oldBinding.generation);
+  assert.notEqual(restoredTarget.profile.principalId, firstTarget.profile.principalId);
+  assert.notEqual(restoredTarget.profile.sessionId, firstTarget.profile.sessionId);
+  assert.ok(restoredTarget.profile.generation > firstTarget.profile.generation);
+  assert.deepEqual(await live.rpc('runtime.stop', { memberId: target.memberId, expectedGeneration: oldBinding.generation }),
+    { ok: false, code: 'forbidden', outcome: 'rejected' });
+  assert.equal(live.session().closeCalls, 0, 'stale target authority cannot close the restored generation');
+  assert.equal(firstDriver.closeCalls, 1, 'retained historical control cannot close the released provider again');
+  for (const [index, peer] of originalPeers.entries()) {
+    assert.deepEqual(live.contexts[index]!.request, peer.config);
+    assert.deepEqual(live.contexts[index]!.profile, peer.profile);
+    assert.equal(store.fenced(peer.binding, tx => tx.get()?.phase), 'allocated');
+    assert.equal(live.sessions[index]!.closeCalls, 0, 'live membership leaves every original peer attached');
+  }
+  const finalRoster = await roster();
+  await live.restart();
+  assert.deepEqual(await command(addId, addPayload, { phase: 'read' }), accepted);
+  assert.deepEqual(await command(restoreId, restorePayload, { phase: 'read' }), restored);
+  assert.deepEqual(await command(restoreId, restorePayload, { phase: 'continue',
+    captureDigest: restoreCapture.liveRosterCapture.captureDigest, remainingMs: 100_000 }), restored);
+  assert.deepEqual(await roster(), finalRoster);
+  assert.equal(live.opens(), initialOpens + 2, 'cold retained outcomes cannot repeat native attachment');
+});
+
+function checkLiveRosterProbeAuthority(t: TestContext, live: Awaited<ReturnType<typeof fixture>>,
+  coordinator: RuntimeTeamCoordinator, isCurrent: () => boolean): void {
+  // Observe the actual first flight retained by the NDJSON composition, not a fabricated receipt.
+  const retained = coordinator as unknown as { capturedTeams: Map<string, HostedTeam>;
+    entries: Map<string, MemberEntry>; options: { teams: ReadonlyMap<string, HostedTeam> } };
+  const teamId = live.binding.scope.teamId, team = retained.options.teams.get(teamId)!;
+  const capturedTeam = retained.capturedTeams.get(teamId)!;
+  const leadId = capturedTeam.definition.members.find(member => member.role === 'lead')!.memberId;
+  const lead = [...retained.entries.values()].find(entry => entry.binding.memberId === leadId &&
+    entry.binding.runId === capturedTeam.launchId)!;
+  assert.ok(lead); assert.equal(lead.team.owner, team.owner); assert.equal(capturedTeam.owner, team.owner);
+  const owner = team.owner, principal = live.selected.principalId;
+  const store = new TeamOwnerStore(live.root, team.definition.binding.teamName);
+  const lock = join(store.directory, 'authority.lock'), directory = join(live.root, 'teams', team.definition.binding.teamName);
+  const state = store.fenced(() => store.read<OwnerState>('state.json')!);
+  const write = (next: OwnerState) => store.fenced(() => store.write('state.json', next));
+  const empty = () => ({ publications: 0, namespaceReads: 0, tokens: [] as string[], checks: [] as string[] });
+  let segment = empty(), observing = false, afterOriginal: (() => void) | undefined;
+  let segments: ReturnType<typeof empty>[] = [], originalCutoff = 0;
+  const link = fs.linkSync, directories = fs.readdirSync, read = TeamOwnerStore.prototype.read;
+  const original = TeamLiveRosterMembership.prototype.withOriginal;
+  const execution = TeamOwner.prototype.assertExecutionAllowed, launchRead = TeamOwner.prototype.withLaunchAuthority;
+  const runtimeRead = RuntimeOwner.prototype.readCapturedSession;
+  const mocks = [
+    t.mock.method(fs, 'linkSync', (...args: Parameters<typeof fs.linkSync>) => {
+      if (observing && args[1] === lock) segment.publications++;
+      return link(...args);
+    }),
+    t.mock.method(fs, 'readdirSync', (...args: Parameters<typeof fs.readdirSync>) => {
+      if (observing && args[0] === directory) segment.namespaceReads++;
+      return directories(...args);
+    }),
+    t.mock.method(TeamOwnerStore.prototype, 'read', function<T>(this: TeamOwnerStore, name: string,
+      decode?: (text: string) => T): T | undefined {
+      if (observing && this.directory === store.directory && name === 'state.json') {
+        const [pid, , token] = fs.readFileSync(lock, 'utf8').split('\n');
+        assert.equal(pid, String(process.pid)); assert.match(token!, /^[a-f0-9-]{36}$/);
+        segment.tokens.push(token!);
+      }
+      return (read<T>).call(this, name, decode);
+    }),
+    t.mock.method(TeamLiveRosterMembership.prototype, 'withOriginal', function<T>(this: TeamLiveRosterMembership,
+      source: Parameters<typeof original>[0], callback: (row: Parameters<Parameters<typeof original>[1]>[0]) => T): T {
+      if (observing) {
+        assert.equal(source.principalId, principal); originalCutoff = source.cutoff;
+        segment.checks.push('original:' + source.principalId);
+      }
+      const result = original.call(this, source, callback) as T;
+      if (observing) afterOriginal?.();
+      return result;
+    }),
+    t.mock.method(TeamOwner.prototype, 'assertExecutionAllowed', function(this: TeamOwner, actor: string) {
+      if (observing) { assert.equal(this, owner); segment.checks.push('execution:' + actor); }
+      return execution.call(this, actor);
+    }),
+    t.mock.method(TeamOwner.prototype, 'withLaunchAuthority', function<T>(this: TeamOwner, actor: string,
+      action: 'read' | 'control', callback: (revision: number) => T): T {
+      if (observing) {
+        assert.equal(this, owner); assert.equal(action, 'read');
+        segment.checks.push('read:' + actor);
+      }
+      return launchRead.call(this, actor, action, callback) as T;
+    }),
+    t.mock.method(RuntimeOwner.prototype, 'readCapturedSession', function(this: RuntimeOwner,
+      binding: Parameters<typeof runtimeRead>[0]) {
+      if (!observing) return runtimeRead.call(this, binding);
+      assert.equal(fs.existsSync(lock), false, 'the original Runtime custody read stays outside the released Team lock');
+      assert.equal(binding.memberId, lead.binding.memberId);
+      segments.push(segment); segment = empty(); observing = false;
+      try { return runtimeRead.call(this, binding); } finally { observing = true; }
+    }),
+  ];
+  syncBuiltinESMExports();
+  const measure = () => {
+    segment = empty(); segments = []; observing = true;
+    try { return { current: isCurrent(), segments, tail: segment }; }
+    finally { observing = false; assert.equal(fs.existsSync(lock), false, 'no Team lock survives the original synchronous check'); }
+  };
+  const changedSource = capturedTeam.capture;
+  assert.ok(changedSource !== undefined, 'the actual captured run retains its original source');
+  const leadTeam = lead.team;
+  const teams = [...new Set([team, capturedTeam, lead.team])];
+  try {
+    const first = measure();
+    assert.equal(first.current, true); assert.equal(first.segments.length, 2);
+    t.diagnostic(JSON.stringify({ liveRosterAuthority: first.segments.map(row => ({
+      publications: row.publications, namespaceReads: row.namespaceReads, stateReads: row.tokens.length })) }));
+    for (const row of first.segments) {
+      assert.equal(row.publications, 1, 'each actual original-plus-execution check shares one physical Team publication');
+      assert.equal(row.namespaceReads, 4, 'all four original namespace observations remain');
+      assert.equal(row.tokens.length, 6, 'all five original state reads plus the outer read grant remain fresh');
+      assert.equal(new Set(row.tokens).size, 1);
+      assert.deepEqual(row.checks, ['read:' + principal, 'original:' + principal, 'execution:' + principal]);
+    }
+    assert.deepEqual(first.tail, empty());
+    assert.notEqual(first.segments[0]!.tokens[0], first.segments[1]!.tokens[0],
+      'captured-source recursion begins after the preceding Team lock is released');
+    const later = measure(); assert.equal(later.current, true);
+    assert.equal(later.segments.length, 2);
+    assert.ok(later.segments.every(row => row.publications === 1 && row.namespaceReads === 4 && row.tokens.length === 6));
+    assert.notEqual(first.segments[0]!.tokens[0], later.segments[0]!.tokens[0], 'no token is reused by a later check');
+    lead.team = { ...leadTeam };
+    const replacedTeam = measure(); assert.equal(replacedTeam.current, false);
+    assert.equal(replacedTeam.tail.publications, 0); lead.team = leadTeam;
+    // A coherent replacement keeps the same persisted policy; only immutable owner identity can reject it early.
+    const replacementOwner = Object.create(owner) as TeamOwner;
+    for (const target of teams) target.owner = replacementOwner;
+    const foreign = measure(); assert.equal(foreign.current, false);
+    assert.equal(foreign.tail.publications, 0); assert.equal(foreign.segments.length, 0);
+    for (const target of teams) target.owner = owner;
+    capturedTeam.capture = { TEST: 'different-original-source' };
+    const stale = measure(); assert.equal(stale.current, false); assert.equal(stale.tail.publications, 0);
+    capturedTeam.capture = changedSource;
+    const changes: [string, (next: OwnerState) => void][] = [
+      ['read-only', next => { next.grants.find(grant => grant.principalId === principal)!.permissions = ['read']; }],
+      ['admin-only', next => { next.grants.find(grant => grant.principalId === principal)!.permissions = ['admin']; }],
+      ['revoked', next => { next.grants.find(grant => grant.principalId === principal)!.revoked = true; }],
+      ['revision', next => { const grant = next.grants.find(value => value.principalId === principal)!;
+        grant.revision = (grant.revision ?? 1) + 1; }],
+      ['lifecycle', next => { next.lifecycle = { cleanupCommandId: 'TEST-pending', cleanupPending: true }; }],
+    ];
+    for (const [name, change] of changes) {
+      const next = structuredClone(state); change(next); write(next);
+      if (name === 'read-only' || name === 'lifecycle')
+        assert.equal(owner.withLaunchAuthority(principal, 'read', () => true), true, 'legitimate read alone cannot authorize live execution');
+      if (name === 'admin-only')
+        assert.equal(owner.withLaunchAuthority(principal, 'control', () => true), true, 'control alone cannot replace the original read grant');
+      if (name === 'revoked')
+        assert.equal(owner.withLaunchAuthority(lead.profile.principalId, 'read', () => true), true,
+          'the lead read grant cannot substitute for the original operator');
+      const refused = measure(); assert.equal(refused.current, false, name);
+      assert.equal(refused.segments.length, 0, name + ' refuses before Runtime custody');
+      write(state); assert.equal(measure().current, true, name + ' does not poison a later fresh check');
+    }
+    if (process.platform !== 'win32') {
+      const path = join(directory, 'TEST-foreign-link');
+      afterOriginal = () => { afterOriginal = undefined; fs.symlinkSync(live.root, path, 'dir'); };
+      try {
+        const refused = measure(); assert.equal(refused.current, false);
+        assert.equal(refused.segments.length, 0, 'the execution fence rechecks namespace after original authority');
+      } finally { afterOriginal = undefined; fs.rmSync(path, { force: true }); }
+    }
+    const now = t.mock.method(Date, 'now', () => originalCutoff);
+    try {
+      const expired = measure(); assert.equal(expired.current, false);
+      assert.equal(expired.segments.length, 0, 'the unchanged original cutoff precedes Runtime custody');
+    } finally { now.mock.restore(); }
+    assert.equal(measure().current, true);
+  } finally {
+    afterOriginal = undefined; observing = false;
+    lead.team = leadTeam;
+    for (const target of teams) target.owner = owner;
+    capturedTeam.capture = changedSource; write(state);
+    for (const mock of mocks) mock.mock.restore();
+    syncBuiltinESMExports();
+  }
+}
+
+test('captured-run OpenCode live Add reaches its original model probe and preserves failed-probe refusal', async t => {
+  let preparations = 0, runs = 0, closes = 0, authorityChecks = false, authorityFailure: unknown;
+  const invocations = t.mock.method(RuntimeTeamCoordinator.prototype, 'executeLiveRoster');
+  const prepare: ProviderManagementCoordinator['prepareTeamProbe'] = (selected, processOrigin) => {
+    assert.equal(selected.provider, 'opencode');
+    assert.equal(processOrigin, undefined, 'this controlled recipe has no Windows process authority');
+    return (input, isCurrent, purpose, origin) => {
+      preparations++;
+      assert.equal(isCurrent(), true);
+      assert.equal(input.profileId, selected.profileId);
+      assert.equal(input.configRevision, selected.configRevision);
+      assert.equal(input.providerId, 'test-provider');
+      assert.equal(input.modelId, 'TEST-live-model');
+      assert.equal(purpose, 'native-local-readiness-v1');
+      assert.equal(origin?.workspaces[0]?.path, selected.cwd);
+      return { timeoutMs: 1000,
+        run: async () => {
+          runs++; assert.equal(isCurrent(), true);
+          const coordinator = invocations.mock.calls.at(-1)?.this;
+          assert.ok(coordinator instanceof RuntimeTeamCoordinator);
+          try { checkLiveRosterProbeAuthority(t, live, coordinator, isCurrent); authorityChecks = true; }
+          catch (error) { authorityFailure = error; throw error; }
+          return false;
+        },
+        close: async () => { closes++; return true; } };
+    };
+  };
+  t.mock.method(ProviderManagementCoordinator.prototype, 'prepareTeamProbe', prepare);
+  const live = await fixture(t, { independentProviders: true, changeProfile(selected) {
+    const root = selected.owner.storageRoot, team = selected.teams[0]!, lead = selected.runtime!.members[0]!;
+    lead.capturedMcpServers = {};
+    team.members[0]!.role = 'lead';
+    team.savedSettings = { cwd: root, providerId: 'anthropic', model: 'TEST-lead-model', syncModelsWithLead: false };
+    team.members[1]!.delivery = { ...team.members[0]!.delivery!, memberId: 'bob-id' };
+    team.grants.push({ principalId: 'TEST-bob-session', memberName: 'bob', permissions: ['read', 'task.write', 'message.write'] });
+    selected.runtime!.members.push({ ...structuredClone(lead), memberId: 'bob-id', principalId: 'TEST-bob-session', sessionId: 'TEST-bob-session' });
+    const environment = { HOME: join(root, 'home'), XDG_CONFIG_HOME: join(root, 'config'),
+      XDG_DATA_HOME: join(root, 'data'), XDG_CACHE_HOME: join(root, 'cache') };
+    for (const directory of Object.values(environment)) mkdirSync(directory);
+    writeFileSync(join(root, 'opencode.json'), JSON.stringify({ provider: { 'test-provider': {
+      npm: '@ai-sdk/openai-compatible', options: { baseURL: 'http://127.0.0.1:9/v1' },
+      models: { 'TEST-live-model': { name: 'TEST live model' } },
+    } } }));
+    const openCode = {
+      provider: 'opencode' as const, protocolRevision: '1.19.4' as const,
+      teamId: team.binding.teamId, memberId: 'TEST-template', principalId: 'TEST-template', sessionId: 'TEST-template',
+      generation: 1, configRevision: 'TEST-opencode-template', cwd: root, model: 'TEST-live-model',
+      accountBinding: 'TEST-private-account', executable: { path: join(root, 'TEST-never-executed'), sha256: 'd'.repeat(64) },
+      environment, endpoint: 'http://127.0.0.1:19001', nativeOptions: { providerId: 'test-provider', agent: 'build' },
+      capturedMcpServers: {}, limits: { ...lead.limits },
+    };
+    selected.runtime!.providerTemplates = [structuredClone(lead), openCode];
+    selected.management = [teamModelProbeProfile(openCode)];
+  } });
+  const roster = async () => (await live.rpc('team.roster.read', {}) as { value: TeamRosterConfiguration }).value;
+  const beforeCapture = await roster();
+  assert.equal((await live.rpc('team.roster.replace', {
+    expectedRevision: beforeCapture.revision, savedSettings: beforeCapture.savedSettings,
+    members: [{ name: 'bob', model: 'TEST-peer-model' }],
+  }, { commandId: 'TEST-live-opencode-roster' }) as { ok: boolean }).ok, true);
+  const captured = await live.rpc('team.launch.capture', { rosterCommandId: 'TEST-live-opencode-roster' },
+    { commandId: 'TEST-live-opencode-capture' }) as { ok: boolean; value: { launch: { launchId: string } } };
+  assert.equal(captured.ok, true, JSON.stringify(captured));
+  assert.notEqual(captured.value.launch.launchId, live.binding.scope.runId, 'the saved Team scope is not the captured native run');
+  for (const memberId of ['alice-id', 'bob-id'])
+    assert.equal((await live.rpc('runtime.open', { memberId }) as { ok: boolean }).ok, true);
+  const originals = live.contexts.map(context => ({ profile: structuredClone(context.profile),
+    request: structuredClone(context.request), binding: normalizeBinding(context.endpoint.binding) }));
+  const originalRoster = await roster(), commandId = 'TEST-live-opencode-add';
+  const payload = { expectedRevision: originalRoster.revision,
+    members: [...originalRoster.members.filter(row => row.role !== 'lead').map(row => ({ name: row.name, ...row.settings })),
+      { name: 'carol', providerId: 'opencode', model: 'test-provider/TEST-live-model' }] };
+  const deadline = Date.now() + 30000;
+  const target = await live.rpc('team.roster.replace', payload,
+    { commandId, liveRoster: { phase: 'capture', remainingMs: deadline - Date.now() } }) as LiveRosterResponse;
+  assert.ok(target.ok && 'liveRosterCapture' in target);
+  const view = target.liveRosterCapture;
+  assert.equal(view.launchId, captured.value.launch.launchId);
+  assert.equal(view.target.workspace, live.root);
+  assert.equal(preparations, 0); assert.equal(live.opens(), 2);
+  const pending = await live.rpc('team.roster.replace', payload, { commandId,
+    liveRoster: { phase: 'continue', captureDigest: 'f'.repeat(64), remainingMs: deadline - Date.now() } });
+  assert.ok((pending as { liveRosterPending?: unknown }).liveRosterPending);
+  assert.equal(preparations, 0, 'a foreign capture cannot invoke the model boundary');
+  const reference = (path: string): ReadinessSourceReference => {
+    const directories: unknown[] = [];
+    let directory = parsePath(path).root;
+    const missing = (value: string) => ({ root: live.root, path, present: false,
+      digest: managementDigest({ path, root: live.root, directories, missing: value }) });
+    for (const part of ['', ...dirname(path).slice(directory.length).split(sep).filter(Boolean)]) {
+      if (part) directory = join(directory, part);
+      let stat;
+      try { stat = lstatSync(directory); }
+      catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return missing(directory); throw error; }
+      assert.ok(stat.isDirectory() && !stat.isSymbolicLink());
+      directories.push([directory, stat.dev, stat.ino, stat.mode, stat.uid]);
+    }
+    let stat;
+    try { stat = lstatSync(path); }
+    catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return missing(path); throw error; }
+    assert.ok(stat.isFile() && !stat.isSymbolicLink());
+    return { root: live.root, path, present: true, digest: managementDigest({ path, root: live.root, directories,
+      file: [stat.dev, stat.ino, stat.mode, stat.uid, stat.size, stat.mtimeMs, stat.ctimeMs, stat.nlink],
+      bytes: createHash('sha256').update(readFileSync(path)).digest('hex') }) };
+  };
+  const origin: LocalModelReadinessOrigin = { schemaVersion: 1, kind: 'team',
+    ownerDigest: managementDigest(live.binding.owner), contextId: 'TEST-context', commandId,
+    selectionDigest: managementDigest({ handleId: live.binding.handleId, scope: live.binding.scope, payload, liveRosterCapture: view }),
+    workspaces: [{ path: live.root, project: { selectedPath: join(live.root, 'opencode.json'), invalid: false,
+      providers: [{ providerId: 'test-provider', baseUrl: 'http://127.0.0.1:9/v1', preset: 'custom', hasConfiguredApiKey: false }],
+      sources: ['opencode.json', 'opencode.jsonc', '.opencode/opencode.json', '.opencode/opencode.jsonc'].map(name => reference(join(live.root, name))) },
+      global: { notConsulted: 'project-precedence' } }], approval: { notConsulted: 'no-private-target' } };
+  const remainingMs = deadline - Date.now();
+  const envelope = { commandId, liveRoster: { phase: 'continue', captureDigest: view.captureDigest, remainingMs },
+    localModelReadinessOrigin: { origin, remainingMs } };
+  const rejected = await live.rpc('team.roster.replace', payload, envelope);
+  if (authorityFailure) throw authorityFailure;
+  assert.equal(authorityChecks, true, 'the actual retained probe guard must exercise its original Team fences');
+  assert.equal(preparations, 1, 'the original captured run must reach the closed model-probe boundary');
+  assert.equal(runs, 1); assert.equal(closes, 1);
+  assert.deepEqual(rejected, { ok: false, code: 'hold', outcome: 'rejected' });
+  const probes = [...new FileManagementCommandStore(live.root).list()];
+  assert.equal(probes.length, 1);
+  const probe = probes[0]!;
+  assert.equal(probe.kind, 'model.probe');
+  if (probe.kind !== 'model.probe') assert.fail();
+  assert.equal(probe.phase, 'held'); assert.equal(probe.ok, false); assert.equal(probe.resourceHeld, false);
+  assert.equal(probe.readiness, undefined, 'the failing boundary supplies no qualifying model evidence');
+  assert.deepEqual(probe.localModelReadinessOrigin, origin);
+  assert.equal(probe.readinessScope?.sourceRevision, view.captureDigest);
+  assert.deepEqual(await roster(), originalRoster);
+  assert.equal(live.opens(), 2, 'a failed model probe must not allocate the target Runtime');
+  for (const [index, original] of originals.entries()) {
+    assert.deepEqual(live.contexts[index]!.profile, original.profile);
+    assert.deepEqual(live.contexts[index]!.request, original.request);
+    assert.equal(new FileRuntimeStore(live.root).fenced(original.binding, tx => tx.get()?.phase), 'allocated');
+    assert.equal(live.sessions[index]!.closeCalls, 0);
+  }
+  assert.deepEqual(await live.rpc('team.roster.replace', payload, envelope), rejected);
+  assert.equal(preparations, 1); assert.equal(runs, 1); assert.equal(closes, 1);
 });
 
 test('NDJSON unknown native cleanup keeps the saved roster and its original grants bound', async (t) => {
@@ -575,8 +1507,28 @@ test('NDJSON unknown native cleanup keeps the saved roster and its original gran
     unknownCleanup: true,
     changeProfile: (profile) => {
       profile.teams[0]!.members[0]!.role = 'lead';
+      for (const kind of ['missing', 'revoked'] as const) {
+        const original = profile.teams[0]!;
+        const binding = { ...original.binding,
+          teamId: 'TEST-product-' + kind, teamName: 'test-product-' + kind };
+        profile.teams.push({
+          binding,
+          scope: { ...original.scope, teamId: binding.teamId, runId: 'TEST-product-run-' + kind },
+          members: [{ memberId: 'product-lead', name: 'product-lead', role: 'lead' }],
+          grants: kind === 'missing' ? [] : [{ principalId: profile.principalId,
+            memberName: 'user', permissions: ['read'], revoked: true }],
+        });
+      }
     },
   });
+  const assertProductReadRefused = async () => {
+    for (const team of f.selected.teams.slice(1))
+      assert.deepEqual(await f.rpc('team.snapshot', {}, {
+        binding: { ...f.binding, scope: team.scope },
+      }), { ok: false, code: 'forbidden', outcome: 'rejected' },
+      'composition presence does not grant actor read');
+  };
+  await assertProductReadRefused();
   const initial = (await f.rpc('team.roster.read', {})) as { value: TeamRosterConfiguration };
   await f.rpc('runtime.open', { memberId: 'alice-id' });
   await f.rpc('runtime.stop', { memberId: 'alice-id' });
@@ -594,6 +1546,61 @@ test('NDJSON unknown native cleanup keeps the saved roster and its original gran
     value: null,
   });
   assert.equal(f.opens(), 1);
+  let original = '';
+  delete f.selected.runtime;
+  await f.restart('failed', () => {
+    original = JSON.stringify(new FileRuntimeStore(f.root).fenced(f.runtimeBinding, tx => tx.get()));
+  });
+  assert.equal(f.opens(), 1, 'no-current-runtime composition still retains old unknown custody');
+  assert.equal((await f.rpc('team.snapshot', {}) as { ok: boolean }).ok, true);
+  assert.deepEqual(await f.rpc('runtime.open', { memberId: 'alice-id' }),
+    { ok: false, code: 'hold', outcome: 'unknown' });
+  await assertProductReadRefused();
+  assert.equal((await f.dispose()).cleanup, 'failed');
+  assert.equal(JSON.stringify(new FileRuntimeStore(f.root).fenced(f.runtimeBinding, tx => tx.get())), original);
+
+  // TEST corruption is introduced only after the original owner completed its cleanup attempt.
+  const privateState = join(f.root, 'teams', f.selected.teams[1]!.binding.teamName, '.host-owner', 'state.json');
+  const before = readFileSync(privateState, 'utf8');
+  await assert.rejects(f.restart('failed', () => {
+    writeFileSync(privateState, JSON.stringify({ ...JSON.parse(before), runtimeCaptures: [{}] }));
+  }), { code: 'hold' }, 'malformed original history cannot become an empty inaccessible Team');
+  assert.equal(f.opens(), 1);
+  assert.equal(JSON.stringify(new FileRuntimeStore(f.root).fenced(f.runtimeBinding, tx => tx.get())), original);
+
+  const retained = await fixture(t, { independentProviders: true, changeProfile(selected) {
+    const team = selected.teams[0]!, base = selected.runtime!.members[0]!;
+    team.members[0]!.role = 'lead';
+    team.savedSettings = { cwd: base.cwd, providerId: 'anthropic' };
+    team.members[1]!.delivery = { ...team.members[0]!.delivery!, memberId: 'bob-id' };
+    team.grants.push({ principalId: 'TEST-retained-bob', memberName: 'bob', permissions: ['read', 'task.write', 'message.write'] });
+    selected.runtime!.members.push({ ...structuredClone(base), memberId: 'bob-id', principalId: 'TEST-retained-bob', sessionId: 'TEST-retained-bob' });
+  } });
+  for (const memberId of ['alice-id', 'bob-id'])
+    assert.equal((await retained.rpc('runtime.open', { memberId }) as { ok: boolean }).ok, true);
+  const beforeRemove = await retained.rpc('team.roster.read', {}) as { value: TeamRosterConfiguration };
+  const targetDriver = retained.sessions[1]!, targetBinding = normalizeBinding(retained.contexts[1]!.endpoint.binding);
+  targetDriver.cleanup = 'unknown';
+  assert.equal((await retained.rpc('runtime.stop', { memberId: 'alice-id' }) as { ok: boolean }).ok, true);
+  const removePayload = { expectedRevision: beforeRemove.value.revision, members: [] };
+  const unknown = await retained.rpc('team.roster.replace', removePayload, { commandId: 'TEST-retained-remove',
+    liveRoster: { phase: 'capture', remainingMs: 100_000 } }) as LiveRosterResponse;
+  assert.ok(unknown.ok && 'liveRosterPending' in unknown);
+  assert.equal(unknown.liveRosterPending.phase, 'held');
+  assert.equal(targetDriver.closeCalls, 1, 'an inactive lead cannot bypass the retained target cleanup');
+  assert.equal(new FileRuntimeStore(retained.root).fenced(targetBinding, tx => tx.get()?.custody), 'unknown');
+  assert.deepEqual(await retained.rpc('team.roster.read', {}), beforeRemove);
+  assert.deepEqual(await retained.rpc('team.roster.lookup', { expected: removePayload }, {
+    commandId: 'TEST-retained-remove', liveRoster: { phase: 'read' } }), unknown);
+  assert.deepEqual(await retained.rpc('team.roster.replace', removePayload, {
+    commandId: 'TEST-retained-remove', liveRoster: { phase: 'capture', remainingMs: 100_000 } }), unknown);
+  assert.equal(targetDriver.closeCalls, 1, 'retained failure is not a second Stop admission');
+  assert.equal(retained.opens(), 2);
+  await retained.restart('failed');
+  assert.deepEqual(await retained.rpc('team.roster.lookup', { expected: removePayload }, {
+    commandId: 'TEST-retained-remove', liveRoster: { phase: 'read' } }), unknown);
+  assert.deepEqual(await retained.rpc('team.roster.read', {}), beforeRemove);
+  assert.equal(retained.opens(), 2, 'cold failed cleanup cannot create another provider');
 });
 function assertSameLaunch(actual: unknown, expected: unknown, message?: string): void {
   const next = actual as { ok: boolean; value: { observedAtMs: number } };
@@ -791,7 +1798,10 @@ async function fixture(
     changeProfile?(selected: TeamHostProfile): void;
     open?: Promise<Awaited<ReturnType<DriverFactory['open']>>>;
     unknownCleanup?: boolean;
+    independentProviders?: boolean;
     checkpointHistory?: boolean;
+    requireCheckpointSource?: boolean;
+    onCheckpointSource?(context: MemberProviderContext): void;
     onProvider?(context: MemberProviderContext): void;
     onCleanup?(): void;
     disposeTimeoutMs?: number;
@@ -818,18 +1828,23 @@ async function fixture(
   };
   output.on('data', receive);
   const contexts: MemberProviderContext[] = [];
+  const sessions: ControlledSession[] = [];
   let session: ControlledSession | undefined;
   let sealed = false;
   let ready = false;
   let cleanupCalls = 0;
   let opens = 0;
   const restored: unknown[] = [];
+  const checkpointSources: NonNullable<ReturnType<NonNullable<MemberProviderContext['readCheckpointSource']>>>[] = [];
+  let handoffs = 0;
   const composition = {
     createProvider(context: MemberProviderContext): MemberProvider {
       contexts.push(context);
       options.onProvider?.(context);
       session = new ControlledSession(context.onProgress);
+      sessions.push(session);
       const capturedSession = session;
+      const independent = options.independentProviders ? { ready: false, sealed: false } : undefined;
       if (options.checkpointHistory)
         session.checkpoint = () => ({
           ok: true,
@@ -840,14 +1855,25 @@ async function fixture(
         factory: {
           open: async () => {
             opens++;
-            if (context.request.checkpointRef)
+            if (context.request.checkpointRef) {
               restored.push(
                 await context.readCheckpoint(context.request.checkpointRef, context.request)
               );
+              if (options.requireCheckpointSource) {
+                // Controlled legacy-candidate boundary only; no synthetic proof is supplied.
+                options.onCheckpointSource?.(context);
+                const proof = context.readCheckpointSource?.(
+                  context.request.checkpointRef, context.request
+                );
+                assert.ok(proof, 'the actual composition must supply original source evidence');
+                checkpointSources.push(proof);
+              }
+            }
             const opened = await (options.open ?? {
-              driver: session!,
+              driver: independent ? capturedSession : session!,
               capabilities: [...context.request.requiredCapabilities],
             });
+            handoffs++;
             const source: Session = opened.driver;
             return {
               ...opened,
@@ -860,20 +1886,22 @@ async function fixture(
                 checkpoint: () => source.checkpoint(),
                 close: async () => {
                   ready = false;
+                  if (independent) independent.ready = false;
                   return source.close();
                 },
                 checkReadiness: async () => {
                   const proof = await source.checkReadiness();
                   ready = proof.ok;
+                  if (independent) independent.ready = proof.ok;
                   return proof;
                 },
               },
             };
           },
         },
-        isReady: () => ready && !sealed && context.isCurrent(),
+        isReady: () => (independent ? independent.ready && !independent.sealed : ready && !sealed) && context.isCurrent(),
         initialContextEvidence: () =>
-          ready && !sealed && context.isCurrent()
+          (independent ? independent.ready && !independent.sealed : ready && !sealed) && context.isCurrent()
             ? {
                 kind: 'native-configuration',
                 contextDigest: initialContextDigest(context.instructions),
@@ -883,6 +1911,7 @@ async function fixture(
             : undefined,
         seal: () => {
           sealed = true;
+          if (independent) independent.sealed = true;
         },
         cleanup: async () => {
           cleanupCalls++;
@@ -941,9 +1970,12 @@ async function fixture(
   return {
     root,
     restored,
-    async restart() {
+    checkpointSources,
+    handoffs: () => handoffs,
+    async restart(expectedCleanup: 'completed' | 'failed' = 'completed', afterClose?: () => void) {
       const closed = await host.dispose();
-      assert.equal(closed.cleanup, 'completed', 'original Host cleanup must finish before explicit cold restart');
+      assert.equal(closed.cleanup, expectedCleanup, 'explicit cold restart retains the original cleanup outcome');
+      afterClose?.();
       input = new PassThrough();
       output = new PassThrough();
       frames.length = 0;
@@ -961,7 +1993,9 @@ async function fixture(
     selected,
     binding,
     host,
+    dispose: () => host.dispose(),
     contexts,
+    sessions,
     frames,
     send,
     answer,
@@ -1487,11 +2521,13 @@ test(
 );
 
 test(
-  'Codex Host selection uses its actual public capability vocabulary and keeps private config off RPC',
+  'Codex Host cost reports retained usage once without native dispatch or private snapshot leakage',
   { timeout: 10000 },
   async (t) => {
     const f = await fixture(t, {
+      checkpointHistory: true,
       changeProfile(selected) {
+        selected.teams[0]!.members[0]!.role = 'lead';
         const member = selected.runtime!.members[0]!;
         if (member.provider !== 'claude') throw new Error('Expected Claude fixture');
         const {
@@ -1512,10 +2548,35 @@ test(
     });
     const opened = (await f.rpc('runtime.open', { memberId: 'alice-id' })) as {
       ok: boolean;
-      value: { nativeReady: boolean };
+      value: { generation: string; nativeReady: boolean; sessionCommands: { name: string; description: string }[] };
     };
     assert.equal(opened.ok, true);
     assert.equal(opened.value.nativeReady, true);
+    assert.deepEqual(opened.value.sessionCommands.map(command => command.name), ['cost']);
+    const cost = { operation: 'message.send', payload: { to: 'alice', text: '/cost',
+      messageId: 'TEST-cost-unknown', nativeCommand: true as const } };
+    const unknown = await f.rpc('team.execute', cost, { commandId: 'TEST-cost-unknown' }) as {
+      ok: boolean; value: CommandReceipt;
+    };
+    assert.equal(unknown.ok, true);
+    assert.equal(unknown.value.phase, 'completed');
+    assert.equal(unknown.value.hostCommand, undefined, 'private prepared facts never cross RPC');
+    const inboxPath = join(f.root, 'teams/test-runtime-host/inboxes/user.json');
+    const replies = () => JSON.parse(readFileSync(inboxPath, 'utf8')) as {
+      messageId: string; text: string; from: string; summary: string;
+    }[];
+    assert.match(replies()[0]!.text, /Input tokens reported: not reported/u);
+    assert.match(replies()[0]!.text, /Output tokens reported: not reported/u);
+    assert.match(replies()[0]!.text, /not a full session total/u);
+    assert.match(replies()[0]!.text, /Price: not reported by Codex/u);
+    assert.equal(f.session().submits.length, 0);
+    for (const payload of [
+      { ...cost.payload, text: '/cost arguments-are-not-a-native-prompt' },
+      { ...cost.payload, to: 'bob' },
+    ]) {
+      const denied = await f.rpc('team.execute', { operation: 'message.send', payload });
+      assert.deepEqual(denied, { ok: false, code: 'invalid', outcome: 'rejected' });
+    }
     assert.deepEqual(f.contexts[0]!.request.requiredCapabilities, ['text', 'tools']);
     assert.equal(f.contexts[0]!.profile.provider, 'codex');
     await f.rpc('team.execute', {
@@ -1526,14 +2587,133 @@ test(
       () => f.session().submits.length === 1,
       'captured Codex selection must receive exactly one input'
     );
+    const original = f.session().submits[0]!;
+    const source = { sessionRef: f.session().sessionRef,
+      inputId: original.inputId, operationRef: original.operationRef };
+    f.session().emit({ ...source, kind: 'usage', inputTokens: 11, outputTokens: 5 });
+    f.session().emit({ ...source, kind: 'text', messageRef: 'TEST-original-message', block: 0,
+      text: 'TEST original ordinary reply', phase: 'complete' });
+    f.session().emit({ ...source, kind: 'usage', inputTokens: 17, outputTokens: 9 });
     f.session().finish(0);
-    await tick();
+    await eventually(() => new FileRuntimeStore(f.root).fenced(f.runtimeBinding,
+      tx => tx.get()?.inputs[0]?.phase === 'terminal'), 'reported original usage must persist');
+    const reportedCommand = { ...cost, payload: { ...cost.payload, messageId: 'TEST-cost-reported' } };
+    const reported = await f.rpc('team.execute', reportedCommand, { commandId: 'TEST-cost-reported' }) as {
+      ok: boolean; value: CommandReceipt;
+    };
+    assert.equal(reported.ok, true);
+    const bytes = readFileSync(inboxPath, 'utf8');
+    assert.equal(replies().length, 2);
+    assert.equal(replies()[1]!.from, 'alice');
+    assert.equal(replies()[1]!.summary, '/cost');
+    assert.match(replies()[1]!.text, /Input tokens reported: 17/u);
+    assert.match(replies()[1]!.text, /Output tokens reported: 9/u);
+    assert.doesNotMatch(replies()[1]!.text, /\$|API duration/u);
+    assert.deepEqual(await f.rpc('team.execute', reportedCommand, { commandId: 'TEST-cost-reported' }), reported);
+    assert.deepEqual(await f.rpc('team.lookup', {}, { commandId: 'TEST-cost-reported' }), reported);
+    assert.equal(readFileSync(inboxPath, 'utf8'), bytes, 'original lookup and replay cannot publish again');
+    const conversation = await f.rpc('team.messages.page', {}) as {
+      ok: boolean; value: { messages: { messageId?: string }[] };
+    };
+    assert.equal(conversation.ok, true);
+    for (const reply of replies())
+      assert.equal(conversation.value.messages.filter(row => row.messageId === reply.messageId).length, 1,
+        'original Host-local command output appears exactly once on the composed conversation page');
+    const ownerStore = new TeamOwnerStore(f.root, 'test-runtime-host');
+    const outbox = ownerStore.fenced(() => ownerStore.list<{ commandId: string }>('outbox'));
+    assert.equal(outbox.length, 1, 'only the ordinary message has a Runtime delivery');
+    assert.ok(outbox.every(entry => !entry.commandId.startsWith('TEST-cost-')));
+    const state = await f.rpc('runtime.read', { memberId: 'alice-id' }) as { value: { inputs: unknown[] } };
+    assert.equal(state.value.inputs.length, 1);
+    assert.equal(f.session().submits.length, 1);
+    const checkpoint = await f.rpc('runtime.checkpoint', {
+      memberId: 'alice-id', checkpointId: 'TEST-cost-checkpoint',
+    }) as { ok: boolean; value: { status: string; reference: string } };
+    assert.equal(checkpoint.ok, true); assert.equal(checkpoint.value.status, 'published');
     const stopped = (await f.rpc('runtime.stop', { memberId: 'alice-id' })) as {
-      value: { phase: string; custody: string };
+      value: { phase: string; custody: string; sessionCommands?: unknown };
     };
     assert.equal(stopped.value.phase, 'closed');
     assert.equal(stopped.value.custody, 'released');
-    const publicBytes = JSON.stringify(f.frames);
+    assert.equal(stopped.value.sessionCommands, undefined);
+    assert.deepEqual(await f.rpc('team.execute', { ...cost,
+      payload: { ...cost.payload, messageId: 'TEST-cost-stale' } }, { commandId: 'TEST-cost-stale' }),
+      { ok: false, code: 'invalid', outcome: 'rejected' });
+    const warmFrames = JSON.stringify(f.frames);
+    await f.restart();
+    assert.deepEqual(await f.rpc('team.lookup', {}, { commandId: 'TEST-cost-reported' }), reported);
+    assert.equal(readFileSync(inboxPath, 'utf8'), bytes, 'cold lookup keeps original output bytes');
+    assert.equal(f.opens(), 1);
+    const resumed = await f.rpc('runtime.restore', {
+      memberId: 'alice-id', reference: checkpoint.value.reference,
+      expectedGeneration: opened.value.generation,
+    }, { commandId: 'TEST-cost-resume' }) as { ok: boolean; value: { generation: string; nativeReady: boolean } };
+    assert.equal(resumed.ok, true, JSON.stringify(resumed)); assert.equal(resumed.value.nativeReady, true);
+    await f.rpc('team.execute', {
+      operation: 'message.send', payload: { to: 'alice', text: 'TEST Codex after Resume' },
+    });
+    await eventually(() => f.session().submits.length === 1, 'one new input reaches resumed Codex');
+    const continued = f.session().submits[0]!;
+    f.session().emit({ kind: 'usage', sessionRef: f.session().sessionRef,
+      inputId: continued.inputId, operationRef: continued.operationRef, inputTokens: 7, outputTokens: 3 });
+    f.session().emit({ kind: 'text', sessionRef: f.session().sessionRef, inputId: continued.inputId,
+      operationRef: continued.operationRef, messageRef: 'TEST-resumed-message', block: 0,
+      text: 'TEST resumed ordinary reply', phase: 'complete' });
+    f.session().finish(0);
+    await eventually(() => new FileRuntimeStore(f.root).fenced(
+      { ...f.runtimeBinding, generation: resumed.value.generation },
+      tx => tx.get()?.inputs[0]?.phase === 'terminal'), 'resumed usage persists');
+    const resumedCost = { ...cost, payload: { ...cost.payload, messageId: 'TEST-cost-resumed' } };
+    assert.equal((await f.rpc('team.execute', resumedCost,
+      { commandId: 'TEST-cost-resumed' }) as { ok: boolean }).ok, true);
+    assert.match(replies().at(-1)!.text, /Input tokens reported: 24/u);
+    assert.match(replies().at(-1)!.text, /Output tokens reported: 12/u);
+    assert.deepEqual(replies().slice(0, 2), JSON.parse(bytes), 'old cost outputs keep their captured units');
+    assert.deepEqual(await f.rpc('team.lookup', {}, { commandId: 'TEST-cost-reported' }), reported);
+    assert.equal(f.session().submits.length, 1, '/cost adds no resumed native input');
+    const resumedPage = await f.rpc('team.messages.page', {}) as {
+      ok: boolean; value: { messages: { text: string; source?: string; leadSessionId?: string }[] };
+    };
+    assert.equal(resumedPage.ok, true, JSON.stringify(resumedPage));
+    const ordinary = resumedPage.value.messages.filter(row => row.source === 'lead_session');
+    assert.deepEqual(ordinary.map(row => row.text), ['TEST original ordinary reply', 'TEST resumed ordinary reply']);
+    assert.equal(new Set(ordinary.map(row => row.leadSessionId)).size, 1, 'qualified Resume retains its original opaque session group');
+    const member = { backendId: f.runtimeBinding.backendId, teamId: f.runtimeBinding.teamId,
+      memberId: f.runtimeBinding.memberId };
+    const retainedFiles = [join(f.root, 'runtime-sessions', runtimeDigest(member), runtimeDigest(f.runtimeBinding) + '.json'),
+      join(f.root, 'runtime-events', runtimeDigest(f.runtimeBinding) + '.json'),
+      join(f.root, 'runtime-events', runtimeDigest(f.runtimeBinding) + '.conversation.json')]
+      .map(file => ({ file, bytes: readFileSync(file) }));
+    try {
+      for (const original of retainedFiles) rmSync(original.file);
+      for (const operation of ['team.messages.page', 'team.changes.read'])
+        assert.deepEqual(await f.rpc(operation, {}), { ok: false, code: 'hold', outcome: 'unknown' },
+          'validated restore source must retain original authority even when every observation file was removed');
+    } finally { for (const original of retainedFiles) writeFileSync(original.file, original.bytes); }
+    await f.rpc('runtime.stop', { memberId: 'alice-id', expectedGeneration: resumed.value.generation });
+    await f.restart();
+    const launch = await f.rpc('team.launch.read', {}) as { value: { launchId: string; rosterRevision: string } };
+    const restart = { launchId: launch.value.launchId, rosterRevision: launch.value.rosterRevision,
+      memberId: 'alice-id', expectedGeneration: resumed.value.generation, action: 'restart' };
+    for (const operation of ['prepare', 'execute']) {
+      const changed = await f.rpc('team.member.action.' + operation, restart,
+        { commandId: 'TEST-cost-fresh-restart' }) as { ok: boolean };
+      assert.equal(changed.ok, true, JSON.stringify(changed));
+    }
+    await eventually(() => f.opens() === 3, 'explicit fresh Restart opens one new session');
+    assert.equal((await f.rpc('team.execute', { ...cost,
+      payload: { ...cost.payload, messageId: 'TEST-cost-fresh' } },
+      { commandId: 'TEST-cost-fresh' }) as { ok: boolean }).ok, true);
+    assert.match(replies().at(-1)!.text, /Input tokens reported: not reported/u,
+      'fresh native session cost cannot borrow prior Resume-segment tokens');
+    assert.equal(f.session().submits.length, 0, 'new-session cost is Host-only');
+    const historical = await f.rpc('team.activity.stats.read', { memberName: 'alice' }) as {
+      ok: boolean; value: { stats: { generations: number; inputTokens: number; outputTokens: number } };
+    };
+    assert.equal(historical.ok, true, JSON.stringify(historical));
+    assert.equal(historical.value.stats.generations, 3, 'Stats retains opened empty Restart and both Resume generations');
+    assert.equal(historical.value.stats.inputTokens, 24); assert.equal(historical.value.stats.outputTokens, 12);
+    const publicBytes = warmFrames + JSON.stringify(f.frames);
     for (const secret of [
       'PRIVATE-environment-token',
       'PRIVATE-account',
@@ -1543,6 +2723,111 @@ test(
       assert.equal(publicBytes.includes(secret), false);
   }
 );
+
+test('composed original stderr survives failed startup before Runtime installs a native session', async t => {
+  const opening = deferred<void>();
+  let observations = 0;
+  const f = await fixture(t, {
+    open: opening.promise.then(() => { throw new Error('TEST original startup failed'); }),
+    onProvider(context) {
+      const binding = normalizeBinding(context.endpoint.binding), store = new FileRuntimeStore(context.profile.cwd);
+      const before = store.fenced(binding, tx => tx.get())!;
+      assert.equal(before.phase, 'opening'); assert.equal(before.sessionRef, undefined);
+      assert.deepEqual(before.inputs, []);
+      const conversation = store.readConversation(binding), observe = context.observeProcessOutput;
+      assert.ok(observe, 'the actual provider composition must supply the retained callback');
+      observe({ kind: 'process-output', stream: 'stderr', text: 'TEST original startup diagnostic' });
+      const after = store.fenced(binding, tx => tx.get())!;
+      assert.equal(after.phase, before.phase); assert.equal(after.custody, before.custody);
+      assert.equal(after.nativeReady, before.nativeReady); assert.equal(after.sessionRef, undefined);
+      assert.deepEqual(after.inputs, before.inputs); assert.deepEqual(after.interactions, before.interactions);
+      assert.deepEqual(store.readConversation(binding), conversation);
+      observations++;
+    },
+  });
+  const pending = f.rpc('runtime.open', { memberId: 'alice-id' });
+  try {
+    await eventually(() => f.opens() === 1, 'the original provider open remains pending');
+    assert.equal(observations, 1);
+    opening.resolve(); await pending;
+    const store = new FileRuntimeStore(f.root), record = store.fenced(f.runtimeBinding, tx => tx.get())!;
+    assert.equal(record.phase, 'held'); assert.equal(record.diagnostic, 'open-unknown');
+    assert.equal(record.custody, 'unknown'); assert.equal(record.nativeReady, false);
+    assert.equal(record.sessionRef, undefined); assert.deepEqual(record.inputs, []);
+    const diagnostics = store.readActivity(f.runtimeBinding)!.events.filter(row => row.data.kind === 'process-output');
+    assert.equal(diagnostics.length, 1);
+    assert.equal(diagnostics[0]!.data.text, 'TEST original startup diagnostic');
+    assert.equal(diagnostics[0]!.inputId, undefined); assert.equal(diagnostics[0]!.operationRef, undefined);
+    assert.equal(store.readConversation(f.runtimeBinding), undefined);
+    assert.equal(f.handoffs(), 0); assert.equal(f.session().submits.length, 0);
+  } finally { opening.resolve(); await pending; }
+});
+
+test('composed original stderr accepts closing diagnostics without settling Runtime state or inputs', async t => {
+  const f = await fixture(t);
+  assert.equal((await f.rpc('runtime.open', { memberId: 'alice-id' }) as { ok: boolean }).ok, true);
+  const context = f.contexts[0]!, observe = context.observeProcessOutput, store = new FileRuntimeStore(f.root);
+  assert.ok(observe);
+  const conversation = store.readConversation(f.runtimeBinding), close = f.session().close;
+  let observations = 0;
+  f.session().close = async () => {
+    const before = store.fenced(f.runtimeBinding, tx => tx.get())!;
+    assert.equal(before.phase, 'closing'); assert.equal(before.sealed, true);
+    assert.equal(before.custody, 'owned'); assert.equal(before.nativeReady, false);
+    assert.equal(context.isCurrent(), true, 'the original source grant remains valid while closing');
+    observe({ kind: 'process-output', stream: 'stderr', text: 'TEST original closing diagnostic' });
+    const after = store.fenced(f.runtimeBinding, tx => tx.get())!;
+    assert.equal(after.phase, before.phase); assert.equal(after.custody, before.custody);
+    assert.equal(after.sealed, before.sealed); assert.equal(after.nativeReady, before.nativeReady);
+    assert.deepEqual(after.inputs, before.inputs); assert.deepEqual(after.interactions, before.interactions);
+    assert.deepEqual(store.readConversation(f.runtimeBinding), conversation);
+    observations++;
+    return close();
+  };
+  const stopped = await f.rpc('runtime.stop', { memberId: 'alice-id' }) as {
+    ok: boolean; value: { phase: string; custody: string };
+  };
+  assert.equal(stopped.ok, true); assert.equal(stopped.value.phase, 'closed');
+  assert.equal(stopped.value.custody, 'released'); assert.equal(observations, 1);
+  const activity = store.readActivity(f.runtimeBinding)!;
+  const diagnostics = activity.events.filter(row => row.data.kind === 'process-output');
+  assert.equal(diagnostics.length, 1); assert.equal(diagnostics[0]!.data.text, 'TEST original closing diagnostic');
+  assert.equal(diagnostics[0]!.inputId, undefined); assert.equal(diagnostics[0]!.operationRef, undefined);
+  observe({ kind: 'process-output', stream: 'stderr', text: 'TEST after original release' });
+  assert.deepEqual(store.readActivity(f.runtimeBinding), activity);
+  assert.deepEqual(store.readConversation(f.runtimeBinding), conversation);
+  assert.equal(f.session().submits.length, 0); assert.equal(f.session().closeCalls, 1);
+});
+
+test('composed original stderr rejects changed member authority, revocation and a sealed Host', async t => {
+  const f = await fixture(t);
+  assert.equal((await f.rpc('runtime.open', { memberId: 'alice-id' }) as { ok: boolean }).ok, true);
+  const context = f.contexts[0]!, observe = context.observeProcessOutput, store = new FileRuntimeStore(f.root);
+  assert.ok(observe);
+  observe({ kind: 'process-output', stream: 'stderr', text: 'TEST original current diagnostic' });
+  const activity = store.readActivity(f.runtimeBinding), record = store.fenced(f.runtimeBinding, tx => tx.get());
+  const conversation = store.readConversation(f.runtimeBinding), memberId = context.profile.memberId;
+  try {
+    context.profile.memberId = 'bob-id';
+    assert.doesNotThrow(() => observe({ kind: 'process-output', stream: 'stderr', text: 'TEST wrong member' }));
+  } finally { context.profile.memberId = memberId; }
+  const path = join(f.root, 'teams/test-runtime-host/.host-owner/state.json'), original = readFileSync(path, 'utf8');
+  const state = JSON.parse(original) as { grants: { principalId: string; revoked?: boolean }[] };
+  state.grants.find(grant => grant.principalId === context.profile.principalId)!.revoked = true;
+  try {
+    writeFileSync(path, JSON.stringify(state));
+    assert.doesNotThrow(() => observe({ kind: 'process-output', stream: 'stderr', text: 'TEST revoked source' }));
+  } finally { writeFileSync(path, original); }
+  assert.deepEqual(store.readActivity(f.runtimeBinding), activity);
+  assert.deepEqual(store.fenced(f.runtimeBinding, tx => tx.get()), record);
+  assert.deepEqual(store.readConversation(f.runtimeBinding), conversation);
+  assert.equal(context.isCurrent(), true, 'restoring the exact original grant restores the same authority');
+  assert.equal((await f.dispose()).cleanup, 'completed');
+  const closed = store.readActivity(f.runtimeBinding);
+  observe({ kind: 'process-output', stream: 'stderr', text: 'TEST sealed Host diagnostic' });
+  assert.deepEqual(store.readActivity(f.runtimeBinding), closed);
+  assert.equal(f.session().submits.length, 0); assert.equal(f.opens(), 1);
+});
 
 test(
   'activity RPC pages normalized native observations with opaque cursor, bounded snapshots and explicit gaps',
@@ -1707,6 +2992,8 @@ test(
     for (const [operation, payload] of [
       ['runtime.activity.snapshot', { memberId: 'alice-id' }],
       ['runtime.activity.feed', { memberId: 'alice-id', cursor: snapshot.value.cursor }],
+      ['team.activity.stats.read', { memberName: 'alice' }],
+      ['team.activity.logs.read', { memberName: 'alice' }],
       ['team.launch.configuration.read', {}],
     ] as const)
       assert.deepEqual(await f.rpc(operation, payload), {
@@ -2024,7 +3311,125 @@ test('launch options refuse allocated state and compile every selected provider 
 });
 
 test('selected checkpoint resumes through a new Host/generation, retains Team delivery ownership and fences stale controls', async (t) => {
-  const f = await fixture(t, { checkpointHistory: true });
+  let sourceChecks = 0;
+  const f = await fixture(t, {
+    checkpointHistory: true,
+    requireCheckpointSource: true,
+    onCheckpointSource(context) {
+      sourceChecks++;
+      const reference = context.request.checkpointRef!;
+      const read = context.readCheckpointSource;
+      assert.ok(read);
+      const source = () => read(reference, context.request);
+      const launchPath = join(f.root, 'teams/test-runtime-host/.host-owner/launches',
+        runtimeDigest('TEST-run') + '.json');
+      const original = readFileSync(launchPath, 'utf8');
+      const journal = JSON.parse(original) as TeamLaunchRecord;
+      const member = journal.members.find(item => item.memberId === 'alice-id')!;
+      const target = member.attempts.findIndex(item =>
+        item.attemptId === 'restore-' + runtimeDigest('TEST-resume-original'));
+      assert.ok(target >= 2, 'genuine original claim, selected Skip, then Restore');
+      const skip = journal.memberActions!.find(item => item.input.commandId === 'TEST-source-skip')!;
+      assert.equal(skip.phase, 'selected');
+      assert.equal(skip.input.action, 'skip');
+      assert.equal(member.attempts[target - 1]!.attemptId,
+        'action-' + runtimeDigest(skip.input.commandId));
+      const originalAttempt = member.attempts.find(item => item.attemptId === skip.sourceAttemptId)!;
+      assert.equal(originalAttempt.claimed, true);
+      assert.equal(originalAttempt.noAllocation, false);
+      const sourcePath = join(f.root, 'runtime-sessions',
+        runtimeDigest({ backendId: f.runtimeBinding.backendId, teamId: f.runtimeBinding.teamId,
+          memberId: f.runtimeBinding.memberId }), runtimeDigest(normalizeBinding(f.runtimeBinding)) + '.json');
+      const sourceBefore = readFileSync(sourcePath, 'utf8');
+      const payloadBefore = readFileSync(join(f.root, 'runtime-checkpoints', reference + '.json'));
+      const proof = source();
+      assert.ok(proof);
+      assert.equal(proof.reference, reference);
+      assert.deepEqual(proof.request, context.request);
+      assert.deepEqual(proof.originalExecutable, f.selected.runtime!.members[0]!.executable);
+      assert.deepEqual(proof.selectedExecutable, proof.originalExecutable);
+      assert.equal(f.handoffs(), 1, 'no restored provider handoff before source qualification');
+      const refusal = (mutate: (copy: TeamLaunchRecord) => void, reason: string) => {
+        const copy = structuredClone(journal);
+        mutate(copy);
+        try {
+          writeFileSync(launchPath, JSON.stringify(copy));
+          assert.throws(source, reason);
+        } finally {
+          writeFileSync(launchPath, original);
+        }
+        assert.equal(readFileSync(launchPath, 'utf8'), original);
+        assert.equal(f.handoffs(), 1);
+      };
+      refusal(copy => {
+        copy.members[0]!.attempts.find(item => item.attemptId === originalAttempt.attemptId)!.claimed = false;
+      }, 'an unclaimed historical predecessor cannot borrow a same-Host claim');
+      refusal(copy => {
+        copy.members[0]!.attempts.find(item => item.attemptId === originalAttempt.attemptId)!.hostIncarnation =
+          'TEST-unrelated-original-host';
+      }, 'a valid shape with a foreign original Host is not the source Runtime');
+      refusal(copy => {
+        copy.members[0]!.attempts.find(item => item.attemptId === originalAttempt.attemptId)!.startedAtMs = -1;
+      }, 'historical fields are validated even though the current attempt is well formed');
+      refusal(copy => {
+        const action = copy.memberActions!.find(item => item.input.commandId === skip.input.commandId)!;
+        action.sourceAttemptId = member.attempts[target]!.attemptId;
+        action.fingerprint = runtimeDigest({
+          input: action.input, actor: action.actor, noAllocation: action.noAllocation,
+          sourceAttemptId: action.sourceAttemptId, source: action.source, selected: action.selected,
+        });
+      }, 'even a valid action fingerprint cannot link Skip forward to this target');
+      refusal(copy => {
+        copy.restorations![0]!.member.restore!.sourceBinding.memberId = 'bob-id';
+      }, 'a foreign member cannot supply source lineage');
+      refusal(copy => {
+        copy.definition.members.find(item => item.memberId === 'alice-id')!.baseConfigurationDigest =
+          runtimeDigest({ ...f.selected.runtime!.members[0]!, executable: {
+            path: '/TEST/different-original-executable', sha256: 'd'.repeat(64),
+          } });
+        copy.fingerprint = runtimeDigest(copy.definition);
+      }, 'a changed original base executable digest cannot be substituted');
+      try {
+        rmSync(launchPath);
+        assert.throws(source, 'missing launch history never becomes original proof');
+      } finally {
+        writeFileSync(launchPath, original);
+      }
+      assert.throws(() => read('cp1-' + 'f'.repeat(64), context.request));
+      assert.throws(() => read(reference, { ...context.request, sessionId: 'TEST-foreign-request' }));
+      const executable = context.profile.executable;
+      try {
+        context.profile.executable = { ...executable, sha256: 'e'.repeat(64) };
+        assert.throws(source, 'changed selected executable is rejected before handoff');
+      } finally {
+        context.profile.executable = executable;
+      }
+      const statePath = join(f.root, 'teams/test-runtime-host/.host-owner/state.json');
+      const stateBefore = readFileSync(statePath, 'utf8');
+      const state = JSON.parse(stateBefore) as { grants: { principalId: string; revoked?: boolean }[] };
+      state.grants.find(item => item.principalId === context.profile.principalId)!.revoked = true;
+      try {
+        writeFileSync(statePath, JSON.stringify(state));
+        assert.throws(source, 'retained source evidence does not replace current authority');
+      } finally {
+        writeFileSync(statePath, stateBefore);
+      }
+      assert.deepEqual(source(), proof, 'exact original bytes restore the same source projection');
+      assert.equal(readFileSync(sourcePath, 'utf8'), sourceBefore);
+      assert.deepEqual(readFileSync(join(f.root, 'runtime-checkpoints', reference + '.json')), payloadBefore);
+      assert.equal(readFileSync(launchPath, 'utf8'), original);
+      assert.equal(f.session().submits.length, 0);
+      assert.equal(f.handoffs(), 1);
+    },
+  });
+  const stats = async () => {
+    const result = await f.rpc('team.activity.stats.read', { memberName: 'alice' }) as {
+      ok: boolean; value: { stats: { generations: number; inputTokens: number; outputTokens: number;
+        costUsd: number | null; gaps: string[]; computedAt: string } };
+    };
+    assert.equal(result.ok, true, JSON.stringify(result));
+    const { computedAt: _computedAt, ...snapshot } = result.value.stats; return snapshot;
+  };
   const initial = (await f.rpc('team.launch.read', {})) as {
     value: { launchId: string; rosterRevision: string };
   };
@@ -2061,6 +3466,9 @@ test('selected checkpoint resumes through a new Host/generation, retains Team de
   const messageA = { operation: 'message.send', payload: { to: 'alice', text: 'TEST_HISTORY_A' } };
   const receiptA = await f.rpc('team.execute', messageA, { commandId: 'TEST-original-A' });
   await eventually(() => f.session().submits.length === 1, 'first input dispatched');
+  f.session().emit({ kind: 'usage', sessionRef: f.session().sessionRef,
+    inputId: f.session().submits[0]!.inputId, operationRef: f.session().submits[0]!.operationRef,
+    inputTokens: 17, outputTokens: 9, cumulativeCostUsd: 0.02 });
   f.session().finish(0);
   await eventually(
     () =>
@@ -2070,12 +3478,80 @@ test('selected checkpoint resumes through a new Host/generation, retains Team de
       ),
     'first input persisted'
   );
+  const firstStats = await stats();
+  assert.equal(firstStats.generations, 1); assert.equal(firstStats.inputTokens, 17);
+  assert.equal(firstStats.outputTokens, 9); assert.equal(firstStats.costUsd, 0.02);
   const captured = (await f.rpc('runtime.checkpoint', {
     memberId: 'alice-id',
     checkpointId: 'TEST-selected',
   })) as { ok: boolean; value: { status: string; reference: string } };
   assert.equal(captured.value.status, 'published');
   await f.rpc('runtime.stop', { memberId: 'alice-id' });
+  const skipScope = await f.rpc('team.launch.read', {}) as {
+    value: { launchId: string; rosterRevision: string };
+  };
+  const skip = { launchId: skipScope.value.launchId, rosterRevision: skipScope.value.rosterRevision,
+    memberId: 'alice-id', expectedGeneration: opened.value.generation, action: 'skip' };
+  for (const operation of ['prepare', 'execute']) {
+    const selected = await f.rpc('team.member.action.' + operation, skip,
+      { commandId: 'TEST-source-skip' }) as { ok: boolean };
+    assert.equal(selected.ok, true, JSON.stringify(selected));
+  }
+  const skipLaunchPath = join(f.root, 'teams/test-runtime-host/.host-owner/launches',
+    runtimeDigest('TEST-run') + '.json');
+  const selectedSkipBytes = readFileSync(skipLaunchPath, 'utf8');
+  for (const fault of ['missing-action', 'unselected-action', 'invalid-transform']) {
+    const altered = JSON.parse(selectedSkipBytes) as TeamLaunchRecord;
+    const action = altered.memberActions!.find(item => item.input.commandId === 'TEST-source-skip')!;
+    if (fault === 'missing-action') delete altered.memberActions;
+    else if (fault === 'unselected-action') action.phase = 'prepared';
+    else {
+      action.source.skipped = true;
+      action.fingerprint = runtimeDigest({
+        input: action.input, actor: action.actor, noAllocation: action.noAllocation,
+        sourceAttemptId: action.sourceAttemptId, source: action.source, selected: action.selected,
+      });
+    }
+    try {
+      writeFileSync(skipLaunchPath, JSON.stringify(altered));
+      const denied = await f.rpc('team.launch.read', {}) as { ok: boolean; code?: string };
+      assert.equal(denied.ok, false, fault);
+      assert.equal(denied.code, 'hold', fault);
+    } finally {
+      writeFileSync(skipLaunchPath, selectedSkipBytes);
+    }
+    assert.equal(readFileSync(skipLaunchPath, 'utf8'), selectedSkipBytes);
+    assert.equal(f.opens(), 1, 'invalid Skip history cannot allocate a replacement provider');
+  }
+  assert.equal(f.opens(), 1, 'Skip retains the original binding without another provider');
+  const skippedLaunchPath = join(f.root, 'teams/test-runtime-host/.host-owner/launches',
+    runtimeDigest('TEST-run') + '.json');
+  const skippedLaunchBytes = readFileSync(skippedLaunchPath, 'utf8');
+  const unexplainedSkip = JSON.parse(skippedLaunchBytes) as TeamLaunchRecord;
+  assert.equal(unexplainedSkip.memberActions?.length, 1);
+  assert.equal(unexplainedSkip.memberActions![0]!.input.commandId, 'TEST-source-skip');
+  assert.equal(unexplainedSkip.memberActions![0]!.phase, 'selected');
+  const skippedSourcePath = join(f.root, 'runtime-sessions',
+    runtimeDigest({ backendId: f.runtimeBinding.backendId, teamId: f.runtimeBinding.teamId,
+      memberId: f.runtimeBinding.memberId }), runtimeDigest(normalizeBinding(f.runtimeBinding)) + '.json');
+  const skippedSourceBytes = readFileSync(skippedSourcePath, 'utf8');
+  const skippedPayloadPath = join(f.root, 'runtime-checkpoints', captured.value.reference + '.json');
+  const skippedPayloadBytes = readFileSync(skippedPayloadPath);
+  delete unexplainedSkip.memberActions;
+  try {
+    writeFileSync(skippedLaunchPath, JSON.stringify(unexplainedSkip));
+    const refused = await f.rpc('team.launch.read', {}) as { ok: boolean; code?: string };
+    assert.equal(refused.ok, false, 'a skipped prepared member needs its original selected Skip receipt');
+    assert.equal(refused.code, 'hold');
+  } finally {
+    writeFileSync(skippedLaunchPath, skippedLaunchBytes);
+  }
+  assert.equal(readFileSync(skippedLaunchPath, 'utf8'), skippedLaunchBytes);
+  assert.equal(readFileSync(skippedSourcePath, 'utf8'), skippedSourceBytes);
+  assert.deepEqual(readFileSync(skippedPayloadPath), skippedPayloadBytes);
+  assert.equal(f.opens(), 1);
+  assert.equal(f.session().submits.length, 1);
+  assert.equal(f.handoffs(), 1);
   await f.restart();
   const before = (await f.rpc('team.launch.read', {})) as {
     ok: boolean;
@@ -2114,12 +3590,19 @@ test('selected checkpoint resumes through a new Host/generation, retains Team de
   const result = concurrent[0]!;
   assert.equal(result.ok, true, JSON.stringify(result));
   assert.equal(result.value.nativeReady, true);
+  assert.equal(sourceChecks, 1);
+  assert.equal(f.checkpointSources.length, 1);
+  assert.equal(f.handoffs(), 2, 'one original and one qualified restored handoff');
   assert.deepEqual(
     await f.rpc('team.execute', messageA, { commandId: 'TEST-original-A' }),
     receiptA,
     'old human receipt keeps its original delivery instead of retargeting it'
   );
   assert.equal(f.session().submits.length, 0);
+  const beforeSecondTurn = await stats();
+  assert.equal(beforeSecondTurn.generations, 2);
+  assert.equal(beforeSecondTurn.inputTokens, 17, 'Resume retains first-generation input usage');
+  assert.equal(beforeSecondTurn.outputTokens, 9);
   assert.deepEqual(
     await f.rpc(
       'team.launch.start',
@@ -2131,6 +3614,20 @@ test('selected checkpoint resumes through a new Host/generation, retains Team de
   assert.notEqual(result.value.generation, opened.value.generation);
   assert.deepEqual(f.restored, [{ history: ['TEST_HISTORY_A'] }]);
   assert.equal(f.contexts.at(-1)?.request.generation, 2);
+  const restoredContext = f.contexts.at(-1)!, restoredBinding = normalizeBinding(restoredContext.endpoint.binding);
+  const diagnosticStore = new FileRuntimeStore(f.root), beforeDiagnostic = diagnosticStore.fenced(restoredBinding, tx => tx.get())!;
+  assert.equal(beforeDiagnostic.config?.checkpointRef, captured.value.reference);
+  assert.ok(restoredContext.observeProcessOutput);
+  const restoredConversation = diagnosticStore.readConversation(restoredBinding);
+  restoredContext.observeProcessOutput({ kind: 'process-output', stream: 'stderr', text: 'TEST exact restored process diagnostic' });
+  const restoredDiagnostic = diagnosticStore.readActivity(restoredBinding)!.events.find(row => row.data.kind === 'process-output')!;
+  assert.equal(restoredDiagnostic.data.text, 'TEST exact restored process diagnostic');
+  assert.equal(restoredDiagnostic.inputId, undefined); assert.equal(restoredDiagnostic.operationRef, undefined);
+  const afterDiagnostic = diagnosticStore.fenced(restoredBinding, tx => tx.get())!;
+  assert.deepEqual(afterDiagnostic.inputs, beforeDiagnostic.inputs);
+  assert.equal(afterDiagnostic.phase, beforeDiagnostic.phase); assert.equal(afterDiagnostic.nativeReady, beforeDiagnostic.nativeReady);
+  assert.equal(afterDiagnostic.custody, beforeDiagnostic.custody);
+  assert.deepEqual(diagnosticStore.readConversation(restoredBinding), restoredConversation);
   const restoredProfile = f.contexts.at(-1)!.profile;
   assert.equal(restoredProfile.model, 'TEST-selected-model');
   assert.equal(restoredProfile.provider, 'claude');
@@ -2158,7 +3655,18 @@ test('selected checkpoint resumes through a new Host/generation, retains Team de
     'new Team delivery reaches restored generation'
   );
   assert.equal(f.session().submits[0]?.content, 'TEST_HISTORY_B');
+  f.session().emit({ kind: 'usage', sessionRef: f.session().sessionRef,
+    inputId: f.session().submits[0]!.inputId, operationRef: f.session().submits[0]!.operationRef,
+    inputTokens: 7, outputTokens: 3, cumulativeCostUsd: 0.03 });
   f.session().finish(0);
+  await eventually(() => new FileRuntimeStore(f.root).fenced(
+    { ...f.runtimeBinding, generation: result.value.generation },
+    tx => tx.get()?.inputs[0]?.phase === 'terminal'), 'second original input usage persisted');
+  const afterSecondTurn = await stats();
+  assert.equal(afterSecondTurn.inputTokens, 24);
+  assert.equal(afterSecondTurn.outputTokens, 12);
+  assert.equal(afterSecondTurn.costUsd, null, 'unqualified resumed cumulative USD cannot be added twice');
+  assert.ok(afterSecondTurn.gaps.some(gap => gap.includes('Cumulative cost across resumed generations')));
   await f.rpc('runtime.restore', restore, { commandId: 'TEST-resume-original' });
   assert.equal(f.opens(), 2, 'same original restore cannot allocate twice');
   assert.deepEqual(
@@ -2180,6 +3688,7 @@ test('selected checkpoint resumes through a new Host/generation, retains Team de
   assert.equal(recovered.ok, true, JSON.stringify(recovered));
   assert.equal(recovered.value.phase, 'closed');
   assert.equal(recovered.value.attached, false);
+  assert.deepEqual(await stats(), afterSecondTurn, 'cold read retains both original usage journals');
   assert.equal(
     f.opens(),
     2,
@@ -2191,6 +3700,13 @@ test('selected checkpoint resumes through a new Host/generation, retains Team de
     runtimeDigest('TEST-run') + '.json'
   );
   const journal = JSON.parse(readFileSync(journalPath, 'utf8'));
+  const originalJournal = JSON.stringify(journal);
+  journal.restorations[0].member.restore.sourceBinding.teamId = 'FOREIGN-team';
+  writeFileSync(journalPath, JSON.stringify(journal));
+  assert.equal((await f.rpc('team.activity.stats.read', { memberName: 'alice' }) as { ok: boolean }).ok, false,
+    'foreign historical binding cannot authorize activity');
+  writeFileSync(journalPath, originalJournal);
+  journal.restorations[0].member.restore.sourceBinding.teamId = f.runtimeBinding.teamId;
   journal.restorations[0].fingerprint = '0'.repeat(64);
   writeFileSync(journalPath, JSON.stringify(journal));
   await assert.rejects(
@@ -2198,4 +3714,1322 @@ test('selected checkpoint resumes through a new Host/generation, retains Team de
     'corrupt historical selection cannot authorize retired bindings'
   );
   assert.equal(f.opens(), 2, 'corrupt restore recovery performs no native allocation');
+  writeFileSync(journalPath, originalJournal);
+
+  // A separate controlled original, with no configuration override, demonstrates that
+  // a newly manufactured seed journal cannot qualify the retained opaque checkpoint.
+  const missingHistory = await fixture(t, { checkpointHistory: true, requireCheckpointSource: true });
+  const scope = await missingHistory.rpc('team.launch.read', {}) as {
+    value: { launchId: string; rosterRevision: string };
+  };
+  assert.equal((await missingHistory.rpc('team.launch.start', {
+    launchId: scope.value.launchId, rosterRevision: scope.value.rosterRevision,
+  }, { commandId: 'TEST-missing-history-launch' }) as { ok: boolean }).ok, true);
+  assert.equal((await missingHistory.rpc('runtime.open', { memberId: 'alice-id' }) as { ok: boolean }).ok, true);
+  await missingHistory.rpc('team.execute', {
+    operation: 'message.send', payload: { to: 'alice', text: 'TEST_ORIGINAL_MISSING_HISTORY' },
+  }, { commandId: 'TEST-missing-history-input' });
+  await eventually(() => missingHistory.session().submits.length === 1, 'original controlled input');
+  missingHistory.session().finish(0);
+  const originalRuntime = new FileRuntimeStore(missingHistory.root);
+  await eventually(() => originalRuntime.fenced(missingHistory.runtimeBinding,
+    tx => tx.get()?.inputs[0]?.phase === 'terminal'), 'original controlled terminal');
+  const originalCheckpoint = await missingHistory.rpc('runtime.checkpoint', {
+    memberId: 'alice-id', checkpointId: 'TEST-missing-history-checkpoint',
+  }) as { ok: boolean; value: { status: string; reference: string } };
+  assert.equal(originalCheckpoint.ok, true);
+  assert.equal(originalCheckpoint.value.status, 'published');
+  await missingHistory.rpc('runtime.stop', { memberId: 'alice-id' });
+  const missingLaunchPath = join(missingHistory.root, 'teams/test-runtime-host/.host-owner/launches',
+    runtimeDigest('TEST-run') + '.json');
+  let originalLaunch = '';
+  let sourceBytes = '';
+  const sourcePath = join(missingHistory.root, 'runtime-sessions',
+    runtimeDigest({ backendId: missingHistory.runtimeBinding.backendId, teamId: missingHistory.runtimeBinding.teamId,
+      memberId: missingHistory.runtimeBinding.memberId }),
+    runtimeDigest(normalizeBinding(missingHistory.runtimeBinding)) + '.json');
+  const payloadPath = join(missingHistory.root, 'runtime-checkpoints', originalCheckpoint.value.reference + '.json');
+  const payloadBytes = readFileSync(payloadPath);
+  await missingHistory.restart('completed', () => {
+    originalLaunch = readFileSync(missingLaunchPath, 'utf8');
+    sourceBytes = readFileSync(sourcePath, 'utf8');
+    rmSync(missingLaunchPath); // Only after the original owner's real close.
+  });
+  const recreated = JSON.parse(readFileSync(missingLaunchPath, 'utf8')) as TeamLaunchRecord;
+  const oldClaim = (JSON.parse(originalLaunch) as TeamLaunchRecord).members[0]!.attempts[0]!;
+  const newSeed = recreated.members[0]!.attempts[0]!;
+  assert.equal(oldClaim.claimed, true);
+  assert.equal(newSeed.claimed, false);
+  assert.notEqual(newSeed.hostIncarnation, oldClaim.hostIncarnation);
+  const missingRestore = { memberId: 'alice-id', reference: originalCheckpoint.value.reference,
+    expectedGeneration: missingHistory.runtimeBinding.generation };
+  const denied = await missingHistory.rpc('runtime.restore', missingRestore,
+    { commandId: 'TEST-missing-history-restore' }) as {
+      ok: boolean; value: { generation: string; phase: string; nativeReady: boolean };
+    };
+  assert.equal(denied.ok, true, 'the original requested Runtime result remains observable');
+  assert.equal(denied.value.phase, 'held');
+  assert.equal(denied.value.nativeReady, false);
+  assert.equal(missingHistory.restored.length, 1, 'original payload was read before the source proof refused');
+  assert.equal(missingHistory.checkpointSources.length, 0);
+  assert.equal(missingHistory.handoffs(), 1, 'unclaimed replacement history cannot release a restored driver');
+  assert.equal(missingHistory.session().submits.length, 0);
+  const beforeSecondColdOpens = missingHistory.opens();
+  await missingHistory.restart('failed');
+  const stillHeld = await missingHistory.rpc('runtime.restore', missingRestore,
+    { commandId: 'TEST-missing-history-restore' }) as typeof denied;
+  assert.equal(stillHeld.ok, true);
+  assert.equal(stillHeld.value.phase, 'held');
+  assert.equal(stillHeld.value.nativeReady, false);
+  assert.equal(missingHistory.opens(), beforeSecondColdOpens, 'second cold startup cannot retry the failed allocation');
+  assert.equal(missingHistory.checkpointSources.length, 0);
+  assert.equal(missingHistory.handoffs(), 1);
+  assert.equal(readFileSync(sourcePath, 'utf8'), sourceBytes);
+  assert.deepEqual(readFileSync(payloadPath), payloadBytes);
+  assert.equal((await missingHistory.dispose()).cleanup, 'failed', 'unknown target remains genuine cleanup debt');
+  writeFileSync(missingLaunchPath, originalLaunch); // Restore the TEST fault without erasing the unknown Runtime.
+  assert.equal(readFileSync(missingLaunchPath, 'utf8'), originalLaunch);
+});
+
+test('Runtime projection privately observes only evaluated readiness operands and preserves the original view and errors', t => {
+  const diagnostic = channel('agent-teams.legacy-host.runtime-projection'), observations: unknown[] = [];
+  const receive = (value: unknown) => { observations.push(value); };
+  diagnostic.subscribe(receive); t.after(() => diagnostic.unsubscribe(receive));
+  const binding = normalizeBinding({ backendId: 'PRIVATE-backend', teamId: 'PRIVATE-team', runId: 'PRIVATE-run', memberId: 'alice', generation: '1' });
+  const failure = new Error('PRIVATE-original-error');
+  const sample = (bits: boolean[], absent: 'record' | 'provider' | undefined = undefined, throwing?: string) => {
+    const calls: string[] = [];
+    const call = (name: string) => { calls.push(name); if (throwing === name) throw failure; };
+    const record: NonNullable<Parameters<typeof projectRuntimeMember>[0]['record']> = {
+      schemaVersion: 1, binding, profileId: 'PRIVATE-profile', config: null, openFingerprint: null,
+      hostIncarnation: 'PRIVATE-host', phase: 'allocated', sealed: false, custody: 'owned', inputs: [], interactions: [],
+      get nativeReady() { call('record'); return bits[1]!; },
+    };
+    const entry = {
+      profile: { memberId: 'alice', provider: 'opencode' },
+      get binding() { call('binding'); return bits[0] ? binding : { ...binding, generation: '2' }; },
+      get provider() {
+        call('provider');
+        return absent === 'provider' ? undefined : { isReady() { call('isReady'); return bits[2]!; } };
+      },
+    } as unknown as MemberEntry;
+    const read = () => projectRuntimeMember({ entry, record: absent === 'record' ? undefined : record, binding,
+      runtime: { readSession(original) { call('read'); assert.equal(original, binding); return { record, attached: false }; } },
+      isCurrent() { call('current'); return bits[3]!; } });
+    return { calls, read };
+  };
+  const cases: { bits: boolean[]; absent?: 'record' | 'provider'; operands: (boolean | null)[]; calls: string[] }[] = [
+    { bits: [false, true, true, true], operands: [false, null, null, null], calls: ['read', 'binding'] },
+    { bits: [true, false, true, true], operands: [true, false, null, null], calls: ['read', 'binding', 'record'] },
+    { bits: [true, true, true, true], absent: 'record', operands: [true, false, null, null], calls: ['read', 'binding'] },
+    { bits: [true, true, true, true], absent: 'provider', operands: [true, true, false, null], calls: ['read', 'binding', 'record', 'provider'] },
+    { bits: [true, true, false, true], operands: [true, true, false, null], calls: ['read', 'binding', 'record', 'provider', 'isReady'] },
+    { bits: [true, true, true, false], operands: [true, true, true, false], calls: ['read', 'binding', 'record', 'provider', 'isReady', 'current'] },
+    { bits: [true, true, true, true], operands: [true, true, true, true], calls: ['read', 'binding', 'record', 'provider', 'isReady', 'current'] },
+  ];
+  for (const row of cases) {
+    observations.length = 0;
+    const selected = sample(row.bits, row.absent), view = selected.read(), ready = row.operands.every(value => value === true);
+    assert.deepEqual(selected.calls, row.calls);
+    assert.deepEqual(view, { memberId: 'alice', generation: '1', phase: row.absent === 'record' ? 'unopened' : 'allocated',
+      sealed: false, custody: row.absent === 'record' ? 'released' : 'owned', nativeReady: ready, attached: false, inputs: [], interactions: [] });
+    assert.deepEqual(observations, [{ viewDigest: runtimeDigest(view), bindingMatches: row.operands[0],
+      recordReady: row.operands[1], providerReady: row.operands[2], ownerCurrent: row.operands[3], nativeReady: ready }]);
+    assert.equal(JSON.stringify(observations).includes('PRIVATE-'), false);
+  }
+  const order = ['read', 'binding', 'record', 'provider', 'isReady', 'current'];
+  for (const [index, throwing] of order.entries()) {
+    observations.length = 0;
+    const selected = sample([true, true, true, true], undefined, throwing);
+    assert.throws(selected.read, error => error === failure);
+    assert.deepEqual(selected.calls, order.slice(0, index + 1)); assert.deepEqual(observations, []);
+  }
+  const source = readFileSync(new URL('../../../tools/owned-process-broker/nativeEmulatedSourceProfile.ts', import.meta.url), 'utf8');
+  const begin = source.indexOf('const runtimeProjectionRows = new Map();');
+  const end = source.indexOf('await import(${JSON.stringify(pathToFileURL(cli).href)});', begin);
+  assert.ok(begin > 0 && end > begin);
+  let receiveProjection: (value: unknown) => void = () => { throw new Error('TEST receiver missing'); };
+  let finishProjection: () => void = () => { throw new Error('TEST exit observer missing'); };
+  const writes: string[] = [];
+  runInNewContext(source.slice(begin, end), { assert, Buffer, projectionLedger: 'TEST-private-ledger',
+    channel(name: string) { assert.equal(name, 'agent-teams.legacy-host.runtime-projection');
+      return { subscribe(callback: typeof receiveProjection) { receiveProjection = callback; } }; },
+    process: { once(name: string, callback: typeof finishProjection) { assert.equal(name, 'exit'); finishProjection = callback; } },
+    writeFileSync(path: string, raw: string, options: unknown) {
+      assert.equal(path, 'TEST-private-ledger'); assert.equal(JSON.stringify(options), '{"mode":384,"flag":"wx"}'); writes.push(raw);
+    } });
+  const forwardProjection = (value: unknown) => {
+    assert.ok(value && typeof value === 'object');
+    assert.equal(Object.getPrototypeOf(value), Object.prototype);
+    // Re-home only the actual publisher's own descriptors for the VM realm, without rebuilding its payload.
+    receiveProjection(Object.defineProperties(Object.create(null) as Record<string, unknown>, Object.getOwnPropertyDescriptors(value)));
+  };
+  diagnostic.subscribe(forwardProjection);
+  try {
+    const pending = [
+      [true, false, true, true], [true, true, false, true], [true, true, true, false],
+      [true, true, false, true], [true, true, false, true],
+    ].map(bits => sample(bits).read());
+    for (const view of pending) assert.deepEqual(view, pending[0]);
+    const pendingDigest = runtimeDigest(pending[0]!);
+    const ready = sample([true, true, true, true]).read(), readyDigest = runtimeDigest(ready);
+    assert.notEqual(readyDigest, pendingDigest, 'final nativeReady remains part of the public digest');
+    assert.equal(writes.length, 0, 'private transitions do not write before the original exit observation');
+    finishProjection();
+    assert.equal(writes.length, 1); assert.ok(Buffer.byteLength(writes[0]!) <= 512);
+    assert.deepEqual(JSON.parse(writes[0]!), { status: 'observed', rows: [
+      [pendingDigest, true, true, false, null, false], [readyDigest, true, true, true, true, true],
+    ] }, 'the same public nonready view retains its latest valid private tuple, including a regressed gate');
+  } finally { diagnostic.unsubscribe(forwardProjection); }
+
+  const plain = sample([true, true, true, true]).read();
+  t.mock.method(diagnostic, 'publish', () => { throw failure; });
+  assert.deepEqual(sample([true, true, true, true]).read(), plain, 'diagnostic failure cannot replace the public result');
+});
+
+test('the original passive Runtime projection receiver writes only bounded exit facts and keeps ambiguous evidence unknown', () => {
+  const source = readFileSync(new URL('../../../tools/owned-process-broker/nativeEmulatedSourceProfile.ts', import.meta.url), 'utf8');
+  const begin = source.indexOf('const runtimeProjectionRows = new Map();');
+  const end = source.indexOf('await import(${JSON.stringify(pathToFileURL(cli).href)});', begin);
+  assert.ok(begin > 0 && end > begin);
+  const create = () => {
+    let receive: (value: unknown) => void = () => { throw new Error('receiver missing'); };
+    let exit: () => void = () => { throw new Error('exit missing'); };
+    const writes: string[] = [];
+    runInNewContext(source.slice(begin, end), { assert, Buffer, projectionLedger: 'TEST-private-ledger',
+      channel(name: string) { assert.equal(name, 'agent-teams.legacy-host.runtime-projection'); return { subscribe(fn: typeof receive) { receive = fn; } }; },
+      process: { once(name: string, fn: typeof exit) { assert.equal(name, 'exit'); exit = fn; } },
+      writeFileSync(path: string, raw: string, options: unknown) {
+        assert.equal(path, 'TEST-private-ledger'); assert.equal(JSON.stringify(options), '{"mode":384,"flag":"wx"}'); writes.push(raw);
+      } });
+    return { receive: (value: unknown) => receive(value), exit: () => exit(), writes };
+  };
+  const row = { viewDigest: 'a'.repeat(64), bindingMatches: true, recordReady: false,
+    providerReady: null, ownerCurrent: null, nativeReady: false };
+  Object.setPrototypeOf(row, null);
+  const copy = (overrides: Record<string, unknown> = {}) => Object.assign(Object.create(null) as Record<string, unknown>, row, overrides);
+  const good = create(); good.receive(row); good.receive(copy());
+  assert.deepEqual(good.writes, [], 'no polling or pre-exit write'); good.exit();
+  assert.equal(good.writes.length, 1); assert.ok(Buffer.byteLength(good.writes[0]!) <= 512);
+  assert.deepEqual(JSON.parse(good.writes[0]!), { status: 'observed', rows: [[row.viewDigest, true, false, null, null, false]] });
+  const empty = create(); empty.exit();
+  assert.deepEqual(JSON.parse(empty.writes[0]!), { status: 'observed', rows: [] }, 'missing digest never becomes a joined observation');
+  let getterCalls = 0;
+  const accessor = Object.defineProperty(copy(), 'recordReady', { get() { getterCalls++; throw new Error('PRIVATE-secret'); } });
+  const bad = [null, [], copy({ extra: 'PRIVATE-secret' }), copy({ viewDigest: 'a'.repeat(513) }),
+    copy({ bindingMatches: false }), copy({ providerReady: true }), copy({ nativeReady: true }), accessor,
+    new Proxy(Object.create(null) as Record<string, unknown>, { ownKeys() { throw new Error('PRIVATE-proxy'); } })];
+  for (const value of bad) {
+    const rejected = create(); rejected.receive(row); rejected.receive(value); rejected.receive(row); rejected.exit();
+    assert.deepEqual(JSON.parse(rejected.writes[0]!), { status: 'unknown', reason: 'invalid' });
+    assert.equal(rejected.writes[0]!.includes('PRIVATE-'), false);
+  }
+  assert.equal(getterCalls, 0);
+  const latest = create(); latest.receive(row);
+  latest.receive(copy({ recordReady: true, providerReady: false }));
+  latest.receive(copy({ recordReady: true, providerReady: true, ownerCurrent: false })); latest.exit();
+  assert.deepEqual(JSON.parse(latest.writes[0]!), { status: 'observed',
+    rows: [[row.viewDigest, true, true, true, false, false]] });
+  const ready = copy({ recordReady: true, providerReady: true, ownerCurrent: true, nativeReady: true });
+  const conflict = create(); conflict.receive(row); conflict.receive(ready); conflict.receive(row); conflict.exit();
+  assert.deepEqual(JSON.parse(conflict.writes[0]!), { status: 'unknown', reason: 'conflict' });
+  const reversed = create(); reversed.receive(ready); reversed.receive(row); reversed.receive(ready); reversed.exit();
+  assert.deepEqual(JSON.parse(reversed.writes[0]!), { status: 'unknown', reason: 'conflict' });
+  const bounded = create(); for (const digit of 'abcd') bounded.receive(copy({ viewDigest: digit.repeat(64) })); bounded.exit();
+  assert.equal(JSON.parse(bounded.writes[0]!).rows.length, 4); assert.ok(Buffer.byteLength(bounded.writes[0]!) <= 512);
+  const overflow = create(); for (const digit of 'abcde') overflow.receive(copy({ viewDigest: digit.repeat(64) })); overflow.exit();
+  assert.deepEqual(JSON.parse(overflow.writes[0]!), { status: 'unknown', reason: 'capacity' });
+
+  const scenario = readFileSync(new URL('../../../tools/owned-process-broker/nativeEmulatedSourceScenario.ts', import.meta.url), 'utf8');
+  const readerBegin = '    // TEST_RUNTIME_PROJECTION_READER_BEGIN';
+  const readerEnd = '    // TEST_RUNTIME_PROJECTION_READER_END';
+  assert.equal(scenario.split(readerBegin).length, 2); assert.equal(scenario.split(readerEnd).length, 2);
+  const start = scenario.indexOf(readerBegin) + readerBegin.length, stop = scenario.indexOf(readerEnd);
+  assert.ok(start >= 0 && stop > start);
+  let reader = scenario.slice(start, stop);
+  // Erase only these two uniquely checked type annotations; execute the original reader body.
+  for (const [before, after] of [['new Set<string>()', 'new Set()'], ['(tuple: unknown)', '(tuple)']] as const) {
+    assert.equal(reader.split(before).length, 2); reader = reader.replace(before, after);
+  }
+  for (const kind of ['observed', 'two-epochs', 'no-epoch', 'unknown-exit', 'missing-exit',
+    'wrong-digest', 'missing-ledger', 'empty-ledger', 'conflicting-ledger', 'overflow-ledger',
+    'invalid-ledger', 'private-reason', 'legacy-unknown', 'large-ledger'] as const) {
+    const evidence: Record<string, unknown> = {};
+    let stats = 0, reads = 0;
+    const epochs = Array.from({ length: kind === 'no-epoch' ? 0 : kind === 'two-epochs' ? 2 : 1 },
+      () => kind === 'missing-exit' ? {} : { projectionHostExit: kind === 'unknown-exit' ? 'unknown' : 'confirmed' });
+    const raw = kind === 'empty-ledger' ? empty.writes[0]! : kind === 'conflicting-ledger' ? conflict.writes[0]!
+      : kind === 'overflow-ledger' ? overflow.writes[0]! : kind === 'invalid-ledger' ? '{"status":"unknown","reason":"invalid"}'
+      : kind === 'private-reason' ? '{"status":"unknown","reason":"PRIVATE-secret"}'
+      : kind === 'legacy-unknown' ? '{"status":"unknown"}' : kind === 'large-ledger' ? 'x'.repeat(513) : good.writes[0]!;
+    runInNewContext(reader, { assert, Buffer, failure: new Error('TEST original readiness failure'),
+      fixture: { runtimeProjectionLedger: 'TEST-private-ledger' }, evidence, epochs,
+      lastRuntimeViewDigest: kind === 'wrong-digest' ? 'b'.repeat(64) : row.viewDigest,
+      lstatSync(path: string) {
+        assert.equal(path, 'TEST-private-ledger'); stats++;
+        if (kind === 'missing-ledger') throw new Error('TEST missing original exit ledger');
+        return { isFile: () => true, isSymbolicLink: () => false, size: Buffer.byteLength(raw) };
+      },
+      readFileSync(path: string, encoding: string) {
+        assert.equal(path, 'TEST-private-ledger'); assert.equal(encoding, 'utf8'); reads++; return raw;
+      },
+      object(value: unknown) { assert.ok(value && typeof value === 'object' && !Array.isArray(value)); return value; },
+      text(value: unknown) { assert.equal(typeof value, 'string'); return value; },
+    });
+    const blocked = ['no-epoch', 'two-epochs', 'unknown-exit', 'missing-exit'].includes(kind);
+    assert.equal(stats, blocked ? 0 : 1, kind + ': original epoch and confirmed exit are required before any ledger read');
+    assert.equal(reads, blocked || kind === 'missing-ledger' || kind === 'large-ledger' ? 0 : 1);
+    const reason = kind === 'no-epoch' || kind === 'two-epochs' ? 'epoch-count'
+      : kind === 'unknown-exit' || kind === 'missing-exit' ? 'host-exit'
+      : kind === 'missing-ledger' || kind === 'large-ledger' ? 'ledger-stat'
+      : kind === 'conflicting-ledger' ? 'receiver-conflict' : kind === 'overflow-ledger' ? 'receiver-capacity'
+      : kind === 'invalid-ledger' ? 'receiver-invalid' : kind === 'private-reason' || kind === 'legacy-unknown' ? 'ledger-format' : 'view-match';
+    assert.deepEqual(JSON.parse(JSON.stringify(evidence.runtimeProjection)), kind === 'observed'
+      ? { status: 'observed', atomicWithFailure: false, ...row }
+      : { status: 'unknown', reason }, kind);
+    assert.doesNotMatch(JSON.stringify(evidence), /TEST-private|PRIVATE-|sessionRef|operationRef/);
+    assert.ok(Buffer.byteLength(JSON.stringify(evidence)) <= 512);
+  }
+});
+
+
+async function reservationCleanupFixture(t: TestContext,
+  alter?: (call: HostCustodyCall, result: HostCustodyResult) => HostCustodyResult) {
+  const source = readFileSync(new URL('../../../tools/owned-process-broker/nativeEmulatedSourceScenario.ts', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+  const part = (begin: string, end: string) => {
+    assert.equal(source.split(begin).length, 2); assert.equal(source.split(end).length, 2);
+    const start = source.indexOf(begin), stop = source.indexOf(end, start); assert.ok(stop > start);
+    return source.slice(start, stop);
+  };
+  let program = part('const custodyTiming =', 'export interface Job {') +
+    part('    const observed: HostCustodyOwner =', '    const client = new CapturedHostClient') +
+    'const holder = {\n' + part('      async close() {', '    };\n  };\n  const epochs:') + '\n}; ({ observed, close: holder.close });';
+  for (const [before, after] of [
+    ['(): CustodyTiming =>', '() =>'], ['(): Record<CustodyPhase, CustodyTiming> =>', '() =>'],
+    ['(): Record<StagingPhase, CustodyTiming> =>', '() =>'], ['const observed: HostCustodyOwner =', 'const observed ='],
+    ["'owner' as 'owner' | 'witness' | 'complete'", "'owner'"],
+    ['let result: Awaited<ReturnType<typeof original.handle>>;', 'let result;'],
+    ['timings: timings!', 'timings: timings'], ['const failures: unknown[] =', 'const failures ='],
+  ]) { assert.equal(program.split(before!).length, 2); program = program.replace(before!, after!); }
+  const owner = { teamIncarnation: 'TEST-reservation-team', runId: 'TEST-reservation-run', laneId: 'TEST-reservation-lane',
+    processGeneration: '00000000-0000-4000-8000-000000000001' };
+  const capability = 'TEST-original-reservation', hash = 'a'.repeat(64), originalResults: { call: HostCustodyCall; result: HostCustodyResult }[] = [];
+  let connections = 0, nativePrepares = 0, shutdowns = 0, witnessCaptures = 0;
+  const pending: PendingOwnedProcess[] = [], logs: string[] = [], jobs: Record<string, unknown>[] = [];
+  const native = new RetainedWindowsCustody({ profileId: 'TEST-profile', profileDigest: hash,
+    selectBroker(reference) { assert.equal(reference, hash); return { path: 'must-never-spawn.exe', sha256: hash, arch: 'x64', protocol: 1 }; },
+    async verifyLaunch() { assert.fail('no native launch verification before a staged prepare'); },
+    createPort() {
+      const port = createWindowsOwnedLaunchPort('must-never-spawn.exe', 'job-membership', {
+        available() { assert.fail('no native availability query'); },
+        connect() { connections++; return assert.fail('no native connection'); },
+      });
+      return { allocate(value) { const result = port.allocate(value); pending.push(result); return result; },
+        prepare(value, spec) { nativePrepares++; return port.prepare(value, spec); } };
+    } });
+  t.after(async () => { assert.equal(await native.close(), true); assert.equal(connections, 0); });
+  const physical = { mainEpoch: native.mainEpoch, close: () => native.close(),
+    attach(context: Parameters<HostCustodyOwner['attach']>[0]) {
+      const port = native.attach(context);
+      return { ...port, async handle(call: HostCustodyCall) {
+        const result = await port.handle(call); originalResults.push({ call, result });
+        return alter ? alter(call, result) : result;
+      } };
+    } };
+  const counts = { service: 0 }, client = { shutdown: async () => { shutdowns++; return { childExit: 'confirmed' }; } };
+  const context = { assert, Buffer, AggregateError, performance, structuredClone, sameOwner, physical, client, jobs, counts,
+    phaseClock: performance.now(), firstCloseEntryMs: null, projectionHostExit: null, available: true, closed: false, failure: undefined as unknown,
+    provider: 'codex', actor: 'TEST-no-actor', events: {}, track() { assert.fail('no observer child'); },
+    entries: () => [], sourceRef: (value: unknown) => value, console: { log: (value: string) => logs.push(value) },
+    capturedQueryableWitness() { witnessCaptures++; return assert.fail('no physical witness before prepare'); } };
+  const evaluated = runInNewContext('"use strict";\n' + program, context) as { observed: HostCustodyOwner; close(): Promise<void> };
+  const port = evaluated.observed.attach({ profileId: 'TEST-profile', signal: new AbortController().signal,
+    binding: { mainEpoch: native.mainEpoch, hostIncarnation: 'TEST-host', profileDigest: hash }, hostExited: new Promise<void>(() => {}) });
+  const send = async (call: HostCustodyCall) => {
+    const result = await port.handle(call); if (!alter) assert.equal(result, originalResults.at(-1)!.result); return result;
+  };
+  await send({ operation: 'allocate', capability, owner: { ...owner }, brokerRef: hash, executableSha256: hash,
+    launchSha256: hash, launchBytes: 1, budgetMs: 20000 });
+  const originalStop = () => {
+    const result = originalResults.findLast(row => row.result.operation === 'stop')?.result;
+    assert.ok(result?.operation === 'stop' && result.state === 'confirmed' && result.receipt && result.receiptRef);
+    return { receipt: result.receipt, receiptRef: result.receiptRef };
+  };
+  return { owner, capability, mainEpoch: native.mainEpoch, jobs, logs, client, counts, send, close: evaluated.close,
+    get stop() { return originalStop(); }, get pending() { assert.equal(pending.length, 1); return pending[0]!; },
+    failScenario(error: unknown) { context.failure = error; },
+    get totals() { return { connections, nativePrepares, shutdowns, witnessCaptures }; },
+    async finish(options: { omitDrain?: boolean; omitRelease?: boolean } = {}) {
+      await send({ operation: 'stop', capability, attemptRef: 'TEST-original-stop', budgetMs: 1000 });
+      if (!options.omitDrain) await send({ operation: 'drain', capability, budgetMs: 1000 });
+      if (!options.omitRelease) await send({ operation: 'release', capability, receiptRef: originalStop().receiptRef });
+    },
+    project() {
+      const evidence: Record<string, unknown> = {}, projection = part('    evidence.epochs = epochs.map(', '    evidence.cleanup =');
+      runInNewContext(projection, { evidence, epochs: [{ physical, pending: { admitted: 0, revoked: 0 }, counts,
+        firstCloseEntryMs: context.firstCloseEntryMs, jobs }] });
+      return JSON.parse(JSON.stringify(evidence.epochs)) as { jobs: Record<string, unknown>[] }[];
+    } };
+}
+function reservationCleanupEvidence(f: { owner: TreeReceipt['owner']; capability: string; mainEpoch: string;
+  stop: { receipt: TreeReceipt; receiptRef: string } }) {
+  return { kind: 'confirmed-no-local-dispatch', mainEpoch: f.mainEpoch, capability: f.capability, allocatedOwner: { ...f.owner },
+    stop: { state: 'confirmed', attemptRef: 'TEST-original-stop', receiptRef: f.stop.receiptRef, receipt: f.stop.receipt },
+    drain: { state: 'complete', afterStopReceiptRef: f.stop.receiptRef }, release: { state: 'released', receiptRef: f.stop.receiptRef },
+    observedCalls: { allocate: { calls: 1, settled: 1, returned: 1 }, prepare: { calls: 0, settled: 0, returned: 0 },
+      resume: { calls: 0, settled: 0, returned: 0 } }, witnessCaptured: false };
+}
+test('source Scenario distinguishes a genuinely released never-prepared reservation from physical HANDLE proof', async t => {
+  const f = await reservationCleanupFixture(t); await f.finish();
+  assert.deepEqual(f.totals, { connections: 0, nativePrepares: 0, shutdowns: 0, witnessCaptures: 0 });
+  assert.equal(f.stop.receipt.coverage, 'no-local-dispatch'); assert.equal(f.stop.receipt.rootExited, false);
+  await assert.rejects(f.pending.release({ ...f.stop.receipt }, 'job-membership'), /Receipt authority/);
+  await assert.rejects(f.pending.release(f.stop.receipt, 'no-local-dispatch'), /required coverage/);
+  let failure: unknown; try { await f.close(); } catch (error) { failure = error; }
+  if (failure instanceof AggregateError) assert.match(String(failure.errors[0]?.message), /Every original physical Job retains confirmed Stop\/drain\/release/);
+  assert.equal(failure, undefined, 'genuine no-local-dispatch cleanup has no physical root HANDLE to await');
+  const expected = reservationCleanupEvidence(f), row = f.project()[0]!.jobs[0]!;
+  assert.deepEqual(row.cleanupEvidence, expected); assert.ok(Buffer.byteLength(JSON.stringify(row.cleanupEvidence)) <= 4096);
+  assert.equal(row.root, null); assert.equal(row.resumed, false); assert.equal(row.originalHandleAbsent, false);
+  assert.equal(row.stopped, true); assert.equal(row.drained, true); assert.equal(row.released, true);
+  assert.deepEqual(JSON.parse(f.logs.at(-1)!).cleanupEvidence, expected);
+  await f.close(); assert.equal(f.totals.shutdowns, 1);
+  const refusal = async (value: Awaited<ReturnType<typeof reservationCleanupFixture>>) => {
+    await assert.rejects(value.close(), error => error instanceof AggregateError &&
+      error.errors.some(item => item?.code === 'ERR_ASSERTION'));
+    assert.equal(value.jobs[0]!.handleAbsent, false); assert.equal(value.project()[0]!.jobs[0]!.cleanupEvidence, undefined);
+  };
+  for (const mode of ['receipt', 'reference', 'owner', 'attempt', 'foreign-reference', 'coverage', 'unknown-stop', 'incomplete-drain', 'unknown-release', 'receipt-getter'] as const) {
+    const value = await reservationCleanupFixture(t, (_call, result) => {
+      if (result.operation === 'drain' && mode === 'incomplete-drain') return { ...result, state: 'incomplete' };
+      if (result.operation === 'release' && mode === 'unknown-release') return { ...result, state: 'unknown' };
+      if (result.operation !== 'stop' || !result.receipt) return result;
+      if (mode === 'receipt-getter') return Object.defineProperty({ ...result }, 'receipt', { get() { throw new Error('TEST observation getter'); } });
+      if (mode === 'receipt') return { operation: 'stop', state: 'confirmed', receiptRef: result.receiptRef };
+      if (mode === 'reference') return { operation: 'stop', state: 'confirmed', receipt: result.receipt };
+      if (mode === 'unknown-stop') return { operation: 'stop', state: 'unknown' };
+      if (mode === 'foreign-reference') return { ...result, receiptRef: 'TEST-foreign-ref' };
+      const receipt = { ...result.receipt, owner: { ...result.receipt.owner } };
+      if (mode === 'owner') receipt.owner.runId = 'TEST-foreign-run';
+      if (mode === 'attempt') receipt.attemptId = 'TEST-foreign-attempt';
+      if (mode === 'coverage') receipt.coverage = 'job-membership';
+      return { ...result, receipt };
+    });
+    await value.finish(); await refusal(value);
+  }
+  for (const mode of ['missing-drain', 'missing-release', 'drain-before-stop', 'close-only', 'prepare', 'resume']) {
+    const value = await reservationCleanupFixture(t);
+    if (mode === 'prepare' || mode === 'resume') await assert.rejects(value.send({ operation: mode, capability: value.capability }), /Original native custody unavailable/);
+    if (mode === 'drain-before-stop') await value.send({ operation: 'drain', capability: value.capability, budgetMs: 1000 });
+    if (mode !== 'close-only') await value.finish({ omitDrain: mode === 'missing-drain' || mode === 'drain-before-stop', omitRelease: mode === 'missing-release' });
+    await refusal(value); assert.equal(value.totals.nativePrepares, 0);
+  }
+  const foreign = await reservationCleanupFixture(t); await foreign.finish({ omitRelease: true });
+  await assert.rejects(foreign.send({ operation: 'release', capability: 'TEST-foreign-capability', receiptRef: foreign.stop.receiptRef }), /Original native custody unavailable/);
+  await refusal(foreign);
+  const handleError = new Error('TEST original handle rejection');
+  const failed = await reservationCleanupFixture(t, (call, result) => { if (call.operation === 'stop') throw handleError; return result; });
+  await assert.rejects(failed.send({ operation: 'stop', capability: failed.capability, attemptRef: 'TEST-original-stop', budgetMs: 1000 }), error => error === handleError);
+  await refusal(failed);
+  const captured = await reservationCleanupFixture(t, (call, result) => {
+    if (call.operation === 'allocate') call.owner.runId = 'TEST-mutated-after-native-allocation'; return result;
+  });
+  await captured.finish(); await captured.close();
+  assert.deepEqual(captured.project()[0]!.jobs[0]!.cleanupEvidence, reservationCleanupEvidence(captured));
+  for (const mode of ['physical', 'failed-unresumed', 'missing-root', 'missing-witness', 'unresumed', 'nonzero-witness', 'rejected-witness']) {
+    const value = await reservationCleanupFixture(t); await value.finish(); let waits = 0;
+    const original = new Error('TEST original HANDLE wait failure'), job = value.jobs[0]!;
+    Object.assign(job, { root: { pid: 4100, birth: '0000000000000001' }, resumed: true, entryStart: 0, entryEnd: 0,
+      witness: { async wait() { waits++; if (mode === 'rejected-witness') throw original; return mode === 'nonzero-witness' ? 1 : 0; } } });
+    if (mode === 'missing-root') delete job.root; if (mode === 'missing-witness') delete job.witness;
+    if (mode === 'unresumed' || mode === 'failed-unresumed') job.resumed = false;
+    if (mode === 'failed-unresumed') value.failScenario(new Error('TEST original resume refusal'));
+    if (mode === 'physical' || mode === 'failed-unresumed') { await value.close(); assert.equal(job.handleAbsent, true); assert.equal(waits, 1); }
+    else {
+      await assert.rejects(value.close(), error => error instanceof AggregateError &&
+        (mode === 'rejected-witness' ? error.errors.includes(original) : error.errors.some(item => item?.code === 'ERR_ASSERTION')));
+      assert.equal(job.handleAbsent, false); assert.equal(waits, ['nonzero-witness', 'rejected-witness'].includes(mode) ? 1 : 0);
+    }
+    assert.equal(value.project()[0]!.jobs[0]!.cleanupEvidence, undefined);
+  }
+  const shutdown = await reservationCleanupFixture(t); await shutdown.finish(); const original = new Error('TEST original shutdown failure');
+  shutdown.client.shutdown = () => Promise.reject(original);
+  await assert.rejects(shutdown.close(), error => error instanceof AggregateError && error.errors.includes(original));
+});
+
+test('full original Process verifier accepts only authority-bound no-dispatch evidence without losing any jobs', async t => {
+  const f = await reservationCleanupFixture(t); await f.finish();
+  const evidence = reservationCleanupEvidence(f), sourceHead = 'a'.repeat(40);
+  const physical = (capability: string) => ({ capability, root: { pid: 4100, birth: '0000000000000001' },
+    resumed: true, stopped: true, drained: true, released: true, originalHandleAbsent: true,
+    entryStart: 0, entryEnd: 0, threadEphemeral: [] });
+  const reservation = { ...physical(f.capability), root: null, resumed: false, originalHandleAbsent: false,
+    entryStart: null, entryEnd: null, cleanupEvidence: evidence };
+  const makeProof = (provider: string) => {
+    const source = { revision: 'TEST-B' }, cold = { currentB: true, retainedA: true, lookup: true,
+      physicalReplayAllocations: 0, originalInputsReplayed: false, sourcePublishPendingAdmission: { admitted: 1, revoked: 1 },
+      sdkPeerCheckpointRestored: provider === 'claude', originalNativeSessionRetained: true, source: { revision: 'TEST-A' } };
+    return { kind: 'TEST_WINDOWS_EMULATED_SOURCE_PARITY', provider, sourceHead, platform: 'win32-x64', nodeVersion: 'v24.21.0',
+      status: 'PASS', cleanup: true, realProviderExecuted: false, desktopQualified: false, releaseQualified: false,
+      sourceScenarios: [{ provider, status: 'PASS', stage: 'complete', cleanup: true, realProviderExecuted: false,
+        desktopQualified: false, releaseQualified: false, foreignScopeGrantRefusedBeforeAllocation: true,
+        selections: { A: { revision: 'TEST-A' }, B: source }, management: { metadataRead: true, modelProbeCompleted: true,
+          modelProbeInputs: 1, modelProbeReplayAllocated: false, metadataHostRetained: provider === 'opencode' },
+        teams: [{ source: { revision: 'TEST-A' } }, { source }], cold,
+        standalone: { supported: false, phase: 'completed', ephemeral: true, replayAllocated: false, source },
+        epochs: [{ mainEpoch: f.mainEpoch, serviceOperations: 0, jobs: [physical('TEST-physical-A'), physical('TEST-physical-B')] as Record<string, unknown>[] },
+          { mainEpoch: 'TEST-cold-Main', serviceOperations: 0, jobs: [physical('TEST-cold')] as Record<string, unknown>[] }] }] };
+  };
+  // Finite fixtures for every independent lane required by the merged whole-workflow verifier.
+  // Only source Job evidence is varied below; no native target or provider is launched here.
+  const emulatedProvider = (provider: string) => {
+    const rootCount = provider === 'codex' ? 2 : 1;
+    const roots = Array.from({ length: rootCount }, (_, index) => ({
+      capability: `TEST-${provider}-capability-${index}`, providerGeneration: `TEST-provider-generation-${index}`,
+      root: { pid: 5100 + index, birth: `TEST-birth-${index}` }, nativeInputs: index === 0 ? 1 : 0,
+      counts: { allocate: 1, prepare: 1, resume: 1, stop: 1, release: 1 },
+      order: ['allocate', 'prepare', 'resume', 'stop', 'release'],
+    }));
+    const previous = roots[0]!, successor = roots[1];
+    const before = { bindingGeneration: 'TEST-binding-before', configGeneration: 1 };
+    const after = { bindingGeneration: 'TEST-binding-after', configGeneration: 2 };
+    const commandId = 'TEST-healthy-restart';
+    const receipt = { commandId, sourceGeneration: before.bindingGeneration, current: true };
+    return { provider, status: 'PASS', stage: 'complete', errors: [], nativeReady: true, inputCompleted: true,
+      neighborSurvivedPrimary: true, providerSurvivedScopedStops: true, cleanup: true, registeredServices: 2, scopedStops: 2,
+      roots, operationOrder: roots.flatMap(root => root.order.map(operation => ({ capability: root.capability, operation }))),
+      counts: { allocate: rootCount, prepare: rootCount, resume: rootCount, release: rootCount, stop: rootCount,
+        serviceCapture: 2, serviceStop: 2, serviceSettle: 2 },
+      physical: { hostExited: true, mainCloseConfirmed: true, handleWaits: Array(rootCount + 2).fill(0) },
+      ...(successor ? { healthyRestart: { status: 'PASS', stage: 'complete', commandId, before, after,
+        sourceClosedBeforeAllocate: true, oldReleaseBeforeAllocate: true, oldRowsAbsent: true,
+        retirementSourceOrder: 'closeRuntimeMember→retireOriginal→installSelected→startSelected',
+        profileGenerationSource: 'executeMemberAction assigns the selected profile generation to config.generation',
+        prepared: { ...receipt, stage: 'prepared', selectedGeneration: null },
+        executed: { ...receipt, stage: 'selected', selectedGeneration: after.bindingGeneration,
+          source: { availability: 'observed', generation: before.bindingGeneration, phase: 'closed', custody: 'released', attached: false },
+          selected: { availability: 'observed', generation: after.bindingGeneration, phase: 'allocated', custody: 'owned', attached: true } },
+        sourcePins: ['nativeEmulatedProviderGate.ts', 'transitionRuntimeMember.ts', 'executeMemberAction.ts', 'RetainedWindowsServices.ts']
+          .map(path => ({ path: '/TEST/' + path, sha256: 'b'.repeat(64) })),
+        staleCapture: { capability: successor.capability, capture: { providerCapability: previous.capability,
+          providerGeneration: previous.providerGeneration, root: previous.root,
+          registrar: { generation: before.bindingGeneration }, target: { pid: 6101 } },
+          rejection: 'Original service custody unavailable', oldRootAbsent: true, newRootAlive: true, countsUnchanged: true },
+        oldRows: [6101, 6102].map(pid => ({ pid, observation: 'absent', canTerminate: false })),
+        successorInputs: 0, handleWaits: [0, 0, 0, 0],
+      } } : {}),
+    };
+  };
+  const emulatedOwnerLoss = (scenario: string, index: number) => {
+    const afterEffect = index === 1, count = afterEffect ? 1 : 0, handles = afterEffect ? 3 : 1;
+    const mainEpoch = `TEST-owner-loss-Main-${index}`, capability = `TEST-owner-loss-capability-${index}`;
+    const providerGeneration = 'TEST-original-provider-generation', root = { pid: 7100, birth: 'TEST-original-root-birth' };
+    const hosts = ['A', 'B'].map(epoch => ({ epoch, mainEpoch, hostIncarnation: `TEST-host-${epoch}`,
+      helloHostIncarnation: `TEST-host-${epoch}`, profileDigest: 'c'.repeat(64), exited: true,
+      shutdown: { childExit: 'confirmed', providerCustody: 'unresolved' } }));
+    const input = { phase: 'consumed', intent: { inputId: 'TEST-delivery', deliveryId: 'TEST-delivery' },
+      fingerprint: 'TEST-input-fingerprint', operationRef: 'TEST-original-operation' };
+    const original = { binding: { generation: 'TEST-original-binding' }, profileId: 'TEST-original-profile',
+      hostIncarnation: 'TEST-runtime-owner-A', openFingerprint: 'TEST-original-open',
+      phase: afterEffect ? 'allocated' : 'opening', custody: afterEffect ? 'owned' : 'unknown', ...(afterEffect ? { input } : {}) };
+    const retained = { ...original, phase: 'held', custody: 'unknown', nativeReady: false, inputs: count, interactions: 0,
+      ...(afterEffect ? { input: { ...input, phase: 'unknown' } } : {}) };
+    const registeredServices = afterEffect ? [7201, 7202].map(pid => ({ pid, processRef: `TEST-process-${pid}` })) : [];
+    const commandReceipt = { phase: 'completed', effects: { deliveryId: input.intent.deliveryId } };
+    return { scenario, status: 'PASS', stage: 'complete', cleanup: true, sourceHead, pinsUnchanged: true,
+      realProviderExecuted: false, desktopQualified: false, releaseQualified: false,
+      mainEpoch, capability, providerGeneration, root, hosts,
+      budgets: { startupMs: 10000, requestMs: 15000, writeMs: 5000, profileShutdownMs: 1000, inputMs: 15000 },
+      counts: { allocated: 1, prepared: 1, resumeRequests: 1, resumeCompleted: count, resumeForwarded: count,
+        businessInputs: count, nativeTurnStarts: count, registeredRows: count,
+        serviceCapture: 2 * count, serviceCaptureACKs: 2 * count, completedEffects: 2 * count,
+        writeCompleted: count, writeForwarded: count },
+      openIntents: { original: 1, identicalReplay: afterEffect ? 0 : 1, reconcile: 1, numericPidProbe: 1,
+        commandLookup: count, processList: count },
+      barrier: { reached: true, pendingBeforeCrash: true, originalAttachmentCurrent: true,
+        originalHostExited: true, callbackSettled: true, crashMarkers: 1, terminalForwarded: false,
+        attachment: { mainEpoch, hostIncarnation: hosts[0]!.hostIncarnation, profileDigest: hosts[0]!.profileDigest },
+        operation: afterEffect ? 'read' : 'resume', ...(afterEffect ? { nativeWriteAcknowledged: true,
+          stream: 'stdout', heldBytes: 1, originalMore: false, inputEntered: 100, inputCutoff: 15100, beforeLossObserved: 200,
+          terminal: { method: 'turn/completed', threadId: 'TEST-thread', turnId: 'TEST-turn' } } : {}) },
+      physical: { originalHandleAliveBeforeLoss: true, originalHandleAliveAfterLoss: true, originalHandleAliveAfterRefusals: true,
+        mainCloseConfirmed: true, originalHandleAbsent: true, sentinelSurvived: true, handlesAliveBeforeLoss: handles,
+        handlesAliveAfterLoss: handles, handlesAliveAfterRefusals: handles, handleWaits: Array(handles).fill(true) },
+      negatives: { 'stale-resume': 'refused', 'stale-write': 'refused', 'successor-resume': 'refused', 'successor-write': 'refused',
+        numericPid: { ok: false, code: 'invalid', outcome: 'rejected' } },
+      states: { beforeLoss: original, retained, afterCleanup: retained,
+        coldRead: { attached: false, nativeReady: false, custody: 'unknown' }, reconciled: { phase: 'held', custody: 'unknown' },
+        replay: { phase: 'held', custody: 'unknown', inputs: [] } },
+      allocationsAfterLoss: 0, nativeWritesAfterLoss: 0, errors: [], forwardedAtLoss: { write: count },
+      nativeTurn: { threadId: 'TEST-thread', requestId: 1 }, nativeTurnReply: { turnId: 'TEST-turn', requestId: 1 },
+      commandReceipt, commandLookup: commandReceipt, registeredServices,
+      originalProcessRows: registeredServices.map(row => ({ ...row, observation: 'same-live', canTerminate: true })),
+      captures: registeredServices.map(row => ({ mainEpoch, providerCapability: capability, providerGeneration, root,
+        registrar: original.binding, target: { pid: row.pid } })),
+      peerJournalRows: 0, openFailure: { code: 'transport-closed', outcome: 'unknown' },
+    };
+  };
+  const workflow = readFileSync(new URL('../../../.github/workflows/host-process-acceptance.yml', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+  const section = '      - name: Require completed original platform receipts and unchanged source';
+  const command = "          node --input-type=module <<'NODE'\n", end = '\n          NODE\n';
+  assert.equal(workflow.split(section).length, 2);
+  const start = workflow.indexOf(command, workflow.indexOf(section)), stop = workflow.indexOf(end, start);
+  assert.ok(start >= 0 && stop > start);
+  let script = workflow.slice(start + command.length, stop).split('\n').map(line => line.replace(/^ {10}/, '')).join('\n');
+  for (const declaration of ["import assert from 'node:assert/strict';", "import { readFileSync, writeFileSync } from 'node:fs';", "import { join } from 'node:path';"]) {
+    assert.equal(script.split(declaration).length, 2); script = script.replace(declaration, '');
+  }
+  const ownerLossRows = () => ['completed-install-before-physical-resume', 'completed-effects-before-runtime-completion'].map(emulatedOwnerLoss);
+  const run = (proof = makeProof('codex'), ownerLoss = ownerLossRows()) => {
+    const files = new Map<string, string>(), writes: Record<string, unknown>[] = [];
+    const put = (name: string, value: unknown) => files.set(join('process-acceptance-evidence', name), JSON.stringify(value));
+    const controller = { gateController: 'drained', rootExitCode: 0, activeProcesses: 0 };
+    for (const name of ['windows-node24.log', 'windows-electron.log']) files.set(join('process-acceptance-evidence', name),
+      JSON.stringify({ gate: 'owned-process-native-scenarios-only', platform: 'win32', arch: 'x64',
+        results: ['captured-provider-native-argv-env-cwd-and-stop', 'TEST-only-debug-service-prebirth-nested-job-feasibility',
+          'TEST-only-direct-I386-root-startup-and-late-application-exceptions'] }) + '\n' + JSON.stringify(controller));
+    put('windows-emulated-provider-receipt.json', { kind: 'TEST_WINDOWS_EMULATED_PROVIDER_PARITY', status: 'PASS', cleanup: true,
+      sourceHead, platform: 'win32-x64', nodeVersion: 'v24.21.0', realProviderExecuted: false, desktopQualified: false, releaseQualified: false,
+      wrappers: ['npm-node', 'generated-bun', 'opaque-cmd', 'positional-bat', 'npm-native'],
+      providers: ['codex', 'opencode'].map(emulatedProvider),
+      ownerLoss });
+    put('windows-emulated-provider.log', controller);
+    for (const provider of ['codex', 'claude', 'opencode']) {
+      put('windows-source-' + provider + '-receipt.json', provider === 'codex' ? proof : makeProof(provider));
+      put('windows-source-' + provider + '.log', controller);
+    }
+    runInNewContext('"use strict";\n' + script, { assert, Buffer, join,
+      process: { platform: 'win32', arch: 'x64', version: 'v24.21.0', env: { HOST_PROCESS_SOURCE_HEAD: sourceHead, HOST_PROCESS_PLATFORM: 'win32-x64' } },
+      readFileSync(path: string, encoding: string) { assert.equal(encoding, 'utf8'); assert.ok(files.has(path)); return files.get(path)!; },
+      writeFileSync(path: string, value: string) { assert.equal(path, join('process-acceptance-evidence', 'scope.json')); writes.push(JSON.parse(value)); } });
+    assert.equal(writes.length, 1); assert.equal(writes[0]!.status, 'PASS'); return writes[0]!;
+  };
+  assert.equal(run().status, 'PASS', 'the complete original all-physical verifier fixture is valid');
+  const valid = makeProof('codex'); valid.sourceScenarios[0]!.epochs[0]!.jobs[1] = reservation;
+  const accepted = run(valid); // Baseline 123e fails here at the original resumed false !== true assertion.
+  const checked = accepted.native as { receipt?: { provider?: string; sourceScenarios: { epochs: { jobs: unknown[] }[] }[] } }[];
+  const preserved = checked.find(item => item.receipt?.provider === 'codex')!.receipt!.sourceScenarios[0]!.epochs[0]!.jobs;
+  assert.equal(preserved.length, 2); assert.deepEqual(preserved[1], reservation);
+  const replace = (root: Record<string, unknown>, path: string[], value: unknown, remove = false) => {
+    let parent = root; for (const key of path.slice(0, -1)) parent = parent[key] as Record<string, unknown>;
+    if (remove) delete parent[path.at(-1)!]; else parent[path.at(-1)!] = value;
+  };
+  const ownerMutations: [string[], unknown][] = [
+    [['states', 'retained', 'hostIncarnation'], 'TEST-other-runtime-owner'],
+    [['states', 'afterCleanup', 'hostIncarnation'], 'TEST-other-runtime-owner'],
+    [['hosts', '0', 'helloHostIncarnation'], 'TEST-other-transport-owner'],
+    [['hosts', '1', 'helloHostIncarnation'], 'TEST-other-transport-owner'],
+    [['barrier', 'attachment', 'hostIncarnation'], 'TEST-other-transport-owner'],
+    [['barrier', 'attachment', 'mainEpoch'], 'TEST-other-Main'],
+    [['barrier', 'attachment', 'profileDigest'], 'd'.repeat(64)],
+  ];
+  for (const index of [0, 1]) {
+    for (const [path, value] of ownerMutations) {
+      const ownerLoss = JSON.parse(JSON.stringify(ownerLossRows())) as ReturnType<typeof ownerLossRows>;
+      replace(ownerLoss[index]!, path, value);
+      assert.throws(() => run(undefined, ownerLoss), { code: 'ERR_ASSERTION' }, 'owner loss ' + index + ' ' + path.join('.'));
+    }
+    const missing = ownerLossRows();
+    for (const state of ['beforeLoss', 'retained', 'afterCleanup'])
+      replace(missing[index]!, ['states', state, 'hostIncarnation'], '');
+    assert.throws(() => run(undefined, missing), { code: 'ERR_ASSERTION' }, 'empty original Runtime owner');
+  }
+  const coincident = ownerLossRows();
+  for (const row of coincident) for (const state of ['beforeLoss', 'retained', 'afterCleanup'])
+    replace(row, ['states', state, 'hostIncarnation'], row.hosts[0]!.hostIncarnation);
+  assert.equal(run(undefined, coincident).status, 'PASS', 'separate identity domains do not require unequal UUIDs');
+  const mutations: [string[], unknown, boolean?][] = [
+    [['cleanupEvidence'], null], [['cleanupEvidence'], null, true], [['cleanupEvidence', 'kind'], 'unknown'],
+    [['cleanupEvidence', 'extra'], true], [['cleanupEvidence', 'mainEpoch'], 'TEST-other-Main'],
+    [['cleanupEvidence', 'allocatedOwner', 'teamIncarnation'], 'a'.repeat(129)], [['cleanupEvidence', 'allocatedOwner', 'processGeneration'], 'not-a-uuid'],
+    [['cleanupEvidence', 'stop', 'receipt', 'owner', 'runId'], 'TEST-foreign-receipt-owner'], [['cleanupEvidence', 'stop', 'receipt', 'attemptId'], 'TEST-foreign-receipt-attempt'],
+    [['cleanupEvidence', 'stop', 'receiptRef'], 'TEST non-reference'], [['cleanupEvidence', 'stop', 'state'], 'unknown'],
+    [['cleanupEvidence', 'allocatedOwner', 'runId'], 'a'.repeat(4097)],
+    [['cleanupEvidence', 'capability'], 'TEST-other-capability'], [['cleanupEvidence', 'allocatedOwner', 'runId'], 'TEST-other-owner'],
+    [['cleanupEvidence', 'stop', 'attemptRef'], 'TEST-other-attempt'], [['cleanupEvidence', 'stop', 'receiptRef'], 'TEST-other-ref'],
+    [['cleanupEvidence', 'stop', 'receipt'], null, true], [['cleanupEvidence', 'stop', 'receipt', 'coverage'], 'job-membership'],
+    [['cleanupEvidence', 'stop', 'receipt', 'rootExited'], true], [['cleanupEvidence', 'stop', 'receipt', 'proofDigest'], 'not-a-digest'],
+    [['cleanupEvidence', 'drain', 'state'], 'incomplete'], [['cleanupEvidence', 'drain', 'afterStopReceiptRef'], 'TEST-other-ref'],
+    [['cleanupEvidence', 'release', 'state'], 'unknown'], [['cleanupEvidence', 'release', 'receiptRef'], 'TEST-other-ref'],
+    [['cleanupEvidence', 'observedCalls', 'allocate', 'returned'], 0], [['cleanupEvidence', 'observedCalls', 'prepare', 'calls'], 1],
+    [['cleanupEvidence', 'observedCalls', 'resume', 'calls'], 1], [['cleanupEvidence', 'observedCalls', 'prepare'], null, true],
+    [['cleanupEvidence', 'witnessCaptured'], true], [['root'], physical('TEST-root').root], [['entryStart'], 0], [['entryEnd'], 0],
+    [['resumed'], true], [['originalHandleAbsent'], true], [['stopped'], false], [['drained'], false], [['released'], false],
+  ];
+  for (const [path, value, remove] of mutations) {
+    const proof = JSON.parse(JSON.stringify(valid)) as ReturnType<typeof makeProof>;
+    replace(proof.sourceScenarios[0]!.epochs[0]!.jobs[1]!, path, value, remove);
+    assert.throws(() => run(proof), { code: 'ERR_ASSERTION' }, path.join('.'));
+  }
+  const maximum = JSON.parse(JSON.stringify(valid)) as ReturnType<typeof makeProof>, wide = 'a'.repeat(128);
+  maximum.sourceScenarios[0]!.epochs[0]!.mainEpoch = wide;
+  const maxRow = maximum.sourceScenarios[0]!.epochs[0]!.jobs[1]!; maxRow.capability = wide;
+  for (const path of [['mainEpoch'], ['capability'], ['stop', 'attemptRef'], ['stop', 'receiptRef'], ['stop', 'receipt', 'attemptId'],
+    ['drain', 'afterStopReceiptRef'], ['release', 'receiptRef']]) replace(maxRow, ['cleanupEvidence', ...path], wide);
+  for (const prefix of [['allocatedOwner'], ['stop', 'receipt', 'owner']])
+    for (const key of ['teamIncarnation', 'runId', 'laneId']) replace(maxRow, ['cleanupEvidence', ...prefix, key], wide);
+  assert.equal(Buffer.byteLength(JSON.stringify(maxRow.cleanupEvidence)), 2471); assert.equal(run(maximum).status, 'PASS');
+  for (const field of ['resumed', 'stopped', 'drained', 'released', 'originalHandleAbsent']) {
+    const proof = makeProof('codex'); delete proof.sourceScenarios[0]!.epochs[0]!.jobs[0]![field];
+    assert.throws(() => run(proof), { code: 'ERR_ASSERTION' }, 'ordinary physical ' + field);
+  }
+  for (const field of ['source', 'standalone']) {
+    const unknown = JSON.parse(JSON.stringify(valid)) as ReturnType<typeof makeProof>;
+    if (field === 'source') unknown.sourceScenarios[0]!.status = 'INCOMPLETE'; else unknown.sourceScenarios[0]!.standalone.phase = 'running';
+    assert.throws(() => run(unknown), { code: 'ERR_ASSERTION' }, 'cleanup never promotes the original ' + field + ' failure');
+  }
+});
+
+
+test('original exit projection is preserved beside a bounded source-bound Codex await ledger', () => {
+  const source = readFileSync(new URL('../../../tools/owned-process-broker/nativeEmulatedSourceProfile.ts', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+  const start = 'const projectionLedger = ${JSON.stringify(runtimeProjectionLedger)};\n';
+  const end = 'await import(${JSON.stringify(pathToFileURL(cli).href)});';
+  assert.equal(source.split(start).length, 2); assert.equal(source.split(end).length, 2);
+  const program = source.slice(source.indexOf(start) + start.length, source.indexOf(end));
+  const phaseName = 'agent-teams.legacy-host.codex-readiness', viewName = 'agent-teams.legacy-host.runtime-projection';
+  const nullRecord = (fields: Record<string, unknown>) => Object.assign(Object.create(null) as Record<string, unknown>, fields);
+  const event = (overrides: Record<string, unknown> = {}) => nullRecord({ schemaVersion: 1, bindingDigest: 'a'.repeat(64),
+    sourceId: 'b'.repeat(64), sourceRevision: 'c'.repeat(64), sequence: 1, invocation: 1,
+    operation: 'readiness', phase: 'before-await', result: null, ...overrides });
+  const view = (digest = 'd'.repeat(64)) => nullRecord({ viewDigest: digest, bindingMatches: true,
+    recordReady: false, providerReady: null, ownerCurrent: null, nativeReady: false });
+  const create = (fault: 'none' | 'write' | 'serialize' | 'subscribe' = 'none') => {
+    const subscribers = new Map<string, ((value: unknown) => void)[]>(), exits: (() => void)[] = [], writes = new Map<string, string>();
+    const calls: string[] = [];
+    runInNewContext(program, { assert, Buffer, projectionLedger: 'TEST-projection',
+      JSON: { parse: JSON.parse, stringify(value: unknown) {
+        if (fault === 'serialize' && value && typeof value === 'object' && Object.hasOwn(value, 'schemaVersion'))
+          throw new Error('PRIVATE-serialization');
+        return JSON.stringify(value);
+      } },
+      channel(name: string) {
+        assert.ok(name === phaseName || name === viewName);
+        return { subscribe(callback: (value: unknown) => void) {
+          calls.push(name);
+          if (fault === 'subscribe' && name === phaseName) throw new Error('PRIVATE-subscription');
+          subscribers.set(name, [...(subscribers.get(name) ?? []), callback]);
+        } };
+      },
+      process: { once(name: string, callback: () => void) { assert.equal(name, 'exit'); exits.push(callback); } },
+      writeFileSync(path: string, raw: string, options: unknown) {
+        assert.ok(path === 'TEST-projection' || path === 'TEST-projection.codex-readiness');
+        assert.equal(JSON.stringify(options), '{"mode":384,"flag":"wx"}');
+        if (fault === 'write' && path.endsWith('.codex-readiness')) throw new Error('PRIVATE-write');
+        assert.equal(writes.has(path), false, 'one exit write per ledger'); writes.set(path, raw);
+      } });
+    return { calls, writes, exits,
+      emit(name: string, value: unknown) { for (const callback of subscribers.get(name) ?? []) assert.doesNotThrow(() => callback(value)); },
+      finish() { for (const callback of exits) assert.doesNotThrow(callback); },
+    };
+  };
+  const baseline = create(); baseline.emit(viewName, view());
+  assert.equal(baseline.writes.size, 0); baseline.finish();
+  const originalRaw = baseline.writes.get('TEST-projection'); assert.ok(originalRaw);
+  assert.ok(Buffer.byteLength(originalRaw) <= 512);
+  assert.deepEqual(JSON.parse(originalRaw), { status: 'observed', rows: [['d'.repeat(64), true, false, null, null, false]] });
+  assert.ok(baseline.writes.has('TEST-projection.codex-readiness'),
+    'the original successful exit must also retain the separate Codex boundary ledger');
+  assert.equal(baseline.exits.length, 2); assert.equal(baseline.calls.filter(name => name === phaseName).length, 1);
+  assert.equal(baseline.calls.filter(name => name === viewName).length, 2);
+  const decode = (f: ReturnType<typeof create>) => JSON.parse(f.writes.get('TEST-projection.codex-readiness')!) as Record<string, unknown>;
+  assert.deepEqual(decode(baseline), { schemaVersion: 1, status: 'observed', contexts: [], events: [], views: [['d'.repeat(64), 0]] });
+  const unknown = { schemaVersion: 1, status: 'unknown', reason: 'invalid-overflow-or-observer-failure' };
+  const run = (values: unknown[], views = [view()]) => {
+    const f = create(); for (const value of values) f.emit(phaseName, value);
+    for (const value of views) f.emit(viewName, value);
+    f.finish(); assert.ok(Buffer.byteLength(f.writes.get('TEST-projection.codex-readiness')!) <= 8192);
+    assert.doesNotMatch(f.writes.get('TEST-projection.codex-readiness')!, /PRIVATE-|TEST-/); return f;
+  };
+  const valid = [event({ operation: 'open' }), event({ sequence: 2, invocation: 2, operation: 'catalog' }),
+    event({ sequence: 3, invocation: 2, operation: 'catalog', phase: 'after-await' }),
+    event({ sequence: 4, invocation: 2, operation: 'catalog', phase: 'returned', result: true }),
+    event({ sequence: 5, operation: 'open', phase: 'after-await' }),
+    event({ sequence: 6, invocation: 3 }), event({ sequence: 7, invocation: 3, phase: 'after-await' }),
+    event({ sequence: 8, invocation: 3, phase: 'returned', result: false })];
+  const good = run(valid), ledger = decode(good);
+  assert.deepEqual(ledger, { schemaVersion: 1, status: 'observed',
+    contexts: [['a'.repeat(64), 'b'.repeat(64), 'c'.repeat(64)]],
+    events: valid.map(row => [0, row.sequence, row.invocation, row.operation, row.phase, row.result]),
+    views: [['d'.repeat(64), 8]] });
+  const timing = (ordinal: number) => [ordinal * 100, ordinal, ordinal * 20, 20, ordinal, ordinal * 10, 10, ordinal, 0, 0];
+  const timed = valid.map((row, index) => event({ ...row, schemaVersion: 2, timing: timing(index + 1) }));
+  const timedLedger = decode(run(timed));
+  assert.deepEqual(timedLedger, { ...ledger, schemaVersion: 2,
+    events: timed.map(row => [0, row.sequence, row.invocation, row.operation, row.phase, row.result, row.timing]) });
+  const repeated = create(); repeated.emit(phaseName, valid[0]); repeated.emit(viewName, view());
+  for (const row of valid.slice(1)) repeated.emit(phaseName, row);
+  repeated.emit(viewName, view()); repeated.finish(); assert.deepEqual(decode(repeated), ledger);
+  for (const phases of [['before-await', 'threw'], ['before-await', 'after-await', 'threw']])
+    assert.equal(decode(run(phases.map((phase, index) => event({ sequence: index + 1, phase })))).status, 'observed');
+  let getterCalls = 0;
+  const getter = Object.defineProperty(event(), 'result', { get() { getterCalls++; throw new Error('PRIVATE-getter'); } });
+  const symbol = event(); Object.defineProperty(symbol, Symbol('PRIVATE-symbol'), { value: true });
+  const invalid = [null, [], event({ extra: 'PRIVATE-extra' }), event({ sequence: 2 }), event({ invocation: 2 }),
+    event({ result: false }), event({ operation: 'foreign' }), event({ phase: 'after-await' }), event({ sourceId: 'bad' }), getter, symbol,
+    new Proxy(Object.create(null) as Record<string, unknown>, { ownKeys() { throw new Error('PRIVATE-reflection'); } }),
+    nullRecord({ schemaVersion: 1, bindingDigest: 'a'.repeat(64), sourceId: 'b'.repeat(64), sourceRevision: 'c'.repeat(64), limit: true })];
+  for (const value of invalid) assert.deepEqual(decode(run([value, ...valid])), unknown);
+  assert.equal(getterCalls, 0);
+  const timingGetter = Object.defineProperty(timing(1), '0', { get() { getterCalls++; return 0; } });
+  const timingSymbol = timing(1); Object.defineProperty(timingSymbol, Symbol('PRIVATE-timing'), { value: true });
+  const invalidTimings: unknown[] = [null, [], timing(1).slice(1), timingGetter, timingSymbol,
+    [-1, ...timing(1).slice(1)], [1.5, ...timing(1).slice(1)], [1000000, ...timing(1).slice(1)],
+    [100, 4097, 20, 20, 1, 10, 10, 1, 0, 0], [100, 0, 20, 20, 1, 10, 10, 1, 0, 0],
+    [100, 1, 10, 20, 1, 10, 10, 1, 0, 0], [NaN, ...timing(1).slice(1)]];
+  for (const value of invalidTimings)
+    assert.deepEqual(decode(run([event({ schemaVersion: 2, timing: value })])), unknown);
+  assert.deepEqual(decode(run([event({ timing: timing(1) })])), unknown);
+  assert.deepEqual(decode(run([event({ schemaVersion: 2 })])), unknown);
+  for (const changed of [[99, ...timing(2).slice(1)], [200, ...timing(1).slice(1, 2), 40, 20, 2, 20, 10, 2, 0, 0],
+    [200, 2, 10, 10, 2, 20, 10, 2, 0, 0]])
+    assert.deepEqual(decode(run([timed[0], event({ ...timed[1], timing: changed })])), unknown);
+  assert.deepEqual(decode(run([timed[0], valid[1]])), unknown);
+  assert.equal(getterCalls, 0, 'malformed timing accessors are never evaluated');
+  for (const values of [[valid[0], valid[0]], [valid[0], event({ sequence: 3, phase: 'after-await' })],
+    [valid[0], event({ sequence: 2, operation: 'catalog', phase: 'after-await' })],
+    [...valid, event({ sequence: 9, invocation: 3, phase: 'returned', result: false })]])
+    assert.deepEqual(decode(run(values)), unknown);
+  const accessorView = Object.defineProperty(view(), 'recordReady', { get() { getterCalls++; return false; } });
+  for (const value of [accessorView, nullRecord({ ...view(), extra: true }), nullRecord({ ...view(), providerReady: true }),
+    nullRecord({ ...view(), nativeReady: true })]) {
+    const f = create(); f.emit(viewName, value); f.finish(); assert.deepEqual(decode(f), unknown);
+  }
+  assert.equal(getterCalls, 0);
+  const wide: Record<string, unknown>[] = [];
+  for (const digit of 'abcd') for (let invocation = 1; invocation <= 8; invocation++)
+    for (const [offset, phase] of ['before-await', 'after-await'].entries())
+      wide.push(event({ bindingDigest: digit.repeat(64), sourceId: 'b'.repeat(64), sourceRevision: 'c'.repeat(64),
+        sequence: (invocation - 1) * 2 + offset + 1, invocation, operation: 'open', phase }));
+  const atLimit = run(wide, [...'def0'].map(digit => view(digit.repeat(64))));
+  assert.equal((decode(atLimit).contexts as unknown[]).length, 4); assert.equal((decode(atLimit).events as unknown[]).length, 64);
+  assert.equal((decode(atLimit).views as unknown[]).length, 4);
+  assert.deepEqual(decode(run([...wide, event({ sequence: 17, invocation: 9, operation: 'open' })])), unknown);
+  assert.deepEqual(decode(run([...'abcde'].map(digit => event({ bindingDigest: digit.repeat(64) })))), unknown);
+  assert.deepEqual(decode(run(valid, [...'def01'].map(digit => view(digit.repeat(64))))), unknown);
+  const sixteen = Array.from({ length: 16 }, (_, index) => event({ sequence: index + 1, invocation: index + 1, operation: 'open' }));
+  assert.equal(decode(run(sixteen)).status, 'observed');
+  assert.deepEqual(decode(run([...sixteen, event({ sequence: 17, invocation: 17, operation: 'open' })])), unknown);
+  // Independent primitive widths conservatively bound every valid history; this is not a claimed executable sequence.
+  const width = { schemaVersion: 1, status: 'observed',
+    contexts: Array.from({ length: 4 }, () => ['f'.repeat(64), 'f'.repeat(64), 'f'.repeat(64)]),
+    events: Array.from({ length: 64 }, () => [3, 64, 16, 'readiness', 'before-await', false]),
+    views: Array.from({ length: 4 }, () => ['f'.repeat(64), 64]) };
+  assert.equal(Buffer.byteLength(JSON.stringify(width)), 3925); assert.ok(Buffer.byteLength(JSON.stringify(width)) < 8192);
+  const widestTiming = [999999, 4096, 999999, 999999, 4096, 999999, 999999, 4096, 999999, 999999];
+  const timedWidth = { ...width, schemaVersion: 2, events: width.events.map(row => [...row, widestTiming]) };
+  assert.equal(Buffer.byteLength(JSON.stringify(timedWidth)), 8149);
+  const timedAtLimit = decode(run(wide.map(row => event({ ...row, schemaVersion: 2, timing: widestTiming })),
+    [...'def0'].map(digit => view(digit.repeat(64)))));
+  assert.equal(timedAtLimit.status, 'observed', 'valid maximum-width timing stays within the original byte cap');
+  assert.equal((timedAtLimit.events as unknown[]).length, 64);
+  for (const fault of ['write', 'serialize', 'subscribe'] as const) {
+    const f = create(fault); f.emit(viewName, view()); f.finish();
+    assert.equal(f.writes.get('TEST-projection'), originalRaw, 'failed new diagnostics preserve the original writer');
+    const raw = f.writes.get('TEST-projection.codex-readiness');
+    if (raw !== undefined) assert.deepEqual(JSON.parse(raw), unknown);
+  }
+
+  // Only reached after the old-source semantic failure above. Execute the actual new export, never a copied validator.
+  const readerSource = readFileSync(new URL('../../../tools/owned-process-broker/nativeEmulatedSourceReadiness.ts', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+  const exportStart = 'export function readEmulatedCodexReadinessObservation(';
+  assert.equal(readerSource.split(exportStart).length, 2);
+  let readerProgram = readerSource.slice(readerSource.indexOf(exportStart));
+  for (const [before, after] of [[exportStart, 'function readEmulatedCodexReadinessObservation('],
+    ['options: Record<string, unknown>', 'options'], ['value: unknown', 'value']] as const) {
+    assert.equal(readerProgram.split(before).length, 2); readerProgram = readerProgram.replace(before, after);
+  }
+  const root = mkdtempSync(join(tmpdir(), 'TEST-codex-phase-reader-')), path = join(root, 'projection.codex-readiness');
+  let serializationFails = false;
+  let stats = 0, reads = 0, ioFault: 'none' | 'stat' | 'read' | 'symlink' | 'oversize' = 'none';
+  const namespace = runInNewContext(readerProgram + '\n({ readEmulatedCodexReadinessObservation });', { assert, Buffer, Object, Array,
+    JSON: { parse: JSON.parse, stringify(value: unknown) { if (serializationFails) throw new Error('PRIVATE-serialization'); return JSON.stringify(value); } },
+    lstatSync(file: string) {
+      stats++; assert.equal(file, path);
+      if (ioFault === 'stat') throw new Error('PRIVATE-stat');
+      if (ioFault === 'symlink' || ioFault === 'oversize')
+        return { isFile: () => true, isSymbolicLink: () => ioFault === 'symlink', size: ioFault === 'oversize' ? 8193 : 1 };
+      return lstatSync(file);
+    },
+    readFileSync(file: string, encoding: 'utf8') {
+      reads++; assert.equal(file, path); assert.equal(encoding, 'utf8');
+      if (ioFault === 'read') throw new Error('PRIVATE-read');
+      return readFileSync(file, encoding);
+    },
+  }) as { readEmulatedCodexReadinessObservation(options: Record<string, unknown>): unknown };
+  const base = () => ({ provider: 'codex', ledgerPath: path, epochs: [{ mainEpoch: 'TEST-main', projectionHostExit: 'confirmed' }],
+    runtimeProjection: { status: 'observed', atomicWithFailure: false, ...view() }, lastRuntimeViewDigest: 'd'.repeat(64),
+    lastLaunchReadiness: { launchId: 'TEST-launch', source: { sourceId: 'b'.repeat(64), revision: 'c'.repeat(64) },
+      lastRuntimeRead: { viewDigest: 'd'.repeat(64) } },
+    diagnosticLaunches: [{ launchId: 'TEST-launch', source: { sourceId: 'b'.repeat(64), revision: 'c'.repeat(64) },
+      bindingDigests: ['a'.repeat(64)] }] });
+  const refused = { status: 'unknown', reason: 'missing-invalid-overflow-conflicting-or-unjoined' };
+  const read = (options: Record<string, unknown>, raw = JSON.stringify(ledger)) => {
+    stats = 0; reads = 0; writeFileSync(path, raw);
+    const result = namespace.readEmulatedCodexReadinessObservation(options);
+    const copied = JSON.parse(JSON.stringify(result)) as Record<string, unknown>;
+    assert.ok(Buffer.byteLength(JSON.stringify(copied)) <= 8192); assert.doesNotMatch(JSON.stringify(copied), /PRIVATE-|stack|argv|token/);
+    return copied;
+  };
+  try {
+    const accepted = read(base());
+    assert.equal(stats, 1); assert.equal(reads, 1);
+    assert.deepEqual(accepted, { schemaVersion: 1, status: 'observed', atomicWithFailure: false,
+      samplePoint: 'last-original-projection-with-matching-view-digest',
+      source: { sourceId: 'b'.repeat(64), revision: 'c'.repeat(64) }, bindingDigest: 'a'.repeat(64), viewDigest: 'd'.repeat(64),
+      mainEpoch: 'TEST-main', launchId: 'TEST-launch', observedEventCount: 8,
+      events: valid.map(row => [row.sequence, row.invocation, row.operation, row.phase, row.result]) });
+    const timedAccepted = read(base(), JSON.stringify(timedLedger));
+    assert.deepEqual(timedAccepted, { ...accepted, schemaVersion: 2, timing: {
+      samplePoint: 'last-original-codex-phase-event', sequence: 8, elapsedDeciMs: timed.map(row => (row.timing as number[])[0]),
+      isCurrent: timing(8).slice(1, 4), canAllocate: timing(8).slice(4, 7), mcpSourceCurrent: timing(8).slice(7, 10) } });
+    const timedBefore = { ...timedLedger, views: [['d'.repeat(64), 1]] };
+    assert.deepEqual(read(base(), JSON.stringify(timedBefore)).timing, {
+      samplePoint: 'last-original-codex-phase-event', sequence: 1, elapsedDeciMs: [100],
+      isCurrent: timing(1).slice(1, 4), canAllocate: timing(1).slice(4, 7), mcpSourceCurrent: timing(1).slice(7, 10) });
+    const timedZero = read(base(), JSON.stringify({ ...timedLedger, views: [['d'.repeat(64), 0]] }));
+    assert.deepEqual(timedZero.events, []); assert.equal(Object.hasOwn(timedZero, 'timing'), false);
+    const before = { ...ledger, views: [['d'.repeat(64), 1]] };
+    assert.deepEqual(read(base(), JSON.stringify(before)).events, [[1, 1, 'open', 'before-await', null]]);
+    const zero = { ...ledger, views: [['d'.repeat(64), 0]] };
+    assert.deepEqual(read(base(), JSON.stringify(zero)).events, [], 'zero observed callbacks does not invent a pending native call');
+    const invalidInputs = [
+      { ...base(), provider: 'opencode' }, { ...base(), epochs: [] }, { ...base(), epochs: [...base().epochs, ...base().epochs] },
+      { ...base(), epochs: [{ mainEpoch: 'TEST-main', projectionHostExit: 'unknown' }] },
+      { ...base(), epochs: [{ mainEpoch: 'TEST-main' }] }, { ...base(), runtimeProjection: { status: 'unknown' } },
+      { ...base(), runtimeProjection: { ...base().runtimeProjection, bindingMatches: false } },
+      { ...base(), lastRuntimeViewDigest: 'e'.repeat(64) }, { ...base(), lastLaunchReadiness: {} },
+      { ...base(), runtimeProjection: { ...base().runtimeProjection, viewDigest: 'e'.repeat(64) } },
+      { ...base(), runtimeProjection: { ...base().runtimeProjection, nativeReady: true } },
+      { ...base(), diagnosticLaunches: [] }, { ...base(), diagnosticLaunches: [...base().diagnosticLaunches, ...base().diagnosticLaunches] },
+      { ...base(), diagnosticLaunches: [{ ...base().diagnosticLaunches[0], launchId: 'FOREIGN' }] },
+      { ...base(), diagnosticLaunches: [{ ...base().diagnosticLaunches[0], source: { sourceId: 'f'.repeat(64), revision: 'c'.repeat(64) } }] },
+      { ...base(), epochs: [{ mainEpoch: '', projectionHostExit: 'confirmed' }] },
+      { ...base(), lastLaunchReadiness: { ...base().lastLaunchReadiness, launchId: 'x'.repeat(257) } },
+    ];
+    for (const input of invalidInputs) {
+      assert.deepEqual(read(input), refused); assert.equal(stats, 0, 'ineligible inputs must not touch the new file'); assert.equal(reads, 0);
+    }
+    for (const fault of ['stat', 'read', 'symlink', 'oversize'] as const) {
+      ioFault = fault; assert.deepEqual(read(base()), refused); assert.equal(stats, 1); assert.equal(reads, fault === 'read' ? 1 : 0);
+    }
+    ioFault = 'none';
+    const badLedgers = [null, [], { ...ledger, extra: true }, { ...ledger, status: 'unknown' },
+      { ...ledger, contexts: [] }, { ...ledger, contexts: [...(ledger.contexts as unknown[]), ...(ledger.contexts as unknown[])] },
+      { ...ledger, contexts: [['f'.repeat(64), 'b'.repeat(64), 'c'.repeat(64)]] },
+      { ...ledger, contexts: [['a'.repeat(64), 'f'.repeat(64), 'c'.repeat(64)]] },
+      { ...ledger, contexts: [['a'.repeat(64), 'b'.repeat(64), 'f'.repeat(64)]] },
+      { ...ledger, views: [['e'.repeat(64), 8]] }, { ...ledger, views: [['d'.repeat(64), 9]] },
+      { ...ledger, views: [['d'.repeat(64), 8], ['d'.repeat(64), 8]] },
+      { ...ledger, events: [[0, 2, 1, 'readiness', 'before-await', null]] },
+      { ...ledger, events: [[0, 1, 1, 'readiness', 'returned', true]] },
+      { ...ledger, events: [[4, 1, 1, 'readiness', 'before-await', null]] },
+      { ...ledger, events: [[0, 1, 17, 'readiness', 'before-await', null]] },
+      { ...ledger, events: [[0, 1, 1, 'readiness', 'before-await', false]] },
+      { ...ledger, contexts: Array.from({ length: 5 }, (_, index) => [String(index).repeat(64), 'b'.repeat(64), 'c'.repeat(64)]) }];
+    for (const invalid of badLedgers) assert.deepEqual(read(base(), JSON.stringify(invalid)), refused);
+    for (const value of invalidTimings.filter(value => value !== timingGetter && value !== timingSymbol)) {
+      const invalid: Record<string, unknown> = { ...timedLedger, events: [[0, 1, 1, 'open', 'before-await', null, value]], views: [['d'.repeat(64), 1]] };
+      assert.deepEqual(read(base(), JSON.stringify(invalid)), refused);
+    }
+    for (const invalid of [{ ...timedLedger, schemaVersion: 1 }, { ...ledger, schemaVersion: 2 },
+      { ...timedLedger, events: [[0, 1, 1, 'open', 'before-await', null, timing(1)],
+        [0, 2, 2, 'catalog', 'before-await', null, [99, ...timing(2).slice(1)]]], views: [['d'.repeat(64), 2]] },
+      { ...timedLedger, events: [[0, 1, 1, 'open', 'before-await', null, timing(1)],
+        [0, 2, 2, 'catalog', 'before-await', null]], views: [['d'.repeat(64), 2]] }])
+      assert.deepEqual(read(base(), JSON.stringify(invalid)), refused);
+    assert.deepEqual(read(base(), '{'), refused); assert.deepEqual(read(base(), ' '.repeat(8193)), refused);
+    rmSync(path); stats = 0; reads = 0;
+    assert.deepEqual(JSON.parse(JSON.stringify(namespace.readEmulatedCodexReadinessObservation(base()))), refused);
+    assert.equal(stats, 1); assert.equal(reads, 0);
+    const foreign = ['f'.repeat(64), 'e'.repeat(64), '0'.repeat(64)];
+    const mixed = { ...ledger, contexts: [foreign, ...(ledger.contexts as unknown[])], views: [['d'.repeat(64), 2]],
+      events: [[0, 1, 1, 'catalog', 'before-await', null], ...valid.map(row => [1, row.sequence, row.invocation, row.operation, row.phase, row.result])] };
+    const selected = read(base(), JSON.stringify(mixed)); assert.equal(selected.observedEventCount, 2);
+    assert.deepEqual(selected.events, [[1, 1, 'open', 'before-await', null]], 'cut off by original global ordinal before filtering the selected source');
+    serializationFails = true; assert.deepEqual(read(base()), refused); serializationFails = false;
+    const widest = base(); widest.epochs[0]!.mainEpoch = '\u0001'.repeat(256);
+    widest.lastLaunchReadiness.launchId = '\u0001'.repeat(256); widest.diagnosticLaunches[0]!.launchId = widest.lastLaunchReadiness.launchId;
+    assert.equal(read(widest).status, 'observed'); assert.ok(Buffer.byteLength(JSON.stringify(read(widest))) <= 8192);
+    const widestTimed = { ...timedLedger, events: Array.from({ length: 16 }, (_, index) =>
+      ['before-await', 'after-await', 'returned'].map((phase, offset) => [0, index * 3 + offset + 1,
+        index + 1, 'readiness', phase, phase === 'returned' ? false : null, widestTiming])).flat(), views: [['d'.repeat(64), 48]] };
+    assert.equal(read(widest, JSON.stringify(widestTimed)).status, 'observed');
+    const resultWidth = { ...accepted, schemaVersion: 2, mainEpoch: '\u0001'.repeat(256), launchId: '\u0001'.repeat(256),
+      observedEventCount: 64, events: width.events.map(row => row.slice(1)), timing: {
+        samplePoint: 'last-original-codex-phase-event', sequence: 64, elapsedDeciMs: Array.from({ length: 64 }, () => 999999),
+        isCurrent: widestTiming.slice(1, 4), canAllocate: widestTiming.slice(4, 7), mcpSourceCurrent: widestTiming.slice(7, 10) } };
+    assert.equal(Buffer.byteLength(JSON.stringify(resultWidth)), 6869);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+async function sourceReadinessDeadlineFixture(input: {
+  now: number; handoffPause?: number; deadline?: number; readCosts?: number[]; ready?: boolean[]; throwRead?: Error;
+  wallNow?: number; wallDeadline?: number; wallHandoffPause?: number; wallReadCosts?: number[];
+}) {
+  const { stripTypeScriptTypes } = await import('node:module');
+  const source = readFileSync(new URL('../../../tools/owned-process-broker/nativeEmulatedSourceScenario.ts', import.meta.url), 'utf8').replace(/\r\n/gu, '\n');
+  const helper = readFileSync(new URL('../../../tools/owned-process-broker/nativeEmulatedSourceReadiness.ts', import.meta.url), 'utf8').replace(/\r\n/gu, '\n');
+  const begin = 'export async function pollEmulatedSource(', end = 'export const emulatedSourceOpenCodeRequestTimeoutMs';
+  for (const marker of [begin, end]) assert.equal(helper.split(marker).length, 2);
+  assert.equal(source.split('pollEmulatedSource as poll').length, 2);
+  assert.match(source, /import \{[^}]*\bpollEmulatedSource as poll\b[^}]*\} from '\.\/nativeEmulatedSourceReadiness';/u);
+  const callBegin = "        await poll(async () => { view = await epoch.rpc(team, 'runtime.read',";
+  const callEnd = "\n      } finally {\n        if (provider === 'codex') readiness.elapsedMs =";
+  for (const marker of [callBegin, callEnd]) assert.equal(source.split(marker).length, 2);
+  const pollSource = stripTypeScriptTypes(helper.slice(helper.indexOf(begin), helper.indexOf(end)).replace(/^export /u, ''));
+  const callerSource = stripTypeScriptTypes(source.slice(source.indexOf(callBegin), source.indexOf(callEnd)));
+  type Poll = (check: () => Promise<boolean>, message: string, budget?: number, deadline?: number, wallDeadline?: number) => Promise<void>;
+  let now = input.now, wallNow = input.wallNow ?? input.now, reads = 0;
+  const advance = (milliseconds: number, wallMilliseconds = milliseconds) => { now += milliseconds; wallNow += wallMilliseconds; };
+  const delays: number[] = [], argumentsSeen: [number | undefined, number | undefined, number | undefined][] = [];
+  const performance = { now: () => now };
+  const actualPoll = runInNewContext(`(()=>{${pollSource}\nreturn pollEmulatedSource;})()`, {
+    assert, performance, Date: { now: () => wallNow },
+    delay: async (milliseconds: number) => { assert.equal(milliseconds, 25); delays.push(milliseconds); advance(milliseconds); },
+  }) as Poll;
+  const readiness: Record<string, unknown> = { readCount: 0, elapsedMs: 0, lastRuntimeRead: null };
+  const run = Function('environment', `'use strict';
+    const {poll,epoch,team,action,runtimeDigest,readiness,readinessStarted,performance,memberReadinessDeadline,observation}=environment;
+    let view={},lastRuntimeViewDigest;
+    return (async()=>{${callerSource}})();`) as (environment: Record<string, unknown>) => Promise<void>;
+  return {
+    run: () => run({ team: 0, action: 'A', runtimeDigest, readiness, readinessStarted: input.now,
+      performance, memberReadinessDeadline: input.deadline,
+      observation: input.wallDeadline === undefined ? undefined : { attemptDeadlineMs: input.wallDeadline },
+      poll: (check: () => Promise<boolean>, message: string, budget?: number, deadline?: number, wallDeadline?: number) => {
+        assert.equal(message, 'Original source Team readiness'); argumentsSeen.push([budget, deadline, wallDeadline]);
+        advance(input.handoffPause ?? 0, input.wallHandoffPause ?? input.handoffPause ?? 0);
+        return actualPoll(check, message, budget, deadline, wallDeadline);
+      }, epoch: { rpc: async (team: number, method: string, command: string, payload: unknown, deadline?: number) => {
+        assert.equal(team, 0); assert.equal(method, 'runtime.read'); assert.equal(command, 'TEST-ready-A');
+        assert.equal(JSON.stringify(payload), '{"memberId":"alice-id"}');
+        assert.equal(deadline, input.deadline, 'Runtime read receives the original monotonic cutoff');
+        const index = reads++; advance(input.readCosts?.[index] ?? 0, input.wallReadCosts?.[index] ?? input.readCosts?.[index] ?? 0);
+        if (input.throwRead) throw input.throwRead;
+        return { memberId: 'alice-id', generation: 'TEST-original', phase: 'allocated', sealed: false,
+          custody: 'owned', nativeReady: input.ready?.[index] ?? true, attached: true };
+      } },
+    }),
+    actualPoll, readiness, argumentsSeen, delays, source, performance,
+    advance, counts: () => ({ now, reads }), wallNow: () => wallNow,
+  };
+}
+
+test('source Codex readiness refuses an expired absolute deadline before its first read after the poll handoff', async () => {
+  const f = await sourceReadinessDeadlineFixture({ now: 89_990, handoffPause: 20, deadline: 90_000 });
+  await assert.rejects(f.run(), /Original source Team readiness/);
+  assert.deepEqual(f.counts(), { now: 90_010, reads: 0 });
+  assert.deepEqual(f.delays, []); assert.deepEqual(f.readiness, { readCount: 0, elapsedMs: 0, lastRuntimeRead: null });
+  assert.deepEqual(f.argumentsSeen, [[undefined, 90_000, undefined]], 'the caller passes the original absolute deadline, not a resampled duration');
+});
+
+test('source Codex readiness refuses a ready result delivered after its original deadline despite a handoff pause', async () => {
+  const f = await sourceReadinessDeadlineFixture({ now: 89_900, handoffPause: 50, deadline: 90_000, readCosts: [60] });
+  await assert.rejects(f.run(), /Original source Team readiness/);
+  assert.deepEqual(f.counts(), { now: 90_010, reads: 1 }); assert.deepEqual(f.delays, []);
+  assert.equal(f.readiness.readCount, 1); assert.equal(f.readiness.elapsedMs, 110);
+  assert.equal((f.readiness.lastRuntimeRead as Record<string, unknown>).nativeReady, true);
+  assert.deepEqual(f.argumentsSeen, [[undefined, 90_000, undefined]]);
+});
+
+test('source readiness keeps its timely success, other original budgets, 25ms cadence and exact read errors', async () => {
+  const timely = await sourceReadinessDeadlineFixture({ now: 89_900, handoffPause: 25, deadline: 90_000, readCosts: [50] });
+  await timely.run(); assert.deepEqual(timely.counts(), { now: 89_975, reads: 1 });
+  assert.deepEqual(timely.delays, []); assert.equal(timely.readiness.readCount, 1);
+  const original = await sourceReadinessDeadlineFixture({ now: 0, handoffPause: 20_000, readCosts: [14_999] });
+  await original.run(); assert.deepEqual(original.counts(), { now: 34_999, reads: 1 });
+  assert.deepEqual(original.argumentsSeen, [[undefined, undefined, undefined]], 'non-Codex still starts its original default 15s poll on entry');
+  const boundary = await sourceReadinessDeadlineFixture({ now: 0, handoffPause: 20_000, readCosts: [15_000] });
+  await assert.rejects(boundary.run(), /Original source Team readiness/);
+  assert.deepEqual(boundary.counts(), { now: 35_000, reads: 1 }); assert.deepEqual(boundary.delays, []);
+  const cadence = await sourceReadinessDeadlineFixture({ now: 0, ready: [false, true] });
+  await cadence.run(); assert.deepEqual(cadence.delays, [25]); assert.deepEqual(cadence.counts(), { now: 25, reads: 2 });
+  assert.equal(cadence.readiness.readCount, 2);
+  const explicit = await sourceReadinessDeadlineFixture({ now: 0 });
+  await explicit.actualPoll(async () => { explicit.advance(29_999); return true; }, 'TEST original explicit budget', 30_000);
+  assert.deepEqual(explicit.counts(), { now: 29_999, reads: 0 }); assert.deepEqual(explicit.delays, []);
+  const explicitLate = await sourceReadinessDeadlineFixture({ now: 0 });
+  await assert.rejects(explicitLate.actualPoll(async () => { explicitLate.advance(30_000); return true; },
+    'TEST original explicit budget', 30_000), /TEST original explicit budget/);
+  const failure = new Error('TEST original Runtime read failed'), refused = await sourceReadinessDeadlineFixture({ now: 0, throwRead: failure });
+  await assert.rejects(refused.run(), error => error === failure);
+  assert.deepEqual(refused.counts(), { now: 0, reads: 1 }); assert.deepEqual(refused.delays, []);
+  assert.equal(refused.readiness.readCount, 0);
+});
+
+test('source Codex readiness refuses original wall expiry before its first read despite remaining monotonic time', async () => {
+  const f = await sourceReadinessDeadlineFixture({ now: 0, deadline: 90_000, wallNow: 100_000,
+    wallDeadline: 100_010, wallHandoffPause: 10 });
+  await assert.rejects(f.run(), /Original source Team readiness/);
+  assert.deepEqual(f.counts(), { now: 0, reads: 0 }); assert.equal(f.wallNow(), 100_010);
+  assert.deepEqual(f.delays, []); assert.equal(f.readiness.readCount, 0);
+  assert.deepEqual(f.argumentsSeen, [[undefined, 90_000, 100_010]]);
+  const timely = await sourceReadinessDeadlineFixture({ now: 500, deadline: 90_000, wallNow: 100_000,
+    wallDeadline: 100_010, handoffPause: 1, wallHandoffPause: 9 });
+  await timely.run(); assert.deepEqual(timely.counts(), { now: 501, reads: 1 });
+  assert.equal(timely.wallNow(), 100_009); assert.deepEqual(timely.delays, []);
+});
+
+test('source Codex readiness refuses a ready result at the original wall cutoff with monotonic time remaining', async () => {
+  const f = await sourceReadinessDeadlineFixture({ now: 100, deadline: 90_000, wallNow: 100_000,
+    wallDeadline: 100_010, readCosts: [1], wallReadCosts: [10] });
+  await assert.rejects(f.run(), /Original source Team readiness/);
+  assert.deepEqual(f.counts(), { now: 101, reads: 1 }); assert.equal(f.wallNow(), 100_010);
+  assert.equal(f.readiness.readCount, 1); assert.equal(f.readiness.elapsedMs, 1);
+  assert.equal((f.readiness.lastRuntimeRead as Record<string, unknown>).nativeReady, true);
+  assert.deepEqual(f.delays, []); assert.deepEqual(f.argumentsSeen, [[undefined, 90_000, 100_010]]);
+});
+
+async function sourceStandaloneDeadlineFixture(input: {
+  now?: number; provider?: 'codex' | 'claude'; ackMs?: number; handoffPause?: number; readCost?: number;
+  changeSourceOnRead?: boolean; invalidCapture?: 'input' | 'source' | 'member' | 'scope' | 'recipe';
+  cleanup?: 'confirmed' | 'unresolved'; exitCode?: number; throwRead?: Error;
+  selectedTimeoutMs?: number; captureCosts?: number[]; recipeCostMs?: number; resultValidationCostMs?: number; neverTerminal?: boolean;
+}) {
+  const clock = await sourceReadinessDeadlineFixture({ now: input.now ?? 0 });
+  const { stripTypeScriptTypes } = await import('node:module');
+  const begin = '      const before = first.jobs.length;';
+  const end = "\n      const jobs = first.jobs.slice(before); assertSourceJobs(jobs, b.source, 'B', 'runtime', fixture.profile.teams[1]!.binding.teamId);";
+  for (const marker of [begin, end]) assert.equal(clock.source.split(marker).length, 2);
+  const body = stripTypeScriptTypes(clock.source.slice(clock.source.indexOf(begin), clock.source.indexOf(end)));
+  const provider = input.provider ?? 'codex', scope = { projectId: 'TEST-project', contextId: 'TEST-context' };
+  const source = { sourceId: 'a'.repeat(64), revision: 'b'.repeat(64) };
+  const recipe = { limits: { timeoutMs: input.selectedTimeoutMs ?? 90_000 } }, runtime = { members: ['TEST original recipe'] };
+  const scheduled = { runId: 'TEST-source-standalone-B', scheduleId: 'TEST-source-schedule-B',
+    expectedRosterRevision: 'TEST-original-roster', config: { cwd: '/TEST/workspace', prompt: 'TEST prompt',
+      providerId: provider === 'codex' ? 'codex' : 'anthropic', model: 'TEST-original-model', skipPermissions: true } };
+  const capture = { schemaVersion: 1, input: structuredClone(scheduled), source: structuredClone(source),
+    memberId: 'alice-id', teamScope: runtimeDigest(scope), recipeDigest: runtimeDigest(recipe),
+    authorityRevision: 1, workspaceIdentity: 'c'.repeat(64), capturedAt: '2026-11-15T00:00:00.000Z' };
+  if (input.invalidCapture === 'input') capture.input.config.model = 'TEST-other-model';
+  if (input.invalidCapture === 'source') capture.source.revision = 'd'.repeat(64);
+  if (input.invalidCapture === 'member') capture.memberId = 'TEST-other-member';
+  if (input.invalidCapture === 'scope') capture.teamScope = 'd'.repeat(64);
+  if (input.invalidCapture === 'recipe') capture.recipeDigest = 'd'.repeat(64);
+  const trace: string[] = [], captureTimes: number[] = [], argumentsSeen: [number | undefined, number | undefined][] = [];
+  const evidence: Record<string, unknown> = {}, output: string[] = [];
+  let starts = 0, reads = 0;
+  class OriginalStore {
+    constructor(root: string, teamName: string) {
+      assert.equal(root, '/TEST/original-owner'); assert.equal(teamName, 'TEST Team B');
+    }
+  }
+  const run = Function('environment', `'use strict';
+    const {first,performance,readScheduledRunCapture,TeamOwnerStore,fixture,scheduled,assert,sourceRef,b,
+      provider,runtimeDigest,resolveRuntimeRecipe,evidence,poll,console,object,text}=environment;
+    return (async()=>{${body}\nreturn {completed,capture};})();`) as (environment: Record<string, unknown>) => Promise<unknown>;
+  return {
+    run: () => run({ performance: clock.performance, provider, runtimeDigest, scheduled, evidence, assert,
+      b: { source }, sourceRef: (value: typeof source) => ({ ...value }),
+      fixture: { profile: { owner: { storageRoot: '/TEST/original-owner' }, runtime,
+        teams: [null, { binding: { teamId: 'TEST-Team-B', teamName: 'TEST Team B' }, scope }] } },
+      TeamOwnerStore: OriginalStore, readScheduledRunCapture: (store: OriginalStore, runId: string) => {
+        assert.ok(store instanceof OriginalStore); assert.equal(runId, scheduled.runId);
+        trace.push('capture'); captureTimes.push(clock.counts().now);
+        clock.advance(input.captureCosts?.[captureTimes.length - 1] ?? 0); return structuredClone(capture);
+      }, resolveRuntimeRecipe: (selected: unknown, teamId: string, memberId: string, providerId: string) => {
+        assert.equal(selected, runtime); assert.equal(teamId, 'TEST-Team-B');
+        assert.equal(memberId, 'alice-id'); assert.equal(providerId, 'codex');
+        trace.push('recipe'); clock.advance(input.recipeCostMs ?? 0); return structuredClone(recipe);
+      }, poll: (check: () => Promise<boolean>, message: string, budget?: number, deadline?: number) => {
+        assert.equal(message, 'Original standalone completion'); argumentsSeen.push([budget, deadline]);
+        clock.advance(input.handoffPause ?? 0); return clock.actualPoll(check, message, budget, deadline);
+      }, first: { jobs: [], rpc: async (team: number, method: string, command: string, payload: unknown) => {
+        assert.equal(team, 1);
+        if (method === 'schedule.run.start') {
+          assert.equal(command, scheduled.runId); assert.deepEqual(payload, scheduled);
+          trace.push('start'); starts++; clock.advance(input.ackMs ?? 0); return { phase: 'running' };
+        }
+        assert.equal(method, 'schedule.run.read'); assert.equal(command, 'TEST-schedule-read');
+        assert.deepEqual(payload, { runId: scheduled.runId, scheduleId: scheduled.scheduleId });
+        trace.push('read'); reads++; clock.advance(input.readCost ?? 0);
+        if (input.throwRead) throw input.throwRead;
+        if (input.changeSourceOnRead) capture.source.revision = 'd'.repeat(64);
+        if (input.neverTerminal) return { phase: 'running', cleanup: 'unresolved' };
+        return { phase: 'completed', cleanup: input.cleanup ?? 'confirmed',
+          result: { exitCode: input.exitCode ?? 0, stdout: provider === 'codex' ? 'OK' : 'TEST standalone complete' } };
+      } }, console: { log: (value: string) => { output.push(value); } },
+      object: (value: unknown) => value, text: (value: unknown) => { clock.advance(input.resultValidationCostMs ?? 0); return value; },
+    }),
+    trace, captureTimes, argumentsSeen, evidence, output, delays: clock.delays,
+    counts: () => ({ now: clock.counts().now, starts, reads }),
+  };
+}
+
+test('source standalone refuses expiry during the poll handoff after its captured recipe ceiling', async () => {
+  const f = await sourceStandaloneDeadlineFixture({ ackMs: 100, handoffPause: 90_020 });
+  await assert.rejects(f.run(), /Original standalone completion/);
+  assert.deepEqual(f.counts(), { now: 90_120, starts: 1, reads: 0 });
+  assert.deepEqual(f.delays, []); assert.deepEqual(f.trace, ['start', 'capture', 'recipe']);
+  assert.deepEqual(f.argumentsSeen, [[undefined, 90_100]]);
+  assert.equal((f.evidence.lastStandaloneCompletion as Record<string, unknown>).readCount, 0);
+});
+
+test('source standalone refuses a completed result delivered after its original post-ACK absolute deadline', async () => {
+  const f = await sourceStandaloneDeadlineFixture({ ackMs: 100, handoffPause: 89_950, readCost: 60 });
+  await assert.rejects(f.run(), /Original standalone completion/);
+  assert.deepEqual(f.counts(), { now: 90_110, starts: 1, reads: 1 }); assert.deepEqual(f.delays, []);
+  assert.deepEqual(f.argumentsSeen, [[undefined, 90_100]]);
+  const completion = f.evidence.lastStandaloneCompletion as Record<string, unknown>;
+  assert.equal(completion.readCount, 1); assert.equal(completion.elapsedMs, 90_010);
+  assert.equal((completion.lastRunRead as Record<string, unknown>).phase, 'completed');
+});
+
+test('source standalone accepts one clean occurrence after 15s within its captured ceiling and records the policy', async () => {
+  const f = await sourceStandaloneDeadlineFixture({ ackMs: 250, handoffPause: 16_000, readCost: 500, captureCosts: [0, 25] });
+  await f.run(); assert.deepEqual(f.counts(), { now: 16_775, starts: 1, reads: 1 });
+  assert.deepEqual(f.trace, ['start', 'capture', 'recipe', 'read', 'capture']); assert.deepEqual(f.delays, []);
+  assert.deepEqual(f.argumentsSeen, [[undefined, 90_250]]);
+  const completion = f.evidence.lastStandaloneCompletion as Record<string, unknown>;
+  assert.deepEqual(completion.observation, { policy: 'captured-recipe-ceiling-v1', anchor: 'post-start-ack',
+    ceilingMs: 90_000, startedAtMs: 250, deadlineMs: 90_250 });
+  assert.ok(Buffer.byteLength(JSON.stringify(completion.observation)) <= 256);
+  assert.deepEqual((JSON.parse(f.output[0]!) as Record<string, unknown>).observation, completion.observation);
+  assert.deepEqual(completion.lastRunRead, { phase: 'completed', cleanup: 'confirmed', exitCode: 0 });
+});
+
+test('source standalone spends early source checks and handoff inside a smaller selected ceiling', async () => {
+  const timely = await sourceStandaloneDeadlineFixture({ selectedTimeoutMs: 200, ackMs: 100,
+    captureCosts: [25, 24], handoffPause: 50, readCost: 50 });
+  await timely.run(); assert.deepEqual(timely.counts(), { now: 249, starts: 1, reads: 1 });
+  assert.deepEqual(timely.argumentsSeen, [[undefined, 300]]);
+  const expired = await sourceStandaloneDeadlineFixture({ selectedTimeoutMs: 200, ackMs: 100, handoffPause: 200 });
+  await assert.rejects(expired.run(), /Original standalone completion/);
+  assert.deepEqual(expired.counts(), { now: 300, starts: 1, reads: 0 }); assert.deepEqual(expired.delays, []);
+  const checks = await sourceStandaloneDeadlineFixture({ selectedTimeoutMs: 200, ackMs: 100,
+    captureCosts: [150], recipeCostMs: 50 });
+  await assert.rejects(checks.run(), /Original standalone completion/);
+  assert.deepEqual(checks.counts(), { now: 300, starts: 1, reads: 0 });
+  assert.deepEqual(checks.trace, ['start', 'capture', 'recipe']); assert.deepEqual(checks.argumentsSeen, [[undefined, 300]]);
+});
+
+test('source standalone rejects expiry before and during its original final fresh capture despite a timely clean result', async () => {
+  const before = await sourceStandaloneDeadlineFixture({ selectedTimeoutMs: 100, readCost: 90, resultValidationCostMs: 10 });
+  await assert.rejects(before.run(), /Original standalone completion/);
+  assert.deepEqual(before.counts(), { now: 100, starts: 1, reads: 1 }); assert.deepEqual(before.delays, []);
+  assert.deepEqual(before.captureTimes, [0]); assert.deepEqual(before.trace, ['start', 'capture', 'recipe', 'read']);
+  const f = await sourceStandaloneDeadlineFixture({ selectedTimeoutMs: 100, captureCosts: [10, 10], readCost: 80 });
+  await assert.rejects(f.run(), /Original standalone completion/);
+  assert.deepEqual(f.counts(), { now: 100, starts: 1, reads: 1 }); assert.deepEqual(f.delays, []);
+  assert.deepEqual(f.captureTimes, [0, 90]); assert.deepEqual(f.trace, ['start', 'capture', 'recipe', 'read', 'capture']);
+  assert.deepEqual((f.evidence.lastStandaloneCompletion as Record<string, unknown>).lastRunRead,
+    { phase: 'completed', cleanup: 'confirmed', exitCode: 0 });
+});
+
+test('source standalone never renews its selected ceiling for a running occurrence', async () => {
+  const f = await sourceStandaloneDeadlineFixture({ selectedTimeoutMs: 100, ackMs: 50, readCost: 20, neverTerminal: true });
+  await assert.rejects(f.run(), /Original standalone completion/);
+  assert.deepEqual(f.counts(), { now: 160, starts: 1, reads: 3 }); assert.deepEqual(f.delays, [25, 25]);
+  assert.deepEqual(f.argumentsSeen, [[undefined, 150]]); assert.deepEqual(f.captureTimes, [50]);
+  assert.deepEqual((f.evidence.lastStandaloneCompletion as Record<string, unknown>).lastRunRead,
+    { phase: 'running', cleanup: 'unresolved' });
+});
+
+for (const provider of ['codex', 'claude'] as const)
+test(`source ${provider} standalone preserves the original fresh capture check after successful completion`, async () => {
+  const f = await sourceStandaloneDeadlineFixture({ provider, readCost: 1, changeSourceOnRead: true });
+  await assert.rejects(f.run(), { code: 'ERR_ASSERTION' });
+  assert.deepEqual(f.counts(), { now: 1, starts: 1, reads: 1 });
+  assert.deepEqual(f.trace, provider === 'codex'
+    ? ['start', 'capture', 'recipe', 'read', 'capture'] : ['start', 'read', 'capture']);
+  assert.deepEqual(f.captureTimes, provider === 'codex' ? [0, 1] : [1]);
+  assert.deepEqual(f.delays, []);
+});
+
+test('source standalone keeps captured authority, original relative defaults, cleanup refusals and exact read errors', async () => {
+  const timely = await sourceStandaloneDeadlineFixture({ ackMs: 100, handoffPause: 25, readCost: 50 });
+  await timely.run(); assert.deepEqual(timely.counts(), { now: 175, starts: 1, reads: 1 });
+  const original = await sourceStandaloneDeadlineFixture({ provider: 'claude', ackMs: 20_000, handoffPause: 20_000, readCost: 14_999 });
+  await original.run(); assert.deepEqual(original.counts(), { now: 54_999, starts: 1, reads: 1 });
+  const boundary = await sourceStandaloneDeadlineFixture({ provider: 'claude', ackMs: 20_000, handoffPause: 20_000, readCost: 15_000 });
+  await assert.rejects(boundary.run(), /Original standalone completion/);
+  assert.deepEqual(boundary.counts(), { now: 55_000, starts: 1, reads: 1 });
+  for (const invalidCapture of ['input', 'source', 'member', 'scope', 'recipe'] as const) {
+    const f = await sourceStandaloneDeadlineFixture({ invalidCapture });
+    await assert.rejects(f.run(), { code: 'ERR_ASSERTION' });
+    assert.deepEqual(f.counts(), { now: 0, starts: 1, reads: 0 }); assert.deepEqual(f.delays, []);
+  }
+  for (const invalidResult of [{ cleanup: 'unresolved' as const }, { exitCode: 1 }]) {
+    const f = await sourceStandaloneDeadlineFixture(invalidResult);
+    await assert.rejects(f.run(), { code: 'ERR_ASSERTION' });
+    assert.deepEqual(f.counts(), { now: 0, starts: 1, reads: 1 }); assert.deepEqual(f.delays, []);
+  }
+  const failure = new Error('TEST original standalone read failed');
+  const refused = await sourceStandaloneDeadlineFixture({ throwRead: failure });
+  await assert.rejects(refused.run(), error => error === failure);
+  assert.deepEqual(refused.counts(), { now: 0, starts: 1, reads: 1 }); assert.deepEqual(refused.delays, []);
+});
+
+test('source failure stdout preserves original refusal and emits only bounded captured readiness afterward', () => {
+  const source = readFileSync(new URL('../../../tools/owned-process-broker/nativeEmulatedSourceScenario.ts', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+  const begin = "    if (failure) try {\n      const diagnostic = JSON.stringify({ kind: 'TEST_SOURCE_FIRST_REFUSAL'";
+  const end = '  }\n  if (failure) throw failure;';
+  assert.equal(source.split(begin).length, 2); assert.equal(source.split(end).length, 2);
+  const start = source.indexOf(begin), stop = source.indexOf(end, start);
+  const cleanup = 'for (const epoch of epochs) try { await epoch.close(); }';
+  assert.equal(source.split(cleanup).length, 2); assert.ok(start > source.indexOf(cleanup));
+  assert.ok(stop > start);
+  const program = source.slice(start, stop) + '\nif (failure) throw failure;';
+  const original = new Error('PRIVATE-original-failure');
+  const refusal = Object.freeze({ status: 'unknown', reason: 'empty' });
+  const projection = Object.freeze({ status: 'observed', atomicWithFailure: false,
+    viewDigest: 'a'.repeat(64), bindingMatches: true, recordReady: false,
+    providerReady: null, ownerCurrent: null, nativeReady: false });
+  const codex = Object.freeze({ schemaVersion: 1, status: 'observed', atomicWithFailure: false,
+    samplePoint: 'last-original-projection-with-matching-view-digest',
+    source: Object.freeze({ sourceId: 'b'.repeat(64), revision: 'c'.repeat(64) }),
+    bindingDigest: 'd'.repeat(64), viewDigest: projection.viewDigest,
+    mainEpoch: 'TEST-prior-main', launchId: 'TEST-prior-Team-B', observedEventCount: 1,
+    events: Object.freeze([Object.freeze([1, 1, 'open', 'before-await', null])]) });
+  const exercise = (evidence: Record<string, unknown>, failure: Error | null = original, failWrite = 0) => {
+    const lines: string[] = []; let writes = 0;
+    const run = () => runInNewContext(program, { evidence, failure, provider: 'codex', Buffer,
+      console: { log(line: string) {
+        writes++;
+        if (writes === failWrite) throw new Error('PRIVATE-sink-failure');
+        lines.push(line);
+      } } });
+    if (failure) assert.throws(run, error => error === failure);
+    else assert.doesNotThrow(run);
+    return { lines, writes };
+  };
+  const evidence = Object.freeze({ stage: 'B-standalone', firstRefusal: refusal,
+    runtimeProjection: projection, codexReadinessObservation: codex });
+  const observed = exercise(evidence);
+  assert.equal(observed.writes, 2);
+  assert.equal(observed.lines[0], JSON.stringify({ kind: 'TEST_SOURCE_FIRST_REFUSAL', provider: 'codex', diagnostic: refusal }));
+  assert.deepEqual(JSON.parse(observed.lines[1]!), { kind: 'TEST_SOURCE_READINESS_OBSERVATIONS', provider: 'codex',
+    runtimeProjection: projection, codexReadinessObservation: codex });
+  assert.equal(evidence.runtimeProjection, projection); assert.equal(evidence.codexReadinessObservation, codex);
+  assert.equal(JSON.parse(observed.lines[1]!).codexReadinessObservation.launchId, 'TEST-prior-Team-B');
+  assert.equal(JSON.parse(observed.lines[1]!).codexReadinessObservation.atomicWithFailure, false,
+    'an earlier Team-B view is not restamped as current standalone readiness');
+  assert.doesNotMatch(observed.lines.join('\n'), /PRIVATE-|argv|environment|operationRef/);
+  const missing = exercise({ firstRefusal: refusal });
+  assert.deepEqual(JSON.parse(missing.lines[1]!), { kind: 'TEST_SOURCE_READINESS_OBSERVATIONS', provider: 'codex',
+    runtimeProjection: null, codexReadinessObservation: null });
+  let reads = 0;
+  const success = exercise(new Proxy({}, { get() { reads++; throw new Error('PRIVATE-success-read'); } }), null);
+  assert.equal(success.writes, 0); assert.equal(success.lines.length, 0); assert.equal(reads, 0);
+  const emptyFrame = JSON.stringify({ kind: 'TEST_SOURCE_READINESS_OBSERVATIONS', provider: 'codex',
+    runtimeProjection: '', codexReadinessObservation: null });
+  const padding = 'a'.repeat(16384 - Buffer.byteLength(emptyFrame));
+  const boundary = exercise({ firstRefusal: refusal, runtimeProjection: padding });
+  assert.equal(boundary.writes, 2); assert.equal(Buffer.byteLength(boundary.lines[1]!), 16384);
+  const overflow = exercise({ firstRefusal: refusal, runtimeProjection: padding.slice(0, -1) + 'é' });
+  assert.equal(overflow.writes, 1); assert.equal(overflow.lines[0], observed.lines[0]);
+  const cyclic: Record<string, unknown> = {}; cyclic.self = cyclic;
+  const serialization = exercise({ firstRefusal: refusal, runtimeProjection: cyclic });
+  assert.equal(serialization.writes, 1); assert.equal(serialization.lines[0], observed.lines[0]);
+  const firstSerialization = exercise({ firstRefusal: cyclic, runtimeProjection: projection, codexReadinessObservation: codex });
+  assert.equal(firstSerialization.writes, 1); assert.equal(firstSerialization.lines[0], observed.lines[1]);
+  const unavailable = exercise(Object.defineProperty({ firstRefusal: refusal }, 'runtimeProjection', {
+    get() { throw new Error('PRIVATE-observation-unavailable'); },
+  }));
+  assert.equal(unavailable.writes, 1); assert.equal(unavailable.lines[0], observed.lines[0]);
+  const firstSink = exercise(evidence, original, 1);
+  assert.equal(firstSink.writes, 2); assert.deepEqual(firstSink.lines, [observed.lines[1]]);
+  const secondSink = exercise(evidence, original, 2);
+  assert.equal(secondSink.writes, 2); assert.deepEqual(secondSink.lines, [observed.lines[0]]);
 });

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useRetainedLegacyAccount, useRetainedLegacyLaunch } from '@features/agent-backend/renderer';
 import { api, isElectronMode } from '@renderer/api';
 import { scheduleStartupIdleTask } from '@renderer/utils/startupIdleTask';
 
@@ -104,6 +105,8 @@ export function useCodexAccountSnapshot(options: {
   cancelChatgptLogin: () => Promise<boolean>;
   logout: () => Promise<boolean>;
 } {
+  const retained = useRetainedLegacyLaunch();
+  const retainedAccount = useRetainedLegacyAccount(options.enabled);
   const electronMode = isElectronMode();
   const [snapshot, setSnapshot] = useState<CodexAccountSnapshotDto | null>(null);
   const [loading, setLoading] = useState(false);
@@ -129,7 +132,7 @@ export function useCodexAccountSnapshot(options: {
   // "Attempted" means settled (success or failure) within the current enabled lifecycle.
   const [initialRefreshAttempted, setInitialRefreshAttempted] = useState(false);
   const [initialRateLimitsAttempted, setInitialRateLimitsAttempted] = useState(false);
-  const enabled = electronMode && options.enabled;
+  const enabled = electronMode && options.enabled && !retained;
   const loginPending = snapshot?.login.status === 'pending' || snapshot?.login.status === 'starting';
   const mayPollAccount = options.passivePollingEnabled !== false || loginPending || loading;
 
@@ -269,7 +272,7 @@ export function useCodexAccountSnapshot(options: {
   );
 
   useEffect(() => {
-    if (!electronMode || !options.enabled) {
+    if (!electronMode || !enabled) {
       return;
     }
 
@@ -379,7 +382,7 @@ export function useCodexAccountSnapshot(options: {
     electronMode,
     initialRefreshDelayMs,
     initialRefreshMaxDelayMs,
-    options.enabled,
+    enabled,
     options.includeRateLimits,
   ]);
 
@@ -423,7 +426,7 @@ export function useCodexAccountSnapshot(options: {
   ]);
 
   useEffect(() => {
-    if (!electronMode || !options.enabled || !mayPollAccount || typeof document === 'undefined') {
+    if (!electronMode || !enabled || !mayPollAccount || typeof document === 'undefined') {
       return;
     }
 
@@ -466,14 +469,14 @@ export function useCodexAccountSnapshot(options: {
     initialRefreshAttempted,
     initialRefreshDelayMs,
     mayPollAccount,
-    options.enabled,
+    enabled,
     options.includeRateLimits,
     refresh,
     snapshot,
   ]);
 
   useEffect(() => {
-    if (!electronMode || !options.enabled || !mayPollAccount) {
+    if (!electronMode || !enabled || !mayPollAccount) {
       return;
     }
     if (snapshot === null && !initialRefreshAttempted) {
@@ -500,7 +503,7 @@ export function useCodexAccountSnapshot(options: {
     initialRefreshAttempted,
     initialRefreshDelayMs,
     mayPollAccount,
-    options.enabled,
+    enabled,
     options.includeRateLimits,
     refresh,
     snapshot,
@@ -559,8 +562,18 @@ export function useCodexAccountSnapshot(options: {
   const effectiveSnapshot = enabled ? snapshot : null;
   const effectiveError = enabled ? error : null;
 
+  const refuseOriginalAccountChange = useCallback(async () => {
+    setError('Close Launch before changing the original runtime connection, then reopen it.');
+    return false;
+  }, []);
+  const { snapshot: originalSnapshot, loading: originalLoading, error: originalError, refresh: originalRefresh } = retainedAccount;
   return useMemo(
-    () => ({
+    () => retained ? {
+      snapshot: originalSnapshot, loading: originalLoading, error: originalError ?? error,
+      refresh: originalRefresh, rateLimitsLoading: false,
+      startChatgptLogin: refuseOriginalAccountChange,
+      cancelChatgptLogin: refuseOriginalAccountChange, logout: refuseOriginalAccountChange,
+    } : ({
       snapshot: effectiveSnapshot,
       loading: effectiveLoading,
       rateLimitsLoading: effectiveRateLimitsLoading,
@@ -571,6 +584,7 @@ export function useCodexAccountSnapshot(options: {
       logout: () => runAction(() => api.logoutCodexAccount()),
     }),
     [
+      retained, originalSnapshot, originalLoading, originalError, originalRefresh, error, refuseOriginalAccountChange,
       effectiveError,
       effectiveLoading,
       effectiveRateLimitsLoading,

@@ -1,0 +1,124 @@
+{
+  "schema": "recoverable-original-native-evidence-bundle/v1",
+  "source": "27b1acf48278dcd0fb348c626696eac2dc64de73",
+  "cohort": "27b",
+  "checkpoint": {
+    "path": "checkpoint-20261115-2319.json",
+    "bytes": 9233,
+    "blob": "e46b9dbdb8d5aa1ab8a4e0fc80dd20f1722ca92a",
+    "sha256": "0f0dc4bd66905a28701ab5dfc58d4c5b38f59b7b81a38ae5945fb18caeee6adb"
+  },
+  "payloadFileCount": 17,
+  "payloadBytes": 762481,
+  "originalArchiveCount": 3,
+  "files": [
+    {
+      "path": "14183604952-archive-audit.json",
+      "bytes": 1411,
+      "blob": "435abe8f68bc5b4df90feb0e6d516d997e72323d",
+      "sha256": "d6c182b452b14327f2b3d7620fd8b14bb43ae888e30a6cc134ad05b37263dda9"
+    },
+    {
+      "path": "14183604952.zip",
+      "bytes": 10597,
+      "blob": "05bb25a415016945bebb07f7facdc5b1f4e364a2",
+      "sha256": "9ef59e43c75425467422683fb3ad38b713912a7b9256969037bcb287d414289c"
+    },
+    {
+      "path": "14184541778-archive-audit.json",
+      "bytes": 5036,
+      "blob": "67e9b1a71a4c3efdf56bfcb443cc7905c876bb14",
+      "sha256": "aa44b3b7bd8010a91784c69a6f5885f8ae4348b2e6f3ce5df7045ee01c77dee4"
+    },
+    {
+      "path": "14184541778.zip",
+      "bytes": 15378,
+      "blob": "6e5cb5651d13ee5ac9fae4d5c38ab5930e7bae33",
+      "sha256": "c95ff53aef5e729b6bcfde35969f02e93958294958cc188d7c6a79d38a0dc152"
+    },
+    {
+      "path": "14184765230-archive-audit.json",
+      "bytes": 3067,
+      "blob": "a2aa02dd72d9194b71e3c2302a169309e62e676c",
+      "sha256": "ee19126f3ef739d43351f571cb9f321649a30f62d064b11041ead3996046952a"
+    },
+    {
+      "path": "14184765230.zip",
+      "bytes": 15521,
+      "blob": "93085b1fce45bd16313fb65eaa784fc0a3c61648",
+      "sha256": "5b1e4ddc8988dca12e90842b144a5f0cb7e2a72ad66ab04c1e75343f3294031f"
+    },
+    {
+      "path": "Plan29-27b-native-failures-appendix.md",
+      "bytes": 6850,
+      "blob": "4f05821c833e1b6182fc36e93a8c1a0edc16784d",
+      "sha256": "4594ee8ad239feb95a8d61715900686e9b9913a213c98730df240b76577ecdb9"
+    },
+    {
+      "path": "checkpoint-20261115-2319.json",
+      "bytes": 9233,
+      "blob": "e46b9dbdb8d5aa1ab8a4e0fc80dd20f1722ca92a",
+      "sha256": "0f0dc4bd66905a28701ab5dfc58d4c5b38f59b7b81a38ae5945fb18caeee6adb"
+    },
+    {
+      "path": "failures-audit-20261115-2318.json",
+      "bytes": 27977,
+      "blob": "6c145008ff79883866874a6e7ddb927b45bf0802",
+      "sha256": "2c367817487bbb9229c663f9ca23b4814d16e7099f685b28643a098e8562262b"
+    },
+    {
+      "path": "independent-ui-native-boundary-review.json",
+      "bytes": 31748,
+      "blob": "4253716660f92c170779b2eedba7f46160940bbc",
+      "sha256": "6cead99403d495481872310bb7b7d0c94de679b3797bedf76534fa183baa9515"
+    },
+    {
+      "path": "native-35c-initial-and-27-final-snapshot-20261115-2301.json",
+      "bytes": 75588,
+      "blob": "9f902a52ac53339e321d0226746b5d2fe4ba41e1",
+      "sha256": "4d7520103b16f121e2a0e41d6019c20863ae04fcd3a5e4ba1894865a26d5c277"
+    },
+    {
+      "path": "official-artifact-metadata-final.json",
+      "bytes": 6698,
+      "blob": "bc2ed91aaa65346ba4b6b7d37964891781420ac8",
+      "sha256": "8d728fb67d6864e7d3e706b0e8fd860c28d95ac2cef5c126dfd6a77b2371d613"
+    },
+    {
+      "path": "process-arm-job.log",
+      "bytes": 174712,
+      "blob": "289565387470d2af23fd44fb6d49cf456c60ae89",
+      "sha256": "7097e606f569d6ac5563adb9076a585081e8cc95408d22b58d50b9c3911306f3"
+    },
+    {
+      "path": "process-x64-job.log",
+      "bytes": 157333,
+      "blob": "34e3e3f4c5813c28123104e7c18451565c3f37c5",
+      "sha256": "060632b55712da9101f0994a871c00bdbf0ca732db8b080bbecfa91e3292978a"
+    },
+    {
+      "path": "static-windows-132984467338-job.log",
+      "bytes": 103066,
+      "blob": "61cf4a1279a41343222d9de9898b0529240cd44d",
+      "sha256": "7569d92cba495507b56e240a2b779923bc3ae88a55effc2ddc977c2c8c30b63d"
+    },
+    {
+      "path": "static-windows-source-audit.json",
+      "bytes": 3467,
+      "blob": "591b95d4dc8dc32f2723fe0d7fbc6e52d0a8a0f8",
+      "sha256": "401c089eb32ac3982ebbfd4166bb72e664e399585aaf4af14a082ec91600c498"
+    },
+    {
+      "path": "v2-darwin-x64-job.log",
+      "bytes": 114799,
+      "blob": "848790f4ed10688c5f873c3fa96f802a368adbc2",
+      "sha256": "c6f353bb276db9cb6279685628761b43719f0b1cbe6799e4996300162512ca91"
+    }
+  ],
+  "limits": [
+    "Original authoritative ZIPs contain exact recoverable extracted receipts/logs; redundant extracted members are not republished.",
+    "Existing checkpoints/appendices/raw logs/independent reviews are byte-identical.",
+    "No signed artifact transport URL or private transport input is included; scanner checked selected text and original ZIP members.",
+    "All source-specific FAIL/SKIP/CANCELLED/unknown/qualification limits survive; this bundle adds no execution or later-source qualification."
+  ]
+}

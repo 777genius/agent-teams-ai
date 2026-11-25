@@ -91,7 +91,8 @@
       "uk": "Ukrainien",
       "ur": "Ourdou",
       "vi": "Vietnamien",
-      "zh": "Chinois"
+      "zh": "Chinois",
+      "zh-TW": "Chinois traditionnel"
     },
     "searchPlaceholder": "Rechercher une langue...",
     "selectPlaceholder": "Sélectionnez la langue de l'application...",

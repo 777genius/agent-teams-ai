@@ -1,0 +1,316 @@
+{
+  "sourceHead": "9a34bb28de0a0deee2eecc42099fd9500563eb1b",
+  "runId": 43751070810,
+  "attempt": 1,
+  "artifacts": [
+    {
+      "id": 14176507630,
+      "file": "9a34-process-win-x64.zip",
+      "source": "9a34bb28de0a0deee2eecc42099fd9500563eb1b",
+      "run": 43751070810,
+      "bytes": 53840,
+      "sha256": "c0af0132336804cbc0f2b6e68561a7bed394a9ff1ee67bf075139fc087480736",
+      "directory": "/workspace/scratch/82d3f9ba6b85/native-audit-9a34/process_win_x64",
+      "zipPath": "/workspace/scratch/82d3f9ba6b85/native-audit-9a34/9a34-process-win-x64.zip",
+      "crcVerified": true,
+      "uniqueSafePaths": true,
+      "symlinks": false,
+      "files": [
+        {
+          "path": "agent-teams-ai/agent-teams-ai/native-evidence/binary-sha256.txt",
+          "bytes": 1723,
+          "sha256": "d78d0fc880fd6684b208a5e4eccf9679de8d4298737af4597db80464692dd6a1"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+          "bytes": 20040,
+          "sha256": "3cb10ac5ffb8f2dbc46e49ed77dcaa78e15fe11f45e775816d5cfca58532b57b"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+          "bytes": 757,
+          "sha256": "22dfcd93c73c676320f8835158415e60a33359f8e01f24fdf9ca84dbdd0a66c4"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+          "bytes": 8825,
+          "sha256": "b77d6c997b35bcca5d2528c6ddee135e21d7d97d9a796aaf33575bb06c67e188"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+          "bytes": 41,
+          "sha256": "c46d4e47ae367c7fc5c2fba4e8cc89f025f4d3858bf2885d5cfcf2045c5f9957"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-binary-sha256.txt",
+          "bytes": 1723,
+          "sha256": "d78d0fc880fd6684b208a5e4eccf9679de8d4298737af4597db80464692dd6a1"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-electron.log",
+          "bytes": 78115,
+          "sha256": "87509c3f147eb282d391e6b45533ec7696bf13e6fe4dae109a6f7a188693716d"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-emulated-provider-receipt.json",
+          "bytes": 2900,
+          "sha256": "e68aec7104a9a062ce277a6cf489079a1d598bf2af897f26993a7195547c7ce0",
+          "keys": [
+            "kind",
+            "sourceHead",
+            "platform",
+            "nodeVersion",
+            "status",
+            "pins",
+            "wrappers",
+            "providers",
+            "cleanup",
+            "realProviderExecuted",
+            "desktopQualified",
+            "releaseQualified"
+          ]
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-emulated-provider.log",
+          "bytes": 1278,
+          "sha256": "98d599167b81eb51a838703af6dded047380be4f639b9de68652937efd0b25ba"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-manifest.json",
+          "bytes": 193,
+          "sha256": "0a9e2fac97a8c53ac8066803978d3c0e6a23e6d62629e5e43691d89cede91747",
+          "keys": [
+            "schema",
+            "platform",
+            "arch",
+            "file",
+            "sha256",
+            "protocol"
+          ]
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-node24.log",
+          "bytes": 78072,
+          "sha256": "54ee649d5e44926ccae11de845d312a0dc528e19ebb1021b6b868182690a9aa8"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-scoped-manifest.json",
+          "bytes": 230,
+          "sha256": "b867312e04f1444534d08f579d0f2909a3f701536c9bbad0dfb78ba5581a8fb8",
+          "keys": [
+            "schema",
+            "platform",
+            "arch",
+            "file",
+            "sha256",
+            "protocol",
+            "capability"
+          ]
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-claude-receipt.json",
+          "bytes": 27712,
+          "sha256": "3fea20dd54a329256c35208445dab921e91ee54e7b0b0e7c0f5ab8221cac3fbf",
+          "keys": [
+            "kind",
+            "sourceHead",
+            "platform",
+            "nodeVersion",
+            "status",
+            "pins",
+            "provider",
+            "sourceScenarios",
+            "cleanup",
+            "realProviderExecuted",
+            "desktopQualified",
+            "releaseQualified"
+          ]
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-claude.log",
+          "bytes": 18987,
+          "sha256": "93974508d53d1142197ca44350bdc1ea6fd34199296b7fb3e790680248b5d718"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-codex-receipt.json",
+          "bytes": 60608,
+          "sha256": "862e675660df6c31818ed5eeb0b52db1907d7336a25c0f85ff41132762622c1b",
+          "keys": [
+            "kind",
+            "sourceHead",
+            "platform",
+            "nodeVersion",
+            "status",
+            "pins",
+            "provider",
+            "sourceScenarios",
+            "cleanup",
+            "realProviderExecuted",
+            "desktopQualified",
+            "releaseQualified"
+          ]
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-codex.log",
+          "bytes": 49806,
+          "sha256": "01bc8941ee88cfa63f1c0b97633375a66d026b68be80aacda06f4fd6609e0045"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-opencode-receipt.json",
+          "bytes": 16676,
+          "sha256": "ff4f24b272b59d65e40fef5a4575eb032d5ce29377c156dbd36498a7e11c76be",
+          "keys": [
+            "kind",
+            "sourceHead",
+            "platform",
+            "nodeVersion",
+            "status",
+            "pins",
+            "provider",
+            "sourceScenarios",
+            "cleanup",
+            "realProviderExecuted",
+            "desktopQualified",
+            "releaseQualified"
+          ]
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-opencode.log",
+          "bytes": 8685,
+          "sha256": "ef2c89070ae085db7405b5545871a0287a6d0d4fb46f72389cdbe71fa4ff9c3f"
+        }
+      ]
+    },
+    {
+      "id": 14176543927,
+      "file": "9a34-process-win-arm64.zip",
+      "source": "9a34bb28de0a0deee2eecc42099fd9500563eb1b",
+      "run": 43751070810,
+      "bytes": 32083,
+      "sha256": "4c24b40810fb48bdbc3dbc7f05ec347b6e618b5354fe4e8ffd21007183b320da",
+      "directory": "/workspace/scratch/82d3f9ba6b85/native-audit-9a34/process_win_arm",
+      "zipPath": "/workspace/scratch/82d3f9ba6b85/native-audit-9a34/9a34-process-win-arm64.zip",
+      "crcVerified": true,
+      "uniqueSafePaths": true,
+      "symlinks": false,
+      "files": [
+        {
+          "path": "agent-teams-ai/agent-teams-ai/native-evidence/binary-sha256.txt",
+          "bytes": 1741,
+          "sha256": "6003e8912645ab533d94b3cd9843e6bf7abf879ef7165c55550d7c023d21122b"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+          "bytes": 20048,
+          "sha256": "3635f3ade39eba385757b223233db1e1615246710bfbc5e0aca440cd91bd43ed"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+          "bytes": 757,
+          "sha256": "edc595d6c7c3fd8ee6945fa605b8f9c246ffe651f44773d47be2df3712501e9d"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+          "bytes": 9167,
+          "sha256": "92ceb3f0d012a8afeac60ed4731bf2a141f38d27abfc2f6b5086b3104dec6892"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+          "bytes": 41,
+          "sha256": "c46d4e47ae367c7fc5c2fba4e8cc89f025f4d3858bf2885d5cfcf2045c5f9957"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-binary-sha256.txt",
+          "bytes": 1741,
+          "sha256": "6003e8912645ab533d94b3cd9843e6bf7abf879ef7165c55550d7c023d21122b"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-electron.log",
+          "bytes": 78125,
+          "sha256": "74d9bf1536ff7b1800c33ce88ec0af3c19dc5a1d3d6bba43388bd8aba71f7e3a"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-emulated-provider-receipt.json",
+          "bytes": 2908,
+          "sha256": "ba430d9294cea276d6e8aa65368055b648768ae0f114e410faf7e9356f4bb59a",
+          "keys": [
+            "kind",
+            "sourceHead",
+            "platform",
+            "nodeVersion",
+            "status",
+            "pins",
+            "wrappers",
+            "providers",
+            "cleanup",
+            "realProviderExecuted",
+            "desktopQualified",
+            "releaseQualified"
+          ]
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-emulated-provider.log",
+          "bytes": 1278,
+          "sha256": "10808b76fcd36a80ab0b9a3fd4ad5bdc46dd34b554fd56dfede9c0df4e6317d7"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-manifest.json",
+          "bytes": 195,
+          "sha256": "15a943a4d0062e308047a61adcc75aed18852420ee1c0b0ac2893ca8b4d635b2",
+          "keys": [
+            "schema",
+            "platform",
+            "arch",
+            "file",
+            "sha256",
+            "protocol"
+          ]
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-node24.log",
+          "bytes": 78084,
+          "sha256": "2b7898e94ee8938cac2a7aa92a4518b1f4dd10a69e70eba55a9f8fa47cfda335"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-scoped-manifest.json",
+          "bytes": 232,
+          "sha256": "5322e5497527e4ee8a241fab338e48ec0c9d3172ee4c60849c16d8725b638771",
+          "keys": [
+            "schema",
+            "platform",
+            "arch",
+            "file",
+            "sha256",
+            "protocol",
+            "capability"
+          ]
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-codex-receipt.json",
+          "bytes": 22370,
+          "sha256": "08f73a0c853502803b5ec53b13e8217f3e7f4c632f2f519b9ed535d2eeb48af9",
+          "keys": [
+            "kind",
+            "sourceHead",
+            "platform",
+            "nodeVersion",
+            "status",
+            "pins",
+            "provider",
+            "sourceScenarios",
+            "cleanup",
+            "realProviderExecuted",
+            "desktopQualified",
+            "releaseQualified"
+          ]
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-codex.log",
+          "bytes": 15035,
+          "sha256": "9c0ece82c5b61122fcab2e11d212068de3470231c3c85a2537398e323eedbcc7"
+        }
+      ]
+    }
+  ],
+  "limits": "Read-only archive/log audit; no project/native execution, CI or tracked mutation."
+}

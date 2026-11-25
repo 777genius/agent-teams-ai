@@ -1,8 +1,9 @@
 import { z } from 'zod';
 
-import { nativeProcessProfileSchema } from '../composition/nativeProcessProfile.js';
+import { nativeProcessProfileSchema, isNativeProfilePath } from '../composition/nativeProcessProfile.js';
 import { openCodeV2EmbeddedProfileSchema } from '../composition/openCodeV2EmbeddedProfile.js';
 import { isCanonicalOpenCodeV2Directory } from '../composition/openCodeV2StaticPreflight.js';
+import { openCodeManagedPreferencesSchema } from '../composition/openCodeManagedPreferences.js';
 
 export const openCodeManagementProfileSchema = nativeProcessProfileSchema
   .extend({
@@ -17,6 +18,7 @@ export const openCodeManagementProfileSchema = nativeProcessProfileSchema
     nativeGeneration: z.enum(['v1', 'v2']).optional(),
     protocolRevision: z.literal('2.1.4').optional(),
     embedded: openCodeV2EmbeddedProfileSchema.optional(),
+    managedPreferences: openCodeManagedPreferencesSchema.optional(),
     nativeModel: z.object({
       providerId: z.string().min(1).max(256).refine(value => !/[\0\r\n]/u.test(value)),
       modelId: z.string().min(1).max(256).refine(value => !/[\0\r\n]/u.test(value)),
@@ -54,7 +56,7 @@ export const openCodeManagementProfileSchema = nativeProcessProfileSchema
           typeof directory === 'string' && isCanonicalOpenCodeV2Directory(platform, directory)))
         context.addIssue({ code: 'custom', message: 'OpenCode V2 management requires canonical native paths' });
     } else if (!nativeProcessProfileSchema.safeParse(value).success) {
-      context.addIssue({ code: 'custom', message: 'Legacy OpenCode management requires its captured POSIX profile' });
+      context.addIssue({ code: 'custom', message: 'Legacy OpenCode management requires its captured native profile' });
     }
   });
 
@@ -64,7 +66,7 @@ export type OpenCodeManagementProfile = z.infer<typeof openCodeManagementProfile
 export const codexManagementProfileSchema = nativeProcessProfileSchema
   .extend({
     provider: z.literal('codex'),
-    protocolRevision: z.literal('0.162.0'),
+    protocolRevision: z.enum(['0.162.0', '0.169.0']),
     modelProbeTimeoutMs: z.number().int().min(1).max(180000).optional(),
     modelProvider: z.string().min(1).max(256).optional(),
     reasoningEffort: z
@@ -83,8 +85,7 @@ export const codexManagementProfileSchema = nativeProcessProfileSchema
         ['HOME', 'CODEX_HOME'].every(
           (key) =>
             typeof value[key] === 'string' &&
-            value[key]!.startsWith('/') &&
-            !value[key]!.includes('\0')
+            isNativeProfilePath(value[key]!)
         ),
       'Captured Codex HOME and CODEX_HOME are required'
     ),
@@ -108,7 +109,7 @@ export const claudeManagementProfileSchema = nativeProcessProfileSchema
   .strict()
   .refine((value) => {
     const path = (entry: unknown) =>
-      typeof entry === 'string' && entry.startsWith('/') && !entry.includes('\0');
+      typeof entry === 'string' && isNativeProfilePath(entry);
     return (
       path(value.environment.HOME) &&
       !!value.environment.PATH &&

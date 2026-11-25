@@ -106,6 +106,7 @@ export async function qualifyProcessColdUi(p7LogPath: string, p7LogSha256: strin
     execFileSync(node.path, [join(import.meta.dirname, 'desktop-backend-smoke.ts')], {
       cwd: repository, stdio: ['ignore', fd, fd],
       env: { HOME: join(root, 'home'), TMPDIR: join(root, 'tmp'), PATH: dirname(node.path) + ':/usr/bin:/bin', NO_COLOR: '1',
+        NODE_OPTIONS: '--max-old-space-size=8192',
         LEGACY_DESKTOP_BACKEND_GO: '1', LEGACY_PROCESS_COLD_UI_GO: '1',
         LEGACY_DESKTOP_PROOF_MODE: 'process-cold-ui',
         LEGACY_DESKTOP_PROCESS_CAPTURE_PATH: capturePin.path, LEGACY_DESKTOP_PROCESS_CAPTURE_SHA256: capturePin.sha256,

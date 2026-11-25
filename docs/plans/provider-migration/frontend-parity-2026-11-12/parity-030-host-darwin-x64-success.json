@@ -1,0 +1,465 @@
+{
+  "schemaVersion": 1,
+  "kind": "original-current-head-host-process-darwin-x64-terminal-success",
+  "repository": "777genius/agent-teams-ai",
+  "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "base": "8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+  "event": "pull_request",
+  "runAttempt": 1,
+  "runId": 44407826280,
+  "jobId": 135167669442,
+  "capturedAt": "2026-11-18T22:32:50.753172+00:00",
+  "job": {
+    "id": 135167669442,
+    "run_id": 44407826280,
+    "workflow_name": "Host process fixture acceptance",
+    "head_branch": "fix/frontend-parity-completion-20261113",
+    "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44407826280",
+    "run_attempt": 1,
+    "node_id": "CR_kwDORVTEtM8AAAAfeJ70wg",
+    "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/135167669442",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826280/job/135167669442",
+    "status": "completed",
+    "conclusion": "success",
+    "created_at": "2026-11-18T22:03:44Z",
+    "started_at": "2026-11-18T22:20:54Z",
+    "completed_at": "2026-11-18T22:29:47Z",
+    "name": "Host process fixtures (darwin-x64)",
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1,
+        "started_at": "2026-11-18T22:20:55Z",
+        "completed_at": "2026-11-18T22:20:57Z"
+      },
+      {
+        "name": "Enable Windows long paths",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 2,
+        "started_at": "2026-11-18T22:20:57Z",
+        "completed_at": "2026-11-18T22:20:57Z"
+      },
+      {
+        "name": "Run actions/checkout@v7.0.1",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3,
+        "started_at": "2026-11-18T22:20:57Z",
+        "completed_at": "2026-11-18T22:21:16Z"
+      },
+      {
+        "name": "Run actions/setup-node@v7.0.0",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4,
+        "started_at": "2026-11-18T22:21:16Z",
+        "completed_at": "2026-11-18T22:21:30Z"
+      },
+      {
+        "name": "Select the pinned package manager with bundled Corepack",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5,
+        "started_at": "2026-11-18T22:21:30Z",
+        "completed_at": "2026-11-18T22:21:36Z"
+      },
+      {
+        "name": "Run actions/setup-node@v7.0.0",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 6,
+        "started_at": "2026-11-18T22:21:36Z",
+        "completed_at": "2026-11-18T22:21:38Z"
+      },
+      {
+        "name": "Bind exact source and actual process tuple",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7,
+        "started_at": "2026-11-18T22:21:38Z",
+        "completed_at": "2026-11-18T22:21:38Z"
+      },
+      {
+        "name": "Install frozen workspace without Desktop postinstall",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8,
+        "started_at": "2026-11-18T22:21:38Z",
+        "completed_at": "2026-11-18T22:25:13Z"
+      },
+      {
+        "name": "Build existing controller and Host",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 9,
+        "started_at": "2026-11-18T22:25:13Z",
+        "completed_at": "2026-11-18T22:25:46Z"
+      },
+      {
+        "name": "Verify process contracts and retained Main Host transport",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 10,
+        "started_at": "2026-11-18T22:25:46Z",
+        "completed_at": "2026-11-18T22:28:03Z"
+      },
+      {
+        "name": "Verify original POSIX Node and shell lifecycle fixtures",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 11,
+        "started_at": "2026-11-18T22:28:03Z",
+        "completed_at": "2026-11-18T22:28:14Z"
+      },
+      {
+        "name": "Prepare pinned Electron for native process fixtures",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 12,
+        "started_at": "2026-11-18T22:28:14Z",
+        "completed_at": "2026-11-18T22:28:14Z"
+      },
+      {
+        "name": "Verify Linux Node exec descriptor closure under both original parents",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 13,
+        "started_at": "2026-11-18T22:28:14Z",
+        "completed_at": "2026-11-18T22:28:14Z"
+      },
+      {
+        "name": "Qualify original Linux pidfs and retained pidfd under Host Node",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 14,
+        "started_at": "2026-11-18T22:28:14Z",
+        "completed_at": "2026-11-18T22:28:14Z"
+      },
+      {
+        "name": "Qualify original Linux pidfs and retained pidfd under Electron Node",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 15,
+        "started_at": "2026-11-18T22:28:14Z",
+        "completed_at": "2026-11-18T22:28:14Z"
+      },
+      {
+        "name": "Build original Windows product broker and C++ fixtures",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 16,
+        "started_at": "2026-11-18T22:28:14Z",
+        "completed_at": "2026-11-18T22:28:14Z"
+      },
+      {
+        "name": "Qualify original Windows Job and control under Host Node",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 17,
+        "started_at": "2026-11-18T22:28:14Z",
+        "completed_at": "2026-11-18T22:28:14Z"
+      },
+      {
+        "name": "Qualify original Windows Job and control under Electron Node",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 18,
+        "started_at": "2026-11-18T22:28:14Z",
+        "completed_at": "2026-11-18T22:28:14Z"
+      },
+      {
+        "name": "Qualify Windows wrappers and actual Main Host provider routes with TEST peers",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 19,
+        "started_at": "2026-11-18T22:28:14Z",
+        "completed_at": "2026-11-18T22:28:14Z"
+      },
+      {
+        "name": "Qualify original codex source A B with TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 20,
+        "started_at": "2026-11-18T22:28:14Z",
+        "completed_at": "2026-11-18T22:28:14Z"
+      },
+      {
+        "name": "Qualify original claude source A B with TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 21,
+        "started_at": "2026-11-18T22:28:14Z",
+        "completed_at": "2026-11-18T22:28:14Z"
+      },
+      {
+        "name": "Qualify original opencode source A B with TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 22,
+        "started_at": "2026-11-18T22:28:14Z",
+        "completed_at": "2026-11-18T22:28:14Z"
+      },
+      {
+        "name": "Require completed original platform receipts and unchanged source",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 23,
+        "started_at": "2026-11-18T22:28:14Z",
+        "completed_at": "2026-11-18T22:28:15Z"
+      },
+      {
+        "name": "Preserve original process evidence including failures",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 24,
+        "started_at": "2026-11-18T22:28:15Z",
+        "completed_at": "2026-11-18T22:28:17Z"
+      },
+      {
+        "name": "Post Run actions/setup-node@v7.0.0",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 46,
+        "started_at": "2026-11-18T22:28:17Z",
+        "completed_at": "2026-11-18T22:29:41Z"
+      },
+      {
+        "name": "Post Run actions/setup-node@v7.0.0",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 47,
+        "started_at": "2026-11-18T22:29:41Z",
+        "completed_at": "2026-11-18T22:29:41Z"
+      },
+      {
+        "name": "Post Run actions/checkout@v7.0.1",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 48,
+        "started_at": "2026-11-18T22:29:41Z",
+        "completed_at": "2026-11-18T22:29:42Z"
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 49,
+        "started_at": "2026-11-18T22:29:42Z",
+        "completed_at": "2026-11-18T22:29:43Z"
+      }
+    ],
+    "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/135167669442",
+    "labels": [
+      "macos-15-intel"
+    ],
+    "runner_id": 1000395119,
+    "runner_name": "GitHub Actions 1000395119",
+    "runner_group_id": 0,
+    "runner_group_name": "GitHub Actions"
+  },
+  "jobLog": {
+    "gitBlob": "3218460b598fcaed4a0f8130f5cd89d48e489477",
+    "sha256": "4e1daf8f5e7b2f4dbe6d41fcb073bdec38051e9a493ac3d0a8167434dee20dd8",
+    "bytes": 181158,
+    "path": "/workspace/scratch/c714f5bce554/ci-current-030/job-135167669442-terminal.log",
+    "exactImmutableReadback": true,
+    "endpointPermanentlyRetired": true
+  },
+  "scope": {
+    "terminalJobConclusion": "success",
+    "sourceBinding": "Original step7 and final step23 assert exact030 git HEAD; both success",
+    "platform": "darwin-x64",
+    "node": "v24.21.0",
+    "hostNodeContracts": {
+      "tests": 192,
+      "pass": 190,
+      "fail": 0,
+      "skipped": 2
+    },
+    "broker": {
+      "files": 4,
+      "pass": 63
+    },
+    "retainedMain": {
+      "files": 9,
+      "pass": 128
+    },
+    "posixNodeAndShellLifecycle": {
+      "tests": 29,
+      "pass": 29,
+      "fail": 0,
+      "skipped": 0
+    },
+    "sourceABProviderGates": "skipped on Darwin; no native provider sourceA/B qualification",
+    "unqualified": [
+      "nativeProviderRuntime",
+      "darwinNativeRegistration",
+      "posixExecutableAdmission",
+      "Desktop",
+      "release"
+    ],
+    "unqualifiedFlagProvenance": "flags in actual successful final inline verifier; scope.json artifact contents not downloaded"
+  },
+  "cleanupExamples": [
+    {
+      "case": "live original process group",
+      "testPassed": true,
+      "cleanupConfirmed": true,
+      "descendantAbsent": true,
+      "neighborPreserved": true
+    },
+    {
+      "case": "unverified process group after parent exit",
+      "testPassed": true,
+      "cleanupConfirmed": false,
+      "descendantAbsent": true,
+      "neighborPreserved": true
+    }
+  ],
+  "artifactReportedInOriginalUploadLog": {
+    "id": 14477258624,
+    "name": "host-process-fixtures-darwin-x64-030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "zipBytes": 15605,
+    "sha256": "182f80b303719059e063e3083ff32d249a343ce4d3dceda744eeeff6541b4492",
+    "notDownloaded": true,
+    "inventoryWillBeCapturedOnceAtWorkflowTerminal": true
+  },
+  "limitations": [
+    "Overall Host workflow remains live; its other four platform jobs were queued at capture.",
+    "Do not substitute this fixture success for real vendor execution or current frontend/full app parity.",
+    "Expected negative custody tests retain cleanupConfirmed=false; no blanket cleanup or handle absence claim."
+  ],
+  "excerptNormalization": "Excerpts retain raw original log line numbers and timestamps; only ANSI color escapes stripped. Exact raw log is separate immutable blob.",
+  "excerpts": [
+    {
+      "startLine": 303,
+      "endLine": 314,
+      "lines": [
+        "2026-11-18T22:21:38.3631150Z ##[group]Run set -euo pipefail",
+        "2026-11-18T22:21:38.3632060Z set -euo pipefail",
+        "2026-11-18T22:21:38.3632730Z test \"$(git rev-parse HEAD)\" = \"$HOST_PROCESS_SOURCE_HEAD\"",
+        "2026-11-18T22:21:38.3634730Z node --input-type=module -e \"import assert from 'node:assert/strict'; assert.equal(process.version,'v24.21.0'); assert.equal(process.platform+'-'+process.arch,process.env.HOST_PROCESS_PLATFORM)\"",
+        "2026-11-18T22:21:38.3636580Z mkdir process-acceptance-evidence",
+        "2026-11-18T22:21:38.3637630Z git rev-parse HEAD > process-acceptance-evidence/source-head.txt",
+        "2026-11-18T22:21:38.3735930Z shell: /bin/bash --noprofile --norc -e -o pipefail {0}",
+        "2026-11-18T22:21:38.3736590Z env:",
+        "2026-11-18T22:21:38.3737040Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci",
+        "2026-11-18T22:21:38.3737750Z   HOST_PROCESS_SOURCE_HEAD: 030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "2026-11-18T22:21:38.3738590Z   HOST_PROCESS_PLATFORM: darwin-x64",
+        "2026-11-18T22:21:38.3739100Z ##[endgroup]"
+      ]
+    },
+    {
+      "startLine": 1014,
+      "endLine": 1033,
+      "lines": [
+        "2026-11-18T22:26:19.3675810Z ℹ tests 192",
+        "2026-11-18T22:26:19.3676210Z ℹ suites 0",
+        "2026-11-18T22:26:19.3676540Z ℹ pass 190",
+        "2026-11-18T22:26:19.3676870Z ℹ fail 0",
+        "2026-11-18T22:26:19.3677200Z ℹ cancelled 0",
+        "2026-11-18T22:26:19.3677550Z ℹ skipped 2",
+        "2026-11-18T22:26:19.3677940Z ℹ todo 0",
+        "2026-11-18T22:26:19.3678380Z ℹ duration_ms 32431.373222",
+        "2026-11-18T22:26:20.8118890Z ",
+        "2026-11-18T22:26:20.8120190Z  RUN  v3.2.6 /Users/runner/work/agent-teams-ai/agent-teams-ai",
+        "2026-11-18T22:26:20.8121100Z ",
+        "2026-11-18T22:26:22.9659980Z  ✓ tools/owned-process-broker/protocol.test.ts (47 tests) 152ms",
+        "2026-11-18T22:26:23.7846670Z  ✓ tools/owned-process-broker/nativeGateEvents.test.ts (4 tests) 28ms",
+        "2026-11-18T22:26:24.1210480Z  ✓ tools/owned-process-broker/nativeSourceSelfDigest.test.ts (7 tests) 52ms",
+        "2026-11-18T22:26:24.9829420Z  ✓ tools/owned-process-broker/nativeGateContext.test.ts (5 tests) 555ms",
+        "2026-11-18T22:26:24.9958370Z ",
+        "2026-11-18T22:26:24.9969330Z  Test Files  4 passed (4)",
+        "2026-11-18T22:26:24.9982060Z       Tests  63 passed (63)",
+        "2026-11-18T22:26:24.9985670Z    Start at  22:26:20",
+        "2026-11-18T22:26:24.9993810Z    Duration  4.18s (transform 604ms, setup 0ms, collect 1.78s, tests 787ms, environment 1ms, prepare 607ms)"
+      ]
+    },
+    {
+      "startLine": 1152,
+      "endLine": 1157,
+      "lines": [
+        "2026-11-18T22:28:03.2199940Z  Test Files  9 passed (9)",
+        "2026-11-18T22:28:03.2200970Z       Tests  128 passed (128)",
+        "2026-11-18T22:28:03.2201750Z    Start at  22:26:25",
+        "2026-11-18T22:28:03.2205780Z    Duration  97.43s (transform 5.89s, setup 4.09s, collect 18.32s, tests 71.01s, environment 354ms, prepare 896ms)",
+        "2026-11-18T22:28:03.2206720Z ",
+        "2026-11-18T22:28:03.5165640Z ##[group]Run set -euo pipefail"
+      ]
+    },
+    {
+      "startLine": 1171,
+      "endLine": 1185,
+      "lines": [
+        "2026-11-18T22:28:04.9429990Z legacy-agent-host: claude-close {\"binding\":{\"backendId\":\"TEST-backend\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"alice\",\"generation\":\"1\"},\"sessionRef\":\"TEST-session\",\"stage\":\"custody-confirmed\",\"physicalConfirmed\":true}",
+        "2026-11-18T22:28:04.9443290Z legacy-agent-host: claude-close {\"binding\":{\"backendId\":\"TEST-backend\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"alice\",\"generation\":\"1\"},\"sessionRef\":\"TEST-session\",\"stage\":\"sdk-close-completed\",\"physicalConfirmed\":true}",
+        "2026-11-18T22:28:04.9450370Z legacy-agent-host: claude-close {\"binding\":{\"backendId\":\"TEST-backend\",\"teamId\":\"TEST-team\",\"runId\":\"TEST-run\",\"memberId\":\"alice\",\"generation\":\"1\"},\"sessionRef\":\"TEST-session\",\"stage\":\"sdk-read-completed\",\"physicalConfirmed\":true}",
+        "2026-11-18T22:28:04.9493530Z ✔ original Claude SDK child stderr reaches the member observer before failed startup and flushes its final tail (179.285772ms)",
+        "2026-11-18T22:28:05.0630860Z ✔ original standalone claude child retains startup stderr and its closing tail without an endpoint (114.504208ms)",
+        "2026-11-18T22:28:05.1688510Z ✔ original standalone codex child retains startup stderr and its closing tail without an endpoint (105.886522ms)",
+        "2026-11-18T22:28:05.1762590Z ✔ captured native executable is pinned again at launch and sealing forbids late allocation (6.93818ms)",
+        "2026-11-18T22:28:05.1824040Z ✔ captured launch rejects exact inode changes hidden by numeric file metadata before spawning (6.357292ms)",
+        "2026-11-18T22:28:05.1881650Z ✔ captured launch rejects exact mtime changes hidden by numeric file metadata before spawning (4.977061ms)",
+        "2026-11-18T22:28:05.1935350Z ✔ captured launch rejects exact ctime changes hidden by numeric file metadata before spawning (4.938022ms)",
+        "2026-11-18T22:28:06.8829170Z ✔ custody closes its live original process group, preserving a neighboring process (1688.276167ms)",
+        "2026-11-18T22:28:06.8830840Z ℹ {\"cleanupConfirmed\":true,\"descendantAbsent\":true,\"neighborPreserved\":true}",
+        "2026-11-18T22:28:10.5815940Z ✔ custody holds an unverified group after parent exit until TEST descendants leave naturally (3697.742673ms)",
+        "2026-11-18T22:28:10.5817840Z ℹ {\"cleanupConfirmed\":false,\"descendantAbsent\":true,\"neighborPreserved\":true}",
+        "2026-11-18T22:28:14.1179440Z ✔ an exited original cannot signal a positively probed replacement group (3533.335691ms)"
+      ]
+    },
+    {
+      "startLine": 1202,
+      "endLine": 1209,
+      "lines": [
+        "2026-11-18T22:28:14.1726850Z ℹ tests 29",
+        "2026-11-18T22:28:14.1728870Z ℹ suites 0",
+        "2026-11-18T22:28:14.1730420Z ℹ pass 29",
+        "2026-11-18T22:28:14.1731810Z ℹ fail 0",
+        "2026-11-18T22:28:14.1735750Z ℹ cancelled 0",
+        "2026-11-18T22:28:14.1738460Z ℹ skipped 0",
+        "2026-11-18T22:28:14.1740990Z ℹ todo 0",
+        "2026-11-18T22:28:14.1744410Z ℹ duration_ms 10495.430089"
+      ]
+    },
+    {
+      "startLine": 1506,
+      "endLine": 1521,
+      "lines": [
+        "2026-11-18T22:28:14.3180670Z } else assert.equal(process.platform, 'darwin');",
+        "2026-11-18T22:28:14.3181790Z writeFileSync(join(directory, 'scope.json'), JSON.stringify({",
+        "2026-11-18T22:28:14.3182950Z   kind: 'TEST_HOST_PROCESS_FIXTURE_ACCEPTANCE', status: 'PASS',",
+        "2026-11-18T22:28:14.3184650Z   sourceHead: process.env.HOST_PROCESS_SOURCE_HEAD, platform: process.env.HOST_PROCESS_PLATFORM,",
+        "2026-11-18T22:28:14.3186850Z   nodeVersion: process.version, controlledContracts: true, retainedMainTransport: true,",
+        "2026-11-18T22:28:14.3188460Z   posixProcessGroups: process.platform !== 'win32', native,",
+        "2026-11-18T22:28:14.3190070Z   nativeProviderRuntimeQualified: false, darwinNativeRegistrationQualified: false,",
+        "2026-11-18T22:28:14.3192130Z   posixExecutableAdmissionQualified: false, desktopQualified: false, releaseQualified: false,",
+        "2026-11-18T22:28:14.3193600Z }, null, 2) + '\\n');",
+        "2026-11-18T22:28:14.3194230Z NODE",
+        "2026-11-18T22:28:14.3322430Z shell: /bin/bash --noprofile --norc -e -o pipefail {0}",
+        "2026-11-18T22:28:14.3323430Z env:",
+        "2026-11-18T22:28:14.3323950Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci",
+        "2026-11-18T22:28:14.3324900Z   HOST_PROCESS_SOURCE_HEAD: 030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "2026-11-18T22:28:14.3326280Z   HOST_PROCESS_PLATFORM: darwin-x64",
+        "2026-11-18T22:28:14.3326770Z ##[endgroup]"
+      ]
+    },
+    {
+      "startLine": 1549,
+      "endLine": 1555,
+      "lines": [
+        "2026-11-18T22:28:17.0376120Z Uploaded bytes 15605",
+        "2026-11-18T22:28:17.1265640Z Finished uploading artifact content to blob storage!",
+        "2026-11-18T22:28:17.1305800Z SHA256 digest of uploaded artifact zip is 182f80b303719059e063e3083ff32d249a343ce4d3dceda744eeeff6541b4492",
+        "2026-11-18T22:28:17.1407300Z Finalizing artifact upload",
+        "2026-11-18T22:28:17.6241050Z Artifact host-process-fixtures-darwin-x64-030b21f0765d1a6e6572f46d262c672d63e69eb7.zip successfully finalized. Artifact ID 14477258624",
+        "2026-11-18T22:28:17.6246210Z Artifact host-process-fixtures-darwin-x64-030b21f0765d1a6e6572f46d262c672d63e69eb7 has been successfully uploaded! Final size is 15605 bytes. Artifact ID is 14477258624",
+        "2026-11-18T22:28:17.6249760Z Artifact download URL: https://github.com/777genius/agent-teams-ai/actions/runs/44407826280/artifacts/14477258624"
+      ]
+    }
+  ]
+}

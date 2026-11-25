@@ -1,0 +1,1808 @@
+{
+  "schemaVersion": 1,
+  "sourceHead": "4dc08dea7eeed5c286cf310e09a2ba26d84a9546",
+  "kind": "Read-only official original artifacts; no source/test/compiler/native execution",
+  "archives": [
+    {
+      "metadataPath": "archive-audit-process_win_arm.json",
+      "metadataIdentity": {
+        "bytes": 4301,
+        "sha256": "0792bd01ee079fac1d817deee11a0744fba97788932e362b709f9d6457218a82",
+        "gitBlob": "444ad6cb5667539d99908b7c3900ac9f953f7f43"
+      },
+      "archive": "4dc-process-win32-arm64.zip",
+      "identity": {
+        "bytes": 14471,
+        "sha256": "a064253b68cf1131c90094936a7718c7a44e191de5b2c5bbed5991393ea3457a",
+        "gitBlob": "d82f3e22351e6fb5a5ef16578f27d09994700b60"
+      },
+      "artifact": {
+        "id": 14182635455,
+        "name": "host-process-fixtures-win32-arm64-4dc08dea7eeed5c286cf310e09a2ba26d84a9546",
+        "size_in_bytes": 14471,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14182635455",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14182635455/zip",
+        "expired": false,
+        "created_at": "2026-11-15T21:53:00Z",
+        "expires_at": "2026-11-29T21:53:00Z",
+        "updated_at": "2026-11-15T21:53:00Z",
+        "digest": "sha256:a064253b68cf1131c90094936a7718c7a44e191de5b2c5bbed5991393ea3457a",
+        "workflow_run": {
+          "id": 43765103075,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "4dc08dea7eeed5c286cf310e09a2ba26d84a9546"
+        }
+      },
+      "members": [
+        {
+          "name": "agent-teams-ai/agent-teams-ai/native-evidence/binary-sha256.txt",
+          "crc32": "8cb3cada",
+          "compressedBytes": 576,
+          "bytes": 1741,
+          "sha256": "7b849e1cfdff135287d0dfd7003f7ce2eebcf3a1963f0cd7792b3b28083ccd95",
+          "gitBlob": "45e49ee05843f8c33434975da39c9d7fa091adcc"
+        },
+        {
+          "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+          "crc32": "759ea22e",
+          "compressedBytes": 6323,
+          "bytes": 20043,
+          "sha256": "7000b40f0904656019bdf3626ba8cab2a7e8aec4e9e6118156e284a5fef165c5",
+          "gitBlob": "97f11bddaccc95fef1cfa8d5f17e1c19f5908df9"
+        },
+        {
+          "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+          "crc32": "1939954c",
+          "compressedBytes": 2342,
+          "bytes": 9713,
+          "sha256": "06cc399f2d2b5f6a1c0f9b13681a44939c9c9acde64dc3f058c25fa7934b0ab2",
+          "gitBlob": "6036495472add371733a99567b7aaaa141c002c6"
+        },
+        {
+          "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+          "crc32": "98e74e03",
+          "compressedBytes": 325,
+          "bytes": 757,
+          "sha256": "ed4d0b470b6b403d9a817af719949ea6f7b431e137057bb622e63598b0e9b3b9",
+          "gitBlob": "3474fc694df0f2032cf4018e6e2da40a16c9484e"
+        },
+        {
+          "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+          "crc32": "4a0d0238",
+          "compressedBytes": 41,
+          "bytes": 41,
+          "sha256": "05e3b19deac439199c40f8a23d9ca39bd6db0598f6726575db43a7a62d2546a4",
+          "gitBlob": "f82e6dd795a11792140be32073767c30c91a7f56"
+        },
+        {
+          "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-binary-sha256.txt",
+          "crc32": "8cb3cada",
+          "compressedBytes": 576,
+          "bytes": 1741,
+          "sha256": "7b849e1cfdff135287d0dfd7003f7ce2eebcf3a1963f0cd7792b3b28083ccd95",
+          "gitBlob": "45e49ee05843f8c33434975da39c9d7fa091adcc"
+        },
+        {
+          "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-manifest.json",
+          "crc32": "ed7b6c10",
+          "compressedBytes": 145,
+          "bytes": 195,
+          "sha256": "c736b72d1c9fd6f6da1a89344b8751c36c7c0fbac9889e61da47d6394152df7c",
+          "gitBlob": "a4fb57b7c4ef508079219c94741cf0c74842cc32"
+        },
+        {
+          "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-node24.log",
+          "crc32": "358c5d1b",
+          "compressedBytes": 1762,
+          "bytes": 23320,
+          "sha256": "bf4cc8f891885bca31af28c0827ba8a1e544b1e673e7b42c989bf24abff0785f",
+          "gitBlob": "7d942b3ca97bb1e81a7dd31c8280c05417207d33"
+        },
+        {
+          "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-scoped-manifest.json",
+          "crc32": "a3f074a4",
+          "compressedBytes": 169,
+          "bytes": 232,
+          "sha256": "9a331d9d6e4a682c1928d7e880b501142e550af60c617d085c5d3b18cef21dc0",
+          "gitBlob": "d69ad1e87abedbefb004ea021a94522d8c7f57c9"
+        }
+      ],
+      "allCrcSafeUniqueNamesAndExtractedBytes": true
+    },
+    {
+      "metadataPath": "archive-audit-v2_win_arm.json",
+      "metadataIdentity": {
+        "bytes": 2150,
+        "sha256": "109ad20e3d2df7035bf3fb5333252eb648c9ee63a83ce6fbfe66c92479305c54",
+        "gitBlob": "ad0406dd1c81f4dc2871d54854ec95ffead3222a"
+      },
+      "archive": "4dc-v2-win32-arm64.zip",
+      "identity": {
+        "bytes": 7452,
+        "sha256": "c506eaa1a236d8e614dd349067aac9155fb7a3b0d46544fc6bcbe88886358971",
+        "gitBlob": "a8210dfdae1cfab5148462a27b351aac579c2715"
+      },
+      "artifact": {
+        "id": 14182895280,
+        "name": "opencode-v2-embedded-native-win32-arm64",
+        "size_in_bytes": 7452,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14182895280",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14182895280/zip",
+        "expired": false,
+        "created_at": "2026-11-15T21:58:12Z",
+        "expires_at": "2026-11-22T21:58:11Z",
+        "updated_at": "2026-11-15T21:58:12Z",
+        "digest": "sha256:c506eaa1a236d8e614dd349067aac9155fb7a3b0d46544fc6bcbe88886358971",
+        "workflow_run": {
+          "id": 43765103118,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "4dc08dea7eeed5c286cf310e09a2ba26d84a9546"
+        }
+      },
+      "members": [
+        {
+          "name": "opencode-v2-embedded-inputs.json",
+          "crc32": "1bbd037b",
+          "compressedBytes": 491,
+          "bytes": 782,
+          "sha256": "269016678913287bbf67701f0da2d4475fd20d34f4bc008ed80ec1359901dc89",
+          "gitBlob": "2131c326cc4e9ac6ef903e4b7bad3bcc3a998c72"
+        },
+        {
+          "name": "opencode-v2-windows-custody.json",
+          "crc32": "63e07543",
+          "compressedBytes": 549,
+          "bytes": 909,
+          "sha256": "60b090d6ba8aacc4b878f37623c0c4c5bfb07ea5ebf3336680bb439e577cf284",
+          "gitBlob": "cf4d6954c6b70d4d97e55872ee5aa54f529446db"
+        },
+        {
+          "name": "opencode-v2-embedded-host.json",
+          "crc32": "89503620",
+          "compressedBytes": 5926,
+          "bytes": 95125,
+          "sha256": "27e6573b1e4e0744ce07e490caae99f4b2959641fb751dd4896d7031991d7895",
+          "gitBlob": "8ce7cee4e15d20993f5dadd534d0130514422001"
+        }
+      ],
+      "allCrcSafeUniqueNamesAndExtractedBytes": true
+    }
+  ],
+  "sources": [
+    {
+      "path": "tools/owned-process-broker/nativeFixture.cpp",
+      "bytes": 17237,
+      "sha256": "5891d489d3587218900ae8864c64c29c4fbc594022b95132c0292074e3ce865c",
+      "gitBlob": "579a7aadf70a284cb44f7ec3690dab32c4d76e92"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+      "bytes": 19603,
+      "sha256": "c37a7f0a4f2ded01700e9cb93e25fcdacd25e363b61c374c375b3ad493c80b27",
+      "gitBlob": "f8eb84e20fb323e5838b918a7934853785ab9ee5"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGate.ts",
+      "bytes": 22330,
+      "sha256": "3b549e313e3ca43b76232282b7dbe9e7a1dfcec594ad93bc81c047f740851197",
+      "gitBlob": "17f5e7b66605bd4d28cf3935b7fa73ea2933a21d"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateEvents.ts",
+      "bytes": 1367,
+      "sha256": "2f06d37ad0ea51fda654501d4c08a6066a1914a9cfe59c2d73d4f29db4c8ba7d",
+      "gitBlob": "1dbbf60801213f80f97cb9b0b0031acdf41d738a"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateDiagnostics.ts",
+      "bytes": 6380,
+      "sha256": "d963accfadeb14a93fd5d7e2b934a409212cca40e678b452d011c4a579f29237",
+      "gitBlob": "22cf67a484f0a2a5a2b89639e38515cc0242a21a"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateContext.ts",
+      "bytes": 7278,
+      "sha256": "7e9096550ed0b90589a91978f8621572424d5b6c24137c13c641f3dde7897200",
+      "gitBlob": "27c6da3bac59ac276c40e79f7c4e1c548adb9d31"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateOutput.ts",
+      "bytes": 1842,
+      "sha256": "ec40aeff9e713d30af99aed2c0936a2c8fc2a3094e57207c21f55da3970f17c8",
+      "gitBlob": "f9e5bb809cc4ae03485e1c55c7d7010322b63ae1"
+    },
+    {
+      "path": "tools/owned-process-broker/gateController.cpp",
+      "bytes": 5935,
+      "sha256": "45d1ce375fbbcce05bc37f885071f8331387bd87c6b9c5fce1b075be56a32532",
+      "gitBlob": "ebc96f50b2a901aae4b97b3b4dcb484f449170a5"
+    },
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "bytes": 30399,
+      "sha256": "a7e59eb17ee93d15ffad248322d79e536d9d9c0b02c83a30a31687fd6e618ce0",
+      "gitBlob": "123e52f461e42790ddf5fb8b1ea653b9e32c30db"
+    },
+    {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "bytes": 36013,
+      "sha256": "fddd1aface758ef115a5e904151cb61dd78dca04d8f52fb99f4326ddaff53a14",
+      "gitBlob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts",
+      "bytes": 33259,
+      "sha256": "e7a295816da293ff4e26a775f898f1bc144ece55e995c3d05bed8e543f2803ff",
+      "gitBlob": "e4fd10d1c969bb5bf8a75e9789599a04dc0fc190"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/windows-job-custody.native.ts",
+      "bytes": 9536,
+      "sha256": "88ee29496c076870605d2e2c6849c92e9286a06809f00cb10444b033757f4687",
+      "gitBlob": "a224b47e942a337e823135d0cfca0fa11cd475bd"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+      "bytes": 37181,
+      "sha256": "7b1ecb5894fb164b605e66030549aa897957986d270575398d2f34b28543606b",
+      "gitBlob": "625c6ddd74357abbdf565bf386388274cebd4068"
+    }
+  ],
+  "hostSource": {
+    "path": "packages/legacy-agent-host/src",
+    "gitTree": "92515b1671f7bc02c9fbbde943319b503f7e73de",
+    "files": 615,
+    "bytes": 4084414,
+    "lfSha256": "7a1229966bdf7b230657d9a8e509a3cedfda01419c24d6aa26fbdca7c669f77e",
+    "crlfSha256": "5c8b4c598e53d8a026d0f829647ff29d0cb200492f99ba4181854f302d2d8052",
+    "algorithm": "sorted relative ASCII name + NUL + exact .ts bytes + NUL"
+  },
+  "process": {
+    "run": 43765103075,
+    "job": 132968371746,
+    "artifact": 14182635455,
+    "fullJob": {
+      "bytes": 149803,
+      "sha256": "b40bfbaff6475e9cf4d05a0cabe663e270d7dacf2e793dfb98956360b3960f38",
+      "gitBlob": "c9ce514317b69c907baeac9d0d322a3f609d85e5"
+    },
+    "nativeLog": {
+      "bytes": 23320,
+      "sha256": "bf4cc8f891885bca31af28c0827ba8a1e544b1e673e7b42c989bf24abff0785f",
+      "gitBlob": "7d942b3ca97bb1e81a7dd31c8280c05417207d33"
+    },
+    "sourceHeadMemberMatches": true,
+    "allNativeJsonLinesPresentInFullLog": true,
+    "jobConclusion": "failure",
+    "jobSteps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1,
+        "started_at": "2026-11-15T21:43:14Z",
+        "completed_at": "2026-11-15T21:43:15Z"
+      },
+      {
+        "name": "Run actions/checkout@v7.0.1",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2,
+        "started_at": "2026-11-15T21:43:15Z",
+        "completed_at": "2026-11-15T21:43:43Z"
+      },
+      {
+        "name": "Run actions/setup-node@v7.0.0",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3,
+        "started_at": "2026-11-15T21:43:43Z",
+        "completed_at": "2026-11-15T21:43:55Z"
+      },
+      {
+        "name": "Select the pinned package manager with bundled Corepack",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4,
+        "started_at": "2026-11-15T21:43:55Z",
+        "completed_at": "2026-11-15T21:44:06Z"
+      },
+      {
+        "name": "Run actions/setup-node@v7.0.0",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5,
+        "started_at": "2026-11-15T21:44:06Z",
+        "completed_at": "2026-11-15T21:45:56Z"
+      },
+      {
+        "name": "Bind exact source and actual process tuple",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 6,
+        "started_at": "2026-11-15T21:45:56Z",
+        "completed_at": "2026-11-15T21:45:57Z"
+      },
+      {
+        "name": "Install frozen workspace without Desktop postinstall",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7,
+        "started_at": "2026-11-15T21:45:57Z",
+        "completed_at": "2026-11-15T21:49:53Z"
+      },
+      {
+        "name": "Build existing controller and Host",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8,
+        "started_at": "2026-11-15T21:49:53Z",
+        "completed_at": "2026-11-15T21:50:02Z"
+      },
+      {
+        "name": "Verify process contracts and retained Main Host transport",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 9,
+        "started_at": "2026-11-15T21:50:02Z",
+        "completed_at": "2026-11-15T21:51:59Z"
+      },
+      {
+        "name": "Verify original POSIX Node and shell lifecycle fixtures",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 10,
+        "started_at": "2026-11-15T21:51:59Z",
+        "completed_at": "2026-11-15T21:51:59Z"
+      },
+      {
+        "name": "Prepare pinned Electron for native process fixtures",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 11,
+        "started_at": "2026-11-15T21:51:59Z",
+        "completed_at": "2026-11-15T21:51:59Z"
+      },
+      {
+        "name": "Verify Linux Node exec descriptor closure under both original parents",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 12,
+        "started_at": "2026-11-15T21:51:59Z",
+        "completed_at": "2026-11-15T21:51:59Z"
+      },
+      {
+        "name": "Qualify original Linux pidfs and retained pidfd under Host Node",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 13,
+        "started_at": "2026-11-15T21:51:59Z",
+        "completed_at": "2026-11-15T21:51:59Z"
+      },
+      {
+        "name": "Qualify original Linux pidfs and retained pidfd under Electron Node",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 14,
+        "started_at": "2026-11-15T21:51:59Z",
+        "completed_at": "2026-11-15T21:51:59Z"
+      },
+      {
+        "name": "Build original Windows product broker and C++ fixtures",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 15,
+        "started_at": "2026-11-15T21:51:59Z",
+        "completed_at": "2026-11-15T21:52:47Z"
+      },
+      {
+        "name": "Qualify original Windows Job and control under Host Node",
+        "status": "completed",
+        "conclusion": "failure",
+        "number": 16,
+        "started_at": "2026-11-15T21:52:47Z",
+        "completed_at": "2026-11-15T21:52:59Z"
+      },
+      {
+        "name": "Qualify original Windows Job and control under Electron Node",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 17,
+        "started_at": "2026-11-15T21:52:59Z",
+        "completed_at": "2026-11-15T21:52:59Z"
+      },
+      {
+        "name": "Qualify Windows wrappers and actual Main Host provider routes with TEST peers",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 18,
+        "started_at": "2026-11-15T21:52:59Z",
+        "completed_at": "2026-11-15T21:52:59Z"
+      },
+      {
+        "name": "Qualify original codex source A B with TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 19,
+        "started_at": "2026-11-15T21:52:59Z",
+        "completed_at": "2026-11-15T21:52:59Z"
+      },
+      {
+        "name": "Qualify original claude source A B with TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 20,
+        "started_at": "2026-11-15T21:52:59Z",
+        "completed_at": "2026-11-15T21:52:59Z"
+      },
+      {
+        "name": "Qualify original opencode source A B with TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 21,
+        "started_at": "2026-11-15T21:52:59Z",
+        "completed_at": "2026-11-15T21:52:59Z"
+      },
+      {
+        "name": "Require completed original platform receipts and unchanged source",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 22,
+        "started_at": "2026-11-15T21:52:59Z",
+        "completed_at": "2026-11-15T21:52:59Z"
+      },
+      {
+        "name": "Preserve original process evidence including failures",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 23,
+        "started_at": "2026-11-15T21:52:59Z",
+        "completed_at": "2026-11-15T21:53:01Z"
+      },
+      {
+        "name": "Post Run actions/setup-node@v7.0.0",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 44,
+        "started_at": "2026-11-15T21:53:01Z",
+        "completed_at": "2026-11-15T21:53:01Z"
+      },
+      {
+        "name": "Post Run actions/setup-node@v7.0.0",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 45,
+        "started_at": "2026-11-15T21:53:01Z",
+        "completed_at": "2026-11-15T21:53:01Z"
+      },
+      {
+        "name": "Post Run actions/checkout@v7.0.1",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 46,
+        "started_at": "2026-11-15T21:53:01Z",
+        "completed_at": "2026-11-15T21:53:05Z"
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 47,
+        "started_at": "2026-11-15T21:53:05Z",
+        "completed_at": "2026-11-15T21:53:05Z"
+      }
+    ],
+    "hostTests": {
+      "tests": 163,
+      "pass": 160,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 3,
+      "todo": 0
+    },
+    "protocolTests": {
+      "files": 3,
+      "pass": 53
+    },
+    "retainedMainTests": {
+      "files": 8,
+      "pass": 81
+    },
+    "ordinaryTotals": {
+      "pass": 294,
+      "skip": 3,
+      "fail": 0
+    },
+    "diagnostic": {
+      "rootExitCode": 62,
+      "rootCount": 1,
+      "childCount": 0,
+      "rootChildCount": 0,
+      "wow64Completed": false,
+      "churnCompleted": false,
+      "prerequisite": {
+        "stage": 5
+      }
+    },
+    "gateFailure": {
+      "scenario": "debug-service",
+      "phase": "child-lines",
+      "helperCount": 13,
+      "retainedCount": 3,
+      "helpers": [
+        {
+          "slot": 0,
+          "role": "sentinel",
+          "scenario": "sentinel",
+          "errorObserved": false,
+          "closed": false,
+          "cleanupRequested": false,
+          "stdoutEnded": false,
+          "stderrEnded": false,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 1,
+          "role": "witness",
+          "scenario": "pre-resume-cancel",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 2,
+          "role": "witness",
+          "scenario": "facade-stdio",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 3,
+          "role": "witness",
+          "scenario": "facade-cancel",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 4,
+          "role": "witness",
+          "scenario": "capture-root-first",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 5,
+          "role": "witness",
+          "scenario": "capture-root-first",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 6,
+          "role": "witness",
+          "scenario": "capture-root-first",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 7,
+          "role": "witness",
+          "scenario": "capture-root-first",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 8,
+          "role": "witness",
+          "scenario": "capture-root-first",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 9,
+          "role": "raw-broker",
+          "scenario": "debug-service-cancel",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 10,
+          "role": "witness",
+          "scenario": "debug-service-cancel",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 11,
+          "role": "raw-broker",
+          "scenario": "debug-service",
+          "errorObserved": false,
+          "closed": false,
+          "cleanupRequested": false,
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 12,
+          "role": "witness",
+          "scenario": "debug-service",
+          "errorObserved": false,
+          "closed": false,
+          "cleanupRequested": false,
+          "stdoutEnded": false,
+          "stderrEnded": false,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        }
+      ],
+      "retainedCapabilities": [
+        {
+          "slot": 0,
+          "diagnostics": {
+            "writeCompleted": true,
+            "brokerExit": {
+              "code": 0,
+              "signal": null
+            }
+          }
+        },
+        {
+          "slot": 1,
+          "diagnostics": {
+            "writeCompleted": true,
+            "brokerExit": {
+              "code": 0,
+              "signal": null
+            }
+          }
+        },
+        {
+          "slot": 2,
+          "diagnostics": {
+            "writeCompleted": true,
+            "brokerExit": {
+              "code": 0,
+              "signal": null
+            }
+          }
+        }
+      ]
+    },
+    "phase": {
+      "scenario": "debug-service",
+      "phase": "child-lines",
+      "elapsedMs": 971
+    },
+    "cleanupPhase": {
+      "scenario": "cleanup",
+      "phase": "abandon-control",
+      "elapsedMs": 10981
+    },
+    "phaseDifferenceMs": 10010,
+    "beforeCleanup": {
+      "cleanupObservation": "before-private-abandon",
+      "helperCount": 13,
+      "retainedCount": 3,
+      "helpers": [
+        {
+          "slot": 0,
+          "role": "sentinel",
+          "scenario": "sentinel",
+          "errorObserved": false,
+          "closed": false,
+          "cleanupRequested": false,
+          "stdoutEnded": false,
+          "stderrEnded": false,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 1,
+          "role": "witness",
+          "scenario": "pre-resume-cancel",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 2,
+          "role": "witness",
+          "scenario": "facade-stdio",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 3,
+          "role": "witness",
+          "scenario": "facade-cancel",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 4,
+          "role": "witness",
+          "scenario": "capture-root-first",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 5,
+          "role": "witness",
+          "scenario": "capture-root-first",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 6,
+          "role": "witness",
+          "scenario": "capture-root-first",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 7,
+          "role": "witness",
+          "scenario": "capture-root-first",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 8,
+          "role": "witness",
+          "scenario": "capture-root-first",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 9,
+          "role": "raw-broker",
+          "scenario": "debug-service-cancel",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 10,
+          "role": "witness",
+          "scenario": "debug-service-cancel",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 11,
+          "role": "raw-broker",
+          "scenario": "debug-service",
+          "errorObserved": false,
+          "closed": false,
+          "cleanupRequested": false,
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 12,
+          "role": "witness",
+          "scenario": "debug-service",
+          "errorObserved": false,
+          "closed": false,
+          "cleanupRequested": false,
+          "stdoutEnded": false,
+          "stderrEnded": false,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        }
+      ],
+      "retainedCapabilities": [
+        {
+          "slot": 0,
+          "diagnostics": {
+            "writeCompleted": true,
+            "brokerExit": {
+              "code": 0,
+              "signal": null
+            }
+          }
+        },
+        {
+          "slot": 1,
+          "diagnostics": {
+            "writeCompleted": true,
+            "brokerExit": {
+              "code": 0,
+              "signal": null
+            }
+          }
+        },
+        {
+          "slot": 2,
+          "diagnostics": {
+            "writeCompleted": true,
+            "brokerExit": {
+              "code": 0,
+              "signal": null
+            }
+          }
+        }
+      ]
+    },
+    "afterCleanup": {
+      "cleanupObservation": "after-helper-wait",
+      "helperCount": 13,
+      "retainedCount": 3,
+      "helpers": [
+        {
+          "slot": 0,
+          "role": "sentinel",
+          "scenario": "sentinel",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": true,
+          "exit": {
+            "code": null,
+            "signal": "SIGTERM"
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 1,
+          "role": "witness",
+          "scenario": "pre-resume-cancel",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 2,
+          "role": "witness",
+          "scenario": "facade-stdio",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 3,
+          "role": "witness",
+          "scenario": "facade-cancel",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 4,
+          "role": "witness",
+          "scenario": "capture-root-first",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 5,
+          "role": "witness",
+          "scenario": "capture-root-first",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 6,
+          "role": "witness",
+          "scenario": "capture-root-first",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 7,
+          "role": "witness",
+          "scenario": "capture-root-first",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 8,
+          "role": "witness",
+          "scenario": "capture-root-first",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 9,
+          "role": "raw-broker",
+          "scenario": "debug-service-cancel",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 10,
+          "role": "witness",
+          "scenario": "debug-service-cancel",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 11,
+          "role": "raw-broker",
+          "scenario": "debug-service",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": true,
+          "exit": {
+            "code": null,
+            "signal": "SIGTERM"
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 12,
+          "role": "witness",
+          "scenario": "debug-service",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": true,
+          "exit": {
+            "code": null,
+            "signal": "SIGTERM"
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        }
+      ],
+      "retainedCapabilities": [
+        {
+          "slot": 0,
+          "diagnostics": {
+            "writeCompleted": true,
+            "brokerExit": {
+              "code": 0,
+              "signal": null
+            }
+          }
+        },
+        {
+          "slot": 1,
+          "diagnostics": {
+            "writeCompleted": true,
+            "brokerExit": {
+              "code": 0,
+              "signal": null
+            }
+          }
+        },
+        {
+          "slot": 2,
+          "diagnostics": {
+            "writeCompleted": true,
+            "brokerExit": {
+              "code": 0,
+              "signal": null
+            }
+          }
+        }
+      ]
+    },
+    "controller": {
+      "gateController": "drained",
+      "rootExitCode": 1,
+      "activeProcesses": 0
+    },
+    "originalWaitErrorRetained": true,
+    "laterRootBirthEqualityReached": false,
+    "completeNativeScenarioReceiptPresent": false,
+    "binaryDigestClaims": {
+      "owned-process-broker-accounting-failure.exe": "cba7924c2bd0b6d665467b10367c1927df918955bc6ad3ab2a050628c42c9729",
+      "owned-process-broker-birth-failure.exe": "2827537ef9d30610ba1b0d57b1795875bbc4f1a21b49f8b14ccd80c3e17b1e09",
+      "owned-process-broker-debug-service.exe": "59abbe42fbd99b9002bd7b585874eee0065601569c7031b81032b054beba3c35",
+      "owned-process-broker-release-delay.exe": "19f46c9cf90f7bc5e83ef2cfb4cfb676fbf76c020373ca65a646846b44c6960d",
+      "owned-process-broker-service-scopes.exe": "4614f2d5d1e4b026a4120b80a7a465fb2f6093af0c7dcec0c5ea7787b497bf5a",
+      "owned-process-broker.exe": "9c2181985e1dad4465a00a433ae63a3d9aca0412f00863ba1ac8dd2e9a8422ec",
+      "owned-process-fixture.exe": "b97d9416d6f9ade0a79111782db5b5aaf8cd0a4b7b4a04a7e3068aaf1e409fe8",
+      "owned-process-gate-controller.exe": "5d348ea48d0bb716d0666b8370c2dd6c1f8507bd42cca98b78ee4f8e5ac273aa",
+      "owned-process-pending-write-fixture.exe": "aa5a30d1ccfed36852b3df39480b53578622116fd076b5c90263843071408693"
+    },
+    "manifests": [
+      {
+        "schema": 1,
+        "platform": "win32",
+        "arch": "arm64",
+        "file": "owned-process-broker.exe",
+        "sha256": "9c2181985e1dad4465a00a433ae63a3d9aca0412f00863ba1ac8dd2e9a8422ec",
+        "protocol": 1
+      },
+      {
+        "schema": 2,
+        "platform": "win32",
+        "arch": "arm64",
+        "file": "owned-process-broker.exe",
+        "sha256": "4614f2d5d1e4b026a4120b80a7a465fb2f6093af0c7dcec0c5ea7787b497bf5a",
+        "protocol": 1,
+        "capability": "service-scopes-v1"
+      }
+    ],
+    "compiledBinariesArchived": false
+  },
+  "v2": {
+    "run": 43765103118,
+    "job": 132968322085,
+    "artifact": 14182895280,
+    "fullJob": {
+      "bytes": 99483,
+      "sha256": "1d40c6aefda602f8d40221bdcd20acbe354ce9838b317c17ff5979ab607e71fe",
+      "gitBlob": "bdafd18cfd945b81a08551fe2dd746e32b1da742"
+    },
+    "jobConclusion": "cancelled",
+    "jobSteps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1,
+        "started_at": "2026-11-15T21:42:50Z",
+        "completed_at": "2026-11-15T21:42:52Z"
+      },
+      {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2,
+        "started_at": "2026-11-15T21:42:52Z",
+        "completed_at": "2026-11-15T21:43:21Z"
+      },
+      {
+        "name": "Require immutable source HEAD and record actual runner tuple",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3,
+        "started_at": "2026-11-15T21:43:21Z",
+        "completed_at": "2026-11-15T21:43:21Z"
+      },
+      {
+        "name": "Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4,
+        "started_at": "2026-11-15T21:43:21Z",
+        "completed_at": "2026-11-15T21:43:41Z"
+      },
+      {
+        "name": "Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5,
+        "started_at": "2026-11-15T21:43:41Z",
+        "completed_at": "2026-11-15T21:46:13Z"
+      },
+      {
+        "name": "Install exact source workspace dependencies",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 6,
+        "started_at": "2026-11-15T21:46:13Z",
+        "completed_at": "2026-11-15T21:50:33Z"
+      },
+      {
+        "name": "Build original Host and its pinned provider implementation",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7,
+        "started_at": "2026-11-15T21:50:33Z",
+        "completed_at": "2026-11-15T21:50:39Z"
+      },
+      {
+        "name": "Check original graph and custody boundaries",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8,
+        "started_at": "2026-11-15T21:50:39Z",
+        "completed_at": "2026-11-15T21:50:53Z"
+      },
+      {
+        "name": "Stage checksum-pinned base archive without executing the legacy CLI",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 9,
+        "started_at": "2026-11-15T21:50:53Z",
+        "completed_at": "2026-11-15T21:51:38Z"
+      },
+      {
+        "name": "Prepare exact Bun, engine graph and original-process artifact",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 10,
+        "started_at": "2026-11-15T21:51:38Z",
+        "completed_at": "2026-11-15T21:52:57Z"
+      },
+      {
+        "name": "Prove actual Darwin executable custody and adversarial cleanup",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 11,
+        "started_at": "2026-11-15T21:52:57Z",
+        "completed_at": "2026-11-15T21:52:57Z"
+      },
+      {
+        "name": "Require complete Darwin evidence for this exact candidate or product tuple",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 12,
+        "started_at": "2026-11-15T21:52:57Z",
+        "completed_at": "2026-11-15T21:52:57Z"
+      },
+      {
+        "name": "Prove original Windows Job custody and surviving descendant cleanup",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 13,
+        "started_at": "2026-11-15T21:52:57Z",
+        "completed_at": "2026-11-15T21:53:20Z"
+      },
+      {
+        "name": "Require exact Windows original-process evidence",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 14,
+        "started_at": "2026-11-15T21:53:20Z",
+        "completed_at": "2026-11-15T21:53:20Z"
+      },
+      {
+        "name": "Check original Desktop private recipe composition",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 15,
+        "started_at": "2026-11-15T21:53:20Z",
+        "completed_at": "2026-11-15T21:53:20Z"
+      },
+      {
+        "name": "Exercise native model, tool, MCP, approval, Stop and cold Host Resume",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 16,
+        "started_at": "2026-11-15T21:53:20Z",
+        "completed_at": "2026-11-15T21:57:11Z"
+      },
+      {
+        "name": "Exercise Windows automatic approval and cold Host Resume",
+        "status": "completed",
+        "conclusion": "cancelled",
+        "number": 17,
+        "started_at": "2026-11-15T21:57:11Z",
+        "completed_at": "2026-11-15T21:58:10Z"
+      },
+      {
+        "name": "Exercise native catalog and model probe without tool allocation",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 18,
+        "started_at": "2026-11-15T21:58:10Z",
+        "completed_at": "2026-11-15T21:58:10Z"
+      },
+      {
+        "name": "Exercise native key connection, saved-key reuse and cold original-intent recovery",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 19,
+        "started_at": "2026-11-15T21:58:10Z",
+        "completed_at": "2026-11-15T21:58:10Z"
+      },
+      {
+        "name": "Exercise effective permissions and active Stop with a surviving sibling",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 20,
+        "started_at": "2026-11-15T21:58:10Z",
+        "completed_at": "2026-11-15T21:58:10Z"
+      },
+      {
+        "name": "Exercise captured external MCP and app-only through the native Host",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 21,
+        "started_at": "2026-11-15T21:58:10Z",
+        "completed_at": "2026-11-15T21:58:10Z"
+      },
+      {
+        "name": "Require complete native management and permission evidence",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 22,
+        "started_at": "2026-11-15T21:58:10Z",
+        "completed_at": "2026-11-15T21:58:10Z"
+      },
+      {
+        "name": "Require product-path Host proof after exact candidate qualification",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 23,
+        "started_at": "2026-11-15T21:58:10Z",
+        "completed_at": "2026-11-15T21:58:10Z"
+      },
+      {
+        "name": "Observe POSIX original-path exec and explicit mutation counterexamples",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 24,
+        "started_at": "2026-11-15T21:58:10Z",
+        "completed_at": "2026-11-15T21:58:10Z"
+      },
+      {
+        "name": "Preserve exact native evidence or candidate HOLD",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 25,
+        "started_at": "2026-11-15T21:58:10Z",
+        "completed_at": "2026-11-15T21:58:12Z"
+      },
+      {
+        "name": "Post Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 48,
+        "started_at": "2026-11-15T21:58:12Z",
+        "completed_at": "2026-11-15T21:58:12Z"
+      },
+      {
+        "name": "Post Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 49,
+        "started_at": "2026-11-15T21:58:12Z",
+        "completed_at": "2026-11-15T21:58:12Z"
+      },
+      {
+        "name": "Post Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 50,
+        "started_at": "2026-11-15T21:58:12Z",
+        "completed_at": "2026-11-15T21:58:18Z"
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 51,
+        "started_at": "2026-11-15T21:58:18Z",
+        "completed_at": "2026-11-15T21:58:18Z"
+      }
+    ],
+    "inputs": {
+      "kind": "TEST_NATIVE_V2_EMBEDDED_INPUTS",
+      "status": "READY",
+      "sourceHead": "4dc08dea7eeed5c286cf310e09a2ba26d84a9546",
+      "platform": "win32-arm64",
+      "nodeVersion": "v24.21.0",
+      "productQualified": false,
+      "stage": "prepared",
+      "baseArchiveSha256": "6455e6269b41ac044357de847e07b783000a56ca7503a340739510c446ad004a",
+      "runtimeSource": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "bun": {
+        "path": "C:\\a\\agent-teams-ai\\agent-teams-ai\\resources\\runtime\\bun\\bun.exe",
+        "sha256": "b662cf80f932866036fc2ef33d0d4e2efcf9e4ba282d2deb3391effdcfe0b98f",
+        "version": "1.4.3"
+      },
+      "supportArchiveSha256": "c52b4ba9f8ec03d40d71e5f60a37978596dc22030be3a41ca46190e766e15f2e",
+      "manifestSha256": "64fb47f2378124e0fbe5564e9ffb0221272ffb4937d326756551edfa27cf76f5"
+    },
+    "windowsCustody": {
+      "kind": "TEST_WINDOWS_ORIGINAL_JOB_CUSTODY",
+      "status": "PASS",
+      "cleanup": true,
+      "sourceHead": "4dc08dea7eeed5c286cf310e09a2ba26d84a9546",
+      "platform": "win32-arm64",
+      "nodeVersion": "v24.21.0",
+      "bunSha256": "b662cf80f932866036fc2ef33d0d4e2efcf9e4ba282d2deb3391effdcfe0b98f",
+      "manifestSha256": "64fb47f2378124e0fbe5564e9ffb0221272ffb4937d326756551edfa27cf76f5",
+      "hostBuild": {
+        "hostSourceDigest": "5c8b4c598e53d8a026d0f829647ff29d0cb200492f99ba4181854f302d2d8052",
+        "hostDistDigest": "ab274ebbc672bda9fa91cc3d8f4680405e85e65e10a1fda8426072508965e227",
+        "providerDigest": "91350f829b72f83e613505bb444ff0d9ef98fb0835e3e438b918bbea8d930f94"
+      },
+      "productQualified": false,
+      "desktopQualified": false,
+      "captureBeforeInput": true,
+      "descendantSurvivedRootExit": true,
+      "originalJobCleanup": "confirmed",
+      "neighborSurvivedTargetStop": true,
+      "neighborJobCleanup": "confirmed"
+    },
+    "manualHost": {
+      "kind": "TEST_NATIVE_V2_EMBEDDED_HOST",
+      "status": "PASS",
+      "sourceHead": "4dc08dea7eeed5c286cf310e09a2ba26d84a9546",
+      "platform": "win32-arm64",
+      "version": "2.1.4",
+      "approvalMode": "manual",
+      "nodeVersion": "v24.21.0",
+      "modelSelection": {
+        "providerId": "TEST-local",
+        "modelId": "TEST-model-B",
+        "variant": "high"
+      },
+      "configurationSelection": {
+        "scope": "project",
+        "original": "project-A",
+        "later": "project-B"
+      },
+      "preferencesSelection": {
+        "nativeDefault": "TEST-local/TEST-model",
+        "appDefault": "TEST-local/TEST-model-B"
+      },
+      "digests": {
+        "bun": "b662cf80f932866036fc2ef33d0d4e2efcf9e4ba282d2deb3391effdcfe0b98f",
+        "manifest": "64fb47f2378124e0fbe5564e9ffb0221272ffb4937d326756551edfa27cf76f5",
+        "node": "dff59da18b6ffe1bf1ca99e1d2af4906080c481740619f5b5098c0fca28bd9b7",
+        "hostSource": "5c8b4c598e53d8a026d0f829647ff29d0cb200492f99ba4181854f302d2d8052",
+        "hostDist": "ab274ebbc672bda9fa91cc3d8f4680405e85e65e10a1fda8426072508965e227",
+        "provider": "91350f829b72f83e613505bb444ff0d9ef98fb0835e3e438b918bbea8d930f94",
+        "windowsShell": "6a5b945e4c27a4eb819988018d219a48ff9bb1bcbdadc56a45539ff26875c617"
+      },
+      "steps": [
+        "original_host_embedded_native_and_mcp_ready",
+        "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+        "changed_project_config_did_not_retarget_running_native_session",
+        "original_uploaded_PNG_native_image_inference_and_public_readback",
+        "checkpoint_and_original_host_native_cleanup_confirmed",
+        "cold_host_restored_native_history_without_model_or_tool_replay"
+      ],
+      "cleanup": true,
+      "phaseElapsedMs": {
+        "original_host_embedded_native_and_mcp_ready": 60561,
+        "native_model_tool_effect_permission_mcp_task_and_reply_completed_once": 173174,
+        "changed_project_config_did_not_retarget_running_native_session": 173174,
+        "original_uploaded_PNG_native_image_inference_and_public_readback": 173174,
+        "checkpoint_and_original_host_native_cleanup_confirmed": 174278,
+        "cold_host_restored_native_history_without_model_or_tool_replay": 228794
+      },
+      "elapsedMs": 230466,
+      "cancelled": false,
+      "inputObservation": {
+        "reads": 310,
+        "last": {
+          "phase": "allocated",
+          "custody": "owned",
+          "nativeReady": true,
+          "attached": true,
+          "sealed": false,
+          "diagnostic": null,
+          "inputs": [
+            {
+              "phase": "terminal",
+              "terminal": "succeeded"
+            },
+            {
+              "phase": "terminal",
+              "terminal": "succeeded"
+            }
+          ],
+          "interactions": [
+            {
+              "kind": "permission",
+              "phase": "resolved"
+            },
+            {
+              "kind": "permission",
+              "phase": "resolved"
+            }
+          ]
+        }
+      },
+      "launchObservation": {
+        "openElapsedMs": 51427,
+        "afterOpen": {
+          "available": true,
+          "status": "ready",
+          "reason": "context-applied",
+          "elapsedSinceAttemptMs": 49940,
+          "capturedTimeoutMs": 120000,
+          "claimed": true,
+          "nativeReady": true,
+          "contextApplied": true,
+          "everReady": true,
+          "usable": true,
+          "controlAvailable": true,
+          "noAllocation": false
+        }
+      },
+      "failureCode": null,
+      "hosts": [
+        {
+          "exitCode": 0,
+          "signalCode": null,
+          "stdoutValid": true
+        },
+        {
+          "exitCode": 0,
+          "signalCode": null,
+          "stdoutValid": true
+        }
+      ],
+      "modelOrigin": "localhost-scripted",
+      "modelRequests": 11,
+      "modelProgress": [
+        {
+          "elapsedMs": 60844,
+          "requests": 0
+        },
+        {
+          "elapsedMs": 72989,
+          "requests": 1
+        },
+        {
+          "elapsedMs": 73434,
+          "requests": 2
+        },
+        {
+          "elapsedMs": 74098,
+          "requests": 3
+        },
+        {
+          "elapsedMs": 74725,
+          "requests": 4
+        },
+        {
+          "elapsedMs": 110041,
+          "requests": 5
+        },
+        {
+          "elapsedMs": 110485,
+          "requests": 6
+        },
+        {
+          "elapsedMs": 111183,
+          "requests": 7
+        },
+        {
+          "elapsedMs": 111720,
+          "requests": 8
+        },
+        {
+          "elapsedMs": 136271,
+          "requests": 9
+        },
+        {
+          "elapsedMs": 165685,
+          "requests": 10
+        },
+        {
+          "elapsedMs": 166142,
+          "requests": 11
+        }
+      ],
+      "coordination": {
+        "status": "unqualified",
+        "cleanup": null
+      },
+      "modelFailures": [],
+      "vendorAuthQualified": false,
+      "desktopQualified": false,
+      "releaseQualified": false
+    },
+    "trace": {
+      "count": 254,
+      "ordinary": 253,
+      "eventCounts": {
+        "child-spawn": 1,
+        "child-ready": 1,
+        "request": 105,
+        "response": 104,
+        "request-send-headers": 15,
+        "request-body-sent": 15,
+        "response-end": 12,
+        "trace-limit": 1
+      },
+      "epochs": [
+        1
+      ],
+      "bytesWithLf": 54796,
+      "maxBytesWithLf": 229,
+      "last": {
+        "epoch": 1,
+        "event": "trace-limit",
+        "atMs": 86461,
+        "child": null,
+        "request": null,
+        "route": null,
+        "method": null,
+        "durationMs": null,
+        "status": null,
+        "contentEncoding": null,
+        "stage": null,
+        "code": null,
+        "exitCode": null,
+        "signal": null
+      },
+      "limitsVerified": true,
+      "completeTraceQualified": false
+    },
+    "cpuSummaryPresent": true,
+    "rawCpuArchived": false,
+    "noPerformanceCauseAttribution": true,
+    "automaticReceiptPresent": false
+  },
+  "limits": [
+    "The actual 4dc process ARM failure is stage5, a closed aggregate over three original empty-return sites; no inner call result or GetLastError was retained.",
+    "The retained rootExitCode frame is not the unreached later rootBirth equality assertion.",
+    "No native gate or source Team A/B PASS; all source A/B steps were skipped.",
+    "Helper cleanup SIGTERM is distinguished from natural exit; outer original Job drained to zero.",
+    "Manifest/binary digest records join their claims; actual binary and full harness source bytes are not archived.",
+    "Manual V2 and original Windows custody passed before automatic cancellation; the whole V2 job remains CANCELLED and later scenarios remain skipped.",
+    "Bounded epoch1 passive trace is not a full cleanup/cold-epoch trace.",
+    "No diagnostic/correction causality, subsequent-source transfer, desktop/P08/P09 or vendor-auth qualification is inferred."
+  ]
+}

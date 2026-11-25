@@ -1261,6 +1261,7 @@ test('diagnostic lineage retains exited parents and exposes orphan candidates wi
   );
   assert.equal(observation.candidates[0].relation, 'historical-parent-absent');
   assert.equal(observation.candidates[0].signalAuthorized, false);
+  assert.equal(observation.candidates[0].currentParent, null);
   assert.equal(packagedDrainSnapshot([], [], [99]).drained, false);
   const reused = { ...helper, birth: '2026-01-01T00:00:01.500Z' };
   assert.equal(
@@ -1268,6 +1269,19 @@ test('diagnostic lineage retains exited parents and exposes orphan candidates wi
       (p) => p.pid === child.pid
     ).relation,
     'ambiguous-parent-identity'
+  );
+  const present = { ...helper, executable: 'TEST helper', unretained: true };
+  assert.deepEqual(
+    packagedOrphanObservation(second.records, [launcher, present, child]).candidates.find(
+      (p) => p.pid === child.pid
+    ).currentParent,
+    { ...helper, executable: 'TEST helper' }
+  );
+  assert.deepEqual(
+    packagedOrphanObservation(second.records, [reused, child]).candidates.find(
+      (p) => p.pid === child.pid
+    ).currentParent,
+    { ...reused, executable: null }
   );
   const full = Array.from({ length: 500 }, (_, i) => ({ ...helper, pid: i + 100 }));
   const bounded = retainPackagedLineage(full, [launcher], 300);
@@ -1555,6 +1569,8 @@ test('explicit candidate evidence survives real seed-to-start manifest handoff',
     `
     export { sameIdentity, ownedTree } from ${JSON.stringify(platformHelper.href)};
     export const assertPortAvailable = () => { throw new Error('TEST_HANDOFF_VERIFIED_BEFORE_LAUNCH'); };
+    // This packaged-only mock must expose the dev E2E port helper, but never use it.
+    export const allocateIsolatedCdpPort = () => { throw new Error('TEST_PACKAGED_PORT_ALLOCATION_FORBIDDEN'); };
     export const processes = () => {
       if (process.argv[2] !== 'stop') return [];
       const launcher = {pid:101,parent:1,birth:${JSON.stringify(launcherBirth)},executable:'node'};

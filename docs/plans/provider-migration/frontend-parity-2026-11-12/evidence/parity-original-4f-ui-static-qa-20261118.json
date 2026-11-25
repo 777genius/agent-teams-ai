@@ -1,0 +1,134 @@
+{
+  "schemaVersion": 1,
+  "kind": "bounded-static-ci-keyframe-review",
+  "head": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+  "reviewer": "/root/lint_review_ui_ci",
+  "reviewedFrameCount": 8,
+  "availablePngCount": 80,
+  "frames": [
+    {
+      "os": "windows",
+      "filename": "teams-create-opened.png",
+      "pixelSize": [
+        1024,
+        720
+      ],
+      "actuallyViewed": true,
+      "observation": "Creation form, member row and project controls occupy the scrollable left pane without overlap with Tasks.",
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-4f/artifact-windows/teams-create-opened.png",
+      "sha256": "19ace4b943e53ed8e6a5bf066c8924d40d387a348f4d4ad44564ca6f6e8b9345",
+      "bytes": 49012
+    },
+    {
+      "os": "windows",
+      "filename": "teams-create-launch-still-modal.png",
+      "pixelSize": [
+        1024,
+        720
+      ],
+      "actuallyViewed": true,
+      "observation": "Launch modal stays inside the viewport; project picker, optional settings and checking state remain distinct. Screenshot captures checking, not a launched provider.",
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-4f/artifact-windows/teams-create-launch-still-modal.png",
+      "sha256": "177e1d02c28fbd82f3510113670606f4ba02cc99d57e4ab1e09041286d1a0832",
+      "bytes": 55058
+    },
+    {
+      "os": "windows",
+      "filename": "teams-create-theme-dark.png",
+      "pixelSize": [
+        1024,
+        720
+      ],
+      "actuallyViewed": true,
+      "observation": "Dark theme preserves aligned creation controls and readable section labels; lower settings continue below the viewport in the scrollable pane.",
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-4f/artifact-windows/teams-create-theme-dark.png",
+      "sha256": "59ea45387ad101238e004d9795e8a1d64d226431bb37e021066fbad515a5e6b1",
+      "bytes": 53522
+    },
+    {
+      "os": "windows",
+      "filename": "teams-create-theme-light.png",
+      "pixelSize": [
+        1024,
+        720
+      ],
+      "actuallyViewed": true,
+      "observation": "Light theme preserves the same control alignment and section hierarchy. Several controls are disabled in this captured state.",
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-4f/artifact-windows/teams-create-theme-light.png",
+      "sha256": "0ac23eccc7d220d48315e22900c8eba3f4e530df2403de2af843edd64b9583f7",
+      "bytes": 53649
+    },
+    {
+      "os": "windows",
+      "filename": "teams-create-native-electron-zoom-200.png",
+      "pixelSize": [
+        1024,
+        720
+      ],
+      "actuallyViewed": true,
+      "observation": "At 1024x720, the header actions stack and controls remain inside the left pane. The long template placeholder is visibly cropped before the end of its final word beside the chevron.",
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-4f/artifact-windows/teams-create-native-electron-zoom-200.png",
+      "sha256": "05b4aa4ca6297bea7daac10876eab7020544cbc00bac2d0a88bd376b132bb821",
+      "bytes": 51198
+    },
+    {
+      "os": "windows",
+      "filename": "teams-create-zh-tw-member-mcp-strict-allowlist.png",
+      "pixelSize": [
+        1024,
+        720
+      ],
+      "actuallyViewed": true,
+      "observation": "Traditional Chinese glyphs, strict-allowlist mode, scope checkboxes and github,sentry input render legibly; explanatory note wraps within its panel.",
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-4f/artifact-windows/teams-create-zh-tw-member-mcp-strict-allowlist.png",
+      "sha256": "435ca71c70d1d8271f0b200747ec486a66c72e26f28ea03e373215e2958fd69e",
+      "bytes": 66623
+    },
+    {
+      "os": "ubuntu",
+      "filename": "teams-create-native-electron-zoom-200.png",
+      "pixelSize": [
+        1280,
+        900
+      ],
+      "actuallyViewed": true,
+      "observation": "At 1280x900, the stacked template action shows the complete label. This is a wider viewport than Windows, so it is not an equal-size OS comparison.",
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-4f/artifact-ubuntu/teams-create-native-electron-zoom-200.png",
+      "sha256": "2864479ba3d665a8d5030ce3a91002bf8f5eb4aaab0826f9c1b6b894f4d2d2c3",
+      "bytes": 77222
+    },
+    {
+      "os": "ubuntu",
+      "filename": "teams-create-zh-tw-member-mcp-strict-allowlist.png",
+      "pixelSize": [
+        1280,
+        900
+      ],
+      "actuallyViewed": true,
+      "observation": "Traditional Chinese labels and allowlist controls render legibly; source-scope controls and explanatory note remain within their panel.",
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-4f/artifact-ubuntu/teams-create-zh-tw-member-mcp-strict-allowlist.png",
+      "sha256": "e29994fcb24c0197c1ea2ca01bd8df0532ef2d7a4b71d11b0fb124b33279278a",
+      "bytes": 100546
+    }
+  ],
+  "findings": [
+    {
+      "kind": "visible-limitation",
+      "scope": "Windows 1024x720 native Electron zoom200 frame",
+      "description": "The long template-placeholder label is cropped next to its chevron. The control remains visible and original scenario succeeds. A wider Ubuntu1280x900 frame fits the whole label. No equal-viewport baseline or newly introduced regression is established.",
+      "sourceFacts": [
+        "TeamTemplatePicker uses the full Team template aria-label.",
+        "The unchanged shared SelectTrigger combines whitespace-nowrap with child line-clamp-1."
+      ],
+      "paths": [
+        "src/features/team-templates/renderer/index.tsx",
+        "src/renderer/components/ui/select.tsx"
+      ]
+    }
+  ],
+  "limits": [
+    "Only the 8 explicitly listed frames were visually inspected; no all-screenshot or complete visual qualification.",
+    "Static images do not independently prove interaction behavior; original job logs and artifact JSON carry functional results.",
+    "This review used cached ZIP/JSON/PNG data only; no browser, Electron, vendor/native child or test was launched by reviewer."
+  ]
+}

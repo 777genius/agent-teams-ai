@@ -9,7 +9,7 @@ import { hasCapturedTeamLaunchReadiness } from './capturedTeamLaunchReadiness';
 import type { createProviderSubmissionFence } from './optionalProviderPreflight';
 import type { ProviderPreparePlan } from './providerPreparePlans';
 import type { ProvisioningProviderCheck } from './provisioningProviderChecks';
-import type { TeamProvisioningModelCheckRequest } from '@shared/types';
+import type { CapturedTeamModelPreparation, TeamLaunchRequest, TeamProvisioningModelCheckRequest } from '@shared/types';
 
 /** Owns only the current dialog observation, never a model cache or provider auth status. */
 export function useCapturedTeamLaunchReadiness(input: {
@@ -107,29 +107,43 @@ export function useCapturedTeamLaunchReadiness(input: {
     },
     [draftSignature, fence]
   );
+  const permits = (providerId: string, now: number): boolean => Boolean(sourceRevision) &&
+    hasCapturedTeamLaunchReadiness({
+      ...scope,
+      selectionSignature: capturedTeamSelectionSignature({
+        cwd: input.cwd,
+        limitContext: input.limitContext,
+        selectedModelChecks: input.selectedModelChecks.filter(check => check.providerId === providerId),
+      }),
+    }, input.checks, providerId, now);
   return {
     draftSignature,
     qualifyPlan,
     runPreflight,
-    permits(providerId: string, now: number): boolean {
-      return (
-        Boolean(sourceRevision) &&
-        hasCapturedTeamLaunchReadiness(
-          {
-            ...scope,
-            selectionSignature: capturedTeamSelectionSignature({
-              cwd: input.cwd,
-              limitContext: input.limitContext,
-              selectedModelChecks: input.selectedModelChecks.filter(
-                (check) => check.providerId === providerId
-              ),
-            }),
-          },
-          input.checks,
-          providerId,
-          now
-        )
-      );
+    permits,
+    captureForSubmit(request: TeamLaunchRequest): TeamLaunchRequest {
+      if (!capturedTeam || !input.selectedModelChecks.some(check => check.providerId === 'opencode'))
+        return request;
+      const now = Date.now();
+      if (latest.current !== draftSignature || request.teamName !== input.teamName || !permits('opencode', now))
+        throw new Error('The selected model check changed. Check the current selection before launching.');
+      const selections: CapturedTeamModelPreparation['selections'] = [];
+      const seen = new Set<string>();
+      for (const check of input.checks) {
+        if (!permits(check.providerId, now)) continue;
+        const original = check.capturedTeamReadiness?.selections;
+        if (!original?.length) {
+          if (check.providerId === 'opencode') throw new Error('Check the selected model again before launching.');
+          continue;
+        }
+        for (const selection of original) {
+          const key = JSON.stringify(selection);
+          if (!seen.has(key)) { seen.add(key); selections.push(structuredClone(selection)); }
+        }
+      }
+      if (!selections.length || selections.length > 256)
+        throw new Error('The original model check selections are unavailable.');
+      return { ...request, modelPreparation: { preparationId: input.preparationId, selections } };
     },
   };
 }

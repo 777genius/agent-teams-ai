@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveOpenCodeQuickConnectGate } from './runtimeProviderQuickConnect';
+import {
+  resolveOpenCodeQuickConnectGate,
+  resolveOpenCodeQuickConnectRuntimeRevision,
+} from './runtimeProviderQuickConnect';
 
 import type { OpenCodeRuntimeStatus } from '@shared/types';
 
@@ -118,6 +121,32 @@ describe('resolveOpenCodeQuickConnectGate', () => {
         cliStatusLoading: false,
       })
     ).toBe('ready');
+
+    const captured: OpenCodeRuntimeStatus = {
+      installed: true,
+      source: 'captured-host',
+      state: 'ready',
+      nativeGeneration: 'v1',
+      sourceRevision: 'a'.repeat(64),
+    };
+    const gate = (status: OpenCodeRuntimeStatus) => resolveOpenCodeQuickConnectGate({
+      runtimeStatus: status,
+      runtimeStatusLoading: false,
+      provider: null,
+      cliStatusLoading: false,
+    });
+    expect(gate(captured)).toBe('ready');
+    expect(gate({ installed: true, source: 'captured-host', state: 'ready' })).toBe('missing');
+    expect(gate({ ...captured, source: 'path' })).toBe('missing');
+    const revision = resolveOpenCodeQuickConnectRuntimeRevision({
+      gate: 'ready', runtimeStatus: captured,
+    });
+    expect(revision).not.toBe(resolveOpenCodeQuickConnectRuntimeRevision({
+      gate: 'ready', runtimeStatus: { ...captured, sourceRevision: 'b'.repeat(64) },
+    }));
+    expect(revision).not.toBe(resolveOpenCodeQuickConnectRuntimeRevision({
+      gate: 'ready', runtimeStatus: { ...captured, nativeGeneration: 'v2' },
+    }));
   });
 
   it.each(['2.0.0', '2.0.32', 'opencode v2.0.32', '2.0.21', 'opencode v2.0.21', '2.0.26', '2.1.4'])(
@@ -156,6 +185,20 @@ describe('resolveOpenCodeQuickConnectGate', () => {
           source: 'path',
           state: 'ready',
           version: '1.15.6',
+        },
+        runtimeStatusLoading: false,
+        provider: null,
+        cliStatusLoading: false,
+      })
+    ).toBe('missing');
+    expect(
+      resolveOpenCodeQuickConnectGate({
+        runtimeStatus: {
+          installed: true,
+          source: 'captured-host',
+          state: 'ready',
+          version: '1.15.6',
+          nativeGeneration: 'v1',
         },
         runtimeStatusLoading: false,
         provider: null,

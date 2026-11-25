@@ -1,0 +1,120 @@
+{
+  "kind": "INERT_ONE_PATH_CAPTURED_HANDLE_CLEANUP_PROPOSAL",
+  "status": "FROZEN_FOR_INDEPENDENT_SOURCE_R1_REVIEW",
+  "selected": false,
+  "published": false,
+  "executed": false,
+  "sourceBase": "3be1fb3ec43d5682aa2ca77a6af62e6fa27b597b",
+  "finalParentBinding": "Root-owned, pending fresh exact current-parent/doc union and published-R1 review",
+  "sourcePaths": [
+    "tools/owned-process-broker/nativeEmulatedSourceScenario.ts"
+  ],
+  "images": [
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/3be1-opencode-cleanup-r2/before/tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "bytes": 59419,
+      "lines": 800,
+      "gitBlob": "9b3a19c372ab3c52e28848b19f67c99fe8bab1f5",
+      "sha256": "f1835c824ecf0f977e86a2cf24203d7e742f96409a9b702a4aa245f71e2aeeae"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/3be1-opencode-cleanup-r2/after/tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "bytes": 59461,
+      "lines": 800,
+      "gitBlob": "b1f0e95ce23ac56ee4ce400157be3316afddbd29",
+      "sha256": "0a23987a84677fc2fc20f44f565cd20150ee6108111dc5793d52bcc9e01ff436"
+    }
+  ],
+  "patch": {
+    "path": "/tmp/migration-evidence-20261116/migration-scope/3be1-opencode-cleanup-r2/candidate.patch",
+    "bytes": 1166,
+    "lines": 16,
+    "gitBlob": "96da4bd5b4277e58629f2116be867ba801b8a296",
+    "sha256": "533e3ff2b76b4754b232218c1d2dd9ebf2fb3676887449ee48a1cfcdea5c8425"
+  },
+  "r1": {
+    "path": "/tmp/migration-evidence-20261116/migration-scope/3be1-opencode-cleanup-r2/prospective-r1.md",
+    "bytes": 11372,
+    "lines": 85,
+    "gitBlob": "3cc579c3e62d1bcea45a75c0f312bb13d0d22ed5",
+    "sha256": "366f86ae5e86be5dc6093aecce8e472e634e28a09a583551673f8c73799b4e46"
+  },
+  "audit": {
+    "path": "/tmp/migration-evidence-20261116/migration-scope/3be1-opencode-cleanup-r2/audit.json",
+    "bytes": 15308,
+    "lines": 366,
+    "gitBlob": "828c841c6df604871a97cbd96861112a04cb762c",
+    "sha256": "57166c5e1d70d5a6046961e639e94922ff206246abc9ed69d7f4439e44c0b8e3"
+  },
+  "preservation": {
+    "path": "/tmp/migration-evidence-20261116/migration-scope/3be1-opencode-cleanup-r2/preservation-proof.json",
+    "bytes": 1132,
+    "lines": 18,
+    "gitBlob": "13f7263c3fa8dc6b957bffb61c041d0ea4a386d3",
+    "sha256": "a276262b8c4aa1e9f56e9b5763f99310bb3c61d2070df6cee1e37b1255aa30d6"
+  },
+  "references": [
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/3be1-opencode-cleanup-r2/reference/host-emulated-acceptance.yml",
+      "bytes": 106650,
+      "lines": 1374,
+      "gitBlob": "a1513210012356a5178620b1f370bd1daf0de9d9",
+      "sha256": "56158f6aac71a16f66959bd022d979860391bb237eacc31ab0571239b4835ca1"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/3be1-opencode-cleanup-r2/reference/nativeEmulatedProviderGate.ts",
+      "bytes": 15213,
+      "lines": 231,
+      "gitBlob": "31a6c30bd3962500e20e99786353cb9ec418adaf",
+      "sha256": "5ecad2b6f6c7f5819e0e18430b5625a9a86ef1120e7e99f595dbd3ad73126bbd"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/3be1-opencode-cleanup-r2/reference/nativeFixture.cpp",
+      "bytes": 19440,
+      "lines": 356,
+      "gitBlob": "8fc74b25d5334395b455ee189e333b53ec9e4d36",
+      "sha256": "45892c8dde062cbb34f09c5187614a1db237bbff8779edd03bf7b94f281247fc"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/3be1-opencode-cleanup-r2/reference/nativeGateContext.raw.json",
+      "bytes": 7631,
+      "lines": 12,
+      "gitBlob": "ba7c12aacd49c2ddcb3a3577da866f2ad4900de4",
+      "sha256": "bfc65e765d12e43b8828623476f74b41c5227a19e8312bd7d0cb7e717b3a7af4"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/3be1-opencode-cleanup-r2/reference/nativeGateContext.ts",
+      "bytes": 7278,
+      "lines": 192,
+      "gitBlob": "27c6da3bac59ac276c40e79f7c4e1c548adb9d31",
+      "sha256": "7e9096550ed0b90589a91978f8621572424d5b6c24137c13c641f3dde7897200"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/3be1-opencode-cleanup-r2/reference/tsconfig.json",
+      "bytes": 557,
+      "lines": 6,
+      "gitBlob": "4936675ad8af5a71d8c001a414836e90250a5daf",
+      "sha256": "9692a10f0691d73cd929940768cd38b084fce81f705b9561d8b1af2ba9a2daef"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/3be1-opencode-cleanup-r2/reference/tsconfig.retained-host.json",
+      "bytes": 393,
+      "lines": 6,
+      "gitBlob": "905f1a1489f3b37d651a9984169b0321c9915a15",
+      "sha256": "c39028ec42fec7402ec1260cb5ed0fca78762d4700847658d9eb95f9e8adbdb7"
+    }
+  ],
+  "changes": {
+    "localState": "Pre-wait custody conjunction snapshot, unchanged predicate/message",
+    "existingWait": "Reached before asserting saved conjunction; same memoized witness; optional absence still rejects",
+    "cap": "800 physical lines unchanged",
+    "sourceDeltaBytes": 42,
+    "newSourceFiles": 0,
+    "newTests": 0,
+    "newWorkflowOperands": 0,
+    "newExecutionCycles": 0
+  },
+  "futureValidation": "Only existing complete original CI/type/lint/native gates; no local execution claim",
+  "superseded": "superseded-simple-reorder is an unselected historical draft; only this snapshot form is current.",
+  "qualificationRoutePrecision": "Source A/B: Host Node x64/ARM. Separate original Job/control: Host Node and Electron Node x64/ARM. No added source-A/B Electron route."
+}

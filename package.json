@@ -1,9 +1,9 @@
 {
   "name": "agent-teams-ai",
   "type": "module",
-  "version": "2.18.6",
+  "version": "2.18.7",
   "dynamicFlags": {
-    "showSponsorFluxion": true
+    "showSponsorFluxion": false
   },
   "description": "Desktop app for managing AI agent teams, reviews, runtime logs, and provider-aware workflows",
   "license": "AGPL-3.0",
@@ -42,7 +42,7 @@
     "team:prove-launch-matrix": "pnpm exec vitest run --maxWorkers=1 test/main/services/team/TeamAgentLaunchMatrix.safe-e2e.test.ts",
     "team:smoke-changes-real-data": "tsx scripts/team-changes-real-data-smoke.ts",
     "smoke:codex-runtime-install": "tsx scripts/smoke/codex-runtime-install.ts",
-    "prebuild": "pnpm --filter @agent-teams/legacy-agent-host build && node ./scripts/ci/verify-radix-presence-patch.mjs && tsx scripts/fetch-pricing-data.ts && pnpm --filter agent-teams-controller build && pnpm --filter agent-teams-mcp build",
+    "prebuild": "node ./scripts/build/buildLinuxNodeExec.mjs && pnpm --filter @agent-teams/legacy-agent-host build && node ./scripts/ci/verify-radix-presence-patch.mjs && tsx scripts/fetch-pricing-data.ts && pnpm --filter agent-teams-controller build && pnpm --filter agent-teams-mcp build",
     "build": "node --max-old-space-size=8192 ./node_modules/electron-vite/bin/electron-vite.js build",
     "postbuild": "node ./scripts/ci/verify-radix-renderer-bundle.mjs",
     "stage-runtime": "node ./scripts/stage-runtime.mjs",
@@ -101,8 +101,8 @@
     "i18n:status": "i18next-cli status",
     "i18n:validate": "tsx scripts/i18n/validate.ts",
     "i18n:types": "i18next-cli types --quiet",
-    "test": "vitest run",
-    "test:ci": "vitest run --maxWorkers=1",
+    "test": "pnpm --filter agent-teams-mcp build && pnpm --filter @agent-teams/legacy-agent-host build && vitest run",
+    "test:ci": "pnpm --filter agent-teams-mcp build && pnpm --filter @agent-teams/legacy-agent-host build && vitest run --maxWorkers=1",
     "test:task-change-ledger": "vitest run test/main/services/team/TaskChangeLedgerReader.test.ts test/main/services/team/taskChangeLedgerFixtures.integration.test.ts test/main/services/team/ReviewApplierService.test.ts test/main/services/team/FileContentResolver.test.ts test/main/services/team/ChangeExtractorService.test.ts test/renderer/store/changeReviewSlice.test.ts test/renderer/utils/reviewKey.test.ts test/main/services/team/TeamLogSourceTracker.test.ts test/main/services/team/stallMonitor/TeamTaskLogFreshnessReader.test.ts",
     "test:e2e:select-team-latch": "tsx scripts/e2e/select-team-latch-desktop.ts",
     "test:e2e:change-review": "node scripts/e2e/change-review-hunk-desktop.mjs",
@@ -124,6 +124,8 @@
     "typecheck:native:tooling": "node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/local-checks/tsconfig.native-tooling.json",
     "test:native:retained": "vitest run --config scripts/local-checks/vitest.retained-policy.config.ts",
     "pretypecheck": "pnpm --filter @agent-teams/legacy-agent-host build",
+    "test:real:suggestions": "node scripts/e2e/native-prompt-suggestions-real/run.mjs",
+    "test:real:suggestions:ui": "node scripts/e2e/native-prompt-suggestions-real/ui.ts",
     "test:legacy-agent-host": "pnpm --filter @agent-teams/legacy-agent-host test && pnpm exec vitest run test/features/agent-backend --maxWorkers=1",
     "stage:legacy-host-node": "node scripts/legacy-agent-host/stage-node.ts",
     "typecheck:legacy-host-scripts": "node node_modules/@typescript/native/bin/tsc --project tsconfig.legacy-agent-host-scripts.json"
@@ -470,6 +472,13 @@
       "icon": "resources/icons/win/icon.ico"
     },
     "linux": {
+      "extraResources": [
+        {
+          "from": "resources/process-launch/linux-x64",
+          "to": "process-launch/linux-x64",
+          "filter": ["manifest.json", "node-exec"]
+        }
+      ],
       "target": [
         "AppImage",
         "deb",

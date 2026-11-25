@@ -1,0 +1,272 @@
+{
+  "kind": "INDEPENDENT_PLAN53_ACTUAL_SOURCE_REVIEW",
+  "disposition": "CHANGES_REQUIRED_CONSUMER_COMPATIBILITY",
+  "projectExecution": false,
+  "ciPolling": false,
+  "sourceApplication": false,
+  "scope": {
+    "sourceCommit": "0d24f086d5fd412d7fb2e37c38f9864f2699a941",
+    "sourceTree": "4c63e84f53bb74886284b44cbcf5389d5545a890",
+    "docsCommit": "783b8f2ccfd2a80fc02c10dacc9f6305181a4547",
+    "parent": "1ef2c16ae547129e6b6ab5c47e03caa6b3f169df",
+    "packet": {
+      "path": "/tmp/migration-evidence-20261116/root/plan53-0d24-full-readback.json",
+      "gitBlob": "8556eeb03ede8ff37cb93c4378d7703d5f02f9a5",
+      "bytes": 453158,
+      "sha256": "b76ebb3e0a2168e00c1fd38e54db676d4c7b91606b314cb83202616c2d4e957d"
+    },
+    "wholeTreeProvenance": "Root complete-tree checks are retained in the packet. This review independently rehashed every selected full body and applied/inverted every supplied patch as text; it did not independently fetch/recompute all 11060 tree leaves."
+  },
+  "sourcePairs": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/53-opencode-v2-metadata-read-failures-2026-11-16.md",
+      "commit": "783b8f2ccfd2a80fc02c10dacc9f6305181a4547",
+      "before": {
+        "gitBlob": "98132d365c399c6200d377eaf7ed7a1d85a9dce6",
+        "bytes": 13078,
+        "sha256": "f8c4abda3a48a33c1749f00282d08550791ff8ad666081e44d7817972af78e8c",
+        "lines": 69
+      },
+      "after": {
+        "gitBlob": "9976d507d19007fe1e98f60f9c7e304ebefe32f8",
+        "bytes": 13352,
+        "sha256": "a65cac5a59c0f07733ec48ac06ff9af20ec05790b4f9ae8d32f65543bef60899",
+        "lines": 69
+      },
+      "patchForwardExact": true,
+      "patchInverseExact": true,
+      "declaredAdded": 3,
+      "declaredDeleted": 3
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "commit": "0d24f086d5fd412d7fb2e37c38f9864f2699a941",
+      "before": {
+        "gitBlob": "53e17d0c4115fa029e9a12dc55859c52d7f448a3",
+        "bytes": 106313,
+        "sha256": "f8ebc45fe39ae9d94309555316ee4950d7997f2870500645aa6a76b367df251e",
+        "lines": 1370
+      },
+      "after": {
+        "gitBlob": "ff94e1d92c82a644a302ef61e64246f919f04d83",
+        "bytes": 106573,
+        "sha256": "09bfb26561b8d795b511b3e808fe7bcdedeb4cd405587394356b2bf0db828867",
+        "lines": 1373
+      },
+      "patchForwardExact": true,
+      "patchInverseExact": true,
+      "declaredAdded": 4,
+      "declaredDeleted": 1
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ManagementHost.ts",
+      "commit": "0d24f086d5fd412d7fb2e37c38f9864f2699a941",
+      "before": {
+        "gitBlob": "384b4c00a05d5886cce267ae76166c93d5892262",
+        "bytes": 21840,
+        "sha256": "0d97f35fcb8ffab937b25ff6656509f51267d43f7d9a5018928f7ea194c91f42",
+        "lines": 402
+      },
+      "after": {
+        "gitBlob": "f050499bc5ef2191460e1d22fa6cda4825a0b000",
+        "bytes": 21535,
+        "sha256": "12ed489a313f075d4d5807f2d232fb6d5ff4cfbfa198a6159f685be5ce99f977",
+        "lines": 399
+      },
+      "patchForwardExact": true,
+      "patchInverseExact": true,
+      "declaredAdded": 7,
+      "declaredDeleted": 10
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/createClaudeCloseDiagnostic.ts",
+      "commit": "0d24f086d5fd412d7fb2e37c38f9864f2699a941",
+      "before": {
+        "gitBlob": "6c8bfdfcf34298a7b513f7a9600301d0256bed32",
+        "bytes": 5861,
+        "sha256": "43a2186091a78d7fca3cb642b2f665439b1f0aedb176dc0a5488035c4aa612de",
+        "lines": 102
+      },
+      "after": {
+        "gitBlob": "40c4c789266a37daf646ed83bdddf0af8d9b6e16",
+        "bytes": 7618,
+        "sha256": "b060c75d39247c07a614dd6653a2c5b477da6c0655ec1a1860bbdf751a625811",
+        "lines": 127
+      },
+      "patchForwardExact": true,
+      "patchInverseExact": true,
+      "declaredAdded": 25,
+      "declaredDeleted": 0
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/CapturedHostClient.ts",
+      "commit": "0d24f086d5fd412d7fb2e37c38f9864f2699a941",
+      "before": {
+        "gitBlob": "6a1c96ed27c412c822e25df22eda858d20bbc6b8",
+        "bytes": 32767,
+        "sha256": "4cc91e2d53dee212b8f41b70611a37880f000d7225329bb51d21f9b56816b138",
+        "lines": 800
+      },
+      "after": {
+        "gitBlob": "c4389ac113de03138fd6a9b4b0c6070fb2f06d86",
+        "bytes": 32706,
+        "sha256": "33e65a4aa30e2edce5eba2e7354c55f89700e15c437611f42c5d06f49cf74b87",
+        "lines": 800
+      },
+      "patchForwardExact": true,
+      "patchInverseExact": true,
+      "declaredAdded": 4,
+      "declaredDeleted": 4
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/decodeClaudeCloseDiagnostics.ts",
+      "commit": "0d24f086d5fd412d7fb2e37c38f9864f2699a941",
+      "before": {
+        "gitBlob": "b2abe9c933e76f64c5046d3566fa3dd5d2174848",
+        "bytes": 7277,
+        "sha256": "36770330ead5cd94b188525e88071900c504a199aa1fb3d6ddcfd47bca06fb3d",
+        "lines": 198
+      },
+      "after": {
+        "gitBlob": "f6ae5712311d9d6bbb455d1fb5892db8d41e0ffe",
+        "bytes": 9935,
+        "sha256": "bfd6af4d362c385d2d5d44455b20261128388868064baad07f8db4ef2a2f7114",
+        "lines": 241
+      },
+      "patchForwardExact": true,
+      "patchInverseExact": true,
+      "declaredAdded": 44,
+      "declaredDeleted": 1
+    },
+    {
+      "path": "test/features/agent-backend/claudeCloseDiagnostics.test.ts",
+      "commit": "0d24f086d5fd412d7fb2e37c38f9864f2699a941",
+      "before": {
+        "gitBlob": "dfc44a77dc1193ed16ef4a751cfe7c6bac7dfee4",
+        "bytes": 9581,
+        "sha256": "8f6e0e8f51e53f6a2c7acc070fc35d0185ed467a7cd1fd0821fe2b54f30d34a2",
+        "lines": 135
+      },
+      "after": {
+        "gitBlob": "3fd06d0f117805e54a0d0ce3d88c5efdfaa516f5",
+        "bytes": 14262,
+        "sha256": "ec93a508e0b7a1148c2b07455198071caf4b94091583dc1d17c62d20bfccb7d2",
+        "lines": 200
+      },
+      "patchForwardExact": true,
+      "patchInverseExact": true,
+      "declaredAdded": 65,
+      "declaredDeleted": 0
+    }
+  ],
+  "blockingFinding": {
+    "id": "PLAN53-LINEAGE-READ-FAILED-SHAPE",
+    "classification": "Concrete current producer/consumer integration defect; no historical CI cause attribution",
+    "consumer": {
+      "path": "/tmp/migration-evidence-20261116/frontend/plan53-actual-source-review/source-reference/scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts",
+      "gitBlob": "31160baa614a4ecd5cc17fb2078561cad371c06c",
+      "bytes": 16119,
+      "sha256": "81d26bee6ac2f5272a4084e5594a260b775169757efa067e4a452728fd7e3bec",
+      "lines": 299,
+      "immutableSourceRead": "One purpose GitHub fetch_blob of exact 31160; no Actions/log/artifact request",
+      "currentness": "Exact leaf in retained Plan51 map; Plan50, Plan52 and Plan53 actual delta sets do not change this path."
+    },
+    "sourceTrace": [
+      "Plan53 createOpenCodeMetadataDiagnostic emits nine closed fields for stage read-failed without pid/startIdentity.",
+      "Plan53 decoder accepts exactly those fields and returns a frozen tagged-union observation.",
+      "CapturedHostClient 150-157 adds captured hostPid and keeps the Host:OpenCodeMetadata namespace and OpenCode metadata stage framing. A failure log therefore has ten keys and neither pid nor startIdentityHash.",
+      "Unchanged readEvents 61-66 selects the namespace/frame and captured hostPid, then asserts exactly seven lifecycle keys before checking stage at 73.",
+      "Any retained valid read-failed row for that same Host deterministically fails the key assertion during a later read, including after a successfully recovered native request. No actual resulting-source run has been claimed.",
+      "readDesktopMetadataLineage 168 calls readEvents outside its failure-facts try; source-lineage capture 252 and release capture 204 use the same parser. The malformed-to-lifecycle rejection occurs before custody/release oracles."
+    ],
+    "failureLogKeys": [
+      "aborted",
+      "deadlineExpired",
+      "elapsedMs",
+      "hostPid",
+      "mode",
+      "profileHash",
+      "providerHash",
+      "readStage",
+      "reason",
+      "stage"
+    ],
+    "requiredLifecycleKeys": [
+      "hostPid",
+      "mode",
+      "pid",
+      "profileHash",
+      "providerHash",
+      "stage",
+      "startIdentityHash"
+    ],
+    "actualCaller": {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/p10-retained-job-routing-review/reference/desktop-runtime-source-selection-267cbfc9.ts",
+      "gitBlob": "267cbfc9d20ff39c7be4d8d74ab08a86728e1f7a",
+      "bytes": 56839,
+      "sha256": "7c2800023632da202e2b402c8bd9b54bfbd2e39d87ae80275167747893516e3f",
+      "anchors": "Import16; ordinary source collection384-387; Quit/release collection230-236; retained metadataLineages proof206."
+    },
+    "requiredCorrectionBoundary": "Validate and exclude only the exact closed read-failed diagnostic record before the original seven-key lifecycle assertion. Invalid/unknown rows must still refuse. Do not turn a failure into ready, released, physical birth, cleanup evidence or process authority. Root separately authorized only an inert minimal correction proposal; no correction is included/applied in this report."
+  },
+  "producerReview": {
+    "firstFailureIdentity": "Existing per-read observed latch and same failure object/rethrow preserved. The first caught original stage feeds both diagnostic sinks. Neither added observation can grant native authority.",
+    "reasonExtraction": "Original function is byte-exact: own data descriptors only, one own transport-cause code, known 19 reasons or unknown. No getters/raw message/stack/arbitrary cause traversal.",
+    "persistentSink": "Created only for non-retained-command catalog owners; captured profile/provider hashes. Synchronous writer faults contained. Existing stderr callback error handling unchanged.",
+    "channel": "Persistent sink call is protected independently; existing channel remains conditional on subscribers, under original observation containment.",
+    "cost": "Failure-path performance.now/Date.now, reason descriptor reads, frozen allocation and persistent serialization/write now occur even with no diagnostics_channel subscribers. Real added work, no zero-overhead claim. No added waits/timers/retries/deadlines.",
+    "limits": "One observation per read by original latch; fixed stage/reason sets and elapsed safe integer 0..3600000. No new global 128-record cap: that belongs to other observers; repeated original reads can each report."
+  },
+  "decoderAndMainReview": {
+    "privacy": "Exact nine-key failure branch precedes unchanged six-key stderr lifecycle branch. Hash/mode consistency, 13 stages, 20 reasons, bounded elapsed and exact flag types enforced. No raw paths/keys/birth strings on failure. Main appends captured Host PID only.",
+    "framing": "Existing fatal UTF-8, 8192-byte frame bound and oversized-line discard/recovery preserved.",
+    "sinks": "Synchronous errors and returned rejected promises contained by existing decoder; original lifecycle projection fields preserved (object property order may differ).",
+    "custody": "All non-projection CapturedHostClient bytes invert exactly; native FIFO/reservations/queue/currentness/admission/shutdown/exit policies unchanged. CapturedHostClient remains exactly800 lines; no cap change."
+  },
+  "validationReview": {
+    "existingTestCases": [
+      "private close decoder handles splits, bounds malformed lines and never forwards raw stderr",
+      "Host captures original binding and emits only bounded finite stage diagnostics",
+      "management diagnostics retain only finite failure stages/codes and captured hashes through existing framing",
+      "retains original auth cleanup refusal through existing bounded management framing",
+      "metadata diagnostics bind original catalog identity and reject missing, extra or unsafe lifecycle facts"
+    ],
+    "afterCases": [
+      "private close decoder handles splits, bounds malformed lines and never forwards raw stderr",
+      "Host captures original binding and emits only bounded finite stage diagnostics",
+      "management diagnostics retain only finite failure stages/codes and captured hashes through existing framing",
+      "retains original auth cleanup refusal through existing bounded management framing",
+      "metadata diagnostics bind original catalog identity and reject missing, extra or unsafe lifecycle facts",
+      "metadata read failures retain closed original facts before ready without acquiring custody authority"
+    ],
+    "allOldBodiesRetained": true,
+    "addedCaseMeaning": "Actual emitter/decoder exercised before-ready and after-ready failures, immutable profile binding, no failure birth fields, exact malformed/unknown field rejection, invalid UTF8/oversize recovery, provider mode, sync/async sink faults.",
+    "coverageLimits": [
+      "Does not instantiate/run OpenCodeV2ManagementHost.read or verify first-failure channel ordering dynamically.",
+      "Does not exercise the immediate app-log lineage parser; this omission permits the concrete blocker.",
+      "No tests/types/lint/native/Desktop execution in this review."
+    ],
+    "workflow": "Only three additional fast-lint operands; all127 previous operands and downstream original workspace/dedicated strict types/typed lint/UI gates preserved. Full selected source/test changes require resulting-source original CI; no separate added CI cycle selected.",
+    "dependencyClosure": "One new same-module runtime value/type import; no package/dependency/build/protocol change. Main/tests already reach existing emitter/decoder.",
+    "sourceCap": {
+      "CapturedHostClient": 800,
+      "OpenCodeV2ManagementHost": 399,
+      "createClaudeCloseDiagnostic": 127,
+      "decodeClaudeCloseDiagnostics": 241
+    }
+  },
+  "proofLimits": [
+    "This source-only defect does not identify the cause of the historical a07 first Models wait. The late response-error after cleanup remains later evidence.",
+    "No native lifecycle, cleanup, P08/P09, source readiness, resulting-source acceptance or runtime PASS qualification is claimed.",
+    "The original custody oracle must stay strict; observation compatibility cannot relax birth, Host, profile, physical absence or release checks."
+  ],
+  "retainedReferences": {
+    "derivedCurrentMap": {
+      "path": "/tmp/migration-evidence-20261116/native/plan51-actual-source-review/derived-current-leaf-map.json",
+      "gitBlob": "be45d9b4f96c93e6c33cf7ce9ae1ba3859590be3",
+      "bytes": 3234555,
+      "sha256": "17a7b5b909ed43f06af6777cadbd8cc2dbbf5b18251ba00517536a4c4c5cd171"
+    },
+    "loggerOwnerPacket": "/tmp/migration-evidence-20261116/root/plan50-unchanged-owner-reference.json"
+  }
+}

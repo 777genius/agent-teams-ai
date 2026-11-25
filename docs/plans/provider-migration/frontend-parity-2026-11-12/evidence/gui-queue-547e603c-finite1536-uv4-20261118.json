@@ -1,0 +1,537 @@
+{
+  "schemaVersion": 1,
+  "kind": "DERIVED_FINAL_GUI_AGGREGATE",
+  "fullReceipt": false,
+  "qualification": "Original per-run verdicts only; no new overall PASS or cross-source qualification. Raw receipt hashes bind exact evidence. Canonical JSON hashes use sorted keys, compact separators, original arrays and unescaped Unicode. Missing resource observations remain unobserved. Cumulative CPU ticks require the same process birth for deltas; no OOM or kill-sender inference.",
+  "runs": [
+    {
+      "mode": "emulated-selection-ui",
+      "originalStatus": "PASS",
+      "scope": "Original Electron controls, standalone Host persistence and renderer reload; only separately pinned TEST provider peers permitted",
+      "excluded": [
+        "vendor authentication",
+        "native model execution",
+        "full Stage1/release/default activation"
+      ],
+      "metadataStatus": "PASS",
+      "harnessExitCode": 0,
+      "source": {
+        "head": "547e603c555be471394e9c6e4b6a53092a33a6d7",
+        "tree": "47ac6f88dbe6726e7f6fe83ba0a4497975969eb9",
+        "dirty": false,
+        "snapshot": {
+          "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/gui-attempt-547e603c-fixed1536-uv4.json",
+          "bytes": 4854,
+          "sha256": "4e876a521087bf0481314e5cd50f4eac8a0f979c5c6d63468f7add90247e1884"
+        },
+        "selectedSourceCount": 1883,
+        "beforeAfterSourceListsEqual": true,
+        "sourceListCanonicalJsonSha256": "2b1f9a0a58031df4324936ed78d41b4cfe4764490f3bfd2ed77694521a32daea"
+      },
+      "profile": null,
+      "modeResourceSelectors": {
+        "LEGACY_DESKTOP_TEST_FINITE_HEAP_1536_UV4": "1",
+        "AGENT_TEAMS_DISABLE_SOURCEMAPS": "1"
+      },
+      "elapsedSeconds": null,
+      "startedAt": "2026-11-18T21:58:11.561077+00:00",
+      "finishedAt": "2026-11-18T22:01:41.668314+00:00",
+      "artifacts": {
+        "finalMetadata": {
+          "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/queued-results-finite1536-uv4/547e603c555be471394e9c6e4b6a53092a33a6d7/emulated-selection-ui.result.json",
+          "bytes": 2113,
+          "sha256": "242564a9817c8c26b951fa9d6d53677e0a64eae2798e993d4f3db3bfb4a5aa70"
+        },
+        "postExitObservation": {
+          "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/queued-results-finite1536-uv4/547e603c555be471394e9c6e4b6a53092a33a6d7/emulated-selection-ui.observation.json",
+          "bytes": 2319,
+          "sha256": "81cdf430df5b14a273b5ee789f27234d5101a20aeb21fb2d22615dd13df2b352"
+        },
+        "originalReceipt": {
+          "path": "/tmp/TEST-desktop-backend-9Y9rFo/desktop-backend-receipt.json",
+          "bytes": 1001133,
+          "sha256": "bd9a420b05b636d22b8575de28964c87f58834a8f4c476fd121b78dec0caba1a"
+        },
+        "originalHarnessLog": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/queued-results-finite1536-uv4/547e603c555be471394e9c6e4b6a53092a33a6d7/emulated-selection-ui.log"
+      },
+      "proofs": {
+        "emulatedSelectionUiProof": {
+          "status": "PASS",
+          "scope": "save-only model/effort selection, renderer reload, next launch and scoped Team Stop while the prior captured runtime remains alive",
+          "excluded": [
+            "vendor model compatibility",
+            "native provider qualification",
+            "replacement of existing provider conversation journeys"
+          ],
+          "visualReview": "Original screenshots require independent inspection",
+          "selectionRetainedAfterReload": true,
+          "canonicalJsonSha256": "a4a8f288e511a4b0eaef0d4dbc8db376259997dba7a8daa47e3fb6ad6f6fe098",
+          "stepCount": 104
+        }
+      },
+      "ownerRoutingEpochs": [],
+      "screenshots": [
+        {
+          "path": "/tmp/TEST-desktop-backend-9Y9rFo/ui-emulated-selection-a-launch.png",
+          "bytes": 97229,
+          "sha256": "97cb46821b17e85f5352a0112ca8157e0b11130c989d82d378736eeabbb23383"
+        },
+        {
+          "path": "/tmp/TEST-desktop-backend-9Y9rFo/ui-emulated-selection-a-survived.png",
+          "bytes": 109099,
+          "sha256": "a172e05c6a0774dd6a10e125eb2b9f2a12120b0d75e95c181b74ac9f56a56543"
+        },
+        {
+          "path": "/tmp/TEST-desktop-backend-9Y9rFo/ui-emulated-selection-b-launch.png",
+          "bytes": 93592,
+          "sha256": "2d60ac2b17c90088d82e475fd4d29be3666065f9f9d19f2b926803a637159bca"
+        },
+        {
+          "path": "/tmp/TEST-desktop-backend-9Y9rFo/ui-emulated-selection-completed.png",
+          "bytes": 113524,
+          "sha256": "40353447d647e7be1d2207029d8fef0046c226f823ce6548b0309ea4d7663f33"
+        },
+        {
+          "path": "/tmp/TEST-desktop-backend-9Y9rFo/ui-emulated-selection-reloaded.png",
+          "bytes": 102987,
+          "sha256": "7e5c0eb4ee0c15f47c9d5e874fe336a396e0646ccbad95eb396dbabc27664afd"
+        },
+        {
+          "path": "/tmp/TEST-desktop-backend-9Y9rFo/ui-emulated-selection-selected.png",
+          "bytes": 90238,
+          "sha256": "c797c1f8508360e4294bbdc7a22b795d8edf3da5cb753ac16032b25d2bce48fe"
+        },
+        {
+          "path": "/tmp/TEST-desktop-backend-9Y9rFo/ui-emulated-selection-stopped.png",
+          "bytes": 104084,
+          "sha256": "5d9b55125508d0b1e55e06accfceaf06849ebe20f8a8bf6085d9f1538da976e3"
+        }
+      ],
+      "failure": {
+        "message": null,
+        "messageCanonicalJsonSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+        "source": null,
+        "sourceFreeze": null
+      },
+      "cleanup": {
+        "remaining": [],
+        "capturedHostObserved": true,
+        "capturedHostAbsent": true,
+        "appExitCode": 0,
+        "appSignalCode": null,
+        "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+      },
+      "cleanupObservation": "observed in original outer receipt",
+      "failureQuit": null,
+      "originalRequestedQuitExit": {
+        "initialExitCode": null,
+        "initialSignalCode": null,
+        "exitCode": 0,
+        "signalCode": null
+      },
+      "originalQueueReceiptChecks": {
+        "status": true,
+        "mode": true,
+        "source": true,
+        "proof": true,
+        "cleanup": true,
+        "childInput": true
+      }
+    },
+    {
+      "mode": "emulated-import-ui",
+      "originalStatus": "PASS",
+      "scope": "Original Electron controls, standalone Host persistence and renderer reload; only separately pinned TEST provider peers permitted",
+      "excluded": [
+        "vendor authentication",
+        "native model execution",
+        "full Stage1/release/default activation"
+      ],
+      "metadataStatus": "PASS",
+      "harnessExitCode": 0,
+      "source": {
+        "head": "547e603c555be471394e9c6e4b6a53092a33a6d7",
+        "tree": "47ac6f88dbe6726e7f6fe83ba0a4497975969eb9",
+        "dirty": false,
+        "snapshot": {
+          "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/gui-attempt-547e603c-fixed1536-uv4.json",
+          "bytes": 4854,
+          "sha256": "4e876a521087bf0481314e5cd50f4eac8a0f979c5c6d63468f7add90247e1884"
+        },
+        "selectedSourceCount": 1883,
+        "beforeAfterSourceListsEqual": true,
+        "sourceListCanonicalJsonSha256": "2b1f9a0a58031df4324936ed78d41b4cfe4764490f3bfd2ed77694521a32daea"
+      },
+      "profile": null,
+      "modeResourceSelectors": {
+        "LEGACY_DESKTOP_TEST_FINITE_HEAP_1536_UV4": "1",
+        "AGENT_TEAMS_DISABLE_SOURCEMAPS": "1"
+      },
+      "elapsedSeconds": null,
+      "startedAt": "2026-11-18T22:01:41.870722+00:00",
+      "finishedAt": "2026-11-18T22:04:33.760048+00:00",
+      "artifacts": {
+        "finalMetadata": {
+          "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/queued-results-finite1536-uv4/547e603c555be471394e9c6e4b6a53092a33a6d7/emulated-import-ui.result.json",
+          "bytes": 2105,
+          "sha256": "7f81997ebca49e08ab77d3fcdf4b22390171501a5240f417d40e445e416c4103"
+        },
+        "postExitObservation": {
+          "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/queued-results-finite1536-uv4/547e603c555be471394e9c6e4b6a53092a33a6d7/emulated-import-ui.observation.json",
+          "bytes": 2063,
+          "sha256": "998525b0e3d46b5c4ab17d92e2dde53b61780f7bf07d3ec3585edd1e554f0489"
+        },
+        "originalReceipt": {
+          "path": "/tmp/TEST-desktop-backend-QnDadZ/desktop-backend-receipt.json",
+          "bytes": 959872,
+          "sha256": "4d218f58b45e0399b0a76b355e1a2437b7c9feb27d2b127f0262b400131c693c"
+        },
+        "originalHarnessLog": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/queued-results-finite1536-uv4/547e603c555be471394e9c6e4b6a53092a33a6d7/emulated-import-ui.log"
+      },
+      "proofs": {
+        "stoppedImportUiProof": {
+          "status": "PASS",
+          "scope": "Original legacy-format TEST archive Detail Launch → Main import → canonical Host dialog; exact saved records and attachment bytes, close without Submit, reload and same original import lookup",
+          "excluded": [
+            "Previously launched/cold Claude or OpenCode import (HOLD; M16 remains open)",
+            "Team Launch Submit",
+            "native agent input",
+            "native session adoption",
+            "real vendor inference/credentials",
+            "full Stage1",
+            "genuine old-frontend archive producer",
+            "vendor CLI qualification"
+          ],
+          "sourceKind": "legacy-format-test-archive",
+          "execution": "finite-protocol-peer",
+          "sourceSha256": "5bc2bf5eaf158ad479e407c80e19623def9e9de4cbaec85635ba85b641b31309",
+          "noLaunchSubmit": true,
+          "sameOriginalImportAfterReload": true,
+          "canonicalJsonSha256": "b4edd571cd5a64012b88ea5d2d39ad746f59bafe1e3b335c61d5dc26a37ef59a",
+          "stepCount": 72
+        }
+      },
+      "ownerRoutingEpochs": [],
+      "screenshots": [
+        {
+          "path": "/tmp/TEST-desktop-backend-QnDadZ/ui-import-source-attachment-kanban.png",
+          "bytes": 126367,
+          "sha256": "161dfbe1de514cbe198a98cd1968a4440596c9f82534e9eed3b8d68968ea6a11"
+        },
+        {
+          "path": "/tmp/TEST-desktop-backend-QnDadZ/ui-import-source-attachment-lightbox.png",
+          "bytes": 96435,
+          "sha256": "33bcac8bb24ab828323938d8b6cd9d328ee288dbb326fa05aa7fa1bbc20a2fed"
+        },
+        {
+          "path": "/tmp/TEST-desktop-backend-QnDadZ/ui-import-source-attachment-task-detail.png",
+          "bytes": 107149,
+          "sha256": "d641bea9c3d4ab1887d03bb9d290c969c207060122e9e2e21d76069b857c160a"
+        },
+        {
+          "path": "/tmp/TEST-desktop-backend-QnDadZ/ui-original-stopped-import-dialog.png",
+          "bytes": 114302,
+          "sha256": "cc5a41fe2597de47494dc48cfddc678748b6d631d47d38bd10489007060f7922"
+        },
+        {
+          "path": "/tmp/TEST-desktop-backend-QnDadZ/ui-original-stopped-import-reloaded.png",
+          "bytes": 114314,
+          "sha256": "8c54522eb0db54b8ba700b06ffdbe1322275de1aa371b7492784afd7f39e42d8"
+        }
+      ],
+      "failure": {
+        "message": null,
+        "messageCanonicalJsonSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+        "source": null,
+        "sourceFreeze": null
+      },
+      "cleanup": {
+        "remaining": [],
+        "capturedHostObserved": true,
+        "capturedHostAbsent": true,
+        "appExitCode": 0,
+        "appSignalCode": null,
+        "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+      },
+      "cleanupObservation": "observed in original outer receipt",
+      "failureQuit": null,
+      "originalRequestedQuitExit": {
+        "initialExitCode": 0,
+        "initialSignalCode": null,
+        "exitCode": 0,
+        "signalCode": null
+      },
+      "originalQueueReceiptChecks": {
+        "status": true,
+        "mode": true,
+        "source": true,
+        "proof": true,
+        "cleanup": true,
+        "childInput": true
+      }
+    },
+    {
+      "mode": "emulated-import-lifecycle-ui",
+      "originalStatus": "INCOMPLETE",
+      "scope": "Original Electron controls, standalone Host persistence and renderer reload; only separately pinned TEST provider peers permitted",
+      "excluded": [
+        "vendor authentication",
+        "native model execution",
+        "full Stage1/release/default activation"
+      ],
+      "metadataStatus": "INCOMPLETE",
+      "harnessExitCode": 1,
+      "source": {
+        "head": "547e603c555be471394e9c6e4b6a53092a33a6d7",
+        "tree": "47ac6f88dbe6726e7f6fe83ba0a4497975969eb9",
+        "dirty": false,
+        "snapshot": {
+          "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/gui-attempt-547e603c-fixed1536-uv4.json",
+          "bytes": 4854,
+          "sha256": "4e876a521087bf0481314e5cd50f4eac8a0f979c5c6d63468f7add90247e1884"
+        },
+        "selectedSourceCount": 1883,
+        "beforeAfterSourceListsEqual": null,
+        "sourceListCanonicalJsonSha256": "2b1f9a0a58031df4324936ed78d41b4cfe4764490f3bfd2ed77694521a32daea"
+      },
+      "profile": null,
+      "modeResourceSelectors": {
+        "LEGACY_DESKTOP_TEST_FINITE_HEAP_1536_UV4": "1",
+        "AGENT_TEAMS_DISABLE_SOURCEMAPS": "1"
+      },
+      "elapsedSeconds": null,
+      "startedAt": "2026-11-18T22:04:33.793139+00:00",
+      "finishedAt": "2026-11-18T22:08:07.582419+00:00",
+      "artifacts": {
+        "finalMetadata": {
+          "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/queued-results-finite1536-uv4/547e603c555be471394e9c6e4b6a53092a33a6d7/emulated-import-lifecycle-ui.result.json",
+          "bytes": 2113,
+          "sha256": "65e9c25d9856538c6cf66c1b0fe6bc2edfcb044817bc33c17d1d06f9e06496aa"
+        },
+        "postExitObservation": {
+          "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/queued-results-finite1536-uv4/547e603c555be471394e9c6e4b6a53092a33a6d7/emulated-import-lifecycle-ui.observation.json",
+          "bytes": 1553,
+          "sha256": "98156d834e89c04083adba5bc29b70a1a6d09f8df54b666d6ce6be1204d38d08"
+        },
+        "originalReceipt": {
+          "path": "/tmp/TEST-desktop-backend-eo1BbC/desktop-backend-receipt.json",
+          "bytes": 492368,
+          "sha256": "6f8d587d9df8e569a2926823da568cb93fde51ce583599f2a67eca0326c8b2ce"
+        },
+        "originalHarnessLog": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/queued-results-finite1536-uv4/547e603c555be471394e9c6e4b6a53092a33a6d7/emulated-import-lifecycle-ui.log"
+      },
+      "proofs": {
+        "finiteStoppedProducer": {
+          "status": "INCOMPLETE",
+          "scope": "Current frontend Create/Launch, visible finite reply, original Main Stop/release, UI Task and ordinary Quit",
+          "excluded": [
+            "genuine historical donor frontend",
+            "vendor CLI/inference/auth qualification",
+            "multi-member or Windows source release",
+            "native session adoption"
+          ],
+          "sourceKind": "actual-current-finite-solo",
+          "execution": "finite-legacy-bootstrap-protocol",
+          "canonicalJsonSha256": "de0311dfe628795a4e337aa3e5192bfbb5ba4483a1c280d0f947a275c3b39701",
+          "stepCount": 26,
+          "failurePhase": "reply",
+          "quitRequested": true,
+          "originalRequestedQuitExit": {
+            "initialExitCode": null,
+            "initialSignalCode": null,
+            "exitCode": 0,
+            "signalCode": null
+          },
+          "sourcePeerAbsentAfterCleanup": true,
+          "inputsFrozen": true,
+          "failure": {
+            "message": "original Main launch publication; original action is never repeated",
+            "messageCanonicalJsonSha256": "2be050820b3cfc520ce7302ff0f5c767201bcfa0f1e660d0dbd8a7b06196862b",
+            "source": null,
+            "sourceFreeze": null
+          },
+          "cleanup": {
+            "remaining": [],
+            "capturedHostAbsent": null
+          },
+          "cleanupCanonicalJsonSha256": "bcade01c8dadceb08fd5a753999d790765949788afeca720a65b8283bbcfd8f1",
+          "beforeHarnessCleanup": {
+            "count": 0,
+            "canonicalJsonSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          }
+        }
+      },
+      "ownerRoutingEpochs": [],
+      "screenshots": [
+        {
+          "path": "/tmp/TEST-desktop-backend-eo1BbC/ui-finite-import-source-failure.png",
+          "bytes": 92971,
+          "sha256": "647a27d5417ef4d112c69d3794694926197d05e838f5020516d625cbd6c62362"
+        }
+      ],
+      "failure": {
+        "message": "authentic finite producer must finish Stop/Quit and frozen cleanup: {\"phase\":\"reply\",\"failure\":\"original Main launch publication; original action is never repeated\"}\n+ actual - expected\n\n+ 'INCOMPLETE'\n- 'PASS'\n",
+        "messageCanonicalJsonSha256": "265ac7655a7b38cf0008dc956ac1146f5626204e23b1cef52394b7b3409b34d8",
+        "source": null,
+        "sourceFreeze": null
+      },
+      "cleanup": null,
+      "cleanupObservation": "unobserved: outer consumer app/cleanup not recorded; nested producer cleanup is separate",
+      "failureQuit": null,
+      "originalRequestedQuitExit": null,
+      "originalQueueReceiptChecks": {
+        "status": false,
+        "mode": true,
+        "source": true,
+        "proof": false,
+        "cleanup": false,
+        "childInput": false
+      },
+      "boundedProducerNotes": {
+        "qualification": "Original source producer failed before consumer startup. One original launch/turn is observed; source lifecycle and import continuation are not qualified.",
+        "artifacts": {
+          "standaloneProducerReceipt": {
+            "path": "/tmp/TEST-desktop-backend-eo1BbC/finite-stopped-import-producer.json",
+            "bytes": 143135,
+            "sha256": "e8822b7c1fc09a87195caac48ed6495f569ae17af60f9f4ff978cf0f7cda563a"
+          },
+          "peerEvents": {
+            "path": "/tmp/TEST-desktop-backend-eo1BbC/finite-legacy-peer.ndjson",
+            "bytes": 4759,
+            "sha256": "068e667d3e0cac2b3ee7c893ad2c9cc4b22d0164d1f0f1e3d136f86b6a577102"
+          },
+          "sourceAppLog": {
+            "path": "/tmp/TEST-desktop-backend-eo1BbC/finite-stopped-import-source-app.log",
+            "bytes": 13827,
+            "sha256": "52b21f5081a24c55e666c504a76eb2ee7fdaf4d67c36c2c411f35fdfbeab69fc"
+          },
+          "teamConfig": {
+            "path": "/tmp/TEST-desktop-backend-eo1BbC/claude/teams/test-stopped-legacy/config.json",
+            "bytes": 823,
+            "sha256": "018008ff5e70e16a2d371cbc29fcef56d8a0b8c385a004f9796d6cdfcca0e948"
+          },
+          "transcript": {
+            "path": "/tmp/TEST-desktop-backend-eo1BbC/claude/projects/-tmp-TEST-desktop-backend-eo1BbC-workspace/618fa1a7-91c5-4b57-8d36-89801d8b885a.jsonl",
+            "bytes": 10621,
+            "sha256": "a8d312aa1de8c8a0a9a53e6edde8817d1c3099d8236d5c5c0ebb3250cf7e7c6e"
+          },
+          "failureScreenshot": {
+            "path": "/tmp/TEST-desktop-backend-eo1BbC/ui-finite-import-source-failure.png",
+            "bytes": 92971,
+            "sha256": "647a27d5417ef4d112c69d3794694926197d05e838f5020516d625cbd6c62362"
+          }
+        },
+        "standaloneAndNestedProducerCanonicalJsonEqual": true,
+        "observedOriginalAction": {
+          "recordedCreateLaunchClickCount": 1,
+          "bootstrapCount": 1,
+          "turnCompletedCount": 1,
+          "pid": 11118,
+          "mainOwnerPid": 7154,
+          "runId": "ce027835-da60-4843-90a4-ff6b0e67c6df",
+          "sessionId": "618fa1a7-91c5-4b57-8d36-89801d8b885a",
+          "teamName": "test-stopped-legacy",
+          "prompt": "TEST_CURRENT_LEGACY_SOLO_ONE",
+          "reply": "REPLY_TEST_CURRENT_LEGACY_SOLO_ONE",
+          "configLeadSessionMatches": true,
+          "transcriptRows": 2,
+          "transcriptTypes": [
+            "user",
+            "assistant"
+          ],
+          "transcriptSessionsMatch": true,
+          "assistantStopReason": "end_turn",
+          "replayedOriginalActionObserved": false,
+          "noReplayQualification": "Exactly one recorded Create/Launch click, one bootstrap and one terminal reply in retained producer artifacts; no retry was run."
+        },
+        "failureBoundary": {
+          "producerStatus": "INCOMPLETE",
+          "producerPhase": "reply",
+          "message": "original Main launch publication; original action is never repeated",
+          "expectedPublicationPath": "/tmp/TEST-desktop-backend-eo1BbC/claude/teams/test-stopped-legacy/launch-state.json",
+          "expectedPublicationPathPresentAfterExit": false,
+          "remainingUnqualified": [
+            "original explicit Stop/release proof",
+            "UI Task/source snapshot qualification",
+            "consumer import-lifecycle continuation"
+          ],
+          "absenceQualification": "The predicate failed and no launch-state file remains. This is not evidence that Launch had no effect, and no unrecorded write error is inferred."
+        },
+        "retainedRendererProgress": {
+          "runId": "ce027835-da60-4843-90a4-ff6b0e67c6df",
+          "state": "ready",
+          "message": "Team provisioned — process alive and ready",
+          "startedAt": "2026-11-18T22:06:34.214Z",
+          "updatedAt": "2026-11-18T22:06:34.990Z",
+          "configReady": true
+        },
+        "sourceInference": {
+          "kind": "SOURCE_BACKED_INFERENCE",
+          "validatedBy": "/root/reviewflow",
+          "sourceHead": "547e603c555be471394e9c6e4b6a53092a33a6d7",
+          "sourceTree": "47ac6f88dbe6726e7f6fe83ba0a4497975969eb9",
+          "conclusion": "Create uses isLaunch=false. The live launch snapshot factory returns null for !isLaunch or empty expectedMembers, including this solo Create shape; reconciliation does not write that snapshot. Original solo Stop requires matching version-2 launch-state and launch-freshness proof. This is a product integration gap; removing the producer wait would not produce the required Stop proof. No altered oracle or replay is used.",
+          "sources": [
+            {
+              "path": "src/main/services/team/provisioning/TeamProvisioningCreateTeamFlow.ts",
+              "lines": "246",
+              "finding": "create context isLaunch=false"
+            },
+            {
+              "path": "src/main/services/team/provisioning/TeamProvisioningLiveLaunchSnapshotBoundaryFactory.ts",
+              "lines": "154-156",
+              "finding": "null when !isLaunch or empty expectedMembers"
+            },
+            {
+              "path": "src/main/services/team/provisioning/TeamProvisioningPersistenceReconcileFacade.ts",
+              "lines": "169-176,190-193",
+              "finding": "null snapshot causes no write; finished clean state clears prior proof"
+            },
+            {
+              "path": "src/main/services/team/provisioning/LegacyNativeStopRelease.ts",
+              "lines": "87-103",
+              "finding": "solo Stop requires launch-state v2 with matching run/session and empty roster, plus matching launch-freshness"
+            }
+          ]
+        },
+        "cleanupQualification": "Nested producer requested ordinary Quit and exited 0 with no signal; beforeHarnessCleanup empty, remaining empty, source peer absent and inputs frozen. Outer consumer cleanup is unobserved/null because consumer did not start. No separate Host exit code or custody release is inferred."
+      }
+    }
+  ],
+  "derivation": {
+    "collector": {
+      "path": "/workspace/scratch/de9d4631e21c/collect-derived-gui-evidence.py",
+      "bytes": 13665,
+      "sha256": "afd6aad2d3bed0191b66878ce56645b72eed51128c5cfa52fb92de4578f8d9c9"
+    },
+    "priorCollector": {
+      "path": "/workspace/scratch/de9d4631e21c/collect-derived-gui-evidence.v2-2143a0bd.py",
+      "bytes": 11712,
+      "sha256": "2143a0bd7e698aa7dd1943a235f642bb335f1c370e53813ad04ebf1afbc4b0df"
+    },
+    "baseAggregate": {
+      "path": "/workspace/scratch/de9d4631e21c/gui-queue-547e603c-finite1536-uv4-derived-base.json",
+      "bytes": 16881,
+      "sha256": "cd74b8c3bd76e80146d8a3ce3bd8fef8e1e0669fd55caa6388ba80a1c8c83ba6"
+    },
+    "additionalNotes": "Read-only artifact facts and separately attributed source inference; original verdicts and queue checks preserved."
+  },
+  "queue": {
+    "artifact": {
+      "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/gui-queue-attempt-547e603c-finite1536-uv4.json",
+      "bytes": 3469,
+      "sha256": "d2db7e4a3576630d242447df366eb9b006b7682d030313cf284830fbad6a7680"
+    },
+    "originalStatus": "STOPPED_FIRST_INCOMPLETE",
+    "actualExitCode": 1,
+    "stopFirstIncomplete": true,
+    "noAutomaticRetry": true,
+    "sourceAndDependenciesFrozen": true,
+    "worktreeCleanAfterExit": true,
+    "notStarted": [
+      "emulated-retained-original-ui",
+      "emulated-claude-lifecycle-ui",
+      "emulated-collaboration-ui"
+    ]
+  }
+}

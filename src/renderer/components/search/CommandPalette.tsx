@@ -522,7 +522,7 @@ export const CommandPalette = (): React.JSX.Element | null => {
         </div>
 
         {/* Search input */}
-        <div className="flex items-center gap-3 border-b border-border px-4 py-3">
+        <div className="flex items-center gap-3 border-b border-border bg-[var(--color-form-control-bg)] px-4 py-3">
           <Search className="size-5 shrink-0 text-text-muted" />
           <input
             ref={inputRef}

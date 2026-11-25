@@ -11,6 +11,7 @@ const storeState = {
   retryFailedOpenCodeSecondaryLanes: vi.fn(),
   selectedTeamName: 'northstar-core',
   selectedTeamData: {
+    isAlive: undefined as boolean | undefined,
     members: [
       { name: 'team-lead', agentType: 'team-lead' },
       { name: 'alice', agentType: 'reviewer', runtimeAdvisory: undefined },
@@ -27,7 +28,7 @@ const storeState = {
         { name: 'jack', agentType: 'developer' },
       ],
     },
-  } as Record<string, { members: Array<Record<string, unknown>> }>,
+  } as Record<string, { members: Array<Record<string, unknown>>; isAlive?: boolean }>,
   memberSpawnStatusesByTeam: {
     'northstar-core': {},
   },
@@ -38,7 +39,9 @@ vi.mock('@renderer/store', () => ({
   useStore: (selector: (state: typeof storeState) => unknown) => selector(storeState),
 }));
 
-vi.mock('@renderer/store/slices/teamSlice', () => ({
+vi.mock('@renderer/store/slices/teamSlice', async () => ({
+  selectTeamIsAliveForName: (await import('@renderer/store/team/teamDataSelectors'))
+    .selectTeamIsAliveForName,
   getCurrentProvisioningProgressForTeam: () => storeState.progress,
   selectTeamDataForName: (_state: typeof storeState, teamName: string) =>
     storeState.teamDataCacheByName[teamName] ??
@@ -91,6 +94,7 @@ vi.mock('@renderer/components/team/ProvisioningProgressBlock', () => ({
 }));
 
 import { TeamProvisioningBanner } from '@renderer/components/team/TeamProvisioningBanner';
+import { TeamProvisioningPanel } from '@renderer/components/team/TeamProvisioningPanel';
 
 describe('TeamProvisioningBanner launch-step alignment', () => {
   afterEach(() => {
@@ -99,6 +103,7 @@ describe('TeamProvisioningBanner launch-step alignment', () => {
 
   beforeEach(() => {
     storeState.selectedTeamName = 'northstar-core';
+    storeState.selectedTeamData.isAlive = undefined;
     storeState.provisioningErrorByTeam = {};
     storeState.clearProvisioningError.mockReset();
     storeState.clearProvisioningError.mockImplementation((teamName: string) => {
@@ -738,5 +743,125 @@ describe('TeamProvisioningBanner launch-step alignment', () => {
       root.unmount();
       await Promise.resolve();
     });
+  });
+
+  it.each([true, undefined, false])(
+    'withholds ready success only when this team is explicitly offline (%s)',
+    async (isAlive) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      storeState.selectedTeamData.isAlive = isAlive;
+      storeState.teamDataCacheByName['northstar-core'].isAlive = isAlive === false;
+      storeState.selectedTeamData.members = [{ name: 'team-lead', agentType: 'team-lead' }];
+      storeState.teamDataCacheByName['northstar-core'].members = [
+        ...storeState.selectedTeamData.members,
+      ];
+      delete storeState.memberSpawnSnapshotsByTeam['northstar-core'];
+      const progress = storeState.progress;
+      const retainedProgress = structuredClone(progress);
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+
+      try {
+        await act(async () => {
+          root.render(React.createElement(TeamProvisioningBanner, { teamName: 'northstar-core' }));
+        });
+
+        const block = host.querySelector('[data-testid="progress-block"]');
+        if (isAlive === false) {
+          expect(block).toBeNull();
+          expect(host.textContent).toBe('');
+        } else {
+          expect(block).not.toBeNull();
+          expect(block?.textContent).toContain('Team launched - lead online');
+        }
+        expect(storeState.progress).toBe(progress);
+        expect(storeState.progress).toEqual(retainedProgress);
+      } finally {
+        await act(async () => root.unmount());
+      }
+    }
+  );
+
+  it('uses this team cache instead of another selected team offline state', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.selectedTeamName = 'other-team';
+    storeState.selectedTeamData.isAlive = false;
+    storeState.teamDataCacheByName['northstar-core'].isAlive = true;
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    try {
+      await act(async () => {
+        root.render(React.createElement(TeamProvisioningBanner, { teamName: 'northstar-core' }));
+      });
+      expect(host.querySelector('[data-testid="progress-block"]')?.textContent).toContain(
+        'Finishing launch'
+      );
+    } finally {
+      await act(async () => root.unmount());
+    }
+  });
+
+  it.each(['assembling', 'failed'])(
+    'preserves %s progress while this team is offline',
+    async (state) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      storeState.selectedTeamData.isAlive = false;
+      storeState.progress = {
+        ...storeState.progress,
+        state,
+        message: 'TEST retained launch diagnostic',
+      };
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+
+      try {
+        await act(async () => {
+          root.render(React.createElement(TeamProvisioningBanner, { teamName: 'northstar-core' }));
+        });
+        expect(host.querySelector('[data-testid="progress-block"]')).not.toBeNull();
+        expect(host.textContent).toContain('TEST retained launch diagnostic');
+      } finally {
+        await act(async () => root.unmount());
+      }
+    }
+  );
+
+  it('recovers ready presentation on the same mounted panel without rewriting progress', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.selectedTeamData.isAlive = true;
+    const progress = storeState.progress;
+    const retainedProgress = structuredClone(progress);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    // The existing store mock does not subscribe; this prop rerenders the same mounted panel.
+    const render = async (className: string) => {
+      await act(async () => {
+        root.render(
+          React.createElement(TeamProvisioningPanel, { teamName: 'northstar-core', className })
+        );
+      });
+    };
+
+    try {
+      await render('before-stop');
+      expect(host.querySelector('[data-testid="progress-block"]')).not.toBeNull();
+      storeState.selectedTeamData.isAlive = false;
+      await render('stopped');
+      expect(host.querySelector('[data-testid="progress-block"]')).toBeNull();
+      storeState.selectedTeamData.isAlive = true;
+      await render('restored');
+      expect(host.querySelector('[data-testid="progress-block"]')?.textContent).toContain(
+        'Finishing launch'
+      );
+      expect(storeState.progress).toBe(progress);
+      expect(storeState.progress).toEqual(retainedProgress);
+    } finally {
+      await act(async () => root.unmount());
+    }
   });
 });

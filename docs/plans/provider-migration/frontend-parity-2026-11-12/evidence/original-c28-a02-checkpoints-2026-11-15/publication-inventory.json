@@ -1,0 +1,1063 @@
+{
+  "kind": "independent prospective documentation evidence mapping; no source/ref/test/CI actions",
+  "referenceGitHeads": [
+    {
+      "head": "4e74d36ba6212938c40a499603ee0419a183fc0a",
+      "scope": "already published followup source/evidence ancestor"
+    },
+    {
+      "head": "4dc08dea7eeed5c286cf310e09a2ba26d84a9546",
+      "scope": "complete incoming history only; no qualification transfer"
+    }
+  ],
+  "proposedPrefix": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/",
+  "existingEvidenceCount": 43,
+  "existingEvidenceBytes": 2189203,
+  "newExactEvidenceFiles": 42,
+  "newExactEvidenceBytes": 2187477,
+  "alreadyDurableReusedFiles": 1,
+  "alreadyDurableReusedBytes": 1726,
+  "groups": [
+    {
+      "name": "c28-windows",
+      "checkpoint": {
+        "path": "/workspace/scratch/82d3f9ba6b85/native-audit-c28/windows-process-checkpoint-20261115-2106.json",
+        "bytes": 4029,
+        "blob": "e0fdbf54040fb28b5d93e468486bd5eb60921552",
+        "sha256": "c4273c41ce7f7fb2c0f129cb04ef1deb4d614bde131acbe5db0ed451332c3063"
+      },
+      "sourceHead": "c28f1aa890c909c7b981254c5e30b874cbc84287",
+      "declaredPayloadCount": 13,
+      "declaredPayloadBytes": 1229131,
+      "payloadWorkspacePaths": [
+        "native-audit-c28/c28-process-win32-x64.zip",
+        "native-audit-c28/c28-process-win32-arm64.zip",
+        "native-audit-c28/job-132949618051.log",
+        "native-audit-c28/job-132949618151.log",
+        "native-audit-c28/archive-audit-process-x64.json",
+        "native-audit-c28/archive-audit-process-arm.json",
+        "native-audit-c28/source-pins-process-x64.json",
+        "native-audit-c28/source-pins-process-arm.json",
+        "native-audit-c28/receipt-audit-process-windows-compact.json",
+        "native-audit-c28/source-c28-four-path-delta.json",
+        "native-audit-c28/process-jobs-snapshot-20261115-2102.json",
+        "native-audit-c28/plan29-c28-windows-process-appendix.md",
+        "native-audit-2cb/source-2cb-seven-path-delta.json"
+      ]
+    },
+    {
+      "name": "a02-darwin",
+      "checkpoint": {
+        "path": "/workspace/scratch/82d3f9ba6b85/native-audit-a02/darwin-first-leaves-checkpoint-20261115-2130.json",
+        "bytes": 2739,
+        "blob": "dd58a141b746609f4128da775edae4978dc4ef70",
+        "sha256": "7c79b68176ff7cf3f74131dbd46bda348ff5b2aa54abfe15a6b05c45563a07db"
+      },
+      "sourceHead": "a02ab70edfdcb4169627e804f0337c9ad6b52af6",
+      "declaredPayloadCount": 9,
+      "declaredPayloadBytes": 381058,
+      "payloadWorkspacePaths": [
+        "native-audit-a02/a02-process-darwin-x64.zip",
+        "native-audit-a02/a02-v2-darwin-x64.zip",
+        "native-audit-a02/job-132959932726.log",
+        "native-audit-a02/job-132960007302.log",
+        "native-audit-a02/archive-audit-process_darwin_x64.json",
+        "native-audit-a02/archive-audit-v2_darwin_x64.json",
+        "native-audit-a02/receipt-audit-darwin-x64.json",
+        "native-audit-a02/initial-jobs-snapshot-20261115-2125.json",
+        "native-audit-a02/plan29-a02-darwin-first-leaves-appendix.md"
+      ]
+    },
+    {
+      "name": "a02-windows",
+      "checkpoint": {
+        "path": "/workspace/scratch/82d3f9ba6b85/native-audit-a02/windows-first-failure-checkpoint-20261115-2149.json",
+        "bytes": 2595,
+        "blob": "91ea8c001c8600a62a91f293db2c42a62c4287b2",
+        "sha256": "75eec9a53a98fe75a46968ccd136e81ee75eacd75a203f24bed4bf33e0e2ef6f"
+      },
+      "sourceHead": "a02ab70edfdcb4169627e804f0337c9ad6b52af6",
+      "declaredPayloadCount": 9,
+      "declaredPayloadBytes": 516724,
+      "payloadWorkspacePaths": [
+        "native-audit-a02/a02-process-win32-x64.zip",
+        "native-audit-a02/a02-process-win32-arm64.zip",
+        "native-audit-a02/job-132959932736.log",
+        "native-audit-a02/job-132959932738.log",
+        "native-audit-a02/archive-audit-process_win_x64.json",
+        "native-audit-a02/archive-audit-process_win_arm.json",
+        "native-audit-a02/receipt-audit-windows-first-failure.json",
+        "native-audit-a02/terminal-jobs-snapshot-20261115-2142.json",
+        "native-audit-a02/plan29-a02-windows-first-failure-appendix.md"
+      ]
+    }
+  ],
+  "generalTerminalSnapshots": [
+    {
+      "file": "general-c28-terminal-jobs.json",
+      "bytes": 4846,
+      "blob": "c55b1dcaf6e77d3c8caa4f4efaec926765e1a323",
+      "sha256": "207ed30b651c9281a7b46ef90c3f65c5dd88aa0302ebd9b1448cb7c580c3e359",
+      "sourceHead": "c28f1aa890c909c7b981254c5e30b874cbc84287",
+      "runId": 43759098083,
+      "observedAtUTC": "2026-11-15T21:07:29Z",
+      "jobCount": 15,
+      "counts": {
+        "cancelled": 12,
+        "skipped": 3
+      },
+      "jobIds": [
+        132949619004,
+        132949620201,
+        132949620277,
+        132949667399,
+        132957135714,
+        132957135836,
+        132957135915,
+        132957136154,
+        132957136275,
+        132957136293,
+        132957136339,
+        132957136340,
+        132957136367,
+        132957136479,
+        132957136582
+      ]
+    },
+    {
+      "file": "general-76-terminal-jobs.json",
+      "bytes": 4846,
+      "blob": "e7ac25bae843b9ce4b57dd0187234667d5b90ee4",
+      "sha256": "3a646585699932bbf91c2afa74573f5ed70a14a13a8b5cc59abeebfffb27c214",
+      "sourceHead": "76a227d283ee9ee4d55d894c2b5d11dde64453e3",
+      "runId": 43761509999,
+      "observedAtUTC": "2026-11-15T21:18:44Z",
+      "jobCount": 15,
+      "counts": {
+        "cancelled": 12,
+        "skipped": 3
+      },
+      "jobIds": [
+        132957137355,
+        132957138417,
+        132957138717,
+        132957167565,
+        132959853460,
+        132959853991,
+        132959854018,
+        132959854076,
+        132959854284,
+        132959854448,
+        132959854454,
+        132959854540,
+        132959854628,
+        132959854641,
+        132959854764
+      ]
+    },
+    {
+      "file": "general-a02-terminal-jobs.json",
+      "bytes": 4846,
+      "blob": "daee3c336113b980f5f27dbaf7d6fbb6b82e68a4",
+      "sha256": "4080f8990048651cca324363ec08ad5c8c5618731921cb442875d1c0afa55883",
+      "sourceHead": "a02ab70edfdcb4169627e804f0337c9ad6b52af6",
+      "runId": 43762390594,
+      "observedAtUTC": "2026-11-15T21:40:30Z",
+      "jobCount": 15,
+      "counts": {
+        "cancelled": 12,
+        "skipped": 3
+      },
+      "jobIds": [
+        132959854848,
+        132959855790,
+        132959856003,
+        132959856148,
+        132967394983,
+        132967395108,
+        132967395117,
+        132967395383,
+        132967395526,
+        132967395584,
+        132967395674,
+        132967395686,
+        132967395715,
+        132967396001,
+        132967396015
+      ]
+    },
+    {
+      "file": "general-3957-terminal-jobs.json",
+      "bytes": 4846,
+      "blob": "4be7ecc053fc5a71d1a690a29c29f8bb5d470be9",
+      "sha256": "c131d766c204b9f1f9ff47b739f050258bdf7aae00ffbeb66ef9806e3005d531",
+      "sourceHead": "3957f2b28417647578d71a465cd61d4e09b5deb9",
+      "runId": 43764802866,
+      "observedAtUTC": "2026-11-15T21:49:49Z",
+      "jobCount": 15,
+      "counts": {
+        "cancelled": 12,
+        "skipped": 3
+      },
+      "jobIds": [
+        132967397169,
+        132967398575,
+        132967398753,
+        132967398860,
+        132968322953,
+        132968323105,
+        132968323120,
+        132968323153,
+        132968323168,
+        132968323169,
+        132968323193,
+        132968323268,
+        132968323281,
+        132968323296,
+        132968324151
+      ]
+    }
+  ],
+  "files": [
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/general-terminal-checkpoints/general-3957-terminal-jobs.json",
+      "workspaceRelativePath": "general-terminal-checkpoints/general-3957-terminal-jobs.json",
+      "bytes": 4846,
+      "blob": "4be7ecc053fc5a71d1a690a29c29f8bb5d470be9",
+      "sha256": "c131d766c204b9f1f9ff47b739f050258bdf7aae00ffbeb66ef9806e3005d531",
+      "groups": [
+        "general-terminal"
+      ],
+      "originalReferences": [],
+      "classification": "saved structured API snapshot; no execution or cancellation-cause inference",
+      "alreadyDurableByteMatches": [],
+      "disposition": "publish-exact-original-bytes",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/general-terminal-checkpoints/general-3957-terminal-jobs.json"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/general-terminal-checkpoints/general-76-terminal-jobs.json",
+      "workspaceRelativePath": "general-terminal-checkpoints/general-76-terminal-jobs.json",
+      "bytes": 4846,
+      "blob": "e7ac25bae843b9ce4b57dd0187234667d5b90ee4",
+      "sha256": "3a646585699932bbf91c2afa74573f5ed70a14a13a8b5cc59abeebfffb27c214",
+      "groups": [
+        "general-terminal"
+      ],
+      "originalReferences": [],
+      "classification": "saved structured API snapshot; no execution or cancellation-cause inference",
+      "alreadyDurableByteMatches": [],
+      "disposition": "publish-exact-original-bytes",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/general-terminal-checkpoints/general-76-terminal-jobs.json"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/general-terminal-checkpoints/general-a02-terminal-jobs.json",
+      "workspaceRelativePath": "general-terminal-checkpoints/general-a02-terminal-jobs.json",
+      "bytes": 4846,
+      "blob": "daee3c336113b980f5f27dbaf7d6fbb6b82e68a4",
+      "sha256": "4080f8990048651cca324363ec08ad5c8c5618731921cb442875d1c0afa55883",
+      "groups": [
+        "general-terminal"
+      ],
+      "originalReferences": [],
+      "classification": "saved structured API snapshot; no execution or cancellation-cause inference",
+      "alreadyDurableByteMatches": [],
+      "disposition": "publish-exact-original-bytes",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/general-terminal-checkpoints/general-a02-terminal-jobs.json"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/general-terminal-checkpoints/general-c28-terminal-jobs.json",
+      "workspaceRelativePath": "general-terminal-checkpoints/general-c28-terminal-jobs.json",
+      "bytes": 4846,
+      "blob": "c55b1dcaf6e77d3c8caa4f4efaec926765e1a323",
+      "sha256": "207ed30b651c9281a7b46ef90c3f65c5dd88aa0302ebd9b1448cb7c580c3e359",
+      "groups": [
+        "general-terminal"
+      ],
+      "originalReferences": [],
+      "classification": "saved structured API snapshot; no execution or cancellation-cause inference",
+      "alreadyDurableByteMatches": [],
+      "disposition": "publish-exact-original-bytes",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/general-terminal-checkpoints/general-c28-terminal-jobs.json"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/native-audit-2cb/source-2cb-seven-path-delta.json",
+      "workspaceRelativePath": "native-audit-2cb/source-2cb-seven-path-delta.json",
+      "bytes": 1726,
+      "blob": "72a2f7ca850def9ba5e2b5fb77d92d4f570e235c",
+      "sha256": "46e1691a10fd57cb8eedf0b4336738fd7c5fe7379372f84af752b6dccf4367eb",
+      "groups": [
+        "c28-windows"
+      ],
+      "originalReferences": [
+        {
+          "checkpoint": "native-audit-c28/windows-process-checkpoint-20261115-2106.json",
+          "literalOriginalPath": "../native-audit-2cb/source-2cb-seven-path-delta.json"
+        }
+      ],
+      "classification": "source identity inventory/audit; not a compiled payload reconstruction",
+      "alreadyDurableByteMatches": [
+        {
+          "head": "4e74d36ba6212938c40a499603ee0419a183fc0a",
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-2cb-2026-11-15/source-2cb-seven-path-delta.json",
+          "mode": "100644"
+        }
+      ],
+      "disposition": "reuse-existing-H-file",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-2cb-2026-11-15/source-2cb-seven-path-delta.json"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/native-audit-a02/a02-process-darwin-x64.zip",
+      "workspaceRelativePath": "native-audit-a02/a02-process-darwin-x64.zip",
+      "bytes": 12394,
+      "blob": "8eeb45bcc989ec940de7465765a5d31ed7de04ce",
+      "sha256": "9e95d33829f173a41002d0f3ab8854aebbb5221f86349b3c8d9932fb8c0d1d96",
+      "groups": [
+        "a02-darwin"
+      ],
+      "originalReferences": [
+        {
+          "checkpoint": "native-audit-a02/darwin-first-leaves-checkpoint-20261115-2130.json",
+          "literalOriginalPath": "a02-process-darwin-x64.zip"
+        }
+      ],
+      "classification": "official original artifact archive; every original member recoverable",
+      "alreadyDurableByteMatches": [],
+      "disposition": "publish-exact-original-bytes",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/a02-process-darwin-x64.zip"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/native-audit-a02/a02-process-win32-arm64.zip",
+      "workspaceRelativePath": "native-audit-a02/a02-process-win32-arm64.zip",
+      "bytes": 14568,
+      "blob": "057b43b670eb6e3af8070e79c4223d288befcd4a",
+      "sha256": "6854610bee9a18c7f67db25eb45c34909303e0b9be4ac4c356fe0c7b1d3dcc83",
+      "groups": [
+        "a02-windows"
+      ],
+      "originalReferences": [
+        {
+          "checkpoint": "native-audit-a02/windows-first-failure-checkpoint-20261115-2149.json",
+          "literalOriginalPath": "a02-process-win32-arm64.zip"
+        }
+      ],
+      "classification": "official original artifact archive; every original member recoverable",
+      "alreadyDurableByteMatches": [],
+      "disposition": "publish-exact-original-bytes",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/a02-process-win32-arm64.zip"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/native-audit-a02/a02-process-win32-x64.zip",
+      "workspaceRelativePath": "native-audit-a02/a02-process-win32-x64.zip",
+      "bytes": 14529,
+      "blob": "1a7cdff7f3d0b6e499c2eeaa4726f847714fa294",
+      "sha256": "1bacc81fbc0fc0ab7d638b5d74698dca0688a4a903fb37df160b55f011c22052",
+      "groups": [
+        "a02-windows"
+      ],
+      "originalReferences": [
+        {
+          "checkpoint": "native-audit-a02/windows-first-failure-checkpoint-20261115-2149.json",
+          "literalOriginalPath": "a02-process-win32-x64.zip"
+        }
+      ],
+      "classification": "official original artifact archive; every original member recoverable",
+      "alreadyDurableByteMatches": [],
+      "disposition": "publish-exact-original-bytes",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/a02-process-win32-x64.zip"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/native-audit-a02/a02-v2-darwin-x64.zip",
+      "workspaceRelativePath": "native-audit-a02/a02-v2-darwin-x64.zip",
+      "bytes": 10515,
+      "blob": "6fe5eb3595b834e0f0f3b93148d905f8498f150d",
+      "sha256": "afaa8fb9f404829d3abbaf8950ad517ad84816fde424e36b27d30c9c894ed839",
+      "groups": [
+        "a02-darwin"
+      ],
+      "originalReferences": [
+        {
+          "checkpoint": "native-audit-a02/darwin-first-leaves-checkpoint-20261115-2130.json",
+          "literalOriginalPath": "a02-v2-darwin-x64.zip"
+        }
+      ],
+      "classification": "official original artifact archive; every original member recoverable",
+      "alreadyDurableByteMatches": [],
+      "disposition": "publish-exact-original-bytes",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/a02-v2-darwin-x64.zip"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/native-audit-a02/archive-audit-process_darwin_x64.json",
+      "workspaceRelativePath": "native-audit-a02/archive-audit-process_darwin_x64.json",
+      "bytes": 3302,
+      "blob": "8e1caac4c4647de91ae71ea5a38c63391f5dda16",
+      "sha256": "c7e1f8ac2973bfb1ec3c66927da2d1fe5893b28d5129a05825756977024c0adc",
+      "groups": [
+        "a02-darwin"
+      ],
+      "originalReferences": [
+        {
+          "checkpoint": "native-audit-a02/darwin-first-leaves-checkpoint-20261115-2130.json",
+          "literalOriginalPath": "archive-audit-process_darwin_x64.json"
+        }
+      ],
+      "classification": "derived archive/receipt/source audit of retained originals",
+      "alreadyDurableByteMatches": [],
+      "disposition": "publish-exact-original-bytes",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/archive-audit-process_darwin_x64.json"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/native-audit-a02/archive-audit-process_win_arm.json",
+      "workspaceRelativePath": "native-audit-a02/archive-audit-process_win_arm.json",
+      "bytes": 4301,
+      "blob": "9b4b1ab6da7a26a9f20a4356705299f7230f4151",
+      "sha256": "85304ae0599d5676ae572ac3a293748baddfe2e8c5f67747636b722803283ecc",
+      "groups": [
+        "a02-windows"
+      ],
+      "originalReferences": [
+        {
+          "checkpoint": "native-audit-a02/windows-first-failure-checkpoint-20261115-2149.json",
+          "literalOriginalPath": "archive-audit-process_win_arm.json"
+        }
+      ],
+      "classification": "derived archive/receipt/source audit of retained originals",
+      "alreadyDurableByteMatches": [],
+      "disposition": "publish-exact-original-bytes",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/archive-audit-process_win_arm.json"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/native-audit-a02/archive-audit-process_win_x64.json",
+      "workspaceRelativePath": "native-audit-a02/archive-audit-process_win_x64.json",
+      "bytes": 4297,
+      "blob": "4d271aa47bc1767c910cebe9184a71750a33c912",
+      "sha256": "839381216a99246b3cce75001d601e365d0ba8dfe88eb42492d825849607c292",
+      "groups": [
+        "a02-windows"
+      ],
+      "originalReferences": [
+        {
+          "checkpoint": "native-audit-a02/windows-first-failure-checkpoint-20261115-2149.json",
+          "literalOriginalPath": "archive-audit-process_win_x64.json"
+        }
+      ],
+      "classification": "derived archive/receipt/source audit of retained originals",
+      "alreadyDurableByteMatches": [],
+      "disposition": "publish-exact-original-bytes",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/archive-audit-process_win_x64.json"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/native-audit-a02/archive-audit-v2_darwin_x64.json",
+      "workspaceRelativePath": "native-audit-a02/archive-audit-v2_darwin_x64.json",
+      "bytes": 2437,
+      "blob": "2a89a423623ae86ad2f29b0ef668a77bc406eaa2",
+      "sha256": "d955520d6fcb8fff975f7b74dbede326eff07456e49d0f41dfa1397713191a7e",
+      "groups": [
+        "a02-darwin"
+      ],
+      "originalReferences": [
+        {
+          "checkpoint": "native-audit-a02/darwin-first-leaves-checkpoint-20261115-2130.json",
+          "literalOriginalPath": "archive-audit-v2_darwin_x64.json"
+        }
+      ],
+      "classification": "derived archive/receipt/source audit of retained originals",
+      "alreadyDurableByteMatches": [],
+      "disposition": "publish-exact-original-bytes",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/archive-audit-v2_darwin_x64.json"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/native-audit-a02/darwin-first-leaves-checkpoint-20261115-2130.json",
+      "workspaceRelativePath": "native-audit-a02/darwin-first-leaves-checkpoint-20261115-2130.json",
+      "bytes": 2739,
+      "blob": "dd58a141b746609f4128da775edae4978dc4ef70",
+      "sha256": "7c79b68176ff7cf3f74131dbd46bda348ff5b2aa54abfe15a6b05c45563a07db",
+      "groups": [
+        "a02-darwin"
+      ],
+      "originalReferences": [],
+      "classification": "frozen evidence checkpoint and original path/hash declarations",
+      "alreadyDurableByteMatches": [],
+      "disposition": "publish-exact-original-bytes",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/darwin-first-leaves-checkpoint-20261115-2130.json"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/native-audit-a02/independent-checkpoint-final-review.json",
+      "workspaceRelativePath": "native-audit-a02/independent-checkpoint-final-review.json",
+      "bytes": 2320,
+      "blob": "e8bc59d5accd29626ada0a82d88c361c930b6cc5",
+      "sha256": "95d33b95c67bf68a166691948d0f589634acbb620579c9c210418a0af6eec97a",
+      "groups": [
+        "a02-darwin"
+      ],
+      "originalReferences": [],
+      "classification": "independent review record; does not itself execute or qualify new source",
+      "alreadyDurableByteMatches": [],
+      "disposition": "publish-exact-original-bytes",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/independent-checkpoint-final-review.json"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/native-audit-a02/independent-checkpoint-review.json",
+      "workspaceRelativePath": "native-audit-a02/independent-checkpoint-review.json",
+      "bytes": 8351,
+      "blob": "ba63b6bfc3fa91a5edb97bddb52c947e7693d60d",
+      "sha256": "45b80d66dec9aaaad3fb6766e1a684f235dc23ed541e1d9d6a615eb846623cf0",
+      "groups": [
+        "a02-darwin"
+      ],
+      "originalReferences": [],
+      "classification": "independent review record; does not itself execute or qualify new source",
+      "alreadyDurableByteMatches": [],
+      "disposition": "publish-exact-original-bytes",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/independent-checkpoint-review.json"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/native-audit-a02/initial-jobs-snapshot-20261115-2125.json",
+      "workspaceRelativePath": "native-audit-a02/initial-jobs-snapshot-20261115-2125.json",
+      "bytes": 92726,
+      "blob": "c972923d758462f32dd68240f6f408a3d04addcb",
+      "sha256": "883653a2e045c189626bfe3c686bc66d0abe9530c47b4d1ddb3ef37e31dff4a6",
+      "groups": [
+        "a02-darwin"
+      ],
+      "originalReferences": [
+        {
+          "checkpoint": "native-audit-a02/darwin-first-leaves-checkpoint-20261115-2130.json",
+          "literalOriginalPath": "initial-jobs-snapshot-20261115-2125.json"
+        }
+      ],
+      "classification": "saved structured API snapshot; no execution or cancellation-cause inference",
+      "alreadyDurableByteMatches": [],
+      "disposition": "publish-exact-original-bytes",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/initial-jobs-snapshot-20261115-2125.json"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/native-audit-a02/job-132959932726.log",
+      "workspaceRelativePath": "native-audit-a02/job-132959932726.log",
+      "bytes": 111654,
+      "blob": "f457565e3bfbeaa5ea689969687a51e4152d637a",
+      "sha256": "96ca68135d37588aa68ca9aed53f26f3b5a06fe2e128e2cc577cbb94955c2f8c",
+      "groups": [
+        "a02-darwin"
+      ],
+      "originalReferences": [
+        {
+          "checkpoint": "native-audit-a02/darwin-first-leaves-checkpoint-20261115-2130.json",
+          "literalOriginalPath": "job-132959932726.log"
+        }
+      ],
+      "classification": "official original complete job log",
+      "alreadyDurableByteMatches": [],
+      "disposition": "publish-exact-original-bytes",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/job-132959932726.log"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/native-audit-a02/job-132959932736.log",
+      "workspaceRelativePath": "native-audit-a02/job-132959932736.log",
+      "bytes": 128865,
+      "blob": "d55f42aec77d9498e62cd04dbaf25bf2656eb428",
+      "sha256": "9d4adf1f05f4fbf8bc2b7b9de77dc66009d832a65b97a233e9c6c61febf45238",
+      "groups": [
+        "a02-windows"
+      ],
+      "originalReferences": [
+        {
+          "checkpoint": "native-audit-a02/windows-first-failure-checkpoint-20261115-2149.json",
+          "literalOriginalPath": "job-132959932736.log"
+        }
+      ],
+      "classification": "official original complete job log",
+      "alreadyDurableByteMatches": [],
+      "disposition": "publish-exact-original-bytes",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/job-132959932736.log"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/native-audit-a02/job-132959932738.log",
+      "workspaceRelativePath": "native-audit-a02/job-132959932738.log",
+      "bytes": 152256,
+      "blob": "37c25d5e822ddd81a55b62374e603fb4bc034a55",
+      "sha256": "77e60dc919ecee333ba23307e228aa6752035bccaadb2ef6f29e6a018b89b6e7",
+      "groups": [
+        "a02-windows"
+      ],
+      "originalReferences": [
+        {
+          "checkpoint": "native-audit-a02/windows-first-failure-checkpoint-20261115-2149.json",
+          "literalOriginalPath": "job-132959932738.log"
+        }
+      ],
+      "classification": "official original complete job log",
+      "alreadyDurableByteMatches": [],
+      "disposition": "publish-exact-original-bytes",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/job-132959932738.log"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/native-audit-a02/job-132960007302.log",
+      "workspaceRelativePath": "native-audit-a02/job-132960007302.log",
+      "bytes": 109870,
+      "blob": "eeea32f195588a3690df54ec4072f1a1d952955f",
+      "sha256": "e0ffb2fe61663664dbf2d6236210553b23ad4279d61f1559fdd7fdc9909101b5",
+      "groups": [
+        "a02-darwin"
+      ],
+      "originalReferences": [
+        {
+          "checkpoint": "native-audit-a02/darwin-first-leaves-checkpoint-20261115-2130.json",
+          "literalOriginalPath": "job-132960007302.log"
+        }
+      ],
+      "classification": "official original complete job log",
+      "alreadyDurableByteMatches": [],
+      "disposition": "publish-exact-original-bytes",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/job-132960007302.log"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/native-audit-a02/plan29-a02-darwin-first-leaves-appendix.md",
+      "workspaceRelativePath": "native-audit-a02/plan29-a02-darwin-first-leaves-appendix.md",
+      "bytes": 6624,
+      "blob": "c9cfc9ed183bdc3a0cc9bb4d6937f3f3f088337e",
+      "sha256": "47fe8ce234b204b6f8b0848d708399c9a774fe048ff04b9c6fead9fbaa7c8f3c",
+      "groups": [
+        "a02-darwin"
+      ],
+      "originalReferences": [
+        {
+          "checkpoint": "native-audit-a02/darwin-first-leaves-checkpoint-20261115-2130.json",
+          "literalOriginalPath": "plan29-a02-darwin-first-leaves-appendix.md"
+        }
+      ],
+      "classification": "source-bound evidence appendix",
+      "alreadyDurableByteMatches": [],
+      "disposition": "publish-exact-original-bytes",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/plan29-a02-darwin-first-leaves-appendix.md"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/native-audit-a02/plan29-a02-windows-first-failure-appendix.md",
+      "workspaceRelativePath": "native-audit-a02/plan29-a02-windows-first-failure-appendix.md",
+      "bytes": 8012,
+      "blob": "728e6c8751b3dc39b9cba1d38cd09cc447d8426b",
+      "sha256": "5453d459b59dd79ea086b49c77c818840d9face290cdbdaf7bcb369112911986",
+      "groups": [
+        "a02-windows"
+      ],
+      "originalReferences": [
+        {
+          "checkpoint": "native-audit-a02/windows-first-failure-checkpoint-20261115-2149.json",
+          "literalOriginalPath": "plan29-a02-windows-first-failure-appendix.md"
+        }
+      ],
+      "classification": "source-bound evidence appendix",
+      "alreadyDurableByteMatches": [],
+      "disposition": "publish-exact-original-bytes",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/plan29-a02-windows-first-failure-appendix.md"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/native-audit-a02/receipt-audit-darwin-x64.json",
+      "workspaceRelativePath": "native-audit-a02/receipt-audit-darwin-x64.json",
+      "bytes": 31536,
+      "blob": "2015897df44c28437e2b620bc4e6e6678c31bfe0",
+      "sha256": "c5ffad3f97261deb27b586cdf7757b528d484b99644ddc8fa4d81a3cab1a9d5f",
+      "groups": [
+        "a02-darwin"
+      ],
+      "originalReferences": [
+        {
+          "checkpoint": "native-audit-a02/darwin-first-leaves-checkpoint-20261115-2130.json",
+          "literalOriginalPath": "receipt-audit-darwin-x64.json"
+        }
+      ],
+      "classification": "derived archive/receipt/source audit of retained originals",
+      "alreadyDurableByteMatches": [],
+      "disposition": "publish-exact-original-bytes",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/receipt-audit-darwin-x64.json"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/native-audit-a02/receipt-audit-windows-first-failure.json",
+      "workspaceRelativePath": "native-audit-a02/receipt-audit-windows-first-failure.json",
+      "bytes": 65902,
+      "blob": "a1d5fbc3f5c2475702b2c9b24de01c9a1b8fa954",
+      "sha256": "cb958fff36f3de1722df664704b07cb3480ec95c096e17f958acca7eb19884b5",
+      "groups": [
+        "a02-windows"
+      ],
+      "originalReferences": [
+        {
+          "checkpoint": "native-audit-a02/windows-first-failure-checkpoint-20261115-2149.json",
+          "literalOriginalPath": "receipt-audit-windows-first-failure.json"
+        }
+      ],
+      "classification": "derived archive/receipt/source audit of retained originals",
+      "alreadyDurableByteMatches": [],
+      "disposition": "publish-exact-original-bytes",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/receipt-audit-windows-first-failure.json"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/native-audit-a02/terminal-jobs-snapshot-20261115-2142.json",
+      "workspaceRelativePath": "native-audit-a02/terminal-jobs-snapshot-20261115-2142.json",
+      "bytes": 123994,
+      "blob": "619f2369d9bdc7aa2b0d5c07d52c852d10ce8160",
+      "sha256": "10304a05045222c7ab52ccdaf33b91d276436d86f66fbd5b5cf6ef6f6323f813",
+      "groups": [
+        "a02-windows"
+      ],
+      "originalReferences": [
+        {
+          "checkpoint": "native-audit-a02/windows-first-failure-checkpoint-20261115-2149.json",
+          "literalOriginalPath": "terminal-jobs-snapshot-20261115-2142.json"
+        }
+      ],
+      "classification": "saved structured API snapshot; no execution or cancellation-cause inference",
+      "alreadyDurableByteMatches": [],
+      "disposition": "publish-exact-original-bytes",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/terminal-jobs-snapshot-20261115-2142.json"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/native-audit-a02/windows-first-failure-checkpoint-20261115-2149.json",
+      "workspaceRelativePath": "native-audit-a02/windows-first-failure-checkpoint-20261115-2149.json",
+      "bytes": 2595,
+      "blob": "91ea8c001c8600a62a91f293db2c42a62c4287b2",
+      "sha256": "75eec9a53a98fe75a46968ccd136e81ee75eacd75a203f24bed4bf33e0e2ef6f",
+      "groups": [
+        "a02-windows"
+      ],
+      "originalReferences": [],
+      "classification": "frozen evidence checkpoint and original path/hash declarations",
+      "alreadyDurableByteMatches": [],
+      "disposition": "publish-exact-original-bytes",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/windows-first-failure-checkpoint-20261115-2149.json"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/native-audit-a02/windows-independent-checkpoint-review.json",
+      "workspaceRelativePath": "native-audit-a02/windows-independent-checkpoint-review.json",
+      "bytes": 6282,
+      "blob": "612fd51e36a17085cab326cb0f346eee2f75a2e0",
+      "sha256": "e90bf96b0a4ab8ea1b96e45d6f0166f9e6f3dd727832e020f5ae5c822b085890",
+      "groups": [
+        "a02-windows"
+      ],
+      "originalReferences": [],
+      "classification": "independent review record; does not itself execute or qualify new source",
+      "alreadyDurableByteMatches": [],
+      "disposition": "publish-exact-original-bytes",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/windows-independent-checkpoint-review.json"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/native-audit-c28/archive-audit-process-arm.json",
+      "workspaceRelativePath": "native-audit-c28/archive-audit-process-arm.json",
+      "bytes": 7509,
+      "blob": "c38b0e78a03805805e73d903ef443c7802dcd5a6",
+      "sha256": "f53aab363b430a054b498423fd4bf6b25b8f2ce3c3b3b567a665832a659c780d",
+      "groups": [
+        "c28-windows"
+      ],
+      "originalReferences": [
+        {
+          "checkpoint": "native-audit-c28/windows-process-checkpoint-20261115-2106.json",
+          "literalOriginalPath": "archive-audit-process-arm.json"
+        }
+      ],
+      "classification": "derived archive/receipt/source audit of retained originals",
+      "alreadyDurableByteMatches": [],
+      "disposition": "publish-exact-original-bytes",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-c28/archive-audit-process-arm.json"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/native-audit-c28/archive-audit-process-x64.json",
+      "workspaceRelativePath": "native-audit-c28/archive-audit-process-x64.json",
+      "bytes": 7505,
+      "blob": "4b559ac051487acc762dadde4296a36a7473bb01",
+      "sha256": "e2398468a07c70a25fed5559ace82955ffed92717fbea25962ffb7048db40c43",
+      "groups": [
+        "c28-windows"
+      ],
+      "originalReferences": [
+        {
+          "checkpoint": "native-audit-c28/windows-process-checkpoint-20261115-2106.json",
+          "literalOriginalPath": "archive-audit-process-x64.json"
+        }
+      ],
+      "classification": "derived archive/receipt/source audit of retained originals",
+      "alreadyDurableByteMatches": [],
+      "disposition": "publish-exact-original-bytes",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-c28/archive-audit-process-x64.json"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/native-audit-c28/c28-process-win32-arm64.zip",
+      "workspaceRelativePath": "native-audit-c28/c28-process-win32-arm64.zip",
+      "bytes": 70776,
+      "blob": "c5477fbd51bdb6d45257c0d6144f439f9eb01f78",
+      "sha256": "cc403b00257f38946f0888905bfcf46842fe892685fede6f8e0433bbedf4767e",
+      "groups": [
+        "c28-windows"
+      ],
+      "originalReferences": [
+        {
+          "checkpoint": "native-audit-c28/windows-process-checkpoint-20261115-2106.json",
+          "literalOriginalPath": "c28-process-win32-arm64.zip"
+        }
+      ],
+      "classification": "official original artifact archive; every original member recoverable",
+      "alreadyDurableByteMatches": [],
+      "disposition": "publish-exact-original-bytes",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-c28/c28-process-win32-arm64.zip"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/native-audit-c28/c28-process-win32-x64.zip",
+      "workspaceRelativePath": "native-audit-c28/c28-process-win32-x64.zip",
+      "bytes": 70615,
+      "blob": "a9db0217554ac27d569086047693d05039f5a90e",
+      "sha256": "b948518d266e7639ffb4f7f9aed3c2574b9f58902b65f40eaf90df6a266dd736",
+      "groups": [
+        "c28-windows"
+      ],
+      "originalReferences": [
+        {
+          "checkpoint": "native-audit-c28/windows-process-checkpoint-20261115-2106.json",
+          "literalOriginalPath": "c28-process-win32-x64.zip"
+        }
+      ],
+      "classification": "official original artifact archive; every original member recoverable",
+      "alreadyDurableByteMatches": [],
+      "disposition": "publish-exact-original-bytes",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-c28/c28-process-win32-x64.zip"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/native-audit-c28/independent-checkpoint-final-review.json",
+      "workspaceRelativePath": "native-audit-c28/independent-checkpoint-final-review.json",
+      "bytes": 3185,
+      "blob": "b6e8c75c62308d0ce3a056dae9db37d6f1dc71f4",
+      "sha256": "87203c0b57277d304935ad48e67e4693633c02463fa7203015682be9dbf0185c",
+      "groups": [
+        "c28-windows"
+      ],
+      "originalReferences": [],
+      "classification": "independent review record; does not itself execute or qualify new source",
+      "alreadyDurableByteMatches": [],
+      "disposition": "publish-exact-original-bytes",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-c28/independent-checkpoint-final-review.json"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/native-audit-c28/independent-checkpoint-review.json",
+      "workspaceRelativePath": "native-audit-c28/independent-checkpoint-review.json",
+      "bytes": 13405,
+      "blob": "75dbcd59ba164b5464f79c5eba30941b0f9aa40c",
+      "sha256": "7439dfc330adfd9636b430cbced4fc60917ceb8c9ed73f3fd64e34fe7560c5e9",
+      "groups": [
+        "c28-windows"
+      ],
+      "originalReferences": [],
+      "classification": "independent review record; does not itself execute or qualify new source",
+      "alreadyDurableByteMatches": [],
+      "disposition": "publish-exact-original-bytes",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-c28/independent-checkpoint-review.json"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/native-audit-c28/job-132949618051.log",
+      "workspaceRelativePath": "native-audit-c28/job-132949618051.log",
+      "bytes": 392398,
+      "blob": "8a0815102fb86e8bae68101426eef0e610fb8619",
+      "sha256": "c24268c1881ddf5f2b394f28d12654eeac6ddee5ddbc44262c3d04739e8384c4",
+      "groups": [
+        "c28-windows"
+      ],
+      "originalReferences": [
+        {
+          "checkpoint": "native-audit-c28/windows-process-checkpoint-20261115-2106.json",
+          "literalOriginalPath": "job-132949618051.log"
+        }
+      ],
+      "classification": "official original complete job log",
+      "alreadyDurableByteMatches": [],
+      "disposition": "publish-exact-original-bytes",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-c28/job-132949618051.log"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/native-audit-c28/job-132949618151.log",
+      "workspaceRelativePath": "native-audit-c28/job-132949618151.log",
+      "bytes": 422323,
+      "blob": "ef79e459d5bec09e1f15679d97f4a48c6dc83b97",
+      "sha256": "d5cd48859cd830d62786967560c50892cba1542a66de78b87075f0fea8245356",
+      "groups": [
+        "c28-windows"
+      ],
+      "originalReferences": [
+        {
+          "checkpoint": "native-audit-c28/windows-process-checkpoint-20261115-2106.json",
+          "literalOriginalPath": "job-132949618151.log"
+        }
+      ],
+      "classification": "official original complete job log",
+      "alreadyDurableByteMatches": [],
+      "disposition": "publish-exact-original-bytes",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-c28/job-132949618151.log"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/native-audit-c28/plan29-c28-windows-process-appendix.md",
+      "workspaceRelativePath": "native-audit-c28/plan29-c28-windows-process-appendix.md",
+      "bytes": 8348,
+      "blob": "fca3d08d92b6a1e7ea9fd6f0e3fd3146281086e3",
+      "sha256": "1b6753cde76dfbbd7c6fac7fe19535b5d94c0d0d57e691f33610a801b935acad",
+      "groups": [
+        "c28-windows"
+      ],
+      "originalReferences": [
+        {
+          "checkpoint": "native-audit-c28/windows-process-checkpoint-20261115-2106.json",
+          "literalOriginalPath": "plan29-c28-windows-process-appendix.md"
+        }
+      ],
+      "classification": "source-bound evidence appendix",
+      "alreadyDurableByteMatches": [],
+      "disposition": "publish-exact-original-bytes",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-c28/plan29-c28-windows-process-appendix.md"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/native-audit-c28/process-jobs-snapshot-20261115-2102.json",
+      "workspaceRelativePath": "native-audit-c28/process-jobs-snapshot-20261115-2102.json",
+      "bytes": 30243,
+      "blob": "3fe942074d8193263502badb4e61e099ac1cb9a0",
+      "sha256": "6347ef5887913fd1a304bf1bca6b3ac27a46e16886e3ca7405237b71a912619d",
+      "groups": [
+        "c28-windows"
+      ],
+      "originalReferences": [
+        {
+          "checkpoint": "native-audit-c28/windows-process-checkpoint-20261115-2106.json",
+          "literalOriginalPath": "process-jobs-snapshot-20261115-2102.json"
+        }
+      ],
+      "classification": "saved structured API snapshot; no execution or cancellation-cause inference",
+      "alreadyDurableByteMatches": [],
+      "disposition": "publish-exact-original-bytes",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-c28/process-jobs-snapshot-20261115-2102.json"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/native-audit-c28/receipt-audit-process-windows-compact.json",
+      "workspaceRelativePath": "native-audit-c28/receipt-audit-process-windows-compact.json",
+      "bytes": 144148,
+      "blob": "622c35f2c32743cb2d53bf2e49b9e75eb0f36642",
+      "sha256": "f85d80b22935ed52f83dbdc07723cadb8b1d8f2c82c95ba85aece007916f8815",
+      "groups": [
+        "c28-windows"
+      ],
+      "originalReferences": [
+        {
+          "checkpoint": "native-audit-c28/windows-process-checkpoint-20261115-2106.json",
+          "literalOriginalPath": "receipt-audit-process-windows-compact.json"
+        }
+      ],
+      "classification": "derived archive/receipt/source audit of retained originals",
+      "alreadyDurableByteMatches": [],
+      "disposition": "publish-exact-original-bytes",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-c28/receipt-audit-process-windows-compact.json"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/native-audit-c28/source-c28-four-path-delta.json",
+      "workspaceRelativePath": "native-audit-c28/source-c28-four-path-delta.json",
+      "bytes": 1101,
+      "blob": "61b17e60a4a9ce3b31bf2af675673769f223eede",
+      "sha256": "1be745baf6bb4b696b378f00252a8359154e9082b9bdf400afcc217e199aa214",
+      "groups": [
+        "c28-windows"
+      ],
+      "originalReferences": [
+        {
+          "checkpoint": "native-audit-c28/windows-process-checkpoint-20261115-2106.json",
+          "literalOriginalPath": "source-c28-four-path-delta.json"
+        }
+      ],
+      "classification": "source identity inventory/audit; not a compiled payload reconstruction",
+      "alreadyDurableByteMatches": [],
+      "disposition": "publish-exact-original-bytes",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-c28/source-c28-four-path-delta.json"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/native-audit-c28/source-pins-process-arm.json",
+      "workspaceRelativePath": "native-audit-c28/source-pins-process-arm.json",
+      "bytes": 35432,
+      "blob": "248c78bdbe83f1ea7197787c4bc00dda888d6074",
+      "sha256": "6c6fda443f6de27f1dba2ac8baea8316ecedc2f2b3e9852bf858efd3434ae9c2",
+      "groups": [
+        "c28-windows"
+      ],
+      "originalReferences": [
+        {
+          "checkpoint": "native-audit-c28/windows-process-checkpoint-20261115-2106.json",
+          "literalOriginalPath": "source-pins-process-arm.json"
+        }
+      ],
+      "classification": "source identity inventory/audit; not a compiled payload reconstruction",
+      "alreadyDurableByteMatches": [],
+      "disposition": "publish-exact-original-bytes",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-c28/source-pins-process-arm.json"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/native-audit-c28/source-pins-process-x64.json",
+      "workspaceRelativePath": "native-audit-c28/source-pins-process-x64.json",
+      "bytes": 37007,
+      "blob": "7eedb0cfd4bc1889d26b312ecda5e3b261a49165",
+      "sha256": "53dcf02be9f7913322179665b7993287d34e6bd7db9e66fdcff4342dc995efce",
+      "groups": [
+        "c28-windows"
+      ],
+      "originalReferences": [
+        {
+          "checkpoint": "native-audit-c28/windows-process-checkpoint-20261115-2106.json",
+          "literalOriginalPath": "source-pins-process-x64.json"
+        }
+      ],
+      "classification": "source identity inventory/audit; not a compiled payload reconstruction",
+      "alreadyDurableByteMatches": [],
+      "disposition": "publish-exact-original-bytes",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-c28/source-pins-process-x64.json"
+    },
+    {
+      "localPath": "/workspace/scratch/82d3f9ba6b85/native-audit-c28/windows-process-checkpoint-20261115-2106.json",
+      "workspaceRelativePath": "native-audit-c28/windows-process-checkpoint-20261115-2106.json",
+      "bytes": 4029,
+      "blob": "e0fdbf54040fb28b5d93e468486bd5eb60921552",
+      "sha256": "c4273c41ce7f7fb2c0f129cb04ef1deb4d614bde131acbe5db0ed451332c3063",
+      "groups": [
+        "c28-windows"
+      ],
+      "originalReferences": [],
+      "classification": "frozen evidence checkpoint and original path/hash declarations",
+      "alreadyDurableByteMatches": [],
+      "disposition": "publish-exact-original-bytes",
+      "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-c28/windows-process-checkpoint-20261115-2106.json"
+    }
+  ],
+  "derivedAppendix": {
+    "path": "/workspace/scratch/82d3f9ba6b85/native-checkpoint-publication-inventory/general-terminal-appendix.md",
+    "bytes": 2842,
+    "blob": "89067f499e94ef26a9d4d17c29f84a55589acfdb",
+    "sha256": "b76ebb47d9d84ed283de21ebf7a76ff2e50ea0c48f5431985676b03f178d79b4",
+    "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/general-terminal-checkpoints/Plan29-terminal-appendix.md",
+    "alsoAppendVerbatimToPlan29": true
+  },
+  "inventoryProposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/publication-inventory.json",
+  "pathRules": [
+    "All43 original files stay unchanged;42 are proposed for new exact-byte publication and one existingH file is reused by its full immutable identity.",
+    "The c28 checkpoint original literal ../native-audit-2cb/source-2cb-seven-path-delta.json remains verbatim historical data. Resolve that one dependency using this inventory to the already durable evidence/original-2cb-2026-11-15/source-2cb-seven-path-delta.json; do not rewrite the original checkpoint or pretend its copied parent-relative path is a standalone new file.",
+    "Every new target is a unique ASCII repository-relative path below the selected evidence prefix, without traversal, backslashes, spaces or signed URLs.",
+    "Original ZIPs retain all extracted members; extraction duplicates, base64 transport, temporary download URLs and construction scripts are intentionally not added.",
+    "Finalreview612fd is a distinctWindows record; original a02 independent-checkpoint(-final)-review files remainDarwin records."
+  ],
+  "verificationScope": [
+    "All43 declared local files read and hashed; every listed checkpoint byte/blob/SHA matched its original row.",
+    "Already-durable Git blob matched exact local bytes atH; incoming4dc searched only for duplicate evidence, not used as qualification.",
+    "General4 metadata records checked for15 unique jobIDs, matchingrunID and12cancelled/3skipped terminal statuses. No raw job execution or cancellation initiator inferred.",
+    "Native archive/source/receipt correctness remains the named independent R2 scope; this inventory does not claim another full native semantic audit or execute archived content."
+  ],
+  "deferred": [
+    "Remaining c28/76 cancelled-partial artifact checkpoint is not independently ready; Native prepares it for later evidence-only publication.",
+    "Current4dc General queued/running state is not characterized by these four terminal snapshots."
+  ],
+  "actionsTaken": {
+    "projectExecutions": 0,
+    "nativeProviderExecutions": 0,
+    "newCIPolls": 0,
+    "ciMutations": 0,
+    "trackedEdits": 0,
+    "refMutations": 0
+  }
+}

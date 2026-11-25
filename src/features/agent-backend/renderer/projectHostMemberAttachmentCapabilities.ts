@@ -12,9 +12,11 @@ export function projectHostMemberAttachmentCapabilities(
     const product = { ...member };
     delete product.nativeInboxAttachmentsSupported;
     delete product.nativeInboxTextAttachmentsSupported;
+    delete product.nativeMediaTransport;
+    delete product.sessionCommands;
     if (product.removedAt || !state) return product;
     const configured = configuration.members.filter((row) => row.name === product.name);
-    if (configured.length !== 1 || configured[0].role !== 'member') return product;
+    if (configured.length !== 1) return product;
     const memberId = configured[0].memberId;
     if (state.unknownMembers.includes(memberId)) return product;
     const captures = state.launch.members.filter((row) => row.memberId === memberId);
@@ -39,10 +41,14 @@ export function projectHostMemberAttachmentCapabilities(
       session.nativeReady !== true ||
       session.sealed !== false ||
       session.custody !== 'owned' ||
-      session.phase !== 'allocated' ||
-      !session.attachmentCapabilities
+      session.phase !== 'allocated'
     )
       return product;
+    if (session.attachmentCapabilities?.nativeMedia) {
+      product.nativeMediaTransport = structuredClone(session.attachmentCapabilities.nativeMedia);
+    }
+    if (configured[0].role === 'lead') return { ...product, sessionCommands: session.sessionCommands ?? [] };
+    if (!session.attachmentCapabilities) return product;
     return {
       ...product,
       nativeInboxAttachmentsSupported: session.attachmentCapabilities.images === true,

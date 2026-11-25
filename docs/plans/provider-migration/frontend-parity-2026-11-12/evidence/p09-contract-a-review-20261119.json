@@ -1,0 +1,139 @@
+{
+  "kind": "P09_CONTRACT_A_SOURCE_REVIEW",
+  "recordedAt": "2026-11-19T17:14:10.616192+00:00",
+  "baseSourceHead": "33ea959ad1b2496ab393e04fa50e610e092224ec",
+  "authorization": {
+    "decision": "A",
+    "date": "2026-11-19",
+    "source": "Explicit owner selection in current chat",
+    "contract": "Preserve copied original path/digest revision through confirmed cleanup of every consuming original scope; all actors retaining write/rename/FD/mmap authority are trusted; writer exclusion is not claimed."
+  },
+  "files": [
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/CapturedProcess.ts",
+      "baseSha256": "f3f02e477c493becf3a401b6d01c3390d51856f43adc5b68cc8e512424aa595b",
+      "sha256": "f67d1b2a6263ba9426a5a43554dc1725e22d69c78556a614e43a9146123af446",
+      "bytes": 12682,
+      "lines": 312
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/RuntimeSourceNativeVersion.ts",
+      "baseSha256": "3d5172989237fdf15827d2116af71e395de0ca58d0d95070c5d258dd25d99e04",
+      "sha256": "6c5f746359c367c67823257a5582a81b5a709fa21a10796c2caf5e2419259030",
+      "bytes": 6801,
+      "lines": 157
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/registered-process-executable.native.ts",
+      "baseSha256": "b249d30a6168eb015658f35f5524ed4314cd7c4093afe5a14690a1ba6743df2e",
+      "sha256": "7d7a8474254d920e041ac98298f221bd2917d4167dce39fde30beaba25e0af3e",
+      "bytes": 37123,
+      "lines": 684
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/posix-exec-native.c",
+      "baseSha256": "085eeb378d9b500490300dcf1c595bf13e7979c1218f2f37f4ba6e18787441e9",
+      "sha256": "1cd5b353aaf58305fa2f55564be579d4dc97321a79c9046ab3abf0506797f152",
+      "bytes": 23555,
+      "lines": 454
+    },
+    {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "baseSha256": "01a7b3829567d0be7d83bb2dad81e25d7523d4ce54bcf891a45f05b12caa5cc1",
+      "sha256": "a0d300f687804d15aa4f939619b5d82ab04c89b15e8a334495e20d5a5843bed4",
+      "bytes": 36434,
+      "lines": 631
+    }
+  ],
+  "checks": [
+    {
+      "command": "GOMEMLIMIT=1536MiB GOMAXPROCS=2 pnpm --filter @agent-teams/legacy-agent-host build",
+      "exitCode": 0,
+      "status": "PASS",
+      "log": {
+        "name": "p09-a-host-build.log",
+        "bytes": 182,
+        "sha256": "d6efa218a38b23ad8285a933ae787d9bcd6d542c54df4d1e1c3e04bf0f5e0789",
+        "text": "$ pnpm --filter @agent-teams/task-change-ledger build\n$ node node_modules/@typescript/native/bin/tsc -p tsconfig.json\n$ node node_modules/@typescript/native/bin/tsc -p tsconfig.json\n"
+      }
+    },
+    {
+      "command": "GOMEMLIMIT=1536MiB GOMAXPROCS=2 pnpm --filter @agent-teams/legacy-agent-host typecheck:test",
+      "exitCode": 0,
+      "status": "PASS",
+      "log": {
+        "name": "p09-a-final-host-test-types.log",
+        "bytes": 69,
+        "sha256": "f453e976d298e4c9c8a5ee0134f19a02d2d39c2c100e3aed187705880615d150",
+        "text": "$ node node_modules/@typescript/native/bin/tsc -p tsconfig.test.json\n"
+      }
+    },
+    {
+      "command": "pnpm guard:source-file-size",
+      "exitCode": 0,
+      "status": "PASS",
+      "log": {
+        "name": "p09-a-source-size.log",
+        "bytes": 249,
+        "sha256": "372810c5e1fc028fe28e9e1b1be6bddd0102b2015114388e4788cde3aebde388",
+        "text": "$ node ./scripts/ci/check-source-file-size.mjs\nSource file size guard passed: 5164 production files checked, 141 frozen legacy exceptions, 800-line limit.\n81 legacy file(s) are below their frozen caps; lower those caps when committing the refactor.\n"
+      }
+    },
+    {
+      "command": "cc -std=c11 -Wall -Wextra -Werror -O2 -fsyntax-only packages/legacy-agent-host/tests/fixtures/posix-exec-native.c (controller, TEST_LIBRARY, TEST_PAYLOAD_TAG=A)",
+      "status": "PASS",
+      "reportedBy": "parity_review",
+      "boundary": "Controller recompiled after final mmap FD identity join; conditional library/payload code unchanged by that join."
+    },
+    {
+      "command": "git diff --check",
+      "status": "PASS",
+      "exitCode": 0
+    }
+  ],
+  "review": {
+    "planRounds": 2,
+    "independentReviewer": "delivery_review",
+    "status": "PASS",
+    "unresolvedFindings": [],
+    "fixedFindings": [
+      "Narrow old image-proof exception to observed Darwin compiler-default baseline, kernel-image-validity/EACCES/-67062.",
+      "Treat all other no-mutation baseline failures as fatal.",
+      "Unexpected actually attempted mutation errno remains fatal collector failure; original 0/ETXTBSY outcomes retain unchanged strict interpretation.",
+      "Join the preopened writable mmap FD to original captured regular-file dev/ino/size and bound; unmap gates cleanup."
+    ],
+    "strictOriginalAssertionBlock": {
+      "lines": 45,
+      "sha256": "0bf2df89dfd06e686768107f5631d0d86f2ef488c984fe1e744b23106c092f02",
+      "byteIdentical": true
+    },
+    "productionBehaviorChanged": false,
+    "noNewRuntimeFlagOrRegistry": true
+  },
+  "acceptance": {
+    "nativeExecuted": false,
+    "platformsPending": [
+      "linux-x64",
+      "darwin-x64",
+      "darwin-arm64"
+    ],
+    "productRows": 8,
+    "productImplementation": "Actual CapturedProcess without spawn/module mock",
+    "legacyObservations": "Preserved separately as PASS/COUNTEREXAMPLE/INCOMPLETE; historical negatives not promoted",
+    "budgetsUnchanged": {
+      "observationMs": 100000,
+      "testMs": 120000,
+      "actorMs": 15000
+    },
+    "installedRuntimeQualified": false,
+    "releaseQualified": false
+  },
+  "delivery": {
+    "checkpointBranch": "work/p09-contract-a-20261119",
+    "reason": "Publish clean source for native proof while preserving active canonical workspace gate on PR head 33ea959; adopt candidate into existing stack after review/qualification.",
+    "mainMerge": false,
+    "release": false,
+    "defaultHostActivation": false,
+    "stage2": false
+  }
+}

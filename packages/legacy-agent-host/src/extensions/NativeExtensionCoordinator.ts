@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { captureNativeExtensionTarget } from './captureNativeExtensionTarget.js';
 import { ManagementCommandError } from '../management/commandRecords.js';
+import { managementDigest } from '../management/identity.js';
 import { ExtensionMutationOwner } from './ExtensionMutationOwner.js';
 import { NativeExtensionProcess } from './NativeExtensionProcess.js';
 import { readNativeMcp, readNativePlugins } from './readNativeExtensionState.js';
@@ -91,6 +92,13 @@ export class NativeExtensionCoordinator {
   private assertCurrent(): void {
     if (this.sealed) throw new ManagementCommandError('held');
     this.options.assertCurrent();
+  }
+
+  admitProfile(profile: ClaudeManagementProfile): void {
+    this.assertCurrent();
+    const original = this.profiles.get(profile.profileId);
+    if (original && managementDigest(original) !== managementDigest(profile)) throw new ManagementCommandError('conflict');
+    if (!original) this.profiles.set(profile.profileId, structuredClone(profile));
   }
 
   private profile(profileId: string, configRevision: string): ClaudeManagementProfile {

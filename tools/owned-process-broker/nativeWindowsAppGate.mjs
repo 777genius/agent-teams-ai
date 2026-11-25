@@ -1,0 +1,715 @@
+/** TEST real packaged Windows Main: explicit metadata Refresh, explicit Retry, original UI Kill. */
+import assert from 'node:assert/strict';
+import { Buffer } from 'node:buffer';
+import { spawn, execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { createWriteStream, existsSync, readFileSync, writeSync } from 'node:fs';
+import { mkdir, realpath, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { basename, dirname, isAbsolute, join, resolve, sep } from 'node:path';
+import { performance } from 'node:perf_hooks';
+import process from 'node:process';
+import { setTimeout, clearTimeout } from 'node:timers';
+import { setTimeout as delay } from 'node:timers/promises';
+import { fileURLToPath } from 'node:url';
+import WebSocket from 'ws';
+import { Cdp } from '../../scripts/e2e/release-updater/cdp.mts';
+import {
+  packagedArtifact, preparePackagedProfile, packagedTarget,
+  retainPackagedLineage, packagedOrphanObservation, packagedDrainSnapshot, closePackagedBrowser,
+} from '../../scripts/e2e/opencode-diagnostics/packaged.mjs';
+import {
+  assertPortAvailable, processes, ownedTree, sameIdentity, createWindowsProcessObserver,
+  windowsQueryChildren,
+} from '../../scripts/e2e/opencode-diagnostics/platform.mjs';
+import { readPackagedOpenCodeV2 } from '../../scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts';
+import { captureDesktopSourceHashes, verifyDesktopSourceFreeze } from '../../scripts/legacy-agent-host/desktop-source-freeze.ts';
+import { desktopProofSources } from '../../scripts/legacy-agent-host/desktop-proof-sources.ts';
+import { desktopProofWindowsRetrySources } from '../../scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts';
+import { createDesktopUiControls, desktopJsLiteral } from '../../scripts/legacy-agent-host/desktop-ui-controls.ts';
+import { desktopProcessOwnerExpression, readDesktopProcessData } from '../../scripts/legacy-agent-host/desktop-native-process-ui.ts';
+import { hostTeamSelectionKey } from '../../src/features/agent-backend/contracts/teamSelection.ts';
+import { prepareNativeWindowsAppFixture } from './nativeWindowsAppFixture.ts';
+
+const { fetch, AbortSignal, structuredClone } = globalThis;
+const object = value => {
+  assert.ok(value && typeof value === 'object' && !Array.isArray(value));
+  return value;
+};
+const sha = bytes => createHash('sha256').update(bytes).digest('hex');
+const hash = path => sha(readFileSync(path));
+const errorText = error => error instanceof Error ? (error.stack ?? error.message).slice(0,4000) : String(error).slice(0,1000);
+// Summarize only existing current-phase observations, independently of the original failure line.
+const windowsCensusFailureLine = (phase, censusReads, censusReadsTruncated) => {
+  const fallback = JSON.stringify({ kind: 'TEST_WINDOWS_PACKAGED_CENSUS_FAILURE', phase, status: 'unknown' }) + '\n';
+  try {
+    const rounded = value => {
+      assert.ok(typeof value === 'number' && Number.isFinite(value) && value >= 0);
+      const result = Math.round(value); assert.ok(Number.isSafeInteger(result)); return result;
+    };
+    assert.ok(Array.isArray(censusReads) && censusReads.length <= 512);
+    assert.equal(typeof censusReadsTruncated, 'boolean');
+    const census = { counts: { 'process-census': 0, 'process-listener-snapshot': 0 },
+      totalMs: 0, maxMs: 0, lastMs: null, failedReads: 0, truncated: censusReadsTruncated };
+    for (const row of censusReads) {
+      assert.ok(row && typeof row === 'object' && !Array.isArray(row) && typeof row.phase === 'string');
+      if (row.phase !== phase) continue;
+      assert.ok(row.operation === 'process-census' || row.operation === 'process-listener-snapshot');
+      rounded(row.startMs); rounded(row.endMs);
+      assert.ok(row.endMs >= row.startMs); assert.equal(typeof row.returned, 'boolean');
+      const elapsed = rounded(row.endMs - row.startMs);
+      census.counts[row.operation]++; census.totalMs = rounded(census.totalMs + elapsed);
+      census.maxMs = Math.max(census.maxMs, elapsed); census.lastMs = elapsed;
+      if (!row.returned) census.failedReads++;
+    }
+    const line = JSON.stringify({ kind: 'TEST_WINDOWS_PACKAGED_CENSUS_FAILURE', phase, status: 'observed', census }) + '\n';
+    return Buffer.byteLength(line, 'utf8') <= 1024 ? line : fallback;
+  } catch { return fallback; }
+};
+const repository = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
+const args = process.argv.slice(2);
+assert.equal(args.length, 6, 'Four finite inputs plus the original controller sandbox pair');
+const [executable, broker, queryFixture, receiptPath, controllerFlag, controllerSandbox] = args;
+assert.equal(controllerFlag, '--controller-sandbox');
+assert.ok(isAbsolute(controllerSandbox) && !/[\r\n\0]/u.test(controllerSandbox));
+for (const path of [executable, broker, queryFixture, receiptPath])
+  assert.ok(isAbsolute(path) && resolve(path) === path && !/[\r\n\0]/u.test(path));
+assert.equal(process.platform, 'win32');
+assert.ok(process.arch === 'x64' || process.arch === 'arm64');
+assert.equal(process.version, 'v24.21.0');
+assert.match(process.env.EXPECTED_SOURCE_SHA ?? '', /^[a-f0-9]{40}$/);
+assert.match(basename(executable), /\.exe$/i);
+assert.ok(!/(?:setup|uninstall)/i.test(basename(executable)));
+assert.equal(existsSync(receiptPath), false);
+const sourceHead = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repository, encoding: 'utf8' }).trim();
+assert.equal(sourceHead, process.env.EXPECTED_SOURCE_SHA);
+const root = await realpath(controllerSandbox);
+assert.equal(dirname(root), await realpath(tmpdir()), 'Original controller temporary root');
+assert.match(basename(root), /^opg[0-9a-f]+\.tmp$/i);
+assert.equal(await realpath(process.cwd()), root, 'Original controller-selected current directory');
+const evidenceRoot = (await realpath(dirname(receiptPath))).toLowerCase();
+assert.ok(evidenceRoot !== root.toLowerCase() && !evidenceRoot.startsWith(root.toLowerCase() + sep),
+  'Evidence remains outside the original removable controller sandbox');
+const controller = await realpath(join(dirname(queryFixture), 'owned-process-gate-controller.exe'));
+const initialCensus = processes();
+assert.ok(initialCensus.length <= 10000, 'Complete original controller and driver census');
+const driverIdentity = object(initialCensus.find(row => row.pid === process.pid));
+const controllerIdentity = object(initialCensus.find(row => row.pid === process.ppid));
+sameIdentity(driverIdentity, driverIdentity); sameIdentity(controllerIdentity, controllerIdentity);
+assert.equal(driverIdentity.parent, controllerIdentity.pid, 'Actual original controller parent');
+assert.equal(await realpath(driverIdentity.executable), await realpath(process.execPath));
+assert.equal(await realpath(controllerIdentity.executable), controller, 'Exact selected native controller');
+const artifact = await packagedArtifact(executable);
+const resourcesRoot = join(dirname(artifact.app.path), 'resources/legacy-agent-host');
+const packagedCapture = {
+  resourcesRoot, manifestSha256: hash(join(resourcesRoot, 'opencode-v2-candidate.json')),
+  appAsar: artifact.archive.path, appAsarSha256: artifact.archive.sha256,
+};
+assert.equal(packagedCapture.manifestSha256, process.env.OPENCODE_V2_PACKAGED_MANIFEST_SHA256);
+const packaged = await readPackagedOpenCodeV2(packagedCapture);
+assert.equal(packaged.manifest.sourceHead, sourceHead);
+assert.equal(packaged.manifest.platform, 'win32-' + process.arch);
+assert.equal(await realpath(broker), join(resourcesRoot, 'windows-retry-custody/owned-process-broker.exe'));
+const sources = [...new Set([...desktopProofSources, ...desktopProofWindowsRetrySources])];
+const sourceHashes = await captureDesktopSourceHashes(repository, sources);
+const profileData = {
+  root, home: join(root, 'app-home'), temp: join(root, 'app-temp'), userData: join(root, 'app-user-data'),
+};
+const baseEnvironment = await preparePackagedProfile(profileData);
+await writeFile(join(baseEnvironment.AGENT_TEAMS_ELECTRON_CLAUDE_ROOT, 'agent-teams-config.json'),
+  JSON.stringify({ general: { appLocale: 'en', agentLanguage: 'en', theme: 'dark' } }), { flag: 'wx' });
+const fixtureRoot = join(root, 'fixture');
+await mkdir(fixtureRoot);
+const fixture = await prepareNativeWindowsAppFixture({
+  root: await realpath(fixtureRoot), broker, fixture: queryFixture, controller, appUserData: profileData.userData,
+  packaged: { nodeExecutable: packaged.node, nodeVersion: 'v' + packaged.manifest.node.version, hostEntry: packaged.entry },
+});
+const selection = hostTeamSelectionKey(fixture.handleId);
+const appEnvironment = Object.freeze({ ...baseEnvironment, ...fixture.metadataEnvironment,
+  AGENT_TEAMS_BACKEND_DESCRIPTOR_PATH: fixture.descriptorPath,
+  AGENT_TEAMS_BACKEND_DESCRIPTOR_SHA256: fixture.descriptorSha256,
+});
+const logPath = receiptPath.replace(/\.json$/i, '') + '.app.log';
+const proof = {
+  kind: 'TEST_WINDOWS_PACKAGED_SAME_MAIN_PROCESS_UI', status: 'INCOMPLETE', cleanup: false,
+  sourceHead, platform: 'win32-' + process.arch, nodeVersion: process.version,
+  root, originalController: controllerIdentity, originalDriver: driverIdentity,
+  selection, descriptorSha256: fixture.descriptorSha256,
+  packaged: { artifact, capture: packagedCapture, node: packaged.node, hostEntry: packaged.entry,
+    nodeSha256: packaged.manifest.node.binarySha256, hostEntrySha256: packaged.manifest.hostEntrySha256 },
+  selectedSourceHashes: sourceHashes, originalInputPins: fixture.pins,
+  counts: { mainStarts: 0, initialRuntimeOpen: 0, businessInput: 0, refreshClicks: 0, retryClicks: 0, uiStops: 0, quit: 0 },
+  phases: [], uiSteps: [], screenshots: [], appLog: logPath,
+  censusReads: [], censusReadsTruncated: false, queryExplanations: [],
+};
+let app, cdp, appLog, main, hostA, hostB, writerA, exit, exitPromise, binding, censusObserver;
+let lineage = [], startedAt, outerDeadline, activeDeadline, activePhase = 'prepare';
+let acceptingExit = false, completed = false, primaryError;
+let quitStarted = false, shutdownResult;
+const remaining = () => {
+  const left = Math.floor(Math.min(outerDeadline, activeDeadline) - performance.now());
+  assert.ok(left > 0, 'Original Windows UI phase expired: ' + activePhase);
+  return left;
+};
+const begin = (name, milliseconds) => {
+  activePhase = name;
+  activeDeadline = Math.min(outerDeadline, performance.now() + milliseconds);
+  const phase = { phase: name, atMs: performance.now() - startedAt, budgetMs: milliseconds };
+  proof.phases.push(phase);
+  try {
+    const line = JSON.stringify({ kind: 'TEST_WINDOWS_PACKAGED_UI_PHASE', ...phase }) + '\n';
+    if (Buffer.byteLength(line, 'utf8') <= 512) writeSync(1, line);
+  } catch { /* The original phase admission remains authoritative. */ }
+  remaining();
+};
+const within = async action => {
+  const left = remaining();
+  let timer;
+  try {
+    const result = await Promise.race([Promise.resolve().then(action), new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error('Original Windows UI phase expired: ' + activePhase)), left);
+    })]);
+    remaining();
+    return result;
+  } finally { clearTimeout(timer); }
+};
+const check = () => {
+  remaining();
+  if (!acceptingExit) {
+    fixture.assertPeer();
+    assert.equal(exit, undefined, 'Original packaged Main must remain alive');
+  }
+};
+const freshWindowsObservation = () => {
+  assert.ok(censusObserver, 'Original Windows query owner was created');
+  return censusObserver.snapshot(Math.min(30000, remaining()));
+};
+const poll = async (read, label) => {
+  void label;
+  for (;;) {
+    check();
+    const value = await within(read);
+    if (value !== false && value !== null && value !== undefined) return value;
+    await delay(Math.min(100, remaining()));
+  }
+};
+const validateCensus = (snapshot, observer) => {
+  assert.ok(snapshot.length <= 10000, 'Complete original Windows process census');
+  sameIdentity(controllerIdentity, snapshot.find(row => row.pid === controllerIdentity.pid));
+  const currentDriver = snapshot.find(row => row.pid === driverIdentity.pid);
+  sameIdentity(driverIdentity, currentDriver);
+  assert.equal(currentDriver.parent, controllerIdentity.pid, 'Same original controller parent');
+  const liveMain = main && snapshot.find(row => row.pid === main.pid && row.birth === main.birth);
+  if (main && !acceptingExit) sameIdentity(main, liveMain);
+  if (liveMain) {
+    const retained = retainPackagedLineage(lineage, ownedTree(snapshot, main));
+    assert.equal(retained.truncated, false); lineage = retained.records;
+  }
+  const queryChildren = windowsQueryChildren(snapshot, observer, driverIdentity);
+  assert.ok(!lineage.some(row => row.pid === observer.pid && row.birth === observer.birth),
+    'Current query must remain outside the original App lineage');
+  const orphans = packagedOrphanObservation(lineage, snapshot);
+  assert.equal(orphans.censusTruncated, false); assert.equal(orphans.candidatesTruncated, false);
+  const explained = orphans.candidates.filter(candidate =>
+    candidate.currentParent?.pid === observer.pid && candidate.currentParent.birth === observer.birth &&
+    queryChildren.some(child => child.pid === candidate.pid && child.parent === candidate.parent && child.birth === candidate.birth));
+  assert.deepEqual(orphans.candidates.filter(candidate => !explained.includes(candidate)), [],
+    'No unexplained child of any original retained ancestor');
+  if (explained.length) {
+    assert.ok(proof.queryExplanations.length < 512, 'Original query explanation bound');
+    proof.queryExplanations.push({
+      phase: activePhase, observer: { ...observer },
+      driver: { pid: driverIdentity.pid, parent: driverIdentity.parent, birth: driverIdentity.birth },
+      children: explained.map(({ pid, parent, birth }) => ({ pid, parent, birth })),
+      observationOnly: true, signalAuthorized: false,
+    });
+  }
+  remaining();
+  return snapshot;
+};
+const observeCensus = (operation, read) => {
+  const phase = activePhase;
+  let from;
+  try { from = performance.now(); } catch { /* Observation only. */ }
+  let returned = false;
+  try {
+    const value = read(); returned = true; return value;
+  } finally {
+    try {
+      if (from !== undefined) {
+        if (proof.censusReads.length < 512) proof.censusReads.push({
+          phase, operation, startMs: from - startedAt, endMs: performance.now() - startedAt, returned,
+        });
+        else proof.censusReadsTruncated = true;
+      }
+    } catch { /* Preserve the original read result or refusal. */ }
+  }
+};
+const captureCensus = () => {
+  check();
+  const observation = observeCensus('process-census', freshWindowsObservation);
+  return validateCensus(observation.processes, observation.observer);
+};
+const assertOwnedRenderer = () => {
+  check();
+  const observation = observeCensus('process-listener-snapshot', freshWindowsObservation);
+  const snapshot = validateCensus(observation.processes, observation.observer), ids = observation.listeners;
+  assert.ok(ids.length > 0 && ids.every(pid => snapshot.some(current =>
+    current.pid === pid && lineage.some(original => original.pid === pid && original.birth === current.birth))),
+  'CDP listener belongs to this original Main family');
+  remaining();
+};
+const readJson = async path => {
+  const response = await fetch('http://127.0.0.1:9222' + path,
+    { signal: AbortSignal.timeout(Math.min(3000, remaining())), redirect: 'error' });
+  assert.equal(response.status, 200);
+  return response.json();
+};
+const port = {
+  async send(method, params = {}) {
+    check();
+    const result = await within(() => cdp.send(method, params));
+    check(); return result;
+  },
+  async evaluate(expression) {
+    const guarded = proof.rendererUrl === undefined ? expression : '(async()=>{const expected=' +
+      desktopJsLiteral(proof.rendererUrl) + ',preload=window.electronAPI,backend=preload?.agentBackend;' +
+      'const current=()=>{if(String(location.href).split(/[?#]/u)[0]!==expected||window.electronAPI!==preload||preload?.agentBackend!==backend)' +
+      'throw new Error("Original packaged renderer changed");};current();const value=await (' + expression + ');current();return value;})()';
+    const response = await port.send('Runtime.evaluate',
+      { expression: guarded, returnByValue: true, awaitPromise: true });
+    assert.equal(response.exceptionDetails, undefined, 'Original renderer evaluation: ' +
+      String(response.exceptionDetails?.exception?.description ?? response.exceptionDetails?.text ?? ''));
+    return response.result.value;
+  },
+};
+const originalBinding = async () => {
+  assertOwnedRenderer();
+  const snapshot = object(await port.evaluate('(async()=>await window.electronAPI.agentBackend.getConnections())()'));
+  assert.equal(snapshot.state, 'ready'); assert.ok(Array.isArray(snapshot.bindings) && snapshot.bindings.length === 1);
+  const value = object(snapshot.bindings[0]);
+  assert.deepEqual(value.handle, { handleId: fixture.handleId });
+  assert.equal(value.label, fixture.prepared.profile.teams[0].binding.teamName);
+  assert.deepEqual(value.members, [{ memberId: 'alice-id', label: 'alice' }]);
+  if (binding) assert.deepEqual(value, binding, 'Same whole original public binding after recovery');
+  return value;
+};
+const invoke = async (operation, commandId, payload) => {
+  assertOwnedRenderer();
+  const request = { operation, commandId, handle: { handleId: fixture.handleId }, payload };
+  const result = object(await port.evaluate('(async()=>await window.electronAPI.agentBackend.invoke(' +
+    desktopJsLiteral(request) + '))()'));
+  assert.equal(result.ok, true, 'Original public ' + operation + ': ' + JSON.stringify(result));
+  return object(result.value);
+};
+const readRuntime = () => invoke('runtime.read', 'TEST-windows-original-runtime-read', { memberId: 'alice-id' });
+const readWriter = () => {
+  try { return fixture.writer(); }
+  catch (error) { if (error?.code === 'ENOENT') return null; throw error; }
+};
+const assertHost = (writer, snapshot) => {
+  const selected = snapshot.filter(row => row.pid === writer.pid);
+  assert.equal(selected.length, 1);
+  const host = selected[0];
+  assert.equal(host.parent, main.pid, 'Original Main is the real Host parent');
+  assert.equal(String(host.executable).toLowerCase(), packaged.node.toLowerCase());
+  sameIdentity(main, snapshot.find(row => row.pid === main.pid));
+  assert.ok(lineage.some(row => row.pid === host.pid && row.birth === host.birth));
+  return host;
+};
+const assertHostBirths = () => {
+  assert.ok(main && hostA, 'Original Main and Host writer identities were captured');
+  const expected = [hostA, ...(hostB ? [hostB] : [])].map(host => ({ pid: host.pid, parentPid: main.pid }));
+  const rows = fixture.hostBirths();
+  assert.deepEqual(rows, expected, 'Only the original Host and explicit Retry successor executed');
+  proof.hostBirths = rows;
+  proof.actualHostSuccessors = rows.length - 1;
+  return rows;
+};
+const screenshot = async name => {
+  assertOwnedRenderer();
+  const data = await port.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+  const bytes = Buffer.from(data.data, 'base64');
+  assert.ok(bytes.length > 0 && bytes.length <= 16 * 1024 * 1024);
+  const path = receiptPath.replace(/\.json$/i, '') + '.' + name + '.png';
+  await within(() => writeFile(path, bytes, { flag: 'wx' }));
+  proof.screenshots.push({ phase: activePhase, path, bytes: bytes.length, sha256: sha(bytes) });
+};
+const processOwner = (row, stopped = false) =>
+  desktopProcessOwnerExpression(selection, row.id, stopped ? null : row.processRef);
+const readProcesses = async () => {
+  const value = await readDesktopProcessData(port, selection,
+    { rendererUrl: proof.rendererUrl, bindingJson: JSON.stringify(binding) });
+  fixture.assertRows(value.processes);
+  return value;
+};
+const killTarget = row => '(() => { const matches=[...document.querySelectorAll(' +
+  desktopJsLiteral('[data-section-id="processes"] span.font-medium') + ')].filter(node=>node.textContent?.trim()===' +
+  desktopJsLiteral(row.label) + '); if(matches.length!==1)return {unavailableTarget:true,matches:matches.length};' +
+  'const parent=matches[0].parentElement;if(!parent)return {unavailableTarget:true,matches:0};' +
+  'const pid=parent.querySelector("span.font-mono"), buttons=[...parent.querySelectorAll("button")].filter(b=>b.textContent.trim()==="Kill");' +
+  'if(buttons.length!==1)return {unavailableTarget:true,matches:buttons.length};const button=buttons[0];' +
+  'if(pid?.textContent?.trim()!==' + desktopJsLiteral('PID' + row.pid) +
+  '||!button||button.textContent?.trim()!=="Kill"||button.disabled)return {unavailableTarget:true,matches:1};' +
+  'const rect=button.getBoundingClientRect(),x=rect.x+rect.width/2,y=rect.y+rect.height/2,hit=document.elementFromPoint(x,y);' +
+  'if(rect.width<=0||rect.height<=0||!hit||!(hit===button||button.contains(hit)))return {unavailableTarget:true,matches:1};' +
+  'return {x,y,tag:button.tagName,text:button.textContent.trim()}; })()';
+const quit = async () => {
+  if (quitStarted) return shutdownResult;
+  quitStarted = true;
+  acceptingExit = true;
+  begin('original-product-Quit', 30000);
+  proof.counts.quit++;
+  proof.quit = { attempted: true };
+  const snapshot = captureCensus();
+  if (main && snapshot.some(row => row.pid === main.pid && row.birth === main.birth)) {
+    try {
+      proof.quit.acknowledgement = await within(() => closePackagedBrowser({
+        assertOwnership: async () => {
+          const current = captureCensus();
+          sameIdentity(main, current.find(row => row.pid === main.pid));
+          const ids = freshWindowsObservation().listeners;
+          assert.ok(ids.length > 0 && ids.every(pid => lineage.some(row => row.pid === pid &&
+            current.some(value => value.pid === pid && value.birth === row.birth))));
+        },
+        readVersion: () => readJson('/json/version'), connect: endpoint => new WebSocket(endpoint),
+        timeoutMs: Math.min(3000, remaining()), receipt: proof.quit,
+      }));
+    } catch (error) { proof.quit.acknowledgementFailure = errorText(error); }
+  }
+  if (exitPromise) proof.appExit = await within(() => exitPromise);
+  assert.deepEqual(proof.appExit, { code: 0, signal: null }, 'Actual product Main exits successfully');
+  const final = await poll(async () => {
+    const current = captureCensus(), ids = freshWindowsObservation().listeners;
+    const state = packagedDrainSnapshot(lineage, current, ids);
+    if (!state.drained) return false;
+    return { ...state, census: current, lineage };
+  }, 'original complete App family and listener release');
+  proof.finalCensus = final;
+  const command = object(proof.quit.command);
+  assert.deepEqual(Object.keys(command).sort(), ['at', 'id', 'method']);
+  assert.equal(command.id, 1); assert.equal(command.method, 'Browser.close');
+  assert.ok(Number.isSafeInteger(command.at) && command.at > 0, 'Original product Quit was actually sent');
+  shutdownResult = final;
+  return final;
+};
+
+try {
+  await assertPortAvailable();
+  startedAt = performance.now(); outerDeadline = startedAt + 300000;
+  begin('packaged-App-startup', 120000);
+  censusObserver = createWindowsProcessObserver();
+  appLog = createWriteStream(logPath, { flags: 'wx' });
+  appLog.on('error', error => { proof.appLogFailure = errorText(error); });
+  app = spawn(artifact.app.path, ['--remote-debugging-port=9222'], {
+    cwd: root, env: appEnvironment, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: false,
+  });
+  proof.counts.mainStarts++;
+  app.stdout.pipe(appLog, { end: false }); app.stderr.pipe(appLog, { end: false });
+  exitPromise = new Promise(resolve => {
+    app.once('error', error => { exit = { spawnError: errorText(error) }; resolve(exit); });
+    app.once('close', (code, signal) => { exit = { code, signal }; resolve(exit); });
+  });
+  assert.ok(Number.isInteger(app.pid) && app.pid > 1);
+  main = await poll(async () => freshWindowsObservation().processes.find(row => row.pid === app.pid) ?? false, 'original actual Main birth');
+  assert.equal(String(main.executable).toLowerCase(), artifact.app.path.toLowerCase());
+  proof.originalMain = main;
+  await poll(async () => {
+    const current = captureCensus(), ids = freshWindowsObservation().listeners;
+    if (!ids.length) return false;
+    assert.ok(ids.every(pid => lineage.some(row => row.pid === pid &&
+      current.some(value => value.pid === pid && value.birth === row.birth))));
+    return true;
+  }, 'original Main CDP ownership');
+  const target = await poll(async () => {
+    assertOwnedRenderer();
+    const targets = await readJson('/json/list');
+    if (!Array.isArray(targets) || !targets.some(row => row.type === 'page' && String(row.url).startsWith('file:'))) return false;
+    return packagedTarget(targets, artifact.renderer, true);
+  }, 'actual packaged renderer target');
+  cdp = await within(() => Cdp.connect(target.webSocketDebuggerUrl));
+  await port.send('Runtime.enable'); await port.send('Page.enable');
+  proof.rendererUrl = String(target.url).split(/[?#]/u)[0];
+  assert.equal(await port.evaluate('String(location.href).split(/[?#]/u)[0]'), proof.rendererUrl);
+  await poll(() => port.evaluate('Boolean(window.electronAPI?.agentBackend?.getConnections && window.electronAPI?.agentBackend?.invoke)'), 'original public preload');
+  binding = structuredClone(await originalBinding()); proof.originalPublicBinding = binding;
+  writerA = await poll(async () => readWriter(), 'original Host writer publication');
+  hostA = assertHost(writerA, captureCensus());
+  proof.originalHost = { identity: hostA, writer: writerA };
+  assertHostBirths();
+
+  begin('one-initial-Runtime-Open', 45000);
+  proof.counts.initialRuntimeOpen++;
+  const opened = await invoke('runtime.open', 'TEST-windows-one-original-open', { memberId: 'alice-id' });
+  assert.equal(opened.nativeReady, true); assert.equal(opened.attached, true);
+  proof.originalOpen = opened;
+  begin('one-original-business-input-and-UI', 35000);
+  proof.counts.businessInput++;
+  const sent = await invoke('message.send', fixture.bootstrap.commandId, fixture.bootstrap.payload);
+  assert.equal(sent.phase, 'completed'); assert.equal(sent.operation, 'message.send');
+  assert.ok(typeof sent.deliveryId === 'string' && sent.deliveryId.length > 0);
+  proof.originalMessage = sent;
+  const terminal = await poll(async () => {
+    const state = await readRuntime();
+    assert.ok(Array.isArray(state.inputs) && state.inputs.length === 1);
+    const input = state.inputs[0];
+    assert.equal(input.inputId, sent.deliveryId);
+    if (input.phase !== 'terminal') return false;
+    assert.equal(input.terminal, 'succeeded'); return state;
+  }, 'original bootstrap terminal result');
+  proof.originalRuntime = terminal;
+  const original = await within(() => fixture.captureOriginal(activeDeadline));
+  proof.originalProcesses = original;
+  const providerPid = original.registrations[0].capture.root.pid;
+  assert.ok(lineage.some(row => row.pid === providerPid &&
+    captureCensus().some(current => current.pid === row.pid && current.birth === row.birth)));
+  const ui = createDesktopUiControls(port, {
+    assertOwnedRenderer,
+    step: value => {
+      assert.ok(proof.uiSteps.length < 128);
+      const entry = { phase: activePhase, ...value };
+      try { entry.atMs = performance.now() - startedAt; } catch { /* Observation only. */ }
+      proof.uiSteps.push(entry);
+    },
+  });
+  await ui.observeInput();
+  await ui.waitRead('Boolean(document.querySelector("#sidebar-tasks-panel"))', 'original sidebar', remaining());
+  await ui.clickSidebar(fixture.uiSeed.subject);
+  await ui.waitRead('Boolean(document.querySelector(\'[data-section-id="processes"]\'))', 'original Processes rows', remaining());
+  if (await port.evaluate('Boolean(document.querySelector(\'[data-section-id="processes"] button[aria-label="Expand section"]\'))'))
+    await ui.click('[data-section-id="processes"] button[aria-label="Expand section"]', 'expand original Processes section');
+  for (const row of original.rows) {
+    const owner = object(await ui.waitRead(processOwner(row), 'original exact process props', remaining()));
+    assert.equal(owner.teamName, selection); assert.deepEqual(owner.process,
+      { ...row, observation: 'same-live', canTerminate: true });
+  }
+  proof.beforeCrashPublic = await readProcesses();
+  await screenshot('before-crash');
+
+  begin('actual-Host-A-exit-and-metadata-Refresh', 10000);
+  fixture.crashOriginal();
+  proof.hostExitCensus = await poll(async () => {
+    const current = captureCensus();
+    if (current.some(row => row.pid === hostA.pid && row.birth === hostA.birth)) return false;
+    return current;
+  }, 'positive original Host A birth absence');
+  await within(() => fixture.afterOriginalExit(activeDeadline));
+  const surface = '[data-testid="host-backend-recovery"]';
+  await ui.waitRead('Boolean(document.querySelector(' + desktopJsLiteral(surface) + '))', 'retained Team recovery surface', remaining());
+  proof.counts.refreshClicks++;
+  await ui.click(surface + ' button', 'explicit original metadata Refresh', 'Refresh');
+  proof.readError = await ui.waitRead('(() => { const surface=document.querySelector(' + desktopJsLiteral(surface) + ');' +
+    'if(!surface)return null; const errors=[...surface.querySelectorAll(\'[role="alert"] p\')].map(node=>node.textContent?.trim())' +
+    '.filter(text=>text==="Host team read unavailable"||text==="Host teams unavailable");' +
+    'const buttons=[...surface.querySelectorAll("button")]; if(errors.length!==1||!buttons.some(b=>b.textContent.trim()==="Refresh"&&!b.disabled)' +
+    '||!buttons.some(b=>b.textContent.trim()==="Retry"&&!b.disabled))return null;return errors[0];})()',
+  'genuine closed Host read marker with separate controls', remaining());
+  const retainedRows = await ui.waitRead('(() => { const rows=[' +
+    original.rows.map(row => processOwner(row)).join(',') +
+    ']; return rows.every(Boolean) ? rows : null; })()',
+  'original rows retained during outage', remaining());
+  assert.ok(Array.isArray(retainedRows));
+  assert.equal(retainedRows.length, original.rows.length);
+  for (const [index, row] of original.rows.entries())
+    assert.equal(object(retainedRows[index]).process.processRef, row.processRef);
+
+  assertHostBirths();
+  begin('one-explicit-same-Main-Retry', 10000);
+  let retryUiSampleCount = 0, retryUiLast = null, retryUiLastAtMs = null;
+  const retryUiBase = { schemaVersion: 1, source: 'original-recovery-wait', atomicWithFailure: false };
+  const retryUiStages = { clickReturnedMs: null, writerObservedMs: null, hostCheckedMs: null, uiReadyMs: null };
+  const publishRetryUi = () => {
+    try {
+      const observation = { ...retryUiBase, stages: { ...retryUiStages }, sampleCount: Math.min(128, retryUiSampleCount),
+        sampleCountCapped: retryUiSampleCount > 128, lastAtMs: retryUiLastAtMs,
+        last: retryUiLast === null ? null : { ...retryUiLast } };
+      if (Buffer.byteLength(JSON.stringify(observation), 'utf8') <= 512) proof.retryUiObservation = observation;
+    } catch { /* Passive observation cannot change the original readiness result. */ }
+  };
+  const recordRetryUi = (stage, last) => {
+    let atMs = null;
+    try {
+      const elapsed = Math.round(performance.now() - startedAt - proof.phases.at(-1).atMs);
+      if (Number.isSafeInteger(elapsed) && elapsed >= 0) atMs = elapsed;
+    } catch { /* Failed timing does not discard valid facts or decide readiness. */ }
+    if (stage === 'sample') {
+      if (retryUiSampleCount < 129) retryUiSampleCount++;
+      retryUiLast = last; retryUiLastAtMs = atMs;
+    } else retryUiStages[stage] = atMs;
+    publishRetryUi();
+  };
+  publishRetryUi();
+  proof.counts.retryClicks++;
+  await ui.click(surface + ' button', 'explicit product Retry once', 'Retry');
+  recordRetryUi('clickReturnedMs');
+  const successorWriter = await poll(async () => {
+    const writer = readWriter();
+    if (!writer || writer.pid === writerA.pid) return false;
+    assert.notEqual(writer.token, writerA.token); return writer;
+  }, 'actual successor writer acquisition');
+  recordRetryUi('writerObservedMs');
+  hostB = assertHost(successorWriter, captureCensus());
+  assert.notEqual(hostB.pid, hostA.pid);
+  proof.successorHost = { identity: hostB, writer: successorWriter };
+  assertHostBirths();
+  recordRetryUi('hostCheckedMs');
+  await ui.waitRead('(() => {const s=document.querySelector(' + desktopJsLiteral(surface) +
+    ');let firstRefresh=null,refresh="not-observed",retryPresent=null,alertPresent=null;' +
+    'if(!s)return {surfacePresent:false,refresh,firstRefreshBusy:null,retryPresent,alertPresent,ready:false};' +
+    'const b=[...s.querySelectorAll("button")];refresh="absent";' +
+    'const ready=b.some(x=>{if(x.textContent.trim()!=="Refresh")return false;if(!firstRefresh)firstRefresh=x;' +
+    'const enabled=!x.disabled;refresh=enabled?"enabled":"disabled";return enabled;})' +
+    '&&!(retryPresent=b.some(x=>x.textContent.trim()==="Retry"))&&!(alertPresent=!!s.querySelector(\'[role="alert"]\'));' +
+    'let firstRefreshBusy=null;try{if(firstRefresh){const busy=firstRefresh.getAttribute("aria-busy");' +
+    'firstRefreshBusy=busy==="true"?true:busy==="false"?false:null;}}catch{}' +
+    'return {surfacePresent:true,refresh,firstRefreshBusy,retryPresent,alertPresent,ready};})()',
+  'original refreshed Team after positive product recovery', remaining(), value => {
+    let last, ready;
+    try {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+      const prototype = Object.getPrototypeOf(value);
+      if (prototype !== Object.prototype && prototype !== null) return false;
+      const names = ['surfacePresent', 'refresh', 'firstRefreshBusy', 'retryPresent', 'alertPresent', 'ready'];
+      const keys = Reflect.ownKeys(value);
+      if (keys.length !== names.length || names.some(name => !keys.includes(name))) return false;
+      const fields = names.map(name => Object.getOwnPropertyDescriptor(value, name));
+      if (fields.some(field => !field || !Object.hasOwn(field, 'value'))) return false;
+      const [surfacePresent, refresh, firstRefreshBusy, retryPresent, alertPresent, observedReady] = fields.map(field => field.value);
+      if (typeof surfacePresent !== 'boolean' || typeof observedReady !== 'boolean' ||
+        !['not-observed', 'absent', 'disabled', 'enabled'].includes(refresh) ||
+        ![firstRefreshBusy, retryPresent, alertPresent].every(field => field === null || typeof field === 'boolean')) return false;
+      if (!surfacePresent && (refresh !== 'not-observed' || firstRefreshBusy !== null || retryPresent !== null || alertPresent !== null) ||
+        surfacePresent && refresh === 'not-observed' || refresh === 'absent' && firstRefreshBusy !== null) return false;
+      if (refresh !== 'enabled' ? retryPresent !== null || alertPresent !== null :
+        typeof retryPresent !== 'boolean' || (retryPresent ? alertPresent !== null : typeof alertPresent !== 'boolean')) return false;
+      ready = surfacePresent && refresh === 'enabled' && retryPresent === false && alertPresent === false;
+      if (observedReady !== ready) return false;
+      last = { surfacePresent, refresh, firstRefreshBusy, retryPresent, alertPresent, ready };
+    } catch { return false; }
+    recordRetryUi('sample', last);
+    return ready;
+  });
+  recordRetryUi('uiReadyMs');
+  await originalBinding();
+  await within(() => fixture.afterRetry(activeDeadline));
+  proof.afterRetryPublic = await readProcesses();
+  const retryRows = await ui.waitRead('(() => { const rows=[' +
+    original.rows.map(row => processOwner(row)).join(',') +
+    ']; return rows.every(Boolean) ? rows : null; })()',
+  'same original process refs after Retry', remaining());
+  assert.ok(Array.isArray(retryRows));
+  assert.equal(retryRows.length, original.rows.length);
+  for (const [index, row] of original.rows.entries()) {
+    const owner = object(retryRows[index]);
+    assert.deepEqual(owner.process, { ...row, observation: 'same-live', canTerminate: true });
+  }
+  proof.sameMainAfterRetry = captureCensus().find(row => row.pid === main.pid);
+  sameIdentity(main, proof.sameMainAfterRetry);
+  await screenshot('after-retry');
+
+  proof.stops = [];
+  for (const [index, role] of ['primary', 'neighbor'].entries()) {
+    begin('original-UI-Kill-' + role, 10000);
+    const row = original.rows[index];
+    await ui.scrollTo('[data-section-id="processes"] span.font-medium', 'original visible target ' + role, row.label);
+    fixture.beginStop(role, activeDeadline);
+    proof.counts.uiStops++;
+    await ui.clickExpression(killTarget(row), 'original UI Kill ' + role);
+    const receipt = await within(() => fixture.completeStop(role));
+    const stopped = object(await ui.waitRead(processOwner(row, true), 'original stopped row ' + role, remaining()));
+    assert.equal(stopped.teamName, selection); assert.deepEqual(stopped.process, receipt.result);
+    proof.stops.push({ role, receipt, renderer: stopped });
+    await readProcesses();
+    sameIdentity(main, captureCensus().find(value => value.pid === main.pid));
+    assertHostBirths();
+    await screenshot('after-' + role);
+  }
+  await quit();
+  proof.nativeCleanup = await within(() => fixture.afterQuit(activeDeadline));
+  proof.cleanup = true;
+  completed = true;
+} catch (error) {
+  primaryError = error;
+  proof.error = errorText(error);
+  try {
+    const failureText = proof.error;
+    if (typeof failureText === 'string') {
+      const line = JSON.stringify({ kind: 'TEST_WINDOWS_PACKAGED_UI_FAILURE', phase: activePhase,
+        error: failureText.slice(0, 1024), errorTruncated: failureText.length > 1024,
+        retryUiObservation: proof.retryUiObservation ?? null }) + '\n';
+      writeSync(1, Buffer.byteLength(line, 'utf8') <= 8192 ? line :
+        '{"kind":"TEST_WINDOWS_PACKAGED_UI_FAILURE","reason":"projection-limit"}\n');
+    }
+  } catch { /* The original failure and cleanup remain authoritative. */ }
+  try {
+    const line = windowsCensusFailureLine(activePhase, proof.censusReads, proof.censusReadsTruncated);
+    if (Buffer.byteLength(line, 'utf8') <= 1024) writeSync(1, line);
+  } catch { /* Keep the original failure and continue original cleanup after a diagnostic write error. */ }
+} finally {
+  if (app && !quitStarted) {
+    try {
+      if (!main && app.pid) {
+        const snapshot = freshWindowsObservation().processes, current = snapshot.find(row => row.pid === app.pid);
+        if (current) {
+          main = current; lineage = retainPackagedLineage([], ownedTree(snapshot, current)).records;
+        }
+      }
+      await quit();
+      proof.nativeCleanup = await within(() => fixture.afterQuit(activeDeadline));
+      proof.cleanup = true;
+    } catch (error) { proof.cleanupFailure = errorText(error); }
+  }
+  cdp?.close();
+  try { await fixture.close(activeDeadline); }
+  catch (error) { proof.fixtureCloseFailure = errorText(error); proof.cleanup = false; }
+  if (censusObserver) {
+    try {
+      const left = Math.floor(Math.min(outerDeadline, activeDeadline) - performance.now());
+      proof.censusObserver = await censusObserver.close(Math.max(0, Math.min(30000, left)));
+      remaining();
+    }
+    catch (error) { proof.censusObserverFailure = errorText(error); proof.cleanup = false; }
+  }
+  if (appLog) await new Promise(resolve => appLog.end(resolve));
+  try { proof.peer = fixture.peerEvidence(); }
+  catch (error) { proof.peerEvidenceFailure = errorText(error); }
+  proof.modelRequests = proof.peer?.modelRequests;
+  proof.modelProbes = proof.peer?.probes;
+  proof.realVendorExecutions = proof.peer?.realVendorExecutions;
+  proof.originalRuntimeGenerations = proof.nativeCleanup?.runtimeGenerations ?? null;
+  try { assertHostBirths(); }
+  catch (error) { proof.hostBirthFailure = errorText(error); proof.actualHostSuccessors = null; }
+  proof.lineage = lineage;
+  try {
+    fixture.assertPins();
+    assert.deepEqual(await packagedArtifact(executable), artifact);
+    assert.deepEqual(await readPackagedOpenCodeV2(packagedCapture), packaged);
+    proof.packagedAndNativeInputsUnchanged = true;
+  } catch (error) { proof.inputFreezeFailure = errorText(error); }
+  await verifyDesktopSourceFreeze(repository, sources, sourceHashes, proof);
+  if (completed && !primaryError && proof.cleanup && proof.packagedAndNativeInputsUnchanged &&
+    !proof.sourceFreezeFailure && !proof.appLogFailure && !proof.fixtureCloseFailure && !proof.peerEvidenceFailure &&
+    !proof.hostBirthFailure && proof.censusObserver?.closed === true && !proof.censusObserverFailure) {
+    try {
+      assert.deepEqual(proof.counts, { mainStarts: 1, initialRuntimeOpen: 1, businessInput: 1,
+        refreshClicks: 1, retryClicks: 1, uiStops: 2, quit: 1 });
+      assert.equal(proof.actualHostSuccessors, 1);
+      assert.deepEqual(proof.nativeCleanup, { phase: 'completed', cleanup: true, originalQueryWitnesses: 3,
+        runtimeGenerations: 1, runtimeInputs: 1, modelRequests: 0, probes: 0, realVendorExecutions: 0,
+        originalUiStops: 2, serviceExitObservations: 2 });
+      assert.equal(proof.peer.provider, 'codex');
+      assert.equal(proof.peer.connected, 1); assert.equal(proof.peer.registrations, 1);
+      assert.equal(proof.peer.serviceExitObservations, 2); assert.equal(proof.peer.failures, 0);
+      assert.equal(proof.modelRequests, 0); assert.equal(proof.modelProbes, 0);
+      assert.equal(proof.realVendorExecutions, 0);
+      proof.status = 'PASS';
+    } catch (error) { proof.qualificationFailure = errorText(error); }
+  }
+  proof.elapsedMs = startedAt === undefined ? null : performance.now() - startedAt;
+  await writeFile(receiptPath, JSON.stringify(proof, null, 2) + '\n', { flag: 'wx' });
+}
+assert.equal(proof.status, 'PASS', 'Original packaged Windows same-Main UI proof remains INCOMPLETE: ' + receiptPath);
+process.stdout.write(JSON.stringify({ kind: proof.kind, status: proof.status, receiptPath, cleanup: proof.cleanup,
+  sourceHead, platform: proof.platform, counts: proof.counts, modelRequests: proof.modelRequests,
+  modelProbes: proof.modelProbes, realVendorExecutions: proof.realVendorExecutions,
+  actualHostSuccessors: proof.actualHostSuccessors }) + '\n');

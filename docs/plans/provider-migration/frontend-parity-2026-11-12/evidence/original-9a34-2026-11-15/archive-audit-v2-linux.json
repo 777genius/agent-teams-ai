@@ -1,0 +1,66 @@
+{
+  "artifact": {
+    "id": 14178161276,
+    "name": "opencode-v2-embedded-native-linux-x64",
+    "size_in_bytes": 23423,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14178161276",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14178161276/zip",
+    "expired": false,
+    "created_at": "2026-11-15T19:56:14Z",
+    "expires_at": "2026-11-22T19:56:13Z",
+    "updated_at": "2026-11-15T19:56:14Z",
+    "digest": "sha256:7f86b6649ae0b605235ed9422311e59128c2987754ed3282d2d6fd9136323976",
+    "workflow_run": {
+      "id": 43751070783,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "9a34bb28de0a0deee2eecc42099fd9500563eb1b"
+    }
+  },
+  "zip": "/workspace/scratch/82d3f9ba6b85/native-audit-9a34/9a34-v2-linux-x64.zip",
+  "bytes": 23423,
+  "sha256": "7f86b6649ae0b605235ed9422311e59128c2987754ed3282d2d6fd9136323976",
+  "crc": "pass",
+  "uniquePaths": true,
+  "safePaths": true,
+  "symlinks": false,
+  "extraction": "/workspace/scratch/82d3f9ba6b85/native-audit-9a34/v2_linux",
+  "files": [
+    {
+      "path": "opencode-v2-embedded-host.json",
+      "bytes": 95664,
+      "sha256": "c4ed1e1731e9e9fc84e65d47b6c1fda1dad812908541736feaf84202feb190cc"
+    },
+    {
+      "path": "opencode-v2-credentials.json",
+      "bytes": 203733,
+      "sha256": "ceb4771996765339784c8b1bc570d2acb7f2b783c808cb10ca9650e01f8f5e16"
+    },
+    {
+      "path": "opencode-v2-embedded-inputs.json",
+      "bytes": 783,
+      "sha256": "dca420aefdd5b7b47aa5b3876aabf9f09da8d2c8c0641e1b56b0b066d55c2bf3"
+    },
+    {
+      "path": "opencode-v2-model-probe.json",
+      "bytes": 88467,
+      "sha256": "60e8e380734b39b91377b327af45f3e3bfad5871d1ba2b876c8cfd6a53288012"
+    },
+    {
+      "path": "opencode-v2-permission-lifecycle.json",
+      "bytes": 2577,
+      "sha256": "c1f2f334487c28fe7d55fea9b7e4f3f14bbd7d8170d859c832dbbc1b2f7f0d2a"
+    },
+    {
+      "path": "opencode-v2-captured-mcp.json",
+      "bytes": 1981,
+      "sha256": "d0ef05a16bc7c270b362552bad43fa201a212bb457a60e32d8a4a3177153d33f"
+    },
+    {
+      "path": "opencode-v2-posix-exec.json",
+      "bytes": 11349,
+      "sha256": "f87e19f193089fb265e02beb7d5ca248cebca20ee38c5a37f22c1064935963f7"
+    }
+  ]
+}

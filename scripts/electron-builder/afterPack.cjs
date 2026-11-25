@@ -1,6 +1,7 @@
 const { spawnSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
+const { verifyPackagedLinuxNodeExec } = require('./verifyLinuxNodeExec.cjs');
 
 const ARCH_LABELS = {
   0: 'ia32',
@@ -763,6 +764,7 @@ async function afterPack(context) {
     await (await import('../legacy-agent-host/packaged-opencode-v2-inputs.ts'))
       .preservePackagedOpenCodeV2DependencyLinks(await fs.promises.realpath(path.join(context.appOutDir, 'resources/legacy-agent-host')),
         { manifestSha256: process.env.OPENCODE_V2_PACKAGED_MANIFEST_SHA256, sourceHead: process.env.OPENCODE_V2_TEST_SOURCE_HEAD });
+  await verifyPackagedLinuxNodeExec(context);
   await signManagedGitBinaries(context);
 
   if (removedPaths.length > 0) {

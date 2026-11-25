@@ -1,0 +1,86 @@
+{
+  "kind": "Original-N-Linux-V2-completed-author-checkpoint",
+  "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "observedAtUtc": "2026-11-16T04:34:29.845972+00:00",
+  "runId": 43795234721,
+  "jobId": 133062438874,
+  "artifactId": 14197532503,
+  "originalConclusion": "success",
+  "independentR2": "PENDING",
+  "payloadCount": 11,
+  "payloadBytes": 593486,
+  "payloads": [
+    {
+      "path": "native-audit-N608efb/new-terminal-0418/archive-retention.json",
+      "bytes": 2627,
+      "blob": "1f54f635f3b0f655c74561273c88c96adb710441",
+      "sha256": "f53a11fd35ab3378123800853c5de4b96284ec142d118f7e63d0e0139400efbd"
+    },
+    {
+      "path": "native-audit-N608efb/new-terminal-0418/artifact-14197532503.zip",
+      "bytes": 23480,
+      "blob": "8fad3369c624f780a76ab33adcc4870d018179ae",
+      "sha256": "18465e28d2edf0d12622a400303c7c9ee005f2ef9570255243af5935ae5f34e2"
+    },
+    {
+      "path": "native-audit-N608efb/new-terminal-0418/job-133062438874.log",
+      "bytes": 115757,
+      "blob": "114eeec682caa4cf88981a18b285cfb4e21be6c7",
+      "sha256": "26c7545f1b55c1b5e8f205d6397bb6620acb68badb17d2b320df65c596d1179e"
+    },
+    {
+      "path": "native-audit-N608efb/new-terminal-0418/v2Artifacts-original-response.json",
+      "bytes": 6787,
+      "blob": "3e36e816880e3e57dcfc704567c05f23f7532e4f",
+      "sha256": "42ff1746e6c1752e3567b724123b4109e6dd1de78c7c138d19c93003f059ba06"
+    },
+    {
+      "path": "native-audit-N608efb/new-terminal-0418/v2LinuxLog-original-response.json",
+      "bytes": 118620,
+      "blob": "1fd952448d600c84cbef34a560ec108102cbff5d",
+      "sha256": "a3dd8e015b24628bc4748616c066e4f1230e04805f348931121926e9181f8b27"
+    },
+    {
+      "path": "ci-n-608efb/v2-jobs-0418.json",
+      "bytes": 44547,
+      "blob": "3d1dab47d77706c2cd1a0870ea84073d5f5890ff",
+      "sha256": "27a82e534d90e7aed2cdfd80337692a39090d1194f1f63e6ad27544ba9c12253"
+    },
+    {
+      "path": "ci-n-608efb/v2-original-run-0258.json",
+      "bytes": 30144,
+      "blob": "8087402aa25d3eb6d5a4a72d1771cb7843366b76",
+      "sha256": "2cd2b012a3155fb0a798f2b8badb7c6a033dd17407ddb71433fd979a149975c1"
+    },
+    {
+      "path": "native-audit-N608efb/host-source-N608efb-git-audit.json",
+      "bytes": 163123,
+      "blob": "9c8472f84db2ee0615314b9fd05df207e2c7d112",
+      "sha256": "30dbbf806666206c905b346f15e475646c2840d0c29f326a953fb3202d595ea0"
+    },
+    {
+      "path": "native-audit-N608efb/v2-linux-x64/source-audit.json",
+      "bytes": 11603,
+      "blob": "f0c00b93a2ede532d0882e89e0375ba75bb58bd4",
+      "sha256": "129dcb5f97f5dd113a915f4c92e57a4a9fcc65e9bde93b4ed5e7d85b86f5cea6"
+    },
+    {
+      "path": "native-audit-N608efb/v2-linux-x64/audit.json",
+      "bytes": 70698,
+      "blob": "dce4676a8bfefa9bc9861320ab6a8029c7c09520",
+      "sha256": "1d086613b833d6ed79a0de2942fd3cea1e3a75ad15354d76943351d6c704dbfd"
+    },
+    {
+      "path": "native-audit-N608efb/v2-linux-x64/Plan29-linux-v2-appendix.md",
+      "bytes": 6100,
+      "blob": "db1562c42b5c38496c607aa44f7ee43e92da0d90",
+      "sha256": "2a4fb228f908857c01df505ef3bd0462ca6d4b54b13e8ba554557a8937885e4a"
+    }
+  ],
+  "archiveMembers": 7,
+  "limits": [
+    "Official original bytes/source-bound author audit only; independent R2 pending.",
+    "Five original native V2 flows plus separate native-only POSIX/script-negative evidence; no broad qualification transfer.",
+    "Original raw files, prior M and current N checkpoints remain unchanged. No signed artifact URLs are retained."
+  ]
+}

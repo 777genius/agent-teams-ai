@@ -1,0 +1,181 @@
+{
+  "kind": "INDEPENDENT_PLAN70_PROSPECTIVE_DIRECTION_ONLY_R2",
+  "reviewer": "/root/p09_review",
+  "verdict": "GO_PROSPECTIVE_EXACT_TWO_PATH_SELECTION_ONLY",
+  "blockers": [],
+  "baseCommit": "20441967f35c93a5b3ef368ac8d3d0c5ee8eef65",
+  "baseTree": "efd8410417d865adb4ae9b635955273776b6bb0a",
+  "plan": {
+    "path": "/tmp/e2e-original-artifacts/reviews/plan70-outer-scroll-direction/plan.md",
+    "bytes": 5662,
+    "physicalLines": 33,
+    "gitBlob": "623dfacbe90ccbd8f3a4a5730fdce4e6ddecc2c8",
+    "sha256": "62856bba5af98a62a9bcfe4f192a782d70cf203d8f647c1fe0424aa82060de8f"
+  },
+  "rootProspectiveR1": {
+    "path": "/tmp/e2e-original-artifacts/reviews/plan70-outer-scroll-direction/prospective-r1.json",
+    "bytes": 3242,
+    "physicalLines": 78,
+    "gitBlob": "28c76551c86d7f2afdd0c95416d1acc264592348",
+    "sha256": "c722cfa2ad03686c050c02caa7c02c43d2a664bc39b153bf612ea0fb7b93945b"
+  },
+  "bindings": {
+    "path": "/tmp/e2e-original-artifacts/reviews/plan70-outer-scroll-direction/preimage-bindings.json",
+    "bytes": 741,
+    "physicalLines": 22,
+    "gitBlob": "1194be7cfaa780b7e0d14740d39fe00ae4a822c0",
+    "sha256": "cb8c1216d5202d98eb734129b4a55cc9f4b49b3bc64b2ad3ceb9a65fb2c10c7b"
+  },
+  "closedActualSource69ByteGate": {
+    "path": "/tmp/e2e-original-artifacts/reviews/plan69-desktop-ui-boundaries/actual-source/independent-actual-source-r2.json",
+    "bytes": 15125,
+    "physicalLines": 336,
+    "gitBlob": "4bfe6da5723e3756a02e44265550ce9b39a1884a",
+    "sha256": "24d63170805927214d42a226d15cdad4aeaf4bfe7c0de0d19961e99d979b7bdc"
+  },
+  "constructiveCounterexampleAndHold": {
+    "path": "/tmp/e2e-original-artifacts/reviews/plan69-desktop-ui-boundaries/above-viewport-direction-findings.json",
+    "bytes": 8148,
+    "physicalLines": 136,
+    "gitBlob": "e4bed25ecda2601d7a2e6eec4ce445f0e0faed48",
+    "sha256": "a5e4a73f47a57dd94347d89de79c7c8f2721881f10a743da60f3b4362015ed7c"
+  },
+  "actualSourcePacket": {
+    "path": "/tmp/e2e-original-artifacts/reviews/plan69-desktop-ui-boundaries/actual-source/official-packet.json",
+    "bytes": 4075105,
+    "physicalLines": 1,
+    "gitBlob": "673261a72348876db5ada0c5eb1e7ac69e0158f8",
+    "sha256": "b60ad1a945183d6c57eae3108d5b0fd4544514c8525712ba1166a5ad84b61a5a"
+  },
+  "selectedPreimages": [
+    {
+      "repositoryPath": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "path": "/tmp/e2e-original-artifacts/reviews/plan70-outer-scroll-direction/before/scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "bytes": 32248,
+      "physicalLines": 577,
+      "gitBlob": "ba3fca51b23f523f1c13b6261e70521cc480ee54",
+      "sha256": "5a613e6a2b740eefe55eb4f4e7a18a764e2d282e8b6ac29354850bd817d5309e",
+      "mode": "100644",
+      "wholeBytesEqualOfficialActualSource69": true
+    },
+    {
+      "repositoryPath": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "path": "/tmp/e2e-original-artifacts/reviews/plan70-outer-scroll-direction/before/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "bytes": 167176,
+      "physicalLines": 2775,
+      "gitBlob": "1335bed86be957c49f9231be75dc8747b9b60d24",
+      "sha256": "abe753c0dd155816f9be0004724ecc5d440b638281c8b6e2062821cb8a62b867",
+      "mode": "100644",
+      "wholeBytesEqualOfficialActualSource69": true
+    }
+  ],
+  "baseBinding": {
+    "officialActualTreeUntruncated": true,
+    "officialLeafCount": 11149,
+    "completePreimageBytes": 199424,
+    "bothPreimagesEqualActualPublishedBodiesAndLeafHashes": true,
+    "newPlanPathAbsent": true,
+    "newEvidenceRootAbsent": true,
+    "repositoryPlanPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/70-original-outer-scroll-direction-2026-11-16.md",
+    "repositoryEvidenceRoot": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan70-outer-scroll-direction-2026-11-16",
+    "sourceAfterimages": 0,
+    "candidatePatchAbsent": true
+  },
+  "scope": {
+    "selectedPaths": 2,
+    "existingSourceOwner": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+    "existingTestOwner": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+    "newFunctionsModulesProductionPaths": 0,
+    "workflowsRostersPackagesOrCommands": 0,
+    "adjacentGuardRemovalSelected": false,
+    "externalWholeGeometryProposalSelected": false
+  },
+  "sourceReasoning": {
+    "actualDefect": "Actual source69 selects an outer wheel rectangle for bottom<=top but still subtracts its dispatch y from the clipped target-content center. An inner clip can be wholly above viewport while its hidden content rectangle lies below the dispatch center, yielding a positive wheel instead of the needed negative direction.",
+    "arithmeticCases": [
+      {
+        "kind": "below",
+        "innerTop": 800,
+        "innerBottom": 1180,
+        "initialTargetTop": 936,
+        "initialTargetHeight": 58,
+        "wheelY": 340.5,
+        "currentTargetDelta": 600,
+        "selectedInnerDelta": 600
+      },
+      {
+        "kind": "above",
+        "innerTop": -800,
+        "innerBottom": -420,
+        "initialTargetTop": 936,
+        "initialTargetHeight": 58,
+        "wheelY": 340.5,
+        "currentTargetDelta": 600,
+        "selectedInnerDelta": -600
+      }
+    ],
+    "selectedCorrection": "Use the center of original nearest-scrollport rectangle p only for the empty-intersection fallback delta; preserve r.y+r.height/2 on the positive-intersection path. Subtract the same actual dispatch y and retain the same [-600,600] clamp.",
+    "directionProof": "For a positive-height finite inner rectangle wholly above viewport, its center is above any y in the selected visible dispatch interval, so the difference is negative. For one wholly below, the center is below that interval, so the difference is positive. The clipped content position no longer reverses that direction.",
+    "preservedAuthority": "p/top/bottom remain the target-visibility authority. Current target size/unique/exact-text checks, optional center-hit expression, first qualifying outer walk, document fallback, wheel point and finite original iteration budget remain unchanged. No automatic visible=true or accepted click follows from exposing an inner port.",
+    "normalPath": "The existing inner-target center must remain literally the ordinary positive-intersection computation. No target rectangle or dispatch calculation should be rederived or normalized beyond the selected local scalar/operand.",
+    "limit": "The plan correctly narrows its claim to the demonstrated direction error. It does not promise complete reachability through every clipping ancestor, overlay, zero-height scrollport, wheel-recipient or scroll-boundary configuration. It does not establish the archived Resume failure was above viewport."
+  },
+  "guardAndBudgetReview": {
+    "exactGuardSites": [
+      {
+        "owner": "scrollTo",
+        "line": 454
+      },
+      {
+        "owner": "waitRead",
+        "line": 190
+      }
+    ],
+    "bothMustRemain": "The outer guard and waitRead guard are explicitly preserved. The separate adjacent-guard proposal is excluded even though its source adjacency is known.",
+    "currentOrder": "Outer guard; synchronous expression construction; waitRead deadline/clock check; waitRead guard; original evaluate. After a wheel, the original 100-ms pause and next iteration enter the same guards. The current source does not contain an additional explicit post-waitRead/pre-wheel guard; none is claimed.",
+    "unchanged": "Complete waitRead and Plan65 click implementation, transport/error behavior, 30-second read deadline, 100-ms polling and post-wheel cadence, default12 and integer1..32 wheel cap, and the final read without another wheel.",
+    "noRuntimeScope": "No Windows census/native admission, phase/product/provider budget, persistence, cleanup or runtime policy changes are selected."
+  },
+  "meaningfulRegression": {
+    "actualExistingCase": {
+      "startLine": 1414,
+      "endLine": 1461,
+      "physicalLines": 48,
+      "sourceBlob": "1335bed86be957c49f9231be75dc8747b9b60d24"
+    },
+    "selectedParameterization": "Only the existing Plan69 case data/name and the initial inner-top / expected first-delta operands become a two-case table or loop. Below initialTop800 expects +600; above initialTop−800 expects −600. Each test still constructs fresh counters, finite DOM objects and current actual controls.",
+    "preservedBelow": "The below target936..994, outer point512/340.5, first +600, subsequent inner point600/290 and +239, three selector observations, false,false,true visibility and exactly two wheel-only sends remain.",
+    "newAboveFailure": "With the same hidden target936..994 and above inner−800..−420, uncorrected source69 returns +600. The exact first wheel assertion requires −600 and therefore detects this concrete bug using the real generated expression.",
+    "normalBranchProtection": "The retained second wheel +239 independently guards against applying inner-center delta to ordinary visible-inner scrolling: that mistaken generalization would calculate zero at the centered inner port and fail the same assertion.",
+    "seam": "Uses existing createDesktopUiControls and runInNewContext; no copied expression/return value, new timer, framework, fixture module or provider/browser call. Original fake CDP only advances finite layout snapshots after a recorded wheel.",
+    "testTruth": "These are finite DOM snapshots, not a model of exact physical browser displacement. The test proves source-result/input expectations when executed, not browser timing, historical causation or full native E2E success.",
+    "preservation": "All tests outside the existing Plan69 block must remain byte-identical. The complete pre-Plan69 suite, default-disabled/optional-hit behavior and Plan65 ownership/cutoff/transport/point-budget cases remain. The old below assertions are parameterized without weakening them."
+  },
+  "validationClosure": {
+    "basis": "Reuses the immediately closed actual69 validation owner bindings, which are unchanged by this selected two-path plan.",
+    "mainVectorCount": 1783,
+    "mainVectorSha256": "ef73662d6baadbb38ee4c7b382c716c87387aa1353ad24939497685c3ce2ed55",
+    "hostFastLintUniqueOperands": 136,
+    "hostFastOperandSha256": "cf6ef50f584dd0c910deaacf9a13d2e81cb4408c0eda1eae6a787e391eeab0b7",
+    "hostWorkflowBlob": "bd50fd9636f7b63bf8501bca0c6c5a296e2e21bb",
+    "bothSelectedPathsAlreadyPinnedAndLinted": true,
+    "routes": "Original safe desktop smoke suite, strict host-script/workspace checks and affected original Desktop journeys; no new workflow/matrix/command.",
+    "caps": "Current controls577L stays naturally below800 with the narrow scalar/operand correction. Existing test2775L may grow only around this selected two-case block. Exact resulting line counts require source R2."
+  },
+  "publicationBoundary": {
+    "prospectiveOnly": "This GO permits the exact selected prospective document; it is not an approval of uncreated source afterimages or a runtime result.",
+    "next": "Ordinary documentary publication and full independent actual-document readback precede source authoring. Then exact two full pre/postimages, strict forward/inverse patch, tree preservation and independent source R2; ordinary source publication followed by actual-source R2.",
+    "primary": "Primary75 remains held for this direction boundary. Any later FF also requires the root-owned fresh sole-CI guard and preservation of useful original executions.",
+    "source69ByteGate": "The earlier exact source69 publication identity remains proven; the behavioral hold is resolved only by the selected follow-up passing its required gates, not by this prospective report alone."
+  },
+  "readCoverage": {
+    "full": "All33 plan lines, complete78-line rootR1, completebindings, both complete preimage byte bodies and actual-source packet leaf joins. Current waitRead182–205, scrollTo446–504 and full48-line existing regression read again.",
+    "reused": "Immediately preceding source69 review already read full577L controls and the selected complete test seam, full patch/inverse and validation references. Those exact bytes remain the Plan70 preimages.",
+    "method": "Only held-file parsing, UTF-8/Git/SHA hashing, exact byte equality and scalar arithmetic. No project/VM/test/compiler or cached verifier code executed."
+  },
+  "limits": [
+    "No source afterimages, repository edits, Git/ref/API mutation, CI polling/download or manual Actions. Only this scratch review report is written.",
+    "No resulting-head test/type/lint/GUI/native PASS is claimed. Original affected journeys and every historical failure/cleanup limit remain.",
+    "No external full-chain/clipping-framework adoption, guard deletion, W01/genuineM16/native mixed qualification, P09 owner/Plan40 A-B choice, producer archive adoption, Ready/merge/release/default activation."
+  ]
+}

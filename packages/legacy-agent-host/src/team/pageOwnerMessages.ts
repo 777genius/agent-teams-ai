@@ -5,6 +5,7 @@ import { messageSegments } from './pageOwnerSnapshot.js';
 
 import type { JsonValue } from '../contracts.js';
 import type { TeamGrant } from './contracts.js';
+import type { TeamConversationMetadata } from './ownerMessageReads.js';
 
 interface PageOptions {
   principalId: string;
@@ -15,6 +16,7 @@ interface PageOptions {
   cursor?: string;
   limit?: number;
   groupChatId?: string;
+  conversation?: TeamConversationMetadata;
 }
 
 const MAX_PAGE_BYTES = 384 * 1024;
@@ -47,6 +49,7 @@ export function pageOwnerMessages(options: PageOptions): JsonValue {
     teamName: options.teamName,
     groupChatId: options.groupChatId ?? null,
     messages,
+    ...(options.conversation ? { conversation: options.conversation } : {}),
   });
   // Owner-bound cursors cannot be transferred to another principal, revision or filter.
   const signature = (offset: number) =>
@@ -69,6 +72,7 @@ export function pageOwnerMessages(options: PageOptions): JsonValue {
     messages: [] as JsonValue[],
     nextCursor: null as string | null,
     hasMore: false,
+    ...(options.conversation ? { conversation: options.conversation } : {}),
     ...(fragmented ? {
       messageTotal: messages.length,
       messageParts: [] as { index: number; part: number; total: number }[],

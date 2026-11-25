@@ -1,0 +1,216 @@
+{
+  "schema": "root-independent-M-static-windows-readback/v1",
+  "reviewer": "/root",
+  "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "verdict": "APPROVE for exact original static job scope only",
+  "run": 43780997620,
+  "job": 133017915233,
+  "fullLog": {
+    "path": "static-windows-job.log",
+    "bytes": 102169,
+    "blob": "e5e8c70cf5b7841ccc0633b678e9f1b16c286120",
+    "sha256": "c209a97934a0b049aa4d6ff36bdc58ad53725e8098e106d1041d3d461786afd8"
+  },
+  "officialApi": {
+    "path": "v2-jobs-api-initial-0038.json",
+    "bytes": 21686,
+    "blob": "1f4c6a507167e6652f40072bc4e839f96ec6e0fa",
+    "sha256": "811ab17f552358898061bdae2bb35b8e2351f8ffcfa8b8512be6921b8eb30508"
+  },
+  "actualCounts": {
+    "tests": [
+      7,
+      41,
+      225
+    ],
+    "pass": [
+      7,
+      41,
+      224
+    ],
+    "fail": [
+      0,
+      0,
+      0
+    ],
+    "cancelled": [
+      0,
+      0,
+      0
+    ],
+    "skipped": [
+      0,
+      0,
+      1
+    ]
+  },
+  "vitestPass": 189,
+  "actualPassTotal": 461,
+  "sourceDefinitions": [
+    {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "bytes": 36013,
+      "lines": 622,
+      "blob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+      "sha256": "fddd1aface758ef115a5e904151cb61dd78dca04d8f52fb99f4326ddaff53a14"
+    },
+    {
+      "path": "packages/legacy-agent-host/package.json",
+      "bytes": 12355,
+      "lines": 304,
+      "blob": "e39cb2ba89c125d850710828a65a30ae25b7344b",
+      "sha256": "77efb91a29ed4ba662ca7dcebc0843965d27305ad9d62f04ef6c84b517732e0b"
+    },
+    {
+      "path": "packages/legacy-agent-host/tsconfig.json",
+      "bytes": 456,
+      "lines": 19,
+      "blob": "9fad9f8a73e1cfffd382c0ba76f2945e5c361531",
+      "sha256": "54be9b6021660d54c06c14fd25cc5c4484b7615f01d9eb033fc52edfded095ab"
+    },
+    {
+      "path": "packages/legacy-agent-host/tsconfig.test.json",
+      "bytes": 174,
+      "lines": 9,
+      "blob": "65edbd94041b7d9a986480badd6802b1dd0a8837",
+      "sha256": "5f1f3e6842c4087e0f834895fbde59769240c68a98ff15c24ac1677d0e5b9356"
+    }
+  ],
+  "steps": [
+    {
+      "number": 1,
+      "name": "Set up job",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "number": 2,
+      "name": "Run actions/checkout@v6",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "number": 3,
+      "name": "Require immutable PR source HEAD",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "number": 4,
+      "name": "Run actions/checkout@v6",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "number": 5,
+      "name": "Record exact current product commit",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "number": 6,
+      "name": "Run pnpm/action-setup@v6",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "number": 7,
+      "name": "Run actions/setup-node@v6",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "number": 8,
+      "name": "Prove retry classification on the exact source HEAD",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "number": 9,
+      "name": "Install pinned workspace dependencies",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "number": 10,
+      "name": "Build Stage1 Host without launching providers",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "number": 11,
+      "name": "Typecheck Host TEST contracts",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "number": 12,
+      "name": "Verify captured and native model variants through Host SPI",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "number": 13,
+      "name": "Verify generation-preserving install and update policy",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "number": 14,
+      "name": "Execute V2 static preflight, current-main lock and FIFO negatives",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "number": 15,
+      "name": "Native V1 baseline and latest Host compatibility (Linux TEST)",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "number": 16,
+      "name": "Preserve native V1 version evidence",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "number": 29,
+      "name": "Post Run actions/setup-node@v6",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "number": 30,
+      "name": "Post Run pnpm/action-setup@v6",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "number": 31,
+      "name": "Post Run actions/checkout@v6",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "number": 32,
+      "name": "Post Run actions/checkout@v6",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "number": 33,
+      "name": "Complete job",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "unchangedLimits": [
+    "Exact M0660 source checkout is confirmed from the original full log, not inferred from General merge SHA.",
+    "This original static job does not execute the full ten-file Team command or held-value privacy canaries, and cannot be the prescribed semantic RED or GREEN.",
+    "M Host build/typecheck success is actual original CI evidence, not a retry/requalification of the old locally SIGKILLed K invocation.",
+    "Original Linux-only native V1/evidence steps remain skipped. No native V1 or Desktop/release proof from this static job.",
+    "No reviewer project/provider/native execution, CI mutation or source/ref change."
+  ],
+  "noProjectExecution": true,
+  "noSourceMutation": true
+}

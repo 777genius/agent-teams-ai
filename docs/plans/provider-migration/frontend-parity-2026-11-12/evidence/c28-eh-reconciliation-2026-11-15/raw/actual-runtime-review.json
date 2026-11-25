@@ -1,0 +1,33 @@
+{
+  "record": "E-runtime-red",
+  "exitCode": 1,
+  "total": 44,
+  "pass": 38,
+  "expectedSemanticFailures": 6,
+  "skip": 0,
+  "cancelled": 0,
+  "unrelatedFailures": 0,
+  "setupFailures": 0,
+  "families": {
+    "team-deadline": 2,
+    "standalone-deadline": 2,
+    "late-capture": 2
+  },
+  "rootApproved": true,
+  "independentApproved": true,
+  "sourceHead": "e9bfd4518bc30218a32fc1999fa04cf5e8ace74e",
+  "sourceTree": "7b4e4636a7708b0f1b8d596b8b2637bdaad821c5",
+  "logSHA256": "7df6a5d364a492c63536f7e3c93687eb313f9c01a3b1c88aa5e25832160c5670",
+  "metadataSHA256": "47e45ea23d069b161622d66c230c01a59249af9c33cc33120fe3c7f532afb144",
+  "independentReview": {
+    "path": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/E-independent-actual-red-review.json",
+    "blob": "fd5bdfe1ee20c50dce3d10860bee0aaa3bbcb92e",
+    "sha256": "39199e48da542e0b0d85b06a2f34b36042dd6acc00a528e192b143f86a1033b9"
+  },
+  "limits": [
+    "Actual semantic missing-rejection failures only; no setup/unrelated failure.",
+    "Assertions after failed rejection checks did not execute and are not claimed PASS.",
+    "Exact isolated c28 composition, not latest a02/native qualification.",
+    "No new build; full source-bound D inventory reused and byte-verified."
+  ]
+}

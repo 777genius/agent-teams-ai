@@ -33,7 +33,6 @@ import {
 } from '@features/runtime-provider-management/renderer';
 import { api, isElectronMode } from '@renderer/api';
 import atlasCloudLogo from '@renderer/assets/atlascloud-logo.svg';
-import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
 import {
   CodexLoginLinkCopyButton,
@@ -65,10 +64,9 @@ import {
   getProviderRuntimeBackendSummary,
 } from '@renderer/components/runtime/ProviderRuntimeBackendSelector';
 import {
-  getProviderTerminalCommand,
-  getProviderTerminalCommandById,
-  getProviderTerminalLogoutCommand,
-} from '@renderer/components/runtime/providerTerminalCommands';
+  type NativeClaudeAuthenticationAction,
+  useProviderAuthenticationActions,
+} from '@renderer/components/runtime/useProviderAuthenticationActions';
 import { useCliInstaller } from '@renderer/hooks/useCliInstaller';
 import {
   loadDashboardCliStatusBannerCollapsed,
@@ -177,6 +175,11 @@ const TerminalLogPanel = lazy(() =>
 const TerminalModal = lazy(() =>
   import('@renderer/components/terminal/TerminalModal').then((module) => ({
     default: module.TerminalModal,
+  }))
+);
+const ProviderAuthenticationTerminal = lazy(() =>
+  import('@renderer/components/runtime/ProviderAuthenticationTerminal').then((module) => ({
+    default: module.ProviderAuthenticationTerminal,
   }))
 );
 
@@ -454,6 +457,7 @@ const CliCheckingSpinner = ({
 interface InstalledBannerProps {
   /** Provider page is visible; hidden tabs retain forms but stop passive reads. */
   isActive: boolean;
+  inline?: boolean;
   catalogFailures?: readonly OpenCodeCatalogFailure[];
   cliStatus: NonNullable<ReturnType<typeof useCliInstaller>['cliStatus']>;
   sourceProviderMap: Map<CliProviderId, CliProviderStatus>;
@@ -806,6 +810,7 @@ const OpenCodeAtlasCloudBanner = ({
 
 const InstalledBanner = ({
   isActive,
+  inline = false,
   catalogFailures = [],
   cliStatus,
   sourceProviderMap,
@@ -848,7 +853,12 @@ const InstalledBanner = ({
   const { t } = useAppTranslation('dashboard');
   const { t: settingsT } = useAppTranslation('settings');
   const { t: commonT } = useAppTranslation('common');
-  const { summary: sharedConnectionSummary, multimodelEnabled, openCodeIsChecking } = useProviderConnectionSummary(cliStatus);
+  const {
+    summary: sharedConnectionSummary,
+    cliProviderStatusLoading: summaryProviderStatusLoading,
+    multimodelEnabled,
+    openCodeIsChecking,
+  } = useProviderConnectionSummary(cliStatus, isActive);
   const runtimeBackendSummaryText = useMemo(
     () => buildProviderRuntimeBackendSummaryText(commonT),
     [commonT]
@@ -883,8 +893,8 @@ const InstalledBanner = ({
     codexSnapshotPending,
     t
   );
-  const showCollapseControl = visibleProviders.length > 0;
-  const showExpandedContent = !providersCollapsed;
+  const showCollapseControl = !inline && visibleProviders.length > 0;
+  const showExpandedContent = inline || !providersCollapsed;
   const openCodeRuntimeInstalling = isRuntimeInstalling(
     openCodeRuntimeStatus,
     openCodeRuntimeStatusLoading
@@ -894,23 +904,29 @@ const InstalledBanner = ({
     openCodeRuntimeStatus?.installed === true &&
     openCodeRuntimeStatus.v2Support === 'required' &&
     getOpenCodeGeneration(openCodeRuntimeStatus.version) === 'v2';
-
   return (
     <div
-      className={`mb-6 overflow-hidden rounded-lg px-4 ${showExpandedContent ? `py-3 ${BANNER_MIN_H}` : 'py-2.5'}`}
-      style={{ backgroundColor: INSTALLED_BANNER_BACKGROUND }}
+      data-testid="provider-status-banner"
+      className={
+        inline
+          ? 'mb-6'
+          : `mb-6 overflow-hidden rounded-lg px-4 ${showExpandedContent ? `py-3 ${BANNER_MIN_H}` : 'py-2.5'}`
+      }
+      style={{ backgroundColor: inline ? 'transparent' : INSTALLED_BANNER_BACKGROUND }}
     >
       <div
+        data-testid="provider-status-banner-header"
         className={`flex items-center justify-between ${
-          showCollapseControl
-            ? `${
-                showExpandedContent ? '-mx-4 -mt-3 px-4 pb-1 pt-4' : '-mx-4 -my-2.5 px-4 py-3.5'
-              } cursor-pointer transition-colors hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-white/15`
-            : ''
+          inline
+            ? 'pb-3 pt-1 font-semibold'
+            : showCollapseControl
+              ? `${
+                  showExpandedContent ? '-mx-4 -mt-3 px-4 pb-1 pt-4' : '-mx-4 -my-2.5 px-4 py-3.5'
+                } cursor-pointer transition-colors hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-white/15`
+              : ''
         }`}
-        role="button"
-        tabIndex={showCollapseControl ? 0 : -1}
-        aria-disabled={!showCollapseControl}
+        role={showCollapseControl ? 'button' : undefined}
+        tabIndex={showCollapseControl ? 0 : undefined}
         aria-expanded={showCollapseControl ? !providersCollapsed : undefined}
         aria-label={
           showCollapseControl
@@ -1026,6 +1042,7 @@ const InstalledBanner = ({
                   summary={sharedConnectionSummary}
                   cliStatus={cliStatus}
                   cliStatusLoading={cliStatusLoading}
+                  providerStatusLoading={summaryProviderStatusLoading}
                   multimodelEnabled={multimodelEnabled}
                   openCodeIsChecking={openCodeIsChecking}
                 />
@@ -1094,7 +1111,10 @@ const InstalledBanner = ({
       {showExpandedContent && detailedProviders.length > 0 && (
         <div className="mt-3">
           {detailedProviders.map((provider) => {
-            const actionDisabled = isBusy || !cliStatus.binaryPath;
+            const hostActionDisabled = isBusy || cliStatusLoading || !cliStatus.installed;
+            const actionDisabled =
+              hostActionDisabled ||
+              (!cliStatus.binaryPath && provider.nativeAuthManagement !== 'claude');
             const runtimeSummary = isConnectionManagedRuntimeProvider(provider)
               ? getProviderCurrentRuntimeSummary(provider, settingsT)
               : getProviderRuntimeBackendSummary(provider, runtimeBackendSummaryText);
@@ -1316,7 +1336,7 @@ const InstalledBanner = ({
                               <CodexLoginLinkCopyButton
                                 authUrl={codexLoginAuthUrl}
                                 userCode={codexLoginUserCode}
-                                disabled={codexReconnectBusy || actionDisabled}
+                                disabled={codexReconnectBusy || hostActionDisabled}
                                 size="xs"
                               />
                               <CodexLoginUserCodeBadge userCode={codexLoginUserCode} />
@@ -1324,7 +1344,7 @@ const InstalledBanner = ({
                                 <button
                                   type="button"
                                   onClick={onCodexDeviceCodeLogin}
-                                  disabled={codexReconnectBusy || actionDisabled}
+                                  disabled={codexReconnectBusy || hostActionDisabled}
                                   className="shrink-0 rounded-md border px-2 py-1 text-[10px] font-medium transition-colors hover:bg-white/5 disabled:opacity-50"
                                   style={{
                                     borderColor: 'rgba(245, 158, 11, 0.22)',
@@ -1344,7 +1364,7 @@ const InstalledBanner = ({
                                   }
                                   onCodexReconnect();
                                 }}
-                                disabled={codexReconnectBusy || actionDisabled}
+                                disabled={codexReconnectBusy || hostActionDisabled}
                                 className="shrink-0 rounded-md border px-2 py-1 text-[10px] font-medium transition-colors hover:bg-white/5 disabled:opacity-50"
                                 style={{
                                   borderColor: 'rgba(245, 158, 11, 0.28)',
@@ -1429,7 +1449,7 @@ const InstalledBanner = ({
                     <button
                       data-testid={`runtime-manage-${provider.providerId}`}
                       onClick={() => onProviderManage(provider.providerId)}
-                      disabled={actionDisabled}
+                      disabled={isBusy || cliStatusLoading || !cliStatus.installed}
                       className="flex items-center gap-1 rounded-md border px-2 py-[3px] text-[10px] font-medium transition-colors hover:bg-white/5 disabled:opacity-50"
                       style={{
                         borderColor: 'var(--color-border)',
@@ -1502,7 +1522,7 @@ const InstalledBanner = ({
                 SHOW_ATLAS_CLOUD_OPENCODE_BANNER &&
                 provider.providerId === 'opencode' ? (
                   <OpenCodeAtlasCloudBanner
-                    disabled={actionDisabled}
+                    disabled={hostActionDisabled}
                     onConnect={() => onOpenCodeProviderConnect(ATLAS_CLOUD_OPENCODE_PROVIDER_ID)}
                   />
                 ) : null}
@@ -1538,9 +1558,11 @@ const InstalledBanner = ({
 
 interface CliStatusBannerProps {
   isDashboardActive?: boolean;
+  mode?: 'dashboard' | 'settings';
 }
 export const CliStatusBanner = ({
   isDashboardActive = false,
+  mode = 'dashboard',
 }: CliStatusBannerProps): React.JSX.Element | null => {
   const { t } = useAppTranslation('dashboard');
   const { t: settingsT } = useAppTranslation('settings');
@@ -1585,6 +1607,8 @@ export const CliStatusBanner = ({
     providerId: CliProviderId;
     action: 'login' | 'logout';
   } | null>(null);
+  const [nativeClaudeAuthAction, setNativeClaudeAuthAction] =
+    useState<NativeClaudeAuthenticationAction | null>(null);
   const [manageProviderId, setManageProviderId] = useState<CliProviderId>('anthropic');
   const [manageRuntimeProviderId, setManageRuntimeProviderId] = useState<string | null>(null);
   const [manageRuntimeProviderAction, setManageRuntimeProviderAction] = useState<
@@ -1661,7 +1685,7 @@ export const CliStatusBanner = ({
     runtimeStatus: openCodeRuntimeStatus,
   });
   const openCodeDashboardCatalog = useOpenCodeConnectedModelCatalog({
-    enabled: openCodeDashboardStatus.enabled,
+    enabled: openCodeDashboardStatus.enabled && !manageDialogOpen,
     statusChecking: cliStatusLoading || cliProviderStatusLoading.opencode === true,
     refreshRevision: providerQuickConnectRefreshKey,
     projectPath: selectedProjectPath,
@@ -1829,12 +1853,15 @@ export const CliStatusBanner = ({
     return () => {
       clearInterval(interval);
     };
-  }, [isDashboardActive, isElectron, refreshAnthropicSubscriptionLimits, shouldPollAnthropicSubscriptionLimits]);
-
+  }, [
+    isDashboardActive,
+    isElectron,
+    refreshAnthropicSubscriptionLimits,
+    shouldPollAnthropicSubscriptionLimits,
+  ]);
   const handleInstall = useCallback(() => {
     installCli();
   }, [installCli]);
-
   const handleRefresh = useCallback(() => {
     openCodeDashboardCatalog.refresh();
     void (async () => {
@@ -1859,7 +1886,6 @@ export const CliStatusBanner = ({
   const refreshOpenCodeProviderDirectory = useCallback(() => {
     setProviderQuickConnectRefreshKey((current) => current + 1);
   }, []);
-
   const handleOpenCodeRefresh = useCallback(() => {
     refreshOpenCodeProviderDirectory();
     void (async () => {
@@ -1871,7 +1897,6 @@ export const CliStatusBanner = ({
     invalidateOpenCodeRuntimeStatus,
     refreshOpenCodeProviderDirectory,
   ]);
-
   const handleToggleProvidersCollapsed = useCallback(() => {
     setProvidersCollapsed((current) => {
       const next = !current;
@@ -1879,19 +1904,16 @@ export const CliStatusBanner = ({
       return next;
     });
   }, []);
-
   const handleCodexDashboardLogin = useCallback(() => {
     void (async () => {
       await codexAccount.startChatgptLogin('browser');
     })();
   }, [codexAccount]);
-
   const handleCodexDashboardDeviceCodeLogin = useCallback(() => {
     void (async () => {
       await codexAccount.startChatgptLogin('device_code');
     })();
   }, [codexAccount]);
-
   const recheckAuthState = useCallback(() => {
     openCodeDashboardCatalog.refresh();
     setIsVerifyingAuth(true);
@@ -1915,38 +1937,30 @@ export const CliStatusBanner = ({
     openCodeDashboardCatalog.refresh,
   ]);
 
-  const handleProviderLogin = useCallback((providerId: CliProviderId) => {
-    setProviderTerminal({ providerId, action: 'login' });
-  }, []);
-
-  const handleProviderLogout = useCallback(
-    (providerId: CliProviderId) => {
-      void (async () => {
-        const provider =
-          effectiveCliStatus?.providers.find((entry) => entry.providerId === providerId) ?? null;
-        const disconnectAction = provider ? getProviderDisconnectAction(provider, settingsT) : null;
-        if (!disconnectAction) {
-          return;
-        }
-
-        const confirmed = await confirm({
-          title: disconnectAction.title,
-          message: disconnectAction.message,
-          confirmLabel: disconnectAction.confirmLabel,
-          cancelLabel: t('cliStatus.actions.cancel'),
-          variant: 'danger',
-        });
-
-        if (!confirmed) {
-          return;
-        }
-
-        setProviderTerminal({ providerId, action: 'logout' });
-      })();
+  const openNativeAuthentication = useCallback(
+    (providerId: CliProviderId, action: NativeClaudeAuthenticationAction) => {
+      setNativeClaudeAuthAction(action);
+      setManageProviderId(providerId);
+      setManageRuntimeProviderId(null);
+      setManageRuntimeProviderAction(null);
+      setManageDialogOpen(true);
     },
-    [effectiveCliStatus?.providers, settingsT, t]
+    []
   );
-
+  const requestProviderAction = useProviderAuthenticationActions({
+    providers: effectiveCliStatus?.providers,
+    projectPath: selectedProjectPath,
+    openNative: openNativeAuthentication,
+    openLegacy: setProviderTerminal,
+  });
+  const handleProviderLogin = useCallback(
+    (providerId: CliProviderId) => void requestProviderAction(providerId, 'login'),
+    [requestProviderAction]
+  );
+  const handleProviderLogout = useCallback(
+    (providerId: CliProviderId) => void requestProviderAction(providerId, 'logout'),
+    [requestProviderAction]
+  );
   const handleProviderManage = useCallback((providerId: CliProviderId) => {
     setManageProviderId(providerId);
     setManageRuntimeProviderId(null);
@@ -1995,6 +2009,7 @@ export const CliStatusBanner = ({
     (open: boolean) => {
       setManageDialogOpen(open);
       if (!open) {
+        setNativeClaudeAuthAction(null);
         if (manageProviderId === 'opencode') {
           setProviderQuickConnectRefreshKey((current) => current + 1);
         }
@@ -2045,6 +2060,52 @@ export const CliStatusBanner = ({
 
   if (!isElectron) return null;
 
+  // Reuse identical banner props across every status branch.
+  const renderInstalledBanner = (status: InstalledBannerProps['cliStatus']) => (
+    <InstalledBanner
+      inline={mode === 'settings'}
+      isActive={isDashboardActive && !manageDialogOpen}
+      catalogFailures={openCodeDashboardCatalog.failures}
+      cliStatus={status}
+      sourceProviderMap={loadingCliProviderMap}
+      cliStatusLoading={cliStatusLoading}
+      cliProviderStatusLoading={cliProviderStatusLoading}
+      codexSnapshotPending={codexSnapshotPending}
+      cliStatusError={cliStatusError ?? null}
+      providersCollapsed={mode === 'dashboard' && providersCollapsed}
+      providerConnectionAuthModes={providerConnectionAuthModes}
+      codexRateLimitsLoading={codexAccount.rateLimitsLoading}
+      codexRateLimitsRefreshKey={codexAccount.snapshot?.updatedAt ?? null}
+      anthropicRateLimitsRefreshing={anthropicRateLimitsRefreshing}
+      anthropicRateLimitsRefreshVersion={anthropicRateLimitsRefreshVersion}
+      openCodeRuntimeStatus={openCodeRuntimeStatus}
+      openCodeRuntimeStatusLoading={openCodeRuntimeStatusLoading}
+      projectPath={selectedProjectPath}
+      providerQuickConnectRefreshKey={providerQuickConnectRefreshKey}
+      codexRuntimeStatus={codexRuntimeStatus}
+      codexRuntimeStatusLoading={codexRuntimeStatusLoading}
+      isBusy={isBusy}
+      onInstall={handleInstall}
+      onOpenCodeInstall={(options) => void installOpenCodeRuntime(options)}
+      onOpenCodeRefresh={handleOpenCodeRefresh}
+      onCodexInstall={() => setCodexRuntimeDialogOpen(true)}
+      onRefresh={handleRefresh}
+      onToggleProvidersCollapsed={handleToggleProvidersCollapsed}
+      onProviderLogin={handleProviderLogin}
+      onProviderLogout={handleProviderLogout}
+      onProviderManage={handleProviderManage}
+      onOpenCodeProviderConnect={handleOpenCodeProviderConnect}
+      onOpenCodeProviderAction={handleOpenCodeProviderAction}
+      onBrowseOpenCodeProviders={handleBrowseOpenCodeProviders}
+      onProviderRefresh={handleProviderRefresh}
+      onCodexReconnect={handleCodexDashboardLogin}
+      onCodexDeviceCodeLogin={handleCodexDashboardDeviceCodeLogin}
+      codexReconnectBusy={codexAccount.loading}
+      openCodeConnectedPlanCount={openCodeConnectedPlanCount}
+      onOpenCodeConnectedPlanCountChange={handleOpenCodeConnectedPlanCountChange}
+    />
+  );
+
   // Determine variant for styling
   const getVariant = (): BannerVariant => {
     if (installerState === 'error') return 'error';
@@ -2073,18 +2134,6 @@ export const CliStatusBanner = ({
 
   const variant = getVariant();
   const styles = VARIANT_STYLES[variant];
-  const activeTerminalProvider = providerTerminal
-    ? (effectiveCliStatus?.providers.find(
-        (provider) => provider.providerId === providerTerminal.providerId
-      ) ?? null)
-    : null;
-  const providerTerminalCommand = providerTerminal
-    ? activeTerminalProvider
-      ? providerTerminal.action === 'login'
-        ? getProviderTerminalCommand(activeTerminalProvider)
-        : getProviderTerminalLogoutCommand(activeTerminalProvider)
-      : getProviderTerminalCommandById(providerTerminal.providerId, providerTerminal.action)
-    : null;
   const installedAuxiliaryUi =
     renderCliStatus !== null ? (
       <>
@@ -2129,6 +2178,7 @@ export const CliStatusBanner = ({
             <ProviderRuntimeSettingsDialog
               open={manageDialogOpen}
               onOpenChange={handleManageDialogOpenChange}
+              nativeClaudeAuthAction={nativeClaudeAuthAction}
               providers={visibleCliProviders}
               projectPath={selectedProjectPath}
               initialProviderId={
@@ -2139,42 +2189,27 @@ export const CliStatusBanner = ({
               initialRuntimeProviderId={manageRuntimeProviderId}
               initialRuntimeProviderAction={manageRuntimeProviderAction}
               providerStatusLoading={cliProviderStatusLoading}
-              disabled={isBusy || cliStatusLoading || !renderCliStatus.binaryPath}
+              disabled={isBusy || cliStatusLoading || !renderCliStatus.installed}
               codexRuntimeStatus={codexRuntimeStatus}
               codexRuntimeStatusLoading={codexRuntimeStatusLoading}
               onInstallCodexRuntime={() => installCodexRuntime()}
               onSelectBackend={handleProviderBackendChange}
               onRefreshProvider={handleProviderRefresh}
-              onRequestLogin={(providerId) => setProviderTerminal({ providerId, action: 'login' })}
+              onRequestLogin={handleProviderLogin}
             />
           </Suspense>
         )}
-        {providerTerminal && renderCliStatus.binaryPath && (
+        {providerTerminal && (
           <Suspense fallback={null}>
-            <TerminalModal
-              title={`${getHumanRuntimeDisplayName(renderCliStatus, multimodelEnabled)} ${
-                providerTerminal.action === 'login'
-                  ? t('cliStatus.labels.loginTitle')
-                  : t('cliStatus.labels.logoutTitle')
-              }: ${getProviderLabel(providerTerminal.providerId)}`}
-              command={renderCliStatus.binaryPath}
-              args={providerTerminalCommand?.args}
-              env={providerTerminalCommand?.env}
+            <ProviderAuthenticationTerminal
+              status={renderCliStatus}
+              multimodelEnabled={multimodelEnabled}
+              request={providerTerminal}
+              label={getProviderLabel(providerTerminal.providerId)}
               onClose={() => {
                 setProviderTerminal(null);
                 recheckAuthState();
               }}
-              autoCloseOnSuccessMs={3000}
-              successMessage={
-                providerTerminal.action === 'login'
-                  ? t('cliStatus.labels.loginAuthUpdated')
-                  : t('cliStatus.labels.loggedOut')
-              }
-              failureMessage={
-                providerTerminal.action === 'login'
-                  ? t('cliStatus.labels.loginAuthFailed')
-                  : t('cliStatus.labels.logoutFailed')
-              }
             />
           </Suspense>
         )}
@@ -2238,49 +2273,7 @@ export const CliStatusBanner = ({
 
     // Multimodel: render provider cards immediately instead of a generic intermediate block.
     if (multimodelEnabled) {
-      return (
-        <InstalledBanner
-          isActive={isDashboardActive}
-          catalogFailures={openCodeDashboardCatalog.failures}
-          cliStatus={renderCliStatus ?? createLoadingMultimodelCliStatus()}
-          sourceProviderMap={loadingCliProviderMap}
-          cliStatusLoading={cliStatusLoading}
-          cliProviderStatusLoading={cliProviderStatusLoading}
-          codexSnapshotPending={codexSnapshotPending}
-          cliStatusError={cliStatusError ?? null}
-          providersCollapsed={providersCollapsed}
-          providerConnectionAuthModes={providerConnectionAuthModes}
-          codexRateLimitsLoading={codexAccount.rateLimitsLoading}
-          codexRateLimitsRefreshKey={codexAccount.snapshot?.updatedAt ?? null}
-          anthropicRateLimitsRefreshing={anthropicRateLimitsRefreshing}
-          anthropicRateLimitsRefreshVersion={anthropicRateLimitsRefreshVersion}
-          openCodeRuntimeStatus={openCodeRuntimeStatus}
-          openCodeRuntimeStatusLoading={openCodeRuntimeStatusLoading}
-          projectPath={selectedProjectPath}
-          providerQuickConnectRefreshKey={providerQuickConnectRefreshKey}
-          codexRuntimeStatus={codexRuntimeStatus}
-          codexRuntimeStatusLoading={codexRuntimeStatusLoading}
-          isBusy={isBusy}
-          onInstall={handleInstall}
-          onOpenCodeInstall={(options) => void installOpenCodeRuntime(options)}
-          onOpenCodeRefresh={handleOpenCodeRefresh}
-          onCodexInstall={() => setCodexRuntimeDialogOpen(true)}
-          onRefresh={handleRefresh}
-          onToggleProvidersCollapsed={handleToggleProvidersCollapsed}
-          onProviderLogin={handleProviderLogin}
-          onProviderLogout={handleProviderLogout}
-          onProviderManage={handleProviderManage}
-          onOpenCodeProviderConnect={handleOpenCodeProviderConnect}
-          onOpenCodeProviderAction={handleOpenCodeProviderAction}
-          onBrowseOpenCodeProviders={handleBrowseOpenCodeProviders}
-          onProviderRefresh={handleProviderRefresh}
-          onCodexReconnect={handleCodexDashboardLogin}
-          onCodexDeviceCodeLogin={handleCodexDashboardDeviceCodeLogin}
-          codexReconnectBusy={codexAccount.loading}
-          openCodeConnectedPlanCount={openCodeConnectedPlanCount}
-          onOpenCodeConnectedPlanCountChange={handleOpenCodeConnectedPlanCountChange}
-        />
-      );
+      return renderInstalledBanner(renderCliStatus ?? createLoadingMultimodelCliStatus());
     }
 
     // Claude-only mode: keep the generic loading spinner.
@@ -2500,47 +2493,7 @@ export const CliStatusBanner = ({
     if (renderCliStatus.authStatusChecking || isVerifyingAuth) {
       return (
         <>
-          <InstalledBanner
-            isActive={isDashboardActive}
-            catalogFailures={openCodeDashboardCatalog.failures}
-            cliStatus={renderCliStatus}
-            sourceProviderMap={loadingCliProviderMap}
-            cliStatusLoading={cliStatusLoading}
-            cliProviderStatusLoading={cliProviderStatusLoading}
-            codexSnapshotPending={codexSnapshotPending}
-            cliStatusError={cliStatusError ?? null}
-            providersCollapsed={providersCollapsed}
-            providerConnectionAuthModes={providerConnectionAuthModes}
-            codexRateLimitsLoading={codexAccount.rateLimitsLoading}
-            codexRateLimitsRefreshKey={codexAccount.snapshot?.updatedAt ?? null}
-            anthropicRateLimitsRefreshing={anthropicRateLimitsRefreshing}
-            anthropicRateLimitsRefreshVersion={anthropicRateLimitsRefreshVersion}
-            openCodeRuntimeStatus={openCodeRuntimeStatus}
-            openCodeRuntimeStatusLoading={openCodeRuntimeStatusLoading}
-            projectPath={selectedProjectPath}
-            providerQuickConnectRefreshKey={providerQuickConnectRefreshKey}
-            codexRuntimeStatus={codexRuntimeStatus}
-            codexRuntimeStatusLoading={codexRuntimeStatusLoading}
-            isBusy={isBusy}
-            onInstall={handleInstall}
-            onOpenCodeInstall={(options) => void installOpenCodeRuntime(options)}
-            onOpenCodeRefresh={handleOpenCodeRefresh}
-            onCodexInstall={() => setCodexRuntimeDialogOpen(true)}
-            onRefresh={handleRefresh}
-            onToggleProvidersCollapsed={handleToggleProvidersCollapsed}
-            onProviderLogin={handleProviderLogin}
-            onProviderLogout={handleProviderLogout}
-            onProviderManage={handleProviderManage}
-            onOpenCodeProviderConnect={handleOpenCodeProviderConnect}
-            onOpenCodeProviderAction={handleOpenCodeProviderAction}
-            onBrowseOpenCodeProviders={handleBrowseOpenCodeProviders}
-            onProviderRefresh={handleProviderRefresh}
-            onCodexReconnect={handleCodexDashboardLogin}
-            onCodexDeviceCodeLogin={handleCodexDashboardDeviceCodeLogin}
-            codexReconnectBusy={codexAccount.loading}
-            openCodeConnectedPlanCount={openCodeConnectedPlanCount}
-            onOpenCodeConnectedPlanCountChange={handleOpenCodeConnectedPlanCountChange}
-          />
+          {renderInstalledBanner(renderCliStatus)}
           {installedAuxiliaryUi}
         </>
       );
@@ -2584,47 +2537,7 @@ export const CliStatusBanner = ({
 
     return (
       <>
-        <InstalledBanner
-          isActive={isDashboardActive}
-          catalogFailures={openCodeDashboardCatalog.failures}
-          cliStatus={renderCliStatus}
-          sourceProviderMap={loadingCliProviderMap}
-          cliStatusLoading={cliStatusLoading}
-          cliProviderStatusLoading={cliProviderStatusLoading}
-          codexSnapshotPending={codexSnapshotPending}
-          cliStatusError={cliStatusError ?? null}
-          providersCollapsed={providersCollapsed}
-          providerConnectionAuthModes={providerConnectionAuthModes}
-          codexRateLimitsLoading={codexAccount.rateLimitsLoading}
-          codexRateLimitsRefreshKey={codexAccount.snapshot?.updatedAt ?? null}
-          anthropicRateLimitsRefreshing={anthropicRateLimitsRefreshing}
-          anthropicRateLimitsRefreshVersion={anthropicRateLimitsRefreshVersion}
-          openCodeRuntimeStatus={openCodeRuntimeStatus}
-          openCodeRuntimeStatusLoading={openCodeRuntimeStatusLoading}
-          projectPath={selectedProjectPath}
-          providerQuickConnectRefreshKey={providerQuickConnectRefreshKey}
-          codexRuntimeStatus={codexRuntimeStatus}
-          codexRuntimeStatusLoading={codexRuntimeStatusLoading}
-          isBusy={isBusy}
-          onInstall={handleInstall}
-          onOpenCodeInstall={(options) => void installOpenCodeRuntime(options)}
-          onOpenCodeRefresh={handleOpenCodeRefresh}
-          onCodexInstall={() => setCodexRuntimeDialogOpen(true)}
-          onRefresh={handleRefresh}
-          onToggleProvidersCollapsed={handleToggleProvidersCollapsed}
-          onProviderLogin={handleProviderLogin}
-          onProviderLogout={handleProviderLogout}
-          onProviderManage={handleProviderManage}
-          onOpenCodeProviderConnect={handleOpenCodeProviderConnect}
-          onOpenCodeProviderAction={handleOpenCodeProviderAction}
-          onBrowseOpenCodeProviders={handleBrowseOpenCodeProviders}
-          onProviderRefresh={handleProviderRefresh}
-          onCodexReconnect={handleCodexDashboardLogin}
-          onCodexDeviceCodeLogin={handleCodexDashboardDeviceCodeLogin}
-          codexReconnectBusy={codexAccount.loading}
-          openCodeConnectedPlanCount={openCodeConnectedPlanCount}
-          onOpenCodeConnectedPlanCountChange={handleOpenCodeConnectedPlanCountChange}
-        />
+        {renderInstalledBanner(renderCliStatus)}
         <div
           className="mb-6 rounded-lg border-l-4 p-4"
           style={{
@@ -2788,47 +2701,7 @@ export const CliStatusBanner = ({
   // Installed — show version, path, update info
   return (
     <>
-      <InstalledBanner
-        isActive={isDashboardActive}
-        catalogFailures={openCodeDashboardCatalog.failures}
-        cliStatus={renderCliStatus}
-        sourceProviderMap={loadingCliProviderMap}
-        cliStatusLoading={cliStatusLoading}
-        cliProviderStatusLoading={cliProviderStatusLoading}
-        codexSnapshotPending={codexSnapshotPending}
-        cliStatusError={cliStatusError ?? null}
-        providersCollapsed={providersCollapsed}
-        providerConnectionAuthModes={providerConnectionAuthModes}
-        codexRateLimitsLoading={codexAccount.rateLimitsLoading}
-        codexRateLimitsRefreshKey={codexAccount.snapshot?.updatedAt ?? null}
-        anthropicRateLimitsRefreshing={anthropicRateLimitsRefreshing}
-        anthropicRateLimitsRefreshVersion={anthropicRateLimitsRefreshVersion}
-        openCodeRuntimeStatus={openCodeRuntimeStatus}
-        openCodeRuntimeStatusLoading={openCodeRuntimeStatusLoading}
-        projectPath={selectedProjectPath}
-        providerQuickConnectRefreshKey={providerQuickConnectRefreshKey}
-        codexRuntimeStatus={codexRuntimeStatus}
-        codexRuntimeStatusLoading={codexRuntimeStatusLoading}
-        isBusy={isBusy}
-        onInstall={handleInstall}
-        onOpenCodeInstall={(options) => void installOpenCodeRuntime(options)}
-        onOpenCodeRefresh={handleOpenCodeRefresh}
-        onCodexInstall={() => setCodexRuntimeDialogOpen(true)}
-        onRefresh={handleRefresh}
-        onToggleProvidersCollapsed={handleToggleProvidersCollapsed}
-        onProviderLogin={handleProviderLogin}
-        onProviderLogout={handleProviderLogout}
-        onProviderManage={handleProviderManage}
-        onOpenCodeProviderConnect={handleOpenCodeProviderConnect}
-        onOpenCodeProviderAction={handleOpenCodeProviderAction}
-        onBrowseOpenCodeProviders={handleBrowseOpenCodeProviders}
-        onProviderRefresh={handleProviderRefresh}
-        onCodexReconnect={handleCodexDashboardLogin}
-        onCodexDeviceCodeLogin={handleCodexDashboardDeviceCodeLogin}
-        codexReconnectBusy={codexAccount.loading}
-        openCodeConnectedPlanCount={openCodeConnectedPlanCount}
-        onOpenCodeConnectedPlanCountChange={handleOpenCodeConnectedPlanCountChange}
-      />
+      {renderInstalledBanner(renderCliStatus)}
       {installedAuxiliaryUi}
     </>
   );

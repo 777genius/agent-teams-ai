@@ -1,0 +1,167 @@
+{
+  "kind": "B2_IMMUTABLE_SOURCE_REFERENCE_PACKETS",
+  "execution": false,
+  "references": [
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/p10-remaining-boundary/donor-source-packet-1.json",
+      "gitBlob": "fb79efc394823bd14c25016bfdec20a587fdb088",
+      "bytes": 35090,
+      "sha256": "947cfce07c80fca59c7e685312366f1bcbbc8cee6789b3edf93e34390b10b78f",
+      "lines": 28
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/p10-remaining-boundary/donor-source-packet-2.json",
+      "gitBlob": "433ff5487921f2518a2007a8684f372e8317806b",
+      "bytes": 236053,
+      "sha256": "c3d2d5703cb376b63bf231a4a807d79971bfa0a151b8fb76525680179ab9f157",
+      "lines": 20
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/p10-remaining-boundary/donor-source-packet-3.json",
+      "gitBlob": "a8fa61c4b592097e377113bceebaf1085aa65abc",
+      "bytes": 204023,
+      "sha256": "63732693b4e8644be12afeac10a3eab91a008a71c1644bf948c9c0ca9cbf4f60",
+      "lines": 28
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/p10-remaining-boundary/donor-source-packet-4.json",
+      "gitBlob": "f92a58fa59935f0f2b18d7bef359f6d1d3814caf",
+      "bytes": 51861,
+      "sha256": "8237f1f565493cc599de70aaa2e49542818b30228767fb361649328cd1469438",
+      "lines": 12
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/p10-remaining-boundary/donor-source-packet-5.json",
+      "gitBlob": "b527f749b78b051768d3d55b191e19f1bdb433c0",
+      "bytes": 32980,
+      "sha256": "17f8e702fa62a2fd569b337e498777a0e664a6ae453e051ed5e92d60423231e2",
+      "lines": 12
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/p10-remaining-boundary/donor-source-packet-6.json",
+      "gitBlob": "2afdf55aba05167123301294f5e002252a9481e3",
+      "bytes": 33308,
+      "sha256": "7d1c5e1ad00ba4a43cabf81dbcfd5da478774bb20f8fc846cf8ff7d5901e0c47",
+      "lines": 22
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/p10-remaining-boundary/donor-source-packet-7.json",
+      "gitBlob": "6a4cb455af9346bf1637d0b9a3c51ce574ea5f63",
+      "bytes": 268661,
+      "sha256": "62c2a7f4eaca3b84717a9710105fa41bacc7d69fa665e1206b4d2222de52aada",
+      "lines": 13
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/p10-remaining-boundary/donor-source-packet-8.json",
+      "gitBlob": "57297f5c5b67efe1a3cd038be8228947c6ab7bb5",
+      "bytes": 99196,
+      "sha256": "511f85503651c76dc11140949c765e856d0f1a6ff65385d3471b39f11be669db",
+      "lines": 31
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/p10-remaining-boundary/donor-source-packet-9.json",
+      "gitBlob": "89c0c7a074aee18919b9dfefe213441cd6b3c930",
+      "bytes": 354785,
+      "sha256": "985946b7e46acf0b7a02bd4d6508a77e7faed37aac562388b8eace91edf5a90b",
+      "lines": 54
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/p10-remaining-boundary/donor-source-packet-10.json",
+      "gitBlob": "fb7ac319108fc9a9a77eec7a260895e771003414",
+      "bytes": 46417,
+      "sha256": "2788aefede97b1f908e2d96b11872a39abc29f7c4950bcaa5bf2401cbafe6c4e",
+      "lines": 22
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/p10-remaining-boundary/donor-source-packet-11.json",
+      "gitBlob": "92e8b63c4a3be0606b6ea276df56d776bb91cd72",
+      "bytes": 211829,
+      "sha256": "48b0b05da9ffde3fe0c9dbc886ec72f045ed0749079ddc67c70be8937e118da2",
+      "lines": 22
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/p10-remaining-boundary/donor-source-packet-12.json",
+      "gitBlob": "d9fcaaa67633f46d6180169b3c766be1ff7c17c5",
+      "bytes": 239184,
+      "sha256": "296119a248f6da6bb7409f0091097f0859b6aaea99b09ed44b8f4f7f803cd033",
+      "lines": 31
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/p10-remaining-boundary/donor-source-packet-13.json",
+      "gitBlob": "3f63a69ac71b90b71ff2ead3ff646c4fcce45778",
+      "bytes": 76015,
+      "sha256": "85dcaab79c53be9f36a2cfd3646a967cb11a832166085abf18921116f5b8ee67",
+      "lines": 22
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/p10-remaining-boundary/donor-source-packet-14.json",
+      "gitBlob": "dedeefbd94701cf7852b038aa3fb99ede735bce5",
+      "bytes": 73392,
+      "sha256": "ca4f5e4d10bec74f2827da1a09bf7e1fcf1b830ba9fe86cf3213b21dceefa5f1",
+      "lines": 13
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/p10-remaining-boundary/donor-source-packet-15.json",
+      "gitBlob": "0f68504667a454255cca0e5e9fa3b28bb8912a48",
+      "bytes": 2339,
+      "sha256": "dd525c88f897a5db2f37884acf6c04c6c7252b00991dc0285d45eccd655df923",
+      "lines": 13
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/p10-remaining-boundary/donor-source-packet-16.json",
+      "gitBlob": "c435e6ad1c458e2616cae965a5d3123c9a42c417",
+      "bytes": 43727,
+      "sha256": "d96564972d030ba51b8d050a23270c246e5fb10f00bdc6b8fc74b09c36955cef",
+      "lines": 20
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/p10-remaining-boundary/donor-source-packet-17.json",
+      "gitBlob": "29e8e38f8635bb0f5fe5dd64566a2c78cf63119e",
+      "bytes": 33234,
+      "sha256": "b270828c4111b63baa0cebff86bbee6dee1d93165f1a7262b727bfd1dd730be6",
+      "lines": 13
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/p10-remaining-boundary/donor-source-packet-18.json",
+      "gitBlob": "2d0fe6649b462ce491a8fc8b0e54319271a0cb40",
+      "bytes": 8130,
+      "sha256": "71ca3bcd41aa065a582cbc211164af11d225396971d6d8c345ef1fc62b0e1e7a",
+      "lines": 20
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/p10-remaining-boundary/donor-source-packet-19.json",
+      "gitBlob": "4bcf954b3071c469420564ea3f627f4fc95ba5f5",
+      "bytes": 23861,
+      "sha256": "eb06f85bbde29d1c4edb72ec9327785eab776b557a5955ba9d8136e55d2ff834",
+      "lines": 28
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/frontend/p10-b2-ui-inert-proposal/source-reference-final.json",
+      "gitBlob": "ce0d4a868ddf2d46e3688b7ace35263f89992c6c",
+      "bytes": 371965,
+      "sha256": "427489d55eaef5d702e933b0925458ee1cfb01deffe5f9dcb852483e4881972c",
+      "lines": 136
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/root/b2-cdp-reference.mts.txt",
+      "gitBlob": "1e2573088eabbca71aeb758d56a22836668f5bdc",
+      "bytes": 3282,
+      "sha256": "0fdce555e88a800c9b5808a3e548b1a5ddfe70181c7d69d656da7857713c2e92",
+      "lines": 65
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/p10-donor-preparation-inert-proposal/immutable-reference.json",
+      "gitBlob": "f8dd1636357c5324b36ba0d57892c735e92e3ee3",
+      "bytes": 1120119,
+      "sha256": "efbc27995683878daec35c3720e820897f937339bb01e0c9d46d97ca7f11188b",
+      "lines": 208
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/frontend/p10-b2-ui-attachment-state-revision/manifest.json",
+      "gitBlob": "4b1d517946cea800cc3999a9e17a1ac8328751cc",
+      "bytes": 1872,
+      "sha256": "7558350ae796495ff5aba911122aadeca15aa161d63d2110a0c156fc49d9341d",
+      "lines": 53
+    }
+  ]
+}

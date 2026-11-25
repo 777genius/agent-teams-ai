@@ -1,0 +1,994 @@
+import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
+import { test } from 'node:test';
+import { acquireProfileWriterLease } from '../dist/adapters/profile/ProfileWriterLease.js';
+import { FileManagementCommandStore } from '../dist/adapters/providers/FileManagementCommandStore.js';
+import { CodexManagementHost } from '../dist/adapters/providers/CodexManagementHost.js';
+import { createCodexMemberProvider } from '../dist/adapters/providers/CodexMemberProvider.js';
+import { RuntimeSourceNativeVersion } from '../dist/adapters/providers/RuntimeSourceNativeVersion.js';
+import { RuntimeSourceIndex } from '../dist/composition/RuntimeSourceIndex.js';
+import { applyLaunchConfiguration } from '../dist/composition/launchConfiguration.js';
+import { runtimeMemberProfileSchema } from '../dist/composition/runtimeProfile.js';
+import { teamModelProbeProfile } from '../dist/composition/teamLaunchModelProbe.js';
+import { assertRuntimeSourceNativePolicy } from '../dist/composition/runtimeSourceQualification.js';
+import { assertRuntimeSourceQualification } from '../dist/composition/verifyRuntimeSourceCandidate.js';
+import { providerManagementProfileSchema } from '../dist/management/profile.js';
+import { runtimeDigest } from '../dist/runtime/identity.js';
+import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
+import type { MemberProviderContext } from '../dist/adapters/providers/MemberProvider.js';
+import type {
+  RuntimeSourceCandidate,
+  RuntimeSourceGrant,
+} from '../dist/composition/runtimeSourceContracts.js';
+import type { TestContext } from 'node:test';
+
+function fixture(t: TestContext, provider: 'codex' | 'claude' | 'opencode' = 'codex') {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-source-native-')));
+  const lease = acquireProfileWriterLease(root),
+    marker = join(root, 'TEST-version-reads');
+  t.after(() => {
+    lease.release();
+    rmSync(root, { recursive: true, force: true });
+  });
+  mkdirSync(join(root, 'config'));
+  const quoted = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
+  const binary = (name: string, version: string, mutate = false) => {
+    const path = join(root, name);
+    const output =
+      provider === 'codex'
+        ? `codex-cli ${version}`
+        : provider === 'claude'
+          ? `${version} (Claude Code)`
+          : version;
+    const bytes = [
+      '#!/bin/sh',
+      `# ${name}`,
+      'test -z "$TEST_SECRET_AUTH$NODE_OPTIONS$BUN_OPTIONS" || exit 9',
+      `printf '%s\\n' ${quoted(name)} >> ${quoted(marker)}`,
+      ...(mutate ? ['printf "\\n# changed bytes\\n" >> "$0"'] : []),
+      `printf '%s\\n' ${quoted(output)}`,
+      '',
+    ].join('\n');
+    writeFileSync(path, bytes, { mode: 0o700 });
+    return { path, sha256: createHash('sha256').update(bytes).digest('hex') };
+  };
+  const version = provider === 'codex' ? '0.162.0' : provider === 'claude' ? '2.1.34' : '1.19.4';
+  const original = binary('TEST-seed', version);
+  const profile: TeamHostProfile = {
+    schemaVersion: 1,
+    principalId: 'TEST-human',
+    teams: [],
+    creation: { contextIds: ['TEST-context'] },
+    owner: {
+      ownerId: 'TEST-owner',
+      revision: 'TEST-owner-revision',
+      profileId: 'TEST-bootstrap',
+      storageRoot: root,
+      protocolVersion: 1,
+      buildId: 'TEST-build',
+      nodeSha256: 'a'.repeat(64),
+      hostEntrySha256: 'b'.repeat(64),
+    },
+    management: [
+      providerManagementProfileSchema.parse({
+        provider,
+        executable: original,
+        cwd: root,
+        accountBinding: 'TEST-account',
+        profileId: 'TEST-profile',
+        configRevision: 'TEST-config',
+        timeoutMs: 1000,
+        environment: {
+          HOME: root,
+          PATH: '/usr/bin:/bin',
+          CODEX_HOME: join(root, 'config'),
+          CLAUDE_CONFIG_DIR: join(root, 'config'),
+          TEST_SECRET_AUTH: 'TEST-must-not-reach-version-child',
+          NODE_OPTIONS: '--require /TEST/not-allowed',
+          BUN_OPTIONS: '--preload /TEST/not-allowed',
+        },
+        ...(provider === 'codex'
+          ? { protocolRevision: '0.162.0' as const }
+          : provider === 'claude'
+            ? { sdkRevision: '0.3.305' as const, configNamespace: 'custom-directory' as const }
+            : { endpoint: 'http://127.0.0.1:19182', nativeGeneration: 'v1' as const }),
+      }),
+    ],
+  };
+  const grant: RuntimeSourceGrant = {
+    targetId: 'c'.repeat(64),
+    ownerId: profile.owner.ownerId,
+    ownerRevision: profile.owner.revision,
+    contextId: 'TEST-context',
+    projectPath: root,
+    runtimeId: provider,
+    profileId: 'TEST-profile',
+    configRevision: 'TEST-config',
+    teamScopes: [],
+  };
+  const assertWriter = () => lease.assertCurrent();
+  const index = new RuntimeSourceIndex(profile, assertWriter),
+    store = new FileManagementCommandStore(root);
+  const candidate = (
+    name: string,
+    expected = version,
+    reported = expected,
+    mutate = false
+  ): RuntimeSourceCandidate => {
+    const executable = binary(name, reported, mutate);
+    return {
+      sourceKind: 'app-managed',
+      executable,
+      nativeCli: {
+        executable,
+        version: expected,
+        ...(provider === 'opencode' ? { generation: 'v1' as const } : {}),
+      },
+    };
+  };
+  const input = (name: string, selected = candidate(name)) => ({
+    grant,
+    commandId: name,
+    expectedRevision: index.current({ grant }).revision,
+    candidate: selected,
+  });
+  return {
+    root,
+    profile,
+    grant,
+    index,
+    store,
+    assertWriter,
+    candidate,
+    input,
+    reads: () => (existsSync(marker) ? readFileSync(marker, 'utf8').trim().split('\n') : []),
+  };
+}
+
+async function interruptPrepared(t: TestContext, index: RuntimeSourceIndex, input: unknown): Promise<void> {
+  const write = FileManagementCommandStore.prototype.write;
+  const fault = t.mock.method(FileManagementCommandStore.prototype, 'write',
+    function (this: FileManagementCommandStore, record: Parameters<typeof write>[0]) {
+      write.call(this, record);
+      if (record.kind === 'runtime.source' && record.phase === 'prepared')
+        throw new Error('TEST-interrupted-after-prepared');
+    });
+  try {
+    await assert.rejects(index.publish(input, () => assert.fail('interruption precedes admission')),
+      /TEST-interrupted-after-prepared/);
+  } finally { fault.mock.restore(); }
+}
+
+test('source hashing yields to original Host control and rejects a replaced pathname before publication', {
+  skip: process.platform === 'win32' ? 'POSIX file replacement fixture' : false,
+}, async t => {
+  for (const scenario of ['seal', 'replace'] as const) {
+    const f = fixture(t), input = f.input('TEST-async-' + scenario);
+    const path = input.candidate.executable.path;
+    const bytes = Buffer.concat([readFileSync(path), Buffer.from('#' + 'x'.repeat(2 * 1024 * 1024) + '\n')]);
+    writeFileSync(path, bytes, { mode: 0o700 });
+    input.candidate.executable = { path, sha256: createHash('sha256').update(bytes).digest('hex') };
+    input.candidate.nativeCli!.executable = input.candidate.executable;
+    let nativeRuns = 0, admitted = false, controlled = false, controlError: unknown;
+    const control = () => {
+      try {
+        controlled = true;
+        if (scenario === 'seal') index.seal();
+        else {
+          renameSync(path, path + '.original');
+          writeFileSync(path, bytes, { mode: 0o700 });
+        }
+      } catch (error) { controlError = error; }
+    };
+    const index = new RuntimeSourceIndex(f.profile, f.assertWriter, {
+      assertCleanupWriter: f.assertWriter,
+      createNativeCheck: () => ({
+        run: async () => {
+          nativeRuns++;
+          if (scenario === 'replace') setImmediate(control);
+          return { nativeVersion: input.candidate.nativeCli!.version };
+        },
+        close: async () => true,
+      }),
+    });
+    if (scenario === 'seal') setImmediate(control);
+    try {
+      const outcome = await index.publish(input, () => { admitted = true; }).then(
+        result => ({ result, error: undefined }),
+        (error: unknown) => ({ result: undefined, error })
+      );
+      assert.equal(controlError, undefined);
+      assert.equal(controlled, true, 'original control runs before the source can publish');
+      assert.ok(outcome.error instanceof Error && 'reason' in outcome.error);
+      assert.equal(outcome.error.reason, 'source-changed');
+      assert.equal(admitted, false);
+      assert.equal(nativeRuns, scenario === 'seal' ? 0 : 1);
+      assert.equal(index.current({ grant: f.grant }).revision, input.expectedRevision);
+      const original = f.store.read(input.commandId)!;
+      assert.equal(original.phase, 'held');
+      assert.equal(original.resourceHeld, false);
+      const cold = new RuntimeSourceIndex(f.profile, f.assertWriter, {
+        createNativeCheck: () => assert.fail('refusal replay cannot allocate a new verifier'),
+      });
+      assert.equal((await cold.publish(input, () => assert.fail('refusal replay cannot admit'))).phase, 'held');
+      assert.deepEqual(f.store.read(input.commandId), original);
+      await cold.close();
+    } finally { await index.close(); }
+  }
+});
+
+test('V1 preferences publish once, retain lost-ACK A and apply only the actual selected model limits', async (t) => {
+  const f = fixture(t, 'opencode');
+  const limits = { contextTokens: 32000, outputTokens: 1000 };
+  const preferencesA = { defaultModelId: 'TEST-local/default', modelLimitOverrides: {
+    'TEST-local/default': limits,
+    'TEST-other/chosen': { contextTokens: 64000, outputTokens: 2000 },
+  } };
+  const preferencesB = { defaultModelId: 'TEST-other/chosen', modelLimitOverrides: {} };
+  const input = { grant: f.grant, commandId: 'TEST-preferences-A',
+    expectedRevision: f.index.current({ grant: f.grant }).revision,
+    openCodePreferences: preferencesA };
+  const write = FileManagementCommandStore.prototype.write;
+  const fault = t.mock.method(FileManagementCommandStore.prototype, 'write',
+    function (this: FileManagementCommandStore, row: Parameters<typeof write>[0]) {
+      if (row.commandId === input.commandId && row.phase === 'published')
+        throw new Error('TEST preferences lost ACK');
+      write.call(this, row);
+    });
+  await assert.rejects(f.index.refreshConfiguration(input, admitted => {
+    assert(admitted.provider === 'opencode');
+    assert.equal(JSON.parse(admitted.environment.OPENCODE_CONFIG_CONTENT!).model, preferencesA.defaultModelId);
+  }), /TEST preferences lost ACK/);
+  fault.mock.restore();
+  const cold = new RuntimeSourceIndex(f.profile, f.assertWriter);
+  const original = cold.lookup({ grant: f.grant, commandId: input.commandId });
+  assert.equal(original?.phase, 'published');
+  assert.deepEqual(await cold.refreshConfiguration({ ...input, openCodePreferences: preferencesB },
+    () => assert.fail('original retry must not re-admit B')), original);
+  const seed = runtimeMemberProfileSchema.parse({
+    provider: 'opencode', protocolRevision: '1.19.4',
+    teamId: 'TEST-team', memberId: 'TEST-member', principalId: 'TEST-principal',
+    sessionId: 'TEST-session', generation: 1, configRevision: 'TEST-config',
+    accountBinding: 'TEST-account', cwd: f.root, endpoint: 'http://127.0.0.1:19182',
+    executable: f.profile.management![0]!.executable, model: 'original',
+    environment: { HOME: f.root, PATH: '/usr/bin:/bin', XDG_CONFIG_HOME: join(f.root, 'config'),
+      XDG_DATA_HOME: join(f.root, 'config'), XDG_CACHE_HOME: join(f.root, 'config'), OPENCODE_CONFIG_CONTENT: JSON.stringify({
+      small_model: 'TEST-seed/original', testPreserved: 'TEST-native-config',
+      provider: {
+        'TEST-local': { models: { default: { limit: { context: 9000, output: 90 }, name: 'TEST-default' } } },
+        'TEST-other': { models: { chosen: { limit: { context: 8000, output: 80 }, name: 'TEST-chosen' } } },
+      },
+    }) },
+    nativeOptions: { providerId: 'TEST-seed', agent: 'TEST-agent', instructions: 'TEST-context' },
+    limits: { queuedInputs: 1, inputBytes: 4096, outputBytes: 8192, outputEvents: 100,
+      pendingInteractions: 1, timeoutMs: 1000 },
+  });
+  const reference = { sourceId: f.grant.targetId, revision: original!.selection!.revision };
+  const scope = { teamId: 'TEST-team', projectId: 'TEST-context', workspaceId: 'TEST-context' };
+  const capturedA = cold.resolveRecipe(reference, scope, f.root, seed);
+  const defaultLaunch = applyLaunchConfiguration(capturedA, {});
+  assert(defaultLaunch.provider === 'opencode');
+  assert.equal(defaultLaunch.nativeOptions.providerId, 'TEST-local');
+  assert.equal(defaultLaunch.model, 'default');
+  const defaultConfig = JSON.parse(defaultLaunch.environment.OPENCODE_CONFIG_CONTENT!);
+  assert.deepEqual(defaultConfig.provider['TEST-local'].models.default.limit, { context: 32000, output: 1000 });
+  assert.deepEqual(defaultConfig.provider['TEST-other'].models.chosen.limit, { context: 8000, output: 80 });
+  assert.equal(defaultConfig.testPreserved, 'TEST-native-config');
+  const explicit = applyLaunchConfiguration(capturedA, { model: 'TEST-other/chosen' });
+  assert(explicit.provider === 'opencode');
+  assert.equal(explicit.nativeOptions.providerId, 'TEST-other');
+  assert.equal(explicit.model, 'chosen');
+  const selectedConfig = JSON.parse(explicit.environment.OPENCODE_CONFIG_CONTENT!);
+  assert.deepEqual(selectedConfig.provider['TEST-other'].models.chosen.limit, { context: 64000, output: 2000 });
+  assert.deepEqual(selectedConfig.provider['TEST-local'].models.default.limit, { context: 9000, output: 90 });
+  const probe = teamModelProbeProfile(explicit);
+  assert(probe.provider === 'opencode');
+  assert.deepEqual(probe.managedPreferences, preferencesA);
+  assert.equal(probe.environment.OPENCODE_CONFIG_CONTENT, explicit.environment.OPENCODE_CONFIG_CONTENT);
+  const next = await cold.refreshConfiguration({ ...input, commandId: 'TEST-preferences-B',
+    expectedRevision: reference.revision, openCodePreferences: preferencesB }, () => {});
+  assert.notEqual(next.selection!.revision, reference.revision);
+  assert.deepEqual(cold.resolveRecipe(reference, scope, f.root, seed), capturedA);
+  assert.deepEqual(await cold.refreshConfiguration(input, () => assert.fail('retained A')), original);
+  await assert.rejects(cold.refreshConfiguration({ ...input, commandId: 'TEST-preferences-invalid',
+    expectedRevision: next.selection!.revision, openCodePreferences: {
+      defaultModelId: `${'x'.repeat(257)}/model`, modelLimitOverrides: {},
+    } }, () => assert.fail('unrepresentable default')));
+  assert.equal(f.store.read('TEST-preferences-invalid'), undefined, 'invalid default reserves no recovery command');
+  assert.equal(cold.current({ grant: f.grant }).revision, next.selection!.revision);
+  assert.deepEqual(f.reads(), [], 'preference capture never starts the model or version executable');
+  await cold.close();
+  await f.index.close();
+});
+
+test(
+  'native-only installer intent shares the exact full-candidate receipt and replay identity',
+  {
+    skip: process.platform === 'win32' ? 'POSIX process fixture' : false,
+  },
+  async (t) => {
+    const f = fixture(t),
+      input = f.input('TEST-native-selection');
+    const nativeInput = {
+      grant: input.grant,
+      commandId: input.commandId,
+      expectedRevision: input.expectedRevision,
+      nativeSelection: {
+        sourceKind: input.candidate.sourceKind,
+        nativeCli: input.candidate.nativeCli!,
+      },
+    };
+    const published = await f.index.publish(nativeInput, () => {});
+    assert.equal(published.phase, 'published');
+    await f.index.publish(f.input('TEST-later-selection'), () => {});
+    const cold = new RuntimeSourceIndex(f.profile, f.assertWriter);
+    assert.deepEqual(await cold.publish(input, () => assert.fail('full replay')), published);
+    assert.deepEqual(
+      await cold.publish(nativeInput, () => assert.fail('native replay')),
+      published
+    );
+    assert.deepEqual(f.reads(), ['TEST-native-selection', 'TEST-later-selection']);
+    await assert.rejects(
+      cold.publish(
+        { ...nativeInput, commandId: 'TEST-unknown-parent', expectedRevision: '0'.repeat(64) },
+        () => assert.fail('unknown parent')
+      ),
+      { code: 'conflict' }
+    );
+    assert.deepEqual(f.reads(), ['TEST-native-selection', 'TEST-later-selection']);
+    await f.index.close();
+  }
+);
+
+test(
+  'V2 native selection inherits executor and delivery only from its original expected revision',
+  {
+    skip:
+      process.platform === 'win32' || (process.platform === 'linux' && process.arch !== 'x64')
+        ? 'POSIX fixture on an existing qualified V2 tuple'
+        : false,
+  },
+  async (t) => {
+    const f = fixture(t, 'opencode');
+    const engine = (name: string) => {
+      const directory = join(f.root, name);
+      const server = 'local-cli/node_modules/@opencode/server-v2.1.4';
+      const effect = 'local-cli/node_modules/effect';
+      const files = {
+        [`${server}/package.json`]: JSON.stringify({
+          name: '@opencode/server',
+          version: '2.1.4',
+          dependencies: { effect: '4.0.1' },
+        }),
+        [`${server}/dist/process.js`]: 'export const TEST = true;\n',
+        [`${effect}/package.json`]: JSON.stringify({
+          name: 'effect',
+          version: '4.0.1',
+          exports: './dist/index.js',
+        }),
+        [`${effect}/dist/index.js`]: 'export const TEST = true;\n',
+      };
+      const hash = (bytes: string) => createHash('sha256').update(bytes).digest('hex');
+      for (const [path, bytes] of Object.entries(files)) {
+        mkdirSync(dirname(join(directory, path)), { recursive: true });
+        writeFileSync(join(directory, path), bytes);
+      }
+      const manifest = JSON.stringify({
+        schemaVersion: 1,
+        platform: process.platform,
+        arch: process.arch,
+        requiredBunVersion: process.platform === 'darwin' ? '1.4.4' : '1.3.11',
+        engineVersions: ['2.1.4'],
+        files: Object.entries(files).map(([path, bytes]) => ({
+          path,
+          bytes: Buffer.byteLength(bytes),
+          sha256: hash(bytes),
+          executable: false,
+        })),
+      });
+      writeFileSync(join(directory, 'opencode-v2-engine-manifest.json'), manifest);
+      return {
+        version: '2.1.4' as const,
+        directory,
+        manifestSha256: hash(manifest),
+        platform: process.platform,
+        arch: process.arch,
+      };
+    };
+    const original = f.profile.management![0]!,
+      originalEngine = engine('TEST-original-engine');
+    const relocated = { ...original.executable, path: join(f.root, 'TEST-relocated-executor') };
+    writeFileSync(relocated.path, readFileSync(original.executable.path), { mode: 0o700 });
+    const seed = providerManagementProfileSchema.parse({
+      ...original,
+      nativeGeneration: 'v2',
+      protocolRevision: '2.1.4',
+      nativeModel: { providerId: 'TEST-provider', modelId: 'TEST-model' },
+      environment: {
+        HOME: f.root,
+        PATH: '/usr/bin',
+        XDG_CONFIG_HOME: f.root,
+        XDG_DATA_HOME: f.root,
+        XDG_CACHE_HOME: f.root,
+      },
+      embedded: { ...originalEngine, externalDirectory: 'deny' },
+    });
+    assert(seed.provider === 'opencode' && seed.embedded);
+    f.profile.management = [seed];
+    const selectedEngine = engine('TEST-selected-engine');
+    const candidate = (
+      name: string,
+      version: string,
+      executable = relocated,
+      embedded = selectedEngine
+    ): RuntimeSourceCandidate => {
+      const cli = f.candidate(name, version);
+      return {
+        sourceKind: 'app-managed',
+        executable,
+        embedded: { ...embedded, platform: seed.embedded!.platform, arch: seed.embedded!.arch },
+        nativeCli: { ...cli.nativeCli!, generation: 'v2' },
+      };
+    };
+    const first = await f.index.publish(
+      f.input('TEST-v2-first', candidate('TEST-v2-first', '2.9.0')),
+      () => {}
+    );
+    const full = {
+      grant: f.grant,
+      commandId: 'TEST-v2-next',
+      expectedRevision: first.selection!.revision,
+      candidate: candidate('TEST-v2-next', '2.9.1'),
+    };
+    const native = {
+      grant: full.grant,
+      commandId: full.commandId,
+      expectedRevision: full.expectedRevision,
+      nativeSelection: {
+        sourceKind: full.candidate.sourceKind,
+        nativeCli: full.candidate.nativeCli!,
+      },
+    };
+    const selected = await f.index.publish(native, (admitted) => {
+      assert.deepEqual(admitted.executable, relocated);
+      assert.equal(
+        admitted.provider === 'opencode' && admitted.embedded?.directory,
+        selectedEngine.directory
+      );
+    });
+    assert.equal(selected.selection?.cliVersion, '2.9.1');
+    assert.equal(selected.selection?.engineVersion, '2.1.4');
+    await f.index.publish(
+      f.input(
+        'TEST-v2-later',
+        candidate('TEST-v2-later', '2.9.2', original.executable, originalEngine)
+      ),
+      () => {}
+    );
+    const cold = new RuntimeSourceIndex(f.profile, f.assertWriter);
+    assert.deepEqual(await cold.publish(native, () => assert.fail('native replay')), selected);
+    assert.deepEqual(await cold.publish(full, () => assert.fail('full replay')), selected);
+    assert.deepEqual(f.reads(), ['TEST-v2-first', 'TEST-v2-next', 'TEST-v2-later']);
+
+    const configPath = join(f.root, 'opencode.json');
+    const writeConfig = (model: string) => writeFileSync(configPath, JSON.stringify({
+      model: `TEST-provider/${model}#high`,
+      provider: { 'TEST-provider': { options: { apiKey: 'TEST-config-secret' },
+        models: { [model]: { limit: { context: 32000 }, variants: { high: { reasoningEffort: 'high' } } } },
+      } },
+    }), { mode: 0o600 });
+    writeConfig('TEST-config-A');
+    assert.equal(cold.current({ grant: f.grant }).configurationCurrent, false);
+    const refresh = { grant: f.grant, commandId: 'TEST-config-refresh',
+      expectedRevision: cold.current({ grant: f.grant }).revision };
+    const write = FileManagementCommandStore.prototype.write;
+    const fault = t.mock.method(FileManagementCommandStore.prototype, 'write',
+      function (this: FileManagementCommandStore, row: Parameters<typeof write>[0]) {
+        if (row.commandId === refresh.commandId && row.phase === 'published')
+          throw new Error('TEST config lost ACK');
+        write.call(this, row);
+      });
+    await assert.rejects(cold.refreshConfiguration(refresh, admitted => {
+      assert(admitted.provider === 'opencode');
+      assert.deepEqual(admitted.nativeModel, { providerId: 'TEST-provider', modelId: 'TEST-config-A' });
+      assert.equal(admitted.variant, 'high');
+      assert.equal(admitted.embedded?.configurationSource?.scope, 'project');
+      assert.ok(!JSON.stringify(admitted).includes('TEST-config-secret'));
+    }), /TEST config lost ACK/);
+    fault.mock.restore();
+    const afterAckLoss = new RuntimeSourceIndex(f.profile, f.assertWriter);
+    const originalRefresh = afterAckLoss.lookup({ grant: f.grant, commandId: refresh.commandId });
+    assert.equal(originalRefresh?.phase, 'published');
+    assert.equal(afterAckLoss.current({ grant: f.grant }).configurationCurrent, true);
+    writeConfig('TEST-config-B');
+    assert.equal(afterAckLoss.current({ grant: f.grant }).configurationCurrent, false);
+    assert.deepEqual(await afterAckLoss.refreshConfiguration(refresh, () => assert.fail('config replay')),
+      originalRefresh, 'lost ACK recovers only original publication even after its source changes');
+    const next = await afterAckLoss.refreshConfiguration({ ...refresh, commandId: 'TEST-config-next',
+      expectedRevision: originalRefresh!.selection!.revision }, admitted => {
+      assert(admitted.provider === 'opencode');
+      assert.equal(admitted.nativeModel?.modelId, 'TEST-config-B');
+    });
+    assert.notEqual(next.selection?.revision, originalRefresh?.selection?.revision);
+    assert.deepEqual(afterAckLoss.lookup({ grant: f.grant, commandId: refresh.commandId }), originalRefresh);
+    assert.ok(!readFileSync(join(f.root, 'runtime-sources', 'index.json'), 'utf8').includes('TEST-config-secret'));
+    assert.equal(f.reads().length, 5, 'two publications verify native CLI once; replay has no process effect');
+    await f.index.close();
+  }
+);
+
+test(
+  'new qualified native bytes publish only after exact owned version and cleanup; cold replay never repeats the child',
+  {
+    skip:
+      process.platform === 'win32'
+        ? 'POSIX process fixture; Windows native broker qualification runs in its own native lane'
+        : false,
+  },
+  async (t) => {
+    const f = fixture(t),
+      input = f.input('TEST-selected');
+    const result = await f.index.publish(input, () => {
+      assert.equal(f.reads().length, 1);
+    });
+    assert.equal(result.phase, 'published');
+    assert.equal(result.selection?.cliVersion, '0.162.0');
+    assert.deepEqual(f.reads(), ['TEST-selected']);
+    assert.deepEqual(
+      await new RuntimeSourceIndex(f.profile, f.assertWriter).publish(input, () =>
+        assert.fail('re-admission')
+      ),
+      result
+    );
+    assert.deepEqual(f.reads(), ['TEST-selected']);
+    const receipt = f.store.read(input.commandId)!;
+    assert.equal(receipt.resourceHeld, false);
+    assert.equal(JSON.stringify(receipt).includes('TEST-must-not-reach-version-child'), false);
+    await f.index.close();
+  }
+);
+
+test(
+  'version policy, exact native output and post-read bytes are independent gates',
+  {
+    skip: process.platform === 'win32' ? 'POSIX process fixture' : false,
+  },
+  async (t) => {
+    const f = fixture(t),
+      initial = f.index.current({ grant: f.grant });
+    await assert.rejects(
+      f.index.publish(
+        f.input('TEST-unqualified', f.candidate('TEST-unqualified', '0.163.0')),
+        () => {}
+      ),
+      { reason: 'unqualified-version' }
+    );
+    assert.deepEqual(f.reads(), []);
+    if (process.platform !== 'darwin' || process.arch !== 'arm64') {
+      const unsupported = f.input('TEST-unsupported-tuple', f.candidate('TEST-unsupported-tuple', '0.169.0'));
+      await assert.rejects(f.index.publish(unsupported, () => assert.fail('unqualified source cannot admit')),
+        { reason: 'unqualified-version' });
+      assert.equal(f.store.read(unsupported.commandId), undefined, 'tuple refusal precedes publication reservation');
+      const seed = f.profile.management![0]!;
+      const metadata = providerManagementProfileSchema.parse({ ...seed, protocolRevision: '0.169.0' });
+      assert.ok(metadata.provider === 'codex');
+      let allocations = 0;
+      assert.throws(() => new CodexManagementHost(metadata, () => true, () => {
+        allocations++; return assert.fail('metadata tuple guard must precede native custody');
+      }), { reason: 'unqualified-version' });
+      const member = runtimeMemberProfileSchema.parse({
+        provider: 'codex', protocolRevision: '0.169.0', teamId: 'TEST-team', memberId: 'TEST-member',
+        principalId: 'TEST-agent', sessionId: 'TEST-session', generation: 0, configRevision: seed.configRevision,
+        model: 'TEST-model', accountBinding: seed.accountBinding, cwd: seed.cwd,
+        environment: seed.environment, executable: seed.executable,
+        nativeOptions: { approvalPolicy: 'never', sandbox: 'read-only' },
+        limits: { queuedInputs: 1, inputBytes: 4096, outputBytes: 8192, outputEvents: 64,
+          pendingInteractions: 1, timeoutMs: 1000 },
+      });
+      const context: MemberProviderContext = {
+        profile: member, instructions: '', isCurrent: () => true, canAllocate: () => true,
+        get request() { return assert.fail('tuple refusal precedes member open'); },
+        get endpoint() { return assert.fail('tuple refusal precedes Team endpoint use'); },
+        get connection() { return assert.fail('tuple refusal precedes Team tool use'); },
+        readCheckpoint: async () => assert.fail('tuple refusal cannot read a checkpoint'),
+        onProgress() {},
+      };
+      assert.throws(() => createCodexMemberProvider(context, { createProcess: () => {
+        allocations++; return assert.fail('member tuple guard must precede native custody');
+      } }), { reason: 'unqualified-version' });
+      assert.equal(allocations, 0);
+      assert.deepEqual(f.reads(), [], 'unqualified direct profiles cannot run a version or app-server child');
+      assert.deepEqual(f.index.current({ grant: f.grant }), initial);
+    }
+    const staticRefusals = [];
+    for (const failure of ['missing', 'changed']) {
+      const input = f.input(`TEST-static-${failure}`), path = input.candidate.executable.path;
+      const bytes = readFileSync(path);
+      if (failure === 'missing') rmSync(path);
+      else writeFileSync(path, Buffer.concat([bytes, Buffer.from('\n# changed before admission\n')]));
+      await assert.rejects(f.index.publish(input, () => assert.fail('static refusal cannot admit')),
+        { reason: 'source-changed' });
+      assert.deepEqual(f.index.lookup({ grant: f.grant, commandId: input.commandId }),
+        { commandId: input.commandId, phase: 'held', reason: 'source-changed' });
+      assert.equal(f.store.read(input.commandId)?.resourceHeld, false);
+      assert.deepEqual(f.index.current({ grant: f.grant }), initial);
+      assert.deepEqual(f.reads(), [], 'static refusal precedes every native allocation');
+      writeFileSync(path, bytes, { mode: 0o700 });
+      assert.equal((await f.index.publish(input, () => assert.fail('original refusal is immutable'))).phase, 'held');
+      staticRefusals.push(input);
+    }
+    const mismatch = await f.index.publish(
+      f.input('TEST-mismatch', f.candidate('TEST-mismatch', '0.162.0', '0.161.0')),
+      () => assert.fail('native mismatch')
+    );
+    assert.equal(mismatch.phase, 'held');
+    assert.equal(mismatch.reason, 'native-version-mismatch');
+    await assert.rejects(
+      f.index.publish(
+        f.input('TEST-mutating', f.candidate('TEST-mutating', '0.162.0', '0.162.0', true)),
+        () => assert.fail('changed bytes')
+      ),
+      { reason: 'source-changed' }
+    );
+    assert.deepEqual(f.index.current({ grant: f.grant }), initial);
+    assert.equal(f.store.read('TEST-mutating')?.resourceHeld, false);
+    const repaired = await f.index.publish({ ...staticRefusals[0]!, commandId: 'TEST-explicit-static-repair' }, () => {});
+    assert.equal(repaired.phase, 'published');
+    assert.equal(f.reads().filter(row => row === 'TEST-static-missing').length, 1);
+    await f.index.close();
+  }
+);
+
+test(
+  'installer restart recovers the one prepared original intent before any replacement selection',
+  { skip: process.platform === 'win32' ? 'POSIX process fixture' : false },
+  async (t) => {
+    const f = fixture(t),
+      input = f.input('TEST-prepared-recovery');
+    await interruptPrepared(t, f.index, input);
+    assert.equal(f.store.read(input.commandId)?.phase, 'prepared');
+    await assert.rejects(
+      f.index.publish(f.input('TEST-replacement'), () => {}),
+      { code: 'held' }
+    );
+    assert.deepEqual(f.reads(), []);
+    const cold = new RuntimeSourceIndex(f.profile, f.assertWriter);
+    const recovered = await cold.recover({ grant: f.grant }, () => {});
+    assert.equal(recovered?.commandId, input.commandId);
+    assert.equal(recovered?.phase, 'published');
+    assert.equal(
+      await cold.recover({ grant: f.grant }, () => assert.fail('already complete')),
+      null
+    );
+    assert.deepEqual(f.reads(), ['TEST-prepared-recovery']);
+    await cold.close();
+  }
+);
+
+test('source recovery refuses missing, changed and ambiguous durable intent snapshots', async (t) => {
+  const f = fixture(t),
+    input = f.input('TEST-original-intent');
+  await interruptPrepared(t, f.index, input);
+  const receipt = f.store.read(input.commandId)!;
+  assert(receipt.kind === 'runtime.source');
+  const { publicationJson: _snapshot, ...legacy } = receipt;
+  f.store.write(legacy);
+  await assert.rejects(
+    f.index.recover({ grant: f.grant }, () => {}),
+    { code: 'held' }
+  );
+  f.store.write({
+    ...receipt,
+    publicationJson: JSON.stringify({ ...input, expectedRevision: '0'.repeat(64) }),
+  });
+  await assert.rejects(
+    f.index.recover({ grant: f.grant }, () => {}),
+    { code: 'held' }
+  );
+  f.store.write(receipt);
+  const second = { ...input, commandId: 'TEST-second-intent' };
+  f.store.write({
+    ...receipt,
+    commandId: second.commandId,
+    fingerprint: runtimeDigest(second),
+    publicationJson: JSON.stringify(second),
+    revision: runtimeDigest({
+      previousRevision: second.expectedRevision,
+      commandId: second.commandId,
+      grant: second.grant,
+      candidate: second.candidate,
+    }),
+  });
+  await assert.rejects(
+    f.index.recover({ grant: f.grant }, () => {}),
+    { code: 'held' }
+  );
+  assert.deepEqual(f.reads(), []);
+});
+
+test(
+  'verified pre-publication recovery reuses its original native observation without another version process',
+  {
+    skip: process.platform === 'win32' ? 'POSIX process fixture' : false,
+  },
+  async (t) => {
+    const f = fixture(t),
+      input = f.input('TEST-before-admission');
+    await assert.rejects(
+      f.index.publish(input, () => {
+        throw new Error('TEST-interrupted-after-verification');
+      })
+    );
+    assert.equal(f.index.lookup({ grant: f.grant, commandId: input.commandId })?.phase, 'verified');
+    assert.equal(
+      (
+        await new RuntimeSourceIndex(f.profile, f.assertWriter).recover(
+          { grant: f.grant },
+          () => {}
+        )
+      )?.phase,
+      'published'
+    );
+    assert.deepEqual(f.reads(), ['TEST-before-admission']);
+    await f.index.close();
+  }
+);
+
+test('unknown cleanup is retained; only the original live handle may settle it without rerunning native verification', async (t) => {
+  const f = fixture(t),
+    input = f.input('TEST-held');
+  let runs = 0,
+    closes = 0;
+  const index = new RuntimeSourceIndex(f.profile, f.assertWriter, {
+    createNativeCheck: () => ({
+      run: async () => {
+        runs++;
+        return { nativeVersion: '0.162.0' };
+      },
+      close: async () => ++closes > 1,
+    }),
+  });
+  assert.deepEqual(await index.publish(input, () => assert.fail('cleanup not confirmed')), {
+    commandId: input.commandId,
+    phase: 'held',
+    reason: 'cleanup-unconfirmed',
+  });
+  const cold = new RuntimeSourceIndex(f.profile, f.assertWriter, {
+    createNativeCheck: () => {
+      assert.fail('cold recovery cannot adopt or relaunch');
+    },
+  });
+  assert.equal((await cold.publish(input, () => assert.fail('cold publication'))).phase, 'held');
+  assert.equal(
+    (await cold.recover({ grant: f.grant }, () => assert.fail('cold recovery')))?.phase,
+    'held'
+  );
+  const held = f.store.read(input.commandId)!;
+  if (held.kind !== 'runtime.source') assert.fail('Expected source receipt');
+  const { reason: _reason, nativeVersion: _version, seedNativeVersion: _seed, ...claimed } = held;
+  // Fault injection at the durable claim boundary: no observation or cleanup was recorded.
+  f.store.write({ ...claimed, phase: 'verifying', resourceHeld: true });
+  assert.deepEqual(cold.lookup({ grant: f.grant, commandId: input.commandId }), {
+    commandId: input.commandId,
+    phase: 'held',
+    reason: 'native-outcome-unknown',
+  });
+  assert.equal((await cold.publish(input, () => assert.fail('unknown claim'))).phase, 'held');
+  assert.equal(
+    (await cold.recover({ grant: f.grant }, () => assert.fail('unknown recovery')))?.phase,
+    'held'
+  );
+  f.store.write(held);
+  assert.equal((await index.publish(input, () => {})).phase, 'published');
+  assert.equal(runs, 1);
+  assert.equal(closes, 2);
+  await index.close();
+});
+
+test('a later shutdown can confirm the same retained version check after an unconfirmed close', async (t) => {
+  const f = fixture(t), input = f.input('TEST-close-recovery');
+  let runs = 0, closes = 0, released = false;
+  const index = new RuntimeSourceIndex(f.profile, f.assertWriter, {
+    createNativeCheck: () => ({
+      run: async () => { runs++; return { nativeVersion: '0.162.0' }; },
+      close: async () => { closes++; return released; },
+    }),
+  });
+  assert.equal((await index.publish(input, () => assert.fail('cleanup is unknown'))).phase, 'held');
+  const first = index.close();
+  assert.equal(index.close(), first, 'concurrent close shares the same original attempt');
+  await assert.rejects(first, { code: 'held' });
+  assert.equal(f.store.read(input.commandId)?.resourceHeld, true);
+  released = true;
+  await index.close();
+  assert.equal(f.store.read(input.commandId)?.resourceHeld, false);
+  assert.equal(runs, 1);
+  assert.equal(closes, 3, 'publication and two shutdown observations use the same check');
+  await index.close();
+  assert.equal(closes, 3);
+  await assert.rejects(index.publish({ ...input, commandId: 'TEST-after-close' }, () => {}), { code: 'held' });
+  const cold = new RuntimeSourceIndex(f.profile, f.assertWriter, {
+    createNativeCheck: () => assert.fail('cold recovery cannot repeat the version process'),
+  });
+  assert.equal((await cold.publish(input, () => assert.fail('original outcome stays held'))).phase, 'held');
+  await cold.close();
+});
+
+test(
+  'Host shutdown seals admission, drains the original version child and persists confirmed cleanup under its lease',
+  {
+    skip: process.platform === 'win32' ? 'POSIX process fixture' : false,
+  },
+  async (t) => {
+    const f = fixture(t),
+      input = f.input('TEST-shutdown');
+    let sealed = false,
+      signalStarted!: () => void;
+    const started = new Promise<void>((resolve) => {
+      signalStarted = resolve;
+    });
+    const index = new RuntimeSourceIndex(
+      f.profile,
+      () => {
+        f.assertWriter();
+        if (sealed) throw new Error('TEST-Host-sealed');
+      },
+      {
+        assertCleanupWriter: f.assertWriter,
+        createNativeCheck: (seed, candidate, current) => {
+          const native = new RuntimeSourceNativeVersion(seed, candidate, current);
+          return {
+            run: () => {
+              const running = native.run();
+              signalStarted();
+              return running;
+            },
+            close: () => native.close(),
+          };
+        },
+      }
+    );
+    const pending = index.publish(input, () => assert.fail('shutdown cannot publish'));
+    await started;
+    sealed = true;
+    await index.close();
+    assert.equal((await pending).phase, 'held');
+    const receipt = f.store.read(input.commandId)!;
+    assert.equal(receipt.resourceHeld, false);
+    assert.equal(receipt.phase, 'held');
+    const cold = new RuntimeSourceIndex(f.profile, f.assertWriter, {
+      createNativeCheck: () => {
+        assert.fail('shutdown replay cannot allocate');
+      },
+    });
+    assert.equal((await cold.publish(input, () => assert.fail('shutdown replay'))).phase, 'held');
+  }
+);
+
+test(
+  'Claude native qualification compares its original CLI version, never the SDK revision',
+  {
+    skip: process.platform === 'win32' ? 'POSIX process fixture' : false,
+  },
+  async (t) => {
+    const f = fixture(t, 'claude');
+    const refused = await f.index.publish(
+      f.input('TEST-new-version', f.candidate('TEST-new-version', '2.1.35')),
+      () => assert.fail('unqualified CLI')
+    );
+    assert.equal(refused.reason, 'unqualified-version');
+    assert.deepEqual(f.reads(), ['TEST-seed']);
+    const accepted = await f.index.publish(f.input('TEST-new-bytes'), () => {});
+    assert.equal(accepted.phase, 'published');
+    assert.deepEqual(f.reads(), ['TEST-seed', 'TEST-seed', 'TEST-new-bytes']);
+    await f.index.close();
+  }
+);
+
+test(
+  'supported V1 native updates change the selected CLI while preserving the engine generation',
+  {
+    skip: process.platform === 'win32' ? 'POSIX process fixture' : false,
+  },
+  async (t) => {
+    const f = fixture(t, 'opencode');
+    const selected = await f.index.publish(
+      f.input('TEST-v1-update', f.candidate('TEST-v1-update', '1.19.5')),
+      () => {}
+    );
+    assert.equal(selected.phase, 'published');
+    assert.equal(selected.selection?.cliVersion, '1.19.5');
+    assert.equal(selected.selection?.nativeGeneration, 'v1');
+    assert.equal(selected.selection?.engineVersion, undefined);
+    await assert.rejects(
+      f.index.publish(
+        f.input('TEST-v1-too-old', f.candidate('TEST-v1-too-old', '1.15.9')),
+        () => {}
+      ),
+      { reason: 'unqualified-version' }
+    );
+    assert.deepEqual(f.reads(), ['TEST-v1-update']);
+    await f.index.close();
+  }
+);
+
+test(
+  'V2 CLI policy cannot substitute another engine, cross generation or qualify unsupported engine versions',
+  {
+    skip:
+      process.platform === 'linux' && process.arch === 'arm64'
+        ? 'V2 is not qualified on linux-arm64'
+        : false,
+  },
+  (t) => {
+    const f = fixture(t, 'opencode'),
+      seed = providerManagementProfileSchema.parse({
+        ...f.profile.management![0]!,
+        nativeGeneration: 'v2',
+        protocolRevision: '2.1.4',
+        nativeModel: { providerId: 'TEST-provider', modelId: 'TEST-model' },
+        environment: {
+          HOME: f.root,
+          PATH: '/usr/bin',
+          XDG_CONFIG_HOME: f.root,
+          XDG_DATA_HOME: f.root,
+          XDG_CACHE_HOME: f.root,
+        },
+        embedded: {
+          version: '2.1.4',
+          directory: f.root,
+          manifestSha256: 'a'.repeat(64),
+          platform: process.platform,
+          arch: process.arch,
+          externalDirectory: 'deny',
+        },
+      });
+    const cli = f.candidate('TEST-v2-cli', '2.9.0');
+    const selected: RuntimeSourceCandidate = {
+      ...cli,
+      executable: seed.executable,
+      nativeCli: { ...cli.nativeCli!, generation: 'v2' },
+    };
+    assert.doesNotThrow(() => assertRuntimeSourceQualification(seed, selected));
+    assert.throws(
+      () => assertRuntimeSourceQualification(seed, { ...selected, executable: cli.executable }),
+      { code: 'held' }
+    );
+    assert.throws(
+      () =>
+        assertRuntimeSourceNativePolicy(seed, {
+          ...selected,
+          nativeCli: { ...selected.nativeCli!, generation: 'v1' },
+        }),
+      { reason: 'generation-change-unqualified' }
+    );
+    assert.throws(
+      () =>
+        assertRuntimeSourceNativePolicy(seed, {
+          ...selected,
+          nativeCli: { ...selected.nativeCli!, version: '3.0.0' },
+        }),
+      { reason: 'unqualified-version' }
+    );
+    assert.throws(() =>
+      providerManagementProfileSchema.parse({ ...seed, protocolRevision: '2.2.0' })
+    );
+    assert.deepEqual(
+      f.reads(),
+      [],
+      'policy checks do not allocate a native process or qualify inference'
+    );
+  }
+);

@@ -1,4 +1,5 @@
 import { NodeApplicationCommandHasher } from '@features/application-command-ledger/main';
+import { type ReviewFlowSettings } from '@features/review-flow';
 import { TaskBoardCommandFacade } from '@features/task-board-commands';
 import { fingerprintSavedLaunchSettings } from '@features/team-provisioning/contracts';
 import { fromProvisioningMembers, isMixedOpenCodeSideLanePlan } from '@features/team-runtime-lanes';
@@ -819,7 +820,7 @@ export class TeamDataService {
   private resolveTaskReviewState(
     task: Pick<TeamTask, 'reviewState' | 'historyEvents' | 'status'>,
     kanbanTaskState?: KanbanState['tasks'][string]
-  ): 'none' | 'review' | 'needsFix' | 'approved' {
+  ): 'none' | 'review' | 'needsFix' | 'reviewed' | 'approved' {
     const kanbanColumn = kanbanTaskState?.column;
     const kanbanWorkflowColumn = kanbanColumn
       ? getTeamTaskWorkflowColumn({
@@ -890,7 +891,7 @@ export class TeamDataService {
   private resolveTaskKanbanColumn(
     task: Pick<TeamTask, 'status'>,
     kanbanTaskState?: KanbanState['tasks'][string],
-    reviewState: 'none' | 'review' | 'needsFix' | 'approved' = 'none'
+    reviewState: 'none' | 'review' | 'needsFix' | 'reviewed' | 'approved' = 'none'
   ): 'review' | 'approved' | undefined {
     return getTeamTaskWorkflowColumn({
       status: task.status,
@@ -907,7 +908,7 @@ export class TeamDataService {
   private resolveReviewerFromHistory(
     task: TeamTask,
     kanbanTaskState?: KanbanState['tasks'][string],
-    reviewState: 'none' | 'review' | 'needsFix' | 'approved' = this.resolveTaskReviewState(
+    reviewState: 'none' | 'review' | 'needsFix' | 'reviewed' | 'approved' = this.resolveTaskReviewState(
       task,
       kanbanTaskState
     )
@@ -925,7 +926,10 @@ export class TeamDataService {
         if (event.type === 'review_requested' && event.reviewer) {
           return event.reviewer;
         }
-        if (event.type === 'review_approved' || event.type === 'review_changes_requested') {
+        if (event.type === 'review_approved' ||
+          event.type === 'review_completed' ||
+          event.type === 'human_approved' ||
+          event.type === 'review_changes_requested') {
           break;
         }
         if (
@@ -2364,7 +2368,8 @@ export class TeamDataService {
   async startTaskByUser(
     teamName: string,
     taskId: string,
-    admission?: { expectedOwner: string; canStart: () => Promise<boolean> }
+    admission?: { expectedOwner: string; expectedRunId: string;
+      isCurrent: () => boolean; canStart: () => Promise<boolean> }
   ): Promise<{ notifiedOwner: boolean }> {
     const tasks = await this.taskReader.getTasks(teamName);
     let task = tasks.find((t) => t.id === taskId);
@@ -2382,7 +2387,7 @@ export class TeamDataService {
       // The admission check awaits runtime I/O: task state may change in the meantime.
       const board = this.getTaskBoard(teamName);
       const latestTask = board.getTask(taskId) as TeamTask | null;
-      if (!latestTask || latestTask.status !== 'pending' || latestTask.owner !== admission.expectedOwner) {
+      if (latestTask?.status !== 'pending' || latestTask.owner !== admission.expectedOwner) {
         throw new Error('Scheduled task start superseded');
       }
       if ((board.listTasks() as TeamTask[]).some(
@@ -2392,6 +2397,7 @@ export class TeamDataService {
       }
       task = latestTask; // Notify using the actual post-admission task contents.
     }
+    if (admission && !admission.isCurrent()) throw new Error('Scheduled task start superseded');
     this.getTaskBoard(teamName).startTask(taskId, 'user');
     this.invalidateGlobalTaskProjectionCache();
     const notifiedOwner = task.owner
@@ -3470,45 +3476,6 @@ export class TeamDataService {
     });
   }
 
-  private getControllerTaskWorkflowColumn(
-    taskBoard: AgentTeamsController['taskBoard'],
-    taskId: string
-  ): 'review' | 'approved' | undefined | null {
-    if (!taskBoard.getTask || !taskBoard.getKanbanState) {
-      return null;
-    }
-
-    const task = taskBoard.getTask(taskId) as TeamTask | null | undefined;
-    if (!task || typeof task.status !== 'string') {
-      return null;
-    }
-
-    const kanbanState = taskBoard.getKanbanState() as KanbanState | null | undefined;
-    const kanbanColumn = kanbanState?.tasks?.[task.id]?.column;
-    const kanbanWorkflowColumn = kanbanColumn
-      ? getTeamTaskWorkflowColumn({
-          status: task.status,
-          reviewState: 'none',
-          kanbanColumn,
-        })
-      : undefined;
-    if (kanbanWorkflowColumn) {
-      return kanbanWorkflowColumn;
-    }
-
-    const reviewState = getReviewStateFromTask({
-      historyEvents: task.historyEvents,
-      reviewState: task.reviewState,
-      status: task.status,
-      ...(kanbanColumn ? { kanbanColumn } : {}),
-    });
-    return getTeamTaskWorkflowColumn({
-      status: task.status,
-      reviewState,
-      ...(kanbanColumn ? { kanbanColumn } : {}),
-    });
-  }
-
   createTeamConfig(request: TeamCreateConfigRequest): Promise<void> {
     return this.runConfigurationOperation(request.teamName, () =>
       createDraftTeamConfig(request, {
@@ -3987,6 +3954,11 @@ export class TeamDataService {
     return texts.length > MAX_LEAD_TEXTS ? texts.slice(-MAX_LEAD_TEXTS) : texts;
   }
 
+  /** `null` removes the team's override so it follows the default again. */
+  async setReviewFlowSettings(teamName: string, settings: ReviewFlowSettings | null): Promise<void> {
+    this.getTaskBoard(teamName).setReviewFlowSettings(settings);
+  }
+
   async updateKanban(teamName: string, taskId: string, patch: UpdateKanbanPatch): Promise<void> {
     const taskBoard = this.getTaskBoard(teamName);
 
@@ -4009,30 +3981,19 @@ export class TeamDataService {
         });
       } else {
         const { leadName, leadSessionId } = await this.resolveLeadRuntimeContext(teamName);
-        const workflowColumn = this.getControllerTaskWorkflowColumn(taskBoard, taskId);
-        if (workflowColumn === undefined) {
-          taskBoard.setKanbanColumn(taskId, 'approved', {
-            transition: 'manual_approve',
-          });
-        } else {
-          taskBoard.approveReview(taskId, {
-            from: leadName,
-            suppressTaskComment: true,
-            'notify-owner': true,
-            ...(leadSessionId ? { leadSessionId } : {}),
-          });
-        }
+        taskBoard.approveReviewFromUser(taskId, {
+          from: leadName, suppressTaskComment: true, 'notify-owner': true,
+          ...(leadSessionId ? { leadSessionId } : {}),
+        });
       }
       return;
     }
 
     const { leadName, leadSessionId } = await this.resolveLeadRuntimeContext(teamName);
-    taskBoard.requestChanges(taskId, {
+    taskBoard.requestChangesFromUser(taskId, {
       from: leadName,
-      comment: patch.comment?.trim() || 'Reviewer requested changes.',
-      ...(patch.op === 'request_changes' && patch.taskRefs?.length
-        ? { taskRefs: patch.taskRefs }
-        : {}),
+      comment: patch.comment?.trim() || 'User requested changes.',
+      ...(patch.taskRefs?.length ? { taskRefs: patch.taskRefs } : {}),
       ...(leadSessionId ? { leadSessionId } : {}),
     });
   }

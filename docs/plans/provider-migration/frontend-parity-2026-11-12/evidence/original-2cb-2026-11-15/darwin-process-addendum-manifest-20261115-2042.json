@@ -1,0 +1,64 @@
+{
+  "kind": "original-2cb-Darwin-Process-later-audit-checkpoint",
+  "sourceHead": "2cb0c0a92c954ab04d081b7a5672270d7484f4a7",
+  "parentCheckpoint": "completed-audits-checkpoint-20261115-2035.json",
+  "dependencyInParentCheckpoint": "source-2cb-seven-path-delta.json",
+  "fileCount": 8,
+  "totalBytes": 277866,
+  "files": [
+    {
+      "path": "2cb-process-darwin-arm64.zip",
+      "bytes": 11978,
+      "sha256": "958134680e076f9ed55989f0926e288546a6611c20e563258f6159cbc8b1159b",
+      "gitBlob": "d02dd9341a8db511f0b15d0463a3cf3cccfcab91"
+    },
+    {
+      "path": "2cb-process-darwin-x64.zip",
+      "bytes": 12296,
+      "sha256": "fb46a8030f2168f52947794f0216c99013ad0a22b1fe04b800a69efbf3d19713",
+      "gitBlob": "9424a70986c424cd1f0eea32dd44557b38f60efe"
+    },
+    {
+      "path": "job-132939165678.log",
+      "bytes": 106358,
+      "sha256": "450c83c32b6101c16516fc42192c0d98c21289bf8a341851e97aae7c5b0c3936",
+      "gitBlob": "4f1d37e172a2a6bfa0cc3b943c6f369fdf40804e"
+    },
+    {
+      "path": "job-132939165768.log",
+      "bytes": 117138,
+      "sha256": "27572c7c89943d1ff1466a23d698b7bc88077a3d9b9f2c1eb0be868b22c43f71",
+      "gitBlob": "22fdcbc91e858b57446d6294fd4be297f1e81ca8"
+    },
+    {
+      "path": "archive-audit-process_darwin_arm.json",
+      "bytes": 3512,
+      "sha256": "134487a50bd8c8a0205faae2ffa0d055494e05490f2b2e32eab37c5d84e08aff",
+      "gitBlob": "7b7718639384fe450a758dfa8059dfbcb8a28524"
+    },
+    {
+      "path": "archive-audit-process_darwin_x64.json",
+      "bytes": 3508,
+      "sha256": "8877572545c596a26ecbfd14a68cca6898de56664bf10dc6114c73035b1221f0",
+      "gitBlob": "2eac93733f37fcaf3ca40dbf9a0f784fae5f128b"
+    },
+    {
+      "path": "receipt-audit-process-darwin.json",
+      "bytes": 18915,
+      "sha256": "922c543efeb573382089db6f84bcd458cd1b9bfefe4ac0870a3b772dcda69b3a",
+      "gitBlob": "071cd4a58201d5fa921c69ab91459f6d87304240"
+    },
+    {
+      "path": "plan29-2cb-process-darwin-appendix.md",
+      "bytes": 4161,
+      "sha256": "daaa8a38a5a8cbd3f2bb3eeac191155ef5339bc852873bb13d07555bbdc0ea91",
+      "gitBlob": "161081e06ec864c9382c9ec43190ef157f444718"
+    }
+  ],
+  "recoverability": "The two exact official ZIPs retain all twelve extracted members; duplicate extracted members are not republished. All signed download inputs and temporary base64 copies are excluded.",
+  "limits": [
+    "These completed original Darwin Process jobs qualify only their controlled fixture/contract scope, with both Linux-specific skips retained.",
+    "The P09 mutation failure and all false broad qualification flags remain unchanged.",
+    "No new execution or CI action; earlier frozen snapshots are not rewritten."
+  ]
+}

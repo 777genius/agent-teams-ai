@@ -1,0 +1,551 @@
+{
+  "kind": "INDEPENDENT_ORIGINAL_72E_WINDOWS_ARM_PACKAGED_SOURCE_AND_CLEANUP_REVIEW",
+  "sourceHead": "72e6ec04444969d343d73834c70bc4e261100fc9",
+  "runId": 43831885834,
+  "jobId": 133207234398,
+  "artifactId": 14216298092,
+  "archive": {
+    "bytes": 544775,
+    "sha256": "7885b5bd313529d0e822d834de5f8c1edffc97c887d969dc51d5656f37fc51bb",
+    "gitBlob": "11670761d8edd6dc8de07ef2a1f991f57049e3c3"
+  },
+  "allSevenMembersCRCRead": true,
+  "safePaths": true,
+  "members": [
+    {
+      "path": "agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+      "bytes": 1154527,
+      "sha256": "08668267cfde2ee4e10074c786d93f3683dbceb2e23a5e81e126c5c882c13cae",
+      "gitBlob": "1be3c4b97533c6efe72f39557701f20d48ab40b6",
+      "crc32": 2767814999
+    },
+    {
+      "path": "_temp/opencode-v2-packaged-inputs.json",
+      "bytes": 782,
+      "sha256": "80f5ea82d5a7d91e5a8ab0eea22795b9e667d2ff619a8575a815387fc902d4de",
+      "gitBlob": "289c9804521fe0cb0b44f348d8fa756a2531ec25",
+      "crc32": 4273039563
+    },
+    {
+      "path": "_temp/opencode-v2-packaged-native.json",
+      "bytes": 5389,
+      "sha256": "64186a2e207db9b41914133254a5baa4b7d1ba287dc2c6b12532f4de1b787cf4",
+      "gitBlob": "75a140f2f99fb3d42b9f53860e29173d0cfdf6b3",
+      "crc32": 4225976848
+    },
+    {
+      "path": "_temp/opencode-v2-packaged.json",
+      "bytes": 1188,
+      "sha256": "64685afef472453ba0256ad02499ca7f6ca9ff93bd10ea3871fea9fbf02e8789",
+      "gitBlob": "be309825e45987c0761cf15ea6bb32e820597a36",
+      "crc32": 153370171
+    },
+    {
+      "path": "_temp/windows-same-main-process-ui.app.log",
+      "bytes": 3582,
+      "sha256": "9f79ff908b79022399c23eabb29088e398521c71dd2c944d5628a057ea450413",
+      "gitBlob": "ba5e2b25230a18d509fe0d42437ef63f2d2fa052",
+      "crc32": 568995039
+    },
+    {
+      "path": "_temp/windows-same-main-process-ui.controller.log",
+      "bytes": 28140,
+      "sha256": "d92993a4c38d00a551a9cc59476e340f9b415858c9ae2183d06f020b338f50a5",
+      "gitBlob": "b6184878455540372bb633be8ba4c5d71684fb95",
+      "crc32": 243592101
+    },
+    {
+      "path": "_temp/windows-same-main-process-ui.json",
+      "bytes": 719746,
+      "sha256": "57a8978a930e65489ab9bbe8499c49e6e60a361ce93b2642106737a33275f96c",
+      "gitBlob": "c96eea32701146ed05fa4fe2b08881a7cd987cf3",
+      "crc32": 3858540691
+    }
+  ],
+  "receipt": {
+    "bytes": 719746,
+    "sha256": "57a8978a930e65489ab9bbe8499c49e6e60a361ce93b2642106737a33275f96c",
+    "gitBlob": "c96eea32701146ed05fa4fe2b08881a7cd987cf3"
+  },
+  "status": "INCOMPLETE",
+  "cleanupQualified": false,
+  "sourcePinList": {
+    "beforeCount": 1798,
+    "afterCount": 1798,
+    "orderedListsExact": true,
+    "uniquePaths": 1798,
+    "all1798ComparedToImmutableSourceBytes": false
+  },
+  "originalActors": {
+    "originalController": {
+      "pid": 1512,
+      "parent": 7756,
+      "birth": "2026-11-16T10:24:37.2471940Z",
+      "executable": "C:\\a\\_temp\\TEST-Windows-UI-build-43831885834-ARM64\\Release\\owned-process-gate-controller.exe"
+    },
+    "originalDriver": {
+      "pid": 6768,
+      "parent": 1512,
+      "birth": "2026-11-16T10:24:37.2659160Z",
+      "executable": "C:\\hostedtoolcache\\windows\\node\\24.21.0\\arm64\\node.exe"
+    },
+    "originalMain": {
+      "pid": 6992,
+      "parent": 6768,
+      "birth": "2026-11-16T10:25:12.2262300Z",
+      "executable": "C:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-arm64-unpacked\\AgentTeamsAI.exe"
+    },
+    "originalHost": {
+      "identity": {
+        "pid": 8096,
+        "parent": 6992,
+        "birth": "2026-11-16T10:25:15.4839500Z",
+        "executable": "C:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-arm64-unpacked\\resources\\legacy-agent-host\\node\\v24.21.0\\win32-arm64\\node.exe"
+      },
+      "writer": {
+        "pid": 8096,
+        "token": "cd43d69d-5134-405c-9597-6fbec03c802c",
+        "publishedAtMs": 1794824718368,
+        "sha256": "a1f4f3c3dbf0a5f09d8db869040cd3b728d6a532c9e03ad06bf6c923cd3a5591",
+        "dev": "2222135570",
+        "ino": "562949954628874"
+      }
+    }
+  },
+  "firstError": "AssertionError [ERR_ASSERTION]: No unexplained child of any original retained ancestor\n+ actual - expected\n\n+ [\n+   {\n+     birth: '2026-11-16T10:25:42.0234620Z',\n+     currentParent: {\n+       birth: '2026-11-16T10:25:42.0189580Z',\n+       executable: 'C:\\\\Windows\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe',\n+       parent: 6768,\n+       pid: 3068\n+     },\n+     executable: 'C:\\\\Windows\\\\system32\\\\conhost.exe',\n+     historicalParents: [\n+       {\n+         birth: '2026-11-16T10:25:13.2586920Z',\n+         pid: 3068\n+       }\n+     ],\n+     observationOnly: true,\n+     parent: 3068,\n+     pid: 10236,\n+     relation: 'ambiguous-parent-identity',\n+     signalAuthorized: false\n+   }\n+ ]\n- []\n\n    at validateCensus (file:///C:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:178:10)\n    at Object.assertOwnedRenderer (file:///C:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:207:20)\n    at waitRead (C:\\a\\agent-teams-ai\\agent-teams-ai\\scripts\\legacy-agent-host\\desktop-ui-controls.ts:190:15)\n    at readPoint (C:\\a\\agent-teams-ai\\agent-teams-ai\\scripts\\legacy-agent-host\\desktop-ui-controls.ts:260:29)\n    at clickExpression (C:\\a\\agent-teams-ai\\agent-teams-ai\\scripts\\legacy-agent-host\\desktop-ui-controls.ts:308:26)\n    at async Object.clickSidebar (C:\\a\\agent-teams-ai\\agent-teams-ai\\scripts\\legacy-agent-host\\desktop-ui-controls.ts:486:5)\n    at async file:///C:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:427:3",
+  "errorInterpretation": {
+    "refusedChild": {
+      "pid": 10236,
+      "parent": 3068,
+      "birth": "2026-11-16T10:25:42.0234620Z",
+      "executable": "C:\\Windows\\system32\\conhost.exe"
+    },
+    "currentParent": {
+      "pid": 3068,
+      "parent": 6768,
+      "birth": "2026-11-16T10:25:42.0189580Z",
+      "executable": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
+    },
+    "historicalParent": {
+      "pid": 3068,
+      "parent": 6992,
+      "birth": "2026-11-16T10:25:13.2586920Z",
+      "executable": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+      "firstSeen": 1794824713734,
+      "lastSeen": 1794824713734,
+      "parentBirth": "2026-11-16T10:25:12.2262300Z"
+    },
+    "recordedRelation": "ambiguous-parent-identity",
+    "observationOnly": true,
+    "signalAuthorized": false,
+    "differentObservedBirthIdentitiesForSameParentPid": true,
+    "specificSnapshotChildSpawnPurposeProven": false,
+    "wslIsNotTheRecordedErrorRow": true,
+    "strictGuardWasNotRelaxed": true
+  },
+  "phases": [
+    {
+      "phase": "packaged-App-startup",
+      "atMs": 0.06859999999869615,
+      "budgetMs": 120000
+    },
+    {
+      "phase": "one-initial-Runtime-Open",
+      "atMs": 7284.205799999996,
+      "budgetMs": 45000
+    },
+    {
+      "phase": "one-original-business-input-and-UI",
+      "atMs": 13514.561300000001,
+      "budgetMs": 35000
+    },
+    {
+      "phase": "original-product-Quit",
+      "atMs": 30520.321799999998,
+      "budgetMs": 30000
+    }
+  ],
+  "counts": {
+    "mainStarts": 1,
+    "initialRuntimeOpen": 1,
+    "businessInput": 1,
+    "refreshClicks": 0,
+    "retryClicks": 0,
+    "uiStops": 0,
+    "quit": 1
+  },
+  "uiStepsCompact": [
+    {
+      "phase": "one-original-business-input-and-UI",
+      "action": "mouseMoved",
+      "label": "hover sidebar row before measuring click",
+      "subject": "TEST same Main Windows original Processes",
+      "target": {
+        "x": 885,
+        "y": 215
+      },
+      "atMs": 24130.5092
+    },
+    {
+      "phase": "one-original-business-input-and-UI",
+      "action": "mouseClick",
+      "label": "sidebar task",
+      "subject": "TEST same Main Windows original Processes",
+      "target": {
+        "x": 885,
+        "y": 215
+      },
+      "state": "attempted",
+      "atMs": 26433.2394
+    },
+    {
+      "phase": "one-original-business-input-and-UI",
+      "atMs": 26472.513999999996
+    },
+    {
+      "phase": "one-original-business-input-and-UI",
+      "action": "mouseMoved",
+      "label": "hover Open team",
+      "selector": "[role=\"dialog\"] button",
+      "target": {
+        "x": 849.6062622070312,
+        "y": 122.14375305175781,
+        "text": "Open team",
+        "tag": "BUTTON"
+      },
+      "atMs": 28086.1
+    }
+  ],
+  "deliveredSidebarEvents": [
+    {
+      "type": "pointerdown",
+      "timeMs": 25450,
+      "trusted": true,
+      "x": 885,
+      "y": 215
+    },
+    {
+      "type": "pointerup",
+      "timeMs": 25457,
+      "trusted": true,
+      "x": 885,
+      "y": 215
+    },
+    {
+      "type": "click",
+      "timeMs": 25457,
+      "trusted": true,
+      "x": 885,
+      "y": 215
+    }
+  ],
+  "lastLiveSnapshot": {
+    "phase": "one-original-business-input-and-UI",
+    "operation": "process-listener-snapshot",
+    "startMs": 29795.403599999998,
+    "endMs": 30514.3203,
+    "returned": true
+  },
+  "censusTimingEntries": 28,
+  "censusReadsTruncated": false,
+  "successorHosts": 0,
+  "cleanup": {
+    "quit": {
+      "attempted": true,
+      "endpoint": "ws://127.0.0.1:9222/devtools/browser/6dc54829-11bf-4def-bb82-b5a5f22267ba",
+      "command": {
+        "at": 1794824748089,
+        "id": 1,
+        "method": "Browser.close"
+      },
+      "acknowledgementFailure": "Error: Packaged Browser.close timed out\n    at Timeout.<anonymous> (file:///C:/a/agent-teams-ai/agent-teams-ai/scripts/e2e/opencode-diagnostics/packaged.mjs:574:22)\n    at listOnTimeout (node:internal/timers:685:17)\n    at process.processTimers (node:internal/timers:618:7)",
+      "socketClosed": {
+        "at": 1794824749458,
+        "afterSend": true
+      }
+    },
+    "appExit": {
+      "code": 0,
+      "signal": null
+    },
+    "finalOwnedRemaining": [],
+    "finalListenerPids": [],
+    "finalDrained": true,
+    "cleanupFailure": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n0 !== 2\n\n    at Object.afterQuit (C:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeWindowsAppFixture.ts:467:16)\n    at file:///C:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:548:56\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async within (file:///C:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:141:20)\n    at async file:///C:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:548:29",
+    "controllerTerminal": "{\"gateController\":\"drained\",\"rootExitCode\":1,\"activeProcesses\":0}",
+    "witnessRowsStillInFinalAppCensus": [
+      {
+        "pid": 10620,
+        "parent": 6768,
+        "birth": "2026-11-16T10:25:32.8002430Z",
+        "executable": "C:\\a\\_temp\\TEST-Windows-UI-build-43831885834-ARM64\\Release\\owned-process-fixture.exe"
+      },
+      {
+        "pid": 8528,
+        "parent": 6768,
+        "birth": "2026-11-16T10:25:32.8361060Z",
+        "executable": "C:\\a\\_temp\\TEST-Windows-UI-build-43831885834-ARM64\\Release\\owned-process-fixture.exe"
+      },
+      {
+        "pid": 5208,
+        "parent": 6768,
+        "birth": "2026-11-16T10:25:32.8680160Z",
+        "executable": "C:\\a\\_temp\\TEST-Windows-UI-build-43831885834-ARM64\\Release\\owned-process-fixture.exe"
+      }
+    ],
+    "finalCensusIsNotFinalControllerDrain": true
+  },
+  "peer": {
+    "provider": "codex",
+    "connected": 1,
+    "registrations": 1,
+    "serviceExitObservations": 0,
+    "failures": 0,
+    "metadata": {
+      "events": 0,
+      "claudeVersions": 0,
+      "codexVersions": 0,
+      "refused": 0
+    },
+    "modelRequests": 0,
+    "probes": 0,
+    "realVendorExecutions": 0
+  },
+  "actualGenerationReceipt": null,
+  "noCurrent784OrBQualificationTransfer": true,
+  "noSourceFixSelected": true,
+  "projectOrNativeExecution": false,
+  "disposition": "FIRST_REFUSAL_AND_SOURCE_BRANCH_ESTABLISHED_NO_FIX_SELECTED",
+  "sourceTree": "de80fbfbffb3fe4daabf6cc9be258cc8df534524",
+  "runJobBinding": "Retained root handoff and archive/receipt context; reviewer did not repeat the Actions metadata or job-log retrieval.",
+  "sourceRecords": [
+    {
+      "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+      "treeLeaf": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "034d2253e0649bdeb5db0b12244656446150c31c",
+        "size": 34285
+      },
+      "lf": {
+        "bytes": 34285,
+        "lines": 597,
+        "gitBlob": "034d2253e0649bdeb5db0b12244656446150c31c",
+        "sha256": "a7057b647c13852fbabdebbb0d8da775a24d55382637d5947d06c733317213bc"
+      },
+      "windowsCRLF": {
+        "bytes": 34882,
+        "lines": 597,
+        "gitBlob": "d95dab9fe47bc8525d5cfa8cc297db2b97ee555f",
+        "sha256": "eb4f7debc190c7840dcd562649c7df153dbb1a9744d6312483ab5c0639f21a75"
+      }
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+      "treeLeaf": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "5e21bb5f8c50a3c9dd2a18b1d8c461896e0f91a9",
+        "size": 12614
+      },
+      "lf": {
+        "bytes": 12614,
+        "lines": 315,
+        "gitBlob": "5e21bb5f8c50a3c9dd2a18b1d8c461896e0f91a9",
+        "sha256": "a407196b363ba102f68bfcce1da2faa4d0757a84a00f937872aef909a6bb01c4"
+      },
+      "windowsCRLF": {
+        "bytes": 12929,
+        "lines": 315,
+        "gitBlob": "2e9b8960d034f21c107ec0071e2867c0e33ddf37",
+        "sha256": "e282eef424b2d98bab70268894d36b446055b7239f972d829ef9e82866452191"
+      }
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/packaged.mjs",
+      "treeLeaf": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "7da83c7a4e631f7599fc57861f19e14629db6036",
+        "size": 27780
+      },
+      "lf": {
+        "bytes": 27780,
+        "lines": 749,
+        "gitBlob": "7da83c7a4e631f7599fc57861f19e14629db6036",
+        "sha256": "5fd9116cb656ce7804dc3253decb3f386e2c17feda57cc40586cc6e0df6fd8d5"
+      },
+      "windowsCRLF": {
+        "bytes": 28529,
+        "lines": 749,
+        "gitBlob": "f281a6c128bd753928e8c4e27a0cf71af623b2d6",
+        "sha256": "866967ed1d8d4a15593de409336c09f3154d0907c9d3dab09745a8a0bd0d611a"
+      }
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/packaged.test.mjs",
+      "treeLeaf": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "751d80c1ea409d84b42e486e48853cfa1cd2c4a1",
+        "size": 67288
+      },
+      "lf": {
+        "bytes": 67288,
+        "lines": 1810,
+        "gitBlob": "751d80c1ea409d84b42e486e48853cfa1cd2c4a1",
+        "sha256": "df5427548f5d16b89967fbe656ad489d931953170ca1a57847a11d115700d40e"
+      },
+      "windowsCRLF": {
+        "bytes": 69098,
+        "lines": 1810,
+        "gitBlob": "64331c02fe9229907f76699dfd6b0cd381c2bca1",
+        "sha256": "d045139852b52f94f7b9cab991ad1323413b4b60be25c63f744a81525e1b595a"
+      }
+    },
+    {
+      "path": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+      "treeLeaf": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0b1bbc3ef47cd55ac3e23c13890fce281de01c98",
+        "size": 31223
+      },
+      "lf": {
+        "bytes": 31223,
+        "lines": 485,
+        "gitBlob": "0b1bbc3ef47cd55ac3e23c13890fce281de01c98",
+        "sha256": "4c037ffe4be03b64ef9e5d9172246a9744f3fc1cf55b48af630811a4c580eaa2"
+      },
+      "windowsCRLF": {
+        "bytes": 31708,
+        "lines": 485,
+        "gitBlob": "2ea379d6d92f92310cb586132ec9aeed7a2814ae",
+        "sha256": "9be5af55b58539523c03194b62ebb68f5b1b5363c8c3994deee833d91fed7499"
+      }
+    }
+  ],
+  "sourceAnchors": [
+    {
+      "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+      "lines": "164–180,204–212",
+      "finding": "Original Main lineage and exact controller/driver checks precede the ambiguity assertion; listener ownership and physical input are not authorized after refusal."
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+      "lines": "8–25,67–90,135–152",
+      "finding": "Exact PID/birth equality, original synchronous PowerShell and ordered non-atomic census/listener envelope; no executing query identity field."
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/packaged.mjs",
+      "lines": "469–545",
+      "finding": "Retained exited-parent history is diagnostic only. Current-parent birth mismatch deliberately remains ambiguous; all candidates observation-only, signalAuthorized:false."
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/packaged.test.mjs",
+      "lines": "1247–1289",
+      "finding": "Existing unexecuted-source regression explicitly requires ambiguity for a reused parent born before its child; no proposed weakening is silently accepted."
+    },
+    {
+      "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+      "lines": "425–439,530–593",
+      "finding": "Refusal inside clickSidebar before Processes proof/Host crash; catch/finally retains failure, runs original cleanup and writes INCOMPLETE receipt."
+    },
+    {
+      "path": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+      "lines": "142–150,466–478",
+      "finding": "Emergency witness-close only confirms observed registered exits; qualified afterQuit requires two Stops before provider, exact3/zero-exit and lock/runtime checks."
+    }
+  ],
+  "birthIdentity": {
+    "oldParentPid": 3068,
+    "oldParentBirth": "2026-11-16T10:25:13.2586920Z",
+    "oldParentParent": 6992,
+    "currentParentPid": 3068,
+    "currentParentBirth": "2026-11-16T10:25:42.0189580Z",
+    "currentParentParent": 6768,
+    "childPid": 10236,
+    "childParent": 3068,
+    "childBirth": "2026-11-16T10:25:42.0234620Z",
+    "parentBirthGapSeconds": "28.760266",
+    "currentParentToChildGapMilliseconds": "4.504",
+    "exactStringIdentityComparison": true,
+    "precisionLimit": "Seven-digit ISO formatting is not independent clock accuracy; orphan ordering uses Date.parse milliseconds, but this refusal is the unequal exact current-parent birth branch, not a sub-millisecond ordering tie."
+  },
+  "sourceCause": {
+    "direct": "The child is not a retained exact identity, its numeric parent matches an older retained identity, and the current parent's birth differs. This deterministically selects ambiguous-parent-identity and Gate178 refuses.",
+    "establishedDistinctIdentities": true,
+    "specificQueryInvocationIdentityProven": false,
+    "querySelfObservationHypothesis": "Consistent with original execFileSync PowerShell, current driver-parent relation and adjacent birth times; no query PID/birth/handle join retained to prove it.",
+    "noUnexplainedChildPolicyRelaxed": false,
+    "candidateSignalAuthority": false,
+    "nameOnlyOrNumericPidOnlyExclusionAdmissibleAsUnchangedFix": false,
+    "possibleFutureProofBoundary": "Inside the existing synchronous PowerShell invocation, retain built-in $PID and select its unique pid/birth/parent row from the already obtained Win32_Process result, without another OS query. Return that closed observer identity in the same envelope; absent/ambiguous self rows refuse. Check the retained original driver-parent identity. Only a separately reviewed, positively joined current-query descendant exclusion could then be considered; preserve all other orphan candidates, exact listener ownership, original action/deadline counts and zero signal authority. Current receipt lacks this proof and no candidate is selected.",
+    "sourceCorrectionSelected": false,
+    "currentQueryChildProcessPidHandleRetained": false,
+    "sameReadObserverIdentityFeasible": true,
+    "additionalProofObservationCost": "An extra primitive identity projection/validation inside the existing read, with its time charged to the unchanged cutoff; no extra process query, timeout, RPC, physical action or signal."
+  },
+  "timingAndCoverage": {
+    "originalBusinessPhaseStartMs": 13514.5613,
+    "originalBusinessBudgetMs": 35000,
+    "originalBusinessCutoffMs": 48514.5613,
+    "lastCombinedSnapshotStartMs": 29795.4036,
+    "lastCombinedSnapshotEndMs": 30514.3203,
+    "lastCombinedSnapshotReturned": true,
+    "nextQuitPhaseStartMs": 30520.3218,
+    "firstFailureWasTimeout": false,
+    "sidebarTaskPhysicalClickDelivered": true,
+    "openTeamHovered": true,
+    "openTeamPhysicalPressEstablished": false,
+    "beforeCrashProcessesProof": false,
+    "hostCrash": false,
+    "refresh": false,
+    "retry": false,
+    "uiStops": 0,
+    "originalCensusTimingListCount": 28,
+    "originalCensusTimingTruncated": false,
+    "censusHistoryIsAppendOnlyBoundedListNotEvictingRing": true
+  },
+  "cleanupQualification": {
+    "overallStatus": "INCOMPLETE",
+    "qualifiedCleanup": false,
+    "quitAttempted": true,
+    "browserCloseAcknowledgement": "timed out",
+    "socketClosedAfterSend": true,
+    "mainExit": {
+      "code": 0,
+      "signal": null
+    },
+    "appFamilyAbsentAndListenerEmpty": true,
+    "appCensusStillContainedQueryWitnesses": true,
+    "afterQuitFirstRefusal": "stops.size 0 != 2 at fixture467",
+    "afterQuitProviderZeroExitThreeWitnessZeroExitLockAndRuntimeAssertionsReached": false,
+    "fixtureCloseFailureRecorded": false,
+    "emergencyCloseScope": "All registered witness exits observed; no independent claim of required three witnesses exiting zero.",
+    "controllerTerminal": {
+      "gateController": "drained",
+      "rootExitCode": 1,
+      "activeProcesses": 0
+    },
+    "finalAppCensusNotSameAsFinalControllerDrain": true
+  },
+  "limits": {
+    "independentlyRehashedAll1798SourceBodies": false,
+    "independentlyRehashedInstalledBinaries": false,
+    "laterFixture784FixQualifiesThisARMFailure": false,
+    "BOrCurrentDeliveryQualificationTransfer": false,
+    "P08P09I386M16VendorQualificationTransfer": false,
+    "originalJobRawRedownload": false,
+    "artifactRedownload": false,
+    "immutableSourceReadCount": 5,
+    "projectOrNativeExecution": false,
+    "ciOrStatusAction": false,
+    "sourceIndexOrRefMutation": false
+  },
+  "preliminaryFacts": {
+    "path": "independent-first-refusal-facts.json",
+    "gitBlob": "24ab5604b3b490eef7581ff114042f0b770d8e42",
+    "status": "retained unchanged; superseded by this completed source review"
+  }
+}

@@ -145,9 +145,9 @@ jobs:
       NATIVE_APP_DIRECTORY: ${{ inputs.native_arch == 'arm64' && 'release/win-arm64-unpacked' || 'release/win-unpacked' }}
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v6
       - name: Enable long paths
         run: git config --global core.longpaths true
+      - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
         with:

@@ -1,0 +1,98 @@
+{
+  "kind": "independent-plan78-prospective-r2",
+  "reviewer": "/root/p08_remaining_audit",
+  "decision": "GO_EXACT_DOCUMENTARY_PUBLICATION_AND_LATER_GATED_FOUR_PATH_SOURCE_CUT",
+  "blockers": [],
+  "base": {
+    "head": "e6bcf9629f2c99c69433d69778ebb6586dc3d134",
+    "tree": "5874030a0e521500b3fa3e75c278b60157440550",
+    "primary": "5c55a4a2008f4a6131d265344d384b39415ad055",
+    "liveBase": "301d00f46db3389ff6e3042afd04c5b064a26270"
+  },
+  "reviewedDocuments": {
+    "plan": {
+      "file": "/workspace/scratch/b87c90489dab/e2e-recovery/plan78/plan.md",
+      "bytes": 5050,
+      "physicalLines": 22,
+      "gitBlob": "372b9b5dfe47c5f1578e1c954fd5704d62162c62",
+      "sha256": "9818f41da0b0d60fb7a9d27cc7842c4df3843c54cd399207a063b8d6bdb4d42d"
+    },
+    "rootR1": {
+      "file": "/workspace/scratch/b87c90489dab/e2e-recovery/plan78/prospective-r1.json",
+      "bytes": 9933,
+      "physicalLines": 200,
+      "gitBlob": "c5176abb433e76ca6a7208fe4bf26c283aac9d5c",
+      "sha256": "3efdb186c0d81e1cddd91e5cbef1f46270c8f220fbfd6f392adb525211068c3c"
+    }
+  },
+  "independentDataProof": {
+    "path": "independent-prospective-data-proof.json",
+    "bytes": 22925,
+    "physicalLines": 561,
+    "gitBlob": "a4503868f99f842153f6142710900b065d509f28",
+    "sha256": "ba7df61cebffaa589e62182f520508a083124c6b4cd3aefb23bad18573ab04a5"
+  },
+  "dataJoins": [
+    "Recomputed all1728 directory/root Git objects and11223 leaf tuples in the retained actual e6bc packet; commit/tree and retained delivery/primary/base tuple agree. This is not a fresh network ref check.",
+    "All four whole preimages match R1 identities and current tree. All11 selected old texts occur exactly once at the specified scope. Three prospective document paths are absent. No source afterimage was assembled or written.",
+    "Seven unchanged source references freshly hash to current tree. Three selected TS bodies plus six Desktop references match the original before/after1815 unique pin vector. Process Scenario is joined by current tree and Team source evidence, not falsely claimed in that Desktop vector.",
+    "Original Team raw/report/data and Collaboration raw/ZIP/receipt/PNG hashes match R1. Independently checked all22 ZIP CRC/member bodies; original failure PNG actually viewed."
+  ],
+  "findings": [
+    {
+      "topic": "Team stale source extraction",
+      "refs": "runtime-team-host.test.ts3720-3758; Scenario60-69,410-411,491-498; raw1125-1274",
+      "finding": "All eight original failures stop at the unique-marker assertion3725, with1 instead of2. Current caller uses epoch.rpc and TEST-ready-${action}. The selected four bindings supply epoch/action:A while preserving existing method/team/payload/TEST-ready-A assertions. Marker-only correction would leave undefined bindings; all four selected replacements are needed."
+    },
+    {
+      "topic": "Deadline and standalone preservation",
+      "refs": "test3761-3928; Scenario60-69,614-653",
+      "finding": "All eight cases remain: strict absolute expiry before/after read, relative15s defaults,25ms cadence, explicit30s, exact errors, capture reread and cleanup/exit refusal. Existing poll and standalone blocks are byte-equal to pre72 source; caller differs only in epoch/action identifiers. Separate standalone first remains valid and unselected. No timeout, ready predicate, source owner or cleanup behavior changes."
+    },
+    {
+      "topic": "One finite Claude model in three slots",
+      "refs": "fixture81-101,134-137; peer86,170-171; producer108-125; availability322-329,633-644",
+      "finding": "Peer advertises resolved TEST-claude-sonnet and accepts it. Producer maps resolvedModel to launchModel; renderer checks exact first-party launch membership. Original saved/runtime/returned sonnet values conflict with that offered value and the original dialog visibly refuses sonnet. One local constant shared by those three fixture slots fixes this TEST inconsistency while preserving other providers, effort, permissions, environment and roster."
+    },
+    {
+      "topic": "Saved-settings hydration",
+      "refs": "collaboration UI99-115; literal helper15-20; current LaunchTeamDialog2012-2013,2676",
+      "finding": "Existing summary includes the raw selectedModel, so matching fixture.emulatedRuntime.savedModel is supported by current rendering. Existing literal helper serializes it as data inside the same read-only expression. Unique-button requirement, expand/settle checks, original prompt/permission actions and90s preflight remain exact."
+    },
+    {
+      "topic": "Independent durable-probe expectations",
+      "refs": "workflow1088-1266, selected1228/1263",
+      "finding": "Only two expected model literals change. They remain independent literals with four total probe records and two initial probes; providers, low effort, command uniqueness, provenance, expiry/currentness and consumed disposition remain required. No count or qualification is weakened."
+    },
+    {
+      "topic": "Original effects and no replay",
+      "refs": "complete collaboration UI and records; workflow1088-1266",
+      "finding": "Saved Launch, Add/Remove/Restore, direct/group/attachment delivery, new generation/principal/session/process, four-session Stop and exact read-only reload snapshot remain unchanged. Original helpers retain single-action/no-mutation-retry behavior and75s read-only effect polls. No new business input, vendor peer, production contract or framework is selected."
+    },
+    {
+      "topic": "Scope and existing coverage",
+      "refs": "workflow133,139-280; original1815 source vector; parent protected leaves",
+      "finding": "Existing Team command executes this test, fast141 already includes the test/UI, and original source vector includes test/fixture/UI. Workflow edits are outside fast operands; main/supplement/process rosters and lock remain protected. Inherited3928-line test and1776-line workflow receive bounded binding/literal edits, with no cap/format workaround. Fixture grows naturally by one local declaration; UI line count stays fixed."
+    }
+  ],
+  "originalFailureLimits": [
+    "Team remains179 tests/171 pass/8 fail; target deadline cases did not run past fixture construction, and later typed/Desktop stages were not qualified.",
+    "Collaboration remains INCOMPLETE at UI115 before the business Launch click. Preflight finite model probes already ran; no zero-allocation or zero-input claim follows from empty operations.",
+    "Original PNG/dialog also retain Codex refreshing catalog, runtime-unavailable and Task read mutation-boundary messages; auth log retains host.held. These are separate unresolved observations, and the selected model correction is not claimed to be the sole cause.",
+    "Failure cleanup records app exit0/null, empty group/observed-peer remainder and acknowledged window-close; capturedHostObserved=false and capturedHostAbsent=null remain exact. No native Host absence qualification is inferred.",
+    "Plan77 two actual corrections remain exact at e6bc. Its packaged shared-fixture applicability is not a new Plan78 source edit or relaunch success claim."
+  ],
+  "preservedGates": [
+    "Root owns selection/publication. Actual documentary R2 and root full-read closure precede any source authoring; future four-path source/frozen/actual reviews still required.",
+    "All other parent leaves, existing deadlines and original types/lint/tests/UI/native gates remain required on resulting head; no execution result is conferred by this prospective review.",
+    "No primary advance during useful original jobs; fresh complete guard and ordinary immediate CAS remain required. No manual dispatch/rerun/cancel, main merge, force, release or Stage2 selected.",
+    "Plan40 A/B, missing historical P10 corpus and genuine-vendor/native acceptance remain separate; Darwin failure analysis adds no selection here."
+  ],
+  "actions": {
+    "apiActionsOrGitMutations": 0,
+    "projectOrNativeExecution": 0,
+    "sourceAfterimages": 0,
+    "sourceEdits": 0,
+    "reviewArtifactsOnly": true
+  }
+}

@@ -2,6 +2,11 @@ import { createHash } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 
 import { validOAuthOperationId } from '../../infrastructure/FileProviderOAuthIntentStore';
+import {
+  getCopyableOAuthAuthorizationUrl,
+  isSafeOAuthAuthorizationUrl,
+  sanitizeOAuthInstructions,
+} from '../../infrastructure/runtimeProviderOAuthPresentation';
 
 import { managementValue } from './capturedManagementCatalog';
 
@@ -19,6 +24,8 @@ export interface CapturedProviderOAuthDependencies {
   openExternal(url: string): Promise<void>;
   emitProgress?(event: Dto.RuntimeProviderOAuthProgressDto): void;
 }
+type OAuthPresentation = Pick<Dto.RuntimeProviderOAuthProgressDto, 'authorizationUrl' | 'instructions'>;
+
 const failed = () => ({ ok: false, error: 'Unable to confirm the original sign-in operation.' });
 const object = (value: unknown): Record<string, unknown> => {
   if (!value || typeof value !== 'object' || Array.isArray(value))
@@ -145,6 +152,7 @@ export class CapturedProviderOAuth {
         'cancelling',
         'completed',
         'cancelled',
+        'failed',
         'held',
       ].includes(String(snapshot.phase)) ||
       ![null, 'code', 'auto'].includes(snapshot.completionMethod as string | null) ||
@@ -157,7 +165,11 @@ export class CapturedProviderOAuth {
     return snapshot as unknown as ProviderOAuthSnapshot;
   }
 
-  private emit(intent: ProviderOAuthIntent, snapshot: ProviderOAuthSnapshot): void {
+  private emit(
+    intent: ProviderOAuthIntent,
+    snapshot: ProviderOAuthSnapshot,
+    presentation?: OAuthPresentation
+  ): void {
     const phase: Dto.RuntimeProviderOAuthProgressPhaseDto =
       snapshot.phase === 'held'
         ? 'failed'
@@ -165,7 +177,12 @@ export class CapturedProviderOAuth {
           ? 'cancelled'
           : snapshot.phase === 'completed'
             ? 'completing'
-            : snapshot.phase;
+            : snapshot.phase === 'completing' &&
+                snapshot.completionMethod === 'auto' &&
+                intent.runtimeId !== 'claude'
+              ? 'waiting-for-browser'
+              : snapshot.phase;
+    const waiting = phase === 'waiting-for-code' || phase === 'waiting-for-browser';
     const event: Dto.RuntimeProviderOAuthProgressDto = {
       operationId: intent.operationId,
       runtimeId: intent.runtimeId ?? 'opencode',
@@ -175,13 +192,18 @@ export class CapturedProviderOAuth {
       methodIndex: intent.methodIndex,
       phase,
       completionMethod: snapshot.completionMethod,
-      instructions:
-        snapshot.phase === 'waiting-for-code'
-          ? 'Complete sign-in in your browser and enter the returned code.'
-          : null,
+      ...(waiting && presentation?.authorizationUrl
+        ? { authorizationUrl: presentation.authorizationUrl }
+        : {}),
+      instructions: waiting
+        ? (presentation?.instructions ??
+          (snapshot.phase === 'waiting-for-code'
+            ? 'Complete sign-in in your browser and enter the returned code.'
+            : null))
+        : null,
       message: null,
     };
-    // Never forward native URLs/instructions or raw Host snapshots to the renderer.
+    // Only canonical, sanitized presentation leaves Main; private replies and journals stay separate.
     for (const listener of [this.deps.emitProgress, ...this.listeners]) {
       try {
         listener?.({ ...event });
@@ -206,6 +228,13 @@ export class CapturedProviderOAuth {
       intent,
       target
     );
+    const presentNativeInstructions = intent.runtimeId !== 'claude';
+    const expiresAt = snapshot.expiresAt;
+    const assertPresentationCurrent = () => {
+      if (!target.isCurrent()) throw new Error('OAuth context changed');
+      if (Date.now() >= expiresAt) throw new Error('OAuth expired');
+    };
+    let presentation: OAuthPresentation | undefined;
     let opened = false,
       autoSubmitted = false,
       sequence = 0;
@@ -216,21 +245,29 @@ export class CapturedProviderOAuth {
         throw new Error('OAuth context changed');
       }
       if (snapshot.sequence < sequence) throw new Error('OAuth progress regressed');
+      if (
+        !['waiting-for-code', 'waiting-for-browser'].includes(snapshot.phase) &&
+        !(snapshot.phase === 'completing' && snapshot.completionMethod === 'auto')
+      )
+        presentation = undefined;
+      if (presentation) assertPresentationCurrent();
       if (snapshot.sequence > sequence) {
-        this.emit(intent, snapshot);
+        this.emit(intent, snapshot, presentation);
         sequence = snapshot.sequence;
       }
       if (snapshot.phase === 'completed') return;
-      if (snapshot.phase === 'held' || snapshot.phase === 'cancelled')
+      if (snapshot.phase === 'held' || snapshot.phase === 'cancelled' || snapshot.phase === 'failed')
         throw new Error('OAuth outcome unconfirmed');
       if (Date.now() >= snapshot.expiresAt) {
         await target.request('oauth.cancel', { operationId: intent.operationId });
         throw new Error('OAuth expired');
       }
       if (!opened && ['waiting-for-code', 'waiting-for-browser'].includes(snapshot.phase)) {
+        if (presentNativeInstructions) assertPresentationCurrent();
         const privateReply = managementValue(
           await target.request('oauth.authorization', { operationId: intent.operationId })
         );
+        if (presentNativeInstructions) assertPresentationCurrent();
         if (privateReply === null) {
           // A code/cancel may have won between progress and this private read.
           snapshot = this.snapshot(
@@ -256,11 +293,47 @@ export class CapturedProviderOAuth {
           )
         )
           throw new Error('OAuth authorization unavailable');
+        if (
+          presentNativeInstructions &&
+          (typeof authorization.instructions !== 'string' ||
+            authorization.instructions.length > 16384)
+        )
+          throw new Error('OAuth authorization unavailable');
         if (!target.isCurrent()) continue;
         opened = true; // Never repeat an uncertain external-open effect.
         if (authorization.browserOwner !== undefined && authorization.browserOwner !== 'native')
           throw new Error('OAuth browser owner unavailable');
         if (authorization.browserOwner !== 'native') await this.deps.openExternal(url.href);
+        if (presentNativeInstructions) {
+          // An opener may outlive cancellation or a context switch. Re-read this exact operation
+          // before exposing any sanitized native presentation, within its original expiry.
+          assertPresentationCurrent();
+          const observed = this.snapshot(
+            await target.request('oauth.read', { operationId: intent.operationId }),
+            intent,
+            target
+          );
+          assertPresentationCurrent();
+          if (
+            observed.sequence < snapshot.sequence ||
+            (observed.sequence === snapshot.sequence && observed.phase !== snapshot.phase) ||
+            observed.completionMethod !== snapshot.completionMethod ||
+            observed.expiresAt !== expiresAt
+          )
+            throw new Error('OAuth progress changed');
+          snapshot = observed;
+          if (snapshot.phase === 'waiting-for-code' || snapshot.phase === 'waiting-for-browser') {
+            presentation = {
+              instructions: sanitizeOAuthInstructions(authorization.instructions as string),
+              authorizationUrl: isSafeOAuthAuthorizationUrl(authorization.authorizationUrl)
+                ? getCopyableOAuthAuthorizationUrl(intent.providerId, authorization.authorizationUrl)
+                : null,
+            };
+            this.emit(intent, snapshot, presentation);
+            sequence = snapshot.sequence;
+          }
+          continue;
+        }
       }
       if (snapshot.phase === 'waiting-for-browser' && !autoSubmitted) {
         autoSubmitted = true;

@@ -1,0 +1,290 @@
+{
+  "schemaVersion": 1,
+  "kind": "BYTE_VERIFIED_TERMINAL_H_EVIDENCE_ARCHIVE_FOR_CANDIDATE_D",
+  "repository": "777genius/agent-teams-ai",
+  "pullRequest": 1192,
+  "baselineHead": "06842c53e5039085998abc4e67a9c0aaff227893",
+  "candidateCommit": null,
+  "candidateBinding": "Exact D source pins; a later ordinary commit supplies the Git identity. H CI does not qualify D.",
+  "allSixOriginalFamiliesTerminal": [
+    {
+      "runId": 45023991499,
+      "name": "Teams creation page Electron E2E",
+      "conclusion": "failure"
+    },
+    {
+      "runId": 45023991564,
+      "name": "OpenCode V2 Stage1 static preflight (TEST only)",
+      "conclusion": "success"
+    },
+    {
+      "runId": 45023991655,
+      "name": "Host Emulated Acceptance",
+      "conclusion": "failure"
+    },
+    {
+      "runId": 45023991540,
+      "name": "CI proof: PR=1192 | head=06842c53e5039085998abc4e67a9c0aaff227893 | base=8d46f13fe87b4a25156b6be8331119eb8d0f790e | merge=419dade4492b442998971a4a419bc1173e02a7c4 | action=synchronize | draft=true",
+      "conclusion": "failure"
+    },
+    {
+      "runId": 45023991515,
+      "name": "Electron packaged CI",
+      "conclusion": "success"
+    },
+    {
+      "runId": 45023991471,
+      "name": "Host process fixture acceptance",
+      "conclusion": "success"
+    }
+  ],
+  "primaryFailuresPreserved": [
+    {
+      "jobId": 137212869512,
+      "kind": "Linux V2 original live Add model probe held"
+    },
+    {
+      "jobId": 137212869580,
+      "kind": "Darwin Resume lane preflight expired before first launch"
+    },
+    {
+      "jobId": 137212869722,
+      "kind": "Darwin Review lane preflight incomplete before first launch"
+    },
+    {
+      "jobId": 137212868284,
+      "kind": "Teams macOS wrong-row click after final geometry sample"
+    },
+    {
+      "jobId": 137242767455,
+      "kind": "Immutable donor4a original Create-visible deadline while deep preflight pending; causal delay unresolved"
+    }
+  ],
+  "master": {
+    "path": "06842/qualification-checkpoint.json",
+    "sha256": "9d95f12c2e18907162bd5f9d929ddb66e4e76e2be925af68c8322cdd1677a5ce"
+  },
+  "inventory": {
+    "path": "06842/publication-evidence-inventory.draft.json",
+    "bytes": 689182,
+    "sha256": "16a133f05d20e6ba7cf42a599e0a68689edd2dcbf79f29046a82120bc3de9d76"
+  },
+  "candidate": {
+    "path": "06842/candidate-source-final-D.json",
+    "sha256": "337ee20c51f7ec9a9cda582d9e1f958a3c6e63d16476b48df098d7b9c2c88300",
+    "sourcePaths": [
+      {
+        "path": ".github/workflows/ci.yml",
+        "bytes": 200847,
+        "sha256": "983450de4660477e16183c06ec4a29450ea2b5692b144a5d7aa54899cd21febd"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/FileManagementCommandStore.ts",
+        "bytes": 9074,
+        "sha256": "eb4ce52da7e76472a44016dbea11eabc5476a95e34ff4a30fb6468fea1c67ff9"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/team/FileTeamRuntimeBindings.ts",
+        "bytes": 14951,
+        "sha256": "cd5c2b937fa60c4a32125c6869f585ae52b6422ba7e3fa047e8c4cb9c32cd85a"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/team/TeamOwnerStore.ts",
+        "bytes": 8297,
+        "sha256": "1afb9fab18e02a3c4ba2f0bd4ba818931d635e27559168c2037c3469b67b5f32"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/savedTeamModelProbe.ts",
+        "bytes": 9681,
+        "sha256": "9907cd4435505f2b9332d3cba3f09be410716fe40a137a1056d1e95be6b14496"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/team/TeamOwner.ts",
+        "bytes": 34696,
+        "sha256": "d3a66c4878418625f5bf4313cdbb2a26f0dea952c3daeb5a04cdf3ab03c25838"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/team/ports.ts",
+        "bytes": 7587,
+        "sha256": "e70ffb90509aab6b8bf986c6abad3f37e6c3a403c39868a5734f4119286df361"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/file-receipt-decode-cache.test.ts",
+        "bytes": 16088,
+        "sha256": "91e8525497fe71c1043fa5cf3b7999d4a7fbb4b8b4e76b286b69cd73a1afcfa6"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+        "bytes": 297129,
+        "sha256": "ff4f9d25c2e859ddedeb555d8d2ea295055463520f3beeb81cbf01c2149babcb"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+        "bytes": 111464,
+        "sha256": "98da50ac9fc1dc60df9d5b43c0a21e263f8a0d4233e7e3827105f3bf69d319dc"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/team-runtime-bindings-decode.test.ts",
+        "bytes": 11570,
+        "sha256": "b8b6e72a9baf16cbfe43e6f243e1d0e3af12db97b623f01d452919092b846171"
+      },
+      {
+        "path": "scripts/e2e/teams-create-page-schedule-observation.mjs",
+        "bytes": 19745,
+        "sha256": "c11b16df5cc1e4e2f821872fc9a5de5705a0d3e8025b834331c3ecc71a1feaaf"
+      },
+      {
+        "path": "scripts/e2e/teams-create-page-schedule-observation.test.mjs",
+        "bytes": 35992,
+        "sha256": "4a6e06dce9ae5c193c5b54ba9699844797b6e318eb3827f09f1dbef33f010ba1"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+        "bytes": 31743,
+        "sha256": "bfecf5323634cb309539913bddb9eb529f3a7b07d0670d8efad08fa15e44781f"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts",
+        "bytes": 58582,
+        "sha256": "fd2acffcb8f30a9805cb3c981bd387014de258d6cf5a4b05c1493fd8a648b36c"
+      }
+    ]
+  },
+  "sourceMap": {
+    "path": "06842/candidate-expected-source-hashes-D.json",
+    "sha256": "0421af5bf024825229612f66691b045f0a85e302ba279c4d942a9217d42ea202",
+    "verifiedDistinctFilesBeforeAndAfter": 2018
+  },
+  "archive": {
+    "path": "continuation-06842-20261122.tar.gz",
+    "bytes": 58769753,
+    "sha256": "cbf5f059ea5698d021944904cee29c8365adef94adc784f89ab2f793d98507c2",
+    "members": 1003
+  },
+  "parts": [
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-001",
+      "bytes": 2621440,
+      "sha256": "40abf997a5029e026314319c514f6ac907bb2d5b4abb9bcc7c5734b4c981cef3"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-002",
+      "bytes": 2621440,
+      "sha256": "db180f4cd09a125525b23d19a87de1f10e1eb27a30ae5de24318e40b76d89b9b"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-003",
+      "bytes": 2621440,
+      "sha256": "201bfeeaeed4b7e002507c6cdcf1678b94c0ee9ea4c1c4a0ff7724a2c5f036d6"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-004",
+      "bytes": 2621440,
+      "sha256": "5c59bf05b3ede51c42c015354f738afc68604e918ad432ed8dfb2599868a5b51"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-005",
+      "bytes": 2621440,
+      "sha256": "ca38bca2d2e3256da945e8e9854b81e81ca48d422ff0d97f49736421197fa942"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-006",
+      "bytes": 2621440,
+      "sha256": "e3fa8556706312323b3c16d65d6d2f8e1c878dd8f2bce593217f221e68c1cb6b"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-007",
+      "bytes": 2621440,
+      "sha256": "d8a3a44ecdf13917e8b41c2ce90ff7754f15d9dbbcfc0a7f833e892b78ad5589"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-008",
+      "bytes": 2621440,
+      "sha256": "62a6562b9217fc9da10055e21dde291a5ee79e1dc261a70fa5778315b78cfb66"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-009",
+      "bytes": 2621440,
+      "sha256": "d17d808afd910df17bc2a0f5f4c5dd999fc2efcea2b08431cfce0aa96ed12feb"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-010",
+      "bytes": 2621440,
+      "sha256": "4b985917e76a5773a179270f66ce780260436870f7141574e5436e427da31980"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-011",
+      "bytes": 2621440,
+      "sha256": "945b347d3730ed47b3c38b12ef395641bc308aa3f2f309c0fcbf93c497a39b35"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-012",
+      "bytes": 2621440,
+      "sha256": "b34a1de3f32f7f3bb4d2060714af7a5e4443ba5d7ac1beaae1ba2ecd428d10cc"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-013",
+      "bytes": 2621440,
+      "sha256": "a2eb2a5decace81e30d49cac58f92a2fb4a9c26a8542197aa1d4cf3ecd0ef7dc"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-014",
+      "bytes": 2621440,
+      "sha256": "acf13af822ccc6aacfcabb24c913a4c0067cddd1ace7bc3e3e4841e231bea383"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-015",
+      "bytes": 2621440,
+      "sha256": "13b11e0d36ef07028f938eb3644c35adc6cb100aeda221e7b0cec0d76d837c12"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-016",
+      "bytes": 2621440,
+      "sha256": "2bcb39ac256bb5f51e9f3a1fecff9ab5919105227b81928c48adc231971dd328"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-017",
+      "bytes": 2621440,
+      "sha256": "c750434e2755fdd68e97fadcccd1124c45e2e86895ed7f1f6f33826f31bfa5d7"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-018",
+      "bytes": 2621440,
+      "sha256": "284df4c2ffc7bd7c615ade2183c15e94d6238811ff45913d0e19b12da712bcda"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-019",
+      "bytes": 2621440,
+      "sha256": "a16ad64791a88751e6017a6d2da6b6e73b7c8989bdea1d85420229828aac6a3b"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-020",
+      "bytes": 2621440,
+      "sha256": "7ad36a8eb3ec5115b6d48213d16f3f258449eb80c1179dd0c2d4b956b5291f32"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-021",
+      "bytes": 2621440,
+      "sha256": "bc555256bf74f9e2450f4f10e96c9e2240dd42c6f598283dd72fe803feab257e"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-022",
+      "bytes": 2621440,
+      "sha256": "29f4c9deea4a3113c51b9c72a7f6512a9996f04dc4e9bb3df05d9802d7db087b"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-023",
+      "bytes": 1098073,
+      "sha256": "f2ff627ba16f0d0a1b94c5d954b4f37db5159d04ae7e926800d5e6f292061a1e"
+    }
+  ],
+  "partCapBytes": 2621440,
+  "verification": {
+    "everyMemberByteHashAndSize": true,
+    "safeRegularUniqueMemberPaths": true,
+    "inventoryAndMasterUnchanged": true,
+    "sourcePinsUnchanged": true,
+    "partsReconcatenatedByteExactly": true
+  },
+  "qualification": "Archive integrity only; original failed and unknown outcomes remain unchanged. Original E2E on candidate D and full workspace gates remain required."
+}

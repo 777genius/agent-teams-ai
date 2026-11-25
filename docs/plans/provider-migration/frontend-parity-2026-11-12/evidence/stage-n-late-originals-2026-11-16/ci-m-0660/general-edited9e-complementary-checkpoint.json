@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "sourceHead": "9e542899f36c47598a88c764c9e6745589fea3e1",
+  "result": "APPROVE_EVIDENCE_WITH_ORIGINAL_RENDERER_FAILURE",
+  "frozenPayloads": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-complementary-foundation.json",
+      "bytes": 2852354,
+      "blob": "3338c3f95abb32f37bcfcc0f2daf477d322a8217",
+      "sha256": "732413870a8b15b1b544799bc2d1981d3cf03cf938ee87033195f778a186be48"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-complementary-independent-review.json",
+      "bytes": 46635,
+      "blob": "a644fc6c262cac704a696683e5e04a364108c6cc",
+      "sha256": "6f8a2238db816446334bb452a6228262f84b6832e2ad7f809ce57b2555e08dce"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/Plan29-general-edited9e-complementary-appendix.md",
+      "bytes": 5362,
+      "blob": "f2a49ebf4fe0016fec2e8c9b1caa44d9874dd45b",
+      "sha256": "4fffbaa0915bf2ff8e3f4c28835d7c97e9187fe4d3e13ec951c5c1447a8b390b"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-9e-edited-jobs-0316.json",
+      "bytes": 41417,
+      "blob": "457984d6b8dd44eb0d70cc7a6fa13d23a40e8aa9",
+      "sha256": "20c4ca689c3edf8132172cf64be158758879219b012e43cf3dedfd0be543eee4"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-merge-commit-original.json",
+      "bytes": 2653,
+      "blob": "ef866594aca5b5e1508c45eac8372ecb09f93cdd",
+      "sha256": "fca04f15e204a0dfde01b6896c97b26f093fbca514b8fbe0370f80cc379a97f6"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-three-producers-independent-review.json",
+      "bytes": 353611,
+      "blob": "582ca153c120ed1e3049ccc018fbae105a018a50",
+      "sha256": "6a6acda4d53e391cd0975fcbb9d5dfc84f8cd647ff814c7b14a5eb8d4e11b91d"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-test-shard1-original.log",
+      "bytes": 421565,
+      "blob": "3d30659b9a275707f871067144ce56bc554d4942",
+      "sha256": "6559fc946927b84f7c50cc7c278644d0e59f77ab9211e5382b4691c60f043fbf"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-test-shard1-original-response.json",
+      "bytes": 468630,
+      "blob": "d6d4e535225063655b7dd47ce2523a54b0a7cd58",
+      "sha256": "c69a9038ca864afff1a16d559e7f222b7c79c5c5860ad6d97e71cd4e313afb97"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-test-shard2-original.log",
+      "bytes": 200505,
+      "blob": "1569ef2ab062d95a3397949d7eda4c08b92ee095",
+      "sha256": "774a18e81e0f1e03a7326bce8bb4b4ae2aa7e885159a0877506c3026a8005fc8"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-test-shard2-original-response.json",
+      "bytes": 244576,
+      "blob": "755cc571e1e0881b304d4c30b23cd44136f37f22",
+      "sha256": "572a3b91d03e08fbdcc94ee6644467fe4a3630d264a35d60cbe85ca9113bf204"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-test-shard3-original.log",
+      "bytes": 181389,
+      "blob": "79af5d71f2c78e767b4b8aa9f0cadf447ec9cfc6",
+      "sha256": "6a8f67e80f9f54e978cf799bf0db760722519778ae9433149fc4caf7d76c33eb"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-test-shard3-original-response.json",
+      "bytes": 221198,
+      "blob": "6a719b2eb9da24124ec6e4d4df427e476fe58522",
+      "sha256": "0ed23e179646d91eba770fda33c5c56c74f48d0a5df619f6ecca78f3401b0059"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-test-shard4-original.log",
+      "bytes": 209979,
+      "blob": "e0eab264998d76c3f8383cdad398c309d4c648af",
+      "sha256": "a8e329923e5b8c460455aaf13f5956018db89152b184006eecb3706e87535226"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-test-shard4-original-log-response.json",
+      "bytes": 255928,
+      "blob": "22446dcb348eebd2034e44691f7da4882d6629cf",
+      "sha256": "40eb79fb15bc944dfbc2a916a2f6a799190e572702dc081a18c3ad2f7d0d0f4a"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-lint-renderer-original.log",
+      "bytes": 813705,
+      "blob": "6ef3bb2a385b54da8114f767ff316a859047c557",
+      "sha256": "1dc0b94aada3975157fd18f625ab1d1502b7831d8d8723c62078a942a0c8f115"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-lint-renderer-original-response.json",
+      "bytes": 819661,
+      "blob": "2341e3154de771ef27efd34d4774263f3c1b21cd",
+      "sha256": "8acb89ecc95f284c944b70d2f8da6937b35d87b0b3551ff04802ccd599bbc5a5"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-lint-features-original.log",
+      "bytes": 451897,
+      "blob": "5f85d29ed6e0691a4d899e1a0a175e0155709bf3",
+      "sha256": "5279d1e35249fa37360c310704125832d05def60c0f6b485bde3756612382071"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-lint-features-original-response.json",
+      "bytes": 455690,
+      "blob": "79bcb96a52437f8623cfbda5994cc46bebc06b77",
+      "sha256": "9c86402794f7d787f61af05c476aa80e1b5009c3a053695edc77185e047e16e7"
+    }
+  ],
+  "limits": [
+    "Historical9e results do not qualify current608 privacy or current-source full CI.",
+    "Original renderer lint is FAILURE; its TypeScript/ESLint context is distinct from project TS7.0.2 typechecking.",
+    "No frontend Desktop, packaged/native physical custody or real vendor execution acceptance follows from these unit/integration totals.",
+    "Previous dedicated backend compiler137 and original K Host build-9 remain original failures; no local/full/dedicated compiler retry was performed.",
+    "At frozen03:16snapshot Full qualification was queued; no terminal or successful gate is inferred. Draft policy and Stage1 skips remain unchanged.",
+    "No workflow change, manual dispatch/rerun/cancel, Ready transition, source patch or ref write occurred during this audit."
+  ]
+}

@@ -1,0 +1,295 @@
+{
+  "kind": "INDEPENDENT_PROSPECTIVE_PLAN64_R2",
+  "reviewer": "/root/p08_remaining_audit",
+  "createdAt": "2026-11-16T22:11:11.833084+00:00",
+  "verdict": "ACCEPTED_PROSPECTIVE_ONLY",
+  "blockingFindings": [],
+  "scope": "Independent documentary/source-design review of the exact three-path Plan64 selection; not an implemented-source review or qualification result.",
+  "reviewedDocuments": {
+    "plan": {
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan64-windows-readiness-cleanup/plan.md",
+      "bytes": 10586,
+      "physicalLines": 51,
+      "sha256": "a454bcc85f27a7358586eed9b22716e202d3cf84eef1d06d60b7cd7f35104553",
+      "gitBlob": "0289cb5a2f9836bb1b941bbc2adfb03efe8b9859",
+      "semanticRead": "FULL 51 physical lines, untruncated"
+    },
+    "rootR1": {
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan64-windows-readiness-cleanup/prospective-r1.json",
+      "bytes": 9033,
+      "physicalLines": 162,
+      "sha256": "754fa0c50ad445338a097271284ed55c54896f7ac70ace4a7c5f30de897b78e7",
+      "gitBlob": "bcee79d4477745fb88fc3a545158ff81adac762b",
+      "semanticRead": "FULL finalized 162 physical lines, untruncated; earlier pending 3409-byte R1 is superseded"
+    },
+    "preimageBindings": {
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan64-windows-readiness-cleanup/preimage-bindings.json",
+      "bytes": 1312,
+      "physicalLines": 26,
+      "sha256": "9b01fa121d9cc04e072a347a6a7d0b8ace1f5c30747d098a4999931a4e8db71f",
+      "gitBlob": "e191b6231ac62b26b6f059d0cce5bf88bea688e5",
+      "semanticRead": "FULL; independently recalculated all three bodies"
+    },
+    "residualFinding": {
+      "localPath": "/tmp/e2e-original-artifacts/reviews/75-windows-x64-process-r2/prospective-residual-cost-finding.json",
+      "bytes": 44480,
+      "physicalLines": 1333,
+      "sha256": "bd6a8678fd06c0a8c2917aee39669c9be82fcac6ddd76111df229ffa66ccbf23",
+      "gitBlob": "29f25ce4cbc299522406d15648a3928ab0dce333",
+      "semanticRead": "Authored from exact held source in the preceding independent bounded audit; root confirms FULL untruncated read"
+    },
+    "actualFailure": {
+      "localPath": "/tmp/e2e-original-artifacts/reviews/75-windows-x64-process-r2/actual-failure-r2.json",
+      "bytes": 29963,
+      "physicalLines": 454,
+      "sha256": "9d139512f8b9f4628a681595b3dc7ec638c21a0f1f20552f24e0afa66a2ce003",
+      "gitBlob": "5bd873b8204e4b312dfa895bd7f10640099801f1"
+    },
+    "cleanupFinding": {
+      "localPath": "/tmp/e2e-original-artifacts/reviews/75-windows-x64-process-r2/prospective-cleanup-design-finding.json",
+      "bytes": 11599,
+      "physicalLines": 185,
+      "sha256": "88ff0a732a14d661bb3171a9d2aa118080cd1d33eecfed57d1500e6b19088155",
+      "gitBlob": "490235ad6ed98edcf24856c0451584adaf596ee1"
+    }
+  },
+  "actualParentBinding": {
+    "commit": "b0cdd1759ad9e591a5f88528b65c3b1407c1d92e",
+    "tree": "88e3d740345148c44522846d5533038e0bde0849",
+    "proof": {
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan64-windows-readiness-cleanup/independent-prospective-base-binding.json",
+      "bytes": 3121,
+      "physicalLines": 72,
+      "sha256": "3b3aba5f36243788c8515293cf96c1b8f4604796d781789b72c4df8c5679dcdd",
+      "gitBlob": "b190f9f5ca007474faf5c0a29c8455d30628deef"
+    },
+    "source": "Held immutable Plan63 actual-source official-packet.json; no new Git/API lookup",
+    "checks": [
+      "Actual commit b0cdd1759ad9e591a5f88528b65c3b1407c1d92e selects tree88e3d740345148c44522846d5533038e0bde0849 and parent4659b73dd568b14cd05bf1ce32ae9073c3287780.",
+      "Recursive tree is untruncated; independently reconstructed all1703 tree records including root from their exact child modes/names/SHAs.",
+      "All11136 non-tree leaves accounted for as tree data; no broad semantic source read claimed.",
+      "All3 selected preimage bodies and all10 read-only reference bodies match the finalized R1 and actual b0cdd leaves.",
+      "All12 source bodies in the residual finding are unchanged from their independently audited75 blobs; the earlier finding newer-head limitation is closed for these bodies by this review."
+    ],
+    "references": [
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+        "gitBlob": "b1f0e95ce23ac56ee4ce400157be3316afddbd29",
+        "writable": true,
+        "matchesHeldActualB0Tree": true,
+        "wholeBodyMatchesPreviouslyAuditedBlob": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+        "gitBlob": "3de70853104e4c49685d870fc4977458f529bfea",
+        "writable": true,
+        "matchesHeldActualB0Tree": true,
+        "wholeBodyMatchesPreviouslyAuditedBlob": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+        "gitBlob": "11b498579f2fb8a6e54afb7ac2f49438c959a213",
+        "writable": true,
+        "matchesHeldActualB0Tree": true,
+        "wholeBodyMatchesPreviouslyAuditedBlob": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/teamLaunchModelProbe.ts",
+        "gitBlob": "7e377e0b51ea453e90f4f2dde5c9bb782c983c99",
+        "writable": false,
+        "matchesHeldActualB0Tree": true,
+        "wholeBodyMatchesPreviouslyAuditedBlob": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/runtimeProfile.ts",
+        "gitBlob": "7dcaecc2d76bf568347082b5f82f0d738e0bfaa1",
+        "writable": false,
+        "matchesHeldActualB0Tree": true,
+        "wholeBodyMatchesPreviouslyAuditedBlob": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/management/profile.ts",
+        "gitBlob": "ccefb500c16a228e03b7a1e4a47e04897fbca4f1",
+        "writable": false,
+        "matchesHeldActualB0Tree": true,
+        "wholeBodyMatchesPreviouslyAuditedBlob": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/management/ModelProbeOwner.ts",
+        "gitBlob": "a870a9c2c213b802ae43a3dee9a0694a67feda7e",
+        "writable": false,
+        "matchesHeldActualB0Tree": true,
+        "wholeBodyMatchesPreviouslyAuditedBlob": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/FileManagementCommandStore.ts",
+        "gitBlob": "d3068dcabf3ea7334a252967b43931f8751f7d58",
+        "writable": false,
+        "matchesHeldActualB0Tree": true,
+        "wholeBodyMatchesPreviouslyAuditedBlob": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/management/identity.ts",
+        "gitBlob": "d4e5631330f08ccc4138353f6e2b5f49f7cac01f",
+        "writable": false,
+        "matchesHeldActualB0Tree": true,
+        "wholeBodyMatchesPreviouslyAuditedBlob": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeConfigurationSource.ts",
+        "gitBlob": "6efd49158d9f3ab93d916fdb562fa61b2f8aa039",
+        "writable": false,
+        "matchesHeldActualB0Tree": true,
+        "wholeBodyMatchesPreviouslyAuditedBlob": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeReadinessOrigin.ts",
+        "gitBlob": "57c68f58a158bc4c6e9f0ea93c349b7abf8daeaa",
+        "writable": false,
+        "matchesHeldActualB0Tree": true,
+        "wholeBodyMatchesPreviouslyAuditedBlob": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/opencode-configuration-source.test.ts",
+        "gitBlob": "15f4280f68324f89fb95b87e2cf745b8de9fd763",
+        "writable": false,
+        "matchesHeldActualB0Tree": true,
+        "wholeBodyMatchesPreviouslyAuditedBlob": true
+      },
+      {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "gitBlob": "af1abdb8c2309b4122d50ba9bdfa745a896344de",
+        "writable": false,
+        "matchesHeldActualB0Tree": true,
+        "wholeBodyMatchesPreviouslyAuditedBlob": false
+      }
+    ],
+    "refLimit": "Delivery b0cdd and primary75 are the values in the held original publication packet. This review did not poll mutable refs and does not claim they remain the live heads at a later publication."
+  },
+  "selectedFourLineBoundary": [
+    {
+      "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+      "preimage": "3de70853104e4c49685d870fc4977458f529bfea",
+      "line": 176,
+      "semanticChange": "Skip the early nativeCurrent evaluation only for the unchanged private bracket; evaluate the original current expression only for non-bracket calls.",
+      "requiredUnchanged": "Bracket126-128, original capture129-138, native/current closures165-175, all V2/file-key logic, final native guard205, target206, policy208 and later consumer/probe expiry/equality/authority remain exact.",
+      "supportedBy": "Residual finding privateBracketProof, plainDataAndCallbackFreeGap and guardsThatMustRemain; before-body equality to current audited source."
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "preimage": "b1f0e95ce23ac56ee4ce400157be3316afddbd29",
+      "line": 316,
+      "semanticChange": "Permit an unresumed original root only while the existing outer failure is already non-undefined.",
+      "requiredUnchanged": "Same root/witness, confirmed stopped/drained/released flags in the pre-wait snapshot; same memoized original HANDLE wait0 at317 before handleAbsent318 and saved-predicate assertion319; all collection/cleanup/status/error gates unchanged.",
+      "supportedBy": "Actual Windows failure R2 and cleanup design finding; close301-324, failure initialization384, success closes675/718, catch723, finally726-739 and final798-799 re-read in exact Plan64 before copy."
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+      "preimage": "11b498579f2fb8a6e54afb7ac2f49438c959a213",
+      "line": 1649,
+      "semanticChange": "Maintain the existing two-successful-inspection diagnostic expectation at26 instead of30, with accurate assertion text.",
+      "requiredUnchanged": "All original behavioral mutations/refusals and derived timing/count/clock formulas. No new count-only test."
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+      "preimage": "11b498579f2fb8a6e54afb7ac2f49438c959a213",
+      "line": 1680,
+      "semanticChange": "Maintain the existing target-throw diagnostic expectation at10 instead of12, with accurate assertion text.",
+      "requiredUnchanged": "Exact original exception identity, first-refusal latch, clock-failure and fractional timing behavior, pending consumer and no allocation assertions."
+    }
+  ],
+  "semanticReview": {
+    "earlyDuplicate": {
+      "accepted": true,
+      "proof": "The unchanged bracket selects a private member V1 configured-key capture with an original retained no-file-key record. Original Main source capture precedes native capture; native capture supplies only a structured clone within its closing freshness check. configuration/key/fileProof are absent. Between early176 and retained205, only ordinary data checks, a local plain-data account object and synchronous digest occur; the account does not escape and no target/owner/native callback or asynchronous yield intervenes.",
+      "safetyBoundary": "Full final native/source/owner check at205 must remain before target206; full Main policy currentness at208 must remain after target. Source changes by another process remain possible during synchronous work and are not grounds to remove the later check.",
+      "compatibility": "Non-bracket public/V2/authless/file-key paths remain unchanged. No weaker current capability, cross-yield snapshot, source cache, new probe or lease is selected."
+    },
+    "callbackArithmetic": {
+      "accepted": true,
+      "sourceGraph": "Each omitted source.isCurrent calls read() with the original owner callback at OpenCodeConfigurationSource230 and237. The private nativeCurrent does not add its own owner call and all credential arms are absent. Exactly2 existing fixture callbacks are removed per selected inspection.",
+      "success": "Current15 becomes13 for one successful inspection; the two existing inspections therefore30→26.",
+      "partialThrow": "Target206 throws after retained native205 but before the2 closing policy callbacks and the1 final consumer authority callback. Current12 becomes10.",
+      "notMeasured": "These are source-derived expected counts, not afterimage execution or claimed wall-time savings."
+    },
+    "cleanup": {
+      "accepted": true,
+      "proof": "The outer failure is initialized at384 before first open386. Successful closes675/718 occur inside the try before its catch723 stores any original failure. Thus the success path still requires resumed; on failure, captured-but-unresumed physical custody can be recognized only with all unchanged root/witness/ACK/HANDLE evidence.",
+      "noPrematureSuccess": "A failed witness wait, missing root/witness, missing Stop/drain/release ACK, failed client shutdown/physical close, nonzero service count or other cleanup error still prevents cleanup success. Retained primary failure remains before final PASS. If first success-path close itself refuses an unresumed root, that error is retained before finally; later physical cleanup cannot erase the already failed scenario.",
+      "ordering": "Preserves the published465 snapshot→same original wait0→HANDLE absent→assert ordering. Does not resume expired roots or substitute PID/name/journal observations."
+    },
+    "meaningfulExistingRegressions": {
+      "retained": [
+        "Saved-team original-source mutation, owner revocation and exact expiry inside the original target refuse without consumption.",
+        "Credential change refuses fresh inspection and consumption; shadowed native source preserves project precedence.",
+        "Original command/context/cutoff and record bytes cannot be renewed by replay; no extra probe/allocation/business open.",
+        "Configuration observer clone isolation and source/owner mutation keep the capture closing guard.",
+        "Actual source/missing-source authority loss closes descriptors and refuses; original approval/whole-command commitment is retained."
+      ],
+      "preciseCoverageLimit": "Existing cases are not asserted to isolate the necessity of line205 itself. This final guard is mandatory by source/order proof and must be checked in the exact selected diff; no new test seam or mirrored call-count test is required."
+    }
+  },
+  "lineAndWorkflowReview": {
+    "preimagePhysicalLines": {
+      "prepareTeamModelReadiness.ts": 783,
+      "nativeEmulatedSourceScenario.ts": 800,
+      "saved-team-model-probe.test.ts": 1743
+    },
+    "prospectiveBoundary": "Four selected line edits can preserve existing ordinary physical-line counts without extraction, packing or source-limit exception. Actual afterimage sizes remain a later gate.",
+    "workflow": {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "gitBlob": "af1abdb8c2309b4122d50ba9bdfa745a896344de",
+      "unchanged": true,
+      "readLimit": "Read the existing fast-lint command as data and its enclosing type/full-lint step; no whole-workflow semantic reread or invocation.",
+      "commandLines": [
+        139,
+        272
+      ],
+      "fastLintOperands": 133,
+      "selectedExactlyOnce": {
+        "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts": 141,
+        "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts": 142,
+        "tools/owned-process-broker/nativeEmulatedSourceScenario.ts": 144
+      },
+      "otherGatesAt273To277Preserved": true
+    }
+  },
+  "scopeAndGateReview": {
+    "exactWritablePaths": 3,
+    "newSourcePaths": 0,
+    "newTests": 0,
+    "sourceAfterimagesObservedInReviewDirectory": 0,
+    "nativeFirstBoundary": "Plan64 does not select native W01 propagation, a fixture helper, genuine provider activation or a native qualification run. Existing P08 native-first prerequisites remain.",
+    "otherBranches": "The Plan63 source and independent incoming native work remain outside these edits. Windows ARM Codex cutoff and P09 alternatives are not selected or claimed repaired.",
+    "originalClocks": "Original15s request/preparation/readiness clocks and all native deadlines remain unchanged. Expired evidence still refuses at its original checks. No extra polling or late acceptance.",
+    "historicalEvidence": "Original failed Windows x64 artifacts are retained as failures. Physical cleanup classification and cost source proof do not rewrite those outcomes.",
+    "remainingMandatoryGates": [
+      "Root full read of this exact prospective R2.",
+      "Actual document publication/readback and independent documentary R2 before source afterimages.",
+      "Exact frozen three-source candidate, complete applicable source review, forward/inverse diff and size checks with independent source R2.",
+      "Ordinary source CAS/readback and actual source R2, preserving useful running jobs and unrelated leaves.",
+      "Original automatic compiler/lint/Host suites and resulting source-specific Windows Process evidence; no local execution/manual rerun/dispatch/cancellation by this audit."
+    ],
+    "authorizationLimit": "This review accepts only the prospective document/semantic scope. It is not permission to bypass root selection/publication gates or any existing native-first qualification."
+  },
+  "operations": {
+    "sourceMutations": 0,
+    "sourceAfterimagesCreated": 0,
+    "plansEdited": 0,
+    "gitApiMutations": 0,
+    "newNetworkReads": 0,
+    "ciPolls": 0,
+    "downloads": 0,
+    "projectOrTestExecution": 0,
+    "nativeOrGuiExecution": 0,
+    "writtenArtifacts": [
+      "independent-prospective-base-binding.json",
+      "prospective-r2.json"
+    ]
+  },
+  "nonblockingClarifications": [
+    "The exact frozen R1 reviewed is9033 bytes/SHA754fa0c50ad445338a097271284ed55c54896f7ac70ace4a7c5f30de897b78e7; the earlier pending R1 is not this approval target.",
+    "The review closes the residual finding actual-parent binding for the12 cited source bodies using the held b0cdd tree. No refreshed mutable-ref claim is made.",
+    "Future source review must reject any fifth changed line or additional path unless root explicitly revises the selected scope and repeats applicable review. Accurate assertion-message edits are included within the two existing selected test lines."
+  ]
+}

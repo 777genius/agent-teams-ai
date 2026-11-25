@@ -5,10 +5,12 @@ import { CLI_PROVIDER_STATUS_DEFERRED_MESSAGE } from '@shared/types/cliInstaller
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { CodexAccountSnapshotDto } from '@features/codex-account/contracts';
+import type { NativeClaudeAuthenticationAction } from '@renderer/components/runtime/useProviderAuthenticationActions';
 
 interface StoreState {
   cliStatus: Record<string, unknown> | null;
   cliStatusLoading: boolean;
+  codexStatusRecoveryPending: boolean;
   cliProviderStatusLoading: Record<string, boolean>;
   cliStatusError: string | null;
   cliInstallerState:
@@ -65,11 +67,16 @@ interface StoreState {
   openExtensionsTab: ReturnType<typeof vi.fn>;
 }
 
+const loadNativeClaudeSetupForm = vi.hoisted(() => vi.fn());
 const storeState = {} as StoreState;
 let providerRuntimeSettingsDialogProps: {
   onSelectBackend?: (providerId: string, backendId: string) => Promise<void> | void;
   onRefreshProvider?: (providerId: string) => Promise<boolean>;
   open?: boolean;
+  disabled?: boolean;
+  providers?: readonly unknown[];
+  onOpenChange?: (open: boolean) => void;
+  nativeClaudeAuthAction?: NativeClaudeAuthenticationAction | null;
   initialProviderId?: string;
   initialRuntimeProviderId?: string | null;
   initialRuntimeProviderAction?: 'connect' | 'select' | null;
@@ -86,6 +93,7 @@ let terminalModalProps: {
 } | null = null;
 let quickConnectConnectedCount = 0;
 let quickConnectRefreshKeys: (number | undefined)[] = [];
+let quickConnectEnabled: boolean[] = [];
 const refreshOpenCodeCatalog = vi.fn();
 let openCodeCatalogHookInputs: {
   refreshRevision?: number;
@@ -105,6 +113,7 @@ const codexAccountHookState = {
 
 vi.mock('@renderer/api', () => ({
   api: {
+    runtimeProviderManagement: { loadSetupForm: loadNativeClaudeSetupForm },
     openExternal: vi.fn(() => Promise.resolve({ success: true })),
     showInFolder: vi.fn(),
   },
@@ -124,6 +133,8 @@ vi.mock('@features/runtime-provider-management/renderer', async (importOriginal)
     await importOriginal<typeof import('@features/runtime-provider-management/renderer')>();
   return {
     ...actual,
+    // Count-only IPC and cache lifecycle have their own focused hook coverage.
+    useOpenCodeDashboardConnectedCountProbe: vi.fn(),
     useOpenCodeConnectedModelCatalog: (
       input: Parameters<typeof actual.useOpenCodeConnectedModelCatalog>[0]
     ) => {
@@ -131,12 +142,14 @@ vi.mock('@features/runtime-provider-management/renderer', async (importOriginal)
       return { providerStatus: input.passiveProviderStatus, refresh: refreshOpenCodeCatalog };
     },
     RuntimeProviderQuickConnect: (props: {
+      enabled: boolean;
       refreshKey?: number;
       onRefreshOpenCode?: () => void;
       onOpenCodeProviderAction?: (providerId: string, action: 'connect' | 'select') => void;
       onConnectedCountChange?: (count: number) => void;
     }) => {
       quickConnectRefreshKeys.push(props.refreshKey);
+      quickConnectEnabled.push(props.enabled);
       React.useEffect(() => {
         props.onConnectedCountChange?.(quickConnectConnectedCount);
       }, [props.onConnectedCountChange]);
@@ -192,6 +205,10 @@ vi.mock('@renderer/components/runtime/ProviderRuntimeSettingsDialog', () => ({
     onSelectBackend?: (providerId: string, backendId: string) => Promise<void> | void;
     onRefreshProvider?: (providerId: string) => Promise<boolean>;
     open?: boolean;
+    disabled?: boolean;
+    providers?: readonly unknown[];
+    onOpenChange?: (open: boolean) => void;
+    nativeClaudeAuthAction?: NativeClaudeAuthenticationAction | null;
     initialProviderId?: string;
     initialRuntimeProviderId?: string | null;
     initialRuntimeProviderAction?: 'connect' | 'select' | null;
@@ -287,6 +304,35 @@ async function flushLazyImports(): Promise<void> {
   await new Promise<void>((resolve) => {
     setTimeout(resolve, 0);
   });
+}
+
+function expectProviderIndicator(
+  host: HTMLElement,
+  id: 'anthropic' | 'codex',
+  state: 'connected' | 'checking' | 'unknown'
+): void {
+  const indicator = host.querySelector<HTMLElement>(`[data-testid="dashboard-${id}-status"]`);
+  expect(indicator).not.toBeNull();
+  expect(indicator?.textContent).toContain(id === 'anthropic' ? 'Anthropic' : 'Codex');
+  expect(indicator?.classList.contains('text-green-400')).toBe(state === 'connected');
+  if (state === 'checking') {
+    expect(
+      indicator?.querySelector('[role="status"][aria-label="Checking providers..."]')
+    ).not.toBeNull();
+    expect(indicator?.textContent).not.toContain('unknown');
+  } else {
+    expect(indicator?.querySelector('[role="status"]')).toBeNull();
+    if (state === 'unknown') expect(indicator?.textContent).toContain('unknown');
+    else expect(indicator?.textContent).not.toContain('unknown');
+  }
+}
+
+function expectSeparateProviderNames(host: HTMLElement): void {
+  const summary = host.querySelector<HTMLElement>('[data-testid="dashboard-main-provider-count"]');
+  expect(
+    Array.from(summary?.children ?? []).map((item) => item.getAttribute('data-testid'))
+  ).toEqual(['dashboard-anthropic-status', 'dashboard-codex-status']);
+  expect(summary?.textContent).not.toMatch(/[,/]/);
 }
 
 function createInstalledCliStatus(
@@ -452,11 +498,13 @@ describe('CLI status visibility during completed install state', () => {
 
   beforeEach(() => {
     providerRuntimeSettingsDialogProps = null;
+    loadNativeClaudeSetupForm.mockReset();
     runtimeProviderOnboardingDialogProps = null;
     terminalModalProps = null;
     quickConnectConnectedCount = 0;
     openCodeCatalogHookInputs = [];
     quickConnectRefreshKeys = [];
+    quickConnectEnabled = [];
     refreshOpenCodeCatalog.mockClear();
     codexAccountHookState.snapshot = null;
     codexAccountHookState.loading = false;
@@ -468,6 +516,7 @@ describe('CLI status visibility during completed install state', () => {
     codexAccountHookState.logout.mockClear();
     storeState.cliStatus = createInstalledCliStatus();
     storeState.cliStatusLoading = false;
+    storeState.codexStatusRecoveryPending = false;
     storeState.cliProviderStatusLoading = {};
     storeState.cliStatusError = null;
     storeState.cliInstallerState = 'completed';
@@ -902,10 +951,10 @@ describe('CLI status visibility during completed install state', () => {
       await Promise.resolve();
     });
 
-    expect(host.querySelector('[data-testid="dashboard-main-provider-count"]')?.textContent)
-      .toContain('Checking providers...');
+    expectProviderIndicator(host, 'anthropic', 'checking');
+    expectProviderIndicator(host, 'codex', 'checking');
+    expectSeparateProviderNames(host);
     expect(host.textContent).toContain('Checking...');
-    expect(host.textContent).not.toContain('Providers: 0 connected');
     expect(host.textContent).not.toContain('Models unavailable for this runtime build');
 
     await act(async () => {
@@ -1048,8 +1097,9 @@ describe('CLI status visibility during completed install state', () => {
 
     expect(host.textContent).toContain('OpenCode');
     expect(host.textContent).toContain('Ready to run agents');
-    expect(host.textContent).toContain('Providers: 2 connected');
-    expect(host.textContent).toContain('Anthropic / Codex');
+    expectProviderIndicator(host, 'anthropic', 'connected');
+    expectProviderIndicator(host, 'codex', 'connected');
+    expectSeparateProviderNames(host);
     expect(host.textContent).not.toContain('Models available');
     expect(host.textContent).toContain('big-pickle');
     expect(host.textContent).not.toContain('Checking...');
@@ -1137,7 +1187,8 @@ describe('CLI status visibility during completed install state', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('Providers: 1 connected');
+    expectProviderIndicator(host, 'anthropic', 'connected');
+    expectProviderIndicator(host, 'codex', 'checking');
     expect(host.textContent).toContain('ChatGPT account ready');
     expect(host.textContent).toContain('Loading models...');
     expect(host.textContent).not.toContain('Checking...');
@@ -1441,6 +1492,7 @@ describe('CLI status visibility during completed install state', () => {
   it('hides a transient Codex install action while account status is loading', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     codexAccountHookState.loading = true;
+    storeState.codexStatusRecoveryPending = true;
     storeState.cliInstallerState = 'idle';
     storeState.codexRuntimeStatus = {
       installed: false,
@@ -1479,13 +1531,11 @@ describe('CLI status visibility during completed install state', () => {
     });
 
     expect(host.textContent).toContain('Checking...');
-    // Account snapshot is loading, but there is no confirmed CLI connection count.
-    expect(host.querySelector('[data-testid="dashboard-main-provider-count"]')?.textContent)
-      .toContain('unknown');
+    // A pending account snapshot shows loading on Codex rather than Unknown.
+    expectProviderIndicator(host, 'codex', 'checking');
     expect(host.textContent).not.toContain('Codex CLI not found');
     expect(host.textContent).not.toContain('Ready to run agents');
     expect(host.textContent).not.toContain('Connect a provider to get started');
-    expect(host.textContent).not.toContain('Providers: 1 connected');
     expect(
       Array.from(host.querySelectorAll('button')).some(
         (button) => button.textContent?.trim() === 'Install'
@@ -1556,6 +1606,120 @@ describe('CLI status visibility during completed install state', () => {
       root.unmount();
       await Promise.resolve();
     });
+  });
+
+  it('keeps Settings usable during Codex update with a long OpenCode model list', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const previousOffsetTop = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetTop');
+    Object.defineProperty(HTMLElement.prototype, 'offsetTop', {
+      configurable: true,
+      get() {
+        const siblings = Array.from(this.parentElement?.children ?? []);
+        return Math.floor(Math.max(0, siblings.indexOf(this)) / 3) * 20;
+      },
+    });
+
+    storeState.cliInstallerState = 'idle';
+    storeState.codexRuntimeStatus = {
+      installed: true,
+      binaryPath: '/usr/local/bin/codex',
+      version: 'codex-cli 0.139.0',
+      latestVersion: '0.144.1',
+      updateAvailable: true,
+      source: 'path',
+      state: 'ready',
+    };
+    storeState.openCodeRuntimeStatus = {
+      installed: true,
+      source: 'app-managed',
+      state: 'ready',
+      version: '1.17.18',
+    };
+    storeState.cliStatus = createInstalledCliStatus({
+      flavor: 'agent_teams_orchestrator',
+      displayName: 'Multimodel runtime',
+      supportsSelfUpdate: false,
+      authLoggedIn: true,
+      providers: [
+        createCodexNativeRolloutProvider({ state: 'ready', available: true }),
+        {
+          providerId: 'opencode',
+          displayName: 'OpenCode',
+          supported: true,
+          authenticated: true,
+          authMethod: 'managed',
+          verificationState: 'verified',
+          statusMessage: null,
+          models: Array.from(
+            { length: 18 },
+            (_, index) => `model-${String(index + 1).padStart(2, '0')}`
+          ),
+          canLoginFromUi: false,
+          capabilities: { teamLaunch: true, oneShot: true },
+        },
+      ],
+    });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const renderSettings = () =>
+      React.createElement(CliStatusBanner, { isDashboardActive: true, mode: 'settings' });
+
+    try {
+      await act(async () => {
+        root.render(renderSettings());
+        await Promise.resolve();
+      });
+      expect(host.textContent).toContain('+13 more');
+
+      const updateButton = Array.from(host.querySelectorAll('button')).find((button) =>
+        button.textContent?.includes('v0.139.0 → v0.144.1')
+      );
+      expect(updateButton).toBeDefined();
+
+      await act(async () => {
+        updateButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        await Promise.resolve();
+      });
+      const dialogUpdateButton = Array.from(
+        document.body.querySelector('[role="dialog"]')?.querySelectorAll('button') ?? []
+      ).find((button) => button.textContent?.includes('v0.139.0 → v0.144.1'));
+      expect(dialogUpdateButton).toBeDefined();
+
+      await act(async () => {
+        dialogUpdateButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        await Promise.resolve();
+      });
+      expect(storeState.installCodexRuntime).toHaveBeenCalledTimes(1);
+
+      const previousStatus = storeState.cliStatus;
+      if (!previousStatus) throw new Error('Missing CLI status fixture');
+      storeState.cliStatus = {
+        ...previousStatus,
+        providers: (previousStatus.providers as Array<Record<string, unknown>>).map((provider) => ({
+          ...provider,
+          models: [...(provider.models as string[])],
+        })),
+      };
+      await act(async () => {
+        root.render(renderSettings());
+        await Promise.resolve();
+      });
+
+      expect(host.querySelector('[data-testid="provider-status-banner"]')).not.toBeNull();
+      expect(host.textContent).toContain('+13 more');
+    } finally {
+      await act(async () => {
+        root.unmount();
+        await Promise.resolve();
+      });
+      if (previousOffsetTop) {
+        Object.defineProperty(HTMLElement.prototype, 'offsetTop', previousOffsetTop);
+      } else {
+        delete (HTMLElement.prototype as { offsetTop?: number }).offsetTop;
+      }
+    }
   });
 
   it.each(['V1', 'V2 native', 'V2 support', 'V2 support checking'] as const)(
@@ -2061,7 +2225,8 @@ describe('CLI status visibility during completed install state', () => {
     expect(host.textContent).toContain('Ready to run agents');
     expect(host.textContent).toContain('1 configured local');
     expect(host.textContent).not.toContain('Connect a provider to get started');
-    expect(host.textContent).not.toContain('Providers: 1 connected');
+    expectProviderIndicator(host, 'anthropic', 'unknown');
+    expectProviderIndicator(host, 'codex', 'unknown');
 
     await act(async () => {
       root.unmount();
@@ -2094,7 +2259,9 @@ describe('CLI status visibility during completed install state', () => {
     const host = document.createElement('div');
     const root = createRoot(host);
     try {
-      await act(async () => root.render(React.createElement(CliStatusBanner, { isDashboardActive: true })));
+      await act(async () =>
+        root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }))
+      );
       expect(host.textContent).toContain('Unable to verify');
       expect(host.textContent).not.toContain(diagnostic);
       expect(host.textContent).not.toContain('Models unavailable for this runtime build');
@@ -2135,7 +2302,9 @@ describe('CLI status visibility during completed install state', () => {
     const host = document.createElement('div');
     const root = createRoot(host);
     try {
-      await act(async () => root.render(React.createElement(CliStatusBanner, { isDashboardActive: true })));
+      await act(async () =>
+        root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }))
+      );
       expect(host.textContent).not.toContain('No models from connected providers');
       expect(host.textContent).not.toContain('Models unavailable for this runtime build');
       expect(host.textContent).toContain('minimax-m2.5-free');
@@ -2310,8 +2479,8 @@ describe('CLI status visibility during completed install state', () => {
   });
 
   it.each([
-    ['1.17.18', '1.18.32'],
-    ['2.1.3', '2.1.4'],
+    ['1.19.4', '1.19.5'],
+    ['2.0.21', '2.3.0'],
   ])(
     'retains usable OpenCode %s and shows a failed native update before retrying %s',
     async (version, latestVersion) => {
@@ -2319,11 +2488,13 @@ describe('CLI status visibility during completed install state', () => {
       storeState.cliInstallerState = 'idle';
       storeState.openCodeRuntimeStatus = {
         installed: true,
-        binaryPath: '/app-data/runtimes/opencode/opencode',
         version,
-        latestVersion,
-        ...(version.startsWith('2.') && { v2Support: 'ready' as const }),
-        updateAvailable: true,
+        ...(version.startsWith('2.') && {
+          v2Support: 'ready' as const,
+          engineVersion: '2.1.4',
+          compatibleV2Version: '2.1.4',
+        }),
+        sourceRevision: 'a'.repeat(64),
         source: 'app-managed',
         state: 'ready',
       };
@@ -2350,7 +2521,24 @@ describe('CLI status visibility during completed install state', () => {
       const root = createRoot(host);
       try {
         act(() => root.render(React.createElement(CliStatusBanner, { isDashboardActive: true })));
+        expect(host.textContent).toContain('Connected');
+        expect(
+          Array.from(host.querySelectorAll('button')).some((button) =>
+            button.textContent?.includes('Update')
+          )
+        ).toBe(false);
+        storeState.openCodeRuntimeStatus = {
+          ...storeState.openCodeRuntimeStatus,
+          latestVersion,
+          updateAvailable: true,
+        };
+        act(() => root.render(React.createElement(CliStatusBanner, { isDashboardActive: true })));
         expect(host.textContent).toContain(`v${version} → v${latestVersion}`);
+        const update = Array.from(host.querySelectorAll('button')).find((button) =>
+          button.textContent?.includes('Update')
+        );
+        expect(update).toBeDefined();
+        expect(update?.disabled).toBe(false);
 
         storeState.openCodeRuntimeStatus = {
           ...storeState.openCodeRuntimeStatus,
@@ -2840,6 +3028,109 @@ describe('CLI status visibility during completed install state', () => {
     });
   });
 
+  it('routes captured Claude sign-in and confirmed sign-out to the original account without a legacy path', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliInstallerState = 'idle';
+    const provider = {
+      providerId: 'anthropic',
+      displayName: 'Anthropic',
+      supported: true,
+      authenticated: false,
+      authMethod: null as string | null,
+      nativeAuthManagement: 'claude',
+      verificationState: 'verified',
+      statusMessage: 'Not connected',
+      models: [],
+      canLoginFromUi: true,
+      capabilities: { teamLaunch: true, oneShot: true },
+      connection: {
+        supportsOAuth: true, supportsApiKey: true,
+        configurableAuthModes: ['auto', 'oauth', 'api_key'],
+        configuredAuthMode: 'oauth', apiKeyConfigured: false,
+        apiKeySource: null, apiKeySourceLabel: null,
+      },
+    };
+    storeState.cliStatus = createInstalledCliStatus({
+      flavor: 'agent_teams_orchestrator', binaryPath: null, providers: [provider],
+    });
+    loadNativeClaudeSetupForm.mockResolvedValue({
+      setupForm: { connectionContextToken: 'TEST-original-login' },
+    });
+    const { confirm } = await import('@renderer/components/common/ConfirmDialog');
+    vi.mocked(confirm).mockClear();
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const render = async () => {
+      await act(async () => {
+        root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
+        await flushLazyImports();
+      });
+    };
+    const click = async (label: string) => {
+      const button = Array.from(host.querySelectorAll('button')).find(
+        (entry) => entry.textContent?.trim() === label
+      );
+      expect(button).toBeDefined();
+      expect(button!.disabled).toBe(false);
+      await act(async () => { button!.click(); await flushLazyImports(); });
+    };
+    const close = async () => {
+      await act(async () => {
+        providerRuntimeSettingsDialogProps!.onOpenChange!(false);
+        await flushLazyImports();
+      });
+    };
+    try {
+      await render();
+      await click('Connect Anthropic');
+      expect(loadNativeClaudeSetupForm).toHaveBeenCalledExactlyOnceWith({
+        runtimeId: 'claude', providerId: 'anthropic', projectPath: null,
+      });
+      expect(providerRuntimeSettingsDialogProps?.nativeClaudeAuthAction).toEqual({
+        action: 'login', projectPath: null, connectionContextToken: 'TEST-original-login',
+      });
+      expect(host.querySelector('[data-testid="terminal-modal"]')).toBeNull();
+      await close();
+      await act(async () => {
+        host.querySelector<HTMLButtonElement>('[data-testid="runtime-manage-anthropic"]')!.click();
+        await flushLazyImports();
+      });
+      expect(providerRuntimeSettingsDialogProps?.nativeClaudeAuthAction).toBeNull();
+      await close();
+
+      loadNativeClaudeSetupForm.mockRejectedValueOnce(new Error('TEST original account unavailable'));
+      await click('Connect Anthropic');
+      expect(providerRuntimeSettingsDialogProps?.nativeClaudeAuthAction).toEqual({
+        action: 'login', projectPath: null, error: 'TEST original account unavailable',
+      });
+      expect(host.querySelector('[data-testid="terminal-modal"]')).toBeNull();
+      await close();
+
+      provider.authenticated = true;
+      provider.authMethod = 'claude.ai';
+      storeState.cliStatus = { ...storeState.cliStatus, providers: [{ ...provider }] };
+      loadNativeClaudeSetupForm.mockResolvedValue({
+        setupForm: { connectionContextToken: 'TEST-original-logout' },
+      });
+      await render();
+      await click('Disconnect');
+      expect(confirm).toHaveBeenCalledOnce();
+      expect(loadNativeClaudeSetupForm.mock.invocationCallOrder.at(-1))
+        .toBeLessThan(vi.mocked(confirm).mock.invocationCallOrder[0]!);
+      expect(providerRuntimeSettingsDialogProps?.nativeClaudeAuthAction).toEqual({
+        action: 'logout', projectPath: null, connectionContextToken: 'TEST-original-logout',
+      });
+      expect(loadNativeClaudeSetupForm).toHaveBeenCalledTimes(3);
+      expect(host.querySelector('[data-testid="terminal-modal"]')).toBeNull();
+      expect(storeState.updateConfig).not.toHaveBeenCalled();
+      expect(storeState.installCli).not.toHaveBeenCalled();
+      expect(storeState.fetchCliProviderStatus).not.toHaveBeenCalled();
+    } finally {
+      await act(async () => { root.unmount(); await flushLazyImports(); });
+    }
+  });
+
   it('shows subscription limit placeholders while an Anthropic subscription provider is checking', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliInstallerState = 'idle';
@@ -3163,9 +3454,8 @@ describe('CLI status visibility during completed install state', () => {
     });
 
     expect(host.textContent).not.toContain('Authenticated');
-    expect(host.textContent).not.toContain('Providers: 1 connected');
-    expect(host.querySelector('[data-testid="dashboard-main-provider-count"]')?.textContent)
-      .toContain('unknown');
+    expectProviderIndicator(host, 'anthropic', 'unknown');
+    expectProviderIndicator(host, 'codex', 'unknown');
     expect(host.firstElementChild?.classList.contains('border-l-4')).toBe(false);
 
     await act(async () => {
@@ -3241,8 +3531,8 @@ describe('CLI status visibility during completed install state', () => {
       await Promise.resolve();
     });
 
-    expect(host.querySelector('[data-testid="dashboard-main-provider-count"]')?.textContent)
-      .toContain('unknown');
+    expectProviderIndicator(host, 'anthropic', 'unknown');
+    expectProviderIndicator(host, 'codex', 'unknown');
     expect(host.textContent).not.toContain('Ready to run agents');
     expect(host.firstElementChild?.classList.contains('border-l-4')).toBe(false);
 
@@ -3299,7 +3589,7 @@ describe('CLI status visibility during completed install state', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('Providers: 1 connected');
+    expectProviderIndicator(host, 'anthropic', 'connected');
     expect(host.textContent).toContain('Anthropic');
 
     const collapseHeader = host.querySelector<HTMLElement>(
@@ -3312,12 +3602,13 @@ describe('CLI status visibility during completed install state', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('Providers: 1 connected');
-    // The header is still labelled Anthropic / Codex, while provider cards are hidden.
-    expect(host.textContent).toContain('Anthropic / Codex');
+    expectProviderIndicator(host, 'anthropic', 'connected');
+    // The separate provider indicators remain visible while their cards are hidden.
+    expectSeparateProviderNames(host);
     expect(host.textContent).not.toContain('Connected via Anthropic subscription');
-    expect(host.querySelector('[data-testid="runtime-provider-quick-connect"]')?.closest('.hidden'))
-      .not.toBeNull();
+    expect(
+      host.querySelector('[data-testid="runtime-provider-quick-connect"]')?.closest('.hidden')
+    ).not.toBeNull();
     expect(
       host.querySelector('[role="button"][aria-label="Expand provider details"]')
     ).not.toBeNull();
@@ -3326,6 +3617,100 @@ describe('CLI status visibility during completed install state', () => {
       root.unmount();
       await Promise.resolve();
     });
+  });
+
+  it('renders the Settings provider list inline while preserving dashboard collapse', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliInstallerState = 'idle';
+    storeState.cliStatus = createInstalledCliStatus({
+      flavor: 'agent_teams_orchestrator',
+      displayName: 'agent_teams_orchestrator',
+      supportsSelfUpdate: false,
+      showVersionDetails: false,
+      showBinaryPath: false,
+      authLoggedIn: true,
+      providers: [
+        {
+          providerId: 'anthropic',
+          displayName: 'Anthropic',
+          supported: true,
+          authenticated: true,
+          authMethod: 'claude.ai',
+          verificationState: 'verified',
+          statusMessage: 'Connected via Anthropic subscription',
+          models: ['claude-sonnet-4-5'],
+          canLoginFromUi: true,
+          capabilities: { teamLaunch: true, oneShot: true },
+          connection: {
+            supportsOAuth: true,
+            supportsApiKey: true,
+            configurableAuthModes: ['auto', 'oauth', 'api_key'],
+            configuredAuthMode: 'oauth',
+            apiKeyConfigured: false,
+            apiKeySource: null,
+            apiKeySourceLabel: null,
+          },
+        },
+      ],
+    });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    try {
+      await act(async () => {
+        root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
+        await Promise.resolve();
+      });
+      const toggle = host.querySelector<HTMLElement>(
+        '[role="button"][aria-label="Collapse provider details"]'
+      );
+      expect(toggle).not.toBeNull();
+      await act(async () => {
+        toggle?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        await Promise.resolve();
+      });
+      expect(host.textContent).not.toContain('Connected via Anthropic subscription');
+
+      await act(async () => {
+        root.render(
+          React.createElement(CliStatusBanner, {
+            isDashboardActive: true,
+            mode: 'settings',
+          })
+        );
+        await Promise.resolve();
+      });
+      const banner = host.querySelector<HTMLElement>('[data-testid="provider-status-banner"]');
+      const header = host.querySelector<HTMLElement>(
+        '[data-testid="provider-status-banner-header"]'
+      );
+      expect(banner?.style.backgroundColor).toBe('transparent');
+      expect(banner?.classList.contains('rounded-lg')).toBe(false);
+      expect(header?.classList.contains('border-b')).toBe(false);
+      expect(header?.getAttribute('role')).toBeNull();
+      expect(header?.getAttribute('aria-expanded')).toBeNull();
+      expect(host.textContent).toContain('Connected via Anthropic subscription');
+      expect(banner?.querySelector('.border-b')).not.toBeNull();
+
+      await act(async () => {
+        header?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        await Promise.resolve();
+      });
+      expect(host.textContent).toContain('Connected via Anthropic subscription');
+
+      await act(async () => {
+        root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
+        await Promise.resolve();
+      });
+      expect(
+        host.querySelector('[role="button"][aria-label="Expand provider details"]')
+      ).not.toBeNull();
+    } finally {
+      await act(async () => {
+        root.unmount();
+        await Promise.resolve();
+      });
+    }
   });
 
   it('restores the collapsed dashboard provider banner after remount', async () => {
@@ -3426,7 +3811,7 @@ describe('CLI status visibility during completed install state', () => {
       await Promise.resolve();
     });
 
-    expect(secondHost.textContent).toContain('Providers: 1 connected');
+    expectProviderIndicator(secondHost, 'codex', 'connected');
     expect(secondHost.textContent).not.toContain('ChatGPT account ready');
     expect(
       secondHost.querySelector('[role="button"][aria-label="Expand provider details"]')
@@ -3698,6 +4083,81 @@ describe('CLI status visibility during completed install state', () => {
       root.unmount();
       await Promise.resolve();
     });
+  });
+
+  it('opens each provider settings with an installed captured Host and no legacy command path', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliInstallerState = 'idle';
+    const providers = (['anthropic', 'codex', 'opencode'] as const).map((providerId) => ({
+      ...createDeferredMultimodelProvider(providerId, providerId),
+      verificationState: 'error',
+      statusMessage: 'TEST provider configuration requires attention',
+    }));
+    storeState.cliStatus = createInstalledCliStatus({
+      flavor: 'agent_teams_orchestrator',
+      binaryPath: null,
+      supportsSelfUpdate: false,
+      showVersionDetails: false,
+      showBinaryPath: false,
+      providers,
+    });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const render = async (key: string) => {
+      await act(async () => {
+        root.render(React.createElement(CliStatusBanner, { isDashboardActive: true, key }));
+        await flushLazyImports();
+      });
+    };
+    try {
+      for (const providerId of ['anthropic', 'codex', 'opencode'] as const) {
+        await render(providerId);
+        const manage = host.querySelector<HTMLButtonElement>(
+          `[data-testid="runtime-manage-${providerId}"]`
+        );
+        expect(manage).not.toBeNull();
+        expect(manage?.disabled).toBe(false);
+        await act(async () => {
+          manage!.click();
+          await flushLazyImports();
+        });
+        expect(providerRuntimeSettingsDialogProps?.open).toBe(true);
+        expect(providerRuntimeSettingsDialogProps?.initialProviderId).toBe(providerId);
+        expect(providerRuntimeSettingsDialogProps?.disabled).toBe(false);
+        expect(host.querySelector('[data-testid="terminal-modal"]')).toBeNull();
+      }
+      expect(storeState.cliStatus.providers).toBe(providers);
+      expect(providers.every((provider) => provider.verificationState === 'error')).toBe(true);
+      storeState.cliStatusLoading = true;
+      await render('opencode');
+      for (const providerId of ['anthropic', 'codex', 'opencode']) {
+        const manage = host.querySelector<HTMLButtonElement>(
+          `[data-testid="runtime-manage-${providerId}"]`
+        );
+        expect(manage === null || manage.disabled).toBe(true);
+      }
+      if (host.querySelector('[data-testid="provider-runtime-settings-dialog"]')) {
+        expect(providerRuntimeSettingsDialogProps?.disabled).toBe(true);
+      }
+      storeState.cliStatusLoading = false;
+      storeState.cliStatus = { ...storeState.cliStatus, installed: false };
+      await render('opencode');
+      expect(host.querySelector('[data-testid^="runtime-manage-"]')).toBeNull();
+      expect(host.querySelector('[data-testid="terminal-modal"]')).toBeNull();
+      expect(storeState.installCli).not.toHaveBeenCalled();
+      expect(storeState.installOpenCodeRuntime).not.toHaveBeenCalled();
+      expect(storeState.installCodexRuntime).not.toHaveBeenCalled();
+      expect(storeState.updateConfig).not.toHaveBeenCalled();
+      expect(codexAccountHookState.startChatgptLogin).not.toHaveBeenCalled();
+      expect(codexAccountHookState.cancelChatgptLogin).not.toHaveBeenCalled();
+      expect(codexAccountHookState.logout).not.toHaveBeenCalled();
+    } finally {
+      await act(async () => {
+        root.unmount();
+        await flushLazyImports();
+      });
+    }
   });
 
   it('routes API-key misconfiguration to provider settings instead of login', async () => {
@@ -4007,7 +4467,7 @@ describe('CLI status visibility during completed install state', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('Providers: 1 connected');
+    expectProviderIndicator(host, 'codex', 'connected');
     expect(host.textContent).toContain('ChatGPT account ready');
     expect(host.textContent).not.toContain(
       'Connect a ChatGPT account to use your Codex subscription.'
@@ -4458,7 +4918,7 @@ describe('CLI status visibility during completed install state', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('Providers: 1 connected');
+    expectProviderIndicator(host, 'codex', 'checking');
     expect(host.textContent).toContain('5h left');
     expect(host.textContent).toContain('Weekly left');
     expect(host.textContent).toContain('resets');
@@ -4733,6 +5193,7 @@ describe('CLI status visibility during completed install state', () => {
       supportsSelfUpdate: false,
       showVersionDetails: false,
       showBinaryPath: false,
+      binaryPath: null,
       authLoggedIn: false,
       providers: [
         createCodexNativeRolloutProvider({
@@ -4798,14 +5259,25 @@ describe('CLI status visibility during completed install state', () => {
       (button) => button.textContent?.trim() === 'Generate link'
     );
     expect(reconnectButton).toBeTruthy();
+    expect(reconnectButton!.disabled).toBe(false);
 
     await act(async () => {
-      reconnectButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      reconnectButton!.click();
       await Promise.resolve();
     });
 
-    expect(codexAccountHookState.startChatgptLogin).toHaveBeenCalledTimes(1);
+    expect(codexAccountHookState.startChatgptLogin).toHaveBeenCalledExactlyOnceWith('browser');
     expect(host.textContent).not.toContain('5h left');
+    storeState.cliStatusLoading = true;
+    await act(async () => {
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
+      await Promise.resolve();
+    });
+    const checkingReconnect = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Generate link'
+    );
+    expect(checkingReconnect === undefined || checkingReconnect.disabled).toBe(true);
+    expect(codexAccountHookState.startChatgptLogin).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       root.unmount();
@@ -4917,12 +5389,16 @@ describe('CLI status visibility during completed install state', () => {
     storeState.cliInstallerState = 'idle';
     const root = createRoot(document.createElement('div'));
     try {
-      await act(async () => root.render(React.createElement(CliStatusBanner, { isDashboardActive: true })));
+      await act(async () =>
+        root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }))
+      );
       storeState.bootstrapCliStatus.mockClear();
       for (let minute = 1; minute < 10; minute++) {
         await act(async () => vi.advanceTimersByTime(60_000));
         storeState.cliStatus = { ...storeState.cliStatus };
-        await act(async () => root.render(React.createElement(CliStatusBanner, { isDashboardActive: true })));
+        await act(async () =>
+          root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }))
+        );
       }
       expect(refreshOpenCodeCatalog).not.toHaveBeenCalled();
       await act(async () => vi.advanceTimersByTime(60_000));
@@ -4934,6 +5410,120 @@ describe('CLI status visibility during completed install state', () => {
     }
   });
 
+  it('pauses passive readers while provider settings stay open without losing foreground or close refresh', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const { useOpenCodeDashboardConnectedCountProbe } =
+      await import('@features/runtime-provider-management/renderer');
+    storeState.cliInstallerState = 'idle';
+    storeState.openCodeRuntimeStatus = {
+      installed: true,
+      source: 'app-managed',
+      state: 'ready',
+      version: '2.1.4',
+      v2Support: 'ready',
+    };
+    const provider = {
+      ...createDeferredMultimodelProvider('opencode', 'OpenCode'),
+      supported: true,
+      authenticated: true,
+      verificationState: 'verified',
+      statusMessage: 'TEST cached OpenCode',
+      models: ['test-local/TEST-model'],
+      capabilities: { teamLaunch: true, oneShot: true },
+    };
+    storeState.cliStatus = createInstalledCliStatus({
+      flavor: 'agent_teams_orchestrator',
+      binaryPath: null,
+      providers: [provider],
+    });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const render = async (active: boolean) => {
+      await act(async () => {
+        root.render(
+          React.createElement(CliStatusBanner, { isDashboardActive: active, mode: 'settings' })
+        );
+        await flushLazyImports();
+      });
+    };
+    const passiveReaders = () => [
+      openCodeCatalogHookInputs.at(-1)?.enabled,
+      quickConnectEnabled.at(-1),
+      vi.mocked(useOpenCodeDashboardConnectedCountProbe).mock.lastCall?.[0].enabled,
+    ];
+    try {
+      await render(true);
+      expect(passiveReaders()).toEqual([true, true, true]);
+      expect(openCodeCatalogHookInputs.at(-1)?.refreshRevision).toBe(0);
+      expect(quickConnectRefreshKeys.at(-1)).toBe(0);
+      const manage = host.querySelector<HTMLButtonElement>('[data-testid="runtime-manage-opencode"]');
+      expect(manage).not.toBeNull();
+      expect(manage!.disabled).toBe(false);
+      await act(async () => {
+        manage!.click();
+        await flushLazyImports();
+      });
+      expect(providerRuntimeSettingsDialogProps?.open).toBe(true);
+      expect(providerRuntimeSettingsDialogProps?.disabled).toBe(false);
+      expect(providerRuntimeSettingsDialogProps?.providers).toContain(provider);
+      expect(host.textContent).toContain('OpenCode');
+      expect(passiveReaders()).toEqual([false, false, false]);
+
+      let finishRefresh!: (value: boolean) => void;
+      let refreshed!: Promise<boolean>;
+      storeState.fetchCliProviderStatus.mockClear();
+      storeState.fetchCliProviderStatus.mockImplementationOnce(
+        () =>
+          new Promise<boolean>((resolve) => {
+            finishRefresh = resolve;
+          })
+      );
+      await act(async () => {
+        refreshed = providerRuntimeSettingsDialogProps!.onRefreshProvider!('opencode');
+      });
+      expect(storeState.fetchCliProviderStatus).toHaveBeenCalledExactlyOnceWith('opencode', {
+        checkReason: 'manual_refresh',
+      });
+      expect(openCodeCatalogHookInputs.at(-1)?.refreshRevision).toBe(0);
+      expect(quickConnectRefreshKeys.at(-1)).toBe(0);
+      expect(passiveReaders()).toEqual([false, false, false]);
+      await act(async () => {
+        finishRefresh(true);
+        expect(await refreshed).toBe(true);
+      });
+      expect(openCodeCatalogHookInputs.at(-1)?.refreshRevision).toBe(1);
+      expect(quickConnectRefreshKeys.at(-1)).toBe(1);
+      expect(passiveReaders()).toEqual([false, false, false]);
+      expect(providerRuntimeSettingsDialogProps?.disabled).toBe(false);
+      expect(providerRuntimeSettingsDialogProps?.providers).toContain(provider);
+
+      await act(async () => {
+        providerRuntimeSettingsDialogProps!.onOpenChange!(false);
+        await flushLazyImports();
+      });
+      expect(host.querySelector('[data-testid="provider-runtime-settings-dialog"]')).toBeNull();
+      expect(openCodeCatalogHookInputs.at(-1)?.refreshRevision).toBe(2);
+      expect(quickConnectRefreshKeys.at(-1)).toBe(2);
+      expect(passiveReaders()).toEqual([true, true, true]);
+      await render(false);
+      expect(passiveReaders()).toEqual([false, false, false]);
+      expect(storeState.fetchCliProviderStatus).toHaveBeenCalledTimes(1);
+      expect(refreshOpenCodeCatalog).not.toHaveBeenCalled();
+      expect(storeState.invalidateCliStatus).not.toHaveBeenCalled();
+      expect(storeState.installCli).not.toHaveBeenCalled();
+      expect(storeState.installOpenCodeRuntime).not.toHaveBeenCalled();
+      expect(storeState.installCodexRuntime).not.toHaveBeenCalled();
+      expect(loadNativeClaudeSetupForm).not.toHaveBeenCalled();
+      expect(codexAccountHookState.startChatgptLogin).not.toHaveBeenCalled();
+    } finally {
+      await act(async () => {
+        root.unmount();
+        await flushLazyImports();
+      });
+    }
+  });
+
   it('refreshes the connected catalog and provider grid when rechecking the OpenCode runtime', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliInstallerState = 'idle';
@@ -4941,7 +5531,9 @@ describe('CLI status visibility during completed install state', () => {
     const host = document.createElement('div');
     const root = createRoot(host);
     try {
-      await act(async () => root.render(React.createElement(CliStatusBanner, { isDashboardActive: true })));
+      await act(async () =>
+        root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }))
+      );
       storeState.fetchOpenCodeRuntimeStatus.mockClear();
       expect(quickConnectRefreshKeys.at(-1)).toBe(0);
       expect(openCodeCatalogHookInputs.at(-1)?.refreshRevision).toBe(0);
@@ -4991,7 +5583,9 @@ describe('CLI status visibility during completed install state', () => {
     const host = document.createElement('div');
     const root = createRoot(host);
     try {
-      await act(async () => root.render(React.createElement(CliStatusBanner, { isDashboardActive: true })));
+      await act(async () =>
+        root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }))
+      );
       storeState.fetchCliProviderStatus.mockClear();
       await act(async () => {
         (host.querySelector('[title="Re-check Codex"]') as HTMLButtonElement).click();

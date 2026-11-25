@@ -1,0 +1,76 @@
+{
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "runId": 43780997349,
+  "jobId": 133040244403,
+  "artifactId": 14193391365,
+  "zip": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-mac-x64/14193391365.zip",
+    "bytes": 800512,
+    "gitBlob": "37cb51e1a8ce9705fd39ef8c1063fada76ca6136",
+    "sha256": "f01a1f34cd8713e10150a1ab2dbe1655eb88aad12640c36e9e4dfbe3221e0178"
+  },
+  "rawJob": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-mac-x64/job-133040244403.log",
+    "bytes": 188943,
+    "gitBlob": "3c34a72c89daac377c96ec87c74e35df561aa86c",
+    "sha256": "dee3e6b917772d452fe996108ec215235179136d83470cf6e8d0a85aa8bcf05e"
+  },
+  "safeUniquePaths": true,
+  "allCrcVerified": true,
+  "entries": [
+    {
+      "path": "agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+      "bytes": 1154723,
+      "sha256": "aa5e3091070f17a1462cda79ad204791267780868b656d88107762e5e1b24037",
+      "crc32": "1d00b5f3"
+    },
+    {
+      "path": "_temp/TEST-desktop-backend-0Q2h6H/ui-emulated-lifecycle-launch.png",
+      "bytes": 107172,
+      "sha256": "33681012e69834c9eaa80b3aba9d887b9807d7ebc78b3b248d24404f8904a0e9",
+      "crc32": "900da545"
+    },
+    {
+      "path": "_temp/TEST-desktop-backend-0Q2h6H/ui-automatic-app-relaunch-successor.png",
+      "bytes": 70777,
+      "sha256": "f38c74d526fb93b0dd77a96c64458daddfb65c1ac339858a8ed86b346ad707c5",
+      "crc32": "1da4fdd5"
+    },
+    {
+      "path": "_temp/TEST-desktop-backend-0Q2h6H/ui-emulated-lifecycle-stopped.png",
+      "bytes": 98035,
+      "sha256": "e64ad75b7d8b1f7f067b4aeb00df051ec070d2e117265f3001deb834dd4c0bc6",
+      "crc32": "8cc07148"
+    },
+    {
+      "path": "_temp/opencode-v2-packaged-inputs.json",
+      "bytes": 2370,
+      "sha256": "30b31bcfcc1c528e1e148729a88239d251f19ec7f6f3bff07ad6872df421af80",
+      "crc32": "7d60a973"
+    },
+    {
+      "path": "_temp/opencode-v2-packaged-native.json",
+      "bytes": 5304,
+      "sha256": "8dcf49a2646f8361c9240ee0141f7449aa5251f9ebbc61c64d5cff1c3abc7aa5",
+      "crc32": "30006c20"
+    },
+    {
+      "path": "_temp/opencode-v2-packaged.json",
+      "bytes": 1187,
+      "sha256": "930431646010b502ec9294c18d69ee9d3ddf7d21d28bb745897617a77ae139ca",
+      "crc32": "2ac28790"
+    },
+    {
+      "path": "_temp/packaged-app-relaunch.app.log",
+      "bytes": 4985,
+      "sha256": "c5b5c4c40ffc1997d21b75c2c16ca68fcbae22ab23cb441c63f95895c47cf62f",
+      "crc32": "3cd24320"
+    },
+    {
+      "path": "_temp/packaged-app-relaunch.json",
+      "bytes": 673443,
+      "sha256": "8a8124512b9bcc86568e79fa876ea18f3082bc87543e8b89b7a91961001ae6e5",
+      "crc32": "0cbbe495"
+    }
+  ]
+}

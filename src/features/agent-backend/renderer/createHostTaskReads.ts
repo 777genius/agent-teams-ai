@@ -24,10 +24,7 @@ export function createHostTaskReads(
   const readDeletedTasks = async (read: CapturedTaskRead): Promise<TeamTaskWithKanban[]> => {
     read.assertCurrent();
     const tasks: TeamTaskWithKanban[] = [];
-    const parts = new Map<number, {
-      total: number;
-      values: Map<number, TeamTaskWithKanban>;
-    }>();
+    const parts: Parameters<typeof assembleTaskParts>[0] = new Map();
     const seen = new Set<string>();
     let revision: string | undefined;
     let taskTotal: number | undefined;
@@ -75,6 +72,10 @@ export function createHostTaskReads(
           if (group.total !== marker.total || group.values.has(marker.part))
             throw new Error('Duplicate Host deleted task fragment');
           group.values.set(marker.part, task);
+          if (marker.commentPart) {
+            group.commentParts ??= new Map();
+            group.commentParts.set(marker.part, marker.commentPart);
+          }
         }
       } else {
         tasks.push(...page.tasks);

@@ -1,0 +1,147 @@
+from pathlib import Path
+import datetime
+import hashlib
+import json
+import subprocess
+import sys
+import time
+
+repo = Path('/workspace/scratch/82d3f9ba6b85/agent-teams-e2e')
+out = Path('/workspace/scratch/82d3f9ba6b85/caller-diagnostic-local')
+review = Path('/workspace/scratch/82d3f9ba6b85/opencode-consumer-caller-r1')
+node = '/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node'
+stage, expected_head = sys.argv[1:3]
+phase, operation = stage.split('-', 1)
+assert phase in ('red', 'green')
+manifest = json.loads((review / 'source-stage-manifest.json').read_text())
+paths = json.loads((review / 'candidate-metadata.json').read_text())['paths']
+expected_tree = manifest['stages'][1 if phase == 'red' else 2]['tree']
+cwd = repo
+commands = {
+    'ledger-build': [node, 'node_modules/@typescript/native/bin/tsc', '-p', 'tsconfig.json'],
+    'host-build': [node, 'node_modules/@typescript/native/bin/tsc', '-p', 'tsconfig.json'],
+    'test-types': [node, 'node_modules/@typescript/native/bin/tsc', '-p', 'tsconfig.test.json'],
+    'test': [node, '--test', '--test-concurrency=1', 'packages/legacy-agent-host/tests/saved-team-model-probe.test.ts'],
+    'scripts-types': [node, 'node_modules/@typescript/native/bin/tsc', '--project', 'tsconfig.legacy-agent-host-scripts.json'],
+    'lint': [node, 'node_modules/eslint/bin/eslint.js', '--config', 'eslint.fast.config.js', '--cache', '--cache-location', '.eslintcache-fast', '--cache-strategy', 'content', '--', *[row['path'] for row in paths]],
+    'size': [node, './scripts/ci/check-source-file-size.mjs'],
+    'architecture': [node, './scripts/ci/check-team-provisioning-architecture.mjs'],
+}
+if operation == 'ledger-build':
+    cwd = repo / 'packages/task-change-ledger'
+elif operation in ('host-build', 'test-types'):
+    cwd = repo / 'packages/legacy-agent-host'
+if operation == 'diff':
+    commands[operation] = ['git', 'diff', '--check', sys.argv[3] + '..' + expected_head, '--', *[row['path'] for row in paths]]
+argv = commands[operation]
+
+def git(*args):
+    return subprocess.check_output(['git', *args], cwd=repo, text=True).strip()
+
+def digest(path):
+    raw = path.read_bytes()
+    return {'bytes': len(raw), 'sha256': hashlib.sha256(raw).hexdigest()}
+
+def leaf(path):
+    raw = (repo / path).read_bytes()
+    blob = hashlib.sha1(b'blob ' + str(len(raw)).encode() + b'\0' + raw).hexdigest()
+    assert git('rev-parse', 'HEAD:' + path) == blob
+    return {'path': path, 'blob': blob, **digest(repo / path)}
+
+def built_outputs():
+    selected = ['packages/task-change-ledger/dist/index.js', 'packages/task-change-ledger/dist/index.d.ts']
+    for name in ['prepareTeamModelReadiness', 'createRuntimeMemberProviderFactory']:
+        selected += [f'packages/legacy-agent-host/dist/composition/{name}.{extension}' for extension in ('js', 'd.ts')]
+    return [{'path': name, 'realpath': str((repo / name).resolve()), **digest(repo / name),
+             'mtimeNs': (repo / name).stat().st_mtime_ns} for name in selected]
+
+assert git('rev-parse', 'HEAD') == expected_head
+assert git('rev-parse', 'HEAD^{tree}') == expected_tree
+assert git('status', '--short') == ''
+version = subprocess.check_output([node, '--version'], text=True).strip()
+assert version == 'v24.21.0'
+node_digest = digest(Path(node))
+assert node_digest['sha256'] == '7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c'
+prior = json.loads(Path('/workspace/scratch/82d3f9ba6b85/reconciliation-local/local-gates-dependency-postflight.json').read_text())
+dependencies = []
+for original in prior['inputs']:
+    current = {'path': original['path'], 'realpath': str((repo / original['path']).resolve()), **digest(repo / original['path'])}
+    assert current == original
+    dependencies.append(current)
+for name in ['packages/task-change-ledger/node_modules/@typescript/native/package.json',
+             'packages/task-change-ledger/node_modules/@typescript/native/bin/tsc',
+             'packages/legacy-agent-host/node_modules/@typescript/native/package.json',
+             'packages/legacy-agent-host/node_modules/@typescript/native/bin/tsc',
+             'packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/package.json']:
+    dependencies.append({'path': name, 'realpath': str((repo / name).resolve()), **digest(repo / name)})
+baseline_path = out / 'selected-dependency-baseline.json'
+if baseline_path.exists():
+    assert json.loads(baseline_path.read_text()) == dependencies, 'Selected dependency baseline changed'
+else:
+    assert stage == 'red-ledger-build', 'The original RED build establishes the dependency baseline'
+    baseline_path.write_text(json.dumps(dependencies, indent=2) + '\n')
+selected = []
+for row in paths:
+    value = leaf(row['path'])
+    expected = row['candidate'] if phase == 'green' or '/tests/' in row['path'] else row['preimage']
+    assert value['blob'] == expected['gitBlobSha1'] and value['sha256'] == expected['sha256']
+    selected.append(value)
+for name in ['packages/task-change-ledger/package.json', 'packages/task-change-ledger/tsconfig.json',
+             'packages/legacy-agent-host/package.json', 'packages/legacy-agent-host/tsconfig.json',
+             'packages/legacy-agent-host/tsconfig.test.json', 'tsconfig.legacy-agent-host-scripts.json',
+             'eslint.fast.config.js', '.github/workflows/host-emulated-acceptance.yml']:
+    selected.append(leaf(name))
+assert (repo / 'packages/legacy-agent-host/node_modules/@agent-teams/task-change-ledger').resolve() == repo / 'packages/task-change-ledger'
+for name in ['packages/task-change-ledger/dist', 'packages/legacy-agent-host/dist']:
+    assert (repo / name).resolve() == repo / name
+
+prerequisite = {'host-build': 'ledger-build', 'test-types': 'host-build', 'test': 'test-types'}.get(operation)
+if prerequisite:
+    record = json.loads((out / f'{phase}-{prerequisite}-metadata.json').read_text())
+    assert record['sourceHead'] == expected_head and record['exitCode'] == 0 and record['postflightExact']
+    if operation == 'test':
+        for name in ['ledger-build', 'host-build']:
+            build = json.loads((out / f'{phase}-{name}-metadata.json').read_text())
+            assert build['sourceHead'] == expected_head and build['exitCode'] == 0 and build['freshSelectedOutputs']
+            for old in build['builtOutputsAfter']:
+                if name == 'ledger-build' and not old['path'].startswith('packages/task-change-ledger/'):
+                    continue
+                assert digest(repo / old['path']) == {'bytes': old['bytes'], 'sha256': old['sha256']}
+
+preflight = {'sourceHead': expected_head, 'sourceTree': expected_tree, 'phase': phase, 'clean': True,
+             'nodePath': node, 'nodeVersion': version, 'nodeSHA256': node_digest['sha256'],
+             'selectedLeaves': selected, 'selectedDependencyInputs': dependencies,
+             'builtOutputsBefore': built_outputs(),
+             'dependencyLimit': 'Nine previously frozen inputs plus five compiler/provider package selections; not a complete dependency payload census.'}
+out.mkdir(exist_ok=True)
+pre_path, log_path, meta_path = [out / (stage + suffix) for suffix in ('-preflight.json', '.log', '-metadata.json')]
+assert not pre_path.exists() and not log_path.exists() and not meta_path.exists(), 'No replay or overwritten record'
+pre_path.write_text(json.dumps(preflight, indent=2) + '\n')
+start = datetime.datetime.now(datetime.timezone.utc).isoformat()
+start_wall_ns = time.time_ns()
+clock = time.monotonic()
+with log_path.open('xb') as log:
+    result = subprocess.run(argv, cwd=cwd, stdout=log, stderr=subprocess.STDOUT)
+elapsed = time.monotonic() - clock
+end = datetime.datetime.now(datetime.timezone.utc).isoformat()
+outputs = built_outputs()
+fresh = None
+if operation in ('ledger-build', 'host-build'):
+    prefix = 'packages/task-change-ledger/' if operation == 'ledger-build' else 'packages/legacy-agent-host/'
+    fresh = all(row['mtimeNs'] >= start_wall_ns for row in outputs if row['path'].startswith(prefix))
+postflight = (git('rev-parse', 'HEAD') == expected_head and git('status', '--short') == ''
+              and all(digest(repo / row['path']) == {'bytes': row['bytes'], 'sha256': row['sha256']} for row in selected + dependencies))
+metadata = {'stage': stage, 'sourceHead': expected_head, 'sourceTree': expected_tree, 'cwd': str(cwd), 'argv': argv,
+            'nodeVersion': version, 'nodeSHA256': node_digest['sha256'], 'startedAtUTC': start,
+            'finishedAtUTC': end, 'elapsedSeconds': elapsed, 'exitCode': result.returncode,
+            'preflightMetadataSHA256': digest(pre_path)['sha256'], 'logBytes': log_path.stat().st_size,
+            'logSHA256': digest(log_path)['sha256'], 'sourceHeadAfter': git('rev-parse', 'HEAD'),
+            'statusAfter': git('status', '--short'), 'postflightExact': postflight,
+            'builtOutputsAfter': outputs, 'freshSelectedOutputs': fresh}
+meta_path.write_text(json.dumps(metadata, indent=2) + '\n')
+print(json.dumps(metadata, indent=2))
+print(log_path.read_text(errors='replace')[-18000:])
+assert postflight, 'Source/dependency postflight differs; original exit is retained above'
+if result.returncode == 0 and fresh is not None:
+    assert fresh, 'Successful build did not freshly emit its selected outputs'
+raise SystemExit(result.returncode)

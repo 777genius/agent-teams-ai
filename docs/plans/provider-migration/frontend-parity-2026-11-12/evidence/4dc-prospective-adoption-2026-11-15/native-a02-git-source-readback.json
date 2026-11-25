@@ -1,0 +1,79 @@
+{
+  "sourceHead": "a02ab70edfdcb4169627e804f0337c9ad6b52af6",
+  "sourceTree": "80391374c3b64ed643e2fd00989cc17cd2711c7c",
+  "candidateMetadata": {
+    "bytes": 11642,
+    "sha256": "7ff1230740bd206100050a5be6d8c2f679edbd68c99478ace3c2e36674c3befb",
+    "gitBlob": "e3846abc9e3c0330767d58dd32fed8ae5a0c08bf"
+  },
+  "allElevenFullGitBytesMatchCandidates": true,
+  "paths": [
+    {
+      "path": "scripts/legacy-agent-host/qualify-linux-process-sdk.ts",
+      "bytes": 9710,
+      "sha256": "364704dbeef77c87178a18c0c1751c0d9202a43a30d8954a5d506d33ce97581a",
+      "gitBlob": "f6fdf6a32240c20d5e1cf6e4ea0ceaab9d38d242"
+    },
+    {
+      "path": "tools/owned-process-broker/debugServiceTest.h",
+      "bytes": 7264,
+      "sha256": "e2ad167bf03a8c4566d720a8bc23d9fff274971b2523397f02ac766d89d8944a",
+      "gitBlob": "9edcec8fffca780706cbde634c35d7929552f9f6"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+      "bytes": 18211,
+      "sha256": "b5262755b152afc9be4c203b6da857ab70e639082276bce3cca8f830cda05eb2",
+      "gitBlob": "ee4066eaecbf8104c84a8d113eb42d3d6225e33e"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeFixture.cpp",
+      "bytes": 14797,
+      "sha256": "f6b6c1ff8eadd27f68f602767f83625fa00757b4107b271fb5faa189e3c8937f",
+      "gitBlob": "8ec365bb41b94d7c238c46e6cb6a8e337b1e16a8"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGate.ts",
+      "bytes": 22199,
+      "sha256": "eb1d1c638fd024d5236d0e8469ac515cb9130555d52c2a054e4c5491d8de520b",
+      "gitBlob": "a12e497e8439454502ea8ad07c197df213b64cc2"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateContext.test.ts",
+      "bytes": 4745,
+      "sha256": "4ad0525d402aac610a867e7011da52a4f85dc7d6055fb048d9c78995187f4778",
+      "gitBlob": "48d1c9752dddb3e5fa91c6c564912b0474312168"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateDiagnostics.ts",
+      "bytes": 6380,
+      "sha256": "d963accfadeb14a93fd5d7e2b934a409212cca40e678b452d011c4a579f29237",
+      "gitBlob": "22cf67a484f0a2a5a2b89639e38515cc0242a21a"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeRetainedHostGate.ts",
+      "bytes": 25732,
+      "sha256": "72eb24e9aca12f4bf283625a311cd60ce58c9c5b5c2e7beeaecc3a1b2185f8cc",
+      "gitBlob": "d7a56276a6baa63ee65a357a98fc52c7cfe03bdd"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeVendorGate.ts",
+      "bytes": 13138,
+      "sha256": "dd37859e4953e3121c80c9a39e4bde5019ba6a6120fbfa138cece23cb3e47dba",
+      "gitBlob": "f704852f8f01b03907502dbaba99fc16bcceeed4"
+    },
+    {
+      "path": "tools/owned-process-broker/serviceDebugLoop.h",
+      "bytes": 4891,
+      "sha256": "b31ecf2118e467b07bb973736920b10109a03c831a2cc72364c1abdb8973a8d3",
+      "gitBlob": "77fb69ac5dfc6eddbd71a273fa1baca1ef5f9298"
+    },
+    {
+      "path": "tools/owned-process-broker/serviceScopes.h",
+      "bytes": 15888,
+      "sha256": "cc6b60ac08081c1d14201391e912b1062967dadc25d4633b5329e9524550fb06",
+      "gitBlob": "ab432fc33f763ee28ed406f8c33e7064fb023169"
+    }
+  ],
+  "projectExecution": false
+}

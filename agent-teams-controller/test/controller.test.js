@@ -50,6 +50,42 @@ describe('agent-teams-controller API', () => {
     );
   }
 
+  it('validates strict kanban safety before reading the effective review-flow policy', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const kanbanPath = path.join(claudeDir, 'teams', 'my-team', 'kanban-state.json');
+    const defaultsPath = path.join(claudeDir, 'review-flow-defaults.json');
+    const defaults = JSON.stringify({ reviewFlow: 'human_approval' });
+    fs.writeFileSync(defaultsPath, defaults);
+
+    expect(controller.taskBoard.getKanbanState({ strict: true })).toMatchObject({
+      teamName: 'my-team',
+      tasks: {},
+      reviewFlow: 'human_approval',
+      reviewFlowSource: 'default',
+    });
+    const valid = JSON.stringify({
+      teamName: 'my-team',
+      tasks: {},
+      reviewFlow: 'lead_then_human',
+    });
+    fs.writeFileSync(kanbanPath, valid);
+    expect(controller.taskBoard.getKanbanState({ strict: true })).toMatchObject({
+      reviewFlow: 'lead_then_human',
+      reviewFlowSource: 'team',
+    });
+    expect(fs.readFileSync(kanbanPath, 'utf8')).toBe(valid);
+
+    for (const corrupt of ['TEST retained invalid kanban\n', '{"tasks":[]}']) {
+      fs.writeFileSync(kanbanPath, corrupt);
+      expect(() => controller.taskBoard.getKanbanState({ strict: true })).toThrow(
+        'Kanban safety state is corrupt'
+      );
+      expect(fs.readFileSync(kanbanPath, 'utf8')).toBe(corrupt);
+      expect(fs.readFileSync(defaultsPath, 'utf8')).toBe(defaults);
+    }
+  });
+
   async function startControlServer(handler) {
     const server = http.createServer(async (req, res) => {
       const chunks = [];

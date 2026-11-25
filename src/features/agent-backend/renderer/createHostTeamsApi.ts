@@ -28,7 +28,7 @@ import {
 import { projectHostMemberAttachmentCapabilities } from './projectHostMemberAttachmentCapabilities';
 import { projectHostSavedTeamRequest } from './projectHostSavedTeamRequest';
 import { readHostMessagesPage } from './readHostMessagesPage';
-import { readHostPagedSnapshot } from './readHostPagedSnapshot';
+import { HostTeamReadUnavailableError, readHostPagedSnapshot } from './readHostPagedSnapshot';
 import {
   assertMatchingConfiguration,
   readHostRosterConfiguration,
@@ -48,7 +48,7 @@ import type { AgentBackendApi } from '../contracts/operations';
 import type { BackendTeamSnapshot } from '../contracts/teamSnapshot';
 import type { HostActivityReadOptions } from './readHostActivityLogs';
 import type { TeamsAPI } from '@shared/types/api';
-import type { TeamTaskWithKanban, TeamViewSnapshot } from '@shared/types/team';
+import type { TeamReadUnavailable, TeamTaskWithKanban, TeamViewSnapshot } from '@shared/types/team';
 
 export { hostTeamSelectionKey, isHostTeamSelectionKey } from './hostTeamRouting';
 
@@ -114,11 +114,26 @@ function remapSnapshot(
     messages: remapHostCrossTeamMessages(snapshot.messages, snapshot.teamName, selection, bindings),
   };
 }
+/**
+ * Host member id by name, from the connection's own captured member bindings. This lets the composer
+ * identify a member (native next-prompt suggestions need it) without waiting for, or depending on, the
+ * separate roster read. A name that is absent or ambiguous yields no id; the roster read stays authoritative.
+ */
+function hostMemberIdsByName(connection: Connection): Map<string, string> {
+  const byName = new Map<string, string | null>();
+  for (const { memberId, label } of connection.members) {
+    const key = label.trim().toLowerCase();
+    byName.set(key, byName.has(key) ? null : memberId);
+  }
+  return new Map([...byName].filter((entry): entry is [string, string] => entry[1] !== null));
+}
+
 function view(
   snapshot: BackendTeamSnapshot,
   connection: Connection,
   alive?: boolean
 ): TeamViewSnapshot {
+  const hostMemberIds = hostMemberIdsByName(connection);
   return {
     teamName: snapshot.teamName,
     config: {
@@ -133,6 +148,9 @@ function view(
     members: snapshot.members.map((member) => ({
       ...member,
       runtimeOwner: 'captured-host',
+      ...(hostMemberIds.has(member.name.toLowerCase())
+        ? { hostMemberId: hostMemberIds.get(member.name.toLowerCase()) }
+        : {}),
       agentType: member.role === 'lead' ? 'team-lead' : 'general-purpose',
       taskCount: snapshot.tasks.filter(
         (task) => task.owner === member.name && task.status !== 'deleted'
@@ -173,11 +191,12 @@ export function createHostTeamsApi(
     selectionKey: hostTeamSelectionKey,
     readOrder,
   });
-  async function connections(check: CurrentScope): Promise<Connection[]> {
+  async function connections(check: CurrentScope, unavailable?: TeamReadUnavailable[]): Promise<Connection[]> {
     const state = await backend.getConnections();
     current(check);
     if (state.state !== 'ready' && state.state !== 'unconfigured')
       throw new Error('Host teams unavailable');
+    unavailable?.push(...(state.unavailableOwners ?? []));
     return state.bindings;
   }
   async function snapshot(
@@ -199,10 +218,14 @@ export function createHostTeamsApi(
     if (!connection) throw new Error('Host team unavailable');
     return connection;
   }
-  async function selected(key: string, check: CurrentScope) {
+  async function selected(key: string, check: CurrentScope, assertOriginal?: () => void) {
+    assertOriginal?.();
     const bindings = await connections(check);
+    assertOriginal?.();
     const connection = await resolveConnection(key, check, bindings);
+    assertOriginal?.();
     const observed = await snapshot(connection, check);
+    assertOriginal?.();
     return {
       connection,
       snapshot: remapSnapshot(observed.data, key, bindings),
@@ -212,14 +235,30 @@ export function createHostTeamsApi(
       assertCurrent: observed.assertCurrent,
     };
   }
+  async function aggregateSnapshot(
+    binding: Connection, check: CurrentScope, observed: (() => void)[], unavailable: TeamReadUnavailable[]
+  ) {
+    try { return await snapshot(binding, check); }
+    catch (error) {
+      if (!(error instanceof HostTeamReadUnavailableError)) throw error;
+      error.assertCurrent();
+      observed.push(error.assertCurrent);
+      unavailable.push({ kind: 'team', teamName: hostTeamSelectionKey(binding.handle.handleId),
+        displayName: binding.label, code: error.code, outcome: error.outcome });
+      return null;
+    }
+  }
   async function list() {
     const check = captureScope();
-    const [oldTeams, bindings] = await Promise.all([legacy.list(), connections(check)]);
+    const unavailable: TeamReadUnavailable[] = [];
+    const [oldTeams, bindings] = await Promise.all([legacy.list(), connections(check, unavailable)]);
+    if (!Array.isArray(oldTeams)) throw new Error('Unexpected legacy Team aggregate');
     const observed: (() => void)[] = [];
     const hostTeams = [];
     // Read one captured Team at a time to leave the finite Host control lane available.
     for (const binding of bindings) {
-      const read = await snapshot(binding, check);
+      const read = await aggregateSnapshot(binding, check, observed, unavailable);
+      if (!read) continue;
       const data = remapSnapshot(
         read.data,
         hostTeamSelectionKey(binding.handle.handleId),
@@ -243,6 +282,7 @@ export function createHostTeamsApi(
       observed.push(read.assertCurrent);
       hostTeams.push({
         teamName: data.teamName,
+        ...(binding.ownerResourceRef === undefined ? {} : { ownerResourceRef: binding.ownerResourceRef }),
         ...(data.lifecycle?.deletedAt ? { deletedAt: data.lifecycle.deletedAt } : {}),
         displayName,
         description,
@@ -266,15 +306,19 @@ export function createHostTeamsApi(
     current(check);
     for (const assertCurrent of observed) assertCurrent();
     // Reserved keys cannot be treated as real legacy filesystem team names.
-    return [...oldTeams.filter((team) => !isHostTeamSelectionKey(team.teamName)), ...hostTeams];
+    const items = [...oldTeams.filter((team) => !isHostTeamSelectionKey(team.teamName)), ...hostTeams];
+    return unavailable.length ? { items, unavailable } : items;
   }
   async function getAllTasks() {
     const check = captureScope();
-    const [oldTasks, bindings] = await Promise.all([legacy.getAllTasks(), connections(check)]);
+    const unavailable: TeamReadUnavailable[] = [];
+    const [oldTasks, bindings] = await Promise.all([legacy.getAllTasks(), connections(check, unavailable)]);
+    if (!Array.isArray(oldTasks)) throw new Error('Unexpected legacy Task aggregate');
     const observed: (() => void)[] = [];
     const hostTasks = [];
     for (const binding of bindings) {
-      const read = await snapshot(binding, check);
+      const read = await aggregateSnapshot(binding, check, observed, unavailable);
+      if (!read) continue;
       const data = remapSnapshot(
         read.data,
         hostTeamSelectionKey(binding.handle.handleId),
@@ -296,16 +340,18 @@ export function createHostTeamsApi(
           ...task,
           teamName: data.teamName,
           teamDisplayName: displayName,
+          ...(binding.ownerResourceRef === undefined ? {} : { ownerResourceRef: binding.ownerResourceRef }),
           ...(projectPath === undefined ? {} : { projectPath }),
         }))
       );
     }
     current(check);
     for (const assertCurrent of observed) assertCurrent();
-    return [
+    const items = [
       ...oldTasks.filter((task) => !isHostTeamSelectionKey(task.teamName)),
       ...hostTasks.flat(),
     ];
+    return unavailable.length ? { items, unavailable } : items;
   }
   const reads = {
     ...createHostTaskReads(backend, (key) => selected(key, captureScope())),
@@ -362,6 +408,7 @@ export function createHostTeamsApi(
         const settings = configuredMembers.map((member) => ({
           ...member.settings,
           name: member.name,
+          hostMemberId: member.memberId,
           configuredSettingsFingerprint: member.settingsFingerprint,
           ...(member.role === 'lead' && saved
             ? {
@@ -547,7 +594,11 @@ export function createHostTeamsApi(
   };
   const logStats = createHostLogStatsApi(activityReadOptions);
   const lead = createHostLeadApi(activityReadOptions);
-  const taskActivity = createHostTaskActivityApi(activityReadOptions);
+  const taskActivity = createHostTaskActivityApi({
+    ...activityReadOptions,
+    readTask: (key, taskId, check, assertOriginal) =>
+      createHostTaskReads(backend, (key) => selected(key, check, assertOriginal)).getTask(key, taskId),
+  });
   const killProcess = createHostProcessControls({
     backend,
     captureScope,

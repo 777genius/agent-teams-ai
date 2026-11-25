@@ -6,6 +6,16 @@ import type { TeamProviderId } from '@shared/types';
 import type { SkillCatalogItem } from '@shared/types/extensions';
 import type { KnownSlashCommandDefinition } from '@shared/utils/slashCommands';
 
+/** Host commands already belong to the exact live lead; management catalogs cannot add authority. */
+export function buildCapturedSlashCommandSuggestions(
+  commands: readonly { name: string; description: string }[] | undefined
+): MentionSuggestion[] {
+  return (commands ?? []).map(command => ({
+    id: `command:${command.name}`, name: command.name, command: `/${command.name}`,
+    description: command.description, subtitle: command.description, type: 'command',
+  }));
+}
+
 function orderSkillsForProvider(
   projectSkills: readonly SkillCatalogItem[],
   userSkills: readonly SkillCatalogItem[],

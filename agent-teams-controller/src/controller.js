@@ -15,6 +15,7 @@ const agentBlocks = require('./internal/agentBlocks.js');
 const taskStartNotification = require('./internal/taskStartNotification.js');
 const actionModeInstructions = require('./internal/actionModeInstructions.js');
 const taskCompletionClaim = require('./internal/taskCompletionClaim.js');
+const reviewFlow = require('./internal/reviewFlow.js');
 const {
   buildChatVisualizationProtocolText,
   buildChatVisualizationRefreshInstruction,
@@ -51,6 +52,12 @@ module.exports = {
   createController,
   createControllerContext,
   agentBlocks,
+  // Storage of the global review-flow default, used by the Electron main process. Input validation
+  // there uses its own TypeScript copy of the rules; a parity test keeps both equal.
+  reviewFlowDefaults: {
+    read: reviewFlow.readDefaults,
+    write: reviewFlow.writeDefaults,
+  },
   taskTextSignals: {
     isTaskCompletionClaimText: taskCompletionClaim.isTaskCompletionClaimText,
   },

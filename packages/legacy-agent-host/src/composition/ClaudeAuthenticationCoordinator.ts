@@ -3,10 +3,12 @@ import { z } from 'zod';
 
 import { ClaudeAuthConversation } from '../adapters/providers/ClaudeAuthConversation.js';
 import { assertManagementTarget, ManagementCommandError } from '../management/commandRecords.js';
+import { managementDigest } from '../management/identity.js';
 
 import type { ManagementTarget } from '../management/commandRecords.js';
 import type { OAuthNativeConversation } from '../management/OAuthOperationOwner.js';
 import type { ClaudeManagementProfile } from '../management/profile.js';
+import type { CapturedNativeProcessFactory } from '../adapters/providers/capturedNativeProcessFactory.js';
 
 const identity = z
   .object({ profileId: z.string().min(1).max(256), configRevision: z.string().min(1).max(256) })
@@ -30,7 +32,8 @@ export class ClaudeAuthenticationCoordinator {
   constructor(
     profiles: ClaudeManagementProfile[],
     private readonly selectTarget: (profileId: string, configRevision: string) => ManagementTarget,
-    private readonly assertWriter: () => void
+    private readonly assertWriter: () => void,
+    private readonly createProcess?: CapturedNativeProcessFactory
   ) {
     this.profiles = new Map(
       structuredClone(profiles).map((profile) => [profile.profileId, profile])
@@ -43,6 +46,14 @@ export class ClaudeAuthenticationCoordinator {
     if (this.sealed || !profile || profile.configRevision !== configRevision)
       throw new ManagementCommandError('invalid');
     return profile;
+  }
+
+  admitProfile(profile: ClaudeManagementProfile): void {
+    this.assertWriter();
+    if (this.sealed) throw new ManagementCommandError('held');
+    const original = this.profiles.get(profile.profileId);
+    if (original && managementDigest(original) !== managementDigest(profile)) throw new ManagementCommandError('conflict');
+    if (!original) this.profiles.set(profile.profileId, structuredClone(profile));
   }
 
   private assertNamespace(profile: ClaudeManagementProfile): void {
@@ -72,7 +83,7 @@ export class ClaudeAuthenticationCoordinator {
       } catch {
         return false;
       }
-    });
+    }, this.createProcess);
     this.active.set(conversation, key);
     return conversation;
   }

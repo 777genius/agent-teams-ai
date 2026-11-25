@@ -460,7 +460,7 @@ describe('ordinary Host Team mutation adapters', () => {
     ]);
     expect(f.legacy.sendMessage).not.toHaveBeenCalled();
   });
-  it('rejects slash commands and meaningful unsupported send extras before reading or dispatching', async () => {
+  it('rejects slash to an uncaptured lead and unsupported send extras without dispatching', async () => {
     const f = fixture();
     await expect(
       f.teams.sendMessage(f.key, { member: 'alice', text: '/compact now' })
@@ -475,7 +475,24 @@ describe('ordinary Host Team mutation adapters', () => {
         attachments: [{ id: 'attachment' } as never],
       })
     ).rejects.toMatchObject({ code: 'unsupported' });
-    expect(f.invoke).not.toHaveBeenCalled();
+    expect(f.invoke.mock.calls.every(([request]) => request.operation === 'team.snapshot')).toBe(true);
+  });
+
+  it('keeps an explicit raw command on the original captured lead and prepared message ID', async () => {
+    const f = fixture();
+    const invoke = f.invoke.getMockImplementation()!;
+    f.invoke.mockImplementation(async (request) => {
+      const result = await invoke(request);
+      return request.operation === 'team.snapshot' && 'revision' in result.value
+        ? { ...result, value: { ...result.value, members: [{ name: 'captured-lead', role: 'lead' as const }] } }
+        : result;
+    });
+    await f.teams.sendMessage(f.key, { member: 'captured-lead', text: '/compact TEST focus',
+      messageId: 'TEST-native-command', actionMode: 'do' });
+    const sent = f.invoke.mock.calls.map(([request]) => request).find(request => request.operation === 'message.send')!;
+    expect(sent).toMatchObject({ handle: { handleId: 'TEST-A' }, commandId: 'TEST-native-command',
+      payload: { to: 'captured-lead', text: '/compact TEST focus', messageId: 'TEST-native-command', nativeCommand: true } });
+    expect(f.legacy.sendMessage).not.toHaveBeenCalled();
   });
 
   it.each([false, true])(

@@ -1,0 +1,190 @@
+{
+  "sourceHead": "2cb0c0a92c954ab04d081b7a5672270d7484f4a7",
+  "baseHead": "9a34bb28de0a0deee2eecc42099fd9500563eb1b",
+  "sourceDelta": "incoming7paths;13 selected source pins CRLF-recomputed,2 overridden incoming source leaves;built outputs are original recorded pins only",
+  "sourcePins": [
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "gitBlob": "91098e2083ed64dc4bd551df2424f40fbec064ee",
+      "rawGitSHA256": "69f6948490d5f4c88f090135912bf8c8189c3558e2480eb1ee4ac69ac15a2c5c",
+      "checkedOutCRLFSHA256": "34ff05cd50faab2f309cfa242cf8a0b1a57865c0641b2bdbe3fc9af4e5e445e3"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "gitBlob": "8164e614ca3f6e6cb01013ea3ec1fc723b5d5c30",
+      "rawGitSHA256": "d1887f19d39e4b6642b4fb2cbe23a686b14443931ba459c343affc4961435e35",
+      "checkedOutCRLFSHA256": "085cfb46146856b9d16516c2144fb7ba015276c154b7c65b1f6659860e550ba5"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+      "gitBlob": "31a6c30bd3962500e20e99786353cb9ec418adaf",
+      "rawGitSHA256": "5ecad2b6f6c7f5819e0e18430b5625a9a86ef1120e7e99f595dbd3ad73126bbd",
+      "checkedOutCRLFSHA256": "421200fecd4c91a5c4c19a0dd765e795b2007beec1116a338c359988da2de3ce"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedProfile.ts",
+      "gitBlob": "67180ac5c567cbeb089d4ef3248391c792e1ba4d",
+      "rawGitSHA256": "8cdc9a1bcc80b61998e93813959f53542a85cb5953c93ae1feb2397e37d9080e",
+      "checkedOutCRLFSHA256": "19ad26755e1655bcc8c2169a9d03d84d15dd8f8bfea17750f2194bf6a9c8d961"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateContext.ts",
+      "gitBlob": "27c6da3bac59ac276c40e79f7c4e1c548adb9d31",
+      "rawGitSHA256": "7e9096550ed0b90589a91978f8621572424d5b6c24137c13c641f3dde7897200",
+      "checkedOutCRLFSHA256": "3f868f0e0c0066bf7a0ecb169dd897274e11d50479c6cfba8aed11f31760dfb6"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateEvents.ts",
+      "gitBlob": "1dbbf60801213f80f97cb9b0b0031acdf41d738a",
+      "rawGitSHA256": "2f06d37ad0ea51fda654501d4c08a6066a1914a9cfe59c2d73d4f29db4c8ba7d",
+      "checkedOutCRLFSHA256": "d8c7b487bbaac95d4fb25080ce57d8d3d36c04c9a2a7297157993dd98698e0c4"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceReadiness.ts",
+      "gitBlob": "a7e45d6cadba355ec46a516a68297d46147d741e",
+      "rawGitSHA256": "83d26a98fd977696a05aafbceae9e28a1fbf71c553bc9c1db565c20567fcf470",
+      "checkedOutCRLFSHA256": "119802fbff75a78790b6b28e4e366b81ed266ddcf4005500e45c1b9772d1e0d2"
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/providerPeer.mjs",
+      "gitBlob": "44c8cba99e4932905da77539a59c904a39da4e36",
+      "rawGitSHA256": "e34c78358e85d3e841e4f9fb7941e77ce9b5f8b757dac434c3fe5ec5dbfdccdd",
+      "checkedOutCRLFSHA256": "039f2e29a17d40cb21a287770eb41354191f495f06e8e9f350eb8a3453e7bddc"
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+      "gitBlob": "77b2f17c47b1bda1506aaf124ea079db1680199f",
+      "rawGitSHA256": "385450afd8694a813b66ae64b56acb9ae836e07b5f18abac0d8da501315c9de4",
+      "checkedOutCRLFSHA256": "747b4ddf324040209fe579b94dcd41cbbfd9046b8cd325a542dd8502add389f0"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts",
+      "gitBlob": "3b5a244c27d004af6e82fffa092fa83e1894de73",
+      "rawGitSHA256": "447a3ae82ab6ce0ec866305af2cd426619df3618fbec2397931212379d945784",
+      "checkedOutCRLFSHA256": "564187147dd3bb26fe284929f67496b40d22b927202b19dcae079a961fae3748"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+      "gitBlob": "b9dd573db23b3033b5f3db7024b317681ce31499",
+      "rawGitSHA256": "89fbe1d8736a5797aa3198df213b89d5861a07012675e91aff78d1302459cf14",
+      "checkedOutCRLFSHA256": "f514e025dfd60394442348f9f0871592e4315072067779b0aef2ad55812f7cbc"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/management/ModelProbeOwner.ts",
+      "gitBlob": "a870a9c2c213b802ae43a3dee9a0694a67feda7e",
+      "rawGitSHA256": "fe9227bedef2284945618382289b36681757175e0f9ffa9f50cf219809f4ced2",
+      "checkedOutCRLFSHA256": "db3058dc894c6d0555d55c60b2af92e51ad155d64667d3c7942484021b508361"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/projectRuntimeMember.ts",
+      "gitBlob": "65d53a2beff3b3a36d554601dcf57d67b086aa0f",
+      "rawGitSHA256": "352c62fcce347599a89658a5dc98d3d05d35d4a6d26618cc87faa6ece2f995df",
+      "checkedOutCRLFSHA256": "1d319cb57b85ef47d22b0e4a99ee4960cbada129cd85d08fa924c79b672bf079"
+    }
+  ],
+  "distPins": [
+    {
+      "path": "packages/legacy-agent-host/dist/cli.js",
+      "sha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add"
+    },
+    {
+      "path": "packages/legacy-agent-host/dist/owned-process/HostWindowsLaunch.js",
+      "sha256": "975108117efd64201c73fb9f565ac890d8b156f7c0a06eb46d5bb6fc15018cb4"
+    },
+    {
+      "path": "packages/legacy-agent-host/dist/composition/prepareTeamModelReadiness.js",
+      "sha256": "265208df5743490006ea59f2f4016ab3cd59619c37af575162576c319e2d416f"
+    },
+    {
+      "path": "packages/legacy-agent-host/dist/management/ModelProbeOwner.js",
+      "sha256": "7201def22b57f351f0c85f20270240c918e203691bb029a44b278580f6b25283"
+    },
+    {
+      "path": "packages/legacy-agent-host/dist/composition/projectRuntimeMember.js",
+      "sha256": "371c569579af59881eaf03a3cd5a622a67a62b2fb780267d0ff78fd8e6fe6770"
+    }
+  ],
+  "summary": {
+    "receipt": "windows-source-codex-receipt.json",
+    "outerStatus": "PASS",
+    "outerCleanup": true,
+    "stage": "complete",
+    "status": "PASS",
+    "scenarioCleanup": true,
+    "sourcePins": 13,
+    "distPins": 5,
+    "epochs": 2,
+    "jobs": 25,
+    "capturedRoots": 25,
+    "resumed": 25,
+    "stopped": 25,
+    "drained": 25,
+    "released": 25,
+    "originalHandleAbsent": 25,
+    "standalone": {
+      "phase": "completed",
+      "source": {
+        "sourceId": "7fc77cf34f9f2dee720a0fad65d454084107d1f8be2600e256686100d186b48c",
+        "revision": "f852d23641e35c004543662efe73e3e4e74fa799b3760c5b086865051b2ed468"
+      },
+      "inputDigest": "e0f5310b3b5a16ca654937604b6179aca1e48dca67246ba26e035db1ee26a906",
+      "limits": null,
+      "ephemeral": true,
+      "replayAllocated": false
+    },
+    "cold": {
+      "currentB": true,
+      "retainedA": true,
+      "lookup": true,
+      "physicalReplayAllocations": 0,
+      "sourcePublishPendingAdmission": {
+        "admitted": 1,
+        "revoked": 1
+      },
+      "originalInputsReplayed": false,
+      "sdkPeerCheckpointRestored": false
+    },
+    "teams": [
+      {
+        "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+        "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+        "inputId": "1781f899-77a7-5c9d-942e-8698af76570c",
+        "captureDigest": "4903e30a5731f874633f5a9eb4c92dd1f27f41a5f5ea78ea5487ff50f5d6f206",
+        "source": {
+          "sourceId": "7fc77cf34f9f2dee720a0fad65d454084107d1f8be2600e256686100d186b48c",
+          "revision": "52f8fbf5491424c21b2ccf1d4586caf90e1b8fdd2bd905b13466adc3374d0393"
+        }
+      },
+      {
+        "launchId": "eca13de8-3599-5b26-bdf8-ae13b6dfa550",
+        "generation": "capture-83ed1d4d-5f5f-53aa-bb2b-02b0d7bbc36c",
+        "inputId": "c37ae6aa-8099-5b55-8f70-40cc4f1dcd1d",
+        "captureDigest": "2c9526b82a7ed7772f9b11a55e289186884f97d095cc427fc33b629a8ca1ce65",
+        "source": {
+          "sourceId": "7fc77cf34f9f2dee720a0fad65d454084107d1f8be2600e256686100d186b48c",
+          "revision": "f852d23641e35c004543662efe73e3e4e74fa799b3760c5b086865051b2ed468"
+        }
+      }
+    ],
+    "keys": [
+      "provider",
+      "status",
+      "stage",
+      "cleanup",
+      "realProviderExecuted",
+      "desktopQualified",
+      "releaseQualified",
+      "pins",
+      "versions",
+      "lastLaunchReadiness",
+      "foreignScopeGrantRefusedBeforeAllocation",
+      "management",
+      "lastStandaloneCompletion",
+      "standalone",
+      "cold",
+      "selections",
+      "teams",
+      "epochs"
+    ]
+  }
+}

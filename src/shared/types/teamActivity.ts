@@ -14,6 +14,14 @@ export type HostActivityContent =
       text: string;
       phase: 'snapshot' | 'complete';
     }
+  | {
+      kind: 'thinking';
+      messageRef: string;
+      block: number;
+      text: string;
+      phase: 'snapshot' | 'complete';
+    }
+  | { kind: 'process-output'; stream: 'stderr'; text: string }
   | { kind: 'tool'; messageRef: string; toolRef: string; name: string; input: HostActivityValue }
   | { kind: 'tool-result'; toolRef: string; content: HostActivityValue; isError: boolean }
   | { kind: 'usage'; inputTokens?: number; outputTokens?: number; cumulativeCostUsd?: number }
@@ -27,7 +35,7 @@ export interface HostSubagentActivity {
   parentToolRef?: string;
   phase: 'started' | 'completed' | 'failed' | 'stopped' | 'fact' | 'interaction' | 'usage' | 'gap';
   fact?:
-    | Exclude<HostActivityContent, { kind: 'usage' | 'result' }>
+    | Exclude<HostActivityContent, { kind: 'usage' | 'result' | 'process-output' }>
     | {
         kind: 'interaction';
         interactionRef: string;

@@ -20,6 +20,7 @@ const fetchCliProviderStatus = vi.fn<
 const createSchedule = vi.fn();
 const updateSchedule = vi.fn();
 const teamRosterEditorSectionMock = vi.hoisted(() => ({ lastProps: null as any }));
+const retainedAccountControls = vi.hoisted(() => ({ fast: false, models: false }));
 const projectPathSelectorMock = vi.hoisted(() => ({
   onSelect: (_path: string) => {},
   lastProps: null as any,
@@ -342,7 +343,10 @@ vi.mock('@renderer/components/team/members/TeamRosterEditorSection', () => ({
           )
         : null,
       'team-roster-editor',
-      props.headerBottom
+      props.headerBottom,
+      retainedAccountControls.models
+        ? React.createElement(RetainedModelProviderProbe, { providerId: props.providerId, projectPath: props.projectPath })
+        : null
     );
   },
 }));
@@ -388,7 +392,8 @@ vi.mock('@renderer/components/team/dialogs/ProjectPathSelector', () => ({
   },
 }));
 
-vi.mock('@renderer/components/ui/button', () => ({
+vi.mock('@renderer/components/ui/button', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@renderer/components/ui/button')>()),
   Button: ({
     children,
     onClick,
@@ -487,6 +492,7 @@ vi.mock('@renderer/components/ui/dialog', () => ({
       : null,
   DialogContent: ({ children }: { children: React.ReactNode }) =>
     React.createElement('div', null, children),
+  DialogTrigger: ({ children }: { children: React.ReactNode }) => children,
   DialogHeader: ({ children }: { children: React.ReactNode }) =>
     React.createElement('div', null, children),
   DialogTitle: ({ children }: { children: React.ReactNode }) =>
@@ -593,7 +599,10 @@ vi.mock('@renderer/utils/teamProviderRuntimeStatusLoading', async (importOrigina
   isTeamProviderRuntimeStatusLoading: vi.fn(() => false),
 }));
 
-vi.mock('@renderer/components/team/dialogs/providerPrepareCacheKey', () => ({
+vi.mock('@renderer/components/team/dialogs/providerPrepareCacheKey', async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import('@renderer/components/team/dialogs/providerPrepareCacheKey')
+  >()),
   buildProviderPrepareModelCacheKey: () => 'prepare-cache-key',
 }));
 
@@ -737,15 +746,12 @@ vi.mock('@renderer/components/team/dialogs/AnthropicFastModeSelector', () => ({
     ),
 }));
 
-vi.mock('@renderer/components/team/dialogs/CodexFastModeSelector', () => ({
-  CodexFastModeSelector: ({
-    value,
-    onValueChange,
-  }: {
-    value: string;
-    onValueChange: (value: 'inherit' | 'on' | 'off') => void;
-  }) =>
-    React.createElement(
+vi.mock('@renderer/components/team/dialogs/CodexFastModeSelector', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@renderer/components/team/dialogs/CodexFastModeSelector')>();
+  return { CodexFastModeSelector: (props: React.ComponentProps<typeof actual.CodexFastModeSelector>) => {
+    if (retainedAccountControls.fast) return React.createElement(actual.CodexFastModeSelector, props);
+    const { value, onValueChange } = props;
+    return React.createElement(
       'div',
       { 'data-testid': 'codex-fast-mode-selector' },
       React.createElement('span', null, `codex-fast:${value}`),
@@ -757,9 +763,11 @@ vi.mock('@renderer/components/team/dialogs/CodexFastModeSelector', () => ({
         },
         'set codex fast on'
       )
-    ),
-}));
+    );
+  } };
+});
 
+import { createRetainedLegacyLaunchClient } from '@features/agent-backend/renderer';
 import { sanitizeProviderStatusAuthority } from '@main/services/runtime/providerStatusCheckContract';
 import { api } from '@renderer/api';
 import { CreateTeamDialog } from '@renderer/components/team/dialogs/CreateTeamDialog';
@@ -767,6 +775,7 @@ import { LaunchTeamDialog } from '@renderer/components/team/dialogs/LaunchTeamDi
 import { runProviderPrepareDiagnostics } from '@renderer/components/team/dialogs/providerPrepareDiagnostics';
 import { computeEffectiveTeamModel as computeModelMock } from '@renderer/components/team/dialogs/TeamModelSelector';
 import { computeEffectiveTeamModel } from '@renderer/components/team/dialogs/teamModelSummary';
+import { useTeamModelProviderStatus } from '@renderer/components/team/dialogs/useTeamModelProviderStatus';
 import { getCliProviderStatusScopeKey } from '@renderer/store/slices/cliInstallerSlice';
 import { reconcileCliProviderSnapshot } from '@renderer/store/slices/cliInstallerStatusReconciliation';
 import {
@@ -793,6 +802,15 @@ async function flush(): Promise<void> {
   await Promise.resolve();
   await Promise.resolve();
   await Promise.resolve();
+}
+
+function RetainedModelProviderProbe({ providerId, projectPath }: {
+  providerId: TeamProviderId;
+  projectPath: string | null;
+}) {
+  // This is the actual provider hook called by TeamModelSelector, inside the roster render boundary.
+  useTeamModelProviderStatus(providerId, projectPath, true);
+  return React.createElement('span', { 'data-testid': 'retained-model-provider-probe' });
 }
 
 async function flushCustomFolderProbe(): Promise<void> {
@@ -870,6 +888,146 @@ function createAuthoritativeProviderStatus(
 }
 
 describe('LaunchTeamDialog', () => {
+  describe('retained Codex account admission', () => {
+    let sequence = 0;
+    const snapshot = () => ({
+      preferredAuthMode: 'api_key' as const, effectiveAuthMode: 'api_key' as const,
+      launchAllowed: true, launchIssueMessage: null, launchReadinessState: 'ready_api_key' as const,
+      appServerState: 'healthy' as const, appServerStatusMessage: null, managedAccount: null,
+      apiKey: { available: true, source: 'environment' as const, sourceLabel: 'TEST original account' },
+      requiresOpenaiAuth: false, login: { status: 'idle' as const, error: null, startedAt: null },
+      rateLimits: null, updatedAt: new Date().toISOString(),
+    });
+    function fixture(retained = true, controls: 'none' | 'fast' | 'models' | 'both' = 'none') {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      retainedAccountControls.fast = controls === 'fast' || controls === 'both';
+      retainedAccountControls.models = controls === 'models' || controls === 'both';
+      localStorage.setItem('team:lastSelectedProvider', 'codex');
+      const id = ++sequence;
+      const teamName = `TEST-retained-account-${id}`;
+      const choice = retained ? { scopeId: `TEST-retained-account-scope-${id}`, teamName,
+        mode: 'original-runtime' as const, expiresAt: Date.now() + 60_000, projectPath: '/tmp/project' } : undefined;
+      let resolve!: (value: TeamCreateRequest) => void;
+      const saved = new Promise<TeamCreateRequest>(yes => { resolve = yes; });
+      const accountRead = vi.fn(async () => snapshot());
+      if (choice) createRetainedLegacyLaunchClient(choice, async request => {
+        if (request.action === 'read') return { ok: true, action: 'read', value: await saved };
+        if (request.action === 'status') return { ok: true, action: 'status', value: storeState.cliStatus as CliInstallationStatus };
+        if (request.action === 'account') return { ok: true, action: 'account', value: await accountRead() };
+        if (request.action === 'close') return { ok: true, action: 'close', value: null };
+        return { ok: false, reason: 'unavailable', outcome: 'not-dispatched' };
+      });
+      vi.mocked(api.getCodexAccountSnapshot).mockResolvedValue(snapshot());
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      return {
+        accountRead, host,
+        async render(open = true) {
+          await act(async () => {
+            root.render(React.createElement(LaunchTeamDialog, {
+              mode: 'launch', open, teamName, retainedLegacyLaunch: choice, members: [],
+              defaultProjectPath: '/tmp/project', provisioningError: null, clearProvisioningError: vi.fn(),
+              activeTeams: [], onClose: vi.fn(), onLaunch: vi.fn(async () => {}),
+            }));
+            await flush();
+          });
+        },
+        async hydrate(providerId: TeamProviderId, teammate = false, syncModelsWithLead = false, cwd = '/tmp/project') {
+          await act(async () => {
+            resolve({ teamName, savedSettingsFingerprint: 'b'.repeat(64), cwd,
+              providerId, model: providerId === 'codex' ? 'gpt-5.4' : providerId === 'opencode' ? 'opencode/big-pickle' : 'opus',
+              syncModelsWithLead, members: teammate ? [{ name: 'bob', ...(syncModelsWithLead ? {} : { providerId: 'codex' as const, model: 'gpt-5.4' }) }] : [] });
+            await flush();
+            await flush();
+          });
+        },
+        async unmount() { await act(async () => root.unmount()); host.remove(); },
+      };
+    }
+
+    it.each([
+      { label: 'Anthropic lead', providerId: 'anthropic', memberCodex: false, sync: false, reads: 0 },
+      { label: 'OpenCode lead', providerId: 'opencode', memberCodex: false, sync: false, reads: 0 },
+      { label: 'Codex lead', providerId: 'codex', memberCodex: false, sync: false, reads: 1 },
+      { label: 'explicit Codex teammate', providerId: 'anthropic', memberCodex: true, sync: false, reads: 1 },
+      { label: 'teammate inheriting Anthropic', providerId: 'anthropic', memberCodex: true, sync: true, reads: 0 },
+    ] as const)('admits account only after saved provider hydration ($label)', async ({ providerId, memberCodex, sync, reads }) => {
+      const view = fixture();
+      try {
+        await view.render();
+        expect(view.host.querySelector<HTMLTextAreaElement>('#dialog-prompt')?.closest('fieldset')?.disabled).toBe(true);
+        expect(view.accountRead).not.toHaveBeenCalled();
+        await view.hydrate(providerId, memberCodex, sync);
+        expect(teamRosterEditorSectionMock.lastProps.providerId).toBe(providerId);
+        expect(view.accountRead).toHaveBeenCalledTimes(reads);
+        expect(api.getCodexAccountSnapshot).not.toHaveBeenCalled();
+      } finally { await view.unmount(); }
+    });
+
+    it('loads the captured account on Anthropic to Codex selection and retains it when switching back', async () => {
+      const view = fixture();
+      try {
+        await view.render();
+        await view.hydrate('anthropic');
+        expect(view.accountRead).not.toHaveBeenCalled();
+        await act(async () => { teamRosterEditorSectionMock.lastProps.onProviderChange('codex'); await flush(); });
+        expect(view.accountRead).toHaveBeenCalledTimes(1);
+        await act(async () => { teamRosterEditorSectionMock.lastProps.onProviderChange('anthropic'); await flush(); });
+        expect(view.accountRead).toHaveBeenCalledTimes(1);
+        expect(api.getCodexAccountSnapshot).not.toHaveBeenCalled();
+      } finally { await view.unmount(); }
+    });
+
+    it('does not read account while the retained dialog is closed', async () => {
+      const view = fixture();
+      try {
+        await view.render(false);
+        await view.hydrate('codex');
+        expect(view.accountRead).not.toHaveBeenCalled();
+      } finally { await view.unmount(); }
+    });
+
+    it('preserves the existing nonretained account admission', async () => {
+      const view = fixture(false);
+      try {
+        await view.render(false);
+        expect(api.getCodexAccountSnapshot).toHaveBeenCalledTimes(1);
+        expect(view.accountRead).not.toHaveBeenCalled();
+      } finally { await view.unmount(); }
+    });
+
+    it.each(['fast', 'models'] as const)('holds the actual %s child account hook until retained provider controls are ready', async controls => {
+      const view = fixture(true, controls);
+      try {
+        await view.render();
+        expect(view.accountRead).not.toHaveBeenCalled();
+        expect(view.host.querySelector('[data-testid="original-runtime-project"]')).not.toBeNull();
+        expect(view.host.querySelector('[data-testid="retained-model-provider-probe"]')).toBeNull();
+        await view.hydrate('anthropic');
+        expect(view.accountRead).not.toHaveBeenCalled();
+        if (controls === 'models')
+          expect(view.host.querySelector('[data-testid="retained-model-provider-probe"]')).not.toBeNull();
+        await act(async () => { teamRosterEditorSectionMock.lastProps.onProviderChange('codex'); await flush(); });
+        expect(view.accountRead).toHaveBeenCalledTimes(1);
+        expect(api.getCodexAccountSnapshot).not.toHaveBeenCalled();
+      } finally { await view.unmount(); }
+    });
+
+    it('holds both actual child hooks for missing cwd while keeping project repair visible', async () => {
+      const view = fixture(true, 'both');
+      try {
+        await view.render();
+        await view.hydrate('codex', false, false, '');
+        expect(view.accountRead).not.toHaveBeenCalled();
+        expect(view.host.querySelector('[data-testid="retained-model-provider-probe"]')).toBeNull();
+        expect(view.host.querySelector('[data-testid="original-runtime-project"]')).not.toBeNull();
+        expect(view.host.querySelector<HTMLTextAreaElement>('#dialog-prompt')?.closest('fieldset')?.disabled).toBe(false);
+        expect(api.getCodexAccountSnapshot).not.toHaveBeenCalled();
+      } finally { await view.unmount(); }
+    });
+  });
+
   it.each([
     'all-ready',
     'close',
@@ -1847,17 +2005,26 @@ describe('LaunchTeamDialog', () => {
     }
   );
 
-  it.each([false, true])(
-    'hydrates owner launch fields without overwriting user edits (%s)',
-    async (edited) => {
+  it.each([
+    { retained: false, edited: false }, { retained: false, edited: true },
+    { retained: true, edited: false }, { retained: true, edited: true },
+  ])(
+    'hydrates owner launch fields without overwriting user edits (retained=$retained, edited=$edited)',
+    async ({ retained, edited }) => {
       vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-      let resolveSaved: (value: any) => void = () => {};
-      vi.mocked(api.teams.getSavedRequest).mockReturnValueOnce(
-        new Promise((resolve) => {
-          resolveSaved = resolve;
-        })
-      );
-      const key = 'host-team:TEST-owner';
+      let resolveSaved!: (value: TeamCreateRequest) => void;
+      const saved = new Promise<TeamCreateRequest>((resolve) => { resolveSaved = resolve; });
+      const key = retained ? 'TEST-retained-owner' : 'host-team:TEST-owner';
+      const choice = retained ? { scopeId: `TEST-retained-hydration-${edited}`, teamName: key,
+        mode: 'original-runtime' as const, expiresAt: Date.now() + 60_000,
+        projectPath: '/tmp/TEST-owner' } : undefined;
+      if (choice) createRetainedLegacyLaunchClient(choice, async (request) => {
+        if (request.action === 'read') return { ok: true, action: 'read', value: await saved };
+        if (request.action === 'status') return { ok: true, action: 'status', value: storeState.cliStatus as CliInstallationStatus };
+        if (request.action === 'close') return { ok: true, action: 'close', value: null };
+        return { ok: false, reason: 'unavailable', outcome: 'not-dispatched' };
+      });
+      else vi.mocked(api.teams.getSavedRequest).mockReturnValueOnce(saved);
       localStorage.setItem(`team:lastCustomArgs:${key}`, 'WRONG-local-args');
       const host = document.createElement('div');
       document.body.appendChild(host);
@@ -1869,6 +2036,7 @@ describe('LaunchTeamDialog', () => {
               mode: 'launch',
               open: true,
               teamName: key,
+              retainedLegacyLaunch: choice,
               members: [],
               defaultProjectPath: '/tmp/project',
               provisioningError: null,
@@ -1880,6 +2048,7 @@ describe('LaunchTeamDialog', () => {
           );
           await flush();
         });
+        expect(host.querySelector<HTMLTextAreaElement>('#dialog-prompt')?.closest('fieldset')?.disabled).toBe(true);
         await act(async () => {
           resolveSaved({
             teamName: key,
@@ -1895,6 +2064,7 @@ describe('LaunchTeamDialog', () => {
           await flush();
           await flush();
         });
+        if (retained) expect(api.teams.getSavedRequest).not.toHaveBeenCalled();
         if (edited)
           await act(async () => {
             advancedCliMock.lastProps.onCustomArgsChange('--user-args');
@@ -2827,6 +2997,8 @@ describe('LaunchTeamDialog', () => {
   );
 
   beforeEach(() => {
+    retainedAccountControls.fast = false;
+    retainedAccountControls.models = false;
     // Each case creates a fresh mock application; actual dialog unmounts within a case retain intent.
     __resetRetainedCreateSubmissionForTests();
     vi.mocked(api.agentBackend.getConnections)

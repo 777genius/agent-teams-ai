@@ -131,9 +131,9 @@ function buildReviewPickupNudgePayload(status: MemberWorkSyncStatus): MemberWork
       'Review pickup required: a current review request is waiting for you.',
       preview ? `Review agenda: ${preview}.` : '',
       'Open the task, verify the current reviewState/status, then start or continue the review only if it is still assigned to you.',
-      `If you cannot pick it up now, call member_work_sync_status with teamName "${status.teamName}" and memberName "${status.memberName}", then report "blocked" or "still_working" only for the real current state.`,
+      `If you cannot pick it up now, call member_work_sync_status using only the arguments declared in its schema, then report "blocked" or "still_working" only for the real current state. For each tool, include teamName "${status.teamName}" and memberName "${status.memberName}" only when that field is declared in its schema; otherwise omit it.`,
       'Do not stop after member_work_sync_status. A status-only tool call is incomplete; member_work_sync_report is the required proof.',
-      'If your runtime exposes prefixed Agent Teams MCP tool names, use mcp__agent-teams__member_work_sync_status and mcp__agent-teams__member_work_sync_report.',
+      'Use the exact tool names and argument schemas exposed by this session, preserving any server prefix and including commandId when required.',
       'Do not mark the review complete from this prompt alone, and do not reply only with acknowledgement.',
     ]
       .filter(Boolean)
@@ -180,13 +180,13 @@ export function buildMemberWorkSyncNudgePayload(
       'Work sync check: you have current actionable work assigned.',
       ...buildProofMissingRecoveryText(status),
       preview ? `Current agenda: ${preview}.` : '',
-      `Required sync action: call member_work_sync_status with teamName "${status.teamName}" and memberName "${status.memberName}", then call member_work_sync_report with the same teamName/memberName and the returned agendaFingerprint and reportToken.`,
+      `Required sync action: call member_work_sync_status using only the arguments declared in its schema, then call member_work_sync_report with the returned agendaFingerprint and reportToken. For each tool, include teamName "${status.teamName}" and memberName "${status.memberName}" only when that field is declared in its schema; otherwise omit it.`,
       'Do not stop after member_work_sync_status. A status-only tool call is incomplete; member_work_sync_report is the required proof.',
-      'If your runtime exposes prefixed Agent Teams MCP tool names, use mcp__agent-teams__member_work_sync_status and mcp__agent-teams__member_work_sync_report. Do not search the filesystem or list MCP resources before the first direct tool attempt.',
+      'Use the exact tool names and argument schemas exposed by this session, preserving any server prefix and including commandId when required. Do not search the filesystem or list MCP resources before the first direct tool attempt.',
       taskIds.length
         ? `When reporting, include taskIds: ${taskIds.map((id) => `"${id}"`).join(', ')}.`
         : '',
-      `Do not use provider names, runtime names, or team names as memberName; use exactly "${status.memberName}".`,
+      `When the tool schema declares memberName, do not use provider names, runtime names, or team names; use exactly "${status.memberName}".`,
       remainingWork
         ? 'If you already reported still_working for this agenda, finish the remaining work now; do not only re-report still_working. If blocked, report state "blocked" and record the blocker on the task.'
         : 'If you are still working, report state "still_working"; if you are blocked, report state "blocked" and record the blocker on the task.',

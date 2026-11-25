@@ -6,6 +6,7 @@ import { command, processTable } from './desktop-backend-observations.ts';
 import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
 import { createDesktopUiControls } from './desktop-ui-controls.ts';
 import { revealDesktopReply } from './desktop-reply-visibility.ts';
+import { verifyDesktopNativeExtensionsAfterUninstall } from './desktop-native-extension-consumption-ui-proof.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
 import type { prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
 import type { startNativeTeamModel } from '../../packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts';
@@ -27,6 +28,9 @@ export async function runDesktopRelaunchUiSmoke(cdp: UiCdpPort, options: {
   assertOwnedRenderer(): void;
 }): Promise<void> {
   const { fixture, model, evidence, firstCapture } = options;
+  const extensions = process.env.LEGACY_DESKTOP_EXTENSIONS_CONSUMPTION_UI === '1';
+  assert.ok(Array.isArray(options.firstSession.inputs));
+  assert.equal(options.firstSession.inputs.length, extensions ? 4 : 1);
   const steps: Record<string, unknown>[] = [];
   const proof: Record<string, unknown> = {
     status: 'INCOMPLETE', steps,
@@ -61,6 +65,7 @@ export async function runDesktopRelaunchUiSmoke(cdp: UiCdpPort, options: {
   assert.equal(record(before[0]!.binding).runId, firstCapture.launchId);
   assert.equal(before[0]!.phase, 'closed');
   assert.equal(before[0]!.custody, 'released');
+  assert.deepEqual(before[0]!.inputs, options.firstSession.inputs);
   await ui.scrollTo('[role="dialog"] #dialog-prompt', 'visible reopened original prompt');
   await ui.click('[role="dialog"] #dialog-prompt', 'focus reopened original prompt');
   await cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'a', code: 'KeyA', modifiers: 4, commands: ['selectAll'] });
@@ -84,11 +89,14 @@ export async function runDesktopRelaunchUiSmoke(cdp: UiCdpPort, options: {
   assert.notEqual(record(secondMember.delivery).generation, record(firstMember.delivery).generation);
   const terminal = await poll(capturedSessions, rows => rows.length === 2 && rows.every(session => {
     const inputs = session.inputs as unknown[];
-    return inputs.length === 1 && record(inputs[0]).phase === 'terminal' && record(inputs[0]).terminal === 'succeeded';
-  }), 'two original inputs only, both terminal');
+    const original = record(session.binding).runId === firstCapture.launchId;
+    return inputs.length === (original ? (options.firstSession.inputs as unknown[]).length : 1) &&
+      inputs.every(input => record(input).phase === 'terminal' && record(input).terminal === 'succeeded');
+  }), 'original exact inputs and one fresh input, all terminal');
   const original = terminal.find(session => record(session.binding).runId === firstCapture.launchId)!;
   const second = terminal.find(session => record(session.binding).runId === secondCapture.launchId)!;
   assert.ok(original && second);
+  assert.deepEqual(original.inputs, options.firstSession.inputs);
   const predecessors = (await sessions()).filter(row => !capturedIds.has(record(row.binding).runId));
   assert.ok(predecessors.length <= 1, 'only the exact static descriptor predecessor may remain');
   const profile = await json(fixture.profilePath);
@@ -128,6 +136,13 @@ export async function runDesktopRelaunchUiSmoke(cdp: UiCdpPort, options: {
   await ui.waitRead(`document.body.innerText.includes('REPLY_NATIVE_ONE')`, 'original reply retained in same product history');
   await revealDesktopReply(cdp, 'REPLY_NATIVE_TWO', { assertOwnedRenderer: options.assertOwnedRenderer, step });
   await revealDesktopReply(cdp, 'REPLY_NATIVE_ONE', { assertOwnedRenderer: options.assertOwnedRenderer, step });
+  if (extensions) {
+    assert.ok(model.extensionRequests);
+    await verifyDesktopNativeExtensionsAfterUninstall(cdp, {
+      root: fixture.root, session: second, model: { ...model, extensionRequests: model.extensionRequests },
+      evidence, assertOwnedRenderer: options.assertOwnedRenderer,
+    });
+  }
   const screenshot = record(await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true }));
   assert.equal(typeof screenshot.data, 'string');
   const path = join(fixture.root, 'ui-original-fresh-relaunch-native.png');
@@ -152,4 +167,10 @@ export async function runDesktopRelaunchUiSmoke(cdp: UiCdpPort, options: {
   proof.nativeTaskRetained = options.nativeTask.id;
   proof.freshNativeHistory = secondRequests;
   proof.status = 'PASS';
+  if (extensions) {
+    const consumption = record(evidence.nativeExtensionConsumption);
+    assert.equal(consumption.uninstalledPluginAbsentFromNewQuery, true);
+    consumption.bothNativeRunsReleased = true;
+    consumption.status = 'PASS';
+  }
 }

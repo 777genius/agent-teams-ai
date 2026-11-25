@@ -1,3 +1,5 @@
+import { getOwnedUnixProcessGroup } from '@main/utils/cliProcessCustody';
+
 import {
   snapshotFromRuntimeMemberStatuses,
   snapshotToMemberSpawnStatuses,
@@ -10,14 +12,83 @@ import type {
   PersistedTeamLaunchPhase,
   PersistedTeamLaunchSnapshot,
 } from '@shared/types';
+import type { ChildProcess } from 'node:child_process';
 
-export interface TeamProvisioningLiveLaunchSnapshotRun {
+export interface OwnedSoloLaunchSnapshotRun {
   runId: string;
   teamName: string;
-  expectedMembers: string[];
   detectedSessionId?: string | null;
-  isLaunch: boolean;
   provisioningComplete: boolean;
+  expectedMembers?: readonly string[];
+  allEffectiveMembers?: readonly unknown[];
+  mixedSecondaryLanes?: readonly unknown[];
+  request?: { providerId?: string; members: readonly unknown[] };
+  child?: ChildProcess | null;
+  cancelRequested?: boolean;
+  processKilled?: boolean;
+  processClosed?: boolean;
+}
+
+/** Existing spawn custody identifies the solo owner; a config or session alone cannot. */
+export function captureOwnedSoloLaunchSnapshotRun(
+  run: OwnedSoloLaunchSnapshotRun
+): (() => boolean) | null {
+  const { teamName, runId, detectedSessionId, child } = run;
+  if (process.platform === 'win32' || !child) return null;
+  const group = getOwnedUnixProcessGroup(child);
+  const rootStartIdentity = group?.rootStartIdentity;
+  const pid = child.pid;
+  const exactIdentity = (value: unknown): value is string =>
+    typeof value === 'string' &&
+    value.length > 0 &&
+    value.length <= 256 &&
+    value.trim() === value &&
+    !value.includes('\0');
+  if (
+    !exactIdentity(runId) ||
+    !exactIdentity(detectedSessionId) ||
+    !/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(teamName) ||
+    !pid ||
+    !rootStartIdentity ||
+    group?.processGroupId !== pid ||
+    group.rootProcessGroupId !== pid
+  )
+    return null;
+  const current = (): boolean => {
+    const owned = getOwnedUnixProcessGroup(child);
+    return (
+      run.teamName === teamName &&
+      run.runId === runId &&
+      run.child === child &&
+      run.detectedSessionId === detectedSessionId &&
+      child.pid === pid &&
+      child.exitCode === null &&
+      child.signalCode === null &&
+      child.killed !== true &&
+      run.provisioningComplete === true &&
+      run.cancelRequested === false &&
+      run.processKilled === false &&
+      run.processClosed === false &&
+      Array.isArray(run.expectedMembers) &&
+      run.expectedMembers.length === 0 &&
+      Array.isArray(run.allEffectiveMembers) &&
+      run.allEffectiveMembers.length === 0 &&
+      Array.isArray(run.mixedSecondaryLanes) &&
+      run.mixedSecondaryLanes.length === 0 &&
+      Array.isArray(run.request?.members) &&
+      run.request.members.length === 0 &&
+      (run.request.providerId === undefined || run.request.providerId === 'anthropic') &&
+      owned?.rootStartIdentity === rootStartIdentity &&
+      owned.processGroupId === pid &&
+      owned.rootProcessGroupId === pid
+    );
+  };
+  return current() ? current : null;
+}
+
+export interface TeamProvisioningLiveLaunchSnapshotRun extends OwnedSoloLaunchSnapshotRun {
+  expectedMembers: string[];
+  isLaunch: boolean;
   memberSpawnStatuses: Map<string, MemberSpawnStatusEntry>;
   pendingMemberRestarts?: { has(memberName: string): boolean };
 }
@@ -151,7 +222,11 @@ export function createTeamProvisioningLiveLaunchSnapshotBoundary<
         return mixedSnapshot;
       }
 
-      if (!run.isLaunch || !run.expectedMembers || run.expectedMembers.length === 0) {
+      const ownedSolo = launchPhase === 'finished' && captureOwnedSoloLaunchSnapshotRun(run);
+      if (
+        !ownedSolo &&
+        (!run.isLaunch || !run.expectedMembers || run.expectedMembers.length === 0)
+      ) {
         return null;
       }
 

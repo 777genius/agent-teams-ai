@@ -1,0 +1,47 @@
+{
+  "schema": "bounded-independent-r2/v1",
+  "reviewer": "/root/native_failures",
+  "observedAt": "2026-11-15T23:35:37Z",
+  "verdict": "APPROVE",
+  "scope": "Canonical L execution venue, security RED/GREEN wording, provider evidence classification and Windows pending-CREATE attribution only. The parent's independent whole-source/composition review is separate.",
+  "canonical": {
+    "path": "stage-l-adoption/canonical-R1.md",
+    "bytes": 14838,
+    "blob": "9fbcaa6f29025870fbf9529b5fee4d8a94752a94",
+    "sha256": "b9ba33443c1a65036d9bb7cc576216c2ba2167b975939c1a2bc42396c4b81854"
+  },
+  "retainedIndependentReports": {
+    "venue": {
+      "blob": "e4103104b054917f99d5d85025c8a4460b6e2664",
+      "bytes": 10995,
+      "sha256": "ed38faf483cd16301f440c54c32b464519064560445c24385e4e8b30ede98a13"
+    },
+    "roster": {
+      "blob": "40d2af3aa46a1c451f58718b6de3f9a2d564503e",
+      "bytes": 9280,
+      "sha256": "e47e8928de53ee993f1fcc8cf218f00b2e82c648e88c783ea9356251011ef185"
+    },
+    "security": {
+      "R1": "b0ddc336db50b6b9974fbb6f4e6bdfef753040c2",
+      "independentReview": "26a368e493e1e1c5c17921a015e9e04d3e39e2bf",
+      "helperPreimage": "3b2b960722f878cf60ba94bae27176fb9e7d0bba",
+      "laterHelper": "21aa3590f82939778a3fd657bbafa2d64c23d923",
+      "testPreimage": "c073ab7b8c6025313747f75e50e8b0a14985d589",
+      "testCandidate": "d1b52658270cc53a9e1ec345de55f840e7549011"
+    }
+  },
+  "findings": [
+    "Read the complete canonical text. It correctly selects the unchanged original Team CI matrix job, exact resulting checkout, original frozen install, Node24.21.0, original builds/prerequisites, and the complete ten-file Node command.",
+    "Captured Node24 includes Corepack0.36.0; known runtime PATH uses Corepack0.34.6/pnpm11.25.0 and an unsuitable fallback shim. No preexisting exact pnpm11.22.0/installed9423 local venue was established. The R1 does not substitute these managers, install locally, retry K, or narrow a compiler project.",
+    "The old19 stderr cases remain, with three actual-helper chunked held-suffix canaries and one control. Full-file23/20PASS3privacyFAIL is explicitly predicted only, distinct from whole-command actual counts. Setup/import/build/missing-event/unrelated failures do not qualify the semantic RED.",
+    "The helper remains exact3b2 throughout L. Later21aa must follow preservation and independent review of the actual privacy-assertion RED, keep test bytes identical, and obtain fresh full-command GREEN. Conservative whole-line context loss and unchanged original limits are accurately disclosed.",
+    "Provider9423 receipts are correctly classified as51 completed controls plus2 expected negatives,53 cleanup:true and0 qualified:true. Provider Node26.11.1 is not application GeneralNode26.12.1; these results do not qualify product Host or packaged Electron.",
+    "Re-read the complete exact27-to35 two-file pending-CREATE diff. Warm active-process assertion remains. Only the original post-Stop barrier uses the complement of completed root HANDLE plus empty Job, while original key/birth/error/StopACK/Settle/registration and cleanup checks remain. Old missing rootExited/ACK operands are not inferred; current1f original results do not qualify L."
+  ],
+  "limits": [
+    "No repository code, compiler, tests, manager, provider, native process or CI action executed for this review.",
+    "No source/ref changes. Only this review artifact is written.",
+    "This bounded review does not independently reapprove the other26 source leaves, final merge tree, source-size union or full source/history table; Scope's separate exact R2 covers those.",
+    "Actual new1f Windows/P09 receipts are being audited separately and are not imported as L RED/GREEN or complete frontend qualification."
+  ]
+}

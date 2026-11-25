@@ -1,0 +1,22 @@
+{
+  "result": "APPROVE_RECOVERABILITY",
+  "role": "root independent original completed9e native bundle complete byte review",
+  "archive": {
+    "bytes": 630348,
+    "blob": "c07f242d66ec9538f2f3f9a64e8c44758fd61d10",
+    "sha256": "0144dfbe4d92402a20c2e016eda15b06008e43c8e1c283fee9cf6973eebf2582"
+  },
+  "outerMembers": 48,
+  "originalPayloads": 46,
+  "originalPayloadBytes": 2430767,
+  "originalArchives": 8,
+  "originalArtifactMembers": 66,
+  "allOriginalFilesFullByteMatched": true,
+  "safeUniqueCRC": true,
+  "scannedNonZIPPayloads": 106,
+  "recursiveMemberVisits": 114,
+  "signedTransportURLsFound": 0,
+  "currentMQualification": false,
+  "projectExecution": false,
+  "observedUtc": "2026-11-16T00:22:26.281689+00:00"
+}

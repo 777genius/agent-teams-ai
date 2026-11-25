@@ -1,0 +1,27 @@
+{
+  "source": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "run": 43813731530,
+  "job": 133120929619,
+  "attempt": 1,
+  "artifactId": 14202148789,
+  "zip": {
+    "bytes": 15113,
+    "blob": "d0d30e9eb6849d03b2b091171c3e4f28e8808f27",
+    "sha256": "15e8fae1f1c5e3cbd86de1c54bc4b7c54528b25463cd3b28df00f794545fc82b"
+  },
+  "expectedDigest": "sha256:15e8fae1f1c5e3cbd86de1c54bc4b7c54528b25463cd3b28df00f794545fc82b",
+  "expectedBytes": 15113,
+  "allCrc": true,
+  "safeEntries": 9,
+  "allExtractedBytesEqualZip": true,
+  "rawJobLog": {
+    "bytes": 174851,
+    "blob": "2a599f79761d88b41ef9e21b7269d4ed42c7e004",
+    "sha256": "f411924081a9dfde45ccbf57944a78761fd24fe9bc7d0f7c5f8acb7d7d458814",
+    "utf8Bom": true,
+    "crlfCount": 1532
+  },
+  "archiveSourceHeadMatches": true,
+  "hasRawI386Trace": false,
+  "hasNativeBinaries": false
+}

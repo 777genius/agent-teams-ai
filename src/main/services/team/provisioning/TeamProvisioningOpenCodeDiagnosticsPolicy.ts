@@ -249,6 +249,12 @@ export function selectOpenCodeModelPreparePrimaryReason(
       ? (authFailure.normalizedMessage ?? prepare.reason)
       : prepare.reason;
   }
+  const terminalFailure = selectRuntimeDiagnosticClassification(
+    [...prepare.diagnostics, ...prepare.warnings].filter(hasRealOpenCodeFailureDiagnostic)
+  );
+  if (terminalFailure?.normalizedMessage) {
+    return terminalFailure.normalizedMessage;
+  }
   const providerDiagnostic = selectOpenCodePrepareProviderDiagnostic(prepare);
   if (providerDiagnostic) {
     return providerDiagnostic;
@@ -269,6 +275,7 @@ export function isOpenCodeModelPrepareBusyDeferred(
   return (
     prepare.retryable &&
     prepare.reason !== 'not_authenticated' &&
+    !candidates.some(hasRealOpenCodeFailureDiagnostic) &&
     !candidates.some(isOpenCodeModelVerificationTimeoutDiagnostic) &&
     candidates.some(isRetryableOpenCodePreflightBusyDiagnostic)
   );

@@ -1,0 +1,65 @@
+{
+  "kind": "INDEPENDENT_STATIC_PLAN37_GATE_SOURCE_R2",
+  "disposition": "APPROVE exact source body for its bounded observation-only scope; no execution, full-cut test or publication-chronology approval.",
+  "preimage": {
+    "path": "/tmp/migration-evidence-20261116/root/winarm72e/independent-source-bodies/nativeWindowsAppGate.mjs.txt",
+    "bytes": 34285,
+    "lines": 597,
+    "gitBlob": "034d2253e0649bdeb5db0b12244656446150c31c",
+    "sha256": "a7057b647c13852fbabdebbb0d8da775a24d55382637d5947d06c733317213bc"
+  },
+  "candidate": {
+    "path": "/tmp/migration-evidence-20261116/native/plan37-source-review/source-reference/nativeWindowsAppGate-a7.mjs.txt",
+    "bytes": 37261,
+    "lines": 648,
+    "gitBlob": "a7b953e61935f6de4b1f29b534b33baaa64a9215",
+    "sha256": "63128b3a2fe85a97a511872344bba39ed270c3f1558c3d65cf328fd0b9ce8864"
+  },
+  "patch": {
+    "path": "/tmp/migration-evidence-20261116/native/plan37-source-review/candidate-source-diff.patch",
+    "bytes": 4198,
+    "lines": 71,
+    "gitBlob": "a70bbfbcbbbb066096b9eea8ade50fe95fe98cf6",
+    "sha256": "dcefeb7c19f7904705c289cc0658451d489f54b69d51d1dda95ef3a49e867fab"
+  },
+  "preservation": {
+    "addedLines": 53,
+    "removedLines": 2,
+    "netLines": 51,
+    "finalLines": 648,
+    "wholePreimageRestoredExactly": true,
+    "inverse": "Remove the single51-line unexported formatter declaration and replace its two-line original catch invocation with the exact old two-line JSON serialization. Full result equals immutable034d bytes. All other code, imports, original calls, await order, clocks, native/UI queries, ownership/admission predicates, cleanup, final receipt and workflow are outside this delta."
+  },
+  "formatterReview": [
+    "The new helper receives only the already-held activePhase, proof.error, proof.retryUi, proof.censusReads and original overflow flag. It does not invoke a provider, process/listener query, source/currentness check, CDP action, clock, timer, wait, retry, file access or cleanup.",
+    "It retains the original fixed kind, phase and first128 characters of the original error. retryUi undefined becomes null. Otherwise it copies only four fixed stage keys, returnedReads within0..500, Boolean countTruncated and a nullable last sample with one of six fixed result labels. Unknown object properties are not copied.",
+    "All projected numeric timing inputs must be finite nonnegative numbers and round to safe integers. Invalid, missing, malformed, throwing or overflowing diagnostic input falls back to the old record. The already-retained source data are not mutated.",
+    "censusReads must be an array of at most512 rows. Each row must be an object with a string phase. Only rows matching the failure phase contribute; their operation must be one of the two existing fixed labels, returned must be Boolean, and end must not precede start. It counts by operation and sums independently rounded per-row elapsed durations with safe-integer checks; maximum/last use those same rounded durations.",
+    "The extended line is JSON-encoded and returned only if its UTF-8 byte length is at most1024. Otherwise the original line is returned. The outer original byte-length guard still checks the actual chosen line before the single original writeSync call.",
+    "The original fallback construction precedes the helper inner try. In the actual caller error is already a string and phase is an internal string; any unexpected exception even before that inner try remains within the unchanged original catch-block diagnostic try/catch and cannot replace primaryError or skip original finally."
+  ],
+  "behaviorAndPrivacy": {
+    "primaryFailure": "The assignments primaryError=error and proof.error=errorText(error) remain exactly before the guarded emission. Diagnostic exceptions stay suppressed by the original diagnostic catch, then the same original finally begins.",
+    "io": "No extra output call or sink: one existing synchronous write may carry additional bounded bytes. The original final wx receipt stays unchanged and late; no partial success receipt, extra file or new public protocol is introduced.",
+    "privacy": "New emitted content is fixed labels, null/Boolean values and bounded counts/durations only. It excludes process identities, arguments, paths, environment, tokens, raw renderer text, error payloads beyond the original128-character prefix, or arbitrary fields from the input objects.",
+    "cost": "Up to512 retained rows are inspected once on failure, plus bounded rounding, allocation and JSON encoding. The synchronous write can carry more bytes. This adds real failure-path cost before original cleanup within existing outer bounds; no zero-overhead, durability or timing-improvement claim.",
+    "timingAndAuthority": "Original15s provider/readiness obligations, this P08 Retry10s, Quit30s, controller120s/cleanup10s and every native/source/owner/action check remain unchanged. No success or cleanup authority is granted."
+  },
+  "preciseEvidenceLimits": [
+    "This change does not preserve a full stack or a separate callsite. The original128-character error prefix remains; the exact downstream remaining() caller can still be absent in future failure output.",
+    "returned=true means only that the synchronous read function returned. Later census validation, retained birth/lineage checks, listener ownership or remaining() may still reject. failedReads counts read-function throws, not all native/ownership/deadline failures.",
+    "Same-phase counts are per operation, but totalMs/maxMs/lastMs combine both operations. They measure elapsed wall time of the existing read envelope with independent rounding; they do not isolate PowerShell/CIM provider cost, hashCPU, renderer work or causal responsibility.",
+    "truncated is the existing global512-row retention overflow flag. A phase with zero retained rows while truncated=true does not establish that the phase made no observations.",
+    "retryUi:null does not prove no Retry physical action. The original object is first assigned to proof by recordRetryUi, normally after click returns, and a post-action guard may refuse before that.",
+    "The original ARM ZIP lacks the final P08 receipt. Its controller emergency-fail/99/active0 record and source-late write are consistent with interruption before persistence but do not prove a specific finalizer stage, exact termination trigger or the unique reason no receipt was uploaded.",
+    "Supplemental Node24.22.1 execution, unseen tests, their chronology and actual resulting-source Windows/native success are not independently established by this source review."
+  ],
+  "qualification": "Original resulting-source tests, pinned toolchain/typed/lint/discovery gates and native/P08/full-source/cleanup receipt qualification remain outstanding. No source cut has been selected or applied by this reviewer.",
+  "method": [
+    "one immutable GitHub blob read for a7, complete Git/SHA256 verification",
+    "retained complete034d source comparison",
+    "pure data full inverse and diff",
+    "no project/source/test execution, CI poll, archive redownload, canonical/Git/ref mutation"
+  ],
+  "relatedActualAudit": "/tmp/migration-evidence-20261116/native/B-packaged-win-arm64-14230030725/audit.json"
+}

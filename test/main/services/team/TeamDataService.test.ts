@@ -7,10 +7,10 @@ import * as path from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { gitIdentityResolver } from '../../../../src/main/services/parsing/GitIdentityResolver';
+import { TeamDraftPreflightCollisionError } from '../../../../src/main/services/team/createDraftTeamConfig';
 import { getEffectiveInboxMessageId } from '../../../../src/main/services/team/inboxMessageIdentity';
 import { buildTaskChangePresenceDescriptor } from '../../../../src/main/services/team/taskChangePresenceUtils';
 import { TeamConfigReader } from '../../../../src/main/services/team/TeamConfigReader';
-import { TeamDraftPreflightCollisionError } from '../../../../src/main/services/team/createDraftTeamConfig';
 import { TeamDataService } from '../../../../src/main/services/team/TeamDataService';
 import { TeamInboxReader } from '../../../../src/main/services/team/TeamInboxReader';
 import { TeamMemberResolver } from '../../../../src/main/services/team/TeamMemberResolver';
@@ -458,9 +458,10 @@ describe('TeamDataService task projection cache invalidation', () => {
   });
 
   it.each([
-    { scenario: 'completed', change: { status: 'completed' as const } },
-    { scenario: 'reassigned', change: { owner: 'bob' } },
-  ])('does not start a task $scenario during asynchronous scheduled admission', async ({ change }) => {
+    { scenario: 'completed', change: { status: 'completed' as const }, stillCurrent: true },
+    { scenario: 'reassigned', change: { owner: 'bob' }, stillCurrent: true },
+    { scenario: 'whose runtime was replaced', change: {}, stillCurrent: false },
+  ])('does not start a task $scenario during asynchronous scheduled admission', async ({ change, stillCurrent }) => {
     const task: TeamTask = {
       id: 'task-1',
       subject: 'Scheduled assignment',
@@ -469,6 +470,7 @@ describe('TeamDataService task projection cache invalidation', () => {
     };
     const taskBoard = {
       getTask: vi.fn(() => task),
+      listTasks: vi.fn(() => [task]),
       startTask: vi.fn(),
     };
     const service = new TeamDataService(
@@ -484,16 +486,23 @@ describe('TeamDataService task projection cache invalidation', () => {
       {} as never,
       (() => ({ taskBoard })) as never
     );
+    const send = vi.spyOn(service, 'sendMessage');
+    let current = true;
     await expect(
       service.startTaskByUser('my-team', task.id, {
         expectedOwner: 'alice',
+        expectedRunId: 'original-run',
+        isCurrent: () => current,
         canStart: async () => {
           Object.assign(task, change);
+          current = stillCurrent;
           return true;
         },
       })
     ).rejects.toThrow('Scheduled task start superseded');
     expect(taskBoard.startTask).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
+    if (!stillCurrent) expect(task.status).toBe('pending');
   });
 
   it.each([true, false])(
@@ -526,6 +535,8 @@ describe('TeamDataService task projection cache invalidation', () => {
       });
       const result = await service.startTaskByUser('my-team', original.id, {
         expectedOwner: 'alice',
+        expectedRunId: 'original-run',
+        isCurrent: () => true,
         canStart: async () => {
           currentTask = { ...original, subject: 'Current instruction' };
           return true;
@@ -562,6 +573,8 @@ describe('TeamDataService task projection cache invalidation', () => {
     expect(service.hasActiveOwnedTask('my-team', 'bob')).toBe(false);
     await expect(service.startTaskByUser('my-team', pending.id, {
       expectedOwner: 'alice',
+      expectedRunId: 'original-run',
+      isCurrent: () => true,
       canStart: async () => true,
     })).rejects.toThrow('Scheduled recipient is already working');
     expect(taskBoard.startTask).not.toHaveBeenCalled();
@@ -4192,8 +4205,10 @@ describe('TeamDataService', () => {
     expect(disapproveReview).toHaveBeenCalledTimes(1);
   });
 
-  it('propagates leadSessionId for kanban-driven review transitions', async () => {
+  it('propagates leadSessionId and options through trusted controller review actions', async () => {
     const requestReviewMock = vi.fn();
+    const approveReviewFromUserMock = vi.fn();
+    const requestChangesFromUserMock = vi.fn();
     const approveReviewMock = vi.fn();
     const requestChangesMock = vi.fn();
 
@@ -4234,6 +4249,8 @@ describe('TeamDataService', () => {
               },
             })),
             requestReview: requestReviewMock,
+            approveReviewFromUser: approveReviewFromUserMock,
+            requestChangesFromUser: requestChangesFromUserMock,
             approveReview: approveReviewMock,
             requestChanges: requestChangesMock,
           },
@@ -4251,20 +4268,79 @@ describe('TeamDataService', () => {
       from: 'team-lead',
       leadSessionId: 'lead-2',
     });
-    expect(approveReviewMock).toHaveBeenCalledWith('task-1', {
+    expect(approveReviewFromUserMock).toHaveBeenCalledExactlyOnceWith('task-1', {
       from: 'team-lead',
       suppressTaskComment: true,
       'notify-owner': true,
       leadSessionId: 'lead-2',
     });
-    expect(requestChangesMock).toHaveBeenCalledWith('task-1', {
+    expect(requestChangesFromUserMock).toHaveBeenCalledExactlyOnceWith('task-1', {
       from: 'team-lead',
       comment: 'Needs fixes',
       leadSessionId: 'lead-2',
     });
+    expect(approveReviewMock).not.toHaveBeenCalled();
+    expect(requestChangesMock).not.toHaveBeenCalled();
   });
 
-  it('uses direct kanban approval for completed tasks that are not in review', async () => {
+  it('delegates an interrupted human rejection retry to the trusted controller after disabling the policy', async () => {
+    const requestChangesFromUser = vi.fn();
+    const requestChangesAsHuman = vi.fn();
+    const requestChanges = vi.fn();
+    const taskBoard = {
+      getTask: vi.fn(() => ({
+        id: 'task-1',
+        status: 'completed',
+        reviewState: 'needsFix',
+        historyEvents: [
+          {
+            id: 'decision-1',
+            type: 'review_changes_requested',
+            from: 'reviewed',
+            to: 'needsFix',
+            actor: 'user',
+            timestamp: '2026-11-16T01:00:00.000Z',
+            note: 'Original human feedback',
+          },
+        ],
+      })),
+      getKanbanState: vi.fn(() => ({
+        teamName: 'my-team', reviewers: [], tasks: {}, reviewFlow: 'agent_approval', reviewFlowSource: 'default',
+      })),
+      requestChangesFromUser,
+      requestChangesAsHuman,
+      requestChanges,
+    };
+    const service = new TeamDataService(
+      {
+        listTeams: vi.fn(),
+        getConfig: vi.fn(async () => ({ name: 'My team', members: [] })),
+      } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      () => ({ taskBoard }) as never
+    );
+
+    await service.updateKanban('my-team', 'task-1', {
+      op: 'request_changes', comment: 'Retry with retained original feedback',
+    });
+    expect(requestChangesFromUser).toHaveBeenCalledExactlyOnceWith('task-1', {
+      from: 'team-lead',
+      comment: 'Retry with retained original feedback',
+    });
+    expect(requestChangesAsHuman).not.toHaveBeenCalled();
+    expect(requestChanges).not.toHaveBeenCalled();
+  });
+
+  it('delegates approval of completed tasks outside review to the trusted controller', async () => {
+    const approveReviewFromUserMock = vi.fn();
     const approveReviewMock = vi.fn();
     const setKanbanColumnMock = vi.fn();
 
@@ -4300,6 +4376,7 @@ describe('TeamDataService', () => {
               reviewers: [],
               tasks: {},
             })),
+            approveReviewFromUser: approveReviewFromUserMock,
             setKanbanColumn: setKanbanColumnMock,
             approveReview: approveReviewMock,
           },
@@ -4308,9 +4385,13 @@ describe('TeamDataService', () => {
 
     await service.updateKanban('my-team', 'task-1', { op: 'set_column', column: 'approved' });
 
-    expect(setKanbanColumnMock).toHaveBeenCalledWith('task-1', 'approved', {
-      transition: 'manual_approve',
+    expect(approveReviewFromUserMock).toHaveBeenCalledExactlyOnceWith('task-1', {
+      from: 'team-lead',
+      suppressTaskComment: true,
+      'notify-owner': true,
+      leadSessionId: 'lead-2',
     });
+    expect(setKanbanColumnMock).not.toHaveBeenCalled();
     expect(approveReviewMock).not.toHaveBeenCalled();
   });
 

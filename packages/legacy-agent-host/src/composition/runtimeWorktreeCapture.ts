@@ -164,6 +164,19 @@ export async function materializeRuntimeWorktrees(options: {
 
 /** Every native factory rechecks the exact owned target, including restored/cold captured entries. */
 export async function assertRuntimeWorktree(entry: MemberEntry): Promise<void> {
+  const live = entry.liveRosterCapture;
+  if (live) {
+    if (live.member.memberId !== entry.profile.memberId || live.workspace !== entry.profile.cwd ||
+        live.configurationDigest !== runtimeDigest(entry.baseProfile) ||
+        live.sourceCaptureDigest !== runtimeDigest(entry.team.capture ?? null))
+      throw new TeamLaunchError('hold', 'live-worktree-runtime-capture');
+    if (!live.worktree) return;
+    const { plan, binding } = live.worktree;
+    if (binding.slotId !== plan.slotId || binding.target.path !== plan.targetPath ||
+        entry.profile.cwd !== plan.targetPath) throw new TeamLaunchError('hold', 'live-worktree-runtime-binding');
+    await new HostWorktreeGit(dirname(plan.targetPath)).inspect(plan, binding);
+    return;
+  }
   if (entry.team.capture === undefined) return;
   const source = runtimeCaptureSourceSchema.parse(entry.team.capture);
   const row = source.worktrees?.find((value) => value.memberIds.includes(entry.profile.memberId));

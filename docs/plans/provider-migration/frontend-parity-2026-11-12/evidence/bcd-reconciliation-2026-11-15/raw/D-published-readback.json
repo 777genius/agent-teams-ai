@@ -1,0 +1,31 @@
+{
+  "head": "7e8e37c282e9cc653efd79799dc862d116310065",
+  "tree": "e77d05767aa3cb4be469e3763b19236601dbc762",
+  "parents": [
+    "3184acb5f000c2ce2e368ff9babc6105c5adc5c1"
+  ],
+  "files": [
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "bytes": 96565,
+      "blob": "4afbfc0ed5f388d07593198fc220073fafd96514",
+      "sha256": "7be5f3ece9c396cba8c09e0eef84c3bb9c216cadb0b301363ae48d9439ea2b70"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "bytes": 26261,
+      "blob": "cd4c8f81b07caa9b7d46f9c4f766fb978e82a40d",
+      "sha256": "a4f1f19bd9ce451946309c5aa6ed2a1437a9244494741937699360a7fe6bab60"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "bytes": 103556,
+      "blob": "d51935df74fc00f498dbe588515269ebfd9dd35a",
+      "sha256": "b799438e8031663783267eafad665522524e50908e13efc9df0890b4ebcbb000"
+    }
+  ],
+  "completeByteReadback": true,
+  "other9553LeavesExactByReviewedTree": true,
+  "outstandingIncoming": "c28f1aa890c909c7b981254c5e30b874cbc84287",
+  "scope": "Exact already-published three-path Selection slice on isolated integrated2cb+followup source. Current PR c28 is not adopted or qualified; its independent history requires subsequent reviewed reconciliation."
+}

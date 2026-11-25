@@ -1,0 +1,1055 @@
+{
+  "schema": "independent-N-late-original-docs-assembly-route-review/v1",
+  "reviewer": "/root/native_failures",
+  "reviewedAt": "2026-11-16T03:33:40.419197+00:00",
+  "verdict": "APPROVE exact130-path documentation preservation candidate; no source or acceptance promotion",
+  "manifest": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stage-n-late-original-evidence-publication/upload-manifest.json",
+    "bytes": 180854,
+    "blob": "6b8eb1844643a601f5e377c7371fc9464d8d2d41",
+    "sha256": "023132f2595981f584de2fb117851599a281c1c6a6b73af3df4b151eeaeed8c7"
+  },
+  "byteTreeFoundation": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stage-n-late-original-evidence-publication/independent-byte-tree-foundation.json",
+    "bytes": 228550,
+    "blob": "54a5533ee35b9ab4dbe1fae74f354eb0efa07757",
+    "sha256": "3e329f1a39004af1ae6f5faa03899c214fd017ce12eb50cfbdbf16d64ee0aca6"
+  },
+  "baseHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "expectedTree": "3cbed68d3c8e45b2ebd88e25deb3837dcf20414c",
+  "scope": {
+    "newDocs": 129,
+    "modifiedDocs": 1,
+    "changedPaths": 130,
+    "allPayloadBytes": 28570415,
+    "inheritedExactMappings": 10,
+    "officialZIPs": 7,
+    "recoverableMembers": 139,
+    "oldLeavesUnchanged": 10333,
+    "resultLeaves": 10463,
+    "all8798NonDocumentationUnchanged": true,
+    "nonDocumentationMapSha256": "d3ed00695b2d09d3bcd38d41830ddde5670908c858a600bae03c757dc00bc397",
+    "originalFullPlanPrefixBytes": 1463115,
+    "resultPlanBytes": 1534053,
+    "orderedAppendices": 9,
+    "finalBridge": 1,
+    "everyJoinIsTwoLiteralLFBytes": true
+  },
+  "groups": [
+    {
+      "name": "Original M Ubuntu SPI",
+      "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "checkpoint": {
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-late-originals-2026-11-16/native-audit-M0660/spi-linux/checkpoint-spi-linux.json",
+        "bytes": 5285,
+        "blob": "dac617f2200af3abb6d0557f4c021c19acb818e7",
+        "sha256": "f6a7b98fb30d6634d62e1583d355efe83c0a0cee4dc621785b7863f7ba7e6076"
+      },
+      "independentR2": {
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-late-originals-2026-11-16/native-audit-M0660/spi-linux/root-independent-review.json",
+        "bytes": 22212,
+        "blob": "950c939dc506243a9f17706310ee6a9b5e33cd57",
+        "sha256": "c716b21f762db8f53283e14338fb65e8ed7508ce6c3207bc7592edf088557aaf"
+      },
+      "decision": "Original exact source job SUCCESS and complete25-step receipt accepted within original unqualified limits; no broader transfer",
+      "appendix": {
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-late-originals-2026-11-16/native-audit-M0660/spi-linux/Plan29-spi-linux-appendix.md",
+        "bytes": 6986,
+        "blob": "0b13f691c11527182eeed34d24c1133834612eeb",
+        "sha256": "48dbe048a1423096115415bf2ab21c0706f962123a42472a56e080650bab00f8"
+      },
+      "fullAppendixRead": true
+    },
+    {
+      "name": "Original M Desktop Processes",
+      "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "checkpoint": {
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-late-originals-2026-11-16/ci-desktop-m0660/processes/checkpoint-processes.json",
+        "bytes": 11448,
+        "blob": "c8c45e83e5593a5b424c4345e159e44079acfa25",
+        "sha256": "fec2725b62a2914b082d050b12f41b5764e97d9bd0d8e5983721368af0fdcc7c"
+      },
+      "independentR2": {
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-late-originals-2026-11-16/ci-desktop-m0660/processes/independent-processes-review.json",
+        "bytes": 98292,
+        "blob": "3a5782d1bd7e03ac7ba924918a98a363679848e8",
+        "sha256": "0c55dd15da4cbd1eff9e25c0cd5c0ea95395e4376099dd6f12c1f12d3d063139"
+      },
+      "decision": "APPROVE",
+      "appendix": {
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-late-originals-2026-11-16/ci-desktop-m0660/processes/Plan29-processes-appendix.md",
+        "bytes": 7061,
+        "blob": "515c0055fc81559d1d96b63d2d35218c5db45a62",
+        "sha256": "f830bb73f10da2a2d2dcbd7733a602d8f00d321e5efc2aa1ab24259fd5e64a36"
+      },
+      "fullAppendixRead": true
+    },
+    {
+      "name": "Original M Claude lifecycle",
+      "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "checkpoint": {
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-late-originals-2026-11-16/ci-desktop-m0660/claude-lifecycle/checkpoint-claude-lifecycle.json",
+        "bytes": 16462,
+        "blob": "4c20168444071eeb1ec21c250b326909eca7effc",
+        "sha256": "bf53c55eced0121c20da3912f3efc1697cbb3c0c70d80b43249d9ca90e7314e3"
+      },
+      "independentR2": {
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-late-originals-2026-11-16/ci-desktop-m0660/claude-lifecycle/independent-claude-lifecycle-review.json",
+        "bytes": 72041,
+        "blob": "32fcb590aa28331b93c2ee9189a9bd88e86ea52b",
+        "sha256": "11e875a39f7e186c283f40a4e866ad74e1d0dbe20cecaa7e4ed0e6595c50aeb6"
+      },
+      "decision": "APPROVE",
+      "appendix": {
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-late-originals-2026-11-16/ci-desktop-m0660/claude-lifecycle/Plan29-claude-lifecycle-appendix.md",
+        "bytes": 8824,
+        "blob": "2ad8582aa6b18949e7942a43bbdd2aef4e8eea2b",
+        "sha256": "cd3beac078337a3209a8677b05b37aa67f6d2c27440cbf76eac0c9f51b47645c"
+      },
+      "fullAppendixRead": true
+    },
+    {
+      "name": "Original M Codex Runtime corrected v2",
+      "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "checkpoint": {
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-late-originals-2026-11-16/ci-desktop-m0660/codex/checkpoint-codex-v2.json",
+        "bytes": 15356,
+        "blob": "e908de4ee4ab0eb62f729723fc542843b51b314f",
+        "sha256": "e07815bc1d5c4e67a9cf28aa0c55f274592bab8a6ce0737cb1eee5f2a19b69cc"
+      },
+      "independentR2": {
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-late-originals-2026-11-16/ci-desktop-m0660/codex/independent-codex-review.json",
+        "bytes": 94242,
+        "blob": "90718d92c3305a1f5ae4fdb5ebdbc127149a96de",
+        "sha256": "03e4dd64cf24385530fb06a4f02635c6d0a81d5d74477d1c4e31b17bf9cccb52"
+      },
+      "decision": "APPROVE",
+      "appendix": {
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-late-originals-2026-11-16/ci-desktop-m0660/codex/Plan29-codex-runtime-appendix-v2.md",
+        "bytes": 7473,
+        "blob": "21e0743198562d391604c7ea618c8664b84f75e9",
+        "sha256": "e7a6e4bf71534b3b2f34a8018431d48e20e837752be854b9fb7c75c262496634"
+      },
+      "fullAppendixRead": true
+    },
+    {
+      "name": "Original M packaged macOS x64",
+      "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "checkpoint": {
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-late-originals-2026-11-16/ci-desktop-m0660/packaged-mac-x64/checkpoint-packaged-mac-x64.json",
+        "bytes": 5047,
+        "blob": "4dc1a4b1d0c9321a568cd29ee5a531f51a33e10e",
+        "sha256": "27b081942a4923dace5dced1ed0b5a8b00dbd773d92cb3e2f93d6d852ef55644"
+      },
+      "independentR2": {
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-late-originals-2026-11-16/ci-desktop-m0660/packaged-mac-x64/root-independent-review.json",
+        "bytes": 68109,
+        "blob": "43e246dcb93c7a9b4949031bce7fa80c3b77ad43",
+        "sha256": "e9ef90f1402c9775c4173d8bb136ac47f6cffb0c4b392181a0445fba21d2ebd4"
+      },
+      "decision": "APPROVE original packaged Launch/Stop and observer-only automatic relaunch, plus separately scoped native V2 PASS",
+      "appendix": {
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-late-originals-2026-11-16/ci-desktop-m0660/packaged-mac-x64/Plan29-packaged-mac-x64-appendix.md",
+        "bytes": 8096,
+        "blob": "8728c294524646ba25d491b9d96edeecbc522087",
+        "sha256": "86b6ab796cbf2f80385aa7e349deb9752e6bcd295decf021d6f446b78707ebea"
+      },
+      "fullAppendixRead": true
+    },
+    {
+      "name": "Original M packaged Windows ARM64 failure",
+      "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "checkpoint": {
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-late-originals-2026-11-16/ci-desktop-m0660/packaged-win-arm/checkpoint-packaged-win-arm.json",
+        "bytes": 3916,
+        "blob": "7239b168b469123a5bbc5f44f18cb7cd3081e19b",
+        "sha256": "f6054508655a199c6043bd8d76d4f18c31a548b5979b6be0a3d4e3a9972b2db4"
+      },
+      "independentR2": {
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-late-originals-2026-11-16/ci-desktop-m0660/packaged-win-arm/root-independent-review.json",
+        "bytes": 184983,
+        "blob": "62a33431b247d50f6f9c4f8594d4454d494abfe2",
+        "sha256": "c3cc149110609a1a722e4f0ae33b0341b479c33561fea0b3d94b6323834b2b8b"
+      },
+      "decision": "APPROVE bounded original FAIL packet and separately qualified packaged native V2 step; P08 remains FAIL",
+      "appendix": {
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-late-originals-2026-11-16/ci-desktop-m0660/packaged-win-arm/Plan29-packaged-win-arm-failure-appendix.md",
+        "bytes": 5328,
+        "blob": "586d4e3ac0eabe47bfa2c071290951fe2fa8d8a2",
+        "sha256": "bfc63082c25b947f32cdc0aaf3b13490b4b2e41463d33ad86bb65feddcf4498d"
+      },
+      "fullAppendixRead": true
+    },
+    {
+      "name": "Original M Management V1 OAuth",
+      "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "checkpoint": {
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-late-originals-2026-11-16/ci-desktop-m0660/management/checkpoint-management-v1.json",
+        "bytes": 11388,
+        "blob": "a599a6acca342c738ef92ea1ac00e987405bd905",
+        "sha256": "2795f6e1172aa05c00a719b6e522f8c48857843f4d25ded22c4fdf1b01b9d533"
+      },
+      "independentR2": {
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-late-originals-2026-11-16/ci-desktop-m0660/management/independent-management-v1-review.json",
+        "bytes": 58167,
+        "blob": "d5737ce39fae7494d2c25f07db752ebf6889869e",
+        "sha256": "26c2e33126313656b6277774b8881129720f6462e6cf954b6ffc28c384a374f9"
+      },
+      "decision": "APPROVE",
+      "appendix": {
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-late-originals-2026-11-16/ci-desktop-m0660/management/Plan29-management-v1-oauth-appendix.md",
+        "bytes": 8431,
+        "blob": "0e363558b85297ef5442bc02c1c2c7d85e2b3d26",
+        "sha256": "a0c3c139e1a42286c53ffda462e8d6ed961fedab476b1138f33152ff81ceef29"
+      },
+      "fullAppendixRead": true
+    },
+    {
+      "name": "Historical9e General validate/main lint/shard4",
+      "source": "9e542899f36c47598a88c764c9e6745589fea3e1",
+      "checkpoint": {
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-late-originals-2026-11-16/ci-m-0660/general-edited9e-three-producers-checkpoint.json",
+        "bytes": 4480,
+        "blob": "4e2fa2a74187fcd681f4c9e669b30a558782856e",
+        "sha256": "1efd70c58f3e6d06f12b22eccd32ac94c3406f1f52c878efd1c15edf517f6262"
+      },
+      "independentR2": {
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-late-originals-2026-11-16/ci-m-0660/general-edited9e-three-producers-independent-review.json",
+        "bytes": 353611,
+        "blob": "582ca153c120ed1e3049ccc018fbae105a018a50",
+        "sha256": "6a6acda4d53e391cd0975fcbb9d5dfc84f8cd647ff814c7b14a5eb8d4e11b91d"
+      },
+      "decision": "APPROVE",
+      "appendix": {
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-late-originals-2026-11-16/ci-m-0660/Plan29-general-edited9e-three-producers-appendix.md",
+        "bytes": 5243,
+        "blob": "87cf0bab96bf590562350432e5ff7b0096dd4b6b",
+        "sha256": "5aa0014e7e92ddff55d37880f24256b4ee8fe1a20df806bf4d31e649c0c06445"
+      },
+      "fullAppendixRead": true
+    },
+    {
+      "name": "Historical9e General complementary producers",
+      "source": "9e542899f36c47598a88c764c9e6745589fea3e1",
+      "checkpoint": {
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-late-originals-2026-11-16/ci-m-0660/general-edited9e-complementary-checkpoint.json",
+        "bytes": 6082,
+        "blob": "89f435f895a515669dbc2e207dd6d3225163ac6d",
+        "sha256": "80fc7a2a0112b919b881900aece9d7745cb3c0fc4af55489469eb5f327a9ef29"
+      },
+      "independentR2": {
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-late-originals-2026-11-16/ci-m-0660/general-edited9e-complementary-independent-review.json",
+        "bytes": 46635,
+        "blob": "a644fc6c262cac704a696683e5e04a364108c6cc",
+        "sha256": "6f8a2238db816446334bb452a6228262f84b6832e2ad7f809ce57b2555e08dce"
+      },
+      "decision": "APPROVE_EVIDENCE_WITH_ORIGINAL_RENDERER_FAILURE",
+      "appendix": {
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-late-originals-2026-11-16/ci-m-0660/Plan29-general-edited9e-complementary-appendix.md",
+        "bytes": 5362,
+        "blob": "f2a49ebf4fe0016fec2e8c9b1caa44d9874dd45b",
+        "sha256": "4fffbaa0915bf2ff8e3f4c28835d7c97e9187fe4d3e13ec951c5c1447a8b390b"
+      },
+      "fullAppendixRead": true
+    }
+  ],
+  "bridge": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stage-n-late-original-evidence-publication/Plan29-N-late-originals-currentness.md",
+    "bytes": 8114,
+    "blob": "f84aa5576b1f33de15761fc55a18c94f1f74f8f7",
+    "sha256": "ca65c2b1faf3c6f63ffc2394afffe6ae900a1187cef754385fb0287d81cab363"
+  },
+  "actualSourceTransition": {
+    "onlyNonDocChangeFrom0660": [
+      "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts"
+    ],
+    "currentSourceObjects": [
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+        "bytes": 8310,
+        "blob": "0b0fc2a68fe678ebbce24227bf6e6002d12701d9",
+        "sha256": "10da3dd44dedec7e1230e1821f5ff75d9b6ec3aeb7a8352cb6820c26e40528c7",
+        "equalOriginal0660": false
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+        "bytes": 16103,
+        "blob": "0727339627757c3a96d54da2933eb7c1b60685f7",
+        "sha256": "2a738fca4120ae3361483abd948f7746d2025f32012b189e695085845bc3e191",
+        "equalOriginal0660": true
+      },
+      {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "bytes": 101741,
+        "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+        "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b",
+        "equalOriginal0660": true
+      }
+    ],
+    "priorPublicationReceipt": {
+      "path": "/workspace/scratch/82d3f9ba6b85/stage-m-post-helper-current-ci-publication/published-commit-and-normal-push-receipt.json",
+      "bytes": 143859,
+      "blob": "d35a3188dfeedfcfbe980d9735ff4591259790d1",
+      "sha256": "7ef5b7d6ce1f7ce93c968aa7e034a2d64eb44f59fbd8b6d1d32fcc6499fda375"
+    },
+    "primaryFastForwardReceipt": {
+      "path": "/workspace/scratch/82d3f9ba6b85/stage-m-post-helper-current-ci-publication/primary-ordinary-fast-forward-receipt.json",
+      "bytes": 208990,
+      "blob": "b94361aa23ff86266f76c2700aca7c398aa9800d",
+      "sha256": "587b5fa2b4e8329a9d073d90bc42bff9ba2c380bb6f88903cd200a3b8cfa437c"
+    },
+    "immediateBranch608AndPR0660KeptDistinct": true,
+    "subsequentPR608JoinVerified": true,
+    "previousActualReadbackR2IdentityPreserved": "d65591c8cc6225b75d8b2a6a15086865369cf8ce"
+  },
+  "frozenSnapshotReview": [
+    {
+      "input": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/full-api-jobs-0300.json",
+        "bytes": 212142,
+        "blob": "aaa9e447920ba1d0e4ae3797169058bc2df43a72",
+        "sha256": "2056635c64f9372a98d560f3ceb63a025fbd92de2bef0eaa5a6a72e8f8dd4f80"
+      },
+      "jobSets": [
+        {
+          "count": 23,
+          "states": {
+            "success": 18,
+            "failure": 4,
+            "cancelled": 1
+          },
+          "jobs": [
+            {
+              "id": 133017915679,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "id": 133017915890,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "id": 133017915894,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "id": 133017915899,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "id": 133017915900,
+              "status": "completed",
+              "conclusion": "failure"
+            },
+            {
+              "id": 133017915909,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "id": 133017915916,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "id": 133017915929,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "id": 133017916005,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "id": 133017916012,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "id": 133017916023,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "id": 133017916024,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "id": 133017916035,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "id": 133017916038,
+              "status": "completed",
+              "conclusion": "failure"
+            },
+            {
+              "id": 133017916047,
+              "status": "completed",
+              "conclusion": "failure"
+            },
+            {
+              "id": 133017916048,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "id": 133017916079,
+              "status": "completed",
+              "conclusion": "failure"
+            },
+            {
+              "id": 133017916085,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "id": 133017916110,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "id": 133017916119,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "id": 133017916174,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "id": 133017916249,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "id": 133048607244,
+              "status": "completed",
+              "conclusion": "cancelled"
+            }
+          ]
+        },
+        {
+          "count": 7,
+          "states": {
+            "success": 3,
+            "failure": 2,
+            "cancelled": 2
+          },
+          "jobs": [
+            {
+              "id": 133017910647,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "id": 133040244339,
+              "status": "completed",
+              "conclusion": "failure"
+            },
+            {
+              "id": 133040244365,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "id": 133040244391,
+              "status": "completed",
+              "conclusion": "failure"
+            },
+            {
+              "id": 133040244403,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "id": 133040245151,
+              "status": "completed",
+              "conclusion": "cancelled"
+            },
+            {
+              "id": 133062441216,
+              "status": "completed",
+              "conclusion": "cancelled"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "input": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-M-jobs-0259.json",
+        "bytes": 7653,
+        "blob": "b7baba75e68e8be4addb897eeb06c1a7e1477e08",
+        "sha256": "cb7de4d65c3753803a4fbde244e0f8f5f65d6d0073bf754e34eb52d1fec2a6c3"
+      },
+      "jobSets": [
+        {
+          "count": 15,
+          "states": {
+            "success": 1,
+            "skipped": 12,
+            "cancelled": 1,
+            "failure": 1
+          },
+          "jobs": [
+            {
+              "id": 133017912464,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "id": 133017913491,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "id": 133017913830,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "id": 133017913863,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "id": 133033794740,
+              "status": "completed",
+              "conclusion": "cancelled"
+            },
+            {
+              "id": 133033795297,
+              "status": "completed",
+              "conclusion": "failure"
+            },
+            {
+              "id": 133033796167,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "id": 133033796272,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "id": 133033796518,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "id": 133033796520,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "id": 133033796685,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "id": 133033796875,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "id": 133033796876,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "id": 133033797144,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "id": 133033797270,
+              "status": "completed",
+              "conclusion": "skipped"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "input": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/owned-api-jobs-0321.json",
+        "bytes": 25459,
+        "blob": "07ba757796a08e167e0bdea74e476510602e5b8b",
+        "sha256": "86887e23f2dde6c287082a068e35b1eca30a2f8a0084e944b2dd991dc166ff00"
+      },
+      "jobSets": [
+        {
+          "count": 22,
+          "states": {
+            "queued": 21,
+            "in_progress": 1
+          },
+          "jobs": [
+            {
+              "id": 133062441284,
+              "status": "queued",
+              "conclusion": null
+            },
+            {
+              "id": 133062441445,
+              "status": "queued",
+              "conclusion": null
+            },
+            {
+              "id": 133062441473,
+              "status": "queued",
+              "conclusion": null
+            },
+            {
+              "id": 133062441494,
+              "status": "queued",
+              "conclusion": null
+            },
+            {
+              "id": 133062441496,
+              "status": "queued",
+              "conclusion": null
+            },
+            {
+              "id": 133062441513,
+              "status": "queued",
+              "conclusion": null
+            },
+            {
+              "id": 133062441515,
+              "status": "queued",
+              "conclusion": null
+            },
+            {
+              "id": 133062441546,
+              "status": "in_progress",
+              "conclusion": null
+            },
+            {
+              "id": 133062441547,
+              "status": "queued",
+              "conclusion": null
+            },
+            {
+              "id": 133062441554,
+              "status": "queued",
+              "conclusion": null
+            },
+            {
+              "id": 133062441557,
+              "status": "queued",
+              "conclusion": null
+            },
+            {
+              "id": 133062441565,
+              "status": "queued",
+              "conclusion": null
+            },
+            {
+              "id": 133062441591,
+              "status": "queued",
+              "conclusion": null
+            },
+            {
+              "id": 133062441600,
+              "status": "queued",
+              "conclusion": null
+            },
+            {
+              "id": 133062441602,
+              "status": "queued",
+              "conclusion": null
+            },
+            {
+              "id": 133062441628,
+              "status": "queued",
+              "conclusion": null
+            },
+            {
+              "id": 133062441639,
+              "status": "queued",
+              "conclusion": null
+            },
+            {
+              "id": 133062441646,
+              "status": "queued",
+              "conclusion": null
+            },
+            {
+              "id": 133062441650,
+              "status": "queued",
+              "conclusion": null
+            },
+            {
+              "id": 133062441661,
+              "status": "queued",
+              "conclusion": null
+            },
+            {
+              "id": 133062441679,
+              "status": "queued",
+              "conclusion": null
+            },
+            {
+              "id": 133062441738,
+              "status": "queued",
+              "conclusion": null
+            }
+          ]
+        },
+        {
+          "count": 3,
+          "states": {
+            "success": 2,
+            "queued": 1
+          },
+          "jobs": [
+            {
+              "id": 133062439206,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "id": 133062439396,
+              "status": "queued",
+              "conclusion": null
+            },
+            {
+              "id": 133062439418,
+              "status": "completed",
+              "conclusion": "success"
+            }
+          ]
+        },
+        {
+          "count": 1,
+          "states": {
+            "queued": 1
+          },
+          "jobs": [
+            {
+              "id": 133062441795,
+              "status": "queued",
+              "conclusion": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "input": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/process-jobs-0320.json",
+        "bytes": 21882,
+        "blob": "2e87ce750a8570b1c8773626f1e977d9a0a7b752",
+        "sha256": "d76b3ad930aecc3024de7c447c979db3b8dface17ba6526b9fd5fb2abee45489"
+      },
+      "jobSets": [
+        {
+          "count": 5,
+          "states": {
+            "queued": 1,
+            "in_progress": 1,
+            "success": 3
+          },
+          "jobs": [
+            {
+              "id": 133062439920,
+              "status": "queued",
+              "conclusion": null
+            },
+            {
+              "id": 133062439921,
+              "status": "in_progress",
+              "conclusion": null
+            },
+            {
+              "id": 133062439989,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "id": 133062439990,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "id": 133062440000,
+              "status": "completed",
+              "conclusion": "success"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "input": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/v2-jobs-0320.json",
+        "bytes": 28473,
+        "blob": "2ce95292bfa56345b84b5452f922f61ce5a1fcbd",
+        "sha256": "fd322e06007485b011fa5eead8643f8745790f0736f02bf392261e059d7366b2"
+      },
+      "jobSets": [
+        {
+          "count": 9,
+          "states": {
+            "queued": 4,
+            "success": 2,
+            "in_progress": 2,
+            "failure": 1
+          },
+          "jobs": [
+            {
+              "id": 133062438603,
+              "status": "queued",
+              "conclusion": null
+            },
+            {
+              "id": 133062438856,
+              "status": "queued",
+              "conclusion": null
+            },
+            {
+              "id": 133062438874,
+              "status": "queued",
+              "conclusion": null
+            },
+            {
+              "id": 133062438882,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "id": 133062438887,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "id": 133062438907,
+              "status": "in_progress",
+              "conclusion": null
+            },
+            {
+              "id": 133062439001,
+              "status": "in_progress",
+              "conclusion": null
+            },
+            {
+              "id": 133062439014,
+              "status": "queued",
+              "conclusion": null
+            },
+            {
+              "id": 133062439089,
+              "status": "completed",
+              "conclusion": "failure"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "input": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/general-jobs-0322.json",
+        "bytes": 1289,
+        "blob": "fcfd060b3f676746873fd9a7e7999cfff38331c6",
+        "sha256": "beb17296b9e4c9e5f00947d2f7610b4667731e840a471953214022842e54147e"
+      },
+      "jobSets": [
+        {
+          "count": 4,
+          "states": {
+            "queued": 1,
+            "skipped": 3
+          },
+          "jobs": [
+            {
+              "id": 133062442880,
+              "status": "queued",
+              "conclusion": null
+            },
+            {
+              "id": 133062444192,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "id": 133062444221,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "id": 133062468416,
+              "status": "completed",
+              "conclusion": "skipped"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "input": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-9e-edited-jobs-0322.json",
+        "bytes": 41417,
+        "blob": "40389ee26be2ed07ddfce5f29d2c9999d90076bb",
+        "sha256": "46b92da4d2ebe8153799ead22e85dfb61c28da730c5da299bd206a0c9b33c1af"
+      },
+      "jobSets": [
+        {
+          "count": 20,
+          "states": {
+            "success": 9,
+            "skipped": 9,
+            "failure": 1,
+            "queued": 1
+          },
+          "jobs": [
+            {
+              "id": 133005430623,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "id": 133005431510,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "id": 133005431912,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "id": 133005471991,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "id": 133026000681,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "id": 133026000685,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "id": 133026000715,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "id": 133026000840,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "id": 133026000848,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "id": 133026000853,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "id": 133026000867,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "id": 133026000887,
+              "status": "completed",
+              "conclusion": "failure"
+            },
+            {
+              "id": 133026001008,
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "id": 133026001918,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "id": 133026002002,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "id": 133026002205,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "id": 133026002242,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "id": 133026002257,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "id": 133026002434,
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "id": 133063049370,
+              "status": "queued",
+              "conclusion": null
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "semanticDecisions": [
+    "Read all nine exact appendices and the complete new bridge. Preserved original0660, historical9e and new608 source attribution; the full prior1463115-byte Plan prefix is byte-exact and is not reinterpreted.",
+    "All nine selected author checkpoints are joined to their exact completed independent reviews. The author SPI appendix still records its historical pending-R2 state; the newer bridge and included completed root review resolve that chronology without rewriting the frozen author prose.",
+    "Canonical Codex v2 corrected stopped-frame qualification is appended; original v1 audit/appendix/checkpoint bytes remain retained as superseded history. Mixed stopped frames are not promoted to stronger Selection convergence.",
+    "Finite provider/SDK peer execution, archived native controlled custody, public action acknowledgements, actual passive exit callbacks, process absence and generated-output identities remain separate. No new visual or source-to-build qualification is claimed by this assembly review.",
+    "Original WindowsARM P08 remains failed with missing final P08 JSON/PNG and uncertain original-root exit; emergency accounting0 is containment only. Successful packaged V2 step does not replace P08 acceptance.",
+    "macOS successor public Quit is once/unconfirmed; absence does not create native custody or PID signal authority. Missing successor exit-code/current-image evidence remains missing.",
+    "Historical General four-shard arithmetic25838PASS/102SKIP across2195disjointfiles and renderer1error/1416warnings are retained with their older source. Portable1410PASS/2SKIP does not qualify the newer24-test helper or177-case Team command.",
+    "All named currentness statements match their frozen03:20/21/22 and03:23:06 inputs. Later N completed logs/archives, later APIs and independent reviews are intentionally outside this cut; no refresh is required or performed.",
+    "Read-only Cross focus and P08 timing analysis remain unimplemented. No source repair, query transport replacement, timeout or guard relaxation is selected. Primary documentation URLs/digests in the P08 design are references, not a claim that a runner module implementation or all external documentation bytes are archived in this cut.",
+    "Current source has the one ambiguity-safe helper but actual original177/24GREEN remains unobserved at this frozen cut. Future lint/Installer/P11/Cross/OpenCode/P08 work retains separate prospective R1/R2 and execution requirements."
+  ],
+  "publicationRoute": {
+    "branch": "fix/frontend-parity-e2e-followups-20261115",
+    "expectedParent": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+    "primaryRemains": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+    "preparationRefsAndDraftBaseReviewed": true,
+    "noOpenFollowupPRAtPreparation": true,
+    "ordinaryExpectedParentUpdateOnly": true,
+    "freshPrecommitLeaseStillRequiredByPublisher": true,
+    "noCreatedCommitOrRemoteTreeClaim": true
+  },
+  "readerExecutionLimits": {
+    "all130FullFileBytesReadAndCompared": true,
+    "all10InheritedActualGitBytesReadAndCompared": true,
+    "all7ZIP139MemberCRCsNamesAndHashesChecked": true,
+    "all10463CandidateAnd10334ParentLeafMappingsCompared": true,
+    "repoStatusCleanBeforeAfter": true,
+    "projectTestsCompilersLintInstallNativeProvidersExecuted": false,
+    "sourceOrRefsChanged": false,
+    "CIActionPerformed": false,
+    "freshAPICallsForThisAssemblyReview": false,
+    "originalAuditorSchemaAliasCorrectionBeforeFoundationOutput": "A first reader pass encountered legacy gitBlob metadata before producing a report. The reader added a blob/gitBlob identity alias and completed the full foundation; no frozen payload was modified."
+  },
+  "findings": []
+}

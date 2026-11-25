@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "artifact": {
+    "id": 14182895280,
+    "name": "opencode-v2-embedded-native-win32-arm64",
+    "size_in_bytes": 7452,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14182895280",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14182895280/zip",
+    "expired": false,
+    "created_at": "2026-11-15T21:58:12Z",
+    "expires_at": "2026-11-22T21:58:11Z",
+    "updated_at": "2026-11-15T21:58:12Z",
+    "digest": "sha256:c506eaa1a236d8e614dd349067aac9155fb7a3b0d46544fc6bcbe88886358971",
+    "workflow_run": {
+      "id": 43765103118,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "4dc08dea7eeed5c286cf310e09a2ba26d84a9546"
+    }
+  },
+  "archive": "4dc-v2-win32-arm64.zip",
+  "archiveIdentity": {
+    "bytes": 7452,
+    "sha256": "c506eaa1a236d8e614dd349067aac9155fb7a3b0d46544fc6bcbe88886358971",
+    "gitBlob": "a8210dfdae1cfab5148462a27b351aac579c2715"
+  },
+  "validation": {
+    "apiSize": true,
+    "apiSha256": true,
+    "allCrc32": true,
+    "safeUniqueRelativeNames": true,
+    "noSymlinks": true
+  },
+  "extract": "v2_win_arm",
+  "fileCount": 3,
+  "members": [
+    {
+      "name": "opencode-v2-embedded-inputs.json",
+      "crc32": "1bbd037b",
+      "compressedBytes": 491,
+      "bytes": 782,
+      "sha256": "269016678913287bbf67701f0da2d4475fd20d34f4bc008ed80ec1359901dc89",
+      "gitBlob": "2131c326cc4e9ac6ef903e4b7bad3bcc3a998c72"
+    },
+    {
+      "name": "opencode-v2-windows-custody.json",
+      "crc32": "63e07543",
+      "compressedBytes": 549,
+      "bytes": 909,
+      "sha256": "60b090d6ba8aacc4b878f37623c0c4c5bfb07ea5ebf3336680bb439e577cf284",
+      "gitBlob": "cf4d6954c6b70d4d97e55872ee5aa54f529446db"
+    },
+    {
+      "name": "opencode-v2-embedded-host.json",
+      "crc32": "89503620",
+      "compressedBytes": 5926,
+      "bytes": 95125,
+      "sha256": "27e6573b1e4e0744ce07e490caae99f4b2959641fb751dd4896d7031991d7895",
+      "gitBlob": "8ce7cee4e15d20993f5dadd534d0130514422001"
+    }
+  ]
+}

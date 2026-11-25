@@ -1,0 +1,88 @@
+{
+  "readConcludedUtc": "2026-11-16 00:08:05 UTC",
+  "runs": [
+    {
+      "runId": 43776922765,
+      "jobs": [
+        {
+          "id": 133005208925,
+          "name": "plan",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43776922765,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133005210108,
+          "name": "Stage 1 current-tuple process and packed qualification",
+          "status": "completed",
+          "conclusion": "skipped",
+          "run_id": 43776922765,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133005210261,
+          "name": "Stage 1 process tuple diagnostic (unqualified)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "run_id": 43776922765,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133005210401,
+          "name": "Stage 1 source Desktop (${{ matrix.label }})",
+          "status": "completed",
+          "conclusion": "skipped",
+          "run_id": 43776922765,
+          "logs_url": null,
+          "steps": null
+        }
+      ]
+    },
+    {
+      "runId": 43776996041,
+      "jobs": [
+        {
+          "id": 133005430623,
+          "name": "Metadata CI plan",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43776996041,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133005431510,
+          "name": "Stage 1 current-tuple process and packed qualification",
+          "status": "completed",
+          "conclusion": "skipped",
+          "run_id": 43776996041,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133005431912,
+          "name": "Stage 1 source Desktop (${{ matrix.label }})",
+          "status": "completed",
+          "conclusion": "skipped",
+          "run_id": 43776996041,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133005471991,
+          "name": "Stage 1 process tuple diagnostic (unqualified)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "run_id": 43776996041,
+          "logs_url": null,
+          "steps": null
+        }
+      ]
+    }
+  ],
+  "manualActions": false
+}

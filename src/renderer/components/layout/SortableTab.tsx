@@ -8,7 +8,7 @@ import { useCallback, useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useAppTranslation } from '@features/localization/renderer';
-import { useTaskDetailTabLabel } from '@features/team-task-detail/renderer';
+import { useTaskDetailTabLabel } from '@features/team-task-detail/renderer/shell';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { getTeamColorSet, getThemedBorder } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';

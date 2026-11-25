@@ -1,0 +1,24 @@
+{
+  "kind": "Read-only retained D output byte checkpoint before any K Host build; not a rebuild or new qualification",
+  "recordedAtUTC": "2026-11-15T22:46:22.395589+00:00",
+  "originalBuildHead": "7e8e37c282e9cc653efd79799dc862d116310065",
+  "observedSourceHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+  "originalInventory": {
+    "path": "/workspace/scratch/82d3f9ba6b85/reconciled-source-local/D-host-build-outputs-after.json",
+    "bytes": 280944,
+    "blob": "897c958cbb8e80120c22670e44614931f6436ba2",
+    "sha256": "babd0e295fbb1c79a3710f808bf6418f1b9e249f29085ee2d7a604ce72721dc8"
+  },
+  "archive": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stage-k-adoption/retained-D-output-checkpoint.zip",
+    "bytes": 1864234,
+    "blob": "6774a882b3de474acc9f19e69beb2a7dddf44614",
+    "sha256": "975096ddb00e53e71ed1bcd33c965f5d758c73f3d9cf789a08700ac0816fc7fe"
+  },
+  "payloadCount": 1446,
+  "payloadBytes": 6207302,
+  "allMembersByteExact": true,
+  "allCRCsExact": true,
+  "sourceOrBuildExecuted": false,
+  "normalizedArchiveMetadata": "1980-01-01T00:00:00, regular100644; content bytes exactly preserved; no original mtime claim"
+}

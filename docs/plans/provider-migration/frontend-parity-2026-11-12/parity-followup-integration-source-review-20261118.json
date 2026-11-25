@@ -1,0 +1,370 @@
+{
+  "schemaVersion": 1,
+  "kind": "bounded-independent-integration-source-review",
+  "verdict": "PASS_WITH_SCOPE_LIMITS",
+  "reviewer": "/root/review_ready_823",
+  "reviewedAt": "2026-11-18T23:50:57.188215+00:00",
+  "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "sourceTree": "292b3cc975b5c927233fb85b73aed1411753efd1",
+  "scope": "Read-only composition, preimage/postimage binding, existing test discovery, additive source-freeze integration and saved complete source-size evaluation. No new implementation review of self-authored components.",
+  "authorIndependence": {
+    "quit": "Reviewer authored this component. Root owns independent implementation review; this receipt only binds its frozen manifest and composition.",
+    "packaged": "Reviewer authored this component. Root owns independent implementation review; this receipt only binds its frozen manifest and composition.",
+    "schedule": "Root authored the three production changes and two existing test adaptations; prior reviewer R2 is separately pinned. Reviewer authored the new regression test, whose implementation review belongs to root.",
+    "integrationAmendment": "Root authored the final additive three-path source-freeze overlay; independently reviewed here."
+  },
+  "sourceBindings": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-captured-app-exit.test.ts",
+      "mode": "100644",
+      "before": "be1826fce2de43cb6af3b1ca0fb87a683985be99",
+      "after": "4765acd5e153d6fd601e2cd9645ab6966e042400",
+      "sha256": "62358a4efb31ae20948c1e81571780742121304d4b302ecb513efa3c58801dc6",
+      "bytes": 2173,
+      "lines": 47,
+      "component": "quit-active"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-quit-command-snapshot.test.mjs",
+      "mode": "100644",
+      "before": null,
+      "after": "7733ec9dd14269c6ba4d8c276fbb0bf64849019e",
+      "sha256": "56fbdd59fbb15dc7e9bf2543b9ae92011e46fd7ba671381f7eae6ab6e4df3614",
+      "bytes": 9836,
+      "lines": 182,
+      "component": "quit-active"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-quit-ui-smoke.ts",
+      "mode": "100644",
+      "before": "cce4088737ff0eb4174746bf6fff49a22aded264",
+      "after": "05b5b1f8d17396c2c690d6e0c7b0c896abad1d7a",
+      "sha256": "3f750eef4be35d55fbffa81640e27f97f22f5504ed6adaeb3f6490fa66b99a3e",
+      "bytes": 22749,
+      "lines": 510,
+      "component": "quit-active"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "mode": "100644",
+      "before": "b42cee83d3526df26ce749e3b7b6c076b48a9257",
+      "after": "741dbdc6f296a7a67a8639b7a928e6664886cab2",
+      "sha256": "d3a459914d1bcf231bc5ee44daec991a252f1c2d2fc57ca94d0377a8b58fd992",
+      "bytes": 25644,
+      "lines": 396,
+      "component": "quit-active"
+    },
+    {
+      "path": "src/main/services/schedule/JsonScheduleRepository.ts",
+      "mode": "100644",
+      "before": "2f0ef6e8a4d6506ecb20322af5626bb193db3f31",
+      "after": "7a77c040eea4d316cd2f0fec5596bbebc31210ca",
+      "sha256": "765d969d6956679e0559017507d5f7289859ba81abd988a8f85fc97ed657bdc2",
+      "bytes": 8604,
+      "lines": 236,
+      "component": "schedule"
+    },
+    {
+      "path": "src/main/services/schedule/ScheduleRepository.ts",
+      "mode": "100644",
+      "before": "9ccc8524d62b5de7c2f4d1b377c2ce93426276dc",
+      "after": "052e724d9ddc699b24c96aaf563cf874d475720a",
+      "sha256": "ff0b29ebbbf8936c01d94916798889185d3336081000d1327f428f885cfb883f",
+      "bytes": 1307,
+      "lines": 26,
+      "component": "schedule"
+    },
+    {
+      "path": "src/main/services/schedule/SchedulerService.ts",
+      "mode": "100644",
+      "before": "b85244125521fce56e3cf2f320a07ae1d4ca0469",
+      "after": "7e80ea7cb896ec3c802f130afff36f32f48b1483",
+      "sha256": "a42eeacd8e4ad2dda44b9941a18d9c4b8023a2a3711f625d81142e63065a5235",
+      "bytes": 32983,
+      "lines": 836,
+      "component": "schedule"
+    },
+    {
+      "path": "test/main/services/schedule/SchedulerMetadataConcurrency.test.ts",
+      "mode": "100644",
+      "before": null,
+      "after": "fa4fc950036305a7f5f2de09e1508f652ff655c1",
+      "sha256": "4d8459485db324be9989ad837b1bfe475006cc141915fddeec9bf0c1a9060caa",
+      "bytes": 9242,
+      "lines": 220,
+      "component": "schedule"
+    },
+    {
+      "path": "test/main/services/schedule/SchedulerService.test.ts",
+      "mode": "100644",
+      "before": "35073d552b8928f969490f7d68028fa11f3ead34",
+      "after": "f04861c30e17c66e13f433a997a121e42d4150ac",
+      "sha256": "0e3882d1cd88571759a59fc29c5352b5baf9298283d9685c8fd7026134d27a22",
+      "bytes": 41784,
+      "lines": 1219,
+      "component": "schedule"
+    },
+    {
+      "path": "test/main/services/schedule/SmartSchedules.safe-e2e.test.ts",
+      "mode": "100644",
+      "before": "214670d5f0780307de13b14c86d19b885f10fc0e",
+      "after": "434b4689a4e9ca01243e7f2da5af21d803252094",
+      "sha256": "4d0dadaeda026ec8836539ca34212bc98a1c0a05b6788ef3f41d396f794b86aa",
+      "bytes": 21111,
+      "lines": 496,
+      "component": "schedule"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-host.ts",
+      "mode": "100644",
+      "before": "7e1c3760f572d1648768a721b590cb343d015b01",
+      "after": "025a124b317917cdceb5d6072977bd2d24508cdd",
+      "sha256": "a7a3fb47fa680bb9c6193657437b860c58526a2fb87f6e5d2327a865c90f10fb",
+      "bytes": 20176,
+      "lines": 465,
+      "component": "packaged"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/native-host-close.test.ts",
+      "mode": "100644",
+      "before": "6e914e68cbbe229ed99d232aab7cb6c7adc330ec",
+      "after": "1e4522ba6e600545535c116e59a53a95f6120b37",
+      "sha256": "be61f648fec4c3b73a2c98eeb9f3428708007dc3abccb421ad6e35ecb3be8708",
+      "bytes": 52804,
+      "lines": 744,
+      "component": "packaged"
+    }
+  ],
+  "preimageMethod": {
+    "baseCommit": "547e603c555be471394e9c6e4b6a53092a33a6d7",
+    "baseTree": "47ac6f88dbe6726e7f6fe83ba0a4497975969eb9",
+    "method": "Read immutable local Git tree/blob objects and cached exact 30-leaf 547-to-030 delta; all 12 candidate paths are absent from that delta. Existing 10 preimages also match component manifest SHA256 and length; both new paths are absent in the base. No Git object, ref or API mutation.",
+    "finalCandidateGitTree": "Not yet supplied; full final tree binding remains a separate step."
+  },
+  "supplementarySourceFreeze": {
+    "original": "b42cee83d3526df26ce749e3b7b6c076b48a9257",
+    "frozenQuit": "c60111361cf3dba3bf395081ec751ec8d3bb8681",
+    "integrated": "741dbdc6f296a7a67a8639b7a928e6664886cab2",
+    "preservedQuitAdditions": [
+      "agent-teams-controller/src/internal/atomicFile.js",
+      "agent-teams-controller/src/internal/fileLock.js",
+      "scripts/legacy-agent-host/desktop-captured-app-exit.test.ts",
+      "scripts/legacy-agent-host/desktop-native-quit-command-snapshot.test.mjs"
+    ],
+    "newIntegrationAdditions": [
+      "src/main/services/schedule/JsonScheduleRepository.ts",
+      "src/main/services/schedule/ScheduleRepository.ts",
+      "src/main/services/schedule/SchedulerService.ts"
+    ],
+    "literalOnly": "Removing exactly the four Quit added lines reconstructs original bytes; removing exactly the three schedule added lines reconstructs frozen Quit bytes. No other line changed.",
+    "multiplicity": "All original entries and multiplicities preserved. No new duplicate is introduced; inherited duplicates continue through the unchanged Set deduplication in desktop-proof-sources.ts.",
+    "runtimeClosure": "Quit smoke and native-host.ts were already captured. The actual controller atomic writer and file-lock primitive plus Node suite import/helper are the four Quit pins. The three schedule production modules are now captured. No new runtime helper is introduced by schedule or packaged changes.",
+    "captureBehavior": "Existing before-app selectedSourceHashesBeforeApp capture and after-flow selectedSourceHashesAfterFlow comparison remain unchanged. Hash mismatch preserves INCOMPLETE/sourceFreezeFailure behavior. Source-freeze configuration itself remains in the captured roster."
+  },
+  "testDiscovery": [
+    {
+      "component": "Quit",
+      "workflow": ".github/workflows/host-emulated-acceptance.yml",
+      "job": "offline-desktop-scenario",
+      "jobCondition": "github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository",
+      "step": "Build existing Desktop prerequisites and verify admission",
+      "command": "node --test [existing explicit suites including scripts/legacy-agent-host/desktop-captured-app-exit.test.ts]",
+      "hook": "Existing captured-app-exit suite imports './desktop-native-quit-command-snapshot.test.mjs'; original suite body remains unchanged. The hook runs with that unconditional prerequisite step when its job executes. Original older POSIX-only test skip is not a skip on the imported new suite.",
+      "noWorkflowExpansion": true
+    },
+    {
+      "component": "Schedule",
+      "workflow": ".github/workflows/ci.yml",
+      "jobCondition": "needs.plan.outputs.full == 'true' && (needs.plan.outputs.scope == 'full' || needs.plan.outputs.scope == 'source') && needs.plan.outputs.reuse != 'true'",
+      "step": "Test root shard",
+      "command": "pnpm exec vitest run --maxWorkers=2 --shard=${{ matrix.shard }}/4",
+      "configuration": "Unchanged vitest.config.ts includes test/**/*.test.ts and canonical test/setup.ts; the new SchedulerMetadataConcurrency.test.ts and both changed existing tests match that glob. Discovery is across the existing four shards, not guaranteed in every shard.",
+      "noWorkflowExpansion": true
+    },
+    {
+      "component": "Packaged fixture regression",
+      "workflow": ".github/workflows/ci.yml",
+      "step": "Test workspace packages",
+      "stepCondition": "matrix.shard == 1 (inside the same conditional root test job)",
+      "command": "PATH=\"$(dirname \"$AGENT_BACKEND_TEST_NODE\"):$PATH\" pnpm --filter @agent-teams/legacy-agent-host test",
+      "packageScript": "pnpm build && pnpm typecheck:test && node --test --test-concurrency=1 tests/*.test.ts tests/team/*.test.ts tests/fixtures/native-claude-team/model.test.ts tests/fixtures/native-opencode-team/model.test.ts tests/fixtures/native-codex-team/model.test.ts",
+      "discovery": "Existing tests/native-host-close.test.ts is selected by tests/*.test.ts. Earlier build/typecheck failure can prevent test execution; this source mapping does not claim those gates passed.",
+      "noWorkflowExpansion": true
+    }
+  ],
+  "crossComponentAssessment": [
+    "The component path sets are disjoint. Their sole composition overlay is the explicitly bound supplementary source list; no component postimage was silently substituted.",
+    "Schedule metadata serialization remains within its existing repository queue; Quit uses the existing controller command writer fence; the packaged change adjusts only fixture-local lazy schema resolution. No new shared global lock, owner, action replay or runtime helper couples these changes.",
+    "The packaged optional frame-reader loader preserves standalone call behavior and is selected from the captured Host entry only within startHost. That fixture path is already frozen by the Desktop roster.",
+    "Existing workflow commands, package scripts, Vitest discovery/configuration and source-freeze comparison code are unchanged by the 12-path composition. Production policy/baseline and all original acceptance deadlines/guards remain outside the changed path set.",
+    "No integration conflict or concrete newly introduced missing discovery/source-freeze pin was found in this bounded source review."
+  ],
+  "savedSizeEvaluation": {
+    "reviewedActualReport": {
+      "sha256": "6f3e6ddf5e269af000dd12352dbbc5ffc2ef50649744a6012f501d893821faec",
+      "gitBlob": "28208674065ab731a53ebbab5965dbae90d06229",
+      "bytes": 17950
+    },
+    "checkedFiles": 5162,
+    "legacyFiles": 141,
+    "defaultMaxLines": 800,
+    "violations": 0,
+    "schedulerPhysicalLines": 836,
+    "schedulerFrozenCap": 847,
+    "guard": {
+      "gitBlob": "65775f7889470056ef7cd91ad6c56d9351e6cdfc",
+      "sha256": "5462ce152af3e3beddabc51ccbb4bf9b74219ebe128664e27e046142382d6bb2"
+    },
+    "policy": {
+      "gitBlob": "730dd19fb082ff5f5cb39af3f759e9fdae706506",
+      "sha256": "e3d651eb260ba35b467dd7b49255af66e290ea58bbd1eb570114afb213aa36e3"
+    },
+    "policyOrBaselineChanged": false,
+    "finalCountedRecordsSha256": "f6bb1ebc48cf1b61e27b54d6917e2fd7288fb5777899229716429004bda3c2c0",
+    "finalProductionTuplesSha256": "9f98ce9f4ea66b1e856e2d22ed41e677060ae2396ab3cea9c5864ba75723ce66",
+    "method": "Read the actual evaluator orchestration, immutable guard/policy bytes, all 12 overlay tuples and saved record digests. This reviewer did not rerun the classifier/evaluator or a checkout CLI."
+  },
+  "unchangedSourcePins": [
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "gitBlob": "874172990918e5cea46d9edd82bf77d8c33c3685",
+      "sha256": "9f2b8df4d67898a153898862fd72402f310558dda28513547404ee88f18d1373",
+      "bytes": 150863
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "gitBlob": "44c29a38fdf225aebe9eaa9eccdb4fe6cad40a94",
+      "sha256": "f5fb5c1958a0e382bae3e8161916820a376b29fedfed0ae19bee683ed4ebe914",
+      "bytes": 199891
+    },
+    {
+      "path": "vitest.config.ts",
+      "gitBlob": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+      "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc",
+      "bytes": 1187
+    },
+    {
+      "path": "package.json",
+      "gitBlob": "1d2d7e8913d17b97176b09ac580ec189da8fe710",
+      "sha256": "eef83d66950dc58d3482924f591815ffb76d6d536060e665e80e24fcf134839e",
+      "bytes": 27016
+    },
+    {
+      "path": "packages/legacy-agent-host/package.json",
+      "gitBlob": "39bfdc27581109c10fa5362375dcbe2c33d44791",
+      "sha256": "a2cfca3f7911d08d4382554c10b254dc7756e5bfa546f50314f116e746d1d8d9",
+      "bytes": 12519
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-sources.ts",
+      "gitBlob": "f5779600a7d38ae104b9ade8a261bf9342a634e7",
+      "sha256": "abc04da58e87a7ebc6e4f1a26925096ba2a4f54e299f0e549029627345d1d43c",
+      "bytes": 52174
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-source-freeze.ts",
+      "gitBlob": "4ef2cc07ede3172aa594e0eac614a1d473a5f705",
+      "sha256": "b7db02503f45ee10136de234f96d4a0999d2dfbbfb421fefb499dfe7a27ec8f9",
+      "bytes": 3208
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "gitBlob": "90196716cd8964fbacb4014f0be017e563276a41",
+      "sha256": "51d056aeff4ce159eab1533ca68838c768dc978f851a41687bb81e49a4863221",
+      "bytes": 57563
+    }
+  ],
+  "inputPins": [
+    {
+      "path": "source-rows-draft.json",
+      "sha256": "4b56ba3028f86ce4bcfe10b3d6eed786e194043a5ccadeb12d3b71ff8e726c3d",
+      "gitBlob": "93465b1d8125a6fc369aab980463db6c11421021",
+      "bytes": 6528
+    },
+    {
+      "path": "source-freeze-amendment.json",
+      "sha256": "391cca3b5c1f82c94679c1f4d3f7f069530d27ea6579c0e82c6642d6573cb70d",
+      "gitBlob": "59ce18d92221aaa767e48f3b7e10d5c871c1b001",
+      "bytes": 1220
+    },
+    {
+      "path": "parity-followup-source-size-20261118.json",
+      "sha256": "6f3e6ddf5e269af000dd12352dbbc5ffc2ef50649744a6012f501d893821faec",
+      "gitBlob": "28208674065ab731a53ebbab5965dbae90d06229",
+      "bytes": 17950
+    },
+    {
+      "path": "evaluate-composition-size.mjs",
+      "sha256": "c0b00f8630b4228d438428a0a6e8a2a7dd4cccd534e5451d09b5e1af9f8d2c00",
+      "gitBlob": "93343667284dea65d43da26ee0711e1cbc9103b4",
+      "bytes": 5194
+    },
+    {
+      "path": "delta547to030.json",
+      "sha256": "f869f380914a7a4528827a68cf0d5b3a1dbc222ce32923fddc1d1d3c2cac4a5f",
+      "gitBlob": "1c901ac60800dd48f600b3bc7e554610b77e9b87",
+      "bytes": 7561
+    },
+    {
+      "path": "check-source-file-size.mjs",
+      "sha256": "5462ce152af3e3beddabc51ccbb4bf9b74219ebe128664e27e046142382d6bb2",
+      "gitBlob": "65775f7889470056ef7cd91ad6c56d9351e6cdfc",
+      "bytes": 8145
+    },
+    {
+      "path": "source-file-size-baseline.json",
+      "sha256": "e3d651eb260ba35b467dd7b49255af66e290ea58bbd1eb570114afb213aa36e3",
+      "gitBlob": "730dd19fb082ff5f5cb39af3f759e9fdae706506",
+      "bytes": 9635
+    },
+    {
+      "path": "quit-active-030-candidate/candidate-manifest.json",
+      "sha256": "ebf3e357f7f54575f81f61df44fe67953d3e37c7fd13482411cabdc1337ef6bd",
+      "gitBlob": "07be00a73fbe120f93c0186595c747f08f36c711",
+      "bytes": 6375
+    },
+    {
+      "path": "quit-active-030-candidate/verification.json",
+      "sha256": "abdf48aa3b04115bc4024b80181aa79a5cc54d0f699866657a8199af9d8c5dde",
+      "gitBlob": "5a1590c7ee2ba85def48d413840a13d72a9d81ed",
+      "bytes": 4817
+    },
+    {
+      "path": "quit-active-030-candidate/integration-lint-review.json",
+      "sha256": "aae24e4e8c220452505ec509b92db3f1a45edb23906b0926788d20466bf22098",
+      "gitBlob": "71cc4e4133c54208e595f01d6d89a0142414c515",
+      "bytes": 5723
+    },
+    {
+      "path": "schedule-030-candidate/candidate-manifest.json",
+      "sha256": "43e91f7363d340db2ded2d0f26061901cb64e73db42a4297b3a88f3551c4e599",
+      "gitBlob": "009a40ec1b6796dcfbfeecddfcbb68d4ce843f22",
+      "bytes": 3080
+    },
+    {
+      "path": "schedule-030-candidate/r2-source-review.json",
+      "sha256": "74610d24de71ab7e221c8101306fdb52350a83f27d288fd1e3e89cd1b145e8a9",
+      "gitBlob": "f373563227324351eeb2e847fb181d86d3610c2c",
+      "bytes": 11391
+    },
+    {
+      "path": "packaged-030-candidate/candidate-manifest.json",
+      "sha256": "c0fc3d5611a4470d87acf75231a5fc74164c32c629c3ef014b7d41c4efd6d528",
+      "gitBlob": "a2f8a2ccc55a7585010b0d18e8b8e424b12a4c09",
+      "bytes": 1612
+    },
+    {
+      "path": "packaged-030-candidate/verification.json",
+      "sha256": "9ab07341ce9cf78f06b46067a7c0f6c06434102a58d71844b21e51b1caabd507",
+      "gitBlob": "93b830d6e1b25c5a0c9f555614378152a378511d",
+      "bytes": 11979
+    }
+  ],
+  "limitations": [
+    "This is source integration review, not final candidate Git tree approval or publication authorization.",
+    "No tests, app/native processes, build, install, new runtime, CI queries or reruns were executed for this review. All finite test/lint outcomes remain bounded by their separately pinned component receipts.",
+    "The full candidate still needs the original CI/native acceptance paths. Saved finite RED/GREEN proofs do not establish native Quit, packaged Darwin, complete workspace typecheck or full typed lint acceptance.",
+    "The original Quit failure names no third directory entry; this receipt makes no identification claim. The packaged invalid-request negative proves it cannot qualify a large reply, not that it was never sent.",
+    "Existing broader CI failures and inherited lint findings are not changed to PASS by this integration review."
+  ]
+}

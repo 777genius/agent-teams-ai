@@ -1,0 +1,513 @@
+{
+  "kind": "ROOT_ORIGINAL_PACKAGED_DARWIN_ARM64_3BE1_RECEIPT_AND_VISUAL_AUDIT",
+  "sourceHead": "3be1fb3ec43d5682aa2ca77a6af62e6fa27b597b",
+  "runId": 43933487470,
+  "jobId": 133564286482,
+  "jobUrl": "https://github.com/777genius/agent-teams-ai/actions/runs/43933487470/job/133564286482",
+  "scope": "Original recorded job/receipt bytes and three original screenshots; no new native execution, no later-head qualification.",
+  "originalLog": {
+    "path": "/tmp/migration-evidence-20261116/root/packaged-3be1-darwin-arm64-133564286482/original-job.log",
+    "bytes": 157687,
+    "gitBlob": "8a5317e52553151ed7e7234fc75af7722eb5c74e",
+    "sha256": "535b56547b2e122bec25200b058934e3118042f61c4e4f7826b882fdbe09b822"
+  },
+  "archive": {
+    "artifactId": 14263562629,
+    "archiveBytes": 1066895,
+    "archiveSha256": "ba503ab4d8a81e51cca527bd394ac2a445c938df0a1284456373785239e60ae8",
+    "safeMembers": true,
+    "crcAllPass": true,
+    "members": [
+      {
+        "path": "agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+        "bytes": 1155049,
+        "crc": 529929962,
+        "gitBlob": "73dca19f861e2abc5e4aba131b3e6cef6cf6c7e9",
+        "sha256": "dfc6e53bd6d65e6c49715049792cfe1dfa1bf5c2fe9c72afb669ddac48eef650"
+      },
+      {
+        "path": "_temp/TEST-desktop-backend-xpckKj/ui-automatic-app-relaunch-successor.png",
+        "bytes": 138348,
+        "crc": 1603865248,
+        "gitBlob": "632482316cf7b01d158661250b1f066ceec0a003",
+        "sha256": "e0dcaaf67c5b6b55b259158b3cb2fa0cb3af5b03a09e339525614065c3164c96"
+      },
+      {
+        "path": "_temp/TEST-desktop-backend-xpckKj/ui-emulated-lifecycle-launch.png",
+        "bytes": 221342,
+        "crc": 1825018213,
+        "gitBlob": "e7a788263b051ce5c7eb8069b2fdb41b0bb45439",
+        "sha256": "c346f7c1e64af398b5fc910193ba34861d9d66b6adc181f08024b3838a4a6f6d"
+      },
+      {
+        "path": "_temp/TEST-desktop-backend-xpckKj/ui-emulated-lifecycle-stopped.png",
+        "bytes": 199431,
+        "crc": 2070261912,
+        "gitBlob": "bb04d38bc5aee540c75469f76562d2793d82892a",
+        "sha256": "15eba1d99fef756fa424e8450c531e95f34fa1907173fc570bbb35ece5b6aa50"
+      },
+      {
+        "path": "_temp/opencode-v2-packaged-inputs.json",
+        "bytes": 2374,
+        "crc": 1406420497,
+        "gitBlob": "9ecf083ec2bc8a3bcac571b64966d936f3099003",
+        "sha256": "0e4791f03dfc35b6bdcc30a975f5edf4f3e30a332ee707d16c097a6a47dda323"
+      },
+      {
+        "path": "_temp/opencode-v2-packaged-native.json",
+        "bytes": 5286,
+        "crc": 1242055708,
+        "gitBlob": "010606c3ce67ebdd02b898860439d8226e183933",
+        "sha256": "d3a573d3e3172375a5362b8e1490a26b77dc6554af4daae6f6f11065bbc678b1"
+      },
+      {
+        "path": "_temp/opencode-v2-packaged.json",
+        "bytes": 1189,
+        "crc": 2281407921,
+        "gitBlob": "861f80a10dce5969dc4738e20f73804df9e0f912",
+        "sha256": "ce1f42110f14b13da5764fcbd048ce00d9c4d546ef0fd942ee4a2d8ed76f8a05"
+      },
+      {
+        "path": "_temp/packaged-app-relaunch.app.log",
+        "bytes": 3027,
+        "crc": 1846005437,
+        "gitBlob": "467dc3825cad0f7da04ba7c0f099fe91719dff8c",
+        "sha256": "4d1b8118ccfda7a5f037c058d1036b1e34e2fdbcc6178659a0e579464e520b47"
+      },
+      {
+        "path": "_temp/packaged-app-relaunch.json",
+        "bytes": 702409,
+        "crc": 1685425449,
+        "gitBlob": "f69d40498f2591ff9f47cfaf6ecd2cfcc2a1947d",
+        "sha256": "1710149924849800a192c9ed9897bd8dc7e8e56361f1f5a82a7a608e8ab10ce3"
+      }
+    ]
+  },
+  "receiptFiles": {
+    "candidate": {
+      "path": "/tmp/migration-evidence-20261116/root/packaged-3be1-darwin-arm64-133564286482/archive/agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+      "bytes": 1155049,
+      "gitBlob": "73dca19f861e2abc5e4aba131b3e6cef6cf6c7e9",
+      "sha256": "dfc6e53bd6d65e6c49715049792cfe1dfa1bf5c2fe9c72afb669ddac48eef650"
+    },
+    "native": {
+      "path": "/tmp/migration-evidence-20261116/root/packaged-3be1-darwin-arm64-133564286482/archive/_temp/opencode-v2-packaged-native.json",
+      "bytes": 5286,
+      "gitBlob": "010606c3ce67ebdd02b898860439d8226e183933",
+      "sha256": "d3a573d3e3172375a5362b8e1490a26b77dc6554af4daae6f6f11065bbc678b1"
+    },
+    "outer": {
+      "path": "/tmp/migration-evidence-20261116/root/packaged-3be1-darwin-arm64-133564286482/archive/_temp/opencode-v2-packaged.json",
+      "bytes": 1189,
+      "gitBlob": "861f80a10dce5969dc4738e20f73804df9e0f912",
+      "sha256": "ce1f42110f14b13da5764fcbd048ce00d9c4d546ef0fd942ee4a2d8ed76f8a05"
+    },
+    "relaunch": {
+      "path": "/tmp/migration-evidence-20261116/root/packaged-3be1-darwin-arm64-133564286482/archive/_temp/packaged-app-relaunch.json",
+      "bytes": 702409,
+      "gitBlob": "f69d40498f2591ff9f47cfaf6ecd2cfcc2a1947d",
+      "sha256": "1710149924849800a192c9ed9897bd8dc7e8e56361f1f5a82a7a608e8ab10ce3"
+    }
+  },
+  "joins": {
+    "allFourSourceHeadsAndPlatformsExact": true,
+    "outerNativeReceiptSha256": true,
+    "threeCandidateManifestSha256": true,
+    "candidateNativeHarnessSha256": true,
+    "fourHostEntrySha256": true,
+    "threeAppAsarSha256": true,
+    "threeNodeSha256": true,
+    "packagedSourceAndLegacyUnavailableDuringNative": true,
+    "originalRestoration": {
+      "sourceRestored": true,
+      "bundleRestored": true,
+      "legacyRuntimeRestored": true
+    }
+  },
+  "native": {
+    "kind": "TEST_PACKAGED_NATIVE_V2_HOST",
+    "status": "PASS",
+    "packaged": {
+      "executionOrigin": "packaged-extraResources",
+      "appAsarSha256": "f173dccc3247d7103ef827ffd3d522b7eb6bf18de73070bfcd6dca05eed1030e",
+      "candidateManifestSha256": "dfc6e53bd6d65e6c49715049792cfe1dfa1bf5c2fe9c72afb669ddac48eef650",
+      "harnessSha256": "4333daaae6d7aa51b79d282bc851cb5074ae6f3af891f6abcdf2b5e9afe517fd",
+      "sourceCheckoutUnavailable": true,
+      "legacyRuntimeUnavailable": true,
+      "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+      "nodeArchiveSha256": "bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057",
+      "providerArtifacts": [
+        {
+          "name": "@agent-teams/provider-implementations",
+          "sha256": "9d66036c17a4c2bf86dde9171d94d3048e5df6f6f1ee17ff05758e3a7cf2be41"
+        },
+        {
+          "name": "@agent-teams/provider-session-contracts",
+          "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc"
+        }
+      ],
+      "packages": 120,
+      "files": 8133
+    },
+    "sourceHead": "3be1fb3ec43d5682aa2ca77a6af62e6fa27b597b",
+    "platform": "darwin-arm64",
+    "version": "2.1.4",
+    "approvalMode": "manual",
+    "nodeVersion": "v24.21.0",
+    "modelSelection": {
+      "providerId": "TEST-local",
+      "modelId": "TEST-model-B",
+      "variant": "high"
+    },
+    "configurationSelection": {
+      "scope": "project",
+      "original": "project-A",
+      "later": "project-B"
+    },
+    "preferencesSelection": {
+      "nativeDefault": "TEST-local/TEST-model",
+      "appDefault": "TEST-local/TEST-model-B"
+    },
+    "digests": {
+      "bun": "0a2237cdcfa0d16ef501d9acca9f0026309ef348bea7393a64e8d1e3609565cc",
+      "manifest": "a6091937d1c8686b7e1f125b2ef69c52146867b208517eb0fab4cb7ea18c2204",
+      "node": "e4b5a3af0e05c75de2eae013904145f40fe7fc2a6e6f17510128bf45cca4e79b",
+      "hostSource": "038d5361271d7fc238ad2697d8face71dd562e6c12ee1039f3ac22e79c37d40d",
+      "hostDist": "9b91c5109562b4f1139779185fbd9735bd77247c71d266dd410d68f46b98a049",
+      "provider": "9d66036c17a4c2bf86dde9171d94d3048e5df6f6f1ee17ff05758e3a7cf2be41"
+    },
+    "steps": [
+      "original_host_embedded_native_and_mcp_ready",
+      "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+      "changed_project_config_did_not_retarget_running_native_session",
+      "original_uploaded_PNG_native_image_inference_and_public_readback",
+      "checkpoint_and_original_host_native_cleanup_confirmed",
+      "cold_host_restored_native_history_without_model_or_tool_replay"
+    ],
+    "cleanup": true,
+    "phaseElapsedMs": {
+      "original_host_embedded_native_and_mcp_ready": 11531,
+      "native_model_tool_effect_permission_mcp_task_and_reply_completed_once": 18160,
+      "changed_project_config_did_not_retarget_running_native_session": 18160,
+      "original_uploaded_PNG_native_image_inference_and_public_readback": 18160,
+      "checkpoint_and_original_host_native_cleanup_confirmed": 18284,
+      "cold_host_restored_native_history_without_model_or_tool_replay": 27285
+    },
+    "elapsedMs": 30626,
+    "cancelled": false,
+    "inputObservation": {
+      "reads": 80,
+      "last": {
+        "phase": "allocated",
+        "custody": "owned",
+        "nativeReady": true,
+        "attached": true,
+        "sealed": false,
+        "diagnostic": null,
+        "inputs": [
+          {
+            "phase": "terminal",
+            "terminal": "succeeded"
+          },
+          {
+            "phase": "terminal",
+            "terminal": "succeeded"
+          }
+        ],
+        "interactions": [
+          {
+            "kind": "permission",
+            "phase": "resolved"
+          },
+          {
+            "kind": "permission",
+            "phase": "resolved"
+          }
+        ]
+      }
+    },
+    "launchObservation": {
+      "openElapsedMs": 7826,
+      "afterOpen": {
+        "available": true,
+        "status": "ready",
+        "reason": "context-applied",
+        "elapsedSinceAttemptMs": 7667,
+        "capturedTimeoutMs": 120000,
+        "claimed": true,
+        "nativeReady": true,
+        "contextApplied": true,
+        "everReady": true,
+        "usable": true,
+        "controlAvailable": true,
+        "noAllocation": false
+      }
+    },
+    "failureCode": null,
+    "hosts": [
+      {
+        "exitCode": 0,
+        "signalCode": null,
+        "stdoutValid": true
+      },
+      {
+        "exitCode": 0,
+        "signalCode": null,
+        "stdoutValid": true
+      }
+    ],
+    "modelOrigin": "localhost-scripted",
+    "modelRequests": 11,
+    "modelProgress": [
+      {
+        "elapsedMs": 11560,
+        "requests": 0
+      },
+      {
+        "elapsedMs": 13343,
+        "requests": 1
+      },
+      {
+        "elapsedMs": 13391,
+        "requests": 2
+      },
+      {
+        "elapsedMs": 13446,
+        "requests": 3
+      },
+      {
+        "elapsedMs": 13504,
+        "requests": 4
+      },
+      {
+        "elapsedMs": 14210,
+        "requests": 5
+      },
+      {
+        "elapsedMs": 14261,
+        "requests": 6
+      },
+      {
+        "elapsedMs": 14316,
+        "requests": 7
+      },
+      {
+        "elapsedMs": 14375,
+        "requests": 8
+      },
+      {
+        "elapsedMs": 17036,
+        "requests": 9
+      },
+      {
+        "elapsedMs": 17485,
+        "requests": 10
+      },
+      {
+        "elapsedMs": 17530,
+        "requests": 11
+      }
+    ],
+    "coordination": {
+      "status": "unqualified",
+      "cleanup": null
+    },
+    "modelFailures": [],
+    "vendorAuthQualified": false,
+    "desktopQualified": false,
+    "releaseQualified": false
+  },
+  "outerQualification": {
+    "kind": "TEST_PACKAGED_V2_QUALIFICATION",
+    "status": "PASS",
+    "sourceHead": "3be1fb3ec43d5682aa2ca77a6af62e6fa27b597b",
+    "platform": "darwin-arm64",
+    "cleanup": true,
+    "phase": "finished",
+    "desktopJourneyQualified": false,
+    "vendorAuthQualified": false,
+    "releaseQualified": false,
+    "cleanupObservation": {
+      "originalExitObserved": true,
+      "nativeReceiptParsed": true,
+      "nativeReceiptBound": true,
+      "nativeCleanupConfirmed": true,
+      "firstFailure": null,
+      "firstRestorationFailure": null
+    },
+    "appAsarSha256": "f173dccc3247d7103ef827ffd3d522b7eb6bf18de73070bfcd6dca05eed1030e",
+    "candidateManifestSha256": "dfc6e53bd6d65e6c49715049792cfe1dfa1bf5c2fe9c72afb669ddac48eef650",
+    "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+    "nodeSha256": "e4b5a3af0e05c75de2eae013904145f40fe7fc2a6e6f17510128bf45cca4e79b",
+    "nativeExit": {
+      "code": 0,
+      "signal": null
+    },
+    "nativeReceiptSha256": "d3a573d3e3172375a5362b8e1490a26b77dc6554af4daae6f6f11065bbc678b1",
+    "sourceCheckoutUnavailable": true,
+    "legacyRuntimeUnavailable": true,
+    "sourceRestored": true,
+    "bundleRestored": true,
+    "legacyRuntimeRestored": true
+  },
+  "finitePeerUi": {
+    "status": "PASS",
+    "scope": "Original Launch, one successful SDK peer input and original Stop before automatic packaged app relaunch",
+    "nativeQualification": false,
+    "realVendorExecutions": 0,
+    "stepsRecorded": 20,
+    "originalLaunchClickCount": 1,
+    "originalStopClickCount": 1,
+    "originalInputEffects": [
+      {
+        "provider": "claude",
+        "role": "runtime",
+        "pid": 9452,
+        "event": "input",
+        "inputId": "92f5622a-f5f3-41ff-aeff-67d24244ce55",
+        "marker": "TEST_MODEL_PROBE",
+        "sessionId": "0ec382e6-4ab1-4844-82dd-c8a6dc250d5a",
+        "wrapped": false
+      },
+      {
+        "provider": "claude",
+        "role": "runtime",
+        "pid": 9578,
+        "event": "input",
+        "inputId": "abbcbfe9-7d98-43ac-a31b-e724eacd8f2b",
+        "marker": "TEST_UI_BOOT",
+        "sessionId": "99b23c49-6b78-4ecc-8235-932c8a0875c2",
+        "wrapped": false
+      }
+    ],
+    "postStopSource": {
+      "phase": "closed",
+      "sealed": true,
+      "custody": "released",
+      "nativeReady": false,
+      "inputs": [
+        {
+          "phase": "terminal",
+          "terminal": "succeeded"
+        }
+      ],
+      "publishedCheckpointCount": 1
+    },
+    "originalMainPid": 9147,
+    "originalHostPid": 9171,
+    "originalPeerPids": [
+      9245,
+      9365,
+      9452,
+      9578
+    ],
+    "allOriginalPeersAbsent": true
+  },
+  "relaunch": {
+    "status": "PASS",
+    "scope": "Automatic packed app.relaunch, observer-only successor and one guarded public Quit",
+    "successorNativeCustody": false,
+    "numericPidSignalsAuthorized": false,
+    "providerRootCleanupQualification": "outside this observer-only app lifecycle scope",
+    "relaunchAttempted": true,
+    "relaunchReply": "acknowledged",
+    "originalExit": {
+      "exitCode": 0,
+      "signalCode": null,
+      "HostExitCode": "unavailable",
+      "HostSignalCode": "unavailable"
+    },
+    "leaseAfterOriginalExit": null,
+    "successorIdentity": {
+      "pid": 9794,
+      "executable": "/Users/runner/work/agent-teams-ai/agent-teams-ai/release/mac-arm64/Agent Teams AI.app/Contents/MacOS/Agent Teams AI",
+      "argv": "/Users/runner/work/agent-teams-ai/agent-teams-ai/release/mac-arm64/Agent Teams AI.app/Contents/MacOS/Agent Teams AI --remote-debugging-port=9222",
+      "started": "Mon Nov 16 19:54:42 2026",
+      "observationOnly": true
+    },
+    "writerOrdering": {
+      "originalHostAbsent": true,
+      "originalLease": {
+        "pid": 9171,
+        "token": "f9333cbe-dac1-4900-a843-e61b0c912672",
+        "dev": 16777231,
+        "ino": 2661320
+      },
+      "newExclusiveLease": {
+        "pid": 9821,
+        "token": "c34f08ad-e848-41fb-a471-1b6dace5cccc",
+        "dev": 16777231,
+        "ino": 2672783
+      },
+      "rule": "Existing no-replace PID/token publication forbids overlap; original release versus dead-owner recovery is not inferred from a missed absence sample"
+    },
+    "successorQuitAttempted": true,
+    "successorQuitReply": "unconfirmed; no retry or signal",
+    "successorAbsence": {
+      "listenerAbsent": true,
+      "observedPidAbsent": true,
+      "HostPidAbsent": true,
+      "writerLockAbsent": true,
+      "exitCode": "unavailable",
+      "signalCode": "unavailable",
+      "naturalExitQualified": false
+    }
+  },
+  "originalCleanup": {
+    "beforeHarnessCleanup": [],
+    "cleanup": {
+      "remaining": [],
+      "capturedHostAbsent": true,
+      "hostPid": 9171
+    },
+    "finalSentinelCensus": [],
+    "packagedInputsUnchanged": true
+  },
+  "sourceEvidence": {
+    "beforeAfterArraysExact": true,
+    "uniqueRows": 1779,
+    "originalTreeMembershipMissing": [],
+    "originalTreeIdentity": "341e1f9316471e30cda69ee55a72fa6e242c259d",
+    "full1779GitBodySHA256JoinPerformed": false,
+    "limit": "Recorded before/after SHA256 vectors and original-tree path membership only; not all1779 source bodies or packaged native binaries are independently available/rehashed here."
+  },
+  "screenshots": [
+    {
+      "role": "launchScreenshot",
+      "path": "/tmp/migration-evidence-20261116/root/packaged-3be1-darwin-arm64-133564286482/archive/_temp/TEST-desktop-backend-xpckKj/ui-emulated-lifecycle-launch.png",
+      "bytes": 221342,
+      "gitBlob": "e7a788263b051ce5c7eb8069b2fdb41b0bb45439",
+      "sha256": "c346f7c1e64af398b5fc910193ba34861d9d66b6adc181f08024b3838a4a6f6d",
+      "receiptSha256Exact": true
+    },
+    {
+      "role": "stoppedScreenshot",
+      "path": "/tmp/migration-evidence-20261116/root/packaged-3be1-darwin-arm64-133564286482/archive/_temp/TEST-desktop-backend-xpckKj/ui-emulated-lifecycle-stopped.png",
+      "bytes": 199431,
+      "gitBlob": "bb04d38bc5aee540c75469f76562d2793d82892a",
+      "sha256": "15eba1d99fef756fa424e8450c531e95f34fa1907173fc570bbb35ece5b6aa50",
+      "receiptSha256Exact": true
+    },
+    {
+      "role": "successorArtifact",
+      "path": "/tmp/migration-evidence-20261116/root/packaged-3be1-darwin-arm64-133564286482/archive/_temp/TEST-desktop-backend-xpckKj/ui-automatic-app-relaunch-successor.png",
+      "bytes": 138348,
+      "gitBlob": "632482316cf7b01d158661250b1f066ceec0a003",
+      "sha256": "e0dcaaf67c5b6b55b259158b3cb2fa0cb3af5b03a09e339525614065c3164c96",
+      "receiptSha256Exact": "not a separate receipt field; original artifact member"
+    }
+  ],
+  "visualObservation": {
+    "launch": "Original image shows Team launched, online lead and TEST boot reply with persisted sidebar seed task.",
+    "stopped": "Original image shows Team offline with Launch control, offline lead and retained history/seed task; prior launched success banner absent.",
+    "successor": "Original image shows successor app home/main UI and persisted sidebar seed task.",
+    "limit": "Root visually inspected all three original images. Images alone do not prove actions, custody, cleanup or native inference."
+  },
+  "limits": [
+    "Only original3be1darwin-arm64 receipts qualify their declared scopes; later commits require their own original CI.",
+    "Native packaged manual11-request V2 success is separate from finite-peer automatic app relaunch.",
+    "Successor public Quit reply remains unconfirmed with no retry/signal; later absence is not a confirmed natural exit or native-custody proof.",
+    "P09 native image mutation, full M13/coordination, genuine vendor auth/inference, release/default/Stage2 and all other cancelled/failed platform jobs remain unqualified.",
+    "No new original log/ZIP retrieval, project command, compiler, test, provider, GUI action, CI action or canonical mutation occurred in this data audit."
+  ]
+}

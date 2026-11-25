@@ -1,0 +1,74 @@
+{
+  "stage": "E",
+  "commandName": "E-journal-red",
+  "sourceHead": "e9bfd4518bc30218a32fc1999fa04cf5e8ace74e",
+  "sourceTree": "7b4e4636a7708b0f1b8d596b8b2637bdaad821c5",
+  "parents": [
+    "da0cf77f42ba92ca17af07f3c8377ef4a27d4614",
+    "c28f1aa890c909c7b981254c5e30b874cbc84287"
+  ],
+  "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+  "argv": [
+    "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+    "--test",
+    "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+    "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+    "scripts/legacy-agent-host/test-child-process-trace.test.ts",
+    "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+    "scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts",
+    "scripts/legacy-agent-host/desktop-resume-records.test.ts",
+    "scripts/legacy-agent-host/desktop-captured-app-exit.test.ts",
+    "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts"
+  ],
+  "nodeVersion": "v24.21.0",
+  "nodeSHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "startedAtUTC": "2026-11-15T21:19:23.704164+00:00",
+  "finishedAtUTC": "2026-11-15T21:19:30.396319+00:00",
+  "elapsedSeconds": 6.6920826279965695,
+  "exitCode": 1,
+  "preflightMetadataSHA256": "19995b9c9d52407ad065847828dd326668e95009561cb761872ad0e1d41db8ac",
+  "logBytes": 14645,
+  "logSHA256": "24067417b0406975b2f8698f166c64f54e7aa1b8287c9fdb521c957f1fadb51e",
+  "postflightExact": true,
+  "postflightError": null,
+  "nonBuildOutputBytesPreserved": true,
+  "builtOutputsCountAfter": 1446,
+  "selectedSourceCount": 32,
+  "hostSourceCount": 615,
+  "selectedDependencyCount": 17,
+  "validationManifest": {
+    "bytes": 66013,
+    "blob": "7953713cb36794a7f504f99c18a686263cfc3371",
+    "sha256": "488189eb6ffe21c8c4a3961a6f79f15bebfce7e1b24f69f3b5d94d14b2df0b39"
+  },
+  "recorder": {
+    "bytes": 17448,
+    "blob": "c340b62f3667f76678d4e3049613ac9cdd038ddd",
+    "sha256": "d150a5015780602de0cc0e48f05eb93526eca387d082a71d111dca820e674fa9"
+  },
+  "newBuildPerformed": false,
+  "reusedBuild": {
+    "sourceHead": "7e8e37c282e9cc653efd79799dc862d116310065",
+    "sourceTree": "e77d05767aa3cb4be469e3763b19236601dbc762",
+    "outputCount": 1446,
+    "reusedOnly": true,
+    "outputInventory": {
+      "path": "/workspace/scratch/82d3f9ba6b85/reconciled-source-local/D-host-build-outputs-after.json",
+      "bytes": 280944,
+      "blob": "897c958cbb8e80120c22670e44614931f6436ba2",
+      "sha256": "babd0e295fbb1c79a3710f808bf6418f1b9e249f29085ee2d7a604ce72721dc8"
+    },
+    "originalHostBuildMetadata": {
+      "path": "/workspace/scratch/82d3f9ba6b85/reconciled-source-local/D-host-build-metadata.json",
+      "bytes": 1613,
+      "blob": "46fcbd461387e4ecc280845f6610c53c3ad2790a",
+      "sha256": "85ecadb70ae10c23e84e994324bd9efe42f9f374c6a9261c59a98ba76c029f4a"
+    },
+    "originalLedgerBuildMetadata": {
+      "path": "/workspace/scratch/82d3f9ba6b85/reconciled-source-local/D-ledger-build-metadata.json",
+      "bytes": 1620,
+      "blob": "35330f31c2c9a4d91d275270f4e9de5016870041",
+      "sha256": "8f30dd274ba8df816b01850217dca18cbe62a66e4227e95cf98cf92c85c3f2ba"
+    }
+  }
+}

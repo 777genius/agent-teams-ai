@@ -1,9 +1,10 @@
 import { z } from 'zod';
 import { OpenCodeManagementError } from '../adapters/providers/OpenCodeManagementHost.js';
+import { OpenCodeConfigurationError } from '../adapters/providers/OpenCodeConfigurationSource.js';
 import { ManagementCommandError } from '../management/commandRecords.js';
 import type { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
-import type { HostMethod } from '../index.js';
-import type { JsonValue } from '../contracts.js';
+import type { HostHandlerContext, HostMethod } from '../index.js';
+import type { JsonValue, RpcId } from '../contracts.js';
 
 /** Finite private management methods; controls reconcile only the original journaled intent. */
 export function createProviderManagementMethods(
@@ -12,7 +13,7 @@ export function createProviderManagementMethods(
 ): Record<string, HostMethod> {
   const managementMethods: Record<string, HostMethod> = {};
   if (management) {
-    const actions: Record<string, (raw: unknown) => unknown> = {
+    const actions: Record<string, (raw: unknown, requestId?: RpcId) => unknown> = {
       'claude.metadata': (raw) => management!.claude.read(raw),
       'claude.auth': (raw) => management!.claudeAuth.read(raw),
       'skills.capture': (raw) => management!.skills.capture(raw),
@@ -29,9 +30,11 @@ export function createProviderManagementMethods(
       'extension.lookup': (raw) => management!.extensions.mutations.lookup(raw),
       'extension.pending': (raw) => management!.extensions.mutations.pending(raw),
       'codex.metadata': (raw) => management!.codex.read(raw),
-      catalog: (raw) => management!.catalog(raw),
+      catalog: (raw, requestId) => management!.catalog(raw, requestId),
       credential: (raw) => management!.credentials.execute(raw),
       'credential.lookup': (raw) => management!.credentials.lookup(raw),
+      'credential.pending': (raw) => management!.pendingCredential(raw),
+      'credential.resume': (raw) => management!.credentials.resume(raw),
       'oauth.start': (raw) => management!.oauth.start(raw),
       'oauth.read': (raw) => management!.oauth.read(raw),
       'oauth.authorization': (raw) => management!.oauth.authorization(raw),
@@ -50,18 +53,24 @@ export function createProviderManagementMethods(
           operation === 'extension.lookup' ||
           operation === 'extension.pending' ||
           operation === 'credential.lookup' ||
+          operation === 'credential.pending' ||
+          operation === 'credential.resume' ||
           operation === 'probe.read' ||
           operation === 'probe.cancel' ||
           (operation.startsWith('oauth.') && operation !== 'oauth.start')
             ? 'control'
             : 'work',
-        async handle(raw): Promise<JsonValue> {
+        async handle(raw, context?: HostHandlerContext): Promise<JsonValue> {
           try {
             if (isSealed()) throw new OpenCodeManagementError('unavailable');
-            return { ok: true, value: JSON.parse(JSON.stringify(await action(raw))) as JsonValue };
+            // Pure original readbacks already project pending cold operations as held.
+            if (operation !== 'probe.read' && operation !== 'oauth.read')
+              management.assertTargetAvailable(raw);
+            return { ok: true, value: JSON.parse(JSON.stringify(await action(raw, context?.requestId))) as JsonValue };
           } catch (error) {
             return {
               ok: false,
+              ...(error instanceof OpenCodeConfigurationError ? { reason: error.reason } : {}),
               code:
                 error instanceof OpenCodeManagementError || error instanceof ManagementCommandError
                   ? error.code

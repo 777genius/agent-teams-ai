@@ -55,8 +55,12 @@ import { RuntimeProviderModelRequestTracker } from './runtimeProviderModelReques
 import {
   RUNTIME_PROVIDER_MODEL_PROBE_COMMAND_TIMEOUT_MS,
   sanitizeRuntimeProviderModelTestResponse,
-  sanitizeRuntimeProviderText,
 } from './runtimeProviderModelTestBoundary';
+import {
+  getCopyableOAuthAuthorizationUrl,
+  isSafeOAuthAuthorizationUrl,
+  sanitizeOAuthInstructions,
+} from './runtimeProviderOAuthPresentation';
 
 import type {
   RuntimeProviderManagementCancelModelLoadInput,
@@ -100,8 +104,6 @@ const MAX_MODEL_RESPONSE_CACHE_ENTRIES = 32;
 const RUNTIME_PROVIDER_OAUTH_EVENT_PREFIX = '@@agent-teams-runtime-provider-oauth@@';
 const OAUTH_OPERATION_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/;
 const OAUTH_EVENT_IDENTITY_FIELD_LIMIT = 256;
-const OAUTH_EVENT_INSTRUCTIONS_LIMIT = 1_000;
-const OAUTH_INSTRUCTIONS_URL_PATTERN = /https?:\/\/[^\s<>"']+/gi;
 const RUNTIME_PROVIDER_ERROR_CODES = new Set<RuntimeProviderManagementErrorDto['code']>([
   'unsupported-runtime',
   'unsupported-action',
@@ -427,18 +429,6 @@ function isRuntimeProviderModelsPayload(value: unknown): boolean {
 
 function isRuntimeProviderModelTestResultPayload(value: unknown): boolean {
   return isRecord(value) && hasArrayField(value, 'diagnostics');
-}
-
-function sanitizeOAuthInstructions(value: string): string | null {
-  const sanitized = sanitizeRuntimeProviderText(value)
-    .replace(OAUTH_INSTRUCTIONS_URL_PATTERN, '[authorization link hidden]')
-    .trim();
-  if (!sanitized) {
-    return null;
-  }
-  return sanitized.length > OAUTH_EVENT_INSTRUCTIONS_LIMIT
-    ? `${sanitized.slice(0, OAUTH_EVENT_INSTRUCTIONS_LIMIT).trimEnd()}...`
-    : sanitized;
 }
 
 function formatNonJsonCliOutputError(input: {
@@ -974,45 +964,6 @@ function readSpawnOutputSnapshot(
   };
 }
 
-function isSafeOAuthAuthorizationUrl(value: string): boolean {
-  if (!value || value.length > 8_192) {
-    return false;
-  }
-  try {
-    const url = new URL(value);
-    if (url.username || url.password) {
-      return false;
-    }
-    if (url.protocol === 'https:') {
-      return true;
-    }
-    return (
-      url.protocol === 'http:' &&
-      (url.hostname === '127.0.0.1' || url.hostname === 'localhost' || url.hostname === '::1')
-    );
-  } catch {
-    return false;
-  }
-}
-
-function getCopyableOAuthAuthorizationUrl(providerId: string, value: string): string | null {
-  if (providerId !== 'github-copilot') {
-    return null;
-  }
-  try {
-    const url = new URL(value);
-    return url.protocol === 'https:' &&
-      url.hostname === 'github.com' &&
-      url.pathname.replace(/\/$/, '') === '/login/device' &&
-      !url.username &&
-      !url.password
-      ? value
-      : null;
-  } catch {
-    return null;
-  }
-}
-
 function parseOAuthAuthorizationEvent(
   line: string,
   expected: {
@@ -1330,10 +1281,14 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
     return response;
   }
 
-  private invalidateDirectoryResponseCache(): void {
+  private invalidateDirectoryResponseCache(preserveRefreshes = false): void {
     this.directoryResponseCacheGeneration += 1;
     this.directoryResponseCache.clear();
-    this.directoryResponseInFlight.clear();
+    for (const key of this.directoryResponseInFlight.keys()) {
+      if (!preserveRefreshes || !key.startsWith('refresh:')) {
+        this.directoryResponseInFlight.delete(key);
+      }
+    }
   }
 
   private getModelResponseCacheKey(
@@ -1545,7 +1500,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
       if (existingRefresh) {
         return existingRefresh;
       }
-      this.invalidateDirectoryResponseCache();
+      this.invalidateDirectoryResponseCache(true);
       // A catalog refresh should make the next model picker read fresh data,
       // but it must not turn an already-visible model load into an AbortError.
       this.invalidateModelResponseCache(false);

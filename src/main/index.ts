@@ -75,6 +75,7 @@ import {
   registerOrganizationsIpc,
   removeOrganizationsIpc,
 } from '@features/organizations/main';
+import { selectNativeNextPromptProviders } from '@features/native-prompt-suggestions/main';
 import * as projectFolderFeature from '@features/project-folder/main';
 import {
   createRecentProjectsFeature,
@@ -227,12 +228,17 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 
 import { createDesktopCodexFeatures } from './composition/createDesktopCodexFeatures';
-import { createDesktopStoppedImportContext } from './composition/createDesktopStoppedImportContext';
+import {
+  captureDesktopNativeStopWorkSyncFence,
+  createDesktopStoppedImportContext,
+  createDesktopWorkSyncSourceAdmission,
+} from './composition/createDesktopStoppedImportContext';
 import { createDesktopOpenCodeLifecycle } from './composition/createDesktopOpenCodeLifecycle';
 import { createDesktopProviderManagementFeatures } from './composition/createDesktopProviderManagementFeatures';
 import {
   captureDesktopAgentBackendHttpScope,
   captureDesktopStatusRequest,
+  desktopHostSchedules,
   getDesktopProviderStatusPort,
   isDesktopAgentBackendSelected,
   configureDesktopBackendPersistence,
@@ -1746,6 +1752,10 @@ async function initializeServices(): Promise<void> {
   initializeAgentBackendConnection(contextRegistry, {
     getMainWindow: () => mainWindow,
     rendererIndexPath: resolveRendererIndexPath(__dirname),
+    nativeNextPromptProviders: selectNativeNextPromptProviders(configManager.getConfig().providerConnections),
+    // Fail closed for browser SSE: /api/events broadcasts to every connected
+    // client without per-owner authorization. Never publish private human-DM
+    // follow-ups there until a scoped authenticated SSE transport exists.
   });
   // An inherited endpoint belongs to a previous process, not this Host's server.
   await startupStage(clearTeamControlApiState);
@@ -1885,7 +1895,8 @@ async function initializeServices(): Promise<void> {
   teamProvisioningService = createDefaultTeamProvisioningService(
     () => teamGroupChatsFeature,
     resolveOpenCodeInputDeclaration,
-    gatewayLaunchRuntime.seams
+    gatewayLaunchRuntime.seams,
+    (teamName) => captureDesktopNativeStopWorkSyncFence(() => memberWorkSyncFeature, teamName)
   );
   teamDataService.setTeamProfileOwnership((teamName) =>
     teamProvisioningService.isTeamManagedByThisProfile(teamName)
@@ -2112,7 +2123,8 @@ async function initializeServices(): Promise<void> {
   schedulerService = createSchedulerService(
     teamIpcHandlerApis,
     teamDataService,
-    teamProvisioningService
+    teamProvisioningService,
+    desktopHostSchedules
   );
   // Extension Store services
   const pluginCatalogService = new PluginCatalogService();
@@ -2497,7 +2509,9 @@ async function initializeServices(): Promise<void> {
       logger: memberWorkSyncLogger,
     });
   const preparedMemberWorkSyncFeature = createMemberWorkSyncFeature({
-    sourceWriteAdmission: initializedBackupOwner.sourceWriteAdmission,
+    sourceWriteAdmission: createDesktopWorkSyncSourceAdmission(
+      initializedBackupOwner, () => teamBackupService === initializedBackupOwner
+    ),
     lifecycleIdentity: initializedBackupOwner.workSyncIdentity,
     operationGate: workSyncRestoreGate,
     startBackground: false,

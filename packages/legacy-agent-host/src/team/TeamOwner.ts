@@ -1,9 +1,10 @@
 import { randomUUID } from 'node:crypto';
-import { pageOwnerMessages } from './pageOwnerMessages.js';
+import { createOwnerMessageReads } from './ownerMessageReads.js';
+import type { TeamConversationReadPort } from './ownerMessageReads.js';
 import { pageOwnerTaskDetail } from './pageOwnerTaskDetail.js';
 import { pageOwnerKanban } from './pageOwnerKanban.js';
 import { pageOwnerSnapshot } from './pageOwnerSnapshot.js';
-import { executeTeamCommand } from './executeTeamCommand.js';
+import { executeTeamCommand, resumeHostCostCommands } from './executeTeamCommand.js';
 import { captureCommandSelection } from './captureCommandSelection.js';
 import { teamCommandFingerprint } from './teamCommandFingerprint.js';
 import { validateCommandAttachments } from './validateCommandAttachments.js';
@@ -27,7 +28,7 @@ import { projectCrossTeamMessages } from '../cross-team/projectCrossTeamMessages
 import { ordinarySubagentAllowed } from './ordinarySubagentPolicy.js';
 import { lookupRetainedTaskStartCause } from './lookupRetainedTaskStartCause.js';
 import { readCrossTeamReplyHints } from './readCrossTeamReplyHints.js';
-import { createTeamDeliveryAuthority } from './TeamDeliveryAuthority.js';
+import { authorizeTeamGrant, createTeamDeliveryAuthority } from './TeamDeliveryAuthority.js';
 import { crossTeamTargetCommand } from '../cross-team/crossTeamInbound.js';
 import type { CapturedCrossTeamIntent } from '../cross-team/contracts.js';
 import { lookupEvidenceCause } from './lookupEvidenceCause.js';
@@ -88,6 +89,9 @@ export interface TeamOwnerOptions {
   crossTeamSourceAuthority?(intent: CapturedCrossTeamIntent): boolean;
 }
 
+/** Internal synchronous continuation; the existing Team owner retains its original fence. */
+export type CapturedProviderCurrent = (owner: TeamOwner, binding: RuntimeMemberBinding) => void;
+
 /**
  * One Team's product owner. All local transitions are synchronous within the same
  * filesystem authority fence. Native delivery is deliberately not dispatched here.
@@ -95,7 +99,8 @@ export interface TeamOwnerOptions {
 export class TeamOwner {
   /** Trusted composition only; never exposed on connect/MCP. */
   readonly contextReminders: TeamContextReminders;
-  readonly nativeRoster: Pick<TeamRosterTransitions, 'nativeCreation' | 'capturedMemberCurrent'>;
+  readonly nativeRoster: Pick<TeamRosterTransitions, 'nativeCreation' | 'capturedMemberCurrent' | 'liveMembership'>;
+  readonly hasRetainedRuntime = () => this.runtimeRegistration.hasRetained();
   private readonly commandAccess: ReturnType<typeof createTeamCommandAccess>;
   private readonly productChanges = new TeamProductChanges();
   /** Volatile key: continuation cursors expire on owner recreation. */
@@ -178,6 +183,7 @@ export class TeamOwner {
     this.deliveryAuthority = createTeamDeliveryAuthority({
       binding: this.binding,
       store: this.store,
+      readInbox: (memberName) => this.policy.readInbox(memberName),
       state: () => this.state(),
       authorize: (principal, permission) => this.authorize(principal, permission),
       runtimeBindings: this.runtimeBindings,
@@ -259,7 +265,9 @@ export class TeamOwner {
   runtimeCapture(principalId: string) {
     return this.runtimeRegistration.current(principalId);
   }
-  runtimeCaptures(principalId: string) {
+  runtimeCaptures(principalId: string, inheritedNamespace?: true) {
+    // A joined original read retains both inventory namespace observations.
+    if (inheritedNamespace) return this.store.fenced(() => this.runtimeRegistration.all(principalId));
     return this.runtimeRegistration.all(principalId);
   }
   hasRuntimeCapture(principalId: string, binding: RuntimeMemberBinding): boolean {
@@ -271,12 +279,23 @@ export class TeamOwner {
     members: readonly Pick<TeamMember, 'memberId' | 'name' | 'role' | 'settings'>[],
     savedSettings?: TeamSavedSettings
   ): boolean {
+    return this.roster.matchesCaptured(members, savedSettings);
+  }
+
+  /** Trusted provider check; an optional closed same-Team guard cannot retain state or do Runtime work. */
+  capturedProviderAuthority(principalId: string, binding: RuntimeMemberBinding, expectedRevision: string,
+    expected: Pick<TeamMember, 'memberId' | 'name' | 'role' | 'settings' | 'delivery'> | undefined,
+    savedSettings?: TeamSavedSettings, onCurrent?: CapturedProviderCurrent): 'current' | 'roster-not-applicable' {
     return this.store.fenced(() => {
-      const state = this.state();
-      return (
-        teamRosterRevision(state.members, state.rosterVersion, state.savedSettings) ===
-        teamRosterRevision(members, 0, savedSettings)
-      );
+      const state = this.state(), grant = authorizeTeamGrant(state, this.store, principalId, 'read');
+      if (!this.deliveryAuthority.providerAuthorized(state, grant, binding)) throw new TeamOwnerError('forbidden');
+      const current = this.roster.capturedMemberCurrentInState(state, expectedRevision, expected, savedSettings);
+      // Recovery and policy reads precede this original nested namespace revalidation.
+      return this.store.fenced(() => {
+        if (!current) return 'roster-not-applicable';
+        if (onCurrent?.(this, binding) !== undefined) throw new TeamOwnerError('hold');
+        return 'current';
+      });
     });
   }
 
@@ -285,8 +304,9 @@ export class TeamOwner {
     return this.deliveryRecovery.resume(runtime);
   }
 
-  /** Trusted startup continuation; it reuses prepared Task facts, never canonical handlers. */
-  resumeTaskCommands(runtime?: TeamRuntimeDeliveryPort) {
+  /** Trusted continuation of prepared Task facts and saved Host replies. */
+  async resumeTaskCommands(runtime?: TeamRuntimeDeliveryPort) {
+    resumeHostCostCommands(this.store, receipt => this.execute(receipt.principalId, receipt.command));
     return this.taskRecovery.resume(runtime);
   }
   lookupTaskStartCause(principalId: string, raw: ImmutableDelivery) {
@@ -369,12 +389,12 @@ export class TeamOwner {
     );
   }
   /** Trusted composition reads the launch-owned current technical selection, never native tokens. */
-  runtimeSelection(principalId: string, memberId: string) {
+  runtimeSelection(principalId: string, memberId: string, checkpointRef?: string) {
     return this.store.fenced(() => {
       this.authorize(principalId, 'read');
       const member = this.state().members.find((item) => item.memberId === memberId);
       if (!member?.delivery) throw new TeamOwnerError('invalid');
-      return this.runtimeBindings?.current(memberBinding(member.delivery));
+      return this.runtimeBindings?.current(memberBinding(member.delivery), checkpointRef);
     });
   }
 
@@ -382,20 +402,23 @@ export class TeamOwner {
   withLaunchAuthority<T>(
     principalId: string,
     action: 'read' | 'control',
-    callback: (authorityRevision: number) => T
+    callback: (authorityRevision: number) => T,
+    inheritedNamespace?: true
   ): T {
     return this.store.fenced(() => {
-      const grant = this.authorize(principalId, action === 'read' ? 'read' : 'admin');
-      return callback(grant.revision ?? 1);
+      const read = () => {
+        const grant = this.authorize(principalId, action === 'read' ? 'read' : 'admin');
+        return callback(grant.revision ?? 1);
+      };
+      // A joined original fence still observes both original entry namespace boundaries.
+      return inheritedNamespace ? this.store.fenced(read) : read();
     });
   }
 
   authorizeRuntimeAccess(
-    principalId: string,
-    binding: RuntimeMemberBinding,
-    action: 'read' | 'control'
+    ...args: Parameters<ReturnType<typeof createTeamDeliveryAuthority>['runtimeAccess']>
   ): boolean {
-    return this.deliveryAuthority.runtimeAccess(principalId, binding, action);
+    return this.deliveryAuthority.runtimeAccess(...args);
   }
   authorizeMemberBinding(
     binding: RuntimeMemberBinding,
@@ -410,6 +433,7 @@ export class TeamOwner {
     return this.deliveryAuthority.authorizeIntent(raw, action);
   }
 
+  isOriginalHumanDirectDelivery(raw: ImmutableDelivery): boolean { return this.deliveryAuthority.isOriginalHumanDirect(raw); }
   private finishBootstrap(state: OwnerState): void {
     const expected = {
       name: this.binding.teamName,
@@ -429,10 +453,20 @@ export class TeamOwner {
   }
 
   /** principalId must come from captured IPC/MCP authentication, not tool arguments. */
-  connect(principalId: string) {
+  connect(principalId: string, conversation?: TeamConversationReadPort) {
     validateTeamText(principalId);
+    const messages = createOwnerMessageReads({
+      binding: this.binding, principalId, key: this.messagesPageKey, changes: this.productChanges,
+      fenced: action => this.store.fenced(action),
+      authority: () => ({ grant: this.authorize(principalId, 'read'),
+        members: this.state().members, removedMembers: this.state().removedMembers ?? [] }),
+      productMessages: (grant, members) => this.productMessages(grant, members),
+      productRevision: () => digest(this.collectProductState(principalId)),
+      ...(conversation ? { conversation } : {}),
+    });
     return Object.freeze({
-      execute: (command: TeamCommand) => this.execute(principalId, command),
+      execute: (command: TeamCommand, prepare?: Parameters<typeof executeTeamCommand>[5]) =>
+        this.execute(principalId, command, undefined, undefined, prepare),
       lookup: (commandId: string, expected?: TeamCommand) => this.lookupCommand(principalId, commandId, expected),
       getTask: (taskId: string) => this.getTask(principalId, taskId),
       readTaskPage: (taskId: string, cursor?: string) => this.store.fenced(() => {
@@ -455,7 +489,7 @@ export class TeamOwner {
       listTasks: () => this.listTasks(principalId),
       readSnapshot: (query: { cursor?: string } = {}) => this.readSnapshot(principalId, query),
       readMessagesPage: (options: { cursor?: string; limit?: number; groupChatId?: string } = {}) =>
-        this.readMessagesPage(principalId, options),
+        messages.readMessagesPage(options),
       readDeletedTasks: (query: { cursor?: string } = {}) => this.readDeletedTasks(principalId, query),
       ...(this.policy.reads
         ? {
@@ -471,7 +505,7 @@ export class TeamOwner {
             }),
           }
         : {}),
-      readChanges: (cursor?: string) => this.readChanges(principalId, cursor),
+      readChanges: (cursor?: string) => messages.readChanges(cursor),
       pendingDeliveries: () => this.pendingDeliveries(principalId),
       revoke: (target: string) => this.revoke(principalId, target),
       readRoster: () => this.roster.read(principalId),
@@ -496,7 +530,8 @@ export class TeamOwner {
       const selection = captureCommandSelection(expected, receipt, this.state().members, grant);
       if (teamCommandFingerprint({ binding: this.binding, principalId, command: expected,
         deliveryBinding: selection.deliveryBinding, taskRecipients: selection.taskRecipients,
-        messageRecipientRole: selection.messageRecipientRole, taskStartLeadName: selection.taskStartLeadName }) !== receipt.fingerprint)
+        messageRecipientRole: selection.messageRecipientRole, taskStartLeadName: selection.taskStartLeadName,
+        ...(receipt.hostCommand ? { hostCommand: receipt.hostCommand } : {}) }) !== receipt.fingerprint)
         throw new TeamOwnerError('conflict');
       if (receipt.messageRecipientRole !== undefined && receipt.messageRecipientRole !== selection.messageRecipient?.role)
         throw new TeamOwnerError('hold');
@@ -533,13 +568,7 @@ export class TeamOwner {
   }
 
   private authorize(principalId: string, permission: TeamGrant['permissions'][number]): TeamGrant {
-    const state = this.state();
-    if (permission === 'task.write' || permission === 'message.write')
-      assertTeamExecutionAllowed(state, this.store);
-    const grant = state.grants.find((entry) => entry.principalId === principalId);
-    if (!grant || grant.revoked || !grant.permissions.includes(permission))
-      throw new TeamOwnerError('forbidden');
-    return grant;
+    return authorizeTeamGrant(this.state(), this.store, principalId, permission);
   }
 
   private taskAuthorityCurrent(receipt: CommandReceipt): boolean {
@@ -691,38 +720,6 @@ export class TeamOwner {
     });
   }
 
-  private readChanges(principalId: string, cursor?: string): JsonValue {
-    return this.store.fenced(() => {
-      // A change-feed response contains only finite invalidation metadata, never
-      // unbounded task/inbox history. Keep it readable after a complete snapshot
-      // becomes oversized, without weakening the snapshot/transport size guards.
-      const revision = digest(this.collectProductState(principalId));
-      return json(this.productChanges.read(principalId, revision, cursor));
-    });
-  }
-
-
-  /** The existing Owner supplies grant, inbox records and the filesystem fence. */
-  private readMessagesPage(
-    principalId: string,
-    options: { cursor?: string; limit?: number; groupChatId?: string }
-  ): JsonValue {
-    return this.store.fenced(() => {
-      const grant = this.authorize(principalId, 'read');
-      return pageOwnerMessages({
-        principalId,
-        grant,
-        teamName: this.binding.teamName,
-        key: this.messagesPageKey,
-        messages: this.productMessages(grant, [
-          ...this.state().members,
-          ...(this.state().removedMembers ?? []),
-        ]),
-        ...options,
-      });
-    });
-  }
-
   private pendingDeliveries(principalId: string): DeliveryIntent[] {
     return this.store.fenced(() => {
       this.authorize(principalId, 'read');
@@ -770,7 +767,8 @@ export class TeamOwner {
     principalId: string,
     rawCommand: TeamCommand,
     crossTeam?: CapturedCrossTeamIntent,
-    group?: CapturedGroupIntent
+    group?: CapturedGroupIntent,
+    prepareHostCost?: Parameters<typeof executeTeamCommand>[5]
   ): CommandReceipt {
     return executeTeamCommand(
       {
@@ -789,7 +787,7 @@ export class TeamOwner {
       principalId,
       rawCommand,
       crossTeam,
-      group
+      group, prepareHostCost
     );
   }
 }

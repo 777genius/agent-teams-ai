@@ -20,6 +20,7 @@ import { parseBackendTeamOperation } from './teamOperationValues';
 import type {
   BackendOperationPayloads,
   BackendOperationRequest,
+  BackendTaskRecipient,
   BackendTaskRef,
 } from '../../../contracts/operations';
 
@@ -28,6 +29,14 @@ export { InvalidBackendOperation, object, stringArray, text } from './backendOpe
 function description(value: unknown): string {
   if (value === '') return '';
   return text(value, 200_000);
+}
+
+function taskRecipient(value: unknown): BackendTaskRecipient {
+  const row = object(value, ['name', 'memberId', 'runId', 'generation', 'requireIdle']);
+  if (row.requireIdle !== undefined && row.requireIdle !== true) throw new InvalidBackendOperation();
+  return { name: text(row.name, 256), memberId: text(row.memberId, 256),
+    runId: text(row.runId, 256), generation: text(row.generation, 256),
+    ...(row.requireIdle === true ? { requireIdle: true as const } : {}) };
 }
 
 function refs(value: unknown): BackendTaskRef[] {
@@ -51,6 +60,14 @@ function payload(
   if (isBackendReviewOperation(operation)) return parseBackendReviewPayload(operation, value);
   if (operation.startsWith('group.')) return parseGroupPayload(operation, value);
   switch (operation) {
+    case 'host.recovery.start': {
+      const p = object(value, ['capability']);
+      const capability = text(p.capability, 36);
+      if (!/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(capability))
+        throw new InvalidBackendOperation();
+      return { capability };
+    }
+    case 'host.recovery.capture':
     case 'process.list':
     case 'process.pending.read':
     case 'crossTeam.lookup':
@@ -128,12 +145,15 @@ function payload(
         'prompt',
         'promptTaskRefs',
         'startImmediately',
+        'notifyOwner',
+        'expectedRecipient',
         'descriptionTaskRefs',
       ]);
       if (p.groupChatId !== undefined && !isGroupUuid(p.groupChatId))
         throw new InvalidBackendOperation();
       if (p.startImmediately !== undefined && typeof p.startImmediately !== 'boolean')
         throw new InvalidBackendOperation();
+      if (p.notifyOwner !== undefined && p.notifyOwner !== false) throw new InvalidBackendOperation();
       return {
         subject: text(p.subject, 20_000),
         ...(p.groupChatId === undefined ? {} : { groupChatId: p.groupChatId }),
@@ -141,6 +161,8 @@ function payload(
         ...(p.prompt === undefined ? {} : { prompt: description(p.prompt) }),
         ...(p.promptTaskRefs === undefined ? {} : { promptTaskRefs: refs(p.promptTaskRefs) }),
         ...(p.startImmediately === undefined ? {} : { startImmediately: p.startImmediately }),
+        ...(p.notifyOwner === false ? { notifyOwner: false as const } : {}),
+        ...(p.expectedRecipient === undefined ? {} : { expectedRecipient: taskRecipient(p.expectedRecipient) }),
         ...(p.description === undefined ? {} : { description: description(p.description) }),
         ...(p.owner === undefined ? {} : { owner: text(p.owner) }),
         ...(p.blockedBy === undefined ? {} : { blockedBy: stringArray(p.blockedBy) }),
@@ -162,6 +184,19 @@ function payload(
     case 'task.board.clear': {
       const p = object(value, ['taskId']);
       return { taskId: text(p.taskId) };
+    }
+    case 'task.board.review-flow': {
+      const settings = object(value, ['settings']).settings;
+      if (settings === null) return { settings: null };
+      const selected = object(settings, ['reviewFlow', 'reviewFlowPrompt']);
+      if (!['agent_approval', 'human_approval', 'lead_then_human'].includes(text(selected.reviewFlow)))
+        throw new InvalidBackendOperation();
+      const prompt = description(selected.reviewFlowPrompt).trim();
+      if (prompt.length > 1000) throw new InvalidBackendOperation();
+      return { settings: {
+        reviewFlow: selected.reviewFlow as 'agent_approval' | 'human_approval' | 'lead_then_human',
+        reviewFlowPrompt: prompt,
+      } };
     }
     case 'task.board.order': {
       const p = object(value, ['columnId', 'orderedTaskIds']);
@@ -207,10 +242,11 @@ function payload(
       return { taskId: text(p.taskId), owner: p.owner === null ? null : text(p.owner) };
     }
     case 'task.start': {
-      const p = object(value, ['taskId', 'notification']);
+      const p = object(value, ['taskId', 'notification', 'expectedRecipient']);
       if (p.notification !== 'legacy' && p.notification !== 'user')
         throw new InvalidBackendOperation();
-      return { taskId: text(p.taskId), notification: p.notification };
+      return { taskId: text(p.taskId), notification: p.notification,
+        ...(p.expectedRecipient === undefined ? {} : { expectedRecipient: taskRecipient(p.expectedRecipient) }) };
     }
     case 'task.lifecycle': {
       const p = object(value, ['taskId', 'action']);
@@ -229,6 +265,7 @@ function payload(
         'note',
         'notifyOwner',
         'suppressTaskComment',
+        'expectedReviewRequestId',
         'comment',
         'taskRefs',
       ]);
@@ -264,12 +301,19 @@ function payload(
             : { suppressTaskComment: p.suppressTaskComment as boolean }),
         };
       }
+      if (p.action === 'complete') {
+        object(value, ['taskId', 'action', 'expectedReviewRequestId', 'note']);
+        return { taskId, action: 'complete', expectedReviewRequestId: text(p.expectedReviewRequestId),
+          ...(p.note === undefined ? {} : { note: description(p.note) }) };
+      }
       if (p.action === 'request_changes') {
-        object(value, ['taskId', 'action', 'comment', 'taskRefs']);
+        object(value, ['taskId', 'action', 'comment', 'taskRefs', 'expectedReviewRequestId']);
         return {
           taskId,
           action: 'request_changes',
           comment: text(p.comment, 200_000),
+          ...(p.expectedReviewRequestId === undefined
+            ? {} : { expectedReviewRequestId: text(p.expectedReviewRequestId) }),
           ...(p.taskRefs === undefined ? {} : { taskRefs: refs(p.taskRefs) }),
         };
       }
@@ -294,9 +338,14 @@ function payload(
         'messageId',
         'summary',
         'actionMode',
+        'nativeCommand',
         'attachments',
       ]);
-      if (parseStandaloneSlashCommand(text(p.text, 200_000))) throw new InvalidBackendOperation();
+      const native = parseStandaloneSlashCommand(text(p.text, 200_000));
+      if ((p.nativeCommand !== undefined && p.nativeCommand !== true) ||
+        Boolean(native) !== (p.nativeCommand === true) ||
+        (native && p.attachments !== undefined && messageAttachmentReferencesSchema.parse(p.attachments).length > 0))
+        throw new InvalidBackendOperation();
       if (
         p.actionMode !== undefined &&
         (typeof p.actionMode !== 'string' || !['do', 'ask', 'delegate'].includes(p.actionMode))
@@ -305,6 +354,7 @@ function payload(
       return {
         to: text(p.to),
         text: text(p.text, 200_000),
+        ...(native ? { nativeCommand: true as const } : {}),
         ...(p.attachments === undefined
           ? {}
           : { attachments: messageAttachmentReferencesSchema.parse(p.attachments) }),

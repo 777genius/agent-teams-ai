@@ -1,0 +1,492 @@
+{
+  "schemaVersion": 1,
+  "kind": "READ_ONLY_CURRENT_STAGE1_DELIVERY_ROUTE_RECHECK",
+  "recordedAt": "2026-11-19T21:38:08.468274+00:00",
+  "reviewer": "/root/task_detail_finish",
+  "sourceHead": "63927aecd95c814f66db23d7bd4aef6975110168",
+  "actualPrMergeTree": "4e1cbcde8677ac48f6e8a0d58f976ec8d111ce25",
+  "metadataAtomicSnapshot": false,
+  "priorAudit": {
+    "path": "/workspace/scratch/f45fed8e9067/audit1192/delivery-route-20261119.json",
+    "sha256": "9f87a4a1848c202b2d94f54d521ebbf14a8f9939b7c6e752b197a6c83f4c0e62",
+    "bytes": 24947
+  },
+  "method": "Reused prior route analysis; refreshed four PR metadata and two repository defaults via GitHub GET; read five exact remote workflow blobs and compared ten endpoint Git blob IDs against local639 and actual PR merge ref. No CI run/job/status/log/artifact query, workflow execution, metadata mutation, merge/Ready/ref update or reviewer communication.",
+  "pullRequests": [
+    {
+      "url": "https://github.com/777genius/agent-teams-ai/pull/1192",
+      "number": 1192,
+      "state": "open",
+      "merged": false,
+      "mergeable": true,
+      "draft": true,
+      "title": "fix: complete Host frontend parity with emulated provider checks",
+      "base": "feat/provider-host-frontend-parity-20261112",
+      "base_sha": "8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+      "head": "fix/frontend-parity-completion-20261113",
+      "head_sha": "63927aecd95c814f66db23d7bd4aef6975110168",
+      "head_repo_full_name": "777genius/agent-teams-ai",
+      "merge_commit_sha": "4e1cbcde8677ac48f6e8a0d58f976ec8d111ce25",
+      "updated_at": "2026-11-19T20:49:08Z",
+      "changed_files": 3568
+    },
+    {
+      "url": "https://github.com/777genius/agent-teams-ai/pull/1186",
+      "number": 1186,
+      "state": "open",
+      "merged": false,
+      "mergeable": true,
+      "draft": false,
+      "title": "feat: preserve existing frontend capabilities across Host providers",
+      "base": "feat/provider-migration-stage-1",
+      "base_sha": "1d0f97f55de566036c970eab4f36b84620afdb3f",
+      "head": "feat/provider-host-frontend-parity-20261112",
+      "head_sha": "8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+      "head_repo_full_name": "777genius/agent-teams-ai",
+      "merge_commit_sha": "d7cf00c411576571a644649d8b2a4e9377117a74",
+      "updated_at": "2026-11-17T21:38:23Z",
+      "changed_files": 687
+    },
+    {
+      "url": "https://github.com/777genius/agent-teams-ai/pull/982",
+      "number": 982,
+      "state": "open",
+      "merged": false,
+      "mergeable": false,
+      "draft": true,
+      "title": "feat(provider-migration): integrate isolated Host with existing Desktop workflows",
+      "base": "main",
+      "base_sha": "0bda42478ae0ea1ec1727efa7dbd10a4dc970101",
+      "head": "feat/provider-migration-stage-1",
+      "head_sha": "1d0f97f55de566036c970eab4f36b84620afdb3f",
+      "head_repo_full_name": "777genius/agent-teams-ai",
+      "merge_commit_sha": null,
+      "updated_at": "2026-11-12T18:50:06Z",
+      "changed_files": 2172
+    },
+    {
+      "url": "https://github.com/agent-teams-ai/old-provider-implementations/pull/8",
+      "number": 8,
+      "state": "open",
+      "merged": false,
+      "mergeable": true,
+      "draft": true,
+      "title": "feat(codex): expose native account login for existing frontend workflows",
+      "base": "bootstrap",
+      "base_sha": "d58500bc983e897506e23d7b0bc8da1209864edd",
+      "head": "feat/frontend-parity-20261112",
+      "head_sha": "b19494fd2de47538a1c9315e338199ff41bbe497",
+      "head_repo_full_name": "agent-teams-ai/old-provider-implementations",
+      "merge_commit_sha": "e5d11509ef075ebb4fac5d5ee6494998ab3b2820",
+      "updated_at": "2026-11-18T21:01:01Z",
+      "changed_files": 107
+    }
+  ],
+  "repositories": [
+    {
+      "full_name": "777genius/agent-teams-ai",
+      "default_branch": "main",
+      "html_url": "https://github.com/777genius/agent-teams-ai",
+      "allow_merge_commit": true,
+      "allow_squash_merge": true,
+      "allow_rebase_merge": true,
+      "allow_auto_merge": false
+    },
+    {
+      "full_name": "agent-teams-ai/old-provider-implementations",
+      "default_branch": "bootstrap",
+      "html_url": "https://github.com/agent-teams-ai/old-provider-implementations",
+      "allow_merge_commit": true,
+      "allow_squash_merge": true,
+      "allow_rebase_merge": true,
+      "allow_auto_merge": false
+    }
+  ],
+  "workflowSources": [
+    {
+      "name": "merge-codex-runtime-smoke.yml",
+      "repository_full_name": "777genius/agent-teams-ai",
+      "ref": "4e1cbcde8677ac48f6e8a0d58f976ec8d111ce25",
+      "path": ".github/workflows/codex-runtime-smoke.yml",
+      "gitBlobSha": "cef44447c47e39a7da678f37e2518952e218da08",
+      "sha256": "2d9b2fb19cb3d1e2797611254104bf5ab433b588427350747f0c0c6196f4490d",
+      "bytes": 3229,
+      "matches639HeadBytes": true
+    },
+    {
+      "name": "merge-ci.yml",
+      "repository_full_name": "777genius/agent-teams-ai",
+      "ref": "4e1cbcde8677ac48f6e8a0d58f976ec8d111ce25",
+      "path": ".github/workflows/ci.yml",
+      "gitBlobSha": "44c29a38fdf225aebe9eaa9eccdb4fe6cad40a94",
+      "sha256": "f5fb5c1958a0e382bae3e8161916820a376b29fedfed0ae19bee683ed4ebe914",
+      "bytes": 199891,
+      "matches639HeadBytes": true
+    },
+    {
+      "name": "parent-codex-runtime-smoke.yml",
+      "repository_full_name": "777genius/agent-teams-ai",
+      "ref": "8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+      "path": ".github/workflows/codex-runtime-smoke.yml",
+      "gitBlobSha": "87e6f5bf62483534335a6aa47ad4fdfd4e94cb63",
+      "sha256": "ff763c4e00409b95b2958fc35d0630f5e09c8eaa4778e2b7b7f5b01bafc945a0",
+      "bytes": 3235
+    },
+    {
+      "name": "parent-ci.yml",
+      "repository_full_name": "777genius/agent-teams-ai",
+      "ref": "8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+      "path": ".github/workflows/ci.yml",
+      "gitBlobSha": "0e6564e92e37d9d9ea5b3547f3b5a7e564d1875a",
+      "sha256": "040895e5636d680f6c8c61ab4d61ab99a4b6174e93dafbd1f018ad8317b5d962",
+      "bytes": 163917
+    },
+    {
+      "name": "provider-ci.yml",
+      "repository_full_name": "agent-teams-ai/old-provider-implementations",
+      "ref": "b19494fd2de47538a1c9315e338199ff41bbe497",
+      "path": ".github/workflows/ci.yml",
+      "gitBlobSha": "7e2bb17761d783b7d0ed298c62c56680a6636279",
+      "sha256": "e3ed45b8e012981adbe924d9ffdc1c2ff08ebbc5bdb057604bcad36da043d022",
+      "bytes": 4457
+    }
+  ],
+  "endpointSourceJoins": [
+    {
+      "path": "scripts/smoke/codex-runtime-install.ts",
+      "gitBlobSha": "95e72341c714ee75278f261ac036d70efbbd4689",
+      "excerpt": "#!/usr/bin/env tsx",
+      "url": "https://github.com/777genius/agent-teams-ai/blob/4e1cbcde8677ac48f6e8a0d58f976ec8d111ce25/scripts/smoke/codex-runtime-install.ts",
+      "sourceSha256": "c66ff3519c488aba86a43efe870156f579d18f0cfbeabcf025492f58baf6a726",
+      "bytes": 6060,
+      "matches639AndActualMerge": true
+    },
+    {
+      "path": "package.json",
+      "gitBlobSha": "1d2d7e8913d17b97176b09ac580ec189da8fe710",
+      "excerpt": "{",
+      "url": "https://github.com/777genius/agent-teams-ai/blob/4e1cbcde8677ac48f6e8a0d58f976ec8d111ce25/package.json",
+      "sourceSha256": "eef83d66950dc58d3482924f591815ffb76d6d536060e665e80e24fcf134839e",
+      "bytes": 27016,
+      "matches639AndActualMerge": true
+    },
+    {
+      "path": "scripts/ci/ci-feedback.mts",
+      "gitBlobSha": "82f0f951244b00c9e3db219041a3e501189d893a",
+      "excerpt": "import { execFileSync } from 'node:child_process';",
+      "url": "https://github.com/777genius/agent-teams-ai/blob/4e1cbcde8677ac48f6e8a0d58f976ec8d111ce25/scripts/ci/ci-feedback.mts",
+      "sourceSha256": "fbfc5af2b3b2aa578bffb7e5b07af62768c0de216f2d8f258dc2b7ec019f767f",
+      "bytes": 19679,
+      "matches639AndActualMerge": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "gitBlobSha": "90196716cd8964fbacb4014f0be017e563276a41",
+      "excerpt": "import { runDesktopOwnerRoutingContinuation } from './desktop-owner-routing-ui-smoke.ts';",
+      "url": "https://github.com/777genius/agent-teams-ai/blob/4e1cbcde8677ac48f6e8a0d58f976ec8d111ce25/scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "sourceSha256": "51d056aeff4ce159eab1533ca68838c768dc978f851a41687bb81e49a4863221",
+      "bytes": 57563,
+      "matches639AndActualMerge": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-fixture.ts",
+      "gitBlobSha": "4f26fd0f9654dd40f4591c5078a5cf7dc119e769",
+      "excerpt": "import { prepareDesktopOwnerRoutingSource } from './desktop-owner-routing-fixture.ts';",
+      "url": "https://github.com/777genius/agent-teams-ai/blob/4e1cbcde8677ac48f6e8a0d58f976ec8d111ce25/scripts/legacy-agent-host/desktop-proof-fixture.ts",
+      "sourceSha256": "6c75fec75d81407cec6d1552d4a6a3a87ccac3145cdaa0aca7fb0187308f8db0",
+      "bytes": 11248,
+      "matches639AndActualMerge": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+      "gitBlobSha": "93c033f6d92bab053f30b3a14d737814b66585ec",
+      "excerpt": "import {",
+      "url": "https://github.com/777genius/agent-teams-ai/blob/4e1cbcde8677ac48f6e8a0d58f976ec8d111ce25/scripts/legacy-agent-host/desktop-backend-fixture.ts",
+      "sourceSha256": "c3d96dd14444e9fc6dcaf5bb357589779e7403d550dce2372a60f9f48c432ce7",
+      "bytes": 35713,
+      "matches639AndActualMerge": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-controlled.ts",
+      "gitBlobSha": "b37b918b51131d2a6500c9685d88875319b08992",
+      "excerpt": "/** Private TEST initial peers for the original P11 OpenCode V2 membership journey. */",
+      "url": "https://github.com/777genius/agent-teams-ai/blob/4e1cbcde8677ac48f6e8a0d58f976ec8d111ce25/scripts/legacy-agent-host/desktop-live-membership-controlled.ts",
+      "sourceSha256": "b96592ad58674280906cc1dbd5f35f95e5d2eb2276e6fdbf04277f47b3b3304e",
+      "bytes": 16360,
+      "matches639AndActualMerge": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-create-launch-ui-smoke.ts",
+      "gitBlobSha": "8e2a3d4f65db62f4129e56472d23dbbad8131bfe",
+      "excerpt": "import { runDesktopCreateMemberUi } from './desktop-create-member-ui.ts';",
+      "url": "https://github.com/777genius/agent-teams-ai/blob/4e1cbcde8677ac48f6e8a0d58f976ec8d111ce25/scripts/legacy-agent-host/desktop-create-launch-ui-smoke.ts",
+      "sourceSha256": "098dcdb782c5ead1118018cb4f07c0dd1f8fc2bd89d7f24abe8ca2453759e3f3",
+      "bytes": 11292,
+      "matches639AndActualMerge": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/ClaudeMemberProvider.ts",
+      "gitBlobSha": "97bdb81c565426910d17b54675357d9bc19762db",
+      "excerpt": "import { CLAUDE_IMAGE_MIME_TYPES } from '../../attachments/mimeTypes.js';",
+      "url": "https://github.com/777genius/agent-teams-ai/blob/4e1cbcde8677ac48f6e8a0d58f976ec8d111ce25/packages/legacy-agent-host/src/adapters/providers/ClaudeMemberProvider.ts",
+      "sourceSha256": "13631c862eb7b7467e2e225bd8f69aa61e0f8b57776306012bba7b3ebe2b8ce5",
+      "bytes": 9607,
+      "matches639AndActualMerge": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/CapturedProcess.ts",
+      "gitBlobSha": "296b720fb5c1fc2a53f895fbd4ca40455a0c6809",
+      "excerpt": "import type {",
+      "url": "https://github.com/777genius/agent-teams-ai/blob/4e1cbcde8677ac48f6e8a0d58f976ec8d111ce25/packages/legacy-agent-host/src/adapters/providers/CapturedProcess.ts",
+      "sourceSha256": "f67d1b2a6263ba9426a5a43554dc1725e22d69c78556a614e43a9146123af446",
+      "bytes": 12682,
+      "matches639AndActualMerge": true
+    }
+  ],
+  "route": [
+    {
+      "edge": "#1192 -> #1186",
+      "branch": "feat/provider-host-frontend-parity-20261112",
+      "destinationHead": "8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+      "permission": "Selected feature integration only after qualified source/review and reconciliation of automatic prohibited real-provider execution."
+    },
+    {
+      "edge": "#1186 -> #982",
+      "branch": "feat/provider-migration-stage-1",
+      "destinationHead": "1d0f97f55de566036c970eab4f36b84620afdb3f",
+      "permission": "Selected Stage1 destination after updated receiving-source qualification; no default/main merge."
+    },
+    {
+      "edge": "#982 -> main",
+      "permission": "Excluded; remains Draft. Current mergeable=false does not authorize main-conflict work or change scope."
+    },
+    {
+      "edge": "provider #8 -> bootstrap",
+      "permission": "Excluded default-branch merge. GitHub repository GET confirms bootstrap is provider default. Checked exact source/archive consumption does not require this merge."
+    }
+  ],
+  "verifiedConflicts": [
+    {
+      "transition": "Make1192 Ready",
+      "event": "pull_request/ready_for_review",
+      "proof": [
+        {
+          "source": {
+            "path": "/workspace/scratch/f45fed8e9067/audit1192/delivery-route-current-63927ae/merge-codex-runtime-smoke.yml",
+            "sha256": "2d9b2fb19cb3d1e2797611254104bf5ab433b588427350747f0c0c6196f4490d",
+            "bytes": 3229
+          },
+          "startLine": 4,
+          "endLine": 18,
+          "text": "  workflow_dispatch:\n  pull_request:\n    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]\n    paths:\n      - '.github/workflows/codex-runtime-smoke.yml'\n      - 'package.json'\n      - 'pnpm-lock.yaml'\n      - 'pnpm-workspace.yaml'\n      - 'scripts/smoke/codex-runtime-install.ts'\n      - 'src/features/codex-runtime-installer/**'\n      - 'src/main/services/infrastructure/codexAppServer/**'\n      - 'src/main/services/runtime/providerAwareCliEnv.ts'\n      - 'src/main/utils/childProcess.ts'\n      - 'src/main/utils/pathDecoder.ts'\n      - 'tsconfig*.json'"
+        },
+        {
+          "source": {
+            "path": "/workspace/scratch/f45fed8e9067/audit1192/delivery-route-current-63927ae/merge-codex-runtime-smoke.yml",
+            "sha256": "2d9b2fb19cb3d1e2797611254104bf5ab433b588427350747f0c0c6196f4490d",
+            "bytes": 3229
+          },
+          "startLine": 44,
+          "endLine": 56,
+          "text": "jobs:\n  install:\n    if: github.event_name != 'pull_request' || github.event.pull_request.draft != true\n    name: Install Codex runtime (${{ matrix.os }})\n    runs-on: ${{ matrix.os == 'ubuntu-latest' && (vars.CI_LINUX_RUNNER || 'ubuntu-latest') || matrix.os == 'macos-latest' && (vars.CI_MACOS_ARM_RUNNER || 'namespace-profile-macos-15') || matrix.os }}\n    timeout-minutes: 20\n\n    strategy:\n      fail-fast: false\n      matrix:\n        os: [ubuntu-latest, macos-latest, windows-latest]\n\n    steps:"
+        },
+        {
+          "source": {
+            "path": "/workspace/scratch/f45fed8e9067/audit1192/delivery-route-current-63927ae/merge-codex-runtime-smoke.yml",
+            "sha256": "2d9b2fb19cb3d1e2797611254104bf5ab433b588427350747f0c0c6196f4490d",
+            "bytes": 3229
+          },
+          "startLine": 79,
+          "endLine": 85,
+          "text": "\n      - name: Smoke Codex app-managed runtime install\n        run: pnpm smoke:codex-runtime-install"
+        },
+        {
+          "repository": "777genius/agent-teams-ai",
+          "sourceHead": "63927aecd95c814f66db23d7bd4aef6975110168",
+          "path": "package.json",
+          "sha256": "eef83d66950dc58d3482924f591815ffb76d6d536060e665e80e24fcf134839e",
+          "startLine": 42,
+          "endLine": 45,
+          "text": "    \"team:prove-launch-matrix\": \"pnpm exec vitest run --maxWorkers=1 test/main/services/team/TeamAgentLaunchMatrix.safe-e2e.test.ts\",\n    \"team:smoke-changes-real-data\": \"tsx scripts/team-changes-real-data-smoke.ts\",\n    \"smoke:codex-runtime-install\": \"tsx scripts/smoke/codex-runtime-install.ts\",\n    \"prebuild\": \"node ./scripts/build/buildLinuxNodeExec.mjs && pnpm --filter @agent-teams/legacy-agent-host build && node ./scripts/ci/verify-radix-presence-patch.mjs && tsx scripts/fetch-pricing-data.ts && pnpm --filter agent-teams-controller build && pnpm --filter agent-teams-mcp build\",",
+          "url": "https://github.com/777genius/agent-teams-ai/blob/63927aecd95c814f66db23d7bd4aef6975110168/package.json"
+        },
+        {
+          "repository": "777genius/agent-teams-ai",
+          "sourceHead": "63927aecd95c814f66db23d7bd4aef6975110168",
+          "path": "scripts/smoke/codex-runtime-install.ts",
+          "sha256": "c66ff3519c488aba86a43efe870156f579d18f0cfbeabcf025492f58baf6a726",
+          "startLine": 59,
+          "endLine": 66,
+          "text": "async function assertExecutableVersion(binaryPath: string): Promise<string> {\n  const { stdout, stderr } = await execFileAsync(binaryPath, ['--version'], {\n    timeout: VERSION_TIMEOUT_MS,\n    windowsHide: true,\n  });\n  const output = `${stdout ?? ''}\\n${stderr ?? ''}`.trim();\n  assertCondition(\n    /\\bcodex-cli\\s+\\d+\\.\\d+\\.\\d+\\b/i.test(output),",
+          "url": "https://github.com/777genius/agent-teams-ai/blob/63927aecd95c814f66db23d7bd4aef6975110168/scripts/smoke/codex-runtime-install.ts"
+        },
+        {
+          "repository": "777genius/agent-teams-ai",
+          "sourceHead": "63927aecd95c814f66db23d7bd4aef6975110168",
+          "path": "scripts/smoke/codex-runtime-install.ts",
+          "sha256": "c66ff3519c488aba86a43efe870156f579d18f0cfbeabcf025492f58baf6a726",
+          "startLine": 79,
+          "endLine": 82,
+          "text": "    const service = new CodexRuntimeInstallerService();\n    const status = await service.install();\n    assertCondition(status.installed, `Codex runtime install failed: ${JSON.stringify(status)}`);\n    assertCondition(status.binaryPath, 'Codex runtime install did not return a binary path');",
+          "url": "https://github.com/777genius/agent-teams-ai/blob/63927aecd95c814f66db23d7bd4aef6975110168/scripts/smoke/codex-runtime-install.ts"
+        },
+        {
+          "repository": "777genius/agent-teams-ai",
+          "sourceHead": "63927aecd95c814f66db23d7bd4aef6975110168",
+          "path": "scripts/smoke/codex-runtime-install.ts",
+          "sha256": "c66ff3519c488aba86a43efe870156f579d18f0cfbeabcf025492f58baf6a726",
+          "startLine": 133,
+          "endLine": 135,
+          "text": "    const versionStdout = await assertExecutableVersion(status.binaryPath);\n    const resolverVersion = await CodexBinaryResolver.resolveVersion(resolvedPath);\n    assertCondition(",
+          "url": "https://github.com/777genius/agent-teams-ai/blob/63927aecd95c814f66db23d7bd4aef6975110168/scripts/smoke/codex-runtime-install.ts"
+        }
+      ],
+      "pathFilterMatch": {
+        "path": ".github/workflows/codex-runtime-smoke.yml",
+        "baseBlob": "87e6f5bf62483534335a6aa47ad4fdfd4e94cb63",
+        "mergeBlob": "cef44447c47e39a7da678f37e2518952e218da08",
+        "changed": true,
+        "note": "Exact file itself is in its paths selector; no incomplete3000-file listing is needed."
+      },
+      "result": "The install job condition becomes true and calls real CodexRuntimeInstallerService.install followed by execFileAsync(status.binaryPath,[--version]) and resolver.resolveVersion. This violates the current prohibition even without an inference request. Three selected OS jobs do not become finite peers."
+    },
+    {
+      "transition": "Merge/push1192 into already-Ready1186, or edit1186 body/title/labels",
+      "events": [
+        "synchronize",
+        "edited",
+        "labeled",
+        "unlabeled"
+      ],
+      "proof": [
+        {
+          "source": {
+            "path": "/workspace/scratch/f45fed8e9067/audit1192/delivery-route-current-63927ae/merge-ci.yml",
+            "sha256": "f5fb5c1958a0e382bae3e8161916820a376b29fedfed0ae19bee683ed4ebe914",
+            "bytes": 199891
+          },
+          "startLine": 15,
+          "endLine": 27,
+          "text": "  pull_request:\n    types:\n      [\n        opened,\n        synchronize,\n        reopened,\n        ready_for_review,\n        converted_to_draft,\n        edited,\n        labeled,\n        unlabeled,\n      ]\n  merge_group:"
+        },
+        {
+          "source": {
+            "path": "/workspace/scratch/f45fed8e9067/audit1192/delivery-route-current-63927ae/merge-ci.yml",
+            "sha256": "f5fb5c1958a0e382bae3e8161916820a376b29fedfed0ae19bee683ed4ebe914",
+            "bytes": 199891
+          },
+          "startLine": 1301,
+          "endLine": 1308,
+          "text": "  stage1-desktop:\n    name: Stage 1 source Desktop (${{ matrix.label }})\n    # Run native/UI acceptance on ready Stage1 source PR and its integration PRs.\n    # Draft, forked and unrelated PRs do not allocate these macOS proof jobs.\n    if: >-\n      (github.event_name == 'workflow_dispatch' && inputs.stage1_desktop) ||\n      (github.event_name == 'pull_request' && github.event.pull_request.draft == false && (github.event.pull_request.base.ref == 'feat/provider-migration-stage-1' || (github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.ref == 'feat/provider-migration-stage-1' && github.event.pull_request.head.repo.full_name == github.repository)))\n    runs-on: ${{ vars.CI_MACOS_ARM_RUNNER || 'macos-15' }}"
+        },
+        {
+          "source": {
+            "path": "/workspace/scratch/f45fed8e9067/audit1192/delivery-route-current-63927ae/merge-ci.yml",
+            "sha256": "f5fb5c1958a0e382bae3e8161916820a376b29fedfed0ae19bee683ed4ebe914",
+            "bytes": 199891
+          },
+          "startLine": 1430,
+          "endLine": 1448,
+          "text": "      - name: Prepare exact TEST package manager and reviewed native binaries\n        env:\n          GH_TOKEN: ${{ github.token }}\n        run: |\n          set -euo pipefail\n          exec > >(tee \"$RUNNER_TEMP/stage1-setup-$STAGE1_VARIANT.log\") 2>&1\n          selected_inputs=\"$(mktemp -d /private/tmp/TEST-stage1-inputs-XXXXXX)\"\n          printf 'STAGE1_INPUTS=%s\\n' \"$selected_inputs\" >> \"$GITHUB_ENV\"\n          mkdir \"$selected_inputs/corepack\" \"$selected_inputs/codex\" \"$selected_inputs/opencode\"\n          printf '{\"private\":true}\\n' > \"$selected_inputs/corepack/package.json\"\n          pnpm --dir \"$selected_inputs/corepack\" add --ignore-scripts --save-exact corepack@0.36.0\n          gh release download rust-v0.162.0 --repo openai/codex --pattern codex-aarch64-apple-darwin.tar.gz --dir \"$selected_inputs\"\n          gh release download rust-v0.162.0 --repo openai/codex --pattern codex-code-mode-host-aarch64-apple-darwin.tar.gz --dir \"$selected_inputs\"\n          gh release download v1.19.4 --repo anomalyco/opencode --pattern opencode-darwin-arm64.zip --dir \"$selected_inputs\"\n          printf '%s  %s\\n' 98e9413a1bd167ae573723939ff178e6d44f1bb21d5cda960dbeb2fa65f49104 \"$selected_inputs/codex-aarch64-apple-darwin.tar.gz\" | shasum -a 256 -c -\n          printf '%s  %s\\n' 9455c17fa9ba6e89f8ec24ebfd3419825e2c651c56f8bd8df7141411e6decdc2 \"$selected_inputs/codex-code-mode-host-aarch64-apple-darwin.tar.gz\" | shasum -a 256 -c -\n          printf '%s  %s\\n' c400a2f8c8ab7e99478a7f4dd1a466b57bf33888e520d85c55780a5464c4b689 \"$selected_inputs/opencode-darwin-arm64.zip\" | shasum -a 256 -c -\n          tar -xzf \"$selected_inputs/codex-aarch64-apple-darwin.tar.gz\" -C \"$selected_inputs/codex\" codex-aarch64-apple-darwin\n          tar -xzf \"$selected_inputs/codex-code-mode-host-aarch64-apple-darwin.tar.gz\" -C \"$selected_inputs/codex\" codex-code-mode-host-aarch64-apple-darwin"
+        },
+        {
+          "source": {
+            "path": "/workspace/scratch/f45fed8e9067/audit1192/delivery-route-current-63927ae/merge-ci.yml",
+            "sha256": "f5fb5c1958a0e382bae3e8161916820a376b29fedfed0ae19bee683ed4ebe914",
+            "bytes": 199891
+          },
+          "startLine": 1463,
+          "endLine": 1496,
+          "text": "          const sdkRoot = realpathSync(resolve(providerRoot, '../../@anthropic-ai/claude-agent-sdk'));\n          const sdkPackage = JSON.parse(readFileSync(join(sdkRoot, 'package.json'), 'utf8'));\n          assert.equal(sdkPackage.name, '@anthropic-ai/claude-agent-sdk');\n          assert.equal(sdkPackage.version, '0.3.305');\n          const claude = realpathSync(resolve(sdkRoot, '../claude-agent-sdk-darwin-arm64/claude'));\n          const codex = realpathSync(join(selected, 'codex/codex-aarch64-apple-darwin'));\n          const codexCodeModeHost = realpathSync(join(selected, 'codex/codex-code-mode-host'));\n          const opencode = realpathSync(join(selected, 'opencode/opencode'));\n          for (const [path, expected] of [\n            [claude, 'ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f'],\n            [codex, '8238273076041e55beded03ba1d51e034f997b7d100b0642d36daf036620fe57'],\n            [codexCodeModeHost, '0b74f513cd960f32e60836f39c574761e6fd1500e608135f3f34347acc3e0e6a'],\n            [opencode, '417af53923f3d529759ab85ce3e8dd09116f742efcd332de591d2da6ebae696b'],\n          ]) assert.equal(digest(path), expected, 'exact reviewed native executable');\n          const node = realpathSync('resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node');\n          const host = realpathSync('packages/legacy-agent-host/dist/cli.js');\n          const corepack = realpathSync(join(selected, 'corepack/node_modules/corepack'));\n          const pnpm = join(corepack, 'dist/pnpm.js');\n          const values = {\n            LEGACY_DESKTOP_BACKEND_GO: '1',\n            LEGACY_DESKTOP_PROOF_MODE: process.env.STAGE1_MODE,\n            LEGACY_DESKTOP_CLAUDE_PATH: claude,\n            ...(process.env.STAGE1_MODE === 'native-mixed-create-launch-ui' ? {\n              LEGACY_DESKTOP_CODEX_PATH: codex, LEGACY_DESKTOP_OPENCODE_PATH: opencode,\n            } : {}),\n            ...(process.env.LEGACY_DESKTOP_RESUME_PROVIDER === 'codex' ? { LEGACY_DESKTOP_CODEX_PATH: codex } : {}),\n            LEGACY_DESKTOP_NODE_SHA256: digest(node),\n            LEGACY_DESKTOP_HOST_ENTRY_SHA256: digest(host),\n            LEGACY_DESKTOP_PNPM_PATH: pnpm,\n            LEGACY_DESKTOP_PNPM_SHA256: digest(pnpm),\n            LEGACY_DESKTOP_COREPACK_PACKAGE_SHA256: digest(join(corepack, 'package.json')),\n            LEGACY_DESKTOP_COREPACK_LIBRARY_SHA256: digest(join(corepack, 'dist/lib/corepack.cjs')),\n          };\n          for (const [key, value] of Object.entries(values)) {"
+        },
+        {
+          "source": {
+            "path": "/workspace/scratch/f45fed8e9067/audit1192/delivery-route-current-63927ae/merge-ci.yml",
+            "sha256": "f5fb5c1958a0e382bae3e8161916820a376b29fedfed0ae19bee683ed4ebe914",
+            "bytes": 199891
+          },
+          "startLine": 1828,
+          "endLine": 1845,
+          "text": "      - name: Check existing UI fixtures and run original Desktop controls once\n        run: |\n          set -euo pipefail\n          selected_node=resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node\n          \"$selected_node\" --test scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/desktop-owner-routing-product.test.ts scripts/legacy-agent-host/desktop-mixed-native-fixture.test.ts\n          if [ \"$LEGACY_DESKTOP_RESUME_PROVIDER\" = codex ]; then\n            \"$selected_node\" --test scripts/legacy-agent-host/desktop-codex-resume-fixture.test.ts\n          fi\n          if [ -n \"$STAGE1_QUIT_SCENARIO\" ]; then\n            export LEGACY_DESKTOP_QUIT_SCENARIO=\"$STAGE1_QUIT_SCENARIO\"\n          fi\n          if [ \"$STAGE1_VARIANT\" = native-resume-ui ]; then\n            test \"$STAGE1_MODE\" = native-resume-ui\n            test -z \"$LEGACY_DESKTOP_RESUME_PROVIDER\"\n            export LEGACY_DESKTOP_CLAUDE_CHECKPOINT_UPGRADE=1\n            export LEGACY_DESKTOP_CLAUDE_CHECKPOINT_DONOR=\"$GITHUB_WORKSPACE/.stage1-checkpoint-donor\"\n          fi\n          \"$selected_node\" scripts/legacy-agent-host/desktop-backend-smoke.ts 2>&1 | tee \"$RUNNER_TEMP/stage1-desktop-$STAGE1_VARIANT.log\""
+        },
+        {
+          "source": {
+            "path": "/workspace/scratch/f45fed8e9067/audit1192/delivery-route-current-63927ae/merge-ci.yml",
+            "sha256": "f5fb5c1958a0e382bae3e8161916820a376b29fedfed0ae19bee683ed4ebe914",
+            "bytes": 199891
+          },
+          "startLine": 2746,
+          "endLine": 2753,
+          "text": "  stage1-process-qualification:\n    name: Stage 1 current-tuple process and packed qualification\n    # Original P7/positive-M19 receipt must bind both selected Stage1 and its integration tree.\n    if: >-\n      (github.event_name == 'workflow_dispatch' && inputs.stage1_process_qualification) ||\n      (github.event_name == 'pull_request' && github.event.pull_request.draft == false && (github.event.pull_request.base.ref == 'feat/provider-migration-stage-1' || (github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.ref == 'feat/provider-migration-stage-1' && github.event.pull_request.head.repo.full_name == github.repository)))\n    runs-on: ${{ vars.CI_MACOS_ARM_RUNNER || 'macos-15' }}\n    timeout-minutes: 45"
+        },
+        {
+          "source": {
+            "path": "/workspace/scratch/f45fed8e9067/audit1192/delivery-route-current-63927ae/parent-ci.yml",
+            "sha256": "040895e5636d680f6c8c61ab4d61ab99a4b6174e93dafbd1f018ad8317b5d962",
+            "bytes": 163917
+          },
+          "startLine": 847,
+          "endLine": 854,
+          "text": "  stage1-desktop:\n    name: Stage 1 source Desktop (${{ matrix.label }})\n    # Run native/UI acceptance on ready Stage1 source PR and its integration PRs.\n    # Draft, forked and unrelated PRs do not allocate these macOS proof jobs.\n    if: >-\n      (github.event_name == 'workflow_dispatch' && inputs.stage1_desktop) ||\n      (github.event_name == 'pull_request' && github.event.pull_request.draft == false && (github.event.pull_request.base.ref == 'feat/provider-migration-stage-1' || (github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.ref == 'feat/provider-migration-stage-1' && github.event.pull_request.head.repo.full_name == github.repository)))\n    runs-on: ${{ vars.CI_MACOS_ARM_RUNNER || 'macos-15' }}"
+        }
+      ],
+      "result": "1186 is currently Ready with base feat/provider-migration-stage-1; both old parent and incoming merge workflow select stage1-desktop. Its native modes receive real Claude/Codex executable paths. Source endpoints verified at actual merge ref reach original native fixture and production CapturedProcess.spawn. TEST-local model endpoints do not emulate those executables.",
+      "additionalScope": "stage1-desktop has no dependency on metadata plan and no action-specific exclusion. Body/title or label mutations on Ready1186 also select the native lane; this audit performed none.",
+      "finiteAlternative": "desktopFiniteV2MembershipSelected requires an explicit absent flag plus Linux x64; selected native Stage1 runner is macOS. It is not an automatic replacement for these original native modes."
+    }
+  ],
+  "existingMechanismsConsidered": [
+    {
+      "mechanism": "Keep current PRs Draft",
+      "result": "Permits implementation, review and original automatic Draft-safe finite/native-OpenCode checks. Does not establish full merge qualification; qualifyFull rejects full != true."
+    },
+    {
+      "mechanism": "Ready1192 followed by normal merge/squash/rebase",
+      "result": "No permitted path identified: Ready itself selects the verified real Codex smoke, and updating Ready1186 selects native Desktop. All three merge methods are enabled by repository settings, but none removes these event conditions."
+    },
+    {
+      "mechanism": "Automatic merge",
+      "result": "Repository GET reports allow_auto_merge=false; no configuration changes proposed. An eventual automatic merge would not remove the same Ready/synchronize execution scope."
+    },
+    {
+      "mechanism": "workflow_dispatch / ci:full selector / retarget / changing Draft or gates to avoid execution / direct integration push",
+      "result": "Not selected: manual dispatch and guard/label/base/state/protection bypass are outside persistent authorization. Existing labels or alternate transport cannot be used to silently redefine the requested gates. Direct receiving-branch push also emits synchronize on Ready1186."
+    },
+    {
+      "mechanism": "Provider8 controlled CI and exact checked archive",
+      "result": "Existing pull_request workflow uses Node24.21.0 and26.11.1 with pinned pnpm11.18.0, pnpm check and Node24 same-consumer archive retention. Source/archive publication can continue while Draft without merging default bootstrap. No new provider CI outcome claimed by this audit."
+    }
+  ],
+  "gateSource": {
+    "repository": "777genius/agent-teams-ai",
+    "sourceHead": "63927aecd95c814f66db23d7bd4aef6975110168",
+    "path": "scripts/ci/ci-feedback.mts",
+    "sha256": "fbfc5af2b3b2aa578bffb7e5b07af62768c0de216f2d8f258dc2b7ec019f767f",
+    "startLine": 411,
+    "endLine": 424,
+    "text": "}\n\nexport function qualifyFull(\n  results: unknown,\n  full: unknown,\n  reuse: unknown,\n  shardCount?: unknown\n): { ok: boolean; reason: string } {\n  try {\n    rootTestShards(shardCount);\n    if (full !== 'true') throw new Error('Draft feedback does not qualify for merge');\n    if (reuse !== 'true' && reuse !== 'false') throw new Error('Invalid reuse mode');\n    const needs = object(results);\n    const plan = object(needs.plan);",
+    "url": "https://github.com/777genius/agent-teams-ai/blob/63927aecd95c814f66db23d7bd4aef6975110168/scripts/ci/ci-feedback.mts"
+  },
+  "permittedWorkNow": [
+    "Finish provider cancellation implementation, exact source review, original controlled checks and checked archive qualification.",
+    "Publish genuine reviewed source into the existing Draft feature branches with exact expected-SHA ownership and preserve archive/source pins.",
+    "Complete current original Draft-safe Desktop/process/native-OpenCode/P09A runs through the sole observer and fix established failures.",
+    "Keep STATUS and1192 Draft delivery evidence current without editing Ready1186 metadata.",
+    "Reconcile technical review remarks and prepare receiving-branch integration evidence; none of those require enlarging real-provider execution scope."
+  ],
+  "eventualOwnerDecision": {
+    "neededOnlyAfterIndependentWorkExhausted": "Explicitly reconcile the existing no-real-Claude/Codex rule with the unavoidable automatic execution selected by Ready1192 and updating Ready1186.",
+    "concreteApprovalIfKeepingCurrentDeliveryRoute": "Authorize the specifically reviewed automatic real Codex installer/version executions and existing Stage1 real Claude/Codex Desktop lifecycle checks in their TEST environments. The permission must include --version and actual native execution; broad autonomy and P09 OptionA do not supply it.",
+    "ifProhibitionRemains": "Owner must choose a revised completion/delivery scope; there is no currently identified ordinary route that delivers these feature merges through the existing gates while preserving the ban. This audit does not propose weakening gates, spoofing outcomes, relabelling peers as native, or secretly skipping checks.",
+    "stillExcluded": "main/default merges, release/default Host activation and Stage2 remain excluded unless separately and explicitly selected. Provider8 bootstrap merge is not required for exact source consumption.",
+    "whyNotSelfAuthorized": "This is a conflict of authorized execution scope, not a missing tool, code fix, CI queue or inaccessible runner; agent cannot broaden owner permission unilaterally."
+  },
+  "wholeGoalBlocked": false,
+  "reason": "Independent implementation, review, provider/archive and original CI work are ongoing. This read-only report is a transition-boundary audit, not an overall blocked or complete verdict.",
+  "limits": [
+    "Native conflict examples are sufficient to establish the two transition conflicts; no claim of an exhaustive inventory of every optional workflow.",
+    "Every future source or receiving ref update requires current-source gate/evidence reconciliation; this audit binds639/4e1 and the recorded metadata only.",
+    "No review-thread or formal-approval inventory refreshed here; prior unresolved/resolved status is not upgraded.",
+    "No CI outcome inferred from selectors, source hashes or repository permissions."
+  ]
+}

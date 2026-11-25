@@ -46,6 +46,8 @@ export interface CreateTeamDialogProps {
   onClose: () => void;
   /** Page Back can return to the originating organization tab; success uses onClose. */
   onBack?: () => void;
+  /** Show committed management changes in the Teams list without clearing the draft. */
+  onManagementApplied?: () => void;
   onCreate: (
     request: TeamCreateRequest,
     placement?: OrganizationPlacementSelection

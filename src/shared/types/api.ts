@@ -90,6 +90,7 @@ import type {
   TaskComment,
   TaskFieldUpdates,
   TeamAgentRuntimeSnapshot,
+  TeamAggregateReadResult,
   TeamChangeEvent,
   TeamClaudeLogsQuery,
   TeamClaudeLogsResponse,
@@ -151,9 +152,11 @@ import type {
   MemberWorkSyncStatusRequest,
   MemberWorkSyncTeamMetrics,
 } from '@features/member-work-sync/contracts';
+import type { NativeNextPromptApi } from '@features/native-prompt-suggestions/contracts';
 import type { OrganizationsElectronApi } from '@features/organizations/contracts';
 import type { ProjectFolderElectronApi } from '@features/project-folder/contracts';
 import type { RecentProjectsElectronApi } from '@features/recent-projects/contracts';
+import type { ReviewFlowElectronApi } from '@features/review-flow/contracts';
 import type { RuntimeProviderManagementApi } from '@features/runtime-provider-management/contracts';
 import type { TeamGroupChatsAPI } from '@features/team-group-chats/contracts';
 import type { TeamImportApi } from '@features/team-import/contracts';
@@ -461,7 +464,7 @@ export interface HttpServerAPI {
 
 export interface TeamsAPI extends TeamMemberSettingsApi, TeamReadLegacyApi {
   readRecovery?: TeamReadRecoveryApi;
-  list: () => Promise<TeamSummary[]>;
+  list: () => Promise<TeamAggregateReadResult<TeamSummary>>;
   getTaskChangePresence: (teamName: string) => Promise<Record<string, TaskChangePresenceState>>;
   setChangePresenceTracking: (teamName: string, enabled: boolean) => Promise<void>;
   setToolActivityTracking: (teamName: string, enabled: boolean) => Promise<void>;
@@ -560,7 +563,7 @@ export interface TeamsAPI extends TeamMemberSettingsApi, TeamReadLegacyApi {
   ) => Promise<BoardTaskExactLogDetailResult | HostTaskLogDetailResult>;
   getMemberStats: (teamName: string, memberName: string) => Promise<MemberStatsResult>;
   launchTeam: (request: TeamLaunchRequest) => Promise<TeamLaunchResponse>;
-  getAllTasks: () => Promise<GlobalTask[]>;
+  getAllTasks: () => Promise<TeamAggregateReadResult<GlobalTask>>;
   updateConfig: (teamName: string, updates: TeamUpdateConfigRequest) => Promise<TeamConfig>;
   addMember: (teamName: string, request: AddMemberRequest) => Promise<void>;
   replaceMembers: (teamName: string, request: ReplaceMembersRequest) => Promise<void>;
@@ -892,6 +895,7 @@ export interface ElectronAPI
     TokenUsageElectronApi,
     ProjectFolderElectronApi {
   teamGroupChats: TeamGroupChatsAPI;
+  reviewFlow: ReviewFlowElectronApi;
   announcements: AnnouncementsApi;
   gatewayProvider: GatewayProviderApi;
   externalAgentConnection: ExternalAgentConnectionApi;
@@ -1048,6 +1052,9 @@ export interface ElectronAPI
 
   // Member log stream API
   memberLogStream: MemberLogStreamApi;
+
+  // Optional until the captured Host advertises this native feature.
+  nativePromptSuggestions?: NativeNextPromptApi;
 
   // Organization map API
   organizations: OrganizationsElectronApi;

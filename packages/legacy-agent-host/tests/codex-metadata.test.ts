@@ -30,7 +30,7 @@ for (const scenario of ['stale', 'wrong-home', 'quota']) {
         HOME: join(root, 'home'),
         CODEX_HOME: join(root, 'codex'),
         ...(wrongNamespace ? { TEST_WRONG_NAMESPACE: '1' } : {}),
-        ...(quota ? { TEST_CHATGPT: '1' } : {}),
+        ...(quota ? { TEST_CHATGPT: '1', OPENAI_API_KEY: 'TEST-private-key' } : {}),
       },
       executable: {
         path: await realpath(process.execPath),
@@ -111,6 +111,11 @@ for (const scenario of ['stale', 'wrong-home', 'quota']) {
       const value = await pending;
       assert.equal(value.rateLimits?.state, 'ready');
       assert.equal(value.rateLimits?.snapshot?.primary?.usedPercent, 0);
+      assert.equal(value.account?.type, 'chatgpt');
+      assert.deepEqual(value.apiKey, {
+        available: true, source: 'environment', sourceLabel: 'Detected from OPENAI_API_KEY',
+      });
+      assert.equal(JSON.stringify(value).includes('TEST-private-key'), false);
     } else
       await assert.rejects(
         pending,

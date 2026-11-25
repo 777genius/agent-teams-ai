@@ -2,6 +2,7 @@ import { readOpenCodeInputModalities } from './readOpenCodeInputModalities.js';
 import { captureOpenCodeExtraArgs } from '@agent-teams/provider-implementations/opencode';
 import { capturedMcpSourceCurrent } from '../../mcp-catalog/capturedSource.js';
 import { createHash, randomBytes } from 'node:crypto';
+import { channel } from 'node:diagnostics_channel';
 import { realpathSync, statSync } from 'node:fs';
 import { setTimeout as delay } from 'node:timers/promises';
 import {
@@ -11,8 +12,10 @@ import {
 } from '@agent-teams/provider-implementations/opencode';
 
 import { CapturedProcess } from './CapturedProcess.js';
+import { readOpenCodeLaunchConfig, openCodeMemberPrompt, buildOpenCodeMemberConfiguration,
+  buildOpenCodeMemberEnvironment } from './nativeLaunchEnvironment.js';
+import { OwnedProcessFacade } from '../../owned-process/processFacade.js';
 import {
-  canonicalOpenCodeAgentPermission,
   requiredOpenCodeToolsAllowed,
 } from './openCodeAgentPolicy.js';
 import {
@@ -23,6 +26,8 @@ import {
 } from './openCodeMcpPolicy.js';
 import { createTeamMcpTools } from '../../mcp/tools.js';
 import { initialContextDigest } from '../../team-launch/context.js';
+import { managementDigest } from '../../management/identity.js';
+import { selectedOpenCodeManagedLimits } from '../../composition/openCodeManagedPreferences.js';
 
 import type {
   OpenCodeClient,
@@ -35,6 +40,7 @@ import type { OpenCodeMemberProfile } from '../../composition/runtimeProfile.js'
 import type { TeamMcpCatalogReceipt } from '../../mcp/contracts.js';
 
 const capabilities = ['text', 'tools', 'permission', 'interrupt', 'checkpoint'];
+const readinessRefusal = channel('agent-teams.legacy-host.first-refusal');
 const record = (value: unknown): Record<string, unknown> => {
   if (!value || typeof value !== 'object' || Array.isArray(value))
     throw new Error('Invalid OpenCode configuration');
@@ -57,18 +63,9 @@ export function createOpenCodeMemberProvider(
   const evidence = context.opencodeEvidence;
   const profile = structuredClone(context.profile);
   const extraArgs = captureOpenCodeExtraArgs(profile.extraArgs);
-  const config =
-    profile.environment.OPENCODE_CONFIG_CONTENT === undefined
-      ? {}
-      : record(JSON.parse(profile.environment.OPENCODE_CONFIG_CONTENT) as unknown);
+  const config = readOpenCodeLaunchConfig(profile.environment);
   const agentName = profile.nativeOptions.agent;
-  const agents = config.agent === undefined ? {} : record(config.agent);
-  const agent = agents[agentName] === undefined ? {} : record(agents[agentName]);
-  if (agent.prompt !== undefined && typeof agent.prompt !== 'string')
-    throw new Error('Invalid OpenCode agent prompt');
-  const prompt = [context.instructions, agent.prompt, profile.nativeOptions.instructions]
-    .filter(Boolean)
-    .join('\n\n');
+  const prompt = openCodeMemberPrompt(profile, config, context.instructions);
   const capturedPolicy = profile.capturedMcpServers !== undefined;
   const plugin = capturedPolicy ? verifyOpenCodeMcpPolicyPlugin(profile) : undefined;
   const policyNonce = capturedPolicy ? randomBytes(32).toString('hex') : undefined;
@@ -85,81 +82,21 @@ export function createOpenCodeMemberProvider(
   ].join('/');
   const prefix =
     'legacy_host_team_' + createHash('sha256').update(bindingKey).digest('hex').slice(0, 16);
-  let serverName = Object.hasOwn(mcp, 'team') ? prefix : 'team';
-  for (let index = 1; Object.hasOwn(mcp, serverName); index++) serverName = `${prefix}_${index}`;
   const requiredToolNames = createTeamMcpTools(context.connection)
     .list()
     .map((tool) => tool.name);
-  const required = requiredToolNames.map((name) => `${serverName}_${name}`);
-  const permission = agent.permission === undefined ? {} : record(agent.permission);
-  const approvalMode = profile.nativeOptions.toolApprovalMode;
-  const selectedPermissions =
-    approvalMode === undefined
-      ? permission
-      : {
-          '*': approvalMode === 'manual' ? 'ask' : 'deny',
-          ...(approvalMode === 'manual'
-            ? {}
-            : Object.fromEntries(
-                [
-                  'read',
-                  'glob',
-                  'grep',
-                  'list',
-                  'lsp',
-                  'todoread',
-                  'todowrite',
-                  'edit',
-                  'bash',
-                ].map((name) => [name, 'allow'])
-              )),
-          task: { '*': 'deny' },
-          external_directory: 'deny',
-          doom_loop: 'deny',
-        };
-  const tools = agent.tools === undefined ? {} : record(agent.tools);
-  const effectiveAgent = {
-    ...Object.fromEntries(Object.entries(agent).filter(([key]) => key !== 'tools')),
-    prompt,
-    model: `${profile.nativeOptions.providerId}/${profile.model}`,
-    permission: canonicalOpenCodeAgentPermission(tools, selectedPermissions, required),
-  };
-  const plugins = config.plugin === undefined ? [] : config.plugin;
-  if (!Array.isArray(plugins)) throw new Error('Invalid OpenCode plugins');
-  const nativeConfig = {
-    ...config,
-    ...(plugin ? { plugin: [...plugins.filter((value) => value !== plugin), plugin] } : {}),
-    agent: { ...agents, [agentName]: effectiveAgent },
-    mcp: {
-      ...mcp,
-      [serverName]: {
-        type: 'remote',
-        url: context.endpoint.url,
-        headers: { Authorization: `Bearer ${context.endpoint.bearerToken}` },
-        oauth: false,
-        enabled: true,
-        timeout: profile.limits.timeoutMs,
-      },
-    },
-  };
+  const { serverName, required, effectiveAgent, nativeConfig, approvalMode, selectedPermissions } =
+    buildOpenCodeMemberConfiguration(
+      profile, config, prompt, { mcp, prefix, endpoint: context.endpoint, requiredToolNames,
+        ...(plugin ? { plugin } : {}) });
   const expectedMcp = structuredClone(nativeConfig.mcp);
   if (policyNonce)
     record(record(expectedMcp[serverName]).headers)['X-Legacy-Mcp-Policy'] = policyNonce;
   const password = randomBytes(32).toString('base64url');
   const captured: OpenCodeMemberProfile = {
     ...profile,
-    environment: {
-      ...profile.environment,
-      OPENCODE_CONFIG_CONTENT: JSON.stringify(nativeConfig),
-      ...(policyNonce
-        ? {
-            LEGACY_AGENT_HOST_MCP_POLICY_NONCE: policyNonce,
-            LEGACY_AGENT_HOST_MCP_TEAM_SERVER: serverName,
-          }
-        : {}),
-      OPENCODE_SERVER_USERNAME: 'opencode',
-      OPENCODE_SERVER_PASSWORD: password,
-    },
+    environment: buildOpenCodeMemberEnvironment(profile.environment, nativeConfig, password,
+      policyNonce ? { nonce: policyNonce, serverName } : undefined),
   };
   // Validate every selected namespace before any process or native mutation.
   const verifyNamespaces = () => {
@@ -173,6 +110,10 @@ export function createOpenCodeMemberProvider(
       }
   };
   verifyNamespaces();
+  const canAllocate = () => context.canAllocate() && capturedMcpSourceCurrent(profile);
+  const canCapture = () =>
+    (context.canCaptureRegisteredProcess?.() ?? context.canAllocate()) &&
+    capturedMcpSourceCurrent(profile);
   const custody = (
     options.createProcess ??
     ((selected, canAllocate) =>
@@ -180,15 +121,20 @@ export function createOpenCodeMemberProvider(
         selected,
         canAllocate,
         context.processCustody,
-        context.canCaptureRegisteredProcess
+        canCapture,
+        undefined,
+        context.retainedWindowsLaunch?.port(selected, canAllocate, canCapture, context.processOrigin)
       ))
-  )(captured, context.canAllocate);
+  )(captured, canAllocate);
   let sealed = false;
   let ready = false;
   let configurationAccepted = false;
   const contextDigest = initialContextDigest(context.instructions);
   let allocated = false;
   let nativeSessionId: string | undefined;
+  let openingStage: 'configuration' | 'server-launch' | 'native-ready' | 'startup-authority' |
+    'startup-configuration' | 'startup-delay' | 'session-authority' | 'session-create' | 'driver-readiness' = 'configuration';
+  let openingRefusalObserved = false;
   // Pending calls, not a delivery queue: D readiness must recheck their media until native handoff.
   const nativeMediaSubmits = new Set<Input>();
   const abort = new AbortController();
@@ -202,7 +148,8 @@ export function createOpenCodeMemberProvider(
       throw new Error('Foreign OpenCode endpoint');
     const headers = new Headers(request.headers);
     headers.set('authorization', 'Basic ' + Buffer.from(`opencode:${password}`).toString('base64'));
-    headers.set('x-opencode-directory', profile.cwd);
+    // Native V1 decodes this header once, including literal percent and Unicode paths.
+    headers.set('x-opencode-directory', encodeURIComponent(profile.cwd));
     return (options.fetchImpl ?? fetch)(new Request(request, { headers, redirect: 'error' }));
   };
   const client = (signal: AbortSignal, deadline: number): OpenCodeClient =>
@@ -246,6 +193,15 @@ export function createOpenCodeMemberProvider(
       !Object.hasOwn(selected[0].models, profile.model)
     )
       return false;
+    const expectedLimits = selectedOpenCodeManagedLimits(profile.managedPreferences,
+      `${profile.nativeOptions.providerId}/${profile.model}`);
+    if (expectedLimits) {
+      const effectiveLimit = record(record(selected[0].models[profile.model]).limit);
+      if (effectiveLimit.context !== expectedLimits.contextTokens ||
+          effectiveLimit.output !== expectedLimits.outputTokens ||
+          (typeof effectiveLimit.input === 'number' && effectiveLimit.input > expectedLimits.contextTokens))
+        return false;
+    }
     const references = [...nativeMediaSubmits].flatMap((input) => input.attachments ?? []);
     if (references.length) {
       const declaration = readOpenCodeInputModalities(selected[0].models[profile.model]);
@@ -279,6 +235,7 @@ export function createOpenCodeMemberProvider(
   let starting: Promise<void> | undefined;
   const startServer = (): Promise<void> =>
     (starting ??= (async () => {
+      openingStage = 'server-launch';
       verifyNamespaces();
       const child = custody.launch({
         command: profile.executable.path,
@@ -295,17 +252,42 @@ export function createOpenCodeMemberProvider(
       child.stdout.on('data', () => {});
       const deadline = Date.now() + profile.limits.timeoutMs;
       const api = client(abort.signal, deadline);
+      if (child instanceof OwnedProcessFacade) {
+        openingStage = 'native-ready';
+        const waiting = new AbortController();
+        const cancelWaiting = () => waiting.abort();
+        abort.signal.addEventListener('abort', cancelWaiting, { once: true });
+        try {
+          const remaining = deadline - Date.now();
+          if (abort.signal.aborted || remaining <= 0)
+            throw new Error('OpenCode configuration unavailable');
+          await Promise.race([
+            child.ready,
+            delay(remaining, undefined, { signal: waiting.signal }).then(() => {
+              throw new Error('OpenCode configuration unavailable');
+            }),
+          ]);
+          if (abort.signal.aborted || Date.now() >= deadline)
+            throw new Error('OpenCode configuration unavailable');
+        } finally {
+          abort.signal.removeEventListener('abort', cancelWaiting);
+          waiting.abort();
+        }
+      }
       // Retry only read-only startup qualification; never repeat a session-creation mutation.
       for (;;) {
+        openingStage = 'startup-authority';
         if (!context.isCurrent() || !context.canAllocate() || sealed)
           throw new Error('OpenCode authority unavailable');
         try {
+          openingStage = 'startup-configuration';
           if (await verifyConfiguration(api)) break;
         } catch {
           /* Startup not proved yet. */
         }
         if (Date.now() >= deadline || !custody.isRunning())
           throw new Error('OpenCode configuration unavailable');
+        openingStage = 'startup-delay';
         await delay(Math.min(25, Math.max(1, deadline - Date.now())), undefined, {
           signal: abort.signal,
         });
@@ -316,6 +298,7 @@ export function createOpenCodeMemberProvider(
     if (sealed || !context.isCurrent() || !nativeSessionId || !capturedMcpSourceCurrent(profile))
       return false;
     await startServer();
+    openingStage = 'driver-readiness';
     if (!current()) return false;
     const api = client(
       AbortSignal.any([signal, abort.signal]),
@@ -356,6 +339,7 @@ export function createOpenCodeMemberProvider(
   const native = createOpenCodeV1DriverFactory({
     capabilities,
     resolveConfiguration: async (request): Promise<OpenCodeV1DriverConfig | undefined> => {
+      openingStage = 'configuration';
       if (
         allocated ||
         sealed ||
@@ -380,9 +364,11 @@ export function createOpenCodeMemberProvider(
         nativeSessionId = restoredSessionId;
       } else {
         await startServer();
+        openingStage = 'session-authority';
         if (!context.canAllocate() || !current())
           throw new Error('OpenCode allocation unavailable');
         const api = client(abort.signal, Date.now() + profile.limits.timeoutMs);
+        openingStage = 'session-create';
         const session = await api.createSession({
           title: `Team member ${profile.memberId}`,
         });
@@ -390,6 +376,7 @@ export function createOpenCodeMemberProvider(
           throw new Error('OpenCode session unavailable');
         nativeSessionId = session.id;
       }
+      openingStage = 'driver-readiness';
       return {
         endpoint: profile.endpoint,
         version: v1ProtocolRevision,
@@ -477,6 +464,15 @@ export function createOpenCodeMemberProvider(
         };
         return { ...opened, driver };
       } catch {
+        if (!openingRefusalObserved) {
+          openingRefusalObserved = true;
+          try { if (readinessRefusal.hasSubscribers) {
+            const { backendId, teamId, runId, memberId, generation } = context.endpoint.binding;
+            readinessRefusal.publish({ kind: 'opencode-open',
+              bindingDigest: managementDigest({ backendId, teamId, runId, memberId, generation }),
+              phase: openingStage, reason: 'threw' });
+          } } catch { /* Original TEST subscriber handles its own errors; preserve cleanup. */ }
+        }
         evidence?.seal();
         sealed = true;
         ready = false;
@@ -493,6 +489,10 @@ export function createOpenCodeMemberProvider(
       ? {
           captureRegisteredProcess: custody.captureRegisteredProcess.bind(custody),
         }
+      : {}),
+    ...(profile.windowsBroker?.capability === 'service-scopes-v1' &&
+        context.retainedWindowsLaunch && custody.prepareRegisteredWindowsProcess
+      ? { prepareRegisteredWindowsProcess: custody.prepareRegisteredWindowsProcess.bind(custody) }
       : {}),
     isReady: () => ready && configurationAccepted && current(),
     initialContextEvidence: () =>

@@ -1,0 +1,63 @@
+{
+  "kind": "recovered-reviewed-readiness-candidate-evidence",
+  "sourceHead": "9ec6cb6f567af14233965a77c4c4a043adc29487",
+  "originalCandidateSourceHead": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+  "qualification": "Exact four-file postimages adopted after unchanged-preimage and static review. Original finite tests and scoped type evidence retained with their limitations; no new original E2E, build, native/vendor or Windows A/B observer qualification.",
+  "files": [
+    {
+      "path": "initial-seed-candidate-manifest.json",
+      "originalPath": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/candidate-manifest.json",
+      "bytes": 2503,
+      "sha256": "0c50b1271025bc4f46fb791f091a83e9febc6e09a76215ef98a883aaaeb68998"
+    },
+    {
+      "path": "initial-seed-verification.json",
+      "originalPath": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/verification.json",
+      "bytes": 20565,
+      "sha256": "77301a050c82a9fc1e5dbe81dce0b2dea85b7a1e86a4626749ec844252e5fe3d"
+    },
+    {
+      "path": "initial-seed-r2-approval.json",
+      "originalPath": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/r2-approval.json",
+      "bytes": 17534,
+      "sha256": "9692cfe475821478bf6c5cce683e25893c2a28299ff4ebb80ca132f69c1fe908"
+    },
+    {
+      "path": "read-cut-candidate-manifest.json",
+      "originalPath": "/workspace/scratch/c714f5bce554/read-cut-finalreason-42a4-candidate/candidate-manifest.json",
+      "bytes": 2887,
+      "sha256": "6919d4e42be603fe7e548cc6593765db1e55f3cf2d89f2607b1b724415aecc79"
+    },
+    {
+      "path": "read-cut-verification.json",
+      "originalPath": "/workspace/scratch/c714f5bce554/read-cut-finalreason-42a4-candidate/verification.json",
+      "bytes": 8738,
+      "sha256": "4f02114db0d49aa1d9b4e717cf447f897ad5b52fa83c36b7191fea12ff533b8b"
+    },
+    {
+      "path": "read-cut-r2-approval.json",
+      "originalPath": "/workspace/scratch/c714f5bce554/read-cut-finalreason-42a4-candidate/r2-approval.json",
+      "bytes": 12571,
+      "sha256": "a44b9d20a8387469785e7343d46de955e86d5d6cac024b502f3896244e330f96"
+    },
+    {
+      "path": "initial-seed-causal-analysis.json",
+      "originalPath": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/causal-analysis.json",
+      "bytes": 2468,
+      "sha256": "e985e6b83c6c4680199c75be8cc6e4da8fdfa5da425266bbbc1c59b3473aee30"
+    },
+    {
+      "path": "read-cut-source-gap-review.json",
+      "originalPath": "/workspace/scratch/c714f5bce554/ci-current-42a4/linux-credential-dispose-source-gap-42a4.json",
+      "bytes": 10633,
+      "sha256": "15d7e49a607e893c2be1b354a45d84a1a00de04e86397ca6673db64657799e66"
+    },
+    {
+      "path": "adoption-9ec.json",
+      "originalPath": "/workspace/scratch/de9d4631e21c/media-recovered-readiness-9ec-adoption-20261119.json",
+      "bytes": 4210,
+      "sha256": "38a40fe6a91d952e4c8ee507f8edebd60d6df1ce953c587dfa61b2e0ea3c9acb"
+    }
+  ],
+  "giantArchivesOrSourceRostersCopied": false
+}

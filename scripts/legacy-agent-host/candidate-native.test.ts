@@ -40,7 +40,8 @@ test('candidate capture refuses a missing or rebound Codex code-mode sibling bef
 
 test(
   'explicit native capture relocates both providers and exact M19 pair without running bytes',
-  { skip: process.platform !== 'darwin' || process.arch !== 'arm64' },
+  { skip: !((process.platform === 'darwin' && process.arch === 'arm64') ||
+    (process.platform === 'linux' && process.arch === 'x64')) },
   async (t) => {
     const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST candidate natives ')));
     t.after(() => rm(root, { recursive: true, force: true }));
@@ -60,9 +61,11 @@ test(
     const manifest = {
       schemaVersion: 1,
       abi: 'napi-8',
-      platform: 'darwin',
-      architecture: 'arm64',
-      osBuild: '24G90',
+      platform: process.platform,
+      architecture: process.arch,
+      ...(process.platform === 'linux'
+        ? { kernelCapability: 'pidfs-inode64-v1', libc: { family: 'glibc', minimumVersion: '2.33' } }
+        : { osBuild: '24G90' }),
       library: 'registered-process.node',
       binarySha256: await candidateDigest(join(bridge, 'registered-process.node')),
     };

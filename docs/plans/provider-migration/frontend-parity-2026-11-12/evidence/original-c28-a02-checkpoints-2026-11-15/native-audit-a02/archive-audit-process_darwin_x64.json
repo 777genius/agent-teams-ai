@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "artifact": {
+    "id": 14180383715,
+    "name": "host-process-fixtures-darwin-x64-a02ab70edfdcb4169627e804f0337c9ad6b52af6",
+    "size_in_bytes": 12394,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14180383715",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14180383715/zip",
+    "expired": false,
+    "created_at": "2026-11-15T21:20:33Z",
+    "expires_at": "2026-11-29T21:20:32Z",
+    "updated_at": "2026-11-15T21:20:33Z",
+    "digest": "sha256:9e95d33829f173a41002d0f3ab8854aebbb5221f86349b3c8d9932fb8c0d1d96",
+    "workflow_run": {
+      "id": 43762390679,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "a02ab70edfdcb4169627e804f0337c9ad6b52af6"
+    }
+  },
+  "archive": "a02-process-darwin-x64.zip",
+  "archiveIdentity": {
+    "bytes": 12394,
+    "sha256": "9e95d33829f173a41002d0f3ab8854aebbb5221f86349b3c8d9932fb8c0d1d96",
+    "gitBlob": "8eeb45bcc989ec940de7465765a5d31ed7de04ce"
+  },
+  "validation": {
+    "apiSize": true,
+    "apiSha256": true,
+    "allCrc32": true,
+    "safeUniqueRelativeNames": true,
+    "noSymlinks": true
+  },
+  "extract": "process_darwin_x64",
+  "fileCount": 6,
+  "members": [
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+      "crc32": "4361cf63",
+      "compressedBytes": 6534,
+      "bytes": 20324,
+      "sha256": "04b7fb46234742eef8ba34ceeb69510409213e38f5eee0cfe4b4afc6e7ff1a12",
+      "gitBlob": "384c26cb2ad6138061872b430840994dbd24a414"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/posix-lifecycle.log",
+      "crc32": "6f17a194",
+      "compressedBytes": 1252,
+      "bytes": 2820,
+      "sha256": "8863a8590678475e30946b4ab7c6fcfe109041dfa195ccb796550672b9d1dc7e",
+      "gitBlob": "ca2a39fcf3218d0ec987ff5eb93274c8e2e2615b"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+      "crc32": "714ce450",
+      "compressedBytes": 336,
+      "bytes": 771,
+      "sha256": "dffb96d3a62b68771a67d43b3956be9f0eccc369ba3c625b34ef0d4fee3ff164",
+      "gitBlob": "291c98e26f6484d2ee52021bca19d03aa7b55698"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+      "crc32": "5083d827",
+      "compressedBytes": 2488,
+      "bytes": 10202,
+      "sha256": "59b00c19297c67e3137450a4af41291445c3c359fedfa3805f88ac67f0f5237f",
+      "gitBlob": "c8f1cc71a6d846d246ba33976cacddee4f5f01ca"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/scope.json",
+      "crc32": "7e13261c",
+      "compressedBytes": 291,
+      "bytes": 493,
+      "sha256": "e5b7a0853d63564eac23ddea9c88f9d1010c416e593ed6ffb6d322b903f5be7f",
+      "gitBlob": "d15661754ec3c2a3786be1bcaf2aa022f47315d5"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+      "crc32": "47f98634",
+      "compressedBytes": 41,
+      "bytes": 41,
+      "sha256": "86cf7f349653b2964b020a265329ca23ba82135e68144c4ef0a5107cbed13254",
+      "gitBlob": "6cee6f8b4c903ad1670da86e0aaee04aa6292811"
+    }
+  ]
+}

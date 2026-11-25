@@ -1,0 +1,491 @@
+{
+  "kind": "ORIGINAL_B_PACKAGED_WINDOWS_ARM64_FIRST_REFUSAL_AND_LIMITED_CLEANUP_AUDIT",
+  "source": "852d9bd3f9142603340f71ca998739e69da00084",
+  "tree": "f2fe271032a3280acfd5e604d6536c40607986b4",
+  "runId": 43856040242,
+  "jobId": 133295289524,
+  "attempt": 1,
+  "rawLog": {
+    "path": "/tmp/migration-evidence-20261116/native/B-packaged-win-arm64-14230030725/job-133295289524.log",
+    "bytes": 322130,
+    "gitBlob": "50f2de07c40f7bb220a0f39c69ec8cef85dbdc34",
+    "sha256": "a15f0b2253cf6d0463991489da344ba10e2927916a9e667a98e23ff98301b7bb",
+    "bomRetained": true,
+    "crlfCount": 2734
+  },
+  "originalMetadata": {
+    "path": "/tmp/migration-evidence-20261116/native/B-packaged-win-arm64-14230030725/job-source-metadata.json",
+    "bytes": 24958,
+    "gitBlob": "75249573f2f0a7614137a62495ccbd2fe6d8560f",
+    "sha256": "2bdd04ca2c1e0df3167a2bde16e5ac2b89ba302a8262dbcc5d1c350202a8938e"
+  },
+  "metadataTransfer": {
+    "path": "/tmp/migration-evidence-20261116/frontend/cohort-b-1324-packaged-metadata.json",
+    "bytes": 74809,
+    "gitBlob": "86b7448e7e82b0a12db5fba5222102c14fef0263",
+    "sha256": "0677054da4265472039ed69cf34e47a1e6db56345996079baeed8e8d54a31410",
+    "newAPIForThisTransfer": false
+  },
+  "artifact": {
+    "artifactId": 14230030725,
+    "path": "/tmp/migration-evidence-20261116/native/B-packaged-win-arm64-14230030725/artifact-14230030725.zip",
+    "bytes": 426682,
+    "gitBlob": "66931e1c5d359515df1137f1d906f07d8ad62a41",
+    "sha256": "74d3e6f211bc678bb9e2e8772a77830710de8805b5a2a2c111e706a8da88f5c7",
+    "uploadDigestMatchesOriginalLog": true,
+    "index": {
+      "path": "/tmp/migration-evidence-20261116/native/B-packaged-win-arm64-14230030725/artifact-manifest.json",
+      "bytes": 1993,
+      "gitBlob": "97263e5282564f01feeffa78a19aaab84601616c",
+      "sha256": "04631065e478c52ccef40e9afeddfd3bf737cac8d5d09d422fc080123c7a36e9"
+    },
+    "safeUniqueCrcMembers": 7,
+    "allMembers": [
+      {
+        "path": "agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+        "bytes": 1154527,
+        "gitBlob": "c7a90ccacc26fec41c6d4f42bf789e17011d681d",
+        "sha256": "509e66c041655b9366d85e4b9f5f484cc4d7cd7d47f53b629f3efac6bcbd6c76"
+      },
+      {
+        "path": "_temp/opencode-v2-packaged-native.json",
+        "bytes": 5389,
+        "gitBlob": "987133ec839fba09f9a896689f02cbd3e2be0f08",
+        "sha256": "34bb06dfa3b1060fa787b4aa2c27a2e49bd4b7ad4b80b8df1d6d67796366fa71"
+      },
+      {
+        "path": "_temp/opencode-v2-packaged-inputs.json",
+        "bytes": 782,
+        "gitBlob": "60d8afe1dbbb80f8338a0285751d09c6005dc09c",
+        "sha256": "40a46426b467943c45bb6a990017582378bcdbca59699fd3491b90fc24299d1c"
+      },
+      {
+        "path": "_temp/opencode-v2-packaged.json",
+        "bytes": 1188,
+        "gitBlob": "dc391b8b2426f7ed06b50b97167ecca128c9c855",
+        "sha256": "b6703b1577a0dfccd547505bf57f8c13547e2c03d4cff547b20c4d79b73b2b5b"
+      },
+      {
+        "path": "_temp/windows-same-main-process-ui.app.log",
+        "bytes": 5506,
+        "gitBlob": "76f945cc0470faf670d534d65cf1d76a008eb2a4",
+        "sha256": "7195d0f3aa5680799c43dae63c4a271e13a0f9bd3626cfb896aa07e955edfc7e"
+      },
+      {
+        "path": "_temp/windows-same-main-process-ui.before-crash.png",
+        "bytes": 79484,
+        "gitBlob": "fd0dd50f638129b232b14362d8cf1528980fe81c",
+        "sha256": "b6aabd1d94bddb49ebc533e8a3f98a1ce86d7c23c5fd28029befa9c1ef480f36"
+      },
+      {
+        "path": "_temp/windows-same-main-process-ui.controller.log",
+        "bytes": 32950,
+        "gitBlob": "847f0aca52ee2db86f012371ee62092636819f3e",
+        "sha256": "9d68655850c045d5269e16ff413cb32b95483991bced9fdbfd70161d54d681de"
+      }
+    ]
+  },
+  "firstRefusal": {
+    "record": {
+      "line": 2582,
+      "timestamp": "2026-11-16T13:20:03.4057735Z",
+      "record": {
+        "kind": "TEST_WINDOWS_PACKAGED_UI_FAILURE",
+        "phase": "one-explicit-same-Main-Retry",
+        "error": "AssertionError [ERR_ASSERTION]: Original Windows UI phase expired: one-explicit-same-Main-Retry\n    at remaining (file:///C:/a/a"
+      }
+    },
+    "kind": "Original assertion-based same-Main Retry deadline, not the racing Promise timer message",
+    "errorIsTruncated": true,
+    "sourceDiagnosticLimitCharacters": 128,
+    "retryBegin": {
+      "line": 2493,
+      "timestamp": "2026-11-16T13:19:53.0352113Z",
+      "record": {
+        "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+        "phase": "one-explicit-same-Main-Retry",
+        "atMs": 48135.276,
+        "budgetMs": 10000
+      }
+    },
+    "nextQuitBegin": {
+      "line": 2583,
+      "timestamp": "2026-11-16T13:20:03.4058908Z",
+      "record": {
+        "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+        "phase": "original-product-Quit",
+        "atMs": 58562.253899999996,
+        "budgetMs": 30000
+      }
+    },
+    "phaseAtMsDifferenceToQuit": 10426.977899999998,
+    "literalObservation": "Original Windows UI phase expired: one-explicit-same-Main-Retry, with stack prefix at remaining. The retained record does not include the downstream caller.",
+    "unknown": [
+      "exact remaining() callsite",
+      "whether Retry physical press had completed",
+      "writer/successor Host visibility",
+      "UI-ready observation and returned-read counts",
+      "per-query census durations",
+      "specific time-consuming sub-operation"
+    ],
+    "notInferred": "No PowerShell/CIM/hash/renderer/Host cause or safe optimization is established from the elapsed duration."
+  },
+  "reachedBoundaries": {
+    "phases": [
+      {
+        "line": 2145,
+        "timestamp": "2026-11-16T13:19:04.9064127Z",
+        "record": {
+          "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+          "phase": "packaged-App-startup",
+          "atMs": 0.08950000000186265,
+          "budgetMs": 120000
+        }
+      },
+      {
+        "line": 2194,
+        "timestamp": "2026-11-16T13:19:13.5555032Z",
+        "record": {
+          "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+          "phase": "one-initial-Runtime-Open",
+          "atMs": 8407.371400000004,
+          "budgetMs": 45000
+        }
+      },
+      {
+        "line": 2203,
+        "timestamp": "2026-11-16T13:19:19.6457255Z",
+        "record": {
+          "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+          "phase": "one-original-business-input-and-UI",
+          "atMs": 14921.934699999998,
+          "budgetMs": 35000
+        }
+      },
+      {
+        "line": 2396,
+        "timestamp": "2026-11-16T13:19:43.9265604Z",
+        "record": {
+          "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+          "phase": "actual-Host-A-exit-and-metadata-Refresh",
+          "atMs": 39094.8054,
+          "budgetMs": 10000
+        }
+      },
+      {
+        "line": 2493,
+        "timestamp": "2026-11-16T13:19:53.0352113Z",
+        "record": {
+          "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+          "phase": "one-explicit-same-Main-Retry",
+          "atMs": 48135.276,
+          "budgetMs": 10000
+        }
+      },
+      {
+        "line": 2583,
+        "timestamp": "2026-11-16T13:20:03.4058908Z",
+        "record": {
+          "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+          "phase": "original-product-Quit",
+          "atMs": 58562.253899999996,
+          "budgetMs": 30000
+        }
+      }
+    ],
+    "meaning": "Original startup, Runtime-Open, business/UI, actual Host-A exit/metadata Refresh, then Retry phase were entered in source order. Catch retained activePhase Retry; the later primary/neighbor UI Kill phases were not reached. The following Quit phase was entered, not proven completed.",
+    "cardinalityLimit": "The P08 proof.counts/UI steps/selected process/Host identity ledger is not present. Source order does not substitute for missing physical Retry, successor, natural-exit or two-Stop receipts."
+  },
+  "missingEvidence": {
+    "p08ReceiptAbsentFromOriginalZip": true,
+    "afterRetryScreenshotAbsentFromOriginalZip": true,
+    "notAvailable": [
+      "full original primary error stack",
+      "retryUi stages",
+      "1798 original pre/post selected source hashes",
+      "P08 input freeze",
+      "same Main/successor identities",
+      "counts/uiSteps/stops",
+      "Quit acknowledgement",
+      "appExit",
+      "final owned/listener census",
+      "nativeCleanup",
+      "P08 cleanup result"
+    ],
+    "limit": "Seven-member ZIP was fully inspected; no source row or cleanup fact is fabricated from the x64 receipt. Why the final receipt did not become an uploaded file and the exact finalizer stage remain unknown."
+  },
+  "outerCleanup": {
+    "raw": {
+      "line": 2656,
+      "timestamp": "2026-11-16T13:20:25.2413550Z",
+      "record": {
+        "gateController": "emergency-fail",
+        "rootExitCode": 99,
+        "activeProcesses": 0
+      }
+    },
+    "controllerLog": {
+      "path": "/tmp/migration-evidence-20261116/native/B-packaged-win-arm64-14230030725/archive/_temp/windows-same-main-process-ui.controller.log",
+      "bytes": 32950,
+      "gitBlob": "847f0aca52ee2db86f012371ee62092636819f3e",
+      "sha256": "9d68655850c045d5269e16ff413cb32b95483991bced9fdbfd70161d54d681de"
+    },
+    "source": {
+      "path": "/tmp/migration-evidence-20261116/native/B-packaged-win-arm64-14230030725/source-reference/gateController.cpp",
+      "bytes": 5935,
+      "gitBlob": "ebc96f50b2a901aae4b97b3b4dcb484f449170a5",
+      "sha256": "45d1ce375fbbcce05bc37f885071f8331387bd87c6b9c5fce1b075be56a32532"
+    },
+    "sourceMeaning": "Original controller owns a private Job and original root HANDLE. It waits120000ms, then normal zero-membership grace3000ms; any emergency branch calls TerminateJobObject(job,99), waits within original10000ms for original root signal and zero membership, closes Job and removes its sandbox before emitting emergency-fail.",
+    "rootExit99Limit": "code is initialized to99 and can remain that sentinel after an unsuccessful original wait or exit-code read;99 is also the emergency termination code. This field does not prove a natural driver exit99 or choose the exact emergency trigger.",
+    "observed": "Emergency fallback completed to its activeProcesses0 record; this is an explicit FAIL path, not ordinary product cleanup or successful controller root completion.",
+    "timingInference": "The approximately120s original controller invocation-to-record duration is consistent with its outer wait bound; the branch is not directly logged, so no unique trigger or finalizer stall is claimed.",
+    "noProductCleanupQualification": true
+  },
+  "sourceAndBuildBinding": {
+    "checkoutEvidence": [
+      {
+        "line": 41,
+        "text": "2026-11-16T12:24:53.3064546Z   OPENCODE_V2_TEST_SOURCE_HEAD: 852d9bd3f9142603340f71ca998739e69da00084"
+      },
+      {
+        "line": 46,
+        "text": "2026-11-16T12:24:54.2437715Z   ref: 852d9bd3f9142603340f71ca998739e69da00084"
+      },
+      {
+        "line": 62,
+        "text": "2026-11-16T12:24:54.2443359Z   OPENCODE_V2_TEST_SOURCE_HEAD: 852d9bd3f9142603340f71ca998739e69da00084"
+      },
+      {
+        "line": 103,
+        "text": "2026-11-16T12:25:00.3524854Z [command]\"C:\\Program Files\\Git\\bin\\git.exe\" -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin 852d9bd3f9142603340f71ca998739e69da00084"
+      },
+      {
+        "line": 105,
+        "text": "2026-11-16T12:25:10.6119398Z  * branch            852d9bd3f9142603340f71ca998739e69da00084 -> FETCH_HEAD"
+      },
+      {
+        "line": 106,
+        "text": "2026-11-16T12:25:10.6196041Z [command]\"C:\\Program Files\\Git\\bin\\git.exe\" rev-parse --verify --quiet 852d9bd3f9142603340f71ca998739e69da00084^{object}"
+      },
+      {
+        "line": 107,
+        "text": "2026-11-16T12:25:10.6758850Z 852d9bd3f9142603340f71ca998739e69da00084"
+      },
+      {
+        "line": 114,
+        "text": "2026-11-16T12:25:10.8310826Z [command]\"C:\\Program Files\\Git\\bin\\git.exe\" checkout --progress --force 852d9bd3f9142603340f71ca998739e69da00084"
+      },
+      {
+        "line": 226,
+        "text": "2026-11-16T12:25:27.6376580Z Note: switching to '852d9bd3f9142603340f71ca998739e69da00084'."
+      },
+      {
+        "line": 245,
+        "text": "2026-11-16T12:25:27.7346885Z [command]\"C:\\Program Files\\Git\\bin\\git.exe\" log -1 --format=%H"
+      },
+      {
+        "line": 246,
+        "text": "2026-11-16T12:25:27.7848995Z 852d9bd3f9142603340f71ca998739e69da00084"
+      }
+    ],
+    "originalBuildEvidence": [
+      {
+        "line": 1545,
+        "text": "2026-11-16T12:46:47.8557852Z   node-version: 24.21.0"
+      },
+      {
+        "line": 1708,
+        "text": "2026-11-16T12:50:47.3220177Z -- The CXX compiler identification is MSVC 19.52.37029.0"
+      },
+      {
+        "line": 1742,
+        "text": "2026-11-16T12:51:11.5558667Z   gateController.cpp"
+      },
+      {
+        "line": 1947,
+        "text": "2026-11-16T13:12:24.6981807Z [smokePackagedNative] OK win32: PACKAGED_NATIVE_OK {\"electron\":\"44.10.1\",\"node\":\"24.22.1\",\"cpuFeatures\":\"aarch64\"}"
+      }
+    ],
+    "sourceRows": [
+      {
+        "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+        "bytes": 34285,
+        "gitBlob": "034d2253e0649bdeb5db0b12244656446150c31c",
+        "sha256": "a7057b647c13852fbabdebbb0d8da775a24d55382637d5947d06c733317213bc",
+        "binding": "Exact B immutable Git leaf from complete retained B source table; shared body rehashed, not an ARM post-flow receipt pin"
+      },
+      {
+        "path": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+        "bytes": 31223,
+        "gitBlob": "0b1bbc3ef47cd55ac3e23c13890fce281de01c98",
+        "sha256": "4c037ffe4be03b64ef9e5d9172246a9744f3fc1cf55b48af630811a4c580eaa2",
+        "binding": "Exact B immutable Git leaf from complete retained B source table; shared body rehashed, not an ARM post-flow receipt pin"
+      },
+      {
+        "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+        "bytes": 12614,
+        "gitBlob": "5e21bb5f8c50a3c9dd2a18b1d8c461896e0f91a9",
+        "sha256": "a407196b363ba102f68bfcce1da2faa4d0757a84a00f937872aef909a6bb01c4",
+        "binding": "Exact B immutable Git leaf from complete retained B source table; shared body rehashed, not an ARM post-flow receipt pin"
+      },
+      {
+        "path": "/tmp/migration-evidence-20261116/native/B-packaged-win-arm64-14230030725/source-reference/gateController.cpp",
+        "bytes": 5935,
+        "gitBlob": "ebc96f50b2a901aae4b97b3b4dcb484f449170a5",
+        "sha256": "45d1ce375fbbcce05bc37f885071f8331387bd87c6b9c5fce1b075be56a32532",
+        "binding": "Exact immutable B Git leaf; full body fetched once and rehashed"
+      }
+    ],
+    "sharedReference": {
+      "path": "/tmp/migration-evidence-20261116/root/winarm72e/independent-source-reference.json",
+      "bytes": 181152,
+      "gitBlob": "1f2a7e452d26ca6b95607c78b3a263fb83d51bea",
+      "sha256": "130382ad8a46f596927d7a391a9621870ca15b56128b0550b0f62a72e544164c"
+    },
+    "currentBLeafReference": {
+      "path": "/tmp/migration-evidence-20261116/frontend/packaged-b-win-x64-original/source-pin-audit.json",
+      "bytes": 938531,
+      "gitBlob": "e01d7d7237af217a835fe37605f6218ace8e996c",
+      "sha256": "3c61dec349b3268bd331bffea67e02037976e6a9b99c28ad4b293e5662746680"
+    },
+    "limits": "Metadata, original checkout and original build lines bind sourceB/ARM. Shared immutable bodies were used only as source facts. The absent P08 receipt prevents a full actual ARM1798 before/after byte-freeze join. No runtime/controller binary payload is included for independent rehash."
+  },
+  "separatePreviousPackagedNative": {
+    "candidateManifest": {
+      "path": "/tmp/migration-evidence-20261116/native/B-packaged-win-arm64-14230030725/archive/agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+      "bytes": 1154527,
+      "gitBlob": "c7a90ccacc26fec41c6d4f42bf789e17011d681d",
+      "sha256": "509e66c041655b9366d85e4b9f5f484cc4d7cd7d47f53b629f3efac6bcbd6c76"
+    },
+    "nativeReceipt": {
+      "path": "/tmp/migration-evidence-20261116/native/B-packaged-win-arm64-14230030725/archive/_temp/opencode-v2-packaged-native.json",
+      "bytes": 5389,
+      "gitBlob": "987133ec839fba09f9a896689f02cbd3e2be0f08",
+      "sha256": "34bb06dfa3b1060fa787b4aa2c27a2e49bd4b7ad4b80b8df1d6d67796366fa71"
+    },
+    "qualificationReceipt": {
+      "path": "/tmp/migration-evidence-20261116/native/B-packaged-win-arm64-14230030725/archive/_temp/opencode-v2-packaged.json",
+      "bytes": 1188,
+      "gitBlob": "dc391b8b2426f7ed06b50b97167ecca128c9c855",
+      "sha256": "b6703b1577a0dfccd547505bf57f8c13547e2c03d4cff547b20c4d79b73b2b5b"
+    },
+    "inputReceipt": {
+      "path": "/tmp/migration-evidence-20261116/native/B-packaged-win-arm64-14230030725/archive/_temp/opencode-v2-packaged-inputs.json",
+      "bytes": 782,
+      "gitBlob": "60d8afe1dbbb80f8338a0285751d09c6005dc09c",
+      "sha256": "40a46426b467943c45bb6a990017582378bcdbca59699fd3491b90fc24299d1c"
+    },
+    "rawQualificationRecord": {
+      "line": 2084,
+      "timestamp": "2026-11-16T13:18:24.4424059Z",
+      "record": {
+        "kind": "TEST_PACKAGED_V2_QUALIFICATION",
+        "status": "PASS",
+        "sourceHead": "852d9bd3f9142603340f71ca998739e69da00084",
+        "platform": "win32-arm64",
+        "cleanup": true,
+        "phase": "finished",
+        "desktopJourneyQualified": false,
+        "vendorAuthQualified": false,
+        "releaseQualified": false,
+        "cleanupObservation": {
+          "originalExitObserved": true,
+          "nativeReceiptParsed": true,
+          "nativeReceiptBound": true,
+          "nativeCleanupConfirmed": true,
+          "firstFailure": null,
+          "firstRestorationFailure": null
+        },
+        "appAsarSha256": "a90dedb6c5ae475d2a7a91ffc23ebb26ff9c3ea9c7a02d547749ef34ac151b7c",
+        "candidateManifestSha256": "509e66c041655b9366d85e4b9f5f484cc4d7cd7d47f53b629f3efac6bcbd6c76",
+        "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+        "nodeSha256": "dff59da18b6ffe1bf1ca99e1d2af4906080c481740619f5b5098c0fca28bd9b7",
+        "nativeExit": {
+          "code": 0,
+          "signal": null
+        },
+        "nativeReceiptSha256": "34bb06dfa3b1060fa787b4aa2c27a2e49bd4b7ad4b80b8df1d6d67796366fa71",
+        "sourceCheckoutUnavailable": true,
+        "legacyRuntimeUnavailable": true,
+        "sourceRestored": true,
+        "bundleRestored": true,
+        "legacyRuntimeRestored": true
+      }
+    },
+    "allSourcePlatformAndDigestJoinsExact": true,
+    "status": "PASS",
+    "cleanup": true,
+    "hosts": [
+      {
+        "exitCode": 0,
+        "signalCode": null,
+        "stdoutValid": true
+      },
+      {
+        "exitCode": 0,
+        "signalCode": null,
+        "stdoutValid": true
+      }
+    ],
+    "modelRequests": 11,
+    "phaseElapsedMs": {
+      "original_host_embedded_native_and_mcp_ready": 74765,
+      "native_model_tool_effect_permission_mcp_task_and_reply_completed_once": 182527,
+      "changed_project_config_did_not_retarget_running_native_session": 182528,
+      "original_uploaded_PNG_native_image_inference_and_public_readback": 182528,
+      "checkpoint_and_original_host_native_cleanup_confirmed": 183424,
+      "cold_host_restored_native_history_without_model_or_tool_replay": 237898
+    },
+    "elapsedMs": 258346,
+    "launchObservation": {
+      "openElapsedMs": 52100,
+      "afterOpen": {
+        "available": true,
+        "status": "ready",
+        "reason": "context-applied",
+        "elapsedSinceAttemptMs": 50540,
+        "capturedTimeoutMs": 120000,
+        "claimed": true,
+        "nativeReady": true,
+        "contextApplied": true,
+        "everReady": true,
+        "usable": true,
+        "controlAvailable": true,
+        "noAllocation": false
+      }
+    },
+    "coordination": {
+      "status": "unqualified",
+      "cleanup": null
+    },
+    "providerArtifacts": [
+      {
+        "name": "@agent-teams/provider-implementations",
+        "sha256": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267"
+      },
+      {
+        "name": "@agent-teams/provider-session-contracts",
+        "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc"
+      }
+    ],
+    "sourceCheckoutUnavailable": true,
+    "legacyRuntimeUnavailable": true,
+    "sourceRestored": true,
+    "bundleRestored": true,
+    "legacyRuntimeRestored": true,
+    "qualificationLimit": "This preceding source-bound manual native packaged receipt has11 finite localhost model requests/two Host exits0/null/cleanuptrue and a120000ms captured readiness timeout. It does not qualify the failed later P08 journey, original15s, P09, direct-I386, M16, real vendor or release. Binary/archive payload hashes are retained original measurements, not independently rehashed runtime payloads here."
+  },
+  "comparison": {
+    "old72ARM": "Different first boundary from retained old72e ARM business-input unexplained-ancestor refusal. No old outcome/cause is transferred.",
+    "Bx64": "Different first boundary from current B x64 fixture432 settlement assertion; no UI Stop phase was reached here.",
+    "publishedSettlement784": "The later confirmed-settlement fixture correction is not reached by this Retry failure and cannot be credited as its remedy.",
+    "liveCim": "B source includes the already selected5e21 live combined snapshot. This failure does not isolate its latency or negate its narrow ownership contract; original cutoff remains unchanged."
+  },
+  "reviewMethod": [
+    "One original job-log retrieval and one artifact metadata listing/reference/byte download; no repeated downloads or cohort polls.",
+    "The generic jobs/{id} read was rejected as an unsupported tool URL; it was not retried. Full original run/job metadata was reused from frontend retained snapshot.",
+    "One necessary immutable gateController source body read; no source execution or modification.",
+    "Pure stdlib read/hash/JSON/ZIP/source inspection only; no project/native/GUI/provider actions, deadline changes or source selection."
+  ]
+}

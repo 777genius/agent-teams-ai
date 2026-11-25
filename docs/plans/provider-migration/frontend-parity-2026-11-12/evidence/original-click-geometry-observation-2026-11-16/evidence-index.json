@@ -1,0 +1,92 @@
+{
+  "kind": "original-click-geometry-observation-evidence-index",
+  "parent": "257ba1192278468aa618d4b924f1a6091925180f",
+  "parentTree": "ec3fc232b68e0f8d1e9451bab267b1e69c828c81",
+  "sourceFiles": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "before": {
+        "size": 27188,
+        "sha": "c634a6275a18c527d623e3de922634e1e75448ec",
+        "sha256": "8bcfa5a202eedfde31e3626845c634901fff1d8890a058a0a093f08d1ba4be4a"
+      },
+      "after": {
+        "size": 30733,
+        "sha": "1c11809c6458f829bd9bb6995aea2ad60b85511e",
+        "sha256": "eb11423b89e2b70edfdd74d8144410dfce62155e9754a50e56d1b1a387e7566e"
+      },
+      "lines": 548
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "before": {
+        "size": 123190,
+        "sha": "5ea26752689cbf9ef4307816ad7c739eb1dd5f4c",
+        "sha256": "9f51a90556cc9d96da3dcd9c7c271d9a97e6d693c0094181d279e9a80310c2c3"
+      },
+      "after": {
+        "size": 134975,
+        "sha": "2017060db6ca7ef01d17ee3096ac994b288ff1aa",
+        "sha256": "08860180456acd6b8202e632fe3dbc3080aba07ddcef6ebd49679eaaa4af3fde"
+      },
+      "lines": 2286
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "before": {
+        "size": 101806,
+        "sha": "d53a2fda2f60c12526b0457cf7d25858f43dd8f2",
+        "sha256": "f01f6c588e2e5172f4b2c56f966cafe50acbf8459c86c8469109da6c9b5cf912"
+      },
+      "after": {
+        "size": 101869,
+        "sha": "09343faa479855d0425f0649e70db76af3ffdef2",
+        "sha256": "bcf54d00b71a0b064efde920fbd7b85d5e549509380b6d3b0bbd44d8c09dbf70"
+      },
+      "lines": 1314
+    }
+  ],
+  "documents": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "before": "8d00e7cde59d8e4d42483067426e5b84914b4b01",
+      "after": {
+        "size": 1947636,
+        "sha": "29734b65cc4e0b48a977aede875549c69725d8a9",
+        "sha256": "e069d5268fe3bb56213a78f47b15d20bf31e76ba7d7cd8f8953cad428c54cb12"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-click-geometry-observation-2026-11-16/r1.md",
+      "before": null,
+      "after": {
+        "size": 9432,
+        "sha": "a0fc82ba8d4f2a6322aa841b6adcd5a427990842",
+        "sha256": "15c39776c3ba63e1510939dc47fb3175dde3cd3dd6e93cac891b024fc7db09e2"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-click-geometry-observation-2026-11-16/source.patch",
+      "before": null,
+      "after": {
+        "size": 19970,
+        "sha": "bc939cc77de7a5a819449a622fb6c14618255a6f",
+        "sha256": "48a28e3fc4fa8e8d0c0c7d8202d49709841708307a751807fe6e11984f4aede1"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-click-geometry-observation-2026-11-16/source-review.json",
+      "before": null,
+      "after": {
+        "size": 3903,
+        "sha": "6ff4bd7ffd1e333377f1668aa59a76ec8e07e859",
+        "sha256": "06005cb4db4aaaa24bd2b53dcb6982188eefbeb200310a17db68fe3337f7a6aa"
+      }
+    }
+  ],
+  "selfReference": "This index does not hash itself; the complete resulting tree and payload identities receive independent prospective and published binding.",
+  "proofScope": "Passive observations of existing reads; original final refusal and error identity preserved. No old cause, layout repair, atomic click or scenario qualification.",
+  "execution": "NOT_RUN: original automatic CI remains the only project execution venue.",
+  "publication": "Separate documentation-only then three-source children, immediate ordinary expected-parent delivery pushes; no force or primary move.",
+  "sequencing": "Actual B123/retry/Runtime/Team/full types/typed lint/R2 and useful-job preservation remain. C separately composes full current Team and95 existing lint operands."
+}

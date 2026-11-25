@@ -1,0 +1,131 @@
+{
+  "sourceHead": "d382c393898d35c9340cd903d1c02fb868c18a8e",
+  "artifacts": [
+    {
+      "key": "packaged_linux",
+      "artifactId": 14175672501,
+      "runId": 43736377103,
+      "jobId": 132896822005,
+      "sourceHead": "d382c393898d35c9340cd903d1c02fb868c18a8e",
+      "zipPath": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/d382-packaged-linux-x64.zip",
+      "zipBytes": 346203,
+      "zipSha256": "f0153246e97645ae924451ecd246fcaed4e5d58c63d89ae86703f21c6f60ac4d",
+      "crcVerified": true,
+      "safePaths": true,
+      "jobLogPath": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/job-132896822005.log",
+      "jobLog": {
+        "bytes": 185353,
+        "sha256": "b378107630540efa38cc940776e777ef69b132a0797e64cd8e7fb8ace36cce85"
+      },
+      "directory": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/packaged_linux",
+      "files": [
+        {
+          "path": "agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+          "bytes": 1151370,
+          "sha256": "84ccd133b35faf26890176d61f2e744fe48c6c47610863671c76f9a3ab074112",
+          "jsonKeys": [
+            "schemaVersion",
+            "kind",
+            "sourceHead",
+            "platform",
+            "hostSourceDigest",
+            "harnessSha256",
+            "node",
+            "nodeExecutable",
+            "hostPackage",
+            "hostEntry",
+            "hostEntrySha256",
+            "packages",
+            "artifacts",
+            "bun",
+            "engine"
+          ]
+        },
+        {
+          "path": "_temp/opencode-v2-packaged-native.json",
+          "bytes": 5286,
+          "sha256": "774d521a92b064ad8570f38b418d6d44daa55ec2b6175ed06edf0b1c7800e078",
+          "jsonKeys": [
+            "kind",
+            "status",
+            "packaged",
+            "sourceHead",
+            "platform",
+            "version",
+            "approvalMode",
+            "nodeVersion",
+            "modelSelection",
+            "configurationSelection",
+            "preferencesSelection",
+            "digests",
+            "steps",
+            "cleanup",
+            "phaseElapsedMs",
+            "elapsedMs",
+            "cancelled",
+            "inputObservation",
+            "launchObservation",
+            "failureCode",
+            "hosts",
+            "modelOrigin",
+            "modelRequests",
+            "modelProgress",
+            "coordination",
+            "modelFailures",
+            "vendorAuthQualified",
+            "desktopQualified",
+            "releaseQualified"
+          ]
+        },
+        {
+          "path": "_temp/opencode-v2-packaged.json",
+          "bytes": 1186,
+          "sha256": "929e11afc0c3b73d5bbcd2951111d5d22e7e696e32f98bfa446bf7be6cde4822",
+          "jsonKeys": [
+            "kind",
+            "status",
+            "sourceHead",
+            "platform",
+            "cleanup",
+            "phase",
+            "desktopJourneyQualified",
+            "vendorAuthQualified",
+            "releaseQualified",
+            "cleanupObservation",
+            "appAsarSha256",
+            "candidateManifestSha256",
+            "hostEntrySha256",
+            "nodeSha256",
+            "nativeExit",
+            "nativeReceiptSha256",
+            "sourceCheckoutUnavailable",
+            "legacyRuntimeUnavailable",
+            "sourceRestored",
+            "bundleRestored",
+            "legacyRuntimeRestored"
+          ]
+        },
+        {
+          "path": "_temp/opencode-v2-packaged-inputs.json",
+          "bytes": 783,
+          "sha256": "27beaf84fc5f29b6f566825a5c4a45aa41fcd0d6c5700c562479d61378ae6ed5",
+          "jsonKeys": [
+            "kind",
+            "status",
+            "sourceHead",
+            "platform",
+            "nodeVersion",
+            "productQualified",
+            "stage",
+            "baseArchiveSha256",
+            "runtimeSource",
+            "bun",
+            "supportArchiveSha256",
+            "manifestSha256"
+          ]
+        }
+      ]
+    }
+  ],
+  "limits": "Original archives and JSON only; no source, tests, native providers, CI actions or tracked checkout modified/executed."
+}

@@ -2572,6 +2572,7 @@
       "allFlagsValid": "Tüm bayraklar geçerli",
       "unknownFlags": "Bilinmeyen: {{flags}}",
       "protectedFlags": "Korumalı: {{flags}}",
+      "missingValue": "Değer eksik: {{flags}}",
       "failed": "Doğrulama başarısız oldu"
     },
     "placeholders": {

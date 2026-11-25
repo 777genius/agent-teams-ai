@@ -16,6 +16,7 @@ import eslintConfigPrettier from 'eslint-config-prettier/flat';
 import globals from 'globals';
 import { featureOverrides } from './eslint.feature-overrides.mts';
 import { gatewayBoundaries } from './eslint.gateway-boundaries.mts';
+import { reviewFlowBoundaries } from './eslint.review-flow-boundaries.mts';
 
 export default defineConfig([
   // Global ignores
@@ -1033,7 +1034,7 @@ export default defineConfig([
                 '@features/*/core/**',
                 '@features/*/main/*',
                 '@features/*/preload/*',
-                '@features/*/renderer/*',
+                '@features/*/renderer/*', '!@features/review-flow/renderer/http', '@features/review-flow/renderer/http/**', '!@features/team-task-detail/renderer/shell', '@features/team-task-detail/renderer/shell/**',
               ],
               message: 'Import feature public entrypoints only.',
             },
@@ -1146,6 +1147,7 @@ export default defineConfig([
   },
 
   ...gatewayBoundaries,
+  ...reviewFlowBoundaries,
 
   // The existing JavaScript compatibility entrypoint is outside the TS project.
   // Its replacement graph stays type-aware; retain normal JS/security lint here.

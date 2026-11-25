@@ -8,6 +8,8 @@ import { dirname, join, resolve } from 'node:path';
 
 import { expect, it, vi } from 'vitest';
 
+import { FileRuntimeSourceIndex } from '../../../packages/legacy-agent-host/dist/adapters/profile/FileRuntimeSourceIndex';
+import { FileManagementCommandStore } from '../../../packages/legacy-agent-host/dist/adapters/providers/FileManagementCommandStore';
 import { treeHash } from '../../../packages/legacy-agent-host/tests/fixtures/native-host';
 import {
   RUNTIME_PROVIDER_MANAGEMENT_CANCEL_MODEL_TEST,
@@ -42,6 +44,8 @@ import {
   CLI_INSTALLER_GET_STATUS,
   CLI_INSTALLER_VERIFY_PROVIDER_MODELS,
 } from '../../../src/preload/constants/ipcChannels';
+import { getTeamEffortSelectorPresentation } from '../../../src/renderer/utils/teamEffortOptions';
+import { isTeamEffortLevelForProvider } from '../../../src/shared/utils/effortLevels';
 
 import type { TeamHostProfile } from '../../../packages/legacy-agent-host/dist/composition/TeamHost';
 import type { DesktopBackendDescriptor } from '../../../src/features/agent-backend/main';
@@ -62,6 +66,8 @@ const sourcePaths = [
   'src/features/runtime-provider-management/main/adapters/output/CapturedModelProbe.ts',
   'packages/legacy-agent-host/tests/fixtures/native-host.ts',
   'src/features/runtime-provider-management/main/adapters/output/CapturedProviderOAuth.ts',
+  'src/features/runtime-provider-management/main/infrastructure/runtimeProviderOAuthPresentation.ts',
+  'src/features/runtime-provider-management/main/infrastructure/runtimeProviderModelTestBoundary.ts',
   'src/features/runtime-provider-management/main/infrastructure/FileProviderOAuthIntentStore.ts',
   'src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderManagementClient.ts',
   'src/features/runtime-provider-management/main/adapters/output/capturedManagementCatalog.ts',
@@ -79,6 +85,8 @@ const sourcePaths = [
   'src/features/runtime-provider-management/core/application/RuntimeProviderStatusPort.ts',
   'src/shared/utils/providerStatusAuthority.ts',
   'src/renderer/store/slices/cliInstallerStatusReconciliation.ts',
+  'src/renderer/utils/teamEffortOptions.ts',
+  'src/shared/utils/effortLevels.ts',
   'test/features/runtime-provider-management/capturedManagement.safe-e2e.test.ts',
 ];
 
@@ -317,6 +325,17 @@ it('actual IPC facade → captured Desktop owner → standalone Host → separat
       statusCheckOutcome: 'model_only',
       models: expect.arrayContaining(['TEST-api/TEST-model']),
     });
+    const providerStatus = status.data.providers.find((p) => p.providerId === 'opencode');
+    const effort = getTeamEffortSelectorPresentation({
+      providerId: 'opencode', model: 'TEST-api/TEST-model', providerStatus,
+    });
+    expect(effort).toMatchObject({
+      disabled: false,
+      options: [{ value: '', label: 'Default' }, { value: 'low', label: 'Low' }, { value: 'high', label: 'High' }],
+    });
+    for (const option of effort.options.filter((option) => option.value))
+      expect(isTeamEffortLevelForProvider(option.value, 'opencode')).toBe(true);
+    expect(JSON.stringify(providerStatus)).not.toContain('TEST-private-variant-setting');
     expect(
       (await readFile(join(root, 'native-effects.ndjson'), 'utf8')).includes(
         'probe-session-created'
@@ -407,13 +426,16 @@ it('actual IPC facade → captured Desktop owner → standalone Host → separat
       codeInput
     );
     await vi.waitFor(
-      () =>
-        expect(
-          oauthProgress.some(
-            (event) =>
-              event.operationId === codeInput.oauthOperationId && event.phase === 'waiting-for-code'
-          )
-        ).toBe(true),
+      () => {
+        const progress = oauthProgress.filter(
+          (event) => event.operationId === codeInput.oauthOperationId
+        ).at(-1);
+        expect(progress?.phase).toBe('waiting-for-code');
+        expect(progress?.instructions).toContain(
+          'Finish sign-in in your browser and paste the returned code.'
+        );
+        expect(progress?.authorizationUrl).toBeUndefined();
+      },
       { timeout: 10000 }
     );
     expect(
@@ -432,6 +454,24 @@ it('actual IPC facade → captured Desktop owner → standalone Host → separat
         )
       ).provider?.state
     ).toBe('not-connected');
+    const originalCommands = new FileManagementCommandStore(owner.storageRoot, true);
+    const sourceIndex = new FileRuntimeSourceIndex(owner.storageRoot, () => {}, true).read();
+    const selectedSources = sourceIndex.records.filter((record) =>
+      record.grant.runtimeId === 'opencode' && record.grant.projectPath === null &&
+      sourceIndex.current.some((pointer) => pointer.sourceId === record.grant.targetId &&
+        pointer.revision === record.revision));
+    expect(selectedSources).toHaveLength(1);
+    const selectedSource = selectedSources[0]!;
+    expect(selectedSource.grant).toMatchObject({
+      ownerId: owner.ownerId, ownerRevision: owner.revision, contextId: 'local',
+      projectPath: null, runtimeId: 'opencode',
+      profileId: 'TEST-management', configRevision: 'TEST-config',
+    });
+    const selectedIdentity = `runtime-source:${selectedSource.revision}`;
+    const nativeEffects = async () => (await readFile(join(root, 'native-effects.ndjson'), 'utf8'))
+      .trim().split('\n').map((line) => JSON.parse(line) as {
+        event: string; providerId?: string; pid: number;
+      });
     const autoInput = {
       ...codeInput,
       providerId: 'TEST-oauth-auto',
@@ -442,28 +482,68 @@ it('actual IPC facade → captured Desktop owner → standalone Host → separat
       autoInput
     );
     await vi.waitFor(
-      () =>
-        expect(
-          oauthProgress.some(
-            (event) =>
-              event.operationId === autoInput.oauthOperationId && event.phase === 'completing'
-          )
-        ).toBe(true),
+      async () => {
+        const callback = (await nativeEffects()).filter(
+          (event) => event.providerId === autoInput.providerId && event.event === 'callback-start'
+        );
+        expect(callback).toHaveLength(1);
+        expect(originalCommands.read(autoInput.oauthOperationId)).toMatchObject({
+          kind: 'oauth', commandId: autoInput.oauthOperationId,
+          profileId: selectedIdentity, configRevision: selectedIdentity,
+          providerId: autoInput.providerId, phase: 'completing', completionMethod: 'auto',
+          completionCommandId: autoInput.oauthOperationId + ':auto', resourceHeld: true,
+        });
+        const progress = oauthProgress.filter(
+          (event) => event.operationId === autoInput.oauthOperationId
+        ).at(-1);
+        expect(progress).toMatchObject({
+          phase: 'waiting-for-browser', completionMethod: 'auto',
+          providerId: autoInput.providerId,
+        });
+        expect(progress?.instructions).toContain('Enter A7F0-835A in your browser.');
+        expect(progress?.authorizationUrl).toBeUndefined();
+        expect(openedUrls).toHaveLength(2);
+      },
       { timeout: 10000 }
     );
+    const originalAuto = originalCommands.read(autoInput.oauthOperationId);
+    if (originalAuto?.kind !== 'oauth') throw new Error('Original auto OAuth receipt unavailable');
+    const autoEffects = (await nativeEffects()).filter(
+      (event) => event.providerId === autoInput.providerId
+    );
+    expect(autoEffects.map((event) => event.event)).toEqual(['authorize', 'callback-start']);
+    const autoPid = autoEffects[0]!.pid;
+    expect(Number.isSafeInteger(autoPid) && autoPid > 1).toBe(true);
+    expect(autoEffects.every((event) => event.pid === autoPid)).toBe(true);
     expect(
       await invoke(RUNTIME_PROVIDER_MANAGEMENT_OAUTH_CANCEL, {
         operationId: autoInput.oauthOperationId,
       })
     ).toEqual({ ok: true });
     expect((await autoPending).error).toBeDefined();
+    expect(originalCommands.read(autoInput.oauthOperationId)).toMatchObject({
+      commandId: originalAuto.commandId, profileId: originalAuto.profileId,
+      configRevision: originalAuto.configRevision, fingerprint: originalAuto.fingerprint,
+      completionCommandId: originalAuto.completionCommandId,
+      phase: 'cancelled', resourceHeld: false,
+    });
+    expect(() => process.kill(autoPid, 0)).toThrowError(expect.objectContaining({ code: 'ESRCH' }));
+    const cancelledEffects = await readFile(join(root, 'native-effects.ndjson'), 'utf8');
     await writeFile(join(root, 'release-auto'), 'TEST retired callback must never write');
+    expect(await readFile(join(root, 'native-effects.ndjson'), 'utf8')).toBe(cancelledEffects);
     expect(JSON.parse(await readFile(authPath, 'utf8'))).toEqual({});
     expect(openedUrls).toHaveLength(2);
+    expect(oauthProgress.filter((event) => event.operationId === autoInput.oauthOperationId).at(-1))
+      .toMatchObject({ phase: 'cancelled', instructions: null });
     const journalDirectory = join(root, 'userData/agent-backend/oauth-intents');
     for (const name of await readdir(journalDirectory)) {
       const journal = await readFile(join(journalDirectory, name), 'utf8');
-      for (const forbidden of ['TEST-private', 'TEST-correct-code', 'authorizationUrl', root])
+      for (const forbidden of ['TEST-private', 'TEST-correct-code', 'A7F0-835A', 'authorizationUrl', root])
+        expect(journal).not.toContain(forbidden);
+    }
+    for (const operationId of [codeInput.oauthOperationId, autoInput.oauthOperationId]) {
+      const journal = JSON.stringify(originalCommands.read(operationId));
+      for (const forbidden of ['TEST-private', 'TEST-correct-code', 'A7F0-835A', 'authorizationUrl', root])
         expect(journal).not.toContain(forbidden);
     }
     const safeProgress = JSON.stringify(oauthProgress);
@@ -567,6 +647,7 @@ it('actual IPC facade → captured Desktop owner → standalone Host → separat
         projectPath: join(root, 'workspace'),
       }
     );
+    expect(globalSaved.error).toBeUndefined();
     expect(globalSaved.view).toMatchObject({
       projectPath: null,
       defaultModel: 'TEST-api/TEST-model',

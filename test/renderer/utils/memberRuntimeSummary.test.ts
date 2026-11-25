@@ -512,6 +512,104 @@ describe('resolveMemberRuntimeSummary', () => {
   });
 });
 
+describe('captured Host runtime summaries', () => {
+  const leadSelection = {
+    providerId: 'anthropic' as const,
+    model: 'haiku',
+    effort: 'low' as const,
+    limitContext: false,
+  };
+
+  for (const state of ['idle', 'pending'] as const) {
+    it(`does not invent lead defaults for a ${state} captured member without configuration`, () => {
+      const member = createMember({
+        runtimeOwner: 'captured-host',
+        providerId: undefined,
+        model: undefined,
+        effort: undefined,
+      });
+      const spawnEntry = state === 'pending' ? createSpawnEntry() : undefined;
+
+      expect(resolveMemberRuntimeSummary(member, leadSelection, spawnEntry)).toBeUndefined();
+    });
+
+    it(`preserves resolved inheritance for a ${state} captured member`, () => {
+      const member = createMember({
+        runtimeOwner: 'captured-host',
+        configuredRuntimeSettings: {},
+        providerId: undefined,
+        model: undefined,
+        effort: undefined,
+      });
+      const spawnEntry = state === 'pending' ? createSpawnEntry() : undefined;
+
+      expect(resolveMemberRuntimeSummary(member, leadSelection, spawnEntry)).toBe(
+        'Anthropic · Haiku 4.5 · Low'
+      );
+    });
+  }
+
+  it('does not present stale member or process fields as resolved Host configuration', () => {
+    const member = createMember({
+      runtimeOwner: 'captured-host',
+      providerId: 'codex',
+      model: 'gpt-5.4-mini',
+    });
+    const spawnEntry = createSpawnEntry({
+      runtimeModel: 'claude-opus-4-7',
+      runtimeAlive: true,
+    });
+
+    expect(resolveMemberRuntimeSummary(member, leadSelection, spawnEntry)).toBeUndefined();
+  });
+
+  it('keeps an explicitly configured Codex member independent of the Anthropic lead', () => {
+    const settings = {
+      providerId: 'codex' as const,
+      model: 'gpt-5.4-mini',
+      effort: 'medium' as const,
+    };
+    const member = createMember({
+      runtimeOwner: 'captured-host',
+      configuredRuntimeSettings: settings,
+      ...settings,
+    });
+
+    expect(resolveMemberRuntimeSummary(member, leadSelection, undefined)).toBe(
+      '5.4 Mini · Medium · Codex'
+    );
+  });
+
+  it('keeps an explicitly configured OpenCode member independent of the Anthropic lead', () => {
+    const settings = {
+      providerId: 'opencode' as const,
+      model: 'opencode/nemotron-3-super-free',
+    };
+    const member = createMember({
+      runtimeOwner: 'captured-host',
+      configuredRuntimeSettings: settings,
+      ...settings,
+      effort: undefined,
+    });
+
+    expect(resolveMemberRuntimeSummary(member, leadSelection, undefined)).toBe(
+      'nemotron-3-super-free · via OpenCode Zen'
+    );
+  });
+
+  it('preserves legacy member inheritance when no Host configuration marker exists', () => {
+    const member = createMember({
+      providerId: undefined,
+      model: undefined,
+      effort: undefined,
+    });
+
+    expect(resolveMemberRuntimeSummary(member, leadSelection, undefined)).toBe(
+      'Anthropic · Haiku 4.5 · Low'
+    );
+  });
+});
+
 describe('getRuntimeMemorySourceLabel', () => {
   it('explains when RSS comes from a tmux pane shell', () => {
     expect(

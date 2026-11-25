@@ -1,13 +1,16 @@
-import { lstatSync, mkdirSync, readFileSync, realpathSync } from 'node:fs';
+import { closeSync, constants, fstatSync, lstatSync, mkdirSync, openSync, readFileSync, readSync, realpathSync } from 'node:fs';
+import type { BigIntStats } from 'node:fs';
 import { createRequire } from 'node:module';
 import { isAbsolute, join, resolve } from 'node:path';
 import { RuntimeOwnerError } from '../../runtime/contracts.js';
 import { normalizeBinding, runtimeDigest } from '../../runtime/identity.js';
-import { DEFAULT_ACTIVITY_LIMITS } from '../../runtime/activityContracts.js';
+import { CONVERSATION_LIMITS, DEFAULT_ACTIVITY_LIMITS } from '../../runtime/activityContracts.js';
+import { validateConversation } from '../../runtime/runtimeConversation.js';
 import type { RuntimeBinding } from '../../runtime/contracts.js';
 import type {
   RuntimeActivityLimits,
   RuntimeActivityRecord,
+  RuntimeConversationRecord,
   RuntimeEventStorage,
 } from '../../runtime/activityContracts.js';
 
@@ -62,6 +65,60 @@ export class FileRuntimeEventStorage implements RuntimeEventStorage {
     this.checkDirectory();
     this.validate(record);
     atomic.writeJsonFileSync(this.path(record.binding), record);
+  }
+  readConversation(raw: RuntimeBinding): RuntimeConversationRecord | undefined {
+    const binding = normalizeBinding(raw);
+    this.checkDirectory();
+    const path = this.conversationPath(binding);
+    let fd: number | undefined, observed = false;
+    const same = (a: BigIntStats, b: BigIntStats) => b.isFile() && !b.isSymbolicLink() &&
+      a.dev === b.dev && a.ino === b.ino && a.size === b.size && a.mtimeNs === b.mtimeNs;
+    try {
+      const before = lstatSync(path, { bigint: true }); observed = true;
+      if (!before.isFile() || before.isSymbolicLink() || before.size > BigInt(CONVERSATION_LIMITS.bytes))
+        throw new RuntimeOwnerError('hold');
+      fd = openSync(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+      if (!same(before, fstatSync(fd, { bigint: true }))) throw new RuntimeOwnerError('hold');
+      const bytes = Buffer.alloc(Number(before.size) + 1);
+      let length = 0, count = 0;
+      do { count = readSync(fd, bytes, length, bytes.length - length, null); length += count; }
+      while (count && length < bytes.length);
+      if (BigInt(length) !== before.size || !same(before, fstatSync(fd, { bigint: true })) ||
+          !same(before, lstatSync(path, { bigint: true }))) throw new RuntimeOwnerError('hold');
+      this.checkDirectory();
+      const record = JSON.parse(new TextDecoder('utf-8', { fatal: true })
+        .decode(bytes.subarray(0, length))) as RuntimeConversationRecord;
+      validateConversation(record);
+      if (runtimeDigest(record.binding) !== runtimeDigest(binding)) throw new RuntimeOwnerError('hold');
+      return record;
+    } catch (error) {
+      if (!observed && (error as NodeJS.ErrnoException).code === 'ENOENT') return undefined;
+      throw new RuntimeOwnerError('hold');
+    } finally { if (fd !== undefined) closeSync(fd); }
+  }
+  writeConversation(record: RuntimeConversationRecord): void {
+    this.checkDirectory();
+    validateConversation(record);
+    atomic.writeJsonFileSync(this.conversationPath(record.binding), record);
+  }
+  private conversationPath(binding: RuntimeBinding): string {
+    return join(this.directory, `${runtimeDigest(binding)}.conversation.json`);
+  }
+  hasRetainedActivity(raw: RuntimeBinding): boolean {
+    const binding = normalizeBinding(raw);
+    this.checkDirectory();
+    let found = false;
+    for (const path of [this.path(binding), this.conversationPath(binding)]) {
+      try {
+        const value = lstatSync(path);
+        if (!value.isFile() || value.isSymbolicLink()) throw new RuntimeOwnerError('hold');
+        found = true;
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw new RuntimeOwnerError('hold');
+      }
+    }
+    this.checkDirectory();
+    return found;
   }
   private validate(record: RuntimeActivityRecord): void {
     const invalid = (): never => {

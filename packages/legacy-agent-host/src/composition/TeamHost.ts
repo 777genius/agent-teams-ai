@@ -2,6 +2,10 @@ import { createTeamCreationMethods, createTeamRegistryMethods } from './createTe
 import { createHostGroupComposition } from './createHostGroupComposition.js';
 import { preflightNativeMemberModel } from './preflightNativeMemberModel.js';
 import { createProviderManagementMethods } from './createProviderManagementMethods.js';
+import { createHostProviderManagementComposition } from './createHostProviderManagementComposition.js';
+import { createRuntimeSourceMethods } from './createRuntimeSourceMethods.js';
+import { createHostScheduledRunComposition } from './createHostScheduledRunComposition.js';
+import { envelopeSchema, parsePreparationEnvelope, parseCreationEnvelope, equalFields, hostOwnerSchema, json, selectBoundHostTeam } from './teamHostEnvelope.js';
 import { join } from 'node:path';
 import { createHostTeamLifecycleComposition } from './createHostTeamLifecycleComposition.js';
 import { createHostWorkSyncComposition } from './createHostWorkSyncComposition.js';
@@ -9,7 +13,9 @@ import { TeamOwnerStore } from '../adapters/team/TeamOwnerStore.js';
 import { admitTeamNamespace } from '../adapters/team/admitTeamNamespace.js';
 import { createRuntimeHostMethods } from './createRuntimeHostMethods.js';
 import { createHostCrossTeamComposition } from './createHostCrossTeamComposition.js';
-import { createProcessCustody, processCustodyProfileSchema } from './processCustody.js';
+import { createProcessCustody } from './processCustody.js';
+import { HostWindowsLaunch } from '../owned-process/HostWindowsLaunch.js';
+import { HOST_CUSTODY_LAUNCH_MS } from '../owned-process/hostCustody.js';
 import { createTeamProcessComposition } from './createTeamProcessComposition.js';
 import { createTeamReviewComposition } from './TeamReviewComposition.js';
 import { createStoppedImportComposition } from './createStoppedImportComposition.js';
@@ -22,22 +28,23 @@ import { createFilesystemTeamOwner } from '../adapters/team/createFilesystemTeam
 import { admitRegistryTeamNamespace } from '../adapters/team-registry/admitRegistryTeamNamespace.js';
 import { FileTeamRegistryStore } from '../adapters/team-registry/FileTeamRegistryStore.js';
 import { TeamRegistry } from '../team-registry/TeamRegistry.js';
-import { teamRegistryScopeSchema } from '../team-registry/contracts.js';
 import { hostedTeamDefinitionSchema } from '../team-registry/definition.js';
 import { createHostServer } from '../index.js';
 import { TEAM_HOST_DISPOSE_TIMEOUT_MS } from '../contracts.js';
 import { TeamOwnerError } from '../team/contracts.js';
 import { RuntimeOwnerError } from '../runtime/contracts.js';
 import { TeamLaunchError } from '../team-launch/contracts.js';
-import { runtimeProfileSchema } from './runtimeProfile.js';
 import { RuntimeTeamCoordinator } from './RuntimeTeamCoordinator.js';
-import { providerManagementProfileSchema } from '../management/profile.js';
-import { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
+import { type CapturedPromptSuggestionNotice, PROMPT_SUGGESTION_PROVIDERS, type PromptSuggestionProvider } from './createCapturedPromptSuggestionBinding.js';
+import { hasRetainedTeamRuntime } from './RuntimeTeamCaptures.js';
+import type { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
 import { assertAccountNamespaces } from './assertAccountNamespaces.js';
 import { ManagementCommandError } from '../management/commandRecords.js';
-import { executeTeamModelProbe, teamModelProbeProfile } from './teamLaunchModelProbe.js';
+import { executeTeamModelProbe } from './teamLaunchModelProbe.js';
 import { replaceRosterPayloadSchema } from '../team/rosterSchema.js';
 import { CreateTeamLaunchCoordinator } from './CreateTeamLaunchCoordinator.js';
+import { teamHostProfileSchema } from './teamHostProfile.js';
+import type { TeamHostProfile } from './teamHostProfile.js';
 
 import type { HostMethod, HostServer, HostServerOptions } from '../index.js';
 import type { JsonValue } from '../contracts.js';
@@ -45,61 +52,12 @@ import type { ProviderOAuthSnapshot } from '../management/contracts.js';
 import type { TeamCommand } from '../team/contracts.js';
 import type { HostedTeam } from './RuntimeTeamCoordinator.js';
 import type { MemberProvider, MemberProviderContext } from '../adapters/providers/MemberProvider.js';
+import type { ScheduledRunProvider, ScheduledRunProviderContext } from '../adapters/providers/ScheduledRunProvider.js';
+export { teamHostProfileSchema } from './teamHostProfile.js';
+export type { TeamHostProfile } from './teamHostProfile.js';
 
 const id = z.string().min(1).max(256);
 const segment = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/);
-const hash = z.string().regex(/^[a-f0-9]{64}$/);
-const scope = teamRegistryScopeSchema;
-const owner = z
-  .object({
-    ownerId: id,
-    revision: id,
-    storageRoot: id,
-    profileId: id,
-    protocolVersion: z.literal(1),
-    buildId: id,
-    nodeSha256: hash,
-    hostEntrySha256: hash,
-  })
-  .strict();
-
-/** Private captured composition data, never an IPC/tool argument or renderer DTO. */
-export const teamHostProfileSchema = z
-  .object({
-    schemaVersion: z.literal(1),
-    owner,
-    principalId: id,
-    reviewTransport: z.literal('review-v1').optional(),
-    runtime: runtimeProfileSchema.optional(),
-    processCustody: processCustodyProfileSchema.optional(),
-    management: z.array(providerManagementProfileSchema).max(16).optional(),
-    creation: z
-      .object({ contextIds: z.array(id).min(1).max(256) })
-      .strict()
-      .optional(),
-    teams: z.array(hostedTeamDefinitionSchema).max(256),
-  })
-  .strict();
-
-export type TeamHostProfile = z.infer<typeof teamHostProfileSchema>;
-
-const envelopeSchema = z
-  .object({
-    commandId: id,
-    binding: z.object({ schemaVersion: z.literal(1), handleId: id, owner, scope }).strict(),
-    payload: z.unknown(),
-  })
-  .strict();
-
-function json(value: unknown): JsonValue {
-  return JSON.parse(JSON.stringify(value)) as JsonValue;
-}
-
-function equalFields(a: object, b: object): boolean {
-  const left = Object.entries(a).sort(([x], [y]) => x.localeCompare(y));
-  const right = Object.entries(b).sort(([x], [y]) => x.localeCompare(y));
-  return JSON.stringify(left) === JSON.stringify(right);
-}
 
 /**
  * Captured product owner and optional real provider Runtime. Aggregate bootstrap
@@ -108,9 +66,15 @@ function equalFields(a: object, b: object): boolean {
 export function createTeamHost(
   rawProfile: TeamHostProfile,
   streams: Pick<HostServerOptions, 'input' | 'output' | 'limits'>,
-  composition?: { createProvider(context: MemberProviderContext): MemberProvider }
+  composition?: { createProvider?(context: MemberProviderContext): MemberProvider;
+    createScheduledProvider?(context: ScheduledRunProviderContext): ScheduledRunProvider;
+    /** Separate captured app preference per provider, evaluated only when the Host is constructed. */
+    promptSuggestionProviders?: readonly PromptSuggestionProvider[]; reviewFlowDefaultsDirectory?: string }
 ): HostServer {
   const profile = structuredClone(teamHostProfileSchema.parse(rawProfile));
+  // CLI/Main owns this app-level preference. Profile remains digest-bound and
+  // existing sessions are never interrupted to apply a change.
+  const promptSuggestionProviders: readonly PromptSuggestionProvider[] = composition?.promptSuggestionProviders ?? (profile.promptSuggestions?.enabled ? PROMPT_SUGGESTION_PROVIDERS : []);
   assertAccountNamespaces([
     ...(profile.runtime?.members ?? []),
     ...(profile.runtime?.providerTemplates ?? []),
@@ -120,36 +84,29 @@ export function createTeamHost(
   let sealed = false;
   let runtime: RuntimeTeamCoordinator | undefined;
   let management: ProviderManagementCoordinator | undefined;
+  let scheduledRuns: ReturnType<typeof createHostScheduledRunComposition> | undefined;
   let emitOAuthProgress: ((snapshot: ProviderOAuthSnapshot) => void) | undefined;
+  let emitPromptSuggestion: ((notice: CapturedPromptSuggestionNotice) => void) | undefined;
   try {
     const processCustody = createProcessCustody(profile.processCustody);
-    const managementProfiles = [
-      ...(profile.management ?? []),
-      ...(profile.runtime?.members.flatMap((member) => {
-        if (member.provider === 'opencode' && member.nativeGeneration === 'v2' &&
-          !(member.protocolRevision === '2.1.4' && member.embedded)) return [];
-        return [teamModelProbeProfile(member)];
-      }) ?? []),
-    ];
-    if (
-      managementProfiles.length ||
-      (profile.creation &&
-        profile.runtime?.providerTemplates?.some((row) => row.provider === 'claude' ||
-          row.provider === 'opencode' && row.nativeGeneration === 'v2' &&
-          row.protocolRevision === '2.1.4' && row.embedded !== undefined))
-    )
-      management = new ProviderManagementCoordinator(
-        managementProfiles,
-        () => lease.assertCurrent(),
-        profile.owner.storageRoot,
-        { onOAuthProgress: (snapshot) => emitOAuthProgress?.(snapshot),
-          ...(processCustody ? { processCustody } : {}) }
-      );
+    const retainedWindowsLaunch = profile.processCustody && 'kind' in profile.processCustody
+      ? new HostWindowsLaunch(() => server.nativeCustody) : undefined;
+    const providerManagement = createHostProviderManagementComposition(profile, () => {
+      if (sealed) throw new ManagementCommandError('held');
+      lease.assertCurrent();
+    }, snapshot => emitOAuthProgress?.(snapshot), processCustody, () => lease.assertCurrent(), retainedWindowsLaunch);
+    management = providerManagement.management;
+    const sources = providerManagement.sources;
     const teams = new Map<string, HostedTeam>();
     const assertCurrent = () => {
       if (sealed) throw new TeamOwnerError('hold');
       lease.assertCurrent();
     };
+    if (profile.runtime) scheduledRuns = createHostScheduledRunComposition({ profile, teams,
+      assertWriter: () => lease.assertCurrent(), ...(sources ? { sources } : {}),
+      ...(processCustody ? { processCustody } : {}),
+      ...(retainedWindowsLaunch ? { retainedWindowsLaunch } : {}),
+      ...(composition?.createScheduledProvider ? { createProvider: composition.createScheduledProvider } : {}) });
     const crossTeam = createHostCrossTeamComposition({
       profile,
       teams,
@@ -168,6 +125,7 @@ export function createTeamHost(
       teams,
       assertCurrent,
       ...(processCustody ? { native: processCustody } : {}),
+      ...(retainedWindowsLaunch ? { windows: retainedWindowsLaunch.registeredProcesses } : {}),
     });
     const lifecycle = createHostTeamLifecycleComposition({
       profile,
@@ -178,6 +136,7 @@ export function createTeamHost(
       runtime: () => runtime,
       importer: () => imports,
       ...(processCustody ? { processCustody } : {}),
+      ...(retainedWindowsLaunch ? { windows: retainedWindowsLaunch.registeredProcesses } : {}),
     });
     const workSync = createHostWorkSyncComposition({
       teamsBasePath: join(profile.owner.storageRoot, 'teams'),
@@ -207,6 +166,7 @@ export function createTeamHost(
       const team = createFilesystemTeamOwner({
         store,
         root: profile.owner.storageRoot,
+        ...(composition?.reviewFlowDefaultsDirectory ? { reviewFlowDefaultsDirectory: composition.reviewFlowDefaultsDirectory } : {}),
         binding: definition.binding,
         crossTeamSourceAuthority: crossTeam.sourceAuthorized,
         ...(definition.savedSettings === undefined
@@ -236,7 +196,7 @@ export function createTeamHost(
       teams.set(definition.binding.teamId, {
         definition,
         owner: team,
-        connection: team.connect(profile.principalId),
+        connection: team.connect(profile.principalId, (capture, mode) => runtime?.readConversation(capture, mode)),
         operatorPrincipalId: profile.principalId,
       });
     };
@@ -291,34 +251,42 @@ export function createTeamHost(
     // Saved configuration survives a stale private runtime descriptor. Product
     // APIs remain usable; native allocation requires a fresh explicit capture.
     const runtimeTeams = teams;
-    if (profile.runtime)
+    if (profile.runtime || hasRetainedTeamRuntime(profile, teams))
       runtime = new RuntimeTeamCoordinator({
         profile: {
           ...profile,
-          runtime: {
+          ...(profile.runtime ? { runtime: {
             ...profile.runtime,
             members: profile.runtime.members.filter((member) => teams.has(member.teamId)),
-          },
+          } } : {}),
         },
         teams: runtimeTeams,
+        ...(sources ? { sources } : {}),
         workSync,
         ...(management
           ? {
+              modelReadiness: management,
               nativeMemberModelPreflight: (input) =>
                 preflightNativeMemberModel({ ...input, management: management! }),
             }
           : {}),
         ...(processCustody ? { processCustody } : {}),
+        ...(retainedWindowsLaunch ? { retainedWindowsLaunch } : {}),
         groups: (entry, capture, current) => groups.member(entry, capture, current),
         crossTeam: (team, principal, binding, current) =>
           crossTeam.memberPort(team, principal, binding, current),
         assertWriter: () => lease.assertCurrent(),
-        ...(composition ? { createProvider: composition.createProvider } : {}),
+        ...(promptSuggestionProviders.length > 0
+          ? { promptSuggestionProviders, onPromptSuggestion: (notice: CapturedPromptSuggestionNotice) =>
+              emitPromptSuggestion?.(notice) }
+          : {}),
+        ...(composition?.createProvider ? { createProvider: composition.createProvider } : {}),
       });
     const creationLaunch =
       registry && runtime && management
         ? new CreateTeamLaunchCoordinator({
             profile,
+            ...(sources ? { sources } : {}),
             registry,
             runtime,
             management,
@@ -336,7 +304,7 @@ export function createTeamHost(
         | 'lookup'
         | 'getTask'
         | 'listTasks'
-        | 'snapshot'
+        | 'snapshot' | 'review-flow.read'
         | 'messages.page'
         | 'activity.logs'
         | 'activity.stats'
@@ -352,15 +320,22 @@ export function createTeamHost(
         try {
           if (sealed) throw new TeamOwnerError('hold');
           lease.assertCurrent();
-          const input = envelopeSchema.parse(raw);
-          const selected = teams.get(input.binding.scope.teamId);
-          if (
-            !selected ||
-            !equalFields(input.binding.owner, profile.owner) ||
-            !equalFields(input.binding.scope, selected.definition.scope)
-          )
-            throw new TeamOwnerError('forbidden');
+          const input = parsePreparationEnvelope(raw, `team.${operation}`);
+          const selected = selectBoundHostTeam(input, profile.owner, teams);
+          if (!selected) throw new TeamOwnerError('forbidden');
+          if (input.liveRoster) {
+            if (runtime) return json(await runtime.executeLiveRoster({ teamId: selected.definition.binding.teamId,
+              method: `team.${operation}` as 'team.roster.replace' | 'team.roster.lookup', commandId: input.commandId,
+              payload: input.payload, binding: input.binding, conversation: input.liveRoster,
+              ...(input.localModelReadinessOrigin ? { localModelReadinessOrigin: input.localModelReadinessOrigin } : {}) }));
+            if (input.liveRoster.phase === 'continue') throw new TeamOwnerError('hold');
+          }
           const connection = selected.connection;
+          if (operation === 'review-flow.read') {
+            z.object({}).strict().parse(input.payload);
+            if (!connection.readQueries) throw new TeamOwnerError('hold');
+            return { ok: true, value: json({ kind: 'review-flow', ...connection.readQueries.getReviewFlowSettings() }) };
+          }
           if (operation === 'roster.read' || operation === 'roster.lookup') {
             if (operation === 'roster.read') {
               z.object({}).strict().parse(input.payload);
@@ -450,8 +425,14 @@ export function createTeamHost(
             .parse(input.payload);
           const command = { ...payload, commandId: input.commandId } as TeamCommand;
           let receipt;
+          let prepareHostCost: Parameters<typeof connection.execute>[1];
           try {
-            receipt = connection.execute(command);
+            if (command.operation === 'message.send' && command.payload?.nativeCommand === true &&
+              !connection.lookup(input.commandId, command)) {
+              if (!runtime) throw new TeamOwnerError('invalid');
+              prepareHostCost = runtime.assertNativeMessage(selected.definition.binding.teamId, command);
+            }
+            receipt = connection.execute(command, prepareHostCost);
           } catch (error) {
             if (
               !(error instanceof TeamOwnerError) ||
@@ -486,7 +467,7 @@ export function createTeamHost(
       select(raw) {
         if (sealed) throw new TeamOwnerError('hold');
         lease.assertCurrent();
-        const input = z.object({ owner, commandId: id, payload: z.unknown() }).strict().parse(raw);
+        const input = z.object({ owner: hostOwnerSchema, commandId: id, payload: z.unknown() }).strict().parse(raw);
         if (!registry || !equalFields(input.owner, profile.owner))
           throw new TeamOwnerError('forbidden');
         return { registry, commandId: input.commandId, payload: input.payload };
@@ -494,16 +475,19 @@ export function createTeamHost(
     });
 
     const creationMethods = createTeamCreationMethods({
-      select(raw) {
+      select(raw, operation) {
         if (sealed) throw new TeamLaunchError('hold', 'sealed');
         lease.assertCurrent();
-        const input = z.object({ owner, commandId: id, payload: z.unknown() }).strict().parse(raw);
+        const input = parseCreationEnvelope(raw, operation);
         if (!creationLaunch || !equalFields(input.owner, profile.owner))
           throw new TeamLaunchError('forbidden', 'creation-owner');
         return {
           coordinator: creationLaunch,
           commandId: input.commandId,
           payload: input.payload,
+          ...(input.localModelReadinessOrigin ? { localModelReadinessOrigin: input.localModelReadinessOrigin } : {}),
+          ...(input.localModelReadinessRemainingMs === undefined ? {} : { localModelReadinessRemainingMs: input.localModelReadinessRemainingMs }),
+          ...(input.localModelReadinessCapture ? { localModelReadinessCapture: input.localModelReadinessCapture } : {}),
         };
       },
     });
@@ -532,14 +516,9 @@ export function createTeamHost(
           try {
             if (sealed) throw new TeamLaunchError('hold', 'sealed');
             lease.assertCurrent();
-            const input = envelopeSchema.parse(raw),
-              selected = teams.get(input.binding.scope.teamId);
-            if (
-              !selected ||
-              !equalFields(input.binding.owner, profile.owner) ||
-              !equalFields(input.binding.scope, selected.definition.scope)
-            )
-              throw new TeamLaunchError('forbidden', 'binding');
+            const input = parsePreparationEnvelope(raw, `team.launch.${operation}`),
+              selected = selectBoundHostTeam(input, profile.owner, teams);
+            if (!selected) throw new TeamLaunchError('forbidden', 'binding');
             if (operation === 'model.configuration.read' && runtime)
               return {
                 ok: true,
@@ -575,8 +554,14 @@ export function createTeamHost(
                 selected.definition.binding.teamId,
                 operation,
                 input.commandId,
-                input.payload
+                input.payload,
+                input.localModelReadinessTransfer ?? (input.localModelReadinessOrigin ? {
+                  preparation: input.localModelReadinessOrigin, owner: profile.owner,
+                  handleId: input.binding.handleId, scope: input.binding.scope,
+                } : undefined)
               ),
+              ...(input.localModelReadinessCapture ? { localModelReadinessCapture: json(
+                runtime.readModelReadinessCapture(selected.definition.binding.teamId, input.localModelReadinessCapture)) } : {}),
             };
           } catch (error) {
             const code =
@@ -606,14 +591,9 @@ export function createTeamHost(
             try {
               if (sealed) throw new TeamLaunchError('hold', 'sealed');
               lease.assertCurrent();
-              const input = envelopeSchema.parse(raw),
-                selected = teams.get(input.binding.scope.teamId);
-              if (
-                !selected ||
-                !equalFields(input.binding.owner, profile.owner) ||
-                !equalFields(input.binding.scope, selected.definition.scope)
-              )
-                throw new TeamLaunchError('forbidden', 'binding');
+              const input = parsePreparationEnvelope(raw, `team.launch.probe.${action}`),
+                selected = selectBoundHostTeam(input, profile.owner, teams);
+              if (!selected) throw new TeamLaunchError('forbidden', 'binding');
               return {
                 ok: true,
                 value: json(
@@ -624,6 +604,10 @@ export function createTeamHost(
                     teamId: selected.definition.binding.teamId,
                     commandId: input.commandId,
                     payload: input.payload,
+                    ...(input.localModelReadinessOrigin ? { readiness: {
+                      preparation: input.localModelReadinessOrigin, owner: profile.owner,
+                      handleId: input.binding.handleId, scope: input.binding.scope,
+                    } } : {}),
                   })
                 ),
               };
@@ -647,21 +631,15 @@ export function createTeamHost(
     const runtimeMethods = runtime
       ? createRuntimeHostMethods({
           runtime,
-          parse(raw) {
+          parse(raw, method) {
             if (sealed) throw new RuntimeOwnerError('hold');
             lease.assertCurrent();
-            const input = envelopeSchema.parse(raw);
-            const selected = teams.get(input.binding.scope.teamId);
-            if (
-              !selected ||
-              !equalFields(input.binding.owner, profile.owner) ||
-              !equalFields(input.binding.scope, selected.definition.scope)
-            )
-              throw new RuntimeOwnerError('forbidden');
-            return {
-              teamId: selected.definition.binding.teamId,
-              commandId: input.commandId,
-              payload: input.payload,
+            const input = parsePreparationEnvelope(raw, method);
+            const selected = selectBoundHostTeam(input, profile.owner, teams);
+            if (!selected) throw new RuntimeOwnerError('forbidden');
+            return { teamId: selected.definition.binding.teamId, commandId: input.commandId, payload: input.payload,
+              ...(input.localModelReadinessOrigin ? { readiness: { preparation: input.localModelReadinessOrigin,
+                owner: profile.owner, handleId: input.binding.handleId, scope: input.binding.scope } } : {}),
             };
           },
         })
@@ -673,28 +651,23 @@ export function createTeamHost(
       profile,
       assertCurrent,
       select(raw) {
-        const input = envelopeSchema.parse(raw),
-          team = teams.get(input.binding.scope.teamId);
-        if (
-          !team ||
-          !equalFields(input.binding.owner, profile.owner) ||
-          !equalFields(input.binding.scope, team.definition.scope)
-        )
-          throw new TeamOwnerError('forbidden');
+        const input = envelopeSchema.parse(raw), team = selectBoundHostTeam(input, profile.owner, teams);
+        if (!team) throw new TeamOwnerError('forbidden');
         team.connection.readRoster();
         return { commandId: input.commandId, payload: input.payload, team };
       },
     });
 
-    const server = createHostServer({
+    const server: HostServer = createHostServer({
       ...streams,
+      ...(retainedWindowsLaunch ? { nativeCustody: { timeoutMs: HOST_CUSTODY_LAUNCH_MS } } : {}),
       // Runtime/provider drain and final backup must finish before the original lease is released.
       limits: { disposeTimeoutMs: TEAM_HOST_DISPOSE_TIMEOUT_MS, ...streams.limits },
       ...(profile.reviewTransport ? { reviewTransport: profile.reviewTransport } : {}),
       buildId: profile.owner.buildId,
       capabilities: [
         'team.task',
-        'team.snapshot',
+        'team.snapshot', 'team.review-flow.read',
         'team.messages.page',
         'team.roster',
         'team.product-changes',
@@ -705,6 +678,8 @@ export function createTeamHost(
         'team.attachments',
         ...(profile.reviewTransport ? ['team.review'] : []),
         ...(creationLaunch ? ['team.creation'] : []),
+        ...(sources ? ['runtime.sources'] : []),
+        ...(scheduledRuns ? ['schedule.run'] : []),
         ...(profile.management?.length
           ? [
               'management.catalog',
@@ -735,6 +710,7 @@ export function createTeamHost(
         'team.task.get': method('getTask'),
         'team.tasks.list': method('listTasks'),
         'team.snapshot': method('snapshot'),
+        'team.review-flow.read': method('review-flow.read'),
         'team.messages.page': method('messages.page'),
         'team.roster.read': method('roster.read'),
         'team.roster.lookup': method('roster.lookup'),
@@ -757,7 +733,9 @@ export function createTeamHost(
         ...attachments.methods,
         ...creationMethods,
         ...managementMethods,
+        ...createRuntimeSourceMethods(sources, management, assertCurrent),
         ...runtimeMethods,
+        ...scheduledRuns?.methods,
         ...launchMethods,
         ...review.methods,
       },
@@ -765,14 +743,18 @@ export function createTeamHost(
         review.seal();
         sealed = true;
         runtime?.seal();
+        scheduledRuns?.seal();
         management?.seal();
+        sources?.seal();
       },
       async onDispose() {
         review.seal();
         try {
           const results = await Promise.allSettled([
             runtime?.close(),
+            scheduledRuns?.close(),
             management?.close(),
+            sources?.close(),
             workSync.close(),
           ]);
           const backups = await Promise.allSettled([lifecycle.shutdown()]);
@@ -786,13 +768,27 @@ export function createTeamHost(
     emitOAuthProgress = (snapshot) => {
       if (!sealed) server.notifyData('management.oauth.progress', json(snapshot));
     };
+    emitPromptSuggestion = (notice) => {
+      // Auxiliary, bounded, best-effort notification; never changes Team/Runtime result.
+      if (!sealed && promptSuggestionProviders.length > 0)
+        server.notifyData('runtime.prompt-suggestion.updated', json(notice));
+    };
     runtime?.kick(); // Resume original durable obligations on startup, without opening/adopting native sessions.
     return server;
   } catch (error) {
     sealed = true;
     runtime?.seal();
+    scheduledRuns?.seal();
     management?.seal();
     lease.release();
     throw error;
   }
 }
+
+export type { LocalModelReadinessOrigin, LocalModelReadinessPreparation, ReadinessSourceReference } from '../management/commandRecords.js';
+export { localModelReadinessTransferSchema } from './prepareTeamModelReadiness.js';
+export type { LocalModelReadinessTransfer } from './prepareTeamModelReadiness.js';
+export { actualCaptureReadinessCommandId, localModelReadinessCaptureSchema, localModelReadinessCaptureViewSchema } from '../team-launch/launchReadiness.js';
+export type { LocalModelReadinessCapture, LocalModelReadinessCaptureView } from '../team-launch/launchReadiness.js';
+export { parseLiveRosterResponse } from '../team/liveRosterMembership.js';
+export type { LiveRosterPrivateInput } from '../team/liveRosterMembership.js';

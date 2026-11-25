@@ -541,9 +541,11 @@ describe('ProviderModelBadges', () => {
 
   it('limits collapsed model badges by rendered rows when requested', () => {
     const originalOffsetTop = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetTop');
+    let offsetTopReads = 0;
     Object.defineProperty(HTMLElement.prototype, 'offsetTop', {
       configurable: true,
       get() {
+        offsetTopReads += 1;
         const siblings = Array.from(this.parentElement?.children ?? []);
         const index = Math.max(0, siblings.indexOf(this));
         return Math.floor(index / 3) * 20;
@@ -567,7 +569,183 @@ describe('ProviderModelBadges', () => {
       expect(host.textContent).toContain('model-14');
       expect(host.textContent).not.toContain('model-13');
       expect(host.textContent).toContain('+13 more');
+      // A full row must be skipped in one commit, not one model per commit.
+      expect(offsetTopReads).toBeLessThan(30);
     } finally {
+      if (originalOffsetTop) {
+        Object.defineProperty(HTMLElement.prototype, 'offsetTop', originalOffsetTop);
+      } else {
+        delete (HTMLElement.prototype as { offsetTop?: number }).offsetTop;
+      }
+    }
+  });
+
+  it('does not exceed React update depth with a crowded provider catalog', () => {
+    const observerTargets: Element[] = [];
+    const originalResizeObserver = globalThis.ResizeObserver;
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe(target: Element) {
+          observerTargets.push(target);
+        }
+        disconnect() {}
+      }
+    );
+    const originalOffsetTop = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetTop');
+    Object.defineProperty(HTMLElement.prototype, 'offsetTop', {
+      configurable: true,
+      get() {
+        const siblings = Array.from(this.parentElement?.children ?? []);
+        const index = Math.max(0, siblings.indexOf(this));
+        return Math.floor(index / 3) * 20;
+      },
+    });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    try {
+      const models = Array.from(
+        { length: 120 },
+        (_, index) => `model-${String(index + 1).padStart(3, '0')}`
+      );
+      expect(() => {
+        act(() => {
+          root.render(
+            <ProviderModelBadges
+              providerId="opencode"
+              models={models}
+              collapseAfter={100}
+              maxCollapsedRows={2}
+            />
+          );
+        });
+      }).not.toThrow();
+      expect(host.querySelectorAll('button')).toHaveLength(1);
+      expect(host.textContent).toContain('+115 more');
+      const list = host.firstElementChild?.firstElementChild as HTMLElement | null;
+      expect(list?.className).toContain('w-full');
+      expect(observerTargets).toEqual([list?.parentElement]);
+    } finally {
+      act(() => {
+        root.unmount();
+      });
+      vi.stubGlobal('ResizeObserver', originalResizeObserver);
+      if (originalOffsetTop) {
+        Object.defineProperty(HTMLElement.prototype, 'offsetTop', originalOffsetTop);
+      } else {
+        delete (HTMLElement.prototype as { offsetTop?: number }).offsetTop;
+      }
+    }
+  });
+
+  it('remeasures changed badge contents even when the previous list needed no trimming', () => {
+    const originalOffsetTop = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetTop');
+    let offsetTopReads = 0;
+    Object.defineProperty(HTMLElement.prototype, 'offsetTop', {
+      configurable: true,
+      get() {
+        offsetTopReads += 1;
+        const siblings = Array.from(this.parentElement?.children ?? []) as HTMLElement[];
+        const index = Math.max(0, siblings.indexOf(this));
+        const narrowRows = siblings.some((item) => item.textContent?.includes('very-long-model'));
+        return Math.floor(index / (narrowRows ? 3 : 30)) * 20;
+      },
+    });
+
+    const models = Array.from({ length: 12 }, (_, index) => `model-${index + 1}`);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    try {
+      act(() => {
+        root.render(
+          <ProviderModelBadges
+            providerId="opencode"
+            models={models}
+            collapseAfter={10}
+            maxCollapsedRows={1}
+          />
+        );
+      });
+      expect(host.textContent).toContain('+2 more');
+
+      offsetTopReads = 0;
+      act(() => {
+        root.render(
+          <ProviderModelBadges
+            providerId="opencode"
+            models={['a-very-long-model', ...models.slice(1)]}
+            collapseAfter={10}
+            maxCollapsedRows={1}
+          />
+        );
+      });
+
+      expect(offsetTopReads).toBeGreaterThan(0);
+      expect(host.textContent).toContain('+10 more');
+    } finally {
+      act(() => {
+        root.unmount();
+      });
+      if (originalOffsetTop) {
+        Object.defineProperty(HTMLElement.prototype, 'offsetTop', originalOffsetTop);
+      } else {
+        delete (HTMLElement.prototype as { offsetTop?: number }).offsetTop;
+      }
+    }
+  });
+
+  it('does not restart row measurements for equivalent refreshed model arrays', () => {
+    const originalOffsetTop = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetTop');
+    let offsetTopReads = 0;
+    Object.defineProperty(HTMLElement.prototype, 'offsetTop', {
+      configurable: true,
+      get() {
+        offsetTopReads += 1;
+        const siblings = Array.from(this.parentElement?.children ?? []);
+        const index = Math.max(0, siblings.indexOf(this));
+        return Math.floor(index / 3) * 20;
+      },
+    });
+
+    const models = Array.from(
+      { length: 18 },
+      (_, index) => `model-${String(index + 1).padStart(2, '0')}`
+    );
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    try {
+      const renderSnapshot = () => (
+        <ProviderModelBadges
+          providerId="opencode"
+          models={[...models]}
+          collapseAfter={15}
+          maxCollapsedRows={2}
+        />
+      );
+
+      act(() => {
+        root.render(renderSnapshot());
+      });
+      expect(host.textContent).toContain('+13 more');
+
+      offsetTopReads = 0;
+      act(() => {
+        root.render(renderSnapshot());
+      });
+
+      expect(offsetTopReads).toBe(0);
+      expect(host.textContent).toContain('+13 more');
+    } finally {
+      act(() => {
+        root.unmount();
+      });
       if (originalOffsetTop) {
         Object.defineProperty(HTMLElement.prototype, 'offsetTop', originalOffsetTop);
       } else {

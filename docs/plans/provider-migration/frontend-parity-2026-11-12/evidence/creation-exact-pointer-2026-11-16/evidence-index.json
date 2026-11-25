@@ -1,0 +1,90 @@
+{
+  "kind": "creation-physical-target-R1-inputs",
+  "parent": "852d9bd3f9142603340f71ca998739e69da00084",
+  "parentTree": "f2fe271032a3280acfd5e604d6536c40607986b4",
+  "planPrefix": {
+    "sha": "86a76ed1d744bb6b2f4edf38bd4091f5cce03448",
+    "bytes": 1925866,
+    "sha256": "6bda28cc8dc78cfd443f2af55937494d3d1c2aad517efe202464daef001a940c"
+  },
+  "source": {
+    "status": "INERT_REVIEW_CANDIDATE_NOT_SELECTED",
+    "base": "852d9bd3f9142603340f71ca998739e69da00084",
+    "path": "scripts/e2e/teams-create-page-desktop.mjs",
+    "before": {
+      "bytes": 103360,
+      "lines": 2105,
+      "blob": "764d42763c8eab6592235acf75073253538cfe38",
+      "sha256": "e1c09e6efffa777bd7f042c813f49cb93d20957d07bed45582474a2930312c1e"
+    },
+    "after": {
+      "bytes": 104472,
+      "lines": 2123,
+      "blob": "616223c8eb4c36291ea4049070a97e1bf891b17c",
+      "sha256": "5803ce5286372478da62827f3d97830641391e567c3380580aa07c8ba6b2e9d5"
+    },
+    "project_execution": false,
+    "live_source_applied": false,
+    "scope": "original physical click target observation and exact fixture team readback; no product change, fixture change, dispatch or rerun"
+  },
+  "evidence": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/creation-exact-pointer-2026-11-16/original-macos.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "be8e37438f24a2e6288a6a24be27fd181a671ff7",
+      "sha256": "49070d538c8377d29c7d16a30071c5fda6be17413f6bd4de3679fea22f004122",
+      "size": 66388
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/creation-exact-pointer-2026-11-16/original-macos-artifact.zip",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6f5c74644f617090031d218c385236835c2dec85",
+      "sha256": "4e991a16c17dec8b2bffe6632c1236f1badb90105c97feb3ca94535e09fdcb8e",
+      "size": 1446976
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/creation-exact-pointer-2026-11-16/original-run-metadata.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5da2a7703176c29b3aa3465956d12ef1172b5f60",
+      "sha256": "679a33f4e91e8e1fe8450194b90aba58f576283b367121eba4d3f1f5110ae76c",
+      "size": 25794
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/creation-exact-pointer-2026-11-16/candidate.patch",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "cb0ad658511483687b9ad511fd01f96f630fa97a",
+      "sha256": "a14040d883d88f9b3b197258ac10ae8c8627fda8b7d47502da316bb42caf0733",
+      "size": 2922
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/creation-exact-pointer-2026-11-16/prospective-review.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1f241942250d4d99a800cca43675326bb2004eaf",
+      "sha256": "b7bbfebb843147db7e0c6f387eac8c1aeb45c053723c38e02363fa696b59967e",
+      "size": 6642
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/creation-exact-pointer-2026-11-16/independent-source-review.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4d19ae2b5d9efe70a8a612c5e8b7d810861042d2",
+      "sha256": "4e6526c7cc7f8975e3672ebf5eb714df53acb5a9011ce74959429c37e7f1608a",
+      "size": 5556
+    }
+  ],
+  "workflow": {
+    "mode": "100644",
+    "type": "blob",
+    "sha": "72c1a8f760a99c53ce7d279c7bb9d5e3ddaa7298",
+    "size": 6522
+  },
+  "primaryAtPreparation": "72e6ec04444969d343d73834c70bc4e261100fc9",
+  "publicationScope": "separate documentation and sole Creation test-source children on existing delivery branch; preserve B primary qualification at852 before promoting Creation descendant",
+  "projectExecution": "original automatic resulting-source CI only",
+  "localProjectExecution": false
+}

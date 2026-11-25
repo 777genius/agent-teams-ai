@@ -1,3 +1,4 @@
+import type { LocalModelReadinessAction } from './prepareTeamModelReadiness.js';
 import { z } from 'zod';
 import { RuntimeOwnerError } from '../runtime/contracts.js';
 import { TeamOwnerError } from '../team/contracts.js';
@@ -7,12 +8,14 @@ import type { HostMethod } from '../index.js';
 import type { RuntimeMemberActionOperation } from './executeRuntimeMemberAction.js';
 /** Uses the same strict captured envelope parser as existing Runtime routes. */
 export function createTeamMemberActionMethods(options: {
-  parse(raw: unknown): { teamId: string; commandId: string; payload: unknown };
+  parse(raw: unknown, method: string): { teamId: string; commandId: string; payload: unknown;
+    readiness?: LocalModelReadinessAction };
   execute(
     teamId: string,
     operation: RuntimeMemberActionOperation,
     commandId: string,
-    raw: unknown
+    raw: unknown,
+    readiness?: LocalModelReadinessAction
   ): Promise<unknown>;
 }): Record<string, HostMethod> {
   const names = {
@@ -28,12 +31,13 @@ export function createTeamMemberActionMethods(options: {
         lane: operation === 'execute' ? 'work' : 'control',
         async handle(raw: unknown): Promise<JsonValue> {
           try {
-            const input = options.parse(raw);
+            const input = options.parse(raw, name);
             const value = await options.execute(
               input.teamId,
               operation,
               input.commandId,
-              input.payload
+              input.payload,
+              input.readiness
             );
             return { ok: true, value: JSON.parse(JSON.stringify(value)) as JsonValue };
           } catch (error) {

@@ -1,0 +1,219 @@
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { createCapturedPromptSuggestionBinding } from '../dist/composition/createCapturedPromptSuggestionBinding.js';
+import { checkCapturedPromptOperation } from '../dist/composition/checkCapturedPromptOperation.js';
+
+import type { CapturedPromptSuggestion, CapturedPromptSuggestionNotice } from '../src/composition/createCapturedPromptSuggestionBinding.ts';
+import type { RuntimeOwner } from '../src/runtime/RuntimeOwner.ts';
+
+const binding = Object.freeze({
+  backendId: 'TEST-host', teamId: 'TEST-team-A',
+  runId: 'TEST-run-A', memberId: 'TEST-member-A', generation: 'TEST-generation-A',
+});
+const candidate: CapturedPromptSuggestion = {
+  provider: 'claude', sessionRef: 'TEST-session-A',
+  inputId: 'TEST-input-A', operationRef: 'TEST-operation-A',
+  nativeSessionRef: 'TEST-native-A', text: 'Verify the changes before merging',
+};
+const original = (phase: string, operationRef = candidate.operationRef) => ({
+  phase,
+  ...(phase === 'terminal' ? { terminal: 'succeeded' } : {}),
+  operationRef,
+  intent: {
+    binding, inputId: 'TEST-input-A', deliveryId: 'TEST-input-A',
+    messageId: 'TEST-message-A', content: 'TEST original human DM',
+  },
+});
+function harness(provider: 'claude' | 'codex' = 'claude') {
+  let active = true, human = true, attached = true;
+  const rows: Array<ReturnType<typeof original>> = [original('consumed')];
+  const config = { tenantId: 'TEST-tenant-A', projectId: 'TEST-project-A',
+    sessionId: candidate.sessionRef, generation: binding.generation };
+  const snapshot = {
+    attached,
+    record: {
+      nativeReady: true, sealed: false, phase: 'allocated',
+      sessionRef: candidate.sessionRef, binding, config: { ...config }, inputs: rows,
+    },
+  };
+  const notices: CapturedPromptSuggestionNotice[] = [];
+  const entry = {
+    binding, config,
+    profile: { provider, sessionId: candidate.sessionRef },
+    team: {
+      definition: { members: [{ memberId: binding.memberId, name: 'alice', role: 'member' }] },
+      owner: { isOriginalHumanDirectDelivery: () => human },
+    },
+  } as unknown as Parameters<typeof createCapturedPromptSuggestionBinding>[0]['entry'];
+  const source = createCapturedPromptSuggestionBinding({
+    entry,
+    isCurrent: () => active,
+    readRuntime: () => ({ ...snapshot, attached }) as unknown as ReturnType<RuntimeOwner['readCapturedSession']>,
+    publish: value => { notices.push(value); },
+  });
+  return {
+    source, notices, rows, binding, entry, snapshot,
+    terminal(outcome: 'succeeded' | 'failed' = 'succeeded') {
+      rows[0]!.phase = 'terminal';
+      (rows[0] as unknown as {terminal: string}).terminal = outcome;
+    },
+    next(phase: 'claimed' | 'admitted' | 'cancelled') {
+      rows.push({ ...original(phase, 'TEST-operation-B'), intent: {
+        ...original(phase).intent, inputId: 'TEST-input-B', deliveryId: 'TEST-input-B', messageId: 'TEST-message-B',
+      } });
+    },
+    setCurrent(value: boolean) { active = value; },
+    setHuman(value: boolean) { human = value; },
+    setAttached(value: boolean) { attached = value; },
+  };
+}
+test('Claude push after result but before Runtime terminal is offered exactly once after existing feed progress', () => {
+  const x = harness();
+  assert.equal(x.source.eligible(candidate), true);
+  x.source.offer(candidate);
+  assert.equal(x.notices.length, 0, 'do not publish before durable Runtime terminal');
+  x.source.flushPending();
+  assert.equal(x.notices.length, 0, 'still awaiting original consumer result');
+  x.terminal();
+  x.source.flushPending();
+  assert.equal(x.notices.length, 1);
+  assert.deepEqual({
+    teamId: x.notices[0]!.teamId, runId: x.notices[0]!.runId,
+    memberId: x.notices[0]!.memberId, generation: x.notices[0]!.generation,
+    messageId: x.notices[0]!.messageId,
+    operationRef: x.notices[0]!.operationRef,
+    completedTurnRef: x.notices[0]!.completedTurnRef,
+  }, {
+    teamId: binding.teamId, runId: binding.runId,
+    memberId: binding.memberId, generation: binding.generation,
+    messageId: 'TEST-message-A', operationRef: candidate.operationRef,
+    completedTurnRef: candidate.operationRef,
+  });
+  x.source.flushPending();
+  x.source.offer(candidate);
+  assert.equal(x.notices.length, 1, 'duplicate late SDK event must be idempotent');
+});
+
+test('Codex candidate retains native turn identity and a cancelled never-run UI queue cannot supersede it', () => {
+  const x = harness('codex');
+  x.terminal();
+  x.next('cancelled');
+  x.source.offer({ ...candidate, provider: 'codex', nativeTurnRef: 'TEST-real-codex-turn-1' });
+  assert.equal(x.notices[0]?.completedTurnRef, 'TEST-real-codex-turn-1');
+  assert.equal(x.notices.length, 1);
+});
+
+test('Codex requires a real bounded native turn and every provider output is bounded before Host publication', () => {
+  const codex = harness('codex');
+  codex.terminal();
+  codex.source.offer({ ...candidate, provider: 'codex' });
+  codex.source.offer({ ...candidate, provider: 'codex', nativeTurnRef: '' });
+  codex.source.offer({ ...candidate, provider: 'codex', nativeTurnRef: 'X'.repeat(257) });
+  assert.equal(codex.notices.length, 0, 'Host operation must never stand in for a native Codex turn');
+  codex.source.offer({ ...candidate, provider: 'codex', nativeTurnRef: 'TEST-native-turn-1' });
+  assert.equal(codex.notices.length, 1);
+  assert.equal(codex.notices[0]!.completedTurnRef, 'TEST-native-turn-1');
+
+  const claude = harness();
+  claude.terminal();
+  claude.source.offer({ ...candidate, nativeSessionRef: 'TEST-\u0000-invalid' });
+  claude.source.offer({ ...candidate, text: 'X'.repeat(513) });
+  claude.source.offer({ ...candidate, text: 'é'.repeat(257) });
+  claude.source.offer({ ...candidate, text: 'TEST\nmultiple lines' });
+  assert.equal(claude.notices.length, 0, 'reject native controls and over-budget UTF-8 before RPC publication');
+  claude.source.offer(candidate);
+  assert.equal(claude.notices.length, 1, 'valid Claude post-result candidate still publishes');
+});
+
+test('later executed turn, changed generation or revoked human source fails closed', () => {
+  const x = harness();
+  x.source.offer(candidate);
+  x.next('claimed');
+  x.terminal();
+  x.source.flushPending();
+  assert.deepEqual(x.notices, [], 'a newer executed native turn revokes previous candidate');
+  const y = harness();
+  y.source.offer(candidate);
+  y.setHuman(false);
+  y.terminal();
+  y.source.flushPending();
+  assert.deepEqual(y.notices, [], 'permission/source withdrawn');
+  const z = harness();
+  z.source.offer(candidate);
+  z.setCurrent(false);
+  z.terminal();
+  z.source.flushPending();
+  assert.deepEqual(z.notices, [], 'restarted/runtime incarnation changed');
+});
+
+test('foreign native provider/session, wrong terminal and detached owner never publish', () => {
+  const x = harness();
+  x.terminal('failed');
+  x.source.offer(candidate);
+  x.source.offer({ ...candidate, sessionRef: 'TEST-other-session' });
+  x.source.offer({ ...candidate, provider: 'codex' });
+  assert.equal(x.notices.length, 0);
+  const y = harness();
+  y.setAttached(false);
+  assert.equal(y.source.eligible(candidate), false);
+  y.source.offer(candidate);
+  assert.equal(y.notices.length, 0);
+});
+
+test('private captured Runtime proof refuses substituted operation, revoked custody or executed successor', () => {
+  const x = harness();
+  x.terminal();
+  const record: typeof x.snapshot.record & {
+    hostIncarnation: string;
+    custody: string;
+    control?: { inputId: string; operationRef: string; phase: string };
+  } = {
+    ...x.snapshot.record,
+    hostIncarnation: 'TEST-host-incarnation',
+    custody: 'owned',
+  };
+  const projected = {
+    memberId: x.binding.memberId,
+    generation: x.binding.generation,
+    phase: 'allocated', custody: 'owned', sealed: false,
+    nativeReady: true, attached: true,
+  };
+  const matches = (inputId = candidate.inputId, operationRef = candidate.operationRef) =>
+    checkCapturedPromptOperation({
+      entry: x.entry,
+      record: record as unknown as NonNullable<Parameters<typeof checkCapturedPromptOperation>[0]['record']>,
+      projection: projected,
+      hostIncarnation: 'TEST-host-incarnation',
+      proof: { inputId, operationRef },
+    });
+  assert.equal(matches(), true, 'only a current, completed original human direct operation is fresh');
+  assert.equal(matches(candidate.inputId, 'TEST-other-operation'), false, 'an operation cannot be substituted');
+  assert.equal(matches('TEST-other-input'), false, 'an unrelated original input cannot be substituted');
+  record.sessionRef = 'TEST-other-session';
+  assert.equal(matches(), false, 'native Host session custody must still match the captured profile');
+  record.sessionRef = candidate.sessionRef;
+  record.hostIncarnation = 'TEST-other-host';
+  assert.equal(matches(), false, 'a restarted Host cannot validate an old operation');
+  record.hostIncarnation = 'TEST-host-incarnation';
+  record.config.projectId = 'TEST-other-project';
+  assert.equal(matches(), false, 'same member name or input under another project is not authoritative');
+  record.config.projectId = 'TEST-project-A';
+  record.config.tenantId = 'TEST-other-tenant';
+  assert.equal(matches(), false, 'foreign tenant cannot vouch for an original direct message');
+  record.config.tenantId = 'TEST-tenant-A';
+  record.control = { inputId: candidate.inputId, operationRef: candidate.operationRef, phase: 'pending' };
+  assert.equal(matches(), false, 'an in-flight native interrupt revokes old insertion authority');
+  delete record.control;
+  x.setHuman(false);
+  assert.equal(matches(), false, 'revoked canonical human DM provenance fails closed');
+  x.setHuman(true);
+  x.next('admitted');
+  assert.equal(matches(), true, 'never-executed queue does not supersede original native turn');
+  x.rows.push({ ...original('admitted', 'TEST-duplicate-operation') });
+  assert.equal(matches(), false, 'duplicate input IDs with different operations cannot launder provenance');
+  x.rows.pop();
+  x.next('claimed');
+  assert.equal(matches(), false, 'a newer executed native input revokes the earlier candidate');
+  projected.nativeReady = false;
+  assert.equal(matches(), false, 'a non-ready public projection never vouches for private custody');
+});

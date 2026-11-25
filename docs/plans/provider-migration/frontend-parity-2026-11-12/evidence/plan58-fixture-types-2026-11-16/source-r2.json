@@ -1,0 +1,324 @@
+{
+  "decision": "ACCEPT_SOURCE_PLAN58_EXACT_THREE_FILE_CUT",
+  "reviewer": "/root/installer_review",
+  "selectedPlan": {
+    "commit": "f83489db1a7600ef911eaba2c488b0955ed54166",
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/58-original-test-fixture-types-2026-11-16.md",
+    "bytes": 6875,
+    "lines": 36,
+    "sha256": "6476ce4fbf8510b32790b0717d3578ed3b45c0b11d8ce3bc7479065c3c5aa547",
+    "gitBlob": "a9b951ee729679584b4842bb80771cc375eae3fa",
+    "officialImmutableFetch": "independently fetched at selected commit; full text equals original draft"
+  },
+  "packet": {
+    "manifestSha256": "6a9f20d61863ee5c9ed502de72ffbab55bb27d67598678edc96d54c4d7625db0",
+    "patch": {
+      "bytes": 3673,
+      "lines": 61,
+      "sha256": "d7618aaafe6142829afeb5d35b4aa0c430a9a050cf900d938b9b59a69e6c897b",
+      "gitBlob": "5fc25aca45a47ae32c28220652452a8bc79205ac"
+    },
+    "paths": [
+      {
+        "path": "test/features/agent-backend/capturedWindowsSelection.test.ts",
+        "before": {
+          "bytes": 31177,
+          "lines": 478,
+          "sha256": "57167497540a3ffab2fabc375fa37000ff50d6b8fdaf654e561354c7861d97f0",
+          "gitBlob": "0f0f46cc362cc3e377a4922eebb08193f5bffd33"
+        },
+        "after": {
+          "bytes": 31184,
+          "lines": 478,
+          "sha256": "fd987261bbb1d13b78939a27280d14bd6217a553903280ff97b64e0f0732bee0",
+          "gitBlob": "336882d6e9aef0ac167808b200d73bf550fc15f5"
+        },
+        "testDeclarations": {
+          "directIt": 7,
+          "itEach": 0,
+          "unchanged": true,
+          "countMeaning": "Lexical declarations, not expanded or executed test cases."
+        },
+        "assertionLineCount": 29,
+        "inverseExact": true
+      },
+      {
+        "path": "test/features/agent-backend/capturedWindowsSourceHistory.test.ts",
+        "before": {
+          "bytes": 25216,
+          "lines": 336,
+          "sha256": "b1f860dc9aa9be5ab61984dc0baa6d6e4f72b5bf968ee388b8d340d92967e2b6",
+          "gitBlob": "aadbde250814c9c74225be65154e2d77ca7104bd"
+        },
+        "after": {
+          "bytes": 25584,
+          "lines": 343,
+          "sha256": "8fa8b476ba44aeb46ac8b31122c21c49d46a60a174947061be731586f0dd05b2",
+          "gitBlob": "38de72f95a4e6c890187a67ea082501e5f6ea566"
+        },
+        "testDeclarations": {
+          "directIt": 9,
+          "itEach": 0,
+          "unchanged": true,
+          "countMeaning": "Lexical declarations, not expanded or executed test cases."
+        },
+        "assertionLineCount": 30,
+        "inverseExact": true
+      },
+      {
+        "path": "test/renderer/hooks/useMentionDetection.test.ts",
+        "before": {
+          "bytes": 12198,
+          "lines": 311,
+          "sha256": "74bb24c5c86495a4243778a3b058bda97f5fa9be7b37b1b0b752bca31f935821",
+          "gitBlob": "cb9eb07f2bbfe4d213e4ec39ceae54bb828399fd"
+        },
+        "after": {
+          "bytes": 12209,
+          "lines": 311,
+          "sha256": "f82ed92a422064d606a484ed13ec7c6fa7775401d5511507014e90324727d68a",
+          "gitBlob": "def835ae43135000c8b3b9e8bfaff4d1d1489189"
+        },
+        "testDeclarations": {
+          "directIt": 18,
+          "itEach": 4,
+          "unchanged": true,
+          "countMeaning": "Lexical declarations, not expanded or executed test cases."
+        },
+        "assertionLineCount": 69,
+        "inverseExact": true
+      }
+    ]
+  },
+  "originalFailure": {
+    "source": "3be1fb3ec43d5682aa2ca77a6af62e6fa27b597b",
+    "runId": 43933487486,
+    "jobId": 133563800223,
+    "log": {
+      "path": "ci-3be-results-1958/fastLog-original-job.log",
+      "bytes": 66802,
+      "lines": 728,
+      "sha256": "cc535d013bb1a25a55853c2b5198a13deafae47fd9648680b3b550a73c0b4ce6",
+      "gitBlob": "95f7eed39a20c3e28d825fab3160f36443335c6a"
+    },
+    "diagnosticCount": 9,
+    "diagnosticDistribution": {
+      "Selection": 1,
+      "SourceHistory_generation": 5,
+      "SourceHistory_environment": 2,
+      "Mention_partial_event": 1
+    }
+  },
+  "sourceAnalysis": [
+    {
+      "path": "test/features/agent-backend/capturedWindowsSelection.test.ts",
+      "conclusion": "The read parameter now describes only the existing root/native call overloads, without requiring the root function namespace property on the native callable. Argument tuple, Object.assign wrapper, pathname projection, read invocation, results and cleanup stay byte-identical. This edit is erased by TypeScript."
+    },
+    {
+      "path": "test/features/agent-backend/capturedWindowsSourceHistory.test.ts",
+      "conclusion": "One named assertion-function declaration checks the actual schema-parsed object before its V1-only projection. It rejects own or inherited generation values except undefined or v1; it neither assigns nor normalizes the object. Calls are immediately after management seed parse and after both unchanged member-provider guards. Current fixture literals omit nativeGeneration and retain their original shape. The generic intersection narrows the broader schema union without widening Main or casting a V2 profile. The only changed existing test statement is the erased Record<string,string> local annotation; its builder, arguments and HOME/NODE_OPTIONS assertions remain exact."
+    },
+    {
+      "path": "test/renderer/hooks/useMentionDetection.test.ts",
+      "conclusion": "The intentional two-target synthetic-event seam now explicitly crosses unknown, matching the existing keyboard fixture. The same actual textarea objects and original hook call sequence remain; no DOM dispatch or fake React event properties were introduced. This edit is erased by TypeScript."
+    }
+  ],
+  "preservation": {
+    "fullInverse": true,
+    "originalAssertionsAndDeclarationLinesByteIdentical": true,
+    "historyCaseRegionTypeErasureOnly": true,
+    "Plan54BothConditionalGenerationSpreadsPreserved": true,
+    "CodexCandidateGenerationRemainsAbsent": true,
+    "noProductionWorkflowDependencySchemaOrCompilerChange": true,
+    "noTimeoutActionOrOracleChange": true,
+    "noSkipOnlyTodoSuppressionOrAnyAdded": true,
+    "sourceLines": {
+      "Selection": 478,
+      "SourceHistory": 343,
+      "Mention": 311
+    }
+  },
+  "countClarification": "The prior prospective wording counted 18 direct Mention it declarations. The unchanged source also contains four it.each declarations. This R2 records 18 direct plus four parameterized declarations (22 lexical declarations); it makes no executed or expanded case-count claim. Selection also contains loop-generated cases, so its seven direct declarations are likewise not an execution count. The immutable prospective report was not modified.",
+  "qualification": "Source-only R2. The selected annotations/guard address the observed static incompatibilities by inspection; canonical TS Native7.0.2 and original applicable Main/frontend CI must still run on the resulting exact source. No compiler/test PASS, native/P08/P09/vendor/release or full end-to-end qualification is claimed.",
+  "execution": "Only official immutable document retrieval, source/log reads, exact text inverses, hashes, inert diff and report construction. No project import, compiler, test, provider, native, GUI or generated verifier executed; no CI polling/action, Git mutation or remote write.",
+  "staticCheckCount": 44,
+  "staticChecks": [
+    {
+      "name": "independently fetched exact published plan equals selected draft",
+      "ok": true
+    },
+    {
+      "name": "selected plan SHA256",
+      "ok": true
+    },
+    {
+      "name": "selected published commit",
+      "ok": true
+    },
+    {
+      "name": "exact three afterimage paths",
+      "ok": true
+    },
+    {
+      "name": "test/features/agent-backend/capturedWindowsSelection.test.ts before metadata",
+      "ok": true
+    },
+    {
+      "name": "test/features/agent-backend/capturedWindowsSelection.test.ts after metadata",
+      "ok": true
+    },
+    {
+      "name": "test/features/agent-backend/capturedWindowsSelection.test.ts unique forward site 1",
+      "ok": true
+    },
+    {
+      "name": "test/features/agent-backend/capturedWindowsSelection.test.ts unique inverse site 1",
+      "ok": true
+    },
+    {
+      "name": "test/features/agent-backend/capturedWindowsSelection.test.ts exact independently reconstructed afterimage",
+      "ok": true
+    },
+    {
+      "name": "test/features/agent-backend/capturedWindowsSelection.test.ts exact inverse restores every original byte",
+      "ok": true
+    },
+    {
+      "name": "test/features/agent-backend/capturedWindowsSelection.test.ts all original declaration lines unchanged",
+      "ok": true
+    },
+    {
+      "name": "test/features/agent-backend/capturedWindowsSelection.test.ts all original assertion lines unchanged",
+      "ok": true
+    },
+    {
+      "name": "test/features/agent-backend/capturedWindowsSelection.test.ts no added skip only todo or suppression",
+      "ok": true
+    },
+    {
+      "name": "test/features/agent-backend/capturedWindowsSourceHistory.test.ts before metadata",
+      "ok": true
+    },
+    {
+      "name": "test/features/agent-backend/capturedWindowsSourceHistory.test.ts after metadata",
+      "ok": true
+    },
+    {
+      "name": "test/features/agent-backend/capturedWindowsSourceHistory.test.ts unique forward site 1",
+      "ok": true
+    },
+    {
+      "name": "test/features/agent-backend/capturedWindowsSourceHistory.test.ts unique forward site 2",
+      "ok": true
+    },
+    {
+      "name": "test/features/agent-backend/capturedWindowsSourceHistory.test.ts unique forward site 3",
+      "ok": true
+    },
+    {
+      "name": "test/features/agent-backend/capturedWindowsSourceHistory.test.ts unique forward site 4",
+      "ok": true
+    },
+    {
+      "name": "test/features/agent-backend/capturedWindowsSourceHistory.test.ts unique inverse site 4",
+      "ok": true
+    },
+    {
+      "name": "test/features/agent-backend/capturedWindowsSourceHistory.test.ts unique inverse site 3",
+      "ok": true
+    },
+    {
+      "name": "test/features/agent-backend/capturedWindowsSourceHistory.test.ts unique inverse site 2",
+      "ok": true
+    },
+    {
+      "name": "test/features/agent-backend/capturedWindowsSourceHistory.test.ts unique inverse site 1",
+      "ok": true
+    },
+    {
+      "name": "test/features/agent-backend/capturedWindowsSourceHistory.test.ts exact independently reconstructed afterimage",
+      "ok": true
+    },
+    {
+      "name": "test/features/agent-backend/capturedWindowsSourceHistory.test.ts exact inverse restores every original byte",
+      "ok": true
+    },
+    {
+      "name": "test/features/agent-backend/capturedWindowsSourceHistory.test.ts all original declaration lines unchanged",
+      "ok": true
+    },
+    {
+      "name": "test/features/agent-backend/capturedWindowsSourceHistory.test.ts all original assertion lines unchanged",
+      "ok": true
+    },
+    {
+      "name": "test/features/agent-backend/capturedWindowsSourceHistory.test.ts no added skip only todo or suppression",
+      "ok": true
+    },
+    {
+      "name": "test/renderer/hooks/useMentionDetection.test.ts before metadata",
+      "ok": true
+    },
+    {
+      "name": "test/renderer/hooks/useMentionDetection.test.ts after metadata",
+      "ok": true
+    },
+    {
+      "name": "test/renderer/hooks/useMentionDetection.test.ts unique forward site 1",
+      "ok": true
+    },
+    {
+      "name": "test/renderer/hooks/useMentionDetection.test.ts unique inverse site 1",
+      "ok": true
+    },
+    {
+      "name": "test/renderer/hooks/useMentionDetection.test.ts exact independently reconstructed afterimage",
+      "ok": true
+    },
+    {
+      "name": "test/renderer/hooks/useMentionDetection.test.ts exact inverse restores every original byte",
+      "ok": true
+    },
+    {
+      "name": "test/renderer/hooks/useMentionDetection.test.ts all original declaration lines unchanged",
+      "ok": true
+    },
+    {
+      "name": "test/renderer/hooks/useMentionDetection.test.ts all original assertion lines unchanged",
+      "ok": true
+    },
+    {
+      "name": "test/renderer/hooks/useMentionDetection.test.ts no added skip only todo or suppression",
+      "ok": true
+    },
+    {
+      "name": "exact full patch independently regenerated",
+      "ok": true
+    },
+    {
+      "name": "exact selected patch hash",
+      "ok": true
+    },
+    {
+      "name": "one named guard plus exactly two original-object calls",
+      "ok": true
+    },
+    {
+      "name": "both Plan54 nativeCli conditional spreads preserved",
+      "ok": true
+    },
+    {
+      "name": "entire existing History test region unchanged except erased environment annotation",
+      "ok": true
+    },
+    {
+      "name": "original canonical compiler log exact hash",
+      "ok": true
+    },
+    {
+      "name": "original nine compiler diagnostics",
+      "ok": true
+    }
+  ],
+  "defects": []
+}

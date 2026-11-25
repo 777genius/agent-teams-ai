@@ -1,0 +1,109 @@
+{
+  "reviewer": "installer_review",
+  "decision": "ACCEPT_SOURCE_PLAN55_EXACT_V2",
+  "selectedPlan": {
+    "commit": "2d74c6efbe1b3047fb835284afbf82f574634b50",
+    "tree": "b2627ee0f0bd9d5d51e8d12c3361babf0ce60c1c",
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/55-v2-native-review-draft-route-2026-11-16.md",
+    "blob": "871215bf075ec8800b7dd4b831c88abd449a8dfc",
+    "sha256": "30fb08fbea3d249cdf10422c1d83a2a53b845c46241bdc95629645cbcdbbd2bd"
+  },
+  "sourceBase": {
+    "commit": "ee06c055eb7e360d6b851ddef3096307456c6bc9",
+    "tree": "b3881099adb278dfc569874126b204eb6fabd7fb"
+  },
+  "path": ".github/workflows/host-emulated-acceptance.yml",
+  "before": {
+    "bytes": 106650,
+    "lines": 1374,
+    "sha256": "56158f6aac71a16f66959bd022d979860391bb237eacc31ab0571239b4835ca1",
+    "gitBlob": "a1513210012356a5178620b1f370bd1daf0de9d9"
+  },
+  "after": {
+    "bytes": 123003,
+    "lines": 1561,
+    "sha256": "eea6e7d63b0e60b05008f7fe9dcfcb6bde27d7488a8b8ae883dfc2bf0207e14b",
+    "gitBlob": "3774658a0ab266686930fbe7e28ecb9e26711ebf"
+  },
+  "packetBinding": {
+    "manifestSha256": "404e0738d56196f414cc4f0fbe1ffe425be388149b0bd0a7799aace72d1bb3b3",
+    "patchSha256": "8a74b65cf87a9cdc5c83a46098b21064bb701798949563a24e9f20a1284d5529"
+  },
+  "checks": {
+    "exact_preimage": true,
+    "exact_v2_postimage": true,
+    "exact_v2_patch": true,
+    "exact_manifest": true,
+    "one_selected_source_path": true,
+    "four_new_steps": true,
+    "two_original_invocations_only": true,
+    "modes_generation_and_native_flag_exact": true,
+    "three_success_dependent_row_steps": true,
+    "failure_visible_final_verifier": true,
+    "no_new_timer_or_retry_selection": true,
+    "explicit_metadata_observation_failure_disqualifier": true,
+    "explicit_quit_request_assertion": true,
+    "no_invented_receipt_source": true,
+    "two_head_clean_binding_checks": true,
+    "unique_roster_and_original_source_arrays": true,
+    "compiled_per_epoch_checks": true,
+    "no_blanket_v2_native_input_rehash_claim": true,
+    "one_canonical_root_and_warm_receipt_digest": true,
+    "zero_runtime_replay_with_one_metadata_child": true,
+    "six_original_model_observations": true,
+    "original_cleanup_fields_required": true,
+    "pure_retained_lineage_only": true,
+    "original_sentinel_predicate_and_refusals_retained": true,
+    "two_original_png_names_signatures_and_hash": true,
+    "false_qualification_fields": true,
+    "one_selected_matrix_row": true,
+    "shared_replacement_count_0": true,
+    "shared_replacement_count_1": true,
+    "shared_replacement_count_2": true,
+    "shared_replacement_count_3": true,
+    "shared_replacement_count_4": true,
+    "shared_replacement_count_5": true,
+    "58_original_artifacts_exact_prefix": true,
+    "14_selected_artifact_additions": true,
+    "artifact_additions_match_selected_values": true,
+    "unique_artifact_addition_block": true,
+    "all_other_original_bytes_inverse_exact": true,
+    "all_old_timeout_lines_preserved": true,
+    "entire_frontend_and_aggregate_suffix_exact": true,
+    "all131_ordered_fastlint_operands_exact": true,
+    "incoming_lineage_lint_operand_preserved": true,
+    "LF_and_terminal_LF_preserved": true,
+    "six_hunks_apply_forward": true,
+    "six_hunks_apply_reverse": true,
+    "v2_only_two_requested_checks": true,
+    "published_plan_exact_binding": true,
+    "selected_current_lineage79c_exact": true
+  },
+  "independentRead": [
+    "All changed YAML plus complete selected plan, original common setup/input capture, original final upload/aggregate, and exact inverse of every old byte.",
+    "Original V2 Review owner: Task creation/start, exact native read/two edits, causal input and blob binding, physical targeted Stop, actual Keep/Reject/Undo/Redo/history and renderer reload; six observations, original interval remains partial.",
+    "Original cold fixture/readback and metadata owners: exact warm receipt hash/root/profile, no model/input/Runtime creation; one explicit attested metadata read is permitted, real original PID/birth lineage and absence checks run before harness cleanup.",
+    "Original smoke catch/finally/Quit/cleanup and native proof scope: native modes do not receive the generic emulated PASS assertion, so final dedicated verifier is necessary; native receipts have no receipt.source.",
+    "Current79c helper: imported retained-lineage oracle preserves original event prefix and physical births without inventing an observed process table."
+  ],
+  "findingsResolved": [
+    {
+      "item": "explicit per-epoch metadataObservationFailure refusal",
+      "resolution": "Added alongside the existing disqualifying keys; old smoke catch also co-writes failure, so this tightens explicit contract without alleging a current false PASS."
+    },
+    {
+      "item": "explicit per-epoch Quit request",
+      "resolution": "Added receipt.quitRequested === true; no action, deadline or application code is changed."
+    }
+  ],
+  "scope": "One new Darwin ARM64 row and exactly four row-local steps in the existing workflow; two original native Review invocations. All old rows, prerequisite tests,131 fast-lint operands,58 artifact operands, full frontend/aggregate suffix,45-minute row cap and original helper oracles are preserved. Fourteen evidence operands append under the same TEST root.",
+  "limits": [
+    "Source-only R2; no generated inline verifier, YAML workflow, project, compiler, test, provider, GUI or CI action was executed.",
+    "The next original eligible coherent-head job must actually finish warm/cold helpers, dedicated verifier and cleanup. Queueing, skipping or process exit alone is not qualification.",
+    "Warm compiled files are checked before cold rebuild; cold compiled files are checked at final verification. No cross-epoch compilation equality is asserted.",
+    "Codex-only selectedNativeInputHashes arrays are absent/empty here. This report does not claim a blanket final V2 Bun/engine graph or all-repository byte rehash.",
+    "Cold zero allocation is scoped to Runtime sessions, with one attested metadata child. Retained sentinel refusals are not proof of native execution or full fork-free/P5 cleanup.",
+    "Native V2 uses finite localhost inference; no genuine Claude/Codex, authenticated vendor, full mixed/Stage1/M13, P08/P09, release or future-head qualification is established.",
+    "Root retains final exact preimage/expected-parent publication and must preserve incoming work."
+  ]
+}

@@ -2,6 +2,7 @@ import { crossTeamInboundRow } from '../cross-team/crossTeamInbound.js';
 import { TeamOwnerError } from './contracts.js';
 import { digest } from './identity.js';
 import { formatTeamMessage } from './formatTeamMessage.js';
+import { commitHostCostReply, validateHostCostCommand } from './hostCostCommand.js';
 
 import type { JsonValue } from '../contracts.js';
 import type { CommandReceipt, DeliveryIntent, TeamMember } from './contracts.js';
@@ -20,6 +21,7 @@ export function commitTeamMessage(
   attachments?: TeamAttachmentPort
 ): JsonValue {
   if (receipt.command.operation !== 'message.send') throw new TeamOwnerError('invalid');
+  validateHostCostCommand(receipt);
   const payload = receipt.command.payload;
   const { to, text, taskRefs } = payload;
   const content = formatTeamMessage(
@@ -87,6 +89,7 @@ export function commitTeamMessage(
     if (applied.messageId !== row.messageId || digest(applied.message) !== digest(row))
       throw new TeamOwnerError('hold');
   }
+  if (receipt.hostCommand) return commitHostCostReply(receipt, actor, row, store, policy);
   if (to === 'user') return json({ messageId: row.messageId, message: row });
   if (
     !member?.delivery ||

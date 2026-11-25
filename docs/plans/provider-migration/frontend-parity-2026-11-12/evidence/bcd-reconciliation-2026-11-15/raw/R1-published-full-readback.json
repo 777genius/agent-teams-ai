@@ -1,0 +1,213 @@
+{
+  "head": "107e56e9821cabf94760848f77474197017986d2",
+  "tree": "4439aadd840acdbc0328d18b112324245aa212c8",
+  "parent": "924fbd1d8a28ca845d7c6c2c35aa88e084d089d2",
+  "files": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-9a34-2026-11-15/9a34-v2-linux-x64.zip",
+      "bytes": 23423,
+      "blob": "0d248b9f4ff71a6067ad023299a634144969dc18",
+      "sha256": "7f86b6649ae0b605235ed9422311e59128c2987754ed3282d2d6fd9136323976"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-9a34-2026-11-15/job-132925032144.log",
+      "bytes": 97346,
+      "blob": "a79d4f3c1fe4629059960d3d2963a0e90842e1a0",
+      "sha256": "1e9d112d6836cc76fa647841efab6cd6dc3b3d7b885fb2f4b961be855dc20b97"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-9a34-2026-11-15/archive-audit-v2-linux.json",
+      "bytes": 2354,
+      "blob": "a881a4403954a309882c3cf0bc86a0edb75bf21e",
+      "sha256": "bf1fa93ba346555788ecd3c611a11b54d3a28027c71fe148c34823ee2172a455"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-9a34-2026-11-15/receipt-audit-v2-linux.json",
+      "bytes": 48743,
+      "blob": "b5b6708a0736ddd04c0842d8711e1e2916fee816",
+      "sha256": "b43ebabbf2a7fbbc7f0475e6a36c40606f8bfea99561c2097caf5f2ee7caaf41"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-9a34-2026-11-15/9a34-v2-darwin-arm64.zip",
+      "bytes": 10467,
+      "blob": "19a892fe1b797cf9f0d5cc49413dc802ddb3ccfd",
+      "sha256": "4941518348e969dade72962221e782f8b76a07e8efe0e58a1107d5442690c13d"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-9a34-2026-11-15/job-132925032258.log",
+      "bytes": 106911,
+      "blob": "d95ea49e3751eee533324a707562da262a0de2c3",
+      "sha256": "c342f23d33a50d296e6432743c4e62b49b6e35c47465c15d2f31d6e5a96b08cb"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-9a34-2026-11-15/archive-audit-v2-darwin-arm.json",
+      "bytes": 1867,
+      "blob": "f9055a19e7790cc6705e9eb5a61ab1dc56a49093",
+      "sha256": "fe70ef6f5d988eb1c575672241e4fdca21272e0469380cab850a07a09cd12f28"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-9a34-2026-11-15/receipt-audit-v2-darwin-arm.json",
+      "bytes": 27475,
+      "blob": "8a5f14b704516a4ee8206810d6defe115552eb6d",
+      "sha256": "349fb289bdd80dbcf4c43294e73eb23c61299ac61eb84f239d652bdd299e223c"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-9a34-2026-11-15/9a34-creation-macos.zip",
+      "bytes": 2295421,
+      "blob": "518bc3cec9d689dc4471f893a8e87504da0dc10e",
+      "sha256": "619d82a6ed6c9310413c2d05bb4d42cb1d6ef5d396c7b57c16d969173c391555"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-9a34-2026-11-15/job-132924989414.log",
+      "bytes": 57510,
+      "blob": "9004b8d4abf46ef33ba53547463d7489abdb12f6",
+      "sha256": "28c104c174d9d3804b77a3a49cef8669da18497553d78fdceeb19b768d6a2a85"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-9a34-2026-11-15/archive-audit-creation-macos.json",
+      "bytes": 8295,
+      "blob": "69ca60450edf71bf3f0a99137c3e9669d36e84fc",
+      "sha256": "249fcc56173a16266254bda1847205172c7d93d248005746f1273b16390d443b"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-9a34-2026-11-15/receipt-audit-creation-macos.json",
+      "bytes": 16938,
+      "blob": "1dee43a867c88c2e2b6eb7de7a6e42a8ba59560d",
+      "sha256": "8a655cab35b25afa1dff4d2724b98491bff0c7dfe04f7877d9bd98e3cfa2b77a"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-9a34-2026-11-15/plan29-9a34-v2-linux-darwin-arm-appendix.md",
+      "bytes": 7670,
+      "blob": "9d74d26d786eeeca9ca25fb322100d59b7a9e58d",
+      "sha256": "b43d0e558e6e6a45590cc3d7273a6df586e4be79ce59f2ba3882373b459c46c3"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-9a34-2026-11-15/plan29-9a34-creation-macos-appendix.md",
+      "bytes": 3889,
+      "blob": "563a01e4252551f56c032ad43fb21d4a2fd7ced2",
+      "sha256": "c0dfec23352e5ec75a250f2c0d05ebf0468a733746291ebb09115c3e5bd66192"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-9a34-2026-11-15/plan29-9a34-cohort-disposition-appendix.md",
+      "bytes": 2072,
+      "blob": "715a972c90660bd516925193783533ad8b75511b",
+      "sha256": "427983002a191fdbce96fa07a3da3d1aa42264687a9e3464be27151926485591"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-9a34-2026-11-15/jobs-snapshot-20261115-200530.json",
+      "bytes": 339777,
+      "blob": "8042e9d60869434e3529175f18ce75588c9e0cb4",
+      "sha256": "46cf9fd9dc7f52cde961b9f1aceb8e438bc850ce05e4e4e8e433ba133048b0fd"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-9a34-2026-11-15/completed-audits-checkpoint-20261115-2016.json",
+      "bytes": 10719,
+      "blob": "790835da6803becc707e529f1925a2824d94bbc3",
+      "sha256": "944071d2926aec3aed8d1d11bed8b4c0e84a30264a0522a18f1e1e6d30ae72b5"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/caller-diagnostic-red-retired-2026-11-15/red-host-build-metadata.json",
+      "bytes": 3294,
+      "blob": "8f066ab7889b9cc142ead8cb52bf335f9dbae67d",
+      "sha256": "680ad7a36d14a5fd8ecebe056e75c132b2349798119288ad44d74c361ff99fc8"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/caller-diagnostic-red-retired-2026-11-15/red-host-build-preflight.json",
+      "bytes": 10464,
+      "blob": "7b59014ac8fe153becbbfe72255a84686227dc75",
+      "sha256": "8193b5fb683f352df77fa0b55cd3a92882a9079ec4d5107b141f91a754a3cb5b"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/caller-diagnostic-red-retired-2026-11-15/red-host-build.log",
+      "bytes": 0,
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/caller-diagnostic-red-retired-2026-11-15/red-ledger-build-metadata.json",
+      "bytes": 3299,
+      "blob": "dcdf2af08f10b3b8b9c3eb81bcd76b49f18bef6f",
+      "sha256": "612d6cd951136718d0c7ae507ed15c8008d3742cdb6a990143f241f5929b9961"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/caller-diagnostic-red-retired-2026-11-15/red-ledger-build-preflight.json",
+      "bytes": 10464,
+      "blob": "5d134b0f08e2014057e732bbbe64c63636ee7d19",
+      "sha256": "bbad07f93145ca3f529afcb2b5a656b369636128822d1ebe7986eca42cafe9ce"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/caller-diagnostic-red-retired-2026-11-15/red-ledger-build.log",
+      "bytes": 0,
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/caller-diagnostic-red-retired-2026-11-15/red-test-metadata.json",
+      "bytes": 3299,
+      "blob": "24239eceece2c295fdf49279e7375666f3595d55",
+      "sha256": "298800ad6dc570ab6118022944ac6e73060c2aba7471fdec92d038f4efd753e8"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/caller-diagnostic-red-retired-2026-11-15/red-test-preflight.json",
+      "bytes": 10464,
+      "blob": "0d21dc8d0e6f4fcbc5839f86a9a5c0291fe09ee7",
+      "sha256": "4ed679a8443009540e5411e9281687f9eed68da83335e6df0b9d63e21d469e8b"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/caller-diagnostic-red-retired-2026-11-15/red-test-types-metadata.json",
+      "bytes": 3298,
+      "blob": "3e1e294a2711e6c492e5e95796a58138c576c1fb",
+      "sha256": "aabbde0bf7bb416bea63a6ea9c346499b1c30e165a7eeeaf06410eb309f3c1cf"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/caller-diagnostic-red-retired-2026-11-15/red-test-types-preflight.json",
+      "bytes": 10464,
+      "blob": "0d21dc8d0e6f4fcbc5839f86a9a5c0291fe09ee7",
+      "sha256": "4ed679a8443009540e5411e9281687f9eed68da83335e6df0b9d63e21d469e8b"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/caller-diagnostic-red-retired-2026-11-15/red-test-types.log",
+      "bytes": 0,
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/caller-diagnostic-red-retired-2026-11-15/red-test.log",
+      "bytes": 7007,
+      "blob": "cc34552c5404b1a72eda37d9f1d3b73c7224aaff",
+      "sha256": "d4fb83d34195fce0e5a426dd08385b6342a223d59c86d7babc83c67f1b38c152"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/caller-diagnostic-red-retired-2026-11-15/run_check.py.txt",
+      "bytes": 9267,
+      "blob": "e1570bdbfe07243b13b2539f33fa87520fe873a3",
+      "sha256": "ad32440ed841a2b65b2a83cafadb42a77819ed33f7341473348e7ec84e1bccf6"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/caller-diagnostic-red-retired-2026-11-15/selected-dependency-baseline.json",
+      "bytes": 4318,
+      "blob": "af9c5789dab1ff56dd15bfa7427f465a1596347d",
+      "sha256": "04631004c98789fc7e50f88e406014ddc244d4b2e043f2c0f244cb45785f5785"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/caller-diagnostic-red-retired-2026-11-15/retirement-evidence-inventory.json",
+      "bytes": 6073,
+      "blob": "bb1315a5da569c973e93cd817d8e914852d3e3d2",
+      "sha256": "3e386360a28afb65efc171264a5478db8b3bd8817ab018b7a53ec22013bb3665"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/caller-diagnostic-red-retired-2026-11-15/retirement-evidence-manifest.json",
+      "bytes": 5224,
+      "blob": "97d47792ebb6c91351588e267b45b6ee5c956fc5",
+      "sha256": "d5da7de7fa7502692cb40502d9eb74b68bde7532b10676247865d0f81562e865"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "bytes": 850938,
+      "blob": "e841ce552dbf0e5f367ced2dab45d9d233e54288",
+      "sha256": "3f78fc38674b55a33c028ea56e938004343324689efe36a193ce53202430edd8"
+    }
+  ],
+  "completeGitObjectReadback": true,
+  "bytes": 3998750
+}

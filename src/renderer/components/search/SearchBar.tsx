@@ -137,7 +137,7 @@ export const SearchBar = ({ tabId }: SearchBarProps): React.JSX.Element | null =
         onChange={(e) => handleChange(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder={t('search.findInConversation')}
-        className="w-48 rounded border border-border bg-surface-raised px-3 py-1.5 text-sm text-text focus:border-text-secondary focus:outline-none"
+        className="w-48 rounded border border-border bg-[var(--color-form-control-bg)] px-3 py-1.5 text-sm text-text focus:border-text-secondary focus:outline-none"
       />
 
       {/* Result count */}

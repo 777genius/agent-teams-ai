@@ -13,9 +13,11 @@ import type {
 import { deliveryFingerprint, normalizeBinding, runtimeDigest } from '../../runtime/identity.js';
 import { FileCheckpointStorage } from './FileCheckpointStorage.js';
 import { FileRuntimeEventStorage } from './FileRuntimeEventStorage.js';
+import { validateConversationMarker } from '../../runtime/runtimeConversation.js';
 import type {
   RuntimeActivityLimits,
   RuntimeActivityRecord,
+  RuntimeConversationRecord,
   RuntimeEventStorage,
 } from '../../runtime/activityContracts.js';
 import { checkpointFingerprint } from '../../runtime/checkpointIdentity.js';
@@ -128,6 +130,7 @@ function validate(record: RuntimeSessionRecord): void {
     (!Number.isSafeInteger(record.activitySequence) || record.activitySequence < 0)
   )
     invalid();
+  validateConversationMarker(record);
   if (record.closeClaimed !== undefined && typeof record.closeClaimed !== 'boolean') invalid();
   if (
     record.nativeReady &&
@@ -292,6 +295,15 @@ export class FileRuntimeStore implements RuntimeStore, CheckpointStorage, Runtim
   }
   writeActivity(record: RuntimeActivityRecord): void {
     this.eventStorage.writeActivity(record);
+  }
+  readConversation(binding: RuntimeBinding): RuntimeConversationRecord | undefined {
+    return this.eventStorage.readConversation(binding);
+  }
+  writeConversation(record: RuntimeConversationRecord): void {
+    this.eventStorage.writeConversation(record);
+  }
+  hasRetainedActivity(binding: RuntimeBinding): boolean {
+    return this.eventStorage.hasRetainedActivity(binding);
   }
 
   writeCheckpoint(payload: CheckpointPayload): void {

@@ -1,0 +1,238 @@
+{
+  "kind": "Independent read-only M UI/roster/workflow exact source R2",
+  "observedAtUTC": "2026-11-16T00:06:45.168439+00:00",
+  "verdict": "APPROVE within reviewed source/proposal scope; no execution qualification",
+  "reviewer": "/root/ui_failures",
+  "incomingHead": "9e542899f36c47598a88c764c9e6745589fea3e1",
+  "priorLHead": "db8b470bf3c530928fef9ad4a2b582a417d436bd",
+  "canonicalR1": {
+    "bytes": 18894,
+    "blob": "6d0e62e631e61dd22e4087451a4e3fadaa4e4343",
+    "sha256": "8db8a2e2706c1e09631114d84be561cfc6af0cd1294b3ebe47a500cfe38a50df"
+  },
+  "sourceContract": {
+    "bytes": 23604,
+    "blob": "166e3c37f4227cd4cee48339d0733267f5313ce6",
+    "sha256": "5306f2db5b82f318fef9d7e54661eb77d17ffcf13fb9821aaa15a554389dbca8"
+  },
+  "sourcePatch": {
+    "bytes": 78799,
+    "blob": "a28b2f93f3c24d3bd75cf9a31d7b68078bdc5af4",
+    "sha256": "5cb5a2a290df19084078fb6f05b042149cf53e0065a63e9fd917a440a9c7d331"
+  },
+  "paths": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "before": {
+        "bytes": 63441,
+        "blob": "8740d94021dd031b0be0248bc8654576484e6d1d",
+        "sha256": "f1c7645f19d8b4ab08da39a248ebff08b896fe85b49df0be1be945b24650e820"
+      },
+      "base": {
+        "bytes": 63953,
+        "blob": "345dc9a6b3fb9d197eaf2982e60840682d7b8fbd",
+        "sha256": "62be20083316c423e9f0814593aa8815b7abd56507138e84a473de3cd8791c92"
+      },
+      "incoming": {
+        "bytes": 69272,
+        "blob": "d1a43bae56a2bceceb450d01a2544cdbe801e06e",
+        "sha256": "3cfffd1793d000850a5f144abdfe3da9c7296ce87f93b1a70215ecd7cab2d4d2"
+      },
+      "selected": {
+        "bytes": 68760,
+        "blob": "1bde37adb7cba710ad77784eedbbe0d6c6e556df",
+        "sha256": "6ca239d1ea242a3ac64323bf28d41b84450fc1d5d7e4ae2324a069d03bff18ad"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-m-adoption/candidate/scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "kind": "composition",
+      "lines": 788,
+      "independentFullBytesVerified": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "before": {
+        "bytes": 20778,
+        "blob": "d8222627fd9f5ba303d1a2116246d63ba0d67516",
+        "sha256": "bfcc571e2c742ff2eb957bcc525c6a596ca9999e6d3d087cc2ca9dfab9e94681"
+      },
+      "base": {
+        "bytes": 20778,
+        "blob": "9ebf57607eb1ca52fa4d7e29213bba99624167c8",
+        "sha256": "4e278c7717ae10c6208dfa1658042b07861af63000e0c02900a735d423986898"
+      },
+      "incoming": {
+        "bytes": 20996,
+        "blob": "b52876e3215910eba3a3a24756f61c289a0965f9",
+        "sha256": "cc5fa1a4c6a2f841145b0e4f33709fd1b2d8c405dae7151477a8a8aac5fce02e"
+      },
+      "selected": {
+        "bytes": 20996,
+        "blob": "f1bfeb0235ed6fc4f80daba16aefda0364ee7e9d",
+        "sha256": "7789d31cd807d8e71fd40d45038ed3266eff98e9c877cc738fcae688e3b5e37b"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-m-adoption/candidate/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "kind": "composition",
+      "lines": 323,
+      "independentFullBytesVerified": true
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "before": {
+        "bytes": 97517,
+        "blob": "ae2e48f5dc013c8c2dd2ce6021dba2afd4ad66d5",
+        "sha256": "0e70cd2ef2ab7658085e4dadaeedaddd3db6f8a94d08f995419fcd596b8ff336"
+      },
+      "base": {
+        "bytes": 96552,
+        "blob": "bf268bbeedf1d985cb1f7ceae35716dae3b3d40c",
+        "sha256": "2aa609c4dd7e068fcd8f0ca469ac8c0c1bd6602aa2eb1d983be3a837479cf8ae"
+      },
+      "incoming": {
+        "bytes": 96552,
+        "blob": "bf268bbeedf1d985cb1f7ceae35716dae3b3d40c",
+        "sha256": "2aa609c4dd7e068fcd8f0ca469ac8c0c1bd6602aa2eb1d983be3a837479cf8ae"
+      },
+      "selected": {
+        "bytes": 101741,
+        "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+        "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-m-adoption/candidate/.github/workflows/host-emulated-acceptance.yml",
+      "kind": "original fast-lint scope extension",
+      "lines": 1312,
+      "independentFullBytesVerified": true
+    },
+    {
+      "path": "test/renderer/components/team/taskLogs/hostTaskActivityTabs.test.tsx",
+      "before": {
+        "bytes": 6944,
+        "blob": "eb380c206e9d2c49984a1bf732ceddaddb9449ae",
+        "sha256": "765a4c8d5825d3e353a83953cf9ef018b2bbcee34fc11e446e8bbe1d3b5b0e13"
+      },
+      "base": {
+        "bytes": 6944,
+        "blob": "eb380c206e9d2c49984a1bf732ceddaddb9449ae",
+        "sha256": "765a4c8d5825d3e353a83953cf9ef018b2bbcee34fc11e446e8bbe1d3b5b0e13"
+      },
+      "incoming": {
+        "bytes": 7490,
+        "blob": "a367866923405e4d584fac1145b56fe27bf37b5a",
+        "sha256": "b5ed7faf0d728baed07f1d25f2cc5bbcc29c87987667d382df065434b861676f"
+      },
+      "selected": {
+        "bytes": 7490,
+        "blob": "a367866923405e4d584fac1145b56fe27bf37b5a",
+        "sha256": "b5ed7faf0d728baed07f1d25f2cc5bbcc29c87987667d382df065434b861676f"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-m-adoption/candidate/test/renderer/components/team/taskLogs/hostTaskActivityTabs.test.tsx",
+      "kind": "exact incoming",
+      "lines": 232,
+      "independentFullBytesVerified": true
+    }
+  ],
+  "uiComposition": {
+    "actualCodeExecuted": false,
+    "groupedKCorrections": 3,
+    "reapplyAllThreeKChangesToCompleteIncomingEqualsSelected": true,
+    "inverseEqualsCompleteIncoming": true,
+    "relativeToL": {
+      "insertions": 56,
+      "deletions": 0,
+      "lineCount": 788,
+      "cap": 800
+    },
+    "entireTaskTabLoopThroughEOFEqualsL": true,
+    "newIncomingBlockScope": [
+      "same-turn partial Thinking block1 and text messageRef",
+      "negative query/clear, both stream filters and cold complete precedence",
+      "same existing fullscreen dialog real Thinking Markdown, exact clipboard and collapse/restore; original query restored",
+      "same original completed standalone run: retained binding/digest/event/input/operation, compatibility UUID/content and unattributed stderr join",
+      "same original scheduled dialog actual Thinking expansion/copy and saved stderr exact pre; original deletion and physical cleanup retained"
+    ],
+    "costAndLimits": "New presentation interactions and passive native/retained-file/CDP observations are real; they run under the unchanged existing helper per-call budgets and add elapsed work. No new business input, provider call, replay, polling implementation or increased timeout is introduced. This is not a claim of unchanged number of observations or zero overhead.",
+    "selectorReview": "Read actual HostMemberActivityLog, ScheduleRunLogDialog, ThinkingItem and relevant BaseItem source. Event identity/sequence/anchor and fresh Task header remain; scheduled Thinking selector targets actual Brain BaseItem; stderr pre uses the saved logs value. No source blocker found.",
+    "underlyingSourceChecksRemain": [
+      "original hold/release and preterminal observation",
+      "root/mcp provider effects and no-replay comparisons",
+      "Task member/generation/source title and exact retained content in both tabs",
+      "no unattributed stderr in Task scope",
+      "Task reads preserve inputs/commands/effects/tasks/retained digest",
+      "existing standalone two-input count and no-hidden-task guard",
+      "held standalone non-success/released custody and both original PIDs absent",
+      "original final Team Stop and held-input unknown semantics"
+    ]
+  },
+  "rendererTestAdaptation": {
+    "exactIncomingBlob": "a367866923405e4d584fac1145b56fe27bf37b5a",
+    "onlyDiffs": [
+      [
+        "replace",
+        1,
+        1
+      ],
+      [
+        "replace",
+        1,
+        12
+      ]
+    ],
+    "entireSecondStaleDetailCaseByteExact": true,
+    "meaning": "Replaces the obsolete raw JSON isError literal with actual original-event dataset flag, rendered error status dot, initially collapsed content, then exact opened-card content. Actual-source/stale-generation/Activity-Stream-Exact/timestamps/no-transcript checks remain.",
+    "execution": "No test was executed; incoming author results remain separately attributed."
+  },
+  "roster": {
+    "counts": {
+      "desktopProofProcessSources": 27,
+      "desktopProofSupplementarySources": 235,
+      "desktopProofWindowsRetrySources": 46
+    },
+    "incomingArraySetsExact": true,
+    "all232PriorCommonPathsRemainExactOrderedPrefix": true,
+    "otherTwoArrayBodiesByteExactToBothParents": true,
+    "added": [
+      "packages/legacy-agent-host/src/composition/scheduledRunProjection.ts",
+      "packages/legacy-agent-host/src/composition/scheduledRunCapture.ts",
+      "packages/legacy-agent-host/src/composition/scheduledRunContracts.ts"
+    ],
+    "allAddedAndPriorCommonPathsExistInIncomingTree": true,
+    "noDuplicatesWithinArrays": true,
+    "commonOrder": "Prior L52 Logs block, then L5, then incoming3; incoming moves its5+3 before52. Only order differs from incoming; source membership exact.",
+    "scope": "Common supplementary import is retained by desktop-proof-sources; Windows Set combines it with unchanged Windows-only array. No new dynamic discovery or roster structure."
+  },
+  "workflow": {
+    "onlyOriginalLintCommandChangedAndReverseRestoresWholeL": true,
+    "oldOperandCount": 38,
+    "newOperandCount": 93,
+    "addedCount": 55,
+    "newOperandsUniqueAndAddedSuffixSorted": true,
+    "old38OperandsOriginalOrder": true,
+    "requiredUnionCounts": {
+      "K": 43,
+      "L": 20,
+      "M": 17,
+      "union": 59
+    },
+    "all59CoveredExactlyByOld38PlusMissing55": true,
+    "tenFileTeamArgvByteExactAndPrecedesLint": "node --test --test-concurrency=1 packages/legacy-agent-host/tests/runtime-activity.test.ts packages/legacy-agent-host/tests/runtime-team-host.test.ts packages/legacy-agent-host/tests/team-snapshot.test.ts packages/legacy-agent-host/tests/team-product-changes.test.ts packages/legacy-agent-host/tests/team-activity-read.test.ts packages/legacy-agent-host/tests/captured-claude-process.test.ts packages/legacy-agent-host/tests/codex-member-provider.test.ts packages/legacy-agent-host/tests/member-process-stderr.test.ts packages/legacy-agent-host/tests/member-provider-authority.test.ts packages/legacy-agent-host/tests/owned-process-facade.test.ts",
+    "outsideList": "All other workflow bytes exact, hence original matrix, timeout, dependency/build commands, selectors, typing and job behavior unchanged.",
+    "redRoute": "Expected Team semantic RED prevents later lint/types stage; NOT RUN is not PASS. No workflow execution, YAML parser or lint run was performed for this source review."
+  },
+  "publishedPlanBasis": {
+    "Plan32At1f": "2305bbd7b3",
+    "Plan32Incoming": "27f455b058d999213277e396343016789163660f",
+    "Plan33Incoming": "77cb678aef27ac3b744258e856deba479ea8c414",
+    "read": "Full incoming diff and bounded original 1f prospective sections for residual Thinking controls/standalone expected source/dialog assertions. New9e completion paragraphs are author evidence, not independently reexecuted."
+  },
+  "otherReviewScope": "Native/root own Host provider/scheduled projection authority and privacy-helper composition; this report does not replace their full production R2. Future held-value helper remains excluded from M until actual prescribed RED and later approval.",
+  "actions": {
+    "trackedEdits": false,
+    "refChanges": false,
+    "projectExecution": false,
+    "CIChanges": false,
+    "providerCalls": false
+  },
+  "notes": [
+    "Pure read-only audit regex initially assumed an as-const suffix absent from the roster. It was corrected to the actual literal array syntax before the completed data comparison; this is not a project-test outcome.",
+    "Historical Installer and Teams receipt qualifications do not transfer to this M candidate."
+  ]
+}

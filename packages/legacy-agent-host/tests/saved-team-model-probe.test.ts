@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import { channel } from 'node:diagnostics_channel';
+import fs from 'node:fs';
 import {
   mkdirSync,
+  lstatSync,
   writeFileSync,
   mkdtempSync,
   readFileSync,
@@ -10,23 +13,50 @@ import {
   renameSync,
   rmSync,
 } from 'node:fs';
+import { syncBuiltinESMExports } from 'node:module';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join, parse as parsePath, sep } from 'node:path';
+import { performance } from 'node:perf_hooks';
 import { test } from 'node:test';
 import { createFilesystemTeamOwner } from '../dist/adapters/team/createFilesystemTeamOwner.js';
 import { FileManagementCommandStore } from '../dist/adapters/providers/FileManagementCommandStore.js';
 import { ClaudeManagementCoordinator } from '../dist/composition/ClaudeManagementCoordinator.js';
 import { RuntimeTeamCoordinator } from '../dist/composition/RuntimeTeamCoordinator.js';
+import { captureSavedTeamModelProbe, readSavedTeamModelConfiguration } from '../dist/composition/savedTeamModelProbe.js';
 import { executeTeamModelProbe, teamModelProbeProfile } from '../dist/composition/teamLaunchModelProbe.js';
+import { captureRuntimeSource, compileRuntimeCapture } from '../dist/composition/runtimeCaptureSource.js';
 import { ManagementResourceFence } from '../dist/management/ManagementResourceFence.js';
 import { ModelProbeOwner } from '../dist/management/ModelProbeOwner.js';
+import { storedModelProbeSchema } from '../dist/management/commandRecords.js';
+import { managementDigest } from '../dist/management/identity.js';
+import { captureOpenCodeConfigurationSource } from '../dist/adapters/providers/OpenCodeConfigurationSource.js';
+import { captureOpenCodeV2Configuration } from '../dist/adapters/providers/OpenCodeV2CapturedConfiguration.js';
+import { captureOpenCodeReadinessOrigin, captureReadinessPreparation } from '../dist/adapters/providers/OpenCodeReadinessOrigin.js';
+import { AcceptedOpenCodeV2FileKey, DeferredOpenCodeV2FileKey, createOpenCodeV2FileMaterialization,
+  openCodeV2SelectedSourceReference, selectedFilePaths } from '../dist/adapters/providers/OpenCodeV2SelectedFileKey.js';
+import { captureOpenCodeProbeAccount, capturePreparedModelReference, captureNativeRestartReadiness,
+  attachMemberModelReadiness, inspectMemberModelReadiness, consumeMemberModelReadiness, captureLaunchModelReadiness } from '../dist/composition/prepareTeamModelReadiness.js';
+import type { LocalModelReadinessTransfer } from '../dist/composition/prepareTeamModelReadiness.js';
+import { TeamOwnerStore } from '../dist/adapters/team/TeamOwnerStore.js';
+import { TeamLaunchOwner } from '../dist/team-launch/TeamLaunchOwner.js';
+import { TeamRosterTransitions } from '../dist/team/TeamRosterTransitions.js';
+import { modelReadinessMechanismDigest } from '../dist/team-launch/launchReadiness.js';
 import { runtimeMemberProfileSchema } from '../dist/composition/runtimeProfile.js';
+import { attachInitialRuntimeModelAdmission, captureInitialRuntimeModelAdmission,
+  captureInitialRuntimeMemberAdmission, initialRuntimeModelProbeScope } from '../dist/composition/initialRuntimeModelAdmission.js';
 import { resolveTeamModelProbeRecipe, applyTeamModelProbeSelection } from '../dist/composition/teamModelProbeRecipe.js';
 import { runtimeDigest } from '../dist/runtime/identity.js';
-import type { HostedTeam } from '../dist/composition/MemberEntry.js';
+import { RuntimeOwner } from '../dist/runtime/RuntimeOwner.js';
+import { emptySession } from '../dist/runtime/sessionState.js';
+import { teamHostProfileSchema } from '../dist/composition/TeamHost.js';
+import { runtimeSourceSelectionFixture } from './fixtures/runtime-source-selection.ts';
+import type { HostedTeam, MemberEntry } from '../dist/composition/MemberEntry.js';
+import type { LocalModelReadinessOrigin, ReadinessSourceReference, NativeLocalReadinessEvidence, StoredModelProbe } from '../dist/management/commandRecords.js';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import type { ProviderManagementProfile } from '../dist/management/profile.js';
 import type { TeamModelProbeSelection } from '../dist/composition/teamLaunchModelProbe.js';
+import type { RuntimeSourceProcessOrigin } from '../dist/composition/runtimeSourceProcessOrigin.js';
+import type { ModelProbePreparation } from '../dist/management/ModelProbeOwner.js';
 import type { TestContext } from 'node:test';
 
 function files(root: string, prefix = ''): unknown[] {
@@ -44,7 +74,8 @@ function files(root: string, prefix = ''): unknown[] {
         ];
   });
 }
-function fixture(t: TestContext) {
+function fixture(t: TestContext, withSources = false, configure?: (profile: TeamHostProfile) => void,
+  onAllocation?: () => void, windowsMain = false) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-saved-model-source-')));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const binding = {
@@ -120,7 +151,7 @@ function fixture(t: TestContext) {
           cwd: root,
           model: 'TEST-default-model',
           accountBinding: 'TEST-private-account',
-          executable: { path: '/TEST/claude', sha256: 'c'.repeat(64) },
+          executable: { path: join(root, 'TEST-never-launched-claude'), sha256: 'c'.repeat(64) },
           environment: {
             HOME: root,
             CLAUDE_CONFIG_DIR: root,
@@ -140,6 +171,15 @@ function fixture(t: TestContext) {
       ],
     },
   };
+  if (windowsMain) {
+    profile.processCustody = { kind: 'main-windows-v1' };
+    profile.runtime!.providerTemplates![0]!.windowsBroker = {
+      path: 'C:\\TEST\\broker.exe', sha256: 'e'.repeat(64), arch: 'x64', protocol: 1,
+      capability: 'service-scopes-v1',
+    };
+    assert.deepEqual(teamHostProfileSchema.parse(profile), profile);
+  }
+  configure?.(profile);
   const owner = createFilesystemTeamOwner({
     root,
     binding,
@@ -162,13 +202,18 @@ function fixture(t: TestContext) {
     connection: owner.connect(profile.principalId),
   };
   let current = true;
+  const sources = withSources ? runtimeSourceSelectionFixture(profile, () => {
+    if (!current) throw new Error('TEST-stale-owner');
+  }) : undefined;
   const runtime = new RuntimeTeamCoordinator({
     profile,
+    ...(sources ? { sources: sources.index } : {}),
     teams: new Map([[binding.teamId, team]]),
     assertWriter: () => {
       if (!current) throw new Error('TEST-stale-owner');
     },
     createProvider: () => {
+      onAllocation?.();
       throw new Error('TEST-no-native-team-allocation');
     },
   });
@@ -205,6 +250,7 @@ function fixture(t: TestContext) {
   return {
     root,
     profile,
+    sources,
     owner,
     team,
     runtime,
@@ -215,6 +261,413 @@ function fixture(t: TestContext) {
     },
   };
 }
+
+test('saved model evidence follows the published source and cannot authorize a later source revision', async (t) => {
+  const f = fixture(t, true);
+  const seed = f.view();
+  const selected = await f.sources!.publish('TEST-saved-source-B');
+  const current = f.view();
+  assert.notEqual(current.source.sourceId, seed.source.sourceId);
+  const input = f.selection();
+  const captured = f.runtime.captureLaunchModelProbe('TEST-imported-team', input, 'start');
+  assert.equal(captured.profile?.executable.path, selected.executable.path);
+  assert.equal(captured.isCurrent(), true);
+  const { effort: _effort, ...withoutEffort } = input;
+  const defaults = f.runtime.captureLaunchModelProbe('TEST-imported-team', {
+    ...withoutEffort, model: '__provider_default__',
+    draft: { providerId: 'anthropic', target: { kind: 'lead' }, workspace: f.root },
+  }, 'start');
+  assert.equal(defaults.profile?.executable.path, selected.executable.path);
+  assert.equal(defaults.model, 'TEST-default-model');
+  await f.sources!.publish('TEST-saved-source-C');
+  assert.equal(captured.isCurrent(), false);
+  assert.equal(defaults.isCurrent(), false);
+  assert.throws(() => f.runtime.captureLaunchModelProbe('TEST-imported-team', input, 'start'), { reason: 'saved-model-source' });
+  const cleanup = f.runtime.captureLaunchModelProbe('TEST-imported-team', input, 'cancel');
+  assert.equal(cleanup.profile, null);
+  assert.equal(cleanup.context, captured.context);
+  assert.deepEqual(f.owner.runtimeCaptures('TEST-human'), []);
+});
+
+function initialSeedFixture(t: TestContext, onAllocation?: () => void) {
+  return fixture(t, true, profile => {
+    const definition = profile.teams[0]!;
+    const lead = definition.members.find(member => member.role === 'lead')!;
+    definition.members = [{ ...lead, delivery: {
+      backendId: definition.binding.backendId, teamId: definition.binding.teamId,
+      teamName: definition.binding.teamName, runId: definition.scope.runId,
+      memberId: lead.memberId, generation: '1',
+    } }];
+    definition.grants.push({ principalId: 'TEST-seed-agent', memberName: lead.name,
+      permissions: ['read', 'task.write', 'message.write'] });
+    const seed = profile.runtime!.providerTemplates![0]!;
+    seed.teamId = definition.binding.teamId;
+    seed.memberId = lead.memberId;
+    seed.principalId = 'TEST-seed-agent';
+    seed.sessionId = 'TEST-original-seed-session';
+    seed.model = definition.savedSettings!.model!;
+    profile.runtime!.members = [seed];
+  }, onAllocation);
+}
+
+test('saved source shares only adjacent Team reads while retaining every original observation and refusal', async t => {
+  const f = initialSeedFixture(t), principal = f.profile.principalId;
+  await f.sources!.publish('TEST-saved-fence-source');
+  const directory = join(f.root, 'teams/test-imported'), ownerDirectory = join(directory, '.host-owner');
+  const lock = join(ownerDirectory, 'authority.lock'), statePath = join(ownerDirectory, 'state.json');
+  const originalState = readFileSync(statePath), before = files(f.root), expected = f.view();
+  const order = ['NS1', 'NS2', 'stateA', 'NS3', 'NS4', 'stateB', 'stateC'];
+  let observing = false, namespaces = 0, states = 0, publications = 0;
+  let trace: string[] = [], tokens: string[] = [], boundaries: string[] = [];
+  let failAt: string | undefined, afterA: (() => void) | undefined;
+  const fault = new Error('TEST original saved-source failure');
+  const point = (name: string) => { trace.push(name); if (failAt === name) throw fault; };
+  const outside = (name: string) => {
+    assert.equal(fs.existsSync(lock), false, name + ' must remain outside Team authority');
+    boundaries.push(name); if (failAt === name) throw fault;
+  };
+  const link = fs.linkSync, directories = fs.readdirSync, read = TeamOwnerStore.prototype.read;
+  const roster = TeamRosterTransitions.prototype.read, sources = f.sources!.index;
+  const currentSource = sources.currentForRecipe, resolveRecipe = sources.resolveRecipe;
+  const mocks = [
+    t.mock.method(fs, 'linkSync', (...args: Parameters<typeof fs.linkSync>) => {
+      const result = link(...args); if (observing && args[1] === lock) publications++; return result;
+    }),
+    t.mock.method(fs, 'readdirSync', (...args: Parameters<typeof fs.readdirSync>) => {
+      if (observing && args[0] === directory) point('NS' + ++namespaces);
+      return directories(...args);
+    }),
+    t.mock.method(TeamOwnerStore.prototype, 'read', function<T>(this: TeamOwnerStore,
+      name: string, decode?: (text: string) => T): T | undefined {
+      const selected = observing && this.directory === ownerDirectory && name === 'state.json';
+      if (selected) {
+        point('state' + String.fromCharCode(65 + states++));
+        const [pid, , token] = readFileSync(lock, 'utf8').split('\n');
+        assert.equal(pid, String(process.pid)); assert.match(token!, /^[a-f0-9-]{36}$/); tokens.push(token!);
+      }
+      const row = (read<T>).call(this, name, decode);
+      if (selected && states === 1) afterA?.();
+      return row;
+    }),
+    t.mock.method(TeamRosterTransitions.prototype, 'read', function(this: TeamRosterTransitions, actor: string) {
+      outside('roster'); observing = false; return roster.call(this, actor);
+    }),
+    t.mock.method(sources, 'currentForRecipe', (...args: Parameters<typeof currentSource>) => {
+      outside('source'); return currentSource.apply(sources, args);
+    }),
+    t.mock.method(sources, 'resolveRecipe', (...args: Parameters<typeof resolveRecipe>) => {
+      outside('recipe'); return resolveRecipe.apply(sources, args);
+    }),
+  ];
+  syncBuiltinESMExports();
+  const actual = () => readSavedTeamModelConfiguration({ profile: f.profile, team: f.team, sources,
+    assertCurrent: () => outside('current'), assertRuntimeHistory: () => { outside('history'); observing = false; } });
+  const original = () => {
+    const authority = f.owner.withLaunchAuthority(principal, 'read', revision => revision);
+    return { authority, hasCaptures: f.owner.runtimeCaptures(principal).length > 0 };
+  };
+  const measure = (action: () => unknown, failure?: string, mutate?: () => void) => {
+    trace = []; tokens = []; boundaries = []; namespaces = states = publications = 0;
+    failAt = failure; afterA = mutate; observing = true;
+    try { return { value: action(), error: undefined, trace, tokens, boundaries, publications }; }
+    catch (error) { return { value: undefined, error, trace, tokens, boundaries, publications }; }
+    finally { observing = false; failAt = undefined; afterA = undefined;
+      assert.equal(fs.existsSync(lock), false, 'original synchronous exit releases its Team lock'); }
+  };
+  try {
+    const old = measure(original), joined = measure(actual);
+    assert.equal(old.error, undefined); assert.equal(joined.error, undefined); assert.deepEqual(joined.value, expected);
+    assert.deepEqual(old.trace, order); assert.deepEqual(joined.trace, order);
+    assert.equal(old.publications, 2); assert.equal(joined.publications, 1);
+    assert.notEqual(old.tokens[0], old.tokens[1]); assert.equal(old.tokens[1], old.tokens[2]);
+    assert.equal(new Set(joined.tokens).size, 1); assert.equal(joined.tokens.length, 3);
+    assert.deepEqual(joined.boundaries.slice(0, 3), ['current', 'history', 'roster']);
+    assert.ok(joined.boundaries.includes('source')); assert.ok(joined.boundaries.includes('recipe'));
+    assert.equal(joined.boundaries.at(-1), 'current');
+    const later = measure(actual); assert.equal(later.error, undefined);
+    assert.notEqual(later.tokens[0], joined.tokens[0], 'a later source read obtains a fresh lock token');
+    const ordinary = measure(() => f.owner.runtimeCaptures(principal));
+    assert.deepEqual(ordinary.value, []); assert.equal(ordinary.publications, 1);
+    assert.deepEqual(ordinary.trace, ['NS1', 'NS2', 'stateA', 'stateB']);
+    const unjoined = measure(() => f.owner.runtimeCaptures(principal, true));
+    assert.deepEqual(unjoined.value, []); assert.equal(unjoined.publications, 1);
+    assert.deepEqual(unjoined.trace, ['NS1', 'NS2', 'NS3', 'stateA', 'stateB']);
+    t.diagnostic(JSON.stringify({ savedSourceFence: { order, originalPublications: old.publications,
+      joinedPublications: joined.publications, freshStateReads: joined.tokens.length } }));
+    for (const [index, boundary] of order.entries()) for (const action of [original, actual]) {
+      const refused = measure(action, boundary);
+      assert.equal(refused.error, fault); assert.deepEqual(refused.trace, order.slice(0, index + 1));
+      assert.equal(refused.publications, index === 0 ? 0 : action === original && index >= 4 ? 2 : 1);
+      assert.equal(measure(actual).error, undefined, 'failure does not retain a lock or nesting depth');
+    }
+    for (const kind of ['revoke', 'missing', 'malformed'] as const) for (const action of [original, actual]) {
+      const refused = measure(action, undefined, () => {
+        if (kind === 'missing') fs.unlinkSync(statePath);
+        else if (kind === 'malformed') writeFileSync(statePath, '{');
+        else { const state = JSON.parse(originalState.toString());
+          state.grants.find((grant: { principalId: string }) => grant.principalId === principal).revoked = true;
+          writeFileSync(statePath, JSON.stringify(state)); }
+      });
+      assert.equal((refused.error as { code?: string })?.code, kind === 'revoke' ? 'forbidden' : 'hold');
+      assert.deepEqual(refused.trace, order.slice(0, 6), 'fresh state B observes the change after state A');
+      writeFileSync(statePath, originalState); assert.equal(measure(actual).error, undefined);
+    }
+    for (const boundary of ['current', 'history', 'roster', 'source', 'recipe']) {
+      const refused = measure(actual, boundary); assert.equal(refused.error, fault);
+      assert.equal(refused.publications, boundary === 'current' ? 0 : 1);
+      assert.equal(measure(actual).error, undefined);
+    }
+    assert.deepEqual(files(f.root), before, 'read and refusal tests leave original durable bytes unchanged');
+  } finally {
+    observing = false; writeFileSync(statePath, originalState);
+    for (const mock of mocks) mock.mock.restore();
+    syncBuiltinESMExports();
+  }
+});
+
+test('saved probe currentness joins only adjacent Team authority reads and reobserves every refusal', async t => {
+  const f = initialSeedFixture(t), principal = f.profile.principalId;
+  await f.sources!.publish('TEST-current-fence-source');
+  const directory = join(f.root, 'teams/test-imported'), ownerDirectory = join(directory, '.host-owner');
+  const lock = join(ownerDirectory, 'authority.lock'), statePath = join(ownerDirectory, 'state.json');
+  const originalState = readFileSync(statePath), before = files(f.root);
+  const order = ['NS1', 'NS2', 'stateA', 'current', 'NS3', 'NS4', 'stateB', 'NS5', 'NS6', 'stateC', 'stateD'];
+  let observing = false, namespaces = 0, states = 0, publications = 0, ownerCurrent = true;
+  let trace: string[] = [], tokens: string[] = [], outsideCalls: string[] = [];
+  let failAt: string | undefined, afterA: (() => void) | undefined;
+  const fault = new Error('TEST original currentness failure');
+  const point = (name: string) => { trace.push(name); if (failAt === name) throw fault; };
+  const outside = (name: string) => {
+    assert.equal(fs.existsSync(lock), false, name + ' must remain outside Team authority');
+    outsideCalls.push(name); if (failAt === name) throw fault;
+  };
+  const options = { profile: f.profile, team: f.team, sources: f.sources!.index,
+    assertCurrent: () => { if (observing) point('current'); if (!ownerCurrent) throw fault; },
+    assertRuntimeHistory: () => { outside('history'); observing = false; } };
+  const captures = (['start', 'read'] as const).map(action =>
+    ({ action, captured: captureSavedTeamModelProbe({ ...options, input: f.selection(), action }) }));
+  const link = fs.linkSync, directories = fs.readdirSync, read = TeamOwnerStore.prototype.read;
+  const roster = TeamRosterTransitions.prototype.read, sources = f.sources!.index;
+  const currentSource = sources.currentForRecipe, resolveRecipe = sources.resolveRecipe;
+  const mocks = [
+    t.mock.method(fs, 'linkSync', (...args: Parameters<typeof fs.linkSync>) => {
+      const result = link(...args); if (observing && args[1] === lock) publications++; return result;
+    }),
+    t.mock.method(fs, 'readdirSync', (...args: Parameters<typeof fs.readdirSync>) => {
+      if (observing && args[0] === directory) point('NS' + ++namespaces);
+      return directories(...args);
+    }),
+    t.mock.method(TeamOwnerStore.prototype, 'read', function<T>(this: TeamOwnerStore,
+      name: string, decode?: (text: string) => T): T | undefined {
+      const selected = observing && this.directory === ownerDirectory && name === 'state.json';
+      if (selected) {
+        point('state' + String.fromCharCode(65 + states++));
+        const [pid, , token] = readFileSync(lock, 'utf8').split('\n');
+        assert.equal(pid, String(process.pid)); assert.match(token!, /^[a-f0-9-]{36}$/); tokens.push(token!);
+      }
+      const row = (read<T>).call(this, name, decode);
+      if (selected && states === 1) afterA?.();
+      return row;
+    }),
+    t.mock.method(TeamRosterTransitions.prototype, 'read', function(this: TeamRosterTransitions, actor: string) {
+      outside('roster'); return roster.call(this, actor);
+    }),
+    t.mock.method(sources, 'currentForRecipe', (...args: Parameters<typeof currentSource>) => {
+      outside('source'); return currentSource.apply(sources, args);
+    }),
+    t.mock.method(sources, 'resolveRecipe', (...args: Parameters<typeof resolveRecipe>) => {
+      outside('recipe'); return resolveRecipe.apply(sources, args);
+    }),
+  ];
+  syncBuiltinESMExports();
+  const measure = (action: () => unknown, failure?: string, mutate?: () => void) => {
+    trace = []; tokens = []; outsideCalls = []; namespaces = states = publications = 0;
+    failAt = failure; afterA = mutate; observing = true;
+    try { return { value: action(), trace, tokens, outsideCalls, publications }; }
+    catch { return { value: false, trace, tokens, outsideCalls, publications }; }
+    finally { observing = false; failAt = undefined; afterA = undefined; ownerCurrent = true;
+      assert.equal(fs.existsSync(lock), false, 'every synchronous exit releases its Team lock'); }
+  };
+  try {
+    for (const { action, captured } of captures) {
+      const original = () => {
+        f.owner.withLaunchAuthority(principal, action === 'start' ? 'control' : 'read', () => undefined);
+        readSavedTeamModelConfiguration(options); return true;
+      };
+      const actual = captured.isCurrent, old = measure(original), joined = measure(actual);
+      assert.equal(old.value, true); assert.equal(joined.value, true);
+      assert.deepEqual(old.trace, order); assert.deepEqual(joined.trace, order);
+      assert.equal(old.publications, 2); assert.equal(joined.publications, 1);
+      assert.notEqual(old.tokens[0], old.tokens[1]);
+      assert.equal(new Set(joined.tokens).size, 1); assert.equal(joined.tokens.length, 4);
+      for (const boundary of ['history', 'roster', 'source', 'recipe']) assert.ok(joined.outsideCalls.includes(boundary));
+      const later = measure(actual); assert.equal(later.value, true);
+      assert.notEqual(later.tokens[0], joined.tokens[0], 'consecutive current calls never share an authority observation');
+      for (const [index, boundary] of order.entries()) for (const inspect of [original, actual]) {
+        const refused = measure(inspect, boundary);
+        assert.equal(refused.value, false); assert.deepEqual(refused.trace, order.slice(0, index + 1));
+        assert.equal(measure(actual).value, true, 'refusal retains no lock, guard value or nesting depth');
+      }
+      for (const kind of ['revoke', 'replace-revoked', 'missing', 'malformed', 'owner'] as const)
+        for (const inspect of [original, actual]) {
+          const refused = measure(inspect, undefined, () => {
+            if (kind === 'owner') ownerCurrent = false;
+            else if (kind === 'missing') fs.unlinkSync(statePath);
+            else if (kind === 'malformed') writeFileSync(statePath, '{');
+            else {
+              const state = JSON.parse(originalState.toString());
+              state.grants.find((grant: { principalId: string }) => grant.principalId === principal).revoked = true;
+              if (kind === 'replace-revoked') {
+                const replacement = join(ownerDirectory, 'TEST-replacement-state');
+                writeFileSync(replacement, JSON.stringify(state)); renameSync(replacement, statePath);
+              } else writeFileSync(statePath, JSON.stringify(state));
+            }
+          });
+          assert.equal(refused.value, false);
+          assert.deepEqual(refused.trace, order.slice(0, kind === 'owner' ? 4 : 7),
+            'the original second authority read observes changed bytes and replacement files');
+          writeFileSync(statePath, originalState); assert.equal(measure(actual).value, true);
+        }
+      for (const boundary of ['history', 'roster', 'source', 'recipe']) {
+        assert.equal(measure(actual, boundary).value, false);
+        assert.equal(measure(actual).value, true);
+      }
+    }
+    assert.deepEqual(files(f.root), before, 'currentness checks leave original durable bytes unchanged');
+  } finally {
+    observing = false; writeFileSync(statePath, originalState);
+    for (const mock of mocks) mock.mock.restore();
+    syncBuiltinESMExports();
+  }
+});
+
+test('unstarted seed model preflight follows current published source without allocating or rebinding the original runtime', async t => {
+  let allocations = 0;
+  const f = initialSeedFixture(t, () => { allocations++; });
+  const selected = await f.sources!.publish('TEST-initial-seed-source-B');
+  const before = files(f.root);
+  const view = f.view();
+  const input: TeamModelProbeSelection = { ...f.selection(),
+    draft: { providerId: 'anthropic', target: { kind: 'lead' }, workspace: f.root } };
+  const probe = f.runtime.captureLaunchModelProbe('TEST-imported-team', input, 'start');
+  assert.equal(probe.profile?.executable.path, selected.executable.path);
+  assert.match(view.source.sourceId, /^saved-model-/u);
+  let runtimeReads = 0;
+  const readRuntime = RuntimeOwner.prototype.readCapturedSession;
+  const runtimeObservation = t.mock.method(RuntimeOwner.prototype, 'readCapturedSession', function(this: RuntimeOwner,
+    binding: Parameters<typeof readRuntime>[0]) {
+    assert.equal(fs.existsSync(join(f.root, 'teams/test-imported/.host-owner/authority.lock')), false);
+    runtimeReads++; return readRuntime.call(this, binding);
+  });
+  try { assert.equal(probe.isCurrent(), true); assert.ok(runtimeReads > 0, 'actual retained Runtime history was read'); }
+  finally { runtimeObservation.mock.restore(); }
+  assert.equal(allocations, 0);
+  assert.deepEqual(f.owner.runtimeCaptures('TEST-human'), []);
+  assert.deepEqual(files(f.root), before);
+  const original = f.runtime.executeLaunch('TEST-imported-team', 'configuration.read', 'TEST-original-read', {});
+  assert.equal((original as { launch: { launchId: string } }).launch.launchId,
+    f.profile.teams[0]!.scope.runId);
+  await f.sources!.publish('TEST-initial-seed-source-C');
+  assert.equal(probe.isCurrent(), false);
+  assert.throws(() => f.runtime.captureLaunchModelProbe('TEST-imported-team', input, 'start'),
+    { reason: 'saved-model-source' });
+  assert.equal(allocations, 0);
+  assert.deepEqual(f.owner.runtimeCaptures('TEST-human'), []);
+});
+
+for (const blocked of ['attached', 'held', 'pending-input', 'unavailable'] as const) {
+  test(`unstarted seed retains current model reads and refuses prospective evidence when ${blocked}`, async t => {
+    let allocations = 0;
+    const f = initialSeedFixture(t, () => { allocations++; });
+    await f.sources!.publish(`TEST-seed-guard-${blocked}`);
+    const input: TeamModelProbeSelection = { ...f.selection(),
+      draft: { providerId: 'anthropic', target: { kind: 'lead' }, workspace: f.root } };
+    assert.match(input.launchId, /^saved-model-/u);
+    const probe = f.runtime.captureLaunchModelProbe('TEST-imported-team', input, 'start');
+    assert.equal(probe.isCurrent(), true);
+    const before = files(f.root);
+    const originalRead = RuntimeOwner.prototype.readCapturedSession;
+    t.mock.method(RuntimeOwner.prototype, 'readCapturedSession', function (this: RuntimeOwner,
+      binding: Parameters<RuntimeOwner['readCapturedSession']>[0]) {
+      if (blocked === 'unavailable') throw new Error('TEST-original-runtime-read-unavailable');
+      const observed = originalRead.call(this, binding);
+      if (blocked === 'attached') return { ...observed, attached: true };
+      const record = emptySession(binding, f.profile.owner.profileId, 'TEST-original-incarnation');
+      if (blocked === 'held') { record.phase = 'held'; record.custody = 'unknown'; }
+      else record.inputs.push({ phase: 'admitted', operationRef: 'TEST-pending-operation',
+        fingerprint: 'a'.repeat(64), intent: { binding, deliveryId: 'TEST-pending-delivery',
+          inputId: 'TEST-pending-input', messageId: 'TEST-pending-message', content: 'TEST-pending' } });
+      return { ...observed, record };
+    });
+    assert.equal(f.view().source.sourceId, f.profile.teams[0]!.scope.runId);
+    assert.equal(probe.isCurrent(), false);
+    assert.throws(() => f.runtime.captureLaunchModelProbe('TEST-imported-team', input, 'start'),
+      { reason: 'saved-model-runtime-history' });
+    assert.equal(allocations, 0);
+    assert.deepEqual(f.owner.runtimeCaptures('TEST-human'), []);
+    assert.deepEqual(files(f.root), before);
+  });
+}
+
+test('saved no-draft and same-provider draft probes retain their source origin outside original profile and journal bytes', async t => {
+  const f = fixture(t, true, undefined, undefined, true), published = await f.sources!.publish('TEST-saved-source-A');
+  const input = f.selection(), captured = f.runtime.captureLaunchModelProbe('TEST-imported-team', input, 'start');
+  assert.ok(captured.profile && captured.processOrigin);
+  const origin = structuredClone(captured.processOrigin), profile = structuredClone(captured.profile);
+  assert.equal(origin.revision, published.selection.revision);
+  assert.equal(origin.sourceId, published.selection.sourceId);
+  assert.equal(origin.origin.kind, 'runtime');
+  assert.equal('processOrigin' in profile, false);
+  assert.equal('runtimeSourceOrigin' in profile, false);
+  const workspace = join(f.root, 'TEST-probe-workspace'); mkdirSync(workspace);
+  const { effort: _effort, ...withoutEffort } = input;
+  const draft = f.runtime.captureLaunchModelProbe('TEST-imported-team', {
+    ...withoutEffort, model: '__provider_default__',
+    draft: { providerId: 'anthropic', target: { kind: 'lead' }, workspace },
+  }, 'start');
+  assert.ok(draft.profile);
+  assert.deepEqual(draft.processOrigin, origin, 'default selection cannot replace the original saved source witness');
+  assert.equal(draft.profile?.cwd, workspace);
+  assert.equal(draft.model, 'TEST-default-model');
+  assert.equal(draft.isCurrent(), true);
+  const store = new FileManagementCommandStore(f.root), profiles = new Map<string, ProviderManagementProfile>();
+  let factories = 0, runs = 0, closes = 0, finish!: (value: boolean) => void;
+  const probes = new ModelProbeOwner({ store, fence: new ManagementResourceFence(store.list()),
+    assertWriter() {}, select(profileId, configRevision) {
+      return { profileId, configRevision, selectionDigest: runtimeDigest(profiles.get(profileId)),
+        resourceId: runtimeDigest('TEST-original-account') };
+    }, prepare: () => assert.fail('A source-derived probe must use its original private preparation') });
+  t.after(() => probes.close());
+  const management = { probes,
+    admitTeamProbeProfile(value: ProviderManagementProfile) { profiles.set(value.profileId, structuredClone(value)); },
+    prepareTeamProbe(value: ProviderManagementProfile, selected?: RuntimeSourceProcessOrigin): ModelProbePreparation {
+      assert.deepEqual(value, profile); assert.deepEqual(selected, origin);
+      return () => {
+        factories++;
+        return { timeoutMs: 10000, run: () => { runs++; return new Promise<boolean>(resolve => { finish = resolve; }); },
+          close: async () => { closes++; finish(false); return true; } };
+      };
+    },
+  };
+  const request = { runtime: f.runtime, management, teamId: 'TEST-imported-team',
+    commandId: 'TEST-original-source-probe', payload: input };
+  assert.equal(await executeTeamModelProbe({ ...request, action: 'read' }), null);
+  assert.equal(factories, 0);
+  assert.equal((await executeTeamModelProbe({ ...request, action: 'start' }))?.phase, 'running');
+  const journal = store.read(request.commandId)!;
+  assert.equal(factories, 1); assert.equal(runs, 1);
+  await executeTeamModelProbe({ ...request, action: 'start' });
+  assert.equal(factories, 1); assert.equal(runs, 1); assert.deepEqual(store.read(request.commandId), journal);
+  assert.equal(JSON.stringify(journal).includes('processOrigin'), false);
+  assert.equal(JSON.stringify(journal).includes('runtimeSourceOrigin'), false);
+  assert.equal((await executeTeamModelProbe({ ...request, action: 'cancel' }))?.phase, 'cancelled');
+  assert.equal(closes, 1);
+  await probes.close();
+  await f.sources!.publish('TEST-saved-source-B');
+  assert.equal(captured.isCurrent(), false); assert.equal(draft.isCurrent(), false);
+  assert.deepEqual(captured.processOrigin, origin);
+  assert.deepEqual(f.owner.runtimeCaptures('TEST-human'), []);
+});
 
 test('never-captured saved/imported lead and Alice resolve explicit private recipes without any product/runtime writes', (t) => {
   const f = fixture(t),
@@ -324,6 +777,7 @@ function selectProvider(f: ReturnType<typeof fixture>, provider: 'claude' | 'cod
 for (const provider of ['claude', 'codex', 'opencode'] as const)
   for (const change of ['roster', 'revoke', 'recipe'] as const)
     test(`existing probe journal retains original intents and exact ${provider} cleanup after ${change} without native Team allocation`, async (t) => {
+      t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
       const f = fixture(t);
       selectProvider(f, provider);
       const payload = f.selection('alice'),
@@ -379,8 +833,25 @@ for (const provider of ['claude', 'codex', 'opencode'] as const)
         'running'
       );
       assert.equal(runs, 1);
+      const first = store.read(request.commandId);
       await executeTeamModelProbe({ ...request, action: 'start' });
       assert.equal(runs, 1);
+      if (provider === 'opencode') {
+        const original = store.read(request.commandId);
+        assert.equal(original?.kind, 'model.probe');
+        if (original?.kind !== 'model.probe') assert.fail('expected original TEST probe');
+        assert.equal(original.readinessScope?.teamBindingDigest, runtimeDigest(f.team.definition.binding));
+        assert.equal(original.readinessScope?.selectionDigest, runtimeDigest(payload));
+        assert.deepEqual(original.readinessScope?.destinationKeys,
+          [runtimeDigest({ launchId: payload.launchId, memberId: payload.memberId })]);
+        assert.equal(first?.kind, 'model.probe');
+        if (first?.kind !== 'model.probe') assert.fail('expected first TEST probe');
+        assert.equal(original.readinessScope?.cutoff, first.readinessScope?.cutoff,
+          'same-ID replay retains the first cutoff');
+        assert.ok(original.expiresAt <= original.readinessScope!.cutoff);
+        await probes.cancelTeamPreparations(runtimeDigest({ ...f.team.definition.binding, teamId: 'TEST-other-team' }));
+        assert.equal(closes, 0, 'cleanup cannot select another Team by member name');
+      }
       if (change === 'roster') {
         const roster = f.team.connection.readRoster();
         f.team.connection.replaceRoster({
@@ -432,6 +903,17 @@ for (const provider of ['claude', 'codex', 'opencode'] as const)
       );
       assert.equal(closes, 1);
       assert.equal(runs, 1);
+      if (provider === 'opencode') {
+        probes.seal();
+        await probes.cancelTeamPreparations(runtimeDigest(f.team.definition.binding));
+        const retired = store.read(request.commandId);
+        assert.equal(retired?.kind, 'model.probe');
+        if (retired?.kind !== 'model.probe') assert.fail('expected retained TEST probe');
+        assert.equal(retired.readinessRetired, true, 'original cleanup survives seal and grant/source changes');
+        assert.equal(retired.resourceHeld, false);
+        assert.equal(retired.ok, false, 'late positive completion cannot revive retired evidence');
+        assert.equal(closes, 1);
+      }
       if (change === 'revoke') assert.throws(f.view, { code: 'forbidden' });
       else assert.deepEqual(f.owner.runtimeCaptures('TEST-human'), []);
       const cold = make();
@@ -444,6 +926,7 @@ for (const provider of ['claude', 'codex', 'opencode'] as const)
         })?.phase,
         'cancelled'
       );
+      if (provider === 'opencode' && change === 'roster') await assertRetainedProductRosterTransfer(t);
     });
 
 test('operator grant revocation invalidates saved source evidence even when the roster and template remain identical', (t) => {
@@ -456,6 +939,8 @@ test('operator grant revocation invalidates saved source evidence even when the 
 });
 
 test('Team probe read rejects completed evidence after physical config-directory replacement while exact contextual cleanup remains addressable', async (t) => {
+  // These synthetic readers validate provenance, not filesystem throughput within the unchanged 1s lease.
+  t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
   const f = fixture(t),
     captured = f.runtime.captureLaunchModelProbe('TEST-imported-team', f.selection(), 'read');
   assert.ok(captured.profile);
@@ -512,6 +997,270 @@ test('Team probe read rejects completed evidence after physical config-directory
     'completed'
   );
   assert.equal(runs, 1);
+
+  // Real source/record/launch readers with an explicitly synthetic native issuer, not native qualification.
+  for (const mode of ['native', 'local', 'initial', 'settings', 'missing', 'copied', 'foreign', 'unclean', 'late'] as const) {
+    const own = fixture(t), providerId = 'test-local', modelId = 'TEST-model';
+    const home = join(own.root, 'file-home'), data = join(own.root, 'file-data');
+    mkdirSync(home); mkdirSync(data);
+    const file = join(own.root, 'TEST-selected.key'), config = join(own.root, 'opencode.json');
+    writeFileSync(file, 'TEST-original-private-key', { mode: 0o600 });
+    writeFileSync(config, JSON.stringify({ provider: { [providerId]: { npm: '@ai-sdk/openai-compatible',
+      options: { baseURL: 'http://127.0.0.1:9/v1', apiKey: '{file:TEST-selected.key}' },
+      models: { [modelId]: { name: 'TEST-model' } } } } }), { mode: 0o600 });
+    const member = runtimeMemberProfileSchema.parse({ provider: 'opencode', nativeGeneration: 'v2',
+      protocolRevision: '2.1.4', teamId: own.team.definition.binding.teamId, memberId: 'team-lead',
+      principalId: 'TEST-agent', sessionId: 'TEST-file-session', generation: 1,
+      configRevision: 'TEST-file-config', accountBinding: 'TEST-file-account', model: modelId, cwd: own.root,
+      executable: { path: join(own.root, 'TEST-bun'), sha256: 'a'.repeat(64) }, endpoint: 'http://127.0.0.1:9',
+      environment: { HOME: home, USERPROFILE: home, XDG_CONFIG_HOME: home, XDG_DATA_HOME: data, XDG_CACHE_HOME: home },
+      embedded: { directory: join(own.root, 'engine'), manifestSha256: 'b'.repeat(64), version: '2.1.4',
+        platform: process.platform, arch: process.arch, externalDirectory: 'deny' },
+      nativeOptions: { providerId, agent: 'build' },
+      limits: { queuedInputs: 1, inputBytes: 4096, outputBytes: 8192, outputEvents: 128,
+        pendingInteractions: 1, timeoutMs: 1000 },
+    });
+    assert.equal(member.provider, 'opencode'); if (member.provider !== 'opencode') assert.fail();
+    member.embedded!.configurationSource = captureOpenCodeConfigurationSource(member).reference;
+    const management = teamModelProbeProfile(member);
+    assert.equal(management.provider, 'opencode'); if (management.provider !== 'opencode') assert.fail();
+    const configuration = captureOpenCodeV2Configuration(management, { providerId, modelId }, () => true);
+    const deferred = configuration.selectedFile; assert.ok(deferred);
+    const request = { commandId: 'TEST-file-' + mode, profileId: management.profileId,
+      configRevision: management.configRevision, providerId,
+      modelId: mode === 'initial' ? providerId + '/' + modelId : modelId, context: runtimeDigest({ mode }) };
+    const initialProfile = mode === 'initial' ? structuredClone(own.profile) : undefined;
+    if (initialProfile) {
+      const team = initialProfile.teams[0]!;
+      team.scope.runId = 'TEST-file-run';
+      team.members.find(row => row.memberId === member.memberId)!.delivery = {
+        ...team.binding, runId: team.scope.runId, memberId: member.memberId, generation: '1' };
+      team.grants.push({ principalId: member.principalId, memberName: 'team-lead', permissions: ['read'] });
+      initialProfile.management = [management]; initialProfile.runtime!.members = [member];
+      initialProfile.runtime!.initialModelAdmissions = [captureInitialRuntimeModelAdmission(initialProfile, {
+        method: 'runtime.open', teamId: member.teamId, commandId: 'TEST-initial-file-open', payload: { memberId: member.memberId },
+        prepared: [{ memberId: member.memberId, commandId: request.commandId, profileId: request.profileId,
+          configRevision: request.configRevision, context: request.context }],
+      })];
+    }
+    const target = { profileId: management.profileId, configRevision: management.configRevision,
+      selectionDigest: runtimeDigest(management), resourceId: runtimeDigest({ account: management.accountBinding, mode }) };
+    const recordStore = new FileManagementCommandStore(own.root);
+    let closed = false, nativeCalls = 0, witnessReads = 0;
+    let complete!: (ok: boolean) => void;
+    let accepted: AcceptedOpenCodeV2FileKey | undefined;
+    const evidence = (): NativeLocalReadinessEvidence => ({ schemaVersion: 1, ordinary: 'confirmed',
+      coordination: 'not-applicable', decision: 'allow', reasons: ['not-applicable'],
+      routeDigest: 'a'.repeat(64), configurationDigest: 'b'.repeat(64),
+      accountDigest: managementDigest({ binding: management.accountBinding, key: accepted?.scopeDigest ?? null,
+        configuredKey: '{file:TEST-selected.key}' }),
+      metadata: { provider: 'custom', tools: null, modelListed: null, contextTokens: null,
+        parameterCount: null, configuredContextTokens: null, trainedContextTokens: null, contextSource: 'unknown' } });
+    const ownerOptions = { store: recordStore, fence: new ManagementResourceFence(recordStore.list()),
+      assertWriter() {}, select: () => target,
+      readinessOriginCurrent: (origin: LocalModelReadinessOrigin) =>
+        captureOpenCodeReadinessOrigin(origin, management, providerId, () => true).isCurrent(),
+      prepare: () => ({ timeoutMs: 1000,
+        run: () => {
+          nativeCalls++;
+          if (mode !== 'missing') {
+            const descriptor = deferred.descriptor, selected = mode === 'foreign'
+              ? DeferredOpenCodeV2FileKey.capture({ ...descriptor, origin: {
+                ...descriptor.origin, value: descriptor.rawKey }, providerId: 'test-foreign',
+                environment: management.environment, isCurrent: () => true }) : deferred;
+            const materializer = createOpenCodeV2FileMaterialization(selected.descriptor, () => {});
+            const actual = selectedFilePaths(selected.descriptor).map(path => materializer.readFileString(path).trim()).join('');
+            const nonce = 'c'.repeat(64), integrationId = selected.descriptor.providerId;
+            const issuer = { nonce, pid: process.pid, integrationId,
+              reference: openCodeV2SelectedSourceReference(selected.descriptor, nonce, integrationId, 'fresh') };
+            accepted = AcceptedOpenCodeV2FileKey.accept(selected, materializer.issue(actual, issuer), issuer, () => true);
+          }
+          return new Promise<boolean>(resolve => { complete = resolve; });
+        },
+        readiness: evidence,
+        nativeFileKeyWitness: () => {
+          assert.equal(closed, true, 'the original owner must close before reading proof'); witnessReads++;
+          return mode === 'copied' ? { ...accepted } : accepted;
+        },
+        close: async () => { closed = true; return mode !== 'unclean'; },
+      }) };
+    const original = new ModelProbeOwner(ownerOptions);
+    try {
+      const admittedAt = Date.now(), cutoff = admittedAt + 1000;
+      const scope = initialProfile ? initialRuntimeModelProbeScope(initialProfile.runtime!.initialModelAdmissions![0]!, member, cutoff)
+        : { schemaVersion: 1 as const, kind: mode === 'local' ? 'team' as const : 'native' as const,
+        teamBindingDigest: runtimeDigest(own.team.definition.binding), actionDigest: runtimeDigest(request.commandId),
+        selectionDigest: runtimeDigest({ providerId, modelId }), sourceRevision: 'TEST-source', rosterRevision: 'TEST-roster',
+        mechanismDigest: modelReadinessMechanismDigest(management), workspace: management.cwd, cutoff,
+        destinationKeys: [runtimeDigest({ launchId: 'TEST-file-run', memberId: member.memberId })] };
+      const reference = (path: string): ReadinessSourceReference => {
+        const directories: unknown[] = []; let directory = parsePath(path).root;
+        for (const part of ['', ...dirname(path).slice(directory.length).split(sep).filter(Boolean)]) {
+          if (part) directory = join(directory, part);
+          try { const stat = lstatSync(directory); directories.push([directory, stat.dev, stat.ino, stat.mode, stat.uid]); }
+          catch (error) { if (!(error instanceof Error) || !('code' in error) || error.code !== 'ENOENT') throw error;
+            return { path, root: own.root, present: false,
+              digest: managementDigest({ path, root: own.root, directories, missing: directory }) }; }
+        }
+        try { const stat = lstatSync(path); return { path, root: own.root, present: true,
+          digest: managementDigest({ path, root: own.root, directories,
+            file: [stat.dev, stat.ino, stat.mode, stat.uid, stat.size, stat.mtimeMs, stat.ctimeMs, stat.nlink],
+            bytes: createHash('sha256').update(readFileSync(path)).digest('hex') }) }; }
+        catch (error) { if (!(error instanceof Error) || !('code' in error) || error.code !== 'ENOENT') throw error;
+          return { path, root: own.root, present: false, digest: managementDigest({ path, root: own.root, directories, missing: path }) }; }
+      };
+      const owner = { ownerId: 'TEST-file-owner' }, selection = { providerId, modelId };
+      const origin: LocalModelReadinessOrigin = { schemaVersion: 1, kind: 'team', ownerDigest: managementDigest(owner),
+        contextId: 'TEST-file-context', commandId: 'TEST-file-action', selectionDigest: managementDigest(selection),
+        workspaces: [{ path: own.root, project: { selectedPath: config, invalid: false,
+          sources: ['opencode.json', 'opencode.jsonc', '.opencode/opencode.json', '.opencode/opencode.jsonc']
+            .map(name => reference(join(own.root, name))),
+          providers: [{ providerId, baseUrl: 'http://127.0.0.1:9/v1', preset: 'custom', hasConfiguredApiKey: true }] },
+          global: { notConsulted: 'project-precedence' } }], approval: { notConsulted: 'no-private-target' } };
+      const preparation = mode === 'local' ? captureReadinessPreparation({ origin, remainingMs: 1000 }, {
+        kind: 'team', owner, contextId: origin.contextId, commandId: origin.commandId, selection,
+        workspaces: [own.root], targets: [{ workspace: own.root, providerId }], anchorCommandId: request.commandId,
+        admittedAt, original: { present: false } }) : undefined;
+      assert.equal(captureOpenCodeProbeAccount(management, request, () => true, undefined,
+        preparation?.origin), undefined, 'initial scope cannot claim a future effective manual key');
+      if (mode === 'settings') original.start(request);
+      else if (mode === 'initial') original.startNativeReadiness(request, () => true, scope);
+      else original.startPrepared(request, () => true, preparation, scope);
+      const admitted = original.readRetainedProbe(request.commandId, request.context);
+      assert.equal(admitted.nativeFileKeyWitness, undefined);
+      assert.equal(admitted.readinessScope?.accountDigest, undefined);
+      if (mode === 'late') await original.cancelContextual(request.commandId, request.context);
+      complete(true);
+      await original.awaitPrepared(request.commandId, request.context);
+      const saved = original.readRetainedProbe(request.commandId, request.context);
+      assert.equal(saved.fingerprint, admitted.fingerprint);
+      assert.deepEqual(saved.readinessScope, admitted.readinessScope, 'scope/cutoff never acquire a late placeholder digest');
+      assert.equal(nativeCalls, 1);
+      assert.equal(JSON.stringify(saved).includes('TEST-original-private-key'), false, 'record has only opaque native evidence');
+      assert.equal(Object.hasOwn(original.read({ commandId: request.commandId, profileId: request.profileId,
+        configRevision: request.configRevision })!, 'nativeFileKeyWitness'), false, 'public snapshot always omits private proof');
+      if (['unclean', 'late', 'settings'].includes(mode)) {
+        assert.equal(saved.phase, mode === 'unclean' ? 'held' : mode === 'late' ? 'cancelled' : 'completed');
+        assert.equal(saved.resourceHeld, mode === 'unclean');
+        assert.equal(saved.ok, mode === 'settings');
+        assert.equal(witnessReads, 0);
+        assert.equal(saved.nativeFileKeyWitness, undefined);
+        assert.equal(storedModelProbeSchema.safeParse({ ...saved, nativeFileKeyWitness: accepted?.encoded }).success, false);
+      } else if (mode === 'copied' || mode === 'foreign') {
+        assert.equal(witnessReads, 1); assert.equal(saved.phase, 'held'); assert.equal(saved.ok, false);
+        assert.equal(saved.nativeFileKeyWitness, undefined);
+      } else if (mode === 'missing') {
+        const historical = original.captureReadinessReference(request.commandId, request.context,
+          () => ({ target, originCurrent: true }));
+        assert.equal(historical.preparationDigest, managementDigest({ scope: saved.readinessScope, anchor: null, origin: null }),
+          'omitting the new witness preserves the historical reference bytes');
+        assert.throws(() => captureOpenCodeProbeAccount(management, request, () => true, saved), { code: 'held' });
+      } else {
+        assert.ok(saved.nativeFileKeyWitness); assert.equal(witnessReads, 1);
+        const account = captureOpenCodeProbeAccount(management, request, () => true, saved); assert.ok(account);
+        assert.equal(account.nativeCredentialScopeDigest, accepted?.scopeDigest);
+        const manager = { probes: original, readinessTarget: () => target };
+        const capture = () => capturePreparedModelReference({ management: manager, profile: member,
+          commandId: request.commandId, context: request.context, ...(mode === 'native' ? { kind: 'native' as const } : {}),
+          isCurrent: () => true });
+        const selected = capture();
+        assert.equal(selected.preparationDigest, managementDigest({ scope: saved.readinessScope,
+          anchor: saved.localModelReadinessPreparation ?? null, origin: saved.localModelReadinessOrigin ?? null,
+          nativeFileKeyWitness: managementDigest(saved.nativeFileKeyWitness) }));
+        const cold = new ModelProbeOwner({ ...ownerOptions, fence: new ManagementResourceFence(recordStore.list()),
+          prepare: () => { throw Error('TEST cold account inspection cannot create another probe'); } });
+        try { assert.deepEqual(capturePreparedModelReference({ management: { ...manager, probes: cold }, profile: member,
+          commandId: request.commandId, context: request.context, ...(mode === 'native' ? { kind: 'native' as const } : {}),
+          isCurrent: () => true }), selected); } finally { await cold.close(); }
+        const binding = { backendId: own.team.definition.binding.backendId, teamId: member.teamId,
+          runId: 'TEST-file-run', memberId: member.memberId, generation: '1' };
+        const entry: MemberEntry = { profile: member, baseProfile: structuredClone(member),
+          team: initialProfile ? { ...own.team, definition: initialProfile.teams[0]! } : own.team,
+          binding, delivery: { ...binding, teamName: own.team.definition.binding.teamName },
+          config: { tenantId: own.profile.owner.ownerId, projectId: own.team.definition.scope.projectId,
+            sessionId: member.sessionId, generation: member.generation, configRevision: member.configRevision,
+            requiredCapabilities: ['text'] } };
+        const launch = new TeamLaunchOwner({ definition: { launchId: binding.runId, rosterRevision: runtimeDigest(scope),
+          members: [{ memberId: member.memberId, binding, configurationDigest: runtimeDigest(member),
+            baseConfigurationDigest: runtimeDigest(member), runtimeGeneration: member.generation,
+            contextDigest: runtimeDigest('TEST-no-input'), configRevision: member.configRevision, skipped: false, timeoutMs: 1000 }] },
+          hostIncarnation: 'TEST-file-host', store: new TeamOwnerStore(own.root, own.team.definition.binding.teamName),
+          authorized: (action, callback) => own.owner.withLaunchAuthority('TEST-human', action, callback),
+          runtime: { read: () => ({ attached: false, nativeReady: false }),
+            open: async () => { throw Error('TEST no business allocation in account proof'); } } });
+        try {
+          if (initialProfile) {
+            const captured = captureInitialRuntimeMemberAdmission(initialProfile, entry); assert.ok(captured);
+            entry.initialModelAdmission = captured;
+            const admit = (actorDigest = runtimeDigest('TEST-actor')) => attachInitialRuntimeModelAdmission({ launch, entries: [entry], management: manager,
+              captureReference: capturePreparedModelReference,
+              method: 'runtime.open', teamId: member.teamId, commandId: 'TEST-initial-file-open',
+              payload: { memberId: member.memberId }, actorDigest,
+              hostIncarnation: 'TEST-file-host', assertCurrent() {} });
+            for (const invalid of ['unscoped', 'foreign', 'expired', 'held'] as const) {
+              const changed: StoredModelProbe = structuredClone(saved);
+              if (invalid === 'unscoped') delete changed.readinessScope;
+              else if (invalid === 'foreign') changed.readinessScope = { ...changed.readinessScope!, actionDigest: 'f'.repeat(64) };
+              else if (invalid === 'expired') changed.expiresAt = Date.now() - 1;
+              else {
+                changed.phase = 'held'; changed.ok = false; changed.resourceHeld = true;
+                delete changed.nativeFileKeyWitness; delete changed.readiness;
+              }
+              recordStore.write(changed);
+              try { assert.throws(admit, 'initial admission cannot adopt ' + invalid + ' proof'); }
+              finally { recordStore.write(saved); }
+              assert.equal(nativeCalls, 1, 'a refused retained receipt cannot create replacement preparation');
+            }
+            admit();
+            const attached = launch.readModelReadiness({ binding, configRevision: member.configRevision,
+              configurationDigest: runtimeDigest(member) });
+            assert.deepEqual(attached.reference, selected);
+            assert.equal(attached.consumer.cutoff, saved.expiresAt);
+            assert.equal(attached.consumer.initialProfile, undefined, 'the original Linux proof remains a prepared arm');
+            admit();
+            assert.deepEqual(launch.readModelReadiness({ binding, configRevision: member.configRevision,
+              configurationDigest: runtimeDigest(member) }), attached, 'same original pending attachment is a read-only replay');
+            assert.throws(() => admit(runtimeDigest('TEST-another-actor')), { code: 'hold' },
+              'another actor cannot replace the retained initial attempt with a new consumer');
+            assert.equal(nativeCalls, 1, 'initial attachment replay and refusal never spend a second probe');
+            assert.deepEqual(original.readRetainedProbe(request.commandId, request.context), saved,
+              'the exact first context, scope, cutoff and clean receipt are never rewritten by allocation attachment');
+          } else attachMemberModelReadiness({ launch, entry, reference: selected, commandId: 'TEST-consume',
+            actorDigest: runtimeDigest('TEST-actor'), inputDigest: runtimeDigest(request), cutoff });
+          const consumed = consumeMemberModelReadiness({ management: manager, launch, entry,
+            hostIncarnation: 'TEST-file-host', assertCurrent() {} });
+          assert.equal(consumed.kind, 'preparation'); assert.ok(consumed.assertReadinessCredential);
+          let handoffs = 0;
+          assert.throws(() => { consumed.assertReadinessCredential!('f'.repeat(64)); handoffs++; }, { code: 'held' });
+          assert.equal(handoffs, 0, 'a later foreign native scope is refused before business handoff');
+          consumed.assertReadinessCredential(account.nativeCredentialScopeDigest!);
+          captureNativeRestartReadiness({ management: manager, launch, entry, isCurrent: () => true }).assertCurrent();
+          if (initialProfile) {
+            assert.equal(saved.modelId, providerId + '/' + member.model,
+              'the original qualified probe remains unchanged while the member model stays bare');
+            for (const modelId of ['test-foreign/' + member.model, providerId + '/' + request.modelId]) {
+              recordStore.write({ ...saved, modelId });
+              try {
+                assert.throws(capture, { code: 'held' });
+                assert.throws(() => captureNativeRestartReadiness({ management: manager, launch, entry,
+                  isCurrent: () => true }), { code: 'held' });
+              } finally { recordStore.write(saved); }
+            }
+            assert.deepEqual(original.readRetainedProbe(request.commandId, request.context), saved,
+              'model comparison never rewrites the original scoped receipt or native account witness');
+          }
+          writeFileSync(file, 'TEST-drifted-original-key', { mode: 0o600 });
+          assert.equal(account.isCurrent(), false);
+          assert.throws(consumed.assertCurrent);
+          assert.throws(() => captureNativeRestartReadiness({ management: manager, launch, entry, isCurrent: () => true }));
+          assert.equal(nativeCalls, 1, 'post-close currentness never starts a replacement native owner');
+        } finally { launch.seal(); }
+      }
+    } finally {
+      if (mode === 'unclean') await assert.rejects(original.close(), { code: 'held' });
+      else await original.close();
+    }
+  }
 });
 
 for (const provider of ['codex', 'opencode'] as const)
@@ -771,6 +1520,54 @@ for (const provider of ['claude', 'codex', 'opencode'] as const)
       assert.deepEqual(f.owner.runtimeCaptures('TEST-human'), []);
     });
 
+test('V1 saved Default rebases only its proven limit overlay and resets the native provider/model pair', (t) => {
+  const f = fixture(t);
+  selectProvider(f, 'opencode');
+  const template = f.profile.runtime!.providerTemplates![0]!;
+  assert(template.provider === 'opencode');
+  template.model = 'default';
+  template.managedPreferences = { defaultModelId: 'TEST-local/default', modelLimitOverrides: {
+    'TEST-local/default': { contextTokens: 32000, outputTokens: 1000 },
+    'TEST-other/chosen': { contextTokens: 64000, outputTokens: 2000 },
+  } };
+  template.environment.OPENCODE_CONFIG_CONTENT = JSON.stringify({ provider: {
+    'TEST-local': { models: { default: { limit: { context: 9000, output: 90 } } } },
+    'TEST-other': { models: { chosen: { limit: { context: 8000, output: 80 } } } },
+  }, testUnrelated: 'TEST-preserved' });
+  const roster = f.team.connection.readRoster();
+  f.team.connection.replaceRoster({
+    commandId: 'TEST-qualified-nondefault', expectedRevision: roster.revision,
+    savedSettings: { ...roster.savedSettings, cwd: f.root, providerId: 'opencode',
+      model: 'TEST-other/chosen', syncModelsWithLead: false, limitContext: true },
+    members: roster.members.filter(row => row.role === 'member').map(row => ({ name: row.name })),
+  });
+  const input = f.selection();
+  const original = f.runtime.captureLaunchModelProbe('TEST-imported-team', input, 'start');
+  assert.ok(original.profile);
+  assert.equal(original.model, 'chosen');
+  assert.equal(original.providerId, 'TEST-other');
+  const originalConfig = JSON.parse(original.profile!.environment.OPENCODE_CONFIG_CONTENT!);
+  assert.deepEqual(originalConfig.provider['TEST-other'].models.chosen.limit, { context: 64000, output: 2000 });
+  const { effort: _effort, ...withoutEffort } = input;
+  const fresh = f.runtime.captureLaunchModelProbe('TEST-imported-team', {
+    ...withoutEffort, model: '__provider_default__',
+    draft: { providerId: 'opencode', target: { kind: 'lead' }, workspace: f.root },
+  }, 'start');
+  assert.ok(fresh.profile);
+  assert.equal(fresh.model, 'default');
+  assert.equal(fresh.providerId, 'TEST-local');
+  const config = JSON.parse(fresh.profile!.environment.OPENCODE_CONFIG_CONTENT!);
+  assert.deepEqual(config.provider['TEST-local'].models.default.limit, { context: 32000, output: 1000 });
+  assert.deepEqual(config.provider['TEST-other'].models.chosen.limit, { context: 8000, output: 80 });
+  assert.equal(config.testUnrelated, 'TEST-preserved');
+  assert.equal(fresh.profile?.accountBinding, original.profile?.accountBinding);
+  assert.equal(fresh.isCurrent(), true);
+  assert.equal(original.isCurrent(), true);
+  assert.deepEqual(f.owner.runtimeCaptures('TEST-human'), [], 'inspection does not allocate a Team');
+  template.environment.TEST_UNRELATED_CHANGE = 'TEST-new-private-value';
+  assert.equal(fresh.isCurrent(), false, 'only the derived selected limits are normalized');
+});
+
 test('V2 draft Default preserves the native session model and rejects drifted private defaults', (t) => {
   const f = fixture(t);
   const base = f.profile.runtime!.providerTemplates![0]!;
@@ -862,6 +1659,16 @@ test('V2 draft Default preserves the native session model and rejects drifted pr
   assert.equal(teamModelProbeProfile(embeddedRecipe()).provider, 'opencode');
   if (embeddedTemplate.provider !== 'opencode' || !embeddedTemplate.embedded)
     throw Error('TEST_expected_embedded_template');
+  embeddedTemplate.model = 'TEST-new-private-default';
+  embeddedTemplate.nativeOptions.variant = 'low';
+  embeddedTemplate.embedded.providerConfiguration = { models: { 'TEST-new-private-default': {} } };
+  const freshDefault = applyTeamModelProbeSelection(embeddedRecipe(), input);
+  assert.equal(freshDefault.model, 'TEST-new-private-default');
+  if (freshDefault.provider !== 'opencode') throw Error('TEST_expected_opencode_default');
+  assert.equal(freshDefault.nativeOptions.variant, 'low');
+  assert.deepEqual(freshDefault.embedded?.providerConfiguration,
+    embeddedTemplate.embedded.providerConfiguration);
+  assert.equal(embeddedSaved.model, 'TEST-bound-native-model', 'saved native history is unchanged');
   embeddedTemplate.embedded.manifestSha256 = 'c'.repeat(64);
   assert.throws(embeddedRecipe, { reason: 'probe-default-recipe' });
   assert.deepEqual(f.owner.runtimeCaptures('TEST-human'), []);
@@ -872,4 +1679,431 @@ function testPolicyPlugin(root: string) {
     bytes = 'export default async () => ({})\n';
   writeFileSync(path, bytes);
   return { path, sha256: createHash('sha256').update(bytes).digest('hex') };
+}
+
+async function assertRetainedProductRosterTransfer(t: TestContext) {
+  const providerId = 'test-local', modelId = 'TEST-model';
+  let allocations = 0;
+  const own = fixture(t, false, profile => {
+    const definition = profile.teams[0]!, root = profile.owner.storageRoot;
+    const alice = definition.members.find(row => row.memberId === 'alice')!;
+    alice.settings = { providerId: 'opencode', model: modelId };
+    alice.delivery = { ...definition.binding, runId: definition.scope.runId, memberId: 'alice', generation: '1' };
+    definition.grants.push({ principalId: 'TEST-retained-agent', memberName: 'alice', permissions: ['read'] });
+    profile.runtime!.members = [runtimeMemberProfileSchema.parse({
+      provider: 'opencode', protocolRevision: '1.19.4', teamId: definition.binding.teamId, memberId: 'alice',
+      principalId: 'TEST-retained-agent', sessionId: 'TEST-retained-session', generation: 1,
+      configRevision: 'TEST-retained-config', accountBinding: 'TEST-retained-account', model: modelId, cwd: root,
+      executable: { path: join(root, 'TEST-opencode'), sha256: 'c'.repeat(64) }, endpoint: 'http://127.0.0.1:9',
+      mcpPolicyPlugin: testPolicyPlugin(root),
+      environment: { HOME: root, XDG_CONFIG_HOME: root, XDG_DATA_HOME: root, XDG_CACHE_HOME: root },
+      nativeOptions: { providerId, agent: 'build' },
+      limits: { queuedInputs: 1, inputBytes: 4096, outputBytes: 8192, outputEvents: 100,
+        pendingInteractions: 1, timeoutMs: 1000 },
+    })];
+    writeFileSync(join(root, 'opencode.json'), JSON.stringify({ provider: { [providerId]: {
+      npm: '@ai-sdk/openai-compatible', options: { baseURL: 'http://127.0.0.1:9/v1', apiKey: 'TEST-retained-key' },
+      models: { [modelId]: { name: modelId } },
+    } } }), { mode: 0o600 });
+  }, () => { allocations++; });
+  const initial = own.runtime.executeLaunch(own.team.definition.binding.teamId, 'configuration.read',
+    'TEST-retained-configuration', {}) as unknown as { launch: { launchId: string; rosterRevision: string } };
+  const originalRoster = own.team.connection.readRoster();
+  const payload: TeamModelProbeSelection = {
+    launchId: initial.launch.launchId, rosterRevision: initial.launch.rosterRevision,
+    memberId: 'alice', model: providerId + '/' + modelId,
+    draft: { providerId: 'opencode', target: { kind: 'member', name: 'alice', originalName: 'alice' } },
+  };
+  assert.notEqual(payload.rosterRevision, originalRoster.revision,
+    'technical Launch and product-roster revisions are separate identities');
+  assert.equal(payload.launchId.startsWith('saved-model-'), false);
+  const captured = own.runtime.captureLaunchModelProbe(own.team.definition.binding.teamId, payload, 'read');
+  assert.ok('productRosterRevision' in captured);
+  assert.equal(captured.productRosterRevision, originalRoster.revision,
+    'the exact prospective destination binds the original product revision');
+  assert.equal(captured.profile?.provider, 'opencode');
+  if (captured.profile?.provider !== 'opencode') assert.fail('TEST-retained-OpenCode-profile');
+  const profile = captured.profile, commandId = 'TEST-retained-product-probe';
+  const records = new FileManagementCommandStore(own.root);
+  const reference = (path: string): ReadinessSourceReference => {
+    const directories: unknown[] = []; let directory = parsePath(path).root;
+    for (const part of ['', ...dirname(path).slice(directory.length).split(sep).filter(Boolean)]) {
+      if (part) directory = join(directory, part);
+      try { const stat = lstatSync(directory); directories.push([directory, stat.dev, stat.ino, stat.mode, stat.uid]); }
+      catch (error) { if (!(error instanceof Error) || !('code' in error) || error.code !== 'ENOENT') throw error;
+        return { path, root: own.root, present: false,
+          digest: managementDigest({ path, root: own.root, directories, missing: directory }) }; }
+    }
+    try { const stat = lstatSync(path); return { path, root: own.root, present: true,
+      digest: managementDigest({ path, root: own.root, directories,
+        file: [stat.dev, stat.ino, stat.mode, stat.uid, stat.size, stat.mtimeMs, stat.ctimeMs, stat.nlink],
+        bytes: createHash('sha256').update(readFileSync(path)).digest('hex') }) }; }
+    catch (error) { if (!(error instanceof Error) || !('code' in error) || error.code !== 'ENOENT') throw error;
+      return { path, root: own.root, present: false,
+        digest: managementDigest({ path, root: own.root, directories, missing: path }) }; }
+  };
+  const handleId = 'TEST-retained-handle', scope = own.team.definition.scope;
+  const origin: LocalModelReadinessOrigin = {
+    schemaVersion: 1, kind: 'team', ownerDigest: managementDigest(own.profile.owner),
+    contextId: 'TEST-retained-context', commandId,
+    selectionDigest: managementDigest({ handleId, scope, payload }),
+    workspaces: [{ path: own.root, project: { selectedPath: join(own.root, 'opencode.json'), invalid: false,
+      sources: ['opencode.json', 'opencode.jsonc', '.opencode/opencode.json', '.opencode/opencode.jsonc']
+        .map(name => reference(join(own.root, name))),
+      providers: [{ providerId, baseUrl: 'http://127.0.0.1:9/v1', preset: 'custom', hasConfiguredApiKey: true }],
+    }, global: { notConsulted: 'project-precedence' } }], approval: { notConsulted: 'no-private-target' },
+  };
+  const profiles = new Map<string, ProviderManagementProfile>();
+  const target = (selected: ProviderManagementProfile) => ({
+    profileId: selected.profileId, configRevision: selected.configRevision,
+    selectionDigest: runtimeDigest(selected), resourceId: runtimeDigest(selected.accountBinding),
+  });
+  let runs = 0, closes = 0, complete!: (ok: boolean) => void;
+  const probes = new ModelProbeOwner({
+    store: records, fence: new ManagementResourceFence(records.list()), assertWriter() {},
+    select: (id, revision) => {
+      const selected = profiles.get(id); assert.ok(selected); assert.equal(selected.configRevision, revision);
+      return target(selected);
+    },
+    readinessOriginCurrent: selected =>
+      captureOpenCodeReadinessOrigin(selected, profile, providerId, () => true).isCurrent(),
+    prepare: (input, current, purpose, selectedOrigin) => {
+      assert.equal(purpose, 'native-local-readiness-v1');
+      assert.deepEqual(selectedOrigin, origin);
+      const account = captureOpenCodeProbeAccount(profile, input, current, undefined, selectedOrigin);
+      assert.ok(account);
+      return { timeoutMs: 1000,
+        run: () => { runs++; return new Promise<boolean>(resolve => { complete = resolve; }); },
+        close: async () => { closes++; return true; },
+        readiness: (): NativeLocalReadinessEvidence => ({
+          schemaVersion: 1, ordinary: 'confirmed', coordination: 'not-applicable', decision: 'allow',
+          reasons: ['not-applicable'], routeDigest: 'a'.repeat(64), configurationDigest: 'b'.repeat(64),
+          accountDigest: account.digest, metadata: { provider: 'custom', tools: null, modelListed: null,
+            contextTokens: null, parameterCount: null, configuredContextTokens: null,
+            trainedContextTokens: null, contextSource: 'unknown' },
+        }),
+      };
+    },
+  });
+  const management = { probes, readinessTarget: target,
+    admitTeamProbeProfile: (selected: ProviderManagementProfile) => { profiles.set(selected.profileId, selected); } };
+  const request = { runtime: own.runtime, management, teamId: own.team.definition.binding.teamId,
+    commandId, payload, readiness: { preparation: { origin, remainingMs: 1000 },
+      owner: own.profile.owner, handleId, scope } };
+  assert.equal((await executeTeamModelProbe({ ...request, action: 'start' }))?.phase, 'running');
+  const admitted = probes.readRetainedProbe(commandId, captured.context);
+  await executeTeamModelProbe({ ...request, action: 'start' });
+  assert.equal(runs, 1, 'same-ID replay must not prepare another native probe');
+  assert.equal(probes.readRetainedProbe(commandId, captured.context).expiresAt, admitted.expiresAt);
+  complete(true);
+  await probes.awaitPrepared(commandId, captured.context);
+  const original = probes.readRetainedProbe(commandId, captured.context);
+  assert.equal(original.phase, 'completed'); assert.equal(original.ok, true);
+  assert.equal(original.resourceHeld, false); assert.equal(closes, 1);
+  assert.equal(original.purpose, 'native-local-readiness-v1');
+  assert.equal(original.readiness?.evidence.ordinary, 'confirmed');
+  assert.equal(original.readinessScope?.sourceRevision, payload.launchId);
+  assert.equal(original.readinessScope?.rosterRevision, payload.rosterRevision);
+  const transfer: LocalModelReadinessTransfer = {
+    preparationId: 'TEST-retained-preparation', remainingMs: 1000, probes: [{ commandId, selection: payload }],
+    roster: { commandId: 'TEST-retained-full-CAS', expected: {
+      expectedRevision: originalRoster.revision, savedSettings: originalRoster.savedSettings!,
+      members: [{ name: 'alice', providerId: 'opencode', model: payload.model }],
+    } },
+  };
+  own.team.connection.replaceRoster({ commandId: transfer.roster.commandId, ...transfer.roster.expected });
+  const published = own.team.connection.readRoster();
+  const source = captureRuntimeSource(own.profile, own.team, 'TEST-retained-capture', transfer.roster.commandId,
+    published, { deferMcp: true });
+  const compiled = compileRuntimeCapture(own.profile, own.team, source, 'model-preflight');
+  const options = { management, team: own.team, source, profiles: compiled.profiles,
+    principalId: own.profile.principalId, hostIncarnation: 'TEST-retained-host', transfer,
+    admittedAt: Date.now(), isCurrent: () => true };
+  const transferred = captureLaunchModelReadiness(options);
+  assert.equal(transferred.groups.length, 1);
+  assert.equal(transferred.groups[0]!.commandId, commandId);
+  assert.equal(transferred.groups[0]!.context, captured.context);
+  assert.equal(transferred.groups[0]!.expiresAt, original.expiresAt);
+  assert.equal(transferred.capture.cutoff, original.expiresAt);
+  assert.equal(transferred.capture.rosterRevision, published.revision);
+  assert.equal(transferred.capture.targets[0]!.originalProbeCommandId, commandId);
+  assert.equal(transferred.capture.targets[0]!.originalContext, captured.context);
+  assert.equal(allocations, 0); assert.deepEqual(own.owner.runtimeCaptures(own.profile.principalId), []);
+  await assert.rejects(() => executeTeamModelProbe({ ...request, action: 'start' }), { code: 'hold' });
+  assert.equal(runs, 1, 'the changed product roster cannot renew the original admission');
+  const originalBytes = files(join(own.root, 'management-commands'));
+  for (const actionDigest of [
+    runtimeDigest({ commandId, context: captured.context }),
+    runtimeDigest({ commandId, context: captured.context, productRosterRevision: 'f'.repeat(64) }),
+  ]) {
+    try {
+      records.write({ ...original, readinessScope: { ...original.readinessScope!, actionDigest } });
+      assert.throws(() => captureLaunchModelReadiness(options), { code: 'held' });
+    } finally {
+      records.write(original); assert.deepEqual(files(join(own.root, 'management-commands')), originalBytes);
+    }
+  }
+  assert.throws(() => captureLaunchModelReadiness({ ...options, transfer: { ...transfer,
+    probes: [{ commandId: commandId + '-foreign', selection: payload }] } }), { code: 'conflict' });
+  assert.throws(() => captureLaunchModelReadiness({ ...options, transfer: { ...transfer,
+    probes: [{ commandId, selection: { ...payload, model: providerId + '/TEST-other-model' } }] } }), { code: 'conflict' });
+  try {
+    records.write({ ...original, expiresAt: Date.now() - 1 });
+    assert.throws(() => captureLaunchModelReadiness(options), { code: 'held' });
+  } finally {
+    records.write(original); assert.deepEqual(files(join(own.root, 'management-commands')), originalBytes);
+  }
+  t.mock.timers.setTime(original.expiresAt - 1);
+  assert.deepEqual(captureLaunchModelReadiness(options), transferred,
+    'the original readiness remains usable strictly before its unchanged cutoff');
+  t.mock.timers.setTime(original.expiresAt);
+  assert.throws(() => captureLaunchModelReadiness(options), { code: 'held' },
+    'the original readiness expires exactly at its cutoff without any lease extension');
+  assert.deepEqual(files(join(own.root, 'management-commands')), originalBytes);
+  assert.equal(runs, 1); assert.equal(closes, 1); assert.equal(allocations, 0);
+
+  // Exercise the private allocation inspector against the original completed V1
+  // receipt; public capture/transfer alone cannot enter its synchronous bracket.
+  const member = compiled.profiles.find(row => row.memberId === 'alice')!;
+  assert.equal(member.provider, 'opencode');
+  const selectedReference = transferred.groups[0]!, shadowDirectory = join(own.root, 'opencode'),
+    shadow = join(shadowDirectory, 'opencode.json'), consulted = join(own.root, 'opencode.jsonc');
+  const originalProject = readFileSync(join(own.root, 'opencode.json'), 'utf8');
+  let businessOpens = 0;
+  for (const change of ['unchanged', 'shadowed-native', 'main-origin', 'owner', 'expiry', 'credential'] as const) {
+    // Independent observations of the same fixed lease, never an updated receipt.
+    t.mock.timers.setTime(original.expiresAt - 1);
+    const binding: MemberEntry['binding'] = { backendId: own.team.definition.binding.backendId, teamId: member.teamId,
+      runId: 'TEST-private-origin-' + change, memberId: member.memberId, generation: '1' };
+    const entry: MemberEntry = { profile: member, baseProfile: structuredClone(member), team: own.team,
+      binding, delivery: { ...binding, teamName: own.team.definition.binding.teamName },
+      config: { tenantId: own.profile.owner.ownerId, projectId: own.team.definition.scope.projectId,
+        sessionId: member.sessionId, generation: member.generation, configRevision: member.configRevision,
+        requiredCapabilities: ['text'] } };
+    const launch = new TeamLaunchOwner({ definition: { launchId: binding.runId, rosterRevision: published.revision,
+      members: [{ memberId: member.memberId, binding, configurationDigest: runtimeDigest(member),
+        baseConfigurationDigest: runtimeDigest(member), runtimeGeneration: member.generation,
+        contextDigest: runtimeDigest('TEST-no-input'), configRevision: member.configRevision, skipped: false, timeoutMs: 1000 }] },
+      hostIncarnation: 'TEST-retained-host', store: new TeamOwnerStore(own.root, own.team.definition.binding.teamName),
+      authorized: (action, callback) => own.owner.withLaunchAuthority('TEST-human', action, callback),
+      runtime: { read: () => ({ attached: false, nativeReady: false }),
+        open: async () => { businessOpens++; throw Error('TEST no business allocation during readiness inspection'); } } });
+    let active = true, targetReads = 0, changed = false;
+    let diagnosticNow = 0, performanceReads = 0, authorityCalls = 0, authorityCost = 11;
+    let failDiagnosticClock = false, diagnosticReadsAfterUnsubscribe = 0;
+    const manager = { ...management, readinessTarget: (selected: ProviderManagementProfile) => {
+      targetReads++;
+      if (change === 'unchanged') diagnosticNow += 23;
+      if (!changed) {
+        changed = true;
+        if (change === 'main-origin') writeFileSync(consulted, '{}', { flag: 'wx', mode: 0o600 });
+        else if (change === 'owner') active = false;
+        else if (change === 'expiry') t.mock.timers.setTime(original.expiresAt);
+      }
+      return target(selected);
+    } };
+    const diagnostic = channel('agent-teams.legacy-host.first-refusal'), observations: unknown[] = [];
+    const observe = (value: unknown) => { observations.push(value); };
+    if (change === 'unchanged') diagnostic.subscribe(observe);
+    const inspection = { management: manager, launch, entry, hostIncarnation: 'TEST-retained-host',
+      assertCurrent() {
+        if (change === 'unchanged') { diagnosticNow += authorityCost; authorityCalls++; }
+        if (!active) throw Error('TEST original member owner revoked');
+      } };
+    const read = (): ReturnType<TeamLaunchOwner['readModelReadiness']> => launch.readModelReadiness({ binding, configRevision: member.configRevision,
+      configurationDigest: runtimeDigest(member) });
+    const originalRead = launch.readModelReadiness;
+    const measuredRead = change === 'unchanged' ? t.mock.method(launch, 'readModelReadiness',
+      (selected: Parameters<TeamLaunchOwner['readModelReadiness']>[0]) => {
+        diagnosticNow += 7; return originalRead.call(launch, selected);
+      }) : undefined;
+    const measuredClock = change === 'unchanged' ? t.mock.method(performance, 'now', () => {
+      performanceReads++;
+      if (failDiagnosticClock) { failDiagnosticClock = false; throw Error('TEST observational clock failure'); }
+      return diagnosticNow;
+    }) : undefined;
+    try {
+      attachMemberModelReadiness({ launch, entry, reference: selectedReference,
+        commandId: 'TEST-private-consume-' + change, actorDigest: runtimeDigest('TEST-original-actor'),
+        inputDigest: runtimeDigest(payload), cutoff: original.expiresAt });
+      const pending = read();
+      assert.equal(pending.consumer.disposition, 'pending');
+      assert.deepEqual(pending.reference, selectedReference);
+      assert.equal(pending.consumer.cutoff, original.expiresAt);
+      if (change === 'main-origin' || change === 'owner' || change === 'expiry') {
+        assert.throws(() => consumeMemberModelReadiness(inspection), { code: 'held' });
+        assert.equal(targetReads, 1, 'the change occurs inside the original target inspection');
+        assert.deepEqual(read(), pending, 'failed final validation never consumes the original reference');
+        if (change === 'expiry') {
+          assert.deepEqual(files(join(own.root, 'management-commands')), originalBytes);
+          assert.deepEqual(probes.readRetainedProbe(commandId, captured.context), original);
+          assert.equal(runs, 1); assert.equal(closes, 1);
+          assert.equal(allocations, 0); assert.equal(businessOpens, 0);
+          continue; // An expired consumer is never qualified again.
+        }
+        if (change === 'main-origin') rmSync(consulted);
+        active = true;
+      }
+      const inspected = inspectMemberModelReadiness(inspection);
+      assert.equal(inspected.kind, 'preparation');
+      assert.equal(inspected.assertReadinessCredential, undefined, 'V1 configured-key inspection has no file-key capability');
+      assert.deepEqual(inspected.reference, selectedReference);
+      assert.deepEqual(read(), pending, 'readonly inspection leaves consumption to its existing owner');
+      inspected.assertCurrent();
+      if (change === 'unchanged') {
+        const originalCheck = inspection.assertCurrent, failure = Error('TEST exact original current refusal');
+        const successfulAuthorityCalls = authorityCalls;
+        inspection.assertCurrent = () => { diagnosticNow += 11; throw failure; };
+        try {
+          assert.throws(inspected.assertCurrent, error => error === failure);
+          assert.throws(inspected.assertCurrent, error => error === failure);
+        } finally { inspection.assertCurrent = originalCheck; }
+        assert.equal(observations.length, 1, 'only the first failure of this actual inspector is observed');
+        const observed = observations[0] as Record<string, unknown>;
+        assert.equal(observed.kind, 'consumer'); assert.equal(observed.phase, 'initial-authority');
+        assert.equal(observed.reason, 'threw'); assert.equal(observed.bindingDigest, managementDigest(binding));
+        assert.equal(observed.consumerId, pending.consumer.consumerId);
+        assert.ok(observed.currentCalls && typeof observed.currentCalls === 'object', 'actual current calls retain bounded timings');
+        const timing = observed.currentCalls as { count: number; totalMs: number; maxMs: number; lastMs: number | null;
+          truncated: boolean; regions?: Record<string, number> };
+        assert.deepEqual(Object.keys(timing).sort(), ['count', 'lastMs', 'maxMs', 'regions', 'totalMs', 'truncated']);
+        assert.equal(timing.count, 3, 'initial inspection, explicit check, and first failed check are measured once');
+        assert.equal(timing.truncated, false);
+        assert.ok([timing.totalMs, timing.maxMs, timing.lastMs].every(value => Number.isSafeInteger(value) && value! >= 0));
+        assert.ok(timing.totalMs >= timing.maxMs && timing.maxMs >= timing.lastMs!);
+        assert.equal(targetReads, 2);
+        assert.equal(successfulAuthorityCalls, 22, 'two V1 inspections retain source capture and closing currentness checks');
+        assert.deepEqual(timing.regions, { initialAuthorityCount: 3, initialAuthorityMs: 33,
+          readConsumerCount: 2, readConsumerMs: 14,
+          referenceCount: 2, referenceMs: 11 * (successfulAuthorityCalls - 4) + 2 * 23,
+          finalAuthorityCount: 2, finalAuthorityMs: 22,
+          referenceAccountCount: 2, referenceAccountMs: 11 * (successfulAuthorityCalls - 6) + 2 * 23,
+          referenceAccountAuthorityCount: 2, referenceAccountAuthorityMs: 11 * (successfulAuthorityCalls - 6) });
+        assert.equal(timing.totalMs, 11 * (successfulAuthorityCalls + 1) + 2 * 7 + 2 * 23);
+        assert.equal(timing.lastMs, 11, 'the first timed partial throw retains its elapsed region');
+        assert.equal(performanceReads, 20 + 2 * (successfulAuthorityCalls - 6),
+          'original clocks plus account intervals and nested authority; no replay after first latch');
+        diagnostic.unsubscribe(observe);
+        assert.deepEqual(read(), pending, 'observation and the unchanged error never consume readiness');
+        for (const clockFailure of [false, true]) {
+          const partial: unknown[] = [], capturePartial = (value: unknown) => { partial.push(value); };
+          const originalTarget = manager.readinessTarget, targetFailure = Error('TEST exact account target refusal');
+          const previousAuthorityCalls = authorityCalls, previousClockReads = performanceReads;
+          authorityCost = 11.4;
+          manager.readinessTarget = () => {
+            targetReads++; diagnosticNow += 23; failDiagnosticClock = clockFailure;
+            throw targetFailure;
+          };
+          diagnostic.subscribe(capturePartial);
+          try {
+            assert.throws(() => inspectMemberModelReadiness(inspection), error => error === targetFailure);
+            assert.equal(partial.length, 2, 'the original reference refusal and its containing consumer are observed once');
+            const consumer = partial.find(value => (value as Record<string, unknown>).kind === 'consumer') as Record<string, unknown>;
+            assert.equal(consumer.phase, 'reference'); assert.equal(consumer.reason, 'threw');
+            const nested = consumer.currentCalls as { count: number; truncated: boolean; regions: Record<string, number> };
+            assert.equal(nested.count, 1); assert.equal(nested.truncated, clockFailure);
+            const callbacks = authorityCalls - previousAuthorityCalls;
+            assert.equal(callbacks, 8, 'the original target throws before the closing policy and final authority checks');
+            assert.equal(nested.regions.referenceAccountAuthorityCount, 1);
+            assert.equal(nested.regions.referenceAccountAuthorityMs, Math.round(authorityCost * (callbacks - 2)),
+              'sum fractional nested intervals before the single outer-call rounding');
+            if (!clockFailure) {
+              assert.equal(nested.regions.referenceAccountCount, 1);
+              assert.equal(nested.regions.referenceAccountMs, Math.round(authorityCost * (callbacks - 2) + 23));
+            }
+            assert.equal(performanceReads - previousClockReads, 7 + 2 * (callbacks - 2));
+            assert.deepEqual(read(), pending, 'partial timing and a failed observer do not consume readiness');
+          } finally {
+            diagnostic.unsubscribe(capturePartial); manager.readinessTarget = originalTarget; authorityCost = 11;
+          }
+        }
+        const authorityTiming: { observe?(part: 'provider' | 'allocation'): (() => void) | undefined } = {};
+        const parts: unknown[] = [], observeParts = (value: unknown) => { parts.push(value); };
+        const previousAuthorityCalls = authorityCalls, previousClockReads = performanceReads;
+        const timedInspection = { ...inspection, authorityTiming,
+          assertCurrent() {
+            const endProvider = authorityTiming.observe?.('provider');
+            try { originalCheck(); } finally { endProvider?.(); }
+            const endAllocation = authorityTiming.observe?.('allocation');
+            try { diagnosticNow += 7; } finally { endAllocation?.(); }
+          } };
+        diagnostic.subscribe(observeParts);
+        try {
+          const original = inspectMemberModelReadiness(timedInspection);
+          assert.equal(authorityCalls - previousAuthorityCalls, 11,
+            'all eight account callbacks and the three surrounding checks still run');
+          assert.equal(Object.hasOwn(authorityTiming, 'observe'), false, 'the original synchronous account interval releases its observer');
+          timedInspection.assertCurrent = () => { diagnosticNow += 11; throw failure; };
+          assert.throws(original.assertCurrent, error => error === failure);
+          assert.throws(original.assertCurrent, error => error === failure);
+          assert.equal(parts.length, 1, 'the existing first-refusal latch is unchanged');
+          const observed = parts[0] as { currentCalls: { count: number; truncated: boolean; regions: Record<string, number> } };
+          assert.equal(observed.currentCalls.count, 2); assert.equal(observed.currentCalls.truncated, false);
+          assert.deepEqual(Object.fromEntries(Object.entries(observed.currentCalls.regions)
+            .filter(([name]) => /^referenceAccount(?:Provider|Allocation)/.test(name))), {
+            referenceAccountProviderCount: 1, referenceAccountProviderMs: 8 * 11,
+            referenceAccountAllocationCount: 1, referenceAccountAllocationMs: 8 * 7,
+          }, 'new counts retain one containing interval, while milliseconds sum all original callbacks');
+          assert.equal(observed.currentCalls.regions.referenceAccountAuthorityMs, 8 * (11 + 7));
+          assert.equal(performanceReads - previousClockReads, 25 + 4 * 8 + 2,
+            'only the original timed account callbacks add two clock pairs each');
+          assert.deepEqual(read(), pending);
+        } finally { diagnostic.unsubscribe(observeParts); }
+        const clocksWithoutSubscriber = performanceReads;
+        let diagnosticReads = 0, originalChecks = 0;
+        const brokenObservation = { ...inspection,
+          get authorityTiming(): never { diagnosticReads++; throw Error('TEST private diagnostic getter failure'); },
+          assertCurrent() { originalChecks++; throw failure; } };
+        assert.throws(() => inspectMemberModelReadiness(brokenObservation), error => error === failure);
+        assert.equal(diagnosticReads, 1); assert.equal(originalChecks, 1);
+        assert.equal(performanceReads, clocksWithoutSubscriber, 'disabled observation adds no clock reads even when its field throws');
+        diagnosticReadsAfterUnsubscribe = performanceReads;
+      }
+      if (change === 'shadowed-native') {
+        mkdirSync(shadowDirectory, { mode: 0o700 });
+        const shadowConfig = (key: string) => JSON.stringify({ provider: { [providerId]: {
+          options: { apiKey: key },
+        } } });
+        writeFileSync(shadow, shadowConfig('TEST-shadowed-first'), { flag: 'wx', mode: 0o600 });
+        inspected.assertCurrent();
+        renameSync(shadow, shadow + '.original');
+        writeFileSync(shadow, shadowConfig('TEST-shadowed-replacement'), { flag: 'wx', mode: 0o600 });
+        inspected.assertCurrent();
+        assert.deepEqual(read(), pending, 'fresh native source inspection preserves project precedence');
+      }
+      if (change === 'credential') {
+        writeFileSync(join(own.root, 'opencode.json'),
+          originalProject.replace('TEST-retained-key', 'TEST-changed-key'), { mode: 0o600 });
+        assert.throws(inspected.assertCurrent, { code: 'held' });
+        assert.throws(() => consumeMemberModelReadiness(inspection), { code: 'held' });
+        assert.deepEqual(read(), pending, 'changed original credential cannot consume old evidence');
+      } else {
+        const consumed = consumeMemberModelReadiness(inspection);
+        const committed = read();
+        assert.equal(committed.consumer.disposition, 'consumed');
+        assert.equal(committed.consumer.consumerId, pending.consumer.consumerId);
+        assert.equal(committed.consumer.cutoff, original.expiresAt);
+        assert.deepEqual(committed.reference, selectedReference);
+        consumed.assertCurrent();
+        assert.equal(consumeMemberModelReadiness(inspection).consumerId, consumed.consumerId);
+        assert.deepEqual(read(), committed, 'repeat consumption retains the same original consumer');
+      }
+      assert.deepEqual(files(join(own.root, 'management-commands')), originalBytes);
+      assert.deepEqual(probes.readRetainedProbe(commandId, captured.context), original);
+      assert.equal(runs, 1); assert.equal(closes, 1);
+      assert.equal(allocations, 0); assert.equal(businessOpens, 0);
+      if (change === 'unchanged') {
+        assert.equal(performanceReads, diagnosticReadsAfterUnsubscribe, 'fresh original consumption checks add no diagnostic clocks without a subscriber');
+        assert.equal(targetReads, 8, 'the two partial checks, one timed inspection and original three consumption checks inspect the target freshly');
+      }
+    } finally {
+      measuredRead?.mock.restore();
+      measuredClock?.mock.restore();
+      diagnostic.unsubscribe(observe);
+      launch.seal();
+      if (change === 'shadowed-native') rmSync(shadowDirectory, { recursive: true, force: true });
+      rmSync(consulted, { force: true });
+      t.mock.timers.setTime(original.expiresAt);
+    }
+  }
 }

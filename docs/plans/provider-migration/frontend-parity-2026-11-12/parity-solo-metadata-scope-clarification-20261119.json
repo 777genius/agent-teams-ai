@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-solo-metadata-scope-clarification",
+  "reviewer": "composition_review_030",
+  "reviewedAt": "2026-11-19T00:58:08.352613+00:00",
+  "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "verdict": "SOURCE_AND_FINITE_APPROVAL_UNCHANGED_WITH_NARROWED_EVIDENCE_WORDING",
+  "clarifiesFrozenReviews": [
+    {
+      "path": "/workspace/scratch/c714f5bce554/solo-publication-030-candidate/r2-source-review.json",
+      "gitBlob": "5f0d4b57daf12a0d9979e67ffcdc5b72b99f264c",
+      "sha256": "5d18c5eeb3f1a0fdf2702409b30f41c1d22f62a2d275a268d44deaafcc78372a",
+      "bytes": 17429
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/solo-publication-030-candidate/parity-solo-publication-review-20261119.json",
+      "gitBlob": "d110dc5a8a6325e6e81f810f5c3203aab6a96733",
+      "sha256": "ed751d1c2000ef0a76e09c7d1d0ccdb0a07036cba764f9a8da8be759ccc9040c",
+      "bytes": 39463
+    }
+  ],
+  "originalSource": {
+    "path": "src/main/services/team/TeamMembersMetaStore.ts",
+    "source": "immutable547, unchanged by exact547to030 delta",
+    "gitBlob": "9fbecf0e8349b8235a2841dc6e880bcf41264fb4",
+    "sha256": "79ab12842153d2f94987ef9b680b9daec7edb41251663e23d8728dd95436e0db",
+    "bytes": 9337
+  },
+  "clarification": {
+    "previousBroadPhrases": [
+      "Unreadable metadata is unknown and returns null",
+      "unreadable roster remains unknown",
+      "unreadable metadata remains unknown"
+    ],
+    "preciseScope": "The candidate rejects solo publication when the facade readMembersMeta promise rejects. The finite negative test injects a throwing/rejected readMembersMeta implementation; this proves only that rejection branch remains unknown.",
+    "canonicalReader": "Main composition calls TeamMembersMetaStore.getMembers. Its existing getMeta returns null for absent metadata, FileReadTimeoutError, malformed JSON/shape and certain invalid file conditions. getMembers then normalizes null to []; other I/O errors propagate as rejected promises. These behaviors are unchanged.",
+    "notClaimed": "No new strict validation of every absent/malformed/timed-out canonical metadata condition, and no fail-closed guarantee for errors already normalized to an empty array by the existing reader.",
+    "authorityUnchanged": "The new solo path separately requires captured live POSIX custody, exact child/run/session/tracked owner and explicit empty in-memory expected/all/mixed/request rosters. Canonical metadata does not create those authorities."
+  },
+  "retainedOriginal976Observation": {
+    "archive": {
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/030-import-lifecycle-linux-x64-14484045585.zip",
+      "gitBlob": "ded0956f473d424d1967c208eb9313ecec5b0961",
+      "sha256": "515798bc7fdfd0e337d5eef75a4e4d046f1961e7e8f9bb38888579499fe0702d",
+      "bytes": 601701
+    },
+    "member": "TEST-desktop-backend-8S6RdP/claude/teams/test-stopped-legacy/members.meta.json",
+    "gitBlob": "11a1f5a8299c270048cb1f48b21d59f4b1c82ee4",
+    "sha256": "e2fbfff9e76c9fc56bed458637c6904eb5d8f3d6bb9f536f8fe6e2bb2de77bea",
+    "bytes": 35,
+    "parsedValue": {
+      "version": 1,
+      "members": []
+    },
+    "rootMetadataPresent": true,
+    "configObservation": "The retained same-team config lists only team-lead. Root members.meta.json is distinct from members/team-lead/member.meta.json.",
+    "timingLimit": "This is retained final-artifact state, not an atomic read at the earlier publication refusal. It supports an observed empty root roster; it does not prove the exact metadata bytes used during the failed live read.",
+    "correction": "A preliminary assumption based on a selected artifact subset that root members.meta.json was absent is rejected by the full ZIP."
+  },
+  "preservation": {
+    "sourceOrTestChanges": false,
+    "newTestsOrRuntimeExecutions": false,
+    "frozenReviewBytesChanged": false,
+    "historical22CompositionChanged": false
+  },
+  "recommendedWording": "A rejected facade readMembersMeta promise remains unknown; existing canonical null-to-empty normalization is unchanged."
+}

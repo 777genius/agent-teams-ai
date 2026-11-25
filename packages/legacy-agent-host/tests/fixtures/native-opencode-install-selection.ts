@@ -14,11 +14,18 @@ export interface NativeInstallMetadata {
   optionalDependencies?: Record<string, string>;
   versions?: Record<string, NativeInstallMetadata>;
 }
-type Selector = (
-  generation: 'v1', qualifiedV2Version: null, candidates: readonly { packageName: string }[],
-  fetchMetadata: (name: string, version?: string | null) => Promise<NativeInstallMetadata>,
-  requestedVersion?: string,
-) => Promise<{ packageName: string; metadata: NativeInstallMetadata & { name: string; version: string }; generation: 'v1' }>;
+type Selector = {
+  (
+    generation: 'v1', qualifiedV2Version: null, candidates: readonly { packageName: string }[],
+    fetchMetadata: (name: string, version?: string | null) => Promise<NativeInstallMetadata>,
+    requestedVersion?: string,
+  ): Promise<{ packageName: string; metadata: NativeInstallMetadata & { name: string; version: string }; generation: 'v1' }>;
+  (
+    generation: 'v2', qualifiedV2Version: '2.1.4', candidates: readonly { packageName: 'opencode-linux-x64' }[],
+    fetchMetadata: (name: string, version?: string | null) => Promise<NativeInstallMetadata>,
+    requestedVersion?: string,
+  ): Promise<{ packageName: string; metadata: NativeInstallMetadata & { name: string; version: string }; generation: 'v2' }>;
+};
 
 export async function measureNativeInstallerSources(repo: string, sourceHead: string, sourceInputs: string[]) {
   const git = (args: string[]) => execFileSync('git', args, {

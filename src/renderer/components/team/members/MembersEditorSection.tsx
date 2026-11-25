@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from '@renderer/components/ui/dropdown-menu';
 import { Label } from '@renderer/components/ui/label';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { CUSTOM_ROLE, NO_ROLE } from '@renderer/constants/teamRoles';
 import { cn } from '@renderer/lib/utils';
 import { getParticipantAvatarUrlByIndex } from '@renderer/utils/memberAvatarCatalog';
@@ -16,7 +17,7 @@ import { getAvailableTeamEffortValue } from '@renderer/utils/teamEffortOptions';
 import { isTeamEffortLevel } from '@shared/utils/effortLevels';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
-import { Plus, Settings2 } from 'lucide-react';
+import { Pencil, Plus, Settings2 } from 'lucide-react';
 
 import { MembersJsonEditor } from '../dialogs/MembersJsonEditor';
 
@@ -471,33 +472,67 @@ export const MembersEditorSection = ({
   const editorActions =
     !hideContent && !singleMemberMode ? (
       <div className="flex gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-1.5"
-          onClick={addMember}
-          disabled={disableAddMember}
-          title={disableAddMember ? addMemberLockReason : undefined}
-        >
-          <Plus className="size-3.5" />
-          {t('members.editor.addMember')}
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="inline-flex">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="size-8 p-0"
+                onClick={addMember}
+                disabled={disableAddMember}
+                aria-label={t('members.editor.addMember')}
+              >
+                <Plus className="size-3.5" aria-hidden="true" />
+              </Button>
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>
+            {disableAddMember && addMemberLockReason
+              ? addMemberLockReason
+              : t('members.editor.addMember')}
+          </TooltipContent>
+        </Tooltip>
         {showJsonEditor && !jsonEditorOpen ? (
-          <Button variant="ghost" size="sm" onClick={toggleJsonEditor}>
-            {t('members.editor.editAsJson')}
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="size-8 p-0"
+                onClick={toggleJsonEditor}
+                aria-label={t('members.editor.editAsJson')}
+              >
+                <Pencil className="size-3.5" aria-hidden="true" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('members.editor.editAsJson')}</TooltipContent>
+          </Tooltip>
         ) : null}
       </div>
     ) : null;
+  const memberSettingsLabel = `${t('members.editor.title')}: ${t('toolApproval.settings')}`;
   const masterRosterControls =
     showWorktreeIsolationControls && !singleMemberMode ? (
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="gap-1.5">
-            <Settings2 className="size-3.5" />
-            {t('toolApproval.settings')}
-          </Button>
-        </DropdownMenuTrigger>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="size-8 p-0"
+                aria-label={memberSettingsLabel}
+              >
+                <Settings2 className="size-3.5" aria-hidden="true" />
+              </Button>
+            </DropdownMenuTrigger>
+          </TooltipTrigger>
+          <TooltipContent>{memberSettingsLabel}</TooltipContent>
+        </Tooltip>
         <DropdownMenuContent align="start" className="max-w-sm">
           {activeMembers.length > 0 ? (
             <>

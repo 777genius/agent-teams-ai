@@ -7,7 +7,6 @@ import { PROVIDER_UI_TIMEOUT_MS } from '@shared/constants/runtimeLoading';
 import {
   getRuntimeProviderConnectTimeoutMs as connectTimeoutMs,
   getRuntimeProviderCredentialUrl,
-  selectInitialProviderId,
   selectRuntimeProviderSetupAuthOptionId,
   supportsScopedDefaultModelInheritance,
 } from '../../core/domain';
@@ -62,6 +61,7 @@ import {
   refreshAfterModelTest,
   startModelTest,
 } from './runtimeProviderModelTestState';
+import { refreshRuntimeProviderView } from './runtimeProviderViewRefresh';
 import { useModelTestStop, withoutModelTestStart } from './useModelTestStop';
 import { useRuntimeProviderProjectContext } from './useRuntimeProviderProjectContext';
 
@@ -449,67 +449,25 @@ export function useRuntimeProviderManagement(
     settledRuntimeRevision,
   ]);
   const refresh = useCallback(
-    async (input: { silent?: boolean } = {}): Promise<boolean> => {
-      if (!options.enabled) {
-        return true;
-      }
-      viewRequestedRef.current = true;
-      const projectContext = getProjectContextSnapshot();
-      const requestSeq = viewLoadRequestSeq.current + 1;
-      viewLoadRequestSeq.current = requestSeq;
-      const requestIsCurrent = (): boolean =>
-        viewLoadRequestSeq.current === requestSeq && isProjectContextCurrent(projectContext);
-      const silent = input.silent === true;
-      if (!silent) {
-        setLoading(true);
-      }
-      setError(null);
-      setErrorDiagnostics(null);
-      try {
-        const response = await api.runtimeProviderManagement.loadView({
-          ...connectionForm.runtimeProviderContext(
-            options.runtimeId,
-            projectContext.path,
-            options.connectionContextToken
-          ),
-        });
-        if (!requestIsCurrent()) {
-          return false;
-        }
-        if (response.error) {
-          if (!silent) {
-            setView(null);
-          }
-          setError(response.error.message);
-          setErrorDiagnostics(response.error.diagnostics ?? null);
-          return false;
-        }
-        const nextView = presentManagementView(response.view ?? null);
-        setView(nextView);
-        setSelectedModelId(nextView?.defaultModel ?? null);
-        setSelectedProviderId((current) => {
-          if (current && nextView?.providers.some((provider) => provider.providerId === current)) {
-            return current;
-          }
-          return selectInitialProviderId(nextView);
-        });
-        return true;
-      } catch (loadError) {
-        if (!requestIsCurrent()) {
-          return false;
-        }
-        if (!silent) {
-          setView(null);
-        }
-        setError(loadError instanceof Error ? loadError.message : 'Failed to load providers');
-        setErrorDiagnostics(null);
-        return false;
-      } finally {
-        if (!silent && requestIsCurrent()) {
-          setLoading(false);
-        }
-      }
-    },
+    (input: { silent?: boolean } = {}): Promise<boolean> =>
+      refreshRuntimeProviderView(
+        {
+          enabled: options.enabled,
+          runtimeId: options.runtimeId,
+          connectionContextToken: options.connectionContextToken,
+          getProjectContextSnapshot,
+          isProjectContextCurrent,
+          viewRequestedRef,
+          viewLoadRequestSeq,
+          setLoading,
+          setError,
+          setErrorDiagnostics,
+          setView,
+          setSelectedModelId,
+          setSelectedProviderId,
+        },
+        input
+      ),
     [
       getProjectContextSnapshot,
       isProjectContextCurrent,

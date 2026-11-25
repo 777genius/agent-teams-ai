@@ -1,0 +1,156 @@
+{
+  "schemaVersion": 1,
+  "kind": "factory-account-fence-source-original-red-to-green",
+  "createdAt": "2026-11-18T20:48:01.943832+00:00",
+  "baseHead": "9f63bec37c2596676bd1761e74a41b272b0ef956",
+  "reviewedCurrentHead": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+  "originalRed": {
+    "blob": "b8601a668ab5686dea67213cccbbfd22c3d5fd2f",
+    "sha256": "a0b38d895bf3b67124d527efb793f11697b99876d3c68c5cb5836447196be0c1"
+  },
+  "passiveDiagnosis": {
+    "blob": "a007f2749134b1abac66483d63193b3b24f36042",
+    "sha256": "b823a0df85e1136b9cfb5e93b060bc8c8eea9dfacfd7b57bb08369aca7f3f0c2"
+  },
+  "candidate": {
+    "kind": "factory-only-readiness-lock-candidate",
+    "baseHead": "9f63bec37c2596676bd1761e74a41b272b0ef956",
+    "root": "<ISOLATED_CANDIDATE>",
+    "files": [
+      {
+        "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+        "baseSha256": "6eddff59c94ed0d9639d7066a0e2ce3aaf2954753f2370496c8cb793620b6e69",
+        "postSha256": "f92b0a41feaf0de8085b118f1642b514b4340cdcf6551b65fac48f153caaaa38",
+        "basePhysicalLines": 367,
+        "postPhysicalLines": 371,
+        "gitBlob": "a47682f91e49ace6ea4dd80d1cd6280a421a6a4e"
+      }
+    ],
+    "other799SourceFilesExact": true,
+    "sourceTestUnchanged": true,
+    "sourceLoaderUnchanged": true,
+    "preparedResourceUnchanged": true,
+    "greenExecuted": false,
+    "diff": "--- a/packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts\n+++ b/packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts\n@@ -39,7 +39,6 @@\n import type { HostWindowsLaunch } from '../owned-process/HostWindowsLaunch.js';\n import type { RuntimeSourceProcessOrigin } from './runtimeSourceProcessOrigin.js';\n import { consumeMemberModelReadiness } from './prepareTeamModelReadiness.js';\n-import { captureTeamAccountRead } from './captureTeamAccountRead.js';\n import type { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';\n import type { TeamLaunchOwner } from '../team-launch/TeamLaunchOwner.js';\n \n@@ -149,11 +148,16 @@\n           if (entry.profile.provider !== 'opencode') return undefined;\n           const launch = options.readinessLaunch?.(entry);\n           if (!launch) throw new RuntimeOwnerError('hold');\n-          const assertCurrent = () => { authority.assertCurrent(); assertAllocation(); };\n+          const team = entry.team, owner = team.owner;\n+          const assertCaptured = () => {\n+            if (entry.team !== team || team.owner !== owner) throw new RuntimeOwnerError('forbidden');\n+          };\n+          const assertCurrent = () => {\n+            assertCaptured(); authority.assertCurrent(); assertAllocation(); assertCaptured();\n+          };\n+          // Allocation reads its separate launch store; do not enclose it in the Team owner's fence.\n           return consumeMemberModelReadiness({ ...(options.modelReadiness ? { management: options.modelReadiness } : {}),\n-            launch, entry, hostIncarnation: options.hostIncarnation,\n-            assertCurrent, withAccountRead: captureTeamAccountRead({ entry,\n-              principalId: entry.profile.principalId, assertCurrent }) });\n+            launch, entry, hostIncarnation: options.hostIncarnation, assertCurrent });\n         })();\n         const setupCurrent = () => {\n           try {\n"
+  },
+  "factory": {
+    "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+    "sha256": "f92b0a41feaf0de8085b118f1642b514b4340cdcf6551b65fac48f153caaaa38",
+    "bytes": 18591,
+    "gitBlob": "a47682f91e49ace6ea4dd80d1cd6280a421a6a4e"
+  },
+  "sourceManifestSha256": "b4754ef425c044520b28717aeb168722273730a9dd71af22332b87a9823c7f3d",
+  "result": {
+    "kind": "one-reviewed-candidate-green-original-source-callback",
+    "startedAt": "2026-11-18T20:44:45.940236+00:00",
+    "baseHead": "9f63bec37c2596676bd1761e74a41b272b0ef956",
+    "command": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "--import",
+      "./source-register.mjs",
+      "--test",
+      "--test-concurrency=1",
+      "--test-name-pattern=^cross\\-provider\\ creation\\ inherits\\ original\\ lead\\ A\\ and\\ original\\ locator;\\ target\\ ambient\\ B\\ is\\ never\\ read\\ and\\ target\\ native\\ policy/account\\ stay\\ independent$",
+      "packages/legacy-agent-host/tests/native-member-creation-runtime.test.ts"
+    ],
+    "sourcePrecondition": "799original + one reviewed factory postimage + prepared resource hash",
+    "qualification": "Source-only finite original callback; not compiled artifact or native process qualification.",
+    "candidateFactorySha256": "f92b0a41feaf0de8085b118f1642b514b4340cdcf6551b65fac48f153caaaa38",
+    "passiveSubscriber": false,
+    "status": "completed",
+    "pid": 4,
+    "exitCode": 0,
+    "outerTimeout": false,
+    "elapsedSeconds": 34.97,
+    "sourcePostMismatches": [],
+    "stdout": {
+      "sha256": "8c9b0b0bdefca31b259c42921e3419844851ec99bf15d7f3584e369838eed315",
+      "bytes": 290
+    },
+    "stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "resolution": {
+      "sha256": "f55e0a46acc61c1e9f2bf254911eea34e102f6af62a6ba862168f73f34cd3398",
+      "bytes": 500460,
+      "rows": 1410,
+      "uniqueSources": 417,
+      "policyPluginImported": false
+    },
+    "testAndSourceAndResourceUnchanged": true
+  },
+  "files": [
+    {
+      "path": "candidate.patch",
+      "sha256": "49c6e48a3c3f31888bfe7cdcd83e44c035ee50388c017939b562b3f75db00b06",
+      "bytes": 1954,
+      "normalizedText": "--- a/packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts\n+++ b/packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts\n@@ -39,7 +39,6 @@\n import type { HostWindowsLaunch } from '../owned-process/HostWindowsLaunch.js';\n import type { RuntimeSourceProcessOrigin } from './runtimeSourceProcessOrigin.js';\n import { consumeMemberModelReadiness } from './prepareTeamModelReadiness.js';\n-import { captureTeamAccountRead } from './captureTeamAccountRead.js';\n import type { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';\n import type { TeamLaunchOwner } from '../team-launch/TeamLaunchOwner.js';\n \n@@ -149,11 +148,16 @@\n           if (entry.profile.provider !== 'opencode') return undefined;\n           const launch = options.readinessLaunch?.(entry);\n           if (!launch) throw new RuntimeOwnerError('hold');\n-          const assertCurrent = () => { authority.assertCurrent(); assertAllocation(); };\n+          const team = entry.team, owner = team.owner;\n+          const assertCaptured = () => {\n+            if (entry.team !== team || team.owner !== owner) throw new RuntimeOwnerError('forbidden');\n+          };\n+          const assertCurrent = () => {\n+            assertCaptured(); authority.assertCurrent(); assertAllocation(); assertCaptured();\n+          };\n+          // Allocation reads its separate launch store; do not enclose it in the Team owner's fence.\n           return consumeMemberModelReadiness({ ...(options.modelReadiness ? { management: options.modelReadiness } : {}),\n-            launch, entry, hostIncarnation: options.hostIncarnation,\n-            assertCurrent, withAccountRead: captureTeamAccountRead({ entry,\n-              principalId: entry.profile.principalId, assertCurrent }) });\n+            launch, entry, hostIncarnation: options.hostIncarnation, assertCurrent });\n         })();\n         const setupCurrent = () => {\n           try {\n"
+    },
+    {
+      "path": "green.stdout.log",
+      "sha256": "8c9b0b0bdefca31b259c42921e3419844851ec99bf15d7f3584e369838eed315",
+      "bytes": 290,
+      "normalizedText": "✔ cross-provider creation inherits original lead A and original locator; target ambient B is never read and target native policy/account stay independent (27482.315723ms)\nℹ tests 1\nℹ suites 0\nℹ pass 1\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 34606.094558\n"
+    },
+    {
+      "path": "green.stderr.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "normalizedText": ""
+    },
+    {
+      "path": "preflight-result.json",
+      "sha256": "07454256d545379564420fdc177c8541a6e07fc5a1a83d469e448deed0121417",
+      "bytes": 1715,
+      "normalizedText": "{\n  \"kind\": \"candidate-resolution-only-preflight\",\n  \"exitCode\": 0,\n  \"elapsedSeconds\": 0.479,\n  \"stdout\": \"{\\\"node\\\":\\\"v24.22.3\\\",\\\"controller\\\":\\\"<ISOLATED_CANDIDATE>/agent-teams-controller/src/index.js\\\",\\\"controllerSha256\\\":\\\"05a44ada3e5fd4777ee39115f61d4d7241ef608d67f8f0bd7055df8f8a3a614d\\\",\\\"resolved\\\":[{\\\"original\\\":\\\"file://<ISOLATED_CANDIDATE>/packages/legacy-agent-host/dist/composition/RuntimeTeamCoordinator.js\\\",\\\"resolved\\\":\\\"file://<ISOLATED_CANDIDATE>/packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts\\\"},{\\\"original\\\":\\\"file://<ISOLATED_CANDIDATE>/packages/legacy-agent-host/dist/composition/createRuntimeMemberProviderFactory.js\\\",\\\"resolved\\\":\\\"file://<ISOLATED_CANDIDATE>/packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts\\\"},{\\\"original\\\":\\\"file://<ISOLATED_CANDIDATE>/packages/legacy-agent-host/dist/composition/captureMemberProviderAuthority.js\\\",\\\"resolved\\\":\\\"file://<ISOLATED_CANDIDATE>/packages/legacy-agent-host/src/composition/captureMemberProviderAuthority.ts\\\"},{\\\"original\\\":\\\"@agent-teams/task-change-ledger/review-io\\\",\\\"resolved\\\":\\\"file://<ISOLATED_CANDIDATE>/packages/task-change-ledger/src/review/io/index.ts\\\"}]}\\n\",\n  \"stderr\": \"\",\n  \"sourceManifestSha256\": \"b4754ef425c044520b28717aeb168722273730a9dd71af22332b87a9823c7f3d\",\n  \"originalCallbackExecuted\": false\n}\n"
+    },
+    {
+      "path": "source-alias-loader.mjs",
+      "sha256": "9bc4da33f390e344ab8615c6362ae1edc7e3fe6ad816f622d2ab4a7c4542e632",
+      "bytes": 3492,
+      "normalizedText": "import { appendFileSync, existsSync, readFileSync } from 'node:fs';\nimport { createHash } from 'node:crypto';\nimport { fileURLToPath, pathToFileURL } from 'node:url';\nimport path from 'node:path';\n\nconst root = fileURLToPath(new URL('.', import.meta.url));\nconst manifest = JSON.parse(readFileSync(new URL('./source-manifest.json', import.meta.url), 'utf8'));\nconst expected = new Map(manifest.sourceFiles.map(row => [path.resolve(root, row.path), row.sha256]));\nconst packages = new Map([\n  ['@agent-teams/legacy-agent-host', path.resolve(root, 'packages/legacy-agent-host')],\n  ['@agent-teams/task-change-ledger', path.resolve(root, 'packages/task-change-ledger')],\n]);\nconst metadata = new Map([...packages].map(([name, directory]) => [name,\n  JSON.parse(readFileSync(path.join(directory, 'package.json'), 'utf8'))]));\nconst transcript = path.resolve(root, 'resolution.jsonl');\nfunction verify(filename) {\n  const hash = expected.get(filename);\n  if (!hash) throw new Error(`Owned source is missing from original manifest: ${filename}`);\n  const actual = createHash('sha256').update(readFileSync(filename)).digest('hex');\n  if (hash !== actual) throw new Error(`Owned source changed before resolution: ${filename}`);\n}\nfunction sourceTarget(filename) {\n  for (const directory of packages.values()) {\n    const dist = path.join(directory, 'dist') + path.sep;\n    const src = path.join(directory, 'src') + path.sep;\n    if (filename.startsWith(dist)) filename = src + filename.slice(dist.length);\n    if (filename.startsWith(src) && filename.endsWith('.js')) {\n      const candidate = filename.slice(0, -3) + '.ts';\n      if (!existsSync(candidate)) throw new Error(`Original source counterpart is absent: ${candidate}`);\n      filename = candidate;\n    }\n    if (filename.startsWith(src)) {\n      verify(filename);\n      return filename;\n    }\n  }\n  return undefined;\n}\nfunction bareTarget(specifier) {\n  for (const [name, directory] of packages) {\n    if (specifier !== name && !specifier.startsWith(name + '/')) continue;\n    const key = specifier === name ? '.' : '.' + specifier.slice(name.length);\n    let target = metadata.get(name).exports[key];\n    if (target && typeof target === 'object') target = target.import ?? target.default;\n    if (typeof target !== 'string') throw new Error(`Unmapped original workspace export: ${specifier}`);\n    return sourceTarget(path.resolve(directory, target));\n  }\n}\nexport async function resolve(specifier, context, nextResolve) {\n  let filename = bareTarget(specifier);\n  if (!filename && (specifier.startsWith('.') || specifier.startsWith('file:')) && context.parentURL?.startsWith('file:')) {\n    const url = new URL(specifier, context.parentURL);\n    url.search = '';\n    url.hash = '';\n    filename = sourceTarget(fileURLToPath(url));\n  }\n  const result = await nextResolve(filename ? pathToFileURL(filename).href : specifier, context);\n  if (result.url.startsWith('file:')) {\n    const resolved = fileURLToPath(new URL(result.url));\n    if (resolved.includes('/packages/legacy-agent-host/') || resolved.includes('/packages/task-change-ledger/')) {\n      if (!resolved.startsWith(root)) throw new Error(`Foreign workspace resolution refused: ${resolved}`);\n    }\n    if (expected.has(resolved)) verify(resolved);\n  }\n  if (filename) appendFileSync(transcript, JSON.stringify({ pid: process.pid, specifier,\n    parentURL: context.parentURL, source: path.relative(root, filename), sha256: expected.get(filename) }) + '\\n');\n  return result;\n}\n"
+    },
+    {
+      "path": "source-register.mjs",
+      "sha256": "3d508b062068d1a83d7e972fae01c7003f93d007732fa6d32f349fb729be9186",
+      "bytes": 117,
+      "normalizedText": "import { register } from 'node:module';\nregister('./source-alias-loader.mjs', import.meta.url);\nawait import('tsx');\n"
+    }
+  ],
+  "verifiedOriginalOracle": {
+    "tests": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "selectedCaseSourceUnchanged": true,
+    "originalSourceClosed": true,
+    "sameIdReplayDoesNotRenewProof": true,
+    "finalReadinessConsumerDisposition": "consumed",
+    "totalProviderContextsAfterRestart": 4
+  },
+  "limits": [
+    "Finite exact-source composition only; no current compiled/native/desktop/vendor-auth qualification.",
+    "No deadline/oracle/test edits; no optional passive observer in GREEN.",
+    "800 source files: original799 plus reviewed factory; prepared shipped policy JS resource retained byte-exact.",
+    "Observed durations are not a performance claim.",
+    "No fresh test beyond the single authorized original GREEN yet."
+  ],
+  "adoptionTo4f": {
+    "original799OtherInputPathsUnchanged": true,
+    "changedPackageMetadata": {
+      "path": "packages/legacy-agent-host/package.json",
+      "baseSha256": "fcf79c402d39803877fe1bc67e3580160ccdbd8c4353c292c86b0d3593c55855",
+      "currentSha256": "dfcd70e7c5f5d8c8fc00a5396cdfbe920e94f0d69849f3abcdd33b3cf4e3610a",
+      "onlyAddedExport": {
+        "./team-host/readiness": {
+          "types": "./dist/composition/teamHostReadiness.d.ts",
+          "import": "./dist/composition/teamHostReadiness.js"
+        }
+      },
+      "allPriorExportMappingsAndOtherPackageFieldsUnchanged": true,
+      "newExportUsedInGreenResolution": false
+    },
+    "greenRetainsItsOriginal9fScope": true
+  }
+}

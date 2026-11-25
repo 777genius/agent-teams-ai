@@ -1,0 +1,1857 @@
+{
+  "schema_version": 1,
+  "kind": "reconstructed-candidate-prepublication-evidence",
+  "generated_at_utc": "2026-11-22T12:28:52.251646+00:00",
+  "repository": "777genius/agent-teams-ai",
+  "baseline": {
+    "head_sha": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+    "base_sha": "8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+    "merge_sha": "3079df4a10590d8fcca906015936c8140df6d033",
+    "pull_request": 1192,
+    "pull_request_url": "https://github.com/777genius/agent-teams-ai/pull/1192",
+    "draft_at_observation": true,
+    "head_branch": "fix/frontend-parity-completion-20261113",
+    "base_branch": "feat/provider-host-frontend-parity-20261112",
+    "route": [
+      1192,
+      1186,
+      982
+    ],
+    "route_source": "continuation task context",
+    "metadata_inspection_date": "2026-11-22",
+    "is_snapshot_not_fresh_api_poll": true
+  },
+  "inputs": [
+    {
+      "path": "initial-ci-audit.json",
+      "sha256": "6efa9f9141a8647e9c1f69e47485eef55f8b311384c76f7373cd1363479285ac"
+    },
+    {
+      "path": "retained-cd18/metadata.json",
+      "sha256": "903cbb6a227d2acefee292a359b4f021d7e9a1c56f9e6560123b088e0467f4ab"
+    },
+    {
+      "path": "retained-cd18/diagnosis.json",
+      "sha256": "7960c3fd2fb82728f7c296374f810a470e00642a767e695f7211a8e1905c3d1c"
+    }
+  ],
+  "original_workflow_family": {
+    "terminal_run_count": 6,
+    "job_count": 69,
+    "job_conclusions": {
+      "success": 47,
+      "failure": 11,
+      "skipped": 11
+    },
+    "primary_failure_count": 8,
+    "derived_failure_count": 3,
+    "runs": [
+      {
+        "id": 44960721088,
+        "name": "Host process fixture acceptance",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44960721088",
+        "status": "completed",
+        "conclusion": "failure",
+        "job_count": 5,
+        "jobs": {
+          "success": 4,
+          "failure": 1,
+          "skipped": 0
+        },
+        "failed_job_ids": [
+          137018695565
+        ]
+      },
+      {
+        "id": 44960721162,
+        "name": "Teams creation page Electron E2E",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44960721162",
+        "status": "completed",
+        "conclusion": "failure",
+        "job_count": 3,
+        "jobs": {
+          "success": 2,
+          "failure": 1,
+          "skipped": 0
+        },
+        "failed_job_ids": [
+          137018695615
+        ]
+      },
+      {
+        "id": 44960721193,
+        "name": "CI proof: PR=1192 | head=cd18a49d58dfa4afe09d53f8af27edfc75bead0e | base=8d46f13fe87b4a25156b6be8331119eb8d0f790e | merge=3079df4a10590d8fcca906015936c8140df6d033 | action=synchronize | draft=true",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44960721193",
+        "status": "completed",
+        "conclusion": "failure",
+        "job_count": 15,
+        "jobs": {
+          "success": 2,
+          "failure": 2,
+          "skipped": 11
+        },
+        "failed_job_ids": [
+          137040291969,
+          137071767959
+        ]
+      },
+      {
+        "id": 44960721134,
+        "name": "Host Emulated Acceptance",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44960721134",
+        "status": "completed",
+        "conclusion": "failure",
+        "job_count": 30,
+        "jobs": {
+          "success": 25,
+          "failure": 5,
+          "skipped": 0
+        },
+        "failed_job_ids": [
+          137018695992,
+          137018696019,
+          137018696154,
+          137018696184,
+          137052870337
+        ]
+      },
+      {
+        "id": 44960721253,
+        "name": "OpenCode V2 Stage1 static preflight (TEST only)",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44960721253",
+        "status": "completed",
+        "conclusion": "success",
+        "job_count": 9,
+        "jobs": {
+          "success": 9,
+          "failure": 0,
+          "skipped": 0
+        },
+        "failed_job_ids": []
+      },
+      {
+        "id": 44960721089,
+        "name": "Electron packaged CI",
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44960721089",
+        "status": "completed",
+        "conclusion": "failure",
+        "job_count": 7,
+        "jobs": {
+          "success": 5,
+          "failure": 2,
+          "skipped": 0
+        },
+        "failed_job_ids": [
+          137039960477,
+          137077330824
+        ]
+      }
+    ],
+    "derived_failures": [
+      {
+        "id": 137071767959,
+        "name": "Full qualification",
+        "run_id": 44960721193,
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44960721193/job/137071767959",
+        "classification": "derived_gate_failure",
+        "failed_steps": [
+          "Require selected retained V1 and Host V2 native Desktop qualification"
+        ]
+      },
+      {
+        "id": 137052870337,
+        "name": "Offline Host Desktop",
+        "run_id": 44960721134,
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44960721134/job/137052870337",
+        "classification": "derived_gate_failure",
+        "failed_steps": [
+          "Require every original UI lane and safe frontend shard to pass"
+        ]
+      },
+      {
+        "id": 137077330824,
+        "name": "packaged full gate",
+        "run_id": 44960721089,
+        "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44960721089/job/137077330824",
+        "classification": "derived_gate_failure",
+        "failed_steps": [
+          "Require selected packaging verification"
+        ]
+      }
+    ]
+  },
+  "primary_failures": [
+    {
+      "job_id": 137018695565,
+      "job_name": "Host process fixtures (darwin-x64)",
+      "run_id": 44960721088,
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44960721088/job/137018695565",
+      "classification": "primary_failure",
+      "evidence_source": "initial-ci-audit.json#primary_failures",
+      "observation": "Catalog UUID correlation test over real TEST stdio failed with Host client request-timeout (unknown).",
+      "cause_status": "not_established_by_retained_log_excerpt",
+      "cause_unknown": "The excerpt does not isolate import cost, scheduler delay, transport progress, or custody cause.",
+      "candidate_scope": "Move TEST-only provider-management imports before server readiness; retain the original request timeout and assertions."
+    },
+    {
+      "job_id": 137018695615,
+      "job_name": "Creation page (ubuntu-latest)",
+      "run_id": 44960721162,
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44960721162/job/137018695615",
+      "classification": "primary_failure",
+      "evidence_source": "initial-ci-audit.json#primary_failures",
+      "observation": "Creation-page schedule flow timed out waiting for run-now feedback visible.",
+      "cause_status": "not_established_by_retained_log_excerpt",
+      "cause_unknown": "The log excerpt does not independently prove an automatic cron occurrence caused the missing feedback.",
+      "candidate_scope": "Place this manual Run now TEST schedule two calendar days in the future; retain original feedback, persistence, edit, and deletion assertions."
+    },
+    {
+      "job_id": 137040291969,
+      "job_name": "Retained OpenCode V1 and Host V2 original Desktop",
+      "run_id": 44960721193,
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44960721193/job/137040291969",
+      "classification": "primary_failure",
+      "evidence_source": "initial-ci-audit.json#primary_failures",
+      "observation": "UI read timed out: original Create visible; no mutation retry",
+      "observed_additional_facts": [
+        "One donor epoch was recorded; no completed epoch Quit was recorded.",
+        "Post-failure UI had valid team/project fields, a selected TEST model, completed compatibility, pending deep verification, and a disabled Create control.",
+        "The post-failure form observation was not atomic with the timeout.",
+        "No TEST model observations or model failures were recorded; cleanup=true and cleanupFailures=[].",
+        "Later missing-selection/receipt errors occurred after the primary Create timeout."
+      ],
+      "cause_status": "unknown_deep_preflight_stage",
+      "cause_unknown": "Preserved logs cannot distinguish native Host startup, MCP, custody, or readiness wait; no supported donor product fix was identified.",
+      "candidate_scope": "Upload three already-existing redacted diagnostic log paths only; no donor source, deadline, retry, or acceptance change."
+    },
+    {
+      "job_id": 137018695992,
+      "job_name": "Offline Host Desktop (linux-x64, cross-team)",
+      "run_id": 44960721134,
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44960721134/job/137018695992",
+      "classification": "primary_failure",
+      "evidence_source": "initial-ci-audit.json#primary_failures",
+      "observation": "Cross-team UI lane retained an INCOMPLETE receipt and failed provider-emulation UI proof incomplete; original receipt retained.",
+      "cause_status": "not_established_by_retained_log_excerpt",
+      "cause_unknown": "The retained excerpt is a failed proof gate; it does not identify the initiating UI or runtime cause.",
+      "candidate_scope": "UI lazy-load work is source-reviewed separately; this index makes no claim that it fixes this original lane."
+    },
+    {
+      "job_id": 137018696019,
+      "job_name": "Offline Host Desktop (darwin-arm64, opencode-v2-review)",
+      "run_id": 44960721134,
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44960721134/job/137018696019",
+      "classification": "primary_failure",
+      "evidence_source": "initial-ci-audit.json#primary_failures",
+      "observation": "Darwin ARM64 V2 review timed out waiting for original captured V2 readiness permits Launch; no mutation retry.",
+      "cause_status": "not_established_by_retained_log_excerpt",
+      "cause_unknown": "The original preflight stage and precise source of the readiness delay are not isolated by the retained excerpt.",
+      "candidate_scope": "No extension of the original Launch deadline or replacement probe is evidenced by this index."
+    },
+    {
+      "job_id": 137018696154,
+      "job_name": "Offline Host Desktop (linux-x64, opencode-v2-management)",
+      "run_id": 44960721134,
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44960721134/job/137018696154",
+      "classification": "primary_failure",
+      "evidence_source": "initial-ci-audit.json#primary_failures",
+      "observation": "Membership physical census failed every remaining original Host child is one expected Runtime: observed 3 versus expected 2.",
+      "cause_status": "prior_continuation_explanation_with_current_source_and_regression_support",
+      "cause_explanation": "The supplied continuation describes a metadata child observed before its original ready journal entry. The current helper regression reproduces the premature count while preserving the child birth.",
+      "cause_limit": "Only the donor artifact payload was downloaded and verified in this continuation; this lane payload was not independently downloaded or reverified here.",
+      "candidate_scope": "Retain each immutable physical census; reconcile later same-birth/source metadata evidence after original Quit before cold spawn. Unknown children and PID reuse remain failures."
+    },
+    {
+      "job_id": 137018696184,
+      "job_name": "Offline Host Desktop (darwin-arm64, opencode-v2-resume)",
+      "run_id": 44960721134,
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44960721134/job/137018696184",
+      "classification": "primary_failure",
+      "evidence_source": "initial-ci-audit.json#primary_failures",
+      "observation": "Darwin ARM64 V2 resume failed Original OpenCode preflight observation expired; no replacement probe.",
+      "cause_status": "not_established_by_retained_log_excerpt",
+      "cause_unknown": "Expiry is observed; the excerpt does not establish the underlying preflight delay or justify a longer deadline.",
+      "candidate_scope": "No replacement probe or enlarged cutoff is evidenced by this index."
+    },
+    {
+      "job_id": 137039960477,
+      "job_name": "packaged smoke (win32-arm64)",
+      "run_id": 44960721089,
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44960721089/job/137039960477",
+      "classification": "primary_failure",
+      "evidence_source": "initial-ci-audit.json#primary_failures",
+      "observation": "Windows ARM64 packaged TEST cleanup failed EBUSY while unlinking the copied TEST node.exe in its temporary fixture directory.",
+      "cause_status": "filesystem_cleanup_failure_observed_lock_owner_unknown",
+      "cause_unknown": "The excerpt does not identify the process or OS component retaining the file lock.",
+      "candidate_scope": "Bounded Windows-only fs.rm cleanup retries in the TEST fixture; final cleanup failure is still propagated."
+    }
+  ],
+  "artifact_inventory": {
+    "count": 51,
+    "source": "initial-ci-audit.json API metadata snapshot",
+    "metadata_is_not_payload_verification": true,
+    "individually_verified_payload_ids_this_continuation": [
+      14735379830
+    ],
+    "artifacts": [
+      {
+        "id": 14733026067,
+        "run_id": 44960721088,
+        "name": "host-process-fixtures-linux-x64-cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "size_in_bytes": 1527686,
+        "digest": "sha256:a1e1195aa40b1c742120edab469db988a96097c6716531c6a6c15973445b5869",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14733026067",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14733026067/zip",
+        "created_at": "2026-11-22T00:50:03Z",
+        "expires_at": "2026-12-06T00:50:01Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14732610946,
+        "run_id": 44960721088,
+        "name": "host-process-fixtures-win32-arm64-cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "size_in_bytes": 111398,
+        "digest": "sha256:3205fb5edb146894d970ae8f820062be6b968f1249298e935a2a7edcb0310d40",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14732610946",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14732610946/zip",
+        "created_at": "2026-11-22T00:40:16Z",
+        "expires_at": "2026-12-06T00:40:15Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14731399331,
+        "run_id": 44960721088,
+        "name": "host-process-fixtures-darwin-arm64-cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "size_in_bytes": 18309,
+        "digest": "sha256:d120758c7076cee78ce72f8703e8b3a5198eab3e12518872bab101468d2b07df",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14731399331",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14731399331/zip",
+        "created_at": "2026-11-22T00:26:55Z",
+        "expires_at": "2026-12-06T00:26:55Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14730710449,
+        "run_id": 44960721088,
+        "name": "host-process-fixtures-darwin-x64-cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "size_in_bytes": 16816,
+        "digest": "sha256:52dc0e9f3d7e0f532c039e337a89cdd9ea604f4c2455ae320d0d65c2af3198f5",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14730710449",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14730710449/zip",
+        "created_at": "2026-11-21T23:45:01Z",
+        "expires_at": "2026-12-05T23:44:59Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14729038764,
+        "run_id": 44960721088,
+        "name": "host-process-fixtures-win32-x64-cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "size_in_bytes": 111517,
+        "digest": "sha256:b746d410edbc099e620e2949db6512bda1760e724169a41357f9a539ad673625",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14729038764",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14729038764/zip",
+        "created_at": "2026-11-21T23:26:44Z",
+        "expires_at": "2026-12-05T23:26:43Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14733016222,
+        "run_id": 44960721162,
+        "name": "teams-create-page-macos-latest-cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "size_in_bytes": 2273646,
+        "digest": "sha256:8689daf2f1328f41d2c7aed3a33f1b8035a8946b338f97db36f61b2b04be2123",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14733016222",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14733016222/zip",
+        "created_at": "2026-11-22T00:50:50Z",
+        "expires_at": "2026-12-06T00:50:48Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14732421286,
+        "run_id": 44960721162,
+        "name": "teams-create-page-windows-latest-cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "size_in_bytes": 1821610,
+        "digest": "sha256:60c683bfd6eb109c253b9a43515cfcf65c3aed0934410500105375c78a0aa266",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14732421286",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14732421286/zip",
+        "created_at": "2026-11-22T00:39:03Z",
+        "expires_at": "2026-12-06T00:39:02Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14730979418,
+        "run_id": 44960721162,
+        "name": "teams-create-page-ubuntu-latest-cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "size_in_bytes": 2492217,
+        "digest": "sha256:4520a5806116d5ec76374ccf589c7c5fc4c6cb0b915afc7d80b4e91cc58f17d8",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14730979418",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14730979418/zip",
+        "created_at": "2026-11-22T00:30:49Z",
+        "expires_at": "2026-12-06T00:30:47Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14735379830,
+        "run_id": 44960721193,
+        "name": "retained-opencode-coexistence-cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "size_in_bytes": 584529,
+        "digest": "sha256:bb4a058b056a3612ea5ef025a40dc3c76f2ca3b48e3fc1fa8aeee86ec4d45ee1",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14735379830",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14735379830/zip",
+        "created_at": "2026-11-22T02:50:05Z",
+        "expires_at": "2026-12-06T02:50:04Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "zip_size_sha256_crc_verified"
+      },
+      {
+        "id": 14734041801,
+        "run_id": 44960721134,
+        "name": "host-emulated-linux-x64-cd18a49d58dfa4afe09d53f8af27edfc75bead0e-management",
+        "size_in_bytes": 1165175,
+        "digest": "sha256:a30187dcf2328c25aab3de72c038f8d314147ca158f77c1fc2f77d6e520d8281",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14734041801",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14734041801/zip",
+        "created_at": "2026-11-22T01:30:11Z",
+        "expires_at": "2026-12-06T01:30:09Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14733966938,
+        "run_id": 44960721134,
+        "name": "host-emulated-linux-x64-cd18a49d58dfa4afe09d53f8af27edfc75bead0e-opencode",
+        "size_in_bytes": 2511092,
+        "digest": "sha256:287c804fc4d30a1e4c4de839e18812bd97392d371857ac991c1d047874ca985f",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14733966938",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14733966938/zip",
+        "created_at": "2026-11-22T01:27:32Z",
+        "expires_at": "2026-12-06T01:27:30Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14733940431,
+        "run_id": 44960721134,
+        "name": "host-emulated-linux-x64-cd18a49d58dfa4afe09d53f8af27edfc75bead0e-taskboard",
+        "size_in_bytes": 1659157,
+        "digest": "sha256:a8bce7e553e52771b1098631a2d3786eb480e23a9162dc075d36b195eef51cec",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14733940431",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14733940431/zip",
+        "created_at": "2026-11-22T01:20:45Z",
+        "expires_at": "2026-12-06T01:20:44Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14733906337,
+        "run_id": 44960721134,
+        "name": "host-emulated-linux-x64-cd18a49d58dfa4afe09d53f8af27edfc75bead0e-codex-login",
+        "size_in_bytes": 721428,
+        "digest": "sha256:6a3dc03ef5b9a71c389c460bb87a6da651a51519ee2fae3f0add896e071c7032",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14733906337",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14733906337/zip",
+        "created_at": "2026-11-22T01:28:03Z",
+        "expires_at": "2026-12-06T01:28:02Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14733666067,
+        "run_id": 44960721134,
+        "name": "host-emulated-linux-x64-cd18a49d58dfa4afe09d53f8af27edfc75bead0e-cross-team",
+        "size_in_bytes": 2113548,
+        "digest": "sha256:f3928950eae8c853bf5f5fbfc631455cdba9b0e8214b32e4f248c088a3a84a6d",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14733666067",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14733666067/zip",
+        "created_at": "2026-11-22T01:14:53Z",
+        "expires_at": "2026-12-06T01:14:52Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14733613055,
+        "run_id": 44960721134,
+        "name": "host-emulated-linux-x64-cd18a49d58dfa4afe09d53f8af27edfc75bead0e-import",
+        "size_in_bytes": 1182067,
+        "digest": "sha256:ae9d4476a3bc5dab1087ebddb5f1d70125bf184a300e4fc1b2a27c059cb323ec",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14733613055",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14733613055/zip",
+        "created_at": "2026-11-22T01:26:29Z",
+        "expires_at": "2026-12-06T01:26:28Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14733577773,
+        "run_id": 44960721134,
+        "name": "host-emulated-linux-x64-cd18a49d58dfa4afe09d53f8af27edfc75bead0e-codex",
+        "size_in_bytes": 2962715,
+        "digest": "sha256:139fecaae67b3f8d9c68c0e1b673790030827e14d4b3e0b26491f55ce3dcd645",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14733577773",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14733577773/zip",
+        "created_at": "2026-11-22T01:24:03Z",
+        "expires_at": "2026-12-06T01:24:02Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14733528894,
+        "run_id": 44960721134,
+        "name": "host-emulated-linux-x64-cd18a49d58dfa4afe09d53f8af27edfc75bead0e-opencode-v2-management",
+        "size_in_bytes": 1443776,
+        "digest": "sha256:7972785adb8e19ce9d83a8385c5dba8f183f27b94d9a6341fc8df8ce9fd1e0e0",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14733528894",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14733528894/zip",
+        "created_at": "2026-11-22T01:29:29Z",
+        "expires_at": "2026-12-06T01:29:28Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14733428380,
+        "run_id": 44960721134,
+        "name": "host-emulated-linux-x64-cd18a49d58dfa4afe09d53f8af27edfc75bead0e-extensions",
+        "size_in_bytes": 1016422,
+        "digest": "sha256:f0c443c02d2aa694dc259bef48eef11a55854934fe408f1573e792ce1788cca3",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14733428380",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14733428380/zip",
+        "created_at": "2026-11-22T01:24:03Z",
+        "expires_at": "2026-12-06T01:24:01Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14733307593,
+        "run_id": 44960721134,
+        "name": "host-emulated-linux-x64-cd18a49d58dfa4afe09d53f8af27edfc75bead0e-processes",
+        "size_in_bytes": 759039,
+        "digest": "sha256:a9b28e4dfdecb9a637192789ce072f4626551958812059a7cbc46288114397af",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14733307593",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14733307593/zip",
+        "created_at": "2026-11-22T01:15:28Z",
+        "expires_at": "2026-12-06T01:15:27Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14733144371,
+        "run_id": 44960721134,
+        "name": "host-emulated-linux-x64-cd18a49d58dfa4afe09d53f8af27edfc75bead0e-import-lifecycle",
+        "size_in_bytes": 1384983,
+        "digest": "sha256:479b87d57adf67e9ecb4f7b90ba635ce75529b7dccfe5944dc6c7624935a2cb7",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14733144371",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14733144371/zip",
+        "created_at": "2026-11-22T01:19:01Z",
+        "expires_at": "2026-12-06T01:19:00Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14733024107,
+        "run_id": 44960721134,
+        "name": "host-emulated-linux-x64-cd18a49d58dfa4afe09d53f8af27edfc75bead0e-skills",
+        "size_in_bytes": 1463139,
+        "digest": "sha256:8977a535570254ce3ff54e5e70c3422eedf625988a2219ac970a02431c0ad693",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14733024107",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14733024107/zip",
+        "created_at": "2026-11-22T01:22:42Z",
+        "expires_at": "2026-12-06T01:22:41Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14733013882,
+        "run_id": 44960721134,
+        "name": "host-emulated-linux-x64-cd18a49d58dfa4afe09d53f8af27edfc75bead0e-retained-original",
+        "size_in_bytes": 1007448,
+        "digest": "sha256:1b7055fbafabbaa553b16c3e70a7d0306a09ecc3748241bdcd5fa402ab5266a6",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14733013882",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14733013882/zip",
+        "created_at": "2026-11-22T01:19:51Z",
+        "expires_at": "2026-12-06T01:19:51Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14732912671,
+        "run_id": 44960721134,
+        "name": "host-emulated-linux-x64-cd18a49d58dfa4afe09d53f8af27edfc75bead0e-claude",
+        "size_in_bytes": 3774290,
+        "digest": "sha256:f4b71449211cdd220cde4c8a544238df5d5b11609e513d45487976813743b2d8",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14732912671",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14732912671/zip",
+        "created_at": "2026-11-22T01:06:27Z",
+        "expires_at": "2026-12-06T01:06:26Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14732868718,
+        "run_id": 44960721134,
+        "name": "host-emulated-linux-x64-cd18a49d58dfa4afe09d53f8af27edfc75bead0e-selection",
+        "size_in_bytes": 1349238,
+        "digest": "sha256:7e847b6f1c4c3666b75d3d7b93e29d042799f2768f0e45c036c85144d221070f",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14732868718",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14732868718/zip",
+        "created_at": "2026-11-22T01:15:02Z",
+        "expires_at": "2026-12-06T01:15:01Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14732763907,
+        "run_id": 44960721134,
+        "name": "host-emulated-linux-x64-cd18a49d58dfa4afe09d53f8af27edfc75bead0e-collaboration",
+        "size_in_bytes": 1708263,
+        "digest": "sha256:534fd50d264897661f0931b6e2089c68161c46d99de8970ded863cc6406d2859",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14732763907",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14732763907/zip",
+        "created_at": "2026-11-22T01:14:38Z",
+        "expires_at": "2026-12-06T01:14:36Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14732742656,
+        "run_id": 44960721134,
+        "name": "host-emulated-linux-x64-cd18a49d58dfa4afe09d53f8af27edfc75bead0e-team",
+        "size_in_bytes": 684761,
+        "digest": "sha256:c4dd7ada2ce19854ec96a33e5ea79539586b20563fe2fcb718769ddbbe216a0d",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14732742656",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14732742656/zip",
+        "created_at": "2026-11-22T00:52:50Z",
+        "expires_at": "2026-12-06T00:52:48Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14732668035,
+        "run_id": 44960721134,
+        "name": "host-offline-tests-cd18a49d58dfa4afe09d53f8af27edfc75bead0e-1",
+        "size_in_bytes": 306953,
+        "digest": "sha256:457eb3f96bc573ede06c7de65e0f483d24e61566db486d5d054e087cc0eeddbb",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14732668035",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14732668035/zip",
+        "created_at": "2026-11-22T01:06:19Z",
+        "expires_at": "2026-12-06T01:06:18Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14732634782,
+        "run_id": 44960721134,
+        "name": "host-emulated-linux-x64-cd18a49d58dfa4afe09d53f8af27edfc75bead0e-review",
+        "size_in_bytes": 1062033,
+        "digest": "sha256:90320dc2da93482c566fae7eea5a831adf1d9dc030975caa1c8564eb13bf9ff8",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14732634782",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14732634782/zip",
+        "created_at": "2026-11-22T01:20:34Z",
+        "expires_at": "2026-12-06T01:20:33Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14732581612,
+        "run_id": 44960721134,
+        "name": "host-emulated-darwin-arm64-cd18a49d58dfa4afe09d53f8af27edfc75bead0e-installer",
+        "size_in_bytes": 1182741,
+        "digest": "sha256:2fb6574c33acc89b594b3575defd02ad7e91a94dd9ebeea31cd86f4ab59b7a15",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14732581612",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14732581612/zip",
+        "created_at": "2026-11-22T00:43:41Z",
+        "expires_at": "2026-12-06T00:43:40Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14732512076,
+        "run_id": 44960721134,
+        "name": "host-emulated-linux-x64-cd18a49d58dfa4afe09d53f8af27edfc75bead0e-claude-lifecycle",
+        "size_in_bytes": 4076530,
+        "digest": "sha256:72f11b184c752caa7129d7694ce6e4fedfb7e7bca04629ad00ee0b2f8aecebc6",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14732512076",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14732512076/zip",
+        "created_at": "2026-11-22T00:54:16Z",
+        "expires_at": "2026-12-06T00:54:14Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14732480983,
+        "run_id": 44960721134,
+        "name": "host-offline-tests-cd18a49d58dfa4afe09d53f8af27edfc75bead0e-2",
+        "size_in_bytes": 324790,
+        "digest": "sha256:6e11c12d8ce3b5d5ced39378584b6e68e94d698775632596d71bfecdb2c1f1fa",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14732480983",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14732480983/zip",
+        "created_at": "2026-11-22T00:37:54Z",
+        "expires_at": "2026-12-06T00:37:52Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14732137150,
+        "run_id": 44960721134,
+        "name": "host-emulated-darwin-arm64-cd18a49d58dfa4afe09d53f8af27edfc75bead0e-opencode-v2-resume",
+        "size_in_bytes": 328478,
+        "digest": "sha256:b8c198556fbf1871b76cca37eb9457bbee4981814d9cca011b67e66895728c94",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14732137150",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14732137150/zip",
+        "created_at": "2026-11-22T00:39:47Z",
+        "expires_at": "2026-12-06T00:39:46Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14731513882,
+        "run_id": 44960721134,
+        "name": "host-offline-tests-cd18a49d58dfa4afe09d53f8af27edfc75bead0e-4",
+        "size_in_bytes": 329494,
+        "digest": "sha256:3d49c74a4fa1e93db55d59657bd09d6332912bb78180d32c048c395f31810308",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14731513882",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14731513882/zip",
+        "created_at": "2026-11-22T00:38:10Z",
+        "expires_at": "2026-12-06T00:38:09Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14731474608,
+        "run_id": 44960721134,
+        "name": "host-emulated-darwin-arm64-cd18a49d58dfa4afe09d53f8af27edfc75bead0e-opencode-v2-quit-active",
+        "size_in_bytes": 671103,
+        "digest": "sha256:b94883f7b1b20db9e66a75b86e8cd47f8587be597433ee2771e75e40f6436610",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14731474608",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14731474608/zip",
+        "created_at": "2026-11-22T00:28:50Z",
+        "expires_at": "2026-12-06T00:28:49Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14731413611,
+        "run_id": 44960721134,
+        "name": "host-emulated-darwin-arm64-cd18a49d58dfa4afe09d53f8af27edfc75bead0e-opencode-v2-review",
+        "size_in_bytes": 322115,
+        "digest": "sha256:7169e33e119260a0a2c9fbf6e3bd057b0c8745ba44e906a20523fa13db7efbe6",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14731413611",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14731413611/zip",
+        "created_at": "2026-11-22T00:22:21Z",
+        "expires_at": "2026-12-06T00:22:20Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14731339067,
+        "run_id": 44960721134,
+        "name": "host-offline-tests-cd18a49d58dfa4afe09d53f8af27edfc75bead0e-3",
+        "size_in_bytes": 313575,
+        "digest": "sha256:844331bc170d53bdfb6f04c817496c4fef1d8b2d56e5969c2bb6b8b3bafc3e6f",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14731339067",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14731339067/zip",
+        "created_at": "2026-11-22T00:36:23Z",
+        "expires_at": "2026-12-06T00:36:22Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14731017135,
+        "run_id": 44960721134,
+        "name": "host-emulated-darwin-arm64-cd18a49d58dfa4afe09d53f8af27edfc75bead0e-opencode-v2-chat-attachments",
+        "size_in_bytes": 717974,
+        "digest": "sha256:420ed8b74ae2de51f18c62e7446b08896fbc2a99f07f0e6fbb1faf9fd264af33",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14731017135",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14731017135/zip",
+        "created_at": "2026-11-22T00:10:47Z",
+        "expires_at": "2026-12-06T00:10:46Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14730872427,
+        "run_id": 44960721134,
+        "name": "host-emulated-darwin-arm64-cd18a49d58dfa4afe09d53f8af27edfc75bead0e-opencode-v2-quit-pending-open",
+        "size_in_bytes": 589529,
+        "digest": "sha256:3638ae24508f5432ba06281d68e66a4483c5b7c49890352c445634eb4c1ada56",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14730872427",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14730872427/zip",
+        "created_at": "2026-11-22T00:11:02Z",
+        "expires_at": "2026-12-06T00:11:00Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14733435999,
+        "run_id": 44960721253,
+        "name": "opencode-v2-published-http-persist-ubuntu",
+        "size_in_bytes": 871,
+        "digest": "sha256:12ac740b0b9853b5debd17cdb704e1d41f8b2664821e7f250db70f62ea1ceccf",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14733435999",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14733435999/zip",
+        "created_at": "2026-11-22T01:08:45Z",
+        "expires_at": "2026-11-29T01:08:44Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14733295183,
+        "run_id": 44960721253,
+        "name": "opencode-v2-stage1-host-native-instructions-ubuntu",
+        "size_in_bytes": 3153,
+        "digest": "sha256:b9823b8ad136fa646d8b35e3f53645b090067621744b545ed3a5994ab615269d",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14733295183",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14733295183/zip",
+        "created_at": "2026-11-22T00:59:25Z",
+        "expires_at": "2026-11-29T00:59:25Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14732673466,
+        "run_id": 44960721253,
+        "name": "opencode-v2-embedded-native-linux-x64",
+        "size_in_bytes": 25122,
+        "digest": "sha256:d31a030d23d9ceabf273f3b74bfcb3146c4d61cfe45c685edd480c84855ce145",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14732673466",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14732673466/zip",
+        "created_at": "2026-11-22T01:09:07Z",
+        "expires_at": "2026-11-29T01:09:06Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14731914100,
+        "run_id": 44960721253,
+        "name": "opencode-v1-version-host-linux",
+        "size_in_bytes": 3976,
+        "digest": "sha256:411957232fcec3b1d136eb243262dd21c6f7c20d88bbb25e0584b79170202b44",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14731914100",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14731914100/zip",
+        "created_at": "2026-11-22T00:41:14Z",
+        "expires_at": "2026-11-29T00:41:12Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14731815518,
+        "run_id": 44960721253,
+        "name": "opencode-v2-embedded-native-darwin-arm64",
+        "size_in_bytes": 12041,
+        "digest": "sha256:5121583157660bf2189e98e82ec88032be52977ad8a5fd8e14184285d5a2aca6",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14731815518",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14731815518/zip",
+        "created_at": "2026-11-22T00:09:37Z",
+        "expires_at": "2026-11-29T00:09:36Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14731513056,
+        "run_id": 44960721253,
+        "name": "opencode-v2-embedded-native-win32-arm64",
+        "size_in_bytes": 14915,
+        "digest": "sha256:9362d3a45e6e218d6fdff384767977166ff991005713f9f75b450cfddc4becb1",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14731513056",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14731513056/zip",
+        "created_at": "2026-11-22T00:30:37Z",
+        "expires_at": "2026-11-29T00:30:36Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14731085141,
+        "run_id": 44960721253,
+        "name": "opencode-v2-embedded-native-darwin-x64",
+        "size_in_bytes": 12219,
+        "digest": "sha256:0da6b0fa9efd6c0c86753eab3ee15818db03649c73406247d89196f652200b4f",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14731085141",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14731085141/zip",
+        "created_at": "2026-11-21T23:54:14Z",
+        "expires_at": "2026-11-28T23:54:12Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14730538945,
+        "run_id": 44960721253,
+        "name": "opencode-v2-embedded-native-win32-x64",
+        "size_in_bytes": 14720,
+        "digest": "sha256:c01e25d8eccfbb96dd42b6902271aa2ad7e088631e5b208f88964934aaa10c75",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14730538945",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14730538945/zip",
+        "created_at": "2026-11-21T23:56:22Z",
+        "expires_at": "2026-11-28T23:56:22Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14736913882,
+        "run_id": 44960721089,
+        "name": "packaged-v2-host-linux-x64-cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "size_in_bytes": 349598,
+        "digest": "sha256:97d66fec36b378f89c7f91d3046e4a844f50b9cf9b8a408fedc364d1f84bb211",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14736913882",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14736913882/zip",
+        "created_at": "2026-11-22T03:14:26Z",
+        "expires_at": "2026-11-29T03:14:26Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14733679214,
+        "run_id": 44960721089,
+        "name": "packaged-v2-host-win32-x64-cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "size_in_bytes": 833309,
+        "digest": "sha256:63756cddfcdb23e580d6783739fd8d923e2d7c858250bb2de147af0c593fa374",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14733679214",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14733679214/zip",
+        "created_at": "2026-11-22T01:36:45Z",
+        "expires_at": "2026-11-29T01:36:45Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14733519744,
+        "run_id": 44960721089,
+        "name": "packaged-v2-host-darwin-arm64-cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "size_in_bytes": 779286,
+        "digest": "sha256:66bb9942ceae15295dc23152c302f8d0ef7b649565d69d1621f5950f8854a271",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14733519744",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14733519744/zip",
+        "created_at": "2026-11-22T01:36:04Z",
+        "expires_at": "2026-11-29T01:36:02Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14733134675,
+        "run_id": 44960721089,
+        "name": "packaged-v2-host-win32-arm64-cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "size_in_bytes": 346090,
+        "digest": "sha256:43616c39c5394fbbba62098f29730adea5d2dc94760d6a5952d7f703b92af2d9",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14733134675",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14733134675/zip",
+        "created_at": "2026-11-22T01:19:40Z",
+        "expires_at": "2026-11-29T01:19:39Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      },
+      {
+        "id": 14733114627,
+        "run_id": 44960721089,
+        "name": "packaged-v2-host-darwin-x64-cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "size_in_bytes": 828909,
+        "digest": "sha256:109631cdc96a1b0f0c430c066f896b98f95912393ceb10db35fae38950e7e15f",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14733114627",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14733114627/zip",
+        "created_at": "2026-11-22T01:32:10Z",
+        "expires_at": "2026-11-29T01:32:09Z",
+        "expired_at_metadata_observation": false,
+        "source_head": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+        "payload_verification_this_continuation": "not_individually_verified"
+      }
+    ]
+  },
+  "retained_donor_verification": {
+    "artifact_id": 14735379830,
+    "run_id": 44960721193,
+    "job_id": 137040291969,
+    "donor_commit": "4a0e06277fe216d9f82dbbede362668fe46622ee",
+    "zip_size_in_bytes": 584529,
+    "zip_sha256": "bb4a058b056a3612ea5ef025a40dc3c76f2ca3b48e3fc1fa8aeee86ec4d45ee1",
+    "zip_crc": "all_members_passed",
+    "zip_member_count": 14,
+    "original_zip_bytes_preserved": true,
+    "receipt_sha256": "74ac6a0a8e3a87c70b83834a83c4689b483c94ef79484c823e8366a64e44d664",
+    "post_failure_ui_atomic_with_failure": false,
+    "diagnosis": "Compatibility completed; deep verification remained pending. Exact preflight cause is unknown.",
+    "added_upload_paths": [
+      "${{ runner.temp }}/TEST-desktop-backend-*/donor-history/tmp/claude-team-preflight-debug.log",
+      "${{ runner.temp }}/TEST-desktop-backend-*/donor-history/userData/logs/app-errors.ndjson",
+      "${{ runner.temp }}/TEST-desktop-backend-*/donor-history/userData/logs/app-errors.1.ndjson"
+    ]
+  },
+  "membership_validation": {
+    "tested_tree": "uncommitted reconstructed candidate based on baseline; root owns final source-hash attachment",
+    "command": "pnpm exec node --test scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts scripts/legacy-agent-host/desktop-opencode-v2-lifecycle.test.ts",
+    "tests": 73,
+    "passed": 73,
+    "failed": 0,
+    "skipped": 0,
+    "new_regression_cases": 18,
+    "typescript7_legacy_host_scripts": "passed",
+    "changed_file_fast_lint": "passed",
+    "diff_whitespace": "passed",
+    "test_log": {
+      "path": "membership-final-tests.log",
+      "sha256": "c99dc9b860679b0a84d1bf270f4a6fe132bb57d66055e6d74a1f247fe0db1e64"
+    },
+    "native_e2e_success_not_established_by_these_checks": true
+  },
+  "collection_constraints": {
+    "new_api_calls_for_this_index": 0,
+    "new_artifact_downloads_for_this_index": 0,
+    "repository_edits_for_this_index": false,
+    "external_mutations_for_this_index": false,
+    "manual_ci_reruns_dispatches_or_cancellations": false,
+    "real_claude_codex_execution": false,
+    "full_logs_embedded": false,
+    "root_owns_final_validation_and_source_hashes": true
+  },
+  "qualification": "New source original E2E pending; old-head green and local checks are not new-head PASS",
+  "reconstruction_provenance": "Previous unpublished29/44-file candidate bytes and ledger unavailable; this diff is newly reconstructed and independently reviewed, not claimed byte-identical",
+  "local_validation": {
+    "schema_version": 1,
+    "baseline_sha": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+    "status": "local checks only; original E2E on new source pending",
+    "compiler": {
+      "selected": "@typescript/native alias npm:typescript@7.0.2",
+      "mcp_source_and_test": "canonical scripts PASS, version printed as 7.0.2",
+      "ordinary_typescript_dependency": "unchanged JavaScript tooling peer; not selected as CLI compiler"
+    },
+    "checks": [
+      {
+        "name": "captured Host client",
+        "passed": 44,
+        "failed": 0,
+        "duration_seconds": 56.88,
+        "provenance": "scope_audit session tool output only; stdout was not saved to a file"
+      },
+      {
+        "name": "reader integrity and process bindings",
+        "passed": 38,
+        "failed": 0,
+        "skipped": 0,
+        "log": "reader-tests-v2.log"
+      },
+      {
+        "name": "reader publication and rollback",
+        "passed": 21,
+        "failed": 0,
+        "skipped": 0,
+        "log": "reader-publication-tests.log",
+        "overlaps": "Reader families overlap; the final publication run includes all14 new regressions, while the preceding38-test run included13 of them. Counts are not additive."
+      },
+      {
+        "name": "currentness helper exact Node24.21.0",
+        "passed": 14,
+        "failed": 0,
+        "skipped": 0,
+        "log": "evidence/opencode-currentness-helper.log"
+      },
+      {
+        "name": "currentness lifecycle/decoder/transport",
+        "passed": 78,
+        "failed": 0,
+        "skipped": 0,
+        "suite_counts": [
+          32,
+          20,
+          26
+        ],
+        "log": "evidence/opencode-currentness-diagnostics-lifecycle-v2.log"
+      },
+      {
+        "name": "membership management records and lifecycle",
+        "passed": 73,
+        "failed": 0,
+        "skipped": 0,
+        "new_regressions": 18,
+        "log": "evidence/membership-final-tests.log"
+      },
+      {
+        "name": "cold UI",
+        "passed": 126,
+        "failed": 0,
+        "skipped": 0,
+        "files": 8,
+        "new_regressions": 20,
+        "log": "evidence/ui-lazy-tests.log"
+      },
+      {
+        "name": "packaged input fixture on exact Node24.21.0 Linux x64",
+        "passed": 21,
+        "failed": 0,
+        "skipped": 1,
+        "skip": "Windows x64 ia32 FFI scenario is platform-inapplicable on Linux; not PASS",
+        "log": "evidence/packaged-node2421.log"
+      },
+      {
+        "name": "Host native TS7 build and TEST types",
+        "result": "PASS",
+        "provenance": "root and scope_audit build output; root final Host TEST command completed before the initial direct MCP check failure",
+        "logs": [
+          "host-build.log",
+          "host-test-types.log",
+          "evidence/final-extra-types-initial.log"
+        ]
+      },
+      {
+        "name": "legacy Host TEST scripts native TS7",
+        "result": "PASS",
+        "logs": [
+          "evidence/membership-final-types.log",
+          "evidence/final-extra-types-initial.log"
+        ]
+      },
+      {
+        "name": "changed Main/UI native TS7",
+        "result": "PASS",
+        "changed_files": 13,
+        "original_ambient_declarations": 5,
+        "same_root_compiler_options": true,
+        "log": "evidence/final-changed-main-ui-types-v3.log",
+        "config": "evidence/tsconfig.changed-main-ui-final.json"
+      },
+      {
+        "name": "canonical MCP source and TEST native TS7",
+        "result": "PASS",
+        "log": "evidence/final-mcp-typecheck.log"
+      },
+      {
+        "name": "MCP build",
+        "result": "PASS",
+        "log": "evidence/final-mcp-build.log"
+      },
+      {
+        "name": "existing packaged MCP manifest check",
+        "passed": 7,
+        "failed": 0,
+        "log": "evidence/final-mcp-manifest-test.log"
+      },
+      {
+        "name": "frozen workspace install",
+        "result": "PASS",
+        "lockfile_scope": "one three-line MCP importer alias, no resolution changes",
+        "log": "evidence/final-frozen-install-v2.log"
+      },
+      {
+        "name": "changed-source fast lint",
+        "result": "PASS",
+        "files": 27,
+        "errors": 0,
+        "warnings": 2,
+        "warnings_scope": "unchanged TeamDetailView lines",
+        "logs": [
+          "evidence/final-fast-lint.log",
+          "evidence/final-manifest-lint.log"
+        ]
+      },
+      {
+        "name": "source-size, architecture, runtime artifacts",
+        "result": "PASS",
+        "logs": [
+          "evidence/final-source-size.log",
+          "evidence/final-architecture.log",
+          "evidence/final-runtime-artifacts.log"
+        ]
+      },
+      {
+        "name": "CI policy",
+        "passed": 17,
+        "failed": 0,
+        "skipped": 0,
+        "log": "evidence/final-ci-policy-tests.log"
+      },
+      {
+        "name": "full root canonical typecheck",
+        "result": "NOT PASS",
+        "exit_code": 137,
+        "observation": "SIGKILL without code diagnostics, including a sequential attempt with resource limits",
+        "log": "evidence/final-root-typecheck.log"
+      },
+      {
+        "name": "changed Main/UI typed ESLint",
+        "result": "NOT PASS",
+        "exit_code": 137,
+        "observation": "SIGKILL without code diagnostics; independent sequential attempt also terminated",
+        "log": "evidence/final-typed-lint.log"
+      }
+    ],
+    "preserved_failure_history": [
+      {
+        "attempt": "initial reader regressions",
+        "passed": 30,
+        "failed": 8,
+        "resolution": "TEST fixture JSON key order and original close-error classification corrected; production acceptance not weakened",
+        "log": "reader-tests.log"
+      },
+      {
+        "attempt": "initial currentness combined suites",
+        "result": "interrupted exit130 after lifecycle32 and decoder20 passed",
+        "resolution": "existing source-extracted transport VM lacked new helper binding; original source body and assertions retained, real helper injected",
+        "log": "evidence/opencode-currentness-diagnostics-lifecycle.log"
+      },
+      {
+        "attempt": "initial direct MCP native TS7",
+        "result": "failed missing Node globals; TEST command not reached",
+        "resolution": "explicit existing native7 alias and Node types; subsequent canonical source and TEST checks PASS",
+        "log": "evidence/final-extra-types-initial.log"
+      },
+      {
+        "attempt": "offline frozen install",
+        "result": "failed policy metadata lookup, not counted as PASS",
+        "resolution": "normal frozen install fetched required registry metadata and passed without dependency resolution changes",
+        "log": "evidence/final-frozen-install.log"
+      },
+      {
+        "attempt": "initial scoped Main/UI config",
+        "result": "failed to resolve types from external temporary config",
+        "resolution": "temporary config placed at repository root",
+        "log": "evidence/final-changed-main-ui-types.log"
+      },
+      {
+        "attempt": "second scoped Main/UI config",
+        "result": "failed without root ambient declarations",
+        "resolution": "all five unchanged source .d.ts files included with original compiler options",
+        "log": "evidence/final-changed-main-ui-types-v2.log"
+      },
+      {
+        "attempt": "UI agent full TS7 and typed ESLint",
+        "result": "SIGKILL; not PASS",
+        "logs": [
+          "evidence/ui-lazy-ts7.log",
+          "evidence/ui-lazy-lint.log"
+        ]
+      }
+    ],
+    "source_closure": {
+      "selected": 2003,
+      "unique": 2003,
+      "missing": [],
+      "changedSourceCount": 31,
+      "unselected": [],
+      "changed": [
+        ".github/workflows/ci.yml",
+        "mcp-server/package.json",
+        "mcp-server/tsconfig.json",
+        "packages/legacy-agent-host/src/adapters/profile/FileRuntimeSourceIndex.ts",
+        "packages/legacy-agent-host/src/adapters/providers/FileManagementCommandStore.ts",
+        "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+        "packages/legacy-agent-host/src/adapters/providers/createClaudeCloseDiagnostic.ts",
+        "pnpm-lock.yaml",
+        "scripts/e2e/teams-create-page-desktop.mjs",
+        "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+        "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+        "scripts/legacy-agent-host/packaged-opencode-v2-inputs.test.ts",
+        "src/features/agent-backend/main/infrastructure/decodeClaudeCloseDiagnostics.ts",
+        "src/features/team-provisioning/renderer/index.ts",
+        "src/renderer/components/team/TeamDetailView.tsx",
+        "src/renderer/utils/memberRuntimeSummary.ts",
+        "test/features/agent-backend/capturedHostClient.test.ts",
+        "test/features/agent-backend/claudeCloseDiagnostics.test.ts",
+        "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+        "test/features/agent-backend/opencodeProbeTransportDiagnostics.test.ts",
+        "packages/legacy-agent-host/src/adapters/providers/OpenCodeCurrentnessTiming.ts",
+        "packages/legacy-agent-host/tests/file-receipt-decode-cache.test.ts",
+        "packages/legacy-agent-host/tests/opencode-currentness-timing.test.ts",
+        "scripts/legacy-agent-host/desktop-live-membership-census.test.ts",
+        "scripts/legacy-agent-host/desktop-live-membership-census.ts",
+        "src/features/team-provisioning/renderer/ui/LazyMemberSettingsDialogs.test.tsx",
+        "src/features/team-provisioning/renderer/ui/LazyMemberSettingsDialogs.tsx",
+        "src/renderer/components/team/TeamDetailLazyDialogs.tsx",
+        "test/renderer/components/team/TeamDetailLazyDialogs.test.tsx",
+        "test/renderer/components/team/teamDetailLoadBoundary.test.ts"
+      ]
+    },
+    "review": {
+      "root": "reviewed the final reader, census, UI, fixture, diagnostic and MCP changes",
+      "independent_reviews": [
+        {
+          "reviewer": "donor_diagnosis",
+          "scope": "readers, UI, three fixture fixes, donor upload and finite source closure",
+          "blockers": [],
+          "resolved_note": "existing management-records driver added to source manifest"
+        },
+        {
+          "reviewer": "live_ci_audit",
+          "scope": "membership/census and telemetry including source-extracted VM test adaptation",
+          "blockers": [],
+          "invariants": "original PID birth/source/currentness/release checks, pre-cold refusal, exact original61 phase lists and negative sequence62 test preserved"
+        },
+        {
+          "reviewer": "scope_audit",
+          "scope": "reader reuse and prospective MCP native compiler configuration",
+          "blockers": []
+        }
+      ],
+      "telemetry_test_budget": "281 added regression lines vs prospective180; strict wire negatives and existing VM fixture adaptation account for expansion; production remains under220 added lines",
+      "new_e2e_not_qualified_by_review": true
+    },
+    "boundary": {
+      "draft_retained": true,
+      "genuine_claude_codex_execution_authorized": false,
+      "manual_rerun_dispatch_cancellation": false,
+      "route": [
+        1192,
+        1186,
+        982
+      ],
+      "main_release_default_host_stage2_in_scope": false,
+      "ci_full_after_originals_terminal": "full-label lane does not replace required original synchronize retained donor PASS"
+    }
+  },
+  "source_pins": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "bytes": 200611,
+      "sha256": "353a51ced56a73c3acb0a456216f59aa28052b9b4bad618813a67471730883d2",
+      "gitBlobSha": "5de9e297b948a5bfec59bfea5d166bfa0aaa8c2e"
+    },
+    {
+      "path": "mcp-server/package.json",
+      "bytes": 1411,
+      "sha256": "64f658de10892c23b3485cca6882808c9aba22ad3ff5f69b67faa7ec174f326b",
+      "gitBlobSha": "46664ace357aebbf7beac1dd8ce35423d2a20e50"
+    },
+    {
+      "path": "mcp-server/tsconfig.json",
+      "bytes": 537,
+      "sha256": "cf379b936072b0acd20d2a65b004cbfa5673a778955589f96e61672e74c76e36",
+      "gitBlobSha": "7c1fe559fb4490b2f61f260639fe66c367344938"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/profile/FileRuntimeSourceIndex.ts",
+      "bytes": 7973,
+      "sha256": "e4ef66f16324f40956dc9cebd1360207fe501cde32ea86a56b0aa4b1b2cff493",
+      "gitBlobSha": "fd7a855b7ece64baeabb74d1410b4f2176d44282"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/FileManagementCommandStore.ts",
+      "bytes": 8662,
+      "sha256": "0817ad275749bafbae5bdf4792b739e75cc94020f1a17b4179178cf4a36a72fa",
+      "gitBlobSha": "8271a1ff540d3653f74721ead32583566e3d5a64"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeCurrentnessTiming.ts",
+      "bytes": 2814,
+      "sha256": "cb7f28bff571f744514defc2228f121c9b9088c801e17ab7ddb717f585dcc7b6",
+      "gitBlobSha": "bf6eb185c5775c116c8221707f590116343ff3cb"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+      "bytes": 26667,
+      "sha256": "10961d0a5f87aa5a6ce3b45dd23084312c9aed464e8ed69d800f16095391c088",
+      "gitBlobSha": "896d6fed3e8699087eee96707b1eea25f402c78b"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/createClaudeCloseDiagnostic.ts",
+      "bytes": 19136,
+      "sha256": "c50be4a85b3566dabd34ed6e351a8e51a5b5e995b11f7edc70d42636f4bc6783",
+      "gitBlobSha": "39f814579168ecf23a79d399eed970d754a55cee"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/file-receipt-decode-cache.test.ts",
+      "bytes": 9306,
+      "sha256": "0d6b626ec054bdc948b416de2fe942143b21ce31f70e93589f4e64611298f845",
+      "gitBlobSha": "4001d152ad1715bbf9d6bb17cf44197d4da4b51e"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-currentness-timing.test.ts",
+      "bytes": 6670,
+      "sha256": "ea7b31a9f21c11101bbe2581405f84894a94b7b4921efc1006dfe42026621e92",
+      "gitBlobSha": "8ec555b0fc8820c4923bc431af00deefe73ca530"
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "bytes": 957103,
+      "sha256": "2268abcda9d89cc2a50338ccdc95b0fe14cfd4723c8e96e36f134bb4dc73b17e",
+      "gitBlobSha": "6d94f537251d50ad940a9a07aa0d38a6fa63ff72"
+    },
+    {
+      "path": "scripts/e2e/teams-create-page-desktop.mjs",
+      "bytes": 115122,
+      "sha256": "5ac675c17c224c1ec3125d08b19e45670f15e61728bc449ad17f3abf1128b0ee",
+      "gitBlobSha": "c081d7ccab83b4cd744a4a81e43bc4d68193dda7"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-census.test.ts",
+      "bytes": 14726,
+      "sha256": "57b2adad0b5a45fb62e8043887ae6b0e21d576387254b80cc4b24c1b9d7a7176",
+      "gitBlobSha": "08d57b1db5a3dfd7125c5a676ae80a5c1dbb62fb"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-census.ts",
+      "bytes": 6294,
+      "sha256": "e726350571d03eb19c91d0f0542cfcaf02b89178398b5cd519181a1a417c4b20",
+      "gitBlobSha": "7f9d213a3e4b95a9c8efc44541935c54d6226496"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "bytes": 54558,
+      "sha256": "38763bfc2f85ce0ec37170693d92c9d0fed78f2cd05157e754e188a62044e54f",
+      "gitBlobSha": "5982eacdbbe98ea43fd4772d744da7c158a07da8"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+      "bytes": 59281,
+      "sha256": "ebab51ed5aec8e041845d4784e47f23ebdf69e26535e8cad48a422d31e0daae2",
+      "gitBlobSha": "302b1c9b3976e46b4f3b0fbfb273d24efb21e043"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "bytes": 31599,
+      "sha256": "0cb23e25bb50db9f80e5b212c0d903af30cb893b002f2739112f4078599ddac6",
+      "gitBlobSha": "238c73feafed455c47596d300fe1efe443cacfae"
+    },
+    {
+      "path": "scripts/legacy-agent-host/packaged-opencode-v2-inputs.test.ts",
+      "bytes": 30129,
+      "sha256": "2d01108249f92248d8ed2c5ba5386c8dfdf6c11447c75855fd462d88a35dc0af",
+      "gitBlobSha": "84e552fb34a19c52dcacde1a95917a2ebeaf90c6"
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/decodeClaudeCloseDiagnostics.ts",
+      "bytes": 20843,
+      "sha256": "ee082e4333fb0573f7c3e66102593d0629e63357172a599c3770561283043d3b",
+      "gitBlobSha": "af45ba0a4705c510bd8a2b87494bd55b3ce80c2b"
+    },
+    {
+      "path": "src/features/team-provisioning/renderer/index.ts",
+      "bytes": 581,
+      "sha256": "b9387244ce3c82fd5286f60b96bd2ab11ef4cf7223cd9a82f140cf6bfb9dd718",
+      "gitBlobSha": "5e51617938f8a0337779c44dac3e63d71f38eeaf"
+    },
+    {
+      "path": "src/features/team-provisioning/renderer/ui/LazyMemberSettingsDialogs.test.tsx",
+      "bytes": 5930,
+      "sha256": "c227d2fc23488a1de088d54afb9238279f6a2f0f6bfc6fd0033d634b00d0f8b6",
+      "gitBlobSha": "c1968a127cccaf6cfc4d590a7fe34d31efbfe948"
+    },
+    {
+      "path": "src/features/team-provisioning/renderer/ui/LazyMemberSettingsDialogs.tsx",
+      "bytes": 1104,
+      "sha256": "f484f76269d4d4f2b3cec9052c358bd2615e4dc81e2bc7f8323c7691b65c2e5f",
+      "gitBlobSha": "527f1b0d9c915dfc3454eecbd5530afc7bf3d151"
+    },
+    {
+      "path": "src/renderer/components/team/TeamDetailLazyDialogs.tsx",
+      "bytes": 1649,
+      "sha256": "6d7384df9bf5df564def6b6889798919811148688839a1f84a07c83b427e506b",
+      "gitBlobSha": "cb8889e690e2ea44cc961866732ec20853cddbc3"
+    },
+    {
+      "path": "src/renderer/components/team/TeamDetailView.tsx",
+      "bytes": 137992,
+      "sha256": "d9f999cafb9f7dba9c14f4c534894168400d5cc0e0ecccd8e88a4c75534302b0",
+      "gitBlobSha": "c08b4afb938cee8a63d8db70888de352242db1d4"
+    },
+    {
+      "path": "src/renderer/utils/memberRuntimeSummary.ts",
+      "bytes": 8663,
+      "sha256": "93fe2aff04a1b4634b303767f7e87b09cff30572d94c0e4c1b8bdd2e283a30f2",
+      "gitBlobSha": "1b211464b5c3db3476c42e8647c2ca5acdd37b4c"
+    },
+    {
+      "path": "test/features/agent-backend/capturedHostClient.test.ts",
+      "bytes": 62347,
+      "sha256": "5e79b67d621f70e04e8b176a58cf18999d32ae17be52b0eb2b35e76a51bc3846",
+      "gitBlobSha": "752f0173a7e3dc8913a4b7948c989c8663aa0215"
+    },
+    {
+      "path": "test/features/agent-backend/claudeCloseDiagnostics.test.ts",
+      "bytes": 39096,
+      "sha256": "f5141d7e0da183428d87157c813ee66eeb3fa35b64c270af193390310c0498f9",
+      "gitBlobSha": "f4cbedf5358787e91535a57b21ffda36f2e08746"
+    },
+    {
+      "path": "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+      "bytes": 53970,
+      "sha256": "2f1a3348072ce0368901972eac2ff932c218e9f7596b9f1df41cc946035f6941",
+      "gitBlobSha": "5f67dd2a65f019ff2f3de4133e268a9d87f05734"
+    },
+    {
+      "path": "test/features/agent-backend/opencodeProbeTransportDiagnostics.test.ts",
+      "bytes": 18778,
+      "sha256": "843253f1c6c7a08284f1aabd0b889bf8457c5288a2968e7684b682aefdc29910",
+      "gitBlobSha": "a738be5709153683cc0742c9de9d4cde92584a4c"
+    },
+    {
+      "path": "test/renderer/components/team/TeamDetailLazyDialogs.test.tsx",
+      "bytes": 6241,
+      "sha256": "36dc0a40098c3ad1791901c509ac1029b04f2858eec798aa64d345d25cf0d61d",
+      "gitBlobSha": "35f95b65f045f3be245de6fe0683a6fc560f5520"
+    },
+    {
+      "path": "test/renderer/components/team/teamDetailLoadBoundary.test.ts",
+      "bytes": 1186,
+      "sha256": "7ef45ce5a83e61f311b6f4cc5ed1583e17fb3bf40c09f40f1d5d27f46625b405",
+      "gitBlobSha": "e495dc80a433539cfb3f7c76c29aa18b95b7bc66"
+    }
+  ],
+  "status_plan_sha256": "22eac4a0170fe6373b4d4e0063a89ca12d5b51e108e681dc7d6feb38bf01ab12",
+  "archive": {
+    "file": "continuation-cd18-20261122.tar.gz",
+    "bytes": 661256,
+    "sha256": "581610a45e30681be1433a219c86157dfe1e1655ce261ee3dfa8f01beaa9c6be",
+    "entries": [
+      {
+        "path": "architecture-guard.log",
+        "bytes": 245,
+        "sha256": "7fe70e1bdd916d7a5694ada6ab418b58456de8373f0f8a9f560e5efcfb90f79c"
+      },
+      {
+        "path": "dependencies-install.log",
+        "bytes": 7707,
+        "sha256": "11aa3cf0d1efec869895db2b686948f4fbd2b255be7f658ed64641ea008b8d03"
+      },
+      {
+        "path": "evidence/ci-draft-trigger-audit.json",
+        "bytes": 21843,
+        "sha256": "a547f115680f2e3e52dcc05a776e4db4019453fb42f564311a7fa0db6d6142d8"
+      },
+      {
+        "path": "evidence/continuation-cd18-baseline.json",
+        "bytes": 57765,
+        "sha256": "64f6e83284e1da69d697dce5e19f8ff3787659bc4fe2ccf0b8e7de52ea964ef3"
+      },
+      {
+        "path": "evidence/continuation-cd18-validation.json",
+        "bytes": 10901,
+        "sha256": "086ce3855002700b82e11db92a9d90ca1ecc7748364491743c8fa48714825628"
+      },
+      {
+        "path": "evidence/final-architecture.log",
+        "bytes": 294,
+        "sha256": "f752538901e05218f5bd969a975ec1771ebc8cb60a8f90cc68c4d1c63c8adf9a"
+      },
+      {
+        "path": "evidence/final-changed-main-ui-types-v2.log",
+        "bytes": 8906,
+        "sha256": "4190e232b978ea6c341bbbff2c69b4432834a854ffe0d3d7f4ce6eb1afe6fb08"
+      },
+      {
+        "path": "evidence/final-changed-main-ui-types-v3.log",
+        "bytes": 204,
+        "sha256": "34573087a4a452d0b45dc854369c2ca9e47a034e384c19751321e0a7434622ce"
+      },
+      {
+        "path": "evidence/final-changed-main-ui-types.log",
+        "bytes": 524,
+        "sha256": "1b163c095a4ce812e959f10f6988a42b88d96d77d57493fb82d6fde5ecaba2bc"
+      },
+      {
+        "path": "evidence/final-ci-policy-tests.log",
+        "bytes": 1411,
+        "sha256": "39af6e55d8347fa2592aed34340e4fea460a286321525167279e37616d18f9bd"
+      },
+      {
+        "path": "evidence/final-extra-types-initial.log",
+        "bytes": 5053,
+        "sha256": "01d5a221d4108f1cbbd1661ec93cf688b188b722e095604a88a29405a5b03c9f"
+      },
+      {
+        "path": "evidence/final-fast-lint.log",
+        "bytes": 4205,
+        "sha256": "dc494bbdd3f32c25efb4ef574446da9071eb8c370569f0e037704ed41055d481"
+      },
+      {
+        "path": "evidence/final-frozen-install-v2.log",
+        "bytes": 382,
+        "sha256": "500c50376d2e8d05745859162409ae4e7662a12c1bd305a84e4e139abaa56ab0"
+      },
+      {
+        "path": "evidence/final-frozen-install.log",
+        "bytes": 516,
+        "sha256": "4506364dd95d260857ad90cfd4d3b2e8221fdabbd7d4ec7462ff1785cbc5d50b"
+      },
+      {
+        "path": "evidence/final-manifest-lint.log",
+        "bytes": 173,
+        "sha256": "64cbeacb308540a4a46643382594e21dee86dd4e124773c660dc844de6df21f7"
+      },
+      {
+        "path": "evidence/final-mcp-build.log",
+        "bytes": 342,
+        "sha256": "6fb1bbebd21129d2a55294718b6ee13848637588ccacbab13bc683e3fd9ca49e"
+      },
+      {
+        "path": "evidence/final-mcp-manifest-test.log",
+        "bytes": 323,
+        "sha256": "539ce886cb138a0ce8bf164f695db25f37fc14cd2518adc273fdaeca821a5b36"
+      },
+      {
+        "path": "evidence/final-mcp-typecheck.log",
+        "bytes": 148,
+        "sha256": "ac7aeb48146c71c66d9a5a9f8e98995effdde493a6ba552a9737e873433b92f2"
+      },
+      {
+        "path": "evidence/final-root-typecheck.log",
+        "bytes": 1104,
+        "sha256": "4b1e42f778f0a3dd1a07c725e1e047c1ae21960da0e42ec4655982bed14bc18c"
+      },
+      {
+        "path": "evidence/final-runtime-artifacts.log",
+        "bytes": 116,
+        "sha256": "394dfe406056a3ebfac0b218e5192f61e097579dca67a069546dfe53935c6a2a"
+      },
+      {
+        "path": "evidence/final-source-closure.json",
+        "bytes": 2185,
+        "sha256": "b9cdbe9d29dcea617d88f4e5d9e301f04dca9227810374176131d4d065ff9abb"
+      },
+      {
+        "path": "evidence/final-source-size.log",
+        "bytes": 284,
+        "sha256": "a4ccab2fd59fd5b35b35b30cdb9e687dce529a2a884e946f336dadc4c3b10ea8"
+      },
+      {
+        "path": "evidence/final-typed-lint.log",
+        "bytes": 150,
+        "sha256": "6839ad0642096b6f1a8168fd8940098422a34c6d80129b85dfe7eb3ae24b0942"
+      },
+      {
+        "path": "evidence/initial-ci-audit.json",
+        "bytes": 522835,
+        "sha256": "6efa9f9141a8647e9c1f69e47485eef55f8b311384c76f7373cd1363479285ac"
+      },
+      {
+        "path": "evidence/membership-final-lint.log",
+        "bytes": 436,
+        "sha256": "f963e0d6439490750185e15a9963662da494ff4abf70926ad0172790b1e3b83c"
+      },
+      {
+        "path": "evidence/membership-final-tests.log",
+        "bytes": 7821,
+        "sha256": "c99dc9b860679b0a84d1bf270f4a6fe132bb57d66055e6d74a1f247fe0db1e64"
+      },
+      {
+        "path": "evidence/membership-final-types.log",
+        "bytes": 97,
+        "sha256": "497757da33976a6244e18944dec8185b370f08467b2b5ad675446e3ca3c3b015"
+      },
+      {
+        "path": "evidence/membership-lint.log",
+        "bytes": 436,
+        "sha256": "f963e0d6439490750185e15a9963662da494ff4abf70926ad0172790b1e3b83c"
+      },
+      {
+        "path": "evidence/membership-records-tests.log",
+        "bytes": 5497,
+        "sha256": "46aba629d6ec9a50d543ddd46757722f0715e2adb6b18ad506dd4cc1ebe2e91f"
+      },
+      {
+        "path": "evidence/membership-types.log",
+        "bytes": 97,
+        "sha256": "497757da33976a6244e18944dec8185b370f08467b2b5ad675446e3ca3c3b015"
+      },
+      {
+        "path": "evidence/opencode-currentness-diagnostics-lifecycle-v2.log",
+        "bytes": 110463,
+        "sha256": "2cc9a249f67157b815605e5e9b558ee0429f0ad8a004a25df8e3b65734c31eaa"
+      },
+      {
+        "path": "evidence/opencode-currentness-diagnostics-lifecycle.log",
+        "bytes": 109907,
+        "sha256": "f40d4bd0bd4acfaaa9f2f2c3e7370e22d2d27ff1c361e3db74aa6104a5d18c48"
+      },
+      {
+        "path": "evidence/opencode-currentness-helper.log",
+        "bytes": 1473,
+        "sha256": "015eaf84484bf70a1ec21936501de236629b6acbdc53b46cc96427d861f817bd"
+      },
+      {
+        "path": "evidence/packaged-node2421.log",
+        "bytes": 1889,
+        "sha256": "2042a36f7acc3e2c48ded69e9dfb5802ce2c5625e7de628407799e932380ef0d"
+      },
+      {
+        "path": "evidence/publication-source-ledger.json",
+        "bytes": 8185,
+        "sha256": "7c6d8e97fe1a730c97a958396c902c43695e98334ef8191977b2bb793072876e"
+      },
+      {
+        "path": "evidence/retained-cd18/diagnosis.json",
+        "bytes": 4690,
+        "sha256": "7960c3fd2fb82728f7c296374f810a470e00642a767e695f7211a8e1905c3d1c"
+      },
+      {
+        "path": "evidence/retained-cd18/metadata.json",
+        "bytes": 815,
+        "sha256": "903cbb6a227d2acefee292a359b4f021d7e9a1c56f9e6560123b088e0467f4ab"
+      },
+      {
+        "path": "evidence/retained-cd18/retained-cd18-14735379830.zip",
+        "bytes": 584529,
+        "sha256": "bb4a058b056a3612ea5ef025a40dc3c76f2ca3b48e3fc1fa8aeee86ec4d45ee1"
+      },
+      {
+        "path": "evidence/tsconfig.changed-main-ui-final.json",
+        "bytes": 1181,
+        "sha256": "309ae3f6583ca8eb94057454971972c31a8b76e40a6bf1abd8b1892f5148d209"
+      },
+      {
+        "path": "evidence/ui-lazy-architecture.log",
+        "bytes": 245,
+        "sha256": "7fe70e1bdd916d7a5694ada6ab418b58456de8373f0f8a9f560e5efcfb90f79c"
+      },
+      {
+        "path": "evidence/ui-lazy-fast-lint.log",
+        "bytes": 480,
+        "sha256": "fc6e13d3301dc74bb6053847d7a2e18b65816bb5a95416b683cc05e876c16f0c"
+      },
+      {
+        "path": "evidence/ui-lazy-import-sort.log",
+        "bytes": 480,
+        "sha256": "fc6e13d3301dc74bb6053847d7a2e18b65816bb5a95416b683cc05e876c16f0c"
+      },
+      {
+        "path": "evidence/ui-lazy-lint.log",
+        "bytes": 786,
+        "sha256": "6ed0a631805e922cdbc8d8f055af60a3ed5a355d00bc1b69f49fd5011721d0fd"
+      },
+      {
+        "path": "evidence/ui-lazy-source-size.log",
+        "bytes": 249,
+        "sha256": "b9be182a4b34388579b70bef96d391af8bb48772385b61201f649fa4b7059941"
+      },
+      {
+        "path": "evidence/ui-lazy-sourcehash.json",
+        "bytes": 1704,
+        "sha256": "7c6a8bfc6126db7618527e6f2b8aaccd6c3bd66b85d9cba9c087155cd2e529ee"
+      },
+      {
+        "path": "evidence/ui-lazy-tests.log",
+        "bytes": 1444,
+        "sha256": "a092f38c8f6fc83db00c6413952100f6c3f9b60d2daaf6569fd6f5a7acdcefcd"
+      },
+      {
+        "path": "evidence/ui-lazy-ts7.log",
+        "bytes": 159,
+        "sha256": "1ebc28bb913d3fe512be5a6dd399ac73546d9efd6e2bbd5da36c89203e7fa89f"
+      },
+      {
+        "path": "host-build.log",
+        "bytes": 182,
+        "sha256": "d6efa218a38b23ad8285a933ae787d9bcd6d542c54df4d1e1c3e04bf0f5e0789"
+      },
+      {
+        "path": "host-test-types.log",
+        "bytes": 69,
+        "sha256": "f453e976d298e4c9c8a5ee0134f19a02d2d39c2c100e3aed187705880615d150"
+      },
+      {
+        "path": "reader-lint.log",
+        "bytes": 332,
+        "sha256": "b5559a8cc2491abb2ff853ba389c0e961f4dd77b74e9415bb211e396aff86c0b"
+      },
+      {
+        "path": "reader-publication-tests.log",
+        "bytes": 2284,
+        "sha256": "72730556de140d7bb9cd8a5ba2d8dbff24fc94076168413c82cfae33849ef492"
+      },
+      {
+        "path": "reader-tests-v2.log",
+        "bytes": 3968,
+        "sha256": "8cdacd5f76a729f6109bdcfb77d81db09debc7655007448fa71dde4763bac305"
+      },
+      {
+        "path": "reader-tests.log",
+        "bytes": 14393,
+        "sha256": "a42a77f823404e05ea816f0100da40e02f50fa494a782d6797771f82f453e6f1"
+      },
+      {
+        "path": "runtime-artifact-guard.log",
+        "bytes": 80,
+        "sha256": "039a480702b228be98bd23668b680fa80b3638b8bd42f6158b1121d4fcd209a6"
+      },
+      {
+        "path": "source-size.log",
+        "bytes": 249,
+        "sha256": "b9be182a4b34388579b70bef96d391af8bb48772385b61201f649fa4b7059941"
+      },
+      {
+        "path": "stage-node.log",
+        "bytes": 323,
+        "sha256": "0d07f1fba2f6331d84f7f7c76644a675b9509118f0c734b6ef6ee8db3b64699d"
+      }
+    ],
+    "readback": "all archived byte counts and SHA256 values verified"
+  },
+  "candidate_commit_binding": "Will be bound by the Git commit containing this index; self-hash is intentionally not invented",
+  "prior_partial_review": {
+    "baseline": "cd18a49d58dfa4afe09d53f8af27edfc75bead0e",
+    "mode": "read_only",
+    "blocking_findings": [],
+    "scope": [
+      "FileRuntimeSourceIndex decoded-byte reuse and observedDigest/currentness",
+      "FileManagementCommandStore byte/path reuse, fresh file checks, clone isolation and close failure",
+      "TeamDetail and public member-settings lazy export boundaries and original callbacks",
+      "TEST catalog startup import fixture, future manual-run schedule fixture, bounded Windows TEST cleanup fixture",
+      "Finite supplementary source manifest retention and new source/test coverage",
+      "Exactly three existing donor diagnostic upload paths"
+    ],
+    "telemetry_excluded_pending_separate_review": true,
+    "source_manifest_original_literal_entries_retained_in_order": true,
+    "source_manifest_note": "The existing management-records test driver remains outside desktopProofSources, as in baseline; its new census regression file is included and the existing CI driver imports it.",
+    "membership_independent_read_only_review": {
+      "blocking_findings": [],
+      "scope": [
+        "Immutable original births and sources",
+        "Unmatched PID cannot disappear into a later census",
+        "Same-profile physical overlap refusal",
+        "Original Quit precedes reconciliation and cold spawn follows it"
+      ]
+    },
+    "historical_scope_note": "Earlier partial review before the final manifest and separate telemetry review. The driver coverage note was resolved; current combined review is in local_validation.review."
+  }
+}

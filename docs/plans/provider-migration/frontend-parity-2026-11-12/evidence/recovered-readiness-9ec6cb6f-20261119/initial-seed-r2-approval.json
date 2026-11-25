@@ -1,0 +1,312 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-initial-seed-readiness-source-evidence-review",
+  "reviewer": "/root/combined_review_42",
+  "recordedAt": "2026-11-19T03:35:06.358051+00:00",
+  "status": "APPROVED_SCOPED_SOURCE_AND_FINITE_EVIDENCE_NOT_ORIGINAL_REVIEW_E2E",
+  "sourceHead": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+  "sourceTree": "06ddfb2e88ee1e049f14a9c6c11290004d16dda2",
+  "candidateManifest": {
+    "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/candidate-manifest.json",
+    "bytes": 2503,
+    "gitBlob": "f5d012f77c1d0ec812e3b8dafe1bb4da627730f3",
+    "sha256": "0c50b1271025bc4f46fb791f091a83e9febc6e09a76215ef98a883aaaeb68998"
+  },
+  "authorVerification": {
+    "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/verification.json",
+    "bytes": 20565,
+    "gitBlob": "23a666cb419fb2fd377f5d78cdae810ef816a402",
+    "sha256": "77301a050c82a9fc1e5dbe81dce0b2dea85b7a1e86a4626749ec844252e5fe3d"
+  },
+  "causalAnalysis": {
+    "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/causal-analysis.json",
+    "bytes": 2468,
+    "gitBlob": "67c99319aec723ff6ac2a64b19dd1366ba5a89e8",
+    "sha256": "e985e6b83c6c4680199c75be8cc6e4da8fdfa5da425266bbbc1c59b3473aee30"
+  },
+  "evidenceArchive": {
+    "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/finite-evidence.tar.gz",
+    "bytes": 122375,
+    "gitBlob": "b1506f40b3962b15b66ccfd08a1ea7e1f2f99c4b",
+    "sha256": "6b9c6a2dc468ee6ff3632279922bce290a4263251fc1692a511cbd679c864362"
+  },
+  "changes": [
+    {
+      "path": "packages/legacy-agent-host/src/composition/teamRoster.ts",
+      "mode": "100644",
+      "kind": "production",
+      "before": {
+        "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/before/packages/legacy-agent-host/src/composition/teamRoster.ts",
+        "bytes": 7027,
+        "lines": 144,
+        "gitBlob": "dccbc1b57913b1f713b6f45ae75c4a0659fe22a7",
+        "sha256": "df2cec75fd0a276566d57f391fa9ddac69db334a698e3e2c0d6043bf725230ed"
+      },
+      "after": {
+        "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/after/packages/legacy-agent-host/src/composition/teamRoster.ts",
+        "bytes": 7384,
+        "lines": 154,
+        "gitBlob": "1c67bcf7d50e4ab415c3e2af3ed0ab4f5bcf8386",
+        "sha256": "6d24ab3558f6f36af846692d97db805c55533178572288af8471a6d652d2326b"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+      "mode": "100644",
+      "kind": "test",
+      "before": {
+        "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/before/packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+        "bytes": 95105,
+        "lines": 1743,
+        "gitBlob": "a36e8d8c9a74bdef6f133f522132d0847a1fde25",
+        "sha256": "0b328c82c22451867d28c7337ad6d6efd6732d441d0bfac502d54be15b26630e"
+      },
+      "after": {
+        "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/after/packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+        "bytes": 99809,
+        "lines": 1826,
+        "gitBlob": "2a88045f035b2cfae748e05d4c5664ae66e8af04",
+        "sha256": "cb72828779a52b88c38675aef761df4a8daa8c58ac3fc21ebbe5ea90e1da8cac"
+      }
+    }
+  ],
+  "independentIntegrityChecks": {
+    "absolutePinnedArtifacts": 33,
+    "allPinnedBytesLengthsSha256AndGitBlobsMatched": true,
+    "allPresentHostSourcesChecked": 628,
+    "onlyChangedHostSource": "packages/legacy-agent-host/src/composition/teamRoster.ts",
+    "missingExpectedHostSources": [
+      "packages/legacy-agent-host/src/composition/teamHostReadiness.ts"
+    ],
+    "missingSourceNotReferencedByAnyPresentHostSource": true,
+    "finiteDistResolution": "dist is a directory symlink to exact present src; the saved commands use the existing tsx loader to resolve .js import specifiers to .ts source.",
+    "preparedDeclarationsChecked": 629,
+    "preparedExternalDeclarationBytesEqualCopiedTypeView": true,
+    "originalStrictCompilerConfigsMatchBaseGitBlobs": true,
+    "focusedIncludesExactlyBothCompleteChangedFiles": true,
+    "preparedDeclarationsNotClaimedAsRegeneratedOrExactHead": true,
+    "tarRegularUniqueSafeEntriesChecked": 28,
+    "tarEntriesEqualExactEvidenceFilesSetAndLocalBytes": true,
+    "unifiedPatchReconstructedByteForByte": true,
+    "allOriginalTestLinesPreservedByInsertOnlyChanges": true,
+    "productionPrefixOutsideChangedCommentAndHelperByteIdentical": true,
+    "productionLineCount": 154,
+    "productionLineCap": 800,
+    "newProductionPaths": 0,
+    "removedProductionPaths": 0,
+    "sourceRosterOrBaselineEdits": false
+  },
+  "sourceFindings": [
+    {
+      "finding": "Exact source inconsistency exists",
+      "reason": "The original helper excluded every team without capture before any release check. Actual initial runtime entries are installed in both active and retained launch maps. Model configuration consequently read the retained seed while prospective capture used the currently published recipe source. The finite published-B fixture exposes this mismatch without allocating a runtime."
+    },
+    {
+      "finding": "Only the actual initial-seed shape gains eligibility",
+      "reason": "The new seed predicate requires capture, configurationRevision and launchId all absent. Malformed partial captures remain ineligible. Both seed and complete capture still require no admission, null startedAtMs and every attempt unclaimed."
+    },
+    {
+      "finding": "Existing custody and roster census is retained",
+      "reason": "The new path calls unchanged assertCapturedRosterCurrent and visits every retained launch for this team. Unchanged assertRosterEditable checks member-action pending state, delivery binding digest, actual runtime attachment/record, attempt presence, released custody, settled inputs, resolved interactions and closed or completely unopened/unsealed/unclaimed state. Initial seed installation inserts its own retained launch, so the normal initialized seed path is not a vacuous census."
+    },
+    {
+      "finding": "Seed fallback does not grant prospective authority",
+      "reason": "A seed-only exception returns false. Existing executeRuntimeLaunch then preserves retained configuration.read, and the saved-model probe boundary rejects prospective evidence with saved-model-runtime-history. launch.read is inside this fallback so unavailable seed reads preserve the old short-circuit behavior."
+    },
+    {
+      "finding": "Complete-capture behavior remains strict",
+      "reason": "Complete captures execute the same neverStarted/current-roster/all-retained checks. Their caught exceptions are immediately rethrown; no complete-capture failure is converted to eligibility or a successful read."
+    },
+    {
+      "finding": "Readiness evidence remains source-bound",
+      "reason": "The positive fixture checks published B as the executable target, zero allocations, no runtime capture publication and unchanged files; retained launch identity remains the original run. Publishing C invalidates the original prospective probe and stale input is rejected. Existing operator-grant and stale-source tests remain selected."
+    },
+    {
+      "finding": "Four guard cases exercise retained reads and prospective refusal",
+      "reason": "The added tests use actual RuntimeOwner readCapturedSession with bounded overrides for attached, held/unknown custody, admitted input and unavailable read. Each preserves retained model source, invalidates prospective evidence and refuses a new probe, with zero allocations and unchanged files. These finite mocked observations are not native process acceptance."
+    }
+  ],
+  "finiteEvidenceReview": {
+    "testsRerunByReviewer": false,
+    "finalTestBlob": "2a88045f035b2cfae748e05d4c5664ae66e8af04",
+    "sameFinalTestBeforeAndAfter": true,
+    "baseline": {
+      "record": {
+        "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/finite-final-cohort-before.json",
+        "bytes": 8870,
+        "gitBlob": "6632f81bdf5443226d25d6cab9d2f51e3d11922c",
+        "sha256": "52a3ba50a07b4b473ca803131091bc88d54daca2bdbb3ead32804be1bc30caae"
+      },
+      "sourceBlob": "dccbc1b57913b1f713b6f45ae75c4a0659fe22a7",
+      "tests": 10,
+      "pass": 5,
+      "fail": 5,
+      "skipped": 0,
+      "cancelled": 0
+    },
+    "candidate": {
+      "record": {
+        "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/finite-final-cohort-after.json",
+        "bytes": 4866,
+        "gitBlob": "79c994a4383090f49a800cc8833e055de2087cff",
+        "sha256": "2ab9f743e9ff1473e90b187a2a6fde209d3e3bd6bfd8bb571994d024638b5c77"
+      },
+      "sourceBlob": "1c67bcf7d50e4ab415c3e2af3ed0ab4f5bcf8386",
+      "tests": 10,
+      "pass": 10,
+      "fail": 0,
+      "skipped": 0,
+      "cancelled": 0
+    },
+    "minimalPatchGuardCounterexample": {
+      "record": {
+        "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/finite-minimal-guard-before.json",
+        "bytes": 9894,
+        "gitBlob": "5d5d799710b4babf637afc4dcb58720821d6ea38",
+        "sha256": "64386c439f58d3d45000c52c700a939a09ba47cec1d5861bee78baaa1bdc2f53"
+      },
+      "sourceBlob": "de28635ca9b17c339efa4566bb32263202e9e9cf",
+      "sameFinalTest": true,
+      "tests": 5,
+      "pass": 1,
+      "fail": 4
+    },
+    "finalGuards": {
+      "record": {
+        "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/finite-final-guards.json",
+        "bytes": 3264,
+        "gitBlob": "1954e305dce23746dc3c6837a8327797fdd2b9db",
+        "sha256": "b39d3d8048808f6c58daf0b73050ffc3289261350c19c7d6345fdf9a3b5da397"
+      },
+      "tests": 5,
+      "pass": 5,
+      "fail": 0
+    },
+    "allSixSemanticRecordExitCountsAndBeforeAfterPinsAgree": true,
+    "allSixRecordedRuntimeGuardAttemptListsEmpty": true,
+    "runtimeGuard": {
+      "path": "/workspace/scratch/c714f5bce554/review-capture-42-analysis/finite-runtime-guard.mjs",
+      "bytes": 705,
+      "gitBlob": "6e68592542802b1afc525bc6bbf0783cfa86e143",
+      "sha256": "d5befad8270251061f1c017ffc00003b65d15957fe9ca0b74781cae0aeb593ab"
+    },
+    "runtimeGuardScope": "Existing guard rejects child_process spawn/spawnSync/exec/execSync/execFile/execFileSync/fork, net.Socket.connect, net.Server.listen and global fetch; saved finite records report zero attempts. This is not a claim of a complete OS sandbox.",
+    "setupFailuresExcludedFromRegressionClaims": true
+  },
+  "typeEvidenceReview": {
+    "successfulRecord": {
+      "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/declaration-backed-focused-typecheck.json",
+      "bytes": 1436,
+      "gitBlob": "ff3686b73d4f3b1032f1e17ff059cea679b3b4d0",
+      "sha256": "0b1b4b91ed2d5ffbc0a50d538871eaa80c55e9e59eb1fb1da6fe72930e291103"
+    },
+    "exit": 0,
+    "scope": "Full final production helper and full final test file under unchanged strict compiler options, noEmit, with 629 unchanged existing prepared dependency declarations. These declarations were not rebuilt and are not asserted to be exact-head transitive outputs.",
+    "changedFileBeforeAfterPinsMatchFinalCandidate": true,
+    "priorTransitiveAttempt": {
+      "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/focused-typecheck.json",
+      "bytes": 625,
+      "gitBlob": "5d791114296bd4a03a7335701dd4d32204613a58",
+      "sha256": "100b2353b02a9901c65bfb9369e95f8416c55b1f96397c288d32fdcee0826481"
+    },
+    "priorExit": -9,
+    "priorAttemptQualifiedAsPass": false,
+    "fullProjectTypecheckOrBuildClaimed": false
+  },
+  "sourcePins": [
+    {
+      "path": "/workspace/scratch/c714f5bce554/review-capture-42-analysis/verify-runtime/packages/legacy-agent-host/src/composition/teamRoster.ts",
+      "bytes": 7384,
+      "gitBlob": "1c67bcf7d50e4ab415c3e2af3ed0ab4f5bcf8386",
+      "sha256": "6d24ab3558f6f36af846692d97db805c55533178572288af8471a6d652d2326b",
+      "repositoryPath": "packages/legacy-agent-host/src/composition/teamRoster.ts",
+      "baseGitBlob": "dccbc1b57913b1f713b6f45ae75c4a0659fe22a7"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/review-capture-42-analysis/verify-runtime/packages/legacy-agent-host/src/composition/executeRuntimeLaunch.ts",
+      "bytes": 13802,
+      "gitBlob": "2b4704eb7c2357fc3e4f045e8469031ff6b326e7",
+      "sha256": "6ff91cfd79f5bb5f2194bac43785bd3c0a2fea874cc121e111a9a0daacf0bb32",
+      "repositoryPath": "packages/legacy-agent-host/src/composition/executeRuntimeLaunch.ts",
+      "baseGitBlob": "2b4704eb7c2357fc3e4f045e8469031ff6b326e7"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/review-capture-42-analysis/verify-runtime/packages/legacy-agent-host/src/composition/savedTeamModelProbe.ts",
+      "bytes": 9614,
+      "gitBlob": "28820fd5d5380410512146b8900a532b9aba6ec2",
+      "sha256": "d9fbc331931e379c0d665a3d66fda0525f241fc129b7f58c5bf500630f29377b",
+      "repositoryPath": "packages/legacy-agent-host/src/composition/savedTeamModelProbe.ts",
+      "baseGitBlob": "28820fd5d5380410512146b8900a532b9aba6ec2"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/review-capture-42-analysis/verify-runtime/packages/legacy-agent-host/src/composition/createRuntimeTeamLaunch.ts",
+      "bytes": 8710,
+      "gitBlob": "7a1b2c1e8641d11a4cc5e4525b1a89fd0193418e",
+      "sha256": "3bbf8f1ce6c0ff67e1bcccbe1d69dd58c0ce5bffe5453884a9136014573db8bb",
+      "repositoryPath": "packages/legacy-agent-host/src/composition/createRuntimeTeamLaunch.ts",
+      "baseGitBlob": "7a1b2c1e8641d11a4cc5e4525b1a89fd0193418e"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/review-capture-42-analysis/verify-runtime/packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts",
+      "bytes": 35094,
+      "gitBlob": "c500e8e7377c600587790dc494ea673381f4791c",
+      "sha256": "9496e03c3b78466d84fa54a9854f2531cef733937c45ab174132def8f4faecf2",
+      "repositoryPath": "packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts",
+      "baseGitBlob": "c500e8e7377c600587790dc494ea673381f4791c"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/review-capture-42-analysis/verify-runtime/packages/legacy-agent-host/src/composition/runtimeLaunchMembers.ts",
+      "bytes": 854,
+      "gitBlob": "62a7d1efb66c762d1a73485237181e3f15691bb5",
+      "sha256": "2aa4ce7e6c7ca17fb8afce53b6654ee5e51130392426ecc9d5eaed8687186022",
+      "repositoryPath": "packages/legacy-agent-host/src/composition/runtimeLaunchMembers.ts",
+      "baseGitBlob": "62a7d1efb66c762d1a73485237181e3f15691bb5"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/review-capture-42-analysis/verify-runtime/packages/legacy-agent-host/src/composition/createMemberEntry.ts",
+      "bytes": 4974,
+      "gitBlob": "48e6e6ca24e09966297a2461bd1b3b0abd14ed17",
+      "sha256": "f4f52b07de19852ce4cff6909f4a7fa7198f84576cb5d71282ea7e1c47fcf647",
+      "repositoryPath": "packages/legacy-agent-host/src/composition/createMemberEntry.ts",
+      "baseGitBlob": "48e6e6ca24e09966297a2461bd1b3b0abd14ed17"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/review-capture-42-analysis/verify-runtime/packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+      "bytes": 31106,
+      "gitBlob": "26b56c5a842fc59054aef11052a205f7dfeb2428",
+      "sha256": "b62e758155cdbd20a4759e1d41c1e678b652d391f40185952317eccb7ebc2821",
+      "repositoryPath": "packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+      "baseGitBlob": "26b56c5a842fc59054aef11052a205f7dfeb2428"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/review-capture-42-analysis/verify-runtime/packages/legacy-agent-host/src/runtime/settledRuntimeInput.ts",
+      "bytes": 360,
+      "gitBlob": "9f64cd40614d9040bd55207970e0b40b16968a98",
+      "sha256": "4638bca51124f650ed8236b43cc59c6d56ff64988681cd112fbf9ede45b0ffa4",
+      "repositoryPath": "packages/legacy-agent-host/src/runtime/settledRuntimeInput.ts",
+      "baseGitBlob": "9f64cd40614d9040bd55207970e0b40b16968a98"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/review-capture-42-analysis/verify-runtime/packages/legacy-agent-host/src/team-launch/TeamLaunchOwner.ts",
+      "bytes": 36114,
+      "gitBlob": "c069249fdaef5ee789ed5e8445b6222bd5fc2238",
+      "sha256": "2e1751eeabd373b1b52432a662255d1c092f64a42a1a1eee7dcd581b8efe6c86",
+      "repositoryPath": "packages/legacy-agent-host/src/team-launch/TeamLaunchOwner.ts",
+      "baseGitBlob": "c069249fdaef5ee789ed5e8445b6222bd5fc2238"
+    }
+  ],
+  "limitations": [
+    "Original Review job 135261471191 reported capture-result-unknown. Its private inner cause and original source publication ordering are absent, so this independent source regression is not asserted as the complete original failure cause.",
+    "No original Review E2E, native process, real provider, packaged application or full project acceptance is granted by this report.",
+    "The finite source view is sparse by one unreferenced source file. It is not a complete exact-head project build.",
+    "No production source, test, frozen candidate artifact, external checkout, ref or index was changed by this review. Only this separate reviewer report is added."
+  ],
+  "reviewerActions": {
+    "sourceEdits": 0,
+    "testExecutions": 0,
+    "nativeOrAppExecutions": 0,
+    "ciRequests": 0,
+    "refsOrIndexWrites": 0,
+    "frozenCandidateFilesOverwritten": 0
+  }
+}

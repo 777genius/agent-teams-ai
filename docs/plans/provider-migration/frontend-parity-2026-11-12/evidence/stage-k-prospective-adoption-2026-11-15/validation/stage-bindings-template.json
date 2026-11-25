@@ -1,0 +1,92 @@
+{
+  "stage": "K",
+  "status": "PROSPECTIVE ONLY; no source applied or commands run; fill only after published full readback and independent approval",
+  "manifest": {
+    "bytes": 223781,
+    "blob": "9ee92856321b14011122258e39e638ec1ca862b1",
+    "sha256": "3ee139e0911084f4a37bf944ef8594b8a80e72068f4a131be264ce731099037b"
+  },
+  "recorder": {
+    "bytes": 21172,
+    "blob": "7766822c39ed7581c1f8d883d34e33069e3170ac",
+    "sha256": "599f2e5c57cb57afa53e9666d57ccc087c242ac0ba362bffa3e2edb10ea1906b"
+  },
+  "independentValidationReview": {
+    "path": null,
+    "bytes": null,
+    "blob": null,
+    "sha256": null
+  },
+  "documentation": {
+    "head": null,
+    "tree": null,
+    "parents": [
+      "9df2adf381b5965315634f68f2f105fa7fb6fb6e"
+    ],
+    "planBlob": null,
+    "readback": {
+      "path": null,
+      "bytes": null,
+      "blob": null,
+      "sha256": null
+    },
+    "validationPaths": {
+      "manifest": null,
+      "recorder": null,
+      "hostSourceClosure": null,
+      "ledgerTrackedClosure": null
+    }
+  },
+  "source": {
+    "head": null,
+    "tree": null,
+    "parents": [
+      null,
+      "27b1acf48278dcd0fb348c626696eac2dc64de73"
+    ],
+    "readback": {
+      "path": null,
+      "bytes": null,
+      "blob": null,
+      "sha256": null
+    }
+  },
+  "requiredReviewFields": {
+    "independentValidationReview": {
+      "result": "APPROVE",
+      "manifest": {
+        "bytes": 223781,
+        "blob": "9ee92856321b14011122258e39e638ec1ca862b1",
+        "sha256": "3ee139e0911084f4a37bf944ef8594b8a80e72068f4a131be264ce731099037b"
+      },
+      "recorder": {
+        "bytes": 21172,
+        "blob": "7766822c39ed7581c1f8d883d34e33069e3170ac",
+        "sha256": "599f2e5c57cb57afa53e9666d57ccc087c242ac0ba362bffa3e2edb10ea1906b"
+      },
+      "canonicalR1": {
+        "bytes": 14216,
+        "blob": "fafc04e3a13dcc7b29756e196141ac148875ac30",
+        "sha256": "724d7e5787d53ddb3e0ca7b308b53256db21f8bd7bb00d28e6dfd509e5be2d8c"
+      },
+      "sourceContract": {
+        "bytes": 55002,
+        "blob": "6902dec99e572a2070ebf6257cccfb4fe3f30af6",
+        "sha256": "ce551d324c677bf00168f908535025a88b07ad296f792d5f8e17216bf4871a5a"
+      }
+    },
+    "readbacks": {
+      "result": "APPROVE",
+      "independentReadbackExact": true,
+      "head": "actual corresponding published commit",
+      "tree": "actual corresponding full tree",
+      "parents": "exact ordered parents",
+      "sourceOnlyExactChangedPaths": "sorted 46 declared source paths in source readback field exactChangedPaths"
+    }
+  },
+  "limits": [
+    "Null publication/review fields are intentionally unusable. Final stage-bindings.json is a separate actual record; no rewriting this prospective template.",
+    "Recorder requires exact immutable review and readback file identities and independently checks Git source/doc trees, published recorder/manifest, complete declared source and output closures.",
+    "No project commands, Node, compiler, lint, tests, native processes, providers, workflow dispatch/rerun/cancel or tracked/ref changes were performed while preparing these files."
+  ]
+}

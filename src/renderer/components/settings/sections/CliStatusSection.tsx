@@ -578,8 +578,7 @@ export const CliStatusSection = (): React.JSX.Element | null => {
                                     type="button"
                                     onClick={() => handleProviderManage(provider.providerId)}
                                     disabled={
-                                      !effectiveCliStatus.binaryPath &&
-                                      provider.nativeAuthManagement !== 'claude'
+                                      !effectiveCliStatus.installed || isBusy || cliStatusLoading
                                     }
                                     className="flex items-center gap-1 rounded-md border px-2 py-[3px] text-[10px] font-medium transition-colors hover:bg-white/5 disabled:opacity-50"
                                     style={{

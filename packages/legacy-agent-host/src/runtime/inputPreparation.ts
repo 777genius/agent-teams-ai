@@ -31,6 +31,8 @@ export interface InputPreparationRequest {
   operationRef: string;
   intentFingerprint: string;
   originalContentBytes: number;
+  /** Original immutable input; composition may preserve native command syntax without a prefix. */
+  originalContent: string;
   epochs: readonly RuntimeContextEpoch[];
   priorProofs: readonly PreparedInputProof[];
 }

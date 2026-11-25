@@ -1,0 +1,202 @@
+{
+  "kind": "strict-host-build",
+  "sourceHead": "e754d23317ae5c8d12f48b2ece39a91167e40481",
+  "scope": "Host production source; Main work may continue independently",
+  "command": [
+    "pnpm",
+    "--config.verify-deps-before-run=false",
+    "exec",
+    "node",
+    "node_modules/@typescript/native/bin/tsc",
+    "-p",
+    "packages/legacy-agent-host/tsconfig.json",
+    "--singleThreaded"
+  ],
+  "compilerProfile": {
+    "GOMEMLIMIT": "512MiB",
+    "GOGC": "50",
+    "GOMAXPROCS": "2"
+  },
+  "timeoutSeconds": 60,
+  "exitCode": 0,
+  "error": null,
+  "elapsedSeconds": 10.064,
+  "before": [
+    {
+      "name": "Node",
+      "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/resources/legacy-agent-host/node/v24.21.0/linux-x64/node",
+      "expected": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+      "actual": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c"
+    },
+    {
+      "name": "Host entry",
+      "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/packages/legacy-agent-host/dist/cli.js",
+      "expected": "4e1841072540175636a776082693780021827ce56d0b5c2aa11f9e8511d132ba",
+      "actual": "4e1841072540175636a776082693780021827ce56d0b5c2aa11f9e8511d132ba"
+    },
+    {
+      "name": "Corepack pnpm",
+      "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/runner/TEST-emulated-ui-inputs-HHScGL/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+      "expected": "7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb",
+      "actual": "7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb"
+    },
+    {
+      "name": "Corepack package",
+      "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/runner/TEST-emulated-ui-inputs-HHScGL/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/package.json",
+      "expected": "6f431b9a91afe6b4757f4b5a3855e2f79e2f366dd4242fd397713932aa3a2714",
+      "actual": "6f431b9a91afe6b4757f4b5a3855e2f79e2f366dd4242fd397713932aa3a2714"
+    },
+    {
+      "name": "Corepack library",
+      "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/runner/TEST-emulated-ui-inputs-HHScGL/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/lib/corepack.cjs",
+      "expected": "abd6f0e7b4e2af310243e202fd908ea64cda545786222f0a3d3f62426e8ad66e",
+      "actual": "abd6f0e7b4e2af310243e202fd908ea64cda545786222f0a3d3f62426e8ad66e"
+    },
+    {
+      "name": "Linux child manifest",
+      "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/runner/TEST-emulated-ui-inputs-HHScGL/linux-child-exec/manifest.json",
+      "expected": "505872c5c4aab8179b4bbdeada091dce5d55a8a86e5cc0b689e35ffdb9e73187",
+      "actual": "505872c5c4aab8179b4bbdeada091dce5d55a8a86e5cc0b689e35ffdb9e73187"
+    },
+    {
+      "name": "Linux child binary",
+      "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/runner/TEST-emulated-ui-inputs-HHScGL/linux-child-exec/linux-child-exec",
+      "expected": "4e823c9e62038d770804475badca3982ecd630d95d9dd39e6f655f05cffda5e0",
+      "actual": "4e823c9e62038d770804475badca3982ecd630d95d9dd39e6f655f05cffda5e0"
+    },
+    {
+      "name": "Linux child source",
+      "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/packages/legacy-agent-host/native/linux-child-exec.c",
+      "expected": "29f122efc95f3b8f4946e624d6d0afd70959f3759499cee4d23bae269c805337",
+      "actual": "29f122efc95f3b8f4946e624d6d0afd70959f3759499cee4d23bae269c805337"
+    },
+    {
+      "name": "Linux node launcher manifest",
+      "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/resources/process-launch/linux-x64/manifest.json",
+      "expected": "5399cf3ac1e806d625a0ad5020d5f92d558bdc7860a9da74c7d9fd074388d9ed",
+      "actual": "5399cf3ac1e806d625a0ad5020d5f92d558bdc7860a9da74c7d9fd074388d9ed"
+    },
+    {
+      "name": "Linux node launcher binary",
+      "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/resources/process-launch/linux-x64/node-exec",
+      "expected": "ed190126a9f4b607ba101ac970ca3da0cfbf76fb30cbb0e9065782a21b66194d",
+      "actual": "ed190126a9f4b607ba101ac970ca3da0cfbf76fb30cbb0e9065782a21b66194d"
+    },
+    {
+      "name": "Linux node launcher source",
+      "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/tools/linux-node-exec/close-fds-exec.c",
+      "expected": "4a6e27406a7c1125cadcef66fc54cf10160b82d920a9b7d516f01ca467426dd3",
+      "actual": "4a6e27406a7c1125cadcef66fc54cf10160b82d920a9b7d516f01ca467426dd3"
+    },
+    {
+      "name": "Xvfb wrapper",
+      "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/sysroot/usr/bin/xvfb-run",
+      "expected": "97e86a102eee7212bfa3bf87d452b27dd4f16ef6e68658eeae20bca63db2ceee",
+      "actual": "97e86a102eee7212bfa3bf87d452b27dd4f16ef6e68658eeae20bca63db2ceee"
+    },
+    {
+      "name": "Xvfb binary",
+      "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/sysroot/usr/bin/Xvfb",
+      "expected": "16667b1eaafbe0b09527c2152e45f81b4b8e977012281062fc2fb2427afa66ce",
+      "actual": "16667b1eaafbe0b09527c2152e45f81b4b8e977012281062fc2fb2427afa66ce"
+    },
+    {
+      "name": "Shared post-exit collector",
+      "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/collect-gui-receipt.py",
+      "expected": "aba116ed472eddf25efc500f03f858ffcf7359a22e083a59655c167d450f00bf",
+      "actual": "aba116ed472eddf25efc500f03f858ffcf7359a22e083a59655c167d450f00bf"
+    }
+  ],
+  "after": [
+    {
+      "name": "Node",
+      "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/resources/legacy-agent-host/node/v24.21.0/linux-x64/node",
+      "expected": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+      "actual": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c"
+    },
+    {
+      "name": "Host entry",
+      "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/packages/legacy-agent-host/dist/cli.js",
+      "expected": "4e1841072540175636a776082693780021827ce56d0b5c2aa11f9e8511d132ba",
+      "actual": "4e1841072540175636a776082693780021827ce56d0b5c2aa11f9e8511d132ba"
+    },
+    {
+      "name": "Corepack pnpm",
+      "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/runner/TEST-emulated-ui-inputs-HHScGL/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+      "expected": "7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb",
+      "actual": "7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb"
+    },
+    {
+      "name": "Corepack package",
+      "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/runner/TEST-emulated-ui-inputs-HHScGL/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/package.json",
+      "expected": "6f431b9a91afe6b4757f4b5a3855e2f79e2f366dd4242fd397713932aa3a2714",
+      "actual": "6f431b9a91afe6b4757f4b5a3855e2f79e2f366dd4242fd397713932aa3a2714"
+    },
+    {
+      "name": "Corepack library",
+      "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/runner/TEST-emulated-ui-inputs-HHScGL/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/lib/corepack.cjs",
+      "expected": "abd6f0e7b4e2af310243e202fd908ea64cda545786222f0a3d3f62426e8ad66e",
+      "actual": "abd6f0e7b4e2af310243e202fd908ea64cda545786222f0a3d3f62426e8ad66e"
+    },
+    {
+      "name": "Linux child manifest",
+      "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/runner/TEST-emulated-ui-inputs-HHScGL/linux-child-exec/manifest.json",
+      "expected": "505872c5c4aab8179b4bbdeada091dce5d55a8a86e5cc0b689e35ffdb9e73187",
+      "actual": "505872c5c4aab8179b4bbdeada091dce5d55a8a86e5cc0b689e35ffdb9e73187"
+    },
+    {
+      "name": "Linux child binary",
+      "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/runner/TEST-emulated-ui-inputs-HHScGL/linux-child-exec/linux-child-exec",
+      "expected": "4e823c9e62038d770804475badca3982ecd630d95d9dd39e6f655f05cffda5e0",
+      "actual": "4e823c9e62038d770804475badca3982ecd630d95d9dd39e6f655f05cffda5e0"
+    },
+    {
+      "name": "Linux child source",
+      "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/packages/legacy-agent-host/native/linux-child-exec.c",
+      "expected": "29f122efc95f3b8f4946e624d6d0afd70959f3759499cee4d23bae269c805337",
+      "actual": "29f122efc95f3b8f4946e624d6d0afd70959f3759499cee4d23bae269c805337"
+    },
+    {
+      "name": "Linux node launcher manifest",
+      "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/resources/process-launch/linux-x64/manifest.json",
+      "expected": "5399cf3ac1e806d625a0ad5020d5f92d558bdc7860a9da74c7d9fd074388d9ed",
+      "actual": "5399cf3ac1e806d625a0ad5020d5f92d558bdc7860a9da74c7d9fd074388d9ed"
+    },
+    {
+      "name": "Linux node launcher binary",
+      "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/resources/process-launch/linux-x64/node-exec",
+      "expected": "ed190126a9f4b607ba101ac970ca3da0cfbf76fb30cbb0e9065782a21b66194d",
+      "actual": "ed190126a9f4b607ba101ac970ca3da0cfbf76fb30cbb0e9065782a21b66194d"
+    },
+    {
+      "name": "Linux node launcher source",
+      "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/tools/linux-node-exec/close-fds-exec.c",
+      "expected": "4a6e27406a7c1125cadcef66fc54cf10160b82d920a9b7d516f01ca467426dd3",
+      "actual": "4a6e27406a7c1125cadcef66fc54cf10160b82d920a9b7d516f01ca467426dd3"
+    },
+    {
+      "name": "Xvfb wrapper",
+      "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/sysroot/usr/bin/xvfb-run",
+      "expected": "97e86a102eee7212bfa3bf87d452b27dd4f16ef6e68658eeae20bca63db2ceee",
+      "actual": "97e86a102eee7212bfa3bf87d452b27dd4f16ef6e68658eeae20bca63db2ceee"
+    },
+    {
+      "name": "Xvfb binary",
+      "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/sysroot/usr/bin/Xvfb",
+      "expected": "16667b1eaafbe0b09527c2152e45f81b4b8e977012281062fc2fb2427afa66ce",
+      "actual": "16667b1eaafbe0b09527c2152e45f81b4b8e977012281062fc2fb2427afa66ce"
+    },
+    {
+      "name": "Shared post-exit collector",
+      "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/collect-gui-receipt.py",
+      "expected": "aba116ed472eddf25efc500f03f858ffcf7359a22e083a59655c167d450f00bf",
+      "actual": "aba116ed472eddf25efc500f03f858ffcf7359a22e083a59655c167d450f00bf"
+    }
+  ],
+  "all14PinsRetained": true,
+  "log": {
+    "path": "/workspace/scratch/de9d4631e21c/host-build-e754d233.log",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+}

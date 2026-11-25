@@ -1,26 +1,296 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, realpathSync, rmSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { OpenCodeV2ManagementHost } from '../dist/adapters/providers/OpenCodeV2ManagementHost.js';
+import { OpenCodeV2CredentialScope } from '../dist/adapters/providers/OpenCodeV2CredentialScope.js';
+import { captureOpenCodeConfigurationSource } from '../dist/adapters/providers/OpenCodeConfigurationSource.js';
+import { FileManagementCommandStore } from '../dist/adapters/providers/FileManagementCommandStore.js';
 import { ProviderManagementCoordinator } from '../dist/composition/ProviderManagementCoordinator.js';
+import { CredentialCommandOwner } from '../dist/management/CredentialCommandOwner.js';
+import { managementDigest } from '../dist/management/identity.js';
 import { openCodeManagementProfileSchema } from '../dist/management/profile.js';
+
+function testProfile(root: string) {
+  return openCodeManagementProfileSchema.parse({
+    provider: 'opencode', nativeGeneration: 'v2', protocolRevision: '2.1.4',
+    profileId: 'TEST-profile', configRevision: 'TEST-config', accountBinding: 'TEST-account',
+    cwd: root, executable: { path: join(root, 'TEST-bun'), sha256: 'a'.repeat(64) },
+    environment: Object.fromEntries(['HOME', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_CACHE_HOME']
+      .map(key => [key, root])),
+    endpoint: 'http://127.0.0.1:19332', timeoutMs: 1000,
+    nativeModel: { providerId: 'TEST-provider', modelId: 'TEST-model' },
+    embedded: { version: '2.1.4', platform: process.platform, arch: process.arch,
+      directory: join(root, 'engine'), manifestSha256: 'b'.repeat(64), externalDirectory: 'deny' },
+  });
+}
+
+test('only the same account rejected publication admits corrected Connect across source revisions', async t => {
+  let admissions = 0;
+  t.mock.method(OpenCodeV2ManagementHost.prototype, 'keyOperation', async () => {
+    admissions++;
+    throw new Error('TEST ends at original native admission; no native connection is simulated');
+  });
+  for (const scenario of ['same-account', 'account-changed', 'home-changed', 'key-changed', 'later-success', 'unknown'] as const) {
+    const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-v2-key-revision-')));
+    const profile = testProfile(root), store = new FileManagementCommandStore(root);
+    const directories = Object.fromEntries(['HOME', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_CACHE_HOME'].map(key => {
+      const path = profile.environment[key]!, stat = statSync(path);
+      return [key, { path, dev: stat.dev, ino: stat.ino }];
+    }));
+    const target = { profileId: profile.profileId, configRevision: profile.configRevision,
+      selectionDigest: managementDigest({ profile, directories }), resourceId: managementDigest(directories.XDG_DATA_HOME) };
+    let accepted = false;
+    // Controlled native progress goes through the real command owner, validator, private auth publication and journal.
+    const originalOwner = new CredentialCommandOwner({ store, assertCurrent() {},
+      select: () => target,
+      async perform(command, _target, progress) {
+        if (command.kind !== 'credential.set') throw new Error('TEST only sets its own key');
+        const scope = new OpenCodeV2CredentialScope(profile, command.providerId, () => true);
+        const publication = scope.prepare(command.key);
+        const base = { integrationId: 'TEST-integration', nativeNamespace: managementDigest({ profile, commandId: command.commandId }),
+          beforeAuthDigest: publication.before.digest };
+        progress({ ...base, phase: 'key-intent' });
+        const connected = { ...base, credentialId: 'cred_TEST' };
+        progress({ ...connected, phase: 'key-connected' });
+        const published = { ...connected, authDigest: publication.publish().digest };
+        progress({ ...published, phase: 'key-published' });
+        const verification = { commandId: 'TEST-verify-' + command.commandId, modelId: 'TEST-provider/TEST-model' };
+        progress({ ...published, phase: 'probe-intent', verification });
+        progress({ ...published, phase: 'probe-completed', verification: { ...verification, ok: accepted } });
+        return { ok: accepted, settled: true, ...(!accepted && scenario !== 'unknown' ? { rejected: true } : {}) };
+      },
+    });
+    const originalCommand = { profileId: profile.profileId, configRevision: profile.configRevision,
+      providerId: 'TEST-provider', commandId: 'TEST-rejected', kind: 'credential.set' as const, key: 'TEST-rejected-key' };
+    const originalReceipt = await originalOwner.execute(originalCommand);
+    const originalRecord = store.read(originalCommand.commandId);
+    const selected = { ...profile, profileId: 'runtime-source:' + 'c'.repeat(64), configRevision: 'c'.repeat(64) };
+    if (scenario === 'account-changed') selected.accountBinding = 'TEST-other-account';
+    if (scenario === 'home-changed') {
+      const home = join(root, 'TEST-other-home'); mkdirSync(home, { mode: 0o700 });
+      selected.environment = { ...profile.environment, HOME: home };
+    }
+    if (scenario === 'key-changed') writeFileSync(join(root, 'opencode/auth.json'),
+      JSON.stringify({ 'TEST-provider': { type: 'api', key: 'TEST-independent-key' } }), { mode: 0o600 });
+    if (scenario === 'later-success') {
+      accepted = true;
+      assert.equal((await originalOwner.execute({ ...originalCommand, commandId: 'TEST-later-success' })).phase, 'completed');
+    }
+    // A cold Coordinator restores the original retained profile alongside the newly selected source profile.
+    const owner = new ProviderManagementCoordinator([profile, selected], () => {}, root);
+    admissions = 0;
+    try {
+      const command = { ...originalCommand, profileId: selected.profileId, configRevision: selected.configRevision,
+        commandId: 'TEST-new-explicit-connect', key: scenario === 'unknown' ? originalCommand.key : 'TEST-corrected-key' };
+      if (scenario === 'same-account') {
+        assert.equal((await owner.credentials.execute(command)).phase, 'held', 'TEST stops before any native effect');
+        assert.equal(admissions, 1, 'both validation and effect admission preserve original rejection authority');
+      } else {
+        await assert.rejects(owner.credentials.execute(command), { code: scenario === 'unknown' ? 'conflict' : 'held' });
+        assert.equal(admissions, 0, scenario);
+      }
+      assert.deepEqual(owner.credentials.lookup({ profileId: profile.profileId, configRevision: profile.configRevision,
+        commandId: originalCommand.commandId }), originalReceipt);
+      assert.deepEqual(store.read(originalCommand.commandId), originalRecord, 'new source never rewrites the original receipt');
+      assert.equal(new OpenCodeV2CredentialScope(profile, originalCommand.providerId, () => true).capture().readKey(),
+        scenario === 'key-changed' ? 'TEST-independent-key' : originalCommand.key);
+    } finally { await owner.close(); rmSync(root, { recursive: true, force: true }); }
+  }
+});
+
+test('credential-absent catalog triplet keeps one owner and three fresh read results', async t => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-v2-catalog-absent-')));
+  const profile = testProfile(root);
+  profile.embedded!.providerConfiguration = { package: 'aisdk:@ai-sdk/openai-compatible',
+    settings: { baseURL: 'http://127.0.0.1:19332/v1', apiKey: 'TEST-LOCALHOST-ONLY' } };
+  const request = { profileId: profile.profileId, configRevision: profile.configRevision };
+  const entered = Promise.withResolvers<void>(), release = Promise.withResolvers<void>();
+  const calls: { host: OpenCodeV2ManagementHost; providerId: string | undefined;
+    includeModels: boolean | undefined; deadline: number | undefined; result: { profileId: string;
+      configRevision: string; configuredDefaultModelId: string; providers: [] } }[] = [];
+  const closed: OpenCodeV2ManagementHost[] = [];
+  let clock = Date.now(); const admittedAt = clock;
+  t.mock.method(Date, 'now', () => clock);
+  t.mock.method(OpenCodeV2ManagementHost.prototype, 'catalog', async function (
+    this: OpenCodeV2ManagementHost, providerId?: string, includeModels?: boolean, deadline?: number
+  ) {
+    const result = { ...request, configuredDefaultModelId: 'TEST-read-' + (calls.length + 1), providers: [] as [] };
+    calls.push({ host: this, providerId, includeModels, deadline, result });
+    if (calls.length === 1) { entered.resolve(); await release.promise; }
+    return result;
+  });
+  t.mock.method(OpenCodeV2ManagementHost.prototype, 'close', async function (this: OpenCodeV2ManagementHost) {
+    closed.push(this); return true;
+  });
+  const owner = new ProviderManagementCoordinator([profile], () => {}, root);
+  try {
+    const status = owner.catalog({ ...request, includeModels: true });
+    await entered.promise;
+    clock += 11; const directory = owner.catalog(request);
+    clock += 7; const explicit = owner.catalog({ ...request, providerId: profile.nativeModel!.providerId });
+    await Promise.resolve(); assert.equal(calls.length, 1); assert.equal(closed.length, 0);
+    release.resolve();
+    const results = await Promise.all([status, directory, explicit]);
+    assert.equal(calls.length, 3, 'each original request invokes catalog separately');
+    assert.equal(new Set(results).size, 3, 'no result coalescing or cross-read cache');
+    results.forEach((result, index) => assert.equal(result, calls[index]!.result));
+    assert.deepEqual(calls.map(call => [call.providerId, call.includeModels]),
+      [[undefined, true], [undefined, undefined], [profile.nativeModel!.providerId, undefined]]);
+    assert.deepEqual(calls.map(call => call.deadline), [0, 11, 18].map(offset => admittedAt + offset + profile.timeoutMs));
+    assert.equal(new Set(calls.map(call => call.host)).size, 1, 'one original credential-absent default-provider owner');
+    assert.equal(closed.length, 0, 'no unnecessary intermediate native owner retirement');
+  } finally {
+    release.resolve(); await owner.close().catch(() => {}); rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('overlapping V2 status and directory reads preserve the active owner and original deadlines', async t => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-v2-catalog-overlap-')));
+  const profile = testProfile(root);
+  mkdirSync(join(root, 'opencode'), { mode: 0o700 });
+  writeFileSync(join(root, 'opencode/auth.json'), JSON.stringify({ 'TEST-provider': { type: 'api', key: 'TEST-original-key' } }), { mode: 0o600 });
+  const originalFailure = new Error('TEST original read failed');
+  const catalog = { profileId: profile.profileId, configRevision: profile.configRevision,
+    configuredDefaultModelId: null, providers: [] };
+  const calls: { host: OpenCodeV2ManagementHost; deadline: number | undefined }[] = [];
+  const closed = new Set<OpenCodeV2ManagementHost>();
+  const observations: { requestIdHash: string; inputKind: string; phase: string }[] = [];
+  t.mock.method(process.stderr, 'write', (chunk: unknown) => {
+    const prefix = 'legacy-agent-host: opencode-catalog ';
+    if (typeof chunk === 'string' && chunk.startsWith(prefix)) {
+      observations.push(JSON.parse(chunk.slice(prefix.length)));
+      throw new Error('TEST diagnostic sink failure must not change catalog behavior');
+    }
+    return true;
+  });
+  const phasesFor = (id: string) => observations.filter(row =>
+    row.requestIdHash === createHash('sha256').update(id, 'utf8').digest('hex')).map(row => row.phase);
+  let clock = Date.now(), pending = Promise.withResolvers<void>(), entered = Promise.withResolvers<void>();
+  let closing: ReturnType<typeof Promise.withResolvers<void>> | undefined;
+  const closeEntered = Promise.withResolvers<void>();
+  let fail = false;
+  t.mock.method(Date, 'now', () => clock);
+  t.mock.method(OpenCodeV2ManagementHost.prototype, 'catalog', async function (
+    this: OpenCodeV2ManagementHost, _providerId?: string, _includeModels?: boolean, deadline?: number
+  ) {
+    calls.push({ host: this, deadline });
+    const gate = pending.promise, rejected = fail;
+    entered.resolve();
+    await gate;
+    assert.equal(closed.has(this), false, 'a mode change cannot close a pending native read');
+    if (rejected) throw originalFailure;
+    return catalog;
+  });
+  t.mock.method(OpenCodeV2ManagementHost.prototype, 'close', async function (this: OpenCodeV2ManagementHost) {
+    closed.add(this);
+    if (closing) { closeEntered.resolve(); await closing.promise; }
+    return true;
+  });
+  const owner = new ProviderManagementCoordinator([profile], () => {}, root);
+  const request = { profileId: profile.profileId, configRevision: profile.configRevision };
+  try {
+    const admittedAt = clock;
+    const status = owner.catalog({ ...request, includeModels: true }, 'TEST-status');
+    await entered.promise;
+    const directory = owner.catalog(request, 'TEST-directory');
+    await Promise.resolve();
+    assert.equal(calls.length, 1);
+    assert.equal(closed.size, 0);
+    assert.deepEqual(phasesFor('TEST-status'), ['queued', 'started']);
+    assert.deepEqual(phasesFor('TEST-directory'), ['queued']);
+    clock += 50;
+    pending.resolve();
+    assert.deepEqual(await Promise.all([status, directory]), [catalog, catalog]);
+    assert.equal(calls.length, 2);
+    assert.notEqual(calls[0]!.host, calls[1]!.host);
+    assert.deepEqual(phasesFor('TEST-status'), ['queued', 'started', 'returned']);
+    assert.deepEqual(phasesFor('TEST-directory'), ['queued', 'started', 'returned']);
+    assert.deepEqual([...new Set(observations.map(row => row.inputKind))], ['include-models', 'directory']);
+    assert.deepEqual(calls.map(call => call.deadline), [admittedAt + profile.timeoutMs, admittedAt + profile.timeoutMs],
+      'queue wait does not reset the original native read budget');
+
+    pending = Promise.withResolvers<void>(); entered = Promise.withResolvers<void>(); fail = true;
+    const failing = owner.catalog(request, 'TEST-failure');
+    const rejected = assert.rejects(failing, error => error === originalFailure);
+    await entered.promise;
+    const afterFailure = owner.catalog({ ...request, includeModels: true });
+    fail = false;
+    pending.resolve();
+    await rejected;
+    assert.deepEqual(phasesFor('TEST-failure'), ['queued', 'started']);
+    assert.deepEqual(await afterFailure, catalog, 'a failed predecessor does not poison later reads');
+    assert.notEqual(calls[2]!.host, calls[3]!.host);
+
+    pending = Promise.withResolvers<void>(); entered = Promise.withResolvers<void>();
+    const active = owner.catalog({ ...request, includeModels: true });
+    await entered.promise;
+    const expired = owner.catalog(request, 'TEST-expired');
+    const expiry = assert.rejects(expired, /held/);
+    clock += profile.timeoutMs;
+    pending.resolve();
+    await active; await expiry;
+    assert.deepEqual(phasesFor('TEST-expired'), ['queued', 'started']);
+    assert.equal(calls.length, 5, 'an expired queued request cannot allocate or read another owner');
+
+    closing = Promise.withResolvers<void>();
+    const revoking = owner.catalog(request);
+    const revoked = assert.rejects(revoking, /unavailable/);
+    await closeEntered.promise;
+    const queued = owner.catalog({ ...request, includeModels: true }), sealed = assert.rejects(queued, /unavailable/);
+    owner.seal();
+    closing.resolve();
+    await revoked; await sealed;
+    assert.equal(calls.length, 5, 'seal during original cleanup prevents replacement and queued native reads');
+  } finally {
+    pending.resolve();
+    closing?.resolve();
+    await owner.close().catch(() => {});
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('catalog compatibility preserves original credential, configuration and owner boundaries', t => {
+  for (const mode of ['stored-key', 'config-key', 'file-key', 'nondefault', 'configured-other',
+    'retained', 'directory', 'key-appeared', 'revoked', 'source-changed'] as const) {
+    const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-v2-catalog-boundary-')));
+    t.after(() => rmSync(root, { recursive: true, force: true }));
+    const profile = testProfile(root), providerId = profile.nativeModel!.providerId;
+    const key = () => {
+      mkdirSync(join(root, 'opencode'), { recursive: true, mode: 0o700 });
+      writeFileSync(join(root, 'opencode/auth.json'), JSON.stringify({ [providerId]: { type: 'api', key: 'TEST-key' } }), { mode: 0o600 });
+    };
+    if (mode === 'stored-key') key();
+    const configuration = join(root, 'opencode.json');
+    if (mode === 'config-key' || mode === 'file-key' || mode === 'source-changed') {
+      writeFileSync(configuration, JSON.stringify({ provider: { [providerId]: {
+        npm: '@ai-sdk/openai-compatible', options: { baseURL: 'http://127.0.0.1:19332/v1',
+          ...(mode === 'source-changed' ? {} : { apiKey: mode === 'file-key' ? '{file:original.key}' : 'TEST-config-key' }) },
+      } } }), { mode: 0o600 });
+      if (mode === 'file-key') writeFileSync(join(root, 'original.key'), 'TEST-manual-key', { mode: 0o600 });
+      profile.embedded!.configurationSource = captureOpenCodeConfigurationSource(profile).reference;
+    }
+    let current = true;
+    const host = new OpenCodeV2ManagementHost(profile, () => current, undefined, {
+      ...(mode === 'directory' ? {} : { catalogProviderId: mode === 'nondefault' ? 'TEST-other' : providerId }),
+      ...(mode === 'retained' ? { retainedCommandId: 'TEST-retained' } : {}),
+      ...(mode === 'configured-other' ? { configurationProviderId: 'TEST-other' } : {}),
+    });
+    if (mode === 'key-appeared') key();
+    if (mode === 'revoked') current = false;
+    if (mode === 'source-changed') writeFileSync(configuration, '{}');
+    assert.equal(host.matchesCatalog(mode === 'directory' ? providerId : undefined), false, mode);
+    if (mode === 'revoked') assert.equal(host.matchesCatalog(providerId), true,
+      'exact-mode matching keeps its existing behavior; original reads still enforce currentness');
+  }
+});
 
 for (const cleanup of ['confirmed', 'unknown', 'rejected'] as const) {
   test(`a failed V2 catalog retires only after ${cleanup} original cleanup`, async t => {
     const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-v2-catalog-recovery-')));
-    const profile = openCodeManagementProfileSchema.parse({
-      provider: 'opencode', nativeGeneration: 'v2', protocolRevision: '2.1.4',
-      profileId: 'TEST-profile', configRevision: 'TEST-config', accountBinding: 'TEST-account',
-      cwd: root, executable: { path: join(root, 'TEST-bun'), sha256: 'a'.repeat(64) },
-      environment: Object.fromEntries(['HOME', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_CACHE_HOME']
-        .map(key => [key, root])),
-      endpoint: 'http://127.0.0.1:19332', timeoutMs: 1000,
-      nativeModel: { providerId: 'TEST-provider', modelId: 'TEST-model' },
-      embedded: { version: '2.1.4', platform: process.platform, arch: process.arch,
-        directory: join(root, 'engine'), manifestSha256: 'b'.repeat(64), externalDirectory: 'deny' },
-    });
+    const profile = testProfile(root);
     const seen: OpenCodeV2ManagementHost[] = [], sealed = new Set<OpenCodeV2ManagementHost>();
     const originalFailure = new Error('TEST original catalog deadline');
     const catalog = { profileId: profile.profileId, configRevision: profile.configRevision,

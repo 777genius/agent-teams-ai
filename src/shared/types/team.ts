@@ -1,4 +1,5 @@
 import type { CliProviderModelCatalogSource } from './cliInstaller';
+import type { KanbanState } from './kanbanReviewFlow';
 import type { NotificationTarget, TeamEventType } from './notifications';
 import type { OpenCodeStopHandshakeFailureFacts } from './openCodeStopHandshakeFailure';
 import type { TaskRef } from './teamBoardTask';
@@ -13,7 +14,9 @@ import type {
 import type { GroupChatEnvelope } from '@features/team-group-chats/contracts';
 import type { TeamManagementCommittedChange } from '@features/team-prompt-management/contracts';
 
+export type * from './kanbanReviewFlow';
 export type * from './teamBoardTask';
+export type { MessagesPage } from './teamMessages';
 export type {
   FileLineStats,
   LeadActivitySnapshot,
@@ -65,7 +68,6 @@ export interface TeamMember {
 }
 
 export type TeamMemberMcpScope = 'user' | 'project' | 'local';
-
 export type TeamMemberMcpMode = 'inheritLead' | 'inheritScopes' | 'strictAllowlist' | 'appOnly';
 
 export interface TeamMemberMcpPolicy {
@@ -103,8 +105,23 @@ export interface TeamSummaryMember {
   mcpPolicy?: TeamMemberMcpPolicy;
 }
 
+export type TeamReadUnavailable = {
+  code: 'busy' | 'unavailable' | 'shutting-down';
+  outcome: 'not-dispatched' | 'rejected' | 'unknown';
+} & (
+  | { kind: 'team'; teamName: string; displayName: string }
+  | { kind: 'owner'; ownerResourceRef: string }
+);
+export interface TeamAggregateRead<T> {
+  items: T[];
+  unavailable: TeamReadUnavailable[];
+}
+export type TeamAggregateReadResult<T> = T[] | TeamAggregateRead<T>;
+
 export interface TeamSummary {
   teamName: string;
+  /** Opaque captured owner identity for display and availability only. */
+  ownerResourceRef?: string;
   displayName: string;
   description: string;
   color?: string;
@@ -150,8 +167,7 @@ export interface TeamSummary {
 }
 
 export type TeamTaskStatus = 'pending' | 'in_progress' | 'completed' | 'deleted';
-export type TeamReviewState = 'none' | 'review' | 'needsFix' | 'approved';
-
+export type TeamReviewState = 'none' | 'review' | 'needsFix' | 'reviewed' | 'approved';
 export interface TaskWorkInterval {
   /** ISO timestamp when task entered in_progress */
   startedAt: string;
@@ -201,6 +217,10 @@ export interface TaskReviewRequestedEvent extends TaskHistoryEventBase {
   to: 'review';
   reviewer?: string;
   note?: string;
+  /** Set on the second review cycle of the lead_then_human flow: the lead signs off after the reviewer. */
+  stage?: 'lead_signoff';
+  /** The reviewer's request this lead sign-off follows. */
+  afterReviewRequestId?: string;
 }
 
 export interface TaskReviewChangesRequestedEvent extends TaskHistoryEventBase {
@@ -209,7 +229,6 @@ export interface TaskReviewChangesRequestedEvent extends TaskHistoryEventBase {
   to: 'needsFix';
   note?: string;
 }
-
 export interface TaskReviewApprovedEvent extends TaskHistoryEventBase {
   type: 'review_approved';
   from: TeamReviewState;
@@ -221,6 +240,22 @@ export interface TaskReviewDisapprovedEvent extends TaskHistoryEventBase {
   type: 'review_disapproved';
   from: 'approved';
   to: 'none';
+}
+
+export interface TaskHumanApprovedEvent extends TaskHistoryEventBase {
+  type: 'human_approved';
+  from: TeamReviewState;
+  to: 'approved';
+}
+
+export interface TaskReviewCompletedEvent extends TaskHistoryEventBase {
+  type: 'review_completed';
+  from: 'review';
+  to: 'reviewed';
+  reviewRequestId: string;
+  note?: string;
+  /** lead_then_human only: why the lead's sign-off stage was skipped for this cycle. */
+  leadSignoffSkipped?: 'actor_is_lead' | 'work_by_lead' | 'no_lead';
 }
 
 export interface TaskReviewStartedEvent extends TaskHistoryEventBase {
@@ -237,6 +272,8 @@ export type TaskHistoryEvent =
   | TaskReviewChangesRequestedEvent
   | TaskReviewApprovedEvent
   | TaskReviewDisapprovedEvent
+  | TaskReviewCompletedEvent
+  | TaskHumanApprovedEvent
   | TaskReviewStartedEvent;
 
 export type TaskCommentType = 'regular' | 'review_request' | 'review_approved';
@@ -270,7 +307,6 @@ export interface SourceMessageSnapshot {
   /** IDs classified as generic file references in the original message. */
   fileReferenceIds?: string[];
 }
-
 export type InboxMessageKind =
   | 'default'
   | 'slash_command'
@@ -431,7 +467,6 @@ export interface ToolCallMeta {
   /** Optional runtime tool_use identifier when available. */
   toolUseId?: string;
 }
-
 export type ToolActivitySource = 'runtime' | 'member_log' | 'inbox';
 export type ToolActivityState = 'running' | 'complete' | 'error';
 
@@ -539,19 +574,6 @@ export interface InboxMessage extends GroupChatEnvelope {
   slashCommand?: SlashCommandMeta;
   /** Structured command-output metadata for session-derived result rows. */
   commandOutput?: CommandOutputMeta;
-}
-
-/** Cursor-based paginated messages response. */
-export interface MessagesPage {
-  messages: InboxMessage[];
-  /** Opaque cursor string for fetching older messages. Null when no more pages. */
-  nextCursor: string | null;
-  hasMore: boolean;
-  /**
-   * Content-stable revision of the full normalized feed that produced this page.
-   * Changes only when the semantic message feed changes.
-   */
-  feedRevision: string;
 }
 
 export type AgentActionMode = 'do' | 'ask' | 'delegate';
@@ -683,7 +705,6 @@ export interface QueuedUserMessageSummary {
   timestamp: string;
   summary?: string;
 }
-
 export interface QueuedUserMessagesSnapshot {
   member: string;
   messages: QueuedUserMessageSummary[];
@@ -719,32 +740,13 @@ export type TeamLaunchAggregateState =
   | 'partial_skipped';
 export type PersistedTeamLaunchPhase = 'active' | 'finished' | 'reconciled';
 
-export type KanbanColumnId = 'todo' | 'in_progress' | 'done' | 'review' | 'approved';
-
-export interface KanbanTaskState {
-  column: Extract<KanbanColumnId, 'review' | 'approved'>;
-  reviewer?: string | null;
-  errorDescription?: string;
-  movedAt: string;
-}
-
-export interface KanbanState {
-  teamName: string;
-  reviewers: string[];
-  tasks: Record<string, KanbanTaskState>;
-  /** Порядок id задач по колонкам для отображения на канбан-доске (drag-and-drop). */
-  columnOrder?: Partial<Record<KanbanColumnId, string[]>>;
-}
-
-export type UpdateKanbanPatch =
-  | { op: 'set_column'; column: Extract<KanbanColumnId, 'review' | 'approved'> }
-  | { op: 'remove' }
-  | { op: 'disapprove' }
-  | { op: 'request_changes'; comment?: string; taskRefs?: TaskRef[] };
 export interface ResolvedTeamMember extends Pick<TeamMember, 'joinedAt'>, NativeMemberCapability {
   name: string;
   /** Presentation provenance only; does not assert native liveness or grant control. */
   runtimeOwner?: 'captured-host';
+  /** Public roster identity for matching a Host-owned native suggestion to its teammate. */
+  hostMemberId?: string;
+  sessionCommands?: readonly { name: string; description: string }[];
   /** Opaque configured-state token from an application owner, never native identity. */
   configuredSettingsFingerprint?: string;
   agentId?: string;
@@ -802,10 +804,9 @@ export interface OpenCodeRuntimeDeliveryUserVisibleImpact {
   observedAt?: string;
   nextReviewAt?: string;
 }
-export interface CapturedTeamProcessStop {
-  processRef: string;
-  originalCommandId?: string;
-}
+export type {
+  ProcessStopSelection as CapturedTeamProcessStop,
+} from '@features/agent-backend/contracts';
 export interface TeamProcess {
   processRef?: string;
   observation?: 'same-live' | 'absent' | 'stale' | 'unknown' | 'metadata-stopped';
@@ -826,6 +827,7 @@ export interface TeamMemberSnapshot extends Pick<TeamMember, 'joinedAt'>, Native
   name: string;
   /** Presentation provenance only; does not assert native liveness or grant control. */
   runtimeOwner?: 'captured-host';
+  sessionCommands?: readonly { name: string; description: string }[];
   /** Opaque configured-state token from an application owner, never native identity. */
   configuredSettingsFingerprint?: string;
   agentId?: string;
@@ -896,7 +898,6 @@ export type TeamProviderBackendId =
   | 'opencode-cli';
 export type ProviderBillingMode = 'api' | 'subscription' | 'free' | 'unknown';
 export type TeamFastMode = 'inherit' | 'on' | 'off';
-
 export interface ProviderModelLaunchIdentity {
   providerId: TeamProviderId;
   providerBackendId: TeamProviderBackendId | null;
@@ -919,6 +920,7 @@ export interface TeamLaunchRequest extends TeamProvisioningTypes.LocalModelLaunc
   /** One existing-dialog launch intent, including its confirmed saved-roster operation. */
   command?: ApplicationCommandRequestIdentity;
   savedRosterCommandId?: string;
+  modelPreparation?: TeamProvisioningTypes.CapturedTeamModelPreparation;
   cwd: string;
   prompt?: string;
   /** Explicit opt-in: start the configured runtime without replaying saved one-time work. */
@@ -942,7 +944,7 @@ export interface TeamLaunchRequest extends TeamProvisioningTypes.LocalModelLaunc
 
 export interface TeamLaunchResponse {
   runId: string;
-  launchStatus?: 'started' | 'already_launching' | 'already_running';
+  launchStatus?: 'started' | 'already_launching' | 'already_running' | 'unconfirmed';
   alreadyLaunching?: boolean;
   alreadyRunning?: boolean;
 }
@@ -1006,7 +1008,6 @@ export interface OpenCodeAppManagedBootstrapCandidate {
 export type OpenCodeBootstrapEvidenceSource = 'runtime_bootstrap_checkin' | 'app_managed_bootstrap';
 
 export type OpenCodeBootstrapMode = 'model_tool_checkin' | 'app_managed_context';
-
 export interface PersistedTeamLaunchMemberState {
   name: string;
   providerId?: TeamProviderId;
@@ -1103,7 +1104,6 @@ export interface RetryFailedOpenCodeSecondaryLanesResult {
 export type MemberSpawnLivenessSource = 'heartbeat' | 'process';
 
 export type TeamAgentRuntimeBackendType = 'lead' | 'tmux' | 'iterm2' | 'in-process' | 'process';
-
 export type TeamAgentRuntimeLivenessKind =
   | 'confirmed_bootstrap'
   | 'runtime_process'
@@ -1147,6 +1147,8 @@ export interface TeamAgentRuntimeEntry {
   memberName: string;
   alive: boolean;
   restartable: boolean;
+  /** Host logical generation used for original-recipient preconditions; never a native PID. */
+  runtimeGeneration?: string;
   backendType?: TeamAgentRuntimeBackendType;
   providerId?: TeamProviderId;
   providerBackendId?: TeamProviderBackendId;
@@ -1192,7 +1194,6 @@ export interface TeamAgentRuntimeSnapshot {
   fastMode?: TeamFastMode;
   members: Record<string, TeamAgentRuntimeEntry>;
 }
-
 export interface TeamChangeEvent {
   management?: TeamManagementCommittedChange;
   type:
@@ -1331,7 +1332,6 @@ export type TeamWorktreeGitBlockReason =
   | 'missing_head'
   | 'git_unavailable'
   | 'git_error';
-
 export interface TeamWorktreeGitStatus {
   projectPath: string;
   isGitRepo: boolean;
@@ -1404,7 +1404,7 @@ export interface TeamCreateResponse {
   runId: string;
   /** Canonical owner-qualified selection returned by the selected Host. */
   teamName?: string;
-  launchStatus?: 'started' | 'already_launching' | 'already_running';
+  launchStatus?: 'started' | 'already_launching' | 'already_running' | 'unconfirmed';
   alreadyLaunching?: boolean;
   alreadyRunning?: boolean;
 }
@@ -1475,19 +1475,8 @@ export interface TeamProvisioningSupportDiagnostic {
   copyText: string;
   createdAt: string;
 }
-
-/** A current observation from one captured Team preparation, never global provider authority. */
-export interface CapturedTeamReadiness {
-  handleId: string;
-  preparationId: string;
-  launchId: string;
-  rosterRevision: string;
-  selectionSignature: string;
-  expiresAt: number;
-}
-
 export interface TeamProvisioningPrepareResult {
-  capturedTeamReadiness?: CapturedTeamReadiness;
+  capturedTeamReadiness?: TeamProvisioningTypes.CapturedTeamReadiness;
   createdTeamReadiness?: CreatedTeamReadiness;
   ready: boolean;
   message: string;
@@ -1580,6 +1569,8 @@ export interface TeamRuntimeState {
 
 export interface GlobalTask extends TeamTaskWithKanban {
   teamName: string;
+  /** Opaque captured owner identity for display and availability only. */
+  ownerResourceRef?: string;
   teamDisplayName: string;
   projectPath?: string;
   /** True when the parent team has been soft-deleted. */
@@ -1681,7 +1672,6 @@ export interface CrossTeamTargetMember {
   role?: string;
   color?: string;
 }
-
 export interface CrossTeamTarget {
   teamName: string;
   displayName: string;

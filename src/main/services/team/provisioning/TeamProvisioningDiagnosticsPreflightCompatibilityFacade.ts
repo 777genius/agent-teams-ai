@@ -6,6 +6,7 @@ import { createLogger } from '@shared/utils/logger';
 import * as path from 'path';
 
 import { type OpenCodePromptDeliveryLedgerRecord } from '../opencode/delivery/OpenCodePromptDeliveryLedger';
+import { type OpenCodePromptDeliveryWatchdogScheduler } from '../opencode/delivery/OpenCodePromptDeliveryWatchdogScheduler';
 
 import { getSystemLocale } from './TeamProvisioningAgentLanguage';
 import { type TeamProvisioningBootstrapTranscriptFacade } from './TeamProvisioningBootstrapTranscriptFacade';
@@ -140,7 +141,8 @@ export abstract class TeamProvisioningDiagnosticsPreflightCompatibilityFacade<
   };
   protected abstract readonly openCodeRuntimeDeliveryBoundaryHost: TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost<TRun>;
   protected abstract readonly inboxReader: OpenCodeMemberDeliveryBusyStatusPorts['inboxReader'];
-  protected abstract readonly openCodePromptDeliveryWatchdogScheduler: OpenCodeMemberInboxDeliveryWakePorts['watchdogScheduler'];
+  protected abstract readonly openCodePromptDeliveryWatchdogScheduler: OpenCodeMemberInboxDeliveryWakePorts['watchdogScheduler'] &
+    Pick<OpenCodePromptDeliveryWatchdogScheduler, 'captureCancellation'>;
 
   private languageChangeInFlight: Promise<void> = Promise.resolve();
   private readonly cliHelpOutputCacheByCwd = new Map<string, CliHelpOutputCache>();
@@ -490,26 +492,32 @@ export abstract class TeamProvisioningDiagnosticsPreflightCompatibilityFacade<
     activeMessageId?: string;
     activeMessageKind?: string | null;
   }> {
-    return getOpenCodeMemberDeliveryBusyStatusWithPorts(input, {
-      teamsBasePath: getTeamsBasePath(),
-      isOpenCodeRuntimeRecipient: (teamName, memberName) =>
-        this.isOpenCodeRuntimeRecipient(teamName, memberName),
-      inboxReader: this.inboxReader,
-      getOpenCodeAgendaSyncRecoveryBypassMessageIds: (bypassInput) =>
-        this.getOpenCodeAgendaSyncRecoveryBypassMessageIds(bypassInput),
-      tryGetActiveOpenCodePromptDeliveryRecord: (activeInput) =>
-        this.tryGetActiveOpenCodePromptDeliveryRecord(activeInput),
-      scheduleOpenCodeMemberInboxDeliveryWake: (wakeInput) =>
-        this.scheduleOpenCodeMemberInboxDeliveryWake(wakeInput),
-      resolveOpenCodeMemberDeliveryIdentity: (teamName, memberName) =>
-        this.resolveOpenCodeMemberDeliveryIdentity(teamName, memberName),
-      tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery: (recoveryInput) =>
-        this.tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery(recoveryInput),
-      tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive: (recoveryInput) =>
-        this.tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive(recoveryInput),
-      createOpenCodePromptDeliveryLedger: (teamName, laneId) =>
-        this.createOpenCodePromptDeliveryLedger(teamName, laneId),
-    });
+    const scope = this.openCodePromptDeliveryWatchdogScheduler.captureCancellation(input.teamName);
+    try {
+      return await getOpenCodeMemberDeliveryBusyStatusWithPorts(input, {
+        teamsBasePath: getTeamsBasePath(),
+        isOpenCodeRuntimeRecipient: (teamName, memberName) =>
+          this.isOpenCodeRuntimeRecipient(teamName, memberName),
+        inboxReader: this.inboxReader,
+        getOpenCodeAgendaSyncRecoveryBypassMessageIds: (bypassInput) =>
+          this.getOpenCodeAgendaSyncRecoveryBypassMessageIds(bypassInput),
+        tryGetActiveOpenCodePromptDeliveryRecord: (activeInput) =>
+          this.tryGetActiveOpenCodePromptDeliveryRecord(activeInput),
+        scheduleOpenCodeMemberInboxDeliveryWake: (wakeInput) => {
+          if (scope.isCurrent()) this.scheduleOpenCodeMemberInboxDeliveryWake(wakeInput);
+        },
+        resolveOpenCodeMemberDeliveryIdentity: (teamName, memberName) =>
+          this.resolveOpenCodeMemberDeliveryIdentity(teamName, memberName),
+        tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery: (recoveryInput) =>
+          this.tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery(recoveryInput),
+        tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive: (recoveryInput) =>
+          this.tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive(recoveryInput),
+        createOpenCodePromptDeliveryLedger: (teamName, laneId) =>
+          this.createOpenCodePromptDeliveryLedger(teamName, laneId),
+      });
+    } finally {
+      scope.release();
+    }
   }
 
   scheduleOpenCodeMemberInboxDeliveryWake(input: {

@@ -505,7 +505,6 @@ export function formatProviderStatusText(
         'Starting ChatGPT login...'
       );
     }
-
     if (provider.connection?.codex?.login.status === 'pending') {
       return translateProviderConnection(
         t,
@@ -513,14 +512,15 @@ export function formatProviderStatusText(
         'Waiting for ChatGPT account login...'
       );
     }
-
     if (
       provider.connection?.codex?.login.status === 'failed' &&
       provider.connection.codex.login.error
     ) {
       return provider.connection.codex.login.error;
     }
-
+    if (provider.statusCheckErrorCode && provider.statusCheckErrorCode !== 'partial_response') {
+      return provider.statusMessage ?? 'Unable to verify';
+    }
     if (
       provider.connection?.codex?.appServerState === 'degraded' &&
       provider.connection.codex.effectiveAuthMode === 'chatgpt' &&
@@ -535,7 +535,6 @@ export function formatProviderStatusText(
         )
       );
     }
-
     if (provider.connection?.codex?.launchAllowed) {
       if (provider.connection.codex.effectiveAuthMode === 'chatgpt') {
         return translateProviderConnection(
@@ -544,7 +543,6 @@ export function formatProviderStatusText(
           'ChatGPT account ready'
         );
       }
-
       if (provider.connection.codex.effectiveAuthMode === 'api_key') {
         return translateProviderConnection(
           t,

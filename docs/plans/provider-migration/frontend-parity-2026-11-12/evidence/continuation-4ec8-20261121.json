@@ -1,0 +1,210 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-11-21T16:39:19.250380+00:00",
+  "baselineSha": "4ec8e74b9a6430143287baa5298a11ade98a5794",
+  "qualification": "Original six-run evidence and reviewed next source; not E2E completion",
+  "archive": {
+    "path": "continuation-4ec8-20261121.tar.gz",
+    "bytes": 6284617,
+    "sha256": "831a9e9425ec5d72bab03ebb3730ce6fcddee5445a38b2f8c99b5757f322cc07"
+  },
+  "archiveEntries": 573,
+  "textBytes": 44659848,
+  "innerInventory": {
+    "path": "inventory.json",
+    "sha256": "4f0bb63f7aa207b633fcdf323dc2efe6771428bcafbd4fa6ee86609907ff9fe5"
+  },
+  "sourcePins": {
+    "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedGraph.ts": {
+      "bytes": 15037,
+      "sha256": "013b67c5b4b5fcd98f90aec7fc3ada2a9f7e61473a377c9d8d9116b62d6cbd10"
+    },
+    "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedServer.ts": {
+      "bytes": 19997,
+      "sha256": "44eefe4131b919220cd870054fbe6fea0008e225013ee236a03ce4b5725de4ea"
+    },
+    "packages/legacy-agent-host/src/adapters/providers/createClaudeCloseDiagnostic.ts": {
+      "bytes": 17074,
+      "sha256": "82238b770bcc78979f5ebdf88d0958a9f468d2131f033f6af76e68bb98b49f74"
+    },
+    "packages/legacy-agent-host/src/composition/ProviderManagementCoordinator.ts": {
+      "bytes": 37231,
+      "sha256": "60c3396ed5ddb2f4e93be5a45482259ee137dc2bee025450f97920890baf8691"
+    },
+    "packages/legacy-agent-host/src/composition/createProviderManagementMethods.ts": {
+      "bytes": 4641,
+      "sha256": "e1ee190adcbc6b05c7123ac564cce9c53f1695d8a12c95d86f71b469f144eb32"
+    },
+    "packages/legacy-agent-host/tests/opencode-v2-embedded-graph.test.ts": {
+      "bytes": 12192,
+      "sha256": "3b266703287a581f917dba46408f6b5d3e4588f007270e679217cfd694e3cf3a"
+    },
+    "packages/legacy-agent-host/tests/opencode-v2-management-recovery.test.ts": {
+      "bytes": 14607,
+      "sha256": "cf8a8aee9e0234274d3d147a9123ba5def09ac68ab4460d22998a9d078947c17"
+    },
+    "patches/croner@10.0.1.patch": {
+      "bytes": 168408,
+      "sha256": "40a5df5b5f714a5efdc2b6116b789fdeb9a00aadb614aed8397be512143c7842"
+    },
+    "pnpm-lock.yaml": {
+      "bytes": 957001,
+      "sha256": "dfde9153d2a5ad9b563863456ec08f89bfef081c8c8ff4ce43c4216666624c3a"
+    },
+    "pnpm-workspace.yaml": {
+      "bytes": 6985,
+      "sha256": "7c8988b794cbbf9469b10ebe06b5c5678f04690326d98b5c04f2664d36f50ef5"
+    },
+    "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts": {
+      "bytes": 52028,
+      "sha256": "64b6a45eb21e4c0f8e59f4573a361aee5c25a955969594bbf585dac697a2284d"
+    },
+    "scripts/legacy-agent-host/desktop-proof-integrated-sources.ts": {
+      "bytes": 45536,
+      "sha256": "82d2b782320b07d4f3499d157256b4cd007791c7e78984687e651432ec7400b2"
+    },
+    "scripts/legacy-agent-host/desktop-proof-management-sources.ts": {
+      "bytes": 22986,
+      "sha256": "c5015df2e2ce568ce520599d21947fca13960dce973b280d56672c85060df75b"
+    },
+    "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts": {
+      "bytes": 30498,
+      "sha256": "d9fa3caa93fd17e8c7a52edd7f4642d9f3ea47aac07820cb976648fe638532cb"
+    },
+    "src/features/agent-backend/main/infrastructure/CapturedHostClient.ts": {
+      "bytes": 33292,
+      "sha256": "19756dbacaf995d6da7f49038441cc47567c39afe2e1a91389b79a9b76a834fa"
+    },
+    "src/features/agent-backend/main/infrastructure/createCapturedHostDiagnostics.ts": {
+      "bytes": 3268,
+      "sha256": "a7506b99b2bab05210ecc99d3601c108f29965c03a160dca861388dafe247b31"
+    },
+    "src/features/agent-backend/main/infrastructure/decodeClaudeCloseDiagnostics.ts": {
+      "bytes": 19825,
+      "sha256": "e72c5c451bfb3f693a74f9065196010f2d97b90572c1e576bf98714bfc87a603"
+    },
+    "src/features/agent-backend/main/infrastructure/stopped-import/legacyStoppedSourceDiagnostic.ts": {
+      "bytes": 2649,
+      "sha256": "6d646c218d1cfaa912a25abf364e618a1493e8a1f2e0fd8704434b322c08f204"
+    },
+    "src/main/services/team/provisioning/TeamProvisioningOpenCodeRuntimeAdapterTeamFlow.ts": {
+      "bytes": 7814,
+      "sha256": "22283ea99c0cb312ac907b688c45c39fb6338dbf1f59199786fe1e15cf240679"
+    },
+    "src/main/services/team/provisioning/__tests__/TeamProvisioningOpenCodeRuntimeAdapterTeamFlow.test.ts": {
+      "bytes": 19593,
+      "sha256": "a48431c16ca253134f37ec5be0dec52b6bb4b1b1a51288d42d5bc50e19319c9d"
+    },
+    "test/features/agent-backend/capturedHostClient.test.ts": {
+      "bytes": 62220,
+      "sha256": "86eb454d7dfaaae8c2216c1d606c16a551a7416fa23d6d7a739c8be334d2f37e"
+    },
+    "test/features/agent-backend/catalogRequestDiagnostics.test.ts": {
+      "bytes": 4981,
+      "sha256": "79caec323d037cb625ddee4d09f3434d1d4285a99cc4c4af3f3e2f69d1149c53"
+    },
+    "test/features/agent-backend/claudeCloseDiagnostics.test.ts": {
+      "bytes": 34160,
+      "sha256": "13e1ad83ed8d0da9e3b46168b21bd9c4a9c6387778aa86af661c43ff0259d9c0"
+    },
+    "test/main/services/schedule/CronerSchedulerHistory.test.ts": {
+      "bytes": 7363,
+      "sha256": "5258e56e9446876de00f8e29df8ee3b39a12ab4d5967dbf6f6da2b6421461d7a"
+    },
+    "test/main/services/schedule/CronerTestClock.ts": {
+      "bytes": 4666,
+      "sha256": "8ddab7150c8ef3e5eaa945bb57d9659d139678797843fbc4a48ba2cd0a1cd09a"
+    },
+    "test/main/services/schedule/CronerTiming.test.ts": {
+      "bytes": 5085,
+      "sha256": "cf4e5633387a6c68d4c0d93424c34e589ed141db6948259568091d08edb40b8b"
+    }
+  },
+  "statusPin": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/STATUS.md",
+    "bytes": 185097,
+    "sha256": "127a435a633079ec98b961e8063a24267bdb669c4b65e73809737028264181ca"
+  },
+  "originalCISummary": {
+    "path": "ci-4ec8/original-six-runs-final-summary.json",
+    "bytes": 5502,
+    "sha256": "d707e55917cdfd6f67a568fd049e15aabf32e3582dbbc081a793530362da715e",
+    "totals": {
+      "runs": 6,
+      "successRuns": 4,
+      "failureRuns": 2,
+      "jobs": 69,
+      "success": 50,
+      "failure": 8,
+      "skipped": 11,
+      "cancelled": 0,
+      "queued": 0,
+      "inProgress": 0,
+      "primaryFailureJobs": 6,
+      "derivedAggregateFailureJobs": 2
+    }
+  },
+  "qualifiedArtifactReadbacks": [
+    {
+      "path": "ci-4ec8/native-artifacts/qualification.json",
+      "bytes": 11953,
+      "sha256": "d5046b4a0df36b5edb0bd62711f75e0acf13b562e289d40834ea30391a3be14a"
+    },
+    {
+      "path": "ci-4ec8/process-artifacts/qualification.json",
+      "bytes": 20976,
+      "sha256": "dea2ec21a03a88b73b3736802fa127cf74f71fcb4379cc91afa3b7b520ff383c"
+    },
+    {
+      "path": "ci-4ec8/teams-artifacts/qualification.json",
+      "bytes": 37399,
+      "sha256": "2ec5bc7614bc7dd2c420685960e035176663ac6fe78df465bc63d4c4023d6899"
+    },
+    {
+      "path": "ci-4ec8/packaged-linux-qualification.json",
+      "bytes": 4558,
+      "sha256": "97104cfa664dc1111fba249958d61b67f309123074983edaba63618b9ed9b388"
+    },
+    {
+      "path": "ci-4ec8/packaged-darwin-qualification.json",
+      "bytes": 7731,
+      "sha256": "680ca693533c4255d5e160a4d578cab26075108474e83448c096c09db2ae8b25"
+    },
+    {
+      "path": "ci-4ec8/packaged-windows-artifacts/qualification.json",
+      "bytes": 25451,
+      "sha256": "78adf905154276c4aac73c53fcd40b26a734f9b0801e1081962e35b18e36600b"
+    }
+  ],
+  "packagedFinalBindings": {
+    "path": "ci-4ec8/packaged-five-platforms-qualification-index.json",
+    "bytes": 12172,
+    "sha256": "dd9c5edc511fecab15aa74235dc29d9c571770d180a952be7580180c8f1fa71a"
+  },
+  "review": "root-review-and-checks.json",
+  "independentArchiveReview": "continuation-4ec8-20261121-review.json",
+  "omittedBytesInventory": "omitted-bytes-inventory.json",
+  "omittedFiles": 193,
+  "sensitivePatternScan": {
+    "scope": "All included UTF-8 file bytes",
+    "patterns": [
+      "signed-query",
+      "github-secret",
+      "private-key"
+    ],
+    "findings": 0
+  },
+  "limits": [
+    "The six original runs qualify only source head 4ec8 in each declared TEST scope. Their six primary failures remain failures; this next source has no new original CI result yet.",
+    "Whole-workspace canonical typecheck exited 137 and is NOT PASS. The explicit final TypeScript 7.0.2 scoped receipt covers only its listed roots and dependency graph. The earlier empty log with truncated/consumed tool exit is not counted as PASS.",
+    "The initial expanded typed-lint attempt remains 63 errors: seven new Croner test errors were corrected and independently reviewed, while 56 previous test-file errors outside canonical src scope remain recorded. Final changed Main production had zero errors.",
+    "Croner public-path RED/GREEN proves a conditional clock defect, not the precise original CI clock interleave or historical introduction. Offline install/metadata resolution attempts are INCOMPLETE; actual pnpm patch installation must be verified by new original CI.",
+    "Darwin catalog and graph changes are passive diagnostics. Their timing causes and original pre-RPC capture boundary remain unproved. Main admission, Host return and diagnostic release are not renderer acknowledgement or physical custody proof.",
+    "Retained original ZIP lacks saved team meta/config and does not identify the mismatched key. Missing runtimeSelectionVersion is supported by source trace and actual persisted-store regression, not a direct read of absent artifact bytes.",
+    "Raw ZIP, binary and screenshot bytes are omitted. The archive cannot independently recompute their recorded digests, visually recheck omitted screenshots, or requalify original executables; original listings, extracted text, digest inventories and readback receipts are retained.",
+    "All receipts preserve their native/ownership/currentness/cleanup/negative limits, including Darwin successorNativeCustody=false and naturalExitQualified=false where stated. Skips are not passes.",
+    "The shared original dependency store had automatic install bookkeeping changed once; six workspace links were restored and source/dist stayed unchanged. It is not claimed byte-frozen. Next dependency directories/task-state were isolated without weakening install policy.",
+    "No genuine Claude/Codex execution, version probes, rerun, dispatch, cancellation, default Host, Stage2, release or app-main merge is qualified or performed by this source batch.",
+    "Archive paths retain original scratch and runner paths in raw evidence. Use matching relative paths inside this archive; original absolute paths are historical provenance, not portable executable locations."
+  ]
+}

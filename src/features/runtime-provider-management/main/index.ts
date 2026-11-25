@@ -10,6 +10,7 @@ export {
 export { createCapturedRuntimeProviderStatusClient } from './adapters/output/CapturedRuntimeProviderStatusClient';
 export { captureNativeExtensionSelection } from './adapters/output/captureNativeExtensionSelection';
 export { createCapturedCodexFeatures } from './adapters/output/createCapturedCodexFeatures';
+export { captureManagedProviderRuntimePreferences } from './application/captureManagedProviderRuntimePreferences';
 export {
   createRuntimeProviderManagementFeature,
   type RuntimeProviderManagementFeatureFacade,
@@ -32,3 +33,16 @@ export {
   type OpenCodeBinaryVersionProbe,
   probeOpenCodeBinaryVersion,
 } from './infrastructure/openCodeVersionDiagnostics';
+
+// Explicit Main-only helpers for the original local-model readiness capture.
+export {
+  createOpenCodeGlobalConfigEnvironmentResolver,
+  isPrivateNetworkRuntimeLocalProviderUrl,
+  JsonLocalProviderPrivateNetworkApprovalStore,
+  LocalProviderOperationError,
+  normalizeRuntimeLocalProviderTarget,
+  OPENCODE_GLOBAL_CONFIG_FILENAMES,
+  OPENCODE_PROJECT_CONFIG_CANDIDATES,
+  readOpenCodeConfigTarget,
+  resolveConfiguredProviderPreset,
+} from './readiness';

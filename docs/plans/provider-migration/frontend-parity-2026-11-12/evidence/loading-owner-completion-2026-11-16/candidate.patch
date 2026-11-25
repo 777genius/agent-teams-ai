@@ -1,0 +1,221 @@
+diff --git a/src/features/runtime-provider-management/renderer/hooks/runtimeProviderViewRefresh.ts b/src/features/runtime-provider-management/renderer/hooks/runtimeProviderViewRefresh.ts
+--- a/src/features/runtime-provider-management/renderer/hooks/runtimeProviderViewRefresh.ts
++++ b/src/features/runtime-provider-management/renderer/hooks/runtimeProviderViewRefresh.ts
+@@ -101,8 +101,8 @@
+           request: requestSeq,
+           phase,
+           silent,
+-          sequenceCurrent: phase === 'finished' && silent ? null : sequenceCurrent,
+-          contextCurrent: phase === 'finished' && silent ? null : contextCurrent,
++          sequenceCurrent,
++          contextCurrent,
+           viewPresent: view === undefined ? null : view !== null,
+           inheritanceFields,
+           loadingFalseSet,
+@@ -165,7 +165,7 @@
+     return false;
+   } finally {
+     let loadingFalseSet = false;
+-    if (!silent && requestIsCurrent()) {
++    if (requestIsCurrent()) {
+       context.setLoading(false);
+       loadingFalseSet = true;
+     }
+diff --git a/test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts b/test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts
+--- a/test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts
++++ b/test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts
+@@ -2408,7 +2408,7 @@
+     }
+   );
+ 
+-  it('keeps the original stale and silent-refresh behavior while retaining passive observations', async () => {
++  it('clears loading for the current silent refresh while retaining stale-response refusal and observations', async () => {
+     const trace = captureViewLoadDiagnostics();
+     try {
+       let resolve!: (response: RuntimeProviderManagementViewResponse) => void;
+@@ -2440,21 +2440,21 @@
+       await act(async () => { await actions!.refreshDirectory(); });
+       expect(loadView).toHaveBeenCalledTimes(2);
+       expect(state?.view?.defaultModel).toBe(currentView.defaultModel);
+-      expect(state?.loading).toBe(true);
++      expect(state?.loading).toBe(false);
+       await act(async () => {
+         resolve({ schemaVersion: 1, runtimeId: 'opencode',
+           view: { ...createRuntimeView(), defaultModel: 'TEST-stale-model' } });
+         expect(await pending).toBe(false);
+       });
+       expect(state?.view?.defaultModel).toBe(currentView.defaultModel);
+-      // Passive evidence does not select the separate loading-owner correction.
+-      expect(state?.loading).toBe(true);
++      // The stale completion cannot restore the loading state cleared by the current request.
++      expect(state?.loading).toBe(false);
+       const rows = trace.rows();
+       expect(rows.find((row) => row.phase === 'response-checked' && row.silent === false)).toMatchObject({
+         sequenceCurrent: false, contextCurrent: null,
+       });
+       expect(rows.find((row) => row.phase === 'finished' && row.silent === true)).toMatchObject({
+-        sequenceCurrent: null, contextCurrent: null, loadingFalseSet: false,
++        sequenceCurrent: true, contextCurrent: true, loadingFalseSet: true,
+       });
+       expect(new Set(rows.map((row) => row.owner)).size).toBe(1);
+       expect(new Set(rows.map((row) => row.request)).size).toBe(2);
+@@ -2463,6 +2463,153 @@
+       trace.restore();
+     }
+   });
++
++  it.each(['response-error', 'rejection'] as const)(
++    'clears pending loading when the current silent refresh ends with %s',
++    async (outcome) => {
++      const trace = captureViewLoadDiagnostics();
++      try {
++        let resolveFirst!: (response: RuntimeProviderManagementViewResponse) => void;
++        const first = new Promise<RuntimeProviderManagementViewResponse>((resolve) => {
++          resolveFirst = resolve;
++        });
++        const failure = new Error('TEST-current-silent-view-error');
++        const failedResponse: RuntimeProviderManagementViewResponse = {
++          schemaVersion: 1,
++          runtimeId: 'opencode',
++          error: { code: 'runtime-misconfigured', message: failure.message, recoverable: true },
++        };
++        let calls = 0;
++        const loadView = vi.fn(() => {
++          calls++;
++          if (calls === 1) return first;
++          return outcome === 'rejection' ? Promise.reject(failure) : Promise.resolve(failedResponse);
++        });
++        Object.defineProperty(window, 'electronAPI', {
++          configurable: true,
++          value: { runtimeProviderManagement: {
++            loadView,
++            loadProviderDirectory: vi.fn(async () => createEmptyDirectoryResponse()),
++          } } as unknown as ElectronAPI,
++        });
++        const root = createRoot(host);
++        await act(async () => {
++          root.render(React.createElement(ConfigurableHarness, { enabled: true, loadViewOnEnable: false }));
++        });
++        let pendingFirst!: Promise<boolean>;
++        await act(async () => { pendingFirst = actions!.refresh(); });
++        expect(state?.loading).toBe(true);
++        await act(async () => { await actions!.refreshDirectory(); });
++        expect(loadView).toHaveBeenCalledTimes(2);
++        expect(state?.loading).toBe(false);
++        expect(state?.view).toBeNull();
++        expect(state?.error).toBe(failure.message);
++        expect(state?.errorDiagnostics).toBeNull();
++        expect(trace.rows().find((row) => row.phase === 'finished' && row.silent === true)).toMatchObject({
++          sequenceCurrent: true, contextCurrent: true, loadingFalseSet: true,
++        });
++        await act(async () => {
++          resolveFirst({
++            schemaVersion: 1, runtimeId: 'opencode',
++            view: { ...createRuntimeView(), defaultModel: 'TEST-stale-after-silent-error' },
++          });
++          expect(await pendingFirst).toBe(false);
++        });
++        expect(state?.loading).toBe(false);
++        expect(state?.view).toBeNull();
++        expect(state?.error).toBe(failure.message);
++        expect(loadView).toHaveBeenCalledTimes(2);
++      } finally {
++        trace.restore();
++      }
++    }
++  );
++
++  it.each(['newer-request', 'unmounted'] as const)(
++    'keeps a silent view completion inert after %s',
++    async (outcome) => {
++      const trace = captureViewLoadDiagnostics();
++      try {
++        let resolveFirst!: (response: RuntimeProviderManagementViewResponse) => void;
++        let resolveSilent!: (response: RuntimeProviderManagementViewResponse) => void;
++        let resolveLatest!: (response: RuntimeProviderManagementViewResponse) => void;
++        const first = new Promise<RuntimeProviderManagementViewResponse>((resolve) => {
++          resolveFirst = resolve;
++        });
++        const silent = new Promise<RuntimeProviderManagementViewResponse>((resolve) => {
++          resolveSilent = resolve;
++        });
++        const latest = new Promise<RuntimeProviderManagementViewResponse>((resolve) => {
++          resolveLatest = resolve;
++        });
++        let calls = 0;
++        const loadView = vi.fn(() => {
++          calls++;
++          return calls === 1 ? first : calls === 2 ? silent : latest;
++        });
++        Object.defineProperty(window, 'electronAPI', {
++          configurable: true,
++          value: { runtimeProviderManagement: {
++            loadView,
++            loadProviderDirectory: vi.fn(async () => createEmptyDirectoryResponse()),
++          } } as unknown as ElectronAPI,
++        });
++        const root = createRoot(host);
++        await act(async () => {
++          root.render(React.createElement(ConfigurableHarness, { enabled: true, loadViewOnEnable: false }));
++        });
++        let pendingFirst!: Promise<boolean>;
++        let pendingSilent!: Promise<void>;
++        let pendingLatest!: Promise<boolean>;
++        await act(async () => { pendingFirst = actions!.refresh(); });
++        await act(async () => { pendingSilent = actions!.refreshDirectory(); });
++        expect(state?.loading).toBe(true);
++        const beforeUnmount = state;
++        if (outcome === 'newer-request') {
++          await act(async () => { pendingLatest = actions!.refresh(); });
++        } else {
++          await act(async () => { root.unmount(); });
++        }
++        await act(async () => {
++          resolveSilent({
++            schemaVersion: 1, runtimeId: 'opencode',
++            view: { ...createRuntimeView(), defaultModel: 'TEST-refused-silent-view' },
++          });
++          await pendingSilent;
++        });
++        expect(loadView).toHaveBeenCalledTimes(outcome === 'newer-request' ? 3 : 2);
++        expect(state?.loading).toBe(true);
++        expect(state?.view).toBeNull();
++        if (outcome === 'unmounted') expect(state).toBe(beforeUnmount);
++        expect(trace.rows().find((row) => row.phase === 'finished' && row.silent === true)).toMatchObject({
++          sequenceCurrent: outcome === 'unmounted',
++          contextCurrent: outcome === 'unmounted' ? false : null,
++          loadingFalseSet: false,
++        });
++        await act(async () => {
++          resolveFirst({ schemaVersion: 1, runtimeId: 'opencode', view: createRuntimeView() });
++          expect(await pendingFirst).toBe(false);
++        });
++        expect(state?.loading).toBe(true);
++        if (outcome === 'newer-request') {
++          await act(async () => {
++            resolveLatest({
++              schemaVersion: 1, runtimeId: 'opencode',
++              view: { ...createRuntimeView(), defaultModel: 'TEST-latest-view' },
++            });
++            expect(await pendingLatest).toBe(true);
++          });
++          expect(state?.loading).toBe(false);
++          expect(state?.view?.defaultModel).toBe('TEST-latest-view');
++        } else {
++          expect(state).toBe(beforeUnmount);
++        }
++        expect(loadView).toHaveBeenCalledTimes(outcome === 'newer-request' ? 3 : 2);
++      } finally {
++        trace.restore();
++      }
++    }
++  );
+ 
+   it.each(['view', 'response-error', 'rejection'] as const)(
+     'preserves the original %s when diagnostic emission throws',
+--- a/.github/workflows/host-emulated-acceptance.yml
++++ b/.github/workflows/host-emulated-acceptance.yml
+@@ -211,1 +211,2 @@
+-            tools/owned-process-broker/nativeWindowsAppFixture.ts
++            tools/owned-process-broker/nativeWindowsAppFixture.ts \
++            test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts

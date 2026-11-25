@@ -1,0 +1,1492 @@
+{
+  "baselineLog": {
+    "path": "/workspace/scratch/c2f5ff7c30ee/team-578-original/job-133150851331.log",
+    "bytes": 2709748,
+    "blob": "f8710649393df89727eedf54ac54e59b61c0ace0",
+    "sha256": "aa428b27236f3867f1cdf13c32494a61ec4fa4ffef02cce2a57794ae2024fa81"
+  },
+  "baselineCases": [
+    {
+      "line": 710,
+      "status": "pass",
+      "name": "offline Desktop admission refuses inherited native selections before preparing a fixture",
+      "durationMs": 9.147591
+    },
+    {
+      "line": 711,
+      "status": "pass",
+      "name": "TEST management admission retains only the exact direct detached Host peer without signaling",
+      "durationMs": 12.584413
+    },
+    {
+      "line": 712,
+      "status": "pass",
+      "name": "Linux CDP diagnostics retain the original bounded descriptor read without accepting a second holder",
+      "durationMs": 24.486284
+    },
+    {
+      "line": 713,
+      "status": "pass",
+      "name": "Linux zero-group rows remain observable without becoming owned app groups; malformed census stays an error",
+      "durationMs": 1.546487
+    },
+    {
+      "line": 714,
+      "status": "pass",
+      "name": "the same original-root oracle uses each existing caller deadline after a long provider phase, without renewing reads",
+      "durationMs": 3.164528
+    },
+    {
+      "line": 715,
+      "status": "pass",
+      "name": "read-only discovery survives navigation during the actual IPC read, then reads the new context",
+      "durationMs": 0.484339
+    },
+    {
+      "line": 716,
+      "status": "pass",
+      "name": "unregistered initial discovery waits, but owner failures are never hidden as navigation",
+      "durationMs": 0.488636
+    },
+    {
+      "line": 717,
+      "status": "pass",
+      "name": "initial discovery passes only its remaining captured budget to the IPC await",
+      "durationMs": 0.314327
+    },
+    {
+      "line": 718,
+      "status": "pass",
+      "name": "exhausted initial observation never dispatches the backend IPC",
+      "durationMs": 0.474935
+    },
+    {
+      "line": 719,
+      "status": "pass",
+      "name": "other discovery callers retain the default CDP budget",
+      "durationMs": 0.217332
+    },
+    {
+      "line": 720,
+      "status": "pass",
+      "name": "an explicit IPC observation budget lets the same read settle after30s within60s",
+      "durationMs": 1.324677
+    },
+    {
+      "line": 721,
+      "status": "pass",
+      "name": "default CDP evaluations still reject at30s without a resend",
+      "durationMs": 0.319785
+    },
+    {
+      "line": 722,
+      "status": "pass",
+      "name": "macOS original Node zombie is the same unreaped harness child, never a changed live command",
+      "durationMs": 0.890662
+    },
+    {
+      "line": 723,
+      "status": "pass",
+      "name": "live stat can become original defunct before the guard; only original child reap and whole-group absence settle it",
+      "durationMs": 1.727485
+    },
+    {
+      "line": 724,
+      "status": "pass",
+      "name": "changed command/start, wrong child/group and initial descendants never authorize a recovery observation",
+      "durationMs": 0.249741
+    },
+    {
+      "line": 725,
+      "status": "pass",
+      "name": "an already observed original natural exit still requires fresh group and captured Host absence",
+      "durationMs": 0.257873
+    },
+    {
+      "line": 726,
+      "status": "pass",
+      "name": "original crash/signal and process-table failures remain debt",
+      "durationMs": 0.223201
+    },
+    {
+      "line": 727,
+      "status": "pass",
+      "name": "the original deadline is not renewed after initial settlement consumed it",
+      "durationMs": 0.146227
+    },
+    {
+      "line": 728,
+      "status": "pass",
+      "name": "numeric group absence without this original child exit observation expires within the remaining original budget",
+      "durationMs": 0.263011
+    },
+    {
+      "line": 729,
+      "status": "pass",
+      "name": "a process-table read that crosses the original deadline cannot qualify natural exit",
+      "durationMs": 0.187118
+    },
+    {
+      "line": 730,
+      "status": "pass",
+      "name": "an already reaped original child waits for actual descendant and original Host absence",
+      "durationMs": 0.621062
+    },
+    {
+      "line": 731,
+      "status": "pass",
+      "name": "an orphan descendant, moved captured descendant or original Host cannot be cleared by an expired budget",
+      "durationMs": 0.532631
+    },
+    {
+      "line": 732,
+      "status": "pass",
+      "name": "absent leader observation rejects wrong child, live/crashed/signaled child and invalid captured identities",
+      "durationMs": 0.302008
+    },
+    {
+      "line": 733,
+      "status": "pass",
+      "name": "a reused leader PID and unavailable full process census retain debt without signaling",
+      "durationMs": 0.223712
+    },
+    {
+      "line": 734,
+      "status": "pass",
+      "name": "absent leader observation never renews the original deadline or accepts a late census",
+      "durationMs": 0.244012
+    },
+    {
+      "line": 735,
+      "status": "pass",
+      "name": "original peer observation accepts later-row only with its retained launch row",
+      "durationMs": 37.9724
+    },
+    {
+      "line": 736,
+      "status": "pass",
+      "name": "original peer observation accepts exit only with its retained launch row",
+      "durationMs": 4.760182
+    },
+    {
+      "line": 737,
+      "status": "pass",
+      "name": "original peer observation refuses reuse without admitting the census PID",
+      "durationMs": 5.421329
+    },
+    {
+      "line": 738,
+      "status": "pass",
+      "name": "original peer observation refuses reparent without admitting the census PID",
+      "durationMs": 3.99397
+    },
+    {
+      "line": 739,
+      "status": "pass",
+      "name": "original peer observation refuses argv without admitting the census PID",
+      "durationMs": 4.04159
+    },
+    {
+      "line": 740,
+      "status": "pass",
+      "name": "original peer observation refuses duplicate without admitting the census PID",
+      "durationMs": 3.49573
+    },
+    {
+      "line": 741,
+      "status": "pass",
+      "name": "original peer observation refuses missing without admitting the census PID",
+      "durationMs": 3.469901
+    },
+    {
+      "line": 742,
+      "status": "pass",
+      "name": "original peer observation refuses late without admitting the census PID",
+      "durationMs": 3.38762
+    },
+    {
+      "line": 743,
+      "status": "pass",
+      "name": "original peer observation accepts a valid empty journal with no current children",
+      "durationMs": 4.241096
+    },
+    {
+      "line": 744,
+      "status": "pass",
+      "name": "original peer observation validates no-child-failure before returning without children",
+      "durationMs": 3.575368
+    },
+    {
+      "line": 745,
+      "status": "pass",
+      "name": "original peer observation validates no-child-malformed before returning without children",
+      "durationMs": 2.961617
+    },
+    {
+      "line": 746,
+      "status": "pass",
+      "name": "original peer observation validates no-child-late before returning without children",
+      "durationMs": 3.893315
+    },
+    {
+      "line": 747,
+      "status": "pass",
+      "name": "empty peer census refuses no-child-provider-mismatch through the original journal oracle",
+      "durationMs": 4.129466
+    },
+    {
+      "line": 748,
+      "status": "pass",
+      "name": "empty peer census refuses zero-host-failure through the original journal oracle",
+      "durationMs": 5.389803
+    },
+    {
+      "line": 749,
+      "status": "pass",
+      "name": "empty peer census validates its journal with no current Host before the first Team read",
+      "durationMs": 2.857383
+    },
+    {
+      "line": 750,
+      "status": "pass",
+      "name": "requested Quit lets the original child report its natural exit before the cleanup census",
+      "durationMs": 603.245333
+    },
+    {
+      "line": 751,
+      "status": "pass",
+      "name": "finite Codex exact native MCP catalog exits with empty inventory without allocating a Runtime",
+      "durationMs": 232.8114
+    },
+    {
+      "line": 752,
+      "status": "pass",
+      "name": "finite Codex catalog refuses changed argv, Runtime authority and nonempty selected configuration",
+      "durationMs": 314.034097
+    },
+    {
+      "line": 753,
+      "status": "pass",
+      "name": "finite Codex answers the original D managed config before connecting its selected Team on thread start",
+      "durationMs": 410.156202
+    },
+    {
+      "line": 754,
+      "status": "pass",
+      "name": "finite managed Codex policy refuses alternate syntax, extra servers and enabled apps before connection",
+      "durationMs": 278.592603
+    },
+    {
+      "line": 755,
+      "status": "pass",
+      "name": "runtime-derived Codex ordinary model probe (default) completes through original Host/D once",
+      "durationMs": 234.578369
+    },
+    {
+      "line": 756,
+      "status": "pass",
+      "name": "runtime-derived Codex ordinary model probe (low) completes through original Host/D once",
+      "durationMs": 136.308234
+    },
+    {
+      "line": 757,
+      "status": "pass",
+      "name": "finite Codex standalone retains empty MCP readiness and completes only its original ephemeral thread",
+      "durationMs": 127.502991
+    },
+    {
+      "line": 758,
+      "status": "pass",
+      "name": "finite Codex standalone refuses Team authority, persistent threads and unselected thread work",
+      "durationMs": 803.436047
+    },
+    {
+      "line": 759,
+      "status": "pass",
+      "name": "extensions Settings peer exposes only isolated auth status through original custody",
+      "durationMs": 428.084102
+    },
+    {
+      "line": 760,
+      "status": "pass",
+      "name": "saved-import Settings peer exposes only isolated auth status through original custody",
+      "durationMs": 408.809288
+    },
+    {
+      "line": 761,
+      "status": "pass",
+      "name": "finite extension status uses the original Host auth command and retains its exact private namespace",
+      "durationMs": 122.81544
+    },
+    {
+      "line": 762,
+      "status": "pass",
+      "name": "finite extensions run through original Host ownership, persist four commands and survive inventory reload without replay",
+      "durationMs": 789.638886
+    },
+    {
+      "line": 763,
+      "status": "pass",
+      "name": "finite extension CLI refuses changed names/scopes and does not overwrite selected config",
+      "durationMs": 359.569785
+    },
+    {
+      "line": 764,
+      "status": "pass",
+      "name": "saved-import finite metadata and actual original probe receipt preserve model/effort with no extra input on lookup",
+      "durationMs": 3231.355019
+    },
+    {
+      "line": 765,
+      "status": "pass",
+      "name": "saved-import peer refuses a business input without producing a probe or touching Host receipts",
+      "durationMs": 399.480501
+    },
+    {
+      "line": 766,
+      "status": "pass",
+      "name": "receipt summaries retain only the original nested mixed Settings owner",
+      "durationMs": 1.389633
+    },
+    {
+      "line": 767,
+      "status": "pass",
+      "name": "retained c226 original rejected-key receipt joins its published seed and exact observed native probe",
+      "durationMs": 100.996073
+    },
+    {
+      "line": 768,
+      "status": "pass",
+      "name": "V2 receipt binding rejects foreign revisions, scope, seed owner, engine and executable",
+      "durationMs": 9.935793
+    },
+    {
+      "line": 769,
+      "status": "pass",
+      "name": "V2 publication rejects an internally rehashed foreign descriptor grant or replacement executable",
+      "durationMs": 5.095947
+    },
+    {
+      "line": 770,
+      "status": "pass",
+      "name": "V2 source history accounts for every publication and the exact retained current chain",
+      "durationMs": 14.115509
+    },
+    {
+      "line": 771,
+      "status": "pass",
+      "name": "original Host rejects old other-project cwd and accepts only its separate exact private-account seed",
+      "durationMs": 2.958092
+    },
+    {
+      "line": 772,
+      "status": "pass",
+      "name": "archived V2 tuple isolation restores the real runner and preserves foreign-platform refusal",
+      "durationMs": 4.493572
+    },
+    {
+      "line": 773,
+      "status": "pass",
+      "name": "original V2 default intent joins its selected saving row within the same receipt deadline",
+      "durationMs": 21.856283
+    },
+    {
+      "line": 774,
+      "status": "pass",
+      "name": "published receipt reads survive the real controller writer before its atomic rename",
+      "durationMs": 82.094667
+    },
+    {
+      "line": 775,
+      "status": "pass",
+      "name": "receipt reads reject foreign staging names, directories and symbolic links",
+      "durationMs": 14.690263
+    },
+    {
+      "line": 776,
+      "status": "pass",
+      "name": "captured UI discovery waits for Main admission and actual mount while early diagnostics remain active",
+      "durationMs": 204.552286
+    },
+    {
+      "line": 777,
+      "status": "pass",
+      "name": "the original remaining startup deadline rejects a pending snapshot without late discovery or a reset",
+      "durationMs": 500.366889
+    },
+    {
+      "line": 778,
+      "status": "pass",
+      "name": "packed file readiness executes the actual diagnostic expression using exact href instead of Electron opaque origin",
+      "durationMs": 4.614351
+    },
+    {
+      "line": 779,
+      "status": "pass",
+      "name": "HTTP readiness keeps exact origin and document path guards when the runtime location origin is untrusted",
+      "durationMs": 2.499051
+    },
+    {
+      "line": 780,
+      "status": "pass",
+      "name": "isolated shell fixture emits the actual framed environment and refuses shell effects",
+      "durationMs": 173.011122
+    },
+    {
+      "line": 781,
+      "status": "pass",
+      "name": "original in-progress Task comment prerequisite requires its exact stage without an assignment control",
+      "durationMs": 9.092801
+    },
+    {
+      "line": 782,
+      "status": "pass",
+      "name": "Task attachment comment waits for its original focused owner after one click before inserting text",
+      "durationMs": 206.869345
+    },
+    {
+      "line": 783,
+      "status": "pass",
+      "name": "original Task assignment prerequisite refuses receipt-only, pending and stale renderer state",
+      "durationMs": 3.207182
+    },
+    {
+      "line": 784,
+      "status": "pass",
+      "name": "original Task assignment prerequisite rejects a foreign context, Team, Task or rebound surface",
+      "durationMs": 3.254763
+    },
+    {
+      "line": 785,
+      "status": "pass",
+      "name": "original desktop click waits for stable target geometry, without repeating input",
+      "durationMs": 301.265188
+    },
+    {
+      "line": 786,
+      "status": "pass",
+      "name": "original Task hover waits through layout and unavailability before its one physical move",
+      "durationMs": 602.535062
+    },
+    {
+      "line": 787,
+      "status": "pass",
+      "name": "original desktop click refuses a constantly moving target before dispatch",
+      "durationMs": 1506.632595
+    },
+    {
+      "line": 788,
+      "status": "pass",
+      "name": "original owner-qualified click rereads its full expression through unavailability at unchanged coordinates",
+      "durationMs": 301.808134
+    },
+    {
+      "line": 789,
+      "status": "pass",
+      "name": "login failure facts retain only bounded original attempts and confirmed milestones",
+      "durationMs": 1.67648
+    },
+    {
+      "line": 790,
+      "status": "pass",
+      "name": "finite readiness failure summaries keep only bounded states and never private snapshot data",
+      "durationMs": 1.282925
+    },
+    {
+      "line": 791,
+      "status": "pass",
+      "name": "Taskboard failure summaries compare retained identities without exposing private snapshot values",
+      "durationMs": 1.994992
+    },
+    {
+      "line": 792,
+      "status": "pass",
+      "name": "installer failure summaries preserve original wait sites and attempts without inferring installation effects",
+      "durationMs": 2.083954
+    },
+    {
+      "line": 793,
+      "status": "pass",
+      "name": "installer failure projection does not invoke input getters and leaves oversized observations unknown",
+      "durationMs": 0.618759
+    },
+    {
+      "line": 794,
+      "status": "pass",
+      "name": "installer CDP and cleanup projection retains only exact finite observations",
+      "durationMs": 1.079433
+    },
+    {
+      "line": 795,
+      "status": "pass",
+      "name": "Selection target summaries retain the exact original phase and six closed facts",
+      "durationMs": 1.097059
+    },
+    {
+      "line": 796,
+      "status": "pass",
+      "name": "Selection target projection rejects unknown or malformed facts without exposing text or invoking getters",
+      "durationMs": 0.628573
+    },
+    {
+      "line": 797,
+      "status": "pass",
+      "name": "Taskboard focus diagnostics preserve last samples and bounded transitions without exposing private input",
+      "durationMs": 1.456923
+    },
+    {
+      "line": 798,
+      "status": "pass",
+      "name": "original desktop click refuses a target unavailable during the final ownership check",
+      "durationMs": 201.812216
+    },
+    {
+      "line": 799,
+      "status": "pass",
+      "name": "original desktop click refuses a target moved during the final ownership check",
+      "durationMs": 202.13711
+    },
+    {
+      "line": 800,
+      "status": "pass",
+      "name": "original default scroll preserves a disabled control before its readiness wait",
+      "durationMs": 1.141185
+    },
+    {
+      "line": 801,
+      "status": "pass",
+      "name": "original scroll opt-in reveals a covered checkbox with one bounded wheel",
+      "durationMs": 101.124001
+    },
+    {
+      "line": 802,
+      "status": "pass",
+      "name": "original desktop click rechecks owner after its pending final target read",
+      "durationMs": 200.621229
+    },
+    {
+      "line": 803,
+      "status": "pass",
+      "name": "original desktop click rechecks cutoff after its pending final target read",
+      "durationMs": 201.107842
+    },
+    {
+      "line": 804,
+      "status": "pass",
+      "name": "original clarification lookup admits its retained read without completing the assignment prerequisite",
+      "durationMs": 2.638978
+    },
+    {
+      "line": 805,
+      "status": "pass",
+      "name": "original clarification lookup refuses changed owner, revision, refresh and retained-read joins",
+      "durationMs": 18.475253
+    },
+    {
+      "line": 806,
+      "status": "pass",
+      "name": "original owner availability admits three captured A Teams through its actual first DOM read",
+      "durationMs": 2.389228
+    },
+    {
+      "line": 807,
+      "status": "pass",
+      "name": "original owner availability retains singleton, subset and duplicate-row cardinality semantics",
+      "durationMs": 2.39074
+    },
+    {
+      "line": 808,
+      "status": "pass",
+      "name": "original owner availability refuses foreign identities and preserves its existing aggregate guards",
+      "durationMs": 25.336611
+    },
+    {
+      "line": 809,
+      "status": "pass",
+      "name": "original owner availability refuses invalid captured discovery before navigation",
+      "durationMs": 0.722914
+    },
+    {
+      "line": 810,
+      "status": "pass",
+      "name": "owner availability admits every captured A Team through the actual first observation",
+      "durationMs": 0.59938
+    },
+    {
+      "line": 811,
+      "status": "pass",
+      "name": "owner availability refuses healthy B in unavailable A rows",
+      "durationMs": 0.463689
+    },
+    {
+      "line": 812,
+      "status": "pass",
+      "name": "owner availability refuses captured foreign owner in unavailable A rows",
+      "durationMs": 0.359163
+    },
+    {
+      "line": 813,
+      "status": "pass",
+      "name": "owner availability refuses unknown Team in unavailable A rows",
+      "durationMs": 0.590577
+    },
+    {
+      "line": 814,
+      "status": "pass",
+      "name": "owner availability refuses malformed Team in unavailable A rows",
+      "durationMs": 0.505911
+    },
+    {
+      "line": 815,
+      "status": "pass",
+      "name": "owner availability refuses missing selected A before original navigation",
+      "durationMs": 0.277081
+    },
+    {
+      "line": 816,
+      "status": "pass",
+      "name": "owner availability refuses non-string A handle before original navigation",
+      "durationMs": 0.200978
+    },
+    {
+      "line": 817,
+      "status": "pass",
+      "name": "owner availability refuses empty A handle before original navigation",
+      "durationMs": 0.261068
+    },
+    {
+      "line": 818,
+      "status": "pass",
+      "name": "owner availability refuses duplicate A handle before original navigation",
+      "durationMs": 0.158055
+    },
+    {
+      "line": 819,
+      "status": "pass",
+      "name": "owner availability refuses over-bound capture before original navigation",
+      "durationMs": 0.261468
+    },
+    {
+      "line": 822,
+      "status": "pass",
+      "name": "original Selection final Stop joins physical absence with its exact stopped UI within the same poll budget",
+      "durationMs": 11.320109
+    },
+    {
+      "line": 823,
+      "status": "pass",
+      "name": "Selection stopped convergence refuses wrong identity, unaccepted progress, visible progress and exhausted observation budget",
+      "durationMs": 29.205516
+    },
+    {
+      "line": 824,
+      "status": "pass",
+      "name": "the existing passive click recorder distinguishes the actual Team from later navigation without new actions",
+      "durationMs": 10.925953
+    },
+    {
+      "line": 825,
+      "status": "pass",
+      "name": "ordinary Node imports and synchronous observations remain inert",
+      "durationMs": 1.920261
+    },
+    {
+      "line": 826,
+      "status": "pass",
+      "name": "constructor subscription observes the original async child after pid assignment",
+      "durationMs": 45.490065
+    },
+    {
+      "line": 827,
+      "status": "pass",
+      "name": "the observer preserves an actual unhandled child-process error",
+      "durationMs": 138.832047
+    },
+    {
+      "line": 828,
+      "status": "pass",
+      "name": "failed reads, writes and unknown child fields cannot change the original operation",
+      "durationMs": 1.87921
+    },
+    {
+      "line": 829,
+      "status": "pass",
+      "name": "the original TEST helper path exposes only its closed requested target class",
+      "durationMs": 1.791841
+    },
+    {
+      "line": 830,
+      "status": "pass",
+      "name": "event and pending-child bounds explicitly preserve incomplete coverage",
+      "durationMs": 1.197057
+    }
+  ],
+  "actualCases": [
+    {
+      "line": 715,
+      "status": "pass",
+      "name": "offline Desktop admission refuses inherited native selections before preparing a fixture",
+      "durationMs": 6.052038
+    },
+    {
+      "line": 716,
+      "status": "pass",
+      "name": "TEST management admission retains only the exact direct detached Host peer without signaling",
+      "durationMs": 4.500501
+    },
+    {
+      "line": 717,
+      "status": "pass",
+      "name": "Linux CDP diagnostics retain the original bounded descriptor read without accepting a second holder",
+      "durationMs": 10.848648
+    },
+    {
+      "line": 718,
+      "status": "pass",
+      "name": "Linux zero-group rows remain observable without becoming owned app groups; malformed census stays an error",
+      "durationMs": 1.440963
+    },
+    {
+      "line": 719,
+      "status": "pass",
+      "name": "the same original-root oracle uses each existing caller deadline after a long provider phase, without renewing reads",
+      "durationMs": 1.708659
+    },
+    {
+      "line": 720,
+      "status": "pass",
+      "name": "read-only discovery survives navigation during the actual IPC read, then reads the new context",
+      "durationMs": 0.45285
+    },
+    {
+      "line": 721,
+      "status": "pass",
+      "name": "unregistered initial discovery waits, but owner failures are never hidden as navigation",
+      "durationMs": 0.4053
+    },
+    {
+      "line": 722,
+      "status": "pass",
+      "name": "initial discovery passes only its remaining captured budget to the IPC await",
+      "durationMs": 0.20981
+    },
+    {
+      "line": 723,
+      "status": "pass",
+      "name": "exhausted initial observation never dispatches the backend IPC",
+      "durationMs": 0.232894
+    },
+    {
+      "line": 724,
+      "status": "pass",
+      "name": "other discovery callers retain the default CDP budget",
+      "durationMs": 0.22934
+    },
+    {
+      "line": 725,
+      "status": "pass",
+      "name": "an explicit IPC observation budget lets the same read settle after30s within60s",
+      "durationMs": 0.785262
+    },
+    {
+      "line": 726,
+      "status": "pass",
+      "name": "default CDP evaluations still reject at30s without a resend",
+      "durationMs": 0.229991
+    },
+    {
+      "line": 727,
+      "status": "pass",
+      "name": "macOS original Node zombie is the same unreaped harness child, never a changed live command",
+      "durationMs": 0.508853
+    },
+    {
+      "line": 728,
+      "status": "pass",
+      "name": "live stat can become original defunct before the guard; only original child reap and whole-group absence settle it",
+      "durationMs": 0.962966
+    },
+    {
+      "line": 729,
+      "status": "pass",
+      "name": "changed command/start, wrong child/group and initial descendants never authorize a recovery observation",
+      "durationMs": 0.204062
+    },
+    {
+      "line": 730,
+      "status": "pass",
+      "name": "an already observed original natural exit still requires fresh group and captured Host absence",
+      "durationMs": 0.18897
+    },
+    {
+      "line": 731,
+      "status": "pass",
+      "name": "original crash/signal and process-table failures remain debt",
+      "durationMs": 0.173006
+    },
+    {
+      "line": 732,
+      "status": "pass",
+      "name": "the original deadline is not renewed after initial settlement consumed it",
+      "durationMs": 0.12125
+    },
+    {
+      "line": 733,
+      "status": "pass",
+      "name": "numeric group absence without this original child exit observation expires within the remaining original budget",
+      "durationMs": 0.238533
+    },
+    {
+      "line": 734,
+      "status": "pass",
+      "name": "a process-table read that crosses the original deadline cannot qualify natural exit",
+      "durationMs": 0.144754
+    },
+    {
+      "line": 735,
+      "status": "pass",
+      "name": "an already reaped original child waits for actual descendant and original Host absence",
+      "durationMs": 0.474933
+    },
+    {
+      "line": 736,
+      "status": "pass",
+      "name": "an orphan descendant, moved captured descendant or original Host cannot be cleared by an expired budget",
+      "durationMs": 0.510005
+    },
+    {
+      "line": 737,
+      "status": "pass",
+      "name": "absent leader observation rejects wrong child, live/crashed/signaled child and invalid captured identities",
+      "durationMs": 0.291311
+    },
+    {
+      "line": 738,
+      "status": "pass",
+      "name": "a reused leader PID and unavailable full process census retain debt without signaling",
+      "durationMs": 0.20909
+    },
+    {
+      "line": 739,
+      "status": "pass",
+      "name": "absent leader observation never renews the original deadline or accepts a late census",
+      "durationMs": 0.17589
+    },
+    {
+      "line": 740,
+      "status": "pass",
+      "name": "original peer observation accepts later-row only with its retained launch row",
+      "durationMs": 30.908339
+    },
+    {
+      "line": 741,
+      "status": "pass",
+      "name": "original peer observation accepts exit only with its retained launch row",
+      "durationMs": 4.145456
+    },
+    {
+      "line": 742,
+      "status": "pass",
+      "name": "original peer observation refuses reuse without admitting the census PID",
+      "durationMs": 4.049995
+    },
+    {
+      "line": 743,
+      "status": "pass",
+      "name": "original peer observation refuses reparent without admitting the census PID",
+      "durationMs": 2.964428
+    },
+    {
+      "line": 744,
+      "status": "pass",
+      "name": "original peer observation refuses argv without admitting the census PID",
+      "durationMs": 3.159917
+    },
+    {
+      "line": 745,
+      "status": "pass",
+      "name": "original peer observation refuses duplicate without admitting the census PID",
+      "durationMs": 3.155311
+    },
+    {
+      "line": 746,
+      "status": "pass",
+      "name": "original peer observation refuses missing without admitting the census PID",
+      "durationMs": 3.025198
+    },
+    {
+      "line": 747,
+      "status": "pass",
+      "name": "original peer observation refuses late without admitting the census PID",
+      "durationMs": 2.56717
+    },
+    {
+      "line": 748,
+      "status": "pass",
+      "name": "original peer observation accepts a valid empty journal with no current children",
+      "durationMs": 3.446051
+    },
+    {
+      "line": 749,
+      "status": "pass",
+      "name": "original peer observation validates no-child-failure before returning without children",
+      "durationMs": 3.002074
+    },
+    {
+      "line": 750,
+      "status": "pass",
+      "name": "original peer observation validates no-child-malformed before returning without children",
+      "durationMs": 2.617679
+    },
+    {
+      "line": 751,
+      "status": "pass",
+      "name": "original peer observation validates no-child-late before returning without children",
+      "durationMs": 3.038307
+    },
+    {
+      "line": 752,
+      "status": "pass",
+      "name": "empty peer census refuses no-child-provider-mismatch through the original journal oracle",
+      "durationMs": 3.654384
+    },
+    {
+      "line": 753,
+      "status": "pass",
+      "name": "empty peer census refuses zero-host-failure through the original journal oracle",
+      "durationMs": 6.130364
+    },
+    {
+      "line": 754,
+      "status": "pass",
+      "name": "empty peer census validates its journal with no current Host before the first Team read",
+      "durationMs": 3.997497
+    },
+    {
+      "line": 755,
+      "status": "pass",
+      "name": "requested Quit lets the original child report its natural exit before the cleanup census",
+      "durationMs": 598.668279
+    },
+    {
+      "line": 756,
+      "status": "pass",
+      "name": "finite Codex exact native MCP catalog exits with empty inventory without allocating a Runtime",
+      "durationMs": 171.382253
+    },
+    {
+      "line": 757,
+      "status": "pass",
+      "name": "finite Codex catalog refuses changed argv, Runtime authority and nonempty selected configuration",
+      "durationMs": 318.951375
+    },
+    {
+      "line": 758,
+      "status": "pass",
+      "name": "finite Codex answers the original D managed config before connecting its selected Team on thread start",
+      "durationMs": 412.305917
+    },
+    {
+      "line": 759,
+      "status": "pass",
+      "name": "finite managed Codex policy refuses alternate syntax, extra servers and enabled apps before connection",
+      "durationMs": 267.754196
+    },
+    {
+      "line": 760,
+      "status": "pass",
+      "name": "runtime-derived Codex ordinary model probe (default) completes through original Host/D once",
+      "durationMs": 174.880292
+    },
+    {
+      "line": 761,
+      "status": "pass",
+      "name": "runtime-derived Codex ordinary model probe (low) completes through original Host/D once",
+      "durationMs": 128.083528
+    },
+    {
+      "line": 762,
+      "status": "pass",
+      "name": "finite Codex standalone retains empty MCP readiness and completes only its original ephemeral thread",
+      "durationMs": 143.684979
+    },
+    {
+      "line": 763,
+      "status": "pass",
+      "name": "finite Codex standalone refuses Team authority, persistent threads and unselected thread work",
+      "durationMs": 710.447229
+    },
+    {
+      "line": 764,
+      "status": "pass",
+      "name": "extensions Settings peer exposes only isolated auth status through original custody",
+      "durationMs": 431.812009
+    },
+    {
+      "line": 765,
+      "status": "pass",
+      "name": "saved-import Settings peer exposes only isolated auth status through original custody",
+      "durationMs": 396.76159
+    },
+    {
+      "line": 766,
+      "status": "pass",
+      "name": "finite extension status uses the original Host auth command and retains its exact private namespace",
+      "durationMs": 142.463576
+    },
+    {
+      "line": 767,
+      "status": "pass",
+      "name": "finite extensions run through original Host ownership, persist four commands and survive inventory reload without replay",
+      "durationMs": 760.095378
+    },
+    {
+      "line": 768,
+      "status": "pass",
+      "name": "finite extension CLI refuses changed names/scopes and does not overwrite selected config",
+      "durationMs": 324.352548
+    },
+    {
+      "line": 769,
+      "status": "pass",
+      "name": "saved-import finite metadata and actual original probe receipt preserve model/effort with no extra input on lookup",
+      "durationMs": 3275.554999
+    },
+    {
+      "line": 770,
+      "status": "pass",
+      "name": "saved-import peer refuses a business input without producing a probe or touching Host receipts",
+      "durationMs": 399.084719
+    },
+    {
+      "line": 771,
+      "status": "pass",
+      "name": "receipt summaries retain only the original nested mixed Settings owner",
+      "durationMs": 1.235078
+    },
+    {
+      "line": 772,
+      "status": "pass",
+      "name": "retained c226 original rejected-key receipt joins its published seed and exact observed native probe",
+      "durationMs": 76.125198
+    },
+    {
+      "line": 773,
+      "status": "pass",
+      "name": "V2 receipt binding rejects foreign revisions, scope, seed owner, engine and executable",
+      "durationMs": 5.07416
+    },
+    {
+      "line": 774,
+      "status": "pass",
+      "name": "V2 publication rejects an internally rehashed foreign descriptor grant or replacement executable",
+      "durationMs": 4.315588
+    },
+    {
+      "line": 775,
+      "status": "pass",
+      "name": "V2 source history accounts for every publication and the exact retained current chain",
+      "durationMs": 10.28287
+    },
+    {
+      "line": 776,
+      "status": "pass",
+      "name": "original Host rejects old other-project cwd and accepts only its separate exact private-account seed",
+      "durationMs": 2.307556
+    },
+    {
+      "line": 777,
+      "status": "pass",
+      "name": "archived V2 tuple isolation restores the real runner and preserves foreign-platform refusal",
+      "durationMs": 2.791462
+    },
+    {
+      "line": 778,
+      "status": "pass",
+      "name": "original V2 default intent joins its selected saving row within the same receipt deadline",
+      "durationMs": 20.026682
+    },
+    {
+      "line": 779,
+      "status": "pass",
+      "name": "published receipt reads survive the real controller writer before its atomic rename",
+      "durationMs": 86.657488
+    },
+    {
+      "line": 780,
+      "status": "pass",
+      "name": "receipt reads reject foreign staging names, directories and symbolic links",
+      "durationMs": 13.751284
+    },
+    {
+      "line": 781,
+      "status": "pass",
+      "name": "captured UI discovery waits for Main admission and actual mount while early diagnostics remain active",
+      "durationMs": 203.489857
+    },
+    {
+      "line": 782,
+      "status": "pass",
+      "name": "the original remaining startup deadline rejects a pending snapshot without late discovery or a reset",
+      "durationMs": 500.417292
+    },
+    {
+      "line": 783,
+      "status": "pass",
+      "name": "packed file readiness executes the actual diagnostic expression using exact href instead of Electron opaque origin",
+      "durationMs": 4.510836
+    },
+    {
+      "line": 784,
+      "status": "pass",
+      "name": "HTTP readiness keeps exact origin and document path guards when the runtime location origin is untrusted",
+      "durationMs": 2.399021
+    },
+    {
+      "line": 785,
+      "status": "pass",
+      "name": "isolated shell fixture emits the actual framed environment and refuses shell effects",
+      "durationMs": 167.0416
+    },
+    {
+      "line": 786,
+      "status": "pass",
+      "name": "original in-progress Task comment prerequisite requires its exact stage without an assignment control",
+      "durationMs": 9.008884
+    },
+    {
+      "line": 787,
+      "status": "pass",
+      "name": "Task attachment comment waits for its original focused owner after one click before inserting text",
+      "durationMs": 206.395057
+    },
+    {
+      "line": 788,
+      "status": "pass",
+      "name": "original Task assignment prerequisite refuses receipt-only, pending and stale renderer state",
+      "durationMs": 3.239425
+    },
+    {
+      "line": 789,
+      "status": "pass",
+      "name": "original Task assignment prerequisite rejects a foreign context, Team, Task or rebound surface",
+      "durationMs": 3.130003
+    },
+    {
+      "line": 790,
+      "status": "pass",
+      "name": "original desktop click waits for stable target geometry, without repeating input",
+      "durationMs": 300.834238
+    },
+    {
+      "line": 791,
+      "status": "pass",
+      "name": "original Task hover waits through layout and unavailability before its one physical move",
+      "durationMs": 601.622848
+    },
+    {
+      "line": 792,
+      "status": "pass",
+      "name": "original desktop click refuses a constantly moving target before dispatch",
+      "durationMs": 1505.136025
+    },
+    {
+      "line": 793,
+      "status": "pass",
+      "name": "original owner-qualified click rereads its full expression through unavailability at unchanged coordinates",
+      "durationMs": 300.645137
+    },
+    {
+      "line": 794,
+      "status": "pass",
+      "name": "login failure facts retain only bounded original attempts and confirmed milestones",
+      "durationMs": 1.235128
+    },
+    {
+      "line": 795,
+      "status": "pass",
+      "name": "finite readiness failure summaries keep only bounded states and never private snapshot data",
+      "durationMs": 1.108912
+    },
+    {
+      "line": 796,
+      "status": "pass",
+      "name": "Taskboard failure summaries compare retained identities without exposing private snapshot values",
+      "durationMs": 1.733696
+    },
+    {
+      "line": 797,
+      "status": "pass",
+      "name": "installer failure summaries preserve original wait sites and attempts without inferring installation effects",
+      "durationMs": 2.269079
+    },
+    {
+      "line": 798,
+      "status": "pass",
+      "name": "installer failure projection does not invoke input getters and leaves oversized observations unknown",
+      "durationMs": 0.806313
+    },
+    {
+      "line": 799,
+      "status": "pass",
+      "name": "installer CDP and cleanup projection retains only exact finite observations",
+      "durationMs": 0.983966
+    },
+    {
+      "line": 800,
+      "status": "pass",
+      "name": "Selection target summaries retain the exact original phase and six closed facts",
+      "durationMs": 1.037806
+    },
+    {
+      "line": 801,
+      "status": "pass",
+      "name": "Selection target projection rejects unknown or malformed facts without exposing text or invoking getters",
+      "durationMs": 0.586388
+    },
+    {
+      "line": 802,
+      "status": "pass",
+      "name": "Taskboard focus diagnostics preserve last samples and bounded transitions without exposing private input",
+      "durationMs": 1.806103
+    },
+    {
+      "line": 803,
+      "status": "pass",
+      "name": "original desktop click refuses a target unavailable during the final ownership check",
+      "durationMs": 201.028915
+    },
+    {
+      "line": 804,
+      "status": "pass",
+      "name": "original desktop click refuses a target moved during the final ownership check",
+      "durationMs": 201.942958
+    },
+    {
+      "line": 805,
+      "status": "pass",
+      "name": "original default scroll preserves a disabled control before its readiness wait",
+      "durationMs": 1.056925
+    },
+    {
+      "line": 806,
+      "status": "pass",
+      "name": "original scroll opt-in reveals a covered checkbox with one bounded wheel",
+      "durationMs": 102.132096
+    },
+    {
+      "line": 807,
+      "status": "pass",
+      "name": "original desktop click rechecks owner after its pending final target read",
+      "durationMs": 201.520933
+    },
+    {
+      "line": 808,
+      "status": "pass",
+      "name": "original desktop click rechecks cutoff after its pending final target read",
+      "durationMs": 200.940505
+    },
+    {
+      "line": 809,
+      "status": "pass",
+      "name": "original clarification lookup admits its retained read without completing the assignment prerequisite",
+      "durationMs": 2.467552
+    },
+    {
+      "line": 810,
+      "status": "pass",
+      "name": "original clarification lookup refuses changed owner, revision, refresh and retained-read joins",
+      "durationMs": 18.870039
+    },
+    {
+      "line": 811,
+      "status": "pass",
+      "name": "original owner availability admits three captured A Teams through its actual first DOM read",
+      "durationMs": 2.266435
+    },
+    {
+      "line": 812,
+      "status": "pass",
+      "name": "original owner availability retains singleton, subset and duplicate-row cardinality semantics",
+      "durationMs": 2.352593
+    },
+    {
+      "line": 813,
+      "status": "pass",
+      "name": "original owner availability refuses foreign identities and preserves its existing aggregate guards",
+      "durationMs": 24.985351
+    },
+    {
+      "line": 814,
+      "status": "pass",
+      "name": "original owner availability refuses invalid captured discovery before navigation",
+      "durationMs": 0.621169
+    },
+    {
+      "line": 815,
+      "status": "pass",
+      "name": "owner availability admits every captured A Team through the actual first observation",
+      "durationMs": 0.536904
+    },
+    {
+      "line": 816,
+      "status": "pass",
+      "name": "owner availability refuses healthy B in unavailable A rows",
+      "durationMs": 0.434253
+    },
+    {
+      "line": 817,
+      "status": "pass",
+      "name": "owner availability refuses captured foreign owner in unavailable A rows",
+      "durationMs": 0.270921
+    },
+    {
+      "line": 818,
+      "status": "pass",
+      "name": "owner availability refuses unknown Team in unavailable A rows",
+      "durationMs": 0.425119
+    },
+    {
+      "line": 819,
+      "status": "pass",
+      "name": "owner availability refuses malformed Team in unavailable A rows",
+      "durationMs": 0.358791
+    },
+    {
+      "line": 820,
+      "status": "pass",
+      "name": "owner availability refuses missing selected A before original navigation",
+      "durationMs": 0.311101
+    },
+    {
+      "line": 821,
+      "status": "pass",
+      "name": "owner availability refuses non-string A handle before original navigation",
+      "durationMs": 0.232755
+    },
+    {
+      "line": 822,
+      "status": "pass",
+      "name": "owner availability refuses empty A handle before original navigation",
+      "durationMs": 0.220546
+    },
+    {
+      "line": 823,
+      "status": "pass",
+      "name": "owner availability refuses duplicate A handle before original navigation",
+      "durationMs": 0.143112
+    },
+    {
+      "line": 824,
+      "status": "pass",
+      "name": "owner availability refuses over-bound capture before original navigation",
+      "durationMs": 0.177253
+    },
+    {
+      "line": 827,
+      "status": "pass",
+      "name": "original Selection final Stop joins physical absence with its exact stopped UI within the same poll budget",
+      "durationMs": 9.207809
+    },
+    {
+      "line": 828,
+      "status": "pass",
+      "name": "Selection stopped convergence refuses wrong identity, unaccepted progress, visible progress and exhausted observation budget",
+      "durationMs": 24.462046
+    },
+    {
+      "line": 829,
+      "status": "pass",
+      "name": "the existing passive click recorder distinguishes the actual Team from later navigation without new actions",
+      "durationMs": 9.908716
+    },
+    {
+      "line": 830,
+      "status": "fail",
+      "name": "P11 keeps the original 90-second cutoff for first result at the exact cutoff",
+      "durationMs": 1.281537
+    },
+    {
+      "line": 831,
+      "status": "fail",
+      "name": "P11 keeps the original 90-second cutoff for first result after the cutoff",
+      "durationMs": 1.749049
+    },
+    {
+      "line": 832,
+      "status": "fail",
+      "name": "P11 keeps the original 90-second cutoff for polled result after the cutoff",
+      "durationMs": 1.069523
+    },
+    {
+      "line": 833,
+      "status": "pass",
+      "name": "P11 actual poll retains timely acceptance, original cadence, currentness and read-error identity",
+      "durationMs": 1.147017
+    },
+    {
+      "line": 834,
+      "status": "pass",
+      "name": "ordinary Node imports and synchronous observations remain inert",
+      "durationMs": 1.578186
+    },
+    {
+      "line": 835,
+      "status": "pass",
+      "name": "constructor subscription observes the original async child after pid assignment",
+      "durationMs": 46.731538
+    },
+    {
+      "line": 836,
+      "status": "pass",
+      "name": "the observer preserves an actual unhandled child-process error",
+      "durationMs": 137.434203
+    },
+    {
+      "line": 837,
+      "status": "pass",
+      "name": "failed reads, writes and unknown child fields cannot change the original operation",
+      "durationMs": 4.45948
+    },
+    {
+      "line": 838,
+      "status": "pass",
+      "name": "the original TEST helper path exposes only its closed requested target class",
+      "durationMs": 2.739555
+    },
+    {
+      "line": 839,
+      "status": "pass",
+      "name": "event and pending-child bounds explicitly preserve incomplete coverage",
+      "durationMs": 1.508844
+    }
+  ],
+  "all119OriginalNamesAndMultiplicityMatch": true,
+  "all119OriginalCasesPass": true,
+  "newCases": [
+    {
+      "line": 830,
+      "status": "fail",
+      "name": "P11 keeps the original 90-second cutoff for first result at the exact cutoff",
+      "durationMs": 1.281537
+    },
+    {
+      "line": 831,
+      "status": "fail",
+      "name": "P11 keeps the original 90-second cutoff for first result after the cutoff",
+      "durationMs": 1.749049
+    },
+    {
+      "line": 832,
+      "status": "fail",
+      "name": "P11 keeps the original 90-second cutoff for polled result after the cutoff",
+      "durationMs": 1.069523
+    },
+    {
+      "line": 833,
+      "status": "pass",
+      "name": "P11 actual poll retains timely acceptance, original cadence, currentness and read-error identity",
+      "durationMs": 1.147017
+    }
+  ]
+}

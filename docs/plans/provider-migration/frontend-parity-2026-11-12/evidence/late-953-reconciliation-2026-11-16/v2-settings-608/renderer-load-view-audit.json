@@ -1,0 +1,207 @@
+{
+  "source": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "run": 43795234483,
+  "attempt": 1,
+  "job": 133062441738,
+  "artifact": 14198086463,
+  "status": "INCOMPLETE",
+  "firstError": {
+    "name": "Error",
+    "message": "UI read timed out: original default inheritance; no mutation retry"
+  },
+  "completedEffects": [
+    {
+      "step": "reject-key",
+      "kind": "credential.set",
+      "phase": "held",
+      "resourceHeld": false,
+      "sourceProjectPath": null
+    },
+    {
+      "step": "connect-key",
+      "kind": "credential.set",
+      "phase": "completed",
+      "resourceHeld": false,
+      "sourceProjectPath": null
+    }
+  ],
+  "firstModelsClick": {
+    "monotonicMs": 266690,
+    "action": "mouseClick",
+    "label": "original Models tab",
+    "selector": "[role=\"dialog\"] [role=\"tab\"][id$=\"-trigger-models\"]",
+    "target": {
+      "x": 269.5703125,
+      "y": 205,
+      "text": "Models",
+      "tag": "BUTTON"
+    },
+    "state": "attempted"
+  },
+  "lastObservedBooleans": {
+    "inheritanceCard": false,
+    "modelsTabActive": true,
+    "modelsTabDisabled": false,
+    "refreshSpinner": true,
+    "legacyModelsPanel": true,
+    "projectContextSelector": true,
+    "publicError": false,
+    "publicWarning": false
+  },
+  "failurePng": {
+    "path": "/workspace/scratch/c2f5ff7c30ee/v2-settings-608-original/archive/TEST-desktop-backend-dpoqO5/ui-v2-management-failure.png",
+    "bytes": 65146,
+    "gitBlob": "aa7d3beedc288ad566c8679d0d4eca832758d142",
+    "sha256": "051506c2dbc7ec2efe5522039a3602deeb55c0de43c98cae1b1b6e2372b877c9",
+    "matchesReceiptSha256": true,
+    "visuallyInspected": true
+  },
+  "logs": [
+    {
+      "path": "/workspace/scratch/c2f5ff7c30ee/cohort-608-preservation-0442/v2-133062441738.log",
+      "bytes": 111977,
+      "gitBlob": "337cb3d4eaa523bb2911473b25eb36135e1d0597",
+      "sha256": "11f743a78d0efcfdb36343ceddff59c0dd05f1f6c81a417c6584a141ef842bbb",
+      "specificLoadViewLifecycleTextMatches": []
+    },
+    {
+      "path": "/workspace/scratch/c2f5ff7c30ee/v2-settings-608-original/archive/TEST-desktop-backend-dpoqO5/desktop-backend-app.log",
+      "bytes": 11213,
+      "gitBlob": "d2e3dfb9a98dc8f384a4adcb0beaefda84441f5d",
+      "sha256": "8eb7c4c08e22d620071c77fb20f2baaff837c70aab3d53620706f88fcd015992",
+      "specificLoadViewLifecycleTextMatches": []
+    },
+    {
+      "path": "/workspace/scratch/c2f5ff7c30ee/v2-settings-608-original/archive/host-emulated-opencode-v2-management-ui.log",
+      "bytes": 1544,
+      "gitBlob": "86d264558824a349c62eedf794a3a5ed2828ec11",
+      "sha256": "045878e1e88ba1732ab7d5c03cabd368f6b343fbbc9573f3f08f41f78e2472c6",
+      "specificLoadViewLifecycleTextMatches": []
+    }
+  ],
+  "sourcePins": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+      "original608": {
+        "bytes": 20394,
+        "gitBlob": "74c3aaddba29d7309af436610f6a8b64c8c337e1",
+        "sha256": "bd70a28a13d10c5150843cd5de88aeb6007c1e27bc6bfcf4b45ced8413d01b3c"
+      },
+      "candidateFf7c": {
+        "bytes": 20435,
+        "gitBlob": "7f224d52e429bbdecb173d65b470a2ac154de475",
+        "sha256": "4aa1e0c6944d0154f4cee2eaa3cef4390ffdcc25cad93cac40488c1d7c2fa8d6"
+      },
+      "identical": false
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "original608": {
+        "bytes": 74351,
+        "gitBlob": "1176fd06b70f1b717ba83deb387f87b05b18b45b",
+        "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575"
+      },
+      "candidateFf7c": {
+        "bytes": 74351,
+        "gitBlob": "1176fd06b70f1b717ba83deb387f87b05b18b45b",
+        "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575"
+      },
+      "identical": true
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/RuntimeProviderManagementPanel.tsx",
+      "original608": {
+        "bytes": 12020,
+        "gitBlob": "32403fc3f01c93153e1325dd1bf1a6b17fa64499",
+        "sha256": "fdeae416c9017d9b377625a32ee4487b8391cc8b6041fb09c2ee292b71f9db31"
+      },
+      "candidateFf7c": {
+        "bytes": 12020,
+        "gitBlob": "32403fc3f01c93153e1325dd1bf1a6b17fa64499",
+        "sha256": "fdeae416c9017d9b377625a32ee4487b8391cc8b6041fb09c2ee292b71f9db31"
+      },
+      "identical": true
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+      "original608": {
+        "bytes": 97366,
+        "gitBlob": "176344903eaee49ced9607a29f28a3c556e59f6e",
+        "sha256": "11871dd43b1c704230c83e722577ba4cdd4f4fd6c2eebce89cab02457b52b81a"
+      },
+      "candidateFf7c": {
+        "bytes": 97366,
+        "gitBlob": "176344903eaee49ced9607a29f28a3c556e59f6e",
+        "sha256": "11871dd43b1c704230c83e722577ba4cdd4f4fd6c2eebce89cab02457b52b81a"
+      },
+      "identical": true
+    },
+    {
+      "path": "src/features/runtime-provider-management/core/domain/providerManagementView.ts",
+      "original608": {
+        "bytes": 3772,
+        "gitBlob": "ff2da0ec82edd2fb58682a8aadf75585fe63c23a",
+        "sha256": "2d127e0195beaa942a0e667b243cbe63b1c71b934224638e3636ca34fec9975c"
+      },
+      "candidateFf7c": {
+        "bytes": 3772,
+        "gitBlob": "ff2da0ec82edd2fb58682a8aadf75585fe63c23a",
+        "sha256": "2d127e0195beaa942a0e667b243cbe63b1c71b934224638e3636ca34fec9975c"
+      },
+      "identical": true
+    },
+    {
+      "path": "src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderManagementClient.ts",
+      "original608": {
+        "bytes": 23900,
+        "gitBlob": "6849549eacb871ea1342a37f4cecd27ed7795c32",
+        "sha256": "fe9b1bdc4e4dfb4eba417e1bb4a3b29987cbd1ccfdbf9766582e2d49a7a53568"
+      },
+      "candidateFf7c": {
+        "bytes": 23900,
+        "gitBlob": "6849549eacb871ea1342a37f4cecd27ed7795c32",
+        "sha256": "fe9b1bdc4e4dfb4eba417e1bb4a3b29987cbd1ccfdbf9766582e2d49a7a53568"
+      },
+      "identical": true
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/refreshRuntimeProviderConnection.ts",
+      "original608": {
+        "bytes": 5385,
+        "gitBlob": "a3a6ee5182d48416eef42766b846e4a3921d714d",
+        "sha256": "b5b887dacbc987d3ccabfa1be2d5f7befa54d8a30cc79b2d90ac43c0adbf4450"
+      },
+      "candidateFf7c": {
+        "bytes": 5385,
+        "gitBlob": "a3a6ee5182d48416eef42766b846e4a3921d714d",
+        "sha256": "b5b887dacbc987d3ccabfa1be2d5f7befa54d8a30cc79b2d90ac43c0adbf4450"
+      },
+      "identical": true
+    }
+  ],
+  "candidateScriptDiff": "--- 608/scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts\n+++ ff7c/scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts\n@@ -91,6 +91,7 @@\n           assert.ok(Date.now() < deadline, 'original default intent remains within its deadline');\n           const modelId = step === 'global-default' ? modelA : modelB;\n           const row = dialog + ' [data-testid=' + JSON.stringify('runtime-provider-model-row-' + modelId) + ']';\n+          options.assertOwnedRenderer();\n           intentComplete = await cdp.evaluate('(() => { const rows=[...document.querySelectorAll(' +\n             desktopJsLiteral(row) + ')]; if(rows.length!==1)return false;' +\n             'const buttons=[...rows[0].querySelectorAll(\"button[aria-pressed]\")]; if(buttons.length!==1)return false;' +\n",
+  "sourceFacts": {
+    "viewDeferredOnEnable": "RuntimeProviderManagementPanel.tsx175 loadViewOnEnable:false",
+    "modelsHandler": "PanelView2271-2277 changes active tab; starts refresh only if !state.view && !state.loading",
+    "refresh": "hook451-510 sets non-silent loading, awaits api.loadView, applies only current request, conditionally clears loading",
+    "scopedCard": "domain/providerManagementView108-129 requires qualified view fields; PanelView2334-2357 selects inheritance card or legacy panel",
+    "originalWitness": "UI script132-163 uses original30_000ms wait; accepts only inheritanceCard true; no new click/retry"
+  },
+  "missingRuntimeObservations": {
+    "loadViewDispatch": null,
+    "loadViewResolutionOrRejection": null,
+    "requestSequenceOrProjectContextSnapshot": null,
+    "runtimeRevisionChange": null,
+    "contextResetDuringModelsRead": null,
+    "catalogOperationJoin": null
+  },
+  "observationLimits": [
+    "No matching loadView/runtimeRevision lifecycle observation is retained in the three logs. This is absence of retained evidence, not proof that no call/error/reset happened.",
+    "Renderer CDP context records describe startup. They do not record the application hook project-context or runtime revision state.",
+    "Final spinner records nonmasked loading, but cannot distinguish a pending current read from overlapping/superseded requests or another unrecorded lifecycle.",
+    "Native catalog PID/birth row has no operation ID, request timing or loadView join.",
+    "No model test, global/project default mutation, inheritance continuation or reload was reached.",
+    "No established source defect or justified source correction from these observations; original acceptance remains FAIL."
+  ],
+  "prohibitedActionsPerformed": false
+}

@@ -8,9 +8,11 @@ import { createExternalAgentConnectionBridge } from '@features/external-agent-co
 import { createGatewayProviderBridge } from '@features/gateway-provider/preload';
 import { createMemberLogStreamBridge } from '@features/member-log-stream/preload';
 import { createMemberWorkSyncBridge } from '@features/member-work-sync/preload';
+import { createNativeNextPromptBridge } from '@features/native-prompt-suggestions/preload';
 import { createOrganizationsBridge } from '@features/organizations/preload';
 import { createProjectFolderBridge } from '@features/project-folder/preload';
 import { createRecentProjectsBridge } from '@features/recent-projects/preload';
+import { createReviewFlowBridge } from '@features/review-flow/preload';
 import { createRuntimeProviderManagementBridge } from '@features/runtime-provider-management/preload';
 import { createTeamGroupChatsBridge } from '@features/team-group-chats/preload';
 import { createTeamImportBridge } from '@features/team-import/preload';
@@ -513,13 +515,14 @@ ipcRenderer.on(
 // =============================================================================
 
 const electronAPI: ElectronAPI = {
-  agentBackend: createAgentBackendBridge(ipcRenderer, ipcRenderer, ipcRenderer),
+  agentBackend: createAgentBackendBridge(ipcRenderer, ipcRenderer, ipcRenderer, ipcRenderer),
   externalAgentConnection: createExternalAgentConnectionBridge(ipcRenderer),
   appCloseCoordination: createAppCloseCoordinationBridge(ipcRenderer),
   ...createCodexAccountBridge({
     ipcRenderer,
   }),
   ...createRecentProjectsBridge(),
+  reviewFlow: createReviewFlowBridge(),
   teamGroupChats: createTeamGroupChatsBridge(),
   announcements: createAnnouncementsBridge(),
   gatewayProvider: createGatewayProviderBridge(),
@@ -529,6 +532,7 @@ const electronAPI: ElectronAPI = {
   runtimeProviderManagement: createRuntimeProviderManagementBridge(ipcRenderer),
   memberWorkSync: createMemberWorkSyncBridge(ipcRenderer),
   memberLogStream: createMemberLogStreamBridge(),
+  nativePromptSuggestions: createNativeNextPromptBridge(ipcRenderer),
   organizations: createOrganizationsBridge(ipcRenderer),
   terminalWorkspace: createTerminalWorkspaceBridge(ipcRenderer),
   tokenUsage: createTokenUsageBridge(ipcRenderer),
@@ -1842,8 +1846,10 @@ const electronAPI: ElectronAPI = {
     install: async (options?: OpenCodeRuntimeInstallOptions): Promise<OpenCodeRuntimeStatus> => {
       return invokeIpcWithResult<OpenCodeRuntimeStatus>(OPENCODE_RUNTIME_INSTALL, options);
     },
-    invalidateStatus: async (): Promise<void> => {
-      return invokeIpcWithResult<void>(OPENCODE_RUNTIME_INVALIDATE_STATUS);
+    invalidateStatus: async (mode?: 'cache-only'): Promise<void> => {
+      return mode === undefined
+        ? invokeIpcWithResult<void>(OPENCODE_RUNTIME_INVALIDATE_STATUS)
+        : invokeIpcWithResult<void>(OPENCODE_RUNTIME_INVALIDATE_STATUS, mode);
     },
     onProgress: (callback: (event: unknown, data: OpenCodeRuntimeStatus) => void): (() => void) => {
       ipcRenderer.on(

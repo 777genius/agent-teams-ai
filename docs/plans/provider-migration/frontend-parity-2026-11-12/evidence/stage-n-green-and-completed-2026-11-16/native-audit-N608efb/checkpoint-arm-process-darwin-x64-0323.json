@@ -1,0 +1,180 @@
+{
+  "kind": "ORIGINAL_N608_INCREMENTAL_COMPLETED_NATIVE_EVIDENCE_CHECKPOINT",
+  "createdAt": "2026-11-16T03:23:27.698842+00:00",
+  "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "runs": [
+    43795234913,
+    43795234721
+  ],
+  "latestOwnedSnapshot": "2026-11-16 03:20:23 UTC",
+  "completedJobs": [
+    {
+      "id": 133062440000,
+      "scope": "Windows ARM64 Process finite TEST",
+      "conclusion": "success"
+    },
+    {
+      "id": 133062439989,
+      "scope": "Darwin x64 Process fixtures; native[]",
+      "conclusion": "success"
+    },
+    {
+      "id": 133062439089,
+      "scope": "Darwin x64 V2 earlier manual flow and P09 first baseline refusal",
+      "conclusion": "failure"
+    }
+  ],
+  "earlierCheckpointRetained": {
+    "path": "native-audit-N608efb/checkpoint-x64-static-0316.json",
+    "bytes": 6277,
+    "blob": "13559ac7a0e122389f53f64615614bdd3475213b",
+    "sha256": "771f3ad62589723bd1ef19c0ae862742991f95d0fc7be15b27e6f6ecf01ccdf5"
+  },
+  "reusedExactCurrentSourceClosure": {
+    "path": "native-audit-N608efb/host-source-N608efb-git-audit.json",
+    "bytes": 163123,
+    "blob": "9c8472f84db2ee0615314b9fd05df207e2c7d112",
+    "sha256": "30dbbf806666206c905b346f15e475646c2840d0c29f326a953fb3202d595ea0"
+  },
+  "files": [
+    {
+      "path": "native-audit-N608efb/process-win32-arm64/job-133062440000.log",
+      "bytes": 450975,
+      "blob": "8cca1336af0ca8e4f7075597eced808ffcad363a",
+      "sha256": "77cfe0f157d407abf397de0315f831617716ac33e884e553879e1e0d276363f6"
+    },
+    {
+      "path": "native-audit-N608efb/process-win32-arm64/artifact-14194558632.zip",
+      "bytes": 72294,
+      "blob": "02a0765eca19742afc372fab80456b7b4b3eebb4",
+      "sha256": "c63bcdc4d931ddad1788bf8b7daa7c0a25d1c8d1d4e1305ab03b2ab33518bfdc"
+    },
+    {
+      "path": "native-audit-N608efb/process-win32-arm64/archive-audit.json",
+      "bytes": 5525,
+      "blob": "85a0cbf513a25d64931187ee6b6fe5205072d7c4",
+      "sha256": "a27e1e8ca382f7fa9bcc7bfeab0a7801178513ca82ce7df558eb37b02f0097b4"
+    },
+    {
+      "path": "native-audit-N608efb/process-windows-arm64-qualification-audit.json",
+      "bytes": 45763,
+      "blob": "4e5e5cd5d004c5ca3f83ef2dde5c6b6523e0a6c8",
+      "sha256": "df0380086df26f9f1ebf5855f28fb392f2d219ce45be4dab563b0f3d677fe2c4"
+    },
+    {
+      "path": "native-audit-N608efb/process-source-pin-audit-arm64.json",
+      "bytes": 36208,
+      "blob": "bd6f02f36bec244fa4f9af0a6ddc200d72704472",
+      "sha256": "109ae274c0085042f2f47cbdc19b8ba0aa61e31d655a0c8b5e7b86545851cd15"
+    },
+    {
+      "path": "native-audit-N608efb/process-darwin-x64/job-133062439989.log",
+      "bytes": 133910,
+      "blob": "d3ec6cfdbc1e9904177faa66ac26cc964b646421",
+      "sha256": "d3cc7755a545290d9ff2b6db7b945a318828ceac2e07932f1e617f0991e9ef44"
+    },
+    {
+      "path": "native-audit-N608efb/process-darwin-x64/artifact-14193918545.zip",
+      "bytes": 13354,
+      "blob": "7f1972097d490bacf6765e6bead6362fe5d76ff2",
+      "sha256": "b1a9edd1569f895c75001ced6b5f38e0e19fce4714d41a33347ee5f0be55454c"
+    },
+    {
+      "path": "native-audit-N608efb/process-darwin-x64/archive-audit.json",
+      "bytes": 1909,
+      "blob": "296d4215f31f1e5bf65b0e13f0f5019b3cd67e43",
+      "sha256": "4616650b8f1a57e4d3f3f5692fdd5a3818f969bcc5707672d630f9e63ae8be64"
+    },
+    {
+      "path": "native-audit-N608efb/process-darwin-x64-qualification-audit.json",
+      "bytes": 7727,
+      "blob": "3104110e718d5ca1450b942b1582475d74d13739",
+      "sha256": "42828313ca3aa776ce977de2d0cd19bb403266753e547496009c6b20d8bd5b49"
+    },
+    {
+      "path": "native-audit-N608efb/v2-darwin-x64/job-133062439089.log",
+      "bytes": 109150,
+      "blob": "a8f58f3d18b14dd8dabf22625c978624d29971ff",
+      "sha256": "2c8458c589296778fa0770de230ab7e79f1b2100df260ea015d5c71ee64ace3e"
+    },
+    {
+      "path": "native-audit-N608efb/v2-darwin-x64/artifact-14195150657.zip",
+      "bytes": 10456,
+      "blob": "ac8fd029c6b7844076db0cc0824658abf5aed22d",
+      "sha256": "1189a153c053fea6db96009513da6f2812d3149e1d6394aee807be3b95da8624"
+    },
+    {
+      "path": "native-audit-N608efb/v2-darwin-x64/archive-audit.json",
+      "bytes": 1203,
+      "blob": "83ba6ed09b8977731b1c9636a4a84aa0c5dd09d8",
+      "sha256": "12852e55ee317fcb02df6407a4205c5bc6d74fcbf38cfb301f9591408ac6b01f"
+    },
+    {
+      "path": "native-audit-N608efb/p09-darwin-x64-qualification-audit.json",
+      "bytes": 28235,
+      "blob": "eb43f68332b6058bcebe635a69ba9f8edb62db1e",
+      "sha256": "ca785844b116ed955497f63852df080f465e4c10d28e7b31efefbfd7fba1bf64"
+    },
+    {
+      "path": "native-audit-N608efb/process-artifacts-0320.json",
+      "bytes": 2961,
+      "blob": "1068fee22883dcf987dc6e51e019824897e6031a",
+      "sha256": "46724ae9b4515c4e8bb36716f9e5610f4c78dcdb6e476e80abc2787c0491c948"
+    },
+    {
+      "path": "native-audit-N608efb/v2-artifacts-0315.json",
+      "bytes": 1958,
+      "blob": "2ea2bc9c14d0005183db4b57059935b3b748d0d5",
+      "sha256": "61e81f06bb43b6be20609f2c4caad5a41cdb05650f41e0839b5d7ef01ca0e272"
+    },
+    {
+      "path": "ci-n-608efb/process-jobs-0315.json",
+      "bytes": 16768,
+      "blob": "95df35bc352c8b22a754c0c9a1f35501fcbf896b",
+      "sha256": "2867c64b0ca6f929d5ad1b609c8d4712a3c98861536cd0be2ebc40a4648fc89d"
+    },
+    {
+      "path": "ci-n-608efb/v2-jobs-0315.json",
+      "bytes": 22950,
+      "blob": "766844190dcf32bf8d1de559512cf50a377e754c",
+      "sha256": "c7cea78b26673b1c719e7df20d0e4655d5feabb0420f7aa90757729be318d062"
+    },
+    {
+      "path": "ci-n-608efb/process-jobs-0320.json",
+      "bytes": 21882,
+      "blob": "2e87ce750a8570b1c8773626f1e977d9a0a7b752",
+      "sha256": "d76b3ad930aecc3024de7c447c979db3b8dface17ba6526b9fd5fb2abee45489"
+    },
+    {
+      "path": "ci-n-608efb/v2-jobs-0320.json",
+      "bytes": 28473,
+      "blob": "2ce95292bfa56345b84b5452f922f61ce5a1fcbd",
+      "sha256": "fd322e06007485b011fa5eead8643f8745790f0736f02bf392261e059d7366b2"
+    }
+  ],
+  "fileCount": 19,
+  "totalBytes": 1011701,
+  "archives": [
+    {
+      "path": "native-audit-N608efb/process-win32-arm64/artifact-14194558632.zip",
+      "members": 19
+    },
+    {
+      "path": "native-audit-N608efb/process-darwin-x64/artifact-14193918545.zip",
+      "members": 6
+    },
+    {
+      "path": "native-audit-N608efb/v2-darwin-x64/artifact-14195150657.zip",
+      "members": 4
+    }
+  ],
+  "archiveCount": 3,
+  "archiveMemberCount": 29,
+  "qualification": [
+    "All hashes bind retained official originals and source-bound read-only audits; no independent reviewer approval is implied.",
+    "The three original full ZIP archives recover all29 extracted members; duplicate extracted copies are omitted from this checkpoint.",
+    "Prior x64 Process/V2/Static checkpoint remains immutable. Completed jobs stay separate from queued/running jobs and from their run-level lagging status.",
+    "P09 is FAIL/INCOMPLETE despite its prior manual V2 flow; no real-provider, P08, Desktop, release, privacy Team177/24 or93lint qualification follows.",
+    "No signed download URL, native/project execution, source/ref mutation or CI action is retained or performed."
+  ]
+}

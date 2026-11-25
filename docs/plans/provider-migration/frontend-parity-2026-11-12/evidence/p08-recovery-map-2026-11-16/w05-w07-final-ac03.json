@@ -1,0 +1,122 @@
+{
+  "status": "READ_ONLY_SCOPE_MAP_SEALED_NO_CURRENT_HEAD_EXECUTION_QUALIFICATION",
+  "sourceHead": "ac03d91bcd4d5678c653e09624978fffdc8f2784",
+  "sourceTree": "9615abfc348734943f7fc3c34f79ca0808175d66",
+  "originalRequirementBlob": "fb05c432887dd9db5dedab8d0e24544cf3ac842d",
+  "requirements": {
+    "W05": {
+      "scenario": "Crash Host/control process до resume, на owner installation и после tool effect; cold reconnect",
+      "oracle": "Нет orphan/input replay; original UNKNOWN виден; новое поколение не принимает старую numeric identity"
+    },
+    "W07": {
+      "scenario": "Stop → exact checkpoint → cold Resume, затем fresh relaunch",
+      "oracle": "Resume сохраняет нужную native history; fresh run имеет новую identity; оба cleanup подтверждены"
+    }
+  },
+  "scope": "Windows Claude/Codex/OpenCode V1 baseline; actual CLI/SDK/OS/Host/UI with scripted localhost inference permitted. W05/W07 are risk-distributed, not a new full provider×arch Cartesian matrix. Darwin regressions, V2 and finite peers do not silently qualify that baseline.",
+  "openCompositions": [
+    {
+      "id": "W05-owner-installation-cold",
+      "classification": "acceptance-composition gap, no production defect established",
+      "missingJoin": "Actual Host crash during held owner installation to durable UNKNOWN and cold reconnect without replay/adoption; existing unit authority-loss and native facade cancellation remain distinct positives."
+    },
+    {
+      "id": "W05-after-effect-unknown-cold",
+      "classification": "separate composition/qualification remains open",
+      "missingJoin": "Actual native effect followed by lost acknowledgment/Host loss and durable UNKNOWN/cold runtime recovery; finite transport response-loss and genuine completed-effect/service-rebind paths do not alone establish the whole join."
+    },
+    {
+      "id": "W07-resume-then-fresh",
+      "classification": "acceptance-composition gap, no production defect established",
+      "missingJoin": "Supported Windows baseline provider exact checkpoint/cold Resume followed by independent fresh launch/new identity and both cleanup proofs; current located helpers stop after restored-generation cleanup."
+    }
+  ],
+  "sameMainRetry": "Implemented and CI-reachable on packaged Windows x64/ARM64. Completed original exact-head receipts still needed; no missing source or justified timer change established.",
+  "notBlocked": [
+    "Plan61 original four V2 Desktop routes",
+    "C8 original Settings-first acceptance",
+    "B2 retained donor job",
+    "same-Main packaged Windows original receipts"
+  ],
+  "ownerRestriction": "No genuine Claude/Codex commands, including version or localhost qualification. Existing genuine retained-Claude route remains owner-restricted. P09 contract decision is separate.",
+  "report": {
+    "path": "p08-recovery-audit/remaining-map-ac03.md",
+    "bytes": 10306,
+    "sha256": "0df799e175247866cabd95565934c9adffdbb9c291e85e73c71973b116857c5e"
+  },
+  "sourceBindings": {
+    "path": "p08-recovery-audit/current-ac03-bindings.json",
+    "sha256": "296fc7c7cf562f47218efac09a34836134495b6e851b6bb8d32e1501e2cece30",
+    "count": 23
+  },
+  "retainedReports": [
+    {
+      "path": "process-3be-win64/artifact-audit/evidence-r2.json",
+      "bytes": 23655,
+      "sha256": "043a763ea80f68139b303bf3e4776abc77c63b8f7a07e7bc9d987735bbe2872b"
+    },
+    {
+      "path": "process-3be-arm64/artifact-audit/evidence-r2.json",
+      "bytes": 19464,
+      "sha256": "03370e0c923dd0cee693b437e4950e8ce42473652e35c3fd1a033f7653580202"
+    },
+    {
+      "path": "native-proposal/v2-first-input-3be-r1/review.json",
+      "bytes": 30201,
+      "sha256": "a00a735e49d6c5ddb166aecbd54db2217885fe3fe54bc36e74839f87a0b7e7be"
+    },
+    {
+      "path": "frontend-proposal/native-aa01-win64/audit.json",
+      "bytes": 9782,
+      "sha256": "89d8ea847fe2c472c94633f1b7adcea9f4a09a49a46f9d9d8807ec2a2cdef385"
+    },
+    {
+      "path": "frontend-proposal/native-aa01-win-arm64/audit.json",
+      "bytes": 12711,
+      "sha256": "202372521a66ecb69e1de39098458c6c06ff0b8aba246fb96460a2ff2d5d344c"
+    },
+    {
+      "path": "ci-3be-pass-audit/processes-collaboration-review.json",
+      "bytes": 9839,
+      "sha256": "9a195d7fa02cc289de97f947769ac5502430d9e75b3a52e3eb1be618cb2eaded"
+    },
+    {
+      "path": "p08-recovery-audit/current-findings.json",
+      "bytes": 6338,
+      "sha256": "4f8e215efd46ef632be0e51e7301083d448f3149a493c0011e40e6f1f9231180"
+    },
+    {
+      "path": "p08-recovery-audit/w05-w07-checkpoint.json",
+      "bytes": 3182,
+      "sha256": "e164f49b6b9de15fa1d972065d825c04aa901b466b5bdc126953f5e9f4985f57"
+    },
+    {
+      "path": "frontend-proposal/stage1-gap-review-447a/remaining-requirements.md",
+      "bytes": 11588,
+      "sha256": "ee7184b2fea95b33d15b22c7ab7d9114f9ca734b9454e5f086b00ae9365a9319"
+    }
+  ],
+  "rawContractLogJoin": [
+    {
+      "path": "process-3be-win64/artifact-audit/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+      "bytes": 20535,
+      "sha256": "c7cea462bb276c4e9eb38ca51818aa6c103a8117506259dccaa00d64fe4e1d05"
+    },
+    {
+      "path": "process-3be-win64/artifact-audit/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+      "bytes": 9677,
+      "sha256": "bfa422005b3c890c61721f072e72093fb2d5466eb4a01f083677ca07f9631ac2"
+    },
+    {
+      "path": "process-3be-arm64/artifact-audit/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+      "bytes": 20518,
+      "sha256": "33fd2b42cb6f8b62253c179b035c8af9cef33e57b9ed8c58c0cffbd0a322d37a"
+    },
+    {
+      "path": "process-3be-arm64/artifact-audit/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+      "bytes": 9714,
+      "sha256": "58ccb053b314b7fc4617efeaf7cda93be93f7285a60b709aed3dc39c78b66d7a"
+    }
+  ],
+  "execution": "Only immutable official source reads and local inert read/hash/diff/reporting. No project/compiler/test/provider/GUI/CI polling/action/remote mutation; no new artifact download."
+}

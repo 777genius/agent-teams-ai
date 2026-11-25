@@ -65,7 +65,7 @@ export const ConflictDialog = ({
             <textarea
               value={editContent}
               onChange={(e) => setEditContent(e.target.value)}
-              className="h-64 w-full resize-y rounded border border-border bg-surface p-3 font-mono text-xs text-text focus:border-blue-500/50 focus:outline-none"
+              className="h-64 w-full resize-y rounded border border-border bg-[var(--color-form-control-bg)] p-3 font-mono text-xs text-text focus:border-blue-500/50 focus:outline-none"
               spellCheck={false}
             />
           ) : (

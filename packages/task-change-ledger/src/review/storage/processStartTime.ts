@@ -1,4 +1,7 @@
-import { execFile, type ExecFileException } from 'child_process';
+import { execFile, type ChildProcess, type ExecFileException, type ExecFileOptions } from 'child_process';
+
+type ProcessStartProbeExecutor = (command: string, args: readonly string[], options: ExecFileOptions,
+  callback: (error: ExecFileException | null, stdout: string | Buffer, stderr: string | Buffer) => void) => ChildProcess;
 
 /** Node-only process identity probe; diagnostics are optional consumer-owned observations. */
 export interface ProcessStartProbeOutcome {
@@ -85,11 +88,12 @@ export async function readProcessStartTimeMs(
   pid: number,
   platform: NodeJS.Platform = process.platform,
   timeoutMs: number = DEFAULT_PROBE_TIMEOUT_MS,
-  onDiagnostic?: ProcessStartProbeObserver
+  onDiagnostic?: ProcessStartProbeObserver,
+  execute: ProcessStartProbeExecutor = execFile
 ): Promise<number | null> {
   return platform === 'win32'
-    ? readWindowsProcessStartTimeMs(pid, timeoutMs, onDiagnostic)
-    : readNativeProcessStartTimeMs(pid, timeoutMs, onDiagnostic);
+    ? readWindowsProcessStartTimeMs(pid, timeoutMs, onDiagnostic, execute)
+    : readNativeProcessStartTimeMs(pid, timeoutMs, onDiagnostic, execute);
 }
 
 /**
@@ -143,15 +147,17 @@ async function readStartTimeOrNull(
 async function readNativeProcessStartTimeMs(
   pid: number,
   timeoutMs: number,
-  onDiagnostic?: ProcessStartProbeObserver
+  onDiagnostic?: ProcessStartProbeObserver,
+  execute: ProcessStartProbeExecutor = execFile
 ): Promise<number | null> {
-  return execProcessProbeText('ps', ['-p', String(pid), '-o', 'lstart='], timeoutMs, onDiagnostic);
+  return execProcessProbeText('ps', ['-p', String(pid), '-o', 'lstart='], timeoutMs, onDiagnostic, execute);
 }
 
 async function readWindowsProcessStartTimeMs(
   pid: number,
   timeoutMs: number,
-  onDiagnostic?: ProcessStartProbeObserver
+  onDiagnostic?: ProcessStartProbeObserver,
+  execute: ProcessStartProbeExecutor = execFile
 ): Promise<number | null> {
   const normalizedPid = Math.trunc(pid);
   // The pid is interpolated into a PowerShell script, so anything that is not a
@@ -186,7 +192,8 @@ async function readWindowsProcessStartTimeMs(
       Buffer.from(script, 'utf16le').toString('base64'),
     ],
     timeoutMs,
-    onDiagnostic
+    onDiagnostic,
+    execute
   );
 }
 
@@ -194,11 +201,12 @@ function execProcessProbeText(
   command: string,
   args: string[],
   timeout: number,
-  onDiagnostic?: ProcessStartProbeObserver
+  onDiagnostic?: ProcessStartProbeObserver,
+  execute: ProcessStartProbeExecutor = execFile
 ): Promise<number | null> {
   const startedAt = performance.now();
   return new Promise((resolve) => {
-    execFile(
+    execute(
       command,
       args,
       {

@@ -32,7 +32,7 @@ test('captured V2 runtime and its derived management probe accept only the curre
   }
 });
 
-test('the ordinary probe preserves V1 POSIX paths and admits a Windows drive path only for native OpenCode', () => {
+test('the ordinary probe follows the trusted native Host while selected V2 paths stay canonical', () => {
   const base = { launchId: 'TEST-launch', rosterRevision: 'TEST-roster', memberId: 'TEST-member', model: 'TEST-model',
     draft: { providerId: 'opencode', target: { kind: 'lead' }, workspace: nativePath('workspace') } };
   assert.equal(teamModelProbeSelectionSchema.safeParse(base).success, true);
@@ -41,14 +41,18 @@ test('the ordinary probe preserves V1 POSIX paths and admits a Windows drive pat
     assert.equal(teamModelProbeSelectionSchema.safeParse({ ...base, draft: { ...base.draft, workspace: bad } }).success, false);
   }
   for (const workspace of ['/repo/', '//server/share/workspace']) {
-    assert.equal(teamModelProbeSelectionSchema.safeParse({ ...base, draft: { ...base.draft, workspace } }).success, true,
-      'an unselected draft retains the original V1 POSIX path rule');
+    assert.equal(teamModelProbeSelectionSchema.safeParse({ ...base, draft: { ...base.draft, workspace } }).success, process.platform !== 'win32',
+      'legacy POSIX admission belongs only to a POSIX Host; Windows never translates slash aliases');
     assert.equal(runtimeProfileSchema.safeParse({ members: [{ ...member(), cwd: workspace }] }).success, false,
       'a selected V2 runtime still refuses a noncanonical or foreign path before allocation');
   }
-  for (const providerId of ['anthropic', 'codex']) {
+  for (const providerId of ['anthropic', 'codex', 'opencode']) {
     assert.equal(teamModelProbeSelectionSchema.safeParse({ ...base,
-      draft: { ...base.draft, providerId, workspace: 'C:\\TEST\\workspace' } }).success, false,
-    'other providers do not gain Windows qualification from the OpenCode path');
+      draft: { ...base.draft, providerId, workspace: nativePath('workspace') } }).success, true,
+    'all provider drafts use this Host OS; captured executable and custody are checked separately');
+    assert.equal(teamModelProbeSelectionSchema.safeParse({ ...base,
+      draft: { ...base.draft, providerId, workspace: process.platform === 'win32'
+        ? '/foreign/workspace' : 'C:\\TEST\\workspace' } }).success, false,
+    'a provider name never grants admission to a foreign OS path');
   }
 });

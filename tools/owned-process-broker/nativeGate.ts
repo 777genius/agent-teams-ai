@@ -30,6 +30,9 @@ import {
 } from './nativeGateContext';
 import { nativeLossScenario, nativeReleaseScenario } from './nativeGateRawScenarios';
 import { runNativePendingWriteGate } from './nativePendingWriteGate';
+import { nativeFacadeScenario } from './nativeFacadeScenario';
+import { nativeCapturedScenario } from './nativeCapturedScenario';
+import { nativeAdditionalDebugServiceScenario, nativeDebugServiceScenario } from './nativeDebugServiceScenario';
 
 async function preResumeCancellation(context: GateContext): Promise<void> {
   const { broker, fixture, owner, marker, spec, track, retain, phase } = context;
@@ -383,6 +386,7 @@ export async function runNativeGate(
   birthFailureBroker: string,
   accountingFailureBroker: string,
   releaseDelayBroker: string,
+  debugServiceBroker: string,
   sandbox: string
 ): Promise<void> {
   assert.equal(process.platform, 'win32', 'Native gate must execute on Windows');
@@ -453,6 +457,19 @@ export async function runNativeGate(
     );
     phase('complete');
     await runScenario('pre-resume-cancel', () => preResumeCancellation(context));
+    await runScenario('facade-stdio', () => nativeFacadeScenario(context, false, sentinel));
+    await runScenario('facade-cancel', () => nativeFacadeScenario(context, true, sentinel));
+    for (const provider of ['claude', 'codex', 'opencode'] as const)
+      await runScenario(`capture-${provider}`, () => nativeCapturedScenario(context, provider, false, sentinel));
+    await runScenario('capture-root-first', () => nativeCapturedScenario(context, 'claude', true, sentinel));
+    await runScenario('debug-service-cancel', () => nativeDebugServiceScenario(context, debugServiceBroker, 'pre-resume-cancel', sentinel));
+    await runScenario('debug-service', () => nativeDebugServiceScenario(context, debugServiceBroker, 'service-pair', sentinel));
+    await runScenario('debug-service-root-first', () => nativeDebugServiceScenario(context, debugServiceBroker, 'service-first', sentinel));
+    await runScenario('debug-service-admission-race', () => nativeAdditionalDebugServiceScenario(context, debugServiceBroker, 'service-race', sentinel));
+    await runScenario('debug-service-wow64-root', () => nativeAdditionalDebugServiceScenario(context, debugServiceBroker, 'wow64-root', sentinel));
+    const includeI386Root = process.env.HOST_PROCESS_NATIVE_I386_FIXTURE !== undefined;
+    if (includeI386Root)
+      await runScenario('debug-service-i386-root', () => nativeAdditionalDebugServiceScenario(context, debugServiceBroker, 'i386-root', sentinel));
     for (const mode of ['tree', 'root-first'] as const)
       await runScenario(mode, () => treeScenario(context, mode, sentinel));
     for (const mode of ['flood', 'breakaway'] as const)
@@ -496,6 +513,14 @@ export async function runNativeGate(
           'blocked-output-independent-stop',
           'breakaway-denied',
           'pre-resume-cancel-first-nonce',
+          'facade-private-stdin-after-native-owner-tail-exit',
+          'facade-pre-resume-cancel-no-private-input',
+          'captured-provider-native-argv-env-cwd-and-stop',
+          'captured-root-first-original-descendants-and-neighbor',
+          'TEST-only-debug-service-prebirth-nested-job-feasibility',
+          'TEST-only-scoped-stop-pending-create-isolation',
+          'TEST-only-wow64-root-child-startup-and-application-exceptions',
+          ...(includeI386Root ? ['TEST-only-direct-I386-root-startup-and-late-application-exceptions'] : []),
           'birth-failure-unknown-first-nonce',
           'owner-eof',
           'accounting-failure-latched-unknown-distinct-reconciliation',
@@ -513,6 +538,8 @@ export async function runNativeGate(
       })
     );
   } catch (error) {
+    // Retain the scenario failure before an exit callback triggered by owned cleanup.
+    events.guard(() => { throw error; })();
     events.guard(diagnostics.failure)();
     throw error;
   } finally {
@@ -535,7 +562,7 @@ export async function runNativeGate(
   }
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const [broker, fixture, fault, accountingFault, releaseDelay, flag, sandbox] =
+  const [broker, fixture, fault, accountingFault, releaseDelay, debugService, flag, sandbox] =
     process.argv.slice(2);
   if (
     !broker ||
@@ -543,6 +570,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     !fault ||
     !accountingFault ||
     !releaseDelay ||
+    !debugService ||
     flag !== '--controller-sandbox' ||
     !sandbox
   ) {
@@ -556,6 +584,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     resolve(fault),
     resolve(accountingFault),
     resolve(releaseDelay),
+    resolve(debugService),
     resolve(sandbox)
   );
 }

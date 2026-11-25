@@ -1,0 +1,54 @@
+{
+  "schema": "independent-source-review",
+  "reviewer": "ui_failures",
+  "sourceCommit": "27b1acf48278dcd0fb348c626696eac2dc64de73",
+  "sourceTree": "df57310cd096bfc628b31ca05b0caae91eb5ae09",
+  "verdict": "APPROVED exact one-file prospective correction; no execution or adoption qualification",
+  "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+  "preimage": {
+    "bytes": 57780,
+    "lines": 666,
+    "gitBlob": "cb3974254caf54d40d560eff2ad5419adcedae3c",
+    "sha256": "20d8cec4bfc143b51e6df5bce01c55fa3f4f7f5fc51973ce2bea5cad7eda3f12"
+  },
+  "candidate": {
+    "bytes": 57268,
+    "lines": 659,
+    "gitBlob": "069111cf2e035c084d54caa0bf3753b47c86b5ba",
+    "sha256": "8ebfdb03d72c73cef19456fd8f74c6c2b7c671e0733edd996a61b9faedd3d411"
+  },
+  "patch": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stage-k-adoption/corrected-v2/runtime-ui-correction.patch",
+    "bytes": 3507,
+    "lines": 44,
+    "gitBlob": "e2ebdfec8ebdb811981b16fd7225311d7c41d724",
+    "sha256": "49a92fa7bad176f33a536cf8967d07371e12f14b4a5ba43a3b5f38b1180c3d5f"
+  },
+  "delta": {
+    "insertions": 7,
+    "deletions": 14
+  },
+  "byteChecks": {
+    "preimageExact": true,
+    "candidateExact": true,
+    "originalHeaderBlockUnchanged": true,
+    "allFollowingAssertionsAndCleanupUnchanged": true,
+    "below800PhysicalLines": true
+  },
+  "findings": [
+    "Both original Task Activity and Task Log Stream render HostMemberActivityLog. The obsolete Activity pre/span query cannot observe the new collapsed BaseItem/Markdown paragraph content.",
+    "The original unique title/member/generation qualification and disclosure inputs are unchanged. Both iterations now reuse the existing actual event identity/disclosure/visibility helper.",
+    "The optional title only augments the existing final DOM expression: it requires one freshly read expanded header whose text equals the earlier qualified title, and returns source from that current DOM node. It does not substitute the earlier string as fresh evidence.",
+    "The Activity outer Captured Task input header is distinct from its nested Captured runtime activity header; strict text matching prevents the nested header from satisfying the original source identity.",
+    "Calls outside the Task loop omit the optional title and execute no header query. The helper has no additional CDP request, native action, timer or deadline. Adapting Activity to the already-existing rich-fact helper intentionally exercises its existing identity read and output disclosure sequence.",
+    "All following no-stderr attribution, input/command/effect/task equality, retained journal digest, screenshots and Stop/cleanup assertions remain byte-identical.",
+    "No downstream tracked assertion requires rendered.source, but the candidate preserves that original current-header receipt fact for Activity and now retains it for Stream too.",
+    "The nested template is syntactically coherent by source inspection; future original compiler/lint/UI execution remains required."
+  ],
+  "limits": [
+    "No source application, project test, parser, build, native/provider command, CI or ref action was performed.",
+    "This is a source-proven fixture compatibility correction, not an observed 27b CI failure or a product repair.",
+    "No atomicity across the earlier title read, disclosure and final DOM observation is claimed; changed source/header causes refusal.",
+    "Thinking producer normalization and checked-provider package adoption remain outside this candidate."
+  ]
+}

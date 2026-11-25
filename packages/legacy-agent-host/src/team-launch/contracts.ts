@@ -53,6 +53,7 @@ export interface RuntimeLaunchObservation {
 export interface RuntimeLaunchPort {
   read(memberId: string): RuntimeLaunchObservation;
   captureAuthority?(memberId: string): () => void;
+  assertModelReadiness?(memberId: string): void;
   open(memberId: string, assertAuthority?: () => void): Promise<void>;
 }
 export type LaunchMemberStatus =
@@ -85,10 +86,14 @@ export interface LaunchMemberRecord {
 }
 export interface TeamLaunchRecord {
   schemaVersion: 1;
+  readiness?: import('./launchReadiness.js').LaunchReadiness;
+  liveMembership?: import('./liveRosterMembership.js').LiveLaunchMembership[];
   nativeAdditions?: import('./nativeLaunchAddition.js').NativeLaunchAddition[];
   definition: TeamLaunchDefinition;
   fingerprint: string;
   startCommandId?: string;
+  /** Undefined preserves the captured saved prompt; null starts without an initial task. */
+  initialPrompt?: string | null;
   /** Original pre-allocation source for starts without a separate option preparation. */
   sourceRosterRevision?: string;
   /** Original aggregate admission time; not reset by polling/replay/retry. */

@@ -1,0 +1,34 @@
+{
+  "kind": "Independent byte-only R2 of retained D output checkpoint before future K build",
+  "result": "APPROVE",
+  "originalBuildHead": "7e8e37c282e9cc653efd79799dc862d116310065",
+  "checkpointObservedHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+  "checkpoint": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stage-k-adoption/retained-D-output-checkpoint.json",
+    "bytes": 1144,
+    "blob": "09f31a9d9efca68430c4b1acbee1cce91153c692",
+    "sha256": "3b67d46d2418b53ebed112200e95422b7ffa3f389a90c7f242360d1676868608"
+  },
+  "originalInventory": {
+    "path": "/workspace/scratch/82d3f9ba6b85/reconciled-source-local/D-host-build-outputs-after.json",
+    "bytes": 280944,
+    "blob": "897c958cbb8e80120c22670e44614931f6436ba2",
+    "sha256": "babd0e295fbb1c79a3710f808bf6418f1b9e249f29085ee2d7a604ce72721dc8"
+  },
+  "archive": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stage-k-adoption/retained-D-output-checkpoint.zip",
+    "bytes": 1864234,
+    "blob": "6774a882b3de474acc9f19e69beb2a7dddf44614",
+    "sha256": "975096ddb00e53e71ed1bcd33c965f5d758c73f3d9cf789a08700ac0816fc7fe"
+  },
+  "payloadCount": 1446,
+  "payloadBytes": 6207302,
+  "allOriginalInventoryNamesAndContentHashesExact": true,
+  "CRCsExact": true,
+  "noDuplicateOrUnsafeMemberNames": true,
+  "normalizedArchiveMtimesNotOriginal": true,
+  "limits": [
+    "This checks the archive against the original D output manifest, not a new build or current-source runtime qualification.",
+    "No Node, project build, tests, source/ref/CI mutation or provider execution by reviewer."
+  ]
+}

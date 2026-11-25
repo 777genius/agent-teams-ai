@@ -1,0 +1,37 @@
+✔ offline Desktop admission refuses inherited native selections before preparing a fixture (9.469003ms)
+✔ TEST management admission retains only the exact direct detached Host peer without signaling (6.678742ms)
+✔ Linux CDP diagnostics retain the original bounded descriptor read without accepting a second holder (15.355504ms)
+✔ Linux zero-group rows remain observable without becoming owned app groups; malformed census stays an error (2.27035ms)
+✔ the same original-root oracle uses each existing caller deadline after a long provider phase, without renewing reads (2.838624ms)
+✔ read-only discovery survives navigation during the actual IPC read, then reads the new context (0.640902ms)
+✔ unregistered initial discovery waits, but owner failures are never hidden as navigation (0.546431ms)
+✔ initial discovery passes only its remaining captured budget to the IPC await (0.389024ms)
+✔ exhausted initial observation never dispatches the backend IPC (0.405239ms)
+✔ other discovery callers retain the default CDP budget (0.324638ms)
+✔ an explicit IPC observation budget lets the same read settle after30s within60s (1.327344ms)
+✔ default CDP evaluations still reject at30s without a resend (0.337346ms)
+✔ macOS original Node zombie is the same unreaped harness child, never a changed live command (0.818189ms)
+✔ live stat can become original defunct before the guard; only original child reap and whole-group absence settle it (1.646193ms)
+✔ changed command/start, wrong child/group and initial descendants never authorize a recovery observation (0.276755ms)
+✔ an already observed original natural exit still requires fresh group and captured Host absence (0.314583ms)
+✔ original crash/signal and process-table failures remain debt (0.340472ms)
+✔ the original deadline is not renewed after initial settlement consumed it (0.174602ms)
+✔ numeric group absence without this original child exit observation expires within the remaining original budget (0.325769ms)
+✔ a process-table read that crosses the original deadline cannot qualify natural exit (0.235964ms)
+✔ an already reaped original child waits for actual descendant and original Host absence (0.766572ms)
+✔ an orphan descendant, moved captured descendant or original Host cannot be cleared by an expired budget (0.536926ms)
+✔ absent leader observation rejects wrong child, live/crashed/signaled child and invalid captured identities (0.469586ms)
+✔ a reused leader PID and unavailable full process census retain debt without signaling (0.372129ms)
+✔ absent leader observation never renews the original deadline or accepts a late census (0.232179ms)
+✔ post-Stop observer continues past stale original and pending alternate to fresh stopped props (1.451441ms)
+✔ initial original-ref observation remains exact and cannot select a replacement ref (0.482125ms)
+✔ background acceptance waits for atomic service publication without masking corrupt readiness (186.147879ms)
+✔ captured no-provider Processes fixture rejects mixed inputs before allocating and seeds no Runtime (1788.428359ms)
+ℹ tests 29
+ℹ suites 0
+ℹ pass 29
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4541.864963

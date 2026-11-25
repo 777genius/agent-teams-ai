@@ -269,7 +269,11 @@ export async function loadDesktopBackendDescriptor(
     const file = await open(selection.path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
     try {
       const stats = await file.stat();
-      if (!stats.isFile() || stats.size > 256 * 1024 || (stats.mode & 0o077) !== 0)
+      if (
+        !stats.isFile() ||
+        stats.size > 256 * 1024 ||
+        (process.platform !== 'win32' && (stats.mode & 0o077) !== 0)
+      )
         throw new BackendRoutingError('hold');
       const buffer = Buffer.alloc(256 * 1024 + 1);
       let length = 0;

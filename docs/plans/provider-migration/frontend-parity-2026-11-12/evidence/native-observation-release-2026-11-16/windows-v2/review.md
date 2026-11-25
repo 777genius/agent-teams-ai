@@ -1,0 +1,12 @@
+# Original e1d Windows x64 OpenCode V2 native Host result
+
+Run43813731517 / job133120929407 / attempt1 executed source e1d14b9cd0fa1d7896b58e513f9040639e9e4940 on Node24.21.0 and win32-x64. The original job completed successfully. Its graph/custody prerequisite command reports57 PASS,0FAIL,1 original Linux-only SKIP out of58; the Windows custody native case and both original Host cases each report1PASS with no skips.
+
+The retained manual and automatic approval receipts each contain the exact six original steps: native Host/MCP readiness; one native model/tool/permission/MCP task/reply sequence; unchanged running-session configuration after project changes; canonical PNG inference/public readback; checkpoint/Stop/native cleanup; and cold Host history restore without model/tool replay. Each used11 finite localhost model requests, with no model failures, two terminal successful inputs and two Host exits0/null with valid stdout. Manual mode retained two resolved permission interactions; automatic mode retained none. Cleanup=true and cancelled=false in both original receipts.
+
+The Windows custody receipt confirms capture before input, a descendant surviving the root exit, confirmed original Job cleanup, a neighbor surviving target Stop, and confirmed neighbor Job cleanup. Bun/manifest/Host-source/Host-dist/provider hashes agree across inputs, custody and both Host receipts. The original producer and build/custody source files were independently hashed against immutable e1d; the current workflow7ccb had already received complete publication readback. The existing final CI verifier ran with its exact model/configuration/steps/qualification assertions.
+
+Archive14201408897 was downloaded once:13339B, SHA25638ef268f1e40f88299f91faf38a7087c6281efbf5305a492962049f00acb3450; all4entries have safe paths and valid CRC. The complete original log is92290B, SHA2566feb2e5b3ad4680f48afb6ca70878fde1b5e1a72236a52ec1634e80ccb4f564d, with BOM/CRLF preserved.
+
+This audit reads original evidence; it does not execute a project verifier, provider or native program. Native binaries are not included in this ZIP and were not freshly rehashed here. The receipts explicitly leave vendorAuthQualified, desktopQualified and releaseQualified=false, and Windows coordination unqualified. No Desktop/GUI, P08 same-Main physical Stops, P09 writer/consumption or genuine Claude M16 qualification follows from this result. Later resulting-source gates remain separate.
+

@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "sourceRepository": "agent-teams-ai/old-provider-implementations",
+  "sourceCommit": "f4b4ac3f6fa4284091aca333e114778a8e84acd7",
+  "sourceTree": "569624ae498c93dcc503463cf2457439ead8bafb",
+  "qualification": "source-and-packed-consumer-only",
+  "nativeHostQualified": false,
+  "packagedElectronQualified": false,
+  "fullChecks": [
+    {
+      "node": "24.21.0",
+      "pnpm": "11.18.0",
+      "command": "pnpm check",
+      "result": "PASS",
+      "runId": 43358959567,
+      "jobId": 131667636969,
+      "url": "https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43358959567/job/131667636969"
+    },
+    {
+      "node": "26.11.1",
+      "pnpm": "11.18.0",
+      "command": "pnpm check",
+      "result": "PASS",
+      "runId": 43358959567,
+      "jobId": 131667637125,
+      "url": "https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43358959567/job/131667637125"
+    }
+  ],
+  "checkedArtifact": {
+    "id": 14007975151,
+    "name": "opencode-v2-spi-consumer-checked-f4b4ac3f6fa4284091aca333e114778a8e84acd7",
+    "bytes": 181138,
+    "sha256": "d14c77eff73e670d1d82a1d58d2882bcdba3cacaef0a3d1abedaeeb80da3fd0e",
+    "url": "https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43358959567/artifacts/14007975151"
+  },
+  "packages": {
+    "provider-implementations": {
+      "file": "agent-teams-provider-implementations-0.0.0.tgz",
+      "oldSha256": "dc3c3d50ab47fe54985436e3647e85c62987dfce6fc11da58ecbe317d82d92ec",
+      "newSha256": "73c7034aef1283ee694114d2a31d12383370286b45c18120958ca0edef789957",
+      "bytes": 174003,
+      "integrity": "sha512-psgnpsfAG7Oq8WHD8CUMdVvRzMzs4RQL6Obr7paTs+XmbCPSsB6My68Lm6oJEKXZ5uQLa+dbL5Zd9rrMuZUaqw=="
+    },
+    "provider-session-contracts": {
+      "file": "agent-teams-provider-session-contracts-0.0.0.tgz",
+      "oldSha256": "aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db",
+      "newSha256": "aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db",
+      "bytes": 6220,
+      "integrity": "sha512-DnVXK40iBmyDx/lRRGYPY65Ek6yCbyncbqMs8Ridcc7kXthAl/aAc4wO4idedyNDKm1QG/tgxYJb9YVMqs4KMw=="
+    }
+  }
+}

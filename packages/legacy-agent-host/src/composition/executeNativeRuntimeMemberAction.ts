@@ -9,12 +9,14 @@ import type { NativeMemberActionSource } from './nativeMemberActionAdmission.js'
 import type { HostedTeam, MemberEntry } from './MemberEntry.js';
 import type { RuntimeOwner } from '../runtime/RuntimeOwner.js';
 import type { TeamLaunchOwner } from '../team-launch/TeamLaunchOwner.js';
+import type { RuntimeSourceProcessOrigin } from './runtimeSourceProcessOrigin.js';
 /** Exact retained Team/run; no default/current-launch substitution for native callers. */
 export function executeNativeRuntimeMemberAction(
   options: {
     retainedLaunches: ReadonlyMap<string, { team: HostedTeam; launch: TeamLaunchOwner }>;
     entries: Map<string, MemberEntry>;
     runtime: RuntimeOwner;
+    captureProcessOrigin?(entry: MemberEntry): RuntimeSourceProcessOrigin | undefined;
     assertCurrent(): void;
     isSealed(): boolean;
   },

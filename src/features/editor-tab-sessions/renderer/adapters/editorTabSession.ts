@@ -1,4 +1,4 @@
-import { getLanguageFromFileName } from '@renderer/utils/codemirrorLanguages';
+import { getLanguageFromFileName } from '@renderer/utils/fileLanguageName';
 import { computeDisambiguatedTabs } from '@renderer/utils/tabLabelDisambiguation';
 import { getBasename } from '@shared/utils/platformPath';
 

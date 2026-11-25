@@ -1,6 +1,6 @@
 import type { BackendCrossTeamOutboxRow } from './crossTeam';
 import type { BackendProcess } from './processes';
-import type { BackendTeamPosition } from './teamChanges';
+import type { BackendTeamConversation, BackendTeamPosition } from './teamChanges';
 import type { BackendTeamLifecycle } from './teamLifecycle';
 import type { InboxMessage, KanbanState, TeamTaskWithKanban } from '@shared/types/team';
 
@@ -15,6 +15,7 @@ export interface BackendTeamMessagesPage {
   /** Present only while the Owner is sending a large message in bounded parts. */
   messageTotal?: number;
   messageParts?: { index: number; part: number; total: number }[];
+  conversation?: BackendTeamConversation;
 }
 
 export interface BackendTeamSnapshot {

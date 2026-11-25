@@ -1,10 +1,13 @@
 import { assertGroupOriginal } from '../group-chats/groupDelivery.js';
-import { teamExecutionAllowed } from './teamLifecycleAdmission.js';
+import { assertTeamExecutionAllowed, teamExecutionAllowed } from './teamLifecycleAdmission.js';
+import { TeamOwnerError } from './contracts.js';
 import { digest, safeSegment } from './identity.js';
+import { verifiedHumanDirectSuggestionSource } from './verifiedHumanDirectSuggestionSource.js';
 import { deliveryIdentity, memberBinding } from './DeliveryRecovery.js';
 import { readProductCommand } from './commandEntries.js';
 import { formatTeamMessage } from './formatTeamMessage.js';
 import type { TeamStore, TeamRuntimeBindings } from './ports.js';
+import type { JsonValue } from '../contracts.js';
 import type { OwnerState } from './ownerState.js';
 import type { TaskRecovery } from './TaskRecovery.js';
 import type {
@@ -16,10 +19,28 @@ import type {
   DeliveryIntent,
 } from './contracts.js';
 import type { CapturedCrossTeamIntent } from '../cross-team/contracts.js';
+
+/** The same grant policy for an ordinary fresh read and a closed same-state authority read. */
+export function authorizeTeamGrant(
+  state: OwnerState,
+  store: TeamStore,
+  principalId: string,
+  permission: TeamGrant['permissions'][number]
+): TeamGrant {
+  if (permission === 'task.write' || permission === 'message.write')
+    assertTeamExecutionAllowed(state, store);
+  const grant = state.grants.find((entry) => entry.principalId === principalId);
+  if (!grant || grant.revoked || !grant.permissions.includes(permission))
+    throw new TeamOwnerError('forbidden');
+  return grant;
+}
+
 /** Current Team delivery authority, shared unchanged by live admission and evidence attribution. */
 export function createTeamDeliveryAuthority(options: {
   binding: TeamBinding;
   store: TeamStore;
+  /** Original inbox reader remains Team-owned; no second message ledger. */
+  readInbox?: (memberName: string) => JsonValue[];
   state(): OwnerState;
   authorize(principalId: string, permission: 'read' | 'message.write'): TeamGrant;
   runtimeBindings?: TeamRuntimeBindings | undefined;
@@ -32,32 +53,46 @@ export function createTeamDeliveryAuthority(options: {
   function runtimeAccess(
     principalId: string,
     binding: RuntimeMemberBinding,
-    action: 'read' | 'control'
+    action: 'read' | 'control' | 'provider',
+    beforeProviderAccess?: () => void
   ): boolean {
+    if (beforeProviderAccess !== undefined && action !== 'provider') return false;
+    if (action === 'provider') {
+      return options.store.fenced(() => {
+        beforeProviderAccess?.();
+        return memberAuthorized(binding, 'admit') && runtimeAccess(principalId, binding, 'control');
+      });
+    }
     return options.store.fenced(() => {
       try {
         const grant = options.authorize(principalId, 'read');
-        const member = options
-          .state()
-          .members.find(
-            (candidate) =>
-              candidate.delivery &&
-              (digest(memberBinding(candidate.delivery)) === digest(memberBinding(binding)) ||
-                (action === 'read' &&
-                  options.runtimeBindings?.retained(memberBinding(candidate.delivery), binding)))
-          );
-        if (!member) return false;
-        return (
-          action === 'read' ||
-          grant.permissions.includes('admin') ||
-          (member?.name === grant.memberName &&
-            (grant.permissions.includes('task.write') ||
-              grant.permissions.includes('message.write')))
-        );
+        return runtimeAccessInState(options.state(), grant, binding, action);
       } catch {
         return false;
       }
     });
+  }
+
+  function runtimeAccessInState(
+    state: OwnerState,
+    grant: TeamGrant,
+    binding: RuntimeMemberBinding,
+    action: 'read' | 'control'
+  ): boolean {
+    const member = state.members.find(
+      (candidate) =>
+        candidate.delivery &&
+        (digest(memberBinding(candidate.delivery)) === digest(memberBinding(binding)) ||
+          (action === 'read' &&
+            options.runtimeBindings?.retained(memberBinding(candidate.delivery), binding)))
+    );
+    if (!member) return false;
+    return (
+      action === 'read' ||
+      grant.permissions.includes('admin') ||
+      (member.name === grant.memberName &&
+        (grant.permissions.includes('task.write') || grant.permissions.includes('message.write')))
+    );
   }
 
   /** Synchronous Runtime-fence callback; callers separately authenticate user/admin control. */
@@ -104,7 +139,18 @@ export function createTeamDeliveryAuthority(options: {
     action: 'read' | 'admit' | 'dispatch' | 'control'
   ): boolean {
     try {
-      const state = options.state();
+      return memberAuthorizedInState(options.state(), binding, action);
+    } catch {
+      return false;
+    }
+  }
+
+  function memberAuthorizedInState(
+    state: OwnerState,
+    binding: RuntimeMemberBinding,
+    action: 'read' | 'admit' | 'dispatch' | 'control'
+  ): boolean {
+    try {
       if (
         (action === 'admit' || action === 'dispatch') &&
         !teamExecutionAllowed(state, options.store)
@@ -196,6 +242,34 @@ export function createTeamDeliveryAuthority(options: {
     }
   }
 
+  /** Trusted Host-only read, fully fenced on original saved Team/Runtime delivery facts. */
+  function isOriginalHumanDirect(raw: ImmutableDelivery): boolean {
+    return options.store.fenced(() => {
+      try {
+        if (!options.readInbox) return false;
+        safeSegment(raw.deliveryId);
+        const intent = options.store.read<DeliveryIntent>(`outbox/${raw.deliveryId}.json`);
+        if (
+          !intent ||
+          digest(deliveryIdentity(raw)) !== digest(deliveryIdentity(intent)) ||
+          !deliveryAuthorized(intent)
+        ) return false;
+        const members = options.state().members;
+        const member = members.find((item) => item.memberId === intent.binding.memberId);
+        if (!member) return false;
+        return verifiedHumanDirectSuggestionSource({
+          intent,
+          receipt: readProductCommand(options.store, intent.commandId),
+          grant: options.authorize(intent.principalId, 'read'),
+          members,
+          inbox: options.readInbox(member.name),
+        }) !== null;
+      } catch {
+        return false;
+      }
+    });
+  }
+
   function crossTeamOriginalAuthorized(intent: CapturedCrossTeamIntent): boolean {
     try {
       return options.crossTeamSourceAuthority?.(intent) === true;
@@ -207,6 +281,12 @@ export function createTeamDeliveryAuthority(options: {
     runtimeAccess,
     authorizeMember,
     authorizeIntent,
+    isOriginalHumanDirect,
+    /** Only TeamOwner's closed synchronous operation supplies this fresh full state. */
+    providerAuthorized: (state: OwnerState, grant: TeamGrant, binding: RuntimeMemberBinding) =>
+      memberAuthorizedInState(state, binding, 'dispatch') &&
+      memberAuthorizedInState(state, binding, 'admit') &&
+      runtimeAccessInState(state, grant, binding, 'control'),
     crossTeamOriginalAuthorized,
     deliveryAuthorized: (intent: DeliveryIntent) =>
       options.store.fenced(() => deliveryAuthorized(intent)),

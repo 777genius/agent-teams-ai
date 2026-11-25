@@ -1,0 +1,134 @@
+{
+  "kind": "INDEPENDENT_PLAN81_PROSPECTIVE_R2",
+  "decision": "GO_EXACT_ONE_PATH_CLEAR_FILTERS_SCOPE_AND_THREE_DOCUMENT_PUBLICATION",
+  "scope": "Prospective plan and root R1 review only. No source afterimage exists in this review; actual documentary closure remains required before source authoring, followed by separate frozen and actual source reviews.",
+  "parent": {
+    "commit": "1f62596fc622343aa04e5ddf3e5736358e3b0515",
+    "tree": "038f43a10d92306e2cad015b658371174e2a240b",
+    "closedParentActualSource": {
+      "path": "e2e-recovery/plan80/actual-source/root-closure.json",
+      "bytes": 902,
+      "physicalLines": 23,
+      "gitBlob": "2b19c5d82300f04fae5de9a82571ad181079c507",
+      "sha256": "52407d337ecb805fc254612c576530cca7ebb615a96de20a18dcce2a31386209"
+    },
+    "heldPrimary": "5c55a4a2008f4a6131d265344d384b39415ad055",
+    "heldLiveBase": "301d00f46db3389ff6e3042afd04c5b064a26270",
+    "refLimit": "These are held official packet identities, not a new live API check. Root retains the fresh-ref/useful-job guard before advancement."
+  },
+  "frozenDocuments": {
+    "plan": {
+      "bytes": 3880,
+      "physicalLines": 21,
+      "gitBlob": "5b9172e043503b34aa6281c6b183e2c3a7da67b1",
+      "sha256": "b96011ff21e32db6cb127620c967516123fd059ecf3f424ce67183e0d4e498b3"
+    },
+    "prospectiveR1": {
+      "bytes": 13330,
+      "physicalLines": 249,
+      "gitBlob": "de0915344a3223c575105d59c40c8a642ed6ff59",
+      "sha256": "d248b8241466213928f5fe6dcf04e9a0f07eb078de9b6921c57e50f32b57725a"
+    }
+  },
+  "data": {
+    "path": "/workspace/scratch/b87c90489dab/e2e-recovery/plan81/independent-prospective-data-proof.json",
+    "bytes": 14012,
+    "physicalLines": 351,
+    "gitBlob": "52ebfc755d1d368e6462e1f6325d0f7fadda127e",
+    "sha256": "234fd6b5096cd073341cd6955ad7c30310a87bb8affacf3dd1e3005cfedf2507"
+  },
+  "selectedSource": {
+    "path": "scripts/legacy-agent-host/desktop-retained-opencode-app.ts",
+    "preimage": {
+      "bytes": 49210,
+      "physicalLines": 728,
+      "gitBlob": "02d20844eb0b4ba46cf027510aefabc0fc5aaebf",
+      "sha256": "e3727844ebdd7c7170a731f488e4a7cdecd660afa9130d6c08b7da48609c3e61"
+    },
+    "uniqueInsertionAnchor": "Immediately after the existing acknowledged custom cwd fill at original line525, before the unchanged modelSelector and exact model wait.",
+    "plannedDelta": "Exactly three physical lines: existing Clear filters selector constant, original ui.scrollTo, one original ui.click. No direct new wait or deadline.",
+    "physicalLines": {
+      "before": 728,
+      "planned": 731,
+      "cap": 800
+    },
+    "otherSourcePaths": 0,
+    "sourceAfterimagesCreatedByReviewer": false
+  },
+  "documentaryPaths": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/81-donor-source-filter-2026-11-17.md",
+      "absentFromFullParentTree": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/donor-source-filter-2026-11-17/prospective-r1.json",
+      "absentFromFullParentTree": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/donor-source-filter-2026-11-17/prospective-r2.json",
+      "absentFromFullParentTree": true
+    }
+  ],
+  "independentChecks": [
+    "Read the complete frozen21-line plan and249-line R1. Their full bytes/hash match the requested identities. The single preimage is the exact current1f625 leaf02d20844 and remains identical to original5c. The old insertion context occurs once; clearFilters is not an existing identifier in this file. No complete candidate source body was constructed.",
+    "Independently recomputed every held current tree directory hash and the donor tree root/directory hashes. All17 R1 reference rows match Git/SHA/size and their respective current or donor leaves; they comprise15 unique scope/path tuples because the selector and catalog hook are identically repeated. These duplicate reference rows introduce no duplicated source edits.",
+    "Three additional held donor guard helpers were independently full-hash joined: teamModelSelectorUi e13b998f, useOpenCodeAuthModelOptions11aaaa5d and openCodeRuntimeStatusUi700ed9a2. Bounded source reads cover filter rendering, pending options, scope association, auth/inspection, selected-state and Create guards.",
+    "Read the23-line closed parent gate and rechecked the two exact closed actual-source report/data identities. All three planned repository documentary paths are absent from the full current tree. No previous source review was reopened.",
+    "Reused the unchanged frozen original13-member ZIP/CRC/body/source finding63500ef7 and its exact data4e07ee3e. Read the complete separate81-line Clear-route finding5ac2ea15 and checked its data identity; this review independently verified the relevant source path rather than treating that advisory GO as authority."
+  ],
+  "sourceAssessment": [
+    {
+      "claim": "The selected navigation removes a demonstrated source-mask contradiction.",
+      "evidence": "Original harness521 selects generic OpenCode; donor selector2915–2919 sets source IDs={opencode}, while fixture569–575 supplies test-legacy/TEST-model. Visible helper e185320e49–53 excludes a concrete test-legacy row while that explicit mask remains."
+    },
+    {
+      "claim": "Clear handles both metadata classifications that blocked the prior Local-only proposal.",
+      "evidence": "Selector2067–2074 clears recommended/free/new, route tags and source IDs via2034–2045. Visible-model predicates44–53 then accept either local or connected tag. The verified-runtime precedence1659–1660 remains untouched. This resolves the route-filter ambiguity without assuming which unretained runtime metadata the original had."
+    },
+    {
+      "claim": "The action is an existing visible UI path with the original readiness boundary.",
+      "evidence": "Successful exact-project local lookup builds the configured overlay. Overlay.options>0 disables shouldAwaitRuntimeModelList1359–1364 and is appended1587–1589. Concrete option counts2207–2218 and route counts1765–1785 are computed before source visibility filtering; the local/connected option permits filters2376–2385, and active source IDs make Clear3497–3508 render. If lookup/auth data does not yield that concrete row, the existing UI navigation/read timeout still refuses rather than synthesizing readiness."
+    },
+    {
+      "claim": "An implicit opencode catalog request does not recreate the cleared source/route masks.",
+      "evidence": "Resolver828a1e6 155–177 may retain or choose opencode as the request source before model selection. That source affects the catalog hook, while the independently scoped local overlay is still appended to all options and the two UI filter sets remain empty. No promise is made to suppress all ordinary catalog I/O."
+    },
+    {
+      "claim": "Selection remains tied to the actual project and exact local model.",
+      "evidence": "Local hook968bcc7 binds the project key, rejects stale completion, and gives project entries precedence. Once TEST-model is selected, knownLocal IDs map test-legacy to null remote catalog authority in resolver114–153; implicit Zen169–173 is false for test-legacy. Selector1381–1396 and helper e13b998f preserve/reassociate the value only through current local or fresh catalog authority. No test-side state or API injection is introduced."
+    },
+    {
+      "claim": "Authorization, provider inspection and actual Create remain meaningful negative checks.",
+      "evidence": "Auth helper11aaaa5d delegates to e13b998f19–60 and retains fresh not_authenticated filtering. Active generic nav can be inspection-only; Clear does not commit a provider or clear inspectedProviderId. Model selection2579–2587 requires !isInspectingInactiveProvider, activeProviderSelectable and ordinary disabled/action checks; click2684 refuses otherwise. Create1914–1925 and2581–2589 retain validation, launch readiness and preflight blockers."
+    },
+    {
+      "claim": "The existing model wait is sufficient effect acknowledgement for this narrow action.",
+      "evidence": "The exact unique model name/cardinality wait527–528 follows the insertion unchanged, then the original click530 and aria-pressed531 assert selection. Create535 and runtimeModel=test-legacy/TEST-model548 remain unchanged. The proposal selects no new direct wait, mutation retry, fallback, alternate model, configuration writer or test oracle."
+    }
+  ],
+  "preservedRequirements": [
+    "One harness file only; no donor/product implementation changes, workflow or source-roster changes, dependency edits, cap baseline changes, new tests or framework.",
+    "Preserve original V1/V2 ownership and isolation, exact inputs/source boundaries, donor native edit/reply, corpus/history/cold readback, no replay, Stop and physical cleanup assertions.",
+    "The already failing original remains FAIL. Prior initial coexistence facts and other old-head PASS results do not qualify this added donor history or a resulting head."
+  ],
+  "ciAndSourceClosure": {
+    "strictTypes": "Current ci.yml97a5aef8 line614 already runs pnpm typecheck:legacy-host-scripts.",
+    "namedLint": "Its existing five-file fast command615–620 includes desktop-retained-opencode-app.ts once at618. No shared HE operand or new job is needed.",
+    "sourceGuard": "Current guard78cb6f00 includes the entire scripts/legacy-agent-host directory at37 and checks exact HEAD/tracked/untracked cleanliness49–58. Coexistence397–398,484–495,561–580 and harness400/714 retain the original donor/current input checks.",
+    "regression": "Use the existing resulting-head retained native Desktop journey and ordinary required CI. No local compiler/test/native execution or manual rerun is selected.",
+    "originalVerifier": "Current ci.yml923 checks the primary coexistence step facts as an observed Set; donor identity/epochs/business/history/physical checks remain separate. Bounded verifier reads908–955/1015–1050 and step-reference census908–1144 establish no fixed donor UI-step count requiring an oracle update for the one navigation click."
+  },
+  "relationToPriorHold": "The prior HOLD on hardcoded Local or connected navigation remains correct. This prospective GO applies only to the distinct existing Clear filters action, which does not choose either route classification. It is not evidence of successful local lookup, authentication, committed provider selection, runtime readiness or completed donor launch.",
+  "remainingOriginalUnknowns": [
+    "No donor failure PNG or catalog snapshot was retained.",
+    "Original successful local lookup and route/proof/auth fields are unobserved.",
+    "Original committed provider versus inspection-only state is unobserved.",
+    "Resulting-head source authoring/publication and the original donor journey have not yet been qualified."
+  ],
+  "blockersForThisProspectiveCut": [],
+  "limits": [
+    "Prospective documentation/source-scope GO only; separate actual-document and source gates remain.",
+    "During this prospective review: no Actions calls, new network fetches, project/native/GUI execution, Git/API writes or source mutation. Only inert retained-byte/tree checks and report/reference writes.",
+    "Separate native/Claude readiness, Plan40, P09 and historical P10 evidence boundaries remain unchanged."
+  ]
+}

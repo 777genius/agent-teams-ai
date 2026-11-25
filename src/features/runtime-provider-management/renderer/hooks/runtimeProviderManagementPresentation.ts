@@ -118,16 +118,16 @@ export function formatProviderConnectError(
     /\binvalid[\s_-]+api[\s_-]*key\b/.test(normalizedMessage) ||
     /\bapi[\s_-]*key\s+(?:is\s+)?(?:invalid|expired|revoked)\b/.test(normalizedMessage);
   if (invalidApiKey) {
-    return `${displayName} rejected this API key. The new credential was not kept. Copy the key from the correct account or subscription plan, then try again.`;
+    return `${displayName} rejected this API key. Copy the key from the correct account or subscription plan, then try again.`;
   }
   if (
     normalizedMessage.includes('access denied by security policy') ||
     normalizedMessage.includes('forbidden')
   ) {
-    return `${displayName} rejected the verification request because of an account or security policy. The new credential was not kept. Check the key permissions and account restrictions, then try again.`;
+    return `${displayName} rejected the verification request because of an account or security policy. Check the key permissions and account restrictions, then try again.`;
   }
   if (error.code === 'auth-failed') {
-    return `${displayName} could not verify this credential with a real model request. The new credential was not kept.\n${error.message}`;
+    return `${displayName} could not verify this credential with a real model request.\n${error.message}`;
   }
   return error.message;
 }

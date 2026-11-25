@@ -8,8 +8,10 @@ import {
 } from '../../../src/renderer/store/slices/teamSlice';
 import { invalidateTeamLocalStateEpoch } from '../../../src/renderer/store/team/teamLocalStateEpoch';
 import { invalidateContextScopedRequestEpoch } from '../../../src/renderer/store/utils/contextScopedRequestEpoch';
+import { getContextScopedTeamResetState } from '../../../src/renderer/store/utils/stateResetHelpers';
 
 import type { AppState } from '../../../src/renderer/store/types';
+import type { GlobalTask, TeamAggregateReadResult, TeamReadUnavailable, TeamSummary } from '../../../src/shared/types';
 
 const apiMock = vi.hoisted(() => ({
   teams: {
@@ -119,6 +121,7 @@ const runtimeSnapshot = {
 
 vi.mock('@renderer/api', () => ({
   api: apiMock,
+  isElectronMode: () => true,
 }));
 
 function deferred<T>(): {
@@ -194,6 +197,105 @@ describe('team slice context races', () => {
     __resetTeamSliceModuleStateForTests();
     vi.useRealTimers();
     vi.restoreAllMocks();
+  });
+
+
+  for (const nextContext of ['ssh-dev', 'local']) {
+    it(`fences unavailable Team and Task metadata across the original ${nextContext} context reset`, async () => {
+      const store = createSliceStore();
+      const team: TeamSummary = { teamName: 'TEST-new-team', displayName: 'New team',
+        description: '', memberCount: 0, taskCount: 1, lastActivity: null, ownerResourceRef: 'TEST-new-owner' };
+      const task: GlobalTask = { id: 'TEST-new-task', teamName: team.teamName,
+        teamDisplayName: team.displayName, subject: 'Current task', status: 'pending', ownerResourceRef: team.ownerResourceRef };
+      const original: TeamReadUnavailable[] = [
+        { kind: 'owner', ownerResourceRef: 'TEST-old-owner', code: 'unavailable', outcome: 'unknown' },
+      ];
+      const current: TeamReadUnavailable[] = [
+        { kind: 'team', teamName: 'TEST-current-missing', displayName: 'Current missing team', code: 'busy', outcome: 'not-dispatched' },
+      ];
+      const list = deferred<TeamAggregateReadResult<TeamSummary>>();
+      const tasks = deferred<TeamAggregateReadResult<GlobalTask>>();
+      apiMock.teams.list.mockReturnValueOnce(list.promise);
+      apiMock.teams.getAllTasks.mockReturnValueOnce(tasks.promise);
+      const oldList = store.getState().fetchTeams();
+      const oldTasks = store.getState().fetchAllTasks();
+      invalidateContextScopedRequestEpoch();
+      store.setState({ ...getContextScopedTeamResetState(), activeContextId: nextContext,
+        teams: [team], globalTasks: [task], globalTasksInitialized: true,
+        teamsUnavailable: current, globalTasksUnavailable: current, selectedTeamName: team.teamName });
+      const accepted = store.getState();
+      list.resolve({ items: [], unavailable: original });
+      tasks.resolve({ items: [], unavailable: original });
+      await Promise.all([oldList, oldTasks]);
+      expect(store.getState().teams).toBe(accepted.teams);
+      expect(store.getState().globalTasks).toBe(accepted.globalTasks);
+      expect(store.getState().teamsUnavailable).toBe(current);
+      expect(store.getState().globalTasksUnavailable).toBe(current);
+      expect(store.getState().selectedTeamName).toBe(team.teamName);
+      expect(apiMock.teams.list).toHaveBeenCalledTimes(1);
+      expect(apiMock.teams.getAllTasks).toHaveBeenCalledTimes(1);
+      expect(apiMock.teams.showMessageNotification).not.toHaveBeenCalled();
+    });
+  }
+
+  it('publishes the newest Team rows and unavailable metadata as one original request result', async () => {
+    const store = createSliceStore();
+    const team: TeamSummary = { teamName: 'TEST-visible', displayName: 'Visible',
+      description: '', memberCount: 0, taskCount: 0, lastActivity: null };
+    store.setState({ teams: [team], selectedTeamName: team.teamName });
+    const old = deferred<TeamAggregateReadResult<TeamSummary>>();
+    const current = deferred<TeamAggregateReadResult<TeamSummary>>();
+    apiMock.teams.list.mockReturnValueOnce(old.promise).mockReturnValueOnce(current.promise);
+    const first = store.getState().fetchTeams(), second = store.getState().fetchTeams();
+    const unavailable: TeamReadUnavailable[] = [
+      { kind: 'owner', ownerResourceRef: 'TEST-current-owner', code: 'busy', outcome: 'rejected' },
+    ];
+    current.resolve({ items: [team], unavailable });
+    await second;
+    const accepted = store.getState();
+    old.resolve({ items: [], unavailable: [
+      { kind: 'owner', ownerResourceRef: 'TEST-obsolete-owner', code: 'unavailable', outcome: 'unknown' },
+    ] });
+    await first;
+    expect(store.getState().teams).toBe(accepted.teams);
+    expect(store.getState().teamsUnavailable).toBe(accepted.teamsUnavailable);
+    expect(store.getState().teamsUnavailable).toEqual(unavailable);
+    expect(store.getState().selectedTeamName).toBe(team.teamName);
+    expect(apiMock.teams.list).toHaveBeenCalledTimes(2);
+  });
+
+  it('retains Task rows and availability visibly stale on fatal refresh and clears both on complete recovery', async () => {
+    const store = createSliceStore();
+    const healthy: GlobalTask = { id: 'TEST-b', teamName: 'TEST-team-b', teamDisplayName: 'Team B',
+      subject: 'Healthy task', status: 'pending', ownerResourceRef: 'TEST-owner-b' };
+    const recovered: GlobalTask = { ...healthy, id: 'TEST-a', teamName: 'TEST-team-a',
+      teamDisplayName: 'Team A', ownerResourceRef: 'TEST-owner-a' };
+    const unavailable: TeamReadUnavailable[] = [
+      { kind: 'owner', ownerResourceRef: 'TEST-owner-a', code: 'unavailable', outcome: 'unknown' },
+    ];
+    apiMock.teams.getAllTasks.mockResolvedValueOnce([healthy]);
+    await store.getState().fetchAllTasks();
+    expect(store.getState().globalTasksUnavailable).toEqual([]);
+    apiMock.teams.getAllTasks.mockResolvedValueOnce({ items: [healthy], unavailable });
+    await store.getState().fetchAllTasks();
+    const partial = store.getState();
+    expect(partial.globalTasks).toEqual([healthy]);
+    expect(partial.globalTasksUnavailable).toEqual(unavailable);
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    apiMock.teams.getAllTasks.mockRejectedValueOnce(new Error('TEST original tasks failed'));
+    await store.getState().fetchAllTasks();
+    expect(store.getState().globalTasks).toBe(partial.globalTasks);
+    expect(store.getState().globalTasksUnavailable).toBe(partial.globalTasksUnavailable);
+    expect(store.getState().globalTasksError).toBe('TEST original tasks failed');
+    expect(errors).toHaveBeenCalledTimes(1);
+    expect(errors).toHaveBeenCalledWith('[Renderer:unwrapIpc]', '[team:getAllTasks] TEST original tasks failed');
+    apiMock.teams.getAllTasks.mockResolvedValueOnce([healthy, recovered]);
+    await store.getState().fetchAllTasks();
+    expect(store.getState().globalTasks).toEqual([healthy, recovered]);
+    expect(store.getState().globalTasksUnavailable).toEqual([]);
+    expect(store.getState().globalTasksError).toBeNull();
+    expect(apiMock.teams.showMessageNotification).not.toHaveBeenCalled();
+    expect(apiMock.teams.getAllTasks).toHaveBeenCalledTimes(4);
   });
 
   it('ignores a team list response loaded for a previous context', async () => {

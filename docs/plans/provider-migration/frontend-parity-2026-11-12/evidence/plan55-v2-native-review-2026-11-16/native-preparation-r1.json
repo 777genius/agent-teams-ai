@@ -1,0 +1,409 @@
+{
+  "schemaVersion": 1,
+  "decision": "R1_SUPPORT_EXISTING_DARWIN_ARM64_V2_REVIEW_REUSE",
+  "sourceHead": "3be1fb3ec43d5682aa2ca77a6af62e6fa27b597b",
+  "prospectivePlan": "Plan55 not yet published at review time",
+  "sourceChanges": [],
+  "facts": [
+    {
+      "id": "selected-route",
+      "source": "desktop-proof-mode.ts:222-228,313-342; desktop-native-review-compose.ts:27-61",
+      "finding": "With OPENCODE_GENERATION=v2 and native-review-ui, the selected finite V2 Review model is used; the Claude model is undefined. Cold native-review-readback-ui starts neither oracle."
+    },
+    {
+      "id": "exclusive-recipes",
+      "source": "desktop-proof-fixture.ts:139-206; desktop-backend-fixture.ts:99-100",
+      "finding": "Selected V2 excludes both nativeClaude and nativeCodex option construction; backend rejects V2 combined with either, candidate runtime or native group chats. The selected runtime and management profiles are both OpenCode V2."
+    },
+    {
+      "id": "actual-node",
+      "source": "desktop-backend-fixture.ts:119-138; desktop-backend-smoke.ts:200-211",
+      "finding": "The V2 branch captures realpath(process.execPath), regardless of EMULATED_ONLY. Harness requires the same executable and exact Node/Host/pnpm/Corepack hashes. The general Stage1 staged Darwin Node is not required for this branch."
+    },
+    {
+      "id": "supported-tuples",
+      "source": "desktop-opencode-v2-fixture.ts:38-42; desktop-backend-smoke.ts:113-114; desktop-backend-observations.ts:18-49",
+      "finding": "Recipe permits Linux x64 and Darwin x64/arm64; the current Desktop harness admits this Review pair on Darwin only. Linux native Review is not in the current bounded Linux admission and is not an emulated-only mode. Appending it to Linux would require separately selected source admission changes."
+    },
+    {
+      "id": "exact-v2-inputs",
+      "source": "desktop-proof-fixture.ts:139-146; desktop-opencode-v2-fixture.ts:43-104",
+      "finding": "Required V2 input variables select canonical Bun path+SHA, graph directory and Darwin custody directory+manifestSHA. Fixture hashes Bun, reads and hashes the packaged custody artifact, selects delivery from runtime.lock, requires Darwin Bun1.4.4 and engine2.1.4, and verifies the embedded graph; externalDirectory remains deny."
+    },
+    {
+      "id": "isolated-namespaces",
+      "source": "desktop-backend-fixture.ts:152-179,712-738; desktop-runtime-source-fixture.ts:250-305; desktop-opencode-v2-fixture.ts:46-52,105-127",
+      "finding": "Canonical mkdtemp TEST root, private HOME/config/data/state/cache/tmp and explicit environment, loopback-only origins and TEST key. Explicit Claude/Codex CLI paths and private vendor aliases point at finite TEST sentinels; shell probe evaluates no user shell commands. No inherited credentials/real native executable selection is needed."
+    },
+    {
+      "id": "no-genuine-closure",
+      "source": "desktop-backend-smoke.ts:146-147,604-613,724-739; desktop-backend-fixture.ts:55-66",
+      "finding": "The V2 pair does not enter Codex native-input capture; nativeInputs is empty. Sentinels allow only finite version responses and refuse agent/control invocations. Original post-Quit census preserves finite refusal observations rather than requiring an empty census. This is a source route exclusion, not a claim that all legacy maintenance gaps are solved."
+    },
+    {
+      "id": "source-pins",
+      "source": "desktop-backend-smoke.ts:196-211,264-269,681-683; desktop-source-freeze.ts:15-51; native-provider-artifact.ts:14-50",
+      "finding": "Original Node/Host/Corepack/pnpm pins and provider archive/actual imported JS verification remain. Existing source rosters are hashed before app and rechecked after flow even on failure. All 21 inspected direct journey dependencies already occur in the base/integrated rosters; no direct roster addition was found."
+    },
+    {
+      "id": "original-hot-actions",
+      "source": "desktop-opencode-v2-review-ui-smoke.ts:35-187",
+      "finding": "Original saved Team Launch once and Task Start once; actual Read/two edit tools; one canonical byte-chain event with exact command/outbox/input/session/Host causal binding; targeted Stop and physical runtime absence before Keep/Reject/Undo/Redo/History/reload. Six finite model observations and unchanged native event bytes reject replay. The exact edit interval remains partial; no global M13 claim."
+    },
+    {
+      "id": "cold-identity",
+      "source": "desktop-readback-fixture.ts:82-164; desktop-native-review-compose.ts:52-78",
+      "finding": "Cold uses the same canonical TEST root and SHA of the hot desktop-backend-receipt.json. Hot overall/Review status must be PASS; V2 provider/generation/proof provider, Node/Host/profile/descriptor/sentinel/pnpm/Corepack/seed pins and retained runtime records are revalidated. No fixture reconstruction, Launch or model oracle."
+    },
+    {
+      "id": "cold-metadata-distinction",
+      "source": "desktop-opencode-v2-cold-metadata.ts:275-408; desktop-native-review-readback.ts:225-255",
+      "finding": "Cold makes the original explicit OpenCode loadModels request, requires a fresh declared catalog and captures one attested metadata child. It asserts zero Runtime allocations and replayed inputs, unchanged runtime records/events/state/review decisions/index/unrelated file, and separates metadata from runtime children."
+    },
+    {
+      "id": "deadlines",
+      "source": "desktop-ui-controls.ts:182-197,488; desktop-opencode-v2-review-ui-smoke.ts:49-55,79-115; desktop-backend-fixture.ts:665-673; desktop-opencode-v2-fixture.ts:135-143,173-175; desktop-backend-smoke.ts:627-636; desktop-opencode-v2-cold-metadata.ts:98-116",
+      "finding": "Preserve existing 30s default UI wait and90s sidebar wait; Review poll60s at100ms; readiness120s; Launch dialog close180s and native work180s; V2 runtime/management/model-probe120s; Host startup60s/RPC180s/write5s/shutdown10s; guarded Quit20s and metadata log drain5s. No timeout change proposed."
+    },
+    {
+      "id": "cleanup-and-receipts",
+      "source": "desktop-backend-smoke.ts:627-641,679-777,793-797; desktop-opencode-v2-cold-metadata.ts:92-116,150-225",
+      "finding": "Guarded Quit waits actual selected Host absence, requires metadata release lineage and physical absence before harness cleanup. Finally preserves source checks, identity-guarded cleanup and receipt even on failure; incomplete/null/nonempty cleanup makes receipt incomplete and the cleanup assertion fails. Original finite model closes in outer finally. Inline CI validation must still require both receipt statuses PASS, not only process exit."
+    }
+  ],
+  "sourceBindings": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+      "gitBlob": "495118ecb0d895dcc87f5782f8a4b0ccd35d3587",
+      "sha256": "58279362c05f6645881e4850807f78183eee5dc51dfb32f355ff4ded7e7c3589",
+      "bytes": 33737,
+      "lines": 770
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+      "gitBlob": "ed93d7422ab7a846a568a2b72437ec75931ba03b",
+      "sha256": "79c793a3005c691c367317ea26c12a7629602fa9d46fd920eeccb5579e4faf23",
+      "bytes": 33173,
+      "lines": 690
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "gitBlob": "9c724c3895e467bc1db062e5015ded70c30e65e4",
+      "sha256": "bbd6647969c1ab0ae125b6a5e0685ca0f112dca05661a6c04b37c4fbee56a33e",
+      "bytes": 55757,
+      "lines": 798
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-review-compose.ts",
+      "gitBlob": "2101d3d7352329524b9c02fd46ab0129df457fef",
+      "sha256": "b789c5473df78ac4b750e059762e806c26848b216288463e2dd4b8d75317958f",
+      "bytes": 3690,
+      "lines": 82
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-review-fixture.ts",
+      "gitBlob": "6fce29a8d2993a4e291c1787dfc931aea751d05b",
+      "sha256": "b7d99cc5e41e04965cd4395eb8747bbc829fe1835d56aad6ea04301fa29acc00",
+      "bytes": 9259,
+      "lines": 153
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-review-readback.ts",
+      "gitBlob": "b3203896a8d8a0290c8a18e9b984793d45f799c9",
+      "sha256": "dd85b8fae9022d6d9e1266403c9844e4930d4b19d3dcf6ef92735981c0107ee8",
+      "bytes": 10402,
+      "lines": 257
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-review-runtime.ts",
+      "gitBlob": "e30717e15e55c607a6fa7317fc5f1fb4395f3e79",
+      "sha256": "36734ae5bc823335a68a2f436bc1dc8defadeb0ed9d2ee5e1f44dfb6e02543a7",
+      "bytes": 2814,
+      "lines": 63
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-cold-metadata.ts",
+      "gitBlob": "2859c6944113e57c71fc726b30c3d866022414aa",
+      "sha256": "86772cbc3a3d99005226ab8c7d6819d4d8eaa702afbab3fadc71fd6d45922f1c",
+      "bytes": 20613,
+      "lines": 409
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-fixture.ts",
+      "gitBlob": "9d6a158fe27134c6f0559ea058f2ecfa5ad478d1",
+      "sha256": "22a46aa137e87c4f1a282aae5518e9aada69ce8b947169457d3aadde3b2ace1d",
+      "bytes": 7577,
+      "lines": 177
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-review-model.ts",
+      "gitBlob": "d880d1842ef50448fe353f653254bea7b7e97b9c",
+      "sha256": "a849ecf59b41f87ecf0bdc56196fffb032cbb3b7583c9665e7c35e1b089fc6d3",
+      "bytes": 6780,
+      "lines": 115
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-review-ui-smoke.ts",
+      "gitBlob": "a914d3808022289da5f994d60ad4bb7cca5eac38",
+      "sha256": "6b807423bd9ff2a1887c18417ee52dbd0c270c0f30bf24f33eb51236e392f4a1",
+      "bytes": 16588,
+      "lines": 187
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+      "gitBlob": "5a537bd32e3b13bedeb415b02a09546bc5f686ed",
+      "sha256": "cb08691efb9eb422674ceb35c3f7e93ba660500f1d3ee8c8da35d611452f00e8",
+      "bytes": 26258,
+      "lines": 394
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-fixture.ts",
+      "gitBlob": "4f26fd0f9654dd40f4591c5078a5cf7dc119e769",
+      "sha256": "6c75fec75d81407cec6d1552d4a6a3a87ccac3145cdaa0aca7fb0187308f8db0",
+      "bytes": 11248,
+      "lines": 223
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-integrated-sources.ts",
+      "gitBlob": "083522612dd93e77dbb0e79c966103b03a71fe87",
+      "sha256": "555a309f762015659a3b7a0d44522785fa7ea171aedf77392020c25dc5d70e33",
+      "bytes": 44561,
+      "lines": 600
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-mode.ts",
+      "gitBlob": "e2e7029c56de6343eb4ad2a2395044efd009ae0b",
+      "sha256": "e96f15e68a59f991034d68ca37b0125d4c798cd06eb34d58ceeb2f3e537966de",
+      "bytes": 26007,
+      "lines": 536
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-sources.ts",
+      "gitBlob": "a8be2617b2c765091cecce789f028ef2bf67af60",
+      "sha256": "5b6ae1e33b7567b7e72d0862f0253ca25875a696e653a86c61580a492601d69a",
+      "bytes": 52632,
+      "lines": 800
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-readback-fixture.ts",
+      "gitBlob": "c50bb37b63a707ab771eda478e336483c8850931",
+      "sha256": "eb37cc1698fe78acaa0a1a4e68339ee621e157d710117ee83c5f1a52950cae30",
+      "bytes": 13099,
+      "lines": 289
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-review-hunk-controls.ts",
+      "gitBlob": "27ad07bff0c9c89ecfc7dc572ac53e2e9e16e8ef",
+      "sha256": "ae6a85389e34559faf22a87320b940e0df5a80437d8f9ee7f2452131cfea95b4",
+      "bytes": 9637,
+      "lines": 220
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-runtime-source-fixture.ts",
+      "gitBlob": "bd1f76510d3339513ca694998fe4523aed0a6eff",
+      "sha256": "64df0ba4beb7c5d85a18637af836533430f90620e2f5072763a9dc3880351231",
+      "bytes": 17687,
+      "lines": 306
+    }
+  ],
+  "directClosureInventory": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-review-compose.ts",
+      "rosters": [
+        "scripts/legacy-agent-host/desktop-proof-sources.ts"
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-review-ui-smoke.ts",
+      "rosters": [
+        "scripts/legacy-agent-host/desktop-proof-integrated-sources.ts"
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-review-readback.ts",
+      "rosters": [
+        "scripts/legacy-agent-host/desktop-proof-sources.ts"
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-fixture.ts",
+      "rosters": [
+        "scripts/legacy-agent-host/desktop-proof-sources.ts"
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+      "rosters": [
+        "scripts/legacy-agent-host/desktop-proof-sources.ts"
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-mode.ts",
+      "rosters": [
+        "scripts/legacy-agent-host/desktop-proof-sources.ts"
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "rosters": [
+        "scripts/legacy-agent-host/desktop-proof-sources.ts"
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+      "rosters": [
+        "scripts/legacy-agent-host/desktop-proof-sources.ts"
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-runtime-source-fixture.ts",
+      "rosters": [
+        "scripts/legacy-agent-host/desktop-proof-sources.ts"
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-fixture.ts",
+      "rosters": [
+        "scripts/legacy-agent-host/desktop-proof-integrated-sources.ts"
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-readback-fixture.ts",
+      "rosters": [
+        "scripts/legacy-agent-host/desktop-proof-sources.ts"
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-cold-metadata.ts",
+      "rosters": [
+        "scripts/legacy-agent-host/desktop-proof-integrated-sources.ts"
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-review-fixture.ts",
+      "rosters": [
+        "scripts/legacy-agent-host/desktop-proof-sources.ts"
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-review-model.ts",
+      "rosters": [
+        "scripts/legacy-agent-host/desktop-proof-integrated-sources.ts"
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-review-runtime.ts",
+      "rosters": [
+        "scripts/legacy-agent-host/desktop-proof-sources.ts"
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "rosters": [
+        "scripts/legacy-agent-host/desktop-proof-sources.ts"
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts",
+      "rosters": [
+        "scripts/legacy-agent-host/desktop-proof-integrated-sources.ts"
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-review-hunk-controls.ts",
+      "rosters": [
+        "scripts/legacy-agent-host/desktop-proof-sources.ts"
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-review-continuation-persistence.ts",
+      "rosters": [
+        "scripts/legacy-agent-host/desktop-proof-sources.ts"
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-source-freeze.ts",
+      "rosters": [
+        "scripts/legacy-agent-host/desktop-proof-sources.ts"
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+      "rosters": [
+        "scripts/legacy-agent-host/desktop-proof-sources.ts"
+      ]
+    }
+  ],
+  "necessaryDirectClosureAdditions": [],
+  "requiredSelection": {
+    "hotMode": "native-review-ui",
+    "coldMode": "native-review-readback-ui",
+    "generationEnvironment": "LEGACY_DESKTOP_OPENCODE_GENERATION=v2",
+    "backendAdmission": "LEGACY_DESKTOP_BACKEND_GO=1",
+    "emulatedOnly": "unset for both original native journeys",
+    "coldRoot": "exact hot TEST root",
+    "coldReceiptSha256": "actual SHA256 of hot desktop-backend-receipt.json",
+    "node": "existing Host Emulated process.execPath pin",
+    "genuineClaudeCodexInputs": "none"
+  },
+  "artifactRetention": [
+    "entire exact hot/cold TEST root recommended",
+    "desktop-backend-receipt.json",
+    "desktop-native-review-readback-receipt.json",
+    "desktop-app.log",
+    "desktop-native-review-readback-app.log",
+    "native-review-ui-seed.json",
+    "sentinel-invocations.ndjson",
+    "userData/logs/app-errors.ndjson",
+    "host-profile.json",
+    "desktop-descriptor.json",
+    "hoststore/teams/test-desktop-backend/review-decisions/**/*.json",
+    "hoststore/teams/test-desktop-backend/.host-evidence/.board-task-changes/events/*.jsonl",
+    "hoststore/teams/test-desktop-backend/.host-evidence/.board-task-changes/blobs/*",
+    "hoststore/teams/test-desktop-backend/.host-owner/state.json",
+    "hoststore/teams/test-desktop-backend/.host-owner/commands/*",
+    "hoststore/teams/test-desktop-backend/.host-owner/outbox/*",
+    "workspace/native-review.ts",
+    "workspace/.git/index",
+    "workspace/pre-existing-untracked.txt",
+    "original screenshots"
+  ],
+  "validationFields": {
+    "both": [
+      "status=PASS",
+      "cleanup.remaining=[]",
+      "cleanup.capturedHostAbsent=true",
+      "selectedSourceHashesBeforeApp==selectedSourceHashesAfterFlow"
+    ],
+    "hot": [
+      "nativeReviewUiProof.status=PASS",
+      "nativeReviewUiProof.provider=opencode-v2",
+      "nativeReviewUiProof.version=2.1.4",
+      "nativeReviewUiProof.stop.releasedBeforeReview=true",
+      "nativeReviewUiProof.originalEventsUnchanged=true",
+      "nativeReviewUiProof.nativeModelObservations.length=6",
+      "nativeReviewUiProof.metadataAtHostClose",
+      "nativeReviewUiProof.metadataAbsentBeforeHarnessCleanup=true"
+    ],
+    "cold": [
+      "nativeReviewReadbackProof.status=PASS",
+      "nativeReviewReadbackProof.originalReceiptSha256 equals actual hot receipt hash",
+      "nativeReviewReadbackProof.nativeInputsReplayed=0",
+      "nativeReviewReadbackProof.nativeAllocations=0",
+      "nativeReviewReadbackProof.metadataProcessCount=1",
+      "nativeReviewReadbackProof.runtimeRecordUnchanged=true",
+      "nativeReviewReadbackProof.nativeEventsUnchanged=true",
+      "nativeReviewReadbackProof.reviewDecisionsUnchanged=true",
+      "coldOpenCodeMetadata.nativeRuntimeAllocations=0",
+      "coldOpenCodeMetadata.metadataAtHostClose",
+      "coldOpenCodeMetadata.metadataAbsentBeforeHarnessCleanup=true"
+    ]
+  },
+  "limits": [
+    "Source-only review; no project/compiler/tests/providers/GUI/CI execution or remote mutation.",
+    "No native acceptance on the prospective source tuple is claimed.",
+    "Existing original V2 Review is partial exact native edit-chain coverage, not full M13, genuine Claude/Codex qualification, P09 integrity or cross-platform Ready qualification.",
+    "Generic selectedNativeInputHashes capture is Codex-specific and empty here; no blanket final rehash of all Bun/graph inputs is claimed beyond the actual fixture/Host/metadata checks described.",
+    "Current Linux native Review admission is absent; no guard relaxation is selected by this report."
+  ]
+}

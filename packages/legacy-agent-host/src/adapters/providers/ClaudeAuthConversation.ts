@@ -10,7 +10,7 @@ import { claudeManagementProfileSchema } from '../../management/profile.js';
 import type { CapturedProcessPort } from './CapturedProcess.js';
 import type { OAuthNativeConversation } from '../../management/OAuthOperationOwner.js';
 import type { ClaudeManagementProfile } from '../../management/profile.js';
-import type { ChildProcessWithoutNullStreams } from 'node:child_process';
+import type { ObservableNativeProcess } from '../../owned-process/processFacade.js';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -32,7 +32,7 @@ export class ClaudeAuthConversation implements OAuthNativeConversation {
   private readonly configDirectory: string;
   private readonly anthropicDirectory: string;
   private readonly abort = new AbortController();
-  private login?: ChildProcessWithoutNullStreams;
+  private login?: ObservableNativeProcess;
   private started = false;
   private codeSent = false;
   private sealed = false;
@@ -230,7 +230,7 @@ export class ClaudeAuthConversation implements OAuthNativeConversation {
     return ok && (await this.close());
   }
 
-  private launch(args: string[], signal: AbortSignal): ChildProcessWithoutNullStreams {
+  private launch(args: string[], signal: AbortSignal): ObservableNativeProcess {
     this.assertCurrent();
     signal.throwIfAborted();
     return this.custody.launch({
@@ -241,7 +241,7 @@ export class ClaudeAuthConversation implements OAuthNativeConversation {
     });
   }
 
-  private exit(child: ChildProcessWithoutNullStreams): Promise<number | null> {
+  private exit(child: ObservableNativeProcess): Promise<number | null> {
     return new Promise((resolve, reject) => {
       child.once('error', reject);
       child.once('close', (code) => resolve(code));

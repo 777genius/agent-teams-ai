@@ -1,0 +1,390 @@
+{
+  "kind": "prospective H plus complete4dc history source composition",
+  "referenceH": "4e74d36ba6212938c40a499603ee0419a183fc0a",
+  "incomingHead": "4dc08dea7eeed5c286cf310e09a2ba26d84a9546",
+  "incomingTree": "13d33c2d2462278df5c7503c4fa55a6b175793f7",
+  "incomingParent": "3957f2b28417647578d71a465cd61d4e09b5deb9",
+  "sourceApplied": false,
+  "projectExecution": false,
+  "expectedSourceDiffPaths": 20,
+  "expectedNewSourceFiles": 1,
+  "files": [
+    {
+      "path": ".github/workflows/electron-packaged-ci.yml",
+      "mode": "100644",
+      "preimage": {
+        "bytes": 18162,
+        "blob": "f520674551d54754e900686f3b051a55faf4cf6f",
+        "sha256": "0a24bcedd1509018f0f70547e42d698b83fd11d07a876aeb923d6cb4e27720f4",
+        "lines": 290
+      },
+      "candidate": {
+        "bytes": 19532,
+        "blob": "0938e9f31bad7520fec025ebde6aad8e071cfe69",
+        "sha256": "443502b3620450fc174440d6bdf6db3777e97b7f00d56d42e2fbd624b569b73f",
+        "lines": 313
+      },
+      "origin": "exact4dc incoming leaf",
+      "insertions": 23,
+      "deletions": 0
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "mode": "100644",
+      "preimage": {
+        "bytes": 96718,
+        "blob": "41cd9e2ebd601765e47739fa58cc9933b2b93e18",
+        "sha256": "80b0e5d9684512936225d49dab59962c459bc4c6545d723f60bf801d39d5e4dc",
+        "lines": 1251
+      },
+      "candidate": {
+        "bytes": 97137,
+        "blob": "19906e8f1b750a36494f94b671b16f284f834085",
+        "sha256": "cd3738968eb9a3ea38d78675c6d57c43f4efc6a5246f0f8d0785a3c0269e3198",
+        "lines": 1257
+      },
+      "origin": "UI82cb exact reviewed composition correction",
+      "insertions": 6,
+      "deletions": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/completion-2026-11-13.md",
+      "mode": "100644",
+      "preimage": {
+        "bytes": 45599,
+        "blob": "dfa8819f10940cce6d2c5c7c28f94c88a7cdab22",
+        "sha256": "e888e36cdc9b643c28c7303f166780d555cb72bd9da1e8db96e02bd827e09646",
+        "lines": 463
+      },
+      "candidate": {
+        "bytes": 52191,
+        "blob": "b4388507ea00bb808461175b4163230fcb0cbe18",
+        "sha256": "92d375284b3b707df92dae22cb3d41308b1cf6b98bc3059d304f5cf6a1fc1a7e",
+        "lines": 533
+      },
+      "origin": "exact4dc incoming leaf",
+      "insertions": 70,
+      "deletions": 0
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+      "mode": "100644",
+      "preimage": {
+        "bytes": 33664,
+        "blob": "0d515263f17c965f2073e69d5e181eb50ac4fc69",
+        "sha256": "fb4bc0fe88eb3e3cb19460ebb235fb798de5eed93db26525b8c75ac2f017639a",
+        "lines": 770
+      },
+      "candidate": {
+        "bytes": 33737,
+        "blob": "495118ecb0d895dcc87f5782f8a4b0ccd35d3587",
+        "sha256": "58279362c05f6645881e4850807f78183eee5dc51dfb32f355ff4ded7e7c3589",
+        "lines": 770
+      },
+      "origin": "exact4dc incoming leaf",
+      "insertions": 1,
+      "deletions": 1
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+      "mode": "100644",
+      "preimage": {
+        "bytes": 49524,
+        "blob": "e43e68508d17900948210de2c523e0289301c6b1",
+        "sha256": "7b43c58055e319586c8c03a64f9fc5a1b148c15fee1aa90b17ab44f021596bdd",
+        "lines": 786
+      },
+      "candidate": {
+        "bytes": 49613,
+        "blob": "865494ab5f5e45c5158fbf74ac858987fb322608",
+        "sha256": "ce4d59cc5285eb78ed108dae13a44fae21d33cd73c544c720d512134f23b7f73",
+        "lines": 787
+      },
+      "origin": "exact4dc incoming leaf",
+      "insertions": 2,
+      "deletions": 1
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts",
+      "mode": "100644",
+      "preimage": {
+        "bytes": 22398,
+        "blob": "933347bf047f0150e15a8a0845d12087704881ce",
+        "sha256": "a8953c07c19c088d55b84fe60d566f1d225a2dd3c876df97e51ac1724ebc898a",
+        "lines": 247
+      },
+      "candidate": {
+        "bytes": 22845,
+        "blob": "b33e5290e4ed86a48b902a24ffc80509f1c89236",
+        "sha256": "135cd81f2edde1f087b231d4dcbed83d8cc8beade5a0230a093e6cbfcb1923ee",
+        "lines": 253
+      },
+      "origin": "exact4dc incoming leaf",
+      "insertions": 7,
+      "deletions": 1
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "mode": "100644",
+      "preimage": {
+        "bytes": 21808,
+        "blob": "6337cb07a04538d9e9ea1859a908efc554e2fc91",
+        "sha256": "8f56cd1d61ee0330082dd3c4a7fa1faf8c0acc294ee0cc18076a2e8b6ba0aad7",
+        "lines": 280
+      },
+      "candidate": {
+        "bytes": 22082,
+        "blob": "a9d725fbe11278dd98611b49d570c19d80684087",
+        "sha256": "3aa149837f6686e8307ba1803984874b4c673d8211094bd3e8e52b9ddb3d70cd",
+        "lines": 281
+      },
+      "origin": "UI82cb exact reviewed composition correction",
+      "insertions": 3,
+      "deletions": 2
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "mode": "100644",
+      "preimage": {
+        "bytes": 41443,
+        "blob": "55a7973806202dcca4b3cbcbadf621d4b7664f34",
+        "sha256": "a81fc69f79e4327046bc94c38202e8c121fbdf76348e33cc8d547e873f02f3d2",
+        "lines": 477
+      },
+      "candidate": {
+        "bytes": 48251,
+        "blob": "5ee2b9275536815e7669a4e9a58c813ab7f7a9e5",
+        "sha256": "2bd7cac970759f563547ccbf946086279c7c1cc05b18518e27e4bfdaad682e2b",
+        "lines": 549
+      },
+      "origin": "exact4dc incoming leaf",
+      "insertions": 73,
+      "deletions": 1
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+      "mode": "100644",
+      "preimage": null,
+      "candidate": {
+        "bytes": 13285,
+        "blob": "dd53c5b6c019dbe034dcde5375f03123b9b3e10a",
+        "sha256": "d9c331cfc2aed9a7aeaa7c815ce39de662a3b491cc31013df1e5f16ee029b514",
+        "lines": 180
+      },
+      "origin": "UI82cb exact reviewed composition correction",
+      "insertions": 180,
+      "deletions": 0
+    },
+    {
+      "path": "scripts/legacy-agent-host/qualify-linux-process-sdk.ts",
+      "mode": "100644",
+      "preimage": {
+        "bytes": 9611,
+        "blob": "865401e9e925d34d97c792a62fa345a9d85f0f80",
+        "sha256": "4493b4f04edae9185bf7920588ab5b520b7123afd8e03012f87a87b92643f4c2",
+        "lines": 146
+      },
+      "candidate": {
+        "bytes": 9710,
+        "blob": "f6fdf6a32240c20d5e1cf6e4ea0ceaab9d38d242",
+        "sha256": "364704dbeef77c87178a18c0c1751c0d9202a43a30d8954a5d506d33ce97581a",
+        "lines": 147
+      },
+      "origin": "exact4dc incoming leaf",
+      "insertions": 1,
+      "deletions": 0
+    },
+    {
+      "path": "tools/owned-process-broker/debugServiceTest.h",
+      "mode": "100644",
+      "preimage": {
+        "bytes": 2715,
+        "blob": "0fbfd352900f07ffe50db6c14701da07be7b4d38",
+        "sha256": "9e057f4ed22bddf4ef14886c8aea550522b854010b7d19e5d709010f6f907a53",
+        "lines": 51
+      },
+      "candidate": {
+        "bytes": 7264,
+        "blob": "9edcec8fffca780706cbde634c35d7929552f9f6",
+        "sha256": "e2ad167bf03a8c4566d720a8bc23d9fff274971b2523397f02ac766d89d8944a",
+        "lines": 153
+      },
+      "origin": "exact4dc incoming leaf",
+      "insertions": 103,
+      "deletions": 1
+    },
+    {
+      "path": "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+      "mode": "100644",
+      "preimage": {
+        "bytes": 13467,
+        "blob": "bb4aea3f241c402c12d3b1759ddb91226c02070d",
+        "sha256": "ff19621e64b300cbbfee6501990ba5cdbee24a3d967c65f4c756b484d9c8ea43",
+        "lines": 222
+      },
+      "candidate": {
+        "bytes": 19603,
+        "blob": "f8eb84e20fb323e5838b918a7934853785ab9ee5",
+        "sha256": "c37a7f0a4f2ded01700e9cb93e25fcdacd25e363b61c374c375b3ad493c80b27",
+        "lines": 317
+      },
+      "origin": "exact4dc incoming leaf",
+      "insertions": 117,
+      "deletions": 22
+    },
+    {
+      "path": "tools/owned-process-broker/nativeFixture.cpp",
+      "mode": "100644",
+      "preimage": {
+        "bytes": 11008,
+        "blob": "cafad66ab0933e9840ea359cb4a5af76e9aa233f",
+        "sha256": "10feceda1ad2522d1ffa754373cad3c67e65edc6bf046b6ded1d3a1865f981b3",
+        "lines": 207
+      },
+      "candidate": {
+        "bytes": 17237,
+        "blob": "579a7aadf70a284cb44f7ec3690dab32c4d76e92",
+        "sha256": "5891d489d3587218900ae8864c64c29c4fbc594022b95132c0292074e3ce865c",
+        "lines": 322
+      },
+      "origin": "exact4dc incoming leaf",
+      "insertions": 120,
+      "deletions": 5
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGate.ts",
+      "mode": "100644",
+      "preimage": {
+        "bytes": 21782,
+        "blob": "7172f9d90a97d1db8ebea150def22e1bf3ffb251",
+        "sha256": "f21333c4148f51365619a100962b13166cf45bc3597417ff9d15f05302e43e26",
+        "lines": 580
+      },
+      "candidate": {
+        "bytes": 22330,
+        "blob": "17f5e7b66605bd4d28cf3935b7fa73ea2933a21d",
+        "sha256": "3b549e313e3ca43b76232282b7dbe9e7a1dfcec594ad93bc81c047f740851197",
+        "lines": 586
+      },
+      "origin": "exact4dc incoming leaf",
+      "insertions": 6,
+      "deletions": 0
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateContext.test.ts",
+      "mode": "100644",
+      "preimage": {
+        "bytes": 4562,
+        "blob": "a70f955276982ef6f13e1c6f41e3be8f6eccc122",
+        "sha256": "efb43ecea2832cc41a674ab2e36613ed6ba6a5bcb3777f91fa0ca882dd7fd800",
+        "lines": 91
+      },
+      "candidate": {
+        "bytes": 4745,
+        "blob": "48d1c9752dddb3e5fa91c6c564912b0474312168",
+        "sha256": "4ad0525d402aac610a867e7011da52a4f85dc7d6055fb048d9c78995187f4778",
+        "lines": 95
+      },
+      "origin": "exact4dc incoming leaf",
+      "insertions": 5,
+      "deletions": 1
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateDiagnostics.ts",
+      "mode": "100644",
+      "preimage": {
+        "bytes": 6314,
+        "blob": "1717e066d2c2fe7e608ee22f308aa884556afa00",
+        "sha256": "0a7ddbb6776f0f3b7ab37b13fd06e171d9995269d6c7cf9be5754a9b67987b50",
+        "lines": 218
+      },
+      "candidate": {
+        "bytes": 6380,
+        "blob": "22cf67a484f0a2a5a2b89639e38515cc0242a21a",
+        "sha256": "d963accfadeb14a93fd5d7e2b934a409212cca40e678b452d011c4a579f29237",
+        "lines": 220
+      },
+      "origin": "exact4dc incoming leaf",
+      "insertions": 2,
+      "deletions": 0
+    },
+    {
+      "path": "tools/owned-process-broker/nativeRetainedHostGate.ts",
+      "mode": "100644",
+      "preimage": {
+        "bytes": 25478,
+        "blob": "d94742582f0cc937118db5ed82c7ffef27bc9d50",
+        "sha256": "ce44f82715e6feefcea527ab6ebd61f0f71476dfd3b15fe449852645d74cc1cf",
+        "lines": 611
+      },
+      "candidate": {
+        "bytes": 25732,
+        "blob": "d7a56276a6baa63ee65a357a98fc52c7cfe03bdd",
+        "sha256": "72eb24e9aca12f4bf283625a311cd60ce58c9c5b5c2e7beeaecc3a1b2185f8cc",
+        "lines": 614
+      },
+      "origin": "exact4dc incoming leaf",
+      "insertions": 6,
+      "deletions": 3
+    },
+    {
+      "path": "tools/owned-process-broker/nativeVendorGate.ts",
+      "mode": "100644",
+      "preimage": {
+        "bytes": 13120,
+        "blob": "bf4ee1f1c73b6ba9885f48dad9c5379fddd422e1",
+        "sha256": "823ed32aac0390101ec1f22a584b7daee4e642e62f2691e8d64085d06df7eb31",
+        "lines": 205
+      },
+      "candidate": {
+        "bytes": 13138,
+        "blob": "f704852f8f01b03907502dbaba99fc16bcceeed4",
+        "sha256": "dd37859e4953e3121c80c9a39e4bde5019ba6a6120fbfa138cece23cb3e47dba",
+        "lines": 204
+      },
+      "origin": "exact4dc incoming leaf",
+      "insertions": 7,
+      "deletions": 8
+    },
+    {
+      "path": "tools/owned-process-broker/serviceDebugLoop.h",
+      "mode": "100644",
+      "preimage": {
+        "bytes": 4760,
+        "blob": "40256b58a3ec8f7cff78c5c2e73cc68a82c6b0a4",
+        "sha256": "51f5e1568d0a97e337e62a5621f0987bd713170b1572ecc1b34f153001bb78a6",
+        "lines": 89
+      },
+      "candidate": {
+        "bytes": 4891,
+        "blob": "77fb69ac5dfc6eddbd71a273fa1baca1ef5f9298",
+        "sha256": "b31ecf2118e467b07bb973736920b10109a03c831a2cc72364c1abdb8973a8d3",
+        "lines": 93
+      },
+      "origin": "exact4dc incoming leaf",
+      "insertions": 10,
+      "deletions": 6
+    },
+    {
+      "path": "tools/owned-process-broker/serviceScopes.h",
+      "mode": "100644",
+      "preimage": {
+        "bytes": 10905,
+        "blob": "7a7fd19445532317d54b24870d598eede0b0024a",
+        "sha256": "78057e8056ce0ed5e83d6848646fc1b16621ddc568425a7720bcde91eae01e33",
+        "lines": 268
+      },
+      "candidate": {
+        "bytes": 15888,
+        "blob": "ab432fc33f763ee28ed406f8c33e7064fb023169",
+        "sha256": "cc6b60ac08081c1d14201391e912b1062967dadc25d4633b5329e9524550fb06",
+        "lines": 376
+      },
+      "origin": "exact4dc incoming leaf",
+      "insertions": 120,
+      "deletions": 12
+    }
+  ],
+  "diffRepresentation": "Git --no-index; only preimage/candidate scratch-directory path prefixes normalized; exact fullblob preimages/candidates are authoritative.",
+  "supersedesDraft": "Earlier a02/3957 source proposals were neither applied nor executed. The final three native diagnostic leaves now select exact4dc; all other17 candidates remain byte-identical. The incoming Plan29 suffix is preserved in the preceding docs-only commit, not an unlisted source-stage delta."
+}

@@ -3,13 +3,16 @@ import { createRoot } from 'react-dom/client';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { GlobalTask, TeamSummary } from '../../../../src/shared/types';
+import type { GlobalTask, TeamReadUnavailable, TeamSummary } from '../../../../src/shared/types';
 
 interface StoreState {
   globalTasks: GlobalTask[];
   globalDeletedTasks: GlobalTask[];
   globalTasksLoading: boolean;
   globalTasksInitialized: boolean;
+  globalTasksUnavailable: TeamReadUnavailable[];
+  globalTasksError: string | null;
+  openTeamTab: ReturnType<typeof vi.fn>;
   fetchAllTasks: ReturnType<typeof vi.fn>;
   fetchAllDeletedTasks: ReturnType<typeof vi.fn>;
   restoreTask: ReturnType<typeof vi.fn>;
@@ -173,17 +176,24 @@ vi.mock('lucide-react', () => {
     Archive: Icon,
     ArrowUpDown: Icon,
     Check: Icon,
+    CheckCircle: Icon,
     ChevronDown: Icon,
     ChevronRight: Icon,
+    Clock: Icon,
+    Filter: Icon,
     Folder: Icon,
     ListTodo: Icon,
     Pin: Icon,
+    Play: Icon,
     Search: Icon,
     X: Icon,
   };
 });
 
 import { GlobalTaskList } from '../../../../src/renderer/components/sidebar/GlobalTaskList';
+import { defaultTaskFiltersState } from '../../../../src/renderer/components/sidebar/taskFiltersState';
+import { TeamListFilterPopover } from '../../../../src/renderer/components/team/TeamListFilterPopover';
+import { TeamTaskStatusSummary } from '../../../../src/renderer/components/team/TeamTaskStatusSummary';
 
 function flushMicrotasks(): Promise<void> {
   return Promise.resolve();
@@ -241,6 +251,9 @@ describe('GlobalTaskList project grouping', () => {
     storeState.globalDeletedTasks = [];
     storeState.globalTasksLoading = false;
     storeState.globalTasksInitialized = true;
+    storeState.globalTasksUnavailable = [];
+    storeState.globalTasksError = null;
+    storeState.openTeamTab = vi.fn();
     storeState.fetchAllTasks = vi.fn(() => Promise.resolve(undefined));
     storeState.fetchAllDeletedTasks = vi.fn(() => Promise.resolve(undefined));
     storeState.restoreTask = vi.fn(() => Promise.resolve(undefined));
@@ -284,6 +297,136 @@ describe('GlobalTaskList project grouping', () => {
     setElectronApiForTest(undefined);
     vi.unstubAllGlobals();
     storeListeners.clear();
+  });
+
+
+  for (const filter of ['project', 'status', 'deleted'] as const) {
+    it(`keeps unavailable-resource notice and original controls visible through the ${filter} filter`, async () => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      storeState.globalTasks = [makeTask(1, { ownerResourceRef: 'TEST-healthy-owner' })];
+      storeState.globalTasksUnavailable = [
+        { kind: 'owner', ownerResourceRef: 'TEST-private-owner-reference', code: 'unavailable', outcome: 'unknown' },
+        { kind: 'team', teamName: 'TEST-original-missing-team', displayName: 'Missing team', code: 'busy', outcome: 'rejected' },
+      ];
+      const filters = defaultTaskFiltersState();
+      if (filter === 'project') filters.projectPath = '/TEST-no-matching-project';
+      else {
+        filters.statusIds = new Set();
+        if (filter === 'deleted') filters.showDeleted = true;
+      }
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      try {
+        await act(async () => {
+          root.render(React.createElement(GlobalTaskList, { contextId: 'local', filters }));
+          await flushMicrotasks();
+        });
+        const notice = host.querySelector<HTMLElement>('[data-team-aggregate-notice="tasks"]');
+        expect(notice?.dataset.state).toBe('partial');
+        expect(notice?.dataset.teamCount).toBe('1');
+        expect(notice?.dataset.ownerCount).toBe('1');
+        expect(notice?.dataset.loadedCount).toBe('1');
+        expect(notice?.textContent).toContain('1 loaded');
+        expect(notice?.textContent).toContain('team count unknown');
+        expect(host.textContent).not.toContain('TEST-private-owner-reference');
+        expect(visibleSubjects(host)).toEqual([]);
+        expect(host.textContent).toContain('No loaded tasks match this view.');
+        expect(storeState.fetchAllTasks).not.toHaveBeenCalled();
+        await act(async () => {
+          notice!.querySelector<HTMLButtonElement>('[data-unavailable-team="TEST-original-missing-team"]')!.click();
+          findButton(notice!, 'Refresh')!.click();
+          await flushMicrotasks();
+        });
+        expect(storeState.openTeamTab).toHaveBeenCalledTimes(1);
+        expect(storeState.openTeamTab).toHaveBeenCalledWith('TEST-original-missing-team');
+        expect(storeState.fetchAllTasks).toHaveBeenCalledTimes(1);
+      } finally { await act(async () => root.unmount()); }
+    });
+  }
+
+  it('qualifies pinned and project counts while keeping healthy rows visible through search and recovery', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.globalTasks = [makeTask(1), makeTask(2)];
+    taskLocalState.pinnedIds.add('alpha-team:task-1');
+    storeState.globalTasksUnavailable = [
+      { kind: 'owner', ownerResourceRef: 'TEST-owner', code: 'unavailable', outcome: 'unknown' },
+    ];
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    try {
+      await act(async () => { root.render(React.createElement(GlobalTaskList, { contextId: 'local' })); await flushMicrotasks(); });
+      expect(visibleSubjects(host)).toEqual(['Task 1', 'Task 2']);
+      expect(host.querySelector('[data-task-count-scope="loaded"]')?.textContent).toContain('Loaded tasks');
+      expect(host.textContent).toContain('1 loaded');
+      const notice = host.querySelector('[data-team-aggregate-notice="tasks"]');
+      await act(async () => {
+        host.querySelector<HTMLButtonElement>('button[aria-label="Search tasks..."]')!.click();
+        await flushMicrotasks();
+      });
+      const input = host.querySelector<HTMLInputElement>('input[placeholder="Search tasks..."]')!;
+      const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+      await act(async () => {
+        setValue.call(input, 'TEST-no-matching-task');
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        await flushMicrotasks();
+      });
+      expect(visibleSubjects(host)).toEqual([]);
+      expect(host.querySelector('[data-team-aggregate-notice="tasks"]')).toBe(notice);
+      expect(host.textContent).toContain('No loaded tasks match this view.');
+      await act(async () => {
+        storeState.globalTasksUnavailable = [];
+        notifyStoreUpdate();
+        await flushMicrotasks();
+      });
+      expect(host.querySelector('[data-team-aggregate-notice="tasks"]')).toBeNull();
+      expect(storeState.fetchAllTasks).not.toHaveBeenCalled();
+    } finally { await act(async () => root.unmount()); }
+  });
+
+  it('keeps stale rows and qualifies time counts when the last complete aggregate refresh fails', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    localStorage.setItem('sidebarTasksGrouping', 'time');
+    storeState.globalTasks = [makeTask(1)];
+    storeState.globalTasksError = 'TEST original aggregate refresh failed';
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    try {
+      await act(async () => { root.render(React.createElement(GlobalTaskList, { contextId: 'local' })); await flushMicrotasks(); });
+      expect(visibleSubjects(host)).toEqual(['Task 1']);
+      const notice = host.querySelector<HTMLElement>('[data-team-aggregate-notice="tasks"]');
+      expect(notice?.dataset.state).toBe('stale');
+      expect(notice?.textContent).toContain('TEST original aggregate refresh failed');
+      expect(notice?.textContent).toContain('counts may be out of date');
+      expect(Array.from(host.querySelectorAll('button')).some((button) => button.textContent?.includes('1 loaded'))).toBe(true);
+      expect(storeState.fetchAllTasks).not.toHaveBeenCalled();
+    } finally { await act(async () => root.unmount()); }
+  });
+
+  it('does not turn unknown Team liveness or task breakdown into zero counts', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    try {
+      await act(async () => {
+        root.render(React.createElement(React.Fragment, null,
+          React.createElement(TeamTaskStatusSummary, { unknown: true }),
+          React.createElement(TeamListFilterPopover, {
+            teams: [], aliveTeams: [], aliveKnown: false, incomplete: true,
+            filter: { selectedStatuses: new Set<string>() }, selectedProjectPath: null,
+            onFilterChange: vi.fn(), onProjectChange: vi.fn(),
+          })
+        ));
+        await flushMicrotasks();
+      });
+      expect(host.querySelector('[data-task-counts="unknown"]')?.textContent).toContain('Task counts unavailable');
+      expect(host.querySelector('[role="progressbar"]')).toBeNull();
+      expect(host.textContent?.match(/Unknown/g)).toHaveLength(2);
+      expect(host.textContent).not.toContain('(0)');
+    } finally { await act(async () => root.unmount()); }
   });
 
   it('does not fetch tasks on mount', async () => {

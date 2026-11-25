@@ -1,4 +1,5 @@
 import { nativeRosterSuccessor } from './nativeRosterSuccessor.js';
+import { TeamLiveRosterMembership, validateLiveRosterMembership } from './liveRosterMembership.js';
 import { TeamNativeMemberCreation } from './TeamNativeMemberCreation.js';
 import { validateNativeMemberCreationRecords } from './validateNativeMemberCreation.js';
 import { assertTeamExecutionAllowed } from './teamLifecycleAdmission.js';
@@ -66,14 +67,35 @@ export class TeamRosterTransitions {
   capturedMemberCurrent(principalId: string, expectedRevision: string, expected: Pick<TeamMember, 'memberId' | 'name' | 'role' | 'settings' | 'delivery'>, savedSettings?: OwnerState['savedSettings']): boolean {
     return this.options.store.fenced(() => {
       this.options.authorize(principalId, 'read');
-      const state = this.options.state(); this.validate(state);
-      return nativeRosterSuccessor(state, expectedRevision, expected, savedSettings);
+      return this.capturedMemberCurrentInState(this.options.state(), expectedRevision, expected, savedSettings);
+    });
+  }
+
+  /** Private TeamOwner composition: never accepts a state from an external command. */
+  capturedMemberCurrentInState(state: OwnerState, expectedRevision: string, expected: Pick<TeamMember, 'memberId' | 'name' | 'role' | 'settings' | 'delivery'> | undefined, savedSettings?: OwnerState['savedSettings']): boolean {
+    this.validate(state);
+    return !!expected && nativeRosterSuccessor(state, expectedRevision, expected, savedSettings);
+  }
+
+  matchesCaptured(members: readonly Pick<TeamMember, 'memberId' | 'name' | 'role' | 'settings'>[], savedSettings?: OwnerState['savedSettings']): boolean {
+    return this.options.store.fenced(() => {
+      const state = this.options.state();
+      return teamRosterRevision(state.members, state.rosterVersion, state.savedSettings) ===
+        teamRosterRevision(members, 0, savedSettings);
     });
   }
 
   /** Private additive native capability; same state, CAS, publication and receipts. */
   nativeCreation(): TeamNativeMemberCreation {
     return new TeamNativeMemberCreation({ ...this.options, validate: state => this.validate(state),
+      project: controllerProjection, recover: state => this.recover(state) });
+  }
+
+  /** Private admin membership use case; shares this exact state, policy and publication owner. */
+  liveMembership(): TeamLiveRosterMembership {
+    return new TeamLiveRosterMembership({ ...this.options,
+      validate: state => this.validate(state), members: (state, input) => this.members(state, input),
+      assertNoPending: commandId => this.assertNoPendingCommands(commandId),
       project: controllerProjection, recover: state => this.recover(state) });
   }
 
@@ -150,6 +172,8 @@ export class TeamRosterTransitions {
         )
           throw new TeamOwnerError('conflict');
       }
+      if (receipt?.liveMembership && receipt.liveMembership.phase !== 'completed')
+        throw new TeamOwnerError(receipt.liveMembership.rejection ?? 'hold');
       return receipt ? { commandId: receipt.commandId, revision: receipt.revision } : undefined;
     });
   }
@@ -280,6 +304,8 @@ export class TeamRosterTransitions {
     if (!prior) return undefined;
     if (prior.principalId !== principalId || prior.fingerprint !== fingerprint)
       throw new TeamOwnerError('conflict');
+    if (prior.liveMembership && prior.liveMembership.phase !== 'completed')
+      throw new TeamOwnerError(prior.liveMembership.rejection ?? 'hold');
     return { commandId, revision: prior.revision };
   }
 
@@ -318,7 +344,10 @@ export class TeamRosterTransitions {
     ];
   }
 
-  private assertNoPendingCommands(): void {
+  private assertNoPendingCommands(originalLiveCommandId?: string): void {
+    if (this.options.state().rosterCommands?.some(row => row.liveMembership &&
+        !['completed', 'rejected'].includes(row.liveMembership.phase) && row.commandId !== originalLiveCommandId))
+      throw new TeamOwnerError('hold');
     if (this.options.state().rosterCommands?.some(row => row.nativeCreation && !['completed', 'held'].includes(row.nativeCreation.phase))) throw new TeamOwnerError('hold');
     const pending = listTeamCommandEntries(this.options.store).some(
       (receipt) => !['completed', 'rejected'].includes(receipt.phase)
@@ -335,6 +364,7 @@ export class TeamRosterTransitions {
 
   private validate(state: OwnerState): void {
     validateNativeMemberCreationRecords(state);
+    validateLiveRosterMembership(state);
     if (
       !Number.isSafeInteger(state.rosterVersion ?? 0) ||
       (state.rosterVersion ?? 0) < 0 ||

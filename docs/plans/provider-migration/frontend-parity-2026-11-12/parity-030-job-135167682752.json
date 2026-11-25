@@ -1,0 +1,114 @@
+{
+  "schema": "current-head-original-ui-job-success-v1",
+  "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "event": "pull_request",
+  "runAttempt": 1,
+  "runId": 44407826474,
+  "job": {
+    "id": 135167682752,
+    "name": "Offline Host Desktop (darwin-arm64, installer)",
+    "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "run_id": 44407826474,
+    "run_attempt": 1,
+    "status": "completed",
+    "conclusion": "success",
+    "started_at": "2026-11-18T22:49:14Z",
+    "completed_at": "2026-11-18T22:54:26Z",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167682752",
+    "runner_name": "GitHub Actions 1000395261"
+  },
+  "rawLog": {
+    "phase": "permanently-retired",
+    "jobId": 135167682752,
+    "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "runId": 44407826474,
+    "runAttempt": 1,
+    "conclusion": "success",
+    "requestedAt": "2026-11-18 22:57:32 UTC",
+    "bytes": 288423,
+    "sha256": "9dc39c1423a622db4f4d0483953e63517aabeef950277004cc47fd6d8e42b0f2",
+    "computedGitBlobSha": "dfefac00679f48c9fea048de326a65316544a64d",
+    "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682752-terminal.log",
+    "endpointRetired": true,
+    "publishedBlobSha": "dfefac00679f48c9fea048de326a65316544a64d",
+    "exactReadback": true
+  },
+  "successfulVerificationAndScenarioSteps": [
+    {
+      "name": "Verify original checkout and runner tuple",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 5,
+      "started_at": "2026-11-18T22:50:01Z",
+      "completed_at": "2026-11-18T22:50:01Z"
+    },
+    {
+      "name": "Build existing Desktop prerequisites and verify admission",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 8,
+      "started_at": "2026-11-18T22:51:08Z",
+      "completed_at": "2026-11-18T22:51:46Z"
+    },
+    {
+      "name": "Exercise stock Codex Update while the original Team retains its captured source",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 27,
+      "started_at": "2026-11-18T22:51:48Z",
+      "completed_at": "2026-11-18T22:54:16Z"
+    },
+    {
+      "name": "Verify exact source, original screenshots, receipts and cleanup",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 38,
+      "started_at": "2026-11-18T22:54:16Z",
+      "completed_at": "2026-11-18T22:54:17Z"
+    }
+  ],
+  "originalUnitSummaryLines": [
+    "ℹ tests 503",
+    "ℹ pass 497",
+    "ℹ fail 0",
+    "ℹ cancelled 0",
+    "ℹ skipped 6",
+    "ℹ todo 0",
+    "ℹ duration_ms 32602.926583",
+    "ℹ tests 7",
+    "ℹ pass 7",
+    "ℹ fail 0",
+    "ℹ cancelled 0",
+    "ℹ skipped 0",
+    "ℹ todo 0",
+    "ℹ duration_ms 279.257209"
+  ],
+  "artifactFromOriginalUploadLog": {
+    "artifactId": 14478234270,
+    "bytes": 1178304,
+    "sha256": "0bd77f72fee961d9e7d25eb180e78e7e6ec660b6fec0f365c2fc998e16768ae8",
+    "downloaded": false,
+    "visualInspection": false
+  },
+  "jobLogEndpointRetired": true,
+  "originalInstallerVerifierCode": "  if (installer) {\n    const update = proof.installer;\n    assert.equal(update.status, 'PASS'); assert.equal(update.nativeQualification, false);\n    assert.equal(update.initialStatus.version, '0.162.0');\n    assert.equal(update.initialStatus.source, 'captured-host');\n    assert.equal(update.installedStatus.version, '0.169.0');\n    assert.equal(update.installedStatus.source, 'app-managed');\n    assert.equal(update.installedStatus.progress.phase, 'ready');\n    assert.equal(update.readbackStatus.sourceRevision, update.installedStatus.sourceRevision);\n    assert.notEqual(update.initialStatus.sourceRevision, update.installedStatus.sourceRevision);\n    assert.equal(update.publication.previousRevision, update.initialStatus.sourceRevision);\n    assert.equal(update.publication.revision, update.installedStatus.sourceRevision);\n    assert.equal(update.command.phase, 'published');\n    assert.equal(update.command.commandId, update.publication.commandId);\n    for (const key of ['sourceWrites', 'updateClicks', 'downloads']) assert.equal(update[key], 1);\n    for (const key of ['initialGetSourceWrites', 'finalGetSourceWrites']) assert.equal(update[key], 0);\n    assert.equal(update.originalRuntimeRetained, true);\n    assert.equal(proof.aInvocation.pid, proof.a.thread.pid);\n    assert.equal(proof.aInvocation.version, '0.162.0');\n    assert.equal(proof.bInvocation.pid, proof.b.thread.pid);\n    assert.equal(proof.bInvocation.version, '0.169.0');\n    assert.equal(proof.bInvocation.executable, update.installed.executable.path);\n    assert.notEqual(proof.aInvocation.executable, proof.bInvocation.executable);\n    assert.equal(proof.bSource.revision, update.publication.revision);\n    assert.equal(update.registry.filter(row => row.kind === 'tarball' && row.event === 'response').length, 1);\n    assert.ok(update.invocations.some(row => row.kind === 'version' && row.version === '0.169.0'));\n    assert.equal(update.fixturePins.aVersion, '0.162.0');\n    assert.equal(update.fixturePins.bVersion, '0.169.0');\n    assert.equal(update.fixturePins.bSha256, update.installed.executable.sha256);\n    for (const key of ['aSha256', 'bSha256', 'packageSha256', 'preloadSha256'])\n      assert.match(update.fixturePins[key], /^[a-f0-9]{64}$/);\n    assert.equal(update.settings.status, 'PASS');\n    for (const key of ['manageOpened', 'providerReady', 'accountHealthy', 'installActionAbsent', 'originalRuntimesRetained'])\n      assert.equal(update.settings[key], true);\n    assert.equal(update.settings.visibleVersionClaimed, false);\n    assert.equal(update.settings.sourceWrites, 0); assert.equal(update.settings.extraDownloads, 0);\n    assert.equal(update.settings.finalStatus.version, '0.169.0');\n    assert.equal(update.settings.finalStatus.source, 'app-managed');\n    assert.equal(update.settings.finalStatus.sourceRevision, update.publication.revision);\n  }\n",
+  "originalEmulatedGuardLines": [
+    "  LEGACY_DESKTOP_EMULATED_ONLY: 1",
+    "  LEGACY_DESKTOP_PROOF_MODE: emulated-installer-ui",
+    "assert.equal(inputs.nativeProviders, 'forbidden');",
+    "    assert.equal(proof.fixturePins.vendorsAllowed, false);",
+    "    assert.equal(proof.fixturePins.vendorsAllowed, false);",
+    "    assert.equal(proof.fixturePins.vendorsAllowed, false); assert.equal(proof.fixturePins.runtimeConfigured, true);",
+    "  nativeProviders: 'not executed', vendorAuthQualified: false, releaseQualified: false,",
+    "  LEGACY_DESKTOP_EMULATED_ONLY: 1",
+    "  LEGACY_DESKTOP_EMULATED_ONLY: 1"
+  ],
+  "originalConsolePass": [
+    {
+      "status": "PASS",
+      "receipt": "/Users/runner/work/_temp/TEST-desktop-backend-WOKDYK/desktop-backend-receipt.json"
+    }
+  ],
+  "scope": "Original stock app Update/retained-source flow against TEST installer and provider fixtures only. Original successful selected-lane verifier checks nativeQualification=false, vendorsAllowed=false and fixture executable identities/SHA pins; no real Codex or Claude execution, vendor authentication, release or mixed-native qualification is claimed.",
+  "verificationLimit": "Full original artifact receipt has not been separately downloaded; exact outcome asserted here is the original scenario PASS plus original source/fixture/cleanup verifier SUCCESS."
+}

@@ -143,6 +143,8 @@ export function messageSegments(
     const continuation = {
       from: original.from, timestamp: original.timestamp, read: original.read,
       ...(typeof original.messageId === 'string' ? { messageId: original.messageId } : {}),
+      ...(typeof original.source === 'string' ? { source: original.source } : {}),
+      ...(typeof original.leadSessionId === 'string' ? { leadSessionId: original.leadSessionId } : {}),
       text: '',
     };
     const first = { ...original, text: '' };

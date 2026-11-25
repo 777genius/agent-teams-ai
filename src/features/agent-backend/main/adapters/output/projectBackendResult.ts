@@ -28,9 +28,19 @@ import { projectLaunchSnapshot } from './projectLaunchSnapshot';
 import { projectLeadObservation } from './projectLeadObservation';
 import { isMemberActionRequest, projectMemberActionResult } from './projectMemberActionResult';
 import { projectMemberCheckpoints } from './projectMemberCheckpoints';
+import { projectNativeSessionCommands } from './projectNativeSessionCommands';
 import { projectProcessResult } from './projectProcessResult';
 import { projectReviewResult } from './projectReviewResult';
 import { projectRosterConfiguration, projectRosterReceipt } from './projectRoster';
+import {
+  activity,
+  activityEvent,
+  array,
+  boolean,
+  oneOf,
+  row,
+  string,
+} from './projectRuntimeActivity';
 import { projectTaskHistory } from './projectTaskHistory';
 import { projectTaskSubmission } from './projectTaskSubmission';
 import { projectTeamActivityLogs, projectTeamActivityStats } from './projectTeamActivity';
@@ -41,13 +51,6 @@ import { projectTeamSnapshot } from './projectTeamSnapshot';
 import { projectInteractionPreview, projectToolApprovalSettings } from './projectToolApproval';
 
 import type {
-  BackendActivityData,
-  BackendActivityEvent,
-  BackendActivityFeed,
-  BackendActivityGap,
-  BackendActivitySnapshot,
-  BackendActivityState,
-  BackendActivityValue,
   BackendCheckpoint,
   BackendCommandReceipt,
   BackendComment,
@@ -65,27 +68,6 @@ function isReviewRequest(
   return isBackendReviewOperation(request.operation);
 }
 
-function row(value: unknown): Record<string, unknown> {
-  if (!value || typeof value !== 'object' || Array.isArray(value))
-    throw new Error('Invalid host projection');
-  return value as Record<string, unknown>;
-}
-function string(value: unknown): string {
-  if (typeof value !== 'string') throw new Error('Invalid host projection');
-  return value;
-}
-function boolean(value: unknown): boolean {
-  if (typeof value !== 'boolean') throw new Error('Invalid host projection');
-  return value;
-}
-function oneOf<T extends string>(value: unknown, values: readonly T[]): T {
-  if (!values.includes(value as T)) throw new Error('Invalid host projection');
-  return value as T;
-}
-function array<T>(value: unknown, project: (entry: unknown) => T): T[] {
-  if (!Array.isArray(value)) throw new Error('Invalid host projection');
-  return value.map(project);
-}
 function refs(value: unknown): BackendTaskRef[] {
   return array(value, (entry) => {
     const ref = row(entry);
@@ -131,6 +113,7 @@ function task(value: unknown): BackendTask {
     result.reviewState = oneOf(source.reviewState, [
       'none',
       'review',
+      'reviewed',
       'approved',
       'needsFix',
     ] as const);
@@ -162,6 +145,7 @@ function receipt(value: unknown, request: BackendOperationRequest): BackendComma
     'task.review',
     'task.board.clear',
     'task.board.order',
+    'task.board.review-flow',
     'task.relationship',
     'task.clarification',
     'message.send',
@@ -181,7 +165,7 @@ function receipt(value: unknown, request: BackendOperationRequest): BackendComma
   if (result.taskSubmissionNoEffect) return result;
   if (source.result !== undefined) {
     const applied = row(source.result);
-    if (operation === 'task.board.order') {
+    if (operation === 'task.board.order' || operation === 'task.board.review-flow') {
       string(applied.teamName);
       array(applied.reviewers, string);
       for (const value of Object.values(row(applied.tasks)))
@@ -255,6 +239,11 @@ function runtime(value: unknown, request: BackendOperationRequest): BackendRunti
       };
     }),
   };
+  if (request.operation === 'runtime.read' && request.payload.nativePromptProof !== undefined)
+    result.nativePromptCurrent = boolean(source.nativePromptCurrent);
+  // Ordinary Runtime reads must never project private suggestion provenance.
+  if (source.sessionCommands !== undefined)
+    result.sessionCommands = projectNativeSessionCommands(source.sessionCommands, result);
   if (source.attachmentCapabilities !== undefined) {
     if (
       !result.generation ||
@@ -271,6 +260,23 @@ function runtime(value: unknown, request: BackendOperationRequest): BackendRunti
       documents: boolean(capabilities.documents),
       textFiles: boolean(capabilities.textFiles),
     };
+    if (capabilities.nativeMedia !== undefined) {
+      const transport = row(capabilities.nativeMedia);
+      const mimeTypes = array(transport.mimeTypes, value => oneOf(value,
+        ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'application/pdf'] as const));
+      if (transport.revision !== 'opencode-2.1.4-native-media-v1' || transport.videos !== false ||
+          new Set(mimeTypes).size !== mimeTypes.length || mimeTypes.length > 5 ||
+          mimeTypes.some(mime => mime.startsWith('image/')) !== result.attachmentCapabilities.images ||
+          mimeTypes.includes('application/pdf') !== result.attachmentCapabilities.documents ||
+          !Number.isSafeInteger(transport.maxBytes) || Number(transport.maxBytes) < 1 || Number(transport.maxBytes) > 4 * 1024 * 1024 ||
+          !Number.isSafeInteger(transport.maxCount) || Number(transport.maxCount) < 1 || Number(transport.maxCount) > 5 ||
+          !Number.isSafeInteger(transport.maxTotalBytes) || Number(transport.maxTotalBytes) < 1 || Number(transport.maxTotalBytes) > 8 * 1024 * 1024) {
+        throw new Error('Invalid native media transport capability');
+      }
+      result.attachmentCapabilities.nativeMedia = { revision: transport.revision, mimeTypes,
+        maxBytes: Number(transport.maxBytes), maxCount: Number(transport.maxCount),
+        maxTotalBytes: Number(transport.maxTotalBytes), videos: false };
+    }
   }
   if (source.diagnostic !== undefined)
     result.diagnostic = oneOf(source.diagnostic, [
@@ -299,280 +305,6 @@ function checkpoint(value: unknown, request: BackendOperationRequest): BackendCh
     result.reference = string(source.reference);
   }
   return result;
-}
-
-const activityGapReasons = [
-  'retention',
-  'incarnation',
-  'cursor',
-  'oversized',
-  'unsupported',
-  'unattributed',
-  'storage',
-  'state-unpublished',
-] as const;
-const activityCodes = [
-  'invalid-config',
-  'unavailable',
-  'dependency-unavailable',
-  'backpressure',
-  'stale',
-  'unsupported',
-  'checkpoint-incompatible',
-  'checkpoint-missing',
-  'provider-failure',
-  'output-limit',
-  'unknown',
-  'unknown-event',
-  'iterator-ended',
-] as const;
-const runtimeDiagnostics = [
-  'open-unknown',
-  'observe-ended',
-  'observe-failed',
-  'readiness-unavailable',
-  'close-unknown',
-] as const;
-function finite(value: unknown, integer = false): number {
-  if (
-    typeof value !== 'number' ||
-    !Number.isFinite(value) ||
-    value < 0 ||
-    (integer && !Number.isSafeInteger(value))
-  )
-    throw new Error('Invalid activity number');
-  return value;
-}
-function activityText(value: unknown, max = 1024): string {
-  const result = string(value);
-  if (result.length > max || result.includes('\0')) throw new Error('Invalid activity text');
-  return result;
-}
-function content(
-  value: unknown,
-  depth = 0,
-  budget = { nodes: 1024, bytes: 16 * 1024 }
-): BackendActivityValue {
-  if (--budget.nodes < 0 || depth > 8) throw new Error('Invalid activity content');
-  if (value === null || typeof value === 'boolean') return value;
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string') {
-    budget.bytes -= Buffer.byteLength(value);
-    if (budget.bytes < 0) throw new Error('Invalid activity content');
-    return value;
-  }
-  if (Array.isArray(value)) return value.map((entry) => content(entry, depth + 1, budget));
-  const source = row(value);
-  return Object.fromEntries(
-    Object.entries(source).map(([key, entry]) => {
-      budget.bytes -= Buffer.byteLength(key);
-      if (budget.bytes < 0) throw new Error('Invalid activity content');
-      return [key, content(entry, depth + 1, budget)];
-    })
-  );
-}
-function activityState(value: unknown): BackendActivityState {
-  const source = row(value);
-  const control = source.control === null ? null : row(source.control);
-  return {
-    phase: oneOf(source.phase, ['unopened', 'opening', 'allocated', 'closing', 'closed', 'held']),
-    custody: oneOf(source.custody, ['owned', 'released', 'unknown']),
-    sealed: boolean(source.sealed),
-    nativeReady: boolean(source.nativeReady),
-    queuedInputs: finite(source.queuedInputs, true),
-    activeInputs: finite(source.activeInputs, true),
-    partial: boolean(source.partial),
-    diagnostic: source.diagnostic === null ? null : oneOf(source.diagnostic, runtimeDiagnostics),
-    control: control
-      ? {
-          inputId: activityText(control.inputId),
-          phase: oneOf(control.phase, ['pending', 'unknown'] as const),
-        }
-      : null,
-    interactions: array(source.interactions, (entry) => {
-      const interaction = row(entry);
-      return {
-        interactionRef: activityText(interaction.interactionRef),
-        inputId: activityText(interaction.inputId),
-        kind: oneOf(interaction.kind, ['permission', 'question'] as const),
-        expiresAt: finite(interaction.expiresAt),
-        phase: oneOf(interaction.phase, ['pending', 'responding', 'resolved', 'unknown']),
-      };
-    }),
-  };
-}
-function activityData(value: unknown, nested = false): BackendActivityData {
-  const data = row(value);
-  switch (data.kind) {
-    case 'subagent': {
-      if (nested) throw new Error('Nested subagent activity');
-      const phase = oneOf(data.phase, [
-        'started',
-        'completed',
-        'failed',
-        'stopped',
-        'fact',
-        'interaction',
-        'usage',
-        'gap',
-      ] as const);
-      const alias = (value: unknown, prefix: string) => {
-        const result = activityText(value);
-        if (!new RegExp(`^${prefix}-[a-f0-9]{64}$`).test(result))
-          throw new Error('Invalid subagent alias');
-        return result;
-      };
-      const result: Extract<BackendActivityData, { kind: 'subagent' }> = {
-        kind: 'subagent',
-        phase,
-        ...(data.childId === undefined && phase === 'gap'
-          ? {}
-          : { childId: alias(data.childId, 'child') }),
-        ...(data.parentToolRef === undefined && phase === 'gap'
-          ? {}
-          : { parentToolRef: alias(data.parentToolRef, 'tool') }),
-      };
-      if (phase === 'fact' || phase === 'interaction') {
-        const fact = activityData(data.fact, true);
-        if (
-          fact.kind === 'state' ||
-          fact.kind === 'subagent' ||
-          fact.kind === 'usage' ||
-          fact.kind === 'result' ||
-          (phase === 'interaction') !== (fact.kind === 'interaction')
-        )
-          throw new Error('Invalid subagent fact');
-        result.fact = fact;
-      }
-      if (phase === 'usage')
-        for (const key of ['childTotalTokens', 'childToolUses', 'childDurationMs'] as const)
-          if (data[key] !== undefined) result[key] = finite(data[key], true);
-      if (phase === 'gap')
-        result.reason = oneOf(data.reason, ['unattributed', 'stale', 'conflict', 'limit'] as const);
-      return result;
-    }
-    case 'text':
-      return {
-        kind: 'text',
-        messageRef: activityText(data.messageRef),
-        block: finite(data.block, true),
-        text: activityText(data.text, 24 * 1024),
-        phase: oneOf(data.phase, ['snapshot', 'complete'] as const),
-      };
-    case 'tool':
-      return {
-        kind: 'tool',
-        messageRef: activityText(data.messageRef),
-        toolRef: activityText(data.toolRef),
-        name: activityText(data.name),
-        input: content(data.input),
-      };
-    case 'tool-result':
-      return {
-        kind: 'tool-result',
-        toolRef: activityText(data.toolRef),
-        content: content(data.content),
-        isError: boolean(data.isError),
-      };
-    case 'usage': {
-      const usage: Extract<BackendActivityData, { kind: 'usage' }> = { kind: 'usage' };
-      for (const key of ['inputTokens', 'outputTokens', 'cumulativeCostUsd'] as const)
-        if (data[key] !== undefined) usage[key] = finite(data[key], key !== 'cumulativeCostUsd');
-      return usage;
-    }
-    case 'compaction':
-      return {
-        kind: 'compaction',
-        sourceRef: activityText(data.sourceRef),
-        reason: oneOf(data.reason, ['manual', 'automatic', 'unknown'] as const),
-      };
-    case 'result':
-      return {
-        kind: 'result',
-        outcome: oneOf(data.outcome, ['succeeded', 'failed', 'cancelled', 'unknown'] as const),
-        ...(data.code === undefined ? {} : { code: oneOf(data.code, activityCodes) }),
-      };
-    case 'interaction': {
-      const request = row(data.request);
-      const common = {
-        kind: 'interaction' as const,
-        interactionRef: activityText(data.interactionRef),
-      };
-      if (request.kind === 'permission')
-        return {
-          ...common,
-          request: {
-            kind: 'permission',
-            tool: activityText(request.tool),
-            input: content(request.input),
-          },
-        };
-      if (request.kind === 'question')
-        return { ...common, request: { kind: 'question', questions: content(request.questions) } };
-      throw new Error('Invalid activity interaction');
-    }
-    case 'diagnostic':
-      return { kind: 'diagnostic', code: oneOf(data.code, activityCodes) };
-    case 'gap':
-      return { kind: 'gap', reason: oneOf(data.reason, activityGapReasons) };
-    case 'state':
-      return { kind: 'state', state: activityState(data.state) };
-    default:
-      throw new Error('Invalid activity event');
-  }
-}
-function activityEvent(value: unknown): BackendActivityEvent {
-  const source = row(value);
-  return {
-    sequence: finite(source.sequence, true),
-    eventId: activityText(source.eventId),
-    ...(source.inputId === undefined ? {} : { inputId: activityText(source.inputId) }),
-    data: activityData(source.data),
-  };
-}
-function activity(
-  value: unknown,
-  request: BackendOperationRequest
-): BackendActivityFeed | BackendActivitySnapshot {
-  const source = row(value);
-  if (!('memberId' in request.payload) || source.memberId !== request.payload.memberId)
-    throw new Error('Wrong activity member');
-  const snapshot = request.operation === 'runtime.activity.snapshot';
-  if (Buffer.byteLength(JSON.stringify(source)) > (snapshot ? 256 : 128) * 1024)
-    throw new Error('Oversized activity result');
-  const cursor = activityText(source.cursor);
-  if (!/^[A-Za-z0-9_-]+$/.test(cursor)) throw new Error('Invalid activity cursor');
-  const result: BackendActivityFeed = {
-    memberId: activityText(source.memberId, 256),
-    cursor,
-    retainedFrom: finite(source.retainedFrom, true),
-    events: array(source.events, activityEvent),
-    hasMore: boolean(source.hasMore),
-    ...(source.gap === undefined
-      ? {}
-      : {
-          gap: {
-            reason: oneOf(row(source.gap).reason, activityGapReasons),
-          } satisfies BackendActivityGap,
-        }),
-  };
-  if (result.events.length > 64) throw new Error('Oversized activity page');
-  if (!snapshot) return result;
-  const latest = row(source.latest);
-  return {
-    ...result,
-    state: source.state === null ? null : activityState(source.state),
-    latest: {
-      text: array(latest.text, activityEvent),
-      tools: array(latest.tools, activityEvent),
-      usage: array(latest.usage, activityEvent),
-      interactions: array(latest.interactions, activityEvent),
-      compaction: latest.compaction === null ? null : activityEvent(latest.compaction),
-      ...(latest.subagents === undefined
-        ? {}
-        : { subagents: array(latest.subagents, activityEvent) }),
-    },
-  };
 }
 
 /** Allowlist response projection; raw receipts/config/native identities never reach transports. */
@@ -754,6 +486,17 @@ export function projectBackendResult(
     request.operation === 'task.attachment.read'
   )
     return { ok: true, value: readBackendAttachmentChunk(source.value, request.payload) };
+  if (request.operation === 'team.review-flow.read') {
+    const value = row(source.value);
+    if (value.kind !== 'review-flow') throw new Error('Invalid review flow settings');
+    const settings = value.settings === null ? null : row(value.settings);
+    if (value.unreadable !== undefined && (value.unreadable !== true || settings !== null))
+      throw new Error('Invalid review flow read');
+    return { ok: true, value: { kind: 'review-flow', ...(value.unreadable ? { unreadable: true as const } : {}), settings: settings === null ? null : {
+      reviewFlow: oneOf(settings.reviewFlow, ['agent_approval', 'human_approval', 'lead_then_human'] as const),
+      reviewFlowPrompt: string(settings.reviewFlowPrompt),
+    } } };
+  }
   if (request.operation === 'team.snapshot')
     return { ok: true, value: projectTeamSnapshot(source.value) };
   if (request.operation === 'team.messages.page')

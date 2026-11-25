@@ -4,11 +4,13 @@ import { TeamConfigReader } from '../team/TeamConfigReader';
 import { JsonScheduleRepository } from './JsonScheduleRepository';
 import { ScheduledTaskExecutor } from './ScheduledTaskExecutor';
 import { SchedulerService } from './SchedulerService';
+import { SelectedScheduleDispatcher } from './SelectedScheduleDispatcher';
 import { SmartScheduleDispatcher } from './SmartScheduleDispatcher';
 
 import type { TeamIpcHandlerApis } from '../team/contracts/TeamProvisioningApis';
 import type { TeamDataService } from '../team/TeamDataService';
 import type { TeamProvisioningService } from '../team/TeamProvisioningService';
+import type { HostScheduleRuntimeFactory } from './SelectedScheduleDispatcher';
 
 /** Composes the scheduler from existing main-process APIs; no new runtime owner. */
 export function createSchedulerService(
@@ -17,7 +19,8 @@ export function createSchedulerService(
     TeamDataService,
     'getLeadMemberName' | 'getSavedRequest' | 'createTask' | 'getTask' | 'startTaskByUser' | 'hasActiveOwnedTask'
   >,
-  provisioning: Pick<TeamProvisioningService, 'launchTeam' | 'prepareForProvisioning' | 'hasTeamOperationInProgress'>
+  provisioning: Pick<TeamProvisioningService, 'launchTeam' | 'prepareForProvisioning' | 'hasTeamOperationInProgress'>,
+  host?: HostScheduleRuntimeFactory
 ): SchedulerService {
   const executor = new ScheduledTaskExecutor();
   const repository = new JsonScheduleRepository();
@@ -50,11 +53,19 @@ export function createSchedulerService(
       }
     },
     startTaskByUser: (teamName, taskId, admission) =>
-      data.startTaskByUser(teamName, taskId, admission),
-    attachMember: (teamName, memberName) =>
-      apis.memberLifecycle.attachLiveRosterMember(teamName, memberName, {
-        reason: 'member_added',
+      data.startTaskByUser(teamName, taskId, admission && { ...admission,
+        isCurrent: () => admission.isCurrent() &&
+          apis.runtime.getCurrentRunId(teamName) === admission.expectedRunId &&
+          apis.runtime.isTeamAlive(teamName) && !provisioning.hasTeamOperationInProgress(teamName),
       }),
+    attachMember: (teamName, memberName, expected) => {
+      if (expected && (apis.runtime.getCurrentRunId(teamName) !== expected.runId ||
+        !apis.runtime.isTeamAlive(teamName) || provisioning.hasTeamOperationInProgress(teamName)))
+        throw new Error('Scheduled recipient changed before attach');
+      return apis.memberLifecycle.attachLiveRosterMember(teamName, memberName, {
+        reason: 'member_added',
+      });
+    },
     createTask: (teamName, request) => data.createTask(teamName, request),
     launchTeam: (request) => provisioning.launchTeam(request, () => undefined),
     runOneShot: (request) => executor.execute(request),
@@ -67,6 +78,7 @@ export function createSchedulerService(
       const result = await provisioning.prepareForProvisioning(cwd, { forceFresh: true });
       return { ready: result.ready, message: result.message };
     },
-    dispatcher
+    new SelectedScheduleDispatcher(dispatcher, async (scheduleId, runId) =>
+      (await repository.listRuns(scheduleId, { limit: 50 })).filter(run => run.id !== runId), host)
   );
 }

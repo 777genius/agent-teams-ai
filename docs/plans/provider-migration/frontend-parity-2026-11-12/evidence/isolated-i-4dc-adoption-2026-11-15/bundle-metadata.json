@@ -1,0 +1,30 @@
+{
+  "kind": "Frozen derived stage I evidence bundle; scratch only, no tracked publication",
+  "appendix": {
+    "localPath": "/workspace/scratch/82d3f9ba6b85/I-evidence-publication/Plan29-appendix.md",
+    "bytes": 7806,
+    "blob": "601176c5fe1a136c616c894d558864e62c57e036",
+    "sha256": "1b05daf6ab8f0e8ab77b0b0f4b05df0beba03d7f88f248e8da361120d6af9a8b"
+  },
+  "inventory": {
+    "localPath": "/workspace/scratch/82d3f9ba6b85/I-evidence-publication/inventory.json",
+    "bytes": 82738,
+    "blob": "8e896b570cabb997e7f084f4bc93f123ec6f960d",
+    "sha256": "97da5f115367fe8444fec639ad633a756256a1513d6e93b1a429435a1040e5a4"
+  },
+  "independentAudit": {
+    "localPath": "/workspace/scratch/82d3f9ba6b85/I-evidence-publication/independent-actual-review.json",
+    "bytes": 35210,
+    "blob": "98292da0e4973d94dab55c40cb2b6be047d78708",
+    "sha256": "b5a054ee53fd74b8cbb0ef3d46cd765dc4ad96232a27344cd836cb1432e30e69"
+  },
+  "rawFiles": 34,
+  "rawBytes": 900591,
+  "alreadyPublishedReuses": 48,
+  "proposedNewEvidencePayloadsIncludingInventory": 36,
+  "sourceHead": "88ada74cfc4598b1bff2ab3bc0f9d08177862dbf",
+  "sourceTree": "6ea25725dec09d0617c2bc438472d6b77f3354ec",
+  "projectExecutionByReviewer": false,
+  "trackedEdits": false,
+  "refMutations": false
+}

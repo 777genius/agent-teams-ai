@@ -1,4 +1,5 @@
 import { runDesktopNativeGroupUiSmoke } from './desktop-native-group-ui-smoke.ts';
+import { prepareNativeNextPromptImeUi, qualifyNativeNextPromptUiStep } from './desktop-native-next-prompt-ui.ts';
 import { prepareNativeChatAttachments } from './desktop-native-chat-attachments-ui.ts';
 import { revealDesktopReply } from './desktop-reply-visibility.ts';
 import assert from 'node:assert/strict';
@@ -50,6 +51,28 @@ export async function runDesktopComposerUiSmoke(
   }
   const openCode = options.openCodeModel !== undefined;
   const model = options.openCodeModel ?? options.model!;
+  const nativeNextPromptUi = process.env.LEGACY_DESKTOP_NATIVE_NEXT_PROMPT_UI === '1';
+  const extendedNativeNextPromptUi = process.env.LEGACY_DESKTOP_NATIVE_NEXT_PROMPT_UI_EXTENDED === '1';
+  const nativeNextPromptEditGuards = process.env.LEGACY_DESKTOP_NATIVE_NEXT_PROMPT_UI_EDIT_GUARDS === '1';
+  const nativeNextPromptShiftTab = process.env.LEGACY_DESKTOP_NATIVE_NEXT_PROMPT_UI_SHIFT_TAB === '1';
+  assert.ok(!extendedNativeNextPromptUi || nativeNextPromptUi,
+    'extended suggestion proof requires its original native conversation fixture');
+  assert.ok(!nativeNextPromptEditGuards || extendedNativeNextPromptUi,
+    'suggestion edit guards require the original extended native UI fixture');
+  assert.ok(!nativeNextPromptShiftTab || nativeNextPromptEditGuards,
+    'visible-offer Shift+Tab requires the original native edit-guard fixture');
+  if (nativeNextPromptUi) {
+    assert.ok(!openCode && options.model?.suggestionRequests,
+      'original TEST Claude SDK must supply the actual follow-up model oracle');
+    options.evidence.nativeNextPromptUi = {
+      status: 'INCOMPLETE',
+      extended: extendedNativeNextPromptUi,
+      editGuards: nativeNextPromptEditGuards,
+      scope: 'original captured Host -> actual Claude SDK -> Main IPC -> physical Electron Composer',
+      screenshots: [],
+      excluded: ['paid vendor authentication', 'Codex native 0.169', 'unscoped HTTP SSE'],
+    };
+  }
   const steps: Record<string, unknown>[] = [];
   const step = (value: Record<string, unknown>) => {
     steps.push({ monotonicMs: Math.round(performance.now()), ...value });
@@ -73,10 +96,71 @@ export async function runDesktopComposerUiSmoke(
   await ui.observeInput();
   await ui.clickSidebar(options.seed.subject);
   await ui.click('button[aria-label^="alice,"]', 'open ordinary alice direct chat');
-  await ui.waitRead(
-    `Boolean(document.querySelector('.message-composer-flat-layout textarea'))`,
-    'direct chat Composer is visible'
-  );
+  try {
+    await ui.waitRead(
+      `Boolean(document.querySelector('.message-composer-flat-layout textarea'))`,
+      'direct chat Composer is visible'
+    );
+  } catch (error) {
+    // Observe only closed TEST metadata. Do not log private messages or DOM text.
+    const renderer = await cdp.evaluate(`(() => {
+      const root = document.getElementById('root');
+      const state = window.__agentTeamsDevStore?.getState?.();
+      const selected = state?.selectedTeamData;
+      const members = Array.isArray(selected?.members) ? selected.members : [];
+      const alice = members.find(row => row.name === 'alice');
+      return {
+        rootPresent: !!root, rootChildren: Math.min(root?.childElementCount ?? 0, 16),
+        fatalFallback: Boolean(root?.firstElementChild?.querySelector('svg.size-10.text-red-500')),
+        storePresent: !!state, selectedHostTeam: typeof state?.selectedTeamName === 'string' &&
+          state.selectedTeamName.startsWith('host-team:'),
+        capturedAlice: alice?.runtimeOwner === 'captured-host',
+        aliceIdMatches: alice?.hostMemberId === 'alice-id',
+        selectedDirectChat: state?.selectedTeamName != null && members.some(row => row.name === 'alice'),
+        anyTextareas: Math.min(document.querySelectorAll('textarea').length, 16),
+        composerRoots: Math.min(document.querySelectorAll('.message-composer-flat-layout').length, 16),
+        targetTextareas: Math.min(document.querySelectorAll('.message-composer-flat-layout textarea').length, 16),
+        documentComplete: document.readyState === 'complete',
+      };
+    })()`).catch(() => null);
+    const facts = { phase: 'direct-composer-bootstrap', renderer };
+    step({ assertion: 'direct chat composer missing', ...facts });
+    process.stderr.write('TEST_NATIVE_COMPOSER_BOOTSTRAP_DIAGNOSTIC ' + JSON.stringify(facts) + '\n');
+    throw new Error('TEST direct chat Composer not visible: ' + JSON.stringify(facts), { cause: error });
+  }
+  if (nativeNextPromptUi) {
+    // The real Electron config, not the fixture's written file, owns billing opt-in.
+    assert.equal(await cdp.evaluate(`window.electronAPI.config.get().then(
+      config => config.providerConnections.anthropic.nativeNextPromptSuggestionsEnabled === true
+    )`), true, 'original Electron Main config captured native suggestion opt-in');
+    // TEST-only passive observation of the existing scoped preload channel.
+    // Capture booleans, never private suggestion content or credentials.
+    assert.equal(await cdp.evaluate(`(() => {
+      const bridge=window.electronAPI?.nativePromptSuggestions;
+      if(typeof bridge?.onUpdated!=='function')return false;
+      window.__TEST_nativeNextPromptNotices=[];
+      bridge.onUpdated(value=>{
+        const rows=window.__TEST_nativeNextPromptNotices;
+        if(!Array.isArray(rows)||rows.length>=8)return;
+        rows.push({
+          ownerIsHost:typeof value?.ownerHandle==='string'&&value.ownerHandle.startsWith('host-team:'),
+          memberIsAlice:value?.memberId==='alice-id',
+          providerIsClaude:value?.provider==='claude',
+          messageIdPresent:typeof value?.messageId==='string'&&value.messageId.length>0,
+          textIsTestSuggestion:typeof value?.text==='string'&&[
+            'Review the completed tests and open a PR',
+            'Summarize the changes and check for regressions.',
+            'Verify the final results and prepare a report.',
+            'Check the final report and summarize the remaining work.',
+            'Review the attachment changes and verify the result.',
+            'Review the referenced file and summarize the result.',
+            'Review the current action mode and verify the result.'
+          ].includes(value.text)
+        });
+      });
+      return true;
+    })()`), true, 'scoped native suggestion preload observable without a new transport');
+  }
   const team = join(options.root, 'hoststore/teams/test-desktop-backend');
   const commands = join(team, '.host-owner/commands');
   const incomingIds: string[] = [];
@@ -88,7 +172,23 @@ export async function runDesktopComposerUiSmoke(
     ['NATIVE_TEAM_ONE', 'REPLY_NATIVE_ONE'],
     ['NATIVE_TEAM_TWO', 'REPLY_NATIVE_TWO'],
   ] as const;
-  for (const [turn, reply] of turns) {
+  const selectedTurns = nativeNextPromptUi
+    ? [...turns, ['NATIVE_TEAM_THREE', 'REPLY_NATIVE_THREE'] as const,
+        ['NATIVE_TEAM_FOUR', 'REPLY_NATIVE_FOUR'] as const,
+        ...(extendedNativeNextPromptUi ? [['NATIVE_TEAM_FIVE', 'REPLY_NATIVE_FIVE'] as const] : []),
+        ...(nativeNextPromptEditGuards ? [
+          ['NATIVE_TEAM_SIX', 'REPLY_NATIVE_SIX'] as const,
+          ['NATIVE_TEAM_SEVEN', 'REPLY_NATIVE_SEVEN'] as const,
+        ] : []),
+        ...(nativeNextPromptShiftTab ? [['NATIVE_TEAM_EIGHT', 'REPLY_NATIVE_EIGHT'] as const] : [])]
+    : turns;
+  for (const [turn, reply] of selectedTurns) {
+    if (nativeNextPromptUi) {
+      record(options.evidence.nativeNextPromptUi).currentTurn = turn;
+      process.stderr.write('TEST_NATIVE_COMPOSER_STAGE ' + JSON.stringify({ turn }) + '\n');
+    }
+    if (nativeNextPromptUi && turn === 'NATIVE_TEAM_FIVE')
+      await prepareNativeNextPromptImeUi(cdp, ui);
     await ui.click('.message-composer-flat-layout textarea', 'focus ordinary Composer');
     await cdp.send('Input.insertText', { text: turn });
     await ui.waitRead(
@@ -154,6 +254,8 @@ export async function runDesktopComposerUiSmoke(
           (!('toolResultError' in row) || !row.toolResultError || (row.turn === 'NATIVE_TEAM_ONE' && row.step === 4))
       )
     );
+    if (nativeNextPromptUi) assert.ok(observations.every(row => !('toolResultError' in row) || !row.toolResultError),
+      'native suggestion proof uses a clean SDK turn; original failure-path proof stays separate');
     if (turn.endsWith('_TEAM_TWO')) assert.ok(observations.every((row) => row.priorTurn));
     if (verifyAttachments) {
       const refs = record(record(receipt.command).payload).attachments;
@@ -199,6 +301,67 @@ export async function runDesktopComposerUiSmoke(
       commandId: id,
       observations: observations.length,
     });
+    if (nativeNextPromptUi) {
+      assert.ok(
+        turn === 'NATIVE_TEAM_ONE' || turn === 'NATIVE_TEAM_TWO' ||
+          turn === 'NATIVE_TEAM_THREE' || turn === 'NATIVE_TEAM_FOUR' || turn === 'NATIVE_TEAM_FIVE' ||
+          turn === 'NATIVE_TEAM_SIX' || turn === 'NATIVE_TEAM_SEVEN' || turn === 'NATIVE_TEAM_EIGHT',
+        'original Claude native conversation only',
+      );
+      // Claude SDK's first native turn may not emit a follow-up. Only
+      // later turns must exercise actual Insert, Escape and Tab in Electron.
+      if (turn === 'NATIVE_TEAM_ONE') {
+        step({ assertion: 'first original Claude turn completed; SDK follow-up optional', turn });
+      } else {
+        try {
+          await qualifyNativeNextPromptUiStep(cdp, ui, {
+            root: options.root,
+            turn,
+            expectedHumanInputs: incomingIds.length,
+            originalHumanSendCount: async () => (await rows(commands)).filter(row =>
+              row.principalId === 'TEST-human' && record(row.command).operation === 'message.send'
+            ).length,
+            modelSampleCount: () => options.model?.suggestionRequests?.length ?? -1,
+            modelSampleCountForTurn: () => options.model?.suggestionRequests?.filter(sample => sample.turn === turn).length ?? -1,
+            step,
+            evidence: options.evidence,
+          });
+        } catch (error) {
+          // Diagnose missing row without another model request or product mutation.
+          const renderer = await cdp.evaluate(`(() => {
+            const state=window.__agentTeamsDevStore?.getState?.();
+            const team=state?.selectedTeamData;
+            const rawMessages=state?.selectedTeamName &&
+              state.teamMessagesByName?.[state.selectedTeamName]?.canonicalMessages;
+            const messages=Array.isArray(rawMessages)?rawMessages:[];
+            const members=Array.isArray(team?.members)?team.members:[];
+            const alice=members.find(member=>member.name==='alice');
+            const direct=messages.filter(message=>message.from==='user'&&message.to==='alice');
+            const notices=window.__TEST_nativeNextPromptNotices;
+            return {
+              storeAvailable:Boolean(state),
+              selectedHostTeam:typeof state?.selectedTeamName==='string'&&state.selectedTeamName.startsWith('host-team:'),
+              memberCaptured:alice?.runtimeOwner==='captured-host',
+              memberIdMatches:alice?.hostMemberId==='alice-id',
+              originalDirectMessages:Math.min(direct.length,16),
+              latestDirectHasMessageId:typeof direct.at(-1)?.messageId==='string',
+              draftEmpty:document.querySelector('.message-composer-flat-layout textarea')?.value==='',
+              rowCount:Math.min(document.querySelectorAll('[data-testid="native-next-prompt-row"]').length,8),
+              noticed:Array.isArray(notices)?notices.slice(0,8):null
+            };
+          })()`).catch(() => null);
+          const diagnostic = { turn, expectedHumanInputs: incomingIds.length,
+            nativeSampleRequests: options.model?.suggestionRequests?.length ?? -1, renderer };
+          step({ assertion: 'native next prompt missing row diagnostic', ...diagnostic });
+          // The outer Desktop harness retains only stack frames on failure.
+          // These diagnostic fields are bounded booleans/counts, never DM text,
+          // operation tokens, model payloads or user credentials.
+          process.stderr.write('TEST_NATIVE_SUGGESTION_DIAGNOSTIC ' +
+            JSON.stringify(diagnostic) + '\n');
+          throw new Error('TEST native suggestion UI incomplete: ' + JSON.stringify(diagnostic), { cause: error });
+        }
+      }
+    }
   }
   const until = Date.now() + 15_000;
   let sessions = await readDesktopNativeStopSessions(options.root);
@@ -243,6 +406,9 @@ export async function runDesktopComposerUiSmoke(
     path: screenshotPath,
     sha256: await fileDigest(screenshotPath),
   };
+  if (nativeNextPromptUi)
+    await ui.scrollTo('button[aria-label="Stop"]',
+      'reveal original Stop after the native suggestion conversation', 'Stop');
   await ui.click(
     'button[aria-label="Stop"]',
     'ordinary Stop once after native conversation',
@@ -270,6 +436,39 @@ export async function runDesktopComposerUiSmoke(
   assert.deepEqual(model.failures, []);
   assert.ok(model.observations.every((item) => item.requestedModel === (openCode ? 'TEST-model' : 'claude-opus-4-6')));
   if (options.model) assert.ok(options.model.observations.every((item) => item.requestedEffort === 'medium'));
+  if (nativeNextPromptUi) {
+    const proof = record(options.evidence.nativeNextPromptUi);
+    const sampled = options.model?.suggestionRequests ?? [];
+    const qualified = sampled.filter(sample => sample.turn !== 'NATIVE_TEAM_ONE')
+      .map(sample => sample.turn).sort();
+    assert.deepEqual(qualified, [
+      ...(extendedNativeNextPromptUi ? ['NATIVE_TEAM_FIVE'] : []),
+      ...(nativeNextPromptEditGuards ? ['NATIVE_TEAM_SIX', 'NATIVE_TEAM_SEVEN'] : []),
+      ...(nativeNextPromptShiftTab ? ['NATIVE_TEAM_EIGHT'] : []),
+      'NATIVE_TEAM_FOUR', 'NATIVE_TEAM_THREE', 'NATIVE_TEAM_TWO',
+    ].sort(), 'all post-warm-up human turns each produce exactly one real native suggestion');
+    assert.ok(sampled.length <= (nativeNextPromptShiftTab ? 8 : nativeNextPromptEditGuards ? 7 : extendedNativeNextPromptUi ? 5 : 4),
+      'warm-up can optionally produce at most one native suggestion');
+    assert.equal(Array.isArray(proof.screenshots) ? proof.screenshots.length : 0,
+      nativeNextPromptShiftTab ? 7 : nativeNextPromptEditGuards ? 6 : extendedNativeNextPromptUi ? 4 : 3,
+      'each actual Electron row has a screenshot');
+    assert.equal(proof.shiftTabPreserved, true);
+    if (nativeNextPromptShiftTab) assert.equal(proof.shiftTabWithVisibleOffer, true);
+    if (extendedNativeNextPromptUi) assert.equal(proof.imePreserved, true);
+    if (nativeNextPromptEditGuards) {
+      assert.equal(proof.attachmentInvalidation, true);
+      assert.equal(proof.chipInvalidation, true);
+    }
+    assert.deepEqual((proof.screenshots as Record<string, unknown>[]).map(shot => [shot.theme, shot.compact]),
+      [['dark', false], ['dark', false], ['dark', false], ...(extendedNativeNextPromptUi ? [['light', true]] : []),
+        ...(nativeNextPromptEditGuards ? [['light', false], ['light', false]] : []),
+        ...(nativeNextPromptShiftTab ? [['light', false]] : [])]);
+    options.evidence.nativeNextPromptUi = {
+      ...proof, status: 'PASS', originalHumanInputs: inputIds.length,
+      nativeSdkSamples: sampled.length, qualifiedSamples: qualified.length,
+      noAutoSend: true, originalNativeCustodyReleased: true,
+    };
+  }
   options.evidence.conversationUiProof = {
     ...record(options.evidence.conversationUiProof),
     status: 'PASS',

@@ -1,0 +1,27 @@
+
+ RUN  v3.2.6 /workspace/scratch/82d3f9ba6b85/agent-teams-e2e
+
+ ✓ test/features/agent-backend/capturedHostClient.test.ts (33 tests) 18367ms
+   ✓ captured legacy host client over real subprocess stdio > keeps the original service intent and scope through late ACK and a successor Host  754ms
+   ✓ captured legacy host client over real subprocess stdio > derives retained service absence only from the original whole-Job proof: job-membership  380ms
+   ✓ captured legacy host client over real subprocess stdio > derives retained service absence only from the original whole-Job proof: no-local-dispatch  347ms
+   ✓ captured legacy host client over real subprocess stdio > retains Main launch/stdio/receipt ownership across graceful Host close  725ms
+   ✓ captured legacy host client over real subprocess stdio > retains Main launch/stdio/receipt ownership across crash Host close  628ms
+   ✓ captured legacy host client over real subprocess stdio > queues multi-member launch and graceful cleanup without caching capacity refusals  363ms
+   ✓ captured legacy host client over real subprocess stdio > queues multi-member launch and expired cleanup without caching capacity refusals  347ms
+   ✓ captured legacy host client over real subprocess stdio > holds Main reply bytes before native effect, expiry=true  587ms
+   ✓ captured legacy host client over real subprocess stdio > keeps the original TEST physical owner across Host loss, without replaying an unacknowledged write  526ms
+   ✓ captured legacy host client over real subprocess stdio > does not turn a generic remote exception after an effect into a rejection receipt  451ms
+   ✓ captured legacy host client over real subprocess stdio > request timeout retains unknown outcome while independent control remains available  572ms
+   ✓ captured legacy host client over real subprocess stdio > rejects mismatched host build identity  6418ms
+   ✓ captured legacy host client over real subprocess stdio > seals pending startup before validation can spawn the host  525ms
+   ✓ captured legacy host client over real subprocess stdio > shutdown does not kill an unrelated captured test child  374ms
+   ✓ captured legacy host client over real subprocess stdio > waits for advertised cleanup budget 200 before signaling the original Host  586ms
+   ✓ captured legacy host client over real subprocess stdio > waits for advertised cleanup budget 6000 before signaling the original Host  368ms
+   ✓ captured legacy host client over real subprocess stdio > keeps finite Host cleanup timeout distinct from confirmed child exit and provider release  317ms
+
+ Test Files  1 passed (1)
+      Tests  33 passed (33)
+   Start at  22:45:34
+   Duration  27.02s (transform 4.75s, setup 475ms, collect 7.77s, tests 18.37s, environment 0ms, prepare 61ms)
+

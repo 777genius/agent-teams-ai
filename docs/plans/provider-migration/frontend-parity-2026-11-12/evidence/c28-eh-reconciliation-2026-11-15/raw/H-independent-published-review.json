@@ -1,0 +1,25 @@
+{
+  "verdict": "APPROVE",
+  "head": "4e74d36ba6212938c40a499603ee0419a183fc0a",
+  "tree": "3c02af92462ec6ea2abec9fd982b8978e04efe03",
+  "parents": [
+    "387fa7ab81ddd57bdd274f763b8be90cfaaae484"
+  ],
+  "proof": {
+    "bytes": 10259,
+    "blob": "03c2e316b11476cc3423d486f49d995e031c4ab0",
+    "sha256": "10bfcfd8350d0391e25261923e7ab5c5462b2aea8af546156f16881f9c1de9b8"
+  },
+  "selected32Exact": true,
+  "integration7Exact": true,
+  "host615Exact": true,
+  "fullPlan29": {
+    "bytes": 945358,
+    "blob": "65de751eea109b87b76cb6634e9120d8f9763e17",
+    "sha256": "6bdbc2a459d8f1d33df6c93fe841c7465aec491c4662278c23ae9f95dbef94f3"
+  },
+  "workingTreeClean": true,
+  "staticGates": "not yet observed",
+  "outstandingIncoming": "a02ab70edfdcb4169627e804f0337c9ad6b52af6",
+  "reviewerProjectExecutions": 0
+}

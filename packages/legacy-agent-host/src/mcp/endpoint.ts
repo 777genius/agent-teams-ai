@@ -133,6 +133,7 @@ export async function startTeamMcpEndpoint(
           readQueries: Object.freeze({
             getTeam: reads.getTeam.bind(reads),
             getKanbanState: reads.getKanbanState.bind(reads),
+            getReviewFlowSettings: reads.getReviewFlowSettings.bind(reads),
             listReviewers: reads.listReviewers.bind(reads),
             getTaskComment: reads.getTaskComment.bind(reads),
             listTaskInventory: reads.listTaskInventory.bind(reads),

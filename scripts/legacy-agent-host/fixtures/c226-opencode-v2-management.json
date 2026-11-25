@@ -1,0 +1,311 @@
+{
+  "provenance": {
+    "sourceHead": "c226dc06d841c828d4e6cd8d56acaf4c5d9d22a5",
+    "jobId": 132583043246,
+    "artifactId": 14132244497,
+    "artifactSha256": "0bf8c381830ba401266d2702081e2a0a425e27838ead18b5bbedd34b14d94d44",
+    "scope": "Retained incomplete Electron attempt, first rejected-key intent only; no new run or PASS receipt"
+  },
+  "root": "/home/runner/work/_temp/TEST-desktop-backend-xks48s",
+  "profile": {
+    "schemaVersion": 1,
+    "owner": {
+      "ownerId": "TEST-desktop-owner-TEST-desktop-backend-xks48s",
+      "revision": "TEST-desktop-revision-1",
+      "storageRoot": "/home/runner/work/_temp/TEST-desktop-backend-xks48s/hoststore",
+      "profileId": "TEST-desktop-profile-TEST-desktop-backend-xks48s",
+      "protocolVersion": 1,
+      "buildId": "TEST-desktop-real-host",
+      "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+      "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add"
+    },
+    "principalId": "TEST-human",
+    "teams": [
+      {
+        "scope": {
+          "projectId": "TEST-project-TEST-desktop-backend-xks48s",
+          "workspaceId": "TEST-workspace-TEST-desktop-backend-xks48s",
+          "teamId": "TEST-desktop-team",
+          "runId": "TEST-run-TEST-desktop-backend-xks48s",
+          "memberId": "human",
+          "generation": "1"
+        },
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-xks48s",
+          "teamId": "TEST-desktop-team",
+          "teamName": "test-desktop-backend"
+        },
+        "members": [
+          {
+            "memberId": "alice-id",
+            "name": "alice",
+            "role": "member"
+          }
+        ],
+        "grants": [
+          {
+            "principalId": "TEST-human",
+            "memberName": "user",
+            "permissions": [
+              "read",
+              "task.write",
+              "message.write",
+              "admin"
+            ]
+          }
+        ]
+      }
+    ],
+    "management": [
+      {
+        "cwd": "/home/runner/work/_temp/TEST-desktop-backend-xks48s/workspace",
+        "environment": {
+          "HOME": "/home/runner/work/_temp/TEST-desktop-backend-xks48s/providers/opencode-v2/home",
+          "TMPDIR": "/home/runner/work/_temp/TEST-desktop-backend-xks48s/providers/opencode-v2/tmp",
+          "XDG_CONFIG_HOME": "/home/runner/work/_temp/TEST-desktop-backend-xks48s/providers/opencode-v2/config",
+          "XDG_DATA_HOME": "/home/runner/work/_temp/TEST-desktop-backend-xks48s/providers/opencode-v2/data",
+          "XDG_STATE_HOME": "/home/runner/work/_temp/TEST-desktop-backend-xks48s/providers/opencode-v2/state",
+          "XDG_CACHE_HOME": "/home/runner/work/_temp/TEST-desktop-backend-xks48s/providers/opencode-v2/cache",
+          "PATH": "/opt/hostedtoolcache/node/24.21.0/x64/bin:/usr/bin:/bin",
+          "NO_COLOR": "1"
+        },
+        "executable": {
+          "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun",
+          "sha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675"
+        },
+        "provider": "opencode",
+        "profileId": "TEST-v2-settings-management",
+        "accountBinding": "TEST-opencode-localhost-only",
+        "configRevision": "TEST-opencode-management",
+        "nativeGeneration": "v2",
+        "protocolRevision": "2.1.4",
+        "embedded": {
+          "version": "2.1.4",
+          "directory": "/home/runner/work/_temp/TEST-opencode-v2-inputs-4aXDss/engine",
+          "manifestSha256": "840d7cc145155e0ad97a407af87eb347da1a9cbf034d19c632897e1a5efbff9b",
+          "platform": "linux",
+          "arch": "x64",
+          "externalDirectory": "deny",
+          "providerConfiguration": {
+            "package": "aisdk:@ai-sdk/openai-compatible",
+            "settings": {
+              "baseURL": "http://127.0.0.1:44049/v1"
+            },
+            "models": {
+              "TEST-project-model": {
+                "name": "TEST-project-model",
+                "limit": {
+                  "context": 98304,
+                  "output": 1024
+                },
+                "capabilities": {
+                  "tools": true,
+                  "input": [
+                    "text"
+                  ],
+                  "output": [
+                    "text"
+                  ]
+                }
+              },
+              "TEST-model": {
+                "name": "TEST-model",
+                "limit": {
+                  "context": 200000,
+                  "output": 2000
+                },
+                "capabilities": {
+                  "tools": true,
+                  "input": [
+                    "text"
+                  ],
+                  "output": [
+                    "text"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "nativeModel": {
+          "providerId": "test-local",
+          "modelId": "TEST-model"
+        },
+        "endpoint": "http://127.0.0.1:36971",
+        "timeoutMs": 120000,
+        "modelProbeTimeoutMs": 120000
+      }
+    ]
+  },
+  "descriptor": {
+    "schemaVersion": 1,
+    "defaultOwner": {
+      "ownerId": "TEST-desktop-owner-TEST-desktop-backend-xks48s",
+      "revision": "TEST-desktop-revision-1"
+    },
+    "owners": [
+      {
+        "ownerId": "TEST-desktop-owner-TEST-desktop-backend-xks48s",
+        "revision": "TEST-desktop-revision-1",
+        "storageRoot": "/home/runner/work/_temp/TEST-desktop-backend-xks48s/hoststore",
+        "profile": {
+          "profileId": "TEST-desktop-profile-TEST-desktop-backend-xks48s",
+          "nodeExecutable": "/opt/hostedtoolcache/node/24.21.0/x64/bin/node",
+          "nodeVersion": "v24.21.0",
+          "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+          "hostEntry": "/home/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/dist/cli.js",
+          "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+          "expectedBuildId": "TEST-desktop-real-host",
+          "cwd": "/home/runner/work/_temp/TEST-desktop-backend-xks48s/workspace",
+          "env": {
+            "HOME": "/home/runner/work/_temp/TEST-desktop-backend-xks48s/home",
+            "TMPDIR": "/home/runner/work/_temp/TEST-desktop-backend-xks48s/tmp",
+            "PATH": "/opt/hostedtoolcache/node/24.21.0/x64/bin:/usr/bin:/bin",
+            "LEGACY_AGENT_HOST_PROFILE_PATH": "/home/runner/work/_temp/TEST-desktop-backend-xks48s/host-profile.json",
+            "LEGACY_AGENT_HOST_PROFILE_SHA256": "0437ec3e863deb462087216bfa75e37fded40d28ad8a1fb15c445c09611d28be"
+          },
+          "startupTimeoutMs": 60000,
+          "requestTimeoutMs": 60000,
+          "writeTimeoutMs": 5000,
+          "shutdownTimeoutMs": 10000
+        }
+      }
+    ],
+    "handles": [
+      {
+        "handleId": "TEST-desktop-handle-TEST-desktop-backend-xks48s",
+        "owner": {
+          "ownerId": "TEST-desktop-owner-TEST-desktop-backend-xks48s",
+          "revision": "TEST-desktop-revision-1"
+        },
+        "contextId": "local",
+        "label": "TEST private backend",
+        "members": [
+          {
+            "memberId": "alice-id",
+            "label": "alice"
+          }
+        ],
+        "scope": {
+          "projectId": "TEST-project-TEST-desktop-backend-xks48s",
+          "workspaceId": "TEST-workspace-TEST-desktop-backend-xks48s",
+          "teamId": "TEST-desktop-team",
+          "runId": "TEST-run-TEST-desktop-backend-xks48s",
+          "memberId": "human",
+          "generation": "1"
+        }
+      }
+    ],
+    "management": [
+      {
+        "runtimeId": "opencode",
+        "owner": {
+          "ownerId": "TEST-desktop-owner-TEST-desktop-backend-xks48s",
+          "revision": "TEST-desktop-revision-1"
+        },
+        "contextId": "local",
+        "projectPath": null,
+        "profileId": "TEST-v2-settings-management",
+        "configRevision": "TEST-opencode-management",
+        "preferences": {
+          "globalRoot": "/home/runner/work/_temp/TEST-desktop-backend-xks48s/preferences/global",
+          "projectRoot": null
+        }
+      },
+      {
+        "runtimeId": "opencode",
+        "owner": {
+          "ownerId": "TEST-desktop-owner-TEST-desktop-backend-xks48s",
+          "revision": "TEST-desktop-revision-1"
+        },
+        "contextId": "local",
+        "projectPath": "/home/runner/work/_temp/TEST-desktop-backend-xks48s/workspace",
+        "profileId": "TEST-v2-settings-management",
+        "configRevision": "TEST-opencode-management",
+        "preferences": {
+          "globalRoot": "/home/runner/work/_temp/TEST-desktop-backend-xks48s/preferences/global",
+          "projectRoot": "/home/runner/work/_temp/TEST-desktop-backend-xks48s/preferences/workspace"
+        }
+      },
+      {
+        "runtimeId": "opencode",
+        "owner": {
+          "ownerId": "TEST-desktop-owner-TEST-desktop-backend-xks48s",
+          "revision": "TEST-desktop-revision-1"
+        },
+        "contextId": "local",
+        "projectPath": "/home/runner/work/_temp/TEST-desktop-backend-xks48s/workspace-other",
+        "profileId": "TEST-v2-settings-management",
+        "configRevision": "TEST-opencode-management",
+        "preferences": {
+          "globalRoot": "/home/runner/work/_temp/TEST-desktop-backend-xks48s/preferences/global",
+          "projectRoot": "/home/runner/work/_temp/TEST-desktop-backend-xks48s/preferences/workspace-other"
+        }
+      }
+    ]
+  },
+  "commandFiles": [
+    {
+      "name": "0b5b3c7bc2291a09f623f1d218f659f28806b1a18fb697ebe99a8fc7659f9dc1.json",
+      "sha256": "a5cbf8a7e17e511dd88071eceeeb97c1f33add1d6f0e9d710b80255d8be76cd0",
+      "envelope": {
+        "schemaVersion": 1,
+        "commandId": "1f18cc67-e01f-454e-bbd8-bbb0bbb79fc4",
+        "profileId": "runtime-source:b8f6d61925db80b67831f090b33414555515ab550bd85fa958ccd0c3a3d46c80",
+        "configRevision": "runtime-source:b8f6d61925db80b67831f090b33414555515ab550bd85fa958ccd0c3a3d46c80",
+        "providerId": "test-local",
+        "fingerprint": "756810f49ddeaeecdebfd4a57c5105f105cc631462b4aefa8d26acc23bb03e2d",
+        "selectionDigest": "6409e53a846e256bb4707c26ebfa63f6d8fe1066e374f53cce1023f9b331823d",
+        "resourceId": "a4fd3ab978c7de36f83ba5bdaf9ec7c6356dc85565f36e71519c2cab0b17d44a",
+        "resourceHeld": false,
+        "kind": "credential.set",
+        "phase": "held",
+        "finishedAtMs": 1794691483166,
+        "openCodeV2": {
+          "phase": "probe-completed",
+          "integrationId": "test-local",
+          "nativeNamespace": "1e04b885917fdc26f7160dfbdf82eb97db2400361bb9857cfbfc60bec602a3c4",
+          "beforeAuthDigest": "b9a62927d355fb3910afe8667b08b10057fa7f95fb32d62dfe2268ccee035731",
+          "credentialId": "cred_1dbf2731f001EKhNxPHOAHMjUQ",
+          "authDigest": "64d32cc62ca21de083e49dcf99ea4aa33370674cee6de3eb2bd40320eab0e805",
+          "verification": {
+            "commandId": "connect-verify-0b5b3c7bc2291a09f623f1d218f659f28806b1a18fb697eb",
+            "modelId": "test-local/TEST-model",
+            "ok": false
+          }
+        },
+        "terminalRejection": true,
+        "digest": "76a58807cbd00645502445299d960955c58a7b5eaa22940ceabd630cf4773cd4"
+      }
+    },
+    {
+      "name": "5e366271b647b9a7c8f045634864443ad2b3dc2c14b86930e50b8647c3b85ca2.json",
+      "sha256": "96c33839a6ad9cca250206e3ab83c0b145680a06940df9721858f15b92366e6d",
+      "envelope": {
+        "schemaVersion": 1,
+        "commandId": "f487ec3c-62db-4de2-9a47-9e815ef3836e",
+        "profileId": "TEST-v2-settings-management",
+        "configRevision": "TEST-opencode-management",
+        "providerId": "opencode",
+        "fingerprint": "96c4d6cfe5201fc79cf2f82e786471f01bc122b57b60e581905df1ad0ecb1f86",
+        "selectionDigest": "263634dd247c8c9439f8d54cc586f28c42ad78effe20c6f7fb11b61386293504",
+        "resourceId": "5d2039fc7d18b20e4ae45268eddb08d91114a10e25fd8f3ad4eda588553c581c",
+        "resourceHeld": false,
+        "kind": "runtime.source",
+        "phase": "published",
+        "sourceId": "5d2039fc7d18b20e4ae45268eddb08d91114a10e25fd8f3ad4eda588553c581c",
+        "revision": "b8f6d61925db80b67831f090b33414555515ab550bd85fa958ccd0c3a3d46c80",
+        "expectedRevision": "263634dd247c8c9439f8d54cc586f28c42ad78effe20c6f7fb11b61386293504",
+        "publicationJson": "{\"grant\":{\"targetId\":\"5d2039fc7d18b20e4ae45268eddb08d91114a10e25fd8f3ad4eda588553c581c\",\"ownerId\":\"TEST-desktop-owner-TEST-desktop-backend-xks48s\",\"ownerRevision\":\"TEST-desktop-revision-1\",\"contextId\":\"local\",\"projectPath\":null,\"runtimeId\":\"opencode\",\"profileId\":\"TEST-v2-settings-management\",\"configRevision\":\"TEST-opencode-management\",\"teamScopes\":[{\"teamId\":\"TEST-desktop-team\",\"projectId\":\"TEST-project-TEST-desktop-backend-xks48s\",\"workspaceId\":\"TEST-workspace-TEST-desktop-backend-xks48s\"}]},\"commandId\":\"f487ec3c-62db-4de2-9a47-9e815ef3836e\",\"expectedRevision\":\"263634dd247c8c9439f8d54cc586f28c42ad78effe20c6f7fb11b61386293504\",\"candidate\":{\"sourceKind\":\"captured\",\"executable\":{\"path\":\"/home/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun\",\"sha256\":\"45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675\"},\"openCodeConfiguration\":{\"scope\":\"global\",\"files\":[{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-xks48s/providers/opencode-v2/home/.config/opencode/opencode.json\",\"digest\":\"2612e5c8d851ccbd480f2b696d537e4f10e2933f8b20f909850f403a81577947\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-xks48s/providers/opencode-v2/home/.config/opencode/opencode.jsonc\",\"digest\":\"9144c57b0d6e9752eb814bc14b0344e3b5b816003a33cbcab1eef221306cb9af\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-xks48s/providers/opencode-v2/config/opencode/opencode.json\",\"digest\":\"99ccc7fd8750b124253722885a488261c1919c2ab761222dd84013ef8813899f\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-xks48s/providers/opencode-v2/config/opencode/opencode.jsonc\",\"digest\":\"69e8cd8438d476932270506a8bf1bdd187757e60d3325316bb864acf0b4d5428\"}],\"inlineDigest\":null},\"openCodePreferences\":{\"defaultModelId\":null,\"modelLimitOverrides\":{}}},\"intent\":\"configuration\"}",
+        "digest": "4c125ff24c681fdae6fe86e29f66ee5880320bb05c9e8d2db429d5aa9571023c"
+      }
+    }
+  ],
+  "probe": {
+    "step": "reject-key",
+    "pid": 5925,
+    "birth": "28150",
+    "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-xks48s/providers/opencode-v2/data/agent-teams-v2-probe-c66864101ac6d673-j1mmsi",
+    "absentAfterReceipt": false
+  }
+}

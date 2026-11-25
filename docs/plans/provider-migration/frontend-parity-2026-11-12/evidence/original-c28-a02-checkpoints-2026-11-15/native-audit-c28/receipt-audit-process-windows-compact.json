@@ -1,0 +1,3689 @@
+{
+  "kind": "original-c28-Windows-Process-byte-and-receipt-audit",
+  "sourceHead": "c28f1aa890c909c7b981254c5e30b874cbc84287",
+  "runId": 43759098052,
+  "method": "Read-only official ZIP/full-log inspection and exact Git source comparison. No source/test/compiler/native/provider execution or CI replay.",
+  "architectures": {
+    "x64": {
+      "jobId": 132949618051,
+      "jobLog": {
+        "path": "job-132949618051.log",
+        "bytes": 392398,
+        "gitBlob": "8a0815102fb86e8bae68101426eef0e610fb8619",
+        "sha256": "c24268c1881ddf5f2b394f28d12654eeac6ddee5ddbc44262c3d04739e8384c4"
+      },
+      "scope": {
+        "path": "process_x64/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/scope.json",
+        "bytes": 137737,
+        "gitBlob": "d643eda39be2672a7a5f14c9aaafd3241e14bc9f",
+        "sha256": "f1594caf19b46963e99521c121de7506e540fc1a551be9fad93ac13cf68bdbda"
+      },
+      "scopeFlags": {
+        "nativeProviderRuntimeQualified": false,
+        "darwinNativeRegistrationQualified": false,
+        "posixExecutableAdmissionQualified": false,
+        "desktopQualified": false,
+        "releaseQualified": false
+      },
+      "scopeControlledContracts": true,
+      "scopeRetainedMainTransport": true,
+      "scopePosixProcessGroups": false,
+      "sourceHeadFile": {
+        "path": "process_x64/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+        "bytes": 41,
+        "gitBlob": "1e2b4a4ba3fdc943cf9b4914e7a267edc1ece36a",
+        "sha256": "ed412a9bf653b9f6fbac43dc54faef76d46abce104dce58f7df4abc7e53e9e72"
+      },
+      "nativeGates": [
+        {
+          "log": {
+            "path": "process_x64/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-node24.log",
+            "bytes": 78063,
+            "gitBlob": "76171fcec81876f2580a8f0e2eb805aff444eb57",
+            "sha256": "0a35f0cf34be2d47f5acaaacf31e682189bbd61090ebe1c64abc36293921ba56"
+          },
+          "gateLine": 363,
+          "gate": "owned-process-native-scenarios-only",
+          "node": "24.21.0",
+          "electron": null,
+          "scenarios": [
+            "tree",
+            "root-first-tail-held-pipe",
+            "blocked-output-independent-stop",
+            "breakaway-denied",
+            "pre-resume-cancel-first-nonce",
+            "facade-private-stdin-after-native-owner-tail-exit",
+            "facade-pre-resume-cancel-no-private-input",
+            "captured-provider-native-argv-env-cwd-and-stop",
+            "captured-root-first-original-descendants-and-neighbor",
+            "TEST-only-debug-service-prebirth-nested-job-feasibility",
+            "birth-failure-unknown-first-nonce",
+            "owner-eof",
+            "accounting-failure-latched-unknown-distinct-reconciliation",
+            "post-launch-pending-read-genuine-prepared",
+            "released-ack-eof-exit-zero",
+            "watcher-lock-contention-released-ack-exit-zero",
+            "failure-winner-after-complete-ack-exit-74",
+            "broker-crash",
+            "wrong-generation",
+            "malformed",
+            "truncated",
+            "lost-prepared-no-resume-first-nonce",
+            "sentinel-isolation"
+          ],
+          "controllerLine": 370,
+          "controller": {
+            "gateController": "drained",
+            "rootExitCode": 0,
+            "activeProcesses": 0
+          },
+          "cleanupObservations": [
+            {
+              "line": 365,
+              "cleanupObservation": "before-private-abandon",
+              "helperCount": 56,
+              "retainedCount": 9
+            },
+            {
+              "line": 369,
+              "cleanupObservation": "after-helper-wait",
+              "helperCount": 56,
+              "retainedCount": 9
+            }
+          ]
+        },
+        {
+          "log": {
+            "path": "process_x64/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-electron.log",
+            "bytes": 78115,
+            "gitBlob": "9427a3c792e07193c50c5e87ede03f0aa41504dc",
+            "sha256": "1488beb471b20b3f5c9071a77fd1a9fe310f56dea207846d3261b64d60cf71e9"
+          },
+          "gateLine": 363,
+          "gate": "owned-process-native-scenarios-only",
+          "node": "24.22.1",
+          "electron": "44.10.1",
+          "scenarios": [
+            "tree",
+            "root-first-tail-held-pipe",
+            "blocked-output-independent-stop",
+            "breakaway-denied",
+            "pre-resume-cancel-first-nonce",
+            "facade-private-stdin-after-native-owner-tail-exit",
+            "facade-pre-resume-cancel-no-private-input",
+            "captured-provider-native-argv-env-cwd-and-stop",
+            "captured-root-first-original-descendants-and-neighbor",
+            "TEST-only-debug-service-prebirth-nested-job-feasibility",
+            "birth-failure-unknown-first-nonce",
+            "owner-eof",
+            "accounting-failure-latched-unknown-distinct-reconciliation",
+            "post-launch-pending-read-genuine-prepared",
+            "released-ack-eof-exit-zero",
+            "watcher-lock-contention-released-ack-exit-zero",
+            "failure-winner-after-complete-ack-exit-74",
+            "broker-crash",
+            "wrong-generation",
+            "malformed",
+            "truncated",
+            "lost-prepared-no-resume-first-nonce",
+            "sentinel-isolation"
+          ],
+          "controllerLine": 370,
+          "controller": {
+            "gateController": "drained",
+            "rootExitCode": 0,
+            "activeProcesses": 0
+          },
+          "cleanupObservations": [
+            {
+              "line": 365,
+              "cleanupObservation": "before-private-abandon",
+              "helperCount": 56,
+              "retainedCount": 9
+            },
+            {
+              "line": 369,
+              "cleanupObservation": "after-helper-wait",
+              "helperCount": 56,
+              "retainedCount": 9
+            }
+          ]
+        }
+      ],
+      "providers": {
+        "codex": {
+          "receipt": {
+            "path": "process_x64/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-codex-receipt.json",
+            "bytes": 60497,
+            "gitBlob": "6e0e336f1c73796cd6647d606bad900d6c622073",
+            "sha256": "185971300c07ff1d9fa731a7804be84081e4bb836b9876a986350d1ba0fe99ba"
+          },
+          "log": {
+            "path": "process_x64/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-codex.log",
+            "bytes": 49713,
+            "gitBlob": "4369ed41bffbc384136367d203d0290cd0c86848",
+            "sha256": "1c8cc9195e6fb7a5af08f05318287d1f3ba9eec61afbf229b8b54ed50f2fdcfb"
+          },
+          "status": "PASS",
+          "stage": "complete",
+          "cleanup": true,
+          "versionsAreFiniteTestCompatibilityStrings": {
+            "A": "0.162.0",
+            "B": "0.162.0"
+          },
+          "readiness": [
+            {
+              "line": 11,
+              "kind": "TEST_SOURCE_READINESS",
+              "provider": "codex",
+              "source": {
+                "sourceId": "faeba59ef3db4b23834879d44881bceee283615d5b1d4a047d9f60c02a19dc0d",
+                "revision": "448fe5ab80fa34d877853653fdbb698297642a261daaba275919b57935367c77"
+              },
+              "image": "A",
+              "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+              "readCount": 84,
+              "elapsedMs": 8389.218400000002,
+              "lastRuntimeRead": {
+                "viewDigest": "051895ca9313a9cdb572155f2c05f9c126d8a81fdf1fbecf93313de477733494",
+                "memberId": "alice-id",
+                "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+                "phase": "allocated",
+                "sealed": false,
+                "custody": "owned",
+                "nativeReady": true,
+                "attached": true
+              }
+            },
+            {
+              "line": 26,
+              "kind": "TEST_SOURCE_READINESS",
+              "provider": "codex",
+              "source": {
+                "sourceId": "faeba59ef3db4b23834879d44881bceee283615d5b1d4a047d9f60c02a19dc0d",
+                "revision": "6fc55ef25cae263a24ca9ea6ccac586b29d5641155ee4b4b480a2a709df3ec97"
+              },
+              "image": "B",
+              "launchId": "eca13de8-3599-5b26-bdf8-ae13b6dfa550",
+              "readCount": 81,
+              "elapsedMs": 8223.189599999998,
+              "lastRuntimeRead": {
+                "viewDigest": "322d611415d1de09975bb832e4f366a34c8a315a2594c0d6f7e9444463a1c6a9",
+                "memberId": "alice-id",
+                "generation": "capture-83ed1d4d-5f5f-53aa-bb2b-02b0d7bbc36c",
+                "phase": "allocated",
+                "sealed": false,
+                "custody": "owned",
+                "nativeReady": true,
+                "attached": true
+              }
+            }
+          ],
+          "management": {
+            "source": {
+              "sourceId": "faeba59ef3db4b23834879d44881bceee283615d5b1d4a047d9f60c02a19dc0d",
+              "revision": "6fc55ef25cae263a24ca9ea6ccac586b29d5641155ee4b4b480a2a709df3ec97"
+            },
+            "metadataRead": true,
+            "modelProbeCompleted": true,
+            "modelProbeReplayAllocated": false,
+            "modelProbeInputs": 1,
+            "metadataHostRetained": false
+          },
+          "standalone": {
+            "phase": "completed",
+            "source": {
+              "sourceId": "faeba59ef3db4b23834879d44881bceee283615d5b1d4a047d9f60c02a19dc0d",
+              "revision": "6fc55ef25cae263a24ca9ea6ccac586b29d5641155ee4b4b480a2a709df3ec97"
+            },
+            "inputDigest": "ab4375edabb016b40c1ef745c2aff6aff31aad13a7bbd51d7c3823cc63c9ceba",
+            "limits": null,
+            "ephemeral": true,
+            "replayAllocated": false
+          },
+          "lastStandaloneCompletion": {
+            "source": {
+              "sourceId": "faeba59ef3db4b23834879d44881bceee283615d5b1d4a047d9f60c02a19dc0d",
+              "revision": "6fc55ef25cae263a24ca9ea6ccac586b29d5641155ee4b4b480a2a709df3ec97"
+            },
+            "runId": "TEST-source-standalone-B",
+            "scheduleId": "TEST-source-schedule-B",
+            "readCount": 100,
+            "elapsedMs": 8791.367700000003,
+            "lastRunRead": {
+              "phase": "completed",
+              "cleanup": "confirmed",
+              "exitCode": 0
+            }
+          },
+          "modelPreparations": null,
+          "cold": {
+            "currentB": true,
+            "retainedA": true,
+            "lookup": true,
+            "physicalReplayAllocations": 0,
+            "sourcePublishPendingAdmission": {
+              "admitted": 1,
+              "revoked": 1
+            },
+            "originalInputsReplayed": false,
+            "sdkPeerCheckpointRestored": false
+          },
+          "selections": {
+            "A": {
+              "sourceId": "faeba59ef3db4b23834879d44881bceee283615d5b1d4a047d9f60c02a19dc0d",
+              "revision": "448fe5ab80fa34d877853653fdbb698297642a261daaba275919b57935367c77",
+              "profileId": "runtime-source:448fe5ab80fa34d877853653fdbb698297642a261daaba275919b57935367c77",
+              "configRevision": "runtime-source:448fe5ab80fa34d877853653fdbb698297642a261daaba275919b57935367c77",
+              "sourceKind": "app-managed",
+              "cliVersion": "0.162.0",
+              "nativeExecutableDigest": "292cd6699f01ce02842c65f6ccd0451f91a33a97ca51841532f533e81cb67950"
+            },
+            "B": {
+              "sourceId": "faeba59ef3db4b23834879d44881bceee283615d5b1d4a047d9f60c02a19dc0d",
+              "revision": "6fc55ef25cae263a24ca9ea6ccac586b29d5641155ee4b4b480a2a709df3ec97",
+              "profileId": "runtime-source:6fc55ef25cae263a24ca9ea6ccac586b29d5641155ee4b4b480a2a709df3ec97",
+              "configRevision": "runtime-source:6fc55ef25cae263a24ca9ea6ccac586b29d5641155ee4b4b480a2a709df3ec97",
+              "sourceKind": "app-managed",
+              "cliVersion": "0.162.0",
+              "nativeExecutableDigest": "930890b322b6fc998090602f95df9cb6bad3693554db4158f06e95b5da963d4c"
+            }
+          },
+          "teams": [
+            {
+              "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+              "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+              "inputId": "fdc96b79-5ee0-5de6-b5f3-a0ebd13173c3",
+              "captureDigest": "5b0f1c9039524c4172fb18778a345c1ffb4f8c26cd7b152c16ca3c88c460b73d",
+              "source": {
+                "sourceId": "faeba59ef3db4b23834879d44881bceee283615d5b1d4a047d9f60c02a19dc0d",
+                "revision": "448fe5ab80fa34d877853653fdbb698297642a261daaba275919b57935367c77"
+              }
+            },
+            {
+              "launchId": "eca13de8-3599-5b26-bdf8-ae13b6dfa550",
+              "generation": "capture-83ed1d4d-5f5f-53aa-bb2b-02b0d7bbc36c",
+              "inputId": "f027a083-2a06-5d11-bc32-ed9d390a80ec",
+              "captureDigest": "7254e826eeb3a94178e56dbb733ed88dc4d15c5832a39fe6f3c17f033d829ef7",
+              "source": {
+                "sourceId": "faeba59ef3db4b23834879d44881bceee283615d5b1d4a047d9f60c02a19dc0d",
+                "revision": "6fc55ef25cae263a24ca9ea6ccac586b29d5641155ee4b4b480a2a709df3ec97"
+              }
+            }
+          ],
+          "epochJobCounts": [
+            25,
+            0
+          ],
+          "epochs": [
+            {
+              "mainEpoch": "e43035ac-5357-44c0-aac2-db5055657712",
+              "pending": {
+                "admitted": 2,
+                "revoked": 2
+              },
+              "serviceOperations": 0,
+              "firstCloseEntryMs": 44350.796800000004,
+              "jobs": [
+                {
+                  "capability": "86a12722-9717-4040-9b10-212309b82b9b",
+                  "root": {
+                    "pid": 828,
+                    "birth": "01dd754215697525"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 0,
+                  "entryEnd": 1,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "400d4110-343c-45e7-b08f-c206af4a59fd",
+                  "root": {
+                    "pid": 3412,
+                    "birth": "01dd754216693251"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 1,
+                  "entryEnd": 2,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "2ee6893a-7a0b-47a5-85a2-47a24c138a62",
+                  "root": {
+                    "pid": 5836,
+                    "birth": "01dd754217a45272"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 2,
+                  "entryEnd": 3,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "241bb5f4-05d3-4d72-88fc-fb6b175d1a4e",
+                  "root": {
+                    "pid": 7056,
+                    "birth": "01dd75421880eb1f"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 3,
+                  "entryEnd": 25,
+                  "threadEphemeral": [
+                    false
+                  ]
+                },
+                {
+                  "capability": "0bb373c7-cc2b-4cfa-89e3-0bab449c2043",
+                  "root": {
+                    "pid": 3372,
+                    "birth": "01dd7542195adeb2"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 4,
+                  "entryEnd": 5,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "4315c712-3b10-44bb-baab-d25dde589e3e",
+                  "root": {
+                    "pid": 2564,
+                    "birth": "01dd75421a8e631a"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 5,
+                  "entryEnd": 6,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "aaf4d0ce-8ed5-4b9c-86b8-e223a0aba1e9",
+                  "root": {
+                    "pid": 3832,
+                    "birth": "01dd75421b8d8bc8"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 6,
+                  "entryEnd": 7,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "b0265b8d-5ff5-4882-925e-3e9fd1ac3b10",
+                  "root": {
+                    "pid": 7632,
+                    "birth": "01dd75421cbf817c"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 7,
+                  "entryEnd": 8,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "1d16fc4a-d8bb-4250-b2f8-42d0fc2dd55d",
+                  "root": {
+                    "pid": 6264,
+                    "birth": "01dd75421e3812bd"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 8,
+                  "entryEnd": 9,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "46d303fb-350a-4364-80cc-7352cf56097d",
+                  "root": {
+                    "pid": 5212,
+                    "birth": "01dd75421ed57bec"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 9,
+                  "entryEnd": 10,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "6561fb50-fc8f-4324-ae07-8f12b949af2c",
+                  "root": {
+                    "pid": 6972,
+                    "birth": "01dd75421f79cf05"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 10,
+                  "entryEnd": 11,
+                  "threadEphemeral": [
+                    false
+                  ]
+                },
+                {
+                  "capability": "282238ab-b8ff-4916-8cba-e2f3981ef534",
+                  "root": {
+                    "pid": 2504,
+                    "birth": "01dd7542208de1bb"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 11,
+                  "entryEnd": 12,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "53a3a4a6-63f1-40a7-8f2b-892c3126a38c",
+                  "root": {
+                    "pid": 3900,
+                    "birth": "01dd754221c24fe2"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 12,
+                  "entryEnd": 13,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "00a9005c-44a3-4365-b456-ef6a6592320a",
+                  "root": {
+                    "pid": 6704,
+                    "birth": "01dd7542229669d7"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 13,
+                  "entryEnd": 25,
+                  "threadEphemeral": [
+                    false
+                  ]
+                },
+                {
+                  "capability": "a17fae91-2db4-4156-867d-aeecec912186",
+                  "root": {
+                    "pid": 4676,
+                    "birth": "01dd754223730b22"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 14,
+                  "entryEnd": 15,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "2b4ac69a-6e65-4372-9024-ae1204620607",
+                  "root": {
+                    "pid": 5504,
+                    "birth": "01dd754224a8a9c6"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 15,
+                  "entryEnd": 16,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "ab7739dc-28f6-4ffa-874e-0c582a289cb7",
+                  "root": {
+                    "pid": 3228,
+                    "birth": "01dd75422589ab39"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 16,
+                  "entryEnd": 17,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "b7f71cac-3de8-4680-9f8d-90369214c537",
+                  "root": {
+                    "pid": 1016,
+                    "birth": "01dd754226d83d26"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 17,
+                  "entryEnd": 18,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "09b7e911-0c5b-4fef-86d8-6040fe6bd071",
+                  "root": {
+                    "pid": 3932,
+                    "birth": "01dd754228800ffb"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 18,
+                  "entryEnd": 19,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "22241958-09f8-46f0-9326-89e3fcb41986",
+                  "root": {
+                    "pid": 1456,
+                    "birth": "01dd754229449b9c"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 19,
+                  "entryEnd": 20,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "4bee9263-56e7-4940-b974-4c036106a784",
+                  "root": {
+                    "pid": 2960,
+                    "birth": "01dd754229e6642f"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 20,
+                  "entryEnd": 25,
+                  "threadEphemeral": [
+                    true
+                  ]
+                },
+                {
+                  "capability": "0913914f-3259-4c71-b824-918a858cad8e",
+                  "root": {
+                    "pid": 4728,
+                    "birth": "01dd75422a89ff7b"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 21,
+                  "entryEnd": 22,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "aee7f780-3332-4042-bee8-76e64598d2a9",
+                  "root": {
+                    "pid": 5924,
+                    "birth": "01dd75422b3da834"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 22,
+                  "entryEnd": 23,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "5d8bf2b5-37b7-45bc-8557-dde1cc5f81a3",
+                  "root": {
+                    "pid": 6304,
+                    "birth": "01dd75422c0434d7"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 23,
+                  "entryEnd": 24,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "785b858e-4720-4e2a-b48b-4838fd5d0b75",
+                  "root": {
+                    "pid": 4420,
+                    "birth": "01dd75422cc9c73f"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 24,
+                  "entryEnd": 25,
+                  "threadEphemeral": []
+                }
+              ]
+            },
+            {
+              "mainEpoch": "4679b1b2-f3a9-4bcd-8a57-3b6639c28136",
+              "pending": {
+                "admitted": 1,
+                "revoked": 1
+              },
+              "serviceOperations": 0,
+              "firstCloseEntryMs": 1676.0112999999983,
+              "jobs": []
+            }
+          ],
+          "controllerLine": 64,
+          "controller": {
+            "gateController": "drained",
+            "rootExitCode": 0,
+            "activeProcesses": 0
+          },
+          "failureOnlyDiagnosticsPresent": false,
+          "cleanupLogWitnesses": {
+            "count": 25,
+            "allRootAndWitnessCaptured": true,
+            "allResumedStoppedDrainedReleased": true,
+            "preWaitRows": [
+              {
+                "line": 38,
+                "mainEpoch": "e43035ac-5357-44c0-aac2-db5055657712",
+                "jobSlot": 0,
+                "originalHandleAbsentAtPreWaitLog": true
+              },
+              {
+                "line": 39,
+                "mainEpoch": "e43035ac-5357-44c0-aac2-db5055657712",
+                "jobSlot": 1,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 40,
+                "mainEpoch": "e43035ac-5357-44c0-aac2-db5055657712",
+                "jobSlot": 2,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 41,
+                "mainEpoch": "e43035ac-5357-44c0-aac2-db5055657712",
+                "jobSlot": 3,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 42,
+                "mainEpoch": "e43035ac-5357-44c0-aac2-db5055657712",
+                "jobSlot": 4,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 43,
+                "mainEpoch": "e43035ac-5357-44c0-aac2-db5055657712",
+                "jobSlot": 5,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 44,
+                "mainEpoch": "e43035ac-5357-44c0-aac2-db5055657712",
+                "jobSlot": 6,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 45,
+                "mainEpoch": "e43035ac-5357-44c0-aac2-db5055657712",
+                "jobSlot": 7,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 46,
+                "mainEpoch": "e43035ac-5357-44c0-aac2-db5055657712",
+                "jobSlot": 8,
+                "originalHandleAbsentAtPreWaitLog": true
+              },
+              {
+                "line": 47,
+                "mainEpoch": "e43035ac-5357-44c0-aac2-db5055657712",
+                "jobSlot": 9,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 48,
+                "mainEpoch": "e43035ac-5357-44c0-aac2-db5055657712",
+                "jobSlot": 10,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 49,
+                "mainEpoch": "e43035ac-5357-44c0-aac2-db5055657712",
+                "jobSlot": 11,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 50,
+                "mainEpoch": "e43035ac-5357-44c0-aac2-db5055657712",
+                "jobSlot": 12,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 51,
+                "mainEpoch": "e43035ac-5357-44c0-aac2-db5055657712",
+                "jobSlot": 13,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 52,
+                "mainEpoch": "e43035ac-5357-44c0-aac2-db5055657712",
+                "jobSlot": 14,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 53,
+                "mainEpoch": "e43035ac-5357-44c0-aac2-db5055657712",
+                "jobSlot": 15,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 54,
+                "mainEpoch": "e43035ac-5357-44c0-aac2-db5055657712",
+                "jobSlot": 16,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 55,
+                "mainEpoch": "e43035ac-5357-44c0-aac2-db5055657712",
+                "jobSlot": 17,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 56,
+                "mainEpoch": "e43035ac-5357-44c0-aac2-db5055657712",
+                "jobSlot": 18,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 57,
+                "mainEpoch": "e43035ac-5357-44c0-aac2-db5055657712",
+                "jobSlot": 19,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 58,
+                "mainEpoch": "e43035ac-5357-44c0-aac2-db5055657712",
+                "jobSlot": 20,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 59,
+                "mainEpoch": "e43035ac-5357-44c0-aac2-db5055657712",
+                "jobSlot": 21,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 60,
+                "mainEpoch": "e43035ac-5357-44c0-aac2-db5055657712",
+                "jobSlot": 22,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 61,
+                "mainEpoch": "e43035ac-5357-44c0-aac2-db5055657712",
+                "jobSlot": 23,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 62,
+                "mainEpoch": "e43035ac-5357-44c0-aac2-db5055657712",
+                "jobSlot": 24,
+                "originalHandleAbsentAtPreWaitLog": false
+              }
+            ],
+            "finalOriginalHandleAbsentAllTrue": true,
+            "ordering": "Original cleanup log precedes witness.wait. Initial false absent field is not a failed wait; final receipt is retained after the original wait."
+          }
+        },
+        "claude": {
+          "receipt": {
+            "path": "process_x64/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-claude-receipt.json",
+            "bytes": 27742,
+            "gitBlob": "ca38ffd79e07688cf58a697f9d58336eb10d3076",
+            "sha256": "9f68b1f1264698ffd3fc6dacb95361a24f9e83b917b4ddf2368dbde4336c0c18"
+          },
+          "log": {
+            "path": "process_x64/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-claude.log",
+            "bytes": 18944,
+            "gitBlob": "994b32cc4d41340ac95d3e6da6dc87d50a702bfc",
+            "sha256": "9c07120139465cb21545abe9450aedd8e7ab65cce73912c92bfb7dcf762bdb97"
+          },
+          "status": "PASS",
+          "stage": "complete",
+          "cleanup": true,
+          "versionsAreFiniteTestCompatibilityStrings": {
+            "A": "2.1.34",
+            "B": "2.1.34"
+          },
+          "readiness": [
+            {
+              "line": 6,
+              "kind": "TEST_SOURCE_READINESS",
+              "provider": "claude",
+              "source": {
+                "sourceId": "c0c968b5832c6289cc0b57d4df3adc73ea0c12172d879afd6a39c784c141ee97",
+                "revision": "3e16a131c806d073383b02a637547e85da56cc5058a9c6ecb75915ffba88a27b"
+              },
+              "image": "A",
+              "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+              "readCount": 19,
+              "elapsedMs": 2624.2237999999998,
+              "lastRuntimeRead": {
+                "viewDigest": "9a06b96f904a89b9b33a4dcc9edfbd9c1d6da839c6f158834ca147b6cd9587cd",
+                "memberId": "alice-id",
+                "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+                "phase": "allocated",
+                "sealed": false,
+                "custody": "owned",
+                "nativeReady": true,
+                "attached": true
+              }
+            },
+            {
+              "line": 16,
+              "kind": "TEST_SOURCE_READINESS",
+              "provider": "claude",
+              "source": {
+                "sourceId": "c0c968b5832c6289cc0b57d4df3adc73ea0c12172d879afd6a39c784c141ee97",
+                "revision": "04db4ce2cbf456b4c3e9e4d723611608581f6ba8b6830c258f27cb0c51c8972a"
+              },
+              "image": "B",
+              "launchId": "eca13de8-3599-5b26-bdf8-ae13b6dfa550",
+              "readCount": 22,
+              "elapsedMs": 2781.403199999999,
+              "lastRuntimeRead": {
+                "viewDigest": "e9c711bebe8d482154970603455182c2f6ea79e5fe18e55d8428109bec781af6",
+                "memberId": "alice-id",
+                "generation": "capture-83ed1d4d-5f5f-53aa-bb2b-02b0d7bbc36c",
+                "phase": "allocated",
+                "sealed": false,
+                "custody": "owned",
+                "nativeReady": true,
+                "attached": true
+              }
+            }
+          ],
+          "management": {
+            "source": {
+              "sourceId": "c0c968b5832c6289cc0b57d4df3adc73ea0c12172d879afd6a39c784c141ee97",
+              "revision": "04db4ce2cbf456b4c3e9e4d723611608581f6ba8b6830c258f27cb0c51c8972a"
+            },
+            "metadataRead": true,
+            "modelProbeCompleted": true,
+            "modelProbeReplayAllocated": false,
+            "modelProbeInputs": 1,
+            "metadataHostRetained": false
+          },
+          "standalone": {
+            "phase": "completed",
+            "source": {
+              "sourceId": "c0c968b5832c6289cc0b57d4df3adc73ea0c12172d879afd6a39c784c141ee97",
+              "revision": "04db4ce2cbf456b4c3e9e4d723611608581f6ba8b6830c258f27cb0c51c8972a"
+            },
+            "inputDigest": "a70b881bb460d2213e08f07bdbd63e9095ec232aeeec50ab1a7213fecfe47c65",
+            "limits": {
+              "maxTurns": 6,
+              "maxBudgetUsd": 0.25
+            },
+            "ephemeral": true,
+            "replayAllocated": false
+          },
+          "lastStandaloneCompletion": {
+            "source": {
+              "sourceId": "c0c968b5832c6289cc0b57d4df3adc73ea0c12172d879afd6a39c784c141ee97",
+              "revision": "04db4ce2cbf456b4c3e9e4d723611608581f6ba8b6830c258f27cb0c51c8972a"
+            },
+            "runId": "TEST-source-standalone-B",
+            "scheduleId": "TEST-source-schedule-B",
+            "readCount": 19,
+            "elapsedMs": 1541.2515000000003,
+            "lastRunRead": {
+              "phase": "completed",
+              "cleanup": "confirmed",
+              "exitCode": 0
+            }
+          },
+          "modelPreparations": null,
+          "cold": {
+            "currentB": true,
+            "retainedA": true,
+            "lookup": true,
+            "physicalReplayAllocations": 0,
+            "sourcePublishPendingAdmission": {
+              "admitted": 1,
+              "revoked": 1
+            },
+            "originalInputsReplayed": false,
+            "sdkPeerCheckpointRestored": true,
+            "originalNativeSessionRetained": true,
+            "restoredGeneration": "restore-6c45776a8ec6335773cd7948b8f2793fb6a1660546d8548d7498689280a0d2fb",
+            "newInputId": "e6fc2168-5036-56fa-94e2-d7d454feb7a4",
+            "source": {
+              "sourceId": "c0c968b5832c6289cc0b57d4df3adc73ea0c12172d879afd6a39c784c141ee97",
+              "revision": "3e16a131c806d073383b02a637547e85da56cc5058a9c6ecb75915ffba88a27b"
+            }
+          },
+          "selections": {
+            "A": {
+              "sourceId": "c0c968b5832c6289cc0b57d4df3adc73ea0c12172d879afd6a39c784c141ee97",
+              "revision": "3e16a131c806d073383b02a637547e85da56cc5058a9c6ecb75915ffba88a27b",
+              "profileId": "runtime-source:3e16a131c806d073383b02a637547e85da56cc5058a9c6ecb75915ffba88a27b",
+              "configRevision": "runtime-source:3e16a131c806d073383b02a637547e85da56cc5058a9c6ecb75915ffba88a27b",
+              "sourceKind": "app-managed",
+              "cliVersion": "2.1.34"
+            },
+            "B": {
+              "sourceId": "c0c968b5832c6289cc0b57d4df3adc73ea0c12172d879afd6a39c784c141ee97",
+              "revision": "04db4ce2cbf456b4c3e9e4d723611608581f6ba8b6830c258f27cb0c51c8972a",
+              "profileId": "runtime-source:04db4ce2cbf456b4c3e9e4d723611608581f6ba8b6830c258f27cb0c51c8972a",
+              "configRevision": "runtime-source:04db4ce2cbf456b4c3e9e4d723611608581f6ba8b6830c258f27cb0c51c8972a",
+              "sourceKind": "app-managed",
+              "cliVersion": "2.1.34"
+            }
+          },
+          "teams": [
+            {
+              "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+              "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+              "inputId": "b4c53322-4db2-5389-b7d3-b8caff9d9329",
+              "captureDigest": "c4b670c2b25cebc8d464fd17a83d128a45ba54931661757738a03ebb2e07a1b2",
+              "source": {
+                "sourceId": "c0c968b5832c6289cc0b57d4df3adc73ea0c12172d879afd6a39c784c141ee97",
+                "revision": "3e16a131c806d073383b02a637547e85da56cc5058a9c6ecb75915ffba88a27b"
+              }
+            },
+            {
+              "launchId": "eca13de8-3599-5b26-bdf8-ae13b6dfa550",
+              "generation": "capture-83ed1d4d-5f5f-53aa-bb2b-02b0d7bbc36c",
+              "inputId": "17d511e2-e022-589e-a991-a5763f549c88",
+              "captureDigest": "57ab563211911e271c24da7cdd87cbabba392f0245c09c0577f1dd925ff69c52",
+              "source": {
+                "sourceId": "c0c968b5832c6289cc0b57d4df3adc73ea0c12172d879afd6a39c784c141ee97",
+                "revision": "04db4ce2cbf456b4c3e9e4d723611608581f6ba8b6830c258f27cb0c51c8972a"
+              }
+            }
+          ],
+          "epochJobCounts": [
+            8,
+            1
+          ],
+          "epochs": [
+            {
+              "mainEpoch": "177a20d5-466c-4fc1-b919-0ca47c6b2c8e",
+              "pending": {
+                "admitted": 2,
+                "revoked": 2
+              },
+              "serviceOperations": 0,
+              "firstCloseEntryMs": 15806.3855,
+              "jobs": [
+                {
+                  "capability": "3b6a06ba-ea21-4d46-9df9-0f0b12aedd2e",
+                  "root": {
+                    "pid": 7004,
+                    "birth": "01dd754232b2af33"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 0,
+                  "entryEnd": 1,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "2099d1c8-e605-43a0-a64e-bf902798d7bd",
+                  "root": {
+                    "pid": 8172,
+                    "birth": "01dd754233928c6f"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 1,
+                  "entryEnd": 8,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "4b6c657f-893a-4476-a7cc-99486bec9928",
+                  "root": {
+                    "pid": 4812,
+                    "birth": "01dd754235b9027f"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 2,
+                  "entryEnd": 4,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "e3034ef7-fd6e-4ff7-b6c6-839d9082cfb0",
+                  "root": {
+                    "pid": 5952,
+                    "birth": "01dd754235efb090"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 3,
+                  "entryEnd": 4,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "2598a10b-367f-4314-aebc-d8941adf89f6",
+                  "root": {
+                    "pid": 2780,
+                    "birth": "01dd75423646aab3"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 4,
+                  "entryEnd": 5,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "66bf688f-ae38-4960-9d10-f117c2c3f5bf",
+                  "root": {
+                    "pid": 5504,
+                    "birth": "01dd754236af92d5"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 5,
+                  "entryEnd": 6,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "aa4e8da2-a65c-40a3-b195-ca8ea0f09405",
+                  "root": {
+                    "pid": 4728,
+                    "birth": "01dd754237c442e3"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 6,
+                  "entryEnd": 8,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "b46c9d2f-cc90-4280-bda7-cd5553a6ca26",
+                  "root": {
+                    "pid": 4604,
+                    "birth": "01dd75423a173f8b"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 7,
+                  "entryEnd": 8,
+                  "threadEphemeral": []
+                }
+              ]
+            },
+            {
+              "mainEpoch": "36f94665-4018-4af6-bc05-d933d54147a4",
+              "pending": {
+                "admitted": 1,
+                "revoked": 1
+              },
+              "serviceOperations": 0,
+              "firstCloseEntryMs": 6395.820100000001,
+              "jobs": [
+                {
+                  "capability": "0b950cf1-a908-4a74-8b31-3a0a43bb9fe0",
+                  "root": {
+                    "pid": 5540,
+                    "birth": "01dd75423cfb3b2e"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 8,
+                  "entryEnd": 9,
+                  "threadEphemeral": []
+                }
+              ]
+            }
+          ],
+          "controllerLine": 34,
+          "controller": {
+            "gateController": "drained",
+            "rootExitCode": 0,
+            "activeProcesses": 0
+          },
+          "failureOnlyDiagnosticsPresent": false,
+          "cleanupLogWitnesses": {
+            "count": 9,
+            "allRootAndWitnessCaptured": true,
+            "allResumedStoppedDrainedReleased": true,
+            "preWaitRows": [
+              {
+                "line": 22,
+                "mainEpoch": "177a20d5-466c-4fc1-b919-0ca47c6b2c8e",
+                "jobSlot": 0,
+                "originalHandleAbsentAtPreWaitLog": true
+              },
+              {
+                "line": 23,
+                "mainEpoch": "177a20d5-466c-4fc1-b919-0ca47c6b2c8e",
+                "jobSlot": 1,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 24,
+                "mainEpoch": "177a20d5-466c-4fc1-b919-0ca47c6b2c8e",
+                "jobSlot": 2,
+                "originalHandleAbsentAtPreWaitLog": true
+              },
+              {
+                "line": 25,
+                "mainEpoch": "177a20d5-466c-4fc1-b919-0ca47c6b2c8e",
+                "jobSlot": 3,
+                "originalHandleAbsentAtPreWaitLog": true
+              },
+              {
+                "line": 26,
+                "mainEpoch": "177a20d5-466c-4fc1-b919-0ca47c6b2c8e",
+                "jobSlot": 4,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 27,
+                "mainEpoch": "177a20d5-466c-4fc1-b919-0ca47c6b2c8e",
+                "jobSlot": 5,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 28,
+                "mainEpoch": "177a20d5-466c-4fc1-b919-0ca47c6b2c8e",
+                "jobSlot": 6,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 29,
+                "mainEpoch": "177a20d5-466c-4fc1-b919-0ca47c6b2c8e",
+                "jobSlot": 7,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 33,
+                "mainEpoch": "36f94665-4018-4af6-bc05-d933d54147a4",
+                "jobSlot": 0,
+                "originalHandleAbsentAtPreWaitLog": false
+              }
+            ],
+            "finalOriginalHandleAbsentAllTrue": true,
+            "ordering": "Original cleanup log precedes witness.wait. Initial false absent field is not a failed wait; final receipt is retained after the original wait."
+          }
+        },
+        "opencode": {
+          "receipt": {
+            "path": "process_x64/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-opencode-receipt.json",
+            "bytes": 25969,
+            "gitBlob": "00cc209b0e3bbabaa07d813eb4ea93f10be68f52",
+            "sha256": "52d389c0f4253413290e6f828457cca7fc41f313d8c0449da1ee92784b2b87ac"
+          },
+          "log": {
+            "path": "process_x64/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-opencode.log",
+            "bytes": 14673,
+            "gitBlob": "10217f0308970c97e75039dd328235758f095ffb",
+            "sha256": "2faba3931885fdb80c48e10df4f53e9b09ed3560b78021b7ae37db1ccd9b54cc"
+          },
+          "status": "PASS",
+          "stage": "complete",
+          "cleanup": true,
+          "versionsAreFiniteTestCompatibilityStrings": {
+            "A": "1.19.4",
+            "B": "1.19.4"
+          },
+          "readiness": [
+            {
+              "line": 7,
+              "kind": "TEST_SOURCE_READINESS",
+              "provider": "opencode",
+              "source": {
+                "sourceId": "d468f70bcedcd7f9d6f5d9dda6733a774e97d803f1f8498ed84802afe569ff58",
+                "revision": "2bc244ded9058f4c05a175636cab98e0738e8830f2138a5b02eadfb27017238e"
+              },
+              "image": "A",
+              "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+              "readCount": 14,
+              "elapsedMs": 20899.2409,
+              "lastRuntimeRead": {
+                "viewDigest": "5b55a8d8b9f4e13605e477b495033321ff9f44dfbbd8ac985c394d021caa3af0",
+                "memberId": "alice-id",
+                "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+                "phase": "allocated",
+                "sealed": false,
+                "custody": "owned",
+                "nativeReady": true,
+                "attached": true
+              }
+            },
+            {
+              "line": 16,
+              "kind": "TEST_SOURCE_READINESS",
+              "provider": "opencode",
+              "source": {
+                "sourceId": "d468f70bcedcd7f9d6f5d9dda6733a774e97d803f1f8498ed84802afe569ff58",
+                "revision": "44e27271ada2516a5b70189912b63f6541f0af5813d5a36dfe0f813004268b36"
+              },
+              "image": "B",
+              "launchId": "eca13de8-3599-5b26-bdf8-ae13b6dfa550",
+              "readCount": 14,
+              "elapsedMs": 20230.551100000004,
+              "lastRuntimeRead": {
+                "viewDigest": "b511010e8e3f029298d97c17493cf8e1ef1803d003f90c2eaea9a76f8931d929",
+                "memberId": "alice-id",
+                "generation": "capture-83ed1d4d-5f5f-53aa-bb2b-02b0d7bbc36c",
+                "phase": "allocated",
+                "sealed": false,
+                "custody": "owned",
+                "nativeReady": true,
+                "attached": true
+              }
+            }
+          ],
+          "management": {
+            "source": {
+              "sourceId": "d468f70bcedcd7f9d6f5d9dda6733a774e97d803f1f8498ed84802afe569ff58",
+              "revision": "44e27271ada2516a5b70189912b63f6541f0af5813d5a36dfe0f813004268b36"
+            },
+            "metadataRead": true,
+            "modelProbeCompleted": true,
+            "modelProbeReplayAllocated": false,
+            "modelProbeInputs": 1,
+            "metadataHostRetained": true
+          },
+          "standalone": {
+            "supported": false,
+            "reason": "Original scheduledRunProfile rejects OpenCode"
+          },
+          "lastStandaloneCompletion": null,
+          "modelPreparations": [
+            {
+              "source": {
+                "sourceId": "d468f70bcedcd7f9d6f5d9dda6733a774e97d803f1f8498ed84802afe569ff58",
+                "revision": "2bc244ded9058f4c05a175636cab98e0738e8830f2138a5b02eadfb27017238e"
+              },
+              "image": "A",
+              "startCommandId": "TEST-start-A",
+              "commandId": "action-probe-c4b5bc7c7f0f2bc5472c7b8cd76b93515a9a63b1a9badb2b5ca07df1099d7614",
+              "profileId": "team-probe-93c164e8f74e80a6f7b4cd8d205c9535bb254ce3e80f5322c17db51c6a779e4f",
+              "configRevision": "team-probe-93c164e8f74e80a6f7b4cd8d205c9535bb254ce3e80f5322c17db51c6a779e4f",
+              "noTeamConnection": true,
+              "originalProbeInputs": 1,
+              "replayAllocated": false
+            },
+            {
+              "source": {
+                "sourceId": "d468f70bcedcd7f9d6f5d9dda6733a774e97d803f1f8498ed84802afe569ff58",
+                "revision": "44e27271ada2516a5b70189912b63f6541f0af5813d5a36dfe0f813004268b36"
+              },
+              "image": "B",
+              "startCommandId": "TEST-start-B",
+              "commandId": "action-probe-ab0dbdd0ead8877a400025081eaeddd585957b507c5db3aca8d92534b6d0f3cc",
+              "profileId": "team-probe-fd2a91861e2ca81a68e7ad2854ae776e9d242e3c6d17c6339d1ebd579ba497a1",
+              "configRevision": "team-probe-fd2a91861e2ca81a68e7ad2854ae776e9d242e3c6d17c6339d1ebd579ba497a1",
+              "noTeamConnection": true,
+              "originalProbeInputs": 1,
+              "replayAllocated": false
+            }
+          ],
+          "cold": {
+            "currentB": true,
+            "retainedA": true,
+            "lookup": true,
+            "physicalReplayAllocations": 0,
+            "sourcePublishPendingAdmission": {
+              "admitted": 1,
+              "revoked": 1
+            },
+            "originalInputsReplayed": false,
+            "sdkPeerCheckpointRestored": false
+          },
+          "selections": {
+            "A": {
+              "sourceId": "d468f70bcedcd7f9d6f5d9dda6733a774e97d803f1f8498ed84802afe569ff58",
+              "revision": "2bc244ded9058f4c05a175636cab98e0738e8830f2138a5b02eadfb27017238e",
+              "profileId": "runtime-source:2bc244ded9058f4c05a175636cab98e0738e8830f2138a5b02eadfb27017238e",
+              "configRevision": "runtime-source:2bc244ded9058f4c05a175636cab98e0738e8830f2138a5b02eadfb27017238e",
+              "sourceKind": "app-managed",
+              "nativeGeneration": "v1",
+              "cliVersion": "1.19.4"
+            },
+            "B": {
+              "sourceId": "d468f70bcedcd7f9d6f5d9dda6733a774e97d803f1f8498ed84802afe569ff58",
+              "revision": "44e27271ada2516a5b70189912b63f6541f0af5813d5a36dfe0f813004268b36",
+              "profileId": "runtime-source:44e27271ada2516a5b70189912b63f6541f0af5813d5a36dfe0f813004268b36",
+              "configRevision": "runtime-source:44e27271ada2516a5b70189912b63f6541f0af5813d5a36dfe0f813004268b36",
+              "sourceKind": "app-managed",
+              "nativeGeneration": "v1",
+              "cliVersion": "1.19.4"
+            }
+          },
+          "teams": [
+            {
+              "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+              "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+              "inputId": "60cd6364-defb-5f1d-998c-dabea81e1997",
+              "captureDigest": "61260305f345c3227e2dcd069365c7af7c005d22a5f37a29deccee1341450659",
+              "source": {
+                "sourceId": "d468f70bcedcd7f9d6f5d9dda6733a774e97d803f1f8498ed84802afe569ff58",
+                "revision": "2bc244ded9058f4c05a175636cab98e0738e8830f2138a5b02eadfb27017238e"
+              }
+            },
+            {
+              "launchId": "eca13de8-3599-5b26-bdf8-ae13b6dfa550",
+              "generation": "capture-83ed1d4d-5f5f-53aa-bb2b-02b0d7bbc36c",
+              "inputId": "a1673894-a513-5bd4-b566-b37879d50baa",
+              "captureDigest": "403b5aca84ad6e15b39b263c9dd502d0f3ed24cbbdf9bfa423b5cd68e9f16269",
+              "source": {
+                "sourceId": "d468f70bcedcd7f9d6f5d9dda6733a774e97d803f1f8498ed84802afe569ff58",
+                "revision": "44e27271ada2516a5b70189912b63f6541f0af5813d5a36dfe0f813004268b36"
+              }
+            }
+          ],
+          "epochJobCounts": [
+            7,
+            0
+          ],
+          "epochs": [
+            {
+              "mainEpoch": "6e743a98-8d1c-4729-b211-4e48848b3596",
+              "pending": {
+                "admitted": 2,
+                "revoked": 2
+              },
+              "serviceOperations": 0,
+              "firstCloseEntryMs": 57135.4364,
+              "jobs": [
+                {
+                  "capability": "c80552e2-3833-4ac6-ace5-83ea42a10367",
+                  "root": {
+                    "pid": 5000,
+                    "birth": "01dd754241cd77cd"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 0,
+                  "entryEnd": 1,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "9cf2a6ef-19e6-4286-90c4-90d96b282edf",
+                  "root": {
+                    "pid": 2968,
+                    "birth": "01dd754242d213dc"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 1,
+                  "entryEnd": 2,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "ad65f361-15ca-4aa3-adf6-60797c284f73",
+                  "root": {
+                    "pid": 3960,
+                    "birth": "01dd754248da0abb"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 2,
+                  "entryEnd": 7,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "0caac33b-2f01-42fc-afac-8fbddb0330f7",
+                  "root": {
+                    "pid": 6232,
+                    "birth": "01dd75425211e19d"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 3,
+                  "entryEnd": 4,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "18e10c2c-934f-42a6-bae6-edbc479caf89",
+                  "root": {
+                    "pid": 828,
+                    "birth": "01dd754252504299"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 4,
+                  "entryEnd": 5,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "6f3a3abe-10e9-4de3-bac5-574ceb522cde",
+                  "root": {
+                    "pid": 6576,
+                    "birth": "01dd7542537ca11a"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 5,
+                  "entryEnd": 6,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "9686c154-2116-4771-9581-1c819f8fefdc",
+                  "root": {
+                    "pid": 3728,
+                    "birth": "01dd754259500a41"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 6,
+                  "entryEnd": 7,
+                  "threadEphemeral": []
+                }
+              ]
+            },
+            {
+              "mainEpoch": "38d2110d-88d5-4dd4-a170-762bca835337",
+              "pending": {
+                "admitted": 1,
+                "revoked": 1
+              },
+              "serviceOperations": 0,
+              "firstCloseEntryMs": 1695.368300000002,
+              "jobs": []
+            }
+          ],
+          "controllerLine": 26,
+          "controller": {
+            "gateController": "drained",
+            "rootExitCode": 0,
+            "activeProcesses": 0
+          },
+          "failureOnlyDiagnosticsPresent": false,
+          "cleanupLogWitnesses": {
+            "count": 7,
+            "allRootAndWitnessCaptured": true,
+            "allResumedStoppedDrainedReleased": true,
+            "preWaitRows": [
+              {
+                "line": 18,
+                "mainEpoch": "6e743a98-8d1c-4729-b211-4e48848b3596",
+                "jobSlot": 0,
+                "originalHandleAbsentAtPreWaitLog": true
+              },
+              {
+                "line": 19,
+                "mainEpoch": "6e743a98-8d1c-4729-b211-4e48848b3596",
+                "jobSlot": 1,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 20,
+                "mainEpoch": "6e743a98-8d1c-4729-b211-4e48848b3596",
+                "jobSlot": 2,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 21,
+                "mainEpoch": "6e743a98-8d1c-4729-b211-4e48848b3596",
+                "jobSlot": 3,
+                "originalHandleAbsentAtPreWaitLog": true
+              },
+              {
+                "line": 22,
+                "mainEpoch": "6e743a98-8d1c-4729-b211-4e48848b3596",
+                "jobSlot": 4,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 23,
+                "mainEpoch": "6e743a98-8d1c-4729-b211-4e48848b3596",
+                "jobSlot": 5,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 24,
+                "mainEpoch": "6e743a98-8d1c-4729-b211-4e48848b3596",
+                "jobSlot": 6,
+                "originalHandleAbsentAtPreWaitLog": false
+              }
+            ],
+            "finalOriginalHandleAbsentAllTrue": true,
+            "ordering": "Original cleanup log precedes witness.wait. Initial false absent field is not a failed wait; final receipt is retained after the original wait."
+          }
+        }
+      },
+      "binaryDigestClaims": [
+        {
+          "name": "owned-process-broker-accounting-failure.exe",
+          "sha256": "989935fe4726d57e7d2b2047eb3a8d0f2fd567f0b1df3012551371944690e129"
+        },
+        {
+          "name": "owned-process-broker-birth-failure.exe",
+          "sha256": "cd0da72b043c7fac57e245dae0ed8356adadca1ad187d5b2111b56736927f9d7"
+        },
+        {
+          "name": "owned-process-broker-debug-service.exe",
+          "sha256": "6b9c8afcab5664b7de026798d868de13a1382c67031b142c4c871323eda49d0c"
+        },
+        {
+          "name": "owned-process-broker-release-delay.exe",
+          "sha256": "caa0aee8cfea8cad32db1a29ae210b6f8a4f0de7302937ac0776fcc9f96857ef"
+        },
+        {
+          "name": "owned-process-broker-service-scopes.exe",
+          "sha256": "79bb0d734c211eb24cdfa248ef122da019f3f823880bc5966d530b1545bce321"
+        },
+        {
+          "name": "owned-process-broker.exe",
+          "sha256": "26a5a4dcc80f23ca159343f716877566bd88bc30bc188394a2ecd7d9b5c92621"
+        },
+        {
+          "name": "owned-process-fixture.exe",
+          "sha256": "ead241604444a6ff44e8234efcc9f69455494d03b8f95e7ac5dd72ecf4a0bd2d"
+        },
+        {
+          "name": "owned-process-gate-controller.exe",
+          "sha256": "1eabbd55d897ce750ef741e22187f5945a38842385181d90c80da03e900f0dda"
+        },
+        {
+          "name": "owned-process-pending-write-fixture.exe",
+          "sha256": "8898dc9950e587b5a94820f2ec5c27239b8abab95746ce09a9d73d04ac590e67"
+        }
+      ],
+      "wrapper": {
+        "receipt": {
+          "path": "process_x64/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-emulated-provider-receipt.json",
+          "bytes": 2900,
+          "gitBlob": "f79a30e01a4b3dbc6a036d22b1bd2a1e460353e1",
+          "sha256": "64058584b15ff9b44e9c710179d294a7554192814872098b654b97ba30c7232e"
+        },
+        "log": {
+          "path": "process_x64/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-emulated-provider.log",
+          "bytes": 1278,
+          "gitBlob": "ccef69db249512ee6958dce1312b20318dbfc204",
+          "sha256": "727fd78f4aa2e53c572e6e2ef1a9c002e3b997690a47009b96fa2f3ee5a6ae12"
+        },
+        "wrappers": [
+          "npm-node",
+          "generated-bun",
+          "opaque-cmd",
+          "positional-bat",
+          "npm-native"
+        ],
+        "providers": [
+          {
+            "provider": "codex",
+            "wrapper": "npm-node",
+            "pins": {
+              "node": "ba4e6d110e8c1592a1ecd390f6b05f3da124b13871a5be62b341a07a853c6c32",
+              "peer": "039f2e29a17d40cb21a287770eb41354191f495f06e8e9f350eb8a3453e7bddc",
+              "wrapper": "808f1868f1cb9649df4edf133c1f7d8da7e888b513b380868de8659ef46b90ca",
+              "cli": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+              "source": "0543e8e4aa25c97e75853be5bdf54aad8d9f88665113c50e6e25e66ce7070930"
+            },
+            "counts": {
+              "allocate": 1,
+              "prepare": 1,
+              "resume": 1,
+              "stop": 1,
+              "release": 1,
+              "serviceCapture": 2,
+              "serviceStop": 2,
+              "serviceSettle": 2
+            },
+            "nativeReady": true,
+            "inputCompleted": true,
+            "registeredServices": 2,
+            "scopedStops": 2,
+            "neighborSurvivedPrimary": true,
+            "providerSurvivedScopedStops": true,
+            "cleanup": true
+          },
+          {
+            "provider": "opencode",
+            "wrapper": "opaque-cmd",
+            "pins": {
+              "node": "ba4e6d110e8c1592a1ecd390f6b05f3da124b13871a5be62b341a07a853c6c32",
+              "peer": "039f2e29a17d40cb21a287770eb41354191f495f06e8e9f350eb8a3453e7bddc",
+              "wrapper": "fd4631ca06e32fe34da1b55f10ffac07eec775fe87127876d13592c4c983b1cf",
+              "cli": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+              "source": "ea7530a35d31e4738416f738d48431ce40c321c84829e5b53c5a1bc5ae932095"
+            },
+            "counts": {
+              "allocate": 1,
+              "prepare": 1,
+              "resume": 1,
+              "stop": 1,
+              "release": 1,
+              "serviceCapture": 2,
+              "serviceStop": 2,
+              "serviceSettle": 2
+            },
+            "nativeReady": true,
+            "inputCompleted": true,
+            "registeredServices": 2,
+            "scopedStops": 2,
+            "neighborSurvivedPrimary": true,
+            "providerSurvivedScopedStops": true,
+            "cleanup": true
+          }
+        ],
+        "controllerLine": 12,
+        "controller": {
+          "gateController": "drained",
+          "rootExitCode": 0,
+          "activeProcesses": 0
+        },
+        "cleanup": true,
+        "realProviderExecuted": false
+      },
+      "sourceJobCount": 41,
+      "controllerCount": 6,
+      "originalPrerequisites": {
+        "node": {
+          "files": 18,
+          "tests": 163,
+          "suites": 0,
+          "pass": 160,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 3,
+          "todo": 0,
+          "skippedCases": [
+            "\ufe63 Linux builder refuses an existing or linked output leaf before any compiler dispatch (1.0167ms) # SKIP",
+            "\ufe63 Linux original executable compares signed Node and unsigned native inode bits exactly (1.0672ms) # SKIP",
+            "\ufe63 actual pinned SDK standalone run completes, cancels and survives cold replay without mutating the Team recipe (0.3264ms) # POSIX TEST shebang; actual Windows custody has its separate native gate"
+          ]
+        },
+        "protocolVitest": {
+          "files": 3,
+          "tests": 53,
+          "pass": 53,
+          "fail": 0,
+          "skip": 0
+        },
+        "retainedMainVitest": {
+          "files": 8,
+          "tests": 81,
+          "pass": 81,
+          "fail": 0,
+          "skip": 0
+        },
+        "totals": {
+          "files": 29,
+          "pass": 294,
+          "fail": 0,
+          "skip": 3,
+          "cancelled": 0
+        },
+        "logs": [
+          {
+            "path": "process_x64/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+            "bytes": 20045,
+            "gitBlob": "8c9775dfbb82e50aace5f1b2796dce5a516a4ae4",
+            "sha256": "dc59d245b7911304ceb6d2b47d23d062c45a53dfd97b7834d75544ee38ff4721"
+          },
+          {
+            "path": "process_x64/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+            "bytes": 757,
+            "gitBlob": "46085e00ee2a0c349b522f78ed258f9d2ef1a980",
+            "sha256": "0fe7ee739efc828efe27f0d76fcf21e35776489e766cf3cd59697df52c421664"
+          },
+          {
+            "path": "process_x64/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+            "bytes": 9371,
+            "gitBlob": "71751174a42a30a6e0e5dca6b8caba1dac88fc32",
+            "sha256": "63dac8379c541256e5fe02fa288f2b4359a77accc4bae68a557f56a2547d1cf6"
+          }
+        ]
+      }
+    },
+    "arm64": {
+      "jobId": 132949618151,
+      "jobLog": {
+        "path": "job-132949618151.log",
+        "bytes": 422323,
+        "gitBlob": "ef79e459d5bec09e1f15679d97f4a48c6dc83b97",
+        "sha256": "d5cd48859cd830d62786967560c50892cba1542a66de78b87075f0fea8245356"
+      },
+      "scope": {
+        "path": "process_arm/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/scope.json",
+        "bytes": 137752,
+        "gitBlob": "e283ebc02e8ea795400d9780102d7bb3e2c3b461",
+        "sha256": "1cfc22536a1bc7b52c674d058dbad7aeed72b24a7d6742e118985217adda1b88"
+      },
+      "scopeFlags": {
+        "nativeProviderRuntimeQualified": false,
+        "darwinNativeRegistrationQualified": false,
+        "posixExecutableAdmissionQualified": false,
+        "desktopQualified": false,
+        "releaseQualified": false
+      },
+      "scopeControlledContracts": true,
+      "scopeRetainedMainTransport": true,
+      "scopePosixProcessGroups": false,
+      "sourceHeadFile": {
+        "path": "process_arm/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+        "bytes": 41,
+        "gitBlob": "1e2b4a4ba3fdc943cf9b4914e7a267edc1ece36a",
+        "sha256": "ed412a9bf653b9f6fbac43dc54faef76d46abce104dce58f7df4abc7e53e9e72"
+      },
+      "nativeGates": [
+        {
+          "log": {
+            "path": "process_arm/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-node24.log",
+            "bytes": 78083,
+            "gitBlob": "c60cfdfc2d5fd96c8efad9242a2780008c9d8286",
+            "sha256": "b545d8c8df47921b026a06499150da4b5f5610a289c924195ab6926cfee5e391"
+          },
+          "gateLine": 363,
+          "gate": "owned-process-native-scenarios-only",
+          "node": "24.21.0",
+          "electron": null,
+          "scenarios": [
+            "tree",
+            "root-first-tail-held-pipe",
+            "blocked-output-independent-stop",
+            "breakaway-denied",
+            "pre-resume-cancel-first-nonce",
+            "facade-private-stdin-after-native-owner-tail-exit",
+            "facade-pre-resume-cancel-no-private-input",
+            "captured-provider-native-argv-env-cwd-and-stop",
+            "captured-root-first-original-descendants-and-neighbor",
+            "TEST-only-debug-service-prebirth-nested-job-feasibility",
+            "birth-failure-unknown-first-nonce",
+            "owner-eof",
+            "accounting-failure-latched-unknown-distinct-reconciliation",
+            "post-launch-pending-read-genuine-prepared",
+            "released-ack-eof-exit-zero",
+            "watcher-lock-contention-released-ack-exit-zero",
+            "failure-winner-after-complete-ack-exit-74",
+            "broker-crash",
+            "wrong-generation",
+            "malformed",
+            "truncated",
+            "lost-prepared-no-resume-first-nonce",
+            "sentinel-isolation"
+          ],
+          "controllerLine": 370,
+          "controller": {
+            "gateController": "drained",
+            "rootExitCode": 0,
+            "activeProcesses": 0
+          },
+          "cleanupObservations": [
+            {
+              "line": 365,
+              "cleanupObservation": "before-private-abandon",
+              "helperCount": 56,
+              "retainedCount": 9
+            },
+            {
+              "line": 369,
+              "cleanupObservation": "after-helper-wait",
+              "helperCount": 56,
+              "retainedCount": 9
+            }
+          ]
+        },
+        {
+          "log": {
+            "path": "process_arm/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-electron.log",
+            "bytes": 78205,
+            "gitBlob": "ed76021e2cc3b5b7df7fa383fedb7354eac0a744",
+            "sha256": "a9c07408795ce3628f64ec02e26b42596195b317caa48f502c1c8634205bed19"
+          },
+          "gateLine": 363,
+          "gate": "owned-process-native-scenarios-only",
+          "node": "24.22.1",
+          "electron": "44.10.1",
+          "scenarios": [
+            "tree",
+            "root-first-tail-held-pipe",
+            "blocked-output-independent-stop",
+            "breakaway-denied",
+            "pre-resume-cancel-first-nonce",
+            "facade-private-stdin-after-native-owner-tail-exit",
+            "facade-pre-resume-cancel-no-private-input",
+            "captured-provider-native-argv-env-cwd-and-stop",
+            "captured-root-first-original-descendants-and-neighbor",
+            "TEST-only-debug-service-prebirth-nested-job-feasibility",
+            "birth-failure-unknown-first-nonce",
+            "owner-eof",
+            "accounting-failure-latched-unknown-distinct-reconciliation",
+            "post-launch-pending-read-genuine-prepared",
+            "released-ack-eof-exit-zero",
+            "watcher-lock-contention-released-ack-exit-zero",
+            "failure-winner-after-complete-ack-exit-74",
+            "broker-crash",
+            "wrong-generation",
+            "malformed",
+            "truncated",
+            "lost-prepared-no-resume-first-nonce",
+            "sentinel-isolation"
+          ],
+          "controllerLine": 370,
+          "controller": {
+            "gateController": "drained",
+            "rootExitCode": 0,
+            "activeProcesses": 0
+          },
+          "cleanupObservations": [
+            {
+              "line": 365,
+              "cleanupObservation": "before-private-abandon",
+              "helperCount": 56,
+              "retainedCount": 9
+            },
+            {
+              "line": 369,
+              "cleanupObservation": "after-helper-wait",
+              "helperCount": 56,
+              "retainedCount": 9
+            }
+          ]
+        }
+      ],
+      "providers": {
+        "codex": {
+          "receipt": {
+            "path": "process_arm/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-codex-receipt.json",
+            "bytes": 60510,
+            "gitBlob": "7899b59961723e3e520322b1045ee4f44fbac25c",
+            "sha256": "62b1ae8b80943456cf40d9fe4cfc388d3308c89cc5f6bcc8a7ca84f002b75269"
+          },
+          "log": {
+            "path": "process_arm/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-codex.log",
+            "bytes": 49633,
+            "gitBlob": "4542ead5f6af7b4c75fdc73416691ba883414c54",
+            "sha256": "150bd94996bd5d54d23169f2821b68484fe2cb13a8b68e2c4e6022e6ec1e1d77"
+          },
+          "status": "PASS",
+          "stage": "complete",
+          "cleanup": true,
+          "versionsAreFiniteTestCompatibilityStrings": {
+            "A": "0.162.0",
+            "B": "0.162.0"
+          },
+          "readiness": [
+            {
+              "line": 11,
+              "kind": "TEST_SOURCE_READINESS",
+              "provider": "codex",
+              "source": {
+                "sourceId": "d3a995bef9f266e12d956f8f97ba16cd4242deaad8ce8275e92ee907107dfd18",
+                "revision": "e9e6bc901647405165cd56bac20d496e3fb3cb2a7b0fd839f8823f05fc2f9f85"
+              },
+              "image": "A",
+              "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+              "readCount": 115,
+              "elapsedMs": 15947.801200000002,
+              "lastRuntimeRead": {
+                "viewDigest": "051895ca9313a9cdb572155f2c05f9c126d8a81fdf1fbecf93313de477733494",
+                "memberId": "alice-id",
+                "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+                "phase": "allocated",
+                "sealed": false,
+                "custody": "owned",
+                "nativeReady": true,
+                "attached": true
+              }
+            },
+            {
+              "line": 26,
+              "kind": "TEST_SOURCE_READINESS",
+              "provider": "codex",
+              "source": {
+                "sourceId": "d3a995bef9f266e12d956f8f97ba16cd4242deaad8ce8275e92ee907107dfd18",
+                "revision": "1aa0f79a7ce6514aa276e19d04b0e786e41e75243c472748cc1b5443f7104cb5"
+              },
+              "image": "B",
+              "launchId": "eca13de8-3599-5b26-bdf8-ae13b6dfa550",
+              "readCount": 116,
+              "elapsedMs": 16054.177499999998,
+              "lastRuntimeRead": {
+                "viewDigest": "322d611415d1de09975bb832e4f366a34c8a315a2594c0d6f7e9444463a1c6a9",
+                "memberId": "alice-id",
+                "generation": "capture-83ed1d4d-5f5f-53aa-bb2b-02b0d7bbc36c",
+                "phase": "allocated",
+                "sealed": false,
+                "custody": "owned",
+                "nativeReady": true,
+                "attached": true
+              }
+            }
+          ],
+          "management": {
+            "source": {
+              "sourceId": "d3a995bef9f266e12d956f8f97ba16cd4242deaad8ce8275e92ee907107dfd18",
+              "revision": "1aa0f79a7ce6514aa276e19d04b0e786e41e75243c472748cc1b5443f7104cb5"
+            },
+            "metadataRead": true,
+            "modelProbeCompleted": true,
+            "modelProbeReplayAllocated": false,
+            "modelProbeInputs": 1,
+            "metadataHostRetained": false
+          },
+          "standalone": {
+            "phase": "completed",
+            "source": {
+              "sourceId": "d3a995bef9f266e12d956f8f97ba16cd4242deaad8ce8275e92ee907107dfd18",
+              "revision": "1aa0f79a7ce6514aa276e19d04b0e786e41e75243c472748cc1b5443f7104cb5"
+            },
+            "inputDigest": "8a56975675fcab3203f7a69d5507ce4d3156ae07e86698b2089c25954229d13c",
+            "limits": null,
+            "ephemeral": true,
+            "replayAllocated": false
+          },
+          "lastStandaloneCompletion": {
+            "source": {
+              "sourceId": "d3a995bef9f266e12d956f8f97ba16cd4242deaad8ce8275e92ee907107dfd18",
+              "revision": "1aa0f79a7ce6514aa276e19d04b0e786e41e75243c472748cc1b5443f7104cb5"
+            },
+            "runId": "TEST-source-standalone-B",
+            "scheduleId": "TEST-source-schedule-B",
+            "readCount": 151,
+            "elapsedMs": 18056.598100000003,
+            "lastRunRead": {
+              "phase": "completed",
+              "cleanup": "confirmed",
+              "exitCode": 0
+            }
+          },
+          "modelPreparations": null,
+          "cold": {
+            "currentB": true,
+            "retainedA": true,
+            "lookup": true,
+            "physicalReplayAllocations": 0,
+            "sourcePublishPendingAdmission": {
+              "admitted": 1,
+              "revoked": 1
+            },
+            "originalInputsReplayed": false,
+            "sdkPeerCheckpointRestored": false
+          },
+          "selections": {
+            "A": {
+              "sourceId": "d3a995bef9f266e12d956f8f97ba16cd4242deaad8ce8275e92ee907107dfd18",
+              "revision": "e9e6bc901647405165cd56bac20d496e3fb3cb2a7b0fd839f8823f05fc2f9f85",
+              "profileId": "runtime-source:e9e6bc901647405165cd56bac20d496e3fb3cb2a7b0fd839f8823f05fc2f9f85",
+              "configRevision": "runtime-source:e9e6bc901647405165cd56bac20d496e3fb3cb2a7b0fd839f8823f05fc2f9f85",
+              "sourceKind": "app-managed",
+              "cliVersion": "0.162.0",
+              "nativeExecutableDigest": "d4cce770a05c9ce397154eba5637636ffa51b1984ad69737f8dcbeef01a4bd03"
+            },
+            "B": {
+              "sourceId": "d3a995bef9f266e12d956f8f97ba16cd4242deaad8ce8275e92ee907107dfd18",
+              "revision": "1aa0f79a7ce6514aa276e19d04b0e786e41e75243c472748cc1b5443f7104cb5",
+              "profileId": "runtime-source:1aa0f79a7ce6514aa276e19d04b0e786e41e75243c472748cc1b5443f7104cb5",
+              "configRevision": "runtime-source:1aa0f79a7ce6514aa276e19d04b0e786e41e75243c472748cc1b5443f7104cb5",
+              "sourceKind": "app-managed",
+              "cliVersion": "0.162.0",
+              "nativeExecutableDigest": "af46d71436ad9d0e323960ad4f05b00ec28dbf9ae25c4ee649eafb6d5867256a"
+            }
+          },
+          "teams": [
+            {
+              "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+              "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+              "inputId": "e672517f-9b6f-590a-9704-8f41f0934d7a",
+              "captureDigest": "628595d6f77d6b76585ad268c90622603f87e5982548a3199d897c46f71b600f",
+              "source": {
+                "sourceId": "d3a995bef9f266e12d956f8f97ba16cd4242deaad8ce8275e92ee907107dfd18",
+                "revision": "e9e6bc901647405165cd56bac20d496e3fb3cb2a7b0fd839f8823f05fc2f9f85"
+              }
+            },
+            {
+              "launchId": "eca13de8-3599-5b26-bdf8-ae13b6dfa550",
+              "generation": "capture-83ed1d4d-5f5f-53aa-bb2b-02b0d7bbc36c",
+              "inputId": "74d7a6be-9fbc-5709-b5c8-4b291ca5cf27",
+              "captureDigest": "448a57cb3c64c411ad284ced3a9235318ee4d03c4d695a843202776de807070d",
+              "source": {
+                "sourceId": "d3a995bef9f266e12d956f8f97ba16cd4242deaad8ce8275e92ee907107dfd18",
+                "revision": "1aa0f79a7ce6514aa276e19d04b0e786e41e75243c472748cc1b5443f7104cb5"
+              }
+            }
+          ],
+          "epochJobCounts": [
+            25,
+            0
+          ],
+          "epochs": [
+            {
+              "mainEpoch": "075efb64-c241-4e95-aa02-a40ff5e39777",
+              "pending": {
+                "admitted": 2,
+                "revoked": 2
+              },
+              "serviceOperations": 0,
+              "firstCloseEntryMs": 85120.84240000001,
+              "jobs": [
+                {
+                  "capability": "72fb6dbd-f543-4400-84d2-b3bb99001c87",
+                  "root": {
+                    "pid": 3700,
+                    "birth": "01dd7542d861b7e4"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 0,
+                  "entryEnd": 1,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "4e8d423a-cf23-4e65-80ae-b07b8ebbb13f",
+                  "root": {
+                    "pid": 4212,
+                    "birth": "01dd7542da79c78a"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 1,
+                  "entryEnd": 2,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "fcceabbd-bc68-4f4c-a3d5-cffc93a00aa7",
+                  "root": {
+                    "pid": 9096,
+                    "birth": "01dd7542dcd1f8f3"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 2,
+                  "entryEnd": 3,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "f8f8a02a-52d8-4c89-ac62-fc7b4a0c9e4d",
+                  "root": {
+                    "pid": 7820,
+                    "birth": "01dd7542de7b94ba"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 3,
+                  "entryEnd": 25,
+                  "threadEphemeral": [
+                    false
+                  ]
+                },
+                {
+                  "capability": "4fe04a4e-2604-42ce-9bb9-e7de44f7aed0",
+                  "root": {
+                    "pid": 7048,
+                    "birth": "01dd7542e03c4711"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 4,
+                  "entryEnd": 5,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "dbf2076e-e443-4b8a-b3da-f9410215de18",
+                  "root": {
+                    "pid": 6812,
+                    "birth": "01dd7542e25c1ec9"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 5,
+                  "entryEnd": 6,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "22531895-cfd5-4c1d-b277-f2d989360b5a",
+                  "root": {
+                    "pid": 9464,
+                    "birth": "01dd7542e4352169"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 6,
+                  "entryEnd": 7,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "e89a0e44-e9cf-4fa4-a29b-c00cd89b6131",
+                  "root": {
+                    "pid": 5476,
+                    "birth": "01dd7542e66cafa5"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 7,
+                  "entryEnd": 8,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "1146d3f3-94e1-4308-81fe-71765539c7d3",
+                  "root": {
+                    "pid": 3972,
+                    "birth": "01dd7542e958401b"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 8,
+                  "entryEnd": 9,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "89b6fa51-7632-4570-8007-99a91decb497",
+                  "root": {
+                    "pid": 8052,
+                    "birth": "01dd7542eacab647"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 9,
+                  "entryEnd": 10,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "5617abb9-b625-4ac9-9a76-8ec769579a75",
+                  "root": {
+                    "pid": 10776,
+                    "birth": "01dd7542ec2aff68"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 10,
+                  "entryEnd": 11,
+                  "threadEphemeral": [
+                    false
+                  ]
+                },
+                {
+                  "capability": "561ba7bb-2113-48ef-ab58-b94e26d0098b",
+                  "root": {
+                    "pid": 9596,
+                    "birth": "01dd7542ee5d7b0c"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 11,
+                  "entryEnd": 12,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "c5137b88-4e31-4820-b1b6-0f6bc6681484",
+                  "root": {
+                    "pid": 7604,
+                    "birth": "01dd7542f0b5f82b"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 12,
+                  "entryEnd": 13,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "cb16ccf8-56eb-4dd3-a7e4-092a203e72b2",
+                  "root": {
+                    "pid": 10092,
+                    "birth": "01dd7542f25f53b0"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 13,
+                  "entryEnd": 25,
+                  "threadEphemeral": [
+                    false
+                  ]
+                },
+                {
+                  "capability": "b6f3349e-9c7f-4e3b-8c2e-7ea65a78e043",
+                  "root": {
+                    "pid": 5652,
+                    "birth": "01dd7542f4246713"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 14,
+                  "entryEnd": 15,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "05da318c-568f-4cf6-aedc-7a89eef7388c",
+                  "root": {
+                    "pid": 2732,
+                    "birth": "01dd7542f6470140"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 15,
+                  "entryEnd": 16,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "6ef49ebd-ff66-4627-a9bf-5932ff87a632",
+                  "root": {
+                    "pid": 5532,
+                    "birth": "01dd7542f81b766a"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 16,
+                  "entryEnd": 17,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "b4a7b731-d43e-43f7-b8b4-47f37685d89e",
+                  "root": {
+                    "pid": 7100,
+                    "birth": "01dd7542fa8ec9dd"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 17,
+                  "entryEnd": 18,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "1e727265-3ad4-4c72-97fb-ba895e6427f0",
+                  "root": {
+                    "pid": 8616,
+                    "birth": "01dd7542fdc4450d"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 18,
+                  "entryEnd": 19,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "b34ac547-bb8e-41ca-a09a-ed1568184279",
+                  "root": {
+                    "pid": 5632,
+                    "birth": "01dd7542ff6899c7"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 19,
+                  "entryEnd": 20,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "72d2e2e3-b172-4955-988e-519385362c4b",
+                  "root": {
+                    "pid": 4708,
+                    "birth": "01dd754300bbcc13"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 20,
+                  "entryEnd": 25,
+                  "threadEphemeral": [
+                    true
+                  ]
+                },
+                {
+                  "capability": "6a30f5b6-8744-4586-940c-ae0a7161e8e0",
+                  "root": {
+                    "pid": 8988,
+                    "birth": "01dd75430234e81b"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 21,
+                  "entryEnd": 22,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "f9bd6e3a-524b-407a-8746-87d38f916bde",
+                  "root": {
+                    "pid": 5220,
+                    "birth": "01dd754303dcf141"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 22,
+                  "entryEnd": 23,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "1dee4be9-1f02-4d78-bf8f-98696a16bd81",
+                  "root": {
+                    "pid": 10500,
+                    "birth": "01dd7543057abaa4"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 23,
+                  "entryEnd": 24,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "305177c1-4252-4d7e-8c89-68a8fe6c0bf8",
+                  "root": {
+                    "pid": 7052,
+                    "birth": "01dd754307121ad3"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 24,
+                  "entryEnd": 25,
+                  "threadEphemeral": []
+                }
+              ]
+            },
+            {
+              "mainEpoch": "264dc546-5231-4e89-b19e-37ce8f289091",
+              "pending": {
+                "admitted": 1,
+                "revoked": 1
+              },
+              "serviceOperations": 0,
+              "firstCloseEntryMs": 2852.654699999999,
+              "jobs": []
+            }
+          ],
+          "controllerLine": 64,
+          "controller": {
+            "gateController": "drained",
+            "rootExitCode": 0,
+            "activeProcesses": 0
+          },
+          "failureOnlyDiagnosticsPresent": false,
+          "cleanupLogWitnesses": {
+            "count": 25,
+            "allRootAndWitnessCaptured": true,
+            "allResumedStoppedDrainedReleased": true,
+            "preWaitRows": [
+              {
+                "line": 38,
+                "mainEpoch": "075efb64-c241-4e95-aa02-a40ff5e39777",
+                "jobSlot": 0,
+                "originalHandleAbsentAtPreWaitLog": true
+              },
+              {
+                "line": 39,
+                "mainEpoch": "075efb64-c241-4e95-aa02-a40ff5e39777",
+                "jobSlot": 1,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 40,
+                "mainEpoch": "075efb64-c241-4e95-aa02-a40ff5e39777",
+                "jobSlot": 2,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 41,
+                "mainEpoch": "075efb64-c241-4e95-aa02-a40ff5e39777",
+                "jobSlot": 3,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 42,
+                "mainEpoch": "075efb64-c241-4e95-aa02-a40ff5e39777",
+                "jobSlot": 4,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 43,
+                "mainEpoch": "075efb64-c241-4e95-aa02-a40ff5e39777",
+                "jobSlot": 5,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 44,
+                "mainEpoch": "075efb64-c241-4e95-aa02-a40ff5e39777",
+                "jobSlot": 6,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 45,
+                "mainEpoch": "075efb64-c241-4e95-aa02-a40ff5e39777",
+                "jobSlot": 7,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 46,
+                "mainEpoch": "075efb64-c241-4e95-aa02-a40ff5e39777",
+                "jobSlot": 8,
+                "originalHandleAbsentAtPreWaitLog": true
+              },
+              {
+                "line": 47,
+                "mainEpoch": "075efb64-c241-4e95-aa02-a40ff5e39777",
+                "jobSlot": 9,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 48,
+                "mainEpoch": "075efb64-c241-4e95-aa02-a40ff5e39777",
+                "jobSlot": 10,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 49,
+                "mainEpoch": "075efb64-c241-4e95-aa02-a40ff5e39777",
+                "jobSlot": 11,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 50,
+                "mainEpoch": "075efb64-c241-4e95-aa02-a40ff5e39777",
+                "jobSlot": 12,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 51,
+                "mainEpoch": "075efb64-c241-4e95-aa02-a40ff5e39777",
+                "jobSlot": 13,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 52,
+                "mainEpoch": "075efb64-c241-4e95-aa02-a40ff5e39777",
+                "jobSlot": 14,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 53,
+                "mainEpoch": "075efb64-c241-4e95-aa02-a40ff5e39777",
+                "jobSlot": 15,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 54,
+                "mainEpoch": "075efb64-c241-4e95-aa02-a40ff5e39777",
+                "jobSlot": 16,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 55,
+                "mainEpoch": "075efb64-c241-4e95-aa02-a40ff5e39777",
+                "jobSlot": 17,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 56,
+                "mainEpoch": "075efb64-c241-4e95-aa02-a40ff5e39777",
+                "jobSlot": 18,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 57,
+                "mainEpoch": "075efb64-c241-4e95-aa02-a40ff5e39777",
+                "jobSlot": 19,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 58,
+                "mainEpoch": "075efb64-c241-4e95-aa02-a40ff5e39777",
+                "jobSlot": 20,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 59,
+                "mainEpoch": "075efb64-c241-4e95-aa02-a40ff5e39777",
+                "jobSlot": 21,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 60,
+                "mainEpoch": "075efb64-c241-4e95-aa02-a40ff5e39777",
+                "jobSlot": 22,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 61,
+                "mainEpoch": "075efb64-c241-4e95-aa02-a40ff5e39777",
+                "jobSlot": 23,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 62,
+                "mainEpoch": "075efb64-c241-4e95-aa02-a40ff5e39777",
+                "jobSlot": 24,
+                "originalHandleAbsentAtPreWaitLog": false
+              }
+            ],
+            "finalOriginalHandleAbsentAllTrue": true,
+            "ordering": "Original cleanup log precedes witness.wait. Initial false absent field is not a failed wait; final receipt is retained after the original wait."
+          }
+        },
+        "claude": {
+          "receipt": {
+            "path": "process_arm/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-claude-receipt.json",
+            "bytes": 27707,
+            "gitBlob": "2d7c24c2abcbe2a5e1ba6294496d37fd4ba6719b",
+            "sha256": "54a531de12073d2bd2834b3d40be06eea4138d82ea847c974ba84555011f051d"
+          },
+          "log": {
+            "path": "process_arm/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-claude.log",
+            "bytes": 18784,
+            "gitBlob": "4294cf0cb9991cf891de466b14f640e69397caf6",
+            "sha256": "d47aeeb77fb4e6e6127ce02c0abdc6448c47a82e6429b0f6a06eba14467fef39"
+          },
+          "status": "PASS",
+          "stage": "complete",
+          "cleanup": true,
+          "versionsAreFiniteTestCompatibilityStrings": {
+            "A": "2.1.34",
+            "B": "2.1.34"
+          },
+          "readiness": [
+            {
+              "line": 6,
+              "kind": "TEST_SOURCE_READINESS",
+              "provider": "claude",
+              "source": {
+                "sourceId": "c1f50b9d7176d15dbc260d87dec6076c2a50ec9c8e7510f47b3b0b4f9e7e1a50",
+                "revision": "0b3846e99775bfb7aef4650934c08b298fd8fec30b74536af9d50c3e3ee25c59"
+              },
+              "image": "A",
+              "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+              "readCount": 18,
+              "elapsedMs": 3475.367,
+              "lastRuntimeRead": {
+                "viewDigest": "9a06b96f904a89b9b33a4dcc9edfbd9c1d6da839c6f158834ca147b6cd9587cd",
+                "memberId": "alice-id",
+                "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+                "phase": "allocated",
+                "sealed": false,
+                "custody": "owned",
+                "nativeReady": true,
+                "attached": true
+              }
+            },
+            {
+              "line": 16,
+              "kind": "TEST_SOURCE_READINESS",
+              "provider": "claude",
+              "source": {
+                "sourceId": "c1f50b9d7176d15dbc260d87dec6076c2a50ec9c8e7510f47b3b0b4f9e7e1a50",
+                "revision": "9c8d7efbeab3675ce066876aa8977749a84436ab0aae4e8724292a15d48bcfee"
+              },
+              "image": "B",
+              "launchId": "eca13de8-3599-5b26-bdf8-ae13b6dfa550",
+              "readCount": 17,
+              "elapsedMs": 3664.0754000000015,
+              "lastRuntimeRead": {
+                "viewDigest": "e9c711bebe8d482154970603455182c2f6ea79e5fe18e55d8428109bec781af6",
+                "memberId": "alice-id",
+                "generation": "capture-83ed1d4d-5f5f-53aa-bb2b-02b0d7bbc36c",
+                "phase": "allocated",
+                "sealed": false,
+                "custody": "owned",
+                "nativeReady": true,
+                "attached": true
+              }
+            }
+          ],
+          "management": {
+            "source": {
+              "sourceId": "c1f50b9d7176d15dbc260d87dec6076c2a50ec9c8e7510f47b3b0b4f9e7e1a50",
+              "revision": "9c8d7efbeab3675ce066876aa8977749a84436ab0aae4e8724292a15d48bcfee"
+            },
+            "metadataRead": true,
+            "modelProbeCompleted": true,
+            "modelProbeReplayAllocated": false,
+            "modelProbeInputs": 1,
+            "metadataHostRetained": false
+          },
+          "standalone": {
+            "phase": "completed",
+            "source": {
+              "sourceId": "c1f50b9d7176d15dbc260d87dec6076c2a50ec9c8e7510f47b3b0b4f9e7e1a50",
+              "revision": "9c8d7efbeab3675ce066876aa8977749a84436ab0aae4e8724292a15d48bcfee"
+            },
+            "inputDigest": "8d953f359b51bdaa0ffa3bf6374358c02b738acf498d15fd9d21564ce04721d2",
+            "limits": {
+              "maxTurns": 6,
+              "maxBudgetUsd": 0.25
+            },
+            "ephemeral": true,
+            "replayAllocated": false
+          },
+          "lastStandaloneCompletion": {
+            "source": {
+              "sourceId": "c1f50b9d7176d15dbc260d87dec6076c2a50ec9c8e7510f47b3b0b4f9e7e1a50",
+              "revision": "9c8d7efbeab3675ce066876aa8977749a84436ab0aae4e8724292a15d48bcfee"
+            },
+            "runId": "TEST-source-standalone-B",
+            "scheduleId": "TEST-source-schedule-B",
+            "readCount": 21,
+            "elapsedMs": 1759.938399999999,
+            "lastRunRead": {
+              "phase": "completed",
+              "cleanup": "confirmed",
+              "exitCode": 0
+            }
+          },
+          "modelPreparations": null,
+          "cold": {
+            "currentB": true,
+            "retainedA": true,
+            "lookup": true,
+            "physicalReplayAllocations": 0,
+            "sourcePublishPendingAdmission": {
+              "admitted": 1,
+              "revoked": 1
+            },
+            "originalInputsReplayed": false,
+            "sdkPeerCheckpointRestored": true,
+            "originalNativeSessionRetained": true,
+            "restoredGeneration": "restore-38fcfdb9b3bc91e13de649598f37db831635af90a193f19222dfbc8a4a8a1913",
+            "newInputId": "5c73cde2-b595-5615-a758-ab9438f55903",
+            "source": {
+              "sourceId": "c1f50b9d7176d15dbc260d87dec6076c2a50ec9c8e7510f47b3b0b4f9e7e1a50",
+              "revision": "0b3846e99775bfb7aef4650934c08b298fd8fec30b74536af9d50c3e3ee25c59"
+            }
+          },
+          "selections": {
+            "A": {
+              "sourceId": "c1f50b9d7176d15dbc260d87dec6076c2a50ec9c8e7510f47b3b0b4f9e7e1a50",
+              "revision": "0b3846e99775bfb7aef4650934c08b298fd8fec30b74536af9d50c3e3ee25c59",
+              "profileId": "runtime-source:0b3846e99775bfb7aef4650934c08b298fd8fec30b74536af9d50c3e3ee25c59",
+              "configRevision": "runtime-source:0b3846e99775bfb7aef4650934c08b298fd8fec30b74536af9d50c3e3ee25c59",
+              "sourceKind": "app-managed",
+              "cliVersion": "2.1.34"
+            },
+            "B": {
+              "sourceId": "c1f50b9d7176d15dbc260d87dec6076c2a50ec9c8e7510f47b3b0b4f9e7e1a50",
+              "revision": "9c8d7efbeab3675ce066876aa8977749a84436ab0aae4e8724292a15d48bcfee",
+              "profileId": "runtime-source:9c8d7efbeab3675ce066876aa8977749a84436ab0aae4e8724292a15d48bcfee",
+              "configRevision": "runtime-source:9c8d7efbeab3675ce066876aa8977749a84436ab0aae4e8724292a15d48bcfee",
+              "sourceKind": "app-managed",
+              "cliVersion": "2.1.34"
+            }
+          },
+          "teams": [
+            {
+              "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+              "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+              "inputId": "fb5c4428-e8b8-5feb-8f43-debd2c8f85ae",
+              "captureDigest": "c9017dd1fc1d0a16183d335fc55db8ef838178c610b23d976f23d8ca50f51aed",
+              "source": {
+                "sourceId": "c1f50b9d7176d15dbc260d87dec6076c2a50ec9c8e7510f47b3b0b4f9e7e1a50",
+                "revision": "0b3846e99775bfb7aef4650934c08b298fd8fec30b74536af9d50c3e3ee25c59"
+              }
+            },
+            {
+              "launchId": "eca13de8-3599-5b26-bdf8-ae13b6dfa550",
+              "generation": "capture-83ed1d4d-5f5f-53aa-bb2b-02b0d7bbc36c",
+              "inputId": "dcd3e691-27f0-58d6-b3cc-c937c39c150e",
+              "captureDigest": "b2d6f32def865531ee83d4469c02ed545779fe7d20dd0ee15cb60a7068360447",
+              "source": {
+                "sourceId": "c1f50b9d7176d15dbc260d87dec6076c2a50ec9c8e7510f47b3b0b4f9e7e1a50",
+                "revision": "9c8d7efbeab3675ce066876aa8977749a84436ab0aae4e8724292a15d48bcfee"
+              }
+            }
+          ],
+          "epochJobCounts": [
+            8,
+            1
+          ],
+          "epochs": [
+            {
+              "mainEpoch": "bf8a94f1-6ba8-4e29-a391-aca4adeb8a1d",
+              "pending": {
+                "admitted": 2,
+                "revoked": 2
+              },
+              "serviceOperations": 0,
+              "firstCloseEntryMs": 21433.5065,
+              "jobs": [
+                {
+                  "capability": "58005ef8-9e82-4dac-9dee-5b0a46d03b0b",
+                  "root": {
+                    "pid": 6696,
+                    "birth": "01dd75430fe67bc1"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 0,
+                  "entryEnd": 1,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "13d2eea8-1e8c-4068-a1b8-22c6f4e722f7",
+                  "root": {
+                    "pid": 844,
+                    "birth": "01dd7543115438b4"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 1,
+                  "entryEnd": 8,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "e763fa5b-6416-481d-81d7-e9db2e279165",
+                  "root": {
+                    "pid": 10372,
+                    "birth": "01dd754313e8929b"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 2,
+                  "entryEnd": 4,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "3acaabc7-479f-45cd-b2e8-8f79319d67ae",
+                  "root": {
+                    "pid": 9064,
+                    "birth": "01dd754314416bd9"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 3,
+                  "entryEnd": 4,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "361c9ae8-2f62-4e4c-8469-e93d275b078d",
+                  "root": {
+                    "pid": 3972,
+                    "birth": "01dd754314ae1de2"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 4,
+                  "entryEnd": 5,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "088fc3f8-0eb5-4a86-a4bf-e8589b93e833",
+                  "root": {
+                    "pid": 9468,
+                    "birth": "01dd7543153d5629"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 5,
+                  "entryEnd": 6,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "df918482-347f-44c0-9816-8042fd5f3221",
+                  "root": {
+                    "pid": 2056,
+                    "birth": "01dd754316cbc452"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 6,
+                  "entryEnd": 8,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "aec83253-07f5-4d08-aa66-57973cc0abb7",
+                  "root": {
+                    "pid": 2860,
+                    "birth": "01dd754319fb94e6"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 7,
+                  "entryEnd": 8,
+                  "threadEphemeral": []
+                }
+              ]
+            },
+            {
+              "mainEpoch": "b9f9e8fd-168b-4466-8c4a-58317aca1d21",
+              "pending": {
+                "admitted": 1,
+                "revoked": 1
+              },
+              "serviceOperations": 0,
+              "firstCloseEntryMs": 10113.587900000002,
+              "jobs": [
+                {
+                  "capability": "436bd974-2bba-4793-bbe2-ff109d686e4d",
+                  "root": {
+                    "pid": 4900,
+                    "birth": "01dd75431ddaf2c2"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 8,
+                  "entryEnd": 9,
+                  "threadEphemeral": []
+                }
+              ]
+            }
+          ],
+          "controllerLine": 34,
+          "controller": {
+            "gateController": "drained",
+            "rootExitCode": 0,
+            "activeProcesses": 0
+          },
+          "failureOnlyDiagnosticsPresent": false,
+          "cleanupLogWitnesses": {
+            "count": 9,
+            "allRootAndWitnessCaptured": true,
+            "allResumedStoppedDrainedReleased": true,
+            "preWaitRows": [
+              {
+                "line": 22,
+                "mainEpoch": "bf8a94f1-6ba8-4e29-a391-aca4adeb8a1d",
+                "jobSlot": 0,
+                "originalHandleAbsentAtPreWaitLog": true
+              },
+              {
+                "line": 23,
+                "mainEpoch": "bf8a94f1-6ba8-4e29-a391-aca4adeb8a1d",
+                "jobSlot": 1,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 24,
+                "mainEpoch": "bf8a94f1-6ba8-4e29-a391-aca4adeb8a1d",
+                "jobSlot": 2,
+                "originalHandleAbsentAtPreWaitLog": true
+              },
+              {
+                "line": 25,
+                "mainEpoch": "bf8a94f1-6ba8-4e29-a391-aca4adeb8a1d",
+                "jobSlot": 3,
+                "originalHandleAbsentAtPreWaitLog": true
+              },
+              {
+                "line": 26,
+                "mainEpoch": "bf8a94f1-6ba8-4e29-a391-aca4adeb8a1d",
+                "jobSlot": 4,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 27,
+                "mainEpoch": "bf8a94f1-6ba8-4e29-a391-aca4adeb8a1d",
+                "jobSlot": 5,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 28,
+                "mainEpoch": "bf8a94f1-6ba8-4e29-a391-aca4adeb8a1d",
+                "jobSlot": 6,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 29,
+                "mainEpoch": "bf8a94f1-6ba8-4e29-a391-aca4adeb8a1d",
+                "jobSlot": 7,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 33,
+                "mainEpoch": "b9f9e8fd-168b-4466-8c4a-58317aca1d21",
+                "jobSlot": 0,
+                "originalHandleAbsentAtPreWaitLog": false
+              }
+            ],
+            "finalOriginalHandleAbsentAllTrue": true,
+            "ordering": "Original cleanup log precedes witness.wait. Initial false absent field is not a failed wait; final receipt is retained after the original wait."
+          }
+        },
+        "opencode": {
+          "receipt": {
+            "path": "process_arm/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-opencode-receipt.json",
+            "bytes": 25996,
+            "gitBlob": "0f8700a36300eab684edc9a37bae82ed3dc78306",
+            "sha256": "53dafb4a0b80a4253986460dc4fb419430472e18b2a8abe735535f368f42e4a5"
+          },
+          "log": {
+            "path": "process_arm/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-opencode.log",
+            "bytes": 14673,
+            "gitBlob": "b512b00afd41a9d5bf3c5c8725d8f1cf75c53f6f",
+            "sha256": "c517189400730a68dcefbdc7012e709fc5852bb7ca6b8cf34471e25d353058d3"
+          },
+          "status": "PASS",
+          "stage": "complete",
+          "cleanup": true,
+          "versionsAreFiniteTestCompatibilityStrings": {
+            "A": "1.19.4",
+            "B": "1.19.4"
+          },
+          "readiness": [
+            {
+              "line": 7,
+              "kind": "TEST_SOURCE_READINESS",
+              "provider": "opencode",
+              "source": {
+                "sourceId": "0a8d5f7e88ecce36d85adf08b273c975638f50a5315f3b8d834a1f10212d7e7d",
+                "revision": "061ed280d376096269fcb39641b9ef9bf4a983fc40b7a272d155727f4bcbc954"
+              },
+              "image": "A",
+              "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+              "readCount": 14,
+              "elapsedMs": 33421.275200000004,
+              "lastRuntimeRead": {
+                "viewDigest": "5b55a8d8b9f4e13605e477b495033321ff9f44dfbbd8ac985c394d021caa3af0",
+                "memberId": "alice-id",
+                "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+                "phase": "allocated",
+                "sealed": false,
+                "custody": "owned",
+                "nativeReady": true,
+                "attached": true
+              }
+            },
+            {
+              "line": 16,
+              "kind": "TEST_SOURCE_READINESS",
+              "provider": "opencode",
+              "source": {
+                "sourceId": "0a8d5f7e88ecce36d85adf08b273c975638f50a5315f3b8d834a1f10212d7e7d",
+                "revision": "5e8b7a764edc4ee10ba60ff877577574cb3eb1489fd3b3efb3202b89d2c8c1e1"
+              },
+              "image": "B",
+              "launchId": "eca13de8-3599-5b26-bdf8-ae13b6dfa550",
+              "readCount": 14,
+              "elapsedMs": 33504.7456,
+              "lastRuntimeRead": {
+                "viewDigest": "b511010e8e3f029298d97c17493cf8e1ef1803d003f90c2eaea9a76f8931d929",
+                "memberId": "alice-id",
+                "generation": "capture-83ed1d4d-5f5f-53aa-bb2b-02b0d7bbc36c",
+                "phase": "allocated",
+                "sealed": false,
+                "custody": "owned",
+                "nativeReady": true,
+                "attached": true
+              }
+            }
+          ],
+          "management": {
+            "source": {
+              "sourceId": "0a8d5f7e88ecce36d85adf08b273c975638f50a5315f3b8d834a1f10212d7e7d",
+              "revision": "5e8b7a764edc4ee10ba60ff877577574cb3eb1489fd3b3efb3202b89d2c8c1e1"
+            },
+            "metadataRead": true,
+            "modelProbeCompleted": true,
+            "modelProbeReplayAllocated": false,
+            "modelProbeInputs": 1,
+            "metadataHostRetained": true
+          },
+          "standalone": {
+            "supported": false,
+            "reason": "Original scheduledRunProfile rejects OpenCode"
+          },
+          "lastStandaloneCompletion": null,
+          "modelPreparations": [
+            {
+              "source": {
+                "sourceId": "0a8d5f7e88ecce36d85adf08b273c975638f50a5315f3b8d834a1f10212d7e7d",
+                "revision": "061ed280d376096269fcb39641b9ef9bf4a983fc40b7a272d155727f4bcbc954"
+              },
+              "image": "A",
+              "startCommandId": "TEST-start-A",
+              "commandId": "action-probe-df0a16890e21222d4da5d6b8a0b4d72f167cdb5b17f772f58bdff4ec06e921df",
+              "profileId": "team-probe-030cfb985552f87dd2ea3ac371d2659af25aaaf858e721321470922e65c45f31",
+              "configRevision": "team-probe-030cfb985552f87dd2ea3ac371d2659af25aaaf858e721321470922e65c45f31",
+              "noTeamConnection": true,
+              "originalProbeInputs": 1,
+              "replayAllocated": false
+            },
+            {
+              "source": {
+                "sourceId": "0a8d5f7e88ecce36d85adf08b273c975638f50a5315f3b8d834a1f10212d7e7d",
+                "revision": "5e8b7a764edc4ee10ba60ff877577574cb3eb1489fd3b3efb3202b89d2c8c1e1"
+              },
+              "image": "B",
+              "startCommandId": "TEST-start-B",
+              "commandId": "action-probe-66fed584458c143455f0e3a9a80e5f0fb2c6e504cddfed85aebb965c59f66ef9",
+              "profileId": "team-probe-35e90e4a60491e916e4ea71f3c3a60e87b5fb9d7a5abc0c078bd1cd86dffd263",
+              "configRevision": "team-probe-35e90e4a60491e916e4ea71f3c3a60e87b5fb9d7a5abc0c078bd1cd86dffd263",
+              "noTeamConnection": true,
+              "originalProbeInputs": 1,
+              "replayAllocated": false
+            }
+          ],
+          "cold": {
+            "currentB": true,
+            "retainedA": true,
+            "lookup": true,
+            "physicalReplayAllocations": 0,
+            "sourcePublishPendingAdmission": {
+              "admitted": 1,
+              "revoked": 1
+            },
+            "originalInputsReplayed": false,
+            "sdkPeerCheckpointRestored": false
+          },
+          "selections": {
+            "A": {
+              "sourceId": "0a8d5f7e88ecce36d85adf08b273c975638f50a5315f3b8d834a1f10212d7e7d",
+              "revision": "061ed280d376096269fcb39641b9ef9bf4a983fc40b7a272d155727f4bcbc954",
+              "profileId": "runtime-source:061ed280d376096269fcb39641b9ef9bf4a983fc40b7a272d155727f4bcbc954",
+              "configRevision": "runtime-source:061ed280d376096269fcb39641b9ef9bf4a983fc40b7a272d155727f4bcbc954",
+              "sourceKind": "app-managed",
+              "nativeGeneration": "v1",
+              "cliVersion": "1.19.4"
+            },
+            "B": {
+              "sourceId": "0a8d5f7e88ecce36d85adf08b273c975638f50a5315f3b8d834a1f10212d7e7d",
+              "revision": "5e8b7a764edc4ee10ba60ff877577574cb3eb1489fd3b3efb3202b89d2c8c1e1",
+              "profileId": "runtime-source:5e8b7a764edc4ee10ba60ff877577574cb3eb1489fd3b3efb3202b89d2c8c1e1",
+              "configRevision": "runtime-source:5e8b7a764edc4ee10ba60ff877577574cb3eb1489fd3b3efb3202b89d2c8c1e1",
+              "sourceKind": "app-managed",
+              "nativeGeneration": "v1",
+              "cliVersion": "1.19.4"
+            }
+          },
+          "teams": [
+            {
+              "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+              "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+              "inputId": "bd6354ef-1cdb-572b-b5d5-a7825a4d485d",
+              "captureDigest": "363a7d99643c45d4bc6eb511ab5c511a344ea2c89ae717d424e0a4816243ee69",
+              "source": {
+                "sourceId": "0a8d5f7e88ecce36d85adf08b273c975638f50a5315f3b8d834a1f10212d7e7d",
+                "revision": "061ed280d376096269fcb39641b9ef9bf4a983fc40b7a272d155727f4bcbc954"
+              }
+            },
+            {
+              "launchId": "eca13de8-3599-5b26-bdf8-ae13b6dfa550",
+              "generation": "capture-83ed1d4d-5f5f-53aa-bb2b-02b0d7bbc36c",
+              "inputId": "0f8f1624-87d9-52e2-b454-b7a7198eb9c1",
+              "captureDigest": "0779734aedffc4e2e33cb3cf09c5bddabace968942b2d51ed3699201e9275739",
+              "source": {
+                "sourceId": "0a8d5f7e88ecce36d85adf08b273c975638f50a5315f3b8d834a1f10212d7e7d",
+                "revision": "5e8b7a764edc4ee10ba60ff877577574cb3eb1489fd3b3efb3202b89d2c8c1e1"
+              }
+            }
+          ],
+          "epochJobCounts": [
+            7,
+            0
+          ],
+          "epochs": [
+            {
+              "mainEpoch": "949ecba9-65f8-45b4-9855-0196ad6d2fc1",
+              "pending": {
+                "admitted": 2,
+                "revoked": 2
+              },
+              "serviceOperations": 0,
+              "firstCloseEntryMs": 91842.628,
+              "jobs": [
+                {
+                  "capability": "2bd2c7ad-f3d7-47d9-8514-6816518f45be",
+                  "root": {
+                    "pid": 11144,
+                    "birth": "01dd754325ebe114"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 0,
+                  "entryEnd": 1,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "c745e4d4-4735-458d-91ce-d053b72b6f81",
+                  "root": {
+                    "pid": 8392,
+                    "birth": "01dd75432794eb99"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 1,
+                  "entryEnd": 2,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "23802dae-d4fe-4634-b32b-2c20b0dc5fb6",
+                  "root": {
+                    "pid": 4912,
+                    "birth": "01dd754331653b7b"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 2,
+                  "entryEnd": 7,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "954bd9e6-a4e5-4363-aa19-68f645501546",
+                  "root": {
+                    "pid": 7996,
+                    "birth": "01dd75433fe3f718"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 3,
+                  "entryEnd": 4,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "4cdb83ed-5c02-4db4-bf03-d6a79ae63155",
+                  "root": {
+                    "pid": 9856,
+                    "birth": "01dd75434050ed0a"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 4,
+                  "entryEnd": 5,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "4a4d7240-ce6b-401f-bef9-42838aed9607",
+                  "root": {
+                    "pid": 10812,
+                    "birth": "01dd754341f4ab40"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 5,
+                  "entryEnd": 6,
+                  "threadEphemeral": []
+                },
+                {
+                  "capability": "f548db5f-f736-47a8-a0fc-4a9a73f7da72",
+                  "root": {
+                    "pid": 7296,
+                    "birth": "01dd75434bb8e658"
+                  },
+                  "resumed": true,
+                  "stopped": true,
+                  "drained": true,
+                  "released": true,
+                  "originalHandleAbsent": true,
+                  "entryStart": 6,
+                  "entryEnd": 7,
+                  "threadEphemeral": []
+                }
+              ]
+            },
+            {
+              "mainEpoch": "c8d28844-42f0-4f40-b8a4-fd7732773dfc",
+              "pending": {
+                "admitted": 1,
+                "revoked": 1
+              },
+              "serviceOperations": 0,
+              "firstCloseEntryMs": 2662.3545999999915,
+              "jobs": []
+            }
+          ],
+          "controllerLine": 26,
+          "controller": {
+            "gateController": "drained",
+            "rootExitCode": 0,
+            "activeProcesses": 0
+          },
+          "failureOnlyDiagnosticsPresent": false,
+          "cleanupLogWitnesses": {
+            "count": 7,
+            "allRootAndWitnessCaptured": true,
+            "allResumedStoppedDrainedReleased": true,
+            "preWaitRows": [
+              {
+                "line": 18,
+                "mainEpoch": "949ecba9-65f8-45b4-9855-0196ad6d2fc1",
+                "jobSlot": 0,
+                "originalHandleAbsentAtPreWaitLog": true
+              },
+              {
+                "line": 19,
+                "mainEpoch": "949ecba9-65f8-45b4-9855-0196ad6d2fc1",
+                "jobSlot": 1,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 20,
+                "mainEpoch": "949ecba9-65f8-45b4-9855-0196ad6d2fc1",
+                "jobSlot": 2,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 21,
+                "mainEpoch": "949ecba9-65f8-45b4-9855-0196ad6d2fc1",
+                "jobSlot": 3,
+                "originalHandleAbsentAtPreWaitLog": true
+              },
+              {
+                "line": 22,
+                "mainEpoch": "949ecba9-65f8-45b4-9855-0196ad6d2fc1",
+                "jobSlot": 4,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 23,
+                "mainEpoch": "949ecba9-65f8-45b4-9855-0196ad6d2fc1",
+                "jobSlot": 5,
+                "originalHandleAbsentAtPreWaitLog": false
+              },
+              {
+                "line": 24,
+                "mainEpoch": "949ecba9-65f8-45b4-9855-0196ad6d2fc1",
+                "jobSlot": 6,
+                "originalHandleAbsentAtPreWaitLog": false
+              }
+            ],
+            "finalOriginalHandleAbsentAllTrue": true,
+            "ordering": "Original cleanup log precedes witness.wait. Initial false absent field is not a failed wait; final receipt is retained after the original wait."
+          }
+        }
+      },
+      "binaryDigestClaims": [
+        {
+          "name": "owned-process-broker-accounting-failure.exe",
+          "sha256": "01e9ac993fa66c96a8cca511a7d6659eb55aa6a507354bf510bc0317f06ea831"
+        },
+        {
+          "name": "owned-process-broker-birth-failure.exe",
+          "sha256": "42d3466be3899d8b290324debff57c03d614b0f51102b602e4fbef5d8ac8971d"
+        },
+        {
+          "name": "owned-process-broker-debug-service.exe",
+          "sha256": "64b2425680bd2fd4083eb1ff02d3cd90f23b22359748fa925c3516371b3ae5b1"
+        },
+        {
+          "name": "owned-process-broker-release-delay.exe",
+          "sha256": "073d76eff5897bda128dc6024616f7afd55ea5ec20162965083ada82051b6330"
+        },
+        {
+          "name": "owned-process-broker-service-scopes.exe",
+          "sha256": "102d4049e8b6f4d3b4f7f442870c1d683d0ae5c80c3ae00193595f5b3da1953f"
+        },
+        {
+          "name": "owned-process-broker.exe",
+          "sha256": "47f0bf6f72d148bf673b2a1e1891117d1c100ff106bb02921d522c6ee75193ba"
+        },
+        {
+          "name": "owned-process-fixture.exe",
+          "sha256": "5be4b044c45037f59b910821679978ba18c35181eeb28075a48a6d4e5ad4e5d7"
+        },
+        {
+          "name": "owned-process-gate-controller.exe",
+          "sha256": "d9f75da9609bc437a44cfd7bde54a01a3681b86a04147a4111f665eb53d34164"
+        },
+        {
+          "name": "owned-process-pending-write-fixture.exe",
+          "sha256": "25b38cdd051181736bd3b9076c8c69e85bbc906f416d1e24b2a15516a78b8844"
+        }
+      ],
+      "wrapper": {
+        "receipt": {
+          "path": "process_arm/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-emulated-provider-receipt.json",
+          "bytes": 2908,
+          "gitBlob": "9ec6e4e2303ec4f4bbccac6216f92eb46a224520",
+          "sha256": "3ca21815ba7e1389839270be42a96e1c416819526cc5353f2d8c7f92f91dcc39"
+        },
+        "log": {
+          "path": "process_arm/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-emulated-provider.log",
+          "bytes": 1278,
+          "gitBlob": "3de131996a4953a3ebaa6ad94a587544f452c19b",
+          "sha256": "22eb55e359101ea6ec283b8c53c3a8ca297821c9e4741c99176c1a9fb5e0f00c"
+        },
+        "wrappers": [
+          "npm-node",
+          "generated-bun",
+          "opaque-cmd",
+          "positional-bat",
+          "npm-native"
+        ],
+        "providers": [
+          {
+            "provider": "codex",
+            "wrapper": "npm-node",
+            "pins": {
+              "node": "dff59da18b6ffe1bf1ca99e1d2af4906080c481740619f5b5098c0fca28bd9b7",
+              "peer": "039f2e29a17d40cb21a287770eb41354191f495f06e8e9f350eb8a3453e7bddc",
+              "wrapper": "d43e0701ac8436be9ce28b2832791e08fd7fa02585422c75fadb531ed6cd564f",
+              "cli": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+              "source": "d056a28d0a573525bc4618bad1a1a08fc95b5ab29f128d0caccefe59c947f73f"
+            },
+            "counts": {
+              "allocate": 1,
+              "prepare": 1,
+              "resume": 1,
+              "stop": 1,
+              "release": 1,
+              "serviceCapture": 2,
+              "serviceStop": 2,
+              "serviceSettle": 2
+            },
+            "nativeReady": true,
+            "inputCompleted": true,
+            "registeredServices": 2,
+            "scopedStops": 2,
+            "neighborSurvivedPrimary": true,
+            "providerSurvivedScopedStops": true,
+            "cleanup": true
+          },
+          {
+            "provider": "opencode",
+            "wrapper": "opaque-cmd",
+            "pins": {
+              "node": "dff59da18b6ffe1bf1ca99e1d2af4906080c481740619f5b5098c0fca28bd9b7",
+              "peer": "039f2e29a17d40cb21a287770eb41354191f495f06e8e9f350eb8a3453e7bddc",
+              "wrapper": "cb47ac0c670cc03cf1f40edb052ba855553525dffd7f8429e1a00bdca78c641d",
+              "cli": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+              "source": "85f32436a359cee0dbf0ab2de3a7c7067eb37c7b99330aec243a5e7e7956ea1c"
+            },
+            "counts": {
+              "allocate": 1,
+              "prepare": 1,
+              "resume": 1,
+              "stop": 1,
+              "release": 1,
+              "serviceCapture": 2,
+              "serviceStop": 2,
+              "serviceSettle": 2
+            },
+            "nativeReady": true,
+            "inputCompleted": true,
+            "registeredServices": 2,
+            "scopedStops": 2,
+            "neighborSurvivedPrimary": true,
+            "providerSurvivedScopedStops": true,
+            "cleanup": true
+          }
+        ],
+        "controllerLine": 12,
+        "controller": {
+          "gateController": "drained",
+          "rootExitCode": 0,
+          "activeProcesses": 0
+        },
+        "cleanup": true,
+        "realProviderExecuted": false
+      },
+      "sourceJobCount": 41,
+      "controllerCount": 6,
+      "originalPrerequisites": {
+        "node": {
+          "files": 18,
+          "tests": 163,
+          "suites": 0,
+          "pass": 160,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 3,
+          "todo": 0,
+          "skippedCases": [
+            "\ufe63 Linux builder refuses an existing or linked output leaf before any compiler dispatch (2.1677ms) # SKIP",
+            "\ufe63 Linux original executable compares signed Node and unsigned native inode bits exactly (1.4609ms) # SKIP",
+            "\ufe63 actual pinned SDK standalone run completes, cancels and survives cold replay without mutating the Team recipe (0.3987ms) # POSIX TEST shebang; actual Windows custody has its separate native gate"
+          ]
+        },
+        "protocolVitest": {
+          "files": 3,
+          "tests": 53,
+          "pass": 53,
+          "fail": 0,
+          "skip": 0
+        },
+        "retainedMainVitest": {
+          "files": 8,
+          "tests": 81,
+          "pass": 81,
+          "fail": 0,
+          "skip": 0
+        },
+        "totals": {
+          "files": 29,
+          "pass": 294,
+          "fail": 0,
+          "skip": 3,
+          "cancelled": 0
+        },
+        "logs": [
+          {
+            "path": "process_arm/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+            "bytes": 20050,
+            "gitBlob": "6bf6ecf0ab65a04b619cdb2d4c34949c032477b2",
+            "sha256": "0c05c638e58304ab3e7f05522095979200473648b11549b168084283ad5a9472"
+          },
+          {
+            "path": "process_arm/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+            "bytes": 757,
+            "gitBlob": "f11b25dcf0944f09467f08023e2e5f1c8f23fc9f",
+            "sha256": "10df8df00532f32acfefe450d458156bb2981d3a6d51910b084a42fe6d094488"
+          },
+          {
+            "path": "process_arm/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+            "bytes": 9713,
+            "gitBlob": "6bffe372b1c0f35f09ee42ff5cc49216e427f970",
+            "sha256": "d076df616263259e797469f1763393483665504d73cf4138e224131e02152591"
+          }
+        ]
+      }
+    }
+  },
+  "sourceLimits": {
+    "scenarioBlob": "8b4f0e8840773aa29e94758688211ffe138ebe04",
+    "profileBlob": "91098e2083ed64dc4bd551df2424f40fbec064ee",
+    "workflowBlob": "123e52f461e42790ddf5fb8b1ea653b9e32c30db",
+    "selectedSourcePinsOnly": true,
+    "compiledPayloadsArchived": false,
+    "generatedWrappersProfilesDescriptorsArchived": false,
+    "historical15sQualified": false,
+    "futureAbsoluteDeadlineAndLateCaptureCompositionQualified": false,
+    "reason": "Raw c28 transfers remaining duration to the poll instead of the original absolute deadline and moved the final standalone capture observation earlier. Their separately reviewed corrections have not been exercised by these original c28 jobs."
+  },
+  "globalLimits": [
+    "These are finite TEST peers through original Windows Main/Host/custody adapters, not actual Claude/Codex/OpenCode CLI execution. Receipt version strings are TEST protocol compatibility values.",
+    "No desktop, P08, P09, release, product default, full frontend or resulting-composition qualification transfers.",
+    "Source scenarios retain final original-HANDLE absence flags and source assertions; raw receipt does not serialize the internal witness object. Controller activeProcesses is the original contained controller census, not an OS-wide absence proof.",
+    "Failure-only projection/first-refusal fields are absent on success; this is not an observed complete empty trace."
+  ]
+}

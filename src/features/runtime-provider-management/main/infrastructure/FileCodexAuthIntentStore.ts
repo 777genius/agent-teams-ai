@@ -1,5 +1,5 @@
-import { constants } from 'node:fs';
-import { lstat, mkdir, open, realpath, unlink } from 'node:fs/promises';
+import { constants, type Stats } from 'node:fs';
+import { lstat, mkdir, open, readdir, realpath, unlink } from 'node:fs/promises';
 import { isAbsolute, join, resolve } from 'node:path';
 
 import { withFileLock } from '@main/services/team/fileLock';
@@ -9,10 +9,12 @@ export interface CodexAuthIntent {
   readonly schemaVersion: 1;
   readonly commandId: string;
   readonly targetId: string;
-  readonly kind: 'credential.forget' | 'credential.refresh';
+  readonly contextId?: string;
+  readonly kind: 'credential.forget' | 'credential.refresh' | 'login.browser' | 'login.device_code';
 }
 export interface CodexAuthIntentStore {
   read(targetId: string): Promise<CodexAuthIntent | null>;
+  pendingLogin(): Promise<CodexAuthIntent | null>;
   create(intent: CodexAuthIntent): Promise<boolean>;
   retire(intent: CodexAuthIntent): Promise<void>;
 }
@@ -27,9 +29,16 @@ function capture(value: unknown): CodexAuthIntent {
     !targetIdValid(row.targetId) ||
     typeof row.commandId !== 'string' ||
     !/^codex-auth-[a-f0-9-]{36}$/.test(row.commandId) ||
-    !['credential.forget', 'credential.refresh'].includes(String(row.kind)) ||
+    !['credential.forget', 'credential.refresh', 'login.browser', 'login.device_code'].includes(
+      String(row.kind)
+    ) ||
+    (row.contextId !== undefined &&
+      (typeof row.contextId !== 'string' ||
+        !row.contextId ||
+        row.contextId.length > 256 ||
+        /[\0\r\n]/u.test(row.contextId))) ||
     Object.keys(row).some(
-      (key) => !['schemaVersion', 'commandId', 'targetId', 'kind'].includes(key)
+      (key) => !['schemaVersion', 'commandId', 'targetId', 'contextId', 'kind'].includes(key)
     )
   )
     throw failure();
@@ -53,7 +62,7 @@ export class FileCodexAuthIntentStore implements CodexAuthIntentStore {
     if (
       !stat.isDirectory() ||
       stat.isSymbolicLink() ||
-      (stat.mode & 0o077) !== 0 ||
+      (process.platform !== 'win32' && (stat.mode & 0o077) !== 0) ||
       (await realpath(this.directory)) !== this.directory
     )
       throw failure();
@@ -70,58 +79,93 @@ export class FileCodexAuthIntentStore implements CodexAuthIntentStore {
     }
   }
   private async readValue(targetId: string): Promise<CodexAuthIntent | null> {
+    const path = this.path(targetId);
+    let original: Stats;
     try {
-      const file = await open(
-        this.path(targetId),
-        constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0)
-      );
-      try {
-        const before = await file.stat();
-        if (!before.isFile() || before.size > 4096 || (before.mode & 0o077) !== 0) throw failure();
-        const bytes = Buffer.alloc(4097);
-        let size = 0;
-        while (size < bytes.length) {
-          const result = await file.read(bytes, size, bytes.length - size, null);
-          if (!result.bytesRead) break;
-          size += result.bytesRead;
-        }
-        const after = await file.stat();
-        if (size > 4096 || before.size !== after.size || before.mtimeMs !== after.mtimeMs)
-          throw failure();
-        const value = capture(
-          JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes.subarray(0, size)))
-        );
-        if (value.targetId !== targetId) throw failure();
-        await this.check();
-        return value;
-      } finally {
-        await file.close();
-      }
+      original = await lstat(path);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
       throw error;
+    }
+    const unchanged = (stat: Stats) =>
+      stat.isFile() &&
+      !stat.isSymbolicLink() &&
+      stat.size <= 4096 &&
+      (process.platform === 'win32' || (stat.mode & 0o077) === 0) &&
+      stat.dev === original.dev &&
+      stat.ino === original.ino &&
+      stat.size === original.size &&
+      stat.mtimeMs === original.mtimeMs;
+    if (!unchanged(original)) throw failure();
+    const file = await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+    try {
+      if (!unchanged(await file.stat())) throw failure();
+      const bytes = Buffer.alloc(4097);
+      let size = 0;
+      while (size < bytes.length) {
+        const result = await file.read(bytes, size, bytes.length - size, null);
+        if (!result.bytesRead) break;
+        size += result.bytesRead;
+      }
+      if (size !== original.size || !unchanged(await file.stat()) || !unchanged(await lstat(path)))
+        throw failure();
+      const value = capture(
+        JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes.subarray(0, size)))
+      );
+      if (value.targetId !== targetId) throw failure();
+      await this.check();
+      return value;
+    } finally {
+      await file.close();
     }
   }
   read(targetId: string): Promise<CodexAuthIntent | null> {
     return this.safe(() => this.readValue(targetId));
   }
+  pendingLogin(): Promise<CodexAuthIntent | null> {
+    return this.safe(() => this.findLogin());
+  }
+  private async findLogin(): Promise<CodexAuthIntent | null> {
+    // The account API has no renderer-owned operation selector. Recover its original
+    // private target even when the selected project/profile changed before a restart.
+    const names = (await readdir(this.directory)).filter((name) =>
+      /^[a-f0-9]{64}\.json$/.test(name)
+    );
+    if (names.length > 256) throw failure();
+    let pending: CodexAuthIntent | null = null;
+    for (const name of names) {
+      const intent = await this.readValue(name.slice(0, -5));
+      if (!intent?.kind.startsWith('login.')) continue;
+      if (pending) throw failure(); // Ambiguous original ownership cannot select a new account.
+      pending = intent;
+    }
+    await this.check();
+    return pending;
+  }
   create(input: CodexAuthIntent): Promise<boolean> {
     const intent = capture(input);
-    return this.safe(() =>
-      withFileLock(
-        this.path(intent.targetId),
-        async () => {
-          await this.check();
-          if (await this.readValue(intent.targetId)) return false;
-          await atomicCreateAsync(this.path(intent.targetId), JSON.stringify(intent) + '\n', {
-            mode: 0o600,
-          });
-          await this.check();
-          return true;
-        },
-        { preventLiveOwnerTakeover: true }
-      )
-    );
+    return this.safe(() => {
+      const create = () =>
+        withFileLock(
+          this.path(intent.targetId),
+          async () => {
+            await this.check();
+            if (await this.readValue(intent.targetId)) return false;
+            if (intent.kind.startsWith('login.') && (await this.findLogin())) return false;
+            await atomicCreateAsync(this.path(intent.targetId), JSON.stringify(intent) + '\n', {
+              mode: 0o600,
+            });
+            await this.check();
+            return true;
+          },
+          { preventLiveOwnerTakeover: true }
+        );
+      return intent.kind.startsWith('login.')
+        ? withFileLock(join(this.directory, 'login-admission'), create, {
+            preventLiveOwnerTakeover: true,
+          })
+        : create();
+    });
   }
   retire(input: CodexAuthIntent): Promise<void> {
     const intent = capture(input);

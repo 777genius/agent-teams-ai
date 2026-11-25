@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "kind": "current030-raw-readiness-deadline-and-nonatomic-samples",
+  "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "runId": 44407826280,
+  "jobId": 135167669587,
+  "attempt": 1,
+  "rawLog": {
+    "gitBlob": "a2b51b2afad3db01a990a4bf1226a47711bb5430",
+    "sha256": "cb042a0ec6883d46a4fa34d2e06ec8b3d8fa9a1636afec3273590734145bfed9",
+    "bytes": 400320
+  },
+  "rawLineBytesPreserved": true,
+  "rawLines": [
+    {
+      "line": 2330,
+      "raw": "2026-11-18T23:06:09.9099961Z {\"kind\":\"TEST_SOURCE_READINESS\",\"provider\":\"codex\",\"source\":{\"sourceId\":\"99a72935ff02dcd588e45595e2fc8b75dc39ead1c2436b66655ce7fb0caca909\",\"revision\":\"a8c90a043db57798df48ed5279de479908f9b5d926dd56e10779aaaad51e3820\"},\"image\":\"A\",\"launchId\":\"faed95fc-2132-54f1-aad3-c38a59bc4a41\",\"readCount\":109,\"elapsedMs\":15436.729499999998,\"lastRuntimeRead\":{\"viewDigest\":\"051895ca9313a9cdb572155f2c05f9c126d8a81fdf1fbecf93313de477733494\",\"memberId\":\"alice-id\",\"generation\":\"capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5\",\"phase\":\"allocated\",\"sealed\":false,\"custody\":\"owned\",\"nativeReady\":true,\"attached\":true}}\r\n"
+    },
+    {
+      "line": 2338,
+      "raw": "2026-11-18T23:06:10.8132557Z {\"kind\":\"TEST_SOURCE_FIRST_REFUSAL\",\"provider\":\"codex\",\"diagnostic\":{\"status\":\"unknown\",\"reason\":\"empty\"}}\r\n"
+    },
+    {
+      "line": 2339,
+      "raw": "2026-11-18T23:06:10.8141193Z {\"kind\":\"TEST_SOURCE_READINESS_OBSERVATIONS\",\"provider\":\"codex\",\"runtimeProjection\":{\"status\":\"observed\",\"atomicWithFailure\":false,\"viewDigest\":\"051895ca9313a9cdb572155f2c05f9c126d8a81fdf1fbecf93313de477733494\",\"bindingMatches\":true,\"recordReady\":true,\"providerReady\":true,\"ownerCurrent\":true,\"nativeReady\":true},\"codexReadinessObservation\":{\"schemaVersion\":2,\"status\":\"observed\",\"atomicWithFailure\":false,\"samplePoint\":\"last-original-projection-with-matching-view-digest\",\"source\":{\"sourceId\":\"99a72935ff02dcd588e45595e2fc8b75dc39ead1c2436b66655ce7fb0caca909\",\"revision\":\"a8c90a043db57798df48ed5279de479908f9b5d926dd56e10779aaaad51e3820\"},\"bindingDigest\":\"cab0c5f24e6d0f40631cb273a0a026cd33d1a87195383ac9ec01d48cb427173a\",\"viewDigest\":\"051895ca9313a9cdb572155f2c05f9c126d8a81fdf1fbecf93313de477733494\",\"mainEpoch\":\"7e843552-231a-46b3-b0cd-21b825622d0e\",\"launchId\":\"faed95fc-2132-54f1-aad3-c38a59bc4a41\",\"observedEventCount\":17,\"events\":[[1,1,\"open\",\"before-await\",null],[2,2,\"catalog\",\"before-await\",null],[3,2,\"catalog\",\"after-await\",null],[4,2,\"catalog\",\"returned\",true],[5,3,\"catalog\",\"before-await\",null],[6,3,\"catalog\",\"after-await\",null],[7,3,\"catalog\",\"returned\",true],[8,4,\"catalog\",\"before-await\",null],[9,4,\"catalog\",\"after-await\",null],[10,4,\"catalog\",\"returned\",true],[11,1,\"open\",\"after-await\",null],[12,5,\"readiness\",\"before-await\",null],[13,6,\"catalog\",\"before-await\",null],[14,6,\"catalog\",\"after-await\",null],[15,6,\"catalog\",\"returned\",true],[16,5,\"readiness\",\"after-await\",null],[17,5,\"readiness\",\"returned\",true]],\"timing\":{\"samplePoint\":\"last-original-codex-phase-event\",\"sequence\":17,\"elapsedDeciMs\":[2734,3252,28151,28236,58198,82208,82287,92361,116883,116976,121762,122267,122360,146145,146228,149193,149278],\"isCurrent\":[133,11534,124],\"canAllocate\":[58,19857,534],\"mcpSourceCurrent\":[189,5,0]}}}\r\n"
+    },
+    {
+      "line": 2344,
+      "raw": "2026-11-18T23:06:10.9338837Z \u001b[31;1mAssertionError [ERR_ASSERTION]: Original source Team readiness\u001b[0m\r\n"
+    },
+    {
+      "line": 2345,
+      "raw": "2026-11-18T23:06:10.9346904Z \u001b[31;1m    at poll (C:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedSourceScenario.ts:58:12)\u001b[0m\r\n"
+    },
+    {
+      "line": 2346,
+      "raw": "2026-11-18T23:06:10.9354878Z \u001b[31;1m    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\u001b[0m\r\n"
+    },
+    {
+      "line": 2347,
+      "raw": "2026-11-18T23:06:10.9363314Z \u001b[31;1m    at async launch (C:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedSourceScenario.ts:480:9)\u001b[0m\r\n"
+    },
+    {
+      "line": 2348,
+      "raw": "2026-11-18T23:06:10.9371938Z \u001b[31;1m    at async nativeEmulatedSourceScenario (C:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedSourceScenario.ts:536:36)\u001b[0m\r\n"
+    },
+    {
+      "line": 2349,
+      "raw": "2026-11-18T23:06:10.9392915Z \u001b[31;1m    at async main (C:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedProviderGate.ts:401:7)\u001b[0m\r\n"
+    },
+    {
+      "line": 2350,
+      "raw": "2026-11-18T23:06:10.9402208Z \u001b[31;1m    at async <anonymous> (C:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedProviderGate.ts:428:85) {\u001b[0m\r\n"
+    },
+    {
+      "line": 2351,
+      "raw": "2026-11-18T23:06:10.9410109Z \u001b[31;1m  generatedMessage: false,\u001b[0m\r\n"
+    },
+    {
+      "line": 2352,
+      "raw": "2026-11-18T23:06:10.9419263Z \u001b[31;1m  code: 'ERR_ASSERTION',\u001b[0m\r\n"
+    },
+    {
+      "line": 2353,
+      "raw": "2026-11-18T23:06:10.9428415Z \u001b[31;1m  actual: false,\u001b[0m\r\n"
+    },
+    {
+      "line": 2354,
+      "raw": "2026-11-18T23:06:10.9439605Z \u001b[31;1m  expected: true,\u001b[0m\r\n"
+    },
+    {
+      "line": 2355,
+      "raw": "2026-11-18T23:06:10.9447569Z \u001b[31;1m  operator: '==',\u001b[0m\r\n"
+    },
+    {
+      "line": 2356,
+      "raw": "2026-11-18T23:06:10.9456494Z \u001b[31;1m  diff: 'simple'\u001b[0m\r\n"
+    },
+    {
+      "line": 2357,
+      "raw": "2026-11-18T23:06:10.9465579Z \u001b[31;1m}\u001b[0m\r\n"
+    },
+    {
+      "line": 2360,
+      "raw": "2026-11-18T23:06:10.9514516Z {\"gateController\":\"drained\",\"rootExitCode\":1,\"activeProcesses\":0}\r\n"
+    },
+    {
+      "line": 2361,
+      "raw": "2026-11-18T23:06:10.9687599Z {\"kind\":\"TEST_SOURCE_CONTROLLER_EXIT\",\"provider\":\"codex\",\"exitCode\":104}\r\n"
+    }
+  ],
+  "scope": [
+    "Readiness trace109 reports elapsed15436.7295ms; original predicate fails at its15s bound.",
+    "Later runtime and Codex readiness samples explicitly atomicWithFailure=false, even where booleans are true.",
+    "Preserve the original failure and later observation scopes separately; no causal readiness performance or check-site inference."
+  ]
+}

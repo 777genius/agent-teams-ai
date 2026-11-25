@@ -1,0 +1,188 @@
+{
+  "schemaVersion": 1,
+  "kind": "Prospective exact incoming diagnostic adoption; source review only",
+  "sourceHead": "4dc08dea7eeed5c286cf310e09a2ba26d84a9546",
+  "parent": "3957f2b28417647578d71a465cd61d4e09b5deb9",
+  "sourceParent": "a02ab70edfdcb4169627e804f0337c9ad6b52af6",
+  "tree": "13d33c2d2462278df5c7503c4fa55a6b175793f7",
+  "paths": [
+    {
+      "path": "tools/owned-process-broker/nativeFixture.cpp",
+      "preimage": {
+        "bytes": 14797,
+        "lines": 279,
+        "gitBlob": "8ec365bb41b94d7c238c46e6cb6a8e337b1e16a8",
+        "sha256": "f6b6c1ff8eadd27f68f602767f83625fa00757b4107b271fb5faa189e3c8937f"
+      },
+      "candidate": {
+        "bytes": 17237,
+        "lines": 322,
+        "gitBlob": "579a7aadf70a284cb44f7ec3690dab32c4d76e92",
+        "sha256": "5891d489d3587218900ae8864c64c29c4fbc594022b95132c0292074e3ce865c"
+      },
+      "additions": 58,
+      "deletions": 15
+    },
+    {
+      "path": "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+      "preimage": {
+        "bytes": 18211,
+        "lines": 294,
+        "gitBlob": "ee4066eaecbf8104c84a8d113eb42d3d6225e33e",
+        "sha256": "b5262755b152afc9be4c203b6da857ab70e639082276bce3cca8f830cda05eb2"
+      },
+      "candidate": {
+        "bytes": 19603,
+        "lines": 317,
+        "gitBlob": "f8eb84e20fb323e5838b918a7934853785ab9ee5",
+        "sha256": "c37a7f0a4f2ded01700e9cb93e25fcdacd25e363b61c374c375b3ad493c80b27"
+      },
+      "additions": 24,
+      "deletions": 1
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGate.ts",
+      "preimage": {
+        "bytes": 22199,
+        "lines": 584,
+        "gitBlob": "a12e497e8439454502ea8ad07c197df213b64cc2",
+        "sha256": "eb1d1c638fd024d5236d0e8469ac515cb9130555d52c2a054e4c5491d8de520b"
+      },
+      "candidate": {
+        "bytes": 22330,
+        "lines": 586,
+        "gitBlob": "17f5e7b66605bd4d28cf3935b7fa73ea2933a21d",
+        "sha256": "3b549e313e3ca43b76232282b7dbe9e7a1dfcec594ad93bc81c047f740851197"
+      },
+      "additions": 2,
+      "deletions": 0
+    }
+  ],
+  "patch": {
+    "bytes": 9375,
+    "lines": 164,
+    "gitBlob": "42b702e183c36c8b90c3eeba5f1baafcf9d8fdad",
+    "sha256": "36c5a9e14c35821f9a9f27c7a6b94de4270e6490717c62b293c8659fa2eb70b8"
+  },
+  "unchangedReviewInputs": [
+    {
+      "path": "packages/legacy-agent-host/src/owned-process/codec.ts",
+      "identity": {
+        "bytes": 10420,
+        "lines": 260,
+        "gitBlob": "7a2aedea1413e3c2af3be85889451bd015534d79",
+        "sha256": "c3a069b4f4d5bf65366b4ca9007f2fb77042d24cd251a40af66170ac66d63dc0"
+      }
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateEvents.ts",
+      "identity": {
+        "bytes": 1367,
+        "lines": 39,
+        "gitBlob": "1dbbf60801213f80f97cb9b0b0031acdf41d738a",
+        "sha256": "2f06d37ad0ea51fda654501d4c08a6066a1914a9cfe59c2d73d4f29db4c8ba7d"
+      }
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateOutput.ts",
+      "identity": {
+        "bytes": 1842,
+        "lines": 46,
+        "gitBlob": "f9e5bb809cc4ae03485e1c55c7d7010322b63ae1",
+        "sha256": "ec40aeff9e713d30af99aed2c0936a2c8fc2a3094e57207c21f55da3970f17c8"
+      }
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateDiagnostics.ts",
+      "identity": {
+        "bytes": 6380,
+        "lines": 220,
+        "gitBlob": "22cf67a484f0a2a5a2b89639e38515cc0242a21a",
+        "sha256": "d963accfadeb14a93fd5d7e2b934a409212cca40e678b452d011c4a579f29237"
+      }
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateEvents.test.ts",
+      "identity": {
+        "bytes": 2514,
+        "lines": 60,
+        "gitBlob": "1d16506c9aa8ef2834bb379d373665947ea06c19",
+        "sha256": "eabb2496217a30e35bd45413aa0cd97a0789b3a2ad1dde354eef6c3697adb85f"
+      }
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateContext.test.ts",
+      "identity": {
+        "bytes": 4745,
+        "lines": 95,
+        "gitBlob": "48d1c9752dddb3e5fa91c6c564912b0474312168",
+        "sha256": "4ad0525d402aac610a867e7011da52a4f85dc7d6055fb048d9c78995187f4778"
+      }
+    },
+    {
+      "path": "tools/owned-process-broker/protocol.test.ts",
+      "identity": {
+        "bytes": 54514,
+        "lines": 1239,
+        "gitBlob": "89fe7152198d4eac2772e21222cd3b7b7be381d7",
+        "sha256": "c726cbfe75eb1b9acee02a51b7828068b14ac7d953c75ee092a5f4f3bf1f6438"
+      }
+    },
+    {
+      "path": "tools/owned-process-broker/vitest.config.ts",
+      "identity": {
+        "bytes": 342,
+        "lines": 13,
+        "gitBlob": "cd03a73404a7b2548c15234743c24c1093b554af",
+        "sha256": "d7af296db40661045f6402af15eeb6072781919fd8c8145e554dada03e0de88e"
+      }
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.json",
+      "identity": {
+        "bytes": 557,
+        "lines": 6,
+        "gitBlob": "4936675ad8af5a71d8c001a414836e90250a5daf",
+        "sha256": "9692a10f0691d73cd929940768cd38b084fce81f705b9561d8b1af2ba9a2daef"
+      }
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.retained-host.json",
+      "identity": {
+        "bytes": 393,
+        "lines": 6,
+        "gitBlob": "905f1a1489f3b37d651a9984169b0321c9915a15",
+        "sha256": "c39028ec42fec7402ec1260cb5ed0fca78762d4700847658d9eb95f9e8adbdb7"
+      }
+    },
+    {
+      "path": "tsconfig.legacy-agent-host-scripts.json",
+      "identity": {
+        "bytes": 646,
+        "lines": 20,
+        "gitBlob": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+        "sha256": "7aaf5b4f155ab3e350a387ad4687f6d4c1a9ad21e428aa4a74f7d6bd7a555306"
+      }
+    }
+  ],
+  "sourceFilesChanged": 3,
+  "additions": 84,
+  "deletions": 16,
+  "projectExecution": false,
+  "trackedEdits": false,
+  "gitRefsChanged": false,
+  "testsAdded": false,
+  "newNativeActionOrQuery": false,
+  "passiveCpuAndOutputWorkAdded": true,
+  "errorPrecedenceIntentionallyChanges": true,
+  "ordinaryCompleteTestCommand": [
+    "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+    "node_modules/vitest/vitest.mjs",
+    "run",
+    "--maxWorkers=1",
+    "--config",
+    "tools/owned-process-broker/vitest.config.ts"
+  ],
+  "expectedOriginalTestsUnexecutedHere": 53,
+  "qualification": "Actual resulting-source original Windows native jobs remain required; no prior or author result is transferred"
+}

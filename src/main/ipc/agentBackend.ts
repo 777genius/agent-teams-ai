@@ -4,56 +4,60 @@ import { pathToFileURL } from 'node:url';
 
 import {
   hostTeamSelectionKey,
-  STOPPED_TEAM_IMPORT_CHANNEL,
+  parseHostTeamSelectionKey,
   TeamCreationRefusal,
 } from '@features/agent-backend/contracts';
 import {
-  captureLegacyStoppedSource,
   createCapturedReviewWatch,
   createConfiguredHostTeam,
   createLaunchedHostTeam,
   DesktopBackendFeature,
   FileTeamModelProbeIntents,
   ForegroundModelChecks,
-  importStoppedLegacyTeam,
-  prepareCapturedTeamModels,
   prepareHostNotification,
   registerAgentBackendIpc,
   registerBackendConnectionsIpc,
   registerCapturedReviewWatchIpc,
 } from '@features/agent-backend/main';
 import { InternalStorageOperationInterruptedError } from '@features/internal-storage/main';
-import { FileCodexAuthIntentStore } from '@features/runtime-provider-management/main';
-import { createCapturedCodexFeatures } from '@features/runtime-provider-management/main';
+import { NATIVE_NEXT_PROMPT_UPDATED } from '@features/native-prompt-suggestions/contracts';
 import {
+  createCapturedCodexFeatures,
   createCapturedRuntimeProviderManagementClient,
-  createCapturedRuntimeProviderStatusClient,
+  FileCodexAuthIntentStore,
   FileProviderOAuthIntentStore,
 } from '@features/runtime-provider-management/main';
-import { TeamLaunchStateStore } from '@main/services/team/TeamLaunchStateStore';
+import { getClaudeBasePath } from '@main/utils/pathDecoder';
+import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
 import { createLogger } from '@shared/utils/logger';
 import { shell } from 'electron';
 
+import { createDesktopHostSchedules } from '../composition/createDesktopHostSchedules';
+import { createDesktopProviderStatusPort } from '../composition/createDesktopProviderStatusPort';
+import { createDesktopStoppedTeamOperations } from '../composition/createDesktopStoppedTeamOperations';
 import { createLegacySourceWriteAdmissionPolicy } from '../composition/legacySourceWriteAdmission';
 import { configureCapturedExtensionCommandRunner } from '../services/extensions/runtime/CapturedExtensionCommandLedger';
 import { CapturedNativeExtensions } from '../services/extensions/runtime/CapturedNativeExtensions';
 import { CapturedSkills } from '../services/extensions/skills/CapturedSkills';
 import { CapturedSkillsCache } from '../services/extensions/skills/CapturedSkillsCache';
 import { CapturedSkillsCollection } from '../services/extensions/skills/CapturedSkillsCollection';
+import { initializeLinuxChildLaunch } from '../utils/linuxChildLaunchSelection';
 import { getTeamsBasePath } from '../utils/pathDecoder';
 import { getDevRendererLocation } from '../utils/rendererLocation';
+
+import { registerDesktopStoppedTeamIpc } from './registerDesktopStoppedTeamIpc';
 
 import type { NativeExtensionCapture } from '../services/extensions/runtime/CapturedNativeExtensions';
 import type { CapturedSkillsCapture } from '../services/extensions/skills/CapturedSkillsCollection';
 import type { LegacySourceWriteAdmissionPolicy } from '@agent-teams/legacy-agent-host/lifecycle';
-import type { StoppedTeamImportResult } from '@features/agent-backend/contracts';
 import type {
   CapturedReviewWatch,
+  CapturedRuntimeSources,
   CapturedTeamModelRequest,
-  LegacyStoppedSourceOwners,
 } from '@features/agent-backend/main';
 import type { ApplicationCommandRunner } from '@features/application-command-ledger';
 import type { CodexAccountAuthMode } from '@features/codex-account/contracts';
+import type { NativeNextPromptCandidate, NativeNextPromptProvider } from '@features/native-prompt-suggestions/contracts';
 import type { RuntimeProviderOAuthProgressDto } from '@features/runtime-provider-management/contracts';
 import type {
   TeamCreateConfigResponse,
@@ -72,6 +76,9 @@ interface BackendShellOptions {
   userDataPath: string;
   /** Captured main-process environment, never renderer arguments. */
   env: Readonly<Record<string, string | undefined>>;
+  publishHttpNativePromptSuggestion?: (candidate: NativeNextPromptCandidate) => void;
+  /** Per-provider opt-ins captured from trusted Main config before first Host spawn. */
+  nativeNextPromptProviders?: readonly NativeNextPromptProvider[];
 }
 
 function withoutHash(value: string): string | null {
@@ -132,40 +139,9 @@ function createCapturedSenderGuard(
     contextSelection?.isCurrent() === true;
 }
 
-let stoppedImportOwners:
-  | { owners: LegacyStoppedSourceOwners; isCurrent(contextId: string): boolean }
-  | undefined;
+const stoppedTeams = createDesktopStoppedTeamOperations(() => active);
+export const configureDesktopStoppedImportOwners = stoppedTeams.configure;
 let desktopCommandRunner: ApplicationCommandRunner | null = null;
-/** Composition supplies actual legacy owners; replacements revoke every prior source capture. */
-export function configureDesktopStoppedImportOwners(
-  owners: Omit<LegacyStoppedSourceOwners, 'launch'>,
-  isCurrent: (contextId: string) => boolean
-): void {
-  stoppedImportOwners = { owners: { ...owners, launch: new TeamLaunchStateStore() }, isCurrent };
-}
-function stoppedImport(
-  original: NonNullable<typeof active>,
-  contextId: string,
-  request: unknown,
-  current: () => boolean
-): Promise<StoppedTeamImportResult> {
-  const captured = stoppedImportOwners;
-  if (!original.selected || !captured || !captured.isCurrent(contextId))
-    return Promise.resolve({ ok: false, reason: 'unsupported', outcome: 'not-dispatched' });
-  const isCurrent = () =>
-    active === original &&
-    stoppedImportOwners === captured &&
-    current() &&
-    captured.isCurrent(contextId);
-  return importStoppedLegacyTeam({
-    feature: original.feature,
-    contextId,
-    request,
-    guard: { isCurrent },
-    owners: captured.owners,
-    captureSource: (teamName) => captureLegacyStoppedSource(teamName, contextId, isCurrent),
-  });
-}
 
 /** HTTP startup captures this shell/context once; replacement never silently selects a new owner. */
 export function captureDesktopAgentBackendHttpScope() {
@@ -178,7 +154,14 @@ export function captureDesktopAgentBackendHttpScope() {
     contextId,
     isCurrent: () => active === original && contextSelection?.isCurrent() === true,
     importStoppedTeam: (request: unknown) =>
-      stoppedImport(
+      stoppedTeams.import(
+        original,
+        contextId,
+        request,
+        () => active === original && contextSelection.isCurrent()
+      ),
+    retainedLegacyLaunch: (request: unknown) =>
+      stoppedTeams.retained(
         original,
         contextId,
         request,
@@ -241,6 +224,10 @@ export function isDesktopAgentBackendSelected(): boolean {
   return active?.selected ?? false;
 }
 
+export const desktopHostSchedules = createDesktopHostSchedules(() => active);
+export const captureDesktopHostSchedule = desktopHostSchedules.capture;
+export const createDesktopHostScheduleRuntime = desktopHostSchedules.create;
+
 /** Existing notification IPC retains the authenticated foreground and original Host handle. */
 export async function captureDesktopHostNotification(event: IpcMainInvokeEvent, data: unknown) {
   const original = active,
@@ -264,8 +251,12 @@ export async function captureDesktopHostNotification(event: IpcMainInvokeEvent, 
           : undefined,
       async readSnapshot(handle, current, cursor) {
         const result = await original.feature.facade.invoke(
-          { handle, commandId: randomUUID(), operation: 'team.snapshot',
-            payload: cursor ? { cursor } : {} },
+          {
+            handle,
+            commandId: randomUUID(),
+            operation: 'team.snapshot',
+            payload: cursor ? { cursor } : {},
+          },
           { isCurrent: current }
         );
         if (
@@ -387,23 +378,21 @@ export async function prepareDesktopCapturedTeam(
         if (!connection) return denied;
         const isCurrent = () =>
           isLatest() && current() && original.feature.authorizeHandle(contextId, connection.handle);
-        return await prepareCapturedTeamModels({
-          handle: connection.handle,
-          request: capturedRequest,
+        const requestedProviders = [
+          capturedRequest.providerId,
+          ...(capturedRequest.providerIds ?? []),
+          ...(capturedRequest.modelChecks ?? []).map((row) => row.providerId),
+          ...(capturedRequest.selectedModelChecks ?? []).map((row) => row.providerId),
+        ];
+        if (capturedRequest.cwd && requestedProviders.includes('opencode'))
+          await original.feature.refreshLaunchConfiguration(
+            contextId,
+            capturedRequest.cwd,
+            { isCurrent },
+            connection.handle
+          );
+        return await original.feature.prepareCapturedModels(connection.handle, capturedRequest, {
           isCurrent,
-          intents: new FileTeamModelProbeIntents(
-            join(original.userDataPath, 'agent-backend', 'team-model-intents'),
-            original.userDataPath
-          ),
-          backend: {
-            invoke: (input) =>
-              original.feature.facade.invoke(
-                input,
-                // Only cleanup may outlive foreground authority; it still addresses
-                // the original authorized descriptor/handle and original probe ID.
-                input.operation === 'team.launch.probe.cancel' ? undefined : { isCurrent }
-              ),
-          },
         });
       }
     );
@@ -519,10 +508,10 @@ export function getDesktopCodexFeatures(preferredAuthMode?: () => CodexAccountAu
   const original = active;
   if (!original?.selected) return undefined;
   return createCapturedCodexFeatures(
-    (projectPath) => {
+    async (projectPath) => {
       const contextSelection = original.captureSelection();
       const contextId = contextSelection.contextId;
-      return original.feature.captureProviderManagement(
+      const target = await original.feature.captureProviderManagement(
         contextId,
         projectPath,
         {
@@ -530,11 +519,21 @@ export function getDesktopCodexFeatures(preferredAuthMode?: () => CodexAccountAu
         },
         'codex'
       );
+      return Object.freeze({ ...target, originalContextId: contextId });
     },
     new FileCodexAuthIntentStore(
       join(original.userDataPath, 'agent-backend', 'codex-auth-intents')
     ),
-    preferredAuthMode
+    preferredAuthMode,
+    (targetId, originalContextId) => {
+      const contextSelection = original.captureSelection();
+      return original.feature.restoreProviderManagement(originalContextId, targetId, {
+        isCurrent: () =>
+          active === original &&
+          contextSelection.contextId === originalContextId &&
+          contextSelection.isCurrent(),
+      });
+    }
   );
 }
 
@@ -557,50 +556,29 @@ export function captureDesktopStatusRequest(event: IpcMainInvokeEvent): (() => b
 export function getDesktopProviderStatusPort() {
   const original = active;
   if (!original?.selected) return undefined;
-  const capture = (projectPath: string | null, isCurrent?: () => boolean) => {
-    const contextSelection = original.captureSelection();
-    const contextId = contextSelection.contextId;
-    return original.feature.captureProviderManagement(contextId, projectPath, {
-      isCurrent: () =>
-        active === original && contextSelection?.isCurrent() === true && (isCurrent?.() ?? true),
-    });
-  };
-  return createCapturedRuntimeProviderStatusClient({
-    capture,
-    captureClaude: (projectPath) => {
-      const contextSelection = original.captureSelection();
-      const contextId = contextSelection.contextId;
-      return original.feature.captureProviderManagement(
-        contextId,
-        projectPath,
-        { isCurrent: () => active === original && contextSelection?.isCurrent() === true },
-        'claude'
-      );
-    },
-    captureCodex: (projectPath) => {
-      const contextSelection = original.captureSelection();
-      const contextId = contextSelection.contextId;
-      return original.feature.captureProviderManagement(
-        contextId,
-        projectPath,
-        {
-          isCurrent: () => active === original && contextSelection?.isCurrent() === true,
-        },
-        'codex'
-      );
-    },
-    captureGuard: () => {
-      const contextSelection = original.captureSelection();
-      return () => active === original && contextSelection?.isCurrent() === true;
-    },
-    readHealth: () => {
-      const contextSelection = original.captureSelection();
-      const contextId = contextSelection.contextId;
-      return original.feature.readRuntimeHealth(contextId, {
-        isCurrent: () => active === original && contextSelection?.isCurrent() === true,
-      });
-    },
+  return createDesktopProviderStatusPort({
+    feature: original.feature,
+    captureSelection: original.captureSelection,
+    isCurrent: () => active === original,
   });
+}
+
+/** Private installer authority comes from the original desktop descriptor, never an IPC path. */
+export function captureDesktopRuntimeSources(
+  event: IpcMainInvokeEvent,
+  runtimeId: 'opencode' | 'codex',
+  captureGuard?: (isCurrent: () => boolean) => void
+): Promise<CapturedRuntimeSources> | undefined {
+  const original = active;
+  if (!original?.selected) return undefined;
+  const context = original.captureSelection(),
+    contextId = original.captureSender(event);
+  if (!contextId || contextId !== context.contextId)
+    throw new Error('Runtime installation sender is unavailable');
+  const isCurrent = createCapturedSenderGuard(original, event, contextId, context);
+  if (!isCurrent()) throw new Error('Runtime installation context changed');
+  captureGuard?.(isCurrent);
+  return original.feature.captureRuntimeSources(contextId, null, runtimeId, { isCurrent });
 }
 
 export function registerDesktopAgentBackend(options: BackendShellOptions): void {
@@ -612,11 +590,43 @@ export function registerDesktopAgentBackend(options: BackendShellOptions): void 
       : pathToFileURL(options.rendererIndexPath).href;
   const path = env.AGENT_TEAMS_BACKEND_DESCRIPTOR_PATH;
   const sha256 = env.AGENT_TEAMS_BACKEND_DESCRIPTOR_SHA256;
+  initializeLinuxChildLaunch(env);
   const feature = new DesktopBackendFeature({
     // Partial/invalid configuration must fail closed, not select another backend.
     descriptor: path || sha256 ? { path: path ?? '', sha256: sha256 ?? '' } : null,
     bindingDirectory: join(options.userDataPath, 'agent-backend', 'bindings'),
+    reviewFlowDefaultsDirectory: getClaudeBasePath(),
+    modelIntents: new FileTeamModelProbeIntents(
+      join(options.userDataPath, 'agent-backend', 'team-model-intents'),
+      options.userDataPath
+    ),
     commandRunner: () => desktopCommandRunner,
+    nativeNextPromptProviders: options.nativeNextPromptProviders ?? [],
+    onNativePromptSuggestion(candidate) {
+      const current = options.captureActiveSelection();
+      if (!current.isCurrent() || active?.feature !== feature || !active.selected) return;
+      let handleId: string;
+      try {
+        handleId = parseHostTeamSelectionKey(candidate.ownerHandle);
+      } catch {
+        return;
+      }
+      if (!feature.authorizeHandle(current.contextId, { handleId })) return;
+      const window = options.getMainWindow();
+      const contents = window && !window.isDestroyed() ? window.webContents : null;
+      if (
+        contents &&
+        !contents.isDestroyed() &&
+        withoutHash(contents.getURL()) === withoutHash(expectedRendererUrl)
+      ) {
+        safeSendToRenderer(window, NATIVE_NEXT_PROMPT_UPDATED, candidate);
+      }
+      try {
+        options.publishHttpNativePromptSuggestion?.(candidate);
+      } catch {
+        /* Auxiliary transport may drop an offer; original work is unaffected. */
+      }
+    },
     onInitializationFailure: (phase, code) =>
       createLogger('IPC:AgentBackend').warn('Captured backend initialization held', {
         phase,
@@ -658,18 +668,10 @@ export function registerDesktopAgentBackend(options: BackendShellOptions): void 
     captureContext,
     () => options.captureActiveSelection()
   );
-  options.ipc.handle(STOPPED_TEAM_IMPORT_CHANNEL, (event, request: unknown) => {
-    const original = active,
-      contextSelection = original?.captureSelection(),
-      contextId = captureContext(event);
-    if (!original || !contextId)
-      return { ok: false, reason: 'unsupported', outcome: 'not-dispatched' };
-    return stoppedImport(
-      original,
-      contextId,
-      request,
-      () => contextSelection?.isCurrent() === true && captureContext(event) === contextId
-    );
+  const removeStoppedTeams = registerDesktopStoppedTeamIpc(options.ipc, stoppedTeams, {
+    readShell: () => active,
+    captureContext,
+    getMainWindow: options.getMainWindow,
   });
   const removeOperations = registerAgentBackendIpc(
     options.ipc,
@@ -766,7 +768,7 @@ export function registerDesktopAgentBackend(options: BackendShellOptions): void 
       removeConnections();
       removeOperations();
       removeReviewWatch();
-      options.ipc.removeHandler(STOPPED_TEAM_IMPORT_CHANNEL);
+      removeStoppedTeams();
       active?.reviewWatch?.bridge.dispose();
     },
   };
@@ -776,13 +778,12 @@ export function registerDesktopAgentBackend(options: BackendShellOptions): void 
 export function shutdownDesktopAgentBackend(): Promise<void> {
   // shutdown() synchronously seals allocation/admission, including pending initialization.
   active?.reviewWatch?.bridge.dispose();
-  const drain = active?.feature.shutdown();
-  return drain ? drain.then(() => undefined) : Promise.resolve();
+  return Promise.all([active?.feature.shutdown(), stoppedTeams.shutdown()]).then(() => undefined);
 }
 
 export function removeDesktopAgentBackendHandlers(): void {
   active?.removeHandlers();
   active = undefined;
-  stoppedImportOwners = undefined;
+  stoppedTeams.clearOwners();
   desktopCommandRunner = null;
 }

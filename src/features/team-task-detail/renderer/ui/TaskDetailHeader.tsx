@@ -19,6 +19,7 @@ import {
   displayMemberName,
   REVIEW_STATE_DISPLAY,
 } from '@renderer/utils/memberHelpers';
+import { getCurrentReviewStage } from '@shared/utils/taskHistory';
 import { deriveTaskDisplayId, formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 import {
   isTeamTaskFinishedForDependency,
@@ -173,6 +174,19 @@ export const TaskDetailHeader = ({
           {formatTaskDisplayLabel(currentTask)}
         </Badge>
         {reviewBadge}
+        {kanbanColumn === 'review' && getCurrentReviewStage(currentTask) === 'lead_signoff' ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span
+                data-testid="task-lead-signoff-chip"
+                className="inline-flex rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400"
+              >
+                {t('taskDetail.leadSignoff.badge')}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">{t('taskDetail.leadSignoff.hint')}</TooltipContent>
+          </Tooltip>
+        ) : null}
         {isTeamTaskNeedsFixActionable(currentTask) ? (
           <span
             className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${REVIEW_STATE_DISPLAY.needsFix.bg} ${REVIEW_STATE_DISPLAY.needsFix.text}`}
@@ -275,7 +289,7 @@ export const TaskDetailHeader = ({
       ) : null}
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
-        <div className="flex min-w-0 items-center gap-2">
+        <div className="flex min-h-8 min-w-0 items-center gap-2">
           {canReassign && onOwnerChange ? (
             <MemberSelect
               members={members}
@@ -346,7 +360,7 @@ export const TaskDetailHeader = ({
             variant="ghost"
             size="sm"
             className="h-6 text-xs"
-            disabled={!sessionController.isOwner}
+            disabled={!sessionController.canResolveClarification}
             onClick={actions.markClarificationResolved}
           >
             {t('taskDetail.actions.markResolved')}

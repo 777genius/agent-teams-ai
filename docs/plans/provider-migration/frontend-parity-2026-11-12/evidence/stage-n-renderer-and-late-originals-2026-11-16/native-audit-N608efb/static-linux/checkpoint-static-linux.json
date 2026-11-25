@@ -1,0 +1,86 @@
+{
+  "kind": "Original-N-LinuxStatic-completed-author-checkpoint",
+  "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "observedAtUtc": "2026-11-16T04:42:31.717059+00:00",
+  "runId": 43795234721,
+  "jobId": 133062439014,
+  "artifactId": 14197334614,
+  "originalConclusion": "success",
+  "independentR2": "PENDING",
+  "payloadCount": 11,
+  "payloadBytes": 578430,
+  "payloads": [
+    {
+      "path": "native-audit-N608efb/new-terminal-0435/staticLinuxLog-original-response.json",
+      "bytes": 116932,
+      "blob": "055ebd6a53f96fc9c6b54a4df74528c5dafd631e",
+      "sha256": "60690c87d9819d01603f06e28edb90d2133746e7d777119d009eb2ac1f237b5d"
+    },
+    {
+      "path": "native-audit-N608efb/new-terminal-0435/v2Artifacts-original-response.json",
+      "bytes": 7713,
+      "blob": "e91460499320ee380a05a9e4aefeb9c1ffc2a02a",
+      "sha256": "1742081d5c9b5e6d9f5467e06feaedaeab778e16550ae7b4f04a207be7086cc2"
+    },
+    {
+      "path": "native-audit-N608efb/new-terminal-0435/job-133062439014.log",
+      "bytes": 114904,
+      "blob": "c1741659a0d5c8cac8b41dc17cac0bf5991b07ee",
+      "sha256": "86fb118a4c3fb306583ec9d013f29cff3db00fac1025520a62070cad6fd1b2f9"
+    },
+    {
+      "path": "native-audit-N608efb/new-terminal-0435/artifact-14197334614.zip",
+      "bytes": 4004,
+      "blob": "389393656884711d6c05a9722da8105e1dee6fcf",
+      "sha256": "c6a0341edfb0a1a8be16754d06c1ed8ee5a3e4e1503929df3b07897731a68a0c"
+    },
+    {
+      "path": "native-audit-N608efb/new-terminal-0435/archive-retention.json",
+      "bytes": 1818,
+      "blob": "4b62f0d348e2d95191698517c13ecd9d8770a2fc",
+      "sha256": "fb95eb5addda95cf3697cd691d3c5e91590f3e4970b7ce2020c7cbb796490a8d"
+    },
+    {
+      "path": "ci-n-608efb/v2-jobs-0435.json",
+      "bytes": 48606,
+      "blob": "cd4e85be02016958750dc4fbac5b82a2d2c26557",
+      "sha256": "7434c64bd9236bf68b2c3da3b87fe00d1f6c227f96fe641a2d19bc56fbd3a8aa"
+    },
+    {
+      "path": "ci-n-608efb/v2-original-run-0258.json",
+      "bytes": 30144,
+      "blob": "8087402aa25d3eb6d5a4a72d1771cb7843366b76",
+      "sha256": "2cd2b012a3155fb0a798f2b8badb7c6a033dd17407ddb71433fd979a149975c1"
+    },
+    {
+      "path": "native-audit-N608efb/host-source-N608efb-git-audit.json",
+      "bytes": 163123,
+      "blob": "9c8472f84db2ee0615314b9fd05df207e2c7d112",
+      "sha256": "30dbbf806666206c905b346f15e475646c2840d0c29f326a953fb3202d595ea0"
+    },
+    {
+      "path": "native-audit-N608efb/static-linux/source-and-command-audit.json",
+      "bytes": 10505,
+      "blob": "37bb98880cd78a41c422ab7dbca176dfff91dfa8",
+      "sha256": "1dee88ee070545f75af63eda34169e77045f40d71a8b83c7f4de0d6acb77644a"
+    },
+    {
+      "path": "native-audit-N608efb/static-linux/audit.json",
+      "bytes": 75467,
+      "blob": "d95ed51eef8ffd9ee74812783c5468064adb3ec8",
+      "sha256": "e7c62b6bd746d8cd78928fa47369fc524679e76e5d33639178b798fbb47803ae"
+    },
+    {
+      "path": "native-audit-N608efb/static-linux/Plan29-static-linux-appendix.md",
+      "bytes": 5214,
+      "blob": "ba5a6c4cb41e64bf5f8b467540836e5e9eb8dbbf",
+      "sha256": "759ceb71a34ff26a0697e1e06a299b0b5791da6e89acf1b5d90c2fe0a622397f"
+    }
+  ],
+  "archiveMembers": 3,
+  "limits": [
+    "Author-only full source/log/receipt qualification; independent R2 pending.",
+    "464PASS/1originalWindowsSKIP, separate3V1 selectors; duplicate nonbaseline JSON does not expose distinct native identities.",
+    "All original native workflows source608 terminal and polling stopped. No signed download URLs, project execution, source/ref or CI mutations."
+  ]
+}

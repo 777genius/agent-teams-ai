@@ -1,10 +1,12 @@
 import { createHmac, randomBytes } from 'node:crypto';
 
+import { withLatestOpenCodeVersion } from '@main/services/infrastructure/openCodeRuntimeLatestVersion';
 import {
   createDefaultProviderStatus,
   createRuntimeStatusErrorProviderStatus,
 } from '@main/services/runtime/providerStatusCheckContract';
 import { CLI_PROVIDER_STATUS_DEFERRED_MESSAGE } from '@shared/types/cliInstaller';
+import { isTeamEffortLevelForProvider } from '@shared/utils/effortLevels';
 
 import { readCapturedClaudeStatus } from './capturedClaudeMetadata';
 import { projectCapturedCodexCatalog } from './capturedCodexCatalog';
@@ -21,8 +23,16 @@ import type { RuntimeProviderStatusPort } from '../../../core/application';
 import type { CaptureClaudeMetadata } from './capturedClaudeMetadata';
 import type { CaptureCodexMetadata } from './capturedCodexMetadata';
 import type { CatalogProvider } from './capturedManagementCatalog';
-import type { CapturedProviderManagement } from '@features/agent-backend/main';
-import type { CliInstallationStatus, CliProviderId, CliProviderStatus } from '@shared/types';
+import type {
+  CapturedProviderManagement,
+  CapturedRuntimeSources,
+} from '@features/agent-backend/main';
+import type {
+  CliInstallationStatus,
+  CliProviderId,
+  CliProviderStatus,
+  OpenCodeRuntimeStatus,
+} from '@shared/types';
 
 const providers: CliProviderId[] = ['anthropic', 'codex', 'opencode'];
 const failure = (
@@ -41,6 +51,9 @@ export interface CapturedRuntimeProviderStatusDependencies {
   ): Promise<CapturedProviderManagement>;
   captureCodex?: CaptureCodexMetadata;
   captureClaude?: CaptureClaudeMetadata;
+  captureSources?(): Promise<Pick<CapturedRuntimeSources, 'current'>>;
+  readonly resolveLatestOpenCodeVersion?: (cliVersion: string) => Promise<string>;
+  readonly qualifiedOpenCodeV2Version?: string | null;
   now?(): number;
   captureGuard?(): () => boolean;
 }
@@ -57,12 +70,14 @@ function projectOpenCodeCatalog(
   now: number
 ): CliProviderStatus {
   const items = rows.flatMap((provider) =>
-    models(provider).map((model) => ({
+    models(provider).map((model, index) => ({
       id: model.modelId,
       launchModel: model.modelId,
       displayName: model.displayName,
       hidden: false,
-      supportedReasoningEfforts: [],
+      supportedReasoningEfforts: (provider.models[index]?.variants ?? []).filter((effort) =>
+        isTeamEffortLevelForProvider(effort, 'opencode')
+      ),
       defaultReasoningEffort: null,
       inputModalities: ['text'],
       supportsPersonality: false,
@@ -111,6 +126,7 @@ function projectOpenCodeCatalog(
     authMethod: null,
     verificationState: 'unknown',
     statusCheckOutcome: 'model_only',
+    statusCheckErrorCode: undefined,
     models: items.map((model) => model.id),
     modelCatalogRefreshState: 'ready',
     modelCatalog: {
@@ -163,17 +179,54 @@ export function createCapturedRuntimeProviderStatusClient(
   const port: RuntimeProviderStatusPort = {
     async readOpenCodeRuntimeStatus() {
       const current = deps.captureGuard?.() ?? (() => true);
+      const sources = await deps.captureSources?.();
       const target = await deps.capture(null);
+      // The original capture may publish its first configuration before selecting the target.
+      const selection = await sources?.current();
       const runtime = parseManagementRuntime(await target.request('catalog', {}), target);
       if (!target.isCurrent() || !current()) throw new Error('Native status context changed');
-      if (runtime.generation === 'v1') return null;
-      return {
+      if (
+        selection &&
+        (selection.profileId !== target.profileId ||
+          selection.configRevision !== target.configRevision ||
+          selection.nativeGeneration !== runtime.generation)
+      )
+        throw new Error('Native runtime selection changed');
+      const status: OpenCodeRuntimeStatus = {
         installed: true,
-        source: 'captured-host',
+        nativeGeneration: runtime.generation,
+        source:
+          selection && selection.sourceKind !== 'captured' && selection.sourceKind !== 'bundled'
+            ? selection.sourceKind
+            : 'captured-host',
         state: 'ready',
-        version: runtime.version,
-        v2Support: 'ready',
+        ...(selection?.cliVersion
+          ? { version: selection.cliVersion }
+          : runtime.generation === 'v2'
+            ? { version: runtime.version }
+            : {}),
+        ...(runtime.generation === 'v2'
+          ? {
+              v2Support: 'ready' as const,
+              ...(selection ? { engineVersion: runtime.version } : {}),
+              ...(selection?.cliVersion && deps.qualifiedOpenCodeV2Version
+                ? { compatibleV2Version: deps.qualifiedOpenCodeV2Version }
+                : {}),
+            }
+          : {}),
+        ...(selection ? { sourceRevision: selection.revision } : {}),
       };
+      const cliVersion = selection?.cliVersion;
+      const resolveLatest = deps.resolveLatestOpenCodeVersion;
+      const result =
+        cliVersion && selection?.sourceKind !== 'override' && resolveLatest
+          ? await withLatestOpenCodeVersion(status, () => resolveLatest(cliVersion))
+          : status;
+      // Registry metadata is optional; it cannot make a replaced source current again.
+      if (selection && (await sources!.current()).revision !== selection.revision)
+        throw new Error('Native runtime selection changed');
+      if (!target.isCurrent() || !current()) throw new Error('Native status context changed');
+      return result;
     },
     async getProviderStatus(providerId, options = {}) {
       const current = deps.captureGuard?.() ?? (() => true);
@@ -201,7 +254,7 @@ export function createCapturedRuntimeProviderStatusClient(
           const catalog = projectCapturedCodexCatalog(value, false);
           return {
             ...createDefaultProviderStatus('codex'),
-            canLoginFromUi: false,
+            canLoginFromUi: true,
             capabilities: {
               teamLaunch: false,
               oneShot: false,

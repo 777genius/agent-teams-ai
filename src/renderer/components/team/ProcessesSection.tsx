@@ -7,6 +7,7 @@ import { formatCompactRelativeTime } from '@renderer/utils/formatters';
 import { ExternalLink, Square, Terminal } from 'lucide-react';
 
 import { MemberBadge } from './MemberBadge';
+import { isTeamProcessAlive } from './teamProcessLiveness';
 
 import type { ResolvedTeamMember, TeamProcess } from '@shared/types';
 
@@ -74,11 +75,9 @@ export const ProcessesSection = memo(function ProcessesSection({
 
   const memberColorMap = new Map(members.map((m) => [m.name, m.color]));
 
-  const isAlive = (proc: TeamProcess) =>
-    proc.processRef ? proc.observation === 'same-live' : isTeamAlive === true && !proc.stoppedAt;
   const sorted = [...processes].sort((a, b) => {
-    const aAlive = isAlive(a);
-    const bAlive = isAlive(b);
+    const aAlive = isTeamProcessAlive(a, isTeamAlive);
+    const bAlive = isTeamProcessAlive(b, isTeamAlive);
     if (aAlive !== bAlive) return aAlive ? -1 : 1;
     return Date.parse(b.registeredAt) - Date.parse(a.registeredAt);
   });
@@ -86,7 +85,7 @@ export const ProcessesSection = memo(function ProcessesSection({
   return (
     <div className="space-y-0.5">
       {sorted.map((proc) => {
-        const alive = isAlive(proc);
+        const alive = isTeamProcessAlive(proc, isTeamAlive);
         const status =
           proc.processRef && proc.observation !== 'same-live' && proc.observation !== 'absent'
             ? 'Unknown'

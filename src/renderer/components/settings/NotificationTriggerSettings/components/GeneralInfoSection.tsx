@@ -44,7 +44,7 @@ export const GeneralInfoSection = ({
           placeholder={t('notificationTriggers.fields.triggerNamePlaceholder')}
           disabled={saving}
           required
-          className={`w-full rounded border border-border bg-transparent px-2 py-1.5 text-sm text-text placeholder:text-text-muted focus:border-transparent focus:outline-none focus:ring-1 focus:ring-indigo-500 ${saving ? 'cursor-not-allowed opacity-50' : ''} `}
+          className={`w-full rounded border border-border bg-[var(--color-form-control-bg)] px-2 py-1.5 text-sm text-text placeholder:text-text-muted focus:border-transparent focus:outline-none focus:ring-1 focus:ring-indigo-500 ${saving ? 'cursor-not-allowed opacity-50' : ''} `}
         />
       </div>
 
@@ -58,10 +58,10 @@ export const GeneralInfoSection = ({
           value={toolName}
           onChange={(e) => onToolNameChange(e.target.value)}
           disabled={saving}
-          className={`rounded border border-border bg-transparent px-2 py-1 text-sm text-text focus:border-transparent focus:outline-none focus:ring-1 focus:ring-indigo-500 ${saving ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'} `}
+          className={`rounded border border-border bg-[var(--color-form-control-bg)] px-2 py-1 text-sm text-text focus:border-transparent focus:outline-none focus:ring-1 focus:ring-indigo-500 ${saving ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'} `}
         >
           {TOOL_NAME_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value} className="bg-[#141416]">
+            <option key={option.value} value={option.value} className="bg-[var(--color-surface)]">
               {option.value ? option.label : t('notificationTriggers.options.toolNames.anyTool')}
             </option>
           ))}

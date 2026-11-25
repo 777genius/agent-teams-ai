@@ -5,52 +5,70 @@ import {
   resolveTeamModelProbeRecipe,
   applyTeamModelProbeSelection,
 } from './teamModelProbeRecipe.js';
-import { captureRuntimeSource, compileRuntimeCapture } from './runtimeCaptureSource.js';
+import { captureRuntimeSource, compileRuntimeCapture, runtimeCaptureCwd, runtimeCaptureSourceSchema } from './runtimeCaptureSource.js';
 import {
   captureTeamModelProbe,
   teamModelProbeProfile,
   teamModelProbeEffort,
   teamModelProbeContext,
 } from './teamLaunchModelProbe.js';
-import { assertCapturedRosterCurrent } from './teamRoster.js';
+import { assertCapturedRosterCurrent, isUnstartedCaptureEditable } from './teamRoster.js';
 import type { HostedTeam, MemberEntry } from './MemberEntry.js';
 import type { TeamLaunchOwner } from '../team-launch/TeamLaunchOwner.js';
 import type { TeamHostProfile } from './TeamHost.js';
+import type { RuntimeRecipeSources } from './runtimeSourceContracts.js';
+import type { RuntimeSourceProcessOrigin } from './runtimeSourceProcessOrigin.js';
 import type { TeamModelProbeSelection } from './teamLaunchModelProbe.js';
 import type { JsonValue } from '../contracts.js';
+import type { RuntimeOwner } from '../runtime/RuntimeOwner.js';
+import type { RetainedLaunchInspection } from './teamRoster.js';
 
 const prefix = 'saved-model-';
 export const isSavedTeamModelSource = (sourceId: string) => sourceId.startsWith(prefix);
 export const savedTeamModelContext = teamModelProbeContext;
 type Options = {
   profile: TeamHostProfile;
+  sources?: RuntimeRecipeSources;
   team: HostedTeam;
   assertCurrent(): void;
+  assertRuntimeHistory?(): void;
 };
 
-/** Pure compilation of a never-captured canonical roster. No registrations, grants or launch records. */
-function source(options: Options) {
-  options.assertCurrent();
+/** Model-only compilation of saved choices; retained history requires its original offline proof. */
+function source(options: Options, precedingAuthority?: 'read' | 'control') {
   const { profile, team } = options;
-  const authority = team.owner.withLaunchAuthority(
-    profile.principalId,
-    'read',
-    (revision) => revision
-  );
+  const readAuthority = (inheritedNamespace?: true) => {
+    options.assertCurrent();
+    return team.owner.withLaunchAuthority(
+      profile.principalId,
+      'read',
+      (authority) => ({ authority,
+        hasCaptures: team.owner.runtimeCaptures(profile.principalId, true).length > 0 }),
+      inheritedNamespace
+    );
+  };
+  // A currentness check's adjacent control/read observation shares only this
+  // synchronous Team fence. Keep both authority reads and namespace boundaries;
+  // Runtime history, roster and source/recipe work start after its release.
+  const { authority, hasCaptures } = precedingAuthority === undefined ? readAuthority()
+    : team.owner.withLaunchAuthority(profile.principalId, precedingAuthority, () => readAuthority(true));
   if (
-    team.owner.runtimeCaptures(profile.principalId).length ||
+    hasCaptures ||
     team.definition.members.some((member) => member.delivery)
-  )
-    throw new TeamLaunchError('hold', 'saved-model-runtime-history');
+  ) {
+    if (!options.assertRuntimeHistory) throw new TeamLaunchError('hold', 'saved-model-runtime-history');
+    options.assertRuntimeHistory();
+  }
   const roster = team.connection.readRoster();
   const captured = captureRuntimeSource(
     profile,
     team,
     'model-preflight',
     'model-preflight',
-    roster
+    roster,
+    options.sources ? { sources: options.sources } : {}
   );
-  const compiled = compileRuntimeCapture(profile, team, captured, 'model-preflight');
+  const compiled = compileRuntimeCapture(profile, team, captured, 'model-preflight', options.sources);
   const sourceId = `${prefix}${runtimeDigest({ owner: profile.owner, authority, captured })}`;
   options.assertCurrent();
   return { sourceId, captured, profiles: compiled.profiles };
@@ -123,25 +141,27 @@ export function captureSavedTeamModelProbe(
     input.rosterRevision !== saved.captured.configurationRevision
   )
     throw new TeamLaunchError('conflict', 'saved-model-source');
-  const recipe = () =>
+  let processOrigin: RuntimeSourceProcessOrigin | undefined;
+  const savedMember = saved.captured.members.find(member => member.memberId === input.memberId);
+  const recipe = (captureOrigin = false) =>
     resolveTeamModelProbeRecipe({
       runtime: profile.runtime,
       team,
       input,
       saved: saved.profiles.find((member) => member.memberId === input.memberId),
+      ...(options.sources ? { sources: options.sources } : {}),
+      sourceReference: saved.captured.recipeSources?.find(reference => reference.memberId === input.memberId),
+      sourceProjectPath: savedMember ? runtimeCaptureCwd({ savedSettings: saved.captured.savedSettings }, savedMember) : undefined,
+      ...(captureOrigin ? { onProcessOrigin: (value: RuntimeSourceProcessOrigin | undefined) => { processOrigin = value; } } : {}),
     });
-  const selected = recipe();
+  const selected = recipe(true);
   const selectionDigest = runtimeDigest(selected);
   const effective = applyTeamModelProbeSelection(selected, input);
   const current = () => {
     try {
-      team.owner.withLaunchAuthority(
-        profile.principalId,
-        action === 'start' ? 'control' : 'read',
-        () => undefined
-      );
       return (
-        source(options).sourceId === saved.sourceId && runtimeDigest(recipe()) === selectionDigest
+        source(options, action === 'start' ? 'control' : 'read').sourceId === saved.sourceId &&
+        runtimeDigest(recipe()) === selectionDigest
       );
     } catch {
       return false;
@@ -149,6 +169,12 @@ export function captureSavedTeamModelProbe(
   };
   return {
     profile: teamModelProbeProfile(effective.provider === 'claude' ? selected : effective),
+    ...(processOrigin ? { processOrigin } : {}),
+    provenance: { teamBindingDigest: runtimeDigest(team.definition.binding),
+      selectionDigest: runtimeDigest(input), sourceRevision: input.launchId, rosterRevision: input.rosterRevision,
+      destinationKeys: [runtimeDigest(input.draft?.target ?? { launchId: input.launchId, memberId: input.memberId })] },
+    readinessCapture: undefined,
+    assertReadinessCapture: undefined,
     context,
     model: effective.model,
     providerId:
@@ -176,10 +202,13 @@ export function isCurrentCapturedTeam(team: HostedTeam | undefined): boolean {
 /** The Runtime coordinator supplies its exact owners; saved inspection never becomes a capture. */
 export function captureTeamModelProbeSelection(options: {
   profile: TeamHostProfile;
+  sources?: RuntimeRecipeSources;
   team: HostedTeam | undefined;
   capturedTeam: HostedTeam | undefined;
   launch: TeamLaunchOwner | undefined;
   entries: readonly MemberEntry[];
+  runtime: RuntimeOwner;
+  retainedLaunches: ReadonlyMap<string, RetainedLaunchInspection>;
   input: TeamModelProbeSelection;
   action: 'start' | 'read' | 'cancel';
   assertCurrent(): void;
@@ -200,13 +229,22 @@ export function captureTeamModelProbeSelection(options: {
   }
   if (!team || !launch || isSavedTeamModelSource(input.launchId)) {
     if (!options.team) throw new TeamLaunchError('invalid', 'team');
-    return captureSavedTeamModelProbe({ ...options, team: options.team });
+    return captureSavedTeamModelProbe({ ...options, team: options.team,
+      assertRuntimeHistory: () => {
+        if (!isUnstartedCaptureEditable({ ...options, team: options.capturedTeam }))
+          throw new TeamLaunchError('hold', 'saved-model-runtime-history');
+      } });
   }
   if (action !== 'cancel') assertCapturedRosterCurrent(team);
+  const source = team.capture === undefined ? undefined : runtimeCaptureSourceSchema.parse(team.capture);
+  const sourceMember = source?.members.find(member => member.memberId === input.memberId);
   return captureTeamModelProbe({
     launch,
     team,
     runtime: options.profile.runtime,
+    ...(options.sources ? { sources: options.sources } : {}),
+    sourceReference: source?.recipeSources?.find(reference => reference.memberId === input.memberId),
+    sourceProjectPath: source && sourceMember ? runtimeCaptureCwd({ savedSettings: source.savedSettings }, sourceMember) : undefined,
     input,
     action,
     principalId: options.profile.principalId,

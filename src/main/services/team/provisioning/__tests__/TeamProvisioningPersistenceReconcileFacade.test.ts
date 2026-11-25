@@ -1,7 +1,24 @@
-import { describe, expect, it, vi } from 'vitest';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
+import {
+  recordOwnedUnixProcessGroup,
+  recordVerifiedCliProcessRelease,
+} from '@main/utils/cliProcessCustody';
+import { getTeamsBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import * as launchWrites from '../../atomicWrite';
 import { createPersistedLaunchSnapshot } from '../../TeamLaunchStateEvaluator';
+import { TeamLaunchStateStore } from '../../TeamLaunchStateStore';
+import { captureLegacyNativeStopPublication } from '../LegacyNativeStopPublication';
+import { captureLegacyNativeStop, readLegacyNativeStopRelease } from '../LegacyNativeStopRelease';
 import { TeamProvisioningLaunchStateStoreBoundary } from '../TeamProvisioningLaunchStateStoreBoundary';
+import {
+  createTeamProvisioningLiveLaunchSnapshotBoundary,
+  type TeamProvisioningLiveLaunchSnapshotRun,
+} from '../TeamProvisioningLiveLaunchSnapshotBoundaryFactory';
 import { type TeamProvisioningPersistedLaunchReconcilePortsInput } from '../TeamProvisioningPersistedLaunchReconcilePorts';
 import {
   createTeamProvisioningPersistenceReconcileFacadeFromService,
@@ -12,11 +29,13 @@ import {
 } from '../TeamProvisioningPersistenceReconcileFacade';
 import { createTeamProvisioningPrimaryBootstrapTruthReportingBoundary } from '../TeamProvisioningPrimaryBootstrapTruthReportingPortsFactory';
 
+import type { LegacyNativeStopRun } from '../LegacyNativeStopRelease';
 import type {
   PersistedTeamLaunchMemberState,
   PersistedTeamLaunchSnapshot,
   TeamMember,
 } from '@shared/types';
+import type { ChildProcess } from 'node:child_process';
 
 const at = '2026-01-01T00:00:00.000Z';
 
@@ -65,10 +84,10 @@ function run(overrides: Partial<TestRun> = {}): TestRun {
   };
 }
 
-function createPorts(
-  overrides: Partial<TeamProvisioningPersistenceReconcileFacadePorts<TestRun>> = {}
-): TeamProvisioningPersistenceReconcileFacadePorts<TestRun> {
-  const launchStateStoreBoundary: TeamProvisioningPersistenceReconcileFacadePorts<TestRun>['launchStateStoreBoundary'] =
+function createPorts<TRun extends TestRun = TestRun>(
+  overrides: Partial<TeamProvisioningPersistenceReconcileFacadePorts<TRun>> = {}
+): TeamProvisioningPersistenceReconcileFacadePorts<TRun> {
+  const launchStateStoreBoundary: TeamProvisioningPersistenceReconcileFacadePorts<TRun>['launchStateStoreBoundary'] =
     {
       clearPersistedLaunchState: vi.fn(async () => undefined),
       canClearPersistedLaunchStateForRun: vi.fn(() => true),
@@ -85,11 +104,12 @@ function createPorts(
       isLaunchStateNoopRefreshDue: vi.fn(() => false),
       enqueue: vi.fn(<T>(_teamName: string, operation: () => Promise<T>) =>
         operation()
-      ) as TeamProvisioningPersistenceReconcileFacadePorts<TestRun>['launchStateStoreBoundary']['enqueue'],
+      ) as TeamProvisioningPersistenceReconcileFacadePorts<TRun>['launchStateStoreBoundary']['enqueue'],
     };
   return {
     launchStateStoreBoundary,
     readLaunchState: vi.fn(async () => null),
+    getRun: vi.fn(() => undefined),
     readMembersMeta: vi.fn(async () => []),
     overlayPrimaryBootstrapTruthIntoRunStatusesFromBootstrapState: vi.fn(async () => undefined),
     buildLiveLaunchSnapshotForRun: vi.fn(() => null),
@@ -316,6 +336,7 @@ describe('TeamProvisioningPersistenceReconcileFacade', () => {
     const service = {
       ...basePorts.reconcile,
       getTrackedRunId,
+      runs: new Map<string, TestRun>(),
       launchStateStore: { read: async () => null },
       membersMetaStore: { getMembers: async () => [] },
       launchStateStoreBoundary: basePorts.launchStateStoreBoundary,
@@ -374,6 +395,7 @@ describe('TeamProvisioningPersistenceReconcileFacade', () => {
       const facade = new TeamProvisioningPersistenceReconcileFacade<TestRun>({
         launchStateStoreBoundary: createRealBoundary(),
         readLaunchState: vi.fn(async () => null),
+        getRun: vi.fn(() => undefined),
         readMembersMeta: vi.fn(async () => []),
         overlayPrimaryBootstrapTruthIntoRunStatusesFromBootstrapState: overlay,
         buildLiveLaunchSnapshotForRun,
@@ -399,6 +421,7 @@ describe('TeamProvisioningPersistenceReconcileFacade', () => {
       const facade = new TeamProvisioningPersistenceReconcileFacade<TestRun>({
         launchStateStoreBoundary: createRealBoundary(),
         readLaunchState: vi.fn(async () => null),
+        getRun: vi.fn(() => undefined),
         readMembersMeta: vi.fn(async () => []),
         overlayPrimaryBootstrapTruthIntoRunStatusesFromBootstrapState: overlay,
         buildLiveLaunchSnapshotForRun,
@@ -416,3 +439,251 @@ describe('TeamProvisioningPersistenceReconcileFacade', () => {
     });
   });
 });
+
+describe.skipIf(process.platform === 'win32')(
+  'owned solo publication through the real Main snapshot and store owners',
+  () => {
+    const roots: string[] = [];
+    afterEach(async () => {
+      vi.restoreAllMocks();
+      setClaudeBasePathOverride(null);
+      await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
+    });
+
+    async function fixture() {
+      const root = await mkdtemp(join(tmpdir(), 'TEST-solo-launch-publication-'));
+      roots.push(root);
+      setClaudeBasePathOverride(root);
+      const teamsBasePath = getTeamsBasePath();
+      const teamName = 'TEST-solo',
+        teamDir = join(teamsBasePath, teamName);
+      await mkdir(teamDir, { recursive: true });
+      const child = {
+        pid: 44101,
+        exitCode: null,
+        signalCode: null,
+        killed: false,
+      } as ChildProcess & { exitCode: number | null };
+      const identity = {
+        pid: child.pid!,
+        parentPid: 1,
+        processGroupId: child.pid!,
+        startIdentity: 'TEST-original-birth',
+      };
+      recordOwnedUnixProcessGroup(child, identity);
+      const target: TestRun & TeamProvisioningLiveLaunchSnapshotRun & LegacyNativeStopRun = {
+        ...run(),
+        teamName,
+        runId: 'TEST-original-run',
+        isLaunch: false,
+        child,
+        provisioningComplete: true,
+        detectedSessionId: 'TEST-original-session',
+        expectedMembers: [],
+        allEffectiveMembers: [],
+        mixedSecondaryLanes: [],
+        request: { providerId: 'anthropic', members: [] },
+        cancelRequested: false,
+        processKilled: false,
+        processClosed: false,
+        memberSpawnStatuses: new Map(),
+      };
+      const current: { run: typeof target | undefined } = { run: target };
+      await writeFile(
+        join(teamDir, 'config.json'),
+        JSON.stringify({
+          name: teamName,
+          leadAgentId: `team-lead@${teamName}`,
+          leadSessionId: target.detectedSessionId,
+          members: [
+            {
+              name: 'team-lead',
+              agentType: 'team-lead',
+              agentId: `team-lead@${teamName}`,
+              providerId: 'anthropic',
+            },
+          ],
+        })
+      );
+      await writeFile(
+        join(teamDir, 'team.meta.json'),
+        JSON.stringify({
+          version: 1,
+          cwd: '/TEST/workspace',
+          createdAt: 1,
+        })
+      );
+      await writeFile(
+        join(teamDir, 'members.meta.json'),
+        JSON.stringify({ version: 1, members: [] })
+      );
+
+      const store = new TeamLaunchStateStore();
+      const boundary = new TeamProvisioningLaunchStateStoreBoundary({
+        launchStateStore: store,
+        membersMetaStore: { getMembers: async () => [] },
+        getTrackedRunId: () => current.run?.runId,
+        applyOpenCodeSecondaryEvidenceOverlay: async ({ snapshot: value }) => value,
+        applyBootstrapStallOverlay: (value) => value,
+        areSnapshotsSemanticallyEqual: () => false,
+        clearBootstrapState: async () => undefined,
+        invalidateRuntimeSnapshotCaches: () => undefined,
+        logDebug: () => undefined,
+        nowMs: () => Date.now(),
+      });
+      const live = createTeamProvisioningLiveLaunchSnapshotBoundary<typeof target>({
+        getPersistedLaunchMemberNames: (value) => value.expectedMembers,
+        pauseMemberTaskActivityForRuntimeLoss: () => undefined,
+        buildMixedPersistedLaunchSnapshotForRun: () => null,
+        buildRuntimeSpawnStatusRecord: (value) => Object.fromEntries(value.memberSpawnStatuses),
+        invalidateMemberSpawnStatusesCache: () => undefined,
+        emitTeamChange: () => undefined,
+        getRun: () => current.run,
+        maybeFireTeamLaunchedNotificationWhenAllMembersJoined: async () => undefined,
+      });
+      const ports = createPorts<typeof target>({
+        launchStateStoreBoundary: boundary,
+        readLaunchState: (name) => store.read(name),
+        getRun: (id) => (current.run?.runId === id ? current.run : undefined),
+        buildLiveLaunchSnapshotForRun: (value, phase) =>
+          live.buildLiveLaunchSnapshotForRun(value, phase),
+      });
+      ports.reconcile.getTrackedRunId = () => current.run?.runId;
+      const facade = new TeamProvisioningPersistenceReconcileFacade(ports);
+      return {
+        teamName,
+        teamDir,
+        teamsBasePath,
+        child,
+        identity,
+        run: target,
+        current,
+        store,
+        ports,
+        facade,
+      };
+    }
+
+    it('publishes an original solo Create, retains live reads, and enables only its exact owned Stop proof', async () => {
+      const f = await fixture();
+      expect(await f.store.readResult(f.teamName)).toEqual({ status: 'absent' });
+      // No test writes launch-state/freshness: this is the same real composition as Main.
+      await f.facade.persistLaunchStateSnapshot(f.run, 'finished');
+      await f.facade.persistLaunchStateSnapshot(f.run, 'finished');
+      expect(await f.store.read(f.teamName)).toMatchObject({
+        version: 2,
+        publicationRunId: f.run.runId,
+        leadSessionId: f.run.detectedSessionId,
+        launchPhase: 'finished',
+        expectedMembers: [],
+        members: {},
+        teamLaunchState: 'clean_success',
+      });
+      expect(JSON.parse(await readFile(join(f.teamDir, 'launch-freshness.json'), 'utf8'))).toEqual({
+        version: 1,
+        teamName: f.teamName,
+        kind: 'launch',
+        runId: f.run.runId,
+      });
+      const session = f.run.detectedSessionId,
+        runId = f.run.runId;
+      f.run.detectedSessionId = 'TEST-foreign-session';
+      expect(captureLegacyNativeStop(f.teamsBasePath, f.run, () => true)).toBeNull();
+      f.run.detectedSessionId = session;
+      f.run.runId = 'TEST-foreign-run';
+      expect(captureLegacyNativeStop(f.teamsBasePath, f.run, () => true)).toBeNull();
+      f.run.runId = runId;
+      const captured = captureLegacyNativeStop(f.teamsBasePath, f.run, () => true);
+      expect(captured).not.toBeNull();
+      expect(captured!.complete()).toBeNull();
+      const stop = captureLegacyNativeStopPublication({
+        teamsBasePath: f.teamsBasePath,
+        run: f.run,
+        current: () =>
+          f.current.run === f.run && f.run.runId === runId && f.run.detectedSessionId === session,
+        beginStop: (name) => f.store.beginStop(name),
+        publishStopped: async (name, authority, proof) => {
+          await f.store.markStopped(name, authority, proof);
+          return readLegacyNativeStopRelease(f.teamDir, name) !== null;
+        },
+      });
+      expect(stop).not.toBeNull();
+      recordVerifiedCliProcessRelease(f.child, [f.identity]);
+      f.child.exitCode = 0;
+      f.run.processClosed = true;
+      expect(await stop!.complete()).toBe(true);
+      expect(readLegacyNativeStopRelease(f.teamDir, f.teamName)).toMatchObject({
+        target: { teamName: f.teamName, runId, sessionId: session, rootPid: f.child.pid },
+        process: { rootStartIdentity: f.identity.startIdentity },
+      });
+      expect(await f.store.readResult(f.teamName)).toEqual({ status: 'absent' });
+      await f.facade.persistLaunchStateSnapshot(f.run, 'finished');
+      expect(await f.store.readResult(f.teamName)).toEqual({ status: 'absent' });
+    });
+
+    it.each(['stop', 'replacement', 'session', 'cancelled', 'closed', 'custody'] as const)(
+      'refuses a solo completion whose original %s changes during the first await',
+      async (change) => {
+        const f = await fixture();
+        let release!: () => void, entered!: () => void;
+        const gate = new Promise<void>((resolve) => {
+          release = resolve;
+        });
+        const started = new Promise<void>((resolve) => {
+          entered = resolve;
+        });
+        f.ports.overlayPrimaryBootstrapTruthIntoRunStatusesFromBootstrapState = async () => {
+          entered();
+          await gate;
+        };
+        const pending = f.facade.persistLaunchStateSnapshot(f.run, 'finished');
+        await started;
+        if (change === 'stop') await f.store.markStopped(f.teamName);
+        if (change === 'replacement') f.current.run = { ...f.run };
+        if (change === 'session') f.run.detectedSessionId = 'TEST-successor-session';
+        if (change === 'cancelled') f.run.cancelRequested = true;
+        if (change === 'closed') f.run.processClosed = true;
+        if (change === 'custody')
+          recordOwnedUnixProcessGroup(f.child, {
+            ...f.identity,
+            startIdentity: 'TEST-replaced-birth',
+          });
+        release();
+        expect(await pending).toBeNull();
+        expect(await f.store.readResult(f.teamName)).toEqual({ status: 'absent' });
+        if (change !== 'stop')
+          await expect(readFile(join(f.teamDir, 'launch-freshness.json'))).rejects.toMatchObject({
+            code: 'ENOENT',
+          });
+      }
+    );
+
+    it('rolls back the real solo publication if ownership changes after its first file commit', async () => {
+      const f = await fixture();
+      const write = launchWrites.atomicWriteAsync;
+      vi.spyOn(launchWrites, 'atomicWriteAsync').mockImplementation(
+        async (path, content, options) => {
+          await write(path, content, options);
+          if (path === join(f.teamDir, 'launch-state.json')) f.current.run = { ...f.run };
+        }
+      );
+      expect(await f.facade.persistLaunchStateSnapshot(f.run, 'finished')).toBeNull();
+      for (const file of ['launch-state.json', 'launch-summary.json', 'launch-freshness.json']) {
+        await expect(readFile(join(f.teamDir, file))).rejects.toMatchObject({ code: 'ENOENT' });
+      }
+      expect(captureLegacyNativeStop(f.teamsBasePath, f.run, () => true)).toBeNull();
+    });
+
+    it('keeps unreadable solo roster metadata unknown instead of authorizing an empty roster', async () => {
+      const f = await fixture();
+      f.ports.readMembersMeta = async () => {
+        throw new Error('TEST metadata unavailable');
+      };
+      expect(await f.facade.persistLaunchStateSnapshot(f.run, 'finished')).toBeNull();
+      expect(await f.store.readResult(f.teamName)).toEqual({ status: 'absent' });
+      await expect(readFile(join(f.teamDir, 'launch-freshness.json'))).rejects.toMatchObject({
+        code: 'ENOENT',
+      });
+    });
+  }
+);

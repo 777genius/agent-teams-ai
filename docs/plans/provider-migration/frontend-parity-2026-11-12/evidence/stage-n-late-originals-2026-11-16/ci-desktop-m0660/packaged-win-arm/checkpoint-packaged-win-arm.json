@@ -1,0 +1,104 @@
+{
+  "kind": "M0660_PACKAGED_WIN_ARM_ORIGINAL_FAILURE_CHECKPOINT",
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "runId": 43780997349,
+  "jobId": 133040244391,
+  "artifactId": 14192424468,
+  "payloads": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-arm/job-133040244391.log",
+      "bytes": 280157,
+      "gitBlob": "5b6c4650d4350fa0359c9cfd3c1e53913bae5e93",
+      "sha256": "b3af777830444f6f766c21fc4d9b03e21c2f364bdbe956434cf22b780425efeb"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-arm/14192424468.zip",
+      "bytes": 349070,
+      "gitBlob": "d73d6d56d570bd411b9d5df0edb5db351d3fd78f",
+      "sha256": "ecbfa68ec3f1e523fce60fa05e5e0e6087135db93a63a3421b1bbcdf9cf9eb4f"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-arm/archive-audit.json",
+      "bytes": 2026,
+      "gitBlob": "c25a2f60439769ee7cd891181e3537a6056ad69f",
+      "sha256": "496700923c375ac5ef15b69e3d1a604e5076dc93226d562a98fe0a6a2a21031e"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/full-api-jobs-0243.json",
+      "bytes": 211451,
+      "gitBlob": "4109a4ef7e1ef998516d0f01e3f595ee7781dfbd",
+      "sha256": "adf6674e111213ef68a67f36c5e0c503b53a1ea8e1b3da8690f5831e8a8650b9"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/official-packaged-artifacts-0243.json",
+      "bytes": 3880,
+      "gitBlob": "bc09c9d602037652d63b11e18c261c4f28532f91",
+      "sha256": "3ea79b8fb547a914c4b639ed3bff3555ca8b5146ded0435dc0ee5789bfebe626"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-arm/audit.json",
+      "bytes": 40330,
+      "gitBlob": "a7765592343f3e96305a111840b5eb0d47e1d8b2",
+      "sha256": "8789307817c0cfbe9749a6d41512b50d8f5c451c71e1fd96237b8eada8d30e0b"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-arm/Plan29-packaged-win-arm-failure-appendix.md",
+      "bytes": 5328,
+      "gitBlob": "586d4e3ac0eabe47bfa2c071290951fe2fa8d8a2",
+      "sha256": "bfc63082c25b947f32cdc0aaf3b13490b4b2e41463d33ad86bb65feddcf4498d"
+    }
+  ],
+  "payloadCount": 7,
+  "archiveMembers": [
+    {
+      "path": "agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+      "bytes": 1154527,
+      "sha256": "7af5e8d98e79feb39c127eba3bc4e72f164c31cc6d66eee9de6c6258366975f0",
+      "crc32": "a105def5"
+    },
+    {
+      "path": "_temp/opencode-v2-packaged-inputs.json",
+      "bytes": 782,
+      "sha256": "e5169aa2b4d53dadc4cec397b2f395bcc7b388eac5def23cb0e5a0372a8684ce",
+      "crc32": "3ccf4baf"
+    },
+    {
+      "path": "_temp/opencode-v2-packaged-native.json",
+      "bytes": 5389,
+      "sha256": "f9764d28bf8e4270d7326314170cc202d8dbbcb5230bcd6478be989c1ce13a4a",
+      "crc32": "8d20755f"
+    },
+    {
+      "path": "_temp/opencode-v2-packaged.json",
+      "bytes": 1188,
+      "sha256": "5a8e31740f57c349e2a0e0d26e0a7585b234c1040d4b587f11dfe1ce3d4a9970",
+      "crc32": "6c0f9d50"
+    },
+    {
+      "path": "_temp/windows-same-main-process-ui.app.log",
+      "bytes": 5069,
+      "sha256": "d98322a72d230ce88ab49fd95fb02c77234a789349e569a77229f5600e6bfdfc",
+      "crc32": "8049af6c"
+    },
+    {
+      "path": "_temp/windows-same-main-process-ui.controller.log",
+      "bytes": 17032,
+      "sha256": "aa8ed6f7d57b482d667a839110ff292cdafecb622604b0d2b8e402e263c872d0",
+      "crc32": "51f0e2be"
+    }
+  ],
+  "qualification": {
+    "originalJob": "FAIL",
+    "step37PackagedNativeV2": "PASS within its receipt scope",
+    "step38P08": "FAIL",
+    "P08Complete": false,
+    "desktopQualified": false,
+    "vendorQualified": false,
+    "releaseQualified": false,
+    "privacyGreenQualified": false,
+    "newExecution": false
+  },
+  "originalsFrozen": true,
+  "independentReviewPending": true,
+  "noSourceOrCIChange": true
+}

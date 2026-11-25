@@ -1,0 +1,31 @@
+{
+  "name": "M0660-Creation-Ubuntu",
+  "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "bundle": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ui-M0660-completed-evidence-bundles/M0660-Creation-Ubuntu/M0660-Creation-Ubuntu.zip",
+    "bytes": 2895943,
+    "blob": "2ded5e0e20ec60084e99adee5926dfeeb35eaa70",
+    "sha256": "ab4dad326c916d0e9f2a94d494da2ad9e977fe61db918f6372e811b35287a667"
+  },
+  "inventory": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ui-M0660-completed-evidence-bundles/M0660-Creation-Ubuntu/inventory.json",
+    "bytes": 4128,
+    "blob": "a17934ed64fcccc02050205f3da97153d6d78009",
+    "sha256": "06fc715ba73e4ae2c00ea8a19bcd769ebad0bf512ae9492fb97a7a5b90631be2"
+  },
+  "readme": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ui-M0660-completed-evidence-bundles/M0660-Creation-Ubuntu/README.md",
+    "bytes": 656,
+    "blob": "09674f7509c43935be085c3a876aa24d27bcd5df",
+    "sha256": "e7231032e4b30b26ec09fdb0dc054c74bc129ce0edefd7f5314fbf44a13eb3db"
+  },
+  "payloadCount": 9,
+  "payloadBytes": 3078474,
+  "officialArchives": 1,
+  "officialArchiveMembers": 41,
+  "originalPNG": 40,
+  "actuallyViewedPNG": 3,
+  "roundtripAllBytes": true,
+  "safeUniqueCRC": true,
+  "noSignedTransportURLs": true
+}

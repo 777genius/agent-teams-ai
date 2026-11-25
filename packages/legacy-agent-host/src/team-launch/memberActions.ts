@@ -1,5 +1,6 @@
 import { runtimeDigest as digest } from '../runtime/identity.js';
 import { TeamLaunchError } from './contracts.js';
+import { liveRosterHistoryFull, liveRosterMemberBlocked, liveRosterSelectionEdges, validateLiveRosterLaunch } from './liveRosterMembership.js';
 import type {
   ExpectedLaunchMember,
   LaunchAttempt,
@@ -171,15 +172,23 @@ export function validateMemberActions(record: ActionLaunchRecord): void {
 /** One validated selection chain combines checkpoint restores and fresh actions without relabelling either. */
 export function validateMemberSelectionChain(record: ActionLaunchRecord): void {
   validateMemberActions(record);
+  validateLiveRosterLaunch(record);
   const actions = (record.memberActions ?? []).filter((r) => r.phase === 'selected');
   for (const current of record.definition.members) {
+    const liveEdges = liveRosterSelectionEdges(record).filter(row => row.member.memberId === current.memberId);
+    for (const edge of liveEdges) if (!edge.source.binding) {
+      const skip = actions.filter(row => row.noAllocation && row.input.memberId === current.memberId).at(-1);
+      if (skip && digest(skip.selected) !== digest(edge.source)) fail('member-action-source');
+    }
     const selections = [
       ...(record.restorations ?? [])
         .filter((r) => r.member.memberId === current.memberId)
-        .map((r) => ({ source: r.member.restore!.sourceBinding, member: r.member })),
+        .map((r) => ({ source: r.member.restore!.sourceBinding, member: r.member, live: false })),
       ...actions
         .filter((r) => r.input.memberId === current.memberId && r.input.action === 'restart')
-        .map((r) => ({ source: r.source.binding!, member: r.selected })),
+        .map((r) => ({ source: r.source.binding!, member: r.selected, live: false })),
+      ...liveEdges
+        .map(row => ({ source: row.source.binding, member: row.member, live: true })),
     ];
     if (!selections.length) {
       const skip = actions
@@ -195,10 +204,11 @@ export function validateMemberSelectionChain(record: ActionLaunchRecord): void {
         next = selection.member;
       if (
         !next.binding ||
-        source.generation === next.binding.generation ||
+        source === null && !selection.live ||
+        source !== null && (source.generation === next.binding.generation ||
         ['backendId', 'teamId', 'runId', 'memberId'].some(
           (k) => source[k as 'memberId'] !== next.binding![k as 'memberId']
-        ) ||
+        )) ||
         bySource.has(digest(source)) ||
         targets.has(digest(next.binding))
       )
@@ -218,9 +228,9 @@ export function validateMemberSelectionChain(record: ActionLaunchRecord): void {
       const next = bySource.get(key)!;
       if (
         next.member.runtimeGeneration! <= selected.member.runtimeGeneration! ||
-        next.member.baseConfigurationDigest !== selected.member.baseConfigurationDigest ||
+        (!next.live && (next.member.baseConfigurationDigest !== selected.member.baseConfigurationDigest ||
         next.member.contextDigest !== selected.member.contextDigest ||
-        next.member.configRevision !== selected.member.configRevision
+        next.member.configRevision !== selected.member.configRevision))
       )
         fail('member-selection-recipe');
       selected = next;
@@ -240,12 +250,12 @@ export function validateMemberSelectionChain(record: ActionLaunchRecord): void {
   }
 }
 export function memberActionBlocksSelection(record: ActionLaunchRecord, memberId: string): boolean {
-  return (record.memberActions ?? []).some(
+  return liveRosterMemberBlocked(record, memberId) || (record.memberActions ?? []).some(
     (a) => a.input.memberId === memberId && !['selected', 'refused'].includes(a.phase)
   );
 }
 export function memberActionBlocksStart(record: ActionLaunchRecord, memberId: string): boolean {
-  return (record.memberActions ?? []).some(
+  return liveRosterMemberBlocked(record, memberId) || (record.memberActions ?? []).some(
     (a) => a.input.memberId === memberId && ['requested', 'closed', 'unallocated'].includes(a.phase)
   );
 }
@@ -281,6 +291,9 @@ export function createLaunchMemberActions(journal: MemberActionJournal) {
           rosterRevision: record.definition.rosterRevision,
           member,
           actions: (record.memberActions ?? []).filter((r) => r.input.memberId === memberId),
+          ...(record.liveMembership ? {
+            liveSelections: liveRosterSelectionEdges(record).filter(row => row.member.memberId === memberId),
+          } : {}),
           retries: record.retries
             .filter((r) => r.memberIds.includes(memberId))
             .map((r) => ({
@@ -349,7 +362,7 @@ export function createLaunchMemberActions(journal: MemberActionJournal) {
           )
         )
           fail('member-action-unresolved');
-        if ((record.memberActions?.length ?? 0) >= 64) fail('member-action-budget');
+        if ((record.memberActions?.length ?? 0) >= 64 || liveRosterHistoryFull(record)) fail('member-action-budget');
         const target = record.members.find((m) => m.memberId === input.memberId);
         if (!target || target.attempts.length >= 65) fail('member-action-attempt-budget');
         if (

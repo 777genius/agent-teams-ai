@@ -1,0 +1,254 @@
+{
+  "schemaVersion": 1,
+  "kind": "INDEPENDENT_RECEIPT_NAMESPACE_INTEGRATION_DOCUMENTATION_REVIEW",
+  "recordedAt": "2026-11-19T23:24:08.364042+00:00",
+  "author": "/root",
+  "reviewer": "/root/task_detail_finish",
+  "status": "PASS_SCOPED_INTEGRATION_DOCUMENTATION_REVIEW",
+  "openFindings": [],
+  "publishedAppSourceBeforeSlice": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+  "providerSource": "45a569bd70607480e650fb12be5c0cce6884f9da",
+  "scope": "Read-only integration review of the final STATUS, four new evidence JSONs and three raw bundles against the two accepted independent R2 records and the saved 23:15:32 UTC snapshot. No source re-review, test, compiler, lint, native/provider execution, GitHub request, CI observation or repository mutation.",
+  "publicationInputs": [
+    {
+      "path": "agent-teams-ai/packages/legacy-agent-host/src/diagnostics/modelReadinessTiming.ts",
+      "bytes": 13370,
+      "sha256": "cfb06dd5e4a98ffff1e7fbc0594d763564867a2dcf5e79bbbc9874f815b97e58"
+    },
+    {
+      "path": "agent-teams-ai/packages/legacy-agent-host/src/adapters/team/TeamOwnerStore.ts",
+      "bytes": 7879,
+      "sha256": "6d3195625854e0b9de1a5e30699ce5112142cc61976f4c78cf239905e3134913"
+    },
+    {
+      "path": "agent-teams-ai/tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "bytes": 34572,
+      "sha256": "91eafaa44a3ff8816b3311fbd90188d7bcaec983f8bb388509617cd963548016"
+    },
+    {
+      "path": "agent-teams-ai/tools/owned-process-broker/nativeEmulatedSourceReadiness.ts",
+      "bytes": 29938,
+      "sha256": "699be5e1dde8d88ea1ee8663610d6687390b422cbdbebe84f540ddf4dda0c151"
+    },
+    {
+      "path": "agent-teams-ai/packages/legacy-agent-host/tests/runtime-open-diagnostic.test.ts",
+      "bytes": 55174,
+      "sha256": "decf02a5f3f4b03c675a46ab253d1159a7089a6327a0a95d3e6ccf08337f7cd0"
+    },
+    {
+      "path": "agent-teams-ai/vendor/provider-migration/v2-admission-45a569bd/source-receipt.json",
+      "bytes": 6135,
+      "sha256": "68ce815a45ebccbb5e7e18fd9b9c61ec66739711e5a8ad0424f0b8fcac672f9b"
+    },
+    {
+      "path": "agent-teams-ai/docs/plans/provider-migration/frontend-parity-2026-11-12/STATUS.md",
+      "bytes": 74171,
+      "sha256": "5bdc180ff963956045061c3d4d8264a95ed115fd657cb047bb9a9260a08b1f87"
+    },
+    {
+      "path": "agent-teams-ai/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/provider-receipt-schema-correction-20261119.json",
+      "bytes": 5624,
+      "sha256": "98677c6fa1f3c79a890860b90f7d32cbd1cc3664de1b6f4884b94f9be80212d5"
+    },
+    {
+      "path": "agent-teams-ai/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/windows-namespace-timing-20261119.json",
+      "bytes": 21052,
+      "sha256": "272c161a4cf68f8b55a9e1792454afbe3a1522b577e74cfeeff6282a068c66ff"
+    },
+    {
+      "path": "agent-teams-ai/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/ci-d8a0c29-incremental-20261119.json",
+      "bytes": 47407,
+      "sha256": "f890227fa38ec580e3ed77ee64f3d2c064210eb5965af9558e49d583e5e5f4f1"
+    },
+    {
+      "path": "agent-teams-ai/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/delivery-review-d8a0c29-20261119.json",
+      "bytes": 42994,
+      "sha256": "8b911a55fa54ae4f9b2c4e2991765c2e06636512bcacfcce64ea45edb4da53c4"
+    },
+    {
+      "path": "agent-teams-ai/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/provider-receipt-schema-checks-20261119.tar.gz",
+      "bytes": 49036,
+      "sha256": "94218252005a5aadc0303a936499aa59112f26e2a0cb5e9e0deb4873bf7ee1a5"
+    },
+    {
+      "path": "agent-teams-ai/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/windows-namespace-timing-checks-20261119.tar.gz",
+      "bytes": 38628,
+      "sha256": "53f27f9eb47e26984752f83d116506e0aca658689dafea7fb0bbe628d88489cd"
+    },
+    {
+      "path": "agent-teams-ai/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/native-source-receipts-d8a0c29-20261119.tar.gz",
+      "bytes": 78997,
+      "sha256": "f11c155fd2109dfb5f510528d7644112e6081566b59ef7d88459c5e099294594"
+    }
+  ],
+  "acceptedIndependentR2": [
+    {
+      "path": "audit1192/app-provider-receipt-schema-independent-r2.json",
+      "bytes": 12565,
+      "sha256": "5a84c291ebf1d8d137851c204945755020e056ad562b920752e700274941b14f"
+    },
+    {
+      "path": "audit1192/windows-namespace-timing-independent-r2.json",
+      "bytes": 18239,
+      "sha256": "c94c591a68a922d04b971d163e9f881391fefd5a94e0bd6595fcdb0e88ccd5d8"
+    }
+  ],
+  "resolvedFindings": [
+    {
+      "id": "DOC-01",
+      "severity": "editorial",
+      "status": "RESOLVED",
+      "finding": "The initial STATUS label described the historical current-slice-integration-review as the current review-thread inventory. That record is the earlier 22:28 integration review; current inventories are in delivery-review-d8a0c29.",
+      "resolution": "The final STATUS separately labels the previous d8 integration review, the fresh delivery/thread inventory, and this receipt/namespace integration review.",
+      "verifiedStatusBytes": 74171,
+      "verifiedStatusSha256": "5bdc180ff963956045061c3d4d8264a95ed115fd657cb047bb9a9260a08b1f87"
+    }
+  ],
+  "integrationChecks": {
+    "receipt": "Canonical receipt 68ce815a remains the exact accepted metadata-only correction. Same original tests RED 3/1 -> GREEN 4/4; original installed verifier PASS. Original d8 installer/Resume/Quit prerequisite failures remain non-PASS; no GUI journey acceptance is inferred.",
+    "namespace": "All five frozen source hashes unchanged. The documentation matches the accepted passive diagnostic R2: six numeric fields, 4096 attempt bound, original call/throw/fence/deadline semantics retained, scoped TS7 + 16/16 focused + lint/guards PASS. No Windows root cause or performance fix is claimed.",
+    "snapshot": {
+      "record": {
+        "path": "audit1192/cid8a0c-20261119-2315.json",
+        "bytes": 154025,
+        "sha256": "edf8a954d2dccccdacaa7adaf2dfbe7018fbd20950fda8a441785e1d41fa8897"
+      },
+      "observedAt": "2026-11-19 23:15:32 UTC",
+      "runs": [
+        {
+          "runId": 44629177811,
+          "sourceQualification": true,
+          "counts": {
+            "failure": 2,
+            "success": 3
+          }
+        },
+        {
+          "runId": 44629178809,
+          "sourceQualification": true,
+          "counts": {
+            "success": 2,
+            "queued": 21,
+            "failure": 5,
+            "in_progress": 1
+          }
+        },
+        {
+          "runId": 44629179503,
+          "sourceQualification": true,
+          "counts": {
+            "success": 6,
+            "queued": 3
+          }
+        },
+        {
+          "runId": 44629179088,
+          "sourceQualification": true,
+          "counts": {
+            "success": 1,
+            "skipped": 11,
+            "queued": 2
+          }
+        },
+        {
+          "runId": 44630906283,
+          "sourceQualification": false,
+          "counts": {
+            "queued": 1,
+            "skipped": 3
+          }
+        }
+      ],
+      "jobIdNameStatusConclusionAndCountProjectionExact": true,
+      "nativeSuccesses": 6,
+      "frontendShardSuccesses": 2,
+      "process": {
+        "POSIXPass": 3,
+        "WindowsFail": 2
+      },
+      "sourceAndMetadataSeparate": true,
+      "laterSnapshotNotSubstituted": true
+    },
+    "armClocks": {
+      "sameAnchorEstablished": false,
+      "atomicAtFailure": false,
+      "mayDeclareReadinessBeforeConsumerDeadline": false,
+      "note": "14533.5 ms phase-relative return is not comparable to the separate consumer deadline. INCOMPLETE, empty first-refusal and confirmed seven-HANDLE cleanup remain distinct facts."
+    },
+    "nativeScope": "d8 Darwin P09 A 8/8 per architecture is preserved separately from queued Linux native lanes and failed Windows process/Desktop journeys; installed/release=false. Old639 failure/cancellation records remain unchanged.",
+    "delivery": {
+      "readOnlyIntegrationPreparationAndAll14GateRowsMatchSavedRecords": true,
+      "appReview": {
+        "observedAt": "2026-11-19 23:08:53 UTC",
+        "sourceHead": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "threads": 43,
+        "resolved": 43,
+        "unresolved": 0,
+        "outdated": 28,
+        "reviewStates": {
+          "COMMENTED": 20
+        },
+        "formalApproval": false
+      },
+      "providerReview": {
+        "observedAt": "2026-11-19 23:09:33 UTC",
+        "sourceHead": "45a569bd70607480e650fb12be5c0cce6884f9da",
+        "threads": 0,
+        "reviews": 0,
+        "formalApproval": false
+      },
+      "qualification": "Saved ancestry/merge-tree preparation applies to recorded d8 feature edges #1192 -> #1186 -> #982, with no Ready/merge/ref transition performed. Real Claude/Codex prohibition and main/default/release/Stage2 exclusions remain in force."
+    },
+    "embeddedRecords": "Receipt checks, namespace final-local/source analysis, native audits, ARM clock audit, old639 terminal audit and delivery preparation/inventory equal their saved original records."
+  },
+  "rawEvidenceVerification": [
+    {
+      "file": {
+        "path": "agent-teams-ai/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/provider-receipt-schema-checks-20261119.tar.gz",
+        "bytes": 49036,
+        "sha256": "94218252005a5aadc0303a936499aa59112f26e2a0cb5e9e0deb4873bf7ee1a5"
+      },
+      "evidenceMembers": 13,
+      "manifestMembers": 1,
+      "allMemberBytesMatchSavedAuditFiles": true,
+      "allInternalSizesAndHashesMatch": true
+    },
+    {
+      "file": {
+        "path": "agent-teams-ai/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/windows-namespace-timing-checks-20261119.tar.gz",
+        "bytes": 38628,
+        "sha256": "53f27f9eb47e26984752f83d116506e0aca658689dafea7fb0bbe628d88489cd"
+      },
+      "evidenceMembers": 23,
+      "manifestMembers": 1,
+      "allMemberBytesMatchSavedAuditFiles": true,
+      "allInternalSizesAndHashesMatch": true
+    },
+    {
+      "file": {
+        "path": "agent-teams-ai/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/native-source-receipts-d8a0c29-20261119.tar.gz",
+        "bytes": 78997,
+        "sha256": "f11c155fd2109dfb5f510528d7644112e6081566b59ef7d88459c5e099294594"
+      },
+      "evidenceMembers": 25,
+      "manifestMembers": 1,
+      "allMemberBytesMatchSavedAuditFiles": true,
+      "allInternalSizesAndHashesMatch": true
+    }
+  ],
+  "qualificationLimits": [
+    "This record accepts documentation and evidence integration for the exact listed bytes, not the entire original end-to-end goal or a future source revision.",
+    "The two independent source/local R2 records remain separate and immutable; their local acceptance does not turn original d8 failures into success.",
+    "Source heads, workflow lanes, architectural scope, cleanup/custody outcomes and differing ARM clocks are explicitly separated.",
+    "No formal GitHub approval, successful merge, native runtime fix or completed release is asserted.",
+    "Root owns publication and next-source qualification. The sole CI observer owns later observations; no later snapshot was fetched or substituted during this review."
+  ],
+  "actions": {
+    "readOnlySourceAndEvidence": true,
+    "newTestOrCompilerRuns": 0,
+    "newGitHubOrCIRequests": 0,
+    "repositoryMutations": 0,
+    "commentsOrReviewRequestsSent": 0,
+    "newScratchRecordOnly": true
+  }
+}

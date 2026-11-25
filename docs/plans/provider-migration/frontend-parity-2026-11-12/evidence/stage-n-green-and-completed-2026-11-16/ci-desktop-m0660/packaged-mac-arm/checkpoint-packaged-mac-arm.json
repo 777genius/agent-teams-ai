@@ -1,0 +1,146 @@
+{
+  "kind": "M0660_PACKAGED_MAC_ARM_ORIGINAL_RELAUNCH_CHECKPOINT",
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "runId": 43780997349,
+  "jobId": 133040244365,
+  "artifactId": 14191980301,
+  "payloads": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-mac-arm/job-133040244365.log",
+      "bytes": 157719,
+      "gitBlob": "e056cc375319a3f9f47faa2b228dbde477e86dd6",
+      "sha256": "e7db08cd4506618dc92ce3ade639770e85892ce8a03e63a524d4671f3d26282d"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-mac-arm/original-job-log-response.json",
+      "bytes": 175437,
+      "gitBlob": "8c645245e627b84935674761b8b832ff3e56788e",
+      "sha256": "8ed8fb91c3e7f072168499e1b8d7686fa060ebcfe0db393c5f36240f0bf157ff"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-mac-arm/artifact-14191980301.zip",
+      "bytes": 1064941,
+      "gitBlob": "352cc91ca6171eb0527c20c1601e703c3f561fd6",
+      "sha256": "258cf232660e4cf40e62ae086b61e57d30766f2cf8eb0d62cc16353f21d560f4"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-mac-arm/archive-audit.json",
+      "bytes": 2774,
+      "gitBlob": "e9f68e15917c266fc9d833230d32d14c4eb9df07",
+      "sha256": "8a5c80490125d8ae23ac6bb3cc5cadd0329a6324324dfce40932497faf60bd44"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/full-api-jobs-0300.json",
+      "bytes": 212142,
+      "gitBlob": "aaa9e447920ba1d0e4ae3797169058bc2df43a72",
+      "sha256": "2056635c64f9372a98d560f3ceb63a025fbd92de2bef0eaa5a6a72e8f8dd4f80"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/official-packaged-artifacts-0243.json",
+      "bytes": 3880,
+      "gitBlob": "bc09c9d602037652d63b11e18c261c4f28532f91",
+      "sha256": "3ea79b8fb547a914c4b639ed3bff3555ca8b5146ded0435dc0ee5789bfebe626"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-mac-arm/source-pin-audit.json",
+      "bytes": 638912,
+      "gitBlob": "1a83c710d179433395d85442ac8a8e0e8fb117b8",
+      "sha256": "afaafc8408042856a81c73826e4804536c8dd35f4fffad8550655e893d351c00"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-mac-arm/audit.json",
+      "bytes": 106122,
+      "gitBlob": "3ff198411507395ff939793d65c3ec694c7b3702",
+      "sha256": "4cbb9cfedd22650a155ed0511d3d95f29d8bcf27531ec01d53613a55eb1efbb6"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-mac-arm/Plan29-packaged-mac-arm-appendix.md",
+      "bytes": 8832,
+      "gitBlob": "c5797560df868f616a63ee037923943a5313f0cb",
+      "sha256": "2d7a52ab14bd98093e080a27d671cdf0eced88b2644e820bbee11e94cde89729"
+    }
+  ],
+  "payloadCount": 9,
+  "archiveMembers": [
+    {
+      "path": "_temp/TEST-desktop-backend-ZV8aRp/ui-automatic-app-relaunch-successor.png",
+      "crc32": "d5b7ff04",
+      "bytes": 138434,
+      "blob": "e387dcf9704addf9a8be1324605d185cb5767cf9",
+      "sha256": "65d152c93300287c8965a43a8c744aa19f23aa373b0166abf7d37fdfa093b525"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+      "crc32": "f7e2343e",
+      "bytes": 1154733,
+      "blob": "7dac409c388ce50383d81589ab0053134d5de6cc",
+      "sha256": "6422c2cfd0452aa36785dcb0fce1f40a5a25418c1e935c77352402ba938c4ea4"
+    },
+    {
+      "path": "_temp/TEST-desktop-backend-ZV8aRp/ui-emulated-lifecycle-stopped.png",
+      "crc32": "5a17132d",
+      "bytes": 200291,
+      "blob": "971a2ed199baa4495fd4254c339c041752b69d57",
+      "sha256": "317641f4db8d21a440565b59cf48f60cd83dd8a1f08c61b6f092f06e05db163c"
+    },
+    {
+      "path": "_temp/TEST-desktop-backend-ZV8aRp/ui-emulated-lifecycle-launch.png",
+      "crc32": "d67b7412",
+      "bytes": 222139,
+      "blob": "c02f9d1cb89ed4ff9a9fe69412c703ac5e3bf0e3",
+      "sha256": "45cf8802df8b2dcbffecf68c4b43910938d38953ea102536b0e3775f5c0a328e"
+    },
+    {
+      "path": "_temp/opencode-v2-packaged-inputs.json",
+      "crc32": "cb392043",
+      "bytes": 2374,
+      "blob": "406b91ef5b662c0220d07be3f1b298c336df5cdc",
+      "sha256": "e76f226bd7c13480b7ea0a2e3d30726a5fafe4b29c39faaee817efa9cf112efd"
+    },
+    {
+      "path": "_temp/opencode-v2-packaged-native.json",
+      "crc32": "16ec5e78",
+      "bytes": 5286,
+      "blob": "067986746476d89891158551cce6ca954160fa4f",
+      "sha256": "dd19e8a267f6f3b667dfd55507a52370ca399337a65433b820f07b64e5bd0823"
+    },
+    {
+      "path": "_temp/opencode-v2-packaged.json",
+      "crc32": "c340f117",
+      "bytes": 1189,
+      "blob": "6ece4759c3195c00d9af4a91bb4e4714ebcba78d",
+      "sha256": "aaa29556e746bb9874a68f8d164365cad872a751de3755bb96c143974c52a9e9"
+    },
+    {
+      "path": "_temp/packaged-app-relaunch.app.log",
+      "crc32": "7f4eb463",
+      "bytes": 3027,
+      "blob": "d6c002ab238c65be78d56386922bcfc8339813f6",
+      "sha256": "39ed4f7f99c7d506a4e0efc127e21ee77118a8f01cfe93151a31c3837e522601"
+    },
+    {
+      "path": "_temp/packaged-app-relaunch.json",
+      "crc32": "3146263f",
+      "bytes": 671444,
+      "blob": "bd185ddf48db1674db7c5272fcaaf54077109656",
+      "sha256": "70e3815884691a6be4155c9ad61a55329b48ec416ea7ae959346ece4f526f293"
+    }
+  ],
+  "imagesActuallyViewed": 3,
+  "qualification": {
+    "originalJob": "SUCCESS",
+    "step37PackagedNativeV2": "PASS within manual localhost-scripted receipt scope",
+    "step39PackagedRelaunch": "PASS within observer-only successor scope",
+    "fullColdResumeActiveQueuedQuitQualified": false,
+    "successorNaturalExitQualified": false,
+    "successorNativeCustody": false,
+    "realVendorQualified": false,
+    "releaseQualified": false,
+    "privacyGreenQualified": false,
+    "laterNSourceQualified": false,
+    "newExecution": false
+  },
+  "originalsFrozen": true,
+  "independentReviewPending": true,
+  "noSourceOrCIChange": true
+}

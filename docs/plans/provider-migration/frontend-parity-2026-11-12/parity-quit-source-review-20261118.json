@@ -1,0 +1,332 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-root-source-review-of-Quit-live-command-snapshot",
+  "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "reviewedAt": "2026-11-18T23:14:14.250890+00:00",
+  "verdict": "PASS within finite source/integration scope",
+  "sourceManifest": {
+    "bytes": 6375,
+    "sha256": "ebf3e357f7f54575f81f61df44fe67953d3e37c7fd13482411cabdc1337ef6bd",
+    "gitBlob": "07be00a73fbe120f93c0186595c747f08f36c711"
+  },
+  "changes": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-captured-app-exit.test.ts",
+      "preimage": {
+        "path": "scripts/legacy-agent-host/desktop-captured-app-exit.test.ts",
+        "gitBlob": "be1826fce2de43cb6af3b1ca0fb87a683985be99",
+        "sha256": "26da6d6f0ad5e089fb59b6a57e7d102e434ea442cb5a1b9ef089f1362a139f21",
+        "bytes": 2115
+      },
+      "postimage": {
+        "gitBlob": "4765acd5e153d6fd601e2cd9645ab6966e042400",
+        "sha256": "62358a4efb31ae20948c1e81571780742121304d4b302ecb513efa3c58801dc6",
+        "bytes": 2173,
+        "lines": 47
+      },
+      "newFile": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-quit-command-snapshot.test.mjs",
+      "preimage": null,
+      "postimage": {
+        "gitBlob": "7733ec9dd14269c6ba4d8c276fbb0bf64849019e",
+        "sha256": "56fbdd59fbb15dc7e9bf2543b9ae92011e46fd7ba671381f7eae6ab6e4df3614",
+        "bytes": 9836,
+        "lines": 182
+      },
+      "newFile": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-quit-ui-smoke.ts",
+      "preimage": {
+        "path": "scripts/legacy-agent-host/desktop-native-quit-ui-smoke.ts",
+        "gitBlob": "cce4088737ff0eb4174746bf6fff49a22aded264",
+        "sha256": "32976b9f60b2047eb4036d0b7c84aa5f60db5caa0ce607940820053546b6754a",
+        "bytes": 21332
+      },
+      "postimage": {
+        "gitBlob": "05b5b1f8d17396c2c690d6e0c7b0c896abad1d7a",
+        "sha256": "3f750eef4be35d55fbffa81640e27f97f22f5504ed6adaeb3f6490fa66b99a3e",
+        "bytes": 22749,
+        "lines": 510
+      },
+      "newFile": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "preimage": {
+        "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+        "gitBlob": "b42cee83d3526df26ce749e3b7b6c076b48a9257",
+        "sha256": "a9de6fd64ac4e335d24e2454242454a6214e764374dea3b4903b389830bad645",
+        "bytes": 25230
+      },
+      "postimage": {
+        "gitBlob": "c60111361cf3dba3bf395081ec751ec8d3bb8681",
+        "sha256": "fba68b86f35af79174bf7c74af45e50f2c6157baa993e5e5a09e7955e644abe3",
+        "bytes": 25480,
+        "lines": 393
+      },
+      "newFile": false
+    }
+  ],
+  "checks": [
+    "All existing preimages match the immutable 030 tree; the new suite path is absent.",
+    "Only live command polling acquires the existing exact canonical authority fence, with createParent=false and acquireTimeoutMs=0.",
+    "Scan, strict entry assertion, JSON reads and record assertions remain inside the acquired synchronous fence; finally always releases.",
+    "Only the canonical acquisition timeout returns a busy poll. Exceptions from scanning/parsing/releasing are not swallowed.",
+    "The original 20-second/100-ms poll and action/no-retry semantics are unchanged.",
+    "Quiescent snapshot and generic files behavior, including allowAbsent, strict names/types/objects and cap256, remain unchanged.",
+    "The existing explicit Node test suite imports the new MJS; no workflow or matrix mutation.",
+    "All four new dependency/test pins enter the existing supplementary source freeze; no discovery, new owner or namespace creation."
+  ],
+  "actualVerification": {
+    "regression": {
+      "file": "regression-run.txt",
+      "bytes": 987,
+      "sha256": "5730ee9459ec020341841ffcb3db2de6bf8d5dba0d12264cb9108e22dd1510dd",
+      "gitBlob": "fa99f8b8b8bc518f0d89a2e5d7459ed6a0b7fec4",
+      "pass": 11,
+      "fail": 0,
+      "skip": 0
+    },
+    "finiteSource": {
+      "schemaVersion": 1,
+      "scope": "Finite source-driven TEST verification; no app, native provider or CI execution",
+      "runtime": {
+        "version": "v24.22.3",
+        "platform": "linux",
+        "arch": "x64"
+      },
+      "original": {
+        "path": "scripts/legacy-agent-host/desktop-native-quit-ui-smoke.ts",
+        "sha256": "32976b9f60b2047eb4036d0b7c84aa5f60db5caa0ce607940820053546b6754a"
+      },
+      "candidate": {
+        "path": "scripts/legacy-agent-host/desktop-native-quit-ui-smoke.ts",
+        "sha256": "3f750eef4be35d55fbffa81640e27f97f22f5504ed6adaeb3f6490fa66b99a3e"
+      },
+      "loading": "Node built-in TypeScript stripping; complete original/candidate modules evaluated with test-only exports of private functions. Unrelated UI/provider imports are refusal stubs. Real filesystem ports and original controller lock/atomic writer source execute.",
+      "checks": [
+        {
+          "name": "Original polling and quiescent productSnapshot bodies unchanged",
+          "status": "PASS",
+          "deadlineMs": 20000,
+          "tickMs": 100,
+          "newLiveCallSites": 1
+        },
+        {
+          "name": "Original TS RED and candidate GREEN against actual paused atomic producer",
+          "status": "PASS",
+          "redShape": {
+            "count": 3,
+            "sampled": 3,
+            "truncated": false,
+            "regular": 3,
+            "validJsonName": 2,
+            "regularJson": 2,
+            "directory": 0,
+            "symbolicLink": 0,
+            "otherType": 0
+          },
+          "pendingPolls": 200,
+          "scansWhileBusy": 0,
+          "readsWhileBusy": 0,
+          "virtualDeadlineMs": 20000,
+          "ticks": 200,
+          "tickMs": 100,
+          "producerWrites": 1,
+          "acceptedRecords": 3,
+          "readScope": "one scan and all three reads under original authority lock",
+          "interleave": "real controller atomicFile writer paused at rename in a finite Worker; canonical fileLock source unchanged; shared process PID"
+        },
+        {
+          "name": "Generic quiescent files behavior preserved including allowAbsent",
+          "status": "PASS",
+          "sameOrderedRecords": true,
+          "absentPolicyUnchanged": true,
+          "malformedEntryStillRefused": true
+        },
+        {
+          "name": "persistent unknown regular file",
+          "status": "PASS",
+          "refused": true,
+          "originalFenceReleased": true
+        },
+        {
+          "name": "persistent canonical temporary without writer",
+          "status": "PASS",
+          "refused": true,
+          "originalFenceReleased": true
+        },
+        {
+          "name": "directory named JSON",
+          "status": "PASS",
+          "refused": true,
+          "originalFenceReleased": true
+        },
+        {
+          "name": "symlink named JSON",
+          "status": "PASS",
+          "refused": true,
+          "originalFenceReleased": true
+        },
+        {
+          "name": "malformed JSON releases fence",
+          "status": "PASS",
+          "refused": true,
+          "originalFenceReleased": true
+        },
+        {
+          "name": "null JSON object refused",
+          "status": "PASS",
+          "refused": true,
+          "originalFenceReleased": true
+        },
+        {
+          "name": "array JSON object refused",
+          "status": "PASS",
+          "refused": true,
+          "originalFenceReleased": true
+        },
+        {
+          "name": "Exact 256 cap accepted and 257 refused under fence",
+          "status": "PASS",
+          "accepted": 256,
+          "refused": 257
+        },
+        {
+          "name": "Acquisition errors other than canonical timeout propagate without scan",
+          "status": "PASS",
+          "refused": true,
+          "scanned": false
+        },
+        {
+          "name": "Scan error matching lock-timeout text is not swallowed as busy",
+          "status": "PASS",
+          "refused": true,
+          "originalFenceReleased": true
+        },
+        {
+          "name": "Missing namespace is not created by read-only acquisition",
+          "status": "PASS",
+          "refused": true,
+          "namespaceCreated": false
+        },
+        {
+          "name": "New direct fence dependency is in existing source-freeze closure",
+          "status": "PASS",
+          "existingQuitModuleFrozen": true,
+          "newDirectDependencyFrozen": true,
+          "extraRuntimeHelper": false,
+          "checkKind": "exact source composition"
+        }
+      ],
+      "status": "PASS",
+      "acquisitionOptions": {
+        "createParent": false,
+        "acquireTimeoutMs": 0
+      },
+      "acquisitionCalls": 214,
+      "hiddenNestedWait": false,
+      "limitations": [
+        "Finite Linux Node verification, not Darwin Electron/native Quit acceptance.",
+        "Original failing entry name remains unknown; source-driven fixture uses actual canonical .tmp writer protocol.",
+        "Unrelated UI/provider functions are refusal stubs, never invoked. No app command or action replay.",
+        "Worker interleave uses canonical file lock with shared process PID; no claim of separate-process liveness qualification.",
+        "No full workspace typecheck, typed lint, build or CI gate executed by this verifier."
+      ],
+      "fixtureDirectoryRemoved": true,
+      "finishedAt": "2026-11-18T22:51:17.377Z"
+    },
+    "integrationAndFastLint": {
+      "schemaVersion": 1,
+      "kind": "frozen-quit-candidate-final-integration-review",
+      "candidateManifestSha256": "ebf3e357f7f54575f81f61df44fe67953d3e37c7fd13482411cabdc1337ef6bd",
+      "candidateChanged": false,
+      "verdict": "PASS within source/finite lint scope; full current CI and workspace typecheck remain open",
+      "discovery": {
+        "workflowBlob": "874172990918e5cea46d9edd82bf77d8c33c3685",
+        "workflow": ".github/workflows/host-emulated-acceptance.yml",
+        "step": "Build existing Desktop prerequisites and verify admission",
+        "commandLocation": "line128",
+        "originalExplicitSuite": "scripts/legacy-agent-host/desktop-captured-app-exit.test.ts",
+        "newSideEffectImport": "./desktop-native-quit-command-snapshot.test.mjs",
+        "caseExecution": "Existing Node test command loads the MJS through this import; original test body unchanged, no workflow/matrix changes. This integration is source-verified; full prerequisite command not run locally.",
+        "rootVitest": "Does not discover scripts/; the existing explicit Node suite is the integration route."
+      },
+      "fastLint": {
+        "command": "node <prepared-eslint>/bin/eslint.js --config eslint.fast.config.js --no-cache --format json",
+        "before": {
+          "files": 2,
+          "exitCode": 0,
+          "errors": 0,
+          "warnings": 0,
+          "fatal": 0,
+          "ignored": 0,
+          "diagnosticsSha256": "ad2ae7aab745cf6427db051617db584a69a324c1b7760d997efacbd1a63047c8"
+        },
+        "after": {
+          "files": 3,
+          "exitCode": 0,
+          "errors": 0,
+          "warnings": 0,
+          "fatal": 0,
+          "ignored": 0,
+          "diagnosticsSha256": "2f5cae8a8110b95396f60bfa2a4dc7ff96d88ffdf8ea1f6b0efc271901f99ea2"
+        },
+        "scope": "Before: quit smoke and suite. After: those plus new MJS. All actual parsed reports contain empty messages. No inherited or introduced diagnostics.",
+        "inputs": "fast-lint-check/inputs.json",
+        "applicability": "Host team fast lint explicitly lists quit smoke. simple-import-sort's fast-imports globs exclude scripts/, resolving the initial sort concern. New Function and Node module API use produced no applicable fast-lint diagnostic. New MJS was linted, not ignored.",
+        "noSortRevisionNeeded": true
+      },
+      "typesAndAPI": {
+        "tsconfig": "tsconfig.legacy-agent-host-scripts.json",
+        "configBlob": "555313dbd31ef99474ccc0e65ed9a5e75bbe72f4",
+        "observedOptions": "strict, noEmit, NodeNext, allowImportingTsExtensions:true; includes scripts/legacy-agent-host/**/*.ts. checkJs/allowJs and noUncheckedSideEffectImports are not enabled.",
+        "scope": "New MJS is executed by Node test and explicitly fast-linted, but is not a separately included TypeScript file. The TS side-effect import uses explicit .mjs; candidate's Node API/functions executed under prepared Node24.22.3. Original Host workflow pins24.21.0; this is not new24.21 native/runtime qualification.",
+        "fenceAPI": "No root public controller fence export. TEST uses exact internal createRequire path already used by ControllerAdapter; package has no exports map. Separate acquireFileLockSync with explicit0 timeout and no parent creation preserves original polling. Direct source dependency is now frozen.",
+        "remaining": "No concrete TypeScript semantic error identified by source inspection; full canonical workspace typecheck remains required, not claimed from stripping or fast lint."
+      },
+      "statusRead": {
+        "path": "/workspace/scratch/c714f5bce554/quit-active-030-followup/STATUS-draft.md",
+        "snapshotSha256": "a467a05565d1b2a3c0ac760a29ca135c476ac16169943bacfeb10f67957802f4",
+        "bytes": 43186,
+        "reviewBoundary": "Draft still being updated; no file edits and no approval of future bytes.",
+        "passBoundaries": [
+          "Quit actual third filename remains unknown; source race and failure cleanup are separate from intended Quit acceptance.",
+          "W1 Codex deadline is separate from the OpenCode-only factory fix; unsealed active Runtime is valid.",
+          "D1 full canonical exact-head typecheck/typed lint remains open; merge-checkout provenance is retained.",
+          "P09 after-check/writer-open mutation success with A markers is not native B execution; script SCRIPT:B is a separate COUNTEREXAMPLE."
+        ],
+        "issue": "M1 table row saying native E2E PASS only on2f33 is stale relative to the saved current030 Darwin manual native PASS. Limit that row to prior Linux scope or add currentDarwin manual scope, retaining P09 overall job failure and skipped/unqualified scopes."
+      },
+      "currentNativeEvidence": {
+        "path": "ci-current-030/completed-native-proofs-030.json",
+        "snapshotSha256": "3690aa110b2a191ac80c81e4bece8a41eb81da5d17b28b48e5931ea49964c969",
+        "bytes": 33346,
+        "darwinManual": "Original030 job135167674048 step17 PASS; exact7-step native receipt PASS,cleanuptrue,11modelRequests,modelFailures[],176237ms. Corrected roster verifier step24 succeeds; entirejobFAILURE atstep25 P09.",
+        "notQualified": "Automatic18 and management19–23 skipped; vendorAuth/Desktop/release false.",
+        "p09": "Original030 receipt6PASS/3INCOMPLETE/1scriptCOUNTEREXAMPLE,all qualification flags false,statusINCOMPLETE; do not relabel as only547 evidence when adding current030 data.",
+        "staticWindows": "262PASS/1SKIP of263 plus7retry and41SPI; Host build/test-types PASS is not fullD1.",
+        "hostLinux": "Nodecontracts192PASS;broker63;retainedMain128;POSIX29;descriptor6+6;pidfd63. Two originalnative receipts completed/cleaned; scope excludes SDK/Desktop/olderABI/WindowsA/B. Artifact14479492155 reported only,not downloaded."
+      },
+      "scope": {
+        "ciRequests": 0,
+        "sourceEdits": 0,
+        "fullTypecheck": false,
+        "fullTypedLint": false,
+        "build": false,
+        "appOrNative": false,
+        "publication": false
+      }
+    }
+  },
+  "limitations": [
+    "Not a Darwin Electron/native Quit acceptance run; original intended Quit never reached its normal acceptance boundary.",
+    "Original failed third filename is not known. The finite interleave uses the actual producer protocol but does not identify that original file.",
+    "Worker shares process PID; no separate-process liveness qualification.",
+    "No full canonical workspace types/typed lint or local app/native execution from this review."
+  ],
+  "publicationAuthority": "Root may publish to the existing Draft branch under the persistent user instruction; the author manifest publicationAuthorized=false only withheld agent ref mutation."
+}

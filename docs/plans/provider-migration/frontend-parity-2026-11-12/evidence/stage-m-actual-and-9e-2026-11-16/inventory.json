@@ -1,0 +1,347 @@
+{
+  "kind": "M actual publication and original9e evidence documentation inventory, excluding self",
+  "parent": "5fc28295461d18068f74a8ca9e2f4ab8ecda8663",
+  "parentTree": "8115f780d90d705933e9b6bb40b76e9da08753bb",
+  "sourceChanges": false,
+  "allMSourceUnchanged": true,
+  "currentMRedGreenExecuted": false,
+  "nativeIndependentReviewIncluded": true,
+  "payloads": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/stage-m-actual-evidence-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "mode": "100644",
+      "type": "blob",
+      "role": "Full M Plan29 prefix plus five exact current-source evidence/actual-readback appendices",
+      "bytes": 1278823,
+      "blob": "22f00c40d0da9b6b2b1354424270d78b1484af63",
+      "sha256": "c2d4bb45b780de5caa980a5455579d476feeee00032b645ce419deec673e050d",
+      "derivation": {
+        "prefixHead": "5fc28295461d18068f74a8ca9e2f4ab8ecda8663",
+        "prefix": {
+          "bytes": 1242743,
+          "blob": "d9df9f3b161793e7cc318f431b86d6244768daa8",
+          "sha256": "1cb80a58475bd1a99c2e12b36975f7850141906ba584cd92978df96863c3a997"
+        },
+        "blocks": [
+          {
+            "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-9e542/Plan29-windows-process-appendix.md",
+            "bytes": 6440,
+            "blob": "64043927a9904aa2f98da0ad044df7322bd5bee2",
+            "sha256": "36c49721680697824c38a631dee52f63dc77f3fbb88295fae58be1da49e27117",
+            "separator": "two literal LF bytes",
+            "separatorOffset": 1242743,
+            "contentOffset": 1242745
+          },
+          {
+            "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-9e542/Plan29-v2-p09-darwin-static-appendix.md",
+            "bytes": 8806,
+            "blob": "b5bf61148cae4fddd12189924b76d9c486079fef",
+            "sha256": "1cd2c5c615a0c58a53ac5a5db3a7d8864f872154b56df20a3d6486ddb12c937d",
+            "separator": "two literal LF bytes",
+            "separatorOffset": 1249185,
+            "contentOffset": 1249187
+          },
+          {
+            "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/Plan29-creation-windows-macos-appendix.md",
+            "bytes": 6967,
+            "blob": "ff226c7d1d71b10e01c918197b80c54ca30328a0",
+            "sha256": "c2daf5fe24c83b7c53f7044f5d0a4ac6bb4d6e37e965315d0ea0509b47f453ec",
+            "separator": "two literal LF bytes",
+            "separatorOffset": 1257993,
+            "contentOffset": 1257995
+          },
+          {
+            "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/Plan29-installer-appendix.md",
+            "bytes": 8947,
+            "blob": "19b5a7c52db1b40910e08ef4e49588b1fd712db1",
+            "sha256": "b27a1c82a0c5f4400f32737cebc88322abe199dadb5202a6c5caee0345b3d684",
+            "separator": "two literal LF bytes",
+            "separatorOffset": 1264962,
+            "contentOffset": 1264964
+          },
+          {
+            "originalPath": "/workspace/scratch/82d3f9ba6b85/stage-m-actual-evidence-publication/Plan29-M-actual-and-9e-evidence-appendix.md",
+            "bytes": 4910,
+            "blob": "d0104a01461e30e302aadbbd398c7891a237fe35",
+            "sha256": "a22291b63730397d001631f4a13a2ce2f84deb82510574a7d834ce1ef1a94ce2",
+            "separator": "two literal LF bytes",
+            "separatorOffset": 1273911,
+            "contentOffset": 1273913
+          }
+        ]
+      },
+      "preimage": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "d9df9f3b161793e7cc318f431b86d6244768daa8"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/root-M-docs-input-review.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/stage-m-actual-evidence-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/root-M-docs-input-review.json",
+      "mode": "100644",
+      "type": "blob",
+      "role": "Exact actual publication review or original9e evidence; not a new project run",
+      "bytes": 377,
+      "blob": "2c0af35102f5c68693449095ee78621c3d399ada",
+      "sha256": "81ec6c6e27c9f372b49c666a30c5af935c0a35c679c1882ec23809d994119eab",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/stage-m-publication/root-prepublication-review.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/independent-M-docs-assembly-review.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/stage-m-actual-evidence-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/independent-M-docs-assembly-review.json",
+      "mode": "100644",
+      "type": "blob",
+      "role": "Exact actual publication review or original9e evidence; not a new project run",
+      "bytes": 27630,
+      "blob": "2cef3a36ca031d4853bf9798c5d26a73658cc9ca",
+      "sha256": "7131999fb75020a75404ccf3fd6e8fe57702c9fc2a527fae0a3c12ff6e3fa5f0",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/stage-m-publication-independent-assembly-review.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/root-M-docs-remote-tree-review.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/stage-m-actual-evidence-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/root-M-docs-remote-tree-review.json",
+      "mode": "100644",
+      "type": "blob",
+      "role": "Exact actual publication review or original9e evidence; not a new project run",
+      "bytes": 397,
+      "blob": "b746cce71188a92080518941ac733321a697b310",
+      "sha256": "d8d52538a3f5165ae7abc8b8b77a2c36ce4cddbc1a834b6ee31c7986d55f49da",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/stage-m-publication/root-remote-tree-review.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/independent-M-docs-remote-tree-review.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/stage-m-actual-evidence-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/independent-M-docs-remote-tree-review.json",
+      "mode": "100644",
+      "type": "blob",
+      "role": "Exact actual publication review or original9e evidence; not a new project run",
+      "bytes": 1986,
+      "blob": "c6cfb7d11761d1a190103d3b73d0acb151cfe6eb",
+      "sha256": "a556aa449b5a491db019e0b6050d2df179f2fc8759b58dcc9f576ca385f186e0",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/stage-m-publication-independent-remote-tree-review.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/root-M-published-docs-readback.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/stage-m-actual-evidence-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/root-M-published-docs-readback.json",
+      "mode": "100644",
+      "type": "blob",
+      "role": "Exact actual publication review or original9e evidence; not a new project run",
+      "bytes": 23745,
+      "blob": "ffe31ed77464c4b0e9f969ac2a3fde938fd15656",
+      "sha256": "5aad3067b3f27058959c0675e80c4d0654885bdfb163395dac792adc3493184d",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/stage-m-publication/published-documentation-readback.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/independent-M-published-docs-readback.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/stage-m-actual-evidence-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/independent-M-published-docs-readback.json",
+      "mode": "100644",
+      "type": "blob",
+      "role": "Exact actual publication review or original9e evidence; not a new project run",
+      "bytes": 30164,
+      "blob": "4fc896f04e6737f1082f8e982916fc6e92f7e4f9",
+      "sha256": "fa2de1f4d6438cb2bdc6f0faae2e5b9fcefff1302a108557757662a1929cb11d",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/stage-m-publication-independent-published-review.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/M-source-tree-request.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/stage-m-actual-evidence-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/M-source-tree-request.json",
+      "mode": "100644",
+      "type": "blob",
+      "role": "Exact actual publication review or original9e evidence; not a new project run",
+      "bytes": 4015,
+      "blob": "5c9f08b5e43f6cc9b246e954ab261aa8380c4c0e",
+      "sha256": "4291e1a9d695bd2a3c0b2e45ee9105217e6f5ca7a3b7fe1b0681a4cfb474959e",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/stage-m-adoption/source-tree-request.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/independent-M-immutable-source-tree-review.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/stage-m-actual-evidence-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/independent-M-immutable-source-tree-review.json",
+      "mode": "100644",
+      "type": "blob",
+      "role": "Exact actual publication review or original9e evidence; not a new project run",
+      "bytes": 8827,
+      "blob": "c08a217556b370256d178707e9e563810219b98e",
+      "sha256": "48c11a836403dac37a9ace0c40150457c938fec0b1ae4830a520c3a847b9d7a1",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/stage-m-adoption/independent-source-tree-review.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/root-M-published-source-readback.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/stage-m-actual-evidence-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/root-M-published-source-readback.json",
+      "mode": "100644",
+      "type": "blob",
+      "role": "Exact actual publication review or original9e evidence; not a new project run",
+      "bytes": 7072,
+      "blob": "822af2371c64fe45fdf678002f5e0e9b971d1ee3",
+      "sha256": "073361caacedb66c001b5fb9b6195e196ba50e0a571cbd4aa0a2c411e27a17aa",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/stage-m-adoption/published-source-readback.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/independent-M-published-source-readback.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/stage-m-actual-evidence-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/independent-M-published-source-readback.json",
+      "mode": "100644",
+      "type": "blob",
+      "role": "Exact actual publication review or original9e evidence; not a new project run",
+      "bytes": 11633,
+      "blob": "bad33d62d4bd8e8cae625e6e48eff5bfa3badbe6",
+      "sha256": "2b33b753711ad10eca0b2322c220c9c1ab83e04a81b21d2e75e788ed8432a231",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/stage-m-adoption/independent-published-source-review.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/Plan29-M-actual-and-9e-evidence-appendix.md",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/stage-m-actual-evidence-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/Plan29-M-actual-and-9e-evidence-appendix.md",
+      "mode": "100644",
+      "type": "blob",
+      "role": "Exact actual publication review or original9e evidence; not a new project run",
+      "bytes": 4910,
+      "blob": "d0104a01461e30e302aadbbd398c7891a237fe35",
+      "sha256": "a22291b63730397d001631f4a13a2ce2f84deb82510574a7d834ce1ef1a94ce2",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/stage-m-actual-evidence-publication/Plan29-M-actual-and-9e-evidence-appendix.md"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/original9e-General-0014.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/stage-m-actual-evidence-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/original9e-General-0014.json",
+      "mode": "100644",
+      "type": "blob",
+      "role": "Exact actual publication review or original9e evidence; not a new project run",
+      "bytes": 2322,
+      "blob": "d3d08e30dedc4879e633a543b782c6d0d4152de1",
+      "sha256": "0380297e3636f933a10a93d87e82f6d3174dd55d9b0e3d699e1278a52701af35",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/general-ci-m-checkpoints/jobs-0014.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/original9e-General-0020.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/stage-m-actual-evidence-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/original9e-General-0020.json",
+      "mode": "100644",
+      "type": "blob",
+      "role": "Exact actual publication review or original9e evidence; not a new project run",
+      "bytes": 2322,
+      "blob": "8d9689785537d496f7b1c797d02e2b5be9fdb368",
+      "sha256": "88ebd3ed2140f966fa8267356fb2d788ab28d3ab35a6487e03be12289acdf1b7",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/general-ci-m-checkpoints/jobs-0020.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/native/9e542-README.md",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/stage-m-actual-evidence-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/native/9e542-README.md",
+      "mode": "100644",
+      "type": "blob",
+      "role": "Recoverable exact original9e completed evidence; unchanged source-specific limitations",
+      "bytes": 1177,
+      "blob": "7fb3e3c7cd7ed3dc9875804cddf15b82858ab97e",
+      "sha256": "69688873e9f6a978e1e7869e76bf2406e73cbce67ff7df8e796e4677fbfe99d3",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-9e-completed-evidence-bundle/9e542-README.md"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/native/9e542-bundle-metadata.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/stage-m-actual-evidence-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/native/9e542-bundle-metadata.json",
+      "mode": "100644",
+      "type": "blob",
+      "role": "Recoverable exact original9e completed evidence; unchanged source-specific limitations",
+      "bytes": 1326,
+      "blob": "0b01dffde849db884949903dfed1b01eaa3f2fd9",
+      "sha256": "5deb6d6e75b425b7b80c98092652509891122c129177dc5d4059898b579f0e90",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-9e-completed-evidence-bundle/9e542-bundle-metadata.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/native/9e542-inventory.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/stage-m-actual-evidence-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/native/9e542-inventory.json",
+      "mode": "100644",
+      "type": "blob",
+      "role": "Recoverable exact original9e completed evidence; unchanged source-specific limitations",
+      "bytes": 10925,
+      "blob": "b2e5042cc00a6921789bd45815b0bb781b239df0",
+      "sha256": "4deba782c8e97cac97ce9b4446a71a19e0e2c43fb5520d6715c47014b17453d5",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-9e-completed-evidence-bundle/9e542-inventory.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/native/9e542-native-evidence.zip",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/stage-m-actual-evidence-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/native/9e542-native-evidence.zip",
+      "mode": "100644",
+      "type": "blob",
+      "role": "Recoverable exact original9e completed evidence; unchanged source-specific limitations",
+      "bytes": 630348,
+      "blob": "c07f242d66ec9538f2f3f9a64e8c44758fd61d10",
+      "sha256": "0144dfbe4d92402a20c2e016eda15b06008e43c8e1c283fee9cf6973eebf2582",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-9e-completed-evidence-bundle/9e542-native-evidence.zip"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/native/root-independent-bundle-review.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/stage-m-actual-evidence-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/native/root-independent-bundle-review.json",
+      "mode": "100644",
+      "type": "blob",
+      "role": "Recoverable exact original9e completed evidence; unchanged source-specific limitations",
+      "bytes": 727,
+      "blob": "125cec622a6ec75b575b524c7523ce579b9f1be7",
+      "sha256": "d0f36a9d97088a1d641a7eb58ad4d077f1f9fa174407459bc35fd111a8295ce2",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-9e-completed-evidence-bundle/root-independent-bundle-review.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/ui/README.md",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/stage-m-actual-evidence-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/ui/README.md",
+      "mode": "100644",
+      "type": "blob",
+      "role": "Recoverable exact original9e completed evidence; unchanged source-specific limitations",
+      "bytes": 4317,
+      "blob": "f73bd54955f2ae20cf8b1d7cbda1e57f3c4116d8",
+      "sha256": "21a6ef9098576bdd6828fa1c9a178c48518f8e3a1e6e60f3493ee5d654955fe7",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ui-9e542-publication/README.md"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/ui/bundle-metadata.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/stage-m-actual-evidence-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/ui/bundle-metadata.json",
+      "mode": "100644",
+      "type": "blob",
+      "role": "Recoverable exact original9e completed evidence; unchanged source-specific limitations",
+      "bytes": 1357,
+      "blob": "bed27d4a2c29e556d7369556c3b92d73b3803b66",
+      "sha256": "ece640a007edd332c2920be02e2f52446ca48ab3f3f077b88225221e7c77898b",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ui-9e542-publication/bundle-metadata.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/ui/inventory.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/stage-m-actual-evidence-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/ui/inventory.json",
+      "mode": "100644",
+      "type": "blob",
+      "role": "Recoverable exact original9e completed evidence; unchanged source-specific limitations",
+      "bytes": 70353,
+      "blob": "7fa492ecdcc0dc5d08fccfc3855c009606296ada",
+      "sha256": "87265033bb2dd9c0daf4f022a08ce2df3ef46b69783f326ba3e25d4fc80a2ee8",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ui-9e542-publication/inventory.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/ui/original-ui-evidence.zip",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/stage-m-actual-evidence-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/ui/original-ui-evidence.zip",
+      "mode": "100644",
+      "type": "blob",
+      "role": "Recoverable exact original9e completed evidence; unchanged source-specific limitations",
+      "bytes": 5616707,
+      "blob": "7e80a86094c5bc2e4ea6aa4540c132f0129e75a6",
+      "sha256": "0349314448bf95729f524cf2810212f467bce78396c3477e83efbaa425b79992",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ui-9e542-publication/original-ui-evidence.zip"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/ui/root-independent-bundle-review.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/stage-m-actual-evidence-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/ui/root-independent-bundle-review.json",
+      "mode": "100644",
+      "type": "blob",
+      "role": "Recoverable exact original9e completed evidence; unchanged source-specific limitations",
+      "bytes": 784,
+      "blob": "7a5d4ecc538a82bc004b77ebbcfd44e3cd9684fc",
+      "sha256": "eb5549ad36c3d6d27abc6fc9b4bd7deae1eb3a2bbcbd44b01e75416239b7f406",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ui-9e542-publication/root-independent-bundle-review.json"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/native/independent-completed-native-review.json",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/stage-m-actual-evidence-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/native/independent-completed-native-review.json",
+      "mode": "100644",
+      "type": "blob",
+      "role": "Independent original9e complete native/source/custody qualification review",
+      "bytes": 74530,
+      "blob": "33c8d4c57aacd5ec57c272be9d6c9d3305a9d062",
+      "sha256": "a79accbb5ce83241150e9e76fa88455918bbd83a816e0d9942ee19450e57cd77",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-9e542/independent-completed-native-review.json"
+    }
+  ],
+  "fileCount": 25,
+  "bytes": 7816774
+}

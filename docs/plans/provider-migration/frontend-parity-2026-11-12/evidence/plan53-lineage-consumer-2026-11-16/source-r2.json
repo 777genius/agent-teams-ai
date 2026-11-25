@@ -1,0 +1,365 @@
+{
+  "kind": "INDEPENDENT_PLAN53_LINEAGE_CONSUMER_SOURCE_R1_R2",
+  "disposition": "APPROVE_EXACT_PROSPECTIVE_SOURCE_AND_R1",
+  "publicationAuthority": {
+    "canonicalParent": null,
+    "documentationPublication": null,
+    "sourceApplication": false,
+    "currentBoundUnionRequired": true,
+    "scope": "Exact three prepared paths and Plan53 append only. Root must bind actual parent/whole tree, publish and read back R1, and obtain actual published-R1 binding R2 before source application."
+  },
+  "basis": {
+    "knownImmutableSource": "0d24f086d5fd412d7fb2e37c38f9864f2699a941",
+    "currentWorkflowAndPlanPrefixJoin": "Complete before workflow and full Plan53 prefix equal retained actual0d24 afterBodies. No fresh ref lease inferred.",
+    "reviewedPacket": "/tmp/migration-evidence-20261116/frontend/plan53-lineage-compatibility-inert-proposal",
+    "manifest": {
+      "path": "/tmp/migration-evidence-20261116/frontend/plan53-lineage-compatibility-inert-proposal/manifest.json",
+      "gitBlob": "02712eb4e52a96f7e299f115932e0e1ebb566e5b",
+      "bytes": 6531,
+      "sha256": "0d40e43a63cba1fc0ec8331bae1c9ca83dffb0fa5ec76774044a8e5e23e063eb",
+      "lines": 158
+    }
+  },
+  "sourcePairs": [
+    {
+      "repositoryPath": "scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts",
+      "before": {
+        "path": "/tmp/migration-evidence-20261116/frontend/plan53-lineage-compatibility-inert-proposal/before/scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts",
+        "gitBlob": "31160baa614a4ecd5cc17fb2078561cad371c06c",
+        "bytes": 16119,
+        "sha256": "81d26bee6ac2f5272a4084e5594a260b775169757efa067e4a452728fd7e3bec",
+        "lines": 299
+      },
+      "after": {
+        "path": "/tmp/migration-evidence-20261116/frontend/plan53-lineage-compatibility-inert-proposal/after/scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts",
+        "gitBlob": "79c288d8cd5f6dc432177a2047ce517f174d11b4",
+        "bytes": 17725,
+        "sha256": "fac4d4bf3d7b662efe23f921f05d5a76277f294ace34de3053c3447d0dd4347f",
+        "lines": 320
+      }
+    },
+    {
+      "repositoryPath": "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+      "before": {
+        "path": "/tmp/migration-evidence-20261116/frontend/plan53-lineage-compatibility-inert-proposal/before/scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+        "gitBlob": "13229f20c93226ee5b3f4d07516d16f94b0d48d5",
+        "bytes": 20040,
+        "sha256": "460743df044eef3901653a6c4331a14bdf977ca644513a22386bf34907aaf13e",
+        "lines": 306
+      },
+      "after": {
+        "path": "/tmp/migration-evidence-20261116/frontend/plan53-lineage-compatibility-inert-proposal/after/scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+        "gitBlob": "cb02a91e7876b4a9367f3d6b763f56fbe566dd7f",
+        "bytes": 25809,
+        "sha256": "a093b30cd5c6e12960c770f65394dc8bebb0149194d1fd0f698b43fb73792605",
+        "lines": 381
+      }
+    },
+    {
+      "repositoryPath": ".github/workflows/host-emulated-acceptance.yml",
+      "before": {
+        "path": "/tmp/migration-evidence-20261116/frontend/plan53-lineage-compatibility-inert-proposal/before/.github/workflows/host-emulated-acceptance.yml",
+        "gitBlob": "ff94e1d92c82a644a302ef61e64246f919f04d83",
+        "bytes": 106573,
+        "sha256": "09bfb26561b8d795b511b3e808fe7bcdedeb4cd405587394356b2bf0db828867",
+        "lines": 1373
+      },
+      "after": {
+        "path": "/tmp/migration-evidence-20261116/frontend/plan53-lineage-compatibility-inert-proposal/after/.github/workflows/host-emulated-acceptance.yml",
+        "gitBlob": "a1513210012356a5178620b1f370bd1daf0de9d9",
+        "bytes": 106650,
+        "sha256": "56158f6aac71a16f66959bd022d979860391bb237eacc31ab0571239b4835ca1",
+        "lines": 1374
+      }
+    }
+  ],
+  "documentaryPayloads": [
+    {
+      "path": "/tmp/migration-evidence-20261116/frontend/plan53-lineage-compatibility-inert-proposal/candidate.patch",
+      "gitBlob": "f638701122030a368e5f8a43eb1307f06c36ca1b",
+      "bytes": 10153,
+      "sha256": "cf9e79d0f1bbc76a60f6be340b8396fc7e2455ab463717dbabd5323f691fbb33",
+      "lines": 138
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/frontend/plan53-lineage-compatibility-inert-proposal/r1-append.md",
+      "gitBlob": "92362b0924008fa01d1074b510ff7350d1acee3e",
+      "bytes": 7530,
+      "sha256": "661798aac8299acda3e890e9e5cd892d329338ae758f3514744c0d67ef566a80",
+      "lines": 44
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/frontend/plan53-lineage-compatibility-inert-proposal/proposed-plan53.md",
+      "gitBlob": "72887883027218b17705cf5c12035e46e69b1196",
+      "bytes": 20882,
+      "sha256": "72238175e3569a2984f19c8ef5d4484ac62f66b4c8a8679880c1a7f55adbbc8a",
+      "lines": 113
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/frontend/plan53-lineage-compatibility-inert-proposal/validation.json",
+      "gitBlob": "3e5376c380b20f6818fbbd6db3236e745b3526a0",
+      "bytes": 14486,
+      "sha256": "18308701ffbbfdcb645442362c39c7996f0e2102d233b31ac80f54d5208f918f",
+      "lines": 80
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/frontend/plan53-lineage-compatibility-inert-proposal/preservation-proof.json",
+      "gitBlob": "35bcfe09f0809b914f0814f1c287c26a9ace8b31",
+      "bytes": 1546,
+      "sha256": "bfd1e052fe120ece0d341b63f483716d4cbf9d343196e1f89b948f6f99b2b44b",
+      "lines": 57
+    }
+  ],
+  "bytePreservation": {
+    "allSixImagesAndTenReferencesRehashed": true,
+    "wholeUnifiedPatchRegeneratedByteExactly": true,
+    "helperRemoveSingle21LineInsertionRestoresEntire31160": true,
+    "testRemoveTwoCaseSuffixAndOnlyRequiredImportsRestoresEntire13229": true,
+    "workflowRemoveOneOperandAndRestoreContinuationRestoresEntireff94": true,
+    "wholePlan9976PlusExact92362Append": true,
+    "originalCaseNames": [
+      "retained c226 original rejected-key receipt joins its published seed and exact observed native probe",
+      "V2 receipt binding rejects foreign revisions, scope, seed owner, engine and executable",
+      "V2 publication rejects an internally rehashed foreign descriptor grant or replacement executable",
+      "V2 source history accounts for every publication and the exact retained current chain",
+      "original Host rejects old other-project cwd and accepts only its separate exact private-account seed",
+      "archived V2 tuple isolation restores the real runner and preserves foreign-platform refusal",
+      "original V2 default intent joins its selected saving row within the same receipt deadline"
+    ],
+    "newCaseNames": [
+      "metadata read failures cannot acquire or retire an original native lifecycle",
+      "metadata observation separation still refuses malformed diagnostics and unknown lifecycle rows"
+    ]
+  },
+  "closedAdmission": {
+    "hostFilter": "Original namespace/framing/strict captured-host equality unchanged. Only same-host stage read-failed enters the new branch.",
+    "exactKeys": [
+      "aborted",
+      "deadlineExpired",
+      "elapsedMs",
+      "hostPid",
+      "mode",
+      "profileHash",
+      "providerHash",
+      "readStage",
+      "reason",
+      "stage"
+    ],
+    "readStages": [
+      "admission",
+      "native-client",
+      "identity",
+      "plugins",
+      "permissions",
+      "mcp",
+      "credential",
+      "directory",
+      "activation-wait",
+      "current",
+      "projection",
+      "dispose",
+      "result-current"
+    ],
+    "reasons": [
+      "held",
+      "conflict",
+      "invalid",
+      "busy",
+      "deadline",
+      "cleanup_unknown",
+      "transport_failure",
+      "authority_mismatch",
+      "disposed",
+      "http_failure",
+      "media_type",
+      "body_limit",
+      "frame_limit",
+      "invalid_response",
+      "invalid_native_catalog",
+      "native_catalog_binding_mismatch",
+      "capabilities_pending",
+      "unqualified_version",
+      "ABORT_ERR",
+      "unknown"
+    ],
+    "producerDecoderEnumSequenceMatch": true,
+    "values": [
+      "64lowercasehex profileHash",
+      "mode directory or provider",
+      "providerHash null or64lowercasehex; directory iff null",
+      "safe integer elapsed0..3600000",
+      "boolean deadlineExpired",
+      "boolean or null aborted"
+    ],
+    "unknownOrMalformed": "Any missing/extra/type/range/unknown matching-host failure field throws. Unknown/nonfailure stages still enter the complete unchanged seven-key lifecycle path and its original stage/identity checks. No broad stage-only skip or new catch.",
+    "diagnosticOnly": "Validated failures are excluded before events.push. They cannot allocate a partition/PID/birth, become ready/released, retire a live owner, or satisfy the existing nonempty lifecycle requirement. A valid failure for another profile may be excluded because it grants no selected-scope authority; real lifecycle events still require original selected profiles."
+  },
+  "custodyPreservation": {
+    "wholeOriginalHelperBodyRestoredByInverse": true,
+    "unchanged": [
+      "ready/released/cleanup-unknown seven-key protocol",
+      "captured Host/profile/mode/provider/native birth and executable comparisons",
+      "one current original owner per scope; no PID reuse",
+      "immutable lifecycle event/birth prefixes",
+      "physical live presence and original retired absence",
+      "original released requirement and cleanup-unknown refusal",
+      "combined rotated+current log4MiB bound",
+      "128 lifecycle-event cap",
+      "WeakMap failure facts and throw propagation",
+      "existing file-read callsites and original captured-source/release callers"
+    ],
+    "failureRowsAndBudget": "Failure records do not consume the128 lifecycle-event cap, but remain within the same existing4MiB whole-log bound. Added sorting/hash/value/enum checks and temporary arrays consume CPU/allocation; no constant runtime or performance improvement claim."
+  },
+  "actualCallerTestReview": {
+    "testCount": "7original+2appended=9 source cases; not an executed count",
+    "realSeam": "Temporary actual app-errors.ndjson framing through captureDesktopSourceMetadataLineage and assertDesktopMetadataLineageReleased; no private-function mirror/string extraction for the new cases. Explicit executable avoids environment mutation.",
+    "positiveChecks": [
+      "initial baseline ready succeeds before introducing a failure",
+      "pre-ready and live failures leave complete original lineage unchanged",
+      "missing physical live child still refuses",
+      "missing actual released event still refuses",
+      "failure-only log cannot create custody",
+      "cleanup-unknown still refuses",
+      "actual released event plus absence preserves exactready/released events and original birth",
+      "remaining nativePID still refuses"
+    ],
+    "negativeChecks": "20 source-authored malformed/unknown cases: extra or lifecycle-only failure fields, missing aborted, unknown stage/reason, malformed hash or mode/provider relationship, invalid elapsed values, invalid booleans, failure disguised as lifecycle and malformed lifecycle rows. All pass through the actual parser.",
+    "staticTrace": "Expected exception regexes match the retained actual helper assertions; successful test calls provide every consumed host/child/path/profile field. New imports are built-in fs/os and the existing helper; its ProcessFact import is erased type-only.",
+    "predictedBaseline": "First new case fails semantically at original seven-key assertion only after its valid initial baseline capture. Negative case preserves refusal. These are source predictions, not actual RED/GREEN.",
+    "cleanup": "Two owned temporary directories removed in finally; no process spawn, native call, clock override or environment replacement introduced."
+  },
+  "coverage": {
+    "sameOriginalFullEightArgv": "node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+    "sameOriginalBuildPrerequisites": true,
+    "testAlreadyInOriginalFullEight": true,
+    "testAlreadyInScopedLint": true,
+    "lintOperandsBefore": 130,
+    "lintOperandsAfter": 131,
+    "oldOrderedOperandsExact": true,
+    "singleNewOperand": "scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts",
+    "duplicateOperands": false,
+    "existingStrictProject": {
+      "pin": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+      "include": "scripts/legacy-agent-host/**/*.ts",
+      "strict": true,
+      "workspaceScriptInvokesLegacyProject": true,
+      "newConfig": false
+    },
+    "fastLint": "Current8a6 config admits scriptsTS; no ignore/rule addition. simple-import-sort rules are scoped tosrc/test/packages-agent-graph, not these scripts. Lint remains unexecuted.",
+    "sourceFreeze": {
+      "helperOccursExactlyOnceInIntegrated083522": true,
+      "primarya8beImportsAndSpreadsIntegratedRoster": true,
+      "rosterMutation": false,
+      "testScope": "Existing original full8 and scoped lint remain its execution binding; no new test/source roster invented."
+    },
+    "unchanged": [
+      "all original helper/full Runtime-Team/type/typed-lint commands",
+      "V2 Settings before P11 membership order",
+      "workflow conditions/matrices/jobs/timeouts/toolchain/dependencies",
+      "native/provider/Main/renderer source and cleanup"
+    ],
+    "caps": "Helper320 and test381 physical lines; no baseline/cap/exemption change. Workflow1374 lines, existing YAML outside source extension guard."
+  },
+  "r1Review": {
+    "completePrefixAndAppendRead": true,
+    "scopeAndCostAccurate": true,
+    "noHistoricalSettingsCauseClaim": true,
+    "noNativeOrCleanupQualificationClaim": true,
+    "noNewMandatoryRedOrCiCycle": true,
+    "actualParentStillUnbound": true,
+    "existingOriginalResultingSourceCIStillRequired": true
+  },
+  "concreteBlockers": [],
+  "limits": [
+    "No project code, parser function, test, compiler, lint, GUI, native source or archived binary executed. Only retained text/hash/diff/JSON operations.",
+    "No API, CI polling/log/archive retrieval, canonical source/doc/index/ref mutation.",
+    "Prospective static R2 is not actual published-R1 binding, final tree authorization or resulting-source pass.",
+    "Valid synthetic physical facts in parser tests do not establish real OS custody or repair historical Models latency."
+  ],
+  "references": [
+    {
+      "path": "/tmp/migration-evidence-20261116/frontend/plan53-lineage-compatibility-inert-proposal/reference/desktop-opencode-v2-lifecycle.test.ts",
+      "gitBlob": "1e2653c7bcad520a5d92f39a5130bee9ff6e63b0",
+      "bytes": 32742,
+      "sha256": "9ad8df35210da6b12afb72aaa146f0bb58b4985d50ec9a035868efbef32df388",
+      "lines": 487
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/frontend/plan53-lineage-compatibility-inert-proposal/reference/desktop-proof-integrated-sources.ts",
+      "gitBlob": "083522612dd93e77dbb0e79c966103b03a71fe87",
+      "bytes": 44561,
+      "sha256": "555a309f762015659a3b7a0d44522785fa7ea171aedf77392020c25dc5d70e33",
+      "lines": 600
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/frontend/plan53-lineage-compatibility-inert-proposal/reference/desktop-proof-management-sources.ts",
+      "gitBlob": "762570da8b4fc492065b217303a3da169bf627cf",
+      "bytes": 21211,
+      "sha256": "7b89bab88022f53fbc8470f0cbcd4acd93f8ee5412059144e3a676c0fb7466f8",
+      "lines": 309
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/frontend/plan53-lineage-compatibility-inert-proposal/reference/desktop-proof-sources.ts",
+      "gitBlob": "a8be2617b2c765091cecce789f028ef2bf67af60",
+      "bytes": 52632,
+      "sha256": "5b6ae1e33b7567b7e72d0862f0253ca25875a696e653a86c61580a492601d69a",
+      "lines": 800
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/frontend/plan53-lineage-compatibility-inert-proposal/reference/desktop-proof-supplementary-sources.ts",
+      "gitBlob": "a3d7047a1d081852263726b59f3fa39ab0428a29",
+      "bytes": 22049,
+      "sha256": "57c46c53b141f00d18c7377afe15476c3587ad46e0ac3b48dc8011080b517618",
+      "lines": 339
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/frontend/plan53-lineage-compatibility-inert-proposal/reference/eslint.fast.config.js",
+      "gitBlob": "8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb",
+      "bytes": 7268,
+      "sha256": "f9d2fc0a4724b04fa231487a1bf0b4e470809d3f79e01315bee4ba236f161c88",
+      "lines": 258
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/frontend/plan53-lineage-compatibility-inert-proposal/reference/opencode-v2-stage1-preflight.yml",
+      "gitBlob": "7ccbfb3cf20349d35087798b66e369c95e91a71e",
+      "bytes": 36309,
+      "sha256": "6db4370dc3ee5521847cef9c039f21bddfcfc412b6dabba49dda73585985996a",
+      "lines": 630
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/frontend/plan53-lineage-compatibility-inert-proposal/reference/package.json",
+      "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+      "bytes": 26839,
+      "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+      "lines": 580
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/frontend/plan53-lineage-compatibility-inert-proposal/reference/plan53-prefix.md",
+      "gitBlob": "9976d507d19007fe1e98f60f9c7e304ebefe32f8",
+      "bytes": 13352,
+      "sha256": "a65cac5a59c0f07733ec48ac06ff9af20ec05790b4f9ae8d32f65543bef60899",
+      "lines": 69
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/frontend/plan53-lineage-compatibility-inert-proposal/reference/tsconfig.legacy-agent-host-scripts.json",
+      "gitBlob": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+      "bytes": 646,
+      "sha256": "7aaf5b4f155ab3e350a387ad4687f6d4c1a9ad21e428aa4a74f7d6bd7a555306",
+      "lines": 20
+    }
+  ],
+  "priorDefectReview": {
+    "path": "/tmp/migration-evidence-20261116/frontend/plan53-actual-source-review/independent-r2.json",
+    "gitBlob": "3986719c9a26aa79ae3c6d515a57ab9b855034a9",
+    "bytes": 14791,
+    "sha256": "792312062df6915491923995b04b002fddbc6439eff475a08802c389f33b43bd",
+    "lines": 272
+  },
+  "currentSourceReadback": {
+    "path": "/tmp/migration-evidence-20261116/root/plan53-0d24-full-readback.json",
+    "gitBlob": "8556eeb03ede8ff37cb93c4378d7703d5f02f9a5",
+    "bytes": 453158,
+    "sha256": "b76ebb3e0a2168e00c1fd38e54db676d4c7b91606b314cb83202616c2d4e957d",
+    "lines": 410
+  }
+}

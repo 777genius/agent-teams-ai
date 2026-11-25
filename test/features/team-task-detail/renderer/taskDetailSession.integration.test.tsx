@@ -1,4 +1,4 @@
-import React, { act, useEffect } from 'react';
+import React, { act, useEffect, useLayoutEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { createTaskDetailReadEntry, taskDetailKey } from '@features/team-task-detail/core';
@@ -12,6 +12,8 @@ import { __resetTeamSliceModuleStateForTests } from '@renderer/store/slices/team
 import {
   acceptTaskDetailLiveTeamSnapshot,
   captureTaskDetailReadScope,
+  invalidateTeamSnapshotResource,
+  invalidateTeamTaskFullResource,
 } from '@renderer/store/team/taskDetailReadAuthority';
 import { invalidateContextScopedRequestEpoch } from '@renderer/store/utils/contextScopedRequestEpoch';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -23,12 +25,13 @@ import type { TaskComment, TeamSummary, TeamTaskWithKanban, TeamViewSnapshot } f
 const apiMock = vi.hoisted(() => ({
   teams: {
     addTaskComment: vi.fn(),
+    getData: vi.fn(),
     getTask: vi.fn(),
     restoreTeam: vi.fn(),
     softDeleteTask: vi.fn(),
   },
 }));
-vi.mock('@renderer/api', () => ({ api: apiMock }));
+vi.mock('@renderer/api', () => ({ api: apiMock, isElectronMode: () => true }));
 vi.mock('@renderer/services/draftStorage', () => ({
   draftStorage: {
     loadDraft: vi.fn(async () => null),
@@ -161,6 +164,65 @@ describe('task session surface and origin integration', () => {
     vi.unstubAllGlobals();
   });
 
+  it('refuses retained callbacks after metadata invalidation before a new render', async () => {
+    let controller!: TaskDetailSessionController;
+    await act(async () => {
+      mount('dialog', (value) => {
+        controller = value;
+      });
+    });
+    const chip = {
+      id: 'TEST-chip',
+      filePath: '/TEST/retained.ts',
+      fileName: 'retained.ts',
+      fromLine: null,
+      toLine: null,
+      codeText: '',
+      language: 'typescript',
+    };
+    await act(async () => {
+      controller.setCommentText('TEST retained draft');
+      controller.addCommentChip(chip);
+    });
+    const retained = controller;
+    const before = structuredClone(retained.session);
+    const fileReader = vi.fn(() => {
+      throw new Error('Unexpected FileReader before current owner authority');
+    });
+    vi.stubGlobal('FileReader', fileReader);
+    invalidateTeamSnapshotResource(identity.contextId, identity.teamName);
+    expect(retained.isOwner).toBe(true);
+    expect(retained.canEditNow()).toBe(false);
+    await act(async () => {
+      retained.setCommentText('TEST refused typing');
+      retained.addCommentChip({ ...chip, id: 'TEST-refused' });
+      retained.removeCommentChip(chip.id);
+      retained.setReply({ taskId: identity.taskId, author: 'alice', text: 'TEST refused reply' });
+      await retained.addPendingFiles([new File(['TEST'], 'refused.txt', { type: 'text/plain' })]);
+      await retained.submitComment();
+      useStore.setState((state) => ({ teamDataCacheByName: { ...state.teamDataCacheByName } }));
+    });
+    expect(controller.isOwner).toBe(false);
+    expect(controller.canSubmit).toBe(false);
+    expect(controller.session).toEqual(before);
+    expect(fileReader).not.toHaveBeenCalled();
+    expect(apiMock.teams.addTaskComment).not.toHaveBeenCalled();
+    await act(async () => acceptLiveTeamSnapshotFixture(identity.teamName));
+    expect(controller.isOwner).toBe(true);
+    expect(controller.canEditNow()).toBe(true);
+    expect(controller.session.ownerSurfaceId).toBe(before.ownerSurfaceId);
+    expect(controller.session.ownerRevision).toBe(before.ownerRevision);
+    await act(async () => controller.setCommentText('TEST current owner resumes editing'));
+    expect(controller.session.commentText).toBe('TEST current owner resumes editing');
+    const current = controller;
+    invalidateContextScopedRequestEpoch();
+    expect(current.canEditNow()).toBe(false);
+    await act(async () => current.setCommentText('TEST stale scope refusal'));
+    expect(useStore.getState().taskDetailSessionById[key].commentText).toBe(
+      'TEST current owner resumes editing'
+    );
+  });
+
   it('retains Host comment ID/payload across actual unmount/reopen and retirement while preserving newer draft edits', async () => {
     const hostIdentity = { ...identity, teamName: 'host-team:TEST-owner' };
     const hostKey = taskDetailKey(hostIdentity);
@@ -250,10 +312,11 @@ describe('task session surface and origin integration', () => {
       [identity.teamName, 'full tail A'],
       [other.teamName, 'full tail B'],
     ]);
-    apiMock.teams.getTask.mockImplementation(async (teamName: string) => ({
-      ...task,
-      description: tails.get(teamName),
-    }));
+    let fullRefresh: Promise<void> | undefined = undefined;
+    apiMock.teams.getTask.mockImplementation(async (teamName: string) => {
+      if (teamName === identity.teamName && fullRefresh) await fullRefresh;
+      return { ...task, needsClarification: 'user', description: tails.get(teamName) };
+    });
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -269,12 +332,42 @@ describe('task session surface and origin integration', () => {
     expect(useStore.getState().taskDetailById[key].full?.description).toBe('full tail A');
     expect(useStore.getState().taskDetailById[otherKey].full?.description).toBe('full tail B');
 
+    let controller!: TaskDetailSessionController;
+    await act(async () => {
+      mount('duplicate-dialog', value => { controller = value; });
+    });
+    const mutation = vi.fn(async () => {});
+    let finishMetadata!: () => void, finishFull!: () => void;
+    const metadata = new Promise<void>(resolve => { finishMetadata = resolve; });
+    fullRefresh = new Promise<void>(resolve => { finishFull = resolve; });
+    useStore.setState({
+      setTaskNeedsClarification: mutation,
+      refreshTeamData: vi.fn(async (teamName: string) => {
+        if (teamName === identity.teamName) await metadata;
+        acceptLiveTeamSnapshotFixture(teamName);
+      }),
+    });
     tails.set(identity.teamName, 'changed tail A');
     tails.set(other.teamName, 'changed tail B');
     await act(async () => {
       useStore.getState().invalidateTaskDetailTeamSource('local', identity.teamName, '1');
       useStore.getState().invalidateTaskDetailTeamSource('local', other.teamName, '1');
     });
+    expect(controller.canEditNow()).toBe(false);
+    expect(controller.canResolveClarification).toBe(true);
+    await act(async () => {
+      controller.resolveClarification();
+      controller.resolveClarification();
+    });
+    expect(mutation).not.toHaveBeenCalled();
+    expect(controller.canResolveClarification).toBe(false);
+    await act(async () => { finishMetadata(); });
+    expect(controller.canEditNow()).toBe(true);
+    expect(useStore.getState().taskDetailById[key].loading).toBe(true);
+    expect(mutation).not.toHaveBeenCalled();
+    await act(async () => { finishFull(); });
+    expect(mutation).toHaveBeenCalledTimes(1);
+    expect(mutation).toHaveBeenCalledWith(identity.teamName, identity.taskId, null);
     expect(apiMock.teams.getTask).toHaveBeenCalledTimes(4);
     expect(useStore.getState().taskDetailById[key].full?.description).toBe('changed tail A');
     expect(useStore.getState().taskDetailById[otherKey].full?.description).toBe('changed tail B');
@@ -285,6 +378,129 @@ describe('task session surface and origin integration', () => {
     expect(useStore.getState().taskDetailSurfaceInterests).not.toHaveProperty('duplicate-dialog');
     expect(apiMock.teams.getTask).toHaveBeenCalledTimes(4);
   });
+
+  it.each(['accepted', 'failed'] as const)(
+    'joins a successor started before coordinator dispatch and preserves its %s outcome',
+    async (outcome) => {
+      const pending = () => {
+        let resolve!: (value: TeamViewSnapshot) => void;
+        let reject!: (error: Error) => void;
+        const promise = new Promise<TeamViewSnapshot>((done, fail) => {
+          resolve = done;
+          reject = fail;
+        });
+        return { promise, resolve, reject };
+      };
+      const first = pending();
+      const accepted = pending();
+      const latest = pending();
+      const full = { ...task, description: 'TEST original full read after successor' };
+      const failure = 'TEST original joined metadata failed';
+      apiMock.teams.getData
+        .mockReset()
+        .mockReturnValueOnce(first.promise)
+        .mockReturnValueOnce(accepted.promise)
+        .mockReturnValueOnce(latest.promise);
+      apiMock.teams.getTask.mockReset().mockResolvedValueOnce(full);
+      useStore.setState({
+        selectedTeamName: identity.teamName,
+        selectedTeamData: teamSnapshot,
+        refreshTeamData: initial.refreshTeamData,
+      });
+      useStore.getState().setTaskDetailSurfaceInterest('TEST-read-work', identity);
+      useStore.getState().setTaskDetailVisibleResourceDemand(
+        'TEST-read-work', identity, 'detail', true
+      );
+      useStore.getState().updateTaskDetailSessionPart(
+        identity, 'commentText', 'TEST retained draft'
+      );
+      const detail = useStore.getState().ensureTaskDetail(identity);
+      const refresh = useStore.getState().refreshTeamData(identity.teamName, { withDedup: false });
+      let successor: Promise<void> | undefined;
+      try {
+        first.resolve(teamSnapshot);
+        await detail;
+        expect(useStore.getState().taskDetailById[key]).toMatchObject({
+          full: task,
+          loading: false,
+          refreshPending: true,
+        });
+        accepted.resolve(teamSnapshot);
+        await refresh;
+        const originalCache = useStore.getState().teamDataCacheByName[identity.teamName];
+        expect(apiMock.teams.getData).toHaveBeenCalledTimes(2);
+        expect(apiMock.teams.getTask).not.toHaveBeenCalled();
+
+        const View = () => {
+          useLayoutEffect(() => {
+            const before = useStore.getState();
+            successor = before.refreshTeamData(identity.teamName, { withDedup: false });
+            expect(useStore.getState()).toBe(before);
+          }, []);
+          return React.createElement(TaskDetailReadCoordinator);
+        };
+        const host = document.createElement('div');
+        document.body.appendChild(host);
+        const root = createRoot(host);
+        roots.push(root);
+        await act(async () => {
+          root.render(React.createElement(View));
+        });
+        expect(successor).toBeDefined();
+        expect(apiMock.teams.getData).toHaveBeenCalledTimes(3);
+        expect(apiMock.teams.getTask).not.toHaveBeenCalled();
+        expect(useStore.getState().taskDetailById[key]).toMatchObject({
+          full: task,
+          loading: true,
+          refreshPending: false,
+        });
+
+        await act(async () => {
+          if (outcome === 'failed') latest.reject(new Error(failure));
+          else latest.resolve(teamSnapshot);
+          await successor;
+        });
+        expect(useStore.getState().teamDataCacheByName[identity.teamName]).toBe(originalCache);
+        if (outcome === 'accepted') {
+          expect(useStore.getState().taskDetailById[key]).toMatchObject({
+            phase: 'ready',
+            full,
+            loading: false,
+            refreshPending: false,
+          });
+          expect(apiMock.teams.getTask).toHaveBeenCalledTimes(1);
+        } else {
+          expect(console.error).toHaveBeenCalledTimes(1);
+          expect(console.error).toHaveBeenCalledWith(
+            '[Renderer:unwrapIpc]', '[team:getData] ' + failure
+          );
+          vi.mocked(console.error).mockClear();
+          vi.mocked(console.warn).mockClear();
+          expect(useStore.getState().taskDetailById[key]).toMatchObject({
+            phase: 'unavailable',
+            full: task,
+            loading: false,
+            refreshPending: false,
+            error: failure,
+          });
+          await act(async () => {
+            useStore.setState({ selectedProjectId: 'TEST-refused-read-observation' });
+          });
+          expect(apiMock.teams.getTask).not.toHaveBeenCalled();
+        }
+        expect(useStore.getState().taskDetailSessionById[key].commentText)
+          .toBe('TEST retained draft');
+        expect(apiMock.teams.getData).toHaveBeenCalledTimes(3);
+      } finally {
+        first.resolve(teamSnapshot);
+        accepted.resolve(teamSnapshot);
+        latest.resolve(teamSnapshot);
+        await act(async () => {
+          await Promise.allSettled([detail, refresh, ...(successor ? [successor] : [])]);
+        });
+      }
+    }
+  );
 
   it('keeps refused reviews and ignores a late confirmation for an older nonce', async () => {
     let first!: (accepted: boolean) => void;
@@ -599,6 +815,126 @@ describe('task session surface and origin integration', () => {
     });
     expect(controller.session.commentText).toBe('TEST preserved deletion draft');
     expect(canEditAfterDeleteAcceptance).toBe(false);
+
+    await act(async () => {
+      for (const mounted of roots.splice(0)) mounted.unmount();
+    });
+    for (const cause of [
+      'deletion', 'owner', 'context', 'team-epoch', 'invalidation', 'successor',
+      'failure', 'clarification', 'disabled', 'unmount',
+    ] as const) {
+      __resetTeamSliceModuleStateForTests();
+      const clarified: TeamTaskWithKanban = { ...task, needsClarification: 'user' };
+      const mutation = vi.fn(async () => {});
+      apiMock.teams.getTask.mockReset().mockResolvedValue(clarified);
+      useStore.setState({
+        ...initial, activeContextId: identity.contextId, isContextSwitching: false,
+        taskDetailById: {}, taskDetailSessionById: {}, taskDetailSurfaceInterests: {},
+        teamByName: { [identity.teamName]: teamSummary },
+        teamDataCacheByName: { [identity.teamName]: teamSnapshot },
+        setTaskNeedsClarification: mutation,
+        refreshTeamData: vi.fn(async (teamName: string) => { acceptLiveTeamSnapshotFixture(teamName); }),
+      }, true);
+      acceptLiveTeamSnapshotFixture(identity.teamName);
+      await act(async () => { await useStore.getState().ensureTaskDetail(identity); });
+      let current!: TaskDetailSessionController;
+      let enabled = true;
+      const View = () => {
+        const value = useTaskDetailSession({ identity, surfaceId: 'TEST-clarification', currentTask: clarified, enabled });
+        useEffect(() => { current = value; }, [value]);
+        return null;
+      };
+      const host = document.createElement('div'); document.body.appendChild(host);
+      const activeRoot = createRoot(host); roots.push(activeRoot);
+      let finish!: (value: TeamTaskWithKanban) => void, fail!: (error: Error) => void;
+      const pendingRead = new Promise<TeamTaskWithKanban>((resolve, reject) => { finish = resolve; fail = reject; });
+      let reading: Promise<void> | undefined, successor: Promise<void> | undefined;
+      try {
+        await act(async () => { activeRoot.render(React.createElement(View)); });
+        apiMock.teams.getTask.mockReturnValueOnce(pendingRead);
+        await act(async () => {
+          useStore.getState().invalidateTaskDetailSource(identity);
+          reading = useStore.getState().ensureTaskDetail(identity);
+        });
+        expect(current.canResolveClarification, cause).toBe(true);
+        const originalResolve = current.resolveClarification;
+        await act(async () => {
+          current.resolveClarification();
+          current.resolveClarification();
+        });
+        expect(mutation, cause).not.toHaveBeenCalled();
+        expect(current.canResolveClarification, cause).toBe(false);
+        await act(async () => {
+          const state = useStore.getState();
+          if (cause === 'deletion') state.setTaskDetailDeletionIntent(identity, 'deleting',
+            captureTaskDetailReadScope(identity.teamName, identity.contextId));
+          if (cause === 'owner') state.transferTaskDetailOwner(identity, 'TEST-clarification',
+            'TEST-successor', current.session.ownerRevision);
+          if (cause === 'context') {
+            invalidateContextScopedRequestEpoch();
+            useStore.setState({ activeContextId: 'TEST-other-context' });
+          }
+          if (cause === 'team-epoch') state.clearDeletedTeamLocalState(identity.teamName);
+          if (cause === 'invalidation') state.invalidateTaskDetailSource(identity);
+          if (cause === 'successor') {
+            invalidateTeamTaskFullResource(identity);
+            successor = state.ensureTaskDetail(identity);
+          }
+          if (cause === 'clarification') useStore.setState(currentState => ({
+            taskDetailById: { ...currentState.taskDetailById,
+              [key]: { ...currentState.taskDetailById[key], full: { ...clarified, needsClarification: 'lead' } } },
+          }));
+          if (cause === 'disabled') {
+            enabled = false; activeRoot.render(React.createElement(View));
+          }
+          if (cause === 'unmount') {
+            activeRoot.unmount(); roots.splice(roots.indexOf(activeRoot), 1);
+          }
+        });
+        await act(async () => {
+          if (cause === 'failure') fail(new Error('TEST clarification read failure'));
+          else finish(clarified);
+          await reading; await successor;
+        });
+        expect(mutation, cause).not.toHaveBeenCalled();
+        if (cause === 'failure') {
+          expect(console.error).toHaveBeenCalledTimes(1);
+          expect(vi.mocked(console.error).mock.calls.flat().join(' ')).toContain('TEST clarification read failure');
+          vi.mocked(console.error).mockClear();
+        }
+        // A later ordinary ready read cannot revive the cancelled user intent.
+        await act(async () => {
+          if (cause === 'context') invalidateContextScopedRequestEpoch();
+          useStore.setState({
+            activeContextId: identity.contextId, isContextSwitching: false,
+            teamByName: { [identity.teamName]: teamSummary },
+            teamDataCacheByName: { [identity.teamName]: teamSnapshot },
+          });
+          acceptLiveTeamSnapshotFixture(identity.teamName);
+          const state = useStore.getState();
+          state.setTaskDetailDeletionIntent(identity, null,
+            captureTaskDetailReadScope(identity.teamName, identity.contextId));
+          if (cause === 'owner') state.transferTaskDetailOwner(identity, 'TEST-successor',
+            'TEST-clarification', state.taskDetailSessionById[key].ownerRevision);
+          if (cause === 'disabled') {
+            enabled = true; activeRoot.render(React.createElement(View));
+          }
+          await state.ensureTaskDetail(identity);
+        });
+        expect(useStore.getState().taskDetailById[key].phase, cause).toBe('ready');
+        if (cause === 'disabled' || cause === 'unmount') await act(async () => { originalResolve(); });
+        expect(apiMock.teams.getTask, cause).toHaveBeenCalledTimes(cause === 'successor' ? 4 : 3);
+        expect(mutation, cause).not.toHaveBeenCalled();
+      } finally {
+        await act(async () => {
+          if (roots.includes(activeRoot)) {
+            activeRoot.unmount(); roots.splice(roots.indexOf(activeRoot), 1);
+          }
+          finish(clarified);
+          await reading; await successor;
+        });
+      }
+    }
   });
 
   it('finishes a selected file in its own draft across context changes and honors removal', async () => {

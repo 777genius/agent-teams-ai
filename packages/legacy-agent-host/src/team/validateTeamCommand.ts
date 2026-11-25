@@ -5,6 +5,8 @@ import {
 } from '../attachments/uploadContracts.js';
 import { isGroupUuid } from '../group-chats/model.js';
 import { TeamOwnerError } from './contracts.js';
+import { validateExpectedTaskRecipient } from './expectedTaskRecipient.js';
+import { parseNativeSessionCommand } from './nativeSessionCommand.js';
 import { safeSegment, stableJson } from './identity.js';
 import type { TeamCommand, TaskRef } from './contracts.js';
 
@@ -40,8 +42,13 @@ export function validateTeamCommand(command: TeamCommand): void {
   const payload = command.payload;
   if (!payload || typeof payload !== 'object' || Array.isArray(payload))
     throw new TeamOwnerError('invalid');
+  if ((command.operation === 'task.create' || command.operation === 'task.start') &&
+    command.payload.expectedRecipient !== undefined)
+    validateExpectedTaskRecipient(command.payload.expectedRecipient);
   switch (command.operation) {
     case 'task.create':
+      if (command.payload.notifyOwner !== undefined && command.payload.notifyOwner !== false)
+        throw new TeamOwnerError('invalid');
       if (command.payload.groupChatId !== undefined && !isGroupUuid(command.payload.groupChatId))
         throw new TeamOwnerError('invalid');
       validateRefs(command.payload.descriptionTaskRefs);
@@ -95,6 +102,18 @@ export function validateTeamCommand(command: TeamCommand): void {
       for (const id of orderedTaskIds) safeSegment(id);
       break;
     }
+    case 'task.board.review-flow': {
+      const settings = command.payload.settings;
+      if (settings !== null) {
+        if (!settings || typeof settings !== 'object' || Array.isArray(settings) ||
+            Object.keys(settings).some((key) => !['reviewFlow', 'reviewFlowPrompt'].includes(key)) ||
+            !['agent_approval', 'human_approval', 'lead_then_human'].includes(settings.reviewFlow))
+          throw new TeamOwnerError('invalid');
+        validateTeamText(settings.reviewFlowPrompt, true);
+        if (settings.reviewFlowPrompt.trim().length > 1000) throw new TeamOwnerError('invalid');
+      }
+      break;
+    }
     case 'task.relationship':
       safeSegment(command.payload.taskId);
       safeSegment(command.payload.targetId);
@@ -126,15 +145,17 @@ export function validateTeamCommand(command: TeamCommand): void {
     case 'task.review': {
       const review = command.payload;
       safeSegment(review.taskId);
-      if (!['request', 'start', 'approve', 'disapprove', 'request_changes'].includes(review.action))
+      if (!['request', 'start', 'approve', 'disapprove', 'complete', 'request_changes'].includes(review.action))
         throw new TeamOwnerError('invalid');
       const fields =
         review.action === 'request'
           ? ['reviewer']
           : review.action === 'approve'
             ? ['note', 'notifyOwner', 'suppressTaskComment']
+            : review.action === 'complete'
+              ? ['note', 'expectedReviewRequestId']
             : review.action === 'request_changes'
-              ? ['comment', 'taskRefs']
+              ? ['comment', 'taskRefs', 'expectedReviewRequestId']
               : [];
       if (Object.keys(review).some((key) => !['taskId', 'action', ...fields].includes(key)))
         throw new TeamOwnerError('invalid');
@@ -146,7 +167,12 @@ export function validateTeamCommand(command: TeamCommand): void {
           if (review[key] !== undefined && typeof review[key] !== 'boolean')
             throw new TeamOwnerError('invalid');
       }
+      if (review.action === 'complete') {
+        validateTeamText(review.expectedReviewRequestId);
+        if (review.note !== undefined) validateTeamText(review.note, true);
+      }
       if (review.action === 'request_changes') {
+        if (review.expectedReviewRequestId !== undefined) validateTeamText(review.expectedReviewRequestId);
         validateTeamText(review.comment);
         validateRefs(review.taskRefs);
       }
@@ -165,6 +191,10 @@ export function validateTeamCommand(command: TeamCommand): void {
       validateRefs(command.payload.taskRefs);
       safeSegment(command.payload.to);
       validateTeamText(command.payload.text);
+      if (command.payload.nativeCommand !== undefined &&
+        (command.payload.nativeCommand !== true || !parseNativeSessionCommand(command.payload.text) ||
+          command.payload.attachments?.length))
+        throw new TeamOwnerError('invalid');
       if (command.payload.messageId !== undefined) {
         validateTeamText(command.payload.messageId);
         if (
@@ -197,6 +227,8 @@ export function validateTeamCommand(command: TeamCommand): void {
       'prompt',
       'promptTaskRefs',
       'startImmediately',
+      'notifyOwner',
+      'expectedRecipient',
       'descriptionTaskRefs',
     ],
     'task.update': ['taskId', 'subject', 'description'],
@@ -204,11 +236,12 @@ export function validateTeamCommand(command: TeamCommand): void {
     'task.attachment.remove': ['taskId', 'attachmentId'],
     'task.board.clear': ['taskId'],
     'task.board.order': ['columnId', 'orderedTaskIds'],
+    'task.board.review-flow': ['settings'],
     'task.relationship': ['taskId', 'targetId', 'type', 'action'],
     'task.clarification': ['taskId', 'value'],
     'task.assign': ['taskId', 'owner'],
     'task.lifecycle': ['taskId', 'action'],
-    'task.start': ['taskId', 'notification'],
+    'task.start': ['taskId', 'notification', 'expectedRecipient'],
     'task.comment': ['taskId', 'text', 'taskRefs', 'attachments'],
     'task.review': [
       'taskId',
@@ -217,10 +250,11 @@ export function validateTeamCommand(command: TeamCommand): void {
       'note',
       'notifyOwner',
       'suppressTaskComment',
+      'expectedReviewRequestId',
       'comment',
       'taskRefs',
     ],
-    'message.send': ['to', 'text', 'taskRefs', 'messageId', 'summary', 'actionMode', 'attachments'],
+    'message.send': ['to', 'text', 'taskRefs', 'messageId', 'summary', 'actionMode', 'nativeCommand', 'attachments'],
   };
   if (
     Object.keys(command).some((key) => !['commandId', 'operation', 'payload'].includes(key)) ||

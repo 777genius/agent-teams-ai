@@ -106,6 +106,7 @@ export function resolveAgentAttachmentCapability(
   }
 
   if (providerId === 'opencode') {
+    const transport = target.nativeMediaTransport;
     const declaration = target.declaredInputModalities;
     if (
       !Array.isArray(declaration) ||
@@ -121,8 +122,10 @@ export function resolveAgentAttachmentCapability(
           'This OpenCode model has unknown video input support. Refresh the model catalog or remove the video.',
       };
     }
-    const images = declaration.includes('image');
-    const video = declaration.includes('video');
+    const imageMimes = transport?.mimeTypes.filter((mime): mime is AgentImageMimeType => mime.startsWith('image/'));
+    const images = declaration.includes('image') && (!transport || !!imageMimes?.length);
+    const documents = declaration.includes('pdf') && transport?.mimeTypes.includes('application/pdf') === true;
+    const video = declaration.includes('video') && !transport;
     return {
       ...unsupported(
         images || video ? 'known_vision_model' : 'known_non_vision_model',
@@ -132,14 +135,19 @@ export function resolveAgentAttachmentCapability(
       ),
       supportsImages: images,
       supportsVideo: video,
-      supportedImageMimeTypes: images ? [...NATIVE_IMAGE_MIME_TYPES] : [],
+      supportsFiles: documents,
+      supportedImageMimeTypes: images ? [...(imageMimes ?? NATIVE_IMAGE_MIME_TYPES)] : [],
+      supportedFileMimeTypes: documents ? ['application/pdf'] : [],
+      maxFiles: documents ? Math.min(5, transport?.maxCount ?? 5) : 0,
+      maxBytesPerFile: documents ? Math.min(DEFAULT_FILE_BYTES_PER_PROVIDER, transport?.maxBytes ?? DEFAULT_FILE_BYTES_PER_PROVIDER) : 0,
+      filesDisplayText: documents ? 'This OpenCode model can receive PDF attachments.' : 'This running agent cannot receive PDF attachments.',
       supportedVideoMimeTypes: video ? [...NATIVE_VIDEO_MIME_TYPES] : [],
-      maxImages: images ? 5 : 0,
+      maxImages: images ? Math.min(5, transport?.maxCount ?? 5) : 0,
       maxVideos: video ? 1 : 0,
-      maxBytesPerImage: images ? DEFAULT_IMAGE_BYTES_PER_PROVIDER : 0,
+      maxBytesPerImage: images ? Math.min(DEFAULT_IMAGE_BYTES_PER_PROVIDER, transport?.maxBytes ?? DEFAULT_IMAGE_BYTES_PER_PROVIDER) : 0,
       maxBytesPerVideo: video ? MAX_AGENT_VIDEO_ATTACHMENT_BYTES : 0,
-      maxBytesTotal: MAX_AGENT_ATTACHMENT_DELIVERY_BYTES_TOTAL,
-      videoDisplayText: video
+      maxBytesTotal: Math.min(MAX_AGENT_ATTACHMENT_DELIVERY_BYTES_TOTAL, transport?.maxTotalBytes ?? MAX_AGENT_ATTACHMENT_DELIVERY_BYTES_TOTAL),
+      videoDisplayText: transport ? 'This running agent cannot receive video attachments.' : video
         ? 'This OpenCode model declares video input support.'
         : 'This OpenCode model does not declare video input support.',
     };

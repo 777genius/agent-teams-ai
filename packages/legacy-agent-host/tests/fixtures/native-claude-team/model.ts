@@ -18,6 +18,18 @@ import { assertNativeChatAttachments } from './chat-attachments.ts';
 import { assertNativeMessagePdf } from '../native-message-pdf.ts';
 import { contextCompactionScript } from '../native-claude-compaction/model.ts';
 import type { CompactionScenario } from '../native-claude-compaction/model.ts';
+import {
+  nativeScheduleScript,
+  type NativeScheduleScenario,
+} from '../native-claude-schedules/model.ts';
+import {
+  nativeCommandUiScript,
+  type NativeCommandUiScenario,
+} from '../native-claude-commands/model.ts';
+import {
+  nativeExtensionUiScript,
+  type NativeExtensionUiScenario,
+} from '../native-claude-extensions/model.ts';
 import { nativeMemberCreationScript } from './member-creation.ts';
 import type { NativeMemberCreationScenario } from './member-creation.ts';
 import { ordinarySubagentScript } from '../native-claude-subagent/model.ts';
@@ -150,15 +162,26 @@ export async function startNativeTeamModel(
     crossTeam?: NativeCrossTeamScenario;
     ordinarySubagents?: { workspace: string; parentStopRequested?: () => boolean };
     contextCompaction?: CompactionScenario;
+    nativeSchedules?: NativeScheduleScenario;
+    nativeCommands?: NativeCommandUiScenario;
+    nativeExtensions?: NativeExtensionUiScenario;
     nativeMemberCreation?: NativeMemberCreationScenario;
     requireVisibleReply?: boolean;
     /** TEST Quit proof: hold one real first-turn inference until its client is closed. */
     holdInitialTurnResponse?: boolean;
     peerMessaging?: boolean;
     uiGeneratedMessageIds?: boolean;
+    /** Only the original selected Electron native-followup fixture enables this. */
+    nativeNextPromptUi?: boolean;
+    /** Suggestion-only mixed roles: real DM reply without assigning a task to a peer. */
+    nativeNextPromptDirectUi?: boolean;
     /** TEST-only original native tool-use IDs observed in actual model request history. */
     captureHistoryMarkers?: boolean;
     allowModelProbes?: boolean;
+    /** Exact old-frontend PONG checks, only until its original app epoch is closed. */
+    donorSavedProbes?: boolean;
+    /** One current-frontend legacy turn before its original Stop/Quit and Host import. */
+    currentLegacySource?: { teamName: string; prompt: string; reply: string };
     /** Original mixed Launch may renew one cancelled check after its explicit close/reopen. */
     nativeModelProbeLimit?: 8 | 9;
     /** TEST-only boundary advanced after verified Stop/reload by the owning UI test. */
@@ -167,6 +190,11 @@ export async function startNativeTeamModel(
     memberName?: 'alice' | 'team-lead';
   } = {}
 ) {
+  if (options.nativeNextPromptUi) assert.ok(options.requireVisibleReply && options.uiGeneratedMessageIds &&
+    !options.groupChats && !options.chatAttachments && !options.mixedGroups && !options.peerMessaging,
+    'one isolated original native suggestion UI oracle');
+  if (options.nativeNextPromptDirectUi) assert.ok(options.nativeNextPromptUi,
+    'direct suggestion turns require the explicit native suggestion oracle');
   const nativeMember = options.nativeMemberCreation
     ? nativeMemberCreationScript(options.nativeMemberCreation, nativeToolReceipt)
     : undefined;
@@ -175,7 +203,21 @@ export async function startNativeTeamModel(
   const crossTeam = options.crossTeam ? nativeCrossTeamScript(options.crossTeam) : undefined;
   const groupChats = options.groupChats ? nativeGroupChatScript(nativeToolReceipt) : undefined;
   const compaction = options.contextCompaction
-    ? contextCompactionScript(options.contextCompaction)
+    ? contextCompactionScript(options.contextCompaction, nativeToolReceipt)
+    : undefined;
+  const schedules = options.nativeSchedules
+    ? nativeScheduleScript(options.nativeSchedules, nativeToolReceipt)
+    : undefined;
+  assert.ok(
+    [options.nativeCommands, options.nativeSchedules, options.nativeExtensions].filter(Boolean)
+      .length <= 1,
+    'one finite native UI scenario'
+  );
+  const commands = options.nativeCommands
+    ? nativeCommandUiScript(options.nativeCommands, nativeToolReceipt)
+    : undefined;
+  const extensions = options.nativeExtensions
+    ? nativeExtensionUiScript(options.nativeExtensions, nativeToolReceipt)
     : undefined;
   const ordinary = options.ordinarySubagents
     ? ordinarySubagentScript(
@@ -184,8 +226,34 @@ export async function startNativeTeamModel(
       )
     : undefined;
   const observations: Observation[] = [];
+  const suggestionRequests: Array<{ turn: string; step: number; inheritedHumanContext: boolean }> = [];
   const notificationObservations: (Observation & { notice: ObservedMixedTaskNotice })[] = [];
-  const probes: { requestedModel?: string; requestedEffort?: string; phase?: 'native' | 'cold-readback' }[] = [];
+  const probes: {
+    requestedModel?: string;
+    requestedEffort?: string;
+    phase?: 'native' | 'cold-readback';
+  }[] = [];
+  const donorSavedProbes: { requestedModel?: string; advertisedTools: string[] }[] = [];
+  let donorSavedOpen = options.donorSavedProbes === true,
+    pendingDonorReads = 0;
+  assert.ok(
+    !(options.donorSavedProbes && options.currentLegacySource),
+    'one original legacy epoch'
+  );
+  let currentLegacyOpen = options.currentLegacySource !== undefined,
+    pendingLegacyReads = 0;
+  const currentLegacyTurns: {
+    prompt: string;
+    reply: string;
+    model: string;
+    advertisedTools: string[];
+  }[] = [];
+  const currentLegacyProbes: string[] = [];
+  let currentLegacyTokenRequests = 0;
+  let currentLegacyCatalogRequests = 0;
+  let currentLegacyPreconnectRequests = 0;
+  let donorSavedCatalogRequests = 0;
+  let donorSavedPreconnectRequests = 0;
   const unexpectedNoToolsRequests: {
     model?: string;
     roles: unknown[];
@@ -198,14 +266,54 @@ export async function startNativeTeamModel(
   let sequence = 0;
   let compactionTokenRequests = 0;
   const server = createServer((request, response) => {
+    const originalDonorRead = donorSavedOpen;
+    const originalLegacyRead = currentLegacyOpen;
+    if (originalDonorRead) pendingDonorReads++;
+    if (originalLegacyRead) pendingLegacyReads++;
     void (async () => {
+      if (request.method === 'HEAD') {
+        assert.equal(failures.length, 0, 'oracle is sealed after its first protocol failure');
+        assert.ok(originalDonorRead || originalLegacyRead, 'preconnect belongs to the original producer epoch');
+        assert.equal(request.url, '/');
+        assert.equal(request.headers.authorization, undefined);
+        assert.equal(request.headers['x-api-key'], undefined);
+        assert.equal(request.headers['transfer-encoding'], undefined);
+        assert.ok(request.headers['content-length'] === undefined || request.headers['content-length'] === '0');
+        for await (const chunk of request)
+          assert.equal(Buffer.from(chunk as Uint8Array).length, 0, 'bodyless original preconnect');
+        const preconnectRequests = originalDonorRead
+          ? ++donorSavedPreconnectRequests : ++currentLegacyPreconnectRequests;
+        assert.ok(preconnectRequests <= 32, 'bounded original runtime preconnects');
+        response.writeHead(204); response.end();
+        return;
+      }
       if (request.url?.includes('count_tokens')) {
-        if (compaction)
+        if (originalLegacyRead)
+          assert.ok(++currentLegacyTokenRequests <= 8, 'bounded original legacy token checks');
+        if (compaction || commands)
           assert.ok(++compactionTokenRequests <= 8, 'bounded native compact token-count requests');
         response.end('{"input_tokens":20}');
         return;
       }
       assert.equal(failures.length, 0, 'oracle is sealed after its first protocol failure');
+      if (request.method === 'GET' &&
+          (request.url === '/v1/models' || request.url === '/v1/models?limit=1000')) {
+        assert.ok(originalDonorRead || originalLegacyRead,
+          'catalog read belongs to its original producer epoch');
+        assert.equal(request.headers['x-api-key'],
+          originalDonorRead ? 'TEST-donor-saved-only-key' : 'TEST-current-legacy-only-key');
+        const catalogRequests = originalDonorRead
+          ? ++donorSavedCatalogRequests : ++currentLegacyCatalogRequests;
+        assert.ok(catalogRequests <= 8, 'bounded original legacy catalog reads');
+        const ids = ['claude-sonnet-4-6', 'claude-opus-4-6'];
+        response.writeHead(200, { 'content-type': 'application/json' });
+        response.end(JSON.stringify({
+          data: ids.map(id => ({ id, type: 'model', display_name: id,
+            created_at: '2026-01-01T00:00:00Z' })),
+          has_more: false, first_id: ids[0], last_id: ids.at(-1),
+        }));
+        return;
+      }
       assert.equal(request.method, 'POST');
       assert.ok(request.url?.startsWith('/v1/messages'));
       const chunks: Buffer[] = [];
@@ -238,6 +346,21 @@ export async function startNativeTeamModel(
           groupChats.respond(body, tools),
           typeof body.model === 'string' ? body.model : undefined
         );
+        return;
+      }
+      const scheduleBlock = schedules?.respond(body, tools);
+      if (scheduleBlock) {
+        emitResponse(response, ++sequence, scheduleBlock, String(body.model));
+        return;
+      }
+      const commandBlock = commands?.respond(body, tools);
+      if (commandBlock) {
+        emitResponse(response, ++sequence, commandBlock, String(body.model));
+        return;
+      }
+      const extensionBlock = extensions?.respond(body, tools);
+      if (extensionBlock) {
+        emitResponse(response, ++sequence, extensionBlock, String(body.model));
         return;
       }
       if (compaction) {
@@ -299,6 +422,69 @@ export async function startNativeTeamModel(
               .filter(Boolean)
               .join('\n')
           : undefined;
+      if (originalLegacyRead) {
+        assert.ok(tools.length <= 128, 'bounded current legacy catalog');
+        if (probeText === 'Output only the single word PONG.') {
+          assert.ok(currentLegacyProbes.length < 8, 'bounded current legacy model checks');
+          currentLegacyProbes.push(String(body.model));
+          emitResponse(response, ++sequence, { type: 'text', text: 'PONG' }, String(body.model));
+          return;
+        }
+        const source = options.currentLegacySource!;
+        assert.equal(currentLegacyTurns.length, 0, 'one original legacy business turn');
+        assert.ok(
+          probeText && probeText.endsWith('\nUser instructions:\n' + source.prompt),
+          'exact original Create prompt'
+        );
+        assert.equal(probeText.split(source.prompt).length, 2, 'one deliberate source marker');
+        assert.ok(
+          probeText.includes('You are "team-lead", the team lead.') &&
+            probeText.includes('- Your team is "' + source.teamName + '".'),
+          'original solo team scope'
+        );
+        assert.ok(!probeText.includes('Team roster (authoritative'), 'source has no teammates');
+        currentLegacyTurns.push({
+          prompt: source.prompt,
+          reply: source.reply,
+          model: String(body.model),
+          advertisedTools: [...tools],
+        });
+        emitResponse(
+          response,
+          ++sequence,
+          { type: 'text', text: source.reply },
+          String(body.model)
+        );
+        return;
+      }
+      if (options.currentLegacySource)
+        assert.ok(
+          !probeTexts.some((text) => text.includes(options.currentLegacySource!.prompt)),
+          'original legacy epoch is closed'
+        );
+      if (originalDonorRead) {
+        assert.equal(
+          probeText,
+          'Output only the single word PONG.',
+          'only the exact donor model check'
+        );
+        assert.ok(
+          donorSavedProbes.length < 8 && tools.length <= 128,
+          'bounded donor diagnostic catalog'
+        );
+        donorSavedProbes.push({
+          ...(typeof body.model === 'string' ? { requestedModel: body.model } : {}),
+          advertisedTools: [...tools],
+        });
+        emitResponse(
+          response,
+          ++sequence,
+          { type: 'text', text: 'PONG' },
+          typeof body.model === 'string' ? body.model : undefined
+        );
+        return;
+      }
+      assert.notEqual(probeText, 'Output only the single word PONG.', 'donor epoch is closed');
       if (
         options.allowModelProbes &&
         probeText === 'Reply only OK. Do not use tools, access files or run commands.' &&
@@ -309,7 +495,9 @@ export async function startNativeTeamModel(
           // One actual new preparation after original Stop/reload, never another
           // allowance for a retry in that same cold UI phase.
           assert.ok(
-            !nativeMember && probes.length >= 8 && probes.length <= nativeModelProbeLimit &&
+            !nativeMember &&
+              probes.length >= 8 &&
+              probes.length <= nativeModelProbeLimit &&
               !probes.some((probe) => probe.phase === 'cold-readback'),
             'finite native cold-readback model probe budget'
           );
@@ -373,7 +561,7 @@ export async function startNativeTeamModel(
         });
       }
       assert.ok(
-        observations.length + notificationObservations.length < (options.peerMessaging ? 48 : 16),
+        observations.length + notificationObservations.length < (options.peerMessaging ? 48 : options.nativeNextPromptDirectUi ? 5 : options.nativeNextPromptUi ? 24 : 16),
         'finite native model request budget'
       );
       let turn = '';
@@ -391,7 +579,8 @@ export async function startNativeTeamModel(
                 .map((block) => block.text)
                 .join('\n');
         const group = options.mixedGroups ? readMixedGroupTurn(text, 'team-lead') : undefined;
-        const match = /NATIVE_TEAM_(ONE|TWO)/.exec(text);
+        const match = (options.nativeNextPromptUi
+          ? /NATIVE_TEAM_(ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT)/ : /NATIVE_TEAM_(ONE|TWO|THREE|FOUR)/).exec(text);
         const peer = options.peerMessaging ? nativePeerTurn(text, 'alice') : undefined;
         if (options.mixedTaskNotifications) {
           const currentText = text;
@@ -414,7 +603,45 @@ export async function startNativeTeamModel(
         }
       }
       assert.ok(turn, 'request is tied to a deliberate TEST input');
+      if (options.nativeNextPromptDirectUi)
+        assert.ok(turn === 'NATIVE_TEAM_ONE' || turn === 'NATIVE_TEAM_TWO',
+          'two original direct human turns per mixed Claude member');
       const step = counters.get(turn) ?? 0;
+      // Native SDK suggestions are separate localhost inference after the
+      // original finished source turn, never another business tool or user
+      // input. The counters are advanced only by real source actions.
+      if (options.nativeNextPromptUi &&
+          ['NATIVE_TEAM_ONE', 'NATIVE_TEAM_TWO', 'NATIVE_TEAM_THREE', 'NATIVE_TEAM_FOUR', 'NATIVE_TEAM_FIVE', 'NATIVE_TEAM_SIX', 'NATIVE_TEAM_SEVEN', 'NATIVE_TEAM_EIGHT'].includes(turn)) {
+        const complete = options.nativeNextPromptDirectUi ? 2
+          : turn === 'NATIVE_TEAM_ONE' ? 8 : turn === 'NATIVE_TEAM_TWO' ? 3 : 2;
+        if (step >= complete) {
+          assert.equal(step, complete, 'native suggestion may not replay an original business turn');
+          const source = JSON.stringify(messages);
+          assert.ok(source.includes('NATIVE_TEAM_ONE'), 'native followup inherits original user context');
+          assert.ok(source.includes(turn), 'native followup is attached to current source turn');
+          suggestionRequests.push({ turn, step, inheritedHumanContext: true });
+          assert.ok(suggestionRequests.length <= (options.nativeNextPromptDirectUi ? 2 : 8),
+            'at most one auxiliary sample per original native turn');
+          emitResponse(response, ++sequence,
+            { type: 'text', text: turn === 'NATIVE_TEAM_ONE'
+              ? 'Review the latest changes and confirm the tests pass.'
+              : turn === 'NATIVE_TEAM_TWO'
+                ? 'Review the completed tests and open a PR'
+                : turn === 'NATIVE_TEAM_THREE'
+                  ? 'Summarize the changes and check for regressions.'
+                  : turn === 'NATIVE_TEAM_FOUR'
+                    ? 'Verify the final results and prepare a report.'
+                    : turn === 'NATIVE_TEAM_FIVE'
+                      ? 'Check the final report and summarize the remaining work.'
+                      : turn === 'NATIVE_TEAM_SIX'
+                        ? 'Review the attachment changes and verify the result.'
+                        : turn === 'NATIVE_TEAM_SEVEN'
+                          ? 'Review the referenced file and summarize the result.'
+                          : 'Review the current action mode and verify the result.' },
+            typeof body.model === 'string' ? body.model : undefined);
+          return;
+        }
+      }
       if (options.mixedTaskNotifications && /_TEAM_(ONE|TWO)$/.test(turn))
         assert.ok(
           step <= (turn.endsWith('_ONE') ? 7 : 2),
@@ -457,11 +684,11 @@ export async function startNativeTeamModel(
         assert.notEqual(last?.is_error, true);
         assertMixedGroupReceipt(mixedGroup, step, last?.content, nativeToolReceipt);
       }
-      if (
+      if (options.nativeNextPromptDirectUi ? step === 1 : (
         (turn === 'NATIVE_TEAM_ONE' && [1, 2, 3, 5, 6, 7].includes(step)) ||
         (turn === 'NATIVE_TEAM_TWO' && step === 2) ||
         (peerActions && step > 0 && step <= peerActions.length)
-      ) {
+      )) {
         const completed = nativeToolReceipt(last?.content);
         assert.equal(
           completed.phase,
@@ -470,7 +697,7 @@ export async function startNativeTeamModel(
         );
         assert.equal(completed.principalId, options.principalId?.() ?? 'alice-session');
       }
-      if (turn === 'NATIVE_TEAM_ONE' && step === 1) {
+      if (!options.nativeNextPromptDirectUi && turn === 'NATIVE_TEAM_ONE' && step === 1) {
         const receipt = nativeToolReceipt(last?.content);
         assert.equal(receipt.phase, 'completed');
         assert.equal(receipt.principalId, options.principalId?.() ?? 'alice-session');
@@ -556,8 +783,12 @@ export async function startNativeTeamModel(
         {
           name: 'Bash',
           input: {
-            command: "printf 'ONE\\n' >> native-effect.txt; exit 7",
-            description: 'Write one TEST-owned task effect and report a failed command',
+            command: options.nativeNextPromptUi
+              ? "printf 'ONE\\n' >> native-effect.txt"
+              : "printf 'ONE\\n' >> native-effect.txt; exit 7",
+            description: options.nativeNextPromptUi
+              ? 'Write one TEST-owned task effect on a clean SDK suggestion turn'
+              : 'Write one TEST-owned task effect and report a failed command',
           },
         },
         {
@@ -565,7 +796,9 @@ export async function startNativeTeamModel(
           input: {
             commandId: 'native-task-comment',
             taskId,
-            text: 'Native Bash produced the TEST file; command exit was seven.',
+            text: options.nativeNextPromptUi
+              ? 'Native Bash produced the TEST file successfully.'
+              : 'Native Bash produced the TEST file; command exit was seven.',
           },
         },
         { name: 'task_complete', input: { commandId: 'native-task-complete', taskId } },
@@ -587,9 +820,40 @@ export async function startNativeTeamModel(
           input: { commandId: 'native-reply-two', to: 'user', text: 'REPLY_NATIVE_TWO' },
         },
       ];
+      const three: { name: string; input: RecordValue }[] = [{
+        name: 'message_send',
+        input: { commandId: 'native-reply-three', to: 'user', text: 'REPLY_NATIVE_THREE' },
+      }];
+      const four: { name: string; input: RecordValue }[] = [{
+        name: 'message_send',
+        input: { commandId: 'native-reply-four', to: 'user', text: 'REPLY_NATIVE_FOUR' },
+      }];
+      const five: { name: string; input: RecordValue }[] = [{
+        name: 'message_send',
+        input: { commandId: 'native-reply-five', to: 'user', text: 'REPLY_NATIVE_FIVE' },
+      }];
+      const six: { name: string; input: RecordValue }[] = [{
+        name: 'message_send',
+        input: { commandId: 'native-reply-six', to: 'user', text: 'REPLY_NATIVE_SIX' },
+      }];
+      const seven: { name: string; input: RecordValue }[] = [{
+        name: 'message_send',
+        input: { commandId: 'native-reply-seven', to: 'user', text: 'REPLY_NATIVE_SEVEN' },
+      }];
+      const eight: { name: string; input: RecordValue }[] = [{
+        name: 'message_send',
+        input: { commandId: 'native-reply-eight', to: 'user', text: 'REPLY_NATIVE_EIGHT' },
+      }];
       const action = notice
         ? undefined
-        : (groupActions ?? peerActions ?? (turn === 'NATIVE_TEAM_ONE' ? one : two))[step];
+        : (options.nativeNextPromptDirectUi ? (turn === 'NATIVE_TEAM_ONE' ? one : two).slice(-1)
+          : groupActions ?? peerActions ?? (turn === 'NATIVE_TEAM_ONE' ? one :
+          turn === 'NATIVE_TEAM_THREE' && options.nativeNextPromptUi ? three :
+          turn === 'NATIVE_TEAM_FOUR' && options.nativeNextPromptUi ? four :
+          turn === 'NATIVE_TEAM_FIVE' && options.nativeNextPromptUi ? five :
+          turn === 'NATIVE_TEAM_SIX' && options.nativeNextPromptUi ? six :
+          turn === 'NATIVE_TEAM_SEVEN' && options.nativeNextPromptUi ? seven :
+          turn === 'NATIVE_TEAM_EIGHT' && options.nativeNextPromptUi ? eight : two))[step];
       if (!action) {
         counters.set(turn, step + 1);
         emitResponse(
@@ -614,30 +878,81 @@ export async function startNativeTeamModel(
         },
         typeof body.model === 'string' ? body.model : undefined
       );
-    })().catch((error) => {
-      failures.push(error instanceof Error ? error.message : 'fixture-failed');
-      if (!response.headersSent) response.writeHead(400);
-      response.end('TEST model fixture rejected request');
-    });
+    })()
+      .catch((error) => {
+        failures.push(error instanceof Error ? error.message : 'fixture-failed');
+        if (!response.headersSent) response.writeHead(400);
+        response.end('TEST model fixture rejected request');
+      })
+      .finally(() => {
+        if (originalDonorRead) pendingDonorReads--;
+        if (originalLegacyRead) pendingLegacyReads--;
+      });
   });
   server.requestTimeout = 15_000;
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   const address = server.address();
   assert.ok(address && typeof address !== 'string');
-  return {
+  const model = {
     url: `http://127.0.0.1:${address.port}`,
     crossTeamRequests: crossTeam?.requests ?? [],
     ordinaryRequests: ordinary?.requests ?? [],
     compactionRequests: compaction?.requests ?? [],
+    ...(schedules ? { scheduleRequests: schedules.requests } : {}),
+    ...(commands ? { commandRequests: commands.requests } : {}),
+    ...(extensions ? { extensionRequests: extensions.requests } : {}),
     get compactionTokenRequests() {
       return compactionTokenRequests;
     },
     observations,
+    ...(options.nativeNextPromptUi ? { suggestionRequests } : {}),
     ...(options.mixedTaskNotifications ? { notificationObservations } : {}),
     ...(nativeMember ? { nativeMemberObservations: nativeMember.observations } : {}),
     ...(groupChats ? { groupRequests: groupChats.requests } : {}),
     ...(options.holdInitialTurnResponse ? { heldInitialRequests } : {}),
     probes,
+    ...(options.currentLegacySource
+      ? {
+          currentLegacyTurns,
+          currentLegacyProbes,
+          currentLegacyCatalogRequests,
+          finishCurrentLegacySource: async () => {
+            assert.ok(currentLegacyOpen, 'close the original current-legacy epoch once');
+            currentLegacyOpen = false;
+            const deadline = Date.now() + 15_000;
+            while (pendingLegacyReads && Date.now() < deadline)
+              await new Promise<void>((resolve) => setTimeout(resolve, 100));
+            assert.equal(pendingLegacyReads, 0, 'original legacy reads settle before consumer');
+            assert.equal(currentLegacyTurns.length, 1);
+            assert.deepEqual(failures, []);
+            return structuredClone({
+              turns: currentLegacyTurns,
+              probes: currentLegacyProbes,
+              tokenRequests: currentLegacyTokenRequests,
+              catalogRequests: currentLegacyCatalogRequests,
+              preconnectRequests: currentLegacyPreconnectRequests,
+            });
+          },
+        }
+      : {}),
+    ...(options.donorSavedProbes
+      ? {
+          donorSavedProbes,
+          finishDonorSavedProbes: async () => {
+            assert.ok(
+              options.donorSavedProbes && donorSavedOpen,
+              'close the original donor epoch once'
+            );
+            donorSavedOpen = false;
+            const deadline = Date.now() + 15_000;
+            while (pendingDonorReads && Date.now() < deadline)
+              await new Promise<void>((resolve) => setTimeout(resolve, 100));
+            assert.equal(pendingDonorReads, 0, 'original donor HTTP reads settle before consumer');
+            assert.deepEqual(failures, []);
+            return structuredClone(donorSavedProbes);
+          },
+        }
+      : {}),
     unexpectedNoToolsRequests,
     failures,
     close: () =>
@@ -646,4 +961,12 @@ export async function startNativeTeamModel(
         server.close(() => resolve());
       }),
   };
+  if (options.currentLegacySource) {
+    Object.defineProperty(model, 'currentLegacyCatalogRequests', {
+      enumerable: true,
+      configurable: true,
+      get: () => currentLegacyCatalogRequests,
+    });
+  }
+  return model;
 }

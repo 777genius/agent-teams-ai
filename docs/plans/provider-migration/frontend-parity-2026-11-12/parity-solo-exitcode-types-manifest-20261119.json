@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "sourceHead": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+  "sourceTree": "06ddfb2e88ee1e049f14a9c6c11290004d16dda2",
+  "scope": "One erased local mutable exitCode intersection on the existing synthetic ChildProcess test assertion; formatter wraps only that declaration",
+  "changes": [
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningPersistenceReconcileFacade.test.ts",
+      "mode": "100644",
+      "before": {
+        "bytes": 28169,
+        "sha256": "529f8a1252abc5c71f8363ff6771dc34c073758fe7dbb0172c8e5dcfc78df335",
+        "gitBlob": "7ca326f89632042a98c5bc459250df221980bdd4",
+        "lines": 684
+      },
+      "after": {
+        "bytes": 28238,
+        "sha256": "1b6a05cb460ada5596bce3f2553a917777e86545e2af8e23995606c44cfd5900",
+        "gitBlob": "36728b28d564cac2d107f17be0add0ab5dafb43c",
+        "lines": 689
+      }
+    }
+  ],
+  "patch": {
+    "path": "/workspace/scratch/c714f5bce554/solo-exitcode-types-42a4-candidate/candidate.patch",
+    "bytes": 717,
+    "sha256": "61c50b56cbdd75263cfcbf89df4799c1c1198618bd905713b3c78d3471dd5eff",
+    "gitBlob": "ed6216e2e2bc4ee83f13f8690538fc470e34b951"
+  }
+}

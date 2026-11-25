@@ -1,0 +1,238 @@
+{
+  "kind": "INDEPENDENT_ACTUAL_PLAN53_CONSUMER_78D8_PUBLISHED_R1_BINDING_R2",
+  "disposition": "APPROVE_EXACT_PUBLISHED_R1_FOR_THREE_SOURCE_CHILD",
+  "actualReadback": {
+    "path": "/tmp/migration-evidence-20261116/root/plan53-consumer-published-docs-78d8-readback.json",
+    "gitBlob": "d05d2a306838bd2942f8848ee28ff602361948c7",
+    "bytes": 306029,
+    "sha256": "bfb10963e7c5b2bc34dc78b597577a0fc86c703bbe4e200c6b18375bfb089c50"
+  },
+  "prospectiveUnionReview": {
+    "path": "/tmp/migration-evidence-20261116/migration-scope/plan53-lineage-compatibility-r2/prospective-3be1-union-r2.json",
+    "gitBlob": "a4de19e2b0275abf8c3a16353a3b3cdd4a3c81fd",
+    "bytes": 9662,
+    "sha256": "b23d1821dff015601001277c72de644e745436a52d6b145281ad48c8f2e502fd"
+  },
+  "actualDocumentationCommit": {
+    "sha": "78d8b351e07afa91f50236834f8beae1ee6f067d",
+    "soleParent": "3be1fb3ec43d5682aa2ca77a6af62e6fa27b597b",
+    "tree": "a11927c2b64af6d1bf9c5b706505d01ffaacd39b",
+    "wholeLeafCount": 11090,
+    "changedPaths": [
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/53-opencode-v2-metadata-read-failures-2026-11-16.md",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-source-reviews-2026-11-16/plan53-actual-source-r2.json",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/donor-4a-task-review-2026-11-16/parent-binding-r2.json",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/donor-4a-task-review-2026-11-16/published-r1-r2.json",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/donor-4a-task-review-2026-11-16/published-source-r2.json",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan53-lineage-consumer-2026-11-16/candidate.patch",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan53-lineage-consumer-2026-11-16/manifest.json",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan53-lineage-consumer-2026-11-16/preservation-proof.json",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan53-lineage-consumer-2026-11-16/root-selection.json",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan53-lineage-consumer-2026-11-16/source-r2.json",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan53-lineage-consumer-2026-11-16/validation.json"
+    ]
+  },
+  "actualChecks": {
+    "allElevenFullBodiesByteEqualFrozenUnion": true,
+    "allBodyGitShaBytesSha256Recomputed": true,
+    "fullTreeIndependentlyRecomputed": true,
+    "exactSoleParentAndElevenCommitFileEntries": true,
+    "wholePlanPrefixAndAppendPreserved": true,
+    "sourcePreimagesStillUnchanged": true,
+    "rootStateStatusHistorical": "state.status still says awaiting readback/R2; completed actualCommit, all full actualBodies/checks and recomputed tree supply this verdict."
+  },
+  "approvedNext": {
+    "soleParent": "78d8b351e07afa91f50236834f8beae1ee6f067d",
+    "sourceTree": "eafc4c048e495391e97e94875d39faab6b9239b3",
+    "wholeLeafCount": 11090,
+    "onlyPaths": [
+      "scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts",
+      "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+      ".github/workflows/host-emulated-acceptance.yml"
+    ],
+    "freshRootExpectedParentGuardRequired": true
+  },
+  "noSourceApplicationOrCiResultClaim": true,
+  "concreteBlockers": [],
+  "sourceSemanticR2": {
+    "path": "/tmp/migration-evidence-20261116/migration-scope/plan53-lineage-compatibility-r2/independent-r2.json",
+    "gitBlob": "cca1df48c7b239d89412eb9680fb24ddd72eae68",
+    "bytes": 18809,
+    "sha256": "eaa459ba14fa5ce6b6a748612634061641176b56018526489055d126a6c2a4f9"
+  },
+  "rootSelection": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan53-lineage-consumer-2026-11-16/root-selection.json",
+    "sha": "ae92a567ed786d249e4d8f72a579f51207a402a4",
+    "bytes": 6259,
+    "sha256": "711267bd2d4325ac1fca0d38387e043d5ea2e9b0d3d43a3d65eb5e92505e8c54"
+  },
+  "documentPayloads": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/donor-4a-task-review-2026-11-16/parent-binding-r2.json",
+      "sha": "5407b6de3be6d08af6db3cb39220e2b1d82656ee",
+      "bytes": 17309,
+      "sha256": "6fc7526be3f9ec638173b9a2c35dcecfb0e7cd93c36cadb9d0798449289c30f6"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-source-reviews-2026-11-16/plan53-actual-source-r2.json",
+      "sha": "3986719c9a26aa79ae3c6d515a57ab9b855034a9",
+      "bytes": 14791,
+      "sha256": "792312062df6915491923995b04b002fddbc6439eff475a08802c389f33b43bd"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/donor-4a-task-review-2026-11-16/published-r1-r2.json",
+      "sha": "3912d3d2d26d92dd484fdbdb6b299317d17879b2",
+      "bytes": 19090,
+      "sha256": "43c5b16f1af81960f23b6090fed6d69f9343e73e156bbbab75b0798738d1423b"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/donor-4a-task-review-2026-11-16/published-source-r2.json",
+      "sha": "70398c747f6eed1a42655511b129d8fb1cde5656",
+      "bytes": 9790,
+      "sha256": "3e2cac3d98de4f85ff27696718c5488483a968f569ef1708cd40e22c771cc21f"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/53-opencode-v2-metadata-read-failures-2026-11-16.md",
+      "sha": "72887883027218b17705cf5c12035e46e69b1196",
+      "bytes": 20882,
+      "sha256": "72238175e3569a2984f19c8ef5d4484ac62f66b4c8a8679880c1a7f55adbbc8a"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan53-lineage-consumer-2026-11-16/manifest.json",
+      "sha": "02712eb4e52a96f7e299f115932e0e1ebb566e5b",
+      "bytes": 6531,
+      "sha256": "0d40e43a63cba1fc0ec8331bae1c9ca83dffb0fa5ec76774044a8e5e23e063eb"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan53-lineage-consumer-2026-11-16/candidate.patch",
+      "sha": "f638701122030a368e5f8a43eb1307f06c36ca1b",
+      "bytes": 10153,
+      "sha256": "cf9e79d0f1bbc76a60f6be340b8396fc7e2455ab463717dbabd5323f691fbb33"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan53-lineage-consumer-2026-11-16/validation.json",
+      "sha": "3e5376c380b20f6818fbbd6db3236e745b3526a0",
+      "bytes": 14486,
+      "sha256": "18308701ffbbfdcb645442362c39c7996f0e2102d233b31ac80f54d5208f918f"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan53-lineage-consumer-2026-11-16/preservation-proof.json",
+      "sha": "35bcfe09f0809b914f0814f1c287c26a9ace8b31",
+      "bytes": 1546,
+      "sha256": "bfd1e052fe120ece0d341b63f483716d4cbf9d343196e1f89b948f6f99b2b44b"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan53-lineage-consumer-2026-11-16/source-r2.json",
+      "sha": "cca1df48c7b239d89412eb9680fb24ddd72eae68",
+      "bytes": 18809,
+      "sha256": "eaa459ba14fa5ce6b6a748612634061641176b56018526489055d126a6c2a4f9"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan53-lineage-consumer-2026-11-16/root-selection.json",
+      "sha": "ae92a567ed786d249e4d8f72a579f51207a402a4",
+      "bytes": 6259,
+      "sha256": "711267bd2d4325ac1fca0d38387e043d5ea2e9b0d3d43a3d65eb5e92505e8c54"
+    }
+  ],
+  "sourceImages": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts",
+      "before": "31160baa614a4ecd5cc17fb2078561cad371c06c",
+      "after": "79c288d8cd5f6dc432177a2047ce517f174d11b4",
+      "bytes": 17725,
+      "lines": 320,
+      "currentParent": "3be1fb3ec43d5682aa2ca77a6af62e6fa27b597b",
+      "exactRoundtrip": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+      "before": "13229f20c93226ee5b3f4d07516d16f94b0d48d5",
+      "after": "cb02a91e7876b4a9367f3d6b763f56fbe566dd7f",
+      "bytes": 25809,
+      "lines": 381,
+      "currentParent": "3be1fb3ec43d5682aa2ca77a6af62e6fa27b597b",
+      "exactRoundtrip": true
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "before": "ff94e1d92c82a644a302ef61e64246f919f04d83",
+      "after": "a1513210012356a5178620b1f370bd1daf0de9d9",
+      "bytes": 106650,
+      "lines": 1374,
+      "currentParent": "3be1fb3ec43d5682aa2ca77a6af62e6fa27b597b",
+      "exactRoundtrip": true
+    }
+  ],
+  "preservation": {
+    "p10": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/10-acceptance-recovery.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1b017131e186f67ccaf62c4215de4bdb0f58af74",
+      "size": 174960
+    },
+    "allFiveActualB2SourceBodies": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-retained-opencode-model.ts",
+        "sha": "369505df3d6a37b5833550954f4ef2a1c501b342",
+        "bytes": 17743
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts",
+        "sha": "a910209438b29f04ea4a30f28e69620d98802183",
+        "bytes": 54340
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-retained-opencode-app.ts",
+        "sha": "4f686cdb2c99ef4f04bb060041bf8ccf6f8601db",
+        "bytes": 49147
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-retained-opencode-model.test.ts",
+        "sha": "45f0d34a10f1928c0ecc7e102a5015188d193ccf",
+        "bytes": 14802
+      },
+      {
+        "path": ".github/workflows/ci.yml",
+        "sha": "4e4554ec3330d0c06b0736e861348d7279511361",
+        "bytes": 199733
+      }
+    ],
+    "incomingPlan54": [
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/54-windows-v1-source-history-fixture-2026-11-16.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "1a0fa9e2cb9ea7553d399cab78dd5f1991e7bbae",
+        "size": 5323
+      },
+      {
+        "path": "test/features/agent-backend/capturedWindowsSourceHistory.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "aadbde250814c9c74225be65154e2d77ca7104bd",
+        "size": 25216
+      }
+    ],
+    "allOtherParentLeavesAndModesExact": true,
+    "noRemovals": true,
+    "noSourceChangesInDocsChild": true,
+    "sourceChildPreservesAllElevenDocs": true
+  },
+  "sourceAndPolicy": {
+    "wholePlan539976Plus92362AppendExact": true,
+    "sixSourceImagesRemainFrozenCca1": true,
+    "originalFullEightAndSevenCasesPlusTwoRealParserCases": true,
+    "lint130To131Only": true,
+    "strict538AndExistingHelperFreeze": true,
+    "nativeAuthorityCleanupDeadlinesCapsUntouched": true,
+    "newRedOrMandatoryCiCycle": false,
+    "historicalSettingsCauseNotClaimed": true
+  },
+  "metadataLimits": [
+    "Package top sourceChecks parent447a is historical; canonical root-selection.sources parent3be1 and independent current-map joins supply actual authority.",
+    "Frozen author appendix INERT/5f300 reference is preparation history; exact root-selection supplies current conditional selection.",
+    "No API/ref/CI status was refreshed by reviewer. Root must still perform its fresh expected-parent guard before source publication.",
+    "No project/parser/test/compiler/lint/native/UI execution or canonical/index/ref mutation was performed."
+  ]
+}

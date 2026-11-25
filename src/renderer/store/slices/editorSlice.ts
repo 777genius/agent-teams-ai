@@ -5,10 +5,10 @@
 
 import { withEditorTabSession } from '@features/editor-tab-sessions/renderer';
 import { api } from '@renderer/api';
-import { getLanguageFromFileName } from '@renderer/utils/codemirrorLanguages';
 import { editorBridge } from '@renderer/utils/editorBridge';
 import { createEditorSaveActions } from '@renderer/utils/editorSaveActions';
 import { createEditorTabActions, omitKey } from '@renderer/utils/editorTabActions';
+import { getLanguageFromFileName } from '@renderer/utils/fileLanguageName';
 import { invalidateQuickOpenCache } from '@renderer/utils/quickOpenCache';
 import { computeDisambiguatedTabs } from '@renderer/utils/tabLabelDisambiguation';
 import { createLogger } from '@shared/utils/logger';

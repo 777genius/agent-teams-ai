@@ -1,0 +1,131 @@
+{
+  "kind": "PROSPECTIVE_CONTINUATION_SCOPED_LINT_CLOSURE",
+  "boundAt": "2026-11-16 11:52:56 UTC",
+  "parent": "5af7488159b3550f118f130e13bca48fa9e754e2",
+  "parentTree": "d0905276b5cca275a1e95ceaeaa5c110e4d2f3cd",
+  "primary": "852d9bd3f9142603340f71ca998739e69da00084",
+  "base": "def734338f13bcc3209e78079a0cedbc48f05a5b",
+  "draft": true,
+  "source": {
+    "parent": "5af7488159b3550f118f130e13bca48fa9e754e2",
+    "parentTree": "d0905276b5cca275a1e95ceaeaa5c110e4d2f3cd",
+    "path": ".github/workflows/host-emulated-acceptance.yml",
+    "before": {
+      "sha": "09343faa479855d0425f0649e70db76af3ffdef2",
+      "bytes": 101869,
+      "sha256": "bcf54d00b71a0b064efde920fbd7b85d5e549509380b6d3b0bbd44d8c09dbf70",
+      "lines": 1314
+    },
+    "after": {
+      "sha": "bcb0a96cda38afc462161fcfdd25bb0626e43ce3",
+      "bytes": 101993,
+      "sha256": "a8f2c36fce25c7724ca751d12bfd1cb4a1ffff481a84c4cb4482d7943864dd5a",
+      "lines": 1316
+    },
+    "patch": {
+      "sha": "65f02056023fe9060a6f25469baff3ee80cd7da4",
+      "bytes": 392,
+      "sha256": "5ee85d10dc47162b54db11d3f3a574c299db7db9c4ed7d20c799ec77d2d16f8d",
+      "lines": 7
+    },
+    "oldLine": 209,
+    "originalOperands": 95,
+    "resultingOperands": 97,
+    "added": [
+      "scripts/e2e/teams-create-page-desktop.mjs",
+      "tools/owned-process-broker/nativeWindowsAppFixture.ts"
+    ],
+    "inverseExact": true,
+    "otherWorkflowBytesUnchanged": true,
+    "newCommands": 0,
+    "newJobs": 0,
+    "newTimeouts": 0,
+    "newRuleSuppressions": 0,
+    "newTestFiles": 0,
+    "actualLintExecution": null
+  },
+  "currentSourcePins": {
+    "scripts/e2e/teams-create-page-desktop.mjs": "616223c8eb4c36291ea4049070a97e1bf891b17c",
+    "tools/owned-process-broker/nativeWindowsAppFixture.ts": "78486e24742278c6f803607e02e1601329e505a0",
+    "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts": "5026f0ec6165bb092717ddc989043848a25081dc",
+    "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts": "2017060db6ca7ef01d17ee3096ac994b288ff1aa",
+    "scripts/legacy-agent-host/desktop-ui-controls.ts": "1c11809c6458f829bd9bb6995aea2ad60b85511e",
+    "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts": "1bc8ea60755485af8f347f5b76b0556d675c4555",
+    "src/features/runtime-provider-management/renderer/hooks/runtimeProviderViewRefresh.ts": "ae36029a51a805c1a1a45e17fd08fa3874d8c85e",
+    "scripts/ci/source-file-size-baseline.json": "8f5deeed4e406894e1ee587ed541014bcb7dde77"
+  },
+  "policyPins": {
+    "AGENTS.md": "0c8a4a63abf24c1510c934990a025ebc99c9e435",
+    "package.json": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+    "eslint.fast.config.js": "8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb",
+    ".github/workflows/host-process-acceptance.yml": "3228b9978cf5064c103ec486468b2e5c5a36956e"
+  },
+  "invocation": {
+    "step": "Verify complete workspace types and original typed lint scopes",
+    "condition": "matrix.lane == 'team'",
+    "jobTimeoutMinutes": 45,
+    "script": "pnpm lint:fast:files --",
+    "originalOperands": 95,
+    "resultingOperands": 97,
+    "addedOperands": [
+      "scripts/e2e/teams-create-page-desktop.mjs",
+      "tools/owned-process-broker/nativeWindowsAppFixture.ts"
+    ],
+    "oldOperandOrderPreserved": true,
+    "allOtherWorkflowBytesPreserved": true,
+    "extraFileProcessing": 2,
+    "measuredTime": null,
+    "newCommands": 0
+  },
+  "plan29": {
+    "before": {
+      "sha": "29734b65cc4e0b48a977aede875549c69725d8a9",
+      "bytes": 1947636,
+      "sha256": "e069d5268fe3bb56213a78f47b15d20bf31e76ba7d7cd8f8953cad428c54cb12",
+      "lines": 8444
+    },
+    "after": {
+      "sha": "c54e2a756c53f7798f33e224c09ed883ec98381b",
+      "bytes": 1954492,
+      "sha256": "f76c1ace19e7f265b660e74fe5d79f3425ac90dfee566135f8df5cd72aae7aeb",
+      "lines": 8478
+    },
+    "append": {
+      "sha": "e76f9819b3cd0ea790fa701dc7039bcf73c26c72",
+      "bytes": 6856,
+      "sha256": "1da5bdd73d2c5d9a2b2917d85fac1f44c10392823879e24260a1f97ec480ad3c",
+      "lines": 34
+    },
+    "completePrefixPreserved": true
+  },
+  "plan30": {
+    "sha": "bea6f50310ca47022159631131f4815a93951251",
+    "bytes": 141747,
+    "unchanged": true
+  },
+  "phase": {
+    "actualBGreen": null,
+    "requiredBOriginalGatesPreserved": true,
+    "independentContinuation": true,
+    "CSelected": false,
+    "newArtificialRedOnlyCycle": false,
+    "primaryAdvancementSelected": false,
+    "noExtraMandatoryCiRoundBeforeC": true,
+    "continuationMayQualifyOnResultingCSource": true,
+    "futureCOperands": 102
+  },
+  "proof": {
+    "projectExecution": false,
+    "lintExecution": false,
+    "staticTextAndHashOnly": true,
+    "existingTestAndPolicyBytesUntouched": true,
+    "oldAlternativeStopAndEventsProposalSelected": false
+  },
+  "required": [
+    "Independent prospective exact-union R2",
+    "Documentation immediate ordinary push and complete readback",
+    "Independent published R1 R2 before one-source child",
+    "Immediate ordinary source push with full tree/body verification",
+    "Original resulting-source CI with97-file invocation plus all existing types/lint/E2E gates"
+  ]
+}

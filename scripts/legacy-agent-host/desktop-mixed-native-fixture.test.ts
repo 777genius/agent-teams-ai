@@ -6,6 +6,7 @@ import {
   startNativeTeamModel,
   CONTEXT_MARKER as claudeContext,
 } from '../../packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts';
+import { runtimeDigest } from '../../packages/legacy-agent-host/dist/runtime/identity.js';
 import { digest, effectId } from '../../packages/legacy-agent-host/dist/team/identity.js';
 import {
   createMixedTaskNoticeReader,
@@ -28,10 +29,12 @@ import {
 import {
   startOpenCodeModel,
   CONTEXT_MARKER as openCodeContext,
+  type SettingsModelProbe,
 } from '../../packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts';
 import {
   mixedDesktopTeamName,
   readMixedCapturedPrincipal,
+  readMixedLiveMembershipIdentity,
 } from './desktop-mixed-native-fixture.ts';
 
 const prompt = 'Reply only OK. Do not use tools, access files or run commands.';
@@ -160,8 +163,16 @@ const providers = [
 for (const selected of providers) {
   test(`${selected.provider} opt-in finite probes never consume business turns or resolve a principal`, async (t) => {
     let principalReads = 0;
+    let settingsProbe: SettingsModelProbe | 'idle' | undefined;
+    const settings: SettingsModelProbe[] = selected.provider === 'opencode' ? [
+      { step: 'global-default', model: 'TEST-model' },
+      { step: 'project-default', model: 'TEST-project-model' },
+      { step: 'project-test', model: 'TEST-project-model' },
+      { step: 'local-limits', model: 'TEST-model', outputTokens: 1536 },
+    ] : [];
     const model = await selected.start({
       allowModelProbes: true,
+      ...(selected.provider === 'opencode' ? { settingsProbe: () => settingsProbe } : {}),
       principalId: () => {
         principalReads++;
         throw new Error('no captured grant before launch');
@@ -174,6 +185,18 @@ for (const selected of providers) {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(body),
       });
+    for (const expected of settings) {
+      settingsProbe = expected;
+      const response = await send({
+        ...selected.probe, model: expected.model,
+        ...(expected.outputTokens === undefined ? {} : { max_tokens: expected.outputTokens }),
+      });
+      assert.equal(response.status, 200);
+      const wire = await response.text();
+      assert.match(wire, /OK/);
+      assert.doesNotMatch(wire, /function_call|tool_calls/);
+    }
+    settingsProbe = undefined;
     for (let i = 0; i < 8; i++) {
       const response = await send(selected.probe);
       assert.equal(response.status, 200);
@@ -181,7 +204,12 @@ for (const selected of providers) {
       assert.match(wire, /OK/);
       assert.doesNotMatch(wire, /function_call|tool_calls/);
     }
-    assert.equal(model.probes.length, 8);
+    assert.equal(model.probes.length, 8 + settings.length);
+    assert.deepEqual(model.probes.slice(0, settings.length), settings.map(expected => ({
+      requestedModel: expected.model,
+      settingsStep: expected.step,
+      ...(expected.outputTokens === undefined ? {} : { requestedOutputTokens: expected.outputTokens }),
+    })));
     assert.equal(principalReads, 0);
     assert.equal(model.observations.length, 0);
     const business = await send(selected.business);
@@ -191,7 +219,7 @@ for (const selected of providers) {
     const ninth = await send(selected.probe);
     assert.equal(ninth.status, 400);
     await ninth.text();
-    assert.equal(model.probes.length, 8);
+    assert.equal(model.probes.length, 8 + settings.length);
     assert.equal(model.failures.length, 1);
   });
 
@@ -408,6 +436,86 @@ test('mixed principal callback requires exact canonical capture delivery and liv
   capture.members[1]!.delivery.runId = 'TEST-other-run';
   await save();
   assert.throws(() => readMixedCapturedPrincipal(root, 'codex'));
+
+  const binding = { backendId: 'TEST-owner', teamId: 'TEST-team', teamName: mixedDesktopTeamName };
+  const peers = members.slice(0, 2).map((member, index) => ({ ...member,
+    delivery: { ...binding, runId: 'TEST-live-run', memberId: member.memberId, generation: `peer-${index}` } }));
+  const source = { commandId: 'TEST-capture', configurationRevision: 'a'.repeat(64), members: peers };
+  const registered = { ...source, launchId: 'TEST-live-run', members: peers.map((member, index) => ({
+    memberId: member.memberId, principalId: `agent:TEST-live-peer-${index}`, delivery: member.delivery })) };
+  const peerSelections = peers.map(member => { const { teamName: _team, ...delivery } = member.delivery;
+    return { memberId: member.memberId, binding: delivery, configurationDigest: 'b'.repeat(64) }; });
+  const liveState = { binding, savedSettings: { providerId: 'anthropic' }, members: [...peers] as Record<string, unknown>[],
+    runtimeCaptures: [registered], grants: peers.map((member, index) => ({ memberName: member.name,
+      principalId: registered.members[index]!.principalId, permissions: [...grants[0]!.permissions], revoked: false })),
+    rosterCommands: [] as Record<string, unknown>[] };
+  const launch = { definition: { launchId: registered.launchId, capture: source,
+    members: [...peerSelections] as Record<string, unknown>[] }, liveMembership: [] as Record<string, unknown>[] };
+  await mkdir(join(directory, 'launches'), { recursive: true });
+  const saveLive = async () => {
+    await writeFile(join(directory, 'state.json'), JSON.stringify(liveState));
+    await writeFile(join(directory, 'launches', digest(registered.launchId) + '.json'), JSON.stringify(launch));
+  };
+  await saveLive();
+  assert.equal(readMixedLiveMembershipIdentity(root, 'claude').principalId, registered.members[0]!.principalId);
+  assert.equal(readMixedLiveMembershipIdentity(root, 'codex').principalId, registered.members[1]!.principalId);
+  assert.throws(() => readMixedLiveMembershipIdentity(root, 'opencode'), 'no target can be invented from the two peers');
+  const install = (commandId: string, kind: 'add' | 'restore', generation: number) => {
+    const memberId = 'TEST-live-carol', requestDigest = digest({ commandId }), revision = digest({ commandId, generation });
+    const fresh = effectId('live-roster-agent', binding.teamId, commandId, memberId, requestDigest);
+    const principalId = `agent:${fresh}`, settings = { providerId: 'opencode', model: 'local/TEST-model' };
+    const current = { memberId, name: 'carol', role: 'member', settings,
+      delivery: { ...binding, runId: registered.launchId, memberId, generation: `live-${generation}` } };
+    const captured = { commandId, requestDigest, sourceCaptureDigest: runtimeDigest(source), launchId: registered.launchId,
+      workspace: join(root, 'workspace'), member: { memberId, name: 'carol', settings },
+      configurationDigest: digest({ commandId, profile: true }), runtimeGeneration: generation };
+    const { configurationDigest: _digest, runtimeGeneration: _generation, ...origin } = captured;
+    const { teamName: _teamName, ...delivery } = current.delivery;
+    const selected = { memberId, binding: delivery, configurationDigest: captured.configurationDigest,
+      configRevision: `live-${runtimeDigest(origin)}`, runtimeGeneration: generation };
+    const view = { commandId, teamId: binding.teamId, requestDigest, sourceCaptureDigest: runtimeDigest(source),
+      captureDigest: runtimeDigest(captured), target: { memberId, name: 'carol', provider: 'opencode',
+        workspace: captured.workspace, configurationDigest: captured.configurationDigest } };
+    const fingerprint = digest({ commandId, fingerprint: true }), expectedRevision = digest({ commandId, before: true });
+    liveState.rosterCommands.push({ commandId, fingerprint, revision, liveMembership: { phase: 'completed',
+      input: { expectedRevision }, requestDigest, launchId: registered.launchId, sourceCaptureDigest: runtimeDigest(source),
+      delta: { kind, targetId: memberId }, capture: view,
+      selection: { principalId, delivery: current.delivery, configurationDigest: selected.configurationDigest } } });
+    launch.liveMembership.push({ intent: { commandId, memberId, requestDigest, sourceCaptureDigest: runtimeDigest(source),
+      expectedRevision, launchId: registered.launchId, originalFingerprint: fingerprint }, phase: 'selected',
+      rosterRevision: revision, capture: captured, captureDigest: runtimeDigest(captured), selected });
+    liveState.members = [...peers, current]; launch.definition.members = [...peerSelections, selected];
+    for (const grant of liveState.grants) if (grant.memberName === 'carol') grant.revoked = true;
+    liveState.grants.push({ memberName: 'carol', principalId, permissions: [...grants[0]!.permissions], revoked: false });
+    return { commandId, memberId };
+  };
+  const first = install('TEST-add', 'add', 1); await saveLive();
+  const firstIdentity = readMixedLiveMembershipIdentity(root, 'opencode', first);
+  assert.equal(firstIdentity.commandId, first.commandId);
+  for (const key of ['backendId', 'teamId'] as const) {
+    const delivery = liveState.members.at(-1)!.delivery as Record<string, unknown>;
+    const selected = launch.definition.members.at(-1)!.binding as Record<string, unknown>;
+    delivery[key] = selected[key] = 'TEST-foreign'; await saveLive();
+    assert.throws(() => readMixedLiveMembershipIdentity(root, 'opencode', first));
+    delivery[key] = selected[key] = binding[key];
+  }
+  await saveLive();
+  assert.throws(() => readMixedLiveMembershipIdentity(root, 'opencode', { ...first, commandId: 'TEST-foreign' }));
+  assert.throws(() => readMixedLiveMembershipIdentity(root, 'opencode', { ...first, memberId: peers[0]!.memberId }));
+  liveState.grants.at(-1)!.revoked = true; await saveLive();
+  assert.throws(() => readMixedLiveMembershipIdentity(root, 'opencode', first));
+  liveState.grants.at(-1)!.revoked = false;
+  const second = install('TEST-restore', 'restore', 2); await saveLive();
+  const secondIdentity = readMixedLiveMembershipIdentity(root, 'opencode', second);
+  assert.notEqual(secondIdentity.principalId, firstIdentity.principalId);
+  assert.notEqual(secondIdentity.sessionId, firstIdentity.sessionId);
+  assert.notDeepEqual(secondIdentity.binding, firstIdentity.binding);
+  assert.throws(() => readMixedLiveMembershipIdentity(root, 'opencode', first), 'old exact command cannot select the restored generation');
+  const unchanged = JSON.stringify({ liveState, launch });
+  assert.equal(readMixedLiveMembershipIdentity(root, 'claude').principalId, registered.members[0]!.principalId);
+  assert.equal(JSON.stringify({ liveState, launch }), unchanged, 'the TEST reader has no publication effect');
+  launch.definition.members.at(-1)!.configurationDigest = 'f'.repeat(64); await saveLive();
+  assert.throws(() => readMixedLiveMembershipIdentity(root, 'opencode', second));
 });
 
 // Known-shape canonical retained files exercise the TEST reader, never production admission/native effects.

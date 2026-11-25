@@ -1,0 +1,303 @@
+{
+  "kind": "N608EFB_ORIGINAL_CODEX_RUNTIME_CHECKPOINT",
+  "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "runId": 43795234483,
+  "jobId": 133062441554,
+  "status": "PASS within original finite TEST peer scope",
+  "payloads": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/codex/job-133062441554.log",
+      "bytes": 180019,
+      "gitBlob": "7f690df97c1f44ab846ca6e2ce111f88f6be3ce2",
+      "sha256": "6fd33e8a24cb0f2c5ce649f86877d49a98ae5857df25ceee3ee924903a897013"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/codex/original-job-log-response.json",
+      "bytes": 189876,
+      "gitBlob": "45a48cdb86f487ff0c5ba559bfb4db4668b4a837",
+      "sha256": "28590d2e59b9f95a6a6382d942b976b6837f655684784a1445162742c66dd1c5"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/codex/artifact-14196003798.zip",
+      "bytes": 2957075,
+      "gitBlob": "eab344cf11fbcfddf2ecd33dbbc10cbf514a09c7",
+      "sha256": "8807b6628c553da5476bc75fc49d82a4998073b8ef0e73c68136d178fff5a3f7"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/codex/archive-retention.json",
+      "bytes": 8266,
+      "gitBlob": "3d7dfc0175a8abaa36419356f631bc8258cc79f0",
+      "sha256": "387f440b0b5b2f6eacdabdeec64e27c39d47d180cf409e092545d910ff0103c3"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/official-host-artifacts-0359.json",
+      "bytes": 6683,
+      "gitBlob": "14b0bd728f5173fba3a26cba373e2c7fd3fb1002",
+      "sha256": "c11a14868785e967397dd0307da8c2be6ea320f1d1ec933b7859a8b47d2f8318"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/owned-api-jobs-0359.json",
+      "bytes": 74155,
+      "gitBlob": "1d22478c6f314ce2384e2aa49be1cfc5f5d24691",
+      "sha256": "a1c4586cff2c3355ca035f881a1d42211247a89c3136fe8a347676f5b3b8d014"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/host-original-run-0258.json",
+      "bytes": 30088,
+      "gitBlob": "ea302039d9efa1062aad0a3c3c062fb462c39774",
+      "sha256": "c1cefe9db820bb9a40b1e371d99d4aa628bd66d1826a35bd8787c99d5e7a9a10"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/cross-team/source-pin-audit.json",
+      "bytes": 461936,
+      "gitBlob": "bc23e5da6e447ed75d4d17adcc4fe1d5de5dbf64",
+      "sha256": "b3a5a97d7b4ba5406ef566cc61351eca3f04b7bbd2f7a6e3d673f56f8a85558a"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/codex/audit.json",
+      "bytes": 67268,
+      "gitBlob": "83edd80d6ab41b92b771f9b1cc815a9173c3d3b0",
+      "sha256": "7735c775d941b1f8568fb8845e050c41538f1c11531dc7df5e51ad15d03dea5f"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/codex/Plan29-codex-runtime-appendix.md",
+      "bytes": 7258,
+      "gitBlob": "c60b5370a62d5a60a8e89ac878067b4c59002263",
+      "sha256": "8a539bde55dacb46aa49079c362b9ea20d0c44afae7d265e94635fc0b21ffc85"
+    }
+  ],
+  "payloadCount": 10,
+  "archiveMembers": [
+    {
+      "path": "TEST-desktop-backend-TPCQrQ/desktop-app.log",
+      "bytes": 39201,
+      "sha256": "dcbbeb583e7c87c383c5784f6fe07917cfa1d586127a1a662bca563d3d49a32e",
+      "crc32": "c5fb7e0c"
+    },
+    {
+      "path": "TEST-desktop-backend-TPCQrQ/desktop-backend-receipt.json",
+      "bytes": 840907,
+      "sha256": "633ebe6ffc436d514ce5a61201f16b75f3ff428ef58ca705705cdf5718204a78",
+      "crc32": "87548c95"
+    },
+    {
+      "path": "TEST-desktop-backend-TPCQrQ/desktop-descriptor.json",
+      "bytes": 2635,
+      "sha256": "1c4912df0fe313ae52fdef6eb4add099a27370ecd6d95b5173cd2cf85aa415bd",
+      "crc32": "58510f21"
+    },
+    {
+      "path": "TEST-desktop-backend-TPCQrQ/TEST-peer-codex-scope/effects.ndjson",
+      "bytes": 15193,
+      "sha256": "c79f4834167adaac35de316f44e750c7611f1987a612e811614274abed0f77a6",
+      "crc32": "d3581566"
+    },
+    {
+      "path": "TEST-desktop-backend-TPCQrQ/host-profile.json",
+      "bytes": 7265,
+      "sha256": "c6b22933c82fcc59fa6c30efed4cab5f35c2ad80ab81be02bb598fbec18cc064",
+      "crc32": "9fd8501c"
+    },
+    {
+      "path": "TEST-desktop-backend-TPCQrQ/hoststore/management-commands/2522abbd5bb30b3f151b7aaf0b885fa850806e22d2ea996a9889394b419eeb55.json",
+      "bytes": 904,
+      "sha256": "4fb0a373654126c6bc997fb2a9e4e8fa6aa886b0a54b7afbf622ae40a9eec3dd",
+      "crc32": "d36c16db"
+    },
+    {
+      "path": "TEST-desktop-backend-TPCQrQ/hoststore/teams/test-desktop-backend/inboxes/alice.json",
+      "bytes": 4637,
+      "sha256": "508bd97be6d6210fd3b99f4165b9dd8931933371d658650fed9af45cdfe8b4ae",
+      "crc32": "2eaf13cd"
+    },
+    {
+      "path": "TEST-desktop-backend-TPCQrQ/hoststore/teams/test-desktop-backend/inboxes/user.json",
+      "bytes": 822,
+      "sha256": "bce5098c27fedc72d4fe16a53d94ca258fe6b348b9929bda7bae9c3fb5ad7b65",
+      "crc32": "967985ef"
+    },
+    {
+      "path": "TEST-desktop-backend-TPCQrQ/sentinel-invocations.ndjson",
+      "bytes": 96,
+      "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253",
+      "crc32": "9fc3bdb4"
+    },
+    {
+      "path": "TEST-desktop-backend-TPCQrQ/ui-emulated-runtime-allow-pending.png",
+      "bytes": 150067,
+      "sha256": "6e171a4e55a69369193d50f8ac364eb7caee24dc555b79d725a3f191ad81834c",
+      "crc32": "17907495"
+    },
+    {
+      "path": "TEST-desktop-backend-TPCQrQ/ui-emulated-runtime-completed.png",
+      "bytes": 135913,
+      "sha256": "387abd9a365fec6bbf5de8a3d86467fd7423882c5aa18b6c27a38c74e87bae8c",
+      "crc32": "eccc1c41"
+    },
+    {
+      "path": "TEST-desktop-backend-TPCQrQ/ui-emulated-runtime-cost.png",
+      "bytes": 148804,
+      "sha256": "fc266069d213eb5db4f84b02cabef722445e78fb538e061dafc8dbd1e96a0dea",
+      "crc32": "cfe9bc9a"
+    },
+    {
+      "path": "TEST-desktop-backend-TPCQrQ/ui-emulated-runtime-deny-pending.png",
+      "bytes": 148407,
+      "sha256": "c615dd324e46845ab135f2d191568f3ac9e4ce890bf155e18345e6270e4e52c4",
+      "crc32": "8fe37b33"
+    },
+    {
+      "path": "TEST-desktop-backend-TPCQrQ/ui-emulated-runtime-effects.json",
+      "bytes": 21077,
+      "sha256": "39099db058d5a7788dc985c5e983147fc50788106012c491e038c9d64313ef1f",
+      "crc32": "77eb8578"
+    },
+    {
+      "path": "TEST-desktop-backend-TPCQrQ/ui-emulated-runtime-held.png",
+      "bytes": 118235,
+      "sha256": "4416c50970bc3effc349530a99fbf5f85a92cd54c9c958231b4a0bea8cece93f",
+      "crc32": "5ad3f35e"
+    },
+    {
+      "path": "TEST-desktop-backend-TPCQrQ/ui-emulated-runtime-launch.png",
+      "bytes": 102131,
+      "sha256": "9a02f5435ea6cd3928474c0ac59ccc69ebca3cdcaf630b266f006d1621ccd8a4",
+      "crc32": "4944edfc"
+    },
+    {
+      "path": "TEST-desktop-backend-TPCQrQ/ui-emulated-runtime-lead-logs.png",
+      "bytes": 61155,
+      "sha256": "0de0c809ad1fd7a4ad8f4328f604949f8e432e80893b501084a960bc0d2a031f",
+      "crc32": "d4859441"
+    },
+    {
+      "path": "TEST-desktop-backend-TPCQrQ/ui-emulated-runtime-logs.png",
+      "bytes": 143365,
+      "sha256": "132e5bb0c808627e0b55c9af6106da8ea1dfc7c8c0e0ef3cf40b9a557465e9fe",
+      "crc32": "5524b0c1"
+    },
+    {
+      "path": "TEST-desktop-backend-TPCQrQ/ui-emulated-runtime-partial.png",
+      "bytes": 105977,
+      "sha256": "00f18e508538d3ea182bf6c09e8d072cc13f7bf2f9db15ec5ee5ebe673471947",
+      "crc32": "d2491ba3"
+    },
+    {
+      "path": "TEST-desktop-backend-TPCQrQ/ui-emulated-runtime-question-decline-pending.png",
+      "bytes": 152424,
+      "sha256": "912d28546d1287d2947d36736bdb3a4dc37b536ecd79e7ace307d1863413130e",
+      "crc32": "208b6054"
+    },
+    {
+      "path": "TEST-desktop-backend-TPCQrQ/ui-emulated-runtime-question-pending.png",
+      "bytes": 157002,
+      "sha256": "5497c5dfc553b2628181b8e5211fcc4e26562bf15aa28a74a3140461317f8ac9",
+      "crc32": "5c2f27a8"
+    },
+    {
+      "path": "TEST-desktop-backend-TPCQrQ/ui-emulated-runtime-reloaded.png",
+      "bytes": 141805,
+      "sha256": "ef3229770dd15cf6356887cbd40fa0d8e374760a1752f551e787be0f07eb2e8b",
+      "crc32": "e27be514"
+    },
+    {
+      "path": "TEST-desktop-backend-TPCQrQ/ui-emulated-runtime-schedule-automatic.png",
+      "bytes": 139064,
+      "sha256": "012a46fa7f7f51fe0b9d5ca3d3f5b1ed7eb5321477c6fb6205792cacd0f419a2",
+      "crc32": "9299fa49"
+    },
+    {
+      "path": "TEST-desktop-backend-TPCQrQ/ui-emulated-runtime-schedule.png",
+      "bytes": 127965,
+      "sha256": "aeaf4a2976965aae0914ad65f184ce528b45610fe0a0a947c7d32971412b4c18",
+      "crc32": "a6952ef3"
+    },
+    {
+      "path": "TEST-desktop-backend-TPCQrQ/ui-emulated-runtime-stats.png",
+      "bytes": 147466,
+      "sha256": "31abced795f04dd5f80e4d64c28c437d3b6b3a0d9834d70ca218c8cf19d26e81",
+      "crc32": "127e1dd2"
+    },
+    {
+      "path": "TEST-desktop-backend-TPCQrQ/ui-emulated-runtime-stopped.png",
+      "bytes": 138081,
+      "sha256": "47c3fe920b5f5ddad0ebf655f3f1a3a622ee2ad5f09fc41a582d379c2b8047b6",
+      "crc32": "22e66e67"
+    },
+    {
+      "path": "TEST-desktop-backend-TPCQrQ/ui-emulated-runtime-task-activity.png",
+      "bytes": 183103,
+      "sha256": "115c0b1ee6b91cbcf32a8d21f1c505237f1bb7a01b3a4bb01e73d1aeb542a50a",
+      "crc32": "bd59c64b"
+    },
+    {
+      "path": "TEST-desktop-backend-TPCQrQ/ui-emulated-runtime-task-log-stream.png",
+      "bytes": 155511,
+      "sha256": "a2be2742a44f1213d764b627b20d91a0decb56e09d442d8f130d54c3faf8ea37",
+      "crc32": "4bd1acc3"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-ZGzJN6/linux-child-exec/linux-child-exec",
+      "bytes": 790608,
+      "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45",
+      "crc32": "ed0ca14b"
+    },
+    {
+      "path": "TEST-desktop-backend-TPCQrQ/ui-seed-receipt.json",
+      "bytes": 2335,
+      "sha256": "0759e00374b9074b0b30be496b45a6e62fa8865a1cc3d09862bb9b523ddf0b3b",
+      "crc32": "40805ebc"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-ZGzJN6/linux-child-exec/manifest.json",
+      "bytes": 2406,
+      "sha256": "4ef7cd76c1a549d6fef41c4dc7561b5433547278d59b0c2907affe2be9a646f1",
+      "crc32": "e3de74e8"
+    },
+    {
+      "path": "host-emulated-emulated-codex-runtime-ui.log",
+      "bytes": 225,
+      "sha256": "4f1889659e352b762460bb84df3bb86a245e2ab626d318ac052c75bc67a2400d",
+      "crc32": "010862d7"
+    },
+    {
+      "path": "host-emulated-inputs.json",
+      "bytes": 1803,
+      "sha256": "42157ac3f48d77ff9fc4ce2f86e9b823dde3d0c27e8bbd1d2035112dc1155e8f",
+      "crc32": "1be212cd"
+    },
+    {
+      "path": "host-emulated-linux-child-exec-selection.json",
+      "bytes": 271,
+      "sha256": "5b3ef770149d45384f0a9ab5532c8be82b8f3efd4b051722964ba73765e3339c",
+      "crc32": "975945a3"
+    },
+    {
+      "path": "host-emulated-summary.json",
+      "bytes": 1658,
+      "sha256": "abe36ab53f4eef91dc302c7d50fb0d9fb706010006ae4ca382bd5b9790490569",
+      "crc32": "a050f959"
+    }
+  ],
+  "actuallyViewed": [
+    "ui-emulated-runtime-lead-logs.png",
+    "ui-emulated-runtime-deny-pending.png",
+    "ui-emulated-runtime-question-pending.png",
+    "ui-emulated-runtime-stats.png",
+    "ui-emulated-runtime-schedule-automatic.png",
+    "ui-emulated-runtime-task-activity.png",
+    "ui-emulated-runtime-task-log-stream.png",
+    "ui-emulated-runtime-stopped.png"
+  ],
+  "limits": [
+    "Finite TEST provider only; no vendor inference/authentication/native-provider/release qualification.",
+    "Thinking replacement/copy, rich-tool and standalone branches are not executed for Codex; no broader Claude-only claim for the shared non-Codex branches.",
+    "All42 peers absent but only28 actualexit0 ledger rows;14remaining absences lack peer exit callbacks.",
+    "Held input remains unknown/terminalConfirmedfalse; Stop is not a successful input result.",
+    "Final mixed-frame duration/cause/convergence unknown; this Runtime flow does not acquire the separate Selectioncd4 final75s DOM-convergence assertion.",
+    "Original source/receipt/DOM/image reads are separate observations, not atomic full-lifetime proof.",
+    "Raw source checkout/fresh build and receipt bundle hashes do not supply an independent installed/generated-file census or rebuild.",
+    "Current Team177/24 contractGREEN and subsequent typed-lintFAIL remain separately qualified."
+  ],
+  "independentReviewPending": true
+}

@@ -244,6 +244,7 @@ const REQUIRED_MOCK_AGENT_TEAMS_TOOLS = [
   'process_stop',
   'process_unregister',
   'review_approve',
+  'review_complete',
   'review_request',
   'review_request_changes',
   'review_start',

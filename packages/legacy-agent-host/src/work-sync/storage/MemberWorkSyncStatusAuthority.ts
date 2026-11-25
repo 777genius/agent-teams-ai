@@ -19,6 +19,7 @@ import type {
 } from '../policy/contracts/index.js';
 import type {
   MemberWorkSyncAuthorityCommitResult,
+  MemberWorkSyncAuthorityFailureDetail,
   MemberWorkSyncAuthorityFailureReason as FailureReason,
   MemberWorkSyncAuthorityReadResult,
   MemberWorkSyncStatusAuthoritySnapshot,
@@ -65,6 +66,7 @@ export type {
 
 export interface MemberWorkSyncStatusAuthorityDeps {
   identity: MemberWorkSyncTokenIdentity;
+  diagnosticDetail?(error: unknown): MemberWorkSyncAuthorityFailureDetail | undefined;
   /** Consumer-owned local/RPC interruption metadata; never serialized or inferred from an error string. */
   interruption?(
     error: unknown
@@ -152,8 +154,10 @@ export class MemberWorkSyncStatusAuthority {
       | undefined;
     let acknowledgedWrite = false;
     let knownCommit: Extract<MemberWorkSyncAuthorityCommitResult, { committed: true }> | undefined;
-    const failed = (reason: FailureReason): Outcome =>
-      commit ? { committed: false, reason } : { ok: false, reason };
+    const failed = (reason: FailureReason, detail?: MemberWorkSyncAuthorityFailureDetail): Outcome =>
+      commit
+        ? { committed: false, reason, ...(detail ? { detail } : {}) }
+        : { ok: false, reason, ...(detail ? { detail } : {}) };
     const classify = (error: unknown): Outcome => {
       const interruption = this.deps.interruption?.(error);
       if (knownCommit)
@@ -169,7 +173,11 @@ export class MemberWorkSyncStatusAuthority {
       if (commit && phase === 'cas' && interruption?.execution !== 'not_started') {
         return { committed: 'unknown', reason: 'commit_unknown', mutationId: commit.mutationId };
       }
-      return failed(failureReason(error));
+      const detail = this.deps.diagnosticDetail?.(error) ??
+        ((error instanceof MemberWorkSyncStatusDecodeError ||
+          error instanceof MemberWorkSyncStatusConflictError) &&
+         error.reason === 'incarnation_mismatch' ? 'incarnation_mismatch' : undefined);
+      return failed(failureReason(error), detail);
     };
     // Deferring effects gives composition a synchronous window to register this entire lifetime.
     const physical = Promise.resolve().then(async () => {

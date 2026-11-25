@@ -117,7 +117,45 @@ describe('JsonScheduleRepository', () => {
       await fs.promises.writeFile(path.join(logsDir, 'run-1.log'), 'stdout');
       await fs.promises.writeFile(path.join(logsDir, 'run-1.err'), 'stderr');
 
-      await repo.deleteSchedule('sched-1');
+      const metadata = repo as unknown as { writeSchedulesFile(rows: Schedule[]): Promise<void> };
+      const write = metadata.writeSchedulesFile.bind(repo);
+      let entered!: () => void;
+      const writing = new Promise<void>((resolve) => { entered = resolve; });
+      let releaseWrite!: () => void;
+      const heldWrite = new Promise<void>((resolve) => { releaseWrite = resolve; });
+      vi.spyOn(metadata, 'writeSchedulesFile').mockImplementationOnce(async (rows) => {
+        entered();
+        await heldWrite;
+        await write(rows);
+      });
+      const earlierUpdate = repo.saveSchedule({ ...schedule, label: 'TEST earlier update' }, { mustExist: true });
+      await writing;
+      let committed!: () => void;
+      const commit = new Promise<void>((resolve) => { committed = resolve; });
+      let releaseCleanup!: () => void;
+      const heldCleanup = new Promise<void>((resolve) => { releaseCleanup = resolve; });
+      let observedCommit = false;
+      const deletion = repo.deleteSchedule('sched-1', async () => {
+        observedCommit = true;
+        expect(await repo.getSchedule('sched-1')).toBeNull();
+        expect(await repo.listRuns('sched-1')).toEqual([run]);
+        expect(await fs.promises.readFile(path.join(logsDir, 'run-1.log'), 'utf8')).toBe('stdout');
+        committed();
+        await heldCleanup;
+      });
+      await Promise.resolve();
+      expect(observedCommit).toBe(false);
+      releaseWrite();
+      await earlierUpdate;
+      await commit;
+
+      // A late finalizer cannot reinsert the deleted row, nor poison the next metadata write.
+      await expect(repo.saveSchedule(schedule, { mustExist: true })).rejects.toThrow('Schedule no longer exists');
+      const independent = makeSchedule({ id: 'TEST-independent' });
+      await repo.saveSchedule(independent);
+      expect(await repo.getSchedule(independent.id)).toEqual(independent);
+      releaseCleanup();
+      await deletion;
 
       expect(await repo.getSchedule('sched-1')).toBeNull();
       expect(await repo.listRuns('sched-1')).toEqual([]);
@@ -251,6 +289,11 @@ describe('JsonScheduleRepository', () => {
       const result = await repo.listSchedules();
       expect(result).toEqual([]);
       expect(warnSpy).toHaveBeenCalled();
+      const onCommitted = vi.fn();
+      await expect(repo.deleteSchedule('sched-1', onCommitted)).rejects.toThrow();
+      await expect(repo.saveSchedule(makeSchedule())).rejects.toThrow();
+      expect(onCommitted).not.toHaveBeenCalled();
+      expect(await fs.promises.readFile(path.join(tempDir, 'schedules.json'), 'utf8')).toBe('not valid json');
       warnSpy.mockRestore();
     });
 
@@ -261,8 +304,9 @@ describe('JsonScheduleRepository', () => {
       await Promise.all(promises);
 
       const schedules = await repo.listSchedules();
-      // At least some should be saved (atomic writes prevent corruption)
-      expect(schedules.length).toBeGreaterThan(0);
+      expect(schedules.map(schedule => schedule.id).sort()).toEqual(
+        Array.from({ length: 5 }, (_, i) => `sched-${i}`)
+      );
     });
   });
 });

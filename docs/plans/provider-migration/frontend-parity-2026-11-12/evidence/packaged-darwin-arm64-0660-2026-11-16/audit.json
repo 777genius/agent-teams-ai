@@ -1,0 +1,227 @@
+{
+  "auditedAt": "2026-11-16T02:02:17.049505+00:00",
+  "method": "Read-only retained artifact/decoded job-log/source review; no application or native execution",
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "tree": "e70ccffc6d55ad42c2249518bf142e2ed32ddf91",
+  "runId": 43780997349,
+  "runAttempt": 1,
+  "jobId": 133040244365,
+  "jobUrl": "https://github.com/777genius/agent-teams-ai/actions/runs/43780997349/job/133040244365",
+  "artifact": {
+    "id": 14191980301,
+    "node_id": "MDg6QXJ0aWZhY3QxNDE5MTk4MDMwMQ==",
+    "name": "packaged-v2-host-darwin-arm64-0660c748f88675063e3051fb0f8b2022e8f6f056",
+    "size_in_bytes": 1064941,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14191980301",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14191980301/zip",
+    "expired": false,
+    "digest": "sha256:258cf232660e4cf40e62ae086b61e57d30766f2cf8eb0d62cc16353f21d560f4",
+    "created_at": "2026-11-16T01:54:01Z",
+    "updated_at": "2026-11-16T01:54:01Z",
+    "expires_at": "2026-11-23T01:54:01Z",
+    "workflow_run": {
+      "id": 43780997349,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "0660c748f88675063e3051fb0f8b2022e8f6f056"
+    }
+  },
+  "jobStartedAt": "2026-11-16T01:45:56Z",
+  "jobCompletedAt": "2026-11-16T01:54:04Z",
+  "originalSteps": [
+    {
+      "name": "Qualify actual packaged V2 Host tools, MCP, Stop and cold Resume",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 37,
+      "started_at": "2026-11-16T01:52:54Z",
+      "completed_at": "2026-11-16T01:53:33Z"
+    },
+    {
+      "name": "Qualify original packaged macOS app relaunch with finite SDK peer",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 39,
+      "started_at": "2026-11-16T01:53:33Z",
+      "completed_at": "2026-11-16T01:54:01Z"
+    },
+    {
+      "name": "Preserve exact packaged Host evidence",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 40,
+      "started_at": "2026-11-16T01:54:01Z",
+      "completed_at": "2026-11-16T01:54:01Z"
+    }
+  ],
+  "all1760SourcePinsMatchImmutableSource": true,
+  "sourceBeforeAfterIdentical": true,
+  "mainPids": {
+    "original": 8987,
+    "successor": 9571
+  },
+  "hostPids": {
+    "original": 9011,
+    "successor": 9590
+  },
+  "businessInputsBeforeAndAfter": 1,
+  "separateProbeInputs": 1,
+  "originalInputId": "bc9e3ff5-b70b-56a6-8a42-57f4876ee6a6",
+  "originalCaptureLaunchId": "8136590e-922e-5582-9e20-e954dcb3a06c",
+  "originalGeneration": "capture-bd2c66dc-5458-5a95-8160-e93ce6f4e5b9",
+  "originalSessionState": {
+    "phase": "closed",
+    "custody": "released",
+    "sealed": true,
+    "terminal": "succeeded"
+  },
+  "originalExit": {
+    "exitCode": 0,
+    "signalCode": null,
+    "HostExitCode": "unavailable",
+    "HostSignalCode": "unavailable"
+  },
+  "originalHostAbsent": true,
+  "originalLeaseAbsenceObserved": true,
+  "successorIdentity": {
+    "pid": 9571,
+    "executable": "/Users/runner/work/agent-teams-ai/agent-teams-ai/release/mac-arm64/Agent Teams AI.app/Contents/MacOS/Agent Teams AI",
+    "argv": "/Users/runner/work/agent-teams-ai/agent-teams-ai/release/mac-arm64/Agent Teams AI.app/Contents/MacOS/Agent Teams AI --remote-debugging-port=9222",
+    "started": "Mon Nov 16 01:53:54 2026",
+    "observationOnly": true
+  },
+  "successorQuitReply": "unconfirmed; no retry or signal",
+  "successorAbsence": {
+    "listenerAbsent": true,
+    "observedPidAbsent": true,
+    "HostPidAbsent": true,
+    "writerLockAbsent": true,
+    "exitCode": "unavailable",
+    "signalCode": "unavailable",
+    "naturalExitQualified": false
+  },
+  "successorNativeCustody": false,
+  "numericPidSignalsAuthorized": false,
+  "cleanup": {
+    "remaining": [],
+    "capturedHostAbsent": true,
+    "hostPid": 9011
+  },
+  "observedPeerPids": [
+    9097,
+    9178,
+    9252,
+    9378
+  ],
+  "allRetainedPeerPidsAbsent": true,
+  "sentinelRows": 0,
+  "screenshotsVisuallyInspected": true,
+  "separateV2Prerequisite": {
+    "status": "PASS",
+    "cleanup": true,
+    "nativeReceiptHashBound": true,
+    "bothHostExitsZero": true,
+    "sourceBundleLegacyRestored": true,
+    "modelOrigin": "localhost-scripted",
+    "modelFailures": [],
+    "coldHostRestoreCompleted": "cold_host_restored_native_history_without_model_or_tool_replay",
+    "coordination": {
+      "status": "unqualified",
+      "cleanup": null
+    },
+    "originalAcceptanceBudgetNotReinterpreted": true
+  },
+  "closedForThisSource": [
+    "Original packaged Darwin ARM finite SDK UI Launch/one business input/Stop and released retained session",
+    "Original captured Main app.relaunch acknowledged once; original Main exit0 without signal; original Host absent",
+    "Observed candidate successor and same home/backend bindings with a fresh exclusive writer token",
+    "No business replay or additional input across automatic relaunch",
+    "One guarded successor public Quit attempt, followed by listener/Main PID/Host PID/writer-lock absence",
+    "Original captured group and all four retained TEST peer PIDs absent; source and packaged input freezes retained",
+    "Separate original packaged V2 prerequisite receipt/cleanup/input restoration cross-bound to the same candidate"
+  ],
+  "remainUnqualified": [
+    "Successor Quit acknowledgement and successor natural exit code/signal",
+    "Successor native custody and provider-root cleanup outside observer-only lifecycle scope",
+    "Original Host natural exit code/signal (absence only)",
+    "Release versus dead-owner writer recovery mechanism",
+    "Full finite Claude cold Resume and active/queued Quit beyond originalStopOnly",
+    "Real Claude/Codex execution, authentication/inference, genuine saved donor/M16 upgrade, release and default activation",
+    "P09 existing-writer zero-marker semantics and held full I386/native policy",
+    "Windows original15-second readiness/P08 recovery and other platform or later-source CI results"
+  ],
+  "binaryReadbackLimit": "ZIP contains manifest and receipts, not app.asar/Node/Host payloads. Their hashes are cross-bound between original runner receipts and source assertions; independent local binary rehash is not claimed.",
+  "files": [
+    {
+      "path": "archive/_temp/TEST-desktop-backend-ZV8aRp/ui-automatic-app-relaunch-successor.png",
+      "bytes": 138434,
+      "sha256": "65d152c93300287c8965a43a8c744aa19f23aa373b0166abf7d37fdfa093b525"
+    },
+    {
+      "path": "archive/_temp/TEST-desktop-backend-ZV8aRp/ui-emulated-lifecycle-launch.png",
+      "bytes": 222139,
+      "sha256": "45cf8802df8b2dcbffecf68c4b43910938d38953ea102536b0e3775f5c0a328e"
+    },
+    {
+      "path": "archive/_temp/TEST-desktop-backend-ZV8aRp/ui-emulated-lifecycle-stopped.png",
+      "bytes": 200291,
+      "sha256": "317641f4db8d21a440565b59cf48f60cd83dd8a1f08c61b6f092f06e05db163c"
+    },
+    {
+      "path": "archive/_temp/opencode-v2-packaged-inputs.json",
+      "bytes": 2374,
+      "sha256": "e76f226bd7c13480b7ea0a2e3d30726a5fafe4b29c39faaee817efa9cf112efd"
+    },
+    {
+      "path": "archive/_temp/opencode-v2-packaged-native.json",
+      "bytes": 5286,
+      "sha256": "dd19e8a267f6f3b667dfd55507a52370ca399337a65433b820f07b64e5bd0823"
+    },
+    {
+      "path": "archive/_temp/opencode-v2-packaged.json",
+      "bytes": 1189,
+      "sha256": "aaa29556e746bb9874a68f8d164365cad872a751de3755bb96c143974c52a9e9"
+    },
+    {
+      "path": "archive/_temp/packaged-app-relaunch.app.log",
+      "bytes": 3027,
+      "sha256": "39ed4f7f99c7d506a4e0efc127e21ee77118a8f01cfe93151a31c3837e522601"
+    },
+    {
+      "path": "archive/_temp/packaged-app-relaunch.json",
+      "bytes": 671444,
+      "sha256": "70e3815884691a6be4155c9ad61a55329b48ec416ea7ae959346ece4f526f293"
+    },
+    {
+      "path": "archive/agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+      "bytes": 1154733,
+      "sha256": "6422c2cfd0452aa36785dcb0fce1f40a5a25418c1e935c77352402ba938c4ea4"
+    },
+    {
+      "path": "artifact-14191980301.zip",
+      "bytes": 1064941,
+      "sha256": "258cf232660e4cf40e62ae086b61e57d30766f2cf8eb0d62cc16353f21d560f4"
+    },
+    {
+      "path": "job-133040244365.log",
+      "bytes": 157719,
+      "sha256": "e7db08cd4506618dc92ce3ade639770e85892ce8a03e63a524d4671f3d26282d"
+    },
+    {
+      "path": "job-metadata.json",
+      "bytes": 11831,
+      "sha256": "8f19e7ff258dc2647413b549634767fa6451115a4b7c1beae7a56c7aabf71095"
+    },
+    {
+      "path": "artifact-metadata.json",
+      "bytes": 865,
+      "sha256": "cf920935d378421c7f4b4abf40a5461b8f954ecd6225509d34eabaa27bc413f1"
+    },
+    {
+      "path": "source-pin-audit.json",
+      "bytes": 677417,
+      "sha256": "3b1e00cd647b74e8be35ffc4216cf1fdca198cfc7a6e6d309a57df3d735f563a"
+    }
+  ]
+}

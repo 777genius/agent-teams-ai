@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { opencodeFailedShellCaptureFixture } from './capture.ts';
+import { OPENCODE_V2_PROBE_STEP_LIMIT } from './model-probe.ts';
 import { CAPTURE_FAILED_AFTER, assertCaptureFailedShellOutput } from './model.ts';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
@@ -9,7 +10,10 @@ import {
   CAPTURE_TURN,
   CAPTURE_ASSIGNMENT,
   CONTEXT_MARKER,
+  COORDINATION_PROMPT,
+  COORDINATION_TOOLS,
   REQUIRED_TOOLS,
+  type LiveMembershipModelPhase,
   startOpenCodeModel,
 } from './model.ts';
 
@@ -18,18 +22,20 @@ const tools = [...REQUIRED_TOOLS.map((name) => `team_${name}`), 'bash'].map((nam
   function: { name },
 }));
 
+const ordinaryProbeMessages = [{ role: 'user', content: 'Reply only OK. Do not use tools, access files or run commands.' }];
+
 test('OpenCode inference oracle requires native context/catalog and scripts two sequential business turns', async () => {
-  const model = await startOpenCodeModel();
+  const model = await startOpenCodeModel({ coordinationProof: true, localReadinessProof: true });
   try {
     const first: unknown[] = [
       { role: 'system', content: CONTEXT_MARKER },
       { role: 'user', content: 'OPENCODE_TEAM_ONE' },
     ];
-    async function next(messages: unknown[]) {
+    async function next(messages: unknown[], offered = tools) {
       const response = await fetch(`${model.url}/v1/chat/completions`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ messages, tools }),
+        body: JSON.stringify({ messages, tools: offered }),
       });
       assert.equal(response.status, 200);
       const wire = await response.text();
@@ -37,9 +43,39 @@ test('OpenCode inference oracle requires native context/catalog and scripts two 
       assert.ok(line);
       return JSON.parse(line.slice(6)).choices[0].delta as {
         content?: string;
-        tool_calls?: { function: { name: string; arguments: string } }[];
+        tool_calls?: { id: string; function: { name: string; arguments: string } }[];
       };
     }
+    // Synthetic HTTP oracle proof; real endpoint/native Session evidence is required by the native case.
+    assert.ok(model.coordination);
+    model.coordination.arm();
+    assert.ok(model.localReadiness);
+    assert.equal((await next(ordinaryProbeMessages, [])).content, 'OK');
+    const inventory = await fetch(model.url + '/v1/models');
+    assert.equal(inventory.status, 200);
+    assert.deepEqual(await inventory.json(), { data: [{ id: 'TEST-model' }] });
+    assert.equal(model.localReadiness.ordinary.length, 1); assert.equal(model.localReadiness.inventoryReads, 1);
+    const offered = COORDINATION_TOOLS.map(name => ({ type: 'function', function: { name } }));
+    const challenge: unknown[] = [{ role: 'user', content: COORDINATION_PROMPT }];
+    const briefing = await next(challenge, offered);
+    assert.equal(briefing.tool_calls?.[0]?.function.name, COORDINATION_TOOLS[0]);
+    challenge.push({ role: 'assistant', tool_calls: briefing.tool_calls }, {
+      role: 'tool', tool_call_id: briefing.tool_calls![0]!.id,
+      content: JSON.stringify({ nonce: 'a'.repeat(64), destination: 'native-local-coordination-v1' }),
+    });
+    const send = await next(challenge, offered);
+    assert.equal(send.tool_calls?.[0]?.function.name, COORDINATION_TOOLS[1]);
+    assert.deepEqual(JSON.parse(send.tool_calls![0]!.function.arguments), {
+      nonce: 'a'.repeat(64), destination: 'native-local-coordination-v1',
+    });
+    challenge.push({ role: 'assistant', tool_calls: send.tool_calls }, {
+      role: 'tool', tool_call_id: send.tool_calls![0]!.id,
+      content: JSON.stringify({ accepted: true, nonce: 'a'.repeat(64) }),
+    });
+    assert.equal((await next(challenge, offered)).content, 'OK');
+    model.coordination.finish();
+    assert.deepEqual(model.coordination.observations.map(row => row.nativeToolRefs),
+      [[], ['TEST_COORDINATION_0'], ['TEST_COORDINATION_0', 'TEST_COORDINATION_1']]);
     const create = await next(first);
     assert.equal(create.tool_calls?.[0]?.function.name, 'team_task_create');
     first.push({
@@ -72,6 +108,7 @@ test('OpenCode inference oracle requires native context/catalog and scripts two 
     assert.equal((await next(second)).tool_calls?.[0]?.function.name, 'team_message_send');
     assert.equal((await next(second)).content, 'DONE_OPENCODE_TEAM_TWO');
     assert.equal(model.observations.length, 11);
+    assert.equal(model.observations.length + model.coordination.observations.length + model.localReadiness.ordinary.length, 15);
     assert.ok(model.observations.every((item) => item.contextEffective));
     assert.ok(
       model.observations
@@ -81,6 +118,179 @@ test('OpenCode inference oracle requires native context/catalog and scripts two 
     assert.deepEqual(model.failures, []);
   } finally {
     await model.close();
+  }
+
+  for (const mode of ['pass', 'pass-v2', 'premature-probe', 'duplicate-probe', 'foreign-key', 'business-before-probe',
+    'wrong-order', 'missing-result', 'foreign-id', 'wrong-principal', 'wrong-command', 'wrong-operation',
+    'wrong-args', 'extra-round', 'old-restored-principal', 'after-stop']) {
+    let phase: LiveMembershipModelPhase = 'idle', principal = 'TEST-add-principal';
+    const v2 = mode === 'pass-v2', liveTools = v2 ? tools.map(tool => ({ ...tool, function: { name:
+      tool.function.name === 'bash' ? 'shell' : tool.function.name.replace(/^team_/, 'agent-teams_') } })) : tools;
+    const original = await startOpenCodeModel({ ...(v2 ? { nativeGeneration: 'v2' as const } : {}),
+      allowModelProbes: true, uiGeneratedMessageIds: true,
+      principalId: () => principal, liveMembershipPhase: () => phase, selectedModel: { id: 'TEST-model' } });
+    type Call = { id: string; type: string; function: { name: string; arguments: string } };
+    const post = async (messages: unknown[], offered: unknown[] = liveTools, key = 'TEST-LOCALHOST-ONLY') => {
+      const response = await fetch(original.url + '/v1/chat/completions', { method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key },
+        body: JSON.stringify({ model: 'TEST-model', messages: v2 && messages === ordinaryProbeMessages
+          ? [...messages, { role: 'assistant', content: OPENCODE_V2_PROBE_STEP_LIMIT }] : messages, tools: offered }) });
+      const wire = await response.text(), line = wire.split('\n').find(value => value.startsWith('data: {'));
+      return { status: response.status, delta: line ? JSON.parse(line.slice(6)).choices[0].delta as {
+        content?: string; tool_calls?: Call[];
+      } : undefined };
+    };
+    const refused = (response: Awaited<ReturnType<typeof post>>) => {
+      assert.equal(response.status, 400); assert.equal(original.failures.length, 1, mode);
+    };
+    const incoming = (turn: string): unknown[] => [{ role: 'system', content: CONTEXT_MARKER }, {
+      role: 'user', content: JSON.stringify({ messageId: '00000000-0000-4000-8000-000000000001', text: turn }) +
+        '\nUse the message_send tool to="user", including commandId and text. ' +
+        'Do not reuse the incoming messageId as a reply commandId.',
+    }];
+    try {
+      if (mode === 'premature-probe') { refused(await post(ordinaryProbeMessages, [])); continue; }
+      phase = 'add';
+      if (mode === 'foreign-key') { refused(await post(ordinaryProbeMessages, [], 'TEST-foreign')); continue; }
+      if (mode !== 'business-before-probe') {
+        assert.equal((await post(ordinaryProbeMessages, [])).delta?.content, 'OK');
+        assert.equal(original.probes.length, 1);
+      }
+      if (mode === 'duplicate-probe') { refused(await post(ordinaryProbeMessages, [])); continue; }
+      phase = 'add-ready';
+      const turn = mode === 'wrong-order' ? 'TEST_LIVE_MEMBERSHIP_RESTORE' : 'TEST_LIVE_MEMBERSHIP_ADD';
+      const messages = incoming(turn), first = await post(messages);
+      if (mode === 'business-before-probe' || mode === 'wrong-order') { refused(first); continue; }
+      assert.equal(first.status, 200); assert.equal(original.observations.length, 1);
+      const call = first.delta!.tool_calls![0]!;
+      assert.equal(call.function.name, v2 ? 'agent-teams_message_send' : 'team_message_send');
+      const args = JSON.parse(call.function.arguments) as { commandId: string; to: string; text: string };
+      assert.deepEqual(args, { commandId: 'TEST-live-reply-add', to: 'user', text: 'REPLY_' + turn });
+      if (mode === 'wrong-args') call.function.arguments = JSON.stringify({ ...args, to: 'bob' });
+      messages.push({ role: 'assistant', tool_calls: [call] });
+      if (mode !== 'missing-result') messages.push({ role: 'tool',
+        tool_call_id: mode === 'foreign-id' ? 'TEST-other-tool' : call.id,
+        content: JSON.stringify({ phase: 'completed', principalId: principal,
+          operation: mode === 'wrong-operation' ? 'task.create' : 'message.send',
+          commandId: mode === 'wrong-command' ? 'TEST-other-command' : args.commandId,
+          effects: { messageId: 'TEST-actual-add-reply' } }) });
+      if (mode === 'wrong-principal') principal = 'TEST-foreign-principal';
+      const terminal = await post(messages);
+      if (['missing-result', 'foreign-id', 'wrong-principal', 'wrong-command', 'wrong-operation', 'wrong-args'].includes(mode)) {
+        refused(terminal); assert.equal(original.observations.length, 1); continue;
+      }
+      assert.equal(terminal.delta?.content, 'DONE_' + turn);
+      if (mode === 'extra-round') { refused(await post(messages)); continue; }
+      phase = 'remove'; assert.equal(original.probes.length, 1); assert.equal(original.observations.length, 2);
+      phase = 'restore'; assert.equal((await post(ordinaryProbeMessages, [])).delta?.content, 'OK');
+      phase = 'restore-ready'; if (mode !== 'old-restored-principal') principal = 'TEST-restored-principal';
+      const restoredTurn = 'TEST_LIVE_MEMBERSHIP_RESTORE', restored = incoming(restoredTurn), next = await post(restored);
+      if (mode === 'old-restored-principal') { refused(next); continue; }
+      assert.equal(next.status, 200);
+      const restoredCall = next.delta!.tool_calls![0]!, restoredArgs = JSON.parse(restoredCall.function.arguments) as { commandId: string };
+      assert.equal(restoredArgs.commandId, 'TEST-live-reply-restore'); assert.notEqual(restoredCall.id, call.id);
+      restored.push({ role: 'assistant', tool_calls: [restoredCall] }, { role: 'tool', tool_call_id: restoredCall.id,
+        content: JSON.stringify({ phase: 'completed', principalId: principal, operation: 'message.send',
+          commandId: restoredArgs.commandId, effects: { messageId: 'TEST-actual-restore-reply' } }) });
+      assert.equal((await post(restored)).delta?.content, 'DONE_' + restoredTurn);
+      phase = 'stopped';
+      assert.equal(original.probes.length, 2); assert.equal(original.observations.length, 4);
+      assert.deepEqual(original.observations.map(row => [row.turn, row.step]), [[turn, 0], [turn, 1], [restoredTurn, 0], [restoredTurn, 1]]);
+      assert.ok(original.observations.every(row => row.contextEffective && row.visibleReplyContract));
+      if (mode === 'after-stop') refused(await post(ordinaryProbeMessages, []));
+      else assert.deepEqual(original.failures, []);
+    } finally { await original.close(); }
+  }
+
+  await assert.rejects(startOpenCodeModel({ configuredLaunchPreparation: true, memberName: 'alice' }));
+  await assert.rejects(startOpenCodeModel({ configuredLaunchPreparation: true,
+    nativeGeneration: 'v2', memberName: 'alice', allowModelProbes: true }));
+  for (const mode of ['pass', 'unarmed', 'duplicate', 'rearm', 'wrong-route', 'wrong-model', 'wrong-key',
+    'missing-suffix', 'wrong-suffix', 'business-before-probe', 'business-before-disarm', 'after-disarm-probe']) {
+    const original = await startOpenCodeModel({ nativeGeneration: 'v2', memberName: 'alice',
+      configuredLaunchPreparation: true });
+    const preparation = original.configuredLaunchPreparation;
+    assert.ok(preparation);
+    const scope = { commandId: 'TEST-explicit-sandbox-setup-launch' as const,
+      launchId: 'TEST-original-launch', rosterRevision: 'a'.repeat(64),
+      memberId: 'alice-id', model: 'test-local/TEST-model' };
+    const probe: unknown[] = [...ordinaryProbeMessages,
+      { role: 'assistant', content: OPENCODE_V2_PROBE_STEP_LIMIT }];
+    const business = [{ role: 'system', content: CONTEXT_MARKER },
+      { role: 'user', content: 'OPENCODE_TEAM_ONE' }];
+    const offered = tools.map(tool => ({ ...tool, function: { name:
+      tool.function.name === 'bash' ? 'shell' : tool.function.name.replace(/^team_/, 'agent-teams_') } }));
+    const post = async (messages: unknown[], input: {
+      path?: string; model?: string; key?: string; tools?: unknown[];
+    } = {}) => {
+      const response = await fetch(original.url + (input.path ?? '/v1/chat/completions'), {
+        method: 'POST', headers: { 'content-type': 'application/json',
+          authorization: 'Bearer ' + (input.key ?? 'TEST-LOCALHOST-ONLY') },
+        body: JSON.stringify({ model: input.model ?? 'TEST-model', messages, tools: input.tools ?? [] }),
+      });
+      return { status: response.status, wire: await response.text() };
+    };
+    const refused = (response: Awaited<ReturnType<typeof post>>) => {
+      assert.equal(response.status, 400, mode);
+      assert.match(response.wire, /fixture rejected/u);
+      assert.equal(original.failures.length, 1, mode);
+      assert.equal(original.observations.length, 0);
+    };
+    let disarm: (() => void) | undefined;
+    try {
+      if (mode === 'unarmed') {
+        refused(await post(probe));
+        assert.equal(preparation.consumed, 0);
+        continue;
+      }
+      disarm = preparation.arm(scope);
+      if (mode === 'wrong-route' || mode === 'wrong-model' || mode === 'wrong-key') {
+        refused(await post(probe, {
+          ...(mode === 'wrong-route' ? { path: '/foreign/v1/chat/completions' } : {}),
+          ...(mode === 'wrong-model' ? { model: 'TEST-other-model' } : {}),
+          ...(mode === 'wrong-key' ? { key: 'TEST-other-key' } : {}),
+        }));
+        assert.equal(original.probes.length, 0);
+        continue;
+      }
+      if (mode === 'missing-suffix' || mode === 'wrong-suffix') {
+        refused(await post(mode === 'missing-suffix' ? [...ordinaryProbeMessages] :
+          [...ordinaryProbeMessages, { role: 'assistant', content: 'TEST-unrelated assistant text' }]));
+        assert.equal(preparation.consumed, 0);
+        continue;
+      }
+      if (mode === 'business-before-probe') {
+        refused(await post(business, { tools: offered }));
+        assert.equal(original.probes.length, 0);
+        continue;
+      }
+      const accepted = await post(probe);
+      assert.equal(accepted.status, 200);
+      assert.match(accepted.wire, /"id":"TEST-opencode-probe-1"/u);
+      assert.match(accepted.wire, /"content":"OK"/u);
+      assert.ok(accepted.wire.endsWith('data: [DONE]\n\n'));
+      assert.equal(preparation.consumed, 1);
+      assert.deepEqual(original.probes, [{ requestedModel: 'TEST-model' }]);
+      if (mode === 'duplicate') { refused(await post(probe)); continue; }
+      if (mode === 'business-before-disarm') {
+        refused(await post(business, { tools: offered }));
+        continue;
+      }
+      disarm();
+      if (mode === 'rearm') {
+        assert.throws(() => preparation.arm(scope));
+        assert.deepEqual(original.failures, []);
+        continue;
+      }
+      if (mode === 'after-disarm-probe') { refused(await post(probe)); continue; }
+      assert.equal((await post(business, { tools: offered })).status, 200);
+      assert.equal(original.observations.length, 1);
+      assert.equal(original.probes.length, 1);
+      assert.deepEqual(original.failures, []);
+    } finally {
+      disarm?.();
+      await original.close();
+    }
   }
 });
 
@@ -106,6 +316,95 @@ test('OpenCode inference oracle seals on absent member context instead of return
     assert.equal(model.failures.length, 2);
   } finally {
     await model.close();
+  }
+  for (const mode of ['unarmed', 'foreign-input', 'foreign-tool', 'missing-result', 'foreign-id',
+    'repeated-briefing', 'wrong-nonce', 'wrong-accepted', 'repeat-terminal']) {
+    // Each refusal is the first failure in a fresh oracle; no prior seal can satisfy it.
+    const original = await startOpenCodeModel({ coordinationProof: true });
+    try {
+      assert.ok(original.coordination);
+      if (mode !== 'unarmed') original.coordination.arm();
+      const offered = COORDINATION_TOOLS.map(name => ({ type: 'function', function: { name } }));
+      const messages: unknown[] = [{ role: 'user', content: mode === 'foreign-input' ? 'foreign' : COORDINATION_PROMPT }];
+      const post = async () => {
+        const response = await fetch(original.url + '/v1/chat/completions', { method: 'POST',
+          headers: { 'content-type': 'application/json' }, body: JSON.stringify({ messages,
+            tools: mode === 'foreign-tool' ? [...offered, { type: 'function', function: { name: 'bash' } }] : offered }) });
+        const wire = await response.text(), line = wire.split('\n').find(value => value.startsWith('data: {'));
+        return { status: response.status, delta: line ? JSON.parse(line.slice(6)).choices[0].delta as {
+          tool_calls?: { id: string; type: string; function: { name: string; arguments: string } }[];
+        } : undefined };
+      };
+      const first = await post();
+      if (['unarmed', 'foreign-input', 'foreign-tool'].includes(mode)) assert.equal(first.status, 400);
+      else {
+        assert.equal(first.status, 200);
+        const call = first.delta!.tool_calls![0]!;
+        messages.push({ role: 'assistant', tool_calls: [call] });
+        if (mode !== 'missing-result') messages.push({ role: 'tool',
+          tool_call_id: mode === 'foreign-id' ? 'foreign' : call.id,
+          content: JSON.stringify({ nonce: 'b'.repeat(64), destination: 'native-local-coordination-v1' }) });
+        if (mode === 'repeated-briefing') messages.push({ role: 'assistant', tool_calls: [call] });
+        const second = await post();
+        if (['missing-result', 'foreign-id', 'repeated-briefing'].includes(mode)) assert.equal(second.status, 400);
+        else {
+          assert.equal(second.status, 200);
+          const send = second.delta!.tool_calls![0]!;
+          if (mode === 'wrong-nonce') send.function.arguments = JSON.stringify({
+            nonce: 'c'.repeat(64), destination: 'native-local-coordination-v1',
+          });
+          messages.push({ role: 'assistant', tool_calls: [send] }, { role: 'tool', tool_call_id: send.id,
+            content: JSON.stringify({ accepted: true, nonce: (mode === 'wrong-accepted' ? 'c' : 'b').repeat(64) }) });
+          const terminal = await post();
+          if (mode === 'repeat-terminal') {
+            assert.equal(terminal.status, 200);
+            assert.equal((await post()).status, 400);
+          } else assert.equal(terminal.status, 400);
+        }
+      }
+      assert.equal(original.failures.length, 1);
+      assert.equal(original.observations.length, 0);
+      assert.throws(() => original.coordination!.finish());
+    } finally { await original.close(); }
+  }
+  for (const mode of ['premature-inventory', 'duplicate-inventory', 'inventory-query', 'inventory-auth',
+    'ordinary-repeat', 'ordinary-tools', 'challenge-before-inventory', 'business-before-proof', 'keyed-ordinary']) {
+    const original = await startOpenCodeModel({ coordinationProof: true, localReadinessProof: true });
+    try {
+      assert.ok(original.coordination && original.localReadiness);
+      original.coordination.arm();
+      const post = (messages: unknown[], offered: unknown[] = [], keyed = false) => fetch(
+        original.url + '/v1/chat/completions', { method: 'POST',
+          headers: { 'content-type': 'application/json', ...(keyed ? { authorization: 'Bearer TEST-foreign' } : {}) },
+          body: JSON.stringify({ messages, tools: offered }) });
+      const get = (suffix = '', keyed = false) => fetch(original.url + '/v1/models' + suffix,
+        keyed ? { headers: { authorization: 'Bearer TEST-foreign' } } : {});
+      let failure: Response;
+      if (mode === 'premature-inventory') failure = await get();
+      else if (mode === 'ordinary-tools' || mode === 'keyed-ordinary')
+        failure = await post(ordinaryProbeMessages, mode === 'ordinary-tools' ? tools : [], mode === 'keyed-ordinary');
+      else {
+        const ordinary = await post(ordinaryProbeMessages);
+        assert.equal(ordinary.status, 200); await ordinary.text();
+        assert.equal(original.localReadiness.ordinary.length, 1);
+        if (mode === 'inventory-query') failure = await get('?foreign=1');
+        else if (mode === 'inventory-auth') failure = await get('', true);
+        else if (mode === 'ordinary-repeat') failure = await post(ordinaryProbeMessages);
+        else if (mode === 'challenge-before-inventory') failure = await post(
+          [{ role: 'user', content: COORDINATION_PROMPT }],
+          COORDINATION_TOOLS.map(name => ({ type: 'function', function: { name } })));
+        else {
+          const inventory = await get(); assert.equal(inventory.status, 200); await inventory.json();
+          if (mode === 'duplicate-inventory') failure = await get();
+          else failure = await post([{ role: 'system', content: CONTEXT_MARKER },
+            { role: 'user', content: 'OPENCODE_TEAM_ONE' }], tools);
+        }
+      }
+      assert.equal(failure.status, 400); await failure.text();
+      assert.equal(original.failures.length, 1, 'each compound refusal is the original first failure');
+      assert.equal(original.observations.length, 0); assert.equal(original.coordination.observations.length, 0);
+      assert.throws(() => original.coordination!.finish());
+    } finally { await original.close(); }
   }
 });
 

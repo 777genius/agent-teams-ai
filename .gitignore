@@ -106,7 +106,12 @@ remotion/*
 !/vendor/provider-migration/typed-quality-validation-v2/agent-teams-provider-implementations-0.0.0.tgz
 !/vendor/provider-migration/readonly-probe-metadata-v1/agent-teams-provider-implementations-0.0.0.tgz
 !/vendor/provider-migration/codex-runtime-mcp-v1/agent-teams-provider-implementations-0.0.0.tgz
+!/vendor/provider-migration/native-prompt-suggestions-74991c21/agent-teams-provider-implementations-0.0.0.tgz
 
 # Deterministic announcement build output (edit landing/content/announcements).
 /landing/public/announcements/
 /landing/public/announcements.tmp-*/
+
+# Built Linux child exec stage (source and build actor remain tracked)
+resources/process-launch/*
+!resources/process-launch/.gitkeep

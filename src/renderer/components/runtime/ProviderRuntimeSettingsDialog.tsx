@@ -19,6 +19,7 @@ import {
   resolveCodexRuntimeSelection,
 } from '@features/codex-runtime-profile/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
+import { NativeNextPromptProviderSetting } from '@features/native-prompt-suggestions/renderer';
 import { RuntimeProviderManagementPanel } from '@features/runtime-provider-management/renderer';
 import { api } from '@renderer/api';
 import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
@@ -755,15 +756,28 @@ export const ProviderRuntimeSettingsDialog = ({
     [onRefreshProvider]
   );
 
+  const apiKeyDetailsRequestedRef = useRef(false);
+  const apiKeyStorageRequestedRef = useRef(false);
+  const apiKeyInitialSelectionRef = useRef<CliProviderId | null>(null);
+  const requestApiKeyDetails = useCallback(
+    (providerId: CliProviderId): void => {
+      if (!open || !isApiKeyProviderId(providerId) || apiKeyDetailsRequestedRef.current) return;
+      apiKeyDetailsRequestedRef.current = true;
+      void fetchApiKeys();
+    },
+    [fetchApiKeys, open]
+  );
+
   useEffect(() => {
+    apiKeyDetailsRequestedRef.current = false;
     if (!open) {
       return;
     }
 
+    apiKeyInitialSelectionRef.current = initialProviderId;
     setSelectedProviderId(initialProviderId);
-    void fetchApiKeys();
-    void fetchApiKeyStorageStatus();
-  }, [fetchApiKeyStorageStatus, fetchApiKeys, initialProviderId, open]);
+    requestApiKeyDetails(initialProviderId);
+  }, [initialProviderId, open, requestApiKeyDetails]);
   useEffect(() => {
     if (open) {
       return;
@@ -1050,6 +1064,19 @@ export const ProviderRuntimeSettingsDialog = ({
     apiKeyConfig &&
     (selectedProvider?.providerId !== 'codex' || !selectedProvider.connection?.supportsOAuth)
   );
+  useEffect(() => {
+    if (!open) {
+      apiKeyStorageRequestedRef.current = false;
+      return;
+    }
+    const initialSelection = apiKeyInitialSelectionRef.current;
+    if (initialSelection !== null && initialSelection !== selectedProviderId) return;
+    apiKeyInitialSelectionRef.current = null;
+    if (!showApiKeySection || !selectedApiKey || apiKeyStorageRequestedRef.current) return;
+    apiKeyStorageRequestedRef.current = true;
+    void fetchApiKeyStorageStatus();
+  }, [fetchApiKeyStorageStatus, open, selectedApiKey, selectedProviderId, showApiKeySection]);
+
   const connectionAlert =
     selectedProvider && !maskCodexNegativeBootstrapState
       ? getConnectionAlert(selectedProvider, t)
@@ -1769,6 +1796,7 @@ export const ProviderRuntimeSettingsDialog = ({
               onValueChange={(value) => {
                 if (!runtimeProviderOperationBlocking) {
                   setSelectedProviderId(value as CliProviderId);
+                  requestApiKeyDetails(value as CliProviderId);
                 }
               }}
             >
@@ -2441,6 +2469,7 @@ export const ProviderRuntimeSettingsDialog = ({
                     </div>
                   </div>
                 ) : null}
+                <NativeNextPromptProviderSetting providerId={selectedProvider.providerId} disabled={connectionBusy} />
 
                 {selectedProvider.providerId === 'codex' ? (
                   <div

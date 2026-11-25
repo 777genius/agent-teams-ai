@@ -1,8 +1,11 @@
 // @vitest-environment node
 import { expect, it, vi } from 'vitest';
 
+import { CapturedRuntimeSourceError } from '../../../src/features/agent-backend/main';
 import { parseManagementCatalog } from '../../../src/features/runtime-provider-management/main/adapters/output/capturedManagementCatalog';
+import * as managementPreferences from '../../../src/features/runtime-provider-management/main/adapters/output/capturedManagementPreferences';
 import { createCapturedRuntimeProviderManagementClient } from '../../../src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderManagementClient';
+import * as logging from '../../../src/shared/utils/logger';
 
 import type {
   CapturedProviderManagement,
@@ -11,7 +14,11 @@ import type {
 import type { JsonValue } from '@agent-teams/legacy-agent-host/contracts';
 
 const binding = { profileId: 'TEST-original', configRevision: 'TEST-v1' };
-function fixture(declaredInputModalities?: JsonValue) {
+function fixture(
+  declaredInputModalities?: JsonValue,
+  generation: 'v1' | 'v2' = 'v1',
+  configured = false
+) {
   const calls: { operation: string; payload: Record<string, JsonValue> }[] = [];
   let connected = false;
   let fail = false;
@@ -26,6 +33,7 @@ function fixture(declaredInputModalities?: JsonValue) {
     ): Promise<JsonValue> {
       calls.push({ operation, payload });
       await barrier;
+      if (operation === 'credential.pending') return { ok: true, value: { generation, receipt: null } };
       if (fail) throw new Error('TEST-api-key-raw-should-never-escape');
       if (operation === 'credential') {
         connected = payload.kind === 'credential.set';
@@ -45,6 +53,7 @@ function fixture(declaredInputModalities?: JsonValue) {
         ok: true,
         value: {
           ...binding,
+          runtime: generation === 'v2' ? { generation, version: '2.1.4' } : { generation },
           secretExtension: 'TEST-secret',
           providers: [
             {
@@ -52,7 +61,7 @@ function fixture(declaredInputModalities?: JsonValue) {
               displayName: 'TEST provider',
               source: 'api',
               connected,
-              configured: false,
+              configured,
               defaultModelId: 'TEST-model',
               modelCount: 1,
               authMethods: ['api'],
@@ -90,6 +99,31 @@ function fixture(declaredInputModalities?: JsonValue) {
   };
 }
 
+it('source capture and native catalog failures keep scoped configuration guidance without raw contents', async () => {
+  const f = fixture(undefined, 'v2');
+  f.capture.mockRejectedValueOnce(new CapturedRuntimeSourceError('configuration-invalid'));
+  expect((await f.port.loadView({ runtimeId: 'opencode' })).error).toMatchObject({
+    code: 'runtime-misconfigured',
+    recoverable: true,
+    message:
+      'OpenCode configuration could not be applied. Check the selected provider and model settings, then refresh.',
+  });
+  f.target.request = async () => ({
+    ok: false,
+    code: 'held',
+    reason: 'configuration-changed',
+    raw: 'TEST-private-config-or-token-must-not-escape',
+  });
+  const result = await f.port.loadModels({ runtimeId: 'opencode', providerId: 'TEST-provider' });
+  expect(result.error).toMatchObject({
+    code: 'runtime-misconfigured',
+    recoverable: true,
+    message:
+      'OpenCode configuration changed during this action. Refresh provider settings and try again.',
+  });
+  expect(JSON.stringify(result)).not.toContain('TEST-private-config-or-token-must-not-escape');
+});
+
 it('maps native catalogs/models without private metadata or invented model execution/default proof', async () => {
   const f = fixture();
   const view = await f.port.loadView({ runtimeId: 'opencode' });
@@ -109,6 +143,29 @@ it('maps native catalogs/models without private metadata or invented model execu
   for (const secret of ['TEST-secret', 'TEST-original', 'TEST-v1', 'targetId'])
     expect(text).not.toContain(secret);
   expect(f.capture).toHaveBeenCalledWith(null);
+  expect(view.view?.providers[0]?.actions.some((action) => action.id === 'test')).toBe(false);
+
+  const configured = fixture(undefined, 'v2', true);
+  const configuredView = await configured.port.loadView({ runtimeId: 'opencode' });
+  expect(configuredView.view?.providers[0]).toMatchObject({
+    state: 'not-connected',
+    modelCount: 1,
+    actions: [
+      { id: 'connect', enabled: true, ownershipScope: 'runtime' },
+      { id: 'test', enabled: true, requiresSecret: false, ownershipScope: 'runtime' },
+    ],
+  });
+  const configuredModels = await configured.port.loadModels({
+    runtimeId: 'opencode', providerId: 'TEST-provider',
+  });
+  expect(configuredModels.models?.models[0]).toMatchObject({
+    availability: 'untested',
+    default: false,
+    proofState: 'needs_probe',
+    requiresExecutionProof: true,
+  });
+  for (const secret of ['TEST-secret', 'TEST-original', 'TEST-v1', 'targetId'])
+    expect(JSON.stringify([configuredView, configuredModels])).not.toContain(secret);
 });
 
 it('filters/paginates a directory and reports malformed responses as unavailable rather than empty ready', async () => {
@@ -163,7 +220,8 @@ it('captures credential intent before awaits, then refreshes the same original o
   metadata.plan = 'TEST-changed';
   release();
   expect((await pending).provider?.state).toBe('connected');
-  expect(f.calls[0]).toEqual({
+  expect(f.calls[0]).toEqual({ operation: 'credential.pending', payload: { providerId: 'TEST-provider' } });
+  expect(f.calls[1]).toEqual({
     operation: 'credential',
     payload: {
       commandId: expect.any(String),
@@ -174,12 +232,12 @@ it('captures credential intent before awaits, then refreshes the same original o
     },
   });
   expect(f.capture).toHaveBeenCalledTimes(1);
-  expect(f.calls[1]).toEqual({ operation: 'catalog', payload: { providerId: 'TEST-provider' } });
+  expect(f.calls[2]).toEqual({ operation: 'catalog', payload: { providerId: 'TEST-provider' } });
   expect(
     (await f.port.forgetCredential({ runtimeId: 'opencode', providerId: 'TEST-provider' })).provider
       ?.state
   ).toBe('not-connected');
-  expect(f.calls[2]?.payload.commandId).not.toBe(f.calls[0]?.payload.commandId);
+  expect(f.calls[4]?.payload.commandId).not.toBe(f.calls[1]?.payload.commandId);
 });
 
 it('contains raw failures and does not dispatch another owner or legacy CLI after an unknown mutation', async () => {
@@ -192,8 +250,35 @@ it('contains raw failures and does not dispatch another owner or legacy CLI afte
   });
   expect(result.error?.code).toBe('runtime-unhealthy');
   expect(JSON.stringify(result)).not.toContain('TEST-api-key-raw');
-  expect(f.calls.map((call) => call.operation)).toEqual(['credential']);
+  expect(f.calls.map((call) => call.operation)).toEqual(['credential.pending', 'credential', 'credential.resume']);
   expect(f.capture).toHaveBeenCalledTimes(1);
+});
+
+it('V2 preserves native plain-key setup and its announced model verification without offering V1 forget', async () => {
+  const f = fixture(undefined, 'v2');
+  const form = await f.port.loadSetupForm({ runtimeId: 'opencode', providerId: 'TEST-provider' });
+  expect(form.setupForm).toMatchObject({ method: 'api', supported: true,
+    verification: { kind: 'model-request', freeModelPreferred: false, mayUseQuotaOrBalance: true } });
+  expect(f.calls.every(call => call.operation === 'catalog')).toBe(true);
+  const connected = await f.port.connectWithApiKey({ runtimeId: 'opencode', providerId: 'TEST-provider', apiKey: 'TEST-key' });
+  expect(connected.provider?.state).toBe('connected');
+  expect(connected.provider?.actions.some(action => action.id === 'forget')).toBe(false);
+  expect(f.calls.filter(call => call.operation === 'credential')).toHaveLength(1);
+  const forgotten = await f.port.forgetCredential({ runtimeId: 'opencode', providerId: 'TEST-provider' });
+  expect(forgotten.error).toBeDefined();
+  expect(f.calls.filter(call => call.operation === 'credential')).toHaveLength(1);
+  const nativeRequest = f.target.request.bind(f.target);
+  f.target.request = async (operation, payload): Promise<JsonValue> => {
+    const reply = await nativeRequest(operation, payload);
+    return operation === 'credential' ? { ok: true, value: { ...binding,
+      commandId: payload.commandId!, providerId: payload.providerId!, kind: payload.kind!,
+      phase: 'held', reason: 'verification-rejected' } } : reply;
+  };
+  const rejected = await f.port.connectWithApiKey({ runtimeId: 'opencode', providerId: 'TEST-provider', apiKey: 'TEST-wrong-key' });
+  expect(rejected.error).toMatchObject({ code: 'auth-failed', recoverable: true });
+  expect(rejected.error?.message).toContain('Check the key and connect again');
+  expect(rejected.provider).toBeUndefined();
+  expect(f.calls.filter(call => call.operation === 'credential')).toHaveLength(2);
 });
 
 it('cancels only the original model-load subscribers and hides their late catalog result', async () => {
@@ -304,5 +389,220 @@ it('preserves native model declarations through the captured catalog without inv
     });
     expect(result.models?.models[0]?.declaredInputModalities).toEqual(expected);
     expect(f.capture).toHaveBeenCalledWith('/TEST/recipient-project');
+  }
+});
+
+function observeViewDiagnostics(flag: string | undefined) {
+  const previous = process.env.LEGACY_DESKTOP_STARTUP_DIAGNOSTICS;
+  if (flag === undefined) delete process.env.LEGACY_DESKTOP_STARTUP_DIAGNOSTICS;
+  else process.env.LEGACY_DESKTOP_STARTUP_DIAGNOSTICS = flag;
+  const records: logging.LogSinkEntry[] = [];
+  const remove = logging.addLogSink((entry) => {
+    if (entry.namespace === 'Host:ProviderView') records.push(entry);
+  });
+  return {
+    records,
+    restore: () => {
+      remove();
+      if (previous === undefined) delete process.env.LEGACY_DESKTOP_STARTUP_DIAGNOSTICS;
+      else process.env.LEGACY_DESKTOP_STARTUP_DIAGNOSTICS = previous;
+    },
+  };
+}
+
+function deferredViewStage() {
+  let release!: () => void;
+  const promise = new Promise<void>((done) => {
+    release = done;
+  });
+  return { promise, release };
+}
+
+it('observes the three original view awaits without another catalog or currentness read', async () => {
+  const observation = observeViewDiagnostics('1');
+  try {
+    const f = fixture();
+    const captureBlock = deferredViewStage();
+    const captureEntered = deferredViewStage();
+    const catalogBlock = deferredViewStage();
+    const catalogEntered = deferredViewStage();
+    const preferencesBlock = deferredViewStage();
+    const preferencesEntered = deferredViewStage();
+    const current = vi.fn((): boolean => true);
+    f.target.isCurrent = current;
+    f.capture.mockImplementationOnce(async () => {
+      captureEntered.release();
+      await captureBlock.promise;
+      return f.target;
+    });
+    const originalRequest = f.target.request.bind(f.target);
+    f.target.request = (operation, payload) => {
+      catalogEntered.release();
+      return originalRequest(operation, payload);
+    };
+    f.setBarrier(catalogBlock.promise);
+    const originalPreferences = managementPreferences.selectedPreferences;
+    const preferences = vi.spyOn(managementPreferences, 'selectedPreferences')
+      .mockImplementation(async (target, nativeDefault) => {
+        preferencesEntered.release();
+        await preferencesBlock.promise;
+        return originalPreferences(target, nativeDefault);
+      });
+    const pending = f.port.loadView({ runtimeId: 'opencode', projectPath: '/TEST/private-project' });
+    try {
+      await captureEntered.promise;
+      expect(observation.records).toHaveLength(1);
+      captureBlock.release();
+      await catalogEntered.promise;
+      expect(observation.records).toHaveLength(2);
+      catalogBlock.release();
+      await preferencesEntered.promise;
+      expect(observation.records).toHaveLength(3);
+      expect(current).not.toHaveBeenCalled();
+      preferencesBlock.release();
+      expect((await pending).view).toBeDefined();
+      expect(f.capture).toHaveBeenCalledTimes(1);
+      expect(f.capture).toHaveBeenCalledWith('/TEST/private-project');
+      expect(f.calls).toEqual([{ operation: 'catalog', payload: {} }]);
+      expect(preferences).toHaveBeenCalledTimes(1);
+      expect(preferences).toHaveBeenCalledWith(f.target, null);
+      expect(current).toHaveBeenCalledTimes(2);
+      expect(observation.records.map((entry) => entry.args)).toEqual(
+        ['capture', 'catalog', 'preferences', 'resolved'].map((stage) => [
+          'Runtime provider view stage',
+          { kind: 'runtime-provider-view-stage-v1', view: 1, stage, scope: 'project' },
+        ])
+      );
+    } finally {
+      captureBlock.release();
+      catalogBlock.release();
+      preferencesBlock.release();
+      await pending.catch(() => undefined);
+      preferences.mockRestore();
+    }
+  } finally {
+    observation.restore();
+  }
+});
+
+it('keeps disabled views silent and bounds observations to the first 32 enabled views per port', async () => {
+  const observation = observeViewDiagnostics(undefined);
+  try {
+    const f = fixture();
+    expect((await f.port.loadView({ runtimeId: 'opencode' })).view).toBeDefined();
+    process.env.LEGACY_DESKTOP_STARTUP_DIAGNOSTICS = 'true';
+    expect((await f.port.loadView({ runtimeId: 'opencode' })).view).toBeDefined();
+    expect(observation.records).toEqual([]);
+    process.env.LEGACY_DESKTOP_STARTUP_DIAGNOSTICS = '1';
+    for (let index = 0; index < 33; index++)
+      expect((await f.port.loadView({ runtimeId: 'opencode' })).view).toBeDefined();
+    expect(f.capture).toHaveBeenCalledTimes(35);
+    expect(f.calls).toEqual(Array.from({ length: 35 }, () => ({ operation: 'catalog', payload: {} })));
+    expect(observation.records).toHaveLength(128);
+    const stages = ['capture', 'catalog', 'preferences', 'resolved'];
+    observation.records.forEach((entry, index) => {
+      expect(entry.level).toBe('diagnostic');
+      expect(entry.args).toEqual([
+        'Runtime provider view stage',
+        { kind: 'runtime-provider-view-stage-v1', view: Math.floor(index / 4) + 1,
+          stage: stages[index % 4], scope: 'global' },
+      ]);
+    });
+    const other = fixture();
+    expect((await other.port.loadView({
+      runtimeId: 'opencode', projectPath: '/TEST/private-other-project',
+    })).view).toBeDefined();
+    expect(observation.records.slice(128).map((entry) => entry.args)).toEqual(
+      stages.map((stage) => [
+        'Runtime provider view stage',
+        { kind: 'runtime-provider-view-stage-v1', view: 1, stage, scope: 'project' },
+      ])
+    );
+    for (const secret of ['TEST-private', '/TEST/', binding.profileId, binding.configRevision,
+      'a'.repeat(64), 'TEST-secret'])
+      expect(JSON.stringify(observation.records)).not.toContain(secret);
+  } finally {
+    observation.restore();
+  }
+});
+
+it('keeps original view failures and their call boundaries without recording raw errors', async () => {
+  const observation = observeViewDiagnostics('1');
+  try {
+    for (const failure of ['capture', 'catalog', 'preferences', 'final-current'] as const) {
+      const f = fixture();
+      const current = vi.fn((): boolean => true);
+      f.target.isCurrent = current;
+      if (failure === 'capture')
+        f.capture.mockRejectedValueOnce(new CapturedRuntimeSourceError('configuration-invalid'));
+      else if (failure === 'catalog') f.fail();
+      else if (failure === 'preferences') current.mockReturnValue(false);
+      else current.mockReturnValueOnce(true).mockReturnValue(false);
+      const start = observation.records.length;
+      const result = await f.port.loadView({ runtimeId: 'opencode' });
+      expect(result.error?.code).toBe(
+        failure === 'capture' ? 'runtime-misconfigured' : 'runtime-unhealthy'
+      );
+      expect(result.view).toBeUndefined();
+      expect(f.capture).toHaveBeenCalledTimes(1);
+      expect(f.calls).toEqual(
+        failure === 'capture' ? [] : [{ operation: 'catalog', payload: {} }]
+      );
+      expect(current).toHaveBeenCalledTimes(
+        failure === 'preferences' ? 1 : failure === 'final-current' ? 2 : 0
+      );
+      const stages = failure === 'capture' ? ['capture', 'rejected']
+        : failure === 'catalog' ? ['capture', 'catalog', 'rejected']
+          : ['capture', 'catalog', 'preferences', 'rejected'];
+      expect(observation.records.slice(start).map((entry) => entry.args)).toEqual(
+        stages.map((stage) => [
+          'Runtime provider view stage',
+          { kind: 'runtime-provider-view-stage-v1', view: 1, stage, scope: 'global' },
+        ])
+      );
+    }
+    for (const secret of ['TEST-api-key-raw', binding.profileId, binding.configRevision, 'TEST-secret'])
+      expect(JSON.stringify(observation.records)).not.toContain(secret);
+  } finally {
+    observation.restore();
+  }
+});
+
+it('contains throwing diagnostic sinks and observer creation without changing the original view', async () => {
+  const observation = observeViewDiagnostics('1');
+  let removeThrowingSink: (() => void) | undefined;
+  try {
+    const baseline = await fixture().port.loadView({ runtimeId: 'opencode' });
+    const f = fixture();
+    let sinkCalls = 0;
+    removeThrowingSink = logging.addLogSink((entry) => {
+      if (entry.namespace === 'Host:ProviderView') {
+        sinkCalls++;
+        throw new Error('TEST-observer-secret');
+      }
+    });
+    expect(await f.port.loadView({ runtimeId: 'opencode' })).toEqual(baseline);
+    expect(sinkCalls).toBe(4);
+    expect(f.capture).toHaveBeenCalledTimes(1);
+    expect(f.calls).toEqual([{ operation: 'catalog', payload: {} }]);
+    removeThrowingSink();
+    removeThrowingSink = undefined;
+    const other = fixture();
+    const logger = vi.spyOn(logging, 'createLogger').mockImplementation(() => {
+      throw new Error('TEST-logger-factory-secret');
+    });
+    try {
+      expect(await other.port.loadView({ runtimeId: 'opencode' })).toEqual(baseline);
+      expect(logger).toHaveBeenCalledTimes(4);
+      expect(other.capture).toHaveBeenCalledTimes(1);
+      expect(other.calls).toEqual([{ operation: 'catalog', payload: {} }]);
+    } finally {
+      logger.mockRestore();
+    }
+    expect(JSON.stringify(observation.records)).not.toContain('TEST-observer-secret');
+    expect(JSON.stringify(observation.records)).not.toContain('TEST-logger-factory-secret');
+  } finally {
+    removeThrowingSink?.();
+    observation.restore();
   }
 });

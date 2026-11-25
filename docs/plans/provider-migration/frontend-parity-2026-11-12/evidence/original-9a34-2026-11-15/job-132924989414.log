@@ -1,0 +1,740 @@
+﻿2026-11-15T19:24:39.3797610Z Current runner version: '2.338.2'
+2026-11-15T19:24:39.3816970Z ##[group]Runner Image Provisioner
+2026-11-15T19:24:39.3817740Z Hosted Compute Agent
+2026-11-15T19:24:39.3818190Z Version: 20261028.624
+2026-11-15T19:24:39.3818760Z Commit: 54898b74c23fde5556c9b3c3a2290865feef0dfe
+2026-11-15T19:24:39.3819450Z Build Date: 2026-10-28T21:51:42Z
+2026-11-15T19:24:39.3820040Z Worker ID: {4a1ffcf5-59d3-45e7-a60a-0ba2be5ceb41}
+2026-11-15T19:24:39.3820650Z Region: westus
+2026-11-15T19:24:39.3821110Z Cloud: MacCloud
+2026-11-15T19:24:39.3821560Z ##[endgroup]
+2026-11-15T19:24:39.3822950Z ##[group]Operating System
+2026-11-15T19:24:39.3823510Z macOS
+2026-11-15T19:24:39.3823900Z 26.7.2
+2026-11-15T19:24:39.3824710Z 25G332
+2026-11-15T19:24:39.3825270Z ##[endgroup]
+2026-11-15T19:24:39.3825780Z ##[group]Runner Image
+2026-11-15T19:24:39.3826350Z Image: macos-26-arm64
+2026-11-15T19:24:39.3826730Z Version: 20261102.0473.1
+2026-11-15T19:24:39.3828100Z Included Software: https://github.com/actions/runner-images/blob/macos-26-arm64/20261102.0473/images/macos/macos-26-arm64-Readme.md
+2026-11-15T19:24:39.3829270Z Image Release: https://github.com/actions/runner-images/releases/tag/macos-26-arm64%2F20261102.0473
+2026-11-15T19:24:39.3830130Z ##[endgroup]
+2026-11-15T19:24:39.3831170Z ##[group]GITHUB_TOKEN Permissions
+2026-11-15T19:24:39.3832500Z Contents: read
+2026-11-15T19:24:39.3832940Z Metadata: read
+2026-11-15T19:24:39.3833330Z ##[endgroup]
+2026-11-15T19:24:39.3835060Z Secret source: Actions
+2026-11-15T19:24:39.3835830Z Cache mode: write
+2026-11-15T19:24:39.3836400Z Prepare workflow directory
+2026-11-15T19:24:39.4189950Z Prepare all required actions
+2026-11-15T19:24:39.4229540Z Getting action download info
+2026-11-15T19:24:39.8185530Z Download action repository 'actions/checkout@v6' (SHA:d23441a48e516b6c34aea4fa41551a30e30af803)
+2026-11-15T19:24:40.0374330Z Download action repository 'pnpm/action-setup@v6' (SHA:73e46992e05b19abd31f2f3c20e0e7370d762115)
+2026-11-15T19:24:40.4959920Z Download action repository 'actions/setup-node@v6' (SHA:249970729cb0ef3589644e2896645e5dc5ba9c38)
+2026-11-15T19:24:40.6355100Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-11-15T19:24:40.8458930Z Complete job name: Creation page (macos-latest)
+2026-11-15T19:24:40.9073550Z ##[group]Run actions/checkout@v6
+2026-11-15T19:24:40.9074200Z with:
+2026-11-15T19:24:40.9074590Z   ref: 9a34bb28de0a0deee2eecc42099fd9500563eb1b
+2026-11-15T19:24:40.9075150Z   persist-credentials: false
+2026-11-15T19:24:40.9075670Z   repository: 777genius/agent-teams-ai
+2026-11-15T19:24:40.9078880Z   token: ***
+2026-11-15T19:24:40.9079240Z   ssh-strict: true
+2026-11-15T19:24:40.9079600Z   ssh-user: git
+2026-11-15T19:24:40.9080000Z   clean: true
+2026-11-15T19:24:40.9080370Z   sparse-checkout-cone-mode: true
+2026-11-15T19:24:40.9080800Z   fetch-depth: 1
+2026-11-15T19:24:40.9081150Z   fetch-tags: false
+2026-11-15T19:24:40.9081500Z   show-progress: true
+2026-11-15T19:24:40.9081870Z   lfs: false
+2026-11-15T19:24:40.9082200Z   submodules: false
+2026-11-15T19:24:40.9082660Z   set-safe-directory: true
+2026-11-15T19:24:40.9083070Z   allow-unsafe-pr-checkout: false
+2026-11-15T19:24:40.9083650Z env:
+2026-11-15T19:24:40.9084010Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-15T19:24:40.9084480Z ##[endgroup]
+2026-11-15T19:24:41.3118830Z Syncing repository: 777genius/agent-teams-ai
+2026-11-15T19:24:41.3124070Z ##[group]Getting Git version info
+2026-11-15T19:24:41.3125410Z Working directory is '/Users/runner/work/agent-teams-ai/agent-teams-ai'
+2026-11-15T19:24:41.3131920Z [command]/opt/homebrew/bin/git version
+2026-11-15T19:24:41.3663760Z git version 2.56.0
+2026-11-15T19:24:41.3680840Z ##[endgroup]
+2026-11-15T19:24:41.3688460Z Copying '/Users/runner/.gitconfig' to '/Users/runner/work/_temp/1b1a5f12-fbb3-4d59-af03-2c57e8317261/.gitconfig'
+2026-11-15T19:24:41.3695440Z Temporarily overriding HOME='/Users/runner/work/_temp/1b1a5f12-fbb3-4d59-af03-2c57e8317261' before making global git config changes
+2026-11-15T19:24:41.3698510Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-15T19:24:41.3701790Z [command]/opt/homebrew/bin/git config --global --add safe.directory /Users/runner/work/agent-teams-ai/agent-teams-ai
+2026-11-15T19:24:41.3808150Z Deleting the contents of '/Users/runner/work/agent-teams-ai/agent-teams-ai'
+2026-11-15T19:24:41.3811210Z ##[group]Determining repository object format
+2026-11-15T19:24:41.3813360Z ##[endgroup]
+2026-11-15T19:24:41.3815050Z ##[group]Initializing the repository
+2026-11-15T19:24:41.3817270Z [command]/opt/homebrew/bin/git init /Users/runner/work/agent-teams-ai/agent-teams-ai
+2026-11-15T19:24:41.4038320Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-11-15T19:24:41.4040470Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-11-15T19:24:41.4042280Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-11-15T19:24:41.4043860Z hint: call:
+2026-11-15T19:24:41.4044660Z hint:
+2026-11-15T19:24:41.4045730Z hint: 	git config --global init.defaultBranch <name>
+2026-11-15T19:24:41.4047700Z hint:
+2026-11-15T19:24:41.4048970Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-11-15T19:24:41.4050850Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-11-15T19:24:41.4052330Z hint:
+2026-11-15T19:24:41.4053080Z hint: 	git branch -m <name>
+2026-11-15T19:24:41.4053940Z hint:
+2026-11-15T19:24:41.4055200Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-11-15T19:24:41.4057290Z Initialized empty Git repository in /Users/runner/work/agent-teams-ai/agent-teams-ai/.git/
+2026-11-15T19:24:41.4060740Z [command]/opt/homebrew/bin/git remote add origin https://github.com/777genius/agent-teams-ai
+2026-11-15T19:24:41.4132710Z ##[endgroup]
+2026-11-15T19:24:41.4134360Z ##[group]Disabling automatic garbage collection
+2026-11-15T19:24:41.4135750Z [command]/opt/homebrew/bin/git config --local gc.auto 0
+2026-11-15T19:24:41.4203800Z ##[endgroup]
+2026-11-15T19:24:41.4205190Z ##[group]Setting up auth
+2026-11-15T19:24:41.4206160Z Removing SSH command configuration
+2026-11-15T19:24:41.4208310Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-15T19:24:41.4277370Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-15T19:24:41.5200280Z Removing HTTP extra header
+2026-11-15T19:24:41.5203210Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-15T19:24:41.5268510Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-15T19:24:41.6288230Z Removing includeIf entries pointing to credentials config files
+2026-11-15T19:24:41.6290500Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-15T19:24:41.6362780Z [command]/opt/homebrew/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-15T19:24:41.7184120Z [command]/opt/homebrew/bin/git config --file /Users/runner/work/_temp/git-credentials-dbb7d7dc-75cc-464a-badf-27e40f39594e.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-11-15T19:24:41.7251760Z [command]/opt/homebrew/bin/git config --local includeIf.gitdir:/Users/runner/work/agent-teams-ai/agent-teams-ai/.git.path /Users/runner/work/_temp/git-credentials-dbb7d7dc-75cc-464a-badf-27e40f39594e.config
+2026-11-15T19:24:41.7312040Z [command]/opt/homebrew/bin/git config --local includeIf.gitdir:/Users/runner/work/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path /Users/runner/work/_temp/git-credentials-dbb7d7dc-75cc-464a-badf-27e40f39594e.config
+2026-11-15T19:24:41.7380740Z [command]/opt/homebrew/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-dbb7d7dc-75cc-464a-badf-27e40f39594e.config
+2026-11-15T19:24:41.7472740Z [command]/opt/homebrew/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-dbb7d7dc-75cc-464a-badf-27e40f39594e.config
+2026-11-15T19:24:41.7531760Z ##[endgroup]
+2026-11-15T19:24:41.7532960Z ##[group]Fetching the repository
+2026-11-15T19:24:41.7537720Z [command]/opt/homebrew/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin 9a34bb28de0a0deee2eecc42099fd9500563eb1b
+2026-11-15T19:24:47.3960930Z From https://github.com/777genius/agent-teams-ai
+2026-11-15T19:24:47.3962290Z  * branch            9a34bb28de0a0deee2eecc42099fd9500563eb1b -> FETCH_HEAD
+2026-11-15T19:24:47.3969560Z [command]/opt/homebrew/bin/git rev-parse --verify --quiet 9a34bb28de0a0deee2eecc42099fd9500563eb1b^{object}
+2026-11-15T19:24:47.4041330Z 9a34bb28de0a0deee2eecc42099fd9500563eb1b
+2026-11-15T19:24:47.4045740Z ##[endgroup]
+2026-11-15T19:24:47.4046260Z ##[group]Determining the checkout info
+2026-11-15T19:24:47.4046840Z ##[endgroup]
+2026-11-15T19:24:47.4051180Z [command]/opt/homebrew/bin/git sparse-checkout disable
+2026-11-15T19:24:47.4140110Z [command]/opt/homebrew/bin/git config --local --unset-all extensions.worktreeConfig
+2026-11-15T19:24:47.4203490Z ##[group]Checking out the ref
+2026-11-15T19:24:47.4206200Z [command]/opt/homebrew/bin/git checkout --progress --force 9a34bb28de0a0deee2eecc42099fd9500563eb1b
+2026-11-15T19:24:48.5118490Z Updating files:  67% (6373/9415)
+2026-11-15T19:24:48.5235120Z Updating files:  68% (6403/9415)
+2026-11-15T19:24:48.5328590Z Updating files:  69% (6497/9415)
+2026-11-15T19:24:48.5518030Z Updating files:  70% (6591/9415)
+2026-11-15T19:24:48.5700260Z Updating files:  71% (6685/9415)
+2026-11-15T19:24:48.5907630Z Updating files:  72% (6779/9415)
+2026-11-15T19:24:48.6003950Z Updating files:  73% (6873/9415)
+2026-11-15T19:24:48.6139510Z Updating files:  74% (6968/9415)
+2026-11-15T19:24:48.6265380Z Updating files:  75% (7062/9415)
+2026-11-15T19:24:48.7282710Z Updating files:  76% (7156/9415)
+2026-11-15T19:24:48.7397180Z Updating files:  77% (7250/9415)
+2026-11-15T19:24:48.7506140Z Updating files:  78% (7344/9415)
+2026-11-15T19:24:48.7611140Z Updating files:  79% (7438/9415)
+2026-11-15T19:24:48.7720540Z Updating files:  80% (7532/9415)
+2026-11-15T19:24:48.7909790Z Updating files:  81% (7627/9415)
+2026-11-15T19:24:48.8023820Z Updating files:  82% (7721/9415)
+2026-11-15T19:24:48.8160650Z Updating files:  83% (7815/9415)
+2026-11-15T19:24:48.8271860Z Updating files:  84% (7909/9415)
+2026-11-15T19:24:48.8399790Z Updating files:  85% (8003/9415)
+2026-11-15T19:24:48.8507090Z Updating files:  86% (8097/9415)
+2026-11-15T19:24:48.8660740Z Updating files:  87% (8192/9415)
+2026-11-15T19:24:48.8811460Z Updating files:  88% (8286/9415)
+2026-11-15T19:24:48.9038980Z Updating files:  89% (8380/9415)
+2026-11-15T19:24:48.9138480Z Updating files:  90% (8474/9415)
+2026-11-15T19:24:48.9250200Z Updating files:  91% (8568/9415)
+2026-11-15T19:24:48.9426680Z Updating files:  92% (8662/9415)
+2026-11-15T19:24:48.9535480Z Updating files:  93% (8756/9415)
+2026-11-15T19:24:48.9674800Z Updating files:  94% (8851/9415)
+2026-11-15T19:24:48.9789680Z Updating files:  95% (8945/9415)
+2026-11-15T19:24:48.9928880Z Updating files:  96% (9039/9415)
+2026-11-15T19:24:49.0021830Z Updating files:  97% (9133/9415)
+2026-11-15T19:24:49.0156390Z Updating files:  98% (9227/9415)
+2026-11-15T19:24:49.0340300Z Updating files:  99% (9321/9415)
+2026-11-15T19:24:49.0340970Z Updating files: 100% (9415/9415)
+2026-11-15T19:24:49.0341430Z Updating files: 100% (9415/9415), done.
+2026-11-15T19:24:49.0463460Z HEAD is now at 9a34bb2 Merge verified frontend parity follow-ups
+2026-11-15T19:24:49.0488090Z ##[endgroup]
+2026-11-15T19:24:49.0627750Z [command]/opt/homebrew/bin/git log -1 --format=%H
+2026-11-15T19:24:49.0711620Z 9a34bb28de0a0deee2eecc42099fd9500563eb1b
+2026-11-15T19:24:49.0722690Z ##[group]Removing auth
+2026-11-15T19:24:49.0726010Z Removing SSH command configuration
+2026-11-15T19:24:49.0726950Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-15T19:24:49.0800320Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-15T19:24:49.1787860Z Removing HTTP extra header
+2026-11-15T19:24:49.1791480Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-15T19:24:49.1861200Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-15T19:24:49.2678940Z Removing includeIf entries pointing to credentials config files
+2026-11-15T19:24:49.2688190Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-15T19:24:49.2745590Z includeif.gitdir:/Users/runner/work/agent-teams-ai/agent-teams-ai/.git.path
+2026-11-15T19:24:49.2746650Z includeif.gitdir:/Users/runner/work/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path
+2026-11-15T19:24:49.2747310Z includeif.gitdir:/github/workspace/.git.path
+2026-11-15T19:24:49.2748950Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-11-15T19:24:49.2753000Z [command]/opt/homebrew/bin/git config --local --get-all includeif.gitdir:/Users/runner/work/agent-teams-ai/agent-teams-ai/.git.path
+2026-11-15T19:24:49.2815310Z /Users/runner/work/_temp/git-credentials-dbb7d7dc-75cc-464a-badf-27e40f39594e.config
+2026-11-15T19:24:49.2823860Z [command]/opt/homebrew/bin/git config --local --unset includeif.gitdir:/Users/runner/work/agent-teams-ai/agent-teams-ai/.git.path /Users/runner/work/_temp/git-credentials-dbb7d7dc-75cc-464a-badf-27e40f39594e.config
+2026-11-15T19:24:49.2889430Z [command]/opt/homebrew/bin/git config --local --get-all includeif.gitdir:/Users/runner/work/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path
+2026-11-15T19:24:49.2949540Z /Users/runner/work/_temp/git-credentials-dbb7d7dc-75cc-464a-badf-27e40f39594e.config
+2026-11-15T19:24:49.2982370Z [command]/opt/homebrew/bin/git config --local --unset includeif.gitdir:/Users/runner/work/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path /Users/runner/work/_temp/git-credentials-dbb7d7dc-75cc-464a-badf-27e40f39594e.config
+2026-11-15T19:24:49.3027770Z [command]/opt/homebrew/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+2026-11-15T19:24:49.3084120Z /github/runner_temp/git-credentials-dbb7d7dc-75cc-464a-badf-27e40f39594e.config
+2026-11-15T19:24:49.3089740Z [command]/opt/homebrew/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-dbb7d7dc-75cc-464a-badf-27e40f39594e.config
+2026-11-15T19:24:49.3156350Z [command]/opt/homebrew/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-11-15T19:24:49.3211400Z /github/runner_temp/git-credentials-dbb7d7dc-75cc-464a-badf-27e40f39594e.config
+2026-11-15T19:24:49.3217160Z [command]/opt/homebrew/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-dbb7d7dc-75cc-464a-badf-27e40f39594e.config
+2026-11-15T19:24:49.3286420Z [command]/opt/homebrew/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-15T19:24:49.4120360Z Removing credentials config '/Users/runner/work/_temp/git-credentials-dbb7d7dc-75cc-464a-badf-27e40f39594e.config'
+2026-11-15T19:24:49.4129090Z ##[endgroup]
+2026-11-15T19:24:49.4413210Z ##[group]Run pnpm/action-setup@v6
+2026-11-15T19:24:49.4413430Z with:
+2026-11-15T19:24:49.4413580Z   dest: ~/setup-pnpm
+2026-11-15T19:24:49.4413730Z   run_install: null
+2026-11-15T19:24:49.4413930Z   cache: false
+2026-11-15T19:24:49.4414100Z   cache_dependency_path: pnpm-lock.yaml
+2026-11-15T19:24:49.4414640Z   package_json_file: package.json
+2026-11-15T19:24:49.4414830Z   standalone: false
+2026-11-15T19:24:49.4414980Z env:
+2026-11-15T19:24:49.4415130Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-15T19:24:49.4415320Z ##[endgroup]
+2026-11-15T19:24:49.6246530Z ##[group]Running self-installer...
+2026-11-15T19:24:50.9645390Z 
+2026-11-15T19:24:50.9645800Z added 1 package, and audited 2 packages in 894ms
+2026-11-15T19:24:50.9646160Z 
+2026-11-15T19:24:50.9646240Z 1 package is looking for funding
+2026-11-15T19:24:50.9646560Z   run `npm fund` for details
+2026-11-15T19:24:50.9650820Z 
+2026-11-15T19:24:50.9651090Z found 0 vulnerabilities
+2026-11-15T19:24:51.7144300Z Checking for updates...
+2026-11-15T19:24:52.1200770Z Switching pnpm from v11.28.10 to v11.22.0...
+2026-11-15T19:24:52.7624420Z .../v11/592-1a1e0ab6a04-a0e8b066d24dcb7d | Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-11-15T19:24:52.7642880Z .../v11/592-1a1e0ab6a04-a0e8b066d24dcb7d |   +1 +
+2026-11-15T19:24:53.1887810Z .../v11/592-1a1e0ab6a04-a0e8b066d24dcb7d | Progress: resolved 1, reused 0, downloaded 1, added 1, done
+2026-11-15T19:24:53.8114000Z [WARN] Detected a pnpm v10 installation layout at PNPM_HOME. The pnpm shims at PNPM_HOME have been refreshed so the new version is active, but pnpm v11 expects bins in PNPM_HOME/bin. Run "pnpm setup" to migrate your PATH to the v11 layout.
+2026-11-15T19:24:53.8130690Z Successfully updated pnpm to v11.22.0
+2026-11-15T19:24:53.8397310Z ##[endgroup]
+2026-11-15T19:24:53.8397860Z Installation Completed!
+2026-11-15T19:24:53.8658210Z ##[group]Run actions/setup-node@v6
+2026-11-15T19:24:53.8658450Z with:
+2026-11-15T19:24:53.8658720Z   node-version-file: .node-version
+2026-11-15T19:24:53.8658950Z   cache: pnpm
+2026-11-15T19:24:53.8659210Z   check-latest: false
+2026-11-15T19:24:53.8661210Z   token: ***
+2026-11-15T19:24:53.8661380Z   package-manager-cache: true
+2026-11-15T19:24:53.8661570Z env:
+2026-11-15T19:24:53.8661730Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-15T19:24:53.8662010Z   PNPM_HOME: /Users/runner/setup-pnpm/node_modules/.bin
+2026-11-15T19:24:53.8662280Z ##[endgroup]
+2026-11-15T19:24:54.0506550Z Node version file is not JSON file
+2026-11-15T19:24:54.0507690Z Resolved .node-version as 26.12.1
+2026-11-15T19:24:54.0526700Z Attempting to download 26.12.1...
+2026-11-15T19:24:55.0986640Z Acquiring 26.12.1 - arm64 from https://github.com/actions/node-versions/releases/download/26.12.1-39618969937/node-26.12.1-darwin-arm64.tar.gz
+2026-11-15T19:24:55.8841390Z Extracting ...
+2026-11-15T19:24:55.8964420Z [command]/usr/bin/tar xz --strip 1 -C /Users/runner/work/_temp/fc18c9ea-4b36-4816-8929-73cfa12766cc -f /Users/runner/work/_temp/f2d67963-db09-4410-8395-e335083c305f
+2026-11-15T19:24:56.9008300Z Adding to the cache ...
+2026-11-15T19:24:58.9898410Z ##[group]Environment details
+2026-11-15T19:24:59.2899750Z node: v26.12.1
+2026-11-15T19:24:59.2900590Z npm: 11.20.0
+2026-11-15T19:24:59.2900880Z yarn: 1.22.22
+2026-11-15T19:24:59.2902630Z ##[endgroup]
+2026-11-15T19:24:59.2939490Z [command]/Users/runner/setup-pnpm/node_modules/.bin/bin/pnpm store path --silent
+2026-11-15T19:24:59.8113490Z /Users/runner/setup-pnpm/node_modules/.bin/store/v11
+2026-11-15T19:24:59.9825210Z Cache hit for: node-cache-macOS-arm64-pnpm-cbd3dc04a868a575f278535b5306d15e1b821ad23fba822f12460fb370775678
+2026-11-15T19:25:01.1742340Z Received 67108864 of 500452235 (13.4%), 63.9 MBs/sec
+2026-11-15T19:25:02.1765580Z Received 130023424 of 500452235 (26.0%), 61.9 MBs/sec
+2026-11-15T19:25:03.1784840Z Received 209715200 of 500452235 (41.9%), 66.6 MBs/sec
+2026-11-15T19:25:04.1793170Z Received 306184192 of 500452235 (61.2%), 72.9 MBs/sec
+2026-11-15T19:25:05.1806090Z Received 402653184 of 500452235 (80.5%), 76.7 MBs/sec
+2026-11-15T19:25:06.0015500Z Received 500452235 of 500452235 (100.0%), 81.9 MBs/sec
+2026-11-15T19:25:06.0017580Z Cache Size: ~477 MB (500452235 B)
+2026-11-15T19:25:06.0056270Z [command]/opt/homebrew/bin/gtar -xf /Users/runner/work/_temp/4f3e0b5b-a676-4aa5-966b-a6ae55a635b3/cache.tzst -P -C /Users/runner/work/agent-teams-ai/agent-teams-ai --delay-directory-restore --use-compress-program unzstd
+2026-11-15T19:25:25.8094130Z Cache restored successfully
+2026-11-15T19:25:25.8302410Z Cache restored from key: node-cache-macOS-arm64-pnpm-cbd3dc04a868a575f278535b5306d15e1b821ad23fba822f12460fb370775678
+2026-11-15T19:25:25.9080680Z ##[group]Run node ./scripts/ci/install-dependencies-with-retry.mjs
+2026-11-15T19:25:25.9081390Z [36;1mnode ./scripts/ci/install-dependencies-with-retry.mjs[0m
+2026-11-15T19:25:26.1054420Z shell: /bin/bash -e {0}
+2026-11-15T19:25:26.1054870Z env:
+2026-11-15T19:25:26.1055170Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-15T19:25:26.1055830Z   PNPM_HOME: /Users/runner/setup-pnpm/node_modules/.bin
+2026-11-15T19:25:26.1056360Z ##[endgroup]
+2026-11-15T19:25:26.9733010Z packages/legacy-agent-host               | [WARN] Unsupported engine: wanted: {"node":">=24.21.0 <25"} (current: {"node":"v26.12.1","pnpm":"11.22.0"})
+2026-11-15T19:25:26.9734410Z packages/task-change-ledger              | [WARN] Unsupported engine: wanted: {"node":">=24.21.0 <25"} (current: {"node":"v26.12.1","pnpm":"11.22.0"})
+2026-11-15T19:25:26.9887680Z Scope: all 7 workspace projects
+2026-11-15T19:25:27.1311360Z ? Verifying lockfile against supply-chain policies (2533 entries)...
+2026-11-15T19:25:27.1866600Z Lockfile is up to date, resolution step is skipped
+2026-11-15T19:25:27.3076770Z Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-11-15T19:25:27.4947340Z Packages: +2294
+2026-11-15T19:25:27.4980500Z ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2026-11-15T19:25:28.3142670Z Progress: resolved 2294, reused 41, downloaded 0, added 0
+2026-11-15T19:25:29.3169250Z Progress: resolved 2294, reused 89, downloaded 0, added 0
+2026-11-15T19:25:30.3109210Z Progress: resolved 2294, reused 193, downloaded 0, added 0
+2026-11-15T19:25:31.3139990Z Progress: resolved 2294, reused 442, downloaded 0, added 0
+2026-11-15T19:25:32.3478040Z Progress: resolved 2294, reused 734, downloaded 0, added 0
+2026-11-15T19:25:33.3647570Z Progress: resolved 2294, reused 927, downloaded 0, added 0
+2026-11-15T19:25:34.3540030Z Progress: resolved 2294, reused 1293, downloaded 0, added 0
+2026-11-15T19:25:34.9227110Z ✓ Lockfile passes supply-chain policies (2533 entries in 7.7s)
+2026-11-15T19:25:35.3527560Z Progress: resolved 2294, reused 2117, downloaded 0, added 0
+2026-11-15T19:25:35.6828490Z Packages are cloned from the content-addressable store to the virtual store.
+2026-11-15T19:25:35.6829700Z   Content-addressable store is at: /Users/runner/setup-pnpm/node_modules/.bin/store/v11
+2026-11-15T19:25:35.6830640Z   Virtual store is at:             node_modules/.pnpm
+2026-11-15T19:25:36.3615830Z Progress: resolved 2294, reused 2279, downloaded 0, added 28
+2026-11-15T19:25:37.3582850Z Progress: resolved 2294, reused 2279, downloaded 0, added 75
+2026-11-15T19:25:38.3618990Z Progress: resolved 2294, reused 2279, downloaded 0, added 78
+2026-11-15T19:25:39.3632640Z Progress: resolved 2294, reused 2279, downloaded 0, added 81
+2026-11-15T19:25:40.3645670Z Progress: resolved 2294, reused 2279, downloaded 0, added 88
+2026-11-15T19:25:41.3664980Z Progress: resolved 2294, reused 2279, downloaded 0, added 93
+2026-11-15T19:25:42.3688670Z Progress: resolved 2294, reused 2279, downloaded 0, added 98
+2026-11-15T19:25:43.3693800Z Progress: resolved 2294, reused 2279, downloaded 0, added 136
+2026-11-15T19:25:44.3714770Z Progress: resolved 2294, reused 2279, downloaded 0, added 163
+2026-11-15T19:25:45.3720800Z Progress: resolved 2294, reused 2279, downloaded 0, added 168
+2026-11-15T19:25:46.3748190Z Progress: resolved 2294, reused 2279, downloaded 0, added 196
+2026-11-15T19:25:47.3755420Z Progress: resolved 2294, reused 2279, downloaded 0, added 234
+2026-11-15T19:25:48.3773770Z Progress: resolved 2294, reused 2279, downloaded 0, added 278
+2026-11-15T19:25:49.3793330Z Progress: resolved 2294, reused 2279, downloaded 0, added 279
+2026-11-15T19:25:50.3834580Z Progress: resolved 2294, reused 2279, downloaded 0, added 285
+2026-11-15T19:25:51.3841500Z Progress: resolved 2294, reused 2279, downloaded 0, added 321
+2026-11-15T19:25:52.3876740Z Progress: resolved 2294, reused 2279, downloaded 0, added 368
+2026-11-15T19:25:53.3879440Z Progress: resolved 2294, reused 2279, downloaded 0, added 434
+2026-11-15T19:25:54.4020380Z Progress: resolved 2294, reused 2279, downloaded 0, added 471
+2026-11-15T19:25:55.3900270Z Progress: resolved 2294, reused 2279, downloaded 0, added 521
+2026-11-15T19:25:56.3926140Z Progress: resolved 2294, reused 2279, downloaded 0, added 618
+2026-11-15T19:25:57.3932300Z Progress: resolved 2294, reused 2279, downloaded 0, added 770
+2026-11-15T19:25:58.3980190Z Progress: resolved 2294, reused 2279, downloaded 0, added 841
+2026-11-15T19:25:59.3989090Z Progress: resolved 2294, reused 2279, downloaded 0, added 848
+2026-11-15T19:26:00.4011600Z Progress: resolved 2294, reused 2279, downloaded 0, added 856
+2026-11-15T19:26:01.4038420Z Progress: resolved 2294, reused 2279, downloaded 0, added 859
+2026-11-15T19:26:02.4059300Z Progress: resolved 2294, reused 2279, downloaded 0, added 880
+2026-11-15T19:26:03.4073800Z Progress: resolved 2294, reused 2279, downloaded 0, added 904
+2026-11-15T19:26:04.4090010Z Progress: resolved 2294, reused 2279, downloaded 0, added 910
+2026-11-15T19:26:05.4112660Z Progress: resolved 2294, reused 2279, downloaded 0, added 918
+2026-11-15T19:26:06.4129650Z Progress: resolved 2294, reused 2279, downloaded 0, added 935
+2026-11-15T19:26:07.4144590Z Progress: resolved 2294, reused 2279, downloaded 0, added 1076
+2026-11-15T19:26:08.4161190Z Progress: resolved 2294, reused 2279, downloaded 0, added 1202
+2026-11-15T19:26:09.4169530Z Progress: resolved 2294, reused 2279, downloaded 0, added 1348
+2026-11-15T19:26:10.4179690Z Progress: resolved 2294, reused 2279, downloaded 0, added 1449
+2026-11-15T19:26:11.4201790Z Progress: resolved 2294, reused 2279, downloaded 0, added 1587
+2026-11-15T19:26:12.4212870Z Progress: resolved 2294, reused 2279, downloaded 0, added 1779
+2026-11-15T19:26:13.4221160Z Progress: resolved 2294, reused 2279, downloaded 0, added 1997
+2026-11-15T19:26:14.4232800Z Progress: resolved 2294, reused 2279, downloaded 0, added 2250
+2026-11-15T19:26:15.0740400Z Progress: resolved 2294, reused 2279, downloaded 0, added 2294, done
+2026-11-15T19:26:16.0358020Z .../node-pty@1.1.0/node_modules/node-pty install$ node scripts/prebuild.js || node-gyp rebuild
+2026-11-15T19:26:16.1156070Z .../node-pty@1.1.0/node_modules/node-pty install: [32m> Checking prebuilds...[0m
+2026-11-15T19:26:16.1171630Z .../node-pty@1.1.0/node_modules/node-pty install: Done
+2026-11-15T19:26:16.1178330Z .../node-pty@1.1.0/node_modules/node-pty postinstall$ node scripts/post-install.js
+2026-11-15T19:26:16.1576410Z .../node-pty@1.1.0/node_modules/node-pty postinstall: [32m> Cleaning release folder...[0m
+2026-11-15T19:26:16.1577380Z .../node-pty@1.1.0/node_modules/node-pty postinstall: [32m> Moving conpty.dll...[0m
+2026-11-15T19:26:16.1609370Z .../node-pty@1.1.0/node_modules/node-pty postinstall:   SKIPPED (not Windows)
+2026-11-15T19:26:16.1611900Z .../node-pty@1.1.0/node_modules/node-pty postinstall: Done
+2026-11-15T19:26:16.6908300Z [WARN] Failed to create bin at /Users/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.bin/legacy-agent-host. ENOENT: no such file or directory, open '/Users/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/dist/cli.js'
+2026-11-15T19:26:16.8423050Z 
+2026-11-15T19:26:16.8423990Z dependencies:
+2026-11-15T19:26:16.8425380Z + @agent-teams/legacy-agent-host 0.1.0 <- packages/legacy-agent-host
+2026-11-15T19:26:16.8426430Z + @agent-teams/task-change-ledger 0.1.0 <- packages/task-change-ledger
+2026-11-15T19:26:16.8439800Z + @claude-teams/agent-graph 0.1.0 <- packages/agent-graph
+2026-11-15T19:26:16.8441890Z + @codemirror/autocomplete 6.20.0
+2026-11-15T19:26:16.8443330Z + @codemirror/commands 6.10.2
+2026-11-15T19:26:16.8444080Z + @codemirror/lang-cpp 6.0.3
+2026-11-15T19:26:16.8444730Z + @codemirror/lang-css 6.3.1
+2026-11-15T19:26:16.8449060Z + @codemirror/lang-go 6.0.1
+2026-11-15T19:26:16.8450360Z + @codemirror/lang-html 6.4.11
+2026-11-15T19:26:16.8734530Z + @codemirror/lang-java 6.0.2
+2026-11-15T19:26:16.8734900Z + @codemirror/lang-javascript 6.2.4
+2026-11-15T19:26:16.8735300Z + @codemirror/lang-json 6.0.2
+2026-11-15T19:26:16.8735640Z + @codemirror/lang-less 6.0.2
+2026-11-15T19:26:16.8737280Z + @codemirror/lang-markdown 6.5.0
+2026-11-15T19:26:16.8737880Z + @codemirror/lang-php 6.0.2
+2026-11-15T19:26:16.8738280Z + @codemirror/lang-python 6.2.1
+2026-11-15T19:26:16.8738720Z + @codemirror/lang-rust 6.0.2
+2026-11-15T19:26:16.8739170Z + @codemirror/lang-sass 6.0.2
+2026-11-15T19:26:16.8739540Z + @codemirror/lang-sql 6.10.0
+2026-11-15T19:26:16.8739980Z + @codemirror/lang-xml 6.1.0
+2026-11-15T19:26:16.8740410Z + @codemirror/lang-yaml 6.1.2
+2026-11-15T19:26:16.8740770Z + @codemirror/language 6.12.1
+2026-11-15T19:26:16.8741220Z + @codemirror/language-data 6.5.2
+2026-11-15T19:26:16.8741600Z + @codemirror/lint 6.9.5
+2026-11-15T19:26:16.8741870Z + @codemirror/merge 6.12.0
+2026-11-15T19:26:16.8742230Z + @codemirror/search 6.6.0
+2026-11-15T19:26:16.8742750Z + @codemirror/state 6.5.4
+2026-11-15T19:26:16.8743150Z + @codemirror/theme-one-dark 6.1.3
+2026-11-15T19:26:16.8743520Z + @codemirror/view 6.39.15
+2026-11-15T19:26:16.8744120Z + @daypicker/react 10.0.1
+2026-11-15T19:26:16.8744650Z + @dnd-kit/core 6.3.1
+2026-11-15T19:26:16.8745050Z + @dnd-kit/sortable 10.0.0
+2026-11-15T19:26:16.8745340Z + @dnd-kit/utilities 3.2.2
+2026-11-15T19:26:16.8745750Z + @fastify/cors 11.2.0
+2026-11-15T19:26:16.8746140Z + @fastify/static 10.1.2
+2026-11-15T19:26:16.8747080Z + @file-viewer/preset-office 3.1.2
+2026-11-15T19:26:16.8747600Z + @file-viewer/react 3.1.2
+2026-11-15T19:26:16.8748020Z + @floating-ui/dom 1.7.6
+2026-11-15T19:26:16.8748320Z + @headless-tree/core 1.7.0
+2026-11-15T19:26:16.8748860Z + @headless-tree/react 1.7.0
+2026-11-15T19:26:16.8749290Z + @openuidev/lang-core 0.3.2
+2026-11-15T19:26:16.8749670Z + @openuidev/react-headless 0.17.0
+2026-11-15T19:26:16.8750110Z + @openuidev/react-lang 0.3.2
+2026-11-15T19:26:16.8750500Z + @openuidev/react-ui 0.17.0
+2026-11-15T19:26:16.8750870Z + @radix-ui/react-alert-dialog 1.1.15
+2026-11-15T19:26:16.8751440Z + @radix-ui/react-checkbox 1.3.3
+2026-11-15T19:26:16.8751850Z + @radix-ui/react-collapsible 1.1.12
+2026-11-15T19:26:16.8753160Z + @radix-ui/react-context-menu 2.2.16
+2026-11-15T19:26:16.8753610Z + @radix-ui/react-dialog 1.1.15
+2026-11-15T19:26:16.8754060Z + @radix-ui/react-dropdown-menu 2.1.16
+2026-11-15T19:26:16.8754540Z + @radix-ui/react-hover-card 1.1.15
+2026-11-15T19:26:16.8781510Z + @radix-ui/react-label 2.1.8
+2026-11-15T19:26:16.8781920Z + @radix-ui/react-popover 1.1.15
+2026-11-15T19:26:16.8782520Z + @radix-ui/react-presence 1.1.5
+2026-11-15T19:26:16.8782930Z + @radix-ui/react-select 2.2.6
+2026-11-15T19:26:16.8783550Z + @radix-ui/react-slot 1.2.4
+2026-11-15T19:26:16.8784300Z + @radix-ui/react-switch 1.3.7
+2026-11-15T19:26:16.8784590Z + @radix-ui/react-tabs 1.1.13
+2026-11-15T19:26:16.8784960Z + @radix-ui/react-tooltip 1.2.8
+2026-11-15T19:26:16.8785340Z + @sentry/electron 7.10.0
+2026-11-15T19:26:16.8785750Z + @sentry/react 10.45.0
+2026-11-15T19:26:16.8786840Z + @tanstack/react-table 9.3.1
+2026-11-15T19:26:16.8787970Z + @tanstack/react-virtual 3.13.24
+2026-11-15T19:26:16.8790450Z + @terminal-platform/design-tokens 0.1.0
+2026-11-15T19:26:16.8791680Z + @terminal-platform/foundation 0.1.0
+2026-11-15T19:26:16.8792050Z + @terminal-platform/runtime-types 0.1.0
+2026-11-15T19:26:16.8792660Z + @terminal-platform/workspace-adapter-websocket 0.1.0
+2026-11-15T19:26:16.8793250Z + @terminal-platform/workspace-contracts 0.1.0
+2026-11-15T19:26:16.8793790Z + @terminal-platform/workspace-core 0.1.0
+2026-11-15T19:26:16.8794340Z + @terminal-platform/workspace-elements 0.1.0
+2026-11-15T19:26:16.8795860Z + @terminal-platform/workspace-gateway-node 0.1.0
+2026-11-15T19:26:16.8797290Z + @terminal-platform/workspace-react 0.1.0
+2026-11-15T19:26:16.8797830Z + @tiptap/extension-placeholder 3.30.5
+2026-11-15T19:26:16.8798210Z + @tiptap/markdown 3.30.5
+2026-11-15T19:26:16.8798460Z + @tiptap/pm 3.30.5
+2026-11-15T19:26:16.8798640Z + @tiptap/react 3.30.5
+2026-11-15T19:26:16.8799330Z + @tiptap/starter-kit 3.30.5
+2026-11-15T19:26:16.8799550Z + @xterm/addon-fit 0.11.0
+2026-11-15T19:26:16.8800180Z + @xterm/addon-web-links 0.12.0
+2026-11-15T19:26:16.8800460Z + @xterm/xterm 6.0.0
+2026-11-15T19:26:16.8801770Z + agent-teams-controller 1.0.0 <- agent-teams-controller
+2026-11-15T19:26:16.8802300Z + better-sqlite3 12.11.1
+2026-11-15T19:26:16.8803020Z + builder-util-runtime 9.7.0
+2026-11-15T19:26:16.8803280Z + chokidar 4.0.3
+2026-11-15T19:26:16.8804290Z + class-variance-authority 0.7.1
+2026-11-15T19:26:16.8804720Z + clsx 2.1.1
+2026-11-15T19:26:16.8804900Z + cmdk 1.0.4
+2026-11-15T19:26:16.8805040Z + croner 10.0.1
+2026-11-15T19:26:16.8805210Z + cronstrue 3.13.0
+2026-11-15T19:26:16.8805370Z + date-fns 3.6.0
+2026-11-15T19:26:16.8805570Z + diff 8.0.3
+2026-11-15T19:26:16.8805970Z + dompurify 3.4.17
+2026-11-15T19:26:16.8806190Z + drizzle-orm 0.45.2
+2026-11-15T19:26:16.8806420Z + electron-updater 6.8.9
+2026-11-15T19:26:16.8806740Z + fast-json-stringify 6.4.0
+2026-11-15T19:26:16.8807120Z + fastify 5.12.5
+2026-11-15T19:26:16.8807340Z + highlight.js 11.11.1
+2026-11-15T19:26:16.8807600Z + i18next 26.2.0
+2026-11-15T19:26:16.8807960Z + idb-keyval 6.2.2
+2026-11-15T19:26:16.8808190Z + isbinaryfile 6.0.0
+2026-11-15T19:26:16.8809230Z + json-schema-ref-resolver 3.0.0
+2026-11-15T19:26:16.8809640Z + jsonc-parser 3.3.1
+2026-11-15T19:26:16.8809970Z + lucide-react 0.577.0
+2026-11-15T19:26:16.8810260Z + mdast-util-to-hast 13.2.1
+2026-11-15T19:26:16.8810510Z + mermaid 11.15.0
+2026-11-15T19:26:16.8810780Z + motion 12.38.0
+2026-11-15T19:26:16.8811050Z + node-diff3 3.2.0
+2026-11-15T19:26:16.8811210Z + node-pty 1.1.0
+2026-11-15T19:26:16.8811410Z + pica 9.0.1
+2026-11-15T19:26:16.8811640Z + pidusage 4.0.1
+2026-11-15T19:26:16.8811840Z + posthog-js 1.396.6
+2026-11-15T19:26:16.8812090Z + react 19.2.4
+2026-11-15T19:26:16.8812480Z + react-dom 19.2.4
+2026-11-15T19:26:16.8812750Z + react-grid-layout 2.2.2
+2026-11-15T19:26:16.8813000Z + react-i18next 17.0.8
+2026-11-15T19:26:16.8813280Z + react-markdown 10.1.0
+2026-11-15T19:26:16.8813510Z + react-modal-sheet 5.6.0
+2026-11-15T19:26:16.8813810Z + react-resizable 3.1.3
+2026-11-15T19:26:16.8814060Z + rehype-highlight 7.0.2
+2026-11-15T19:26:16.8814320Z + rehype-raw 7.0.0
+2026-11-15T19:26:16.8814630Z + rehype-sanitize 6.0.0
+2026-11-15T19:26:16.8814870Z + remark-gfm 4.0.1
+2026-11-15T19:26:16.8815140Z + remark-parse 11.0.0
+2026-11-15T19:26:16.8815410Z + simple-git 4.0.2
+2026-11-15T19:26:16.8815630Z + ssh-config 5.0.4
+2026-11-15T19:26:16.8815870Z + ssh2 1.17.0
+2026-11-15T19:26:16.8816130Z + strip-markdown 6.0.0
+2026-11-15T19:26:16.8816510Z + tailwind-merge 3.5.0
+2026-11-15T19:26:16.8816860Z + tailwindcss-animate 1.0.7
+2026-11-15T19:26:16.8817600Z + terminal-platform-node terminal-platform-node@file:vendor/terminal-platform/terminal-platform-node-stub
+2026-11-15T19:26:16.8818300Z + unified 11.0.5
+2026-11-15T19:26:16.8818570Z + ws 8.21.0
+2026-11-15T19:26:16.8818800Z + yaml 2.9.0
+2026-11-15T19:26:16.8819180Z + yet-another-react-lightbox 3.29.1
+2026-11-15T19:26:16.8819960Z + zod 4.6.7
+2026-11-15T19:26:16.8820280Z + zustand 4.5.7
+2026-11-15T19:26:16.8820460Z 
+2026-11-15T19:26:16.8820590Z devDependencies:
+2026-11-15T19:26:16.8821870Z + @electron/rebuild 4.2.0
+2026-11-15T19:26:16.8822300Z + @eslint-community/eslint-plugin-eslint-comments 4.6.0
+2026-11-15T19:26:16.8822680Z + @eslint/js 9.39.2
+2026-11-15T19:26:16.8823040Z + @file-viewer/vite-plugin 3.1.2
+2026-11-15T19:26:16.8823320Z + @sentry/vite-plugin 5.1.1
+2026-11-15T19:26:16.8823690Z + @tailwindcss/typography 0.5.19
+2026-11-15T19:26:16.8824040Z + @types/better-sqlite3 7.6.13
+2026-11-15T19:26:16.8824370Z + @types/hast 3.0.4
+2026-11-15T19:26:16.8824640Z + @types/mdast 4.0.4
+2026-11-15T19:26:16.8824880Z + @types/node 24.12.4
+2026-11-15T19:26:16.8825180Z + @types/pidusage 2.0.5
+2026-11-15T19:26:16.8825420Z + @types/react 19.2.14
+2026-11-15T19:26:16.8825700Z + @types/react-dom 19.2.3
+2026-11-15T19:26:16.8826640Z + @types/ssh2 1.15.5
+2026-11-15T19:26:16.8826900Z + @typescript/native <- typescript 7.0.2
+2026-11-15T19:26:16.8827240Z + @vitejs/plugin-react 4.7.0
+2026-11-15T19:26:16.8827990Z + @vitest/coverage-v8 3.2.6
+2026-11-15T19:26:16.8828290Z + autoprefixer 10.4.23
+2026-11-15T19:26:16.8829320Z + better-sqlite3-node <- better-sqlite3 12.10.1
+2026-11-15T19:26:16.8829800Z + electron 44.10.1
+2026-11-15T19:26:16.8830310Z + electron-builder 26.17.0
+2026-11-15T19:26:16.8830880Z + electron-vite 5.0.0
+2026-11-15T19:26:16.8831120Z + eslint 9.39.4
+2026-11-15T19:26:16.8831390Z + eslint-config-prettier 10.1.8
+2026-11-15T19:26:16.8832020Z + eslint-import-resolver-typescript 4.4.4
+2026-11-15T19:26:16.8832430Z + eslint-plugin-boundaries 5.3.1
+2026-11-15T19:26:16.8832820Z + eslint-plugin-import 2.32.0
+2026-11-15T19:26:16.8833790Z + eslint-plugin-jsx-a11y 6.10.2
+2026-11-15T19:26:16.8834220Z + eslint-plugin-react 7.37.5
+2026-11-15T19:26:16.8834580Z + eslint-plugin-react-hooks 7.0.1
+2026-11-15T19:26:16.8834960Z + eslint-plugin-react-refresh 0.4.26
+2026-11-15T19:26:16.8835270Z + eslint-plugin-security 3.0.1
+2026-11-15T19:26:16.8835650Z + eslint-plugin-simple-import-sort 12.1.1
+2026-11-15T19:26:16.8835980Z + eslint-plugin-sonarjs 3.0.6
+2026-11-15T19:26:16.8836240Z + eslint-plugin-tailwindcss 3.18.2
+2026-11-15T19:26:16.8836600Z + fake-indexeddb 6.2.5
+2026-11-15T19:26:16.8836860Z + globals 17.2.0
+2026-11-15T19:26:16.8837080Z + happy-dom 21.0.4
+2026-11-15T19:26:16.8837320Z + husky 9.1.7
+2026-11-15T19:26:16.8837630Z + i18next-cli 1.58.0
+2026-11-15T19:26:16.8837880Z + knip 5.82.1
+2026-11-15T19:26:16.8838190Z + lint-staged 16.2.7
+2026-11-15T19:26:16.8838520Z + oxfmt 0.72.0
+2026-11-15T19:26:16.8838730Z + oxlint 1.87.0
+2026-11-15T19:26:16.8838910Z + postcss 8.5.28
+2026-11-15T19:26:16.8839100Z + prettier 3.8.1
+2026-11-15T19:26:16.8839360Z + prettier-plugin-tailwindcss 0.7.2
+2026-11-15T19:26:16.8839890Z + tailwindcss 3.4.19
+2026-11-15T19:26:16.8840080Z + tsx 4.23.15
+2026-11-15T19:26:16.8840290Z + typescript 5.9.3
+2026-11-15T19:26:16.8840520Z + typescript-eslint 8.54.0
+2026-11-15T19:26:16.8840700Z + vite 6.4.4
+2026-11-15T19:26:16.8840840Z + vitest 3.2.6
+2026-11-15T19:26:16.8840940Z 
+2026-11-15T19:26:16.8868840Z landing postinstall$ node ./scripts/patch-minimatch-brace-expansion.mjs && node ../scripts/ci/transitive-security.ts --apply
+2026-11-15T19:26:16.9300550Z landing postinstall: [landing postinstall] skipped npm layout patch; pnpm patchedDependencies handles compatibility
+2026-11-15T19:26:17.1314150Z landing postinstall: Verified braces security backport in 1 package(s)
+2026-11-15T19:26:17.2280770Z landing postinstall: Verified http-cache-semantics security backport in 1 package(s)
+2026-11-15T19:26:17.2336660Z landing postinstall: Done
+2026-11-15T19:26:17.3310980Z [WARN] Failed to create bin at /Users/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.bin/legacy-agent-host. ENOENT: no such file or directory, open '/Users/runner/work/agent-teams-ai/agent-teams-ai/node_modules/@agent-teams/legacy-agent-host/dist/cli.js'
+2026-11-15T19:26:17.3353190Z . preinstall$ node ./scripts/ci/enforce-pnpm-install.mjs
+2026-11-15T19:26:17.3791750Z . preinstall: Done
+2026-11-15T19:26:17.3792340Z . postinstall$ node ./scripts/postinstall-electron.cjs
+2026-11-15T19:26:17.4199910Z . postinstall: Done
+2026-11-15T19:26:17.4200220Z . prepare$ husky
+2026-11-15T19:26:17.5463770Z . prepare: Done
+2026-11-15T19:26:17.5661050Z Done in 50.9s using pnpm v11.22.0
+2026-11-15T19:26:17.6326300Z ##[group]Run pnpm --filter @agent-teams/legacy-agent-host build
+2026-11-15T19:26:17.6327350Z [36;1mpnpm --filter @agent-teams/legacy-agent-host build[0m
+2026-11-15T19:26:17.7844820Z shell: /bin/bash -e {0}
+2026-11-15T19:26:17.7845040Z env:
+2026-11-15T19:26:17.7845220Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-15T19:26:17.7845700Z   PNPM_HOME: /Users/runner/setup-pnpm/node_modules/.bin
+2026-11-15T19:26:17.7846080Z ##[endgroup]
+2026-11-15T19:26:18.2389270Z packages/legacy-agent-host               | [WARN] Unsupported engine: wanted: {"node":">=24.21.0 <25"} (current: {"node":"v26.12.1","pnpm":"11.22.0"})
+2026-11-15T19:26:18.2393070Z packages/task-change-ledger              | [WARN] Unsupported engine: wanted: {"node":">=24.21.0 <25"} (current: {"node":"v26.12.1","pnpm":"11.22.0"})
+2026-11-15T19:26:18.2596420Z $ pnpm --filter @agent-teams/task-change-ledger build
+2026-11-15T19:26:18.6357660Z .                                        | [WARN] Unsupported engine: wanted: {"node":">=24.21.0 <25"} (current: {"node":"v26.12.1","pnpm":"11.22.0"})
+2026-11-15T19:26:18.6361810Z ../task-change-ledger                    | [WARN] Unsupported engine: wanted: {"node":">=24.21.0 <25"} (current: {"node":"v26.12.1","pnpm":"11.22.0"})
+2026-11-15T19:26:18.6552030Z $ node node_modules/@typescript/native/bin/tsc -p tsconfig.json
+2026-11-15T19:26:19.1512410Z $ node node_modules/@typescript/native/bin/tsc -p tsconfig.json
+2026-11-15T19:26:21.6570840Z ##[group]Run node ./scripts/stage-terminal-platform-runtime.mjs --ensure
+2026-11-15T19:26:21.6571390Z [36;1mnode ./scripts/stage-terminal-platform-runtime.mjs --ensure[0m
+2026-11-15T19:26:21.6611310Z shell: /bin/bash -e {0}
+2026-11-15T19:26:21.6611560Z env:
+2026-11-15T19:26:21.6611750Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-15T19:26:21.6612070Z   PNPM_HOME: /Users/runner/setup-pnpm/node_modules/.bin
+2026-11-15T19:26:21.6614700Z   GH_TOKEN: ***
+2026-11-15T19:26:21.6615010Z ##[endgroup]
+2026-11-15T19:26:21.7706630Z Downloading terminal-platform-runtime-darwin-arm64-v0.3.4.tar.gz from 777genius/terminal-platform@v0.3.4
+2026-11-15T19:26:22.8256490Z Extracting terminal-platform-runtime-darwin-arm64-v0.3.4.tar.gz
+2026-11-15T19:26:22.8846230Z Staged terminal-platform runtime 0.3.4 for darwin-arm64
+2026-11-15T19:26:22.8974480Z ##[group]Run node ./scripts/ensure-electron-install.cjs --strict
+2026-11-15T19:26:22.8974930Z [36;1mnode ./scripts/ensure-electron-install.cjs --strict[0m
+2026-11-15T19:26:22.9011430Z shell: /bin/bash -e {0}
+2026-11-15T19:26:22.9011640Z env:
+2026-11-15T19:26:22.9011820Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-15T19:26:22.9012190Z   PNPM_HOME: /Users/runner/setup-pnpm/node_modules/.bin
+2026-11-15T19:26:22.9012490Z ##[endgroup]
+2026-11-15T19:26:22.9647010Z Electron installation is incomplete, running installer: /Users/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.pnpm/electron@44.10.1_supports-color@10.2.2/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron
+2026-11-15T19:26:31.2315870Z ##[group]Run node --test scripts/e2e/teams-create-page-owned-processes.test.mjs
+2026-11-15T19:26:31.2316680Z [36;1mnode --test scripts/e2e/teams-create-page-owned-processes.test.mjs[0m
+2026-11-15T19:26:31.2350640Z shell: /bin/bash -e {0}
+2026-11-15T19:26:31.2350900Z env:
+2026-11-15T19:26:31.2351220Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-15T19:26:31.2351680Z   PNPM_HOME: /Users/runner/setup-pnpm/node_modules/.bin
+2026-11-15T19:26:31.2352000Z ##[endgroup]
+2026-11-15T19:26:31.3616110Z ✔ retains exact descendants when a verified parent exits (1.801541ms)
+2026-11-15T19:26:31.3617130Z ✔ never adopts children of a reused parent PID (0.108708ms)
+2026-11-15T19:26:31.3618210Z ✔ refuses older child identity and an unknown owner history (0.516958ms)
+2026-11-15T19:26:31.3655540Z ℹ tests 3
+2026-11-15T19:26:31.3655930Z ℹ suites 0
+2026-11-15T19:26:31.3656450Z ℹ pass 3
+2026-11-15T19:26:31.3656880Z ℹ fail 0
+2026-11-15T19:26:31.3657220Z ℹ cancelled 0
+2026-11-15T19:26:31.3657610Z ℹ skipped 0
+2026-11-15T19:26:31.3657900Z ℹ todo 0
+2026-11-15T19:26:31.3658200Z ℹ duration_ms 53.373375
+2026-11-15T19:26:31.3731840Z ##[group]Run if [[ "$RUNNER_OS" == "Linux" ]]; then
+2026-11-15T19:26:31.3732200Z [36;1mif [[ "$RUNNER_OS" == "Linux" ]]; then[0m
+2026-11-15T19:26:31.3732620Z [36;1m  xvfb-run -a node scripts/e2e/teams-create-page-desktop.mjs[0m
+2026-11-15T19:26:31.3733010Z [36;1melse[0m
+2026-11-15T19:26:31.3733310Z [36;1m  node scripts/e2e/teams-create-page-desktop.mjs[0m
+2026-11-15T19:26:31.3733710Z [36;1mfi[0m
+2026-11-15T19:26:31.3766480Z shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-15T19:26:31.3766810Z env:
+2026-11-15T19:26:31.3767110Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-15T19:26:31.3767500Z   PNPM_HOME: /Users/runner/setup-pnpm/node_modules/.bin
+2026-11-15T19:26:31.3768460Z   TEAMS_CREATE_E2E_ARTIFACT_DIR: /Users/runner/work/_temp/teams-create-page-evidence
+2026-11-15T19:26:31.3768920Z ##[endgroup]
+2026-11-15T19:26:31.6156400Z STEP: start isolated Electron profile
+2026-11-15T19:27:39.2330730Z STEP: click real Create Team button
+2026-11-15T19:27:42.6767510Z STEP: restore unedited Advanced CLI defaults for a saved team name
+2026-11-15T19:27:43.6497690Z STEP: edit Advanced CLI while the team name is explicitly empty
+2026-11-15T19:27:43.9360130Z STEP: naming and renaming a team preserves in-progress Advanced CLI overrides
+2026-11-15T19:27:44.6693530Z STEP: Back to Teams and resume saved draft
+2026-11-15T19:27:45.3755050Z STEP: open Providers Settings through the real model picker and resume the draft
+2026-11-15T19:27:45.4657480Z STEP: click provider refresh and verify native-store checks in the isolated Electron session
+2026-11-15T19:27:47.3170130Z STEP: render creation page in both themes and at 200% CSS zoom
+2026-11-15T19:27:47.9239220Z STEP: verify actual BrowserWindow.zoomFactor=2 in isolated Electron main process
+2026-11-15T19:27:48.0672370Z STEP: split into two panes and prevent duplicate creation editors
+2026-11-15T19:27:48.6141280Z STEP: restart real Electron process retaining the same isolated data root
+2026-11-15T19:28:36.8686880Z STEP: Launch existing sandbox team must still open a modal
+2026-11-15T19:28:38.3971850Z STEP: close launch dialog without starting the deny-all runtime
+2026-11-15T19:28:38.4192160Z STEP: create an actual config-only team from the restored screen
+2026-11-15T19:28:40.5461460Z STEP: native config-only save rejection retains the editor and its working directory
+2026-11-15T19:28:41.9913790Z STEP: copy an existing sandbox team using the real Teams card
+2026-11-15T19:28:43.7125050Z STEP: template replacement must be cancelable without losing copied draft
+2026-11-15T19:28:44.9329960Z STEP: create from actual Organization Map and verify native placement
+2026-11-15T19:28:47.4710420Z STEP: duplicate team-name validation and recovery in organization editor
+2026-11-15T19:28:48.3214550Z STEP: reject invalid cron and timezone at the actual native IPC boundary
+2026-11-15T19:28:48.3328550Z STEP: open real Schedules UI in isolated Electron
+2026-11-15T19:28:49.6946550Z STEP: select the fixture team and review its saved one-time startup prompt
+2026-11-15T19:28:49.9323940Z STEP: invalid cron is field-level visible and blocks Save
+2026-11-15T19:28:50.2668120Z STEP: exercise list presentation in dark/light and native Electron 200% zoom
+2026-11-15T19:28:50.6732330Z STEP: capture the schedule UI at a genuinely narrow viewport
+2026-11-15T19:28:50.7623670Z STEP: edit the real schedule without migrating its task-first semantics
+2026-11-15T19:28:51.1383930Z STEP: pause and resume the schedule through the real actions menu
+2026-11-15T19:28:51.4853420Z STEP: run now and inspect the actual schedule run history
+2026-11-15T19:28:51.9318860Z STEP: destructive action demands confirmation and Cancel preserves the record
+2026-11-15T19:28:52.3945740Z STEP: restart isolated native Electron in zh-TW for member MCP UI qualification
+2026-11-15T19:29:41.3923570Z STEP: inspect native zh-TW task detail dialog and separate task tab
+2026-11-15T19:29:44.8360000Z {
+2026-11-15T19:29:44.8361370Z   "success": true,
+2026-11-15T19:29:44.8361800Z   "scheduleUiEvidence": {
+2026-11-15T19:29:44.8367710Z     "scheduleLabel": "schedule-visual-e2e-c04551d8",
+2026-11-15T19:29:44.8368770Z     "scheduleId": "f46b6293-b11b-4c79-a096-5a0edb485710",
+2026-11-15T19:29:44.8369390Z     "createdAndDeleted": true
+2026-11-15T19:29:44.8369730Z   },
+2026-11-15T19:29:44.8370180Z   "zhTwMcpUiEvidence": {
+2026-11-15T19:29:44.8370590Z     "locale": "zh-TW",
+2026-11-15T19:29:44.8370830Z     "taskDetailUiEvidence": {
+2026-11-15T19:29:44.8371260Z       "taskId": "77",
+2026-11-15T19:29:44.8371550Z       "locale": "zh-TW",
+2026-11-15T19:29:44.8377770Z       "dialogOpenTabAction": "在獨立分頁中開啟",
+2026-11-15T19:29:44.8378640Z       "dialogScreenshot": "teams-create-zh-tw-task-detail-dialog.png",
+2026-11-15T19:29:44.8379580Z       "tabScreenshot": "teams-create-zh-tw-task-detail-tab.png",
+2026-11-15T19:29:44.8387030Z       "nativeTaskTabVisible": true
+2026-11-15T19:29:44.8387320Z     },
+2026-11-15T19:29:44.8387970Z     "strictAllowlistVisible": true,
+2026-11-15T19:29:44.8388490Z     "placeholder": "github, sentry",
+2026-11-15T19:29:44.8388810Z     "parsedServerNames": [
+2026-11-15T19:29:44.8389310Z       "github",
+2026-11-15T19:29:44.8389810Z       "sentry"
+2026-11-15T19:29:44.8390100Z     ],
+2026-11-15T19:29:44.8390810Z     "screenshot": "teams-create-zh-tw-member-mcp-strict-allowlist.png",
+2026-11-15T19:29:44.8391450Z     "controlEditedThroughNativeCdp": true
+2026-11-15T19:29:44.8392130Z   },
+2026-11-15T19:29:44.8392710Z   "unique": "create-page-e2e-3b4b259e",
+2026-11-15T19:29:44.8393170Z   "retainedAcrossBack": true,
+2026-11-15T19:29:44.8394180Z   "retainedAcrossTabSwitch": true,
+2026-11-15T19:29:44.8394890Z   "manageProvidersNavigationRetainsDraft": true,
+2026-11-15T19:29:44.8396190Z   "retainedAcrossProcessRestart": true,
+2026-11-15T19:29:44.8396750Z   "advancedCliRetainedAcrossRename": true,
+2026-11-15T19:29:44.8397410Z   "teammateModeOverridePersistedThroughNativeUi": true,
+2026-11-15T19:29:44.8398380Z   "teammateModeOverrideValidatedThroughNativeUi": true,
+2026-11-15T19:29:44.8399040Z   "missingRequiredCliValueRejectedThroughNativeUi": true,
+2026-11-15T19:29:44.8399620Z   "advancedCliRetainedAcrossPaneSplit": true,
+2026-11-15T19:29:44.8400130Z   "advancedCliRetainedAcrossBackRemount": true,
+2026-11-15T19:29:44.8400860Z   "advancedCliRestoresUneditedDefaults": true,
+2026-11-15T19:29:44.8401750Z   "unnamedAdvancedCliEditsRetained": true,
+2026-11-15T19:29:44.8402290Z   "launchStillModal": true,
+2026-11-15T19:29:44.8402990Z   "launchContentLoaded": true,
+2026-11-15T19:29:44.8403480Z   "configOnlyCreatedThroughUi": true,
+2026-11-15T19:29:44.8404010Z   "nativeConfigOnlyRejectionKeepsDraft": true,
+2026-11-15T19:29:44.8404750Z   "copiedTeamUsesSharedEditor": true,
+2026-11-15T19:29:44.8405400Z   "copiedDraftDoesNotReplaySeed": true,
+2026-11-15T19:29:44.8406000Z   "templateReplacementCancelledAndConfirmed": true,
+2026-11-15T19:29:44.8406920Z   "organizationPlacementPersistedViaNativeApi": true,
+2026-11-15T19:29:44.8407840Z   "duplicateNameValidationRecovered": true,
+2026-11-15T19:29:44.8408270Z   "themeDarkLightRendered": true,
+2026-11-15T19:29:44.8408810Z   "cssZoom200Rendered": true,
+2026-11-15T19:29:44.8409480Z   "nativeElectronZoom200Rendered": true,
+2026-11-15T19:29:44.8409960Z   "splitPaneSingleEditor": true,
+2026-11-15T19:29:44.8410760Z   "macInputSelectionFallbackCount": 0,
+2026-11-15T19:29:44.8411660Z   "sandboxRoot": "/private/var/folders/h5/t85nd63d71x27_8gl5gw3l_w0000gn/T/teams-create-page-e2e-MITN04",
+2026-11-15T19:29:44.8412230Z   "cleanup": {
+2026-11-15T19:29:44.8412710Z     "processGroupAbsent": true,
+2026-11-15T19:29:44.8413280Z     "windowsTaskkillExitedZero": null,
+2026-11-15T19:29:44.8414070Z     "windowsExactOwnedProcessesAbsent": null,
+2026-11-15T19:29:44.8414600Z     "windowsTeardowns": null,
+2026-11-15T19:29:44.8415060Z     "temporaryProfileRemoved": true
+2026-11-15T19:29:44.8415430Z   }
+2026-11-15T19:29:44.8416030Z }
+2026-11-15T19:29:44.8634980Z ##[group]Run actions/upload-artifact@v4
+2026-11-15T19:29:44.8635390Z with:
+2026-11-15T19:29:44.8636090Z   name: teams-create-page-macos-latest-9a34bb28de0a0deee2eecc42099fd9500563eb1b
+2026-11-15T19:29:44.8636510Z   retention-days: 14
+2026-11-15T19:29:44.8637220Z   if-no-files-found: warn
+2026-11-15T19:29:44.8637740Z   path: /Users/runner/work/_temp/teams-create-page-evidence/*.png
+/Users/runner/work/_temp/teams-create-page-evidence/*.json
+
+2026-11-15T19:29:44.8638400Z   compression-level: 6
+2026-11-15T19:29:44.8638740Z   overwrite: false
+2026-11-15T19:29:44.8639250Z   include-hidden-files: false
+2026-11-15T19:29:44.8639510Z env:
+2026-11-15T19:29:44.8640050Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-15T19:29:44.8640470Z   PNPM_HOME: /Users/runner/setup-pnpm/node_modules/.bin
+2026-11-15T19:29:44.8640980Z ##[endgroup]
+2026-11-15T19:29:45.3371040Z (node:9555) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-15T19:29:45.3373180Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-15T19:29:45.3439500Z With the provided path, there will be 41 files uploaded
+2026-11-15T19:29:45.3442380Z Artifact name is valid!
+2026-11-15T19:29:45.3442700Z Root directory input is valid!
+2026-11-15T19:29:45.6946610Z Beginning upload of artifact content to blob storage
+2026-11-15T19:29:45.9635800Z (node:9555) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-11-15T19:29:46.4069670Z Uploaded bytes 2295421
+2026-11-15T19:29:46.4521530Z Finished uploading artifact content to blob storage!
+2026-11-15T19:29:46.4522330Z SHA256 digest of uploaded artifact zip is 619d82a6ed6c9310413c2d05bb4d42cb1d6ef5d396c7b57c16d969173c391555
+2026-11-15T19:29:46.4522940Z Finalizing artifact upload
+2026-11-15T19:29:46.8219030Z Artifact teams-create-page-macos-latest-9a34bb28de0a0deee2eecc42099fd9500563eb1b.zip successfully finalized. Artifact ID 14176674211
+2026-11-15T19:29:46.8220890Z Artifact teams-create-page-macos-latest-9a34bb28de0a0deee2eecc42099fd9500563eb1b has been successfully uploaded! Final size is 2295421 bytes. Artifact ID is 14176674211
+2026-11-15T19:29:46.8232110Z Artifact download URL: https://github.com/777genius/agent-teams-ai/actions/runs/43751070710/artifacts/14176674211
+2026-11-15T19:29:46.8321820Z Post job cleanup.
+2026-11-15T19:29:46.9804950Z Cache hit occurred on the primary key node-cache-macOS-arm64-pnpm-cbd3dc04a868a575f278535b5306d15e1b821ad23fba822f12460fb370775678, not saving cache.
+2026-11-15T19:29:46.9905180Z Post job cleanup.
+2026-11-15T19:29:47.1579620Z Pruning is unnecessary.
+2026-11-15T19:29:47.1705860Z Post job cleanup.
+2026-11-15T19:29:47.2973840Z [command]/opt/homebrew/bin/git version
+2026-11-15T19:29:47.3261450Z git version 2.56.0
+2026-11-15T19:29:47.3283850Z Copying '/Users/runner/.gitconfig' to '/Users/runner/work/_temp/c59576b9-82d0-419d-b5a2-80cf1ee25557/.gitconfig'
+2026-11-15T19:29:47.3293980Z Temporarily overriding HOME='/Users/runner/work/_temp/c59576b9-82d0-419d-b5a2-80cf1ee25557' before making global git config changes
+2026-11-15T19:29:47.3294990Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-15T19:29:47.3297430Z [command]/opt/homebrew/bin/git config --global --add safe.directory /Users/runner/work/agent-teams-ai/agent-teams-ai
+2026-11-15T19:29:47.3428460Z Removing SSH command configuration
+2026-11-15T19:29:47.3434010Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-15T19:29:47.3512100Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-15T19:29:47.4652670Z Removing HTTP extra header
+2026-11-15T19:29:47.4657590Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-15T19:29:47.4733290Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-15T19:29:47.5725000Z Removing includeIf entries pointing to credentials config files
+2026-11-15T19:29:47.5731810Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-15T19:29:47.5803980Z [command]/opt/homebrew/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-15T19:29:47.7577480Z Cleaning up orphan processes
+2026-11-15T19:29:50.5263580Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/upload-artifact@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

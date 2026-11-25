@@ -1,5 +1,3 @@
-import { isElectronMode } from '@renderer/api';
-
 import type { SettingsSection } from './SettingsTabs';
 
 interface SettingsLoadingSkeletonProps {
@@ -11,10 +9,6 @@ export const SettingsLoadingSkeleton = ({
   label,
   activeSection,
 }: SettingsLoadingSkeletonProps): React.JSX.Element => {
-  const itemWidths = isElectronMode()
-    ? ['w-16', 'w-20', 'w-24', 'w-20', 'w-28', 'w-16']
-    : ['w-16', 'w-20', 'w-24', 'w-16'];
-
   return (
     <div
       role="status"
@@ -22,19 +16,6 @@ export const SettingsLoadingSkeleton = ({
       aria-busy="true"
       className="flex min-h-0 min-w-0 flex-1 bg-[var(--color-surface)]"
     >
-      <div
-        aria-hidden="true"
-        className="flex w-48 shrink-0 flex-col gap-1 border-e border-border p-3 max-sm:w-36 max-sm:p-2"
-      >
-        {itemWidths.map((width, index) => (
-          <div key={index} className="flex h-9 items-center gap-2 px-3">
-            <div className="skeleton-shimmer size-4 shrink-0 rounded bg-[var(--skeleton-base)] motion-reduce:after:animate-none" />
-            <div
-              className={`skeleton-shimmer h-3 max-w-full rounded bg-[var(--skeleton-base)] motion-reduce:after:animate-none ${width}`}
-            />
-          </div>
-        ))}
-      </div>
       <div aria-hidden="true" className="min-w-0 flex-1 overflow-hidden">
         <div
           className={`mx-auto w-full px-6 py-8 ${

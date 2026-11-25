@@ -8,6 +8,10 @@ import { createHostTeamsApi } from '../../../src/features/agent-backend/renderer
 import { projectHostProvisioningProgress } from '../../../src/features/agent-backend/renderer/projectHostProvisioningProgress';
 import { TeamProductReadOrder } from '../../../src/features/agent-backend/renderer/TeamProductReadOrder';
 import { getLaunchJoinMilestonesFromMembers } from '../../../src/renderer/components/team/provisioningSteps';
+import {
+  projectIncomingMemberSpawnSnapshot,
+  shouldAdoptSuccessorProvisioningRun,
+} from '../../../src/renderer/store/team/teamRuntimeRunAdoption';
 import { buildTeamProvisioningPresentation } from '../../../src/renderer/utils/teamProvisioningPresentation';
 
 import type { BackendConnectionSnapshot } from '../../../src/features/agent-backend/contracts/connections';
@@ -16,7 +20,9 @@ import type {
   AgentBackendApi,
   BackendOperationResult,
 } from '../../../src/features/agent-backend/contracts/operations';
+import type { IncomingMemberSpawnProjectionState } from '../../../src/renderer/store/team/teamRuntimeRunAdoption';
 import type { TeamsAPI } from '../../../src/shared/types/api';
+import type { MemberSpawnStatusesSnapshot } from '../../../src/shared/types/team';
 
 const observedAt = Date.parse('2026-10-27T19:00:05.000Z');
 const handleId = 'TEST-original-owner';
@@ -390,6 +396,157 @@ describe('captured Host member spawn observations', () => {
       wait.resolve({ ok: true, value: f.view });
       await rejected;
       expect(f.legacy.getMemberSpawnStatuses).not.toHaveBeenCalled();
+    }
+  );
+});
+
+
+describe('current Host live-roster snapshot handoff', () => {
+  const pin = (snapshot: MemberSpawnStatusesSnapshot): IncomingMemberSpawnProjectionState => ({
+    ignoredRuntimeRunIds: {},
+    ignoredProvisioningRunIds: {},
+    currentRuntimeRunIdByTeam: { [key]: snapshot.runId },
+    leadActivityByTeam: { [key]: 'idle' },
+    memberSpawnStatusesByTeam: { [key]: snapshot.statuses },
+    memberSpawnSnapshotsByTeam: { [key]: snapshot },
+  });
+  const apply = (prev: IncomingMemberSpawnProjectionState, snapshot: MemberSpawnStatusesSnapshot) =>
+    projectIncomingMemberSpawnSnapshot({
+      teamName: key,
+      prev,
+      snapshot,
+      onEqualSuppressed: vi.fn(),
+    });
+
+  it('accepts a fresh added member without stopping Bob and retires only the old exact tuple', async () => {
+    const f = fixture(),
+      member = f.view.members.pop()!,
+      attempt = f.view.launch.members.pop()!;
+    f.view.launch.expected = 2;
+    f.view.launch.ready = 2;
+    const original = await f.api.getMemberSpawnStatuses(key),
+      previous = pin(original);
+    f.view.members.push(member);
+    f.view.launch.members.push(attempt);
+    f.view.launch.expected = 3;
+    f.view.launch.ready = 3;
+    f.view.launch.rosterRevision = 'TEST-added-roster';
+    const next = await f.api.getMemberSpawnStatuses(key),
+      changed = apply(previous, next);
+    expect(changed.currentRuntimeRunIdByTeam?.[key]).toBe(next.runId);
+    expect(changed.ignoredRuntimeRunIds).toEqual({ [runId]: key });
+    expect(changed.memberSpawnStatusesByTeam?.[key].bob).toEqual(original.statuses.bob);
+    expect(
+      buildTeamProvisioningPresentation({
+        progress: projectHostProvisioningProgress(handleId, f.view),
+        members: joinMembers(f.view),
+        memberSpawnStatuses: changed.memberSpawnStatusesByTeam?.[key],
+        memberSpawnSnapshot: changed.memberSpawnSnapshotsByTeam?.[key],
+      })
+    ).toMatchObject({
+      allTeammatesConfirmedAlive: true,
+      remainingJoinCount: 0,
+      successMessage: 'Team launched - all 2 teammates joined',
+    });
+    expect(
+      shouldAdoptSuccessorProvisioningRun({
+        teamName: key,
+        previousRunId: runId,
+        previousState: 'assembling',
+        nextRunId: next.runId,
+        currentRuntimeRunId: changed.currentRuntimeRunIdByTeam?.[key],
+        ignoredRuntimeRunIds: changed.ignoredRuntimeRunIds!,
+        pinnedSpawnStatuses: changed.memberSpawnStatusesByTeam?.[key],
+      })
+    ).toBe(true);
+    expect(apply({ ...previous, ...changed }, original)).toEqual({});
+  });
+
+  it('does not revive an unpinned R1 after a fresh R2 restore, even when the pinned members are offline', async () => {
+    const f = fixture(),
+      previous = pin(await f.api.getMemberSpawnStatuses(key));
+    f.view.launch.rosterRevision = 'TEST-R1';
+    const held = await f.api.getMemberSpawnStatuses(key);
+    f.view.launch.rosterRevision = 'TEST-R2';
+    Object.assign(f.view.launch.members[2]!, {
+      generation: 'TEST-restored-generation',
+      status: 'pending-bootstrap',
+      usable: false,
+      nativeReady: false,
+    });
+    f.view.launch.status = 'partial';
+    f.view.launch.ready = 2;
+    const fresh = await f.api.getMemberSpawnStatuses(key),
+      changed = apply(previous, fresh);
+    expect(changed.currentRuntimeRunIdByTeam?.[key]).toBe(fresh.runId);
+    expect(changed.memberSpawnStatusesByTeam?.[key].carol.bootstrapConfirmed).toBe(false);
+    const stopped = {
+      ...previous,
+      ...changed,
+      memberSpawnStatusesByTeam: {
+        [key]: { bob: { ...fresh.statuses.bob, status: 'offline' as const } },
+      },
+    };
+    expect(apply(stopped, held)).toEqual({});
+    expect(apply(stopped, structuredClone(held))).toEqual({});
+    expect(
+      shouldAdoptSuccessorProvisioningRun({
+        teamName: key,
+        previousRunId: runId,
+        previousState: 'ready',
+        nextRunId: held.runId,
+        currentRuntimeRunId: fresh.runId,
+        ignoredRuntimeRunIds: changed.ignoredRuntimeRunIds!,
+        pinnedSpawnStatuses: stopped.memberSpawnStatusesByTeam[key],
+      })
+    ).toBe(false);
+  });
+
+  it.each(['context', 'mutation', 'new-launch-read'] as const)(
+    'refuses an actual resolved snapshot invalidated by %s before store application',
+    async (change) => {
+      const f = fixture(),
+        previous = pin(await f.api.getMemberSpawnStatuses(key));
+      f.view.launch.rosterRevision = 'TEST-next';
+      const next = await f.api.getMemberSpawnStatuses(key);
+      if (change === 'context') f.changeContext();
+      else if (change === 'mutation') f.readOrder.invalidateReads(handleId);
+      else f.readOrder.launchReadFence(handleId);
+      expect(apply(previous, next)).toEqual({});
+    }
+  );
+
+  it.each(['clone', 'plain', 'other-launch', 'other-owner', 'changed-id'] as const)(
+    'does not infer current same-launch provenance from %s',
+    async (change) => {
+      const f = fixture(),
+        previous = pin(await f.api.getMemberSpawnStatuses(key));
+      f.view.launch.rosterRevision = 'TEST-next';
+      if (change === 'other-launch') f.view.launch.launchId = 'TEST-other-launch';
+      let next = await f.api.getMemberSpawnStatuses(key);
+      if (change === 'clone') next = structuredClone(next);
+      if (change === 'plain') next = projectHostMemberSpawnStatuses(handleId, f.view);
+      if (change === 'other-owner')
+        previous.currentRuntimeRunIdByTeam[key] = hostTeamRunId(
+          'TEST-other-owner',
+          'TEST-original-launch',
+          'TEST-original-roster'
+        );
+      if (change === 'changed-id')
+        next.runId = hostTeamRunId(handleId, 'TEST-original-launch', 'TEST-forged');
+      expect(apply(previous, next)).toEqual({});
+    }
+  );
+
+  it.each(['ignoredRuntimeRunIds', 'ignoredProvisioningRunIds'] as const)(
+    'preserves %s for both original and incoming exact tuples',
+    async (map) => {
+      const f = fixture(),
+        previous = pin(await f.api.getMemberSpawnStatuses(key));
+      f.view.launch.rosterRevision = 'TEST-next';
+      const next = await f.api.getMemberSpawnStatuses(key);
+      for (const ignored of [runId, next.runId!])
+        expect(apply({ ...previous, [map]: { [ignored]: key } }, next)).toEqual({});
     }
   );
 });

@@ -1,0 +1,685 @@
+{
+  "kind": "INDEPENDENT_CURRENT_PUBLISHED_PLAN49_ACTUAL_SOURCE_REVIEW",
+  "reviewedUTC": "2026-11-16T17:35:03.645092+00:00",
+  "disposition": "APPROVE SOURCE ONLY",
+  "blockers": [],
+  "scope": "Actual immutable aa01 source bodies, their exact d6b83 inverses, current dependency bodies, existing source caps and unchanged validation routing. No source or project code executed. This report does not attest an unseen external pre-publication R2 chronology.",
+  "binding": {
+    "sourceCommit": "aa01c426d0abe52504ba8ca21f929e4072024315",
+    "sourceTree": "b54e070226e713f896f90c41f6409073a28ec168",
+    "sourceParent": "e1f539c8166539e4c0f8c9b5f1081f8e3de16cd9",
+    "documentationCommit": "e1f539c8166539e4c0f8c9b5f1081f8e3de16cd9",
+    "documentationTree": "18461e64fb1a34c8ea359a13add35b47dd3c0330",
+    "documentationParent": "d6b83fe65b7ff0f1e93b979cb9354f713db82d40",
+    "baseTree": "e254d6d73269d0349e34ecbcf46ee18955efbc49",
+    "leafCount": 11056,
+    "delta": {
+      "documentationPaths": 2,
+      "existingSourcePaths": 14,
+      "removedPaths": 0
+    },
+    "packet": {
+      "path": "/tmp/migration-evidence-20261116/root/plan49-aa01-full-readback.json",
+      "gitBlob": "a91ed72a1e6ee924355299e804df2d4c6f595db3",
+      "bytes": 655784,
+      "sha256": "d403b5ab952826f8972a0717498cc6147c1c03d628c1c115d4c4b0f0c827d28b"
+    },
+    "independentFullInverseAndMerkleProof": {
+      "path": "/tmp/migration-evidence-20261116/native/plan49-actual-source-review/full-inverse-and-tree-proof.json",
+      "bytes": 12887,
+      "gitBlob": "c7fca4f898cc5b8ce7f5a622e5bedff570ab9f61",
+      "sha256": "a969862b3c22b308e0053414b63c71d94aafb870deccc620b32cdeb64d4232a0"
+    },
+    "allSixteenFullAfterBodiesRehashed": true,
+    "allFifteenExistingPreimagesReconstructedExactly": true,
+    "newPlan49OnlyNewPath": true,
+    "allOtherLeafModesAndIdentitiesPreserved": true,
+    "p10FourSourcesAndPublishedPlanAndReviewPreserved": true
+  },
+  "sourceInventory": [
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "status": "modified",
+      "before": {
+        "gitBlob": "941fc37fa9da9d15bad80acfec8f03b3cb266359",
+        "bytes": 105599,
+        "sha256": "c6c1736d597be39faa44e5b502f34ea3d47dce80a2b09a63818c7fc462184897"
+      },
+      "after": {
+        "gitBlob": "7ca54389de5f2e8909c458d60c70ab630c35645c",
+        "bytes": 105991,
+        "sha256": "0194a1ac594afbe43f6e95542504304691c4f4aaef4ca2b40c48aa7c648cb7bf"
+      },
+      "beforeLines": 1361,
+      "afterLines": 1366,
+      "additions": 5,
+      "deletions": 0,
+      "fullInverseVerified": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeMemberProvider.ts",
+      "status": "modified",
+      "before": {
+        "gitBlob": "edd129db7f8a145641439d5dbd14f17849174bcb",
+        "bytes": 22313,
+        "sha256": "e6145bf1c7cae9ac240fa07171b74ae349a9386dae63137fd2c12ce7f4ba65f9"
+      },
+      "after": {
+        "gitBlob": "046fa413d99035bf47365efb92c737143f82a332",
+        "bytes": 22356,
+        "sha256": "6061f51e4537a966b3c33c595d2538cb0a7be1bf1fdce0975a0e07eeecb0f3f1"
+      },
+      "beforeLines": 515,
+      "afterLines": 516,
+      "additions": 4,
+      "deletions": 3,
+      "fullInverseVerified": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/nativeLaunchEnvironment.ts",
+      "status": "modified",
+      "before": {
+        "gitBlob": "e838ef93378ccb27237891f1b841b3ca07c71a87",
+        "bytes": 8721,
+        "sha256": "d3dd1556fa35fd6b76006934b9f859696981e091174f1f084ea06fb4b5b650bb"
+      },
+      "after": {
+        "gitBlob": "e61d6c5fb32bbc7c6749fad4d9f4f978f716cdbb",
+        "bytes": 8756,
+        "sha256": "8ec6d24566d0130a3c86719a9ac6f3300faa23b3776d75f55743201566354ab1"
+      },
+      "beforeLines": 178,
+      "afterLines": 178,
+      "additions": 1,
+      "deletions": 1,
+      "fullInverseVerified": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "status": "modified",
+      "before": {
+        "gitBlob": "de952472530e397059730ed55741fdbfd2ced146",
+        "bytes": 26716,
+        "sha256": "15070efccca67835def722835d53bf5ac01591b1e68a7faeb6b5ef2e6cd4cc9b"
+      },
+      "after": {
+        "gitBlob": "f1511486e21b76273a6c2ca49e2b18a42a2945a9",
+        "bytes": 26878,
+        "sha256": "2a42fc68b1f281812779635989aab6793eecd5ed23e18efafddd0131dc1fc24d"
+      },
+      "beforeLines": 322,
+      "afterLines": 323,
+      "additions": 2,
+      "deletions": 1,
+      "fullInverseVerified": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "status": "modified",
+      "before": {
+        "gitBlob": "443f498018e63a23b33fe887b0381ccc2833d2d2",
+        "bytes": 21557,
+        "sha256": "91a29639fd383caf835a4b8811d453ee8bb075764d157029af8fb9059c98b7f7"
+      },
+      "after": {
+        "gitBlob": "3ec75b1384e05f5e5f1d8368de946c2685afe608",
+        "bytes": 21743,
+        "sha256": "d067267ff6c2129af259a1118f6566b8e5140dd09db59e72e1becfc967187f52"
+      },
+      "beforeLines": 331,
+      "afterLines": 334,
+      "additions": 3,
+      "deletions": 0,
+      "fullInverseVerified": true
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts",
+      "status": "modified",
+      "before": {
+        "gitBlob": "438f4a8055df627bc75d29278956917cc60388e2",
+        "bytes": 8992,
+        "sha256": "da5a3e78162e525c61efe18614950558a3183e7fdabbde41216817d93120af9c"
+      },
+      "after": {
+        "gitBlob": "42bedb26a801b624f49c3c966dd51efe604e9805",
+        "bytes": 8992,
+        "sha256": "f7889eeaf5ab236d2d0c769844bd12dcb239779afe3c8e4e56178bf715df4c9a"
+      },
+      "beforeLines": 176,
+      "afterLines": 176,
+      "additions": 2,
+      "deletions": 2,
+      "fullInverseVerified": true
+    },
+    {
+      "path": "src/renderer/components/common/ProviderActivityStatusStrip.tsx",
+      "status": "modified",
+      "before": {
+        "gitBlob": "bd2eb01e2c72650724d4d1f2f63b95a90ed8b92e",
+        "bytes": 13472,
+        "sha256": "811837bbe5e72a83efb79ed6a015d688fab997624eb3f0a57c69000ea8c9e7d9"
+      },
+      "after": {
+        "gitBlob": "c1d31ee945c28cfe1f1339d914d0d1be7fc5e928",
+        "bytes": 13822,
+        "sha256": "b0f3a9ede1f0bb08f75f11c2742d0fdb14b281b1ea63da5509e50b38d9d98cac"
+      },
+      "beforeLines": 386,
+      "afterLines": 396,
+      "additions": 11,
+      "deletions": 1,
+      "fullInverseVerified": true
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx",
+      "status": "modified",
+      "before": {
+        "gitBlob": "4bd95a0f2e5636a21d1f0d83dd45f228b054b048",
+        "bytes": 132317,
+        "sha256": "af7b6f9da352008ef014dad120b868090626e071cd5d94037fd03385e2234d40"
+      },
+      "after": {
+        "gitBlob": "832ed8f713a1bc34b2eaa78858180af19eda6862",
+        "bytes": 132386,
+        "sha256": "70f0a8dac05a8031d191de97c3e9ab7bc60ed21ca87b4dfcea167e32478ea66e"
+      },
+      "beforeLines": 3219,
+      "afterLines": 3220,
+      "additions": 1,
+      "deletions": 0,
+      "fullInverseVerified": true
+    },
+    {
+      "path": "test/features/agent-backend/capturedRuntimeSourceNativeAdmission.test.ts",
+      "status": "modified",
+      "before": {
+        "gitBlob": "4a7801a5260ad0c25a07485003d4e99ac5b4633f",
+        "bytes": 4592,
+        "sha256": "a979a7e7a32e952067237fc3d04f3b4b19a97328dacf55db65c606dae4211287"
+      },
+      "after": {
+        "gitBlob": "7357dd45eedc3f9e3f9cfccf67e1bf75a4392511",
+        "bytes": 9802,
+        "sha256": "c191568abd98ca0fa9e10e532485bf0dbbdf76c5e3e7bcb3da978801aba8155a"
+      },
+      "beforeLines": 67,
+      "afterLines": 154,
+      "additions": 87,
+      "deletions": 0,
+      "fullInverseVerified": true
+    },
+    {
+      "path": "test/features/agent-backend/capturedWindowsSelection.test.ts",
+      "status": "modified",
+      "before": {
+        "gitBlob": "9a895cb0aa68f194c660b037632d5730d297787d",
+        "bytes": 31177,
+        "sha256": "6a5acfb91d69fecd9239e02caa2ed68c37352065694f7ff8310444ee8564b52a"
+      },
+      "after": {
+        "gitBlob": "0f0f46cc362cc3e377a4922eebb08193f5bffd33",
+        "bytes": 31177,
+        "sha256": "57167497540a3ffab2fabc375fa37000ff50d6b8fdaf654e561354c7861d97f0"
+      },
+      "beforeLines": 478,
+      "afterLines": 478,
+      "additions": 2,
+      "deletions": 2,
+      "fullInverseVerified": true
+    },
+    {
+      "path": "test/features/agent-backend/capturedWindowsSourceHistory.test.ts",
+      "status": "modified",
+      "before": {
+        "gitBlob": "45c2c0738de31a316d532280510aaf3bc25ce2ff",
+        "bytes": 25096,
+        "sha256": "b43a295ea3158b8a2137b688b5cd613d42f9ee918930c21f0c674ddb6641c32c"
+      },
+      "after": {
+        "gitBlob": "dd54632d57813fcb142a1c88ca9ec801567d11ed",
+        "bytes": 25096,
+        "sha256": "1d52700b35b5f8c36e795e686f818b6877c4d6807caad2f2617bdca2bb173508"
+      },
+      "beforeLines": 336,
+      "afterLines": 336,
+      "additions": 4,
+      "deletions": 4,
+      "fullInverseVerified": true
+    },
+    {
+      "path": "test/renderer/components/common/ProviderActivityStatusStrip.test.ts",
+      "status": "modified",
+      "before": {
+        "gitBlob": "bb4b238b7066e9121b17a26c141daad1b641e0d0",
+        "bytes": 23548,
+        "sha256": "c4172cc0f85fa16680bb5468cf2cd6e80373b67d00fce7e2bd257db7392efc9b"
+      },
+      "after": {
+        "gitBlob": "c1ab11f043ea5bcfb5325cb8fb6f147541076f38",
+        "bytes": 28286,
+        "sha256": "375ab28dfb1aaf9506b0c852fc97dc48ae612d38edf5fad3099dcf9e420de286"
+      },
+      "beforeLines": 715,
+      "afterLines": 844,
+      "additions": 129,
+      "deletions": 0,
+      "fullInverseVerified": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceReadiness.ts",
+      "status": "modified",
+      "before": {
+        "gitBlob": "a7e45d6cadba355ec46a516a68297d46147d741e",
+        "bytes": 6451,
+        "sha256": "83d26a98fd977696a05aafbceae9e28a1fbf71c553bc9c1db565c20567fcf470"
+      },
+      "after": {
+        "gitBlob": "776bdfdab840a24d061001a58323b5232bcf160d",
+        "bytes": 9425,
+        "sha256": "3bf94dee56ca709e34bf1e3afb3f3f7e5202f1cad64bbfa5570d97df7e76d50f"
+      },
+      "beforeLines": 86,
+      "afterLines": 141,
+      "additions": 55,
+      "deletions": 0,
+      "fullInverseVerified": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "status": "modified",
+      "before": {
+        "gitBlob": "379ae796590f7d1f2909003157554df0891c9ba1",
+        "bytes": 59327,
+        "sha256": "ddd2632c6be78ab791f658ff19245a0f859eb9f14c336a47f7b1b6fb6862f4f9"
+      },
+      "after": {
+        "gitBlob": "9b3a19c372ab3c52e28848b19f67c99fe8bab1f5",
+        "bytes": 59419,
+        "sha256": "f1835c824ecf0f977e86a2cf24203d7e742f96409a9b702a4aa245f71e2aeeae"
+      },
+      "beforeLines": 800,
+      "afterLines": 800,
+      "additions": 2,
+      "deletions": 2,
+      "fullInverseVerified": true
+    }
+  ],
+  "referenceBodies": [
+    {
+      "path": "/tmp/migration-evidence-20261116/native/plan49-actual-source-review/reference/source-file-size-baseline.json",
+      "bytes": 9635,
+      "gitBlob": "8f5deeed4e406894e1ee587ed541014bcb7dde77",
+      "sha256": "8e4e373812efb4556e6261353fe9c8808fc93e6393f095fd00476a11fb5a6cae"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/native/plan49-actual-source-review/reference/check-source-file-size.mjs",
+      "bytes": 8145,
+      "gitBlob": "65775f7889470056ef7cd91ad6c56d9351e6cdfc",
+      "sha256": "5462ce152af3e3beddabc51ccbb4bf9b74219ebe128664e27e046142382d6bb2"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/native/plan49-actual-source-review/reference/capturedTeamLaunchReadiness.ts",
+      "bytes": 1376,
+      "gitBlob": "7a78f0791a54d09bcdda9c466b4df9c8b3b569d1",
+      "sha256": "5a3e24af0a051afe0e8736e4d79e21239ef23b3aeb7a972c59fe5e79655db09e"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/native/plan49-actual-source-review/reference/useCapturedTeamLaunchReadiness.ts",
+      "bytes": 5710,
+      "gitBlob": "e8f5137ea0b7b69f4c098203d797780be99a5c01",
+      "sha256": "7327fb6ed0504e412dcdafe4989c91625c2ef0712edf0705c767c5bfc52775af"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/native/plan49-actual-source-review/reference/providerReadiness.ts",
+      "bytes": 2022,
+      "gitBlob": "b912faca5caef24aebf1ce4105556e2dc8b3bdaf",
+      "sha256": "4c68a3835384f0358b884930965719286d40ded7cce4a0f47ba63ad50937d297"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/native/plan49-actual-source-review/reference/providerLaunchAuthority.ts",
+      "bytes": 8286,
+      "gitBlob": "a6dbcf114109c75f5a0dfad9ca20e71884956f31",
+      "sha256": "7c122f43c764f438d9c9d78413f5e3912e83f29a3c30f72631333dc34d6e44d0"
+    }
+  ],
+  "capturedTeamPresentation": {
+    "owner": "src/renderer/components/common/ProviderActivityStatusStrip.tsx",
+    "ownerBlob": "c1d31ee945c28cfe1f1339d914d0d1be7fc5e928",
+    "oneCallerBinding": "LaunchTeamDialog adds only hasCapturedTeamReadiness={capturedReadiness.permits}; its complete previous body is otherwise byte-identical.",
+    "precedence": "Original forced/provider loading, Codex snapshot/bootstrap masking and settled scoped OpenCode readiness keep their short-circuit precedence. Only then can an exact-true current captured-Team predicate suppress the unrelated global launch-authority error. Other callers omit the optional prop and preserve the original truth condition. The global provider object is neither changed nor persisted.",
+    "unchangedPredicate": {
+      "blob": "7a78f0791a54d09bcdda9c466b4df9c8b3b569d1",
+      "requires": [
+        "open captured Host Team parsed by original selector",
+        "known provider",
+        "finite current clock",
+        "ready existing check",
+        "matching draftSignature",
+        "matching handleId",
+        "matching preparationId",
+        "matching provider selectionSignature",
+        "nonempty launchId and rosterRevision",
+        "finite expiresAt strictly greater than now"
+      ]
+    },
+    "unchangedHook": {
+      "blob": "e8f5137ea0b7b69f4c098203d797780be99a5c01",
+      "sourceContext": "Existing draft signature includes source revision, active/target context, switching/connection/Host context, selection and current draft. permits requires a truthy current sourceRevision and derives the selected-provider subset signature.",
+      "expiry": "The existing hook schedules its original expiry invalidation. It creates a new permits function on every render; the new strip memo dependency therefore re-evaluates on that existing expiry-triggered render. No timer was added or budget renewed. This remains asynchronous presentation, not an atomic authority decision.",
+      "submitAuthority": "Original captureForSubmit, current/draft fences and Host admission are unchanged."
+    },
+    "launchGuard": {
+      "blob": "a6dbcf114109c75f5a0dfad9ca20e71884956f31",
+      "fact": "The original guard already checks capturedTeam.permits with Date.now before its global fallback. Its body and every Launch mutation call remain unchanged by aa01; the strip does not grant or refresh any lease."
+    },
+    "additionalCost": "One optional synchronous predicate/current-time evaluation for eligible nonloading provider chips, within existing render work; no RPC, native read, provider probe or action added."
+  },
+  "rendererRegressionReview": {
+    "file": "test/renderer/components/common/ProviderActivityStatusStrip.test.ts",
+    "blob": "c1ab11f043ea5bcfb5325cb8fb6f147541076f38",
+    "oldLinesPreservedByExactInverse": 715,
+    "newLines": 844,
+    "newParameterizedCases": 9,
+    "caseNames": [
+      "draft",
+      "team",
+      "preparation",
+      "selection",
+      "expired",
+      "closed",
+      "text-only",
+      "failed",
+      "loading"
+    ],
+    "actualOwners": "Uses the actual ProviderActivityStatusStrip, hasCapturedTeamLaunchReadiness and createLaunchGuard; only existing API/logo mocks remain. The check/provider/scope fixtures satisfy the consumed pure-predicate fields. Date.now is controlled, the root unmounts and the spy restores in finally.",
+    "oracles": [
+      "Fresh captured proof displays checked/Ready despite global error; guard with proof permits but original global-only guard still refuses.",
+      "Changing each actual binding, strict expiry equality, closure, removing proof, or failed status restores error; forced loading retains loading.",
+      "A sibling Anthropic chip with no matching check stays in error.",
+      "The original global status JSON remains byte-equivalent."
+    ],
+    "limits": "The nine cases render after changes and exercise the pure predicate/guard. They do not execute the hook expiry timer or a real Host launch; the actual hook placement/invalidator is source-reviewed separately. No baseline test-only RED or executed result is claimed."
+  },
+  "installerWait": {
+    "file": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+    "blob": "f1511486e21b76273a6c2ca49e2b18a42a2945a9",
+    "change": "The single existing enabled-Launch wait additionally requires the existing Codex activity chip to be checked only when the original installer flag is present. The false installer branch preserves the original Selection predicate.",
+    "preservation": {
+      "original90000MsWaitCount": 1,
+      "uiClickCallsites": 20,
+      "uiScrollCallsites": 15,
+      "InputCallsites": 3,
+      "launchCallsites": 2,
+      "allUnchanged": true
+    },
+    "limits": "One additional DOM condition and potentially more iterations spend the original wait. Same selected-owner/capture-empty check follows; original click geometry, uniqueness, source, owner and physical action guards are unchanged. Actual strengthened Installer execution remains outstanding."
+  },
+  "permissionBindingRepair": {
+    "consumer": {
+      "before": "edd129db7f8a145641439d5dbd14f17849174bcb",
+      "after": "046fa413d99035bf47365efb92c737143f82a332"
+    },
+    "helper": {
+      "before": "e838ef93378ccb27237891f1b841b3ca07c71a87",
+      "after": "e61d6c5fb32bbc7c6749fad4d9f4f978f716cdbb"
+    },
+    "identifiedDefect": "The extracted published consumer referenced approvalMode and selectedPermissions in verifyConfiguration without lexical bindings. The helper already computed both. This is a source-proven missing-binding defect; it is not inferred as the cause of an earlier a07 native deadline failure.",
+    "correction": "Return those same local values and destructure them at the original single call. No policy is recalculated, default broadened, permission check removed or native configuration changed.",
+    "wholeOraclePreserved": "The entire verifyConfiguration/probe segment through the driver-factory declaration is byte-identical. Required-tool checks and exact selected permission entry equality remain unchanged; every original allocation/readiness/cleanup/clock boundary is retained.",
+    "validationBoundary": "Fresh original Host compilation and complete provider permission/configuration tests are still required; a static missing-name repair is not a runtime or readiness PASS."
+  },
+  "passiveCodexProjection": {
+    "helperBlob": "776bdfdab840a24d061001a58323b5232bcf160d",
+    "scenarioBlob": "9b3a19c372ab3c52e28848b19f67c99fe8bab1f5",
+    "sameOriginalRead": "After all original epoch.close attempts, the existing effects() call is evaluated once as the observer argument. Its pre-existing journal validation and refusal on a failure event execute before the observer. The same original pin loop then runs; no extra filesystem/process/native query is introduced.",
+    "inputBound": "Original journal reader requires a regular nonsymlink file <=1 MiB, a final newline, JSON object rows, and no recorded failure. These guards are unchanged.",
+    "outputBound": {
+      "selectedEventsMaximum": 64,
+      "events": [
+        "launch",
+        "mcp-catalog",
+        "managed-configuration-read",
+        "connected",
+        "exit"
+      ],
+      "common": [
+        "original ordinal",
+        "positive safe-integer pid",
+        "closed runtime/management role"
+      ],
+      "launch": [
+        "positive safe-integer parentPid",
+        "argc 0..1024"
+      ],
+      "mcpCatalog": [
+        "configuredServers 0..256"
+      ],
+      "managedConfiguration": [
+        "array length <=1 containing only literal team",
+        "selectedServerCount",
+        "teamSelected Boolean"
+      ],
+      "connected": [
+        "array length <=256 of strings",
+        "toolCount only"
+      ],
+      "exit": [
+        "code exactly 0 or 1"
+      ],
+      "overflow": "explicit truncated=true at the next selected event; no eviction or deduplication"
+    },
+    "privacy": "Provider/event/role/capture-point/status are closed values. Only numeric identities/counts and one Boolean are projected. No tool/server names, argv, paths, prompts, credentials or arbitrary error message are emitted. Accessor properties for selected fields refuse to unknown; validation failures and even output setters are caught without replacing an original business/pin Error.",
+    "causalBoundary": "capturePoint is existing-post-cleanup-effects-read and atomicWithReadinessFailure=false. Rows show observed lifetime stages and may include shutdown progress. PID/ordinal are observations only, not birth/owner authority, exact failure-time stage or successful readiness.",
+    "originalFlowPreserved": {
+      "awaitLines": 70,
+      "performanceNowLines": 15,
+      "dateNowLines": 0,
+      "closeLines": 4,
+      "killLines": 1,
+      "allByteIdentical": true,
+      "allOriginal15sBudgetsAndPostAwaitGuardsPreserved": true,
+      "failureAggregationAndCleanupDecisionsUnchanged": true,
+      "Plan47NestedTimingReaderUnchanged": true
+    },
+    "additionalCost": "Bounded synchronous projection of already-read rows is real extra finalizer work under unchanged surrounding bounds; no zero-cost or native speedup claim."
+  },
+  "nativeRegressionReview": {
+    "file": "test/features/agent-backend/capturedRuntimeSourceNativeAdmission.test.ts",
+    "blob": "7357dd45eedc3f9e3f9cfccf67e1bf75a4392511",
+    "newTests": 2,
+    "oldWholeBodyPreservedApartFromDeclaredImports": true,
+    "projectionCase": "Calls the real exported helper with a controlled journal. Verifies all five event shapes, repeated equal rows retained at distinct ordinals, private-value absence, first64 plus explicit overflow, non-Codex no-op, and six invalid selected-field/accessor paths returning unknown without throwing.",
+    "actualCallsiteCase": "Uniquely extracts the actual two JavaScript-compatible try/catch lines at Scenario727-728 into Function with injected existing boundaries; no whole Scenario import or native execution. Complete keeps [effects,observe,pin] and no error; original effects error bypasses observer/pins as before and retains exact identity; throwing diagnostic output setter is contained and a later original pin error remains the sole captured Error.",
+    "moduleSetup": "The new helper import retains its existing dist dependencies; original Host builds precede the existing retained-Main suite and safe frontend shards. No missing-helper baseline RED is claimed. The extraction has one matching marker and includes its actual catch, not a copied assertion implementation.",
+    "limits": "Finite injected data/control seams cover projection and order/error identity. They do not execute real filesystem journal reads, native processes, original readiness deadlines, all provider venues or actual cleanup. Full current-source original suites remain required."
+  },
+  "importOnlyCorrections": {
+    "paths": [
+      "src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts",
+      "test/features/agent-backend/capturedWindowsSelection.test.ts",
+      "test/features/agent-backend/capturedWindowsSourceHistory.test.ts"
+    ],
+    "verified": "All import declaration multisets and all non-import bytes are identical. Physical lines remain176/478/336. No assertion/body or custody decision changes. Existing lint routing covers all three."
+  },
+  "sourceClosureAndValidationRouting": {
+    "supplementaryAddsOnly": [
+      "src/renderer/components/common/ProviderActivityStatusStrip.tsx",
+      "src/renderer/utils/providerReadiness.ts",
+      "test/renderer/components/common/ProviderActivityStatusStrip.test.ts"
+    ],
+    "mainRoster": "Unchanged a8be2617b2c765091cecce789f028ef2bf67af60. Already-retained actual a07 source-freeze vectors include both unchanged capturedTeamLaunchReadiness and useCapturedTeamLaunchReadiness with the exact freshly rehashed Git/SHA pairs. No new closure gap is introduced for these two dependencies.",
+    "lint": {
+      "workflow": "7ca54389de5f2e8909c458d60c70ab630c35645c",
+      "beforeCount": 118,
+      "afterCount": 123,
+      "unique": 123,
+      "addedOperands": [
+        "tools/owned-process-broker/nativeEmulatedSourceReadiness.ts",
+        "src/renderer/components/common/ProviderActivityStatusStrip.tsx",
+        "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx",
+        "test/renderer/components/common/ProviderActivityStatusStrip.test.ts",
+        "test/features/agent-backend/capturedRuntimeSourceNativeAdmission.test.ts"
+      ],
+      "allOtherWorkflowBytesRestoreExactly": true,
+      "all13ChangedCodeTestRosterOperandsPresentOnce": true,
+      "oldOperandOrderPreserved": true,
+      "executionClaim": false
+    },
+    "existingCommands": [
+      "Original Team pnpm lint:fast:files -- exact123 selected operands",
+      "pnpm typecheck:workspace",
+      "node node_modules/@typescript/native/bin/tsc --noEmit -p test/features/agent-backend/tsconfig.json",
+      "Original typed src/main/preload/shared/types, renderer, features lint and lint:mcp",
+      "Original four safe frontend Vitest shards after Host build",
+      "Original Host Process retained-Main Vitest command explicitly including capturedRuntimeSourceNativeAdmission.test.ts after Host and both broker compiler projects"
+    ],
+    "retainedRoutingEvidence": {
+      "path": "/tmp/migration-evidence-20261116/native/a07-process-win-arm64-133387301562/job-133387301562.log",
+      "lines": [
+        848,
+        864,
+        1121
+      ],
+      "interpretation": "Original a07 command routing and then-existing three-test execution are historical facts only. The workflow current immutable leaf93606e49aedfe84b6452aee487efdf2055f45524 is unchanged; no aa01 test result is inferred."
+    },
+    "noNewCommandRuleJobRunnerMatrixTriggerTimeoutOrExtraRedCycle": true
+  },
+  "sourceCaps": {
+    "checker": {
+      "path": "/tmp/migration-evidence-20261116/native/plan49-actual-source-review/reference/check-source-file-size.mjs",
+      "bytes": 8145,
+      "gitBlob": "65775f7889470056ef7cd91ad6c56d9351e6cdfc",
+      "sha256": "5462ce152af3e3beddabc51ccbb4bf9b74219ebe128664e27e046142382d6bb2"
+    },
+    "baseline": {
+      "path": "/tmp/migration-evidence-20261116/native/plan49-actual-source-review/reference/source-file-size-baseline.json",
+      "bytes": 9635,
+      "gitBlob": "8f5deeed4e406894e1ee587ed541014bcb7dde77",
+      "sha256": "8e4e373812efb4556e6261353fe9c8808fc93e6393f095fd00476a11fb5a6cae"
+    },
+    "checkerInterpretation": "Read as inert text only: recognized production source extensions, test/spec and test-directory exclusions, YAML not a source extension, unchanged physical newline counting. No checker import or run.",
+    "rows": [
+      {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "lines": 1366,
+        "scope": "existing test/YAML exclusion",
+        "cap": null,
+        "withinUnchangedSelectedScope": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeMemberProvider.ts",
+        "lines": 516,
+        "scope": "production source policy",
+        "cap": 800,
+        "withinUnchangedSelectedScope": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/nativeLaunchEnvironment.ts",
+        "lines": 178,
+        "scope": "production source policy",
+        "cap": 800,
+        "withinUnchangedSelectedScope": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "lines": 323,
+        "scope": "production source policy",
+        "cap": 800,
+        "withinUnchangedSelectedScope": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+        "lines": 334,
+        "scope": "production source policy",
+        "cap": 800,
+        "withinUnchangedSelectedScope": true
+      },
+      {
+        "path": "src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts",
+        "lines": 176,
+        "scope": "production source policy",
+        "cap": 800,
+        "withinUnchangedSelectedScope": true
+      },
+      {
+        "path": "src/renderer/components/common/ProviderActivityStatusStrip.tsx",
+        "lines": 396,
+        "scope": "production source policy",
+        "cap": 800,
+        "withinUnchangedSelectedScope": true
+      },
+      {
+        "path": "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx",
+        "lines": 3220,
+        "scope": "production source policy",
+        "cap": 3247,
+        "withinUnchangedSelectedScope": true
+      },
+      {
+        "path": "test/features/agent-backend/capturedRuntimeSourceNativeAdmission.test.ts",
+        "lines": 154,
+        "scope": "existing test/YAML exclusion",
+        "cap": null,
+        "withinUnchangedSelectedScope": true
+      },
+      {
+        "path": "test/features/agent-backend/capturedWindowsSelection.test.ts",
+        "lines": 478,
+        "scope": "existing test/YAML exclusion",
+        "cap": null,
+        "withinUnchangedSelectedScope": true
+      },
+      {
+        "path": "test/features/agent-backend/capturedWindowsSourceHistory.test.ts",
+        "lines": 336,
+        "scope": "existing test/YAML exclusion",
+        "cap": null,
+        "withinUnchangedSelectedScope": true
+      },
+      {
+        "path": "test/renderer/components/common/ProviderActivityStatusStrip.test.ts",
+        "lines": 844,
+        "scope": "existing test/YAML exclusion",
+        "cap": null,
+        "withinUnchangedSelectedScope": true
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceReadiness.ts",
+        "lines": 141,
+        "scope": "production source policy",
+        "cap": 800,
+        "withinUnchangedSelectedScope": true
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+        "lines": 800,
+        "scope": "production source policy",
+        "cap": 800,
+        "withinUnchangedSelectedScope": true
+      }
+    ],
+    "allChangedScopeFits": true,
+    "wholeRepositoryGuardExecutionClaim": false
+  },
+  "documentationDisposition": {
+    "Plan43FullOldPrefixPreserved": true,
+    "Plan49NoLocalExecutionAndNoPassBoundariesAccurate": true,
+    "historicalExternalR2ChronologyVerified": false,
+    "noEarlierRuntimeCausalRepairClaimAccepted": true,
+    "P10M16P09P08I386VendorAndReleaseHoldsRemain": true
+  },
+  "reviewerActions": {
+    "sourceDataReadsAndHashes": true,
+    "pureMerkleAndUnifiedInverse": true,
+    "projectImportsTestsBuildsTypesLintOrSizeGuard": false,
+    "nativeGuiOrProviderExecution": false,
+    "CIStatusPollsOrArtifactDownloads": false,
+    "canonicalSourceIndexRefOrActionsWrites": false
+  },
+  "remainingGates": [
+    "Actual current-source original tests, complete types and unchanged scoped/typed lint.",
+    "Original Installer strengthened presentation/read/source/cleanup journey.",
+    "Original Windows source A/B under unchanged15s and all selected Host/Electron native tuples.",
+    "P10 donor/current/cold history and all other original current-source Desktop/package/native obligations remain separate."
+  ]
+}

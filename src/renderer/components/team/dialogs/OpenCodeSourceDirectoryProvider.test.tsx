@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { OpenCodeSourceDirectoryProvider } from './OpenCodeSourceDirectoryProvider';
+import { OpenCodeSourceDirectoryProvider, useOpenCodeSourceDirectory } from './OpenCodeSourceDirectoryProvider';
 
 const storeState = vi.hoisted(() => ({
   current: {
@@ -46,6 +46,41 @@ beforeEach(() => {
 });
 
 describe('OpenCodeSourceDirectoryProvider', () => {
+  it('retains deferred discovery only while current-scope selector consumers remain mounted', async () => {
+    const Demand = ({ path }: { path: string }) => {
+      useOpenCodeSourceDirectory(path, true);
+      return null;
+    };
+    const root = createRoot(document.createElement('div'));
+    const render = (path: string, consumers: number, enabled = true) => root.render(
+      <OpenCodeSourceDirectoryProvider enabled={enabled} deferDiscovery projectPath={path}>
+        {Array.from({ length: consumers }, (_, index) => <Demand key={index} path={path} />)}
+      </OpenCodeSourceDirectoryProvider>
+    );
+    const expectEnabled = (enabled: boolean, path: string) => expect(quickConnect).toHaveBeenLastCalledWith({
+      enabled, projectPath: path, runtimeRevision: JSON.stringify(['ready', '1.17.18', '/opt/opencode']),
+    });
+    try {
+      await act(async () => { render('/TEST/project-A', 0); });
+      expectEnabled(false, '/TEST/project-A');
+      await act(async () => { render('/TEST/project-A', 2); });
+      expectEnabled(true, '/TEST/project-A');
+      await act(async () => { render('/TEST/project-A', 1); });
+      expectEnabled(true, '/TEST/project-A');
+      await act(async () => { render('/TEST/project-B', 0); });
+      expectEnabled(false, '/TEST/project-B');
+      await act(async () => { render('/TEST/project-A', 0); });
+      expectEnabled(false, '/TEST/project-A');
+      await act(async () => { render('/TEST/project-A', 1); });
+      expectEnabled(true, '/TEST/project-A');
+      await act(async () => { render('/TEST/project-A', 0, false); });
+      await act(async () => { render('/TEST/project-A', 0); });
+      expectEnabled(false, '/TEST/project-A');
+    } finally {
+      await act(async () => root.unmount());
+    }
+  });
+
   it('does not start directory discovery for a missing runtime', async () => {
     storeState.current.openCodeRuntimeStatus = null;
     const root = createRoot(document.createElement('div'));

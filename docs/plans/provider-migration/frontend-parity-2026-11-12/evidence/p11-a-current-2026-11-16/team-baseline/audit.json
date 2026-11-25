@@ -1,0 +1,798 @@
+{
+  "status": "ACTUAL_CURRENT_578_TEAM_SUCCESS_WITH_SEPARATE_AGGREGATE_FAILURE",
+  "source": "57885c055a18b27c180c304762643eac632513ad",
+  "tree": "b1685b4993306f9cd509d832b72f2cd6f0418943",
+  "pr": 1192,
+  "run": {
+    "id": 43823212577,
+    "attempt": 1,
+    "event": "pull_request",
+    "workflow": ".github/workflows/host-emulated-acceptance.yml",
+    "conclusion": "failure"
+  },
+  "job": {
+    "id": 133150851331,
+    "name": "Offline Host Desktop (linux-x64, team)",
+    "conclusion": "success",
+    "runId": 43823212577,
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1
+      },
+      {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2
+      },
+      {
+        "name": "Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3
+      },
+      {
+        "name": "Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4
+      },
+      {
+        "name": "Verify original checkout and runner tuple",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5
+      },
+      {
+        "name": "Prepare private Linux display",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 6
+      },
+      {
+        "name": "Install frozen workspace and Electron",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7
+      },
+      {
+        "name": "Build existing Desktop prerequisites and verify admission",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8
+      },
+      {
+        "name": "Verify original Runtime and Team conversation contracts",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 9
+      },
+      {
+        "name": "Verify complete workspace types and original typed lint scopes",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 10
+      },
+      {
+        "name": "Capture package-manager and Host inputs without vendor executables",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 11
+      },
+      {
+        "name": "Capture original controlled Linux process input without a provider",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 12
+      },
+      {
+        "name": "Exercise ordinary Team controls and renderer reload",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 13
+      },
+      {
+        "name": "Exercise ordinary Taskboard controls and persistence",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 14
+      },
+      {
+        "name": "Exercise original Skills and cross-Team controls",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 15
+      },
+      {
+        "name": "Exercise model, effort and credential controls with the pinned TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 16
+      },
+      {
+        "name": "Exercise original collaboration, Extensions and saved-import controls through finite peers",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 17
+      },
+      {
+        "name": "Exercise original Codex browser and device login controls through the finite TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 18
+      },
+      {
+        "name": "Exercise original cold Claude Resume and active Quit with the finite SDK peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 19
+      },
+      {
+        "name": "Exercise original provider conversations and schedules through pinned TEST peers",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 20
+      },
+      {
+        "name": "Exercise original Review Keep, Reject, Undo, Redo and reload",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 21
+      },
+      {
+        "name": "Exercise original Review after a cold Host and app restart",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 22
+      },
+      {
+        "name": "Exercise saved next-launch selection while the original Team remains live",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 23
+      },
+      {
+        "name": "Exercise original cold Processes Stop with an independently retained neighbor",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 24
+      },
+      {
+        "name": "Exercise stock Codex Update while the original Team retains its captured source",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 25
+      },
+      {
+        "name": "Stage checksum-pinned OpenCode base without executing the legacy CLI",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 26
+      },
+      {
+        "name": "Prepare exact OpenCode V2 Bun and engine graph",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 27
+      },
+      {
+        "name": "Exercise original OpenCode V2 credential and scoped model Settings",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 28
+      },
+      {
+        "name": "Verify original OpenCode V2 UI receipts and physical cleanup",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 29
+      },
+      {
+        "name": "Verify exact source, original screenshots, receipts and cleanup",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 30
+      },
+      {
+        "name": "Preserve original Desktop evidence, including failures",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 31
+      },
+      {
+        "name": "Post Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 60
+      },
+      {
+        "name": "Post Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 61
+      },
+      {
+        "name": "Post Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 62
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 63
+      }
+    ]
+  },
+  "rawLog": {
+    "path": "team-578-original/job-133150851331.log",
+    "gitBlob": "f8710649393df89727eedf54ac54e59b61c0ace0",
+    "bytes": 2709748,
+    "sha256": "aa428b27236f3867f1cdf13c32494a61ec4fa4ffef02cce2a57794ae2024fa81"
+  },
+  "rawPreservation": {
+    "utf8BomPresent": true,
+    "lines": 16645,
+    "fullLogRequests": 1,
+    "requestedOnlyAfterTerminalNotice": true,
+    "bytesUnmodified": true,
+    "retrievedArtifacts": 0
+  },
+  "terminalSnapshot": {
+    "path": "cohort-578-preservation-0807/snapshot.json",
+    "gitBlob": "2addbb6f2985a52252e21d0861dfe838fcef2c45",
+    "bytes": 188491,
+    "sha256": "02a19d0ca40bc190b2b75348d7b2568319ec6d6f96d0ff150e12654a24df79dd"
+  },
+  "sourceBinding": {
+    "path": "team-578-original/source-binding.json",
+    "gitBlob": "e9f57a6f00c2ad5e4d27b9bb7c42cd3b66834ad2",
+    "bytes": 23742,
+    "sha256": "0570e0742162ca529bd5661368a3e07c0644936d26558747136a5d8d1d7c6756"
+  },
+  "sourceAndToolchain": {
+    "checkoutEvidence": {
+      "log": "job-133150851331.log",
+      "lines": [
+        153,
+        156
+      ]
+    },
+    "originalCheckoutVerification": {
+      "log": "job-133150851331.log",
+      "lines": [
+        246,
+        263
+      ]
+    },
+    "Node": "24.21.0",
+    "NodeEvidence": {
+      "log": "job-133150851331.log",
+      "lines": [
+        236,
+        236
+      ]
+    },
+    "typescriptNative": "7.0.2",
+    "typescriptNativeEvidence": {
+      "log": "job-133150851331.log",
+      "lines": [
+        621,
+        621
+      ]
+    },
+    "typescriptPackage": "5.9.3",
+    "typescriptPackageEvidence": {
+      "log": "job-133150851331.log",
+      "lines": [
+        656,
+        656
+      ]
+    },
+    "pnpm": "11.22.0",
+    "pnpmEvidence": {
+      "log": "job-133150851331.log",
+      "lines": [
+        673,
+        673
+      ]
+    },
+    "Electron": "44.10.1",
+    "ElectronEvidence": {
+      "log": "job-133150851331.log",
+      "lines": [
+        307,
+        310
+      ]
+    },
+    "frozenInstallAndElectronRebuild": {
+      "step": 7,
+      "conclusion": "success",
+      "evidence": {
+        "log": "job-133150851331.log",
+        "lines": [
+          305,
+          677
+        ]
+      }
+    }
+  },
+  "prerequisites": {
+    "step": 8,
+    "conclusion": "success",
+    "buildCommands": [
+      "if [[ \"$RUNNER_OS\" = Linux ]]; then node scripts/build/buildLinuxNodeExec.mjs; fi",
+      "pnpm --filter @agent-teams/legacy-agent-host build",
+      "pnpm --filter agent-teams-controller build",
+      "pnpm --filter agent-teams-mcp build"
+    ],
+    "HostLedgerControllerMcpBuildEvidence": {
+      "log": "job-133150851331.log",
+      "lines": [
+        678,
+        709
+      ]
+    },
+    "originalEightFile": {
+      "command": "node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+      "counts": {
+        "tests": 119,
+        "pass": 119,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "durationMs": 9323.497629,
+      "evidence": {
+        "log": "job-133150851331.log",
+        "lines": [
+          684,
+          838
+        ]
+      }
+    },
+    "installRetry": {
+      "command": "node --test test/scripts/installDependenciesWithRetry.test.mjs",
+      "counts": {
+        "tests": 7,
+        "pass": 7,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "durationMs": 222.29307,
+      "evidence": {
+        "log": "job-133150851331.log",
+        "lines": [
+          839,
+          853
+        ]
+      }
+    }
+  },
+  "runtimeTeamFullTen": {
+    "step": 9,
+    "conclusion": "success",
+    "command": "node --test --test-concurrency=1 packages/legacy-agent-host/tests/runtime-activity.test.ts packages/legacy-agent-host/tests/runtime-team-host.test.ts packages/legacy-agent-host/tests/team-snapshot.test.ts packages/legacy-agent-host/tests/team-product-changes.test.ts packages/legacy-agent-host/tests/team-activity-read.test.ts packages/legacy-agent-host/tests/captured-claude-process.test.ts packages/legacy-agent-host/tests/codex-member-provider.test.ts packages/legacy-agent-host/tests/member-process-stderr.test.ts packages/legacy-agent-host/tests/member-provider-authority.test.ts packages/legacy-agent-host/tests/owned-process-facade.test.ts",
+    "counts": {
+      "tests": 179,
+      "pass": 179,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "durationMs": 91180.100707,
+    "commandEvidence": {
+      "log": "job-133150851331.log",
+      "lines": [
+        856,
+        856
+      ]
+    },
+    "summaryEvidence": {
+      "log": "job-133150851331.log",
+      "lines": [
+        1058,
+        1065
+      ]
+    },
+    "individualPassLinesIndependentlyCounted": 179,
+    "notHistorical177": true,
+    "preservedWarning": {
+      "code": "CLAUDE_SDK_CAN_USE_TOOL_SHADOWED",
+      "evidence": {
+        "log": "job-133150851331.log",
+        "lines": [
+          867,
+          868
+        ]
+      },
+      "notRealVendorQualification": true
+    }
+  },
+  "stderrPrivacy": {
+    "helperBlob": "0b0fc2a68fe678ebbce24227bf6e6002d12701d9",
+    "testBlob": "ce5c3a7511009501ca057f01957008a8ce3ef67b",
+    "all24Cases": [
+      {
+        "line": 909,
+        "outcome": "PASS",
+        "name": "original stderr captures startup and tail while redacting selected values across UTF-8 chunks"
+      },
+      {
+        "line": 910,
+        "outcome": "PASS",
+        "name": "standalone stderr uses selected private values without a Team endpoint"
+      },
+      {
+        "line": 911,
+        "outcome": "PASS",
+        "name": "invalid UTF-8 and NUL are readable diagnostics, including a final incomplete sequence"
+      },
+      {
+        "line": 912,
+        "outcome": "PASS",
+        "name": "decoded UTF-8 and NUL expansion cannot exceed the retained text byte limit"
+      },
+      {
+        "line": 913,
+        "outcome": "PASS",
+        "name": "oversized lines discard their complete suffix and preserve a multiline dump opener"
+      },
+      {
+        "line": 914,
+        "outcome": "PASS",
+        "name": "dump continuations stay suppressed through ordinary newlines and oversized fragments"
+      },
+      {
+        "line": 915,
+        "outcome": "PASS",
+        "name": "observer errors and reentrant close cannot change stream outcomes or duplicate a tail"
+      },
+      {
+        "line": 916,
+        "outcome": "PASS",
+        "name": "a bounded escape-heavy line remains subject to the existing serialized journal limit"
+      },
+      {
+        "line": 917,
+        "outcome": "PASS",
+        "name": "held escaped, URI and whitespace-normalized values and quoted assignments cannot leave secret suffixes"
+      },
+      {
+        "line": 918,
+        "outcome": "PASS",
+        "name": "overlapping held values are masked in one pass: ABABAB"
+      },
+      {
+        "line": 919,
+        "outcome": "PASS",
+        "name": "overlapping held values are masked in one pass: a"
+      },
+      {
+        "line": 920,
+        "outcome": "PASS",
+        "name": "long split ANSI does not lose a dump opener before flush"
+      },
+      {
+        "line": 921,
+        "outcome": "PASS",
+        "name": "long split ANSI does not lose a dump opener before discard"
+      },
+      {
+        "line": 922,
+        "outcome": "PASS",
+        "name": "dump detection continues through already discarded oversized fragments"
+      },
+      {
+        "line": 923,
+        "outcome": "PASS",
+        "name": "a short held value cannot destroy sensitive syntax before classification: s"
+      },
+      {
+        "line": 924,
+        "outcome": "PASS",
+        "name": "a short held value cannot destroy sensitive syntax before classification: a"
+      },
+      {
+        "line": 925,
+        "outcome": "PASS",
+        "name": "a short held value cannot destroy sensitive syntax before classification: h"
+      },
+      {
+        "line": 926,
+        "outcome": "PASS",
+        "name": "syntax redaction cannot expose fragments of a transformed held value"
+      },
+      {
+        "line": 927,
+        "outcome": "PASS",
+        "name": "an ANSI prefix larger than the line budget remains fail-closed (false)"
+      },
+      {
+        "line": 928,
+        "outcome": "PASS",
+        "name": "an ANSI prefix larger than the line budget remains fail-closed (true)"
+      },
+      {
+        "line": 929,
+        "outcome": "PASS",
+        "name": "held whitespace values cannot leak after contextual syntax redaction (space)"
+      },
+      {
+        "line": 930,
+        "outcome": "PASS",
+        "name": "held whitespace values cannot leak after contextual syntax redaction (tab)"
+      },
+      {
+        "line": 931,
+        "outcome": "PASS",
+        "name": "held whitespace values cannot leak after contextual syntax redaction (mixed)"
+      },
+      {
+        "line": 932,
+        "outcome": "PASS",
+        "name": "safe diagnostics and unambiguous held-value context remain readable"
+      }
+    ],
+    "heldWhitespaceCasesAtLines": [
+      929,
+      930,
+      931
+    ],
+    "safeControlAtLine": 932,
+    "earlyZeroObservation": {
+      "sourceLine": 60,
+      "passingExistingCaseAtLogLine": 910,
+      "assertion": "assert.equal(f.observations.length, 0, 'no diagnostic is synthesized before original stderr arrives');",
+      "notAdditionalTwentyFifthCase": true
+    },
+    "scope": "Actual current578 original full10 result includes all24 preserved stderr cases and the private early assertion; historical072733 RED and source-bound older GREEN remain unchanged."
+  },
+  "fullTypesAndTypedLint": {
+    "step": 10,
+    "conclusion": "success",
+    "serialShell": "set -euo pipefail",
+    "originalCommands": [
+      {
+        "line": 1162,
+        "command": "pnpm typecheck:workspace"
+      },
+      {
+        "line": 1163,
+        "command": "node node_modules/@typescript/native/bin/tsc --noEmit -p test/features/agent-backend/tsconfig.json"
+      },
+      {
+        "line": 1164,
+        "command": "pnpm lint:ci:files src/main src/preload src/shared src/types --cache-location .eslintcache-main"
+      },
+      {
+        "line": 1165,
+        "command": "pnpm lint:ci:files src/renderer --cache-location .eslintcache-renderer"
+      },
+      {
+        "line": 1166,
+        "command": "pnpm lint:ci:files src/features --cache-location .eslintcache-features"
+      },
+      {
+        "line": 1167,
+        "command": "pnpm lint:mcp"
+      }
+    ],
+    "workspaceExpansion": [
+      {
+        "line": 1192,
+        "command": "$ pnpm typecheck && pnpm typecheck:legacy-host-scripts && pnpm --filter @agent-teams/legacy-agent-host typecheck:test && pnpm --filter agent-teams-mcp typecheck && pnpm --filter agent-teams-mcp typecheck:test"
+      },
+      {
+        "line": 1193,
+        "command": "$ pnpm --filter @agent-teams/legacy-agent-host build"
+      },
+      {
+        "line": 1194,
+        "command": "$ pnpm --filter @agent-teams/task-change-ledger build"
+      },
+      {
+        "line": 1195,
+        "command": "$ node node_modules/@typescript/native/bin/tsc -p tsconfig.json"
+      },
+      {
+        "line": 1196,
+        "command": "$ node node_modules/@typescript/native/bin/tsc -p tsconfig.json"
+      },
+      {
+        "line": 1197,
+        "command": "$ node ./node_modules/@typescript/native/bin/tsc --noEmit && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.updater-e2e.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.release-tooling.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-e2e.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-sdk-e2e.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-sdk-preload.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-sdk-renderer.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.desktop-e2e.json"
+      },
+      {
+        "line": 1198,
+        "command": "$ node node_modules/@typescript/native/bin/tsc --project tsconfig.legacy-agent-host-scripts.json"
+      },
+      {
+        "line": 1199,
+        "command": "$ node node_modules/@typescript/native/bin/tsc -p tsconfig.test.json"
+      },
+      {
+        "line": 1200,
+        "command": "$ tsc --noEmit"
+      },
+      {
+        "line": 1201,
+        "command": "$ tsc --noEmit -p tsconfig.test.json"
+      }
+    ],
+    "explicitBackendCompiler": {
+      "command": "node node_modules/@typescript/native/bin/tsc --noEmit -p test/features/agent-backend/tsconfig.json",
+      "silentOutput": true,
+      "successBasis": "Exact command in set-e step10, subsequent typed lint and next step, plus terminal step10 success. No invented separate compiler receipt."
+    },
+    "fastLint": {
+      "fileOperands": 93,
+      "commandEvidence": {
+        "log": "job-133150851331.log",
+        "lines": [
+          1068,
+          1161
+        ]
+      },
+      "executedExpansion": {
+        "log": "job-133150851331.log",
+        "lines": [
+          1177,
+          1177
+        ]
+      }
+    },
+    "typedLintExecutedExpansions": [
+      {
+        "line": 1202,
+        "command": "$ node --max-old-space-size=8192 node_modules/eslint/bin/eslint.js --cache --cache-strategy content src/main src/preload src/shared src/types --cache-location .eslintcache-main"
+      },
+      {
+        "line": 8447,
+        "command": "$ node --max-old-space-size=8192 node_modules/eslint/bin/eslint.js --cache --cache-strategy content src/renderer --cache-location .eslintcache-renderer"
+      },
+      {
+        "line": 13180,
+        "command": "$ node --max-old-space-size=8192 node_modules/eslint/bin/eslint.js --cache --cache-strategy content src/features --cache-location .eslintcache-features"
+      },
+      {
+        "line": 15707,
+        "command": "$ pnpm --filter agent-teams-mcp lint"
+      },
+      {
+        "line": 15708,
+        "command": "$ eslint \"src/**/*.ts\""
+      }
+    ],
+    "warningsRetained": [
+      {
+        "scope": "fast 93 file operands",
+        "rawLine": 1190,
+        "errors": 0,
+        "warnings": 5,
+        "literal": "✖ 5 problems (0 errors, 5 warnings)"
+      },
+      {
+        "scope": "main/preload/shared/types",
+        "rawLine": 8444,
+        "errors": 0,
+        "warnings": 3338,
+        "literal": "✖ 3338 problems (0 errors, 3338 warnings)"
+      },
+      {
+        "scope": "renderer",
+        "rawLine": 13177,
+        "errors": 0,
+        "warnings": 1416,
+        "literal": "✖ 1416 problems (0 errors, 1416 warnings)"
+      },
+      {
+        "scope": "features",
+        "rawLine": 15704,
+        "errors": 0,
+        "warnings": 1483,
+        "literal": "✖ 1483 problems (0 errors, 1483 warnings)"
+      },
+      {
+        "scope": "MCP",
+        "rawLine": 15718,
+        "errors": 0,
+        "warnings": 4,
+        "literal": "✖ 4 problems (0 errors, 4 warnings)"
+      }
+    ],
+    "multipleProjectsPerformanceWarning": {
+      "log": "job-133150851331.log",
+      "lines": [
+        13181,
+        13181
+      ]
+    },
+    "lastSummaryAndNextStep": {
+      "log": "job-133150851331.log",
+      "lines": [
+        15718,
+        15720
+      ]
+    },
+    "errorAnnotationsInWholeLog": 0,
+    "noWarningSuppressionOrLintScopeChange": true
+  },
+  "downstreamTeamUi": {
+    "step": 13,
+    "conclusion": "success",
+    "mode": "team-ui",
+    "prepared": {
+      "line": 15824,
+      "receipt": "/home/runner/work/_temp/TEST-desktop-backend-kPz1bG/desktop-backend-receipt.json"
+    },
+    "actualPassLog": {
+      "log": "job-133150851331.log",
+      "lines": [
+        15825,
+        15825
+      ]
+    },
+    "originalVerifier": {
+      "step": 30,
+      "conclusion": "success",
+      "bodyEvidence": {
+        "log": "job-133150851331.log",
+        "lines": [
+          15828,
+          16510
+        ]
+      },
+      "sourceAndCleanupAssertionsPresentAtLines": [
+        15839,
+        15893,
+        15916,
+        15917,
+        15918
+      ],
+      "selectedTeamReceiptModeLine": 15856
+    },
+    "originalUpload": {
+      "step": 31,
+      "conclusion": "success",
+      "artifactId": 14207048848,
+      "bytesReported": 651631,
+      "sha256Reported": "d16e4dd4556eb2732788275367240825716bdb2f512eeacdd8aed1e5123e37b9",
+      "fileCountReported": 14,
+      "evidence": {
+        "log": "job-133150851331.log",
+        "lines": [
+          16613,
+          16624
+        ]
+      },
+      "downloadedOrRehashedHere": false
+    },
+    "independentReceiptPngOrCleanupForensicsPerformedHere": false,
+    "scope": "Original Team UI and original verifier completed successfully for578. This audit does not independently inspect the uploaded receipt/PNG bytes or infer skipped lane details."
+  },
+  "p11Disposition": {
+    "actualCurrentFullTypesTypedRendererBaselineSatisfiedFor578": true,
+    "originalEightAndFullTenAlsoPassedFor578": true,
+    "phaseASelectedByThisAudit": false,
+    "phaseAActualResult": null,
+    "phaseBActualResult": null,
+    "phaseCActualResult": null,
+    "nextRequired": "Fresh exact current-parent append-only R1/R2 and documentary publication/readback before selecting the unchanged one-test A95b→3c. Preserve A semantic RED/R2→B GREEN/R2→C original V2 Settings then added journey ordering. No local project execution."
+  },
+  "qualificationLimits": [
+    "Host run aggregate is FAILURE despite this individual Team SUCCESS.",
+    "No result is transferred to a future A/B/C composition, new source, another OS or another Desktop lane.",
+    "No P08/P09/I386/M16, genuine donor/current-positive Resume, vendor authentication or release qualification.",
+    "Selected lane verifier explicitly records nativeProviders not executed, vendorAuthQualified false and releaseQualified false.",
+    "No artifact download, source/project/native/GUI execution, Git/index mutation, workflow action or source application was performed for this audit."
+  ]
+}

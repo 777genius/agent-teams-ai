@@ -1,0 +1,11 @@
+✔ conversation equal text remains input-distinct, existing blocks may clear, and 65 blocks survive count retention (1606.710017ms)
+✔ conversation exact reserved-envelope budget retains the reply and one extra byte reports loss without evicting it (1135.942754ms)
+✔ ordinary long replies preserve 30 KiB snapshots and 300 KiB Unicode through signed fragments and cold reads (905.155512ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5448.255005

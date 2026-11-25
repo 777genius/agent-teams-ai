@@ -11,6 +11,7 @@ import type {
   GlobalTask,
   TaskComment,
   TeamMessageNotificationData,
+  TeamReadUnavailable,
 } from '../../../src/shared/types';
 
 const { notify } = vi.hoisted(() => ({
@@ -63,6 +64,39 @@ describe('task comment startup history', () => {
     vi.useRealTimers();
     notify.mockClear();
     resetGlobalTaskNotificationTrackerForTests();
+  });
+
+
+  it('preserves fresh comments and the original cutoff when one unavailable owner recovers', () => {
+    const healthy = { ...task(), id: 'healthy-task', teamName: 'healthy-team',
+      teamDisplayName: 'Healthy Team', ownerResourceRef: 'TEST-healthy-owner' };
+    refresh([], [healthy], consumeFirstGlobalTasksFetchFlag());
+    vi.setSystemTime('2026-09-09T10:01:00.000Z');
+    const recovered = { ...task([comment('old'), comment('new-recovered', new Date().toISOString())]),
+      ownerResourceRef: 'TEST-recovered-owner' };
+    const updatedHealthy = { ...healthy, comments: [comment('new-healthy', new Date().toISOString())] };
+    const unavailable: TeamReadUnavailable[] = [{
+      kind: 'owner', ownerResourceRef: 'TEST-recovered-owner', code: 'unavailable', outcome: 'unknown',
+    }];
+    const current = [recovered, updatedHealthy];
+    processGlobalTaskNotifications({ oldTasks: [healthy], newTasks: current,
+      isInitialFetch: false, appConfig: null, teamByName: {}, previouslyUnavailable: unavailable });
+    processGlobalTaskNotifications({ oldTasks: current, newTasks: current,
+      isInitialFetch: false, appConfig: null, teamByName: {}, previouslyUnavailable: unavailable });
+    expect(commentToasts().map((row) => row.target)).toEqual([
+      expect.objectContaining({ teamName: recovered.teamName, commentId: 'new-recovered' }),
+      expect.objectContaining({ teamName: healthy.teamName, commentId: 'new-healthy' }),
+    ]);
+    expect(notify.mock.calls.map(([row]) => row.teamEventType)).toEqual(['task_comment', 'task_comment']);
+    expect(consumeFirstGlobalTasksFetchFlag()).toBe(false);
+
+    notify.mockClear();
+    vi.setSystemTime('2026-09-09T11:00:00.000Z');
+    invalidateContextScopedRequestEpoch();
+    processGlobalTaskNotifications({ oldTasks: [], newTasks: current,
+      isInitialFetch: consumeFirstGlobalTasksFetchFlag(), appConfig: null, teamByName: {},
+      previouslyUnavailable: unavailable });
+    expect(notify).not.toHaveBeenCalled();
   });
 
   it('does not toast hours-old comments discovered after an empty startup snapshot', () => {

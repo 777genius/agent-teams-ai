@@ -1,0 +1,179 @@
+{
+  "kind": "PROSPECTIVE_CURRENT_SETTINGS_LOADING_OWNER_COMPLETION",
+  "boundAt": "2026-11-16 12:14:36 UTC",
+  "parent": "6d446d74da33681180b0eecfd13b8bf84807efd4",
+  "parentTree": "1ddf8d07069049ed722fe077b3a467b6f49234eb",
+  "primary": "852d9bd3f9142603340f71ca998739e69da00084",
+  "base": "def734338f13bcc3209e78079a0cedbc48f05a5b",
+  "draft": true,
+  "sourceFiles": [
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/runtimeProviderViewRefresh.ts",
+      "before": {
+        "sha": "ae36029a51a805c1a1a45e17fd08fa3874d8c85e",
+        "bytes": 5784,
+        "sha256": "7d8e0908290b88c0f0ee1a331d590680f32d9e810d075e09b54162b148eadab0",
+        "lines": 174
+      },
+      "after": {
+        "sha": "e8fbf803614d4fecc90b8e8f34c64b9e6350a81f",
+        "bytes": 5660,
+        "sha256": "89707a4d23754519902d2a9413410e7468e41584fa1104bc4fb304ee8a889ea2",
+        "lines": 174
+      }
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "before": {
+        "sha": "7342e99150860ac599c3614973334509329ae9b8",
+        "bytes": 189367,
+        "sha256": "0a9b5850918d7c60c2fc9d2521b9b3254619b007ce95926c4edf42b348b8612b",
+        "lines": 5887
+      },
+      "after": {
+        "sha": "c9e19b14b433c58494c10b06eac9f82d5f5cd118",
+        "bytes": 195789,
+        "sha256": "008d47eafc5f9113af654cd42c29bdc398ed1969695d15c3650898b281cbb195",
+        "lines": 6034
+      }
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "before": {
+        "sha": "bcb0a96cda38afc462161fcfdd25bb0626e43ce3",
+        "bytes": 101993,
+        "sha256": "a8f2c36fce25c7724ca751d12bfd1cb4a1ffff481a84c4cb4482d7943864dd5a",
+        "lines": 1316
+      },
+      "after": {
+        "sha": "b9f7f33d7752f0029c970268ac82d7598746ea7e",
+        "bytes": 102095,
+        "sha256": "d56ef0062fe0dc9974bf5c4c1e7093f4e79f183d5219071e7690e609ed20bdca",
+        "lines": 1317
+      }
+    }
+  ],
+  "patch": {
+    "sha": "e5a05445207411f642ab83c45e18250f22abb61e",
+    "bytes": 10407,
+    "sha256": "3a18fa63e76b0e85733dc25b5cd7e3c489dfbe5e9793dd034adcd81b81e88fc1",
+    "lines": 221
+  },
+  "productionChanges": "three replaced lines in the existing helper; one currentness guard plus two diagnostic shorthand fields",
+  "testChanges": {
+    "oldCurrentSilentCaseAdjusted": 1,
+    "otherDiagnosticCasesPreserved": 5,
+    "newActualHookCases": 4,
+    "wholeOtherPriorTestsPreserved": true,
+    "sourceConfirmedDefect": true,
+    "historicalSettingsCauseProven": false,
+    "execution": null
+  },
+  "workflow": {
+    "path": ".github/workflows/host-emulated-acceptance.yml",
+    "before": {
+      "sha": "bcb0a96cda38afc462161fcfdd25bb0626e43ce3",
+      "bytes": 101993,
+      "sha256": "a8f2c36fce25c7724ca751d12bfd1cb4a1ffff481a84c4cb4482d7943864dd5a",
+      "lines": 1316
+    },
+    "after": {
+      "sha": "b9f7f33d7752f0029c970268ac82d7598746ea7e",
+      "bytes": 102095,
+      "sha256": "d56ef0062fe0dc9974bf5c4c1e7093f4e79f183d5219071e7690e609ed20bdca",
+      "lines": 1317
+    },
+    "patch": {
+      "sha": "fccbf72e5ea027b64ff783224922719dd84084fd",
+      "bytes": 363,
+      "sha256": "1f340301a7fbed649c5800dfd9d483ab6e29c28f3eac5cfe54938aef8429cc08",
+      "lines": 6
+    },
+    "oldLine": 211,
+    "from": 97,
+    "to": 98,
+    "appended": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+    "allPriorOperandOrderPreserved": true,
+    "otherWorkflowBytesPreserved": true,
+    "configuredCoverage": {
+      "helper": "General Fast feedback pnpm lint:fast includes src; Host Team typed features scope includes source",
+      "testCompiler": "Root strict tsconfig568952 includes test/**/*",
+      "testLint": "This exact appended operand closes omission; actual execution still required"
+    },
+    "projectExecution": false,
+    "selected": false
+  },
+  "compiler": {
+    "path": "tsconfig.json",
+    "blob": "568952f5025a88c16b0568c7279d8e85a4288b43",
+    "strict": true,
+    "existingIncludes": [
+      "src/**/*",
+      "test/**/*"
+    ],
+    "newContext": false
+  },
+  "generalCI": {
+    "path": ".github/workflows/ci.yml",
+    "blob": "da94c393b024d3c8a40159edbf9975cd528007a6",
+    "helperFastScope": "src/",
+    "helperTypedScope": "src/features",
+    "rendererTestAlreadyLinted": false
+  },
+  "plan29": {
+    "before": {
+      "sha": "c54e2a756c53f7798f33e224c09ed883ec98381b",
+      "bytes": 1954492,
+      "sha256": "f76c1ace19e7f265b660e74fe5d79f3425ac90dfee566135f8df5cd72aae7aeb",
+      "lines": 8478
+    },
+    "after": {
+      "sha": "311fe7ef1550903fd6df866e1aa7ba4831132375",
+      "bytes": 1963158,
+      "sha256": "a11876cf7b3e336fb72f8921967d24ac2c63de061ad84f32d380ff43aa81e0df",
+      "lines": 8522
+    },
+    "append": {
+      "sha": "46de2afe87ffd4ff20a4f2c562fe5e8de0bd34fc",
+      "bytes": 8666,
+      "sha256": "b3f5f5815157a9775e652f4c45022c639cd011514ed96cc5cca8bcd02131c24c",
+      "lines": 44
+    },
+    "completePrefixPreserved": true
+  },
+  "plan30": {
+    "sha": "bea6f50310ca47022159631131f4815a93951251",
+    "unchanged": true
+  },
+  "phase": {
+    "primaryAdvancement": false,
+    "BActualGatesStillRequired": true,
+    "CSelected": false,
+    "extraMandatoryCiRoundBeforeC": false,
+    "newRedOnlyCycle": false,
+    "futureCOperands": 103
+  },
+  "proof": {
+    "inertTextHashOnly": true,
+    "projectExecution": false,
+    "actualTests": null,
+    "actualLint": null,
+    "actualTypes": null,
+    "unselectedLeavesPreserved": true
+  },
+  "originalBudgets": {
+    "SettingsWaitMs": 30000,
+    "TeamJobMinutes": 45,
+    "WindowsReadinessMs": 15000,
+    "changed": false
+  },
+  "required": [
+    "Independent prospective exact source/documentary union R2",
+    "Separate documentation commit and immediate ordinary push/full readback",
+    "Independent published-R1 R2 before exact three-source child",
+    "Immediate ordinary source push/full body/tree/ref readback",
+    "Original resulting-source full types/fast and typed lint/full frontend/Settings/E2E qualification"
+  ],
+  "noRealClaudeCodex": true,
+  "sourceCapsChanged": false
+}

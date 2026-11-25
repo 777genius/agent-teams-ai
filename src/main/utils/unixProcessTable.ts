@@ -1,5 +1,7 @@
-import { spawnSync } from 'child_process';
 import { readFileSync } from 'fs';
+
+import { spawnSyncWithLinuxChildLaunch } from './linuxChildLaunch';
+import { traceTestUnixProcessTableResult } from './testChildProcessTrace';
 
 export interface UnixProcessIdentity {
   pid: number;
@@ -18,10 +20,11 @@ export function tryReadUnixProcessTable(): Map<number, UnixProcessIdentity> | nu
 
 export function readUnixProcessTable(rootPid: number): Map<number, UnixProcessIdentity> {
   try {
-    const result = spawnSync('ps', ['-axo', 'pid=,ppid=,pgid=,lstart='], {
+    const result = spawnSyncWithLinuxChildLaunch('ps', ['-axo', 'pid=,ppid=,pgid=,lstart='], {
       encoding: 'utf8',
       windowsHide: true,
     });
+    traceTestUnixProcessTableResult(result);
     if (result.error || result.status !== 0 || typeof result.stdout !== 'string') {
       throw new Error(`Failed to inspect Unix process tree ${rootPid}`);
     }
