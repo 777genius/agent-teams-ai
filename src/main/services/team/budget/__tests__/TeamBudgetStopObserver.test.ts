@@ -117,6 +117,25 @@ describe('team budget stop observer', () => {
     expect(stop).toHaveBeenCalledExactlyOnceWith('ptc-first');
   });
 
+  it('still stops the owned native team if its project index is unreadable', async () => {
+    let alive = true;
+    const stop = vi.fn(async () => { alive = false; });
+    const warn = vi.fn();
+    const observer = new TeamBudgetStopObserver({
+      readCurrentStatus: async () => makeStatus(),
+      aliveTeams: () => alive ? ['alpha'] : [],
+      resolveRuntimeNames: async () => { throw new Error('Corrupt project index'); },
+      ownsTeam: async () => true,
+      stopTeam: stop,
+      isTeamAlive: async () => alive,
+      warn,
+    });
+    observer.observe(makeStatus());
+    await settle();
+    expect(stop).toHaveBeenCalledExactlyOnceWith('alpha');
+    expect(warn).toHaveBeenCalledOnce();
+  });
+
   it('continues stopping other owned copies when the first stop fails', async () => {
     const stop = vi.fn(async (name: string) => {
       if (name === 'ptc-broken') throw new Error('Cannot stop broken runtime');
