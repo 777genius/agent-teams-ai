@@ -15,6 +15,7 @@ import { computeScheduleNextRunAt } from './computeScheduleNextRunAt';
 import { recoverInterruptedScheduleRuns } from './recoverInterruptedScheduleRuns';
 import { SchedulerStopBarrier } from './SchedulerStopBarrier';
 import { admissionRefusal, folderChange, type ScheduleAdmissionCheck } from './scheduleTarget';
+import { updateScheduleTimestamps } from './updateScheduleTimestamps';
 
 import type { ScheduledTaskExecutor } from './ScheduledTaskExecutor';
 import type { ScheduleRepository } from './ScheduleRepository';
@@ -671,7 +672,7 @@ export class SchedulerService {
         if (this.activeRuns.get(scheduleId)?.id === run.id) this.releaseRunLocks(scheduleId);
         // A cancelled external dispatch cannot write after stop/fixture teardown.
         if (!finishFinalization) return;
-        await this.updateScheduleTimestamps(schedule);
+        await updateScheduleTimestamps(this.repository, schedule, (event) => this.emitChange(event));
         const freshSchedule = await this.repository.getSchedule(scheduleId);
         if (!this.stopped && freshSchedule?.status === 'active') this.scheduleWarmUp(freshSchedule);
       } finally {
@@ -820,32 +821,6 @@ export class SchedulerService {
         detail: `auto-paused after ${newCount} consecutive failures`,
       });
     }
-  }
-  // ===========================================================================
-  // Schedule Timestamp Updates
-  // ===========================================================================
-
-  private async updateScheduleTimestamps(schedule: Schedule): Promise<void> {
-    // Reload fresh from repo to avoid overwriting changes from incrementConsecutiveFailures
-    const fresh = await this.repository.getSchedule(schedule.id);
-    if (!fresh) return;
-
-    const now = new Date().toISOString();
-    const nextRunAt = computeScheduleNextRunAt(fresh);
-
-    const updated: Schedule = {
-      ...fresh,
-      lastRunAt: now,
-      nextRunAt: nextRunAt ?? undefined,
-      updatedAt: now,
-    };
-
-    await this.repository.saveSchedule(updated);
-    this.emitChange({
-      type: 'schedule-updated',
-      scheduleId: fresh.id,
-      teamName: fresh.teamName,
-    });
   }
 
   private releaseRunLocks(scheduleId: string): void {

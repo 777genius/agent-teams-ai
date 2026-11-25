@@ -210,6 +210,12 @@ import {
   restoreLogicalTeamWithContexts,
   stopLogicalTeam,
 } from './teams/teamContextLifecycle';
+import {
+  buildLeadDirectDelegateAckBlock,
+  buildLeadRosterContextBlock,
+  getDurableLeadTeammateRoster,
+  resolveVisibleDirectReplyProtocol,
+} from './teams/teamDirectMessageContext';
 import { withTeamLaunchAdmission } from './teams/teamLaunchAdmission';
 import { assertLiveRosterMutationAllowed } from './teams/teamLiveRosterMutationPolicy';
 import { teamMessageNotificationScanner } from './teams/teamMessageNotificationScanner';
@@ -288,7 +294,6 @@ import type { TeamScopedResourceReleaser } from './teams/teamScopedResourceRelea
 import type { ResolveOpenCodeInputDeclaration } from '@features/agent-attachments';
 import type {
   AddTaskCommentRequest,
-  AgentActionMode,
   AttachmentFileData,
   AttachmentPayload,
   BoardTaskActivityDetailResult,
@@ -350,22 +355,6 @@ import type { CliArgsValidationResult } from '@shared/utils/cliArgsParser';
 
 const logger = createLogger('IPC:teams');
 
-type VisibleDirectReplyProtocol = 'send_message' | 'agent_teams_message_send';
-function resolveVisibleDirectReplyProtocol(input: {
-  providerId?: TeamProviderId;
-  isLeadRecipient: boolean;
-  replyRecipient: string;
-}): VisibleDirectReplyProtocol {
-  if (
-    !input.isLeadRecipient &&
-    input.replyRecipient.trim().toLowerCase() === 'user' &&
-    input.providerId === 'codex'
-  ) {
-    return 'agent_teams_message_send';
-  }
-
-  return 'send_message';
-}
 const TEAM_DATA_DRAFT_CLASSIFICATION_ACCESS_TIMEOUT_MS = 250;
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   if (value == null || typeof value !== 'object') {
@@ -465,98 +454,6 @@ async function getNewestMessagesPageWithLiveOverlay(input: {
 
 function invalidateTeamRosterSnapshotCaches(teamName: string): void {
   invalidateNativeTeamRosterSnapshotCaches(teamName, getTeamDataService());
-}
-
-async function getDurableLeadTeammateRoster(
-  teamName: string,
-  leadName: string
-): Promise<{ name: string; role?: string }[]> {
-  const normalize = (name: string | undefined | null): string => name?.trim().toLowerCase() ?? '';
-  const leadLower = normalize(leadName);
-  const reserved = new Set(['team-lead', 'user', leadLower].filter((value) => value.length > 0));
-
-  try {
-    const members = await new TeamMembersMetaStore().getMembers(teamName);
-    const teammates = members
-      .filter((member) => !member.removedAt)
-      .filter((member) => {
-        const lower = normalize(member.name);
-        return lower.length > 0 && !reserved.has(lower);
-      })
-      .map((member) => ({
-        name: member.name.trim(),
-        role:
-          typeof member.role === 'string' && member.role.trim().length > 0
-            ? member.role.trim()
-            : undefined,
-      }));
-    if (teammates.length > 0) return teammates;
-  } catch (error) {
-    logger.debug(
-      `[teams:sendMessage] Failed to read members.meta roster for "${teamName}": ${
-        error instanceof Error ? error.message : String(error)
-      }`
-    );
-  }
-
-  try {
-    const data = await getTeamDataService().getTeamData(teamName);
-    return data.members
-      .filter((member) => !member.removedAt)
-      .filter((member) => {
-        const lower = normalize(member.name);
-        return lower.length > 0 && !reserved.has(lower);
-      })
-      .map((member) => ({
-        name: member.name.trim(),
-        role:
-          typeof member.role === 'string' && member.role.trim().length > 0
-            ? member.role.trim()
-            : undefined,
-      }));
-  } catch (error) {
-    logger.debug(
-      `[teams:sendMessage] Failed to read fallback team roster for "${teamName}": ${
-        error instanceof Error ? error.message : String(error)
-      }`
-    );
-    return [];
-  }
-}
-
-function buildLeadRosterContextBlock(
-  teamName: string,
-  leadName: string,
-  teammates: { name: string; role?: string }[]
-): string | null {
-  if (teammates.length === 0) return null;
-
-  const summary = teammates
-    .map((member) => (member.role ? `${member.name} (${member.role})` : member.name))
-    .join(', ');
-
-  return [
-    `Current durable team context:`,
-    `- Team name: ${teamName}`,
-    `- You are the live team lead "${leadName}"`,
-    `- Persistent teammates currently configured: ${summary}`,
-    `- This team is NOT in solo mode`,
-    `- If the user asks who is on the team, answer from this durable roster unless newer durable state explicitly says otherwise.`,
-  ].join('\n');
-}
-
-function buildLeadDirectDelegateAckBlock(actionMode?: AgentActionMode): string | null {
-  if (actionMode !== 'delegate') return null;
-
-  return wrapAgentBlock(
-    [
-      'DELEGATE MODE USER ACK CONTRACT:',
-      'Before any task creation, delegation, or other tool use, begin your next assistant response with one short human-readable acknowledgement to the user.',
-      'That acknowledgement must be visible plain text, not only an agent-only block.',
-      'Make the acknowledgement at least 40 characters so it is preserved in the Messages panel.',
-      'After that visible acknowledgement, continue with delegation/orchestration in the same turn.',
-    ].join('\n')
-  );
 }
 
 let teamDataService: TeamDataService | null = null;
@@ -2654,7 +2551,12 @@ async function handleSendMessage(
     // Smart routing: lead + alive → stdin direct, else → inbox
     if (isLeadRecipient && isAlive && !isOpenCodeRecipient) {
       const resolvedLeadName = leadName ?? memberName;
-      const teammateRoster = await getDurableLeadTeammateRoster(tn, resolvedLeadName);
+      const teammateRoster = await getDurableLeadTeammateRoster(
+        tn,
+        resolvedLeadName,
+        getTeamDataService,
+        logger
+      );
       const rosterContextBlock = buildLeadRosterContextBlock(tn, resolvedLeadName, teammateRoster);
       const delegateAckBlock = buildLeadDirectDelegateAckBlock(actionMode);
       // Use one stable messageId for stdin and persistence provenance.
