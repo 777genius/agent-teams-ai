@@ -1,6 +1,9 @@
 import { TeamProjectContextRegistry } from '@features/team-project-context/main';
 import { namedTeamId } from '@features/token-usage/contracts';
-import { assertTeamBudgetLaunchAllowed } from '@features/token-usage/core/domain';
+import {
+  assertTeamBudgetLaunchAllowed,
+  evaluateTeamBudgetEnforcement,
+} from '@features/token-usage/core/domain';
 
 import { stopTeamWithVerifiedEscalation } from '../lifecycle/stopTeamWithVerifiedEscalation';
 import { TeamBudgetStopObserver } from './TeamBudgetStopObserver';
@@ -68,6 +71,11 @@ export function createTeamBudgetAdmission(
     const settings = await reader.getBudgetSettings();
     if ((settings.teams?.[namedTeamId(logicalTeam)]?.onExceeded ?? 'notify') === 'notify') return;
     let status = await reader.getBudgetStatus();
+    // A known subtotal at the limit needs no expensive provider refresh.
+    // The stop/launch decision is already conclusive even if other data is late.
+    if (evaluateTeamBudgetEnforcement(status, logicalTeam).state === 'exceeded') {
+      assertTeamBudgetLaunchAllowed(status, logicalTeam);
+    }
     // Refresh first-use and rolled-over budgets once. No stale/unknown zero-spend assumption.
     if (status.stale || status.degraded || status.targets.some(
       (target) => target.scope === 'team' && target.id === namedTeamId(logicalTeam) &&

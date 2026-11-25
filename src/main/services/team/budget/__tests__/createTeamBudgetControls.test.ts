@@ -131,6 +131,12 @@ describe('team budget composition - no live provider required', () => {
     expect(refresh).toHaveBeenCalledOnce();
   });
 
+  it('rejects a known reached subtotal without waiting for stale metering to refresh', async () => {
+    const { guard, refresh } = setup({ action: 'stop_team', used: 120, stale: true });
+    await expect(guard()).rejects.toThrow('TEAM_BUDGET_BLOCKED');
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
   it('rejects launches at the limit even if budget alerts are turned off', async () => {
     const { guard, refresh, controls } = setup({ action: 'stop_team', used: 100 });
     await expect(guard()).rejects.toThrow('TEAM_BUDGET_BLOCKED');
