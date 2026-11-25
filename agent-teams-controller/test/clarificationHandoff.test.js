@@ -73,6 +73,44 @@ describe('atomic human clarification answers', () => {
     })).toThrow('different content');
   });
 
+  it('retries normalized answer references and attachments without accepting changed content', () => {
+    const task = controller.tasks.createTask({
+      subject: 'Choose database', owner: 'bob', notifyOwner: false, needsClarification: 'user',
+    });
+    const taskRef = { taskId: 'related-task', displayId: 'related', teamName: 'test-team' };
+    const attachment = {
+      id: 'answer-evidence', filename: 'evidence.txt', mimeType: 'text/plain', size: 42,
+      createdAt: '2026-11-24T00:00:00.000Z',
+    };
+    const answer = {
+      from: 'user', text: 'Use PostgreSQL',
+      answerClarificationRequestId: readTask(task.id).clarificationRequestId,
+      taskRefs: [{ ...taskRef, taskId: ' related-task ', teamName: ' test-team ' }],
+      attachments: [attachment],
+    };
+    const first = controller.tasks.addTaskComment(task.id, answer);
+    const persisted = readTask(task.id);
+    expect(persisted.comments[0].taskRefs).toEqual([taskRef]);
+
+    const retried = controller.tasks.addTaskComment(task.id, {
+      ...answer,
+      taskRefs: [taskRef],
+      attachments: [{ ...attachment, createdAt: '2026-11-25T00:00:00.000Z' }],
+    });
+    expect(retried.commentId).toBe(first.commentId);
+    expect(readTask(task.id)).toEqual(persisted);
+
+    for (const changedContent of [
+      { taskRefs: [{ ...taskRef, taskId: 'another-task' }] },
+      { attachments: [{ ...attachment, size: 43 }] },
+    ]) {
+      expect(() => controller.tasks.addTaskComment(task.id, {
+        ...answer, ...changedContent,
+      })).toThrow('Clarification already answered with different content');
+      expect(readTask(task.id)).toEqual(persisted);
+    }
+  });
+
   it('does not let an old answer close a new clarification cycle', () => {
     const task = controller.tasks.createTask({ subject: 'Pick option', owner: 'bob', notifyOwner: false });
     controller.tasks.setNeedsClarification(task.id, 'user');

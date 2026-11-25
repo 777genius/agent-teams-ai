@@ -29,9 +29,9 @@ Before publishing:
 - Confirm the GitHub release title is exactly the tag (`v2.15.0`), not `Agent Teams v2.15.0`.
 - Keep the body in this document identical to the GitHub release body.
 
-## v2.19.0 (Preparing draft)
+## v2.19.0 (Published 2026-11-25)
 
-Target branch: `main`. Includes published Agent Teams runtime `0.0.161` and Terminal Platform `0.3.4`. Runtime source and public delivery gates passed; exact-head product CI, live mixed-provider E2E, five-platform application builds, signatures, notarization, updater verification and public installation remain pending. The notes below are a draft: append the verified versioned download links after the installer inventory is available, then synchronize the exact body with the GitHub release before publication.
+Target branch: `main`; immutable release source `2a4e1c2938923826cb1555e8fb894a3fdbb4447e`. Includes Agent Teams runtime `0.0.161` and Terminal Platform `0.3.4`. The [five-platform build](https://github.com/777genius/agent-teams-ai/actions/runs/45464122669) and [draft promotion](https://github.com/777genius/agent-teams-ai/actions/runs/45606957151) passed. Published at 11:54 UTC on November 25, 2026; confirmed as GitHub's stable latest release. All five packaged-app smoke tests passed; macOS signatures and notarization passed on both architectures. Windows installers are unsigned (no code signing certificate configured). All 40 published assets have SHA-256 digests, and the official updater guard passed for all three feeds. The GitHub release body matches the public notes below. The [exact-head product CI](https://github.com/777genius/agent-teams-ai/actions/runs/45462291108) concluded `FAILURE`; previously identified noncritical issues were accepted for this release and tracked separately. Fresh installed-app launch, actual native OTA from 2.18.7, and live mixed Codex/OpenCode E2E remain unconfirmed; successful publication is not evidence of these scenarios. The feeds were generated before the final notes edit, so their embedded notes may still contain the generated changelog; this does not establish an updater installation failure.
 
 <!-- RELEASE_BODY_START v2.19.0 -->
 
@@ -60,6 +60,50 @@ Manage requests from all your teams in one place, route notifications to your pr
 - Prevent Settings crashes while provider model statuses refresh.
 - Reuse only the correct Git worktree when restarting a teammate.
 - Recover interrupted project-team launches with clearer retry guidance.
+
+### Downloads
+
+<table>
+<tr>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.19.0/Agent.Teams.AI-2.19.0-arm64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Apple_Silicon-.dmg-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Apple Silicon" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.19.0/Agent.Teams.AI-2.19.0-x64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Intel-.dmg-434343?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel" />
+  </a>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.19.0/Agent.Teams.AI.Setup.2.19.0.exe">
+    <img src="https://img.shields.io/badge/Windows_x64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows x64" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.19.0/Agent.Teams.AI.Setup.2.19.0-arm64.exe">
+    <img src="https://img.shields.io/badge/Windows_ARM64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows ARM64" />
+  </a>
+  <br />
+  <sub>May trigger SmartScreen - click "More info" then "Run anyway"</sub>
+  <br />
+  <sub>Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.</sub>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.19.0/Agent.Teams.AI-2.19.0.AppImage">
+    <img src="https://img.shields.io/badge/Linux-Download_.AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.19.0/agent-teams-ai_2.19.0_amd64.deb">
+    <img src="https://img.shields.io/badge/.deb-E95420?style=flat-square&logo=ubuntu&logoColor=white" alt=".deb" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.19.0/agent-teams-ai-2.19.0.x86_64.rpm">
+    <img src="https://img.shields.io/badge/.rpm-294172?style=flat-square&logo=redhat&logoColor=white" alt=".rpm" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.19.0/agent-teams-ai-2.19.0.pacman">
+    <img src="https://img.shields.io/badge/.pacman-1793D1?style=flat-square&logo=archlinux&logoColor=white" alt=".pacman" />
+  </a>
+</td>
+</tr>
+</table>
 
 <!-- RELEASE_BODY_END v2.19.0 -->
 
