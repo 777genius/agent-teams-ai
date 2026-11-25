@@ -5,12 +5,14 @@ import { createHash } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { performance } from 'node:perf_hooks';
 import { runInNewContext } from 'node:vm';
 import { setImmediate } from 'node:timers/promises';
 
 import { desktopShellEnvironmentProbeSource } from './desktop-backend-fixture.ts';
 import { readRendererBackendConnections } from './desktop-backend-observations.ts';
-import { attachRendererDiagnostics } from './desktop-team-ui-smoke.ts';
+import { attachRendererDiagnostics, waitForDesktopMainUiReadiness, waitForDesktopUiStartup } from './desktop-team-ui-smoke.ts';
+import { observeDesktopModuleLoads } from './desktop-module-load-observation.ts';
 import { assertDesktopOwnerRoutingAvailability } from './desktop-owner-routing-availability-ui.ts';
 import { hostTeamSelectionKey } from '../../src/features/agent-backend/contracts/teamSelection.ts';
 import { desktopTaskBoardAssignmentReadyExpression } from './desktop-task-comment-input-target.ts';
@@ -29,14 +31,18 @@ function deferred<T>() {
 }
 const ready = { originMatches: true, mainReady: true, errorPresent: false, phase: 'ready',
   uiDidInit: true, storePresent: true, rootChildCount: 1 };
-function fixture(reads: ReturnType<typeof deferred<Record<string, unknown>>>[]) {
+function fixture(reads: ReturnType<typeof deferred<Record<string, unknown>>>[], bootstrapOnly = false) {
   const listeners = new Map<string, (value: unknown) => void>();
   const acknowledgments = reads.map(() => deferred<void>());
-  let observations = 0, discovery = 0;
+  let observations = 0, discovery = 0, ownerChecks = 0;
   const commands: string[] = [];
   const cdp = {
-    on(method: string, listener: (value: unknown) => void) { listeners.set(method, listener); },
+    on(method: string, listener: (value: unknown) => void) {
+      assert.equal(bootstrapOnly, false, 'readiness-only admission has no diagnostic subscriptions');
+      listeners.set(method, listener);
+    },
     async send(method: string) {
+      assert.equal(bootstrapOnly, false, 'readiness-only admission has no diagnostic protocol calls');
       commands.push(method);
       if (method === 'Runtime.enable') listeners.get('Runtime.executionContextCreated')?.({
         context: { id: 7, auxData: { isDefault: true, frameId: 'TEST-frame' } },
@@ -58,35 +64,111 @@ function fixture(reads: ReturnType<typeof deferred<Record<string, unknown>>>[]) 
     },
   };
   const evidence: Record<string, unknown> = {};
-  const start = (remainingMs: number) => attachRendererDiagnostics(cdp, 'http://localhost:5173/', evidence,
-    { remainingMs, assertOwnedRenderer() {} }).then(() => readRendererBackendConnections(cdp));
-  return { start, acknowledgments, evidence, listeners, commands,
-    observations: () => observations, discovery: () => discovery };
+  const assertOwnedRenderer = () => { ownerChecks++; };
+  const start = (remainingMs: number) => {
+    const deadline = performance.now() + remainingMs;
+    const admission = bootstrapOnly
+      ? waitForDesktopMainUiReadiness(cdp, 'http://localhost:5173/', evidence,
+          { deadline, assertOwnedRenderer })
+      : waitForDesktopUiStartup(cdp, 'http://localhost:5173/', evidence,
+          { mode: 'team-ui', uiMode: true, deadline, remainingMs, assertOwnedRenderer });
+    return admission.then(() => readRendererBackendConnections(cdp));
+  };
+  const startNative = (deadline: number, remainingMs: number) =>
+    waitForDesktopUiStartup(cdp, 'http://localhost:5173/', evidence,
+      { mode: 'codex-login-ui', uiMode: false, deadline, remainingMs, assertOwnedRenderer })
+      .then(() => readRendererBackendConnections(cdp));
+  return { start, startNative, acknowledgments, evidence, listeners, commands,
+    observations: () => observations, discovery: () => discovery, ownerChecks: () => ownerChecks };
 }
 
 test('captured UI discovery waits for Main admission and actual mount while early diagnostics remain active', { timeout: 5000 }, async () => {
-  const reads = [deferred<Record<string, unknown>>(), deferred<Record<string, unknown>>(), deferred<Record<string, unknown>>()];
-  const f = fixture(reads), pending = f.start(3000);
-  await Promise.race([f.acknowledgments[0]!.promise, pending.then(() => { assert.fail('discovery completed before Main/UI readiness was observed'); })]);
-  assert.equal(f.discovery(), 0);
-  const diagnostics = f.evidence.rendererDiagnostics as { startup: { status: string }; };
-  assert.equal(diagnostics.startup.status, 'DOCUMENT_READY', 'document diagnostics do not wait for full app admission');
-  reads[0]!.resolve({ ...ready, mainReady: false, phase: 'team-backups' });
-  await f.acknowledgments[1]!.promise; assert.equal(f.discovery(), 0);
-  reads[1]!.resolve({ ...ready, uiDidInit: false, rootChildCount: 0 });
-  await f.acknowledgments[2]!.promise; assert.equal(f.discovery(), 0);
-  reads[2]!.resolve({ ...ready, storePresent: false }); // Packed builds expose no DEV store.
-  assert.deepEqual(await pending, { kind: 'read', value: { state: 'ready', bindings: [] } });
-  assert.equal(f.discovery(), 1);
+  for (const bootstrapOnly of [false, true]) {
+    const reads = [deferred<Record<string, unknown>>(), deferred<Record<string, unknown>>(), deferred<Record<string, unknown>>()];
+    const f = fixture(reads, bootstrapOnly), pending = f.start(3000);
+    await Promise.race([f.acknowledgments[0]!.promise, pending.then(() => { assert.fail('discovery completed before Main/UI readiness was observed'); })]);
+    assert.equal(f.discovery(), 0);
+    if (!bootstrapOnly) {
+      const diagnostics = f.evidence.rendererDiagnostics as { startup: { status: string }; };
+      assert.equal(diagnostics.startup.status, 'DOCUMENT_READY', 'document diagnostics do not wait for full app admission');
+    }
+    reads[0]!.resolve({ ...ready, mainReady: false, phase: 'team-backups' });
+    await f.acknowledgments[1]!.promise; assert.equal(f.discovery(), 0);
+    reads[1]!.resolve({ ...ready, uiDidInit: false, rootChildCount: 0 });
+    await f.acknowledgments[2]!.promise; assert.equal(f.discovery(), 0);
+    reads[2]!.resolve({ ...ready, storePresent: false }); // Packed builds expose no DEV store.
+    assert.deepEqual(await pending, { kind: 'read', value: { state: 'ready', bindings: [] } });
+    assert.equal(f.discovery(), 1);
+  }
 });
 
 test('the original remaining startup deadline rejects a pending snapshot without late discovery or a reset', { timeout: 5000 }, async () => {
-  const held = deferred<Record<string, unknown>>(), f = fixture([held]);
-  const pending = f.start(500);
+  for (const bootstrapOnly of [false, true]) {
+    const held = deferred<Record<string, unknown>>(), f = fixture([held], bootstrapOnly);
+    const pending = f.start(500);
+    const rejected = assert.rejects(pending, /Main\/UI startup readiness timed out; no mutation retry/);
+    await f.acknowledgments[0]!.promise; assert.equal(f.discovery(), 0);
+    await rejected; assert.equal(f.discovery(), 0);
+    held.resolve(ready); await setImmediate(); assert.equal(f.discovery(), 0);
+  }
+});
+
+test('native login startup keeps the original absolute deadline before and after deferred reads', { timeout: 5000 }, async (context) => {
+  const expired = fixture([], true);
+  await assert.rejects(expired.startNative(performance.now() - 1, 20_000),
+    /original startup budget expired before Main\/UI readiness/);
+  assert.equal(expired.observations(), 0); assert.equal(expired.discovery(), 0);
+  assert.equal(expired.ownerChecks(), 0);
+
+  const held = deferred<Record<string, unknown>>(), waiting = fixture([held], true);
+  const pending = waiting.startNative(performance.now() + 500, 20_000);
   const rejected = assert.rejects(pending, /Main\/UI startup readiness timed out; no mutation retry/);
-  await f.acknowledgments[0]!.promise; assert.equal(f.discovery(), 0);
-  await rejected; assert.equal(f.discovery(), 0);
-  held.resolve(ready); await setImmediate(); assert.equal(f.discovery(), 0);
+  await waiting.acknowledgments[0]!.promise;
+  assert.equal(waiting.discovery(), 0); assert.equal(waiting.ownerChecks(), 1);
+  await rejected;
+  held.resolve(ready); await setImmediate();
+  assert.equal(waiting.observations(), 1); assert.equal(waiting.discovery(), 0);
+  assert.equal(waiting.ownerChecks(), 1);
+
+  const admitted = deferred<Record<string, unknown>>(), successful = fixture([admitted], true);
+  const completing = successful.startNative(performance.now() + 3000, 20_000);
+  await successful.acknowledgments[0]!.promise; assert.equal(successful.discovery(), 0);
+  admitted.resolve({ ...ready, storePresent: false });
+  assert.deepEqual(await completing, { kind: 'read', value: { state: 'ready', bindings: [] } });
+  assert.equal(successful.discovery(), 1); assert.equal(successful.ownerChecks(), 2);
+  assert.deepEqual(successful.commands, []);
+  assert.equal(successful.evidence.rendererDiagnostics, undefined);
+  assert.equal((successful.evidence.codexLoginStartup as { appReadiness: { status: string } }).appReadiness.status, 'READY');
+
+  // Complete the deferred read after the monotonic cutoff, before its real timer fires.
+  let now = 100;
+  context.mock.method(performance, 'now', () => now);
+  const late = deferred<Record<string, unknown>>(), observedLate = fixture([late], true);
+  const completingLate = observedLate.startNative(200, 20_000);
+  const rejectedLate = assert.rejects(completingLate, /original startup budget remains after Main\/UI observation/);
+  await observedLate.acknowledgments[0]!.promise;
+  now = 201; late.resolve(ready);
+  await rejectedLate;
+  assert.equal(observedLate.observations(), 1); assert.equal(observedLate.discovery(), 0);
+  assert.equal(observedLate.ownerChecks(), 2);
+});
+
+test('startup dispatch leaves unrelated modes untouched without probes or owner callbacks', async () => {
+  let probes = 0, ownerChecks = 0;
+  const cdp = {
+    on() { probes++; assert.fail('unrelated modes must not subscribe to diagnostics'); },
+    async send() { probes++; assert.fail('unrelated modes must not send protocol commands'); },
+    async evaluate() { probes++; assert.fail('unrelated modes must not read startup'); },
+  };
+  for (const mode of ['read', 'codex-account-read', 'codex-account-auth', 'emulated-codex-login-ui']) {
+    const evidence: Record<string, unknown> = {};
+    await waitForDesktopUiStartup(cdp, 'not-a-renderer-url', evidence, {
+      mode, uiMode: false, deadline: -1, remainingMs: -1,
+      assertOwnedRenderer() { ownerChecks++; assert.fail('unrelated modes must not check the owner'); },
+    });
+    assert.deepEqual(evidence, {});
+  }
+  assert.equal(probes, 0); assert.equal(ownerChecks, 0);
 });
 
 test('startup diagnostics retain the final call and completed observation after the original 24 history cap', { timeout: 5000 }, async () => {
@@ -992,6 +1074,48 @@ test('login failure facts retain only bounded original attempts and confirmed mi
     capturedHostObserved: null, capturedHostAbsent: null, failureRecorded: null });
   assert.equal(JSON.stringify(malformed).includes(privateSentinel), false);
   assert.equal(projectDesktopCodexLoginFailure({}).originalFailureRecorded, false);
+  assert.deepEqual(projection.initialUnavailableTarget, { state: 'not-recorded' });
+  const prefix = 'UI target read failed: open existing More menu; facts=';
+  const facts = { matches: 0, disabled: false, ariaDisabled: false, pointerEventsNone: false,
+    centerInViewport: false, hitPresent: false, rootPresent: true, rootChildren: 0 };
+  const retainedEvidence = { ...evidence, failure: prefix + JSON.stringify(facts) };
+  const retainedBefore = structuredClone(retainedEvidence);
+  const retained = projectDesktopCodexLoginFailure(retainedEvidence);
+  assert.deepEqual(retained.initialUnavailableTarget, { state: 'retained', facts: {
+    disabled: false, ariaDisabled: false, pointerEventsNone: false, centerInViewport: false,
+    hitPresent: false, rootPresent: true, uiInitialized: null, splashPresent: null,
+    splashPositiveSize: null, splashError: null, splashSlow: null, documentComplete: null,
+    languageEnglish: null, languageEmpty: null, rootFallbackShape: null,
+    matches: 0, rawMatches: null, rootChildren: 0,
+  } });
+  assert.equal(JSON.stringify(retained).includes(privateSentinel), false);
+  assert.ok(Buffer.byteLength(JSON.stringify(retained)) <= 4096);
+  assert.deepEqual(retainedEvidence, retainedBefore, 'the bounded projection does not mutate the private receipt');
+  const boundary = projectDesktopCodexLoginFailure({ ...evidence,
+    failure: prefix + JSON.stringify({ ...facts, matches: 256, rawMatches: 256, rootChildren: 16 }) });
+  assert.equal((boundary.initialUnavailableTarget as { state: string }).state, 'retained');
+  const invalidFailures = [
+    prefix + '{',
+    prefix + JSON.stringify([facts]),
+    prefix + JSON.stringify({ ...facts, disabled: undefined }),
+    prefix + JSON.stringify({ ...facts, disabled: 'false' }),
+    prefix + JSON.stringify({ ...facts, rootPresent: 'true' }),
+    prefix + JSON.stringify({ ...facts, matches: -1 }),
+    prefix + JSON.stringify({ ...facts, matches: 0.5 }),
+    prefix + JSON.stringify({ ...facts, matches: 257 }),
+    prefix + JSON.stringify({ ...facts, rawMatches: 257 }),
+    prefix + JSON.stringify({ ...facts, rootChildren: 17 }),
+    prefix + JSON.stringify({ ...facts, privateUrl: privateSentinel }),
+    prefix + JSON.stringify(facts) + ' '.repeat(4001),
+  ];
+  for (const failure of invalidFailures) {
+    const input = { ...evidence, failure }, original = structuredClone(input);
+    const unavailable = projectDesktopCodexLoginFailure(input);
+    assert.deepEqual(unavailable.initialUnavailableTarget, { state: 'unavailable' });
+    assert.equal(JSON.stringify(unavailable).includes(privateSentinel), false);
+    assert.ok(Buffer.byteLength(JSON.stringify(unavailable)) <= 4096);
+    assert.deepEqual(input, original);
+  }
 });
 
 test('finite readiness failure summaries keep only bounded states and never private snapshot data', () => {
@@ -4476,3 +4600,152 @@ test('standalone actual global metadata retains its default CDP override without
   assert.deepEqual(f.countsOfPreparation(), { arms: 0, disarms: 0 }); assert.deepEqual(f.evidence, {});
 });
 await import('./desktop-ui-controls-deadline.test.ts');
+
+function moduleActivityFixture() {
+  const listeners = new Map<string, (value: unknown) => void>();
+  let frame: unknown = 'TEST-frame', clock = 0;
+  const observer = observeDesktopModuleLoads({
+    on(method, listener) {
+      assert.equal(listeners.has(method), false, 'one existing subscription per method');
+      listeners.set(method, listener);
+    },
+  }, 'http://localhost:5173/', () => frame, () => ++clock);
+  const emit = (method: string, value: unknown) => listeners.get(method)!(value);
+  const start = (requestId: string, overrides: Record<string, unknown> = {}) =>
+    emit('Network.requestWillBeSent', { requestId, type: 'Script', frameId: frame,
+      request: { url: 'http://localhost:5173/component.tsx?private=query#secret' }, ...overrides });
+  const finish = (requestId: string) => emit('Network.loadingFinished', { requestId });
+  const fail = (requestId: string, errorText = 'net::ERR_INSUFFICIENT_RESOURCES', type = 'Script') =>
+    observer.loadingFailed({ requestId, errorText, type });
+  return { ...observer, listeners, emit, start, finish, fail, setFrame(value: unknown) { frame = value; } };
+}
+
+test('module request activity retains completions and peak after module history eviction', () => {
+  const f = moduleActivityFixture();
+  for (let index = 0; index < 300; index++) f.start(String(index));
+  assert.equal(f.evidence.loads.length, 256);
+  assert.equal(f.evidence.overflow, true);
+  const activity = f.evidence.activity;
+  assert.ok(activity, 'request pressure must survive the bounded module history');
+  assert.equal(activity.allRequests.pending, 300);
+  assert.equal(activity.allRequests.peakPending, 300);
+  for (let index = 0; index < 299; index++) f.finish(String(index));
+  assert.equal(activity.allRequests.pending, 1, 'evicted rows still retire their active request');
+  f.fail('299');
+  assert.deepEqual(activity.allRequests, {
+    started: 300, finished: 299, failed: 1, redirected: 0, pending: 0, peakPending: 300,
+  });
+  assert.deepEqual(activity.mainFrameSameOriginScripts, activity.allRequests);
+  const first = activity.firstResourceFailure;
+  assert.ok(first);
+  assert.equal(first.requestTracked, true);
+  assert.equal(first.mainFrameSameOriginScript, true);
+  assert.equal(first.allRequests.pending, 1, 'failure snapshot includes the failing observed request');
+  assert.equal(first.allRequests.failed, 0, 'snapshot precedes terminal accounting');
+  assert.equal(first.overflow, false, 'history eviction does not make active tracking incomplete');
+  const retained = JSON.stringify(first);
+  f.start('later'); f.fail('later');
+  assert.equal(JSON.stringify(first), retained, 'first failure is an immutable observation');
+  assert.equal(activity.firstResourceFailure, first);
+  assert.deepEqual([...f.listeners.keys()], [
+    'Network.requestWillBeSent', 'Network.responseReceived', 'Network.loadingFinished',
+  ], 'existing Network stream only; failures remain forwarded by the enclosing observer');
+  assert.equal(JSON.stringify(f.evidence).includes('private'), false);
+  assert.equal(JSON.stringify(f.evidence).includes('secret'), false);
+});
+
+test('module request activity counts all resources and redirects without duplicating active requests', () => {
+  const f = moduleActivityFixture();
+  f.start('script'); f.start('script');
+  f.start('style', { type: 'Stylesheet', frameId: 'TEST-child-frame',
+    request: { url: 'https://external.example/private.css?token=secret' } });
+  f.start('script', { type: 'Fetch', redirectResponse: { status: 302 },
+    request: { url: 'https://external.example/private?token=secret' } });
+  const activity = f.evidence.activity;
+  assert.equal(activity.duplicateStartEvents, 1);
+  assert.deepEqual(activity.allRequests, {
+    started: 3, finished: 0, failed: 0, redirected: 1, pending: 2, peakPending: 2,
+  });
+  assert.deepEqual(activity.mainFrameSameOriginScripts, {
+    started: 1, finished: 0, failed: 0, redirected: 1, pending: 0, peakPending: 1,
+  });
+  f.setFrame('TEST-next-frame');
+  f.finish('style'); f.fail('script', 'net::ERR_INSUFFICIENT_RESOURCES', 'Fetch');
+  assert.deepEqual(activity.allRequests, {
+    started: 3, finished: 1, failed: 1, redirected: 1, pending: 0, peakPending: 2,
+  });
+  assert.equal(activity.firstResourceFailure!.mainFrameSameOriginScript, false);
+  assert.equal(activity.firstResourceFailure!.requestType, 'Fetch');
+  assert.equal(activity.firstResourceFailure!.allRequests.pending, 1);
+  assert.equal(JSON.stringify(activity).includes('external'), false);
+  assert.equal(JSON.stringify(activity).includes('secret'), false);
+  assert.equal(JSON.stringify(activity).includes('TEST-child-frame'), false);
+});
+
+test('module request activity preserves the captured script membership across navigation', () => {
+  const f = moduleActivityFixture();
+  f.start('old-document');
+  f.setFrame(undefined);
+  f.start('during-navigation');
+  f.setFrame('TEST-next-frame');
+  f.start('new-document');
+  f.finish('old-document');
+  f.finish('during-navigation');
+  assert.equal(f.evidence.activity.mainFrameSameOriginScripts.pending, 1);
+  f.finish('new-document');
+  assert.deepEqual(f.evidence.activity.mainFrameSameOriginScripts, {
+    started: 2, finished: 2, failed: 0, redirected: 0, pending: 0, peakPending: 2,
+  });
+  assert.equal(f.evidence.activity.allRequests.started, 3);
+  assert.equal(f.evidence.activity.allRequests.pending, 0);
+});
+
+test('module request activity active tracking cap is explicit, preserves existing requests and never fabricates completion', () => {
+  const f = moduleActivityFixture();
+  const activity = f.evidence.activity;
+  assert.equal(activity.activeLimit, 8192);
+  for (let index = 0; index <= activity.activeLimit; index++)
+    f.start(String(index), { type: 'Fetch' });
+  assert.equal(activity.overflow, true);
+  assert.equal(activity.untrackedRequestEvents, 1);
+  assert.equal(activity.allRequests.started, 8192);
+  assert.equal(activity.allRequests.pending, 8192);
+  assert.equal(activity.allRequests.peakPending, 8192);
+  f.fail('8192');
+  const first = activity.firstResourceFailure!;
+  assert.equal(first.requestTracked, false);
+  assert.equal(first.mainFrameSameOriginScript, null);
+  assert.equal(first.overflow, true);
+  assert.equal(first.untrackedRequestEvents, 1);
+  assert.equal(first.allRequests.pending, 8192);
+  assert.equal(activity.allRequests.failed, 0, 'an omitted ID cannot retire another request');
+  assert.equal(activity.orphanTerminalEvents, 1);
+  for (let index = 0; index < 8192; index++) f.finish(String(index));
+  assert.equal(activity.allRequests.pending, 0);
+  assert.equal(activity.allRequests.finished, 8192);
+  assert.equal(first.allRequests.pending, 8192, 'subsequent cleanup cannot rewrite the failure');
+  assert.equal(activity.overflow, true, 'tracking incompleteness stays visible after cleanup');
+  assert.ok(JSON.stringify(f.evidence).length < 4096, 'active IDs never enter the receipt');
+});
+
+test('module request activity malformed and unobserved events cannot create negative counts or leak error payloads', () => {
+  const f = moduleActivityFixture();
+  for (const value of [null, [], {}, { requestId: '' }, { requestId: 'x'.repeat(129) },
+    { requestId: 'invalid-url', request: { url: 'invalid' } }])
+    assert.doesNotThrow(() => f.emit('Network.requestWillBeSent', value));
+  f.finish('unobserved');
+  assert.equal(f.evidence.activity.allRequests.started, 0);
+  assert.equal(f.evidence.activity.allRequests.pending, 0);
+  assert.equal(f.evidence.activity.orphanTerminalEvents, 1);
+  f.start('TEST-private-id');
+  f.fail('TEST-private-id', 'PRIVATE request payload');
+  assert.equal(f.evidence.activity.firstResourceFailure, null);
+  f.start('resource-refusal');
+  f.fail('resource-refusal', 'net::ERR_INSUFFICIENT_RESOURCES', 'PRIVATE unknown type');
+  assert.equal(f.evidence.activity.firstResourceFailure!.requestType, null);
+  f.finish('resource-refusal');
+  assert.equal(f.evidence.activity.allRequests.pending, 0);
+  assert.equal(f.evidence.activity.orphanTerminalEvents, 2);
+  assert.equal(JSON.stringify(f.evidence).includes('PRIVATE'), false);
+  assert.equal(JSON.stringify(f.evidence).includes('TEST-private-id'), false);
+});

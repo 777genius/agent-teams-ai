@@ -297,7 +297,7 @@ export interface BackendDeletedTasks {
   revision?: string;
   nextCursor?: string | null;
   taskTotal?: number;
-  taskParts?: { index: number; part: number; total: number }[];
+  taskParts?: BackendTeamSnapshot['taskParts'];
 }
 
 export interface BackendTask {

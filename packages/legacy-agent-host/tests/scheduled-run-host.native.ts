@@ -1,18 +1,25 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { constants } from 'node:fs';
-import { chmod, copyFile, mkdir, mkdtemp, readdir, readFile, realpath, writeFile } from 'node:fs/promises';
+import { chmod, copyFile, mkdir, mkdtemp, open, readdir, readFile, realpath, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 import { test } from 'node:test';
 import { setTimeout as delay } from 'node:timers/promises';
 import { verifyNativeProviderArtifact } from './fixtures/native-provider-artifact.ts';
 import { scheduledRunSnapshotSchema } from '../dist/composition/scheduledRunContracts.js';
-import { fileHash, startHost, treeHash } from './fixtures/native-host.ts';
+import { digestOpenExecutable } from '../dist/process/digestOpenExecutable.js';
+import { startHost, treeHash } from './fixtures/native-host.ts';
 import { scheduledNativePrompt, startScheduledNativeModel } from './fixtures/native-scheduled-model.ts';
 import type { ScheduledNativeMode } from './fixtures/native-scheduled-model.ts';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import type { ScheduledRunInput } from '../dist/composition/scheduledRunContracts.js';
+
+async function fileHash(path: string): Promise<string> {
+  const file = await open(path, 'r');
+  try { return digestOpenExecutable(file.fd); }
+  finally { await file.close(); }
+}
 
 const pins = {
   claude: '86cb722ab68348877dba7971e4d0c659919e05e6228c05e006e83da320e656ef',
@@ -21,6 +28,36 @@ const pins = {
 const object = (value: unknown): Record<string, unknown> => {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value)); return value as Record<string, unknown>;
 };
+const observedRpcMethods = new Set([
+  'host.handshake', 'team.roster.read', 'team.tasks.list',
+  'schedule.run.start', 'schedule.run.read', 'schedule.run.cancel',
+]);
+function failureObservation(error: unknown) {
+  const category = error instanceof assert.AssertionError ? 'assertion'
+    : error instanceof TypeError ? 'type' : error instanceof Error ? 'error' : 'non-error';
+  const firstLine = error instanceof Error ? error.message.slice(0, 512).split(/\r?\n/u)[0] : '';
+  const fixedMessages = [
+    'Host exited; original intent retained', 'Host unavailable; original intent retained',
+    'Host stdin unavailable; original intent retained', 'Host returned RPC protocol error',
+    'Host stdout protocol violation', 'Host closed', 'Host advertised an invalid disposal budget',
+    'Host exit zero confirms Runtime/provider cleanup completed',
+    'captured Host must confirm provider cleanup before exiting',
+    'original native schedule settles', 'native request is in flight before cancel',
+    'native tool effect exists while the original application reply is withheld',
+    'Expected values to be strictly equal:', 'Expected values to be strictly deep-equal:',
+    'The expression evaluated to a falsy value:',
+  ];
+  const rpcTimeout = /^Host RPC (host\.handshake|team\.(roster\.read|tasks\.list)|schedule\.run\.(start|read|cancel)) exceeded 60 seconds; intent retained$/u;
+  return { category, message: firstLine && (fixedMessages.includes(firstLine) || rpcTimeout.test(firstLine))
+    ? firstLine : 'Original failure details withheld' };
+}
+function observedHostFacts(host: ReturnType<typeof startHost>) {
+  const facts = host.facts();
+  return { pid: facts.pid ?? null, exitCode: facts.exitCode, signalCode: facts.signalCode,
+    stdoutValid: facts.stdoutValid, diagnosticBytes: facts.diagnosticBytes, frameCount: facts.frames.length,
+    frames: facts.frames.slice(-16).map(frame => ({ id: frame.id,
+      method: observedRpcMethods.has(frame.method) ? frame.method : 'unknown', ok: frame.ok })) };
+}
 async function until(check: () => boolean | Promise<boolean>, label: string, deadline = Date.now() + 75_000) {
   while (!await check()) { assert.ok(Date.now() < deadline, label); await delay(50); }
 }
@@ -165,9 +202,16 @@ stream_max_retries = 0
     const binding = { schemaVersion: 1, handleId: 'TEST-schedule-handle', owner: profile.owner, scope };
     const receipts: unknown[] = [];
     let applicationReplyLoss: Record<string, unknown> | undefined;
-    const rpc = (method: string, payload: unknown, commandId = 'TEST-read') => host.rpc(method, { commandId, binding, payload });
+    let phase = 'handshake', lastRpc = 'host.handshake';
+    let originalFailure: unknown, firstFailure: ReturnType<typeof failureObservation> | undefined;
+    let cleanupFailures: ReturnType<typeof failureObservation>[] = [];
+    const rpc = (method: string, payload: unknown, commandId = 'TEST-read') => {
+      lastRpc = observedRpcMethods.has(method) ? method : 'unknown';
+      return host.rpc(method, { commandId, binding, payload });
+    };
     try {
       await host.rpc('host.handshake', { protocolVersion: 1 });
+      phase = 'roster';
       const roster = await rpc('team.roster.read', {}); assert.equal(roster.ok, true);
       const request = (mode: ScheduledNativeMode): ScheduledRunInput => ({
         runId: `TEST-${provider}-${mode}`, scheduleId: 'TEST-original-schedule', expectedRosterRevision: String(object(roster.value).revision),
@@ -189,6 +233,7 @@ stream_max_retries = 0
       };
       const first = request('success');
       const firstDeadline = provider === 'codex' ? Date.now() + 75_000 : undefined;
+      phase = 'first-start';
       if (provider === 'codex') {
         const lost = new Error('TEST original application start reply lost after native effect');
         let deliveredSuccess = false;
@@ -216,7 +261,9 @@ stream_max_retries = 0
         observation.callerOutcome = 'unknown';
         observation.successDelivered = deliveredSuccess;
       } else assert.equal((await rpc('schedule.run.start', first, first.runId)).ok, true);
+      phase = 'first-completion';
       const completed = await finish(first, firstDeadline);
+      phase = 'first-result';
       if (applicationReplyLoss)
         assert.deepEqual(await originalScheduledInput(root, first.runId), applicationReplyLoss.original);
       assert.equal(completed.result?.exitCode, 0); assert.match(completed.result!.stdout, /TEST_SCHEDULE_DONE/);
@@ -238,9 +285,13 @@ stream_max_retries = 0
       assert.match(JSON.stringify(results[0]!.content), /TEST_NATIVE_TOOL/);
       assert.equal(await readFile(join(common.cwd, 'schedule-success.txt'), 'utf8'), 'TEST_NATIVE_TOOL\n');
       assert.equal(model.counts.get('success'), 2);
+      phase = 'same-intent';
       assert.equal((await rpc('schedule.run.start', first, first.runId)).ok, true);
       assert.equal(model.counts.get('success'), 2, 'same intent only reads its receipt');
-      await host.close(); host = open(); await host.rpc('host.handshake', { protocolVersion: 1 });
+      phase = 'cold-restart';
+      await host.close(); host = open(); lastRpc = 'host.handshake';
+      await host.rpc('host.handshake', { protocolVersion: 1 });
+      phase = 'cold-lookup';
       const cold = await read(first); assert.equal(cold.result?.exitCode, 0); assert.equal(cold.cleanup, 'confirmed');
       assert.deepEqual(cold, { ...completed, result: { ...completed.result!,
         stderr: 'Some retained runtime log entries are unavailable.' } },
@@ -256,6 +307,7 @@ stream_max_retries = 0
         applicationReplyLoss.coldLookupRetained = true;
         applicationReplyLoss.sameIntentRetained = true;
       }
+      phase = 'limits';
       if (provider === 'claude') for (const mode of ['turn-limit', 'budget'] as const) {
         const limited = request(mode); assert.equal((await rpc('schedule.run.start', limited, limited.runId)).ok, true);
         const result = await finish(limited); assert.equal(result.phase, 'completed'); assert.equal(result.result?.exitCode, 1);
@@ -265,23 +317,33 @@ stream_max_retries = 0
         assert.equal((await rpc('schedule.run.start', refused, refused.runId)).ok, false);
         assert.equal(model.counts.has('turn-limit'), false, 'unsupported limit refused before model allocation');
       }
+      phase = 'cancellation';
       const cancelled = request('cancel');
       assert.equal((await rpc('schedule.run.start', cancelled, cancelled.runId)).ok, true);
       await until(() => model.counts.get('cancel') === 1, 'native request is in flight before cancel');
       assert.equal((await rpc('schedule.run.cancel', { runId: cancelled.runId, scheduleId: cancelled.scheduleId })).ok, true);
       const stopped = await finish(cancelled); assert.notEqual(stopped.result?.exitCode, 0);
       assert.equal(model.counts.get('cancel'), 1);
+      phase = 'final-assertions';
       assert.deepEqual((await rpc('team.tasks.list', {})).value, [], 'finite execution creates no hidden Team task');
       assert.deepEqual(await transcriptFiles(join(root, 'config', provider === 'claude' ? 'projects' : 'sessions')), [],
         'native ephemeral session does not write a persisted conversation transcript');
-      assert.deepEqual(model.failures, []); passed = true;
+      assert.deepEqual(model.failures, []); passed = true; phase = 'completed';
+    } catch (error) {
+      originalFailure = error; firstFailure = failureObservation(error);
+      throw error;
     } finally {
+      const hostBeforeCleanup = observedHostFacts(host);
       try {
         const results = await Promise.allSettled([host.close(), model.close()]);
         cleanup = results.every(result => result.status === 'fulfilled');
-        for (const result of results) if (result.status === 'rejected') throw result.reason;
+        const failures = results.flatMap(result => result.status === 'rejected' ? [result.reason] : []);
+        cleanupFailures = failures.map(failureObservation);
+        if (failures.length) throw new AggregateError(firstFailure ? [originalFailure, ...failures] : failures,
+          firstFailure ? 'Original native schedule failure and cleanup failure' : 'Native schedule cleanup failed');
       }
       finally {
+        const hostAfterCleanup = observedHostFacts(host);
         const frozen = await treeHash(join(repo, 'packages/legacy-agent-host/src'), '.ts') === sourceBefore &&
           await treeHash(join(repo, 'packages/legacy-agent-host/dist'), '.js') === distBefore &&
           await treeHash(join(repo, 'packages/legacy-agent-host/tests'), '.ts') === harnessBefore &&
@@ -294,6 +356,8 @@ stream_max_retries = 0
           harnessSha256: harnessBefore, cleanup, frozen,
           modelRequests: model.requests, modelFailures: model.failures, receipts, root,
           ...(applicationReplyLoss ? { applicationReplyLoss } : {}),
+          ...(!passed || !cleanup || !frozen ? { failureObservation: { phase, lastRpc, firstFailure: firstFailure ?? null,
+            cleanupFailures, hostBeforeCleanup, hostAfterCleanup } } : {}),
           desktopQualified: false, vendorAuthQualified: false,
         }, null, 2) + '\n', { mode: 0o600, flag: 'wx' });
         assert.equal(frozen, true);

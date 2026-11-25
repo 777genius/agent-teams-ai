@@ -75,9 +75,13 @@ const probePhases = new Set(['run', 'graph-start', 'graph-done', 'native-launch'
   'credential-dispose-start', 'credential-dispose-returned', 'credential-returned',
   'catalog-read-returned', 'catalog-current-returned', 'catalog-repeat',
   'attestation-observe-returned', 'session-current-returned', 'session-create-returned',
-  'credential', 'attestation', 'attestation-returned', 'session-create', 'driver-open', 'first-submit']);
+  'credential', 'attestation', 'attestation-returned', 'session-create', 'driver-open', 'first-submit',
+  'driver-open-returned', 'first-submit-current-returned', 'first-submit-returned']);
+const submitFailureCodes = new Set(['invalid-config', 'unavailable', 'dependency-unavailable', 'backpressure',
+  'stale', 'unsupported', 'checkpoint-incompatible', 'checkpoint-missing', 'provider-failure', 'output-limit', 'unknown']);
 const currentnessPhases = new Set(['identity-currentness-summary', 'catalog-1-currentness-summary',
-  'catalog-2-currentness-summary', 'catalog-3-currentness-summary']);
+  'catalog-2-currentness-summary', 'catalog-3-currentness-summary',
+  'credential-catalog-currentness-summary', 'credential-directory-currentness-summary', 'credential-connect-currentness-summary']);
 export interface OpenCodeProbeDiagnostic {
   readonly profileHash: string;
   readonly commandHash: string;
@@ -87,6 +91,11 @@ export interface OpenCodeProbeDiagnostic {
   readonly elapsedMs: number;
   readonly currentCalls?: number;
   readonly currentElapsedMs?: number;
+  readonly submitStatus?: 'ok' | 'refused' | 'unclassified';
+  readonly submitCode?: string | null;
+  readonly submitDelivery?: 'known-not-sent' | 'unobserved';
+  readonly catalogProviderPresent?: boolean;
+  readonly catalogModelPresent?: boolean;
 }
 interface OpenCodeMetadataIdentity {
   readonly profileHash: string;
@@ -263,9 +272,13 @@ export function decodeClaudeCloseDiagnostics(
         if (!retainProbe) return;
         const value: unknown = JSON.parse(text.slice(probePrefix.length));
         const keys = ['profileHash', 'commandHash', 'probeDigest', 'phase', 'sequence', 'elapsedMs'];
-        if (!exact(value, keys) && !exact(value, [...keys, 'currentCalls', 'currentElapsedMs'])) return;
+        if (!exact(value, keys) && !exact(value, [...keys, 'currentCalls', 'currentElapsedMs']) &&
+            !exact(value, [...keys, 'submitStatus', 'submitCode', 'submitDelivery']) &&
+            !exact(value, [...keys, 'catalogProviderPresent', 'catalogModelPresent'])) return;
         const summary = typeof value.phase === 'string' && currentnessPhases.has(value.phase);
-        if (summary !== Object.hasOwn(value, 'currentCalls') ||
+        const submitted = value.phase === 'first-submit-returned';
+        const catalogRepeat = Object.hasOwn(value, 'catalogProviderPresent');
+        if (summary !== Object.hasOwn(value, 'currentCalls') || submitted !== Object.hasOwn(value, 'submitStatus') ||
             !hash(value.profileHash) || !hash(value.commandHash) || !hash(value.probeDigest) ||
             typeof value.phase !== 'string' || !(probePhases.has(value.phase) || summary) ||
             typeof value.sequence !== 'number' || !Number.isSafeInteger(value.sequence) ||
@@ -276,10 +289,21 @@ export function decodeClaudeCloseDiagnostics(
             value.currentCalls < 0 || value.currentCalls > 1_000_000 ||
             typeof value.currentElapsedMs !== 'number' || !Number.isSafeInteger(value.currentElapsedMs) ||
             value.currentElapsedMs < 0 || value.currentElapsedMs > 3_600_000)) return;
+        if (submitted && (!(value.submitStatus === 'ok' || value.submitStatus === 'refused' || value.submitStatus === 'unclassified') ||
+            !(value.submitCode === null || typeof value.submitCode === 'string' && submitFailureCodes.has(value.submitCode)) ||
+            !(value.submitDelivery === 'known-not-sent' || value.submitDelivery === 'unobserved') ||
+            value.submitStatus !== 'refused' && (value.submitCode !== null || value.submitDelivery !== 'unobserved'))) return;
+        if (catalogRepeat && (value.phase !== 'catalog-repeat' || typeof value.catalogProviderPresent !== 'boolean' ||
+            typeof value.catalogModelPresent !== 'boolean' || (value.catalogProviderPresent && value.catalogModelPresent))) return;
         const diagnostic: OpenCodeProbeDiagnostic = Object.freeze({
           profileHash: value.profileHash, commandHash: value.commandHash, probeDigest: value.probeDigest,
           phase: value.phase, sequence: value.sequence, elapsedMs: value.elapsedMs,
           ...(summary ? { currentCalls: value.currentCalls as number, currentElapsedMs: value.currentElapsedMs as number } : {}),
+          ...(submitted ? { submitStatus: value.submitStatus as OpenCodeProbeDiagnostic['submitStatus'],
+            submitCode: value.submitCode as string | null,
+            submitDelivery: value.submitDelivery as OpenCodeProbeDiagnostic['submitDelivery'] } : {}),
+          ...(catalogRepeat ? { catalogProviderPresent: value.catalogProviderPresent as boolean,
+            catalogModelPresent: value.catalogModelPresent as boolean } : {}),
         });
         void Promise.resolve(retainProbe(diagnostic)).catch(() => {
           /* Missing observations cannot settle the original probe or its cleanup. */

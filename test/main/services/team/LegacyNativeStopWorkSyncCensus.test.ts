@@ -203,7 +203,237 @@ async function emptyReplicaFixture() {
   };
 }
 
+function caughtUpFixture() {
+  const f = fixture(false);
+  f.status.state = 'caught_up';
+  f.status.diagnostics = ['agenda_empty', 'report_token_issued'];
+  f.agenda.diagnostics = [];
+  f.shadow.triggerReasons = ['startup_scan'];
+  f.metric.state = 'caught_up';
+  f.metric.triggerReasons = ['startup_scan'];
+  const decision: Row = {
+    ...f.audit[3],
+    event: 'decision_made',
+    state: 'caught_up',
+    diagnostics: ['agenda_empty'],
+  };
+  f.audit.splice(
+    0,
+    f.audit.length,
+    { ...f.audit[1], triggerReasons: ['startup_scan'] },
+    f.audit[2]!,
+    decision
+  );
+  f.publish();
+  return { ...f, decision };
+}
+
 describe('strict native Stop WorkSync product census', () => {
+  it('classifies the current empty startup-scan history without requiring a second reconcile after Stop', () => {
+    const f = caughtUpFixture();
+    const proof = f.read();
+    expect(proof).toMatchObject({ incarnation: f.marker.value, teamName: f.target.teamName });
+    expect(JSON.stringify(proof)).not.toMatch(
+      /TEST-private|agenda_empty|caught_up|TEST-fingerprint/
+    );
+    // Historical empty decision remains valid when a later product-only refresh is inactive.
+    f.status.state = 'inactive';
+    f.status.diagnostics = ['member_or_team_inactive'];
+    f.publish();
+    expect(f.read()).toEqual(proof);
+  });
+
+  it.each([
+    [
+      'nonempty agenda',
+      (f: ReturnType<typeof caughtUpFixture>) => {
+        f.agenda.items = [
+          {
+            taskId: 'TEST-task',
+            subject: 'Product change',
+            kind: 'work',
+            assignee: f.target.leadName,
+            priority: 'normal',
+            reason: 'assigned',
+            evidence: {
+              status: 'pending',
+              owner: f.target.leadName,
+              historyEventIds: ['TEST-product-event'],
+            },
+          },
+        ];
+      },
+    ],
+    [
+      'missing shadow',
+      (f: ReturnType<typeof caughtUpFixture>) => {
+        delete f.status.shadow;
+      },
+    ],
+    [
+      'planned nudge',
+      (f: ReturnType<typeof caughtUpFixture>) => {
+        f.shadow.wouldNudge = true;
+      },
+    ],
+    [
+      'missing empty-agenda status diagnostic',
+      (f: ReturnType<typeof caughtUpFixture>) => {
+        f.status.diagnostics = [];
+      },
+    ],
+    [
+      'actionable caught-up metric',
+      (f: ReturnType<typeof caughtUpFixture>) => {
+        f.metric.actionableCount = 1;
+      },
+    ],
+    [
+      'actionable historical metric',
+      (f: ReturnType<typeof caughtUpFixture>) => {
+        f.metric.state = 'inactive';
+        f.metric.actionableCount = 1;
+      },
+    ],
+    [
+      'actionable agenda audit',
+      (f: ReturnType<typeof caughtUpFixture>) => {
+        f.audit[1]!.actionableCount = 1;
+      },
+    ],
+    [
+      'actionable decision',
+      (f: ReturnType<typeof caughtUpFixture>) => {
+        f.decision.actionableCount = 1;
+      },
+    ],
+    [
+      'missing decision count',
+      (f: ReturnType<typeof caughtUpFixture>) => {
+        delete f.decision.actionableCount;
+      },
+    ],
+    [
+      'missing decision fingerprint',
+      (f: ReturnType<typeof caughtUpFixture>) => {
+        delete f.decision.agendaFingerprint;
+      },
+    ],
+    [
+      'missing decision diagnostics',
+      (f: ReturnType<typeof caughtUpFixture>) => {
+        delete f.decision.diagnostics;
+      },
+    ],
+    [
+      'missing empty-agenda decision diagnostic',
+      (f: ReturnType<typeof caughtUpFixture>) => {
+        f.decision.diagnostics = [];
+      },
+    ],
+    [
+      'foreign decision source',
+      (f: ReturnType<typeof caughtUpFixture>) => {
+        f.decision.source = 'event_queue';
+      },
+    ],
+    [
+      'foreign decision provider',
+      (f: ReturnType<typeof caughtUpFixture>) => {
+        f.decision.providerId = 'opencode';
+      },
+    ],
+    [
+      'inactive decision',
+      (f: ReturnType<typeof caughtUpFixture>) => {
+        f.decision.state = 'inactive';
+      },
+    ],
+    [
+      'decision task references',
+      (f: ReturnType<typeof caughtUpFixture>) => {
+        f.decision.taskRefs = [{ taskId: 'TEST-task' }];
+      },
+    ],
+    [
+      'decision fields allowed only by the outer audit schema',
+      (f: ReturnType<typeof caughtUpFixture>) => {
+        f.decision.reason = 'runtime_activity';
+      },
+    ],
+    [
+      'unknown audit caught-up state',
+      (f: ReturnType<typeof caughtUpFixture>) => {
+        f.audit[0]!.state = 'caught_up';
+      },
+    ],
+    [
+      'missing envelope incarnation',
+      (f: ReturnType<typeof caughtUpFixture>) => {
+        delete f.replica.incarnation;
+      },
+    ],
+    [
+      'foreign envelope incarnation',
+      (f: ReturnType<typeof caughtUpFixture>) => {
+        f.replica.incarnation = 'foreign';
+      },
+    ],
+    [
+      'foreign status incarnation',
+      (f: ReturnType<typeof caughtUpFixture>) => {
+        f.revision.incarnation = 'foreign';
+      },
+    ],
+    [
+      'foreign secret incarnation',
+      (f: ReturnType<typeof caughtUpFixture>) => {
+        f.secret.incarnation = 'foreign';
+      },
+    ],
+    [
+      'pending report',
+      (f: ReturnType<typeof caughtUpFixture>) => {
+        f.snapshot.reportIntents = [{ status: 'pending' }];
+      },
+    ],
+    [
+      'pending delivery',
+      (f: ReturnType<typeof caughtUpFixture>) => {
+        f.snapshot.outboxItems = [{ status: 'pending' }];
+      },
+    ],
+    [
+      'report receipt',
+      (f: ReturnType<typeof caughtUpFixture>) => {
+        f.status.pendingReportReceipt = {};
+      },
+    ],
+    [
+      'recovery metadata',
+      (f: ReturnType<typeof caughtUpFixture>) => {
+        f.status.recoveryHealth = {};
+      },
+    ],
+    [
+      'runtime admission',
+      (f: ReturnType<typeof caughtUpFixture>) => {
+        f.status.runtimeAdmission = {};
+      },
+    ],
+    [
+      'accepted report',
+      (f: ReturnType<typeof caughtUpFixture>) => {
+        f.status.lastAcceptedReport = {};
+      },
+    ],
+  ])('refuses empty caught-up history with %s', (_name, change) => {
+    const f = caughtUpFixture();
+    change(f);
+    f.publish();
+    expect(f.read).toThrow();
+  });
+
   it('classifies the real clean-empty SQLite replica without inventing native history or a token owner', async () => {
     const f = await emptyReplicaFixture();
     expect(f.envelope).toEqual({

@@ -1,5 +1,6 @@
 import { ConfigManager } from '@main/services/infrastructure/ConfigManager';
 import { getAppIconPath } from '@main/utils/appIcon';
+import { getOptionalElectronMain } from '@main/utils/optionalElectronMain';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { DEFAULT_TOOL_APPROVAL_SETTINGS } from '@shared/types/team';
 
@@ -368,10 +369,7 @@ export class TeamProvisioningToolApprovalFacade<
         if (notificationDeps?.getNotificationConstructor) {
           return notificationDeps.getNotificationConstructor();
         }
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const { Notification: ElectronNotification } = require('electron') as Partial<
-          typeof import('electron')
-        >;
+        const ElectronNotification = getOptionalElectronMain()?.Notification;
         return (ElectronNotification ??
           null) as TeamProvisioningToolApprovalNotificationConstructor | null;
       },

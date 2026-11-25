@@ -1,5 +1,6 @@
 import { mkdir, readFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
+import { isDeepStrictEqual } from 'node:util';
 
 import { atomicWriteAsync, syncDirectoryDurably } from '@main/utils/atomicWrite';
 
@@ -12,6 +13,14 @@ export interface InternalStorageJsonReplicaEnvelope<TSnapshot> {
   snapshot?: TSnapshot;
   /** Optional binding for opt-in authority recovery; legacy consumers do not grant recovery. */
   incarnation?: string;
+  /** An unfinished unbound import is not a legacy dirty snapshot or an authority grant. */
+  unboundImport?: { schemaVersion: 1; preimageDigest: string; expectedDigest: string };
+}
+
+export interface InternalStorageUnboundImport<TSnapshot> {
+  preimageDigest: string;
+  expectedDigest: string;
+  snapshot: TSnapshot;
 }
 
 export type InternalStorageReplicaRecoverySource<TSnapshot> =
@@ -46,11 +55,13 @@ export class InternalStorageJsonReplica<TSnapshot> {
     ) => AdmittedLegacySourceWrite | undefined
   ) {}
 
-  async markDirty(teamName: string): Promise<void> {
+  async markDirty(teamName: string, incarnation?: string): Promise<void> {
+    if (incarnation !== undefined) this.validateIncarnation(teamName, incarnation);
     await this.write(teamName, {
       schemaVersion: 1,
       state: 'dirty',
       updatedAt: new Date().toISOString(),
+      ...(incarnation === undefined ? {} : { incarnation }),
     });
   }
 
@@ -74,6 +85,80 @@ export class InternalStorageJsonReplica<TSnapshot> {
       incarnation,
       snapshot: candidate,
     });
+  }
+
+  /** The caller owns the admitted mutex and has verified the exact unbound primary. */
+  async markDirtyWithUnboundImport(
+    teamName: string,
+    intent: InternalStorageUnboundImport<TSnapshot>,
+    previous: InternalStorageUnboundImport<TSnapshot> | null
+  ): Promise<void> {
+    if (
+      !/^[a-f0-9]{64}$/.test(intent.preimageDigest) ||
+      !/^[a-f0-9]{64}$/.test(intent.expectedDigest) ||
+      !this.isSnapshot(intent.snapshot, teamName) ||
+      !isDeepStrictEqual(await this.readUnboundImport(teamName), previous)
+    )
+      throw new InternalStorageFallbackUnsafeError(this.getPath(teamName), 'unbound import changed');
+    await this.write(teamName, {
+      schemaVersion: 1,
+      state: 'dirty',
+      updatedAt: new Date().toISOString(),
+      snapshot: intent.snapshot,
+      unboundImport: {
+        schemaVersion: 1,
+        preimageDigest: intent.preimageDigest,
+        expectedDigest: intent.expectedDigest,
+      },
+    });
+  }
+
+  /** Only this explicit intent reader exposes an unbound import; generic dirty readers stay unchanged. */
+  async readUnboundImport(teamName: string): Promise<InternalStorageUnboundImport<TSnapshot> | null> {
+    const envelope = await this.readEnvelope(teamName, false);
+    return envelope ? this.decodeUnboundImport(teamName, envelope) : null;
+  }
+
+  private decodeUnboundImport(
+    teamName: string,
+    envelope: InternalStorageJsonReplicaEnvelope<unknown>
+  ): InternalStorageUnboundImport<TSnapshot> | null {
+    if (!Object.hasOwn(envelope, 'unboundImport')) return null;
+    const marker = envelope.unboundImport;
+    if (
+      envelope.state !== 'dirty' ||
+      Object.hasOwn(envelope, 'incarnation') ||
+      !Number.isFinite(Date.parse(envelope.updatedAt)) ||
+      Object.keys(envelope).some(
+        (key) => !['schemaVersion', 'state', 'updatedAt', 'snapshot', 'unboundImport'].includes(key)
+      ) ||
+      !this.isSnapshot(envelope.snapshot, teamName) ||
+      !marker ||
+      typeof marker !== 'object' ||
+      Array.isArray(marker) ||
+      Object.keys(marker).length !== 3 ||
+      marker.schemaVersion !== 1 ||
+      typeof marker.preimageDigest !== 'string' ||
+      !/^[a-f0-9]{64}$/.test(marker.preimageDigest) ||
+      typeof marker.expectedDigest !== 'string' ||
+      !/^[a-f0-9]{64}$/.test(marker.expectedDigest)
+    )
+      throw new InternalStorageFallbackUnsafeError(this.getPath(teamName), 'unbound import is invalid');
+    return {
+      snapshot: envelope.snapshot,
+      preimageDigest: marker.preimageDigest,
+      expectedDigest: marker.expectedDigest,
+    };
+  }
+
+  /** Clear only the caller's original intent after complete primary/importer readback, before any action. */
+  async completeUnboundImport(
+    teamName: string,
+    intent: InternalStorageUnboundImport<TSnapshot>
+  ): Promise<void> {
+    if (!isDeepStrictEqual(await this.readUnboundImport(teamName), intent))
+      throw new InternalStorageFallbackUnsafeError(this.getPath(teamName), 'unbound import changed');
+    await this.write(teamName, { schemaVersion: 1, state: 'dirty', updatedAt: new Date().toISOString() });
   }
 
   /** Evidence only. Dirty candidates never authorize fallback or establish primary continuity. */
@@ -109,8 +194,57 @@ export class InternalStorageJsonReplica<TSnapshot> {
       : { state: 'dirty', candidate: envelope.snapshot };
   }
 
+  /** Persisted metadata only; the caller must validate ownership under its publication lock. */
+  async readBoundClean(
+    teamName: string
+  ): Promise<{ incarnation: string; snapshot: TSnapshot } | null> {
+    const publication = await this.readBoundPublication(teamName);
+    if (!publication) return null;
+    if (publication.state !== 'clean')
+      throw new InternalStorageFallbackUnsafeError(
+        this.getPath(teamName),
+        'bound clean replica is invalid'
+      );
+    return { incarnation: publication.incarnation, snapshot: publication.snapshot };
+  }
+
+  /** Evidence only: a bare dirty fence needs independently validated healthy-primary ownership. */
+  async readBoundPublication(
+    teamName: string
+  ): Promise<
+    | { state: 'clean'; incarnation: string; snapshot: TSnapshot }
+    | { state: 'dirty'; incarnation: string }
+    | null
+  > {
+    const envelope = await this.readEnvelope(teamName, false);
+    if (!envelope || !Object.hasOwn(envelope, 'incarnation')) return null;
+    const incarnation = envelope.incarnation!;
+    this.validateIncarnation(teamName, incarnation);
+    if (
+      !Number.isFinite(Date.parse(envelope.updatedAt)) ||
+      Object.keys(envelope).some(
+        (key) => !['schemaVersion', 'state', 'updatedAt', 'incarnation', 'snapshot'].includes(key)
+      ) ||
+      (envelope.state === 'clean'
+        ? !this.isSnapshot(envelope.snapshot, teamName)
+        : Object.hasOwn(envelope, 'snapshot'))
+    )
+      throw new InternalStorageFallbackUnsafeError(
+        this.getPath(teamName),
+        'bound clean replica is invalid'
+      );
+    // Candidate-bearing dirty evidence belongs exclusively to authority preparation.
+    return envelope.state === 'dirty'
+      ? { state: 'dirty', incarnation }
+      : { state: 'clean', incarnation, snapshot: envelope.snapshot as TSnapshot };
+  }
+
   private validateIncarnation(teamName: string, incarnation: string): void {
-    if (!incarnation.trim() || incarnation !== incarnation.trim()) {
+    if (
+      typeof incarnation !== 'string' ||
+      !incarnation.trim() ||
+      incarnation !== incarnation.trim()
+    ) {
       throw new InternalStorageFallbackUnsafeError(this.getPath(teamName), 'invalid incarnation');
     }
   }
@@ -193,6 +327,8 @@ export class InternalStorageJsonReplica<TSnapshot> {
     if (!isEnvelope(parsed)) {
       throw new InternalStorageFallbackUnsafeError(replicaPath, 'replica envelope is invalid');
     }
+    // A malformed explicit intent cannot masquerade as clean data in another reader.
+    this.decodeUnboundImport(teamName, parsed);
     return parsed;
   }
 

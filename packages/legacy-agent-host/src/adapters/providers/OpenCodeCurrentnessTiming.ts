@@ -1,11 +1,13 @@
-export type OpenCodeCurrentnessWindow = 'identity' | `catalog-${1 | 2 | 3}`;
+export type OpenCodeCurrentnessWindow = 'identity' | `catalog-${1 | 2 | 3}`
+  | `credential-${'catalog' | 'directory' | 'connect'}`;
 export type OpenCodeCurrentnessPhase = `${OpenCodeCurrentnessWindow}-currentness-summary`;
 export interface OpenCodeCurrentnessStats {
   readonly currentCalls: number;
   readonly currentElapsedMs: number;
 }
 
-const windows = new Set<OpenCodeCurrentnessWindow>(['identity', 'catalog-1', 'catalog-2', 'catalog-3']);
+const windows = new Set<OpenCodeCurrentnessWindow>(['identity', 'catalog-1', 'catalog-2', 'catalog-3',
+  'credential-catalog', 'credential-directory', 'credential-connect']);
 const noop = () => {};
 interface Observation {
   window: OpenCodeCurrentnessWindow;

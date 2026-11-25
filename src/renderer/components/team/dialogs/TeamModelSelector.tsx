@@ -945,7 +945,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   const openCodeProviderDirectoryCache = useRuntimeProviderDirectoryCacheWithGlobalFallback(
     openCodeCatalogScopeKey || null
   );
-  const sourceDiscovery = useOpenCodeSourceDirectory(openCodeCatalogScopeKey || null);
+  const sourceDiscovery = useOpenCodeSourceDirectory(openCodeCatalogScopeKey || null, true);
   const [pendingPrivateNetworkSetup, setPendingPrivateNetworkSetup] = useState<{
     target: OpenCodeLocalModelSetupTarget;
     projectPath: string;

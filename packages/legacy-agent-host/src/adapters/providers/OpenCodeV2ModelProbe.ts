@@ -161,8 +161,26 @@ export function createOpenCodeV2ModelProbe(
       managementDigest(options.readiness.expectedProvider)) return unavailable();
   let config: Record<string, unknown> = noTool.config;
   let selection: OpenCodeV2OwnedSessionSelection = noTool.selection;
+  let finishCredentialCurrentness: (() => void) | undefined;
+  const closeCredentialCurrentness = () => {
+    const finish = finishCredentialCurrentness;
+    finishCredentialCurrentness = undefined;
+    finish?.();
+  };
   const credential = captureOpenCodeV2SessionCredential(profile, input.providerId,
-    configuration.isCurrent, configuration.key, configuration.selectedFile, observePhase);
+    configuration.isCurrent, configuration.key, configuration.selectedFile, observePhase ? phase => {
+      observePhase(phase);
+      const window = phase === 'credential-catalog-start' ? 'credential-catalog'
+        : phase === 'credential-directory-start' ? 'credential-directory'
+          : phase === 'credential-connect-start' ? 'credential-connect' : undefined;
+      if (window) {
+        closeCredentialCurrentness();
+        finishCredentialCurrentness = currentnessTiming.begin(window);
+      } else if (phase === 'credential-catalog-returned' || phase === 'credential-directory-returned'
+          || phase === 'credential-connect-returned' || phase === 'credential-dispose-start') {
+        closeCredentialCurrentness();
+      }
+    } : undefined);
   const current = coordinationSource
     ? () => credential.isCurrent() && coordinationSource.isCurrent() : credential.isCurrent;
   let nativeCredential: OpenCodeV2OwnedSessionSelection['credential'];
@@ -299,7 +317,7 @@ export function createOpenCodeV2ModelProbe(
     coordinationSource?.beforeAllocation();
     ready = await server.start(signal);
     observePhase?.('native-ready');
-    assertCurrent(signal);
+    // withClient starts with the same synchronous guard before constructing a client.
     await withClient(signal, async (client, wire) => {
       let identity: Awaited<ReturnType<typeof client.identity>>;
       try {
@@ -309,8 +327,10 @@ export function createOpenCodeV2ModelProbe(
       } finally { identityRequestPending = false; }
       observePhase?.('credential');
       if (identity.pid !== ready!.pid || identity.version !== '2.1.4') return unavailable();
-      nativeCredential = await credential.prepare(wire, client, undefined,
-        integrationId => server!.selectedFileKey(ready!, integrationId));
+      try {
+        nativeCredential = await credential.prepare(wire, client, undefined,
+          integrationId => server!.selectedFileKey(ready!, integrationId));
+      } finally { closeCredentialCurrentness(); }
       observePhase?.('credential-returned');
       observePhase?.('attestation');
       try {
@@ -368,7 +388,24 @@ export function createOpenCodeV2ModelProbe(
           },
           probe: async (probeSignal) =>
             withClient(probeSignal, async (client) => {
-              const observed = await client.readSession();
+              // Independent native reads keep their original custody/currentness gates.
+              // Await all before comparing so no check is silently skipped.
+              const [session, permissions, plugins, mcpResult] = await Promise.allSettled([
+                client.readSession(),
+                client.savedPermissionsEmpty(),
+                client.builtinPluginsOnly(),
+                client.readMcp(),
+              ]);
+              // Settle every native request/lease before owner-client dispose, even
+              // if an earlier request failed.
+              if (session.status === 'rejected') throw session.reason;
+              if (permissions.status === 'rejected') throw permissions.reason;
+              if (plugins.status === 'rejected') throw plugins.reason;
+              if (mcpResult.status === 'rejected') throw mcpResult.reason;
+              const observed = session.value;
+              const permissionsEmpty = permissions.value;
+              const pluginsOnly = plugins.value;
+              const mcp = mcpResult.value;
               return (
                 managementDigest({
                   agent: observed.agent,
@@ -376,13 +413,10 @@ export function createOpenCodeV2ModelProbe(
                   permissions: observed.permissions,
                   ...(observed.credential ? { credential: observed.credential } : {}),
                 }) === managementDigest({ ...selection, ...(nativeCredential ? { credential: nativeCredential } : {}) }) &&
-                (await client.savedPermissionsEmpty()) &&
-                (await client.builtinPluginsOnly()) &&
-                await (async () => {
-                  const mcp = await client.readMcp();
-                  return coordination ? mcp.length === 1 && mcp[0]?.name === coordinationServer &&
-                    mcp[0].status === 'connected' && coordination.catalogCurrent() : mcp.length === 0;
-                })()
+                permissionsEmpty &&
+                pluginsOnly &&
+                (coordination ? mcp.length === 1 && mcp[0]?.name === coordinationServer &&
+                  mcp[0].status === 'connected' && coordination.catalogCurrent() : mcp.length === 0)
               );
             }),
           confirmStopped: () => server!.stopOwned(),
@@ -396,6 +430,7 @@ export function createOpenCodeV2ModelProbe(
       requiredCapabilities: coordination ? ['text', 'tools'] : ['text'],
     });
     driver = opened.driver;
+    observePhase?.('driver-open-returned');
     assertCurrent(signal);
   }
   async function run(signal: AbortSignal, originalDeadline?: number): Promise<boolean> {
@@ -410,6 +445,7 @@ export function createOpenCodeV2ModelProbe(
     await starting;
     observePhase?.('first-submit');
     assertCurrent(combined);
+    observePhase?.('first-submit-current-returned');
     if (!driver) return unavailable();
     if (coordination) {
       if (options.readiness) {
@@ -422,6 +458,7 @@ export function createOpenCodeV2ModelProbe(
     const inputId = 'model-probe-' + captured.slice(0, 32);
     const operationRef = 'model-probe-operation-' + captured.slice(0, 32);
     const handed = await driver.submit({ inputId, operationRef, content: prompt });
+    observePhase?.('first-submit-returned', handed);
     if (!handed.ok) return false;
     let hasText = false;
     for await (const event of driver.observe()) {

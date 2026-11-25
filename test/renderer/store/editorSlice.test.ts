@@ -9,6 +9,8 @@ import { createTestStore } from './storeTestUtils';
 import type { FileTreeEntry, ReadDirResult } from '../../../src/shared/types/editor';
 import type { TestStore } from './storeTestUtils';
 
+const syntaxSupportImports = vi.hoisted(() => ({ count: 0 }));
+
 // =============================================================================
 // Mock API
 // =============================================================================
@@ -78,22 +80,25 @@ vi.mock('@renderer/utils/editorBridge', () => ({
   },
 }));
 
-vi.mock('@renderer/utils/codemirrorLanguages', () => ({
-  getLanguageFromFileName: (name: string) => {
-    const ext = name.split('.').pop()?.toLowerCase();
-    const map: Record<string, string> = {
-      ts: 'TypeScript',
-      tsx: 'TSX',
-      js: 'JavaScript',
-      json: 'JSON',
-      md: 'Markdown',
-      py: 'Python',
-    };
-    return map[ext ?? ''] ?? 'Plain Text';
-  },
-  getSyncLanguageExtension: vi.fn(),
-  getAsyncLanguageDesc: vi.fn(),
-}));
+vi.mock('@renderer/utils/codemirrorLanguages', () => {
+  syntaxSupportImports.count++;
+  return {
+    getLanguageFromFileName: (name: string) => {
+      const ext = name.split('.').pop()?.toLowerCase();
+      const map: Record<string, string> = {
+        ts: 'TypeScript',
+        tsx: 'TSX',
+        js: 'JavaScript',
+        json: 'JSON',
+        md: 'Markdown',
+        py: 'Python',
+      };
+      return map[ext ?? ''] ?? 'Plain Text';
+    },
+    getSyncLanguageExtension: vi.fn(),
+    getAsyncLanguageDesc: vi.fn(),
+  };
+});
 
 vi.mock('@shared/utils/logger', () => ({
   createLogger: () => ({
@@ -173,6 +178,8 @@ describe('editorSlice', () => {
       restarted.getState().closeEditor();
       await restarted.getState().openEditor('/a');
       expect(restarted.getState().editorOpenTabs).toEqual([]);
+      // Tab metadata must not load the syntax extension catalog.
+      expect(syntaxSupportImports.count).toBe(0);
     });
 
     it('preserves stored tabs when StrictMode closes during initialization or the current open fails', async () => {

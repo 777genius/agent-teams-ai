@@ -193,7 +193,13 @@ export function createRuntimeMemberProviderFactory(options: {
           try {
             // canAllocate closes its authority check immediately before this synchronous read.
             const state = options.readRuntime(entry.binding);
-            if (state.record?.phase === 'opening' && !state.attached) readiness?.assertCurrent();
+            if (state.record?.phase === 'opening' && !state.attached) {
+              try { readiness?.assertCurrent(); }
+              catch (error) {
+                observeOpen('model-readiness', error);
+                return false;
+              }
+            }
             return true;
           } catch { return false; }
         };

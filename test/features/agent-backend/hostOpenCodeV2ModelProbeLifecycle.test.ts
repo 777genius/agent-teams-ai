@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { channel } from 'node:diagnostics_channel';
 import { EventEmitter, once } from 'node:events';
-import { mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { realpath } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
@@ -19,12 +19,26 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 const controlled = vi.hoisted(() => ({
   create: (_options: unknown): unknown => { throw new Error('TEST native factory unset'); },
   spawn: vi.fn(() => { throw new Error('TEST unexpected native spawn'); }),
+  driverFactory: undefined as ((_options: unknown) => unknown) | undefined,
+  observeClient: undefined as ((client: unknown) => void) | undefined,
 }));
 vi.mock('node:child_process', async importOriginal => ({
   ...await importOriginal<typeof import('node:child_process')>(), spawn: controlled.spawn,
 }));
 vi.mock('../../../packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedServer.js',
   () => ({ createOpenCodeV2EmbeddedServer: (options: unknown) => controlled.create(options) }));
+vi.mock('../../../packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist/opencode.js',
+  async importOriginal => {
+    const original = await importOriginal<typeof import('../../../packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist/opencode.js')>();
+    return { ...original,
+      createOpenCodeV2OwnedSessionClient: (...args: Parameters<typeof original.createOpenCodeV2OwnedSessionClient>) => {
+        const client = original.createOpenCodeV2OwnedSessionClient(...args);
+        controlled.observeClient?.(client);
+        return client;
+      },
+      createOpenCodeV2DriverFactory: (options: Parameters<typeof original.createOpenCodeV2DriverFactory>[0]) =>
+      controlled.driverFactory ? controlled.driverFactory(options) : original.createOpenCodeV2DriverFactory(options) };
+  });
 
 import * as capturedProcess from '../../../packages/legacy-agent-host/src/adapters/providers/CapturedProcess';
 import * as probeDiagnostics from '../../../packages/legacy-agent-host/src/adapters/providers/createClaudeCloseDiagnostic';
@@ -44,6 +58,8 @@ import type { OpenCodeProbeCloseDiagnostic, OpenCodeProbeDiagnostic } from '../.
 
 afterEach(() => {
   controlled.create = () => { throw new Error('TEST native factory unset'); };
+  controlled.driverFactory = undefined;
+  controlled.observeClient = undefined;
   expect(controlled.spawn).not.toHaveBeenCalled();
   controlled.spawn.mockClear();
 });
@@ -62,7 +78,7 @@ async function within<T>(work: Promise<T>, label: string): Promise<T> {
  * Production ModelProbe, its private configuration, both D clients and global fetch
  * remain real. These checks do not qualify an actual native process or credential.
  */
-async function fixture(mode: 'http' | 'custody' | 'stop-unknown' | 'final-cut' = 'http', startFailure?: unknown,
+async function fixture(mode: 'http' | 'custody' | 'stop-unknown' | 'final-cut' | 'open-read-failed' = 'http', startFailure?: unknown,
   isCurrent: () => boolean = () => true) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-v2-model-probe-lifecycle-')));
   const pid = 48101, startIdentity = 'TEST-original-start-identity', password = 'TEST-loopback-only';
@@ -85,6 +101,9 @@ async function fixture(mode: 'http' | 'custody' | 'stop-unknown' | 'final-cut' =
   let finalArmed = false, finalCustodyCalls = 0, finalCustodyReturns = 0, messageReads = 0;
   let cutFailureCount = 0, driverFailureCount = 0, nativeInput: { id: string; text: string } | undefined;
   const parent = new AbortController();
+  const openEntered = Promise.withResolvers<void>();
+  const openResponses = new Map<'session' | 'mcp', ServerResponse>();
+  const openCancelled: string[] = [];
   const location = { directory: root };
   const json = (res: ServerResponse, value: unknown) => {
     res.writeHead(200, { 'content-type': 'application/json' });
@@ -97,6 +116,12 @@ async function fixture(mode: 'http' | 'custody' | 'stop-unknown' | 'final-cut' =
       finalDisconnected[index].resolve();
     });
     finalHttp[index].resolve();
+  };
+  const holdOpenResponse = (kind: 'session' | 'mcp', res: ServerResponse) => {
+    assert.equal(openResponses.has(kind), false, 'one original driver-open read per route');
+    openResponses.set(kind, res);
+    res.once('close', () => { if (!res.writableFinished) openCancelled.push(kind); });
+    if (openResponses.size === 2) openEntered.resolve();
   };
   const serve = async (req: IncomingMessage, res: ServerResponse) => {
     assert.ok(++requests <= 64, 'finite original HTTP requests');
@@ -127,6 +152,7 @@ async function fixture(mode: 'http' | 'custody' | 'stop-unknown' | 'final-cut' =
       return json(res, { data: session });
     }
     if (req.method === 'GET' && url.pathname === '/api/session/' + sessionId) {
+      if (mode === 'open-read-failed') return holdOpenResponse('session', res);
       if (mode === 'final-cut' && finalArmed) return holdFinalResponse(1, res);
       assert.ok(session); return json(res, { data: session });
     }
@@ -145,6 +171,8 @@ async function fixture(mode: 'http' | 'custody' | 'stop-unknown' | 'final-cut' =
     }
     if (req.method === 'GET' && url.pathname === '/api/permission/saved')
       return json(res, { data: [] });
+    if (mode === 'open-read-failed' && req.method === 'GET' && url.pathname === '/api/mcp')
+      return holdOpenResponse('mcp', res);
     if (req.method === 'GET' && (url.pathname === '/api/plugin' || url.pathname === '/api/mcp'))
       return json(res, { location, data: [] });
     if (req.method === 'GET' && url.pathname === '/api/experimental/session/' + sessionId + '/log') {
@@ -275,6 +303,15 @@ async function fixture(mode: 'http' | 'custody' | 'stop-unknown' | 'final-cut' =
     probe, parent, disconnected: disconnected.promise, custodyReturned: custodyReturned.promise,
     releaseCustody: () => returnCustody.resolve(),
     heldSignal: () => heldSignal,
+    openRead: {
+      entered: openEntered.promise,
+      cancelled: openCancelled,
+      failSession() {
+        const response = openResponses.get('session'); assert.ok(response);
+        response.writeHead(500, { 'content-type': 'application/json' }); response.end('{}');
+      },
+      releaseSibling() { const response = openResponses.get('mcp'); assert.ok(response); json(response, { location, data: [] }); },
+    },
     finalCut: {
       entered: finalEntered.promise, http: finalHttp.map(value => value.promise),
       disconnected: finalDisconnected.map(value => value.promise), failed: cutFailed.promise,
@@ -304,6 +341,8 @@ async function fixture(mode: 'http' | 'custody' | 'stop-unknown' | 'final-cut' =
     async dispose() {
       const close = probe.close(); returnCustody.resolve();
       for (const gate of finalGates) gate.resolve();
+      for (const response of openResponses.values())
+        if (!response.destroyed && !response.writableEnded) json(response, { location, data: [] });
       try { await close; if (run) await run.catch(() => {}); }
       finally {
         diagnostic.unsubscribe(observe);
@@ -315,6 +354,47 @@ async function fixture(mode: 'http' | 'custody' | 'stop-unknown' | 'final-cut' =
     },
   };
 }
+
+test('driver-open rejected read retains its real sibling HTTP until settlement before owner cleanup', async () => {
+  type OwnerClient = ReturnType<typeof import('../../../packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist/opencode.js').createOpenCodeV2OwnedSessionClient>;
+  const failedRead = Promise.withResolvers<unknown>(), siblingReturned = Promise.withResolvers<void>();
+  const disposals: number[] = [];
+  let owners = 0, siblingSettled = false, runSettled = false;
+  controlled.observeClient = raw => {
+    const client = raw as OwnerClient, owner = ++owners;
+    const dispose = client.dispose.bind(client);
+    vi.spyOn(client, 'dispose').mockImplementation(async () => { disposals.push(owner); await dispose(); });
+    if (owner !== 2) return;
+    const readSession = client.readSession.bind(client), readMcp = client.readMcp.bind(client);
+    vi.spyOn(client, 'readSession').mockImplementation(async () => {
+      try { return await readSession(); }
+      catch (error) { failedRead.resolve(error); throw error; }
+    });
+    vi.spyOn(client, 'readMcp').mockImplementation(async () => {
+      try { return await readMcp(); }
+      finally { siblingSettled = true; siblingReturned.resolve(); }
+    });
+  };
+  const f = await fixture('open-read-failed');
+  try {
+    const running = f.start(); void running.then(() => { runSettled = true; }, () => { runSettled = true; });
+    await within(f.openRead.entered, 'original session and MCP HTTP');
+    expect(owners).toBe(2); expect(disposals).toEqual([1]);
+    f.openRead.failSession();
+    await expect(within(failedRead.promise, 'original failed session read')).resolves.toMatchObject({ code: 'invalid_response' });
+    await new Promise<void>(resolve => setImmediate(resolve));
+    expect(disposals, 'owner disposal must not cancel its still-pending sibling').toEqual([1]);
+    expect(siblingSettled).toBe(false); expect(runSettled).toBe(false);
+    expect(f.openRead.cancelled).toEqual([]); expect(f.counts().physicalStops).toBe(0);
+    const before = f.counts();
+    f.openRead.releaseSibling(); await within(siblingReturned.promise, 'original MCP body settlement');
+    await expect(within(running, 'failed driver-open settlement')).rejects.toThrow('opencode.driver.dependency-unavailable');
+    expect(disposals).toEqual([1, 2]); expect(f.openRead.cancelled).toEqual([]);
+    await expect(f.probe.close()).resolves.toBe(true);
+    expect(f.counts().requests).toBe(before.requests); expect(f.counts().passwordReads).toBe(before.passwordReads);
+    f.assertClosed({ logReads: 0, promptPosts: 0 }); expect(f.observations).toEqual([]);
+  } finally { await f.dispose(); controlled.observeClient = undefined; }
+});
 
 test.each(['close', 'parent-signal'] as const)(
   'original ModelProbe %s aborts admitted driver HTTP before waiting for its lease',
@@ -532,7 +612,8 @@ function assertCurrentnessSummaries(records: OpenCodeProbeDiagnostic[], expected
 const phases = ['run', 'graph-start', 'graph-done', 'native-launch', 'native-launch-returned', 'native-endpoint-resolved', 'native-ready',
   'identity-start', 'identity-request-start', 'identity-custody-start', 'identity-custody-returned', 'identity-request-admitted',
   'credential', 'credential-returned', 'attestation', ...catalogPhases, 'catalog-read-returned', 'catalog-current-returned',
-  'attestation-returned', 'attestation-observe-returned', 'session-create', 'session-current-returned', 'session-create-returned', 'driver-open', 'first-submit'];
+  'attestation-returned', 'attestation-observe-returned', 'session-create', 'session-current-returned', 'session-create-returned',
+  'driver-open', 'driver-open-returned', 'first-submit', 'first-submit-current-returned'];
 
 test.each(['complete', 'custody', 'mismatch', 'http'] as const)(
   'catalog admissions retain original calls, errors and release with %s in memory', async fault => {
@@ -601,21 +682,140 @@ test.each(['complete', 'custody', 'mismatch', 'http'] as const)(
         const observed = records.map(record => record.phase).filter(phase => catalogPhases.includes(phase));
         const second = fault === 'custody' ? [0, 1, 4] : fault === 'mismatch' ? [0, 1, 2, 4] : [0, 1, 2, 3, 4];
         expect(observed).toEqual(sink === 'absent' ? [] : fault === 'complete' ? catalogPhases
-          : [...catalogPhases.slice(0, 5), ...second.map(index => catalogPhases[5 + index])]);
+          : fault === 'http' ? catalogPhases.slice(0, 5)
+            : [...catalogPhases.slice(0, 5), ...second.map(index => catalogPhases[5 + index])]);
         assertCurrentnessSummaries(records, sink === 'absent' ? [] : fault === 'complete'
-          ? currentnessPhases : currentnessPhases.slice(0, 3));
+          ? currentnessPhases : currentnessPhases.slice(0, fault === 'http' ? 2 : 3));
         for (const record of records.filter(record => currentnessPhases.includes(record.phase)))
           expect(record.currentCalls).toBe(originalCalls.get(record.phase));
         expect(records.map(record => record.phase).filter(phase =>
           ['catalog-read-returned', 'catalog-current-returned', 'catalog-repeat'].includes(phase)))
           .toEqual(sink !== 'absent' && fault === 'complete'
             ? ['catalog-read-returned', 'catalog-current-returned', 'catalog-repeat'] : []);
-        expect(routes.length).toBe(fault === 'complete' ? 7 : fault === 'http' ? 3 : 2);
+        expect(routes).toEqual(fault === 'complete'
+          ? ['/api/info', '/api/model', '/api/provider', '/api/model/default',
+            '/api/model', '/api/provider', '/api/model/default']
+          : ['/api/info', '/api/model']);
         const phaseCount = records.length, release = await admission!(controller.signal);
         assert.ok(typeof release === 'function'); release(); release();
         expect(records).toHaveLength(phaseCount); // finally disables catalog marks, even after failure.
         await expect(probe.close()).resolves.toBe(true);
         await expect(probe.close()).resolves.toBe(true); expect(stops).toBe(1);
+      } finally {
+        await probe.close(); fetch.mockRestore(); credential.mockRestore(); diagnostic.mockRestore();
+        rmSync(root, { recursive: true, force: true });
+      }
+    }
+  }
+);
+
+test.each(['connected', 'directory', 'catalog-failed', 'directory-failed', 'connect-failed'] as const)(
+  'credential timing preserves original request order and closes every started window for %s', async mode => {
+    const originalDiagnostic = probeDiagnostics.createOpenCodeProbeDiagnostic;
+    const originalCredential = sessionCredential.captureOpenCodeV2SessionCredential;
+    const credentialWindows = ['credential-catalog', 'credential-directory', 'credential-connect'];
+    let baseline: unknown;
+    for (const sink of ['absent', 'healthy', 'throws'] as const) {
+      const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-credential-currentness-')));
+      const management = openCodeManagementProfileSchema.parse(
+        teamModelProbeProfile(runtimeMemberProfileSchema.parse(opencodeV2ModelProbeProfile(root))));
+      const authDirectory = join(root, 'opencode'), authFile = join(authDirectory, 'auth.json');
+      mkdirSync(authDirectory, { mode: 0o700 });
+      const authBytes = JSON.stringify({ 'TEST-provider': { type: 'api', key: 'TEST-private-key' } });
+      writeFileSync(authFile, authBytes, { mode: 0o600 });
+      const records: OpenCodeProbeDiagnostic[] = [], routes: string[] = [];
+      const starts = new Map<string, number>(), callsAtSummary = new Map<string, number>();
+      let guards = 0, custody = 0, passwordReads = 0, stops = 0, connected = false;
+      const failure = new Error('TEST original operation failure'), attested = new Error('TEST stop after original attestation');
+      const parent = new AbortController();
+      let admission: Parameters<ReturnType<typeof originalCredential>['prepare']>[0]['beforeRequest'];
+      const diagnostic = vi.spyOn(probeDiagnostics, 'createOpenCodeProbeDiagnostic')
+        .mockImplementation((selected, command, digest) => sink === 'absent' ? () => {}
+          : originalDiagnostic(selected, command, digest, line => {
+            const record = JSON.parse(line.slice(probePrefix.length)) as OpenCodeProbeDiagnostic;
+            records.push(record);
+            for (const window of credentialWindows) {
+              if (record.phase === window + '-start') starts.set(window, guards);
+              if (record.phase === window + '-currentness-summary')
+                callsAtSummary.set(window, guards - starts.get(window)!);
+            }
+            if (sink === 'throws') throw new Error('TEST diagnostic write failed');
+          }));
+      const credential = vi.spyOn(sessionCredential, 'captureOpenCodeV2SessionCredential').mockImplementation((...args) => {
+        const original = originalCredential(...args);
+        return { ...original, prepare(wire, ...rest) { admission = wire.beforeRequest; return original.prepare(wire, ...rest); } };
+      });
+      const identity = { pid: 48101, startIdentity: 'TEST-original-root', version: '2.1.4' };
+      controlled.create = () => ({
+        start: async () => ({ ...identity, endpoint: management.endpoint }),
+        readPassword: () => { passwordReads++; return 'TEST-private-password'; },
+        readNativeCustody: async () => { custody++; return { ...identity }; },
+        stopOwned: async () => { stops++; return true; },
+      });
+      const fetch = vi.spyOn(globalThis, 'fetch').mockImplementation(async request => {
+        const native = request instanceof Request ? request : new Request(String(request));
+        const path = new URL(native.url).pathname;
+        routes.push(native.method + ' ' + path); expect(routes.length).toBeLessThanOrEqual(14);
+        if (mode === 'catalog-failed' && path === '/api/model'
+            || mode === 'directory-failed' && path === '/api/integration'
+            || mode === 'connect-failed' && native.method === 'POST') throw failure;
+        if (native.method === 'POST') {
+          expect(path).toBe('/api/integration/TEST-provider/connect/key');
+          expect(connected).toBe(false); expect(await native.json()).toEqual({ key: 'TEST-private-key' });
+          connected = true; return new Response(null, { status: 204 });
+        }
+        const location = { directory: root };
+        const integration = { id: 'TEST-provider', name: 'TEST integration', methods: [{ type: 'key' }],
+          connections: connected ? [{ type: 'credential', method: 'key', id: 'cred_TEST' }] : [] };
+        const data: Record<string, unknown> = {
+          '/api/provider': [{ id: 'TEST-provider', name: 'TEST provider', activation: 'enabled',
+            ...(mode === 'connected' ? { integrationID: 'TEST-provider' } : {}) }],
+          '/api/model': [{ id: 'TEST-model', providerID: 'TEST-provider', name: 'TEST model',
+            enabled: true, limit: { context: 4096, output: 512 },
+            capabilities: { tools: false, input: ['text'] }, variants: [{ id: 'high' }] }],
+          '/api/model/default': { providerID: 'TEST-provider', id: 'TEST-model' },
+          '/api/integration': [integration], '/api/integration/TEST-provider': integration,
+        };
+        expect(path === '/api/info' || Object.hasOwn(data, path)).toBe(true);
+        return new Response(JSON.stringify(path === '/api/info'
+          ? { pid: identity.pid, version: identity.version } : { location, data: data[path] }),
+        { headers: { 'content-type': 'application/json' } });
+      });
+      const probe = createOpenCodeV2ModelProbe(management, { commandId: 'TEST-credential-timing',
+        profileId: management.profileId, configRevision: management.configRevision,
+        providerId: 'TEST-provider', modelId: 'TEST-model' }, () => { guards++; return true; },
+      { readiness: { observeProvider: () => { throw attested; } } });
+      try {
+        const running = probe.run(parent.signal, Date.now() + 30000);
+        expect(probe.run(parent.signal)).toBe(running);
+        if (mode === 'connected' || mode === 'directory') await expect(running).rejects.toBe(attested);
+        else await expect(running).rejects.toMatchObject({ code: mode === 'connect-failed'
+          ? 'native_credential_request_failed' : 'transport_failure' });
+        const before = { guards, custody, passwordReads, connected, routes: [...routes] };
+        baseline ??= before; expect(before).toEqual(baseline);
+        const expected = mode === 'connected' ? [credentialWindows[0], credentialWindows[2]]
+          : mode === 'catalog-failed' ? credentialWindows.slice(0, 1)
+            : mode === 'directory-failed' ? credentialWindows.slice(0, 2) : credentialWindows;
+        const summaries = records.filter(record => credentialWindows.some(window => record.phase === window + '-currentness-summary'));
+        expect(summaries.map(record => record.phase)).toEqual(sink === 'absent' ? [] : expected.map(window => window + '-currentness-summary'));
+        expect(summaries.length).toBeLessThanOrEqual(3);
+        for (const summary of summaries) {
+          const window = summary.phase.replace('-currentness-summary', '');
+          expect(summary.currentCalls).toBe(callsAtSummary.get(window));
+          expect(summary.currentCalls).toBeGreaterThan(0);
+          expect(Number.isSafeInteger(summary.currentElapsedMs)).toBe(true);
+          expect(summary.currentElapsedMs).toBeGreaterThanOrEqual(0);
+          expect(summary.sequence).toBe(records[records.indexOf(summary) - 1]!.sequence);
+          expect(Object.keys(summary).sort()).toEqual(['commandHash', 'currentCalls', 'currentElapsedMs',
+            'elapsedMs', 'phase', 'probeDigest', 'profileHash', 'sequence']);
+        }
+        const count = records.length, release = await admission!(parent.signal);
+        assert.ok(typeof release === 'function'); release(); release();
+        expect(records, 'failed and successful credential windows close before later work').toHaveLength(count);
+        expect(JSON.stringify(records)).not.toContain('TEST-private');
+        expect(readFileSync(authFile, 'utf8')).toBe(authBytes);
+        await expect(probe.close()).resolves.toBe(true); expect(stops).toBe(1);
+        expect(records, 'cleanup cannot reopen a credential summary').toHaveLength(count);
       } finally {
         await probe.close(); fetch.mockRestore(); credential.mockRestore(); diagnostic.mockRestore();
         rmSync(root, { recursive: true, force: true });
@@ -649,6 +849,75 @@ test.each(['complete', 'read-failed', 'current-lost'] as const)(
       expect(phases).toEqual(sink === 'absent' || fault === 'read-failed' ? [] : fault === 'current-lost'
         ? ['catalog-read-returned'] : ['catalog-read-returned', 'catalog-current-returned', 'catalog-repeat']);
       expect(reads).toBe(fault === 'complete' ? 3 : 1);
+    }
+  }
+);
+
+test.each(['first-pass', 'absent-provider', 'absent-model', 'both-absent', 'hard-invalid'] as const)(
+  'catalog repeat preserves the first missing selection pair for %s', async shape => {
+    let baseline: unknown;
+    for (const sink of ['absent', 'healthy', 'throws'] as const) {
+      const selection = { providerID: 'TEST-provider', id: 'TEST-model' };
+      const observations: { phase: string; detail?: unknown }[] = [];
+      let reads = 0, checks = 0;
+      const result = attestOpenCodeV2ModelSelection({ readCatalog: async () => {
+        reads++;
+        const first = reads === 1;
+        return {
+          provider: first && (shape === 'absent-provider' || shape === 'both-absent') ? null
+            : { id: selection.providerID, activation: shape === 'hard-invalid' ? 'disabled' : 'enabled' },
+          defaultModel: { providerId: selection.providerID, modelId: selection.id },
+          models: first && (shape === 'absent-model' || shape === 'both-absent') ? []
+            : [{ id: selection.id, enabled: true, variants: [] }],
+        };
+      } }, selection, { signal: new AbortController().signal, deadline: Date.now() + 5000,
+        isCurrent: () => { checks++; return true; } }, sink === 'absent' ? undefined : (phase, detail?: unknown) => {
+        observations.push({ phase, ...(detail === undefined ? {} : { detail }) });
+        if (sink === 'throws') throw Error('TEST diagnostic failure');
+      });
+      if (shape === 'hard-invalid') await expect(result).rejects.toMatchObject({ code: 'invalid' });
+      else await expect(result).resolves.toBeUndefined();
+      baseline ??= { reads, checks }; expect({ reads, checks }).toEqual(baseline);
+      const repeats = shape !== 'first-pass' && shape !== 'hard-invalid';
+      expect({ reads, checks }).toEqual(repeats ? { reads: 2, checks: 4 } : { reads: 1, checks: 2 });
+      expect(observations.filter(row => row.phase === 'catalog-repeat')).toEqual(sink === 'absent' || !repeats ? [] : [{
+        phase: 'catalog-repeat', detail: {
+          catalogProviderPresent: shape === 'absent-model', catalogModelPresent: shape === 'absent-provider',
+        },
+      }]);
+      expect(observations.filter(row => row.phase !== 'catalog-repeat').every(row => row.detail === undefined)).toBe(true);
+    }
+  }
+);
+
+test.each(['accessor', 'proxy'] as const)(
+  'catalog repeat projection adds no reads or reflection through a %s catalog', async shape => {
+    let baseline: string[] | undefined;
+    for (const sink of ['absent', 'healthy', 'throws'] as const) {
+      const selection = { providerID: 'TEST-provider', id: 'TEST-model' }, trace: string[] = [];
+      const complete = { provider: { id: selection.providerID, activation: 'enabled' },
+        defaultModel: { providerId: selection.providerID, modelId: selection.id },
+        models: [{ id: selection.id, enabled: true, variants: [] }] };
+      const missing = { ...complete, provider: null };
+      const catalog = shape === 'accessor' ? Object.defineProperty(missing, 'provider', {
+        get() { trace.push('provider getter'); return null; },
+      }) : new Proxy(missing, {
+        get(target, key, receiver) { trace.push('get ' + String(key)); return Reflect.get(target, key, receiver); },
+        getOwnPropertyDescriptor() { trace.push('forbidden descriptor'); throw Error('TEST diagnostic reflection'); },
+        ownKeys() { trace.push('forbidden keys'); throw Error('TEST diagnostic reflection'); },
+      });
+      let reads = 0;
+      const observations: { phase: string; detail?: unknown }[] = [];
+      await expect(attestOpenCodeV2ModelSelection({ readCatalog: async () => ++reads === 1 ? catalog : complete },
+        selection, { signal: new AbortController().signal, deadline: Date.now() + 5000,
+          isCurrent: () => { trace.push('current'); return true; } }, sink === 'absent' ? undefined : (phase, detail?: unknown) => {
+          observations.push({ phase, ...(detail === undefined ? {} : { detail }) });
+          if (sink === 'throws') throw Error('TEST diagnostic failure');
+        })).resolves.toBeUndefined();
+      baseline ??= trace; expect(trace).toEqual(baseline);
+      expect(trace.some(value => value.startsWith('forbidden'))).toBe(false);
+      expect(observations.filter(row => row.phase === 'catalog-repeat')).toEqual(sink === 'absent' ? [] : [{ phase: 'catalog-repeat' }]);
+      expect(reads).toBe(2);
     }
   }
 );
@@ -690,10 +959,37 @@ test('phase sink failure preserves the original probe HTTP, single run and physi
       await expect(f.probe.close()).resolves.toBe(true);
       expect(f.counts().requests).toBe(before.requests);
       expect(f.counts().passwordReads).toBe(before.passwordReads);
-      expect(records).toHaveLength(phases.length + currentnessPhases.length);
+      expect(records).toHaveLength(phases.length + currentnessPhases.length + 1);
+      expect(records.at(-1)).toMatchObject({ phase: 'first-submit-returned', submitStatus: 'refused' });
       f.assertClosed(); expect(f.observations).toEqual([]);
     } finally { diagnostic.mockRestore(); await f?.dispose(); }
   }
+});
+
+test('native-ready observes one original currentness guard before creating its first owned client', async () => {
+  const originalFactory = probeDiagnostics.createOpenCodeProbeDiagnostic;
+  let observing = false, currentCalls = 0, callsAtClient: number | undefined;
+  const diagnostic = vi.spyOn(probeDiagnostics, 'createOpenCodeProbeDiagnostic')
+    .mockImplementation((selected, command, digest) => originalFactory(selected, command, digest, line => {
+      const record = JSON.parse(line.slice(probePrefix.length)) as OpenCodeProbeDiagnostic;
+      if (record.phase === 'native-ready') { observing = true; currentCalls = 0; }
+    }));
+  controlled.observeClient = () => {
+    if (observing) { callsAtClient = currentCalls; observing = false; }
+  };
+  let f: Awaited<ReturnType<typeof fixture>> | undefined;
+  try {
+    f = await fixture('http', undefined, () => { if (observing) currentCalls++; return true; });
+    const running = f.start();
+    await f.barrier();
+    expect(callsAtClient).toBe(2); // The single credential guard retains its before/after owner bracket.
+    expect(f.counts()).toMatchObject({ nativeCreations: 1, sessionCreates: 1, logReads: 1, promptPosts: 0 });
+    f.parent.abort();
+    await within(f.disconnected, 'original response after the first owned client');
+    await expect(running).resolves.toBe(false);
+    await expect(f.probe.close()).resolves.toBe(true);
+    f.assertClosed();
+  } finally { diagnostic.mockRestore(); await f?.dispose(); }
 });
 
 test.each(['native-ready', 'attestation-returned', 'session-create', 'first-submit'] as const)(
@@ -877,5 +1173,136 @@ test.each(['native-launch-returned', 'native-endpoint-resolved'] as const)(
 test.each(['timer', 'lifecycle'] as const)(
   'actual embedded startup observes the existing %s abort without extending it', async reason => {
     await embeddedBoundary('throw', false, reason);
+  }
+);
+
+test.each(['refused', 'accepted', 'threw', 'revoked-open'] as const)(
+  'passive probe handoff preserves original operations and clean close for %s in memory', async mode => {
+    let baseline: string[] | undefined;
+    const originalDiagnostic = probeDiagnostics.createOpenCodeProbeDiagnostic;
+    for (const sink of ['absent', 'healthy', 'throws'] as const) {
+      const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-probe-handoff-')));
+      const management = openCodeManagementProfileSchema.parse(
+        teamModelProbeProfile(runtimeMemberProfileSchema.parse(opencodeV2ModelProbeProfile(root))));
+      const records: OpenCodeProbeDiagnostic[] = [], operations: string[] = [];
+      const phasePositions = new Map<string, number>();
+      const opened = Promise.withResolvers<void>(), releaseOpen = Promise.withResolvers<void>();
+      const originalFailure = new Error('TEST original submit failure');
+      let current = true, input: { inputId: string; operationRef: string } | undefined;
+      const diagnostic = vi.spyOn(probeDiagnostics, 'createOpenCodeProbeDiagnostic')
+        .mockImplementation((selected, command, digest) => sink === 'absent' ? () => {}
+          : originalDiagnostic(selected, command, digest, line => {
+            const record = JSON.parse(line.slice(probePrefix.length)) as OpenCodeProbeDiagnostic;
+            records.push(record); phasePositions.set(record.phase, operations.length);
+            if (sink === 'throws') throw new Error('TEST diagnostic sink failure');
+          }));
+      const identity = { pid: 48101, startIdentity: 'TEST-original-root', version: '2.1.4' };
+      controlled.create = () => {
+        operations.push('create');
+        return {
+          start: async () => { operations.push('start'); return { ...identity, endpoint: management.endpoint }; },
+          readPassword: () => { operations.push('password'); return 'TEST-private-password'; },
+          readNativeCustody: async () => { operations.push('custody'); return { ...identity }; },
+          stopOwned: async () => { operations.push('stop'); return true; },
+        };
+      };
+      const driver = {
+        sessionRef: 'TEST-private-session',
+        submit: async (value: { inputId: string; operationRef: string }) => {
+          operations.push('submit'); input = value;
+          if (mode === 'threw') throw originalFailure;
+          return mode === 'refused' ? { ok: false, code: 'dependency-unavailable', delivery: 'known-not-sent' }
+            : { ok: true, value: { ...value, delivery: 'client-consumed', providerAcceptance: 'unknown' } };
+        },
+        observe: async function* () {
+          operations.push('observe'); assert.ok(input);
+          yield { sessionRef: driver.sessionRef, ...input, kind: 'text', text: 'TEST OK' };
+          yield { sessionRef: driver.sessionRef, ...input, kind: 'result', outcome: 'succeeded' };
+        },
+        close: async () => { operations.push('close'); return { cleanup: 'confirmed' }; },
+      };
+      controlled.driverFactory = () => {
+        operations.push('factory');
+        return { open: async () => {
+          operations.push('open-enter'); opened.resolve();
+          await releaseOpen.promise; operations.push('open-return'); return { driver };
+        } };
+      };
+      let requests = 0;
+      const fetch = vi.spyOn(globalThis, 'fetch').mockImplementation(async request => {
+        const native = request instanceof Request ? request : new Request(String(request));
+        const path = new URL(native.url).pathname;
+        operations.push(native.method + ' ' + path); expect(++requests).toBeLessThanOrEqual(12);
+        const location = { directory: root };
+        if (native.method === 'POST') {
+          expect(path).toBe('/api/session');
+          const body = await native.json() as Record<string, unknown>;
+          expect(body.location).toEqual(location);
+          return new Response(JSON.stringify({ data: { ...body, time: { created: 1 } } }),
+            { headers: { 'content-type': 'application/json' } });
+        }
+        expect(['/api/info', '/api/provider', '/api/model', '/api/model/default']).toContain(path);
+        const value = path === '/api/info' ? { pid: identity.pid, version: identity.version }
+          : path === '/api/provider' ? { location, data: [{ id: 'TEST-provider', name: 'TEST provider', activation: 'enabled' }] }
+            : path === '/api/model' ? { location, data: [{ id: 'TEST-model', providerID: 'TEST-provider', name: 'TEST model',
+              enabled: true, limit: { context: 4096, output: 512 }, capabilities: { tools: false, input: ['text'] }, variants: [{ id: 'high' }] }] }
+              : { location, data: { providerID: 'TEST-provider', id: 'TEST-model' } };
+        return new Response(JSON.stringify(value), { headers: { 'content-type': 'application/json' } });
+      });
+      const probe = createOpenCodeV2ModelProbe(management, { commandId: 'TEST-handoff', profileId: management.profileId,
+        configRevision: management.configRevision, providerId: 'TEST-provider', modelId: 'TEST-model' },
+      () => { operations.push('current'); return current; });
+      try {
+        const signal = new AbortController().signal, running = probe.run(signal);
+        expect(probe.run(signal)).toBe(running);
+        const settled = running.then(value => ({ value }), error => ({ error }));
+        await within(Promise.race([opened.promise, settled.then(result => {
+          if ('error' in result) throw result.error;
+          throw new Error('TEST run settled before original open');
+        })]), 'original in-memory open');
+        if (mode === 'revoked-open') current = false;
+        releaseOpen.resolve();
+        const result = await settled;
+        if (mode === 'threw') {
+          assert.ok('error' in result); expect(result.error).toBe(originalFailure);
+        }
+        else if (mode === 'revoked-open') expect(result).toMatchObject({ error: { code: 'held' } });
+        else expect(result).toEqual({ value: mode === 'accepted' });
+        const handoffs = records.filter(record => ['driver-open-returned', 'first-submit-current-returned',
+          'first-submit-returned'].includes(record.phase));
+        expect(handoffs.map(record => record.phase)).toEqual(sink === 'absent' ? [] : mode === 'revoked-open'
+          ? ['driver-open-returned'] : mode === 'threw' ? ['driver-open-returned', 'first-submit-current-returned']
+            : ['driver-open-returned', 'first-submit-current-returned', 'first-submit-returned']);
+        if (sink !== 'absent' && (mode === 'refused' || mode === 'accepted'))
+          expect(handoffs.at(-1)).toMatchObject({ submitStatus: mode === 'refused' ? 'refused' : 'ok',
+            submitCode: mode === 'refused' ? 'dependency-unavailable' : null,
+            submitDelivery: mode === 'refused' ? 'known-not-sent' : 'unobserved' });
+        if (sink !== 'absent') {
+          const openAt = phasePositions.get('driver-open-returned')!;
+          expect(operations[openAt - 1]).toBe('open-return'); expect(operations[openAt]).toBe('current');
+          if (mode !== 'revoked-open') {
+            const currentAt = phasePositions.get('first-submit-current-returned')!;
+            expect(operations[currentAt - 1]).toBe('current'); expect(operations[currentAt]).toBe('submit');
+          }
+        }
+        const beforeClose = [...records];
+        await expect(probe.close()).resolves.toBe(true);
+        await expect(probe.close()).resolves.toBe(true);
+        expect(records, 'the submit snapshot is independent of successful cleanup').toEqual(beforeClose);
+        expect(operations.filter(operation => operation === 'create')).toHaveLength(1);
+        expect(operations.filter(operation => operation === 'POST /api/session')).toHaveLength(1);
+        expect(operations.filter(operation => operation === 'submit')).toHaveLength(mode === 'revoked-open' ? 0 : 1);
+        expect(operations.filter(operation => operation === 'observe')).toHaveLength(mode === 'accepted' ? 1 : 0);
+        expect(operations.filter(operation => operation === 'close')).toHaveLength(1);
+        expect(operations.filter(operation => operation === 'stop')).toHaveLength(1);
+        expect(operations.slice(-2)).toEqual(['close', 'stop']);
+        baseline ??= operations; expect(operations).toEqual(baseline);
+        expect(JSON.stringify(records)).not.toContain('TEST-private');
+      } finally {
+        releaseOpen.resolve(); await probe.close();
+        fetch.mockRestore(); diagnostic.mockRestore(); controlled.driverFactory = undefined;
+        rmSync(root, { recursive: true, force: true });
+      }
+    }
   }
 );

@@ -602,3 +602,52 @@ test('hover and uncertain press failures retain their original error without inp
     assert.equal(h.c.uiMutations, 0);
   }
 });
+
+function actualOrganizationCreationWait({ publishedAt = Infinity, editorClosedAt = 0, wrongEntry = false } = {}) {
+  const source = readFileSync(new URL('./teams-create-page-desktop.mjs', import.meta.url), 'utf8');
+  const classStart = source.indexOf('class CdpClient {');
+  const classEnd = source.indexOf('\nasync function waitForProcessGroupExit(', classStart);
+  const label = source.indexOf("'organization team saved and editor closed'");
+  const waitStart = source.lastIndexOf('    await cdp.waitFor(', label);
+  const waitEnd = source.indexOf('\n    const structure =', label);
+  assert.ok(classStart > 0 && classEnd > classStart && waitStart > classEnd && waitEnd > label);
+  const state = { now: 0, reads: 0, timeouts: [] }, orgTeamName = 'org-team-e2e-observed';
+  const teamByName = { 'org-team-e2e-foreign': { teamName: 'org-team-e2e-foreign' } };
+  if (wrongEntry) teamByName[orgTeamName] = { teamName: 'org-team-e2e-foreign' };
+  const document = { querySelector: () => state.now < editorClosedAt ? {} : null };
+  const window = { __agentTeamsDevStore: { getState: () => ({ teamByName }) } };
+  const { CdpClient, wait } = runInNewContext(
+    `${source.slice(classStart, classEnd)}\n({ CdpClient, wait: async (cdp, orgTeamName) => { ${source.slice(waitStart, waitEnd)} } })`,
+    { Date: { now: () => state.now }, setTimeout(callback, ms) {
+      state.now += ms; queueMicrotask(callback); return 1;
+    }, clearTimeout() {} }
+  );
+  const cdp = new CdpClient({ on() {} });
+  cdp.evaluate = async expression => {
+    state.reads++;
+    if (state.now >= publishedAt) teamByName[orgTeamName] = { teamName: orgTeamName };
+    return runInNewContext(expression, { document, window });
+  };
+  const originalWait = cdp.waitFor.bind(cdp);
+  cdp.waitFor = (expression, waitLabel, timeoutMs) => {
+    state.timeouts.push(timeoutMs); return originalWait(expression, waitLabel, timeoutMs);
+  };
+  return { state, wait: () => wait(cdp, orgTeamName) };
+}
+
+test('original organization Create waits for its delayed exact team-list projection before Schedules', async () => {
+  const h = actualOrganizationCreationWait({ editorClosedAt: 80, publishedAt: 240, wrongEntry: true });
+  await h.wait();
+  assert.equal(h.state.now, 240, 'closed editor alone must not admit Schedules before the created row is published');
+  assert.equal(h.state.reads, 4);
+  assert.deepEqual(h.state.timeouts, [45_000], 'hydration shares the original Create completion budget');
+});
+
+test('organization Create does not accept a missing or mismatched projection, or an editor still open', async () => {
+  for (const options of [{}, { wrongEntry: true }, { publishedAt: 0, editorClosedAt: Infinity }]) {
+    const h = actualOrganizationCreationWait(options);
+    await assert.rejects(h.wait(), /Timed out waiting for organization team saved and editor closed/);
+    assert.ok(h.state.now >= 45_000 && h.state.now < 45_080);
+    assert.deepEqual(h.state.timeouts, [45_000]);
+  }
+});

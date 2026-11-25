@@ -57,6 +57,40 @@ test('original captured credential absence rejects later keys, revoked owners an
   'original preparation failure is not swallowed by the compatibility predicate');
 });
 
+test('V2 literal configured key remains fresh only while original auth and owner stay unchanged', t => {
+  const f = fixture(); t.after(f.cleanup);
+  const cwd = join(f.root, 'TEST-config-only');
+  mkdirSync(cwd, { mode: 0o700 });
+  writeFileSync(join(cwd, 'opencode.json'), JSON.stringify({ provider: { 'TEST-provider': {
+    npm: '@ai-sdk/openai-compatible',
+    options: { baseURL: 'http://127.0.0.1:12345/v1', apiKey: 'TEST-config-only-key' },
+  } } }), { mode: 0o600 });
+  const profile: OpenCodeManagementProfile = {
+    ...f.profile, cwd, provider: 'opencode',
+    environment: { ...f.profile.environment, XDG_CONFIG_HOME: join(f.home, '.config') },
+    profileId: 'TEST-config-only', configRevision: 'TEST-config-only-revision',
+    executable: { path: process.execPath, sha256: 'a'.repeat(64) },
+    endpoint: 'http://127.0.0.1:12345', timeoutMs: 5000,
+    nativeGeneration: 'v2', protocolRevision: '2.1.4',
+    nativeModel: { providerId: 'TEST-provider', modelId: 'TEST-model' },
+    embedded: { version: '2.1.4', directory: f.root, manifestSha256: 'b'.repeat(64),
+      platform: process.platform === 'win32' ? 'win32' : process.platform === 'darwin' ? 'darwin' : 'linux',
+      arch: process.arch === 'arm64' ? 'arm64' : 'x64', externalDirectory: 'deny' },
+  };
+  profile.embedded!.configurationSource = captureOpenCodeConfigurationSource(profile).reference;
+  let ownerCurrent = true;
+  const captured = captureOpenCodeV2Configuration(profile,
+    { providerId: 'TEST-provider', modelId: 'TEST-model' }, () => ownerCurrent);
+  assert.ok(captured.key, 'configured literal must bind the original auth source');
+  assert.equal(captured.isCurrent(), true);
+  f.write({ 'TEST-provider': { type: 'api', key: 'TEST-rotated-foreign-key' } });
+  assert.equal(captured.isCurrent(), false, 'new auth bytes revoke original configuration');
+  f.write({});
+  assert.equal(captured.isCurrent(), true, 'restored original source is current');
+  ownerCurrent = false;
+  assert.equal(captured.isCurrent(), false, 'revoked owner is never hidden by the fast path');
+});
+
 test('V2 key publication survives a fresh scope, preserves foreign credentials and only rolls back its own entry', async t => {
   const f = fixture(); t.after(f.cleanup);
   const foreign = { type: 'oauth', access: 'TEST-foreign-token', refresh: 'TEST-foreign-refresh', expires: 123 };
@@ -208,7 +242,8 @@ test('V2 key publication survives a fresh scope, preserves foreign credentials a
         await assert.rejects(original, { code });
         assert.equal(prepared.prepare(config, owner), original, 'refusal cannot retry native preparation');
       }
-      const catalog = ['GET /api/provider', 'GET /api/model', 'GET /api/model/default'];
+      // The pinned SDK awaits native model activation before reading the provider snapshot.
+      const catalog = ['GET /api/model', 'GET /api/provider', 'GET /api/model/default'];
       const selection = explicit ? catalog : [...catalog, ...catalog, 'GET /api/integration'];
       const keyRead = 'GET /api/integration/' + integrationId;
       assert.deepEqual(requests, [...selection,
@@ -361,8 +396,8 @@ test('V2 key publication survives a fresh scope, preserves foreign credentials a
         const result = await original; assert.ok(result);
         assert.equal(result.credentialId, 'cred_TEST'); assert.equal(result.scopeDigest, prepared.fileProof()?.scopeDigest);
       }
-      const selectionCalls = ['GET /api/provider', 'GET /api/model', 'GET /api/model/default',
-        'GET /api/provider', 'GET /api/model', 'GET /api/model/default', 'GET /api/integration'];
+      const selectionCalls = ['GET /api/model', 'GET /api/provider', 'GET /api/model/default',
+        'GET /api/model', 'GET /api/provider', 'GET /api/model/default', 'GET /api/integration'];
       const keyRead = 'GET /api/integration/TEST-provider';
       assert.deepEqual(requests, [...selectionCalls, keyRead, 'POST /api/integration/TEST-provider/connect/key', ...(success ? [keyRead] : [])]);
       assert.equal(materializations, 1); assert.equal(connected, true); assert.deepEqual(failures, []);
@@ -534,7 +569,7 @@ test('V2 key publication survives a fresh scope, preserves foreign credentials a
                 : mode === 'form' ? 'native_key_existing_or_unsupported' : 'held' });
           }
           const before = ['GET /api/info', 'GET /api/plugin', 'GET /api/permission/saved', 'GET /api/mcp',
-            'GET /api/provider', 'GET /api/model', 'GET /api/model/default'];
+            'GET /api/model', 'GET /api/provider', 'GET /api/model/default'];
           const directory = malformed ? before : [...before, 'GET /api/integration'];
           const keyRead = 'GET /api/integration/' + integrationId;
           assert.deepEqual(requests.slice(start), [...directory, ...(kind === 'key' && accepted

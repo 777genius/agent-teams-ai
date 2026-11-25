@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import childProcess, { ChildProcess } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import fs from 'node:fs';
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { createRequire, syncBuiltinESMExports } from 'node:module';
 import { tmpdir } from 'node:os';
@@ -222,12 +223,14 @@ test('native executable observations reuse the original captured child and rejec
   const child = new ChildProcess(); Object.defineProperty(child, 'pid', { value: 1000 });
   assert.throws(() => api.readRootExecutable(child, executable), /unavailable/);
   assert.equal(state.executableReads, 0, 'a numeric PID does not grant executable observation');
-  let current = true;
-  api.captureRoot(child, () => current);
+  let current = true, currentReads = 0;
+  api.captureRoot(child, () => { currentReads++; return current; });
+  currentReads = 0;
   const first = api.readRootExecutable(child, executable);
   assert.deepEqual(first, { executablePath: binary, executableSha256: executable.sha256,
     pid: 1000, startIdentity: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa:1000:2:12345' });
   assert.equal(state.executableReads, 2, 'kernel identity is rechecked after the file hash');
+  assert.equal(currentReads, 5, 'the second native observation closes authority once before returning');
   assert.throws(() => api.captureRoot(child, () => true), /unavailable/, 'the same handle is never recaptured');
   const replacement = new ChildProcess(); Object.defineProperty(replacement, 'pid', { value: 1000 });
   assert.throws(() => api.readRootExecutable(replacement, executable), /unavailable/);
@@ -247,6 +250,63 @@ test('native executable observations reuse the original captured child and rejec
   current = true; child.emit('exit', 0, null);
   assert.throws(() => api.readRootExecutable(child, executable), /unavailable/);
 });
+
+for (const boundary of [1, 2]) {
+  test(`Darwin executable custody refuses owner revocation during native observation ${boundary}`, t => {
+    darwin(t);
+    const { artifact, state } = bridge(t);
+    const binary = join(sandbox(t), 'TEST-bun');
+    writeFileSync(binary, 'TEST selected executable bytes; never executed');
+    const executable = { path: binary, sha256: hash(binary) };
+    state.executablePath = binary;
+    const api = createQualifiedDarwinProcessApi(artifact);
+    const child = new ChildProcess(); Object.defineProperty(child, 'pid', { value: 1000 });
+    let current = true;
+    api.captureRoot(child, () => current);
+    state.afterExecutableRead = () => { if (state.executableReads === boundary) current = false; };
+    assert.throws(() => api.readRootExecutable(child, executable), /unavailable/);
+    assert.equal(state.executableReads, boundary, 'revocation fences any later native observation');
+    assert.throws(() => api.readRootExecutable(child, executable), /unavailable/);
+    assert.equal(state.executableReads, boundary, 'a later API call reobserves revoked ownership before native access');
+  });
+}
+
+for (const mutation of ['replace', 'overwrite'] as const) {
+  test(`Darwin executable custody refuses ${mutation} during the actual image read and closes its fd`, t => {
+    darwin(t);
+    const { artifact, state } = bridge(t);
+    const root = sandbox(t), binary = join(root, 'TEST-bun');
+    const bytes = Buffer.from('TEST selected executable bytes; never executed');
+    writeFileSync(binary, bytes);
+    const executable = { path: binary, sha256: hash(binary) }, before = fs.lstatSync(binary);
+    state.executablePath = binary;
+    const api = createQualifiedDarwinProcessApi(artifact);
+    const child = new ChildProcess(); Object.defineProperty(child, 'pid', { value: 1000 });
+    api.captureRoot(child, () => true);
+    const originalRead = fs.readSync;
+    let ownedFile: number | undefined;
+    t.mock.method(fs, 'readSync', ((file, buffer, offset, length, position) => {
+      const observed = fs.fstatSync(file);
+      const selected = ownedFile === undefined && observed.dev === before.dev && observed.ino === before.ino;
+      if (selected) {
+        ownedFile = file;
+        if (mutation === 'overwrite') writeFileSync(binary, Buffer.alloc(bytes.length, 99));
+      }
+      const count = originalRead(file, buffer, offset, length, position ?? null);
+      if (selected && mutation === 'replace') {
+        fs.renameSync(binary, join(root, 'TEST-original-image'));
+        writeFileSync(binary, bytes);
+      }
+      return count;
+    }) as typeof fs.readSync);
+    syncBuiltinESMExports();
+    t.after(() => { t.mock.restoreAll(); syncBuiltinESMExports(); });
+    assert.throws(() => api.readRootExecutable(child, executable), /unavailable/);
+    assert.notEqual(ownedFile, undefined, 'mutation happened inside the real executable digest');
+    assert.throws(() => fs.fstatSync(ownedFile!), { code: 'EBADF' });
+    assert.equal(state.executableReads, 1, 'the changed image is refused before a second native observation');
+  });
+}
 
 test('x64 selects only its own finite OS artifact; this synthetic boundary is not a native qualification', t => {
   darwin(t, 'x64');

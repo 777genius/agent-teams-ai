@@ -22,6 +22,7 @@ interface ValidatedLaunch {
   name: string;
   runId: string;
   text: string;
+  row: TeamLaunchRecord;
 }
 
 /** Read-only projection of the one authoritative launch record, never a second registry. */
@@ -39,7 +40,8 @@ export class FileTeamRuntimeBindings implements TeamRuntimeBindings {
       const value = this.store.read<unknown>(name, text => {
         // No parsed row escapes into a store wrapper, and each invocation replaces the token.
         selected.token = Object.freeze({}); selected.entry = undefined;
-        selected.entry = { text, row: JSON.parse(text) as TeamLaunchRecord };
+        selected.entry = { text, row: previous?.name === name && previous.runId === runId && previous.text === text
+          ? previous.row : JSON.parse(text) as TeamLaunchRecord };
         return selected.token;
       });
       if (value === undefined) return undefined;
@@ -51,7 +53,7 @@ export class FileTeamRuntimeBindings implements TeamRuntimeBindings {
       else if (row.definition.launchId !== initial.runId) throw new TeamOwnerError('hold');
       // Size bounds reuse only; fresh reads, authority and larger valid records keep their old path.
       if (initial.runId === runId && Buffer.byteLength(text, 'utf8') <= 1024 * 1024)
-        completed = { name, runId, text };
+        completed = { name, runId, text, row };
       return row;
     } finally {
       // An outer failure also discards any entry published by a reentrant read.

@@ -2191,8 +2191,12 @@ async function main() {
       await cdp.click("document.querySelector('[data-testid=create-team-page] #launch-team')");
     }
     await cdp.click(createButtonExpression('Create'));
+    // Config-only Create closes before the asynchronous list refresh. Wait for its
+    // exact row so that refresh cannot insert a preceding option during selection.
     await cdp.waitFor(
-      "!document.querySelector('[data-testid=create-team-page]')",
+      "!document.querySelector('[data-testid=create-team-page]') && " +
+        "window.__agentTeamsDevStore.getState().teamByName[" + JSON.stringify(orgTeamName) +
+        "]?.teamName === " + JSON.stringify(orgTeamName),
       'organization team saved and editor closed', 45_000
     );
     const structure = await cdp.evaluate(

@@ -28,6 +28,8 @@ import {
 import { createRetainedLegacyOpenDiagnostic } from '../../../src/features/agent-backend/main/infrastructure/stopped-import/createRetainedLegacyOpenDiagnostic';
 import { prepareStoppedLegacyImport } from '../../../src/features/agent-backend/main/infrastructure/stopped-import/prepareStoppedLegacyImport';
 import { ApplicationCommandRunner } from '../../../src/features/application-command-ledger';
+import { MemberWorkSyncTeamOperationGate } from '../../../src/features/member-work-sync/core/application/MemberWorkSyncTeamOperationGate';
+import { captureLegacySourceReadFence } from '../../../src/features/member-work-sync/main/composition/legacySourceWorkSyncAdmission';
 import { TaskBoardCommandFacade } from '../../../src/features/task-board-commands';
 import { isLegacySavedTeamProductRecords } from '../../../src/main/services/team/LegacySavedTeamNativeIdentity';
 import {
@@ -167,6 +169,90 @@ function fixture() {
       current = false;
     },
   };
+}
+
+function writeEmptyCaughtUpWorkSync(f: ReturnType<typeof fixture>) {
+  const timestamp = '2026-11-22T23:43:35.240Z';
+  const incarnation = 'TEST-original-work-sync';
+  const member = { teamName: f.teamName, memberName: 'team-lead' };
+  const fingerprint = 'TEST-empty-agenda';
+  const status = {
+    ...member,
+    state: 'caught_up',
+    providerId: 'anthropic',
+    evaluatedAt: timestamp,
+    diagnostics: ['agenda_empty'],
+    agenda: { ...member, generatedAt: timestamp, fingerprint, items: [], diagnostics: [] },
+    statusRevision: { incarnation, lineageId: 'TEST-lineage', sequence: 1, nonce: 'TEST-nonce' },
+    shadow: {
+      reconciledBy: 'queue',
+      wouldNudge: false,
+      fingerprintChanged: false,
+      triggerReasons: ['startup_scan'],
+    },
+  };
+  const root = join(f.team, '.member-work-sync');
+  mkdirSync(root, { recursive: true });
+  writeFileSync(
+    join(root, 'report-token-secret.json'),
+    JSON.stringify({
+      schemaVersion: 2,
+      teamName: f.teamName,
+      incarnation,
+      secret: 'TEST-source-secret'.padEnd(43, 'x'),
+    })
+  );
+  writeFileSync(
+    join(root, 'sqlite-fallback-replica.json'),
+    JSON.stringify({
+      schemaVersion: 1,
+      state: 'clean',
+      incarnation,
+      updatedAt: timestamp,
+      snapshot: {
+        statuses: [status],
+        reportIntents: [],
+        outboxItems: [],
+        filesToArchive: [],
+        metricEvents: [
+          {
+            ...member,
+            id: 'TEST-empty-metric',
+            kind: 'status_evaluated',
+            state: 'caught_up',
+            agendaFingerprint: fingerprint,
+            recordedAt: timestamp,
+            actionableCount: 0,
+          },
+        ],
+      },
+    })
+  );
+  const journalPath = 'members/team-lead/.member-work-sync/journal.jsonl';
+  const journal =
+    [
+      { event: 'reconcile_started', triggerReasons: ['startup_scan'] },
+      {
+        event: 'agenda_loaded',
+        agendaFingerprint: fingerprint,
+        actionableCount: 0,
+        diagnostics: [],
+      },
+      {
+        event: 'decision_made',
+        agendaFingerprint: fingerprint,
+        state: 'caught_up',
+        actionableCount: 0,
+        diagnostics: ['agenda_empty'],
+      },
+    ]
+      .map((row) =>
+        JSON.stringify({ ...member, schemaVersion: 1, timestamp, source: 'reconciler', ...row })
+      )
+      .join('\n') + '\n';
+  mkdirSync(join(f.team, 'members/team-lead/.member-work-sync'), { recursive: true });
+  writeFileSync(join(f.team, journalPath), journal);
+  return { incarnation, journalPath, journal };
 }
 
 describe('actual legacy source owners and existing fences', () => {
@@ -341,81 +427,157 @@ describe('actual legacy source owners and existing fences', () => {
       expect(state.runtimeCaptures).toBeUndefined();
     }
   );
-  it('exports retained native IDs only after the original private process release is durably bound by the actual stopped store', async () => {
-    const f = fixture();
-    const write = (file: string, value: unknown) =>
-      writeFileSync(join(f.team, file), JSON.stringify(value));
-    const child = { pid: 44107 } as ChildProcess;
-    const identity = {
-      pid: child.pid!,
-      parentPid: 1,
-      processGroupId: child.pid!,
-      startIdentity: 'TEST-original-birth',
-    };
-    recordOwnedUnixProcessGroup(child, identity);
-    write('config.json', {
-      name: f.teamName,
-      leadAgentId: `team-lead@${f.teamName}`,
-      leadSessionId: 'TEST-session',
-      members: [{ name: 'team-lead', agentType: 'team-lead', providerId: 'anthropic' }],
-    });
-    write('members.meta.json', { version: 1, members: [] });
-    write('team.meta.json', {
-      version: 1,
-      cwd: '/TEST/workspace',
-      providerId: 'anthropic',
-      createdAt: 1,
-    });
-    write('launch-state.json', {
-      version: 2,
-      teamName: f.teamName,
-      publicationRunId: 'TEST-run',
-      leadSessionId: 'TEST-session',
-      expectedMembers: [],
-      members: {},
-    });
-    write('launch-freshness.json', {
-      version: 1,
-      teamName: f.teamName,
-      kind: 'launch',
-      runId: 'TEST-run',
-    });
-    const run = {
-      teamName: f.teamName,
-      runId: 'TEST-run',
-      child,
-      detectedSessionId: 'TEST-session',
-      expectedMembers: [],
-      allEffectiveMembers: [],
-      mixedSecondaryLanes: [],
-      request: { providerId: 'anthropic', members: [] },
-    };
-    const captured = captureLegacyNativeStop(join(f.root, 'claude/teams'), run, () => true)!;
-    expect(captured).not.toBeNull();
-    await expect(f.source.describe()).rejects.toMatchObject({
-      reason: 'native-custody-unverified',
-    });
-    recordVerifiedCliProcessRelease(child, [identity]);
-    const proof = captured.complete()!;
-    const store = new TeamLaunchStateStore();
-    await store.markStopped(f.teamName, await store.beginStop(f.teamName), proof);
-    expect(readLegacyNativeStopRelease(f.team, f.teamName)).toEqual(proof);
-    const snapshot = await exportStoppedTeam(f.source);
-    expect(validateStoppedSnapshot(snapshot)).toEqual(snapshot);
-    expect(snapshot.header.obligations.custody).toBe('released');
-    expect(snapshot.header.members).toMatchObject([{ name: 'team-lead', role: 'lead' }]);
-    // The ordinary outer stopped tail may retain the exact receipt, never infer a new one.
-    await store.markStopped(f.teamName);
-    expect(readLegacyNativeStopRelease(f.team, f.teamName)).toEqual(proof);
-    write('config.json', {
-      name: f.teamName,
-      leadSessionId: 'TEST-foreign-session',
-      members: [{ name: 'team-lead', agentType: 'team-lead' }],
-    });
-    await expect(f.source.describe()).rejects.toMatchObject({
-      reason: 'native-custody-unverified',
-    });
-  });
+  it.each([false, true])(
+    'exports retained native IDs only after original release, with empty caught-up WorkSync=%s',
+    async (withWorkSync) => {
+      const f = fixture();
+      const workSync = withWorkSync ? writeEmptyCaughtUpWorkSync(f) : null;
+      const write = (file: string, value: unknown) =>
+        writeFileSync(join(f.team, file), JSON.stringify(value));
+      const child = { pid: 44107 } as ChildProcess;
+      const identity = {
+        pid: child.pid!,
+        parentPid: 1,
+        processGroupId: child.pid!,
+        startIdentity: 'TEST-original-birth',
+      };
+      recordOwnedUnixProcessGroup(child, identity);
+      const config = {
+        name: f.teamName,
+        ...(workSync ? { _backupIdentityId: workSync.incarnation } : {}),
+        leadAgentId: `team-lead@${f.teamName}`,
+        leadSessionId: 'TEST-session',
+        members: [{ name: 'team-lead', agentType: 'team-lead', providerId: 'anthropic' }],
+      };
+      write('config.json', config);
+      write('members.meta.json', { version: 1, members: [] });
+      write('team.meta.json', {
+        version: 1,
+        cwd: '/TEST/workspace',
+        providerId: 'anthropic',
+        createdAt: 1,
+      });
+      write('launch-state.json', {
+        version: 2,
+        teamName: f.teamName,
+        publicationRunId: 'TEST-run',
+        leadSessionId: 'TEST-session',
+        expectedMembers: [],
+        members: {},
+      });
+      write('launch-freshness.json', {
+        version: 1,
+        teamName: f.teamName,
+        kind: 'launch',
+        runId: 'TEST-run',
+      });
+      const run = {
+        teamName: f.teamName,
+        runId: 'TEST-run',
+        child,
+        detectedSessionId: 'TEST-session',
+        expectedMembers: [],
+        allEffectiveMembers: [],
+        mixedSecondaryLanes: [],
+        request: { providerId: 'anthropic', members: [] },
+      };
+      if (workSync)
+        expect(captureLegacyNativeStop(join(f.root, 'claude/teams'), run, () => true)).toBeNull();
+      const fence = workSync
+        ? captureLegacySourceReadFence(f.teamName, {
+            gate: new MemberWorkSyncTeamOperationGate(),
+            router: { awaitTeamIdle: async () => {} },
+            queue: {
+              awaitTeamIdle: async () => {},
+              getDiagnostics: () => ({ queuedItems: [], runningItems: [] }),
+            },
+            audit: { awaitTeamIdle: async () => {} },
+          })
+        : null;
+      const captured = captureLegacyNativeStop(
+        join(f.root, 'claude/teams'),
+        run,
+        () => true,
+        fence !== null
+      )!;
+      expect(captured).not.toBeNull();
+      await expect(f.source.describe()).rejects.toMatchObject({
+        reason: 'native-custody-unverified',
+      });
+      recordVerifiedCliProcessRelease(child, [identity]);
+      if (fence) expect(captured.complete(fence.assertDrained)).toBeNull();
+      await fence?.drain();
+      const proof = captured.complete(fence?.assertDrained)!;
+      const store = new TeamLaunchStateStore();
+      await store.markStopped(f.teamName, await store.beginStop(f.teamName), proof);
+      fence?.release();
+      expect(readLegacyNativeStopRelease(f.team, f.teamName)).toEqual(proof);
+      const snapshot = await exportStoppedTeam(f.source);
+      expect(validateStoppedSnapshot(snapshot)).toEqual(snapshot);
+      expect(snapshot.header.obligations.custody).toBe('released');
+      expect(snapshot.header.members).toMatchObject([{ name: 'team-lead', role: 'lead' }]);
+      if (workSync) {
+        for (const path of [
+          '.member-work-sync/report-token-secret.json',
+          '.member-work-sync/sqlite-fallback-replica.json',
+        ]) {
+          const file = snapshot.files.find(
+            (entry) => entry.category === 'team' && entry.path === path
+          )!;
+          expect(file.disposition).toBe('excluded');
+          expect(file).not.toHaveProperty('base64');
+        }
+        expect(
+          snapshot.files.find((entry) => entry.path === workSync.journalPath)?.disposition
+        ).toBe('archive');
+        const destination = join(f.root, 'TEST-caught-up-import');
+        mkdirSync(destination);
+        const importer = new FileStoppedTeamImport({
+          root: destination,
+          ownerId: 'TEST-host',
+          profileId: 'TEST-profile',
+          principalId: 'TEST-human',
+          contextIds: ['TEST-context'],
+          assertWriter() {},
+          existingRecords: () => [],
+          bindOrigin() {},
+          validateConfiguration() {},
+          attach() {},
+        });
+        const receipt = importer.import(
+          'TEST-caught-up-original',
+          {
+            contextId: 'TEST-context',
+            sourceId: snapshot.header.sourceId,
+            snapshotDigest: snapshot.digest,
+            teamName: 'TEST-imported',
+          },
+          snapshot
+        );
+        expect(receipt.phase).toBe('published');
+        const target = join(destination, 'teams/TEST-imported');
+        expect(existsSync(join(target, '.member-work-sync'))).toBe(false);
+        expect(existsSync(join(target, workSync.journalPath))).toBe(false);
+        expect(
+          readFileSync(
+            join(target, '.host-owner/import/archive/team', workSync.journalPath),
+            'utf8'
+          )
+        ).toBe(workSync.journal);
+        expect(readFileSync(join(f.team, workSync.journalPath), 'utf8')).toBe(workSync.journal);
+      }
+      // The ordinary outer stopped tail may retain the exact receipt, never infer a new one.
+      await store.markStopped(f.teamName);
+      expect(readLegacyNativeStopRelease(f.team, f.teamName)).toEqual(proof);
+      write('config.json', {
+        ...config,
+        leadSessionId: 'TEST-foreign-session',
+      });
+      await expect(f.source.describe()).rejects.toMatchObject({
+        reason: 'native-custody-unverified',
+      });
+    }
+  );
 
   it('imports actual save-only service output without manufacturing a native config or lead session', async () => {
     const f = fixture();

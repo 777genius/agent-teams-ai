@@ -2503,7 +2503,7 @@ const LaunchTeamDialogContent = (props: LaunchTeamDialogProps): React.JSX.Elemen
         }
       }}
     >
-      <OpenCodeSourceDirectoryProvider enabled={open && isLaunchMode && multimodelEnabled} projectPath={effectiveCwd}>
+      <OpenCodeSourceDirectoryProvider deferDiscovery enabled={open && isLaunchMode && multimodelEnabled} projectPath={effectiveCwd}>
       <DialogContent
         className={isSchedule ? 'max-h-[90vh] max-w-[52rem] overflow-y-auto' : 'max-w-[52rem]'}
       >
