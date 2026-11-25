@@ -1,12 +1,12 @@
 import type {
-  ReplaceMembersRequest,
-  TeamCreateDraft,
-  TeamProvisioningMemberInput,
-} from '@shared/types/team';
+  ReplaceTeamRoster,
+  TeamMemberSettings,
+  TeamSavedSettings,
+} from '@agent-teams/legacy-agent-host/team/contracts';
 
 /** Existing application settings; no vendor profile, account or native selectors. */
-export type BackendRosterSettings = Omit<TeamProvisioningMemberInput, 'name'>;
-export type BackendSavedTeamSettings = Omit<TeamCreateDraft, 'teamName' | 'members'> & { language?: string };
+export type BackendRosterSettings = TeamMemberSettings;
+export type BackendSavedTeamSettings = TeamSavedSettings;
 export interface BackendRosterConfiguration {
   revision: string;
   /** Absent means not captured; effective runtime parameters are never saved defaults. */
@@ -31,8 +31,8 @@ export interface BackendRosterReceipt {
 }
 export interface BackendRosterReplacement {
   expectedRevision: string;
-  members: TeamProvisioningMemberInput[];
+  members: ReplaceTeamRoster['members'];
   /** Omission preserves settings; supplied object fully replaces configured choices. */
   savedSettings?: BackendSavedTeamSettings;
-  memberSettingsRelaunch?: ReplaceMembersRequest['memberSettingsRelaunch'];
+  memberSettingsRelaunch?: ReplaceTeamRoster['memberSettingsRelaunch'];
 }

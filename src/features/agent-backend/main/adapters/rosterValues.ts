@@ -2,7 +2,7 @@ import type {
   BackendRosterReplacement,
   BackendRosterSettings,
   BackendSavedTeamSettings,
-} from '../../contracts/roster';
+} from '../../contracts/roster.js';
 
 export function rosterRow(value: unknown, allowed?: readonly string[]): Record<string, unknown> {
   if (
