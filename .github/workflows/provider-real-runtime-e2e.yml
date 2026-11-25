@@ -105,6 +105,8 @@ jobs:
         run: node scripts/e2e/provider-real-runtime-e2e.ts
       - name: Install desktop Electron test dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Build isolated Host before Electron startup
+        run: pnpm --filter @agent-teams/legacy-agent-host build
       - name: Verify isolated desktop harness guardrails
         run: node --test scripts/e2e/opencode-diagnostics/platform.test.mjs
       - name: Verify real pinned runtime through Linux Electron IPC and UI
@@ -124,6 +126,7 @@ jobs:
           retention-days: 14
           if-no-files-found: warn
           path: |
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/desktop.log
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/real-connection.json
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/real-connection.png
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/cold-dashboard.json
