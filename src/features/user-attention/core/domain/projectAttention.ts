@@ -22,14 +22,17 @@ function messageIdentity(message: InboxMessage): string {
 }
 
 function isAttentionVisibleMessage(message: InboxMessage): boolean {
-  return message.messageKind !== 'task_comment_notification' &&
+  return (
+    message.messageKind !== 'task_comment_notification' &&
     !isInboxNoiseMessage(message.text) &&
     !isTeamInternalControlMessageEnvelope(message) &&
     !isMemberWorkSyncNudgeMessage(message) &&
     !isRuntimeRecoveryNudgeMessage(message) &&
     !isReviewPickupEscalationMessage(message) &&
     !isTaskStallRemediationMessage(message) &&
-    (!message.groupChatId || Boolean(message.groupMessageId && message.groupMessageId === message.messageId));
+    (!message.groupChatId ||
+      Boolean(message.groupMessageId && message.groupMessageId === message.messageId))
+  );
 }
 
 function projectVisibleAttentionMessage(message: InboxMessage): InboxMessage | null {
@@ -40,10 +43,11 @@ function projectVisibleAttentionMessage(message: InboxMessage): InboxMessage | n
 
   // Capture the existing read identity before truncating user-visible preview.
   const messageId = messageIdentity(message);
-  const attachmentCount = (message.attachments?.length ?? 0) + (message.fileReferences?.length ?? 0);
+  const attachmentCount =
+    (message.attachments?.length ?? 0) + (message.fileReferences?.length ?? 0);
   // An attachment-only message is still a message addressed to the user.
-  const text = sanitized.slice(0, 240) ||
-    (attachmentCount > 0 ? `Attachment (${attachmentCount})` : '');
+  const text =
+    sanitized.slice(0, 240) || (attachmentCount > 0 ? `Attachment (${attachmentCount})` : '');
   if (!text) return null;
   return {
     from: message.from,
@@ -68,7 +72,10 @@ export function projectAttentionMessages(
   messages: readonly InboxMessage[],
   leadNames: Iterable<string>
 ): InboxMessage[] {
-  const visible = deduplicateVisibleRelayMessages(messages.filter(isAttentionVisibleMessage), leadNames);
+  const visible = deduplicateVisibleRelayMessages(
+    messages.filter(isAttentionVisibleMessage),
+    leadNames
+  );
   return visible.flatMap((message) => {
     const candidate = projectVisibleAttentionMessage(message);
     return candidate ? [candidate] : [];
@@ -80,8 +87,9 @@ export function projectAttentionTasks(
   team: { teamName: string; logicalTeamName?: string; displayName: string; projectPath?: string }
 ): AttentionTaskCandidate[] {
   return tasks
-    .filter((task) => task.needsClarification === 'user' &&
-      task.status !== 'deleted' && !task.deletedAt)
+    .filter(
+      (task) => task.needsClarification === 'user' && task.status !== 'deleted' && !task.deletedAt
+    )
     .map((task) => ({
       teamName: team.teamName,
       ...(team.logicalTeamName ? { logicalTeamName: team.logicalTeamName } : {}),

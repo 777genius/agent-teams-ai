@@ -1,8 +1,9 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
-import { AttentionInboxPanel } from '../../../../src/features/user-attention/renderer/ui/AttentionInboxPanel';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import { AttentionInboxPanel } from '../../../../src/features/user-attention/renderer/ui/AttentionInboxPanel';
 
 import type { AttentionModel } from '../../../../src/features/user-attention/core/domain/buildAttention';
 
@@ -69,17 +70,20 @@ afterEach(() => {
 });
 
 describe('AttentionInboxPanel renderer', () => {
-  it('shows the assigned member for a task', async () => {
+  it('shows and announces the assigned member without changing ownerless labels', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');
     document.body.append(host);
     const root = createRoot(host);
     await act(async () => root.render(
-      <AttentionInboxPanel variant="full" model={{ ...model, tasks: [{ ...tasks[0], owner: 'maya' }], taskCount: 1 }}
+      <AttentionInboxPanel variant="full" model={{ ...model, tasks: [{ ...tasks[0], owner: 'team-lead' }, tasks[1]], taskCount: 2 }}
         loading={false} error={null} onOpenTask={onOpenTask} onOpenChat={onOpenChat} onRetry={onRetry} />
     ));
-    expect(host.textContent).toContain('maya');
-    expect(host.querySelector('img')).not.toBeNull();
+    expect(host.textContent).toContain('lead');
+    const rows = host.querySelectorAll('[aria-label^="attention.openTask"]');
+    expect(rows[0].getAttribute('aria-label')).toBe('attention.openTask · lead');
+    expect(rows[1].getAttribute('aria-label')).toBe('attention.openTask');
+    expect(rows[0].querySelector('img')?.getAttribute('alt')).toBe('');
     await act(async () => root.unmount());
   });
 
@@ -131,7 +135,7 @@ describe('AttentionInboxPanel renderer', () => {
     await act(async () => root.unmount());
   });
 
-  it('filters the full inbox by team, task, speaker and message preview', async () => {
+  it('filters the full inbox by team, task, owner, speaker and message preview', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');
     document.body.append(host);
@@ -140,7 +144,7 @@ describe('AttentionInboxPanel renderer', () => {
       <AttentionInboxPanel variant="full" model={{
         ...model,
         tasks: [{ ...tasks[0], teamName: 'design', teamDisplayName: 'Design team',
-          subject: 'Approve new banner' }, tasks[1]],
+          subject: 'Approve new banner', owner: 'maya' }, tasks[1]],
         chats: [{ ...chats[0], teamName: 'design', teamDisplayName: 'Design team',
           latestUnread: { ...chats[0].latestUnread, text: 'Choose a palette' } }, chats[1]],
         taskCount: 2, chatCount: 2,
@@ -167,6 +171,16 @@ describe('AttentionInboxPanel renderer', () => {
     expect(host.querySelectorAll('[aria-label^="attention.openTask"]')).toHaveLength(1);
     expect(host.querySelector('[data-testid="attention-sections"]')?.className)
       .toContain('xl:grid-cols-2');
+    await act(async () => {
+      valueSetter?.call(input, ' MAYA ');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    expect(host.querySelectorAll('[data-testid="chat-row"]')).toHaveLength(0);
+    const ownerRows = host.querySelectorAll<HTMLButtonElement>('[aria-label^="attention.openTask"]');
+    expect(ownerRows).toHaveLength(1);
+    expect(ownerRows[0].textContent).toContain('Approve new banner');
+    await act(async () => ownerRows[0].click());
+    expect(onOpenTask).toHaveBeenCalledWith(expect.objectContaining({ owner: 'maya', taskId: '0' }));
     await act(async () => root.unmount());
   });
 

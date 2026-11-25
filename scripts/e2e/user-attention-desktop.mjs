@@ -154,7 +154,7 @@ async function setup() {
   await json(path.join(taskRoot, '1.json'), {
     id: '1', subject: 'ATTENTION_E2E_OLDEST_USER_DECISION',
     description: 'Human decision needed', status: 'pending',
-    needsClarification: 'user', blocks: [], blockedBy: [],
+    needsClarification: 'user', owner: 'team-lead', blocks: [], blockedBy: [],
     createdAt: stamp,
   });
   // Regression: older awaiting task must survive legacy globalTasks 500-row cap.
@@ -224,6 +224,7 @@ async function checkDesktop() {
   const oldest = snap.teams.find((t) => t.teamName === first);
   assert(oldest.tasks.some((t) => t.taskId === '1'), 'oldest task survives >500 candidates');
   assert.equal(oldest.tasks[0].requestedAt, null, 'legacy timestamp not fabricated');
+  assert.equal(oldest.tasks[0].owner, 'team-lead', 'assigned owner survives filesystem and IPC projection');
   assert(oldest.messages.some((message) => message.messageId === 'attention-dm-' + first),
     'old unread message survives 60 newer messages');
   const relayTeam = snap.teams.find((t) => t.teamName === second);
@@ -238,6 +239,14 @@ async function checkDesktop() {
   await cdp.waitFor(
     'document.querySelector("[data-testid=user-attention-inbox]")?.textContent.includes("ATTENTION_E2E_OLDEST_USER_DECISION")',
     'dashboard awaiting task');
+  await cdp.waitFor(`(() => {
+    const task = [...document.querySelectorAll('[data-testid=user-attention-inbox] button')]
+      .find((button) => button.getClientRects().length > 0 &&
+        button.getAttribute('aria-label')?.includes('ATTENTION_E2E_OLDEST_USER_DECISION'));
+    return task?.getAttribute('aria-label').endsWith(' · lead') &&
+      task.textContent.includes('lead') && task.querySelector('img[alt=""]');
+  })()`, 'assigned owner is visible and announced on the task row');
+  evidence.checks.push('task owner from persisted task through IPC to visible accessible row');
   const toolbar = await cdp.evaluate(
     'document.querySelector("button[aria-label=\\"Needs your attention\\"]") !== null');
   assert(toolbar, 'separate header attention button exists');

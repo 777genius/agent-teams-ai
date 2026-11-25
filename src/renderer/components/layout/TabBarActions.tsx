@@ -171,53 +171,61 @@ export const TabBarActions = (): React.JSX.Element => {
 
       {/* Human attention is distinct from ordinary notification history. */}
       {attentionSupported && (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button type="button" aria-label={t('attention.title')}
-            aria-describedby={attentionModel ? attentionCountDescriptionId : undefined}
-            className="relative inline-flex items-center gap-1 rounded-md px-2 py-2 text-text-muted transition-colors hover:bg-surface-raised hover:text-text"
-            onClick={() => {
-              const state = useStore.getState();
-              const focused = state.paneLayout.panes.find((p) => p.id === state.paneLayout.focusedPaneId);
-              const existing = focused?.tabs.find((tab) => tab.type === 'attention');
-              if (existing) state.setActiveTab(existing.id);
-              else state.openTab({ type: 'attention', label: t('attention.tab') });
-            }}>
-            <Inbox className="size-4" aria-hidden="true" />
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              aria-label={t('attention.title')}
+              aria-describedby={attentionModel ? attentionCountDescriptionId : undefined}
+              className="relative inline-flex items-center gap-1 rounded-md px-2 py-2 text-text-muted transition-colors hover:bg-surface-raised hover:text-text"
+              onClick={() => {
+                const state = useStore.getState();
+                const focused = state.paneLayout.panes.find(
+                  (p) => p.id === state.paneLayout.focusedPaneId
+                );
+                const existing = focused?.tabs.find((tab) => tab.type === 'attention');
+                if (existing) state.setActiveTab(existing.id);
+                else state.openTab({ type: 'attention', label: t('attention.tab') });
+              }}
+            >
+              <Inbox className="size-4" aria-hidden="true" />
+              {attentionModel && (
+                <span id={attentionCountDescriptionId} className="sr-only">
+                  {`${t('attention.tasks')}: ${attentionModel.taskCount}; ${t('attention.chats')}: ${attentionModel.chatCount}`}
+                </span>
+              )}
+              {attentionModel && (attentionModel.taskCount > 0 || attentionModel.chatCount > 0) && (
+                <span
+                  data-testid="attention-toolbar-counts"
+                  className="inline-flex items-center gap-1 text-[10px] font-medium tabular-nums"
+                  aria-hidden="true"
+                >
+                  {attentionModel.taskCount > 0 && (
+                    <span className="inline-flex h-6 min-w-6 items-center justify-center gap-1 rounded-full bg-red-500 px-1.5 text-xs text-white">
+                      <AlertCircle size={12} />
+                      {attentionModel.taskCount > 99 ? '99+' : attentionModel.taskCount}
+                    </span>
+                  )}
+                  {attentionModel.chatCount > 0 && (
+                    <span className="inline-flex h-6 min-w-6 items-center justify-center gap-1 rounded-full bg-red-500 px-1.5 text-xs text-white">
+                      <MessageCircle size={12} />
+                      {attentionModel.chatCount > 99 ? '99+' : attentionModel.chatCount}
+                    </span>
+                  )}
+                </span>
+              )}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            {t('attention.title')}
             {attentionModel && (
-              <span id={attentionCountDescriptionId} className="sr-only">
-                {`${t('attention.tasks')}: ${attentionModel.taskCount}; ${t('attention.chats')}: ${attentionModel.chatCount}`}
+              <span className="block text-xs">
+                {t('attention.tasks')}: {attentionModel.taskCount} · {t('attention.chats')}:{' '}
+                {attentionModel.chatCount}
               </span>
             )}
-            {attentionModel && (attentionModel.taskCount > 0 || attentionModel.chatCount > 0) && (
-              <span data-testid="attention-toolbar-counts"
-                className="inline-flex items-center gap-1 text-[10px] font-medium tabular-nums"
-                aria-hidden="true">
-                {attentionModel.taskCount > 0 && (
-                  <span className="inline-flex h-6 min-w-6 items-center justify-center gap-1 rounded-full bg-red-500 px-1.5 text-xs text-white">
-                    <AlertCircle size={12} />
-                    {attentionModel.taskCount > 99 ? '99+' : attentionModel.taskCount}
-                  </span>
-                )}
-                {attentionModel.chatCount > 0 && (
-                  <span className="inline-flex h-6 min-w-6 items-center justify-center gap-1 rounded-full bg-red-500 px-1.5 text-xs text-white">
-                    <MessageCircle size={12} />
-                    {attentionModel.chatCount > 99 ? '99+' : attentionModel.chatCount}
-                  </span>
-                )}
-              </span>
-            )}
-          </button>
-        </TooltipTrigger>
-        <TooltipContent side="bottom">
-          {t('attention.title')}
-          {attentionModel && (
-            <span className="block text-xs">
-              {t('attention.tasks')}: {attentionModel.taskCount} · {t('attention.chats')}: {attentionModel.chatCount}
-            </span>
-          )}
-        </TooltipContent>
-      </Tooltip>
+          </TooltipContent>
+        </Tooltip>
       )}
 
       {/* GitHub link */}
