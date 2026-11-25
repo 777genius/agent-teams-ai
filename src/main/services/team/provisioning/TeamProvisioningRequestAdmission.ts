@@ -37,6 +37,8 @@ interface TeamProvisioningRequestWithTeamName {
 
 export interface TeamProvisioningRequestAdmissionServiceHost extends TeamProvisioningCreateLaunchOrchestrationServiceHost {
   withTeamLock<T>(teamName: string, fn: () => Promise<T>): Promise<T>;
+  /** Opt-in team budget guard runs under the same launch lock, before any spawn. */
+  assertTeamBudgetAdmission?(teamName: string): Promise<void>;
 }
 
 export interface TeamProvisioningRequestAdmissionBoundary {
@@ -80,6 +82,8 @@ async function runAdmittedTeamProvisioningRequest<TResult>(
 
   const publicationIsAuthorized = captureTeamLaunchPublicationAuthority(lockKey);
   return service.withTeamLock(lockKey, async () => {
+    if (!publicationIsAuthorized()) throw new Error('Launch admission superseded by Stop');
+    await service.assertTeamBudgetAdmission?.(lockKey);
     if (!publicationIsAuthorized()) throw new Error('Launch admission superseded by Stop');
     normalizeRuntimeSelectionVersion(request.runtimeSelectionVersion);
     const meta = await readTeamMeta(lockKey);
