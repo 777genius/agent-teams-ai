@@ -465,7 +465,17 @@
       "project": "Project",
       "loadFailed": "Failed to load budget settings",
       "notificationSettings": "Notification settings",
-      "saveFailed": "Failed to save budget settings"
+      "saveFailed": "Failed to save budget settings",
+      "teamCardBudget": "ماہانہ بجٹ",
+      "teamCardUnknown": "استعمال نامعلوم",
+      "teamCardBlocked": "حد پوری - آغاز بند",
+      "editor": {
+        "onExceeded": "بجٹ کی حد پر کارروائی",
+        "notifyOnly": "صرف اطلاع دیں",
+        "blockLaunch": "ٹیم کے نئے آغاز روکیں",
+        "stopTeam": "چلتی ٹیم بند کریں اور آغاز روکیں",
+        "enforcementHint": "اگر استعمال کا ڈیٹا غائب یا تاخیر سے ہو تو نئے آغاز بند ہوں گے۔ اخراجات اندازے ہیں، بل حد سے بڑھ سکتا ہے۔"
+      }
     }
   }
 }

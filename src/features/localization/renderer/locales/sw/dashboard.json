@@ -465,7 +465,17 @@
       "project": "Project",
       "loadFailed": "Failed to load budget settings",
       "notificationSettings": "Notification settings",
-      "saveFailed": "Failed to save budget settings"
+      "saveFailed": "Failed to save budget settings",
+      "teamCardBudget": "Bajeti ya mwezi",
+      "teamCardUnknown": "Matumizi hayajulikani",
+      "teamCardBlocked": "Kikomo kimefikiwa - kuanza kumezuiwa",
+      "editor": {
+        "onExceeded": "Hatua kikomo kinapofikiwa",
+        "notifyOnly": "Arifa pekee",
+        "blockLaunch": "Zuia kuanza upya kwa timu",
+        "stopTeam": "Simamisha timu na uzuie kuanza",
+        "enforcementHint": "Data ya matumizi ikikosekana au kuchelewa, kuanza upya huzuiwa. Gharama ni makadirio na bili inaweza kuzidi kikomo."
+      }
     }
   }
 }
