@@ -353,6 +353,9 @@
     },
     "budgets": {
       "allTeams": "Все команды",
+      "teamCardBudget": "Месячный бюджет",
+      "teamCardUnknown": "Нет точных данных расхода",
+      "teamCardBlocked": "Лимит достигнут - запуск заблокирован",
       "configureFor": "Бюджет для {{scope}}",
       "costLimit": "Лимит API-equivalent $",
       "costLimitDetail": "{{cost}} из {{limit}}",
