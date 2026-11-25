@@ -11,6 +11,7 @@ import type {
 interface TeamBudgetReader {
   getBudgetSettings(): Promise<TokenUsageBudgetSettingsDto>;
   getBudgetStatus(): Promise<TokenUsageBudgetStatusDto>;
+  refreshSnapshot(): Promise<unknown>;
 }
 
 interface TeamBudgetRuntime {
@@ -47,7 +48,17 @@ export function createTeamBudgetControls(
     const reader = read();
     const settings = await reader.getBudgetSettings();
     if ((settings.teams?.[namedTeamId(teamName)]?.onExceeded ?? 'notify') === 'notify') return;
-    assertTeamBudgetLaunchAllowed(await reader.getBudgetStatus(), teamName);
+    let status = await reader.getBudgetStatus();
+    // Before the first launch (or after UTC rollover), the usage ledger may
+    // have no freshness marker. Refresh once instead of blocking forever.
+    if (status.stale || status.degraded || status.targets.some(
+      (target) => target.scope === 'team' && target.id === namedTeamId(teamName) &&
+        target.metrics.some((metric) => metric.incomplete || metric.value === null)
+    )) {
+      await reader.refreshSnapshot();
+      status = await reader.getBudgetStatus();
+    }
+    assertTeamBudgetLaunchAllowed(status, teamName);
   });
   const observer = new TeamBudgetStopObserver({
     readCurrentStatus: async () => read().getBudgetStatus(),
