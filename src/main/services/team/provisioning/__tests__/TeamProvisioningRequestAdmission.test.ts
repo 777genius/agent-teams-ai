@@ -83,6 +83,32 @@ function createHost(
 }
 
 describe('TeamProvisioningRequestAdmission', () => {
+  it.each(['create', 'launch'] as const)(
+    'rejects a budget-blocked %s under the team lock, before the runtime mutates',
+    async (operation) => {
+      const budgetGuard = vi.fn(async () => {
+        throw new Error('TEAM_BUDGET_BLOCKED: monthly budget reached');
+      });
+      const create = vi.fn(unexpected);
+      const launch = vi.fn(unexpected);
+      const host = createHost({
+        assertTeamBudgetAdmission: budgetGuard,
+        createOpenCodeTeamThroughRuntimeAdapter: create,
+        launchOpenCodeTeamThroughRuntimeAdapter: launch,
+      });
+      const boundary = createTeamProvisioningRequestAdmissionBoundary(host, async () => null);
+      const promise = operation === 'create'
+        ? boundary.createTeam(createRequest, vi.fn())
+        : boundary.launchTeam(launchRequest, vi.fn());
+      await expect(promise).rejects.toThrow('TEAM_BUDGET_BLOCKED');
+      expect(host.lockCalls).toEqual(['alpha']);
+      expect(budgetGuard).toHaveBeenCalledOnce();
+      expect(create).not.toHaveBeenCalled();
+      expect(launch).not.toHaveBeenCalled();
+    }
+  );
+
+
   it.each(['team-lock', 'preparation'])(
     'keeps original launch admission across %s awaits',
     async (barrier) => {
