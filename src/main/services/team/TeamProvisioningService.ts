@@ -275,6 +275,7 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
     await this.assertTeamBudgetAdmission(input.teamName);
     await restartLeadRuntime(input, {
       spawn: spawnCli,
+      beforeSpawn: () => this.assertTeamBudgetAdmission(input.teamName),
       killAndWait: killTeamProcessAndWait,
       attachStdout: (run) => this.outputRecoveryFacade.attachStdoutHandler(run),
       attachStderr: (run) => this.outputRecoveryFacade.attachStderrHandler(run),

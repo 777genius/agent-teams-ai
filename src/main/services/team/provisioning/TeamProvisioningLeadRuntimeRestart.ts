@@ -28,6 +28,8 @@ export interface LeadRuntimeSettings {
 
 export interface LeadRuntimeRestartPorts {
   spawn: typeof spawnCli;
+  /** Checked immediately before every replacement and rollback process spawn. */
+  beforeSpawn?: () => Promise<void>;
   killAndWait(child: ChildProcess): Promise<void>;
   attachStdout(run: ProvisioningRun): void;
   attachStderr(run: ProvisioningRun): void;
@@ -281,6 +283,7 @@ async function spawnReplacement(
 ): Promise<ChildProcess> {
   const context = run.spawnContext;
   if (!context) throw new Error('Lead spawn context is unavailable');
+  await ports.beforeSpawn?.();
   const child = ports.spawn(context.claudePath, args, {
     cwd: context.cwd,
     env: { ...context.env },
