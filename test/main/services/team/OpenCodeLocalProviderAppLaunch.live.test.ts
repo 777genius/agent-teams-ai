@@ -9,7 +9,10 @@ import {
   inspectOpenCodeLocalModelRuntimeReadiness,
   OpenCodeLocalProviderConnector,
 } from '../../../../src/features/runtime-provider-management/main';
-import { readOpenCodeRuntimeLaneIndex } from '../../../../src/main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
+import {
+  getOpenCodeRuntimeLaneIndexPath,
+  readOpenCodeRuntimeLaneIndex,
+} from '../../../../src/main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import {
   getTeamsBasePath,
   setClaudeBasePathOverride,
@@ -249,14 +252,7 @@ liveDescribe('OpenCode local provider app launch live e2e', () => {
     ).toBe(true);
     expect(progressDump).toMatch(/missing-test:0\.5b|not available|unavailable/i);
     expect(fakeServer.requests, progressDump).not.toContain('POST /v1/chat/completions');
-    await waitUntil(
-      async () => {
-        const laneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName!);
-        return Object.keys(laneIndex.lanes).length === 0;
-      },
-      15_000,
-      500
-    );
+    await waitUntil(() => hasNoOpenCodeRuntimeLanes(getTeamsBasePath(), teamName!), 15_000, 500);
     clearBenignSlowConfigReadWarnings();
   }, 180_000);
 
@@ -427,6 +423,35 @@ liveDescribe('OpenCode local provider app launch live e2e', () => {
 });
 
 describe('OpenCode local provider fixture', () => {
+  it('checks the canonical lane index without accepting corrupt evidence as empty', async () => {
+    const teamsBasePath = await fs.mkdtemp(path.join(os.tmpdir(), 'TEST-opencode-lane-index-'));
+    const teamName = 'TEST-lane-index';
+    const indexPath = getOpenCodeRuntimeLaneIndexPath(teamsBasePath, teamName);
+    try {
+      expect(await hasNoOpenCodeRuntimeLanes(teamsBasePath, teamName)).toBe(true);
+      await fs.mkdir(path.dirname(indexPath), { recursive: true });
+      for (const corrupt of ['{', '{}', '{"version":1,"updatedAt":"now","lanes":[]}']) {
+        await fs.writeFile(indexPath, corrupt, 'utf8');
+        await expect(hasNoOpenCodeRuntimeLanes(teamsBasePath, teamName)).rejects.toThrow();
+        expect(await fs.readFile(indexPath, 'utf8')).toBe(corrupt);
+      }
+      const index = { version: 1, updatedAt: new Date().toISOString(), lanes: {} };
+      await fs.writeFile(indexPath, JSON.stringify(index), 'utf8');
+      expect(await hasNoOpenCodeRuntimeLanes(teamsBasePath, teamName)).toBe(true);
+      await fs.writeFile(
+        indexPath,
+        JSON.stringify({
+          ...index,
+          lanes: { primary: { laneId: 'primary', state: 'active', updatedAt: index.updatedAt } },
+        }),
+        'utf8'
+      );
+      expect(await hasNoOpenCodeRuntimeLanes(teamsBasePath, teamName)).toBe(false);
+    } finally {
+      await fs.rm(teamsBasePath, { recursive: true, force: true });
+    }
+  });
+
   it.each([false, true])('echoes each fresh launch challenge (stream=%s)', async (stream) => {
     const server = await startFakeOpenAiCompatibleServer();
     try {
@@ -476,6 +501,36 @@ interface FakeOpenAiCompatibleServer {
   requests: string[];
   chatBodies: unknown[];
   close: () => Promise<void>;
+}
+
+async function hasNoOpenCodeRuntimeLanes(
+  teamsBasePath: string,
+  teamName: string
+): Promise<boolean> {
+  const indexPath = getOpenCodeRuntimeLaneIndexPath(teamsBasePath, teamName);
+  let raw: string;
+  try {
+    raw = await fs.readFile(indexPath, 'utf8');
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return true;
+    throw error;
+  }
+  // The production reader repairs malformed indexes. Qualification must retain
+  // and reject that evidence instead of interpreting a repaired index as empty.
+  const parsed = JSON.parse(raw) as Record<string, unknown>;
+  if (
+    !parsed ||
+    typeof parsed !== 'object' ||
+    Array.isArray(parsed) ||
+    parsed.version !== 1 ||
+    typeof parsed.updatedAt !== 'string' ||
+    !parsed.lanes ||
+    typeof parsed.lanes !== 'object' ||
+    Array.isArray(parsed.lanes)
+  ) {
+    throw new Error(`Invalid OpenCode lane index: ${indexPath}`);
+  }
+  return Object.keys(parsed.lanes).length === 0;
 }
 
 async function startFakeOpenAiCompatibleServer(port = 0): Promise<FakeOpenAiCompatibleServer> {
