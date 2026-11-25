@@ -1,10 +1,10 @@
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { SaveAsTemplateAction } from '@features/custom-team-templates/renderer';
-import { useTeamBudgetStatus } from '@features/token-usage/renderer/hooks/useTeamBudgetStatus';
-import { TeamBudgetProgress } from '@features/token-usage/renderer/ui/TeamBudgetProgress';
+
 import { useAppTranslation } from '@features/localization/renderer';
 import { recordRecentProjectOpenPaths } from '@features/recent-projects/renderer';
+import { TeamBudgetProgress, useTeamBudgetStatus } from '@features/token-usage/renderer';
 import { classifyAnalyticsError, recordTeamStop } from '@renderer/analytics/productAnalytics';
 import { api, isElectronMode } from '@renderer/api';
 import { confirm } from '@renderer/components/common/ConfirmDialog';

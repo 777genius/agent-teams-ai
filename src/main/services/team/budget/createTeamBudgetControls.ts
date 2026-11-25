@@ -3,7 +3,7 @@ import { namedTeamId } from '@features/token-usage/contracts';
 import {
   assertTeamBudgetLaunchAllowed,
   evaluateTeamBudgetEnforcement,
-} from '@features/token-usage/core/domain';
+} from '@features/token-usage/main';
 
 import { stopTeamWithVerifiedEscalation } from '../lifecycle/stopTeamWithVerifiedEscalation';
 import { TeamBudgetStopObserver } from './TeamBudgetStopObserver';

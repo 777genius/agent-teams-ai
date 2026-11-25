@@ -1,9 +1,6 @@
 import { useState } from 'react';
 
-import { useStore } from '@renderer/store';
-
-import { namedTeamId } from '../../contracts';
-
+import { useKnownBudgetTeams } from '../hooks/useKnownBudgetTeams';
 import { useOpenTokenUsageNotificationSettings } from '../hooks/useOpenTokenUsageNotificationSettings';
 import { useTokenUsageBudgetSettings } from '../hooks/useTokenUsageBudgetSettings';
 
@@ -15,7 +12,7 @@ import type React from 'react';
 /** Owns Budget independently from analytics filters and cache display preferences. */
 export const BudgetSection = ({ t }: { t: BudgetT }): React.JSX.Element => {
   const [selected, setSelected] = useState('global:global');
-  const teams = useStore((state) => state.teams);
+  const knownTeams = useKnownBudgetTeams();
   const openNotificationSettings = useOpenTokenUsageNotificationSettings();
   const budget = useTokenUsageBudgetSettings({
     loadErrorMessage: t('tokenUsage.budgets.loadFailed'),
@@ -24,11 +21,7 @@ export const BudgetSection = ({ t }: { t: BudgetT }): React.JSX.Element => {
   return (
     <BudgetAlertsPanel
       status={budget.budgetStatus}
-      knownTeams={teams.filter((team) => !team.deletedAt).map((team) => ({
-        scope: 'team' as const,
-        id: namedTeamId(team.teamName),
-        label: team.displayName,
-      }))}
+      knownTeams={knownTeams}
       budgetConfig={budget.budgetConfig}
       budgetTargetKey={selected}
       error={budget.budgetConfigError}

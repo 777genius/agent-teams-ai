@@ -1,5 +1,5 @@
 import { rawTeamName } from '@features/token-usage/contracts';
-import { evaluateTeamBudgetEnforcement } from '@features/token-usage/core/domain';
+import { evaluateTeamBudgetEnforcement } from '@features/token-usage/main';
 
 import type { TokenUsageBudgetStatusDto } from '@features/token-usage/contracts';
 
