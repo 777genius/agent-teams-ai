@@ -57,6 +57,7 @@ export function createDesktopUiControls(
   options: {
     assertOwnedRenderer(): void;
     step(value: Record<string, unknown>): void;
+    prepareBlockedTarget?(deadline: number): Promise<void>;
   }
 ) {
   const step = options.step;
@@ -381,9 +382,14 @@ export function createDesktopUiControls(
         : expression;
       let facts: Record<string, boolean | number | string> | undefined;
       let preparationPending = false;
-      const readOptions = prepareScroll ? { deadline: readDeadline, beforeRead: async () => {
+      let blockedTarget = false;
+      const readOptions = prepareScroll || options.prepareBlockedTarget ? { deadline: readDeadline, beforeRead: async () => {
         preparationPending = true;
-        await prepareScroll();
+        if (blockedTarget && options.prepareBlockedTarget) {
+          blockedTarget = false;
+          await options.prepareBlockedTarget(readDeadline);
+        }
+        await prepareScroll?.();
       } } : undefined;
       try {
         const observed = record(await waitRead(readExpression, phase, readDeadline - Date.now(), value => {
@@ -391,6 +397,8 @@ export function createDesktopUiControls(
           if (value && typeof value === 'object' && !Array.isArray(value)) {
             const row = value as Record<string, unknown>;
             if (row.unavailableTarget === true) {
+              blockedTarget = row.matches === 1 && row.disabled === false && row.ariaDisabled === false &&
+                row.pointerEventsNone === true && row.centerInViewport === true && row.hitPresent === true;
               facts = {
                 matches: Number.isSafeInteger(row.matches) && Number(row.matches) >= 0
                   ? Math.min(Number(row.matches), 256) : 0,

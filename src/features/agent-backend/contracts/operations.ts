@@ -41,6 +41,7 @@ import type {
   BackendProcessPending,
   BackendProcessReceipt,
 } from './processes';
+import type { BackendProjectContextOperations } from './projectContext';
 import type {
   BackendLaunchRestorations,
   BackendResumePreparation,
@@ -48,6 +49,7 @@ import type {
 } from './restorations';
 import type { RetainedLegacyLaunchApi } from './retainedLegacyLaunch';
 import type { BackendReviewOperationPayloads, BackendReviewValue } from './review';
+import type { BackendReviewFlowView } from './reviewFlow';
 import type { AgentBackendReviewWatchApi } from './reviewWatch';
 import type {
   BackendRosterConfiguration,
@@ -98,6 +100,7 @@ export interface BackendTaskRecipient {
 
 export interface BackendOperationPayloads
   extends
+    BackendProjectContextOperations,
     BackendGroupPayloads,
     BackendReviewOperationPayloads,
     BackendTeamLifecyclePayloads,
@@ -171,6 +174,7 @@ export interface BackendOperationPayloads
   'task.comment': {
     taskId: string;
     text: string;
+    answerClarificationRequestId?: string;
     taskRefs?: BackendTaskRef[];
     attachments?: AttachmentReference[];
   };
@@ -306,6 +310,7 @@ export interface BackendTask {
   id: string;
   status: string;
   needsClarification?: 'lead' | 'user';
+  clarificationRequestId?: string;
   reviewState?: 'none' | 'review' | 'reviewed' | 'approved' | 'needsFix';
   subject?: string;
   description?: string;
@@ -509,7 +514,9 @@ export type BackendOperationResult =
         | BackendLeadActivity
         | BackendLeadContext
         | BackendTeamSnapshot
-        | { kind: 'review-flow'; settings: BackendOperationPayloads['task.board.review-flow']['settings']; unreadable?: true }
+        | import('./projectContext').BackendProjectContextSnapshot
+        | import('./projectContext').BackendProjectLaunchSource
+        | BackendReviewFlowView
         | BackendTeamMessagesPage
         | BackendRosterConfiguration
         | BackendRosterReceipt

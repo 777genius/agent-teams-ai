@@ -28,11 +28,13 @@ import {
 } from '../store/utils/contextScopedRequestEpoch';
 
 import { createContextScopedExtensionApi } from './createContextScopedExtensionApi';
+import { resolveHttpBaseUrl } from './httpBaseUrl';
 import { HttpAPIClient } from './httpClient';
+import { withTeamDefinitionEdits } from './teamDefinitionEdits';
 
 import type { ReviewOriginScope } from '@agent-teams/task-change-ledger/review-transport';
 import type { TeamGroupChatsAPI } from '@features/team-group-chats/contracts';
-import type { CrossTeamAPI, ElectronAPI, ReviewAPI } from '@shared/types/api';
+import type { CrossTeamAPI, ElectronAPI, ReviewAPI, TeamsAPI } from '@shared/types/api';
 
 /**
  * Resolves the base URL for the HTTP API client.
@@ -42,12 +44,7 @@ import type { CrossTeamAPI, ElectronAPI, ReviewAPI } from '@shared/types/api';
  *   to avoid cross-origin issues (localhost vs 127.0.0.1)
  */
 function getHttpBaseUrl(): string {
-  const params = new URLSearchParams(window.location.search);
-  const explicitPort = params.get('port');
-  if (explicitPort) {
-    return `http://127.0.0.1:${parseInt(explicitPort, 10)}`;
-  }
-  return window.location.origin;
+  return resolveHttpBaseUrl(window.location.origin, window.location.search);
 }
 
 let httpClient: HttpAPIClient | null = null;
@@ -64,7 +61,7 @@ function captureReviewContext(): () => boolean {
 function hostAdapter(impl: ElectronAPI): ReturnType<typeof createHostBackendRenderer> {
   let adapter = hostAdapters.get(impl);
   if (!adapter) {
-    adapter = createHostBackendRenderer(impl.teams, impl.agentBackend, captureReviewContext);
+    adapter = createHostBackendRenderer(withTeamDefinitionEdits(impl.teams), impl.agentBackend, captureReviewContext);
     hostAdapters.set(impl, adapter);
   }
   return adapter;
@@ -181,6 +178,8 @@ export const api: ElectronAPI = new Proxy({} as ElectronAPI, {
       return adapter;
     }
     const value = Reflect.get(impl, prop, receiver) as unknown;
+    if (prop === 'teams' && value && typeof value === 'object')
+      return withTeamDefinitionEdits(value as TeamsAPI);
     if (typeof value === 'function') {
       return (value as (...args: unknown[]) => unknown).bind(impl);
     }

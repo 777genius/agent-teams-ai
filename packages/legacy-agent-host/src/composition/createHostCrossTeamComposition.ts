@@ -63,6 +63,9 @@ export function createHostCrossTeamComposition(options: {
   teams: ReadonlyMap<string, HostedTeam>;
   assertCurrent(): void;
   activeInputs(binding: RuntimeMemberBinding): readonly ImmutableDelivery[];
+  resolveTarget?(source: HostedTeam, requested: HostedTeam, sourceHandle?: string,
+    targetHandle?: string, visibleOnly?: boolean): { team: HostedTeam; handleId?: string };
+  assertPair?(source: HostedTeam, target: HostedTeam): void;
 }) {
   const authority = createCrossTeamPairAuthority(options),
     outbox = createHostCrossTeamOutbox(options.profile.owner.storageRoot);
@@ -257,13 +260,17 @@ export function createHostCrossTeamComposition(options: {
             source,
             options.profile.principalId,
             options.assertCurrent,
-            () =>
-              authority.target(
-                target,
+            () => {
+              const selected = options.resolveTarget?.(source, target, input.binding.handleId,
+                paired.targetBinding.handleId) ?? { team: target, handleId: paired.targetBinding.handleId };
+              options.assertPair?.(source, selected.team);
+              return authority.target(
+                selected.team,
                 options.profile.principalId,
                 request.toMember,
-                paired.targetBinding.handleId
-              ),
+                selected.handleId
+              );
+            },
             input.binding.handleId
           );
           return {
@@ -324,13 +331,17 @@ export function createHostCrossTeamComposition(options: {
       if (teamName !== undefined && teamName !== source.definition.binding.teamName)
         throw new TeamOwnerError('forbidden');
     };
-    const catalog = () => {
+    const catalog = (includePhysical = false) => {
       guard();
       return [...options.teams.values()]
         .filter((team) => team !== canonical)
         .flatMap((team) => {
           try {
-            return [{ team, side: authority.target(team, options.profile.principalId) }];
+            const selected = options.resolveTarget?.(canonical!, team, undefined, undefined,
+              !includePhysical) ?? { team };
+            options.assertPair?.(canonical!, selected.team);
+            return [{ team, side: authority.target(selected.team, options.profile.principalId,
+              undefined, selected.handleId) }];
           } catch {
             return [];
           }
@@ -345,10 +356,10 @@ export function createHostCrossTeamComposition(options: {
               input?.excludeTeam !== row.side.resourceRef &&
               input?.excludeTeam !== row.side.teamName
           )
-          .map(({ side }) => ({
+          .map(({ team, side }) => ({
             resourceRef: side.resourceRef,
             teamResourceRef: side.teamResourceRef,
-            teamName: side.teamName,
+            teamName: team.definition.binding.teamName,
             recipientName: side.recipient.name,
           }));
       },
@@ -361,13 +372,14 @@ export function createHostCrossTeamComposition(options: {
         const old = owner.crossTeamCommands(principalId).lookup(input.commandId);
         const selected = old
           ? { side: old.intent.pair.target }
-          : catalog().find((row) => row.side.resourceRef === input.toTeam);
+          : catalog(true).find((row) => row.side.resourceRef === input.toTeam);
         if (!selected) throw new TeamOwnerError('hold');
-        const taskRefs = input.taskRefs?.map((ref) => {
+        const taskRefs = old ? structuredClone(old.intent.request.taskRefs) : input.taskRefs?.map((ref) => {
           const team: 'source' | 'target' | undefined =
             ref.teamName === source.definition.binding.teamName
               ? 'source'
-              : ref.teamName === selected.side.teamName
+              : ref.teamName === selected.side.teamName ||
+                  'team' in selected && ref.teamName === selected.team.definition.binding.teamName
                 ? 'target'
                 : undefined;
           if (!team) throw new TeamOwnerError('invalid');
@@ -387,7 +399,7 @@ export function createHostCrossTeamComposition(options: {
           ...(taskRefs === undefined ? {} : { taskRefs }),
         };
         const service = coordinator(canonical!, principalId, guard, () => {
-          const chosen = catalog().find((row) => row.side.resourceRef === input.toTeam);
+          const chosen = catalog(true).find((row) => row.side.resourceRef === input.toTeam);
           if (!chosen) throw new TeamOwnerError('hold');
           return chosen.side;
         });

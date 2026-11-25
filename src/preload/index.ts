@@ -3,12 +3,14 @@ import { createAnnouncementsBridge } from '@features/announcements/preload';
 import { createAppCloseCoordinationBridge } from '@features/app-close-coordination/preload';
 import { createCodexAccountBridge } from '@features/codex-account/preload';
 import { createCodexRuntimeInstallerBridge } from '@features/codex-runtime-installer/preload';
+import { createCustomTeamTemplatesBridge } from '@features/custom-team-templates/preload';
 import { createDocumentPreviewBridge } from '@features/document-preview/preload';
 import { createExternalAgentConnectionBridge } from '@features/external-agent-connection/preload';
 import { createGatewayProviderBridge } from '@features/gateway-provider/preload';
 import { createMemberLogStreamBridge } from '@features/member-log-stream/preload';
 import { createMemberWorkSyncBridge } from '@features/member-work-sync/preload';
 import { createNativeNextPromptBridge } from '@features/native-prompt-suggestions/preload';
+import { createNotificationChannelsBridge } from '@features/notification-channels/preload';
 import { createOrganizationsBridge } from '@features/organizations/preload';
 import { createProjectFolderBridge } from '@features/project-folder/preload';
 import { createRecentProjectsBridge } from '@features/recent-projects/preload';
@@ -16,14 +18,23 @@ import { createReviewFlowBridge } from '@features/review-flow/preload';
 import { createRuntimeProviderManagementBridge } from '@features/runtime-provider-management/preload';
 import { createTeamGroupChatsBridge } from '@features/team-group-chats/preload';
 import { createTeamImportBridge } from '@features/team-import/preload';
+import {
+  TEAM_PROJECT_CONTEXT_VIEW_CHANNEL,
+  type TeamProjectContextView,
+} from '@features/team-project-context/contracts';
 import { createTeamMemberSettingsBridge } from '@features/team-provisioning/preload';
 import { createTeamReadRecoveryBridge } from '@features/team-read-recovery/preload';
 import { createTerminalWorkspaceBridge } from '@features/terminal-workspace/preload';
 import { createTmuxInstallerBridge } from '@features/tmux-installer/preload';
 import { createTokenUsageBridge } from '@features/token-usage/preload';
+import { createUserAttentionBridge } from '@features/user-attention/preload';
 import { createWorkspaceTrustBridge } from '@features/workspace-trust/preload';
-import { WINDOW_SET_ZOOM_FACTOR_CHANNEL, WINDOW_ZOOM_FACTOR_CHANGED_CHANNEL } from '@shared/constants';
+import {
+  WINDOW_SET_ZOOM_FACTOR_CHANNEL,
+  WINDOW_ZOOM_FACTOR_CHANGED_CHANNEL,
+} from '@shared/constants';
 import { parseTeamMemberRestartResult } from '@shared/types/teamMemberRestart';
+import { toTeamDefinitionEditRefusal } from '@shared/utils/teamDefinitionEditRefusal';
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
 
 import {
@@ -42,6 +53,32 @@ import {
   CLI_INSTALLER_INVALIDATE_STATUS,
   CLI_INSTALLER_PROGRESS,
   CLI_INSTALLER_VERIFY_PROVIDER_MODELS,
+  CONFIG_ADD_CUSTOM_PROJECT_PATH,
+  CONFIG_ADD_IGNORE_REGEX,
+  CONFIG_ADD_IGNORE_REPOSITORY,
+  CONFIG_ADD_TRIGGER,
+  CONFIG_CLEAR_SNOOZE,
+  CONFIG_FIND_WSL_CLAUDE_ROOTS,
+  CONFIG_GET,
+  CONFIG_GET_CLAUDE_ROOT_INFO,
+  CONFIG_GET_TRIGGERS,
+  CONFIG_HIDE_SESSION,
+  CONFIG_HIDE_SESSIONS,
+  CONFIG_OPEN_IN_EDITOR,
+  CONFIG_PIN_SESSION,
+  CONFIG_REMOVE_CUSTOM_PROJECT_PATH,
+  CONFIG_REMOVE_IGNORE_REGEX,
+  CONFIG_REMOVE_IGNORE_REPOSITORY,
+  CONFIG_REMOVE_TRIGGER,
+  CONFIG_SELECT_CLAUDE_ROOT_FOLDER,
+  CONFIG_SELECT_FOLDERS,
+  CONFIG_SNOOZE,
+  CONFIG_TEST_TRIGGER,
+  CONFIG_UNHIDE_SESSION,
+  CONFIG_UNHIDE_SESSIONS,
+  CONFIG_UNPIN_SESSION,
+  CONFIG_UPDATE,
+  CONFIG_UPDATE_TRIGGER,
   CONTEXT_CHANGED,
   CONTEXT_GET_ACTIVE,
   CONTEXT_LIST,
@@ -153,7 +190,6 @@ import {
   SSH_SAVE_LAST_CONNECTION,
   SSH_STATUS,
   SSH_TEST,
-  TEAM_ADD_MEMBER,
   TEAM_ADD_TASK_COMMENT,
   TEAM_ADD_TASK_RELATIONSHIP,
   TEAM_ALIVE_LIST,
@@ -208,13 +244,10 @@ import {
   TEAM_PROJECT_BRANCH_CHANGE,
   TEAM_PROVISIONING_PROGRESS,
   TEAM_PROVISIONING_STATUS,
-  TEAM_REMOVE_MEMBER,
   TEAM_REMOVE_TASK_RELATIONSHIP,
-  TEAM_REPLACE_MEMBERS,
   TEAM_REQUEST_REVIEW,
   TEAM_RESTART_MEMBER,
   TEAM_RESTORE,
-  TEAM_RESTORE_MEMBER,
   TEAM_RESTORE_TASK,
   TEAM_RETRY_FAILED_OPENCODE_SECONDARY_LANES,
   TEAM_SAVE_TASK_ATTACHMENT,
@@ -234,10 +267,8 @@ import {
   TEAM_TOOL_APPROVAL_READ_FILE,
   TEAM_TOOL_APPROVAL_RESPOND,
   TEAM_TOOL_APPROVAL_SETTINGS,
-  TEAM_UPDATE_CONFIG,
   TEAM_UPDATE_KANBAN,
   TEAM_UPDATE_KANBAN_COLUMN_ORDER,
-  TEAM_UPDATE_MEMBER_ROLE,
   TEAM_UPDATE_TASK_FIELDS,
   TEAM_UPDATE_TASK_OWNER,
   TEAM_UPDATE_TASK_STATUS,
@@ -261,36 +292,11 @@ import {
   WINDOW_MAXIMIZE,
   WINDOW_MINIMIZE,
 } from './constants/ipcChannels';
-import {
-  CONFIG_ADD_CUSTOM_PROJECT_PATH,
-  CONFIG_ADD_IGNORE_REGEX,
-  CONFIG_ADD_IGNORE_REPOSITORY,
-  CONFIG_ADD_TRIGGER,
-  CONFIG_CLEAR_SNOOZE,
-  CONFIG_FIND_WSL_CLAUDE_ROOTS,
-  CONFIG_GET,
-  CONFIG_GET_CLAUDE_ROOT_INFO,
-  CONFIG_GET_TRIGGERS,
-  CONFIG_HIDE_SESSION,
-  CONFIG_HIDE_SESSIONS,
-  CONFIG_OPEN_IN_EDITOR,
-  CONFIG_PIN_SESSION,
-  CONFIG_REMOVE_CUSTOM_PROJECT_PATH,
-  CONFIG_REMOVE_IGNORE_REGEX,
-  CONFIG_REMOVE_IGNORE_REPOSITORY,
-  CONFIG_REMOVE_TRIGGER,
-  CONFIG_SELECT_CLAUDE_ROOT_FOLDER,
-  CONFIG_SELECT_FOLDERS,
-  CONFIG_SNOOZE,
-  CONFIG_TEST_TRIGGER,
-  CONFIG_UNHIDE_SESSION,
-  CONFIG_UNHIDE_SESSIONS,
-  CONFIG_UNPIN_SESSION,
-  CONFIG_UPDATE,
-  CONFIG_UPDATE_TRIGGER,
-} from './constants/ipcChannels';
+import { createTeamDefinitionEditBridge } from './createTeamDefinitionEditBridge';
 import { installRendererLogForwarding } from './installRendererLogForwarding';
 import { installSentryRendererIpcBridge } from './installSentryRendererIpcBridge';
+import { unwrapIpcResult } from './ipcResult';
+import { createNotificationHistoryBridge } from './notificationHistoryBridge';
 import { createOpenCodeStartupCleanupAPI } from './openCodeStartupCleanup';
 
 import type {
@@ -299,7 +305,6 @@ import type {
   ReviewDraftHistorySnapshot,
 } from '@features/change-review-history/contracts';
 import type {
-  AddMemberRequest,
   AddTaskCommentRequest,
   AgentChangeSet,
   AppConfig,
@@ -352,7 +357,6 @@ import type {
   ProjectBranchChangeEvent,
   QueuedUserMessagesSnapshot,
   RejectResult,
-  ReplaceMembersRequest,
   RestoreReviewHistoryRequest,
   RestoreReviewHistoryResult,
   RetryFailedOpenCodeSecondaryLanesResult,
@@ -387,7 +391,6 @@ import type {
   TeamChangeEvent,
   TeamClaudeLogsQuery,
   TeamClaudeLogsResponse,
-  TeamConfig,
   TeamCreateConfigRequest,
   TeamCreateConfigResponse,
   TeamCreateRequest,
@@ -409,7 +412,6 @@ import type {
   TeamTaskChangeSummaryRequest,
   TeamTaskStatus,
   TeamTaskWithKanban,
-  TeamUpdateConfigRequest,
   TeamViewSnapshot,
   TeamWorktreeGitStatus,
   ToolApprovalEvent,
@@ -459,6 +461,7 @@ import type {
   SkillUpsertRequest,
   SkillWatcherEvent,
 } from '@shared/types/extensions';
+import type { TeamDefinitionEditRefusal } from '@shared/types/teamDefinitionEdit';
 import type { PtySpawnOptions } from '@shared/types/terminal';
 import type { CliArgsValidationResult } from '@shared/utils/cliArgsParser';
 
@@ -482,11 +485,19 @@ interface IpcFileChangePayload {
 }
 
 async function invokeIpcWithResult<T>(channel: string, ...args: unknown[]): Promise<T> {
+  return unwrapIpcResult((await ipcRenderer.invoke(channel, ...args)) as IpcResult<T>);
+}
+
+async function invokeDefinitionEdit<T>(
+  channel: string,
+  ...args: unknown[]
+): Promise<T | TeamDefinitionEditRefusal> {
   const result = (await ipcRenderer.invoke(channel, ...args)) as IpcResult<T>;
   if (!result.success) {
-    throw new Error(result.error ?? 'Unknown error');
+    const refusal = toTeamDefinitionEditRefusal(result.error ?? 'Unknown error', result.failure);
+    if (refusal) return refusal;
   }
-  return result.data as T;
+  return unwrapIpcResult(result);
 }
 
 installRendererLogForwarding();
@@ -522,8 +533,11 @@ const electronAPI: ElectronAPI = {
     ipcRenderer,
   }),
   ...createRecentProjectsBridge(),
+  ...createUserAttentionBridge(),
+  ...createNotificationChannelsBridge(ipcRenderer),
   reviewFlow: createReviewFlowBridge(),
   teamGroupChats: createTeamGroupChatsBridge(),
+  customTeamTemplates: createCustomTeamTemplatesBridge(),
   announcements: createAnnouncementsBridge(),
   gatewayProvider: createGatewayProviderBridge(),
   ...createWorkspaceTrustBridge(ipcRenderer),
@@ -607,61 +621,7 @@ const electronAPI: ElectronAPI = {
   // Agent config reading
   readAgentConfigs: (projectRoot: string) => ipcRenderer.invoke('read-agent-configs', projectRoot),
 
-  // Notifications API
-  notifications: {
-    get: (options?: { limit?: number; offset?: number }) =>
-      ipcRenderer.invoke('notifications:get', options),
-    markRead: (id: string) => ipcRenderer.invoke('notifications:markRead', id),
-    markAllRead: () => ipcRenderer.invoke('notifications:markAllRead'),
-    setViewedTeam: (teamName: string | null) =>
-      ipcRenderer.invoke('notifications:setViewedTeam', teamName),
-    delete: (id: string) => ipcRenderer.invoke('notifications:delete', id),
-    clear: () => ipcRenderer.invoke('notifications:clear'),
-    getUnreadCount: () => ipcRenderer.invoke('notifications:getUnreadCount'),
-    testNotification: () =>
-      ipcRenderer.invoke('notifications:testNotification') as Promise<{
-        success: boolean;
-        error?: string;
-      }>,
-    onNew: (callback: (event: unknown, error: unknown) => void): (() => void) => {
-      ipcRenderer.on(
-        'notification:new',
-        callback as (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
-      );
-      return (): void => {
-        ipcRenderer.removeListener(
-          'notification:new',
-          callback as (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
-        );
-      };
-    },
-    onUpdated: (
-      callback: (event: unknown, payload: { total: number; unreadCount: number }) => void
-    ): (() => void) => {
-      ipcRenderer.on(
-        'notification:updated',
-        callback as (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
-      );
-      return (): void => {
-        ipcRenderer.removeListener(
-          'notification:updated',
-          callback as (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
-        );
-      };
-    },
-    onClicked: (callback: (event: unknown, data: unknown) => void): (() => void) => {
-      ipcRenderer.on(
-        'notification:clicked',
-        callback as (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
-      );
-      return (): void => {
-        ipcRenderer.removeListener(
-          'notification:clicked',
-          callback as (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
-        );
-      };
-    },
-  },
+  ...createNotificationHistoryBridge(ipcRenderer),
 
   // Config API - uses typed helper to unwrap { success, data, error } responses
   config: {
@@ -771,7 +731,8 @@ const electronAPI: ElectronAPI = {
 
   // Zoom factor sync (used for traffic-light-safe layout)
   getZoomFactor: async (): Promise<number> => currentZoomFactor,
-  setZoomFactor: (factor: number): Promise<number> => ipcRenderer.invoke(WINDOW_SET_ZOOM_FACTOR_CHANNEL, factor),
+  setZoomFactor: (factor: number): Promise<number> =>
+    ipcRenderer.invoke(WINDOW_SET_ZOOM_FACTOR_CHANNEL, factor),
   onZoomFactorChanged: (callback: (zoomFactor: number) => void): (() => void) => {
     const listener = (_event: Electron.IpcRendererEvent, zoomFactor: unknown): void => {
       if (typeof zoomFactor !== 'number' || !Number.isFinite(zoomFactor)) return;
@@ -932,6 +893,12 @@ const electronAPI: ElectronAPI = {
     list: async () => {
       return invokeIpcWithResult<TeamSummary[]>(TEAM_LIST);
     },
+    getProjectContextView: async (logicalName: string, projectPath?: string | null) =>
+      invokeIpcWithResult<TeamProjectContextView>(
+        TEAM_PROJECT_CONTEXT_VIEW_CHANNEL,
+        logicalName,
+        projectPath ?? null
+      ),
     getData: async (teamName: string, options?: TeamGetDataOptions) => {
       if (options === undefined) {
         return invokeIpcWithResult<TeamViewSnapshot>(TEAM_GET_DATA, teamName);
@@ -1205,26 +1172,11 @@ const electronAPI: ElectronAPI = {
     getAllTasks: async () => {
       return invokeIpcWithResult<GlobalTask[]>(TEAM_GET_ALL_TASKS);
     },
-    updateConfig: async (teamName: string, updates: TeamUpdateConfigRequest) => {
-      return invokeIpcWithResult<TeamConfig>(TEAM_UPDATE_CONFIG, teamName, updates);
-    },
+    ...createTeamDefinitionEditBridge<never>(invokeIpcWithResult),
+    definitionEdits:
+      createTeamDefinitionEditBridge<TeamDefinitionEditRefusal>(invokeDefinitionEdit),
     addTaskComment: async (teamName: string, taskId: string, request: AddTaskCommentRequest) => {
       return invokeIpcWithResult<TaskComment>(TEAM_ADD_TASK_COMMENT, teamName, taskId, request);
-    },
-    addMember: async (teamName: string, request: AddMemberRequest) => {
-      return invokeIpcWithResult<void>(TEAM_ADD_MEMBER, teamName, request);
-    },
-    replaceMembers: async (teamName: string, request: ReplaceMembersRequest) => {
-      return invokeIpcWithResult<void>(TEAM_REPLACE_MEMBERS, teamName, request);
-    },
-    removeMember: async (teamName: string, memberName: string) => {
-      return invokeIpcWithResult<void>(TEAM_REMOVE_MEMBER, teamName, memberName);
-    },
-    restoreMember: async (teamName: string, memberName: string) => {
-      return invokeIpcWithResult<void>(TEAM_RESTORE_MEMBER, teamName, memberName);
-    },
-    updateMemberRole: async (teamName: string, memberName: string, role: string | undefined) => {
-      return invokeIpcWithResult<void>(TEAM_UPDATE_MEMBER_ROLE, teamName, memberName, role);
     },
     getProjectBranch: async (projectPath: string) => {
       return invokeIpcWithResult<string | null>(TEAM_GET_PROJECT_BRANCH, projectPath);

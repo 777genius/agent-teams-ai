@@ -12,6 +12,12 @@ interface ExecuteTeamRelaunchOptions {
   isTeamAlive: boolean;
   request: TeamLaunchRequest;
   members: TeamCreateRequest['members'];
+  /**
+   * The roster belongs to a team definition that the team edit flow owns (a
+   * per-project team). Required so no caller can forget it: such a relaunch
+   * never saves the roster shown in the dialog.
+   */
+  rosterReadOnly: boolean;
   memberSettingsRelaunch?: ReplaceMembersRequest['memberSettingsRelaunch'];
   rosterMetadata?: Pick<ReplaceMembersRequest, 'command' | 'configuration'> & {
     relaunch?: TeamRelaunchContinuation;
@@ -29,6 +35,7 @@ export async function executeTeamRelaunch({
   isTeamAlive,
   request,
   members,
+  rosterReadOnly,
   memberSettingsRelaunch,
   rosterMetadata,
   validateBeforeReplace,
@@ -39,6 +46,20 @@ export async function executeTeamRelaunch({
   onMembersSaved,
 }: ExecuteTeamRelaunchOptions): Promise<void> {
   const { relaunch, ...persistedMetadata } = rosterMetadata ?? {};
+  if (relaunch && rosterReadOnly) {
+    await validateBeforeReplace?.();
+    if (!relaunch.stopConfirmed) {
+      if (isTeamAlive) {
+        if (!relaunch.originalRunId || !stopRun)
+          throw new Error('Original team run unavailable. Close and reopen relaunch.');
+        await stopRun(relaunch.originalRunId);
+      }
+      relaunch.stopConfirmed = true;
+    }
+    await validateBeforeReplace?.();
+    await launchTeam(request);
+    return;
+  }
   if (relaunch) {
     if (!relaunch.replaceConfirmed) {
       if (!relaunch.replaceAttempted) {
@@ -70,11 +91,13 @@ export async function executeTeamRelaunch({
     await stopTeam(teamName);
     await validateBeforeReplace?.();
   }
-  await replaceMembers(teamName, {
-    members,
-    ...persistedMetadata,
-    ...(memberSettingsRelaunch ? { memberSettingsRelaunch } : {}),
-  });
-  onMembersSaved?.();
+  if (!rosterReadOnly) {
+    await replaceMembers(teamName, {
+      members,
+      ...persistedMetadata,
+      ...(memberSettingsRelaunch ? { memberSettingsRelaunch } : {}),
+    });
+    onMembersSaved?.();
+  }
   await launchTeam(request);
 }

@@ -31,6 +31,7 @@ export interface BackendLaunchModelSelection {
 export interface BackendLaunchModelPreparation {
   preparationId: string;
   selections: BackendLaunchModelSelection[];
+  projectContext?: import('./projectContext').BackendProjectReadinessLocator;
 }
 
 /** Selected Team/member model observation; no global authentication or launch grant. */

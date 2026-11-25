@@ -115,6 +115,7 @@ export class BackendOperationsFacade {
           request.operation === 'team.lead.context.read';
         const changes = request.operation === 'team.changes.read';
         const roster =
+          request.operation.startsWith('team.project-context.') ||
           request.operation.startsWith('team.roster.') ||
           request.operation.startsWith('team.lifecycle.') ||
           request.operation.startsWith('team.queue.');
@@ -176,6 +177,8 @@ export class BackendOperationsFacade {
             changes ||
             request.operation === 'team.roster.read' ||
             request.operation === 'team.roster.lookup' ||
+            request.operation === 'team.project-context.read' ||
+            request.operation === 'team.project-context.launch-source.read' ||
             request.operation === 'team.launch.read' ||
             request.operation === 'team.launch.configuration.read' ||
             request.operation === 'team.launch.model.configuration.read' ||

@@ -1,6 +1,7 @@
 /** UI scenario sources and their controller/fixture closure. */
 export const desktopProofUiSources = [
   'scripts/legacy-agent-host/desktop-proof-ui-sources.ts',
+  'scripts/legacy-agent-host/desktop-created-project-selection.ts',
   'scripts/legacy-agent-host/desktop-task-board-cross-team-ui-smoke.ts',
   'scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts',
   'scripts/legacy-agent-host/desktop-review-flow-ui-smoke.ts',

@@ -139,6 +139,28 @@ describe('ActivityItem compact header preview', () => {
     vi.unstubAllGlobals();
   });
 
+  it('keeps hook order when the same mounted message changes between ordinary and system presentation', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const message: InboxMessage = { from: 'alice', messageId: 'TEST-same-row', text: 'Original message',
+      timestamp: '2026-11-25T00:00:00.000Z', read: true, source: 'inbox' };
+    const render = async (text: string) => act(async () => {
+      root.render(React.createElement(ActivityItem, { message: { ...message, text }, teamName: 'TEST-team' }));
+    });
+    try {
+      await render(message.text);
+      expect(host.textContent).toContain('Original message');
+      await render(JSON.stringify({ type: 'shutdown_request' }));
+      expect(host.textContent).toContain('Shutdown requested');
+      await render('Updated original message');
+      expect(host.textContent).toContain('Updated original message');
+    } finally {
+      await act(async () => root.unmount());
+    }
+  });
+
   it('uses the sidebar unread tint for a newly highlighted message', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');

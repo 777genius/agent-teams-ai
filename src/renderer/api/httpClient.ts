@@ -3,11 +3,16 @@
  */
 import { createAgentBackendHttpClient } from '@features/agent-backend/renderer';
 import {
+  createHttpCustomTeamTemplatesApi,
+  type CustomTeamTemplatesApi,
+} from '@features/custom-team-templates';
+import {
   createEmptyMemberLogPreviewResponse,
   createEmptyMemberLogStreamResponse,
   createEmptyMemberRuntimeLogTailResponse,
 } from '@features/member-log-stream/contracts';
 import { NATIVE_NEXT_PROMPT_UPDATED, type NativeNextPromptApi } from '@features/native-prompt-suggestions/contracts';
+import { NOTIFICATION_CHANNELS_HTTP } from '@features/notification-channels/contracts';
 import {
   type AssignOrganizationTeamRequest,
   type CreateOrganizationRequest,
@@ -31,12 +36,12 @@ import {
 } from '@features/organizations/contracts';
 import { createReviewFlowHttpApi } from '@features/review-flow/renderer/http';
 import { createHttpTeamGroupChatsAPI } from '@features/team-group-chats';
+import { DESKTOP_ONLY_TEAM_MEMBER_SETTINGS_API } from '@features/team-provisioning/contracts';
 import {
   TOKEN_USAGE_BUDGET_SETTINGS_ROUTE,
   TOKEN_USAGE_BUDGET_STATUS_CHANGED,
   TOKEN_USAGE_BUDGET_STATUS_ROUTE,
   TOKEN_USAGE_SNAPSHOT_CHANGED,
-  TOKEN_USAGE_SNAPSHOT_ROUTE,
   type TokenUsageAnalyticsSnapshotDto,
   type TokenUsageBudgetSettingsDto,
   type TokenUsageBudgetSettingsUpdateRequestDto,
@@ -44,6 +49,11 @@ import {
   type TokenUsageElectronApi,
   type TokenUsageSnapshotRequest,
 } from '@features/token-usage/contracts';
+import {
+  type AttentionSnapshot,
+  USER_ATTENTION_HTTP_ROUTE,
+  UserAttentionUnsupportedError,
+} from '@features/user-attention/contracts';
 import {
   WORKSPACE_TRUST_LAUNCH_STATUS_ROUTE,
   WORKSPACE_TRUST_PROJECT_STATUS_ROUTE,
@@ -53,6 +63,8 @@ import { SENTRY_ENVIRONMENT, SENTRY_RELEASE } from '@shared/utils/sentryConfig';
 
 import { createBrowserReviewApi } from './browserReviewApi';
 import { createAgentBackendReviewHttpTransport } from './createAgentBackendReviewHttpTransport';
+import { createHttpNotificationHistoryApi } from './notificationHistoryHttp';
+import { buildTokenUsageSnapshotRoute } from './tokenUsageSnapshotRoute';
 
 import type { AnnouncementsApi, AnnouncementsSnapshot } from '@features/announcements/contracts';
 import type {
@@ -66,6 +78,7 @@ import type {
 } from '@features/external-agent-connection/contracts';
 import type { GatewayProviderApi } from '@features/gateway-provider/contracts';
 import type { MemberLogStreamApi } from '@features/member-log-stream/contracts';
+import type { NotificationChannelsApi } from '@features/notification-channels/contracts';
 import type { ProjectFolderElectronApi } from '@features/project-folder/contracts';
 import type { DashboardRecentProjectsPayload } from '@features/recent-projects/contracts';
 import type {
@@ -162,27 +175,6 @@ import type {
 import type { AgentConfig, MemberWorkSyncElectronApi } from '@shared/types/api';
 import type { EditorAPI, ProjectAPI } from '@shared/types/editor';
 import type { TerminalAPI } from '@shared/types/terminal';
-
-function buildTokenUsageSnapshotRoute(request?: TokenUsageSnapshotRequest): string {
-  const query = new URLSearchParams();
-  if (request?.teamIds !== undefined) {
-    for (const teamId of request.teamIds) query.append('teamIds', teamId);
-  } else {
-    if (request?.teamName) query.set('teamName', request.teamName);
-    for (const teamName of request?.teamNames ?? []) query.append('teamNames', teamName);
-  }
-  if (request?.agentId) query.set('agentId', request.agentId);
-  if (request?.commandId) query.set('commandId', request.commandId);
-  if (request?.commandInvocationId) {
-    query.set('commandInvocationId', request.commandInvocationId);
-  }
-  if (request?.nativeSessionId) query.set('nativeSessionId', request.nativeSessionId);
-  if (request?.from) query.set('from', request.from);
-  if (request?.to) query.set('to', request.to);
-  const suffix = query.toString();
-  return suffix ? `${TOKEN_USAGE_SNAPSHOT_ROUTE}?${suffix}` : TOKEN_USAGE_SNAPSHOT_ROUTE;
-}
-
 function createBrowserCompanionStatus(
   input: RuntimeProviderCompanionInput,
   operation: 'status' | 'install' | 'connect' | 'action'
@@ -225,11 +217,9 @@ function createBrowserRuntimeProviderError<T extends RuntimeProviderModelTestRun
     },
   };
 }
-
 function gatewayUnavailable(): never {
   throw new Error('Gateway providers are available in the desktop app.');
 }
-
 export class HttpAPIClient implements ElectronAPI {
   agentBackend = createAgentBackendHttpClient(
     (route, request) => this.post(route, request),
@@ -243,6 +233,9 @@ export class HttpAPIClient implements ElectronAPI {
 
   reviewFlow = createReviewFlowHttpApi();
 
+  get customTeamTemplates(): CustomTeamTemplatesApi {
+    return createHttpCustomTeamTemplatesApi(this.baseUrl);
+  }
   gatewayProvider: GatewayProviderApi = {
     listGatewayProfiles: async () => [],
     saveGatewayProfile: async () => gatewayUnavailable(),
@@ -272,7 +265,6 @@ export class HttpAPIClient implements ElectronAPI {
     dismiss: async () => ({ saved: false }),
     onStateChanged: () => () => {},
   };
-
   private unavailableAnnouncements(): AnnouncementsSnapshot {
     return {
       status: 'unavailable',
@@ -283,7 +275,6 @@ export class HttpAPIClient implements ElectronAPI {
       autoShowEnabled: false,
     };
   }
-
   private baseUrl: string;
   private eventSource: EventSource | null = null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- event callbacks have varying signatures
@@ -376,11 +367,12 @@ export class HttpAPIClient implements ElectronAPI {
     ) as T;
   }
 
-  private async get<T>(path: string, reviveDates = true): Promise<T> {
+  private async get<T>(path: string, reviveDates = true, missingRouteError?: Error): Promise<T> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10_000);
     try {
       const res = await fetch(`${this.baseUrl}${path}`, { signal: controller.signal });
+      if (res.status === 404 && missingRouteError) throw missingRouteError;
       return this.parseJson<T>(res, reviveDates);
     } finally {
       clearTimeout(timeout);
@@ -476,6 +468,13 @@ export class HttpAPIClient implements ElectronAPI {
 
   getDashboardRecentProjects = (): Promise<DashboardRecentProjectsPayload> =>
     this.get<DashboardRecentProjectsPayload>('/api/dashboard/recent-projects');
+
+  getUserAttentionSnapshot = (teamName?: string): Promise<AttentionSnapshot> =>
+    this.get(
+      USER_ATTENTION_HTTP_ROUTE + (teamName ? '?teamName=' + encodeURIComponent(teamName) : ''),
+      false,
+      new UserAttentionUnsupportedError()
+    );
 
   workspaceTrust: WorkspaceTrustElectronApi['workspaceTrust'] = {
     getLaunchStatus: (request) => this.post(WORKSPACE_TRUST_LAUNCH_STATUS_ROUTE, request),
@@ -746,40 +745,22 @@ export class HttpAPIClient implements ElectronAPI {
   // Notifications (nested API)
   // ---------------------------------------------------------------------------
 
-  notifications: NotificationsAPI = {
-    get: (options) =>
-      this.get(
-        `/api/notifications?${new URLSearchParams(
-          options
-            ? {
-                limit: String(options.limit ?? 20),
-                offset: String(options.offset ?? 0),
-              }
-            : {}
-        )}`
-      ),
-    markRead: (id) => this.post(`/api/notifications/${encodeURIComponent(id)}/read`),
-    markAllRead: () => this.post('/api/notifications/read-all'),
-    setViewedTeam: (teamName) => this.post('/api/notifications/viewed-team', { teamName }),
-    delete: (id) => this.del(`/api/notifications/${encodeURIComponent(id)}`),
-    clear: () => this.del('/api/notifications'),
-    getUnreadCount: () => this.get('/api/notifications/unread-count'),
-    testNotification: async () => ({
-      success: false,
-      error: 'Test notifications require Electron (not available in browser mode)',
-    }),
-    // IPC signature: (event: unknown, error: unknown) => void
-    onNew: (callback) =>
-      this.addEventListener('notification:new', (data: unknown) => callback(null, data)),
-    // IPC signature: (event: unknown, payload: { total; unreadCount }) => void
-    onUpdated: (callback) =>
-      this.addEventListener('notification:updated', (data: unknown) =>
-        callback(null, data as { total: number; unreadCount: number })
-      ),
-    // IPC signature: (event: unknown, data: unknown) => void
-    onClicked: (callback) =>
-      this.addEventListener('notification:clicked', (data: unknown) => callback(null, data)),
+  notificationChannels: NotificationChannelsApi = {
+    list: () => this.get(NOTIFICATION_CHANNELS_HTTP),
+    save: (request) => this.post(NOTIFICATION_CHANNELS_HTTP, request),
+    remove: async (id) => {
+      await this.del(NOTIFICATION_CHANNELS_HTTP + '/' + encodeURIComponent(id), {});
+    },
+    test: (id) =>
+      this.post(NOTIFICATION_CHANNELS_HTTP + '/' + encodeURIComponent(id) + '/test', {}),
   };
+
+  notifications: NotificationsAPI = createHttpNotificationHistoryApi({
+    get: <T>(path: string) => this.get<T>(path),
+    post: <T>(path: string, body?: unknown) => this.post<T>(path, body),
+    del: <T>(path: string) => this.del<T>(path),
+    listen: (channel, callback) => this.addEventListener(channel, callback),
+  });
 
   // ---------------------------------------------------------------------------
   // Config (nested API)
@@ -864,7 +845,9 @@ export class HttpAPIClient implements ElectronAPI {
       const config = await this.config.get();
       const fallbackPath = config.general.claudeRootPath ?? '~/.claude';
       return {
-        defaultPath: fallbackPath,
+        // Browser transport has no auto-detection API; do not label an explicit
+        // custom root as the default, or workspace-scoped reads would collide.
+        defaultPath: '~/.claude',
         resolvedPath: fallbackPath,
         customPath: config.general.claudeRootPath,
       };
@@ -1048,8 +1031,10 @@ export class HttpAPIClient implements ElectronAPI {
     getStatus: (): Promise<HttpServerStatus> =>
       Promise.resolve({ running: true, port: parseInt(new URL(this.baseUrl).port, 10) }),
   };
-
   teams: TeamsAPI = {
+    getProjectContextView: async () => {
+      throw new Error('Project-scoped local team history is only available in Electron mode');
+    },
     list: async (): Promise<TeamSummary[]> => {
       console.warn('[HttpAPIClient] teams API is not available in browser mode');
       return [];
@@ -1322,8 +1307,7 @@ export class HttpAPIClient implements ElectronAPI {
     updateMemberRole: async (): Promise<void> => {
       throw new Error('Team member management is not available in browser mode');
     },
-    updateMemberSettings: async () =>
-      Promise.reject(new Error('Team member settings updates require the desktop app')),
+    ...DESKTOP_ONLY_TEAM_MEMBER_SETTINGS_API,
     getProjectBranch: async (_projectPath: string): Promise<string | null> => null,
     setProjectBranchTracking: async (): Promise<void> => {
       // Not available in browser mode — no-op.

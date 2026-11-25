@@ -145,7 +145,7 @@ async function launch(): Promise<Cdp> {
     cwd: repo, detached: process.platform !== 'win32', stdio: ['ignore', 'pipe', 'pipe'],
     env: { ...process.env, NODE_ENV: 'development', AGENT_TEAMS_DISABLE_SOURCEMAPS: '1',
       AGENT_TEAMS_ELECTRON_CLAUDE_ROOT: claudeRoot, AGENT_TEAMS_ELECTRON_USER_DATA_DIR: userDataRoot,
-      CLAUDE_CONFIG_DIR: claudeRoot, CLAUDE_TEAM_OPENCODE_MCP_HTTP: '0', NODE_BINARY: process.execPath,
+      CLAUDE_CONFIG_DIR: claudeRoot, AGENT_TEAMS_MCP_HTTP: '0', NODE_BINARY: process.execPath,
       CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: process.execPath },
   });
   const remember = (chunk: Buffer) => { appLogs.push(chunk.toString()); if (appLogs.length > 200) appLogs.shift(); };

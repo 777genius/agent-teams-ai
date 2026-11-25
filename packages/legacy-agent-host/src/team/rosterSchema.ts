@@ -57,9 +57,11 @@ export const savedTeamSettingsSchema = z
   .object({
     runtimeSelectionVersion: z.literal(1).optional(),
     cwd: savedText(8192, true),
+    projectContextMode: z.enum(['shared', 'per_project']).optional(),
     displayName: savedText(256).optional(),
     description: savedText(64 * 1024).optional(),
     color: savedText(256).optional(),
+    language: savedText(256).optional(),
     prompt: savedText(64 * 1024).optional(),
     ...memberSettingsSchema.pick({
       providerId: true,

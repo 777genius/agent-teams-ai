@@ -76,6 +76,7 @@ export interface LegacyStoppedSourceOwners {
 
 const settings = [
   'runtimeSelectionVersion',
+  'projectContextMode',
   'cwd',
   'displayName',
   'description',
@@ -232,6 +233,7 @@ export function createLegacyStoppedTeamSource(
         const draft = captureConfiguredHostTeamDraft(binding.contextId, {
           teamName: binding.teamName,
           ...pick(meta, settings),
+          ...pick(config ?? {}, ['language']),
           members: nonLead.map((member) => ({
             name: member.name,
             ...pick(member, memberSettings),

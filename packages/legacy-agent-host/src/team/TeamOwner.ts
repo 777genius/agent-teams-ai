@@ -99,7 +99,7 @@ export type CapturedProviderCurrent = (owner: TeamOwner, binding: RuntimeMemberB
 export class TeamOwner {
   /** Trusted composition only; never exposed on connect/MCP. */
   readonly contextReminders: TeamContextReminders;
-  readonly nativeRoster: Pick<TeamRosterTransitions, 'nativeCreation' | 'capturedMemberCurrent' | 'liveMembership'>;
+  readonly nativeRoster: Pick<TeamRosterTransitions, 'nativeCreation' | 'capturedMemberCurrent' | 'liveMembership' | 'replaceAuthored' | 'readExpectation'>;
   readonly hasRetainedRuntime = () => this.runtimeRegistration.hasRetained();
   private readonly commandAccess: ReturnType<typeof createTeamCommandAccess>;
   private readonly productChanges = new TeamProductChanges();

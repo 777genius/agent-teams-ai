@@ -3248,7 +3248,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                   <div className="mb-2 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] p-2">
                     <Label
                       htmlFor="anthropic-compatible-custom-model"
-                      className="mb-1 block text-[11px] font-medium text-[var(--color-text-secondary)]"
+                      className="mb-1 block text-[11px] font-medium"
                     >
                       {t('modelSelector.customModelId')}
                     </Label>

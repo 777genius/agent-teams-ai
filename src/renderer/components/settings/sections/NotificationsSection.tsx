@@ -5,6 +5,11 @@
 import { useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import {
+  createNotificationDestinationRenderer,
+  NotificationChannelsSettings,
+  useNotificationChannelsSettings,
+} from '@features/notification-channels/renderer';
 import { api } from '@renderer/api';
 import {
   RepositoryDropdown,
@@ -41,14 +46,10 @@ import {
 import { SettingRow, SettingsSectionHeader, SettingsSelect, SettingsToggle } from '../components';
 import { NotificationTriggerSettings } from '../NotificationTriggerSettings';
 
+import { StatusCheckboxGroup } from './StatusCheckboxGroup';
+
 import type { RepositoryDropdownItem, SafeConfig } from '../hooks/useSettingsConfig';
 import type { NotificationTrigger } from '@renderer/types/data';
-import type { TeamReviewState, TeamTaskStatus } from '@shared/types';
-
-/** Notification targets span workflow status plus the explicit review axis. */
-type NotifiableStatus =
-  | TeamTaskStatus
-  | Extract<TeamReviewState, 'review' | 'needsFix' | 'approved'>;
 
 const SNOOZE_OPTIONS = [
   { value: 15, labelKey: 'notifications.snooze.options.15' },
@@ -58,19 +59,6 @@ const SNOOZE_OPTIONS = [
   { value: 240, labelKey: 'notifications.snooze.options.240' },
   { value: -1, labelKey: 'notifications.snooze.options.-1' },
 ] as const;
-
-const STATUS_OPTIONS = [
-  {
-    value: 'in_progress',
-    labelKey: 'notifications.team.statusChange.statuses.options.in_progress',
-  },
-  { value: 'completed', labelKey: 'notifications.team.statusChange.statuses.options.completed' },
-  { value: 'review', labelKey: 'notifications.team.statusChange.statuses.options.review' },
-  { value: 'needsFix', labelKey: 'notifications.team.statusChange.statuses.options.needsFix' },
-  { value: 'approved', labelKey: 'notifications.team.statusChange.statuses.options.approved' },
-  { value: 'pending', labelKey: 'notifications.team.statusChange.statuses.options.pending' },
-  { value: 'deleted', labelKey: 'notifications.team.statusChange.statuses.options.deleted' },
-] as const satisfies readonly { value: NotifiableStatus; labelKey: string }[];
 
 interface NotificationsSectionProps {
   readonly safeConfig: SafeConfig;
@@ -104,6 +92,9 @@ interface NotificationsSectionProps {
     update: Partial<SafeConfig['teamRuntimeRecovery']>
   ) => void;
   readonly onStatusChangeStatusesUpdate: (statuses: string[]) => void;
+  readonly onDesktopDestinationsChange: (
+    events: SafeConfig['notifications']['desktopDisabledEvents']
+  ) => void;
   readonly onSnooze: (minutes: number) => Promise<void>;
   readonly onClearSnooze: () => Promise<void>;
   readonly onAddIgnoredRepository: (item: RepositoryDropdownItem) => Promise<void>;
@@ -132,9 +123,11 @@ export const NotificationsSection = ({
   onUpdateTrigger,
   onRemoveTrigger,
   onStatusChangeStatusesUpdate,
+  onDesktopDestinationsChange,
 }: NotificationsSectionProps): React.JSX.Element => {
   const openTab = useStore((state) => state.openTab);
   const { t } = useAppTranslation('settings');
+  const deliverySettings = useNotificationChannelsSettings();
   const [testStatus, setTestStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
   const [testError, setTestError] = useState<string | null>(null);
   const snoozeOptions = useMemo(
@@ -145,6 +138,18 @@ export const NotificationsSection = ({
       })),
     [t]
   );
+
+  const destinations = createNotificationDestinationRenderer({
+    settings: deliverySettings,
+    labelForEvent: (event) => t(`notifications.delivery.eventLabels.${event}` as const),
+    desktopDisabledEvents: safeConfig.notifications.desktopDisabledEvents,
+    globalEnabled: safeConfig.notifications.enabled,
+    budgetDesktopEnabled: safeConfig.notifications.notifyOnUsageBudgetNativeToast,
+    saving,
+    onDesktopExcludedChange: onDesktopDestinationsChange,
+    onBudgetDesktopChange: (checked) =>
+      onNotificationToggle('notifyOnUsageBudgetNativeToast', checked),
+  });
 
   const handleTestNotification = async (): Promise<void> => {
     setTestStatus('sending');
@@ -366,6 +371,18 @@ export const NotificationsSection = ({
         </div>
       </SettingRow>
 
+      <NotificationChannelsSettings
+        settings={deliverySettings}
+        autoDeliveryPauseReason={
+          !safeConfig.notifications.enabled ? 'notifications_off' : isSnoozed ? 'snoozed' : null
+        }
+        snoozedUntil={safeConfig.notifications.snoozedUntil}
+      />
+
+      <p className="mb-4 text-xs" style={{ color: 'var(--color-text-muted)' }}>
+        {t('notifications.delivery.routingHint')}
+      </p>
+
       <div id="usage-budget-notifications" className="scroll-mt-6">
         <div className="flex items-center justify-between gap-3">
           <SettingsSectionHeader
@@ -385,6 +402,7 @@ export const NotificationsSection = ({
           }}
         >
           <SettingRow
+            wrapControls
             label={t('notifications.usageBudgets.enabled.label')}
             description={t('notifications.usageBudgets.enabled.description')}
             icon={<BellRing className="size-4" />}
@@ -394,6 +412,11 @@ export const NotificationsSection = ({
               onChange={(v) => onNotificationToggle('notifyOnUsageBudgetAlerts', v)}
               disabled={saving || !safeConfig.notifications.enabled}
             />
+            {destinations(
+              ['usage_budget_warning', 'usage_budget_exceeded'],
+              safeConfig.notifications.notifyOnUsageBudgetAlerts,
+              true
+            )}
           </SettingRow>
           <Button
             type="button"
@@ -403,21 +426,6 @@ export const NotificationsSection = ({
           >
             {t('notifications.usageBudgets.editorLink')}
           </Button>
-          <SettingRow
-            label={t('notifications.usageBudgets.nativeToast.label')}
-            description={t('notifications.usageBudgets.nativeToast.description')}
-            icon={<Volume2 className="size-4" />}
-          >
-            <SettingsToggle
-              enabled={safeConfig.notifications.notifyOnUsageBudgetNativeToast}
-              onChange={(v) => onNotificationToggle('notifyOnUsageBudgetNativeToast', v)}
-              disabled={
-                saving ||
-                !safeConfig.notifications.enabled ||
-                !safeConfig.notifications.notifyOnUsageBudgetAlerts
-              }
-            />
-          </SettingRow>
         </div>
       </div>
 
@@ -433,8 +441,9 @@ export const NotificationsSection = ({
           backgroundColor: 'var(--color-surface-raised)',
         }}
       >
-        <div className="grid grid-cols-1 gap-x-6 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-x-6">
           <SettingRow
+            wrapControls
             label={t('notifications.team.leadInbox.label')}
             description={t('notifications.team.leadInbox.description')}
             icon={<Inbox className="size-4" />}
@@ -444,8 +453,10 @@ export const NotificationsSection = ({
               onChange={(v) => onNotificationToggle('notifyOnLeadInbox', v)}
               disabled={saving || !safeConfig.notifications.enabled}
             />
+            {destinations(['lead_inbox'], safeConfig.notifications.notifyOnLeadInbox)}
           </SettingRow>
           <SettingRow
+            wrapControls
             label={t('notifications.team.userInbox.label')}
             description={t('notifications.team.userInbox.description')}
             icon={<Mail className="size-4" />}
@@ -455,8 +466,10 @@ export const NotificationsSection = ({
               onChange={(v) => onNotificationToggle('notifyOnUserInbox', v)}
               disabled={saving || !safeConfig.notifications.enabled}
             />
+            {destinations(['user_inbox'], safeConfig.notifications.notifyOnUserInbox)}
           </SettingRow>
           <SettingRow
+            wrapControls
             label={t('notifications.team.clarifications.label')}
             description={t('notifications.team.clarifications.description')}
             icon={<HelpCircle className="size-4" />}
@@ -466,8 +479,13 @@ export const NotificationsSection = ({
               onChange={(v) => onNotificationToggle('notifyOnClarifications', v)}
               disabled={saving || !safeConfig.notifications.enabled}
             />
+            {destinations(
+              ['task_clarification', 'task_blocked'],
+              safeConfig.notifications.notifyOnClarifications
+            )}
           </SettingRow>
           <SettingRow
+            wrapControls
             label={t('notifications.team.taskComments.label')}
             description={t('notifications.team.taskComments.description')}
             icon={<MessageSquare className="size-4" />}
@@ -477,8 +495,13 @@ export const NotificationsSection = ({
               onChange={(v) => onNotificationToggle('notifyOnTaskComments', v)}
               disabled={saving || !safeConfig.notifications.enabled}
             />
+            {destinations(
+              ['task_comment', 'task_review_requested'],
+              safeConfig.notifications.notifyOnTaskComments
+            )}
           </SettingRow>
           <SettingRow
+            wrapControls
             label={t('notifications.team.taskCreated.label')}
             description={t('notifications.team.taskCreated.description')}
             icon={<CirclePlus className="size-4" />}
@@ -488,8 +511,10 @@ export const NotificationsSection = ({
               onChange={(v) => onNotificationToggle('notifyOnTaskCreated', v)}
               disabled={saving || !safeConfig.notifications.enabled}
             />
+            {destinations(['task_created'], safeConfig.notifications.notifyOnTaskCreated)}
           </SettingRow>
           <SettingRow
+            wrapControls
             label={t('notifications.team.allTasksCompleted.label')}
             description={t('notifications.team.allTasksCompleted.description')}
             icon={<CheckCircle2 className="size-4" />}
@@ -499,8 +524,13 @@ export const NotificationsSection = ({
               onChange={(v) => onNotificationToggle('notifyOnAllTasksCompleted', v)}
               disabled={saving || !safeConfig.notifications.enabled}
             />
+            {destinations(
+              ['all_tasks_completed'],
+              safeConfig.notifications.notifyOnAllTasksCompleted
+            )}
           </SettingRow>
           <SettingRow
+            wrapControls
             label={t('notifications.team.crossTeamMessage.label')}
             description={t('notifications.team.crossTeamMessage.description')}
             icon={<GitBranch className="size-4" />}
@@ -510,8 +540,13 @@ export const NotificationsSection = ({
               onChange={(v) => onNotificationToggle('notifyOnCrossTeamMessage', v)}
               disabled={saving || !safeConfig.notifications.enabled}
             />
+            {destinations(
+              ['cross_team_message'],
+              safeConfig.notifications.notifyOnCrossTeamMessage
+            )}
           </SettingRow>
           <SettingRow
+            wrapControls
             label={t('notifications.team.teamLaunched.label')}
             description={t('notifications.team.teamLaunched.description')}
             icon={<Rocket className="size-4" />}
@@ -521,6 +556,10 @@ export const NotificationsSection = ({
               onChange={(v) => onNotificationToggle('notifyOnTeamLaunched', v)}
               disabled={saving || !safeConfig.notifications.enabled}
             />
+            {destinations(
+              ['team_launched', 'team_launch_incomplete'],
+              safeConfig.notifications.notifyOnTeamLaunched
+            )}
           </SettingRow>
           <SettingRow
             label={t('notifications.team.toolApproval.label')}
@@ -532,10 +571,14 @@ export const NotificationsSection = ({
               onChange={(v) => onNotificationToggle('notifyOnToolApproval', v)}
               disabled={saving || !safeConfig.notifications.enabled}
             />
+            <span className="ml-2 text-xs text-[var(--color-text-muted)]">
+              {t('notifications.delivery.desktopOnly')}
+            </span>
           </SettingRow>
           {/* Task Status Change Notifications — nested within team card */}
           <div className="*:last:border-b-0 lg:col-span-2">
             <SettingRow
+              wrapControls
               label={t('notifications.team.statusChange.label')}
               description={t('notifications.team.statusChange.description')}
               icon={<ArrowRightLeft className="size-4" />}
@@ -545,6 +588,7 @@ export const NotificationsSection = ({
                 onChange={(v) => onNotificationToggle('notifyOnStatusChange', v)}
                 disabled={saving || !safeConfig.notifications.enabled}
               />
+              {destinations(['task_status_change'], safeConfig.notifications.notifyOnStatusChange)}
             </SettingRow>
             {safeConfig.notifications.notifyOnStatusChange && safeConfig.notifications.enabled ? (
               <div
@@ -594,6 +638,19 @@ export const NotificationsSection = ({
             ) : null}
           </div>
         </div>
+      </div>
+
+      <div className="mb-4 rounded-lg border p-4" style={{ borderColor: 'var(--color-border)' }}>
+        <p className="mb-2 text-xs font-medium">{t('notifications.delivery.additionalEvents')}</p>
+        {(['runtime_recovery', 'schedule_completed', 'schedule_failed'] as const).map((event) => (
+          <SettingRow
+            key={event}
+            wrapControls
+            label={t(`notifications.delivery.eventLabels.${event}` as const)}
+          >
+            {destinations([event], true)}
+          </SettingRow>
+        ))}
       </div>
 
       {/* Custom Triggers */}
@@ -671,44 +728,6 @@ export const NotificationsSection = ({
     </div>
   );
 };
-
-const StatusCheckboxGroup = ({
-  selected,
-  onChange,
-  disabled,
-  t,
-}: {
-  selected: string[];
-  onChange: (statuses: string[]) => void;
-  disabled: boolean;
-  t: ReturnType<typeof useAppTranslation>['t'];
-}) => (
-  <div className="flex flex-wrap gap-2">
-    {STATUS_OPTIONS.map((option) => {
-      const checked = selected.includes(option.value);
-      return (
-        <button
-          key={option.value}
-          type="button"
-          disabled={disabled}
-          onClick={() => {
-            const next = checked
-              ? selected.filter((selectedStatus) => selectedStatus !== option.value)
-              : [...selected, option.value];
-            onChange(next);
-          }}
-          className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-            checked
-              ? 'bg-indigo-500/20 text-indigo-400'
-              : 'bg-[var(--color-surface-raised)] text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'
-          } ${disabled ? 'cursor-not-allowed opacity-50' : ''}`}
-        >
-          {t(option.labelKey)}
-        </button>
-      );
-    })}
-  </div>
-);
 
 const SettingsInfoTooltip = ({
   label,

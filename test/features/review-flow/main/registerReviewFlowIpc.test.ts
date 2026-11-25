@@ -1,9 +1,10 @@
 import {
   REVIEW_FLOW_GET_OVERVIEW,
+  REVIEW_FLOW_PROJECT_BOARDS_NOT_UPDATED,
   REVIEW_FLOW_SET_DEFAULTS,
   REVIEW_FLOW_SET_TEAM_OVERRIDE,
 } from '@features/review-flow/contracts';
-import { ReviewFlowService } from '@features/review-flow/core/application';
+import { ProjectBoardsNotUpdatedError, ReviewFlowService } from '@features/review-flow/core/application';
 import { registerReviewFlowIpc, removeReviewFlowIpc } from '@features/review-flow/main';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -23,7 +24,10 @@ function setup() {
       read: async () => ({ reviewFlow: 'agent_approval', reviewFlowPrompt: '' }),
       write: async (settings) => settings,
     },
-    teams: { writeOverride, listOverrides: async () => ({ overrides: {}, unreadable: [] }) },
+    teams: {
+      writeOverride,
+      listOverrides: async () => ({ overrides: {}, unreadable: [], projectTeams: {} }),
+    },
   });
   registerReviewFlowIpc(ipcMain, service);
   return { handlers, ipcMain, writeOverride };
@@ -51,6 +55,21 @@ describe('review flow IPC', () => {
       value: null,
     });
     expect(writeOverride).toHaveBeenCalledWith('alpha', null);
+  });
+
+  it('sends a save that did not reach every project board as its code, for the app to say in its language', async () => {
+    const { handlers, writeOverride } = setup();
+    writeOverride.mockRejectedValueOnce(
+      new ProjectBoardsNotUpdatedError([{ projectPath: '/home/me/app', message: 'lock timeout' }])
+    );
+    expect(await handlers.get(REVIEW_FLOW_SET_TEAM_OVERRIDE)!({}, 'builders', null)).toMatchObject({
+      ok: false,
+      code: REVIEW_FLOW_PROJECT_BOARDS_NOT_UPDATED,
+    });
+    // Main keeps the details (projects and reasons) in its log.
+    const logged = vi.mocked(console.error);
+    expect(logged.mock.calls.flat().map(String).join(' ')).toContain('/home/me/app (lock timeout)');
+    logged.mockClear();
   });
 
   it('removes exactly the channels it registered', () => {

@@ -1,4 +1,5 @@
 import {
+  hostProjectProgressOwners,
   hostProvisioningMemberSnapshot,
   isHostReadUnavailable,
 } from '@features/agent-backend/renderer';
@@ -132,6 +133,7 @@ import {
   structurallyShareMemberActivityFacts,
 } from '../team/teamMemberActivityMeta';
 import { createTeamMemberRestartAction } from '../team/teamMemberRestartAction';
+import { provisioningProgressPayloadEqual } from '../team/teamMemberSpawnSnapshotEquality';
 import {
   clearAllMemberSpawnStatusesIpcBackoffs,
   clearMemberSpawnStatusesIpcBackoff,
@@ -164,7 +166,14 @@ import {
   setPendingReplyRefreshEnabled,
 } from '../team/teamPendingReplyWaits';
 import {
-  getProvisioningProgressError,
+  getCurrentProvisioningProgressForTeam,
+  isTeamRunIgnored,
+  projectMissingProvisioningRunCleanup,
+  projectProvisioningProgressOwners,
+  projectProvisioningRuntimeAdoption,
+  pruneProvisioningRuns,
+} from '../team/teamProvisioningRunIdentity';
+import {
   isActiveProvisioningState,
   isTerminalProvisioningState,
   shouldIgnoreProvisioningProgressRegression,
@@ -192,6 +201,7 @@ import {
 import {
   buildTeamScopedProgressTombstones,
   collectFailedProvisioningAttemptCleanup,
+  collectStartedProvisioningAttemptCleanup,
   collectTeamScopedStateRemovals,
   collectTeamScopedVisibleLoadingResets,
   teamProvisioningAttemptTracker,
@@ -201,6 +211,7 @@ import {
   structurallySharePlainValue,
   structurallyShareTeamSnapshot,
 } from '../team/teamSnapshotStructuralSharing';
+import { buildTeamSummaryIndexes } from '../team/teamSummaryIndexes';
 import {
   collectTaskChangeInvalidationState,
   preserveKnownTaskChangePresence,
@@ -213,6 +224,7 @@ import {
   saveToolApprovalSettingsForTeam,
 } from '../team/teamToolApprovalSettings';
 import {
+  persistAndAwaitToolApprovalSettingsSync,
   persistAndScheduleToolApprovalSettingsSync,
   resetToolApprovalSettingsSync,
   scheduleToolApprovalSettingsSync,
@@ -232,6 +244,7 @@ import type {
   RefreshTeamMessagesHeadResult,
   TeamMessagesCacheEntry,
 } from '../team/teamMessagesCache';
+import type { IgnoredTeamRunOwners } from '../team/teamProvisioningRunIdentity';
 import type { AppState } from '../types';
 import type { GraphLayoutMode, GraphOwnerSlotAssignment } from '@claude-teams/agent-graph';
 import type { TeamManagementCommittedChange } from '@features/team-prompt-management/contracts';
@@ -262,7 +275,6 @@ import type {
   TeamCreateRequest,
   TeamCreateResponse,
   TeamGetDataOptions,
-  TeamLaunchDiagnosticItem,
   TeamLaunchRequest,
   TeamMemberActivityMeta,
   TeamProvisioningProgress,
@@ -680,28 +692,6 @@ function isTeamRequestScopeCurrent(
     isContextRequestScopeCurrent(get, scope) &&
     isTeamLocalStateEpochCurrent(teamName, scope.teamStateEpoch)
   );
-}
-
-function buildTeamSummaryIndexes(teams: readonly TeamSummary[]): {
-  teamByName: Record<string, TeamSummary>;
-  teamBySessionId: Record<string, TeamSummary>;
-} {
-  const teamByName: Record<string, TeamSummary> = {};
-  const teamBySessionId: Record<string, TeamSummary> = {};
-  for (const team of teams) {
-    teamByName[team.teamName] = team;
-    if (team.leadSessionId) {
-      teamBySessionId[team.leadSessionId] = team;
-    }
-    if (Array.isArray(team.sessionHistory)) {
-      for (const sid of team.sessionHistory) {
-        if (typeof sid === 'string' && sid) {
-          teamBySessionId[sid] = team;
-        }
-      }
-    }
-  }
-  return { teamByName, teamBySessionId };
 }
 
 function removeProvisioningSnapshotsForTeams(
@@ -1293,14 +1283,29 @@ function recordTeamLaunchIpcFailure(
   });
 }
 
+function refreshAdoptedProvisioningRun(getState: () => AppState, runId: string): void {
+  if (Object.hasOwn(getState().provisioningRuns, runId)) return;
+  const requestScope = captureContextRequestScope(getState);
+  void getState().getProvisioningStatus(runId).catch((error: unknown) => {
+    if (
+      isContextRequestScopeCurrent(getState, requestScope) &&
+      isUnknownProvisioningRunError(error)
+    ) {
+      getState().clearMissingProvisioningRun(runId);
+    }
+  });
+}
+
 async function pollProvisioningStatus(
-  getState: () => TeamSlice,
+  getState: () => AppState,
   runId: string,
+  requestScope: ContextRequestScope,
   opts?: { maxAttempts?: number; initialDelayMs?: number }
 ): Promise<void> {
   const maxAttempts = opts?.maxAttempts ?? 12;
   let delayMs = opts?.initialDelayMs ?? 150;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    if (!isContextRequestScopeCurrent(getState, requestScope)) return;
     const state = getState();
     const current = state.provisioningRuns[runId];
     if (current && isTerminalProvisioningState(current.state)) {
@@ -1308,10 +1313,14 @@ async function pollProvisioningStatus(
     }
     try {
       const progress = await state.getProvisioningStatus(runId);
-      if (isTerminalProvisioningState(progress.state)) {
+      if (
+        !isContextRequestScopeCurrent(getState, requestScope) ||
+        isTerminalProvisioningState(progress.state)
+      ) {
         return;
       }
     } catch (error) {
+      if (!isContextRequestScopeCurrent(getState, requestScope)) return;
       if (isUnknownProvisioningRunError(error)) {
         state.clearMissingProvisioningRun(runId);
         return;
@@ -1436,9 +1445,9 @@ export interface TeamSlice extends SidebarLogsHeightSlice, DeletedTaskFeed {
   currentProvisioningRunIdByTeam: Record<string, string | null>;
   currentRuntimeRunIdByTeam: Record<string, string | null>;
   /** Runs explicitly cleared after Unknown runId polling; late events/progress for them are ignored. */
-  ignoredProvisioningRunIds: Record<string, string>;
+  ignoredProvisioningRunIds: IgnoredTeamRunOwners;
   /** Runtime runs explicitly tombstoned after stop/offline so late events cannot resurrect UI state. */
-  ignoredRuntimeRunIds: Record<string, string>;
+  ignoredRuntimeRunIds: IgnoredTeamRunOwners;
   /**
    * Per-team lower bound for provisioning progress timestamps.
    * Used to ignore late progress events from a previous run after stop→launch.
@@ -1480,7 +1489,7 @@ export interface TeamSlice extends SidebarLogsHeightSlice, DeletedTaskFeed {
   fetchTeams: () => Promise<void>;
   fetchAllTasks: () => Promise<void>;
   openTeamsTab: (projectPath?: string) => void;
-  openTeamTab: (teamName: string, projectPath?: string, taskId?: string) => void;
+  openTeamTab: (teamName: string, projectPath?: string) => void;
   clearKanbanFilter: () => void;
   ensureTeamGraphSlotAssignments: (
     teamName: string,
@@ -1645,73 +1654,7 @@ export interface TeamSlice extends SidebarLogsHeightSlice, DeletedTaskFeed {
   setMessagesPanelWidth: (width: number) => void;
 }
 
-export function getCurrentProvisioningProgressForTeam(
-  state: Pick<TeamSlice, 'currentProvisioningRunIdByTeam' | 'provisioningRuns'>,
-  teamName: string
-): TeamProvisioningProgress | null {
-  const currentRunId = state.currentProvisioningRunIdByTeam?.[teamName];
-  return currentRunId ? (state.provisioningRuns?.[currentRunId] ?? null) : null;
-}
-
-function stringArraysEqual(
-  a: readonly string[] | undefined,
-  b: readonly string[] | undefined
-): boolean {
-  if (a === b) return true;
-  if (!a || !b || a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i++) {
-    if (a[i] !== b[i]) return false;
-  }
-  return true;
-}
-
-function launchDiagnosticsEqual(
-  a: readonly TeamLaunchDiagnosticItem[] | undefined,
-  b: readonly TeamLaunchDiagnosticItem[] | undefined
-): boolean {
-  if (a === b) return true;
-  if (!a || !b || a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i++) {
-    const left = a[i];
-    const right = b[i];
-    if (
-      !left ||
-      !right ||
-      left.id !== right.id ||
-      left.memberName !== right.memberName ||
-      left.severity !== right.severity ||
-      left.code !== right.code ||
-      left.label !== right.label ||
-      left.detail !== right.detail ||
-      left.observedAt !== right.observedAt
-    ) {
-      return false;
-    }
-  }
-  return true;
-}
-
-function provisioningProgressPayloadEqual(
-  a: TeamProvisioningProgress,
-  b: TeamProvisioningProgress
-): boolean {
-  return (
-    a.runId === b.runId &&
-    a.teamName === b.teamName &&
-    a.state === b.state &&
-    a.message === b.message &&
-    a.messageSeverity === b.messageSeverity &&
-    a.startedAt === b.startedAt &&
-    a.pid === b.pid &&
-    a.error === b.error &&
-    a.cliLogsTail === b.cliLogsTail &&
-    a.assistantOutput === b.assistantOutput &&
-    a.configReady === b.configReady &&
-    a.retainedSecondaryRuntime === b.retainedSecondaryRuntime &&
-    stringArraysEqual(a.warnings, b.warnings) &&
-    launchDiagnosticsEqual(a.launchDiagnostics, b.launchDiagnostics)
-  );
-}
+export { getCurrentProvisioningProgressForTeam } from '../team/teamProvisioningRunIdentity';
 
 export function isTeamProvisioningActive(
   state: Pick<TeamSlice, 'currentProvisioningRunIdByTeam' | 'provisioningRuns'>,
@@ -1819,14 +1762,16 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       }
       clearMemberSpawnStatusesIpcBackoff(teamName);
       const previousRuntimeRunId = get().currentRuntimeRunIdByTeam[teamName];
-      set((prev) =>
-        projectIncomingMemberSpawnSnapshot({
-          teamName,
-          snapshot,
-          prev,
+      set((prev) => {
+        const projected = projectIncomingMemberSpawnSnapshot({
+          teamName, snapshot, prev,
           onEqualSuppressed: maybeLogMemberSpawnUiEqualSuppressed,
-        })
-      );
+        });
+        return {
+          ...projected,
+          ...projectProvisioningRuntimeAdoption(prev, teamName, projected.currentRuntimeRunIdByTeam?.[teamName]),
+        };
+      });
       const nextRuntimeRunId = get().currentRuntimeRunIdByTeam[teamName];
       if (
         snapshot.runId &&
@@ -1834,7 +1779,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         nextRuntimeRunId === snapshot.runId &&
         previousRuntimeRunId !== snapshot.runId
       ) {
-        void get().getProvisioningStatus(snapshot.runId);
+        refreshAdoptedProvisioningRun(get, snapshot.runId);
       }
     } catch (error) {
       if (!isTeamRequestScopeCurrent(get, teamName, requestScope)) {
@@ -1858,6 +1803,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       if (!isTeamRequestScopeCurrent(get, teamName, requestScope)) {
         return;
       }
+      const previousRuntimeRunId = get().currentRuntimeRunIdByTeam[teamName];
       set((prev) => {
         const adoption = resolveIncomingRuntimeRunAdoption({
           teamName,
@@ -1877,6 +1823,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           adoption,
           false
         );
+        const progressProjection = projectProvisioningRuntimeAdoption(prev, teamName, nextCurrentRuntimeRunIdByTeam[teamName]);
         const visibleSnapshot = prev.teamAgentRuntimeByTeam[teamName];
         const previousSnapshot = getTeamAgentRuntimeFreshnessSnapshot(
           teamName,
@@ -1889,9 +1836,10 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           if (nextCurrentRuntimeRunIdByTeam === prev.currentRuntimeRunIdByTeam) {
             return {};
           }
-          return { currentRuntimeRunIdByTeam: nextCurrentRuntimeRunIdByTeam };
+          return { ...progressProjection, currentRuntimeRunIdByTeam: nextCurrentRuntimeRunIdByTeam };
         }
         return {
+          ...progressProjection,
           ...(nextCurrentRuntimeRunIdByTeam === prev.currentRuntimeRunIdByTeam
             ? {}
             : { currentRuntimeRunIdByTeam: nextCurrentRuntimeRunIdByTeam }),
@@ -1901,6 +1849,12 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           },
         };
       });
+      if (
+        snapshot.runId && previousRuntimeRunId && previousRuntimeRunId !== snapshot.runId &&
+        get().currentRuntimeRunIdByTeam[teamName] === snapshot.runId
+      ) {
+        refreshAdoptedProvisioningRun(get, snapshot.runId);
+      }
     } catch {
       // ignore — runtime snapshots are best-effort
     }
@@ -2259,39 +2213,51 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     });
   },
 
-  openTeamTab: (teamName: string, projectPath?: string, _taskId?: string) => {
+  openTeamTab: (teamName: string, projectPath?: string) => {
     if (!teamName.trim()) {
       return;
     }
-
     // If projectPath is provided, immediately select the matching project in the sidebar.
     // This avoids a race condition where config.json hasn't been updated with projectPath yet.
     if (projectPath) {
       const stateForProject = get();
       const normalizedPath = normalizePath(projectPath);
-      const matchingProject = stateForProject.projects.find(
+      const matchingProject = (stateForProject.projects ?? []).find(
         (p) => normalizePath(p.path) === normalizedPath
       );
       if (matchingProject && stateForProject.selectedProjectId !== matchingProject.id) {
         stateForProject.selectProject(matchingProject.id);
+      } else if (!matchingProject) {
+        // Grouped worktrees are stored separately from the flat projects list.
+        // The path must select the matching worktree before opening a logical tab.
+        for (const group of stateForProject.repositoryGroups ?? []) {
+          const worktree = group.worktrees.find(
+            (candidate) => normalizePath(candidate.path) === normalizedPath
+          );
+          if (!worktree) continue;
+          if (stateForProject.selectedRepositoryId !== group.id ||
+              stateForProject.selectedWorktreeId !== worktree.id ||
+              stateForProject.selectedProjectId !== worktree.id) {
+            set(getWorktreeNavigationState(group.id, worktree.id));
+            void get().fetchSessionsInitial(worktree.id);
+          }
+          break;
+        }
       }
     }
-
     const state = get();
     // Use display name from teams list or selected team data if available
     const teamSummary = state.teamByName[teamName];
     const selectedTeamDisplayName =
       state.selectedTeamName === teamName ? state.selectedTeamData?.config.name : undefined;
     const displayName = teamSummary?.displayName || selectedTeamDisplayName || teamName;
-
     const allTabs = state.getAllPaneTabs();
-    const existing = allTabs.find((tab) => isOrdinaryTeamTab(tab) && tab.teamName === teamName);
+    const existing = allTabs.find(
+      (tab) => isOrdinaryTeamTab(tab) && tab.teamName === teamName
+    );
     if (existing) {
       state.setActiveTab(existing.id);
-      // Sync label in case display name changed
-      if (existing.label !== displayName) {
-        state.updateTabLabel(existing.id, displayName);
-      }
+      if (existing.label !== displayName) state.updateTabLabel(existing.id, displayName);
     } else {
       state.openTab({
         type: 'team',
@@ -4156,8 +4122,11 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   },
 
   createTeam: async (request: TeamCreateRequest) => {
-    if (request.createdTeamReadiness)
-      return createHostTeamFromDialog(request, get, pollProvisioningStatus);
+    if (request.createdTeamReadiness) {
+      const requestScope = captureContextRequestScope(get);
+      return createHostTeamFromDialog(request, get, (_get, runId) =>
+        pollProvisioningStatus(get, runId, requestScope));
+    }
     const analyticsStartedAtMs = Date.now();
     const launchAnalyticsContext = buildTeamCreateLaunchAnalyticsContext(
       request,
@@ -4168,6 +4137,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     clearPendingReplyRefreshTimer(request.teamName);
     clearPendingReplyRefreshWaits(request.teamName);
     clearTeamScopedTransientState(request.teamName, get);
+    const requestScope = captureContextRequestScope(get);
     const attemptId = teamProvisioningAttemptTracker.begin(request.teamName);
     // Establish a per-team floor so late events from a previous run can't override UI.
     const floor = nowIso();
@@ -4177,53 +4147,10 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         [request.teamName]: floor,
       },
     }));
-    // Clear stale provisioning runs for this team so the banner starts fresh
-    set((state) => {
-      const cleaned = { ...state.provisioningRuns };
-      for (const [runId, run] of Object.entries(cleaned)) {
-        if (run.teamName === request.teamName) {
-          delete cleaned[runId];
-        }
-      }
-      const nextErrors = { ...state.provisioningErrorByTeam };
-      delete nextErrors[request.teamName];
-      const nextSpawnStatuses = { ...state.memberSpawnStatusesByTeam };
-      delete nextSpawnStatuses[request.teamName];
-      const nextSpawnSnapshots = { ...state.memberSpawnSnapshotsByTeam };
-      delete nextSpawnSnapshots[request.teamName];
-      const nextRuntime = { ...state.teamAgentRuntimeByTeam };
-      delete nextRuntime[request.teamName];
-      const nextActiveTools = { ...state.activeToolsByTeam };
-      delete nextActiveTools[request.teamName];
-      const nextFinishedVisible = { ...state.finishedVisibleByTeam };
-      delete nextFinishedVisible[request.teamName];
-      const nextToolHistory = { ...state.toolHistoryByTeam };
-      delete nextToolHistory[request.teamName];
-      const nextRuntimeRunIdByTeam = { ...state.currentRuntimeRunIdByTeam };
-      const previousRuntimeRunId = nextRuntimeRunIdByTeam[request.teamName];
-      delete nextRuntimeRunIdByTeam[request.teamName];
-      const nextIgnoredRuntimeRunIds = previousRuntimeRunId
-        ? {
-            ...state.ignoredRuntimeRunIds,
-            [previousRuntimeRunId]: request.teamName,
-          }
-        : state.ignoredRuntimeRunIds;
-      const visibleLoadingResets = collectTeamScopedVisibleLoadingResets(state, request.teamName);
-      return {
-        provisioningRuns: cleaned,
-        provisioningErrorByTeam: nextErrors,
-        memberSpawnStatusesByTeam: nextSpawnStatuses,
-        memberSpawnSnapshotsByTeam: nextSpawnSnapshots,
-        teamAgentRuntimeByTeam: nextRuntime,
-        activeToolsByTeam: nextActiveTools,
-        finishedVisibleByTeam: nextFinishedVisible,
-        toolHistoryByTeam: nextToolHistory,
-        currentRuntimeRunIdByTeam: nextRuntimeRunIdByTeam,
-        ignoredProvisioningRunIds: state.ignoredProvisioningRunIds,
-        ignoredRuntimeRunIds: nextIgnoredRuntimeRunIds,
-        ...visibleLoadingResets,
-      };
-    });
+    set((state) => ({
+      ...collectStartedProvisioningAttemptCleanup(state, request.teamName),
+      ...collectTeamScopedVisibleLoadingResets(state, request.teamName),
+    }));
 
     // Optimistic progress entry: ensures banner shows even if IPC progress is delayed/missed.
     const pendingRunId = `pending:${request.teamName}:${attemptId}`;
@@ -4287,6 +4214,10 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       }
       const response = await unwrapIpc('team:create', () => api.teams.createTeam(request));
       responseRunId = response.runId;
+      if (!isContextRequestScopeCurrent(get, requestScope)) {
+        teamProvisioningAttemptTracker.finish(request.teamName, attemptId);
+        return response;
+      }
       teamLaunchAnalyticsByRunId.set(response.runId, launchAnalyticsContext);
       recordTeamCreate({
         source: 'dialog',
@@ -4331,7 +4262,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       } catch {
         // ignore — polling below will retry
       }
-      void pollProvisioningStatus(get, response.runId);
+      void pollProvisioningStatus(get, response.runId, requestScope);
       teamProvisioningAttemptTracker.finish(request.teamName, attemptId);
       return response;
     } catch (error) {
@@ -4343,6 +4274,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
             : 'Failed to create team';
       const isCurrentAttempt = teamProvisioningAttemptTracker.finish(request.teamName, attemptId);
       set((state) => {
+        if (!isContextRequestScopeCurrent(get, requestScope)) return {};
         const failedAttemptCleanup = collectFailedProvisioningAttemptCleanup(
           state,
           request.teamName,
@@ -4390,6 +4322,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     clearPendingReplyRefreshTimer(request.teamName);
     clearPendingReplyRefreshWaits(request.teamName);
     clearTeamScopedTransientState(request.teamName, get);
+    const requestScope = captureContextRequestScope(get);
     const attemptId = teamProvisioningAttemptTracker.begin(request.teamName);
     // Establish a per-team floor so late events from a previous run can't override UI.
     const floor = nowIso();
@@ -4400,52 +4333,10 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       },
     }));
     // Clear stale provisioning runs for this team so the banner starts fresh
-    set((state) => {
-      const cleaned = { ...state.provisioningRuns };
-      for (const [runId, run] of Object.entries(cleaned)) {
-        if (run.teamName === request.teamName) {
-          delete cleaned[runId];
-        }
-      }
-      const nextErrors = { ...state.provisioningErrorByTeam };
-      delete nextErrors[request.teamName];
-      const nextSpawnStatuses = { ...state.memberSpawnStatusesByTeam };
-      delete nextSpawnStatuses[request.teamName];
-      const nextSpawnSnapshots = { ...state.memberSpawnSnapshotsByTeam };
-      delete nextSpawnSnapshots[request.teamName];
-      const nextRuntime = { ...state.teamAgentRuntimeByTeam };
-      delete nextRuntime[request.teamName];
-      const nextActiveTools = { ...state.activeToolsByTeam };
-      delete nextActiveTools[request.teamName];
-      const nextFinishedVisible = { ...state.finishedVisibleByTeam };
-      delete nextFinishedVisible[request.teamName];
-      const nextToolHistory = { ...state.toolHistoryByTeam };
-      delete nextToolHistory[request.teamName];
-      const nextRuntimeRunIdByTeam = { ...state.currentRuntimeRunIdByTeam };
-      const previousRuntimeRunId = nextRuntimeRunIdByTeam[request.teamName];
-      delete nextRuntimeRunIdByTeam[request.teamName];
-      const nextIgnoredRuntimeRunIds = previousRuntimeRunId
-        ? {
-            ...state.ignoredRuntimeRunIds,
-            [previousRuntimeRunId]: request.teamName,
-          }
-        : state.ignoredRuntimeRunIds;
-      const visibleLoadingResets = collectTeamScopedVisibleLoadingResets(state, request.teamName);
-      return {
-        provisioningRuns: cleaned,
-        provisioningErrorByTeam: nextErrors,
-        memberSpawnStatusesByTeam: nextSpawnStatuses,
-        memberSpawnSnapshotsByTeam: nextSpawnSnapshots,
-        teamAgentRuntimeByTeam: nextRuntime,
-        activeToolsByTeam: nextActiveTools,
-        finishedVisibleByTeam: nextFinishedVisible,
-        toolHistoryByTeam: nextToolHistory,
-        currentRuntimeRunIdByTeam: nextRuntimeRunIdByTeam,
-        ignoredProvisioningRunIds: state.ignoredProvisioningRunIds,
-        ignoredRuntimeRunIds: nextIgnoredRuntimeRunIds,
-        ...visibleLoadingResets,
-      };
-    });
+    set((state) => ({
+      ...collectStartedProvisioningAttemptCleanup(state, request.teamName),
+      ...collectTeamScopedVisibleLoadingResets(state, request.teamName),
+    }));
 
     // Optimistic progress entry: ensures banner shows even if IPC progress is delayed/missed.
     const pendingRunId = `pending:${request.teamName}:${attemptId}`;
@@ -4477,23 +4368,42 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         [request.teamName]: optimisticLaunchParams,
       },
     }));
-    // Initialize per-team tool approval settings based on skipPermissions flag
-    {
-      const launchSettings: ToolApprovalSettings =
-        request.skipPermissions === false
-          ? DEFAULT_TOOL_APPROVAL_SETTINGS
-          : { ...DEFAULT_TOOL_APPROVAL_SETTINGS, autoAllowAll: true };
-      saveToolApprovalSettingsForTeam(request.teamName, launchSettings);
-      set((state) => projectToolApprovalSettings(state, request.teamName, launchSettings));
-    }
+    // Initialize per-team tool approval settings based on skipPermissions flag.
+    const launchSettings: ToolApprovalSettings =
+      request.skipPermissions === false
+        ? DEFAULT_TOOL_APPROVAL_SETTINGS
+        : { ...DEFAULT_TOOL_APPROVAL_SETTINGS, autoAllowAll: true };
+    saveToolApprovalSettingsForTeam(request.teamName, launchSettings);
+    set((state) => projectToolApprovalSettings(state, request.teamName, launchSettings));
     let responseRunId: string | null = null;
     try {
+      // The runtime is addressed by a verified physical alias, even when UI
+      // launch/progress uses the logical team. Reset its persisted policy before
+      // native launch; otherwise an old "allow all" selection survives relaunch.
+      const context = dispatch === api.teams.launchTeam
+        ? await api.teams.getProjectContextView(request.teamName, request.cwd) : null;
+      if (!isContextRequestScopeCurrent(get, requestScope)) {
+        throw new Error('The project context changed before the team could launch. Try again.');
+      }
+      if (context?.mode === 'per_project' && context.state === 'ready') {
+        set((state) =>
+          projectToolApprovalSettings(state, context.executionTeamName, launchSettings)
+        );
+        await persistAndAwaitToolApprovalSettingsSync(context.executionTeamName, launchSettings);
+      }
+      if (!isContextRequestScopeCurrent(get, requestScope)) {
+        throw new Error('The project context changed before the team could launch. Try again.');
+      }
       const response = await unwrapIpc('team:launch', () => dispatch(request));
       if (response.launchStatus === 'unconfirmed')
         throw new Error(
           'Team saved. Launch was not confirmed. Check this team before launching again.'
         );
       responseRunId = response.runId;
+      if (!isContextRequestScopeCurrent(get, requestScope)) {
+        teamProvisioningAttemptTracker.finish(request.teamName, attemptId);
+        return response.runId;
+      }
       teamLaunchAnalyticsByRunId.set(response.runId, launchAnalyticsContext);
       saveTeamLaunchParams(request.teamName, optimisticLaunchParams);
       set((state) => ({
@@ -4532,7 +4442,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       } catch {
         // ignore — polling below will retry
       }
-      void pollProvisioningStatus(get, response.runId);
+      void pollProvisioningStatus(get, response.runId, requestScope);
       teamProvisioningAttemptTracker.finish(request.teamName, attemptId);
       return response.runId;
     } catch (error) {
@@ -4544,6 +4454,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
             : 'Failed to launch team';
       const isCurrentAttempt = teamProvisioningAttemptTracker.finish(request.teamName, attemptId);
       set((state) => {
+        if (!isContextRequestScopeCurrent(get, requestScope)) return {};
         const failedAttemptCleanup = collectFailedProvisioningAttemptCleanup(
           state,
           request.teamName,
@@ -4578,6 +4489,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   },
 
   getProvisioningStatus: async (runId: string) => {
+    const requestScope = captureContextRequestScope(get);
     const isCurrent = captureHostProvisioningStatusRead(runId, get, (teamName) => {
       const scope = captureTeamRequestScope(get, teamName);
       return () => isTeamRequestScopeCurrent(get, teamName, scope);
@@ -4585,71 +4497,17 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     const progress = await unwrapIpc('team:provisioningStatus', () =>
       api.teams.getProvisioningStatus(runId)
     );
-    if (isCurrent()) get().onProvisioningProgress(progress);
+    if (isContextRequestScopeCurrent(get, requestScope) && isCurrent(progress))
+      get().onProvisioningProgress(progress);
     return progress;
   },
   clearMissingProvisioningRun: (runId: string) => {
     teamLaunchAnalyticsByRunId.delete(runId);
     clearTeamLaunchStepTracking(runId);
     set((state) => {
-      const existing = state.provisioningRuns[runId];
-      if (!existing) {
-        return {};
-      }
-
-      const nextRuns = { ...state.provisioningRuns };
-      delete nextRuns[runId];
-      const nextCurrentRunIdByTeam = { ...state.currentProvisioningRunIdByTeam };
-      const isCanonicalRun = nextCurrentRunIdByTeam[existing.teamName] === runId;
-      if (isCanonicalRun) {
-        delete nextCurrentRunIdByTeam[existing.teamName];
-      }
-      const nextRuntimeRunIdByTeam = { ...state.currentRuntimeRunIdByTeam };
-      if (nextRuntimeRunIdByTeam[existing.teamName] === runId) {
-        delete nextRuntimeRunIdByTeam[existing.teamName];
-      }
-      const nextIgnoredRunIds = {
-        ...state.ignoredProvisioningRunIds,
-        [runId]: existing.teamName,
-      };
-      const nextIgnoredRuntimeRunIds =
-        state.currentRuntimeRunIdByTeam[existing.teamName] === runId
-          ? {
-              ...state.ignoredRuntimeRunIds,
-              [runId]: existing.teamName,
-            }
-          : state.ignoredRuntimeRunIds;
-      const nextSpawnStatuses = { ...state.memberSpawnStatusesByTeam };
-      const nextSpawnSnapshots = { ...state.memberSpawnSnapshotsByTeam };
-      const nextRuntime = { ...state.teamAgentRuntimeByTeam };
-      if (isCanonicalRun) {
-        delete nextSpawnStatuses[existing.teamName];
-        delete nextSpawnSnapshots[existing.teamName];
-        delete nextRuntime[existing.teamName];
-        clearTeamAgentRuntimeFreshnessSnapshot(existing.teamName);
-      }
-      const nextActiveTools = { ...state.activeToolsByTeam };
-      const nextFinishedVisible = { ...state.finishedVisibleByTeam };
-      const nextToolHistory = { ...state.toolHistoryByTeam };
-      if (isCanonicalRun) {
-        delete nextActiveTools[existing.teamName];
-        delete nextFinishedVisible[existing.teamName];
-        delete nextToolHistory[existing.teamName];
-      }
-
-      return {
-        provisioningRuns: nextRuns,
-        currentProvisioningRunIdByTeam: nextCurrentRunIdByTeam,
-        currentRuntimeRunIdByTeam: nextRuntimeRunIdByTeam,
-        memberSpawnStatusesByTeam: nextSpawnStatuses,
-        memberSpawnSnapshotsByTeam: nextSpawnSnapshots,
-        teamAgentRuntimeByTeam: nextRuntime,
-        activeToolsByTeam: nextActiveTools,
-        finishedVisibleByTeam: nextFinishedVisible,
-        toolHistoryByTeam: nextToolHistory,
-        ignoredProvisioningRunIds: nextIgnoredRunIds,
-        ignoredRuntimeRunIds: nextIgnoredRuntimeRunIds,
-      };
+      const cleanup = projectMissingProvisioningRunCleanup(state, runId);
+      cleanup.clearedRuntimeTeams.forEach(clearTeamAgentRuntimeFreshnessSnapshot);
+      return cleanup.state;
     });
   },
 
@@ -4658,10 +4516,12 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   },
 
   onProvisioningProgress: (progress: TeamProvisioningProgress) => {
-    if (get().ignoredProvisioningRunIds[progress.runId] === progress.teamName) {
+    const verifiedOwners = hostProjectProgressOwners(progress);
+    if (verifiedOwners === null) return;
+    if (isTeamRunIgnored(get().ignoredProvisioningRunIds, progress.runId, progress.teamName)) {
       return;
     }
-    if (get().ignoredRuntimeRunIds[progress.runId] === progress.teamName) {
+    if (isTeamRunIgnored(get().ignoredRuntimeRunIds, progress.runId, progress.teamName)) {
       return;
     }
 
@@ -4745,13 +4605,20 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
             previousState: previousProgress?.state,
             nextRunId: progress.runId,
             currentRuntimeRunId: state.currentRuntimeRunIdByTeam[progress.teamName],
+            nextRunObserved: Object.values(state.currentRuntimeRunIdByTeam).includes(progress.runId),
+            previousStartedAt: previousProgress?.startedAt,
+            nextStartedAt: progress.startedAt,
             ignoredRuntimeRunIds: state.ignoredRuntimeRunIds,
             pinnedSpawnStatuses: state.memberSpawnStatusesByTeam[progress.teamName],
+            verifiedHostProjectOwner: verifiedOwners?.includes(progress.teamName),
           })
         ) {
           nextCurrentRunIdByTeam[progress.teamName] = progress.runId;
           isCanonicalRun = true;
-        } else if (!(progress.runId in state.provisioningRuns)) {
+        } else if (
+          !(progress.runId in state.provisioningRuns) ||
+          Object.values(state.currentProvisioningRunIdByTeam).includes(progress.runId)
+        ) {
           return {};
         } else {
           delete nextRuns[progress.runId];
@@ -4760,16 +4627,8 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       }
 
       nextRuns[progress.runId] = progress;
-      for (const [runId, run] of Object.entries(nextRuns)) {
-        if (runId !== progress.runId && run.teamName === progress.teamName) {
-          delete nextRuns[runId];
-        }
-      }
 
-      const nextErrors = { ...state.provisioningErrorByTeam };
-      const progressError = getProvisioningProgressError(progress);
-      if (progressError) nextErrors[progress.teamName] = progressError;
-      else delete nextErrors[progress.teamName];
+      const progressOwners = projectProvisioningProgressOwners({ ...state, currentProvisioningRunIdByTeam: nextCurrentRunIdByTeam }, progress);
       // Clean up provisioning snapshot on terminal failure states
       const nextSnapshots =
         progress.state === 'failed' || progress.state === 'cancelled'
@@ -4780,13 +4639,12 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
             })()
           : state.provisioningSnapshotByTeam;
       return {
-        provisioningRuns: nextRuns,
-        currentProvisioningRunIdByTeam: nextCurrentRunIdByTeam,
+        provisioningRuns: pruneProvisioningRuns(nextRuns, progressOwners.currentProvisioningRunIdByTeam, progress),
+        ...progressOwners,
         currentRuntimeRunIdByTeam: {
           ...state.currentRuntimeRunIdByTeam,
           [progress.teamName]: progress.runId,
         },
-        provisioningErrorByTeam: nextErrors,
         provisioningSnapshotByTeam: nextSnapshots,
       };
     });

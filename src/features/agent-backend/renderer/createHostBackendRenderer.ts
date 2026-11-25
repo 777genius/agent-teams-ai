@@ -44,6 +44,8 @@ const reads = new Set<BackendOperation>([
   'team.queue.lookup',
   'team.roster.read',
   'team.roster.lookup',
+  'team.project-context.read',
+  'team.project-context.launch-source.read',
   'team.member.actions.read',
   'team.member.action.lookup',
   'team.launch.read',

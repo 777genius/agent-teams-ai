@@ -85,6 +85,8 @@ export async function runDesktopCreateConfigUiSmoke(
     ),
   );
   assert.equal(record(owner.savedSettings).cwd, workspace);
+  assert.equal(record(owner.savedSettings).projectContextMode, 'per_project');
+  assert.deepEqual(owner.runtimeCaptures ?? [], [], 'save-only creates a definition without a native execution');
   assert.equal(owner.ready, true);
   assert.deepEqual(
     (owner.members as unknown[]).map(record).map((row) => [row.name, row.role]),

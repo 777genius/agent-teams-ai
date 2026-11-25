@@ -43,7 +43,9 @@ function preparation(
     !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(preparationId)
   )
     throw new BackendRoutingError('invalid-binding');
-  return { preparationId, draft: captureConfiguredHostTeamDraft(contextId, draft) };
+  const product = draft && typeof draft === 'object' && !Array.isArray(draft)
+    ? { ...draft, projectContextMode: (draft as { projectContextMode?: unknown }).projectContextMode ?? 'per_project' } : draft;
+  return { preparationId, draft: captureConfiguredHostTeamDraft(contextId, product) };
 }
 
 /** A bounded foreground check; existing Host probe records own spend, results and cleanup. */
@@ -177,9 +179,15 @@ export async function createLaunchedHostTeam(options: {
   const result = await options.target.submit(identity.commandId, input);
   assertBackendRequestGuard(options.guard, 'unknown');
   const handleId = result.creation.record.binding.handleId;
+  const executionHandleId = result.execution?.binding.handleId ?? handleId;
   return {
     teamName: hostTeamSelectionKey(handleId),
-    runId: hostTeamRunId(handleId, result.launch.launchId, result.launch.rosterRevision),
+    runId: hostTeamRunId(executionHandleId, result.launch.launchId, result.launch.rosterRevision),
+    ...(result.execution?.projectContext ? {
+      executionTeamName: hostTeamSelectionKey(executionHandleId),
+      projectContext: { logicalHandleId: result.execution.projectContext.logicalHandleId,
+        projectPath: result.execution.projectContext.projectPath, workContextId: result.execution.projectContext.workContextId },
+    } : {}),
     launchStatus: result.partialCreated ? 'unconfirmed' : 'started',
   };
 }

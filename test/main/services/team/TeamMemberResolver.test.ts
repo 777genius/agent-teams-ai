@@ -5,6 +5,61 @@ import { TeamMemberResolver } from '../../../../src/main/services/team/TeamMembe
 import type { TeamConfig, TeamTask, TeamTaskWithKanban } from '../../../../src/shared/types/team';
 
 describe('TeamMemberResolver', () => {
+  it.each(['LIVE_ROLE_COBALT', undefined])(
+    'uses the authored role %s without replacing current runtime identity',
+    (role) => {
+      const runtimeMember = {
+        name: 'Alice',
+        role: 'Test worker',
+        agentId: 'alice@ptc-a',
+        joinedAt: 1710000000000,
+        agentType: 'general-purpose',
+        providerId: 'opencode' as const,
+        providerBackendId: 'opencode-cli' as const,
+        model: 'kimi/current',
+        cwd: '/TEST/project-a',
+      };
+      const resolver = new TeamMemberResolver();
+      const config = { name: 'ptc-a', members: [runtimeMember] };
+      const before = resolver.resolveMembers(config, [], [], [])[0];
+      const member = resolver.resolveMembers(
+        config,
+        [{ name: ' alice ', role, agentId: 'stale-meta-id', joinedAt: 1, cwd: '/stale' }],
+        [],
+        []
+      )[0];
+
+      expect(member.role).toBe(role);
+      expect(member).toMatchObject({
+        name: runtimeMember.name,
+        agentId: runtimeMember.agentId,
+        joinedAt: runtimeMember.joinedAt,
+        agentType: runtimeMember.agentType,
+        providerId: runtimeMember.providerId,
+        providerBackendId: before.providerBackendId,
+        model: runtimeMember.model,
+        cwd: runtimeMember.cwd,
+        laneId: before.laneId,
+        laneKind: before.laneKind,
+        laneOwnerProviderId: before.laneOwnerProviderId,
+      });
+      expect(config.members[0].role).toBe('Test worker');
+    }
+  );
+
+  it.each([{ metadata: [] }, { metadata: [{ name: 'Bob', role: 'Other role' }] }])(
+    'keeps the legacy config role when the member has no metadata row (%j)',
+    ({ metadata }) => {
+      const members = new TeamMemberResolver().resolveMembers(
+        { name: 'legacy', members: [{ name: 'Alice', role: 'Config role' }] },
+        metadata,
+        [],
+        []
+      );
+      expect(members.find((member) => member.name === 'Alice')?.role).toBe('Config role');
+    }
+  );
+
   it('projects the resolved OpenCode primary model over saved default selection', () => {
     const members = new TeamMemberResolver().resolveMembers(
       {

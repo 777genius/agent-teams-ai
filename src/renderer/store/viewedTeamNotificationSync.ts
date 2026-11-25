@@ -1,6 +1,10 @@
 import { isOrdinaryTeamTab } from '@renderer/types/tabs';
 
 import { selectTeamDataForName } from './team/teamDataSelectors';
+import {
+  getFocusedProjectTeamName,
+  subscribeVisiblePhysicalTeamChanges,
+} from './team/teamViewVisibility';
 
 import type { AppState } from './types';
 
@@ -25,11 +29,18 @@ export function getFocusedVisibleTeamName(state: AppState): string | null {
     return null;
   }
 
-  if (!selectTeamDataForName(state, activeTab.teamName)) {
+  const logicalName = activeTab.teamName;
+  const verifiedPhysicalName = getFocusedProjectTeamName(logicalName);
+  if (verifiedPhysicalName) {
+    return selectTeamDataForName(state, verifiedPhysicalName)
+      ? verifiedPhysicalName
+      : null;
+  }
+  // An unmounted logical project tab cannot own native unread notifications.
+  if (state.teamByName?.[logicalName]?.projectContextMode === 'per_project') {
     return null;
   }
-
-  return activeTab.teamName;
+  return selectTeamDataForName(state, logicalName) ? logicalName : null;
 }
 
 export function startViewedTeamNotificationSync(store: ViewedTeamStore): () => void {
@@ -76,7 +87,8 @@ export function startViewedTeamNotificationSync(store: ViewedTeamStore): () => v
   };
 
   sync();
-  return store.subscribe((state, prevState) => {
+  const stopVisibleContext = subscribeVisiblePhysicalTeamChanges(() => sync(store.getState()));
+  const stopStore = store.subscribe((state, prevState) => {
     if (
       state.paneLayout === prevState.paneLayout &&
       state.selectedTeamName === prevState.selectedTeamName &&
@@ -87,4 +99,8 @@ export function startViewedTeamNotificationSync(store: ViewedTeamStore): () => v
     }
     sync(state);
   });
+  return () => {
+    stopStore();
+    stopVisibleContext();
+  };
 }

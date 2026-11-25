@@ -88,6 +88,16 @@ describe('pathValidation', () => {
       expect(isPathWithinRoot(sibling, root)).toBe(false);
     });
 
+    it('accepts entries whose names start with two dots', () => {
+      const root = path.join(os.tmpdir(), 'repo');
+      expect(isPathWithinRoot(path.join(root, '..data', 'config.yaml'), root)).toBe(true);
+      expect(isPathWithinRoot(path.join(root, '..env'), root)).toBe(true);
+      expect(isPathWithinRoot(path.join(root, '..'), root)).toBe(false);
+      expect(isPathWithinRoot(path.join(root, '..', 'repo2', 'a.ts'), root)).toBe(false);
+      expect(isPathWithinRoot(path.join(root, '.. '), root)).toBe(false);
+      expect(isPathWithinRoot(path.join(root, '... ', 'a.ts'), root)).toBe(false);
+    });
+
     it('handles Windows drive casing and traversal consistently', () => {
       if (process.platform !== 'win32') {
         return;

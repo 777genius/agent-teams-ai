@@ -6,7 +6,7 @@ import type {
 
 /** Existing application settings; no vendor profile, account or native selectors. */
 export type BackendRosterSettings = Omit<TeamProvisioningMemberInput, 'name'>;
-export type BackendSavedTeamSettings = Omit<TeamCreateDraft, 'teamName' | 'members'>;
+export type BackendSavedTeamSettings = Omit<TeamCreateDraft, 'teamName' | 'members'> & { language?: string };
 export interface BackendRosterConfiguration {
   revision: string;
   /** Absent means not captured; effective runtime parameters are never saved defaults. */

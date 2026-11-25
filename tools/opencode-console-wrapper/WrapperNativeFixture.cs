@@ -65,6 +65,7 @@ internal static class WrapperNativeFixture
             Directory.CreateDirectory(root);
             string fixture=Process.GetCurrentProcess().MainModule.FileName;
             Environment.SetEnvironmentVariable("OPENCODE_CONSOLE_WRAPPER_TARGET", fixture);
+            Environment.SetEnvironmentVariable("AGENT_TEAMS_TEAMMATE_WRAPPER_TARGET", fixture);
             bool succeeded=false;
             try {
                 using (Socket unrelated=new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)) {

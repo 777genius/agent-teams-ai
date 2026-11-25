@@ -477,6 +477,7 @@ vi.mock('@renderer/store', () => ({
         selectedTeamName: null,
         skillsProjectCatalogByProjectPath: {},
         skillsUserCatalog: [],
+        teams: [],
         leadActivityByTeam: { 'team-alpha': provisioningHarness.state.leadActivity },
         currentRuntimeRunIdByTeam: { 'team-alpha': provisioningHarness.state.currentRunId },
       }),

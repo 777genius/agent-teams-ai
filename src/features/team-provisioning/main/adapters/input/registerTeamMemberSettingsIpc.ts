@@ -1,11 +1,13 @@
 import { validateMemberName, validateTeamName } from '@main/ipc/guards';
 import { isReservedLeadRole } from '@shared/utils/leadDetection';
 
-import { TEAM_UPDATE_MEMBER_SETTINGS } from '../../../contracts';
+import { TEAM_GET_MEMBER_SETTINGS_TARGET, TEAM_UPDATE_MEMBER_SETTINGS } from '../../../contracts';
 
 import type {
   EditableMemberSettings,
+  GetMemberSettingsTargetRequest,
   MemberSettingsMcpPolicy,
+  MemberSettingsTarget,
   UpdateMemberSettingsRequest,
   UpdateMemberSettingsResult,
 } from '../../../contracts/memberSettings';
@@ -28,6 +30,7 @@ const MAX_ID_LENGTH = 256;
 const MAX_NAME_LENGTH = 128;
 const MAX_TEXT_LENGTH = 16_384;
 const MAX_FINGERPRINT_LENGTH = 65_536;
+const MAX_RELAUNCH_BASELINE_LENGTH = 256 * 1024;
 const MAX_MCP_SERVERS = 100;
 const MAX_MCP_SERVER_NAME_LENGTH = 128;
 
@@ -179,6 +182,39 @@ function parseSettings(value: unknown): EditableMemberSettings {
   };
 }
 
+function parseRelaunchGuard(value: unknown): UpdateMemberSettingsRequest['relaunchGuard'] {
+  if (value === undefined) return undefined;
+  if (!isPlainObject(value) || !Array.isArray(value.baseline) || value.baseline.length > 128) {
+    throw new TypeError('Invalid relaunch baseline');
+  }
+  const seen = new Set<string>();
+  let totalLength = 0;
+  const baseline = value.baseline.map((row) => {
+    if (!isPlainObject(row)) throw new TypeError('Invalid relaunch baseline member');
+    const memberName = validatedIdentifier(row.memberName, 'memberName', validateMemberName);
+    const key = memberName.toLowerCase();
+    if (seen.has(key)) throw new TypeError('Duplicate relaunch baseline member');
+    seen.add(key);
+    const expectedFingerprint = requiredString(
+      row.expectedFingerprint,
+      'expectedFingerprint',
+      MAX_FINGERPRINT_LENGTH
+    );
+    totalLength += memberName.length + expectedFingerprint.length;
+    if (totalLength > MAX_RELAUNCH_BASELINE_LENGTH)
+      throw new TypeError('Relaunch baseline is too large');
+    return { memberName, expectedFingerprint };
+  });
+  return {
+    expectedTeamSettingsFingerprint: requiredString(
+      value.expectedTeamSettingsFingerprint,
+      'expectedTeamSettingsFingerprint',
+      MAX_FINGERPRINT_LENGTH
+    ),
+    baseline,
+  };
+}
+
 export function parseUpdateMemberSettingsRequest(value: unknown): UpdateMemberSettingsRequest {
   if (!isPlainObject(value)) throw new TypeError('request must be a plain object');
   const base = {
@@ -186,6 +222,9 @@ export function parseUpdateMemberSettingsRequest(value: unknown): UpdateMemberSe
     idempotencyKey: requiredString(value.idempotencyKey, 'idempotencyKey', MAX_ID_LENGTH),
     teamName: validatedIdentifier(value.teamName, 'teamName', validateTeamName),
     memberName: validatedIdentifier(value.memberName, 'memberName', validateMemberName),
+    ...(value.relaunchGuard === undefined
+      ? {}
+      : { relaunchGuard: parseRelaunchGuard(value.relaunchGuard) }),
     expectedFingerprint: requiredString(
       value.expectedFingerprint,
       'expectedFingerprint',
@@ -223,6 +262,16 @@ export function parseUpdateMemberSettingsRequest(value: unknown): UpdateMemberSe
   return { ...base, targetKind, settings: parseSettings(value.settings) };
 }
 
+export function parseGetMemberSettingsTargetRequest(
+  value: unknown
+): GetMemberSettingsTargetRequest {
+  if (!isPlainObject(value)) throw new TypeError('request must be a plain object');
+  return {
+    teamName: validatedIdentifier(value.teamName, 'teamName', validateTeamName),
+    memberName: validatedIdentifier(value.memberName, 'memberName', validateMemberName),
+  };
+}
+
 export function registerTeamMemberSettingsIpc(
   ipcMain: IpcMain,
   feature: TeamMemberSettingsFeatureApi
@@ -241,8 +290,25 @@ export function registerTeamMemberSettingsIpc(
       }
     }
   );
+  ipcMain.handle(
+    TEAM_GET_MEMBER_SETTINGS_TARGET,
+    async (
+      _event: IpcMainInvokeEvent,
+      value: unknown
+    ): Promise<IpcResult<MemberSettingsTarget | null>> => {
+      try {
+        const data = await feature.getMemberSettingsTarget(
+          parseGetMemberSettingsTargetRequest(value)
+        );
+        return { success: true, data };
+      } catch (error) {
+        return { success: false, error: error instanceof Error ? error.message : String(error) };
+      }
+    }
+  );
 }
 
 export function removeTeamMemberSettingsIpc(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_UPDATE_MEMBER_SETTINGS);
+  ipcMain.removeHandler(TEAM_GET_MEMBER_SETTINGS_TARGET);
 }

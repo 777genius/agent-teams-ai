@@ -53,6 +53,7 @@ export interface SafeConfig {
   notifications: {
     enabled: boolean;
     soundEnabled: boolean;
+    desktopDisabledEvents: NonNullable<AppConfig['notifications']['desktopDisabledEvents']>;
     ignoredRegex: string[];
     ignoredRepositories: string[];
     snoozedUntil: number | null;
@@ -182,9 +183,7 @@ export function useSettingsConfig(): UseSettingsConfigReturn {
           pendingUpdatesRef.current = pendingUpdatesRef.current.filter((item) => item !== pending);
           const lastSaved = savedConfigRef.current;
           setOptimisticConfig(
-            lastSaved
-              ? pendingUpdatesRef.current.reduce(applyConfigUpdate, lastSaved)
-              : null
+            lastSaved ? pendingUpdatesRef.current.reduce(applyConfigUpdate, lastSaved) : null
           );
           setSaving(pendingUpdatesRef.current.length > 0);
         }
@@ -214,11 +213,12 @@ export function useSettingsConfig(): UseSettingsConfigReturn {
         autoExpandAIGroups: displayConfig?.general?.autoExpandAIGroups ?? false,
         useNativeTitleBar: displayConfig?.general?.useNativeTitleBar ?? false,
         telemetryEnabled: displayConfig?.general?.telemetryEnabled ?? true,
-        externalAgentCdpEnabled: displayConfig?.general?.externalAgentCdpEnabled ?? false,
+        externalAgentCdpEnabled: displayConfig?.general?.externalAgentCdpEnabled ?? true,
       },
       notifications: {
         enabled: displayConfig?.notifications?.enabled ?? true,
         soundEnabled: displayConfig?.notifications?.soundEnabled ?? true,
+        desktopDisabledEvents: displayConfig?.notifications?.desktopDisabledEvents ?? [],
         ignoredRegex: displayConfig?.notifications?.ignoredRegex ?? [],
         ignoredRepositories: displayConfig?.notifications?.ignoredRepositories ?? [],
         snoozedUntil: displayConfig?.notifications?.snoozedUntil ?? null,

@@ -4,6 +4,7 @@ import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
+import { describeMemberLaunchFailureReason } from '@renderer/utils/memberLaunchFailureReasonText';
 import { X } from 'lucide-react';
 
 import { ProvisioningProgressBlock } from './ProvisioningProgressBlock';
@@ -48,6 +49,7 @@ export const TeamProvisioningPanel = memo(function TeamProvisioningPanel({
   defaultLogsOpen,
 }: TeamProvisioningPanelProps): React.JSX.Element | null {
   const { t } = useAppTranslation('common');
+  const { t: translateTeam } = useAppTranslation('team');
   const provisioningError = useStore((s) => s.provisioningErrorByTeam[teamName]);
   const clearProvisioningError = useStore((s) => s.clearProvisioningError);
   const {
@@ -104,7 +106,7 @@ export const TeamProvisioningPanel = memo(function TeamProvisioningPanel({
                 defaultValue: 'Could not cancel launch: {{error}}',
                 error: cancelError,
               })
-            : provisioningError}
+            : describeMemberLaunchFailureReason(provisioningError ?? undefined, translateTeam)}
         </p>
         {dismissible ? (
           <Button
@@ -249,7 +251,7 @@ export const TeamProvisioningPanel = memo(function TeamProvisioningPanel({
       {presentation.isFailed ? (
         <div className="flex items-center gap-2 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2">
           <p className="flex-1 text-xs text-[var(--step-error-text)]">
-            {presentation.progress.message}
+            {presentation.panelMessage ?? presentation.progress.message}
           </p>
           {dismissible ? (
             <Button

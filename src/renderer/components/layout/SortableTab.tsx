@@ -21,6 +21,7 @@ import {
   Calendar,
   FileText,
   Gauge,
+  Inbox,
   LayoutDashboard,
   Network,
   Pin,
@@ -51,6 +52,7 @@ interface SortableTabProps {
 const TAB_ICONS = {
   dashboard: LayoutDashboard,
   notifications: Bell,
+  attention: Inbox,
   settings: Settings,
   session: FileText,
   teams: Users,

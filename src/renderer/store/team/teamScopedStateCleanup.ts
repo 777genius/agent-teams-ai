@@ -1,3 +1,7 @@
+import { addIgnoredTeamRun, pruneProvisioningRuns } from './teamProvisioningRunIdentity';
+
+import type { IgnoredTeamRunOwners } from './teamProvisioningRunIdentity';
+
 interface TeamMessagesLoadingEntry {
   loadingHead: boolean;
   loadingOlder: boolean;
@@ -25,7 +29,7 @@ interface TeamScopedStateRemovalState<
   teamMessagesByName: TeamScopedRecord;
   memberActivityMetaByTeam: TeamScopedRecord;
   provisioningSnapshotByTeam: TeamScopedRecord;
-  currentProvisioningRunIdByTeam: TeamScopedRecord;
+  currentProvisioningRunIdByTeam: Record<string, string | null | undefined>;
   currentRuntimeRunIdByTeam: TeamScopedRecord;
   provisioningStartedAtFloorByTeam: TeamScopedRecord;
   leadActivityByTeam: TeamScopedRecord;
@@ -44,8 +48,8 @@ type TeamScopedStateRemovalKey = keyof TeamScopedStateRemovalState;
 interface TeamScopedProgressTombstoneState {
   currentProvisioningRunIdByTeam: Record<string, string | null | undefined>;
   currentRuntimeRunIdByTeam: Record<string, string | null | undefined>;
-  ignoredProvisioningRunIds: Record<string, string>;
-  ignoredRuntimeRunIds: Record<string, string>;
+  ignoredProvisioningRunIds: IgnoredTeamRunOwners;
+  ignoredRuntimeRunIds: IgnoredTeamRunOwners;
   provisioningStartedAtFloorByTeam: Record<string, string>;
 }
 
@@ -55,8 +59,8 @@ interface FailedProvisioningAttemptState {
   currentRuntimeRunIdByTeam: Record<string, string | null | undefined>;
   provisioningStartedAtFloorByTeam: Record<string, string>;
   provisioningSnapshotByTeam: TeamScopedRecord;
-  ignoredProvisioningRunIds: Record<string, string>;
-  ignoredRuntimeRunIds: Record<string, string>;
+  ignoredProvisioningRunIds: IgnoredTeamRunOwners;
+  ignoredRuntimeRunIds: IgnoredTeamRunOwners;
   memberSpawnStatusesByTeam: TeamScopedRecord;
   memberSpawnSnapshotsByTeam: TeamScopedRecord;
   teamAgentRuntimeByTeam: TeamScopedRecord;
@@ -66,6 +70,10 @@ interface FailedProvisioningAttemptState {
 }
 
 type FailedProvisioningAttemptCleanupKey = keyof FailedProvisioningAttemptState;
+
+interface StartedProvisioningAttemptState extends FailedProvisioningAttemptState {
+  provisioningErrorByTeam: TeamScopedRecord;
+}
 
 const currentProvisioningAttemptIdByTeam = new Map<string, string>();
 
@@ -135,19 +143,59 @@ function omitTeamKey<TRecord extends Record<string, unknown>>(
   return next;
 }
 
+/** Retire only this owner's attempt; another alias may still display the same native run. */
+export function collectStartedProvisioningAttemptCleanup<
+  TState extends StartedProvisioningAttemptState,
+>(
+  state: TState,
+  teamName: string
+): Partial<Pick<TState, keyof StartedProvisioningAttemptState>> {
+  const currentProvisioningRunIdByTeam = { ...state.currentProvisioningRunIdByTeam };
+  delete currentProvisioningRunIdByTeam[teamName];
+  const currentRuntimeRunIdByTeam = { ...state.currentRuntimeRunIdByTeam };
+  const previousRuntimeRunId = currentRuntimeRunIdByTeam[teamName];
+  delete currentRuntimeRunIdByTeam[teamName];
+  return {
+    provisioningRuns: pruneProvisioningRuns(
+      state.provisioningRuns,
+      currentProvisioningRunIdByTeam,
+      { teamName }
+    ),
+    currentProvisioningRunIdByTeam,
+    currentRuntimeRunIdByTeam,
+    provisioningErrorByTeam:
+      omitTeamKey(state.provisioningErrorByTeam, teamName) ?? state.provisioningErrorByTeam,
+    memberSpawnStatusesByTeam:
+      omitTeamKey(state.memberSpawnStatusesByTeam, teamName) ?? state.memberSpawnStatusesByTeam,
+    memberSpawnSnapshotsByTeam:
+      omitTeamKey(state.memberSpawnSnapshotsByTeam, teamName) ?? state.memberSpawnSnapshotsByTeam,
+    teamAgentRuntimeByTeam:
+      omitTeamKey(state.teamAgentRuntimeByTeam, teamName) ?? state.teamAgentRuntimeByTeam,
+    activeToolsByTeam: omitTeamKey(state.activeToolsByTeam, teamName) ?? state.activeToolsByTeam,
+    finishedVisibleByTeam:
+      omitTeamKey(state.finishedVisibleByTeam, teamName) ?? state.finishedVisibleByTeam,
+    toolHistoryByTeam: omitTeamKey(state.toolHistoryByTeam, teamName) ?? state.toolHistoryByTeam,
+    ignoredRuntimeRunIds: previousRuntimeRunId
+      ? addIgnoredTeamRun(state.ignoredRuntimeRunIds, previousRuntimeRunId, teamName)
+      : state.ignoredRuntimeRunIds,
+  };
+}
+
 export function collectTeamScopedStateRemovals<TState extends TeamScopedStateRemovalState>(
   state: TState,
   teamName: string
 ): Partial<Pick<TState, TeamScopedStateRemovalKey>> {
-  const nextProvisioningRuns = Object.fromEntries(
-    Object.entries(state.provisioningRuns).filter(([, run]) => run.teamName !== teamName)
+  const nextCurrentProvisioningRunId = omitTeamKey(state.currentProvisioningRunIdByTeam, teamName);
+  const nextProvisioningRuns = pruneProvisioningRuns(
+    state.provisioningRuns,
+    nextCurrentProvisioningRunId ?? state.currentProvisioningRunIdByTeam,
+    { teamName }
   ) as TState['provisioningRuns'];
   const nextTeamDataCache = omitTeamKey(state.teamDataCacheByName, teamName);
   const nextTeamAgentRuntime = omitTeamKey(state.teamAgentRuntimeByTeam, teamName);
   const nextTeamMessages = omitTeamKey(state.teamMessagesByName, teamName);
   const nextMemberActivityMeta = omitTeamKey(state.memberActivityMetaByTeam, teamName);
   const nextProvisioningSnapshot = omitTeamKey(state.provisioningSnapshotByTeam, teamName);
-  const nextCurrentProvisioningRunId = omitTeamKey(state.currentProvisioningRunIdByTeam, teamName);
   const nextCurrentRuntimeRunId = omitTeamKey(state.currentRuntimeRunIdByTeam, teamName);
   const nextProvisioningStartedAtFloor = omitTeamKey(
     state.provisioningStartedAtFloorByTeam,
@@ -201,16 +249,24 @@ export function buildTeamScopedProgressTombstones<TState extends TeamScopedProgr
   TState,
   'ignoredProvisioningRunIds' | 'ignoredRuntimeRunIds' | 'provisioningStartedAtFloorByTeam'
 > {
-  const nextIgnoredProvisioningRunIds = { ...state.ignoredProvisioningRunIds };
-  const nextIgnoredRuntimeRunIds = { ...state.ignoredRuntimeRunIds };
+  let nextIgnoredProvisioningRunIds = state.ignoredProvisioningRunIds;
+  let nextIgnoredRuntimeRunIds = state.ignoredRuntimeRunIds;
 
   const currentProvisioningRunId = state.currentProvisioningRunIdByTeam[teamName];
   const currentRuntimeRunId = state.currentRuntimeRunIdByTeam[teamName];
   if (currentProvisioningRunId) {
-    nextIgnoredProvisioningRunIds[currentProvisioningRunId] = teamName;
+    nextIgnoredProvisioningRunIds = addIgnoredTeamRun(
+      nextIgnoredProvisioningRunIds,
+      currentProvisioningRunId,
+      teamName
+    );
   }
   if (currentRuntimeRunId) {
-    nextIgnoredRuntimeRunIds[currentRuntimeRunId] = teamName;
+    nextIgnoredRuntimeRunIds = addIgnoredTeamRun(
+      nextIgnoredRuntimeRunIds,
+      currentRuntimeRunId,
+      teamName
+    );
   }
 
   return {
@@ -247,19 +303,24 @@ export function collectFailedProvisioningAttemptCleanup<
   }
 
   const provisioningRuns = { ...state.provisioningRuns };
-  const ignoredProvisioningRunIds = { ...state.ignoredProvisioningRunIds };
+  const otherOwnerRunIds = new Set(
+    Object.entries(state.currentProvisioningRunIdByTeam)
+      .filter(([owner]) => owner !== teamName)
+      .map(([, runId]) => runId)
+  );
+  let ignoredProvisioningRunIds = state.ignoredProvisioningRunIds;
   for (const runId of failedRunIds) {
-    delete provisioningRuns[runId];
-    ignoredProvisioningRunIds[runId] = teamName;
+    if (!otherOwnerRunIds.has(runId)) delete provisioningRuns[runId];
+    ignoredProvisioningRunIds = addIgnoredTeamRun(ignoredProvisioningRunIds, runId, teamName);
   }
 
   const clearsProvisioning =
     typeof currentProvisioningRunId === 'string' && failedRunIds.has(currentProvisioningRunId);
   const clearsRuntime =
     typeof currentRuntimeRunId === 'string' && failedRunIds.has(currentRuntimeRunId);
-  const ignoredRuntimeRunIds = { ...state.ignoredRuntimeRunIds };
+  let ignoredRuntimeRunIds = state.ignoredRuntimeRunIds;
   if (clearsRuntime && currentRuntimeRunId) {
-    ignoredRuntimeRunIds[currentRuntimeRunId] = teamName;
+    ignoredRuntimeRunIds = addIgnoredTeamRun(ignoredRuntimeRunIds, currentRuntimeRunId, teamName);
   }
 
   const memberSpawnStatusesByTeam = omitTeamKey(state.memberSpawnStatusesByTeam, teamName);

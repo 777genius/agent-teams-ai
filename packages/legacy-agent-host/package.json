@@ -279,6 +279,10 @@
     "./diagnostics/assignments": {
       "types": "./dist/diagnostics/redactDiagnosticAssignments.d.ts",
       "import": "./dist/diagnostics/redactDiagnosticAssignments.js"
+    },
+    "./team-project-context/contracts": {
+      "types": "./dist/team-project-context/contracts.d.ts",
+      "import": "./dist/team-project-context/contracts.js"
     }
   },
   "bin": {

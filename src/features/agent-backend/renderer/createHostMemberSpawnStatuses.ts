@@ -1,6 +1,8 @@
 import { hostTeamRunId, parseHostTeamRunId } from '../contracts/teamRunSelection';
 import { hostTeamSelectionKey, parseHostTeamSelectionKey } from '../contracts/teamSelection';
 
+import { captureHostProjectFamily } from './hostProjectBindings';
+import { hostProjectProgressOwners } from './hostProjectProvisioningOwner';
 import { readHostLaunchConfiguration } from './readHostLaunchConfiguration';
 
 import type { BackendLaunchConfigurationView } from '../contracts/launch';
@@ -21,12 +23,12 @@ const capturedProgress = new WeakMap<
 
 function retainCapturedSnapshot(
   snapshot: MemberSpawnStatusesSnapshot,
-  teamName: string,
+  teamName: string | readonly string[],
   assertCurrent: () => void
 ): MemberSpawnStatusesSnapshot {
   const runId = snapshot.runId;
   capturedSnapshots.set(snapshot, (selectedTeam) => {
-    if (selectedTeam !== teamName || snapshot.runId !== runId) return false;
+    if (!(typeof teamName === 'string' ? selectedTeam === teamName : teamName.includes(selectedTeam)) || snapshot.runId !== runId) return false;
     try {
       assertCurrent();
       return true;
@@ -51,11 +53,15 @@ export function captureHostProvisioningMemberSnapshot(
   assertCurrent: () => void
 ): TeamProvisioningProgress {
   const teamName = hostTeamSelectionKey(parseHostTeamRunId(progress.runId).handleId);
-  if (progress.teamName !== teamName || snapshot.runId !== progress.runId)
+  const owners = hostProjectProgressOwners(progress);
+  if (owners === null || (progress.teamName !== teamName && !owners?.includes(progress.teamName)) || snapshot.runId !== progress.runId)
     throw new Error('Host progress and member snapshot selections differ');
   capturedProgress.set(progress, {
-    snapshot: retainCapturedSnapshot(snapshot, teamName, assertCurrent),
-    teamName,
+    snapshot: retainCapturedSnapshot(snapshot, owners ?? teamName, () => {
+      assertCurrent();
+      if (hostProjectProgressOwners(progress) === null) throw new Error('Host project progress changed');
+    }),
+    teamName: progress.teamName,
     runId: progress.runId,
   });
   return progress;
@@ -230,22 +236,31 @@ export function createHostMemberSpawnStatuses(
       const snapshot = await backend.getConnections();
       current();
       if (snapshot.state !== 'ready') throw new Error('Host teams unavailable');
-      const connections = snapshot.bindings.filter(
-        (binding) => binding.handle.handleId === handleId
-      );
-      if (connections.length !== 1) throw new Error('Host team unavailable');
-      const handle = { ...connections[0].handle };
-      const readFence = readOrder.launchReadFence(handleId);
-      const configuration = await readHostLaunchConfiguration(backend, handle);
-      current();
-      readFence();
+      const family = captureHostProjectFamily(snapshot, key);
+      const sources: { handleId: string; value: BackendLaunchConfigurationView | null; fence: () => void }[] = [];
+      for (const target of family.targets) {
+        const fence = readOrder.launchReadFence(target.handle.handleId);
+        const value = await readHostLaunchConfiguration(backend, target.handle);
+        current(); fence();
+        sources.push({ handleId: target.handle.handleId, value, fence });
+      }
+      if (family.children.length || family.logical.projectContextMode === 'per_project') {
+        const latest = await backend.getConnections();
+        current(); family.assertSame(latest);
+      }
+      for (const source of sources) source.fence();
+      const existing = sources.filter(source => source.value)
+        .sort((a, b) => (b.value!.launch.startedAtMs ?? -1) - (a.value!.launch.startedAtMs ?? -1));
+      if (existing.length > 1 && (existing[0].value!.launch.startedAtMs ?? -1) === (existing[1].value!.launch.startedAtMs ?? -1))
+        throw new Error('Ambiguous project launch');
+      const selected = existing[0], configuration = selected?.value;
       if (!configuration) return { statuses: {}, runId: null };
       return retainCapturedSnapshot(
-        projectHostMemberSpawnStatuses(handleId, configuration),
-        hostTeamSelectionKey(handleId),
+        projectHostMemberSpawnStatuses(selected.handleId, configuration),
+        [key, hostTeamSelectionKey(selected.handleId)],
         () => {
           if (!check()) throw new Error('Team context changed');
-          readFence();
+          for (const source of sources) source.fence();
         }
       );
     } finally {

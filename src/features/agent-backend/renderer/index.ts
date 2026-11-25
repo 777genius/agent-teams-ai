@@ -28,6 +28,7 @@ export {
   isHostReadUnavailable,
   isWindowsHostTeamSelection,
 } from './HostBackendRetryAction';
+export { hostProjectProgressOwners } from './hostProjectProvisioningOwner';
 export { HostReviewOperationError } from './HostReviewOperationError';
 export {
   closeRetainedLegacyLaunch,

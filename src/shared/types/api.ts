@@ -7,7 +7,9 @@
  * Shared between preload and renderer processes.
  */
 import type { CliArgsValidationResult } from '../utils/cliArgsParser';
+import type { ClaudeRootFolderSelection, ClaudeRootInfo, WslClaudeRootCandidate } from './claudeRoot';
 import type { CliInstallerAPI, OpenCodeRuntimeAPI } from './cliInstaller';
+import type { DesktopShellApi } from './desktopShell';
 import type { TelemetryAPI, WindowsElevationStatus } from './desktopShell';
 import type { EditorAPI, EditorFileChangeEvent, ProjectAPI } from './editor';
 import type { ApiKeysAPI, McpCatalogAPI, PluginCatalogAPI, SkillsCatalogAPI } from './extensions';
@@ -57,7 +59,6 @@ import type {
 import type { SshAPI } from './ssh';
 import type { MemberStatsResult } from './team';
 import type {
-  AddMemberRequest,
   AddTaskCommentRequest,
   AttachmentFileData,
   BoardTaskActivityDetailResult,
@@ -81,7 +82,6 @@ import type {
   OpenCodeRuntimeDeliveryStatus,
   ProjectBranchChangeEvent,
   QueuedUserMessagesSnapshot,
-  ReplaceMembersRequest,
   RetryFailedOpenCodeSecondaryLanesResult,
   SendMessageRequest,
   SendMessageResult,
@@ -94,7 +94,6 @@ import type {
   TeamChangeEvent,
   TeamClaudeLogsQuery,
   TeamClaudeLogsResponse,
-  TeamConfig,
   TeamCreateConfigRequest,
   TeamCreateConfigResponse,
   TeamCreateRequest,
@@ -113,7 +112,6 @@ import type {
   TeamTask,
   TeamTaskStatus,
   TeamTaskWithKanban,
-  TeamUpdateConfigRequest,
   TeamWorktreeGitStatus,
   ToolApprovalEvent,
   ToolApprovalFileContent,
@@ -127,6 +125,7 @@ import type {
   HostTaskLogDetailResult,
   HostTaskLogStream,
 } from './teamActivity';
+import type { TeamDefinitionEditApi, TeamDefinitionEditsTransport } from './teamDefinitionEdit';
 import type { TeamMemberRestartResult } from './teamMemberRestart';
 import type { TerminalAPI } from './terminal';
 import type { TmuxAPI } from './tmux';
@@ -141,6 +140,7 @@ import type {
 } from '@features/change-review-history/contracts';
 import type { CodexAccountElectronApi } from '@features/codex-account/contracts';
 import type { CodexRuntimeAPI } from '@features/codex-runtime-installer/contracts';
+import type { CustomTeamTemplatesApi } from '@features/custom-team-templates/contracts';
 import type { ExternalAgentConnectionApi } from '@features/external-agent-connection/contracts';
 import type { GatewayProviderApi } from '@features/gateway-provider/contracts';
 import type { MemberLogStreamApi } from '@features/member-log-stream/contracts';
@@ -153,6 +153,7 @@ import type {
   MemberWorkSyncTeamMetrics,
 } from '@features/member-work-sync/contracts';
 import type { NativeNextPromptApi } from '@features/native-prompt-suggestions/contracts';
+import type { NotificationChannelsApi } from '@features/notification-channels/contracts';
 import type { OrganizationsElectronApi } from '@features/organizations/contracts';
 import type { ProjectFolderElectronApi } from '@features/project-folder/contracts';
 import type { RecentProjectsElectronApi } from '@features/recent-projects/contracts';
@@ -160,6 +161,7 @@ import type { ReviewFlowElectronApi } from '@features/review-flow/contracts';
 import type { RuntimeProviderManagementApi } from '@features/runtime-provider-management/contracts';
 import type { TeamGroupChatsAPI } from '@features/team-group-chats/contracts';
 import type { TeamImportApi } from '@features/team-import/contracts';
+import type { TeamProjectContextViewApi } from '@features/team-project-context/contracts';
 import type { TeamMemberSettingsApi } from '@features/team-provisioning/contracts';
 import type {
   TeamReadLegacyApi,
@@ -167,6 +169,7 @@ import type {
 } from '@features/team-read-recovery/contracts';
 import type { TerminalWorkspaceElectronApi } from '@features/terminal-workspace/contracts';
 import type { TokenUsageElectronApi } from '@features/token-usage/contracts';
+import type { UserAttentionApi } from '@features/user-attention/contracts';
 import type { WorkspaceTrustElectronApi } from '@features/workspace-trust/contracts';
 import type {
   ConversationGroup,
@@ -182,6 +185,7 @@ import type {
   SessionsPaginationOptions,
   SubagentDetail,
 } from '@main/types';
+export type { ClaudeRootFolderSelection, ClaudeRootInfo, WslClaudeRootCandidate } from './claudeRoot';
 export type {
   SentryTelemetryContext,
   SentryTelemetryStatus,
@@ -306,33 +310,6 @@ export interface ConfigAPI {
   addCustomProjectPath: (projectPath: string) => Promise<void>;
   /** Remove a custom project path */
   removeCustomProjectPath: (projectPath: string) => Promise<void>;
-}
-
-export interface ClaudeRootInfo {
-  /** Auto-detected default Claude root path for this machine */
-  defaultPath: string;
-  /** Effective path currently used by local context */
-  resolvedPath: string;
-  /** Custom override path from settings (null means auto-detect) */
-  customPath: string | null;
-}
-
-export interface ClaudeRootFolderSelection {
-  /** Selected directory absolute path */
-  path: string;
-  /** Whether the selected folder name is exactly ".claude" */
-  isClaudeDirName: boolean;
-  /** Whether selected folder contains a "projects" directory */
-  hasProjectsDir: boolean;
-}
-
-export interface WslClaudeRootCandidate {
-  /** WSL distribution name (e.g. Ubuntu) */
-  distro: string;
-  /** Candidate Claude root path in UNC format */
-  path: string;
-  /** True if this root contains "projects" directory */
-  hasProjectsDir: boolean;
 }
 
 // =============================================================================
@@ -462,7 +439,13 @@ export interface HttpServerAPI {
 // Teams API
 // =============================================================================
 
-export interface TeamsAPI extends TeamMemberSettingsApi, TeamReadLegacyApi {
+export interface TeamsAPI
+  extends
+    TeamMemberSettingsApi,
+    TeamReadLegacyApi,
+    TeamProjectContextViewApi,
+    TeamDefinitionEditApi {
+  definitionEdits?: TeamDefinitionEditsTransport;
   readRecovery?: TeamReadRecoveryApi;
   list: () => Promise<TeamAggregateReadResult<TeamSummary>>;
   getTaskChangePresence: (teamName: string) => Promise<Record<string, TaskChangePresenceState>>;
@@ -564,16 +547,6 @@ export interface TeamsAPI extends TeamMemberSettingsApi, TeamReadLegacyApi {
   getMemberStats: (teamName: string, memberName: string) => Promise<MemberStatsResult>;
   launchTeam: (request: TeamLaunchRequest) => Promise<TeamLaunchResponse>;
   getAllTasks: () => Promise<TeamAggregateReadResult<GlobalTask>>;
-  updateConfig: (teamName: string, updates: TeamUpdateConfigRequest) => Promise<TeamConfig>;
-  addMember: (teamName: string, request: AddMemberRequest) => Promise<void>;
-  replaceMembers: (teamName: string, request: ReplaceMembersRequest) => Promise<void>;
-  removeMember: (teamName: string, memberName: string) => Promise<void>;
-  restoreMember: (teamName: string, memberName: string) => Promise<void>;
-  updateMemberRole: (
-    teamName: string,
-    memberName: string,
-    role: string | undefined
-  ) => Promise<void>;
   addTaskComment: (
     teamName: string,
     taskId: string,
@@ -891,10 +864,13 @@ export interface ElectronAPI
   extends
     AgentBackendElectronApi,
     RecentProjectsElectronApi,
+    UserAttentionApi,
     CodexAccountElectronApi,
     TokenUsageElectronApi,
-    ProjectFolderElectronApi {
+    ProjectFolderElectronApi,
+    DesktopShellApi {
   teamGroupChats: TeamGroupChatsAPI;
+  customTeamTemplates: CustomTeamTemplatesApi;
   reviewFlow: ReviewFlowElectronApi;
   announcements: AnnouncementsApi;
   gatewayProvider: GatewayProviderApi;
@@ -965,10 +941,9 @@ export interface ElectronAPI
   // Agent config reading
   readAgentConfigs: (projectRoot: string) => Promise<Record<string, AgentConfig>>;
 
-  // Notifications API
   notifications: NotificationsAPI;
+  notificationChannels: NotificationChannelsApi;
 
-  // Config API
   config: ConfigAPI;
 
   // Deep link navigation
@@ -982,29 +957,6 @@ export interface ElectronAPI
   // File change events (real-time updates)
   onFileChange: (callback: (event: FileChangeEvent) => void) => () => void;
   onTodoChange: (callback: (event: FileChangeEvent) => void) => () => void;
-
-  // Shell operations
-  openPath: (
-    targetPath: string,
-    projectRoot?: string,
-    userSelectedFromDialog?: boolean
-  ) => Promise<{ success: boolean; error?: string }>;
-  showInFolder: (filePath: string) => Promise<void>;
-  openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
-  getDiscordMemberCount: () => Promise<{ count: number | null; error?: string }>;
-
-  // Window controls (when title bar is hidden, e.g. Windows / Linux)
-  windowControls: {
-    minimize: () => Promise<void>;
-    maximize: () => Promise<void>;
-    close: () => Promise<void>;
-    isMaximized: () => Promise<boolean>;
-    isFullScreen: () => Promise<boolean>;
-    relaunch: () => Promise<void>;
-  };
-
-  /** Subscribe to fullscreen changes (e.g. to remove macOS traffic light padding in fullscreen) */
-  onFullScreenChange: (callback: (isFullScreen: boolean) => void) => () => void;
 
   // Updater API
   updater: UpdaterAPI;

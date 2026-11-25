@@ -179,6 +179,9 @@ export function validateTeamCommand(command: TeamCommand): void {
       break;
     }
     case 'task.comment':
+      if (command.payload.answerClarificationRequestId !== undefined &&
+          !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(command.payload.answerClarificationRequestId))
+        throw new TeamOwnerError('invalid');
       if (command.payload.attachments !== undefined)
         attachmentReferencesSchema.parse(command.payload.attachments);
       validateRefs(command.payload.taskRefs);
@@ -242,7 +245,7 @@ export function validateTeamCommand(command: TeamCommand): void {
     'task.assign': ['taskId', 'owner'],
     'task.lifecycle': ['taskId', 'action'],
     'task.start': ['taskId', 'notification', 'expectedRecipient'],
-    'task.comment': ['taskId', 'text', 'taskRefs', 'attachments'],
+    'task.comment': ['taskId', 'text', 'taskRefs', 'attachments', 'answerClarificationRequestId'],
     'task.review': [
       'taskId',
       'action',

@@ -1,12 +1,10 @@
-import {
-  isCanonicalSettingsLeadMember,
-  isReservedLeadRole,
-} from '@shared/utils/leadDetection';
+import { isCanonicalSettingsLeadMember, isReservedLeadRole } from '@shared/utils/leadDetection';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
 
 import type {
   EditableMemberSettings,
   MemberSettingsProviderId,
+  MemberSettingsTarget,
 } from '../../contracts/memberSettings';
 
 export type MemberSettingsRuntimeLane = 'primary' | 'opencode_secondary';
@@ -79,10 +77,27 @@ export function normalizeEditableMemberSettings(
 }
 
 export function isCanonicalLeadTarget(target: MemberSettingsTargetSnapshot): boolean {
-  return isCanonicalSettingsLeadMember({ name: target.name, agentType: target.agentType, role: target.settings.role });
+  return isCanonicalSettingsLeadMember({
+    name: target.name,
+    agentType: target.agentType,
+    role: target.settings.role,
+  });
 }
 
-export function createMemberSettingsFingerprint(target: MemberSettingsTargetSnapshot): string {
+/** What a caller needs to show the saved settings and to send the matching fingerprint. */
+export function toMemberSettingsTarget(target: MemberSettingsTargetSnapshot): MemberSettingsTarget {
+  return {
+    name: target.name,
+    agentType: target.agentType,
+    agentId: target.agentId,
+    joinedAt: target.joinedAt,
+    settings: target.settings,
+  };
+}
+
+export function createMemberSettingsFingerprint<
+  T extends Pick<MemberSettingsTargetSnapshot, 'name' | 'agentId' | 'joinedAt' | 'settings'>,
+>(target: T): string {
   return JSON.stringify({
     memberName: normalizeIdentityText(target.name),
     identity: {

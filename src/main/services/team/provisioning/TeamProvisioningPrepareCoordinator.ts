@@ -10,7 +10,6 @@ import { isMissingDirectory } from '@main/utils/directoryPresence';
 import { resolveAnthropicLaunchModel } from '@shared/utils/anthropicLaunchModel';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { isDefaultProviderModelSelection } from '@shared/utils/providerModelSelection';
-import * as fs from 'fs';
 import * as path from 'path';
 
 import { buildProviderControlPlaneCliCommandArgs } from '../../runtime/providerCliCommandArgs';
@@ -135,6 +134,7 @@ export interface TeamProvisioningPrepareCoordinatorPorts {
     teamName: string;
     memberName: string;
     baseCwd: string;
+    existingCwd?: string;
   }): Promise<{ worktreePath: string }>;
   execCli(
     command: string,
@@ -834,29 +834,11 @@ export class TeamProvisioningPrepareCoordinator {
         continue;
       }
 
-      const existingCwd = member.cwd?.trim();
-      if (existingCwd) {
-        if (!path.isAbsolute(existingCwd)) {
-          throw new Error(
-            `OpenCode worktree path for "${member.name}" must be absolute: ${existingCwd}`
-          );
-        }
-        const existingCwdStat = await fs.promises.stat(existingCwd).catch(() => null);
-        if (existingCwdStat) {
-          if (!existingCwdStat.isDirectory()) {
-            throw new Error(
-              `OpenCode worktree path for "${member.name}" is not a directory: ${existingCwd}`
-            );
-          }
-          nextMembers.push({ ...member, cwd: existingCwd });
-          continue;
-        }
-      }
-
       const resolution = await this.ports.ensureMemberWorktree({
         teamName: params.teamName,
         memberName: member.name,
         baseCwd: params.baseCwd,
+        ...(member.cwd?.trim() ? { existingCwd: member.cwd.trim() } : {}),
       });
       nextMembers.push({ ...member, cwd: resolution.worktreePath });
     }

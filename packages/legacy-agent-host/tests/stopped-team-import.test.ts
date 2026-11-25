@@ -275,6 +275,25 @@ test('actual saved-draft layout exports and detached-validates without manufactu
   await assert.rejects(exportStoppedTeam(f.source), /hold/);
 });
 
+test('saved project context mode survives publication and a cold import catalog read', async (t) => {
+  for (const projectContextMode of [undefined, 'shared', 'per_project'] as const) {
+    const f = fixture(t);
+    if (projectContextMode) f.header.savedSettings.projectContextMode = projectContextMode;
+    const snapshot = await exportStoppedTeam(f.source);
+    const request = { contextId: 'TEST-context', sourceId: f.header.sourceId,
+      snapshotDigest: snapshot.digest, teamName: 'TEST-imported-mode' };
+    const published = f.importer.import('TEST-import-project-mode', request, snapshot);
+    assert.equal(published.phase, 'published');
+    const cold = new FileStoppedTeamImport(f.options);
+    const records = cold.records('TEST-context');
+    assert.equal(records.length, 1);
+    assert.equal(records[0]?.projectContextMode, projectContextMode);
+    assert.equal(f.attached[0]?.savedSettings?.projectContextMode, projectContextMode);
+    assert.deepEqual(cold.records('TEST-context'), records);
+    assert.deepEqual(f.importer.records('TEST-context'), records);
+  }
+});
+
 test('removed import rows reject active identity conflicts and source native authority', async (t) => {
   const f = fixture(t);
   const removed = {

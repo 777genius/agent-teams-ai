@@ -174,7 +174,9 @@ export function executeTeamCommand(
         ...(messageRecipientRole ? { messageRecipientRole } : {}),
         effects: {
           taskId: effectId('task', ...seed),
-          commentId: effectId('comment', ...seed),
+          commentId: command.operation === 'task.comment' && command.payload.answerClarificationRequestId
+            ? `clarification-answer-${command.payload.answerClarificationRequestId}`
+            : effectId('comment', ...seed),
           messageId: crossTeam
             ? crossTeam.request.messageId
             : command.operation === 'message.send' && command.payload.messageId !== undefined

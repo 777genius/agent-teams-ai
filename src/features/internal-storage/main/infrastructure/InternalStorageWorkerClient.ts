@@ -21,6 +21,7 @@ import type {
   MemberWorkSyncReportJournalOpResult,
   MemberWorkSyncStatusCompareAndWriteInput,
   MemberWorkSyncStatusCompareAndWriteResult,
+  MemberWorkSyncStatusDeleteTarget,
   MemberWorkSyncStatusRecord,
   MemberWorkSyncTeamSnapshotRecords,
   StallJournalEntryRecord,
@@ -45,6 +46,18 @@ import type {
   ApplicationCommandLedgerRecord,
   ApplicationCommandLedgerStorageGateway,
 } from '@features/application-command-ledger';
+import type {
+  CreateCustomTeamTemplateRecordRequest,
+  CreateCustomTeamTemplateRecordResult,
+  CustomTeamTemplateStorageGateway,
+  DeleteCustomTeamTemplateRecordRequest,
+  DeleteCustomTeamTemplateRecordResult,
+  ListCustomTeamTemplateRecordsResult,
+  ReadCustomTeamTemplateRecordRequest,
+  ReadCustomTeamTemplateRecordResult,
+  UpdateCustomTeamTemplateRecordRequest,
+  UpdateCustomTeamTemplateRecordResult,
+} from '@features/custom-team-templates/contracts';
 
 const logger = createLogger('Service:InternalStorageWorkerClient');
 
@@ -53,6 +66,7 @@ const logger = createLogger('Service:InternalStorageWorkerClient');
 type InternalStorageWorkerPayloadFor<TOp extends InternalStorageWorkerRequest['op']> = TOp extends
   | `appCommandLedger.${string}`
   | `mws.${string}`
+  | `customTemplate.${string}`
   ? unknown
   : Extract<InternalStorageWorkerRequest, { op: TOp }>['payload'];
 
@@ -111,7 +125,8 @@ export class InternalStorageWorkerClient
   implements
     InternalStorageGateway,
     MemberWorkSyncStorageGateway,
-    ApplicationCommandLedgerStorageGateway
+    ApplicationCommandLedgerStorageGateway,
+    CustomTeamTemplateStorageGateway
 {
   private worker: Worker | null = null;
   private readonly workerPath: string | null = resolveWorkerPath();
@@ -218,6 +233,13 @@ export class InternalStorageWorkerClient
 
   async statusList(teamName: string): Promise<MemberWorkSyncStatusRecord[]> {
     return (await this.call('mws.status.list', { teamName })) as MemberWorkSyncStatusRecord[];
+  }
+
+  async statusDeleteMatching(
+    teamName: string,
+    targets: MemberWorkSyncStatusDeleteTarget[]
+  ): Promise<number> {
+    return (await this.call('mws.status.deleteMatching', { teamName, targets })) as number;
   }
 
   async metricEventsList(teamName: string): Promise<MemberWorkSyncMetricEventRecord[]> {
@@ -446,6 +468,46 @@ export class InternalStorageWorkerClient
       'appCommandLedger.listByScope',
       request
     )) as ApplicationCommandLedgerRecord<TOperation>[];
+  }
+
+  async customTeamTemplateCreate(
+    request: CreateCustomTeamTemplateRecordRequest
+  ): Promise<CreateCustomTeamTemplateRecordResult> {
+    return (await this.call(
+      'customTemplate.create',
+      request
+    )) as CreateCustomTeamTemplateRecordResult;
+  }
+
+  async customTeamTemplateList(): Promise<ListCustomTeamTemplateRecordsResult> {
+    return (await this.call('customTemplate.list', {})) as ListCustomTeamTemplateRecordsResult;
+  }
+
+  async customTeamTemplateGetById(
+    request: ReadCustomTeamTemplateRecordRequest
+  ): Promise<ReadCustomTeamTemplateRecordResult> {
+    return (await this.call(
+      'customTemplate.getById',
+      request
+    )) as ReadCustomTeamTemplateRecordResult;
+  }
+
+  async customTeamTemplateUpdate(
+    request: UpdateCustomTeamTemplateRecordRequest
+  ): Promise<UpdateCustomTeamTemplateRecordResult> {
+    return (await this.call(
+      'customTemplate.update',
+      request
+    )) as UpdateCustomTeamTemplateRecordResult;
+  }
+
+  async customTeamTemplateDelete(
+    request: DeleteCustomTeamTemplateRecordRequest
+  ): Promise<DeleteCustomTeamTemplateRecordResult> {
+    return (await this.call(
+      'customTemplate.delete',
+      request
+    )) as DeleteCustomTeamTemplateRecordResult;
   }
 
   close(): Promise<void> {

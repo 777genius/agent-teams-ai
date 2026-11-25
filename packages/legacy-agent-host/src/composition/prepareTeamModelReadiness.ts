@@ -35,6 +35,10 @@ import type { RuntimeCaptureSource } from './runtimeCaptureSource.js';
 import type { LaunchReadinessCaptureAdmission } from '../team-launch/launchReadiness.js';
 import type { CreateTeamLaunchPreparationInput } from '../team-registry/createLaunchContracts.js';
 import type { RuntimeBinding } from '../runtime/contracts.js';
+import { projectReadinessLocatorSchema } from '../team-project-context/contracts.js';
+import { assertProjectReadinessTransfer } from '../team-project-context/projectReadinessTransfer.js';
+import { readCreatedProjectReadinessTransfer } from '../team-project-context/projectReadinessTransfer.js';
+import type { ProjectModelReadinessTransfer } from '../team-project-context/projectReadinessTransfer.js';
 
 const readinessRefusal = channel('agent-teams.legacy-host.first-refusal');
 const id = z.string().min(1).max(256).refine(value => !/[\0\r\n]/u.test(value));
@@ -46,6 +50,7 @@ export const localModelReadinessTransferSchema = z.object({
   probes: z.array(z.object({ commandId: id, selection: teamModelProbeSelectionSchema }).strict())
     .min(1).max(256),
   roster: z.object({ commandId: id, expected: replaceRosterPayloadSchema }).strict(),
+  projectContext: projectReadinessLocatorSchema.optional(),
 }).strict().refine(value =>
   new Set(value.probes.map(row => JSON.stringify([row.commandId, row.selection]))).size === value.probes.length &&
   Buffer.byteLength(JSON.stringify(value)) <= 256 * 1024);
@@ -57,7 +62,7 @@ export type CreationModelReadinessTransfer = {
   roster: LocalModelReadinessTransfer['roster'];
   probes: { memberName: string; commandId: string; context: string }[];
 };
-export type CaptureModelReadinessTransfer = LocalModelReadinessTransfer | CreationModelReadinessTransfer;
+export type CaptureModelReadinessTransfer = LocalModelReadinessTransfer | CreationModelReadinessTransfer | ProjectModelReadinessTransfer;
 export type LocalModelReadinessAction = {
   preparation: LocalModelReadinessPreparation; owner: unknown; handleId: string; scope: unknown;
 };
@@ -668,8 +673,12 @@ export function captureLaunchModelReadiness(options: {
   admittedAt: number; isCurrent(): boolean;
 }): { capture: LaunchReadinessCaptureAdmission; groups: ModelReadinessReference[] } {
   const { team, source, transfer } = options;
-  const creating = 'kind' in transfer;
-  if (!creating) localModelReadinessTransferSchema.parse(transfer);
+  const creating = 'kind' in transfer && transfer.kind === 'create';
+  const createdProjectSettings = creating ? readCreatedProjectReadinessTransfer(transfer) : undefined;
+  const project = 'kind' in transfer && transfer.kind === 'project' ? transfer : undefined;
+  const savedTransfer = transfer as LocalModelReadinessTransfer | ProjectModelReadinessTransfer;
+  if (project) assertProjectReadinessTransfer(project);
+  if (!creating && !project) localModelReadinessTransferSchema.parse(transfer);
   const teamBindingDigest = runtimeDigest(team.definition.binding);
   const actor = team.owner.withLaunchAuthority(options.principalId, 'control', revision => revision);
   const receipt = team.connection.lookupRoster(transfer.roster.commandId, transfer.roster.expected);
@@ -677,7 +686,9 @@ export function captureLaunchModelReadiness(options: {
       receipt.revision !== source.configurationRevision ||
       team.connection.readRoster().revision !== receipt.revision) held();
   const current = () => {
-    try { return options.isCurrent() && team.connection.readRoster().revision === receipt.revision &&
+    try { if (project) assertProjectReadinessTransfer(project);
+      if (creating) readCreatedProjectReadinessTransfer(transfer);
+      return options.isCurrent() && team.connection.readRoster().revision === receipt.revision &&
       team.owner.withLaunchAuthority(options.principalId, 'control', revision => revision) === actor; }
     catch { return false; }
   };
@@ -699,20 +710,23 @@ export function captureLaunchModelReadiness(options: {
       const intended = destination.role === 'lead' ? {}
         : transfer.input.draft.members.find(row => row.name === destination.name)?.memberSettings;
       if (!intended || runtimeDigest(intended) !== runtimeDigest(destination.settings) ||
-          runtimeDigest(source.savedSettings) !== runtimeDigest(transfer.input.draft.savedSettings)) held();
+          runtimeDigest(source.savedSettings) !== runtimeDigest(createdProjectSettings ?? transfer.input.draft.savedSettings)) held();
     } else {
-      const matches = transfer.probes.filter(({ selection }) => {
+      const logicalMemberId = project?.logicalMembers.find(row => row.name === destination.name && row.role === destination.role)?.memberId;
+      if (project && !logicalMemberId) held();
+      const intendedMemberId = logicalMemberId ?? destination.memberId;
+      const matches = savedTransfer.probes.filter(({ selection }) => {
         const target = selection.draft?.target;
-        return !target ? selection.memberId === destination.memberId
+        return !target ? selection.memberId === intendedMemberId
           : target.kind === 'lead' ? destination.role === 'lead'
           : destination.role === 'member' && target.name === destination.name &&
-            (selection.memberId === destination.memberId ||
+            (selection.memberId === intendedMemberId ||
               !target.originalName && selection.memberId === `draft:${target.name}`);
       });
       if (matches.length !== 1) held();
       const original = matches[0]!, input = original.selection;
       if (input.draft && input.draft.providerId !== 'opencode') held();
-      saved = options.management.probes.readScopedProbe(original.commandId, teamBindingDigest, runtimeDigest(input));
+      saved = options.management.probes.readScopedProbe(original.commandId, project?.logicalBindingDigest ?? teamBindingDigest, runtimeDigest(input));
       if (saved.readinessScope?.kind !== 'team' || saved.readinessScope.sourceRevision !== input.launchId ||
           saved.readinessScope.rosterRevision !== input.rosterRevision ||
           !saved.readinessScope.destinationKeys.includes(runtimeDigest(input.draft?.target ?? {
@@ -720,8 +734,8 @@ export function captureLaunchModelReadiness(options: {
       if (input.draft && !input.launchId.startsWith('saved-model-') &&
           saved.readinessScope.actionDigest !== teamModelProbeActionDigest(original.commandId, saved.context!)) {
         if (saved.readinessScope.actionDigest !== teamModelProbeActionDigest(original.commandId, saved.context!,
-          transfer.roster.expected.expectedRevision)) held();
-      } else if (input.rosterRevision !== transfer.roster.expected.expectedRevision) held();
+          project?.probeRevision ?? transfer.roster.expected.expectedRevision)) held();
+      } else if (input.rosterRevision !== (project?.probeRevision ?? transfer.roster.expected.expectedRevision)) held();
       if (input.draft?.target.kind === 'member') {
         const intended = transfer.roster.expected.members.find(row => row.name === destination.name);
         if (!intended) held();
@@ -736,11 +750,11 @@ export function captureLaunchModelReadiness(options: {
       originalContext: saved.context!, originalWorkspace: saved.readinessScope!.workspace });
   }
   if (!targets.length || !current()) held();
-  const cutoff = Math.min(creating ? transfer.cutoff : options.admittedAt + transfer.remainingMs,
+  const cutoff = Math.min(creating ? transfer.cutoff : options.admittedAt + savedTransfer.remainingMs,
     ...groups.map(row => row.expiresAt));
   if (Date.now() >= cutoff) held();
   return { capture: {
-    commandId: source.commandId, preparationId: creating ? transfer.input.preparationId : transfer.preparationId,
+    commandId: source.commandId, preparationId: creating ? transfer.input.preparationId : savedTransfer.preparationId,
     rosterCommandId: source.rosterCommandId, rosterRevision: source.configurationRevision,
     teamBindingDigest, actorDigest: runtimeDigest({ principalId: options.principalId, actor }),
     associationDigest: runtimeDigest(transfer), sourceDigest: runtimeDigest(source), admission: '',

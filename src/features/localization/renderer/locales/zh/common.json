@@ -952,5 +952,21 @@
       "unavailable": "News is available in the desktop app.",
       "state_unavailable": "Reading is available, but your progress cannot be saved right now. Automatic news is paused."
     }
+  },
+  "attention": {
+    "title": "需要你处理",
+    "tab": "待处理",
+    "viewAll": "查看全部",
+    "refresh": "刷新状态",
+    "loading": "加载中…",
+    "loadFailed": "无法加载待处理状态",
+    "retry": "重试",
+    "partial": "部分团队未能加载，计数可能不完整。",
+    "nothing": "等待你决定的任务和未读团队聊天将在此显示。",
+    "tasks": "等待你的决定",
+    "chats": "未读聊天",
+    "openTask": "打开任务：{{subject}}（{{team}}）",
+    "timeUnknown": "时间未知",
+    "teamAttention": "待处理"
   }
 }

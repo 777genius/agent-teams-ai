@@ -50,7 +50,7 @@ function getTimestampMs(value: string): number {
 
 export class CrossTeamOrganizationAdapter implements OrganizationsCrossTeamMessagePort {
   constructor(
-    private readonly crossTeamService: CrossTeamService,
+    private readonly crossTeamService: Pick<CrossTeamService, 'getOutbox'>,
     private readonly logger: OrganizationsLoggerPort
   ) {}
 

@@ -5,6 +5,9 @@ import {
   projectHostMemberSpawnStatuses,
 } from './createHostMemberSpawnStatuses';
 import { createHostTeamLifecycle } from './createHostTeamLifecycle';
+import { captureHostProjectFamily } from './hostProjectBindings';
+import { projectHostProjectProgress } from './hostProjectProvisioningOwner';
+import { hostTeamSelectionKey } from './hostTeamRouting';
 import { projectHostProvisioningProgress } from './projectHostProvisioningProgress';
 import { readHostLaunchConfiguration } from './readHostLaunchConfiguration';
 
@@ -31,10 +34,9 @@ export function createHostTeamProvisioning(
     const snapshot = await backend.getConnections();
     current();
     if (snapshot.state !== 'ready') throw new Error('Host teams unavailable');
-    const original = snapshot.bindings.find(
-      (binding) => binding.handle.handleId === selected.handleId
-    );
-    if (!original) throw new Error('Host team unavailable');
+    const captured = structuredClone(snapshot);
+    const family = captureHostProjectFamily(captured, hostTeamSelectionKey(selected.handleId));
+    const original = family.selected;
     const retained = new Set(snapshot.bindings.map((binding) => binding.handle.handleId));
     for (const handleId of reads.keys()) if (!retained.has(handleId)) reads.delete(handleId);
     if ((reads.get(selected.handleId) ?? 0) > request) throw new Error('Stale Host launch read');
@@ -62,14 +64,17 @@ export function createHostTeamProvisioning(
       configuration.launch.rosterRevision !== selected.rosterRevision
     )
       throw new Error('Host launch selection changed');
-    return { connection, configuration, assertCurrent: assertObservationCurrent, check };
+    family.assertSame(await backend.getConnections());
+    assertObservationCurrent();
+    return { connection, configuration, captured, assertCurrent: assertObservationCurrent, check };
   }
   return {
     async getProvisioningStatus(runId: string) {
       const selected = await capture(runId);
       selected.assertCurrent();
       return captureHostProvisioningMemberSnapshot(
-        projectHostProvisioningProgress(selected.connection.handle.handleId, selected.configuration),
+        projectHostProjectProgress(projectHostProvisioningProgress(selected.connection.handle.handleId, selected.configuration),
+          selected.captured, selected.assertCurrent),
         projectHostMemberSpawnStatuses(selected.connection.handle.handleId, selected.configuration),
         selected.assertCurrent
       );

@@ -9,6 +9,7 @@ import { formatNextRun, getCronDescription } from '@renderer/utils/scheduleForma
 import {
   ChevronDown,
   ChevronRight,
+  Folder,
   MoreHorizontal,
   Pause,
   Pencil,
@@ -38,8 +39,13 @@ import type { Schedule, ScheduleRun } from '@shared/types';
 // Props
 // =============================================================================
 
+const projectFolderName = (path: string): string =>
+  path.replace(/[\\/]+$/, '').split(/[\\/]/).pop() || path;
+
 interface ScheduleSectionProps {
   teamName: string;
+  /** A team with separate history per project: each schedule names its project. */
+  projectScope?: { projectPath?: string };
 }
 
 // =============================================================================
@@ -48,6 +54,8 @@ interface ScheduleSectionProps {
 
 interface ScheduleRowProps {
   schedule: Schedule;
+  /** Show the project of the schedule (teams with separate history per project). */
+  showProject?: boolean;
   onEdit: (schedule: Schedule) => void;
   onDelete: (id: string) => void;
   onPause: (id: string) => void;
@@ -57,6 +65,7 @@ interface ScheduleRowProps {
 
 const ScheduleRow = ({
   schedule,
+  showProject = false,
   onEdit,
   onDelete,
   onPause,
@@ -118,6 +127,12 @@ const ScheduleRow = ({
               ) : null}
             </Tooltip>
             <span>{schedule.timezone}</span>
+            {showProject ? (
+              <span className="inline-flex items-center gap-1" title={schedule.launchConfig.cwd}>
+                <Folder className="size-3" aria-hidden="true" />
+                {projectFolderName(schedule.launchConfig.cwd)}
+              </span>
+            ) : null}
           </div>
           <ScheduleAssignmentSummary schedule={schedule} />
         </div>
@@ -223,7 +238,10 @@ const ScheduleRow = ({
 // ScheduleSection
 // =============================================================================
 
-export const ScheduleSection = ({ teamName }: ScheduleSectionProps): React.JSX.Element => {
+export const ScheduleSection = ({
+  teamName,
+  projectScope,
+}: ScheduleSectionProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const { schedules, fetchSchedules } = useStore(useShallow((s) => ({
     schedules: s.schedules.filter((sch) => sch.teamName === teamName),
@@ -287,6 +305,7 @@ export const ScheduleSection = ({ teamName }: ScheduleSectionProps): React.JSX.E
             <ScheduleRow
               key={schedule.id}
               schedule={schedule}
+              showProject={projectScope !== undefined}
               onEdit={handleEdit}
               onDelete={(id) => void actOnSchedule('delete', id)}
               onPause={(id) => void actOnSchedule('pause', id)}
@@ -314,6 +333,7 @@ export const ScheduleSection = ({ teamName }: ScheduleSectionProps): React.JSX.E
             open={dialogOpen}
             teamName={teamName}
             schedule={editingSchedule}
+            projectScope={projectScope}
             onClose={handleClose}
           />
         </Suspense>

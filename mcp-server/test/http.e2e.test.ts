@@ -297,9 +297,30 @@ describe('agent-teams-mcp HTTP e2e', () => {
         return parseJsonToolResult(parseMcpResponse(response.body, id));
       };
       expect((await call('app_get_connection_info')).context).toEqual(context);
+      expect(
+        await call('app_show_connection_confirmation', {
+          agentName: 'Codex',
+          cdpVerified: true,
+          expectedContext: context,
+        })
+      ).toMatchObject({ accepted: true });
+      const confirmation = requests.find(
+        (request) => request.url === '/api/app/connection/confirmation'
+      );
+      expect(confirmation).toMatchObject({
+        context,
+        body: { agentName: 'Codex', cdpVerified: true, expectedContext: context },
+      });
+      await expect(
+        call('app_show_connection_confirmation', {
+          agentName: 'Codex',
+          expectedContext: { ...context, connectionGeneration: 3 },
+        })
+      ).rejects.toThrow();
       await expect(call('app_get_connection_info', { controlUrl: fallbackUrl })).rejects.toThrow();
       const args = {
         teamName,
+        projectContextMode: 'shared',
         runtimeSelectionVersion: 1,
         expectedContext: context,
         members: [{ name: 'alice', role: 'developer', workflow: 'Implement scoped changes' }],

@@ -172,6 +172,8 @@ export function projectTeamTask(value: unknown, teamName: string): TeamTaskWithK
       'needsFix',
       'approved',
     ] as const);
+  if (source.clarificationRequestId !== undefined)
+    result.clarificationRequestId = text(source.clarificationRequestId);
   if (source.needsClarification !== undefined)
     result.needsClarification = choice(source.needsClarification, ['lead', 'user'] as const);
   return result;

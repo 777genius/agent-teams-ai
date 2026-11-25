@@ -2,6 +2,8 @@ import {
   captureHostProvisioningMemberSnapshot,
   projectHostMemberSpawnStatuses,
 } from './createHostMemberSpawnStatuses';
+import { captureHostProjectFamily } from './hostProjectBindings';
+import { cloneHostProjectProgress, projectHostProjectProgress } from './hostProjectProvisioningOwner';
 import { projectHostProvisioningProgress } from './projectHostProvisioningProgress';
 import { readHostLaunchConfiguration } from './readHostLaunchConfiguration';
 
@@ -48,8 +50,9 @@ export function createHostTeamChanges(options: {
     priorScope = current;
     const active = () => current() && capturedEpoch === epoch && hasListeners();
     try {
-      const snapshot = await options.backend.getConnections();
-      if (!active() || snapshot.state !== 'ready') return;
+      const observedConnections = await options.backend.getConnections();
+      if (!active() || observedConnections.state !== 'ready') return;
+      const snapshot = structuredClone(observedConnections);
       options.readOrder.capture(current);
       if (resyncAll) {
         for (const binding of snapshot.bindings) resync.add(binding.handle.handleId);
@@ -64,6 +67,10 @@ export function createHostTeamChanges(options: {
       for (const binding of snapshot.bindings) {
         if (!active()) return;
         const handleId = binding.handle.handleId;
+        let family;
+        try { family = captureHostProjectFamily(snapshot, options.selectionKey(handleId)); }
+        catch { continue; }
+        const destinations = new Set([options.selectionKey(handleId), options.selectionKey(family.logical.handle.handleId)]);
         if (progressListeners.size) {
           const readFence = options.readOrder.launchReadFence(handleId);
           try {
@@ -71,12 +78,13 @@ export function createHostTeamChanges(options: {
             if (!active()) return;
             readFence();
             if (configuration && configuration.launch.startedAtMs !== null) {
-              const progress = projectHostProvisioningProgress(handleId, configuration);
               const members = projectHostMemberSpawnStatuses(handleId, configuration);
               const assertCurrent = () => {
                 if (!active()) throw new Error('Host progress subscription changed');
                 readFence();
               };
+              const progress = projectHostProjectProgress(
+                projectHostProvisioningProgress(handleId, configuration), snapshot, assertCurrent);
               // Observation time alone is not a product change. New subscribers
               // clear this signature and receive their own current projection.
               const signature = JSON.stringify({
@@ -94,7 +102,7 @@ export function createHostTeamChanges(options: {
                     listener(
                       undefined,
                       captureHostProvisioningMemberSnapshot(
-                        structuredClone(progress),
+                        cloneHostProjectProgress(progress),
                         structuredClone(members),
                         assertCurrent
                       )
@@ -156,15 +164,17 @@ export function createHostTeamChanges(options: {
               if (!listeners.has(token)) continue;
               if (!active()) return;
               try {
-                listener(undefined, {
-                  type,
-                  teamName: options.selectionKey(handleId),
-                  detail: feed.gap
-                    ? 'host-product-gap'
-                    : force
-                      ? 'host-subscription-resync'
-                      : productChanged ? 'host-product-invalidated' : 'host-conversation-invalidated',
-                });
+                for (const teamName of destinations) {
+                  if (!active() || !listeners.has(token)) break;
+                  listener(undefined, {
+                    type, teamName,
+                    detail: feed.gap
+                      ? 'host-product-gap'
+                      : force
+                        ? 'host-subscription-resync'
+                        : productChanged ? 'host-product-invalidated' : 'host-conversation-invalidated',
+                  });
+                }
               } catch {
                 /* One observer cannot prevent other observers from rehydrating. */
               }

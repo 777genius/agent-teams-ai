@@ -16,6 +16,49 @@ describe('ConfigManager notification config shape', () => {
     pathDecoder.setClaudeBasePathOverride(null);
   });
 
+  it('enables bounded recovery for new installs and preserves existing choices', async () => {
+    overrideRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'config-recovery-defaults-'));
+    const pathDecoder = await import('../../../../src/main/utils/pathDecoder');
+    pathDecoder.setClaudeBasePathOverride(overrideRoot);
+    const { ConfigManager } =
+      await import('../../../../src/main/services/infrastructure/ConfigManager');
+    const fresh = new ConfigManager(path.join(overrideRoot, 'fresh.json'));
+    expect(fresh.getConfig().teamRuntimeRecovery).toEqual({
+      transientErrorsEnabled: true,
+      rateLimitsEnabled: true,
+      initialDelaySeconds: 60,
+      maxAttempts: 2,
+    });
+
+    const existingPath = path.join(overrideRoot, 'existing.json');
+    fs.writeFileSync(existingPath, JSON.stringify({
+      notifications: { autoResumeOnRateLimit: false },
+      teamRuntimeRecovery: { transientErrorsEnabled: false, rateLimitsEnabled: false },
+    }));
+    const existing = new ConfigManager(existingPath);
+    expect(existing.getConfig().teamRuntimeRecovery).toMatchObject({
+      transientErrorsEnabled: false,
+      rateLimitsEnabled: false,
+    });
+    await existing.waitForPersistence();
+  });
+
+  it('preserves disabled recovery for existing configs without recovery settings', async () => {
+    overrideRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'config-recovery-legacy-'));
+    const pathDecoder = await import('../../../../src/main/utils/pathDecoder');
+    pathDecoder.setClaudeBasePathOverride(overrideRoot);
+    const configPath = path.join(overrideRoot, 'existing.json');
+    fs.writeFileSync(configPath, JSON.stringify({ notifications: {} }));
+    const { ConfigManager } =
+      await import('../../../../src/main/services/infrastructure/ConfigManager');
+    const existing = new ConfigManager(configPath);
+    expect(existing.getConfig().teamRuntimeRecovery).toMatchObject({
+      transientErrorsEnabled: false,
+      rateLimitsEnabled: false,
+    });
+    await existing.waitForPersistence();
+  });
+
   it('strips unknown notification keys while keeping autoResumeOnRateLimit', async () => {
     vi.resetModules();
 

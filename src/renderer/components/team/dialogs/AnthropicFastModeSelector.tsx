@@ -66,7 +66,7 @@ export const AnthropicFastModeSelector: React.FC<AnthropicFastModeSelectorProps>
 
   return (
     <div className="mb-3">
-      <Label htmlFor={id} className="label-optional mb-1.5 block">
+      <Label htmlFor={id} className="mb-1.5 block">
         {t('modelSelector.fastMode.optionalLabel')}
       </Label>
       <div className="flex items-center gap-2">

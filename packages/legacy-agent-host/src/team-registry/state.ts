@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { createTeamRegistryPayloadSchema, teamRegistryRecordSchema } from './contracts.js';
+import { createTeamRegistryPayloadSchema, teamRegistryRecordSchema, teamProjectContextRelationSchema } from './contracts.js';
 import { hostedTeamDefinitionSchema } from './definition.js';
 
 export const storedTeamCreationSchema = z
@@ -13,6 +13,7 @@ export const storedTeamCreationSchema = z
     intent: createTeamRegistryPayloadSchema,
     definition: hostedTeamDefinitionSchema,
     record: teamRegistryRecordSchema,
+    projectContext: teamProjectContextRelationSchema.optional(),
     phase: z.enum(['pending', 'published', 'held']),
     /** Once published, loss of the original owner marker must never recreate bootstrap defaults. */
     bootstrapPublished: z.boolean(),

@@ -17,6 +17,8 @@ import { createScheduleRun, persistScheduleRun } from './createScheduleRun';
 import { recoverInterruptedScheduleRuns } from './recoverInterruptedScheduleRuns';
 import { assertScheduledTeamTarget, hasScheduledTeamTarget, HOST_SCHEDULE_UNSUPPORTED } from './scheduledTeamTarget';
 import { SchedulerStopBarrier } from './SchedulerStopBarrier';
+import { admissionRefusal, assertScheduleAdmission, folderChange, type ScheduleAdmissionCheck } from './scheduleTarget';
+import { updateScheduleTimestamps } from './updateScheduleTimestamps';
 
 import type { ScheduledTaskExecutor } from './ScheduledTaskExecutor';
 import type { ScheduleTargetAdmission } from './scheduledTeamTarget';
@@ -56,8 +58,6 @@ export type WarmUpFn = (cwd: string) => Promise<{ ready: boolean; message: strin
 // =============================================================================
 
 export class SchedulerService {
-  private repository: ScheduleRepository;
-  private executor: Pick<ScheduledTaskExecutor, 'execute' | 'cancel' | 'cancelAll'>;
   private warmUpFn: WarmUpFn;
   private smartDispatcher: ScheduleDispatcher | null;
   private changeEmitter: ChangeEmitter | null = null;
@@ -80,13 +80,12 @@ export class SchedulerService {
   private readonly stopBarrier = new SchedulerStopBarrier();
 
   constructor(
-    repository: ScheduleRepository,
-    executor: Pick<ScheduledTaskExecutor, 'execute' | 'cancel' | 'cancelAll'>,
+    private readonly repository: ScheduleRepository,
+    private readonly executor: Pick<ScheduledTaskExecutor, 'execute' | 'cancel' | 'cancelAll'>,
     warmUpFn?: WarmUpFn,
-    smartDispatcher?: ScheduleDispatcher
+    smartDispatcher?: ScheduleDispatcher,
+    private readonly allowTeamSchedule: ScheduleAdmissionCheck = async () => true
   ) {
-    this.repository = repository;
-    this.executor = executor;
     this.smartDispatcher = smartDispatcher ?? null;
     this.warmUpFn = warmUpFn ?? (async () => ({ ready: true, message: 'warm-up skipped' }));
   }
@@ -95,9 +94,7 @@ export class SchedulerService {
     this.changeEmitter = emitter;
   }
 
-  // ===========================================================================
   // Lifecycle
-  // ===========================================================================
 
   async start(): Promise<void> {
     await this.stopBarrier.drainFinalizations();
@@ -163,9 +160,7 @@ export class SchedulerService {
     logger.info('Scheduler stopped');
   }
 
-  // ===========================================================================
   // CRUD
-  // ===========================================================================
   async listSchedules(): Promise<Schedule[]> {
     return this.repository.listSchedules();
   }
@@ -179,6 +174,7 @@ export class SchedulerService {
   }
 
   async createSchedule(input: CreateScheduleInput, admission?: ScheduleTargetAdmission): Promise<Schedule> {
+    await assertScheduleAdmission(this.allowTeamSchedule, input.teamName, { cwd: input.launchConfig.cwd });
     const cronExpression = input.cronExpression.trim();
     const timezone = input.timezone.trim();
     getValidScheduleNextRuns(cronExpression, timezone);
@@ -231,6 +227,7 @@ export class SchedulerService {
   async updateSchedule(id: string, patch: UpdateSchedulePatch, admission?: ScheduleTargetAdmission): Promise<Schedule> {
     const existing = await this.repository.getSchedule(id);
     if (!existing) throw new Error(`Schedule not found: ${id}`);
+    await assertScheduleAdmission(this.allowTeamSchedule, existing.teamName, folderChange(existing, patch));
     const hostTarget = admission?.target ?? existing.hostTarget;
     assertScheduledTeamTarget({ teamName: existing.teamName, hostTarget }, this.smartDispatcher?.supportsHost === true);
     if (patch.reviewedSavedPrompt && !existing.taskFirst) throw new Error('Review requires task-first schedule');
@@ -253,7 +250,7 @@ export class SchedulerService {
       }),
       updatedAt: new Date().toISOString(),
     };
-    await this.smartDispatcher?.assertCanSchedule(updated);
+    await this.smartDispatcher?.assertCanSchedule(updated, folderChange(existing, patch));
 
     // Reschedule cron job if expression or timezone changed
     const reschedule = Boolean(admission) || cronChanged || patch.warmUpMinutes !== undefined || patch.executionMode !== undefined;
@@ -330,6 +327,7 @@ export class SchedulerService {
     const existing = await this.repository.getSchedule(id);
     if (!existing) throw new Error(`Schedule not found: ${id}`);
 
+    await assertScheduleAdmission(this.allowTeamSchedule, existing.teamName);
     // A retained Host schedule cannot be armed against the legacy executor.
     assertScheduledTeamTarget(existing, this.smartDispatcher?.supportsHost === true);
     await this.smartDispatcher?.assertCanSchedule(existing);
@@ -362,9 +360,7 @@ export class SchedulerService {
     logger.info(`Schedule resumed: ${id}`);
   }
 
-  // ===========================================================================
   // Run History
-  // ===========================================================================
 
   async getRuns(
     scheduleId: string,
@@ -377,15 +373,14 @@ export class SchedulerService {
     return this.repository.getRunLogs(scheduleId, runId);
   }
 
-  // ===========================================================================
   // Trigger Now
-  // ===========================================================================
   async triggerNow(id: string): Promise<ScheduleRun> {
     if (this.stopped) throw new Error('Scheduler is stopped');
     const generation = this.lifecycleEpoch;
     return this.stopBarrier.withAdmission(id, async (isCurrent) => {
       const schedule = await this.repository.getSchedule(id);
       if (!schedule) throw new Error(`Schedule not found: ${id}`);
+      await assertScheduleAdmission(this.allowTeamSchedule, schedule.teamName);
       assertScheduledTeamTarget(schedule, this.smartDispatcher?.supportsHost === true);
       const conflict = this.lockConflict(schedule);
       if (conflict) throw new Error(conflict);
@@ -395,9 +390,7 @@ export class SchedulerService {
     });
   }
 
-  // ===========================================================================
   // claudeRootPath Change
-  // ===========================================================================
 
   async reloadForClaudeRootChange(): Promise<void> {
     logger.info('Reloading schedules for claudeRootPath change');
@@ -405,9 +398,7 @@ export class SchedulerService {
     await this.start();
   }
 
-  // ===========================================================================
   // Cron Job Management
-  // ===========================================================================
 
   /** Prepare the replacement without touching the currently active cron timer. */
   private prepareCronJob(schedule: Schedule): Cron {
@@ -445,9 +436,7 @@ export class SchedulerService {
     this.clearWarmUpTimer(scheduleId);
   }
 
-  // ===========================================================================
   // Warm-Up Timer
-  // ===========================================================================
 
   private scheduleWarmUp(schedule: Schedule): void {
     if (this.stopped) return;
@@ -526,9 +515,7 @@ export class SchedulerService {
     });
   }
 
-  // ===========================================================================
   // Cron Tick → Execution
-  // ===========================================================================
 
   private async onCronTick(scheduleId: string): Promise<void> {
     const generation = this.lifecycleEpoch;
@@ -555,9 +542,7 @@ export class SchedulerService {
     return undefined;
   }
 
-  // ===========================================================================
   // Execution
-  // ===========================================================================
 
   /** Publish only in the original lifecycle; delayed reads cannot acquire locks after Stop. */
   private async startOccurrence(
@@ -607,7 +592,8 @@ export class SchedulerService {
     let finishFinalization: (() => void) | undefined;
 
     try {
-      const outcome = schedule.executionMode || schedule.hostTarget
+      const refusal = admissionRefusal(await this.allowTeamSchedule(schedule.teamName));
+      const outcome = refusal ? { kind: 'skipped' as const, summary: refusal } : schedule.executionMode || schedule.hostTarget
         ? await this.smartDispatcher?.dispatch(schedule, run.id, () =>
             this.stopped || generation !== this.lifecycleEpoch || this.activeRuns.get(scheduleId)?.id !== run.id
           )
@@ -626,7 +612,7 @@ export class SchedulerService {
       if (outcome.kind === 'skipped' || outcome.kind === 'dispatched') {
         const receiptRun = outcome.kind === 'skipped' && outcome.pendingTaskCommandId
           ? { ...run, pendingTaskCommandId: outcome.pendingTaskCommandId } : run;
-        await this.completeRun(receiptRun, outcome.kind, null, outcome.summary, undefined, outcome.taskId);
+        await this.completeRun(receiptRun, outcome.kind, null, outcome.summary, undefined, outcome);
         if (outcome.kind === 'dispatched') await this.resetConsecutiveFailures(schedule);
       } else {
         const result = outcome.result;
@@ -665,7 +651,7 @@ export class SchedulerService {
         if (this.activeRuns.get(scheduleId)?.id === run.id) this.releaseRunLocks(scheduleId);
         // A cancelled external dispatch cannot write after stop/fixture teardown.
         if (!finishFinalization) return;
-        await this.updateScheduleTimestamps(schedule);
+        await updateScheduleTimestamps(this.repository, schedule, (event) => this.emitChange(event));
         await this.stopBarrier.withAdmission(scheduleId, async (isCurrent) => {
           const freshSchedule = await this.repository.getSchedule(scheduleId);
           if (isCurrent() && !this.stopped && generation === this.lifecycleEpoch && freshSchedule?.status === 'active') {
@@ -747,17 +733,15 @@ export class SchedulerService {
     exitCode: number | null,
     summary?: string,
     error?: string,
-    linkedTaskId?: string
+    link?: { taskId?: string; executionTeamName?: string }
   ): Promise<void> {
     await completeScheduleRun(
       this.repository, (event) => this.emitChange(event),
-      run, status, exitCode, summary, error, linkedTaskId
+      run, status, exitCode, summary, error, link
     );
   }
 
-  // ===========================================================================
   // Consecutive Failure Tracking
-  // ===========================================================================
 
   private async resetConsecutiveFailures(schedule: Schedule): Promise<void> {
     await this.repository.updateSchedule(schedule.id, (fresh) => fresh.consecutiveFailures === 0 ? null : ({
@@ -793,29 +777,6 @@ export class SchedulerService {
         detail: `auto-paused after ${updated.consecutiveFailures} consecutive failures`,
       });
     }
-  }
-
-  // ===========================================================================
-  // Schedule Timestamp Updates
-  // ===========================================================================
-
-  private async updateScheduleTimestamps(schedule: Schedule): Promise<void> {
-    // Pause and edits may commit while a run finishes; retain their latest fields.
-    const updated = await this.repository.updateSchedule(schedule.id, (fresh) => {
-      const now = new Date().toISOString();
-      return {
-        ...fresh,
-        lastRunAt: now,
-        nextRunAt: computeScheduleNextRunAt(fresh) ?? undefined,
-        updatedAt: now,
-      };
-    });
-    if (!updated) return;
-    this.emitChange({
-      type: 'schedule-updated',
-      scheduleId: updated.id,
-      teamName: updated.teamName,
-    });
   }
 
   private releaseRunLocks(scheduleId: string): void {

@@ -500,7 +500,7 @@ export function createHostTeamMutations(options: {
           current: options.captureScope(),
         },
         async (attempt) => {
-          object(request, ['command', 'text', 'taskRefs', 'attachments']);
+          object(request, ['command', 'text', 'taskRefs', 'attachments', 'answerClarificationRequestId']);
           const files = attachments(request.attachments, 'task');
           const taskRefs = refs(request.taskRefs);
           attempt.attachments(
@@ -514,6 +514,8 @@ export function createHostTeamMutations(options: {
               payload: {
                 taskId,
                 text: request.text,
+                ...(request.answerClarificationRequestId === undefined ? {} :
+                  { answerClarificationRequestId: request.answerClarificationRequestId }),
                 ...(taskRefs === undefined ? {} : { taskRefs }),
               },
             },

@@ -5,17 +5,20 @@ import { deliveryFingerprint } from '../runtime/identity.js';
 import { createTeamBackupComposition } from './createTeamBackupComposition.js';
 import { createTeamLifecycleMethods } from './createTeamLifecycleMethods.js';
 import { createTeamLifecycleRetirement } from './createTeamLifecycleRetirement.js';
+import { HostProjectTeamLifecycle } from '../team-project-context/HostProjectTeamLifecycle.js';
 import type { TeamHostProfile } from './TeamHost.js';
 import type { HostedTeam, RuntimeTeamCoordinator } from './RuntimeTeamCoordinator.js';
 import type { TeamRuntimeDeliveryPort } from '../team/contracts.js';
 import type { FileStoppedTeamImport } from '../stopped-team-import/FileStoppedTeamImport.js';
 import type { ProcessCustody } from './processCustody.js';
 import type { WindowsRegisteredProcessPort } from '../owned-process/retainedServiceContracts.js';
+import type { TeamRegistry } from '../team-registry/TeamRegistry.js';
 
 /** One captured storage lifetime for lifecycle, backup and the native WorkSync identity port. */
 export function createHostTeamLifecycleComposition(options: {
-  profile: Pick<TeamHostProfile, 'owner' | 'principalId'>;
+  profile: Pick<TeamHostProfile, 'owner' | 'principalId' | 'creation'>;
   teams: Map<string, HostedTeam>;
+  registry?(): Pick<TeamRegistry, 'list'> | undefined;
   runtime(): Pick<RuntimeTeamCoordinator, 'lifecyclePorts'> | undefined;
   importer(): Pick<FileStoppedTeamImport, 'publication'> | undefined;
   processCustody?: Pick<NonNullable<ProcessCustody>, 'observe' | 'releaseTeam'>;
@@ -102,9 +105,19 @@ export function createHostTeamLifecycleComposition(options: {
     async lookupDelivery() { throw new TeamOwnerError('hold'); },
     async cancelDelivery() { throw new TeamOwnerError('hold'); },
   };
-  const lifecycle = createTeamLifecycleMethods({
-    profile, teams, storage, retirement, assertCurrent: options.assertCurrent,
-    delivery: () => options.runtime()?.lifecyclePorts().delivery ?? unconfiguredDelivery,
+  const projects = new HostProjectTeamLifecycle({
+    profile, teams, stores, storage, retirement, assertCurrent: options.assertCurrent,
+    registry: () => options.registry?.(),
+    async preparePurge(teamId, deadline) {
+      options.assertCurrent();
+      const commands = processCommands(teamId);
+      if (options.windows) {
+        if (!commands.windows) throw new TeamOwnerError('hold');
+        await commands.windows.reconcileNaturalAbsence(deadline);
+        options.assertCurrent();
+      }
+      commands.assertReleased();
+    },
     async afterTrash(team, commandId) {
       options.assertCurrent();
       const runtime = options.runtime();
@@ -117,6 +130,10 @@ export function createHostTeamLifecycleComposition(options: {
         });
       }
     },
+  });
+  const lifecycle = createTeamLifecycleMethods({
+    profile, teams, storage, retirement, projects, assertCurrent: options.assertCurrent,
+    delivery: () => options.runtime()?.lifecyclePorts().delivery ?? unconfiguredDelivery,
   });
   return {
     stores, storage, retirement, methods: lifecycle.methods,

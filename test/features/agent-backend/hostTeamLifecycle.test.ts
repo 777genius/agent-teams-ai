@@ -85,6 +85,34 @@ function fixture() {
 }
 
 describe('ordinary captured Team lifecycle', () => {
+  it('retains UNKNOWN when no generation exists without an original no-allocation proof', async () => {
+    const f = fixture(), original = vi.mocked(f.backend.invoke).getMockImplementation()!;
+    const capture = structuredClone(launch);
+    for (const member of capture.members) Object.assign(member, { generation: null, status: 'unknown', noAllocation: false });
+    vi.mocked(f.backend.invoke).mockImplementation(async request => request.operation === 'team.launch.read'
+      ? { ok: true, value: structuredClone(capture) } : original(request));
+    expect(await f.lifecycle.read(connection, () => true)).toMatchObject({ alive: undefined, unknownMembers: ['a', 'b', 'c'] });
+    await expect(f.lifecycle.stop(connection, () => true)).rejects.toMatchObject({ code: 'hold', outcome: 'unknown' });
+    expect(f.stops).toEqual([]);
+    for (const member of capture.members) member.noAllocation = true;
+    expect(await f.lifecycle.read(connection, () => true)).toMatchObject({ alive: false, unknownMembers: [] });
+    await expect(f.lifecycle.stop(connection, () => true)).resolves.toBeUndefined();
+    expect(f.stops).toEqual([]);
+  });
+
+  it('releases all known original generations while keeping an unbound allocation Stop outcome unknown', async () => {
+    const f = fixture(), original = vi.mocked(f.backend.invoke).getMockImplementation()!;
+    const capture = structuredClone(launch);
+    Object.assign(capture.members[1], { generation: null, status: 'unknown', noAllocation: false });
+    vi.mocked(f.backend.invoke).mockImplementation(async request => request.operation === 'team.launch.read'
+      ? { ok: true, value: structuredClone(capture) } : original(request));
+    await expect(f.lifecycle.stop(connection, () => true)).rejects.toMatchObject({ code: 'hold', outcome: 'unknown' });
+    expect(f.stops).toEqual([{ memberId: 'a', generation: '1' }, { memberId: 'c', generation: '1' }]);
+    expect(f.sessions.get('a')!.custody).toBe('released');
+    expect(f.sessions.get('c')!.custody).toBe('released');
+    expect(f.sessions.get('b')!.custody).toBe('owned');
+  });
+
   it('accepts a configured revision only with the original admitted command, source revision and exact options', async () => {
     const configuration = { members: [{ memberId: 'a', model: 'TEST-selected', fastMode: false }] };
     const admission = { commandId: 'TEST-launch', sourceRosterRevision: 'revision', members: [{ memberId: 'a', configuration: { model: 'TEST-selected', fastMode: false } }] };

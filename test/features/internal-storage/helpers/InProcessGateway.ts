@@ -21,6 +21,7 @@ import type {
   MemberWorkSyncReportJournalOpResult,
   MemberWorkSyncStatusCompareAndWriteInput,
   MemberWorkSyncStatusCompareAndWriteResult,
+  MemberWorkSyncStatusDeleteTarget,
   MemberWorkSyncStatusRecord,
   MemberWorkSyncTeamSnapshotRecords,
   StallJournalEntryRecord,
@@ -63,6 +64,13 @@ export class InProcessGateway
 
   statusList(teamName: string): Promise<MemberWorkSyncStatusRecord[]> {
     return this.op('mws.status.list', { teamName });
+  }
+
+  async statusDeleteMatching(
+    teamName: string,
+    targets: MemberWorkSyncStatusDeleteTarget[]
+  ): Promise<number> {
+    return this.op('mws.status.deleteMatching', { teamName, targets });
   }
 
   metricEventsList(teamName: string): Promise<MemberWorkSyncMetricEventRecord[]> {

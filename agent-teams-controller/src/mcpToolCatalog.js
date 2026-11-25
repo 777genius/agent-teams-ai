@@ -8,7 +8,10 @@ const AGENT_TEAMS_MANAGEMENT_TOOL_NAMES = [
   'team_trash',
 ];
 
-const AGENT_TEAMS_TEAM_TOOL_NAMES = [...AGENT_TEAMS_MANAGEMENT_TOOL_NAMES];
+const AGENT_TEAMS_TEAM_TOOL_NAMES = [
+  ...AGENT_TEAMS_MANAGEMENT_TOOL_NAMES,
+  'app_show_connection_confirmation',
+];
 
 const AGENT_TEAMS_TASK_TOOL_NAMES = [
   'member_briefing',
@@ -82,55 +85,69 @@ const AGENT_TEAMS_RUNTIME_TOOL_NAMES = [
 
 const AGENT_TEAMS_WORK_SYNC_TOOL_NAMES = ['member_work_sync_status', 'member_work_sync_report'];
 
+// projectBoard: the tools of the group work on the board of one team, so they take the project
+// of a team that keeps a separate history per project. Not the team tools (the team as a whole)
+// nor the runtime group (launch/stop of the team, and the runtime bridge, which agents call by
+// their physical team name).
 const AGENT_TEAMS_MCP_TOOL_GROUPS = [
   {
     id: 'team',
     teammateOperational: false,
+    projectBoard: false,
     toolNames: AGENT_TEAMS_TEAM_TOOL_NAMES,
   },
   {
     id: 'task',
     teammateOperational: true,
+    projectBoard: true,
     toolNames: AGENT_TEAMS_TASK_TOOL_NAMES,
   },
   {
     id: 'lead',
     teammateOperational: false,
+    projectBoard: true,
     toolNames: AGENT_TEAMS_LEAD_TOOL_NAMES,
   },
   {
     id: 'kanban',
     teammateOperational: false,
+    projectBoard: true,
     toolNames: AGENT_TEAMS_KANBAN_TOOL_NAMES,
   },
   {
     id: 'review',
     teammateOperational: true,
+    projectBoard: true,
     toolNames: AGENT_TEAMS_REVIEW_TOOL_NAMES,
   },
   {
     id: 'message',
     teammateOperational: true,
+    projectBoard: true,
     toolNames: AGENT_TEAMS_MESSAGE_TOOL_NAMES,
   },
   {
     id: 'process',
     teammateOperational: true,
+    projectBoard: true,
     toolNames: AGENT_TEAMS_PROCESS_TOOL_NAMES,
   },
   {
     id: 'runtime',
     teammateOperational: false,
+    projectBoard: false,
     toolNames: AGENT_TEAMS_RUNTIME_TOOL_NAMES,
   },
   {
     id: 'workSync',
     teammateOperational: true,
+    projectBoard: true,
     toolNames: AGENT_TEAMS_WORK_SYNC_TOOL_NAMES,
   },
   {
     id: 'crossTeam',
     teammateOperational: true,
+    projectBoard: true,
     toolNames: AGENT_TEAMS_CROSS_TEAM_TOOL_NAMES,
   },
 ];
@@ -138,6 +155,10 @@ const AGENT_TEAMS_MCP_TOOL_GROUPS = [
 const AGENT_TEAMS_REGISTERED_TOOL_NAMES = AGENT_TEAMS_MCP_TOOL_GROUPS.flatMap((group) => [
   ...group.toolNames,
 ]);
+
+const AGENT_TEAMS_PROJECT_BOARD_TOOL_NAMES = AGENT_TEAMS_MCP_TOOL_GROUPS.filter(
+  (group) => group.projectBoard
+).flatMap((group) => [...group.toolNames]);
 
 const AGENT_TEAMS_TEAMMATE_OPERATIONAL_TOOL_NAMES = AGENT_TEAMS_MCP_TOOL_GROUPS.filter(
   (group) => group.teammateOperational
@@ -169,6 +190,7 @@ module.exports = {
   AGENT_TEAMS_WORK_SYNC_TOOL_NAMES,
   AGENT_TEAMS_MCP_TOOL_GROUPS,
   AGENT_TEAMS_REGISTERED_TOOL_NAMES,
+  AGENT_TEAMS_PROJECT_BOARD_TOOL_NAMES,
   AGENT_TEAMS_TEAMMATE_OPERATIONAL_TOOL_NAMES,
   AGENT_TEAMS_NAMESPACED_TEAMMATE_OPERATIONAL_TOOL_NAMES,
   AGENT_TEAMS_LEAD_BOOTSTRAP_TOOL_NAMES,

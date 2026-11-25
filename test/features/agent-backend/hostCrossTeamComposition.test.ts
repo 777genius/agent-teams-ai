@@ -24,7 +24,8 @@ afterEach(async () => {
   await Promise.all(endpoints.splice(0).map((endpoint) => endpoint.close()));
   roots.splice(0).forEach((root) => rmSync(root, { recursive: true, force: true }));
 });
-function fixture() {
+function fixture(projectRouting: Pick<Parameters<typeof createHostCrossTeamComposition>[0],
+  'resolveTarget' | 'assertPair'> = {}) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-cross-team-headless-')));
   roots.push(root);
   const profile: Pick<TeamHostProfile, 'owner' | 'principalId'> = {
@@ -50,6 +51,7 @@ function fixture() {
       if (!current) throw new Error('TEST owner retired');
     },
     activeInputs: (binding) => active.get(binding.teamId) ?? [],
+    ...projectRouting,
   });
   for (const name of ['alpha', 'beta', 'gamma']) {
     const binding = { backendId: 'TEST-host', teamId: name, teamName: name };
@@ -177,6 +179,27 @@ function fixture() {
     },
   };
 }
+
+it('keeps a foreign project alias out of the picker while admitting an exact native reply to its original resource', async () => {
+  const f = fixture({ resolveTarget(source, requested, _sourceHandle, _targetHandle, visibleOnly) {
+    if (source.definition.binding.teamId === 'alpha' &&
+        requested.definition.binding.teamId === 'gamma' && visibleOnly)
+      throw new Error('TEST physical history hidden from picker');
+    return { team: requested };
+  } });
+  const alpha = await f.endpoint('alpha'), beta = await f.endpoint('beta');
+  expect(alpha.port.listTargets().map(row => row.teamName)).toEqual(['beta']);
+  const originalTarget = beta.port.listTargets().find(row => row.teamName === 'gamma')!;
+  const receipt = await alpha.port.send({ commandId: 'TEST-exact-project-reply',
+    toTeam: originalTarget.resourceRef, text: 'TEST retained project recipient' });
+  expect(receipt.phase).toBe('completed');
+  const inbox = JSON.parse(readFileSync(join(f.root, 'teams/gamma/inboxes/lead.json'), 'utf8'));
+  expect(inbox).toHaveLength(1);
+  expect(inbox[0].text).toContain('TEST retained project recipient');
+  await alpha.port.send({ commandId: 'TEST-exact-project-reply',
+    toTeam: originalTarget.resourceRef, text: 'TEST retained project recipient' });
+  expect(JSON.parse(readFileSync(join(f.root, 'teams/gamma/inboxes/lead.json'), 'utf8'))).toHaveLength(1);
+});
 
 it.each([false, true])(
   'routes headless same-Host tools through real owners and original receipts (captured snapshot: %s)',

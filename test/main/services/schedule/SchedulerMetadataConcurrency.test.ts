@@ -4,6 +4,7 @@ import { join } from 'node:path';
 
 import { JsonScheduleRepository } from '@main/services/schedule/JsonScheduleRepository';
 import { SchedulerService } from '@main/services/schedule/SchedulerService';
+import { updateScheduleTimestamps } from '@main/services/schedule/updateScheduleTimestamps';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Schedule } from '@shared/types';
@@ -12,7 +13,6 @@ const paths = vi.hoisted(() => ({ directory: '' }));
 vi.mock('@main/utils/pathDecoder', () => ({ getSchedulesBasePath: () => paths.directory }));
 
 interface BackgroundMetadata {
-  updateScheduleTimestamps(schedule: Schedule): Promise<void>;
   resetConsecutiveFailures(schedule: Schedule): Promise<void>;
   incrementConsecutiveFailures(schedule: Schedule): Promise<void>;
 }
@@ -116,7 +116,9 @@ describe('scheduler metadata concurrency', () => {
     await repository.saveSchedule(original);
     let edited!: Schedule;
     await beforeMetadataAdmission(repository,
-      () => (scheduler as unknown as BackgroundMetadata)[method](original),
+      () => method === 'updateScheduleTimestamps'
+        ? updateScheduleTimestamps(repository, original, () => undefined)
+        : (scheduler as unknown as BackgroundMetadata)[method](original),
       async () => {
         await scheduler.pauseSchedule(original.id);
         edited = await scheduler.updateSchedule(original.id, {
@@ -178,7 +180,9 @@ describe('scheduler metadata concurrency', () => {
     const changed = vi.fn();
     scheduler.setChangeEmitter(changed);
     await beforeMetadataAdmission(repository,
-      () => (scheduler as unknown as BackgroundMetadata)[method](original),
+      () => method === 'updateScheduleTimestamps'
+        ? updateScheduleTimestamps(repository, original, changed)
+        : (scheduler as unknown as BackgroundMetadata)[method](original),
       () => repository.deleteSchedule(original.id));
     expect(await repository.getSchedule(original.id)).toBeNull();
     expect(await repository.listSchedules()).toEqual([]);

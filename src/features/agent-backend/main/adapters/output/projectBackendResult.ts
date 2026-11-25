@@ -30,6 +30,8 @@ import { isMemberActionRequest, projectMemberActionResult } from './projectMembe
 import { projectMemberCheckpoints } from './projectMemberCheckpoints';
 import { projectNativeSessionCommands } from './projectNativeSessionCommands';
 import { projectProcessResult } from './projectProcessResult';
+import { projectProjectContext, projectProjectLaunchSource } from './projectProjectContext';
+import { projectReviewFlow } from './projectReviewFlow';
 import { projectReviewResult } from './projectReviewResult';
 import { projectRosterConfiguration, projectRosterReceipt } from './projectRoster';
 import {
@@ -117,6 +119,8 @@ function task(value: unknown): BackendTask {
       'approved',
       'needsFix',
     ] as const);
+  if (source.clarificationRequestId !== undefined)
+    result.clarificationRequestId = string(source.clarificationRequestId);
   if (source.needsClarification !== undefined)
     result.needsClarification = oneOf(source.needsClarification, ['lead', 'user'] as const);
   if (source.groupChatId !== undefined) {
@@ -378,6 +382,10 @@ export function projectBackendResult(
     };
   if (request.operation === 'team.roster.read')
     return { ok: true, value: projectRosterConfiguration(source.value) };
+  if (request.operation === 'team.project-context.read' || request.operation === 'team.project-context.prepare')
+    return { ok: true, value: projectProjectContext(source.value) };
+  if (request.operation === 'team.project-context.launch-source.read')
+    return { ok: true, value: projectProjectLaunchSource(source.value) };
   if (request.operation === 'team.roster.replace' || request.operation === 'team.roster.lookup')
     return {
       ok: true,
@@ -486,17 +494,8 @@ export function projectBackendResult(
     request.operation === 'task.attachment.read'
   )
     return { ok: true, value: readBackendAttachmentChunk(source.value, request.payload) };
-  if (request.operation === 'team.review-flow.read') {
-    const value = row(source.value);
-    if (value.kind !== 'review-flow') throw new Error('Invalid review flow settings');
-    const settings = value.settings === null ? null : row(value.settings);
-    if (value.unreadable !== undefined && (value.unreadable !== true || settings !== null))
-      throw new Error('Invalid review flow read');
-    return { ok: true, value: { kind: 'review-flow', ...(value.unreadable ? { unreadable: true as const } : {}), settings: settings === null ? null : {
-      reviewFlow: oneOf(settings.reviewFlow, ['agent_approval', 'human_approval', 'lead_then_human'] as const),
-      reviewFlowPrompt: string(settings.reviewFlowPrompt),
-    } } };
-  }
+  if (request.operation === 'team.review-flow.read')
+    return { ok: true, value: projectReviewFlow(source.value) };
   if (request.operation === 'team.snapshot')
     return { ok: true, value: projectTeamSnapshot(source.value) };
   if (request.operation === 'team.messages.page')

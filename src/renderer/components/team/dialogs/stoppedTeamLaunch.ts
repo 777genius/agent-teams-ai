@@ -17,6 +17,8 @@ import {
   isContextScopedRequestEpochCurrent,
 } from '@renderer/store/utils/contextScopedRequestEpoch';
 
+import { resolveTeamLaunchDefaultProjectPath, resolveTeamListProjectPermissionAlias } from '../teamProjectSelection';
+
 import type { TeamLaunchDialogMode } from './LaunchTeamDialog.types';
 import type { MemberSettingsRelaunchDraft } from '@features/team-provisioning/renderer';
 import type { ResolvedTeamMember, TeamMemberSnapshot } from '@shared/types';
@@ -169,6 +171,39 @@ export async function loadExistingTeamLaunchDialog(
   mode: TeamLaunchDialogMode,
   signal?: AbortSignal
 ) {
+  const epoch = captureContextScopedRequestEpoch();
+  const current = () => !signal?.aborted && isContextScopedRequestEpochCurrent(epoch);
+  const check = () => {
+    if (!current()) throw new StoppedTeamLaunchHold('Team context changed. Reopen Launch.');
+  };
+  const qualify = async (target: {
+    teamName: string; mode: TeamLaunchDialogMode; members: ResolvedTeamMember[];
+    projectPath: string; retainedLegacyLaunch?: RetainedLegacyLaunchChoice;
+  }) => {
+    check();
+    const hintedMode = useStore.getState().teamByName[target.teamName]?.projectContextMode;
+    let saved;
+    try { saved = await api.teams.getSavedRequest(target.teamName); }
+    catch (error) {
+      if (hintedMode === 'per_project' || isHostTeamSelectionKey(target.teamName)) throw error;
+    }
+    check();
+    const mode = saved?.projectContextMode ?? hintedMode;
+    let projectPermissionTeamName: string | null | undefined;
+    if (mode === 'per_project') {
+      if (!saved || saved.teamName !== target.teamName)
+        throw new StoppedTeamLaunchHold('Saved team configuration unavailable. Reopen Launch.');
+      target.members = saved.members.map((member) => ({ ...member, joinedAt: 0,
+        currentTaskId: null, taskCount: 0, messageCount: 0, lastActiveAt: null, status: 'idle' as const }));
+      try {
+        const view = await api.teams.getProjectContextView(target.teamName, projectPath);
+        check();
+        projectPermissionTeamName = resolveTeamListProjectPermissionAlias(target.teamName, projectPath, view);
+      } catch { check(); projectPermissionTeamName = null; }
+    }
+    return { ...target, projectPath: resolveTeamLaunchDefaultProjectPath(mode, projectPath, target.projectPath),
+      projectPermissionTeamName };
+  };
   try {
     let retainedLegacyLaunch: RetainedLegacyLaunchChoice | undefined;
     const retain = (choice: RetainedLegacyLaunchChoice) => {
@@ -177,17 +212,20 @@ export async function loadExistingTeamLaunchDialog(
     let data;
     try {
       data = await api.teams.getData(teamName, { includeMemberBranches: false });
+      check();
     } catch (error) {
       if (!(error instanceof Error && error.message.includes('TEAM_DRAFT'))) throw error;
+      check();
       const target = await stoppedTeamLaunchSelection(teamName, false, retain, signal, { mode });
-      if (target !== teamName) return await loadImportedDialog(target, projectPath);
-      return {
+      check();
+      if (target !== teamName) return await qualify(await loadImportedDialog(target, projectPath));
+      return await qualify({
         teamName,
         mode,
         members: [] as ResolvedTeamMember[],
         projectPath,
         retainedLegacyLaunch,
-      };
+      });
     }
     const target = await stoppedTeamLaunchSelection(teamName, data.isAlive, retain, signal, {
       mode,
@@ -195,14 +233,15 @@ export async function loadExistingTeamLaunchDialog(
         data = original;
       },
     });
-    if (target !== teamName) return await loadImportedDialog(target, projectPath);
-    return {
+    check();
+    if (target !== teamName) return await qualify(await loadImportedDialog(target, projectPath));
+    return await qualify({
       teamName,
       mode: retainedLegacyLaunch ? ('launch' as const) : mode,
       retainedLegacyLaunch,
       members: resolveLaunchDialogMembers(data.members ?? []),
       projectPath: data.config.projectPath ?? projectPath,
-    };
+    });
   } catch (error) {
     if (!signal?.aborted) showStoppedTeamLaunchHold(error);
     return null;

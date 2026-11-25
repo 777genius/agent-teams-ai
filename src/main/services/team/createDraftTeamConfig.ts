@@ -1,3 +1,4 @@
+import { parseNewTeamProjectContextMode } from '@features/team-project-context/core';
 import { getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { isTeamEffortLevel } from '@shared/utils/effortLevels';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
@@ -6,6 +7,7 @@ import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { claimTeamForThisProfile } from './provisioning/TeamProvisioningProfileOwnership';
 import { TeamConfigReader } from './TeamConfigReader';
 import { parseCreateTeamRequest } from './TeamRequestValidation';
 import { applyDistinctRosterColors } from './teamRosterColors';
@@ -24,7 +26,8 @@ export class TeamDraftPreflightCollisionError extends Error {
 
 export async function createDraftTeamConfig(
   request: TeamCreateConfigRequest,
-  stores: { teamMetaStore: TeamMetaStore; membersMetaStore: TeamMembersMetaStore }
+  stores: { teamMetaStore: TeamMetaStore; membersMetaStore: TeamMembersMetaStore },
+  options: { claimOwnerOnCreate?: boolean } = {}
 ): Promise<void> {
   request = parseCreateTeamRequest(request);
   const teamsBasePath = getTeamsBasePath();
@@ -63,12 +66,23 @@ export async function createDraftTeamConfig(
     await fs.promises.mkdir(tasksDir, { mode: 0o700 });
     tasksDirectoryCreated = true;
     await fs.promises.mkdir(path.join(teamDir, 'inboxes'), { mode: 0o700 });
+    const contextMode = parseNewTeamProjectContextMode(request.projectContextMode);
+    // Per-project contexts must be owned before their first materialization.
+    // Shared-mode teams continue using the legacy draft creation path.
+    if (contextMode === 'per_project' || options.claimOwnerOnCreate === true) {
+      await claimTeamForThisProfile({
+        teamsBasePath,
+        teamName: request.teamName,
+        reason: 'create',
+      });
+    }
 
     const joinedAt = Date.now();
     // Save team-level metadata to team.meta.json (NOT config.json).
     // config.json is CLI territory — created by TeamCreate during provisioning.
     // team.meta.json preserves user's configuration for the Launch flow.
     const metadata: Omit<TeamMetaFile, 'version'> = {
+      projectContextMode: contextMode,
       runtimeSelectionVersion: request.runtimeSelectionVersion,
       displayName: request.displayName,
       description: request.description,

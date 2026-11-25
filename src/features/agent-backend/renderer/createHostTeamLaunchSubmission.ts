@@ -1,6 +1,7 @@
 import { hostTeamRunId } from '../contracts/teamRunSelection';
 import { parseHostTeamSelectionKey } from '../contracts/teamSelection';
 
+import { prepareHostProjectLaunch } from './createHostProjectContextApi';
 import { createHostTeamLaunch } from './createHostTeamLaunch';
 import { HostTeamOperationError } from './createHostTeamMutations';
 
@@ -14,9 +15,9 @@ export function createHostTeamLaunchSubmission(options: {
   invalidateReads(handleId: string, current: () => boolean): void;
 }) {
   return async (raw: TeamLaunchRequest): Promise<TeamLaunchResponse> => {
-    const request = structuredClone(raw),
-      current = options.captureScope();
-    const handleId = parseHostTeamSelectionKey(request.teamName);
+    let request = structuredClone(raw);
+    const current = options.captureScope();
+    parseHostTeamSelectionKey(request.teamName);
     const command = request.command;
     if (
       !command ||
@@ -24,15 +25,22 @@ export function createHostTeamLaunchSubmission(options: {
       typeof command.commandId !== 'string' ||
       !command.commandId.trim() ||
       command.commandId.length > 240 ||
-      command.commandId.includes('\0') ||
-      typeof request.savedRosterCommandId !== 'string' ||
-      !request.savedRosterCommandId.trim() ||
-      request.savedRosterCommandId.length > 256 ||
-      request.savedRosterCommandId.includes('\0')
+      command.commandId.includes('\0')
     )
       throw new HostTeamOperationError('launch-source-required', 'not-dispatched');
     if (!current())
       throw new HostTeamOperationError('context-changed', 'not-dispatched', command.commandId);
+    request = await prepareHostProjectLaunch({ ...options, resolve: async (key, check) => {
+      const connections = await options.backend.getConnections();
+      if (!check() || connections.state !== 'ready') throw new HostTeamOperationError('context-changed', 'not-dispatched');
+      const connection = connections.bindings.find(row => row.handle.handleId === parseHostTeamSelectionKey(key));
+      if (!connection) throw new HostTeamOperationError('team-unavailable', 'not-dispatched');
+      return connection;
+    } }, request, current);
+    const handleId = parseHostTeamSelectionKey(request.teamName);
+    if (typeof request.savedRosterCommandId !== 'string' || !request.savedRosterCommandId.trim() ||
+        request.savedRosterCommandId.length > 256 || request.savedRosterCommandId.includes('\0'))
+      throw new HostTeamOperationError('launch-source-required', 'not-dispatched', command.commandId);
     const launch = createHostTeamLaunch(options.backend, request.teamName, current);
     options.invalidateReads(handleId, current);
     try {
@@ -43,7 +51,9 @@ export function createHostTeamLaunchSubmission(options: {
       );
       if (!current())
         throw new HostTeamOperationError('context-changed', 'unknown', command.commandId);
-      const result = await launch.start(view, undefined, command.commandId, request.modelPreparation);
+      const initialPrompt = request.bootstrapOnly ? null
+        : Object.hasOwn(request, 'prompt') ? request.prompt?.trim() || null : undefined;
+      const result = await launch.start(view, undefined, command.commandId, request.modelPreparation, initialPrompt);
       if (!current())
         throw new HostTeamOperationError('context-changed', 'unknown', command.commandId);
       return {

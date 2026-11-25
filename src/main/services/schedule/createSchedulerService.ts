@@ -1,3 +1,5 @@
+import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
+
 import { isControllerTaskNotFoundError } from '../team/taskCreationIdempotency';
 import { TeamConfigReader } from '../team/TeamConfigReader';
 
@@ -10,6 +12,7 @@ import { SmartScheduleDispatcher } from './SmartScheduleDispatcher';
 import type { TeamIpcHandlerApis } from '../team/contracts/TeamProvisioningApis';
 import type { TeamDataService } from '../team/TeamDataService';
 import type { TeamProvisioningService } from '../team/TeamProvisioningService';
+import type { ScheduleTargets } from './scheduleTarget';
 import type { HostScheduleRuntimeFactory } from './SelectedScheduleDispatcher';
 
 /** Composes the scheduler from existing main-process APIs; no new runtime owner. */
@@ -17,10 +20,16 @@ export function createSchedulerService(
   apis: Pick<TeamIpcHandlerApis, 'runtime' | 'provisioningRun' | 'diagnostics' | 'memberLifecycle'>,
   data: Pick<
     TeamDataService,
-    'getLeadMemberName' | 'getSavedRequest' | 'createTask' | 'getTask' | 'startTaskByUser' | 'hasActiveOwnedTask'
+    | 'getLeadMemberName'
+    | 'getSavedRequest'
+    | 'createTask'
+    | 'getTask'
+    | 'startTaskByUser'
+    | 'hasActiveOwnedTask'
   >,
   provisioning: Pick<TeamProvisioningService, 'launchTeam' | 'prepareForProvisioning' | 'hasTeamOperationInProgress'>,
-  host?: HostScheduleRuntimeFactory
+  host?: HostScheduleRuntimeFactory,
+  targets?: ScheduleTargets
 ): SchedulerService {
   const executor = new ScheduledTaskExecutor();
   const repository = new JsonScheduleRepository();
@@ -48,7 +57,8 @@ export function createSchedulerService(
         if (
           isControllerTaskNotFoundError(error, taskId) ||
           (error instanceof Error && 'code' in error && error.code === 'TASK_NOT_FOUND')
-        ) return null;
+        )
+          return null;
         throw error;
       }
     },
@@ -69,6 +79,10 @@ export function createSchedulerService(
     createTask: (teamName, request) => data.createTask(teamName, request),
     launchTeam: (request) => provisioning.launchTeam(request, () => undefined),
     runOneShot: (request) => executor.execute(request),
+    ...(targets ? {
+      resolveTarget: (schedule: import('@shared/types').Schedule) => targets.resolve(schedule),
+      launchProjectTeam: (schedule: import('@shared/types').Schedule, request: import('@shared/types').TeamLaunchRequest) => targets.launch(schedule, request),
+    } : {}),
   });
 
   return new SchedulerService(
@@ -79,6 +93,8 @@ export function createSchedulerService(
       return { ready: result.ready, message: result.message };
     },
     new SelectedScheduleDispatcher(dispatcher, async (scheduleId, runId) =>
-      (await repository.listRuns(scheduleId, { limit: 50 })).filter(run => run.id !== runId), host)
+      (await repository.listRuns(scheduleId, { limit: 50 })).filter(run => run.id !== runId), host),
+    (teamName, change) => isHostTeamSelectionKey(teamName) ? Promise.resolve(true) :
+      targets?.admit(teamName, change) ?? Promise.resolve(true)
   );
 }

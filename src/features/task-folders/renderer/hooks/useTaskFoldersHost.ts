@@ -66,7 +66,12 @@ export function useTaskFoldersHost(
     () => (globalDeletedTasks.length > 0 ? [...tasks, ...globalDeletedTasks] : tasks),
     [globalDeletedTasks, tasks]
   );
-  const teamCatalogKey = useMemo(() => teams.map((team) => team.teamName).join('|'), [teams]);
+  const teamCatalogKey = useMemo(
+    () => teams.map((team) => [
+      team.teamName, ...(team.projectHistoryContexts ?? []).map((context) => context.executionTeamName),
+    ].join(':')).join('|'),
+    [teams]
+  );
   // Membership only: task add/remove invalidates the deleted feed, status churn must not.
   const globalTaskIdsKey = useMemo(() => tasks.map((task) => task.id).join('|'), [tasks]);
   const docked = useTaskFoldersDocked();
@@ -117,6 +122,7 @@ export function useTaskFoldersHost(
         searchQuery: view.searchQuery,
         archiveMode: view.filters.showArchived ? 'all' : 'active',
         getEffectiveSubject,
+        teamCatalog: teams,
       },
       readState,
       (task) => local.isArchived(task.teamName, task.id)
@@ -143,6 +149,7 @@ export function useTaskFoldersHost(
     taskOrder,
     viewTasks,
     view.filters,
+    teams,
     view.searchQuery,
     view.sortMode,
   ]);

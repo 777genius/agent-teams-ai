@@ -5,6 +5,8 @@ export interface BackendTeamLifecycle {
   revision: string;
   deletedAt: string | null;
   cleanupPending: boolean;
+  /** An incomplete logical-family change resumes only with this exact original command. */
+  pendingChange?: { commandId: string; expectedRevision: string; action: 'trash' | 'restore' };
   /** Explicit Delete retry only; this read never advances the original prepared deletion. */
   pendingPurge?: { commandId: string; expectedRevision: string };
 }

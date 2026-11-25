@@ -254,7 +254,9 @@ export function desktopBackendEnvironment(
   return {
     HOME: join(root, 'home'),
     TMPDIR: join(root, 'tmp'),
-    XDG_CONFIG_HOME: join(root, 'config'),
+    // The ordinary global readiness selector requires the application's canonical HOME config.
+    // Native provider recipes retain their separately captured configuration directories.
+    XDG_CONFIG_HOME: join(root, 'home', '.config'),
     // Chromium's macOS GetHomeDir uses NSHomeDirectory, not getenv(HOME).
     // Apple's CFPlatform.c prioritizes this override before the passwd home.
     CFFIXED_USER_HOME: join(root, 'home'),

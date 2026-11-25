@@ -235,11 +235,12 @@ export class FileStoppedTeamImport {
         },
       ],
     });
-    const { displayName, description, color } = snapshot.header.savedSettings;
+    const { displayName, description, color, projectContextMode } = snapshot.header.savedSettings;
     const record = teamRegistryRecordSchema.parse({
       contextId: request.contextId,
       teamId,
       teamName: request.teamName,
+      ...(projectContextMode === undefined ? {} : { projectContextMode }),
       ...(displayName === undefined ? {} : { displayName }),
       ...(description === undefined ? {} : { description }),
       ...(color === undefined ? {} : { color }),

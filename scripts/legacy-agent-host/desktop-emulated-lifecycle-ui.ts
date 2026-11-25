@@ -8,6 +8,7 @@ import { observeDesktopEmulatedRuntimeCleanup, readDesktopEmulatedRuntimeEffects
 import { lifecycleRows, readEmulatedClaudeCheckpoint, readEmulatedLifecycleProduct, readEmulatedLifecycleSessions } from './desktop-emulated-lifecycle-records.ts';
 import { json, jsonDigest, record, rows } from './desktop-resume-records.ts';
 import { createDesktopUiControls, desktopJsLiteral as literal } from './desktop-ui-controls.ts';
+import { createDesktopUpdateNoticePreparation } from './desktop-update-notice.ts';
 import type { EmulatedLifecycleFixture, EmulatedLifecycleRow as Row } from './desktop-emulated-lifecycle-records.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
 
@@ -16,6 +17,7 @@ export async function runDesktopEmulatedLifecycleUi(initialCdp: UiCdpPort, optio
   fixture: EmulatedLifecycleFixture; evidence: Row; assertOwnedRenderer(): void;
   restartSameProfile(): Promise<UiCdpPort>;
   originalStopOnly?: true;
+  prepareUpdateNotice?: true;
 }) {
   const { fixture, evidence } = options;
   assert.equal(fixture.emulatedRuntime.provider, 'claude'); assert.equal(fixture.emulatedRuntime.variant, 'lifecycle');
@@ -29,7 +31,14 @@ export async function runDesktopEmulatedLifecycleUi(initialCdp: UiCdpPort, optio
     proof.excluded = ['vendor inference/authentication', 'native provider qualification', 'cold checkpoint Resume', 'active/queued Quit'];
     evidence.emulatedLaunchStopUiProof = proof;
   } else evidence.emulatedLifecycleUiProof = proof;
-  const controls = () => createDesktopUiControls(cdp, { assertOwnedRenderer: options.assertOwnedRenderer, step: value => steps.push(value) });
+  if (options.prepareUpdateNotice)
+    assert.equal(options.originalStopOnly, true, 'Update notice preparation belongs to the original packaged flow');
+  const controlOptions = { assertOwnedRenderer: options.assertOwnedRenderer, step: (value: Row) => steps.push(value) };
+  const prepareUpdateNotice = options.prepareUpdateNotice
+    ? createDesktopUpdateNoticePreparation(initialCdp, controlOptions) : undefined;
+  const controls = () => createDesktopUiControls(cdp, {
+    ...controlOptions, prepareBlockedTarget: prepareUpdateNotice,
+  });
   let ui = controls();
   const effects = () => readDesktopEmulatedRuntimeEffects(fixture);
   const owner = join(fixture.root, 'hoststore/teams/test-desktop-backend/.host-owner');

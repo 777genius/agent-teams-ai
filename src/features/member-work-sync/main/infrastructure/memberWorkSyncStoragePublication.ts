@@ -6,6 +6,7 @@ import { MemberWorkSyncSafetyJsonReadError } from './memberWorkSyncSafetyJson';
 import { recordsToSnapshot } from './memberWorkSyncSqliteMappers';
 
 import type { MemberWorkSyncStoreSnapshot } from './JsonMemberWorkSyncStore';
+import type { StaleIncarnationHealInput } from './memberWorkSyncStaleIncarnationHeal';
 import type { MemberWorkSyncStorePaths } from './MemberWorkSyncStorePaths';
 import type { AdmittedLegacySourceWrite } from '@agent-teams/legacy-agent-host/lifecycle';
 import type { MemberWorkSyncTeamSnapshotRecords } from '@features/internal-storage/contracts/internalStorageContracts';
@@ -27,6 +28,7 @@ export interface BackendSelectingMemberWorkSyncStoreOptions {
   gateway: MemberWorkSyncStorageGateway;
   paths: MemberWorkSyncStorePaths;
   fallbackRequiresReplica: boolean;
+  readTeamRootStats?: StaleIncarnationHealInput['readTeamRootStats'];
   logger?: { warn(message: string, metadata?: Record<string, unknown>): void };
 }
 

@@ -255,7 +255,7 @@ async function launch(): Promise<Cdp> {
       HOME: testHome,
       XDG_DATA_HOME: xdgDataRoot,
       XDG_CONFIG_HOME: xdgConfigRoot,
-      CLAUDE_TEAM_OPENCODE_MCP_HTTP: '0',
+      AGENT_TEAMS_MCP_HTTP: '0',
       NODE_BINARY: process.execPath,
       CLAUDE_DEV_RUNTIME_CACHE_ROOT: path.join(repo, '.test-tmp-dev-mcp/runtime-cache'),
     },

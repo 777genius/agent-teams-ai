@@ -3,13 +3,14 @@ import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
 import { assertScheduledTeamTarget } from './scheduledTeamTarget';
 import { SmartScheduleDispatcher } from './SmartScheduleDispatcher';
 
+import type { ScheduleFolderChange } from './scheduleTarget';
 import type { SmartScheduleOutcome, SmartScheduleRuntimePort } from './SmartScheduleDispatcher';
 import type { Schedule, ScheduleRun } from '@shared/types';
 
 type ScheduleAdmission = Pick<Schedule, 'teamName' | 'hostTarget' | 'executionMode' | 'taskFirst' | 'launchConfig'> & Partial<Pick<Schedule, 'id'>>;
 export interface ScheduleDispatcher {
   readonly supportsHost?: boolean;
-  assertCanSchedule(schedule: ScheduleAdmission): Promise<void>;
+  assertCanSchedule(schedule: ScheduleAdmission, change?: ScheduleFolderChange): Promise<void>;
   dispatch(schedule: Schedule, runId: string, isCancelled: () => boolean): Promise<SmartScheduleOutcome>;
   cancel?(runId: string): Promise<void>;
   cancelAll?(): Promise<void>;
@@ -19,6 +20,7 @@ export interface ScheduleDispatcher {
 export interface HostScheduleRuntimeFactory {
   create(options: {
     schedule: ScheduleAdmission;
+    folderChange?: ScheduleFolderChange;
     runId?: string;
     isCancelled?(): boolean;
     getPreviousRuns(scheduleId: string, runId: string): Promise<ScheduleRun[]>;
@@ -37,10 +39,10 @@ export class SelectedScheduleDispatcher implements ScheduleDispatcher {
     private readonly host?: HostScheduleRuntimeFactory
   ) { this.supportsHost = Boolean(host); }
 
-  async assertCanSchedule(schedule: ScheduleAdmission): Promise<void> {
+  async assertCanSchedule(schedule: ScheduleAdmission, change?: ScheduleFolderChange): Promise<void> {
     assertScheduledTeamTarget(schedule, this.supportsHost);
     if (!isHostTeamSelectionKey(schedule.teamName)) return this.legacy.assertCanSchedule(schedule);
-    const runtime = await this.host!.create({ schedule, getPreviousRuns: this.getPreviousRuns });
+    const runtime = await this.host!.create({ schedule, folderChange: change, getPreviousRuns: this.getPreviousRuns });
     const saved = await runtime.getSavedRequest(schedule.teamName);
     if (!saved || !(await runtime.hasLaunchConfig(schedule.teamName)))
       throw new Error('Finish team setup before scheduling');

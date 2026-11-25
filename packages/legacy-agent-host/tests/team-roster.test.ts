@@ -64,6 +64,43 @@ function fixture(t: TestContext, edit?: (options: FilesystemTeamOwnerOptions) =>
     state: () => store.read<OwnerState>('state.json')!,
   };
 }
+
+test('live authored settings retain original runtime custody, member IDs and captured successor provenance', t => {
+  const f = fixture(t, options => {
+    options.savedSettings = { cwd: '/TEST/project', providerId: 'anthropic', model: 'TEST-model', prompt: 'TEST original' };
+    options.members[1]!.delivery = { ...options.binding, runId: 'TEST-run', memberId: 'alice-id', generation: '1' };
+    options.assertRosterEditable = () => { throw new TeamOwnerError('hold'); };
+  });
+  const before = f.state(), source = f.human.readRoster();
+  const input = { ...f.request('TEST-authored', [{ name: 'alice', role: 'Writer', workflow: 'TEST-workflow' }, { name: 'bob' }]),
+    savedSettings: { ...source.savedSettings!, language: 'ru', prompt: 'TEST authored next run' } };
+  const receipt = f.owner.nativeRoster.replaceAuthored('human', input)!;
+  assert.ok(receipt); assert.deepEqual(f.owner.nativeRoster.replaceAuthored('human', input), receipt);
+  const after = f.state();
+  assert.deepEqual(after.grants, before.grants);
+  assert.deepEqual(after.members[1]!.delivery, before.members[1]!.delivery);
+  assert.equal(after.members[1]!.memberId, before.members[1]!.memberId);
+  assert.equal(f.owner.nativeRoster.capturedMemberCurrent('human', source.revision, before.members[1]!, before.savedSettings), true);
+  assert.deepEqual(f.owner.nativeRoster.readExpectation('human', input.commandId), { expectedRevision: source.revision, revision: receipt.revision });
+  assert.equal(f.owner.nativeRoster.replaceAuthored('human', { ...f.request('TEST-runtime-change'),
+    savedSettings: { ...source.savedSettings!, model: 'TEST-different-model' } }), undefined);
+  assert.throws(() => f.human.replaceRoster({ ...f.request('TEST-runtime-change'),
+    savedSettings: { ...source.savedSettings!, model: 'TEST-different-model' } }), { code: 'hold' });
+});
+
+test('authored no-op retains the original settings receipt and corrupted authored provenance fails closed', t => {
+  const f = fixture(t), request = f.request('TEST-no-changes');
+  const receipt = f.owner.nativeRoster.replaceAuthored('human', request)!;
+  assert.equal(receipt.revision, request.expectedRevision);
+  assert.deepEqual(f.human.lookupRoster(request.commandId), receipt);
+  const change = f.request('TEST-authored', [{ name: 'alice', role: 'Writer' }, { name: 'bob' }]);
+  f.owner.nativeRoster.replaceAuthored('human', change);
+  f.store.fenced(() => {
+    const state = f.state(), edge = state.rosterCommands!.find(row => row.commandId === change.commandId)!.authored!;
+    edge.after[1]!.settings!.model = 'TEST-forged-native-model'; f.store.write('state.json', state);
+  });
+  assert.throws(() => f.human.readRoster(), { code: 'hold' });
+});
 const code = (expected: string) => (error: unknown) =>
   error instanceof TeamOwnerError && error.code === expected;
 

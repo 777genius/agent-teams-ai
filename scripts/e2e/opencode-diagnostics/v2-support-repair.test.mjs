@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createHash, randomUUID } from 'node:crypto';
-import { link, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
+import { link, mkdir, mkdtemp, open, readFile, realpath, rm, symlink, truncate, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { assertV2SupportWarmReuse, prepareV2SupportRepair, v2SupportSnapshot, verifyV2SupportRepair } from './v2-support-repair.mjs';
+
+import { MAX_OPENCODE_BINARY_BYTES } from '../../../src/features/opencode-runtime-installer/main/infrastructure/packageExtraction.ts';
 
 const sha = (bytes) => createHash('sha256').update(bytes).digest('hex');
 const helper = 'local-cli/opencodeV2RunOwner.js';
@@ -206,5 +208,28 @@ test('support proof rejects escaping receipt instances and linked profile ancest
           userData: path.join(linkedRoot, 'user-data') }), /root alias/);
       } finally { await rm(linkedRoot); }
     }
+  } finally { await rm(f.root, { recursive: true, force: true }); }
+});
+
+// The pinned Windows native 2.x executable exceeds the distinct support-file cap.
+test('native proof keeps the installer bound and hashes every byte of the larger pinned layout', async () => {
+  const f = await fixture('2.2.7');
+  try {
+    const pinnedBytes = 278_383_496;
+    await truncate(f.nativeFile, pinnedBytes);
+    const cold = await v2SupportSnapshot(f.data, 'selected');
+    assert.equal(cold.native.binaryPath, f.nativeFile);
+    assertV2SupportWarmReuse(cold, await v2SupportSnapshot(f.data, 'selected'));
+    const held = await open(f.nativeFile, 'r+');
+    try { await held.write(Buffer.from([1]), 0, 1, pinnedBytes - 1); }
+    finally { await held.close(); }
+    const changed = await v2SupportSnapshot(f.data, 'selected');
+    assert.notEqual(changed.native.sha256, cold.native.sha256);
+    assert.throws(() => assertV2SupportWarmReuse(cold, changed), /native selection or bytes/);
+    await truncate(f.nativeFile, MAX_OPENCODE_BINARY_BYTES + 1);
+    await assert.rejects(v2SupportSnapshot(f.data, 'selected'));
+    await truncate(f.nativeFile, pinnedBytes);
+    await truncate(path.join(f.original, helper), 256 * 1024 ** 2 + 1);
+    await assert.rejects(v2SupportSnapshot(f.data, 'selected'));
   } finally { await rm(f.root, { recursive: true, force: true }); }
 });

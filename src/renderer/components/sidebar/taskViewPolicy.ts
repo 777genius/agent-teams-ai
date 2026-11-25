@@ -3,7 +3,7 @@ import { normalizePath } from '@renderer/utils/pathNormalize';
 import { getTaskUnreadCount, type TaskFiltersState, taskMatchesStatus } from './taskFiltersState';
 
 import type { useReadStateSnapshot } from './taskFiltersState';
-import type { GlobalTask } from '@shared/types';
+import type { GlobalTask, TeamSummary } from '@shared/types';
 
 export const TASK_SORT_MODES = ['time', 'project', 'team', 'unread'] as const;
 export type TaskSortMode = (typeof TASK_SORT_MODES)[number];
@@ -152,6 +152,7 @@ export function filterGlobalTasks(
   tasks: readonly GlobalTask[],
   policy: Omit<TaskViewPolicy, 'sortMode'> & {
     getEffectiveSubject?: TaskEffectiveSubjectAccessor;
+    teamCatalog?: readonly TeamSummary[];
   },
   readState: ReturnType<typeof useReadStateSnapshot>,
   isArchived: (task: GlobalTask) => boolean = () => false
@@ -163,7 +164,13 @@ export function filterGlobalTasks(
       : taskMatchesStatus(task, policy.filters.statusIds)
   );
   if (policy.filters.teamName) {
-    visible = visible.filter((task) => task.teamName === policy.filters.teamName);
+    const selected = policy.filters.teamName;
+    const logical = policy.teamCatalog?.find((team) => team.teamName === selected);
+    const matchingPhysicalNames = new Set([
+      selected,
+      ...(logical?.projectHistoryContexts ?? []).map((context) => context.executionTeamName),
+    ]);
+    visible = visible.filter((task) => matchingPhysicalNames.has(task.teamName));
   }
   if (policy.filters.readFilter === 'unread') {
     visible = visible.filter(

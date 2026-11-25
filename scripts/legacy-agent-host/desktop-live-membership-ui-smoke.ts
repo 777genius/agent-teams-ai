@@ -21,6 +21,7 @@ import { mixedDesktopTeamName, readMixedLiveMembershipIdentity } from './desktop
 import type { DesktopLiveMemberSelection, DesktopMixedModels } from './desktop-mixed-native-fixture.ts';
 import { readDesktopFiniteMembershipPeers, desktopFiniteMembershipProcesses } from './desktop-live-membership-controlled.ts';
 import type { DesktopFiniteMembership } from './desktop-live-membership-controlled.ts';
+import { readDesktopLiveMembershipPayload } from './desktop-live-membership-selection.ts';
 import { assertDesktopMembershipCensus, captureDesktopMembershipCensus, captureDesktopMembershipRuntimes } from './desktop-live-membership-census.ts';
 import type { DesktopMembershipCensus, DesktopMembershipRuntimeSelection } from './desktop-live-membership-census.ts';
 import { createDesktopLinuxMetadataBirthReader, createDesktopMetadataBirthCensus } from './desktop-metadata-birth-census.ts';
@@ -471,7 +472,9 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
       assert.equal(probe.readinessScope.teamBindingDigest, runtimeDigest(state.binding));
       assert.equal(probe.readinessScope.sourceRevision, view.captureDigest);
       assert.equal(probe.readinessScope.actionDigest, runtimeDigest({ commandId: target.commandId, context }));
-      assert.equal(probe.readinessScope.selectionDigest, runtimeDigest({ payload: decision.input, capture: view }));
+      const originalPayload = readDesktopLiveMembershipPayload(target.commandId,
+        { input: decision.input, requestDigest: decision.requestDigest, capture: view });
+      assert.equal(probe.readinessScope.selectionDigest, runtimeDigest({ payload: originalPayload, capture: view }));
       assert.equal(probe.readinessScope.rosterRevision, record(decision.input).expectedRevision);
       assert.equal(consumer.cutoff, reference.expiresAt);
       assert.ok(reference.expiresAt <= probe.readinessScope.cutoff);

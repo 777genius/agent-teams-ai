@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { createTeamRegistryPayloadSchema, teamRegistryReceiptSchema } from './contracts.js';
-import type { TeamRegistryReceipt } from './contracts.js';
+import { createTeamRegistryPayloadSchema, teamRegistryReceiptSchema, teamRegistryRecordSchema } from './contracts.js';
+import type { TeamRegistryReceipt, TeamRegistryRecord } from './contracts.js';
 import type { TeamLaunchSummary } from '../team-launch/contracts.js';
 
 const id = z
@@ -48,6 +48,7 @@ export type CreateTeamLaunchPreparationSnapshot = z.infer<
 >;
 export interface CreateTeamLaunchSubmitResult {
   creation: TeamRegistryReceipt;
+  execution?: TeamRegistryRecord | undefined;
   launch: TeamLaunchSummary;
   /** The Team and capture exist; this does not claim that a native launch succeeded. */
   partialCreated?: true | undefined;
@@ -120,11 +121,23 @@ const launchSummarySchema = z
 export const createTeamLaunchSubmitResultSchema: z.ZodType<CreateTeamLaunchSubmitResult> = z
   .object({
     creation: teamRegistryReceiptSchema,
+    execution: teamRegistryRecordSchema.optional(),
     launch: launchSummarySchema,
     partialCreated: z.literal(true).optional(),
   })
   .strict()
   .superRefine((value, context) => {
+    const execution = value.execution, logical = value.creation.record;
+    if (execution && (logical.projectContextMode !== 'per_project' || logical.projectContext ||
+        execution.projectContext?.logicalTeamId !== logical.teamId ||
+        execution.projectContext?.logicalHandleId !== logical.binding.handleId ||
+        execution.contextId !== logical.contextId || execution.projectContextMode === 'per_project' ||
+        execution.binding.scope.projectId !== logical.binding.scope.projectId ||
+        execution.binding.scope.workspaceId !== logical.binding.scope.workspaceId ||
+        value.launch.members.some(row => row.binding && row.binding.teamId !== execution.teamId)))
+      context.addIssue({ code: 'custom', message: 'Creation execution must be an original project history' });
+    if (!execution && logical.projectContextMode === 'per_project')
+      context.addIssue({ code: 'custom', message: 'Per-project creation requires its exact execution history' });
     if (value.partialCreated && (value.creation.phase !== 'published' ||
         value.launch.admission || value.launch.startedAtMs !== null ||
         value.launch.members.some(member => member.attempt.claimed)))

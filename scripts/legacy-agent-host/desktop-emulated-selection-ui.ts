@@ -13,6 +13,7 @@ import { readDesktopEmulatedCodexInstallerSettingsUi, runDesktopEmulatedCodexIns
 import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
 import { json, jsonDigest, record, rows } from './desktop-resume-records.ts';
 import { createDesktopUiControls, desktopJsLiteral as literal } from './desktop-ui-controls.ts';
+import { captureDesktopProjectOracle } from './desktop-created-project-selection.ts';
 import type { prepareDesktopEmulatedRuntimeFixture } from './desktop-emulated-runtime-fixture.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
 
@@ -26,6 +27,7 @@ export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort & { evaluate(
   assertOwnedRenderer(): void;
 }) {
   const { fixture } = options, steps: Row[] = [], observations: Row[] = [];
+  const projectOracle = await captureDesktopProjectOracle(cdp, fixture, join(fixture.root, 'workspace'));
   assert.equal(fixture.emulatedRuntime.provider, 'codex');
   assert.ok(fixture.emulatedRuntime.variant === 'selection' || fixture.emulatedRuntime.variant === 'installer');
   const installer = fixture.emulatedRuntime.installer;
@@ -59,9 +61,9 @@ export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort & { evaluate(
     await cdp.send('Input.insertText', { text: value });
     await ui.waitRead(`document.querySelector(${literal(selector)})?.value===${literal(value)}`, 'exact original input');
   };
-  const team = (name: string, handleId: string, model: string, effort: 'low' | 'high') => {
+  const team = (name: string, handleId: string, model: string, effort: 'low' | 'high', projectDefinition = false) => {
     const root = join(fixture.root, 'hoststore/teams', name);
-    return { name, handleId, model, effort, root, owner: () => json(join(root, '.host-owner/state.json')),
+    return { name, handleId, model, effort, root, projectDefinition, owner: () => json(join(root, '.host-owner/state.json')),
       commands: () => rows(join(root, '.host-owner/commands')) };
   };
   type Team = ReturnType<typeof team>;
@@ -96,6 +98,15 @@ export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort & { evaluate(
     }));
     if (settings.expanded !== 'true') await ui.click(`[role="dialog"] button[aria-controls=${literal(settings.id)}]`, 'expand original saved launch settings');
     const lead = '[role="dialog"] [data-role="lead-row"]';
+    if (selected.projectDefinition) {
+      assert.equal(chooseLow, false, 'a project Launch cannot edit the logical definition');
+      await ui.waitRead(`(()=>{const rows=[...document.querySelectorAll('[role="dialog"] button[aria-controls]')]
+        .filter(e=>e.getAttribute('aria-controls')===${literal(settings.id)});
+        return rows.length===1&&rows[0].textContent.includes('Provider: Codex')&&
+          rows[0].textContent.includes(${literal('Model: ' + selected.model)})&&
+          rows[0].textContent.includes(${literal('Effort: ' + selected.effort)})&&
+          !document.querySelector('${lead} #lead-effort')})()`, 'authored model and effort hydrate the original read-only project Launch');
+    } else {
     // Launch shares the expandable lead row with Create. #dialog-effort belongs
     // to schedule mode; opening the original lead row does not change its choices.
     if (!(await cdp.evaluate(`Boolean(document.querySelector('${lead} #lead-effort'))`))) {
@@ -108,6 +119,7 @@ export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort & { evaluate(
       await ui.click(`${lead} div:has(> #lead-effort) > button`, 'select original Low effort', 'Low');
     }
     await ui.waitRead(`document.querySelector('${lead} #lead-effort')?.textContent.trim()===${literal(selected.effort === 'low' ? 'Low' : 'High')}`, 'saved effort hydrates original Launch');
+    }
     await fill('[role="dialog"] #dialog-prompt', 'TEST_UI_BOOT');
     assert.equal(await cdp.evaluate(`document.querySelector('[role="dialog"] #dialog-skip-permissions')?.getAttribute('data-state')`), 'unchecked');
     await ui.scrollTo('[role="dialog"] button', 'original Launch team', 'Launch team');
@@ -118,9 +130,16 @@ export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort & { evaluate(
   const launch = async (selected: Team) => {
     await ui.click('[role="dialog"] button', 'launch original selection once', 'Launch team');
     await ui.waitRead(`!document.querySelector('[role="dialog"] #dialog-prompt')`, 'original Launch closes', 60_000);
-    const owner = await poll(selected.owner, value => array(value.runtimeCaptures ?? []).length === 1, 'one original Team launch capture');
+    const projectSelection = selected.projectDefinition ? await projectOracle.select(selected.name) : undefined;
+    const execution = projectSelection ? team(projectSelection.execution.teamName, projectSelection.execution.binding.handleId,
+      selected.model, selected.effort) : selected;
+    if (projectSelection) {
+      assert.deepEqual((await selected.owner()).runtimeCaptures ?? [], [], 'logical definition has no native capture');
+      assert.equal(record((await execution.owner()).savedSettings).projectContextMode, 'shared');
+    }
+    const owner = await poll(execution.owner, value => array(value.runtimeCaptures ?? []).length === 1, 'one original Team launch capture');
     const capture = array(owner.runtimeCaptures)[0]!;
-    const launched = await json(join(selected.root, '.host-owner/launches', jsonDigest(capture.launchId) + '.json'));
+    const launched = await json(join(execution.root, '.host-owner/launches', jsonDigest(capture.launchId) + '.json'));
     const definition = structuredClone(record(launched.definition)); assert.equal(definition.launchId, capture.launchId);
     const source = record(definition.capture), settings = record(source.savedSettings), members = array(source.members);
     assert.equal(members.length, 1); assert.equal(members[0]!.role, 'lead');
@@ -139,7 +158,8 @@ export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort & { evaluate(
     assert.equal(native.length, 1); const thread = native[0]!;
     assert.equal(thread.effort, selected.effort); assert.equal(thread.role, 'runtime');
     assert.equal((await effects()).filter(row => row.pid === thread.pid && row.event === 'input' && row.marker === 'TEST_UI_BOOT').length, 1);
-    return { ...selected, capture, definition, session, initial: structuredClone(initial), thread,
+    await projectSelection?.assertRun(capture.launchId);
+    return { ...selected, execution, projectSelection, capture, definition, session, initial: structuredClone(initial), thread,
       memberName: String(members[0]!.name) };
   };
   type Live = Awaited<ReturnType<typeof launch>>;
@@ -158,8 +178,9 @@ export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort & { evaluate(
     open: controls => openChat(live, controls),
   });
   const assertSameLive = async (live: Live, phase: string, originalInputs: boolean) => {
-    assert.deepEqual(array((await live.owner()).runtimeCaptures), [live.capture]);
-    const stored = await json(join(live.root, '.host-owner/launches', jsonDigest(live.capture.launchId) + '.json'));
+    await live.projectSelection?.assertCurrent();
+    assert.deepEqual(array((await live.execution.owner()).runtimeCaptures), [live.capture]);
+    const stored = await json(join(live.execution.root, '.host-owner/launches', jsonDigest(live.capture.launchId) + '.json'));
     assert.deepEqual(record(stored.definition), live.definition);
     const current = await live.session();
     assert.deepEqual(current.binding, live.initial.binding); assert.deepEqual(current.config, live.initial.config);
@@ -182,7 +203,7 @@ export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort & { evaluate(
       const table = processTable();
       if (table.some(row => row.pid === live.thread.pid)) return false;
       if (!observeStoppedUi) return true;
-      const key = hostTeamSelectionKey(live.handleId), runId = hostTeamRunId(live.handleId,
+      const key = hostTeamSelectionKey(live.handleId), runId = hostTeamRunId(live.execution.handleId,
         live.definition.launchId as string, live.definition.rosterRevision as string);
       options.assertOwnedRenderer();
       const remaining = deadline - Date.now();
@@ -275,10 +296,11 @@ export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort & { evaluate(
   const registry = await rows(join(fixture.root, 'hoststore/.host-team-registry/records'));
   assert.equal(registry.length, 1); assert.equal(registry[0]!.phase, 'published');
   const created = record(registry[0]!.record); assert.equal(created.teamName, bName);
-  const b = team(bName, String(record(created.binding).handleId), 'TEST-model-next', 'high');
+  const b = team(bName, String(record(created.binding).handleId), 'TEST-model-next', 'high', true);
   const bSaved = await b.owner(), saved = record(bSaved.savedSettings);
   assert.equal(saved.providerId, 'codex'); assert.equal(saved.model, b.model); assert.equal(saved.effort, b.effort);
   assert.equal(saved.skipPermissions, false);
+  assert.equal(saved.projectContextMode, 'per_project');
   assert.equal(saved.cwd, join(fixture.root, 'workspace')); assert.deepEqual(bSaved.runtimeCaptures ?? [], []);
   await assertSameLive(liveA, 'after-save-only', true); proof.creation = registry[0]; proof.savedSelection = saved;
 
@@ -289,6 +311,9 @@ export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort & { evaluate(
   assert.deepEqual(await b.owner(), bSaved); await assertSameLive(liveA, 'after-reload-before-next-launch', true);
   proof.reloadedScreenshot = await screenshot('reloaded'); proof.selectionRetainedAfterReload = true;
   const liveB = await launch(b); assert.notEqual(liveB.thread.pid, liveA.thread.pid); assert.notEqual(liveB.thread.threadId, liveA.thread.threadId);
+  assert.deepEqual(record((await b.owner()).savedSettings), saved, 'one-run prompt and physical launch do not replace the authored definition');
+  assert.equal((await rows(join(fixture.root, 'hoststore/.host-team-registry/records'))).length, 2,
+    'one original logical Create and one exact project execution');
   if (installer) {
     const installed = await readDesktopEmulatedCodexInstallation(installer); assert.ok(installed);
     const nextInvocation = (await readDesktopEmulatedCodexInstallerLog(installer.invocationLog)).filter(row => row.pid === liveB.thread.pid && row.kind === 'app-server');

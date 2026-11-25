@@ -4,6 +4,11 @@ import { createRoot } from 'react-dom/client';
 import { MembersEditorSection } from '@renderer/components/team/members/MembersEditorSection';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('@renderer/components/team/definitionEdit/ProjectContextRecoveryNotice', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@renderer/components/team/definitionEdit/ProjectContextRecoveryNotice')>(),
+  ProjectContextRecoveryNotice: () => React.createElement('div', { 'data-testid': 'project-recovery' }, 'Open blocking project'),
+}));
+
 vi.mock('@renderer/api', () => ({
   api: {
     gatewayProvider: {
@@ -568,6 +573,98 @@ describe('EditTeamDialog', () => {
     await act(async () => {
       root.unmount();
       await Promise.resolve();
+    });
+  });
+
+  describe('lead instructions of a team definition', () => {
+    async function mountWithPrompt(currentLeadPrompt: string | undefined) {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      vi.mocked(api.teams.updateConfig).mockResolvedValue({} as any);
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      await act(async () => {
+        root.render(
+          React.createElement(EditTeamDialog, {
+            open: true,
+            teamName: 'builders',
+            currentName: 'Builders',
+            currentDescription: 'desc',
+            currentColor: 'blue',
+            ...(currentLeadPrompt === undefined ? {} : { currentLeadPrompt }),
+            currentMembers: [{ name: 'bob', role: 'Developer' }] as any,
+            leadMember: { name: 'team-lead', role: 'Team Lead' } as any,
+            projectPath: '/tmp/project',
+            onClose: vi.fn(),
+            onChangeLeadRuntime: vi.fn(),
+            onSaved: vi.fn(),
+          })
+        );
+        await Promise.resolve();
+      });
+      return { host, root };
+    }
+
+    async function save(host: HTMLElement) {
+      const saveButton = Array.from(host.querySelectorAll('button')).find(
+        (button) => button.textContent === 'Save'
+      ) as HTMLButtonElement;
+      await act(async () => {
+        saveButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        await Promise.resolve();
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+    }
+
+    it('hides the field for a team whose definition holds no lead instructions', async () => {
+      const { host, root } = await mountWithPrompt(undefined);
+      expect(host.querySelector('#edit-team-lead-prompt')).toBeNull();
+      await act(async () => {
+        root.unmount();
+        await Promise.resolve();
+      });
+    });
+
+    it('shows the saved instructions and writes a changed prompt with the other settings', async () => {
+      const { host, root } = await mountWithPrompt('Be brief');
+      const field = host.querySelector('#edit-team-lead-prompt') as HTMLTextAreaElement;
+      expect(field.value).toBe('Be brief');
+      await act(async () => {
+        const setValue = Object.getOwnPropertyDescriptor(
+          HTMLTextAreaElement.prototype,
+          'value'
+        )?.set;
+        setValue?.call(field, '  Be brief and cite sources  ');
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+        await Promise.resolve();
+      });
+      await save(host);
+      expect(api.teams.updateConfig).toHaveBeenCalledWith('builders', {
+        name: 'Builders',
+        description: 'desc',
+        color: 'blue',
+        prompt: 'Be brief and cite sources',
+      });
+      await act(async () => {
+        root.unmount();
+        await Promise.resolve();
+      });
+    });
+
+    it('does not send an unchanged prompt, so a prompt edited elsewhere is never overwritten', async () => {
+      const { host, root } = await mountWithPrompt('Be brief');
+      await save(host);
+      expect(api.teams.updateConfig).toHaveBeenCalledWith('builders', {
+        name: 'Builders',
+        description: 'desc',
+        color: 'blue',
+      });
+      await act(async () => {
+        root.unmount();
+        await Promise.resolve();
+      });
     });
   });
 
@@ -1160,10 +1257,10 @@ describe('EditTeamDialog', () => {
     });
   });
 
-  it('surfaces partial-save feedback when team settings save but member changes fail', async () => {
+  it.each([false, true])('surfaces a partial roster refusal with recovery only when required (%s)', async (projectRefusal) => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.mocked(api.teams.updateConfig).mockResolvedValue({} as any);
-    vi.mocked(api.teams.replaceMembers).mockRejectedValueOnce(new Error('disk write failed'));
+    vi.mocked(api.teams.replaceMembers).mockRejectedValueOnce(Object.assign(new Error('disk write failed'), projectRefusal ? { failure: { code: 'TEAM_PROJECT_CONTEXT_UNRECONCILED' } } : {}));
     const onSaved = vi.fn();
 
     const host = document.createElement('div');
@@ -1209,6 +1306,7 @@ describe('EditTeamDialog', () => {
       'Team settings were saved, but member changes failed: disk write failed'
     );
     expect(onSaved).toHaveBeenCalledTimes(1);
+    expect(Boolean(host.querySelector('[data-testid="project-recovery"]'))).toBe(projectRefusal);
 
     await act(async () => {
       root.unmount();

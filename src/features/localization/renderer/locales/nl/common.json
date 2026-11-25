@@ -952,5 +952,21 @@
       "unavailable": "News is available in the desktop app.",
       "state_unavailable": "Reading is available, but your progress cannot be saved right now. Automatic news is paused."
     }
+  },
+  "attention": {
+    "title": "Vereist uw aandacht",
+    "tab": "Aandacht",
+    "viewAll": "Alles bekijken",
+    "refresh": "Status vernieuwen",
+    "loading": "Laden…",
+    "loadFailed": "Aandachtsstatus kan niet worden geladen",
+    "retry": "Opnieuw proberen",
+    "partial": "Sommige teams konden niet worden geladen. Aantallen zijn mogelijk onvolledig.",
+    "nothing": "Taken die op je beslissing wachten en ongelezen teamchats verschijnen hier.",
+    "tasks": "Wacht op uw beslissing",
+    "chats": "Ongelezen chats",
+    "openTask": "Taak openen: {{subject}} in {{team}}",
+    "timeUnknown": "Tijd onbekend",
+    "teamAttention": "Aandacht"
   }
 }

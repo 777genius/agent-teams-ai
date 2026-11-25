@@ -1,13 +1,17 @@
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
 
+import { captureContextScopedRequestEpoch } from '@renderer/store/utils/contextScopedRequestEpoch';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
 import {
   getReadSetSnapshot,
+  getTeamMessageReadStorageKey,
   markBulkRead as markBulkReadStorage,
   markRead as markReadStorage,
   seedPersistedReadKeysOnce,
   subscribeTeamMessageReadStore,
 } from '@renderer/utils/teamMessageReadStorage';
+
+import { useTeamMessageReadContextScope } from './useTeamMessageReadContextScope';
 
 import type { InboxMessage } from '@shared/types';
 
@@ -18,46 +22,48 @@ export function useTeamMessagesRead(
   teamName: string,
   messages: readonly InboxMessage[] = EMPTY_MESSAGES,
   hydrationComplete = false,
-  storageScope?: string
+  contextId = 'local',
+  kind: 'direct' | 'group' = 'direct'
 ): {
   readSet: Set<string>;
+  ready: boolean;
   markRead: (messageKey: string) => void;
   markAllRead: (messageKeys: string[]) => void;
 } {
-  const storageTeam =
-    storageScope === undefined ? teamName : JSON.stringify(['group', storageScope, teamName]);
+  const { scope, epoch } = useTeamMessageReadContextScope(contextId);
+  const storageTeam = scope ? getTeamMessageReadStorageKey(teamName, scope, kind) : null;
   const subscribe = useCallback((onStoreChange: () => void) => {
     return subscribeTeamMessageReadStore(onStoreChange);
   }, []);
   const getSnapshot = useCallback(
-    () => (teamName ? getReadSetSnapshot(storageTeam) : EMPTY_READ_SET),
+    () => (teamName && storageTeam ? getReadSetSnapshot(storageTeam) : EMPTY_READ_SET),
     [storageTeam, teamName]
   );
   const readSet = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
   useEffect(() => {
-    if (!teamName || messages.length === 0) return;
+    if (!teamName || !storageTeam || messages.length === 0 || captureContextScopedRequestEpoch() !== epoch) return;
     seedPersistedReadKeysOnce(
       storageTeam,
       messages.filter((message) => message.read === true).map(toMessageKey),
       { finalize: hydrationComplete }
     );
-  }, [hydrationComplete, messages, storageTeam, teamName]);
+  }, [epoch, hydrationComplete, messages, storageTeam, teamName]);
 
   const markRead = useCallback(
     (messageKey: string) => {
-      if (!teamName) return;
+      if (!teamName || !storageTeam || captureContextScopedRequestEpoch() !== epoch) return;
       const existing = new Set(getReadSetSnapshot(storageTeam));
       if (existing.has(messageKey)) return;
       existing.add(messageKey);
       markReadStorage(storageTeam, messageKey, existing);
     },
-    [storageTeam, teamName]
+    [epoch, storageTeam, teamName]
   );
 
   const markAllRead = useCallback(
     (messageKeys: string[]) => {
-      if (!teamName || messageKeys.length === 0) return;
+      if (!teamName || !storageTeam || messageKeys.length === 0 || captureContextScopedRequestEpoch() !== epoch) return;
       const existing = new Set(getReadSetSnapshot(storageTeam));
       let changed = false;
       for (const key of messageKeys) {
@@ -69,15 +75,16 @@ export function useTeamMessagesRead(
       if (!changed) return;
       markBulkReadStorage(storageTeam, existing);
     },
-    [storageTeam, teamName]
+    [epoch, storageTeam, teamName]
   );
 
   return useMemo(
     () => ({
       readSet: teamName ? readSet : EMPTY_READ_SET,
+      ready: Boolean(storageTeam),
       markRead,
       markAllRead,
     }),
-    [markAllRead, markRead, readSet, teamName]
+    [markAllRead, markRead, readSet, storageTeam, teamName]
   );
 }

@@ -1,6 +1,6 @@
 import { gunzipSync } from 'zlib';
 
-const MAX_BINARY_BYTES = 350 * 1024 * 1024;
+export const MAX_OPENCODE_BINARY_BYTES = 350 * 1024 * 1024;
 const MAX_METADATA_BYTES = 64 * 1024;
 
 function tarString(buffer: Buffer, start: number, length: number): string {
@@ -16,7 +16,7 @@ export function extractOpenCodePackage(
   executableName: string,
   identity?: { packageName: string; version: string }
 ): { binary: Buffer; packageJson?: Buffer } {
-  const tar = gunzipSync(tarball, { maxOutputLength: MAX_BINARY_BYTES + 1024 * 1024 });
+  const tar = gunzipSync(tarball, { maxOutputLength: MAX_OPENCODE_BINARY_BYTES + 1024 * 1024 });
   const target = `package/bin/${executableName}`;
   let binary: Buffer | undefined;
   let packageJson: Buffer | undefined;
@@ -46,7 +46,7 @@ export function extractOpenCodePackage(
     if (!['', '0', '5'].includes(type))
       throw new Error('OpenCode package contains a non-regular entry');
     if (type !== '5' && fullName === target) {
-      if (binary || size <= 0 || size > MAX_BINARY_BYTES)
+      if (binary || size <= 0 || size > MAX_OPENCODE_BINARY_BYTES)
         throw new Error('OpenCode binary size or duplicate entry is invalid');
       binary = tar.subarray(start, end);
     }

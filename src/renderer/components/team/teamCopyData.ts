@@ -28,6 +28,15 @@ interface CopyableTeamMember {
   removedAt?: number | string | null;
 }
 
+export function generateUniqueName(sourceName: string, existingNames: string[]): string {
+  const base = sourceName.replace(/-\d+$/, '');
+  const existing = new Set(existingNames);
+  for (let i = 1; ; i++) {
+    const candidate = `${base}-${i}`;
+    if (!existing.has(candidate)) return candidate;
+  }
+}
+
 function normalizeCopyString(value: unknown): string | undefined {
   if (typeof value !== 'string') {
     return undefined;

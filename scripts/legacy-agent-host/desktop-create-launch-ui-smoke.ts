@@ -12,6 +12,7 @@ import {
 import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
 import { command, processTable } from './desktop-backend-observations.ts';
 import { readCreateDialogDiagnostics } from './desktop-create-diagnostics.ts';
+import { captureDesktopProjectOracle } from './desktop-created-project-selection.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
 import type { prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
 import type { startNativeTeamModel } from '../../packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts';
@@ -59,8 +60,8 @@ export async function runDesktopCreateUiSmoke(
     assert.ok(accepts(value), label);
     return value;
   };
+  const projectOracle = await captureDesktopProjectOracle(cdp, fixture, join(fixture.root, 'workspace'));
   await openOriginalCreateForm(cdp, ui, join(fixture.root, 'workspace'), 'test-created-native');
-  const teamRoot = join(fixture.root, 'hoststore/teams/test-created-native');
   assert.ok(
     !(await readdir(join(fixture.root, 'hoststore/teams'))).includes('test-created-native'),
     'opening Create never creates Team'
@@ -113,6 +114,11 @@ export async function runDesktopCreateUiSmoke(
     'original Create closes',
     90_000
   );
+  const selection = await projectOracle.select('test-created-native');
+  const teamRoot = selection.executionRoot;
+  const logical = await read(join(selection.logicalRoot, '.host-owner/state.json'));
+  assert.equal(record(logical.savedSettings).projectContextMode, 'per_project');
+  assert.deepEqual(logical.runtimeCaptures ?? [], [], 'logical definition never owns the native run');
   const state = await poll(
     () => read(join(teamRoot, '.host-owner/state.json')),
     (row) => Array.isArray(row.runtimeCaptures) && row.runtimeCaptures.length === 1,
@@ -120,6 +126,7 @@ export async function runDesktopCreateUiSmoke(
   );
   const capture = record((state.runtimeCaptures as unknown[])[0]);
   const saved = record(state.savedSettings);
+  assert.equal(saved.projectContextMode, 'shared');
   assert.equal(saved.model, 'claude-opus-4-6');
   assert.equal(saved.effort, 'medium');
   assert.equal(saved.prompt, 'NATIVE_TEAM_ONE');
@@ -157,9 +164,9 @@ export async function runDesktopCreateUiSmoke(
   assert.deepEqual(model.failures, []);
   assert.equal(await readFile(join(fixture.root, 'workspace/native-effect.txt'), 'utf8'), 'ONE\n');
   const tasks = await Promise.all(
-    (await readdir(join(fixture.root, 'hoststore/tasks/test-created-native')))
+    (await readdir(selection.taskRoot))
       .filter((name) => /^[A-Za-z0-9_-]+\.json$/.test(name))
-      .map((name) => read(join(fixture.root, 'hoststore/tasks/test-created-native', name)))
+      .map((name) => read(join(selection.taskRoot, name)))
   );
   assert.equal(tasks.length, 1);
   assert.equal(tasks[0]!.owner, 'team-lead');
@@ -169,6 +176,7 @@ export async function runDesktopCreateUiSmoke(
     `document.body.innerText.includes('REPLY_NATIVE_ONE')`,
     'created native reply visible'
   );
+  await selection.assertRun(capture.launchId);
   const shot = record(
     await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true })
   );
@@ -178,6 +186,7 @@ export async function runDesktopCreateUiSmoke(
     process.env.LEGACY_DESKTOP_NATIVE_MEMBER_CREATE === '1'
       ? await runDesktopCreateMemberUi(cdp, {
           root: fixture.root,
+          executionRoot: selection.executionRoot,
           launchId: capture.launchId,
           model,
           evidence: proof,
@@ -225,6 +234,8 @@ export async function runDesktopCreateUiSmoke(
     90_000
   );
   const final = await read(join(teamRoot, '.host-owner/state.json'));
+  await selection.assertCurrent();
+  assert.deepEqual((await read(join(selection.logicalRoot, '.host-owner/state.json'))).runtimeCaptures ?? [], []);
   assert.deepEqual(final.savedSettings, saved);
   assert.equal((final.runtimeCaptures as unknown[]).length, 1);
   assert.equal(model.observations.length, 8);
@@ -248,6 +259,8 @@ export async function runDesktopCreateUiSmoke(
   Object.assign(proof, {
     status: 'PASS',
     capture,
+    logical: selection.logical,
+    execution: selection.execution,
     savedSettings: saved,
     nativeSessionBeforeStop: before[0],
     nativeTask: tasks[0],

@@ -59,7 +59,11 @@ export const liveRosterPendingViewSchema = z.object({
 export type LiveRosterPendingView = z.infer<typeof liveRosterPendingViewSchema>;
 
 export const liveRosterResponseSchema = z.union([
-  z.object({ ok: z.literal(true), liveRosterCapture: liveRosterCaptureViewSchema }).strict(),
+  z.object({ ok: z.literal(true), liveRosterCapture: liveRosterCaptureViewSchema,
+    /** Host-issued projection of the original logical command; never accepted from a renderer. */
+    projectDefinition: z.object({ logicalCommandId: id, logicalHandleId: id, logicalTeamId: id,
+      logicalExpectedRevision: hash, logicalRequestDigest: hash, selectionDigest: hash }).strict().optional(),
+  }).strict(),
   z.object({ ok: z.literal(true), liveRosterPending: liveRosterPendingViewSchema }).strict(),
   z.object({ ok: z.literal(true), value: z.object({ commandId: id, revision: hash }).strict() }).strict(),
   z.object({

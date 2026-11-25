@@ -6,10 +6,23 @@ The format is based on Keep a Changelog and this project follows Semantic Versio
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking for HTTP and MCP clients:** `POST /api/teams` and MCP `team_create` now require `projectContextMode` (`shared` or `per_project`) and answer 400 with code `PROJECT_CONTEXT_MODE_REQUIRED` without it. Before, they always created a `shared` team. Migration: send `projectContextMode: "shared"` to keep the old behavior; `per_project` creates a team with separate history per project folder, which `team_launch` can launch and the MCP board tools can use with `projectPath`.
+- HTTP create and launch accept an empty `effort` or `fastMode` as "not set", like the app (they were refused with 400).
+
 ### Added
 
+- HTTP `POST /api/teams/:team/launch` and MCP `team_launch` launch a team with separate history per project in the project given by `cwd`, with the project-context launch of the app (reservation, launch gate, copy, launch settings). Like every HTTP launch, it does not mark the team as watched for the open app and does not take the backup identity fence the app takes for a draft.
+- MCP board tools (`task_*`, `message_send`, `review_*`, `kanban_*`, process, group chat, cross-team and work-sync tools; not the `runtime_*` bridge) work with a team that keeps a separate history per project: they take an optional `projectPath` and work on that project's history only. A refusal writes nothing and reaches the MCP client as a `UserError` whose text starts with the code, because MCP clients only see the text: `[PROJECT_REQUIRED]`, `[NO_PROJECT_HISTORY]`, `[PROJECT_LAUNCH_PENDING]` (a launch runs there), `[PROJECT_LAUNCH_INCOMPLETE]` (a launch there failed: launch again), `[PROJECT_MISMATCH]` (a project copy named with another project), `[UNRESOLVED]`, `[TEAM_METADATA_UNREADABLE]`; refusals of `cross_team_send` get their code the same way. A call without `projectPath` on any other team is unchanged. A call with `projectPath` always asks the app, also for an ordinary team: without a running app it is refused, a relative path answers 400, and a project copy named with a folder that is not its project answers `PROJECT_MISMATCH`. The app answers which project copy holds the board at `GET /api/teams/:team/board-target?projectPath=`.
 - GPT-5.6 Sol, Terra, and Luna fallback selection for Codex teams, dynamic future-model efforts, and in-app Codex CLI updates.
 - Traditional Chinese (Taiwan, `zh-TW`) app language with Taiwan terminology. Traditional Chinese system locales (zh-TW, zh-HK, zh-MO, zh-Hant) select it automatically, missing keys fall back to English instead of Simplified Chinese, and cron schedule descriptions use cronstrue's `zh_TW`.
+
+### Fixed
+
+- A cross-team message to a project whose first launch failed is refused with `PROJECT_LAUNCH_INCOMPLETE` instead of `PROJECT_LAUNCH_PENDING`, which asked to wait for a launch that no longer runs. A copy whose launch is still in flight (from its reservation until it was confirmed) or whose team runs is still reported as pending. A cancelled run may still retain runtime ownership while cleanup is incomplete; stop and cleanup must finish before another launch. OpenCode runtime delivery can only observe the launch tracker, not a separately running team.
+- Windows: direct-process teammates now spawn non-detached with the app's hidden console, reducing terminal-window flashes during Bash, git, and PowerShell tool calls. Native GUI validation and process-tree cleanup of tool subprocesses after app termination remain to be verified.
+- Windows: ccusage/tokscale token-usage importer child processes now request `windowsHide: true`; physical GUI verification of zero flashes remains pending.
 
 ## [1.2.0] - 2026-03-31
 

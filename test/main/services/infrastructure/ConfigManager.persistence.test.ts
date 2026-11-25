@@ -1,7 +1,6 @@
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ConfigManager } from '../../../../src/main/services/infrastructure/ConfigManager';
@@ -15,6 +14,45 @@ describe('ConfigManager persistence barrier', () => {
     if (dir) fs.rmSync(dir, { recursive: true, force: true });
     dir = null;
   });
+
+  it.each([
+    { previous: undefined, version: undefined },
+    { previous: false, version: undefined },
+    { previous: false, version: 0 },
+  ])(
+    'migrates legacy CDP preference $previous at version $version and preserves later opt-out',
+    async ({ previous, version }) => {
+      dir = fs.mkdtempSync(path.join(os.tmpdir(), 'config-cdp-default-'));
+      const file = path.join(dir, 'settings.json');
+      const fresh = new ConfigManager(file);
+      expect(fresh.getConfig().general.externalAgentCdpEnabled).toBe(true);
+
+      fs.writeFileSync(
+        file,
+        JSON.stringify({
+          general: {
+            theme: 'light',
+            externalAgentCdpEnabled: previous,
+            externalAgentCdpSettingsVersion: version,
+          },
+        })
+      );
+      const legacy = new ConfigManager(file);
+      expect(legacy.getConfig().general.externalAgentCdpEnabled).toBe(true);
+      await legacy.waitForPersistence();
+      const migrated = JSON.parse(fs.readFileSync(file, 'utf8')) as ReturnType<
+        ConfigManager['getConfig']
+      >;
+      expect(migrated.general.externalAgentCdpSettingsVersion).toBe(1);
+      expect(migrated.general.externalAgentCdpEnabled).toBe(true);
+
+      legacy.updateConfig('general', { externalAgentCdpEnabled: false });
+      await legacy.waitForPersistence();
+      const reopened = new ConfigManager(file);
+      expect(reopened.getConfig().general.externalAgentCdpEnabled).toBe(false);
+      await reopened.waitForPersistence();
+    }
+  );
 
   it('serializes rapid updates and waits until the final snapshot is on disk', async () => {
     dir = fs.mkdtempSync(path.join(os.tmpdir(), 'config-persistence-'));

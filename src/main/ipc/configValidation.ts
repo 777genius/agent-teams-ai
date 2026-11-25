@@ -4,6 +4,7 @@
  */
 
 import { isAppLocalePreference } from '@features/localization';
+import { NOTIFICATION_DESKTOP_ROUTABLE_EVENTS } from '@features/notification-channels/contracts';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import * as path from 'path';
 
@@ -192,6 +193,7 @@ function validateNotificationsSection(
   const allowedKeys: (keyof NotificationConfig)[] = [
     'enabled',
     'soundEnabled',
+    'desktopDisabledEvents',
     'includeSubagentErrors',
     'notifyOnLeadInbox',
     'notifyOnUserInbox',
@@ -229,75 +231,73 @@ function validateNotificationsSection(
 
     switch (key as keyof NotificationConfig) {
       case 'enabled':
-        if (typeof value !== 'boolean') {
+        if (typeof value !== 'boolean')
           return { valid: false, error: `notifications.${key} must be a boolean` };
-        }
         result.enabled = value;
         break;
       case 'soundEnabled':
-        if (typeof value !== 'boolean') {
+        if (typeof value !== 'boolean')
           return { valid: false, error: `notifications.${key} must be a boolean` };
-        }
         result.soundEnabled = value;
         break;
-      case 'includeSubagentErrors':
-        if (typeof value !== 'boolean') {
-          return { valid: false, error: `notifications.${key} must be a boolean` };
+      case 'desktopDisabledEvents':
+        if (
+          !isStringArray(value) ||
+          value.length > NOTIFICATION_DESKTOP_ROUTABLE_EVENTS.length ||
+          value.some((event) => !(NOTIFICATION_DESKTOP_ROUTABLE_EVENTS as readonly string[]).includes(event))
+        ) {
+          return { valid: false, error: 'notifications.desktopDisabledEvents contains unsupported events' };
         }
+        result.desktopDisabledEvents = [...new Set(value)] as NotificationConfig['desktopDisabledEvents'];
+        break;
+      case 'includeSubagentErrors':
+        if (typeof value !== 'boolean')
+          return { valid: false, error: `notifications.${key} must be a boolean` };
         result.includeSubagentErrors = value;
         break;
       case 'notifyOnLeadInbox':
-        if (typeof value !== 'boolean') {
+        if (typeof value !== 'boolean')
           return { valid: false, error: `notifications.${key} must be a boolean` };
-        }
         result.notifyOnLeadInbox = value;
         break;
       case 'notifyOnUserInbox':
-        if (typeof value !== 'boolean') {
+        if (typeof value !== 'boolean')
           return { valid: false, error: `notifications.${key} must be a boolean` };
-        }
         result.notifyOnUserInbox = value;
         break;
       case 'notifyOnClarifications':
-        if (typeof value !== 'boolean') {
+        if (typeof value !== 'boolean')
           return { valid: false, error: `notifications.${key} must be a boolean` };
-        }
         result.notifyOnClarifications = value;
         break;
       case 'notifyOnStatusChange':
-        if (typeof value !== 'boolean') {
+        if (typeof value !== 'boolean')
           return { valid: false, error: `notifications.${key} must be a boolean` };
-        }
         result.notifyOnStatusChange = value;
         break;
       case 'notifyOnTaskComments':
-        if (typeof value !== 'boolean') {
+        if (typeof value !== 'boolean')
           return { valid: false, error: `notifications.${key} must be a boolean` };
-        }
         result.notifyOnTaskComments = value;
         break;
       case 'notifyOnTaskCreated':
-        if (typeof value !== 'boolean') {
+        if (typeof value !== 'boolean')
           return { valid: false, error: `notifications.${key} must be a boolean` };
-        }
         result.notifyOnTaskCreated = value;
         break;
       case 'notifyOnAllTasksCompleted':
-        if (typeof value !== 'boolean') {
+        if (typeof value !== 'boolean')
           return { valid: false, error: `notifications.${key} must be a boolean` };
-        }
         result.notifyOnAllTasksCompleted = value;
         break;
       case 'notifyOnCrossTeamMessage':
-        if (typeof value !== 'boolean') {
+        if (typeof value !== 'boolean')
           return { valid: false, error: `notifications.${key} must be a boolean` };
-        }
         result.notifyOnCrossTeamMessage = value;
         break;
       case 'notifyOnTeamLaunched':
-        if (typeof value !== 'boolean') {
+        if (typeof value !== 'boolean')
           return { valid: false, error: `notifications.${key} must be a boolean` };
-        }
         result.notifyOnTeamLaunched = value;
         break;
       case 'notifyOnToolApproval':

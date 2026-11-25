@@ -12,7 +12,7 @@ export async function completeScheduleRun(
   exitCode: number | null,
   summary?: string,
   error?: string,
-  linkedTaskId?: string
+  link?: { taskId?: string; executionTeamName?: string }
 ): Promise<void> {
   const completedAt = new Date().toISOString();
   const durationMs = Date.now() - new Date(run.startedAt).getTime();
@@ -24,11 +24,12 @@ export async function completeScheduleRun(
     exitCode,
     summary: summary ?? run.summary,
     error: error ?? run.error,
-    ...(linkedTaskId ? { linkedTaskId } : {}),
+    ...(link?.taskId ? { linkedTaskId: link.taskId } : {}),
+    ...(link?.executionTeamName ? { executionTeamName: link.executionTeamName } : {}),
   };
   await repository.saveRun(updatedRun);
   const eventType = status === 'completed' || status === 'dispatched' || status === 'skipped'
     ? 'run-completed'
     : 'run-failed';
-  emit({ type: eventType, scheduleId: run.scheduleId, teamName: run.teamName, detail: error });
+  emit({ type: eventType, scheduleId: run.scheduleId, teamName: run.teamName, detail: error, runId: run.id, runStatus: status });
 }

@@ -1,4 +1,5 @@
 import {
+  captureHostProjectScheduleContext,
   captureHostScheduleTarget,
   HostSmartScheduleRuntimeAdapter,
   restoreHostScheduleTarget,
@@ -46,15 +47,17 @@ export function createDesktopHostSchedules(current: () => DesktopScheduleScope |
       if (!original?.selected) throw new Error('Captured Host scheduler is unavailable');
       const target = await restoreHostScheduleTarget(original.feature, options.schedule.teamName,
         options.schedule.hostTarget, () => current() === original && original.selected);
-      return new HostSmartScheduleRuntimeAdapter({ target, selection: options.schedule.teamName,
+      const project = await captureHostProjectScheduleContext({ feature: original.feature, logical: target,
+        projectPath: options.schedule.launchConfig.cwd, folderChange: options.folderChange, runId: options.runId });
+      return new HostSmartScheduleRuntimeAdapter({ target, project, selection: options.schedule.teamName,
         runId: options.runId, taskFirst: options.schedule.taskFirst, getPreviousRuns: options.getPreviousRuns,
         isCancelled: options.isCancelled,
-        async runOneShot(request, expectedRosterRevision) {
+        async runOneShot(request, expectedRosterRevision, executionTarget) {
           const scheduleId = options.schedule.id;
           if (!scheduleId || request.runId !== options.runId || active.has(request.runId))
             throw new Error('Scheduled occurrence is already admitted');
-          const captured = original.feature.captureScheduledRuns(target.target.contextId,
-            { handleId: target.target.handleId }, scheduleId, { isCurrent: target.isCurrent });
+          const captured = original.feature.captureScheduledRuns(executionTarget.target.contextId,
+            { handleId: executionTarget.target.handleId }, scheduleId, { isCurrent: executionTarget.isCurrent });
           active.set(request.runId, captured);
           let port: CapturedScheduleRunPort | undefined;
           try {

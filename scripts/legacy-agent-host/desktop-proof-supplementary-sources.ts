@@ -73,6 +73,7 @@ export const desktopProofSupplementarySources = [
   'src/renderer/components/team/dialogs/ProviderLaunchAuthorityNotice.tsx',
   'src/renderer/components/team/dialogs/ProviderLaunchAuthorityNotice.test.tsx',
   'scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts',
+  'scripts/legacy-agent-host/desktop-update-notice.ts',
   'src/features/agent-backend/main/infrastructure/createCapturedHostDiagnostics.ts',
   'test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts',
   'scripts/legacy-agent-host/desktop-file-digest.ts',
