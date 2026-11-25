@@ -98,4 +98,25 @@ describe('team budget stop observer', () => {
     expect(warn).toHaveBeenCalledOnce();
   });
 
+  it('continues stopping other owned copies when the first stop fails', async () => {
+    const stop = vi.fn(async (name: string) => {
+      if (name === 'ptc-broken') throw new Error('Cannot stop broken runtime');
+    });
+    const warn = vi.fn();
+    const observer = new TeamBudgetStopObserver({
+      readCurrentStatus: async () => makeStatus(),
+      aliveTeams: () => ['ptc-broken', 'ptc-healthy'],
+      resolveRuntimeNames: async () => ['ptc-broken', 'ptc-healthy'],
+      ownsTeam: async () => true,
+      stopTeam: stop,
+      isTeamAlive: async (name) => name === 'ptc-broken',
+      warn,
+    });
+    observer.observe(makeStatus());
+    await settle();
+    expect(stop.mock.calls.map(([name]) => name)).toEqual(['ptc-broken', 'ptc-healthy']);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0][0]).toContain('ptc-broken');
+  });
+
 });

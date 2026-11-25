@@ -2,6 +2,9 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { testEvent, testRun } from '../../domain/__tests__/budgetFixtures';
 import { TokenUsageAnalyticsService } from '../TokenUsageAnalyticsService';
+import { evaluateTeamBudgetEnforcement } from '../../domain/teamBudgetEnforcement';
+
+import type { TokenUsageAnalyticsServiceDeps } from '../TokenUsageAnalyticsService';
 
 import type {
   TokenUsageBudgetSettingsDto,
@@ -11,7 +14,9 @@ import type {
 } from '../../../contracts';
 
 // Catches closed-screen freshness starvation, concurrent importer writes, erased failure health and month reuse.
-function fixture() {
+function fixture(
+  budgetTeamNameAliases?: TokenUsageAnalyticsServiceDeps['budgetTeamNameAliases']
+) {
   let now = new Date('2026-10-03T12:00:00.000Z');
   let runs: TokenUsageRunDto[] = [testRun()];
   let events: TokenUsageEventDto[] = [testEvent()];
@@ -54,6 +59,7 @@ function fixture() {
     discovery: { discoverAppRuns: discovery },
     importers: [{ importUsage: importer }],
     clock: { now: () => now },
+    budgetTeamNameAliases,
     budgets: {
       getSettings: async () => {
         if (settingsFail) throw new Error('config corrupt');
@@ -227,5 +233,26 @@ describe('Budget service lifecycle', () => {
     expect((await f.service.refreshSnapshot()).summary.totalTokens).toBe(100);
     await expect(f.service.ingestEvents([testEvent()])).resolves.toBeUndefined();
     await expect(f.service.getBudgetStatus()).rejects.toThrow('config corrupt');
+  });  it('keeps other budget projections readable when a project alias registry entry fails', async () => {
+    const resolver = vi.fn(async () => {
+      throw new Error('Corrupt unrelated project history');
+    });
+    const f = fixture(resolver);
+    f.settings().teams = {
+      'team:sandbox-team': {
+        monthlyTokenLimit: 100,
+        notificationsEnabled: true,
+        thresholds: [80, 100],
+        onExceeded: 'stop_team',
+      },
+    };
+    await f.service.refreshSnapshot();
+    const result = await f.service.getBudgetStatus();
+    expect(resolver).toHaveBeenCalled();
+    expect(result.degraded).toBe(true);
+    expect(result.targets.find((t) => t.id === 'team:sandbox-team')?.metrics[0].value).toBe(100);
+    expect(evaluateTeamBudgetEnforcement(result, 'sandbox-team').state).toBe('exceeded');
+    expect(f.statuses.at(-1)?.targets.find((t) => t.id === 'team:sandbox-team')).toBeDefined();
   });
+
 });

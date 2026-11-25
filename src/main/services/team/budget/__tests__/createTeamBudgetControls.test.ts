@@ -9,18 +9,27 @@ import type {
 
 const registry = vi.hoisted(() => ({
   aliases: new Map<string, string>(),
+  failNames: new Set<string>(),
   nativeNames: ['alpha'] as string[],
 }));
 vi.mock('@features/team-project-context/main', () => ({
   TeamProjectContextRegistry: {
     fromCurrentApp: () => ({
       resolveOwnedExecutionAliases: async (names: string[]) => new Map(
-        names.map((name) => [name, {
-          alias: registry.aliases.has(name)
-            ? { logicalTeamName: registry.aliases.get(name), context: {} }
-            : null,
-        }])
+        names.map((name) => [name, registry.failNames.has(name)
+          ? { error: new Error('Unresolved project owner') }
+          : {
+              alias: registry.aliases.has(name)
+                ? { logicalTeamName: registry.aliases.get(name), context: {} }
+                : null,
+            }])
       ),
+      resolveOwnedExecutionAlias: async (name: string) => {
+        if (registry.failNames.has(name)) throw new Error('Unresolved project owner');
+        return registry.aliases.has(name)
+          ? { logicalTeamName: registry.aliases.get(name), context: {} }
+          : null;
+      },
       listRetained: async () => registry.nativeNames
         .filter((name) => name !== 'alpha')
         .map((executionTeamName) => ({ executionTeamName })),
@@ -97,7 +106,11 @@ function setup(initial: {
 }
 
 describe('team budget composition - no live provider required', () => {
-  beforeEach(() => { registry.aliases.clear(); registry.nativeNames = ['alpha']; });
+  beforeEach(() => {
+    registry.aliases.clear();
+    registry.failNames.clear();
+    registry.nativeNames = ['alpha'];
+  });
 
   it('refreshes first-use evidence once, then permits an under-budget launch', async () => {
     const { guard, refresh } = setup({ action: 'block_launch', stale: true });
@@ -129,6 +142,17 @@ describe('team budget composition - no live provider required', () => {
     registry.aliases.set('ptc-copy-1', 'alpha');
     const { guard } = setup({ action: 'block_launch', used: 120 });
     await expect(guard('ptc-copy-1')).rejects.toThrow('TEAM_BUDGET_BLOCKED');
+  });
+
+  it('preserves good alias mappings and reports unreadable aliases without hiding the budget', async () => {
+    registry.aliases.set('ptc-good', 'alpha');
+    registry.failNames.add('ptc-bad');
+    const { controls, guard } = setup({ action: 'stop_team', used: 120 });
+    const lookup = await controls.resolveBudgetAliases(['ptc-good', 'ptc-bad', 'alpha']);
+    expect(lookup.aliases.get('ptc-good')).toBe('alpha');
+    expect(lookup.unresolvedNames).toEqual(['ptc-bad']);
+    await expect(guard('ptc-bad')).rejects.toThrow('Unresolved project owner');
+    await expect(guard('ptc-good')).rejects.toThrow('TEAM_BUDGET_BLOCKED');
   });
 
   it('stops an owned physical project copy when the logical team reaches its limit', async () => {
