@@ -1,10 +1,10 @@
+import { Webhook } from 'lucide-react';
+
 import discordLogo from '../assets/provider-logos/discord.svg';
 import googleChatLogo from '../assets/provider-logos/google-chat.svg';
 import teamsLogo from '../assets/provider-logos/ms-teams.svg';
 import slackLogo from '../assets/provider-logos/slack.svg';
 import telegramLogo from '../assets/provider-logos/telegram.svg';
-
-import { Webhook } from 'lucide-react';
 
 import type { DeliveryProvider } from '../../contracts';
 
