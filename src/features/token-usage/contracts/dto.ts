@@ -25,11 +25,15 @@ export interface TokenUsageSnapshotRequest {
   to?: string;
 }
 
+export type TokenUsageBudgetExceededAction = 'notify' | 'block_launch' | 'stop_team';
+
 export interface TokenUsageBudgetLimitDto {
   thresholds: number[];
   notificationsEnabled: boolean;
   monthlyTokenLimit?: number;
   monthlyApiEquivalentCostLimitUsd?: number;
+  /** Team-only opt-in runtime policy; absence preserves notification-only behaviour. */
+  onExceeded?: TokenUsageBudgetExceededAction;
 }
 
 export interface TokenUsageBudgetSettingsDto {
@@ -56,6 +60,7 @@ export interface TokenUsageBudgetTargetStatusDto {
   label: string;
   thresholds: number[];
   notificationsEnabled: boolean;
+  onExceeded?: TokenUsageBudgetExceededAction;
   metrics: TokenUsageBudgetMetricStatusDto[];
 }
 export interface TokenUsageBudgetStatusDto {
