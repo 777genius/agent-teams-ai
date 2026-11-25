@@ -89,6 +89,7 @@ export function projectAttentionTasks(
       taskId: task.id,
       displayId: task.displayId,
       subject: task.subject.slice(0, 300),
+      ...(task.owner?.trim() ? { owner: task.owner.trim() } : {}),
       requestedAt: task.clarificationRequestedAt ?? null,
       projectPath: team.projectPath,
     }));

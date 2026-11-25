@@ -69,6 +69,20 @@ afterEach(() => {
 });
 
 describe('AttentionInboxPanel renderer', () => {
+  it('shows the assigned member for a task', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+    await act(async () => root.render(
+      <AttentionInboxPanel variant="full" model={{ ...model, tasks: [{ ...tasks[0], owner: 'maya' }], taskCount: 1 }}
+        loading={false} error={null} onOpenTask={onOpenTask} onOpenChat={onOpenChat} onRetry={onRetry} />
+    ));
+    expect(host.textContent).toContain('maya');
+    expect(host.querySelector('img')).not.toBeNull();
+    await act(async () => root.unmount());
+  });
+
   it('shows up to eight older decisions and eight recent chats independently', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const rootEl = document.createElement('div');

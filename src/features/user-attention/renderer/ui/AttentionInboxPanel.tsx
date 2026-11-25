@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { ChatListRow } from '@features/team-direct-chats/renderer';
+import { ParticipantAvatar } from '@renderer/components/team/ParticipantAvatar';
 import { Input } from '@renderer/components/ui/input';
+import { agentAvatarUrl, displayMemberName } from '@renderer/utils/memberHelpers';
 import { AlertCircle, Inbox, MessageCircle, RefreshCw } from 'lucide-react';
 
 import { relativeAttentionAge, toAttentionChatRow } from '../view-models/toAttentionChatRow';
@@ -22,9 +24,9 @@ export interface AttentionInboxPanelProps {
   onOpenFull?(): void;
 }
 
-export function AttentionInboxPanel({
+export const AttentionInboxPanel = ({
   variant, model, loading, error, onRetry, onOpenTask, onOpenChat, onOpenFull,
-}: Readonly<AttentionInboxPanelProps>): React.JSX.Element {
+}: Readonly<AttentionInboxPanelProps>): React.JSX.Element => {
   const { t, resolvedLanguage } = useAppTranslation('common');
   const [now, setNow] = useState(() => Date.now());
   const [taskLimit, setTaskLimit] = useState(variant === 'compact' ? 8 : 50);
@@ -44,7 +46,7 @@ export function AttentionInboxPanel({
       !search || values.some((value) => value?.toLocaleLowerCase().includes(search));
     return {
       tasks: (model?.tasks ?? []).filter((task) =>
-        matches(task.subject, task.teamName, task.teamDisplayName)),
+        matches(task.subject, task.teamName, task.teamDisplayName, task.owner)),
       chats: (model?.chats ?? []).filter((chat) =>
         matches(chat.name, chat.teamName, chat.teamDisplayName,
           chat.latestUnread.from, chat.latestUnread.text)),
@@ -151,8 +153,13 @@ export function AttentionInboxPanel({
                     <AlertCircle size={16} className="shrink-0 text-red-400" aria-hidden="true" />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-medium text-text">{task.subject}</span>
-                      <span className="block truncate text-xs text-text-secondary">
-                        {task.teamDisplayName}{age ? ' · ' + age : ''}
+                      <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 text-xs text-text-secondary">
+                        <span className="truncate">{task.teamDisplayName}{age ? ' · ' + age : ''}</span>
+                        {task.owner && <span className="inline-flex min-w-0 items-center gap-1">
+                          <span aria-hidden="true">·</span>
+                          <ParticipantAvatar src={agentAvatarUrl(task.owner)} alt="" className="size-4 rounded-full" />
+                          <span className="truncate">{displayMemberName(task.owner)}</span>
+                        </span>}
                       </span>
                     </span>
                   </button>
