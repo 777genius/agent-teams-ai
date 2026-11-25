@@ -90,10 +90,16 @@ export function createTeamBudgetControls(
   const observer = new TeamBudgetStopObserver({
     readCurrentStatus: async () => read().getBudgetStatus(),
     aliveTeams: () => runtime.getAliveTeams(),
-    resolveRuntimeNames: async (logicalTeam) => [
-      logicalTeam,
-      ...(await projectContexts.listRetained(logicalTeam)).map((item) => item.executionTeamName),
-    ],
+    resolveRuntimeNames: async (logicalTeam) => {
+      const { candidates, refused } = await projectContexts.listOwnedStopCandidates(logicalTeam);
+      for (const failure of refused) {
+        warn(
+          `Budget stop skipped unverified runtime "${failure.executionTeamName}" for "${logicalTeam}"`,
+          failure.error
+        );
+      }
+      return [logicalTeam, ...candidates];
+    },
     ownsTeam: (teamName) => runtime.isTeamManagedByThisProfile(teamName),
     stopTeam: (teamName) => runtime.stopTeam(teamName),
     isTeamAlive: (teamName) => runtime.isTeamAlive(teamName),

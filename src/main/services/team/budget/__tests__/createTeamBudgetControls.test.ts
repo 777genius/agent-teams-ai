@@ -10,6 +10,7 @@ import type {
 const registry = vi.hoisted(() => ({
   aliases: new Map<string, string>(),
   failNames: new Set<string>(),
+  failedCopies: [] as string[],
   nativeNames: ['alpha'] as string[],
 }));
 vi.mock('@features/team-project-context/main', () => ({
@@ -30,9 +31,13 @@ vi.mock('@features/team-project-context/main', () => ({
           ? { logicalTeamName: registry.aliases.get(name), context: {} }
           : null;
       },
-      listRetained: async () => registry.nativeNames
-        .filter((name) => name !== 'alpha')
-        .map((executionTeamName) => ({ executionTeamName })),
+      listOwnedStopCandidates: async () => ({
+        candidates: registry.nativeNames.filter((name) => name !== 'alpha'),
+        refused: registry.failedCopies.map((executionTeamName) => ({
+          executionTeamName,
+          error: new Error('Unverified project runtime'),
+        })),
+      }),
     }),
   },
 }));
@@ -109,6 +114,7 @@ describe('team budget composition - no live provider required', () => {
   beforeEach(() => {
     registry.aliases.clear();
     registry.failNames.clear();
+    registry.failedCopies = [];
     registry.nativeNames = ['alpha'];
   });
 
@@ -153,6 +159,21 @@ describe('team budget composition - no live provider required', () => {
     expect(lookup.unresolvedNames).toEqual(['ptc-bad']);
     await expect(guard('ptc-bad')).rejects.toThrow('Unresolved project owner');
     await expect(guard('ptc-good')).rejects.toThrow('TEAM_BUDGET_BLOCKED');
+  });
+
+  it('warns about one unreadable copy while stopping a different owned copy', async () => {
+    registry.failedCopies = ['ptc-unverified'];
+    registry.nativeNames = ['ptc-healthy'];
+    const { controls, stop, warn } = setup({
+      action: 'stop_team', used: 120, aliveName: 'ptc-healthy',
+    });
+    controls.observer.observe(budgetStatus({ action: 'stop_team', used: 120 }));
+    for (let n = 0; n < 30; n++) await Promise.resolve();
+    expect(stop).toHaveBeenCalledExactlyOnceWith('ptc-healthy');
+    expect(warn).toHaveBeenCalledExactlyOnceWith(
+      expect.stringContaining('ptc-unverified'),
+      expect.any(Error)
+    );
   });
 
   it('stops an owned physical project copy when the logical team reaches its limit', async () => {

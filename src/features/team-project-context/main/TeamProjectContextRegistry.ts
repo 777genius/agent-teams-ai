@@ -420,6 +420,39 @@ export class TeamProjectContextRegistry {
   }
 
   /**
+   * Enumerate runtime-stop candidates independently. An unreadable member
+   * owner cannot hide the remaining verified copies of the same logical team.
+   * No directory is trusted from its name alone, including pending copies.
+   */
+  async listOwnedStopCandidates(logicalTeamName: string): Promise<{
+    candidates: string[];
+    refused: { executionTeamName: string; error: Error }[];
+  }> {
+    if (!(await this.hasRetainedIndex(logicalTeamName))) {
+      return { candidates: [], refused: [] };
+    }
+    await this.assertOwnedDirectory(logicalTeamName);
+    const index = await this.readIndex(logicalTeamName);
+    if (index.deleting) {
+      throw new TeamProjectContextUnavailableError('Team permanent deletion is in progress');
+    }
+    const candidates: string[] = [];
+    const refused: { executionTeamName: string; error: Error }[] = [];
+    for (const row of index.contexts) {
+      try {
+        await this.assertOwnedDirectory(row.executionTeamName);
+        candidates.push(row.executionTeamName);
+      } catch (error) {
+        refused.push({
+          executionTeamName: row.executionTeamName,
+          error: error instanceof Error ? error : new Error(String(error)),
+        });
+      }
+    }
+    return { candidates, refused };
+  }
+
+  /**
    * Enumerate only verified native aliases; never treat a matching name prefix
    * as proof that a directory belongs to this team or this app profile.
    */
