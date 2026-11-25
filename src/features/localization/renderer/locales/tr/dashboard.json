@@ -465,7 +465,17 @@
       "project": "Project",
       "loadFailed": "Failed to load budget settings",
       "notificationSettings": "Notification settings",
-      "saveFailed": "Failed to save budget settings"
+      "saveFailed": "Failed to save budget settings",
+      "teamCardBudget": "Aylık bütçe",
+      "teamCardUnknown": "Kullanım bilinmiyor",
+      "teamCardBlocked": "Limite ulaşıldı - başlatma engellendi",
+      "editor": {
+        "onExceeded": "Bütçe limitine ulaşıldığında",
+        "notifyOnly": "Yalnızca bildir",
+        "blockLaunch": "Yeni ekip başlatmalarını engelle",
+        "stopTeam": "Çalışan ekibi durdur ve başlatmaları engelle",
+        "enforcementHint": "Kullanım verisi eksik veya gecikmişse yeni başlatmalar engellenir. Maliyetler tahminidir; fatura limiti aşabilir."
+      }
     }
   }
 }

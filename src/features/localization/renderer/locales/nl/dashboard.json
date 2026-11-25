@@ -465,7 +465,17 @@
       "project": "Project",
       "loadFailed": "Failed to load budget settings",
       "notificationSettings": "Notification settings",
-      "saveFailed": "Failed to save budget settings"
+      "saveFailed": "Failed to save budget settings",
+      "teamCardBudget": "Maandbudget",
+      "teamCardUnknown": "Verbruik onbekend",
+      "teamCardBlocked": "Limiet bereikt - starten geblokkeerd",
+      "editor": {
+        "onExceeded": "Actie bij bereiken van budgetlimiet",
+        "notifyOnly": "Alleen melden",
+        "blockLaunch": "Nieuwe teamstarts blokkeren",
+        "stopTeam": "Lopend team stoppen en starts blokkeren",
+        "enforcementHint": "Bij ontbrekende of vertraagde verbruiksgegevens worden nieuwe starts geblokkeerd. Kosten zijn schattingen; de rekening kan de limiet overschrijden."
+      }
     }
   }
 }
