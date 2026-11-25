@@ -5724,7 +5724,7 @@ describe('TeamDataService', () => {
     }
   });
 
-  it('seeds all historical comments when a UI clarification answer creates the journal', async () => {
+  it.each([false, true])('seeds the first journal even if answer delivery fails (%s)', async (firstSendFails) => {
     const previous = process.env[TASK_COMMENT_FORWARDING_ENV];
     process.env[TASK_COMMENT_FORWARDING_ENV] = 'on';
     try {
@@ -5760,8 +5760,15 @@ describe('TeamDataService', () => {
       });
       const { journalEntries, journal } = createForwardingJournalStore();
       journal.exists.mockResolvedValueOnce(false).mockResolvedValue(true);
-      const { service, inboxWriter } = createTaskCommentForwardingService({
+      const inboxWriter = {
+        sendMessage: vi.fn(async () => ({ deliveredToInbox: true, messageId: 'persisted' })),
+      };
+      if (firstSendFails) {
+        inboxWriter.sendMessage.mockRejectedValueOnce(new Error('Simulated offline inbox'));
+      }
+      const { service } = createTaskCommentForwardingService({
         journal,
+        inboxWriter,
         addTaskComment,
         members: [{ name: 'team-lead', role: 'Lead' }, { name: 'bob', role: 'developer' }],
         tasks: [task, otherTask],
@@ -5781,12 +5788,23 @@ describe('TeamDataService', () => {
       expect(journalEntries).toEqual(expect.arrayContaining([
         expect.objectContaining({ key: 'answer-task:historical-target', state: 'seeded' }),
         expect.objectContaining({ key: 'other-task:historical-other', state: 'seeded' }),
-        expect.objectContaining({ commentId: answer.id, state: 'sent' }),
+        expect.objectContaining({
+          commentId: answer.id,
+          state: firstSendFails ? 'pending_send' : 'sent',
+        }),
       ]));
 
       await service.notifyLeadOnTeammateTaskComment('my-team', task.id);
       await service.notifyLeadOnTeammateTaskComment('my-team', otherTask.id);
-      expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(1);
+      expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(firstSendFails ? 2 : 1);
+      expect(journalEntries.find((entry) => entry.commentId === answer.id)?.state).toBe('sent');
+      if (firstSendFails) {
+        expect(inboxWriter.sendMessage).toHaveBeenNthCalledWith(
+          2,
+          'my-team',
+          expect.objectContaining({ member: 'bob', commentId: answer.id })
+        );
+      }
     } finally {
       if (previous === undefined) delete process.env[TASK_COMMENT_FORWARDING_ENV];
       else process.env[TASK_COMMENT_FORWARDING_ENV] = previous;
