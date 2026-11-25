@@ -71,7 +71,7 @@ import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import {
-  attachRendererDiagnostics,
+  waitForDesktopUiStartup,
   runDesktopTeamUiSmoke,
 } from './desktop-team-ui-smoke.ts';
 import {
@@ -375,11 +375,11 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
         evidence, key: 'startupDiagnosticClose' });
       return; // Existing finally retains raw diagnostics and exact captured process cleanup.
     }
-    if (uiMode)
-      await attachRendererDiagnostics(cdp, String(target.url), evidence, {
-        remainingMs: startupBudgetMs - (performance.now() - startupStarted),
-        assertOwnedRenderer: () => assertOwnedCdpListener(group),
-      });
+    await waitForDesktopUiStartup(cdp, String(target.url), evidence, {
+      mode, uiMode, deadline: startupStarted + startupBudgetMs,
+      remainingMs: startupBudgetMs - (performance.now() - startupStarted),
+      assertOwnedRenderer: () => assertOwnedCdpListener(group),
+    });
     if (questionUiMode || suggestionMixedMode)
       await waitDesktopCodexQuestionRenderer(cdp, { url: String(target.url),
         remainingStartupMs: startupBudgetMs - (performance.now() - startupStarted),

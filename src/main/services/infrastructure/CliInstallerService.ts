@@ -21,6 +21,7 @@ import { execCli, killProcessTree, spawnCli } from '@main/utils/childProcess';
 import { appendCliAuthDiag } from '@main/utils/cliAuthDiagLog';
 import { buildEnrichedEnv } from '@main/utils/cliEnv';
 import { buildMergedCliPath } from '@main/utils/cliPathMerge';
+import { getOptionalElectronMain } from '@main/utils/optionalElectronMain';
 import { getClaudeBasePath, getHomeDir } from '@main/utils/pathDecoder';
 import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
 import {
@@ -446,10 +447,9 @@ export class CliInstallerService {
 
   private electronMetaForDiag(): Record<string, unknown> {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { app } = require('electron') as typeof import('electron');
+      const app = getOptionalElectronMain()?.app;
       return {
-        electronPackaged: Boolean(app?.isPackaged),
+        electronPackaged: app ? Boolean(app.isPackaged) : null,
         appVersion: typeof app?.getVersion === 'function' ? app.getVersion() : null,
         exePath:
           typeof app?.getPath === 'function'

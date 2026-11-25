@@ -228,6 +228,20 @@ function rendererDocumentMatches(value: unknown, rendererUrl: string): boolean {
   } catch { return false; }
 }
 
+/** Preserve each mode's original startup admission before binding or account reads. */
+export async function waitForDesktopUiStartup(
+  cdp: Parameters<typeof attachRendererDiagnostics>[0],
+  rendererUrl: string,
+  evidence: Record<string, unknown>,
+  startup: { mode: string; uiMode: boolean; deadline: number; remainingMs: number; assertOwnedRenderer(): void }
+): Promise<void> {
+  if (startup.uiMode) return attachRendererDiagnostics(cdp, rendererUrl, evidence, startup);
+  if (startup.mode !== 'codex-login-ui') return;
+  const startupEvidence: Record<string, unknown> = {};
+  evidence.codexLoginStartup = startupEvidence;
+  await waitForDesktopMainUiReadiness(cdp, rendererUrl, startupEvidence, startup);
+}
+
 /** Captures only finite module/load diagnostics, never request headers or bodies. */
 export async function attachRendererDiagnostics(
   cdp: UiCdpPort & {
@@ -415,6 +429,21 @@ export async function attachRendererDiagnostics(
   for (const domain of ['Log', 'Network']) await send(`${domain}.enable`);
   // Document readiness precedes Main's mandatory Host backup/reconciliation fence.
   // Keep early diagnostics active while waiting; discovery must not spend its 30s CDP bound on that fence.
+  await waitForDesktopMainUiReadiness(cdp, rendererUrl, startupEvidence, {
+    deadline,
+    assertOwnedRenderer: () => startup.assertOwnedRenderer(),
+    readDocumentRevision: () => revision,
+  });
+}
+
+/** Original Main/UI precondition under the caller's captured monotonic cutoff. */
+export async function waitForDesktopMainUiReadiness(
+  cdp: UiCdpPort,
+  rendererUrl: string,
+  startupEvidence: Record<string, unknown>,
+  startup: { deadline: number; assertOwnedRenderer(): void; readDocumentRevision?(): number }
+): Promise<void> {
+  const { deadline } = startup;
   // Keep the original first 24 observations plus one fixed last record; no extra read or retained protocol value.
   const stamp = () => ({ monotonicMs: Math.round(performance.now()), epochMs: Date.now() });
   const last: Record<string, unknown> = { attempt: 0, phase: 'waiting', failure: null, observation: null };
@@ -426,7 +455,7 @@ export async function attachRendererDiagnostics(
   try {
     while (performance.now() < deadline) {
       Object.assign(last, { attempt: ++attempts, phase: 'owner-before', enteredAt: stamp(),
-        callAt: null, completedAt: null, failedAt: null, failure: null, documentRevision: revision });
+        callAt: null, completedAt: null, failedAt: null, failure: null, documentRevision: startup.readDocumentRevision?.() });
       startup.assertOwnedRenderer();
       last.phase = 'budget-before';
       const remaining = deadline - performance.now();

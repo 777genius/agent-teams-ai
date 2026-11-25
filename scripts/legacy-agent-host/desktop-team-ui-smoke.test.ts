@@ -5,12 +5,13 @@ import { createHash } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { performance } from 'node:perf_hooks';
 import { runInNewContext } from 'node:vm';
 import { setImmediate } from 'node:timers/promises';
 
 import { desktopShellEnvironmentProbeSource } from './desktop-backend-fixture.ts';
 import { readRendererBackendConnections } from './desktop-backend-observations.ts';
-import { attachRendererDiagnostics } from './desktop-team-ui-smoke.ts';
+import { attachRendererDiagnostics, waitForDesktopMainUiReadiness, waitForDesktopUiStartup } from './desktop-team-ui-smoke.ts';
 import { observeDesktopModuleLoads } from './desktop-module-load-observation.ts';
 import { assertDesktopOwnerRoutingAvailability } from './desktop-owner-routing-availability-ui.ts';
 import { hostTeamSelectionKey } from '../../src/features/agent-backend/contracts/teamSelection.ts';
@@ -30,14 +31,18 @@ function deferred<T>() {
 }
 const ready = { originMatches: true, mainReady: true, errorPresent: false, phase: 'ready',
   uiDidInit: true, storePresent: true, rootChildCount: 1 };
-function fixture(reads: ReturnType<typeof deferred<Record<string, unknown>>>[]) {
+function fixture(reads: ReturnType<typeof deferred<Record<string, unknown>>>[], bootstrapOnly = false) {
   const listeners = new Map<string, (value: unknown) => void>();
   const acknowledgments = reads.map(() => deferred<void>());
-  let observations = 0, discovery = 0;
+  let observations = 0, discovery = 0, ownerChecks = 0;
   const commands: string[] = [];
   const cdp = {
-    on(method: string, listener: (value: unknown) => void) { listeners.set(method, listener); },
+    on(method: string, listener: (value: unknown) => void) {
+      assert.equal(bootstrapOnly, false, 'readiness-only admission has no diagnostic subscriptions');
+      listeners.set(method, listener);
+    },
     async send(method: string) {
+      assert.equal(bootstrapOnly, false, 'readiness-only admission has no diagnostic protocol calls');
       commands.push(method);
       if (method === 'Runtime.enable') listeners.get('Runtime.executionContextCreated')?.({
         context: { id: 7, auxData: { isDefault: true, frameId: 'TEST-frame' } },
@@ -59,35 +64,111 @@ function fixture(reads: ReturnType<typeof deferred<Record<string, unknown>>>[]) 
     },
   };
   const evidence: Record<string, unknown> = {};
-  const start = (remainingMs: number) => attachRendererDiagnostics(cdp, 'http://localhost:5173/', evidence,
-    { remainingMs, assertOwnedRenderer() {} }).then(() => readRendererBackendConnections(cdp));
-  return { start, acknowledgments, evidence, listeners, commands,
-    observations: () => observations, discovery: () => discovery };
+  const assertOwnedRenderer = () => { ownerChecks++; };
+  const start = (remainingMs: number) => {
+    const deadline = performance.now() + remainingMs;
+    const admission = bootstrapOnly
+      ? waitForDesktopMainUiReadiness(cdp, 'http://localhost:5173/', evidence,
+          { deadline, assertOwnedRenderer })
+      : waitForDesktopUiStartup(cdp, 'http://localhost:5173/', evidence,
+          { mode: 'team-ui', uiMode: true, deadline, remainingMs, assertOwnedRenderer });
+    return admission.then(() => readRendererBackendConnections(cdp));
+  };
+  const startNative = (deadline: number, remainingMs: number) =>
+    waitForDesktopUiStartup(cdp, 'http://localhost:5173/', evidence,
+      { mode: 'codex-login-ui', uiMode: false, deadline, remainingMs, assertOwnedRenderer })
+      .then(() => readRendererBackendConnections(cdp));
+  return { start, startNative, acknowledgments, evidence, listeners, commands,
+    observations: () => observations, discovery: () => discovery, ownerChecks: () => ownerChecks };
 }
 
 test('captured UI discovery waits for Main admission and actual mount while early diagnostics remain active', { timeout: 5000 }, async () => {
-  const reads = [deferred<Record<string, unknown>>(), deferred<Record<string, unknown>>(), deferred<Record<string, unknown>>()];
-  const f = fixture(reads), pending = f.start(3000);
-  await Promise.race([f.acknowledgments[0]!.promise, pending.then(() => { assert.fail('discovery completed before Main/UI readiness was observed'); })]);
-  assert.equal(f.discovery(), 0);
-  const diagnostics = f.evidence.rendererDiagnostics as { startup: { status: string }; };
-  assert.equal(diagnostics.startup.status, 'DOCUMENT_READY', 'document diagnostics do not wait for full app admission');
-  reads[0]!.resolve({ ...ready, mainReady: false, phase: 'team-backups' });
-  await f.acknowledgments[1]!.promise; assert.equal(f.discovery(), 0);
-  reads[1]!.resolve({ ...ready, uiDidInit: false, rootChildCount: 0 });
-  await f.acknowledgments[2]!.promise; assert.equal(f.discovery(), 0);
-  reads[2]!.resolve({ ...ready, storePresent: false }); // Packed builds expose no DEV store.
-  assert.deepEqual(await pending, { kind: 'read', value: { state: 'ready', bindings: [] } });
-  assert.equal(f.discovery(), 1);
+  for (const bootstrapOnly of [false, true]) {
+    const reads = [deferred<Record<string, unknown>>(), deferred<Record<string, unknown>>(), deferred<Record<string, unknown>>()];
+    const f = fixture(reads, bootstrapOnly), pending = f.start(3000);
+    await Promise.race([f.acknowledgments[0]!.promise, pending.then(() => { assert.fail('discovery completed before Main/UI readiness was observed'); })]);
+    assert.equal(f.discovery(), 0);
+    if (!bootstrapOnly) {
+      const diagnostics = f.evidence.rendererDiagnostics as { startup: { status: string }; };
+      assert.equal(diagnostics.startup.status, 'DOCUMENT_READY', 'document diagnostics do not wait for full app admission');
+    }
+    reads[0]!.resolve({ ...ready, mainReady: false, phase: 'team-backups' });
+    await f.acknowledgments[1]!.promise; assert.equal(f.discovery(), 0);
+    reads[1]!.resolve({ ...ready, uiDidInit: false, rootChildCount: 0 });
+    await f.acknowledgments[2]!.promise; assert.equal(f.discovery(), 0);
+    reads[2]!.resolve({ ...ready, storePresent: false }); // Packed builds expose no DEV store.
+    assert.deepEqual(await pending, { kind: 'read', value: { state: 'ready', bindings: [] } });
+    assert.equal(f.discovery(), 1);
+  }
 });
 
 test('the original remaining startup deadline rejects a pending snapshot without late discovery or a reset', { timeout: 5000 }, async () => {
-  const held = deferred<Record<string, unknown>>(), f = fixture([held]);
-  const pending = f.start(500);
+  for (const bootstrapOnly of [false, true]) {
+    const held = deferred<Record<string, unknown>>(), f = fixture([held], bootstrapOnly);
+    const pending = f.start(500);
+    const rejected = assert.rejects(pending, /Main\/UI startup readiness timed out; no mutation retry/);
+    await f.acknowledgments[0]!.promise; assert.equal(f.discovery(), 0);
+    await rejected; assert.equal(f.discovery(), 0);
+    held.resolve(ready); await setImmediate(); assert.equal(f.discovery(), 0);
+  }
+});
+
+test('native login startup keeps the original absolute deadline before and after deferred reads', { timeout: 5000 }, async (context) => {
+  const expired = fixture([], true);
+  await assert.rejects(expired.startNative(performance.now() - 1, 20_000),
+    /original startup budget expired before Main\/UI readiness/);
+  assert.equal(expired.observations(), 0); assert.equal(expired.discovery(), 0);
+  assert.equal(expired.ownerChecks(), 0);
+
+  const held = deferred<Record<string, unknown>>(), waiting = fixture([held], true);
+  const pending = waiting.startNative(performance.now() + 500, 20_000);
   const rejected = assert.rejects(pending, /Main\/UI startup readiness timed out; no mutation retry/);
-  await f.acknowledgments[0]!.promise; assert.equal(f.discovery(), 0);
-  await rejected; assert.equal(f.discovery(), 0);
-  held.resolve(ready); await setImmediate(); assert.equal(f.discovery(), 0);
+  await waiting.acknowledgments[0]!.promise;
+  assert.equal(waiting.discovery(), 0); assert.equal(waiting.ownerChecks(), 1);
+  await rejected;
+  held.resolve(ready); await setImmediate();
+  assert.equal(waiting.observations(), 1); assert.equal(waiting.discovery(), 0);
+  assert.equal(waiting.ownerChecks(), 1);
+
+  const admitted = deferred<Record<string, unknown>>(), successful = fixture([admitted], true);
+  const completing = successful.startNative(performance.now() + 3000, 20_000);
+  await successful.acknowledgments[0]!.promise; assert.equal(successful.discovery(), 0);
+  admitted.resolve({ ...ready, storePresent: false });
+  assert.deepEqual(await completing, { kind: 'read', value: { state: 'ready', bindings: [] } });
+  assert.equal(successful.discovery(), 1); assert.equal(successful.ownerChecks(), 2);
+  assert.deepEqual(successful.commands, []);
+  assert.equal(successful.evidence.rendererDiagnostics, undefined);
+  assert.equal((successful.evidence.codexLoginStartup as { appReadiness: { status: string } }).appReadiness.status, 'READY');
+
+  // Complete the deferred read after the monotonic cutoff, before its real timer fires.
+  let now = 100;
+  context.mock.method(performance, 'now', () => now);
+  const late = deferred<Record<string, unknown>>(), observedLate = fixture([late], true);
+  const completingLate = observedLate.startNative(200, 20_000);
+  const rejectedLate = assert.rejects(completingLate, /original startup budget remains after Main\/UI observation/);
+  await observedLate.acknowledgments[0]!.promise;
+  now = 201; late.resolve(ready);
+  await rejectedLate;
+  assert.equal(observedLate.observations(), 1); assert.equal(observedLate.discovery(), 0);
+  assert.equal(observedLate.ownerChecks(), 2);
+});
+
+test('startup dispatch leaves unrelated modes untouched without probes or owner callbacks', async () => {
+  let probes = 0, ownerChecks = 0;
+  const cdp = {
+    on() { probes++; assert.fail('unrelated modes must not subscribe to diagnostics'); },
+    async send() { probes++; assert.fail('unrelated modes must not send protocol commands'); },
+    async evaluate() { probes++; assert.fail('unrelated modes must not read startup'); },
+  };
+  for (const mode of ['read', 'codex-account-read', 'codex-account-auth', 'emulated-codex-login-ui']) {
+    const evidence: Record<string, unknown> = {};
+    await waitForDesktopUiStartup(cdp, 'not-a-renderer-url', evidence, {
+      mode, uiMode: false, deadline: -1, remainingMs: -1,
+      assertOwnedRenderer() { ownerChecks++; assert.fail('unrelated modes must not check the owner'); },
+    });
+    assert.deepEqual(evidence, {});
+  }
+  assert.equal(probes, 0); assert.equal(ownerChecks, 0);
 });
 
 test('startup diagnostics retain the final call and completed observation after the original 24 history cap', { timeout: 5000 }, async () => {
@@ -993,6 +1074,48 @@ test('login failure facts retain only bounded original attempts and confirmed mi
     capturedHostObserved: null, capturedHostAbsent: null, failureRecorded: null });
   assert.equal(JSON.stringify(malformed).includes(privateSentinel), false);
   assert.equal(projectDesktopCodexLoginFailure({}).originalFailureRecorded, false);
+  assert.deepEqual(projection.initialUnavailableTarget, { state: 'not-recorded' });
+  const prefix = 'UI target read failed: open existing More menu; facts=';
+  const facts = { matches: 0, disabled: false, ariaDisabled: false, pointerEventsNone: false,
+    centerInViewport: false, hitPresent: false, rootPresent: true, rootChildren: 0 };
+  const retainedEvidence = { ...evidence, failure: prefix + JSON.stringify(facts) };
+  const retainedBefore = structuredClone(retainedEvidence);
+  const retained = projectDesktopCodexLoginFailure(retainedEvidence);
+  assert.deepEqual(retained.initialUnavailableTarget, { state: 'retained', facts: {
+    disabled: false, ariaDisabled: false, pointerEventsNone: false, centerInViewport: false,
+    hitPresent: false, rootPresent: true, uiInitialized: null, splashPresent: null,
+    splashPositiveSize: null, splashError: null, splashSlow: null, documentComplete: null,
+    languageEnglish: null, languageEmpty: null, rootFallbackShape: null,
+    matches: 0, rawMatches: null, rootChildren: 0,
+  } });
+  assert.equal(JSON.stringify(retained).includes(privateSentinel), false);
+  assert.ok(Buffer.byteLength(JSON.stringify(retained)) <= 4096);
+  assert.deepEqual(retainedEvidence, retainedBefore, 'the bounded projection does not mutate the private receipt');
+  const boundary = projectDesktopCodexLoginFailure({ ...evidence,
+    failure: prefix + JSON.stringify({ ...facts, matches: 256, rawMatches: 256, rootChildren: 16 }) });
+  assert.equal((boundary.initialUnavailableTarget as { state: string }).state, 'retained');
+  const invalidFailures = [
+    prefix + '{',
+    prefix + JSON.stringify([facts]),
+    prefix + JSON.stringify({ ...facts, disabled: undefined }),
+    prefix + JSON.stringify({ ...facts, disabled: 'false' }),
+    prefix + JSON.stringify({ ...facts, rootPresent: 'true' }),
+    prefix + JSON.stringify({ ...facts, matches: -1 }),
+    prefix + JSON.stringify({ ...facts, matches: 0.5 }),
+    prefix + JSON.stringify({ ...facts, matches: 257 }),
+    prefix + JSON.stringify({ ...facts, rawMatches: 257 }),
+    prefix + JSON.stringify({ ...facts, rootChildren: 17 }),
+    prefix + JSON.stringify({ ...facts, privateUrl: privateSentinel }),
+    prefix + JSON.stringify(facts) + ' '.repeat(4001),
+  ];
+  for (const failure of invalidFailures) {
+    const input = { ...evidence, failure }, original = structuredClone(input);
+    const unavailable = projectDesktopCodexLoginFailure(input);
+    assert.deepEqual(unavailable.initialUnavailableTarget, { state: 'unavailable' });
+    assert.equal(JSON.stringify(unavailable).includes(privateSentinel), false);
+    assert.ok(Buffer.byteLength(JSON.stringify(unavailable)) <= 4096);
+    assert.deepEqual(input, original);
+  }
 });
 
 test('finite readiness failure summaries keep only bounded states and never private snapshot data', () => {

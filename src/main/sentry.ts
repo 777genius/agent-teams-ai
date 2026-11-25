@@ -15,6 +15,7 @@ import {
   ensureAgentTeamsClientIdentity,
   getSentryAnonymousUserId,
 } from '@main/services/identity/AgentTeamsIdentityStore';
+import { getOptionalElectronMain, isElectronMainProcess } from '@main/utils/optionalElectronMain';
 import { getClaudeBasePath } from '@main/utils/pathDecoder';
 import { getSharedTelemetryBuildProperties } from '@shared/utils/buildMetadata';
 import {
@@ -164,6 +165,7 @@ interface SentryInitOptions {
 type SentryMainLoader = () => unknown;
 
 const defaultSentryMainLoader: SentryMainLoader = () => {
+  if (!isElectronMainProcess()) throw new Error('Sentry Electron requires the Main process');
   // eslint-disable-next-line @typescript-eslint/no-require-imports -- lazy optional Electron runtime dependency.
   return require('@sentry/electron/main') as SentryMainApi;
 };
@@ -202,13 +204,9 @@ function clearSentryUser(): void {
 
 function removeMainSentryIpcListeners(): void {
   try {
-    // Keep Electron optional so standalone mode can import this module.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports -- optional Electron runtime dependency.
-    const electron = require('electron') as {
-      ipcMain?: { removeAllListeners: (channel: string) => unknown };
-    };
+    const electron = getOptionalElectronMain();
     for (const channel of SENTRY_IPC_CHANNELS) {
-      electron.ipcMain?.removeAllListeners(`${SENTRY_IPC_NAMESPACE}.${channel}`);
+      electron?.ipcMain?.removeAllListeners(`${SENTRY_IPC_NAMESPACE}.${channel}`);
     }
   } catch {
     // Electron is unavailable in standalone mode.

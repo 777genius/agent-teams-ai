@@ -2,6 +2,7 @@ import { closeSync, fstatSync, openSync, readSync } from 'node:fs';
 import { join, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+import { getOptionalElectronMain } from '@main/utils/optionalElectronMain';
 import { APP_RELEASE, BUILD_GIT_SHA, BUILD_ID } from '@shared/utils/buildMetadata';
 import {
   parseSentryArtifactInventory,
@@ -35,9 +36,7 @@ function readInventory(file: string, expected: SentryBuildIdentity): SentryRunti
 export function loadMainSentryArtifactPolicy(): SentryArtifactPolicy | null {
   try {
     // Electron stays optional in standalone mode; no user config or event supplies this root.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports -- optional Electron startup dependency.
-    const electron = require('electron') as { app?: { getAppPath(): string } };
-    const root = electron.app?.getAppPath();
+    const root = getOptionalElectronMain()?.app?.getAppPath();
     if (!root) return null;
     const identity = { release: APP_RELEASE, buildId: BUILD_ID, gitSha: BUILD_GIT_SHA };
     const main = readInventory(join(root, 'dist-electron/main', SENTRY_INVENTORY_FILE), identity);
