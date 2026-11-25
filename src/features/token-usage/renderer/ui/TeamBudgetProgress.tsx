@@ -16,7 +16,12 @@ export function TeamBudgetProgress({ teamName, status }: TeamBudgetProgressProps
     (item) => item.scope === 'team' && item.id === namedTeamId(teamName)
   );
   if (!target?.metrics.length) return null;
-  const metric = target.metrics.reduce((best, current) =>
+  // A confirmed exceeded counter takes precedence over an incomplete estimate.
+  const exceededMetrics = target.metrics.filter(
+    (metric) => !metric.incomplete && metric.value !== null && metric.value >= metric.limit
+  );
+  const candidates = exceededMetrics.length ? exceededMetrics : target.metrics;
+  const metric = candidates.reduce((best, current) =>
     (current.percent ?? -1) > (best.percent ?? -1) ? current : best
   );
   const reached = target.metrics.some(
