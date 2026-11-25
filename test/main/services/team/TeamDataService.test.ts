@@ -5860,7 +5860,7 @@ describe('TeamDataService', () => {
       });
 
       await service.notifyLeadOnTeammateTaskComment('my-team', 'alice-task');
-      expect(await journal.exists('my-team')).toBe(true);
+      expect(await journal.exists()).toBe(true);
       expect(journal.ensureFile).not.toHaveBeenCalled();
       expect(journalEntries).toHaveLength(4);
       expect(journalEntries).toEqual(expect.arrayContaining([
@@ -5896,12 +5896,12 @@ describe('TeamDataService', () => {
       const { service, inboxWriter } = createTaskCommentForwardingService({ tasks, journal, getTasks });
 
       await service.notifyLeadOnTeammateTaskComment('my-team', 'future-task');
-      expect(await journal.exists('my-team')).toBe(false);
+      expect(await journal.exists()).toBe(false);
       expect(journal.ensureFile).not.toHaveBeenCalled();
       expect(journal.withEntries).not.toHaveBeenCalled();
 
       await service.notifyLeadOnTeammateTaskComment('my-team', 'future-task');
-      expect(await journal.exists('my-team')).toBe(true);
+      expect(await journal.exists()).toBe(true);
       expect(journalEntries).toHaveLength(0);
       tasks.push({
         id: 'future-task', subject: 'New task', status: 'pending', owner: 'alice',
