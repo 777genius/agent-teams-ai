@@ -16,17 +16,21 @@ export function TeamBudgetProgress({ teamName, status }: TeamBudgetProgressProps
     (item) => item.scope === 'team' && item.id === namedTeamId(teamName)
   );
   if (!target?.metrics.length) return null;
-  // A confirmed exceeded counter takes precedence over an incomplete estimate.
+  // A complete exceeded counter takes priority over an incomplete one, but
+  // even a known partial subtotal above the limit is enough to block spending.
   const exceededMetrics = target.metrics.filter(
-    (metric) => !metric.incomplete && metric.value !== null && metric.value >= metric.limit
+    (metric) => metric.value !== null && metric.value >= metric.limit
   );
-  const candidates = exceededMetrics.length ? exceededMetrics : target.metrics;
+  const completeExceeded = exceededMetrics.filter((metric) => !metric.incomplete);
+  const candidates = completeExceeded.length
+    ? completeExceeded
+    : exceededMetrics.length
+      ? exceededMetrics
+      : target.metrics;
   const metric = candidates.reduce((best, current) =>
     (current.percent ?? -1) > (best.percent ?? -1) ? current : best
   );
-  const reached = target.metrics.some(
-    (item) => !item.incomplete && item.value !== null && item.value >= item.limit
-  );
+  const reached = exceededMetrics.length > 0;
   const uncertain = !reached && Boolean(
     status?.stale || status?.degraded ||
     target.metrics.some((item) => item.incomplete || item.value === null)

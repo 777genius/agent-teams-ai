@@ -59,6 +59,14 @@ describe('team budget enforcement', () => {
       status({ action: 'stop_team', value: 120, degraded: true }), 'alpha'
     ).state).toBe('exceeded');
   });
+  it('enforces an already-reached known subtotal despite incomplete pricing', () => {
+    expect(evaluateTeamBudgetEnforcement(
+      status({ action: 'stop_team', value: 120, incomplete: true }), 'alpha'
+    ).state).toBe('exceeded');
+    expect(() => assertTeamBudgetLaunchAllowed(
+      status({ action: 'stop_team', value: 120, incomplete: true }), 'alpha'
+    )).toThrow('TEAM_BUDGET_BLOCKED');
+  });
   it('allows under-limit usage', () => {
     expect(evaluateTeamBudgetEnforcement(status({ action: 'stop_team', value: 80 }), 'alpha').state).toBe('within_limit');
   });

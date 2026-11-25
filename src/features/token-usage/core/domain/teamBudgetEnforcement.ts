@@ -30,8 +30,7 @@ export function evaluateTeamBudgetEnforcement(
   // even when another usage source is lagging. Unknown totals never grant
   // launch permission or justify a stop on their own.
   const exceeded = target.metrics.some(
-    (metric) =>
-      !metric.incomplete && metric.value !== null && metric.value >= metric.limit
+    (metric) => metric.value !== null && metric.value >= metric.limit
   );
   if (exceeded) return { action, state: 'exceeded' };
 

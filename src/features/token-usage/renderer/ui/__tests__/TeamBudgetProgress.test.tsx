@@ -78,6 +78,14 @@ describe('team budget card', () => {
     expect(container.textContent).toContain('teamCardBlocked');
   });
 
+  it('shows a reached budget even if the observed subtotal has incomplete coverage', async () => {
+    const data = status({ policy: 'stop_team', value: 22 });
+    data.targets[0].metrics[0].incomplete = true;
+    await act(async () => root.render(<TeamBudgetProgress teamName="alpha" status={data} />));
+    expect(container.textContent).toContain('teamCardBlocked');
+    expect(container.textContent).toContain('$22.00 / $20.00');
+  });
+
   it('never shows a healthy budget if another configured metric is incomplete', async () => {
     const data = status({ value: 18, policy: 'block_launch' });
     data.targets[0].metrics.push({
