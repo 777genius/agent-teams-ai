@@ -98,6 +98,25 @@ describe('team budget stop observer', () => {
     expect(warn).toHaveBeenCalledOnce();
   });
 
+  it('honors a policy change before stopping the next project copy', async () => {
+    let action: 'stop_team' | 'notify' = 'stop_team';
+    const stop = vi.fn(async (name: string) => {
+      if (name === 'ptc-first') action = 'notify';
+    });
+    const observer = new TeamBudgetStopObserver({
+      readCurrentStatus: async () => makeStatus(action),
+      aliveTeams: () => ['ptc-first', 'ptc-second'],
+      resolveRuntimeNames: async () => ['ptc-first', 'ptc-second'],
+      ownsTeam: async () => true,
+      stopTeam: stop,
+      isTeamAlive: async () => false,
+      warn: vi.fn(),
+    });
+    observer.observe(makeStatus());
+    await settle();
+    expect(stop).toHaveBeenCalledExactlyOnceWith('ptc-first');
+  });
+
   it('continues stopping other owned copies when the first stop fails', async () => {
     const stop = vi.fn(async (name: string) => {
       if (name === 'ptc-broken') throw new Error('Cannot stop broken runtime');
