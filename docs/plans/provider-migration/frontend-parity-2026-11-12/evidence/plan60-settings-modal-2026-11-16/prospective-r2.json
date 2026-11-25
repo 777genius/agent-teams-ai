@@ -1,0 +1,170 @@
+{
+  "reviewer": "/root",
+  "author": "/root/frontend_gaps",
+  "decision": "ACCEPT_PROSPECTIVE_PLAN60_EXACT_SELECTED_DOCUMENT",
+  "selectedPlan": {
+    "bytes": 15907,
+    "sha256": "3b79888493dd6f9cca928738bc8c757a10e4b5246a287b2765020d34f73f1551",
+    "gitBlob": "897b56da95f0b2c5a749f8b38a4d35fbca15ce3a"
+  },
+  "originalR1Sha256": "dbc786484d24a12637639c875c6f0375f3e82fac125ad2f68713fcd9cc39584f",
+  "selectedPreimages": {
+    "sourceRef": "4900dcd71399b118b9dcc0a2e525280da9a06be0",
+    "paths": [
+      {
+        "path": "src/renderer/components/dashboard/CliStatusBanner.tsx",
+        "sha": "e91be4b22d835f585e561902e3680e831e11c47e"
+      },
+      {
+        "path": "test/renderer/components/cli/CliStatusVisibility.test.ts",
+        "sha": "f708343155d84f0abf1225b5f5f89ebfb784232f"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+        "sha": "dba3426375f7bbd3db5f594f2fe68d58e3cc3e25"
+      },
+      {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "sha": "3774658a0ab266686930fbe7e28ecb9e26711ebf"
+      }
+    ]
+  },
+  "verifiedSourceManifest": [
+    {
+      "path": "src/features/runtime-provider-management/renderer/RuntimeProviderQuickConnect.tsx",
+      "gitBlob": "b97a5bfb6de6f8da98caa781b0a44d3417ecaad6",
+      "receiptPinned": false
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useOpenCodeConnectedModelCatalog.test.tsx",
+      "gitBlob": "5125c41e5a2132a060091c978335fdcb4108d404",
+      "receiptPinned": false
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useOpenCodeDashboardConnectedCountProbe.ts",
+      "gitBlob": "1b0204357c63ad15d2006b8533b417d19a7fc35e",
+      "receiptPinned": false
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderCompanion.ts",
+      "gitBlob": "fbde17a9ae4288b26a5565a2038e6c91fe722328",
+      "receiptPinned": false
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderQuickConnect.ts",
+      "gitBlob": "ac1eaec22b5f91e48860e6de62ca15fef751fb57",
+      "receiptPinned": false
+    },
+    {
+      "path": "src/main/composition/createDesktopProviderManagementFeatures.ts",
+      "gitBlob": "9777f8c6bdcbdb247d24d09ae7b0b51499bbe130",
+      "receiptPinned": true
+    },
+    {
+      "path": "src/main/ipc/cliInstaller.ts",
+      "gitBlob": "d16940a91acba49dcee7ba0ef854c8515999317b",
+      "receiptPinned": true
+    },
+    {
+      "path": "src/main/services/infrastructure/CliInstallerService.ts",
+      "gitBlob": "0e12fc278e2f6feb705dcfa3d4da6b73b350a6f0",
+      "receiptPinned": true
+    },
+    {
+      "path": "src/renderer/components/dashboard/CliStatusBanner.tsx",
+      "gitBlob": "e91be4b22d835f585e561902e3680e831e11c47e",
+      "receiptPinned": true
+    },
+    {
+      "path": "src/renderer/components/dashboard/DashboardProviderSummary.test.tsx",
+      "gitBlob": "0bd53004c7e1d457aa33e412408ac3656811e0ad",
+      "receiptPinned": false
+    },
+    {
+      "path": "src/renderer/components/dashboard/ProviderCatalogDiagnostics.test.tsx",
+      "gitBlob": "ed93af2202e85df904c846bb8ae61b9705a49a84",
+      "receiptPinned": false
+    },
+    {
+      "path": "src/renderer/components/dashboard/cliProviderScopeRefresh.test.tsx",
+      "gitBlob": "b6e2e47b08f27c36ff2a1a807f0fc931f41de11b",
+      "receiptPinned": false
+    },
+    {
+      "path": "src/renderer/components/dashboard/openCodeRuntimeInstallScope.test.tsx",
+      "gitBlob": "77da9cc3c44ba35bf39fbfc87f3a558a426f72ab",
+      "receiptPinned": false
+    },
+    {
+      "path": "src/renderer/components/dashboard/useOpenCodeDashboardStatus.ts",
+      "gitBlob": "8e6e603a9ace5cdf536f91f47a2503ca70336d50",
+      "receiptPinned": false
+    },
+    {
+      "path": "src/renderer/components/dashboard/useProviderConnectionSummary.ts",
+      "gitBlob": "b4b719097a3c12f18fe21107f476402019d201ee",
+      "receiptPinned": false
+    },
+    {
+      "path": "src/renderer/components/runtime/ProviderRuntimeSettingsDialog.tsx",
+      "gitBlob": "ddef9d560b53af7c9f4be3af7a65ba841a17f2a7",
+      "receiptPinned": true
+    },
+    {
+      "path": "src/renderer/components/settings/SettingsContent.tsx",
+      "gitBlob": "095ef27abf80bd1a1275f4a266aa3a74acdca9b5",
+      "receiptPinned": false
+    },
+    {
+      "path": "src/renderer/components/settings/hooks/useSettingsCliStatus.ts",
+      "gitBlob": "c06322ba9fa8579d3e280e035545e2dbec53afc2",
+      "receiptPinned": false
+    },
+    {
+      "path": "src/renderer/components/settings/sections/CliStatusSection.tsx",
+      "gitBlob": "ce0a93347e54e2dcbb6480ef7ba171b371f16f9f",
+      "receiptPinned": true
+    },
+    {
+      "path": "src/renderer/hooks/useCliInstaller.ts",
+      "gitBlob": "a653a01b647ec3d1be66f926f23c950777d11d7e",
+      "receiptPinned": false
+    },
+    {
+      "path": "src/renderer/store/slices/cliInstallerSlice.ts",
+      "gitBlob": "38de9ccec33c7b9b1250a17173003e1e6fb96d9c",
+      "receiptPinned": true
+    },
+    {
+      "path": "src/renderer/store/slices/cliInstallerStatusReconciliation.ts",
+      "gitBlob": "c3347aaded7d5705b775b8aa1ca29f6d37a58c8e",
+      "receiptPinned": true
+    },
+    {
+      "path": "test/renderer/components/cli/CliStatusVisibility.test.ts",
+      "gitBlob": "f708343155d84f0abf1225b5f5f89ebfb784232f",
+      "receiptPinned": false
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderQuickConnect.test.ts",
+      "gitBlob": "129e512e33ae0494e92381f3d2667f2407fa3678",
+      "receiptPinned": false
+    }
+  ],
+  "independentReview": [
+    "Actual SettingsContent mounts real Banner with active Providers page while its own dialog is open. The two selected expressions control only passive catalog/grid/count owners.",
+    "Connected-catalog effect returns before consuming refresh revisions when disabled; cleanup cancels its own groups. Current Main keeps Host request independent from subscriber cancellation.",
+    "QuickConnect keeps same-scope entries and consumes refresh keys only when its original timer actually starts a read. Cleanup cancels its local continuation/count subscription/timer.",
+    "Companion enabled false removes passive subscription/warming; mounted reference and pending action promises remain live.",
+    "InstalledBanner isActive has exactly two selected uses, summary opt-in and QuickConnect enabled. Foreground dialog/status callback remains independent.",
+    "Original close handler increments once for OpenCode and preserves page visibility gate. No extra refresh callback or read is selected.",
+    "Inspected the risk of retained catalog loading state: RuntimeProviderManagementPanel receives disabled || selectedProviderLoading, not modelCatalogRefreshState. The proposal does not mask or rewrite the cached flag.",
+    "Existing actual-Banner suite provides the exact dialog callback, lazy import flush, subscriber input capture and count-probe mock; one ordering regression is meaningful.",
+    "One unchanged test added to common proof list and fast-lint operands is the complete validation-only delta. Current131 operands and Windows Retry subset remain."
+  ],
+  "limits": [
+    "Source-level independent prospective review only; no original metadata-child request attribution or guaranteed latency/PASS.",
+    "24 official source snapshots rehashed; individually unpinned unchanged helpers remain explicitly identified. No claim of complete transitive runtime pin closure.",
+    "No source afterimages or compiler/test/provider/native/GUI execution. Actual source R2 and original resulting-source CI remain required."
+  ]
+}

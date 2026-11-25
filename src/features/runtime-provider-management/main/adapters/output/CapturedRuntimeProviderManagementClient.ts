@@ -1,4 +1,5 @@
 import { CapturedRuntimeSourceError } from '@features/agent-backend/main';
+import { createLogger } from '@shared/utils/logger';
 
 import { validManagedModelLimits } from '../../../core/domain/managedProviderPreferences';
 
@@ -33,6 +34,9 @@ export interface CapturedRuntimeProviderManagementDependencies {
   oauth?: CapturedProviderOAuthDependencies;
   captureClaude?: CapturedRuntimeProviderManagementDependencies['capture'];
 }
+
+type ViewStage = 'capture' | 'catalog' | 'preferences' | 'resolved' | 'rejected';
+type ViewObservation = (stage: ViewStage) => void;
 
 const unavailable = (error?: unknown) => ({
   schemaVersion: 1 as const,
@@ -96,6 +100,25 @@ export function createCapturedRuntimeProviderManagementClient(
     // explicit limits-editor test sends proposed values before they are saved.
     new CapturedModelProbe(selectedCapture, undefined, deps.captureClaude);
   const probes = createProbe(deps.capture);
+  let observedViews = 0;
+  const observeView = (projectPath: string | null | undefined): ViewObservation | undefined => {
+    if (process.env.LEGACY_DESKTOP_STARTUP_DIAGNOSTICS !== '1' || observedViews >= 32)
+      return undefined;
+    const view = ++observedViews;
+    const scope = projectPath === null || projectPath === undefined ? 'global' : 'project';
+    return (stage) => {
+      try {
+        createLogger('Host:ProviderView').diagnostic('Runtime provider view stage', {
+          kind: 'runtime-provider-view-stage-v1',
+          view,
+          stage,
+          scope,
+        });
+      } catch {
+        /* Passive observations cannot change the original view outcome. */
+      }
+    };
+  };
   const capture = (input: Dto.RuntimeProviderManagementLoadViewInput) => {
     if (input?.runtimeId !== 'opencode') throw new Error('Unsupported runtime');
     return deps.capture(input.projectPath ?? null);
@@ -110,7 +133,11 @@ export function createCapturedRuntimeProviderManagementClient(
     if (!provider) throw new Error('Provider unavailable');
     return provider;
   };
-  const readCatalog = async (target: CapturedProviderManagement) => {
+  const readCatalog = async (
+    target: CapturedProviderManagement,
+    observe?: ViewObservation
+  ) => {
+    observe?.('catalog');
     const raw = await target.request('catalog', {});
     return {
       providers: parseManagementCatalog(raw, target),
@@ -121,18 +148,20 @@ export function createCapturedRuntimeProviderManagementClient(
     target: CapturedProviderManagement,
     projectPath: string | null,
     previous?: Awaited<ReturnType<typeof readCatalog>>,
-    refreshConfiguration = false
+    refreshConfiguration = false,
+    observe?: ViewObservation
   ): Promise<Dto.RuntimeProviderManagementViewResponse> => {
     let current: Awaited<ReturnType<typeof readCatalog>>;
     let degraded = false;
     try {
       if (refreshConfiguration && target.refreshConfiguration) target = await target.refreshConfiguration();
-      current = await readCatalog(target);
+      current = await readCatalog(target, observe);
     } catch (error) {
       if (!previous || !target.isCurrent()) throw error;
       current = previous;
       degraded = true;
     }
+    observe?.('preferences');
     const preferences = await selectedPreferences(target, current.nativeDefault);
     const resolved = preferences.resolved;
     if (!target.isCurrent()) throw new Error('Provider preferences context changed');
@@ -224,9 +253,20 @@ export function createCapturedRuntimeProviderManagementClient(
   const port: RuntimeProviderManagementPort = {
     async loadView(input) {
       const captured = { ...input };
+      const observe = observeView(captured.projectPath);
       try {
-        return await view(await capture(captured), captured.projectPath ?? null);
+        observe?.('capture');
+        const result = await view(
+          await capture(captured),
+          captured.projectPath ?? null,
+          undefined,
+          false,
+          observe
+        );
+        observe?.('resolved');
+        return result;
       } catch (error) {
+        observe?.('rejected');
         return unavailable(error);
       }
     },

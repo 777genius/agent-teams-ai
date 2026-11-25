@@ -10,6 +10,7 @@ import { tmpdir } from 'os';
 import path from 'path';
 
 import { resolveGeminiRuntimeAuth } from './geminiRuntimeAuth';
+import { originalRuntimeCacheKey } from './OriginalRuntimeScope';
 import {
   buildPassiveProviderStatusCliEnv,
   buildProviderAwareCliEnv,
@@ -65,7 +66,6 @@ const PROVIDER_STATUS_MAX_BUFFER_BYTES = 8 * 1024 * 1024;
 const PROVIDER_MODELS_MAX_BUFFER_BYTES = 8 * 1024 * 1024;
 const OPENCODE_PROJECT_STATUS_CACHE_TTL_MS = 10_000;
 
-// Summary updates are snapshots; asynchronous hydration updates contain one provider delta.
 type ProviderStatusesObserver = (
   providers: CliProviderStatus[],
   updatedProviderId?: CliProviderId
@@ -684,21 +684,6 @@ export class ClaudeMultimodelBridgeService {
     providerIds: readonly CliProviderId[],
     projectPath?: string | null
   ): number {
-    if (providerIds.length === 1) {
-      const hydrationKey = this.getProviderStatusHydrationKey(
-        binaryPath,
-        providerIds[0],
-        projectPath
-      );
-      const currentGeneration = this.providerStatusHydrationGenerations.get(hydrationKey);
-      if (
-        currentGeneration !== undefined &&
-        this.providerStatusHydrationInFlight.has(hydrationKey)
-      ) {
-        return currentGeneration;
-      }
-    }
-
     const generation = ++this.providerStatusHydrationGeneration;
     for (const providerId of providerIds) {
       this.providerStatusHydrationGenerations.set(
@@ -925,7 +910,10 @@ export class ClaudeMultimodelBridgeService {
           })
         : Promise.resolve(null);
 
-    const context = await resolveRuntimeStatusExecutionContext(providerId, getProviderStatusCommandCwd(options.projectPath));
+    const context = await resolveRuntimeStatusExecutionContext(
+      providerId,
+      getProviderStatusCommandCwd(options.projectPath)
+    );
     const modelListPromise = execCli(
       binaryPath,
       ['model', 'list', '--json', '--provider', providerId, ...context.projectArgs],
@@ -1226,7 +1214,10 @@ export class ClaudeMultimodelBridgeService {
     connectionIssues: Partial<Record<CliProviderId, string>>,
     options: { summary?: boolean; timeoutMs?: number; projectPath?: string | null } = {}
   ): Promise<CliProviderStatus> {
-    const context = await resolveRuntimeStatusExecutionContext(providerId, getProviderStatusCommandCwd(options.projectPath));
+    const context = await resolveRuntimeStatusExecutionContext(
+      providerId,
+      getProviderStatusCommandCwd(options.projectPath)
+    );
     const args = ['runtime', 'status', '--json', '--provider', providerId];
     if (options.summary) {
       args.push('--summary');
@@ -1267,7 +1258,7 @@ export class ClaudeMultimodelBridgeService {
     options: { summary?: boolean; timeoutMs?: number; projectPath?: string | null } = {}
   ): Promise<CliProviderStatus> {
     const projectPath = getProviderStatusCommandCwd(options.projectPath) ?? '';
-    const requestKey = JSON.stringify([
+    const requestKey = originalRuntimeCacheKey([
       path.resolve(binaryPath),
       providerId,
       options.summary === true,
@@ -1304,13 +1295,27 @@ export class ClaudeMultimodelBridgeService {
         if (providerId === 'anthropic' && options.summary !== true) {
           await providerConnectionService.applyAnthropicCompatibleCatalogStatusConnectionEnv(env);
         }
-        const status = await this.getProviderStatusFromRuntimeStatusCommand(
+        let status = await this.getProviderStatusFromRuntimeStatusCommand(
           binaryPath,
           providerId,
           env,
           connectionIssues,
           options
         );
+        if (providerId === 'codex' && options.summary !== true && status.modelCatalog) {
+          const configuredCatalog = await providerConnectionService.getCodexModelCatalog({
+            cwd: projectPath || null,
+          });
+          if (configuredCatalog?.diagnostics?.configReadState === 'ready') {
+            status = {
+              ...status,
+              modelCatalog: {
+                ...status.modelCatalog,
+                configuredReasoningEffort: configuredCatalog.configuredReasoningEffort ?? null,
+              },
+            };
+          }
+        }
         if (
           canReuseCompletedRead &&
           status.statusCheckOutcome === 'authoritative' &&

@@ -1,0 +1,212 @@
+{
+  "r1Published": {
+    "head": null,
+    "tree": null,
+    "parents": [
+      "4e74d36ba6212938c40a499603ee0419a183fc0a"
+    ],
+    "planBlob": null,
+    "canonicalR1": {
+      "path": null,
+      "bytes": null,
+      "blob": null,
+      "sha256": null
+    },
+    "fullReadbackExact": false,
+    "independentlyReviewed": false
+  },
+  "priorH": {
+    "head": "4e74d36ba6212938c40a499603ee0419a183fc0a",
+    "tree": "3c02af92462ec6ea2abec9fd982b8978e04efe03",
+    "rootApproved": false,
+    "independentApproved": false,
+    "stageBindings": {
+      "path": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/stage-bindings.json",
+      "bytes": null,
+      "blob": null,
+      "sha256": null
+    },
+    "records": [
+      {
+        "name": "F-runtime-green",
+        "metadata": {
+          "path": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/F-runtime-green-metadata.json",
+          "bytes": null,
+          "blob": null,
+          "sha256": null
+        },
+        "preflight": {
+          "path": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/F-runtime-green-preflight.json",
+          "bytes": null,
+          "blob": null,
+          "sha256": null
+        },
+        "log": {
+          "path": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/F-runtime-green.log",
+          "bytes": null,
+          "blob": null,
+          "sha256": null
+        }
+      },
+      {
+        "name": "G-journal-green",
+        "metadata": {
+          "path": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/G-journal-green-metadata.json",
+          "bytes": null,
+          "blob": null,
+          "sha256": null
+        },
+        "preflight": {
+          "path": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/G-journal-green-preflight.json",
+          "bytes": null,
+          "blob": null,
+          "sha256": null
+        },
+        "log": {
+          "path": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/G-journal-green.log",
+          "bytes": null,
+          "blob": null,
+          "sha256": null
+        }
+      },
+      {
+        "name": "H-host-test-types",
+        "metadata": {
+          "path": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-host-test-types-metadata.json",
+          "bytes": null,
+          "blob": null,
+          "sha256": null
+        },
+        "preflight": {
+          "path": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-host-test-types-preflight.json",
+          "bytes": null,
+          "blob": null,
+          "sha256": null
+        },
+        "log": {
+          "path": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-host-test-types.log",
+          "bytes": null,
+          "blob": null,
+          "sha256": null
+        }
+      },
+      {
+        "name": "H-scripts-types",
+        "metadata": {
+          "path": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-scripts-types-metadata.json",
+          "bytes": null,
+          "blob": null,
+          "sha256": null
+        },
+        "preflight": {
+          "path": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-scripts-types-preflight.json",
+          "bytes": null,
+          "blob": null,
+          "sha256": null
+        },
+        "log": {
+          "path": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-scripts-types.log",
+          "bytes": null,
+          "blob": null,
+          "sha256": null
+        }
+      },
+      {
+        "name": "H-scoped-fast-lint",
+        "metadata": {
+          "path": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-scoped-fast-lint-metadata.json",
+          "bytes": null,
+          "blob": null,
+          "sha256": null
+        },
+        "preflight": {
+          "path": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-scoped-fast-lint-preflight.json",
+          "bytes": null,
+          "blob": null,
+          "sha256": null
+        },
+        "log": {
+          "path": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-scoped-fast-lint.log",
+          "bytes": null,
+          "blob": null,
+          "sha256": null
+        }
+      },
+      {
+        "name": "H-size",
+        "metadata": {
+          "path": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-size-metadata.json",
+          "bytes": null,
+          "blob": null,
+          "sha256": null
+        },
+        "preflight": {
+          "path": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-size-preflight.json",
+          "bytes": null,
+          "blob": null,
+          "sha256": null
+        },
+        "log": {
+          "path": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-size.log",
+          "bytes": null,
+          "blob": null,
+          "sha256": null
+        }
+      },
+      {
+        "name": "H-architecture",
+        "metadata": {
+          "path": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-architecture-metadata.json",
+          "bytes": null,
+          "blob": null,
+          "sha256": null
+        },
+        "preflight": {
+          "path": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-architecture-preflight.json",
+          "bytes": null,
+          "blob": null,
+          "sha256": null
+        },
+        "log": {
+          "path": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-architecture.log",
+          "bytes": null,
+          "blob": null,
+          "sha256": null
+        }
+      },
+      {
+        "name": "H-diff",
+        "metadata": {
+          "path": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-diff-metadata.json",
+          "bytes": null,
+          "blob": null,
+          "sha256": null
+        },
+        "preflight": {
+          "path": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-diff-preflight.json",
+          "bytes": null,
+          "blob": null,
+          "sha256": null
+        },
+        "log": {
+          "path": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-diff.log",
+          "bytes": null,
+          "blob": null,
+          "sha256": null
+        }
+      }
+    ]
+  },
+  "recorderBlob": "c3c983293c1ad0f2496b07b9d2262af71adb60c9",
+  "stages": {
+    "I": {
+      "head": null,
+      "tree": null,
+      "parents": [
+        "PUBLISHED_REVIEWED_DOCS_HEAD",
+        "4dc08dea7eeed5c286cf310e09a2ba26d84a9546"
+      ],
+      "independentlyReviewed": false
+    }
+  }
+}

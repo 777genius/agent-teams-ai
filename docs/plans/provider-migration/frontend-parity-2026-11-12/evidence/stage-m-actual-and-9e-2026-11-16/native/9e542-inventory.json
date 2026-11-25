@@ -1,0 +1,296 @@
+{
+  "schema": "recoverable-original-native-evidence-bundle/v1",
+  "source": "9e542899f36c47598a88c764c9e6745589fea3e1",
+  "cohort": "9e542-completed-0017",
+  "checkpoint": {
+    "path": "checkpoint-20261116-0017.json",
+    "bytes": 21502,
+    "blob": "09fab681c2aa99962c1503656443cc428a583fe8",
+    "sha256": "afa91121dc690daf5555ef2dfb330ecc2ecf123478cd862809531d042953edd5"
+  },
+  "payloadFileCount": 46,
+  "payloadBytes": 2430767,
+  "originalArchiveCount": 8,
+  "files": [
+    {
+      "path": "14186959509-archive-audit.json",
+      "bytes": 6424,
+      "blob": "8e4a0c06103090eadd34da5e128370eaefd35e9f",
+      "sha256": "d9448b44eb8c2b13e45c8d3b88b0a7ed4f2df7f907eb735681f1f54a0e2cf200"
+    },
+    {
+      "path": "14186959509.zip",
+      "bytes": 72079,
+      "blob": "f032c28d6922eabfe2667ac694cd93ee25cc3a16",
+      "sha256": "79166da9f7569d13e3d99915fbd28f70110b955d51d9101f99920cb486ad7556"
+    },
+    {
+      "path": "14187118195-archive-audit.json",
+      "bytes": 2809,
+      "blob": "49675d9dbd1114e9c3b4eeadd18532ae5648c63a",
+      "sha256": "32abbbee0270c2661944acbf68e2d15c63ef4b1acd5b77008ac02baa23938f09"
+    },
+    {
+      "path": "14187118195.zip",
+      "bytes": 12661,
+      "blob": "8201e02392663dd52950a36dfefa8e10cb766b39",
+      "sha256": "17ecc3409ec1629cd40ddff3f47c8652274ba2e03101253b5b1ebf571e6b2b00"
+    },
+    {
+      "path": "14187121941-archive-audit.json",
+      "bytes": 2182,
+      "blob": "e373a08934f1b0b4a8bf113c74d4e4030eee54d8",
+      "sha256": "75a1ddbfc338705b597e03c26c97747b1b14676a9db0472722e67e0089f09641"
+    },
+    {
+      "path": "14187121941.zip",
+      "bytes": 10370,
+      "blob": "f4f6ec91212c7578eda781a0d941685441423e4f",
+      "sha256": "0f4ea286cd45a1f88e83586ae9e15dbf93491f6a3ba6b38407f20a55b45c5ef7"
+    },
+    {
+      "path": "14187216906-archive-audit.json",
+      "bytes": 2180,
+      "blob": "ef5e48cd05f74b43266773e8b7add89d87c79220",
+      "sha256": "451bd48edcbf755ffe6049a9cda73c6aee491eaea3c480d9c6887ab3c0bcd134"
+    },
+    {
+      "path": "14187216906.zip",
+      "bytes": 10574,
+      "blob": "b3f6218f2ec87ca2d77d632d92b2aba4b41450cf",
+      "sha256": "8abaf22af6d8bb7e94c1be9dde93607b9f69b26e832cb9334ecc519255ae6eee"
+    },
+    {
+      "path": "14187241023-archive-audit.json",
+      "bytes": 6935,
+      "blob": "57e9c349a8cadabb1a0b839ae21c78032a48ea70",
+      "sha256": "d809837750e238bc0f776ce101f4b01c4faa37a28abc91903acade60ff9667dd"
+    },
+    {
+      "path": "14187241023.zip",
+      "bytes": 71791,
+      "blob": "1a9405c8e808af82b163263e67c8aa88d242a981",
+      "sha256": "603750ecd3af87c9832882dfa3d1ed62830b04579d0ed0a0380ac195646698be"
+    },
+    {
+      "path": "14187251902-archive-audit.json",
+      "bytes": 2969,
+      "blob": "21bb938f260505497ade8276e9b096858b40f5b8",
+      "sha256": "0097db10e99c3899c226b51aea3ed20f3439a325ee7ea69b99d73df53a89ca0a"
+    },
+    {
+      "path": "14187251902.zip",
+      "bytes": 13231,
+      "blob": "156ee52c7d38ab3647e119d4af4393638f09fde9",
+      "sha256": "8ce7596307dac061b312538b69d0e9fcd2161ec5e9f8f8bbba757b86bd91ee11"
+    },
+    {
+      "path": "14187271552-archive-audit.json",
+      "bytes": 2186,
+      "blob": "a262a9ea0598881faa99aee04bc35f23939d3e4b",
+      "sha256": "793e20dfc5e6855c50eeb01f7238a2eace612e611ef4e30bca86c74196f98d9c"
+    },
+    {
+      "path": "14187271552.zip",
+      "bytes": 13206,
+      "blob": "853111f890dc8be2da6af53e73ea86c4e8e64132",
+      "sha256": "812ddf5cb220b49cf0a43c3e8a7701e2851ec0b2a3d7a66b6f8dac27ea5b3fc1"
+    },
+    {
+      "path": "14187666424-archive-audit.json",
+      "bytes": 2080,
+      "blob": "fd0389e7d0a71261cc64f6d0d4be8c5142af9c26",
+      "sha256": "0e9d2c5aec8b2392c34ee89c2769088ad07e9142d09397c422fde3494a94f492"
+    },
+    {
+      "path": "14187666424.zip",
+      "bytes": 13423,
+      "blob": "8173db5dcf540af0d2c4c28ca15a9af6f1fc83c5",
+      "sha256": "d96c1a0a8cced10d476d07c250d41d05351b224f3ad25c0b9af72597113b8129"
+    },
+    {
+      "path": "Plan29-v2-p09-darwin-static-appendix.md",
+      "bytes": 8806,
+      "blob": "b5bf61148cae4fddd12189924b76d9c486079fef",
+      "sha256": "1cd2c5c615a0c58a53ac5a5db3a7d8864f872154b56df20a3d6486ddb12c937d"
+    },
+    {
+      "path": "Plan29-windows-process-appendix.md",
+      "bytes": 6440,
+      "blob": "64043927a9904aa2f98da0ad044df7322bd5bee2",
+      "sha256": "36c49721680697824c38a631dee52f63dc77f3fbb88295fae58be1da49e27117"
+    },
+    {
+      "path": "artifact-metadata-0013.json",
+      "bytes": 3602,
+      "blob": "cff14b266955a0e41f512a21b013f4c71f8e6564",
+      "sha256": "3cb78191710b62b18e6bba972b10ba040976cfdc9879ff02de48ef1a272fc4c7"
+    },
+    {
+      "path": "artifact-metadata-v2-0018.json",
+      "bytes": 3462,
+      "blob": "fb70478f93184b5b5d16a12dde23fc621d2b79fe",
+      "sha256": "a629ca5405ccbf4f5d3c899fb67f35438747da5d1a0333c9611d9a2c139d686a"
+    },
+    {
+      "path": "checkpoint-20261116-0017.json",
+      "bytes": 21502,
+      "blob": "09fab681c2aa99962c1503656443cc428a583fe8",
+      "sha256": "afa91121dc690daf5555ef2dfb330ecc2ecf123478cd862809531d042953edd5"
+    },
+    {
+      "path": "host-source-9e542-git-audit.json",
+      "bytes": 163238,
+      "blob": "7c18302f554538b710fe06e5799ab84859879d3c",
+      "sha256": "5d3fad6433c0ba2bf72e3f39be373be50f3779d8b31a158aa17f8794901068cb"
+    },
+    {
+      "path": "host-source-final-receipt-joins.json",
+      "bytes": 5442,
+      "blob": "c9c8d74bba44b5ff73742be591ac29982cf81500",
+      "sha256": "f16e7e77cb2bceaf2f416e4a6a6c428ceb73db7b8394ab741529e3ac9ea3b09d"
+    },
+    {
+      "path": "process-arm-job.log",
+      "bytes": 434494,
+      "blob": "05d1a9604497267242213e328620d8ac6c19a7f4",
+      "sha256": "8ee2e87a1437522a084427464a4078bf0dfe58c94dd35754f3d6760da8ebf4ed"
+    },
+    {
+      "path": "process-darwin-arm-job.log",
+      "bytes": 107253,
+      "blob": "08c0dbecb2f27bcbbac0bf642b5e02f019adec74",
+      "sha256": "0c6d06ff0fdca8fa2d0d605d397acf8f3aa55c80903a7dec53d1bb07b6ec466c"
+    },
+    {
+      "path": "process-darwin-arm-qualification-audit.json",
+      "bytes": 7303,
+      "blob": "aab74b3328c9a45016a71fa53216de120284301a",
+      "sha256": "fa3ad372f2589e180e1f1542b3fbd59d7777c88953913a770ba192b04cd66b82"
+    },
+    {
+      "path": "process-darwin-x64-job.log",
+      "bytes": 117393,
+      "blob": "d4c3815a02538c5fd382646b4ac378284928c42e",
+      "sha256": "bd8dd4083665d682d4fde99b5b16f29aba7183672fc76d3469b8ba58140f0616"
+    },
+    {
+      "path": "process-darwin-x64-qualification-audit.json",
+      "bytes": 7297,
+      "blob": "26392ace94130ede3e8581cb8a8d77c0b48b9712",
+      "sha256": "6d53b43947187b416b7b7eb6b3d806a98a75a4270c0ed3b671c8745011363507"
+    },
+    {
+      "path": "process-jobs-api-0007.json",
+      "bytes": 23815,
+      "blob": "eabd9759a50373a8f2f12b2e48dee60e2017525c",
+      "sha256": "7704a6c9704e469aa7409f72e3f1e6c5e8cf0e8bbe0b3be0c764fa84de2abe53"
+    },
+    {
+      "path": "process-jobs-api-0012.json",
+      "bytes": 25239,
+      "blob": "fa73ecdc505f9031b04126784712827735f9e3a9",
+      "sha256": "720b61714ede82add5788b618d073d59335c0cb61fb8fdfe4f597afee047aa51"
+    },
+    {
+      "path": "process-jobs-api-0017.json",
+      "bytes": 25239,
+      "blob": "fa73ecdc505f9031b04126784712827735f9e3a9",
+      "sha256": "720b61714ede82add5788b618d073d59335c0cb61fb8fdfe4f597afee047aa51"
+    },
+    {
+      "path": "process-source-pin-audit-arm.json",
+      "bytes": 30659,
+      "blob": "559c78533a42640da93c9c6f38b622d178cffafa",
+      "sha256": "44c94e4b4c96470e5918243d051baa7f7da2020a9bfdcc4781153b0d9e8517db"
+    },
+    {
+      "path": "process-source-pin-audit-x64.json",
+      "bytes": 30647,
+      "blob": "9ff586b48ffcc874ea7a0683587fa5737048bc16",
+      "sha256": "77f4cb9bd49ae539e08883b27e9ce81b91f8ea965ccc93028fc87ee550e0c336"
+    },
+    {
+      "path": "process-windows-arm-qualification-audit.json",
+      "bytes": 38328,
+      "blob": "11607d65bf1d07eec7e07aeb53af8af4db7d1a14",
+      "sha256": "48cfb3b9b971d10d5ed05dfe9cd77c643c5ea197c3b1c3de8111d4b1edbacc31"
+    },
+    {
+      "path": "process-windows-x64-qualification-audit.json",
+      "bytes": 38297,
+      "blob": "f9bf5b53a939ec532ef61c489601cb87b1042eae",
+      "sha256": "9d0d48ee85d0c0cbdbb608510e9c1fe5c04920e6fd12f6e03eeedca2064e2f3c"
+    },
+    {
+      "path": "process-x64-job.log",
+      "bytes": 418454,
+      "blob": "8912cfe5fbbd6205b2d7d36ac84d30eb6aae28df",
+      "sha256": "095f23f1520851b474446f530648a721101cafc6d05e24fba13fd482fe8e3703"
+    },
+    {
+      "path": "static-windows-job.log",
+      "bytes": 103191,
+      "blob": "7df0ec0aa408b51f921969df81d70fc929a48a2b",
+      "sha256": "f8519d37a4ee239313260067ef43cf8fe5800d00ffc21074d7c541f2e72ad5a1"
+    },
+    {
+      "path": "static-windows-qualification-audit.json",
+      "bytes": 4790,
+      "blob": "ca23c40d7c58a01e943bbb8d4af1acb03cb3bf00",
+      "sha256": "8a53f2984c3a1a0f830b4e807df9301c00e4ad088b2d565c56108bedf59a7011"
+    },
+    {
+      "path": "v2-arm-job.log",
+      "bytes": 111202,
+      "blob": "03440d715e70f86637a44650978625985031d4b6",
+      "sha256": "6ee17c090b69c1193ac82990c06d1001d9297fa21d16e4fafd77873731bf346e"
+    },
+    {
+      "path": "v2-darwin-arm-job.log",
+      "bytes": 101705,
+      "blob": "3856b797d1dbe886676f61b308ce02b9eb97a5a1",
+      "sha256": "827cb198c85932887b632354d59d9efe2892d996f3fb57a7b7fb9cf9c6dafcaf"
+    },
+    {
+      "path": "v2-darwin-x64-job.log",
+      "bytes": 116795,
+      "blob": "c3f84b26a8404c4686c2fdc6253862cf1b390c27",
+      "sha256": "22863372a2eff2be3b24a5d452adc8756a3f9c3d5fe8ffb65b0d435f91f59b26"
+    },
+    {
+      "path": "v2-jobs-api-0012.json",
+      "bytes": 34116,
+      "blob": "f7b337f123580c67b1f92b2878a324595582de09",
+      "sha256": "ef1d47143da74287660449a9ee073b21bc77005d03e54e8cfacab9428d03916a"
+    },
+    {
+      "path": "v2-jobs-api-0017.json",
+      "bytes": 34828,
+      "blob": "23701b8ea3975802c7b87d5a21e23d90e6f8ede6",
+      "sha256": "f024da5e33a012d198b36d612ff8436b1f32efab4d5c07d971748bc3b7c9d17c"
+    },
+    {
+      "path": "v2-windows-and-p09-qualification-audit.json",
+      "bytes": 55728,
+      "blob": "15338d9f3fd2c82a7121ea954fc7b984acdee011",
+      "sha256": "ffefcbc56ff828978ad04c826d0b85178f80e3792bcf12cb46a0f670d9e668a4"
+    },
+    {
+      "path": "v2-windows-arm-qualification-audit.json",
+      "bytes": 18364,
+      "blob": "5f6ae7bf06c2432d6b5c82e5559ce8d77d07be25",
+      "sha256": "82436dec2c8a45753b72076cfb65626413a6c80de0a4f96e5b2a6c561a4d5ba0"
+    },
+    {
+      "path": "v2-x64-job.log",
+      "bytes": 88038,
+      "blob": "1164d6b269e9d18003d22b16cd16733bf8973cce",
+      "sha256": "bbfeaadb45bae92a01c96b693c1ec090725fd0c7e745aa637b4c61d98215804a"
+    }
+  ],
+  "limits": [
+    "Authoritative ZIPs contain all exact recoverable receipt/log members; redundant extracted members are not separately republished.",
+    "Independent qualification review is delivered separately after this frozen bundle; none is falsely claimed inside."
+  ]
+}

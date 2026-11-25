@@ -1,5 +1,7 @@
 import { useCallback, useSyncExternalStore } from 'react';
 
+import { useRetainedLegacyLaunch } from '@features/agent-backend/renderer';
+
 import type { RuntimeProviderDirectoryEntryDto } from '../contracts';
 
 export interface RuntimeProviderDirectoryCacheSnapshot {
@@ -27,8 +29,7 @@ export interface RuntimeProviderConnectedCountEvidence {
   readonly checking?: boolean;
 }
 
-interface PublishRuntimeProviderConnectedCountInput
-  extends RuntimeProviderConnectedCountObservation {
+interface PublishRuntimeProviderConnectedCountInput extends RuntimeProviderConnectedCountObservation {
   projectPath?: string | null;
   readToken: string;
 }
@@ -48,7 +49,10 @@ const GLOBAL_SCOPE_KEY = '\u0000global';
 const MAX_CACHED_PROJECT_SCOPES = 8;
 const EMPTY_SNAPSHOT: RuntimeProviderDirectoryCacheSnapshot | null = null;
 const snapshotsByScope = new Map<string, RuntimeProviderDirectoryCacheSnapshot>();
-const EMPTY_COUNT_EVIDENCE: RuntimeProviderConnectedCountEvidence = { observation: null, invalidated: false };
+const EMPTY_COUNT_EVIDENCE: RuntimeProviderConnectedCountEvidence = {
+  observation: null,
+  invalidated: false,
+};
 const connectedCountEvidenceByScope = new Map<string, RuntimeProviderConnectedCountEvidence>();
 const activeConnectionChecksByScope = new Map<string, Set<symbol>>();
 const listenersByScope = new Map<string, Set<() => void>>();
@@ -64,7 +68,7 @@ let globalFallbackSource: RuntimeProviderDirectoryCacheSnapshot | null = null;
 let globalFallbackSnapshot: RuntimeProviderDirectoryCacheSnapshot | null = null;
 let observedRuntimeRevision: string | null = null;
 let invalidationEpoch = 0;
-const generationByScope = new Map<string, number>;
+const generationByScope = new Map<string, number>();
 
 /** Reject directory reads started before a credential mutation. */
 export function getRuntimeProviderDirectoryReadToken(projectPath?: string | null): string {
@@ -233,7 +237,8 @@ export function publishRuntimeProviderDirectoryCache({
   runtimeRevision,
   readToken,
 }: PublishRuntimeProviderDirectoryCacheInput): void {
-  if (readToken !== undefined && readToken !== getRuntimeProviderDirectoryReadToken(projectPath)) return;
+  if (readToken !== undefined && readToken !== getRuntimeProviderDirectoryReadToken(projectPath))
+    return;
   if (runtimeRevision && observedRuntimeRevision && runtimeRevision !== observedRuntimeRevision) {
     return; // An in-flight response from a replaced binary is stale.
   }
@@ -248,7 +253,8 @@ export function publishRuntimeProviderDirectoryCache({
     matchingRevision &&
     nextFetchedAt <
       Math.max(currentFetchedAt, getFetchedAtTimestamp(current.lastSummaryFetchedAt ?? ''))
-  ) return;
+  )
+    return;
   const retainFullDirectory = matchingRevision && current?.authoritative && !authoritative;
   const summaryByProvider = retainFullDirectory
     ? new Map(entries.map((entry) => [entry.providerId, entry] as const))
@@ -298,14 +304,19 @@ export function publishRuntimeProviderDirectoryCache({
   // Count validity stays separate so the existing catalog keeps its identity.
   const evidence = connectedCountEvidenceByScope.get(scopeKey);
   if (
-    authoritative && !retainFullDirectory &&
-    nextCursor == null && totalCount === entries.length &&
+    authoritative &&
+    !retainFullDirectory &&
+    nextCursor == null &&
+    totalCount === entries.length &&
     entries.every((entry) => entry.state !== 'error') &&
     (evidence?.invalidated ||
       (evidence?.observation &&
         nextFetchedAt >= getFetchedAtTimestamp(evidence.observation.fetchedAt)))
   ) {
-    connectedCountEvidenceByScope.set(scopeKey, EMPTY_COUNT_EVIDENCE);
+    connectedCountEvidenceByScope.set(scopeKey, {
+      ...EMPTY_COUNT_EVIDENCE,
+      checking: (activeConnectionChecksByScope.get(scopeKey)?.size ?? 0) > 0,
+    });
   }
   notifyScope(scopeKey);
 }
@@ -371,7 +382,8 @@ export function publishRuntimeProviderConnectedCount({
     (observedRuntimeRevision !== null && runtimeRevision !== observedRuntimeRevision) ||
     !Number.isSafeInteger(connected) ||
     connected < 0
-  ) return;
+  )
+    return;
   const fetchedAtMs = Date.parse(fetchedAt);
   if (!Number.isFinite(fetchedAtMs) || fetchedAtMs > Date.now()) return;
   const scopeKey = getScopeKey(projectPath);
@@ -434,7 +446,10 @@ export function useRuntimeProviderConnectedCount(
     (listener: () => void) => subscribeScope(scopeKey, listener),
     [scopeKey]
   );
-  const getSnapshot = useCallback(() => getRuntimeProviderConnectedCountEvidence(projectPath), [scopeKey]);
+  const getSnapshot = useCallback(
+    () => getRuntimeProviderConnectedCountEvidence(projectPath),
+    [scopeKey]
+  );
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
 
@@ -457,6 +472,7 @@ export function useRuntimeProviderDirectoryCache(
 export function useRuntimeProviderDirectoryCacheWithGlobalFallback(
   projectPath?: string | null
 ): RuntimeProviderDirectoryCacheSnapshot | null {
+  const retained = useRetainedLegacyLaunch();
   const scopeKey = getScopeKey(projectPath);
   const subscribe = useCallback(
     (listener: () => void) => {
@@ -472,7 +488,8 @@ export function useRuntimeProviderDirectoryCacheWithGlobalFallback(
   );
   const getSnapshot = useCallback(() => getSnapshotWithGlobalFallback(scopeKey), [scopeKey]);
 
-  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+  const snapshot = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+  return retained ? null : snapshot;
 }
 
 /** The last settled revision survives hook unmounts; changes invalidate every scope. */

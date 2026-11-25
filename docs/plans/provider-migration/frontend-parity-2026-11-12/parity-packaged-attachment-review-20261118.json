@@ -1,0 +1,325 @@
+{
+  "schemaVersion": 1,
+  "kind": "root-independent-packaged-attachment-loader-review",
+  "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "sourceTree": "292b3cc975b5c927233fb85b73aed1411753efd1",
+  "reviewer": "root; different from candidate author review_ready_823",
+  "reviewedAt": "2026-11-18T23:45:49.217556+00:00",
+  "result": "PASS_SOURCE_AND_FINITE_SCOPE_ONLY",
+  "candidateManifest": {
+    "schemaVersion": 1,
+    "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "sourceTree": "292b3cc975b5c927233fb85b73aed1411753efd1",
+    "scope": "Two TEST-only source files; no product, schema, bundler, workflow, manifest, deadline or guard changes",
+    "changes": [
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/native-host.ts",
+        "mode": "100644",
+        "before": {
+          "gitBlob": "7e1c3760f572d1648768a721b590cb343d015b01",
+          "sha256": "add94feee7daec17fbb3ce35ebda379121c9a254da579100a9445ed9fd809e49",
+          "bytes": 19768,
+          "lines": 460
+        },
+        "after": {
+          "gitBlob": "025a124b317917cdceb5d6072977bd2d24508cdd",
+          "sha256": "a7a3fb47fa680bb9c6193657437b860c58526a2fb87f6e5d2327a865c90f10fb",
+          "bytes": 20176,
+          "lines": 465
+        }
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/native-host-close.test.ts",
+        "mode": "100644",
+        "before": {
+          "gitBlob": "6e914e68cbbe229ed99d232aab7cb6c7adc330ec",
+          "sha256": "0be9ee5a68210c1e6e17e0817d58b238a4a37c409aadd62237b772d62ddfe5a5",
+          "bytes": 45802,
+          "lines": 628
+        },
+        "after": {
+          "gitBlob": "1e4522ba6e600545535c116e59a53a95f6120b37",
+          "sha256": "be61f648fec4c3b73a2c98eeb9f3428708007dc3abccb421ad6e35ecb3be8708",
+          "bytes": 52804,
+          "lines": 744
+        }
+      }
+    ],
+    "patch": {
+      "path": "candidate.patch",
+      "gitBlob": "a1c2bafbcc20919ae294d2f3c517b5846f9043f4",
+      "sha256": "0700c8b02c4671ec9321307f2f6dd6f6481424283c5008f03cd71aa37ac742ed",
+      "bytes": 11096,
+      "lines": 185
+    }
+  },
+  "candidateManifestPin": {
+    "gitBlob": "a2f8a2ccc55a7585010b0d18e8b8e424b12a4c09",
+    "sha256": "c0fc3d5611a4470d87acf75231a5fc74164c32c629c3ef014b7d41c4efd6d528",
+    "bytes": 1612
+  },
+  "authorVerificationPin": {
+    "gitBlob": "93b830d6e1b25c5a0c9f555614378152a378511d",
+    "sha256": "9ab07341ce9cf78f06b46067a7c0f6c06434102a58d71844b21e51b1caabd507",
+    "bytes": 11979
+  },
+  "authorVerification": {
+    "schemaVersion": 1,
+    "status": "FINITE_RED_GREEN_PASS",
+    "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "rootCause": {
+      "observed": "Original packaged Darwin ARM64 generated TEST harness failed at attachmentContracts then rpc with MODULE_NOT_FOUND ../../dist/attachments/contracts.js; wrapper refused child exit1. Native and wrapper status remained INCOMPLETE with recorded cleanup/restoration.",
+      "source": "Aliased createRequire(import.meta.url) in native-host.ts survives bundling; import.meta.url then names the RUNNER_TEMP harness. The relative dist request consequently resolves against that temporary location, while the source checkout is deliberately unavailable."
+    },
+    "change": {
+      "binding": "startHost constructs one lazy contract loader from its already supplied options.entry and ./attachments/contracts.js; the same loader validates attachment requests and large response frames.",
+      "preserved": [
+        "Standalone frame helper keeps its lazy fixture-relative default and ordinary-frame behavior.",
+        "Original frame limits, schemas, exact digest/id/offset/base64/envelope checks and response failure behavior.",
+        "Original source-hidden and legacy-runtime-hidden assertions, package manifest/census/hash binding, bundler settings, runtime timeouts and native cleanup rules."
+      ],
+      "capturedEntryProvenance": "readPackagedOpenCodeV2 requires manifest.hostEntry exactly manifest.hostPackage+/dist/cli.js, checks listed SHA and physical file. packagedOpenCodeV2Scenario returns this captured.entry; embedded Host scenario129 selects it and passes it unchanged to startHost285. No new selector or fallback is introduced."
+    },
+    "execution": {
+      "runtime": {
+        "version": "v24.22.3",
+        "platform": "linux",
+        "arch": "x64",
+        "executable": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "sha256": "acbe4b8d9153b841ed0697cbfc4f93e767386620edb745ab9358306c0a6f31aa"
+      },
+      "scope": "Intrinsic Node TypeScript stripping evaluates the actual fixture bodies with relocated import.meta.url. Only spawn is replaced with finite EventEmitter/PassThrough transport; Node createRequire and copied prepared pure contract/dependency bytes are real. No product/native/app, bundler, build or installation executes.",
+      "before": {
+        "command": "node --test --test-concurrency=1 --test-name-pattern='^relocated TEST fixture reads attachment contracts' tests/native-host-close.test.ts",
+        "workingDirectory": "/workspace/scratch/c714f5bce554/packaged-030-candidate/verify-before/packages/legacy-agent-host",
+        "exitCode": 1,
+        "selectedTests": 1,
+        "passed": 0,
+        "failed": 1,
+        "durationMs": 838.982433,
+        "firstFailure": "MODULE_NOT_FOUND ../../dist/attachments/contracts.js; require stack is relocated TEST-packaged-v2-host.mjs",
+        "log": {
+          "gitBlob": "764bcb26fa28e7f9180e5cb605cf11d5ff3fa5b0",
+          "sha256": "26db13a8cf4bef9c23366efc0b175c0313c562a2fc104a6f4be9c02e84929d74",
+          "bytes": 1839,
+          "lines": 32
+        }
+      },
+      "after": {
+        "command": "node --test --test-concurrency=1 --test-name-pattern='^(relocated TEST fixture reads attachment contracts|native Host keeps ordinary frame bounds)' tests/native-host-close.test.ts",
+        "workingDirectory": "/workspace/scratch/c714f5bce554/packaged-030-candidate/verify-after/packages/legacy-agent-host",
+        "exitCode": 0,
+        "selectedTests": 2,
+        "passed": 2,
+        "failed": 0,
+        "durationMs": 1204.58279,
+        "log": {
+          "gitBlob": "921cc612fb384399f8c1c4aa0b95ed27ee439aa1",
+          "sha256": "26ba6cb35d4df90df74282a0449c717e312871f472339df504a81e84da59b426",
+          "bytes": 537,
+          "lines": 12
+        }
+      },
+      "sameRegressionSourceBothSnapshots": true,
+      "cases": [
+        "A normal large chunk validates using two loads from the exact captured entry: request schema and response schema.",
+        "Unknown attachment metadata, oversized reply, wrong digest and an invalid request fail to qualify a large reply. Invalid request case does not claim it was never sent.",
+        "A missing selected contract throws MODULE_NOT_FOUND after only that captured-entry lookup; no checkout/neighboring-Host fallback.",
+        "Module initialization and ordinary helpers do not eagerly load the compiled attachment schema.",
+        "Existing unchanged strict frame test passes all original exact-chunk and malformed/oversized/foreign-binding cases."
+      ],
+      "preparedContracts": [
+        {
+          "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/packages/legacy-agent-host/dist/attachments/contracts.js",
+          "bytes": 1834,
+          "sha256": "bc29eb0e932947fcf3533ee15e25c745e0dd275a7ba87f839dad78ece7f88398"
+        },
+        {
+          "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/packages/legacy-agent-host/dist/attachments/portable.js",
+          "bytes": 5280,
+          "sha256": "95c09abe52a842b87ca0d15a53d18e0ac0a6ab9649561faf7ac811c04ed58b30"
+        },
+        {
+          "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/packages/legacy-agent-host/dist/attachments/messageFileReferences.js",
+          "bytes": 2298,
+          "sha256": "908751deb095ff022598209bd4f409610ee84b43ccf2d64ce1d937ccf60bf029"
+        },
+        {
+          "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/packages/legacy-agent-host/dist/attachments/mimeTypes.js",
+          "bytes": 723,
+          "sha256": "4fb9dd95b2f6377f7c0febf4fb3e4f406c789fc70a0c5821ec0a4f5e7bf51881"
+        }
+      ],
+      "dependency": "Regression copies the prepared Zod package resolved from the original contract into its temporary captured closure; no dependency download or install."
+    },
+    "discovery": {
+      "workflow": ".github/workflows/ci.yml",
+      "step": "Test workspace packages",
+      "condition": "matrix.shard == 1",
+      "command": "pnpm --filter @agent-teams/legacy-agent-host test",
+      "packageScript": "pnpm build && pnpm typecheck:test && node --test --test-concurrency=1 tests/*.test.ts tests/team/*.test.ts tests/fixtures/native-claude-team/model.test.ts tests/fixtures/native-opencode-team/model.test.ts tests/fixtures/native-codex-team/model.test.ts",
+      "test": "Existing tests/*.test.ts discovers native-host-close.test.ts; no workflow/suite expansion."
+    },
+    "limits": [
+      "No esbuild, builder, native Host, app or packaged journey was rerun. Original CI already supplies the actual bundling/relocation failure; this finite witness reproduces its module-base semantics.",
+      "The prepared compiled pure schemas were copied and pinned, not rebuilt. This is not fresh project build/typecheck qualification.",
+      "The final packaged E2E must qualify the candidate in original CI; finite GREEN does not change original INCOMPLETE receipts.",
+      "Only two selected node tests ran; other registered tests were not executed."
+    ],
+    "candidateManifest": {
+      "gitBlob": "a2f8a2ccc55a7585010b0d18e8b8e424b12a4c09",
+      "sha256": "c0fc3d5611a4470d87acf75231a5fc74164c32c629c3ef014b7d41c4efd6d528",
+      "bytes": 1612,
+      "lines": 47
+    },
+    "sourcePins": [
+      {
+        "path": "scripts/legacy-agent-host/stage-opencode-v2-packaged.ts",
+        "gitBlob": "08fd0ad35418d66b9cd5b007213b58888fcf8a24",
+        "sha256": "a7d4b63db9a604114c46c9ee4f2dcaf27747e9cfd4753f2de79e0e6a9fee591d",
+        "bytes": 9840,
+        "lines": 142,
+        "unchanged547To030": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/run-packaged-opencode-v2.ts",
+        "gitBlob": "44ccc655c11bb48dd354b10c09acb3d0e2d65c91",
+        "sha256": "b6f0893cda4210adaa754d7b2af96f3ddd43dc9af64e0656a5736e26e79060e4",
+        "bytes": 14137,
+        "lines": 257,
+        "unchanged547To030": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts",
+        "gitBlob": "27cf4112a25dec299a21d6f802a5c08d55e36f2d",
+        "sha256": "74444f48ffc2ddd4ca4bae52c9cbd7c2bddaa465508169d026e193661ce25787",
+        "bytes": 17320,
+        "lines": 298,
+        "unchanged547To030": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts",
+        "gitBlob": "b836af9bbae19ac541a367e9fc247f6f2637bfa3",
+        "sha256": "832f743b8d3faed7fc43ebf84a0477ff5d81c9df10ffbd26c9dc82fd44c52528",
+        "bytes": 33488,
+        "lines": 501,
+        "unchanged547To030": true
+      },
+      {
+        "path": "packages/legacy-agent-host/package.json",
+        "gitBlob": "39bfdc27581109c10fa5362375dcbe2c33d44791",
+        "sha256": "a2cfca3f7911d08d4382554c10b254dc7756e5bfa546f50314f116e746d1d8d9",
+        "bytes": 12519,
+        "lines": 308,
+        "unchanged547To030": true
+      },
+      {
+        "path": ".github/workflows/ci.yml",
+        "gitBlob": "44c29a38fdf225aebe9eaa9eccdb4fe6cad40a94",
+        "sha256": "f5fb5c1958a0e382bae3e8161916820a376b29fedfed0ae19bee683ed4ebe914",
+        "bytes": 199891,
+        "lines": 2940,
+        "unchanged547To030": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/attachments/contracts.ts",
+        "gitBlob": "511871b8844074c9c0f297b5035af09a9901ed04",
+        "sha256": "c1f4c05204d880e8ed57f581b562631ad0c0c76a0f196dd5bb2d26ea9b6ae46a",
+        "bytes": 2200,
+        "lines": 64,
+        "unchanged547To030": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/attachments/portable.ts",
+        "gitBlob": "a875e671a08789f10cb5f0ceec97e505499b4bd6",
+        "sha256": "5d6629d051a5fca12d6d696f9ec343d724699f4894793a7e61c66c114e55ad00",
+        "bytes": 5493,
+        "lines": 141,
+        "unchanged547To030": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/attachments/messageFileReferences.ts",
+        "gitBlob": "63134d6997d15247b86247babcda2308a9fd5bd4",
+        "sha256": "a2e42a49beffccc5b7fb6b2a2f974e7ecada98fa8f3e2d1f0cdc733238a4f04a",
+        "bytes": 2899,
+        "lines": 77,
+        "unchanged547To030": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/attachments/mimeTypes.ts",
+        "gitBlob": "0924f0678d8956e2ea23b6fdf0f414b183b99a33",
+        "sha256": "8cbf957758905135a09095145e4b9cda19e744109b976cba05398cbe4b3080a2",
+        "bytes": 1263,
+        "lines": 43,
+        "unchanged547To030": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/contracts.ts",
+        "gitBlob": "5d5743e8728ff3f16dcc09ad822804e4952632e1",
+        "sha256": "c9c5686a8f6ccf6abfe2518edf713d34f48641b79ede32f070048c46c0ae4b3d",
+        "bytes": 5570,
+        "lines": 169,
+        "unchanged547To030": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+        "gitBlob": "e2b14e9e1118948e4f0159c25aa0f4d34dd138b5",
+        "sha256": "d3de97d27fd606c02a32ba1faf6a96eefe2b2be9875d6dd2f13c8b6fb9874ded",
+        "bytes": 42751,
+        "lines": 656,
+        "unchanged547To030": true
+      }
+    ],
+    "originalEvidence": [
+      {
+        "path": "/workspace/scratch/c714f5bce554/ci-current-030/job-135200651032-terminal.log",
+        "gitBlob": "850af2f103d1aa68dded5cf0a072ee0d668dd0f8",
+        "sha256": "a52fba0dea30973a01955e21d335a4abef428d32e9182181f59c3cf15bb023ab",
+        "bytes": 171220,
+        "lines": 1432
+      },
+      {
+        "path": "/workspace/scratch/c714f5bce554/ci-current-030/packaged-native-original-receipt.json",
+        "gitBlob": "8143f838125141b0312b8d0436217210b9e2f18c",
+        "sha256": "343cccfe6c4e88d2fd5c83acd67acb178c5b74e99ebb3db7994581cbe466523c",
+        "bytes": 6335,
+        "lines": 230
+      },
+      {
+        "path": "/workspace/scratch/c714f5bce554/ci-current-030/packaged-wrapper-original-receipt.json",
+        "gitBlob": "a43c9db057c8d83af8be82586759b1d0fc3fe5a6",
+        "sha256": "6d4ae3478b8e84969e194654ee0977bf62dccd958853b20b4a61b5a834dffb63",
+        "bytes": 1189,
+        "lines": 34
+      },
+      {
+        "path": "/workspace/scratch/c714f5bce554/ci-current-030/packaged-darwin-arm-module-failure-030.json",
+        "gitBlob": "75c168587a4453de455b42e3e559b2145f61e091",
+        "sha256": "ebe3f63b44ccd91f922c78c0fc398333200ce2213698cbf862b9da3126683694",
+        "bytes": 29891,
+        "lines": 531
+      }
+    ]
+  },
+  "rootReview": {
+    "exactPreimages": "Both before blobs match the full immutable030 tree. Both postimages and modes rehashed from frozen candidate bytes. No external worktree changes.",
+    "source": "Read full two-path patch, source dependency/provenance, actual RED/GREEN logs and all startHost entry callsites. Existing full contract checks stay in place; the injected lazy loader changes only the base of the already selected Host contract.",
+    "entryAuthority": "The packaged manifest reader verifies the host package and captured dist/cli.js; the scenario passes that same captured absolute entry. No alternative selection or fallback. Other attachment startHost consumers already supply an absolute actual dist/cli.js. Ordinary helper callers retain the default lazy loader.",
+    "testSemantics": "The regression executes actual stripped fixture bodies with real Node createRequire and copied pure schemas, replacing only child creation with an in-memory transport. Module initialization and ordinary frames need zero schema loads. A valid attachment request and response both use exactly the selected contract.",
+    "negativeOracles": [
+      "Wrong metadata/private fields, oversized frame, wrong digest and invalid request cannot qualify a large response.",
+      "A missing contract fails MODULE_NOT_FOUND after the selected entry lookup; no checkout or adjacent Host fallback.",
+      "Existing strict attachment frame oracle is unchanged.",
+      "An invalid request is not claimed never to have been written."
+    ],
+    "testDiscovery": "Existing package node:test glob discovers the changed test through the existing original MainCI workspace command. No workflow, matrix, manifests, schemas, bundler settings or runtime budget changed.",
+    "sourceFreeze": "The existing desktop supplementary source list already pins packages/legacy-agent-host/tests/fixtures/native-host.ts; the independent final composition separately binds its new blob.",
+    "scope": "Two TEST-only source files, 465 and744 physical lines, both classified non-production by the unchanged actual source-size classifier."
+  },
+  "acceptanceLimits": [
+    "Original packaged Darwin ARM64 receipt remains INCOMPLETE; the new source still requires its original packaged CI acceptance.",
+    "Finite Node2PASS proves module relocation and strict frame behavior, not a native/provider/app/build/typecheck run.",
+    "Prepared pure schema bytes are pinned but were not rebuilt.",
+    "No local process retry, real Claude/Codex invocation, CI retry/cancellation/dispatch or branch/ref mutation was performed for this review."
+  ]
+}

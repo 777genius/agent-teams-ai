@@ -20,6 +20,7 @@ import type { Event, Input, Session } from '@agent-teams/provider-session-contra
 import { ProviderManagementCoordinator } from '../dist/composition/ProviderManagementCoordinator.js';
 import type { ManagementCommandStore, NativeLocalReadinessEvidence } from '../src/management/commandRecords.ts';
 import type { OpenCodeManagementProfile } from '../src/management/profile.ts';
+import type { ModelProbePreparation } from '../src/management/ModelProbeOwner.ts';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -73,8 +74,8 @@ test('a Team model probe binds its context and cannot publish a result after its
   assert.equal(privateProbe.runs(), 1);
 });
 async function until(check: () => boolean) {
-  const end = Date.now() + 2000;
-  while (!check() && Date.now() < end) await new Promise<void>((done) => setImmediate(done));
+  const end = performance.now() + 2000;
+  while (!check() && performance.now() < end) await new Promise<void>((done) => setImmediate(done));
   assert.ok(check());
 }
 function fixture(
@@ -107,31 +108,32 @@ function fixture(
   const writer = () => {
     if (!current) throw new Error('TEST revoked');
   };
+  const prepare: ModelProbePreparation = (_input, _current, purpose) => {
+    purposes.push(purpose);
+    return {
+      timeoutMs: options.timeoutMs ?? 10000,
+      ...(options.readiness ? { readiness: () => structuredClone(options.readiness!) } : {}),
+      async run(_signal: AbortSignal, deadline?: number) {
+        assert.equal(base.read(start.commandId)?.phase, 'running');
+        deadlines.push({ phase: 'run', deadline });
+        runs++;
+        if (options.failRun) throw new Error('TEST native observation unavailable');
+        return result.promise;
+      },
+      async close(deadline?: number) {
+        deadlines.push({ phase: 'close', deadline });
+        closes++;
+        return options.blockClose ? close.promise : !options.cleanupFails;
+      },
+    };
+  };
   const make = () =>
     new ModelProbeOwner({
       store,
       fence,
       assertWriter: writer,
       select: () => ({ ...target }),
-      prepare: (_input, _current, purpose) => {
-        purposes.push(purpose);
-        return {
-          timeoutMs: options.timeoutMs ?? 10000,
-          ...(options.readiness ? { readiness: () => structuredClone(options.readiness!) } : {}),
-          async run(_signal: AbortSignal, deadline?: number) {
-            assert.equal(base.read(start.commandId)?.phase, 'running');
-            deadlines.push({ phase: 'run', deadline });
-            runs++;
-            if (options.failRun) throw new Error('TEST native observation unavailable');
-            return result.promise;
-          },
-          async close(deadline?: number) {
-            deadlines.push({ phase: 'close', deadline });
-            closes++;
-            return options.blockClose ? close.promise : !options.cleanupFails;
-          },
-          };
-      },
+      prepare,
     });
   const owner = make();
   const credentials = new CredentialCommandOwner({
@@ -148,6 +150,7 @@ function fixture(
     deadlines,
     owner,
     make,
+    prepare,
     credentials,
     result,
     close,
@@ -166,11 +169,32 @@ function fixture(
 test('model probe claims before native work and returns original result without a second model request on replay', async (t) => {
   const f = fixture();
   t.after(f.cleanup);
-  assert.equal(f.owner.start(start).phase, 'running');
+  const journalBytes = () => readdirSync(join(f.root, 'management-commands')).sort()
+    .map((name) => ({ name, bytes: readFileSync(join(f.root, 'management-commands', name)) }));
+  let preparations = 0;
+  const original: ModelProbePreparation = (input, current) => {
+    preparations++;
+    assert.deepEqual(input, start);
+    assert.equal(f.base.read(start.commandId), undefined);
+    return f.prepare(input, current);
+  };
+  const replacement: ModelProbePreparation = () => {
+    assert.fail('Replay or refused admission must not prepare another native operation');
+  };
+  assert.equal(f.owner.start(start, () => true, original).phase, 'running');
+  assert.equal(preparations, 1);
   assert.equal(f.runs(), 1);
-  assert.equal(f.owner.start(start).phase, 'running');
+  const pendingBytes = journalBytes();
+  assert.equal(f.owner.start(start, () => true, replacement).phase, 'running');
+  assert.equal(f.make().start(start, () => true, replacement).phase, 'held');
+  assert.deepEqual(journalBytes(), pendingBytes, 'live and cold replay retain exact original bytes');
   assert.equal(f.runs(), 1);
-  assert.throws(() => f.owner.start({ ...start, modelId: 'TEST-other' }), { code: 'conflict' });
+  assert.throws(() => f.owner.start({ ...start, modelId: 'TEST-other' }, () => true, replacement),
+    { code: 'conflict' });
+  assert.throws(() => f.owner.start({ ...start, commandId: 'TEST-competing-probe' }, () => true, replacement),
+    { code: 'busy' });
+  assert.equal(f.base.read('TEST-competing-probe'), undefined);
+  assert.deepEqual(journalBytes(), pendingBytes, 'resource refusal precedes preparation and publication');
   await assert.rejects(
     f.credentials.execute({
       ...lookup,
@@ -184,7 +208,10 @@ test('model probe claims before native work and returns original result without 
   await until(() => f.owner.read(lookup)?.phase === 'completed');
   assert.equal(f.owner.read(lookup)?.ok, true);
   assert.equal(f.closes(), 1);
-  assert.equal(f.make().start(start).ok, true);
+  const completedBytes = journalBytes();
+  assert.equal(f.make().start(start, () => true, replacement).ok, true);
+  assert.deepEqual(journalBytes(), completedBytes, 'cold completion replay is read-only');
+  assert.equal(preparations, 1);
   assert.equal(f.runs(), 1);
   const journal = readdirSync(join(f.root, 'management-commands'))
     .map((name) => readFileSync(join(f.root, 'management-commands', name), 'utf8'))
@@ -277,6 +304,12 @@ test('model probe claims before native work and returns original result without 
     'native-rejected', 'native-unavailable', 'native-missing', 'ordinary-failed',
     'key-drift', 'source-drift', 'unclean', 'private-unapproved'] as const)
     await syntheticLocalReadiness(mode);
+});
+
+test('typed Thinking cannot replace the original coordination answer or bypass provenance and budgets', async () => {
+  for (const mode of ['valid-thinking', 'thinking-only', 'thinking-foreign-session',
+    'thinking-foreign-input', 'thinking-foreign-operation', 'thinking-oversized', 'thinking-count'] as const)
+    await syntheticCoordination(mode);
 });
 
 test('cancel retains auth namespace until physical close and a late model response cannot publish success', async (t) => {
@@ -393,22 +426,31 @@ test('expiry and orderly shutdown cancel only their original probe', async (t) =
   second.owner.start(start);
   await second.owner.close();
   assert.equal(second.base.read(start.commandId)?.phase, 'cancelled');
+  // Keep admission independent of durable-file latency; expire the original 20ms proof below.
+  const admittedAt = Date.now();
+  t.mock.timers.enable({ apis: ['Date', 'setTimeout'], now: admittedAt });
   const stronger = fixture({ timeoutMs: 20, blockClose: true });
   t.after(stronger.cleanup);
   const input = { ...start, context: 'e'.repeat(64) };
   const admitted = stronger.owner.startNativeCoordination(input, () => true);
+  assert.equal(admitted.expiresAt, admittedAt + 20);
+  assert.equal(stronger.runs(), 1);
   stronger.result.resolve(true);
   await until(() => stronger.closes() === 1);
-  await until(() => Date.now() >= admitted.expiresAt);
+  t.mock.timers.tick(19);
+  assert.equal(stronger.owner.read(lookup)?.phase, 'running');
+  assert.equal(stronger.base.read(start.commandId)?.resourceHeld, true);
+  t.mock.timers.tick(1);
   stronger.close.resolve(true);
   await until(() => stronger.owner.read(lookup)?.phase === 'cancelled');
   assert.equal(stronger.owner.read(lookup)?.ok, false);
+  assert.equal(stronger.base.read(start.commandId)?.resourceHeld, false);
   assert.throws(() => stronger.owner.readNativeCoordination({ ...lookup, context: input.context }), { code: 'held' });
   assert.deepEqual(stronger.deadlines, ['run', 'close'].map(phase => ({ phase, deadline: admitted.expiresAt })));
   // A delayed timer callback must not let an already resolved cleanup Promise renew the deadline.
   const deadline = Date.now() + 5;
   const late = closeCoordinationByDeadline(Promise.resolve(true), deadline);
-  while (Date.now() <= deadline) { /* Keep this one timer callback pending. */ }
+  t.mock.timers.setTime(deadline + 1); // Move Date without dispatching the queued timer callback.
   assert.equal(await late, false);
 });
 
@@ -476,7 +518,9 @@ test('model limit identity is durable: changed limits conflict and invalid bound
 
 type SyntheticCoordinationMode = 'valid' | 'text-json' | 'second-first' | 'wrong-nonce' |
   'duplicate' | 'duplicate-message' | 'wrong-message' | 'result-before-tool' |
-  'foreign-session' | 'foreign-input' | 'revoked' | 'cancelled' | 'foreign-token';
+  'foreign-session' | 'foreign-input' | 'revoked' | 'cancelled' | 'foreign-token' |
+  'valid-thinking' | 'thinking-only' | 'thinking-foreign-session' | 'thinking-foreign-input' |
+  'thinking-foreign-operation' | 'thinking-oversized' | 'thinking-count';
 
 /** Explicit synthetic Session events exercise the proof gate; this is not native qualification. */
 async function syntheticCoordination(mode: SyntheticCoordinationMode) {
@@ -521,6 +565,23 @@ async function syntheticCoordination(mode: SyntheticCoordinationMode) {
         assert.ok(submitted);
         const bound = { sessionRef: mode === 'foreign-session' ? 'foreign' : driver.sessionRef,
           inputId: mode === 'foreign-input' ? 'foreign' : submitted.inputId, operationRef: submitted.operationRef };
+        if (mode === 'valid-thinking' || mode.startsWith('thinking-')) {
+          const count = mode === 'thinking-count' ? 129 : 1;
+          const thinking: Event = {
+            ...bound,
+            sessionRef: mode === 'thinking-foreign-session' ? 'foreign' : bound.sessionRef,
+            inputId: mode === 'thinking-foreign-input' ? 'foreign' : bound.inputId,
+            operationRef: mode === 'thinking-foreign-operation' ? 'foreign' : bound.operationRef,
+            kind: 'thinking', messageRef: 't', block: 0, phase: 'snapshot',
+            text: mode === 'thinking-oversized' ? 'x'.repeat(32768)
+              : mode === 'thinking-count' ? '' : 'TEST reasoning',
+          };
+          const bytes = Buffer.byteLength(JSON.stringify(thinking));
+          if (mode === 'thinking-count') assert.ok(bytes * count < 32768, 'event-count refusal must not be a byte-budget refusal');
+          if (mode === 'thinking-oversized') assert.ok(bytes > 32768);
+          for (let index = 0; index < count; index++) yield thinking;
+          if (mode === 'valid-thinking') yield { ...thinking, phase: 'complete' };
+        }
         if (mode === 'text-json') {
           yield { ...bound, kind: 'text', messageRef: 'message-text', block: 0, phase: 'complete',
             text: '{"tool":"coordination_task_briefing","then":"coordination_message_send"}' };
@@ -554,7 +615,8 @@ async function syntheticCoordination(mode: SyntheticCoordinationMode) {
         const second = await client.callTool({ name: 'message_send', arguments: input });
         yield { ...bound, kind: 'tool-result', toolRef: secondRef,
           isError: second.isError === true, content: second.content };
-        yield { ...bound, kind: 'text', messageRef: 'message-3', block: 0, phase: 'complete', text: 'OK' };
+        if (mode !== 'thinking-only')
+          yield { ...bound, kind: 'text', messageRef: 'message-3', block: 0, phase: 'complete', text: 'OK' };
         yield { ...bound, kind: 'result', outcome: 'succeeded' };
       },
       respondToInteraction() { throw new Error('TEST no permission authority in inert coordination'); },
@@ -566,9 +628,11 @@ async function syntheticCoordination(mode: SyntheticCoordinationMode) {
     const work = runNativeCoordination(driver, 'TEST-native-session', endpoint, 'e'.repeat(64),
       abort.signal, deadline, () => current);
     if (mode === 'revoked' || mode === 'cancelled') await assert.rejects(work);
-    else assert.equal(await work, mode === 'valid');
+    else assert.equal(await work, mode === 'valid' || mode === 'valid-thinking');
     assert.equal(submissions, 1);
-    assert.equal(endpoint.completed('TEST-native-session'), mode === 'valid');
+    assert.equal(endpoint.completed('TEST-native-session'),
+      mode === 'valid' || mode === 'valid-thinking' || mode === 'thinking-only',
+      'completed MCP effects do not replace the required actual answer');
     assert.equal(endpoint.completed('TEST-foreign-session'), false);
   } finally {
     await client.close();
@@ -645,7 +709,8 @@ async function syntheticLocalReadiness(mode: LocalReadinessMode) {
           async fetchImpl(value, init) {
             const request = new Request(value, init), target = new URL(request.url);
             assert.equal(target.origin, profile.endpoint); assert.equal(request.redirect, 'error');
-            assert.equal(request.headers.get('x-opencode-directory'), cwd);
+            assert.equal(request.headers.get('x-opencode-directory'), encodeURIComponent(cwd));
+            assert.equal(decodeURIComponent(request.headers.get('x-opencode-directory')!), cwd);
             nativeRequests.push(request.method + ' ' + target.pathname);
             if (target.pathname === '/config') return Response.json(nativeConfig);
             if (target.pathname === '/provider') return Response.json({ all: [{

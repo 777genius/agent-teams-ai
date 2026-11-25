@@ -1,5 +1,6 @@
 import type { NativePermissionReadback } from './OpenCodeV2PermissionReadback.js';
 import type { NativeInitialContextCapture, NativeInitialContextReadback } from './OpenCodeV2InitialContextReadback.js';
+import type { OpenCodeV2MediaProof } from './OpenCodeV2MediaReceipt.js';
 
 /**
  * A separately selected, TEST-owned native V2 engine and session. The provider
@@ -11,6 +12,8 @@ import type { NativeInitialContextCapture, NativeInitialContextReadback } from '
  * provider factory openness does not qualify Desktop's 2.1.4 distribution.
  */
 export interface OpenCodeV2OwnedSession {
+  /** Optional sole packaged-child signer, captured before policy/readiness access. */
+  verifyMediaReceipt?(proof: OpenCodeV2MediaProof): boolean;
   readPassword(): string;
   probe(signal: AbortSignal): Promise<boolean>;
   /**

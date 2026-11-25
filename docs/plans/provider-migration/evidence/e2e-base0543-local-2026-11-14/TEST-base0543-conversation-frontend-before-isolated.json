@@ -1,0 +1,33 @@
+{
+  "commandStatus": "FAIL",
+  "exitCode": 1,
+  "seconds": 8.307,
+  "command": [
+    "/workspace/scratch/391e21b06e24/agent-teams-ai/resources/legacy-agent-host/node/v24.21.0/linux-x64/node",
+    "/workspace/scratch/391e21b06e24/TEST-corepack036-stopped-import-r6080l74/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+    "exec",
+    "vitest",
+    "run",
+    "test/features/agent-backend/hostTeamChanges.test.ts",
+    "test/features/agent-backend/hostMessagesPageTransport.test.ts",
+    "test/renderer/store/teamSlice.test.ts",
+    "--maxWorkers=1",
+    "--minWorkers=1"
+  ],
+  "head": "2335b403b7d015ef871e9dd8609803fb4630a6cb",
+  "sourceBefore": {
+    ".github/workflows/host-emulated-acceptance.yml": "b7d618a7a464610ae4412b4e702723db197f1953a565d3283148d7f07df3cebf",
+    "packages/legacy-agent-host/src/runtime/activityContracts.ts": "c6d288a017a58191627562a11d4473707c15bd0c6a77783148419000e8f5ff09",
+    "packages/legacy-agent-host/src/runtime/contracts.ts": "1da0db3b09d43e3007bd0531e66afa2512400bf34e26fbd5c9f2c69ebe0fff0a",
+    "packages/legacy-agent-host/tests/runtime-team-host.test.ts": "2d6b6badf4cf3ee34e495ecf676aeec914540c1083b570374dbee28deb4aab15",
+    "scripts/ci/install-dependencies-with-retry.mjs": "c8dc0b63fc490fd5a9a1b4abf0631b66c30e1ccda2199094c86e49a6e250d01e",
+    "scripts/legacy-agent-host/desktop-readback-fixture.ts": "eb37cc1698fe78acaa0a1a4e68339ee621e157d710117ee83c5f1a52950cae30",
+    "src/renderer/components/team/review/CodeMirrorDiffView.tsx": "8365c1c010d5f9b4fccfd45f1a0d1bb80058ba647909f1151b1a1a3516ef190f",
+    "test/features/agent-backend/hostMessagesPageTransport.test.ts": "11c1c29516dc22273cdbb05788a0582552ae08d3d92bccf10c952ca824282721",
+    "test/features/agent-backend/hostTeamChanges.test.ts": "54a8aeee05df63eab28133a96909ac203afbdb6c11d644411e0ef6db05d50d96",
+    "test/renderer/store/teamSlice.test.ts": "f7082574b3e73619411cbcb2599331397fd50fad99d128469a051d168a4afd36"
+  },
+  "dependencyGraph": "isolated canonical frozen install, copied packages",
+  "realVendorExecuted": false,
+  "logSha256": "424be856500ca0ef812f03065c4f4fb69584d472570f7614ccfd49b5bf45ee11"
+}

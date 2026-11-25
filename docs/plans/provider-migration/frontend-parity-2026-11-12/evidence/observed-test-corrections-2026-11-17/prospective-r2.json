@@ -1,0 +1,122 @@
+{
+  "schemaVersion": 1,
+  "kind": "plan77-independent-prospective-r2",
+  "reviewer": "/root/p08_remaining_audit",
+  "decision": "GO_EXACT_PLAN77_DOCUMENTARY_PUBLICATION_ONLY",
+  "blockers": [],
+  "parent": "5c55a4a2008f4a6131d265344d384b39415ad055",
+  "parentTree": "c8a560d3ac23a5e17c45ad8b0f0aec299eaa163d",
+  "plan": {
+    "bytes": 4474,
+    "physicalLines": 24,
+    "gitBlob": "e3e2db5a50eb5e5bede240dad4dd58fa20b1aa51",
+    "sha256": "2bc4415f45fd21457b8677ab132dea7b047cb2f32b8d1ed421c899057273f7be"
+  },
+  "rootR1": {
+    "bytes": 4542,
+    "physicalLines": 107,
+    "gitBlob": "5efc0c4ddc9224bf37c7ae93e3cff1c67b7ddf9b",
+    "sha256": "55d32973d8870fa754db61d59548c3f4baefe1ac7494f14b0cc583707b4ef080"
+  },
+  "dataProof": {
+    "path": "independent-prospective-data-proof.json",
+    "identity": {
+      "bytes": 10993,
+      "physicalLines": 280,
+      "gitBlob": "5c28b53161ad8e090120a0e32bfb75d67001edd0",
+      "sha256": "4984aa975fafb61ab1a32ffe5a33da3dd11b1de25fb04dcb362341d7857a2f22"
+    }
+  },
+  "selectedScope": {
+    "sourcePaths": [
+      "tools/owned-process-broker/nativeEmulatedOwnerLossScenario.ts",
+      "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts"
+    ],
+    "sourceEdits": 2,
+    "newPaths": 0,
+    "documentaryPaths": {
+      "plan": "docs/plans/provider-migration/frontend-parity-2026-11-12/77-observed-test-corrections-2026-11-17.md",
+      "r1": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/observed-test-corrections-2026-11-17/prospective-r1.json",
+      "r2": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/observed-test-corrections-2026-11-17/prospective-r2.json"
+    },
+    "sourceAfterimagesCreated": false
+  },
+  "independentReadLedger": [
+    "Full exact plan24L and original R1 98L; final documentaryPaths/branches amendment through107L re-read and final R1 hash verified.",
+    "Both complete preimage identities and unique selected fragments rechecked against closed actual5c55 full tree; all three planned documentary paths absent.",
+    "Full shared runtime fixture281L read in this review, including model107 fanout, collaboration early return, verification, observation and cleanup.",
+    "Exact helper540L complete semantic review reused from closed Plan73 sourceR2; fresh bounded compiler diagnosis covered union108, generic observe116-120, handlers354-356, assertion360-362, before-resume415-420, catch/finally478-540 and source pins140-167.",
+    "Original Windows full-log identity/diagnostic, job metadata and one-member archive inspected; original Claude log/receipt identities, exact source hash joins, saved profile models, failure DOM, PNG and cleanup inspected.",
+    "Current schedule23-35 and memberModelScope125-178 independently read; current fast roster lines154/279 independently joined.",
+    "P09 independent bounded producer/coupled-consumer source review closed; its exact frozen original-failure report185L was fully read. Prior full Plan75 producer/availability source review remains applicable to unchanged blobs."
+  ],
+  "findings": [
+    {
+      "id": "77-R2-01",
+      "status": "PASS",
+      "subject": "Unreachable rejected branch",
+      "evidence": "pendingOpen is fulfilled-response | rejected-error. Original assert.equal(opened.state,fulfilled) already throws on rejected and narrows the union. Accessing error in the subsequent opposite branch is the exact observed never diagnostic.",
+      "selectedCorrection": "Delete only the unreachable line361.",
+      "preservation": "Fulfilled continues to the same nativeReady assertion; rejected retains the same original assertion error and catch/finally. Observation failures also retain their path. No casts, reorder, new helper or oracle relaxation."
+    },
+    {
+      "id": "77-R2-02",
+      "status": "PASS",
+      "subject": "Finite Claude launch model matches existing catalog value",
+      "evidence": "Original clean5c55 receipt and source pins show saved/member/template sonnet, invalid-model DOM and disabled Launch. The unchanged peer accepts TEST-claude-sonnet and advertises it as resolvedModel; the unchanged SDK producer maps that to launchModel.",
+      "selectedCorrection": "Replace only Claude model107 with TEST-claude-sonnet.",
+      "preservation": "Same constant supplies savedSettings, member, cloned template and legacy schedule. Codex/OpenCode values, effort/permissions, profile provenance, strict predicates, clocks and cleanup remain unchanged."
+    },
+    {
+      "id": "77-R2-03",
+      "status": "PASS",
+      "subject": "Coupled ordinary/lifecycle/packaged/schedule paths",
+      "evidence": "Current ordinary and lifecycle callers select savedModel; packaged invokes the same Claude lifecycle fixture. Schedule copies selection.model. No separate sonnet assertion in these reviewed consumers.",
+      "preservation": "Collaboration returns before shared model107; its separate sonnet assertions stay valid. Genuine schedule claude-sonnet-4-6 and all genuine provider restrictions remain untouched."
+    },
+    {
+      "id": "77-R2-04",
+      "status": "PASS_WITH_EXPLICIT_LIMIT",
+      "subject": "Causal and qualification boundary",
+      "evidence": "The original failure also retains refresh/runtime-unavailable messages; P09 notes separate host.held evidence.",
+      "limit": "This plan repairs a demonstrated finite model-value inconsistency but does not claim that it is the only preflight cause or that a resulting journey will pass. Those additional failures remain unresolved pending original resulting-head evidence."
+    },
+    {
+      "id": "77-R2-05",
+      "status": "PASS",
+      "subject": "Finite scope, rosters and gates",
+      "evidence": "Two exact existing preimages and one old-fragment occurrence each; both paths already present in current fast lint and original fixture included in before/after proof source hashes.",
+      "preservation": "No extra roster entry, workflow, dependency, product source or source-size baseline is needed. Helper540L loses one line; fixture281L retains its layout. Existing CI types/lint/tests and original applicable scenarios remain gates."
+    }
+  ],
+  "requiredSequence": [
+    "Root full read and acceptance of this exact prospective R2.",
+    "Publish only the three selected documents by ordinary expected-parent CAS.",
+    "Complete independent actual documentary readback before any source afterimage.",
+    "Author/review exact two source deltas with strict forward/inverse and unchanged-file checks; publish and close actual source readback.",
+    "Any later primary fast-forward requires the existing fresh ref/PR/useful-job guard; preserve active original5c55 jobs."
+  ],
+  "limits": {
+    "sourceOrDocumentPublishedByReviewer": false,
+    "sourceAfterimagesCreated": false,
+    "projectCompilerTestsNativeGuiExecuted": false,
+    "apiOrActionsCalled": false,
+    "newRuntimePassClaimed": false,
+    "catalogRefreshCauseResolved": false,
+    "physicalHostAbsenceInferred": false,
+    "plan40WriterSelectionChanged": false,
+    "historicalP10InputHoldChanged": false,
+    "nativeProviderRestrictionsChanged": false
+  },
+  "conclusion": "No concrete blocker remains in the exact prospective two-line selection. GO authorizes documentary publication only; source authoring remains behind the actual-document gate.",
+  "independentPeerReport": {
+    "path": "/workspace/scratch/b87c90489dab/e2e-recovery/claude-preflight-5c55/independent-original-failure-r2.json",
+    "identity": {
+      "bytes": 10572,
+      "physicalLines": 185,
+      "gitBlob": "55d948907c3bea1002af4c89c106274031ff6f15",
+      "sha256": "a210930ac0c4b3843ae7ff645e5db65864c92b482912a3fc3a2233519aa2d382"
+    },
+    "scope": "Supports model/coupled-consumer findings only; root/P08 own this prospective gate."
+  }
+}

@@ -1,0 +1,56 @@
+--- a/scripts/e2e/teams-create-page-desktop.mjs
++++ b/scripts/e2e/teams-create-page-desktop.mjs
+@@ -465,16 +465,33 @@
+   }
+ 
+   async click(expression) {
+-    await this.waitFor(expression, expression);
+-    const target = await this.evaluate(`(() => {
++    const cutoff = Date.now() + 30_000;
++    const remaining = () => Math.max(0, cutoff - Date.now());
++    await this.waitFor(expression, expression, remaining());
++    assert(Date.now() < cutoff, `E2E click target deadline: ${expression}`);
++    await this.evaluate(`(() => {
+       const element = ${expression};
+-      if (!element || element.disabled) return null;
+-      element.scrollIntoView({ block: 'center', inline: 'nearest' });
++      if (element && !element.disabled) {
++        element.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
++      }
++    })()`);
++    const hitTarget = `(() => {
++      const element = ${expression};
++      if (!element?.isConnected || element.disabled) return null;
++      for (let ancestor = element; ancestor; ancestor = ancestor.parentElement) {
++        if (ancestor.getAnimations().some(animation => animation.playState === 'running')) return null;
++      }
+       const rect = element.getBoundingClientRect();
+-      return rect.width > 0 && rect.height > 0
+-        ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
+-        : null;
+-    })()`);
++      const x = rect.left + rect.width / 2;
++      const y = rect.top + rect.height / 2;
++      const hit = document.elementFromPoint(x, y);
++      return rect.width > 0 && rect.height > 0 &&
++        x >= 0 && x < window.innerWidth && y >= 0 && y < window.innerHeight &&
++        hit && element.contains(hit) ? { x, y } : null;
++    })()`;
++    await this.waitFor(hitTarget, `settled exact E2E click target: ${expression}`, remaining());
++    const target = await this.evaluate(hitTarget);
++    assert(Date.now() < cutoff, `E2E click target deadline: ${expression}`);
+     assert(target, `Missing/disabled/hidden E2E click target: ${expression}`);
+     await this.send('Input.dispatchMouseEvent', {
+       type: 'mousePressed', x: target.x, y: target.y, button: 'left', clickCount: 1,
+@@ -873,8 +890,9 @@
+     ".find(option => option.textContent?.includes(" + JSON.stringify(fixture.teamName) + "))";
+   await client.click(teamOption);
+   await client.waitFor(
+-    "document.querySelector('#schedule-saved-prompt-reviewed')",
+-    'saved prompt acknowledgement visible before Save', 45_000);
++    "document.querySelector('[role=dialog] button[role=combobox]')?.textContent?.trim() === " +
++      JSON.stringify(fixture.teamName) + " && document.querySelector('#schedule-saved-prompt-reviewed')",
++    'saved prompt acknowledgement for the exact fixture team visible before Save', 45_000);
+   await captureScreenshot(client, fixture, 'schedules-old-prompt-review');
+ 
+   await client.fill('#schedule-label', scheduleLabel);

@@ -9,6 +9,7 @@ import type {
   CliProviderStatus,
   TeamProviderId,
   TeamProvisioningModelCheckRequest,
+  TeamProvisioningPrepareContext,
 } from '@shared/types';
 
 /** Presentation cache lookup only; cached model results carry no launch readiness. */
@@ -20,6 +21,8 @@ export function readLaunchPrepareModelIssues({
   selectedModelChecksByProvider,
   cwd,
   limitContext,
+  context,
+  invalidationEpochByProviderId,
 }: {
   isLaunchMode: boolean;
   selectedMemberProviders: readonly TeamProviderId[];
@@ -31,6 +34,8 @@ export function readLaunchPrepareModelIssues({
   >;
   cwd: string;
   limitContext: boolean;
+  context: TeamProvisioningPrepareContext;
+  invalidationEpochByProviderId?: Readonly<Partial<Record<TeamProviderId, number>>>;
 }) {
   const modelAdvisoryReasonByProvider: Partial<Record<TeamProviderId, Record<string, string>>> = {};
   const modelIssueReasonByProvider: Partial<Record<TeamProviderId, Record<string, string>>> = {};
@@ -61,6 +66,8 @@ export function readLaunchPrepareModelIssues({
       limitContext: limitContext,
       runtimeStatusSignature: providerRuntimeStatusSignature,
       modelChecksSignature: providerModelChecksSignature,
+      context,
+      invalidationEpoch: invalidationEpochByProviderId?.[providerId],
     });
     const issueReasons = getShortLivedProviderPrepareModelIssueReasons({
       providerId,

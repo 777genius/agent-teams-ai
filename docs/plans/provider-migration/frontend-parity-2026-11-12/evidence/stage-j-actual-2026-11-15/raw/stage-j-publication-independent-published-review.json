@@ -1,0 +1,39 @@
+{
+  "verdict": "APPROVE independent published documentation R2",
+  "head": "6f74d7e8ecaa7f046826b6421ad105ab35eb09fa",
+  "tree": "58bc141c909c84c83278dbb38b98059b82ee3b7a",
+  "parents": [
+    "88ada74cfc4598b1bff2ab3bc0f9d08177862dbf"
+  ],
+  "actualFiles": 90,
+  "actualGitBytes": 3347652,
+  "leaves": 9889,
+  "unchanged": 9799,
+  "added": 89,
+  "fullPrefixBytes": 1072934,
+  "appendixBlocks": 8,
+  "plan29": {
+    "bytes": 1126080,
+    "blob": "ee173c2f6610efd71ace3c907508d9e8ceec3397",
+    "sha256": "775a030bd5c4c27e45157335abc9d548758fbc482dae562e34fb394810b68765"
+  },
+  "rootProof": {
+    "bytes": 30181,
+    "blob": "4fca140ef2b4b3f576646c3672ad62d92d9b2ebe",
+    "sha256": "3ef09fb8919064517a4788263f10fa603c5d669c8b7dcbcf8892e2c32c5bf5b2"
+  },
+  "nativeFixtureUnchanged": true,
+  "sourceApplied": false,
+  "projectExecution": false,
+  "apiCommitTupleExact": true,
+  "apiFullRecursiveTree": {
+    "entries": 11313,
+    "leaves": 9889,
+    "truncated": false,
+    "all90SelectedLeafIdentitiesExact": true,
+    "other9799LeavesAndModesExact": true
+  },
+  "precommitIndependentReview": "7fd4ffc991f301a81b659f4cf946db2276c36fce",
+  "sourceJUnapplied": true,
+  "projectExecutionByReviewer": false
+}

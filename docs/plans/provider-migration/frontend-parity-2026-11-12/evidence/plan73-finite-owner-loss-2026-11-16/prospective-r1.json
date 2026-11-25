@@ -1,0 +1,411 @@
+{
+  "kind": "ROOT_PLAN73_PROSPECTIVE_SOURCE_FEASIBILITY_R1",
+  "decision": "GO_EXACT_SIX_PATH_PROSPECTIVE_SELECTION; INDEPENDENT_PROSPECTIVE_R2_REQUIRED",
+  "baseCommit": "c94e63d68f43393bec42cbaa94826b12b2a9b6cd",
+  "baseTree": "7708e69be7b0242c851616e1f06a88b82868ffd0",
+  "plan": {
+    "file": "/tmp/e2e-original-artifacts/reviews/plan73-finite-owner-loss/rebound-current/plan.md",
+    "bytes": 28402,
+    "lines": 199,
+    "gitSha": "74694e251c53303e9dffa7d52f44103fe5eed04e",
+    "sha256": "8e7782ced94202c40d6d4c5f56776621455ecdb2fff0fb6f115fd903cb1f46fd"
+  },
+  "manifest": {
+    "file": "/tmp/e2e-original-artifacts/reviews/plan73-finite-owner-loss/rebound-current/preimage-bindings.json",
+    "bytes": 26923,
+    "lines": 574,
+    "gitSha": "f237a29a74f16e9838de81a3e4ea323b73e9c7a2",
+    "sha256": "257d42d141693b43016d4ea9b0112c6ed3113643175e03add556573f3b99bb92"
+  },
+  "publicationReady": false,
+  "sourceAfterimages": 0,
+  "ciCallsThisTask": 0,
+  "projectExecution": 0,
+  "nativeExecution": 0,
+  "gitMutations": 0,
+  "actualChecks": {
+    "officialCommitAndFullTreeRetained": true,
+    "apiTreeTruncated": false,
+    "entries": 12872,
+    "leaves": 11162,
+    "recomputedRootTree": "7708e69be7b0242c851616e1f06a88b82868ffd0",
+    "subtreeHashesMatched": 1710,
+    "fivePresentPreimagesMatchTree": true,
+    "newHelperAbsent": true,
+    "newPlanAndEvidenceDirectoryAbsent": true,
+    "referenceFullBodiesHashMatched": true,
+    "externalSixFullBodiesHashed": true,
+    "beforeProfileAndGateComparedToExternalWholeBodies": true,
+    "hostProcessWholeCurrent419AndExternal27LineAdditionRead": true,
+    "hostEmulatedCompleteByteDifferenceAndFastScopeRead": true,
+    "hostEmulatedUnchangedUnrelated1771LineSemanticsReaudited": false,
+    "selected3AlreadyPresent": false,
+    "retainedHostCompilerAlreadyIncludesGateAndTransitiveImports": true,
+    "tsconfigStandaloneExclusionIsNotGlobalTypeExclusion": true,
+    "bothOwnCopiesMatch": true,
+    "externalStandingWorkspaceWritten": false,
+    "all35ReferenceBodiesMatchCurrentTree": true,
+    "publishedColdHelperAndPlan64PredicatePreserved": true,
+    "fastOperandsExactly137UniqueWithOld136Prefix": true,
+    "publishedColdAlreadyPresentOnce": true
+  },
+  "externalProposalDisposition": {
+    "ownerLoss": "Retain separately the before-resume original oracle; external298-line helper does not yet contain after-effect or clean generation proof.",
+    "profile": "Select only a closed optional Codex/unpackaged loss mode with the original marker/birth journal and unchanged profile budgets.",
+    "gate": "External6-line wiring is input only. Selected cut additionally needs after-effect row and actual clean Codex restart/stale-capture proof.",
+    "tsconfig": "Reject unrelated nativeRetainedProviderFixture addition. Cold is included only after independently reviewed Plan72 publication.",
+    "hostProcess": "Read all current419 lines and27-line external addition. New aggregate must preserve old predicates and add both closed modes plus per-root restart accounting.",
+    "hostEmulated": "Reject removals of4 prior operands and W01/native additions. Preserve136, then independently selectedCold1, appendonly3OwnerLoss operands =>140."
+  },
+  "sourceFindings": [
+    {
+      "id": "completed-install-boundary",
+      "sources": [
+        "HostWindowsLaunch.ts:391-409",
+        "WindowsCapturedProcess.ts:90-122",
+        "processFacade.ts:104-141"
+      ],
+      "finding": "First Host resume RPC follows successful await installOwner, while Main physical resume has not run. This observes callback completion, not an internal instruction or every possible timing window."
+    },
+    {
+      "id": "original-owner-retains",
+      "sources": [
+        "RetainedWindowsCustody.ts:100-167,280-335,491-520",
+        "CapturedHostClient.ts:197-203,418-444,717-799"
+      ],
+      "finding": "Actual child close plus abort allows successor attachment. Abort seals original input but does not stop Main allocations. Same original Main retains Stop/drain/release independently of successor Host."
+    },
+    {
+      "id": "two-completed-effects",
+      "sources": [
+        "providerPeer.mjs:53-101",
+        "RetainedWindowsServices.ts:165-195"
+      ],
+      "finding": "One finite turn/start performs exactly2 process_register calls, validates both completed receipts, records1 registered row, then emits item/completed and turn/completed. No peer change or fabricated ACK needed."
+    },
+    {
+      "id": "single-held-read",
+      "sources": [
+        "HostWindowsLaunch.ts:162-205,244-249",
+        "hostCustody.ts:17-18,32-38,355-364",
+        "codexByteTransport.ts:1-45"
+      ],
+      "finding": "One pending stdout pull can be held at the existing port result, preventing later stdout completion from overtaking. Retain the original full read result and more flag; final release rejects only after actual old Host exit."
+    },
+    {
+      "id": "framing-limit",
+      "sources": [
+        "hostCustody.ts:17-18,32-38",
+        "nativeEmulatedProfile.ts:existing limits",
+        "providerPeer.mjs:77-101"
+      ],
+      "finding": "Existing custody chunk16KiB and selected output budget1,000,000 bytes bound local TEST byte framing. Normal paired item/turn notifications can be in one chunk; select first completion in stream order and one barrier, not a false duplicate-frame rejection."
+    },
+    {
+      "id": "same-input-no-replay",
+      "sources": [
+        "RuntimeOwner.ts:262-385,680-695",
+        "TeamHost.ts:423-454",
+        "executeTeamCommand.ts:40-140"
+      ],
+      "finding": "Durable claim/inputId/fingerprint/operationRef precede submit. Same completed Team command with identical payload/principal/fingerprint returns the retained receipt/deliveryId. Native turn/start count stays1; no new command/input namespace."
+    },
+    {
+      "id": "cold-read-precision",
+      "sources": [
+        "executeCapturedRuntimeControl.ts:249-275",
+        "projectRuntimeMember.ts:18-67",
+        "RuntimeOwner.ts:131-139,612-637"
+      ],
+      "finding": "Cold read is not a mutating reconcile and may expose saved allocated/owned custody while attached/nativeReady false. Require truthful firstread and actual UNKNOWN only after the original explicit reconcile; no product change selected."
+    },
+    {
+      "id": "unknown-not-cleared",
+      "sources": [
+        "FileRuntimeStore.ts:236-290",
+        "prepareSessionOpen.ts:17-47",
+        "sessionState.ts:62-82",
+        "RuntimeOwner.ts:520-576,612-637"
+      ],
+      "finding": "Member-wide siblings prevent a new runId/generation bypassing held history. Original Main physical absence does not release or erase Runtime UNKNOWN. Fixture store access only fence/get."
+    },
+    {
+      "id": "real-clean-restart-route",
+      "sources": [
+        "RuntimeTeamCoordinator.ts:326-349,400-427",
+        "createRuntimeTeamLaunch.ts:18-142,157-176",
+        "createRuntimeHostMethods.ts:59-66",
+        "createTeamMemberActionMethods.ts:21-62",
+        "executeRuntimeMemberAction.ts:53-119",
+        "executeMemberAction.ts:108-145,217-281",
+        "transitionRuntimeMember.ts:58-76,116-152"
+      ],
+      "finding": "Existing strict read/prepare/execute actions carry real launchId/rosterRevision/original generation. Old Runtime closed/released and provider/endpoint retirement precede selected successor publication/allocation. No new public API or fake generation required."
+    },
+    {
+      "id": "unchanged-stale-capture",
+      "sources": [
+        "RetainedWindowsServices.ts:59-78,208-217",
+        "retainedServiceContracts.ts:14-21,55-79",
+        "RetainedWindowsCustody.ts:321-335"
+      ],
+      "finding": "A fully valid actual new capability with unchanged old source capture fails at source equality before query/native allocation. Same old capability would test terminal history, not successor refusal. Error plus exact selected values/source branch supplies the pre-query proof; no invented lower-level query count."
+    },
+    {
+      "id": "handle-ownership",
+      "sources": [
+        "nativeGateContext.ts:85-153",
+        "nativeGateEvents.ts:1-39",
+        "RetainedWindowsCustody.ts:491-520"
+      ],
+      "finding": "Use retained query/wait witnesses only, each at most4 sequential observations; keep original wait0 and same-Main native close. PID birth journal is evidence only. First-failure latch cannot be replaced by eventual drained summary."
+    },
+    {
+      "id": "validation-route",
+      "sources": [
+        "host-process-acceptance.yml:45-75,111-125,207-245,291-419",
+        "tsconfig.retained-host.json:1-6",
+        "host-emulated-acceptance.yml:129-280"
+      ],
+      "finding": "No new matrix or run. NewW05 executes only existing Windows Node provider step; separate original Node/Electron broker gates remain. Existing compiler follows new helper import; full types/typed lint remain unchanged,3fast operands only."
+    }
+  ],
+  "requiredCaseAccounting": {
+    "beforeResume": {
+      "mainOwners": 1,
+      "hostEpochs": 2,
+      "rootAllocations": 1,
+      "prepares": 1,
+      "interceptedResumeRequests": 1,
+      "nativeResume": 0,
+      "nativeWrites": 0,
+      "businessInputs": 0,
+      "registerEffects": 0,
+      "peerRows": 0,
+      "crashMarkers": 1,
+      "handleWitnesses": 1,
+      "hostEpochNames": [
+        "A",
+        "B"
+      ],
+      "staleSuccessorInputRefusals": 4,
+      "numericPidSchemaProbe": 1
+    },
+    "afterEffect": {
+      "mainOwners": 1,
+      "hostEpochs": 2,
+      "rootAllocations": 1,
+      "prepares": 1,
+      "nativeResume": 1,
+      "businessInputs": 1,
+      "acknowledgedNativeTurnStart": 1,
+      "registerEffects": 2,
+      "serviceCaptureACKs": 2,
+      "registeredRows": 1,
+      "leafProcesses": 2,
+      "originalHandleWitnesses": 3,
+      "crashMarkers": 1,
+      "nativeBusinessInputReplays": 0,
+      "allocationsAfterLoss": 0,
+      "nativeWritesAfterLoss": 0,
+      "finalRuntimeInputPhase": "unknown"
+    },
+    "cleanCodexRestart": {
+      "mainOwners": 1,
+      "hostEpochs": 1,
+      "rootAllocations": 2,
+      "prepares": 2,
+      "nativeResumes": 2,
+      "businessInputsByGeneration": [
+        1,
+        0
+      ],
+      "serviceCaptures": 2,
+      "scopedStops": 2,
+      "serviceSettles": 2,
+      "originalHandleWaits": 4,
+      "newCapabilityOldCaptureRefusals": 1,
+      "oldReleaseBeforeSuccessorAllocation": true
+    },
+    "originalOpenCode": "unchanged1root/1input/2registers/2Stops/2settles/3HANDLEwitnesses",
+    "countingCautions": [
+      "No fixed total startup-write/read-chunk count.",
+      "Do not equate Runtime generation, numeric config generation and physical provider-generation UUID.",
+      "Normal item/completed+turn/completed in1heldchunk is1barrier.",
+      "Public processRef is joined through actual process list, not compared with nonexistent capture.processRef.",
+      "Separate TEST-case roots never change A-to-B original runtime namespace."
+    ]
+  },
+  "requiredSafetyAndCleanup": [
+    "Every callback/promise settles on failure; held bytes never delivered after oldHostexit.",
+    "Original A close/abort, B shutdown, Main close, all original HANDLE waits and sentinel proof are required.",
+    "No tx.put, state rewrite, numeric PID adoption, unknown-to-released inference, new runId escape or genuine provider command.",
+    "One 15000 ms input cutoff before the sole after-effect business RPC; preserve 10s helper/Stop, 10000/15000/5000/1000 profile limits and existing Main 10s/3s close.",
+    "No per-root stop-bound relaxation to a broad aggregate.",
+    "All touched/new TypeScript bodies stay within the 800-line code cap; workflows retain existing layout and commands."
+  ],
+  "reviewCoverage": {
+    "fullSmallBodies": [
+      "codexByteTransport.ts",
+      "prepareSessionOpen.ts",
+      "sessionState.ts",
+      "RetainedWindowsServices.ts",
+      "retainedServiceContracts.ts",
+      "readMemberActions.ts",
+      "createRuntimeHostMethods.ts",
+      "createRuntimeTeamLaunch.ts",
+      "createTeamMemberActionMethods.ts",
+      "transitionRuntimeMember.ts",
+      "projectRuntimeMember.ts",
+      "providerPeer.mjs",
+      "nativeGateEvents.ts",
+      "tsconfig.retained-host.json"
+    ],
+    "boundedCriticalReads": {
+      "RuntimeOwner.ts": [
+        "131-169",
+        "200-280",
+        "330-425",
+        "520-578",
+        "608-696"
+      ],
+      "FileRuntimeStore.ts": [
+        "185-311"
+      ],
+      "HostWindowsLaunch.ts": [
+        "150-205",
+        "244-249",
+        "375-414"
+      ],
+      "WindowsCapturedProcess.ts": [
+        "80-130"
+      ],
+      "processFacade.ts": [
+        "94-149"
+      ],
+      "RetainedWindowsCustody.ts": [
+        "100-177",
+        "268-285",
+        "303-335",
+        "350-389",
+        "451-467",
+        "481-522"
+      ],
+      "CapturedHostClient.ts": [
+        "180-206",
+        "411-462",
+        "687-800"
+      ],
+      "CapturedWindowsCustody.ts": [
+        "75-176"
+      ],
+      "CodexMemberProvider.ts": [
+        "135-183"
+      ],
+      "RuntimeTeamCoordinator.ts": [
+        "1-48",
+        "294-354",
+        "390-440",
+        "639-706",
+        "735-799"
+      ],
+      "TeamHost.ts": [
+        "385-459"
+      ],
+      "TeamOwner.ts": [
+        "740-777"
+      ],
+      "executeTeamCommand.ts": [
+        "40-140"
+      ],
+      "executeCapturedRuntimeControl.ts": [
+        "180-210",
+        "246-311"
+      ],
+      "executeMemberAction.ts": [
+        "1-59",
+        "80-155",
+        "160-195",
+        "217-284"
+      ],
+      "executeRuntimeMemberAction.ts": [
+        "1-139"
+      ],
+      "hostCustody.ts": [
+        "1-42",
+        "350-370"
+      ],
+      "nativeGateContext.ts": [
+        "1-24",
+        "85-159"
+      ],
+      "08-windows-provider-runtime.md": [
+        "181-202",
+        "706-716",
+        "873-881"
+      ]
+    },
+    "externalOwnerLossFull298PreviouslyReadBeforeReset": true,
+    "externalProfileFull108AndGateFull237Read": true,
+    "noClaimOfWholeProductAudit": true
+  },
+  "historicalFeasibilityReceipts": [
+    {
+      "sha256": "8797011cb19c612839b1f84c4b1d3c0c7af4f4671095dc70ed9b09afc5711383",
+      "bytes": 36439,
+      "lines": 629,
+      "state": "Full read by root and this agent before the transient reset; the raw body is not claimed restored."
+    },
+    {
+      "sha256": "03f9399c5e19c0efb094975a233868f98cfacbd28518d9fa4c5c3f00f5ff27ce",
+      "bytes": 34274,
+      "lines": 451,
+      "state": "Full read by root and this agent before the transient reset; current feasibility was independently checked against 33 source bodies."
+    }
+  ],
+  "remainingGates": [
+    "Root full read of rebound plan/R1/manifest and independent prospective R2.",
+    "Fresh ordinary documentary publication preserving exact current leaves, full official actual-document R2.",
+    "Only then exactly six source afterimages and full independent source R2.",
+    "Exact ordinary source publication and independent actual-source R2.",
+    "Fresh sole useful-job guard, guarded integration and original resulting-head CI/receipts; no PASS transfer."
+  ],
+  "qualificationLimits": [
+    "No source afterimages written.",
+    "No native/project execution or timing proof.",
+    "No broad W05, W01, vendor, Desktop, release or P09 qualification.",
+    "Owner-install proof is after completed callback/before physical resume only.",
+    "Tool effects2 are already ACKed; the lost result is Runtime/native terminal completion.",
+    "All performance and cleanup requirements remain actual resulting-head acceptance gates."
+  ],
+  "preparedBy": "/root/qualification_audit; original provisional feasibility retained",
+  "ownedBy": "/root",
+  "closedActualSourcePrerequisites": [
+    {
+      "plan": 71,
+      "path": "/tmp/e2e-original-artifacts/reviews/plan71-original-setup-window/actual-source/independent-actual-source-r2.json",
+      "bytes": 17401,
+      "physicalLines": 340,
+      "gitBlob": "1aaf22bd1e18c761f47af9a2186418bcb7b196f7",
+      "sha256": "67e0946ae75da8aa45e8729e51ccc20346098e55d660f2fb8c1c5df6280ea6a3"
+    },
+    {
+      "plan": 72,
+      "path": "/tmp/e2e-original-artifacts/reviews/plan72-finite-cold-resume-fresh/actual-source/independent-actual-source-r2.json",
+      "bytes": 16921,
+      "physicalLines": 344,
+      "gitBlob": "0a6885e60b2b9d9aabb849f03c99919a8e6f1a10",
+      "sha256": "707c128ac9436a34250608ead7f72c29d5bda0276d7577a6045d1a32a94244b4"
+    }
+  ],
+  "rootOwnership": {
+    "readScope": "Complete original plan190L/R1377L/manifest536L and scoped original owner/Runtime/restart references read earlier. Current full documentary rebind and exact source tuples reviewed by root; independent p08 preliminary technical review found no concrete blocker and will review this final packet.",
+    "exactChangedBindingInputs": [
+      "tools/owned-process-broker/tsconfig.json",
+      ".github/workflows/host-emulated-acceptance.yml"
+    ],
+    "semanticsUnchanged": "The three finite cases, original owner roles, exact action counts, callback settlement, UNKNOWN/no replay and original cleanup obligations are unchanged.",
+    "teamExecuteCaution": "Completed Team command lookup retains its original runtime.kick finally; exact input/turn-start/effect/root counters remain mandatory. It is not described as a pure read.",
+    "noSourceAfterimagesOrExecution": true
+  }
+}

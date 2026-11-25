@@ -17,19 +17,14 @@ import { isConfiguredAuthless } from './openCodeConfiguredAuthless.js';
 import { captureOpenCodeV2SessionCredential } from './OpenCodeV2SessionCredential.js';
 import { OpenCodeV2CredentialScope } from './OpenCodeV2CredentialScope.js';
 import { captureOpenCodeV2Configuration } from './OpenCodeV2CapturedConfiguration.js';
-import { createOpenCodeMetadataDiagnostic } from './createClaudeCloseDiagnostic.js';
+import { createOpenCodeMetadataDiagnostic, metadataFailureReasons } from './createClaudeCloseDiagnostic.js';
+import type { MetadataReadStage } from './createClaudeCloseDiagnostic.js';
 
 import type { ProviderManagementCatalog } from '../../management/contracts.js';
 import type { OpenCodeManagementProfile } from '../../management/profile.js';
 import type { RegisteredProcessRootSource } from '../../process/registeredProcessContracts.js';
 
 const metadataReadFailure = channel('agent-teams:opencode-v2:metadata-read-failed');
-type MetadataReadStage = 'admission' | 'native-client' | 'identity' | 'plugins' | 'permissions' | 'mcp'
-  | 'credential' | 'directory' | 'activation-wait' | 'current' | 'projection' | 'dispose' | 'result-current';
-const metadataFailureReasons = new Set(['held', 'conflict', 'invalid', 'busy', 'deadline', 'cleanup_unknown',
-  'transport_failure', 'authority_mismatch', 'disposed', 'http_failure', 'media_type', 'body_limit',
-  'frame_limit', 'invalid_response', 'invalid_native_catalog', 'native_catalog_binding_mismatch',
-  'capabilities_pending', 'unqualified_version', 'ABORT_ERR']);
 /** Diagnostic data only: never execute error accessors or inspect raw messages/cause chains. */
 function metadataFailureReason(error: unknown): string {
   try {
@@ -136,7 +131,11 @@ export class OpenCodeV2ManagementHost {
   }
 
   matchesCatalog(providerId: string | undefined): boolean {
-    return !this.options.retainedCommandId && this.options.catalogProviderId === providerId;
+    return !this.options.retainedCommandId &&
+      (this.options.catalogProviderId === providerId || (providerId === undefined &&
+        this.options.catalogProviderId === this.profile.nativeModel!.providerId &&
+        this.configuredProviderId === this.options.catalogProviderId &&
+        this.catalogCredential?.isAbsent() === true));
   }
 
   private assertCurrent(signal: AbortSignal): void {
@@ -210,11 +209,13 @@ export class OpenCodeV2ManagementHost {
       if (observed) return;
       observed = true;
       try {
-        if (!metadataReadFailure.hasSubscribers) return;
         const elapsedMs = Math.max(0, Math.round(performance.now() - started));
         if (!Number.isSafeInteger(elapsedMs) || elapsedMs > 3_600_000) return;
-        metadataReadFailure.publish(Object.freeze({ stage, reason: metadataFailureReason(error), elapsedMs,
-          deadlineExpired: Date.now() >= deadline, aborted: signal?.aborted ?? null }));
+        const observation = Object.freeze({ stage, reason: metadataFailureReason(error), elapsedMs,
+          deadlineExpired: Date.now() >= deadline, aborted: signal?.aborted ?? null });
+        try { this.metadataDiagnostic?.readFailed(observation); }
+        catch { /* The persistent sink cannot prevent the existing channel observation. */ }
+        if (metadataReadFailure.hasSubscribers) metadataReadFailure.publish(observation);
       } catch { /* Observation cannot replace the original failure or determine cleanup. */ }
     };
     // The original nativeClient await stays outside the original client/dispose try.
@@ -264,7 +265,7 @@ export class OpenCodeV2ManagementHost {
             !['kimi-for-coding', 'kiro', 'cursor-acp'].includes(id) &&
             (!['exa', 'tavily'].includes(id) || providers.get(id)?.integrationId)).map(id => {
             const provider = providers.get(id);
-            const integration = integrations.get(provider?.integrationId ?? id);
+            const integration = integrations.get(provider?.integrationId === undefined ? id : provider.integrationId);
             const models = catalog.models.filter(model => model.providerId === id && model.enabled);
             const configuration = id === this.configuredProviderId ? this.configuration.configuration : undefined;
             const configuredAuthless = !!configuration && !this.configuration.selectedFile && isConfiguredAuthless({ id,
@@ -285,6 +286,7 @@ export class OpenCodeV2ManagementHost {
               models: providerId === undefined && !includeModels ? [] : models.map(model => ({
                 modelId: model.id, displayName: model.name, contextTokens: model.contextTokens,
                 outputTokens: model.outputTokens, free: null, declaredInputModalities: model.inputModalities,
+                variants: model.variants,
               })),
               authMethods: integration?.plainKey ? ['api' as const] : [],
             };
@@ -334,9 +336,10 @@ export class OpenCodeV2ManagementHost {
             !(await client.savedPermissionsEmpty()) || (await client.readMcp()).length !== 0) held();
         const directory = await client.readDirectory();
         const provider = directory.providers.find(row => row.id === providerId);
-        const integrationId = provider?.integrationId
-          ?? directory.integrations.find(row => row.id === providerId &&
-            !['exa', 'tavily', 'kimi-for-coding', 'kiro', 'cursor-acp'].includes(row.id))?.id;
+        const integrationId = provider?.integrationId === undefined
+          ? directory.integrations.find(row => row.id === providerId &&
+            !['exa', 'tavily', 'kimi-for-coding', 'kiro', 'cursor-acp'].includes(row.id))?.id
+          : provider.integrationId;
         if (!integrationId) return held();
         key = createOpenCodeV2CredentialClient({ ...config, integrationId });
         result = await operation({ integrationId, read: key.read, connectKey: key.connectKey,

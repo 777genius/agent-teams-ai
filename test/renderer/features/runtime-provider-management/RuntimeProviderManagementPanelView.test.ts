@@ -2394,7 +2394,7 @@ describe('RuntimeProviderManagementPanelView', () => {
     const status = host.querySelector('[role="status"][aria-busy="true"]');
     expect(status?.textContent).toContain('Verifying connection');
     expect(status?.textContent).toContain('running one minimal model request');
-    expect(status?.textContent).toContain('previous connection is restored');
+    expect(status?.textContent).not.toMatch(/temporarily|new credential is removed|previous connection is restored/);
   });
 
   it('offers retry when provider setup form loading fails', async () => {

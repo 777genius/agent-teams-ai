@@ -79,6 +79,8 @@ export function createLegacySourceWriteAdmissionPolicy(options: {
       if (selectedHost) assertPhysicalRoot();
       const rootIdentity = selectedHost ? directory(teamsRoot) : null;
       const original = selectedHost ? directory(key) : null;
+      if (selectedHost && original && realpathSync(key) !== key)
+        throw new Error('Legacy source directory is not canonical');
       const assertOwnerCurrent = () => {
         if (!selectedHost) return;
         if (!isCurrentOwner()) throw new Error('Legacy source owner changed');
@@ -99,6 +101,8 @@ export function createLegacySourceWriteAdmissionPolicy(options: {
           if (!selectedHost) return;
           assertOwnerCurrent();
           if (!same(original, directory(key))) throw new Error('Legacy source directory changed');
+          if (original && realpathSync(key) !== key)
+            throw new Error('Legacy source directory is not canonical');
           if (original && readLegacyNativeStopRelease(key, teamName))
             throw new Error('Legacy source is read-only');
         },

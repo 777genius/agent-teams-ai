@@ -1,10 +1,13 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, realpathSync, rmSync } from 'node:fs';
+import { createHash, randomUUID } from 'node:crypto';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { PassThrough } from 'node:stream';
 import { test } from 'node:test';
 import { createTeamHost } from '../dist/composition/TeamHost.js';
+import { fileHash, startHost } from './fixtures/native-host.ts';
 import { FileRuntimeStore } from '../dist/adapters/runtime/FileRuntimeStore.js';
 import { TeamOwnerStore } from '../dist/adapters/team/TeamOwnerStore.js';
 import { readScheduledRunCapture } from '../dist/composition/scheduledRunCapture.js';
@@ -15,6 +18,7 @@ import type { Event, Input, Session } from '@agent-teams/provider-session-contra
 import type { TestContext } from 'node:test';
 
 const tick = () => new Promise<void>(resolve => setImmediate(resolve));
+const logWarning = 'Some retained runtime log entries are unavailable.';
 async function until(predicate: () => boolean | Promise<boolean>) {
   const deadline = Date.now() + 5000;
   while (!(await predicate())) { assert.ok(Date.now() < deadline, 'original operation must settle'); await tick(); }
@@ -52,10 +56,13 @@ class ControlledSession implements Session {
     this.closes++; this.ended = true; this.wake?.();
     return { logicallyClosed: true, cleanup: this.unknown ? 'unknown' : 'confirmed' };
   };
+  emit(...events: Event[]) {
+    this.events.push(...events); this.wake?.(); delete this.wake;
+  }
   finish() {
     const input = this.inputs[0]; assert.ok(input);
     const identity = { sessionRef: this.sessionRef, inputId: input.inputId, operationRef: input.operationRef };
-    this.events.push(
+    this.emit(
       { ...identity, kind: 'tool', messageRef: 'TEST-tool-message', toolRef: 'TEST-scheduled-tool',
         name: 'Bash', input: { command: 'TEST command' } },
       { ...identity, kind: 'tool-result', toolRef: 'TEST-scheduled-tool', content: 'TEST tool result', isError: false },
@@ -63,12 +70,16 @@ class ControlledSession implements Session {
         phase: 'complete', text: 'TEST finite model result' },
       { ...identity, kind: 'usage', inputTokens: 7, outputTokens: 3, cumulativeCostUsd: 0.01 },
       { ...identity, kind: 'result', outcome: 'succeeded' });
-    this.wake?.(); delete this.wake;
   }
 }
 
-async function fixture(t: TestContext, options: { blockOpen?: boolean; unknown?: boolean; physicalUnknown?: boolean } = {}) {
+async function fixture(t: TestContext, options: {
+  blockOpen?: boolean; unknown?: boolean; physicalUnknown?: boolean; failOpen?: boolean; separateWorkspace?: boolean;
+  onOpen?(context: ScheduledRunProviderContext, root: string): void;
+} = {}) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-scheduled-host-')));
+  const cwd = options.separateWorkspace ? join(root, 'workspace') : root;
+  if (cwd !== root) mkdirSync(cwd);
   const teamBinding = { backendId: 'TEST-backend', teamId: 'TEST-team', teamName: 'test-scheduled' };
   const profile: TeamHostProfile = { schemaVersion: 1, principalId: 'human',
     owner: { ownerId: teamBinding.backendId, revision: '1', storageRoot: root, profileId: 'TEST-profile',
@@ -76,15 +87,15 @@ async function fixture(t: TestContext, options: { blockOpen?: boolean; unknown?:
     teams: [{ binding: teamBinding,
       scope: { projectId: 'TEST-project', workspaceId: 'TEST-project', teamId: teamBinding.teamId,
         runId: 'TEST-team-run', memberId: 'human', generation: '1' },
-      savedSettings: { cwd: root, providerId: 'anthropic', prompt: 'TEST saved team prompt' },
+      savedSettings: { cwd, providerId: 'anthropic', prompt: 'TEST saved team prompt' },
       members: [{ memberId: 'lead', name: 'team-lead', role: 'lead',
         delivery: { ...teamBinding, runId: 'TEST-team-run', memberId: 'lead', generation: '1' } }],
       grants: [{ principalId: 'human', memberName: 'user', permissions: ['read', 'admin', 'task.write', 'message.write'] },
         { principalId: 'lead-principal', memberName: 'team-lead', permissions: ['read', 'task.write', 'message.write'] }] }],
     runtime: { members: [{ provider: 'claude', teamId: teamBinding.teamId, memberId: 'lead', principalId: 'lead-principal',
-      sessionId: 'PRIVATE-team-session', generation: 1, configRevision: 'PRIVATE-recipe', cwd: root,
+      sessionId: 'PRIVATE-team-session', generation: 1, configRevision: 'PRIVATE-recipe', cwd,
       model: 'PRIVATE-default-model', accountBinding: 'PRIVATE-account',
-      executable: { path: '/TEST/no-native-execution', sha256: 'c'.repeat(64) },
+      executable: { path: join(root, 'TEST-no-native-execution'), sha256: 'c'.repeat(64) },
       environment: { HOME: root, CLAUDE_CONFIG_DIR: root, PATH: '/TEST/no-native-execution', TEST_TOKEN: 'PRIVATE-token' },
       nativeTools: ['Bash', 'Read'], autoAllowedTools: [],
       limits: { queuedInputs: 1, inputBytes: 65536, outputBytes: 65536, outputEvents: 256, pendingInteractions: 1, timeoutMs: 10000 } }] } };
@@ -102,7 +113,9 @@ async function fixture(t: TestContext, options: { blockOpen?: boolean; unknown?:
       sessions.push(session);
       return { factory: { async open() {
         opens++; order.push('open-entered');
+        options.onOpen?.(context, root);
         if (options.blockOpen) await new Promise<void>(resolve => { release = resolve; });
+        if (options.failOpen) throw new Error('TEST original startup failed');
         order.push('open-returned');
         return { driver: session, capabilities: [...context.request.requiredCapabilities] };
       } }, seal() { order.push('provider-sealed'); }, async cleanup() {
@@ -137,7 +150,7 @@ async function fixture(t: TestContext, options: { blockOpen?: boolean; unknown?:
     raw(method, { commandId, binding: target, payload });
   const roster = await rpc('team.roster.read', {}) as unknown as { value: { revision: string } };
   const request = (runId: string, scheduleId = 'TEST-schedule'): ScheduledRunInput => ({ runId, scheduleId, expectedRosterRevision: roster.value.revision,
-    config: { cwd: root, prompt: 'TEST standalone prompt', providerId: 'anthropic', model: 'TEST-selected-model',
+    config: { cwd, prompt: 'TEST standalone prompt', providerId: 'anthropic', model: 'TEST-selected-model',
       effort: 'low', resolvedFastMode: false, skipPermissions: false, allowedTools: ['Read'], disallowedTools: ['Bash'] },
     maxTurns: 2, maxBudgetUsd: 0.5 });
   const read = async (runId: string, scheduleId = 'TEST-schedule') => {
@@ -146,7 +159,9 @@ async function fixture(t: TestContext, options: { blockOpen?: boolean; unknown?:
   };
   return { root, profile, binding, contexts, sessions, order, opens: () => opens, rpc, read, request,
     confirmOriginalCleanup() { cleanupUnknown = false; },
-    async restart() { assert.equal((await host.dispose()).cleanup, 'completed'); host = open(); await raw('host.handshake', { protocolVersion: 1 }); },
+    async restart(cleanup: 'completed' | 'failed' = 'completed') {
+      assert.equal((await host.dispose()).cleanup, cleanup); host = open(); await raw('host.handshake', { protocolVersion: 1 });
+    },
     dispose: () => host.dispose() };
 }
 
@@ -167,12 +182,19 @@ test('finite Host run keeps scheduled choices, one input and original outcome ac
   assert.equal('endpoint' in context, false); assert.equal('connection' in context, false);
   assert.equal(f.sessions[0]!.inputs[0]!.content, request.config.prompt);
   const nativeInput = f.sessions[0]!.inputs[0]!;
-  const authorization = { sessionRef: f.sessions[0]!.sessionRef, inputId: nativeInput.inputId,
-    operationRef: nativeInput.operationRef, parentToolRef: 'TEST-parent-tool', signal: new AbortController().signal };
+  const identity = { sessionRef: f.sessions[0]!.sessionRef, inputId: nativeInput.inputId, operationRef: nativeInput.operationRef };
+  const authorization = { ...identity, parentToolRef: 'TEST-parent-tool', signal: new AbortController().signal };
   assert.equal(await context.subagents?.authorize(authorization), true);
   assert.equal(await context.subagents?.authorize({ ...authorization, inputId: 'TEST-foreign' }), false);
   assert.equal((await f.rpc('schedule.run.start', request, request.runId)).ok, true);
   assert.equal(f.opens(), 1);
+  f.sessions[0]!.emit(
+    { ...identity, kind: 'thinking', messageRef: 'TEST-message', block: 1, phase: 'complete', text: 'TEST root **Thinking**' },
+    { ...identity, kind: 'thinking', messageRef: 'TEST-message', block: 1, phase: 'snapshot', text: 'TEST late root snapshot' });
+  assert.ok(context.subagents);
+  for (const [phase, text] of [['complete', 'TEST child **Thinking**'], ['snapshot', 'TEST late child snapshot']] as const)
+    await context.subagents.observe({ ...authorization, childRef: 'TEST-original-child', phase: 'fact',
+      fact: { kind: 'thinking', messageRef: 'TEST-child-message', block: 0, phase, text } });
   f.sessions[0]!.finish();
   await until(async () => (await f.read(request.runId))?.phase === 'completed');
   const terminal = await f.read(request.runId);
@@ -189,13 +211,26 @@ test('finite Host run keeps scheduled choices, one input and original outcome ac
   const durationMs = Math.max(0, Date.parse(lastTime) - Date.parse(capture.capturedAt));
   assert.equal(terminal!.result!.durationMs, durationMs);
   const logRows = terminal!.result!.stdout.split('\n').map(line =>
-    JSON.parse(line) as { type?: string; duration_ms?: number; message?: { content?: Record<string, unknown>[] } });
+    JSON.parse(line) as { type?: string; uuid?: string; agentId?: string; duration_ms?: number;
+      message?: { content?: Record<string, unknown>[] } });
   assert.deepEqual(logRows.filter(row => row.type === 'result').map(row => row.duration_ms), [durationMs]);
   const blocks = logRows.flatMap(row => row.message?.content ?? []);
   assert.deepEqual(blocks.filter(block => ['tool_use', 'tool_result'].includes(String(block.type))), [
     { type: 'tool_use', id: 'TEST-scheduled-tool', name: 'Bash', input: { command: 'TEST command' } },
     { type: 'tool_result', tool_use_id: 'TEST-scheduled-tool', content: 'TEST tool result', is_error: false },
   ]);
+  const thoughts = logRows.filter(row => row.message?.content?.[0]?.type === 'thinking');
+  assert.deepEqual(thoughts.map(row => row.message!.content![0]!.thinking).sort(),
+    ['TEST child **Thinking**', 'TEST root **Thinking**']);
+  const retained = runtimeStore.readActivity(context.binding)!.events;
+  const rootThought = retained.find(row => row.data.kind === 'thinking' && row.data.phase === 'complete')!;
+  const childThought = retained.find(row => row.data.kind === 'subagent' && row.data.phase === 'fact' &&
+    row.data.fact && typeof row.data.fact === 'object' && !Array.isArray(row.data.fact) && row.data.fact.phase === 'complete')!;
+  assert.ok(rootThought && childThought);
+  assert.deepEqual(thoughts.map(row => row.uuid), [rootThought, childThought].sort((a, b) => a.sequence - b.sequence).map(row => row.eventId));
+  assert.equal(thoughts.find(row => row.uuid === rootThought.eventId)!.agentId, undefined);
+  assert.equal(thoughts.find(row => row.uuid === childThought.eventId)!.agentId, childThought.data.childId);
+  assert.doesNotMatch(terminal!.result!.stdout, /TEST late (?:root|child) snapshot/u);
   assert.equal(await context.subagents?.authorize(authorization), false);
   assert.equal(JSON.stringify(terminal).includes('PRIVATE-'), false);
   const tasks = await f.rpc('team.tasks.list', {}) as unknown as { value: unknown[] };
@@ -203,7 +238,7 @@ test('finite Host run keeps scheduled choices, one input and original outcome ac
   await f.restart();
   // The retained outcome/latest text survives; cold Runtime truthfully reports its volatile log gap.
   assert.deepEqual(await f.read(request.runId), { ...terminal,
-    result: { ...terminal!.result!, stderr: 'Some retained runtime log entries are unavailable.' } });
+    result: { ...terminal!.result!, stderr: logWarning } });
   assert.equal((await f.rpc('schedule.run.start', request, request.runId)).ok, true);
   assert.equal(f.opens(), 1);
   assert.equal((await f.rpc('schedule.run.start', { ...request, config: { ...request.config, prompt: 'TEST changed' } }, request.runId)).code, 'conflict');
@@ -230,6 +265,122 @@ test('cancel before start and during native open never submit; original physical
   assert.equal(f.sessions[0]!.closes, 1);
   assert.equal((await f.rpc('schedule.run.start', request, request.runId)).value?.phase, 'interrupted');
   assert.equal(f.opens(), 1);
+});
+
+test('original scheduled stderr is retained before SessionRef even when opening fails, without an input or replay', async t => {
+  let observations = 0;
+  const f = await fixture(t, { failOpen: true, onOpen(context, root) {
+    const store = new FileRuntimeStore(root), before = store.fenced(context.binding, tx => tx.get())!;
+    assert.equal(before.phase, 'opening'); assert.equal(before.sessionRef, undefined);
+    assert.deepEqual(before.inputs, []); assert.ok(context.observeProcessOutput);
+    context.observeProcessOutput({ kind: 'process-output', stream: 'stderr', text: 'TEST original scheduled startup' });
+    const after = store.fenced(context.binding, tx => tx.get())!;
+    assert.equal(after.phase, before.phase); assert.equal(after.custody, before.custody);
+    assert.equal(after.nativeReady, false); assert.equal(after.sessionRef, undefined);
+    assert.deepEqual(after.inputs, []); assert.deepEqual(after.interactions, before.interactions);
+    assert.equal(store.readConversation(context.binding), undefined);
+    observations++;
+  } });
+  const request = f.request('TEST-failed-opening');
+  assert.equal((await f.rpc('schedule.run.start', request, request.runId)).ok, true);
+  await until(async () => (await f.read(request.runId))?.phase === 'held');
+  assert.equal(observations, 1); assert.equal(f.sessions[0]!.inputs.length, 0);
+  const context = f.contexts[0]!, store = new FileRuntimeStore(f.root);
+  const record = store.fenced(context.binding, tx => tx.get())!;
+  assert.equal(record.diagnostic, 'open-unknown'); assert.equal(record.custody, 'unknown');
+  assert.equal(record.sessionRef, undefined); assert.deepEqual(record.inputs, []);
+  const retained = store.readActivity(context.binding)!;
+  const diagnostics = retained.events.filter(row => row.data.kind === 'process-output');
+  assert.equal(diagnostics.length, 1);
+  assert.deepEqual(diagnostics[0]!.data, { kind: 'process-output', stream: 'stderr', text: 'TEST original scheduled startup' });
+  assert.equal(diagnostics[0]!.inputId, undefined); assert.equal(diagnostics[0]!.operationRef, undefined);
+  assert.equal((await f.read(request.runId))?.result, undefined, 'startup diagnostics cannot manufacture a model outcome');
+  await f.restart('failed'); // Failed native open retains unknown custody; no replacement can settle it.
+  assert.equal((await f.read(request.runId))?.phase, 'held');
+  assert.deepEqual(store.readActivity(context.binding), retained);
+  assert.equal((await f.rpc('schedule.run.start', request, request.runId)).value?.phase, 'held');
+  assert.equal(f.opens(), 1); assert.equal(f.sessions[0]!.inputs.length, 0);
+  assert.equal(store.readConversation(context.binding), undefined);
+});
+
+test('scheduled diagnostics refuse replaced selection, Team authority, workspace, writer and Host seal', async t => {
+  const f = await fixture(t, { separateWorkspace: true }), request = f.request('TEST-source-grant');
+  assert.equal((await f.rpc('schedule.run.start', request, request.runId)).ok, true);
+  await until(() => f.sessions[0]?.inputs.length === 1);
+  const context = f.contexts[0]!, binding = structuredClone(context.binding), store = new FileRuntimeStore(f.root);
+  const observe = context.observeProcessOutput; assert.ok(observe);
+  observe({ kind: 'process-output', stream: 'stderr', text: 'TEST original source' });
+  const refuse = (label: string, change: () => void, restore: () => void) => {
+    const activity = store.readActivity(binding), state = store.fenced(binding, tx => tx.get());
+    const conversation = store.readConversation(binding);
+    try {
+      change();
+      assert.doesNotThrow(() => observe({ kind: 'process-output', stream: 'stderr', text: `TEST refused ${label}` }));
+    } finally { restore(); }
+    assert.deepEqual(store.readActivity(binding), activity, label);
+    assert.deepEqual(store.fenced(binding, tx => tx.get()), state, label);
+    assert.deepEqual(store.readConversation(binding), conversation, label);
+  };
+  const executable = context.profile.executable, originalRequest = structuredClone(context.request);
+  refuse('selected executable', () => { context.profile.executable = { ...executable, sha256: 'd'.repeat(64) }; },
+    () => { context.profile.executable = executable; });
+  refuse('open request', () => { Object.assign(context.request, { configRevision: 'TEST-replaced-request' }); },
+    () => { Object.assign(context.request, originalRequest); });
+  refuse('original binding', () => { context.binding.generation = 'TEST-neighbor'; },
+    () => { Object.assign(context.binding, binding); });
+  const statePath = join(f.root, 'teams/test-scheduled/.host-owner/state.json'), originalState = readFileSync(statePath, 'utf8');
+  for (const kind of ['revision', 'revocation'] as const) {
+    const state = JSON.parse(originalState) as { grants: { principalId: string; revision?: number; revoked?: boolean }[] };
+    const grant = state.grants.find(row => row.principalId === 'human')!;
+    if (kind === 'revision') grant.revision = (grant.revision ?? 1) + 1;
+    else grant.revoked = true;
+    refuse(`Team ${kind}`, () => { writeFileSync(statePath, JSON.stringify(state)); },
+      () => { writeFileSync(statePath, originalState); });
+  }
+  // These are private fixture directories; replace and restore without yielding to other work.
+  for (const [label, path] of [['retained workspace', request.config.cwd], ['writer root', f.root]] as const) {
+    const original = `${path}-original`;
+    refuse(label, () => { renameSync(path, original); mkdirSync(path); },
+      () => { rmSync(path, { recursive: true, force: true }); renameSync(original, path); });
+  }
+  observe({ kind: 'process-output', stream: 'stderr', text: 'TEST restored original source' });
+  assert.deepEqual(store.readActivity(binding)!.events.filter(row => row.data.kind === 'process-output').map(row => row.data.text),
+    ['TEST original source', 'TEST restored original source']);
+  const close = f.sessions[0]!.close; let closing = 0;
+  f.sessions[0]!.close = async () => {
+    const state = store.fenced(binding, tx => tx.get())!;
+    assert.equal(state.phase, 'closing'); assert.equal(state.custody, 'owned');
+    const activity = store.readActivity(binding);
+    observe({ kind: 'process-output', stream: 'stderr', text: 'TEST sealed Host closing' });
+    assert.deepEqual(store.readActivity(binding), activity, 'Host seal revokes diagnostics before original custody releases');
+    closing++; return close();
+  };
+  assert.equal((await f.dispose()).cleanup, 'completed'); assert.equal(closing, 1);
+  assert.equal(f.opens(), 1); assert.equal(f.sessions[0]!.inputs.length, 1);
+});
+
+test('scheduled stderr keeps the first 16 KiB on UTF-8 boundaries and one warning across cold reads', async t => {
+  const f = await fixture(t), request = f.request('TEST-bounded-stderr');
+  await f.rpc('schedule.run.start', request, request.runId);
+  await until(() => f.sessions[0]?.inputs.length === 1);
+  const context = f.contexts[0]!, first = 'TEST first ' + 'é'.repeat(6000), second = '🙂'.repeat(3000) + 'TEST dropped tail';
+  assert.ok(context.observeProcessOutput);
+  for (const text of [first, second]) context.observeProcessOutput({ kind: 'process-output', stream: 'stderr', text });
+  f.sessions[0]!.finish();
+  await until(async () => (await f.read(request.runId))?.phase === 'completed');
+  const terminal = (await f.read(request.runId))!, stderr = terminal.result!.stderr;
+  assert.ok(Buffer.byteLength(stderr) <= 16 * 1024);
+  assert.ok(Buffer.byteLength(stderr) > 16 * 1024 - 4, 'only the incomplete final code point may be omitted');
+  assert.ok(stderr.startsWith(first + '\n🙂')); assert.ok(stderr.endsWith('\n' + logWarning));
+  assert.equal(stderr.split(logWarning).length, 2); assert.doesNotMatch(stderr, /\ufffd|TEST dropped tail/u);
+  const prefix = stderr.slice(0, -(logWarning.length + 1));
+  assert.ok((first + '\n' + second).startsWith(prefix)); assert.ok(prefix.endsWith('🙂'));
+  const activity = new FileRuntimeStore(f.root).readActivity(context.binding)!;
+  assert.deepEqual(activity.events.filter(row => row.data.kind === 'process-output').map(row => row.data.text), [first, second]);
+  await f.restart();
+  assert.deepEqual(await f.read(request.runId), terminal);
+  await f.rpc('schedule.run.start', request, request.runId);
+  assert.equal(f.opens(), 1); assert.equal(f.sessions[0]!.inputs.length, 1);
 });
 
 test('unknown cleanup is retained and cannot authorize replay or another native occurrence', async t => {
@@ -267,12 +418,181 @@ test('independent schedules run concurrently and cancelling one preserves the or
     second = f.request('TEST-parallel-B', 'TEST-schedule-B');
   for (const input of [first, second]) assert.equal((await f.rpc('schedule.run.start', input, input.runId)).ok, true);
   await until(() => f.sessions.length === 2 && f.sessions.every(session => session.inputs.length === 1));
+  const [contextA, contextB] = f.contexts, store = new FileRuntimeStore(f.root);
+  assert.ok(contextA?.observeProcessOutput && contextB?.observeProcessOutput);
+  contextA.observeProcessOutput({ kind: 'process-output', stream: 'stderr', text: 'TEST stderr A' });
+  contextB.observeProcessOutput({ kind: 'process-output', stream: 'stderr', text: 'TEST stderr B' });
+  const close = f.sessions[0]!.close; let closing = 0;
+  f.sessions[0]!.close = async () => {
+    const before = store.fenced(contextA.binding, tx => tx.get())!, conversation = store.readConversation(contextA.binding);
+    assert.equal(before.phase, 'closing'); assert.equal(before.custody, 'owned'); assert.equal(before.sealed, true);
+    assert.equal(contextA.isCurrent(), false, 'ordinary cancellation closes allocation authority');
+    contextA.observeProcessOutput!({ kind: 'process-output', stream: 'stderr', text: 'TEST original closing A' });
+    const after = store.fenced(contextA.binding, tx => tx.get())!;
+    assert.equal(after.phase, before.phase); assert.equal(after.custody, before.custody);
+    assert.equal(after.sealed, before.sealed); assert.equal(after.nativeReady, false);
+    assert.deepEqual(after.inputs, before.inputs); assert.deepEqual(after.interactions, before.interactions);
+    assert.deepEqual(store.readConversation(contextA.binding), conversation);
+    closing++; return close();
+  };
   const wrong = await f.rpc('schedule.run.cancel', { runId: first.runId, scheduleId: second.scheduleId });
   assert.equal(wrong.code, 'conflict'); assert.equal(f.sessions[0]!.closes, 0);
   const cancelled = await f.rpc('schedule.run.cancel', { runId: first.runId, scheduleId: first.scheduleId });
   assert.equal(cancelled.value?.cleanup, 'confirmed'); assert.equal(f.sessions[1]!.closes, 0);
+  assert.equal(closing, 1); assert.equal(cancelled.value?.result?.stderr, 'TEST stderr A\nTEST original closing A');
+  const retainedA = store.readActivity(contextA.binding), retainedB = store.readActivity(contextB.binding);
+  contextA.observeProcessOutput({ kind: 'process-output', stream: 'stderr', text: 'TEST after A released' });
+  assert.deepEqual(store.readActivity(contextA.binding), retainedA);
+  assert.deepEqual(store.readActivity(contextB.binding), retainedB);
+  for (const event of retainedA!.events.filter(row => row.data.kind === 'process-output')) {
+    assert.equal(event.inputId, undefined); assert.equal(event.operationRef, undefined);
+  }
   assert.equal((await f.read(second.runId, second.scheduleId))?.phase, 'running');
   f.sessions[1]!.finish();
   await until(async () => (await f.read(second.runId, second.scheduleId))?.phase === 'completed');
+  assert.equal((await f.read(second.runId, second.scheduleId))?.result?.stderr, 'TEST stderr B');
   assert.equal(f.opens(), 2);
+});
+
+
+test('actual pinned SDK standalone run completes, cancels and survives cold replay without mutating the Team recipe', {
+  skip: process.platform === 'win32' ? 'POSIX TEST shebang; actual Windows custody has its separate native gate' : false,
+  timeout: 45_000,
+}, async t => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-claude-standalone-')));
+  const node = realpathSync(process.env.AGENT_BACKEND_TEST_NODE ?? process.execPath);
+  const entry = fileURLToPath(new URL('../dist/cli.js', import.meta.url));
+  const peer = fileURLToPath(new URL('../../../tools/owned-process-broker/fixtures/claudeProviderPeer.mjs', import.meta.url));
+  const peerRoot = join(root, 'TEST-peer-claude-scope'), cwd = join(root, 'workspace');
+  for (const path of [cwd, join(root, 'home'), join(root, 'tmp'), peerRoot,
+    join(peerRoot, 'home'), join(peerRoot, 'config'), join(peerRoot, 'tmp')]) mkdirSync(path, { mode: 0o700 });
+  const effects = join(peerRoot, 'effects.ndjson'), executablePath = join(root, 'TEST-claude-peer');
+  const sourceHash = await fileHash(peer);
+  const wrapper = '#!' + node + '\n' +
+    "import assert from 'node:assert/strict';import {createHash} from 'node:crypto';import {readFileSync,realpathSync} from 'node:fs';\n" +
+    'const source=' + JSON.stringify({ path: peer, sha256: sourceHash }) + ';\n' +
+    "assert.equal(realpathSync(source.path),source.path);assert.equal(createHash('sha256').update(readFileSync(source.path)).digest('hex'),source.sha256);\n" +
+    'await import(' + JSON.stringify(pathToFileURL(peer).href) + ');\n';
+  writeFileSync(executablePath, wrapper, { mode: 0o700, flag: 'wx' });
+  const teamBinding = { backendId: 'TEST-sdk-owner', teamId: 'TEST-sdk-team', teamName: 'test-sdk-scheduled' };
+  const profile: TeamHostProfile = { schemaVersion: 1, principalId: 'human',
+    owner: { ownerId: teamBinding.backendId, revision: '1', storageRoot: root,
+      profileId: 'TEST-sdk-profile', protocolVersion: 1, buildId: 'TEST-sdk-scheduled',
+      nodeSha256: await fileHash(node), hostEntrySha256: await fileHash(entry) },
+    teams: [{ binding: teamBinding,
+      scope: { projectId: 'TEST-project', workspaceId: 'TEST-project', teamId: teamBinding.teamId,
+        runId: 'TEST-team-run', memberId: 'human', generation: '1' },
+      savedSettings: { cwd, providerId: 'anthropic', model: 'sonnet', prompt: '', skipPermissions: false },
+      members: [{ memberId: 'alice-id', name: 'alice', role: 'lead',
+        delivery: { ...teamBinding, runId: 'TEST-team-run', memberId: 'alice-id', generation: '1' } }],
+      grants: [{ principalId: 'human', memberName: 'user', permissions: ['read', 'admin', 'task.write', 'message.write'] },
+        { principalId: 'alice-session', memberName: 'alice', permissions: ['read', 'task.write', 'message.write'] }] }],
+    runtime: { members: [{ provider: 'claude', teamId: teamBinding.teamId, memberId: 'alice-id',
+      principalId: 'alice-session', sessionId: randomUUID(), generation: 1, configRevision: 'TEST-original-recipe',
+      cwd, model: 'sonnet', accountBinding: 'TEST-no-vendor-account', configNamespace: 'custom-directory',
+      executable: { path: executablePath, sha256: createHash('sha256').update(wrapper).digest('hex') },
+      environment: { HOME: join(peerRoot, 'home'), CLAUDE_CONFIG_DIR: join(peerRoot, 'config'),
+        TMPDIR: join(peerRoot, 'tmp'), PATH: dirname(node) + ':/usr/bin:/bin',
+        TEST_EMULATED_DESKTOP_PROVIDER: '1', TEST_PEER_SCENARIO: 'desktop-ui-v1', TEST_PEER_PROVIDER: 'claude',
+        TEST_PEER_ROLE: 'runtime', TEST_DESKTOP_PEER_ROOT: peerRoot, TEST_PEER_EFFECTS: effects,
+        TEST_DESKTOP_PEER_WORKSPACE: cwd },
+      nativeTools: ['Read', 'Write', 'AskUserQuestion'], autoAllowedTools: [],
+      nativeOptions: { permissionMode: 'default', settingSources: [], effort: 'low', fastMode: false },
+      limits: { queuedInputs: 2, inputBytes: 65536, outputBytes: 1_000_000, outputEvents: 1500,
+        pendingInteractions: 4, timeoutMs: 20_000 } }] } };
+  const profilePath = join(root, 'profile.json');
+  writeFileSync(profilePath, JSON.stringify(profile), { mode: 0o600, flag: 'wx' });
+  const profileHash = await fileHash(profilePath);
+  const binding = { schemaVersion: 1, handleId: 'TEST-sdk-handle', owner: profile.owner, scope: profile.teams[0]!.scope };
+  const open = () => startHost({ node, entry, root, profile: profilePath, profileHash });
+  let host = open();
+  const journal = (): Record<string, unknown>[] => existsSync(effects)
+    ? readFileSync(effects, 'utf8').trim().split('\n').filter(Boolean).map(line => JSON.parse(line) as Record<string, unknown>) : [];
+  const present = (pid: number) => {
+    // Signal zero only observes presence; original Host custody owns every actual termination.
+    try { process.kill(pid, 0); return true; }
+    catch (error) { if ((error as NodeJS.ErrnoException).code === 'ESRCH') return false; throw error; }
+  };
+  const wait = async (predicate: () => boolean | Promise<boolean>) => {
+    const deadline = Date.now() + 15_000;
+    while (!(await predicate())) {
+      assert.equal(journal().some(row => row.event === 'failure'), false);
+      assert.ok(Date.now() < deadline, 'bounded original SDK outcome; no replay');
+      await new Promise<void>(resolve => setTimeout(resolve, 25));
+    }
+  };
+  const rpc = async <T>(method: string, payload: unknown, commandId = 'TEST-read'): Promise<T> => {
+    const result = await host.rpc(method, { commandId, binding, payload });
+    assert.equal(result.ok, true, JSON.stringify(result)); return result.value as T;
+  };
+  t.after(async () => {
+    await host.close();
+    assert.equal(journal().some(row => row.event === 'failure'), false);
+    for (const row of journal().filter(row => row.event === 'launch')) assert.equal(present(Number(row.pid)), false);
+    assert.equal(await fileHash(peer), sourceHash);
+    assert.equal(await fileHash(profilePath), profileHash);
+    rmSync(root, { recursive: true, force: true });
+  });
+  await host.rpc('host.handshake', { protocolVersion: 1 });
+  const roster = await rpc<{ revision: string }>('team.roster.read', {});
+  const request = (runId: string, prompt: string): ScheduledRunInput => ({
+    runId, scheduleId: 'TEST-legacy-schedule', expectedRosterRevision: roster.revision,
+    config: { cwd, prompt, providerId: 'anthropic', model: 'sonnet', effort: 'low',
+      resolvedFastMode: false, skipPermissions: true }, maxTurns: 6, maxBudgetUsd: 0.25,
+  });
+  const read = (runId: string) => rpc<ScheduledRunSnapshot>('schedule.run.read', { runId, scheduleId: 'TEST-legacy-schedule' });
+  const done = request('TEST-sdk-done', 'TEST_UI_STANDALONE_DONE');
+  await rpc('schedule.run.start', done, done.runId);
+  await wait(async () => (await read(done.runId)).phase === 'completed');
+  const completed = await read(done.runId);
+  assert.equal(completed.cleanup, 'confirmed'); assert.equal(completed.result?.exitCode, 0);
+  assert.equal(completed.result?.summary, 'TEST standalone complete');
+  assert.match(completed.result!.stdout, /TEST standalone complete/u);
+  assert.match(completed.result!.stdout, /"type":"thinking","thinking":"TEST standalone thought complete"/u);
+  assert.equal(completed.result!.stderr, 'TEST standalone stderr');
+  const captured = readScheduledRunCapture(new TeamOwnerStore(root, teamBinding.teamName), done.runId)!;
+  assert.deepEqual(captured.input, done);
+  assert.equal(journal().filter(row => row.event === 'input').length, 1);
+  await rpc('schedule.run.start', done, done.runId);
+  assert.equal(journal().filter(row => row.event === 'input').length, 1);
+
+  const held = request('TEST-sdk-held', 'TEST_UI_STANDALONE_HOLD');
+  await rpc('schedule.run.start', held, held.runId);
+  await wait(() => journal().some(row => row.event === 'partial' && row.marker === held.config.prompt));
+  const cancelled = await rpc<ScheduledRunSnapshot>('schedule.run.cancel', { runId: held.runId, scheduleId: held.scheduleId }, 'TEST-original-cancel');
+  assert.equal(cancelled.phase, 'interrupted'); assert.equal(cancelled.cleanup, 'confirmed');
+  const nativeInputs = journal().filter(row => row.event === 'input');
+  assert.deepEqual(nativeInputs.map(row => row.marker), [done.config.prompt, held.config.prompt]);
+  assert.equal(journal().some(row => row.event === 'mcp-connected'), false);
+  assert.equal(existsSync(join(peerRoot, 'config/projects')), false);
+  assert.deepEqual(await rpc('team.tasks.list', {}), []);
+  const launches = journal().filter(row => row.event === 'launch');
+  assert.equal(launches.length, 2); assert.ok(launches.every(row => row.parentPid === host.child.pid));
+  await wait(() => launches.every(row => !present(Number(row.pid))));
+
+  // The original Team recipe stays persistent/manual and still accepts original rich Composer input.
+  const opened = await rpc<{ nativeReady: boolean }>('runtime.open', { memberId: 'alice-id' }, 'TEST-open-original-team');
+  assert.equal(opened.nativeReady, true, JSON.stringify(opened));
+  const commandId = 'TEST-rich-composer-input';
+  const sent = await rpc<{ effects: { deliveryId: string } }>('team.execute', {
+    operation: 'message.send', payload: { to: 'alice', text: 'TEST_UI_BOOT', messageId: commandId, actionMode: 'do' },
+  }, commandId);
+  type View = { phase: string; custody: string; inputs: { inputId: string; phase: string; terminal?: string }[] };
+  const teamRead = () => rpc<View>('runtime.read', { memberId: 'alice-id' });
+  await wait(async () => (await teamRead()).inputs.some(row => row.inputId === sent.effects.deliveryId && row.terminal === 'succeeded'));
+  const rich = journal().filter(row => row.event === 'input' && row.marker === 'TEST_UI_BOOT');
+  assert.equal(rich.length, 1); assert.equal(rich[0]!.wrapped, true);
+  assert.equal(journal().filter(row => row.event === 'mcp-connected').length, 1);
+  const stopped = await rpc<View>('runtime.stop', { memberId: 'alice-id' }, 'TEST-stop-original-team');
+  assert.equal(stopped.phase, 'closed'); assert.equal(stopped.custody, 'released');
+  const counts = () => ['input', 'launch'].map(event => journal().filter(row => row.event === event).length);
+  const beforeCold = counts(); assert.deepEqual(beforeCold, [3, 3]);
+  await host.close();
+  host = open(); await host.rpc('host.handshake', { protocolVersion: 1 });
+  for (const [input, phase] of [[done, 'completed'], [held, 'interrupted']] as const) {
+    const retained = await read(input.runId); assert.equal(retained.phase, phase); assert.equal(retained.cleanup, 'confirmed');
+    if (input === done) assert.deepEqual(retained.result, { ...completed.result!, stderr: 'TEST standalone stderr\n' + logWarning });
+    await rpc('schedule.run.start', input, input.runId);
+  }
+  assert.deepEqual(counts(), beforeCold);
 });

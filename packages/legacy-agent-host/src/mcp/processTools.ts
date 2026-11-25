@@ -33,8 +33,8 @@ export function createProcessMcpTools(
         url: z.string().max(4096).optional(),
         command: z.string().max(4096).optional(),
       }),
-      ({ commandId, ...payload }) =>
-        projectProcessReceipt(process.register(commandId, present(payload)))
+      async ({ commandId, ...payload }) =>
+        projectProcessReceipt(await process.register(commandId, present(payload)))
     ),
     define(
       'process_list',
@@ -50,11 +50,11 @@ export function createProcessMcpTools(
           ? 'Mark existing process metadata stopped by ID or PID. This never sends an OS signal.'
           : 'Remove registry metadata only; PID removes its complete registered history. This never sends an OS signal.',
         z.strictObject({ ...command, id: identifier.optional(), pid: pid.optional() }),
-        ({ commandId, id, pid }) => {
+        async ({ commandId, id, pid }) => {
           const selected = selector.safeParse(present({ id, pid }));
           if (!selected.success) throw new McpToolFailure('invalid');
           return projectProcessReceipt(
-            process.metadata(
+            await process.metadata(
               commandId,
               operation === 'stop' ? 'metadata-stop' : 'unregister',
               selected.data
@@ -67,8 +67,8 @@ export function createProcessMcpTools(
       'process_lookup',
       'Look up the original process command under current authority; no native replay.',
       z.strictObject(command),
-      ({ commandId }) => projectProcessReceipt(process.lookup(commandId)),
+      async ({ commandId }) => projectProcessReceipt(await process.lookup(commandId)),
       false
     ),
-  ];
+  ].map(tool => ({ ...tool, asynchronous: true as const }));
 }

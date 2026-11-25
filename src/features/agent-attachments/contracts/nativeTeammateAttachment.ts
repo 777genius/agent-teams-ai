@@ -1,3 +1,5 @@
+import type { NativeMediaTransport } from '@agent-teams/legacy-agent-host/attachments/attachmentTypes';
+
 /**
  * Broad MIME type string (e.g. "image/png", "application/pdf").
  *
@@ -16,6 +18,7 @@ export interface NativeAttachmentDigest {
 export interface NativeMemberCapability {
   nativeInboxAttachmentsSupported?: boolean;
   nativeInboxTextAttachmentsSupported?: boolean;
+  nativeMediaTransport?: NativeMediaTransport;
 }
 
 export interface AttachmentMeta extends NativeAttachmentDigest {

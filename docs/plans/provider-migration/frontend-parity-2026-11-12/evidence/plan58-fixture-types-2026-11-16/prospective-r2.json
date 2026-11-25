@@ -1,0 +1,177 @@
+{
+  "reviewer": "installer_review",
+  "decision": "ACCEPT_PROSPECTIVE_PLAN58_EXACT_DRAFT",
+  "plan": {
+    "path": "fixture-types-proposal/plan58-draft.md",
+    "bytes": 6875,
+    "sha256": "6476ce4fbf8510b32790b0717d3578ed3b45c0b11d8ce3bc7479065c3c5aa547",
+    "gitBlob": "a9b951ee729679584b4842bb80771cc375eae3fa"
+  },
+  "originalFailure": {
+    "sourceHead": "3be1fb3ec43d5682aa2ca77a6af62e6fa27b597b",
+    "runId": 43933487486,
+    "jobId": 133563800223,
+    "logPath": "ci-3be-results-1958/fastLog-original-job.log",
+    "bytes": 66802,
+    "sha256": "cc535d013bb1a25a55853c2b5198a13deafae47fd9648680b3b550a73c0b4ce6",
+    "diagnostics": [
+      {
+        "path": "test/features/agent-backend/capturedWindowsSelection.test.ts",
+        "line": 60,
+        "column": 82,
+        "code": "TS2741",
+        "originalLogLine": 659
+      },
+      {
+        "path": "test/features/agent-backend/capturedWindowsSourceHistory.test.ts",
+        "line": 120,
+        "column": 5,
+        "code": "TS2322",
+        "originalLogLine": 660
+      },
+      {
+        "path": "test/features/agent-backend/capturedWindowsSourceHistory.test.ts",
+        "line": 180,
+        "column": 79,
+        "code": "TS2322",
+        "originalLogLine": 666
+      },
+      {
+        "path": "test/features/agent-backend/capturedWindowsSourceHistory.test.ts",
+        "line": 247,
+        "column": 11,
+        "code": "TS2322",
+        "originalLogLine": 672
+      },
+      {
+        "path": "test/features/agent-backend/capturedWindowsSourceHistory.test.ts",
+        "line": 280,
+        "column": 9,
+        "code": "TS2322",
+        "originalLogLine": 677
+      },
+      {
+        "path": "test/features/agent-backend/capturedWindowsSourceHistory.test.ts",
+        "line": 314,
+        "column": 22,
+        "code": "TS2339",
+        "originalLogLine": 682
+      },
+      {
+        "path": "test/features/agent-backend/capturedWindowsSourceHistory.test.ts",
+        "line": 315,
+        "column": 22,
+        "code": "TS2339",
+        "originalLogLine": 683
+      },
+      {
+        "path": "test/features/agent-backend/capturedWindowsSourceHistory.test.ts",
+        "line": 317,
+        "column": 9,
+        "code": "TS2322",
+        "originalLogLine": 684
+      },
+      {
+        "path": "test/renderer/hooks/useMentionDetection.test.ts",
+        "line": 99,
+        "column": 5,
+        "code": "TS2352",
+        "originalLogLine": 689
+      }
+    ]
+  },
+  "preimages": [
+    {
+      "path": "test/features/agent-backend/capturedWindowsSelection.test.ts",
+      "gitBlob": "0f0f46cc362cc3e377a4922eebb08193f5bffd33",
+      "sha256": "57167497540a3ffab2fabc375fa37000ff50d6b8fdaf654e561354c7861d97f0",
+      "bytes": 31177,
+      "lines": 478,
+      "existingCases": 7
+    },
+    {
+      "path": "test/features/agent-backend/capturedWindowsSourceHistory.test.ts",
+      "gitBlob": "aadbde250814c9c74225be65154e2d77ca7104bd",
+      "sha256": "b1f860dc9aa9be5ab61984dc0baa6d6e4f72b5bf968ee388b8d340d92967e2b6",
+      "bytes": 25216,
+      "lines": 336,
+      "existingCases": 9
+    },
+    {
+      "path": "test/renderer/hooks/useMentionDetection.test.ts",
+      "gitBlob": "cb9eb07f2bbfe4d213e4ec39ceae54bb828399fd",
+      "sha256": "74bb24c5c86495a4243778a3b058bda97f5fa9be7b37b1b0b752bca31f935821",
+      "bytes": 12198,
+      "lines": 311,
+      "existingCases": 18
+    }
+  ],
+  "productionReferenceBindings": [
+    {
+      "path": "packages/legacy-agent-host/src/composition/nativeProcessProfile.ts",
+      "gitBlob": "34daeaecc7fa6d9f809bb3c69e0b7acdcde7fd73",
+      "officialBlob": "34daeaecc7fa6d9f809bb3c69e0b7acdcde7fd73",
+      "sha256": "b2765f950a8fb41ceb1a1ec7a0673591215425e7d7694be7177d412581bb8688",
+      "bytes": 1399
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/runtimeProfile.ts",
+      "gitBlob": "7dcaecc2d76bf568347082b5f82f0d738e0bfaa1",
+      "officialBlob": "7dcaecc2d76bf568347082b5f82f0d738e0bfaa1",
+      "sha256": "8d01aa3189e83512c25b1b5f2a5fc3f0a427da7be979291127179914489b9cc8",
+      "bytes": 10369
+    },
+    {
+      "path": "packages/legacy-agent-host/src/management/profile.ts",
+      "gitBlob": "ccefb500c16a228e03b7a1e4a47e04897fbca4f1",
+      "officialBlob": "ccefb500c16a228e03b7a1e4a47e04897fbca4f1",
+      "sha256": "e4c99575480163cb5077d0768cc2a612f9f00bead9b228f3e9d56c0e2399896c",
+      "bytes": 5699
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/CapturedWindowsRuntimeSources.ts",
+      "gitBlob": "87b49dfe4641f8152bb314ae27befa10b27b2f11",
+      "officialBlob": "87b49dfe4641f8152bb314ae27befa10b27b2f11",
+      "sha256": "d37b4bdc05e4e700fb37075f54537b7319265c89243cd600e442a25bb1c55737",
+      "bytes": 13031
+    }
+  ],
+  "checks": {
+    "exact_prospective_plan": true,
+    "exact_original_log": true,
+    "exact_nine_diagnostics_in_three_selected_paths": true,
+    "five_generation_projection_diagnostics": true,
+    "two_environment_key_diagnostics": true,
+    "one_callable_namespace_diagnostic": true,
+    "one_partial_event_assertion_diagnostic": true,
+    "all_three_preimages_match": true,
+    "all_four_production_references_exact": true,
+    "all_original_cases_present": true
+  },
+  "typeReview": [
+    {
+      "change": "canonical read parameter uses typeof original.realpathSync.native",
+      "assessment": "The helper invokes read only; it never consumes read.native. The root function and native member have the same call overloads, but only the root owns the native namespace property. Selecting the actual callable type removes the irrelevant structural requirement while preserving the existing parameter tuple, implementation and both calls. No runtime change is required."
+    },
+    {
+      "change": "One named generic assertion declaration and exactly two calls",
+      "assessment": "A declaration asserting T & {nativeGeneration?:v1} is a valid subtype refinement. The runtime condition checks an own or inherited present value and rejects every value except undefined/v1; it does not add, delete, normalize or rewrite any property. Runtime-member OpenCode permits optionalv2; intersecting with optionalv1 narrows its allowed value to undefined, matching these original V1 literals. Management optionalv1/v2 narrows to v1/undefined. Applying the assertion after the seed parse and after both original member-provider guards carries the narrowed type through member/template/profile and seed-derived management projections, addressing all five observed TS2322 sites. Preserve function-declaration assertion form; do not replace it with an inferred callback, unsound cast or production widening."
+    },
+    {
+      "change": "Coordination environment annotated Record<string,string>",
+      "assessment": "The real builder preserves a string map at runtime while inferred spread return type exposes only three explicit OpenCode properties. The local annotation makes the already existing HOME/NODE_OPTIONS assertions legal without altering builder arguments, output or any mutation/refusal case. No production return type or schema change is needed."
+    },
+    {
+      "change": "Partial synthetic textarea event crosses unknown explicitly",
+      "assessment": "The existing two-target object is intentionally not a complete React SyntheticEvent. Current change/select handlers read currentTarget and use the same real textarea; the fixture already uses an analogous unknown bridge for partial keyboard events. The explicit bridge acknowledges this existing seam and changes no value, DOM event, call, caret/IME transition or assertion. It is confined to the test helper, with no any or diagnostic suppression."
+    }
+  ],
+  "preservationRequirements": [
+    "No source afterimage precedes selected-plan publication/readback.",
+    "Only these three test paths may change; exact source R2 must verify the helper/two calls/three type-expression changes and full inverse restoration.",
+    "All7 Selection,9 SourceHistory and18 Mention cases remain; preserve every original assertion, action, cleanup, mock boundary and runtime literal.",
+    "Preserve Plan54 two conditional nativeCli V1 generation fields and Codex absence. Do not add nativeGeneration to existing parsed profiles.",
+    "No production/schema/public API/workflow/compiler/dependency/timer/oracle widening and no new test framework or execution cycle."
+  ],
+  "limits": "Prospective source/type reasoning only. Original pending inert reads completed normally; no project import/compiler/provider/test/GUI/generated verifier or CI action ran. Actual resulting-source canonical TS Native7.0.2 and original suites remain required; this report is neither a compiler PASS nor full migration qualification."
+}

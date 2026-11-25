@@ -1,0 +1,230 @@
+{
+  "schemaVersion": 1,
+  "baseSource": "5278bfeb40a38706f8ec2d4359f4621622f61674",
+  "singlePlan": "../STATUS.md",
+  "sourcePins": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-launch-ui-smoke.ts",
+      "sha256": "b7ec8677a62afaf2f30dd18b68ee9b32e9b1eb6ee7d46656a05df7ff11ffe8e4",
+      "bytes": 52755,
+      "lines": 779
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "sha256": "013d4ec7c387ddf01a971fe186b52b9fdf3d646f694e1ee79bfaa0975da745fb",
+      "bytes": 57606,
+      "lines": 800
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-captured-app-exit.test.ts",
+      "sha256": "e2277af99bdbd483e8832d81d603ad69a750ed07099c5e2b4ae9a80aef52fc5b",
+      "bytes": 9581,
+      "lines": 162
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "sha256": "9d9f8c90a211ab9f93919300e44d8df551da664a5704d1b4a3342f26c29b4ecf",
+      "bytes": 181582,
+      "lines": 2968
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "sha256": "7e732d23975fd4fc0c07cedc431abd9a7aadbfa9df79f6038bc942251d43f2b6",
+      "bytes": 59400,
+      "lines": 799
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "sha256": "6f57073e77249095e34896adf5c8bd323e7a78c78106d63c8c63b84753cf3b29",
+      "bytes": 294189,
+      "lines": 5002
+    }
+  ],
+  "scope": "Reviewed cleanup handoff and two explicit bounded functional observation policies",
+  "qualification": "Original5278 receipts and reviewed local continuation tests are distinct; new-head E2E not claimed.",
+  "entries": [
+    {
+      "path": "ci-5278-current-observation.json",
+      "bytes": 82909,
+      "sha256": "c46842df661bc05de924b2dde86b64cb5bccb098cca2c8414f2ba47ea7c5a2f6"
+    },
+    {
+      "path": "continuation-5278-checks/host-script-types.json",
+      "bytes": 115,
+      "sha256": "d2bfc3b67927209eed8470d7ce89bb3029efec9e1125a3c5c8ad38525b8cae18"
+    },
+    {
+      "path": "continuation-5278-checks/host-script-types.log",
+      "bytes": 97,
+      "sha256": "497757da33976a6244e18944dec8185b370f08467b2b5ad675446e3ca3c3b015"
+    },
+    {
+      "path": "continuation-5278-checks/host-test-types.json",
+      "bytes": 154,
+      "sha256": "3fcd84636ba129a742d1c4861621b8a329cb7e9c465c6f063196cd8bea7f6977"
+    },
+    {
+      "path": "continuation-5278-checks/host-test-types.log",
+      "bytes": 69,
+      "sha256": "f453e976d298e4c9c8a5ee0134f19a02d2d39c2c100e3aed187705880615d150"
+    },
+    {
+      "path": "continuation-5278-root-review.json",
+      "bytes": 4368,
+      "sha256": "e4cd2603cf6c6f3054ae2199e87372aaa9c6705fcd5e6d34655bac5d4c896be1"
+    },
+    {
+      "path": "continuation-publication-readback.json",
+      "bytes": 345,
+      "sha256": "5682150ce9339aaf1d9fc75585c950cbe42790961e93cd675d49298c1595333e"
+    },
+    {
+      "path": "darwin-resume-acquisition-deadline-decision-audit.json",
+      "bytes": 14231,
+      "sha256": "0a35ae250d5084929c21815662d01f93a6ddeae8f9d6fbe6eaf3364b6a360ffb"
+    },
+    {
+      "path": "darwin-resume-host-cleanup-handoff-evidence.json",
+      "bytes": 12555,
+      "sha256": "e19e1184e067288bc561af43c1bb2b5f4012d7f96f69be0ee210ea42bf8131aa"
+    },
+    {
+      "path": "delivery-posix-parent-source-comparison.json",
+      "bytes": 897,
+      "sha256": "07a5d55945c5219fd217045855a78eab23e80b50830705440efe464e5f87cc15"
+    },
+    {
+      "path": "delivery-review-5278-20261120.json",
+      "bytes": 50633,
+      "sha256": "f5db6acad0aecd22982599b71617c378db698e30b21c6fe0d08c601edddf6cb6"
+    },
+    {
+      "path": "launch-host-observation-green.log",
+      "bytes": 590,
+      "sha256": "eedc15cd72108e47789c489710b0362ed4c4b0fc31bd37714a570da9ba63e092"
+    },
+    {
+      "path": "launch-host-observation-lint.log",
+      "bytes": 379,
+      "sha256": "97e32fd5311d6a558bbca2438b0fb5d952a5bcf85d96596ab23ab5fa8dffc748"
+    },
+    {
+      "path": "launch-host-observation-r2-review.json",
+      "bytes": 6360,
+      "sha256": "96dfbc099f24ee4bced5ac83522310f0dfe421fe0a1a7a20bf843539c6fc187c"
+    },
+    {
+      "path": "launch-host-observation-red.log",
+      "bytes": 2125,
+      "sha256": "f2f2cdfc3c50bd0bee87d8372941ebf7b0b434f7474f39f8aae443eb7c04230d"
+    },
+    {
+      "path": "launch-host-observation-root-review.json",
+      "bytes": 2473,
+      "sha256": "015fe781702fa41b0a87bb73f0d3317f7bd3652ac3f193502dba09944dd3729f"
+    },
+    {
+      "path": "renderer-main-global-boundary-confirmation-5278.json",
+      "bytes": 5797,
+      "sha256": "a11b17c04489b86ad100b7b5f30da43e372d03312114d404bfa541848d237815"
+    },
+    {
+      "path": "resume-acquisition-policy-green.log",
+      "bytes": 20349,
+      "sha256": "00f05202a3632e3aed4a7da1f8dc796813faa80e7c1f82259eeda29d6b08f3d3"
+    },
+    {
+      "path": "resume-acquisition-policy-implementation-evidence.json",
+      "bytes": 7244,
+      "sha256": "e10fca404c1c5f543527bd69b8dd5975a2405843f32d9105aa78b2edbed2e928"
+    },
+    {
+      "path": "resume-acquisition-policy-lint.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "resume-acquisition-policy-r2-review.json",
+      "bytes": 5021,
+      "sha256": "0b42a28f36a5ab10d377258c54fd9287025b2fe60ddd6986d1d9e7ecc443edb2"
+    },
+    {
+      "path": "resume-acquisition-policy-red.log",
+      "bytes": 2009,
+      "sha256": "88569dce2ddc3011405066c5c43ab8663d79e5cc78922e7fe77987f371021d48"
+    },
+    {
+      "path": "resume-acquisition-policy-source.diff",
+      "bytes": 2111,
+      "sha256": "677fa38dedcd2e98cb2382426fe811943efc1b305160aa9ab820b5939145773c"
+    },
+    {
+      "path": "resume-cleanup-handoff-checks/canonical-script-types.json",
+      "bytes": 115,
+      "sha256": "e339170f0a97a495509189f9fb899fc8d81f7d0b9ef6223874935c905a7c7bb2"
+    },
+    {
+      "path": "resume-cleanup-handoff-checks/canonical-script-types.log",
+      "bytes": 97,
+      "sha256": "497757da33976a6244e18944dec8185b370f08467b2b5ad675446e3ca3c3b015"
+    },
+    {
+      "path": "windows-1186-5278-thread-disposition.json",
+      "bytes": 9089,
+      "sha256": "32d140f95bb2a299c7bcbbc952eba1e9d64c30696eaa870e9e1f62e75a9f79bb"
+    },
+    {
+      "path": "windows-5278-namespace-observer-scope-audit.json",
+      "bytes": 9900,
+      "sha256": "4274e89fb021a7a880c33b494b47c8907fc0a49b09d889b68acbfc98d5e66b48"
+    },
+    {
+      "path": "windows-5278-standalone-source-audit.json",
+      "bytes": 7933,
+      "sha256": "e78119c35bb5f4676d914f01921c656ee76add06e36959df901aa8e8db91ff3f"
+    },
+    {
+      "path": "windows-arm-5278-first-refusal-audit.json",
+      "bytes": 28006,
+      "sha256": "0cfd74b3341d1ae0c59667ab36071fda2f035bf9859908aea5adf6a503670bb7"
+    },
+    {
+      "path": "windows-arm-5278-team-readiness-comparison.json",
+      "bytes": 15934,
+      "sha256": "1dfde255f23555c2f2a1d4ade2423ea08d888fe4236acaf589d066141d91f075"
+    },
+    {
+      "path": "windows-standalone-observation-policy-evidence.json",
+      "bytes": 8125,
+      "sha256": "5dc85fd5ebf97d016c123b8db2ed730321e7be6e93c4c332c1b830f4e14fcbb2"
+    },
+    {
+      "path": "windows-standalone-policy-green.log",
+      "bytes": 1701,
+      "sha256": "9b21757468776d8decfdc4f3ca8cff919803e9cd6bd2f05b6ad54c9c9d61b019"
+    },
+    {
+      "path": "windows-standalone-policy-lint.log",
+      "bytes": 229,
+      "sha256": "011c59aa084635cabeb78eab2d36e2f89fd4081b7dbf54c4c7cc6ed4ea0c371e"
+    },
+    {
+      "path": "windows-standalone-policy-r2-review.json",
+      "bytes": 8135,
+      "sha256": "f5bfe43a8747f80358080c2a34b3bbe8a91507e036b63e11f8a5f25320560ce5"
+    },
+    {
+      "path": "windows-standalone-policy-red.log",
+      "bytes": 7066,
+      "sha256": "f1443a2fda6cb99eff1a078fff9a53ac274b3ee875cb9cf20d02cd63bb64dea0"
+    },
+    {
+      "path": "windows-standalone-policy-size.log",
+      "bytes": 249,
+      "sha256": "abcf962a8eba4cc20cce7fd7e502525274e330af1ca05ccabdc52da7891d2e46"
+    }
+  ],
+  "bundle": "continuation-5278-20261120.tar.gz",
+  "bundleBytes": 61790,
+  "bundleSha256": "e57824205740c21acca73e5eb170d34e170b37a196c5c4a8b2048108caedb219"
+}

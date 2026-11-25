@@ -1,0 +1,121 @@
+{
+  "status": "APPROVE_EXACT_ONE_FILE_SOURCE_AND_PROSPECTIVE_PROSE_ONLY",
+  "reviewer": "migration_scope",
+  "baseCommit": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "baseTree": "d9f28b5c732167943607d251f258444f9d2f2d8d",
+  "reviewedFiles": {
+    "manifest.json": {
+      "blob": "42d3cb94571a00be840b0e2c692dc669f4ded17d",
+      "sha256": "70b1f8b54abbebbefd0f85cc39b3c1551675c6476f01959bf6aa15e037a2f707",
+      "bytes": 4237
+    },
+    "candidate.patch": {
+      "blob": "4479a6a45e50abeb60008f2dd9c244574e655adf",
+      "sha256": "ffa5690988dc432f944c7e4eefcbb8447c62c6833841564a91b7bbeef98d3f92",
+      "bytes": 1210
+    },
+    "plan29-r1-addition.md": {
+      "blob": "841bd5a3211d674c4c3d37ded645cdca1c652ee8",
+      "sha256": "010a6e2ba069e1a210f7db95f543dd9d90433c32094bfd51ff5e6893ad873665",
+      "bytes": 3554
+    }
+  },
+  "sourceImages": [
+    {
+      "path": "test/features/agent-backend/capturedHostClient.test.ts",
+      "before": {
+        "blob": "d285d22cd1ad69e43b3997ea58d90ea5d0f4600b",
+        "bytes": 51981,
+        "sha256": "d9e5f76a6e156f6526d9553307126f4a4a03798950baf097d9ad6e58e8d5715f",
+        "lines": 1040
+      },
+      "after": {
+        "blob": "272e7c3f6ca10d890148fa16080464b395535125",
+        "bytes": 52301,
+        "sha256": "a974eadfc088aa488412b34840a138ef4187e5382592b19493af4a4eeb66d86f",
+        "lines": 1046
+      },
+      "addedLines": 7,
+      "deletedLines": 1
+    }
+  ],
+  "sourceReferences": [
+    {
+      "path": "packages/legacy-agent-host/src/contracts.ts",
+      "blob": "5d5743e8728ff3f16dcc09ad822804e4952632e1",
+      "bytes": 5570,
+      "sha256": "c9c5686a8f6ccf6abfe2518edf713d34f48641b79ede32f070048c46c0ae4b3d",
+      "lines": 169
+    },
+    {
+      "path": "packages/legacy-agent-host/src/owned-process/hostCustody.ts",
+      "blob": "af69d8430ffd473d471a5e663606fcaea640d2e5",
+      "bytes": 21129,
+      "sha256": "ae2bc6fe45b4dded8cff67b13daf01e8a5f5c4fc3e835ce7eb98a8c58adaf435",
+      "lines": 472
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/CapturedHostClient.ts",
+      "blob": "6a1c96ed27c412c822e25df22eda858d20bbc6b8",
+      "bytes": 32767,
+      "sha256": "4cc91e2d53dee212b8f41b70611a37880f000d7225329bb51d21f9b56816b138",
+      "lines": 800
+    },
+    {
+      "path": "test/features/agent-backend/fixtures/retainedNativeCustody.ts",
+      "blob": "c2a23405f8e90face1927707d741cd8f462e35b8",
+      "bytes": 29798,
+      "sha256": "84d8b7cb8ce39b73d713c5d819ebd3c3ae854fe6917257333809328106c474e7",
+      "lines": 603
+    }
+  ],
+  "checks": {
+    "fullPreimageMatchesImmutableE1d": true,
+    "fullBeforeAfterRehashed": true,
+    "allFourReferencesMatchImmutableE1d": true,
+    "soleCallbackInverseRestoresEntireOriginal": true,
+    "actualJsonValueAllowsObjectStatusNarrowing": true,
+    "actualHostCustodyReplyClosedUnionNoCodeField": true,
+    "resolvedStatusReadOnce": true,
+    "noPayloadValueErrorTextDump": true,
+    "fixedInvalidSentinel": true,
+    "originalErrorClassAndMessagePrefix": true,
+    "rejectedRequestPropagatesUnchanged": true,
+    "firstBlockedRaceAndSecondAdmissionRacePreserved": true,
+    "originalEffectsControlAssertionsFinallyRestoreShutdown": true,
+    "original20ms2000ms3000ms": true,
+    "noCaseImportHelperTimerWaitActionReplayAdded": true
+  },
+  "evidence": {
+    "run": 43813731530,
+    "job": 133120929324,
+    "tests": 81,
+    "pass": 80,
+    "fail": 1,
+    "source": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+    "rawLog": {
+      "blob": "0a1daaf057b77571deaac25dffdbe70f86475744",
+      "sha256": "27e6fa59194a32898ca1761ccf4358e4f4ef1d1c14b1bc7f4e5806b9e0fc0eb1",
+      "bytes": 99531
+    },
+    "audit": {
+      "blob": "6418f43c4cc22df473ce6e528ab21477b703c8ff",
+      "sha256": "3dc1e64e7f6b1c5f4874bd6bdf52780108f709a07309f81252a26bd8fba435ae",
+      "bytes": 6129
+    }
+  },
+  "limits": [
+    "The old failure retains no resolved status or exact scheduling/expiry cause.",
+    "The closed status alone will not prove cause or authorize a budget change.",
+    "The diagnostic is not claimed to repair the original failure.",
+    "Original same eight-file resulting-source Main command remains required; no mirror test is selected.",
+    "finally source presence is not a natural Main/Host exit receipt.",
+    "Actual future parent/full Plan binding and prospective publication remain root-owned."
+  ],
+  "actions": {
+    "projectExecution": false,
+    "sourceApplication": false,
+    "gitIndexRefMutation": false,
+    "manualActions": false
+  }
+}

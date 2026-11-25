@@ -98,6 +98,7 @@ export interface AgentAttachmentCapabilityTarget {
   model?: string | null;
   declaredInputModalities?: readonly string[] | null;
   nativeInboxTextAttachmentsSupported?: boolean;
+  nativeMediaTransport?: NativeMediaTransport;
 }
 
 export interface AgentAttachmentCapability {
@@ -139,4 +140,15 @@ export interface NativeAttachmentCapabilities {
   images: boolean;
   documents: boolean;
   textFiles: boolean;
+  nativeMedia?: NativeMediaTransport;
+}
+
+/** Finite transport ceiling already intersected with the captured native model. */
+export interface NativeMediaTransport {
+  revision: 'opencode-2.1.4-native-media-v1';
+  mimeTypes: readonly (AgentImageMimeType | 'application/pdf')[];
+  maxBytes: number;
+  maxCount: number;
+  maxTotalBytes: number;
+  videos: false;
 }

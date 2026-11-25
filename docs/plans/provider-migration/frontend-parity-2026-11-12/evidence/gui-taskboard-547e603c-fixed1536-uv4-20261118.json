@@ -1,0 +1,416 @@
+{
+  "schemaVersion": 1,
+  "kind": "DERIVED_FINAL_GUI_AGGREGATE",
+  "fullReceipt": false,
+  "qualification": "Original per-run verdicts only; no new overall PASS or cross-source qualification. Raw receipt hashes bind exact evidence. Canonical JSON hashes use sorted keys, compact separators, original arrays and unescaped Unicode. Missing resource observations remain unobserved. Cumulative CPU ticks require the same process birth for deltas; no OOM or kill-sender inference.",
+  "runs": [
+    {
+      "mode": "task-board-cross-team-ui",
+      "originalStatus": "INCOMPLETE",
+      "metadataStatus": "INCOMPLETE",
+      "harnessExitCode": 1,
+      "source": {
+        "head": "547e603c555be471394e9c6e4b6a53092a33a6d7",
+        "tree": "47ac6f88dbe6726e7f6fe83ba0a4497975969eb9",
+        "dirty": false,
+        "snapshot": {
+          "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/gui-attempt-547e603c-fixed1536-uv4.json",
+          "bytes": 4854,
+          "sha256": "4e876a521087bf0481314e5cd50f4eac8a0f979c5c6d63468f7add90247e1884"
+        },
+        "selectedSourceCount": 1883,
+        "beforeAfterSourceListsEqual": true,
+        "sourceListCanonicalJsonSha256": "2b1f9a0a58031df4324936ed78d41b4cfe4764490f3bfd2ed77694521a32daea"
+      },
+      "profile": {
+        "selector": "LEGACY_DESKTOP_TEST_FINITE_HEAP_1536_UV4=1",
+        "oldSpaceMiB": 1536,
+        "uvThreadPoolSize": 4,
+        "mapsOff": true,
+        "parentHeap": "unchanged"
+      },
+      "modeResourceSelectors": {},
+      "elapsedSeconds": 419.55,
+      "artifacts": {
+        "finalMetadata": {
+          "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/gui-attempt-547e603c-fixed1536-uv4.json",
+          "bytes": 4854,
+          "sha256": "4e876a521087bf0481314e5cd50f4eac8a0f979c5c6d63468f7add90247e1884"
+        },
+        "postExitObservation": {
+          "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/task-board-cross-team-20261118T214742Z.observation.json",
+          "bytes": 2809,
+          "sha256": "ef559c232f65da466601e9792d1d9dc156b31877737c80d6a2f775bd9c6225a6"
+        },
+        "originalReceipt": {
+          "path": "/tmp/TEST-desktop-backend-A1gegO/desktop-backend-receipt.json",
+          "bytes": 4219751,
+          "sha256": "c46d561b9044d4df1b862f49a15b6de649e18de572c036bd1acc5e169f27de51"
+        },
+        "originalHarnessLog": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/task-board-cross-team-20261118T214742Z.log",
+        "resources": {
+          "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/task-board-fixed1536-uv4-no-maps-547e603c.resources.json",
+          "bytes": 41314,
+          "sha256": "b6dc9e43b6b21e5cc42dd9cce934830c8b33efc599ea80789bef22f426a3a726"
+        }
+      },
+      "proofs": {
+        "taskBoardUiProof": {
+          "status": "PASS",
+          "sourceSha256": "0d33e45f9692601125f536cdbd87354bee19fa6fd336ac60d6d1b31d3432f59c",
+          "visualReview": "screenshots retained; independent visual inspection pending",
+          "canonicalJsonSha256": "0620193405c62974b08f5fec7397c6e4218482c6a7c1ce7e13cb905c5e0f07bb",
+          "stepCount": 99,
+          "receipts": {
+            "count": 13,
+            "canonicalJsonSha256": "db279ba6495e6da22b3a0612bad175dd81015a8b2934267f3370267da04e50cc"
+          },
+          "tasks": {
+            "count": 2,
+            "canonicalJsonSha256": "aa173f449a9c600850b6b8f6e36baa306783003a60b51da878d7e765b96289e2"
+          }
+        },
+        "taskReviewCycleUiProof": {
+          "status": "PASS",
+          "sourceSha256": "3123c2bcf29522defc7e9441ad6f68d2e31e6a1e0ea570d4b455aaada9044e76",
+          "canonicalJsonSha256": "752b6f3e833572ecf9b27879b0c8338cb8df14263171097d4f99ff6eada740db",
+          "stepCount": 62,
+          "commandAssertionCount": 9,
+          "commandAssertionIdsCanonicalJsonSha256": "7626c7f2706237c7fb9f7d5b6f970b8619f0a0ba977ff893be1652179f939597",
+          "receiptIds": {
+            "count": 9,
+            "canonicalJsonSha256": "4e7592382744d68f3eec4881074db7914688ef35c9748623da6c125352514c94"
+          },
+          "states": {
+            "count": 9,
+            "canonicalJsonSha256": "b108363a4e8510f76918085840520850db7a33fba0c2d16413d9079e8443701e"
+          }
+        },
+        "reviewFlowUiProof": {
+          "status": "INCOMPLETE",
+          "sourceSha256": "108c17af79eeb3381d4adb6aeea1f36cb7c84fbb25f3a6e348e0d9d7baf9c6c8",
+          "canonicalJsonSha256": "c08a72e1e484b0756aeed1a868fe0422b4cbb2b4ae40a6450bb34e209f10a503",
+          "stepCount": 35
+        }
+      },
+      "ownerRoutingEpochs": [],
+      "screenshots": [
+        {
+          "path": "/tmp/TEST-desktop-backend-A1gegO/ui-failure.png",
+          "bytes": 1240425,
+          "sha256": "f21e8368707c7d950e0c5702847b3f7da8c1e0cd3687b821feb3f65e9ca15318"
+        },
+        {
+          "path": "/tmp/TEST-desktop-backend-A1gegO/ui-task-board-assigned-blocked.png",
+          "bytes": 104385,
+          "sha256": "346d80f118f2b4d5b16823792a003ae3047745aed9baad888a58fc998bb4ea54"
+        },
+        {
+          "path": "/tmp/TEST-desktop-backend-A1gegO/ui-task-board-attachment-added.png",
+          "bytes": 119295,
+          "sha256": "fc51077daacba049d5327a1b5b56fc354a9889ae530225f3dd0c783abd8a46a4"
+        },
+        {
+          "path": "/tmp/TEST-desktop-backend-A1gegO/ui-task-board-attachment-removed.png",
+          "bytes": 111495,
+          "sha256": "6aeb5a2caac1b82a3f102254b6e231218dc7907f42ffa4e5c0416c349ecc1de9"
+        },
+        {
+          "path": "/tmp/TEST-desktop-backend-A1gegO/ui-task-board-attachments-reloaded.png",
+          "bytes": 109788,
+          "sha256": "8a4207b6ff9ae995be7ad79b76aa691363d93e55449e3fa57a0cf3332bec4b4d"
+        },
+        {
+          "path": "/tmp/TEST-desktop-backend-A1gegO/ui-task-board-blocked-start.png",
+          "bytes": 125881,
+          "sha256": "05d76b68fe2cd763b3550d4b9bd1489e0d41476eafed87e770007dbfb59ca997"
+        },
+        {
+          "path": "/tmp/TEST-desktop-backend-A1gegO/ui-task-board-initial.png",
+          "bytes": 102520,
+          "sha256": "4308494de38f63157e2476a3af09728491e5283e3d9c3db09cd7b14d97ef9ffe"
+        },
+        {
+          "path": "/tmp/TEST-desktop-backend-A1gegO/ui-task-board-reloaded.png",
+          "bytes": 118168,
+          "sha256": "ca8f2cecc2ed1d5a4aca5593b0febed3a0407e5e0301bf1d7d9930a246c9becf"
+        },
+        {
+          "path": "/tmp/TEST-desktop-backend-A1gegO/ui-task-board-reordered.png",
+          "bytes": 125745,
+          "sha256": "33a973e045a90b77c61f54b48471869e31783f1a37f77099320decd0e85dddfa"
+        },
+        {
+          "path": "/tmp/TEST-desktop-backend-A1gegO/ui-task-review-approved.png",
+          "bytes": 97072,
+          "sha256": "16f945a0c388460de6e4ef507bf9f832d2c9b73f2fb097a396be00246f6fb118"
+        }
+      ],
+      "failure": {
+        "message": "CDP command timed out: Runtime.evaluate",
+        "messageCanonicalJsonSha256": "5f46cac990a33fcb8816ce67cd7f8da5e00185d8b385546faa7cb13ec89dea2b",
+        "source": {
+          "canonicalJsonSha256": "4b29efdd95a3fc5b999a76b2148478ddb0b7d17e8c26623efa50ad3eb18a7a8a",
+          "kind": "error",
+          "omittedFieldCount": 1,
+          "frameCount": 0
+        },
+        "sourceFreeze": null
+      },
+      "cleanup": {
+        "remaining": [],
+        "capturedHostObserved": false,
+        "capturedHostAbsent": null,
+        "appExitCode": null,
+        "appSignalCode": "SIGTERM",
+        "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+      },
+      "failureQuit": {
+        "attempted": true,
+        "scope": "Close only the verified TEST window before stopping its dev wrapper",
+        "reply": "unconfirmed",
+        "reason": "timeout",
+        "listenerAbsent": false
+      },
+      "originalRequestedQuitExit": {
+        "initialExitCode": null,
+        "initialSignalCode": null,
+        "exitCode": null,
+        "signalCode": null
+      },
+      "resources": {
+        "declaredResourceScope": {
+          "selector": "LEGACY_DESKTOP_TEST_FINITE_HEAP_1536_UV4=1",
+          "oldSpaceMiB": 1536,
+          "uvThreadPoolSize": 4,
+          "sourceMapsOverride": true,
+          "observerChangesEnvironment": false,
+          "observerChangesAffinity": false,
+          "observerSendsSignals": false
+        },
+        "cpuClockTicksPerSecond": 100,
+        "sampleCount": 365,
+        "observationLimited": true,
+        "peakTotalRssKiB": 3808548,
+        "peakTotalPssKiB": 3131080,
+        "qualification": "Passive process memory and cumulative CPU ticks only; summed RSS may count shared pages repeatedly; CPU deltas require the same process birth; no kill-sender, OOM attribution, or GUI PASS inference",
+        "trace": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/task-board-fixed1536-uv4-no-maps-547e603c.resources.jsonl",
+        "topProcessPeaks": [
+          {
+            "pid": 128,
+            "ppid": 115,
+            "startTicks": 2455866,
+            "role": "electron-vite",
+            "peakRssKiB": 1677580,
+            "peakPssKiB": 1636376,
+            "peakUtimeTicks": 9003,
+            "peakStimeTicks": 4344,
+            "nodeOptions": "fixed1536",
+            "sourceMaps": "off"
+          },
+          {
+            "pid": 252,
+            "ppid": 197,
+            "startTicks": 2459328,
+            "role": "electron",
+            "peakRssKiB": 1458080,
+            "peakPssKiB": 1379931,
+            "peakUtimeTicks": 16138,
+            "peakStimeTicks": 15916,
+            "nodeOptions": "not-observed",
+            "sourceMaps": "not-observed"
+          },
+          {
+            "pid": 449,
+            "ppid": 194,
+            "startTicks": 2459714,
+            "role": "other-owned-child",
+            "peakRssKiB": 442004,
+            "peakPssKiB": 403445,
+            "peakUtimeTicks": 8234,
+            "peakStimeTicks": 6172,
+            "nodeOptions": "not-observed",
+            "sourceMaps": "not-observed"
+          },
+          {
+            "pid": 194,
+            "ppid": 128,
+            "startTicks": 2459216,
+            "role": "electron",
+            "peakRssKiB": 350964,
+            "peakPssKiB": 254725,
+            "peakUtimeTicks": 3285,
+            "peakStimeTicks": 10665,
+            "nodeOptions": "not-observed",
+            "sourceMaps": "not-observed"
+          },
+          {
+            "pid": 142,
+            "ppid": 128,
+            "startTicks": 2455934,
+            "role": "esbuild",
+            "peakRssKiB": 346988,
+            "peakPssKiB": 340696,
+            "peakUtimeTicks": 1535,
+            "peakStimeTicks": 4669,
+            "nodeOptions": "not-observed",
+            "sourceMaps": "not-observed"
+          },
+          {
+            "pid": 44,
+            "ppid": 31,
+            "startTicks": 2455164,
+            "role": "harness",
+            "peakRssKiB": 323564,
+            "peakPssKiB": 285380,
+            "peakUtimeTicks": 2374,
+            "peakStimeTicks": 5503,
+            "nodeOptions": "not-observed",
+            "sourceMaps": "not-observed"
+          },
+          {
+            "pid": 225,
+            "ppid": 196,
+            "startTicks": 2459316,
+            "role": "electron",
+            "peakRssKiB": 190988,
+            "peakPssKiB": 100801,
+            "peakUtimeTicks": 3529,
+            "peakStimeTicks": 12108,
+            "nodeOptions": "not-observed",
+            "sourceMaps": "not-observed"
+          },
+          {
+            "pid": 374,
+            "ppid": 317,
+            "startTicks": 2459440,
+            "role": "esbuild",
+            "peakRssKiB": 172236,
+            "peakUtimeTicks": 147,
+            "peakStimeTicks": 136,
+            "nodeOptions": "not-observed",
+            "sourceMaps": "not-observed"
+          }
+        ],
+        "totalProcessCount": 128,
+        "ranking": "peakRssKiB descending",
+        "remainingProcessRecordsOmitted": 120
+      },
+      "derivedRunNotes": {
+        "kind": "DERIVED_PARTIAL_REVIEWFLOW_BOUNDARY",
+        "qualification": "These successful intermediate actions do not change the original ReviewFlow INCOMPLETE verdict. They combine original source-order assertions, retained completed command receipts and final saved TEST files.",
+        "completedSettingsActions": [
+          "Original footer link reached the global Review flow Settings page; human_approval was saved and acknowledged.",
+          "The team inherited human_approval, then saved a lead_then_human override through one completed Host command.",
+          "A second completed Host command restored inheritance; both team override fields were removed and the Main-owned human_approval default stayed unchanged.",
+          "The inherited policy was reopened and read as human_approval; the original footer Cancel control closed it.",
+          "One human Approve command completed; the task is completed/approved with a final human_approved event by user."
+        ],
+        "completedCommands": {
+          "override": {
+            "path": "/tmp/TEST-desktop-backend-A1gegO/hoststore/teams/test-desktop-backend/.host-owner/commands/4fba5a2a1bbd1a124674d34976649992406efe2bd91dccac3d0c4669c20a6460.json",
+            "bytes": 1462,
+            "sha256": "924a54a99edfd0630e24e80d2b9fff73cebeb1ac3451fa6d6c55bfe008da14cf",
+            "commandId": "1bcdd785-a5cc-4a66-bfce-6eacde5e0e85",
+            "operation": "task.board.review-flow",
+            "phase": "completed",
+            "principalId": "TEST-human"
+          },
+          "inherit": {
+            "path": "/tmp/TEST-desktop-backend-A1gegO/hoststore/teams/test-desktop-backend/.host-owner/commands/6042780c1adecfea45f19f451eb8fab45d2fe790e3148828db940a2fb9666f40.json",
+            "bytes": 1348,
+            "sha256": "64c2b8ce2f843c9dfb9c36296c7cc15f52bd1153c6b64848f51d81ab9ed331ac",
+            "commandId": "2200cbe2-a54d-4106-b660-8c1e73e74a70",
+            "operation": "task.board.review-flow",
+            "phase": "completed",
+            "principalId": "TEST-human"
+          },
+          "humanApproval": {
+            "path": "/tmp/TEST-desktop-backend-A1gegO/hoststore/teams/test-desktop-backend/.host-owner/commands/63a7f085496cb3e1e4f9150cf0e750f7fc7295ed46c5c82f3cecbd97133789ab.json",
+            "bytes": 7570,
+            "sha256": "f0077c46918602d39ac40123d7fd5495680a6c1a1425d63c29d43414a28ff177",
+            "commandId": "730d2b33-b2d1-4e22-9053-e33d483c15d7",
+            "operation": "task.review",
+            "phase": "completed",
+            "principalId": "TEST-human"
+          }
+        },
+        "finalSavedTestState": {
+          "appDefaults": {
+            "path": "/tmp/TEST-desktop-backend-A1gegO/claude/review-flow-defaults.json",
+            "bytes": 36,
+            "sha256": "00604a4a77a2db479eca766590a46bffb1d5bea5cd44fe6d80278361a1621094",
+            "reviewFlow": "human_approval"
+          },
+          "teamBoard": {
+            "path": "/tmp/TEST-desktop-backend-A1gegO/hoststore/teams/test-desktop-backend/kanban-state.json",
+            "bytes": 360,
+            "sha256": "997e3bc2a2519a38736a3616ac3a980bb2515b03b6436cd41ceda337846d8e9c",
+            "reviewFlowPresent": false,
+            "reviewFlowPromptPresent": false
+          },
+          "task": {
+            "path": "/tmp/TEST-desktop-backend-A1gegO/hoststore/tasks/test-desktop-backend/c857e47b-dc91-5244-9106-379b1ed01150.json",
+            "bytes": 5933,
+            "sha256": "0fe310e6ca128eaebf62c974865d6aa64b16d8050213d8fac8cde850aef1a673",
+            "status": "completed",
+            "reviewState": "approved",
+            "lastHistoryType": "human_approved",
+            "lastHistoryActor": "user"
+          }
+        },
+        "originalFailureBoundary": {
+          "phase": "canonical sidebar task lookup after human approval and planned renderer reload readiness",
+          "basis": "The existing helper first verifies the completed approval receipt and human_approved history, then completes its explicit reload readiness wait, observes input and enters ui.clickSidebar. The recorded 90-second read wait identifies that sidebar lookup; no sidebar input was recorded.",
+          "readWait": [
+            {
+              "phase": "other",
+              "boundary": "evaluate",
+              "cutoff": "none",
+              "firstCheckAtMs": 1795038756651,
+              "lastCheckAtMs": 1795038765987,
+              "ownerStarted": 6,
+              "ownerResolved": 6,
+              "preparationStarted": 0,
+              "preparationResolved": 0,
+              "readsStarted": 6,
+              "readsResolved": 5,
+              "postReadLate": 0,
+              "contextRetries": 0,
+              "deadlineMs": 1795038846651
+            }
+          ],
+          "plannedNavigationMonotonicMs": 293399,
+          "recoveryNavigationMonotonicMs": 402859,
+          "timestampQualification": "firstCheckAtMs and lastCheckAtMs precede the synchronous owner census; neither is an exact CDP send or timeout-delivery timestamp."
+        },
+        "notCompleted": [
+          "Post-reload sidebar navigation and inherited-policy reopen assertions.",
+          "Final no-replay/settings-file byte checks.",
+          "Restore global default to agent_approval.",
+          "ReviewFlow PASS and owner-routing continuation."
+        ],
+        "cpuInterpretation": {
+          "artifact": {
+            "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/gui-547e603c-bounded-cpu-diagnostic.json",
+            "bytes": 3773,
+            "sha256": "f424a087acfa59ad8015a15d795c87f8f5bdf71a337b4fb62ca60b5b797afcb8"
+          },
+          "observationLimited": true,
+          "recordedProcessIdentities": 128,
+          "qualification": "The observer reached its recorded identity ceiling. Several owned processes accumulated system CPU in the selected window; this does not establish a JavaScript loop, kernel cause, OOM, kill sender or absence of later processes."
+        },
+        "independentVisualInspection": {
+          "reviewer": "/root",
+          "artifact": {
+            "path": "/tmp/TEST-desktop-backend-A1gegO/ui-failure.png",
+            "bytes": 1240425,
+            "sha256": "f21e8368707c7d950e0c5702847b3f7da8c1e0cd3687b821feb3f65e9ca15318"
+          },
+          "observation": "The late failure-capture PNG shows the full Preparing workspace splash with a displayed duration of approximately 6 seconds.",
+          "qualification": "This is the later failure/recovery capture state, not evidence of the original blocked sidebar frame or its cause; it does not change any original verdict."
+        }
+      }
+    }
+  ]
+}

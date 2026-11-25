@@ -1,0 +1,60 @@
+{
+  "kind": "independent-final-checkpoint-and-wording-R2",
+  "verdict": "APPROVE",
+  "checkpoint": {
+    "path": "darwin-first-leaves-checkpoint-20261115-2130.json",
+    "bytes": 2739,
+    "gitBlob": "dd58a141b746609f4128da775edae4978dc4ef70",
+    "sha256": "7c79b68176ff7cf3f74131dbd46bda348ff5b2aa54abfe15a6b05c45563a07db"
+  },
+  "appendix": {
+    "path": "plan29-a02-darwin-first-leaves-appendix.md",
+    "bytes": 6624,
+    "gitBlob": "c9cfc9ed183bdc3a0cc9bb4d6937f3f3f088337e",
+    "sha256": "47fe8ce234b204b6f8b0848d708399c9a774fe048ff04b9c6fead9fbaa7c8f3c"
+  },
+  "detailedByteSourceAndReceiptReview": {
+    "path": "independent-checkpoint-review.json",
+    "bytes": 8351,
+    "gitBlob": "ba63b6bfc3fa91a5edb97bddb52c947e7693d60d",
+    "sha256": "45b80d66dec9aaaad3fb6766e1a684f235dc23ed541e1d9d6a615eb846623cf0"
+  },
+  "savedOfficialJobStatus": [
+    {
+      "id": 132959932726,
+      "run_id": 43762390679,
+      "head_sha": "a02ab70edfdcb4169627e804f0337c9ad6b52af6",
+      "name": "Host process fixtures (darwin-x64)",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-15T21:13:57Z",
+      "completed_at": "2026-11-15T21:20:41Z"
+    },
+    {
+      "id": 132960007302,
+      "run_id": 43762390792,
+      "head_sha": "a02ab70edfdcb4169627e804f0337c9ad6b52af6",
+      "name": "Embedded V2.1.4 original Host (darwin-x64)",
+      "status": "completed",
+      "conclusion": "failure",
+      "started_at": "2026-11-15T21:16:56Z",
+      "completed_at": "2026-11-15T21:24:55Z"
+    }
+  ],
+  "negativeSemantics": {
+    "baselineErrno": 13,
+    "baselineCodeSigningError": -67062,
+    "baselineNeverResumed": true,
+    "bothAdhocMutationObservationsRemainIncomplete": true,
+    "scriptExplicitCounterexamplePreserved": true,
+    "all10CleanupTrueVerified": true,
+    "sourceAndGeneratedDigestJoinsOnly": true,
+    "binaryPayloadReconstructionClaim": false
+  },
+  "limits": [
+    "Saved official original executions only; no project/native/provider execution or CI status re-poll in this review.",
+    "Source-specific results are not qualification of isolated E–H or future incoming source.",
+    "Archive hashes/CRC and source joins do not recreate unarchived compiled payloads.",
+    "Historical failed, skipped, incomplete and false qualification flags remain unchanged."
+  ]
+}

@@ -8,6 +8,22 @@ import { afterEach, expect, test, vi } from 'vitest';
 import type { MemberProviderContext } from '../../../packages/legacy-agent-host/src/adapters/providers/MemberProvider';
 import type { OpenCodeV2OwnedSession } from '../../../packages/legacy-agent-host/src/adapters/providers/OpenCodeV2OwnedSession';
 
+const nativeMediaLimits = {
+  revision: 'opencode-2.1.4-native-media-v1',
+  maxBytes: 4 * 1024 * 1024,
+  maxCount: 5,
+  maxTotalBytes: 8 * 1024 * 1024,
+  videos: false,
+};
+const attachmentBinding: Parameters<NonNullable<MemberProviderContext['attachments']>['resolve']>[0] = {
+  trustedBinding: 'TEST-trusted-binding',
+  sessionRef: 'TEST-native-session',
+  inputId: 'TEST-input',
+  operationRef: 'TEST-operation',
+  fingerprint: 'b'.repeat(64),
+  reference: { artifactId: 'TEST-png', mimeType: 'image/png', byteLength: 1, digest: 'c'.repeat(64) },
+};
+
 const controlled = vi.hoisted(() => ({
   client: (): unknown => {
     throw new Error('TEST client unset');
@@ -16,6 +32,7 @@ const controlled = vi.hoisted(() => ({
     throw new Error('TEST server unset');
   },
   capture: (_context: MemberProviderContext): void => {},
+  captureOwned: (_owned: OpenCodeV2OwnedSession): void => {},
 }));
 vi.mock(
   '../../../packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist/opencode.js',
@@ -55,6 +72,7 @@ vi.mock(
       owned: OpenCodeV2OwnedSession
     ) => {
       controlled.capture(context);
+      controlled.captureOwned(owned);
       return {
         factory: {
           async open() {
@@ -86,7 +104,7 @@ function fixture(image = true) {
     model: { providerID: 'TEST-provider', id: 'TEST-model' },
     permissions: [],
   };
-  let live = true, ownerCurrent = true;
+  let live = true, ownerCurrent = true, mcpReads = 0;
   const ready = Object.freeze({ endpoint: 'http://127.0.0.1:12345', pid: 10, startIdentity: 'TEST-birth' });
   const stop = vi.fn(async () => { live = false; return true; }),
     resolve = vi.fn(async (binding: unknown) => ({ binding, bytes: new Uint8Array([1]) }));
@@ -112,6 +130,7 @@ function fixture(image = true) {
       return true;
     },
     async readMcp() {
+      mcpReads++;
       return [{ name: 'agent-teams', status: 'connected' }];
     },
     async readCatalog() {
@@ -149,10 +168,16 @@ function fixture(image = true) {
     stopOwned: stop,
     confirmStopped: stop,
   });
-  let delegateContext: MemberProviderContext | undefined;
+  let delegateContext: MemberProviderContext | undefined, ownedSession: OpenCodeV2OwnedSession | undefined;
   controlled.capture = (context) => {
     delegateContext = context;
   };
+  controlled.captureOwned = (owned) => { ownedSession = owned; };
+  const catalogReceipt = {
+    sequence: 1, binding: { memberId: 'TEST-member' }, toolNames: ['TEST-tool'],
+  };
+  const getCatalogReceipt = vi.fn((): typeof catalogReceipt | undefined => catalogReceipt);
+  const canAllocate = vi.fn(() => true);
   const request = {
     tenantId: 'TEST-tenant',
     projectId: 'TEST-project',
@@ -183,15 +208,11 @@ function fixture(image = true) {
     request,
     endpoint: {
       binding: { memberId: 'TEST-member' },
-      getCatalogReceipt: () => ({
-        sequence: 1,
-        binding: { memberId: 'TEST-member' },
-        toolNames: ['TEST-tool'],
-      }),
+      getCatalogReceipt,
     },
     instructions: 'TEST original context',
     isCurrent: () => ownerCurrent,
-    canAllocate: () => true,
+    canAllocate,
     attachments: {
       model: 'TEST-provider/TEST-model',
       revision: 'TEST-PNG-policy',
@@ -205,6 +226,10 @@ function fixture(image = true) {
     request,
     stop,
     resolve,
+    canAllocate,
+    getCatalogReceipt,
+    mcpReads: () => mcpReads,
+    reattest: () => ownedSession!.probe(new AbortController().signal),
     attachments: () => delegateContext!.attachments!,
     revokeOwner() { ownerCurrent = false; },
     publishAuth() {
@@ -218,6 +243,7 @@ function fixture(image = true) {
       callbackFailure = primary;
       disposalFailure = true;
     },
+    failDisposal() { disposalFailure = true; },
     holdDispose() {
       let release = () => {};
       heldDisposal = new Promise<void>((done) => {
@@ -230,6 +256,53 @@ function fixture(image = true) {
     },
   };
 }
+
+test.each(['false', 'throw'] as const)('missing catalog and %s allocation stop the original opening without further polling', async mode => {
+  const f = fixture(), failure = new Error('TEST original allocation refused');
+  f.getCatalogReceipt.mockImplementation(() => {
+    f.canAllocate.mockImplementation(() => { if (mode === 'throw') throw failure; return false; });
+    return undefined;
+  });
+  const opening = f.provider.factory.open(f.request);
+  if (mode === 'throw') await expect(opening).rejects.toBe(failure);
+  else await expect(opening).rejects.toThrow('OpenCode V2 embedded session unavailable');
+  expect(f.mcpReads()).toBe(1);
+  expect(f.stop).toHaveBeenCalledTimes(1);
+  expect(f.provider.isReady()).toBe(false);
+  expect(f.resolve).not.toHaveBeenCalled();
+  expect(await f.provider.cleanup()).toBe(true);
+});
+
+test('missing catalog with current allocation may complete and valid later receipts add no allocation read', async () => {
+  const f = fixture();
+  f.getCatalogReceipt.mockReturnValueOnce(undefined);
+  await f.provider.factory.open(f.request);
+  expect(f.mcpReads()).toBe(2);
+  const allocationReads = f.canAllocate.mock.calls.length;
+  f.canAllocate.mockImplementation(() => { throw new Error('TEST allocated Runtime must not be read here'); });
+  await expect(f.reattest()).resolves.toBe(true);
+  expect(f.canAllocate).toHaveBeenCalledTimes(allocationReads);
+  expect(await f.provider.cleanup()).toBe(true);
+});
+
+test.each(['stop', 'dispose'] as const)('admission loss preserves %s cleanup uncertainty', async mode => {
+  const f = fixture();
+  if (mode === 'stop') f.stop.mockResolvedValue(false);
+  f.getCatalogReceipt.mockImplementation(() => {
+    f.canAllocate.mockReturnValue(false);
+    if (mode === 'dispose') f.failDisposal();
+    return undefined;
+  });
+  await expect(f.provider.factory.open(f.request)).rejects.toMatchObject({
+    message: 'OpenCode V2 embedded cleanup unknown',
+    cause: { message: 'OpenCode V2 embedded session unavailable' },
+  });
+  expect(f.mcpReads()).toBe(1);
+  expect(f.stop).toHaveBeenCalledTimes(1);
+  expect(await f.provider.cleanup()).toBe(false);
+  expect(f.provider.isReady()).toBe(false);
+  expect(f.resolve).not.toHaveBeenCalled();
+});
 
 test('rejected owned-client disposal stays UNKNOWN while physical stop preserves the original callback failure', async () => {
   const f = fixture(),
@@ -253,12 +326,16 @@ test('seal, revoked owner or changed auth during catalog disposal cannot resolve
       images: true,
       documents: false,
       textFiles: false,
+      nativeMedia: {
+        ...nativeMediaLimits,
+        mimeTypes: ['image/png'],
+      },
     });
     const held = f.holdDispose();
     const pending = f
       .attachments()
       .resolve(
-        {} as Parameters<NonNullable<MemberProviderContext['attachments']>['resolve']>[0],
+        attachmentBinding,
         new AbortController().signal
       );
     const rejected = expect(pending).rejects.toMatchObject(
@@ -286,12 +363,13 @@ test('image capability is absent before native catalog attestation and disabled 
     images: false,
     documents: false,
     textFiles: false,
+    nativeMedia: { ...nativeMediaLimits, mimeTypes: [] },
   });
   expect(
     await f
       .attachments()
       .resolve(
-        {} as Parameters<NonNullable<MemberProviderContext['attachments']>['resolve']>[0],
+        attachmentBinding,
         new AbortController().signal
       )
   ).toBeUndefined();

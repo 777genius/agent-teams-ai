@@ -1,0 +1,582 @@
+{
+  "schema": "root-independent-M-OpenCode-original-failure-review/v1",
+  "reviewedUtc": "2026-11-16T01:51:34.291729+00:00",
+  "verdict": "APPROVE retained original failure evidence; geometry and cleanup debts remain unresolved",
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "runId": 43780997237,
+  "jobId": 133017915900,
+  "jobConclusion": "failure",
+  "failedOriginalSteps": [
+    {
+      "name": "Exercise original provider conversations and schedules through pinned TEST peers",
+      "status": "completed",
+      "conclusion": "failure",
+      "number": 20
+    },
+    {
+      "name": "Verify exact source, original screenshots, receipts and cleanup",
+      "status": "completed",
+      "conclusion": "failure",
+      "number": 30
+    }
+  ],
+  "checkpoint": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/opencode/checkpoint-opencode-failure.json",
+    "bytes": 6728,
+    "blob": "4d945d84a45543d694a4138d3308dd854e1f6ad3",
+    "sha256": "db708488f6e255420353aab823a0f4308fe1e9c76092804593946a5e30b1b82e"
+  },
+  "payloadCount": 9,
+  "payloadBytes": 1493820,
+  "payloads": [
+    {
+      "path": "artifact-14189374994.zip",
+      "bytes": 665565,
+      "blob": "087218fdd1ee26394fca0f1700171d87a955cd60",
+      "sha256": "4ebbd3445d8a455746843c471d9115e46502be1909c8a2b7b60110aaa0c57a2e"
+    },
+    {
+      "path": "job-133017915900.log",
+      "bytes": 184267,
+      "blob": "18de3a01b1af208e57279ba29317c6c12637911c",
+      "sha256": "e96323c7cd7ec9baba03e6f0c34153b9eec9f99c1b8b9b6b6ba6aa2739e3e422"
+    },
+    {
+      "path": "official-artifacts.json",
+      "bytes": 2701,
+      "blob": "a26686c153b488aa85ca8f935300c6d9b04fedb1",
+      "sha256": "18f0b0c43ae87d34f5326c43b39e739f11087581972e16a7f31ed3e8519b4996"
+    },
+    {
+      "path": "original-run-identity.json",
+      "bytes": 13832,
+      "blob": "5519a8827aa8166efb61ae84db6ee49a2a0a501b",
+      "sha256": "9d9c64ce801e1b504a74043b697f92696f44ee876efb8a53700094dda0b58f91"
+    },
+    {
+      "path": "job-terminal-api.json",
+      "bytes": 6551,
+      "blob": "b37f778a6b3bafdfaabad69687f7a8351a701038",
+      "sha256": "3aa9d37a6073e2da6c89cdb7e43c6510d75d24dfa02ccd90388a488c4a626a6d"
+    },
+    {
+      "path": "archive-audit.json",
+      "bytes": 4175,
+      "blob": "0e876a7df17a5f52ceebd6563941c571b1669e40",
+      "sha256": "db1fe5ac7671056e7cef13d17982d2c2f21382eccc8d259437d80c5a05bd13b4"
+    },
+    {
+      "path": "source-pin-audit.json",
+      "bytes": 583301,
+      "blob": "1c01b40f08d6ae98228dff19b84ce19b4f94a735",
+      "sha256": "d52ff557a2797f355e51af8449ae66cc7d55e4d4c9e5f7d35f6cfecb8dcc628d"
+    },
+    {
+      "path": "audit.json",
+      "bytes": 27581,
+      "blob": "457d4d6f606f30381acd8cd669b3766e98ac87e7",
+      "sha256": "df6bacc3bbd4c622d3e69cbaa00bff508c8f77a4e26c85007a2c78b5ca8896fe"
+    },
+    {
+      "path": "Plan29-opencode-failure-appendix.md",
+      "bytes": 5847,
+      "blob": "5c380730fa85c05b8be829ff41d72a6eeb82edf7",
+      "sha256": "3a35a28cdb41779bdae4dfccdfaeb7fe7a308b907bd31d1e40f5c9a3b08ee0d2"
+    }
+  ],
+  "officialArtifact": {
+    "id": 14189374994,
+    "name": "host-emulated-linux-x64-0660c748f88675063e3051fb0f8b2022e8f6f056-opencode",
+    "size_in_bytes": 665565,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14189374994",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14189374994/zip",
+    "expired": false,
+    "created_at": "2026-11-16T01:26:58Z",
+    "expires_at": "2026-11-30T01:26:57Z",
+    "updated_at": "2026-11-16T01:26:58Z",
+    "digest": "sha256:4ebbd3445d8a455746843c471d9115e46502be1909c8a2b7b60110aaa0c57a2e",
+    "workflow_run": {
+      "id": 43780997237,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "0660c748f88675063e3051fb0f8b2022e8f6f056"
+    }
+  },
+  "all14ArchiveMembersSafeUniqueCRCAndExtractedBytesExact": true,
+  "archiveMembers": [
+    {
+      "path": "TEST-desktop-backend-DXg4Xj/desktop-app.log",
+      "crc32": "0bd22328",
+      "bytes": 16293,
+      "blob": "71c36b4b187baa1371c8ab81ec53b0f885eced5a",
+      "sha256": "b2ca4576e68242005e07157f4b5f5c993890eec8089ec6adb30835330c6911a9"
+    },
+    {
+      "path": "TEST-desktop-backend-DXg4Xj/TEST-peer-opencode-scope/effects.ndjson",
+      "crc32": "36ab6161",
+      "bytes": 565,
+      "blob": "eb87bd36e0473b88f81331383a05ba463baf9990",
+      "sha256": "78d878f13f081f16decd1645f3e413e55af5c115443236e3153a3b20645f4e56"
+    },
+    {
+      "path": "TEST-desktop-backend-DXg4Xj/desktop-descriptor.json",
+      "crc32": "15dd1368",
+      "bytes": 2653,
+      "blob": "141556c6c2d4cd0f2afb8262d59be1e57ba33874",
+      "sha256": "528640ae4a657a87074d59e9a8f9d9dc4689db383ff83c5571b6af4b06187d52"
+    },
+    {
+      "path": "TEST-desktop-backend-DXg4Xj/desktop-backend-receipt.json",
+      "crc32": "263bee54",
+      "bytes": 756997,
+      "blob": "aeb2650c4ce00e53c7a8b746b506d992eac985e0",
+      "sha256": "189e97065f05e8afba47064b1eb8c63ffc87d97cc6a4b292fd1ca461a092bde3"
+    },
+    {
+      "path": "TEST-desktop-backend-DXg4Xj/host-profile.json",
+      "crc32": "0166c012",
+      "bytes": 9801,
+      "blob": "f6a15be5d9f8752cdfaaa3a3fe25cdd92e2e1931",
+      "sha256": "1e7f748d40236ce6e3daacb3385be78e79c4779c29dedd65ace1025bf69409b3"
+    },
+    {
+      "path": "TEST-desktop-backend-DXg4Xj/hoststore/management-commands/03f164d40dc60de82996a045c86a527d1d3ec139a9a69116110d14689f27bf44.json",
+      "crc32": "b2fd352a",
+      "bytes": 5775,
+      "blob": "3ba570840ab36cfca3ad51b6f3c60aa867128733",
+      "sha256": "772633be8830dc65b2aa3fb96045da5061d5e978d3d20a0a9e01e53d3dc18176"
+    },
+    {
+      "path": "TEST-desktop-backend-DXg4Xj/sentinel-invocations.ndjson",
+      "crc32": "9fc3bdb4",
+      "bytes": 96,
+      "blob": "6364a862f901e4ca8d4ecccb4d90cdd842a44162",
+      "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253"
+    },
+    {
+      "path": "TEST-desktop-backend-DXg4Xj/ui-failure.png",
+      "crc32": "c0d8e2e1",
+      "bytes": 98967,
+      "blob": "9e1393d49d0cfdfaefec629c2ff7b8e4ed513ee5",
+      "sha256": "030e755d3913c47faf2364394dd0caa306f254c631ff482bf269a1ac5969aaaa"
+    },
+    {
+      "path": "TEST-desktop-backend-DXg4Xj/ui-seed-receipt.json",
+      "crc32": "fef72b05",
+      "bytes": 2335,
+      "blob": "832f6c08d971ee2c3b74172d8a76c217d53e8ea9",
+      "sha256": "6eb07e7d3a8e0bf32c75ed9268bb45a9de62d25a07cf6bedffada6c9df0fe3ff"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-QEC5M5/linux-child-exec/linux-child-exec",
+      "crc32": "ed0ca14b",
+      "bytes": 790608,
+      "blob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+      "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-QEC5M5/linux-child-exec/manifest.json",
+      "crc32": "e06f2443",
+      "bytes": 2408,
+      "blob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+      "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734"
+    },
+    {
+      "path": "host-emulated-emulated-opencode-runtime-ui.log",
+      "crc32": "38196a2c",
+      "bytes": 2078,
+      "blob": "33a85ee8a2e44dbefb2c04dcc6da5cce0c9e06c6",
+      "sha256": "02347ed73389978c19a0d4fb6eaa5712061ba9d8f20acc689dbea350c4aca387"
+    },
+    {
+      "path": "host-emulated-inputs.json",
+      "crc32": "ae9af518",
+      "bytes": 1803,
+      "blob": "50d7301c41f1f19300b2f88a14f10822212dcd2d",
+      "sha256": "147371c4828cab7f4844faebceda5facee7085e055aa7bcff47488fca44e8f4d"
+    },
+    {
+      "path": "host-emulated-linux-child-exec-selection.json",
+      "crc32": "20edf86a",
+      "bytes": 271,
+      "blob": "44fcdb5cab964df596102f7bc6550d96b2107d70",
+      "sha256": "f4d8276eefe8bae7fdfb1b961d5eb2cc302fac8def45bc38ea2fce2f9ea12720"
+    }
+  ],
+  "sourceCensus": {
+    "count": 1757,
+    "orderedOriginalPrePostEqualsSelectionOriginalPrePost": true,
+    "independentExactGitHashBasis": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/selection/root-independent-review.json",
+      "bytes": 29680,
+      "blob": "eeec84656302462c0400a5716369b36a9df804ea",
+      "sha256": "00e8c036c60a73f17efbf8eb302704f058ae7b250db400b64f265b8395c9161d"
+    },
+    "basisSourceCensus": {
+      "files": 1757,
+      "beforeAfterOrderedArraysExact": true,
+      "everyGitBlobSHA256IndependentlyRecomputed": true,
+      "gitSourceBytes": 20308016,
+      "orderedPathAndGitBlobAndSHA256TableSha256": "7ea0d2b4074eaab92703709af2c95d7cebe50b59f8593f265956c329b1346fa4",
+      "tableEncoding": "UTF8 compact JSON array of path,bytes,blob,sha256 in retained original pin order",
+      "scope": "Selected source closure; not a rebuilt or whole installed output tree"
+    },
+    "noAcceptanceTransfer": "Only the exact same ordered source bytes reuse the independently recomputed Git census; all OpenCode artifact/actions/failure/cleanup reviewed separately."
+  },
+  "manualBoundarySourceIdentities": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "bytes": 25052,
+      "blob": "2ea000d33b7c872a4a1bcd5f2a510c8418924fe5",
+      "sha256": "9e9d4115a2216bee4f1f6bd5cdec6c0ceef5f0aef9b3968ac4611a7955a2e0c7"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "bytes": 68760,
+      "blob": "1bde37adb7cba710ad77784eedbbe0d6c6e556df",
+      "sha256": "6ca239d1ea242a3ac64323bf28d41b84450fc1d5d7e4ae2324a069d03bff18ad"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "bytes": 54778,
+      "blob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+      "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc"
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "bytes": 101741,
+      "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+      "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b"
+    }
+  ],
+  "firstFailure": "Original UI target moved after ownership check\n+ actual - expected\n\n  [\n    700,\n+   505.75,\n-   494.75,\n    'BUTTON'\n  ]\n",
+  "firstFailureSource": {
+    "kind": "assertion",
+    "frames": [
+      "scripts/legacy-agent-host/desktop-ui-controls.ts:288:12",
+      "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts:87:37",
+      "scripts/legacy-agent-host/desktop-backend-smoke.ts:421:12",
+      "scripts/legacy-agent-host/desktop-backend-smoke.ts:781:29"
+    ]
+  },
+  "firstBoundary": {
+    "action": "expand original saved launch settings",
+    "sourceCall": "desktop-emulated-runtime-ui.ts:87",
+    "helperAssertion": "desktop-ui-controls.ts:288",
+    "stablePoint": [
+      700,
+      494.75,
+      "BUTTON"
+    ],
+    "afterOwnershipPoint": [
+      700,
+      505.75,
+      "BUTTON"
+    ],
+    "deltaY": 11,
+    "hoverStepPoint": {
+      "x": 700,
+      "y": 507.5,
+      "text": "Optional launch settingsOptional\u2022OpenCode\u2022test-provider/TEST-model\u2022Fresh lead session",
+      "tag": "BUTTON"
+    },
+    "actualPressedReleasedClickUnreachedForThisTarget": true,
+    "earlierAttemptedMouseClicks": 3,
+    "sourceOnlyOrder": "Stable-target assertion and two settled samples precede owned-renderer guard and final evaluate; geometry mismatch occurs before second guard, click record and mousePressed/mouseReleased.",
+    "limits": [
+      "The raw receipt does not retain the full sequence or timing of stable samples.",
+      "The earlier preflight state before the compared points is unretained. Final Ready display does not prove it caused the movement.",
+      "No uncertainty/retry relaxation or production/navigation repair is inferred."
+    ]
+  },
+  "originalFailureAttribution": "The exact geometry message and compared coordinates are in the original archived receipt. The full job log retains its assertion frames, INCOMPLETE summary and two verifier failures; it does not print that entire first error string.",
+  "readerCorrection": "Initial scratch reader expected the receipt-only geometry message verbatim in the job log. Corrected to verify original receipt text and exact frames plus actual verifier failures in the log; no project or original artifact changed.",
+  "rootSourceRead": [
+    "controls247-302: original hover/stable/ownership/final-point assertion precedes click record and dispatch",
+    "runtime-ui66-103: saved settings expansion precedes prompt/preflight/business Launch",
+    "captured-app396-511 and observations500-520,578-615: absent Host skips natural-drain; leaderless nonempty returned census refuses before identity/zombie/signal branch"
+  ],
+  "originalUiSteps": 8,
+  "earlierClickAttempts": 3,
+  "businessCommands": [],
+  "lastHover": {
+    "action": "mouseMoved",
+    "label": "hover expand original saved launch settings",
+    "selector": "[role=\"dialog\"] button[aria-controls=\"_r_2r_\"]",
+    "target": {
+      "x": 700,
+      "y": 507.5,
+      "text": "Optional launch settingsOptional\u2022OpenCode\u2022test-provider/TEST-model\u2022Fresh lead session",
+      "tag": "BUTTON"
+    }
+  },
+  "effects": [
+    {
+      "event": "launch",
+      "parentPid": 4604,
+      "argc": 5,
+      "provider": "opencode",
+      "role": "management",
+      "pid": 5180
+    },
+    {
+      "event": "launch",
+      "parentPid": 4604,
+      "argc": 5,
+      "provider": "opencode",
+      "role": "runtime",
+      "pid": 5341
+    },
+    {
+      "event": "input",
+      "marker": "TEST_MODEL_PROBE",
+      "provider": "opencode",
+      "role": "runtime",
+      "pid": 5341
+    },
+    {
+      "event": "terminal",
+      "marker": "TEST_MODEL_PROBE",
+      "outcome": "succeeded",
+      "provider": "opencode",
+      "role": "runtime",
+      "pid": 5341
+    },
+    {
+      "event": "exit",
+      "code": 0,
+      "provider": "opencode",
+      "role": "runtime",
+      "pid": 5341
+    },
+    {
+      "event": "exit",
+      "code": 0,
+      "provider": "opencode",
+      "role": "management",
+      "pid": 5180
+    }
+  ],
+  "finitePeers": {
+    "originalPeerPids": [
+      5180,
+      5341
+    ],
+    "remaining": [],
+    "absent": true
+  },
+  "originalPrerequisiteMetrics": {
+    "tests": [
+      115,
+      7
+    ],
+    "pass": [
+      115,
+      7
+    ],
+    "fail": [
+      0,
+      0
+    ],
+    "cancelled": [
+      0,
+      0
+    ],
+    "skipped": [
+      0,
+      0
+    ]
+  },
+  "originalSkippedSteps": [
+    {
+      "number": 9,
+      "name": "Verify original Runtime and Team conversation contracts"
+    },
+    {
+      "number": 10,
+      "name": "Verify complete workspace types and original typed lint scopes"
+    },
+    {
+      "number": 12,
+      "name": "Capture original controlled Linux process input without a provider"
+    },
+    {
+      "number": 13,
+      "name": "Exercise ordinary Team controls and renderer reload"
+    },
+    {
+      "number": 14,
+      "name": "Exercise ordinary Taskboard controls and persistence"
+    },
+    {
+      "number": 15,
+      "name": "Exercise original Skills and cross-Team controls"
+    },
+    {
+      "number": 16,
+      "name": "Exercise model, effort and credential controls with the pinned TEST peer"
+    },
+    {
+      "number": 17,
+      "name": "Exercise original collaboration, Extensions and saved-import controls through finite peers"
+    },
+    {
+      "number": 18,
+      "name": "Exercise original Codex browser and device login controls through the finite TEST peer"
+    },
+    {
+      "number": 19,
+      "name": "Exercise original cold Claude Resume and active Quit with the finite SDK peer"
+    },
+    {
+      "number": 21,
+      "name": "Exercise original Review Keep, Reject, Undo, Redo and reload"
+    },
+    {
+      "number": 22,
+      "name": "Exercise original Review after a cold Host and app restart"
+    },
+    {
+      "number": 23,
+      "name": "Exercise saved next-launch selection while the original Team remains live"
+    },
+    {
+      "number": 24,
+      "name": "Exercise original cold Processes Stop with an independently retained neighbor"
+    },
+    {
+      "number": 25,
+      "name": "Exercise stock Codex Update while the original Team retains its captured source"
+    },
+    {
+      "number": 26,
+      "name": "Stage checksum-pinned OpenCode base without executing the legacy CLI"
+    },
+    {
+      "number": 27,
+      "name": "Prepare exact OpenCode V2 Bun and engine graph"
+    },
+    {
+      "number": 28,
+      "name": "Exercise original OpenCode V2 credential and scoped model Settings"
+    },
+    {
+      "number": 29,
+      "name": "Verify original OpenCode V2 UI receipts and physical cleanup"
+    },
+    {
+      "number": 60,
+      "name": "Post Run actions/setup-node@v6"
+    }
+  ],
+  "app": {
+    "pid": 4281,
+    "processGroup": 4281,
+    "identity": "Mon Nov 16 01:26:05 2026 /opt/hostedtoolcache/node/24.21.0/x64/bin/node /home/runner/work/_temp/TEST-emulated-ui-inputs-QEC5M5/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js dev:mcp --remoteDebuggingPort 9222 --noSandbox",
+    "invocation": [
+      "/opt/hostedtoolcache/node/24.21.0/x64/bin/node",
+      "/home/runner/work/_temp/TEST-emulated-ui-inputs-QEC5M5/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+      "dev:mcp",
+      "--remoteDebuggingPort",
+      "9222",
+      "--noSandbox"
+    ]
+  },
+  "failureQuit": {
+    "attempted": true,
+    "scope": "Close only the verified TEST window before stopping its dev wrapper",
+    "reply": "acknowledged",
+    "listenerAbsent": true
+  },
+  "originalRequestedQuitExit": {
+    "initialExitCode": null,
+    "initialSignalCode": null,
+    "exitCode": 0,
+    "signalCode": null
+  },
+  "beforeHarnessCleanup": [
+    {
+      "pid": 4354,
+      "ppid": 1,
+      "pgid": 4281
+    }
+  ],
+  "cleanup": {
+    "processGroup": 4281,
+    "remaining": [
+      {
+        "pid": 4354,
+        "ppid": 1,
+        "pgid": 4281
+      }
+    ],
+    "appExitCode": 0,
+    "appSignalCode": null,
+    "cleanupFailure": "captured leader absent; retain cleanup debt without signaling",
+    "capturedHostObserved": false,
+    "capturedHostAbsent": null,
+    "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+  },
+  "finalSentinelCensus": {
+    "invocations": [
+      {
+        "executable": "claude-multimodel",
+        "allowed": true,
+        "argc": 1,
+        "command": null,
+        "flags": [
+          "--version"
+        ]
+      }
+    ],
+    "preQuitCount": null,
+    "postQuitOrCleanupInvocations": null,
+    "refusedInvocations": [],
+    "qualification": "Only finite sentinel version checks and the isolated shell-environment fixture are admitted; any native/control fallback before or after Quit makes this provider-emulation proof incomplete."
+  },
+  "sameReturnedCensusNotTwoObservations": true,
+  "noMissingHostIdentityRetrofittedFromEffectParent4604": true,
+  "rootActuallyViewedFailurePng": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/opencode/extracted/TEST-desktop-backend-DXg4Xj/ui-failure.png",
+    "bytes": 98967,
+    "blob": "9e1393d49d0cfdfaefec629c2ff7b8e4ed513ee5",
+    "sha256": "030e755d3913c47faf2364394dd0caa306f254c631ff482bf269a1ac5969aaaa"
+  },
+  "visualFacts": [
+    "Launch Team dialog remains open and Optional launch settings collapsed.",
+    "Selected OpenCode TEST model is Ready/verified and Launch team is enabled; underlying Team is offline.",
+    "This is the postfailure frame; no earlier footer state/dialog bounds or causality is retained."
+  ],
+  "boundedIndependentSourceReviews": [
+    {
+      "path": "native-audit-M0660/opencode-cleanup-source-review.json",
+      "bytes": 17297,
+      "blob": "81d6f5d878aaf99870f9bd094cec2f44a1ebcc18",
+      "sha256": "d9b289c63c30dc4ccc49518889a7e8a96d2204ce52e48700f72df180b573cd58"
+    },
+    {
+      "path": "opencode-first-target-source-review/independent-source-review.json",
+      "bytes": 20818,
+      "blob": "1abf06447d00f0005d433eb0ab4a867f2417e9d8",
+      "sha256": "259041017d8f15980620c0e9bebd52a4750df1890c06e814afaafc302c95a863"
+    }
+  ],
+  "precisionAppendixV2": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/opencode/Plan29-opencode-failure-appendix-v2.md",
+    "bytes": 5950,
+    "blob": "3355042930be89d70cccce47e1e36eafb1e7dcba",
+    "sha256": "7e9f5e46135f626a60446b2de7fba94b263d0850c3ea5e3c09b3b465bfc18f12"
+  },
+  "limits": [
+    "Original full scenario and final verifier failed. Two finite peers absent and exit0 do not discharge the remaining app-group row.",
+    "No complete point history or earlier readiness/layout transition is available; centered-dialog resize is a possible source mechanism only, with no proven repair.",
+    "The settledGroupMembers initial census/loop iterations are not retained; only the later identity/zombie/signal branch is proven unreached.",
+    "Historical PID4354 esbuild rows have no final birth/command/state join. No benign-zombie, latency, final Host identity or zero-after-Quit sentinel claim.",
+    "No business Launch, conversation/schedule/Product Stop, privacy RED/GREEN, native/provider, P08/P09 or whole-goal qualification.",
+    "The scope source report describes a dormant observation idea only, not an implementation R1 or authorization to change action/guard/deadline semantics."
+  ],
+  "projectCodeExecuted": false,
+  "sourceChanged": false,
+  "ciStateChanged": false
+}

@@ -1,0 +1,5111 @@
+{
+  "schema": "original-N608efb-Installer-author-audit-v1",
+  "reviewedAtUTC": "2026-11-16T03:37:20.347671+00:00",
+  "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "sourceTree": "87e104735545a0860ec2bbcd9bf1ef2318dbbebb",
+  "runId": 43795234483,
+  "jobId": 133062441546,
+  "artifactId": 14195690062,
+  "result": "PASS / original selected Installer lane only",
+  "qualification": {
+    "nativeProvider": false,
+    "vendorAuthentication": false,
+    "release": false,
+    "TeamTenFile177OrStderr24": false,
+    "historicalNavigationCauseEstablished": false,
+    "navigationRepairClaim": false
+  },
+  "method": "Read original official artifacts, decoded full CI log and source-pinned closure; freshly hash all 1757 Git leaves, verify all safe ZIP members and actually inspect all 11 original PNG singly. No project test/build/install/native execution or source edit.",
+  "rawInputs": [
+    {
+      "path": "ci-n-608efb/host-original-run-0258.json",
+      "bytes": 30088,
+      "blob": "ea302039d9efa1062aad0a3c3c062fb462c39774",
+      "sha256": "c1cefe9db820bb9a40b1e371d99d4aa628bd66d1826a35bd8787c99d5e7a9a10"
+    },
+    {
+      "path": "ci-n-608efb/host-original-jobs-0258.json",
+      "bytes": 5979,
+      "blob": "51a062454451795329f7862b2015da9b7794a02a",
+      "sha256": "377962b151b28eec4ad54d783b03a6fea3f119250a48642fa1b5ca489a0c7c0f"
+    },
+    {
+      "path": "ci-n-608efb/owned-api-jobs-0326.json",
+      "bytes": 25860,
+      "blob": "f4e8e08650058e8da028e0a4aab0436edb2e2d13",
+      "sha256": "980c9241de33106881e373ddd117ff994233aa84fa520aebde1e5f125687b9f4"
+    },
+    {
+      "path": "ci-n-608efb/installer/official-artifact-response.json",
+      "bytes": 823,
+      "blob": "4ffc315081f5cafecb83d5d548cc1ab36357feee",
+      "sha256": "89bebce995c19c14667d7d53ab53f1204d3577cbd6e67b616afc16539475f7c4"
+    },
+    {
+      "path": "ci-n-608efb/installer/original-job-log-response.json",
+      "bytes": 188259,
+      "blob": "2514898f15ac9035450b258d441bdff7150614a4",
+      "sha256": "da28db425dbc654f35a4366c37e4a010c3b16336b6d5a5d68febe18318c7f134"
+    },
+    {
+      "path": "ci-n-608efb/installer/job-133062441546.log",
+      "bytes": 178429,
+      "blob": "4fbe5c93f44f77b7fe006822f96072e1d403a3eb",
+      "sha256": "a1913f183d6266181d668f3819ccdd521a123e61ea9b704236c6d4bb3e7a229d"
+    },
+    {
+      "path": "ci-n-608efb/installer/artifact-14195690062.zip",
+      "bytes": 1149462,
+      "blob": "c6761c72ec106e15d716dc85d49594f936d3cb30",
+      "sha256": "1458223457d9339293a14a237cf0d36b717de801c4da67b9227276ee8a7f17f6"
+    },
+    {
+      "path": "ci-n-608efb/installer/archive-retention.json",
+      "bytes": 8575,
+      "blob": "091ab56178a7170e8168ef324895e4def06a49ac",
+      "sha256": "9845a5bdf0c89accdfed8da181855c701792f37f5ec839fb96da2bc8721eeaa1"
+    },
+    {
+      "path": "ci-n-608efb/installer/source-pin-audit.json",
+      "bytes": 584102,
+      "blob": "0137c167ea0345dcfc0fa93b547863102bc4bea5",
+      "sha256": "53145a3e6e6863daa3e035ee3d8a6566161321ac7835f07871e2bb3d8accb39d"
+    }
+  ],
+  "officialRun": {
+    "id": 43795234483,
+    "name": "Host Emulated Acceptance",
+    "node_id": "WFR_kwLORVTEtM8AAAAKMmY-sw",
+    "head_branch": "fix/frontend-parity-completion-20261113",
+    "head_sha": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+    "path": ".github/workflows/host-emulated-acceptance.yml",
+    "display_title": "fix: complete Host frontend parity with emulated provider checks",
+    "run_number": 87,
+    "event": "pull_request",
+    "status": "queued",
+    "conclusion": null,
+    "workflow_id": 417564953,
+    "check_suite_id": 118563136223,
+    "check_suite_node_id": "CS_kwDORVTEtM8AAAAbmuni3w",
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234483",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43795234483",
+    "pull_requests": [
+      {
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls/1192",
+        "id": 5299966773,
+        "number": 1192,
+        "head": {
+          "ref": "fix/frontend-parity-completion-20261113",
+          "sha": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+          "repo": {
+            "id": 1163183284,
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+            "name": "agent-teams-ai"
+          }
+        },
+        "base": {
+          "ref": "feat/provider-host-frontend-parity-20261112",
+          "sha": "def734338f13bcc3209e78079a0cedbc48f05a5b",
+          "repo": {
+            "id": 1163183284,
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+            "name": "agent-teams-ai"
+          }
+        }
+      }
+    ],
+    "created_at": "2026-11-16T02:57:27Z",
+    "updated_at": "2026-11-16T02:57:29Z",
+    "actor": {
+      "login": "777genius",
+      "id": 13103045,
+      "node_id": "MDQ6VXNlcjEzMTAzMDQ1",
+      "avatar_url": "https://avatars.githubusercontent.com/u/13103045?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/777genius",
+      "html_url": "https://github.com/777genius",
+      "followers_url": "https://api.github.com/users/777genius/followers",
+      "following_url": "https://api.github.com/users/777genius/following{/other_user}",
+      "gists_url": "https://api.github.com/users/777genius/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/777genius/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/777genius/subscriptions",
+      "organizations_url": "https://api.github.com/users/777genius/orgs",
+      "repos_url": "https://api.github.com/users/777genius/repos",
+      "events_url": "https://api.github.com/users/777genius/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/777genius/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "run_attempt": 1,
+    "referenced_workflows": [],
+    "run_started_at": "2026-11-16T02:57:27Z",
+    "triggering_actor": {
+      "login": "777genius",
+      "id": 13103045,
+      "node_id": "MDQ6VXNlcjEzMTAzMDQ1",
+      "avatar_url": "https://avatars.githubusercontent.com/u/13103045?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/777genius",
+      "html_url": "https://github.com/777genius",
+      "followers_url": "https://api.github.com/users/777genius/followers",
+      "following_url": "https://api.github.com/users/777genius/following{/other_user}",
+      "gists_url": "https://api.github.com/users/777genius/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/777genius/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/777genius/subscriptions",
+      "organizations_url": "https://api.github.com/users/777genius/orgs",
+      "repos_url": "https://api.github.com/users/777genius/repos",
+      "events_url": "https://api.github.com/users/777genius/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/777genius/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234483/jobs",
+    "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234483/logs",
+    "check_suite_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-suites/118563136223",
+    "artifacts_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234483/artifacts",
+    "cancel_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234483/cancel",
+    "rerun_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234483/rerun",
+    "previous_attempt_url": null,
+    "workflow_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/workflows/417564953",
+    "head_commit": {
+      "id": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+      "tree_id": "87e104735545a0860ec2bbcd9bf1ef2318dbbebb",
+      "message": "docs(migration): retain post-helper original CI evidence and publication readbacks",
+      "timestamp": "2026-11-16T02:49:35Z",
+      "author": {
+        "name": "Илия",
+        "email": "iliyazelenkog@gmail.com"
+      },
+      "committer": {
+        "name": "Илия",
+        "email": "iliyazelenkog@gmail.com"
+      }
+    },
+    "repository": {
+      "id": 1163183284,
+      "node_id": "R_kgDORVTEtA",
+      "name": "agent-teams-ai",
+      "full_name": "777genius/agent-teams-ai",
+      "private": false,
+      "owner": {
+        "login": "777genius",
+        "id": 13103045,
+        "node_id": "MDQ6VXNlcjEzMTAzMDQ1",
+        "avatar_url": "https://avatars.githubusercontent.com/u/13103045?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/777genius",
+        "html_url": "https://github.com/777genius",
+        "followers_url": "https://api.github.com/users/777genius/followers",
+        "following_url": "https://api.github.com/users/777genius/following{/other_user}",
+        "gists_url": "https://api.github.com/users/777genius/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/777genius/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/777genius/subscriptions",
+        "organizations_url": "https://api.github.com/users/777genius/orgs",
+        "repos_url": "https://api.github.com/users/777genius/repos",
+        "events_url": "https://api.github.com/users/777genius/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/777genius/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "html_url": "https://github.com/777genius/agent-teams-ai",
+      "description": "You're the boss, agents are your team. They handle tasks on their own, message each other, and review each other's work. You just watch the kanban board and give high-level commands. Codex/Claude/OpenCode/Cursor/Grok/GitHub/Kiro/Z.AI/Xiaomi/MiniMax/Kimi(300+ models, 200+ LLM providers, free models no auth) Build your AI company with multiple teams",
+      "fork": false,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+      "forks_url": "https://api.github.com/repos/777genius/agent-teams-ai/forks",
+      "keys_url": "https://api.github.com/repos/777genius/agent-teams-ai/keys{/key_id}",
+      "collaborators_url": "https://api.github.com/repos/777genius/agent-teams-ai/collaborators{/collaborator}",
+      "teams_url": "https://api.github.com/repos/777genius/agent-teams-ai/teams",
+      "hooks_url": "https://api.github.com/repos/777genius/agent-teams-ai/hooks",
+      "issue_events_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues/events{/number}",
+      "events_url": "https://api.github.com/repos/777genius/agent-teams-ai/events",
+      "assignees_url": "https://api.github.com/repos/777genius/agent-teams-ai/assignees{/user}",
+      "branches_url": "https://api.github.com/repos/777genius/agent-teams-ai/branches{/branch}",
+      "tags_url": "https://api.github.com/repos/777genius/agent-teams-ai/tags",
+      "blobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs{/sha}",
+      "git_tags_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/tags{/sha}",
+      "git_refs_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/refs{/sha}",
+      "trees_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees{/sha}",
+      "statuses_url": "https://api.github.com/repos/777genius/agent-teams-ai/statuses/{sha}",
+      "languages_url": "https://api.github.com/repos/777genius/agent-teams-ai/languages",
+      "stargazers_url": "https://api.github.com/repos/777genius/agent-teams-ai/stargazers",
+      "contributors_url": "https://api.github.com/repos/777genius/agent-teams-ai/contributors",
+      "subscribers_url": "https://api.github.com/repos/777genius/agent-teams-ai/subscribers",
+      "subscription_url": "https://api.github.com/repos/777genius/agent-teams-ai/subscription",
+      "commits_url": "https://api.github.com/repos/777genius/agent-teams-ai/commits{/sha}",
+      "git_commits_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits{/sha}",
+      "comments_url": "https://api.github.com/repos/777genius/agent-teams-ai/comments{/number}",
+      "issue_comment_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues/comments{/number}",
+      "contents_url": "https://api.github.com/repos/777genius/agent-teams-ai/contents/{+path}",
+      "compare_url": "https://api.github.com/repos/777genius/agent-teams-ai/compare/{base}...{head}",
+      "merges_url": "https://api.github.com/repos/777genius/agent-teams-ai/merges",
+      "archive_url": "https://api.github.com/repos/777genius/agent-teams-ai/{archive_format}{/ref}",
+      "downloads_url": "https://api.github.com/repos/777genius/agent-teams-ai/downloads",
+      "issues_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues{/number}",
+      "pulls_url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls{/number}",
+      "milestones_url": "https://api.github.com/repos/777genius/agent-teams-ai/milestones{/number}",
+      "notifications_url": "https://api.github.com/repos/777genius/agent-teams-ai/notifications{?since,all,participating}",
+      "labels_url": "https://api.github.com/repos/777genius/agent-teams-ai/labels{/name}",
+      "releases_url": "https://api.github.com/repos/777genius/agent-teams-ai/releases{/id}",
+      "deployments_url": "https://api.github.com/repos/777genius/agent-teams-ai/deployments"
+    },
+    "head_repository": {
+      "id": 1163183284,
+      "node_id": "R_kgDORVTEtA",
+      "name": "agent-teams-ai",
+      "full_name": "777genius/agent-teams-ai",
+      "private": false,
+      "owner": {
+        "login": "777genius",
+        "id": 13103045,
+        "node_id": "MDQ6VXNlcjEzMTAzMDQ1",
+        "avatar_url": "https://avatars.githubusercontent.com/u/13103045?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/777genius",
+        "html_url": "https://github.com/777genius",
+        "followers_url": "https://api.github.com/users/777genius/followers",
+        "following_url": "https://api.github.com/users/777genius/following{/other_user}",
+        "gists_url": "https://api.github.com/users/777genius/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/777genius/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/777genius/subscriptions",
+        "organizations_url": "https://api.github.com/users/777genius/orgs",
+        "repos_url": "https://api.github.com/users/777genius/repos",
+        "events_url": "https://api.github.com/users/777genius/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/777genius/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "html_url": "https://github.com/777genius/agent-teams-ai",
+      "description": "You're the boss, agents are your team. They handle tasks on their own, message each other, and review each other's work. You just watch the kanban board and give high-level commands. Codex/Claude/OpenCode/Cursor/Grok/GitHub/Kiro/Z.AI/Xiaomi/MiniMax/Kimi(300+ models, 200+ LLM providers, free models no auth) Build your AI company with multiple teams",
+      "fork": false,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+      "forks_url": "https://api.github.com/repos/777genius/agent-teams-ai/forks",
+      "keys_url": "https://api.github.com/repos/777genius/agent-teams-ai/keys{/key_id}",
+      "collaborators_url": "https://api.github.com/repos/777genius/agent-teams-ai/collaborators{/collaborator}",
+      "teams_url": "https://api.github.com/repos/777genius/agent-teams-ai/teams",
+      "hooks_url": "https://api.github.com/repos/777genius/agent-teams-ai/hooks",
+      "issue_events_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues/events{/number}",
+      "events_url": "https://api.github.com/repos/777genius/agent-teams-ai/events",
+      "assignees_url": "https://api.github.com/repos/777genius/agent-teams-ai/assignees{/user}",
+      "branches_url": "https://api.github.com/repos/777genius/agent-teams-ai/branches{/branch}",
+      "tags_url": "https://api.github.com/repos/777genius/agent-teams-ai/tags",
+      "blobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs{/sha}",
+      "git_tags_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/tags{/sha}",
+      "git_refs_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/refs{/sha}",
+      "trees_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees{/sha}",
+      "statuses_url": "https://api.github.com/repos/777genius/agent-teams-ai/statuses/{sha}",
+      "languages_url": "https://api.github.com/repos/777genius/agent-teams-ai/languages",
+      "stargazers_url": "https://api.github.com/repos/777genius/agent-teams-ai/stargazers",
+      "contributors_url": "https://api.github.com/repos/777genius/agent-teams-ai/contributors",
+      "subscribers_url": "https://api.github.com/repos/777genius/agent-teams-ai/subscribers",
+      "subscription_url": "https://api.github.com/repos/777genius/agent-teams-ai/subscription",
+      "commits_url": "https://api.github.com/repos/777genius/agent-teams-ai/commits{/sha}",
+      "git_commits_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits{/sha}",
+      "comments_url": "https://api.github.com/repos/777genius/agent-teams-ai/comments{/number}",
+      "issue_comment_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues/comments{/number}",
+      "contents_url": "https://api.github.com/repos/777genius/agent-teams-ai/contents/{+path}",
+      "compare_url": "https://api.github.com/repos/777genius/agent-teams-ai/compare/{base}...{head}",
+      "merges_url": "https://api.github.com/repos/777genius/agent-teams-ai/merges",
+      "archive_url": "https://api.github.com/repos/777genius/agent-teams-ai/{archive_format}{/ref}",
+      "downloads_url": "https://api.github.com/repos/777genius/agent-teams-ai/downloads",
+      "issues_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues{/number}",
+      "pulls_url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls{/number}",
+      "milestones_url": "https://api.github.com/repos/777genius/agent-teams-ai/milestones{/number}",
+      "notifications_url": "https://api.github.com/repos/777genius/agent-teams-ai/notifications{?since,all,participating}",
+      "labels_url": "https://api.github.com/repos/777genius/agent-teams-ai/labels{/name}",
+      "releases_url": "https://api.github.com/repos/777genius/agent-teams-ai/releases{/id}",
+      "deployments_url": "https://api.github.com/repos/777genius/agent-teams-ai/deployments"
+    }
+  },
+  "officialJob": {
+    "id": 133062441546,
+    "name": "Offline Host Desktop (darwin-arm64, installer)",
+    "status": "completed",
+    "conclusion": "success",
+    "run_id": 43795234483,
+    "logs_url": null,
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1
+      },
+      {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2
+      },
+      {
+        "name": "Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3
+      },
+      {
+        "name": "Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4
+      },
+      {
+        "name": "Verify original checkout and runner tuple",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5
+      },
+      {
+        "name": "Prepare private Linux display",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 6
+      },
+      {
+        "name": "Install frozen workspace and Electron",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7
+      },
+      {
+        "name": "Build existing Desktop prerequisites and verify admission",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8
+      },
+      {
+        "name": "Verify original Runtime and Team conversation contracts",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 9
+      },
+      {
+        "name": "Verify complete workspace types and original typed lint scopes",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 10
+      },
+      {
+        "name": "Capture package-manager and Host inputs without vendor executables",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 11
+      },
+      {
+        "name": "Capture original controlled Linux process input without a provider",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 12
+      },
+      {
+        "name": "Exercise ordinary Team controls and renderer reload",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 13
+      },
+      {
+        "name": "Exercise ordinary Taskboard controls and persistence",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 14
+      },
+      {
+        "name": "Exercise original Skills and cross-Team controls",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 15
+      },
+      {
+        "name": "Exercise model, effort and credential controls with the pinned TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 16
+      },
+      {
+        "name": "Exercise original collaboration, Extensions and saved-import controls through finite peers",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 17
+      },
+      {
+        "name": "Exercise original Codex browser and device login controls through the finite TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 18
+      },
+      {
+        "name": "Exercise original cold Claude Resume and active Quit with the finite SDK peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 19
+      },
+      {
+        "name": "Exercise original provider conversations and schedules through pinned TEST peers",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 20
+      },
+      {
+        "name": "Exercise original Review Keep, Reject, Undo, Redo and reload",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 21
+      },
+      {
+        "name": "Exercise original Review after a cold Host and app restart",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 22
+      },
+      {
+        "name": "Exercise saved next-launch selection while the original Team remains live",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 23
+      },
+      {
+        "name": "Exercise original cold Processes Stop with an independently retained neighbor",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 24
+      },
+      {
+        "name": "Exercise stock Codex Update while the original Team retains its captured source",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 25
+      },
+      {
+        "name": "Stage checksum-pinned OpenCode base without executing the legacy CLI",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 26
+      },
+      {
+        "name": "Prepare exact OpenCode V2 Bun and engine graph",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 27
+      },
+      {
+        "name": "Exercise original OpenCode V2 credential and scoped model Settings",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 28
+      },
+      {
+        "name": "Verify original OpenCode V2 UI receipts and physical cleanup",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 29
+      },
+      {
+        "name": "Verify exact source, original screenshots, receipts and cleanup",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 30
+      },
+      {
+        "name": "Preserve original Desktop evidence, including failures",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 31
+      },
+      {
+        "name": "Post Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 60
+      },
+      {
+        "name": "Post Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 61
+      },
+      {
+        "name": "Post Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 62
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 63
+      }
+    ]
+  },
+  "officialArtifact": {
+    "id": 14195690062,
+    "name": "host-emulated-darwin-arm64-608efb78823d7c74b35f8a674fcfb6faea8ecfc5-installer",
+    "size_in_bytes": 1149462,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14195690062",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14195690062/zip",
+    "expired": false,
+    "created_at": "2026-11-16T03:25:41Z",
+    "expires_at": "2026-11-30T03:25:40Z",
+    "updated_at": "2026-11-16T03:25:41Z",
+    "digest": "sha256:1458223457d9339293a14a237cf0d36b717de801c4da67b9227276ee8a7f17f6",
+    "workflow_run": {
+      "id": 43795234483,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5"
+    }
+  },
+  "archive": {
+    "originalZIP": {
+      "path": "ci-n-608efb/installer/artifact-14195690062.zip",
+      "bytes": 1149462,
+      "blob": "c6761c72ec106e15d716dc85d49594f936d3cb30",
+      "sha256": "1458223457d9339293a14a237cf0d36b717de801c4da67b9227276ee8a7f17f6"
+    },
+    "safeUniqueCRCCheckedMembers": 34,
+    "expandedBytes": 1883393,
+    "members": [
+      {
+        "name": "TEST-desktop-backend-FpV7cb/TEST-codex-install/registry.ndjson",
+        "bytes": 1512,
+        "sha256": "634f997c467758121af526d1bc7bd9ac494ee76d087ff68c46e1a33847167097",
+        "crc32": "e5102b41",
+        "extractedExact": true
+      },
+      {
+        "name": "TEST-desktop-backend-FpV7cb/desktop-app.log",
+        "bytes": 16868,
+        "sha256": "41667d3b5f3ab9b3a4c4364d6e8e92d581726fa30e1da95fd80d8f69b74382dd",
+        "crc32": "7fc34cd8",
+        "extractedExact": true
+      },
+      {
+        "name": "TEST-desktop-backend-FpV7cb/TEST-codex-install/invocations.ndjson",
+        "bytes": 15438,
+        "sha256": "d6337d7101d8b8dd1b01f3c82970f7125ba943e32a69c06ba491afd0a4d2e92d",
+        "crc32": "4429ee59",
+        "extractedExact": true
+      },
+      {
+        "name": "TEST-desktop-backend-FpV7cb/TEST-peer-codex-scope/effects.ndjson",
+        "bytes": 16041,
+        "sha256": "17fa32fcf5070dd3927e0bcb387af063a815da33dec23735966bd36b86c8a24a",
+        "crc32": "f5f2b71e",
+        "extractedExact": true
+      },
+      {
+        "name": "TEST-desktop-backend-FpV7cb/desktop-backend-receipt.json",
+        "bytes": 832155,
+        "sha256": "4c5d1f7c15a0fcb9659a6eba56163bea7022e83f7035d298e5ad0e688abed74c",
+        "crc32": "74868fde",
+        "extractedExact": true
+      },
+      {
+        "name": "TEST-desktop-backend-FpV7cb/desktop-descriptor.json",
+        "bytes": 2664,
+        "sha256": "ded70f7f97712ba0a66c83b3c122862c4de5c5c6ee3d8e5dd573a544dd523ff0",
+        "crc32": "ddaf1dd1",
+        "extractedExact": true
+      },
+      {
+        "name": "TEST-desktop-backend-FpV7cb/host-profile.json",
+        "bytes": 7471,
+        "sha256": "496c2bc71538c8317d4548237b16654e83087cf19fd5e1d505c73c32cfb771e2",
+        "crc32": "8442bd91",
+        "extractedExact": true
+      },
+      {
+        "name": "TEST-desktop-backend-FpV7cb/hoststore/management-commands/31995021a66d7b1a00ee286c7ce030a6f3a834593234dda9510bee72b269c385.json",
+        "bytes": 923,
+        "sha256": "6488c2862fa74590fd7d0d83353c50b1006348f81d93f2aac6a112071d8e5f95",
+        "crc32": "165945d9",
+        "extractedExact": true
+      },
+      {
+        "name": "TEST-desktop-backend-FpV7cb/hoststore/management-commands/93b4ebc3ddddcc9a22fbd23a6d0ddd7c3e33f42650170cdbbb9ed9acd9b67513.json",
+        "bytes": 2297,
+        "sha256": "30a1470d4a3a3ec0d473b35d1a3eeb1b544a3bdfb95808b62a019926de592466",
+        "crc32": "f37760fa",
+        "extractedExact": true
+      },
+      {
+        "name": "TEST-desktop-backend-FpV7cb/hoststore/management-commands/97407d4ef0abf32009fd4ffe60fbb20487bf95f1c4740678df6d6b960f6f5ae0.json",
+        "bytes": 929,
+        "sha256": "ea434aaf8cfa3133a6c2485d4dbe9a09a468eee41a904bdcbbb3787ea3bd8688",
+        "crc32": "a5159062",
+        "extractedExact": true
+      },
+      {
+        "name": "TEST-desktop-backend-FpV7cb/hoststore/management-commands/9dce448314eb560c21cd082f68aa2acc6f977a2341f50753032ad58e8df70bf4.json",
+        "bytes": 904,
+        "sha256": "2c019d6d6459746350afe6bc03a045b1177b5c92acee57ea134914e2659b0a81",
+        "crc32": "5cf2fb46",
+        "extractedExact": true
+      },
+      {
+        "name": "TEST-desktop-backend-FpV7cb/hoststore/runtime-checkpoints/cp1-3923dd2eac7f1080b3150bcae5762cbb407c5a32539dd922b65d1bde28a6c58f.json",
+        "bytes": 2319,
+        "sha256": "2ca30ca6ccf22cf70cab58936d2ad81d1c994649b8e98cb9db39b484c1d852cd",
+        "crc32": "bbc485be",
+        "extractedExact": true
+      },
+      {
+        "name": "TEST-desktop-backend-FpV7cb/hoststore/runtime-checkpoints/cp1-6a25966e2f3c52573de6e4a7d00cbc7c39f3f0b437b8a2d7f74e9d7a2f071722.json",
+        "bytes": 1895,
+        "sha256": "5cd8cca46b40a5ceb395241fcabd73b5df64aa06182f7f07be251183d75bdc83",
+        "crc32": "b81460d7",
+        "extractedExact": true
+      },
+      {
+        "name": "TEST-desktop-backend-FpV7cb/hoststore/runtime-sources/index.json",
+        "bytes": 1687,
+        "sha256": "b06dc1fece3561b10d710018d5e850ed19f7461063e796b69c7193922bd3b61f",
+        "crc32": "a362b6c6",
+        "extractedExact": true
+      },
+      {
+        "name": "TEST-desktop-backend-FpV7cb/hoststore/teams/test-desktop-backend/inboxes/alice.json",
+        "bytes": 453,
+        "sha256": "5491a638f3dc952ba63f149ba3247eade9a25206b976e713440b08e6d81b6134",
+        "crc32": "1bd468dc",
+        "extractedExact": true
+      },
+      {
+        "name": "TEST-desktop-backend-FpV7cb/hoststore/teams/test-selection-next-team/inboxes/team-lead.json",
+        "bytes": 202,
+        "sha256": "bf8b7aa15c621b16c017072f93a5c870646cfba8573fe41048c1ef72d3ba39c1",
+        "crc32": "2cb7f725",
+        "extractedExact": true
+      },
+      {
+        "name": "TEST-desktop-backend-FpV7cb/sentinel-invocations.ndjson",
+        "bytes": 96,
+        "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253",
+        "crc32": "9fc3bdb4",
+        "extractedExact": true
+      },
+      {
+        "name": "TEST-desktop-backend-FpV7cb/ui-emulated-selection-a-launch.png",
+        "bytes": 88780,
+        "sha256": "5d433819eacbdfe00f2ff00b2c65dc7f3b326fc158fb5bf1d1eb1de23a2756c2",
+        "crc32": "e730c17c",
+        "extractedExact": true
+      },
+      {
+        "name": "TEST-desktop-backend-FpV7cb/ui-emulated-selection-a-survived.png",
+        "bytes": 103938,
+        "sha256": "6af959846fe7ca5542b6bcc724babd18bd651e118e6c9cf81a80880f20217e28",
+        "crc32": "540dd25b",
+        "extractedExact": true
+      },
+      {
+        "name": "TEST-desktop-backend-FpV7cb/ui-emulated-selection-b-launch.png",
+        "bytes": 84766,
+        "sha256": "807921c1d3b55d6a4ed4d65d9dff6a7a41bbf9304f0c422bd9f17e11157cb385",
+        "crc32": "0dbf20fe",
+        "extractedExact": true
+      },
+      {
+        "name": "TEST-desktop-backend-FpV7cb/ui-emulated-selection-completed.png",
+        "bytes": 108222,
+        "sha256": "bb5eda6a4a1f5eb2188f966bf13768e377a04652a3a0bf18f198314c8fbd06fb",
+        "crc32": "a6a877e4",
+        "extractedExact": true
+      },
+      {
+        "name": "TEST-desktop-backend-FpV7cb/ui-emulated-selection-effects.json",
+        "bytes": 22719,
+        "sha256": "9657261a2dff72ff49a3f165878c12840827df49c8b4018e12e52acb5d16dff8",
+        "crc32": "d562b257",
+        "extractedExact": true
+      },
+      {
+        "name": "TEST-desktop-backend-FpV7cb/ui-emulated-selection-installer-before.png",
+        "bytes": 77434,
+        "sha256": "82b1d86e32bbca6b2af3e107dea0f8d72006ab3213c816ff18570007a7b40476",
+        "crc32": "0658fb9c",
+        "extractedExact": true
+      },
+      {
+        "name": "TEST-desktop-backend-FpV7cb/ui-emulated-selection-installer-ready.png",
+        "bytes": 67877,
+        "sha256": "25890abcda99375456573cc9950f3bf9113475d66e4981ba0c1e3f8799669a4a",
+        "crc32": "930c818c",
+        "extractedExact": true
+      },
+      {
+        "name": "TEST-desktop-backend-FpV7cb/ui-emulated-selection-installer-settings-dialog.png",
+        "bytes": 91573,
+        "sha256": "009a3f1009dfec6e80ab38a8c9f0f062e617612445f9059d29f4b882ae5c4a58",
+        "crc32": "6ea6c42f",
+        "extractedExact": true
+      },
+      {
+        "name": "TEST-desktop-backend-FpV7cb/ui-emulated-selection-installer-settings-page.png",
+        "bytes": 86958,
+        "sha256": "b9085c8a2b9751599bab9d393672e48c026066209513bb549927778d8ead29b6",
+        "crc32": "8991f6ff",
+        "extractedExact": true
+      },
+      {
+        "name": "TEST-desktop-backend-FpV7cb/ui-emulated-selection-reloaded.png",
+        "bytes": 76027,
+        "sha256": "228ead7c53acae0e0cbcfc9e92d2d611d15b56c2575550d0b03355a21874e47a",
+        "crc32": "7e0d9df1",
+        "extractedExact": true
+      },
+      {
+        "name": "TEST-desktop-backend-FpV7cb/ui-emulated-selection-selected.png",
+        "bytes": 70779,
+        "sha256": "878a80ccf6a39831c322b0bfe88fdf38d519924f5b60a726636a22b2018e6a1d",
+        "crc32": "234b9e0c",
+        "extractedExact": true
+      },
+      {
+        "name": "TEST-desktop-backend-FpV7cb/ui-emulated-selection-stopped.png",
+        "bytes": 94992,
+        "sha256": "0e383ca240e2b83f4d761c0a2764dd32c6d5b511b7884ae51811748bb34aa04a",
+        "crc32": "b0811b91",
+        "extractedExact": true
+      },
+      {
+        "name": "TEST-desktop-backend-FpV7cb/ui-seed-receipt.json",
+        "bytes": 2335,
+        "sha256": "06f43b1b231ebe543de11a021a81b2a6b47694cb1618ba752d0dc71acd49cb36",
+        "crc32": "d27c8774",
+        "extractedExact": true
+      },
+      {
+        "name": "host-emulated-emulated-installer-ui.log",
+        "bytes": 227,
+        "sha256": "8ce5d9e0ba5bfb0978be4816d922032dd7bf49b661d989a756352db41b4abbac",
+        "crc32": "916fb4aa",
+        "extractedExact": true
+      },
+      {
+        "name": "host-emulated-inputs.json",
+        "bytes": 1055,
+        "sha256": "e99d2c057b0ac5dca3776e99de98beeb43aad997d83206d9824a9ca762b561df",
+        "crc32": "12eaabe3",
+        "extractedExact": true
+      },
+      {
+        "name": "TEST-desktop-backend-FpV7cb/userData/data/runtimes/codex/current.json",
+        "bytes": 502,
+        "sha256": "41f868a162698085057eeca8d98017af7763473638527f50ccd2c5afb2bba93e",
+        "crc32": "cbfc5fed",
+        "extractedExact": true
+      },
+      {
+        "name": "host-emulated-summary.json",
+        "bytes": 1355,
+        "sha256": "9b9045f0836922a39eae5ce36cd17d9c51018d1cacf34dbb94374ac754adb58b",
+        "crc32": "89fc40e8",
+        "extractedExact": true
+      }
+    ],
+    "allExtractedByteExact": true
+  },
+  "sourceProof": {
+    "receipt": {
+      "path": "ci-n-608efb/installer/extracted/TEST-desktop-backend-FpV7cb/desktop-backend-receipt.json",
+      "bytes": 832155,
+      "blob": "71c497ff56580296b4c390856f786364babb2ade",
+      "sha256": "4c5d1f7c15a0fcb9659a6eba56163bea7022e83f7035d298e5ad0e688abed74c"
+    },
+    "orderedBeforeAfter": true,
+    "count": 1757,
+    "freshGitBytes": 20308471,
+    "fullSourceAudit": {
+      "path": "ci-n-608efb/installer/source-pin-audit.json",
+      "bytes": 584102,
+      "blob": "0137c167ea0345dcfc0fa93b547863102bc4bea5",
+      "sha256": "53145a3e6e6863daa3e035ee3d8a6566161321ac7835f07871e2bb3d8accb39d"
+    },
+    "relevantFreshSourceLeaves": [
+      {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "bytes": 101741,
+        "lines": 1312,
+        "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+        "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b",
+        "byteEqualToM0660": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "bytes": 26261,
+        "lines": 313,
+        "blob": "cd4c8f81b07caa9b7d46f9c4f766fb978e82a40d",
+        "sha256": "a4f1f19bd9ce451946309c5aa6ed2a1437a9244494741937699360a7fe6bab60",
+        "byteEqualToM0660": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-codex-installer-ui.ts",
+        "bytes": 16522,
+        "lines": 186,
+        "blob": "f049194429d74ab3e3a6808abd7c16d9772d5606",
+        "sha256": "19b78ef8d3dd637d5ae9b71c57d1b4dcd7175be344932afb8e55c53a33f8ba9d",
+        "byteEqualToM0660": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-codex-installer-fixture.ts",
+        "bytes": 12137,
+        "lines": 153,
+        "blob": "b68eabb08c71dc31d2f9d4205cff265498fefe1f",
+        "sha256": "1818787c244d71ed8c8540ffa9acc6e749eaa8403e32f0a356d23ec99237d9b8",
+        "byteEqualToM0660": true
+      },
+      {
+        "path": "tools/owned-process-broker/fixtures/codexInstallerRegistry.cjs",
+        "bytes": 3989,
+        "lines": 61,
+        "blob": "3b05efcfb1d7c81157385429a15dc3c7fb972d57",
+        "sha256": "1ed00e251e232ccc4ed3582b4e53e9c1d239d43aeb5474b9c4d8df6d72a086fe",
+        "byteEqualToM0660": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+        "bytes": 22082,
+        "lines": 281,
+        "blob": "a9d725fbe11278dd98611b49d570c19d80684087",
+        "sha256": "3aa149837f6686e8307ba1803984874b4c673d8211094bd3e8e52b9ddb3d70cd",
+        "byteEqualToM0660": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "bytes": 25052,
+        "lines": 456,
+        "blob": "2ea000d33b7c872a4a1bcd5f2a510c8418924fe5",
+        "sha256": "9e9d4115a2216bee4f1f6bd5cdec6c0ceef5f0aef9b3968ac4611a7955a2e0c7",
+        "byteEqualToM0660": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+        "bytes": 49613,
+        "lines": 787,
+        "blob": "865494ab5f5e45c5158fbf74ac858987fb322608",
+        "sha256": "ce4d59cc5285eb78ed108dae13a44fae21d33cd73c544c720d512134f23b7f73",
+        "byteEqualToM0660": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+        "bytes": 33173,
+        "lines": 690,
+        "blob": "ed93d7422ab7a846a568a2b72437ec75931ba03b",
+        "sha256": "79c793a3005c691c367317ea26c12a7629602fa9d46fd920eeccb5579e4faf23",
+        "byteEqualToM0660": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+        "bytes": 54778,
+        "lines": 791,
+        "blob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+        "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+        "byteEqualToM0660": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-proof-sources.ts",
+        "bytes": 52632,
+        "lines": 800,
+        "blob": "a8be2617b2c765091cecce789f028ef2bf67af60",
+        "sha256": "5b6ae1e33b7567b7e72d0862f0253ca25875a696e653a86c61580a492601d69a",
+        "byteEqualToM0660": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+        "bytes": 20996,
+        "lines": 323,
+        "blob": "f1bfeb0235ed6fc4f80daba16aefda0364ee7e9d",
+        "sha256": "7789d31cd807d8e71fd40d45038ed3266eff98e9c877cc738fcae688e3b5e37b",
+        "byteEqualToM0660": true
+      },
+      {
+        "path": "tools/owned-process-broker/fixtures/providerPeer.mjs",
+        "bytes": 9569,
+        "lines": 153,
+        "blob": "44c8cba99e4932905da77539a59c904a39da4e36",
+        "sha256": "e34c78358e85d3e841e4f9fb7941e77ce9b5f8b757dac434c3fe5ec5dbfdccdd",
+        "byteEqualToM0660": true
+      },
+      {
+        "path": "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+        "bytes": 39026,
+        "lines": 562,
+        "blob": "76f5d1953816fd125f576a966c42caefcfc297e2",
+        "sha256": "94cc5c1faed9d9d6d82d6db8e5fb7e36f292fa7335ff60ffc0648009a0d2b43a",
+        "byteEqualToM0660": true
+      },
+      {
+        "path": "src/renderer/store/slices/teamSlice.ts",
+        "bytes": 184647,
+        "lines": 5017,
+        "blob": "df9dd8391bdd9fcd2edc05057fa18a8cbd787dad",
+        "sha256": "87f07dfa0d132d20493add182d0bb05d40fa1c5f97b5ddb72fa9ab23b6df8e9a",
+        "byteEqualToM0660": true
+      },
+      {
+        "path": "src/renderer/store/team/teamProvisioningStateRules.ts",
+        "bytes": 1661,
+        "lines": 56,
+        "blob": "088f69076851992ecf9030454f666c1a32e2e6c6",
+        "sha256": "d8beccd49e61fd1b23a04fc17a355b7907f37bb9fc48eed42f1b8bb84cb67135",
+        "byteEqualToM0660": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+        "bytes": 8310,
+        "lines": 172,
+        "blob": "0b0fc2a68fe678ebbce24227bf6e6002d12701d9",
+        "sha256": "10da3dd44dedec7e1230e1821f5ff75d9b6ec3aeb7a8352cb6820c26e40528c7",
+        "byteEqualToM0660": false
+      }
+    ],
+    "completeMToNNonDocumentationDelta": [
+      "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts"
+    ],
+    "orderedMToNSelectedPinDifferences": [
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+        "Msha256": "df315063bd119870f52b932daf72880ac4ea40340e023049a236fed79e505c37",
+        "Nsha256": "10da3dd44dedec7e1230e1821f5ff75d9b6ec3aeb7a8352cb6820c26e40528c7"
+      }
+    ],
+    "compiledDigestsRecordedOnly": [
+      {
+        "path": "main/chunks/index-D9GX0Q6a.cjs",
+        "sha256": "89c988b7be61f7f30f0effaed6a2626a2279b0ed753228360e77e227884d0a92"
+      },
+      {
+        "path": "main/chunks/index-yaJFGvjB.cjs",
+        "sha256": "ec64b11e28a53961fd7846392857a0167886b8b086d14f54e20041ddc9927155"
+      },
+      {
+        "path": "main/chunks/memberWorkSyncTeamIdentity-BKWiAXQn.cjs",
+        "sha256": "7babbc9bd69c863a2210647b3d5f589d96437a9a80fd794b54196387849217f6"
+      },
+      {
+        "path": "main/chunks/TaskBoundaryParser-Zk2WZzJg.cjs",
+        "sha256": "c14cfc36aeec6fd7103c507f258097aaeccf552dbbf608fea43f9e3c7a7ef3b3"
+      },
+      {
+        "path": "main/chunks/taskChangeState-rZolvpL6.cjs",
+        "sha256": "f40557112189b351692a4b0f19244d7845a4dfe754f468326a21c36386efa1cd"
+      },
+      {
+        "path": "main/chunks/taskHistory-2kbwfqIg.cjs",
+        "sha256": "1d336b6cea5aa5c4768954541a24347fe89bb46a83faddaf8b26fd6e0afb7f85"
+      },
+      {
+        "path": "main/chunks/TeamDataService-DySh5-O-.cjs",
+        "sha256": "ed455bf2423e0511bf1fb8e30069280fe99b505e8e4968df3705309a7131556e"
+      },
+      {
+        "path": "main/chunks/teamTaskSnapshotCompaction-mUovQwio.cjs",
+        "sha256": "2915a9af73772eda67fa92bd4499976d75724d9605cc947e356bd1dc1cee600c"
+      },
+      {
+        "path": "main/index.cjs",
+        "sha256": "047e62401bd12685acfbff8675c1afe006b894b5b32fceba6ec26332faa36ef1"
+      },
+      {
+        "path": "main/internal-storage-worker.cjs",
+        "sha256": "3433cb94575a5748d3133174952698af2a98ac2afb348cb159fcb1110e0b284f"
+      },
+      {
+        "path": "main/task-change-worker.cjs",
+        "sha256": "f8fcc24dd4dc9842cd0f70ffe02891d39eef84019d4aab4ed21b529ba9326446"
+      },
+      {
+        "path": "main/team-data-worker.cjs",
+        "sha256": "dc145e9f1fb5fdfa2e5f51ca6d6f2db8e22e89cb3ab34dae2745ccfd4e6f3823"
+      },
+      {
+        "path": "main/team-fs-worker.cjs",
+        "sha256": "6e6410a44a3d1b97065085259858215045ed137b5bd0dd27bf70f797091c9c83"
+      },
+      {
+        "path": "preload/index.js",
+        "sha256": "4f02e5f1659bb0373f5515d81c7edf5f9bc7af8b67a39f1600171f8acb291406"
+      }
+    ],
+    "runtimePins": {
+      "nodeSha256": "e4b5a3af0e05c75de2eae013904145f40fe7fc2a6e6f17510128bf45cca4e79b",
+      "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+      "corepackPackageSha256": "6f431b9a91afe6b4757f4b5a3855e2f79e2f366dd4242fd397713932aa3a2714",
+      "corepackLibrarySha256": "abd6f0e7b4e2af310243e202fd908ea64cda545786222f0a3d3f62426e8ad66e",
+      "pnpmStubSha256": "380f646a614fc3504d46dce65383efe5070feeed78a027d6238cdfd3ea5caf60",
+      "profileSha256": "496c2bc71538c8317d4548237b16654e83087cf19fd5e1d505c73c32cfb771e2",
+      "descriptorSha256": "ded70f7f97712ba0a66c83b3c122862c4de5c5c6ee3d8e5dd573a544dd523ff0",
+      "sentinelSha256": "6548c656e46e8b1544b0cdba3e99f5ba183cbe9675ac434d101177fb7274d9a2",
+      "shellProbeSha256": "0761ef4fa4867f49c2a68e490c6d0369721d6eba3501cbc0ad31f45ad3c48548",
+      "providerArchiveSha256": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+      "pnpmSha256": "7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb",
+      "electronSha256": "8c6ba2a581b0de90f0fa1a3743c3caecaa2f81a203491f92f774ab9bfb2dcd26",
+      "smokeSourceSha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+      "fixtureSourceSha256": "58279362c05f6645881e4850807f78183eee5dc51dfb32f355ff4ded7e7c3589",
+      "uiSourceSha256": "9ea0a2063cae525d80b8a79eac4fcb79062d47fe81f9f2b72d843662a3e92abf"
+    },
+    "originalInputEnvelope": {
+      "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+      "platform": "darwin",
+      "architecture": "arm64",
+      "nativeProviders": "forbidden",
+      "values": {
+        "LEGACY_DESKTOP_BACKEND_GO": "1",
+        "LEGACY_DESKTOP_EMULATED_ONLY": "1",
+        "LEGACY_DESKTOP_COREPACK_HOME": "/Users/runner/work/_temp/TEST-emulated-ui-inputs-IKTy0B/cache",
+        "LEGACY_DESKTOP_NODE_SHA256": "e4b5a3af0e05c75de2eae013904145f40fe7fc2a6e6f17510128bf45cca4e79b",
+        "LEGACY_DESKTOP_HOST_ENTRY_SHA256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+        "LEGACY_DESKTOP_PNPM_PATH": "/Users/runner/work/_temp/TEST-emulated-ui-inputs-IKTy0B/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+        "LEGACY_DESKTOP_PNPM_SHA256": "7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb",
+        "LEGACY_DESKTOP_COREPACK_PACKAGE_SHA256": "6f431b9a91afe6b4757f4b5a3855e2f79e2f366dd4242fd397713932aa3a2714",
+        "LEGACY_DESKTOP_COREPACK_LIBRARY_SHA256": "abd6f0e7b4e2af310243e202fd908ea64cda545786222f0a3d3f62426e8ad66e"
+      }
+    },
+    "originalSummary": {
+      "status": "PASS",
+      "scope": "selected lane only",
+      "lane": "installer",
+      "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+      "completed": [
+        {
+          "mode": "emulated-installer-ui",
+          "receipt": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/desktop-backend-receipt.json",
+          "screenshots": [
+            "5d433819eacbdfe00f2ff00b2c65dc7f3b326fc158fb5bf1d1eb1de23a2756c2",
+            "878a80ccf6a39831c322b0bfe88fdf38d519924f5b60a726636a22b2018e6a1d",
+            "228ead7c53acae0e0cbcfc9e92d2d611d15b56c2575550d0b03355a21874e47a",
+            "807921c1d3b55d6a4ed4d65d9dff6a7a41bbf9304f0c422bd9f17e11157cb385",
+            "6af959846fe7ca5542b6bcc724babd18bd651e118e6c9cf81a80880f20217e28",
+            "bb5eda6a4a1f5eb2188f966bf13768e377a04652a3a0bf18f198314c8fbd06fb",
+            "0e383ca240e2b83f4d761c0a2764dd32c6d5b511b7884ae51811748bb34aa04a",
+            "82b1d86e32bbca6b2af3e107dea0f8d72006ab3213c816ff18570007a7b40476",
+            "25890abcda99375456573cc9950f3bf9113475d66e4981ba0c1e3f8799669a4a",
+            "b9085c8a2b9751599bab9d393672e48c026066209513bb549927778d8ead29b6",
+            "009a3f1009dfec6e80ab38a8c9f0f062e617612445f9059d29f4b882ae5c4a58"
+          ]
+        }
+      ],
+      "nativeProviders": "not executed",
+      "vendorAuthQualified": false,
+      "releaseQualified": false,
+      "visualReview": "original screenshots retained for independent inspection"
+    }
+  },
+  "originalCI": {
+    "node": "24.21.0",
+    "architecture": "darwin-arm64",
+    "testCommands": [
+      "node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+      "node --test test/scripts/installDependenciesWithRetry.test.mjs"
+    ],
+    "counts": {
+      "tests": [
+        115,
+        7
+      ],
+      "pass": [
+        114,
+        7
+      ],
+      "fail": [
+        0,
+        0
+      ],
+      "cancelled": [
+        0,
+        0
+      ],
+      "skipped": [
+        1,
+        0
+      ]
+    },
+    "originalSkip": "Linux CDP diagnostics retain the original bounded descriptor read without accepting a second holder",
+    "TeamContractStep9": "SKIPPED",
+    "CompleteTypesAndTypedLintStep10": "SKIPPED",
+    "originalDesktopArgv": "node scripts/legacy-agent-host/desktop-backend-smoke.ts",
+    "modeEnvironment": "emulated-installer-ui",
+    "fullLogMatchesOriginalDecodedMCPResponse": true,
+    "teeLinesAppearByteExactAfterJobTimestampRemoval": true,
+    "freshBuildCommands": [
+      "pnpm --filter @agent-teams/legacy-agent-host build",
+      "pnpm --filter agent-teams-controller build",
+      "pnpm --filter agent-teams-mcp build"
+    ],
+    "buildQualification": "Original successful job steps and recorded resulting compiled digests; no independent rebuild, no archived complete built payload."
+  },
+  "business": {
+    "recordedStepCount": 122,
+    "stepKinds": {
+      "mouseMoved": 55,
+      "mouseClick": 55,
+      "passiveObservation": 1,
+      "mouseWheel": 11
+    },
+    "trustedInputObservationCount": 7,
+    "semanticClicks": {
+      "Update": 1,
+      "Create": 1,
+      "Launch": 2,
+      "streamSend": 1,
+      "Stop": 2
+    },
+    "steps": [
+      {
+        "action": "mouseMoved",
+        "label": "hover sidebar row before measuring click",
+        "subject": "TEST persisted Host sidebar seed",
+        "target": {
+          "x": 885,
+          "y": 174.875
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "sidebar task",
+        "subject": "TEST persisted Host sidebar seed",
+        "target": {
+          "x": 885,
+          "y": 174.875
+        },
+        "state": "attempted"
+      },
+      {
+        "observation": "passive input delivery after sidebar click",
+        "value": {
+          "focused": true,
+          "visibility": "visible",
+          "events": [
+            {
+              "type": "pointerdown",
+              "timeMs": 46014,
+              "x": 885,
+              "y": 174.875,
+              "button": 0,
+              "buttons": 1,
+              "trusted": true,
+              "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+              "target": {
+                "tag": "SPAN",
+                "id": "",
+                "ariaLabel": null,
+                "className": ""
+              },
+              "focusBefore": {
+                "tag": "INPUT",
+                "id": "",
+                "ariaLabel": null,
+                "className": "min-w-0 flex-1 bg-transparent text-base text-text outline-none placeholder:text-text-muted"
+              },
+              "defaultPreventedBefore": false,
+              "sidebarRow": false,
+              "taskId": null,
+              "activeSortable": [],
+              "dragAnnouncement": [
+                ""
+              ],
+              "taskClarification": null,
+              "defaultPreventedAfterMicrotask": false,
+              "focusAfterMicrotask": {
+                "tag": "INPUT",
+                "id": "",
+                "ariaLabel": null,
+                "className": "min-w-0 flex-1 bg-transparent text-base text-text outline-none placeholder:text-text-muted"
+              },
+              "defaultPreventedAfterDispatch": false,
+              "focusAfterDispatch": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              }
+            },
+            {
+              "type": "focusout",
+              "timeMs": 46017,
+              "trusted": true,
+              "buttonClass": null,
+              "target": {
+                "tag": "INPUT",
+                "id": "",
+                "ariaLabel": null,
+                "className": "min-w-0 flex-1 bg-transparent text-base text-text outline-none placeholder:text-text-muted"
+              },
+              "focusBefore": {
+                "tag": "BODY",
+                "id": "",
+                "ariaLabel": null,
+                "className": ""
+              },
+              "defaultPreventedBefore": false,
+              "sidebarRow": false,
+              "taskId": null,
+              "activeSortable": [],
+              "dragAnnouncement": [
+                ""
+              ],
+              "defaultPreventedAfterMicrotask": false,
+              "focusAfterMicrotask": {
+                "tag": "BODY",
+                "id": "",
+                "ariaLabel": null,
+                "className": ""
+              },
+              "defaultPreventedAfterDispatch": false,
+              "focusAfterDispatch": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              }
+            },
+            {
+              "type": "focusin",
+              "timeMs": 46020,
+              "trusted": true,
+              "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+              "target": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "focusBefore": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "defaultPreventedBefore": false,
+              "sidebarRow": false,
+              "taskId": null,
+              "activeSortable": [],
+              "dragAnnouncement": [
+                ""
+              ],
+              "defaultPreventedAfterMicrotask": false,
+              "focusAfterMicrotask": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "defaultPreventedAfterDispatch": false,
+              "focusAfterDispatch": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              }
+            },
+            {
+              "type": "pointerup",
+              "timeMs": 46023,
+              "x": 885,
+              "y": 174.875,
+              "button": 0,
+              "buttons": 0,
+              "trusted": true,
+              "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+              "target": {
+                "tag": "SPAN",
+                "id": "",
+                "ariaLabel": null,
+                "className": ""
+              },
+              "focusBefore": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "defaultPreventedBefore": false,
+              "sidebarRow": false,
+              "taskId": null,
+              "activeSortable": [],
+              "dragAnnouncement": [
+                ""
+              ],
+              "taskClarification": null,
+              "defaultPreventedAfterMicrotask": false,
+              "focusAfterMicrotask": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "defaultPreventedAfterDispatch": false,
+              "focusAfterDispatch": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              }
+            },
+            {
+              "type": "click",
+              "timeMs": 46024,
+              "x": 885,
+              "y": 174,
+              "button": 0,
+              "buttons": 0,
+              "trusted": true,
+              "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+              "target": {
+                "tag": "SPAN",
+                "id": "",
+                "ariaLabel": null,
+                "className": ""
+              },
+              "focusBefore": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "defaultPreventedBefore": false,
+              "sidebarRow": false,
+              "taskId": null,
+              "activeSortable": [],
+              "dragAnnouncement": [
+                ""
+              ],
+              "taskClarification": null,
+              "defaultPreventedAfterMicrotask": false,
+              "focusAfterMicrotask": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "defaultPreventedAfterDispatch": false,
+              "focusAfterDispatch": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              }
+            },
+            {
+              "type": "focusout",
+              "timeMs": 46053,
+              "trusted": true,
+              "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+              "target": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "focusBefore": {
+                "tag": "BODY",
+                "id": "",
+                "ariaLabel": null,
+                "className": ""
+              },
+              "defaultPreventedBefore": false,
+              "sidebarRow": false,
+              "taskId": null,
+              "activeSortable": [],
+              "dragAnnouncement": [
+                ""
+              ],
+              "defaultPreventedAfterMicrotask": false,
+              "focusAfterMicrotask": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              },
+              "defaultPreventedAfterDispatch": false,
+              "focusAfterDispatch": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              }
+            },
+            {
+              "type": "focusin",
+              "timeMs": 46059,
+              "trusted": true,
+              "buttonClass": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--",
+              "target": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              },
+              "focusBefore": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              },
+              "defaultPreventedBefore": false,
+              "sidebarRow": false,
+              "taskId": null,
+              "activeSortable": [],
+              "dragAnnouncement": [
+                ""
+              ],
+              "defaultPreventedAfterMicrotask": false,
+              "focusAfterMicrotask": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              },
+              "defaultPreventedAfterDispatch": false,
+              "focusAfterDispatch": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover Open team",
+        "selector": "[role=\"dialog\"] button",
+        "target": {
+          "x": 848.2926025390625,
+          "y": 102.64375305175781,
+          "text": "Open team",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "Open team",
+        "selector": "[role=\"dialog\"] button",
+        "expectedText": "Open team",
+        "target": {
+          "x": 865.9921875,
+          "y": 90.125,
+          "text": "Open team",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover open original saved Team Launch",
+        "selector": "button",
+        "target": {
+          "x": 664.9375,
+          "y": 174,
+          "text": "Launch",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "open original saved Team Launch",
+        "selector": "button",
+        "expectedText": "Launch",
+        "target": {
+          "x": 664.9375,
+          "y": 174,
+          "text": "Launch",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover expand original saved launch settings",
+        "selector": "[role=\"dialog\"] button[aria-controls=\"_r_2l_\"]",
+        "target": {
+          "x": 512,
+          "y": 397.5,
+          "text": "Optional launch settingsOptional•Codex•TEST-model•Fresh lead session",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "expand original saved launch settings",
+        "selector": "[role=\"dialog\"] button[aria-controls=\"_r_2l_\"]",
+        "target": {
+          "x": 512,
+          "y": 379.75,
+          "text": "Optional launch settingsOptional•Codex•TEST-model•Fresh lead session",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover expand original captured lead model",
+        "selector": "[role=\"dialog\"] [data-role=\"lead-row\"] button[aria-label^=\"Codex provider,\"]",
+        "target": {
+          "x": 588.7109375,
+          "y": 572.546875,
+          "text": "TEST-model",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "expand original captured lead model",
+        "selector": "[role=\"dialog\"] [data-role=\"lead-row\"] button[aria-label^=\"Codex provider,\"]",
+        "target": {
+          "x": 588.7109375,
+          "y": 572.546875,
+          "text": "TEST-model",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseWheel",
+        "label": "original captured effort",
+        "selector": "[role=\"dialog\"] [data-role=\"lead-row\"] #lead-effort",
+        "deltaY": 600
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover select original Low effort",
+        "selector": "[role=\"dialog\"] [data-role=\"lead-row\"] div:has(> #lead-effort) > button",
+        "target": {
+          "x": 300.421875,
+          "y": 415.921875,
+          "text": "Low",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "select original Low effort",
+        "selector": "[role=\"dialog\"] [data-role=\"lead-row\"] div:has(> #lead-effort) > button",
+        "expectedText": "Low",
+        "target": {
+          "x": 300.421875,
+          "y": 415.921875,
+          "text": "Low",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseWheel",
+        "label": "original input",
+        "selector": "[role=\"dialog\"] #dialog-prompt",
+        "deltaY": 275.3046875
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover focus original input",
+        "selector": "[role=\"dialog\"] #dialog-prompt",
+        "target": {
+          "x": 506.5,
+          "y": 340.796875,
+          "text": "",
+          "tag": "TEXTAREA"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "focus original input",
+        "selector": "[role=\"dialog\"] #dialog-prompt",
+        "target": {
+          "x": 506.5,
+          "y": 340.796875,
+          "text": "",
+          "tag": "TEXTAREA"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseWheel",
+        "label": "original Launch team",
+        "selector": "[role=\"dialog\"] button",
+        "deltaY": 304.3046875
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover launch original selection once",
+        "selector": "[role=\"dialog\"] button",
+        "target": {
+          "x": 810.1484375,
+          "y": 505.796875,
+          "text": "Launch team",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "launch original selection once",
+        "selector": "[role=\"dialog\"] button",
+        "expectedText": "Launch team",
+        "target": {
+          "x": 810.1484375,
+          "y": 505.796875,
+          "text": "Launch team",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover open original lead conversation",
+        "selector": "button[aria-label^=\"alice,\"]",
+        "target": {
+          "x": 169.5,
+          "y": 178,
+          "text": "aliceYou: TEST_UI_BOOT03:24 AM",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "open original lead conversation",
+        "selector": "button[aria-label^=\"alice,\"]",
+        "target": {
+          "x": 169.5,
+          "y": 186.5,
+          "text": "aliceTEST boot ready03:24 AM11",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover open original application menu",
+        "selector": "button[aria-label=\"More actions\"]",
+        "target": {
+          "x": 1008,
+          "y": 19.5,
+          "text": "",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "open original application menu",
+        "selector": "button[aria-label=\"More actions\"]",
+        "target": {
+          "x": 1008,
+          "y": 19.5,
+          "text": "",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover open original Teams list",
+        "selector": "button",
+        "target": {
+          "x": 896,
+          "y": 60.5,
+          "text": "Teams",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "open original Teams list",
+        "selector": "button",
+        "expectedText": "Teams",
+        "target": {
+          "x": 896,
+          "y": 60.5,
+          "text": "Teams",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover open original Create Team dialog",
+        "selector": "div.mb-4 > div > div > button.gap-2",
+        "target": {
+          "x": 658.8671875,
+          "y": 74,
+          "text": "Create Team",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "open original Create Team dialog",
+        "selector": "div.mb-4 > div > div > button.gap-2",
+        "expectedText": "Create Team",
+        "target": {
+          "x": 658.8671875,
+          "y": 74,
+          "text": "Create Team",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover focus original team name",
+        "selector": "[data-testid=\"create-team-page\"] #team-name",
+        "target": {
+          "x": 208,
+          "y": 163,
+          "text": "",
+          "tag": "INPUT"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "focus original team name",
+        "selector": "[data-testid=\"create-team-page\"] #team-name",
+        "target": {
+          "x": 208,
+          "y": 163,
+          "text": "",
+          "tag": "INPUT"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover choose original custom project mode",
+        "selector": "[data-testid=\"create-team-page\"] button",
+        "target": {
+          "x": 203.2109375,
+          "y": 458,
+          "text": "Custom path",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "choose original custom project mode",
+        "selector": "[data-testid=\"create-team-page\"] button",
+        "expectedText": "Custom path",
+        "target": {
+          "x": 203.2109375,
+          "y": 458,
+          "text": "Custom path",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover type TEST workspace",
+        "selector": "[data-testid=\"create-team-page\"] input[placeholder=\"/absolute/path/to/project\"]",
+        "target": {
+          "x": 455.375,
+          "y": 459,
+          "text": "",
+          "tag": "INPUT"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "type TEST workspace",
+        "selector": "[data-testid=\"create-team-page\"] input[placeholder=\"/absolute/path/to/project\"]",
+        "target": {
+          "x": 455.375,
+          "y": 459,
+          "text": "",
+          "tag": "INPUT"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover expand original Create launch settings",
+        "selector": "[data-testid=\"create-team-page\"] button[aria-controls=\"_r_5h_\"]",
+        "target": {
+          "x": 366.5,
+          "y": 631,
+          "text": "Optional launch settingsOptional•Tools auto•Fast disabled",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "expand original Create launch settings",
+        "selector": "[data-testid=\"create-team-page\"] button[aria-controls=\"_r_5h_\"]",
+        "target": {
+          "x": 366.5,
+          "y": 631,
+          "text": "Optional launch settingsOptional•Tools auto•Fast disabled",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseWheel",
+        "label": "original Create approval choice",
+        "selector": "[data-testid=\"create-team-page\"] #create-skip-permissions",
+        "deltaY": 570
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover retain tool confirmations for saved Team",
+        "selector": "[data-testid=\"create-team-page\"] #create-skip-permissions",
+        "target": {
+          "x": 58,
+          "y": 360.5,
+          "text": "",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "retain tool confirmations for saved Team",
+        "selector": "[data-testid=\"create-team-page\"] #create-skip-permissions",
+        "target": {
+          "x": 58,
+          "y": 360.5,
+          "text": "",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseWheel",
+        "label": "original immediate-launch checkbox",
+        "selector": "[data-testid=\"create-team-page\"] #launch-team",
+        "deltaY": -426.5
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover select original save-only Create",
+        "selector": "[data-testid=\"create-team-page\"] #launch-team",
+        "target": {
+          "x": 41,
+          "y": 360,
+          "text": "",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "select original save-only Create",
+        "selector": "[data-testid=\"create-team-page\"] #launch-team",
+        "target": {
+          "x": 41,
+          "y": 360,
+          "text": "",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover open original lead model selector",
+        "selector": "[data-testid=\"create-team-page\"] button[aria-label*=\" provider,\"]",
+        "target": {
+          "x": 460.6875,
+          "y": 314,
+          "text": "Opus 4.8",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "open original lead model selector",
+        "selector": "[data-testid=\"create-team-page\"] button[aria-label*=\" provider,\"]",
+        "target": {
+          "x": 460.6875,
+          "y": 314,
+          "text": "Opus 4.8",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover select original Codex provider",
+        "selector": "[data-testid=\"create-team-page\"] [data-testid=\"team-model-selector-provider-nav-codex\"]",
+        "target": {
+          "x": 128.5,
+          "y": 451,
+          "text": "Codex",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "select original Codex provider",
+        "selector": "[data-testid=\"create-team-page\"] [data-testid=\"team-model-selector-provider-nav-codex\"]",
+        "target": {
+          "x": 128.5,
+          "y": 451,
+          "text": "Codex",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover open original Codex Update dialog",
+        "selector": "[data-testid=\"codex-runtime-update-notice\"] button",
+        "target": {
+          "x": 583.3984375,
+          "y": 380.25,
+          "text": "Update v0.162.0 → v0.169.0",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "open original Codex Update dialog",
+        "selector": "[data-testid=\"codex-runtime-update-notice\"] button",
+        "target": {
+          "x": 583.3984375,
+          "y": 380.25,
+          "text": "Update v0.162.0 → v0.169.0",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover install original Codex package exactly once",
+        "selector": "[role=\"dialog\"] button",
+        "target": {
+          "x": 618.921875,
+          "y": 378.5,
+          "text": "Update v0.162.0 → v0.169.0",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "install original Codex package exactly once",
+        "selector": "[role=\"dialog\"] button",
+        "expectedText": "Update v0.162.0 → v0.169.0",
+        "target": {
+          "x": 618.921875,
+          "y": 378.5,
+          "text": "Update v0.162.0 → v0.169.0",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover close original completed Update dialog",
+        "selector": "[role=\"dialog\"] > div.flex-col-reverse > button",
+        "target": {
+          "x": 691.3984375,
+          "y": 416.5,
+          "text": "Close",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "close original completed Update dialog",
+        "selector": "[role=\"dialog\"] > div.flex-col-reverse > button",
+        "expectedText": "Close",
+        "target": {
+          "x": 691.3984375,
+          "y": 416.5,
+          "text": "Close",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover select original second model",
+        "selector": "[data-testid=\"create-team-page\"] [data-testid=\"team-model-selector-model-option\"][aria-label^=\"TEST next model\"]",
+        "target": {
+          "x": 308.1640625,
+          "y": 559.328125,
+          "text": "TEST next model",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "select original second model",
+        "selector": "[data-testid=\"create-team-page\"] [data-testid=\"team-model-selector-model-option\"][aria-label^=\"TEST next model\"]",
+        "target": {
+          "x": 308.1640625,
+          "y": 559.328125,
+          "text": "TEST next model",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseWheel",
+        "label": "original effort choices",
+        "selector": "[data-testid=\"create-team-page\"] #lead-effort",
+        "deltaY": 352.5
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover select original High effort",
+        "selector": "[data-testid=\"create-team-page\"] div:has(> #lead-effort) > button",
+        "target": {
+          "x": 227.4609375,
+          "y": 360,
+          "text": "High",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "select original High effort",
+        "selector": "[data-testid=\"create-team-page\"] div:has(> #lead-effort) > button",
+        "expectedText": "High",
+        "target": {
+          "x": 227.4609375,
+          "y": 360,
+          "text": "High",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseWheel",
+        "label": "original save-only Create action",
+        "selector": "[data-testid=\"create-team-page\"] button",
+        "deltaY": 306.375
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover save original second selection once",
+        "selector": "[data-testid=\"create-team-page\"] button",
+        "target": {
+          "x": 653,
+          "y": 640.875,
+          "text": "Create",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "save original second selection once",
+        "selector": "[data-testid=\"create-team-page\"] button",
+        "expectedText": "Create",
+        "target": {
+          "x": 653,
+          "y": 640.875,
+          "text": "Create",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover open original application menu",
+        "selector": "button[aria-label=\"More actions\"]",
+        "target": {
+          "x": 1008,
+          "y": 19.5,
+          "text": "",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "open original application menu",
+        "selector": "button[aria-label=\"More actions\"]",
+        "target": {
+          "x": 1008,
+          "y": 19.5,
+          "text": "",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover open original Teams list",
+        "selector": "button",
+        "target": {
+          "x": 896,
+          "y": 60.5,
+          "text": "Teams",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "open original Teams list",
+        "selector": "button",
+        "expectedText": "Teams",
+        "target": {
+          "x": 896,
+          "y": 60.5,
+          "text": "Teams",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover open original captured Team",
+        "selector": "[data-team-name=\"host-team:c99b5f5a-0943-5f0d-9c89-f0a877d28de3\"]",
+        "target": {
+          "x": 553,
+          "y": 228,
+          "text": "test-selection-next-teamUnknownNo descriptionteam-leadlead0/0workspace",
+          "tag": "DIV"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "open original captured Team",
+        "selector": "[data-team-name=\"host-team:c99b5f5a-0943-5f0d-9c89-f0a877d28de3\"]",
+        "target": {
+          "x": 553,
+          "y": 228,
+          "text": "test-selection-next-teamOfflineNo descriptionteam-leadlead0/0workspace",
+          "tag": "DIV"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover open original saved Team Launch",
+        "selector": "button",
+        "target": {
+          "x": 664.9375,
+          "y": 174,
+          "text": "Launch",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "open original saved Team Launch",
+        "selector": "button",
+        "expectedText": "Launch",
+        "target": {
+          "x": 664.9375,
+          "y": 174,
+          "text": "Launch",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover expand original saved launch settings",
+        "selector": "[role=\"dialog\"] button[aria-controls=\"_r_2h_\"]",
+        "target": {
+          "x": 506.5,
+          "y": 457.046875,
+          "text": "Optional launch settingsOptional•Codex•TEST-model-next•high•+2",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "expand original saved launch settings",
+        "selector": "[role=\"dialog\"] button[aria-controls=\"_r_2h_\"]",
+        "target": {
+          "x": 506.5,
+          "y": 457.046875,
+          "text": "Optional launch settingsOptional•Codex•TEST-model-next•high•+2",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseWheel",
+        "label": "original captured lead model",
+        "selector": "[role=\"dialog\"] [data-role=\"lead-row\"] button[aria-label^=\"Codex provider,\"]",
+        "deltaY": 371.0546875
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover expand original captured lead model",
+        "selector": "[role=\"dialog\"] [data-role=\"lead-row\"] button[aria-label^=\"Codex provider,\"]",
+        "target": {
+          "x": 588.7109375,
+          "y": 340.546875,
+          "text": "TEST-model-next",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "expand original captured lead model",
+        "selector": "[role=\"dialog\"] [data-role=\"lead-row\"] button[aria-label^=\"Codex provider,\"]",
+        "target": {
+          "x": 588.7109375,
+          "y": 340.546875,
+          "text": "TEST-model-next",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseWheel",
+        "label": "original input",
+        "selector": "[role=\"dialog\"] #dialog-prompt",
+        "deltaY": 600
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover focus original input",
+        "selector": "[role=\"dialog\"] #dialog-prompt",
+        "target": {
+          "x": 506.5,
+          "y": 383.296875,
+          "text": "",
+          "tag": "TEXTAREA"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "focus original input",
+        "selector": "[role=\"dialog\"] #dialog-prompt",
+        "target": {
+          "x": 506.5,
+          "y": 383.296875,
+          "text": "",
+          "tag": "TEXTAREA"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseWheel",
+        "label": "original Launch team",
+        "selector": "[role=\"dialog\"] button",
+        "deltaY": 346.8046875
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover launch original selection once",
+        "selector": "[role=\"dialog\"] button",
+        "target": {
+          "x": 810.1484375,
+          "y": 505.296875,
+          "text": "Launch team",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "launch original selection once",
+        "selector": "[role=\"dialog\"] button",
+        "expectedText": "Launch team",
+        "target": {
+          "x": 810.1484375,
+          "y": 505.296875,
+          "text": "Launch team",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover open original lead conversation",
+        "selector": "button[aria-label^=\"lead,\"]",
+        "target": {
+          "x": 169.5,
+          "y": 178,
+          "text": "leadNo messages yet",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "open original lead conversation",
+        "selector": "button[aria-label^=\"lead,\"]",
+        "target": {
+          "x": 169.5,
+          "y": 178,
+          "text": "leadTEST boot ready03:25 AM",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover open original Settings menu after Update",
+        "selector": "button[aria-label=\"More actions\"]",
+        "target": {
+          "x": 1008,
+          "y": 19.5,
+          "text": "",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "open original Settings menu after Update",
+        "selector": "button[aria-label=\"More actions\"]",
+        "target": {
+          "x": 1008,
+          "y": 19.5,
+          "text": "",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover open original Settings after Update",
+        "selector": "button",
+        "target": {
+          "x": 896,
+          "y": 92.5,
+          "text": "Settings",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "open original Settings after Update",
+        "selector": "button",
+        "expectedText": "Settings",
+        "target": {
+          "x": 896,
+          "y": 92.5,
+          "text": "Settings",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover open original Providers settings after Update",
+        "selector": "[data-testid=\"settings-nav-providers\"]",
+        "target": {
+          "x": 95.5,
+          "y": 190,
+          "text": "Providers",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "open original Providers settings after Update",
+        "selector": "[data-testid=\"settings-nav-providers\"]",
+        "target": {
+          "x": 95.5,
+          "y": 190,
+          "text": "Providers",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseWheel",
+        "label": "original Codex Manage after Update",
+        "selector": "[data-testid=\"provider-settings-page\"] [data-testid=\"runtime-manage-codex\"]",
+        "deltaY": 600
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover open original Codex Manage after Update",
+        "selector": "[data-testid=\"provider-settings-page\"] [data-testid=\"runtime-manage-codex\"]",
+        "target": {
+          "x": 627.5703125,
+          "y": 431.75,
+          "text": "Manage",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "open original Codex Manage after Update",
+        "selector": "[data-testid=\"provider-settings-page\"] [data-testid=\"runtime-manage-codex\"]",
+        "target": {
+          "x": 627.5703125,
+          "y": 431.75,
+          "text": "Manage",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover open original application menu",
+        "selector": "button[aria-label=\"More actions\"]",
+        "target": {
+          "x": 1008,
+          "y": 19.5,
+          "text": "",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "open original application menu",
+        "selector": "button[aria-label=\"More actions\"]",
+        "target": {
+          "x": 1008,
+          "y": 19.5,
+          "text": "",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover open original Teams list",
+        "selector": "button",
+        "target": {
+          "x": 896,
+          "y": 60.5,
+          "text": "Teams",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "open original Teams list",
+        "selector": "button",
+        "expectedText": "Teams",
+        "target": {
+          "x": 896,
+          "y": 60.5,
+          "text": "Teams",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover open original captured Team",
+        "selector": "[data-team-name=\"host-team:TEST-desktop-handle-TEST-desktop-backend-FpV7cb\"]",
+        "target": {
+          "x": 553,
+          "y": 228,
+          "text": "TEST private backendRunningNo descriptionalicelead0/11 pendingworkspace",
+          "tag": "DIV"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "open original captured Team",
+        "selector": "[data-team-name=\"host-team:TEST-desktop-handle-TEST-desktop-backend-FpV7cb\"]",
+        "target": {
+          "x": 553,
+          "y": 228,
+          "text": "TEST private backendRunningNo descriptionalicelead0/11 pendingworkspace",
+          "tag": "DIV"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover open original lead conversation",
+        "selector": "button[aria-label^=\"alice,\"]",
+        "target": {
+          "x": 169.5,
+          "y": 178,
+          "text": "aliceTEST boot ready03:24 AM",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "open original lead conversation",
+        "selector": "button[aria-label^=\"alice,\"]",
+        "target": {
+          "x": 169.5,
+          "y": 178,
+          "text": "aliceTEST boot ready03:24 AM",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover focus original input",
+        "selector": ".message-composer-flat-layout textarea",
+        "target": {
+          "x": 169.5,
+          "y": 543,
+          "text": "",
+          "tag": "TEXTAREA"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "focus original input",
+        "selector": ".message-composer-flat-layout textarea",
+        "target": {
+          "x": 169.5,
+          "y": 543,
+          "text": "",
+          "tag": "TEXTAREA"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover send original held stream once",
+        "selector": "button.message-composer-send-button",
+        "target": {
+          "x": 281.265625,
+          "y": 567,
+          "text": "Send",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "send original held stream once",
+        "selector": "button.message-composer-send-button",
+        "expectedText": "Send",
+        "target": {
+          "x": 281.265625,
+          "y": 567,
+          "text": "Send",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover open original application menu",
+        "selector": "button[aria-label=\"More actions\"]",
+        "target": {
+          "x": 1008,
+          "y": 19.5,
+          "text": "",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "open original application menu",
+        "selector": "button[aria-label=\"More actions\"]",
+        "target": {
+          "x": 1008,
+          "y": 19.5,
+          "text": "",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover open original Teams list",
+        "selector": "button",
+        "target": {
+          "x": 896,
+          "y": 60.5,
+          "text": "Teams",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "open original Teams list",
+        "selector": "button",
+        "expectedText": "Teams",
+        "target": {
+          "x": 896,
+          "y": 60.5,
+          "text": "Teams",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover open original captured Team",
+        "selector": "[data-team-name=\"host-team:c99b5f5a-0943-5f0d-9c89-f0a877d28de3\"]",
+        "target": {
+          "x": 553,
+          "y": 228,
+          "text": "test-selection-next-teamRunningNo descriptionteam-leadlead0/0workspace",
+          "tag": "DIV"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "open original captured Team",
+        "selector": "[data-team-name=\"host-team:c99b5f5a-0943-5f0d-9c89-f0a877d28de3\"]",
+        "target": {
+          "x": 553,
+          "y": 228,
+          "text": "test-selection-next-teamRunningNo descriptionteam-leadlead0/0workspace",
+          "tag": "DIV"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover stop original selected Team once",
+        "selector": "button[aria-label=\"Stop\"]",
+        "target": {
+          "x": 622.515625,
+          "y": 68,
+          "text": "Stop",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "stop original selected Team once",
+        "selector": "button[aria-label=\"Stop\"]",
+        "expectedText": "Stop",
+        "target": {
+          "x": 622.515625,
+          "y": 68,
+          "text": "Stop",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover open original application menu",
+        "selector": "button[aria-label=\"More actions\"]",
+        "target": {
+          "x": 1008,
+          "y": 19.5,
+          "text": "",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "open original application menu",
+        "selector": "button[aria-label=\"More actions\"]",
+        "target": {
+          "x": 1008,
+          "y": 19.5,
+          "text": "",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover open original Teams list",
+        "selector": "button",
+        "target": {
+          "x": 896,
+          "y": 60.5,
+          "text": "Teams",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "open original Teams list",
+        "selector": "button",
+        "expectedText": "Teams",
+        "target": {
+          "x": 896,
+          "y": 60.5,
+          "text": "Teams",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover open original captured Team",
+        "selector": "[data-team-name=\"host-team:TEST-desktop-handle-TEST-desktop-backend-FpV7cb\"]",
+        "target": {
+          "x": 191,
+          "y": 228,
+          "text": "TEST private backendRunningNo descriptionalicelead0/11 pendingworkspace",
+          "tag": "DIV"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "open original captured Team",
+        "selector": "[data-team-name=\"host-team:TEST-desktop-handle-TEST-desktop-backend-FpV7cb\"]",
+        "target": {
+          "x": 191,
+          "y": 228,
+          "text": "TEST private backendRunningNo descriptionalicelead0/11 pendingworkspace",
+          "tag": "DIV"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover return to original A chats after B Stop",
+        "selector": "button[aria-label=\"Back to chats\"]",
+        "target": {
+          "x": 26,
+          "y": 62,
+          "text": "",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "return to original A chats after B Stop",
+        "selector": "button[aria-label=\"Back to chats\"]",
+        "target": {
+          "x": 26,
+          "y": 62,
+          "text": "",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover open original lead conversation",
+        "selector": "button[aria-label^=\"alice,\"]",
+        "target": {
+          "x": 169.5,
+          "y": 178,
+          "text": "aliceTEST stream partial03:25 AM",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "open original lead conversation",
+        "selector": "button[aria-label^=\"alice,\"]",
+        "target": {
+          "x": 169.5,
+          "y": 178,
+          "text": "aliceTEST stream partial03:25 AM",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover stop original selected Team once",
+        "selector": "button[aria-label=\"Stop\"]",
+        "target": {
+          "x": 622.515625,
+          "y": 68,
+          "text": "Stop",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "stop original selected Team once",
+        "selector": "button[aria-label=\"Stop\"]",
+        "expectedText": "Stop",
+        "target": {
+          "x": 622.515625,
+          "y": 68,
+          "text": "Stop",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      }
+    ],
+    "originalObservations": [
+      {
+        "phase": "before-create",
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-FpV7cb",
+          "teamId": "TEST-desktop-team",
+          "runId": "fc634dc1-8af8-5bae-8cff-4a30386b741e",
+          "memberId": "alice-id",
+          "generation": "capture-d8d1db9f-81d2-5d9b-a7c4-412825fda29d"
+        },
+        "sessionRef": "b429458a-876c-52b0-be0d-8a62c3fd7ef1",
+        "thread": {
+          "event": "thread-selection",
+          "threadId": "TEST-thread-15304",
+          "model": "TEST-model",
+          "effort": "low",
+          "runtimeMcp": true,
+          "provider": "codex",
+          "role": "runtime",
+          "pid": 15304
+        },
+        "nativeReady": true,
+        "originalInputsUnchanged": true
+      },
+      {
+        "phase": "before-original-installer-update",
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-FpV7cb",
+          "teamId": "TEST-desktop-team",
+          "runId": "fc634dc1-8af8-5bae-8cff-4a30386b741e",
+          "memberId": "alice-id",
+          "generation": "capture-d8d1db9f-81d2-5d9b-a7c4-412825fda29d"
+        },
+        "sessionRef": "b429458a-876c-52b0-be0d-8a62c3fd7ef1",
+        "thread": {
+          "event": "thread-selection",
+          "threadId": "TEST-thread-15304",
+          "model": "TEST-model",
+          "effort": "low",
+          "runtimeMcp": true,
+          "provider": "codex",
+          "role": "runtime",
+          "pid": 15304
+        },
+        "nativeReady": true,
+        "originalInputsUnchanged": true
+      },
+      {
+        "phase": "after-original-installer-ready",
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-FpV7cb",
+          "teamId": "TEST-desktop-team",
+          "runId": "fc634dc1-8af8-5bae-8cff-4a30386b741e",
+          "memberId": "alice-id",
+          "generation": "capture-d8d1db9f-81d2-5d9b-a7c4-412825fda29d"
+        },
+        "sessionRef": "b429458a-876c-52b0-be0d-8a62c3fd7ef1",
+        "thread": {
+          "event": "thread-selection",
+          "threadId": "TEST-thread-15304",
+          "model": "TEST-model",
+          "effort": "low",
+          "runtimeMcp": true,
+          "provider": "codex",
+          "role": "runtime",
+          "pid": 15304
+        },
+        "nativeReady": true,
+        "originalInputsUnchanged": true
+      },
+      {
+        "phase": "after-save-only",
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-FpV7cb",
+          "teamId": "TEST-desktop-team",
+          "runId": "fc634dc1-8af8-5bae-8cff-4a30386b741e",
+          "memberId": "alice-id",
+          "generation": "capture-d8d1db9f-81d2-5d9b-a7c4-412825fda29d"
+        },
+        "sessionRef": "b429458a-876c-52b0-be0d-8a62c3fd7ef1",
+        "thread": {
+          "event": "thread-selection",
+          "threadId": "TEST-thread-15304",
+          "model": "TEST-model",
+          "effort": "low",
+          "runtimeMcp": true,
+          "provider": "codex",
+          "role": "runtime",
+          "pid": 15304
+        },
+        "nativeReady": true,
+        "originalInputsUnchanged": true
+      },
+      {
+        "phase": "after-reload-before-next-launch",
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-FpV7cb",
+          "teamId": "TEST-desktop-team",
+          "runId": "fc634dc1-8af8-5bae-8cff-4a30386b741e",
+          "memberId": "alice-id",
+          "generation": "capture-d8d1db9f-81d2-5d9b-a7c4-412825fda29d"
+        },
+        "sessionRef": "b429458a-876c-52b0-be0d-8a62c3fd7ef1",
+        "thread": {
+          "event": "thread-selection",
+          "threadId": "TEST-thread-15304",
+          "model": "TEST-model",
+          "effort": "low",
+          "runtimeMcp": true,
+          "provider": "codex",
+          "role": "runtime",
+          "pid": 15304
+        },
+        "nativeReady": true,
+        "originalInputsUnchanged": true
+      },
+      {
+        "phase": "after-next-launch",
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-FpV7cb",
+          "teamId": "TEST-desktop-team",
+          "runId": "fc634dc1-8af8-5bae-8cff-4a30386b741e",
+          "memberId": "alice-id",
+          "generation": "capture-d8d1db9f-81d2-5d9b-a7c4-412825fda29d"
+        },
+        "sessionRef": "b429458a-876c-52b0-be0d-8a62c3fd7ef1",
+        "thread": {
+          "event": "thread-selection",
+          "threadId": "TEST-thread-15304",
+          "model": "TEST-model",
+          "effort": "low",
+          "runtimeMcp": true,
+          "provider": "codex",
+          "role": "runtime",
+          "pid": 15304
+        },
+        "nativeReady": true,
+        "originalInputsUnchanged": true
+      },
+      {
+        "phase": "before-original-installer-settings",
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-FpV7cb",
+          "teamId": "TEST-desktop-team",
+          "runId": "fc634dc1-8af8-5bae-8cff-4a30386b741e",
+          "memberId": "alice-id",
+          "generation": "capture-d8d1db9f-81d2-5d9b-a7c4-412825fda29d"
+        },
+        "sessionRef": "b429458a-876c-52b0-be0d-8a62c3fd7ef1",
+        "thread": {
+          "event": "thread-selection",
+          "threadId": "TEST-thread-15304",
+          "model": "TEST-model",
+          "effort": "low",
+          "runtimeMcp": true,
+          "provider": "codex",
+          "role": "runtime",
+          "pid": 15304
+        },
+        "nativeReady": true,
+        "originalInputsUnchanged": true
+      },
+      {
+        "phase": "before-original-installer-settings",
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-FpV7cb",
+          "teamId": "2786fd7b-18c8-5430-b557-31d9f95368f0",
+          "runId": "4dd5807a-f977-55cb-8927-9dc781e70e15",
+          "memberId": "9c5f3309-c86e-5c22-970f-e586444abf56",
+          "generation": "capture-d247769d-a640-52d2-8ce0-e508a1ac0c6a"
+        },
+        "sessionRef": "1f969f5d-66f3-561f-b1b3-6c4a55f6577f",
+        "thread": {
+          "event": "thread-selection",
+          "threadId": "TEST-thread-17510",
+          "model": "TEST-model-next",
+          "effort": "high",
+          "runtimeMcp": true,
+          "provider": "codex",
+          "role": "runtime",
+          "pid": 17510
+        },
+        "nativeReady": true,
+        "originalInputsUnchanged": true
+      },
+      {
+        "phase": "after-original-installer-settings",
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-FpV7cb",
+          "teamId": "TEST-desktop-team",
+          "runId": "fc634dc1-8af8-5bae-8cff-4a30386b741e",
+          "memberId": "alice-id",
+          "generation": "capture-d8d1db9f-81d2-5d9b-a7c4-412825fda29d"
+        },
+        "sessionRef": "b429458a-876c-52b0-be0d-8a62c3fd7ef1",
+        "thread": {
+          "event": "thread-selection",
+          "threadId": "TEST-thread-15304",
+          "model": "TEST-model",
+          "effort": "low",
+          "runtimeMcp": true,
+          "provider": "codex",
+          "role": "runtime",
+          "pid": 15304
+        },
+        "nativeReady": true,
+        "originalInputsUnchanged": true
+      },
+      {
+        "phase": "after-original-installer-settings",
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-FpV7cb",
+          "teamId": "2786fd7b-18c8-5430-b557-31d9f95368f0",
+          "runId": "4dd5807a-f977-55cb-8927-9dc781e70e15",
+          "memberId": "9c5f3309-c86e-5c22-970f-e586444abf56",
+          "generation": "capture-d247769d-a640-52d2-8ce0-e508a1ac0c6a"
+        },
+        "sessionRef": "1f969f5d-66f3-561f-b1b3-6c4a55f6577f",
+        "thread": {
+          "event": "thread-selection",
+          "threadId": "TEST-thread-17510",
+          "model": "TEST-model-next",
+          "effort": "high",
+          "runtimeMcp": true,
+          "provider": "codex",
+          "role": "runtime",
+          "pid": 17510
+        },
+        "nativeReady": true,
+        "originalInputsUnchanged": true
+      },
+      {
+        "phase": "after-b-stop-during-a-input",
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-FpV7cb",
+          "teamId": "TEST-desktop-team",
+          "runId": "fc634dc1-8af8-5bae-8cff-4a30386b741e",
+          "memberId": "alice-id",
+          "generation": "capture-d8d1db9f-81d2-5d9b-a7c4-412825fda29d"
+        },
+        "sessionRef": "b429458a-876c-52b0-be0d-8a62c3fd7ef1",
+        "thread": {
+          "event": "thread-selection",
+          "threadId": "TEST-thread-15304",
+          "model": "TEST-model",
+          "effort": "low",
+          "runtimeMcp": true,
+          "provider": "codex",
+          "role": "runtime",
+          "pid": 15304
+        },
+        "nativeReady": true,
+        "originalInputsUnchanged": false
+      }
+    ],
+    "installer": {
+      "status": "PASS",
+      "nativeQualification": false,
+      "scope": "One original Update from TEST A0.162 to TEST B0.169 through stock package download/extraction/version check, manifest and Host publication while A stays alive",
+      "beforeScreenshot": {
+        "path": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/ui-emulated-selection-installer-before.png",
+        "sha256": "82b1d86e32bbca6b2af3e107dea0f8d72006ab3213c816ff18570007a7b40476"
+      },
+      "readyScreenshot": {
+        "path": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/ui-emulated-selection-installer-ready.png",
+        "sha256": "25890abcda99375456573cc9950f3bf9113475d66e4981ba0c1e3f8799669a4a"
+      },
+      "initialStatus": {
+        "installed": true,
+        "version": "0.162.0",
+        "latestVersion": "0.169.0",
+        "updateAvailable": true,
+        "source": "captured-host",
+        "state": "ready",
+        "sourceRevision": "26f84d9d05d4d05f040275f4980f575b78b49841c754fe0a9975d1c75a278ab4"
+      },
+      "installedStatus": {
+        "installed": true,
+        "version": "0.169.0",
+        "latestVersion": "0.169.0",
+        "updateAvailable": false,
+        "source": "app-managed",
+        "state": "ready",
+        "sourceRevision": "0bcdc8da4fa9ca43fa285608aae3516e2e94f500c1974c797573f06fd4ada1b4",
+        "progress": {
+          "phase": "ready",
+          "percent": 100,
+          "detail": "Codex is ready for new launches."
+        }
+      },
+      "readbackStatus": {
+        "installed": true,
+        "version": "0.169.0",
+        "latestVersion": null,
+        "updateAvailable": false,
+        "source": "app-managed",
+        "state": "checking",
+        "sourceRevision": "0bcdc8da4fa9ca43fa285608aae3516e2e94f500c1974c797573f06fd4ada1b4"
+      },
+      "installed": {
+        "manifest": {
+          "schemaVersion": 1,
+          "rootVersion": "0.169.0",
+          "platformVersion": "0.169.0-darwin-arm64",
+          "platformTarget": "aarch64-apple-darwin",
+          "binaryPath": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/userData/data/runtimes/codex/versions/0.169.0-darwin-arm64/aarch64-apple-darwin-d7bbeed6-45ea-4c1f-98ac-8fc0fe73f37c/codex/codex",
+          "integrity": "sha512-IPU94wDtt+kldV0teLfTpdzcRx5aTBjtKjTK4OZVAkl30/cbcXYps7D91Azv98HZd1oFGBHif6EIMefqn2kFcA==",
+          "installedAt": "2026-11-16T03:24:50.049Z"
+        },
+        "manifestPath": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/userData/data/runtimes/codex/current.json",
+        "manifestSha256": "41f868a162698085057eeca8d98017af7763473638527f50ccd2c5afb2bba93e",
+        "installation": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/userData/data/runtimes/codex/versions/0.169.0-darwin-arm64/aarch64-apple-darwin-d7bbeed6-45ea-4c1f-98ac-8fc0fe73f37c",
+        "executable": {
+          "path": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/userData/data/runtimes/codex/versions/0.169.0-darwin-arm64/aarch64-apple-darwin-d7bbeed6-45ea-4c1f-98ac-8fc0fe73f37c/codex/codex",
+          "sha256": "b6f12db86e5220eecad25ade72845ff1de95f69d74ac304cf2fd4736a90295bc"
+        },
+        "packageFiles": [
+          {
+            "relativePath": "codex/codex",
+            "sha256": "b6f12db86e5220eecad25ade72845ff1de95f69d74ac304cf2fd4736a90295bc",
+            "mode": 448
+          },
+          {
+            "relativePath": "path/rg",
+            "sha256": "850c97e31cc412edab3dbead7389ec6b2b9ebbf17f7a9a7ee9d0224b4d44e1ee",
+            "mode": 448
+          },
+          {
+            "relativePath": "codex/TEST-package.json",
+            "sha256": "e264a378d5f2e44588bf42f7e690b06c52b10b1fc6efb8ce0f15faffff598c2b",
+            "mode": 384
+          }
+        ]
+      },
+      "publication": {
+        "revision": "0bcdc8da4fa9ca43fa285608aae3516e2e94f500c1974c797573f06fd4ada1b4",
+        "previousRevision": "26f84d9d05d4d05f040275f4980f575b78b49841c754fe0a9975d1c75a278ab4",
+        "commandId": "feeca241-b000-4921-a6b8-561e0cb14ffc",
+        "grant": {
+          "targetId": "e7a1cbb8fc7f9f09c363d3031ccbcaf93cbd38eba2b27893936e96096ebf7852",
+          "ownerId": "TEST-desktop-owner-TEST-desktop-backend-FpV7cb",
+          "ownerRevision": "TEST-desktop-revision-1",
+          "contextId": "local",
+          "projectPath": null,
+          "runtimeId": "codex",
+          "profileId": "TEST-emulated-codex-management",
+          "configRevision": "TEST-emulated-codex-management",
+          "teamScopes": [
+            {
+              "teamId": "TEST-desktop-team",
+              "projectId": "TEST-project-TEST-desktop-backend-FpV7cb",
+              "workspaceId": "TEST-workspace-TEST-desktop-backend-FpV7cb"
+            }
+          ]
+        },
+        "candidate": {
+          "sourceKind": "app-managed",
+          "executable": {
+            "path": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/userData/data/runtimes/codex/versions/0.169.0-darwin-arm64/aarch64-apple-darwin-d7bbeed6-45ea-4c1f-98ac-8fc0fe73f37c/codex/codex",
+            "sha256": "b6f12db86e5220eecad25ade72845ff1de95f69d74ac304cf2fd4736a90295bc"
+          },
+          "nativeCli": {
+            "executable": {
+              "path": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/userData/data/runtimes/codex/versions/0.169.0-darwin-arm64/aarch64-apple-darwin-d7bbeed6-45ea-4c1f-98ac-8fc0fe73f37c/codex/codex",
+              "sha256": "b6f12db86e5220eecad25ade72845ff1de95f69d74ac304cf2fd4736a90295bc"
+            },
+            "version": "0.169.0"
+          }
+        }
+      },
+      "command": {
+        "schemaVersion": 1,
+        "commandId": "feeca241-b000-4921-a6b8-561e0cb14ffc",
+        "profileId": "TEST-emulated-codex-management",
+        "configRevision": "TEST-emulated-codex-management",
+        "providerId": "codex",
+        "fingerprint": "bd4294e33ab08ce3df88c43167abbbef24c33a5483716ca5bd11b989c8accb54",
+        "selectionDigest": "26f84d9d05d4d05f040275f4980f575b78b49841c754fe0a9975d1c75a278ab4",
+        "resourceId": "e7a1cbb8fc7f9f09c363d3031ccbcaf93cbd38eba2b27893936e96096ebf7852",
+        "resourceHeld": false,
+        "kind": "runtime.source",
+        "phase": "published",
+        "sourceId": "e7a1cbb8fc7f9f09c363d3031ccbcaf93cbd38eba2b27893936e96096ebf7852",
+        "revision": "0bcdc8da4fa9ca43fa285608aae3516e2e94f500c1974c797573f06fd4ada1b4",
+        "expectedRevision": "26f84d9d05d4d05f040275f4980f575b78b49841c754fe0a9975d1c75a278ab4",
+        "nativeVersion": "0.169.0",
+        "publicationJson": "{\"grant\":{\"targetId\":\"e7a1cbb8fc7f9f09c363d3031ccbcaf93cbd38eba2b27893936e96096ebf7852\",\"ownerId\":\"TEST-desktop-owner-TEST-desktop-backend-FpV7cb\",\"ownerRevision\":\"TEST-desktop-revision-1\",\"contextId\":\"local\",\"projectPath\":null,\"runtimeId\":\"codex\",\"profileId\":\"TEST-emulated-codex-management\",\"configRevision\":\"TEST-emulated-codex-management\",\"teamScopes\":[{\"teamId\":\"TEST-desktop-team\",\"projectId\":\"TEST-project-TEST-desktop-backend-FpV7cb\",\"workspaceId\":\"TEST-workspace-TEST-desktop-backend-FpV7cb\"}]},\"commandId\":\"feeca241-b000-4921-a6b8-561e0cb14ffc\",\"expectedRevision\":\"26f84d9d05d4d05f040275f4980f575b78b49841c754fe0a9975d1c75a278ab4\",\"candidate\":{\"sourceKind\":\"app-managed\",\"executable\":{\"path\":\"/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/userData/data/runtimes/codex/versions/0.169.0-darwin-arm64/aarch64-apple-darwin-d7bbeed6-45ea-4c1f-98ac-8fc0fe73f37c/codex/codex\",\"sha256\":\"b6f12db86e5220eecad25ade72845ff1de95f69d74ac304cf2fd4736a90295bc\"},\"nativeCli\":{\"executable\":{\"path\":\"/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/userData/data/runtimes/codex/versions/0.169.0-darwin-arm64/aarch64-apple-darwin-d7bbeed6-45ea-4c1f-98ac-8fc0fe73f37c/codex/codex\",\"sha256\":\"b6f12db86e5220eecad25ade72845ff1de95f69d74ac304cf2fd4736a90295bc\"},\"version\":\"0.169.0\"}}}",
+        "digest": "24bdc38750629ec9264218bda0b73d114cd97b3680c33feb9bc1282851e3d60d"
+      },
+      "sourceWrites": 1,
+      "updateClicks": 1,
+      "downloads": 1,
+      "initialGetSourceWrites": 0,
+      "finalGetSourceWrites": 0,
+      "originalRuntimeRetained": true,
+      "registry": [
+        {
+          "pid": 11937,
+          "event": "armed",
+          "processType": "browser",
+          "electron": "44.10.1",
+          "fixtureSha256": "81c5af595e3f2cf5ab960e2a290c7ca9efb928d695c6468aed8c8472d8f25148"
+        },
+        {
+          "pid": 11937,
+          "event": "response",
+          "kind": "latest",
+          "sequence": 1,
+          "sha256": "f7f7417e5aa18ac82e5ebb1be1c30deb7df9a0bb850b0393b44e13698658f8f7",
+          "bytes": 358
+        },
+        {
+          "pid": 11937,
+          "event": "response",
+          "kind": "latest",
+          "sequence": 2,
+          "sha256": "f7f7417e5aa18ac82e5ebb1be1c30deb7df9a0bb850b0393b44e13698658f8f7",
+          "bytes": 358
+        },
+        {
+          "pid": 11937,
+          "event": "response",
+          "kind": "latest",
+          "sequence": 3,
+          "sha256": "f7f7417e5aa18ac82e5ebb1be1c30deb7df9a0bb850b0393b44e13698658f8f7",
+          "bytes": 358
+        },
+        {
+          "pid": 11937,
+          "event": "response",
+          "kind": "platform",
+          "sequence": 4,
+          "sha256": "bc664fecc8cceb76a8caff309c1f36ed594bee8c591a6a2001bb3c67c768fff1",
+          "bytes": 276
+        },
+        {
+          "pid": 11937,
+          "event": "response",
+          "kind": "tarball",
+          "sequence": 5,
+          "sha256": "5b7e3717f1270560e7d96819822c943c0b3727a8179977ae3914434ab866ef49",
+          "bytes": 1293
+        },
+        {
+          "pid": 11937,
+          "event": "response",
+          "kind": "latest",
+          "sequence": 6,
+          "sha256": "f7f7417e5aa18ac82e5ebb1be1c30deb7df9a0bb850b0393b44e13698658f8f7",
+          "bytes": 358
+        }
+      ],
+      "invocations": [
+        {
+          "event": "invoke",
+          "pid": 14227,
+          "parentPid": 11937,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "version"
+        },
+        {
+          "event": "invoke",
+          "pid": 14225,
+          "parentPid": 12373,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 14847,
+          "parentPid": 12373,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 14848,
+          "parentPid": 12373,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 14856,
+          "parentPid": 12373,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 14873,
+          "parentPid": 12373,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 14905,
+          "parentPid": 12373,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 14916,
+          "parentPid": 12373,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 14946,
+          "parentPid": 12373,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 14955,
+          "parentPid": 12373,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 14956,
+          "parentPid": 12373,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 14957,
+          "parentPid": 12373,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 15014,
+          "parentPid": 12373,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 15099,
+          "parentPid": 12373,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 15163,
+          "parentPid": 12373,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 15257,
+          "parentPid": 12373,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 15304,
+          "parentPid": 12373,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 15333,
+          "parentPid": 12373,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 15377,
+          "parentPid": 12373,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 15378,
+          "parentPid": 12373,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 15379,
+          "parentPid": 12373,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 15411,
+          "parentPid": 12373,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 15606,
+          "parentPid": 12373,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 15614,
+          "parentPid": 12373,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 15683,
+          "parentPid": 12373,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 16187,
+          "parentPid": 12373,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 16192,
+          "parentPid": 11937,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "version"
+        },
+        {
+          "event": "invoke",
+          "pid": 16205,
+          "parentPid": 12373,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 16206,
+          "parentPid": 12373,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 16223,
+          "parentPid": 12373,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/TEST-codex-install/bin/codex",
+          "version": "0.162.0",
+          "kind": "app-server"
+        },
+        {
+          "event": "invoke",
+          "pid": 16295,
+          "parentPid": 11937,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/userData/data/runtimes/codex/installing-11937-c143824f-efb4-43a7-8ae1-440c559c531e/codex/codex",
+          "version": "0.169.0",
+          "kind": "version"
+        },
+        {
+          "event": "invoke",
+          "pid": 16312,
+          "parentPid": 11937,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/userData/data/runtimes/codex/versions/0.169.0-darwin-arm64/aarch64-apple-darwin-d7bbeed6-45ea-4c1f-98ac-8fc0fe73f37c/codex/codex",
+          "version": "0.169.0",
+          "kind": "version"
+        },
+        {
+          "event": "invoke",
+          "pid": 16325,
+          "parentPid": 12373,
+          "executable": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/userData/data/runtimes/codex/versions/0.169.0-darwin-arm64/aarch64-apple-darwin-d7bbeed6-45ea-4c1f-98ac-8fc0fe73f37c/codex/codex",
+          "version": "0.169.0",
+          "kind": "version"
+        }
+      ],
+      "fixturePins": {
+        "package": "TEST finite package, not an official Codex distribution",
+        "aVersion": "0.162.0",
+        "bVersion": "0.169.0",
+        "aSha256": "d9f7b133c7aa1dd32c40473a3650f62e1c643f97296abee8e34212c3e7b8f73a",
+        "bSha256": "b6f12db86e5220eecad25ade72845ff1de95f69d74ac304cf2fd4736a90295bc",
+        "packageSha256": "5b7e3717f1270560e7d96819822c943c0b3727a8179977ae3914434ab866ef49",
+        "integrity": "sha512-IPU94wDtt+kldV0teLfTpdzcRx5aTBjtKjTK4OZVAkl30/cbcXYps7D91Azv98HZd1oFGBHif6EIMefqn2kFcA==",
+        "preloadSha256": "1ed00e251e232ccc4ed3582b4e53e9c1d239d43aeb5474b9c4d8df6d72a086fe",
+        "pathAlias": {
+          "path": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/claude/local/node_modules/.bin/codex",
+          "target": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/TEST-codex-install/bin/codex",
+          "sha256": "d9f7b133c7aa1dd32c40473a3650f62e1c643f97296abee8e34212c3e7b8f73a"
+        }
+      },
+      "settings": {
+        "status": "PASS",
+        "scope": "Settings Providers and Codex Manage show the healthy installed runtime; exact version is read through original getStatus",
+        "visibleVersionClaimed": false,
+        "providerReady": true,
+        "accountHealthy": true,
+        "manageOpened": true,
+        "installActionAbsent": true,
+        "finalStatus": {
+          "installed": true,
+          "version": "0.169.0",
+          "latestVersion": "0.169.0",
+          "updateAvailable": false,
+          "source": "app-managed",
+          "state": "ready",
+          "sourceRevision": "0bcdc8da4fa9ca43fa285608aae3516e2e94f500c1974c797573f06fd4ada1b4"
+        },
+        "sourceWrites": 0,
+        "extraDownloads": 0,
+        "originalRuntimesRetained": true,
+        "pageScreenshot": {
+          "path": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/ui-emulated-selection-installer-settings-page.png",
+          "sha256": "b9085c8a2b9751599bab9d393672e48c026066209513bb549927778d8ead29b6"
+        },
+        "dialogScreenshot": {
+          "path": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/ui-emulated-selection-installer-settings-dialog.png",
+          "sha256": "009a3f1009dfec6e80ab38a8c9f0f062e617612445f9059d29f4b882ae5c4a58"
+        }
+      }
+    },
+    "creation": {
+      "schemaVersion": 1,
+      "ownerId": "TEST-desktop-owner-TEST-desktop-backend-FpV7cb",
+      "profileId": "TEST-desktop-profile-TEST-desktop-backend-FpV7cb",
+      "principalId": "TEST-human",
+      "commandId": "d29785be-2d4f-42e5-85ac-2cb68b75bc7c",
+      "fingerprint": "47f2ee259b2b0410d16ea3d67780bcaca961c39241e7e792c1e305f0368f98dd",
+      "intent": {
+        "contextId": "local",
+        "teamName": "test-selection-next-team",
+        "savedSettings": {
+          "cwd": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/workspace",
+          "providerId": "codex",
+          "providerBackendId": "codex-native",
+          "model": "TEST-model-next",
+          "effort": "high",
+          "fastMode": "off",
+          "syncModelsWithLead": true,
+          "limitContext": false,
+          "skipPermissions": false
+        },
+        "members": []
+      },
+      "definition": {
+        "scope": {
+          "projectId": "local",
+          "workspaceId": "local",
+          "teamId": "2786fd7b-18c8-5430-b557-31d9f95368f0",
+          "runId": "1131f8d5-e128-505d-bf5e-493f30bcf894",
+          "memberId": "user",
+          "generation": "1"
+        },
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-FpV7cb",
+          "teamId": "2786fd7b-18c8-5430-b557-31d9f95368f0",
+          "teamName": "test-selection-next-team"
+        },
+        "savedSettings": {
+          "cwd": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/workspace",
+          "providerId": "codex",
+          "providerBackendId": "codex-native",
+          "model": "TEST-model-next",
+          "effort": "high",
+          "fastMode": "off",
+          "syncModelsWithLead": true,
+          "limitContext": false,
+          "skipPermissions": false
+        },
+        "members": [
+          {
+            "memberId": "9c5f3309-c86e-5c22-970f-e586444abf56",
+            "name": "team-lead",
+            "role": "lead"
+          }
+        ],
+        "grants": [
+          {
+            "principalId": "TEST-human",
+            "memberName": "user",
+            "permissions": [
+              "read",
+              "task.write",
+              "message.write",
+              "process.write",
+              "admin"
+            ]
+          }
+        ]
+      },
+      "record": {
+        "contextId": "local",
+        "teamId": "2786fd7b-18c8-5430-b557-31d9f95368f0",
+        "teamName": "test-selection-next-team",
+        "members": [
+          {
+            "memberId": "9c5f3309-c86e-5c22-970f-e586444abf56",
+            "label": "team-lead"
+          }
+        ],
+        "binding": {
+          "schemaVersion": 1,
+          "handleId": "c99b5f5a-0943-5f0d-9c89-f0a877d28de3",
+          "scope": {
+            "projectId": "local",
+            "workspaceId": "local",
+            "teamId": "2786fd7b-18c8-5430-b557-31d9f95368f0",
+            "runId": "1131f8d5-e128-505d-bf5e-493f30bcf894",
+            "memberId": "user",
+            "generation": "1"
+          }
+        }
+      },
+      "phase": "published",
+      "bootstrapPublished": true
+    },
+    "savedSelection": {
+      "cwd": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/workspace",
+      "providerId": "codex",
+      "providerBackendId": "codex-native",
+      "model": "TEST-model-next",
+      "effort": "high",
+      "fastMode": "off",
+      "syncModelsWithLead": true,
+      "limitContext": false,
+      "skipPermissions": false
+    },
+    "selectionRetainedAfterReload": true,
+    "a": {
+      "capture": {
+        "commandId": "capture:launch:roster:0d148036-f654-4497-8985-ce2ae60fe28f",
+        "configurationRevision": "d5765385f32c0733bf6758c04602add6b0027f8e80db50e05a6ba2ba0fd866b2",
+        "launchId": "fc634dc1-8af8-5bae-8cff-4a30386b741e",
+        "members": [
+          {
+            "memberId": "alice-id",
+            "principalId": "agent:5670f964-d9c0-50fc-8529-672cbf9098dc",
+            "delivery": {
+              "backendId": "TEST-desktop-owner-TEST-desktop-backend-FpV7cb",
+              "teamId": "TEST-desktop-team",
+              "teamName": "test-desktop-backend",
+              "runId": "fc634dc1-8af8-5bae-8cff-4a30386b741e",
+              "memberId": "alice-id",
+              "generation": "capture-d8d1db9f-81d2-5d9b-a7c4-412825fda29d"
+            }
+          }
+        ],
+        "principalId": "TEST-human",
+        "fingerprint": "5f3f170ca04d65ca9df9b2737ce840ce80561fab02ef6db83690dba7c344f927"
+      },
+      "definition": {
+        "launchId": "fc634dc1-8af8-5bae-8cff-4a30386b741e",
+        "rosterRevision": "2269a726ba4e388d5db4172ec0318fd692b9616192b7ca3ff29db6ea7e83057c",
+        "rosterScope": {
+          "projectId": "TEST-project-TEST-desktop-backend-FpV7cb",
+          "workspaceId": "TEST-workspace-TEST-desktop-backend-FpV7cb",
+          "teamId": "TEST-desktop-team",
+          "runId": "TEST-run-TEST-desktop-backend-FpV7cb",
+          "memberId": "human",
+          "generation": "1"
+        },
+        "capture": {
+          "commandId": "capture:launch:roster:0d148036-f654-4497-8985-ce2ae60fe28f",
+          "rosterCommandId": "roster:0d148036-f654-4497-8985-ce2ae60fe28f",
+          "configurationRevision": "d5765385f32c0733bf6758c04602add6b0027f8e80db50e05a6ba2ba0fd866b2",
+          "mcpCaptureVersion": 1,
+          "mcpRecipeReferences": [
+            {
+              "memberId": "alice-id",
+              "digest": "076170aff0726693f1cec90a83513428a5e64f56940eb5b7288ae7bc36b5406f"
+            }
+          ],
+          "savedSettings": {
+            "cwd": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/workspace",
+            "prompt": "TEST_UI_BOOT",
+            "providerId": "codex",
+            "providerBackendId": "codex-native",
+            "model": "TEST-model",
+            "effort": "low",
+            "fastMode": "inherit",
+            "syncModelsWithLead": true,
+            "limitContext": false,
+            "skipPermissions": false,
+            "allowExperimentalLocalModels": false
+          },
+          "members": [
+            {
+              "memberId": "alice-id",
+              "name": "alice",
+              "role": "lead",
+              "settings": {},
+              "recipeDigest": "cfccbf1324ab9406d4e1acf418d363bc973bcb62bc6f242bda801941b908e89e"
+            }
+          ]
+        },
+        "members": [
+          {
+            "memberId": "alice-id",
+            "binding": {
+              "backendId": "TEST-desktop-owner-TEST-desktop-backend-FpV7cb",
+              "teamId": "TEST-desktop-team",
+              "runId": "fc634dc1-8af8-5bae-8cff-4a30386b741e",
+              "memberId": "alice-id",
+              "generation": "capture-d8d1db9f-81d2-5d9b-a7c4-412825fda29d"
+            },
+            "configurationDigest": "875c2c9083d9110cf7dd1d6c8ee17ee924176e98f3017c1e67a12e90bebbd9fd",
+            "contextDigest": "458efb76f7408abdcab89826e36f96d42914eb3bef85c6b567ddb1ce3fc171ea",
+            "configRevision": "capture-0a557bfca91994531061732d87766853591f6f38440910f662587bc56333db6a",
+            "skipped": false,
+            "timeoutMs": 90000,
+            "runtimeGeneration": 2,
+            "baseConfigurationDigest": "875c2c9083d9110cf7dd1d6c8ee17ee924176e98f3017c1e67a12e90bebbd9fd"
+          }
+        ]
+      },
+      "thread": {
+        "event": "thread-selection",
+        "threadId": "TEST-thread-15304",
+        "model": "TEST-model",
+        "effort": "low",
+        "runtimeMcp": true,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 15304
+      }
+    },
+    "b": {
+      "capture": {
+        "commandId": "capture:launch:roster:af03e32a-1056-4de0-8c12-31b76101463b",
+        "configurationRevision": "8f8794b668e3da259a40533c3b847e8cdc3f57223d3b05d0166bb40280f573b1",
+        "launchId": "4dd5807a-f977-55cb-8927-9dc781e70e15",
+        "members": [
+          {
+            "memberId": "9c5f3309-c86e-5c22-970f-e586444abf56",
+            "principalId": "agent:82a962d9-8e6e-5054-bc63-29776852d22e",
+            "delivery": {
+              "backendId": "TEST-desktop-owner-TEST-desktop-backend-FpV7cb",
+              "teamId": "2786fd7b-18c8-5430-b557-31d9f95368f0",
+              "teamName": "test-selection-next-team",
+              "runId": "4dd5807a-f977-55cb-8927-9dc781e70e15",
+              "memberId": "9c5f3309-c86e-5c22-970f-e586444abf56",
+              "generation": "capture-d247769d-a640-52d2-8ce0-e508a1ac0c6a"
+            }
+          }
+        ],
+        "principalId": "TEST-human",
+        "fingerprint": "955c5d14fa04a6eb3c53698864ed780f1b4f9901b33e0c743c5ca2b16e94198e"
+      },
+      "definition": {
+        "launchId": "4dd5807a-f977-55cb-8927-9dc781e70e15",
+        "rosterRevision": "965e6d72f139dc6a1784592e95920c3423850ff3a6662977540db2133a375138",
+        "rosterScope": {
+          "projectId": "local",
+          "workspaceId": "local",
+          "teamId": "2786fd7b-18c8-5430-b557-31d9f95368f0",
+          "runId": "1131f8d5-e128-505d-bf5e-493f30bcf894",
+          "memberId": "user",
+          "generation": "1"
+        },
+        "capture": {
+          "commandId": "capture:launch:roster:af03e32a-1056-4de0-8c12-31b76101463b",
+          "rosterCommandId": "roster:af03e32a-1056-4de0-8c12-31b76101463b",
+          "configurationRevision": "8f8794b668e3da259a40533c3b847e8cdc3f57223d3b05d0166bb40280f573b1",
+          "mcpCaptureVersion": 1,
+          "mcpRecipeReferences": [
+            {
+              "memberId": "9c5f3309-c86e-5c22-970f-e586444abf56",
+              "digest": "e7e1a80c2cd73a04865c44c40e351fe476da17f8bfa9f939700ded8fe5387d52"
+            }
+          ],
+          "recipeSources": [
+            {
+              "sourceId": "e7a1cbb8fc7f9f09c363d3031ccbcaf93cbd38eba2b27893936e96096ebf7852",
+              "revision": "0bcdc8da4fa9ca43fa285608aae3516e2e94f500c1974c797573f06fd4ada1b4",
+              "memberId": "9c5f3309-c86e-5c22-970f-e586444abf56"
+            }
+          ],
+          "savedSettings": {
+            "cwd": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/workspace",
+            "prompt": "TEST_UI_BOOT",
+            "providerId": "codex",
+            "providerBackendId": "codex-native",
+            "model": "TEST-model-next",
+            "effort": "high",
+            "fastMode": "off",
+            "syncModelsWithLead": true,
+            "limitContext": false,
+            "skipPermissions": false,
+            "allowExperimentalLocalModels": false
+          },
+          "members": [
+            {
+              "memberId": "9c5f3309-c86e-5c22-970f-e586444abf56",
+              "name": "team-lead",
+              "role": "lead",
+              "settings": {},
+              "recipeDigest": "56f38b5dc36f80a064e5e68a95efdd02d4398b237ad9def33db9e2e9f16e7e25"
+            }
+          ]
+        },
+        "members": [
+          {
+            "memberId": "9c5f3309-c86e-5c22-970f-e586444abf56",
+            "binding": {
+              "backendId": "TEST-desktop-owner-TEST-desktop-backend-FpV7cb",
+              "teamId": "2786fd7b-18c8-5430-b557-31d9f95368f0",
+              "runId": "4dd5807a-f977-55cb-8927-9dc781e70e15",
+              "memberId": "9c5f3309-c86e-5c22-970f-e586444abf56",
+              "generation": "capture-d247769d-a640-52d2-8ce0-e508a1ac0c6a"
+            },
+            "configurationDigest": "97a833fa7668154d4b4caff00d7713485a13acd24731267726a8e60c0b160124",
+            "contextDigest": "36de614aaaeb8f53884e36a1baf70c8a57667268cae3d6ad53e566d48a845356",
+            "configRevision": "capture-e1e3f560478939b4a96c59594b01478150d843a410a2ff2ee4973a66812f77fd",
+            "skipped": false,
+            "timeoutMs": 90000,
+            "runtimeGeneration": 2,
+            "baseConfigurationDigest": "97a833fa7668154d4b4caff00d7713485a13acd24731267726a8e60c0b160124"
+          }
+        ]
+      },
+      "thread": {
+        "event": "thread-selection",
+        "threadId": "TEST-thread-17510",
+        "model": "TEST-model-next",
+        "effort": "high",
+        "runtimeMcp": true,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 17510
+      }
+    },
+    "aInvocation": {
+      "event": "invoke",
+      "pid": 15304,
+      "parentPid": 12373,
+      "executable": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/TEST-codex-install/bin/codex",
+      "version": "0.162.0",
+      "kind": "app-server"
+    },
+    "bInvocation": {
+      "event": "invoke",
+      "pid": 17510,
+      "parentPid": 12373,
+      "executable": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/userData/data/runtimes/codex/versions/0.169.0-darwin-arm64/aarch64-apple-darwin-d7bbeed6-45ea-4c1f-98ac-8fc0fe73f37c/codex/codex",
+      "version": "0.169.0",
+      "kind": "app-server"
+    },
+    "bSource": {
+      "sourceId": "e7a1cbb8fc7f9f09c363d3031ccbcaf93cbd38eba2b27893936e96096ebf7852",
+      "revision": "0bcdc8da4fa9ca43fa285608aae3516e2e94f500c1974c797573f06fd4ada1b4",
+      "memberId": "9c5f3309-c86e-5c22-970f-e586444abf56"
+    },
+    "bStop": {
+      "binding": {
+        "backendId": "TEST-desktop-owner-TEST-desktop-backend-FpV7cb",
+        "teamId": "2786fd7b-18c8-5430-b557-31d9f95368f0",
+        "runId": "4dd5807a-f977-55cb-8927-9dc781e70e15",
+        "memberId": "9c5f3309-c86e-5c22-970f-e586444abf56",
+        "generation": "capture-d247769d-a640-52d2-8ce0-e508a1ac0c6a"
+      },
+      "phase": "closed",
+      "custody": "released",
+      "originalPid": 17510,
+      "absent": true
+    },
+    "stream": {
+      "commandId": "30fc122a-5e8d-43bc-a383-68dc69f985fc",
+      "inputId": "6d3fdeda-e2a5-5f47-aa37-1a1e6ecc91c5",
+      "terminal": "succeeded",
+      "survivedBStop": true
+    },
+    "aStop": {
+      "binding": {
+        "backendId": "TEST-desktop-owner-TEST-desktop-backend-FpV7cb",
+        "teamId": "TEST-desktop-team",
+        "runId": "fc634dc1-8af8-5bae-8cff-4a30386b741e",
+        "memberId": "alice-id",
+        "generation": "capture-d8d1db9f-81d2-5d9b-a7c4-412825fda29d"
+      },
+      "phase": "closed",
+      "custody": "released",
+      "originalPid": 15304,
+      "absent": true
+    },
+    "finalConvergence": "The successful unchanged source at Selection150-186/307 establishes original A same selected key, provisioning/runtime pins, accepted same-run disconnected progress, unique visible offline+Launch banner and empty direct progress wrapper during the original75s absence loop. Remaining CDP budget and post-read cutoff remain checked. Exact evaluated store/DOM tuple and elapsed convergence duration are not separately retained; screenshot follows, non-atomically."
+  },
+  "durability": {
+    "manifest": {
+      "file": {
+        "path": "ci-n-608efb/installer/extracted/TEST-desktop-backend-FpV7cb/userData/data/runtimes/codex/current.json",
+        "bytes": 502,
+        "blob": "b07466c31863874205fb903853a6d5c94671a4d9",
+        "sha256": "41f868a162698085057eeca8d98017af7763473638527f50ccd2c5afb2bba93e"
+      },
+      "value": {
+        "schemaVersion": 1,
+        "rootVersion": "0.169.0",
+        "platformVersion": "0.169.0-darwin-arm64",
+        "platformTarget": "aarch64-apple-darwin",
+        "binaryPath": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/userData/data/runtimes/codex/versions/0.169.0-darwin-arm64/aarch64-apple-darwin-d7bbeed6-45ea-4c1f-98ac-8fc0fe73f37c/codex/codex",
+        "integrity": "sha512-IPU94wDtt+kldV0teLfTpdzcRx5aTBjtKjTK4OZVAkl30/cbcXYps7D91Azv98HZd1oFGBHif6EIMefqn2kFcA==",
+        "installedAt": "2026-11-16T03:24:50.049Z"
+      },
+      "originalDigestMatched": true
+    },
+    "sourceIndex": {
+      "file": {
+        "path": "ci-n-608efb/installer/extracted/TEST-desktop-backend-FpV7cb/hoststore/runtime-sources/index.json",
+        "bytes": 1687,
+        "blob": "7b02cc450de7f5289df6e56784e5e5fbd37ec41c",
+        "sha256": "b06dc1fece3561b10d710018d5e850ed19f7461063e796b69c7193922bd3b61f"
+      },
+      "value": {
+        "schemaVersion": 1,
+        "records": [
+          {
+            "revision": "0bcdc8da4fa9ca43fa285608aae3516e2e94f500c1974c797573f06fd4ada1b4",
+            "previousRevision": "26f84d9d05d4d05f040275f4980f575b78b49841c754fe0a9975d1c75a278ab4",
+            "commandId": "feeca241-b000-4921-a6b8-561e0cb14ffc",
+            "grant": {
+              "targetId": "e7a1cbb8fc7f9f09c363d3031ccbcaf93cbd38eba2b27893936e96096ebf7852",
+              "ownerId": "TEST-desktop-owner-TEST-desktop-backend-FpV7cb",
+              "ownerRevision": "TEST-desktop-revision-1",
+              "contextId": "local",
+              "projectPath": null,
+              "runtimeId": "codex",
+              "profileId": "TEST-emulated-codex-management",
+              "configRevision": "TEST-emulated-codex-management",
+              "teamScopes": [
+                {
+                  "teamId": "TEST-desktop-team",
+                  "projectId": "TEST-project-TEST-desktop-backend-FpV7cb",
+                  "workspaceId": "TEST-workspace-TEST-desktop-backend-FpV7cb"
+                }
+              ]
+            },
+            "candidate": {
+              "sourceKind": "app-managed",
+              "executable": {
+                "path": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/userData/data/runtimes/codex/versions/0.169.0-darwin-arm64/aarch64-apple-darwin-d7bbeed6-45ea-4c1f-98ac-8fc0fe73f37c/codex/codex",
+                "sha256": "b6f12db86e5220eecad25ade72845ff1de95f69d74ac304cf2fd4736a90295bc"
+              },
+              "nativeCli": {
+                "executable": {
+                  "path": "/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/userData/data/runtimes/codex/versions/0.169.0-darwin-arm64/aarch64-apple-darwin-d7bbeed6-45ea-4c1f-98ac-8fc0fe73f37c/codex/codex",
+                  "sha256": "b6f12db86e5220eecad25ade72845ff1de95f69d74ac304cf2fd4736a90295bc"
+                },
+                "version": "0.169.0"
+              }
+            }
+          }
+        ],
+        "current": [
+          {
+            "sourceId": "e7a1cbb8fc7f9f09c363d3031ccbcaf93cbd38eba2b27893936e96096ebf7852",
+            "revision": "0bcdc8da4fa9ca43fa285608aae3516e2e94f500c1974c797573f06fd4ada1b4",
+            "commandId": "feeca241-b000-4921-a6b8-561e0cb14ffc"
+          }
+        ],
+        "digest": "38e0c27300e1ff4bc1b4fe4c0f7af585528051c1c0e2b53838844f8100488026"
+      },
+      "digestVerified": true,
+      "oneRecordOneCurrent": true
+    },
+    "managementJournals": [
+      {
+        "file": {
+          "path": "ci-n-608efb/installer/extracted/TEST-desktop-backend-FpV7cb/hoststore/management-commands/31995021a66d7b1a00ee286c7ce030a6f3a834593234dda9510bee72b269c385.json",
+          "bytes": 923,
+          "blob": "ae323f18eb97c444deae0f73f3be66c8fd32fb0e",
+          "sha256": "6488c2862fa74590fd7d0d83353c50b1006348f81d93f2aac6a112071d8e5f95"
+        },
+        "record": {
+          "schemaVersion": 1,
+          "commandId": "team-preflight-2e990e7cfbedc6329198370baf2260628a141c5a445a79c45079a65d3c3abc7e",
+          "profileId": "team-probe-fe7704184cd03572691feeebd58595d79a816429a1ff2d6a3f502a84f2572c47",
+          "configRevision": "team-probe-fe7704184cd03572691feeebd58595d79a816429a1ff2d6a3f502a84f2572c47",
+          "providerId": "codex",
+          "fingerprint": "4fa8429ba1e7ea7df96eb11b3309be0efec33535c6ee84b8c07b49afe19914af",
+          "selectionDigest": "33da8272362574cd18bb59aee5687862bf6a780b1730abc59730888f8f7c3a12",
+          "resourceId": "0491717dcb03c34f2d5d4d3791b934c5fa7901182ace91ad9753461fd371d180",
+          "resourceHeld": false,
+          "kind": "model.probe",
+          "modelId": "TEST-model",
+          "effort": "low",
+          "context": "80108e283a813b334fa770ca369865bb61490b82724f9a092a57816594098a1e",
+          "phase": "completed",
+          "expiresAt": 1794799561688,
+          "ok": true,
+          "digest": "a443b7ddf4375ba3455f8b354d80ffdefb419e9629329e708d68abb6d9108aee"
+        },
+        "bodyDigestVerified": true,
+        "filenameCommandDigestVerified": true
+      },
+      {
+        "file": {
+          "path": "ci-n-608efb/installer/extracted/TEST-desktop-backend-FpV7cb/hoststore/management-commands/93b4ebc3ddddcc9a22fbd23a6d0ddd7c3e33f42650170cdbbb9ed9acd9b67513.json",
+          "bytes": 2297,
+          "blob": "aaded8a4e0000465ec7e7df14528615b18eeb631",
+          "sha256": "30a1470d4a3a3ec0d473b35d1a3eeb1b544a3bdfb95808b62a019926de592466"
+        },
+        "record": {
+          "schemaVersion": 1,
+          "commandId": "feeca241-b000-4921-a6b8-561e0cb14ffc",
+          "profileId": "TEST-emulated-codex-management",
+          "configRevision": "TEST-emulated-codex-management",
+          "providerId": "codex",
+          "fingerprint": "bd4294e33ab08ce3df88c43167abbbef24c33a5483716ca5bd11b989c8accb54",
+          "selectionDigest": "26f84d9d05d4d05f040275f4980f575b78b49841c754fe0a9975d1c75a278ab4",
+          "resourceId": "e7a1cbb8fc7f9f09c363d3031ccbcaf93cbd38eba2b27893936e96096ebf7852",
+          "resourceHeld": false,
+          "kind": "runtime.source",
+          "phase": "published",
+          "sourceId": "e7a1cbb8fc7f9f09c363d3031ccbcaf93cbd38eba2b27893936e96096ebf7852",
+          "revision": "0bcdc8da4fa9ca43fa285608aae3516e2e94f500c1974c797573f06fd4ada1b4",
+          "expectedRevision": "26f84d9d05d4d05f040275f4980f575b78b49841c754fe0a9975d1c75a278ab4",
+          "nativeVersion": "0.169.0",
+          "publicationJson": "{\"grant\":{\"targetId\":\"e7a1cbb8fc7f9f09c363d3031ccbcaf93cbd38eba2b27893936e96096ebf7852\",\"ownerId\":\"TEST-desktop-owner-TEST-desktop-backend-FpV7cb\",\"ownerRevision\":\"TEST-desktop-revision-1\",\"contextId\":\"local\",\"projectPath\":null,\"runtimeId\":\"codex\",\"profileId\":\"TEST-emulated-codex-management\",\"configRevision\":\"TEST-emulated-codex-management\",\"teamScopes\":[{\"teamId\":\"TEST-desktop-team\",\"projectId\":\"TEST-project-TEST-desktop-backend-FpV7cb\",\"workspaceId\":\"TEST-workspace-TEST-desktop-backend-FpV7cb\"}]},\"commandId\":\"feeca241-b000-4921-a6b8-561e0cb14ffc\",\"expectedRevision\":\"26f84d9d05d4d05f040275f4980f575b78b49841c754fe0a9975d1c75a278ab4\",\"candidate\":{\"sourceKind\":\"app-managed\",\"executable\":{\"path\":\"/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/userData/data/runtimes/codex/versions/0.169.0-darwin-arm64/aarch64-apple-darwin-d7bbeed6-45ea-4c1f-98ac-8fc0fe73f37c/codex/codex\",\"sha256\":\"b6f12db86e5220eecad25ade72845ff1de95f69d74ac304cf2fd4736a90295bc\"},\"nativeCli\":{\"executable\":{\"path\":\"/Users/runner/work/_temp/TEST-desktop-backend-FpV7cb/userData/data/runtimes/codex/versions/0.169.0-darwin-arm64/aarch64-apple-darwin-d7bbeed6-45ea-4c1f-98ac-8fc0fe73f37c/codex/codex\",\"sha256\":\"b6f12db86e5220eecad25ade72845ff1de95f69d74ac304cf2fd4736a90295bc\"},\"version\":\"0.169.0\"}}}",
+          "digest": "24bdc38750629ec9264218bda0b73d114cd97b3680c33feb9bc1282851e3d60d"
+        },
+        "bodyDigestVerified": true,
+        "filenameCommandDigestVerified": true
+      },
+      {
+        "file": {
+          "path": "ci-n-608efb/installer/extracted/TEST-desktop-backend-FpV7cb/hoststore/management-commands/97407d4ef0abf32009fd4ffe60fbb20487bf95f1c4740678df6d6b960f6f5ae0.json",
+          "bytes": 929,
+          "blob": "8502ef11274c5579c51adc341cc7e2762e9c3652",
+          "sha256": "ea434aaf8cfa3133a6c2485d4dbe9a09a468eee41a904bdcbbb3787ea3bd8688"
+        },
+        "record": {
+          "schemaVersion": 1,
+          "commandId": "team-preflight-5237f69c5959aff08785c93c62053a28688fbb79b63df98a6fd4c213d8d1289d",
+          "profileId": "team-probe-dea136fa7dfc06290c18ad861319d548f7199ca477981f253eb080731a26b810",
+          "configRevision": "team-probe-dea136fa7dfc06290c18ad861319d548f7199ca477981f253eb080731a26b810",
+          "providerId": "codex",
+          "fingerprint": "82d638bcdb518ad7d294a72c9fe242a74cfbdfe9587b60e9bfad736c0a59ffad",
+          "selectionDigest": "840daf96e58d81ddc708da844a0e1f54df430cf2826affcd87b7532b7e48d281",
+          "resourceId": "0491717dcb03c34f2d5d4d3791b934c5fa7901182ace91ad9753461fd371d180",
+          "resourceHeld": false,
+          "kind": "model.probe",
+          "modelId": "TEST-model-next",
+          "effort": "high",
+          "context": "850e69b241a8607ef367218222e2b43ca0af04b99df381d400cc03be236c9a6e",
+          "phase": "completed",
+          "expiresAt": 1794799595440,
+          "ok": true,
+          "digest": "c0461e2b579172106301dcc31e8060bd7a0946a903a3a3ae4e5df996d669aad8"
+        },
+        "bodyDigestVerified": true,
+        "filenameCommandDigestVerified": true
+      },
+      {
+        "file": {
+          "path": "ci-n-608efb/installer/extracted/TEST-desktop-backend-FpV7cb/hoststore/management-commands/9dce448314eb560c21cd082f68aa2acc6f977a2341f50753032ad58e8df70bf4.json",
+          "bytes": 904,
+          "blob": "c75b2ced0dae5fed30d2e7d89811f370b5440bb2",
+          "sha256": "2c019d6d6459746350afe6bc03a045b1177b5c92acee57ea134914e2659b0a81"
+        },
+        "record": {
+          "schemaVersion": 1,
+          "commandId": "team-preflight-4ad4ddb66b92370202126c6fe1df005165fbd5664e7f156ae252953fc0e67ec1",
+          "profileId": "team-probe-056133015871e7bfd73c538f96c13f0921233b99a89a4e3c74f5a1581908afac",
+          "configRevision": "team-probe-056133015871e7bfd73c538f96c13f0921233b99a89a4e3c74f5a1581908afac",
+          "providerId": "codex",
+          "fingerprint": "e83451f8f604d46a551c601036ae9c01908ba54d8d30a2d0678fc8e990d22972",
+          "selectionDigest": "7880036f082f0dee794e94670ce07a75688c7e930bed514071ae7c2ed5a16752",
+          "resourceId": "0491717dcb03c34f2d5d4d3791b934c5fa7901182ace91ad9753461fd371d180",
+          "resourceHeld": false,
+          "kind": "model.probe",
+          "modelId": "TEST-model",
+          "context": "9e4a7df41c7ead0b21708566f0ddeddb3bf393be0986c5dc5eee1314a4ccea74",
+          "phase": "completed",
+          "expiresAt": 1794799558487,
+          "ok": true,
+          "digest": "8d3351dec3b677670ee3d45f8d9206ad1ca1d343fe6800eb3f8928fd44981e0a"
+        },
+        "bodyDigestVerified": true,
+        "filenameCommandDigestVerified": true
+      }
+    ],
+    "runtimeCheckpoints": [
+      {
+        "file": {
+          "path": "ci-n-608efb/installer/extracted/TEST-desktop-backend-FpV7cb/hoststore/runtime-checkpoints/cp1-3923dd2eac7f1080b3150bcae5762cbb407c5a32539dd922b65d1bde28a6c58f.json",
+          "bytes": 2319,
+          "blob": "ad1a7beaa29a692f610ba8755e79c7fb32303026",
+          "sha256": "2ca30ca6ccf22cf70cab58936d2ad81d1c994649b8e98cb9db39b484c1d852cd"
+        },
+        "team": "a",
+        "record": {
+          "schemaVersion": 1,
+          "reference": "cp1-3923dd2eac7f1080b3150bcae5762cbb407c5a32539dd922b65d1bde28a6c58f",
+          "checkpointId": "stop-4cecd47f5c9c99ec5a928c98d3ef7c3bc1345d438ca38e84d0dc6ce8c0176453",
+          "fingerprint": "c8fc81cbb0763b5d7ef5b45fffeae0b0a6820872845caefcdbeb66131fad5db5",
+          "sourceBinding": {
+            "backendId": "TEST-desktop-owner-TEST-desktop-backend-FpV7cb",
+            "teamId": "TEST-desktop-team",
+            "runId": "fc634dc1-8af8-5bae-8cff-4a30386b741e",
+            "memberId": "alice-id",
+            "generation": "capture-d8d1db9f-81d2-5d9b-a7c4-412825fda29d"
+          },
+          "profileId": "TEST-desktop-profile-TEST-desktop-backend-FpV7cb",
+          "sourceConfig": {
+            "tenantId": "TEST-desktop-owner-TEST-desktop-backend-FpV7cb",
+            "projectId": "TEST-project-TEST-desktop-backend-FpV7cb",
+            "sessionId": "b429458a-876c-52b0-be0d-8a62c3fd7ef1",
+            "generation": 2,
+            "configRevision": "capture-0a557bfca91994531061732d87766853591f6f38440910f662587bc56333db6a",
+            "requiredCapabilities": [
+              "text",
+              "tools"
+            ]
+          },
+          "sourceSessionRef": "b429458a-876c-52b0-be0d-8a62c3fd7ef1",
+          "historyDigest": "6101a6ea995d389058e8f551acf0ca61fc9b25ef6cfc144e436a01d8dcd47d38",
+          "completedOperations": [
+            {
+              "inputId": "c62f80a9-4ae3-5ffa-9f30-7615bd2b8f3b",
+              "operationRef": "d449d2ba-e50d-4ba3-9eba-d9aec91eb1bc",
+              "fingerprint": "dbc35555b7b31d521d154e971aba6861cff97f7a86ea4cbbd025724787ec019f",
+              "outcome": "succeeded"
+            },
+            {
+              "inputId": "6d3fdeda-e2a5-5f47-aa37-1a1e6ecc91c5",
+              "operationRef": "6c108e2d-284a-4b97-9f7d-b849c12cad73",
+              "fingerprint": "840b0d32d7fc90aca851746cd5b8c4753524b06a596d66c83fbf05f6766d9b4d",
+              "outcome": "succeeded"
+            }
+          ],
+          "opaque": {
+            "version": 2,
+            "engine": "codex-app-server",
+            "nativeThreadId": "TEST-thread-15304",
+            "compatibility": "50ed91e1a8e14b7296d2c9487514e496ba03954dbb86b4f65dceb9dcf53de03b",
+            "itemOwners": [
+              [
+                "TEST-message-1",
+                "e711163e-54c3-4e11-8812-9116b420e25c"
+              ],
+              [
+                "TEST-message-2",
+                "2f432daf-acb4-45fd-bcb5-32aaed542f9a"
+              ],
+              [
+                "TEST-message-2-final",
+                "2f432daf-acb4-45fd-bcb5-32aaed542f9a"
+              ]
+            ],
+            "legacyItemsExhausted": false
+          },
+          "digest": "6701dd76d5610da5f25231edcac3d8933c5049616deea6b43645ac79ac982400"
+        },
+        "bodyDigestVerified": true,
+        "referenceFilenameVerified": true
+      },
+      {
+        "file": {
+          "path": "ci-n-608efb/installer/extracted/TEST-desktop-backend-FpV7cb/hoststore/runtime-checkpoints/cp1-6a25966e2f3c52573de6e4a7d00cbc7c39f3f0b437b8a2d7f74e9d7a2f071722.json",
+          "bytes": 1895,
+          "blob": "4ca52f78b4be15458ff3c27ec19ac56157228ac4",
+          "sha256": "5cd8cca46b40a5ceb395241fcabd73b5df64aa06182f7f07be251183d75bdc83"
+        },
+        "team": "b",
+        "record": {
+          "schemaVersion": 1,
+          "reference": "cp1-6a25966e2f3c52573de6e4a7d00cbc7c39f3f0b437b8a2d7f74e9d7a2f071722",
+          "checkpointId": "stop-7cb370c247070c7465345a00c8a4a898c9919b5f632a2187204173e039ea0e5c",
+          "fingerprint": "a6bf5e39cd119cc0b40de2a37cac2dc59e64f9841414fdeb9f331e3c40c37b47",
+          "sourceBinding": {
+            "backendId": "TEST-desktop-owner-TEST-desktop-backend-FpV7cb",
+            "teamId": "2786fd7b-18c8-5430-b557-31d9f95368f0",
+            "runId": "4dd5807a-f977-55cb-8927-9dc781e70e15",
+            "memberId": "9c5f3309-c86e-5c22-970f-e586444abf56",
+            "generation": "capture-d247769d-a640-52d2-8ce0-e508a1ac0c6a"
+          },
+          "profileId": "TEST-desktop-profile-TEST-desktop-backend-FpV7cb",
+          "sourceConfig": {
+            "tenantId": "TEST-desktop-owner-TEST-desktop-backend-FpV7cb",
+            "projectId": "local",
+            "sessionId": "1f969f5d-66f3-561f-b1b3-6c4a55f6577f",
+            "generation": 2,
+            "configRevision": "capture-e1e3f560478939b4a96c59594b01478150d843a410a2ff2ee4973a66812f77fd",
+            "requiredCapabilities": [
+              "text",
+              "tools"
+            ]
+          },
+          "sourceSessionRef": "1f969f5d-66f3-561f-b1b3-6c4a55f6577f",
+          "historyDigest": "49b88e2bce2fb509923061e89f7207d937d3efb49d6e279be0abfc5a5c6ab6da",
+          "completedOperations": [
+            {
+              "inputId": "e81f5784-5c08-5ff7-a983-e0296603954b",
+              "operationRef": "c568c499-b001-4c31-b105-8c733d7bcc4f",
+              "fingerprint": "0af5ffd8d1e1b154192ddc3967adb6e62d7b4dc1a3e76a7d92e405f06a46e946",
+              "outcome": "succeeded"
+            }
+          ],
+          "opaque": {
+            "version": 2,
+            "engine": "codex-app-server",
+            "nativeThreadId": "TEST-thread-17510",
+            "compatibility": "7fcc2cdacd5ae1ca75d3018f5c01f8af4d67b71f8d3414f895a44cca85509e3c",
+            "itemOwners": [
+              [
+                "TEST-message-1",
+                "3d52a3b1-f4a8-4cc8-b28d-9e4454d0e965"
+              ]
+            ],
+            "legacyItemsExhausted": false
+          },
+          "digest": "77028c9f5ec6dfb56a961c120575989f99b80ab206fbe30714879bde3c3895ca"
+        },
+        "bodyDigestVerified": true,
+        "referenceFilenameVerified": true
+      }
+    ],
+    "limits": "Original owner launch/session/config files and generated executable/package/tarball bytes are not separately archived. Their exact observation/assertions/digests are retained in source-bound receipt; this audit does not substitute missing runtime files or rebuild them."
+  },
+  "effects": {
+    "rawEffectCount": 147,
+    "proofEqualsRawEqualsEffectsJSONEqualsFinalCleanup": true,
+    "eventCounts": {
+      "launch": 59,
+      "exit": 46,
+      "thread-selection": 5,
+      "input": 6,
+      "terminal": 6,
+      "mcp-catalog": 13,
+      "managed-configuration-read": 9,
+      "connected": 2,
+      "partial": 1
+    },
+    "launchPids": [
+      14225,
+      14847,
+      14848,
+      14856,
+      14873,
+      14905,
+      14916,
+      14946,
+      14955,
+      14956,
+      14957,
+      15014,
+      15099,
+      15163,
+      15257,
+      15304,
+      15333,
+      15377,
+      15378,
+      15379,
+      15411,
+      15606,
+      15614,
+      15683,
+      16187,
+      16205,
+      16206,
+      16223,
+      16348,
+      16350,
+      16404,
+      16443,
+      16894,
+      17088,
+      17091,
+      17097,
+      17115,
+      17132,
+      17141,
+      17183,
+      17193,
+      17197,
+      17201,
+      17411,
+      17483,
+      17510,
+      17534,
+      17542,
+      17543,
+      17544,
+      17545,
+      17749,
+      17801,
+      17872,
+      17885,
+      18149,
+      18360,
+      18491,
+      18964
+    ],
+    "exitRows": [
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 14225
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 14847
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 14848
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 14856
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 14873
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 14905
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 14916
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 14946
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 14955
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 14956
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 14957
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 15014
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 15099
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 15411
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 15606
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 15614
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 15683
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 16187
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 16205
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 16206
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 16223
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 16348
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 16350
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 16404
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 16443
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 16894
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 17088
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 17091
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 17097
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 17115
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 17132
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 17141
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 17183
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 17193
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 17197
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 17201
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 17542
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 17749
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 17801
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 17872
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 17885
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 18149
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 18491
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 17510
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 18964
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 15304
+      }
+    ],
+    "uniqueLaunches": 59,
+    "recordedExitZeroRows": 46,
+    "absenceWithoutRecordedExitCount": 13,
+    "rawInvocationCount": 65,
+    "rawInvocationKinds": {
+      "version": 6,
+      "app-server": 59
+    },
+    "installerSnapshotInvocationPrefix": 33,
+    "rawRegistryCount": 10,
+    "installerSnapshotRegistryPrefix": 7,
+    "registry": [
+      {
+        "pid": 11937,
+        "event": "armed",
+        "processType": "browser",
+        "electron": "44.10.1",
+        "fixtureSha256": "81c5af595e3f2cf5ab960e2a290c7ca9efb928d695c6468aed8c8472d8f25148"
+      },
+      {
+        "pid": 11937,
+        "event": "response",
+        "kind": "latest",
+        "sequence": 1,
+        "sha256": "f7f7417e5aa18ac82e5ebb1be1c30deb7df9a0bb850b0393b44e13698658f8f7",
+        "bytes": 358
+      },
+      {
+        "pid": 11937,
+        "event": "response",
+        "kind": "latest",
+        "sequence": 2,
+        "sha256": "f7f7417e5aa18ac82e5ebb1be1c30deb7df9a0bb850b0393b44e13698658f8f7",
+        "bytes": 358
+      },
+      {
+        "pid": 11937,
+        "event": "response",
+        "kind": "latest",
+        "sequence": 3,
+        "sha256": "f7f7417e5aa18ac82e5ebb1be1c30deb7df9a0bb850b0393b44e13698658f8f7",
+        "bytes": 358
+      },
+      {
+        "pid": 11937,
+        "event": "response",
+        "kind": "platform",
+        "sequence": 4,
+        "sha256": "bc664fecc8cceb76a8caff309c1f36ed594bee8c591a6a2001bb3c67c768fff1",
+        "bytes": 276
+      },
+      {
+        "pid": 11937,
+        "event": "response",
+        "kind": "tarball",
+        "sequence": 5,
+        "sha256": "5b7e3717f1270560e7d96819822c943c0b3727a8179977ae3914434ab866ef49",
+        "bytes": 1293
+      },
+      {
+        "pid": 11937,
+        "event": "response",
+        "kind": "latest",
+        "sequence": 6,
+        "sha256": "f7f7417e5aa18ac82e5ebb1be1c30deb7df9a0bb850b0393b44e13698658f8f7",
+        "bytes": 358
+      },
+      {
+        "pid": 11937,
+        "event": "response",
+        "kind": "latest",
+        "sequence": 7,
+        "sha256": "f7f7417e5aa18ac82e5ebb1be1c30deb7df9a0bb850b0393b44e13698658f8f7",
+        "bytes": 358
+      },
+      {
+        "pid": 11937,
+        "event": "response",
+        "kind": "latest",
+        "sequence": 8,
+        "sha256": "f7f7417e5aa18ac82e5ebb1be1c30deb7df9a0bb850b0393b44e13698658f8f7",
+        "bytes": 358
+      },
+      {
+        "pid": 11937,
+        "event": "response",
+        "kind": "latest",
+        "sequence": 9,
+        "sha256": "f7f7417e5aa18ac82e5ebb1be1c30deb7df9a0bb850b0393b44e13698658f8f7",
+        "bytes": 358
+      }
+    ],
+    "onePlatformResponseOneTarballResponse": true,
+    "downloadBytes": 1293,
+    "downloadsMatchRecordedFinitePackageDigest": true
+  },
+  "cleanup": {
+    "capturedApp": {
+      "pid": 11026,
+      "processGroup": 11026,
+      "identity": "Mon Nov 16 03:22:54 2026     /Users/runner/hostedtoolcache/node/24.21.0/arm64/bin/node /Users/runner/work/_temp/TEST-emulated-ui-inputs-IKTy0B/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js dev:mcp --remoteDebuggingPort 9222",
+      "invocation": [
+        "/Users/runner/hostedtoolcache/node/24.21.0/arm64/bin/node",
+        "/Users/runner/work/_temp/TEST-emulated-ui-inputs-IKTy0B/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+        "dev:mcp",
+        "--remoteDebuggingPort",
+        "9222"
+      ]
+    },
+    "capturedHost": {
+      "pid": 12373,
+      "ppid": 11937,
+      "pgid": 11026,
+      "command": "/Users/runner/hostedtoolcache/node/24.21.0/arm64/bin/node /Users/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/dist/cli.js",
+      "observedBeforeShutdown": true
+    },
+    "quitRequested": true,
+    "originalRequestedQuitExit": {
+      "initialExitCode": null,
+      "initialSignalCode": null,
+      "exitCode": 0,
+      "signalCode": null
+    },
+    "beforeHarnessCleanup": [
+      {
+        "pid": 11057,
+        "ppid": 1,
+        "pgid": 11026
+      }
+    ],
+    "originalExitedGroup": {
+      "settled": true,
+      "reason": "original-natural-exit-and-fresh-absence",
+      "initialMembers": [
+        {
+          "pid": 11057,
+          "ppid": 1,
+          "pgid": 11026
+        }
+      ],
+      "remaining": [],
+      "capturedHostAbsent": true,
+      "capturedDescendantsAbsent": true,
+      "appExitCode": 0,
+      "appSignalCode": null
+    },
+    "finalCleanup": {
+      "processGroup": 11026,
+      "remaining": [],
+      "appExitCode": 0,
+      "appSignalCode": null,
+      "capturedHostObserved": true,
+      "capturedHostAbsent": true,
+      "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+    },
+    "originalPeerPids": [
+      14225,
+      14847,
+      14848,
+      14856,
+      14873,
+      14905,
+      14916,
+      14946,
+      14955,
+      14956,
+      14957,
+      15014,
+      15099,
+      15163,
+      15257,
+      15304,
+      15333,
+      15377,
+      15378,
+      15379,
+      15411,
+      15606,
+      15614,
+      15683,
+      16187,
+      16205,
+      16206,
+      16223,
+      16348,
+      16350,
+      16404,
+      16443,
+      16894,
+      17088,
+      17091,
+      17097,
+      17115,
+      17132,
+      17141,
+      17183,
+      17193,
+      17197,
+      17201,
+      17411,
+      17483,
+      17510,
+      17534,
+      17542,
+      17543,
+      17544,
+      17545,
+      17749,
+      17801,
+      17872,
+      17885,
+      18149,
+      18360,
+      18491,
+      18964
+    ],
+    "peerRemaining": [],
+    "peersAbsent": true,
+    "sentinel": {
+      "invocations": [
+        {
+          "executable": "claude-multimodel",
+          "allowed": true,
+          "argc": 1,
+          "command": null,
+          "flags": [
+            "--version"
+          ]
+        }
+      ],
+      "preQuitCount": 1,
+      "postQuitOrCleanupInvocations": [],
+      "refusedInvocations": [],
+      "qualification": "Only finite sentinel version checks and the isolated shell-environment fixture are admitted; any native/control fallback before or after Quit makes this provider-emulation proof incomplete."
+    },
+    "passiveMainChildTraceRowsPresent": false,
+    "limits": "App launcher exit0/null and fresh group/Host/descendant absence are retained. No separate Host exit code is exposed in this macOS receipt or its app log. Both A/B finite runtime exits0 occur in the original effect journal; the remaining13 absent peers have no retained exit row. No all-peer natural-exit/native-custody inference."
+  },
+  "images": [
+    {
+      "file": {
+        "path": "ci-n-608efb/installer/extracted/TEST-desktop-backend-FpV7cb/ui-emulated-selection-a-launch.png",
+        "bytes": 88780,
+        "blob": "f9e64f521e13eb51a12934acba1f1f5b01568604",
+        "sha256": "5d433819eacbdfe00f2ff00b2c65dc7f3b326fc158fb5bf1d1eb1de23a2756c2"
+      },
+      "width": 1024,
+      "height": 681,
+      "receiptHashMatches": true,
+      "actuallyViewedSingly": true,
+      "scope": "Alice TEST boot ready; green launch-complete panel; TEST persisted Host sidebar seed."
+    },
+    {
+      "file": {
+        "path": "ci-n-608efb/installer/extracted/TEST-desktop-backend-FpV7cb/ui-emulated-selection-a-survived.png",
+        "bytes": 103938,
+        "blob": "52a1247c7a3147c7db1b337d067877d32ad1a66f",
+        "sha256": "6af959846fe7ca5542b6bcc724babd18bd651e118e6c9cf81a80880f20217e28"
+      },
+      "width": 1024,
+      "height": 681,
+      "receiptHashMatches": true,
+      "actuallyViewedSingly": true,
+      "scope": "Original Team A remains Running with Stop and TEST stream partial after B Stop."
+    },
+    {
+      "file": {
+        "path": "ci-n-608efb/installer/extracted/TEST-desktop-backend-FpV7cb/ui-emulated-selection-b-launch.png",
+        "bytes": 84766,
+        "blob": "008d01c583f66924e09e973e714dcdf96cc2ed43",
+        "sha256": "807921c1d3b55d6a4ed4d65d9dff6a7a41bbf9304f0c422bd9f17e11157cb385"
+      },
+      "width": 1024,
+      "height": 681,
+      "receiptHashMatches": true,
+      "actuallyViewedSingly": true,
+      "scope": "Second Team lead conversation contains TEST boot ready and green launch-complete panel."
+    },
+    {
+      "file": {
+        "path": "ci-n-608efb/installer/extracted/TEST-desktop-backend-FpV7cb/ui-emulated-selection-completed.png",
+        "bytes": 108222,
+        "blob": "7bcc98c19e6a5498f307a65ce4d4ee1adfe26f8c",
+        "sha256": "bb5eda6a4a1f5eb2188f966bf13768e377a04652a3a0bf18f198314c8fbd06fb"
+      },
+      "width": 1024,
+      "height": 681,
+      "receiptHashMatches": true,
+      "actuallyViewedSingly": true,
+      "scope": "Same A conversation now includes TEST stream partial complete."
+    },
+    {
+      "file": {
+        "path": "ci-n-608efb/installer/extracted/TEST-desktop-backend-FpV7cb/ui-emulated-selection-installer-before.png",
+        "bytes": 77434,
+        "blob": "bb4719952917ece38e6de9fc45a6b59217449ab1",
+        "sha256": "82b1d86e32bbca6b2af3e107dea0f8d72006ab3213c816ff18570007a7b40476"
+      },
+      "width": 1024,
+      "height": 681,
+      "receiptHashMatches": true,
+      "actuallyViewedSingly": true,
+      "scope": "Original Update available dialog explicitly shows Codex 0.162.0 to 0.169.0 and one Update button."
+    },
+    {
+      "file": {
+        "path": "ci-n-608efb/installer/extracted/TEST-desktop-backend-FpV7cb/ui-emulated-selection-installer-ready.png",
+        "bytes": 67877,
+        "blob": "101e2d5df1a04b450400eba628249ccf6c83961c",
+        "sha256": "25890abcda99375456573cc9950f3bf9113475d66e4981ba0c1e3f8799669a4a"
+      },
+      "width": 1024,
+      "height": 681,
+      "receiptHashMatches": true,
+      "actuallyViewedSingly": true,
+      "scope": "Original Update Ready dialog shows 0.169.0, 100 percent and ready-for-new-launches text."
+    },
+    {
+      "file": {
+        "path": "ci-n-608efb/installer/extracted/TEST-desktop-backend-FpV7cb/ui-emulated-selection-installer-settings-dialog.png",
+        "bytes": 91573,
+        "blob": "0c7e564902de201ec889d930c7c2ac74c00b3963",
+        "sha256": "009a3f1009dfec6e80ab38a8c9f0f062e617612445f9059d29f4b882ae5c4a58"
+      },
+      "width": 1024,
+      "height": 681,
+      "receiptHashMatches": true,
+      "actuallyViewedSingly": true,
+      "scope": "Codex tab selected, Auto selected, custom endpoint off. Healthy account text and version are outside this screenshot viewport; their source assertions are separate."
+    },
+    {
+      "file": {
+        "path": "ci-n-608efb/installer/extracted/TEST-desktop-backend-FpV7cb/ui-emulated-selection-installer-settings-page.png",
+        "bytes": 86958,
+        "blob": "2aa7cea02fee337c1b5ddf46a4f486c97dc29d27",
+        "sha256": "b9085c8a2b9751599bab9d393672e48c026066209513bb549927778d8ead29b6"
+      },
+      "width": 1024,
+      "height": 681,
+      "receiptHashMatches": true,
+      "actuallyViewedSingly": true,
+      "scope": "Providers page is visible, with unrelated OpenCode needs-attention/unavailable and plan-checking content; the Codex row is outside this screenshot viewport. It does not independently depict every DOM assertion."
+    },
+    {
+      "file": {
+        "path": "ci-n-608efb/installer/extracted/TEST-desktop-backend-FpV7cb/ui-emulated-selection-reloaded.png",
+        "bytes": 76027,
+        "blob": "3449072b5e428d299a25c88129c13f43ad3941b3",
+        "sha256": "228ead7c53acae0e0cbcfc9e92d2d611d15b56c2575550d0b03355a21874e47a"
+      },
+      "width": 1024,
+      "height": 681,
+      "receiptHashMatches": true,
+      "actuallyViewedSingly": true,
+      "scope": "Saved Launch dialog contains TEST_UI_BOOT and manual mode. Codex Needs attention appears alongside All selected providers are ready / selected model verified; not an all-status-clean claim."
+    },
+    {
+      "file": {
+        "path": "ci-n-608efb/installer/extracted/TEST-desktop-backend-FpV7cb/ui-emulated-selection-selected.png",
+        "bytes": 70779,
+        "blob": "d3907d413b2c500230062eb326662216fd1e62c8",
+        "sha256": "878a80ccf6a39831c322b0bfe88fdf38d519924f5b60a726636a22b2018e6a1d"
+      },
+      "width": 1024,
+      "height": 681,
+      "receiptHashMatches": true,
+      "actuallyViewedSingly": true,
+      "scope": "TEST next model and High effort selected in Create; Run command after create unchecked; Create enabled."
+    },
+    {
+      "file": {
+        "path": "ci-n-608efb/installer/extracted/TEST-desktop-backend-FpV7cb/ui-emulated-selection-stopped.png",
+        "bytes": 94992,
+        "blob": "e0594225e94267a625d5743289190968fb8776e4",
+        "sha256": "0e383ca240e2b83f4d761c0a2764dd32c6d5b511b7884ae51811748bb34aa04a"
+      },
+      "width": 1024,
+      "height": 681,
+      "receiptHashMatches": true,
+      "actuallyViewedSingly": true,
+      "scope": "Team A offline banner with Launch, Alice offline and completed stream retained; no green completed-launch panel. One retained post-convergence frame, not an atomic permanent-state certificate."
+    }
+  ],
+  "historicalMComparison": {
+    "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+    "receipt": {
+      "path": "ci-desktop-m0660/installer-macos/extracted/TEST-desktop-backend-oILXLv/desktop-backend-receipt.json",
+      "bytes": 1005304,
+      "blob": "9e05e1b7e71a7012b4f169efbd94c81038095ee1",
+      "sha256": "d980f1d1e7384e1b6b0b6099a821f0254647b317c768597e02f1d96158590827"
+    },
+    "checkpoint": {
+      "path": "ci-desktop-m0660/installer-macos/checkpoint-installer-failure.json",
+      "bytes": 5965,
+      "blob": "76ea101e182cd9c6f723429d347286fd501d1c70",
+      "sha256": "452feac8ebe1043dd40d624f9c72d8b3faa2f6e0bd3f2bd715da87aabaf94b42"
+    },
+    "independentRootReview": {
+      "path": "ci-desktop-m0660/root-independent-installer-failure-review.json",
+      "bytes": 47470,
+      "blob": "7287e405ad796acbcb6a25ab413072faafbcb71d",
+      "sha256": "b0f389306781d3828ac71047edbec004edd724599b4d6267b8997d054737fbac"
+    },
+    "independentNavigationSourceReview": {
+      "path": "native-audit-M0660/installer-navigation-source-review.json",
+      "bytes": 17844,
+      "blob": "f0aa903a02cf7f8090749589597d420f17bfd7c8",
+      "sha256": "048dfbe9de4ea8a9a91f94c59f28f473ca98570e00a59f96d52f7457e6ca851a"
+    },
+    "oldResult": "INCOMPLETE; original selected-Team wait timed out before B Stop",
+    "oldLastTarget": {
+      "action": "mouseClick",
+      "label": "open original captured Team",
+      "selector": "[data-team-name=\"host-team:110ff390-0cbc-5ed7-936b-804bb4555b6b\"]",
+      "target": {
+        "x": 191,
+        "y": 228,
+        "text": "test-selection-next-teamRunningNo descriptionteam-leadlead0/0workspace",
+        "tag": "DIV"
+      },
+      "state": "attempted"
+    },
+    "newCorrespondingTarget": {
+      "action": "mouseClick",
+      "label": "open original captured Team",
+      "selector": "[data-team-name=\"host-team:c99b5f5a-0943-5f0d-9c89-f0a877d28de3\"]",
+      "target": {
+        "x": 553,
+        "y": 228,
+        "text": "test-selection-next-teamRunningNo descriptionteam-leadlead0/0workspace",
+        "tag": "DIV"
+      },
+      "state": "attempted"
+    },
+    "newSequencePassesOriginalWaitThenBStop": true,
+    "sameRelevantUISource": true,
+    "onlyProductionChange": "observeMemberProcessStderr held-value redaction helper",
+    "conclusion": "The original same-contract N journey completed the previously failed navigation boundary and both Stops without adding navigation diagnostics, replay or timeout. This is a new source-bound success, not an identified cause or repair for M. Actual clicked card-owner/navigation-transition history remains unretained; dormant diagnostic proposal was not applied and remains optional pending root disposition."
+  },
+  "preservedLimits": [
+    "Finite TEST A/B wrappers and intercepted package metadata, not official vendor executables/model compatibility.",
+    "Provider Settings assertions are DOM/source-bound; page/dialog screenshots do not show all offscreen asserted text and no visible version is claimed.",
+    "Reloaded Launch frame retains Codex Needs attention alongside selected-model-ready text.",
+    "Installer does not execute Team177/24 security contracts or the original complete static Team step.",
+    "Successful source-path checks and non-atomic screenshot cannot establish permanently converged renderer state or historical failure cause."
+  ]
+}

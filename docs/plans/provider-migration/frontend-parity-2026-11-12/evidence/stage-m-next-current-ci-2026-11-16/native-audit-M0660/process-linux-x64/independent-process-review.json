@@ -1,0 +1,2186 @@
+{
+  "kind": "INDEPENDENT_M0660_ORIGINAL_LINUX_PROCESS_EVIDENCE_REVIEW",
+  "schemaVersion": 1,
+  "result": "APPROVE",
+  "independentReadbackExact": true,
+  "reviewer": "/root/migration_scope",
+  "reviewedAtUtc": "2026-11-16T02:10:20.387363+00:00",
+  "scope": "Read-only independent original CI evidence and source attribution. No project/native/provider execution, CI poll, source/ref mutation, package installation, or provisional manifest extension.",
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "sourceTree": "e70ccffc6d55ad42c2249518bf142e2ed32ddf91",
+  "runId": 43780997272,
+  "jobId": 133017913714,
+  "jobConclusion": "success",
+  "artifactId": 14191426901,
+  "checkpoint": {
+    "path": "native-audit-M0660/process-linux-x64/checkpoint.json",
+    "bytes": 2220,
+    "blob": "a40659d976162b1118274f68ea976cabc26ad104",
+    "sha256": "7764e2c68d958c656b16e7d4543198cce5c35f9f62f20f68ab396fc618af1492"
+  },
+  "originalPayloads": [
+    {
+      "path": "native-audit-M0660/process-linux-x64/artifact-14191426901.zip",
+      "bytes": 1523241,
+      "blob": "a234dc6df38c6bd1efbddb53542a0893b9502fb3",
+      "sha256": "fd901e1748e031dac4b06ad2758f2f72d1d34f2aabe9faff93f7a0c12b9c4507"
+    },
+    {
+      "path": "native-audit-M0660/process-linux-x64/job-133017913714.log",
+      "bytes": 137758,
+      "blob": "c9890985c7f3469140d3f87968045e020d002d11",
+      "sha256": "8f82592ace32db61b971e639cda76c58cc1fcbd8b1198b0057167bf56068c562"
+    },
+    {
+      "path": "native-audit-M0660/process-linux-x64/job-api.json",
+      "bytes": 4412,
+      "blob": "59ee7f9a37e880f1eec059d8e3cbfec38be34b0b",
+      "sha256": "b89853f06656bbd3a81c54314d8d858ffdb4c5809dacf3c859b543efff1f8998"
+    },
+    {
+      "path": "native-audit-M0660/process-linux-x64/artifact-api.json",
+      "bytes": 818,
+      "blob": "9547a2dafebb7ee430ec38e268c193d757ab35ae",
+      "sha256": "83af8200e67dcfabef9c07b17e60b0cb6e694f7f044859ce0ff1002a96480931"
+    },
+    {
+      "path": "native-audit-M0660/process-linux-x64/archive-audit.json",
+      "bytes": 15484,
+      "blob": "399b6177fae2479e0529f3c1de5ad65f8e9807ca",
+      "sha256": "b1d98a98e51c62643ff54c2f339bb84f39a576164ecb8cf020aec43f99a7219a"
+    },
+    {
+      "path": "native-audit-M0660/process-linux-x64/source-audit.json",
+      "bytes": 17813,
+      "blob": "b0221a2c9c364ee2ed064a56bc1a6541da084d5f",
+      "sha256": "f6eba055f2a5c0594982e803bf1c608c05fd15b79f3eb9ffa85408ef9a03e2e5"
+    },
+    {
+      "path": "native-audit-M0660/process-linux-x64/audit.json",
+      "bytes": 62214,
+      "blob": "64f83d747cb01eb7178db4464ce21a8f80459204",
+      "sha256": "75fce93316837f9d623a898067c7c6058969fec9f0379bb9254351dec773aac4"
+    },
+    {
+      "path": "native-audit-M0660/process-linux-x64/Plan29-linux-process-appendix.md",
+      "bytes": 7011,
+      "blob": "f335766cbbe2bcd3e1ef983f2dc4ba22cbf7c7e9",
+      "sha256": "eb795a6fdacafc24a88d96a953d7a95f04a48c9f600d4ae02b15a7fdf8f8edde"
+    }
+  ],
+  "payloadCount": 8,
+  "payloadBytes": 1768751,
+  "allOriginalPayloadsUnchangedAfterReview": true,
+  "originalLogReview": {
+    "identity": {
+      "path": "native-audit-M0660/process-linux-x64/job-133017913714.log",
+      "bytes": 137758,
+      "blob": "c9890985c7f3469140d3f87968045e020d002d11",
+      "sha256": "8f82592ace32db61b971e639cda76c58cc1fcbd8b1198b0057167bf56068c562"
+    },
+    "fullOriginalLinesRead": 1266,
+    "method": "Entire original log read in ordered ranges, including the omitted middle of one display truncation; rendered timestamps/ANSI omitted only for reading. Raw original remains unchanged. All seven complete reporter files checked as substrings after rendering normalization.",
+    "sourceCheckoutAndFinalGate": "Original log checks out and prints 0660; later set-euo-pipefail block checks the same head, git diff --exit-code and exact Linux receipts; saved API marks that block success.",
+    "dependencyAndBuildBoundary": "Original CI install/build records only; six original ledger/controller/Host/Host-test/broker compiler commands succeed in the original set-euo-pipefail step. No reviewer build, no separate root backend-project compiler or broad workspace type/lint qualification inferred."
+  },
+  "officialArtifactJoin": {
+    "savedApi": {
+      "path": "native-audit-M0660/process-linux-x64/artifact-api.json",
+      "bytes": 818,
+      "blob": "9547a2dafebb7ee430ec38e268c193d757ab35ae",
+      "sha256": "83af8200e67dcfabef9c07b17e60b0cb6e694f7f044859ce0ff1002a96480931"
+    },
+    "apiSizeDigestHeadRunMatch": true,
+    "originalUploadLogHasSame51FilesSizeDigestAndArtifactId": true,
+    "signedDownloadUrlsRetained": false
+  },
+  "archiveReview": {
+    "all51CrcValid": true,
+    "all51NamesSafeUniqueNonsymlink": true,
+    "all51ExtractedBytesExact": true,
+    "totalUncompressedMemberBytes": 3474324,
+    "members": [
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+        "crc32": "9a5b8b0e",
+        "bytes": 20699,
+        "blob": "90fcefdb01b6775f522c2608edb0de94c1edf301",
+        "sha256": "905816116662918134499815072f016e00d48e6b4a6335a534ef68b1a81ad72f"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/artifact/registered-process.node",
+        "crc32": "54f3fc63",
+        "bytes": 36104,
+        "blob": "57c127f01e3510ea9ad8bb6fc8028b06e9cdfd37",
+        "sha256": "a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/artifact/manifest.json",
+        "crc32": "222febbc",
+        "bytes": 1170,
+        "blob": "c5a238b73e94f4ba56fa1ace5933ce3179eb7a8e",
+        "sha256": "b9e4d9e8546a22a3d3b1b0cfcd81f395761210023b3c1c62a766b83f44718555"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/linux-child-exec/linux-child-exec",
+        "crc32": "bdcb7dc9",
+        "bytes": 789792,
+        "blob": "26cd7246d5b74d2f14464fe82b8ba566e77f3d97",
+        "sha256": "be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/linux-child-exec/manifest.json",
+        "crc32": "0168806d",
+        "bytes": 2408,
+        "blob": "2f3526beb8e45f35f6f34188a71bd287274d430f",
+        "sha256": "c7a9de31f589d168495922a21a4d769cdd81ee33492961eef4d25ddfc2fbf484"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/native.log",
+        "crc32": "abb3c96e",
+        "bytes": 233,
+        "blob": "6b89bfaf3691c6772aa6511999865ae7ca269c04",
+        "sha256": "9331e77dbe728680c6ffee24645fa8d9e39bebfde0a0d03855258fd904bf7db5"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/proof.ndjson",
+        "crc32": "1d92c0b9",
+        "bytes": 4081,
+        "blob": "1fd7237ff3e4931f913862e029c89791161410b2",
+        "sha256": "39ef4e9cee2d9786a1ccbd94e945f738971507671511fdf54ad5a41f51aefa23"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/registered-process-actor",
+        "crc32": "5e95f969",
+        "bytes": 17288,
+        "blob": "cc293fa68010718e8ebbc606002657e28342b46a",
+        "sha256": "8026a8cdb44dfa74a29ddc80b632759a0375313b5d9289050b15e581598e550b"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/selection.json",
+        "crc32": "2c5f984b",
+        "bytes": 589,
+        "blob": "e44117941270b10f1137126488616ecd07906f4b",
+        "sha256": "a94197e52deef716e2c254c58acb4af780fab2f63953f8c009a93746a849332d"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/warm-native.log",
+        "crc32": "4c387b11",
+        "bytes": 233,
+        "blob": "61a5f5bbad341490c1c6716dacee2f86e00e376f",
+        "sha256": "37ac3a8265a4e68ff3a374cce88264c0a00db767f11194520455c494afff30f3"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/warm-proof.ndjson",
+        "crc32": "787a2545",
+        "bytes": 4577,
+        "blob": "812b566c4c56d23f8e4bccaab9f0119bfeef3df8",
+        "sha256": "f7a3adb0a9f36400e2dd07823ad701fd455a8a79aefb3e7791f48f4a95a268a4"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron.log",
+        "crc32": "7c3a2e39",
+        "bytes": 854,
+        "blob": "1fca8b41434e17b6f5d5bc784dcf4486b9c98bef",
+        "sha256": "ee5c32733e898bab151a8529e17387cec34d1b12390363ac84a197b087f98dc5"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node-exec-electron.log",
+        "crc32": "e953bcf5",
+        "bytes": 753,
+        "blob": "9cb69c64a30e43489cdee88fb56afbc01063276f",
+        "sha256": "4805e15be0caafbab7e06a4dbe3149e00253ada50f4b9873a5ad0d0a7d266975"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node-exec-packaging.log",
+        "crc32": "f19a3632",
+        "bytes": 6529,
+        "blob": "48dab8055d9b24220cf7f96ffe24af4ce549bc8a",
+        "sha256": "7a7b250892be6f0d515a4a655898635eb60213a10ec99c3b43a4596732e393b6"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node-exec-node24.log",
+        "crc32": "d55ef4b7",
+        "bytes": 756,
+        "blob": "4ff1e6812d8e363661a26b6b7b4c810f0b9fd0d2",
+        "sha256": "ca0ac8b134445b714e33b5bd5db1f85a5b9907e82d1634d1787376735c5403a6"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/artifact/manifest.json",
+        "crc32": "222febbc",
+        "bytes": 1170,
+        "blob": "c5a238b73e94f4ba56fa1ace5933ce3179eb7a8e",
+        "sha256": "b9e4d9e8546a22a3d3b1b0cfcd81f395761210023b3c1c62a766b83f44718555"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/artifact/registered-process.node",
+        "crc32": "54f3fc63",
+        "bytes": 36104,
+        "blob": "57c127f01e3510ea9ad8bb6fc8028b06e9cdfd37",
+        "sha256": "a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/linux-child-exec/linux-child-exec",
+        "crc32": "bdcb7dc9",
+        "bytes": 789792,
+        "blob": "26cd7246d5b74d2f14464fe82b8ba566e77f3d97",
+        "sha256": "be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/linux-child-exec/manifest.json",
+        "crc32": "0168806d",
+        "bytes": 2408,
+        "blob": "2f3526beb8e45f35f6f34188a71bd287274d430f",
+        "sha256": "c7a9de31f589d168495922a21a4d769cdd81ee33492961eef4d25ddfc2fbf484"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/native.log",
+        "crc32": "bfaec69f",
+        "bytes": 233,
+        "blob": "83153af374f89836b1c65ab32d68c904308a0b2b",
+        "sha256": "17c579faccd82606f4adc997baf422052dee4d0f36de22a9a20f63a04a81709c"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/proof.ndjson",
+        "crc32": "66ea325b",
+        "bytes": 4039,
+        "blob": "65a3e5171370f8f15c4535667468eb4525a54870",
+        "sha256": "c1fa4e04a81ce7251ad549b61d0292e6716d0649c0b210197e98283d1f505241"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/registered-process-actor",
+        "crc32": "5e95f969",
+        "bytes": 17288,
+        "blob": "cc293fa68010718e8ebbc606002657e28342b46a",
+        "sha256": "8026a8cdb44dfa74a29ddc80b632759a0375313b5d9289050b15e581598e550b"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/selection.json",
+        "crc32": "390bb5f8",
+        "bytes": 583,
+        "blob": "b48dee596c012dd858c65b06b7055df9008a9b02",
+        "sha256": "af26c77f97f933c1a3fedf2f782843235705314135c8c0a9336d66b68c55c033"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/warm-native.log",
+        "crc32": "c5127b90",
+        "bytes": 233,
+        "blob": "21d175c7fa91f35f2061dcf3f2c8ae7d20750371",
+        "sha256": "87b66d86a49b4070577cf97b9829bdb7c2c49a4d7c8f78d73308e3961fbecb5f"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/warm-proof.ndjson",
+        "crc32": "6d462799",
+        "bytes": 4534,
+        "blob": "c543d9a2082edf001a40b10dbf413aae9e3c0c78",
+        "sha256": "edfe92e8c6c43d7001c6a12445c02ace78610c191d5113b6f32b28d35b0e59a6"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24.log",
+        "crc32": "873aa1f9",
+        "bytes": 848,
+        "blob": "5dd63656a6c84d40e677957b06b2d39943d4b3e0",
+        "sha256": "350586d6006a73706144e383fdc729b7d24d8ea03f35a4e34973d2040b549349"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/posix-lifecycle.log",
+        "crc32": "f70d383f",
+        "bytes": 5165,
+        "blob": "a6b4615dc60a603e6ae551379cac6d885d64ca6d",
+        "sha256": "3df32eee5903563c1dfed36a63f6ee91ac266614ac9e4ff75cff87dabd8d4f44"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+        "crc32": "08125613",
+        "bytes": 769,
+        "blob": "26e3c4feb9a7aa5962e90dcd0b735d52fefded82",
+        "sha256": "c390a323c27593bf703e36e8d269948579903d81d3289bbb7efff289f83d93a5"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/scope.json",
+        "crc32": "0b77dbd9",
+        "bytes": 2810,
+        "blob": "c3aec269becd48122f8da34fc16e97e543cf1a21",
+        "sha256": "c5324cebf34a4d2b972d86dcc9b19ab174ef22d036bdc44f7f20ba0c147fe812"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+        "crc32": "4499b00c",
+        "bytes": 41,
+        "blob": "773a8225a2fbcd1ef6fc246f11e817d4d2e5447c",
+        "sha256": "340bb727c5c76bddb02ac891f27911ecf7977030ce1dfe2444a74771be67b182"
+      },
+      {
+        "name": "_temp/TEST-process-node24-43780997272/artifact/manifest.json",
+        "crc32": "222febbc",
+        "bytes": 1170,
+        "blob": "c5a238b73e94f4ba56fa1ace5933ce3179eb7a8e",
+        "sha256": "b9e4d9e8546a22a3d3b1b0cfcd81f395761210023b3c1c62a766b83f44718555"
+      },
+      {
+        "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+        "crc32": "3790621a",
+        "bytes": 9382,
+        "blob": "9d9620093ec5a88d43c5980cb840084ab109807e",
+        "sha256": "9404d0db0658d100ca1445b765d7fadd4530b5131fa5771cf54587e07ee6b105"
+      },
+      {
+        "name": "_temp/TEST-process-node24-43780997272/artifact/registered-process.node",
+        "crc32": "54f3fc63",
+        "bytes": 36104,
+        "blob": "57c127f01e3510ea9ad8bb6fc8028b06e9cdfd37",
+        "sha256": "a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217"
+      },
+      {
+        "name": "_temp/TEST-process-node24-43780997272/linux-child-exec/linux-child-exec",
+        "crc32": "bdcb7dc9",
+        "bytes": 789792,
+        "blob": "26cd7246d5b74d2f14464fe82b8ba566e77f3d97",
+        "sha256": "be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110"
+      },
+      {
+        "name": "_temp/TEST-process-node24-43780997272/linux-child-exec/manifest.json",
+        "crc32": "0168806d",
+        "bytes": 2408,
+        "blob": "2f3526beb8e45f35f6f34188a71bd287274d430f",
+        "sha256": "c7a9de31f589d168495922a21a4d769cdd81ee33492961eef4d25ddfc2fbf484"
+      },
+      {
+        "name": "_temp/TEST-process-node24-43780997272/native.log",
+        "crc32": "bfaec69f",
+        "bytes": 233,
+        "blob": "83153af374f89836b1c65ab32d68c904308a0b2b",
+        "sha256": "17c579faccd82606f4adc997baf422052dee4d0f36de22a9a20f63a04a81709c"
+      },
+      {
+        "name": "_temp/TEST-process-node24-43780997272/proof.ndjson",
+        "crc32": "66ea325b",
+        "bytes": 4039,
+        "blob": "65a3e5171370f8f15c4535667468eb4525a54870",
+        "sha256": "c1fa4e04a81ce7251ad549b61d0292e6716d0649c0b210197e98283d1f505241"
+      },
+      {
+        "name": "_temp/TEST-process-node24-43780997272/registered-process-actor",
+        "crc32": "5e95f969",
+        "bytes": 17288,
+        "blob": "cc293fa68010718e8ebbc606002657e28342b46a",
+        "sha256": "8026a8cdb44dfa74a29ddc80b632759a0375313b5d9289050b15e581598e550b"
+      },
+      {
+        "name": "_temp/TEST-process-node24-43780997272/selection.json",
+        "crc32": "390bb5f8",
+        "bytes": 583,
+        "blob": "b48dee596c012dd858c65b06b7055df9008a9b02",
+        "sha256": "af26c77f97f933c1a3fedf2f782843235705314135c8c0a9336d66b68c55c033"
+      },
+      {
+        "name": "_temp/TEST-process-node24-43780997272/warm-native.log",
+        "crc32": "c5127b90",
+        "bytes": 233,
+        "blob": "21d175c7fa91f35f2061dcf3f2c8ae7d20750371",
+        "sha256": "87b66d86a49b4070577cf97b9829bdb7c2c49a4d7c8f78d73308e3961fbecb5f"
+      },
+      {
+        "name": "_temp/TEST-process-node24-43780997272/warm-proof.ndjson",
+        "crc32": "6d462799",
+        "bytes": 4534,
+        "blob": "c543d9a2082edf001a40b10dbf413aae9e3c0c78",
+        "sha256": "edfe92e8c6c43d7001c6a12445c02ace78610c191d5113b6f32b28d35b0e59a6"
+      },
+      {
+        "name": "_temp/TEST-process-electron-43780997272/artifact/manifest.json",
+        "crc32": "222febbc",
+        "bytes": 1170,
+        "blob": "c5a238b73e94f4ba56fa1ace5933ce3179eb7a8e",
+        "sha256": "b9e4d9e8546a22a3d3b1b0cfcd81f395761210023b3c1c62a766b83f44718555"
+      },
+      {
+        "name": "_temp/TEST-process-electron-43780997272/artifact/registered-process.node",
+        "crc32": "54f3fc63",
+        "bytes": 36104,
+        "blob": "57c127f01e3510ea9ad8bb6fc8028b06e9cdfd37",
+        "sha256": "a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217"
+      },
+      {
+        "name": "_temp/TEST-process-electron-43780997272/linux-child-exec/linux-child-exec",
+        "crc32": "bdcb7dc9",
+        "bytes": 789792,
+        "blob": "26cd7246d5b74d2f14464fe82b8ba566e77f3d97",
+        "sha256": "be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110"
+      },
+      {
+        "name": "_temp/TEST-process-electron-43780997272/linux-child-exec/manifest.json",
+        "crc32": "0168806d",
+        "bytes": 2408,
+        "blob": "2f3526beb8e45f35f6f34188a71bd287274d430f",
+        "sha256": "c7a9de31f589d168495922a21a4d769cdd81ee33492961eef4d25ddfc2fbf484"
+      },
+      {
+        "name": "_temp/TEST-process-electron-43780997272/native.log",
+        "crc32": "abb3c96e",
+        "bytes": 233,
+        "blob": "6b89bfaf3691c6772aa6511999865ae7ca269c04",
+        "sha256": "9331e77dbe728680c6ffee24645fa8d9e39bebfde0a0d03855258fd904bf7db5"
+      },
+      {
+        "name": "_temp/TEST-process-electron-43780997272/proof.ndjson",
+        "crc32": "1d92c0b9",
+        "bytes": 4081,
+        "blob": "1fd7237ff3e4931f913862e029c89791161410b2",
+        "sha256": "39ef4e9cee2d9786a1ccbd94e945f738971507671511fdf54ad5a41f51aefa23"
+      },
+      {
+        "name": "_temp/TEST-process-electron-43780997272/registered-process-actor",
+        "crc32": "5e95f969",
+        "bytes": 17288,
+        "blob": "cc293fa68010718e8ebbc606002657e28342b46a",
+        "sha256": "8026a8cdb44dfa74a29ddc80b632759a0375313b5d9289050b15e581598e550b"
+      },
+      {
+        "name": "_temp/TEST-process-electron-43780997272/selection.json",
+        "crc32": "2c5f984b",
+        "bytes": 589,
+        "blob": "e44117941270b10f1137126488616ecd07906f4b",
+        "sha256": "a94197e52deef716e2c254c58acb4af780fab2f63953f8c009a93746a849332d"
+      },
+      {
+        "name": "_temp/TEST-process-electron-43780997272/warm-native.log",
+        "crc32": "4c387b11",
+        "bytes": 233,
+        "blob": "61a5f5bbad341490c1c6716dacee2f86e00e376f",
+        "sha256": "37ac3a8265a4e68ff3a374cce88264c0a00db767f11194520455c494afff30f3"
+      },
+      {
+        "name": "_temp/TEST-process-electron-43780997272/warm-proof.ndjson",
+        "crc32": "787a2545",
+        "bytes": 4577,
+        "blob": "812b566c4c56d23f8e4bccaab9f0119bfeef3df8",
+        "sha256": "f7a3adb0a9f36400e2dd07823ad701fd455a8a79aefb3e7791f48f4a95a268a4"
+      }
+    ],
+    "duplicateMemberCount": 20,
+    "duplicatePairs": [
+      {
+        "canonical": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/artifact/manifest.json",
+        "duplicate": "_temp/TEST-process-node24-43780997272/artifact/manifest.json",
+        "bytes": 1170,
+        "blob": "c5a238b73e94f4ba56fa1ace5933ce3179eb7a8e",
+        "sha256": "b9e4d9e8546a22a3d3b1b0cfcd81f395761210023b3c1c62a766b83f44718555"
+      },
+      {
+        "canonical": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/artifact/registered-process.node",
+        "duplicate": "_temp/TEST-process-node24-43780997272/artifact/registered-process.node",
+        "bytes": 36104,
+        "blob": "57c127f01e3510ea9ad8bb6fc8028b06e9cdfd37",
+        "sha256": "a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217"
+      },
+      {
+        "canonical": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/linux-child-exec/linux-child-exec",
+        "duplicate": "_temp/TEST-process-node24-43780997272/linux-child-exec/linux-child-exec",
+        "bytes": 789792,
+        "blob": "26cd7246d5b74d2f14464fe82b8ba566e77f3d97",
+        "sha256": "be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110"
+      },
+      {
+        "canonical": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/linux-child-exec/manifest.json",
+        "duplicate": "_temp/TEST-process-node24-43780997272/linux-child-exec/manifest.json",
+        "bytes": 2408,
+        "blob": "2f3526beb8e45f35f6f34188a71bd287274d430f",
+        "sha256": "c7a9de31f589d168495922a21a4d769cdd81ee33492961eef4d25ddfc2fbf484"
+      },
+      {
+        "canonical": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/native.log",
+        "duplicate": "_temp/TEST-process-node24-43780997272/native.log",
+        "bytes": 233,
+        "blob": "83153af374f89836b1c65ab32d68c904308a0b2b",
+        "sha256": "17c579faccd82606f4adc997baf422052dee4d0f36de22a9a20f63a04a81709c"
+      },
+      {
+        "canonical": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/proof.ndjson",
+        "duplicate": "_temp/TEST-process-node24-43780997272/proof.ndjson",
+        "bytes": 4039,
+        "blob": "65a3e5171370f8f15c4535667468eb4525a54870",
+        "sha256": "c1fa4e04a81ce7251ad549b61d0292e6716d0649c0b210197e98283d1f505241"
+      },
+      {
+        "canonical": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/registered-process-actor",
+        "duplicate": "_temp/TEST-process-node24-43780997272/registered-process-actor",
+        "bytes": 17288,
+        "blob": "cc293fa68010718e8ebbc606002657e28342b46a",
+        "sha256": "8026a8cdb44dfa74a29ddc80b632759a0375313b5d9289050b15e581598e550b"
+      },
+      {
+        "canonical": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/selection.json",
+        "duplicate": "_temp/TEST-process-node24-43780997272/selection.json",
+        "bytes": 583,
+        "blob": "b48dee596c012dd858c65b06b7055df9008a9b02",
+        "sha256": "af26c77f97f933c1a3fedf2f782843235705314135c8c0a9336d66b68c55c033"
+      },
+      {
+        "canonical": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/warm-native.log",
+        "duplicate": "_temp/TEST-process-node24-43780997272/warm-native.log",
+        "bytes": 233,
+        "blob": "21d175c7fa91f35f2061dcf3f2c8ae7d20750371",
+        "sha256": "87b66d86a49b4070577cf97b9829bdb7c2c49a4d7c8f78d73308e3961fbecb5f"
+      },
+      {
+        "canonical": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/warm-proof.ndjson",
+        "duplicate": "_temp/TEST-process-node24-43780997272/warm-proof.ndjson",
+        "bytes": 4534,
+        "blob": "c543d9a2082edf001a40b10dbf413aae9e3c0c78",
+        "sha256": "edfe92e8c6c43d7001c6a12445c02ace78610c191d5113b6f32b28d35b0e59a6"
+      },
+      {
+        "canonical": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/artifact/manifest.json",
+        "duplicate": "_temp/TEST-process-electron-43780997272/artifact/manifest.json",
+        "bytes": 1170,
+        "blob": "c5a238b73e94f4ba56fa1ace5933ce3179eb7a8e",
+        "sha256": "b9e4d9e8546a22a3d3b1b0cfcd81f395761210023b3c1c62a766b83f44718555"
+      },
+      {
+        "canonical": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/artifact/registered-process.node",
+        "duplicate": "_temp/TEST-process-electron-43780997272/artifact/registered-process.node",
+        "bytes": 36104,
+        "blob": "57c127f01e3510ea9ad8bb6fc8028b06e9cdfd37",
+        "sha256": "a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217"
+      },
+      {
+        "canonical": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/linux-child-exec/linux-child-exec",
+        "duplicate": "_temp/TEST-process-electron-43780997272/linux-child-exec/linux-child-exec",
+        "bytes": 789792,
+        "blob": "26cd7246d5b74d2f14464fe82b8ba566e77f3d97",
+        "sha256": "be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110"
+      },
+      {
+        "canonical": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/linux-child-exec/manifest.json",
+        "duplicate": "_temp/TEST-process-electron-43780997272/linux-child-exec/manifest.json",
+        "bytes": 2408,
+        "blob": "2f3526beb8e45f35f6f34188a71bd287274d430f",
+        "sha256": "c7a9de31f589d168495922a21a4d769cdd81ee33492961eef4d25ddfc2fbf484"
+      },
+      {
+        "canonical": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/native.log",
+        "duplicate": "_temp/TEST-process-electron-43780997272/native.log",
+        "bytes": 233,
+        "blob": "6b89bfaf3691c6772aa6511999865ae7ca269c04",
+        "sha256": "9331e77dbe728680c6ffee24645fa8d9e39bebfde0a0d03855258fd904bf7db5"
+      },
+      {
+        "canonical": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/proof.ndjson",
+        "duplicate": "_temp/TEST-process-electron-43780997272/proof.ndjson",
+        "bytes": 4081,
+        "blob": "1fd7237ff3e4931f913862e029c89791161410b2",
+        "sha256": "39ef4e9cee2d9786a1ccbd94e945f738971507671511fdf54ad5a41f51aefa23"
+      },
+      {
+        "canonical": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/registered-process-actor",
+        "duplicate": "_temp/TEST-process-electron-43780997272/registered-process-actor",
+        "bytes": 17288,
+        "blob": "cc293fa68010718e8ebbc606002657e28342b46a",
+        "sha256": "8026a8cdb44dfa74a29ddc80b632759a0375313b5d9289050b15e581598e550b"
+      },
+      {
+        "canonical": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/selection.json",
+        "duplicate": "_temp/TEST-process-electron-43780997272/selection.json",
+        "bytes": 589,
+        "blob": "e44117941270b10f1137126488616ecd07906f4b",
+        "sha256": "a94197e52deef716e2c254c58acb4af780fab2f63953f8c009a93746a849332d"
+      },
+      {
+        "canonical": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/warm-native.log",
+        "duplicate": "_temp/TEST-process-electron-43780997272/warm-native.log",
+        "bytes": 233,
+        "blob": "61a5f5bbad341490c1c6716dacee2f86e00e376f",
+        "sha256": "37ac3a8265a4e68ff3a374cce88264c0a00db767f11194520455c494afff30f3"
+      },
+      {
+        "canonical": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/warm-proof.ndjson",
+        "duplicate": "_temp/TEST-process-electron-43780997272/warm-proof.ndjson",
+        "bytes": 4577,
+        "blob": "812b566c4c56d23f8e4bccaab9f0119bfeef3df8",
+        "sha256": "f7a3adb0a9f36400e2dd07823ad701fd455a8a79aefb3e7791f48f4a95a268a4"
+      }
+    ],
+    "duplicateMeaning": "The 20 _temp members duplicate the canonical two ten-file native fixture directories byte-for-byte. They are not 20 additional executions or additional proof runs. Four standalone native executions only."
+  },
+  "sourceReview": {
+    "freshGitSourceCount": 63,
+    "freshGitSourceBytes": 1861834,
+    "sourceAudit": {
+      "path": "native-audit-M0660/process-linux-x64/source-audit.json",
+      "bytes": 17813,
+      "blob": "b0221a2c9c364ee2ed064a56bc1a6541da084d5f",
+      "sha256": "f6eba055f2a5c0594982e803bf1c608c05fd15b79f3eb9ffa85408ef9a03e2e5"
+    },
+    "all63GitBlobSizeSha256ModeJoinsExact": true,
+    "files": [
+      {
+        "path": ".github/workflows/host-process-acceptance.yml",
+        "bytes": 30399,
+        "blob": "123e52f461e42790ddf5fb8b1ea653b9e32c30db",
+        "sha256": "a7e59eb17ee93d15ffad248322d79e536d9d9c0b02c83a30a31687fd6e618ce0",
+        "lines": 392,
+        "mode": "100644"
+      },
+      {
+        "path": "agent-teams-controller/scripts/build.mjs",
+        "bytes": 990,
+        "blob": "bf2ce41041a9aee92261319e86cf802d82004739",
+        "sha256": "a7afb7428749efcd15c45acf9b4da03ce4d529ff663b57af876a55b373b97399",
+        "lines": 31,
+        "mode": "100644"
+      },
+      {
+        "path": "package.json",
+        "bytes": 26839,
+        "blob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+        "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+        "lines": 580,
+        "mode": "100644"
+      },
+      {
+        "path": "packages/legacy-agent-host/native/linux-child-exec.c",
+        "bytes": 1674,
+        "blob": "5f094bf61ae831f4b84339eaabb29d6f46c06a2e",
+        "sha256": "29f122efc95f3b8f4946e624d6d0afd70959f3759499cee4d23bae269c805337",
+        "lines": 42,
+        "mode": "100644"
+      },
+      {
+        "path": "packages/legacy-agent-host/native/registered-process-linux.c",
+        "bytes": 23627,
+        "blob": "841cda775caf1f7618dea59e89267d85c888d158",
+        "sha256": "f5d00c04919f9d8bdd36a1482bd96849488d54552a55f9daebeb03739db7c667",
+        "lines": 429,
+        "mode": "100644"
+      },
+      {
+        "path": "packages/legacy-agent-host/scripts/buildLinuxProcessNativeArtifact.ts",
+        "bytes": 11402,
+        "blob": "ee69300d2d6e5a33e34efcce78937bc36d5fefd4",
+        "sha256": "08b8d63f4b9fcbb2ce93b0703240c9b34fa91141b84d808543bb11ab221b019f",
+        "lines": 181,
+        "mode": "100644"
+      },
+      {
+        "path": "packages/legacy-agent-host/scripts/qualifyLinuxProcessNative.ts",
+        "bytes": 4671,
+        "blob": "c4cd9df0a6ffb3bda9173bb90fae298e9160da89",
+        "sha256": "2b8dca84ed5b7411b0c11820af8c40f3f184e7599cd39a60ccc4a79150dbbf7c",
+        "lines": 62,
+        "mode": "100644"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/processCustody.ts",
+        "bytes": 1995,
+        "blob": "7e537486aaa681c9e11cdd517f1e48e9291c3c64",
+        "sha256": "89865559d4ed06d9f47d010f03b6dd098cb7589db8cad01baa9ad33ed972fd7b",
+        "lines": 39,
+        "mode": "100644"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/process/LinuxRegisteredProcess.ts",
+        "bytes": 10169,
+        "blob": "e6ba065fa5ca2de79f4d6d1fe7aa03df68c2d899",
+        "sha256": "755f7f7e04914f130b72c0a8fdbc5f51560ebed39e805bd27196f568cfff24bd",
+        "lines": 175,
+        "mode": "100644"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/process/LinuxWarmProcess.ts",
+        "bytes": 9022,
+        "blob": "2e05306067e97f644d68c21c7cada8bc4cda1d1a",
+        "sha256": "5a1d5392725b299691aef7540c9fcc59a778016d5a07cc262a799cdd39b50f44",
+        "lines": 179,
+        "mode": "100644"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/process/loadProcessNativeArtifact.ts",
+        "bytes": 1239,
+        "blob": "c1ef9543c9950014059d45573f4c3283c521af86",
+        "sha256": "9e2c784c728d032cea5b6fe403664dbdf6705774183c036346a549e5ade6f9a5",
+        "lines": 25,
+        "mode": "100644"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/process/readPackagedProcessArtifact.ts",
+        "bytes": 3413,
+        "blob": "926327a2f072814f41e9c08cee03e48985404175",
+        "sha256": "a59deccd3ac1d7f24609494568046c15bd968015136c5aa52e9e745e91e3a79a",
+        "lines": 70,
+        "mode": "100644"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/captured-claude-process.test.ts",
+        "bytes": 17005,
+        "blob": "d2b952c9e6ac2281a14a00665cf4689d9c7d4b5c",
+        "sha256": "12be8f565712c09537d99ba75b63aa6e01774708ad1967c7ee2fdd964d747712",
+        "lines": 366,
+        "mode": "100644"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/claude-management-host.test.ts",
+        "bytes": 13620,
+        "blob": "7f7ee01121e64f0ab55c127f62c796bf20b3fc70",
+        "sha256": "0c90e1992310021a746897425e4440dff4116dcb8a7a19651def8a47563925be",
+        "lines": 223,
+        "mode": "100644"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/registered-process-actor.c",
+        "bytes": 2466,
+        "blob": "b2df27d949168d2d2a3242eb10b93c3b70ff9e41",
+        "sha256": "54cdd83e491803abaff29e1ec0f953535592960033b17a3373ea594cd9c98bb7",
+        "lines": 57,
+        "mode": "100644"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/registered-process-parent.ts",
+        "bytes": 1215,
+        "blob": "e39a4a27879953cd81564992b102c57a6e823825",
+        "sha256": "2b056e84f9dd470aabb899889699ed47ff3e9c386e14c2a4bde9c6820d0aca8b",
+        "lines": 19,
+        "mode": "100644"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/lifecycle-process-release.test.ts",
+        "bytes": 11844,
+        "blob": "6e620f1fdc12a4752b19e8ec2a8757ee2ad0d368",
+        "sha256": "d635cffd30e479172d6febdfa1de71d2c518c310a72aadfd6cd0f63c9e2deca1",
+        "lines": 169,
+        "mode": "100644"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/management-command-store.test.ts",
+        "bytes": 6631,
+        "blob": "b5788fd14518fde0dff0c58071cf8f9722d87e72",
+        "sha256": "c49a82c5f6626f17228c929077d849f74bf53f8837c6b11d6ed759e7280f3b60",
+        "lines": 120,
+        "mode": "100644"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/management-model-probe.test.ts",
+        "bytes": 47440,
+        "blob": "d13aa0c846dbf97aff99786e1165aa214aab93c7",
+        "sha256": "5a1e781f3d910b97cb3e4bfdc8592897bce69861b6200421355ed9f047f85f89",
+        "lines": 850,
+        "mode": "100644"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/owned-process-facade.test.ts",
+        "bytes": 9208,
+        "blob": "1a202377edc9f57c62eb757e9fcdc8718479e3d1",
+        "sha256": "ee1ba17e9fd9f52dc825c067a17038a5de36af4541ede3201621e62007614dec",
+        "lines": 164,
+        "mode": "100644"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/registered-process-build-selection.test.ts",
+        "bytes": 15547,
+        "blob": "d88797a15f80482027c990a1fdd75ff42264aa41",
+        "sha256": "26dd3e24a21b33fbe50067f2f73a925db82d3ae7e907cd93b2a9f0bd8fe08322",
+        "lines": 258,
+        "mode": "100644"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/registered-process-capture-records.test.ts",
+        "bytes": 4201,
+        "blob": "c7e75d4252407448804d52f80de69e64014645af",
+        "sha256": "c25580f9eac0ecfaf67d0319e75db263b3f06126a1891ffb23697594f711ec16",
+        "lines": 57,
+        "mode": "100644"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/registered-process-commands.test.ts",
+        "bytes": 48150,
+        "blob": "5fedca0326ab0bc92a124af9c39d1df1e4bb90cd",
+        "sha256": "052e701e1f0942215caeae3e6d2a92e900a03dcede46a3707682cf651122e68f",
+        "lines": 844,
+        "mode": "100644"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/registered-process-linux-warm-lifetime.test.ts",
+        "bytes": 18173,
+        "blob": "06472ff88775f547e4b49fd1521109623d2d220f",
+        "sha256": "98050d0259dd0ab0b061f23e8d8e313811dc21ba59e0238e67a3269269b00c3e",
+        "lines": 290,
+        "mode": "100644"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/registered-process-linux.native.mjs",
+        "bytes": 19288,
+        "blob": "f5959483a2441a5b53570c55df8b855f39003a94",
+        "sha256": "69e4235a7d3243cec40f0a68d356b32189c559e844367fa39323b4fa7f1dc28e",
+        "lines": 284,
+        "mode": "100644"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/registered-process-owner.test.ts",
+        "bytes": 12404,
+        "blob": "f1737e1a21a0447d43b84d3d839a5ffa6f385e2b",
+        "sha256": "44641e49e37d6c7bc9106aa18c98b399f9697128b7fdc4b341185c0835a8c0ef",
+        "lines": 314,
+        "mode": "100644"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/runtime-source-native-identity.test.ts",
+        "bytes": 42655,
+        "blob": "eaf21d42dc203d22778cfec4f02eb9bc6d62c0fa",
+        "sha256": "3cb9951ac6c712fb5911ebf83598d1c81d62a6fa6aa9bd03dc6c2df745e3a420",
+        "lines": 994,
+        "mode": "100644"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/runtime-source-probe-origins.test.ts",
+        "bytes": 12854,
+        "blob": "e757868741c2f4dd63f811a76232f95d6c7d6ba1",
+        "sha256": "33987a7fadfa6254175e64d9a743931c34684192e787a236a5b43dc247d82011",
+        "lines": 212,
+        "mode": "100644"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/runtime-source-process-selections.test.ts",
+        "bytes": 21765,
+        "blob": "126e66a45224121719b7b33c333692ee147b664d",
+        "sha256": "21ba6dea161737fee65834714cc9c4fb252e148f3d778f52d5e004fcfd18b757",
+        "lines": 294,
+        "mode": "100644"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+        "bytes": 87973,
+        "blob": "bc0913e775d3e076518009c4fe7b5ee45f8c7e7b",
+        "sha256": "a5c97e6dc5ce77215a0fb8e6d86d62606ded0d62cc1cea0475299519ff35cd1a",
+        "lines": 1646,
+        "mode": "100644"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/scheduled-run-host.test.ts",
+        "bytes": 41863,
+        "blob": "dbbd17b11db24a9dc3fb989e0266101847f0a778",
+        "sha256": "f3f9147184700663c24d85a2a81ff6ab54724b7883a9e6fcc9bf9c324f473ab5",
+        "lines": 598,
+        "mode": "100644"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/windows-finite-process-routing.test.ts",
+        "bytes": 10746,
+        "blob": "00eaa6c453a9d53c31dfc29f0dc0d83a610f5b85",
+        "sha256": "194703f2e57d73a0a4db026b41e9c64071bdc956d08dcdf9cb4ef2c238d8462b",
+        "lines": 165,
+        "mode": "100644"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/windows-job-custody.test.ts",
+        "bytes": 19542,
+        "blob": "1ca246fe30e71394783be13dc49ccc1d9b864dbb",
+        "sha256": "1ff30c2a0b092456040fe2779a2f71325d261cccc71fd81d527722105dced469",
+        "lines": 349,
+        "mode": "100644"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/windows-launcher-recipe.test.ts",
+        "bytes": 22044,
+        "blob": "af3b9078b2fa9ee565ccc406a50852ccb600b4bb",
+        "sha256": "7a7dfa5edfa12536d692aa1d5db0df4db992092a33094c965918ce8fbbc0e0af",
+        "lines": 357,
+        "mode": "100644"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/windows-provider-routing.test.ts",
+        "bytes": 5368,
+        "blob": "7ec8646c9dd6f375f77c999fb33d1963a259298e",
+        "sha256": "d3ea92a25c8f1b837f7f08a8196a1ce6eb02dd6de51601a382906601b8f14596",
+        "lines": 92,
+        "mode": "100644"
+      },
+      {
+        "path": "packages/legacy-agent-host/tsconfig.json",
+        "bytes": 456,
+        "blob": "9fad9f8a73e1cfffd382c0ba76f2945e5c361531",
+        "sha256": "54be9b6021660d54c06c14fd25cc5c4484b7615f01d9eb033fc52edfded095ab",
+        "lines": 19,
+        "mode": "100644"
+      },
+      {
+        "path": "packages/legacy-agent-host/tsconfig.test.json",
+        "bytes": 174,
+        "blob": "65edbd94041b7d9a986480badd6802b1dd0a8837",
+        "sha256": "5f1f3e6842c4087e0f834895fbde59769240c68a98ff15c24ac1677d0e5b9356",
+        "lines": 9,
+        "mode": "100644"
+      },
+      {
+        "path": "packages/task-change-ledger/tsconfig.json",
+        "bytes": 378,
+        "blob": "ff7683dc99c69dbf8c884ba138382468c9c86314",
+        "sha256": "03d503904b76cc07fc4765a30493d288b99a2dbcf1325f3dda243592a407cb6c",
+        "lines": 17,
+        "mode": "100644"
+      },
+      {
+        "path": "pnpm-lock.yaml",
+        "bytes": 956788,
+        "blob": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+        "sha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c",
+        "lines": 26665,
+        "mode": "100644"
+      },
+      {
+        "path": "scripts/build/buildLinuxNodeExec.mjs",
+        "bytes": 4125,
+        "blob": "f0ed24053ad252e8e348090c535b0818100a5a80",
+        "sha256": "fc7e6f68bd899b1109df035d0c903d0df50d9613b5a6c7f1543b763727d8b927",
+        "lines": 82,
+        "mode": "100644"
+      },
+      {
+        "path": "scripts/build/linuxNodeExec.native.test.mjs",
+        "bytes": 9565,
+        "blob": "05e0abb5adad9cecc93f202c913de42168846c2a",
+        "sha256": "3f6ac3e61f98ff41b3fe6531488aede1b1b3faf5e980700613cc4c634345e05c",
+        "lines": 178,
+        "mode": "100644"
+      },
+      {
+        "path": "scripts/ci/enforce-pnpm-install.mjs",
+        "bytes": 312,
+        "blob": "fb33357b9d8b38c2d133593791153aa2fe0bdcf0",
+        "sha256": "79b147e33807a5d236bda58f6fd4c401c54015b09684e66b054497d08a4f9bed",
+        "lines": 13,
+        "mode": "100644"
+      },
+      {
+        "path": "scripts/ci/install-dependencies-with-retry.mjs",
+        "bytes": 5259,
+        "blob": "cbf2463eb47d22c3d87d9eec001edad26dd68ff0",
+        "sha256": "c8dc0b63fc490fd5a9a1b4abf0631b66c30e1ccda2199094c86e49a6e250d01e",
+        "lines": 128,
+        "mode": "100644"
+      },
+      {
+        "path": "scripts/ensure-electron-install.cjs",
+        "bytes": 4585,
+        "blob": "6e82478a6347cde01cbc5d52ae71ef79cb38f290",
+        "sha256": "9bd7bd4a400eeb7ef4987189ffc9d64774677576a9198e417839989401bf4edb",
+        "lines": 158,
+        "mode": "100644"
+      },
+      {
+        "path": "src/main/utils/linuxChildLaunch.ts",
+        "bytes": 15382,
+        "blob": "6cadc2595d46e954bc6258245c6b82d9133a1a09",
+        "sha256": "e5cd7de9c86f4e0fcab043404c24561dfb71926e839ad79feecd3839d6068814",
+        "lines": 294,
+        "mode": "100644"
+      },
+      {
+        "path": "src/main/utils/linuxChildLaunchSelection.ts",
+        "bytes": 13318,
+        "blob": "72c4e47c0a396c8168e3c064e21e7e96104cf181",
+        "sha256": "c3a5eedb723e112ec3bc9ee0458b9570d462dc39f9ee7e610b02a2d84850b848",
+        "lines": 255,
+        "mode": "100644"
+      },
+      {
+        "path": "src/main/utils/linuxNodeExecArtifact.ts",
+        "bytes": 6181,
+        "blob": "f7d2ac8cb75afdd5649facc4f5b6ad605236ae4c",
+        "sha256": "5f83c0db30747a7cc762ea5b40634b315029088f68dcdeaf6274591e1c1462c1",
+        "lines": 127,
+        "mode": "100644"
+      },
+      {
+        "path": "test/features/agent-backend/capturedHostClient.test.ts",
+        "bytes": 51981,
+        "blob": "d285d22cd1ad69e43b3997ea58d90ea5d0f4600b",
+        "sha256": "d9e5f76a6e156f6526d9553307126f4a4a03798950baf097d9ad6e58e8d5715f",
+        "lines": 1040,
+        "mode": "100644"
+      },
+      {
+        "path": "test/features/agent-backend/capturedRuntimeSourceNativeAdmission.test.ts",
+        "bytes": 4592,
+        "blob": "4a7801a5260ad0c25a07485003d4e99ac5b4633f",
+        "sha256": "a979a7e7a32e952067237fc3d04f3b4b19a97328dacf55db65c606dae4211287",
+        "lines": 67,
+        "mode": "100644"
+      },
+      {
+        "path": "test/features/agent-backend/capturedWindowsSelection.test.ts",
+        "bytes": 10861,
+        "blob": "e6379e4ace2cc874f660c6bb1377592bba52ebb9",
+        "sha256": "3f972d99f44c514d3f06875a7c8a094b63998aa5daf17abf68db13a7b4cc9025",
+        "lines": 186,
+        "mode": "100644"
+      },
+      {
+        "path": "test/features/agent-backend/capturedWindowsSourceHistory.test.ts",
+        "bytes": 12515,
+        "blob": "b6ce74003e2dc27a8e4527bd07298fc2bff2a586",
+        "sha256": "0c411315405fd6a572dddb385e3735ca43b78141d729f932a27087adf48480c7",
+        "lines": 166,
+        "mode": "100644"
+      },
+      {
+        "path": "test/features/agent-backend/capturedWindowsSourcePending.test.ts",
+        "bytes": 6457,
+        "blob": "1ff48096cf52cde91cd82ac55eddf99f4458896e",
+        "sha256": "b18822ad82a51a00100184148043032822fcfa2df80c47e1d38a4dbdc6e71e56",
+        "lines": 86,
+        "mode": "100644"
+      },
+      {
+        "path": "test/features/agent-backend/desktopBackendFeature.test.ts",
+        "bytes": 56748,
+        "blob": "1bd21c24852ebfade85b23b425342e6665f447e7",
+        "sha256": "a6540bd6c68165b7b0d782768cc7303d00cb609083df4baacdaad81d51e3f810",
+        "lines": 1121,
+        "mode": "100644"
+      },
+      {
+        "path": "test/features/agent-backend/fileTeamModelProbeIntents.test.ts",
+        "bytes": 10028,
+        "blob": "a596613b900598a51d446d7c959b1ea7c1c95b64",
+        "sha256": "0fd030d5cdfb4473b32991b6b62befa9ecd888236423419df9a48f9e599cc119",
+        "lines": 194,
+        "mode": "100644"
+      },
+      {
+        "path": "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+        "bytes": 15667,
+        "blob": "bc0820f51820e4cf66f37404395fee4c536b5311",
+        "sha256": "1f20a7ab1e2f8e35abd2123a962884054f00b0a48deb7bf2617502bc8d960b46",
+        "lines": 294,
+        "mode": "100644"
+      },
+      {
+        "path": "test/main/build/electronBuilderAfterPack.test.ts",
+        "bytes": 47049,
+        "blob": "b89cebb11cbf08b1293d92eac48cfb243e9337de",
+        "sha256": "f8090556fb7689243f0ab75c58aa910d01b3de939b282a2e409c3c588c86c743",
+        "lines": 1177,
+        "mode": "100644"
+      },
+      {
+        "path": "test/setup.ts",
+        "bytes": 5297,
+        "blob": "e24e03f9e2b9f7b9bdc3720212713c4106c64a1c",
+        "sha256": "cb945908ebb8f9aecec7eb6eca354a9fe6a34b2aec1994ac7463d56dfd5f0d3b",
+        "lines": 168,
+        "mode": "100644"
+      },
+      {
+        "path": "tools/linux-node-exec/close-fds-exec.c",
+        "bytes": 1932,
+        "blob": "34eb3d68815cd4a2c79fbb972934332d79c449b6",
+        "sha256": "4a6e27406a7c1125cadcef66fc54cf10160b82d920a9b7d516f01ca467426dd3",
+        "lines": 69,
+        "mode": "100644"
+      },
+      {
+        "path": "tools/linux-node-exec/inherited-fds-fixture.c",
+        "bytes": 2263,
+        "blob": "1c04e7e782c1101a77e5851e6e68f59315a9ac5e",
+        "sha256": "09784caf4d8aea5992db365f1b2c15c6724648af5f37a9e7ec19090cd4f86608",
+        "lines": 60,
+        "mode": "100644"
+      },
+      {
+        "path": "tools/owned-process-broker/tsconfig.json",
+        "bytes": 557,
+        "blob": "4936675ad8af5a71d8c001a414836e90250a5daf",
+        "sha256": "9692a10f0691d73cd929940768cd38b084fce81f705b9561d8b1af2ba9a2daef",
+        "lines": 6,
+        "mode": "100644"
+      },
+      {
+        "path": "tools/owned-process-broker/tsconfig.retained-host.json",
+        "bytes": 393,
+        "blob": "905f1a1489f3b37d651a9984169b0321c9915a15",
+        "sha256": "c39028ec42fec7402ec1260cb5ed0fca78762d4700847658d9eb95f9e8adbdb7",
+        "lines": 6,
+        "mode": "100644"
+      },
+      {
+        "path": "tools/owned-process-broker/vitest.config.ts",
+        "bytes": 342,
+        "blob": "cd03a73404a7b2548c15234743c24c1093b554af",
+        "sha256": "d7af296db40661045f6402af15eeb6072781919fd8c8145e554dada03e0de88e",
+        "lines": 13,
+        "mode": "100644"
+      },
+      {
+        "path": "vitest.config.ts",
+        "bytes": 1187,
+        "blob": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+        "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc",
+        "lines": 34,
+        "mode": "100644"
+      }
+    ],
+    "priorFrozenHost619Inventory": {
+      "path": "native-audit-M0660/host-source-M0660-git-audit.json",
+      "bytes": 163123,
+      "blob": "c6f687fc66ecfbd5ab750c1fa657af628e2329e7",
+      "sha256": "05d5046c29097f54d9fb6c48bb8ab4236240a883d5ebfda4854269c5779a2893",
+      "fileIdentityChecked": true,
+      "freshAll619ReauditClaimed": false
+    },
+    "semanticReadScope": [
+      "Complete qualifyLinuxProcessNative.ts, registered-process-linux.native.mjs, LinuxRegisteredProcess.ts, LinuxWarmProcess.ts, processCustody.ts, buildLinuxProcessNativeArtifact.ts, original finite C/TS actor fixtures, linuxNodeExec.native.test.mjs.",
+      "Original POSIX positive/negative custody and replacement-group assertions in captured-claude-process.test.ts; workflow source selection/build/test/Linux/final-gate/upload blocks.",
+      "63-file identity verification is not a claim that every byte of every transitive runtime/toolchain dependency was independently recompiled or archived."
+    ]
+  },
+  "originalCommands": [
+    "node node_modules/@typescript/native/bin/tsc -p packages/task-change-ledger/tsconfig.json",
+    "node agent-teams-controller/scripts/build.mjs",
+    "node node_modules/@typescript/native/bin/tsc -p packages/legacy-agent-host/tsconfig.json",
+    "node node_modules/@typescript/native/bin/tsc -p packages/legacy-agent-host/tsconfig.test.json",
+    "node node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.json",
+    "node node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.retained-host.json",
+    "node --test packages/legacy-agent-host/tests/claude-management-host.test.ts packages/legacy-agent-host/tests/scheduled-run-host.test.ts packages/legacy-agent-host/tests/management-command-store.test.ts packages/legacy-agent-host/tests/owned-process-facade.test.ts packages/legacy-agent-host/tests/windows-job-custody.test.ts packages/legacy-agent-host/tests/registered-process-owner.test.ts packages/legacy-agent-host/tests/registered-process-capture-records.test.ts packages/legacy-agent-host/tests/registered-process-commands.test.ts packages/legacy-agent-host/tests/registered-process-linux-warm-lifetime.test.ts packages/legacy-agent-host/tests/registered-process-build-selection.test.ts packages/legacy-agent-host/tests/lifecycle-process-release.test.ts packages/legacy-agent-host/tests/windows-provider-routing.test.ts packages/legacy-agent-host/tests/windows-launcher-recipe.test.ts packages/legacy-agent-host/tests/windows-finite-process-routing.test.ts packages/legacy-agent-host/tests/runtime-source-process-selections.test.ts packages/legacy-agent-host/tests/runtime-source-probe-origins.test.ts packages/legacy-agent-host/tests/management-model-probe.test.ts packages/legacy-agent-host/tests/saved-team-model-probe.test.ts 2>&1 | tee process-acceptance-evidence/host-contracts.log",
+    "node node_modules/vitest/vitest.mjs run --maxWorkers=1 --config tools/owned-process-broker/vitest.config.ts 2>&1 | tee process-acceptance-evidence/protocol.log",
+    "node node_modules/vitest/vitest.mjs run --maxWorkers=1 test/features/agent-backend/capturedHostClient.test.ts test/features/agent-backend/capturedWindowsSelection.test.ts test/features/agent-backend/desktopBackendFeature.test.ts test/features/agent-backend/fileTeamModelProbeIntents.test.ts test/features/agent-backend/capturedRuntimeSourceNativeAdmission.test.ts test/features/agent-backend/capturedWindowsSourceHistory.test.ts test/features/agent-backend/capturedWindowsSourcePending.test.ts test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts 2>&1 | tee process-acceptance-evidence/retained-main.log",
+    "node --test packages/legacy-agent-host/tests/captured-claude-process.test.ts packages/legacy-agent-host/tests/runtime-source-native-identity.test.ts 2>&1 | tee process-acceptance-evidence/posix-lifecycle.log",
+    "HOST_NODE_EXEC_TARGET=\"$(command -v node)\" node --test scripts/build/linuxNodeExec.native.test.mjs 2>&1 | tee process-acceptance-evidence/linux-node-exec-node24.log",
+    "HOST_NODE_EXEC_TARGET=\"$(command -v node)\" ELECTRON_RUN_AS_NODE=1 node_modules/electron/dist/electron --test scripts/build/linuxNodeExec.native.test.mjs 2>&1 | tee process-acceptance-evidence/linux-node-exec-electron.log",
+    "node node_modules/vitest/vitest.mjs run --maxWorkers=1 test/main/build/electronBuilderAfterPack.test.ts 2>&1 | tee process-acceptance-evidence/linux-node-exec-packaging.log",
+    "node packages/legacy-agent-host/scripts/qualifyLinuxProcessNative.ts \"$RUNNER_TEMP/TEST-process-node24-$GITHUB_RUN_ID\" \"$(command -v cc)\" \"$(command -v readelf)\" \"$headers\" 2>&1 | tee process-acceptance-evidence/linux-node24.log",
+    "node_modules/electron/dist/electron packages/legacy-agent-host/scripts/qualifyLinuxProcessNative.ts \"$RUNNER_TEMP/TEST-process-electron-$GITHUB_RUN_ID\" \"$(command -v cc)\" \"$(command -v readelf)\" \"$headers\" 2>&1 | tee process-acceptance-evidence/linux-electron.log"
+  ],
+  "all15CommandsExactlyInOriginalWorkflowAndJobLog": true,
+  "originalBuildCommands": [
+    "node node_modules/@typescript/native/bin/tsc -p packages/task-change-ledger/tsconfig.json",
+    "node agent-teams-controller/scripts/build.mjs",
+    "node node_modules/@typescript/native/bin/tsc -p packages/legacy-agent-host/tsconfig.json",
+    "node node_modules/@typescript/native/bin/tsc -p packages/legacy-agent-host/tsconfig.test.json",
+    "node node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.json",
+    "node node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.retained-host.json"
+  ],
+  "reporterBlocks": [
+    {
+      "file": "host-contracts.log",
+      "runner": "node",
+      "testFilesOrExplicitNodeOperands": 18,
+      "passed": 167,
+      "failed": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "bytes": 20699,
+      "blob": "90fcefdb01b6775f522c2608edb0de94c1edf301",
+      "sha256": "905816116662918134499815072f016e00d48e6b4a6335a534ef68b1a81ad72f",
+      "actualParsedCounts": {
+        "tests": 167,
+        "pass": 167,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "fullReporterIncludedInOriginalJobLogAfterTimestampAnsiRenderingNormalization": true
+    },
+    {
+      "file": "protocol.log",
+      "runner": "vitest",
+      "testFilesOrExplicitNodeOperands": 3,
+      "passed": 53,
+      "failed": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "bytes": 769,
+      "blob": "26e3c4feb9a7aa5962e90dcd0b735d52fefded82",
+      "sha256": "c390a323c27593bf703e36e8d269948579903d81d3289bbb7efff289f83d93a5",
+      "actualParsedCounts": {
+        "tests": 53,
+        "pass": 53,
+        "fail": 0,
+        "skipped": 0,
+        "cancelled": 0,
+        "todo": 0
+      },
+      "fullReporterIncludedInOriginalJobLogAfterTimestampAnsiRenderingNormalization": true
+    },
+    {
+      "file": "retained-main.log",
+      "runner": "vitest",
+      "testFilesOrExplicitNodeOperands": 8,
+      "passed": 81,
+      "failed": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "bytes": 9382,
+      "blob": "9d9620093ec5a88d43c5980cb840084ab109807e",
+      "sha256": "9404d0db0658d100ca1445b765d7fadd4530b5131fa5771cf54587e07ee6b105",
+      "actualParsedCounts": {
+        "tests": 81,
+        "pass": 81,
+        "fail": 0,
+        "skipped": 0,
+        "cancelled": 0,
+        "todo": 0
+      },
+      "fullReporterIncludedInOriginalJobLogAfterTimestampAnsiRenderingNormalization": true
+    },
+    {
+      "file": "posix-lifecycle.log",
+      "runner": "node",
+      "testFilesOrExplicitNodeOperands": 2,
+      "passed": 27,
+      "failed": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "bytes": 5165,
+      "blob": "a6b4615dc60a603e6ae551379cac6d885d64ca6d",
+      "sha256": "3df32eee5903563c1dfed36a63f6ee91ac266614ac9e4ff75cff87dabd8d4f44",
+      "actualParsedCounts": {
+        "tests": 27,
+        "pass": 27,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "fullReporterIncludedInOriginalJobLogAfterTimestampAnsiRenderingNormalization": true
+    },
+    {
+      "file": "linux-node-exec-node24.log",
+      "runner": "node",
+      "testFilesOrExplicitNodeOperands": 1,
+      "passed": 6,
+      "failed": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "bytes": 756,
+      "blob": "4ff1e6812d8e363661a26b6b7b4c810f0b9fd0d2",
+      "sha256": "ca0ac8b134445b714e33b5bd5db1f85a5b9907e82d1634d1787376735c5403a6",
+      "actualParsedCounts": {
+        "tests": 6,
+        "pass": 6,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "fullReporterIncludedInOriginalJobLogAfterTimestampAnsiRenderingNormalization": true
+    },
+    {
+      "file": "linux-node-exec-electron.log",
+      "runner": "node",
+      "testFilesOrExplicitNodeOperands": 1,
+      "passed": 6,
+      "failed": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "bytes": 753,
+      "blob": "9cb69c64a30e43489cdee88fb56afbc01063276f",
+      "sha256": "4805e15be0caafbab7e06a4dbe3149e00253ada50f4b9873a5ad0d0a7d266975",
+      "actualParsedCounts": {
+        "tests": 6,
+        "pass": 6,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "fullReporterIncludedInOriginalJobLogAfterTimestampAnsiRenderingNormalization": true
+    },
+    {
+      "file": "linux-node-exec-packaging.log",
+      "runner": "vitest",
+      "testFilesOrExplicitNodeOperands": 1,
+      "passed": 63,
+      "failed": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "bytes": 6529,
+      "blob": "48dab8055d9b24220cf7f96ffe24af4ce549bc8a",
+      "sha256": "7a7b250892be6f0d515a4a655898635eb60213a10ec99c3b43a4596732e393b6",
+      "actualParsedCounts": {
+        "tests": 63,
+        "pass": 63,
+        "fail": 0,
+        "skipped": 0,
+        "cancelled": 0,
+        "todo": 0
+      },
+      "fullReporterIncludedInOriginalJobLogAfterTimestampAnsiRenderingNormalization": true
+    }
+  ],
+  "reporterTotals": {
+    "passed": 403,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "todo": 0,
+    "distinctReporterBlocks": 7
+  },
+  "windowsOnlyWorkflowStepsSkipped": [
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21
+  ],
+  "standaloneNativeExecutionsExcludedFrom403": 4,
+  "nativeBuildJoins": [
+    {
+      "lane": "linux-node24",
+      "receipt": {
+        "path": "native-audit-M0660/process-linux-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24.log",
+        "bytes": 848,
+        "blob": "5dd63656a6c84d40e677957b06b2d39943d4b3e0",
+        "sha256": "350586d6006a73706144e383fdc729b7d24d8ea03f35a4e34973d2040b549349"
+      },
+      "selection": {
+        "path": "native-audit-M0660/process-linux-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/selection.json",
+        "bytes": 583,
+        "blob": "b48dee596c012dd858c65b06b7055df9008a9b02",
+        "sha256": "af26c77f97f933c1a3fedf2f782843235705314135c8c0a9336d66b68c55c033"
+      },
+      "addonManifest": {
+        "path": "native-audit-M0660/process-linux-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/artifact/manifest.json",
+        "bytes": 1170,
+        "blob": "c5a238b73e94f4ba56fa1ace5933ce3179eb7a8e",
+        "sha256": "b9e4d9e8546a22a3d3b1b0cfcd81f395761210023b3c1c62a766b83f44718555"
+      },
+      "addonBinary": {
+        "path": "native-audit-M0660/process-linux-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/artifact/registered-process.node",
+        "bytes": 36104,
+        "blob": "57c127f01e3510ea9ad8bb6fc8028b06e9cdfd37",
+        "sha256": "a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217"
+      },
+      "childManifest": {
+        "path": "native-audit-M0660/process-linux-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/linux-child-exec/manifest.json",
+        "bytes": 2408,
+        "blob": "2f3526beb8e45f35f6f34188a71bd287274d430f",
+        "sha256": "c7a9de31f589d168495922a21a4d769cdd81ee33492961eef4d25ddfc2fbf484"
+      },
+      "childBinary": {
+        "path": "native-audit-M0660/process-linux-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/linux-child-exec/linux-child-exec",
+        "bytes": 789792,
+        "blob": "26cd7246d5b74d2f14464fe82b8ba566e77f3d97",
+        "sha256": "be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110"
+      },
+      "sourcePinsMatchFreshGit": true,
+      "retainedExternalBuildInputs": {
+        "compilerSha256": "1b99826121ae6682a634e5efe09bd3e3df58ce58e0b28f849114ab5b89139c26",
+        "inspectorSha256": "64c58e15274bbbb5153f31078e455e9e77ee5f51489e709bba5bb788ce9df2b0",
+        "napiHeaders": [
+          {
+            "file": "node_api.h",
+            "sha256": "2d4560831e525b47b060ec8a0864ab73993df9e20215ce9f0fe7b24cd31af32a"
+          },
+          {
+            "file": "node_api_types.h",
+            "sha256": "a25356630d3058f0a0c8937d9f297e9471e037fda58c2696d8a505c2bd99cb00"
+          },
+          {
+            "file": "js_native_api.h",
+            "sha256": "8808ef8899a1691411928ef5dd7dae0537aedc93d3a34e223b2d89692e79c788"
+          },
+          {
+            "file": "js_native_api_types.h",
+            "sha256": "4f19cb90d240765cc0961d92a1ee20f65fdc50db7de1ab0a5cb6bc227224e1a0"
+          }
+        ],
+        "staticLinkInputs": [
+          {
+            "file": "/usr/bin/x86_64-linux-gnu-as",
+            "sha256": "21aff249b692b5c31a44007491f922dcb49f41323e362c57d2ada3f52eddb7f0"
+          },
+          {
+            "file": "/usr/bin/x86_64-linux-gnu-ld.bfd",
+            "sha256": "e9ceb054c12207970f2726dfc07e9a66b411602748628baf27399f02a9bbb31b"
+          },
+          {
+            "file": "/usr/lib/gcc/x86_64-linux-gnu/13/crtbeginT.o",
+            "sha256": "42171a80795909e1a0743f71c60b503ff2951ed40bf94cae9ca55c324a8cc26a"
+          },
+          {
+            "file": "/usr/lib/gcc/x86_64-linux-gnu/13/crtend.o",
+            "sha256": "9c8b2caad195193301ef072895dc89bea1d23371d4c19accd821debe27773063"
+          },
+          {
+            "file": "/usr/lib/gcc/x86_64-linux-gnu/13/libgcc.a",
+            "sha256": "d9376c55f97863a4e5fbb6c6beca2591b319bf786f3a7ca56da8964c5662171f"
+          },
+          {
+            "file": "/usr/lib/gcc/x86_64-linux-gnu/13/libgcc_eh.a",
+            "sha256": "f853cbbf842ff8714cc8dd986e2fd5bb309d34d490b0707203223ee4d52c76bc"
+          },
+          {
+            "file": "/usr/lib/x86_64-linux-gnu/crt1.o",
+            "sha256": "5cfb30db1d2c92a9a818f6c015ad7fcd6519afaa1b88148e831504fe6e299479"
+          },
+          {
+            "file": "/usr/lib/x86_64-linux-gnu/crti.o",
+            "sha256": "077ccb6c68db1794da3ee262c4a16a3c6f8e902845dd0829110ad4b7065e5aa3"
+          },
+          {
+            "file": "/usr/lib/x86_64-linux-gnu/crtn.o",
+            "sha256": "a2266079f95b84ccc2162ebbf279bcd78858a748aa1882e0bdb912316c76a58f"
+          },
+          {
+            "file": "/usr/lib/x86_64-linux-gnu/libc.a",
+            "sha256": "a40c7eae7581f977b65eddb81cbc799213a695749e039d966db55bdee4ac9621"
+          },
+          {
+            "file": "/usr/libexec/gcc/x86_64-linux-gnu/13/cc1",
+            "sha256": "5d1679131184e2de4435b426eb264bf13472fe026db8e5c6bc97445814e8e2f4"
+          },
+          {
+            "file": "/usr/libexec/gcc/x86_64-linux-gnu/13/collect2",
+            "sha256": "4d1f341ae5b763b513258ee2812422a45e063c30a2f1924a0cf63d3699f3a158"
+          }
+        ]
+      },
+      "externalToolchainBytesIndependentlyArchivedOrRebuilt": false
+    },
+    {
+      "lane": "linux-electron",
+      "receipt": {
+        "path": "native-audit-M0660/process-linux-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron.log",
+        "bytes": 854,
+        "blob": "1fca8b41434e17b6f5d5bc784dcf4486b9c98bef",
+        "sha256": "ee5c32733e898bab151a8529e17387cec34d1b12390363ac84a197b087f98dc5"
+      },
+      "selection": {
+        "path": "native-audit-M0660/process-linux-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/selection.json",
+        "bytes": 589,
+        "blob": "e44117941270b10f1137126488616ecd07906f4b",
+        "sha256": "a94197e52deef716e2c254c58acb4af780fab2f63953f8c009a93746a849332d"
+      },
+      "addonManifest": {
+        "path": "native-audit-M0660/process-linux-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/artifact/manifest.json",
+        "bytes": 1170,
+        "blob": "c5a238b73e94f4ba56fa1ace5933ce3179eb7a8e",
+        "sha256": "b9e4d9e8546a22a3d3b1b0cfcd81f395761210023b3c1c62a766b83f44718555"
+      },
+      "addonBinary": {
+        "path": "native-audit-M0660/process-linux-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/artifact/registered-process.node",
+        "bytes": 36104,
+        "blob": "57c127f01e3510ea9ad8bb6fc8028b06e9cdfd37",
+        "sha256": "a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217"
+      },
+      "childManifest": {
+        "path": "native-audit-M0660/process-linux-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/linux-child-exec/manifest.json",
+        "bytes": 2408,
+        "blob": "2f3526beb8e45f35f6f34188a71bd287274d430f",
+        "sha256": "c7a9de31f589d168495922a21a4d769cdd81ee33492961eef4d25ddfc2fbf484"
+      },
+      "childBinary": {
+        "path": "native-audit-M0660/process-linux-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/linux-child-exec/linux-child-exec",
+        "bytes": 789792,
+        "blob": "26cd7246d5b74d2f14464fe82b8ba566e77f3d97",
+        "sha256": "be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110"
+      },
+      "sourcePinsMatchFreshGit": true,
+      "retainedExternalBuildInputs": {
+        "compilerSha256": "1b99826121ae6682a634e5efe09bd3e3df58ce58e0b28f849114ab5b89139c26",
+        "inspectorSha256": "64c58e15274bbbb5153f31078e455e9e77ee5f51489e709bba5bb788ce9df2b0",
+        "napiHeaders": [
+          {
+            "file": "node_api.h",
+            "sha256": "2d4560831e525b47b060ec8a0864ab73993df9e20215ce9f0fe7b24cd31af32a"
+          },
+          {
+            "file": "node_api_types.h",
+            "sha256": "a25356630d3058f0a0c8937d9f297e9471e037fda58c2696d8a505c2bd99cb00"
+          },
+          {
+            "file": "js_native_api.h",
+            "sha256": "8808ef8899a1691411928ef5dd7dae0537aedc93d3a34e223b2d89692e79c788"
+          },
+          {
+            "file": "js_native_api_types.h",
+            "sha256": "4f19cb90d240765cc0961d92a1ee20f65fdc50db7de1ab0a5cb6bc227224e1a0"
+          }
+        ],
+        "staticLinkInputs": [
+          {
+            "file": "/usr/bin/x86_64-linux-gnu-as",
+            "sha256": "21aff249b692b5c31a44007491f922dcb49f41323e362c57d2ada3f52eddb7f0"
+          },
+          {
+            "file": "/usr/bin/x86_64-linux-gnu-ld.bfd",
+            "sha256": "e9ceb054c12207970f2726dfc07e9a66b411602748628baf27399f02a9bbb31b"
+          },
+          {
+            "file": "/usr/lib/gcc/x86_64-linux-gnu/13/crtbeginT.o",
+            "sha256": "42171a80795909e1a0743f71c60b503ff2951ed40bf94cae9ca55c324a8cc26a"
+          },
+          {
+            "file": "/usr/lib/gcc/x86_64-linux-gnu/13/crtend.o",
+            "sha256": "9c8b2caad195193301ef072895dc89bea1d23371d4c19accd821debe27773063"
+          },
+          {
+            "file": "/usr/lib/gcc/x86_64-linux-gnu/13/libgcc.a",
+            "sha256": "d9376c55f97863a4e5fbb6c6beca2591b319bf786f3a7ca56da8964c5662171f"
+          },
+          {
+            "file": "/usr/lib/gcc/x86_64-linux-gnu/13/libgcc_eh.a",
+            "sha256": "f853cbbf842ff8714cc8dd986e2fd5bb309d34d490b0707203223ee4d52c76bc"
+          },
+          {
+            "file": "/usr/lib/x86_64-linux-gnu/crt1.o",
+            "sha256": "5cfb30db1d2c92a9a818f6c015ad7fcd6519afaa1b88148e831504fe6e299479"
+          },
+          {
+            "file": "/usr/lib/x86_64-linux-gnu/crti.o",
+            "sha256": "077ccb6c68db1794da3ee262c4a16a3c6f8e902845dd0829110ad4b7065e5aa3"
+          },
+          {
+            "file": "/usr/lib/x86_64-linux-gnu/crtn.o",
+            "sha256": "a2266079f95b84ccc2162ebbf279bcd78858a748aa1882e0bdb912316c76a58f"
+          },
+          {
+            "file": "/usr/lib/x86_64-linux-gnu/libc.a",
+            "sha256": "a40c7eae7581f977b65eddb81cbc799213a695749e039d966db55bdee4ac9621"
+          },
+          {
+            "file": "/usr/libexec/gcc/x86_64-linux-gnu/13/cc1",
+            "sha256": "5d1679131184e2de4435b426eb264bf13472fe026db8e5c6bc97445814e8e2f4"
+          },
+          {
+            "file": "/usr/libexec/gcc/x86_64-linux-gnu/13/collect2",
+            "sha256": "4d1f341ae5b763b513258ee2812422a45e063c30a2f1924a0cf63d3699f3a158"
+          }
+        ]
+      },
+      "externalToolchainBytesIndependentlyArchivedOrRebuilt": false
+    }
+  ],
+  "nativeFlows": [
+    {
+      "lane": "linux-node24",
+      "mode": "automatic",
+      "originalProof": {
+        "path": "native-audit-M0660/process-linux-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/proof.ndjson",
+        "bytes": 4039,
+        "blob": "65a3e5171370f8f15c4535667468eb4525a54870",
+        "sha256": "c1fa4e04a81ce7251ad549b61d0292e6716d0649c0b210197e98283d1f505241"
+      },
+      "originalFinalReceipt": {
+        "path": "native-audit-M0660/process-linux-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/native.log",
+        "bytes": 233,
+        "blob": "83153af374f89836b1c65ab32d68c904308a0b2b",
+        "sha256": "17c579faccd82606f4adc997baf422052dee4d0f36de22a9a20f63a04a81709c"
+      },
+      "orderedPhases": [
+        "start",
+        "isolated-same-child-launch",
+        "ownership-and-identity-negatives",
+        "requested-before-native",
+        "live-worker-after-thread-leader-exit",
+        "proved",
+        "finite-cleanup"
+      ],
+      "runtimeVersions": {
+        "node": "24.21.0",
+        "acorn": "8.18.0",
+        "ada": "4.0.0",
+        "amaro": "1.1.11",
+        "ares": "1.34.8",
+        "brotli": "1.2.0",
+        "cldr": "48.0",
+        "icu": "78.3",
+        "llhttp": "9.4.3",
+        "merve": "1.2.2",
+        "modules": "137",
+        "napi": "10",
+        "nbytes": "0.1.4",
+        "ncrypto": "0.0.1",
+        "nghttp2": "1.70.0",
+        "nghttp3": "",
+        "ngtcp2": "",
+        "openssl": "3.5.8",
+        "simdjson": "4.6.7",
+        "simdutf": "6.4.0",
+        "sqlite": "3.53.4",
+        "tz": "2026c",
+        "undici": "7.29.1",
+        "unicode": "17.0",
+        "uv": "1.52.1",
+        "uvwasi": "0.0.23",
+        "v8": "13.6.233.17-node.53",
+        "zlib": "1.3.2.1-motley-8002e91",
+        "zstd": "1.5.7"
+      },
+      "kernel": {
+        "release": "7.0.0-1017-azure",
+        "platform": "linux",
+        "arch": "x64"
+      },
+      "isolatedChild": {
+        "phase": "isolated-same-child-launch",
+        "completed": true,
+        "parentUnchanged": true,
+        "helperSha256": "be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110",
+        "originalChildPid": 4454,
+        "exactHighDescriptorAbsent": true,
+        "descendantDescriptorAbsent": true,
+        "scope": "Native child isolation only; Main integration and executable-byte race qualification remain separate"
+      },
+      "liveWorkerCounterexample": {
+        "phase": "live-worker-after-thread-leader-exit",
+        "original": {
+          "version": 3,
+          "platform": "linux",
+          "registrar": {
+            "backendId": "TEST-native",
+            "teamId": "TEST-team",
+            "runId": "TEST-run",
+            "memberId": "TEST-member",
+            "generation": "1"
+          },
+          "root": {
+            "pid": 4538,
+            "sessionId": 4538,
+            "pidfdId": "13459",
+            "pidNamespaceId": "4026531836",
+            "bootId": "37f4e2d3-78c4-4920-b400-5470a41cfc83"
+          },
+          "target": {
+            "pid": 4552,
+            "sessionId": 4545,
+            "pidfdId": "1117",
+            "pidNamespaceId": "4026531836",
+            "bootId": "37f4e2d3-78c4-4920-b400-5470a41cfc83"
+          }
+        },
+        "observation": "unknown",
+        "signal": "refused",
+        "workerClosed": false
+      },
+      "proved": {
+        "phase": "proved",
+        "captureVersion": 3,
+        "coldRead": {
+          "before": "same-live",
+          "workerPid": 4554
+        },
+        "coldSignal": {
+          "before": "same-live",
+          "result": "accepted",
+          "workerPid": 4565
+        },
+        "originalTarget": "absent",
+        "neighbor": "same-live",
+        "sameSession": "same-live",
+        "changedSession": "unknown",
+        "nativeSignalCalls": 1
+      },
+      "finiteCleanup": {
+        "phase": "finite-cleanup",
+        "cleaned": true,
+        "completed": true,
+        "scope": "Only original pidfd received one SIGTERM; all other TEST actors self-exited after their TTL"
+      },
+      "completed": true,
+      "cleaned": true
+    },
+    {
+      "lane": "linux-node24",
+      "mode": "warm",
+      "originalProof": {
+        "path": "native-audit-M0660/process-linux-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/warm-proof.ndjson",
+        "bytes": 4534,
+        "blob": "c543d9a2082edf001a40b10dbf413aae9e3c0c78",
+        "sha256": "edfe92e8c6c43d7001c6a12445c02ace78610c191d5113b6f32b28d35b0e59a6"
+      },
+      "originalFinalReceipt": {
+        "path": "native-audit-M0660/process-linux-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/warm-native.log",
+        "bytes": 233,
+        "blob": "21d175c7fa91f35f2061dcf3f2c8ae7d20750371",
+        "sha256": "87b66d86a49b4070577cf97b9829bdb7c2c49a4d7c8f78d73308e3961fbecb5f"
+      },
+      "orderedPhases": [
+        "start",
+        "isolated-same-child-launch",
+        "ownership-and-identity-negatives",
+        "requested-before-native",
+        "live-worker-after-thread-leader-exit",
+        "proved",
+        "finite-cleanup"
+      ],
+      "runtimeVersions": {
+        "node": "24.21.0",
+        "acorn": "8.18.0",
+        "ada": "4.0.0",
+        "amaro": "1.1.11",
+        "ares": "1.34.8",
+        "brotli": "1.2.0",
+        "cldr": "48.0",
+        "icu": "78.3",
+        "llhttp": "9.4.3",
+        "merve": "1.2.2",
+        "modules": "137",
+        "napi": "10",
+        "nbytes": "0.1.4",
+        "ncrypto": "0.0.1",
+        "nghttp2": "1.70.0",
+        "nghttp3": "",
+        "ngtcp2": "",
+        "openssl": "3.5.8",
+        "simdjson": "4.6.7",
+        "simdutf": "6.4.0",
+        "sqlite": "3.53.4",
+        "tz": "2026c",
+        "undici": "7.29.1",
+        "unicode": "17.0",
+        "uv": "1.52.1",
+        "uvwasi": "0.0.23",
+        "v8": "13.6.233.17-node.53",
+        "zlib": "1.3.2.1-motley-8002e91",
+        "zstd": "1.5.7"
+      },
+      "kernel": {
+        "release": "7.0.0-1017-azure",
+        "platform": "linux",
+        "arch": "x64"
+      },
+      "isolatedChild": {
+        "phase": "isolated-same-child-launch",
+        "completed": true,
+        "parentUnchanged": true,
+        "helperSha256": "be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110",
+        "originalChildPid": 4603,
+        "exactHighDescriptorAbsent": true,
+        "descendantDescriptorAbsent": true,
+        "scope": "Native child isolation only; Main integration and executable-byte race qualification remain separate"
+      },
+      "liveWorkerCounterexample": {
+        "phase": "live-worker-after-thread-leader-exit",
+        "original": {
+          "version": 4,
+          "platform": "linux",
+          "admission": "owner-pidfd-v1",
+          "ownerInstance": "9b880707-917c-49dc-bac5-87fdc91785b8",
+          "captureKey": "da05b9e7-f602-4730-968a-5cf14b70a63f",
+          "registrar": {
+            "backendId": "TEST-native",
+            "teamId": "TEST-team",
+            "runId": "TEST-run",
+            "memberId": "TEST-member",
+            "generation": "1"
+          },
+          "root": {
+            "pid": 4687,
+            "sessionId": 4687,
+            "pidNamespaceId": "4026531836",
+            "bootId": "37f4e2d3-78c4-4920-b400-5470a41cfc83"
+          },
+          "target": {
+            "pid": 4701,
+            "sessionId": 4694,
+            "pidNamespaceId": "4026531836",
+            "bootId": "37f4e2d3-78c4-4920-b400-5470a41cfc83"
+          }
+        },
+        "observation": "unknown",
+        "signal": "refused",
+        "workerClosed": false
+      },
+      "proved": {
+        "phase": "proved",
+        "captureVersion": 4,
+        "coldRead": {
+          "before": "unknown",
+          "workerPid": 4703
+        },
+        "coldSignal": {
+          "before": "unknown",
+          "result": "refused",
+          "workerPid": 4714
+        },
+        "originalTarget": "absent",
+        "neighbor": "same-live",
+        "sameSession": "same-live",
+        "changedSession": "unknown",
+        "nativeSignalCalls": 1
+      },
+      "finiteCleanup": {
+        "phase": "finite-cleanup",
+        "cleaned": true,
+        "completed": true,
+        "scope": "Only original pidfd received one SIGTERM; all other TEST actors self-exited after their TTL"
+      },
+      "completed": true,
+      "cleaned": true
+    },
+    {
+      "lane": "linux-electron",
+      "mode": "automatic",
+      "originalProof": {
+        "path": "native-audit-M0660/process-linux-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/proof.ndjson",
+        "bytes": 4081,
+        "blob": "1fd7237ff3e4931f913862e029c89791161410b2",
+        "sha256": "39ef4e9cee2d9786a1ccbd94e945f738971507671511fdf54ad5a41f51aefa23"
+      },
+      "originalFinalReceipt": {
+        "path": "native-audit-M0660/process-linux-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/native.log",
+        "bytes": 233,
+        "blob": "6b89bfaf3691c6772aa6511999865ae7ca269c04",
+        "sha256": "9331e77dbe728680c6ffee24645fa8d9e39bebfde0a0d03855258fd904bf7db5"
+      },
+      "orderedPhases": [
+        "start",
+        "isolated-same-child-launch",
+        "ownership-and-identity-negatives",
+        "requested-before-native",
+        "live-worker-after-thread-leader-exit",
+        "proved",
+        "finite-cleanup"
+      ],
+      "runtimeVersions": {
+        "node": "24.22.1",
+        "acorn": "8.18.0",
+        "ada": "4.0.0",
+        "amaro": "1.1.11",
+        "ares": "1.34.9",
+        "brotli": "1.2.0",
+        "cldr": "48.0",
+        "icu": "78.2",
+        "llhttp": "9.4.3",
+        "merve": "1.2.2",
+        "modules": "149",
+        "napi": "10",
+        "nbytes": "0.1.4",
+        "ncrypto": "0.0.1",
+        "nghttp2": "1.70.0",
+        "nghttp3": "",
+        "ngtcp2": "",
+        "openssl": "0.0.0",
+        "simdjson": "4.6.11",
+        "simdutf": "7.7.0",
+        "sqlite": "3.53.4",
+        "tz": "2026e",
+        "undici": "7.30.1",
+        "unicode": "17.0",
+        "uv": "1.52.1",
+        "uvwasi": "0.0.23",
+        "v8": "15.2.124.45-electron.0",
+        "zlib": "1.3.2.1-motley",
+        "zstd": "1.6.0",
+        "electron": "44.10.1",
+        "chrome": "152.0.7977.169"
+      },
+      "kernel": {
+        "release": "7.0.0-1017-azure",
+        "platform": "linux",
+        "arch": "x64"
+      },
+      "isolatedChild": {
+        "phase": "isolated-same-child-launch",
+        "completed": true,
+        "parentUnchanged": true,
+        "helperSha256": "be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110",
+        "originalChildPid": 4814,
+        "exactHighDescriptorAbsent": true,
+        "descendantDescriptorAbsent": true,
+        "scope": "Native child isolation only; Main integration and executable-byte race qualification remain separate"
+      },
+      "liveWorkerCounterexample": {
+        "phase": "live-worker-after-thread-leader-exit",
+        "original": {
+          "version": 3,
+          "platform": "linux",
+          "registrar": {
+            "backendId": "TEST-native",
+            "teamId": "TEST-team",
+            "runId": "TEST-run",
+            "memberId": "TEST-member",
+            "generation": "1"
+          },
+          "root": {
+            "pid": 4920,
+            "sessionId": 4920,
+            "pidfdId": "5178",
+            "pidNamespaceId": "4026531836",
+            "bootId": "37f4e2d3-78c4-4920-b400-5470a41cfc83"
+          },
+          "target": {
+            "pid": 4938,
+            "sessionId": 4929,
+            "pidfdId": "1196",
+            "pidNamespaceId": "4026531836",
+            "bootId": "37f4e2d3-78c4-4920-b400-5470a41cfc83"
+          }
+        },
+        "observation": "unknown",
+        "signal": "refused",
+        "workerClosed": false
+      },
+      "proved": {
+        "phase": "proved",
+        "captureVersion": 3,
+        "coldRead": {
+          "before": "same-live",
+          "workerPid": 4940
+        },
+        "coldSignal": {
+          "before": "same-live",
+          "result": "accepted",
+          "workerPid": 4953
+        },
+        "originalTarget": "absent",
+        "neighbor": "same-live",
+        "sameSession": "same-live",
+        "changedSession": "unknown",
+        "nativeSignalCalls": 1
+      },
+      "finiteCleanup": {
+        "phase": "finite-cleanup",
+        "cleaned": true,
+        "completed": true,
+        "scope": "Only original pidfd received one SIGTERM; all other TEST actors self-exited after their TTL"
+      },
+      "completed": true,
+      "cleaned": true
+    },
+    {
+      "lane": "linux-electron",
+      "mode": "warm",
+      "originalProof": {
+        "path": "native-audit-M0660/process-linux-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/warm-proof.ndjson",
+        "bytes": 4577,
+        "blob": "812b566c4c56d23f8e4bccaab9f0119bfeef3df8",
+        "sha256": "f7a3adb0a9f36400e2dd07823ad701fd455a8a79aefb3e7791f48f4a95a268a4"
+      },
+      "originalFinalReceipt": {
+        "path": "native-audit-M0660/process-linux-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/warm-native.log",
+        "bytes": 233,
+        "blob": "61a5f5bbad341490c1c6716dacee2f86e00e376f",
+        "sha256": "37ac3a8265a4e68ff3a374cce88264c0a00db767f11194520455c494afff30f3"
+      },
+      "orderedPhases": [
+        "start",
+        "isolated-same-child-launch",
+        "ownership-and-identity-negatives",
+        "requested-before-native",
+        "live-worker-after-thread-leader-exit",
+        "proved",
+        "finite-cleanup"
+      ],
+      "runtimeVersions": {
+        "node": "24.22.1",
+        "acorn": "8.18.0",
+        "ada": "4.0.0",
+        "amaro": "1.1.11",
+        "ares": "1.34.9",
+        "brotli": "1.2.0",
+        "cldr": "48.0",
+        "icu": "78.2",
+        "llhttp": "9.4.3",
+        "merve": "1.2.2",
+        "modules": "149",
+        "napi": "10",
+        "nbytes": "0.1.4",
+        "ncrypto": "0.0.1",
+        "nghttp2": "1.70.0",
+        "nghttp3": "",
+        "ngtcp2": "",
+        "openssl": "0.0.0",
+        "simdjson": "4.6.11",
+        "simdutf": "7.7.0",
+        "sqlite": "3.53.4",
+        "tz": "2026e",
+        "undici": "7.30.1",
+        "unicode": "17.0",
+        "uv": "1.52.1",
+        "uvwasi": "0.0.23",
+        "v8": "15.2.124.45-electron.0",
+        "zlib": "1.3.2.1-motley",
+        "zstd": "1.6.0",
+        "electron": "44.10.1",
+        "chrome": "152.0.7977.169"
+      },
+      "kernel": {
+        "release": "7.0.0-1017-azure",
+        "platform": "linux",
+        "arch": "x64"
+      },
+      "isolatedChild": {
+        "phase": "isolated-same-child-launch",
+        "completed": true,
+        "parentUnchanged": true,
+        "helperSha256": "be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110",
+        "originalChildPid": 5000,
+        "exactHighDescriptorAbsent": true,
+        "descendantDescriptorAbsent": true,
+        "scope": "Native child isolation only; Main integration and executable-byte race qualification remain separate"
+      },
+      "liveWorkerCounterexample": {
+        "phase": "live-worker-after-thread-leader-exit",
+        "original": {
+          "version": 4,
+          "platform": "linux",
+          "admission": "owner-pidfd-v1",
+          "ownerInstance": "30dbf1df-be7f-414f-9250-33cb8b7c2c17",
+          "captureKey": "aa001b80-72b6-46e5-860a-e5d3ebde710c",
+          "registrar": {
+            "backendId": "TEST-native",
+            "teamId": "TEST-team",
+            "runId": "TEST-run",
+            "memberId": "TEST-member",
+            "generation": "1"
+          },
+          "root": {
+            "pid": 5106,
+            "sessionId": 5106,
+            "pidNamespaceId": "4026531836",
+            "bootId": "37f4e2d3-78c4-4920-b400-5470a41cfc83"
+          },
+          "target": {
+            "pid": 5124,
+            "sessionId": 5115,
+            "pidNamespaceId": "4026531836",
+            "bootId": "37f4e2d3-78c4-4920-b400-5470a41cfc83"
+          }
+        },
+        "observation": "unknown",
+        "signal": "refused",
+        "workerClosed": false
+      },
+      "proved": {
+        "phase": "proved",
+        "captureVersion": 4,
+        "coldRead": {
+          "before": "unknown",
+          "workerPid": 5126
+        },
+        "coldSignal": {
+          "before": "unknown",
+          "result": "refused",
+          "workerPid": 5139
+        },
+        "originalTarget": "absent",
+        "neighbor": "same-live",
+        "sameSession": "same-live",
+        "changedSession": "unknown",
+        "nativeSignalCalls": 1
+      },
+      "finiteCleanup": {
+        "phase": "finite-cleanup",
+        "cleaned": true,
+        "completed": true,
+        "scope": "Only original pidfd received one SIGTERM; all other TEST actors self-exited after their TTL"
+      },
+      "completed": true,
+      "cleaned": true
+    }
+  ],
+  "sourceQualifiedInterpretation": {
+    "automaticVersusWarm": "Automatic selected capture v3: original cold read same-live and signal accepted. Explicit internal warm v4: cold read unknown and signal refused; source line242 signals only through the retained original warm owner. Modern-kernel warm control does not establish older-kernel compatibility.",
+    "negativeControls": "Original source assertions precede proof publication and reject foreign lineage, wrong pidfd/capture key, namespace mismatch, new orphan admission, replacement target and changed-session signaling. Worker surviving thread-group leader remains unknown/refused with workerClosed:false; this intermediate state is not a cleanup failure mislabeled as success.",
+    "custodyCleanup": "Finally writes original root self-exit marker files, awaits root closes, then within the original15-second loop requires all finite actor closed markers and every retained capture absent/stale. Actual four final proof rows and four final receipts have completed:true/cleaned:true. C actor TTL is12 seconds, parent TTL10 seconds; no new signal or timeout added by review.",
+    "signalCount": "nativeSignalCalls:1 describes the intended original pidfd custody operation. It is not a global count of every signal in the isolated launch prelude, its explicit SIGTERM case, or failure-only SIGKILL cleanup.",
+    "posixNegativeCounterexample": "Original reporter retains cleanupConfirmed:false when original parent has exited. Source separately keeps the descendant alive, writes TEST release, confirms eventual absence and preserves neighbor. The earlier negative result is not reclassified as confirmed product cleanup. A separate numeric replacement-group negative is mocked deliberately; no forced numeric PID reuse is claimed.",
+    "isolation": "Actual four isolated-same-child-launch rows follow source checks for exact PID/group/argv0/args/cwd/env/stdio, highFD64 child+descendant absence with retained parent FD usable, errno2/13 encoded in12-byte status versus target exit111, original ENOEXEC script, and original-child SIGTERM. This is child isolation evidence, not future executable-byte consumption safety.",
+    "linuxNodeExec": "Each original parent runs the full six reported Node cases: wrapper parent plus five subtests, including normal/fallback socketFD52/4096 closure, original child identity/stdio, close_range refusal before target, original Stop with live sibling, and changed manifest/image refusal. Source cleanup requires all owned original child closes before deleting the fixture; no double-counting of parent and subtests beyond original reporter total is invented."
+  },
+  "finalScopeReceipt": {
+    "identity": {
+      "path": "native-audit-M0660/process-linux-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/scope.json",
+      "bytes": 2810,
+      "blob": "c3aec269becd48122f8da34fc16e97e543cf1a21",
+      "sha256": "c5324cebf34a4d2b972d86dcc9b19ab174ef22d036bdc44f7f20ba0c147fe812"
+    },
+    "original": {
+      "kind": "TEST_HOST_PROCESS_FIXTURE_ACCEPTANCE",
+      "status": "PASS",
+      "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "platform": "linux-x64",
+      "nodeVersion": "v24.21.0",
+      "controlledContracts": true,
+      "retainedMainTransport": true,
+      "posixProcessGroups": true,
+      "native": [
+        {
+          "log": "linux-node24.log",
+          "scope": "original Linux pidfs and retained pidfd",
+          "receipt": {
+            "directory": "/home/runner/work/_temp/TEST-process-node24-43780997272/artifact",
+            "manifestSha256": "b9e4d9e8546a22a3d3b1b0cfcd81f395761210023b3c1c62a766b83f44718555",
+            "actor": "/home/runner/work/_temp/TEST-process-node24-43780997272/registered-process-actor",
+            "linuxChildExec": {
+              "manifestPath": "/home/runner/work/_temp/TEST-process-node24-43780997272/linux-child-exec/manifest.json",
+              "manifestSha256": "c7a9de31f589d168495922a21a4d769cdd81ee33492961eef4d25ddfc2fbf484",
+              "binarySha256": "be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110"
+            },
+            "completed": true,
+            "cleaned": true,
+            "automaticAndWarm": true,
+            "binarySha256": "a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217",
+            "libc": {
+              "family": "glibc",
+              "minimumVersion": "2.33"
+            },
+            "scope": "Linux automatic custody and retained pidfd native/Host proof; SDK, Desktop and older ABI remain separate"
+          }
+        },
+        {
+          "log": "linux-electron.log",
+          "scope": "original Linux pidfs and retained pidfd",
+          "receipt": {
+            "directory": "/home/runner/work/_temp/TEST-process-electron-43780997272/artifact",
+            "manifestSha256": "b9e4d9e8546a22a3d3b1b0cfcd81f395761210023b3c1c62a766b83f44718555",
+            "actor": "/home/runner/work/_temp/TEST-process-electron-43780997272/registered-process-actor",
+            "linuxChildExec": {
+              "manifestPath": "/home/runner/work/_temp/TEST-process-electron-43780997272/linux-child-exec/manifest.json",
+              "manifestSha256": "c7a9de31f589d168495922a21a4d769cdd81ee33492961eef4d25ddfc2fbf484",
+              "binarySha256": "be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110"
+            },
+            "completed": true,
+            "cleaned": true,
+            "automaticAndWarm": true,
+            "binarySha256": "a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217",
+            "libc": {
+              "family": "glibc",
+              "minimumVersion": "2.33"
+            },
+            "scope": "Linux automatic custody and retained pidfd native/Host proof; SDK, Desktop and older ABI remain separate"
+          }
+        }
+      ],
+      "nativeProviderRuntimeQualified": false,
+      "darwinNativeRegistrationQualified": false,
+      "posixExecutableAdmissionQualified": false,
+      "desktopQualified": false,
+      "releaseQualified": false
+    },
+    "fiveBroadQualificationFlagsRemainFalse": true
+  },
+  "appendixReview": {
+    "identity": {
+      "path": "native-audit-M0660/process-linux-x64/Plan29-linux-process-appendix.md",
+      "bytes": 7011,
+      "blob": "f335766cbbe2bcd3e1ef983f2dc4ba22cbf7c7e9",
+      "sha256": "eb795a6fdacafc24a88d96a953d7a95f04a48c9f600d4ae02b15a7fdf8f8edde"
+    },
+    "result": "APPROVE",
+    "correctionsRequired": [],
+    "proseMatchesOriginalEvidenceAndDirectSourceAssertions": true
+  },
+  "limits": [
+    "This is exact original Linux x64 job evidence at0660, not a new or replayed run.",
+    "No real Claude/Codex/OpenCode business executable, Desktop renderer journey, release, installed/custom provider-source launch, forced PID churn, older kernel/libc, or future executable-byte consumption qualification.",
+    "External compiler/inspector/headers/static-link hashes are retained original build declarations; full toolchain binaries were not independently archived/rebuilt here.",
+    "Windows native steps15–21 remain skipped in this Linux job; no Windows/native-provider qualification transfers from unit test names.",
+    "Separate Darwin P09 failures and Team privacy RED/GREEN remain separate. Other Ubuntu static/SPI states are not inferred or repolled.",
+    "403 is the sum of seven original reporter blocks, not a unique cross-platform campaign total; the four native proof runs and20 copied archive members are separate."
+  ],
+  "reviewActions": {
+    "gitReadsOnly": true,
+    "pythonUsedOnlyForReadOnlyArtifactHashZipJsonSourceComparisonAndThisDerivedReport": true,
+    "projectCommandsExecuted": false,
+    "nativeOrVendorProcessesExecuted": false,
+    "ciPollsOrMutations": false,
+    "sourceOrRefChanges": false,
+    "provisionalManifestChanged": false
+  }
+}

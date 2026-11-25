@@ -1,0 +1,180 @@
+{
+  "kind": "INDEPENDENT_CURRENT_PLAN47_PASSIVE_REFERENCE_ATTRIBUTION_SOURCE_R2",
+  "reviewer": "/root/native_failures",
+  "createdAtUtc": "2026-11-16T17:15:12.943517+00:00",
+  "verdict": "APPROVE_CURRENT_SOURCE_STATIC_ONLY",
+  "blockers": [],
+  "actualBinding": {
+    "commit": "56c925464087e6f95b5309de77e7f7a6682cff7f",
+    "soleParent": "ab12152cb99edad50743c79f6a9dc5b5be2417f6",
+    "tree": "901abb00fd5e79c4329bd1c5bab155f3043d9f91",
+    "sourceHeadUnderReview": "56c925464087e6f95b5309de77e7f7a6682cff7f",
+    "currentLaterP10PreservesAllFour": true,
+    "reviewedWholeSourcePublicationR2": {
+      "path": "/tmp/migration-evidence-20261116/native/p10-final-four-source-review/published-source-d6b83-r2.json",
+      "bytes": 17061,
+      "gitBlob": "17019578fdd374374f3eb8fce0c808e99b31b0c7",
+      "sha256": "7da0bbfdae7a1f1d5bfe3dced5e0262c6042ad9c8970822261d1cebdefeb14d7"
+    }
+  },
+  "fullSourcePins": [
+    {
+      "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+      "before": {
+        "bytes": 46201,
+        "gitBlob": "90e0ccba36eb51c60dd4f0251b2cc5de995a47b6",
+        "sha256": "e5d425d97efc2807ed00096b5609680ac70503f747c650defbb3c39d6e6d9652",
+        "lines": 739
+      },
+      "after": {
+        "bytes": 48430,
+        "gitBlob": "561580091cc89067c9a1b2e80b0fa402e8950043",
+        "sha256": "0f7fab05d2be7c9827a6b2d44b8b67ac7772c0766bc93f22b489e0d3101e3d29",
+        "lines": 779
+      },
+      "actualParentLeaf": {
+        "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+        "sha": "90e0ccba36eb51c60dd4f0251b2cc5de995a47b6",
+        "mode": "100644",
+        "type": "blob",
+        "size": 46201
+      },
+      "preimageMethod": "Retained complete prior reviewed source image, independently matches immutable parent leaf."
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+      "before": {
+        "bytes": 92005,
+        "gitBlob": "0b346f8b6db221c602f7a6d9cc8b628da62099cb",
+        "sha256": "44af58ab6932f1560ecb49d34c80d5e96df96f0622fa90d60d558b8dece52cfc",
+        "lines": 1703
+      },
+      "after": {
+        "bytes": 95083,
+        "gitBlob": "91c0d5773aa6799636c03c507533914c37b6d996",
+        "sha256": "ba2a4c9db4de32d2bc048a6ac601f41c32ba90b7cf73a2c9b8e163eb2a2f328a",
+        "lines": 1743
+      },
+      "actualParentLeaf": {
+        "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+        "sha": "0b346f8b6db221c602f7a6d9cc8b628da62099cb",
+        "mode": "100644",
+        "type": "blob",
+        "size": 92005
+      },
+      "preimageMethod": "Retained complete prior reviewed source image, independently matches immutable parent leaf."
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "before": {
+        "bytes": 24914,
+        "gitBlob": "afe5134ed023b0732ec195a0f25604f3655b7116",
+        "sha256": "7c64ab1df2823ad1530121c26a9fa1d184a9106b7907c325384ab58cb1413956",
+        "lines": 291
+      },
+      "after": {
+        "bytes": 25025,
+        "gitBlob": "e0a107ffb1f57b62396c725cef57e9cadb78c5b1",
+        "sha256": "ece91a5b47fb81afe2f271a2ec627e577615eca256f309c2a51dcce291d41767",
+        "lines": 291
+      },
+      "actualParentLeaf": {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+        "sha": "afe5134ed023b0732ec195a0f25604f3655b7116",
+        "mode": "100644",
+        "type": "blob",
+        "size": 24914
+      },
+      "preimageMethod": "Exact inverse of the sole names-list edit, independently matches full immutable parent afe5134; preserved Plan43 plugin pin is already in this preimage."
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "before": {
+        "bytes": 59216,
+        "gitBlob": "ca0c93b66d7cd7c51fe0e72c70ab26c3a02bf5c2",
+        "sha256": "cb5a49b85ae57c28eaf64c1385c193f5aebf9e6ed0cafa4399b4ec1b50ec8931",
+        "lines": 800
+      },
+      "after": {
+        "bytes": 59327,
+        "gitBlob": "379ae796590f7d1f2909003157554df0891c9ba1",
+        "sha256": "ddd2632c6be78ab791f658ff19245a0f859eb9f14c336a47f7b1b6fb6862f4f9",
+        "lines": 800
+      },
+      "actualParentLeaf": {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+        "sha": "ca0c93b66d7cd7c51fe0e72c70ab26c3a02bf5c2",
+        "mode": "100644",
+        "type": "blob",
+        "size": 59216
+      },
+      "preimageMethod": "Retained complete prior reviewed source image, independently matches immutable parent leaf."
+    }
+  ],
+  "readback": {
+    "path": "/tmp/migration-evidence-20261116/root/p10-donor-four-path/parent-56c-delta.json",
+    "bytes": 268041,
+    "gitBlob": "70ebc20643d15c3bd78f4d1256719b89822c10c6",
+    "sha256": "1932d58cd080ecccfcd82654db350daa0ed8775f6da71a84cf76ec8d0ce5a00c"
+  },
+  "plan47": {
+    "path": "/tmp/migration-evidence-20261116/native/plan47-current-source-review/plan47-readback.md",
+    "bytes": 8279,
+    "gitBlob": "6b84ee1f3333bf7a4dbccf19ff4f3b806daa2794",
+    "sha256": "89c6b60359f5a6786d6c9f8f59a2103f6e707bbd95444904ce38541c58d41671"
+  },
+  "actualFullDiff": {
+    "path": "/tmp/migration-evidence-20261116/native/plan47-current-source-review/actual-four-source.patch",
+    "bytes": 15514,
+    "gitBlob": "d6e744ad143b2c0a9d8e600c0f4af443a6d090bd",
+    "sha256": "9c4f15f4db5acec4bfb3a1564bb13b968f847444bf516cb56086fb5ed51ddf21"
+  },
+  "exactBoundaryFindings": [
+    "Correct current Profile preimage is afe5134,291lines, with the incoming Plan43 explicit mcpPolicyPlugin pin already present. The apparent extra plugin change against historical4fcd is not a Plan47 change. Profile and Scenario each change only the closed region names list.",
+    "Producer739→779; test1703→1743; Profile291→291; Scenario800→800. No cap increase or unrelated line compression. All business Date.now lines and async boundary lines remain byte-identical and ordered.",
+    "captureOpenCodeProbeAccountInspection body, public capturePreparedModelReference signature/body and all source from consumeMemberModelReadiness onward are byte-identical. The private readPreparedModelReference gets one optional third observational callback, used only by the existing member inspector.",
+    "Original retained-probe reads, account/configuration/policy/target inspection, all options.assertCurrent calls, equality checks and final authority remain. No cache, skipped observation, native action, query, new wait, lease refresh, timeout increase or authority grant appears.",
+    "Account timing wraps exactly the original account inspection in try/finally. ModelProbeOwner invokes its supplied inspector once at199 before unchanged admission/target/expiry checks; no new caller or repeat is introduced.",
+    "Nested authority timing wraps only existing callbacks while accountStarted is present. It preserves the original try assertCurrent/true catch false behavior; clock/aggregation failures are caught and set truncated. Account finally resets its active marker. The exact original outer business error is rethrown.",
+    "New callbacks/clock reads/region objects are created only under the existing subscriber, first-refusal and4096-call measurement gate. Without a subscriber or after the first latch the new branches perform no diagnostic performance reads; local condition checks/try-finally add ordinary execution overhead.",
+    "Added counts are valid measured outer-call aggregates, at most one each per current invocation, not individual callback counts. Partial business throws can contribute valid spans. Invalid/missing measurements remain0 with truncated indication;0 is not proof no underlying work happened.",
+    "Raw authority durations are summed then rounded once per outer current call; account duration rounds once likewise. The nested spans overlap reference and each other, with independently rounded totals; they must not be added or treated as an exhaustive cost partition.",
+    "Both readers accept legacy absence of regions, exact8-field prior regions, or exact12-field new regions. The presence marker requires both complete new pairs; missing/extra fields, symbols/accessors, foreign prototypes, invalid integers, negative time and counts beyond outer count remain refused.",
+    "Only fixed numeric Count/Ms fields are added; existing64-row/64KiB ledger,4096call cap, original phases/reasons/digests and privacy boundary remain. Instrumentation consumes the unchanged original budgets and promises no performance improvement."
+  ],
+  "actualSourceRegressionReview": {
+    "testSourceIsActualExistingSeam": true,
+    "retainedCases": [
+      "unchanged",
+      "shadowed-native",
+      "main-origin",
+      "owner",
+      "expiry",
+      "credential"
+    ],
+    "successBranch": "Two actual unchanged inspections retain38 authority callbacks and2target reads; old whole-call totals and partial first-refusal identity remain checked. New nested authority totals exclude6outer/non-account callbacks; no measured callback is removed.",
+    "clocks": "Static expected successful ledger: old16performance reads becomes84 =20+2*(38-6). Each of two new target-failure cases has15original authority callbacks,13nested;33clock reads =7+2*(15-2). These are source/test expectations, not executed counts.",
+    "partialThrowAndClockFailure": "Two actual inspectMemberModelReadiness calls inject the same target Error per call; one additionally makes the account-ending performance read throw. Both must return the target Error unchanged and leave readiness pending. Original reference refusal plus containing consumer yields2observations; count1/phase reference/reason threw and fractional nested rounding are asserted.",
+    "noSubscriber": "After unsubscribing, original consumption/repeated-current checks still execute3fresh target inspections with no extra performance reads. Total targets7 includes the original2, the new2partial checks and the original3consumption checks.",
+    "restoration": "New target method and authority cost restore in inner finally; original performance/read mocks, subscriber, launch and changed fixture files restore in the outer existing finally. All source/owner/expiry/credential/refusal assertions, original receipt-byte equality,1model run/1close and0business allocations remain.",
+    "coverageLimits": "Only static branch/setup/type reasoning performed. Current source/compiler/full original tests and native resulting-source receipt still required. The test does not claim every invalid-clock/overflow/subscriber path is executed."
+  },
+  "existingOwnerSource": {
+    "path": "/tmp/migration-evidence-20261116/native/B-linux-v2-133260432289/source-reference/ModelProbeOwner.ts",
+    "bytes": 30721,
+    "gitBlob": "a870a9c2c213b802ae43a3dee9a0694a67feda7e",
+    "sha256": "fe9227bedef2284945618382289b36681757175e0f9ffa9f50cf219809f4ced2"
+  },
+  "originalFailureInterpretation": "The exact a07 34-call/11524ms whole and10625ms reference observations remain historical evidence. New source attribution has no runtime result yet and establishes no causal repair, CPU attribution, safely removable check or original15s readiness success.",
+  "publicationAndGateLimits": [
+    "CurrentSourceReview only; no unseen prior independent-review or external execution chronology is certified.",
+    "Existing original Process full contract command/Host test compiler/retained-host compiler and Team scoped lint/type routing remain selected; no new mandatory test-only RED or CI cycle is imposed.",
+    "No actual project/native/vendor/GUI/Actions command was run. Scratch writes contain only source copies, inert diff and review data."
+  ],
+  "execution": {
+    "projectCommandsImportsTestsBuildCompilerLintNativeGui": 0,
+    "gitIndexRefCanonicalWrites": 0,
+    "apiStatusSourceLogArtifactRequestsForReview": 0,
+    "scratchDataOnly": true
+  }
+}

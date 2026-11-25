@@ -1,0 +1,249 @@
+{
+  "kind": "prospective-plan81-root-r1",
+  "at": "2026-11-17T06:06:33.337314+00:00",
+  "decision": "SELECT_EXISTING_CLEAR_FILTERS_ACTION_SUBJECT_TO_INDEPENDENT_R2",
+  "parent": "1f62596fc622343aa04e5ddf3e5736358e3b0515",
+  "parentTree": "038f43a10d92306e2cad015b658371174e2a240b",
+  "primary": "5c55a4a2008f4a6131d265344d384b39415ad055",
+  "liveBase": "301d00f46db3389ff6e3042afd04c5b064a26270",
+  "externalReadOnly": "23255c9bf81351f455203ef85375e67c1dd8918a",
+  "parentPacket": {
+    "path": "/workspace/scratch/b87c90489dab/e2e-recovery/plan80/actual-source/official-packet.json",
+    "bytes": 7819251,
+    "physicalLines": 1,
+    "gitBlob": "ec8d70f97d6980c0e59dc7767d15106ceece0708",
+    "sha256": "52fa1e6904457d2541365e16aa62a533b49ed6a3e57e90d4b59a05f1745206e2"
+  },
+  "closedParentActualSource": {
+    "path": "e2e-recovery/plan80/actual-source/root-closure.json",
+    "bytes": 902,
+    "physicalLines": 23,
+    "gitBlob": "2b19c5d82300f04fae5de9a82571ad181079c507",
+    "sha256": "52407d337ecb805fc254612c576530cca7ebb615a96de20a18dcce2a31386209"
+  },
+  "plan": {
+    "bytes": 3880,
+    "physicalLines": 21,
+    "gitBlob": "5b9172e043503b34aa6281c6b183e2c3a7da67b1",
+    "sha256": "b96011ff21e32db6cb127620c967516123fd059ecf3f424ce67183e0d4e498b3"
+  },
+  "sourceCut": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-retained-opencode-app.ts",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/new-failures-5c55-root/reference/scripts/legacy-agent-host/desktop-retained-opencode-app.ts",
+      "preimage": {
+        "bytes": 49210,
+        "physicalLines": 728,
+        "gitBlob": "02d20844eb0b4ba46cf027510aefabc0fc5aaebf",
+        "sha256": "e3727844ebdd7c7170a731f488e4a7cdecd660afa9130d6c08b7da48609c3e61"
+      },
+      "selectedOldText": "        await fill(page + ' input[aria-label=\"Custom working directory\"]', join(root, 'project'));\n",
+      "selectedNewText": "        await fill(page + ' input[aria-label=\"Custom working directory\"]', join(root, 'project'));\n        const clearFilters = '[data-testid=\"team-model-selector-clear-filters\"]';\n        await ui.scrollTo(clearFilters, 'original model source filters visible');\n        await ui.click(clearFilters, 'clear original model source filter');\n",
+      "exactOccurrenceCount": 1,
+      "expectedPhysicalLines": 731
+    }
+  ],
+  "sourceAfterimagesCreated": false,
+  "originalEvidence": {
+    "head": "5c55a4a2008f4a6131d265344d384b39415ad055",
+    "runId": 44008164287,
+    "jobId": 133806869175,
+    "attempt": 1,
+    "raw": {
+      "bytes": 252339,
+      "physicalLines": 2590,
+      "gitBlob": "fe5abdc84a0e3688c07adeda44a2068d0d32298c",
+      "sha256": "2f43cfc6e323e79a76504bd373befc052034fcb1a804bc96c28652fc1ba6596a"
+    },
+    "archive": {
+      "bytes": 482608,
+      "physicalLines": 3400,
+      "gitBlob": "4ee67212c097b1391ea6f2341d41fe4fcfd3224c",
+      "sha256": "f7c5d8a204b3181bf1c6f17baf8bb32e5f949187a2c8a8bc859980aa68edf672"
+    },
+    "failure": "UI read timed out: one finite project model; no mutation retry",
+    "boundary": "Additional donor epoch before model select/Create/business input; earlier initial coexistence facts remain separate.",
+    "donorFailureScreenshot": false,
+    "donorCatalogSnapshot": false
+  },
+  "sourceReferences": [
+    {
+      "scope": "donor",
+      "path": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/plan81/reference/donor/src/renderer/components/team/dialogs/TeamModelSelector.tsx",
+      "bytes": 157769,
+      "physicalLines": 3606,
+      "gitBlob": "df97ab3a5a56b43038e8f7c2489d83ff4d77d38f",
+      "sha256": "a4d5f156cf2eec1181cdfd43bff514f663b4a58e4ff06b609c0a0b86fa29481a"
+    },
+    {
+      "scope": "donor",
+      "path": "src/features/runtime-provider-management/renderer/hooks/useOpenCodeProviderModelCatalog.ts",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/plan81/reference/donor/src/features/runtime-provider-management/renderer/hooks/useOpenCodeProviderModelCatalog.ts",
+      "bytes": 21420,
+      "physicalLines": 609,
+      "gitBlob": "828a1e6c636cb39b1904ef6bacc545e741060dd6",
+      "sha256": "1ec29d1d0d8c12a46af1ab5bf8119e94cfb3148c09fecdeec5cc67253f1cffb7"
+    },
+    {
+      "scope": "current",
+      "path": ".github/workflows/ci.yml",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/plan81/reference/current/.github/workflows/ci.yml",
+      "bytes": 203111,
+      "physicalLines": 2978,
+      "gitBlob": "97a5aef8801b185d418b9c8c60764f7fcd32c5c0",
+      "sha256": "3adb6243ca0d6562b47577daf544c8bd85aba1b309c8f94acb1d046ec98bf0bf"
+    },
+    {
+      "scope": "current",
+      "path": "packages/legacy-agent-host/tests/opencode-v1-version-source.ts",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/plan81/reference/current/packages/legacy-agent-host/tests/opencode-v1-version-source.ts",
+      "bytes": 9765,
+      "physicalLines": 186,
+      "gitBlob": "78cb6f0026821785b1d0c0c1ad21ddfe76cdaee4",
+      "sha256": "0ff252732bedb1807cf428370e41628922a4d719090f479a41f25117d7227979"
+    },
+    {
+      "scope": "current",
+      "path": "scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/plan81/reference/current/scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts",
+      "bytes": 56997,
+      "physicalLines": 764,
+      "gitBlob": "de1b4b77fa7b90bdeda9618da8f98ac20fdaaef5",
+      "sha256": "62b222833b0d6b86706f84e92fbb0fe954bb0f62b7cd8b48a7e38c1724b4ed43"
+    },
+    {
+      "scope": "donor",
+      "path": "src/features/runtime-provider-management/main/infrastructure/OpenCodeLocalProviderConnector.ts",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/plan81/reference/donor/src/features/runtime-provider-management/main/infrastructure/OpenCodeLocalProviderConnector.ts",
+      "bytes": 28803,
+      "physicalLines": 756,
+      "gitBlob": "8e0804fcbd906067099546e6d3ec4de167ce1aed",
+      "sha256": "315871dd33329ace24069e37c48856e1ce070ca7975014ecf3e6fe65500a2728"
+    },
+    {
+      "scope": "donor",
+      "path": "src/features/runtime-provider-management/main/infrastructure/OpenCodeLocalProviderSupport.ts",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/plan81/reference/donor/src/features/runtime-provider-management/main/infrastructure/OpenCodeLocalProviderSupport.ts",
+      "bytes": 13131,
+      "physicalLines": 370,
+      "gitBlob": "b59158e77f0002298f6adeca91aaf793ea1084ed",
+      "sha256": "83aca53efa273bc7a6cf3551cf88d7d1dc674ee2e4ea6db22921395ca721cbd4"
+    },
+    {
+      "scope": "donor",
+      "path": "src/features/runtime-provider-management/renderer/hooks/useOpenCodeLocalProviders.ts",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/plan81/reference/donor/src/features/runtime-provider-management/renderer/hooks/useOpenCodeLocalProviders.ts",
+      "bytes": 7280,
+      "physicalLines": 237,
+      "gitBlob": "968bcc7b5b9d6f137cc0c2e36a76df20627fb685",
+      "sha256": "cfdaebc39ddd6ef2f0eb964cd31e0f6b8614cf4a27d3d9372c9e6a50a1441d94"
+    },
+    {
+      "scope": "donor",
+      "path": "src/features/runtime-provider-management/renderer/hooks/useOpenCodeProviderModelCatalog.ts",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/plan81/reference/donor/src/features/runtime-provider-management/renderer/hooks/useOpenCodeProviderModelCatalog.ts",
+      "bytes": 21420,
+      "physicalLines": 609,
+      "gitBlob": "828a1e6c636cb39b1904ef6bacc545e741060dd6",
+      "sha256": "1ec29d1d0d8c12a46af1ab5bf8119e94cfb3148c09fecdeec5cc67253f1cffb7"
+    },
+    {
+      "scope": "donor",
+      "path": "src/renderer/components/team/dialogs/CreateTeamDialog.tsx",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/plan81/reference/donor/src/renderer/components/team/dialogs/CreateTeamDialog.tsx",
+      "bytes": 128026,
+      "physicalLines": 3106,
+      "gitBlob": "39b9fb49756821a2d3c72cb6c3ff603a792fd239",
+      "sha256": "0dcb816a46bd78741289d16fd5afd21346b2a3ddbc7d77804be425f4fbf7b3fa"
+    },
+    {
+      "scope": "donor",
+      "path": "src/renderer/components/team/dialogs/OpenCodeSourceProviderTabTrigger.tsx",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/plan81/reference/donor/src/renderer/components/team/dialogs/OpenCodeSourceProviderTabTrigger.tsx",
+      "bytes": 4648,
+      "physicalLines": 106,
+      "gitBlob": "61c9ab98d8050c9a6aec9287c1d9c4245469df5e",
+      "sha256": "586f07d065b68ee07c60741409ab3aa7b96cfb10e153fee8721a50eee95c51ed"
+    },
+    {
+      "scope": "donor",
+      "path": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/plan81/reference/donor/src/renderer/components/team/dialogs/TeamModelSelector.tsx",
+      "bytes": 157769,
+      "physicalLines": 3606,
+      "gitBlob": "df97ab3a5a56b43038e8f7c2489d83ff4d77d38f",
+      "sha256": "a4d5f156cf2eec1181cdfd43bff514f663b4a58e4ff06b609c0a0b86fa29481a"
+    },
+    {
+      "scope": "donor",
+      "path": "src/renderer/components/team/dialogs/openCodeLocalModelOverlay.ts",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/plan81/reference/donor/src/renderer/components/team/dialogs/openCodeLocalModelOverlay.ts",
+      "bytes": 9577,
+      "physicalLines": 283,
+      "gitBlob": "9c15eaa97352e913c09c7e3d84fb2137e56845e2",
+      "sha256": "1111c7224d2c2b721f5c389c4484b94c4ae82fb7533bab107b66ac3168bdc43f"
+    },
+    {
+      "scope": "donor",
+      "path": "src/renderer/components/team/dialogs/openCodeVisibleModelOptions.ts",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/plan81/reference/donor/src/renderer/components/team/dialogs/openCodeVisibleModelOptions.ts",
+      "bytes": 3399,
+      "physicalLines": 97,
+      "gitBlob": "e185320ef3a87d91e00ab765950e0f1f2c3ced58",
+      "sha256": "39637acbeeb44839edc93f96cf88c5390ec99a28ea81b2023eac8092be00498c"
+    },
+    {
+      "scope": "donor",
+      "path": "src/renderer/components/team/members/LeadModelRow.tsx",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/plan81/reference/donor/src/renderer/components/team/members/LeadModelRow.tsx",
+      "bytes": 14599,
+      "physicalLines": 349,
+      "gitBlob": "6996f4ad0e9327f1ea4f3b7065d965cbde384d1d",
+      "sha256": "12474fb9a8e1843580e65c39ca6d16942114a335e2e89ed082b570a1034cf266"
+    },
+    {
+      "scope": "donor",
+      "path": "src/renderer/components/team/members/TeamRosterEditorSection.tsx",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/plan81/reference/donor/src/renderer/components/team/members/TeamRosterEditorSection.tsx",
+      "bytes": 11060,
+      "physicalLines": 268,
+      "gitBlob": "70201ff571039eed85771a324187793396da542a",
+      "sha256": "e6a9d7f03ff275a243a4a468ac75a061e4479183026f43cd8074c975720a4dd1"
+    },
+    {
+      "scope": "donor",
+      "path": "src/shared/utils/opencodeModelRoute.ts",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/plan81/reference/donor/src/shared/utils/opencodeModelRoute.ts",
+      "bytes": 6221,
+      "physicalLines": 188,
+      "gitBlob": "0085f8eda0b80198a005e26807266d743106a84d",
+      "sha256": "a329a721aed9173989076694ecee4888a2a583cb5f476444684edd37bd85ff9a"
+    }
+  ],
+  "reasoning": [
+    "Donor generic OpenCode handler2915–2919 selects only source opencode; visible filter49–53 excludes test-legacy independently of its route classification.",
+    "Original config569–575 is exact test-legacy/TEST-model in both global and project opencode.json, loopback with a finite test API key.",
+    "Connector116–309 plus Support82–106 and local hook scope precedence supply configured local overlay. Verified runtime metadata can replace overlay route classification at selector1659–1660; therefore unconditional Local models is rejected.",
+    "Existing clear handler2067–2074 and toggle2034–2045 empty source and route filters. It never changes model/provider/project or writes config.",
+    "Overlay>0 disables shouldAwaitRuntimeModelList1359–1364. Overlay options append1587–1589; route counts1765–1785 are computed before visibility filtering. Filters2376–2385 and button3497–3508 expose Clear when the concrete configured option is available.",
+    "Exact unique TEST-model wait and all subsequent ordinary selection/Create/physical assertions remain byte-identical. No claim that clearing a known wrong mask fixes independent catalog/currentness/runtime problems."
+  ],
+  "verification": {
+    "existingStrictTypes": "ci.yml611–614 pnpm typecheck:legacy-host-scripts",
+    "existingFastLint": "ci.yml615–620 already names the harness once",
+    "sourceGuard": "assertNativeV1Source49–58, inputs37 includes full scripts/legacy-agent-host; existing donor caller asserts throughout",
+    "newTests": 0,
+    "newSourceRoster": 0,
+    "workflowChanges": 0,
+    "execution": "Automatic resulting-head GitHub Actions only; no local project execution or manual CI rerun."
+  },
+  "nonGoals": [
+    "No donor/product source edit",
+    "No runtime route classifier change",
+    "No config/model/provider/authorization change",
+    "No extra wait/retry/deadline or launch fallback",
+    "No existing assertion weakening",
+    "No broader P09/Plan40/P10 or resulting-head PASS claim"
+  ]
+}

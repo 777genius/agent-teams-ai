@@ -1,4 +1,5 @@
 import type { BackendHandle } from './index';
+import type { TeamReadUnavailable } from '@shared/types/team';
 
 export const AGENT_BACKEND_CONNECTIONS_CHANNEL = 'agentBackend:connections';
 export const AGENT_BACKEND_CONNECTIONS_ROUTE = '/api/agent-backend/connections';
@@ -6,6 +7,8 @@ export const AGENT_BACKEND_CONNECTIONS_ROUTE = '/api/agent-backend/connections';
 export interface BackendConnectionSnapshot {
   /** Descriptor/handle availability only; never native session/member readiness. */
   state: 'unconfigured' | 'ready' | 'hold' | 'shutting-down';
+  /** Incomplete original owner enumeration; opaque display metadata, never dispatch authority. */
+  unavailableOwners?: Extract<TeamReadUnavailable, { kind: 'owner' }>[];
   bindings: {
     handle: BackendHandle;
     label: string;

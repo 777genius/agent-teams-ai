@@ -1,0 +1,26 @@
+{
+  "observedAt": "2026-11-16T04:34:21Z",
+  "response": [],
+  "originalToolResponse": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Action completed."
+      }
+    ],
+    "structuredContent": {
+      "content": "[]",
+      "title": "pulls",
+      "modified_date": null,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls?head=777genius%3Afix%2Ffrontend-parity-e2e-followups-20261115&state=open",
+      "display_url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls?head=777genius%3Afix%2Ffrontend-parity-e2e-followups-20261115&state=open",
+      "display_title": "pulls",
+      "structuredContent": {
+        "title": "pulls",
+        "content": "[]",
+        "display_url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls?head=777genius%3Afix%2Ffrontend-parity-e2e-followups-20261115&state=open"
+      }
+    },
+    "isError": false
+  }
+}

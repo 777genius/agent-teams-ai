@@ -1,0 +1,78 @@
+{
+  "kind": "ROOT_PLAN70_PROSPECTIVE_R1",
+  "verdict": "GO_EXACT_TWO_PATH_DIRECTION_SELECTION_ONLY",
+  "baseCommit": "20441967f35c93a5b3ef368ac8d3d0c5ee8eef65",
+  "baseTree": "efd8410417d865adb4ae9b635955273776b6bb0a",
+  "plan": {
+    "path": "/tmp/e2e-original-artifacts/reviews/plan70-outer-scroll-direction/plan.md",
+    "bytes": 5662,
+    "physicalLines": 33,
+    "gitBlob": "623dfacbe90ccbd8f3a4a5730fdce4e6ddecc2c8",
+    "sha256": "62856bba5af98a62a9bcfe4f192a782d70cf203d8f647c1fe0424aa82060de8f"
+  },
+  "bindings": {
+    "path": "/tmp/e2e-original-artifacts/reviews/plan70-outer-scroll-direction/preimage-bindings.json",
+    "bytes": 741,
+    "physicalLines": 22,
+    "gitBlob": "1194be7cfaa780b7e0d14740d39fe00ae4a822c0",
+    "sha256": "cb8c1216d5202d98eb734129b4a55cc9f4b49b3bc64b2ad3ceb9a65fb2c10c7b"
+  },
+  "actualPlan69R2": {
+    "path": "/tmp/e2e-original-artifacts/reviews/plan69-desktop-ui-boundaries/actual-source/independent-actual-source-r2.json",
+    "bytes": 15125,
+    "physicalLines": 336,
+    "gitBlob": "4bfe6da5723e3756a02e44265550ce9b39a1884a",
+    "sha256": "24d63170805927214d42a226d15cdad4aeaf4bfe7c0de0d19961e99d979b7bdc"
+  },
+  "selectedFiles": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "mode": "100644",
+      "bytes": 32248,
+      "physicalLines": 577,
+      "gitBlob": "ba3fca51b23f523f1c13b6261e70521cc480ee54",
+      "sha256": "5a613e6a2b740eefe55eb4f4e7a18a764e2d282e8b6ac29354850bd817d5309e"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "mode": "100644",
+      "bytes": 167176,
+      "physicalLines": 2775,
+      "gitBlob": "1335bed86be957c49f9231be75dc8747b9b60d24",
+      "sha256": "abe753c0dd155816f9be0004724ecc5d440b638281c8b6e2062821cb8a62b867"
+    }
+  ],
+  "sourceCounterexample": {
+    "viewport": [
+      0,
+      681
+    ],
+    "innerClip": [
+      -800,
+      -420
+    ],
+    "targetTop": 936,
+    "targetHeight": 58,
+    "wheelY": 340.5,
+    "currentDelta": 600,
+    "requiredDirection": "up",
+    "proposedDelta": -600,
+    "basis": "Arithmetic over actual expression and constructible clipped target; no project/VM/browser execution."
+  },
+  "selectedChanges": [
+    "Only offscreen fallback delta point uses original inner rectangle center; visible branch keeps target center.",
+    "Only existing Plan69 nested VM case parameterized with original below plus above data and exact opposite first delta."
+  ],
+  "preservation": [
+    "Both ownership guard sites and full waitRead/Plan65 code unchanged.",
+    "All other source paths and all tests outside current Plan69 case unchanged.",
+    "1783 vector/136 fast lint, workflows, product/custody/phase budgets unchanged.",
+    "No external clipping framework or adjacent-guard removal."
+  ],
+  "sourceAfterimages": 0,
+  "blockers": [],
+  "runtimeQualified": false,
+  "repositoryPlanPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/70-original-outer-scroll-direction-2026-11-16.md",
+  "repositoryEvidenceRoot": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan70-outer-scroll-direction-2026-11-16",
+  "next": "Independent prospective R2 before documentary publication. Primary remains75 on hold for this boundary."
+}

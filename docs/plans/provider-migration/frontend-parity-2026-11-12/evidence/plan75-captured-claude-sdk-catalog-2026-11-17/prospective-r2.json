@@ -1,0 +1,254 @@
+{
+  "schemaVersion": 1,
+  "kind": "Independent final prospective Plan75 R2",
+  "reviewer": "/root/p08_remaining_audit",
+  "decision": "GO_PROSPECTIVE_PLAN75_DOCUMENT_PUBLICATION_ONLY",
+  "blockers": [],
+  "head": "15853ce6f67c5afd3cc3f7c75585dfb7f981be89",
+  "tree": "487d5e5c85c2cc616b148b7ea720abf8cd930024",
+  "scope": "Exactly five selected existing paths: one Claude SDK catalogue predicate clause, three typed regression families in the existing unit suite, two finite membership expectations, and one append in each existing closure list.",
+  "independence": {
+    "proposalAuthor": "/root/qualification_audit",
+    "currentRebindAuthor": "/root/p09_review",
+    "rootOwnsSelectionR1AdoptionAndPublication": true,
+    "reviewerDidNotAuthorPlan75DocsOrCandidateSources": true,
+    "rootSource73AndSource74ClosureReceiptsReused": true
+  },
+  "exactReviewedInputs": {
+    "plan.md": {
+      "bytes": 17692,
+      "physicalLines": 82,
+      "gitBlob": "3326448953cd5f163facc87fa82e6a9b73ee7856",
+      "sha256": "e1a86a2b4d59dd4ff44ea62008be3a529d8bd3d8633d107995de9927c4874897"
+    },
+    "prospective-r1.json": {
+      "bytes": 37223,
+      "physicalLines": 964,
+      "gitBlob": "a9e36812df20393a1024a1c47ef4bcc2c0fe415e",
+      "sha256": "5d4848c962881f5f8b3c18774d6bc9902dd71fce90bd6bc6aae7ec3f1118541f"
+    },
+    "preimage-bindings.json": {
+      "bytes": 26928,
+      "physicalLines": 666,
+      "gitBlob": "5fc44157ab782aaf5fdca444810c69a2a46671af",
+      "sha256": "a41ed243694ccc317e2f50cc250eb4f3acac1b8e9303302a5857c9f6ea2f6568"
+    },
+    "data-proof.json": {
+      "bytes": 13847,
+      "physicalLines": 352,
+      "gitBlob": "b59f37b2a5b6be0680c23abe5b1d45af53b86a21",
+      "sha256": "742363d7ce4c4f776341c3082ee68fc73164eabdfc3abe9189cc9fae43182513"
+    },
+    "document-rebind-replacements.json": {
+      "bytes": 7974,
+      "physicalLines": 30,
+      "gitBlob": "d8353f18f28959a731b3c094e4ba31434ddc0430",
+      "sha256": "fe4a17ecd2b9801d545b29a54a2c223637ec58c3fa7f306e93448b649fc6dce9"
+    }
+  },
+  "independentDataProof": {
+    "path": "independent-data-proof.json",
+    "bytes": 17308,
+    "physicalLines": 522,
+    "gitBlob": "c90410aa77e5deb15723621a58fe6bdf82c58b19",
+    "sha256": "2bd266c8b1f69015a71e099695c27b89c1774916a7be05d8782ef71adb9d726f"
+  },
+  "independentVerifier": {
+    "path": "independent-verify-prospective-data.py",
+    "bytes": 20292,
+    "physicalLines": 368,
+    "gitBlob": "18894ef7f18d66b403b18e0a1dfe2ef62d055bdc",
+    "sha256": "203e28451252498d62473c9c65c7c8582f2b2cfcfdb47f118b3b56c14aa6c56d"
+  },
+  "actualParentBinding": {
+    "packet": {
+      "path": "/workspace/scratch/b87c90489dab/e2e-recovery/plan73/actual-source/official-packet.json",
+      "bytes": 4075341,
+      "physicalLines": 1,
+      "gitBlob": "f32a288e67cf1e9da3268e07f53827609b1dae38",
+      "sha256": "cf4da5a8954b4595db39ecfcc9dcdae9522e7eb2b680009cb5dd192b2b15a2c6"
+    },
+    "all12877UniqueUntruncatedTreeEntriesChecked": true,
+    "all11166LeavesReconstructAll1712GitTreeHashes": true,
+    "selectedPreimages": 5,
+    "referenceBodies": 30,
+    "all35ModeBlobAndBodyJoinsMatchActualTree": true,
+    "unchangedFromFullyReadAmendedPacket": 33,
+    "onlyChangedBodies": [
+      ".github/workflows/host-emulated-acceptance.yml",
+      "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts"
+    ],
+    "bothChangedBodiesEqualTheirActualPublishedSource73Or74Body": true,
+    "allSixActualSource74LeavesPreservedByCurrentTree": true,
+    "source71And72RemainCoveredByClosedActualSource73Gate": true,
+    "freshRootLeaseIsSeparateFromThisReadOnlySnapshot": true
+  },
+  "closedGates": {
+    "actualSource73": {
+      "path": "/workspace/scratch/b87c90489dab/e2e-recovery/plan73/actual-source/independent-actual-source-r2.json",
+      "bytes": 14877,
+      "physicalLines": 323,
+      "gitBlob": "3d0a61b1f46a03b9b349d66f084fd8641766209c",
+      "sha256": "cafe53da35d73ae615dc54224fba661baa3bea36ea135165409f5fb14cb8c245"
+    },
+    "actualSource74": {
+      "path": "/workspace/scratch/b87c90489dab/e2e-recovery/plan74/actual-source/independent-actual-source-r2.json",
+      "bytes": 15228,
+      "physicalLines": 322,
+      "gitBlob": "d2fae897bfc3f64086b592b84537f75f83956288",
+      "sha256": "daf8e97a0c1d8c9ecf163f85cf154b73dbe27e0f3dea5b72aae7bb7531adb16b"
+    },
+    "allSixActual74BodiesStillPresentInCurrentTree": true
+  },
+  "prospectiveDocumentIntegrity": {
+    "sevenExactUniqueProseReplacements": true,
+    "strictForwardEqualsFrozen82LinePlan": true,
+    "strictInverseRecoversFullyReadAmended82LinePlan": true,
+    "original24PacketFilesAndFourAmendedDocsRemainExact": true,
+    "entireCurrentR1AccountedForByPriorFull877LineReadAndCompleteCurrentJsonDeltaRead": true,
+    "entireCurrentBindingAccountedForByPriorFull585LineReadAndCompleteCurrentJsonDeltaRead": true,
+    "current352LineAuthorDataProofFullyRead": true,
+    "unchangedSemanticFields": [
+      "schemaVersion",
+      "date",
+      "author",
+      "repository",
+      "scope",
+      "evidenceDirectory",
+      "sourceFinding",
+      "selectedChange",
+      "preservationMatrix",
+      "testPlan",
+      "caps",
+      "validation",
+      "readLedger",
+      "activity",
+      "finiteValueAndEffortChain"
+    ],
+    "changesConfinedToActualParentClosedGatesAndClosureMetadata": true,
+    "newPlanAndEvidenceDirectoryAbsentInFullCurrentTree": {
+      "plan": "docs/plans/provider-migration/frontend-parity-2026-11-12/75-captured-claude-sdk-model-catalog-2026-11-17.md",
+      "evidenceDirectory": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan75-captured-claude-sdk-catalog-2026-11-17",
+      "allAbsent": true
+    },
+    "futureRefMovementRequiresExactRebind": true
+  },
+  "selectedPaths": [
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "gitBlob": "6092c36973dab9ed75d5e12beb14b17d1c155f05",
+      "bytes": 142352,
+      "physicalLines": 1775
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "gitBlob": "2612d5b78cffc3a7b11d03b1bf8cd6bae4cee976",
+      "bytes": 23005,
+      "physicalLines": 353
+    },
+    {
+      "path": "src/renderer/utils/teamModelAvailability.ts",
+      "gitBlob": "167751c56f74c2869b8b3d9b128002d5bd642bcb",
+      "bytes": 32055,
+      "physicalLines": 982
+    },
+    {
+      "path": "test/renderer/utils/teamModelAvailability.test.ts",
+      "gitBlob": "1a58c9c686010d5b5ded00f8e2b5064e4ab78c32",
+      "bytes": 49687,
+      "physicalLines": 1429
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "gitBlob": "05f976179d30af3dac75c2fc00f68554e6ef200c",
+      "bytes": 47581,
+      "physicalLines": 585
+    }
+  ],
+  "semanticReviewReusedAndConfirmed": [
+    {
+      "subject": "Existing first-party catalogue predicate",
+      "evidence": "src/renderer/utils/teamModelAvailability.ts:322-330, exact blob167751c56f74c2869b8b3d9b128002d5bd642bcb; unchanged capturedClaudeMetadata producer and DTO/selector references in the 35 joins.",
+      "finding": "Admitting the already existing claude-sdk source beside anthropic-models-api repairs the consumer mismatch. The selected clause is unique at line327; Anthropic provider and catalogue status!=unavailable guards at326/328 stay intact. No provider/API enum or producer change is selected."
+    },
+    {
+      "subject": "Selection, refusal and fallback semantics",
+      "finding": "The existing catalogue path retains visible/nonempty filtering, explicit resolved launch values, labels/order/deduplication and nonmember refusal. Hidden or unavailable choices stay unusable; a nonempty all-unavailable catalogue keeps disabled choices and available=[] without curated fallback. A missing/unavailable catalogue or no visible nonempty rows retains existing fallback. The removed-model filter remains API-only. Compatible, Codex and OpenCode paths are unchanged."
+    },
+    {
+      "subject": "Display metadata versus runtime authority",
+      "finding": "The clause does not establish authentication, freshness, readiness or execute authority. Existing stale/degraded display rules and verification counts retain their meanings. No source route, native custody, input, request, probe, timeout, cache, retry or cleanup change is selected."
+    },
+    {
+      "subject": "Required finite membership expectations",
+      "evidence": "desktop-live-membership-ui-smoke.ts exact05f976179d30af3dac75c2fc00f68554e6ef200c, unique ternaries at268/297; previously closed producer/selector/Medium/save/persistence chain retained byte-for-byte.",
+      "finding": "Only finite Sonnet4.6→TEST Claude Sonnet and finite sonnet→TEST-claude-sonnet are selected. Genuine Opus4.6/claude-opus-4-6 alternatives remain exact. The existing single selection sequence, Medium choice, save-only action and exact persisted-value assertion remain meaningful. No OR fallback, alternate selector or repeated action is allowed."
+    },
+    {
+      "subject": "Three typed regression families in the existing unit suite",
+      "evidence": "Entire existing1429-line test blob1a58c9c686010d5b5ded00f8e2b5064e4ab78c32 was previously read; it is still the exact current preimage. All38 literal declaration sites remain the original preimage, not an executed test count.",
+      "finding": "The proposed valid SDK offer/alias refusal case; mixed hidden, valid, unavailable and all-unavailable family; and unavailable-with-rows versus ready-empty fallback family cover the changed boundary and its retained guards. Typed public-API fixtures preserve authenticated=false/verificationState=unknown. No casts, any, predicate copies or utility mocks are selected. All prior API, compatible, fallback and Codex/OpenCode cases and oracles remain mandatory."
+    }
+  ],
+  "closureReview": {
+    "common": {
+      "count": 265,
+      "orderedSha256": "eafffa09aae67652da558043f55c0f33b833123964c95ed9c0711b459deb2820"
+    },
+    "commonAfterSelectedAppend": {
+      "count": 266,
+      "orderedSha256": "7c20f61f9b7aa1a4b8219a17d8a4e217cafc690d12007688a58c910901d0102a"
+    },
+    "main": {
+      "count": 1787,
+      "orderedSha256": "4d50aac95c4fc8f2e746f60baa22e598f8366339d70a7a0d09b2071579da40c2"
+    },
+    "mainAfterSelectedAppend": {
+      "count": 1788,
+      "orderedSha256": "8fa29c056bdcfb1663adc6c6d42bcc5d1280f9b943766a7a771428a5f28bfb91"
+    },
+    "commonOnlyAppend": "src/renderer/utils/teamModelAvailability.ts",
+    "main800LineOwnerUnchanged": true,
+    "process27AndWindowsRetry46BlocksByteIdentical": true,
+    "wholeExistingOrderRecoveredAfterRemovingNewUtility": true,
+    "fastCurrentCount": 140,
+    "fastCurrentOrderedSha256": "f591bc6f5c4df70c830e15b9bada4b4e7e03843c8c38aa7211ca389805b07a26",
+    "fastPlannedCount": 141,
+    "fastPlannedOrderedSha256": "41a31eabc24245b3cf54203d61e3d04034ffbb774044f84fa0c979c6b309108c",
+    "fastOnlyAppend": "test/renderer/utils/teamModelAvailability.test.ts",
+    "coldAtZeroBased136AndActual73ThreeOperandsPreserved": true,
+    "membershipAlreadyOnceInMainAndFast": {
+      "mainZeroBasedIndex": 923,
+      "fastZeroBasedIndex": 113
+    },
+    "noExternalRosterOrWorkflowChainAdopted": true,
+    "metadataClarification": "Author data retains currentColdLastOperand from the historical137-entry prefix. The explicit currentLastOperand and independent140-entry sequence correctly end at OwnerLoss. This historical label does not alter counts, order, source selection or the review verdict."
+  },
+  "capsAndScope": {
+    "utility982PhysicalLinesAndLegacyCap983Unchanged": true,
+    "membership585PhysicalLinesAndTwoSameLineLiteralChangesOnly": true,
+    "sourceBaselineAndGuardUnchanged": true,
+    "existingUnitSuiteIsTheSelectedTestOwner": true,
+    "noNewModulesFrameworksPublicApiBusinessInputsOrProviderMatrix": true,
+    "sourceAfterimagesPresent": 0
+  },
+  "remainingGates": [
+    "Root must full-read this exact R2/data and perform the ordinary current publication lease before publishing only reviewed prospective documents/evidence.",
+    "Complete official documentary readback and independent actual-document R2 must close before authoring any Plan75 source afterimage.",
+    "Exactly five source afterimages then need source R1/independent R2 and complete actual-source readback; any later parent movement requires preserving all prior published work.",
+    "Resulting-head original CI, including typed tests and the existing GUI membership oracle, remains required. This prospective review supplies no executed RED/PASS, live provider/auth qualification, native Windows qualification, or physical cleanup proof."
+  ],
+  "limits": [
+    "The original75 membership failure lacked a complete renderer DTO receipt, so this proven source mismatch is not claimed to be the sole historical cause.",
+    "The pending typed test bodies do not yet exist. Sufficiency is a prospective design conclusion; actual assertions, typing and preservation must be reviewed after documentary publication.",
+    "Previously closed73/74 semantic/publication reviews and the unchanged test/value/Medium chain were reused; no broad survey or new external evidence was introduced."
+  ],
+  "activity": {
+    "networkOrApiCalls": 0,
+    "gitMutations": 0,
+    "ciReadsOrMutations": 0,
+    "projectOrCompilerOrTestOrNativeExecution": 0,
+    "sourceAfterimages": 0,
+    "dataOnlyStdlibVerification": true
+  }
+}

@@ -1,0 +1,367 @@
+{
+  "kind": "READ_ONLY_9A34_COMPLETED_AUDITS_CHECKPOINT",
+  "sourceHead": "9a34bb28de0a0deee2eecc42099fd9500563eb1b",
+  "sourceUrl": "https://github.com/777genius/agent-teams-ai/tree/9a34bb28de0a0deee2eecc42099fd9500563eb1b",
+  "localRoot": "/workspace/scratch/82d3f9ba6b85/native-audit-9a34",
+  "auditScope": "Seven completed original jobs audited so far, not all jobs or an aggregate workflow qualification. All original statuses and limits are retained independently.",
+  "storageChoice": "Authoritative original ZIPs + full decoded job logs + independent audits + three evidence-only appendix candidates. Every extracted member is recoverable from its exact ZIP; extracted binaries/PNGs/receipts are not redundantly listed as publication files. Archive audit JSONs retain member names and SHA-256s.",
+  "hashes": "Raw file-byte SHA-256 and calculated Git blob SHA-1; this manifest creates no Git objects, refs or commits.",
+  "files": [
+    {
+      "path": "9a34-process-darwin-x64.zip",
+      "kind": "official-artifact-zip",
+      "bytes": 12176,
+      "sha256": "f369c3e1db741c689636eefb16156ab51092a3459fc1c632173c780c6132ead3",
+      "gitBlobSha1": "07f4273ac2bd4f7d653b0a9c4ad25a6d92112ffe"
+    },
+    {
+      "path": "9a34-process-win-arm64.zip",
+      "kind": "official-artifact-zip",
+      "bytes": 32083,
+      "sha256": "4c24b40810fb48bdbc3dbc7f05ec347b6e618b5354fe4e8ffd21007183b320da",
+      "gitBlobSha1": "337d974c2d207f8c32dd0e6b4eb6d7d9079e2144"
+    },
+    {
+      "path": "9a34-process-win-x64.zip",
+      "kind": "official-artifact-zip",
+      "bytes": 53840,
+      "sha256": "c0af0132336804cbc0f2b6e68561a7bed394a9ff1ee67bf075139fc087480736",
+      "gitBlobSha1": "02e740182a0f30ff19b77eb14684981670689395"
+    },
+    {
+      "path": "9a34-selection-linux.zip",
+      "kind": "official-artifact-zip",
+      "bytes": 1313131,
+      "sha256": "589928f41d1f04b9159b78ebe59d4733728c2a711be2d55a4de29478934b18e5",
+      "gitBlobSha1": "e9d4d93e397bebc18a50440353f176328ed23d20"
+    },
+    {
+      "path": "9a34-v2-darwin-x64.zip",
+      "kind": "official-artifact-zip",
+      "bytes": 10595,
+      "sha256": "5f5e499460a524f56b6ede4648aa3b2687831154a0de463ae6acced4e0c2a428",
+      "gitBlobSha1": "65abc728c97c99d723014c8637aef100b389c6c4"
+    },
+    {
+      "path": "9a34-v2-win-arm64.zip",
+      "kind": "official-artifact-zip",
+      "bytes": 13392,
+      "sha256": "81492e6fb7943fb8c17d7b767d7027b02c530d4b214fb275e932e80aea3af124",
+      "gitBlobSha1": "c88f013eaf419bb202688f0419b52e00d6b11580"
+    },
+    {
+      "path": "9a34-v2-win-x64.zip",
+      "kind": "official-artifact-zip",
+      "bytes": 13310,
+      "sha256": "c0b9826ae187704dcf61b75f49db7c57bba7db10dc5e618c6c705eab902253e8",
+      "gitBlobSha1": "8511688dce686383c10ab52e3e3e0ebb25316976"
+    },
+    {
+      "path": "archive-audit-process-darwin-x64.json",
+      "kind": "independent-read-only-audit",
+      "bytes": 2492,
+      "sha256": "4488330fb8dc732dd6f8d1d080fa3b242ceeda8eeed4da6a2a76d8132d36163c",
+      "gitBlobSha1": "71996bc84bf8d8d20fc26da239f00e1970239232"
+    },
+    {
+      "path": "archive-audit-process-windows.json",
+      "kind": "independent-read-only-audit",
+      "bytes": 11686,
+      "sha256": "6f12434734a5a2202563753f1a9e154702a6ef09fb64e1258ba4d7b55f9963dd",
+      "gitBlobSha1": "6a0b1d7c3d39efa8a7f860baac6015ef70ac3881"
+    },
+    {
+      "path": "archive-audit-selection.json",
+      "kind": "independent-read-only-audit",
+      "bytes": 7023,
+      "sha256": "e6364fe177684edf61ce02e9bac7a236f54d3c2000b7724c1c5870a315a6a36e",
+      "gitBlobSha1": "c399e3d452e0b72e7c8155fd4f9e61ab7f7acaa4"
+    },
+    {
+      "path": "archive-audit-v2-darwin-x64.json",
+      "kind": "independent-read-only-audit",
+      "bytes": 1919,
+      "sha256": "3be79da8de2cd25f32f6afdc88a6f155d0c7c1c5b290ba4322f2eac08dc36bbf",
+      "gitBlobSha1": "5e37bc00bdb79f501192dfa1b834c9734274fd26"
+    },
+    {
+      "path": "archive-audit-v2-win-arm.json",
+      "kind": "independent-read-only-audit",
+      "bytes": 1923,
+      "sha256": "2b4fb4de9fe171f7a3e1d6d3079994cc302d320fd92f54164497224272dda233",
+      "gitBlobSha1": "1f9eb76d490683cb8a365dd1b7543bfbbf753946"
+    },
+    {
+      "path": "archive-audit-v2-win-x64.json",
+      "kind": "independent-read-only-audit",
+      "bytes": 3413,
+      "sha256": "04ef994632068af4dd1973b5befa4d952501b40c126e3d67b3d6893215609067",
+      "gitBlobSha1": "aa634a8ca345c1777c03e5db38940bfcba1ff189"
+    },
+    {
+      "path": "job-132924919941.log",
+      "kind": "full-decoded-original-job-log",
+      "bytes": 159585,
+      "sha256": "db0eea5db6dd10ef98ee6bc8d837361a8bba07968d7d7c25d651dab050d0455d",
+      "gitBlobSha1": "5d91ae13efafebd12dc904868813fe9da3168ef8"
+    },
+    {
+      "path": "job-132924970397.log",
+      "kind": "full-decoded-original-job-log",
+      "bytes": 110650,
+      "sha256": "c156c46d30d7d390f00a7ad482b0992b2c6974d9583ed822158d34b46564fc3a",
+      "gitBlobSha1": "e5928a66414070b51a91e2fea9d4165bc53fb223"
+    },
+    {
+      "path": "job-132924970626.log",
+      "kind": "full-decoded-original-job-log",
+      "bytes": 374179,
+      "sha256": "b1c0fcedb7a040375f07d80fe83bfe6366863ff3d2584b3f39add8ffb40d3967",
+      "gitBlobSha1": "037dd327a5dd8552920746250111706dd375da93"
+    },
+    {
+      "path": "job-132924970687.log",
+      "kind": "full-decoded-original-job-log",
+      "bytes": 335696,
+      "sha256": "6ecbecbfc811e0578e88480fe860d3fc7a63b3a29c6bed7d726178aaee98a6a4",
+      "gitBlobSha1": "6cc25e9428e445b44dc69e7b023a5fad71ab5704"
+    },
+    {
+      "path": "job-132925032257.log",
+      "kind": "full-decoded-original-job-log",
+      "bytes": 112983,
+      "sha256": "7ae2e655dfc3ed57006133c39b3c1881e0ed692853ea30b6cba714f6eaab1e61",
+      "gitBlobSha1": "75eee467a154348a39185c2ffccf31cc843ca072"
+    },
+    {
+      "path": "job-132925032270.log",
+      "kind": "full-decoded-original-job-log",
+      "bytes": 89235,
+      "sha256": "f1d9493f7653e58ded0df347d8a891bff1e8715071405d1837e8d95d73d6d149",
+      "gitBlobSha1": "508b05ad3ac614ca026ece97c13796a5390a19d4"
+    },
+    {
+      "path": "job-132925032346.log",
+      "kind": "full-decoded-original-job-log",
+      "bytes": 113039,
+      "sha256": "7e7a9bbdd3852f34eaf6bbd0efc416e02571a17ec8187da9a3dc2b5fc566a7b4",
+      "gitBlobSha1": "9e0a9744de91449447ac928648973b8db74eeb0c"
+    },
+    {
+      "path": "plan29-9a34-native-leaves-appendix.md",
+      "kind": "evidence-only-appendix-candidate",
+      "bytes": 7450,
+      "sha256": "44507097c5404de6dc5176c6a5cc3785aee79a4733edd06df067c8cc210086bf",
+      "gitBlobSha1": "7ec9d1e40648fc5045898b3f0b8a8b7d067137b7"
+    },
+    {
+      "path": "plan29-9a34-process-windows-appendix.md",
+      "kind": "evidence-only-appendix-candidate",
+      "bytes": 7860,
+      "sha256": "e7fd28a9bc99525b6347178df2977fbefcd610bbf61e13276bddcb197fe023ec",
+      "gitBlobSha1": "9361689fba1cb68b045635b6d9e906107d12265c"
+    },
+    {
+      "path": "plan29-9a34-selection-appendix.md",
+      "kind": "evidence-only-appendix-candidate",
+      "bytes": 4501,
+      "sha256": "bf9dacecc2f04e2d073b1fedaa22c07fd5bdd69919b696010e5343b825448732",
+      "gitBlobSha1": "7d1ee92af82647d7c5f3ad8210032ca3c877c505"
+    },
+    {
+      "path": "receipt-audit-process-windows.json",
+      "kind": "independent-read-only-audit",
+      "bytes": 58445,
+      "sha256": "8cab7d610f690592a531305abefddfc8cdf2cfc1691389735a0ea602ee64e54c",
+      "gitBlobSha1": "ca51ef0318d93728e6f41464d86458461707e41a"
+    },
+    {
+      "path": "receipt-audit-selection.json",
+      "kind": "independent-read-only-audit",
+      "bytes": 642575,
+      "sha256": "86ebcedc36506de2f3f51b82a8481cf7c52114ae71a6b8a43f23ac7084a91dbd",
+      "gitBlobSha1": "37119a348f4f0e46505eaca51dc4d6a295e255c9"
+    },
+    {
+      "path": "receipt-audit-v2-darwin-x64.json",
+      "kind": "independent-read-only-audit",
+      "bytes": 33388,
+      "sha256": "554223f750cd29bdb9b48e8e28264947af64b1f57f4ddd322261da23a86d50d1",
+      "gitBlobSha1": "04e516d4f6a22c1ba020db5327e1f3e6cb10501a"
+    },
+    {
+      "path": "receipt-audit-v2-win-arm.json",
+      "kind": "independent-read-only-audit",
+      "bytes": 25908,
+      "sha256": "19335af8c9de8e440a4b27454bd6740aadde9c5067eeb767df6d1f7000a417f9",
+      "gitBlobSha1": "70b7277c0f34764932a1194cd20c52de3659788e"
+    },
+    {
+      "path": "receipt-audit-v2-win-x64.json",
+      "kind": "independent-read-only-audit",
+      "bytes": 27757,
+      "sha256": "a38cb09a708f7958e374cfb72d5f3700d156d286077c5273c5faaab2dd77a06d",
+      "gitBlobSha1": "eaa1e77f3f776535a740e8b05aa41c6e79341b41"
+    },
+    {
+      "path": "source-pins-process_win_arm.json",
+      "kind": "independent-read-only-audit",
+      "bytes": 5830,
+      "sha256": "b461adf07c285dae1424dccc8fd029d01cac6b831d731b5651ed9160d56730a8",
+      "gitBlobSha1": "e2a06bd3932455ba1a42e4e592def55f3f5dd748"
+    },
+    {
+      "path": "source-pins-process_win_x64.json",
+      "kind": "independent-read-only-audit",
+      "bytes": 6064,
+      "sha256": "1e16a41c617e4803dcf256e3f826241ed2ceb32f9bc2dd3a1346c7b5fecb178a",
+      "gitBlobSha1": "7c3b12dd15c14e97fddf5bba9668ab1b945ecb6f"
+    }
+  ],
+  "fileCount": 30,
+  "totalBytes": 3592128,
+  "uniqueBlobCount": 30,
+  "artifactProvenance": [
+    {
+      "artifactId": 14176507630,
+      "runId": 43751070810,
+      "attempt": 1,
+      "jobId": 132924970626,
+      "sourceHead": "9a34bb28de0a0deee2eecc42099fd9500563eb1b",
+      "artifactUrl": "https://github.com/777genius/agent-teams-ai/actions/runs/43751070810/artifacts/14176507630",
+      "jobUrl": "https://github.com/777genius/agent-teams-ai/actions/runs/43751070810/job/132924970626",
+      "zipPath": "9a34-process-win-x64.zip",
+      "apiSizeAndDigestMatched": true,
+      "zipBytes": 53840,
+      "zipSha256": "c0af0132336804cbc0f2b6e68561a7bed394a9ff1ee67bf075139fc087480736",
+      "crcVerified": true,
+      "uniqueSafeMemberPaths": true,
+      "symlinks": false,
+      "memberIndexAudit": "archive-audit-process-windows.json",
+      "fullJobLog": "job-132924970626.log",
+      "qualification": "FAIL at original OpenCode Team-A readiness; reference probe-expiry observed. Final three original Jobs have release/absence confirmed; native readiness does not qualify."
+    },
+    {
+      "artifactId": 14176543927,
+      "runId": 43751070810,
+      "attempt": 1,
+      "jobId": 132924970687,
+      "sourceHead": "9a34bb28de0a0deee2eecc42099fd9500563eb1b",
+      "artifactUrl": "https://github.com/777genius/agent-teams-ai/actions/runs/43751070810/artifacts/14176543927",
+      "jobUrl": "https://github.com/777genius/agent-teams-ai/actions/runs/43751070810/job/132924970687",
+      "zipPath": "9a34-process-win-arm64.zip",
+      "apiSizeAndDigestMatched": true,
+      "zipBytes": 32083,
+      "zipSha256": "4c24b40810fb48bdbc3dbc7f05ec347b6e618b5354fe4e8ffd21007183b320da",
+      "crcVerified": true,
+      "uniqueSafeMemberPaths": true,
+      "symlinks": false,
+      "memberIndexAudit": "archive-audit-process-windows.json",
+      "fullJobLog": "job-132924970687.log",
+      "qualification": "FAIL at original Codex Team-A readiness; allocated/owned/attached with recordReady false and no first-refusal record. Final seven original Jobs have release/absence confirmed. Final wrapper entry is not catalog/stdio completion proof."
+    },
+    {
+      "artifactId": 14176154616,
+      "runId": 43751070783,
+      "attempt": 1,
+      "jobId": 132925032270,
+      "sourceHead": "9a34bb28de0a0deee2eecc42099fd9500563eb1b",
+      "artifactUrl": "https://github.com/777genius/agent-teams-ai/actions/runs/43751070783/artifacts/14176154616",
+      "jobUrl": "https://github.com/777genius/agent-teams-ai/actions/runs/43751070783/job/132925032270",
+      "zipPath": "9a34-v2-win-x64.zip",
+      "apiSizeAndDigestMatched": true,
+      "zipBytes": 13310,
+      "zipSha256": "c0b9826ae187704dcf61b75f49db7c57bba7db10dc5e618c6c705eab902253e8",
+      "crcVerified": true,
+      "uniqueSafeMemberPaths": true,
+      "symlinks": false,
+      "memberIndexAudit": "archive-audit-v2-win-x64.json",
+      "fullJobLog": "job-132925032270.log",
+      "qualification": "PASS for original manual/auto Host and separate Windows custody scenarios: 60 PASS and one original SKIP. No Process/P08/P09/desktop/vendor/release promotion."
+    },
+    {
+      "artifactId": 14177431138,
+      "runId": 43751070783,
+      "attempt": 1,
+      "jobId": 132925032346,
+      "sourceHead": "9a34bb28de0a0deee2eecc42099fd9500563eb1b",
+      "artifactUrl": "https://github.com/777genius/agent-teams-ai/actions/runs/43751070783/artifacts/14177431138",
+      "jobUrl": "https://github.com/777genius/agent-teams-ai/actions/runs/43751070783/job/132925032346",
+      "zipPath": "9a34-v2-win-arm64.zip",
+      "apiSizeAndDigestMatched": true,
+      "zipBytes": 13392,
+      "zipSha256": "81492e6fb7943fb8c17d7b767d7027b02c530d4b214fb275e932e80aea3af124",
+      "crcVerified": true,
+      "uniqueSafeMemberPaths": true,
+      "symlinks": false,
+      "memberIndexAudit": "archive-audit-v2-win-arm.json",
+      "fullJobLog": "job-132925032346.log",
+      "qualification": "PASS for original manual/auto Host and separate Windows custody scenarios: 60 PASS and one original SKIP. No Process/P08/P09/desktop/vendor/release promotion."
+    },
+    {
+      "artifactId": 14177890351,
+      "runId": 43751070783,
+      "attempt": 1,
+      "jobId": 132925032257,
+      "sourceHead": "9a34bb28de0a0deee2eecc42099fd9500563eb1b",
+      "artifactUrl": "https://github.com/777genius/agent-teams-ai/actions/runs/43751070783/artifacts/14177890351",
+      "jobUrl": "https://github.com/777genius/agent-teams-ai/actions/runs/43751070783/job/132925032257",
+      "zipPath": "9a34-v2-darwin-x64.zip",
+      "apiSizeAndDigestMatched": true,
+      "zipBytes": 10595,
+      "zipSha256": "5f5e499460a524f56b6ede4648aa3b2687831154a0de463ae6acced4e0c2a428",
+      "crcVerified": true,
+      "uniqueSafeMemberPaths": true,
+      "symlinks": false,
+      "memberIndexAudit": "archive-audit-v2-darwin-x64.json",
+      "fullJobLog": "job-132925032257.log",
+      "qualification": "FAIL at P09 original mutation step after manual Host PASS and separate custody PASS: 60 PASS, one FAIL, two original SKIPs. P09 remains INCOMPLETE; cleanup true; all P09 qualification flags false."
+    },
+    {
+      "artifactId": 14177027834,
+      "runId": 43751070810,
+      "attempt": 1,
+      "jobId": 132924970397,
+      "sourceHead": "9a34bb28de0a0deee2eecc42099fd9500563eb1b",
+      "artifactUrl": "https://github.com/777genius/agent-teams-ai/actions/runs/43751070810/artifacts/14177027834",
+      "jobUrl": "https://github.com/777genius/agent-teams-ai/actions/runs/43751070810/job/132924970397",
+      "zipPath": "9a34-process-darwin-x64.zip",
+      "apiSizeAndDigestMatched": true,
+      "zipBytes": 12176,
+      "zipSha256": "f369c3e1db741c689636eefb16156ab51092a3459fc1c632173c780c6132ead3",
+      "crcVerified": true,
+      "uniqueSafeMemberPaths": true,
+      "symlinks": false,
+      "memberIndexAudit": "archive-audit-process-darwin-x64.json",
+      "fullJobLog": "job-132924970397.log",
+      "qualification": "PASS for controlled contracts, retained Main and POSIX groups only: Node 161 PASS/two SKIPs plus 23 PASS; Vitest 53 plus 78 PASS. native=[] and all broader flags false. Intentional negative cleanupConfirmed false is preserved."
+    },
+    {
+      "artifactId": 14177425297,
+      "runId": 43751070830,
+      "attempt": 1,
+      "jobId": 132924919941,
+      "sourceHead": "9a34bb28de0a0deee2eecc42099fd9500563eb1b",
+      "artifactUrl": "https://github.com/777genius/agent-teams-ai/actions/runs/43751070830/artifacts/14177425297",
+      "jobUrl": "https://github.com/777genius/agent-teams-ai/actions/runs/43751070830/job/132924919941",
+      "zipPath": "9a34-selection-linux.zip",
+      "apiSizeAndDigestMatched": true,
+      "zipBytes": 1313131,
+      "zipSha256": "589928f41d1f04b9159b78ebe59d4733728c2a711be2d55a4de29478934b18e5",
+      "crcVerified": true,
+      "uniqueSafeMemberPaths": true,
+      "symlinks": false,
+      "memberIndexAudit": "archive-audit-selection.json",
+      "fullJobLog": "job-132924919941.log",
+      "qualification": "PASS for original Selection oracle with mixed stopped PNG retained. All 1697 pins match Git; all seven PNGs viewed. All 49 finite peers absent; launcher 0/null is not an independent Main/Host exit. Exact progress state and Stop-to-frame interval are absent."
+    }
+  ],
+  "limits": [
+    "Original workflow/job logs and artifacts only; no auditor test/compiler/native/provider execution, rerun, cancellation or ref/source mutation.",
+    "Archive integrity and source equality do not independently reconstruct unarchived binaries or establish every artifact member as qualified.",
+    "Only the original selected observations and assertions stated in the appendices are qualified; skipped, failed, absent and truncated evidence is not PASS.",
+    "Temporary signed download inputs and base64 transfer wrappers are excluded. No signed artifact-download URL is retained here.",
+    "Current queued or uninspected CI leaves and later source compositions receive no result from this checkpoint."
+  ],
+  "checkpointMinuteUtc": "2026-11-15T19:52Z"
+}

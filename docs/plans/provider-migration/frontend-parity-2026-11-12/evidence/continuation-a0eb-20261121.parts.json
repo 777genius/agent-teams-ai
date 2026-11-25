@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "format": "raw-byte-concatenation",
+  "parentHead": "a0eb98f0775ca8499815c20d459e1c1037ef363d",
+  "archive": {
+    "path": "continuation-a0eb-20261121.tar.gz",
+    "bytes": 19563877,
+    "sha256": "1012766999eec5e7bc3b9163d9faf3cf4fecf60189ef64d5ef9e5e1438e9f857"
+  },
+  "parts": [
+    {
+      "path": "continuation-a0eb-20261121.tar.gz.part000",
+      "offset": 0,
+      "bytes": 3000000,
+      "sha256": "23c92de2fa3f6717140fc563951fc53d23ce53189073999c55f857102c663a71",
+      "gitBlobSha": "fe9c4025f32899f4cc7b1b451197d663ee52d37e"
+    },
+    {
+      "path": "continuation-a0eb-20261121.tar.gz.part001",
+      "offset": 3000000,
+      "bytes": 3000000,
+      "sha256": "a9ca6be0935c613497afadab1fb4ee8e7a699e76f142e2dfa3cfeee5200b104f",
+      "gitBlobSha": "9cc081f094fcecbf5b7ff04a8b6b69c951505162"
+    },
+    {
+      "path": "continuation-a0eb-20261121.tar.gz.part002",
+      "offset": 6000000,
+      "bytes": 3000000,
+      "sha256": "d4c21917e9db56521e5e096cf03c594894278078466234789006ccd0b61f7d5b",
+      "gitBlobSha": "9848d4ac7b7a8919e8170d4d5158d49716a983fb"
+    },
+    {
+      "path": "continuation-a0eb-20261121.tar.gz.part003",
+      "offset": 9000000,
+      "bytes": 3000000,
+      "sha256": "4584175b19c24f72c38a34b5e57733045d2565d37dbbdca9d2e623aa26c03533",
+      "gitBlobSha": "90a3b751a025f3a398e692d69ef7698f7554c5f1"
+    },
+    {
+      "path": "continuation-a0eb-20261121.tar.gz.part004",
+      "offset": 12000000,
+      "bytes": 3000000,
+      "sha256": "a1856100ca9afa41625b472d9df11187a09a5e98a53e460d3b2df4a2a1f44f17",
+      "gitBlobSha": "73596f88405299cb03b344352be32e1d2352d9be"
+    },
+    {
+      "path": "continuation-a0eb-20261121.tar.gz.part005",
+      "offset": 15000000,
+      "bytes": 3000000,
+      "sha256": "574231609aa18be1a750c64434b4a70e3d0d70d25cc350ea3a599be7292e4723",
+      "gitBlobSha": "90d3c03bdc68949e41e5e6b18327db4ededa3828"
+    },
+    {
+      "path": "continuation-a0eb-20261121.tar.gz.part006",
+      "offset": 18000000,
+      "bytes": 1563877,
+      "sha256": "fde919dc0d3d19c947a6ae6bdd73e54447bef321cc6933432b98cec5495fb1f8",
+      "gitBlobSha": "040f4a186aa00655e522aa58f54477b5345e7eab"
+    }
+  ],
+  "index": {
+    "path": "continuation-a0eb-20261121.json",
+    "bytes": 28150,
+    "sha256": "3d6f719e4bcf3028c1482a4e7f838fe416254a185c93fa97c80cbc3227ec3658"
+  },
+  "review": {
+    "path": "continuation-a0eb-20261121-review.json",
+    "bytes": 87068,
+    "sha256": "cea0d59a0be25a96dde31dc40ce1a54bc17cc52783f29673c91daf6c13b20c67"
+  },
+  "reviewedStatus": {
+    "archiveMember": "STATUS.md",
+    "bytes": 205554,
+    "sha256": "15c0b57fc17f40c31e7657fbce464731fcb1a8ae5054c91a9d1e26f1f5c2ecd8"
+  },
+  "publishedStatus": {
+    "path": "../STATUS.md",
+    "bytes": 206632,
+    "sha256": "ef55e1052e4e03822cfa99b2d96fb7f264bc00c3c0fd43e81a3cee00b1e83a29"
+  },
+  "reconstruction": "Concatenate parts in this exact array order, then verify archive byte count and SHA256 before extracting.",
+  "qualification": "Transport representation only. Original archive, index, review and all source bytes are unchanged. The published STATUS adds only the transport note. This does not qualify new original E2E, whole-workspace execution, release or merge readiness."
+}

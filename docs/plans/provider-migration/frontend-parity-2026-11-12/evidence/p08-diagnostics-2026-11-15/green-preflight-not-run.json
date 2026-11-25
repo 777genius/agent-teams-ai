@@ -1,0 +1,11 @@
+{
+  "stage": "green invocation refused before Node or test launch",
+  "observedAtUTC": "2026-11-15T18:51:18Z",
+  "expectedSourceHead": "f4f5a2c7b7ede7bd231643cc60f1cab1e8a6043c",
+  "runnerExitCode": 1,
+  "refusal": "run_check.py line 38: assert git('rev-parse', 'HEAD') == expected_head",
+  "context": "The preceding git fetch/switch tool call had yielded running session20352; root invoked the dependent preflight too early. The assertion stopped before node --version, preflight-file creation or the original Node test command. The actual mismatched HEAD value was not printed.",
+  "nodeOrTestsStarted": false,
+  "qualification": "NOT RUN; neither RED nor GREEN",
+  "resolution": "Waited on owned session20352. It completed exit0 with exact f4f5a2 source and approved Gate75b/testef533/workflowc956. Only after that completion may the actual GREEN command start."
+}

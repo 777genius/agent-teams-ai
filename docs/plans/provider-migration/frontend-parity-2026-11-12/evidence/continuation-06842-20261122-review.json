@@ -1,0 +1,2189 @@
+{
+  "schemaVersion": 1,
+  "kind": "INDEPENDENT_EXACT_PUBLICATION_ASSEMBLY_REVIEW",
+  "reviewer": "/root/scope_audit",
+  "startedAt": "2026-11-22T19:38:13.845200+00:00",
+  "completedAt": "2026-11-22T19:38:16.925084+00:00",
+  "verdict": "PASS_FOR_EXACT_PUBLICATION_ASSEMBLY_INTEGRITY_ONLY",
+  "blockers": [],
+  "baselineHead": "06842c53e5039085998abc4e67a9c0aaff227893",
+  "candidateCommit": null,
+  "repository": "777genius/agent-teams-ai",
+  "pullRequest": 1192,
+  "scope": "Offline exact inventory/archive/part/current-source/STATUS binding and preserved qualification limits. No product tests, API calls, CI polling, reruns, downloads, builds, source edits, or publication mutations by this reviewer.",
+  "checks": [
+    {
+      "name": "Frozen exact inventory, master, assembly manifest and final terminal gate",
+      "pass": true,
+      "inventoryBytes": 689182,
+      "selectedFiles": 1002
+    },
+    {
+      "name": "All 1002 selected evidence files and inventory preserved as 1003 safe regular unique tar members",
+      "pass": true,
+      "selectedBytes": 116335133,
+      "archiveBytes": 58769753
+    },
+    {
+      "name": "23 ordered parts reconstruct the exact frozen compressed bytes without transcoding",
+      "pass": true,
+      "partCapBytes": 2621440,
+      "lastPartBytes": 1098073
+    },
+    {
+      "name": "All 2018 D closure source files match fresh local bytes; all 15 prepared Git source blobs bind exact bytes",
+      "pass": true,
+      "commonCount": 2005,
+      "managementCount": 2016,
+      "separateTeamsCount": 2,
+      "candidatePaths": 15
+    },
+    {
+      "name": "Exact STATUS, commit message and 25 planned documentation inputs/worktree bytes pinned; sidecar is the only remaining documentation file",
+      "pass": true
+    },
+    {
+      "name": "Final saved observation has all six original runs terminal and all 69 jobs accounted for; 58 non-skipped jobs have hash-bound scoped analyses",
+      "pass": true,
+      "success": 51,
+      "failure": 7,
+      "skipped": 11
+    },
+    {
+      "name": "Public omissions, exact-original custody classes, historical separation, source components and required failed attempts are closed",
+      "pass": true,
+      "checkedReferenceBindings": 156,
+      "historicalCd18ZipSeparate": true
+    },
+    {
+      "name": "Independent selected-text URL query/fragment signature scan found no signed delivery material",
+      "pass": true,
+      "textFilesScanned": 950,
+      "originalZipContentsScanned": false
+    },
+    {
+      "name": "Observer incident remains explicit; all five canonical raw captures 60–64 and custody receipts are byte-bound",
+      "pass": true,
+      "original53Unavailable": true,
+      "observedCadenceViolationSeconds": 127,
+      "requiredMinimumSeconds": 300
+    },
+    {
+      "name": "All read inputs unchanged throughout final review; full archive disk bytes rechecked after verification",
+      "pass": true,
+      "stableInputFiles": 3095
+    }
+  ],
+  "checkSummary": {
+    "passed": 10,
+    "failed": 0
+  },
+  "frozenInputs": {
+    "inventory": {
+      "path": "06842/publication-evidence-inventory.draft.json",
+      "bytes": 689182,
+      "sha256": "16a133f05d20e6ba7cf42a599e0a68689edd2dcbf79f29046a82120bc3de9d76"
+    },
+    "master": {
+      "path": "06842/qualification-checkpoint.json",
+      "bytes": 35017,
+      "sha256": "9d95f12c2e18907162bd5f9d929ddb66e4e76e2be925af68c8322cdd1677a5ce"
+    },
+    "finalObservation": {
+      "path": "ci-06842-poll-64.json",
+      "bytes": 471402,
+      "sha256": "af13220c65efcbbfff6b533d097bc7598b6863087db9ff0d6611a1386e3ab5ec"
+    },
+    "assemblyManifest": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.json",
+      "bytes": 10565,
+      "sha256": "05034e941eb2461902b9bb62553fea39285eb5a43dee82a94d905dbe114afcc1",
+      "gitBlobSha": "4853500c6a28e3d7f44269a51b186069c87ba149"
+    },
+    "candidate": {
+      "path": "06842/candidate-source-final-D.json",
+      "bytes": 3831,
+      "sha256": "337ee20c51f7ec9a9cda582d9e1f958a3c6e63d16476b48df098d7b9c2c88300"
+    },
+    "sourceMap": {
+      "path": "06842/candidate-expected-source-hashes-D.json",
+      "bytes": 717229,
+      "sha256": "0421af5bf024825229612f66691b045f0a85e302ba279c4d942a9217d42ea202"
+    },
+    "STATUS": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/STATUS.md",
+      "bytes": 255959,
+      "sha256": "c8a9db4aff945fbe2a5cc5630457229833ae12a977f0b0f549e3ea98a57013d5",
+      "gitBlobSha": "5801a471308638198d64a33d5f044e886ae58d87"
+    },
+    "commitMessage": {
+      "path": "commit-message.txt",
+      "bytes": 708,
+      "sha256": "1e97e99e098a21c99ed98da9d113fe063654273aef6aa67d836f66191d747b93",
+      "text": "perf: reduce repeated Host validation before native launch\n\nReuse bounded pure receipt decoding and validation-only binding checks while keeping fresh filesystem reads and authority observations. Group adjacent saved-Team checks under the existing fence without changing their order, deadlines, or acceptance rules.\n\nCorrect the isolated retained donor's Codex availability fixture and collect its existing diagnostics. Add passive Teams menu placement observations while preserving the original wrong-row rejection.\n\nPreserve the original H CI failures, observation-ledger limitations, and independently reviewed local evidence. Original E2E and full workspace qualification on this source remain required.\n"
+    },
+    "preparedDocumentationInputs": {
+      "path": "prepared-documentation-inputs.json",
+      "bytes": 9214,
+      "sha256": "bb2807b7f6b86997520640426bc1d1cfabe32700ce026a03be11b7547a8e9d84"
+    },
+    "preparedDocumentationWorktreeCopies": {
+      "path": "prepared-documentation-worktree-copies.json",
+      "bytes": 7325,
+      "sha256": "29669d04da3d28091b7e51ffa40ebe7fcf1db467e42dc6d8aefcc515e14307b4"
+    }
+  },
+  "archive": {
+    "path": "continuation-06842-20261122.tar.gz",
+    "bytes": 58769753,
+    "sha256": "cbf5f059ea5698d021944904cee29c8365adef94adc784f89ab2f793d98507c2",
+    "members": 1003,
+    "regularSafeUniqueMembers": 1003,
+    "allMembersRehashedFromFrozenCompressedBytes": true,
+    "inventoryEntries": 1002,
+    "inventorySelectedBytes": 116335133,
+    "inventoryIncludedExactlyOnce": true,
+    "gzipMtimeZero": true,
+    "tarMetadataDeterministic": true,
+    "notPlannedForCommit": true
+  },
+  "parts": [
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-001",
+      "bytes": 2621440,
+      "sha256": "40abf997a5029e026314319c514f6ac907bb2d5b4abb9bcc7c5734b4c981cef3",
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-001",
+      "gitBlobSha": "357009aaaec64744f39a2dbe72067862524fbc83"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-002",
+      "bytes": 2621440,
+      "sha256": "db180f4cd09a125525b23d19a87de1f10e1eb27a30ae5de24318e40b76d89b9b",
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-002",
+      "gitBlobSha": "f314422e454b9336917ad5ebc179a45f1fc26a80"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-003",
+      "bytes": 2621440,
+      "sha256": "201bfeeaeed4b7e002507c6cdcf1678b94c0ee9ea4c1c4a0ff7724a2c5f036d6",
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-003",
+      "gitBlobSha": "8c810ad0a06da958ce67e51508d93dbd640013f0"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-004",
+      "bytes": 2621440,
+      "sha256": "5c59bf05b3ede51c42c015354f738afc68604e918ad432ed8dfb2599868a5b51",
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-004",
+      "gitBlobSha": "b7a1548962cc3193d99774f9e5711637cb0ea99a"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-005",
+      "bytes": 2621440,
+      "sha256": "ca38bca2d2e3256da945e8e9854b81e81ca48d422ff0d97f49736421197fa942",
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-005",
+      "gitBlobSha": "8119585b5895525ab791ff0456c4101a85eb9f45"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-006",
+      "bytes": 2621440,
+      "sha256": "e3fa8556706312323b3c16d65d6d2f8e1c878dd8f2bce593217f221e68c1cb6b",
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-006",
+      "gitBlobSha": "0a6d082287e34616b744aabdadef9b52c6255463"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-007",
+      "bytes": 2621440,
+      "sha256": "d8a3a44ecdf13917e8b41c2ce90ff7754f15d9dbbcfc0a7f833e892b78ad5589",
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-007",
+      "gitBlobSha": "d424a790c18d668008b6ed5ddfd3a10b96a94933"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-008",
+      "bytes": 2621440,
+      "sha256": "62a6562b9217fc9da10055e21dde291a5ee79e1dc261a70fa5778315b78cfb66",
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-008",
+      "gitBlobSha": "24090e9f5a971f9228665f0e4dfb47aa73dac8c2"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-009",
+      "bytes": 2621440,
+      "sha256": "d17d808afd910df17bc2a0f5f4c5dd999fc2efcea2b08431cfce0aa96ed12feb",
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-009",
+      "gitBlobSha": "3b9fee1da3e71dfb53feaa58ab524986a204465e"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-010",
+      "bytes": 2621440,
+      "sha256": "4b985917e76a5773a179270f66ce780260436870f7141574e5436e427da31980",
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-010",
+      "gitBlobSha": "19311a2eb923b4c3d2f8170abc611ffbc08c5027"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-011",
+      "bytes": 2621440,
+      "sha256": "945b347d3730ed47b3c38b12ef395641bc308aa3f2f309c0fcbf93c497a39b35",
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-011",
+      "gitBlobSha": "58584e4dd343f7976f4b9745f8c2fe009fd8aeea"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-012",
+      "bytes": 2621440,
+      "sha256": "b34a1de3f32f7f3bb4d2060714af7a5e4443ba5d7ac1beaae1ba2ecd428d10cc",
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-012",
+      "gitBlobSha": "6304f3d7fcb5dad7f374a7e8b7de2709b219c898"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-013",
+      "bytes": 2621440,
+      "sha256": "a2eb2a5decace81e30d49cac58f92a2fb4a9c26a8542197aa1d4cf3ecd0ef7dc",
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-013",
+      "gitBlobSha": "8c29972e02e2e01ce01910ed03440f4540e1c53e"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-014",
+      "bytes": 2621440,
+      "sha256": "acf13af822ccc6aacfcabb24c913a4c0067cddd1ace7bc3e3e4841e231bea383",
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-014",
+      "gitBlobSha": "0b900424e45eab3c5de4c8e4b420c73af7dd8bbc"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-015",
+      "bytes": 2621440,
+      "sha256": "13b11e0d36ef07028f938eb3644c35adc6cb100aeda221e7b0cec0d76d837c12",
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-015",
+      "gitBlobSha": "4be4e8de22f03e11fff287057fe6fb40518ab222"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-016",
+      "bytes": 2621440,
+      "sha256": "2bcb39ac256bb5f51e9f3a1fecff9ab5919105227b81928c48adc231971dd328",
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-016",
+      "gitBlobSha": "aab280ced99881fba209ee21852a1fd8719ab6dd"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-017",
+      "bytes": 2621440,
+      "sha256": "c750434e2755fdd68e97fadcccd1124c45e2e86895ed7f1f6f33826f31bfa5d7",
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-017",
+      "gitBlobSha": "c8960c8d66e9fa2ef4d53621b054e98b2bb1cf25"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-018",
+      "bytes": 2621440,
+      "sha256": "284df4c2ffc7bd7c615ade2183c15e94d6238811ff45913d0e19b12da712bcda",
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-018",
+      "gitBlobSha": "22684ba4dd56421ad094e2ea95a817503341d7bb"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-019",
+      "bytes": 2621440,
+      "sha256": "a16ad64791a88751e6017a6d2da6b6e73b7c8989bdea1d85420229828aac6a3b",
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-019",
+      "gitBlobSha": "fb1b56bb43321b70c8f2f428e5bbf56df309c442"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-020",
+      "bytes": 2621440,
+      "sha256": "7ad36a8eb3ec5115b6d48213d16f3f258449eb80c1179dd0c2d4b956b5291f32",
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-020",
+      "gitBlobSha": "ea7c7ed7bcd54a0cdfdf4d0002d1c539eb7e42dc"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-021",
+      "bytes": 2621440,
+      "sha256": "bc555256bf74f9e2450f4f10e96c9e2240dd42c6f598283dd72fe803feab257e",
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-021",
+      "gitBlobSha": "2ca9fd5cff55cf5e120c535214cc53a55854be81"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-022",
+      "bytes": 2621440,
+      "sha256": "29f4c9deea4a3113c51b9c72a7f6512a9996f04dc4e9bb3df05d9802d7db087b",
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-022",
+      "gitBlobSha": "37982a4fd213de2a3030406fb48001ee3e166810"
+    },
+    {
+      "path": "continuation-06842-20261122.tar.gz.part-023",
+      "bytes": 1098073,
+      "sha256": "f2ff627ba16f0d0a1b94c5d954b4f37db5159d04ae7e926800d5e6f292061a1e",
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-023",
+      "gitBlobSha": "0e1f3f421c5204dced854d2294307471fc5b3dc1"
+    }
+  ],
+  "partsVerification": {
+    "orderedCount": 23,
+    "capBytes": 2621440,
+    "totalBytes": 58769753,
+    "reconstructedSha256": "cbf5f059ea5698d021944904cee29c8365adef94adc784f89ab2f793d98507c2",
+    "eachPartIsExactContiguousArchiveSlice": true
+  },
+  "currentSourceBinding": {
+    "baselineHead": "06842c53e5039085998abc4e67a9c0aaff227893",
+    "commonCount": 2005,
+    "managementCount": 2016,
+    "distinctVerifiedFiles": 2018,
+    "orderedCommonPrefixMatchesManagement": true,
+    "separateTeamsInputs": [
+      {
+        "path": "scripts/e2e/teams-create-page-schedule-observation.mjs",
+        "sha256": "c11b16df5cc1e4e2f821872fc9a5de5705a0d3e8025b834331c3ecc71a1feaaf",
+        "bytes": 19745
+      },
+      {
+        "path": "scripts/e2e/teams-create-page-schedule-observation.test.mjs",
+        "sha256": "4a6e06dce9ae5c193c5b54ba9699844797b6e318eb3827f09f1dbef33f010ba1",
+        "bytes": 35992
+      }
+    ],
+    "all15CandidatePathsInVerifiedClosure": true,
+    "sourceMapIsPublishedArchiveMember": true,
+    "unpublishedDOnly": true,
+    "sourceBlobBindings": [
+      {
+        "path": ".github/workflows/ci.yml",
+        "bytes": 200847,
+        "sha256": "983450de4660477e16183c06ec4a29450ea2b5692b144a5d7aa54899cd21febd",
+        "gitBlobSha": "555104be28b9e31828ad96a2d5413ee969104961",
+        "returnedGitBlobSha": "555104be28b9e31828ad96a2d5413ee969104961",
+        "receiptBytes": 624,
+        "receiptSha256": "245191b134ae6615040222ae90efe9446f30fd1c0299e7882cddd2f1001fd116",
+        "receiptIndex": 0,
+        "unreferencedObjectOnly": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/FileManagementCommandStore.ts",
+        "bytes": 9074,
+        "sha256": "eb4ce52da7e76472a44016dbea11eabc5476a95e34ff4a30fb6468fea1c67ff9",
+        "gitBlobSha": "5311cc3770605998a7491e282640856db46f0bf0",
+        "returnedGitBlobSha": "5311cc3770605998a7491e282640856db46f0bf0",
+        "receiptBytes": 677,
+        "receiptSha256": "f6494c021b1ec522ea6188c1657f8f50cdae9fcba0caebbce21e585c4cd67202",
+        "receiptIndex": 1,
+        "unreferencedObjectOnly": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/team/FileTeamRuntimeBindings.ts",
+        "bytes": 14951,
+        "sha256": "cd5c2b937fa60c4a32125c6869f585ae52b6422ba7e3fa047e8c4cb9c32cd85a",
+        "gitBlobSha": "0442305060fde93e7b1a9cd4b1696c72fd42e304",
+        "returnedGitBlobSha": "0442305060fde93e7b1a9cd4b1696c72fd42e304",
+        "receiptBytes": 670,
+        "receiptSha256": "adacaccfc121ab155e2e531d6f0b126a088de62b9c9985a6f9b5da4923f88eff",
+        "receiptIndex": 2,
+        "unreferencedObjectOnly": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/team/TeamOwnerStore.ts",
+        "bytes": 8297,
+        "sha256": "1afb9fab18e02a3c4ba2f0bd4ba818931d635e27559168c2037c3469b67b5f32",
+        "gitBlobSha": "ac2246f6761a85f871895a1b79e37a351083840d",
+        "returnedGitBlobSha": "ac2246f6761a85f871895a1b79e37a351083840d",
+        "receiptBytes": 660,
+        "receiptSha256": "6af6f72a42f52ddb0806b857fa362e2bdbcf5a78ae1aa99df4c21ac074aa794a",
+        "receiptIndex": 3,
+        "unreferencedObjectOnly": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/savedTeamModelProbe.ts",
+        "bytes": 9681,
+        "sha256": "9907cd4435505f2b9332d3cba3f09be410716fe40a137a1056d1e95be6b14496",
+        "gitBlobSha": "4bd3fffe3722c8d0087fdbb5d9cce50fc27e0dac",
+        "returnedGitBlobSha": "4bd3fffe3722c8d0087fdbb5d9cce50fc27e0dac",
+        "receiptBytes": 663,
+        "receiptSha256": "683ee74b7bd2b045991eae0f9417f9643f47cb3b863005f6d6fab8d1e1a21964",
+        "receiptIndex": 4,
+        "unreferencedObjectOnly": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/team/TeamOwner.ts",
+        "bytes": 34696,
+        "sha256": "d3a66c4878418625f5bf4313cdbb2a26f0dea952c3daeb5a04cdf3ab03c25838",
+        "gitBlobSha": "037183325909a3e4822eb594b0957bd8ab0b0376",
+        "returnedGitBlobSha": "037183325909a3e4822eb594b0957bd8ab0b0376",
+        "receiptBytes": 647,
+        "receiptSha256": "f68b2a6ab3f0c23b2a290b65bbabfd2524cceaa33d4c25546f44f61df57cb023",
+        "receiptIndex": 5,
+        "unreferencedObjectOnly": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/team/ports.ts",
+        "bytes": 7587,
+        "sha256": "e70ffb90509aab6b8bf986c6abad3f37e6c3a403c39868a5734f4119286df361",
+        "gitBlobSha": "b6b37e7541bfdb43fd9d97c98fe2b4e11361bce4",
+        "returnedGitBlobSha": "b6b37e7541bfdb43fd9d97c98fe2b4e11361bce4",
+        "receiptBytes": 642,
+        "receiptSha256": "778808cdca33bd5ad26af6495bdc9f575d6c03dbe13f53903d8c410d0547cfc2",
+        "receiptIndex": 6,
+        "unreferencedObjectOnly": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/file-receipt-decode-cache.test.ts",
+        "bytes": 16088,
+        "sha256": "91e8525497fe71c1043fa5cf3b7999d4a7fbb4b8b4e76b286b69cd73a1afcfa6",
+        "gitBlobSha": "35a5527f874c5e3332a87e116074e7d80b936888",
+        "returnedGitBlobSha": "35a5527f874c5e3332a87e116074e7d80b936888",
+        "receiptBytes": 665,
+        "receiptSha256": "4d20a9b854563e64fa6e1e265af037010b39a00b7040405cda9bf1963bb57f20",
+        "receiptIndex": 7,
+        "unreferencedObjectOnly": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+        "bytes": 297129,
+        "sha256": "ff4f9d25c2e859ddedeb555d8d2ea295055463520f3beeb81cbf01c2149babcb",
+        "gitBlobSha": "88495f956b5a78fedaa2a18481f7e6f7abaac795",
+        "returnedGitBlobSha": "88495f956b5a78fedaa2a18481f7e6f7abaac795",
+        "receiptBytes": 658,
+        "receiptSha256": "5754937356dba5d43dece84f34ed045f412cfb45896aa81036cf855b448d5eec",
+        "receiptIndex": 8,
+        "unreferencedObjectOnly": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+        "bytes": 111464,
+        "sha256": "98da50ac9fc1dc60df9d5b43c0a21e263f8a0d4233e7e3827105f3bf69d319dc",
+        "gitBlobSha": "094e66062a28e3cd2c2d86879864127fbc9a1fbb",
+        "returnedGitBlobSha": "094e66062a28e3cd2c2d86879864127fbc9a1fbb",
+        "receiptBytes": 663,
+        "receiptSha256": "b60edf44628110d083343cc6b10beae704a2b90026e7d800ebd64c8e7ebe510a",
+        "receiptIndex": 9,
+        "unreferencedObjectOnly": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/team-runtime-bindings-decode.test.ts",
+        "bytes": 11570,
+        "sha256": "b8b6e72a9baf16cbfe43e6f243e1d0e3af12db97b623f01d452919092b846171",
+        "gitBlobSha": "7a4301664bc79059acbe056dd0b199d8803925ca",
+        "returnedGitBlobSha": "7a4301664bc79059acbe056dd0b199d8803925ca",
+        "receiptBytes": 669,
+        "receiptSha256": "67be7746e595a0c41af2b88ffe083bfb83cec99963d6758bc90aa8586e05a3e4",
+        "receiptIndex": 10,
+        "unreferencedObjectOnly": true
+      },
+      {
+        "path": "scripts/e2e/teams-create-page-schedule-observation.mjs",
+        "bytes": 19745,
+        "sha256": "c11b16df5cc1e4e2f821872fc9a5de5705a0d3e8025b834331c3ecc71a1feaaf",
+        "gitBlobSha": "0b860fd4d5113d35b112b25d36a153c9092e1618",
+        "returnedGitBlobSha": "0b860fd4d5113d35b112b25d36a153c9092e1618",
+        "receiptBytes": 654,
+        "receiptSha256": "9e0f32e6a798cad3932d6cc7030a4e409ee5f4fe6eb00024551729ac78b6f0c7",
+        "receiptIndex": 11,
+        "unreferencedObjectOnly": true
+      },
+      {
+        "path": "scripts/e2e/teams-create-page-schedule-observation.test.mjs",
+        "bytes": 35992,
+        "sha256": "4a6e06dce9ae5c193c5b54ba9699844797b6e318eb3827f09f1dbef33f010ba1",
+        "gitBlobSha": "e7b2d22c84885627b05520aaea6e3449201acb2b",
+        "returnedGitBlobSha": "e7b2d22c84885627b05520aaea6e3449201acb2b",
+        "receiptBytes": 659,
+        "receiptSha256": "9e1e91fed1a45c2e35e4272c6a6aef9b0ae1b9b4a99379b8af630f0a9fddb709",
+        "receiptIndex": 12,
+        "unreferencedObjectOnly": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+        "bytes": 31743,
+        "sha256": "bfecf5323634cb309539913bddb9eb529f3a7b07d0670d8efad08fa15e44781f",
+        "gitBlobSha": "3eba6cc1cf2e9a174390be1d6c72fb8b4fe295c8",
+        "returnedGitBlobSha": "3eba6cc1cf2e9a174390be1d6c72fb8b4fe295c8",
+        "receiptBytes": 664,
+        "receiptSha256": "27660fe310e09b348a17525aa0af4407ddf88934d636f266b0e3674adb3a2681",
+        "receiptIndex": 13,
+        "unreferencedObjectOnly": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts",
+        "bytes": 58582,
+        "sha256": "fd2acffcb8f30a9805cb3c981bd387014de258d6cf5a4b05c1493fd8a648b36c",
+        "gitBlobSha": "825ece63517df4010699a65c536086f0837b0ea6",
+        "returnedGitBlobSha": "825ece63517df4010699a65c536086f0837b0ea6",
+        "receiptBytes": 673,
+        "receiptSha256": "24d2df4d7568d66b5dbab0edb5a980fb476c681015da379f21dba51dd61147e4",
+        "receiptIndex": 14,
+        "unreferencedObjectOnly": true
+      }
+    ],
+    "gitBlobMeaning": "Returned unreferenced Git object identities match the exact local D bytes. This is not a commit/ref identity and does not qualify E2E."
+  },
+  "plannedPublication": {
+    "documentationInputs": [
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-001",
+        "bytes": 2621440,
+        "sha256": "40abf997a5029e026314319c514f6ac907bb2d5b4abb9bcc7c5734b4c981cef3",
+        "gitBlobSha": "357009aaaec64744f39a2dbe72067862524fbc83",
+        "worktreeExact": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-002",
+        "bytes": 2621440,
+        "sha256": "db180f4cd09a125525b23d19a87de1f10e1eb27a30ae5de24318e40b76d89b9b",
+        "gitBlobSha": "f314422e454b9336917ad5ebc179a45f1fc26a80",
+        "worktreeExact": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-003",
+        "bytes": 2621440,
+        "sha256": "201bfeeaeed4b7e002507c6cdcf1678b94c0ee9ea4c1c4a0ff7724a2c5f036d6",
+        "gitBlobSha": "8c810ad0a06da958ce67e51508d93dbd640013f0",
+        "worktreeExact": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-004",
+        "bytes": 2621440,
+        "sha256": "5c59bf05b3ede51c42c015354f738afc68604e918ad432ed8dfb2599868a5b51",
+        "gitBlobSha": "b7a1548962cc3193d99774f9e5711637cb0ea99a",
+        "worktreeExact": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-005",
+        "bytes": 2621440,
+        "sha256": "ca38bca2d2e3256da945e8e9854b81e81ca48d422ff0d97f49736421197fa942",
+        "gitBlobSha": "8119585b5895525ab791ff0456c4101a85eb9f45",
+        "worktreeExact": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-006",
+        "bytes": 2621440,
+        "sha256": "e3fa8556706312323b3c16d65d6d2f8e1c878dd8f2bce593217f221e68c1cb6b",
+        "gitBlobSha": "0a6d082287e34616b744aabdadef9b52c6255463",
+        "worktreeExact": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-007",
+        "bytes": 2621440,
+        "sha256": "d8a3a44ecdf13917e8b41c2ce90ff7754f15d9dbbcfc0a7f833e892b78ad5589",
+        "gitBlobSha": "d424a790c18d668008b6ed5ddfd3a10b96a94933",
+        "worktreeExact": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-008",
+        "bytes": 2621440,
+        "sha256": "62a6562b9217fc9da10055e21dde291a5ee79e1dc261a70fa5778315b78cfb66",
+        "gitBlobSha": "24090e9f5a971f9228665f0e4dfb47aa73dac8c2",
+        "worktreeExact": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-009",
+        "bytes": 2621440,
+        "sha256": "d17d808afd910df17bc2a0f5f4c5dd999fc2efcea2b08431cfce0aa96ed12feb",
+        "gitBlobSha": "3b9fee1da3e71dfb53feaa58ab524986a204465e",
+        "worktreeExact": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-010",
+        "bytes": 2621440,
+        "sha256": "4b985917e76a5773a179270f66ce780260436870f7141574e5436e427da31980",
+        "gitBlobSha": "19311a2eb923b4c3d2f8170abc611ffbc08c5027",
+        "worktreeExact": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-011",
+        "bytes": 2621440,
+        "sha256": "945b347d3730ed47b3c38b12ef395641bc308aa3f2f309c0fcbf93c497a39b35",
+        "gitBlobSha": "58584e4dd343f7976f4b9745f8c2fe009fd8aeea",
+        "worktreeExact": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-012",
+        "bytes": 2621440,
+        "sha256": "b34a1de3f32f7f3bb4d2060714af7a5e4443ba5d7ac1beaae1ba2ecd428d10cc",
+        "gitBlobSha": "6304f3d7fcb5dad7f374a7e8b7de2709b219c898",
+        "worktreeExact": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-013",
+        "bytes": 2621440,
+        "sha256": "a2eb2a5decace81e30d49cac58f92a2fb4a9c26a8542197aa1d4cf3ecd0ef7dc",
+        "gitBlobSha": "8c29972e02e2e01ce01910ed03440f4540e1c53e",
+        "worktreeExact": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-014",
+        "bytes": 2621440,
+        "sha256": "acf13af822ccc6aacfcabb24c913a4c0067cddd1ace7bc3e3e4841e231bea383",
+        "gitBlobSha": "0b900424e45eab3c5de4c8e4b420c73af7dd8bbc",
+        "worktreeExact": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-015",
+        "bytes": 2621440,
+        "sha256": "13b11e0d36ef07028f938eb3644c35adc6cb100aeda221e7b0cec0d76d837c12",
+        "gitBlobSha": "4be4e8de22f03e11fff287057fe6fb40518ab222",
+        "worktreeExact": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-016",
+        "bytes": 2621440,
+        "sha256": "2bcb39ac256bb5f51e9f3a1fecff9ab5919105227b81928c48adc231971dd328",
+        "gitBlobSha": "aab280ced99881fba209ee21852a1fd8719ab6dd",
+        "worktreeExact": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-017",
+        "bytes": 2621440,
+        "sha256": "c750434e2755fdd68e97fadcccd1124c45e2e86895ed7f1f6f33826f31bfa5d7",
+        "gitBlobSha": "c8960c8d66e9fa2ef4d53621b054e98b2bb1cf25",
+        "worktreeExact": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-018",
+        "bytes": 2621440,
+        "sha256": "284df4c2ffc7bd7c615ade2183c15e94d6238811ff45913d0e19b12da712bcda",
+        "gitBlobSha": "22684ba4dd56421ad094e2ea95a817503341d7bb",
+        "worktreeExact": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-019",
+        "bytes": 2621440,
+        "sha256": "a16ad64791a88751e6017a6d2da6b6e73b7c8989bdea1d85420229828aac6a3b",
+        "gitBlobSha": "fb1b56bb43321b70c8f2f428e5bbf56df309c442",
+        "worktreeExact": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-020",
+        "bytes": 2621440,
+        "sha256": "7ad36a8eb3ec5115b6d48213d16f3f258449eb80c1179dd0c2d4b956b5291f32",
+        "gitBlobSha": "ea7c7ed7bcd54a0cdfdf4d0002d1c539eb7e42dc",
+        "worktreeExact": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-021",
+        "bytes": 2621440,
+        "sha256": "bc555256bf74f9e2450f4f10e96c9e2240dd42c6f598283dd72fe803feab257e",
+        "gitBlobSha": "2ca9fd5cff55cf5e120c535214cc53a55854be81",
+        "worktreeExact": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-022",
+        "bytes": 2621440,
+        "sha256": "29f4c9deea4a3113c51b9c72a7f6512a9996f04dc4e9bb3df05d9802d7db087b",
+        "gitBlobSha": "37982a4fd213de2a3030406fb48001ee3e166810",
+        "worktreeExact": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.tar.gz.part-023",
+        "bytes": 1098073,
+        "sha256": "f2ff627ba16f0d0a1b94c5d954b4f37db5159d04ae7e926800d5e6f292061a1e",
+        "gitBlobSha": "0e1f3f421c5204dced854d2294307471fc5b3dc1",
+        "worktreeExact": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122.json",
+        "bytes": 10565,
+        "sha256": "05034e941eb2461902b9bb62553fea39285eb5a43dee82a94d905dbe114afcc1",
+        "gitBlobSha": "4853500c6a28e3d7f44269a51b186069c87ba149",
+        "worktreeExact": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/STATUS.md",
+        "bytes": 255959,
+        "sha256": "c8a9db4aff945fbe2a5cc5630457229833ae12a977f0b0f549e3ea98a57013d5",
+        "gitBlobSha": "5801a471308638198d64a33d5f044e886ae58d87",
+        "worktreeExact": true
+      }
+    ],
+    "sidecarRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-06842-20261122-review.json",
+    "sidecarNotSelfHashed": "Root must hash these completed exact bytes before upload; a recursive self-hash is intentionally absent.",
+    "documentationPathsWithSidecar": 26,
+    "sourcePaths": 15,
+    "totalChangedPaths": 41,
+    "fullArchiveCommitted": false,
+    "reviewSupportFilesRequiredForInterpretation": false,
+    "finalRemoteHeadBasePrAndCasCheckOwnedByRoot": true
+  },
+  "terminalOriginalH": {
+    "families": [
+      {
+        "runId": 45023991499,
+        "name": "Teams creation page Electron E2E",
+        "conclusion": "failure",
+        "status": "completed",
+        "perRunHeadFieldAvailable": false
+      },
+      {
+        "runId": 45023991564,
+        "name": "OpenCode V2 Stage1 static preflight (TEST only)",
+        "conclusion": "success",
+        "status": "completed",
+        "perRunHeadFieldAvailable": false
+      },
+      {
+        "runId": 45023991655,
+        "name": "Host Emulated Acceptance",
+        "conclusion": "failure",
+        "status": "completed",
+        "perRunHeadFieldAvailable": false
+      },
+      {
+        "runId": 45023991540,
+        "name": "CI proof: PR=1192 | head=06842c53e5039085998abc4e67a9c0aaff227893 | base=8d46f13fe87b4a25156b6be8331119eb8d0f790e | merge=419dade4492b442998971a4a419bc1173e02a7c4 | action=synchronize | draft=true",
+        "conclusion": "failure",
+        "status": "completed",
+        "perRunHeadFieldAvailable": false
+      },
+      {
+        "runId": 45023991515,
+        "name": "Electron packaged CI",
+        "conclusion": "success",
+        "status": "completed",
+        "perRunHeadFieldAvailable": false
+      },
+      {
+        "runId": 45023991471,
+        "name": "Host process fixture acceptance",
+        "conclusion": "success",
+        "status": "completed",
+        "perRunHeadFieldAvailable": false
+      }
+    ],
+    "jobCount": 69,
+    "conclusions": {
+      "success": 51,
+      "failure": 7,
+      "skipped": 11
+    },
+    "analysesForAll58NonSkippedJobs": true,
+    "scopedAnalyses": [
+      {
+        "jobId": 137212868265,
+        "artifactId": 14755403709,
+        "family": "process",
+        "path": "process/win32-x64-14755403709/analysis.json",
+        "sha256": "3e5c3f39e01c515e6b68d2b1f5e084110baac382d6cc32b76fb08d1a9a432e10",
+        "qualification": "PASS",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212868284,
+        "artifactId": 14759457425,
+        "family": "teams",
+        "path": "teams/macos-14759457425/analysis.json",
+        "sha256": "d96365e9e9bc3172a6079d162ee967f315b0ff33e51602daf79657f49378438f",
+        "qualification": "SEE_EXACT_SCOPED_ANALYSIS",
+        "jobConclusion": "failure"
+      },
+      {
+        "jobId": 137212868389,
+        "artifactId": null,
+        "family": "packaged",
+        "path": "packaged/packaged-classifier-137212868389/analysis.json",
+        "sha256": "0823b6cbb91c5c423f1833bb7403026586a451986e679fddc8dc2708855e81fd",
+        "qualification": "PASS_CLASSIFIER_POLICY_AND_SELECTION_ONLY",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212868425,
+        "artifactId": 14757904236,
+        "family": "teams",
+        "path": "teams/windows-14757904236/analysis.json",
+        "sha256": "0248253e164ab6736d6ce21dea4f5ee8202f22fe750fa022af49d8533fc69c77",
+        "qualification": "PASS",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212868428,
+        "artifactId": 14759158353,
+        "family": "teams",
+        "path": "teams/linux-14759158353/analysis.json",
+        "sha256": "80ec67586e43d729f5c2c68bcb3ecb1a9459a90c81f7b73a5daa63a4d69e73a7",
+        "qualification": "PASS within original Teams creation/retention/Schedules finite TEST scope",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212868442,
+        "artifactId": 14758793235,
+        "family": "process",
+        "path": "process/linux-x64-14758793235/analysis.json",
+        "sha256": "55ddaa2136fce8482e2db4e969f3fa932f99342666f56336c9aefe5f053abbbf",
+        "qualification": "PASS",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212868466,
+        "artifactId": 14755714839,
+        "family": "process",
+        "path": "process/win32-arm64-14755714839/analysis.json",
+        "sha256": "2b16c85c73f124b53dee5ef3b72d1304f2d35771b5067598f394daf953ebcda0",
+        "qualification": "PASS",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212868512,
+        "artifactId": 14757626990,
+        "family": "process",
+        "path": "process/darwin-arm64-14757626990/analysis.json",
+        "sha256": "1a3388ce043b57b301fdd5813b28166ff473873fb7bba440601f0704e49a66c4",
+        "qualification": "PASS",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212868518,
+        "artifactId": 14757973722,
+        "family": "process",
+        "path": "process/darwin-x64-14757973722/analysis.json",
+        "sha256": "2125d1f7ae0b7cc59808eec9cb1e652e6e5e47a6e6e95631fd623a07d3f92181",
+        "qualification": "PASS",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212868877,
+        "artifactId": null,
+        "family": "native",
+        "path": "native/static-win-137212868877/analysis.json",
+        "sha256": "495c27ce690f195b12fb6882ec11478f005c66a56fbe355c9f7952cae0de4e9d",
+        "qualification": "PASS_STATIC_WINDOWS_SOURCE_ONLY",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212869018,
+        "artifactId": null,
+        "family": "source",
+        "path": "source/source-plan-137212869018/analysis.json",
+        "sha256": "a8da641dddfb34e86ab223354bcd0af177805ba142f48f66768d375666393f3b",
+        "qualification": "PASS_SOURCE_PLAN_POLICY_ONLY_DRAFT_FEEDBACK",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212869040,
+        "artifactId": 14758912014,
+        "family": "native",
+        "path": "native/win32-x64-14758912014/analysis.json",
+        "sha256": "24747252b2d71c1c3faff9abcc9f0970fdbfed59747c6f13e7efbaed229d69dd",
+        "qualification": "PASS for original native TEST scope at06842",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212869061,
+        "artifactId": 14759590244,
+        "family": "native",
+        "path": "native/static-linux-14759590244/analysis.json",
+        "sha256": "6bf8e20e08577011f2fe1470339217ba8ff699b7bbef5e20159a8c3170ce2301",
+        "qualification": "PASS_FOR_ORIGINAL_LINUX_V1_TEST_RECEIPT_CONTRACTS",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212869062,
+        "artifactId": 14758394295,
+        "family": "native",
+        "path": "native/linux-x64-14758394295/analysis.json",
+        "sha256": "ac61c257ce4962c56e9578545fe4dfb1e52377c54e02309bfda0ae7849f1dd88",
+        "qualification": "PASS original native TEST business, coordination and Linux management scopes; POSIX trusted-writer fixture only",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212869103,
+        "artifactId": 14759296319,
+        "family": "native",
+        "path": "native/spi-14759296319/analysis.json",
+        "sha256": "bd882810619d1317d58909d6eeda6f9cfbb6d82f1458a5004d08d0188b9b86c7",
+        "qualification": "PASS_FOR_ORIGINAL_25_STAGE_TEST_NATIVE_SPI_RECEIPT_ONLY",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212869125,
+        "artifactId": 14758779218,
+        "family": "native",
+        "path": "native/published-http-14758779218/analysis.json",
+        "sha256": "c2ce0cf4615d10ff8dfe323ee5af2225c8f81bd2a97910b8db3427fc3753bcac",
+        "qualification": "PASS_FOR_ORIGINAL_TEST_DISCOVERY_RECEIPT_ONLY",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212869126,
+        "artifactId": 14758251334,
+        "family": "native",
+        "path": "native/win32-arm64-14758251334/analysis.json",
+        "sha256": "651dcfd68b5929c44abbafadf4fe56048e84d105f3b945a2cb1a2cb89a28d2ad",
+        "qualification": "PASS for original native TEST scope at06842",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212869153,
+        "artifactId": 14758068328,
+        "family": "native",
+        "path": "native/darwin-arm64-14758068328/analysis.json",
+        "sha256": "b05b88d0c742ee0dd65807aa93958259d7f7773fa46d6f2f0c1338180fb84aae",
+        "qualification": "PASS original native TEST and trusted-writer fixture scopes; legacy strict verdict remains INCOMPLETE",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212869161,
+        "artifactId": 14757774673,
+        "family": "host",
+        "path": "host/offline-shard2-14757774673/analysis.json",
+        "sha256": "dffb6fc08a86b6040be911fc15c2cf544f779e17a0c94292dc4c4baaf288ec14",
+        "qualification": "PASS_FOR_ORIGINAL_SAFE_FRONTEND_SHARD_2_OF_4_WITH_EXISTING_SKIPS",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212869164,
+        "artifactId": 14759300501,
+        "family": "native",
+        "path": "native/darwin-x64-14759300501/analysis.json",
+        "sha256": "5554f06d7c2e00f55225ad7ea5c080607c70d7acb8d1c999a4d741fd65beb35d",
+        "qualification": "PASS original native TEST and trusted-writer fixture scopes; legacy strict verdict remains INCOMPLETE",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212869358,
+        "artifactId": 14758989463,
+        "family": "host",
+        "path": "host/offline-shard3-14758989463/analysis.json",
+        "sha256": "6e10f081b7fcdbe58052c1734b09434f1debd05008f110c516e47ed54e0b1760",
+        "qualification": "PASS_FOR_ORIGINAL_SAFE_FRONTEND_SHARD_3_OF_4_WITH_EXISTING_SKIPS",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212869377,
+        "artifactId": 14758991318,
+        "family": "host",
+        "path": "host/skills-14758991318/analysis.json",
+        "sha256": "d7b36d7bf1878af70c5c5432f635aaac54549bbaa25b02cdc76b0e5a4a16ac21",
+        "qualification": "PASS",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212869412,
+        "artifactId": 14758963443,
+        "family": "host",
+        "path": "host/offline-shard1-14758963443/analysis.json",
+        "sha256": "e4dde571a828fe1d4130a8d64d1e18f3ae3879c0e50f36bd1cb8777afdea0a0c",
+        "qualification": "PASS_FOR_ORIGINAL_SAFE_FRONTEND_SHARD_1_OF_4_WITH_EXISTING_SKIPS",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212869445,
+        "artifactId": 14759004606,
+        "family": "host",
+        "path": "host/offline-shard4-14759004606/analysis.json",
+        "sha256": "70298eb30b3be8ac9041f49917d24156b4d7d73e036df944a0a40fba67e833f4",
+        "qualification": "PASS_FOR_ORIGINAL_SAFE_FRONTEND_SHARD_4_OF_4_WITH_EXISTING_SKIPS",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212869464,
+        "artifactId": 14759495732,
+        "family": "host",
+        "path": "host/claude-14759495732/analysis.json",
+        "sha256": "f763761e783a3ababb55fbac31a805e2ee12c0585ab5069fa4467bc78c72fc1a",
+        "qualification": "PASS",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212869477,
+        "artifactId": 14759631187,
+        "family": "host",
+        "path": "host/collaboration-14759631187/analysis.json",
+        "sha256": "b5b287129bfdeb20cd132f7977e7e24f27df3b63fa6d25163c6fb490188dc5e4",
+        "qualification": "PASS",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212869498,
+        "artifactId": 14759995461,
+        "family": "host",
+        "path": "host/processes-14759995461/analysis.json",
+        "sha256": "8c2c04f41171188439412f038f55b065143dd2e898f444a79bd334f58ab0aa34",
+        "qualification": "PASS: controlled native original-reference Processes Stop after real Host restart, neighbor preserved",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212869512,
+        "artifactId": 14755952096,
+        "family": "host",
+        "path": "host/14755952096-analysis.json",
+        "sha256": "57fb656f87df433948830f0342e0a9cb2eae08a7ab6b2a9176b8549a5812ecbe",
+        "qualification": "SEE_EXACT_SCOPED_ANALYSIS",
+        "jobConclusion": "failure"
+      },
+      {
+        "jobId": 137212869541,
+        "artifactId": 14759108694,
+        "family": "host",
+        "path": "host/taskboard-14759108694/analysis.json",
+        "sha256": "1d6eba5818535ee857a75504210fad0e4a313491c82670f923b9f876a5e51d72",
+        "qualification": "PASS_WITH_ARCHIVE_LIMITS",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212869545,
+        "artifactId": 14759418516,
+        "family": "host",
+        "path": "host/import-14759418516/analysis.json",
+        "sha256": "180d2f7da37e698b2321aa6a94acae36049a0911c64fda7d512e42deb31fb858",
+        "qualification": "PASS_FOR_ORIGINAL_UNLAUNCHED_TEST_ARCHIVE_IMPORT_AND_ATTACHMENT_READBACK_SCOPE_WITH_ARCHIVAL_GAPS",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212869547,
+        "artifactId": 14759852451,
+        "family": "host",
+        "path": "host/selection-14759852451/analysis.json",
+        "sha256": "07b0a7b91ca1b62ae99281d936ad902f255f4566a054e2e1148eb7d83fcbf03f",
+        "qualification": "PASS finite save-only next-launch selection preserves original live Team; each original Stop released",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212869554,
+        "artifactId": 14759034430,
+        "family": "host",
+        "path": "host/review-finite-14759034430/analysis.json",
+        "sha256": "21ba445a4abd3fb6e55204abfe4b11edd845e4a6188de6ade0235f4a16b2ae3e",
+        "qualification": "PASS finite synthetic Task Changes, separate Host restart readback and stale guard; working-file archive limitation retained",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212869564,
+        "artifactId": 14759008250,
+        "family": "host",
+        "path": "host/claude-lifecycle-14759008250/analysis.json",
+        "sha256": "e1a8e06348fdb5c8f0cd88cf0a9b345e4ccd5c9b6dc5e71958b3b261a0db1ea7",
+        "qualification": "PASS_FOR_ORIGINAL_FINITE_CLAUDE_LIFECYCLE_SCOPE",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212869567,
+        "artifactId": 14759164856,
+        "family": "host",
+        "path": "host/cross-team-14759164856/analysis.json",
+        "sha256": "09d26545f614499cb98b5fa93a40cbc32f97951b5cde810b0276d10ade3e5d24",
+        "qualification": "PASS_WITH_ARCHIVE_LIMITS",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212869572,
+        "artifactId": 14759886601,
+        "family": "host",
+        "path": "host/import-lifecycle-14759886601/analysis.json",
+        "sha256": "9cf355c251bfbbd55f4eee03bf45e430e841ce70d3705349cd6441d643b5fea6",
+        "qualification": "PASS_FOR_ORIGINAL_CURRENT_FINITE_SOURCE_IMPORT_AND_FRESH_HOST_SCOPE_WITH_EXPLICIT_ARCHIVAL_GAPS",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212869575,
+        "artifactId": 14759083391,
+        "family": "host",
+        "path": "host/darwin-arm64-installer-14759083391/analysis.json",
+        "sha256": "115a4ad1ddbbc020610494aed3fa10536dd0d83356b94f93f1b849d1ccc48bff",
+        "qualification": "PASS_FOR_ORIGINAL_STOCK_INSTALLER_WITH_FINITE_TEST_PACKAGE_AND_CAPTURED_RUNTIME_SELECTION_SCOPE",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212869580,
+        "artifactId": 14758849619,
+        "family": "host",
+        "path": "host/darwin-arm64-resume-14758849619/analysis.json",
+        "sha256": "94c62e9643409f99c02e4703d382dd8577216cf95af0601fc03cacb0464dbb32",
+        "qualification": "INCOMPLETE: original preflight expired before first launch; cold Resume unexercised",
+        "jobConclusion": "failure"
+      },
+      {
+        "jobId": 137212869582,
+        "artifactId": 14760540621,
+        "family": "host",
+        "path": "host/team-14760540621/analysis.json",
+        "sha256": "4c181c99f687067315ac0ab1ad28c749fe9e3d4eeb71a95cc4c6aad347b2aca0",
+        "qualification": "PASS_WITH_ARCHIVE_LIMITS",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212869584,
+        "artifactId": 14759219465,
+        "family": "host",
+        "path": "host/darwin-arm64-quit-active-14759219465/analysis.json",
+        "sha256": "6719ea77bd96d995e32d07e40c99064ac606095b9e6e9d92008430414c0c21e9",
+        "qualification": "PASS within the original guarded Quit and cold readback contract",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212869585,
+        "artifactId": 14759953339,
+        "family": "host",
+        "path": "host/extensions-14759953339/analysis.json",
+        "sha256": "75003d564ca967a4c0b58f6c3a47830141870ed45b8feb22354fe4b4c2311dfa",
+        "qualification": "PASS finite extension mutation UI with explicit omitted-configuration and capability/visual limits",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212869587,
+        "artifactId": 14759618580,
+        "family": "host",
+        "path": "host/linux-x64-codex-login-14759618580/analysis.json",
+        "sha256": "b170662f7c827091d4a59055a71b9d8b206ac1de43e41254dbc12001cc683376",
+        "qualification": "PASS for original finite Host codex-login lane; genuine provider execution and vendor authentication remain unqualified",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212869593,
+        "artifactId": 14758954636,
+        "family": "host",
+        "path": "host/darwin-arm64-chat-attachments-14758954636/analysis.json",
+        "sha256": "9532dea76d4119d32569d32d3e4dd05767af6f6fcc11b05a0535bc6f54a032c4",
+        "qualification": "PASS: original Darwin ARM64 OpenCode V2 chat attachment journey, Stop, Quit and cold readback; finite localhost model only",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212869596,
+        "artifactId": 14759353541,
+        "family": "host",
+        "path": "host/retained-original-14759353541/analysis.json",
+        "sha256": "71316184e4fb6e7d6da5ff122ee664d0f925f857592c042d568813173e3ad30b",
+        "qualification": "PASS_FOR_RECORDED_ORIGINAL_FINITE_LANE_WITH_EXPLICIT_ARCHIVAL_GAPS",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212869598,
+        "artifactId": 14760265255,
+        "family": "host",
+        "path": "host/linux-x64-codex-14760265255/analysis.json",
+        "sha256": "21947d0333b30eb128b7794378662de85dbdf2a3f5a3921020ff2a527979c76f",
+        "qualification": "PASS for original finite Host codex lane; genuine provider execution and vendor authentication remain unqualified",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212869632,
+        "artifactId": 14759209438,
+        "family": "host",
+        "path": "host/opencode-14759209438/analysis.json",
+        "sha256": "c21f73820d40777030d70af0c32ffba820bae80059a9588473b19da62b99a203",
+        "qualification": "PASS_WITH_ARCHIVE_LIMITS",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212869637,
+        "artifactId": 14760565242,
+        "family": "host",
+        "path": "host/darwin-arm64-quit-pending-open-14760565242/analysis.json",
+        "sha256": "6e4c9f9162a0917b0f1a0f9437d672f3c1045d4948b92ae67d248f7ef9cd6e7e",
+        "qualification": "PASS within the original guarded Quit and cold readback contract; retained UNKNOWN is not released custody",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212869638,
+        "artifactId": 14760395260,
+        "family": "host",
+        "path": "host/linux-x64-management-14760395260/analysis.json",
+        "sha256": "d5dfb07518c3f4971a8e7d67efd0d390373c7aad3096b7a98d5e1098add9c92a",
+        "qualification": "PASS for original finite Host management lane; genuine provider execution and vendor authentication remain unqualified",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137212869722,
+        "artifactId": 14760445642,
+        "family": "host",
+        "path": "host/darwin-arm64-review-14760445642/analysis.json",
+        "sha256": "edc61d32fb2903ca80175dd64431c544e1fcd074ff9f0fd1bf544a9501333b4a",
+        "qualification": "INCOMPLETE: original saved preflight never permitted first Launch; Review and Stop unexercised",
+        "jobConclusion": "failure"
+      },
+      {
+        "jobId": 137242767455,
+        "artifactId": 14762884365,
+        "family": "source",
+        "path": "source/retained-original-14762884365/analysis.json",
+        "sha256": "b4f783c9d94656a261f7eb56fbc2438d578df6f689ac421e5a8296ec3601d0cb",
+        "qualification": "FAIL preserved",
+        "jobConclusion": "failure"
+      },
+      {
+        "jobId": 137242767488,
+        "artifactId": null,
+        "family": "source",
+        "path": "source/fast-feedback-137242767488/analysis.json",
+        "sha256": "d6d3f6495d760e23b7f2e134c50e585e82a30d0009ebe8d9817a370f74a85d52",
+        "qualification": "PASS original source fast feedback on PR merge with exact same Git tree as06842",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137244026327,
+        "artifactId": 14763302074,
+        "family": "packaged",
+        "path": "packaged/darwin-x64-14763302074/analysis.json",
+        "sha256": "f4e00f6fba5dba9f43a6a1100c67f6c6682ff03b080e0be1636ec28f4d86e1b7",
+        "qualification": "PASS_WITH_EXPLICIT_SCOPE_AND_ARCHIVE_LIMITS",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137244026346,
+        "artifactId": 14761234443,
+        "family": "packaged",
+        "path": "packaged/win32-x64-14761234443/analysis.json",
+        "sha256": "6357042bd72436ee5b65c9777135cd0b6ec9976459ec167ac8287e86de7cd932",
+        "qualification": "PASS within original platform scopes",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137244026376,
+        "artifactId": 14764360131,
+        "family": "packaged",
+        "path": "packaged/linux-x64-14764360131/analysis.json",
+        "sha256": "e5d03ccbe70cda337581bc2bbf6ef86d0e7888109ce328835240147affb33473",
+        "qualification": "PASS_WITH_EXPLICIT_SCOPE_AND_ARCHIVE_LIMITS",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137244026380,
+        "artifactId": 14764607531,
+        "family": "packaged",
+        "path": "packaged/darwin-arm64-14764607531/analysis.json",
+        "sha256": "9b9d69c0b42338be52e21567c57770e0e08c0ed6ec3dea730997aa0e3f30216d",
+        "qualification": "PASS_WITH_EXPLICIT_SCOPE_AND_ARCHIVE_LIMITS",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137244026417,
+        "artifactId": 14762666403,
+        "family": "packaged",
+        "path": "packaged/win32-arm64-14762666403/analysis.json",
+        "sha256": "25915fcfdedab3aa1396e4640d59c429a35f2d68db79ef24d1fe3af593fc2ae1",
+        "qualification": "PASS_WITH_STATED_LIMITS",
+        "jobConclusion": "success"
+      },
+      {
+        "jobId": 137254980389,
+        "artifactId": null,
+        "family": "host",
+        "path": "host/host-derived-summary-137254980389/analysis.json",
+        "sha256": "551d23f58c088ecc23351b38a65149ed2ba62113652462ca6f74967ef2182ad0",
+        "qualification": "FAIL_DERIVED_HOST_SUMMARY_NO_NEW_PRIMARY_FAILURE",
+        "jobConclusion": "failure"
+      },
+      {
+        "jobId": 137277918907,
+        "artifactId": null,
+        "family": "source",
+        "path": "source/source-derived-summary-137277918907/analysis.json",
+        "sha256": "2f6aaf59a8c60e33f2967b0a375b7a3909e039bccc9e1d0ed2b0559b855b7d20",
+        "qualification": "FAIL preserved; retained-derived aggregate verified",
+        "jobConclusion": "failure"
+      },
+      {
+        "jobId": 137288888721,
+        "artifactId": null,
+        "family": "packaged",
+        "path": "packaged/packaged-derived-summary-137288888721/analysis.json",
+        "sha256": "e16354c2d1149409704ebc54654b2ea5f0ea4c5c0fb840fbfc5e6214d10d7e78",
+        "qualification": "PASS_WITH_EXPLICIT_DERIVED_SCOPE",
+        "jobConclusion": "success"
+      }
+    ],
+    "primaryFailures": [
+      {
+        "jobId": 137212869512,
+        "kind": "Linux V2 original live Add model probe held"
+      },
+      {
+        "jobId": 137212869580,
+        "kind": "Darwin Resume lane preflight expired before first launch"
+      },
+      {
+        "jobId": 137212869722,
+        "kind": "Darwin Review lane preflight incomplete before first launch"
+      },
+      {
+        "jobId": 137212868284,
+        "kind": "Teams macOS wrong-row click after final geometry sample"
+      },
+      {
+        "jobId": 137242767455,
+        "kind": "Immutable donor4a original Create-visible deadline while deep preflight pending; causal delay unresolved"
+      }
+    ],
+    "derivedFailureJobs": [
+      137254980389,
+      137277918907
+    ],
+    "skippedJobs": [
+      {
+        "id": 137212870019,
+        "run_id": 45023991540,
+        "name": "Stage 1 source Desktop (${{ matrix.label }})",
+        "conclusion": "skipped"
+      },
+      {
+        "id": 137212870158,
+        "run_id": 45023991540,
+        "name": "Stage 1 process tuple diagnostic (unqualified)",
+        "conclusion": "skipped"
+      },
+      {
+        "id": 137212870300,
+        "run_id": 45023991540,
+        "name": "Stage 1 current-tuple process and packed qualification",
+        "conclusion": "skipped"
+      },
+      {
+        "id": 137242768643,
+        "run_id": 45023991540,
+        "name": "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata validate' || 'validate'",
+        "conclusion": "skipped"
+      },
+      {
+        "id": 137242768782,
+        "run_id": 45023991540,
+        "name": "Renderer source validation",
+        "conclusion": "skipped"
+      },
+      {
+        "id": 137242768833,
+        "run_id": 45023991540,
+        "name": "${{ (((github.event_name == 'pull_request') && (github.event.action == 'edited') && (((needs.plan.result != 'success') || (needs.plan.outputs.metadata != 'false'))) && 'Metadata lint') || 'lint') }} (${{ matrix.scope }})",
+        "conclusion": "skipped"
+      },
+      {
+        "id": 137242768855,
+        "run_id": 45023991540,
+        "name": "Codex login Desktop (Linux x64)",
+        "conclusion": "skipped"
+      },
+      {
+        "id": 137242768879,
+        "run_id": 45023991540,
+        "name": "macOS DMG artwork end-to-end",
+        "conclusion": "skipped"
+      },
+      {
+        "id": 137242768919,
+        "run_id": 45023991540,
+        "name": "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata Windows smoke' || 'Task change ledger Windows smoke'",
+        "conclusion": "skipped"
+      },
+      {
+        "id": 137242768969,
+        "run_id": 45023991540,
+        "name": "${{ (((github.event_name == 'pull_request') && (github.event.action == 'edited') && (((needs.plan.result != 'success') || (needs.plan.outputs.metadata != 'false'))) && 'Metadata test') || 'test') }} (${{ matrix.shard }}/4)",
+        "conclusion": "skipped"
+      },
+      {
+        "id": 137242769326,
+        "run_id": 45023991540,
+        "name": "Focused documentation and asset validation",
+        "conclusion": "skipped"
+      }
+    ],
+    "metadataBindingLimit": "Normalized workflow-run rows omit per-run head_sha. This review verifies the saved enclosing H capture, the seven ordered observation identities, the fixed six run IDs, their completed status/conclusion, and all per-job run_id values; no absent per-run field is invented."
+  },
+  "originalCustody": {
+    "currentHZipCount": 51,
+    "currentHZipBytes": 50341328,
+    "currentHZipFiles": [
+      {
+        "path": "06842/host/claude-14759495732/original.zip",
+        "bytes": 3787456,
+        "sha256": "5b9ada71e03e765fb452da81350860cecd951fff408cb5a52d7c0b686771bb2e",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14759495732
+      },
+      {
+        "path": "06842/host/claude-lifecycle-14759008250/original.zip",
+        "bytes": 4066025,
+        "sha256": "aeb3c0a1533d40c415dbbbad3fc0416963b59f1136d96ee2501530920abc1237",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14759008250
+      },
+      {
+        "path": "06842/host/collaboration-14759631187/original.zip",
+        "bytes": 1707681,
+        "sha256": "7dd375de6eafe22e396c269b369e79b9c0593097d8f009244a2924f04e4d746d",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14759631187
+      },
+      {
+        "path": "06842/host/cross-team-14759164856/original.zip",
+        "bytes": 2962941,
+        "sha256": "6c55247e0f79aaf1f62d3b006ecd4172eaf3c4d79a473fdfe4e477dfe55f81cd",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14759164856
+      },
+      {
+        "path": "06842/host/darwin-arm64-chat-attachments-14758954636/host-darwin-arm64-chat-attachments-14758954636.zip",
+        "bytes": 723289,
+        "sha256": "5d241708c7c272ebf3892ea42b3e3661e2540940aa323ba5f771c324c598812d",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14758954636
+      },
+      {
+        "path": "06842/host/darwin-arm64-installer-14759083391/original.zip",
+        "bytes": 1194537,
+        "sha256": "a1672c247a30d5c74dc33cacce96edc03d8213225d0177416353020ad90efb20",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14759083391
+      },
+      {
+        "path": "06842/host/darwin-arm64-quit-active-14759219465/payload.zip",
+        "bytes": 674301,
+        "sha256": "7739e68145f6fbdf03eba8ffc71470b4b9a2db8c1ba6732a9254b7e0077686f6",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14759219465
+      },
+      {
+        "path": "06842/host/darwin-arm64-quit-pending-open-14760565242/payload.zip",
+        "bytes": 596196,
+        "sha256": "b173a871512e8e8bb10749fdaf3a90c2f4ce5123a99d0a21932b3ff028b407ed",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14760565242
+      },
+      {
+        "path": "06842/host/darwin-arm64-resume-14758849619/host-darwin-arm64-resume-14758849619.zip",
+        "bytes": 331012,
+        "sha256": "57a432dd4dc700f7a76fecc41c2c5c1df7517405a8b84441dd09a8d459c1fa1c",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14758849619
+      },
+      {
+        "path": "06842/host/darwin-arm64-review-14760445642/original.zip",
+        "bytes": 324287,
+        "sha256": "ad527271e588a42e7425b5576f58dd472e11c85884324b2d67a7aa909c0c9a7c",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14760445642
+      },
+      {
+        "path": "06842/host/extensions-14759953339/original.zip",
+        "bytes": 1001731,
+        "sha256": "ac6c1224dc8f3b7def5b56b24d12d7cc3e8b3fbb57acfcd841d99e46ebeab2ec",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14759953339
+      },
+      {
+        "path": "06842/host/host-06842-linux-v2-management-14755952096.zip",
+        "bytes": 1468196,
+        "sha256": "9ba1cf6852a766bd4c1792e469fabc510d5e5d00048b0939210332351f1ab0b9",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14755952096
+      },
+      {
+        "path": "06842/host/import-14759418516/original.zip",
+        "bytes": 1202779,
+        "sha256": "9e807b089eb6735d21030218d6150ee5527790387ec47f55292b0bed2c107ab5",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14759418516
+      },
+      {
+        "path": "06842/host/import-lifecycle-14759886601/original.zip",
+        "bytes": 1385216,
+        "sha256": "af499c8de0be1b89e72ebc416e6769b30001d3d029ce9e416b3f502f0a912a08",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14759886601
+      },
+      {
+        "path": "06842/host/linux-x64-codex-14760265255/payload.zip",
+        "bytes": 2984658,
+        "sha256": "3cd792c63b0e0e1b8b676d7820e316f275e4b8aba26c00e14c328c0729290c59",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14760265255
+      },
+      {
+        "path": "06842/host/linux-x64-codex-login-14759618580/payload.zip",
+        "bytes": 725108,
+        "sha256": "9b7d2fbb6506dff6dcebb391884a3970800ca8e57359ad2099db78e309119977",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14759618580
+      },
+      {
+        "path": "06842/host/linux-x64-management-14760395260/payload.zip",
+        "bytes": 1176262,
+        "sha256": "8567025ac13e28d40af8339b9be76e950f4bad00dcc2a01d2bdc64ddb1b9f105",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14760395260
+      },
+      {
+        "path": "06842/host/offline-shard1-14758963443/original.zip",
+        "bytes": 306087,
+        "sha256": "4f2c56911b53a004538d56af035d7bcc76a74522a272b4fff3a84c2bfc060259",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14758963443
+      },
+      {
+        "path": "06842/host/offline-shard2-14757774673/original.zip",
+        "bytes": 324362,
+        "sha256": "191c3e51f13ec59666bf500ddebd0ab6b4ab5f455f9d098894cd1c77b346d4fa",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14757774673
+      },
+      {
+        "path": "06842/host/offline-shard3-14758989463/original.zip",
+        "bytes": 313912,
+        "sha256": "5ae5fa70f55e77e290373e216efaf5b1a078e1116831a3b166fa0a227fb9c6cd",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14758989463
+      },
+      {
+        "path": "06842/host/offline-shard4-14759004606/original.zip",
+        "bytes": 329722,
+        "sha256": "8e16450087f78befec2b41a84ded259a9a9e05906945b04d3adb466277fbac74",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14759004606
+      },
+      {
+        "path": "06842/host/opencode-14759209438/original.zip",
+        "bytes": 2506690,
+        "sha256": "69c6f98b6507b23e90c2575e0858b2d5fb685d3b732f0982df22c1770e70241c",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14759209438
+      },
+      {
+        "path": "06842/host/processes-14759995461/original.zip",
+        "bytes": 761428,
+        "sha256": "c29b89202d8f07a19f9069ca07a6f232c6e6f67efcb6dca2f2c83c55d26f83bd",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14759995461
+      },
+      {
+        "path": "06842/host/retained-original-14759353541/original.zip",
+        "bytes": 1004795,
+        "sha256": "b4bb15f1e86ad018e8d0eb8819bf35cab0861d635e3a389eda937a9a236b4a35",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14759353541
+      },
+      {
+        "path": "06842/host/review-finite-14759034430/original.zip",
+        "bytes": 1067315,
+        "sha256": "ab424f97fa87fa7f27063ed71e74572cbf0172cb0149e41753a05414d36704ba",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14759034430
+      },
+      {
+        "path": "06842/host/selection-14759852451/original.zip",
+        "bytes": 1354584,
+        "sha256": "bbebd874dcf262573ee71ce14f82eb1b5eb02b1bb3a39503f5f98e0d31fc7a1e",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14759852451
+      },
+      {
+        "path": "06842/host/skills-14758991318/original.zip",
+        "bytes": 1429434,
+        "sha256": "492aff882e58cfd878f66975063bc3e9370172a0e6a8ea9af68117aae467fe03",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14758991318
+      },
+      {
+        "path": "06842/host/taskboard-14759108694/original.zip",
+        "bytes": 1663859,
+        "sha256": "efe5ad935cd91909bd8a44c2c820b1ceaea2c0dc26c6d2d3f6fba2041424df9d",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14759108694
+      },
+      {
+        "path": "06842/host/team-14760540621/original.zip",
+        "bytes": 686907,
+        "sha256": "7ec6302ff5707c2c00d44008f279610649da49f01375c86f20d54449ea12d091",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14760540621
+      },
+      {
+        "path": "06842/native/darwin-arm64-14758068328/opencode-v2-embedded-native-darwin-arm64-14758068328.zip",
+        "bytes": 12185,
+        "sha256": "db7de7bd87e491b4cd202392f75bbb4a0ba9d1fa3152e59880ba99e64724cb50",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14758068328
+      },
+      {
+        "path": "06842/native/darwin-x64-14759300501/opencode-v2-embedded-native-darwin-x64-14759300501.zip",
+        "bytes": 12192,
+        "sha256": "e60f95152d661ecf4b18f37700dded43278a05991c4803a39b3f0ff512b7f07f",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14759300501
+      },
+      {
+        "path": "06842/native/linux-x64-14758394295/opencode-v2-embedded-native-linux-x64-14758394295.zip",
+        "bytes": 24855,
+        "sha256": "ab35976a5793e3d283c94835ff06f8489c5d5ac74ee71c758a7f0c9963583f02",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14758394295
+      },
+      {
+        "path": "06842/native/published-http-14758779218/original.zip",
+        "bytes": 875,
+        "sha256": "f78b6d55c05576c851e1df4e2a5404922bea73b0182b2559733b1dfe3435924b",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14758779218
+      },
+      {
+        "path": "06842/native/spi-14759296319/original.zip",
+        "bytes": 3155,
+        "sha256": "d83ecdf73fcb5332d428587d3e9e8253080f548c2163b51988f22323933ac2d7",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14759296319
+      },
+      {
+        "path": "06842/native/static-linux-14759590244/original.zip",
+        "bytes": 3985,
+        "sha256": "50c216b709b50340222d4949717fbe4b78781a4384fa3d940f287b98a0bc37c2",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14759590244
+      },
+      {
+        "path": "06842/native/win32-arm64-14758251334/opencode-v2-embedded-native-win32-arm64-14758251334.zip",
+        "bytes": 13909,
+        "sha256": "36a032a0aa2e41c727339ff3e748a05bc0694b231e34a4fe8d6b7a21f0f00899",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14758251334
+      },
+      {
+        "path": "06842/native/win32-x64-14758912014/opencode-v2-embedded-native-win32-x64-14758912014.zip",
+        "bytes": 14679,
+        "sha256": "fba6e939fb933106d0e40690e527408e64e49d750cba898e0531ae7614e0bb5a",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14758912014
+      },
+      {
+        "path": "06842/packaged/darwin-arm64-14764607531/original.zip",
+        "bytes": 779518,
+        "sha256": "f575d1b4553b5b754d58369f3977d2088eb7ca54f8794b005fc094749d684ac8",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14764607531
+      },
+      {
+        "path": "06842/packaged/darwin-x64-14763302074/original.zip",
+        "bytes": 831588,
+        "sha256": "ff7c47fdc294546807a9caf389a7b10adce23d681ac43b40dac1234e5c7809c1",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14763302074
+      },
+      {
+        "path": "06842/packaged/linux-x64-14764360131/original.zip",
+        "bytes": 349706,
+        "sha256": "55e8b90b3c49d2efc94d74c3c867bf0223d5b2bc1bc693b07f7a641ad9624297",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14764360131
+      },
+      {
+        "path": "06842/packaged/win32-arm64-14762666403/payload.zip",
+        "bytes": 837428,
+        "sha256": "3a9e94b1bd1980ae72b22575eaa9a2cddc227f86dccf542b283d26fdf31476c7",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14762666403
+      },
+      {
+        "path": "06842/packaged/win32-x64-14761234443/original.zip",
+        "bytes": 835627,
+        "sha256": "f451b56f3d097c10216808b8f17b52c0b822e1e52f8c4ffff1e3ae77932d8782",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14761234443
+      },
+      {
+        "path": "06842/process/darwin-arm64-14757626990/original.zip",
+        "bytes": 18889,
+        "sha256": "ea433044ea16ed9f2fc24194d49dee894cc7aca08ba5a40e344dbe9397fd80af",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14757626990
+      },
+      {
+        "path": "06842/process/darwin-x64-14757973722/original.zip",
+        "bytes": 19618,
+        "sha256": "73071028bd29fbb6aadabe9422c724ef3f514340ba855926964aa1e0a437b5a5",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14757973722
+      },
+      {
+        "path": "06842/process/linux-x64-14758793235/original.zip",
+        "bytes": 1527627,
+        "sha256": "bc9e13d0a497d43d90a8091c8707efab75d5b4edf8abf0dd40f82d01159afd28",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14758793235
+      },
+      {
+        "path": "06842/process/win32-arm64-14755714839/original.zip",
+        "bytes": 111904,
+        "sha256": "373a39f4b8e1bc6907d1c6dbe66cfe814629bd512e06caf9d6c2ff44982c2574",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14755714839
+      },
+      {
+        "path": "06842/process/win32-x64-14755403709/original.zip",
+        "bytes": 111553,
+        "sha256": "d6a4dc3cc10e9c03079402f62596241d894b72e151c029055fee7f1af5e09ac2",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14755403709
+      },
+      {
+        "path": "06842/source/retained-original-14762884365/original.zip",
+        "bytes": 586574,
+        "sha256": "9e31878bbcfa8e44384613cf5201c7bbc3ef30f845f9e71264f904c18a61f917",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14762884365
+      },
+      {
+        "path": "06842/teams/linux-14759158353/original.zip",
+        "bytes": 2892626,
+        "sha256": "01b559474e9eb3b50aae0e23184a9eebdd7b6acf17fd2404aaa8e1924e830f3b",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14759158353
+      },
+      {
+        "path": "06842/teams/macos-14759457425/original.zip",
+        "bytes": 1438085,
+        "sha256": "0a9cbcc17c01a4df7f0211f48284b2d6dc33fdbb6e81da275850abcbf08f4d8e",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14759457425
+      },
+      {
+        "path": "06842/teams/windows-14757904236/teams-create-page-windows-14757904236.zip",
+        "bytes": 1853980,
+        "sha256": "cac8dab5ee9900bd7d209c25ab72216b9b62688c41e0e024515e74b4f80ac7de",
+        "category": "original_H_ci_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14757904236
+      }
+    ],
+    "historicalCd18ArchivesSeparate": [
+      {
+        "path": "retained-cd18/retained-cd18-14735379830.zip",
+        "bytes": 584529,
+        "sha256": "bb4a058b056a3612ea5ef025a40dc3c76f2ca3b48e3fc1fa8aeee86ec4d45ee1",
+        "category": "historical_cd18_original_zip",
+        "fileStableDuringRead": true,
+        "artifactId": 14735379830
+      }
+    ],
+    "originalJobLogs": [
+      {
+        "path": "06842/host/darwin-arm64-resume-14758849619/job.original.log",
+        "bytes": 255406,
+        "sha256": "eabc36e6ab7ea2bebad866d98d42a3201498a76cd4ab63c6cb0e589963931385",
+        "category": "original_ci_job_log",
+        "fileStableDuringRead": true
+      },
+      {
+        "path": "06842/host/host-derived-summary-137254980389/job.original.log",
+        "bytes": 2381,
+        "sha256": "23793f64054dd6169a9d5d1245fad2b984f7072ac443c7ccb4f5342c614ddad3",
+        "category": "original_ci_job_log",
+        "fileStableDuringRead": true
+      },
+      {
+        "path": "06842/host/team-job-137212869582/job.original.log",
+        "bytes": 2982603,
+        "sha256": "481c267c3623b77cdef9b0936c26a50e3b830d78b3b72c31fe2f119737607cde",
+        "category": "original_ci_job_log",
+        "fileStableDuringRead": true
+      },
+      {
+        "path": "06842/packaged/darwin-arm64-14764607531/job.original.log",
+        "bytes": 190078,
+        "sha256": "30089b815048244877058d6c2402a1b7f4b93791ce85f67b5179cfd6fb12cec7",
+        "category": "original_ci_job_log",
+        "fileStableDuringRead": true
+      },
+      {
+        "path": "06842/packaged/darwin-x64-14763302074/job.original.log",
+        "bytes": 197080,
+        "sha256": "53c2ad57656e1d8e2fceaa9ceea1f475344ee6c4876bb900298c33399e6659ab",
+        "category": "original_ci_job_log",
+        "fileStableDuringRead": true
+      },
+      {
+        "path": "06842/packaged/linux-x64-14764360131/job.original.log",
+        "bytes": 200408,
+        "sha256": "44f27731b34601e14e527e9571e1a75505f937a3d01982cf6e878550d42eb612",
+        "category": "original_ci_job_log",
+        "fileStableDuringRead": true
+      },
+      {
+        "path": "06842/packaged/packaged-classifier-137212868389/job.original.log",
+        "bytes": 127338,
+        "sha256": "f5b16ba39d4b56717770ab082fa1b4439533550d971670c672202275f6b32b54",
+        "category": "original_ci_job_log",
+        "fileStableDuringRead": true
+      },
+      {
+        "path": "06842/packaged/packaged-derived-summary-137288888721/job.original.log",
+        "bytes": 20026,
+        "sha256": "5a270251f49e00a89b4993ed8570c02b7a4c35dc6b2a8cebb1ff1cf4a98ae458",
+        "category": "original_ci_job_log",
+        "fileStableDuringRead": true
+      },
+      {
+        "path": "06842/packaged/win32-arm64-14762666403/original-job-137244026417.log",
+        "bytes": 269246,
+        "sha256": "4a55b8f885fb30327d9fcd68fd0e805505b9aed731dad0cdf4845cf97bf90deb",
+        "category": "original_ci_job_log",
+        "fileStableDuringRead": true
+      },
+      {
+        "path": "06842/packaged/win32-x64-14761234443/original-job-137244026346.log",
+        "bytes": 235849,
+        "sha256": "ca5cd282a1b628acc8310c287171389e1c58d5b14c5b6e4826b6bf0a033002d2",
+        "category": "original_ci_job_log",
+        "fileStableDuringRead": true
+      },
+      {
+        "path": "06842/source/fast-feedback-137242767488/job.original.log",
+        "bytes": 161884,
+        "sha256": "4a84a8c765f57f1463def39a717d6901af2f8e600ae3e50a1b10ec0416eb7a02",
+        "category": "original_ci_job_log",
+        "fileStableDuringRead": true
+      },
+      {
+        "path": "06842/source/retained-original-14762884365/original-job-137242767455.log",
+        "bytes": 268186,
+        "sha256": "85468e36b74de8aa0db23c09d44006b1907bb355413d4739643fc2744d415e87",
+        "category": "original_ci_job_log",
+        "fileStableDuringRead": true
+      },
+      {
+        "path": "06842/source/source-derived-summary-137277918907/job.original.log",
+        "bytes": 17259,
+        "sha256": "9bbc1adf90fc721308ec43facb4da8bfdc299e63d0decfc1d3efce08b727e710",
+        "category": "original_ci_job_log",
+        "fileStableDuringRead": true
+      },
+      {
+        "path": "06842/source/source-plan-137212869018/job.original.log",
+        "bytes": 124706,
+        "sha256": "c3e72d07cb14637610abceafb7e412b0e714d52dfa3e47cd7c8920bf179c779d",
+        "category": "original_ci_job_log",
+        "fileStableDuringRead": true
+      },
+      {
+        "path": "06842/teams/linux-14759158353/job.original.log",
+        "bytes": 87089,
+        "sha256": "c003b7a3bb4aa5b18e7dbaed2fb5ff5ffa95f41c4d6b53c5d9cca9bd00b2c254",
+        "category": "original_ci_job_log",
+        "fileStableDuringRead": true
+      },
+      {
+        "path": "06842/teams/macos-14759457425/job-137212868284.original.log",
+        "bytes": 86120,
+        "sha256": "273f1a01aacf80b102f40967e95f11be09876e0d8d7c79567c3b4f4f52a01422",
+        "category": "original_ci_job_log",
+        "fileStableDuringRead": true
+      },
+      {
+        "path": "06842/teams/windows-14757904236/job.original.log",
+        "bytes": 100716,
+        "sha256": "1125beed8f88d82223f9d9f38fd27b813b85a7aa850c60f0067a4d6399d86e2e",
+        "category": "original_ci_job_log",
+        "fileStableDuringRead": true
+      },
+      {
+        "path": "host-06842-management-job-137212869512.original.log",
+        "bytes": 252474,
+        "sha256": "542411bf5381e255151c269ae0ca094b0d4ebb2c6ab38e21d450fcd8f54c13ae",
+        "category": "original_ci_job_log",
+        "fileStableDuringRead": true
+      },
+      {
+        "path": "native-06842-static-win-job-137212868877.original.log",
+        "bytes": 115178,
+        "sha256": "962ab35a6659ed5762dce12aca1e74681cd46b69f4b69e4b281ac3ca9cd2128e",
+        "category": "original_ci_job_log",
+        "fileStableDuringRead": true
+      }
+    ],
+    "rawCpuProfiles": [
+      {
+        "path": "06842/add-local-profile-candidate-launch-decode/live-add-candidate-test.cpuprofile",
+        "bytes": 3650924,
+        "sha256": "07a1f6638d0e063936ae5195663a3e9c1884c65443ec2f05912366987d256596",
+        "category": "original_raw_cpu_profile",
+        "fileStableDuringRead": true
+      },
+      {
+        "path": "06842/add-local-profile-candidate-validation-B/live-add-validation-B.cpuprofile",
+        "bytes": 3242487,
+        "sha256": "af47bc8bb034037d321579c433bfb3307e93f5198101aaf63a3c96a7ccdbd5a2",
+        "category": "original_raw_cpu_profile",
+        "fileStableDuringRead": true
+      },
+      {
+        "path": "06842/add-local-profile/live-add-existing-test.cpuprofile",
+        "bytes": 4065495,
+        "sha256": "a633e21be58c1f26d189daf80abcbaf65613acfeed38998ef2cc0d4553a37aa3",
+        "category": "original_raw_cpu_profile",
+        "fileStableDuringRead": true
+      },
+      {
+        "path": "06842/saved-preflight-currentness-B/saved-preflight-currentness-B.cpuprofile",
+        "bytes": 1125356,
+        "sha256": "ea13b261539daa5a244383b74eeafdb74e2b8aabbdd28f1e3676d23aebae9415",
+        "category": "original_raw_cpu_profile",
+        "fileStableDuringRead": true
+      },
+      {
+        "path": "06842/saved-preflight-currentness-C/saved-preflight-currentness-C.cpuprofile",
+        "bytes": 1246994,
+        "sha256": "74b3c2e5a875d0251a96d5ea78dedec22f2add5ff012ecf6272ff40141dbd55c",
+        "category": "original_raw_cpu_profile",
+        "fileStableDuringRead": true
+      }
+    ],
+    "byteIdentityMethod": "Every original file is SHA256/size-checked against the strict inventory and again inside the archive. Prior CRC/scenario custody remains in the archived scoped analyses; no payload was redownloaded or historical scenario rerun."
+  },
+  "publicOmissions": {
+    "signedDeliveryReferencesCount": 39,
+    "privateRawLogTransportCount": 15,
+    "normalizedLogDuplicates": 2,
+    "expandedAndPrivateTestFiles": 1196,
+    "knownExtraExpandedFiles": 10,
+    "allExcludedPathsAbsentExceptExplicitInventoryAddition": true,
+    "selectedTextScanFiles": 950,
+    "signedUrlFindings": [],
+    "queryOrFragmentValuesPrintedOrCopiedIntoReview": false,
+    "originalZipContentsRedactedOrRescanned": false,
+    "exactOriginalZipBytesRemainWhole": true,
+    "runtimeAndDependencyBundlesNotSelectedOutsideOriginalPayloads": true,
+    "publicPrivateNamedOmitListsRemainSafeMetadata": true
+  },
+  "observerCustody": {
+    "incident": {
+      "path": "06842/observer-state-recovery/incident.json",
+      "bytes": 17828,
+      "sha256": "7f85a9fd8066e6c75156b0df8d594f81c2f64544d49eb38de04b992d28e8420d"
+    },
+    "original53UnavailableAndNotReconstructed": true,
+    "cadenceCompliantAtIncident": false,
+    "actualIncidentGapSeconds": 127,
+    "requiredGapSeconds": 300,
+    "canonicalCaptures": [
+      {
+        "poll": 60,
+        "reservationId": "465f0221b62a46fe84b43c7f3b55f5d0",
+        "raw": {
+          "path": "06842/observer-state-recovery/captures/poll-60-465f0221b62a46fe84b43c7f3b55f5d0.raw.json",
+          "bytes": 469567,
+          "sha256": "0e577552f0177da241fc0c2ed465f8153fa37f6fe3a82844fe20fc0df8cfa64f"
+        },
+        "canonicalSnapshot": {
+          "path": "ci-06842-poll-60.json",
+          "bytes": 469707,
+          "sha256": "cf5acdf477d5f519d8a79021beef7065612933fc746c70ab3b0129113946d254"
+        },
+        "custodyReceipt": {
+          "path": "06842/observer-state-recovery/captures/poll-60-465f0221b62a46fe84b43c7f3b55f5d0.custody.json",
+          "bytes": 1513,
+          "sha256": "804a6d7358b34f989fe8f15b37daf6f03f2fe98a3eedc1a14dc150d38b621d0d"
+        },
+        "originalBytesAndResultsEqual": true
+      },
+      {
+        "poll": 61,
+        "reservationId": "750f967fe4414ddeb104803d9812c889",
+        "raw": {
+          "path": "06842/observer-state-recovery/captures/poll-61-750f967fe4414ddeb104803d9812c889.raw.json",
+          "bytes": 469567,
+          "sha256": "5cfafa081b049c36886ccec4f513e68f5ed8ecc3d1692e5975e6f5a492e03912"
+        },
+        "canonicalSnapshot": {
+          "path": "ci-06842-poll-61.json",
+          "bytes": 469707,
+          "sha256": "5b7ef478387e18d1835c6a392067f0aa4c48f0b5af7f59226dddcaee59dbb947"
+        },
+        "custodyReceipt": {
+          "path": "06842/observer-state-recovery/captures/poll-61-750f967fe4414ddeb104803d9812c889.custody.json",
+          "bytes": 1513,
+          "sha256": "0706e8ec7c19f30d00d30aa9122b788997a527147ac2d0451a093ad45d4a64c2"
+        },
+        "originalBytesAndResultsEqual": true
+      },
+      {
+        "poll": 62,
+        "reservationId": "06f4a5f903b4479aa327a815d840dcf0",
+        "raw": {
+          "path": "06842/observer-state-recovery/captures/poll-62-06f4a5f903b4479aa327a815d840dcf0.raw.json",
+          "bytes": 469567,
+          "sha256": "b959453972072af0eb0f407d996e1e9130fdefafc7e0fc21f5391d40100b86ff"
+        },
+        "canonicalSnapshot": {
+          "path": "ci-06842-poll-62.json",
+          "bytes": 469707,
+          "sha256": "318b9be7d2d0142c1a8c4a52675bfc52bbbd150bf87c089514f37af0a6babfdc"
+        },
+        "custodyReceipt": {
+          "path": "06842/observer-state-recovery/captures/poll-62-06f4a5f903b4479aa327a815d840dcf0.custody.json",
+          "bytes": 1513,
+          "sha256": "816ca5ff1c509e9987ed713b69c56905df225e21e82bae4f871afcbbdda0afbd"
+        },
+        "originalBytesAndResultsEqual": true
+      },
+      {
+        "poll": 63,
+        "reservationId": "9d88ae33bb7e46c6becaf719a896c4ff",
+        "raw": {
+          "path": "06842/observer-state-recovery/captures/poll-63-9d88ae33bb7e46c6becaf719a896c4ff.raw.json",
+          "bytes": 469567,
+          "sha256": "d5d47366bd39f80ad23ed7489505bbe26478e60c08c9d7dae6e05968cebd28b5"
+        },
+        "canonicalSnapshot": {
+          "path": "ci-06842-poll-63.json",
+          "bytes": 469707,
+          "sha256": "24e9709910ca8a5b17744d9e9f2b613fbe7d621493e649941a999308b9daad00"
+        },
+        "custodyReceipt": {
+          "path": "06842/observer-state-recovery/captures/poll-63-9d88ae33bb7e46c6becaf719a896c4ff.custody.json",
+          "bytes": 1513,
+          "sha256": "56471301761a65b2c7109e97847cac9a87b5405e2892a7bbb823ddbf58da0ae0"
+        },
+        "originalBytesAndResultsEqual": true
+      },
+      {
+        "poll": 64,
+        "reservationId": "77bcd91f19cb40afab7ecdb134ba16cd",
+        "raw": {
+          "path": "06842/observer-state-recovery/captures/poll-64-77bcd91f19cb40afab7ecdb134ba16cd.raw.json",
+          "bytes": 471262,
+          "sha256": "679560fa13c9c9f793072cc9c190cee5d3b105df25cbd8630e585d71d21f1d80"
+        },
+        "canonicalSnapshot": {
+          "path": "ci-06842-poll-64.json",
+          "bytes": 471402,
+          "sha256": "af13220c65efcbbfff6b533d097bc7598b6863087db9ff0d6611a1386e3ab5ec"
+        },
+        "custodyReceipt": {
+          "path": "06842/observer-state-recovery/captures/poll-64-77bcd91f19cb40afab7ecdb134ba16cd.custody.json",
+          "bytes": 1513,
+          "sha256": "516192a67bbce19baf11b5b2c223c4597aa36d88801a98a3601e24646a2dc60a"
+        },
+        "originalBytesAndResultsEqual": true
+      }
+    ]
+  },
+  "failedAttemptsPreserved": {
+    "requestedArchivedAttemptPaths": [
+      "06842/candidate-source-closure-C-attempt1.json",
+      "06842/candidate-source-closure-D-attempt1.json",
+      "06842/host/cross-team-14759164856/qualify-common.initial.py",
+      "06842/host/cross-team-14759164856/qualify-cross-team.initial.py",
+      "06842/host/team-14760540621/qualify-team.initial.py",
+      "06842/observer-state-recovery/capture-preservation-60-62.attempt1.command.json",
+      "06842/observer-state-recovery/capture-preservation-60-62.attempt1.result.json",
+      "06842/observer-state-recovery/capture-preservation-60-62.attempt1.stderr.log",
+      "06842/observer-state-recovery/capture-preservation-60-62.attempt1.stdout.log",
+      "06842/observer-state-recovery/independent-review/inspection-attempt1.json",
+      "06842/observer-state-recovery/root-invocation-attempt1.json",
+      "06842/packaged/darwin-arm64-14764607531/artifact-wrong-repository-attempt1.json",
+      "06842/packaged/darwin-arm64-14764607531/job-log-wrong-repository-attempt1.json",
+      "06842/publication-inventory-review/structured-reference-audit.initial.json",
+      "06842/publication-inventory-review/zip-reference-resolution.initial.json",
+      "06842/publication-preflight-review.stale-expectation-attempt.json",
+      "06842/saved-preflight-fence/initial-edit-hashes.json",
+      "06842/saved-preflight-fence/initial.patch",
+      "06842/source-receipt-decode-diagnostic.setup-error.log",
+      "06842/source/source-derived-summary-137277918907/qualification-attempt1.json",
+      "06842/teams/diagnostic-slice/initial.patch",
+      "06842/teams/diagnostic-slice/test-initial-command.json",
+      "06842/teams/diagnostic-slice/test-initial-result.json",
+      "06842/teams/diagnostic-slice/tests-initial.log",
+      "06842/two-entry-memo-test-types.setup-error.log",
+      "06842/two-entry-memo-tests.initial.log",
+      "final-extra-types-initial.log",
+      "initial-ci-audit.json"
+    ],
+    "requiredPreservationPathsChecked": [
+      "candidate-source-closure-D.json",
+      "candidate-expected-source-hashes-D.json",
+      "candidate-source-final-D.json",
+      "candidate-source-closure-C-attempt1.json",
+      "candidate-source-closure-D-attempt1.json",
+      "retained-fixture-followup/prospective-r1.json",
+      "retained-fixture-followup/prospective-r2.json",
+      "retained-fixture-followup/exact-r2.json",
+      "retained-fixture-followup/exact-r2-composition-D.json",
+      "retained-fixture-followup/validation.json",
+      "retained-fixture-followup/host-C-component-reuse.json",
+      "source-receipt-decode-diagnostic.setup-error.log",
+      "two-entry-memo-tests.initial.log",
+      "two-entry-memo-test-types.setup-error.log",
+      "teams/diagnostic-slice/tests-initial.log",
+      "teams/diagnostic-slice/test-initial-result.json",
+      "publication-preflight-review.stale-expectation-attempt.json",
+      "full-workspace-types-3gib/result.json",
+      "full-workspace-types-1gib/result.json",
+      "full-host-tests-B/analysis.json",
+      "full-host-tests-C/analysis.json",
+      "packaged/packaged-classifier-137212868389/job.original.log",
+      "packaged/packaged-classifier-137212868389/job-log-custody.json",
+      "source/source-plan-137212869018/job.original.log",
+      "source/source-plan-137212869018/job-log-custody.json",
+      "host/host-derived-summary-137254980389/job.original.log",
+      "host/host-derived-summary-137254980389/job-log-custody.json",
+      "packaged/linux-x64-14764360131/analysis.json"
+    ],
+    "thisReviewInitialReaderFailure": {
+      "kind": "FINAL_REVIEW_READER_ATTEMPT_FAILURE",
+      "recordedAt": "2026-11-22T19:33:10.909396+00:00",
+      "attempt": 1,
+      "exitCode": 1,
+      "error": "KeyError: head_sha",
+      "phase": "After archive/member/part/current-source/blob/document checks, while inspecting terminal workflow rows",
+      "reason": "Review reader assumed a per-run head_sha field; original normalized commit-scoped run metadata must be inspected without inventing absent fields.",
+      "inputsMutated": false,
+      "productOrApiCalls": 0,
+      "reviewSidecarWritten": false,
+      "interpretation": "Inspection metadata-reader failure, not a CI or product failure; retained before correcting the offline reader.",
+      "bytes": 668,
+      "sha256": "d109f0ad6854c841e4d8349cd2d259d2d5ef177499d6b9a659808a9213edba4c",
+      "scope": "Local unpublished review support; full failure facts are inline here. Corrected by reading available normalized fields, without changing inputs."
+    }
+  },
+  "qualificationLimits": [
+    "Five primary original H failures and two derived failures remain failures; eleven skipped jobs remain skipped. No whole-six-family success or E2E completion is asserted.",
+    "Original H CI qualifies only its archived exact scopes. D still requires its own original E2E and full workspace gates; local Host/test/compiler/profile evidence is not promoted to those gates.",
+    "Finite or scripted Claude/Codex peers are not genuine vendor execution. Native OpenCode and platform-specific packaged lifecycle proof retain the exact limits of each original scoped analysis.",
+    "Packaged receipts retain runner source/executable pins; full app bundles, DMGs and installed binary contents are not present in the publication ZIPs. Platform-specific same-Main and Darwin relaunch coverage is not generalized.",
+    "Local CPU timings are synthetic diagnostics, not proof of Darwin latency causation or an E2E fix. Failed local attempts, exit137 evidence, historical cd18 material and observer-ledger limitations remain archived and distinct.",
+    "STATUS and commit-message wording preserve the unqualified-D boundary. This review approves only assembly integrity for the exact pinned inputs, not merge/release, a label change, a future workflow launch, a branch mutation or remote publication success.",
+    "No current remote PR/head/base state was read by this reviewer. Root must perform its planned final check and compare-and-swap update."
+  ],
+  "mutationsByReviewer": {
+    "frozenEvidenceRoot": 0,
+    "productSource": 0,
+    "STATUS": 0,
+    "manifestArchiveParts": 0,
+    "remote": 0,
+    "reviewOutputOnlyOutsideEvidenceRoot": true
+  }
+}

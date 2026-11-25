@@ -1,0 +1,328 @@
+--- a/scripts/e2e/opencode-diagnostics/platform.mjs
++++ b/scripts/e2e/opencode-diagnostics/platform.mjs
+@@ -39,6 +39,59 @@
+     };
+   });
+ }
++function assertWindowsBirth(birth) {
++  assert.equal(typeof birth, 'string');
++  assert.match(birth, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z$/);
++  const milliseconds = Date.parse(birth);
++  assert.ok(Number.isFinite(milliseconds), 'Invalid Windows creation identity');
++  assert.equal(new Date(milliseconds).toISOString(), birth.slice(0, 23) + 'Z', 'Canonical Windows creation date');
++}
++function windowsQueryObserver(snapshot, observerPid) {
++  assert.ok(Number.isSafeInteger(observerPid) && observerPid > 0, 'Missing current query PID');
++  const matches = snapshot.filter(row => row.pid === observerPid);
++  assert.equal(matches.length, 1, 'One current query identity in the original census');
++  const { pid, parent, birth } = matches[0];
++  assert.ok(Number.isSafeInteger(parent) && parent > 0);
++  assertWindowsBirth(birth);
++  return { pid, parent, birth };
++}
++/** Identify this executing query from its own $PID; no second process observation. */
++export function windowsProcessSnapshot(execute = powershell) {
++  const output = execute(
++    `$TESTProcessOutput = ${windowsProcessQuery};\n` +
++    '[pscustomobject]@{ processes = [string]$TESTProcessOutput; observerPid = [int]$PID } | ConvertTo-Json -Compress'
++  );
++  const value = JSON.parse(output.replace(/^\uFEFF/, '').trim());
++  assert.ok(value && typeof value === 'object' && !Array.isArray(value), 'Invalid Windows observation envelope');
++  assert.deepEqual(Object.keys(value).sort(), ['observerPid', 'processes']);
++  assert.equal(typeof value.processes, 'string');
++  const snapshot = parseWindowsProcesses(value.processes);
++  return { processes: snapshot, observer: windowsQueryObserver(snapshot, value.observerPid) };
++}
++/** Current-query children are observations only; never add them to App ownership or cleanup. */
++export function windowsQueryChildren(snapshot, observer, driver) {
++  assert.ok(Array.isArray(snapshot) && snapshot.length <= 10000, 'Complete current query census');
++  assert.ok(observer && typeof observer === 'object' && !Array.isArray(observer));
++  assert.deepEqual(Object.keys(observer).sort(), ['birth', 'parent', 'pid']);
++  assert.deepEqual(observer, windowsQueryObserver(snapshot, observer.pid));
++  const byPid = new Map();
++  for (const row of snapshot) {
++    assert.ok(!byPid.has(row.pid), 'Duplicate process PID in current query census');
++    byPid.set(row.pid, row);
++  }
++  const currentDriver = byPid.get(driver.pid);
++  sameIdentity(driver, currentDriver);
++  assert.equal(currentDriver.parent, driver.parent, 'Same original query driver parent');
++  assert.notEqual(observer.pid, driver.pid);
++  assert.notEqual(observer.pid, driver.parent);
++  assert.equal(observer.parent, driver.pid, 'Current query belongs to the original driver');
++  return snapshot.filter(child => {
++    if (child.parent !== observer.pid) return false;
++    assert.ok(Number.isSafeInteger(child.pid) && child.pid > 0);
++    assertWindowsBirth(child.birth);
++    return child.birth > observer.birth;
++  });
++}
+ export function parseUnixProcesses(output) {
+   return output
+     .trim()
+@@ -133,8 +186,9 @@
+   }
+ }
+ /** Fresh ordered observations, not an atomic snapshot or retained authority. */
+-export function windowsProcessListenerSnapshot(port = 9222, execute = powershell) {
++export function windowsProcessListenerSnapshot(port = 9222, execute = powershell, captureObserver = false) {
+   assertCdpPort(port);
++  assert.equal(typeof captureObserver, 'boolean');
+   const output = execute(
+     `$TESTProcessOutput = ${windowsProcessQuery};\n` +
+     // Empty listeners can only refuse the live guard; standalone absence queries stay unchanged.
+@@ -142,14 +196,19 @@
+     `-ClassName MSFT_NetTCPConnection -Filter "State = 2 AND LocalPort = ${port}" ` +
+     '-Property OwningProcess | Select-Object -ExpandProperty OwningProcess;\n' +
+     '[pscustomobject]@{ processes = [string]$TESTProcessOutput; ' +
+-    'listeners = [string]($TESTListenerOutput -join [Environment]::NewLine) } | ConvertTo-Json -Compress'
++    'listeners = [string]($TESTListenerOutput -join [Environment]::NewLine)' +
++    (captureObserver ? '; observerPid = [int]$PID' : '') +
++    ' } | ConvertTo-Json -Compress'
+   );
+   const value = JSON.parse(output.replace(/^\uFEFF/, '').trim());
+   assert.ok(value && typeof value === 'object' && !Array.isArray(value), 'Invalid Windows observation envelope');
+-  assert.deepEqual(Object.keys(value).sort(), ['listeners', 'processes']);
++  assert.deepEqual(Object.keys(value).sort(), captureObserver ? ['listeners', 'observerPid', 'processes'] : ['listeners', 'processes']);
+   assert.equal(typeof value.processes, 'string');
+   assert.equal(typeof value.listeners, 'string');
+-  return { processes: parseWindowsProcesses(value.processes), listeners: parseListeners(value.listeners) };
++  const snapshot = parseWindowsProcesses(value.processes);
++  return { processes: snapshot, listeners: parseListeners(value.listeners),
++    ...(captureObserver ? { observer: windowsQueryObserver(snapshot, value.observerPid) } : {}),
++  };
+ }
+ export function assertListenerOwnership(ids, owned) {
+   assert(
+--- a/tools/owned-process-broker/nativeWindowsAppGate.mjs
++++ b/tools/owned-process-broker/nativeWindowsAppGate.mjs
+@@ -20,6 +20,7 @@
+ } from '../../scripts/e2e/opencode-diagnostics/packaged.mjs';
+ import {
+   assertPortAvailable, processes, ownedTree, sameIdentity, listeners, windowsProcessListenerSnapshot,
++  windowsProcessSnapshot, windowsQueryChildren,
+ } from '../../scripts/e2e/opencode-diagnostics/platform.mjs';
+ import { readPackagedOpenCodeV2 } from '../../scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts';
+ import { captureDesktopSourceHashes, verifyDesktopSourceFreeze } from '../../scripts/legacy-agent-host/desktop-source-freeze.ts';
+@@ -163,7 +164,7 @@
+   selectedSourceHashes: sourceHashes, originalInputPins: fixture.pins,
+   counts: { mainStarts: 0, initialRuntimeOpen: 0, businessInput: 0, refreshClicks: 0, retryClicks: 0, uiStops: 0, quit: 0 },
+   phases: [], uiSteps: [], screenshots: [], appLog: logPath,
+-  censusReads: [], censusReadsTruncated: false,
++  censusReads: [], censusReadsTruncated: false, queryExplanations: [],
+ };
+ let app, cdp, appLog, main, hostA, hostB, writerA, exit, exitPromise, binding;
+ let lineage = [], startedAt, outerDeadline, activeDeadline, activePhase = 'prepare';
+@@ -212,7 +213,7 @@
+     await delay(Math.min(100, remaining()));
+   }
+ };
+-const validateCensus = snapshot => {
++const validateCensus = (snapshot, observer) => {
+   assert.ok(snapshot.length <= 10000, 'Complete original Windows process census');
+   sameIdentity(controllerIdentity, snapshot.find(row => row.pid === controllerIdentity.pid));
+   const currentDriver = snapshot.find(row => row.pid === driverIdentity.pid);
+@@ -224,9 +225,25 @@
+     const retained = retainPackagedLineage(lineage, ownedTree(snapshot, main));
+     assert.equal(retained.truncated, false); lineage = retained.records;
+   }
++  const queryChildren = windowsQueryChildren(snapshot, observer, driverIdentity);
++  assert.ok(!lineage.some(row => row.pid === observer.pid && row.birth === observer.birth),
++    'Current query must remain outside the original App lineage');
+   const orphans = packagedOrphanObservation(lineage, snapshot);
+   assert.equal(orphans.censusTruncated, false); assert.equal(orphans.candidatesTruncated, false);
+-  assert.deepEqual(orphans.candidates, [], 'No unexplained child of any original retained ancestor');
++  const explained = orphans.candidates.filter(candidate =>
++    candidate.currentParent?.pid === observer.pid && candidate.currentParent.birth === observer.birth &&
++    queryChildren.some(child => child.pid === candidate.pid && child.parent === candidate.parent && child.birth === candidate.birth));
++  assert.deepEqual(orphans.candidates.filter(candidate => !explained.includes(candidate)), [],
++    'No unexplained child of any original retained ancestor');
++  if (explained.length) {
++    assert.ok(proof.queryExplanations.length < 512, 'Original query explanation bound');
++    proof.queryExplanations.push({
++      phase: activePhase, observer: { ...observer },
++      driver: { pid: driverIdentity.pid, parent: driverIdentity.parent, birth: driverIdentity.birth },
++      children: explained.map(({ pid, parent, birth }) => ({ pid, parent, birth })),
++      observationOnly: true, signalAuthorized: false,
++    });
++  }
+   remaining();
+   return snapshot;
+ };
+@@ -250,12 +267,13 @@
+ };
+ const captureCensus = () => {
+   check();
+-  return validateCensus(observeCensus('process-census', processes));
++  const observation = observeCensus('process-census', windowsProcessSnapshot);
++  return validateCensus(observation.processes, observation.observer);
+ };
+ const assertOwnedRenderer = () => {
+   check();
+-  const observation = observeCensus('process-listener-snapshot', windowsProcessListenerSnapshot);
+-  const snapshot = validateCensus(observation.processes), ids = observation.listeners;
++  const observation = observeCensus('process-listener-snapshot', () => windowsProcessListenerSnapshot(9222, undefined, true));
++  const snapshot = validateCensus(observation.processes, observation.observer), ids = observation.listeners;
+   assert.ok(ids.length > 0 && ids.every(pid => snapshot.some(current =>
+     current.pid === pid && lineage.some(original => original.pid === pid && original.birth === current.birth))),
+   'CDP listener belongs to this original Main family');
+--- a/scripts/e2e/opencode-diagnostics/platform.test.mjs
++++ b/scripts/e2e/opencode-diagnostics/platform.test.mjs
+@@ -20,7 +20,10 @@
+   allocateIsolatedCdpPort,
+   assertPortAvailable,
+   windowsProcessListenerSnapshot,
++  windowsProcessSnapshot,
++  windowsQueryChildren,
+ } from './platform.mjs';
++import { retainPackagedLineage, packagedOrphanObservation } from './packaged.mjs';
+ 
+ test('OS process and listener output parsing fails closed', () => {
+   assert.deepEqual(
+@@ -394,3 +397,136 @@
+     assert.deepEqual(refused.calls, expected, 'the original refusal stops before caller admission');
+   }
+ });
++
++test('Windows observer capture binds the executing query inside each original read', () => {
++  const driver = { pid: 100, parent: 90, birth: '2026-01-01T00:00:01.0000000Z' };
++  const observer = { pid: 300, parent: 100, birth: '2026-01-01T00:00:03.0000000Z' };
++  const child = { pid: 301, parent: 300, birth: '2026-01-01T00:00:03.0000001Z' };
++  const census = [driver, observer, child], scripts = [];
++  const execute = script => {
++    scripts.push(script);
++    assert.equal(script.split('Get-CimInstance Win32_Process').length, 2);
++    assert.equal(script.split('observerPid = [int]$PID').length, 2);
++    assert.doesNotMatch(script, /Get-Process|Start-Process|Start-Sleep/);
++    const listeners = script.includes('MSFT_NetTCPConnection');
++    assert.equal(script.split('MSFT_NetTCPConnection').length, listeners ? 2 : 1);
++    if (listeners) assert.ok(script.indexOf('Win32_Process') < script.indexOf('MSFT_NetTCPConnection'));
++    return '\uFEFF' + JSON.stringify({
++      processes: JSON.stringify(census), observerPid: observer.pid,
++      ...(listeners ? { listeners: '100\r\n' } : {}),
++    });
++  };
++  const processOnly = windowsProcessSnapshot(execute);
++  assert.deepEqual(processOnly, { processes: census, observer });
++  const combined = windowsProcessListenerSnapshot(9222, execute, true);
++  assert.deepEqual(combined, { processes: census, listeners: [100], observer });
++  assert.equal(scripts.length, 2, 'one existing query per call, without fallback');
++  assert.deepEqual(windowsQueryChildren(combined.processes, combined.observer, driver), [child]);
++  assert.deepEqual(census, [driver, observer, child], 'observations do not alter the original rows');
++});
++
++test('Windows observer envelopes reject absent, ambiguous and malformed query identities', () => {
++  const observer = { pid: 300, parent: 100, birth: '2026-01-01T00:00:03.0000000Z' };
++  const valid = { processes: JSON.stringify([observer]), observerPid: observer.pid };
++  const invalid = [
++    { ...valid, observerPid: undefined }, { ...valid, observerPid: null },
++    { ...valid, observerPid: '300' }, { ...valid, observerPid: 0 }, { ...valid, observerPid: 300.5 },
++    { ...valid, observerPid: 301 }, { ...valid, processes: '[]' },
++    { ...valid, processes: JSON.stringify([observer, observer]) },
++    { ...valid, processes: JSON.stringify([{ ...observer, parent: 0 }]) },
++    { ...valid, processes: JSON.stringify([{ ...observer, birth: 'reused' }]) },
++    { ...valid, processes: JSON.stringify([{ ...observer, birth: '2026-02-30T00:00:03.0000000Z' }]) },
++    { ...valid, processes: JSON.stringify([{ ...observer, birth: '2026-01-01T00:00:03Z' }]) },
++    { ...valid, extra: true }, { ...valid, processes: [] },
++  ];
++  for (const value of invalid) for (const combined of [false, true]) {
++    let calls = 0;
++    const execute = () => {
++      calls++;
++      return JSON.stringify({ ...value, ...(combined ? { listeners: '' } : {}) });
++    };
++    assert.throws(() => combined ? windowsProcessListenerSnapshot(9222, execute, true) : windowsProcessSnapshot(execute));
++    assert.equal(calls, 1, 'invalid self evidence cannot trigger another query');
++  }
++  let calls = 0;
++  assert.throws(() => windowsProcessListenerSnapshot(9222, () => { calls++; }, 'true'));
++  assert.equal(calls, 0, 'observer mode must be explicit before observation');
++  const failure = new Error('TEST original observer interpreter refusal');
++  for (const combined of [false, true]) {
++    calls = 0;
++    const execute = () => { calls++; throw failure; };
++    assert.throws(() => combined ? windowsProcessListenerSnapshot(9222, execute, true) : windowsProcessSnapshot(execute),
++      error => error === failure);
++    assert.equal(calls, 1, 'original executor failure propagates unchanged');
++  }
++});
++
++test('actual Windows census guard explains only current query children without App or signal authority', () => {
++  const source = readFileSync(new URL('../../../tools/owned-process-broker/nativeWindowsAppGate.mjs', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
++  const start = 'const validateCensus = (snapshot, observer) => {', end = 'const observeCensus = (operation, read) => {';
++  assert.equal(source.split(start).length, 2); assert.equal(source.split(end).length, 2);
++  const from = source.indexOf(start), to = source.indexOf(end); assert.ok(to > from);
++  const create = runInThisContext('(function(assert, controllerIdentity, driverIdentity, main, proof, history,' +
++    'ownedTree, sameIdentity, retainPackagedLineage, packagedOrphanObservation, windowsQueryChildren, remaining) {' +
++    "let lineage=history; const acceptingExit=false, activePhase='TEST original phase';" +
++    source.slice(from, to) + 'return { validate: validateCensus, lineage: () => lineage };})');
++  const controller = { pid: 90, parent: 80, birth: '2026-01-01T00:00:00.0000000Z' };
++  const driver = { pid: 100, parent: 90, birth: '2026-01-01T00:00:01.0000000Z' };
++  const main = { pid: 200, parent: 100, birth: '2026-01-01T00:00:02.0000000Z' };
++  const oldParent = { pid: 300, parent: 200, birth: '2026-01-01T00:00:03.0000000Z' };
++  const observer = { pid: 300, parent: 100, birth: '2026-01-01T00:00:04.0000000Z' };
++  const child = { pid: 301, parent: 300, birth: '2026-01-01T00:00:04.0000001Z' };
++  const census = [controller, driver, main, observer, child];
++  const originalHistory = retainPackagedLineage([], [main, oldParent], 100).records;
++  const original = packagedOrphanObservation(originalHistory, census);
++  assert.equal(original.candidates.length, 1);
++  assert.equal(original.candidates[0].relation, 'ambiguous-parent-identity', 'generic ambiguity oracle stays strict');
++  const exercise = ({ snapshot = census, self = observer, history = originalHistory, entries = [] } = {}) => {
++    const proof = { queryExplanations: entries }, calls = [];
++    const guard = create(assert, controller, driver, main, proof, history,
++      ownedTree, sameIdentity, (previous, proven) => retainPackagedLineage(previous, proven, 200),
++      packagedOrphanObservation, windowsQueryChildren, () => { calls.push('original cutoff'); });
++    return { proof, calls, lineage: guard.lineage, run: () => guard.validate(snapshot, self) };
++  };
++  const current = exercise();
++  assert.equal(current.run(), census, 'full current census remains the returned observation');
++  assert.deepEqual(current.calls, ['original cutoff']);
++  assert.deepEqual(current.proof.queryExplanations, [{
++    phase: 'TEST original phase', observer, driver, children: [child],
++    observationOnly: true, signalAuthorized: false,
++  }]);
++  assert.deepEqual(current.lineage().map(({ pid, birth }) => ({ pid, birth })),
++    [main, oldParent].map(({ pid, birth }) => ({ pid, birth })), 'query identities never enter App custody');
++  const noChild = exercise({ snapshot: census.filter(row => row !== child) });
++  noChild.run(); assert.deepEqual(noChild.proof.queryExplanations, []);
++  const otherParent = { pid: 400, parent: 200, birth: oldParent.birth };
++  const foreignChild = { pid: 401, parent: 400, birth: child.birth };
++  const otherQuery = { pid: 500, parent: 100, birth: observer.birth };
++  const refused = [
++    { self: null }, { self: { ...observer, birth: oldParent.birth } },
++    { self: { ...observer, extra: true } },
++    { snapshot: census.filter(row => row !== observer) },
++    { snapshot: [...census, { ...observer }] },
++    { snapshot: census.map(row => row === driver ? { ...row, birth: 'reused' } : row) },
++    { snapshot: census.map(row => row === driver ? { ...row, parent: 999 } : row) },
++    { snapshot: census.map(row => row === observer ? { ...row, parent: 999 } : row),
++      self: { ...observer, parent: 999 } },
++    { snapshot: census.map(row => row === child ? { ...row, birth: observer.birth } : row) },
++    { snapshot: census.map(row => row === child ? { ...row, birth: '2026-01-01T00:00:03.9999999Z' } : row) },
++    { snapshot: census.map(row => row === child ? { ...row, birth: 'invalid' } : row) },
++    { snapshot: census.map(row => row === child ? { ...row, birth: '2026-02-30T00:00:04.0000000Z' } : row) },
++    { snapshot: [...census, foreignChild], history: [...originalHistory, otherParent] },
++    { snapshot: [...census, otherQuery], self: otherQuery },
++    { entries: Array(512).fill(null) }, { entries: Object.freeze([]) },
++  ];
++  for (const input of refused) {
++    const result = exercise(input);
++    assert.throws(result.run);
++    assert.deepEqual(result.calls, [], 'no original admission follows unresolved provenance or overflow');
++    assert.ok(!result.lineage().some(row => row.pid === child.pid), 'no query-child cleanup authority');
++  }
++  const previous = exercise({ snapshot: [...census.filter(row => row !== observer), otherQuery], self: otherQuery,
++    entries: current.proof.queryExplanations });
++  assert.throws(previous.run, 'an earlier explanation never authorizes a later query');
++  assert.equal(packagedOrphanObservation(originalHistory, census).candidates[0].signalAuthorized, false);
++});
+--- a/.github/workflows/host-emulated-acceptance.yml
++++ b/.github/workflows/host-emulated-acceptance.yml
+@@ -107,6 +107,7 @@
+         run: |
+           set -euo pipefail
+           node --test --test-concurrency=1 packages/legacy-agent-host/tests/runtime-activity.test.ts packages/legacy-agent-host/tests/runtime-team-host.test.ts packages/legacy-agent-host/tests/team-snapshot.test.ts packages/legacy-agent-host/tests/team-product-changes.test.ts packages/legacy-agent-host/tests/team-activity-read.test.ts packages/legacy-agent-host/tests/captured-claude-process.test.ts packages/legacy-agent-host/tests/codex-member-provider.test.ts packages/legacy-agent-host/tests/member-process-stderr.test.ts packages/legacy-agent-host/tests/member-provider-authority.test.ts packages/legacy-agent-host/tests/owned-process-facade.test.ts
++          node --test scripts/e2e/opencode-diagnostics/platform.test.mjs scripts/e2e/opencode-diagnostics/packaged.test.mjs scripts/e2e/opencode-diagnostics/catalog.test.mjs scripts/e2e/opencode-diagnostics/stage-candidate.test.mjs scripts/e2e/opencode-diagnostics/v2-support-repair.test.mjs
+       - name: Verify complete workspace types and original typed lint scopes
+         if: matrix.lane == 'team'
+         run: |

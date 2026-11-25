@@ -1,16 +1,73 @@
 import { ManagementCommandError } from '../management/commandRecords.js';
 import { runtimeDigest } from '../runtime/identity.js';
-import { publishRuntimeSourceSchema } from './runtimeSourceContracts.js';
+import { publishRuntimeSourceSchema, runtimeSourceGrantSchema } from './runtimeSourceContracts.js';
 import type { FileRuntimeSourceIndex } from '../adapters/profile/FileRuntimeSourceIndex.js';
 import type { ManagementCommandStore, StoredRuntimeSourceCommand } from '../management/commandRecords.js';
 import type { ProviderManagementProfile } from '../management/profile.js';
-import type { PublishRuntimeSource, RuntimeSourceGrant } from './runtimeSourceContracts.js';
+import type { PublishRuntimeSource, RuntimeSourceGrant, RuntimeSourceCandidate, RuntimeSourceTeamScope } from './runtimeSourceContracts.js';
 
 const held = (): never => { throw new ManagementCommandError('held'); };
 
 /** Only current private recipe/authority absence may isolate already validated original history. */
 export class RuntimeSourceUnavailable extends ManagementCommandError {
   constructor() { super('held'); }
+}
+
+export interface RuntimeSourceSeedProfile {
+  owner: { ownerId: string; revision: string };
+  teams: readonly { scope: RuntimeSourceTeamScope }[];
+  management?: readonly ProviderManagementProfile[] | undefined;
+}
+
+/** The same private seed/grant predicate serves Host publication and independent Main admission. */
+export function selectRuntimeSourceSeed(
+  profile: RuntimeSourceSeedProfile, raw: RuntimeSourceGrant, retained = false
+): ProviderManagementProfile {
+  const unavailable = (): never => {
+    if (retained) throw new RuntimeSourceUnavailable();
+    throw new ManagementCommandError('conflict');
+  };
+  const grant = runtimeSourceGrantSchema.parse(raw);
+  if (grant.ownerId !== profile.owner.ownerId || grant.ownerRevision !== profile.owner.revision)
+    return unavailable();
+  if (grant.teamScopes.some(scope => !profile.teams.some(team =>
+    team.scope.teamId === scope.teamId && team.scope.projectId === scope.projectId &&
+    team.scope.workspaceId === scope.workspaceId))) return unavailable();
+  const seeds = profile.management?.filter(row => row.profileId === grant.profileId &&
+    row.configRevision === grant.configRevision && row.provider === grant.runtimeId) ?? [];
+  if (seeds.length > 1) throw new ManagementCommandError('conflict');
+  const seed = seeds[0];
+  if (!seed || (grant.projectPath !== null && grant.projectPath !== seed.cwd)) return unavailable();
+  return seed;
+}
+
+export function runtimeSourceNativeIdentityMatches(
+  seed: ProviderManagementProfile, candidate: RuntimeSourceCandidate,
+  identity: { nativeVersion?: string | undefined; seedNativeVersion?: string | undefined } | undefined
+): boolean {
+  return candidate.nativeCli !== undefined && identity?.nativeVersion === candidate.nativeCli.version &&
+    (seed.provider !== 'claude' || candidate.executable.sha256 === seed.executable.sha256 ||
+      identity?.seedNativeVersion === candidate.nativeCli.version);
+}
+
+/** Shared original Team/project association; a current source pointer supplies no authority. */
+export function runtimeSourceGrantMatchesScope(
+  grant: RuntimeSourceGrant, scope: RuntimeSourceTeamScope, projectPath: string
+): boolean {
+  return (grant.projectPath === null || grant.projectPath === projectPath) &&
+    (grant.teamScopes.some(row => row.teamId === scope.teamId &&
+      row.projectId === scope.projectId && row.workspaceId === scope.workspaceId) ||
+      (scope.projectId === grant.contextId && scope.workspaceId === grant.contextId));
+}
+
+export function assertRuntimeSourceScopeAvailable(
+  profile: { creation?: { contextIds: readonly string[] } | undefined },
+  grant: RuntimeSourceGrant, scope: RuntimeSourceTeamScope, projectPath: string
+): void {
+  if (!runtimeSourceGrantMatchesScope(grant, scope, projectPath)) held();
+  if (!grant.teamScopes.some(row => row.teamId === scope.teamId &&
+    row.projectId === scope.projectId && row.workspaceId === scope.workspaceId) &&
+    !profile.creation?.contextIds.includes(grant.contextId)) throw new RuntimeSourceUnavailable();
 }
 
 /** Aliases may repeat a scope; every other authority field and the exact scope set must match. */
@@ -23,30 +80,87 @@ export function sameRuntimeSourceGrantAuthority(a: RuntimeSourceGrant, b: Runtim
   return runtimeDigest(normalize(a)) === runtimeDigest(normalize(b));
 }
 
-/** Structural history only. Its recorded selection digest never supplies a missing private seed. */
-export function readStoredRuntimeSourcePublication(saved: StoredRuntimeSourceCommand): PublishRuntimeSource {
+interface DecodedPublication {
+  text: string;
+  input: PublishRuntimeSource;
+  fingerprint: string;
+  revision: string;
+}
+
+function decodePublication(text: string): DecodedPublication {
+  const input = publishRuntimeSourceSchema.parse(JSON.parse(text));
+  return { text, input, fingerprint: runtimeDigest(input), revision: runtimeDigest({
+    previousRevision: input.expectedRevision,
+    commandId: input.commandId,
+    grant: input.grant,
+    candidate: input.candidate,
+    ...(input.intent ? { intent: input.intent } : {}),
+  }) };
+}
+
+function readStoredPublication(saved: StoredRuntimeSourceCommand,
+  decode: (text: string) => DecodedPublication): PublishRuntimeSource {
   if (!saved.publicationJson) return held();
-  let input: PublishRuntimeSource;
-  try { input = publishRuntimeSourceSchema.parse(JSON.parse(saved.publicationJson)); }
+  let decoded: DecodedPublication;
+  try { decoded = decode(saved.publicationJson); }
   catch { return held(); }
+  const { input } = decoded;
   if (
     input.commandId !== saved.commandId ||
     input.expectedRevision !== saved.expectedRevision ||
-    runtimeDigest(input) !== saved.fingerprint ||
+    decoded.fingerprint !== saved.fingerprint ||
     saved.sourceId !== input.grant.targetId ||
     saved.resourceId !== input.grant.targetId ||
     saved.profileId !== input.grant.profileId ||
     saved.configRevision !== input.grant.configRevision ||
     saved.providerId !== input.grant.runtimeId ||
-    saved.revision !== runtimeDigest({
-      previousRevision: input.expectedRevision,
-      commandId: input.commandId,
-      grant: input.grant,
-      candidate: input.candidate,
-      ...(input.intent ? { intent: input.intent } : {}),
-    })
+    saved.revision !== decoded.revision
   ) return held();
+  // Private JSON/schema output; exported readers still clone before exposing it.
   return input;
+}
+
+/** Structural history only. Its recorded selection digest never supplies a missing private seed. */
+export function readStoredRuntimeSourcePublication(saved: StoredRuntimeSourceCommand): PublishRuntimeSource {
+  return structuredClone(readStoredPublication(saved, decodePublication));
+}
+
+function createStoredRuntimeSourcePublicationProjection<T>(
+  project: (input: PublishRuntimeSource) => T
+): (saved: StoredRuntimeSourceCommand) => T {
+  // Share the existing single-publication UTF-8 budget across at most two decodes.
+  const maximumBytes = 2 * 1024 * 1024;
+  let retained: (DecodedPublication & { bytes: number })[] = [];
+  return saved => {
+    try {
+      return project(readStoredPublication(saved, text => {
+        const previous = retained.find(value => value.text === text);
+        if (previous) {
+          retained = [previous, ...retained.filter(value => value !== previous)];
+          return previous;
+        }
+        const decoded = decodePublication(text), bytes = Buffer.byteLength(text);
+        if (bytes <= maximumBytes) {
+          retained = [{ ...decoded, bytes }, ...retained].slice(0, 2);
+          while (retained.reduce((total, value) => total + value.bytes, 0) > maximumBytes) retained.pop();
+        }
+        return decoded;
+      }));
+    } catch (error) {
+      retained = [];
+      throw error;
+    }
+  };
+}
+
+/** One index's pure JSON work only; every receipt comparison and physical read stays fresh. */
+export function createStoredRuntimeSourcePublicationReader(): typeof readStoredRuntimeSourcePublication {
+  return createStoredRuntimeSourcePublicationProjection(input => structuredClone(input));
+}
+
+/** History consumes only validation; no private decoded object escapes this void projection. */
+export function createStoredRuntimeSourcePublicationValidator(): (saved: StoredRuntimeSourceCommand) => void {
+  return createStoredRuntimeSourcePublicationProjection(() => undefined);
 }
 
 /** Original replay requires the same current private seed as well as intact recorded identity. */
@@ -65,7 +179,8 @@ export function readOriginalRuntimeSourcePublication(
 /** Validate every original record and pointer, including currently ineligible sources. */
 export function validateRuntimeSourceHistory(
   index: ReturnType<FileRuntimeSourceIndex['read']>,
-  commands: Pick<ManagementCommandStore, 'read'>
+  commands: Pick<ManagementCommandStore, 'read'>,
+  validatePublication: (saved: StoredRuntimeSourceCommand) => void = readStoredRuntimeSourcePublication
 ): void {
   const previous = new Map<string, string>(), grants = new Map<string, string>(),
     selections = new Map<string, string>();
@@ -73,7 +188,7 @@ export function validateRuntimeSourceHistory(
     const sourceId = record.grant.targetId, grantDigest = runtimeDigest(record.grant),
       receipt = commands.read(record.commandId);
     if (!receipt || receipt.kind !== 'runtime.source') return held();
-    if (receipt.publicationJson) readStoredRuntimeSourcePublication(receipt);
+    if (receipt.publicationJson) validatePublication(receipt);
     if (
       (grants.has(sourceId) && grants.get(sourceId) !== grantDigest) ||
       (selections.has(sourceId) && selections.get(sourceId) !== receipt.selectionDigest) ||

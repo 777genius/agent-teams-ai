@@ -355,6 +355,269 @@ Root and an independent peer review this exact append before source. Review the 
 
 The next unchanged packaged lane must retain the original failure as failure while exposing its specific original boundary if it recurs. Only that evidence can justify a later cause-specific repair. This observation does not close the x64 failure, does not qualify the ARM native input or cleanup, and does not change Host/provider source eligibility, pins, launch policy, filesystem authority or frontend features. Root remains the only publisher.
 
+## 14. Existing Windows launcher and provider Processes parity (plan, 2026-11-13)
+
+The integrated source still has two functional omissions. Main's captured Windows custody admits only Claude profiles; Runtime also passes its retained launch/service port only to Claude. Codex and OpenCode V1 create the same `CapturedProcess` without this port and do not expose its existing `prepareRegisteredWindowsProcess`. An explicitly scoped profile therefore fails before launch, or cannot register a background service. The retained Main owner, Host bridge, broker, structural process facade and public Processes journal already implement provider-independent custody. Reuse those exact primitives for the three process-backed adapters. Keep embedded V2's separate process-tree route explicit; merely adding its provider label does not qualify service registration.
+
+Baseline `src/main/utils/childProcess.ts` already supports npm Node/native `.cmd` shims, generated Bun wrappers and an inspected opaque `.cmd`/`.bat` fallback. It resolves known wrappers to direct argv, preserving literal percent expressions; the fallback forbids control characters and unsafe positional substitution and accounts for `%*` reparsing. The new Host currently passes a batch file directly to `CreateProcessW`, which cannot preserve that supported launch behaviour.
+
+1. Remove the Claude-only composition checks for the existing process-backed adapters. Pass the original Main launch port and Team-only capture guard into Codex/OpenCode V1 exactly as Claude does, and expose the existing service intent only when the selected scoped broker and original retained owner are present. Main must admit only the finite known runtime provider union; V2 is excluded from this routing until its separate embedded process owner is connected. Keep profile/source checks, original handles, service capture identity, deadlines and cleanup receipts unchanged.
+2. Extend existing controlled provider tests to prove service intent forwarding and absence when the original owner or scoped capability is missing. Add a composition-level regression proving Codex-only and V1-only selected profiles can reach the same retained Main custody, and that unknown/embedded selections are not promoted by this change. These are wiring tests, not kernel qualification.
+3. Reuse the baseline launcher parsing/encoding in one shared implementation. Capture a resolved launch recipe once from the original wrapper and the profile's captured environment: direct executable/interpreter, fixed entrypoint argv, or explicit cmd executable for the existing fallback. Pin and recheck every selected image/script and the original launcher. Resolve no ambient PATH and read no new wrapper at launch; changed or ambiguous selection refuses before allocation. Retain the original profile command identity, while the broker owns the actual interpreter root and all descendants before resume/stdin. Main must independently admit and verify that same selected recipe; never replace a broker Job with shell PID cleanup.
+4. Add fixture-only actual Windows qualification to the existing safe process lane. Use repository Node/C++ test actors, never installed Codex or Claude. Exercise the production adapter/custody path, quoted and literal-percent argv through supported wrappers, service registration/targeted Stop, neighbor survival and exact original Job drain/release. Run both Windows architectures and retain each exact-head receipt. Existing C++ provider-label cases alone do not establish provider adapter wiring or batch parity.
+5. Review the bounded diff independently, run direct Host/test typechecks and the affected controlled suites, then let root publish and inspect actual safe CI receipts. Preserve failures; no skipped native scenario or Linux mock becomes Windows proof. Do not dispatch the older vendor gates, mark the Draft ready, merge main/#982 or alter native eligibility. POSIX pathname-to-exec mutation remains an independently recorded limitation and is not weakened by this work.
+
+Initial source scope: `CapturedWindowsCustody`, Runtime member factory/context, Codex/OpenCode V1 adapters and their existing tests; then the shared Windows launcher recipe, its Host/Main consumers and the existing fixture-only broker qualification. All Git publication remains with the coordinator. This plan is an implementation commitment, not a passing Windows/native claim.
+
+Round 2 review: coordinator and independent provider reviewer accepted this scope. Admission stays on the finite process-backed provider/generation union, the explicitly selected scoped broker and the original retained Main owner. A changed source, stale Team authority or foreign registrar must refuse before service dispatch. The recipe must pin both the original wrapper and the actual interpreter/cmd image from captured input, with an independent Main recheck and no ambient lookup at launch. The existing shared parser is preferred over a second shell policy. Version-source qualification is owned separately; the new routing regression uses its own bounded test file to avoid changing that work's existing Codex fixture.
+
+Round 3 implementation: the routing seam was published in `96bb78f45c1e2f2e424e93f4b58ce33cafad1403`; the shared launcher, independent Host/Main image/script checks and fixture-only Windows gate were published in `01d1751f`. The original frontend batch helper tests passed 54/54, retained Main transport tests 29/29, broker protocol tests 49/49 and focused launcher/routing tests 6/6. Host/test and both native fixture TypeScript projects passed. These local results establish the controlled contracts. The new actual Windows Node/C++ scenarios must still return exact-source receipts on both architectures; no actual Windows, real-provider or Desktop PASS is claimed here.
+
+## 15. Remaining scoped Windows management, scheduling and source admission (plan, 2026-11-13)
+
+### Round 1 — concrete functional gaps
+
+The same scoped Windows profile still reaches `CapturedProcess` without its original Main port from finite metadata/auth operations, standalone schedules, Codex MCP catalog capture and `RuntimeSourceNativeVersion`. `WindowsCapturedProcess` correctly rejects this construction. These are missing composition links for existing frontend functions. Main also admits only original runtime member/template images: a source-selected candidate B would be rejected both for its finite `--version` check and for the next member launch, even if a port were passed. Removing the scoped capability, manufacturing a local Main port or weakening the existing refusal is not a fix.
+
+### Round 2 — explicit existing ownership and bounded source selection
+
+1. Route the existing retained launch port through the existing process factories for finite management/auth operations, native version reads, standalone schedules and Codex MCP metadata reads. The same current/namespace/source guards and original cleanup handles remain attached to each operation. No management or standalone process receives Team service-registration authority. Include the original finite process-backed management selections in Main's immutable allowlist; keep embedded OpenCode V2 on its separate process owner.
+2. Bind source admission to the existing Main-only runtime-source grant derived from the captured descriptor. During one original publish request, admit only the exact selected candidate's `--version` command, filtered captured environment, cwd, selected broker and captured launcher recipe. Preserve the original selected Claude comparison when applicable. Admission expires with the request/current guard and is bounded to the original finite preparation capabilities; changed/foreign grants or arbitrary argv receive no native launch authority.
+3. Permit subsequent source-selected launches only from the existing verified, released, published source history. Reuse the original journal fingerprint, seed-selection digest, complete grant, previous-revision chain and qualified native-version checks. A read-only path must not create or modify a store, acquire its writer lease, retry a native probe or promote a held/verifying command. Main captures and rechecks the actual image/script recipe independently, including on cold restart. Retained source references remain distinct from the current pointer; unavailable or changed original authority is held rather than repaired from current configuration.
+4. Keep publication authority separate from physical cleanup. Revoking a pending source admission stops new prepare/resume, while the original Main still owns every already allocated handle, Stop attempt and release receipt. Do not expose source paths, executable selection, environment or a generic process launcher through renderer IPC.
+5. Add focused controlled regressions for every missing factory route, exact candidate version admission, changed source/guard/argv refusal, publication/cold-read eligibility and failed/unknown cleanup. Extend the existing repository-peer Windows gate for metadata and version/source-selection journeys. Use only repository Node/C++ actors, the original Host/Runtime/D and real Windows Jobs. Keep independent source review, exact-source native receipts and all nonpassing results; no skipped case becomes qualification.
+
+Initial scope is the existing Host management/scheduled/MCP composition and process factory seams, Main captured custody/runtime-source composition, a bounded read-only reuse of the existing source journal validation, and their focused tests. No new native protocol, separate persistent source store, generic executor, production test flag, provider subscription or Stage2 work is introduced. All Git publication stays with the coordinator. This plan does not close the separate POSIX pathname-to-exec limitation or Darwin native qualification gap.
+
+### Round 3 — source identity and original Team association review
+
+The coordinator accepted the Phase1 port wiring separately in `0233b1b6`. Phase2 review found that matching a published candidate only by provider, original executable hash and broker would allow an unrelated original profile using the same binary to adopt that candidate. Credential namespace matching alone cannot distinguish two Teams with identical HOME/config roots, and requiring the original cwd would break legitimate worktree launches.
+
+Before changing the private allocation wire, the coordinator approved this bounded association plan:
+
+1. Add one optional, strict, bounded `runtimeSourceOrigin` value to a captured native profile and the existing private custody allocation. It names the original `sourceId`/`revision` plus either the original management profile/configuration identity or the original runtime scope, project path, member selector and recipe identity. Store it immutably with the same original allocation; no later request can replace it.
+2. Only the existing `RuntimeSourceIndex` source derivation creates this value from its validated record. Reuse the existing source scope/project/creation predicate and a shared identity over the original provider/account/executable/environment/broker/generation selection. Model/run settings and a derived worktree cwd do not become alternate account or source identities.
+3. Main independently validates the complete original descriptor grant, original released source receipt and full publication chain. For management it selects the exact original seed. For Runtime it selects the exact original member recipe when present, otherwise the unique explicitly captured provider template, compares the recipe identity and checks the same source scope/project/creation predicate. The actual native credential namespace must still match that original recipe. Every dynamically source-selected process requires this association; there is no image-hash-only fallback.
+4. Preserve the private association through the existing model-probe and Codex MCP derivations. Finite `--version` reads deliberately omit it and remain bound to one exact pending publish, prepared-never-allocated recovery or explicit configuration-refresh operation. Cold reads, source discovery and retained restore alone do not authorize a version probe. Verifying, held or unknown native receipts never gain new execution authority.
+5. Add a critical same-image/same-HOME foreign-Team refusal, exact original management and runtime positives, explicitly authorized second-Team and dynamic-template/worktree positives, and forged source/recipe/purpose negatives. Revocation blocks new prepare/resume while original Stop, drain and release stay with Main. The selector operates inside the existing trusted Host private boundary; it is not a claim that Main authenticates a compromised Host's semantic Team labels.
+
+The actual Windows x64 and ARM64 safe lanes at `b4641f` both exposed the existing management journal's unconditional POSIX mode-bit check. Diagnose and repair that platform-specific file observation separately while retaining canonical path, immutable directory, receipt digest, size and original-source checks. POSIX privacy checks stay unchanged; Windows POSIX bits must not be described as an ACL proof. No new native/provider probe is authorized by a file-mode repair.
+
+### Round 4 — process-only origin and original operation preparation
+
+Round 3's proposed enumerable profile field was rejected before publication: it
+would change existing recipe, MCP artifact, configuration and model-probe
+identities. The reviewed implementation keeps all persisted profile schemas and
+bytes unchanged. `runtimeSourceProcessOrigin.ts` defines private metadata;
+`RuntimeSourceIndex.processOrigin` derives it beside a validated retained source
+reference. It travels as a separate fourth `HostWindowsLaunch.port` argument and
+is captured immutably on the existing private allocation. Main reuses the original
+`resolveRuntimeRecipe` exact-member/unique-template selection, checks the complete
+original grant and source history, requires equal Team and scope Team IDs and the
+exact captured scope for an existing Team, and checks the actual native credential
+namespace. Worktree cwd is not an alternate original recipe identity.
+
+Runtime, scheduled-run and Codex MCP composition derive this sidecar from their
+existing captured source reference, original scope/project and private recipe.
+Saved/non-draft model probes and explicit same-provider drafts must derive it
+beside the saved reference too: those branches may never call `privateRecipe`.
+The new/provider-switch branch observes its existing private selection without
+adding a default-selection read or changing the returned recipe.
+
+Independent review found that two source revisions may produce byte-identical
+model profiles and therefore the same original model-probe IDs. An origin map
+keyed only by those IDs or profile digest cannot own the operation. Instead the
+original `ModelProbeOwner.start` preparation boundary accepts a private optional
+preparation callback: after existing-command lookup and resource reservation,
+the same synchronous prepare captures a bound process factory. Existing receipts,
+fingerprints, replay and cold-read behavior remain unchanged. Claude carries that
+factory across its metadata wait; Codex carries it through its existing queue.
+V1 retains the immutable origin of each cached host and uses its original endpoint
+queue and confirmed retirement before allocating a different origin. Original
+close/Stop ownership is never replaced by a later source selection. Ordinary
+source-management profile IDs already name the exact source revision.
+
+Critical checks include byte-identical old profile/digest/cold-receipt behavior;
+same-image/same-HOME foreign-Team refusal; authorized exact member, template and
+worktree selection; saved/non-draft and switched draft model origins; two equal
+profiles with different source revisions retaining their own queued preparation;
+replay without preparing again; and confirmed V1 A retirement before B. Finite
+version-only pending grants remain separate. These changes do not authenticate a
+compromised Host's semantic labels and do not alter the separate POSIX exec-window
+limitation. Root and the independent provider reviewer accepted this plan before
+implementation; exact code and Windows fixture results still require review.
+
+### Round 5 — merged baseline and complete private profiles
+
+Phase2 is reconciled onto `e7c6f4b1ec758541738724425d2556a1558c8397` with the
+new Claude checkpoint source, validated Skip transformation and original writer
+fence preserved. The complete captured Team scope includes run, member and
+generation fields; the private Main context reader projects only the three source
+scope fields, and the origin producer explicitly selects sourceId/revision from
+the member reference. The actual source grant and allocation-origin schemas stay
+strict. An original profile without `main-windows-v1` retains the existing
+whole-Job path without an origin, after the same source/scope checks. A scoped
+broker without Main continues to refuse allocation. A plain broker with Main
+still carries its exact origin.
+
+Critical complete-profile fixtures cover equal image, HOME and account with a
+foreign Team; the original authorized template with a derived worktree; identical
+recipe/profile/probe IDs from distinct immutable source revisions; full captured
+member references; and saved no-draft/default model probes. The existing original
+journal replay, coordinator queues, V1 cache retirement and namespace fence own
+their checks. Every affected source is included in the Desktop proof closure.
+No actual Windows or Desktop result is inferred before the exact-source safe
+matrix and original repository-peer journeys finish.
+
+### Round 6 — controlled reconciliation checks, not Windows qualification
+
+The isolated `phase2-e7c6` checkout uses its own Host/controller/ledger package
+aliases and the unchanged checked provider archive at `68dca527`. Its bounded
+Node24.21/TS7 source build and focused Host/Main type projects passed. The first
+Host build had no local ledger output; building that original dependency resolved
+its missing declarations without a source change. Two existing V1 test accesses
+needed explicit non-null profile assertions; the private origin types were not
+weakened.
+
+The six focused Host suites passed 78/78 with no skips, including complete source
+capture/restore, source-native TEST version processes, saved/draft model probes,
+finite management routing and the actual SDK standalone journey against the
+repository Node peer. The independent model-owner and coordinator queue suites
+passed another 14/14 with no skips. The four unaffected Main suites passed 15/15;
+the corrected five-case history suite passed 5/5 separately. The original combined
+Main run was 19/20 and remains preserved as a failed run. These checks
+include the original nine real Main/Host source and installer journeys using
+TEST executable bytes. No real Claude or Codex CLI was launched.
+
+Original failed observations remain preserved: the queue fixture initially used
+JSON property order as an equality oracle; the source fixture initially conflated
+private recipe equality with the existing distinct full-capture configRevision;
+the same-account/HOME Main fixture initially called its identical B recipe hash
+a forged hash. Each correction changes only that test oracle. Full capture
+lineage, exact retained A reconstruction, same-account/HOME foreign-Team refusal,
+source grant checks and production cleanup predicates remain required.
+
+The full frontend `pnpm typecheck` attempt on this working tree did not pass:
+its Host pretypecheck compiler exited 137 after 7.1 seconds, before the frontend
+compiler ran, while the kernel OOM counter increased from 90 to 91. The original
+command, environment, diff digest and log digest are retained in the local
+`TEST-p08-phase2-full-frontend-types.json` receipt. Earlier focused source/type
+checks remain separate evidence; the final Host test-only oracle correction was
+executed by the 78-case run after its focused typecheck. No full frontend type
+success or final exact-head native result is inferred from these observations.
+The five-platform safe workflow now includes the four affected Host and three
+Main controlled suites without changing any native step or success predicate.
+
+The remaining actual Windows metadata/version/source-selection extension must use
+the original Main/Host/broker and finite repository peers. These Linux controlled
+results do not qualify Windows kernel custody, Desktop UI, the separate Darwin
+exec-mutation invariant, or any real provider integration.
+
+## 16. Actual Windows source publication: platform-correct journal I/O
+
+### Evidence and reviewed plan — 2026-11-13
+
+At b4641f456271b6c9d254bbdebc9bbc9143c0b469, original process-fixture run
+43487488619 failed in Windows x64 job132099682194 and ARM64 job132099682510:
+64 PASS, one failure, two platform skips in each controlled contract group.
+The source-version case reached FileManagementCommandStore.parse through the
+original RuntimeSourceIndex and was held by the unconditional POSIX mode check.
+Node's Windows mode projection is not a POSIX privacy assertion. The adjacent
+FileRuntimeSourceIndex already applies its mode and directory-fsync policy only
+outside Windows.
+
+The bounded correction applies that same platform distinction to the existing
+management journal: retain file flush before atomic rename; retain original
+directory identity checks before and after publication; keep POSIX directory
+fsync and reject POSIX group/other-readable receipts. On Windows, do not treat
+mode bits or opening/fsyncing a directory as an ACL primitive. Digest, schema,
+size, no-follow, original-directory and retained-receipt refusal checks remain.
+No read-only reader or dynamic admission WIP is included in this slice.
+
+The existing critical-store regression reproduces a Windows-like 0666 stat
+projection, reads the original receipt through a cold store, writes the next
+phase, and rejects modified receipt bytes. Its paired POSIX case retains the
+0644 refusal. Add both to the existing controlled process-contract group,
+including the actual Windows x64/ARM64 jobs; no vendor executable is used.
+
+Root reviewed the exact production preimage2d6031ae7c0c0aad5d637581f5242714536ac215;
+the independent provider reviewer compared the correction with the existing
+source-index policy. Before correction, the controlled Windows-like test failed
+and the POSIX refusal passed. The local executor became unavailable before
+after-correction execution. Source review is not actual Windows qualification;
+the original matrix remains required, with no assertion/timeout/gate reduction.
+
+### Follow-up — descriptor/model intents and original-file checks
+
+A bounded audit of the existing Host adapter stores and Main descriptor/model-intent
+readers found two more unconditional POSIX mode checks:
+`loadDesktopBackendDescriptor` and `FileTeamModelProbeIntents`. Apply the same
+Windows distinction there; retain the descriptor's canonical path, bounded open
+file read, exact SHA and strict schema. Existing source-index, lifecycle and shared
+ledger directory-sync helpers already distinguish unsupported Windows directory
+operations from real I/O failures, so this slice does not change those helpers.
+
+Independent review found a concrete second boundary: Node 24.21.0's
+[Windows libuv header](https://github.com/nodejs/node/blob/v24.21.0/deps/uv/include/uv/win.h)
+defines `UV_FS_O_NOFOLLOW` as zero. Removing the mode refusal alone could therefore
+admit a valid symlink record in the management journal or model-intent store.
+Both readers now compare the original named file, opened descriptor, final
+descriptor and final named file using BigInt device/inode/size/mtime identity;
+each named snapshot must be a regular non-symlink file. The exact bounded byte
+count, digest and schema remain required. Only an initial, unobserved ENOENT is
+absence; disappearance after an observed record is held. The original descriptor
+closes on every path, and the management journal retains its original-directory
+check before and after the read. No new root canonicalization, nlink requirement
+or ctime equality is imposed: dropping the temporary hardlink is part of the
+existing concurrent `atomicCreate` publication and does not change file contents.
+These checks do not claim an atomic pathname-to-exec guarantee.
+
+After the executor returned, focused Linux/Node v24.22.1 filesystem checks used
+exact 6fbc source preimages and the reviewed replacements in a separate validation
+worktree. The isolated Host reader/import graph was transformed with Node's
+strip-types operation; this is not a TypeScript build or actual Windows run.
+
+| Controlled existing suite | Before repair | After repair |
+| --- | --- | --- |
+| Management command journal, including simulated Windows no-follow-zero and three replacement/disappearance boundaries | 2 PASS / 4 assertion failures | 6 PASS / 0 skip |
+| Main immutable model intents, including the existing concurrent-winner case and the same alias/replacement boundaries | 5 PASS / 5 assertion failures | 10 PASS / 0 skip |
+| Two descriptor mode regressions only | 1 PASS / 1 assertion failure | 2 PASS; 11 unrelated cases not selected |
+
+The full existing descriptor and model-intent test files are added to the same
+five-platform controlled lane without a test-name filter. Source review by the
+independent provider reviewer accepts these exact read/refusal and FD-cleanup
+boundaries; actual Windows x64/ARM64, full TypeScript and the unchanged complete
+matrix remain required. No ACL or Desktop qualification is inferred from mode
+projection tests.
+
+### Follow-up — retain the original native fixture inventory
+
+At exact 6fbc, [run43494936182](https://github.com/777genius/agent-teams-ai/actions/runs/43494936182)
+passed the controlled Windows contracts and native builds, then Windows x64
+job132125643973 and ARM64 job132125644073 failed the original pending-write gate:
+`native-evidence/binary-sha256.txt` was missing. That gate validates the actual C++
+fixture hash against the build inventory before admission. The safe workflow had
+already written the same inventory under `process-acceptance-evidence`, but did
+not populate the original gate's required path.
+
+Mirror that exact build-generated inventory to the original `native-evidence`
+path and retain both evidence directories in the existing always-upload step.
+No binary/hash predicate, native scenario, controller cleanup requirement or
+success assertion changes. The original failing runs remain failed; later
+Windows wrapper/Electron steps were not reached. Darwin Intel's package-manager
+bootstrap failure and Darwin's original executable-mutation HOLD are separate
+and receive no qualification from this correction.
+
+
+---
+
+## Incoming base history preserved at 0543d437
+
+The following append-only entries are retained verbatim from base
+`0543d437695318f0157e6d600d76abdce5c51e8e`. Their original section numbers
+refer to that branch history; they do not renumber or replace the completion
+branch entries above. Current integration is governed by plan 12.
+
 ## 14. Settle an original Windows registration's definitive missing capture as refusal
 
 ### Round 1 — current review finding and the exact native contract

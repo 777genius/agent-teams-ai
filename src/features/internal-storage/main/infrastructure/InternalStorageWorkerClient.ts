@@ -16,6 +16,7 @@ import type {
   MemberWorkSyncOutboxEnsureRecordInput,
   MemberWorkSyncOutboxEnsureRecordResult,
   MemberWorkSyncOutboxItemRecord,
+  MemberWorkSyncPrimaryImport,
   MemberWorkSyncReportIntentRecord,
   MemberWorkSyncReportJournalOpResult,
   MemberWorkSyncStatusCompareAndWriteInput,
@@ -387,8 +388,16 @@ export class InternalStorageWorkerClient
     })) as MemberWorkSyncTeamSnapshotRecords;
   }
 
-  async importTeam(teamName: string, snapshot: MemberWorkSyncTeamSnapshotRecords): Promise<void> {
-    await this.call('mws.importTeam', { teamName, snapshot });
+  async readPrimaryIncarnation(teamName: string): Promise<string | null> {
+    return (await this.call('mws.primaryIncarnation.read', { teamName })) as string | null;
+  }
+
+  async importTeam(
+    teamName: string,
+    snapshot: MemberWorkSyncTeamSnapshotRecords,
+    binding?: MemberWorkSyncPrimaryImport
+  ): Promise<void> {
+    await this.call('mws.importTeam', { teamName, snapshot, binding });
   }
 
   async applicationCommandLedgerBegin<TOperation extends string>(

@@ -102,6 +102,18 @@ export function validateTeamCommand(command: TeamCommand): void {
       for (const id of orderedTaskIds) safeSegment(id);
       break;
     }
+    case 'task.board.review-flow': {
+      const settings = command.payload.settings;
+      if (settings !== null) {
+        if (!settings || typeof settings !== 'object' || Array.isArray(settings) ||
+            Object.keys(settings).some((key) => !['reviewFlow', 'reviewFlowPrompt'].includes(key)) ||
+            !['agent_approval', 'human_approval', 'lead_then_human'].includes(settings.reviewFlow))
+          throw new TeamOwnerError('invalid');
+        validateTeamText(settings.reviewFlowPrompt, true);
+        if (settings.reviewFlowPrompt.trim().length > 1000) throw new TeamOwnerError('invalid');
+      }
+      break;
+    }
     case 'task.relationship':
       safeSegment(command.payload.taskId);
       safeSegment(command.payload.targetId);
@@ -133,15 +145,17 @@ export function validateTeamCommand(command: TeamCommand): void {
     case 'task.review': {
       const review = command.payload;
       safeSegment(review.taskId);
-      if (!['request', 'start', 'approve', 'disapprove', 'request_changes'].includes(review.action))
+      if (!['request', 'start', 'approve', 'disapprove', 'complete', 'request_changes'].includes(review.action))
         throw new TeamOwnerError('invalid');
       const fields =
         review.action === 'request'
           ? ['reviewer']
           : review.action === 'approve'
             ? ['note', 'notifyOwner', 'suppressTaskComment']
+            : review.action === 'complete'
+              ? ['note', 'expectedReviewRequestId']
             : review.action === 'request_changes'
-              ? ['comment', 'taskRefs']
+              ? ['comment', 'taskRefs', 'expectedReviewRequestId']
               : [];
       if (Object.keys(review).some((key) => !['taskId', 'action', ...fields].includes(key)))
         throw new TeamOwnerError('invalid');
@@ -153,7 +167,12 @@ export function validateTeamCommand(command: TeamCommand): void {
           if (review[key] !== undefined && typeof review[key] !== 'boolean')
             throw new TeamOwnerError('invalid');
       }
+      if (review.action === 'complete') {
+        validateTeamText(review.expectedReviewRequestId);
+        if (review.note !== undefined) validateTeamText(review.note, true);
+      }
       if (review.action === 'request_changes') {
+        if (review.expectedReviewRequestId !== undefined) validateTeamText(review.expectedReviewRequestId);
         validateTeamText(review.comment);
         validateRefs(review.taskRefs);
       }
@@ -217,6 +236,7 @@ export function validateTeamCommand(command: TeamCommand): void {
     'task.attachment.remove': ['taskId', 'attachmentId'],
     'task.board.clear': ['taskId'],
     'task.board.order': ['columnId', 'orderedTaskIds'],
+    'task.board.review-flow': ['settings'],
     'task.relationship': ['taskId', 'targetId', 'type', 'action'],
     'task.clarification': ['taskId', 'value'],
     'task.assign': ['taskId', 'owner'],
@@ -230,6 +250,7 @@ export function validateTeamCommand(command: TeamCommand): void {
       'note',
       'notifyOwner',
       'suppressTaskComment',
+      'expectedReviewRequestId',
       'comment',
       'taskRefs',
     ],

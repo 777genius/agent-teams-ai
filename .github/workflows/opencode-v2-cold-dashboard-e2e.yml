@@ -6,6 +6,12 @@ on:
     paths:
       - '.github/workflows/opencode-v2-cold-dashboard-e2e.yml'
       - 'src/renderer/store/index.ts'
+      # Qualify native packaged V2 after shared #1153 catalog/status changes.
+      - 'src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.ts'
+      - 'src/features/runtime-provider-management/core/application/loadOpenCodeScopedCatalog.ts'
+      - 'src/features/runtime-provider-management/renderer/hooks/useOpenCodeConnectedModelCatalog.ts'
+      - 'src/features/runtime-provider-management/renderer/hooks/useOpenCodeProviderModelCatalog.ts'
+      - 'src/renderer/components/dashboard/useOpenCodeDashboardStatus.ts'
       - '.github/workflows/opencode-packaged-e2e.yml'
       - 'scripts/e2e/opencode-diagnostics/packaged-verify.mjs'
       - 'scripts/e2e/opencode-diagnostics/real-runtime.mjs'

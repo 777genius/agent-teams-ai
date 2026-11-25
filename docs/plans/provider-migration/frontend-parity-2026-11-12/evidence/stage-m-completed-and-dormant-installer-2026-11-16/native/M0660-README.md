@@ -1,0 +1,5 @@
+# Original M0660 native/static evidence
+
+This bundle preserves source0660c748f88675063e3051fb0f8b2022e8f6f056 at the original 2026-11-16 00:55:34 UTC API snapshot: seven completed successful leaves, two failed P09 leaves, and five still-queued unqualified rows. It contains 57 frozen payload files, including eight exact official artifact ZIPs, full decoded original job logs, byte/source/custody audits, root independent static/x64 reviews, the checkpoint and one evidence-only Plan29 appendix.
+
+Extracting each official ZIP into native-audit-M0660/<artifact-id>/ reconstructs the original member paths referenced by its archive audit. Nested ZIPs retain all 66 CRC-verified safe unique nonsymlink members; extracted copies are not redundantly stored. Inventory byte/blob/SHA256 identities bind every payload. Git source rows refer to immutable source0660 objects. No signed transport URLs, execution, source changes, reruns, or blanket native/Desktop/release qualification are conveyed. Later statuses and independent reviews, if any, are separate append-only records.

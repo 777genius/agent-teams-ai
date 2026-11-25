@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "sourceHead": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+  "bundle": {
+    "relativeFile": "parity-test-types-additional-raw-20261119.json.gz",
+    "sha": "d461242e9f7a8912664c1f9befc947011d362206",
+    "sha256": "aec35e5f52b030f3c8a998aba60a826c04dbf5e5f19b17afd1ecd8c124c876c3",
+    "bytes": 283790
+  },
+  "uncompressed": {
+    "sha": "3f13f6bc928d88cbb388c0fd72d94d9f4b02a7ba",
+    "sha256": "2ac110ac67bc4a5af47817cdde5129bcbe360c0e7fcec3362000db6f6e4d162c",
+    "bytes": 1565926
+  },
+  "members": [
+    {
+      "path": "ci-current-42a4/job-135261468702-terminal.log",
+      "sha": "69fdc1e6ad813bd3c34e3057bd3d0b880f212aa5",
+      "sha256": "f6ed26411d4aec2ec7d5ccd79583948083c91f5b1ac70f9a12781d2984b574c4",
+      "bytes": 51047
+    },
+    {
+      "path": "ci-current-42a4/job-135261468736-terminal.log",
+      "sha": "d647f4684d815623cff24c3814c675845fe3b673",
+      "sha256": "a65b67d6a66b710188cea0f01869259d5d00779badc7f5d007dac0841da6c3a7",
+      "bytes": 42558
+    },
+    {
+      "path": "ci-current-42a4/job-135261468848-terminal.log",
+      "sha": "31dc93ea99a8487701867d8f2bb02c58493af7b5",
+      "sha256": "d3c5089e10ed2b616505e16475ff76914141bbef38f2a1eacbbf350a4397be84",
+      "bytes": 54894
+    },
+    {
+      "path": "ci-current-42a4/job-135261468893-terminal.log",
+      "sha": "b9b352028d811a916cb9b70f09025e4ea0ec5b9a",
+      "sha256": "124bcb754a9dac852e573c7ac54f7c379bbc1ea5bcacefdfea53ef939dc13711",
+      "bytes": 114461
+    },
+    {
+      "path": "ci-current-42a4/job-135261468754-terminal.log",
+      "sha": "ad7e103be4bf9cc44391e543a512a4952c7abeb9",
+      "sha256": "5c64e5243b202b15b3899018831a762a198ccb99a685fcf3d0a95383ea00b2ae",
+      "bytes": 113036
+    },
+    {
+      "path": "ci-current-42a4/job-135261468687-terminal.log",
+      "sha": "b9f6fa5531c2ceb0d8996a5cae976de7a1d98310",
+      "sha256": "88662b0abdad435ca2d1bb923eea9e9b209d4f339ef24542d04018b2f5a53957",
+      "bytes": 108117
+    },
+    {
+      "path": "lint-review-ui-ci-42a4/job-135261468624-terminal.log",
+      "sha": "5d7fa81fd328ca91d682480b0d37ea1464021620",
+      "sha256": "75a164af8d1bfe4e595cbcd51dc1621d01442fb140a6549d005934a55b9d5deb",
+      "bytes": 47766
+    },
+    {
+      "path": "lint-review-ui-ci-42a4/job-135261468308-terminal.log",
+      "sha": "44bbd09a7bb7ca5be99517ba07b1faefb4f30b85",
+      "sha256": "c2c577c4f76a0570c7b936e1e2a10e8de4b1bb5b38633d93edf67adba0184780",
+      "bytes": 69682
+    },
+    {
+      "path": "lint-review-ui-ci-42a4/job-135261470422-terminal.log",
+      "sha": "c3e519c955f2de38d6241a528b29df36ce4760b3",
+      "sha256": "e8d87da2a79527ce5fee61a60e9e623c21f608bb8402910a5eae4c636c924b93",
+      "bytes": 267102
+    },
+    {
+      "path": "lint-review-ui-ci-42a4/job-135261471138-terminal.log",
+      "sha": "c0e8ecb462d176a84417647d585e4d1b26ee69ae",
+      "sha256": "0257fea434ec8cfd313826994e5a5cb9b1b813b7c747c22bfa75e618e3007e72",
+      "bytes": 298435
+    },
+    {
+      "path": "lint-review-ui-ci-42a4/job-135261470910-terminal.log",
+      "sha": "b6db6a8fc8eed97dd56f8e659c12e64c0454eaaa",
+      "sha256": "5abf00b610c75737ac1e38cdfc0ea98818dea91aa067abe1eaa3b9081e7f426b",
+      "bytes": 292341
+    }
+  ],
+  "scope": "Additional original42a4 cached logs; second type-only finite receipts are separately preserved in their complete author bundle. No endpoint requery."
+}

@@ -1,15 +1,15 @@
+import { liveRuntimeCaptureSchema, liveRuntimeCaptureSeedSchema } from './liveRuntimeCaptureSchema.js';
+import type { LiveRuntimeCapture, LiveRuntimeCaptureSeed } from './liveRuntimeCaptureSchema.js';
+export { liveRuntimeCaptureSchema } from './liveRuntimeCaptureSchema.js';
+export type { LiveRuntimeCapture } from './liveRuntimeCaptureSchema.js';
 import { lstatSync } from 'node:fs';
-import { isAbsolute, join } from 'node:path';
-import { z } from 'zod';
+import { join } from 'node:path';
 import { TeamOwnerStore } from '../adapters/team/TeamOwnerStore.js';
 import { effectId } from '../team/identity.js';
-import { memberSettingsSchema, savedTeamSettingsSchema } from '../team/rosterSchema.js';
 import { TeamLaunchError } from '../team-launch/contracts.js';
-import { liveExpectedMemberSchema } from '../team-launch/liveRosterMembership.js';
 import { liveRosterValidationRecord, validateLiveRosterLaunch } from '../team-launch/liveRosterMembership.js';
 import { validateLaunchRecord } from '../team-launch/validateLaunchRecord.js';
 import { materializeWorktree } from '../team-launch/materializeWorktree.js';
-import { launchWorktreePlanSchema, ownedWorktreeBindingSchema } from '../team-launch/worktreeSchema.js';
 import { runtimeDigest, normalizeBinding } from '../runtime/identity.js';
 import { initialContextDigest } from '../team-launch/context.js';
 import { captureRuntimeExtraArgs } from './runtimeExtraArgs.js';
@@ -17,14 +17,13 @@ import { captureRuntimeMcp } from './captureRuntimeMcp.js';
 import { inheritNativeMemberMcp } from './inheritNativeMemberMcp.js';
 import { capturedMcpSourceCurrent } from '../mcp-catalog/capturedSource.js';
 import { resolveRuntimeRecipe, resolveCapturedRuntimeRecipe, runtimeProviderId } from './runtimeRecipe.js';
-import { runtimeSourceReferenceSchema } from './runtimeSourceContracts.js';
 import { RuntimeSourceUnavailable } from './runtimeSourceGrantAuthority.js';
 import { compileRuntimeMemberProfile, runtimeCaptureSourceSchema } from './runtimeCaptureSource.js';
 import { runtimeMemberProfileSchema } from './runtimeProfile.js';
 import { runtimeWorktreeGit } from './runtimeWorktreeCapture.js';
 import { memberInitialInstructions } from './TeamLaunchComposition.js';
 import { createMemberEntry } from './createMemberEntry.js';
-import { capturedRuntimeMcpReferencesSchema, prepareCapturedRuntimeMcpRecipes,
+import { prepareCapturedRuntimeMcpRecipes,
   loadCapturedRuntimeMcpRecipe, validateCapturedRuntimeMcpRecipe } from './capturedRuntimeMcpRecipes.js';
 import type { JsonValue } from '../contracts.js';
 import type { ExpectedLaunchMember, TeamLaunchRecord } from '../team-launch/contracts.js';
@@ -36,27 +35,10 @@ import type { HostedTeam, MemberEntry } from './MemberEntry.js';
 import type { RuntimeRecipeSources } from './runtimeSourceContracts.js';
 import type { RuntimeMemberProfile } from './runtimeProfile.js';
 
-const id = z.string().min(1).max(256).refine(value => !/[\0\r\n]/u.test(value));
-const hash = z.string().regex(/^[a-f0-9]{64}$/u);
-const path = z.string().min(1).max(8192).refine(value => isAbsolute(value) && !/[\0\r\n]/u.test(value));
-const seedSchema = z.object({
-  schemaVersion: z.literal(1), commandId: id, requestDigest: hash, sourceCaptureDigest: hash,
-  expectedRevision: hash, launchId: id, sourceCwd: path,
-  savedSettings: savedTeamSettingsSchema, leadProvider: z.enum(['anthropic', 'codex', 'opencode']),
-  member: z.object({ memberId: id, name: id, role: z.literal('member'), settings: memberSettingsSchema }).strict(),
-  sourceReference: runtimeSourceReferenceSchema.optional(), templateDigest: hash,
-  previous: liveExpectedMemberSchema.nullable(),
-}).strict();
-export const liveRuntimeCaptureSchema = seedSchema.extend({
-  workspace: path, worktree: z.object({ plan: launchWorktreePlanSchema, binding: ownedWorktreeBindingSchema }).strict().optional(),
-  mcpRecipeReference: capturedRuntimeMcpReferencesSchema.element, recipeDigest: hash,
-  configurationDigest: hash, runtimeGeneration: z.number().int().positive(),
-}).strict();
-export type LiveRuntimeCapture = z.infer<typeof liveRuntimeCaptureSchema>;
 const held = (reason = 'live-roster-capture'): never => { throw new TeamLaunchError('hold', reason); };
 const json = (value: unknown) => JSON.parse(JSON.stringify(value)) as JsonValue;
 
-function seedRecipe(profile: TeamHostProfile, team: HostedTeam, seed: z.infer<typeof seedSchema>,
+function seedRecipe(profile: TeamHostProfile, team: HostedTeam, seed: LiveRuntimeCaptureSeed,
   sources?: RuntimeRecipeSources, restoring = false): RuntimeMemberProfile {
   const base = resolveRuntimeRecipe(profile.runtime, team.definition.binding.teamId, seed.member.memberId,
     seed.member.settings.providerId ?? seed.leadProvider, restoring);
@@ -159,7 +141,7 @@ export async function captureLiveRosterMember(options: {
   const template = resolveRuntimeRecipe(profile.runtime, team.definition.binding.teamId,
     member.memberId, member.settings.providerId ?? leadProvider);
   const sourceReference = options.sources?.currentForRecipe(team.definition.scope, sourceCwd, template);
-  const seed = seedSchema.parse({ schemaVersion: 1, commandId: intent.commandId,
+  const seed = liveRuntimeCaptureSeedSchema.parse({ schemaVersion: 1, commandId: intent.commandId,
     requestDigest: intent.requestDigest, sourceCaptureDigest: intent.sourceCaptureDigest,
     expectedRevision: intent.expectedRevision, launchId: intent.launchId, sourceCwd,
     savedSettings: structuredClone(savedSettings), leadProvider, member,

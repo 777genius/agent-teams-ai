@@ -1,0 +1,630 @@
+{
+  "schema": "c28-eh-actual-evidence-independent-review-v1",
+  "verdict": "APPROVE",
+  "reviewerProjectExecutions": 0,
+  "recordedPublishedR1": {
+    "head": "da0cf77f42ba92ca17af07f3c8377ef4a27d4614",
+    "tree": "979b7bdd8022b3c595de5e0a9be3b792458f3712",
+    "parents": [
+      "7e8e37c282e9cc653efd79799dc862d116310065"
+    ],
+    "planBlob": "65de751eea109b87b76cb6634e9120d8f9763e17",
+    "fullReadbackExact": true,
+    "independentlyReviewed": true
+  },
+  "immutableValidationManifest": {
+    "bytes": 66013,
+    "blob": "7953713cb36794a7f504f99c18a686263cfc3371",
+    "sha256": "488189eb6ffe21c8c4a3961a6f79f15bebfce7e1b24f69f3b5d94d14b2df0b39"
+  },
+  "immutableRecorder": {
+    "bytes": 17448,
+    "blob": "c340b62f3667f76678d4e3049613ac9cdd038ddd",
+    "sha256": "d150a5015780602de0cc0e48f05eb93526eca387d082a71d111dca820e674fa9"
+  },
+  "hostSourceClosure": {
+    "bytes": 144977,
+    "blob": "92fe358082aa8c5892c084798b2bdb8b5bdb106f",
+    "sha256": "288b4a26f4e81dc3d65bcaaab061b09af4800efafe575cb1e29e798f33234a10"
+  },
+  "node": {
+    "path": "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+    "expectedVersion": "v24.21.0",
+    "sha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+    "versionEvidence": "Retained caller-diagnostic-local/red-test-preflight.json; no Node process invoked while preparing this manifest."
+  },
+  "stages": [
+    {
+      "head": "e9bfd4518bc30218a32fc1999fa04cf5e8ace74e",
+      "tree": "7b4e4636a7708b0f1b8d596b8b2637bdaad821c5",
+      "parents": [
+        "da0cf77f42ba92ca17af07f3c8377ef4a27d4614",
+        "c28f1aa890c909c7b981254c5e30b874cbc84287"
+      ],
+      "independentlyReviewed": true,
+      "outstandingIncoming": "a02ab70edfdcb4169627e804f0337c9ad6b52af6",
+      "scope": "Exact published isolated c28 E–H; latest a02 and parent76 remain unadopted until separately reviewed later reconciliation. Explicit fresh disjoint-drift disposition under published efc72 note; no source/policy/command or current-stage input changes.",
+      "stage": "E",
+      "leafCount": 9663,
+      "changedPathsFromPreviousStage": [
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/completion-2026-11-13.md",
+        "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+        "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+        "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "tools/owned-process-broker/nativeEmulatedSourceScenario.ts"
+      ],
+      "allOtherLeavesAndModesExact": true
+    },
+    {
+      "head": "6376001fa9db4b67c4d3264352680d29832a43c9",
+      "tree": "e27dc5d280d7970ac4179a040330663b59ceb54a",
+      "parents": [
+        "e9bfd4518bc30218a32fc1999fa04cf5e8ace74e"
+      ],
+      "independentlyReviewed": true,
+      "outstandingIncoming": "a02ab70edfdcb4169627e804f0337c9ad6b52af6",
+      "scope": "Only reviewed Scenario296 correction after independently verified actual six semantic Runtime RED failures; no latest a02 adoption or native qualification.",
+      "stage": "F",
+      "leafCount": 9663,
+      "changedPathsFromPreviousStage": [
+        "tools/owned-process-broker/nativeEmulatedSourceScenario.ts"
+      ],
+      "allOtherLeavesAndModesExact": true
+    },
+    {
+      "head": "387fa7ab81ddd57bdd274f763b8be90cfaaae484",
+      "tree": "0bf635e84287ce152a542bc4c06f25ec70b85dcb",
+      "parents": [
+        "6376001fa9db4b67c4d3264352680d29832a43c9"
+      ],
+      "independentlyReviewed": true,
+      "outstandingIncoming": "a02ab70edfdcb4169627e804f0337c9ad6b52af6",
+      "scope": "Only published originaljournal unconditional read and same-deadline postread correction after independently verified E journal RED and F full Runtime GREEN; no latest a02 adoption or native qualification.",
+      "stage": "G",
+      "leafCount": 9663,
+      "changedPathsFromPreviousStage": [
+        "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts"
+      ],
+      "allOtherLeavesAndModesExact": true
+    },
+    {
+      "head": "4e74d36ba6212938c40a499603ee0419a183fc0a",
+      "tree": "3c02af92462ec6ea2abec9fd982b8978e04efe03",
+      "parents": [
+        "387fa7ab81ddd57bdd274f763b8be90cfaaae484"
+      ],
+      "independentlyReviewed": true,
+      "outstandingIncoming": "a02ab70edfdcb4169627e804f0337c9ad6b52af6",
+      "scope": "Only published original acceptance lint coverage30to32 after independently verified Runtime44GREEN and helper115GREEN; six existing static gates, no latest a02 adoption or native qualification.",
+      "stage": "H",
+      "leafCount": 9663,
+      "changedPathsFromPreviousStage": [
+        ".github/workflows/host-emulated-acceptance.yml"
+      ],
+      "allOtherLeavesAndModesExact": true
+    }
+  ],
+  "commands": [
+    {
+      "name": "E-runtime-red",
+      "stage": "E",
+      "head": "e9bfd4518bc30218a32fc1999fa04cf5e8ace74e",
+      "tree": "7b4e4636a7708b0f1b8d596b8b2637bdaad821c5",
+      "parents": [
+        "da0cf77f42ba92ca17af07f3c8377ef4a27d4614",
+        "c28f1aa890c909c7b981254c5e30b874cbc84287"
+      ],
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "--test",
+        "--test-concurrency=1",
+        "packages/legacy-agent-host/tests/runtime-team-host.test.ts"
+      ],
+      "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+      "startedAtUTC": "2026-11-15T21:18:31.969066+00:00",
+      "finishedAtUTC": "2026-11-15T21:18:41.881800+00:00",
+      "elapsedSeconds": 9.91271015899838,
+      "exitCode": 1,
+      "counts": {
+        "tests": 44,
+        "pass": 38,
+        "fail": 6,
+        "skipped": 0,
+        "cancelled": 0,
+        "todo": 0
+      },
+      "postflightExact": true,
+      "newBuildPerformed": false,
+      "files": {
+        "log": {
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/E-runtime-red.log",
+          "bytes": 9993,
+          "blob": "f755173c9522c79891d6ede7a112f3f0fb1b8d93",
+          "sha256": "7df6a5d364a492c63536f7e3c93687eb313f9c01a3b1c88aa5e25832160c5670"
+        },
+        "metadata": {
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/E-runtime-red-metadata.json",
+          "bytes": 2735,
+          "blob": "c8c6017ac2b2bb686d9467cc8da9310ffe060ec7",
+          "sha256": "47e45ea23d069b161622d66c230c01a59249af9c33cc33120fe3c7f532afb144"
+        },
+        "preflight": {
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/E-runtime-red-preflight.json",
+          "bytes": 19138,
+          "blob": "2a83b6afbaed5db37be39b3907bbf0b16332799c",
+          "sha256": "5e6cff2d2f15699dc4549787932cbb6a4a215ef4def8d0c204dbd49ddf139a8d"
+        }
+      }
+    },
+    {
+      "name": "E-journal-red",
+      "stage": "E",
+      "head": "e9bfd4518bc30218a32fc1999fa04cf5e8ace74e",
+      "tree": "7b4e4636a7708b0f1b8d596b8b2637bdaad821c5",
+      "parents": [
+        "da0cf77f42ba92ca17af07f3c8377ef4a27d4614",
+        "c28f1aa890c909c7b981254c5e30b874cbc84287"
+      ],
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "--test",
+        "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "scripts/legacy-agent-host/test-child-process-trace.test.ts",
+        "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+        "scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts",
+        "scripts/legacy-agent-host/desktop-resume-records.test.ts",
+        "scripts/legacy-agent-host/desktop-captured-app-exit.test.ts",
+        "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts"
+      ],
+      "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+      "startedAtUTC": "2026-11-15T21:19:23.704164+00:00",
+      "finishedAtUTC": "2026-11-15T21:19:30.396319+00:00",
+      "elapsedSeconds": 6.6920826279965695,
+      "exitCode": 1,
+      "counts": {
+        "tests": 115,
+        "pass": 112,
+        "fail": 3,
+        "skipped": 0,
+        "cancelled": 0,
+        "todo": 0
+      },
+      "postflightExact": true,
+      "newBuildPerformed": false,
+      "files": {
+        "log": {
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/E-journal-red.log",
+          "bytes": 14645,
+          "blob": "cb2c77b8154b051a0009cef4ddefb047561b4584",
+          "sha256": "24067417b0406975b2f8698f166c64f54e7aa1b8287c9fdb521c957f1fadb51e"
+        },
+        "metadata": {
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/E-journal-red-metadata.json",
+          "bytes": 3193,
+          "blob": "ac3e082818d1447f1521ed973a442133f9bee074",
+          "sha256": "cbba2a27b06a51149fd24d9dc669161b986fc042ae3c67fd16a0549e44ce2274"
+        },
+        "preflight": {
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/E-journal-red-preflight.json",
+          "bytes": 20364,
+          "blob": "6ab9710ef5dc4e525ea4d4b10b02d9679f64e55d",
+          "sha256": "19995b9c9d52407ad065847828dd326668e95009561cb761872ad0e1d41db8ac"
+        }
+      }
+    },
+    {
+      "name": "F-runtime-green",
+      "stage": "F",
+      "head": "6376001fa9db4b67c4d3264352680d29832a43c9",
+      "tree": "e27dc5d280d7970ac4179a040330663b59ceb54a",
+      "parents": [
+        "e9bfd4518bc30218a32fc1999fa04cf5e8ace74e"
+      ],
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "--test",
+        "--test-concurrency=1",
+        "packages/legacy-agent-host/tests/runtime-team-host.test.ts"
+      ],
+      "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+      "startedAtUTC": "2026-11-15T21:24:16.750705+00:00",
+      "finishedAtUTC": "2026-11-15T21:24:26.417869+00:00",
+      "elapsedSeconds": 9.667085895998753,
+      "exitCode": 0,
+      "counts": {
+        "tests": 44,
+        "pass": 44,
+        "fail": 0,
+        "skipped": 0,
+        "cancelled": 0,
+        "todo": 0
+      },
+      "postflightExact": true,
+      "newBuildPerformed": false,
+      "files": {
+        "log": {
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/F-runtime-green.log",
+          "bytes": 5547,
+          "blob": "fbcbc4c2422eedbe5dabeec75715e196faeb0ec2",
+          "sha256": "d8364a1fec852e34c9d9f00d6d88ef8a1b497640333ce1f4ddec29554185ccac"
+        },
+        "metadata": {
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/F-runtime-green-metadata.json",
+          "bytes": 2690,
+          "blob": "88bd38dad85a128264533c7443f5cd7727d374d5",
+          "sha256": "6f5e47487f087f2f3e40c8e17d2617bcb047083b3dfb43bb310004db3866630b"
+        },
+        "preflight": {
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/F-runtime-green-preflight.json",
+          "bytes": 20742,
+          "blob": "dfa14ffac7135ece54f119d15018d6e69312fada",
+          "sha256": "561a48e79ef45738d7bd92a09848f321559ad09b94158aff435c16550f50cf97"
+        }
+      }
+    },
+    {
+      "name": "G-journal-green",
+      "stage": "G",
+      "head": "387fa7ab81ddd57bdd274f763b8be90cfaaae484",
+      "tree": "0bf635e84287ce152a542bc4c06f25ec70b85dcb",
+      "parents": [
+        "6376001fa9db4b67c4d3264352680d29832a43c9"
+      ],
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "--test",
+        "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "scripts/legacy-agent-host/test-child-process-trace.test.ts",
+        "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+        "scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts",
+        "scripts/legacy-agent-host/desktop-resume-records.test.ts",
+        "scripts/legacy-agent-host/desktop-captured-app-exit.test.ts",
+        "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts"
+      ],
+      "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+      "startedAtUTC": "2026-11-15T21:30:43.085143+00:00",
+      "finishedAtUTC": "2026-11-15T21:30:49.767042+00:00",
+      "elapsedSeconds": 6.681822876009392,
+      "exitCode": 0,
+      "counts": {
+        "tests": 115,
+        "pass": 115,
+        "fail": 0,
+        "skipped": 0,
+        "cancelled": 0,
+        "todo": 0
+      },
+      "postflightExact": true,
+      "newBuildPerformed": false,
+      "files": {
+        "log": {
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/G-journal-green.log",
+          "bytes": 12416,
+          "blob": "2c8fa6ea4ed918ce9c5172c6f58e2eda67dde4c3",
+          "sha256": "eef1f40546520534fc46a878b70762e6280c3c943df44b22ede84425ce7e5841"
+        },
+        "metadata": {
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/G-journal-green-metadata.json",
+          "bytes": 3146,
+          "blob": "31c2d1b91a293406d4fc238dd4559ae2646ccb5a",
+          "sha256": "a9744f9906caf3298d999dddd0d3c222d04cef4a979710a94601145e9abd26c7"
+        },
+        "preflight": {
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/G-journal-green-preflight.json",
+          "bytes": 22543,
+          "blob": "0d1bb56b1c9414c56a72f1169a58700a106b0fcb",
+          "sha256": "e62798371a5299ee7e3cabeb18721f4d1e20604583456e33ba35d3b471f00ae2"
+        }
+      }
+    },
+    {
+      "name": "H-host-test-types",
+      "stage": "H",
+      "head": "4e74d36ba6212938c40a499603ee0419a183fc0a",
+      "tree": "3c02af92462ec6ea2abec9fd982b8978e04efe03",
+      "parents": [
+        "387fa7ab81ddd57bdd274f763b8be90cfaaae484"
+      ],
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "node_modules/@typescript/native/bin/tsc",
+        "--project",
+        "packages/legacy-agent-host/tsconfig.test.json"
+      ],
+      "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+      "startedAtUTC": "2026-11-15T21:33:43.875672+00:00",
+      "finishedAtUTC": "2026-11-15T21:33:47.124021+00:00",
+      "elapsedSeconds": 3.2483284390036715,
+      "exitCode": 0,
+      "counts": null,
+      "postflightExact": true,
+      "newBuildPerformed": false,
+      "files": {
+        "log": {
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-host-test-types.log",
+          "bytes": 0,
+          "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "metadata": {
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-host-test-types-metadata.json",
+          "bytes": 2699,
+          "blob": "30997970bc716a6962ade85b21369b45cb2f67a8",
+          "sha256": "69e966a51ad48ed5fde3b365235ff137c61df279ee425750fe792395bd029ff0"
+        },
+        "preflight": {
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-host-test-types-preflight.json",
+          "bytes": 23128,
+          "blob": "7122919b550c96d9c639fda6c19343100966bcde",
+          "sha256": "1a42a061e611d77b1cf08a732b307c0246190be508833f2cf5a03b6c5e971262"
+        }
+      }
+    },
+    {
+      "name": "H-scripts-types",
+      "stage": "H",
+      "head": "4e74d36ba6212938c40a499603ee0419a183fc0a",
+      "tree": "3c02af92462ec6ea2abec9fd982b8978e04efe03",
+      "parents": [
+        "387fa7ab81ddd57bdd274f763b8be90cfaaae484"
+      ],
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "node_modules/@typescript/native/bin/tsc",
+        "--project",
+        "tsconfig.legacy-agent-host-scripts.json"
+      ],
+      "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+      "startedAtUTC": "2026-11-15T21:33:47.884769+00:00",
+      "finishedAtUTC": "2026-11-15T21:33:48.988907+00:00",
+      "elapsedSeconds": 1.1041155849961797,
+      "exitCode": 0,
+      "counts": null,
+      "postflightExact": true,
+      "newBuildPerformed": false,
+      "files": {
+        "log": {
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-scripts-types.log",
+          "bytes": 0,
+          "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "metadata": {
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-scripts-types-metadata.json",
+          "bytes": 2691,
+          "blob": "907793bc9d93d77e396acfa30e2d60bec5a42583",
+          "sha256": "5e07da3045754d1fc843e736870df9fa2e32c21a1db51a3e49634e9bcfdb6466"
+        },
+        "preflight": {
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-scripts-types-preflight.json",
+          "bytes": 23898,
+          "blob": "c368c42f03bafa78d067bc4fddb09d7f86c4d5a7",
+          "sha256": "b1115d15d7463f5dc859e9a596dee1fadf3d341f9aaec58ebfd573264a4ed1ab"
+        }
+      }
+    },
+    {
+      "name": "H-scoped-fast-lint",
+      "stage": "H",
+      "head": "4e74d36ba6212938c40a499603ee0419a183fc0a",
+      "tree": "3c02af92462ec6ea2abec9fd982b8978e04efe03",
+      "parents": [
+        "387fa7ab81ddd57bdd274f763b8be90cfaaae484"
+      ],
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.fast.config.js",
+        "--cache",
+        "--cache-location",
+        ".eslintcache-fast",
+        "--cache-strategy",
+        "content",
+        "--",
+        "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+        "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+        "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "tools/owned-process-broker/nativeEmulatedSourceScenario.ts"
+      ],
+      "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+      "startedAtUTC": "2026-11-15T21:33:49.829601+00:00",
+      "finishedAtUTC": "2026-11-15T21:33:52.196814+00:00",
+      "elapsedSeconds": 2.367192542995326,
+      "exitCode": 0,
+      "counts": null,
+      "postflightExact": true,
+      "newBuildPerformed": false,
+      "files": {
+        "log": {
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-scoped-fast-lint.log",
+          "bytes": 0,
+          "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "metadata": {
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-scoped-fast-lint-metadata.json",
+          "bytes": 3115,
+          "blob": "185ef063f2d715a92e9ec841add4dd547f40814b",
+          "sha256": "18df9491562ebd822fbff88dbe0df191e4189b950cb47200e6513966796d8818"
+        },
+        "preflight": {
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-scoped-fast-lint-preflight.json",
+          "bytes": 25095,
+          "blob": "6bcd73b466264a0915ab48bf7cabce571bb5c28a",
+          "sha256": "226c2188ac6eda09788c8f36e61dfcf8fae9be5c252ffdc6356d0f0806a96ab7"
+        }
+      }
+    },
+    {
+      "name": "H-size",
+      "stage": "H",
+      "head": "4e74d36ba6212938c40a499603ee0419a183fc0a",
+      "tree": "3c02af92462ec6ea2abec9fd982b8978e04efe03",
+      "parents": [
+        "387fa7ab81ddd57bdd274f763b8be90cfaaae484"
+      ],
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "./scripts/ci/check-source-file-size.mjs"
+      ],
+      "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+      "startedAtUTC": "2026-11-15T21:33:53.417593+00:00",
+      "finishedAtUTC": "2026-11-15T21:33:54.135623+00:00",
+      "elapsedSeconds": 0.718006601993693,
+      "exitCode": 0,
+      "counts": null,
+      "postflightExact": true,
+      "newBuildPerformed": false,
+      "files": {
+        "log": {
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-size.log",
+          "bytes": 202,
+          "blob": "9e532b2a599bb5da3a6ea6de65a3e6a8db6c3b6b",
+          "sha256": "1eb83c975f69534c70814629b4eb6d3124c0367a12b2463dd9716b6741d1a167"
+        },
+        "metadata": {
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-size-metadata.json",
+          "bytes": 2619,
+          "blob": "6ba1f16ea58d4d00611e815008929b7fae89877a",
+          "sha256": "12ca53b2ed180e028431456033aedd7a24a266881493836d94861d256851240c"
+        },
+        "preflight": {
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-size-preflight.json",
+          "bytes": 25378,
+          "blob": "e091f8fcc4e764acd1f762987f81f89a251cc35a",
+          "sha256": "15346f136a55f72264f693f3ac59875c63f31e64ce535b3585cf348c983493e0"
+        }
+      }
+    },
+    {
+      "name": "H-architecture",
+      "stage": "H",
+      "head": "4e74d36ba6212938c40a499603ee0419a183fc0a",
+      "tree": "3c02af92462ec6ea2abec9fd982b8978e04efe03",
+      "parents": [
+        "387fa7ab81ddd57bdd274f763b8be90cfaaae484"
+      ],
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "./scripts/ci/check-team-provisioning-architecture.mjs"
+      ],
+      "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+      "startedAtUTC": "2026-11-15T21:33:55.239502+00:00",
+      "finishedAtUTC": "2026-11-15T21:33:55.333890+00:00",
+      "elapsedSeconds": 0.09436629200354218,
+      "exitCode": 0,
+      "counts": null,
+      "postflightExact": true,
+      "newBuildPerformed": false,
+      "files": {
+        "log": {
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-architecture.log",
+          "bytes": 184,
+          "blob": "8cb9d8cb2385eb2e1c022c79e0af379ff3a1c601",
+          "sha256": "0f72f211f9285332305dc9d63650e47a7d741f2216f712df043bdccbc02f473d"
+        },
+        "metadata": {
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-architecture-metadata.json",
+          "bytes": 2643,
+          "blob": "fd037edb2ec2d7cd4d2e210fb05ef801467d4683",
+          "sha256": "c2ae8dd4b190ec273c3cf5aa6524948ad7111e1ce40084612bc8c41e70b3a43b"
+        },
+        "preflight": {
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-architecture-preflight.json",
+          "bytes": 26147,
+          "blob": "036a6cedd431fb31a50951c946c7f214024dd218",
+          "sha256": "5d735674552a7365d6d140d98ad0ab63473cdcb3d387542ec27934926428bc6e"
+        }
+      }
+    },
+    {
+      "name": "H-diff",
+      "stage": "H",
+      "head": "4e74d36ba6212938c40a499603ee0419a183fc0a",
+      "tree": "3c02af92462ec6ea2abec9fd982b8978e04efe03",
+      "parents": [
+        "387fa7ab81ddd57bdd274f763b8be90cfaaae484"
+      ],
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "da0cf77f42ba92ca17af07f3c8377ef4a27d4614..4e74d36ba6212938c40a499603ee0419a183fc0a",
+        "--",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/completion-2026-11-13.md",
+        "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+        "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+        "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+        "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        ".github/workflows/host-emulated-acceptance.yml"
+      ],
+      "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+      "startedAtUTC": "2026-11-15T21:33:56.098335+00:00",
+      "finishedAtUTC": "2026-11-15T21:33:56.108580+00:00",
+      "elapsedSeconds": 0.01022607799677644,
+      "exitCode": 0,
+      "counts": null,
+      "postflightExact": true,
+      "newBuildPerformed": false,
+      "files": {
+        "log": {
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-diff.log",
+          "bytes": 0,
+          "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "metadata": {
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-diff-metadata.json",
+          "bytes": 3122,
+          "blob": "6e95e108ce4986838913e983f5b7c5c1f75d727a",
+          "sha256": "909c9982bf7f3607b06f2fcda9ba604ea3dc227ed9b38ffaf47552b7031c8333"
+        },
+        "preflight": {
+          "originalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-diff-preflight.json",
+          "bytes": 27399,
+          "blob": "7fc116870ca16d862839d27fd48189d048b10702",
+          "sha256": "991ecded879fba5f950958ea71904dd2b13e26862105d699321774cf159c7e32"
+        }
+      }
+    }
+  ],
+  "executedCommandCount": 10,
+  "exitSummary": {
+    "exit0": 8,
+    "exit1SemanticRed": 2
+  },
+  "exactGitSourceBlobsRehashed": 647,
+  "selectedSourceCountEachCommand": 32,
+  "hostSourceCountEachCommand": 615,
+  "selectedDependencyCountEachCommand": 17,
+  "reusedBuildOutputCount": 1446,
+  "reusedBuildInventory": {
+    "bytes": 280944,
+    "blob": "897c958cbb8e80120c22670e44614931f6436ba2",
+    "sha256": "babd0e295fbb1c79a3710f808bf6418f1b9e249f29085ee2d7a604ce72721dc8"
+  },
+  "newBuildPerformedByEH": false,
+  "dependencyLimit": "The exact previous14 selected inputs plus root compiler CLI and ESLint package/CLI; preserves the original9 frozen inputs. Not a full dependency payload census. All must be exact before and after; no pnpm shim or installation.",
+  "actualRedAssertions": {
+    "runtime": "Exactly six missing-rejection failures: two Team deadline, two standalone deadline, two fresh late capture. No setup/unrelated failure. Statements after failed rejection assertions did not execute at E.",
+    "journal": "Exactly three missing-rejection failures: no-child failure, malformed SyntaxError and late journal. Post-rejection assertions did not execute at E."
+  },
+  "actualGreenAssertions": {
+    "runtime": "All same44 complete cases PASS at F, including all later assertions in six formerly failing cases.",
+    "journal": "All same115 complete cases PASS at G, including all later assertions in three formerly failing cases; both Selection convergence cases PASS at E and G."
+  },
+  "currentWorkingTreeCleanAtReview": true,
+  "limits": [
+    "Exact isolated c28 history is merged; incoming76/a02 remains explicitly unadopted and unqualified here.",
+    "All commands are local/source-bound, not Windows/macOS native runs, full UI end-to-end receipts, current PR CI or P09 qualification.",
+    "The full Host test project and legacy scripts compiler are not the separate root agent-backend test project or retained-host native compiler.",
+    "Full1446 output bytes reused from original D; no E–H build, full dependency payload census or new freshness claim.",
+    "Historical D Selection setup failures and older B/C/optional-caller results remain as recorded; no retroactive PASS."
+  ]
+}

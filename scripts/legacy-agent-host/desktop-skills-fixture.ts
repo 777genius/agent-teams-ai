@@ -49,6 +49,30 @@ export function isSkillsMetadataRefusal(row: Record<string, unknown>): boolean {
   );
 }
 
+/** Finite Skills admission retains only the two originally generated metadata-refusal executables. */
+export async function verifyDesktopSkillsFixture(fixture: Fixture): Promise<void> {
+  const profile = readTeamHostProfile(fixture.profilePath, fixture.pins.profileSha256);
+  assert.equal(profile.runtime, undefined);
+  assert.ok(profile.management && profile.management.length === 2);
+  const descriptor = JSON.parse(await readFile(fixture.descriptorPath, 'utf8'));
+  assert.equal(await fileDigest(fixture.descriptorPath), fixture.pins.descriptorSha256);
+  const expected = [];
+  for (const [index, provider] of (['claude', 'codex'] as const).entries()) {
+    const entry: NonNullable<typeof profile.management>[number] = profile.management[index]!;
+    assert.equal(entry.provider, provider);
+    assert.equal(entry.profileId, `TEST-skills-${provider}`);
+    assert.equal(entry.configRevision, `TEST-skills-${provider}-1`);
+    assert.equal(entry.accountBinding, 'TEST-NO-PROVIDER-ACTIONS');
+    assert.equal(entry.cwd, join(fixture.root, 'workspace'));
+    assert.equal(entry.executable.path, join(fixture.root, 'bin', `skills-${provider}-management`));
+    assert.equal(await fileDigest(entry.executable.path), entry.executable.sha256);
+    if (entry.provider === 'claude') assert.deepEqual(entry.settingSources, []);
+    expected.push({ runtimeId: provider, contextId: 'local', projectPath: null,
+      owner: descriptor.defaultOwner, profileId: entry.profileId, configRevision: entry.configRevision });
+  }
+  assert.deepEqual(descriptor.management, expected);
+}
+
 export const skillsUiMarkdown = (version: number) =>
   `---\nname: test-ui-imported-v${version}\ndescription: TEST imported exact snapshot ${version}\n---\n\nTEST body version ${version}.\n`;
 

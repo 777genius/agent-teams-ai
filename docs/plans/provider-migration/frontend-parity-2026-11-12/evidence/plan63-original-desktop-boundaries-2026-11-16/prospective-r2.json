@@ -1,0 +1,163 @@
+{
+  "kind": "INDEPENDENT_PROSPECTIVE_PLAN63_DOCUMENTARY_R2",
+  "reviewer": "/root/p09_review",
+  "verdict": "GO for the exact selected prospective Plan63 document and source scope. The sole typing clarification is resolved by the existing DesktopCdpPort capability. No source afterimage, compiler result, native/UI completion or published document/source gate is claimed.",
+  "baseCommit": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+  "baseTree": "d5dc487719c64720b95a8ed390cc72f8ea9b924f",
+  "baseLeaves": 11133,
+  "selectedPlan": {
+    "path": "/tmp/e2e-original-artifacts/reviews/plan63-original-desktop-boundaries/plan.md",
+    "bytes": 11988,
+    "physicalLines": 61,
+    "gitBlob": "b54e3a8a5680141a3a7b0889661d4de1888b35ba",
+    "sha256": "5d719a9e49d697a4a9662d0edd94a4e439049b16e39def4c079c71066a92cb0c",
+    "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/63-original-desktop-e2e-boundaries-2026-11-16.md"
+  },
+  "rootR1": {
+    "path": "/tmp/e2e-original-artifacts/reviews/plan63-original-desktop-boundaries/prospective-r1.json",
+    "bytes": 6759,
+    "physicalLines": 118,
+    "gitBlob": "49f7aa9b83bd8e89d01fd51887c5d83f4ab8df38",
+    "sha256": "57adb12a336f366d0a550e8227ef60f076993a1c73d92b0b941c2df71c944778"
+  },
+  "sourceBinding": "All seven complete selected/reference bodies independently rehashed by Git blob, SHA256, byte length and physical lines and matched to exact75 mode100644 leaves. The complete11133-leaf map was independently reconstructed to d5dc487719c64720b95a8ed390cc72f8ea9b924f in the preceding two-helper review. The proposed Plan63 path is absent from that base.",
+  "deadlineSemantics": {
+    "demonstratedMismatch": "Full fixture lines40-46/141-145 send the configured start without a timeout. Full actual CDP9397505b:51-80 defaults to30000ms, validates a positive safe integer, and only deletes/rejects that pending request on expiry. It does not cancel the renderer promise. Fixture180000 readinessMs is currently started after start resolves (pending159, ready196).",
+    "productBoundary": "Existing teamLaunchModelProbe7e377e0b:82-83 selects startup at most30000 and modelProbeTimeoutMs90000. Current OpenCodeV2ModelProbe195dabe:63-64 caps the purpose-bound original probe at90000. ModelProbeOwner a870a9c2:179-183 awaits the already admitted original operation, never creates another probe. None of these production paths is selected.",
+    "selectedAlignment": "For options.openCode only, one deadline from the existing180000 readiness allowance is captured after the original preparation arm and before the original start. One start await consumes its positive remainder; both readiness branches consume the same deadline without renewal. This explicitly changes this caller's previous implicit30-second start observation ceiling. It does not increase a product probe deadline or select another Launch.",
+    "preserved": "Non-OpenCode/default start retains its original default30-second CDP behavior and post-start45-second readiness. Ordinary progress reads retain default30-second CDP observations. Existing100ms polling tick,5-second metadata census, exact configuration/command/payload, member and source/profile/birth checks, consumed-one probe checks, errors, pending-open predicates and disarm finally stay.",
+    "notHardWallClockClaim": "An ordinary already-dispatched30-second read can finish after the readiness cutoff; the plan requires rejecting that late result and forbids another dispatch after expiry. This is an acceptance deadline, not a new cancellation mechanism or a claim that all helper/census/I/O work is physically stopped at180000ms.",
+    "futureExactSourceChecks": [
+      "Compute/check remaining time at the last existing point before the start evaluate, after the retained renderer-owner assertion; do not let a stale remainder authorize dispatch after an expensive owner check.",
+      "Keep cutoff assignment and all new start checks inside the original try/disarm finally. Preserve original rejection identity on rejected awaits; do not introduce a finally deadline assertion. Keep polling after the original disarm, not inside an expanded arm lifetime.",
+      "Guard after the original100ms tick before dispatching another progress read and before a pending file-read iteration. Reject late fulfilled readiness observations before accepting ready/opening.",
+      "Preserve each pending-open condition, exact native child identity and missed-window refusal. No conversion of already-ready or missing opening evidence to pending-open success.",
+      "No second OpenCode deadline after start; no global CDP default change, cache, replay, new input, extra model operation, or altered metadata/cleanup budget.",
+      "Scope new absolute-deadline admission checks to the selected OpenCode path; preserve unrelated45-second legacy behavior."
+    ],
+    "finallyBoundary": "The updated selection explicitly puts cutoff assignment and every new start-time throw inside the original preparation try/disarm finally. The original disarm remains immediately after start and preparation-consumption assertions; polling continues afterwards. The selection does not enlarge the armed lifetime to cover the readiness loops.",
+    "dispatchAndAcceptanceChecks": "Same OpenCode deadline checked at the last point after assertOwnedCdpListener and before the one start dispatch, then after fulfilled start before success acceptance. The ready loop checks after its existing tick before dispatch and after its awaited readiness read before acceptance. The pending branch checks before its original Runtime read and after the read/native observation before opening acceptance. These are requirements for the later exact source review, not claims about uncreated source bodies."
+  },
+  "observedFailureJoin": {
+    "review": {
+      "path": "/tmp/e2e-original-artifacts/reviews/75-chat-attachments-r2/independent-actual-failure-r2.json",
+      "bytes": 20685,
+      "physicalLines": 341,
+      "gitBlob": "d8fa2c06f0889fdd0374d7443a3d0e336ff4bf95",
+      "sha256": "40d06db4d59ed7ff09ed4fdea5a7eb0319576c0f40aafd9c2d609d21775d1fc8"
+    },
+    "reviewRead": "Complete20685-byte report read. Its original source+durable command join, timestamp precision and physical-cleanup limitations are retained. This prospective review did not repeat original ZIP/PNG inspection or infer unseen per-CDP timestamps.",
+    "directReceiptCheck": "Full713869-byte retained receipt loaded as data; SHA96bfebb48d6d8209c67cb8aebc091e0ad7a1455f636f9ca9d366fdb6cfbb539f. Before/after vectors exactly equal,1777 rows and1777 unique paths each; all three selected additions absent.",
+    "causalLimit": "The mismatched observer window is demonstrated. Eventual native read consumption, result/close success, reason for inner noncompletion and successful PNG/Stop/cold readback remain unproved. Running/resourceHeld probe, absent capturedHost witness and final empty group do not become qualified cleanup."
+  },
+  "rosterAndLint": {
+    "closedCurrentCommonUniquePaths": 1777,
+    "selectedCommonAfterCount": 1780,
+    "exactThreeNewPaths": [
+      "scripts/legacy-agent-host/desktop-oversized-comment-ui-smoke.ts",
+      "scripts/legacy-agent-host/desktop-owner-routing-product-census.ts",
+      "scripts/e2e/comment-notification/cdp.mjs"
+    ],
+    "roster": "All three names absent from the four current roster bodies and both retained receipt vectors. Append only to common Supplementary:343→346 ordinary lines, preserving all old literal order and separate Process/Windows lists. Root source list remains800 lines; no cap/baseline exception.",
+    "effect": "Three extra file-hash reads per existing capture invocation, no new capture pass or GUI/CDP/native/provider action. No exhaustive transitive-closure or retrospective per-run-freeze claim.",
+    "fastLint": "Original existing command at workflow139-271 has132 unique ordered operands; supplementary roster is already included and native-stop fixture is absent. Adding only that fixture gives133. Every other workflow command, matrix, timeout, upload and existing original journey must remain exact."
+  },
+  "publicationAndQualification": "The selected document precedes any source afterimages; actual document/body/tree and independent published-binding gate precede the separate three-source child. This review neither creates a commit/ref nor verifies the current live branch. Isolated75 staging and preservation of incoming Plan62 are root-declared publication constraints, not permission to propagate unqualified native work. Resulting original CI/PNG/active-pending Quit/Review/Cross/full gates remain unqualified until their own actual outcomes.",
+  "readExtent": "Full final11988-byte61-line plan and final6759-byte118-line rootR1 read without truncation. Full545-line native-stop fixture and119-line actual CDP read earlier in this same bounded review; exact bodies rehashed. Full20685-byte original failure R2 read, retained receipt fully parsed/hashed as data. Both full Cross helper bodies and prior complete Plan61 workflow/Plan60 roster semantics reused by exact equality; fast-lint operand list/static roster membership rechecked. UiCdpPort/re-export/DesktopCdpPort and original90s/awaitPrepared windows hash-joined to75 and read. New DesktopCdpPort fullbody hash verified, only the relevant interface/import window semantically read.",
+  "actions": {
+    "sourceAfterimages": 0,
+    "sourceOrGitMutations": 0,
+    "networkOrCIReads": 0,
+    "projectCompilerTestLintInstallNativeGuiProviderExecution": 0,
+    "scratchReportsOnly": true,
+    "sourceAfterimageDirectoryExists": false
+  },
+  "revision": 2,
+  "inputs": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-stop-fixture.ts",
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan63-original-desktop-boundaries/before/scripts/legacy-agent-host/desktop-native-stop-fixture.ts",
+      "writable": true,
+      "bytes": 29580,
+      "physicalLines": 545,
+      "gitBlob": "d2f58f7dd6ce6b05ff6200fabe67a4945f94a506",
+      "sha256": "2b954cec0846e30f530ae615e63ac05ae9a3969e0338e5d2ab03ec80a62a0f0d"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan63-original-desktop-boundaries/before/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "writable": true,
+      "bytes": 22320,
+      "physicalLines": 343,
+      "gitBlob": "a41bff15e351d829d9cbb0197a7026ad09d6dc18",
+      "sha256": "e649994d2311bc5fdc308c24167593d0c387ce4fef3a170f04b8e20c9402ffe1"
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan63-original-desktop-boundaries/before/.github/workflows/host-emulated-acceptance.yml",
+      "writable": true,
+      "bytes": 141809,
+      "physicalLines": 1767,
+      "gitBlob": "458a88ff6b3b197282f9144951aeb79074cc8d5b",
+      "sha256": "e8bafc0f5bc8016a6a7f55591436edf470f2e0eb259a6a85cc5a986d9f956d88"
+    },
+    {
+      "path": "scripts/e2e/comment-notification/cdp.mjs",
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan63-original-desktop-boundaries/reference/scripts/e2e/comment-notification/cdp.mjs",
+      "writable": false,
+      "bytes": 3704,
+      "physicalLines": 119,
+      "gitBlob": "9397505b7889db88ef103dca62287e3d02a88cc9",
+      "sha256": "8e70fecbb1f2107abffa91d78644ee74f8e34546c8117587661f8376c27998aa"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-oversized-comment-ui-smoke.ts",
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan63-original-desktop-boundaries/reference/scripts/legacy-agent-host/desktop-oversized-comment-ui-smoke.ts",
+      "writable": false,
+      "bytes": 10086,
+      "physicalLines": 206,
+      "gitBlob": "23aab1f3fbf713eacc2e9741be6513fcc9de18e5",
+      "sha256": "312e42b78ad2975b0a3d1fb83b63c4835eab0aaa89b7831c2e06c5050028ab44"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-owner-routing-product-census.ts",
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan63-original-desktop-boundaries/reference/scripts/legacy-agent-host/desktop-owner-routing-product-census.ts",
+      "writable": false,
+      "bytes": 4022,
+      "physicalLines": 77,
+      "gitBlob": "ea9ed87dd6e0571843d807f68e7158c9cf469ee8",
+      "sha256": "af69541cc3ac9fa3740a05ef312b837096d4c239dacaf42241748cb897028e35"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan63-original-desktop-boundaries/reference/scripts/legacy-agent-host/desktop-captured-app.ts",
+      "writable": false,
+      "bytes": 49613,
+      "physicalLines": 787,
+      "gitBlob": "865494ab5f5e45c5158fbf74ac858987fb322608",
+      "sha256": "ce4d59cc5285eb78ed108dae13a44fae21d33cd73c544c720d512134f23b7f73"
+    }
+  ],
+  "resolvedTypingClarification": {
+    "sourceFact": "prepareDesktopNativeStop currently accepts cdp: UiCdpPort. desktop-team-ui-smoke.ts602c2fe5d57cc67a8b18fe0c193b61e58293f508 only re-exports UiCdpPort from desktop-ui-controls.ts1c11809c6458f829bd9bb6995aea2ad60b85511e; its evaluate signature at23 takes only expression:string. A direct two-argument evaluate through that unchanged declared type is not type-correct even though runtime CdpClient supports the timeout.",
+    "existingSolution": "The existing current DesktopCdpPort in desktop-captured-app.ts865494ab5f5e45c5158fbf74ac858987fb322608:22-27 already declares evaluate(expression:string, timeoutMs?:number) and send(method,params?,timeoutMs?). Select a same-file fixture parameter type using that existing capability, for example Pick<DesktopCdpPort, evaluate | send>, without changing the shared interface or adding a handwritten parallel shape/cast. Remaining one-argument helper types can remain unchanged.",
+    "scope": "This clarification can remain entirely within the already selected native-stop fixture path and a type-only import. No fourth writable owner, new public production API, runtime behavior or framework is necessary.",
+    "status": "RESOLVED in exact plan b54e3a8a lines31-33 and rootR1 49f7aa9b. Only the selected fixture parameter is refined to Pick<DesktopCdpPort, evaluate | send> via a type-only import. Both shared interfaces and other UiCdpPort helpers remain unchanged; no fourth writable path.",
+    "typeReferenceReadExtent": "Whole49613-byte787-line reference hashed and joined to current75; exact existing interface and import window1-37 read. No fresh semantic review of unrelated787-line implementation is claimed. The type-only import is erased and does not introduce a runtime circular import despite the type-provider already importing the fixture."
+  },
+  "supersededReview": {
+    "path": "/tmp/e2e-original-artifacts/reviews/plan63-original-desktop-boundaries/prospective-r2-v1-typing-note.json",
+    "bytes": 12322,
+    "physicalLines": 133,
+    "gitBlob": "5cc9d32ba64cad0abfba630688aa50d8ae68d373",
+    "sha256": "7c3729072b3fbd7c6bf1d1d9da1b6bbf3eb4a696460442d4568da2f96f0b0300",
+    "reason": "Preserved exact v1 typing HOLD. Final v2 resolves that selected issue; no source afterimages were authored between reviews."
+  },
+  "remainingGates": [
+    "Actual documentary commit/body/tree and independent actual R2 on the selected parent",
+    "Only then frozen three-file afterimages with original start/pending/ready and type-only boundaries reviewed, exact forward/inverse diff and cap/roster/lint preservation",
+    "Ordinary source publication and complete actual source/tree R2",
+    "Resulting original automatic CI and actual scoped PNG/Stop/cold readback/cleanup, pending/active Quit, Review and Cross outcomes; no transfer from producer or historical runs"
+  ],
+  "unresolvedBlockers": []
+}

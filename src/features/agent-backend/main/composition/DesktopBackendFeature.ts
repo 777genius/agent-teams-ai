@@ -1,15 +1,11 @@
-import { createHash } from 'node:crypto';
 import { isAbsolute, resolve } from 'node:path';
 
 import {
-  crossTeamOwnerResourceRef,
   crossTeamTeamResourceRef,
 } from '@agent-teams/legacy-agent-host/cross-team';
-import { projectHostPromptSuggestion } from '@features/native-prompt-suggestions/main';
 import { captureManagedProviderRuntimePreferences } from '@features/runtime-provider-management/main';
 import { createdTeamSelectionSignature } from '@shared/utils/createdTeamReadiness';
 
-import { hostTeamSelectionKey } from '../../contracts/teamSelection';
 import { BackendOperationsFacade } from '../adapters/input/BackendOperationsFacade';
 import {
   assertBackendRequestGuard,
@@ -26,13 +22,21 @@ import { CapturedHostClient } from '../infrastructure/CapturedHostClient';
 import { captureCreatedTeamConversation, requestWithLocalModelReadiness } from '../infrastructure/CapturedLocalModelReadiness';
 import { captureProviderManagement } from '../infrastructure/CapturedProviderManagement';
 import { CapturedRosterCommands } from '../infrastructure/CapturedRosterCommands';
+import { capturedRuntimeSourceGrant } from '../infrastructure/capturedRuntimeSourceGrant';
 import { captureRuntimeSources } from '../infrastructure/CapturedRuntimeSources';
 import { CapturedScheduledRuns } from '../infrastructure/CapturedScheduledRuns';
 import { CapturedTeamRegistry } from '../infrastructure/CapturedTeamRegistry';
+import { captureMainWindowsCustody } from '../infrastructure/CapturedWindowsCustody';
+import { prepareMainWindowsRuntimeConfiguration, prepareMainWindowsRuntimeSource,
+  prepareMainWindowsRuntimeSourceRecovery } from '../infrastructure/CapturedWindowsRuntimeSources';
 import { FileHandleBindingStore } from '../infrastructure/FileHandleBindingStore';
 import { loadDesktopBackendDescriptor } from '../infrastructure/loadDesktopBackendDescriptor';
-import { readCapturedTeamRetirements } from '../infrastructure/readCapturedTeamRetirements';
+import { type CapturedConnectionUnavailable, readCapturedConnectionAvailability,
+  readCapturedOwnerAvailability } from '../infrastructure/readCapturedConnectionAvailability';
 import { CapturedStoppedTeamImport } from '../infrastructure/stopped-import/CapturedStoppedTeamImport';
+
+import { captureHostPromptSuggestions } from './captureHostPromptSuggestions';
+import { recoverCapturedHost } from './recoverCapturedHost';
 
 import type { BackendHandle } from '../../contracts';
 import type { BackendConnectionSnapshot } from '../../contracts/connections';
@@ -43,47 +47,17 @@ import type {
 } from '../application/backendBinding';
 import type { CapturedBackendOwner } from '../application/BackendOwnerRouter';
 import type { CapturedTeamModelRequest } from '../application/prepareCapturedTeamModels';
-import type { TeamModelProbeIntents } from '../application/TeamModelProbeIntents';
 import type { CapturedProviderManagement } from '../infrastructure/CapturedProviderManagement';
-import type {
-  DesktopBackendDescriptor,
-  DesktopBackendDescriptorSelection,
-} from '../infrastructure/loadDesktopBackendDescriptor';
+import type { DesktopBackendDescriptor } from '../infrastructure/loadDesktopBackendDescriptor';
+import type { DesktopBackendFeatureOptions, InitializationPhase } from './DesktopBackendOptions';
 import type { RuntimeSourceSummary } from '@agent-teams/legacy-agent-host/runtime-sources';
 import type {
   CreateTeamRegistryPayload,
   TeamRegistryRecord,
 } from '@agent-teams/legacy-agent-host/team-registry/contracts';
-import type { ApplicationCommandRunner } from '@features/application-command-ledger';
-import type { NativeNextPromptCandidate, NativeNextPromptProvider } from '@features/native-prompt-suggestions/contracts';
 import type { TeamCreateRequest } from '@shared/types/team';
 
-type InitializationPhase =
-  | 'descriptor'
-  | 'owner-registration'
-  | 'handle-read'
-  | 'handle-publication'
-  | 'default-owner';
-
-export interface DesktopBackendFeatureOptions {
-  /** Null is the safe default: no descriptor, handles or process launch. */
-  descriptor: DesktopBackendDescriptorSelection | null;
-  bindingDirectory: string;
-  /** Private composition diagnostics; never serializes paths, payloads or raw errors. */
-  onInitializationFailure?: (
-    phase: InitializationPhase,
-    code: BackendRoutingError['code'] | 'unexpected'
-  ) => void;
-  /** Existing durable storage port, useful for composing the app's chosen persistence. */
-  bindings?: HandleBindingStore;
-  /** Existing durable Main ledger is supplied before renderer work admission. */
-  commandRunner?: () => ApplicationCommandRunner | null;
-  modelIntents?: TeamModelProbeIntents;
-  /** Ephemeral, validated Host output; the Main shell owns IPC and HTTP publication. */
-  onNativePromptSuggestion?: (value: NativeNextPromptCandidate) => void;
-  /** Immutable for each captured Host launch; provider settings take effect on app restart. */
-  nativeNextPromptProviders?: readonly NativeNextPromptProvider[];
-}
+export type { DesktopBackendFeatureOptions } from './DesktopBackendOptions';
 
 export class DesktopBackendFeature {
   readonly facade: BackendOperationsFacade;
@@ -96,8 +70,9 @@ export class DesktopBackendFeature {
   private readonly clients = new Map<string, CapturedBackendOwner>();
   private readonly dynamicHandles = new Map<string, DesktopBackendDescriptor['handles'][number]>();
   private readonly retiredHandles = new Set<string>();
-  private readonly registryReads = new Map<string, Promise<void>>();
+  private readonly registryReads = new Map<string, Promise<CapturedConnectionUnavailable[]>>();
   private readonly creationChecks = new ForegroundModelChecks();
+  private readonly hostClientOptions: ReturnType<typeof captureHostPromptSuggestions>;
 
   constructor(private readonly options: DesktopBackendFeatureOptions) {
     // Selection is captured before any asynchronous access; callers cannot swap its path/hash.
@@ -105,6 +80,16 @@ export class DesktopBackendFeature {
       ...options,
       descriptor: options.descriptor ? Object.freeze({ ...options.descriptor }) : null,
     };
+    const promptOptions = captureHostPromptSuggestions({
+      definitions: () => this.handleDefinitions(),
+      currentClient: key => this.clients.get(key)?.client,
+      isCurrent: () => !this.sealed && this.state === 'ready',
+      publish: this.options.onNativePromptSuggestion,
+      enabled: this.options.nativeNextPromptEnabled === true,
+      providers: this.options.nativeNextPromptProviders,
+    });
+    this.hostClientOptions = owner => ({ ...promptOptions(owner),
+      ...(this.options.reviewFlowDefaultsDirectory ? { reviewFlowDefaultsDirectory: this.options.reviewFlowDefaultsDirectory } : {}) });
     this.store = options.bindings ?? new FileHandleBindingStore(options.bindingDirectory);
     const target = async (
       handle: BackendHandle,
@@ -146,7 +131,13 @@ export class DesktopBackendFeature {
         lookup: async (handle, commandId, method, guard) =>
           (await target(handle, guard)).lookup(handle, commandId, method, guard),
       },
-      rosterCommands
+      rosterCommands,
+      (request, guard) => recoverCapturedHost(request, guard, {
+        selection: this.options.descriptor, descriptor: () => this.descriptor,
+        router: () => this.router, definitions: () => this.handleDefinitions(), clients: this.clients,
+        isCurrent: () => !this.sealed && this.state === 'ready',
+        clientOptions: this.hostClientOptions,
+      })
     );
   }
 
@@ -167,29 +158,17 @@ export class DesktopBackendFeature {
       this.router = router;
       phase = 'owner-registration';
       for (const owner of descriptor.owners) {
+        const nativeCustody = captureMainWindowsCustody(owner.profile, (descriptor.management ?? [])
+          .filter(entry => ownerKey(entry.owner) === ownerKey(owner))
+          .map(entry => capturedRuntimeSourceGrant(descriptor, entry)));
         const captured = {
           ownerId: owner.ownerId,
           revision: owner.revision,
           storageRoot: owner.storageRoot,
-          client: new CapturedHostClient(owner.profile, (raw) => {
-            if (this.sealed || this.state !== 'ready') return;
-            const value = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw as Record<string, unknown> : null;
-            if (typeof value?.teamId !== 'string') return;
-            const matches = this.handleDefinitions().filter((entry) =>
-              ownerKey(entry.owner) === ownerKey(owner) &&
-              entry.scope.teamId === value.teamId && entry.scope.runId === value.runId
-            );
-            // Deduplicate only equivalent descriptor handles; otherwise reject.
-            const unique = new Map(matches.map((entry) => [entry.handleId, entry]));
-            if (unique.size !== 1) return;
-            const selected = unique.values().next().value!;
-            // Original roster remains authoritative.
-            if (!selected.members.some(member => member.memberId === value.memberId)) return;
-            const projected = projectHostPromptSuggestion(
-              raw, hostTeamSelectionKey(selected.handleId), selected.scope.teamId, selected.scope.runId
-            );
-            if (projected) this.options.onNativePromptSuggestion?.(projected);
-          }, this.options.nativeNextPromptProviders ?? []),
+          client: new CapturedHostClient(
+            owner.profile, nativeCustody, undefined, this.hostClientOptions(owner)
+          ),
+          ...(nativeCustody ? { nativeCustody } : {}),
         };
         router.registerOwner(captured);
         this.clients.set(ownerKey(owner), captured);
@@ -232,6 +211,7 @@ export class DesktopBackendFeature {
         /* Diagnostics cannot alter the original failed admission. */
       }
       await this.router?.shutdown();
+      await this.closeNativeOwners();
     }
   }
 
@@ -339,58 +319,60 @@ export class DesktopBackendFeature {
   ): Promise<BackendConnectionSnapshot> {
     await this.initialize();
     assertBackendRequestGuard(guard);
-    if (this.descriptor?.creation?.contextIds.includes(contextId)) {
+    if (!this.router || this.state !== 'ready') {
+      if (this.descriptor?.creation?.contextIds.includes(contextId)) await this.registry(contextId, guard);
+      return this.listBindings(contextId);
+    }
+    const router = this.router, clients = new Map(this.clients);
+    const current = () => {
+      assertBackendRequestGuard(guard);
+      if (this.sealed || this.state !== 'ready' || this.router !== router ||
+        [...clients].some(([key, captured]) => this.clients.get(key) !== captured))
+        throw new BackendRoutingError('unavailable');
+    };
+    const capturedGuard = { isCurrent: () => { current(); return true; } };
+    const unavailable = new Map<string, CapturedConnectionUnavailable>();
+    const retain = (rows: CapturedConnectionUnavailable[]) => {
+      current();
+      for (const row of rows) if (!unavailable.has(row.ownerResourceRef))
+        unavailable.set(row.ownerResourceRef, row);
+    };
+    const creation = this.descriptor?.creation;
+    if (creation?.contextIds.includes(contextId)) {
       let reading = this.registryReads.get(contextId);
       if (!reading) {
         reading = (async () => {
-          const target = await this.registry(contextId, guard);
-          const catalog = await target.client.list(contextId, guard);
-          for (const record of catalog.teams)
-            await this.registerDynamic(record, target.owner, contextId, guard);
+          const result = await readCapturedOwnerAvailability({ router, owner: creation.owner,
+            assertCurrent: current, read: async () => {
+              const target = await this.registry(contextId, capturedGuard);
+              return target.client.list(contextId, capturedGuard);
+            } });
+          if ('unavailable' in result) return [result.unavailable];
+          for (const record of result.value.teams) {
+            current();
+            await this.registerDynamic(record, creation.owner, contextId, capturedGuard);
+            current();
+          }
+          return [];
         })();
         this.registryReads.set(contextId, reading);
-        void reading
-          .finally(() => {
-            if (this.registryReads.get(contextId) === reading) this.registryReads.delete(contextId);
-          })
-          .catch(() => undefined);
+        void reading.finally(() => {
+          if (this.registryReads.get(contextId) === reading) this.registryReads.delete(contextId);
+        }).catch(() => undefined);
       }
-      await reading;
+      retain(await reading);
     }
-    assertBackendRequestGuard(guard);
-    await this.refreshRetirements(contextId, guard);
-    return this.listBindings(contextId);
-  }
-
-  private async refreshRetirements(contextId: string, guard?: BackendRequestGuard): Promise<void> {
-    const router = this.router;
-    if (!router || this.sealed || this.state !== 'ready') return;
-    const entries = this.handleDefinitions().filter((entry) => entry.contextId === contextId);
-    const owners = new Map(entries.map((entry) => [ownerKey(entry.owner), entry.owner]));
-    const retired = new Set<string>();
-    for (const [key, owner] of owners) {
-      const captured = this.clients.get(key);
-      if (!captured) throw new BackendRoutingError('hold');
-      const teamIds = await readCapturedTeamRetirements({
-        owner: router.ownerBinding(owner),
-        contextId,
-        client: captured.client,
-        start: () => router.startOwner(owner),
-        available: () =>
-          !this.sealed &&
-          this.state === 'ready' &&
-          this.router === router &&
-          this.clients.get(key) === captured,
-        ...(guard ? { guard } : {}),
-      });
-      for (const entry of entries)
-        if (ownerKey(entry.owner) === key && teamIds.includes(entry.scope.teamId))
-          retired.add(entry.handleId);
-    }
-    assertBackendRequestGuard(guard);
-    if (this.sealed || this.router !== router) throw new BackendRoutingError('unavailable');
-    for (const entry of entries) this.retiredHandles.delete(entry.handleId);
-    for (const handle of retired) this.retiredHandles.add(handle);
+    const entries = this.handleDefinitions().filter(entry => entry.contextId === contextId);
+    const retired = await readCapturedConnectionAvailability({
+      contextId, router, clients, entries, assertCurrent: current, guard: capturedGuard,
+    });
+    retain(retired.unavailable);
+    for (const entry of entries) if (retired.replaced.has(ownerKey(entry.owner)))
+      this.retiredHandles.delete(entry.handleId);
+    for (const handle of retired.retired) this.retiredHandles.add(handle);
+    const snapshot = this.listBindings(contextId);
+    current();
+    return unavailable.size ? { ...snapshot, unavailableOwners: [...unavailable.values()] } : snapshot;
   }
 
   async createConfiguredTeam(
@@ -484,7 +466,8 @@ export class DesktopBackendFeature {
     const selected = await this.discoverBindings(contextId, guard);
     assertBackendRequestGuard(guard);
     const router = this.router;
-    if (selected.state !== 'ready' || !router) throw new BackendRoutingError('hold');
+    if (selected.state !== 'ready' || selected.unavailableOwners?.length || !router)
+      throw new BackendRoutingError('hold');
     const handles = selected.bindings.map((entry) => ({ ...entry.handle }));
     return createCapturedHostBackup({
       handles,
@@ -513,9 +496,9 @@ export class DesktopBackendFeature {
               .map((entry) => ({
                 handle: { handleId: entry.handleId },
                 label: entry.label,
-                ownerResourceRef: crossTeamOwnerResourceRef(router.ownerBinding(entry.owner)),
+                ownerResourceRef: router.ownerDisplayRef(entry.owner),
                 teamResourceRef: crossTeamTeamResourceRef(
-                  crossTeamOwnerResourceRef(router.ownerBinding(entry.owner)),
+                  router.ownerDisplayRef(entry.owner),
                   entry.scope
                 ),
                 members: entry.members.map((member) => ({
@@ -691,11 +674,8 @@ export class DesktopBackendFeature {
   private managementTargetId(
     selected: NonNullable<DesktopBackendDescriptor['management']>[number]
   ): string {
-    const owner = this.descriptor?.owners.find(
-      (entry) => ownerKey(entry) === ownerKey(selected.owner)
-    );
-    if (!owner) throw new BackendRoutingError('hold');
-    return createHash('sha256').update(JSON.stringify({ selected, owner })).digest('hex');
+    if (!this.descriptor) throw new BackendRoutingError('hold');
+    return capturedRuntimeSourceGrant(this.descriptor, selected).targetId;
   }
 
   private captureManagementTarget(
@@ -753,36 +733,22 @@ export class DesktopBackendFeature {
     if (this.sealed || this.clients.get(ownerKey(selected.owner)) !== owner)
       throw new BackendRoutingError('unavailable');
     if (!handshake.capabilities.includes('runtime.sources')) return undefined;
-    const teamScopes = [...new Map((this.descriptor?.handles ?? [])
-      .filter(
-        (entry) =>
-          entry.contextId === selected.contextId &&
-          ownerKey(entry.owner) === ownerKey(selected.owner)
-      )
-      .map(({ scope }) => [JSON.stringify([scope.teamId, scope.projectId, scope.workspaceId]), {
-        teamId: scope.teamId,
-        projectId: scope.projectId,
-        workspaceId: scope.workspaceId,
-      }] as const)).values()];
+    if (!this.descriptor) throw new BackendRoutingError('hold');
+    const grant = capturedRuntimeSourceGrant(this.descriptor, selected);
+    const ownerAvailable = () => !this.sealed && this.state === 'ready' &&
+      this.clients.get(ownerKey(selected.owner)) === owner;
+    const nativeCurrent = () => ownerAvailable() && (guard?.isCurrent() ?? true);
     return captureRuntimeSources({
-      grant: {
-        targetId: this.managementTargetId(selected),
-        ownerId: selected.owner.ownerId,
-        ownerRevision: selected.owner.revision,
-        contextId: selected.contextId,
-        projectPath: selected.projectPath,
-        runtimeId: selected.runtimeId,
-        profileId: selected.profileId,
-        configRevision: selected.configRevision,
-        teamScopes,
-      },
+      grant,
       client: owner.client,
       start: () => router.startOwner(selected.owner),
-      ownerAvailable: () =>
-        !this.sealed &&
-        this.state === 'ready' &&
-        this.clients.get(ownerKey(selected.owner)) === owner,
+      ownerAvailable,
       foregroundCurrent: () => guard?.isCurrent() ?? true,
+      ...(owner.nativeCustody ? {
+        prepareNativePublication: input => prepareMainWindowsRuntimeSource(owner.nativeCustody!, grant, input, nativeCurrent),
+        prepareNativeRecovery: () => prepareMainWindowsRuntimeSourceRecovery(owner.nativeCustody!, grant, nativeCurrent),
+        prepareNativeConfiguration: input => prepareMainWindowsRuntimeConfiguration(owner.nativeCustody!, grant, input, nativeCurrent),
+      } : {}),
       ...(selected.runtimeId === 'opencode' && selected.preferences ? {
         capturePreferences: () => captureManagedProviderRuntimePreferences(selected.preferences!, () =>
           !this.sealed && this.state === 'ready' && this.clients.get(ownerKey(selected.owner)) === owner &&
@@ -794,6 +760,14 @@ export class DesktopBackendFeature {
   shutdown(): ReturnType<BackendOwnerRouter['shutdown']> {
     this.sealed = true;
     this.state = 'shutting-down';
-    return this.router?.shutdown() ?? Promise.resolve([]);
+    return (this.router?.shutdown() ?? Promise.resolve([])).then(async results => {
+      await this.closeNativeOwners();
+      return results;
+    });
+  }
+
+  private async closeNativeOwners(): Promise<void> {
+    const outcomes = await Promise.all([...this.clients.values()].map(owner => owner.nativeCustody?.close() ?? Promise.resolve(true)));
+    if (outcomes.some(value => !value)) throw new BackendRoutingError('hold');
   }
 }

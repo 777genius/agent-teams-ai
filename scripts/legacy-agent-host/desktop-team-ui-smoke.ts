@@ -7,6 +7,7 @@ import { bounded } from './desktop-proof-bounds.ts';
 import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
 
 import { createDesktopUiControls } from './desktop-ui-controls.ts';
+import { desktopNetworkFailure, observeDesktopModuleLoads } from './desktop-module-load-observation.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
 export type { UiCdpPort } from './desktop-ui-controls.ts';
 const record = (value: unknown): Record<string, unknown> => {
@@ -227,6 +228,20 @@ function rendererDocumentMatches(value: unknown, rendererUrl: string): boolean {
   } catch { return false; }
 }
 
+/** Preserve each mode's original startup admission before binding or account reads. */
+export async function waitForDesktopUiStartup(
+  cdp: Parameters<typeof attachRendererDiagnostics>[0],
+  rendererUrl: string,
+  evidence: Record<string, unknown>,
+  startup: { mode: string; uiMode: boolean; deadline: number; remainingMs: number; assertOwnedRenderer(): void }
+): Promise<void> {
+  if (startup.uiMode) return attachRendererDiagnostics(cdp, rendererUrl, evidence, startup);
+  if (startup.mode !== 'codex-login-ui') return;
+  const startupEvidence: Record<string, unknown> = {};
+  evidence.codexLoginStartup = startupEvidence;
+  await waitForDesktopMainUiReadiness(cdp, rendererUrl, startupEvidence, startup);
+}
+
 /** Captures only finite module/load diagnostics, never request headers or bodies. */
 export async function attachRendererDiagnostics(
   cdp: UiCdpPort & {
@@ -240,12 +255,17 @@ export async function attachRendererDiagnostics(
   const deadline = performance.now() + startup.remainingMs;
   const origin = new URL(rendererUrl).origin;
   const events: unknown[] = [];
+  const viewLoads: { events: unknown[]; overflow: boolean } = { events: [], overflow: false };
   const startupEvidence: Record<string, unknown> = { status: 'WAITING', commands: [], contextEvents: [] };
-  evidence.rendererDiagnostics = { scope: 'bounded read-only module/load evidence', events, startup: startupEvidence };
+  evidence.rendererDiagnostics = { scope: 'bounded read-only module/load evidence', events, startup: startupEvidence, viewLoads };
   const commands = startupEvidence.commands as Record<string, unknown>[];
   const contextEvents = startupEvidence.contextEvents as Record<string, unknown>[];
   const contexts = new Map<number, unknown>();
   let mainFrameId: unknown, revision = 0;
+  const moduleLoads = observeDesktopModuleLoads(cdp, rendererUrl, () => mainFrameId);
+  (evidence.rendererDiagnostics as Record<string, unknown>).moduleLoads =
+    moduleLoads.evidence;
+  let viewLoadDocumentRevision: number | undefined;
   const noteContext = (event: Record<string, unknown>): void => {
     if (contextEvents.length < 96) contextEvents.push({ monotonicMs: Math.round(performance.now()), ...event });
   };
@@ -258,7 +278,10 @@ export async function attachRendererDiagnostics(
       const remaining = deadline - performance.now(); assert.ok(remaining > 0, 'original startup budget remains');
       const result = await bounded(cdp.send(method, params), remaining, 'renderer startup ' + method);
       command.ackMs = Math.round(performance.now()); return result;
-    } catch (error) { command.failed = /timed out/i.test(String(error)) ? 'timeout' : 'refused'; throw error; }
+    } catch (error) {
+      command.failedMs = Math.round(performance.now()); command.failedEpochMs = Date.now();
+      command.failed = /timed out/i.test(String(error)) ? 'timeout' : 'refused'; throw error;
+    }
   };
   const path = (value: unknown): string | null => {
     if (typeof value !== 'string') return null;
@@ -305,16 +328,14 @@ export async function attachRendererDiagnostics(
       });
   });
   cdp.on('Network.loadingFailed', (value) => {
+    moduleLoads.loadingFailed(value);
     const entry = record(value);
     add({
       event: 'Network.loadingFailed',
       type: entry.type,
       canceled: entry.canceled,
       blockedReason: entry.blockedReason,
-      errorText:
-        typeof entry.errorText === 'string' && /^net::ERR_[A-Z_]+$/.test(entry.errorText)
-          ? entry.errorText
-          : 'unclassified',
+      errorText: desktopNetworkFailure(entry.errorText),
     });
   });
   cdp.on('Page.frameNavigated', (value) => {
@@ -336,6 +357,49 @@ export async function attachRendererDiagnostics(
     if (typeof id === 'number') contexts.delete(id);
     revision++; noteContext({ event: 'contextDestroyed', id });
   });
+  cdp.on('Runtime.consoleAPICalled', (value) => {
+    try {
+      const entry = record(value), contextId = entry.executionContextId;
+      if (entry.type !== 'debug' || typeof contextId !== 'number' ||
+          viewLoadDocumentRevision === undefined || revision !== viewLoadDocumentRevision ||
+          contextId !== startupEvidence.contextId || mainFrameId !== startupEvidence.frameId ||
+          contexts.get(contextId) !== mainFrameId || !Array.isArray(entry.args) || entry.args.length !== 1)
+        return;
+      const argument = record(entry.args[0]);
+      if (argument.type !== 'string' || typeof argument.value !== 'string') return;
+      const raw = argument.value;
+      if (raw.length > 1024 || !raw.startsWith('{"kind":"runtime-provider-view-load-v1",') ||
+          Buffer.byteLength(raw, 'utf8') > 1024) return;
+      const row = record(JSON.parse(raw) as unknown);
+      const keys = ['kind', 'owner', 'request', 'phase', 'silent', 'sequenceCurrent',
+        'contextCurrent', 'viewPresent', 'inheritanceFields', 'loadingFalseSet'];
+      if (Object.keys(row).length !== keys.length || keys.some(key => !Object.hasOwn(row, key)) ||
+          row.kind !== 'runtime-provider-view-load-v1' ||
+          typeof row.owner !== 'number' || !Number.isSafeInteger(row.owner) || row.owner <= 0 ||
+          typeof row.request !== 'number' || !Number.isSafeInteger(row.request) || row.request <= 0 ||
+          typeof row.phase !== 'string' || !['start', 'response-checked', 'response-error',
+            'view-set', 'error-checked', 'finished'].includes(row.phase) ||
+          typeof row.silent !== 'boolean' ||
+          ['sequenceCurrent', 'contextCurrent', 'viewPresent', 'loadingFalseSet'].some(
+            key => row[key] !== null && typeof row[key] !== 'boolean') ||
+          (row.inheritanceFields !== null && (typeof row.inheritanceFields !== 'number' ||
+            !Number.isInteger(row.inheritanceFields) || row.inheritanceFields < 0 || row.inheritanceFields > 31)))
+        return;
+      if (viewLoads.events.length >= 96) { viewLoads.overflow = true; return; }
+      const observation = {
+        monotonicMs: Math.round(performance.now()), executionContextId: contextId,
+        documentRevision: viewLoadDocumentRevision, kind: row.kind, owner: row.owner,
+        request: row.request, phase: row.phase, silent: row.silent,
+        sequenceCurrent: row.sequenceCurrent, contextCurrent: row.contextCurrent,
+        viewPresent: row.viewPresent, inheritanceFields: row.inheritanceFields,
+        loadingFalseSet: row.loadingFalseSet,
+      };
+      viewLoads.events.push(observation);
+      console.log(JSON.stringify({ kind: 'TEST_RENDERER_VIEW_LOAD', observation }));
+    } catch {
+      // Passive diagnostics cannot replace the original startup or UI failure.
+    }
+  });
   // Cold protocol subscriptions measured ~25s; every command still keeps CdpClient's original30s bound.
   await Promise.all([send('Page.enable'), send('Runtime.enable')]);
   const frame = record(record(record(await send('Page.getFrameTree')).frameTree).frame);
@@ -352,7 +416,8 @@ export async function attachRendererDiagnostics(
         if (revision === observedRevision && contexts.get(contextId) === mainFrameId && sameDocument(value.url) &&
             ['interactive', 'complete'].includes(String(value.readyState))) {
           startupEvidence.status = 'DOCUMENT_READY'; startupEvidence.contextId = contextId;
-          startupEvidence.frameId = mainFrameId; startupEvidence.readyState = value.readyState; break;
+          startupEvidence.frameId = mainFrameId; startupEvidence.readyState = value.readyState;
+          viewLoadDocumentRevision = observedRevision; break;
         }
       } catch (error) {
         if (!/execution context was destroyed|cannot find (?:default )?execution context|cannot find context with specified id/i.test(String(error))) throw error;
@@ -364,38 +429,88 @@ export async function attachRendererDiagnostics(
   for (const domain of ['Log', 'Network']) await send(`${domain}.enable`);
   // Document readiness precedes Main's mandatory Host backup/reconciliation fence.
   // Keep early diagnostics active while waiting; discovery must not spend its 30s CDP bound on that fence.
-  const appReadiness: Record<string, unknown> = { status: 'WAITING', observations: [] };
+  await waitForDesktopMainUiReadiness(cdp, rendererUrl, startupEvidence, {
+    deadline,
+    assertOwnedRenderer: () => startup.assertOwnedRenderer(),
+    readDocumentRevision: () => revision,
+  });
+}
+
+/** Original Main/UI precondition under the caller's captured monotonic cutoff. */
+export async function waitForDesktopMainUiReadiness(
+  cdp: UiCdpPort,
+  rendererUrl: string,
+  startupEvidence: Record<string, unknown>,
+  startup: { deadline: number; assertOwnedRenderer(): void; readDocumentRevision?(): number }
+): Promise<void> {
+  const { deadline } = startup;
+  // Keep the original first 24 observations plus one fixed last record; no extra read or retained protocol value.
+  const stamp = () => ({ monotonicMs: Math.round(performance.now()), epochMs: Date.now() });
+  const last: Record<string, unknown> = { attempt: 0, phase: 'waiting', failure: null, observation: null };
+  const appReadiness: Record<string, unknown> = { status: 'WAITING', observations: [],
+    deadlineMs: Math.round(deadline), clock: stamp(), last, contextRetries: 0 };
   startupEvidence.appReadiness = appReadiness;
   const observations = appReadiness.observations as unknown[];
-  while (performance.now() < deadline) {
-    startup.assertOwnedRenderer();
-    const remaining = deadline - performance.now();
-    assert.ok(remaining > 0, 'original startup budget remains before Main/UI readiness');
-    let value: Record<string, unknown>;
-    try {
-      value = record(await bounded(cdp.evaluate(`(async () => {
+  let attempts = 0, contextRetries = 0;
+  try {
+    while (performance.now() < deadline) {
+      Object.assign(last, { attempt: ++attempts, phase: 'owner-before', enteredAt: stamp(),
+        callAt: null, completedAt: null, failedAt: null, failure: null, documentRevision: startup.readDocumentRevision?.() });
+      startup.assertOwnedRenderer();
+      last.phase = 'budget-before';
+      const remaining = deadline - performance.now();
+      last.remainingMs = remaining;
+      assert.ok(remaining > 0, 'original startup budget remains before Main/UI readiness');
+      let value: Record<string, unknown>;
+      try {
+        last.phase = 'evaluate'; last.callAt = stamp();
+        const response = await bounded(cdp.evaluate(`(async () => {
         const status = window.electronAPI?.startup?.getStatus ? await window.electronAPI.startup.getStatus() : null;
         return {originMatches:(${rendererDocumentMatches.toString()})(location.href,${JSON.stringify(rendererUrl)}),mainReady:status?.ready===true,
           errorPresent:Boolean(status?.error),phase:typeof status?.phase==='string'?status.phase.slice(0,80):'bridge-pending',
           uiDidInit:window.__claudeTeamsUiDidInit===true,storePresent:Boolean(window.__agentTeamsDevStore),
           rootChildCount:document.getElementById('root')?.childElementCount??0};
-      })()`), remaining, 'Main/UI startup readiness'));
-    } catch (error) {
-      if (!/execution context was destroyed|cannot find (?:default )?execution context|cannot find context with specified id/i.test(String(error))) throw error;
+      })()`), remaining, 'Main/UI startup readiness');
+        last.completedAt = stamp(); last.phase = 'decode'; value = record(response);
+      } catch (error) {
+        const description = String(error);
+        const transient = /execution context was destroyed|cannot find (?:default )?execution context|cannot find context with specified id/i.test(description);
+        last.failedAt = stamp();
+        last.failure = transient ? 'context-changed' : description === 'Error: CDP command timed out: Runtime.evaluate'
+          ? 'cdp-timeout' : description === 'Error: Main/UI startup readiness timed out; no mutation retry'
+            ? 'startup-budget' : description === 'Error: CDP connection closed' ? 'cdp-closed' : 'refused';
+        if (!transient) throw error;
+        appReadiness.contextRetries = ++contextRetries;
+        await new Promise<void>(done => setTimeout(done, Math.min(100, Math.max(0, deadline - performance.now()))));
+        continue;
+      }
+      last.phase = 'owner-after'; startup.assertOwnedRenderer();
+      if (observations.length < 24) observations.push({ monotonicMs: Math.round(performance.now()), ...value });
+      last.observation = { attempt: attempts, observedAt: stamp(),
+        mainPhase: value.phase === 'ready' ? 'ready' : value.phase === 'bridge-pending' ? 'bridge-pending' : 'other',
+        ...Object.fromEntries(['originMatches', 'mainReady', 'errorPresent', 'uiDidInit', 'storePresent']
+          .map(key => [key, typeof value[key] === 'boolean' ? value[key] : null])),
+        rootChildCount: Number.isSafeInteger(value.rootChildCount) && Number(value.rootChildCount) >= 0 ? value.rootChildCount : null };
+      last.phase = 'main-admission';
+      assert.notEqual(value.errorPresent, true, 'Main startup refused before UI readiness');
+      last.phase = 'budget-after';
+      assert.ok(performance.now() < deadline, 'original startup budget remains after Main/UI observation');
+      last.phase = 'check-ready';
+      if (value.originMatches === true && value.mainReady === true && value.uiDidInit === true &&
+          typeof value.rootChildCount === 'number' && value.rootChildCount > 0) {
+        appReadiness.status = 'READY'; appReadiness.observation = value; last.phase = 'ready'; return;
+      }
+      last.phase = 'delay';
       await new Promise<void>(done => setTimeout(done, Math.min(100, Math.max(0, deadline - performance.now()))));
-      continue;
     }
-    startup.assertOwnedRenderer();
-    if (observations.length < 24) observations.push({ monotonicMs: Math.round(performance.now()), ...value });
-    assert.notEqual(value.errorPresent, true, 'Main startup refused before UI readiness');
-    assert.ok(performance.now() < deadline, 'original startup budget remains after Main/UI observation');
-    if (value.originMatches === true && value.mainReady === true && value.uiDidInit === true &&
-        typeof value.rootChildCount === 'number' && value.rootChildCount > 0) {
-      appReadiness.status = 'READY'; appReadiness.observation = value; return;
-    }
-    await new Promise<void>(done => setTimeout(done, Math.min(100, Math.max(0, deadline - performance.now()))));
+    last.phase = 'budget-expired';
+    assert.fail('original startup budget expired before Main/UI readiness');
+  } catch (error) {
+    last.rejectedAt = stamp();
+    if (String(last.phase).startsWith('budget-')) { last.failedAt = last.rejectedAt; last.failure = 'startup-budget'; }
+    else { last.failedAt ??= last.rejectedAt; last.failure ??= 'refused'; }
+    throw error;
   }
-  assert.fail('original startup budget expired before Main/UI readiness');
 }
 
 export async function readRendererFailureSnapshot(cdp: UiCdpPort): Promise<unknown> {

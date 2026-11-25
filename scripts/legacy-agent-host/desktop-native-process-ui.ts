@@ -237,6 +237,8 @@ export async function qualifyColdProcessUi(
       .filter(node=>node.textContent.trim()===${desktopJsLiteral(PROCESS_LABEL)});
     if(labels.length!==1)return null;
     const label=labels[0],container=label.parentElement;
+    const header=container.closest('[data-section-id="processes"]')?.firstElementChild;
+    const badges=header?[...header.querySelectorAll('span.font-normal.leading-none')]:[];
     const pids=[...container.querySelectorAll('span.font-mono')]
       .filter(node=>node.textContent.trim()===${desktopJsLiteral('PID' + services.primary.pid)});
     if(pids.length!==1)return null;
@@ -249,6 +251,8 @@ export async function qualifyColdProcessUi(
     if(!visible(label)||!visible(pids[0]))return null;
     const r=container.getBoundingClientRect();
     return {label:label.textContent.trim(),pidText:pids[0].textContent.trim(),
+      headerActiveCount:badges.length===1?badges[0].textContent.trim():null,
+      headerActiveIndicator:header?Boolean(header.querySelector('span.animate-ping')):null,
       geometry:{x:r.x,y:r.y,width:r.width,height:r.height},
       stoppedStyle:container.classList.contains('opacity-50'),
       stoppedIndicator:Boolean(container.querySelector('span.bg-zinc-500')),
@@ -257,6 +261,10 @@ export async function qualifyColdProcessUi(
   const originalRenderedRow = row(await ui.waitRead(renderedRowExpression, 'rendered original process label/PID with visible geometry'));
   proof.originalRenderedRow = originalRenderedRow;
   proof.beforeScreenshot = await screenshot('ui-original-native-process-before-stop.png');
+  if (controlled) {
+    assert.equal(originalRenderedRow.headerActiveCount, '1', 'cold original process is counted');
+    assert.equal(originalRenderedRow.headerActiveIndicator, true, 'cold original process activates header');
+  }
   if (source) {
     // Existing public read validates detachment; persisted phase/custody are not rewritten by this proof.
     const runtimeResult = row(await cdp.evaluate(`window.electronAPI.agentBackend.invoke(${desktopJsLiteral({
@@ -413,6 +421,8 @@ export async function qualifyColdProcessUi(
     const stoppedRead = (stoppedData.processes as unknown[]).map(row).filter(value => value.id === id);
     assert.equal(stoppedRead.length, 1); assert.deepEqual(stoppedRead[0], stoppedRow);
     const stoppedRendered = row(await ui.waitRead(`(() => {const r=(${renderedRowExpression});return r&&r.killCount===0&&r.stoppedStyle&&r.stoppedIndicator?r:null;})()`, 'visible stopped original row with no Kill action'));
+    assert.equal(stoppedRendered.headerActiveCount, '0', 'stopped original process is not counted');
+    assert.equal(stoppedRendered.headerActiveIndicator, false, 'stopped original process clears header');
     await controlled.assertStopped(commandId, String(stoppedRow.processRef));
     proof.stoppedOwnerProps = stoppedOwner; proof.stoppedOwnerRead = stoppedRead[0]; proof.stoppedRenderedRow = stoppedRendered;
     proof.runtimeCustody = 'NOT_ALLOCATED';

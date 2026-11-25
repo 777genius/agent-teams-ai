@@ -218,6 +218,11 @@ export function buildActionableWorkAgenda(
         continue;
       }
 
+      // Lead clarification stays actionable above; the waiting owner/reviewer has no work yet.
+      if (task.needsClarification === 'lead' || task.needsClarification === 'user') {
+        continue;
+      }
+
       const reviewCycle = isReviewWorkflow
         ? resolveCurrentReviewCycle({
             reviewState: workflowColumn,
@@ -300,10 +305,6 @@ export function buildActionableWorkAgenda(
       }
 
       if (!sameMemberName(owner, memberName)) {
-        continue;
-      }
-
-      if (task.needsClarification === 'lead' || task.needsClarification === 'user') {
         continue;
       }
 

@@ -1,0 +1,232 @@
+{
+  "kind": "original-9a34-incremental-completed-audits",
+  "sourceHead": "9a34bb28de0a0deee2eecc42099fd9500563eb1b",
+  "sourceUrl": "https://github.com/777genius/agent-teams-ai/commit/9a34bb28de0a0deee2eecc42099fd9500563eb1b",
+  "localRoot": "/workspace/scratch/82d3f9ba6b85/native-audit-9a34",
+  "checkpointCreatedUtc": "2026-11-15T20:16:07.891982+00:00",
+  "previousCheckpoint": "completed-audits-checkpoint-20261115-1952.json",
+  "previousCheckpointUnchanged": true,
+  "auditScope": [
+    "Linux original V2/native flow SUCCESS",
+    "Darwin ARM64 original Host flow SUCCESS and later P09 mutation assertion FAILURE",
+    "Creation macOS original UI workflow SUCCESS with forced fixture teardown limits",
+    "Original cohort job disposition observed at the per-run times retained in the snapshot"
+  ],
+  "storageChoice": "Preserve exact official ZIPs, complete original job logs, bounded integrity/source/receipt audits and appendices. Every archived receipt and PNG is recoverable from its authoritative ZIP; extracted members are not duplicated. No signed download URLs, download helpers, base64 staging or mutable source checkout is included.",
+  "hashes": "SHA256 over exact bytes; Git blob SHA1 over blob + space + decimal length + NUL + bytes. Artifact API digest is matched independently.",
+  "files": [
+    {
+      "path": "9a34-v2-linux-x64.zip",
+      "kind": "official-artifact-zip",
+      "bytes": 23423,
+      "sha256": "7f86b6649ae0b605235ed9422311e59128c2987754ed3282d2d6fd9136323976",
+      "gitBlobSha1": "0d248b9f4ff71a6067ad023299a634144969dc18"
+    },
+    {
+      "path": "job-132925032144.log",
+      "kind": "complete-original-job-log",
+      "bytes": 97346,
+      "sha256": "1e9d112d6836cc76fa647841efab6cd6dc3b3d7b885fb2f4b961be855dc20b97",
+      "gitBlobSha1": "a79d4f3c1fe4629059960d3d2963a0e90842e1a0"
+    },
+    {
+      "path": "archive-audit-v2-linux.json",
+      "kind": "artifact-integrity-audit",
+      "bytes": 2354,
+      "sha256": "bf1fa93ba346555788ecd3c611a11b54d3a28027c71fe148c34823ee2172a455",
+      "gitBlobSha1": "a881a4403954a309882c3cf0bc86a0edb75bf21e"
+    },
+    {
+      "path": "receipt-audit-v2-linux.json",
+      "kind": "bounded-receipt-source-audit",
+      "bytes": 48743,
+      "sha256": "b43ebabbf2a7fbbc7f0475e6a36c40606f8bfea99561c2097caf5f2ee7caaf41",
+      "gitBlobSha1": "b5b6708a0736ddd04c0842d8711e1e2916fee816"
+    },
+    {
+      "path": "9a34-v2-darwin-arm64.zip",
+      "kind": "official-artifact-zip",
+      "bytes": 10467,
+      "sha256": "4941518348e969dade72962221e782f8b76a07e8efe0e58a1107d5442690c13d",
+      "gitBlobSha1": "19a892fe1b797cf9f0d5cc49413dc802ddb3ccfd"
+    },
+    {
+      "path": "job-132925032258.log",
+      "kind": "complete-original-job-log",
+      "bytes": 106911,
+      "sha256": "c342f23d33a50d296e6432743c4e62b49b6e35c47465c15d2f31d6e5a96b08cb",
+      "gitBlobSha1": "d95ea49e3751eee533324a707562da262a0de2c3"
+    },
+    {
+      "path": "archive-audit-v2-darwin-arm.json",
+      "kind": "artifact-integrity-audit",
+      "bytes": 1867,
+      "sha256": "fe70ef6f5d988eb1c575672241e4fdca21272e0469380cab850a07a09cd12f28",
+      "gitBlobSha1": "f9055a19e7790cc6705e9eb5a61ab1dc56a49093"
+    },
+    {
+      "path": "receipt-audit-v2-darwin-arm.json",
+      "kind": "bounded-receipt-source-audit",
+      "bytes": 27475,
+      "sha256": "349fb289bdd80dbcf4c43294e73eb23c61299ac61eb84f239d652bdd299e223c",
+      "gitBlobSha1": "8a5f14b704516a4ee8206810d6defe115552eb6d"
+    },
+    {
+      "path": "9a34-creation-macos.zip",
+      "kind": "official-artifact-zip",
+      "bytes": 2295421,
+      "sha256": "619d82a6ed6c9310413c2d05bb4d42cb1d6ef5d396c7b57c16d969173c391555",
+      "gitBlobSha1": "518bc3cec9d689dc4471f893a8e87504da0dc10e"
+    },
+    {
+      "path": "job-132924989414.log",
+      "kind": "complete-original-job-log",
+      "bytes": 57510,
+      "sha256": "28c104c174d9d3804b77a3a49cef8669da18497553d78fdceeb19b768d6a2a85",
+      "gitBlobSha1": "9004b8d4abf46ef33ba53547463d7489abdb12f6"
+    },
+    {
+      "path": "archive-audit-creation-macos.json",
+      "kind": "artifact-integrity-audit",
+      "bytes": 8295,
+      "sha256": "249fcc56173a16266254bda1847205172c7d93d248005746f1273b16390d443b",
+      "gitBlobSha1": "69ca60450edf71bf3f0a99137c3e9669d36e84fc"
+    },
+    {
+      "path": "receipt-audit-creation-macos.json",
+      "kind": "bounded-receipt-source-audit",
+      "bytes": 16938,
+      "sha256": "8a655cab35b25afa1dff4d2724b98491bff0c7dfe04f7877d9bd98e3cfa2b77a",
+      "gitBlobSha1": "1dee43a867c88c2e2b6eb7de7a6e42a8ba59560d"
+    },
+    {
+      "path": "plan29-9a34-v2-linux-darwin-arm-appendix.md",
+      "kind": "evidence-only-appendix",
+      "bytes": 7670,
+      "sha256": "b43d0e558e6e6a45590cc3d7273a6df586e4be79ce59f2ba3882373b459c46c3",
+      "gitBlobSha1": "9d74d26d786eeeca9ca25fb322100d59b7a9e58d"
+    },
+    {
+      "path": "plan29-9a34-creation-macos-appendix.md",
+      "kind": "evidence-only-appendix",
+      "bytes": 3889,
+      "sha256": "c0dfec23352e5ec75a250f2c0d05ebf0468a733746291ebb09115c3e5bd66192",
+      "gitBlobSha1": "563a01e4252551f56c032ad43fb21d4a2fd7ced2"
+    },
+    {
+      "path": "plan29-9a34-cohort-disposition-appendix.md",
+      "kind": "evidence-only-appendix",
+      "bytes": 2072,
+      "sha256": "427983002a191fdbce96fa07a3da3d1aa42264687a9e3464be27151926485591",
+      "gitBlobSha1": "715a972c90660bd516925193783533ad8b75511b"
+    },
+    {
+      "path": "jobs-snapshot-20261115-200530.json",
+      "kind": "original-job-api-snapshot",
+      "bytes": 339777,
+      "sha256": "46cf9fd9dc7f52cde961b9f1aceb8e438bc850ce05e4e4e8e433ba133048b0fd",
+      "gitBlobSha1": "8042e9d60869434e3529175f18ce75588c9e0cb4"
+    }
+  ],
+  "fileCount": 16,
+  "totalBytes": 3050158,
+  "uniqueBlobCount": 16,
+  "artifactProvenance": [
+    {
+      "jobId": 132925032144,
+      "jobUrl": "https://github.com/777genius/agent-teams-ai/actions/runs/43751070783/job/132925032144",
+      "artifactApi": {
+        "id": 14178161276,
+        "name": "opencode-v2-embedded-native-linux-x64",
+        "size_in_bytes": 23423,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14178161276",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14178161276/zip",
+        "expired": false,
+        "created_at": "2026-11-15T19:56:14Z",
+        "expires_at": "2026-11-22T19:56:13Z",
+        "updated_at": "2026-11-15T19:56:14Z",
+        "digest": "sha256:7f86b6649ae0b605235ed9422311e59128c2987754ed3282d2d6fd9136323976",
+        "workflow_run": {
+          "id": 43751070783,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "9a34bb28de0a0deee2eecc42099fd9500563eb1b"
+        }
+      },
+      "zip": "9a34-v2-linux-x64.zip",
+      "jobLog": "job-132925032144.log",
+      "integrityAudit": "archive-audit-v2-linux.json",
+      "receiptAudit": "receipt-audit-v2-linux.json",
+      "memberCount": 7,
+      "memberBytesRecoverableFromExactZip": true
+    },
+    {
+      "jobId": 132925032258,
+      "jobUrl": "https://github.com/777genius/agent-teams-ai/actions/runs/43751070783/job/132925032258",
+      "artifactApi": {
+        "id": 14177492593,
+        "name": "opencode-v2-embedded-native-darwin-arm64",
+        "size_in_bytes": 10467,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14177492593",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14177492593/zip",
+        "expired": false,
+        "created_at": "2026-11-15T19:53:39Z",
+        "expires_at": "2026-11-22T19:53:38Z",
+        "updated_at": "2026-11-15T19:53:39Z",
+        "digest": "sha256:4941518348e969dade72962221e782f8b76a07e8efe0e58a1107d5442690c13d",
+        "workflow_run": {
+          "id": 43751070783,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "9a34bb28de0a0deee2eecc42099fd9500563eb1b"
+        }
+      },
+      "zip": "9a34-v2-darwin-arm64.zip",
+      "jobLog": "job-132925032258.log",
+      "integrityAudit": "archive-audit-v2-darwin-arm.json",
+      "receiptAudit": "receipt-audit-v2-darwin-arm.json",
+      "memberCount": 4,
+      "memberBytesRecoverableFromExactZip": true
+    },
+    {
+      "jobId": 132924989414,
+      "jobUrl": "https://github.com/777genius/agent-teams-ai/actions/runs/43751070710/job/132924989414",
+      "artifactApi": {
+        "id": 14176674211,
+        "name": "teams-create-page-macos-latest-9a34bb28de0a0deee2eecc42099fd9500563eb1b",
+        "size_in_bytes": 2295421,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14176674211",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14176674211/zip",
+        "expired": false,
+        "created_at": "2026-11-15T19:29:47Z",
+        "expires_at": "2026-11-29T19:29:45Z",
+        "updated_at": "2026-11-15T19:29:47Z",
+        "digest": "sha256:619d82a6ed6c9310413c2d05bb4d42cb1d6ef5d396c7b57c16d969173c391555",
+        "workflow_run": {
+          "id": 43751070710,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "9a34bb28de0a0deee2eecc42099fd9500563eb1b"
+        }
+      },
+      "zip": "9a34-creation-macos.zip",
+      "jobLog": "job-132924989414.log",
+      "integrityAudit": "archive-audit-creation-macos.json",
+      "receiptAudit": "receipt-audit-creation-macos.json",
+      "memberCount": 41,
+      "memberBytesRecoverableFromExactZip": true
+    }
+  ],
+  "limits": [
+    "No tests, compilers, native or provider processes, CI reruns/cancellations, source edits or refs were executed by this auditor.",
+    "No original result transfers to incoming 2cb or any composition. Historical skipped/cancelled/failed jobs retain those dispositions.",
+    "Linux and Darwin Host passive traces may be truncated; preserve distinct Host close, finite native cleanup and raw-PID retention limits.",
+    "Darwin ARM P09 remains INCOMPLETE despite successful Host flow and cleanup; Linux P09 is native TEST fixture only.",
+    "Creation uses Node 26.12.1, finite deny-all peers and original forced process-group teardown, without a Host-native source freeze or runtime launch qualification.",
+    "Only six of forty Creation PNGs were visually inspected; all forty are integrity hashed and recoverable.",
+    "The original 19:52 checkpoint and its published appendices remain unchanged."
+  ]
+}

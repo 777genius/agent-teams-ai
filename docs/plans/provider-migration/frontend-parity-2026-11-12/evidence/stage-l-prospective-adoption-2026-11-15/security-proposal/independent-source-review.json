@@ -1,0 +1,118 @@
+{
+  "kind": "Independent source/prose R2 of prospective held-value stderr correction; no execution",
+  "result": "APPROVE",
+  "observedAtUTC": "2026-11-15T23:14:12.736562+00:00",
+  "sourceBase": "35cbd6e99b620e9b41802af936143d900f5e2aca",
+  "r1": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stderr-held-value-35c-r1/R1-appendix.md",
+    "bytes": 9310,
+    "blob": "b0ddc336db50b6b9974fbb6f4e6bdfef753040c2",
+    "sha256": "4ee330cf75261d1f1152e744250b3da35c046fb7419ba9fce9c2fdff9cb328a8"
+  },
+  "metadata": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stderr-held-value-35c-r1/candidate-metadata.json",
+    "bytes": 1927,
+    "blob": "d09469d58c94cd50f7eb1446bae0286133321c21",
+    "sha256": "1f66517f4e788cbfcbf1efda4d6e459f9c15e4dcd27ae77bc16b872a4409e188"
+  },
+  "patch": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stderr-held-value-35c-r1/candidate.patch",
+    "bytes": 3250,
+    "blob": "5bb0d1a3b011fcc66f009b6b5e9cf8f44f1af36b",
+    "sha256": "e3f8a21efa078c299f6686d30f8c245c7857564d9ec160ef11d1de470526818b"
+  },
+  "files": [
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "preimage": {
+        "bytes": 7826,
+        "blob": "3b2b960722f878cf60ba94bae27176fb9e7d0bba",
+        "sha256": "c30d9a9d7357275864ede578ec9a4c66e335ffb1a613a5d916c6aced9061e1bc"
+      },
+      "candidate": {
+        "bytes": 8281,
+        "blob": "21aa3590f82939778a3fd657bbafa2d64c23d923",
+        "sha256": "eeec12dc4e1bfab70181c71c81aa05210b717cd18cb5261795d562d714925efd"
+      },
+      "delta": {
+        "insertions": 8,
+        "deletions": 1
+      },
+      "fullPreimageGitExact": true,
+      "fullInverseOrOriginalPrefixExact": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "preimage": {
+        "bytes": 12742,
+        "blob": "c073ab7b8c6025313747f75e50e8b0a14985d589",
+        "sha256": "f2c89ada2f51d13e42af390229cc6b2fc58e2c82a48bf64154c006c5feedc573"
+      },
+      "candidate": {
+        "bytes": 14603,
+        "blob": "d1b52658270cc53a9e1ec345de55f840e7549011",
+        "sha256": "fd7504cd6196122a450cab25dc3bce50f5125c4ab589510c005f08e68c731510"
+      },
+      "delta": {
+        "insertions": 30,
+        "deletions": 0
+      },
+      "fullPreimageGitExact": true,
+      "fullInverseOrOriginalPrefixExact": true
+    }
+  ],
+  "unchangedSanitizerSources": [
+    {
+      "path": "packages/legacy-agent-host/src/diagnostics/runtimeDiagnosticText.ts",
+      "sourceCommit": "35cbd6e99b620e9b41802af936143d900f5e2aca",
+      "bytes": 2888,
+      "blob": "49183056d50b7815bde238e758c47c13302117f3",
+      "sha256": "6c8d7217b45893446430419d689185c0d3420183e6d003324c1f4cf5d7838c5e"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/diagnostics/diagnosticsRedaction.ts",
+      "sourceCommit": "35cbd6e99b620e9b41802af936143d900f5e2aca",
+      "bytes": 1836,
+      "blob": "5fe2b1c75dc79aff685c9ef281b6cffd19e3a55b",
+      "sha256": "ce6281ee65275c72fc67d540bfb3fd70d902276ef0fabcefc4d471fa3df5efe2"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/diagnostics/redactDiagnosticAssignments.ts",
+      "sourceCommit": "35cbd6e99b620e9b41802af936143d900f5e2aca",
+      "bytes": 5376,
+      "blob": "b82e437c1e8f04726982af5d50fc54394725f138",
+      "sha256": "a1c2499af3048c0e656f66131ffa76540fe7493c1f3643e0486c8ffe6358d940"
+    }
+  ],
+  "sourceFindings": [
+    "The incoming syntax-first sanitizer can remove a contextual first Bearer token from an already-held multiword value before the later exact mask sees its suffix. The candidate keeps the existing syntax order and conservatively hides a line when syntax changed it and an original/raw-folded held form matched.",
+    "The exact existing masker is reused, including overlapping spans and marker stability. No new token parser, credential lookup, stream listener, native action, RPC, timer, deadline, input association, journal authority, or process custody is introduced.",
+    "Whole-line information loss also covers disjoint syntax and held-value spans. This is explicitly disclosed and prospectively accepted; the branch does not claim original-span intersection or complete unknown-secret detection.",
+    "Only the single helper replacement changes. All framing,24KiB checks,discard/dump state,512-code-unit scan tail,finish-once/listener cleanup and protected observer error paths are exact preimage bytes. Additional bounded-string masking CPU/temporary allocations are real work; no new total-memory or latency guarantee is claimed.",
+    "The entire original226-line/19-case test prefix is retained. Three actual helper PassThrough cases first assert suffix absence; old35 source leaves that canary, so intended RED is semantic, not missing setup or export. Final marker assertion also prevents absent observations from satisfying the cases. The fourth case preserves public diagnostics and unambiguous context.",
+    "Space,tab,mixed separators exercise raw versus whitespace-folded matching. Tests import the built actual observer and require the independently frozen future source/dist procedure. No test run or native failure cause is inferred here.",
+    "K27 remains a different frozen preimage. Later incoming composition must retain the reviewed K common source-roster relocation and Task DOM/Team coverage corrections; this two-path appendix grants no return to Windows-only pins or wholesale35 adoption."
+  ],
+  "predictedOnly": {
+    "source35": 19,
+    "candidate": 23,
+    "predictedRed": {
+      "pass": 20,
+      "fail": 3,
+      "skip": 0,
+      "cancelled": 0
+    },
+    "predictedGreen": {
+      "pass": 23,
+      "fail": 0,
+      "skip": 0,
+      "cancelled": 0
+    },
+    "observedExecution": false
+  },
+  "limits": [
+    "No source application, project/native/provider execution, tests, compiler, lint, refs, commits or CI actions by this reviewer.",
+    "APPROVE covers the exact two-path proposal and prospective R1, not any historical artifact or the full resulting source35 composition.",
+    "The actual RED, independent RED review, helper application, fresh Host build/output joins and identical whole-file GREEN remain mandatory future steps; other full resulting-source checks remain outstanding."
+  ]
+}

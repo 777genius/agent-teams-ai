@@ -1,10 +1,10 @@
-import { createHash } from 'node:crypto';
-
 import { hostTeamSelectionKey } from '../../contracts';
 import { LegacyStoppedImportHold } from '../infrastructure/stopped-import/createLegacyStoppedTeamSource';
+import { createStoppedImportDiagnostic } from '../infrastructure/stopped-import/createStoppedImportDiagnostic';
 import { prepareStoppedLegacyImport } from '../infrastructure/stopped-import/prepareStoppedLegacyImport';
 
 import { assertBackendRequestGuard } from './backendBinding';
+import { stoppedLegacyImportCommandId } from './createRetainedLegacyLaunchScope';
 
 import type {
   StoppedTeamImportAction,
@@ -15,6 +15,11 @@ import type {
   CapturedLegacyStoppedSource,
   LegacyStoppedSourceOwners,
 } from '../infrastructure/stopped-import/createLegacyStoppedTeamSource';
+import type {
+  StoppedImportDiagnosticPhase,
+  StoppedImportDiagnosticSink,
+  StoppedImportPrepareObservation,
+} from '../infrastructure/stopped-import/createStoppedImportDiagnostic';
 import type { BackendRequestGuard } from './backendBinding';
 
 export function validateStoppedImportAction(value: unknown): StoppedTeamImportAction {
@@ -37,37 +42,51 @@ export async function importStoppedLegacyTeam(options: {
   guard: BackendRequestGuard;
   captureSource(teamName: string): CapturedLegacyStoppedSource;
   owners: LegacyStoppedSourceOwners;
+  observeFailure?: StoppedImportDiagnosticSink;
 }): Promise<StoppedTeamImportResult> {
   let effect = false;
+  const prepareObservation: StoppedImportPrepareObservation = {};
+  const observe = createStoppedImportDiagnostic('application', (observation) =>
+    options.observeFailure?.(observation)
+  );
+  let phase: StoppedImportDiagnosticPhase = 'request';
   try {
     const input = validateStoppedImportAction(options.request);
     let source: CapturedLegacyStoppedSource | undefined;
+    phase = 'source-capture';
     try {
       source = options.captureSource(input.teamName);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
     }
     // Stable identity excludes mutable file content. Lost ACK/reopen always recovers this same command.
-    const commandId = `stopped-import-${createHash('sha256')
-      .update(
-        JSON.stringify([source?.sourceOwnerId, source?.sourceId, options.contextId, input.teamName])
-      )
-      .digest('hex')}`;
+    phase = 'command';
+    const commandId = stoppedLegacyImportCommandId(source, options.contextId, input.teamName);
     const guard = options.guard;
+    phase = 'guard';
     assertBackendRequestGuard(guard);
+    phase = 'host-capture';
     const target = await options.feature.captureStoppedImport(options.contextId, guard);
+    phase = 'receipts';
     const entries = await target.client.list(commandId, options.contextId, guard);
     const same = entries.filter((entry) => entry.record.teamName === input.teamName);
     if (
       same.length > 1 ||
       (source && same.some((entry) => entry.source.sourceId !== source.sourceId))
-    )
+    ) {
+      observe(phase, undefined, 'not-dispatched', 'receipt-conflict');
       return { ok: false, reason: 'held', outcome: 'not-dispatched' };
+    }
+    phase = 'lookup';
     let receipt: Awaited<ReturnType<typeof target.client.lookup>> =
       same[0] ?? (await target.client.lookup(commandId, options.contextId, guard));
-    if (receipt && source && receipt.source.sourceId !== source.sourceId)
+    phase = 'receipt-source';
+    if (receipt && source && receipt.source.sourceId !== source.sourceId) {
+      observe(phase, undefined, 'not-dispatched', 'receipt-conflict');
       return { ok: false, reason: 'held', outcome: 'not-dispatched' };
+    }
     if (receipt?.phase === 'held' && input.action === 'retry') {
+      phase = 'retry';
       effect = true;
       receipt = await target.client.retry(
         receipt.commandId,
@@ -80,6 +99,7 @@ export async function importStoppedLegacyTeam(options: {
         guard
       );
     } else if (!receipt && input.action === 'prepare') {
+      phase = 'prepare';
       if (!source) throw new LegacyStoppedImportHold('source-unreadable');
       const live = { isCurrent: () => guard.isCurrent() && source.isCurrent() };
       const request = await prepareStoppedLegacyImport({
@@ -87,26 +107,48 @@ export async function importStoppedLegacyTeam(options: {
         owners: options.owners,
         target: target.authority,
         destinationTeamName: input.teamName,
+        observation: prepareObservation,
       });
+      phase = 'publish-guard';
       assertBackendRequestGuard(live);
       effect = true;
       try {
+        phase = 'publish';
         receipt = await target.client.publish(commandId, request, live);
       } catch {
+        phase = 'reconcile';
         receipt = await target.client.lookup(commandId, options.contextId, guard);
       }
     }
-    if (receipt?.phase !== 'published')
+    phase = 'receipt';
+    if (receipt?.phase !== 'published') {
+      observe(
+        phase,
+        undefined,
+        effect ? 'unknown' : 'not-dispatched',
+        receipt ? 'receipt-held' : 'receipt-absent'
+      );
       return {
         ok: false,
         reason: receipt ? 'held' : 'unknown',
         outcome: effect ? 'unknown' : 'not-dispatched',
       };
+    }
+    phase = 'published-source';
     if (source && !source.isCurrent()) throw new LegacyStoppedImportHold('source-changed');
+    phase = 'register';
     await target.registerPublished(receipt.record);
+    phase = 'final-guard';
     assertBackendRequestGuard(guard, 'unknown');
     return { ok: true, selection: hostTeamSelectionKey(receipt.record.binding.handleId) };
   } catch (error) {
+    observe(
+      phase,
+      error,
+      effect ? 'unknown' : 'not-dispatched',
+      undefined,
+      phase === 'prepare' ? prepareObservation : undefined
+    );
     return {
       ok: false,
       reason:

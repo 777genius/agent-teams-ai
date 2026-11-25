@@ -411,3 +411,47 @@ artifact layout through its narrow `attachments/*` exports. UI metadata excludes
 private paths, while canonical product metadata retains paths for existing
 archive/import support. D receives ordered references and resolves exact bytes
 through its private attachment port; storage alone is not native delivery.
+
+## Explicit original runtime for existing legacy Teams
+
+An existing raw legacy Team can retain its original runtime while a Host is
+configured. Ordinary stopped Launch first uses the detached import conversation.
+A known `native-custody-unverified` refusal can offer the visible **Use original
+runtime for this team** choice. That choice grants no import or native release
+proof. A member-settings relaunch draft explicitly selects its original runtime
+before import so its original member and saved-settings fingerprints remain valid.
+A live legacy relaunch first confirms **Stop and configure original runtime**,
+stops the captured original run once, then rereads stopped Team data and unchanged
+draft fingerprints before opening the existing Launch dialog.
+
+`RetainedLegacyLaunchCoordinator` binds an ephemeral opaque choice to the physical
+source, original service/data context, account, environment and configuration.
+Detached import publication and final original Launch admission use the same
+source queue, including direct service entry points. Private original installer,
+account, model and management ports supply dialog readiness and preparation;
+failed original reads clear readiness instead of consulting the selected Host.
+The capability is never stored in Team settings, roster data or launch history.
+
+Project changes require the visible **Use this project** action. `rebind` captures
+fresh original ports under the same source fence and projects the new working
+directory into the saved request without changing the archive. Owned roster and
+Launch operations retain the original compare-and-swap checks and exact Main
+write witnesses. Connection/authentication mutations remain outside this temporary
+Launch choice; its captured management port exposes the original read/cancel work.
+
+Open and rebind requests carry stable renderer intent IDs. A lost response retains
+the same transport and intent for explicit recovery. `closeIntent` can cancel an
+allocation whose scope ID was never received, while closing an old choice cannot
+close its replacement. Unknown candidate cleanup and unknown Team effects retain
+their Main reservation independently of the bounded cancellation-history cache.
+Context changes, dialog unmount and stale completions use the captured cleanup
+owner. They never switch to ambient transport or retry a native dispatch.
+
+The Electron `emulated-retained-original-ui` lane starts with an explicitly labeled
+TEST archive that has no native release receipt. It exercises the visible original
+choice, private readiness, one finite Launch/reply, original Main Stop and process
+absence. Main alone writes its lifecycle metadata. The fixture and validator do
+not qualify a historical donor frontend, real Claude/Codex execution, native session
+adoption, Windows release or multi-member migration. Unit and transport tests cover
+scope replacement, cancellation, source/account races and stale settings; actual
+Desktop acceptance requires a successful artifact from the current commit.

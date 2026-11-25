@@ -1,0 +1,40 @@
+{
+  "decision": "ACCEPT_PROSPECTIVE_PLAN57",
+  "plan": {
+    "sha256": "ff27f62f07aeb0de8e71ba9d19c683949ac9c369d3a49d56545eaa007b6a0095",
+    "bytes": 4054,
+    "path": "/workspace/scratch/20ba97c23d57/provisioning-mock-proposal/prospective-plan.md"
+  },
+  "sourceHead": "3be1fb3ec43d5682aa2ca77a6af62e6fa27b597b",
+  "originalEvidence": {
+    "runId": 43933487563,
+    "jobId": 133531813939,
+    "jsonSha256": "e7934b3414f6a2a01f77c3154b5eca1e1cdc1663dfc7644dad54c54d09b75c89",
+    "resultFiles": 541,
+    "failedFiles": 1,
+    "passedTests": 6222,
+    "failedTests": 4,
+    "explicitSkippedTests": 6,
+    "failure": "Every failed case rejects the absent named selector export in the complete teamSlice mock before reaching cancellation assertions.",
+    "caseNames": [
+      "synthetic provisioning cancellation UI ownership observes cancellation failure, exposes it and allows an explicit retry",
+      "synthetic provisioning cancellation UI ownership keeps a replacement run pending when the old cancellation rejects",
+      "synthetic provisioning cancellation UI ownership shows same-owner cleanup failure after cancelled progress removes the presentation",
+      "synthetic provisioning cancellation UI ownership preserves an expanded diagnostics view during cancellation and after failure"
+    ]
+  },
+  "sourceBindings": {
+    "test": "d3a363bcecb304583851fe7da2b625da5569e775",
+    "teamSlice": "df9dd8391bdd9fcd2edc05057fa18a8cbd787dad",
+    "realSelector": "aaa234335255c27ec212c3538d9e1e8167a7df32"
+  },
+  "causalReview": "The entire fixture contains no isAlive field, and no later test updates selectedTeamData or teamDataCacheByName. The real selector returns the selected/cached snapshot optional isAlive. Adding only selectTeamIsAliveForName: () => undefined represents those exact current unknown-liveness fixtures; it does not synthesize online/offline state or alter production Plan51 semantics.",
+  "acceptedCut": {
+    "onlyPath": "test/renderer/components/team/TeamProvisioningCancellation.test.ts",
+    "change": "One missing field in the existing complete vi.mock factory, optionally one explanatory adjacent comment.",
+    "preserve": "All four original bodies, fixtures, deferred promises, teardown, names, state, assertions and timing byte-identical; inverse removal restores original complete source.",
+    "noAdditionalTestFramework": true
+  },
+  "qualification": "Prospective source compatibility diagnosis only. Independent frozen one-file source R2 and original complete safe shard execution remain required. No actual postimage/test PASS claimed.",
+  "operations": "Read-only exact document/source/JSON inspection and hashes. No source afterimage, local project/compiler/test/provider/GUI execution, CI action/poll or remote mutation."
+}

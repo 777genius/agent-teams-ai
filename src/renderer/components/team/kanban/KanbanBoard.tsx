@@ -5,6 +5,7 @@ import { arrayMove } from '@dnd-kit/sortable';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useAppTranslation } from '@features/localization/renderer';
+import { isElectronMode } from '@renderer/api';
 import { Button } from '@renderer/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useResizableColumns } from '@renderer/hooks/useResizableColumns';
@@ -23,6 +24,7 @@ import {
 } from 'lucide-react';
 
 import { TaskTableView } from './table/TaskTableView';
+import { KanbanApprovedSettingsMenu } from './KanbanApprovedSettingsMenu';
 import { KANBAN_COLUMN_CONTROL_INSET_CLASS, KanbanColumn } from './KanbanColumn';
 import { KanbanFilterPopover } from './KanbanFilterPopover';
 import {
@@ -42,7 +44,12 @@ import type { KanbanViewMode } from './KanbanViewModeSwitch';
 import type { TaskGroupOption } from './teamTaskProjection';
 import type { DragEndEvent } from '@dnd-kit/core';
 import type { Session } from '@renderer/types/data';
-import type { KanbanColumnId, KanbanState, ResolvedTeamMember, TeamTask } from '@shared/types';
+import type {
+  KanbanColumnId,
+  KanbanState,
+  ResolvedTeamMember,
+  TeamTask,
+} from '@shared/types';
 
 const COLUMN_ACCENTS: Record<KanbanColumnId, { accentColor: string; icon: React.ReactNode }> = {
   todo: {
@@ -346,6 +353,11 @@ export const KanbanBoard = memo(function KanbanBoard({
   const [visibleTaskLimitsByColumn, setVisibleTaskLimitsByColumn] = useState<
     Partial<Record<KanbanColumnId, number>>
   >({});
+  const approvalSettingsAccessory = useMemo(
+    // Review-flow settings are saved through the desktop bridge only.
+    () => (isElectronMode() ? <KanbanApprovedSettingsMenu teamName={teamName} /> : null),
+    [teamName]
+  );
   const hasReviewers = kanbanState.reviewers.length > 0;
   const enableTaskSorting =
     viewMode === 'columns' && !!onColumnOrderChange && sort.field === 'manual';
@@ -741,6 +753,7 @@ export const KanbanBoard = memo(function KanbanBoard({
           count: columnTasks.length,
           icon: accent.icon,
           accentColor: accent.accentColor,
+          headerAccessory: column.id === 'approved' ? approvalSettingsAccessory : undefined,
           content: renderCards(column.id, columnTasks),
           showAddButton: columnSupportsAddButton(column.id, onAddTask),
           skeletonCards: renderableColumnTasks(column.id, columnTasks).map((task) => ({
@@ -754,6 +767,7 @@ export const KanbanBoard = memo(function KanbanBoard({
       visibleColumns,
       groupedOrdered,
       renderCards,
+      approvalSettingsAccessory,
       onAddTask,
       renderableColumnTasks,
       kanbanState,
@@ -849,6 +863,7 @@ export const KanbanBoard = memo(function KanbanBoard({
                     count={columnTasks.length}
                     icon={accent.icon}
                     accentColor={accent.accentColor}
+                    headerAccessory={column.id === 'approved' ? approvalSettingsAccessory : undefined}
                     bodyClassName="max-h-none overflow-visible"
                   >
                     {renderCards(column.id, columnTasks, true)}

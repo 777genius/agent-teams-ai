@@ -1,0 +1,1398 @@
+{
+  "kind": "Frozen publication inventory for actual isolated stage I local verification; no source authority",
+  "sourceHead": "88ada74cfc4598b1bff2ab3bc0f9d08177862dbf",
+  "sourceTree": "6ea25725dec09d0617c2bc438472d6b77f3354ec",
+  "orderedParents": [
+    "d556e23288c820b983a33808117f624cb2e93e39",
+    "4dc08dea7eeed5c286cf310e09a2ba26d84a9546"
+  ],
+  "documentationParent": "d556e23288c820b983a33808117f624cb2e93e39",
+  "recordedPlan29Prefix": {
+    "bytes": 1072934,
+    "blob": "f48ed094dc7ed844be870ec03cf28499b75e18a2",
+    "sha256": "e0fb71c44ee54279d0ddcda193e718e8b2639e076bcdcbb359669df6a3a92be2"
+  },
+  "appendRule": "Append evidence after the complete then-current Plan29; this recorded prefix is provenance, not permission to overwrite later appendices.",
+  "proposedRepositoryDirectory": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15",
+  "originalRawCommandRecords": 30,
+  "additionalOriginalProofs": 4,
+  "verbatimOriginalFiles": 34,
+  "verbatimOriginalBytes": 900591,
+  "derivedAuditFiles": 1,
+  "listedNewPayloadFiles": 35,
+  "listedNewPayloadBytes": 935801,
+  "files": [
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-helpers.log",
+      "originalWorkspaceRelativePath": "a02-adoption-local/I-helpers.log",
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/I-evidence-publication/raw/I-helpers.log",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-helpers.log",
+      "bytes": 12416,
+      "blob": "8fe1062b22269c9b8a3d0dfcb6ae571f0dfef95c",
+      "sha256": "79309dff5f44a99018c41fdddde4d31b57c5d0253d9f68b78c76f65cc4837445",
+      "classification": "original raw command output; actual exit joined by separate metadata, including empty logs"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-helpers-metadata.json",
+      "originalWorkspaceRelativePath": "a02-adoption-local/I-helpers-metadata.json",
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/I-evidence-publication/raw/I-helpers-metadata.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-helpers-metadata.json",
+      "bytes": 3266,
+      "blob": "6e1228b59becdbe05cd19ab39eb97431efbba7f5",
+      "sha256": "a9efdf58a8e3cfe2b9cb134bb2acc7d2a0f592897b599b652154aa4617d25ec9",
+      "classification": "original completed-command metadata; raw exit and protected postflight"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-helpers-preflight.json",
+      "originalWorkspaceRelativePath": "a02-adoption-local/I-helpers-preflight.json",
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/I-evidence-publication/raw/I-helpers-preflight.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-helpers-preflight.json",
+      "bytes": 74257,
+      "blob": "3012ee1c33e454c658f19f79c092c893cee3accd",
+      "sha256": "09ee222e745b854ef96e37415cd7d14685df1446ebf37f8c9858e65011acb6d5",
+      "classification": "original source/dependency/build/prior-proof preflight snapshot"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-scripts-types.log",
+      "originalWorkspaceRelativePath": "a02-adoption-local/I-scripts-types.log",
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/I-evidence-publication/raw/I-scripts-types.log",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-scripts-types.log",
+      "bytes": 0,
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "classification": "original raw command output; actual exit joined by separate metadata, including empty logs"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-scripts-types-metadata.json",
+      "originalWorkspaceRelativePath": "a02-adoption-local/I-scripts-types-metadata.json",
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/I-evidence-publication/raw/I-scripts-types-metadata.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-scripts-types-metadata.json",
+      "bytes": 2815,
+      "blob": "e94127e6327ab6b5d18355f6752c4d3b7c0718da",
+      "sha256": "4d7ea1389e8548097bd7f035a5a36fa9460fdbc2b25bf9fa8857bb598fc557eb",
+      "classification": "original completed-command metadata; raw exit and protected postflight"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-scripts-types-preflight.json",
+      "originalWorkspaceRelativePath": "a02-adoption-local/I-scripts-types-preflight.json",
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/I-evidence-publication/raw/I-scripts-types-preflight.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-scripts-types-preflight.json",
+      "bytes": 74563,
+      "blob": "71a3019758c8f5a91ca6fcbe483a969a38fb2ede",
+      "sha256": "29ffbb2e91b31140afb6445429ed922d5998a9d3caee22cf0b45edaa2d57e0ad",
+      "classification": "original source/dependency/build/prior-proof preflight snapshot"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-native-types.log",
+      "originalWorkspaceRelativePath": "a02-adoption-local/I-native-types.log",
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/I-evidence-publication/raw/I-native-types.log",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-native-types.log",
+      "bytes": 0,
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "classification": "original raw command output; actual exit joined by separate metadata, including empty logs"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-native-types-metadata.json",
+      "originalWorkspaceRelativePath": "a02-adoption-local/I-native-types-metadata.json",
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/I-evidence-publication/raw/I-native-types-metadata.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-native-types-metadata.json",
+      "bytes": 2826,
+      "blob": "fc825fc177e388e1b6ee3e5415100d283087b087",
+      "sha256": "707179e6862d02eae37305448cf5faf0ec28b86366ba728effb6076f36e8d634",
+      "classification": "original completed-command metadata; raw exit and protected postflight"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-native-types-preflight.json",
+      "originalWorkspaceRelativePath": "a02-adoption-local/I-native-types-preflight.json",
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/I-evidence-publication/raw/I-native-types-preflight.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-native-types-preflight.json",
+      "bytes": 75338,
+      "blob": "77457c002eddb0c2cca40511ac76ad8dd541ec1a",
+      "sha256": "fa1d97dc321bebae1d0279bce1ce93d164a27022815c22a3b10f8c2036868aa5",
+      "classification": "original source/dependency/build/prior-proof preflight snapshot"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-retained-host-types.log",
+      "originalWorkspaceRelativePath": "a02-adoption-local/I-retained-host-types.log",
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/I-evidence-publication/raw/I-retained-host-types.log",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-retained-host-types.log",
+      "bytes": 0,
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "classification": "original raw command output; actual exit joined by separate metadata, including empty logs"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-retained-host-types-metadata.json",
+      "originalWorkspaceRelativePath": "a02-adoption-local/I-retained-host-types-metadata.json",
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/I-evidence-publication/raw/I-retained-host-types-metadata.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-retained-host-types-metadata.json",
+      "bytes": 2847,
+      "blob": "5fb4209132edaa3cb5d11c9c88226fe8ca77538a",
+      "sha256": "dd2021f7c912bb1c27c5072ca7cec204bfaf0a7fca684390fa62637f588babe4",
+      "classification": "original completed-command metadata; raw exit and protected postflight"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-retained-host-types-preflight.json",
+      "originalWorkspaceRelativePath": "a02-adoption-local/I-retained-host-types-preflight.json",
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/I-evidence-publication/raw/I-retained-host-types-preflight.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-retained-host-types-preflight.json",
+      "bytes": 76122,
+      "blob": "2d1cf3899b4a29ba2eec8372f964c5485db8d16c",
+      "sha256": "e52bbb393e42035f140e7cba65ee8d3f0fccf10946a03c1073c1a3d9d222beb8",
+      "classification": "original source/dependency/build/prior-proof preflight snapshot"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-native-finite.log",
+      "originalWorkspaceRelativePath": "a02-adoption-local/I-native-finite.log",
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/I-evidence-publication/raw/I-native-finite.log",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-native-finite.log",
+      "bytes": 459,
+      "blob": "aac2dd883fdfb864e899237711339c171a2ab198",
+      "sha256": "3b4fcb5fcc017b6eda0b335eb5b6f36dfdb6e7b20ab48e597d7abe1d4c4d31f1",
+      "classification": "original raw command output; actual exit joined by separate metadata, including empty logs"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-native-finite-metadata.json",
+      "originalWorkspaceRelativePath": "a02-adoption-local/I-native-finite-metadata.json",
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/I-evidence-publication/raw/I-native-finite-metadata.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-native-finite-metadata.json",
+      "bytes": 2845,
+      "blob": "7adc406705d3837d7c4bc0282c1a251b3fc13aee",
+      "sha256": "1a8c86e65917f29ae23dedc3435fd9d96b7f3a990e434132e3df4f1c180a63fd",
+      "classification": "original completed-command metadata; raw exit and protected postflight"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-native-finite-preflight.json",
+      "originalWorkspaceRelativePath": "a02-adoption-local/I-native-finite-preflight.json",
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/I-evidence-publication/raw/I-native-finite-preflight.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-native-finite-preflight.json",
+      "bytes": 76903,
+      "blob": "ffd1ab857711e3100bf84bb8aaa617a10b9ecf7d",
+      "sha256": "b675fc40c80652366ec8085f99def999bc50e0169c15af20150d1bb23771fbd9",
+      "classification": "original source/dependency/build/prior-proof preflight snapshot"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-scoped-fast-lint.log",
+      "originalWorkspaceRelativePath": "a02-adoption-local/I-scoped-fast-lint.log",
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/I-evidence-publication/raw/I-scoped-fast-lint.log",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-scoped-fast-lint.log",
+      "bytes": 0,
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "classification": "original raw command output; actual exit joined by separate metadata, including empty logs"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-scoped-fast-lint-metadata.json",
+      "originalWorkspaceRelativePath": "a02-adoption-local/I-scoped-fast-lint-metadata.json",
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/I-evidence-publication/raw/I-scoped-fast-lint-metadata.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-scoped-fast-lint-metadata.json",
+      "bytes": 3697,
+      "blob": "fa442b5978ffe73d723bbb0ca23ddd4f4371dae8",
+      "sha256": "1779505a124c4bd53fcec71cd31d4d9ba0574c54ee811ce81fc6fcc70f762b5d",
+      "classification": "original completed-command metadata; raw exit and protected postflight"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-scoped-fast-lint-preflight.json",
+      "originalWorkspaceRelativePath": "a02-adoption-local/I-scoped-fast-lint-preflight.json",
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/I-evidence-publication/raw/I-scoped-fast-lint-preflight.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-scoped-fast-lint-preflight.json",
+      "bytes": 78526,
+      "blob": "abd360ad92126aa9a0a8da937195d54f999d6c11",
+      "sha256": "189a7e3f308b7a64dde4f89f00ef713179d5ceb41cbe8ed81011f6b882d7b986",
+      "classification": "original source/dependency/build/prior-proof preflight snapshot"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-size.log",
+      "originalWorkspaceRelativePath": "a02-adoption-local/I-size.log",
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/I-evidence-publication/raw/I-size.log",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-size.log",
+      "bytes": 202,
+      "blob": "edaab622b182eaa8a0f724a28d1a80bc5d775889",
+      "sha256": "97aba38b21a1a5d9722a56b57664e431fd2d6a9df9dbcadd0a43d0cc4a47657b",
+      "classification": "original raw command output; actual exit joined by separate metadata, including empty logs"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-size-metadata.json",
+      "originalWorkspaceRelativePath": "a02-adoption-local/I-size-metadata.json",
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/I-evidence-publication/raw/I-size-metadata.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-size-metadata.json",
+      "bytes": 2747,
+      "blob": "d1a2f86c03cd26fa5e70bd4ba18940d9fea65843",
+      "sha256": "dd494fd78d10c561ebf62035d4a100d0513e30d1db0e9e3803df8bb1e6883df9",
+      "classification": "original completed-command metadata; raw exit and protected postflight"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-size-preflight.json",
+      "originalWorkspaceRelativePath": "a02-adoption-local/I-size-preflight.json",
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/I-evidence-publication/raw/I-size-preflight.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-size-preflight.json",
+      "bytes": 78346,
+      "blob": "bfd16739f1e7402e49ed4e2fce52e5f67a0b5c70",
+      "sha256": "5af0ede296f6c2169f519dea3c1bf627a346595d94522a4824af88a0068a2299",
+      "classification": "original source/dependency/build/prior-proof preflight snapshot"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-architecture.log",
+      "originalWorkspaceRelativePath": "a02-adoption-local/I-architecture.log",
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/I-evidence-publication/raw/I-architecture.log",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-architecture.log",
+      "bytes": 184,
+      "blob": "8cb9d8cb2385eb2e1c022c79e0af379ff3a1c601",
+      "sha256": "0f72f211f9285332305dc9d63650e47a7d741f2216f712df043bdccbc02f473d",
+      "classification": "original raw command output; actual exit joined by separate metadata, including empty logs"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-architecture-metadata.json",
+      "originalWorkspaceRelativePath": "a02-adoption-local/I-architecture-metadata.json",
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/I-evidence-publication/raw/I-architecture-metadata.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-architecture-metadata.json",
+      "bytes": 2769,
+      "blob": "39b4fc8283efa238cd25232c17c9d4246300630e",
+      "sha256": "49d0745ed632d1176257326d770067dbd187f2aed6832490fc97b699d2ecb7bb",
+      "classification": "original completed-command metadata; raw exit and protected postflight"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-architecture-preflight.json",
+      "originalWorkspaceRelativePath": "a02-adoption-local/I-architecture-preflight.json",
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/I-evidence-publication/raw/I-architecture-preflight.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-architecture-preflight.json",
+      "bytes": 79109,
+      "blob": "6fee4c5d65b99b7624d7bb407ec6af2c1d60e39d",
+      "sha256": "50fe85186dd590a4abbd04383aa4a0222bdc6554ae218520247aceba944d6f6c",
+      "classification": "original source/dependency/build/prior-proof preflight snapshot"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-workflow-yaml.log",
+      "originalWorkspaceRelativePath": "a02-adoption-local/I-workflow-yaml.log",
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/I-evidence-publication/raw/I-workflow-yaml.log",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-workflow-yaml.log",
+      "bytes": 216,
+      "blob": "df8cb1b3a75b2371ad4a3bb20f5aa536d18e98f3",
+      "sha256": "3c0206cd76f8103b7a0ae68899ddde2e1bdc7e52e801e48540f69fdf6917ab5a",
+      "classification": "original raw command output; actual exit joined by separate metadata, including empty logs"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-workflow-yaml-metadata.json",
+      "originalWorkspaceRelativePath": "a02-adoption-local/I-workflow-yaml-metadata.json",
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/I-evidence-publication/raw/I-workflow-yaml-metadata.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-workflow-yaml-metadata.json",
+      "bytes": 4269,
+      "blob": "6da5b262b6a821b716815cbe50db636866a2de39",
+      "sha256": "84b855531edd985a24fb577d1d93c6d2ec266e4608f1fe86d273553f61c31c04",
+      "classification": "original completed-command metadata; raw exit and protected postflight"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-workflow-yaml-preflight.json",
+      "originalWorkspaceRelativePath": "a02-adoption-local/I-workflow-yaml-preflight.json",
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/I-evidence-publication/raw/I-workflow-yaml-preflight.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-workflow-yaml-preflight.json",
+      "bytes": 81374,
+      "blob": "2442d3ea105ef626364e56a1096dab2eb551e178",
+      "sha256": "471c3109ccf5b5a3d34ed33487de9c95382c3c0b10c9829cf1ad68a6029e691c",
+      "classification": "original source/dependency/build/prior-proof preflight snapshot"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-diff.log",
+      "originalWorkspaceRelativePath": "a02-adoption-local/I-diff.log",
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/I-evidence-publication/raw/I-diff.log",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-diff.log",
+      "bytes": 0,
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "classification": "original raw command output; actual exit joined by separate metadata, including empty logs"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-diff-metadata.json",
+      "originalWorkspaceRelativePath": "a02-adoption-local/I-diff-metadata.json",
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/I-evidence-publication/raw/I-diff-metadata.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-diff-metadata.json",
+      "bytes": 3964,
+      "blob": "d5533a11d04e7639947c9fb67d60d2ba7319754f",
+      "sha256": "ccb973bd26953deb5c9db4875401b061b8ce4eb32d9bd1be471563b259b429d9",
+      "classification": "original completed-command metadata; raw exit and protected postflight"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-diff-preflight.json",
+      "originalWorkspaceRelativePath": "a02-adoption-local/I-diff-preflight.json",
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/I-evidence-publication/raw/I-diff-preflight.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-diff-preflight.json",
+      "bytes": 81838,
+      "blob": "84bd0695761065253ef378b458671c59953ce9f3",
+      "sha256": "c08b47172c8b0f6bc8301a768e56efb945e972f2724b7400747f21e4bf20820b",
+      "classification": "original source/dependency/build/prior-proof preflight snapshot"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/stage-bindings.json",
+      "originalWorkspaceRelativePath": "a02-adoption-local/stage-bindings.json",
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/I-evidence-publication/raw/stage-bindings.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/stage-bindings.json",
+      "bytes": 9197,
+      "blob": "45ba72f6b7bba3dbb48f8a3f350ef269d93202cd",
+      "sha256": "4e86da127c5c11d528cf0ee94c7b9e5e0ab6c06118e4d1830ab4e8a603c3f851",
+      "classification": "original live binding or published-source/documentation review proof"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/published-source-readback.json",
+      "originalWorkspaceRelativePath": "a02-adoption-local/published-source-readback.json",
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/I-evidence-publication/raw/published-source-readback.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/published-source-readback.json",
+      "bytes": 19867,
+      "blob": "d268335336d2f999309f1924cde2e95e0c504b08",
+      "sha256": "62b1d48e22b26c15377cd7d630a5b54656847e419527897be9c705d9b7a143dd",
+      "classification": "original live binding or published-source/documentation review proof"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/I-independent-published-source-review.json",
+      "originalWorkspaceRelativePath": "a02-adoption-local/I-independent-published-source-review.json",
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/I-evidence-publication/raw/I-independent-published-source-review.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/I-independent-published-source-review.json",
+      "bytes": 3560,
+      "blob": "585e190acd07c21cc29c595fcd292788194d259c",
+      "sha256": "565af81819f40c9851e807ecd09718d2749c5ae1664a5e2f48b807ebcc900801",
+      "classification": "original live binding or published-source/documentation review proof"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/4dc-adoption-publication/late-332-v2/published-readback.json",
+      "originalWorkspaceRelativePath": "4dc-adoption-publication/late-332-v2/published-readback.json",
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/I-evidence-publication/raw/docs-published-readback.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/raw/docs-published-readback.json",
+      "bytes": 46069,
+      "blob": "aa68892e9b9befb66111b09f3d9e0dc2aa770ae8",
+      "sha256": "653dad90f4b788002890ca14ae356e2d18de15dacd094944f161f9d8e6abfae3",
+      "classification": "original live binding or published-source/documentation review proof"
+    },
+    {
+      "retainedLocalPath": "/workspace/scratch/82d3f9ba6b85/I-evidence-publication/independent-actual-review.json",
+      "proposedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/isolated-i-4dc-adoption-2026-11-15/independent-actual-review.json",
+      "bytes": 35210,
+      "blob": "98292da0e4973d94dab55c40cb2b6be047d78708",
+      "sha256": "b5a054ee53fd74b8cbb0ef3d46cd765dc4ad96232a27344cd836cb1432e30e69",
+      "classification": "new derived independent ten-command actual audit; no project execution by reviewer"
+    }
+  ],
+  "alreadyDurableReuses": [
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/execution-plan.md",
+      "originalWorkspaceRelativePath": "a02-adoption-local/execution-plan.md",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/4dc-prospective-adoption-2026-11-15/execution-plan.md",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 11350,
+      "blob": "9b0f070ce3b45adb5305b3e6f128613fec5f9464",
+      "sha256": "72b0f371581a472b4f613ece997606028740c217c47abefd5b7ad9d8915308fa",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/run_check.py",
+      "originalWorkspaceRelativePath": "a02-adoption-local/run_check.py",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/4dc-prospective-adoption-2026-11-15/run_check.py.txt",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 26293,
+      "blob": "c3c983293c1ad0f2496b07b9d2262af71adb60c9",
+      "sha256": "acdea416258ae569c7d0891115697ffae201d799537d229fb775dc71c463aeb1",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/validation-manifest.json",
+      "originalWorkspaceRelativePath": "a02-adoption-local/validation-manifest.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/4dc-prospective-adoption-2026-11-15/validation-manifest.json",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 114714,
+      "blob": "c12e7f2c56649cdd8d2d21b08884bb876fd3a6d9",
+      "sha256": "bbc34c4aea78ce3cec706a8be9ffeb47d39e5fa76e9b5eaea834f9a69e0277e6",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/a02-reconciliation-r1/canonical-R1.md",
+      "originalWorkspaceRelativePath": "a02-reconciliation-r1/canonical-R1.md",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/4dc-prospective-adoption-2026-11-15/canonical-R1.md",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 22527,
+      "blob": "d62f158878d992d43b71bb0071f7a4561d149c9c",
+      "sha256": "5baad28fabf56507fce52de64757e8ad278ec02b6657d072d803b408e296837e",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/E-journal-red-metadata.json",
+      "originalWorkspaceRelativePath": "reconciled-c28-local/E-journal-red-metadata.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/E-journal-red-metadata.json",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 3193,
+      "blob": "ac3e082818d1447f1521ed973a442133f9bee074",
+      "sha256": "cbba2a27b06a51149fd24d9dc669161b986fc042ae3c67fd16a0549e44ce2274",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/E-journal-red-preflight.json",
+      "originalWorkspaceRelativePath": "reconciled-c28-local/E-journal-red-preflight.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/E-journal-red-preflight.json",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 20364,
+      "blob": "6ab9710ef5dc4e525ea4d4b10b02d9679f64e55d",
+      "sha256": "19995b9c9d52407ad065847828dd326668e95009561cb761872ad0e1d41db8ac",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/E-journal-red.log",
+      "originalWorkspaceRelativePath": "reconciled-c28-local/E-journal-red.log",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/E-journal-red.log",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 14645,
+      "blob": "cb2c77b8154b051a0009cef4ddefb047561b4584",
+      "sha256": "24067417b0406975b2f8698f166c64f54e7aa1b8287c9fdb521c957f1fadb51e",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/E-runtime-red-metadata.json",
+      "originalWorkspaceRelativePath": "reconciled-c28-local/E-runtime-red-metadata.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/E-runtime-red-metadata.json",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 2735,
+      "blob": "c8c6017ac2b2bb686d9467cc8da9310ffe060ec7",
+      "sha256": "47e45ea23d069b161622d66c230c01a59249af9c33cc33120fe3c7f532afb144",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/E-runtime-red-preflight.json",
+      "originalWorkspaceRelativePath": "reconciled-c28-local/E-runtime-red-preflight.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/E-runtime-red-preflight.json",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 19138,
+      "blob": "2a83b6afbaed5db37be39b3907bbf0b16332799c",
+      "sha256": "5e6cff2d2f15699dc4549787932cbb6a4a215ef4def8d0c204dbd49ddf139a8d",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/E-runtime-red.log",
+      "originalWorkspaceRelativePath": "reconciled-c28-local/E-runtime-red.log",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/E-runtime-red.log",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 9993,
+      "blob": "f755173c9522c79891d6ede7a112f3f0fb1b8d93",
+      "sha256": "7df6a5d364a492c63536f7e3c93687eb313f9c01a3b1c88aa5e25832160c5670",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/F-runtime-green-metadata.json",
+      "originalWorkspaceRelativePath": "reconciled-c28-local/F-runtime-green-metadata.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/F-runtime-green-metadata.json",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 2690,
+      "blob": "88bd38dad85a128264533c7443f5cd7727d374d5",
+      "sha256": "6f5e47487f087f2f3e40c8e17d2617bcb047083b3dfb43bb310004db3866630b",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/F-runtime-green-preflight.json",
+      "originalWorkspaceRelativePath": "reconciled-c28-local/F-runtime-green-preflight.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/F-runtime-green-preflight.json",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 20742,
+      "blob": "dfa14ffac7135ece54f119d15018d6e69312fada",
+      "sha256": "561a48e79ef45738d7bd92a09848f321559ad09b94158aff435c16550f50cf97",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/F-runtime-green.log",
+      "originalWorkspaceRelativePath": "reconciled-c28-local/F-runtime-green.log",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/F-runtime-green.log",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 5547,
+      "blob": "fbcbc4c2422eedbe5dabeec75715e196faeb0ec2",
+      "sha256": "d8364a1fec852e34c9d9f00d6d88ef8a1b497640333ce1f4ddec29554185ccac",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/G-journal-green-metadata.json",
+      "originalWorkspaceRelativePath": "reconciled-c28-local/G-journal-green-metadata.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/G-journal-green-metadata.json",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 3146,
+      "blob": "31c2d1b91a293406d4fc238dd4559ae2646ccb5a",
+      "sha256": "a9744f9906caf3298d999dddd0d3c222d04cef4a979710a94601145e9abd26c7",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/G-journal-green-preflight.json",
+      "originalWorkspaceRelativePath": "reconciled-c28-local/G-journal-green-preflight.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/G-journal-green-preflight.json",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 22543,
+      "blob": "0d1bb56b1c9414c56a72f1169a58700a106b0fcb",
+      "sha256": "e62798371a5299ee7e3cabeb18721f4d1e20604583456e33ba35d3b471f00ae2",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/G-journal-green.log",
+      "originalWorkspaceRelativePath": "reconciled-c28-local/G-journal-green.log",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/G-journal-green.log",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 12416,
+      "blob": "2c8fa6ea4ed918ce9c5172c6f58e2eda67dde4c3",
+      "sha256": "eef1f40546520534fc46a878b70762e6280c3c943df44b22ede84425ce7e5841",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-architecture-metadata.json",
+      "originalWorkspaceRelativePath": "reconciled-c28-local/H-architecture-metadata.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/H-architecture-metadata.json",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 2643,
+      "blob": "fd037edb2ec2d7cd4d2e210fb05ef801467d4683",
+      "sha256": "c2ae8dd4b190ec273c3cf5aa6524948ad7111e1ce40084612bc8c41e70b3a43b",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-architecture-preflight.json",
+      "originalWorkspaceRelativePath": "reconciled-c28-local/H-architecture-preflight.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/H-architecture-preflight.json",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 26147,
+      "blob": "036a6cedd431fb31a50951c946c7f214024dd218",
+      "sha256": "5d735674552a7365d6d140d98ad0ab63473cdcb3d387542ec27934926428bc6e",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-architecture.log",
+      "originalWorkspaceRelativePath": "reconciled-c28-local/H-architecture.log",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/H-architecture.log",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 184,
+      "blob": "8cb9d8cb2385eb2e1c022c79e0af379ff3a1c601",
+      "sha256": "0f72f211f9285332305dc9d63650e47a7d741f2216f712df043bdccbc02f473d",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-diff-metadata.json",
+      "originalWorkspaceRelativePath": "reconciled-c28-local/H-diff-metadata.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/H-diff-metadata.json",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 3122,
+      "blob": "6e95e108ce4986838913e983f5b7c5c1f75d727a",
+      "sha256": "909c9982bf7f3607b06f2fcda9ba604ea3dc227ed9b38ffaf47552b7031c8333",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-diff-preflight.json",
+      "originalWorkspaceRelativePath": "reconciled-c28-local/H-diff-preflight.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/H-diff-preflight.json",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 27399,
+      "blob": "7fc116870ca16d862839d27fd48189d048b10702",
+      "sha256": "991ecded879fba5f950958ea71904dd2b13e26862105d699321774cf159c7e32",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-diff.log",
+      "originalWorkspaceRelativePath": "reconciled-c28-local/H-diff.log",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/H-diff.log",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 0,
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-host-test-types-metadata.json",
+      "originalWorkspaceRelativePath": "reconciled-c28-local/H-host-test-types-metadata.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/H-host-test-types-metadata.json",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 2699,
+      "blob": "30997970bc716a6962ade85b21369b45cb2f67a8",
+      "sha256": "69e966a51ad48ed5fde3b365235ff137c61df279ee425750fe792395bd029ff0",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-host-test-types-preflight.json",
+      "originalWorkspaceRelativePath": "reconciled-c28-local/H-host-test-types-preflight.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/H-host-test-types-preflight.json",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 23128,
+      "blob": "7122919b550c96d9c639fda6c19343100966bcde",
+      "sha256": "1a42a061e611d77b1cf08a732b307c0246190be508833f2cf5a03b6c5e971262",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-host-test-types.log",
+      "originalWorkspaceRelativePath": "reconciled-c28-local/H-host-test-types.log",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/H-host-test-types.log",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 0,
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-independent-actual-static-review.json",
+      "originalWorkspaceRelativePath": "reconciled-c28-local/H-independent-actual-static-review.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/H-independent-actual-static-review.json",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 8951,
+      "blob": "0009a7ff3ae1ae78b168c0b5d675bc954b4dc578",
+      "sha256": "9082c4a94d067e4adc2f5f65b460214fb74222ea7bfb9d190df39c572924bc36",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-scoped-fast-lint-metadata.json",
+      "originalWorkspaceRelativePath": "reconciled-c28-local/H-scoped-fast-lint-metadata.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/H-scoped-fast-lint-metadata.json",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 3115,
+      "blob": "185ef063f2d715a92e9ec841add4dd547f40814b",
+      "sha256": "18df9491562ebd822fbff88dbe0df191e4189b950cb47200e6513966796d8818",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-scoped-fast-lint-preflight.json",
+      "originalWorkspaceRelativePath": "reconciled-c28-local/H-scoped-fast-lint-preflight.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/H-scoped-fast-lint-preflight.json",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 25095,
+      "blob": "6bcd73b466264a0915ab48bf7cabce571bb5c28a",
+      "sha256": "226c2188ac6eda09788c8f36e61dfcf8fae9be5c252ffdc6356d0f0806a96ab7",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-scoped-fast-lint.log",
+      "originalWorkspaceRelativePath": "reconciled-c28-local/H-scoped-fast-lint.log",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/H-scoped-fast-lint.log",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 0,
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-scripts-types-metadata.json",
+      "originalWorkspaceRelativePath": "reconciled-c28-local/H-scripts-types-metadata.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/H-scripts-types-metadata.json",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 2691,
+      "blob": "907793bc9d93d77e396acfa30e2d60bec5a42583",
+      "sha256": "5e07da3045754d1fc843e736870df9fa2e32c21a1db51a3e49634e9bcfdb6466",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-scripts-types-preflight.json",
+      "originalWorkspaceRelativePath": "reconciled-c28-local/H-scripts-types-preflight.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/H-scripts-types-preflight.json",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 23898,
+      "blob": "c368c42f03bafa78d067bc4fddb09d7f86c4d5a7",
+      "sha256": "b1115d15d7463f5dc859e9a596dee1fadf3d341f9aaec58ebfd573264a4ed1ab",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-scripts-types.log",
+      "originalWorkspaceRelativePath": "reconciled-c28-local/H-scripts-types.log",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/H-scripts-types.log",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 0,
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-size-metadata.json",
+      "originalWorkspaceRelativePath": "reconciled-c28-local/H-size-metadata.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/H-size-metadata.json",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 2619,
+      "blob": "6ba1f16ea58d4d00611e815008929b7fae89877a",
+      "sha256": "12ca53b2ed180e028431456033aedd7a24a266881493836d94861d256851240c",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-size-preflight.json",
+      "originalWorkspaceRelativePath": "reconciled-c28-local/H-size-preflight.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/H-size-preflight.json",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 25378,
+      "blob": "e091f8fcc4e764acd1f762987f81f89a251cc35a",
+      "sha256": "15346f136a55f72264f693f3ac59875c63f31e64ce535b3585cf348c983493e0",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/H-size.log",
+      "originalWorkspaceRelativePath": "reconciled-c28-local/H-size.log",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/H-size.log",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 202,
+      "blob": "9e532b2a599bb5da3a6ea6de65a3e6a8db6c3b6b",
+      "sha256": "1eb83c975f69534c70814629b4eb6d3124c0367a12b2463dd9716b6741d1a167",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/actual-journal-green-review.json",
+      "originalWorkspaceRelativePath": "reconciled-c28-local/actual-journal-green-review.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/actual-journal-green-review.json",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 1213,
+      "blob": "101a6562d7da736782a6b968c079185138b1c4c1",
+      "sha256": "cb52f9cd206a1cca9fd5d623d123fb6ad24ba49c3ff859e0f16b8c50f67fa5df",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/actual-journal-review.json",
+      "originalWorkspaceRelativePath": "reconciled-c28-local/actual-journal-review.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/actual-journal-review.json",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 1202,
+      "blob": "aff289bb42ccf91df14bd18882be146749ba6247",
+      "sha256": "bf711146bacd90d33b2453e70a43cc78f9003450bd8ae70487b45032f0a0e6bc",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/actual-runtime-green-review.json",
+      "originalWorkspaceRelativePath": "reconciled-c28-local/actual-runtime-green-review.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/actual-runtime-green-review.json",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 1203,
+      "blob": "fe4d879d4ee2cce0288ae8438508b5f232eb5d9f",
+      "sha256": "5919cbe1968bb9e46611bd0d88c1abaa8d20f08335b0c311d755ede4eef5f133",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/actual-runtime-review.json",
+      "originalWorkspaceRelativePath": "reconciled-c28-local/actual-runtime-review.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/actual-runtime-review.json",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 1250,
+      "blob": "7076e70c0b5852896dd9156ad3c6ab9c2de21e79",
+      "sha256": "e47aaf69703306d4b2c9a24a7e8b5847d63929fad53b9a546e0884d857acfd70",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/stage-bindings.json",
+      "originalWorkspaceRelativePath": "reconciled-c28-local/stage-bindings.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/stage-bindings.json",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 2639,
+      "blob": "93ec34298e25221ace11769db92dc5ed8d6e35d7",
+      "sha256": "d60a3d3abb3a1a0b62860f9e9410fa38079956b62c3c3e5318c7c5c882f7484b",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-source-local/D-host-build-metadata.json",
+      "originalWorkspaceRelativePath": "reconciled-source-local/D-host-build-metadata.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/bcd-reconciliation-2026-11-15/raw/D-host-build-metadata.json",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 1613,
+      "blob": "46fcbd461387e4ecc280845f6610c53c3ad2790a",
+      "sha256": "85ecadb70ae10c23e84e994324bd9efe42f9f374c6a9261c59a98ba76c029f4a",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-source-local/D-host-build-outputs-after.json",
+      "originalWorkspaceRelativePath": "reconciled-source-local/D-host-build-outputs-after.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/bcd-reconciliation-2026-11-15/raw/build-outputs-retained.json",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 280944,
+      "blob": "897c958cbb8e80120c22670e44614931f6436ba2",
+      "sha256": "babd0e295fbb1c79a3710f808bf6418f1b9e249f29085ee2d7a604ce72721dc8",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-source-local/D-host-build-preflight.json",
+      "originalWorkspaceRelativePath": "reconciled-source-local/D-host-build-preflight.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/bcd-reconciliation-2026-11-15/raw/D-host-build-preflight.json",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 15369,
+      "blob": "75c6e1773a58a426c99f45251081f2edb89aaf72",
+      "sha256": "0ddbc0b6df3265266c5da10e329ce35c01d233c42fba1d0297ce892bf3aebde8",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-source-local/D-host-build.log",
+      "originalWorkspaceRelativePath": "reconciled-source-local/D-host-build.log",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/bcd-reconciliation-2026-11-15/raw/D-host-build.log",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 0,
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-source-local/D-ledger-build-metadata.json",
+      "originalWorkspaceRelativePath": "reconciled-source-local/D-ledger-build-metadata.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/bcd-reconciliation-2026-11-15/raw/D-ledger-build-metadata.json",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 1620,
+      "blob": "35330f31c2c9a4d91d275270f4e9de5016870041",
+      "sha256": "8f30dd274ba8df816b01850217dca18cbe62a66e4227e95cf98cf92c85c3f2ba",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-source-local/D-ledger-build-preflight.json",
+      "originalWorkspaceRelativePath": "reconciled-source-local/D-ledger-build-preflight.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/bcd-reconciliation-2026-11-15/raw/D-ledger-build-preflight.json",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 15373,
+      "blob": "c70be07ee32c4806b4c38ca2405fc2f7c3c2ce12",
+      "sha256": "c82945bf80708f4548af41de585693dd4380fcbe3f21a05f5f3b3963fa05c5a1",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/reconciled-source-local/D-ledger-build.log",
+      "originalWorkspaceRelativePath": "reconciled-source-local/D-ledger-build.log",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/bcd-reconciliation-2026-11-15/raw/D-ledger-build.log",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 0,
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    },
+    {
+      "originalLocalPath": "/workspace/scratch/82d3f9ba6b85/source-deadline-handoff-r1/host-source-closure.json",
+      "originalWorkspaceRelativePath": "source-deadline-handoff-r1/host-source-closure.json",
+      "existingRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/bcd-reconciliation-2026-11-15/raw/host-source-closure.json",
+      "verifiedAtHead": "d556e23288c820b983a33808117f624cb2e93e39",
+      "mode": "100644",
+      "bytes": 144977,
+      "blob": "92fe358082aa8c5892c084798b2bdb8b5bdb106f",
+      "sha256": "288b4a26f4e81dc3d65bcaaab061b09af4800efafe575cb1e29e798f33234a10",
+      "disposition": "reuse exact already-published evidence; no new copy"
+    }
+  ],
+  "alreadyDurableReuseCount": 48,
+  "commands": [
+    {
+      "name": "I-helpers",
+      "sourceHead": "88ada74cfc4598b1bff2ab3bc0f9d08177862dbf",
+      "sourceTree": "6ea25725dec09d0617c2bc438472d6b77f3354ec",
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "--test",
+        "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "scripts/legacy-agent-host/test-child-process-trace.test.ts",
+        "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+        "scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts",
+        "scripts/legacy-agent-host/desktop-resume-records.test.ts",
+        "scripts/legacy-agent-host/desktop-captured-app-exit.test.ts",
+        "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts"
+      ],
+      "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+      "startedAtUTC": "2026-11-15T22:16:46.265588+00:00",
+      "finishedAtUTC": "2026-11-15T22:16:52.925442+00:00",
+      "elapsedSeconds": 6.659833640005672,
+      "exitCode": 0,
+      "postflightExact": true,
+      "log": {
+        "bytes": 12416,
+        "blob": "8fe1062b22269c9b8a3d0dfcb6ae571f0dfef95c",
+        "sha256": "79309dff5f44a99018c41fdddde4d31b57c5d0253d9f68b78c76f65cc4837445"
+      },
+      "metadata": {
+        "bytes": 3266,
+        "blob": "6e1228b59becdbe05cd19ab39eb97431efbba7f5",
+        "sha256": "a9efdf58a8e3cfe2b9cb134bb2acc7d2a0f592897b599b652154aa4617d25ec9"
+      },
+      "preflight": {
+        "bytes": 74257,
+        "blob": "3012ee1c33e454c658f19f79c092c893cee3accd",
+        "sha256": "09ee222e745b854ef96e37415cd7d14685df1446ebf37f8c9858e65011acb6d5"
+      },
+      "proofSnapshotCount": 36,
+      "observed": {
+        "tests": 115,
+        "pass": 115,
+        "fail": 0,
+        "skip": 0,
+        "cancelled": 0,
+        "todo": 0,
+        "allOriginal115CaseNamesAndOrderPreserved": true
+      }
+    },
+    {
+      "name": "I-scripts-types",
+      "sourceHead": "88ada74cfc4598b1bff2ab3bc0f9d08177862dbf",
+      "sourceTree": "6ea25725dec09d0617c2bc438472d6b77f3354ec",
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "node_modules/@typescript/native/bin/tsc",
+        "--project",
+        "tsconfig.legacy-agent-host-scripts.json"
+      ],
+      "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+      "startedAtUTC": "2026-11-15T22:20:36.169677+00:00",
+      "finishedAtUTC": "2026-11-15T22:20:37.349624+00:00",
+      "elapsedSeconds": 1.17992967099417,
+      "exitCode": 0,
+      "postflightExact": true,
+      "log": {
+        "bytes": 0,
+        "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "metadata": {
+        "bytes": 2815,
+        "blob": "e94127e6327ab6b5d18355f6752c4d3b7c0718da",
+        "sha256": "4d7ea1389e8548097bd7f035a5a36fa9460fdbc2b25bf9fa8857bb598fc557eb"
+      },
+      "preflight": {
+        "bytes": 74563,
+        "blob": "71a3019758c8f5a91ca6fcbe483a969a38fb2ede",
+        "sha256": "29ffbb2e91b31140afb6445429ed922d5998a9d3caee22cf0b45edaa2d57e0ad"
+      },
+      "proofSnapshotCount": 39,
+      "observed": {
+        "emptyOutput": true,
+        "qualifiedByActualExitAndPostflight": true
+      }
+    },
+    {
+      "name": "I-native-types",
+      "sourceHead": "88ada74cfc4598b1bff2ab3bc0f9d08177862dbf",
+      "sourceTree": "6ea25725dec09d0617c2bc438472d6b77f3354ec",
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "node_modules/@typescript/native/bin/tsc",
+        "--noEmit",
+        "-p",
+        "tools/owned-process-broker/tsconfig.json"
+      ],
+      "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+      "startedAtUTC": "2026-11-15T22:20:38.990236+00:00",
+      "finishedAtUTC": "2026-11-15T22:20:39.387063+00:00",
+      "elapsedSeconds": 0.3968054740107618,
+      "exitCode": 0,
+      "postflightExact": true,
+      "log": {
+        "bytes": 0,
+        "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "metadata": {
+        "bytes": 2826,
+        "blob": "fc825fc177e388e1b6ee3e5415100d283087b087",
+        "sha256": "707179e6862d02eae37305448cf5faf0ec28b86366ba728effb6076f36e8d634"
+      },
+      "preflight": {
+        "bytes": 75338,
+        "blob": "77457c002eddb0c2cca40511ac76ad8dd541ec1a",
+        "sha256": "fa1d97dc321bebae1d0279bce1ce93d164a27022815c22a3b10f8c2036868aa5"
+      },
+      "proofSnapshotCount": 42,
+      "observed": {
+        "emptyOutput": true,
+        "qualifiedByActualExitAndPostflight": true
+      }
+    },
+    {
+      "name": "I-retained-host-types",
+      "sourceHead": "88ada74cfc4598b1bff2ab3bc0f9d08177862dbf",
+      "sourceTree": "6ea25725dec09d0617c2bc438472d6b77f3354ec",
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "node_modules/@typescript/native/bin/tsc",
+        "--noEmit",
+        "-p",
+        "tools/owned-process-broker/tsconfig.retained-host.json"
+      ],
+      "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+      "startedAtUTC": "2026-11-15T22:20:40.861973+00:00",
+      "finishedAtUTC": "2026-11-15T22:20:41.732656+00:00",
+      "elapsedSeconds": 0.8706565469910856,
+      "exitCode": 0,
+      "postflightExact": true,
+      "log": {
+        "bytes": 0,
+        "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "metadata": {
+        "bytes": 2847,
+        "blob": "5fb4209132edaa3cb5d11c9c88226fe8ca77538a",
+        "sha256": "dd2021f7c912bb1c27c5072ca7cec204bfaf0a7fca684390fa62637f588babe4"
+      },
+      "preflight": {
+        "bytes": 76122,
+        "blob": "2d1cf3899b4a29ba2eec8372f964c5485db8d16c",
+        "sha256": "e52bbb393e42035f140e7cba65ee8d3f0fccf10946a03c1073c1a3d9d222beb8"
+      },
+      "proofSnapshotCount": 45,
+      "observed": {
+        "emptyOutput": true,
+        "qualifiedByActualExitAndPostflight": true
+      }
+    },
+    {
+      "name": "I-native-finite",
+      "sourceHead": "88ada74cfc4598b1bff2ab3bc0f9d08177862dbf",
+      "sourceTree": "6ea25725dec09d0617c2bc438472d6b77f3354ec",
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "--maxWorkers=1",
+        "--config",
+        "tools/owned-process-broker/vitest.config.ts"
+      ],
+      "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+      "startedAtUTC": "2026-11-15T22:20:56.692788+00:00",
+      "finishedAtUTC": "2026-11-15T22:20:58.987382+00:00",
+      "elapsedSeconds": 2.294531116989674,
+      "exitCode": 0,
+      "postflightExact": true,
+      "log": {
+        "bytes": 459,
+        "blob": "aac2dd883fdfb864e899237711339c171a2ab198",
+        "sha256": "3b4fcb5fcc017b6eda0b335eb5b6f36dfdb6e7b20ab48e597d7abe1d4c4d31f1"
+      },
+      "metadata": {
+        "bytes": 2845,
+        "blob": "7adc406705d3837d7c4bc0282c1a251b3fc13aee",
+        "sha256": "1a8c86e65917f29ae23dedc3435fd9d96b7f3a990e434132e3df4f1c180a63fd"
+      },
+      "preflight": {
+        "bytes": 76903,
+        "blob": "ffd1ab857711e3100bf84bb8aaa617a10b9ecf7d",
+        "sha256": "b675fc40c80652366ec8085f99def999bc50e0169c15af20150d1bb23771fbd9"
+      },
+      "proofSnapshotCount": 48,
+      "observed": {
+        "tests": 53,
+        "pass": 53,
+        "allThreeOriginalFilesPassed": true,
+        "perFile": [
+          {
+            "path": "tools/owned-process-broker/protocol.test.ts",
+            "pass": 47
+          },
+          {
+            "path": "tools/owned-process-broker/nativeGateContext.test.ts",
+            "pass": 3
+          },
+          {
+            "path": "tools/owned-process-broker/nativeGateEvents.test.ts",
+            "pass": 3
+          }
+        ],
+        "qualification": "Finite Node protocol/context/event tests; not native C++ or OS execution"
+      }
+    },
+    {
+      "name": "I-scoped-fast-lint",
+      "sourceHead": "88ada74cfc4598b1bff2ab3bc0f9d08177862dbf",
+      "sourceTree": "6ea25725dec09d0617c2bc438472d6b77f3354ec",
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.fast.config.js",
+        "--cache",
+        "--cache-location",
+        ".eslintcache-fast",
+        "--cache-strategy",
+        "content",
+        "--",
+        "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+        "scripts/legacy-agent-host/desktop-captured-app.ts",
+        "scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts",
+        "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+        "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+        "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+        "scripts/legacy-agent-host/qualify-linux-process-sdk.ts",
+        "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+        "tools/owned-process-broker/nativeGate.ts",
+        "tools/owned-process-broker/nativeGateContext.test.ts",
+        "tools/owned-process-broker/nativeGateDiagnostics.ts",
+        "tools/owned-process-broker/nativeRetainedHostGate.ts",
+        "tools/owned-process-broker/nativeVendorGate.ts"
+      ],
+      "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+      "startedAtUTC": "2026-11-15T22:21:00.280126+00:00",
+      "finishedAtUTC": "2026-11-15T22:21:03.128208+00:00",
+      "elapsedSeconds": 2.84800288999395,
+      "exitCode": 0,
+      "postflightExact": true,
+      "log": {
+        "bytes": 0,
+        "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "metadata": {
+        "bytes": 3697,
+        "blob": "fa442b5978ffe73d723bbb0ca23ddd4f4371dae8",
+        "sha256": "1779505a124c4bd53fcec71cd31d4d9ba0574c54ee811ce81fc6fcc70f762b5d"
+      },
+      "preflight": {
+        "bytes": 78526,
+        "blob": "abd360ad92126aa9a0a8da937195d54f999d6c11",
+        "sha256": "189a7e3f308b7a64dde4f89f00ef713179d5ceb41cbe8ed81011f6b882d7b986"
+      },
+      "proofSnapshotCount": 51,
+      "observed": {
+        "emptyOutput": true,
+        "qualifiedByActualExitAndPostflight": true
+      }
+    },
+    {
+      "name": "I-size",
+      "sourceHead": "88ada74cfc4598b1bff2ab3bc0f9d08177862dbf",
+      "sourceTree": "6ea25725dec09d0617c2bc438472d6b77f3354ec",
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "./scripts/ci/check-source-file-size.mjs"
+      ],
+      "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+      "startedAtUTC": "2026-11-15T22:21:04.335069+00:00",
+      "finishedAtUTC": "2026-11-15T22:21:04.803327+00:00",
+      "elapsedSeconds": 0.46824028600531165,
+      "exitCode": 0,
+      "postflightExact": true,
+      "log": {
+        "bytes": 202,
+        "blob": "edaab622b182eaa8a0f724a28d1a80bc5d775889",
+        "sha256": "97aba38b21a1a5d9722a56b57664e431fd2d6a9df9dbcadd0a43d0cc4a47657b"
+      },
+      "metadata": {
+        "bytes": 2747,
+        "blob": "d1a2f86c03cd26fa5e70bd4ba18940d9fea65843",
+        "sha256": "dd494fd78d10c561ebf62035d4a100d0513e30d1db0e9e3803df8bb1e6883df9"
+      },
+      "preflight": {
+        "bytes": 78346,
+        "blob": "bfd16739f1e7402e49ed4e2fce52e5f67a0b5c70",
+        "sha256": "5af0ede296f6c2169f519dea3c1bf627a346595d94522a4824af88a0068a2299"
+      },
+      "proofSnapshotCount": 54,
+      "observed": {
+        "productionFiles": 5015,
+        "frozenExceptions": 141,
+        "lineCap": 800,
+        "belowFrozenCaps": 86
+      }
+    },
+    {
+      "name": "I-architecture",
+      "sourceHead": "88ada74cfc4598b1bff2ab3bc0f9d08177862dbf",
+      "sourceTree": "6ea25725dec09d0617c2bc438472d6b77f3354ec",
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "./scripts/ci/check-team-provisioning-architecture.mjs"
+      ],
+      "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+      "startedAtUTC": "2026-11-15T22:21:06.131351+00:00",
+      "finishedAtUTC": "2026-11-15T22:21:06.237974+00:00",
+      "elapsedSeconds": 0.10660080899833702,
+      "exitCode": 0,
+      "postflightExact": true,
+      "log": {
+        "bytes": 184,
+        "blob": "8cb9d8cb2385eb2e1c022c79e0af379ff3a1c601",
+        "sha256": "0f72f211f9285332305dc9d63650e47a7d741f2216f712df043bdccbc02f473d"
+      },
+      "metadata": {
+        "bytes": 2769,
+        "blob": "39b4fc8283efa238cd25232c17c9d4246300630e",
+        "sha256": "49d0745ed632d1176257326d770067dbd187f2aed6832490fc97b699d2ecb7bb"
+      },
+      "preflight": {
+        "bytes": 79109,
+        "blob": "6fee4c5d65b99b7624d7bb407ec6af2c1d60e39d",
+        "sha256": "50fe85186dd590a4abbd04383aa4a0222bdc6554ae218520247aceba944d6f6c"
+      },
+      "proofSnapshotCount": 57,
+      "observed": {
+        "facadeInheritance": 22,
+        "serviceHostDeclaration": 50,
+        "serviceHostCast": 31,
+        "protectedAbstractDependency": 62,
+        "createFromServiceFactory": 154
+      }
+    },
+    {
+      "name": "I-workflow-yaml",
+      "sourceHead": "88ada74cfc4598b1bff2ab3bc0f9d08177862dbf",
+      "sourceTree": "6ea25725dec09d0617c2bc438472d6b77f3354ec",
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "--input-type=module",
+        "-e",
+        "import assert from 'node:assert/strict';\nimport fs from 'node:fs';\nimport YAML from './node_modules/yaml/dist/index.js';\nconst paths = process.argv.slice(1);\nassert.deepEqual(paths, ['.github/workflows/host-emulated-acceptance.yml', '.github/workflows/electron-packaged-ci.yml']);\nfor (const path of paths) {\n  const info = fs.lstatSync(path);\n  assert.ok(info.isFile() && !info.isSymbolicLink() && info.size > 0 && info.size <= 131072, path);\n  const descriptor = fs.openSync(path, 'r');\n  let bytes;\n  try {\n    const buffer = Buffer.alloc(131072);\n    const length = fs.readSync(descriptor, buffer, 0, buffer.byteLength, 0);\n    assert.equal(length, info.size, path);\n    bytes = buffer.subarray(0, length);\n  } finally {\n    fs.closeSync(descriptor);\n  }\n  const source = bytes.toString('utf8');\n  assert.equal(Buffer.byteLength(source), bytes.byteLength, path);\n  const documents = YAML.parseAllDocuments(source, { version: '1.2', strict: true, uniqueKeys: true, prettyErrors: false });\n  assert.equal(documents.length, 1, path);\n  const document = documents[0];\n  assert.equal(document.errors.length, 0, path);\n  const value = document.toJS({ maxAliasCount: 100 });\n  assert.ok(value !== null && typeof value === 'object' && !Array.isArray(value), path);\n  console.log(JSON.stringify({ path, bytes: info.size, documents: 1, errors: 0, warnings: document.warnings.length }));\n}\n",
+        ".github/workflows/host-emulated-acceptance.yml",
+        ".github/workflows/electron-packaged-ci.yml"
+      ],
+      "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+      "startedAtUTC": "2026-11-15T22:21:07.549255+00:00",
+      "finishedAtUTC": "2026-11-15T22:21:07.622553+00:00",
+      "elapsedSeconds": 0.07327801200153772,
+      "exitCode": 0,
+      "postflightExact": true,
+      "log": {
+        "bytes": 216,
+        "blob": "df8cb1b3a75b2371ad4a3bb20f5aa536d18e98f3",
+        "sha256": "3c0206cd76f8103b7a0ae68899ddde2e1bdc7e52e801e48540f69fdf6917ab5a"
+      },
+      "metadata": {
+        "bytes": 4269,
+        "blob": "6da5b262b6a821b716815cbe50db636866a2de39",
+        "sha256": "84b855531edd985a24fb577d1d93c6d2ec266e4608f1fe86d273553f61c31c04"
+      },
+      "preflight": {
+        "bytes": 81374,
+        "blob": "2442d3ea105ef626364e56a1096dab2eb551e178",
+        "sha256": "471c3109ccf5b5a3d34ed33487de9c95382c3c0b10c9829cf1ad68a6029e691c"
+      },
+      "proofSnapshotCount": 60,
+      "observed": {
+        "documents": [
+          {
+            "path": ".github/workflows/host-emulated-acceptance.yml",
+            "bytes": 97137,
+            "documents": 1,
+            "errors": 0,
+            "warnings": 0
+          },
+          {
+            "path": ".github/workflows/electron-packaged-ci.yml",
+            "bytes": 19532,
+            "documents": 1,
+            "errors": 0,
+            "warnings": 0
+          }
+        ],
+        "qualification": "Static YAML syntax only; not GitHub Actions schema/expression/event/runtime qualification"
+      }
+    },
+    {
+      "name": "I-diff",
+      "sourceHead": "88ada74cfc4598b1bff2ab3bc0f9d08177862dbf",
+      "sourceTree": "6ea25725dec09d0617c2bc438472d6b77f3354ec",
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "d556e23288c820b983a33808117f624cb2e93e39..88ada74cfc4598b1bff2ab3bc0f9d08177862dbf",
+        "--",
+        ".github/workflows/electron-packaged-ci.yml",
+        ".github/workflows/host-emulated-acceptance.yml",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/completion-2026-11-13.md",
+        "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+        "scripts/legacy-agent-host/desktop-captured-app.ts",
+        "scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts",
+        "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+        "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+        "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+        "scripts/legacy-agent-host/qualify-linux-process-sdk.ts",
+        "tools/owned-process-broker/debugServiceTest.h",
+        "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+        "tools/owned-process-broker/nativeFixture.cpp",
+        "tools/owned-process-broker/nativeGate.ts",
+        "tools/owned-process-broker/nativeGateContext.test.ts",
+        "tools/owned-process-broker/nativeGateDiagnostics.ts",
+        "tools/owned-process-broker/nativeRetainedHostGate.ts",
+        "tools/owned-process-broker/nativeVendorGate.ts",
+        "tools/owned-process-broker/serviceDebugLoop.h",
+        "tools/owned-process-broker/serviceScopes.h"
+      ],
+      "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+      "startedAtUTC": "2026-11-15T22:21:08.839218+00:00",
+      "finishedAtUTC": "2026-11-15T22:21:08.847732+00:00",
+      "elapsedSeconds": 0.008500658994307742,
+      "exitCode": 0,
+      "postflightExact": true,
+      "log": {
+        "bytes": 0,
+        "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "metadata": {
+        "bytes": 3964,
+        "blob": "d5533a11d04e7639947c9fb67d60d2ba7319754f",
+        "sha256": "ccb973bd26953deb5c9db4875401b061b8ce4eb32d9bd1be471563b259b429d9"
+      },
+      "preflight": {
+        "bytes": 81838,
+        "blob": "84bd0695761065253ef378b458671c59953ce9f3",
+        "sha256": "c08b47172c8b0f6bc8301a768e56efb945e972f2724b7400747f21e4bf20820b"
+      },
+      "proofSnapshotCount": 63,
+      "observed": {
+        "emptyOutput": true,
+        "qualifiedByActualExitAndPostflight": true
+      }
+    }
+  ],
+  "commandCount": 10,
+  "node": {
+    "path": "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+    "version": "v24.21.0",
+    "sha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c"
+  },
+  "sourceClosure": {
+    "selected": 76,
+    "host": 615,
+    "selectedDependencies": 17,
+    "additionalYamlDependencies": 77,
+    "totalSelectedDependencies": 94,
+    "retainedDOutputPayloads": 1446,
+    "newBuildPerformed": false
+  },
+  "storageRules": [
+    "Every original log/metadata/preflight retains its own path, even when bytes are identical or empty.",
+    "The already durable manifest, recorder, execution plan, canonical R1, Host-source inventory, D-build receipts/output inventory and earlier E/F/G/H proof snapshots are mapped by exact Git bytes and are not copied again.",
+    "Absolute scratch paths preserve execution provenance; corresponding proposed or existing repository paths are the durable review locations.",
+    "This inventory and the Plan29 appendix are publication-envelope files, excluded from their own payload list to avoid self-hash cycles.",
+    "No signed downloads, upload helper code, archive reconstruction, source application or project execution is added."
+  ],
+  "qualificationLimits": [
+    "All results are local Linux observations of I88ada/tree6ea; not qualification of later author heads or the current PR.",
+    "The eight-helper run and the three-file finite Node/Vitest run passed115 and53 respectively; no native C++/Windows/macOS controller/provider execution is implied.",
+    "Named whole scripts/native/retained-host TypeScript projects passed; no separate root backend-test-project rerun or reconstruction of historical Killed137 argv is claimed.",
+    "The original94 selected dependency files were checked; this is not a full node_modules freeze.",
+    "The1446 development output payloads are reused unchanged from actual D builds; stage I did not rebuild them or establish a new platform payload.",
+    "YAML results are syntax/mapping checks for two files, not Actions schema, permissions, expressions, scheduling or runtime execution.",
+    "Historical failures and skipped/cancelled evidence stay source-bound. Resulting original CI/UI/native/P08/P09 acceptance remains required.",
+    "No source/ref/PR changes, project tests, compilers, native launch or CI polling were performed by this independent reviewer."
+  ]
+}

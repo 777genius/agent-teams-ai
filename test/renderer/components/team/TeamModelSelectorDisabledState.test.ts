@@ -239,15 +239,25 @@ vi.mock('@features/codex-account/renderer', async (importOriginal) => {
 });
 
 const useVirtualizerMock = vi.fn(
-  (options: { count: number }) =>
+  (options: {
+    count: number;
+    rangeExtractor?: (range: {
+      startIndex: number;
+      endIndex: number;
+      overscan: number;
+      count: number;
+    }) => number[];
+  }) =>
     ({
       getVirtualItems: () =>
-        Array.from({ length: Math.min(options.count, 9) }, (_, index) => ({
-          index,
-          key: index,
-          start: index * 92,
-          size: 92,
-        })),
+        (options.rangeExtractor?.({
+          startIndex: 0,
+          endIndex: Math.min(options.count - 1, 8),
+          overscan: 0,
+          count: options.count,
+        }) ?? Array.from({ length: Math.min(options.count, 9) }, (_, index) => index)).map(
+          (index) => ({ index, key: index, start: index * 92, size: 92 })
+        ),
       getTotalSize: () => options.count * 92,
       measureElement: () => undefined,
     }) as const
@@ -268,13 +278,14 @@ vi.mock('@tanstack/react-virtual', () => ({
 }));
 
 import { OpenCodeDefaultMaterializationContext } from '@renderer/components/team/dialogs/openCodeDefaultMaterialization';
+import { OpenCodeSourceDirectoryContext, OpenCodeSourceDirectoryProvider, useOpenCodeSourceDirectory } from '@renderer/components/team/dialogs/OpenCodeSourceDirectoryProvider';
 import { TeamModelSelector } from '@renderer/components/team/dialogs/TeamModelSelector';
-import { OpenCodeSourceDirectoryContext } from '@renderer/components/team/dialogs/OpenCodeSourceDirectoryProvider';
-import { getActiveOpenCodeStickyHeadingIndex } from '@renderer/components/team/dialogs/teamModelSelectorUi';
+import { LeadModelRow } from '@renderer/components/team/members/LeadModelRow';
 import {
   getCliProviderStatusScopeKey,
   MULTIMODEL_PROVIDER_IDS,
 } from '@renderer/store/slices/cliInstallerSlice';
+import { invalidateContextScopedRequestEpoch } from '@renderer/store/utils/contextScopedRequestEpoch';
 
 /** Renders inside the Create/Launch roster, where OpenCode Default names its route. */
 const inMaterializingRoster = (element: React.ReactElement): React.ReactElement =>
@@ -285,6 +296,133 @@ const inMaterializingRoster = (element: React.ReactElement): React.ReactElement 
   );
 
 describe('TeamModelSelector disabled Codex models', () => {
+  it('defers display-only OpenCode discovery until the original lead model picker opens', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers();
+    storeState.cliStatus = { flavor: 'agent_teams_orchestrator', providers: [] };
+    storeState.openCodeRuntimeStatus = {
+      installed: true, state: 'ready', source: 'path', version: '1.17.18', binaryPath: '/TEST/opencode',
+    };
+    const loadModels = vi.fn(async (input: RuntimeProviderManagementLoadModelsInput) =>
+      providerModelsResponse(input.providerId, [input.providerId + '/TEST-model']));
+    installLoadModelsApi(loadModels);
+    const loadProviderDirectory = vi.fn(async () => ({
+      schemaVersion: 1, runtimeId: 'opencode', directory: {
+        runtimeId: 'opencode', entries: [], totalCount: 0, returnedCount: 0,
+        filter: 'all', query: null, limit: 100, cursor: null, nextCursor: null,
+        diagnostics: [], fetchedAt: new Date().toISOString(),
+      },
+    }));
+    Object.assign(window.electronAPI!.runtimeProviderManagement, { loadProviderDirectory });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(OpenCodeSourceDirectoryProvider, {
+        enabled: true, deferDiscovery: true, projectPath: '/TEST/original-project',
+        children: React.createElement(LeadModelRow, {
+          providerId: 'opencode', model: 'test-local/TEST-model', limitContext: false,
+          projectPath: '/TEST/original-project', syncModelsWithTeammates: false,
+          onProviderChange: vi.fn(), onModelChange: vi.fn(), onEffortChange: vi.fn(),
+          onLimitContextChange: vi.fn(), onSyncModelsWithTeammatesChange: vi.fn(),
+        }),
+      }));
+    });
+    await act(async () => { await vi.advanceTimersByTimeAsync(200); });
+    expect(loadProviderDirectory).not.toHaveBeenCalled();
+    expect(host.querySelector('[data-testid="team-model-selector-refresh-providers"]')).toBeNull();
+    const picker = host.querySelector<HTMLButtonElement>('button[aria-label="OpenCode provider, TEST-model"]');
+    expect(picker).not.toBeNull();
+    await act(async () => { picker!.click(); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(200); });
+    expect(host.querySelector('[data-testid="team-model-selector-refresh-providers"]')).not.toBeNull();
+    expect(loadProviderDirectory).toHaveBeenCalledExactlyOnceWith({
+      runtimeId: 'opencode', summary: true, projectPath: '/TEST/original-project',
+      query: null, filter: 'all', limit: 100, cursor: null, refresh: false,
+    });
+    await act(async () => { picker!.click(); });
+    expect(host.querySelector('[data-testid="team-model-selector-refresh-providers"]')).toBeNull();
+    await act(async () => { await vi.advanceTimersByTimeAsync(200); });
+    expect(loadProviderDirectory).toHaveBeenCalledTimes(1);
+  });
+
+  it('binds deferred discovery refresh to the current project and owner epoch and ignores late old replies', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers();
+    storeState.openCodeRuntimeStatus = {
+      installed: true, state: 'ready', source: 'path', version: '1.17.18', binaryPath: '/TEST/opencode',
+    };
+    installLoadModelsApi(async input => providerModelsResponse(input.providerId));
+    const first = createDeferred<unknown>();
+    const second = createDeferred<unknown>();
+    const loadProviderDirectory = vi.fn()
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise)
+      .mockResolvedValue({ schemaVersion: 1, runtimeId: 'opencode', directory: {
+        runtimeId: 'opencode', entries: [], totalCount: 0, returnedCount: 0,
+        filter: 'all', query: null, limit: 100, cursor: null, nextCursor: null,
+        diagnostics: [], fetchedAt: new Date().toISOString(),
+      } });
+    Object.assign(window.electronAPI!.runtimeProviderManagement, { loadProviderDirectory });
+    let observed!: NonNullable<ReturnType<typeof useOpenCodeSourceDirectory>>;
+    const Observe = ({ path }: { path: string }) => {
+      const directory = useOpenCodeSourceDirectory(path);
+      if (directory) observed = directory;
+      return null;
+    };
+    const root = createRoot(document.createElement('div'));
+    const render = (path: string, enabled = true) => root.render(
+      React.createElement(OpenCodeSourceDirectoryProvider, {
+        enabled, deferDiscovery: true, projectPath: path,
+        children: React.createElement(Observe, { path }),
+      })
+    );
+    await act(async () => { render('/TEST/project-A'); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(200); });
+    expect(loadProviderDirectory).not.toHaveBeenCalled();
+    const oldProject = observed;
+    await act(async () => { observed.refresh(); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(200); });
+    expect(loadProviderDirectory).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+      projectPath: '/TEST/project-A', summary: true, refresh: true,
+    }));
+    await act(async () => { render('/TEST/project-B'); });
+    await act(async () => {
+      oldProject.refresh();
+      oldProject.retainDiscovery?.()();
+      await vi.advanceTimersByTimeAsync(200);
+    });
+    expect(loadProviderDirectory).toHaveBeenCalledTimes(1);
+    await act(async () => { observed.refresh(); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(200); });
+    expect(loadProviderDirectory).toHaveBeenLastCalledWith(expect.objectContaining({
+      projectPath: '/TEST/project-B', summary: true, refresh: true,
+    }));
+    const oldOwner = observed;
+    await act(async () => { invalidateContextScopedRequestEpoch(); });
+    await act(async () => {
+      oldOwner.refresh();
+      oldOwner.retainDiscovery?.()();
+      await vi.advanceTimersByTimeAsync(200);
+    });
+    expect(loadProviderDirectory).toHaveBeenCalledTimes(2);
+    const oldFailure = { schemaVersion: 1, runtimeId: 'opencode',
+      error: { code: 'runtime-unhealthy', message: 'TEST old owner reply', recoverable: true } };
+    await resolveDeferred(first, oldFailure);
+    await resolveDeferred(second, oldFailure);
+    expect(observed.error).toBeNull();
+    await act(async () => { observed.refresh(); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(200); });
+    expect(loadProviderDirectory).toHaveBeenCalledTimes(3);
+    expect(observed.loaded).toBe(true);
+    expect(observed.error).toBeNull();
+    await act(async () => { render('/TEST/project-B', false); });
+    await act(async () => { render('/TEST/project-B'); });
+    await act(async () => { render('/TEST/project-A'); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(200); });
+    expect(loadProviderDirectory).toHaveBeenCalledTimes(3);
+  });
+
   it('invalidates the selected Create Team preflight before opening provider Settings', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliStatus = {
@@ -2770,10 +2908,13 @@ describe('TeamModelSelector disabled Codex models', () => {
 
   it('virtualizes large OpenCode model lists instead of rendering every model tile', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    const models = Array.from(
-      { length: 160 },
-      (_, index) => `openrouter/test/model-${String(index).padStart(3, '0')}`
-    );
+    const models = [
+      ...Array.from(
+        { length: 160 },
+        (_, index) => `openrouter/test/model-${String(index).padStart(3, '0')}`
+      ),
+      'zai/glm-next',
+    ];
     storeState.cliStatus = {
       flavor: 'agent_teams_orchestrator',
       providers: [
@@ -2827,33 +2968,41 @@ describe('TeamModelSelector disabled Codex models', () => {
         }
       | undefined;
     expect(virtualizerOptions?.count).toBeGreaterThan(80);
-    const headingIndex = Array.from(
+    const headingIndexes = Array.from(
       { length: virtualizerOptions?.count ?? 0 },
       (_, index) => index
-    ).find((index) => String(virtualizerOptions?.getItemKey?.(index)).startsWith('heading:'));
-    expect(headingIndex).toBeTypeOf('number');
+    ).filter((index) => String(virtualizerOptions?.getItemKey?.(index)).startsWith('heading:'));
+    expect(headingIndexes).toHaveLength(2);
+    const headingIndex = headingIndexes[0];
     expect(virtualizerOptions?.estimateSize?.(headingIndex ?? 0)).toBe(38);
     expect(virtualizerOptions?.estimateSize?.((headingIndex ?? 0) + 1)).toBe(74);
-    expect(getActiveOpenCodeStickyHeadingIndex([headingIndex ?? 0], headingIndex ?? 0)).toBeNull();
-    expect(getActiveOpenCodeStickyHeadingIndex([headingIndex ?? 0], (headingIndex ?? 0) + 1)).toBe(
-      headingIndex
-    );
-
     const extractedIndexes = virtualizerOptions?.rangeExtractor?.({
       startIndex: (headingIndex ?? 0) + 4,
       endIndex: (headingIndex ?? 0) + 8,
       overscan: 2,
       count: virtualizerOptions?.count ?? 0,
     });
-    expect(extractedIndexes).toContain(headingIndex);
+    expect(extractedIndexes).toEqual(expect.arrayContaining(headingIndexes));
     expect(host.textContent).toContain('OpenRouter');
     expect(host.textContent).toContain('test/model-159');
     expect(host.textContent).not.toContain('test/model-000');
 
-    const groupHeader = host.querySelector<HTMLElement>(
+    const groups = Array.from(host.querySelectorAll<HTMLElement>(
       '[data-testid="team-model-selector-opencode-group"]'
+    ));
+    const stickyHeaders = host.querySelectorAll<HTMLElement>(
+      '[data-testid="team-model-selector-sticky-group-header"]'
     );
-    expect(groupHeader?.parentElement?.className).toContain('z-30');
+    expect(groups).toHaveLength(2);
+    expect(stickyHeaders).toHaveLength(groups.length);
+    for (const [index, group] of groups.entries()) {
+      const start = headingIndexes[index] ?? 0;
+      const end = headingIndexes[index + 1] ?? virtualizerOptions?.count ?? 0;
+      expect(stickyHeaders[index]?.parentElement).toBe(group);
+      expect(group.style.top).toBe(`${start * 92}px`);
+      expect(group.style.height).toBe(`${(end - start) * 92}px`);
+      expect(group.querySelectorAll('h4')).toHaveLength(1);
+    }
 
     const unselectedModelCells = Array.from(
       host.querySelectorAll<HTMLElement>(
@@ -4185,7 +4334,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
   });
 
-  it('shows Check instead of Install while OpenCode readiness is pending', async () => {
+  it('shows an accessible spinner instead of Install while OpenCode readiness is pending', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliStatus = {
       providers: [
@@ -4224,7 +4373,13 @@ describe('TeamModelSelector disabled Codex models', () => {
     const openCodeButton = Array.from(host.querySelectorAll('button')).find((button) =>
       button.textContent?.includes('OpenCode')
     );
-    expect(openCodeButton?.textContent).toContain('Check');
+    const pendingStatus = openCodeButton?.querySelector(
+      '[data-testid="team-model-selector-provider-nav-status-opencode"]'
+    );
+    const loadingAnnouncement = openCodeButton?.querySelector('[role="status"]');
+    expect(loadingAnnouncement?.textContent).toBe('OpenCode status: checking runtime');
+    expect(pendingStatus?.getAttribute('aria-label')).toBe('OpenCode status: checking runtime');
+    expect(pendingStatus?.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
     expect(openCodeButton?.textContent).not.toContain('Install');
     expect(openCodeButton?.getAttribute('aria-description')).toBe(
       'OpenCode runtime status is still loading.'
@@ -5205,6 +5360,7 @@ describe('TeamModelSelector disabled Codex models', () => {
 
   it('uses role-specific provider disabled copy before OpenCode readiness gating', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.openCodeRuntimeStatusLoading = true;
     storeState.cliStatus = {
       providers: [
         {
@@ -5252,6 +5408,12 @@ describe('TeamModelSelector disabled Codex models', () => {
       'OpenCode team launch is available for normal teams, but scheduled one-shot prompts still run through claude -p. Choose Anthropic or Codex for one-shot schedules.'
     );
     expect(openCodeButton?.textContent).toContain('team only');
+    expect(
+      openCodeButton?.querySelector(
+        '[data-testid="team-model-selector-provider-nav-status-opencode"] svg'
+      )
+    ).toBeNull();
+    expect(openCodeButton?.querySelector('[role="status"]')?.textContent).toBe('');
 
     await act(async () => {
       openCodeButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));

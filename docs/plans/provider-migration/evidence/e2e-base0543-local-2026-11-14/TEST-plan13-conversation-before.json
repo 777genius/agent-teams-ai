@@ -1,0 +1,23 @@
+{
+  "commandStatus": "FAIL",
+  "exitCode": 1,
+  "seconds": 2.468,
+  "command": [
+    "/workspace/scratch/391e21b06e24/agent-teams-ai/resources/legacy-agent-host/node/v24.21.0/linux-x64/node",
+    "/workspace/scratch/391e21b06e24/TEST-corepack036-stopped-import-r6080l74/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+    "exec",
+    "node",
+    "--test",
+    "--test-concurrency=1",
+    "--test-name-pattern=ordinary lead replies replace their original signed conversation",
+    "packages/legacy-agent-host/tests/runtime-team-host.test.ts"
+  ],
+  "head": "2335b403b7d015ef871e9dd8609803fb4630a6cb",
+  "sourceBefore": {
+    "packages/legacy-agent-host/tests/runtime-team-host.test.ts": "2d6b6badf4cf3ee34e495ecf676aeec914540c1083b570374dbee28deb4aab15",
+    "src/renderer/components/team/review/CodeMirrorDiffView.tsx": "8365c1c010d5f9b4fccfd45f1a0d1bb80058ba647909f1151b1a1a3516ef190f"
+  },
+  "dependencyGraph": "isolated canonical frozen install, copied packages",
+  "realVendorExecuted": false,
+  "logSha256": "6cc10078a3b61ac17a639d34e11530a5809af8951bc00ea396a5a06a312964d1"
+}

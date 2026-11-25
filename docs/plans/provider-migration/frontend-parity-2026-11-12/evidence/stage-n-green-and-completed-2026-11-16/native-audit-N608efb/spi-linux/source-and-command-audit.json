@@ -1,0 +1,194 @@
+{
+  "kind": "N608EFB_SPI_FRESH_SOURCE_AND_COMMAND_JOIN",
+  "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "selectedSourceCount": 22,
+  "sources": [
+    {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "bytes": 36013,
+      "blob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+      "sha256": "fddd1aface758ef115a5e904151cb61dd78dca04d8f52fb99f4326ddaff53a14",
+      "lines": 622,
+      "byteIdenticalToM0660": true
+    },
+    {
+      "path": "package.json",
+      "bytes": 26839,
+      "blob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+      "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+      "lines": 580,
+      "byteIdenticalToM0660": true
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "bytes": 956788,
+      "blob": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+      "sha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c",
+      "lines": 26665,
+      "byteIdenticalToM0660": true
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "bytes": 6946,
+      "blob": "3999f1f503fc23c84db89cf9e964bcc3164122e5",
+      "sha256": "c3801a0cb971ad1c31e7236a61c328ff55c9c91d63b7b7042de8562ff39f00ea",
+      "lines": 169,
+      "byteIdenticalToM0660": true
+    },
+    {
+      "path": "packages/legacy-agent-host/package.json",
+      "bytes": 12355,
+      "blob": "e39cb2ba89c125d850710828a65a30ae25b7344b",
+      "sha256": "77efb91a29ed4ba662ca7dcebc0843965d27305ad9d62f04ef6c84b517732e0b",
+      "lines": 304,
+      "byteIdenticalToM0660": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tsconfig.json",
+      "bytes": 456,
+      "blob": "9fad9f8a73e1cfffd382c0ba76f2945e5c361531",
+      "sha256": "54be9b6021660d54c06c14fd25cc5c4484b7615f01d9eb033fc52edfded095ab",
+      "lines": 19,
+      "byteIdenticalToM0660": true
+    },
+    {
+      "path": "packages/task-change-ledger/package.json",
+      "bytes": 2714,
+      "blob": "0fac5843889e1b28d53712f353bce1b0bae855a4",
+      "sha256": "a0db21117b905b414e825862d8bc93cfe9280975c8b91e1afa6cca2e1570a132",
+      "lines": 90,
+      "byteIdenticalToM0660": true
+    },
+    {
+      "path": "packages/task-change-ledger/tsconfig.json",
+      "bytes": 378,
+      "blob": "ff7683dc99c69dbf8c884ba138382468c9c86314",
+      "sha256": "03d503904b76cc07fc4765a30493d288b99a2dbcf1325f3dda243592a407cb6c",
+      "lines": 17,
+      "byteIdenticalToM0660": true
+    },
+    {
+      "path": "scripts/ci/install-dependencies-with-retry.mjs",
+      "bytes": 5259,
+      "blob": "cbf2463eb47d22c3d87d9eec001edad26dd68ff0",
+      "sha256": "c8dc0b63fc490fd5a9a1b4abf0631b66c30e1ccda2199094c86e49a6e250d01e",
+      "lines": 128,
+      "byteIdenticalToM0660": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-native-instructions.mjs",
+      "bytes": 37890,
+      "blob": "8a86e4d573be9cc3c918455d7f1d4915b0d86a61",
+      "sha256": "4e00fdba8225af7d6042ac8a0bba5a70452a214545c822e7f6db05b438bcd9b3",
+      "lines": 671,
+      "byteIdenticalToM0660": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt-verify.mjs",
+      "bytes": 7565,
+      "blob": "9e2c645055a933b6bc89e8c80369f590f2bb1314",
+      "sha256": "53b9090805cadb8848a27a16ae313eeb955457eb19982cd4f8c59ed9733b6164",
+      "lines": 125,
+      "byteIdenticalToM0660": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-native-test-pin.mjs",
+      "bytes": 264,
+      "blob": "24de9fdc51a7bae1b5fd968ce9ac2ee1f3ee9083",
+      "sha256": "7d8d7dcd4da22a72ff05654a4a056bd013e4d5734c08c7b09bd26e4a81b598d5",
+      "lines": 3,
+      "byteIdenticalToM0660": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-direct-shell-probe.mjs",
+      "bytes": 4322,
+      "blob": "56d2d33affd9ad67d8b0f9cccd8a7eb985c69554",
+      "sha256": "4c6161bc64396c6e8f30de0b027773bc80b45f13eb801e9a27acbd9eff7a5def",
+      "lines": 94,
+      "byteIdenticalToM0660": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-direct-shell-probe.test.mjs",
+      "bytes": 8858,
+      "blob": "f23deb8988ad49014913a443d51bfa731a371daa",
+      "sha256": "ec8b3b06b1fffa1476fc603cb7131b73652bc04ca2ce74f9e477b376496e73bb",
+      "lines": 162,
+      "byteIdenticalToM0660": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-native-session-guard.mjs",
+      "bytes": 950,
+      "blob": "f0b3bda7d1f2e2731ffca1c773c6cbf1504cea23",
+      "sha256": "e30430400acf68eee82b15deb6a4e8d5a248443ef2776e9fe6637ea852619e8a",
+      "lines": 17,
+      "byteIdenticalToM0660": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-native-log-parse.mjs",
+      "bytes": 4222,
+      "blob": "fba657e913aa08cfb8742400e44007a745a6b70d",
+      "sha256": "3d3b01ff3c519704d83d32b4563e99614b73bfad6dc99e496ae22d032fb3ccc0",
+      "lines": 75,
+      "byteIdenticalToM0660": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-native-process-guard.mjs",
+      "bytes": 634,
+      "blob": "d8522e59f917838468c07ba4a43beb71c08809c2",
+      "sha256": "2dfe3eb1e99067c4bcfec025b33effa5313aed5db84bec7894238419a0c4416b",
+      "lines": 12,
+      "byteIdenticalToM0660": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-http-interrupt-negative.test.mjs",
+      "bytes": 6483,
+      "blob": "d20c5b3dc77a9fc9a8c4179ff6d8bf486c6c2020",
+      "sha256": "3a393846259e883c0d0e9ea324b932a47055c424dfe135e7332261eff1ef7805",
+      "lines": 135,
+      "byteIdenticalToM0660": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2MemberProvider.ts",
+      "bytes": 48064,
+      "blob": "89f2eb8711025416f7afd07727ed62fcd4ad3dad",
+      "sha256": "0d5775cebf1c7fcf7883e11db479a4a4a3efdcc943638065dccfa889cf17ae68",
+      "lines": 799,
+      "byteIdenticalToM0660": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelVariant.ts",
+      "bytes": 768,
+      "blob": "0df38e070a24cf3f2f6762954d2f706e50409d37",
+      "sha256": "b257839d3a5c8b3e70e3f05ab33068d497fd2ed8bb01a31a61bd670ece9f2ae2",
+      "lines": 16,
+      "byteIdenticalToM0660": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/team-launch/context.ts",
+      "bytes": 290,
+      "blob": "03f264613cbdfc553675a7263ed6124ca475efe3",
+      "sha256": "d588944b04b0ef58fb24a85c2ecc703b9f1d96ed221266c8f8434860ea0869ac",
+      "lines": 6,
+      "byteIdenticalToM0660": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/openCodeV2StaticPreflight.ts",
+      "bytes": 19050,
+      "blob": "e4ef669047f308bcb4378283d92a4064b3e3e062",
+      "sha256": "ce2b40432a29553b322e9e2b40b05a43ca620515e60d060194df72c7e5ccedff",
+      "lines": 370,
+      "byteIdenticalToM0660": true
+    }
+  ],
+  "all22ByteEqualToM": true,
+  "hostGitSourceCount": 619,
+  "hostPathNulBytesNulDigest": "4a97065f4e44d4dd380638100abb11769cf1290d61eaac64a9e3bf6e956041d9",
+  "hostSourceReference": {
+    "path": "native-audit-N608efb/host-source-N608efb-git-audit.json",
+    "bytes": 163123,
+    "blob": "9c8472f84db2ee0615314b9fd05df207e2c7d112",
+    "sha256": "30dbbf806666206c905b346f15e475646c2840d0c29f326a953fb3202d595ea0"
+  },
+  "runtimeFullSourceCensusOrDistDigestRetained": false,
+  "limits": "Fresh immutable Git source bytes qualify source inspection, not unrecorded runtime source/ELF/dist bytes. Prior M review is only a byte-equal source-semantics reference; all current outcome checks below use the original N log and receipt."
+}

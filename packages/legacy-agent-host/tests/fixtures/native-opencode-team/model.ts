@@ -4,6 +4,7 @@ import type {
   ObservedMixedTaskNotice,
 } from '../native-mixed-task-notifications.ts';
 import { assertNativeMessageImage } from '../native-message-image.ts';
+import { assertNativeMessageMedia } from '../native-message-media.ts';
 import {
   readMixedGroupTurn,
   mixedGroupActions,
@@ -63,6 +64,7 @@ export async function startOpenCodeModel(
     liveMembershipPhase?: () => LiveMembershipModelPhase;
     sharedSessionProbe?: boolean;
     nativeMessageImage?: boolean;
+    nativeMessageMedia?: boolean;
     mixedGroups?: boolean;
     mixedTaskNotifications?: MixedTaskNoticeReader;
     peerMessaging?: boolean;
@@ -136,6 +138,7 @@ export async function startOpenCodeModel(
   const settingsSteps = new Set<SettingsModelProbe['step']>();
   const observations: {
     nativeImage?: ReturnType<typeof assertNativeMessageImage>;
+    nativeMedia?: ReturnType<typeof assertNativeMessageMedia>;
     failedShellToolOutput?: ReturnType<typeof assertCaptureFailedShellOutput>;
     turn: string;
     step: number;
@@ -444,6 +447,8 @@ export async function startOpenCodeModel(
           step <= (turn.endsWith('_ONE') ? 7 : 2),
           'finite original business input; no replay'
         );
+      const nativeMedia = options.nativeMessageMedia && turn === 'OPENCODE_TEAM_TWO'
+        ? assertNativeMessageMedia(messages) : undefined;
       const nativeImage =
         options.nativeMessageImage && turn === 'OPENCODE_TEAM_TWO'
           ? assertNativeMessageImage(messages, 'opencode')
@@ -548,6 +553,7 @@ export async function startOpenCodeModel(
       }
       const observation = {
         ...(nativeImage ? { nativeImage } : {}),
+        ...(nativeMedia ? { nativeMedia } : {}),
         ...(failedShellToolOutput ? { failedShellToolOutput } : {}),
         turn,
         step,

@@ -7,10 +7,11 @@ import { assertOwnedCdpListener, command, processTable } from './desktop-backend
 import { processFacts } from '../../packages/legacy-agent-host/tests/fixtures/native-input-capture.ts';
 import { desktopJsLiteral } from './desktop-ui-controls.ts';
 import { desktopActiveMetadata, desktopMetadataProcess, desktopMetadataProfileHash,
-  readDesktopMetadataLineage, assertDesktopMetadataLineageRetained } from './desktop-opencode-metadata-lineage.ts';
+  readDesktopMetadataLineage, assertDesktopMetadataLineageRetained,
+  readDesktopMetadataEvents, desktopMetadataReadyScopeCount } from './desktop-opencode-metadata-lineage.ts';
 import type { DesktopNativeHostSnapshot } from './desktop-opencode-metadata-lineage.ts';
 import type { ProcessFact } from '../../packages/legacy-agent-host/tests/fixtures/native-input-capture.ts';
-import type { UiCdpPort } from './desktop-team-ui-smoke.ts';
+import type { DesktopCdpPort } from './desktop-captured-app.ts';
 import type { ConfiguredOpenCodeLaunchPreparation } from '../../packages/legacy-agent-host/tests/fixtures/native-opencode-team/model-probe.ts';
 export {
   readNativeProviderArtifact as readDesktopNativeProviderArtifact,
@@ -23,7 +24,7 @@ const object = (value: unknown): Record<string, unknown> => {
 const tick = () => new Promise<void>((done) => setTimeout(done, 100));
 
 export async function prepareDesktopNativeStop(options: {
-  cdp: UiCdpPort;
+  cdp: Pick<DesktopCdpPort, 'evaluate' | 'send'>;
   fixture: { handleId: string; node: string; hostEntry: string; root?: string };
   group: number;
   evidence: Record<string, unknown>;
@@ -37,18 +38,28 @@ export async function prepareDesktopNativeStop(options: {
   assert.ok(executable);
   const openCodeModel = options.openCode?.model, preparation = openCodeModel?.configuredLaunchPreparation;
   if (options.openCode) assert.ok(preparation, 'the selected OpenCode setup requires its original preparation port');
-  const invokeSetup = async (operation: string, commandId: string, payload: unknown) => {
+  const readinessMs = options.openCode ? 180_000 : 45_000;
+  const setupDeadline = options.openCode ? Date.now() + readinessMs : undefined;
+  const remainingSetupMs = () => {
+    if (setupDeadline === undefined) return undefined;
+    const remaining = setupDeadline - Date.now();
+    assert.ok(remaining > 0, 'Original OpenCode setup observation deadline expired');
+    return remaining;
+  };
+  const invokeSetup = async (operation: string, commandId: string, payload: unknown, useSetupTimeout = false) => {
     assertOwnedCdpListener(group);
-    return object(
-      await cdp!.evaluate(
-        `window.electronAPI.agentBackend.invoke(${JSON.stringify({ handle: { handleId: fixture.handleId }, commandId, operation, payload })})`
-      )
+    const remaining = remainingSetupMs();
+    const response = await cdp!.evaluate(
+      `window.electronAPI.agentBackend.invoke(${JSON.stringify({ handle: { handleId: fixture.handleId }, commandId, operation, payload })})`,
+      remaining === undefined ? undefined : useSetupTimeout ? remaining : Math.min(30_000, remaining)
     );
+    remainingSetupMs();
+    return object(response);
   };
   if (options.openCode) assert.ok(fixture.root);
   const globalMetadata = options.openCode
     ? await captureDesktopOpenCodeGlobalMetadata(cdp, { ...fixture, root: fixture.root! }, group,
-      () => assertOwnedCdpListener(group)) : undefined;
+      () => assertOwnedCdpListener(group), remainingSetupMs) : undefined;
   const read = await invokeSetup('team.launch.read', 'TEST-setup-read', {});
   assert.equal(
     read.ok,
@@ -87,8 +98,9 @@ export async function prepareDesktopNativeStop(options: {
     const response = object(await cdp.evaluate(
       `window.electronAPI.runtimeProviderManagement.loadModels(${desktopJsLiteral({
         runtimeId: 'opencode', providerId: 'test-local', projectPath: join(fixture.root, 'workspace'),
-      })})`
+      })})`, remainingSetupMs()
     ));
+    remainingSetupMs();
     assert.equal(response.error, undefined, 'actual native catalog is ready before Runtime allocation');
     assert.equal(response.runtimeId, 'opencode');
     const catalog = object(response.models);
@@ -105,7 +117,9 @@ export async function prepareDesktopNativeStop(options: {
     }
   }
   const selectedMetadata = globalMetadata ? await captureDesktopOpenCodeProjectMetadata(
-    { ...fixture, root: fixture.root! }, group, globalMetadata) : undefined;
+    { ...fixture, root: fixture.root! }, group, globalMetadata,
+    { remainingMs: remainingSetupMs, assertOwnedRenderer: () => assertOwnedCdpListener(group) }) : undefined;
+  remainingSetupMs();
   const metadata = selectedMetadata?.captured, metadataSources = selectedMetadata?.metadataSources;
   if (metadata) assert.equal(metadata.host.groupId, group, 'metadata belongs to the captured TEST Host');
   let observedMetadata = metadata;
@@ -126,13 +140,13 @@ export async function prepareDesktopNativeStop(options: {
     return { hostPid, nativeChildren: table.filter(row =>
       row.ppid === hostPid && command(row.pid).startsWith(executable)) };
   };
-  const readinessMs = options.openCode ? 180_000 : 45_000;
   const commandId = 'TEST-explicit-sandbox-setup-launch';
   let disarm: (() => void) | undefined;
   if (preparation) {
     const { launchId, rosterRevision } = selection;
     assert.ok(typeof launchId === 'string' && typeof rosterRevision === 'string');
     assert.deepEqual(memberIds, ['alice-id']);
+    remainingSetupMs();
     disarm = preparation.arm({ commandId, launchId,
       rosterRevision, memberId, model: configuration.members[0]!.model });
   }
@@ -142,7 +156,8 @@ export async function prepareDesktopNativeStop(options: {
       launchId: selection.launchId,
       rosterRevision: selection.rosterRevision,
       configuration,
-    });
+    }, true);
+    remainingSetupMs();
     evidence.nativeLaunchResponse = start;
     assert.equal(start.ok, true, `TEST configured launch response: ${JSON.stringify(start)}`);
     if (preparation) {
@@ -156,14 +171,16 @@ export async function prepareDesktopNativeStop(options: {
   } finally { disarm?.(); }
   if (options.returnAt === 'opening') {
     assert.ok(fixture.root, 'exact TEST Runtime store for pending-open observation');
-    const deadline = Date.now() + readinessMs;
+    const deadline = setupDeadline ?? Date.now() + readinessMs;
     do {
+      remainingSetupMs();
       const sessions: Record<string, unknown>[] = await readDesktopNativeStopSessions(
         fixture.root
       ).catch((error) => {
         if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
         throw error;
       });
+      remainingSetupMs();
       assert.ok(sessions.length <= 1, 'one exact pending native Runtime');
       const session: Record<string, unknown> | undefined = sessions[0];
       if (session) {
@@ -174,8 +191,11 @@ export async function prepareDesktopNativeStop(options: {
         assert.equal(session.sealed, false);
         assert.deepEqual(session.inputs, []);
         const { hostPid, nativeChildren } = await observeNative();
+        remainingSetupMs();
         if (nativeChildren.length) {
           assert.equal(nativeChildren.length, 1);
+          const nativeExecutableSha256 = await fileDigest(executable);
+          remainingSetupMs();
           evidence.nativeSetup = {
             scope: 'Explicit TEST setup returned during actual native open; no input',
             configuration,
@@ -184,32 +204,39 @@ export async function prepareDesktopNativeStop(options: {
             session,
             nativeChildren,
             ...(metadata ? { metadataBeforeLaunch: metadata, metadataSources, metadataAtRuntimeObservation: observedMetadata } : {}),
-            nativeExecutableSha256: await fileDigest(executable),
+            nativeExecutableSha256,
           };
           return { hostPid, nativeChildren };
         }
       }
       await tick();
+      remainingSetupMs();
     } while (Date.now() < deadline);
     throw new Error('No actual pending native open observed; no launch or Quit retry');
   }
-  const readyDeadline = Date.now() + readinessMs;
+  const readyDeadline = setupDeadline ?? Date.now() + readinessMs;
   let ready = object(start.value);
   while (ready.status !== 'ready' && Date.now() < readyDeadline) {
     await tick();
+    remainingSetupMs();
     const progress = await invokeSetup('team.launch.read', 'TEST-setup-progress', {});
+    remainingSetupMs();
     evidence.nativeLaunchProgressResponse = progress;
     assert.equal(progress.ok, true, `TEST launch progress refused: ${JSON.stringify(progress)}`);
     ready = object(progress.value);
   }
+  remainingSetupMs();
   assert.equal(ready.status, 'ready');
   assert.equal(ready.ready, expectedMembers);
   const { hostPid, nativeChildren } = await observeNative();
+  remainingSetupMs();
   assert.equal(
     nativeChildren.length,
     expectedMembers,
     'exact captured actual native actors before ordinary Stop'
   );
+  const nativeExecutableSha256 = await fileDigest(executable);
+  remainingSetupMs();
   evidence.nativeSetup = {
     scope:
       'Explicit selected model/effort setup via actual app IPC; ordinary launch UI is not qualified',
@@ -218,7 +245,7 @@ export async function prepareDesktopNativeStop(options: {
     launch: ready,
     nativeChildren,
     ...(metadata ? { metadataBeforeLaunch: metadata, metadataSources, metadataAtRuntimeObservation: observedMetadata } : {}),
-    nativeExecutableSha256: await fileDigest(executable),
+    nativeExecutableSha256,
   };
   return { hostPid, nativeChildren };
 }
@@ -359,9 +386,12 @@ export function separateDesktopOpenCodeRuntimeChildren(
 
 /** Observe only the existing stderr/file and OS census; never repeat a catalog/native operation. */
 async function captureMetadataObservation(fixture: MetadataFixture, group: number,
-  profileHashes: readonly string[], original?: DesktopNativeHostSnapshot, expectedRuntimeCount?: 0 | 1 | 3) {
-  const deadline = Date.now() + 5000; let last: unknown;
+  profileHashes: readonly string[], original?: DesktopNativeHostSnapshot, expectedRuntimeCount?: 0 | 1 | 3,
+  remainingMs?: () => number) {
+  const deadline = Date.now() + Math.min(5000, remainingMs?.() ?? 5000); let last: unknown;
   do {
+    remainingMs?.();
+    let result: { captured: DesktopNativeHostSnapshot; runtime: ProcessFact[] } | undefined;
     try {
       const captured = readDesktopNativeHostProcesses(fixture, group), table = processFacts();
       assert.deepEqual(table.find(row => row.pid === captured.host.pid), captured.host);
@@ -374,9 +404,15 @@ async function captureMetadataObservation(fixture: MetadataFixture, group: numbe
       assert.ok(expected === 0 || expected === 1 || expectedRuntimeCount === 3 && expected === 3);
       assert.equal(runtime.length, expected);
       for (const child of runtime) assert.equal(child.command, metadata[0]!.command);
-      return { captured, runtime };
+      result = { captured, runtime };
     } catch (error) { last = error; }
+    remainingMs?.();
+    if (result) {
+      if (remainingMs) assert.ok(Date.now() < deadline, 'Original metadata physical observation deadline expired');
+      return result;
+    }
     await tick();
+    remainingMs?.();
   } while (Date.now() < deadline);
   throw last;
 }
@@ -392,6 +428,74 @@ type MetadataSource = { sourceId: string; revision: string; profileId: string; c
 type MetadataFixture = { root: string; node: string; hostEntry: string };
 type GlobalMetadata = { captured: ReturnType<typeof readDesktopNativeHostProcesses>;
   source: MetadataSource; runtimeDigest: string };
+
+type MetadataObservationBudget = {
+  remainingMs(): number | undefined;
+  assertOwnedRenderer(): void;
+  beforePhysical?(): Promise<unknown>;
+};
+const metadataRemaining = (budget: MetadataObservationBudget): number => {
+  budget.assertOwnedRenderer();
+  const remaining = budget.remainingMs();
+  assert.ok(typeof remaining === 'number' && Number.isFinite(remaining) && remaining > 0,
+    'Original metadata observation deadline expired');
+  return remaining;
+};
+
+function metadataHostCurrent(fixture: MetadataFixture, group: number,
+  host: ProcessFact, budget: MetadataObservationBudget): void {
+  metadataRemaining(budget);
+  assert.deepEqual(readDesktopNativeHostProcesses(fixture, group).host, host, 'same retained metadata Host birth');
+  metadataRemaining(budget);
+}
+
+async function assertMetadataSelectionCurrent(fixture: MetadataFixture, group: number,
+  sources: readonly MetadataSource[], host: ProcessFact, budget: MetadataObservationBudget): Promise<void> {
+  metadataHostCurrent(fixture, group, host, budget);
+  for (const source of sources) {
+    metadataHostCurrent(fixture, group, host, budget);
+    const current = await readDesktopOpenCodeMetadataSource(fixture.root, source.projectPath);
+    metadataHostCurrent(fixture, group, host, budget);
+    assert.deepEqual(current, source, 'same retained metadata source selection');
+  }
+  metadataRemaining(budget);
+}
+
+/** Wait only for the original log's lifecycle transition; the physical oracle below still qualifies it. */
+async function captureReadyMetadata(fixture: MetadataFixture, group: number,
+  sources: readonly MetadataSource[], host: ProcessFact, budget: MetadataObservationBudget,
+  original?: DesktopNativeHostSnapshot) {
+  const profileHashes = sources.map(desktopMetadataProfileHash);
+  let prefix = original?.metadataLineage?.events.map(event => ({ ...event })) ?? [];
+  const assertCurrent = () => assertMetadataSelectionCurrent(fixture, group, sources, host, budget);
+  const ready = () => {
+    metadataRemaining(budget);
+    const events = readDesktopMetadataEvents(fixture.root, host.pid, true);
+    assert.deepEqual(events.slice(0, prefix.length), prefix, 'original metadata log prefix is retained while waiting');
+    const count = desktopMetadataReadyScopeCount(events, profileHashes, host.pid);
+    prefix = events.map(event => ({ ...event }));
+    assert.deepEqual(readDesktopNativeHostProcesses(fixture, group).host, host, 'same retained metadata Host birth');
+    metadataRemaining(budget);
+    return count === profileHashes.length;
+  };
+  await assertCurrent();
+  for (;;) {
+    if (ready()) {
+      if (!budget.beforePhysical) break;
+      await budget.beforePhysical();
+      await assertCurrent();
+      if (ready()) break;
+    }
+    await tick();
+    await assertCurrent();
+  }
+  const result = await captureMetadataObservation(fixture, group, profileHashes, original, 0,
+    () => metadataRemaining(budget));
+  await assertCurrent();
+  assert.deepEqual(result.captured.host, host);
+  metadataRemaining(budget);
+  return result;
+}
 
 /** Actual source-derived profile IDs, not the descriptor's common seed profile. */
 async function readDesktopOpenCodeMetadataSource(root: string, projectPath: string | null): Promise<MetadataSource> {
@@ -458,41 +562,65 @@ export async function captureDesktopOpenCodeColdMetadata(fixture: MetadataFixtur
 }
 
 /** Before project selection, observe one actual global catalog child through the existing read-only IPC. */
-export async function captureDesktopOpenCodeGlobalMetadata(cdp: UiCdpPort, fixture: MetadataFixture,
-  group: number, assertOwnedRenderer: () => void): Promise<GlobalMetadata> {
+export async function captureDesktopOpenCodeGlobalMetadata(cdp: Pick<DesktopCdpPort, 'evaluate'>, fixture: MetadataFixture,
+  group: number, assertOwnedRenderer: () => void, remainingMs?: () => number | undefined): Promise<GlobalMetadata> {
   assertOwnedRenderer();
   const response = object(await cdp.evaluate(
     `window.electronAPI.runtimeProviderManagement.loadModels(${desktopJsLiteral({
       runtimeId: 'opencode', providerId: 'test-local', projectPath: null,
-    })})`
+    })})`, remainingMs?.()
   ));
   assertOwnedRenderer();
+  remainingMs?.();
   assert.equal(response.error, undefined); assert.equal(response.runtimeId, 'opencode');
   const catalog = object(response.models);
   assert.equal(catalog.providerId, 'test-local'); assert.equal(catalog.catalogState, 'fresh');
   assert.ok(Array.isArray(catalog.models) &&
     catalog.models.map(object).some(model => model.modelId === 'test-local/TEST-model'));
+  const budget = remainingMs ? { remainingMs, assertOwnedRenderer } : undefined;
+  const host = budget ? readDesktopNativeHostProcesses(fixture, group).host : undefined;
+  if (budget) metadataHostCurrent(fixture, group, host!, budget);
   const source = await readDesktopOpenCodeMetadataSource(fixture.root, null);
-  const { captured } = await captureMetadataObservation(fixture, group, [desktopMetadataProfileHash(source)], undefined, 0);
+  if (budget) metadataHostCurrent(fixture, group, host!, budget);
+  remainingMs?.();
+  const { captured } = budget
+    ? await captureReadyMetadata(fixture, group, [source], host!, budget)
+    : await captureMetadataObservation(fixture, group, [desktopMetadataProfileHash(source)], undefined, 0);
+  if (budget) metadataHostCurrent(fixture, group, host!, budget);
+  remainingMs?.();
   assert.equal(captured.children.length, 1,
     'capture one global owner before project selection; every earlier retired owner remains in the lineage');
-  return { captured, source, runtimeDigest: await metadataOnlyRuntimeDigest(fixture.root) };
+  const digest = await metadataOnlyRuntimeDigest(fixture.root);
+  if (budget) {
+    await assertMetadataSelectionCurrent(fixture, group, [source], host!, budget);
+    assertOwnedRenderer();
+  }
+  remainingMs?.();
+  return { captured, source, runtimeDigest: digest };
 }
 
 /** Preserve the full original lineage and correlate both captured scopes with their actual native owners. */
 export async function captureDesktopOpenCodeProjectMetadata(fixture: MetadataFixture, group: number,
-  global: GlobalMetadata) {
-  const sources = [await readDesktopOpenCodeMetadataSource(fixture.root, null),
-    await readDesktopOpenCodeMetadataSource(fixture.root, join(fixture.root, 'workspace'))];
+  global: GlobalMetadata, budget?: MetadataObservationBudget) {
+  const assertCurrent = () => { if (budget) metadataHostCurrent(fixture, group, global.captured.host, budget); };
+  assertCurrent();
+  const source = await readDesktopOpenCodeMetadataSource(fixture.root, null);
+  assertCurrent();
+  const sources = [source, await readDesktopOpenCodeMetadataSource(fixture.root, join(fixture.root, 'workspace'))];
+  assertCurrent();
   assert.deepEqual(sources[0], global.source, 'global selection did not change while project metadata loaded');
   assert.equal(await metadataOnlyRuntimeDigest(fixture.root), global.runtimeDigest,
     'catalog/preflight did not create or alter a Runtime');
-  const { captured } = await captureMetadataObservation(fixture, group, sources.map(desktopMetadataProfileHash), global.captured, 0);
+  assertCurrent();
+  const { captured } = budget
+    ? await captureReadyMetadata(fixture, group, sources, global.captured.host, budget, global.captured)
+    : await captureMetadataObservation(fixture, group, sources.map(desktopMetadataProfileHash), global.captured, 0);
   assert.equal(captured.children.length, 2, 'one observed native owner for each exact captured scope');
   const metadataSources = sources.map(source => ({
     ...source, process: desktopMetadataProcess(captured, desktopMetadataProfileHash(source)),
   }));
   assertDesktopOpenCodeMetadataSources(metadataSources, captured);
+  if (budget) metadataRemaining(budget);
   return { captured, metadataSources };
 }
 

@@ -36,20 +36,25 @@ function assertNoToolMessageRoles(messages: readonly { role: string; content: un
 }
 
 /** A finite inference oracle. Only the genuine selected engines execute tools or write history. */
-export async function startRetainedOpenCodeModel(options: { sourceSelection?: true } = {}) {
+export async function startRetainedOpenCodeModel(options: { sourceSelection?: true;
+  donorReview?: { filePath: string; before: string; after: string } } = {}) {
   const observations: { owner: 'legacy' | 'host'; marker: string | null; tools: string[];
     strictLaunch?: { model: string; challenge: string }; sourcePreflight?: true;
-    preparationCommandId?: 'TEST-coexist-launch-once' }[] = [];
+    preparationCommandId?: 'TEST-coexist-launch-once'; donorStage?: 'read' | 'edit' | 'reply';
+    toolCallId?: string; toolResultIds?: string[] }[] = [];
   const failures: string[] = [];
   const markers = new Set<string>();
   let expectedSource: SourceMarker | undefined;
   let hostPreparation: { active: boolean; consumed: number } | undefined;
+  let donorStep = 0, donorPrompt: string | undefined;
+  assert.ok(!(options.sourceSelection && options.donorReview));
   const server = createServer((request, response) => {
     void (async () => {
       assert.equal(failures.length, 0, 'seal after the first model contract failure');
       const owner = request.url?.startsWith('/legacy/') ? 'legacy' :
         request.url?.startsWith('/host/') ? 'host' : null;
       assert.ok(owner, 'one selected owner-specific inference endpoint');
+      if (options.donorReview) assert.equal(owner, 'legacy', 'donor model is unavailable to a Host');
       if (request.method === 'GET' && request.url === `/${owner}/v1/models`) {
         response.writeHead(200, { 'content-type': 'application/json' });
         response.end(JSON.stringify({ object: 'list', data: [{ id: 'TEST-model', object: 'model' }] }));
@@ -74,6 +79,9 @@ export async function startRetainedOpenCodeModel(options: { sourceSelection?: tr
       let strictLaunch: { model: string; challenge: string } | undefined;
       let sourcePreflight: true | undefined;
       let preparationCommandId: 'TEST-coexist-launch-once' | undefined;
+      let donorStage: 'read' | 'edit' | 'reply' | undefined;
+      let toolCall: { id: string; type: 'function'; function: { name: string; arguments: string } } | undefined;
+      let toolResultIds: string[] | undefined;
       if (options.sourceSelection) {
         assert.equal(owner, 'host', 'source-selection inputs belong to the original Host');
         assert.equal(JSON.stringify(messages).includes('TEST_RETAINED_V1_'), false);
@@ -108,6 +116,62 @@ export async function startRetainedOpenCodeModel(options: { sourceSelection?: tr
           assertNoToolMessageRoles(messages);
           sourcePreflight = true;
         }
+      } else if (options.donorReview && lastUser?.includes('TEST_RETAINED_V1_HISTORY')) {
+        assert.equal(owner, 'legacy', 'only the selected genuine donor may request native edits');
+        assert.equal(JSON.stringify(messages).includes('TEST_OWNED_V2_'), false);
+        assert.ok(donorStep < 3, 'one Read, one Edit and one reply for the single original Send');
+        const selected = options.donorReview;
+        assert.ok(selected.filePath.startsWith('/') && selected.before && selected.after !== selected.before);
+        const row = (value: unknown): Record<string, unknown> => {
+          assert.ok(value && typeof value === 'object' && !Array.isArray(value)); return value as Record<string, unknown>;
+        };
+        const users = messages.filter(message => message.role === 'user' &&
+          JSON.stringify(message.content).includes('TEST_RETAINED_V1_HISTORY'));
+        assert.equal(users.length, 1, 'the one business prompt is never resubmitted');
+        if (donorStep === 0) {
+          assert.equal(markers.has('TEST_RETAINED_V1_HISTORY'), false);
+          donorPrompt = lastUser; marker = 'TEST_RETAINED_V1_HISTORY'; markers.add(marker);
+        } else assert.equal(lastUser, donorPrompt, 'only tool results continue the original prompt');
+        const actions = [
+          { id: 'TEST_DONOR_REVIEW_READ', name: 'read', input: { filePath: selected.filePath } },
+          { id: 'TEST_DONOR_REVIEW_EDIT', name: 'edit', input: {
+            filePath: selected.filePath, oldString: selected.before, newString: selected.after, replaceAll: false,
+          } },
+        ];
+        const catalog = (Array.isArray(body.tools) ? body.tools : []).map(row).map(tool => row(tool.function));
+        tools = catalog.map(tool => { assert.equal(typeof tool.name, 'string'); return tool.name as string; });
+        for (const action of actions) {
+          const offered = catalog.filter(tool => tool.name === action.name);
+          assert.equal(offered.length, 1, 'the original donor advertises the exact native tool');
+          const schema = row(offered[0]!.parameters), properties = row(schema.properties);
+          assert.equal(schema.type, 'object'); assert.ok(Array.isArray(schema.required));
+          for (const key of Object.keys(action.input)) {
+            assert.equal(row(properties[key]).type, key === 'replaceAll' ? 'boolean' : 'string');
+            if (key !== 'replaceAll') assert.ok(schema.required.includes(key));
+          }
+          assert.ok(schema.required.every(key => typeof key === 'string' && Object.hasOwn(action.input, key)));
+        }
+        const tail = messages.slice(messages.findLastIndex(message => message.role === 'user') + 1).map(row);
+        const calls = tail.filter(message => message.role === 'assistant').flatMap(message =>
+          Array.isArray(message.tool_calls) ? message.tool_calls.map(row) : []);
+        const results = tail.filter(message => message.role === 'tool');
+        assert.equal(calls.length, donorStep); assert.equal(results.length, donorStep);
+        toolResultIds = [];
+        for (let index = 0; index < donorStep; index++) {
+          const action = actions[index]!, call = calls[index]!, result = results[index]!;
+          assert.equal(call.id, action.id); assert.equal(call.type, 'function');
+          assert.equal(row(call.function).name, action.name);
+          assert.deepEqual(JSON.parse(String(row(call.function).arguments)), action.input);
+          assert.equal(result.tool_call_id, action.id); toolResultIds.push(action.id);
+          assert.ok(typeof result.content === 'string' || Array.isArray(result.content));
+          if (index === 0) assert.ok(JSON.stringify(result.content).includes(selected.before.trim()),
+            'the actual native Read returns the preexisting Git fixture before Edit');
+        }
+        donorStage = (['read', 'edit', 'reply'] as const)[donorStep]!;
+        const action = actions[donorStep]; donorStep++;
+        if (action) toolCall = { id: action.id, type: 'function', function: {
+          name: action.name, arguments: JSON.stringify(action.input),
+        } };
       } else {
         const ownPrefix = owner === 'legacy' ? 'TEST_RETAINED_V1_' : 'TEST_OWNED_V2_';
         const otherPrefix = owner === 'legacy' ? 'TEST_OWNED_V2_' : 'TEST_RETAINED_V1_';
@@ -115,6 +179,7 @@ export async function startRetainedOpenCodeModel(options: { sourceSelection?: tr
           'no business input or history crosses the original owner boundary');
         marker = [...lastUser?.matchAll(/TEST_(?:RETAINED_V1|OWNED_V2)_(?:HISTORY|FIRST|AFTER_STOP)/g) ?? []].at(-1)?.[0] ?? null;
         if (marker) {
+          assert.equal(options.donorReview, undefined, 'the donor accepts only its one HISTORY tool sequence');
           assert.ok(owner !== 'host' || !hostPreparation?.active, 'Host business input cannot replace preparation');
           assert.ok(marker.startsWith(ownPrefix));
           assert.equal(markers.has(marker), false, 'no repeated business inference'); markers.add(marker);
@@ -152,11 +217,14 @@ export async function startRetainedOpenCodeModel(options: { sourceSelection?: tr
         }
       }
       observations.push({ owner, marker, tools, ...(strictLaunch ? { strictLaunch } : {}),
-        ...(sourcePreflight ? { sourcePreflight } : {}), ...(preparationCommandId ? { preparationCommandId } : {}) });
-      const content = marker ? `REPLY_${marker}` : sourcePreflight || preparationCommandId ? 'OK' : strictLaunch?.challenge ?? 'PONG';
+        ...(sourcePreflight ? { sourcePreflight } : {}), ...(preparationCommandId ? { preparationCommandId } : {}),
+        ...(donorStage ? { donorStage, toolResultIds, ...(toolCall ? { toolCallId: toolCall.id } : {}) } : {}) });
+      const content = donorStage === 'reply' ? 'REPLY_TEST_RETAINED_V1_HISTORY' :
+        marker ? `REPLY_${marker}` : sourcePreflight || preparationCommandId ? 'OK' : strictLaunch?.challenge ?? 'PONG';
       if (body.stream === true) {
         response.writeHead(200, { 'content-type': 'text/event-stream' });
-        for (const [delta, finish_reason] of [[{ role: 'assistant', content }, null], [{}, 'stop']] as const)
+        const message = toolCall ? { role: 'assistant', tool_calls: [{ index: 0, ...toolCall }] } : { role: 'assistant', content };
+        for (const [delta, finish_reason] of [[message, null], [{}, toolCall ? 'tool_calls' : 'stop']] as const)
           response.write(`data: ${JSON.stringify({ id: `TEST-${owner}-${observations.length}`,
             object: 'chat.completion.chunk', created: 1700000000, model: 'TEST-model',
             choices: [{ index: 0, delta, finish_reason }] })}\n\n`);
@@ -164,7 +232,8 @@ export async function startRetainedOpenCodeModel(options: { sourceSelection?: tr
       } else {
         response.writeHead(200, { 'content-type': 'application/json' });
         response.end(JSON.stringify({ id: `TEST-${owner}-${observations.length}`, object: 'chat.completion',
-          model: 'TEST-model', choices: [{ index: 0, message: { role: 'assistant', content }, finish_reason: 'stop' }] }));
+          model: 'TEST-model', choices: [{ index: 0, message: toolCall ? { role: 'assistant', tool_calls: [toolCall] } :
+            { role: 'assistant', content }, finish_reason: toolCall ? 'tool_calls' : 'stop' }] }));
       }
     })().catch(error => {
       failures.push(error instanceof Error ? error.message : 'model contract failure');

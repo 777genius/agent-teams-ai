@@ -1,0 +1,3 @@
+$ node --max-old-space-size=8192 node_modules/eslint/bin/eslint.js src/ --cache --cache-location .eslintcache --cache-strategy content
+Killed
+[ELIFECYCLE] Command failed with exit code 137.

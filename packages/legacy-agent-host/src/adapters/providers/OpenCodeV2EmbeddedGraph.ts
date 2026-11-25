@@ -12,6 +12,10 @@ export interface OpenCodeV2EmbeddedSelection {
   arch: string;
 }
 
+export type OpenCodeV2GraphPhase = 'graph-manifest-verified' | 'graph-inventory-indexed'
+  | 'graph-census-returned' | 'graph-files-quarter' | 'graph-files-half'
+  | 'graph-files-three-quarters' | 'graph-files-returned';
+
 export interface VerifiedOpenCodeV2EmbeddedGraph {
   modulePath: string;
   effectPath: string;
@@ -85,8 +89,13 @@ export async function verifyOpenCodeV2EmbeddedManifest(
 /** Verify the entire immutable delivery and resolve Effect from the selected server itself. */
 export async function verifyOpenCodeV2EmbeddedGraph(
   selection: OpenCodeV2EmbeddedSelection,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  observeProgress?: (phase: OpenCodeV2GraphPhase) => void
 ): Promise<VerifiedOpenCodeV2EmbeddedGraph> {
+  const observe = (phase: OpenCodeV2GraphPhase): void => {
+    try { observeProgress?.(phase); }
+    catch { /* Partial progress is diagnostic only, never graph admission. */ }
+  };
   signal?.throwIfAborted();
   if (
     selection.version !== '2.1.4' ||
@@ -126,6 +135,7 @@ export async function verifyOpenCodeV2EmbeddedGraph(
     manifest.files.length > 100_000
   )
     return hold();
+  observe('graph-manifest-verified');
   const entries = new Map<string, FileEntry>();
   const directories = new Set<string>();
   let totalBytes = 0;
@@ -155,9 +165,11 @@ export async function verifyOpenCodeV2EmbeddedGraph(
       parent = path.posix.dirname(parent);
     }
   }
+  observe('graph-inventory-indexed');
   let observed = 0;
-  async function walk(relative: string): Promise<void> {
+  async function inspectDirectory(relative: string): Promise<string[]> {
     signal?.throwIfAborted();
+    const children: string[] = [];
     for (const child of await readdir(path.join(selection.directory, relative), {
       withFileTypes: true,
     })) {
@@ -165,15 +177,35 @@ export async function verifyOpenCodeV2EmbeddedGraph(
       if (child.isSymbolicLink()) return hold();
       if (child.isDirectory()) {
         if (!directories.has(name)) return hold();
-        await walk(name);
+        children.push(name);
       } else if (child.isFile()) {
         if (name !== manifestName && !entries.has(name)) return hold();
         if (name !== manifestName) observed++;
       } else return hold();
     }
+    return children;
   }
-  await walk('');
+  const pendingDirectories = [''];
+  while (pendingDirectories.length) {
+    // Only descend through directory entries accepted by the original parent read.
+    // Independent directories can be inspected together within the same validation.
+    const batch = await Promise.allSettled(
+      pendingDirectories.splice(0, 12).map(inspectDirectory)
+    );
+    // All original reads settle before refusal, another batch or byte checks.
+    for (const result of batch) {
+      if (result.status === 'rejected') throw result.reason;
+      for (const child of result.value) pendingDirectories.push(child);
+    }
+  }
   if (observed !== entries.size) return hold();
+  observe('graph-census-returned');
+  const milestones = [
+    [Math.ceil(entries.size / 4), 'graph-files-quarter'],
+    [Math.ceil(entries.size / 2), 'graph-files-half'],
+    [Math.ceil(entries.size * 3 / 4), 'graph-files-three-quarters'],
+  ] as const;
+  let verifiedFiles = 0, nextMilestone = 0;
   const remaining = entries.values();
   await Promise.all(
     Array.from({ length: 12 }, async () => {
@@ -189,10 +221,19 @@ export async function verifyOpenCodeV2EmbeddedGraph(
           (process.platform !== 'win32' && Boolean(info.mode & 0o111) !== entry.executable)
         )
           return hold();
+        if (observeProgress) {
+          verifiedFiles++;
+          // Report only successful original checks, including pinnedFile's close.
+          while (nextMilestone < milestones.length && verifiedFiles >= milestones[nextMilestone]![0]) {
+            observe(milestones[nextMilestone]![1]);
+            nextMilestone++;
+          }
+        }
       }
     })
   );
   signal?.throwIfAborted();
+  observe('graph-files-returned');
 
   const checkedEntry = async (entry: string): Promise<string> => {
     const canonical = await realpath(entry);

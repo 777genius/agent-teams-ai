@@ -1,12 +1,78 @@
-import { hostTeamRunId } from '../contracts/teamRunSelection';
-import { parseHostTeamSelectionKey } from '../contracts/teamSelection';
+import { hostTeamRunId, parseHostTeamRunId } from '../contracts/teamRunSelection';
+import { hostTeamSelectionKey, parseHostTeamSelectionKey } from '../contracts/teamSelection';
 
 import { readHostLaunchConfiguration } from './readHostLaunchConfiguration';
 
 import type { BackendLaunchConfigurationView } from '../contracts/launch';
 import type { AgentBackendApi } from '../contracts/operations';
 import type { TeamProductReadOrder } from './TeamProductReadOrder';
-import type { MemberSpawnStatusEntry, MemberSpawnStatusesSnapshot } from '@shared/types/team';
+import type {
+  MemberSpawnStatusEntry,
+  MemberSpawnStatusesSnapshot,
+  TeamProvisioningProgress,
+} from '@shared/types/team';
+
+// Local provenance only: no DTO fields, new read token or control authority.
+const capturedSnapshots = new WeakMap<MemberSpawnStatusesSnapshot, (teamName: string) => boolean>();
+const capturedProgress = new WeakMap<
+  TeamProvisioningProgress,
+  { snapshot: MemberSpawnStatusesSnapshot; teamName: string; runId: string }
+>();
+
+function retainCapturedSnapshot(
+  snapshot: MemberSpawnStatusesSnapshot,
+  teamName: string,
+  assertCurrent: () => void
+): MemberSpawnStatusesSnapshot {
+  const runId = snapshot.runId;
+  capturedSnapshots.set(snapshot, (selectedTeam) => {
+    if (selectedTeam !== teamName || snapshot.runId !== runId) return false;
+    try {
+      assertCurrent();
+      return true;
+    } catch {
+      return false;
+    }
+  });
+  return snapshot;
+}
+
+export function hostMemberSpawnSnapshotCurrentness(
+  snapshot: MemberSpawnStatusesSnapshot,
+  teamName: string
+): boolean | undefined {
+  return capturedSnapshots.get(snapshot)?.(teamName);
+}
+
+/** Internal Host readers attach only projections of the same already-read configuration. */
+export function captureHostProvisioningMemberSnapshot(
+  progress: TeamProvisioningProgress,
+  snapshot: MemberSpawnStatusesSnapshot,
+  assertCurrent: () => void
+): TeamProvisioningProgress {
+  const teamName = hostTeamSelectionKey(parseHostTeamRunId(progress.runId).handleId);
+  if (progress.teamName !== teamName || snapshot.runId !== progress.runId)
+    throw new Error('Host progress and member snapshot selections differ');
+  capturedProgress.set(progress, {
+    snapshot: retainCapturedSnapshot(snapshot, teamName, assertCurrent),
+    teamName,
+    runId: progress.runId,
+  });
+  return progress;
+}
+
+/** Undefined is unregistered; null is a known stale or changed Host observation. */
+export function hostProvisioningMemberSnapshot(
+  progress: TeamProvisioningProgress
+): MemberSpawnStatusesSnapshot | null | undefined {
+  const captured = capturedProgress.get(progress);
+  if (!captured) return undefined;
+  return progress.teamName === captured.teamName &&
+    progress.runId === captured.runId &&
+    hostMemberSpawnSnapshotCurrentness(captured.snapshot, captured.teamName) === true
+    ? captured.snapshot
+    : null;
+}
 
 const text = (value: unknown): value is string =>
   typeof value === 'string' && value.length > 0 && value.length <= 256 && !value.includes('\0');
@@ -173,9 +239,15 @@ export function createHostMemberSpawnStatuses(
       const configuration = await readHostLaunchConfiguration(backend, handle);
       current();
       readFence();
-      return configuration
-        ? projectHostMemberSpawnStatuses(handleId, configuration)
-        : { statuses: {}, runId: null };
+      if (!configuration) return { statuses: {}, runId: null };
+      return retainCapturedSnapshot(
+        projectHostMemberSpawnStatuses(handleId, configuration),
+        hostTeamSelectionKey(handleId),
+        () => {
+          if (!check()) throw new Error('Team context changed');
+          readFence();
+        }
+      );
     } finally {
       if (reads.get(handleId) === request) reads.delete(handleId);
     }

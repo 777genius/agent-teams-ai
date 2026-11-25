@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 1,
+  "kind": "current-head-original-selected-ui-lane-success",
+  "sourceHead": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+  "event": "pull_request",
+  "runAttempt": 1,
+  "runId": 44434982606,
+  "job": {
+    "id": 135261470910,
+    "name": "Offline Host Desktop (darwin-arm64, installer)",
+    "head_sha": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+    "run_id": 44434982606,
+    "run_attempt": 1,
+    "status": "completed",
+    "conclusion": "success",
+    "started_at": "2026-11-19T01:46:29Z",
+    "completed_at": "2026-11-19T01:53:57Z",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44434982606/job/135261470910",
+    "runner_name": "GitHub Actions 1000396087"
+  },
+  "rawLog": {
+    "phase": "permanently-retired",
+    "jobId": 135261470910,
+    "head": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+    "runId": 44434982606,
+    "runAttempt": 1,
+    "conclusion": "success",
+    "requestedAt": "2026-11-19 01:56:15 UTC",
+    "bytes": 292341,
+    "sha256": "5abf00b610c75737ac1e38cdfc0ea98818dea91aa067abe1eaa3b9081e7f426b",
+    "computedGitBlobSha": "b6db6a8fc8eed97dd56f8e659c12e64c0454eaaa",
+    "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/job-135261470910-terminal.log",
+    "rawToolResponseLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/job-135261470910-log-response-raw.json",
+    "rawResponsePersistedBeforeDecode": true,
+    "endpointRetired": true,
+    "publishedBlobSha": "b6db6a8fc8eed97dd56f8e659c12e64c0454eaaa",
+    "exactReadback": true
+  },
+  "originalUnitSummaryLines": [
+    "ℹ tests 514",
+    "ℹ pass 508",
+    "ℹ fail 0",
+    "ℹ cancelled 0",
+    "ℹ skipped 6",
+    "ℹ todo 0",
+    "ℹ duration_ms 36911.736375",
+    "ℹ tests 7",
+    "ℹ pass 7",
+    "ℹ fail 0",
+    "ℹ cancelled 0",
+    "ℹ skipped 0",
+    "ℹ todo 0",
+    "ℹ duration_ms 320.585541"
+  ],
+  "originalConsolePass": [
+    {
+      "status": "PASS",
+      "receipt": "/Users/runner/work/_temp/TEST-desktop-backend-tsTrQI/desktop-backend-receipt.json"
+    }
+  ],
+  "originalScenarioAndVerificationSteps": [
+    {
+      "name": "Verify original checkout and runner tuple",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 5,
+      "started_at": "2026-11-19T01:47:38Z",
+      "completed_at": "2026-11-19T01:47:38Z"
+    },
+    {
+      "name": "Exercise stock Codex Update while the original Team retains its captured source",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 27,
+      "started_at": "2026-11-19T01:50:03Z",
+      "completed_at": "2026-11-19T01:53:43Z"
+    },
+    {
+      "name": "Verify exact source, original screenshots, receipts and cleanup",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 38,
+      "started_at": "2026-11-19T01:53:43Z",
+      "completed_at": "2026-11-19T01:53:44Z"
+    }
+  ],
+  "originalSafetyAndCleanupVerifierProgramLines": [
+    "  LEGACY_DESKTOP_EMULATED_ONLY: 1",
+    "  LEGACY_DESKTOP_PROOF_MODE: emulated-installer-ui",
+    "assert.equal(inputs.nativeProviders, 'forbidden');",
+    "    assert.equal(proof.fixturePins.vendorsAllowed, false);",
+    "    assert.equal(receipt.emulatedRuntimeCleanup.absent, true);",
+    "    assert.deepEqual(receipt.emulatedRuntimeCleanup.remaining, []);",
+    "    assert.equal(proof.fixturePins.vendorsAllowed, false);",
+    "    assert.equal(receipt.emulatedRuntimeCleanup.absent, true); assert.deepEqual(receipt.emulatedRuntimeCleanup.remaining, []);",
+    "    assert.equal(proof.fixturePins.vendorsAllowed, false); assert.equal(proof.fixturePins.runtimeConfigured, true);",
+    "    assert.equal(receipt.emulatedRuntimeCleanup.absent, true); assert.deepEqual(receipt.emulatedRuntimeCleanup.remaining, []);",
+    "  nativeProviders: 'not executed', vendorAuthQualified: false, releaseQualified: false,",
+    "  LEGACY_DESKTOP_EMULATED_ONLY: 1",
+    "  LEGACY_DESKTOP_EMULATED_ONLY: 1"
+  ],
+  "artifactFromOriginalUploadLog": {
+    "artifactId": 14490218393,
+    "bytes": 1178014,
+    "sha256": "3e5672893df2ba5c9c5de8423754e8bca6b9fd4d33f8cf0ecbf9250a50978ba4",
+    "downloaded": false,
+    "visualInspection": false
+  },
+  "scope": "Original darwin-arm64 installer UI scenario exercises stock Codex Update while the original Team retains its captured source, inside the original finite TEST fixture and emulated-only workflow. Original exact source/screenshots/receipts/cleanup verifier succeeded. This does not qualify real vendor Codex download/update or execution, vendor authentication, native Codex or release behavior; no separate receipt ZIP or visual inspection is claimed.",
+  "verificationLimit": "Original scenario PASS plus original source/receipt/cleanup verifier SUCCESS; full artifact receipt was not separately downloaded. Verifier program lines are original assertions, not separately decoded field observations. Common source unit tests repeat across jobs and are not summed as unique tests.",
+  "jobLogEndpointRetired": true
+}

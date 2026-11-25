@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { mkdir, mkdtemp, readFile, readdir, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -19,7 +20,7 @@ const value = <T>(reply: Record<string, unknown>): T => {
   assert.equal(reply.ok, true);
   return reply.value as T;
 };
-type Wire = { method: string; params?: Record<string, unknown> };
+type Wire = { method: string; params?: Record<string, unknown>; pid?: number };
 const identity = {
   operationId: 'TEST-owned-login',
   profileId: 'TEST-profile',
@@ -208,6 +209,50 @@ test(
     }
   }
 );
+
+for (const [methodIndex, type, url] of [
+  [0, 'chatgpt', 'https://auth.openai.com/TEST-login?state=TEST-private-state'],
+  [1, 'chatgptDeviceCode', 'https://auth.openai.com/TEST-device'],
+] as const) {
+  test(`Desktop pending Codex peer preserves original ${type} cancellation and cold receipt`,
+    { timeout: 20_000, skip: process.platform === 'win32' }, async (t) => {
+      const f = await fixture(t, 'desktop-pending');
+      assert.throws(() => execFileSync(f.managementProfile.executable.path, ['--version'], {
+        env: f.managementProfile.environment, timeout: 1000, stdio: 'pipe',
+      }), (error: unknown) => typeof error === 'object' && error !== null &&
+        'status' in error && error.status === 1, 'the TEST login peer refuses version invocation');
+      const start = { ...identity, providerId: 'codex', methodIndex };
+      value(await f.rpc('oauth.start', start));
+      await f.wait('waiting-for-browser');
+      const authorization = value<ProviderOAuthAuthorization>(await f.rpc('oauth.authorization', identity));
+      assert.equal(authorization.authorizationUrl, url);
+      assert.equal(authorization.userCode, methodIndex === 1 ? 'TEST-PRIVATE-CODE' : undefined);
+      assert.deepEqual(value(await f.rpc('oauth.authorization', identity)), authorization);
+      value(await f.rpc('oauth.cancel', identity));
+      await f.wait('cancelled');
+      const commandDirectory = join(f.root, 'store/management-commands');
+      const commands = await Promise.all((await readdir(commandDirectory)).filter(name => name.endsWith('.json'))
+        .map(async name => JSON.parse(await readFile(join(commandDirectory, name), 'utf8')) as Record<string, unknown>));
+      assert.equal(commands.length, 1);
+      assert.equal(commands[0]!.phase, 'cancelled');
+      assert.equal(commands[0]!.resourceHeld, false);
+      const wire = await f.wire();
+      const starts = wire.filter(row => row.method === 'account/login/start');
+      const cancellations = wire.filter(row => row.method === 'account/login/cancel');
+      assert.equal(starts.length, 1);
+      assert.equal(starts[0]!.params?.type, type);
+      assert.equal(cancellations.length, 1);
+      assert.equal(cancellations[0]!.pid, starts[0]!.pid);
+      assert.equal(cancellations[0]!.params?.loginId, 'TEST-native-login-' + String(starts[0]!.pid));
+      assert.ok(wire.every(row => ['initialize', 'initialized', 'account/login/start', 'account/login/cancel'].includes(row.method)));
+      assert.ok((await f.processes()).every(row => absent(row.pid)), 'original peer exits before cancellation receipt');
+      const launches = (await f.processes()).length;
+      await f.restart();
+      assert.equal(value<ProviderOAuthSnapshot>(await f.rpc('oauth.start', start)).phase, 'cancelled');
+      assert.equal(value(await f.rpc('oauth.authorization', identity)), null);
+      assert.equal((await f.processes()).length, launches, 'cold read never substitutes a second login');
+    });
+}
 
 for (const scenario of [
   'early',

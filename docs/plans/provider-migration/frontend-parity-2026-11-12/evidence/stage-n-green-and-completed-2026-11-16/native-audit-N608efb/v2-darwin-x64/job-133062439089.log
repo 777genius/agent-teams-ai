@@ -1,0 +1,1205 @@
+﻿2026-11-16T03:06:48.7209720Z Current runner version: '2.338.2'
+2026-11-16T03:06:48.7260750Z ##[group]Runner Image Provisioner
+2026-11-16T03:06:48.7262170Z Hosted Compute Agent
+2026-11-16T03:06:48.7262910Z Version: 20260819.586
+2026-11-16T03:06:48.7263730Z Commit: 3cc4a88dfa507ef76119ad1bb3eccc6378bb2b76
+2026-11-16T03:06:48.7264640Z Build Date: 2026-08-18T23:20:18Z
+2026-11-16T03:06:48.7265450Z Worker ID: {cfa3ffac-61f1-434c-8d3e-01fd1c024ace}
+2026-11-16T03:06:48.7266330Z Azure Region: westus
+2026-11-16T03:06:48.7267010Z ##[endgroup]
+2026-11-16T03:06:48.7269730Z ##[group]Operating System
+2026-11-16T03:06:48.7270550Z macOS
+2026-11-16T03:06:48.7271350Z 15.7.9
+2026-11-16T03:06:48.7271960Z 24G830
+2026-11-16T03:06:48.7272530Z ##[endgroup]
+2026-11-16T03:06:48.7273200Z ##[group]Runner Image
+2026-11-16T03:06:48.7274370Z Image: macos-15
+2026-11-16T03:06:48.7275250Z Version: 20260824.0482.1
+2026-11-16T03:06:48.7278050Z Included Software: https://github.com/actions/runner-images/blob/macos-15/20260824.0482/images/macos/macos-15-Readme.md
+2026-11-16T03:06:48.7280400Z Image Release: https://github.com/actions/runner-images/releases/tag/macos-15%2F20260824.0482
+2026-11-16T03:06:48.7281700Z ##[endgroup]
+2026-11-16T03:06:48.7283130Z ##[group]GITHUB_TOKEN Permissions
+2026-11-16T03:06:48.7286720Z Contents: read
+2026-11-16T03:06:48.7287810Z Metadata: read
+2026-11-16T03:06:48.7288890Z ##[endgroup]
+2026-11-16T03:06:48.7292230Z Secret source: Actions
+2026-11-16T03:06:48.7293310Z Cache mode: write
+2026-11-16T03:06:48.7295080Z Prepare workflow directory
+2026-11-16T03:06:48.8301780Z Prepare all required actions
+2026-11-16T03:06:48.8365510Z Getting action download info
+2026-11-16T03:06:49.0215460Z Download action repository 'actions/checkout@v6' (SHA:d23441a48e516b6c34aea4fa41551a30e30af803)
+2026-11-16T03:06:49.2061550Z Download action repository 'pnpm/action-setup@v6' (SHA:73e46992e05b19abd31f2f3c20e0e7370d762115)
+2026-11-16T03:06:49.9010460Z Download action repository 'actions/setup-node@v6' (SHA:249970729cb0ef3589644e2896645e5dc5ba9c38)
+2026-11-16T03:06:50.0152190Z Download action repository 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-11-16T03:06:50.3358170Z Complete job name: Embedded V2.1.4 original Host (darwin-x64)
+2026-11-16T03:06:50.4990600Z ##[group]Run actions/checkout@v6
+2026-11-16T03:06:50.4993020Z with:
+2026-11-16T03:06:50.4994670Z   ref: 608efb78823d7c74b35f8a674fcfb6faea8ecfc5
+2026-11-16T03:06:50.4996860Z   persist-credentials: false
+2026-11-16T03:06:50.4998680Z   repository: 777genius/agent-teams-ai
+2026-11-16T03:06:50.5016360Z   token: ***
+2026-11-16T03:06:50.5017800Z   ssh-strict: true
+2026-11-16T03:06:50.5019290Z   ssh-user: git
+2026-11-16T03:06:50.5020740Z   clean: true
+2026-11-16T03:06:50.5022260Z   sparse-checkout-cone-mode: true
+2026-11-16T03:06:50.5024120Z   fetch-depth: 1
+2026-11-16T03:06:50.5025600Z   fetch-tags: false
+2026-11-16T03:06:50.5027140Z   show-progress: true
+2026-11-16T03:06:50.5028680Z   lfs: false
+2026-11-16T03:06:50.5030080Z   submodules: false
+2026-11-16T03:06:50.5031670Z   set-safe-directory: true
+2026-11-16T03:06:50.5033420Z   allow-unsafe-pr-checkout: false
+2026-11-16T03:06:50.5036140Z env:
+2026-11-16T03:06:50.5037590Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T03:06:50.5039620Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+2026-11-16T03:06:50.5042800Z   npm_config_audit: false
+2026-11-16T03:06:50.5045100Z   npm_config_fund: false
+2026-11-16T03:06:50.5047430Z   OPENCODE_V2_TEST_SOURCE_HEAD: 608efb78823d7c74b35f8a674fcfb6faea8ecfc5
+2026-11-16T03:06:50.5050160Z   OPENCODE_V2_TEST_PLATFORM: darwin-x64
+2026-11-16T03:06:50.5052290Z   OPENCODE_V2_TEST_DARWIN_CANDIDATE_BUILD: 24G830
+2026-11-16T03:06:50.5056370Z   OPENCODE_V2_EMBEDDED_INPUTS_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-embedded-inputs.json
+2026-11-16T03:06:50.5062530Z   OPENCODE_V2_EMBEDDED_DARWIN_CUSTODY_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-darwin-custody.json
+2026-11-16T03:06:50.5088010Z   OPENCODE_V2_EMBEDDED_WINDOWS_CUSTODY_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-windows-custody.json
+2026-11-16T03:06:50.5095340Z   OPENCODE_V2_EMBEDDED_HOST_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-embedded-host.json
+2026-11-16T03:06:50.5100330Z ##[endgroup]
+2026-11-16T03:06:50.8649370Z Syncing repository: 777genius/agent-teams-ai
+2026-11-16T03:06:50.8656200Z ##[group]Getting Git version info
+2026-11-16T03:06:50.8660500Z Working directory is '/Users/runner/work/agent-teams-ai/agent-teams-ai'
+2026-11-16T03:06:50.8666680Z [command]/usr/local/bin/git version
+2026-11-16T03:06:50.9011960Z git version 2.55.0
+2026-11-16T03:06:50.9058550Z ##[endgroup]
+2026-11-16T03:06:50.9077420Z Copying '/Users/runner/.gitconfig' to '/Users/runner/work/_temp/3c8b0d09-13bb-4924-8b91-c380939f0f02/.gitconfig'
+2026-11-16T03:06:50.9099240Z Temporarily overriding HOME='/Users/runner/work/_temp/3c8b0d09-13bb-4924-8b91-c380939f0f02' before making global git config changes
+2026-11-16T03:06:50.9106890Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-16T03:06:50.9114030Z [command]/usr/local/bin/git config --global --add safe.directory /Users/runner/work/agent-teams-ai/agent-teams-ai
+2026-11-16T03:06:50.9279220Z Deleting the contents of '/Users/runner/work/agent-teams-ai/agent-teams-ai'
+2026-11-16T03:06:50.9286540Z ##[group]Determining repository object format
+2026-11-16T03:06:50.9291070Z ##[endgroup]
+2026-11-16T03:06:50.9295310Z ##[group]Initializing the repository
+2026-11-16T03:06:50.9299880Z [command]/usr/local/bin/git init /Users/runner/work/agent-teams-ai/agent-teams-ai
+2026-11-16T03:06:50.9722390Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-11-16T03:06:50.9729360Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-11-16T03:06:50.9734510Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-11-16T03:06:50.9741200Z hint: call:
+2026-11-16T03:06:50.9743440Z hint:
+2026-11-16T03:06:50.9745800Z hint: 	git config --global init.defaultBranch <name>
+2026-11-16T03:06:50.9748680Z hint:
+2026-11-16T03:06:50.9751060Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-11-16T03:06:50.9756310Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-11-16T03:06:50.9759730Z hint:
+2026-11-16T03:06:50.9761500Z hint: 	git branch -m <name>
+2026-11-16T03:06:50.9763850Z hint:
+2026-11-16T03:06:50.9766780Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-11-16T03:06:50.9771550Z Initialized empty Git repository in /Users/runner/work/agent-teams-ai/agent-teams-ai/.git/
+2026-11-16T03:06:50.9779230Z [command]/usr/local/bin/git remote add origin https://github.com/777genius/agent-teams-ai
+2026-11-16T03:06:50.9919810Z ##[endgroup]
+2026-11-16T03:06:50.9923700Z ##[group]Disabling automatic garbage collection
+2026-11-16T03:06:50.9927390Z [command]/usr/local/bin/git config --local gc.auto 0
+2026-11-16T03:06:51.0060310Z ##[endgroup]
+2026-11-16T03:06:51.0064220Z ##[group]Setting up auth
+2026-11-16T03:06:51.0066990Z Removing SSH command configuration
+2026-11-16T03:06:51.0073410Z [command]/usr/local/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-16T03:06:51.0225660Z [command]/usr/local/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-16T03:06:51.1926410Z Removing HTTP extra header
+2026-11-16T03:06:51.1933830Z [command]/usr/local/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-16T03:06:51.2062000Z [command]/usr/local/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-16T03:06:51.3706410Z Removing includeIf entries pointing to credentials config files
+2026-11-16T03:06:51.3714730Z [command]/usr/local/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-16T03:06:51.3848190Z [command]/usr/local/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-16T03:06:51.5389290Z [command]/usr/local/bin/git config --file /Users/runner/work/_temp/git-credentials-8e1f40a0-3416-4c2d-a89a-6d81f69ba059.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-11-16T03:06:51.5536600Z [command]/usr/local/bin/git config --local includeIf.gitdir:/Users/runner/work/agent-teams-ai/agent-teams-ai/.git.path /Users/runner/work/_temp/git-credentials-8e1f40a0-3416-4c2d-a89a-6d81f69ba059.config
+2026-11-16T03:06:51.5669340Z [command]/usr/local/bin/git config --local includeIf.gitdir:/Users/runner/work/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path /Users/runner/work/_temp/git-credentials-8e1f40a0-3416-4c2d-a89a-6d81f69ba059.config
+2026-11-16T03:06:51.5801300Z [command]/usr/local/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-8e1f40a0-3416-4c2d-a89a-6d81f69ba059.config
+2026-11-16T03:06:51.5950420Z [command]/usr/local/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-8e1f40a0-3416-4c2d-a89a-6d81f69ba059.config
+2026-11-16T03:06:51.6085680Z ##[endgroup]
+2026-11-16T03:06:51.6089530Z ##[group]Fetching the repository
+2026-11-16T03:06:51.6096710Z [command]/usr/local/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin 608efb78823d7c74b35f8a674fcfb6faea8ecfc5
+2026-11-16T03:07:00.2062010Z From https://github.com/777genius/agent-teams-ai
+2026-11-16T03:07:00.2063990Z  * branch            608efb78823d7c74b35f8a674fcfb6faea8ecfc5 -> FETCH_HEAD
+2026-11-16T03:07:00.2079310Z [command]/usr/local/bin/git rev-parse --verify --quiet 608efb78823d7c74b35f8a674fcfb6faea8ecfc5^{object}
+2026-11-16T03:07:00.2226820Z 608efb78823d7c74b35f8a674fcfb6faea8ecfc5
+2026-11-16T03:07:00.2234800Z ##[endgroup]
+2026-11-16T03:07:00.2236710Z ##[group]Determining the checkout info
+2026-11-16T03:07:00.2238830Z ##[endgroup]
+2026-11-16T03:07:00.2245050Z [command]/usr/local/bin/git sparse-checkout disable
+2026-11-16T03:07:00.2415770Z [command]/usr/local/bin/git config --local --unset-all extensions.worktreeConfig
+2026-11-16T03:07:00.2535790Z ##[group]Checking out the ref
+2026-11-16T03:07:00.2545220Z [command]/usr/local/bin/git checkout --progress --force 608efb78823d7c74b35f8a674fcfb6faea8ecfc5
+2026-11-16T03:07:01.3447710Z Updating files:  14% (1492/10334)
+2026-11-16T03:07:01.4939980Z Updating files:  15% (1551/10334)
+2026-11-16T03:07:01.5518430Z Updating files:  16% (1654/10334)
+2026-11-16T03:07:01.5828090Z Updating files:  17% (1757/10334)
+2026-11-16T03:07:01.6203120Z Updating files:  18% (1861/10334)
+2026-11-16T03:07:01.6778250Z Updating files:  19% (1964/10334)
+2026-11-16T03:07:01.8983100Z Updating files:  20% (2067/10334)
+2026-11-16T03:07:01.9233590Z Updating files:  21% (2171/10334)
+2026-11-16T03:07:01.9481000Z Updating files:  22% (2274/10334)
+2026-11-16T03:07:01.9761440Z Updating files:  23% (2377/10334)
+2026-11-16T03:07:02.0046320Z Updating files:  24% (2481/10334)
+2026-11-16T03:07:02.0354340Z Updating files:  25% (2584/10334)
+2026-11-16T03:07:02.0632520Z Updating files:  26% (2687/10334)
+2026-11-16T03:07:02.0905870Z Updating files:  27% (2791/10334)
+2026-11-16T03:07:02.1268860Z Updating files:  28% (2894/10334)
+2026-11-16T03:07:02.1556950Z Updating files:  29% (2997/10334)
+2026-11-16T03:07:02.2078550Z Updating files:  30% (3101/10334)
+2026-11-16T03:07:02.2387650Z Updating files:  31% (3204/10334)
+2026-11-16T03:07:02.2695030Z Updating files:  32% (3307/10334)
+2026-11-16T03:07:02.2915930Z Updating files:  33% (3411/10334)
+2026-11-16T03:07:02.2988030Z Updating files:  33% (3488/10334)
+2026-11-16T03:07:02.3285960Z Updating files:  34% (3514/10334)
+2026-11-16T03:07:02.3688390Z Updating files:  35% (3617/10334)
+2026-11-16T03:07:02.4494680Z Updating files:  36% (3721/10334)
+2026-11-16T03:07:02.4847700Z Updating files:  37% (3824/10334)
+2026-11-16T03:07:02.5133880Z Updating files:  38% (3927/10334)
+2026-11-16T03:07:02.5462000Z Updating files:  39% (4031/10334)
+2026-11-16T03:07:02.5749390Z Updating files:  40% (4134/10334)
+2026-11-16T03:07:02.6078900Z Updating files:  41% (4237/10334)
+2026-11-16T03:07:02.6474580Z Updating files:  42% (4341/10334)
+2026-11-16T03:07:02.6950600Z Updating files:  43% (4444/10334)
+2026-11-16T03:07:02.7271470Z Updating files:  44% (4547/10334)
+2026-11-16T03:07:02.7669700Z Updating files:  45% (4651/10334)
+2026-11-16T03:07:02.8027280Z Updating files:  46% (4754/10334)
+2026-11-16T03:07:02.8368750Z Updating files:  47% (4857/10334)
+2026-11-16T03:07:02.8626050Z Updating files:  48% (4961/10334)
+2026-11-16T03:07:02.8879540Z Updating files:  49% (5064/10334)
+2026-11-16T03:07:02.9169020Z Updating files:  50% (5167/10334)
+2026-11-16T03:07:03.0085210Z Updating files:  51% (5271/10334)
+2026-11-16T03:07:03.0416040Z Updating files:  52% (5374/10334)
+2026-11-16T03:07:03.0706860Z Updating files:  53% (5478/10334)
+2026-11-16T03:07:03.1113130Z Updating files:  54% (5581/10334)
+2026-11-16T03:07:03.1387860Z Updating files:  55% (5684/10334)
+2026-11-16T03:07:03.1714110Z Updating files:  56% (5788/10334)
+2026-11-16T03:07:03.2005150Z Updating files:  57% (5891/10334)
+2026-11-16T03:07:03.2342590Z Updating files:  58% (5994/10334)
+2026-11-16T03:07:03.2657170Z Updating files:  59% (6098/10334)
+2026-11-16T03:07:03.2920430Z Updating files:  60% (6201/10334)
+2026-11-16T03:07:03.2973800Z Updating files:  60% (6288/10334)
+2026-11-16T03:07:03.3290470Z Updating files:  61% (6304/10334)
+2026-11-16T03:07:03.3624090Z Updating files:  62% (6408/10334)
+2026-11-16T03:07:03.3983770Z Updating files:  63% (6511/10334)
+2026-11-16T03:07:03.4338770Z Updating files:  64% (6614/10334)
+2026-11-16T03:07:03.4667470Z Updating files:  65% (6718/10334)
+2026-11-16T03:07:03.4977540Z Updating files:  66% (6821/10334)
+2026-11-16T03:07:03.5290760Z Updating files:  67% (6924/10334)
+2026-11-16T03:07:03.5640900Z Updating files:  68% (7028/10334)
+2026-11-16T03:07:03.5946380Z Updating files:  69% (7131/10334)
+2026-11-16T03:07:03.6933970Z Updating files:  70% (7234/10334)
+2026-11-16T03:07:03.7255960Z Updating files:  71% (7338/10334)
+2026-11-16T03:07:03.7570250Z Updating files:  72% (7441/10334)
+2026-11-16T03:07:03.7886430Z Updating files:  73% (7544/10334)
+2026-11-16T03:07:03.8218000Z Updating files:  74% (7648/10334)
+2026-11-16T03:07:03.8540100Z Updating files:  75% (7751/10334)
+2026-11-16T03:07:03.8846730Z Updating files:  76% (7854/10334)
+2026-11-16T03:07:03.9197170Z Updating files:  77% (7958/10334)
+2026-11-16T03:07:03.9529210Z Updating files:  78% (8061/10334)
+2026-11-16T03:07:03.9834940Z Updating files:  79% (8164/10334)
+2026-11-16T03:07:04.0158970Z Updating files:  80% (8268/10334)
+2026-11-16T03:07:04.0423280Z Updating files:  81% (8371/10334)
+2026-11-16T03:07:04.0725030Z Updating files:  82% (8474/10334)
+2026-11-16T03:07:04.1048210Z Updating files:  83% (8578/10334)
+2026-11-16T03:07:04.1395870Z Updating files:  84% (8681/10334)
+2026-11-16T03:07:04.1710820Z Updating files:  85% (8784/10334)
+2026-11-16T03:07:04.2052020Z Updating files:  86% (8888/10334)
+2026-11-16T03:07:04.2376550Z Updating files:  87% (8991/10334)
+2026-11-16T03:07:04.2824070Z Updating files:  88% (9094/10334)
+2026-11-16T03:07:04.3275030Z Updating files:  89% (9198/10334)
+2026-11-16T03:07:04.3604160Z Updating files:  89% (9201/10334)
+2026-11-16T03:07:04.4019870Z Updating files:  90% (9301/10334)
+2026-11-16T03:07:04.4304950Z Updating files:  91% (9404/10334)
+2026-11-16T03:07:04.4608150Z Updating files:  92% (9508/10334)
+2026-11-16T03:07:04.4962180Z Updating files:  93% (9611/10334)
+2026-11-16T03:07:04.5287320Z Updating files:  94% (9714/10334)
+2026-11-16T03:07:04.5614470Z Updating files:  95% (9818/10334)
+2026-11-16T03:07:04.5965610Z Updating files:  96% (9921/10334)
+2026-11-16T03:07:04.6272480Z Updating files:  97% (10024/10334)
+2026-11-16T03:07:04.6581240Z Updating files:  98% (10128/10334)
+2026-11-16T03:07:04.6991150Z Updating files:  99% (10231/10334)
+2026-11-16T03:07:04.6992260Z Updating files: 100% (10334/10334)
+2026-11-16T03:07:04.6993410Z Updating files: 100% (10334/10334), done.
+2026-11-16T03:07:04.7190480Z HEAD is now at 608efb7 docs(migration): retain post-helper original CI evidence and publication readbacks
+2026-11-16T03:07:04.7241030Z ##[endgroup]
+2026-11-16T03:07:04.7397450Z [command]/usr/local/bin/git log -1 --format=%H
+2026-11-16T03:07:04.7513590Z 608efb78823d7c74b35f8a674fcfb6faea8ecfc5
+2026-11-16T03:07:04.7531440Z ##[group]Removing auth
+2026-11-16T03:07:04.7532650Z Removing SSH command configuration
+2026-11-16T03:07:04.7536770Z [command]/usr/local/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-16T03:07:04.7636120Z [command]/usr/local/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-16T03:07:04.8913350Z Removing HTTP extra header
+2026-11-16T03:07:04.8919040Z [command]/usr/local/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-16T03:07:04.9013900Z [command]/usr/local/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-16T03:07:05.0248680Z Removing includeIf entries pointing to credentials config files
+2026-11-16T03:07:05.0249640Z [command]/usr/local/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-16T03:07:05.0329230Z includeif.gitdir:/Users/runner/work/agent-teams-ai/agent-teams-ai/.git.path
+2026-11-16T03:07:05.0330880Z includeif.gitdir:/Users/runner/work/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path
+2026-11-16T03:07:05.0332230Z includeif.gitdir:/github/workspace/.git.path
+2026-11-16T03:07:05.0333120Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-11-16T03:07:05.0341880Z [command]/usr/local/bin/git config --local --get-all includeif.gitdir:/Users/runner/work/agent-teams-ai/agent-teams-ai/.git.path
+2026-11-16T03:07:05.0426650Z /Users/runner/work/_temp/git-credentials-8e1f40a0-3416-4c2d-a89a-6d81f69ba059.config
+2026-11-16T03:07:05.0439900Z [command]/usr/local/bin/git config --local --unset includeif.gitdir:/Users/runner/work/agent-teams-ai/agent-teams-ai/.git.path /Users/runner/work/_temp/git-credentials-8e1f40a0-3416-4c2d-a89a-6d81f69ba059.config
+2026-11-16T03:07:05.0533560Z [command]/usr/local/bin/git config --local --get-all includeif.gitdir:/Users/runner/work/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path
+2026-11-16T03:07:05.0614050Z /Users/runner/work/_temp/git-credentials-8e1f40a0-3416-4c2d-a89a-6d81f69ba059.config
+2026-11-16T03:07:05.0628430Z [command]/usr/local/bin/git config --local --unset includeif.gitdir:/Users/runner/work/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path /Users/runner/work/_temp/git-credentials-8e1f40a0-3416-4c2d-a89a-6d81f69ba059.config
+2026-11-16T03:07:05.0728230Z [command]/usr/local/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+2026-11-16T03:07:05.0810480Z /github/runner_temp/git-credentials-8e1f40a0-3416-4c2d-a89a-6d81f69ba059.config
+2026-11-16T03:07:05.0822200Z [command]/usr/local/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-8e1f40a0-3416-4c2d-a89a-6d81f69ba059.config
+2026-11-16T03:07:05.0918020Z [command]/usr/local/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-11-16T03:07:05.0999600Z /github/runner_temp/git-credentials-8e1f40a0-3416-4c2d-a89a-6d81f69ba059.config
+2026-11-16T03:07:05.1014230Z [command]/usr/local/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-8e1f40a0-3416-4c2d-a89a-6d81f69ba059.config
+2026-11-16T03:07:05.1111430Z [command]/usr/local/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-16T03:07:05.2349840Z Removing credentials config '/Users/runner/work/_temp/git-credentials-8e1f40a0-3416-4c2d-a89a-6d81f69ba059.config'
+2026-11-16T03:07:05.2363160Z ##[endgroup]
+2026-11-16T03:07:05.2614800Z ##[group]Run set -euo pipefail
+2026-11-16T03:07:05.2615360Z [36;1mset -euo pipefail[0m
+2026-11-16T03:07:05.2615940Z [36;1mtest "$(git rev-parse HEAD)" = "$OPENCODE_V2_TEST_SOURCE_HEAD"[0m
+2026-11-16T03:07:05.2616570Z [36;1muname -sm[0m
+2026-11-16T03:07:05.2617130Z [36;1mif [ "$RUNNER_OS" = macOS ]; then /usr/sbin/sysctl -n kern.osversion; fi[0m
+2026-11-16T03:07:05.2682040Z shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-16T03:07:05.2682590Z env:
+2026-11-16T03:07:05.2682920Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T03:07:05.2683400Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+2026-11-16T03:07:05.2683830Z   npm_config_audit: false
+2026-11-16T03:07:05.2684210Z   npm_config_fund: false
+2026-11-16T03:07:05.2684770Z   OPENCODE_V2_TEST_SOURCE_HEAD: 608efb78823d7c74b35f8a674fcfb6faea8ecfc5
+2026-11-16T03:07:05.2685440Z   OPENCODE_V2_TEST_PLATFORM: darwin-x64
+2026-11-16T03:07:05.2685970Z   OPENCODE_V2_TEST_DARWIN_CANDIDATE_BUILD: 24G830
+2026-11-16T03:07:05.2687080Z   OPENCODE_V2_EMBEDDED_INPUTS_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-embedded-inputs.json
+2026-11-16T03:07:05.2688670Z   OPENCODE_V2_EMBEDDED_DARWIN_CUSTODY_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-darwin-custody.json
+2026-11-16T03:07:05.2690310Z   OPENCODE_V2_EMBEDDED_WINDOWS_CUSTODY_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-windows-custody.json
+2026-11-16T03:07:05.2691890Z   OPENCODE_V2_EMBEDDED_HOST_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-embedded-host.json
+2026-11-16T03:07:05.2692850Z ##[endgroup]
+2026-11-16T03:07:05.3042600Z Darwin x86_64
+2026-11-16T03:07:05.3075770Z 24G830
+2026-11-16T03:07:05.3274360Z ##[group]Run pnpm/action-setup@v6
+2026-11-16T03:07:05.3274940Z with:
+2026-11-16T03:07:05.3275310Z   dest: ~/setup-pnpm
+2026-11-16T03:07:05.3275700Z   run_install: null
+2026-11-16T03:07:05.3276180Z   cache: false
+2026-11-16T03:07:05.3276580Z   cache_dependency_path: pnpm-lock.yaml
+2026-11-16T03:07:05.3277110Z   package_json_file: package.json
+2026-11-16T03:07:05.3277590Z   standalone: false
+2026-11-16T03:07:05.3277970Z env:
+2026-11-16T03:07:05.3278350Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T03:07:05.3278900Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+2026-11-16T03:07:05.3279390Z   npm_config_audit: false
+2026-11-16T03:07:05.3279830Z   npm_config_fund: false
+2026-11-16T03:07:05.3280450Z   OPENCODE_V2_TEST_SOURCE_HEAD: 608efb78823d7c74b35f8a674fcfb6faea8ecfc5
+2026-11-16T03:07:05.3281190Z   OPENCODE_V2_TEST_PLATFORM: darwin-x64
+2026-11-16T03:07:05.3281760Z   OPENCODE_V2_TEST_DARWIN_CANDIDATE_BUILD: 24G830
+2026-11-16T03:07:05.3282980Z   OPENCODE_V2_EMBEDDED_INPUTS_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-embedded-inputs.json
+2026-11-16T03:07:05.3284630Z   OPENCODE_V2_EMBEDDED_DARWIN_CUSTODY_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-darwin-custody.json
+2026-11-16T03:07:05.3286340Z   OPENCODE_V2_EMBEDDED_WINDOWS_CUSTODY_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-windows-custody.json
+2026-11-16T03:07:05.3287970Z   OPENCODE_V2_EMBEDDED_HOST_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-embedded-host.json
+2026-11-16T03:07:05.3289000Z ##[endgroup]
+2026-11-16T03:07:05.5598750Z ##[group]Running self-installer...
+2026-11-16T03:07:08.3209650Z 
+2026-11-16T03:07:08.3210100Z added 1 package in 2s
+2026-11-16T03:07:10.2670210Z Checking for updates...
+2026-11-16T03:07:10.8144890Z Switching pnpm from v11.28.10 to v11.22.0...
+2026-11-16T03:07:12.0116700Z .../v11/5a8-1a1e252ad59-a84064da51ef1dd2 | Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-11-16T03:07:12.0143040Z .../v11/5a8-1a1e252ad59-a84064da51ef1dd2 |   +1 +
+2026-11-16T03:07:13.5040020Z .../v11/5a8-1a1e252ad59-a84064da51ef1dd2 | Progress: resolved 1, reused 0, downloaded 1, added 0
+2026-11-16T03:07:13.7492310Z .../v11/5a8-1a1e252ad59-a84064da51ef1dd2 | Progress: resolved 1, reused 0, downloaded 1, added 1, done
+2026-11-16T03:07:14.8596260Z [WARN] Detected a pnpm v10 installation layout at PNPM_HOME. The pnpm shims at PNPM_HOME have been refreshed so the new version is active, but pnpm v11 expects bins in PNPM_HOME/bin. Run "pnpm setup" to migrate your PATH to the v11 layout.
+2026-11-16T03:07:14.8673210Z Successfully updated pnpm to v11.22.0
+2026-11-16T03:07:14.9044710Z ##[endgroup]
+2026-11-16T03:07:14.9045140Z Installation Completed!
+2026-11-16T03:07:14.9326370Z ##[group]Run actions/setup-node@v6
+2026-11-16T03:07:14.9326910Z with:
+2026-11-16T03:07:14.9327270Z   node-version: 24.21.0
+2026-11-16T03:07:14.9327670Z   cache: pnpm
+2026-11-16T03:07:14.9328060Z   check-latest: false
+2026-11-16T03:07:14.9332340Z   token: ***
+2026-11-16T03:07:14.9332760Z   package-manager-cache: true
+2026-11-16T03:07:14.9333200Z env:
+2026-11-16T03:07:14.9333580Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T03:07:14.9334100Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+2026-11-16T03:07:14.9334640Z   npm_config_audit: false
+2026-11-16T03:07:14.9352350Z   npm_config_fund: false
+2026-11-16T03:07:14.9354770Z   OPENCODE_V2_TEST_SOURCE_HEAD: 608efb78823d7c74b35f8a674fcfb6faea8ecfc5
+2026-11-16T03:07:14.9355590Z   OPENCODE_V2_TEST_PLATFORM: darwin-x64
+2026-11-16T03:07:14.9356170Z   OPENCODE_V2_TEST_DARWIN_CANDIDATE_BUILD: 24G830
+2026-11-16T03:07:14.9357320Z   OPENCODE_V2_EMBEDDED_INPUTS_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-embedded-inputs.json
+2026-11-16T03:07:14.9359120Z   OPENCODE_V2_EMBEDDED_DARWIN_CUSTODY_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-darwin-custody.json
+2026-11-16T03:07:14.9360850Z   OPENCODE_V2_EMBEDDED_WINDOWS_CUSTODY_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-windows-custody.json
+2026-11-16T03:07:14.9362510Z   OPENCODE_V2_EMBEDDED_HOST_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-embedded-host.json
+2026-11-16T03:07:14.9363680Z   PNPM_HOME: /Users/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:07:14.9364300Z ##[endgroup]
+2026-11-16T03:07:15.1360310Z Attempting to download 24.21.0...
+2026-11-16T03:07:16.3271800Z Acquiring 24.21.0 - x64 from https://github.com/actions/node-versions/releases/download/24.21.0-34304089047/node-24.21.0-darwin-x64.tar.gz
+2026-11-16T03:07:17.1296650Z Extracting ...
+2026-11-16T03:07:17.1488320Z [command]/usr/bin/tar xz --strip 1 -C /Users/runner/work/_temp/bc6b75bf-568d-41c5-a738-7d3fdab24b03 -f /Users/runner/work/_temp/dc5e45c3-4fa1-4e46-8a2e-03809f073db3
+2026-11-16T03:07:21.8510570Z Adding to the cache ...
+2026-11-16T03:07:30.6501330Z ##[group]Environment details
+2026-11-16T03:07:31.1843000Z node: v24.21.0
+2026-11-16T03:07:31.2152850Z npm: 11.19.0
+2026-11-16T03:07:31.2170670Z yarn: 1.22.22
+2026-11-16T03:07:31.2185220Z ##[endgroup]
+2026-11-16T03:07:31.2197380Z [command]/Users/runner/setup-pnpm/node_modules/.bin/bin/pnpm store path --silent
+2026-11-16T03:07:32.7819640Z /Users/runner/setup-pnpm/node_modules/.bin/store/v11
+2026-11-16T03:07:32.9313760Z Cache hit for: node-cache-macOS-x64-pnpm-e41c5038acc80c011488727c0ad32bbe3761689d5355c2cac2cd5bccb79e675e
+2026-11-16T03:07:34.0453770Z Received 88080384 of 510644028 (17.2%), 81.2 MBs/sec
+2026-11-16T03:07:35.3798510Z Received 142606336 of 510644028 (27.9%), 57.3 MBs/sec
+2026-11-16T03:07:36.8107730Z Received 184549376 of 510644028 (36.1%), 46.1 MBs/sec
+2026-11-16T03:07:38.1127980Z Received 222298112 of 510644028 (43.5%), 42.0 MBs/sec
+2026-11-16T03:07:39.1353460Z Received 255852544 of 510644028 (50.1%), 40.3 MBs/sec
+2026-11-16T03:07:40.0454990Z Received 268435456 of 510644028 (52.6%), 36.3 MBs/sec
+2026-11-16T03:07:41.1422070Z Received 268435456 of 510644028 (52.6%), 31.4 MBs/sec
+2026-11-16T03:07:42.2255650Z Received 373293056 of 510644028 (73.1%), 38.9 MBs/sec
+2026-11-16T03:07:44.9297790Z Received 402653184 of 510644028 (78.9%), 32.2 MBs/sec
+2026-11-16T03:07:46.6728950Z Received 510644028 of 510644028 (100.0%), 35.6 MBs/sec
+2026-11-16T03:07:46.7023460Z Cache Size: ~487 MB (510644028 B)
+2026-11-16T03:07:46.7046770Z [command]/usr/local/bin/gtar -xf /Users/runner/work/_temp/4220885f-b092-4ae4-9f7f-111640eb2940/cache.tzst -P -C /Users/runner/work/agent-teams-ai/agent-teams-ai --delay-directory-restore --use-compress-program unzstd
+2026-11-16T03:08:43.0442910Z Cache restored successfully
+2026-11-16T03:08:43.0758670Z Cache restored from key: node-cache-macOS-x64-pnpm-e41c5038acc80c011488727c0ad32bbe3761689d5355c2cac2cd5bccb79e675e
+2026-11-16T03:08:43.4752310Z ##[group]Run node ./scripts/ci/install-dependencies-with-retry.mjs
+2026-11-16T03:08:43.4767160Z [36;1mnode ./scripts/ci/install-dependencies-with-retry.mjs[0m
+2026-11-16T03:08:43.5358830Z shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-16T03:08:43.5361880Z env:
+2026-11-16T03:08:43.5362290Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T03:08:43.5362890Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+2026-11-16T03:08:43.5363400Z   npm_config_audit: false
+2026-11-16T03:08:43.5363860Z   npm_config_fund: false
+2026-11-16T03:08:43.5364510Z   OPENCODE_V2_TEST_SOURCE_HEAD: 608efb78823d7c74b35f8a674fcfb6faea8ecfc5
+2026-11-16T03:08:43.5365400Z   OPENCODE_V2_TEST_PLATFORM: darwin-x64
+2026-11-16T03:08:43.5366150Z   OPENCODE_V2_TEST_DARWIN_CANDIDATE_BUILD: 24G830
+2026-11-16T03:08:43.5367290Z   OPENCODE_V2_EMBEDDED_INPUTS_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-embedded-inputs.json
+2026-11-16T03:08:43.5399580Z   OPENCODE_V2_EMBEDDED_DARWIN_CUSTODY_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-darwin-custody.json
+2026-11-16T03:08:43.5401970Z   OPENCODE_V2_EMBEDDED_WINDOWS_CUSTODY_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-windows-custody.json
+2026-11-16T03:08:43.5404100Z   OPENCODE_V2_EMBEDDED_HOST_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-embedded-host.json
+2026-11-16T03:08:43.5880980Z   PNPM_HOME: /Users/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:08:43.5906030Z ##[endgroup]
+2026-11-16T03:08:45.2505550Z Scope: all 7 workspace projects
+2026-11-16T03:08:45.5046580Z ? Verifying lockfile against supply-chain policies (2533 entries)...
+2026-11-16T03:08:45.6328210Z Lockfile is up to date, resolution step is skipped
+2026-11-16T03:08:46.2432440Z Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-11-16T03:08:46.7634280Z Packages: +2294
+2026-11-16T03:08:46.7653540Z ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2026-11-16T03:08:47.3140370Z Progress: resolved 2294, reused 85, downloaded 0, added 0
+2026-11-16T03:08:48.2746920Z Progress: resolved 2294, reused 359, downloaded 0, added 0
+2026-11-16T03:08:49.2981280Z Progress: resolved 2294, reused 670, downloaded 0, added 0
+2026-11-16T03:08:50.2941700Z Progress: resolved 2294, reused 1005, downloaded 0, added 0
+2026-11-16T03:08:51.3076570Z Progress: resolved 2294, reused 1435, downloaded 0, added 0
+2026-11-16T03:08:52.3035850Z Progress: resolved 2294, reused 1619, downloaded 0, added 0
+2026-11-16T03:08:53.4220190Z Progress: resolved 2294, reused 1640, downloaded 0, added 0
+2026-11-16T03:08:54.5371580Z Progress: resolved 2294, reused 1709, downloaded 0, added 0
+2026-11-16T03:08:55.5518100Z Progress: resolved 2294, reused 1837, downloaded 0, added 0
+2026-11-16T03:08:56.5759720Z Progress: resolved 2294, reused 2043, downloaded 0, added 0
+2026-11-16T03:08:57.6184960Z Packages are cloned from the content-addressable store to the virtual store.
+2026-11-16T03:08:57.7183130Z   Content-addressable store is at: /Users/runner/setup-pnpm/node_modules/.bin/store/v11
+2026-11-16T03:08:57.8186170Z   Virtual store is at:             node_modules/.pnpm
+2026-11-16T03:08:57.9194780Z Progress: resolved 2294, reused 2279, downloaded 0, added 1
+2026-11-16T03:08:58.7165240Z Progress: resolved 2294, reused 2279, downloaded 0, added 33
+2026-11-16T03:08:59.7199010Z Progress: resolved 2294, reused 2279, downloaded 0, added 59
+2026-11-16T03:09:00.3401390Z [WARN] Request took 10477ms: https://registry.npmjs.org/@typescript-eslint%2Fscope-manager
+2026-11-16T03:09:00.7545260Z Progress: resolved 2294, reused 2279, downloaded 0, added 74
+2026-11-16T03:09:01.7625480Z Progress: resolved 2294, reused 2279, downloaded 0, added 77
+2026-11-16T03:09:02.8997250Z [WARN] Request took 13119ms: https://registry.npmjs.org/@typescript-eslint%2Fparser
+2026-11-16T03:09:03.1003180Z Progress: resolved 2294, reused 2279, downloaded 0, added 81
+2026-11-16T03:09:04.3247100Z [WARN] Request took 14529ms: https://registry.npmjs.org/@typescript-eslint%2Ftypescript-estree
+2026-11-16T03:09:04.7449440Z Progress: resolved 2294, reused 2279, downloaded 0, added 88
+2026-11-16T03:09:05.3443200Z [WARN] Request took 15572ms: https://registry.npmjs.org/@typescript-eslint%2Feslint-plugin
+2026-11-16T03:09:05.6886650Z Progress: resolved 2294, reused 2279, downloaded 0, added 110
+2026-11-16T03:09:06.3131080Z [WARN] Request took 14584ms: https://registry.npmjs.org/hls.js
+2026-11-16T03:09:06.7196310Z Progress: resolved 2294, reused 2279, downloaded 0, added 127
+2026-11-16T03:09:08.2796780Z ✓ Lockfile passes supply-chain policies (2533 entries in 22.7s)
+2026-11-16T03:09:08.2798680Z Progress: resolved 2294, reused 2279, downloaded 0, added 153
+2026-11-16T03:09:09.2810830Z Progress: resolved 2294, reused 2279, downloaded 0, added 170
+2026-11-16T03:09:10.3046270Z Progress: resolved 2294, reused 2279, downloaded 0, added 189
+2026-11-16T03:09:11.3654370Z Progress: resolved 2294, reused 2279, downloaded 0, added 217
+2026-11-16T03:09:12.2843130Z Progress: resolved 2294, reused 2279, downloaded 0, added 253
+2026-11-16T03:09:13.2852290Z Progress: resolved 2294, reused 2279, downloaded 0, added 279
+2026-11-16T03:09:14.2900140Z Progress: resolved 2294, reused 2279, downloaded 0, added 280
+2026-11-16T03:09:15.2902640Z Progress: resolved 2294, reused 2279, downloaded 0, added 319
+2026-11-16T03:09:16.3217650Z Progress: resolved 2294, reused 2279, downloaded 0, added 320
+2026-11-16T03:09:17.2990070Z Progress: resolved 2294, reused 2279, downloaded 0, added 329
+2026-11-16T03:09:18.2956350Z Progress: resolved 2294, reused 2279, downloaded 0, added 425
+2026-11-16T03:09:19.3706670Z Progress: resolved 2294, reused 2279, downloaded 0, added 473
+2026-11-16T03:09:20.3030560Z Progress: resolved 2294, reused 2279, downloaded 0, added 519
+2026-11-16T03:09:21.3046090Z Progress: resolved 2294, reused 2279, downloaded 0, added 610
+2026-11-16T03:09:22.3026520Z Progress: resolved 2294, reused 2279, downloaded 0, added 816
+2026-11-16T03:09:23.3255810Z Progress: resolved 2294, reused 2279, downloaded 0, added 879
+2026-11-16T03:09:24.3093030Z Progress: resolved 2294, reused 2279, downloaded 0, added 909
+2026-11-16T03:09:25.3079280Z Progress: resolved 2294, reused 2279, downloaded 0, added 933
+2026-11-16T03:09:26.3114190Z Progress: resolved 2294, reused 2279, downloaded 0, added 962
+2026-11-16T03:09:27.3173190Z Progress: resolved 2294, reused 2279, downloaded 0, added 1112
+2026-11-16T03:09:28.3141000Z Progress: resolved 2294, reused 2279, downloaded 0, added 1276
+2026-11-16T03:09:29.3161100Z Progress: resolved 2294, reused 2279, downloaded 0, added 1383
+2026-11-16T03:09:30.3271630Z Progress: resolved 2294, reused 2279, downloaded 0, added 1497
+2026-11-16T03:09:31.3200810Z Progress: resolved 2294, reused 2279, downloaded 0, added 1662
+2026-11-16T03:09:32.3193380Z Progress: resolved 2294, reused 2279, downloaded 0, added 1847
+2026-11-16T03:09:33.3201180Z Progress: resolved 2294, reused 2279, downloaded 0, added 2150
+2026-11-16T03:09:34.3800850Z Progress: resolved 2294, reused 2279, downloaded 0, added 2291
+2026-11-16T03:09:34.4757960Z Progress: resolved 2294, reused 2279, downloaded 0, added 2294, done
+2026-11-16T03:09:36.0327230Z .../node_modules/better-sqlite3 install$ prebuild-install || node-gyp rebuild --release
+2026-11-16T03:09:36.0790700Z .../node_modules/better-sqlite3 install$ prebuild-install || node-gyp rebuild --release
+2026-11-16T03:09:36.0976530Z .../node-pty@1.1.0/node_modules/node-pty install$ node scripts/prebuild.js || node-gyp rebuild
+2026-11-16T03:09:36.0981230Z .../node_modules/cpu-features install$ node buildcheck.js > buildcheck.gypi && node-gyp rebuild
+2026-11-16T03:09:36.2059330Z .../node-pty@1.1.0/node_modules/node-pty install: [32m> Checking prebuilds...[0m
+2026-11-16T03:09:36.2479160Z .../node-pty@1.1.0/node_modules/node-pty install: Done
+2026-11-16T03:09:36.3290290Z .../node-pty@1.1.0/node_modules/node-pty postinstall$ node scripts/post-install.js
+2026-11-16T03:09:36.3337980Z .../node_modules/better-sqlite3 install: (node:3128) [DEP0176] DeprecationWarning: fs.R_OK is deprecated, use fs.constants.R_OK instead
+2026-11-16T03:09:36.3395900Z .../node_modules/better-sqlite3 install: (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-16T03:09:36.3398010Z .../node_modules/better-sqlite3 install: (node:3096) [DEP0176] DeprecationWarning: fs.R_OK is deprecated, use fs.constants.R_OK instead
+2026-11-16T03:09:36.3400240Z .../node_modules/better-sqlite3 install: (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-16T03:09:36.3402790Z .../node-pty@1.1.0/node_modules/node-pty postinstall: [32m> Cleaning release folder...[0m
+2026-11-16T03:09:36.3404940Z .../node-pty@1.1.0/node_modules/node-pty postinstall: [32m> Moving conpty.dll...[0m
+2026-11-16T03:09:36.3406310Z .../node-pty@1.1.0/node_modules/node-pty postinstall:   SKIPPED (not Windows)
+2026-11-16T03:09:36.3407400Z .../node-pty@1.1.0/node_modules/node-pty postinstall: Done
+2026-11-16T03:09:36.7945910Z .../node_modules/better-sqlite3 install: Done
+2026-11-16T03:09:36.8195120Z .../node_modules/better-sqlite3 install: Done
+2026-11-16T03:09:40.9397530Z .../node_modules/cpu-features install: gyp info it worked if it ends with ok
+2026-11-16T03:09:40.9399600Z .../node_modules/cpu-features install: gyp info using node-gyp@12.3.0
+2026-11-16T03:09:40.9401250Z .../node_modules/cpu-features install: gyp info using node@24.21.0 | darwin | x64
+2026-11-16T03:09:41.1661530Z .../node_modules/cpu-features install: gyp info find Python using Python version 3.14.7 found at "/usr/local/opt/python@3.14/bin/python3.14"
+2026-11-16T03:09:41.2814480Z .../node_modules/cpu-features install: gyp http GET https://nodejs.org/download/release/v24.21.0/node-v24.21.0-headers.tar.gz
+2026-11-16T03:09:41.3486400Z .../node_modules/cpu-features install: gyp http 200 https://nodejs.org/download/release/v24.21.0/node-v24.21.0-headers.tar.gz
+2026-11-16T03:09:47.2386940Z .../node_modules/cpu-features install: gyp http GET https://nodejs.org/download/release/v24.21.0/SHASUMS256.txt
+2026-11-16T03:09:47.2540290Z .../node_modules/cpu-features install: gyp http 200 https://nodejs.org/download/release/v24.21.0/SHASUMS256.txt
+2026-11-16T03:09:49.0625300Z .../node_modules/cpu-features install: gyp info spawn /usr/local/opt/python@3.14/bin/python3.14
+2026-11-16T03:09:49.0627360Z .../node_modules/cpu-features install: gyp info spawn args [
+2026-11-16T03:09:49.0632390Z .../node_modules/cpu-features install: gyp info spawn args '/Users/runner/setup-pnpm/node_modules/.bin/store/v11/links/@/pnpm/11.22.0/874b24f781e23f828b3ec2a0045beb39c0debb9e15320a28400627444308d4b8/node_modules/pnpm/dist/node_modules/node-gyp/gyp/gyp_main.py',
+2026-11-16T03:09:49.0636030Z .../node_modules/cpu-features install: gyp info spawn args 'binding.gyp',
+2026-11-16T03:09:49.0639340Z .../node_modules/cpu-features install: gyp info spawn args '-f',
+2026-11-16T03:09:49.0640470Z .../node_modules/cpu-features install: gyp info spawn args 'make',
+2026-11-16T03:09:49.0641960Z .../node_modules/cpu-features install: gyp info spawn args '-I',
+2026-11-16T03:09:49.0644940Z .../node_modules/cpu-features install: gyp info spawn args '/Users/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.pnpm/cpu-features@0.0.10/node_modules/cpu-features/build/config.gypi',
+2026-11-16T03:09:49.0647450Z .../node_modules/cpu-features install: gyp info spawn args '-I',
+2026-11-16T03:09:49.0651160Z .../node_modules/cpu-features install: gyp info spawn args '/Users/runner/setup-pnpm/node_modules/.bin/store/v11/links/@/pnpm/11.22.0/874b24f781e23f828b3ec2a0045beb39c0debb9e15320a28400627444308d4b8/node_modules/pnpm/dist/node_modules/node-gyp/addon.gypi',
+2026-11-16T03:09:49.0654880Z .../node_modules/cpu-features install: gyp info spawn args '-I',
+2026-11-16T03:09:49.0657050Z .../node_modules/cpu-features install: gyp info spawn args '/Users/runner/Library/Caches/node-gyp/24.21.0/include/node/common.gypi',
+2026-11-16T03:09:49.0659500Z .../node_modules/cpu-features install: gyp info spawn args '-Dlibrary=shared_library',
+2026-11-16T03:09:49.0661800Z .../node_modules/cpu-features install: gyp info spawn args '-Dvisibility=default',
+2026-11-16T03:09:49.0664170Z .../node_modules/cpu-features install: gyp info spawn args '-Dnode_root_dir=/Users/runner/Library/Caches/node-gyp/24.21.0',
+2026-11-16T03:09:49.0668030Z .../node_modules/cpu-features install: gyp info spawn args '-Dnode_gyp_dir=/Users/runner/setup-pnpm/node_modules/.bin/store/v11/links/@/pnpm/11.22.0/874b24f781e23f828b3ec2a0045beb39c0debb9e15320a28400627444308d4b8/node_modules/pnpm/dist/node_modules/node-gyp',
+2026-11-16T03:09:49.0671720Z .../node_modules/cpu-features install: gyp info spawn args '-Dnode_lib_file=/Users/runner/Library/Caches/node-gyp/24.21.0/<(target_arch)/node.lib',
+2026-11-16T03:09:49.0675300Z .../node_modules/cpu-features install: gyp info spawn args '-Dmodule_root_dir=/Users/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.pnpm/cpu-features@0.0.10/node_modules/cpu-features',
+2026-11-16T03:09:49.0677750Z .../node_modules/cpu-features install: gyp info spawn args '-Dnode_engine=v8',
+2026-11-16T03:09:49.0679230Z .../node_modules/cpu-features install: gyp info spawn args '--depth=.',
+2026-11-16T03:09:49.0680440Z .../node_modules/cpu-features install: gyp info spawn args '--no-parallel',
+2026-11-16T03:09:49.0681680Z .../node_modules/cpu-features install: gyp info spawn args '--generator-output',
+2026-11-16T03:09:49.0682840Z .../node_modules/cpu-features install: gyp info spawn args 'build',
+2026-11-16T03:09:49.0684010Z .../node_modules/cpu-features install: gyp info spawn args '-Goutput_dir=.'
+2026-11-16T03:09:49.0685070Z .../node_modules/cpu-features install: gyp info spawn args ]
+2026-11-16T03:09:49.6414000Z .../node_modules/cpu-features install: gyp info spawn make
+2026-11-16T03:09:49.6415330Z .../node_modules/cpu-features install: gyp info spawn args [ 'BUILDTYPE=Release', '-C', 'build' ]
+2026-11-16T03:09:50.4306590Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_aarch64_linux_or_android.o
+2026-11-16T03:09:50.5602070Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_aarch64_macos_or_iphone.o
+2026-11-16T03:09:50.6741330Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_aarch64_windows.o
+2026-11-16T03:09:50.7852940Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_arm_linux_or_android.o
+2026-11-16T03:09:50.8991800Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_mips_linux_or_android.o
+2026-11-16T03:09:51.0132080Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_ppc_linux.o
+2026-11-16T03:09:51.1278750Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_x86_freebsd.o
+2026-11-16T03:09:51.2449120Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_x86_linux_or_android.o
+2026-11-16T03:09:51.3596820Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_x86_macos.o
+2026-11-16T03:09:51.9525770Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_x86_windows.o
+2026-11-16T03:09:52.0703800Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/filesystem.o
+2026-11-16T03:09:52.2415100Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/stack_line_reader.o
+2026-11-16T03:09:52.3981440Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/string_view.o
+2026-11-16T03:09:52.6087810Z .../node_modules/cpu-features install:   LIBTOOL-STATIC Release/cpu_features.a
+2026-11-16T03:09:53.5154390Z .../node_modules/cpu-features install:   CXX(target) Release/obj.target/cpufeatures/src/binding.o
+2026-11-16T03:09:57.9026790Z .../node_modules/cpu-features install: ../src/binding.cc:151:1: warning: cast from 'void (*)(Nan::ADDON_REGISTER_FUNCTION_ARGS_TYPE)' (aka 'void (*)(Local<v8::Object>)') to 'node::addon_register_func' (aka 'void (*)(v8::Local<v8::Object>, v8::Local<v8::Value>, void *)') converts to incompatible function type [-Wcast-function-type-mismatch]
+2026-11-16T03:09:57.9031320Z .../node_modules/cpu-features install:   151 | NODE_MODULE(cpufeatures, init)
+2026-11-16T03:09:57.9033460Z .../node_modules/cpu-features install:       | ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+2026-11-16T03:09:57.9036280Z .../node_modules/cpu-features install: /Users/runner/Library/Caches/node-gyp/24.21.0/include/node/node.h:1408:3: note: expanded from macro 'NODE_MODULE'
+2026-11-16T03:09:57.9038640Z .../node_modules/cpu-features install:  1408 |   NODE_MODULE_X(modname, regfunc, NULL, 0)  // NOLINT (readability/null_usage)
+2026-11-16T03:09:57.9040870Z .../node_modules/cpu-features install:       |   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+2026-11-16T03:09:57.9042840Z .../node_modules/cpu-features install: /Users/runner/Library/Caches/node-gyp/24.21.0/include/node/node.h:1374:7: note: expanded from macro 'NODE_MODULE_X'
+2026-11-16T03:09:57.9045470Z .../node_modules/cpu-features install:  1374 |       (node::addon_register_func) (regfunc),                          \
+2026-11-16T03:09:57.9047250Z .../node_modules/cpu-features install:       |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+2026-11-16T03:09:58.1066070Z .../node_modules/cpu-features install: 1 warning generated.
+2026-11-16T03:09:58.1829140Z .../node_modules/cpu-features install:   SOLINK_MODULE(target) Release/cpufeatures.node
+2026-11-16T03:09:58.2786060Z .../node_modules/cpu-features install: gyp info ok 
+2026-11-16T03:09:58.2927090Z .../node_modules/cpu-features install: Done
+2026-11-16T03:09:58.5333140Z [WARN] Failed to create bin at /Users/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.bin/legacy-agent-host. ENOENT: no such file or directory, open '/Users/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/dist/cli.js'
+2026-11-16T03:09:58.8224490Z 
+2026-11-16T03:09:58.8226340Z dependencies:
+2026-11-16T03:09:58.8228030Z + @agent-teams/legacy-agent-host 0.1.0 <- packages/legacy-agent-host
+2026-11-16T03:09:58.8231770Z + @agent-teams/task-change-ledger 0.1.0 <- packages/task-change-ledger
+2026-11-16T03:09:58.8235200Z + @claude-teams/agent-graph 0.1.0 <- packages/agent-graph
+2026-11-16T03:09:58.8242330Z + @codemirror/autocomplete 6.20.0
+2026-11-16T03:09:58.8248660Z + @codemirror/commands 6.10.2
+2026-11-16T03:09:58.8252180Z + @codemirror/lang-cpp 6.0.3
+2026-11-16T03:09:58.8254310Z + @codemirror/lang-css 6.3.1
+2026-11-16T03:09:58.8256170Z + @codemirror/lang-go 6.0.1
+2026-11-16T03:09:58.8259750Z + @codemirror/lang-html 6.4.11
+2026-11-16T03:09:58.8269360Z + @codemirror/lang-java 6.0.2
+2026-11-16T03:09:58.8273110Z + @codemirror/lang-javascript 6.2.4
+2026-11-16T03:09:58.8278030Z + @codemirror/lang-json 6.0.2
+2026-11-16T03:09:58.8280800Z + @codemirror/lang-less 6.0.2
+2026-11-16T03:09:58.8282680Z + @codemirror/lang-markdown 6.5.0
+2026-11-16T03:09:58.8284480Z + @codemirror/lang-php 6.0.2
+2026-11-16T03:09:58.8288950Z + @codemirror/lang-python 6.2.1
+2026-11-16T03:09:58.8290700Z + @codemirror/lang-rust 6.0.2
+2026-11-16T03:09:58.8292010Z + @codemirror/lang-sass 6.0.2
+2026-11-16T03:09:58.8294370Z + @codemirror/lang-sql 6.10.0
+2026-11-16T03:09:58.8296330Z + @codemirror/lang-xml 6.1.0
+2026-11-16T03:09:58.8301000Z + @codemirror/lang-yaml 6.1.2
+2026-11-16T03:09:58.8305110Z + @codemirror/language 6.12.1
+2026-11-16T03:09:58.8309260Z + @codemirror/language-data 6.5.2
+2026-11-16T03:09:58.8313660Z + @codemirror/lint 6.9.5
+2026-11-16T03:09:58.8316210Z + @codemirror/merge 6.12.0
+2026-11-16T03:09:58.8318160Z + @codemirror/search 6.6.0
+2026-11-16T03:09:58.8319790Z + @codemirror/state 6.5.4
+2026-11-16T03:09:58.8322170Z + @codemirror/theme-one-dark 6.1.3
+2026-11-16T03:09:58.8324640Z + @codemirror/view 6.39.15
+2026-11-16T03:09:58.8328070Z + @daypicker/react 10.0.1
+2026-11-16T03:09:58.8330680Z + @dnd-kit/core 6.3.1
+2026-11-16T03:09:58.8333060Z + @dnd-kit/sortable 10.0.0
+2026-11-16T03:09:58.8333870Z + @dnd-kit/utilities 3.2.2
+2026-11-16T03:09:58.8334310Z + @fastify/cors 11.2.0
+2026-11-16T03:09:58.8335270Z + @fastify/static 10.1.2
+2026-11-16T03:09:58.8335900Z + @file-viewer/preset-office 3.1.2
+2026-11-16T03:09:58.8336410Z + @file-viewer/react 3.1.2
+2026-11-16T03:09:58.8336850Z + @floating-ui/dom 1.7.6
+2026-11-16T03:09:58.8337290Z + @headless-tree/core 1.7.0
+2026-11-16T03:09:58.8337760Z + @headless-tree/react 1.7.0
+2026-11-16T03:09:58.8338220Z + @openuidev/lang-core 0.3.2
+2026-11-16T03:09:58.8338780Z + @openuidev/react-headless 0.17.0
+2026-11-16T03:09:58.8339280Z + @openuidev/react-lang 0.3.2
+2026-11-16T03:09:58.8339760Z + @openuidev/react-ui 0.17.0
+2026-11-16T03:09:58.8340320Z + @radix-ui/react-alert-dialog 1.1.15
+2026-11-16T03:09:58.8340900Z + @radix-ui/react-checkbox 1.3.3
+2026-11-16T03:09:58.8341600Z + @radix-ui/react-collapsible 1.1.12
+2026-11-16T03:09:58.8342250Z + @radix-ui/react-context-menu 2.2.16
+2026-11-16T03:09:58.8342820Z + @radix-ui/react-dialog 1.1.15
+2026-11-16T03:09:58.8343390Z + @radix-ui/react-dropdown-menu 2.1.16
+2026-11-16T03:09:58.8343990Z + @radix-ui/react-hover-card 1.1.15
+2026-11-16T03:09:58.8344500Z + @radix-ui/react-label 2.1.8
+2026-11-16T03:09:58.8345030Z + @radix-ui/react-popover 1.1.15
+2026-11-16T03:09:58.8345680Z + @radix-ui/react-presence 1.1.5
+2026-11-16T03:09:58.8346360Z + @radix-ui/react-select 2.2.6
+2026-11-16T03:09:58.8346940Z + @radix-ui/react-slot 1.2.4
+2026-11-16T03:09:58.8347480Z + @radix-ui/react-switch 1.3.7
+2026-11-16T03:09:58.8347960Z + @radix-ui/react-tabs 1.1.13
+2026-11-16T03:09:58.8348500Z + @radix-ui/react-tooltip 1.2.8
+2026-11-16T03:09:58.8348970Z + @sentry/electron 7.10.0
+2026-11-16T03:09:58.8349490Z + @sentry/react 10.45.0
+2026-11-16T03:09:58.8349950Z + @tanstack/react-table 9.3.1
+2026-11-16T03:09:58.8350490Z + @tanstack/react-virtual 3.13.24
+2026-11-16T03:09:58.8351420Z + @terminal-platform/design-tokens 0.1.0
+2026-11-16T03:09:58.8352440Z + @terminal-platform/foundation 0.1.0
+2026-11-16T03:09:58.8353700Z + @terminal-platform/runtime-types 0.1.0
+2026-11-16T03:09:58.8354450Z + @terminal-platform/workspace-adapter-websocket 0.1.0
+2026-11-16T03:09:58.8355220Z + @terminal-platform/workspace-contracts 0.1.0
+2026-11-16T03:09:58.8355890Z + @terminal-platform/workspace-core 0.1.0
+2026-11-16T03:09:58.8356560Z + @terminal-platform/workspace-elements 0.1.0
+2026-11-16T03:09:58.8357300Z + @terminal-platform/workspace-gateway-node 0.1.0
+2026-11-16T03:09:58.8358010Z + @terminal-platform/workspace-react 0.1.0
+2026-11-16T03:09:58.8358650Z + @tiptap/extension-placeholder 3.30.5
+2026-11-16T03:09:58.8359190Z + @tiptap/markdown 3.30.5
+2026-11-16T03:09:58.8359620Z + @tiptap/pm 3.30.5
+2026-11-16T03:09:58.8360580Z + @tiptap/react 3.30.5
+2026-11-16T03:09:58.8361040Z + @tiptap/starter-kit 3.30.5
+2026-11-16T03:09:58.8361500Z + @xterm/addon-fit 0.11.0
+2026-11-16T03:09:58.8362020Z + @xterm/addon-web-links 0.12.0
+2026-11-16T03:09:58.8362470Z + @xterm/xterm 6.0.0
+2026-11-16T03:09:58.8363120Z + agent-teams-controller 1.0.0 <- agent-teams-controller
+2026-11-16T03:09:58.8364170Z + better-sqlite3 12.11.1
+2026-11-16T03:09:58.8364630Z + builder-util-runtime 9.7.0
+2026-11-16T03:09:58.8365050Z + chokidar 4.0.3
+2026-11-16T03:09:58.8365510Z + class-variance-authority 0.7.1
+2026-11-16T03:09:58.8365940Z + clsx 2.1.1
+2026-11-16T03:09:58.8366260Z + cmdk 1.0.4
+2026-11-16T03:09:58.8366590Z + croner 10.0.1
+2026-11-16T03:09:58.8366950Z + cronstrue 3.13.0
+2026-11-16T03:09:58.8367300Z + date-fns 3.6.0
+2026-11-16T03:09:58.8367640Z + diff 8.0.3
+2026-11-16T03:09:58.8367990Z + dompurify 3.4.17
+2026-11-16T03:09:58.8368920Z + drizzle-orm 0.45.2
+2026-11-16T03:09:58.8369340Z + electron-updater 6.8.9
+2026-11-16T03:09:58.8369790Z + fast-json-stringify 6.4.0
+2026-11-16T03:09:58.8370850Z + fastify 5.12.5
+2026-11-16T03:09:58.8371240Z + highlight.js 11.11.1
+2026-11-16T03:09:58.8371610Z + i18next 26.2.0
+2026-11-16T03:09:58.8372160Z + idb-keyval 6.2.2
+2026-11-16T03:09:58.8372670Z + isbinaryfile 6.0.0
+2026-11-16T03:09:58.8373530Z + json-schema-ref-resolver 3.0.0
+2026-11-16T03:09:58.8374140Z + jsonc-parser 3.3.1
+2026-11-16T03:09:58.8374550Z + lucide-react 0.577.0
+2026-11-16T03:09:58.8375590Z + mdast-util-to-hast 13.2.1
+2026-11-16T03:09:58.8376470Z + mermaid 11.15.0
+2026-11-16T03:09:58.8376920Z + motion 12.38.0
+2026-11-16T03:09:58.8377290Z + node-diff3 3.2.0
+2026-11-16T03:09:58.8377640Z + node-pty 1.1.0
+2026-11-16T03:09:58.8377980Z + pica 9.0.1
+2026-11-16T03:09:58.8378300Z + pidusage 4.0.1
+2026-11-16T03:09:58.8378680Z + posthog-js 1.396.6
+2026-11-16T03:09:58.8379040Z + react 19.2.4
+2026-11-16T03:09:58.8379400Z + react-dom 19.2.4
+2026-11-16T03:09:58.8379810Z + react-grid-layout 2.2.2
+2026-11-16T03:09:58.8380800Z + react-i18next 17.0.8
+2026-11-16T03:09:58.8381240Z + react-markdown 10.1.0
+2026-11-16T03:09:58.8381680Z + react-modal-sheet 5.6.0
+2026-11-16T03:09:58.8382120Z + react-resizable 3.1.3
+2026-11-16T03:09:58.8382550Z + rehype-highlight 7.0.2
+2026-11-16T03:09:58.8382970Z + rehype-raw 7.0.0
+2026-11-16T03:09:58.8383360Z + rehype-sanitize 6.0.0
+2026-11-16T03:09:58.8383780Z + remark-gfm 4.0.1
+2026-11-16T03:09:58.8384170Z + remark-parse 11.0.0
+2026-11-16T03:09:58.8384570Z + simple-git 4.0.2
+2026-11-16T03:09:58.8384950Z + ssh-config 5.0.4
+2026-11-16T03:09:58.8385630Z + ssh2 1.17.0
+2026-11-16T03:09:58.8386020Z + strip-markdown 6.0.0
+2026-11-16T03:09:58.8386440Z + tailwind-merge 3.5.0
+2026-11-16T03:09:58.8386870Z + tailwindcss-animate 1.0.7
+2026-11-16T03:09:58.8388060Z + terminal-platform-node terminal-platform-node@file:vendor/terminal-platform/terminal-platform-node-stub
+2026-11-16T03:09:58.8389020Z + unified 11.0.5
+2026-11-16T03:09:58.8389950Z + ws 8.21.0
+2026-11-16T03:09:58.8390270Z + yaml 2.9.0
+2026-11-16T03:09:58.8390730Z + yet-another-react-lightbox 3.29.1
+2026-11-16T03:09:58.8391180Z + zod 4.6.7
+2026-11-16T03:09:58.8391500Z + zustand 4.5.7
+2026-11-16T03:09:58.8391710Z 
+2026-11-16T03:09:58.8391850Z devDependencies:
+2026-11-16T03:09:58.8392250Z + @electron/rebuild 4.2.0
+2026-11-16T03:09:58.8392920Z + @eslint-community/eslint-plugin-eslint-comments 4.6.0
+2026-11-16T03:09:58.8393520Z + @eslint/js 9.39.2
+2026-11-16T03:09:58.8393990Z + @file-viewer/vite-plugin 3.1.2
+2026-11-16T03:09:58.8394490Z + @sentry/vite-plugin 5.1.1
+2026-11-16T03:09:58.8395970Z + @tailwindcss/typography 0.5.19
+2026-11-16T03:09:58.8396560Z + @types/better-sqlite3 7.6.13
+2026-11-16T03:09:58.8397080Z + @types/hast 3.0.4
+2026-11-16T03:09:58.8397480Z + @types/mdast 4.0.4
+2026-11-16T03:09:58.8397870Z + @types/node 24.12.4
+2026-11-16T03:09:58.8398280Z + @types/pidusage 2.0.5
+2026-11-16T03:09:58.8398700Z + @types/react 19.2.14
+2026-11-16T03:09:58.8399370Z + @types/react-dom 19.2.3
+2026-11-16T03:09:58.8399850Z + @types/ssh2 1.15.5
+2026-11-16T03:09:58.8400400Z + @typescript/native <- typescript 7.0.2
+2026-11-16T03:09:58.8401050Z + @vitejs/plugin-react 4.7.0
+2026-11-16T03:09:58.8401550Z + @vitest/coverage-v8 3.2.6
+2026-11-16T03:09:58.8402000Z + autoprefixer 10.4.23
+2026-11-16T03:09:58.8402580Z + better-sqlite3-node <- better-sqlite3 12.10.1
+2026-11-16T03:09:58.8403870Z + electron 44.10.1
+2026-11-16T03:09:58.8404290Z + electron-builder 26.17.0
+2026-11-16T03:09:58.8404790Z + electron-vite 5.0.0
+2026-11-16T03:09:58.8405150Z + eslint 9.39.4
+2026-11-16T03:09:58.8405620Z + eslint-config-prettier 10.1.8
+2026-11-16T03:09:58.8406220Z + eslint-import-resolver-typescript 4.4.4
+2026-11-16T03:09:58.8406850Z + eslint-plugin-boundaries 5.3.1
+2026-11-16T03:09:58.8407360Z + eslint-plugin-import 2.32.0
+2026-11-16T03:09:58.8407900Z + eslint-plugin-jsx-a11y 6.10.2
+2026-11-16T03:09:58.8408380Z + eslint-plugin-react 7.37.5
+2026-11-16T03:09:58.8408920Z + eslint-plugin-react-hooks 7.0.1
+2026-11-16T03:09:58.8410630Z + eslint-plugin-react-refresh 0.4.26
+2026-11-16T03:09:58.8411250Z + eslint-plugin-security 3.0.1
+2026-11-16T03:09:58.8411960Z + eslint-plugin-simple-import-sort 12.1.1
+2026-11-16T03:09:58.8412530Z + eslint-plugin-sonarjs 3.0.6
+2026-11-16T03:09:58.8413170Z + eslint-plugin-tailwindcss 3.18.2
+2026-11-16T03:09:58.8413690Z + fake-indexeddb 6.2.5
+2026-11-16T03:09:58.8415240Z + globals 17.2.0
+2026-11-16T03:09:58.8416860Z + happy-dom 21.0.4
+2026-11-16T03:09:58.8417260Z + husky 9.1.7
+2026-11-16T03:09:58.8417630Z + i18next-cli 1.58.0
+2026-11-16T03:09:58.8417990Z + knip 5.82.1
+2026-11-16T03:09:58.8418510Z + lint-staged 16.2.7
+2026-11-16T03:09:58.8418900Z + oxfmt 0.72.0
+2026-11-16T03:09:58.8419220Z + oxlint 1.87.0
+2026-11-16T03:09:58.8419560Z + postcss 8.5.28
+2026-11-16T03:09:58.8419910Z + prettier 3.8.1
+2026-11-16T03:09:58.8420430Z + prettier-plugin-tailwindcss 0.7.2
+2026-11-16T03:09:58.8420940Z + tailwindcss 3.4.19
+2026-11-16T03:09:58.8421290Z + tsx 4.23.15
+2026-11-16T03:09:58.8421660Z + typescript 5.9.3
+2026-11-16T03:09:58.8422080Z + typescript-eslint 8.54.0
+2026-11-16T03:09:58.8422580Z + vite 6.4.4
+2026-11-16T03:09:58.8422930Z + vitest 3.2.6
+2026-11-16T03:09:58.8423140Z 
+2026-11-16T03:09:58.8596350Z landing postinstall$ node ./scripts/patch-minimatch-brace-expansion.mjs && node ../scripts/ci/transitive-security.ts --apply
+2026-11-16T03:09:58.9414140Z landing postinstall: [landing postinstall] skipped npm layout patch; pnpm patchedDependencies handles compatibility
+2026-11-16T03:09:59.6779390Z landing postinstall: Verified braces security backport in 1 package(s)
+2026-11-16T03:09:59.9037450Z landing postinstall: Verified http-cache-semantics security backport in 1 package(s)
+2026-11-16T03:09:59.9494500Z landing postinstall: Done
+2026-11-16T03:10:00.0402610Z [WARN] Failed to create bin at /Users/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.bin/legacy-agent-host. ENOENT: no such file or directory, open '/Users/runner/work/agent-teams-ai/agent-teams-ai/node_modules/@agent-teams/legacy-agent-host/dist/cli.js'
+2026-11-16T03:10:00.0530640Z . preinstall$ node ./scripts/ci/enforce-pnpm-install.mjs
+2026-11-16T03:10:00.1392620Z . preinstall: Done
+2026-11-16T03:10:00.1397150Z . postinstall$ node ./scripts/postinstall-electron.cjs
+2026-11-16T03:10:00.2182490Z . postinstall: Done
+2026-11-16T03:10:00.2183990Z . prepare$ husky
+2026-11-16T03:10:00.3874980Z . prepare: Done
+2026-11-16T03:10:00.4338630Z Done in 1m 15.9s using pnpm v11.22.0
+2026-11-16T03:10:00.5343420Z ##[group]Run pnpm --filter @agent-teams/legacy-agent-host build
+2026-11-16T03:10:00.5344230Z [36;1mpnpm --filter @agent-teams/legacy-agent-host build[0m
+2026-11-16T03:10:00.7157280Z shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-16T03:10:00.7157840Z env:
+2026-11-16T03:10:00.7158180Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T03:10:00.7158670Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+2026-11-16T03:10:00.7159130Z   npm_config_audit: false
+2026-11-16T03:10:00.7159520Z   npm_config_fund: false
+2026-11-16T03:10:00.7160100Z   OPENCODE_V2_TEST_SOURCE_HEAD: 608efb78823d7c74b35f8a674fcfb6faea8ecfc5
+2026-11-16T03:10:00.7160800Z   OPENCODE_V2_TEST_PLATFORM: darwin-x64
+2026-11-16T03:10:00.7161330Z   OPENCODE_V2_TEST_DARWIN_CANDIDATE_BUILD: 24G830
+2026-11-16T03:10:00.7162400Z   OPENCODE_V2_EMBEDDED_INPUTS_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-embedded-inputs.json
+2026-11-16T03:10:00.7164070Z   OPENCODE_V2_EMBEDDED_DARWIN_CUSTODY_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-darwin-custody.json
+2026-11-16T03:10:00.7165750Z   OPENCODE_V2_EMBEDDED_WINDOWS_CUSTODY_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-windows-custody.json
+2026-11-16T03:10:00.7167420Z   OPENCODE_V2_EMBEDDED_HOST_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-embedded-host.json
+2026-11-16T03:10:00.7168510Z   PNPM_HOME: /Users/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:10:00.7169050Z ##[endgroup]
+2026-11-16T03:10:01.4058450Z $ pnpm --filter @agent-teams/task-change-ledger build
+2026-11-16T03:10:02.0214470Z $ node node_modules/@typescript/native/bin/tsc -p tsconfig.json
+2026-11-16T03:10:03.1569410Z $ node node_modules/@typescript/native/bin/tsc -p tsconfig.json
+2026-11-16T03:10:06.2864440Z ##[group]Run node --test packages/legacy-agent-host/tests/opencode-v2-embedded-graph.test.ts packages/legacy-agent-host/tests/registered-process-build-selection.test.ts packages/legacy-agent-host/tests/windows-job-custody.test.ts packages/legacy-agent-host/tests/opencode-v2-native-paths.test.ts packages/legacy-agent-host/tests/owner-scoped-backup.test.ts packages/legacy-agent-host/tests/member-attachment-delivery.test.ts
+2026-11-16T03:10:06.2870720Z [36;1mnode --test packages/legacy-agent-host/tests/opencode-v2-embedded-graph.test.ts packages/legacy-agent-host/tests/registered-process-build-selection.test.ts packages/legacy-agent-host/tests/windows-job-custody.test.ts packages/legacy-agent-host/tests/opencode-v2-native-paths.test.ts packages/legacy-agent-host/tests/owner-scoped-backup.test.ts packages/legacy-agent-host/tests/member-attachment-delivery.test.ts[0m
+2026-11-16T03:10:06.2929960Z shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-16T03:10:06.2930610Z env:
+2026-11-16T03:10:06.2931110Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T03:10:06.2931660Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+2026-11-16T03:10:06.2932160Z   npm_config_audit: false
+2026-11-16T03:10:06.2932610Z   npm_config_fund: false
+2026-11-16T03:10:06.2933240Z   OPENCODE_V2_TEST_SOURCE_HEAD: 608efb78823d7c74b35f8a674fcfb6faea8ecfc5
+2026-11-16T03:10:06.2934130Z   OPENCODE_V2_TEST_PLATFORM: darwin-x64
+2026-11-16T03:10:06.2934720Z   OPENCODE_V2_TEST_DARWIN_CANDIDATE_BUILD: 24G830
+2026-11-16T03:10:06.2935840Z   OPENCODE_V2_EMBEDDED_INPUTS_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-embedded-inputs.json
+2026-11-16T03:10:06.2937540Z   OPENCODE_V2_EMBEDDED_DARWIN_CUSTODY_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-darwin-custody.json
+2026-11-16T03:10:06.2939280Z   OPENCODE_V2_EMBEDDED_WINDOWS_CUSTODY_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-windows-custody.json
+2026-11-16T03:10:06.2940930Z   OPENCODE_V2_EMBEDDED_HOST_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-embedded-host.json
+2026-11-16T03:10:06.2942100Z   PNPM_HOME: /Users/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:10:06.2942690Z ##[endgroup]
+2026-11-16T03:10:10.6978010Z ✔ attachment upload creates native nested Unicode directories and reads back the exact PNG (428.600082ms)
+2026-11-16T03:10:10.7438660Z ✔ attachment upload refuses an intermediate junction without publishing foreign bytes (227.781098ms)
+2026-11-16T03:10:10.7444750Z ✔ attachment publication distinguishes unsupported directory sync from EINVAL storage refusal (252.913192ms)
+2026-11-16T03:10:10.7597470Z ✔ attachment publication distinguishes unsupported directory sync from EPERM storage refusal (269.723029ms)
+2026-11-16T03:10:10.7604040Z ✔ attachment publication distinguishes unsupported directory sync from EIO storage refusal (235.988162ms)
+2026-11-16T03:10:10.7624040Z ✔ attachment publication distinguishes unsupported directory sync from ENOSPC storage refusal (230.569251ms)
+2026-11-16T03:10:10.7876550Z ✔ unsupported attachment directory sync cannot conceal a real descriptor close failure (218.889795ms)
+2026-11-16T03:10:10.7882350Z ✔ captured mixed attachment delivery retains custody identity and native order while references carry verified paths and digests (753.268858ms)
+2026-11-16T03:10:10.7989140Z ✔ claude teammate keeps native images; captured Codex text uses references without changing qualified legacy routing (339.95816ms)
+2026-11-16T03:10:10.8001650Z ✔ codex teammate keeps native images; captured Codex text uses references without changing qualified legacy routing (349.154125ms)
+2026-11-16T03:10:10.8005940Z ✔ native attachment capability projection requires the exact attached current ready generation and omits private fields (240.190847ms)
+2026-11-16T03:10:10.8008420Z ✔ native Host fixture admits only exact boolean attachment capability projections (9.818845ms)
+2026-11-16T03:10:10.8012410Z ✔ delivery byte validation resolves the server and its own Effect within the verified graph (41.043706ms)
+2026-11-16T03:10:10.8014040Z ✔ delivery byte validation rejects file changes before engine import (28.094793ms)
+2026-11-16T03:10:10.8015470Z ✔ delivery byte validation rejects manifest changes before engine import (19.823395ms)
+2026-11-16T03:10:10.8017010Z ✔ delivery byte validation rejects unlisted-file changes before engine import (14.486571ms)
+2026-11-16T03:10:10.8018630Z ✔ delivery byte validation rejects unlisted-directory changes before engine import (15.655047ms)
+2026-11-16T03:10:10.8020150Z ✔ delivery byte validation rejects hardlink changes before engine import (15.984347ms)
+2026-11-16T03:10:10.8021440Z ✔ delivery validation rejects symlinked graph files (12.941442ms)
+2026-11-16T03:10:10.8022820Z ✔ delivery validation rejects a pinned manifest with unsafe or duplicated paths (15.797624ms)
+2026-11-16T03:10:10.8024430Z ✔ delivery validation refuses another tuple or cancellation without importing code (10.486512ms)
+2026-11-16T03:10:10.8026290Z ✔ executor version remains pinned by the selected platform delivery, even with a valid manifest hash (15.555647ms)
+2026-11-16T03:10:10.8028160Z ✔ captured V2 runtime and its derived management probe accept only the current native path form (14.967723ms)
+2026-11-16T03:10:10.8032840Z ✔ the ordinary probe follows the trusted native Host while selected V2 paths stay canonical (2.633626ms)
+2026-11-16T03:10:11.0559720Z ✔ backup directory walk creates nested native paths and refuses an intermediate junction (4.576945ms)
+2026-11-16T03:10:11.0562080Z ✔ existing backup manifest and canonical resource proof restore missing product files without replacing control state (340.725286ms)
+2026-11-16T03:10:11.0564840Z ✔ backup restore distinguishes unsupported directory sync from EINVAL storage refusal (248.153433ms)
+2026-11-16T03:10:11.0566550Z ✔ backup restore distinguishes unsupported directory sync from EPERM storage refusal (217.35665ms)
+2026-11-16T03:10:11.0568980Z ✔ backup restore distinguishes unsupported directory sync from EIO storage refusal (222.479767ms)
+2026-11-16T03:10:11.0571470Z ✔ backup restore distinguishes unsupported directory sync from ENOSPC storage refusal (258.337546ms)
+2026-11-16T03:10:11.0573770Z ✔ unsupported directory sync cannot hide a real close failure or claim restored bytes (211.714148ms)
+2026-11-16T03:10:11.0575920Z [tasks] retracted 0 queued notification(s) for deleted task f9331779-fdf6-5e8d-9819-1baaee2c48ff
+2026-11-16T03:10:11.0579210Z ✔ actual completed delete/update defeat old backup per resource and deletion boundary fences further backup publication (443.549816ms)
+2026-11-16T03:10:11.0583010Z ✔ original physical purge refuses retained references, then uses the same deletion proof and never restores deleted bytes (602.149382ms)
+2026-11-16T03:10:11.0586570Z ✔ physical target replacement is retained across purge failure and original recovery cannot bypass its identity proof (402.422574ms)
+2026-11-16T03:10:11.0588990Z ✔ lost purge reply resolves only the original retained actor/CAS request after cold startup and removed Team data (641.235618ms)
+2026-11-16T03:10:11.0591330Z ✔ Host prepared purge retains original command across startup; legacy prepared intent keeps its rollback semantics (340.081535ms)
+2026-11-16T03:10:11.3173880Z ✔ old backup retention holds referenced/debt artifacts and corrupt timestamps without blocking an unrelated owner backup (262.059925ms)
+2026-11-16T03:10:11.6515960Z ✔ final Host backup runs after ingress seal with the original owner/lease and includes latest completed Task outcomes (333.788766ms)
+2026-11-16T03:10:11.7918510Z ✔ selected Host backup retains the profile owner marker without granting restore authority (153.815009ms)
+2026-11-16T03:10:11.8062350Z ﹣ Linux builder refuses an existing or linked output leaf before any compiler dispatch (0.881364ms) # SKIP
+2026-11-16T03:10:11.8064230Z ✔ new native-qualified OS builds admit only the architecture with measured custody evidence (11.694449ms)
+2026-11-16T03:10:11.8067930Z ✔ manifest selects one exact known build; unknown tuples and a mismatched loaded build fail closed (18.467788ms)
+2026-11-16T03:10:11.8070050Z ✔ saved historical records remain readable; control requires root, target, selected and actual builds to match (8.802662ms)
+2026-11-16T03:10:11.8071900Z ✔ builder keeps unknown candidates out of product admission and refuses changed hosts (29.331055ms)
+2026-11-16T03:10:11.8073670Z ✔ native executable observations reuse the original captured child and reject changed bytes or birth (9.707583ms)
+2026-11-16T03:10:11.8075530Z ✔ x64 selects only its own finite OS artifact; this synthetic boundary is not a native qualification (13.22299ms)
+2026-11-16T03:10:12.1592830Z ✔ original Windows handles retain birth and executable identity without any later PID lookup (18.96923ms)
+2026-11-16T03:10:12.1594810Z ✔ same-name executable replacement cannot satisfy retained Windows process custody (8.056921ms)
+2026-11-16T03:10:12.1596640Z ✔ Windows job owns descendants after root exit and closes both handles only after complete absence (4.279311ms)
+2026-11-16T03:10:12.1598630Z ✔ native Windows errors and malformed accounting stay unknown and do not replay termination (4.603786ms)
+2026-11-16T03:10:12.1602730Z ✔ a failed native close never retries a possibly recycled handle or claims cleanup (4.118273ms)
+2026-11-16T03:10:12.1604520Z ✔ failed Windows job assignment rejects original capture and never adopts the PID on retry (4.886896ms)
+2026-11-16T03:10:12.1606410Z ✔ kernel32 binding uses noninheritable opaque handles and a non-breakaway job with native accounting (1.929944ms)
+2026-11-16T03:10:12.1608540Z ✔ required tree capture fails before private stdin and retains the failed original child as unknown (4541.097881ms)
+2026-11-16T03:10:13.2922560Z ✔ fresh observations of a retained original tree use owned lifetime, not the allocation gate (1133.088612ms)
+2026-11-16T03:10:13.2964870Z ✔ retained Windows executable checks distinguish file IDs above the safe integer range (3.989307ms)
+2026-11-16T03:10:13.3193590Z ✔ native binding rejects unattested-bytes-before-load without admitting a kernel (23.201119ms)
+2026-11-16T03:10:13.3398450Z ✔ native binding rejects lossy-file-id-after-load without admitting a kernel (20.451817ms)
+2026-11-16T03:10:13.3854160Z ℹ tests 58
+2026-11-16T03:10:13.3854640Z ℹ suites 0
+2026-11-16T03:10:13.3855050Z ℹ pass 57
+2026-11-16T03:10:13.3855440Z ℹ fail 0
+2026-11-16T03:10:13.3855840Z ℹ cancelled 0
+2026-11-16T03:10:13.3856300Z ℹ skipped 1
+2026-11-16T03:10:13.3856700Z ℹ todo 0
+2026-11-16T03:10:13.3857160Z ℹ duration_ms 7001.564469
+2026-11-16T03:10:13.3999130Z ##[group]Run node scripts/stage-runtime.mjs --platform darwin-x64
+2026-11-16T03:10:13.4000030Z [36;1mnode scripts/stage-runtime.mjs --platform darwin-x64[0m
+2026-11-16T03:10:13.4069370Z shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-16T03:10:13.4070000Z env:
+2026-11-16T03:10:13.4070380Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T03:10:13.4070950Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+2026-11-16T03:10:13.4071490Z   npm_config_audit: false
+2026-11-16T03:10:13.4072540Z   npm_config_fund: false
+2026-11-16T03:10:13.4073200Z   OPENCODE_V2_TEST_SOURCE_HEAD: 608efb78823d7c74b35f8a674fcfb6faea8ecfc5
+2026-11-16T03:10:13.4073940Z   OPENCODE_V2_TEST_PLATFORM: darwin-x64
+2026-11-16T03:10:13.4074560Z   OPENCODE_V2_TEST_DARWIN_CANDIDATE_BUILD: 24G830
+2026-11-16T03:10:13.4075700Z   OPENCODE_V2_EMBEDDED_INPUTS_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-embedded-inputs.json
+2026-11-16T03:10:13.4077530Z   OPENCODE_V2_EMBEDDED_DARWIN_CUSTODY_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-darwin-custody.json
+2026-11-16T03:10:13.4079260Z   OPENCODE_V2_EMBEDDED_WINDOWS_CUSTODY_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-windows-custody.json
+2026-11-16T03:10:13.4080910Z   OPENCODE_V2_EMBEDDED_HOST_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-embedded-host.json
+2026-11-16T03:10:13.4082300Z   PNPM_HOME: /Users/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:10:13.4097180Z   GH_TOKEN: ***
+2026-11-16T03:10:13.4097690Z ##[endgroup]
+2026-11-16T03:10:13.5618920Z Downloading agent-teams-runtime-darwin-x64-v0.0.160.tar.gz from 777genius/agent_teams_orchestrator_binaries@runtime-v0.0.160
+2026-11-16T03:10:15.4187760Z Verified agent-teams-runtime-darwin-x64-v0.0.160.tar.gz sha256
+2026-11-16T03:10:15.4188850Z Extracting agent-teams-runtime-darwin-x64-v0.0.160.tar.gz
+2026-11-16T03:10:16.1794750Z Staged runtime 0.0.160 for darwin-x64
+2026-11-16T03:10:16.2143020Z ##[group]Run node --import tsx scripts/legacy-agent-host/prepare-opencode-v2-native.ts
+2026-11-16T03:10:16.2144270Z [36;1mnode --import tsx scripts/legacy-agent-host/prepare-opencode-v2-native.ts[0m
+2026-11-16T03:10:16.2202020Z shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-16T03:10:16.2202640Z env:
+2026-11-16T03:10:16.2203040Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T03:10:16.2203620Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+2026-11-16T03:10:16.2204140Z   npm_config_audit: false
+2026-11-16T03:10:16.2204590Z   npm_config_fund: false
+2026-11-16T03:10:16.2205220Z   OPENCODE_V2_TEST_SOURCE_HEAD: 608efb78823d7c74b35f8a674fcfb6faea8ecfc5
+2026-11-16T03:10:16.2205950Z   OPENCODE_V2_TEST_PLATFORM: darwin-x64
+2026-11-16T03:10:16.2206560Z   OPENCODE_V2_TEST_DARWIN_CANDIDATE_BUILD: 24G830
+2026-11-16T03:10:16.2207680Z   OPENCODE_V2_EMBEDDED_INPUTS_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-embedded-inputs.json
+2026-11-16T03:10:16.2209470Z   OPENCODE_V2_EMBEDDED_DARWIN_CUSTODY_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-darwin-custody.json
+2026-11-16T03:10:16.2211190Z   OPENCODE_V2_EMBEDDED_WINDOWS_CUSTODY_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-windows-custody.json
+2026-11-16T03:10:16.2212830Z   OPENCODE_V2_EMBEDDED_HOST_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-embedded-host.json
+2026-11-16T03:10:16.2213990Z   PNPM_HOME: /Users/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:10:16.2214590Z ##[endgroup]
+2026-11-16T03:11:15.7391150Z ##[group]Run node --experimental-test-module-mocks --test packages/legacy-agent-host/tests/registered-process-executable.native.ts
+2026-11-16T03:11:15.7393070Z [36;1mnode --experimental-test-module-mocks --test packages/legacy-agent-host/tests/registered-process-executable.native.ts[0m
+2026-11-16T03:11:15.7463620Z shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-16T03:11:15.7464260Z env:
+2026-11-16T03:11:15.7464650Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T03:11:15.7465220Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+2026-11-16T03:11:15.7465720Z   npm_config_audit: false
+2026-11-16T03:11:15.7466170Z   npm_config_fund: false
+2026-11-16T03:11:15.7466810Z   OPENCODE_V2_TEST_SOURCE_HEAD: 608efb78823d7c74b35f8a674fcfb6faea8ecfc5
+2026-11-16T03:11:15.7467580Z   OPENCODE_V2_TEST_PLATFORM: darwin-x64
+2026-11-16T03:11:15.7468190Z   OPENCODE_V2_TEST_DARWIN_CANDIDATE_BUILD: 24G830
+2026-11-16T03:11:15.7469520Z   OPENCODE_V2_EMBEDDED_INPUTS_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-embedded-inputs.json
+2026-11-16T03:11:15.7471190Z   OPENCODE_V2_EMBEDDED_DARWIN_CUSTODY_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-darwin-custody.json
+2026-11-16T03:11:15.7472930Z   OPENCODE_V2_EMBEDDED_WINDOWS_CUSTODY_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-windows-custody.json
+2026-11-16T03:11:15.7474570Z   OPENCODE_V2_EMBEDDED_HOST_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-embedded-host.json
+2026-11-16T03:11:15.7475710Z   PNPM_HOME: /Users/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:11:15.7476710Z   OPENCODE_V2_EMBEDDED_BUN: /Users/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun
+2026-11-16T03:11:15.7478040Z   OPENCODE_V2_EMBEDDED_BUN_SHA256: c35307c7d45d65c5a385a58c4a6cb0bb9499e4e626abdee207c177a77ba666ab
+2026-11-16T03:11:15.7478990Z   OPENCODE_V2_EMBEDDED_PRODUCT_ADMITTED: 1
+2026-11-16T03:11:15.7480520Z   OPENCODE_V2_EMBEDDED_PROCESS_CUSTODY_DIRECTORY: /Users/runner/work/_temp/TEST-opencode-v2-inputs-YKFu3d/process-artifact
+2026-11-16T03:11:15.7482160Z   OPENCODE_V2_EMBEDDED_PROCESS_CUSTODY_MANIFEST_SHA256: 160c3052dda74b45ed6d78e8f1553091f52587399e5912590c01484b6b37e10e
+2026-11-16T03:11:15.7483640Z   OPENCODE_V2_EMBEDDED_GRAPH: /Users/runner/work/_temp/TEST-opencode-v2-inputs-YKFu3d/engine
+2026-11-16T03:11:15.7485040Z   OPENCODE_V2_EMBEDDED_MANIFEST_SHA256: 7690030a5aba3026544e65f000475dd20f83213383e9bfddad3d98c1134a65fb
+2026-11-16T03:11:15.7486060Z   OPENCODE_V2_EMBEDDED_DARWIN_CUSTODY_GO: 1
+2026-11-16T03:11:15.7486700Z ##[endgroup]
+2026-11-16T03:11:26.5696800Z ✔ Darwin audit-bound executable measurement rejects replacement and preserves sibling custody (10516.788029ms)
+2026-11-16T03:11:26.5733750Z ﹣ POSIX original-path pre-user image gate keeps explicit mutation counterexamples (1.572733ms) # SKIP
+2026-11-16T03:11:26.6055680Z ℹ tests 2
+2026-11-16T03:11:26.6066480Z ℹ suites 0
+2026-11-16T03:11:26.6073210Z ℹ pass 1
+2026-11-16T03:11:26.6073760Z ℹ fail 0
+2026-11-16T03:11:26.6074250Z ℹ cancelled 0
+2026-11-16T03:11:26.6074690Z ℹ skipped 1
+2026-11-16T03:11:26.6075110Z ℹ todo 0
+2026-11-16T03:11:26.6075580Z ℹ duration_ms 10724.993712
+2026-11-16T03:11:26.6241600Z ##[group]Run node --input-type=module -e "
+2026-11-16T03:11:26.6242420Z [36;1mnode --input-type=module -e "[0m
+2026-11-16T03:11:26.6243090Z [36;1m  import assert from 'node:assert/strict';[0m
+2026-11-16T03:11:26.6243730Z [36;1m  import fs from 'node:fs';[0m
+2026-11-16T03:11:26.6244970Z [36;1m  const r = JSON.parse(fs.readFileSync(process.env.OPENCODE_V2_EMBEDDED_DARWIN_CUSTODY_RECEIPT, 'utf8'));[0m
+2026-11-16T03:11:26.6246270Z [36;1m  const candidate = process.env.OPENCODE_V2_EMBEDDED_PRODUCT_ADMITTED !== '1';[0m
+2026-11-16T03:11:26.6247610Z [36;1m  assert.equal(r.kind, candidate ? 'TEST_DARWIN_CUSTODY_CANDIDATE' : 'TEST_DARWIN_CUSTODY_PRODUCT_PATH');[0m
+2026-11-16T03:11:26.6249050Z [36;1m  assert.equal(r.sourceHead, process.env.OPENCODE_V2_TEST_SOURCE_HEAD);[0m
+2026-11-16T03:11:26.6250180Z [36;1m  assert.equal(r.platform + '-' + r.arch, process.env.OPENCODE_V2_TEST_PLATFORM);[0m
+2026-11-16T03:11:26.6251420Z [36;1m  assert.equal(r.status, 'PASS'); assert.equal(r.cleanup, 'confirmed');[0m
+2026-11-16T03:11:26.6253240Z [36;1m  assert.equal(r.productQualified, false);[0m
+2026-11-16T03:11:26.6254140Z [36;1m  assert.equal(r.replacementRefused, true);[0m
+2026-11-16T03:11:26.6254890Z [36;1m  assert.equal(r.siblingSurvivedTargetStop, true);[0m
+2026-11-16T03:11:26.6255850Z [36;1m  assert.equal(r.bunSha256, process.env.OPENCODE_V2_EMBEDDED_BUN_SHA256);[0m
+2026-11-16T03:11:26.6257380Z [36;1m  assert.equal(r.processArtifactManifestSha256, process.env.OPENCODE_V2_EMBEDDED_PROCESS_CUSTODY_MANIFEST_SHA256);[0m
+2026-11-16T03:11:26.6259410Z [36;1m  assert.notEqual(r.original.startIdentity, r.sibling.startIdentity);[0m
+2026-11-16T03:11:26.6261470Z [36;1m  if (candidate) assert.equal(r.osBuild, process.env.OPENCODE_V2_TEST_DARWIN_CANDIDATE_BUILD);[0m
+2026-11-16T03:11:26.6262770Z [36;1m"[0m
+2026-11-16T03:11:26.6332680Z shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-16T03:11:26.6333310Z env:
+2026-11-16T03:11:26.6333730Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T03:11:26.6334280Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+2026-11-16T03:11:26.6335090Z   npm_config_audit: false
+2026-11-16T03:11:26.6335660Z   npm_config_fund: false
+2026-11-16T03:11:26.6336310Z   OPENCODE_V2_TEST_SOURCE_HEAD: 608efb78823d7c74b35f8a674fcfb6faea8ecfc5
+2026-11-16T03:11:26.6337060Z   OPENCODE_V2_TEST_PLATFORM: darwin-x64
+2026-11-16T03:11:26.6337670Z   OPENCODE_V2_TEST_DARWIN_CANDIDATE_BUILD: 24G830
+2026-11-16T03:11:26.6338800Z   OPENCODE_V2_EMBEDDED_INPUTS_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-embedded-inputs.json
+2026-11-16T03:11:26.6340480Z   OPENCODE_V2_EMBEDDED_DARWIN_CUSTODY_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-darwin-custody.json
+2026-11-16T03:11:26.6342660Z   OPENCODE_V2_EMBEDDED_WINDOWS_CUSTODY_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-windows-custody.json
+2026-11-16T03:11:26.6344780Z   OPENCODE_V2_EMBEDDED_HOST_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-embedded-host.json
+2026-11-16T03:11:26.6345970Z   PNPM_HOME: /Users/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:11:26.6347010Z   OPENCODE_V2_EMBEDDED_BUN: /Users/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun
+2026-11-16T03:11:26.6348300Z   OPENCODE_V2_EMBEDDED_BUN_SHA256: c35307c7d45d65c5a385a58c4a6cb0bb9499e4e626abdee207c177a77ba666ab
+2026-11-16T03:11:26.6349610Z   OPENCODE_V2_EMBEDDED_PRODUCT_ADMITTED: 1
+2026-11-16T03:11:26.6350690Z   OPENCODE_V2_EMBEDDED_PROCESS_CUSTODY_DIRECTORY: /Users/runner/work/_temp/TEST-opencode-v2-inputs-YKFu3d/process-artifact
+2026-11-16T03:11:26.6352350Z   OPENCODE_V2_EMBEDDED_PROCESS_CUSTODY_MANIFEST_SHA256: 160c3052dda74b45ed6d78e8f1553091f52587399e5912590c01484b6b37e10e
+2026-11-16T03:11:26.6353760Z   OPENCODE_V2_EMBEDDED_GRAPH: /Users/runner/work/_temp/TEST-opencode-v2-inputs-YKFu3d/engine
+2026-11-16T03:11:26.6355010Z   OPENCODE_V2_EMBEDDED_MANIFEST_SHA256: 7690030a5aba3026544e65f000475dd20f83213383e9bfddad3d98c1134a65fb
+2026-11-16T03:11:26.6356560Z ##[endgroup]
+2026-11-16T03:11:26.7337210Z ##[group]Run node --test scripts/legacy-agent-host/desktop-opencode-v2-fixture.test.ts
+2026-11-16T03:11:26.7338460Z [36;1mnode --test scripts/legacy-agent-host/desktop-opencode-v2-fixture.test.ts[0m
+2026-11-16T03:11:26.7394300Z shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-16T03:11:26.7394910Z env:
+2026-11-16T03:11:26.7395330Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T03:11:26.7395880Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+2026-11-16T03:11:26.7396390Z   npm_config_audit: false
+2026-11-16T03:11:26.7396840Z   npm_config_fund: false
+2026-11-16T03:11:26.7397510Z   OPENCODE_V2_TEST_SOURCE_HEAD: 608efb78823d7c74b35f8a674fcfb6faea8ecfc5
+2026-11-16T03:11:26.7398260Z   OPENCODE_V2_TEST_PLATFORM: darwin-x64
+2026-11-16T03:11:26.7398890Z   OPENCODE_V2_TEST_DARWIN_CANDIDATE_BUILD: 24G830
+2026-11-16T03:11:26.7400020Z   OPENCODE_V2_EMBEDDED_INPUTS_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-embedded-inputs.json
+2026-11-16T03:11:26.7401820Z   OPENCODE_V2_EMBEDDED_DARWIN_CUSTODY_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-darwin-custody.json
+2026-11-16T03:11:26.7403580Z   OPENCODE_V2_EMBEDDED_WINDOWS_CUSTODY_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-windows-custody.json
+2026-11-16T03:11:26.7405220Z   OPENCODE_V2_EMBEDDED_HOST_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-embedded-host.json
+2026-11-16T03:11:26.7406360Z   PNPM_HOME: /Users/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:11:26.7407390Z   OPENCODE_V2_EMBEDDED_BUN: /Users/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun
+2026-11-16T03:11:26.7408710Z   OPENCODE_V2_EMBEDDED_BUN_SHA256: c35307c7d45d65c5a385a58c4a6cb0bb9499e4e626abdee207c177a77ba666ab
+2026-11-16T03:11:26.7409660Z   OPENCODE_V2_EMBEDDED_PRODUCT_ADMITTED: 1
+2026-11-16T03:11:26.7410780Z   OPENCODE_V2_EMBEDDED_PROCESS_CUSTODY_DIRECTORY: /Users/runner/work/_temp/TEST-opencode-v2-inputs-YKFu3d/process-artifact
+2026-11-16T03:11:26.7412510Z   OPENCODE_V2_EMBEDDED_PROCESS_CUSTODY_MANIFEST_SHA256: 160c3052dda74b45ed6d78e8f1553091f52587399e5912590c01484b6b37e10e
+2026-11-16T03:11:26.7413890Z   OPENCODE_V2_EMBEDDED_GRAPH: /Users/runner/work/_temp/TEST-opencode-v2-inputs-YKFu3d/engine
+2026-11-16T03:11:26.7415200Z   OPENCODE_V2_EMBEDDED_MANIFEST_SHA256: 7690030a5aba3026544e65f000475dd20f83213383e9bfddad3d98c1134a65fb
+2026-11-16T03:11:26.7416130Z ##[endgroup]
+2026-11-16T03:11:47.1893520Z ✔ Desktop captures embedded delivery and native management in its original private Host descriptor (19114.533813ms)
+2026-11-16T03:11:47.2373530Z ℹ tests 1
+2026-11-16T03:11:47.2376990Z ℹ suites 0
+2026-11-16T03:11:47.2378790Z ℹ pass 1
+2026-11-16T03:11:47.2379300Z ℹ fail 0
+2026-11-16T03:11:47.2380400Z ℹ cancelled 0
+2026-11-16T03:11:47.2381040Z ℹ skipped 0
+2026-11-16T03:11:47.2382020Z ℹ todo 0
+2026-11-16T03:11:47.2382520Z ℹ duration_ms 20398.201037
+2026-11-16T03:11:47.2550600Z ##[group]Run node --test packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts
+2026-11-16T03:11:47.2552050Z [36;1mnode --test packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts[0m
+2026-11-16T03:11:47.2613940Z shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-16T03:11:47.2614570Z env:
+2026-11-16T03:11:47.2614960Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T03:11:47.2615540Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+2026-11-16T03:11:47.2616050Z   npm_config_audit: false
+2026-11-16T03:11:47.2616500Z   npm_config_fund: false
+2026-11-16T03:11:47.2617150Z   OPENCODE_V2_TEST_SOURCE_HEAD: 608efb78823d7c74b35f8a674fcfb6faea8ecfc5
+2026-11-16T03:11:47.2617920Z   OPENCODE_V2_TEST_PLATFORM: darwin-x64
+2026-11-16T03:11:47.2618500Z   OPENCODE_V2_TEST_DARWIN_CANDIDATE_BUILD: 24G830
+2026-11-16T03:11:47.2619660Z   OPENCODE_V2_EMBEDDED_INPUTS_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-embedded-inputs.json
+2026-11-16T03:11:47.2621470Z   OPENCODE_V2_EMBEDDED_DARWIN_CUSTODY_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-darwin-custody.json
+2026-11-16T03:11:47.2623200Z   OPENCODE_V2_EMBEDDED_WINDOWS_CUSTODY_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-windows-custody.json
+2026-11-16T03:11:47.2624840Z   OPENCODE_V2_EMBEDDED_HOST_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-embedded-host.json
+2026-11-16T03:11:47.2626020Z   PNPM_HOME: /Users/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:11:47.2627020Z   OPENCODE_V2_EMBEDDED_BUN: /Users/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun
+2026-11-16T03:11:47.2628330Z   OPENCODE_V2_EMBEDDED_BUN_SHA256: c35307c7d45d65c5a385a58c4a6cb0bb9499e4e626abdee207c177a77ba666ab
+2026-11-16T03:11:47.2629300Z   OPENCODE_V2_EMBEDDED_PRODUCT_ADMITTED: 1
+2026-11-16T03:11:47.2630410Z   OPENCODE_V2_EMBEDDED_PROCESS_CUSTODY_DIRECTORY: /Users/runner/work/_temp/TEST-opencode-v2-inputs-YKFu3d/process-artifact
+2026-11-16T03:11:47.2632020Z   OPENCODE_V2_EMBEDDED_PROCESS_CUSTODY_MANIFEST_SHA256: 160c3052dda74b45ed6d78e8f1553091f52587399e5912590c01484b6b37e10e
+2026-11-16T03:11:47.2633430Z   OPENCODE_V2_EMBEDDED_GRAPH: /Users/runner/work/_temp/TEST-opencode-v2-inputs-YKFu3d/engine
+2026-11-16T03:11:47.2634710Z   OPENCODE_V2_EMBEDDED_MANIFEST_SHA256: 7690030a5aba3026544e65f000475dd20f83213383e9bfddad3d98c1134a65fb
+2026-11-16T03:11:47.2635670Z   OPENCODE_V2_EMBEDDED_HOST_GO: 1
+2026-11-16T03:11:47.2636310Z ##[endgroup]
+2026-11-16T03:13:39.2172580Z ✔ embedded 2.1.4 performs native tools, MCP, once approval and cold Host Resume without replay (111509.945081ms)
+2026-11-16T03:13:39.2344360Z ℹ tests 1
+2026-11-16T03:13:39.2346900Z ℹ suites 0
+2026-11-16T03:13:39.2349310Z ℹ pass 1
+2026-11-16T03:13:39.2349790Z ℹ fail 0
+2026-11-16T03:13:39.2359820Z ℹ cancelled 0
+2026-11-16T03:13:39.2360820Z ℹ skipped 0
+2026-11-16T03:13:39.2362140Z ℹ todo 0
+2026-11-16T03:13:39.2363550Z ℹ duration_ms 111826.462957
+2026-11-16T03:13:39.2568390Z ##[group]Run node --input-type=module -e "
+2026-11-16T03:13:39.2569280Z [36;1mnode --input-type=module -e "[0m
+2026-11-16T03:13:39.2569910Z [36;1m  import assert from 'node:assert/strict';[0m
+2026-11-16T03:13:39.2570520Z [36;1m  import fs from 'node:fs';[0m
+2026-11-16T03:13:39.2571270Z [36;1m  assert.equal(process.env.OPENCODE_V2_EMBEDDED_PRODUCT_ADMITTED, '1',[0m
+2026-11-16T03:13:39.2572650Z [36;1m    'HOLD: candidate custody evidence is available; qualify only this exact tuple and rerun the unmodified product path');[0m
+2026-11-16T03:13:39.2574040Z [36;1m  const receipts = [[process.env.OPENCODE_V2_EMBEDDED_HOST_RECEIPT, 'manual']];[0m
+2026-11-16T03:13:39.2575280Z [36;1m  if (process.platform === 'win32') receipts.push(['opencode-v2-embedded-host-auto.json', 'auto']);[0m
+2026-11-16T03:13:39.2576300Z [36;1m  for (const [path, mode] of receipts) {[0m
+2026-11-16T03:13:39.2577460Z [36;1m  const r = JSON.parse(fs.readFileSync(path, 'utf8'));[0m
+2026-11-16T03:13:39.2578330Z [36;1m  assert.equal(r.kind, 'TEST_NATIVE_V2_EMBEDDED_HOST');[0m
+2026-11-16T03:13:39.2579270Z [36;1m  assert.equal(r.sourceHead, process.env.OPENCODE_V2_TEST_SOURCE_HEAD);[0m
+2026-11-16T03:13:39.2580270Z [36;1m  assert.equal(r.platform, process.env.OPENCODE_V2_TEST_PLATFORM);[0m
+2026-11-16T03:13:39.2581200Z [36;1m  assert.equal(r.status, 'PASS'); assert.equal(r.cleanup, true);[0m
+2026-11-16T03:13:39.2582190Z [36;1m  assert.equal(r.nodeVersion, 'v24.21.0'); assert.equal(r.version, '2.1.4');[0m
+2026-11-16T03:13:39.2583200Z [36;1m  assert.equal(r.approvalMode, mode); assert.equal(r.modelRequests, 11);[0m
+2026-11-16T03:13:39.2584030Z [36;1m  assert.deepEqual(r.modelSelection,[0m
+2026-11-16T03:13:39.2584820Z [36;1m    { providerId: 'TEST-local', modelId: 'TEST-model-B', variant: 'high' });[0m
+2026-11-16T03:13:39.2585690Z [36;1m  assert.deepEqual(r.configurationSelection,[0m
+2026-11-16T03:13:39.2586470Z [36;1m    { scope: 'project', original: 'project-A', later: 'project-B' });[0m
+2026-11-16T03:13:39.2587240Z [36;1m  assert.deepEqual(r.preferencesSelection,[0m
+2026-11-16T03:13:39.2588140Z [36;1m    { nativeDefault: 'TEST-local/TEST-model', appDefault: 'TEST-local/TEST-model-B' });[0m
+2026-11-16T03:13:39.2589070Z [36;1m  assert.deepEqual(r.modelFailures, []);[0m
+2026-11-16T03:13:39.2589910Z [36;1m  assert.equal(r.digests.bun, process.env.OPENCODE_V2_EMBEDDED_BUN_SHA256);[0m
+2026-11-16T03:13:39.2591060Z [36;1m  assert.equal(r.digests.manifest, process.env.OPENCODE_V2_EMBEDDED_MANIFEST_SHA256);[0m
+2026-11-16T03:13:39.2592230Z [36;1m  const coordination = process.platform === 'linux' && process.arch === 'x64';[0m
+2026-11-16T03:13:39.2593050Z [36;1m  if (coordination) {[0m
+2026-11-16T03:13:39.2593910Z [36;1m    assert.equal(r.coordination.status, 'PASS'); assert.equal(r.coordination.cleanup, true);[0m
+2026-11-16T03:13:39.2594760Z [36;1m  }[0m
+2026-11-16T03:13:39.2595160Z [36;1m  assert.deepEqual(r.steps, [[0m
+2026-11-16T03:13:39.2596000Z [36;1m    ...(coordination ? ['original_native_coordination_and_cleanup_before_business_host'] : []),[0m
+2026-11-16T03:13:39.2596960Z [36;1m    'original_host_embedded_native_and_mcp_ready',[0m
+2026-11-16T03:13:39.2597790Z [36;1m    'native_model_tool_effect_permission_mcp_task_and_reply_completed_once',[0m
+2026-11-16T03:13:39.2598750Z [36;1m    'changed_project_config_did_not_retarget_running_native_session',[0m
+2026-11-16T03:13:39.2599670Z [36;1m    'original_uploaded_PNG_native_image_inference_and_public_readback',[0m
+2026-11-16T03:13:39.2600540Z [36;1m    'checkpoint_and_original_host_native_cleanup_confirmed',[0m
+2026-11-16T03:13:39.2601390Z [36;1m    'cold_host_restored_native_history_without_model_or_tool_replay',[0m
+2026-11-16T03:13:39.2602050Z [36;1m  ]);[0m
+2026-11-16T03:13:39.2602470Z [36;1m  assert.equal(r.vendorAuthQualified, false);[0m
+2026-11-16T03:13:39.2603350Z [36;1m  assert.equal(r.desktopQualified, false); assert.equal(r.releaseQualified, false);[0m
+2026-11-16T03:13:39.2604870Z [36;1m  if (process.platform === 'win32') assert.match(r.digests.windowsShell, /^[a-f0-9]{64}$/);[0m
+2026-11-16T03:13:39.2605690Z [36;1m  }[0m
+2026-11-16T03:13:39.2606000Z [36;1m"[0m
+2026-11-16T03:13:39.2664490Z shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-16T03:13:39.2665030Z env:
+2026-11-16T03:13:39.2665370Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T03:13:39.2665850Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+2026-11-16T03:13:39.2666290Z   npm_config_audit: false
+2026-11-16T03:13:39.2666680Z   npm_config_fund: false
+2026-11-16T03:13:39.2667250Z   OPENCODE_V2_TEST_SOURCE_HEAD: 608efb78823d7c74b35f8a674fcfb6faea8ecfc5
+2026-11-16T03:13:39.2667940Z   OPENCODE_V2_TEST_PLATFORM: darwin-x64
+2026-11-16T03:13:39.2668460Z   OPENCODE_V2_TEST_DARWIN_CANDIDATE_BUILD: 24G830
+2026-11-16T03:13:39.2669520Z   OPENCODE_V2_EMBEDDED_INPUTS_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-embedded-inputs.json
+2026-11-16T03:13:39.2671360Z   OPENCODE_V2_EMBEDDED_DARWIN_CUSTODY_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-darwin-custody.json
+2026-11-16T03:13:39.2673030Z   OPENCODE_V2_EMBEDDED_WINDOWS_CUSTODY_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-windows-custody.json
+2026-11-16T03:13:39.2674610Z   OPENCODE_V2_EMBEDDED_HOST_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-embedded-host.json
+2026-11-16T03:13:39.2675690Z   PNPM_HOME: /Users/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:13:39.2676640Z   OPENCODE_V2_EMBEDDED_BUN: /Users/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun
+2026-11-16T03:13:39.2677880Z   OPENCODE_V2_EMBEDDED_BUN_SHA256: c35307c7d45d65c5a385a58c4a6cb0bb9499e4e626abdee207c177a77ba666ab
+2026-11-16T03:13:39.2678760Z   OPENCODE_V2_EMBEDDED_PRODUCT_ADMITTED: 1
+2026-11-16T03:13:39.2679790Z   OPENCODE_V2_EMBEDDED_PROCESS_CUSTODY_DIRECTORY: /Users/runner/work/_temp/TEST-opencode-v2-inputs-YKFu3d/process-artifact
+2026-11-16T03:13:39.2681340Z   OPENCODE_V2_EMBEDDED_PROCESS_CUSTODY_MANIFEST_SHA256: 160c3052dda74b45ed6d78e8f1553091f52587399e5912590c01484b6b37e10e
+2026-11-16T03:13:39.2682660Z   OPENCODE_V2_EMBEDDED_GRAPH: /Users/runner/work/_temp/TEST-opencode-v2-inputs-YKFu3d/engine
+2026-11-16T03:13:39.2683870Z   OPENCODE_V2_EMBEDDED_MANIFEST_SHA256: 7690030a5aba3026544e65f000475dd20f83213383e9bfddad3d98c1134a65fb
+2026-11-16T03:13:39.2684750Z ##[endgroup]
+2026-11-16T03:13:39.3615880Z ##[group]Run node --test --test-name-pattern='^POSIX original-path' packages/legacy-agent-host/tests/registered-process-executable.native.ts
+2026-11-16T03:13:39.3617920Z [36;1mnode --test --test-name-pattern='^POSIX original-path' packages/legacy-agent-host/tests/registered-process-executable.native.ts[0m
+2026-11-16T03:13:39.3675380Z shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-16T03:13:39.3676010Z env:
+2026-11-16T03:13:39.3676420Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T03:13:39.3677000Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+2026-11-16T03:13:39.3677530Z   npm_config_audit: false
+2026-11-16T03:13:39.3677980Z   npm_config_fund: false
+2026-11-16T03:13:39.3678630Z   OPENCODE_V2_TEST_SOURCE_HEAD: 608efb78823d7c74b35f8a674fcfb6faea8ecfc5
+2026-11-16T03:13:39.3679380Z   OPENCODE_V2_TEST_PLATFORM: darwin-x64
+2026-11-16T03:13:39.3679960Z   OPENCODE_V2_TEST_DARWIN_CANDIDATE_BUILD: 24G830
+2026-11-16T03:13:39.3681230Z   OPENCODE_V2_EMBEDDED_INPUTS_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-embedded-inputs.json
+2026-11-16T03:13:39.3682900Z   OPENCODE_V2_EMBEDDED_DARWIN_CUSTODY_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-darwin-custody.json
+2026-11-16T03:13:39.3684620Z   OPENCODE_V2_EMBEDDED_WINDOWS_CUSTODY_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-windows-custody.json
+2026-11-16T03:13:39.3686390Z   OPENCODE_V2_EMBEDDED_HOST_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-embedded-host.json
+2026-11-16T03:13:39.3687530Z   PNPM_HOME: /Users/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:13:39.3688530Z   OPENCODE_V2_EMBEDDED_BUN: /Users/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun
+2026-11-16T03:13:39.3689840Z   OPENCODE_V2_EMBEDDED_BUN_SHA256: c35307c7d45d65c5a385a58c4a6cb0bb9499e4e626abdee207c177a77ba666ab
+2026-11-16T03:13:39.3690800Z   OPENCODE_V2_EMBEDDED_PRODUCT_ADMITTED: 1
+2026-11-16T03:13:39.3691890Z   OPENCODE_V2_EMBEDDED_PROCESS_CUSTODY_DIRECTORY: /Users/runner/work/_temp/TEST-opencode-v2-inputs-YKFu3d/process-artifact
+2026-11-16T03:13:39.3693520Z   OPENCODE_V2_EMBEDDED_PROCESS_CUSTODY_MANIFEST_SHA256: 160c3052dda74b45ed6d78e8f1553091f52587399e5912590c01484b6b37e10e
+2026-11-16T03:13:39.3694890Z   OPENCODE_V2_EMBEDDED_GRAPH: /Users/runner/work/_temp/TEST-opencode-v2-inputs-YKFu3d/engine
+2026-11-16T03:13:39.3696160Z   OPENCODE_V2_EMBEDDED_MANIFEST_SHA256: 7690030a5aba3026544e65f000475dd20f83213383e9bfddad3d98c1134a65fb
+2026-11-16T03:13:39.3697120Z   OPENCODE_V2_POSIX_EXEC_GO: 1
+2026-11-16T03:13:39.3698770Z   OPENCODE_V2_POSIX_EXEC_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-posix-exec.json
+2026-11-16T03:13:39.3699850Z   OPENCODE_V2_EMBEDDED_DARWIN_CANDIDATE_BUILD: 
+2026-11-16T03:13:39.3700520Z ##[endgroup]
+2026-11-16T03:13:41.2499060Z {"kind":"TEST_POSIX_IMAGE_WITNESS_FAILURE","case":"compiler-default:baseline","stage":"kernel-image-validity","errno":13,"codeSigningError":-67062}
+2026-11-16T03:13:41.5633740Z {"kind":"TEST_POSIX_MUTATION_FAILURE","case":"adhoc-test-only:after-check","stage":"exit","errno":0,"execErrno":0,"stoppedBeforeUser":true,"payloadMarkersAbsentBeforeGate":true,"kernelImageObserved":true,"imageMatched":true,"resumed":true,"mutationAfterCheckErrno":0,"codeSigningFlags":570425345,"codeSigningError":0,"exitCode":0,"exitSignal":0,"originalReaped":true,"originalGroupAbsent":true,"cleanup":true,"markers":{"count":3,"library":true,"constructorA":true,"constructorB":false,"mainA":true,"mainB":false}}
+2026-11-16T03:13:41.6308100Z {"kind":"TEST_POSIX_MUTATION_FAILURE","case":"adhoc-test-only:writer-open","stage":"exit","errno":0,"execErrno":0,"stoppedBeforeUser":true,"payloadMarkersAbsentBeforeGate":true,"kernelImageObserved":true,"imageMatched":true,"resumed":true,"mutationAfterCheckErrno":0,"codeSigningFlags":570425345,"codeSigningError":0,"exitCode":0,"exitSignal":0,"originalReaped":true,"originalGroupAbsent":true,"cleanup":true,"markers":{"count":3,"library":true,"constructorA":true,"constructorB":false,"mainA":true,"mainB":false}}
+2026-11-16T03:13:42.1772570Z ✖ POSIX original-path pre-user image gate keeps explicit mutation counterexamples (2572.667112ms)
+2026-11-16T03:13:42.2022990Z ℹ tests 1
+2026-11-16T03:13:42.2024150Z ℹ suites 0
+2026-11-16T03:13:42.2024600Z ℹ pass 0
+2026-11-16T03:13:42.2025210Z ℹ fail 1
+2026-11-16T03:13:42.2025990Z ℹ cancelled 0
+2026-11-16T03:13:42.2026450Z ℹ skipped 0
+2026-11-16T03:13:42.2026940Z ℹ todo 0
+2026-11-16T03:13:42.2027450Z ℹ duration_ms 2745.838566
+2026-11-16T03:13:42.2035000Z 
+2026-11-16T03:13:42.2036330Z ✖ failing tests:
+2026-11-16T03:13:42.2037490Z 
+2026-11-16T03:13:42.2039110Z test at packages/legacy-agent-host/tests/registered-process-executable.native.ts:318:1
+2026-11-16T03:13:42.2043010Z ✖ POSIX original-path pre-user image gate keeps explicit mutation counterexamples (2572.667112ms)
+2026-11-16T03:13:42.2045120Z   AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+2026-11-16T03:13:42.2046690Z   
+2026-11-16T03:13:42.2047910Z   13 !== 0
+2026-11-16T03:13:42.2049140Z   
+2026-11-16T03:13:42.2060260Z       at TestContext.<anonymous> (file:///Users/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/tests/registered-process-executable.native.ts:476:18)
+2026-11-16T03:13:42.2062780Z       at async Test.run (node:internal/test_runner/test:1409:7)
+2026-11-16T03:13:42.2064750Z       at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+2026-11-16T03:13:42.2067530Z     generatedMessage: true,
+2026-11-16T03:13:42.2068100Z     code: 'ERR_ASSERTION',
+2026-11-16T03:13:42.2068740Z     actual: 13,
+2026-11-16T03:13:42.2069630Z     expected: 0,
+2026-11-16T03:13:42.2071500Z     operator: 'strictEqual',
+2026-11-16T03:13:42.2072480Z     diff: 'simple'
+2026-11-16T03:13:42.2072940Z   }
+2026-11-16T03:13:42.2132570Z ##[error]Process completed with exit code 1.
+2026-11-16T03:13:42.2349910Z ##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+2026-11-16T03:13:42.2350770Z with:
+2026-11-16T03:13:42.2351220Z   name: opencode-v2-embedded-native-darwin-x64
+2026-11-16T03:13:42.2351810Z   retention-days: 7
+2026-11-16T03:13:42.2352220Z   if-no-files-found: warn
+2026-11-16T03:13:42.2354850Z   path: opencode-v2-embedded-inputs.json
+opencode-v2-darwin-custody.json
+opencode-v2-windows-custody.json
+opencode-v2-embedded-host.json
+opencode-v2-embedded-host-auto.json
+opencode-v2-model-probe.json
+opencode-v2-credentials.json
+opencode-v2-permission-lifecycle.json
+opencode-v2-captured-mcp.json
+opencode-v2-posix-exec.json
+
+2026-11-16T03:13:42.2357580Z   compression-level: 6
+2026-11-16T03:13:42.2358320Z   overwrite: false
+2026-11-16T03:13:42.2358740Z   include-hidden-files: false
+2026-11-16T03:13:42.2359200Z env:
+2026-11-16T03:13:42.2359580Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T03:13:42.2360140Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+2026-11-16T03:13:42.2360730Z   npm_config_audit: false
+2026-11-16T03:13:42.2361190Z   npm_config_fund: false
+2026-11-16T03:13:42.2361810Z   OPENCODE_V2_TEST_SOURCE_HEAD: 608efb78823d7c74b35f8a674fcfb6faea8ecfc5
+2026-11-16T03:13:42.2362550Z   OPENCODE_V2_TEST_PLATFORM: darwin-x64
+2026-11-16T03:13:42.2363150Z   OPENCODE_V2_TEST_DARWIN_CANDIDATE_BUILD: 24G830
+2026-11-16T03:13:42.2364270Z   OPENCODE_V2_EMBEDDED_INPUTS_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-embedded-inputs.json
+2026-11-16T03:13:42.2365920Z   OPENCODE_V2_EMBEDDED_DARWIN_CUSTODY_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-darwin-custody.json
+2026-11-16T03:13:42.2367650Z   OPENCODE_V2_EMBEDDED_WINDOWS_CUSTODY_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-windows-custody.json
+2026-11-16T03:13:42.2369300Z   OPENCODE_V2_EMBEDDED_HOST_RECEIPT: /Users/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-embedded-host.json
+2026-11-16T03:13:42.2370430Z   PNPM_HOME: /Users/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:13:42.2371430Z   OPENCODE_V2_EMBEDDED_BUN: /Users/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun
+2026-11-16T03:13:42.2372730Z   OPENCODE_V2_EMBEDDED_BUN_SHA256: c35307c7d45d65c5a385a58c4a6cb0bb9499e4e626abdee207c177a77ba666ab
+2026-11-16T03:13:42.2373680Z   OPENCODE_V2_EMBEDDED_PRODUCT_ADMITTED: 1
+2026-11-16T03:13:42.2374760Z   OPENCODE_V2_EMBEDDED_PROCESS_CUSTODY_DIRECTORY: /Users/runner/work/_temp/TEST-opencode-v2-inputs-YKFu3d/process-artifact
+2026-11-16T03:13:42.2376370Z   OPENCODE_V2_EMBEDDED_PROCESS_CUSTODY_MANIFEST_SHA256: 160c3052dda74b45ed6d78e8f1553091f52587399e5912590c01484b6b37e10e
+2026-11-16T03:13:42.2377760Z   OPENCODE_V2_EMBEDDED_GRAPH: /Users/runner/work/_temp/TEST-opencode-v2-inputs-YKFu3d/engine
+2026-11-16T03:13:42.2379140Z   OPENCODE_V2_EMBEDDED_MANIFEST_SHA256: 7690030a5aba3026544e65f000475dd20f83213383e9bfddad3d98c1134a65fb
+2026-11-16T03:13:42.2380100Z ##[endgroup]
+2026-11-16T03:13:42.9156950Z (node:9114) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-16T03:13:42.9159140Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-16T03:13:42.9220360Z Multiple search paths detected. Calculating the least common ancestor of all paths
+2026-11-16T03:13:42.9227320Z The least common ancestor is /Users/runner/work/agent-teams-ai/agent-teams-ai. This will be the root directory of the artifact
+2026-11-16T03:13:42.9228740Z With the provided path, there will be 4 files uploaded
+2026-11-16T03:13:42.9229720Z Artifact name is valid!
+2026-11-16T03:13:42.9231000Z Root directory input is valid!
+2026-11-16T03:13:43.1975720Z (node:9114) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-11-16T03:13:43.2019010Z Beginning upload of artifact content to blob storage
+2026-11-16T03:13:43.2186150Z Uploaded bytes 10456
+2026-11-16T03:13:43.2321260Z Finished uploading artifact content to blob storage!
+2026-11-16T03:13:43.2322760Z SHA256 digest of uploaded artifact zip is 1189a153c053fea6db96009513da6f2812d3149e1d6394aee807be3b95da8624
+2026-11-16T03:13:43.2323880Z Finalizing artifact upload
+2026-11-16T03:13:43.5539280Z Artifact opencode-v2-embedded-native-darwin-x64.zip successfully finalized. Artifact ID 14195150657
+2026-11-16T03:13:43.5550180Z Artifact opencode-v2-embedded-native-darwin-x64 has been successfully uploaded! Final size is 10456 bytes. Artifact ID is 14195150657
+2026-11-16T03:13:43.5569410Z Artifact download URL: https://github.com/777genius/agent-teams-ai/actions/runs/43795234721/artifacts/14195150657
+2026-11-16T03:13:43.5738890Z Post job cleanup.
+2026-11-16T03:13:43.7799750Z Pruning is unnecessary.
+2026-11-16T03:13:43.8053670Z Post job cleanup.
+2026-11-16T03:13:43.9655400Z [command]/usr/local/bin/git version
+2026-11-16T03:13:43.9748720Z git version 2.55.0
+2026-11-16T03:13:43.9784970Z Copying '/Users/runner/.gitconfig' to '/Users/runner/work/_temp/8fa721c8-a604-4f62-b929-ec488f8c2131/.gitconfig'
+2026-11-16T03:13:43.9798680Z Temporarily overriding HOME='/Users/runner/work/_temp/8fa721c8-a604-4f62-b929-ec488f8c2131' before making global git config changes
+2026-11-16T03:13:43.9800530Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-16T03:13:43.9805250Z [command]/usr/local/bin/git config --global --add safe.directory /Users/runner/work/agent-teams-ai/agent-teams-ai
+2026-11-16T03:13:43.9895780Z Removing SSH command configuration
+2026-11-16T03:13:43.9904650Z [command]/usr/local/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-16T03:13:43.9998770Z [command]/usr/local/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-16T03:13:44.1266120Z Removing HTTP extra header
+2026-11-16T03:13:44.1273590Z [command]/usr/local/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-16T03:13:44.1369430Z [command]/usr/local/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-16T03:13:44.3020850Z Removing includeIf entries pointing to credentials config files
+2026-11-16T03:13:44.3024060Z [command]/usr/local/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-16T03:13:44.3225560Z [command]/usr/local/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-16T03:13:44.4871350Z Cleaning up orphan processes
+2026-11-16T03:13:45.3593680Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

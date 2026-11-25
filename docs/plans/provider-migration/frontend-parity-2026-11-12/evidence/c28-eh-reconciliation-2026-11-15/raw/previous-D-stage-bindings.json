@@ -1,0 +1,37 @@
+{
+  "r1Published": {
+    "head": "107e56e9821cabf94760848f77474197017986d2",
+    "tree": "4439aadd840acdbc0328d18b112324245aa212c8",
+    "planBlob": "e841ce552dbf0e5f367ced2dab45d9d233e54288",
+    "fullReadbackExact": true
+  },
+  "stages": {
+    "B": {
+      "head": "a4c32a3247b6c39731e4ec12a257b894eaeac887",
+      "tree": "924ca292df67231b2777b937930279072eb30649",
+      "parents": [
+        "107e56e9821cabf94760848f77474197017986d2",
+        "2cb0c0a92c954ab04d081b7a5672270d7484f4a7"
+      ],
+      "independentlyReviewed": true
+    },
+    "C": {
+      "head": "3184acb5f000c2ce2e368ff9babc6105c5adc5c1",
+      "tree": "2b8e39d1f3edf063d98eda76d3531156aa8e386c",
+      "parents": [
+        "a4c32a3247b6c39731e4ec12a257b894eaeac887"
+      ],
+      "independentlyReviewed": true
+    },
+    "D": {
+      "head": "7e8e37c282e9cc653efd79799dc862d116310065",
+      "tree": "e77d05767aa3cb4be469e3763b19236601dbc762",
+      "parents": [
+        "3184acb5f000c2ce2e368ff9babc6105c5adc5c1"
+      ],
+      "independentlyReviewed": true,
+      "outstandingIncoming": "c28f1aa890c909c7b981254c5e30b874cbc84287",
+      "scope": "Exact already-published three-path Selection slice on isolated integrated2cb+followup source. Current PR c28 is not adopted or qualified; its independent history requires subsequent reviewed reconciliation."
+    }
+  }
+}

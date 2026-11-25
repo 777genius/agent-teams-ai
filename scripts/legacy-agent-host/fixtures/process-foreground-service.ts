@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import { appendFile, readFile, realpath, writeFile } from 'node:fs/promises';
+import { appendFile, readFile, realpath, rename, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 const startedAt = Date.now(),
   ttlMs = 300_000;
@@ -12,8 +12,10 @@ assert.ok(basename(root).startsWith('TEST-desktop-backend-'));
 const seed = JSON.parse(await readFile(join(root, 'process-ui-seed.json'), 'utf8')) as {
   node: string;
   roles: Record<string, { nonce: string }>;
+  primaryCompletion?: 'natural-request';
 };
 assert.equal(await realpath(process.execPath), seed.node);
+assert.ok(seed.primaryCompletion === undefined || seed.primaryCompletion === 'natural-request');
 const role = selectedRole,
   nonce = seed.roles[role]!.nonce;
 assert.match(nonce, /^TEST-[a-f0-9-]{36}$/);
@@ -37,13 +39,20 @@ const server = createServer((req, res) => {
     return;
   }
   res.setHeader('content-type', 'application/json');
+  if (role === 'primary' && seed.primaryCompletion === 'natural-request') {
+    res.once('finish', () => {
+      clearTimeout(timer);
+      void close('natural-request');
+    });
+  }
   res.end(JSON.stringify({ role, nonce, pid: process.pid }));
 });
 await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
 const address = server.address();
 assert.ok(address && typeof address !== 'string');
+const publication = join(root, `workspace/process-${role}.json`);
 await writeFile(
-  join(root, `workspace/process-${role}.json`),
+  publication + '.pending',
   JSON.stringify({
     role,
     nonce,
@@ -53,7 +62,10 @@ await writeFile(
   }),
   { mode: 0o600, flag: 'wx' }
 );
-await record({ event: 'listening', port: address.port, ttlMs, startedAt });
+if (seed.primaryCompletion === undefined) {
+  await rename(publication + '.pending', publication);
+  await record({ event: 'listening', port: address.port, ttlMs, startedAt });
+}
 let closing = false;
 const close = async (reason: string) => {
   if (closing) return;
@@ -74,4 +86,9 @@ process.once('SIGTERM', () => {
   clearTimeout(timer);
   void close('SIGTERM');
 });
+if (seed.primaryCompletion === 'natural-request') {
+  // Publish this mode only after its close handler/timer and original lifecycle record exist.
+  await record({ event: 'listening', port: address.port, ttlMs, startedAt });
+  await rename(publication + '.pending', publication);
+}
 // Foreground server: no spawn, unref, daemonization, private release file or child process.

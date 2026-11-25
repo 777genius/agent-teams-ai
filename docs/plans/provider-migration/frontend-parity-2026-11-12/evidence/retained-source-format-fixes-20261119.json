@@ -1,0 +1,797 @@
+{
+  "schemaVersion": 1,
+  "kind": "RETAINED_SOURCE_FINITE_DIAGNOSTIC_AND_ACTUAL_SAVED_DRAFT_FORMAT",
+  "preimageHead": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+  "slices": [
+    {
+      "name": "retained-source-boundary-local-checks.json",
+      "bytes": 19856,
+      "sha256": "87a9ee8d410e007db10f385298a8ef5ef69b52a9c231d48abc179f4b1526e71b",
+      "record": {
+        "schemaVersion": 1,
+        "kind": "TEST-retained-source-boundary-local-checks",
+        "recordedAt": "2026-11-19T19:25:14.867495+00:00",
+        "base": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+        "scope": "Separate passive8path slice; root may now apply separately tested save-only functional follow-up.",
+        "sourceFiles": [
+          {
+            "path": "src/features/agent-backend/main/infrastructure/stopped-import/createLegacyStoppedTeamSource.ts",
+            "preimageCommit": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+            "preimageSha256": "57557c18e1cc5f85ef54cc2153f2cd76f50b91af52e7a60f2cd04849e2b84057",
+            "preimagePhysicalLines": 342,
+            "postimageSha256": "0dd419972e8e77937a835cf08b6916e6367cef2ae9581f8e619057ad71321582",
+            "postimagePhysicalLines": 372,
+            "frozenPostimage": "/workspace/scratch/f45fed8e9067/audit1192/retained-source-boundary-postimage/src/features/agent-backend/main/infrastructure/stopped-import/createLegacyStoppedTeamSource.ts"
+          },
+          {
+            "path": "src/features/agent-backend/main/infrastructure/stopped-import/retainedLegacyOpenDiagnosticContract.ts",
+            "preimageCommit": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+            "preimageSha256": "7918e41e7692d4f9c2440488f4ccde5e195929948df41686ec59ed8b5602239b",
+            "preimagePhysicalLines": 52,
+            "postimageSha256": "9b08a44df75debb985226746a7993dfd2ed96318f989f61a62f4d74bcd9f4eb1",
+            "postimagePhysicalLines": 77,
+            "frozenPostimage": "/workspace/scratch/f45fed8e9067/audit1192/retained-source-boundary-postimage/src/features/agent-backend/main/infrastructure/stopped-import/retainedLegacyOpenDiagnosticContract.ts"
+          },
+          {
+            "path": "src/features/agent-backend/main/infrastructure/stopped-import/createRetainedLegacyOpenDiagnostic.ts",
+            "preimageCommit": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+            "preimageSha256": "1d61d048cb4f384e8d46f86fb5a0a5cd0e7dcc902b131cbc7d5974f18a7c21ad",
+            "preimagePhysicalLines": 108,
+            "postimageSha256": "8ad947cf6c1699babe85fc457b6f52fd8076c832e4966e66ca251247f1baab1e",
+            "postimagePhysicalLines": 118,
+            "frozenPostimage": "/workspace/scratch/f45fed8e9067/audit1192/retained-source-boundary-postimage/src/features/agent-backend/main/infrastructure/stopped-import/createRetainedLegacyOpenDiagnostic.ts"
+          },
+          {
+            "path": "src/features/agent-backend/main/infrastructure/stopped-import/legacyStoppedSourceDiagnostic.ts",
+            "preimageCommit": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+            "preimageSha256": null,
+            "preimagePhysicalLines": 0,
+            "postimageSha256": "bbb037ae4a552df2d48c44d4668aea554249dbaf1d42f68beb8303a9bfac6b76",
+            "postimagePhysicalLines": 23,
+            "frozenPostimage": "/workspace/scratch/f45fed8e9067/audit1192/retained-source-boundary-postimage/src/features/agent-backend/main/infrastructure/stopped-import/legacyStoppedSourceDiagnostic.ts"
+          },
+          {
+            "path": "scripts/legacy-agent-host/desktop-retained-open-diagnostics.ts",
+            "preimageCommit": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+            "preimageSha256": "4d08dd2eb96b9f44bf370d8f63f1eedc7daca36c8064e7cb60f266a7e623077c",
+            "preimagePhysicalLines": 228,
+            "postimageSha256": "16ff5bef8f1b2624ef565377090780a1e19692b24e87cc8d144aa2de8a981f81",
+            "postimagePhysicalLines": 237,
+            "frozenPostimage": "/workspace/scratch/f45fed8e9067/audit1192/retained-source-boundary-postimage/scripts/legacy-agent-host/desktop-retained-open-diagnostics.ts"
+          },
+          {
+            "path": "scripts/legacy-agent-host/desktop-retained-open-diagnostics.test.ts",
+            "preimageCommit": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+            "preimageSha256": "b4606d21091fca1bc19b5482e65b3d3f90724c963286a13ea3df283cccee7ecf",
+            "preimagePhysicalLines": 377,
+            "postimageSha256": "bd084d06b3d3e616f61b2c8d8fde6a1ee3cad6460b3c774428bd08dbe8f0ad79",
+            "postimagePhysicalLines": 397,
+            "frozenPostimage": "/workspace/scratch/f45fed8e9067/audit1192/retained-source-boundary-postimage/scripts/legacy-agent-host/desktop-retained-open-diagnostics.test.ts"
+          },
+          {
+            "path": "test/features/agent-backend/legacyStoppedImportSource.test.ts",
+            "preimageCommit": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+            "preimageSha256": "4d817603ddedef0e6452d0b2c4205fff7c0aed974be6ab0392f7d86c55b35414",
+            "preimagePhysicalLines": 676,
+            "postimageSha256": "494057b070960c27eb8313d1b29155493e3277ba509c4b9cfd376c0a72c56f01",
+            "postimagePhysicalLines": 755,
+            "frozenPostimage": "/workspace/scratch/f45fed8e9067/audit1192/retained-source-boundary-postimage/test/features/agent-backend/legacyStoppedImportSource.test.ts"
+          },
+          {
+            "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+            "preimageCommit": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+            "preimageSha256": "67d52fa4e5e0fcf56dcaa5a07184c8eaeb5f04c27e33be87ba40fd7887987fe4",
+            "preimagePhysicalLines": 403,
+            "postimageSha256": "d6c700da2fda7e2189701b2c0e138fe8687c0bfd496a1bdfbfb8c83d931b6d62",
+            "postimagePhysicalLines": 405,
+            "frozenPostimage": "/workspace/scratch/f45fed8e9067/audit1192/retained-source-boundary-postimage/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts"
+          }
+        ],
+        "checks": [
+          {
+            "name": "red",
+            "status": "EXPECTED_FAIL",
+            "note": "Two controlled regressions lacked sourceBoundary; original source-unreadable remained unchanged.",
+            "exitCode": 1,
+            "argv": [
+              "pnpm",
+              "exec",
+              "vitest",
+              "run",
+              "test/features/agent-backend/legacyStoppedImportSource.test.ts",
+              "--maxWorkers=1",
+              "-t",
+              "distinguishes original unreadable source boundaries|preserves a frozen original Hold"
+            ],
+            "seconds": 20.356140613555908,
+            "log": "/workspace/scratch/f45fed8e9067/audit1192/retained-source-boundary-red.log",
+            "logBytes": 7431,
+            "logSha256": "fe53132f516195576b972e779f6f495a678c67dfdfd81b3204e02d92b48547a7",
+            "receipt": "/workspace/scratch/f45fed8e9067/audit1192/retained-source-boundary-red.json",
+            "receiptSha256": "438281ba57b8e8c1d56c67192a29bcc82b22bf079a3f8cf4c45a24fe33787e82",
+            "sourceUnchangedDuringCheck": null
+          },
+          {
+            "name": "lint",
+            "status": "FAIL_IMPORT_ORDER",
+            "note": "App test import group order corrected; existing scanner warning left unchanged.",
+            "exitCode": 1,
+            "argv": [
+              "pnpm",
+              "exec",
+              "eslint",
+              "--config",
+              "eslint.fast.config.js",
+              "src/features/agent-backend/main/infrastructure/stopped-import/createLegacyStoppedTeamSource.ts",
+              "src/features/agent-backend/main/infrastructure/stopped-import/retainedLegacyOpenDiagnosticContract.ts",
+              "src/features/agent-backend/main/infrastructure/stopped-import/createRetainedLegacyOpenDiagnostic.ts",
+              "src/features/agent-backend/main/infrastructure/stopped-import/legacyStoppedSourceDiagnostic.ts",
+              "scripts/legacy-agent-host/desktop-retained-open-diagnostics.ts",
+              "scripts/legacy-agent-host/desktop-retained-open-diagnostics.test.ts",
+              "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+              "test/features/agent-backend/legacyStoppedImportSource.test.ts"
+            ],
+            "seconds": 7.185810804367065,
+            "log": "/workspace/scratch/f45fed8e9067/audit1192/retained-source-boundary-lint.log",
+            "logBytes": 558,
+            "logSha256": "00fe3094e6bd5f0252ae9225dc145424a8f290e91bce062e101a271f621bb0da",
+            "receipt": "/workspace/scratch/f45fed8e9067/audit1192/retained-source-boundary-lint.json",
+            "receiptSha256": "bb6e06e7ea5292b2ebc6ba2625e661312a43e2bc7e035d4c134ca91de412aa43",
+            "sourceUnchangedDuringCheck": true
+          },
+          {
+            "name": "app-types",
+            "status": "COMMAND_NOT_FOUND",
+            "note": "tsgo alias absent; no compiler executed. Continued using pinned canonical node_modules/@typescript/native/bin/tsc.",
+            "exitCode": 1,
+            "argv": [
+              "pnpm",
+              "exec",
+              "tsgo",
+              "-p",
+              "tsconfig.retained-source-boundary-app.json"
+            ],
+            "seconds": 1.153594970703125,
+            "log": "/workspace/scratch/f45fed8e9067/audit1192/retained-source-boundary-app-types.log",
+            "logBytes": 103,
+            "logSha256": "3f117cbd149d1ec0d96e03458a9b592f046503a472a9e7ca7e2d2f72d9245b74",
+            "receipt": "/workspace/scratch/f45fed8e9067/audit1192/retained-source-boundary-app-types.json",
+            "receiptSha256": "5ef6b30d37ac656b87ac5cb8f853d1b91f8087e8b17d5db4930f5017e5b15ca2",
+            "sourceUnchangedDuringCheck": true
+          },
+          {
+            "name": "green",
+            "status": "PASS",
+            "note": "46 tests:27 original-source+19 producer, including2 new controlled cases.",
+            "exitCode": 0,
+            "argv": [
+              "pnpm",
+              "exec",
+              "vitest",
+              "run",
+              "test/features/agent-backend/legacyStoppedImportSource.test.ts",
+              "test/features/agent-backend/retainedLegacyOpenDiagnostics.test.ts",
+              "--maxWorkers=1"
+            ],
+            "seconds": 20.871164083480835,
+            "log": "/workspace/scratch/f45fed8e9067/audit1192/retained-source-boundary-green.log",
+            "logBytes": 424,
+            "logSha256": "b382138964dce1373df09aba5e510f66e2536d413dcbd6b8381ba3490a851dc0",
+            "receipt": "/workspace/scratch/f45fed8e9067/audit1192/retained-source-boundary-green.json",
+            "receiptSha256": "c0188cfc877601f0928909dfaac912eca9397265c935f9a466ab34d6bde32033",
+            "sourceUnchangedDuringCheck": true
+          },
+          {
+            "name": "scanner",
+            "status": "PASS",
+            "note": "28 strict scanner/final cleanup tests, including1 new finite-boundary test.",
+            "exitCode": 0,
+            "argv": [
+              "pnpm",
+              "exec",
+              "node",
+              "--test",
+              "scripts/legacy-agent-host/desktop-retained-open-diagnostics.test.ts"
+            ],
+            "seconds": 1.6230669021606445,
+            "log": "/workspace/scratch/f45fed8e9067/audit1192/retained-source-boundary-scanner.log",
+            "logBytes": 2992,
+            "logSha256": "cb3732740667b58fd82dd6f19c66bc144d5682a10cacc5b55b52246cec52db19",
+            "receipt": "/workspace/scratch/f45fed8e9067/audit1192/retained-source-boundary-scanner.json",
+            "receiptSha256": "8f7e95f60da8d645c06cdb9d8ea3c6d520d03ae9383c5ffe1bf2c27ccd51350c",
+            "sourceUnchangedDuringCheck": true
+          },
+          {
+            "name": "size",
+            "status": "PASS",
+            "note": "5166 production files;141 frozen exceptions;800linecap. Later mapper typed-holder change grew only114→118lines.",
+            "exitCode": 0,
+            "argv": [
+              "pnpm",
+              "guard:source-file-size"
+            ],
+            "seconds": 1.978917121887207,
+            "log": "/workspace/scratch/f45fed8e9067/audit1192/retained-source-boundary-size.log",
+            "logBytes": 249,
+            "logSha256": "e49129f59fd747ca4108c3055762b0c9d05154bafa65b257ec6835e5bb7d5f7d",
+            "receipt": "/workspace/scratch/f45fed8e9067/audit1192/retained-source-boundary-size.json",
+            "receiptSha256": "ca4ee3c68ef7a198cfddfd69941cc8fa73499cab597caf99c0f734a23d04cda8",
+            "sourceUnchangedDuringCheck": true
+          },
+          {
+            "name": "lint-final",
+            "status": "PASS_WITH_EXISTING_WARNING",
+            "note": "All8candidatepaths:0errors; existing UNKNOWN_REASONS type-only warning.",
+            "exitCode": 0,
+            "argv": [
+              "pnpm",
+              "exec",
+              "eslint",
+              "--config",
+              "eslint.fast.config.js",
+              "src/features/agent-backend/main/infrastructure/stopped-import/createLegacyStoppedTeamSource.ts",
+              "src/features/agent-backend/main/infrastructure/stopped-import/retainedLegacyOpenDiagnosticContract.ts",
+              "src/features/agent-backend/main/infrastructure/stopped-import/createRetainedLegacyOpenDiagnostic.ts",
+              "src/features/agent-backend/main/infrastructure/stopped-import/legacyStoppedSourceDiagnostic.ts",
+              "scripts/legacy-agent-host/desktop-retained-open-diagnostics.ts",
+              "scripts/legacy-agent-host/desktop-retained-open-diagnostics.test.ts",
+              "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+              "test/features/agent-backend/legacyStoppedImportSource.test.ts"
+            ],
+            "seconds": 4.783507823944092,
+            "log": "/workspace/scratch/f45fed8e9067/audit1192/retained-source-boundary-lint-final.log",
+            "logBytes": 301,
+            "logSha256": "62eaab2f9a7cbb3f692667ef0121b71ec89a4b9ef5f376bea164b5c81f4a8463",
+            "receipt": "/workspace/scratch/f45fed8e9067/audit1192/retained-source-boundary-lint-final.json",
+            "receiptSha256": "0655df4f578dd0afe815c9ea8c6994968b23bea6bbb79791289c20dda7f49747",
+            "sourceUnchangedDuringCheck": true
+          },
+          {
+            "name": "app-types-pinned",
+            "status": "FAIL_TYPE_NARROWING",
+            "note": "TS2367 closure-mutated category; changed only typed observation holder.",
+            "exitCode": 1,
+            "argv": [
+              "pnpm",
+              "exec",
+              "node",
+              "node_modules/@typescript/native/bin/tsc",
+              "--project",
+              "tsconfig.retained-source-boundary-app.json"
+            ],
+            "seconds": 10.517598390579224,
+            "log": "/workspace/scratch/f45fed8e9067/audit1192/retained-source-boundary-app-types-pinned.log",
+            "logBytes": 239,
+            "logSha256": "6f5c6c388078eeaeed53f316b0fe0f392a86cd4b9564f7e8ccb94d19e135c607",
+            "receipt": "/workspace/scratch/f45fed8e9067/audit1192/retained-source-boundary-app-types-pinned.json",
+            "receiptSha256": "b0b2131c4f5194efbb8612bd186c38d385aef78c8da40a0d32d32ec0260bd034",
+            "sourceUnchangedDuringCheck": true
+          },
+          {
+            "name": "scripts-types",
+            "status": "PASS",
+            "note": "Canonical scripts extends scope, compiler options unchanged.",
+            "exitCode": 0,
+            "argv": [
+              "pnpm",
+              "exec",
+              "node",
+              "node_modules/@typescript/native/bin/tsc",
+              "--project",
+              "tsconfig.retained-source-boundary-scripts.json"
+            ],
+            "seconds": 1.4270727634429932,
+            "log": "/workspace/scratch/f45fed8e9067/audit1192/retained-source-boundary-scripts-types.log",
+            "logBytes": 0,
+            "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "receipt": "/workspace/scratch/f45fed8e9067/audit1192/retained-source-boundary-scripts-types.json",
+            "receiptSha256": "5816a9562327b78aae7010b408dac500a999182c66f369da6703a8565c633266",
+            "sourceUnchangedDuringCheck": true
+          },
+          {
+            "name": "app-types-final",
+            "status": "SIGKILL",
+            "note": "Compiler killed during concurrent Vitest; no diagnostic and no PASS claimed.",
+            "exitCode": 1,
+            "argv": [
+              "pnpm",
+              "exec",
+              "node",
+              "node_modules/@typescript/native/bin/tsc",
+              "--project",
+              "tsconfig.retained-source-boundary-app.json"
+            ],
+            "seconds": 19.363807201385498,
+            "log": "/workspace/scratch/f45fed8e9067/audit1192/retained-source-boundary-app-types-final.log",
+            "logBytes": 201,
+            "logSha256": "385cd55ef6989c2710c88890c010225e2545c5d481f7acc785e1f7e95e128129",
+            "receipt": "/workspace/scratch/f45fed8e9067/audit1192/retained-source-boundary-app-types-final.json",
+            "receiptSha256": "d156961376c00695a4e023ad5aa5f37e288dacaf14e7075dc4be143d4385e463",
+            "sourceUnchangedDuringCheck": true
+          },
+          {
+            "name": "producer-final",
+            "status": "PASS",
+            "note": "Final mapper:21 affected cases pass;25 unrelated source cases not repeated.",
+            "exitCode": 0,
+            "argv": [
+              "pnpm",
+              "exec",
+              "vitest",
+              "run",
+              "test/features/agent-backend/legacyStoppedImportSource.test.ts",
+              "test/features/agent-backend/retainedLegacyOpenDiagnostics.test.ts",
+              "--maxWorkers=1",
+              "-t",
+              "private retained original open diagnostic|distinguishes original unreadable source boundaries|preserves a frozen original Hold"
+            ],
+            "seconds": 32.344759464263916,
+            "log": "/workspace/scratch/f45fed8e9067/audit1192/retained-source-boundary-producer-final.log",
+            "logBytes": 449,
+            "logSha256": "c2d767e4c2ef3d380fecdd936ad8ae47fab5ce998b617b1b09f17d3241496081",
+            "receipt": "/workspace/scratch/f45fed8e9067/audit1192/retained-source-boundary-producer-final.json",
+            "receiptSha256": "f130250b5f84ca7bd32b4b5b5d37bf5921f3f75937987a42dd6a3b005a95ce1c",
+            "sourceUnchangedDuringCheck": true
+          },
+          {
+            "name": "mapper-lint-final",
+            "status": "PASS",
+            "note": "Final typed-holder mapper lint passed without warnings.",
+            "exitCode": 0,
+            "argv": [
+              "pnpm",
+              "exec",
+              "eslint",
+              "--config",
+              "eslint.fast.config.js",
+              "src/features/agent-backend/main/infrastructure/stopped-import/createRetainedLegacyOpenDiagnostic.ts"
+            ],
+            "seconds": 4.691683769226074,
+            "log": "/workspace/scratch/f45fed8e9067/audit1192/retained-source-boundary-mapper-lint-final.log",
+            "logBytes": 0,
+            "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "receipt": "/workspace/scratch/f45fed8e9067/audit1192/retained-source-boundary-mapper-lint-final.json",
+            "receiptSha256": "2e4a0f9485ad8bd6184cd7b7255f1040a6cf53040d6d405f1ee1bfc06a3977be",
+            "sourceUnchangedDuringCheck": true
+          },
+          {
+            "name": "app-types-serial",
+            "status": "PASS",
+            "note": "Same pinned canonical app scope/source/options, run alone after concurrent process exited.",
+            "exitCode": 0,
+            "argv": [
+              "pnpm",
+              "exec",
+              "node",
+              "node_modules/@typescript/native/bin/tsc",
+              "--project",
+              "tsconfig.retained-source-boundary-app.json"
+            ],
+            "seconds": 9.834055662155151,
+            "log": "/workspace/scratch/f45fed8e9067/audit1192/retained-source-boundary-app-types-serial.log",
+            "logBytes": 0,
+            "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "receipt": "/workspace/scratch/f45fed8e9067/audit1192/retained-source-boundary-app-types-serial.json",
+            "receiptSha256": "05b7ba5eb6768dbabc65383716c25bf91e46d0f748def69ce8393f916c718b98",
+            "sourceUnchangedDuringCheck": true
+          }
+        ],
+        "independentReview": {
+          "status": "PASS",
+          "path": "/workspace/scratch/f45fed8e9067/audit1192/retained-source-boundary-independent-r2.json",
+          "sha256": "96dd4454c84dddebf4bcc12af28652c6d70cd76f227c23c761492348f7ec91d4",
+          "unresolvedFindings": []
+        },
+        "sourceCustodyPinsAdded": [
+          "src/features/agent-backend/main/infrastructure/stopped-import/legacyStoppedSourceDiagnostic.ts",
+          "packages/legacy-agent-host/src/diagnostics/modelReadinessTiming.ts"
+        ],
+        "invariants": {
+          "originalDescribeReadOrder": true,
+          "initialCurrentOutsideTryPreserved": true,
+          "originalFencesAwaitsCurrentnessAndDeadlinesPreserved": true,
+          "typedHoldIdentityPreserved": true,
+          "nonHoldWrappedExactlyOnceWithOriginalSourceUnreadableReason": true,
+          "errorObjectsNotMutated": true,
+          "reusedErrorIdentityRemainsAmbiguous": true,
+          "alreadyCapturedObservationImmutable": true,
+          "sourceBoundaries": 19,
+          "boundaryOnlyForCoordinatorAdmissionSourceUnreadable": true,
+          "oldPrivateDiagnosticShapeAccepted": true,
+          "rawRecordsOrErrorsExposed": false,
+          "sourceAdmissionSchemaChanged": false,
+          "newSourceReads": 0,
+          "newRetries": 0,
+          "newOperationalAwaits": 0,
+          "newAuthorityOwner": false,
+          "readEligibilityMainAndCoordinatorUnchanged": true
+        },
+        "limits": {
+          "originalJobCause": "UNKNOWN at nested source boundary; source-unreadable is not attributed to generic metadata mismatch.",
+          "nativeQualification": false,
+          "nativeExecution": false,
+          "realClaudeOrCodexExecution": false,
+          "ciQueriesDownloadsOrActions": false,
+          "providerArchiveChanged": false,
+          "compilersAndTestsRunningAtHandoff": false,
+          "publication": "Root owns docs,index,refs and source delivery; no child stage/commit/push."
+        }
+      }
+    },
+    {
+      "name": "saved-draft-version-local-checks.json",
+      "bytes": 10407,
+      "sha256": "c9cb4d087e9f4893a54266562f253d27bfdd11d7c854508ef8df2fb28daaf377",
+      "record": {
+        "schemaVersion": 1,
+        "kind": "ACTUAL_SAVED_DRAFT_FORMAT_COMPATIBILITY_FIX",
+        "preimageHead": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+        "files": [
+          {
+            "path": "src/main/services/team/LegacySavedTeamNativeIdentity.ts",
+            "preimageHeadSha256": "cc2472d9ad65dcd15b865cd444e70dbf1c80c22d5593d020ce2dc21f9153b964",
+            "postimageSha256": "05670759e4c43305bc4caf471937792304119dd537e0d3e9ee662391520ad0be",
+            "bytes": 6729,
+            "physicalLines": 185
+          },
+          {
+            "path": "src/features/agent-backend/main/infrastructure/stopped-import/createLegacyStoppedTeamSource.ts",
+            "preimageHeadSha256": "57557c18e1cc5f85ef54cc2153f2cd76f50b91af52e7a60f2cd04849e2b84057",
+            "postimageSha256": "812edb871d68e8f3e2da6bdaf1f95ad9eb57c9296e2209750732efd7fd5ca56e",
+            "bytes": 14540,
+            "physicalLines": 373
+          },
+          {
+            "path": "test/features/agent-backend/legacySavedDraftFormat.test.ts",
+            "preimageHeadSha256": null,
+            "postimageSha256": "c9c527d83794e65bb1b1a2134cb135fd2a869e69118d6aa6153c21b016a1a4f6",
+            "bytes": 5749,
+            "physicalLines": 134
+          }
+        ],
+        "changes": [
+          "Accept only the existing numeric literal runtimeSelectionVersion1 in finite static product metadata. Absent field preserves legacy form.",
+          "Retain that field in original savedSettings projection, preserving existing Host explicit-provider semantics."
+        ],
+        "actualWriter": "createDraftTeamConfig → TeamMetaStore.serializeMeta + TeamMembersMetaStore → original saved files → source.fenced(describe)",
+        "controlledScope": "Owner capability facts are controlled in-process values; original TeamLaunchStateStore and publication lock remain used. No native or full import qualification is claimed.",
+        "checks": [
+          {
+            "status": "EXPECTED_RED",
+            "exitCode": 1,
+            "sessionId": 62556,
+            "log": "saved-draft-version-red.log",
+            "logBytes": 1510,
+            "logSha256": "5685546f8ffe312d56f428d9053d11bbffebe26db0d77c88283073e46c3ab663",
+            "purpose": "Real current-format writer output was refused; legacy control and invalid/foreign field negatives passed."
+          },
+          {
+            "status": "PASS",
+            "exitCode": 0,
+            "sessionId": 88123,
+            "log": "saved-draft-version-green.log",
+            "logBytes": 416,
+            "logSha256": "b481e893cc7973c97c358b4196fd6ad2c6e3aa8303f4e2f708ab480ed699ea34",
+            "purpose": "All3new actualwriter cases and27existing source cases PASS; modern settings preserve1, absent version remains absent,9invalid/foreign-field inputs remain refused without rewriting files."
+          },
+          {
+            "status": "PASS",
+            "exitCode": 0,
+            "sessionId": 14769,
+            "log": "saved-draft-version-lint.log",
+            "logBytes": 0,
+            "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "purpose": "Fast lint of3functional files:0errors/0warnings."
+          },
+          {
+            "status": "PASS",
+            "exitCode": 0,
+            "sessionId": 72700,
+            "log": "saved-draft-version-types.log",
+            "logBytes": 0,
+            "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "purpose": "Canonical11file app scope plus transitiveimports, original compiler options unchanged; pinned Node24.21.0+TS7, GOMEMLIMIT1536MiB/GOMAXPROCS2; PASS alone."
+          }
+        ],
+        "typeScope": {
+          "path": "/workspace/scratch/f45fed8e9067/agent-teams-ai/tsconfig.saved-draft-version-scope.json",
+          "config": {
+            "extends": "./test/features/agent-backend/tsconfig.json",
+            "files": [
+              "/workspace/scratch/f45fed8e9067/agent-teams-ai/src/features/agent-backend/main/infrastructure/stopped-import/createLegacyStoppedTeamSource.ts",
+              "/workspace/scratch/f45fed8e9067/agent-teams-ai/src/features/agent-backend/main/infrastructure/stopped-import/retainedLegacyOpenDiagnosticContract.ts",
+              "/workspace/scratch/f45fed8e9067/agent-teams-ai/src/features/agent-backend/main/infrastructure/stopped-import/createRetainedLegacyOpenDiagnostic.ts",
+              "/workspace/scratch/f45fed8e9067/agent-teams-ai/src/features/agent-backend/main/infrastructure/stopped-import/legacyStoppedSourceDiagnostic.ts",
+              "/workspace/scratch/f45fed8e9067/agent-teams-ai/test/features/agent-backend/legacyStoppedImportSource.test.ts",
+              "/workspace/scratch/f45fed8e9067/agent-teams-ai/test/types/better-sqlite3-node.d.ts",
+              "/workspace/scratch/f45fed8e9067/agent-teams-ai/src/renderer/vite-env.d.ts",
+              "/workspace/scratch/f45fed8e9067/agent-teams-ai/src/types/pica.d.ts",
+              "/workspace/scratch/f45fed8e9067/agent-teams-ai/src/types/agent-teams-controller.d.ts",
+              "/workspace/scratch/f45fed8e9067/agent-teams-ai/src/main/services/team/LegacySavedTeamNativeIdentity.ts",
+              "/workspace/scratch/f45fed8e9067/agent-teams-ai/test/features/agent-backend/legacySavedDraftFormat.test.ts"
+            ],
+            "include": []
+          },
+          "compilerOptionsOverridden": false,
+          "temporaryConfigRemovedAfterRun": true
+        },
+        "independentReview": {
+          "status": "PASS",
+          "sha256": "b481ad701bb605ff975b9f59a001297b8c81c0fe14e0d19221d93187c468f276",
+          "record": {
+            "kind": "saved-draft-runtime-selection-version-independent-r2",
+            "result": "PASS",
+            "reviewer": "/root/delivery_review",
+            "baseHead": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+            "files": [
+              {
+                "path": "src/main/services/team/LegacySavedTeamNativeIdentity.ts",
+                "sha256": "05670759e4c43305bc4caf471937792304119dd537e0d3e9ee662391520ad0be",
+                "lines": 185
+              },
+              {
+                "path": "src/features/agent-backend/main/infrastructure/stopped-import/createLegacyStoppedTeamSource.ts",
+                "sha256": "812edb871d68e8f3e2da6bdaf1f95ad9eb57c9296e2209750732efd7fd5ca56e",
+                "lines": 373
+              },
+              {
+                "path": "test/features/agent-backend/legacySavedDraftFormat.test.ts",
+                "sha256": "c9c527d83794e65bb1b1a2134cb135fd2a869e69118d6aa6153c21b016a1a4f6",
+                "lines": 134
+              }
+            ],
+            "compositionWithPassiveReview": {
+              "priorSourceSha256": "0dd419972e8e77937a835cf08b6916e6367cef2ae9581f8e619057ad71321582",
+              "checkedTransformation": "Removing exactly the added runtimeSelectionVersion literal from source settings reproduces the prior independently reviewed passive source bytes/hash.",
+              "identityDelta": "Removing the one literal1-only metadata rule reproduces HEAD bytes exactly."
+            },
+            "sourceEvidence": [
+              {
+                "path": "src/main/services/team/createDraftTeamConfig.ts",
+                "finding": "Actual save-only writer forwards the request runtimeSelectionVersion into team metadata and uses real TeamMetaStore/TeamMembersMetaStore serialization and writes."
+              },
+              {
+                "path": "src/main/services/team/TeamMetaStore.ts",
+                "finding": "serializeMeta preserves normalized runtimeSelectionVersion1; omission remains the legacy format."
+              },
+              {
+                "path": "src/features/agent-backend/main/application/createConfiguredHostTeam.ts",
+                "finding": "Existing finite draft mapping already admits the named field and validates through the canonical Host registry schema."
+              },
+              {
+                "path": "packages/legacy-agent-host/src/team/rosterSchema.ts",
+                "finding": "Existing savedTeamSettingsSchema allows only optional literal1."
+              },
+              {
+                "path": "packages/legacy-agent-host/src/composition/runtimeCaptureSource.ts",
+                "finding": "Existing compileRuntimeCapture refuses runtime-selection-required when saved version is1 and providerId is missing. Preserving the field prevents losing this selection requirement."
+              }
+            ],
+            "reviewedInvariants": [
+              "Only literal numeric1 is newly admitted in finite product metadata; missing field remains accepted for legacy records.",
+              "Source projection preserves the known semantic field instead of silently dropping it.",
+              "No change to native-identity classification, unknown-field refusal, launchIdentity rules, owner/runtime/release fences, source currentness, deadlines or public admission interfaces.",
+              "Unknown versions and unrelated fields remain refused as source-unreadable without rewriting saved bytes.",
+              "Real Save-only writer, real stores and source.fenced(describe) exercise the changed format boundary; no production facade or native execution is introduced.",
+              "Both changed production owners already appear in existing Desktop source-freeze arrays."
+            ],
+            "testReview": "Read-only review of the three new parameterized cases covering omitted/1 formats plus unsupported values0,2,string1,true,null,object,array and launchIdentity/unknown-field negatives. Existing source tests remain unchanged by this functional slice.",
+            "authorReportedValidation": {
+              "source": "/root message; not rerun by reviewer",
+              "green": "30/30 PASS: actual writer3 plus existing source27",
+              "fastLint": "PASS,0warnings",
+              "canonicalScopedTs7": "In progress at report time, session72700; author owns final result"
+            },
+            "limits": [
+              "Controlled owner facts intentionally isolate writer/reader format compatibility; no full import, retained native custody or live provider qualification claimed.",
+              "No claim that this defect caused the prior fbc pure-OpenCode coexistence failure.",
+              "No tests, builds, native/UI/CI execution or source/docs/index/ref edits by reviewer; only this scratch review record written."
+            ],
+            "openFindings": []
+          }
+        },
+        "passiveSourceComposition": {
+          "beforeSha256": "0dd419972e8e77937a835cf08b6916e6367cef2ae9581f8e619057ad71321582",
+          "addedLiteral": "  'runtimeSelectionVersion',\n",
+          "qualification": "IndependentR2verified removing only this newlyadded settings literal reproduces the frozen passive source bytes."
+        },
+        "preserved": [
+          "Finite unknown-key rejection",
+          "launchIdentity remains unsupported by this product-record predicate",
+          "Original native identity/custody/owner/fence/currentness/read/await/action/deadline",
+          "No new authority owner, controller or process action",
+          "Both productionownersalreadyenumeratedinDesktopproofsourcefreeze"
+        ],
+        "causalLimit": "This is a separately proved current frontend Save-only format mismatch, not attribution of the earlier pure OpenCode coexistence failure."
+      }
+    }
+  ],
+  "originalCoexistenceAudit": {
+    "name": "retained-v1-v2-source-boundary-audit.json",
+    "bytes": 2646,
+    "sha256": "636853c7c6141b92eb24cccc0dff70ef5963a01288c6516e545baff58489b5a3",
+    "record": {
+      "schemaVersion": 1,
+      "kind": "TEST-retained-v1-v2-source-boundary-audit",
+      "recordedAt": "2026-11-19T19:12:24.617334+00:00",
+      "sourceHead": "fbc77ea6b9a35f4be640d7b1e103b992a3f3a45e",
+      "run": 44584326304,
+      "job": 135782182242,
+      "artifact": {
+        "id": 14564885568,
+        "bytes": 367848,
+        "sha256": "6d10c3a0eb56fbfd6ea834c8c7716af8b5ace5b8664457a2c42e120a8e63f917",
+        "downloadedAgain": false
+      },
+      "observed": {
+        "phase": "coordinator-admission",
+        "category": "source-unreadable",
+        "outcome": "not-dispatched",
+        "publicReason": "not-eligible",
+        "cleanup": true,
+        "cleanupFailures": [],
+        "modelFailures": [],
+        "stepsReached": [
+          "actual legacy V1 native history",
+          "original Stop",
+          "reopen original history",
+          "no replay",
+          "retained open refusal"
+        ],
+        "stepsNotReached": [
+          "original retained launch after reopen",
+          "new Host source owner coexistence",
+          "combined cold flow"
+        ]
+      },
+      "trace": [
+        "createDesktopStoppedTeamOperations.retained capture source/target/runtime",
+        "RetainedLegacyLaunchCoordinator.retainOpen: import absence checked",
+        "createRetainedLegacyLaunchScope.readEligibility: original.fenced(() => original.describe())",
+        "createLegacyStoppedTeamSource.describe: existing branch or wrapped error → LegacyStoppedImportHold(source-unreadable)",
+        "readEligibility catches and remembers original refusal, returns other",
+        "retainOpen maps other → not-eligible; no authority.run launch action"
+      ],
+      "conclusion": "Exact failing describe boundary remains unknown. Existing private observation is many-to-one; artifact has no raw saved config/meta/roster or nested boundary. No eligibility schema fix is proven by this run.",
+      "rejectedAttribution": {
+        "genericWriterMismatch": "Generic deterministic writer preserves runtimeSelectionVersion and launchIdentity while product-record allowlist rejects those keys.",
+        "whyNotThisRunProof": "Actual pure OpenCode Create metadata payload explicitly omits those two keys; no raw saved records prove later additions or native-empty classification.",
+        "action": "Do not broaden source eligibility based on this hypothesis."
+      },
+      "nextSlice": {
+        "kind": "passive finite source describe boundary",
+        "preserve": [
+          "original source reads",
+          "locks and awaits",
+          "source/currentness",
+          "reason and error precedence",
+          "coordinator admission",
+          "actions and deadlines",
+          "cleanup"
+        ],
+        "no": [
+          "raw records",
+          "new source rereads",
+          "retries",
+          "native execution",
+          "CI actions"
+        ]
+      }
+    }
+  },
+  "integration": {
+    "status": "PASS",
+    "sourceFileCount": 10,
+    "files": [
+      {
+        "path": "src/features/agent-backend/main/infrastructure/stopped-import/createLegacyStoppedTeamSource.ts",
+        "bytes": 14540,
+        "sha256": "812edb871d68e8f3e2da6bdaf1f95ad9eb57c9296e2209750732efd7fd5ca56e"
+      },
+      {
+        "path": "src/features/agent-backend/main/infrastructure/stopped-import/retainedLegacyOpenDiagnosticContract.ts",
+        "bytes": 2186,
+        "sha256": "9b08a44df75debb985226746a7993dfd2ed96318f989f61a62f4d74bcd9f4eb1"
+      },
+      {
+        "path": "src/features/agent-backend/main/infrastructure/stopped-import/createRetainedLegacyOpenDiagnostic.ts",
+        "bytes": 4532,
+        "sha256": "8ad947cf6c1699babe85fc457b6f52fd8076c832e4966e66ca251247f1baab1e"
+      },
+      {
+        "path": "src/features/agent-backend/main/infrastructure/stopped-import/legacyStoppedSourceDiagnostic.ts",
+        "bytes": 953,
+        "sha256": "bbb037ae4a552df2d48c44d4668aea554249dbaf1d42f68beb8303a9bfac6b76"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-retained-open-diagnostics.ts",
+        "bytes": 12347,
+        "sha256": "16ff5bef8f1b2624ef565377090780a1e19692b24e87cc8d144aa2de8a981f81"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-retained-open-diagnostics.test.ts",
+        "bytes": 23900,
+        "sha256": "bd084d06b3d3e616f61b2c8d8fde6a1ee3cad6460b3c774428bd08dbe8f0ad79"
+      },
+      {
+        "path": "test/features/agent-backend/legacyStoppedImportSource.test.ts",
+        "bytes": 30700,
+        "sha256": "494057b070960c27eb8313d1b29155493e3277ba509c4b9cfd376c0a72c56f01"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+        "bytes": 26455,
+        "sha256": "d6c700da2fda7e2189701b2c0e138fe8687c0bfd496a1bdfbfb8c83d931b6d62"
+      },
+      {
+        "path": "src/main/services/team/LegacySavedTeamNativeIdentity.ts",
+        "bytes": 6729,
+        "sha256": "05670759e4c43305bc4caf471937792304119dd537e0d3e9ee662391520ad0be"
+      },
+      {
+        "path": "test/features/agent-backend/legacySavedDraftFormat.test.ts",
+        "bytes": 5749,
+        "sha256": "c9c527d83794e65bb1b1a2134cb135fd2a869e69118d6aa6153c21b016a1a4f6"
+      }
+    ],
+    "unexpectedSourcePaths": [],
+    "functionalSettingsDeltaReproducesFrozenPassiveSource": true,
+    "diffCheck": "PASS",
+    "sourceSize": {
+      "priorExecutedGuard": "PASS:5166productionfiles,141frozenlegacyexceptions,800linecap",
+      "subsequentProductionDelta": "One literal field in each of two existing production files; no new production file or cap change",
+      "currentAffectedPhysicalLines": {
+        "src/main/services/team/LegacySavedTeamNativeIdentity.ts": 185,
+        "src/features/agent-backend/main/infrastructure/stopped-import/createLegacyStoppedTeamSource.ts": 373,
+        "test/features/agent-backend/legacySavedDraftFormat.test.ts": 134
+      }
+    },
+    "newNativeOrFullE2EQualification": false
+  },
+  "archives": [
+    {
+      "path": "saved-draft-format-checks-20261119.tar.gz",
+      "bytes": 3002,
+      "sha256": "7a8d03f3c7ad971de5a7539d6e2250eb73701b634f41a20f068bebab802be7f2",
+      "entries": [
+        {
+          "path": "saved-draft-version-red.log",
+          "bytes": 1510,
+          "sha256": "5685546f8ffe312d56f428d9053d11bbffebe26db0d77c88283073e46c3ab663"
+        },
+        {
+          "path": "saved-draft-version-green.log",
+          "bytes": 416,
+          "sha256": "b481e893cc7973c97c358b4196fd6ad2c6e3aa8303f4e2f708ab480ed699ea34"
+        },
+        {
+          "path": "saved-draft-version-lint.log",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "saved-draft-version-types.log",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "saved-draft-version-type-scope.json",
+          "bytes": 1609,
+          "sha256": "ae8a72b3194fec1830bb157b4e6769c6821529ec44313e885099d532f57619e6"
+        },
+        {
+          "path": "saved-draft-version-independent-r2.json",
+          "bytes": 4194,
+          "sha256": "b481ad701bb605ff975b9f59a001297b8c81c0fe14e0d19221d93187c468f276"
+        }
+      ]
+    },
+    {
+      "path": "retained-source-boundary-checks-20261119.tar.gz",
+      "bytes": 20687,
+      "sha256": "1043ead167d5afef520966382849965966001bc7164e1ca2a2f82bee8e052a93"
+    }
+  ],
+  "deliveryRoute": "1192→1186→982;1192Draft;noMain/release/defaultHostactivation/Stage2;noRealClaudeOrCodex",
+  "boundary": "Passive failure labels do not alter admission. Functional support accepts only current actual writer literal1 and preserves its existing Host selection semantics. Other schema/custody/owner/currentness remains unchanged. Earlier pureOpenCode failure cause remains UNKNOWN."
+}

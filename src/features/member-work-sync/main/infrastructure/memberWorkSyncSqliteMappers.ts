@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 import { normalizeMemberWorkSyncSnapshotTeamIdentity } from '@features/internal-storage/contracts/memberWorkSyncTeamIdentity';
 
 import { decodeMemberWorkSyncReportJournalMetadata } from '../../core/domain/MemberWorkSyncReportJournalMetadata';
@@ -288,16 +290,23 @@ function stableStringify(value: unknown): string {
  * Order-insensitive equality used to verify the JSON -> SQLite import before
  * the legacy files are archived. Compares full record content.
  */
+function canonicalRecordSets(snapshot: MemberWorkSyncTeamSnapshotRecords): string {
+  return stableStringify({
+    statuses: sortByKey(snapshot.statuses, (record) => record.memberKey),
+    reportIntents: sortByKey(snapshot.reportIntents, (record) => record.id),
+    outboxItems: sortByKey(snapshot.outboxItems, (record) => record.id),
+    metricEvents: sortByKey(snapshot.metricEvents, (record) => record.id),
+  });
+}
+
 export function areSnapshotRecordSetsEquivalent(
   left: MemberWorkSyncTeamSnapshotRecords,
   right: MemberWorkSyncTeamSnapshotRecords
 ): boolean {
-  const canonical = (snapshot: MemberWorkSyncTeamSnapshotRecords): string =>
-    stableStringify({
-      statuses: sortByKey(snapshot.statuses, (record) => record.memberKey),
-      reportIntents: sortByKey(snapshot.reportIntents, (record) => record.id),
-      outboxItems: sortByKey(snapshot.outboxItems, (record) => record.id),
-      metricEvents: sortByKey(snapshot.metricEvents, (record) => record.id),
-    });
-  return canonical(left) === canonical(right);
+  return canonicalRecordSets(left) === canonicalRecordSets(right);
+}
+
+/** Exact stored columns, including JSON bytes; no domain or team-identity normalization. */
+export function memberWorkSyncRecordSetDigest(records: MemberWorkSyncTeamSnapshotRecords): string {
+  return createHash('sha256').update(canonicalRecordSets(records)).digest('hex');
 }

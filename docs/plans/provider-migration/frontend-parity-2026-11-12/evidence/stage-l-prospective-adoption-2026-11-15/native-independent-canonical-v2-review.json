@@ -1,0 +1,25 @@
+{
+  "schema": "bounded-independent-r2-addendum/v1",
+  "reviewer": "/root/native_failures",
+  "verdict": "APPROVE",
+  "canonical": {
+    "path": "stage-l-adoption/canonical-R1.md",
+    "blob": "43b41001269e32ccb6f3c4d4483faea7c63bc9cd",
+    "bytes": 16135,
+    "sha256": "1f517f360c100a8f5dc3bd12e1bd8c896dfa1af3f14af3541007c99fe7812d4a"
+  },
+  "priorUnpublishedCanonical": "9fbcaa6f29025870fbf9529b5fee4d8a94752a94",
+  "priorNarrowReview": "f9a92e43f073172743abd8d67f16503ff50fe866",
+  "scope": "Exact three wording amendments plus continuation of the prior bounded venue/security/provider/native-attribution review; not a replacement for Scope's full composition R2.",
+  "checkedDelta": [
+    "Replaced blanket unchanged acceptance-oracle wording with unchanged workflow selectors, rows, timeouts and caps while explicitly acknowledging the described source/test and pending-CREATE amendments.",
+    "Added preservation of still-useful current-source cohort evidence before each ordinary PR-head integration, while preserving automatic cancellations as CANCELLED and not requiring every queued job to finish before any necessary correction.",
+    "Explicitly retains unexecuted K43 and affected L package/test/tools lint as pending: General src-only lint and Host38 do not establish that complete file scope; any finite later amendment remains separately reviewed."
+  ],
+  "unchangedConclusions": [
+    "Fresh original CI frozen install/build and complete ten-file Team command remain the selected venue.",
+    "Exact helper3b2/testd1b semantic privacy RED and later single-helper21aa GREEN order remain unchanged;23/20P3F are predicted stderr-file counts only.",
+    "Captured Corepack0.36 versus unestablished local pnpm11.22/9423 venue, provider51/2 with0qualified, and original Windows source-bound limits remain accurate."
+  ],
+  "actions": "Read-only full-file/diff review only. Prior v1 canonical and f9a92 review remain unchanged; no source, ref, install, compiler, test, native or CI action."
+}

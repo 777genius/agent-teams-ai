@@ -1,6 +1,7 @@
 import {
   AGENT_BACKEND_REVIEW_EVENTS_ROUTE,
   AGENT_BACKEND_REVIEW_FILE_CHANGE_CHANNEL,
+  RETAINED_LEGACY_LAUNCH_ROUTE,
   STOPPED_TEAM_IMPORT_ROUTE,
 } from '@features/agent-backend/contracts';
 import {
@@ -14,6 +15,7 @@ import { writeReviewSse } from './writeReviewSse';
 
 import type {
   BackendReviewFileChangeEvent,
+  RetainedLegacyLaunchResult,
   StoppedTeamImportResult,
 } from '@features/agent-backend/contracts';
 import type { CapturedReviewWatch, DesktopBackendFeature } from '@features/agent-backend/main';
@@ -25,6 +27,7 @@ export interface HttpAgentBackendScope {
   readonly contextId: string;
   readonly isCurrent: () => boolean;
   readonly importStoppedTeam?: (request: unknown) => Promise<StoppedTeamImportResult>;
+  readonly retainedLegacyLaunch?: (request: unknown) => Promise<RetainedLegacyLaunchResult>;
 }
 
 const MAX_REVIEW_STREAMS = 32;
@@ -40,6 +43,7 @@ export function registerHttpAgentBackend(
   const contextId = scope.contextId;
   const originalCurrent = scope.isCurrent.bind(scope);
   const importStoppedTeam = scope.importStoppedTeam?.bind(scope);
+  const retainedLegacyLaunch = scope.retainedLegacyLaunch?.bind(scope);
   let closed = false;
   const isCurrent = () => !closed && originalCurrent();
   const guardFor = (handle: { handleId: string }) => ({
@@ -58,6 +62,18 @@ export function registerHttpAgentBackend(
       : isCurrent() && importStoppedTeam
         ? importStoppedTeam(request.body)
         : { ok: false, reason: 'unsupported', outcome: 'not-dispatched' }
+  );
+  app.post(RETAINED_LEGACY_LAUNCH_ROUTE, { bodyLimit: 128 * 1024 }, (request) =>
+    Object.keys(request.query ?? {}).length
+      ? { ok: false, reason: 'invalid', outcome: 'not-dispatched' }
+      : !closed &&
+          (isCurrent() ||
+            ['close', 'closeIntent', 'cancelModels'].includes(
+              String((request.body as { action?: unknown } | null)?.action)
+            )) &&
+          retainedLegacyLaunch
+        ? retainedLegacyLaunch(request.body)
+        : { ok: false, reason: 'unavailable', outcome: 'not-dispatched' }
   );
 
   const streams = new Set<FastifyReply>();

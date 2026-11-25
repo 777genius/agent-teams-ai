@@ -1,0 +1,139 @@
+{
+  "artifactId": 14192695442,
+  "officialDigestVerified": true,
+  "safeUniquePaths": true,
+  "crcAllPassed": true,
+  "originalZip": {
+    "bytes": 681033,
+    "blob": "d2cc1c8910a82a2ad5435edb620d00e1134231b2",
+    "sha256": "9532212509d360d901efadd0cc306cb882df5c90673098e0391e83c9dffddd67"
+  },
+  "entries": [
+    {
+      "path": "TEST-desktop-backend-sTh641/TEST-codex-login-management/home/TEST-wire.ndjson",
+      "crc32": "74a22dfc",
+      "bytes": 7697,
+      "blob": "0238d2f565a228545739f0e3addd650b8a80b0f8",
+      "sha256": "177eedf643c8496a859dea279652033f243f5bece29b807fa46bb6309c5db437"
+    },
+    {
+      "path": "TEST-desktop-backend-sTh641/TEST-codex-login-management/home/TEST-login-processes.ndjson",
+      "crc32": "76706c7e",
+      "bytes": 1140,
+      "blob": "9faffbb9608c2c747393a8fa40a3f749d3ecbb65",
+      "sha256": "de19d68a7c6620909cdd2bd726bb40aa6a3bce56d03e4c0ccfce243a51388141"
+    },
+    {
+      "path": "TEST-desktop-backend-sTh641/desktop-app.log",
+      "crc32": "4d4c2274",
+      "bytes": 13622,
+      "blob": "93affcda7acc181ef2786ce48d31eda43b09379e",
+      "sha256": "d80cb4aed0f1dfb47f081fa637bde6865d9a3ab63ae6d18004555b324b19b379"
+    },
+    {
+      "path": "TEST-desktop-backend-sTh641/desktop-backend-receipt.json",
+      "crc32": "3c45095b",
+      "bytes": 679585,
+      "blob": "cbd7707f1eca512b93b46fcde93875da5f6b9612",
+      "sha256": "f4e24f24c8cad3600639961c982b5ddc7c6da69cdf144f9bb74a99a5922ffc43"
+    },
+    {
+      "path": "TEST-desktop-backend-sTh641/desktop-descriptor.json",
+      "crc32": "5c66ea3b",
+      "bytes": 2487,
+      "blob": "acd44237b7fe1162c7a17818f9d91d844d7f0a1b",
+      "sha256": "93f3b5196b0e41f4b40c9bd66c9040737cfbf6b0dfdc1532a0924551a1982b09"
+    },
+    {
+      "path": "TEST-desktop-backend-sTh641/external-open.jsonl",
+      "crc32": "2dfaf991",
+      "bytes": 156,
+      "blob": "05961e38952ccb852a75f3e757a66cf552683600",
+      "sha256": "c9bfde977c7fcac68ec3d1458f335f74f8f1640231ffaf87bbce5c8130cd2dad"
+    },
+    {
+      "path": "TEST-desktop-backend-sTh641/host-profile.json",
+      "crc32": "2485fb87",
+      "bytes": 2310,
+      "blob": "7bebc2163372b6f2932bf2f39385bb060f24d098",
+      "sha256": "ad902343f04f5f97296cf92f271d577c055e726c6207765de8b237ff5378a268"
+    },
+    {
+      "path": "TEST-desktop-backend-sTh641/hoststore/management-commands/5a4872e4d387c6cd77de666d34120af689a86a7fe4945672f56e394bb3cf1bd3.json",
+      "crc32": "fed2343b",
+      "bytes": 743,
+      "blob": "a3f3b573c6f68244fae746cd04817b9c9761710f",
+      "sha256": "eb905182be053c7f1e6c16dd33104221ee823fb7413695fece19e8de4dfaf35c"
+    },
+    {
+      "path": "TEST-desktop-backend-sTh641/hoststore/management-commands/e9fa00ad2ea5aa4a697a0e984990c29aa2cff45ceb179d31a1f91e780762a326.json",
+      "crc32": "dd3ee851",
+      "bytes": 743,
+      "blob": "e430f4e31a667b33b77fae9deca06a2b3991ede2",
+      "sha256": "d70206875e6a2c58537ac4e2a58d4a1fb0a3b1922f1f8d9a50faa597574c5270"
+    },
+    {
+      "path": "TEST-desktop-backend-sTh641/sentinel-invocations.ndjson",
+      "crc32": "4d60c26c",
+      "bytes": 180,
+      "blob": "f55e20f500187392630cdd6198edf748f311ca2b",
+      "sha256": "b73cef9015c8a1577c44ab27bec7f3e29312ed3458f526b76cd95ba93b69d323"
+    },
+    {
+      "path": "TEST-desktop-backend-sTh641/ui-emulated-codex-login-cancelled.png",
+      "crc32": "d19c7ff2",
+      "bytes": 121426,
+      "blob": "df607633242a6bb50b80e56a2cca7d9cf43a11b5",
+      "sha256": "d363428138095f7d1a68c7a3b0a684243933f25ec593619fd415049c66896efe"
+    },
+    {
+      "path": "TEST-desktop-backend-sTh641/ui-seed-receipt.json",
+      "crc32": "6bb0c7e5",
+      "bytes": 2037,
+      "blob": "702b0181500feed5068557887bf365740f28a1d3",
+      "sha256": "4ebf76bad0a43b666b8e293b6f45ec1eeeac5f00af84626b7632da391f97afbf"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-lfOoDO/linux-child-exec/linux-child-exec",
+      "crc32": "ed0ca14b",
+      "bytes": 790608,
+      "blob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+      "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-lfOoDO/linux-child-exec/manifest.json",
+      "crc32": "e06f2443",
+      "bytes": 2408,
+      "blob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+      "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734"
+    },
+    {
+      "path": "host-emulated-emulated-codex-login-ui.log",
+      "crc32": "bee39052",
+      "bytes": 225,
+      "blob": "5b23c15514726adda166be628ced48998b0d397c",
+      "sha256": "d12e73e2679e7ecd70e4f9247db093caa5d55d5b64cc48020ad3d1609d8f5a5a"
+    },
+    {
+      "path": "host-emulated-inputs.json",
+      "crc32": "6963874a",
+      "bytes": 1803,
+      "blob": "17a6664b2f1eb2a56894cd808f5a8d93df7ffa38",
+      "sha256": "06fc9c4d53ffdf65c04d58a171a4fd3bcb94e7c7b78148017eba8e55d235f9b0"
+    },
+    {
+      "path": "host-emulated-linux-child-exec-selection.json",
+      "crc32": "87498847",
+      "bytes": 271,
+      "blob": "4615545a0df074324941ae3c066d6be387fc07e7",
+      "sha256": "d6e78d9cce7eaa71977a4b31825a86cc27cec61a3349d6342eb389883a885cf0"
+    },
+    {
+      "path": "host-emulated-summary.json",
+      "crc32": "8c05e74f",
+      "bytes": 598,
+      "blob": "af80202690801e8a742db376d29d05e5087333e6",
+      "sha256": "41010c5d4b32d4e45292d8c51a0f446bf71dd14c660a4d43bbb0a4e210ab5a90"
+    }
+  ]
+}

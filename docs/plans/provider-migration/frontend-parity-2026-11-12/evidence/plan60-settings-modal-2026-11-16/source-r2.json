@@ -1,0 +1,302 @@
+{
+  "kind": "plan60-independent-actual-source-r2",
+  "status": "ACCEPT_SOURCE_ONLY",
+  "reviewer": "root, independent from frontend_gaps author",
+  "sourceParent": "cbe66b653eecb4d0d16b1771e49572d761d83a2e",
+  "sourceTree": "8c109757a8bd0aca75f0133b11ad666acdae84ae",
+  "selectedPlan": {
+    "commit": "4e54064f1f6f82f4151ac4b22b1628d2b74ddf8c",
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/60-settings-dialog-passive-catalog-2026-11-16.md",
+    "gitBlob": "897b56da95f0b2c5a749f8b38a4d35fbca15ce3a",
+    "sha256": "3b79888493dd6f9cca928738bc8c757a10e4b5246a287b2765020d34f73f1551"
+  },
+  "candidateManifestSha256": "e9ddb1127c053acababe0715cd596be486999d4d8e283cb2e55b8800b576e60a",
+  "candidatePatchSha256": "d9a70a87239f13e1af09619a16078e20039c9c33037823c8c06b6dcbaf88720c",
+  "files": [
+    {
+      "path": "src/renderer/components/dashboard/CliStatusBanner.tsx",
+      "before": {
+        "gitBlob": "e91be4b22d835f585e561902e3680e831e11c47e",
+        "sha256": "3c0b990c3e0cb44dc14b90487b84588087a0ba9cdd10ac256ae1b305102e0705",
+        "bytes": 109714,
+        "lines": 2708
+      },
+      "after": {
+        "gitBlob": "8b53d7e51bf0928a011cbfb280f7c2e1e06dc1d4",
+        "sha256": "dbf6058dee671395fc6b998e0246bdc8cccc9e4037735d525b7c7be26e9293cf",
+        "bytes": 109756,
+        "lines": 2708
+      },
+      "addedLines": 2,
+      "removedLines": 2
+    },
+    {
+      "path": "test/renderer/components/cli/CliStatusVisibility.test.ts",
+      "before": {
+        "gitBlob": "f708343155d84f0abf1225b5f5f89ebfb784232f",
+        "sha256": "c0b55586f9d9766746f285980efa1a02da22e2f46c410f1ff381c2d33d941a0d",
+        "bytes": 189357,
+        "lines": 5510
+      },
+      "after": {
+        "gitBlob": "fade927e412c2a15cfde37c164c7dff57f622f93",
+        "sha256": "96b2446a1066c8146b2c6c8085221facb07c2bba2d24a678039d35b61b174852",
+        "bytes": 194434,
+        "lines": 5630
+      },
+      "addedLines": 120,
+      "removedLines": 0
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "before": {
+        "gitBlob": "dba3426375f7bbd3db5f594f2fe68d58e3cc3e25",
+        "sha256": "cc130e893171483f19773b03a2ed79a138abd6c6d84206eb4d93c3b209269bc3",
+        "bytes": 22258,
+        "lines": 342
+      },
+      "after": {
+        "gitBlob": "a41bff15e351d829d9cbb0197a7026ad09d6dc18",
+        "sha256": "e649994d2311bc5fdc308c24167593d0c387ce4fef3a170f04b8e20c9402ffe1",
+        "bytes": 22320,
+        "lines": 343
+      },
+      "addedLines": 1,
+      "removedLines": 0
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "before": {
+        "gitBlob": "3774658a0ab266686930fbe7e28ecb9e26711ebf",
+        "sha256": "eea6e7d63b0e60b05008f7fe9dcfcb6bde27d7488a8b8ae883dfc2bf0207e14b",
+        "bytes": 123003,
+        "lines": 1561
+      },
+      "after": {
+        "gitBlob": "4211a5b6de087018bdbf5a4ad41d488f16f61646",
+        "sha256": "e30db362721a07c03ca00ad5dbb4cb0da2297e92337089ad3fbfda1b4bbf180c",
+        "bytes": 123074,
+        "lines": 1562
+      },
+      "addedLines": 2,
+      "removedLines": 1
+    }
+  ],
+  "checks": [
+    {
+      "name": "src/renderer/components/dashboard/CliStatusBanner.tsx: before matches official complete tree blob",
+      "pass": true
+    },
+    {
+      "name": "src/renderer/components/dashboard/CliStatusBanner.tsx: before full bytes/SHA256/Git blob/lines match manifest",
+      "pass": true
+    },
+    {
+      "name": "src/renderer/components/dashboard/CliStatusBanner.tsx: after full bytes/SHA256/Git blob/lines match manifest",
+      "pass": true
+    },
+    {
+      "name": "src/renderer/components/dashboard/CliStatusBanner.tsx: no new trailing whitespace",
+      "pass": true
+    },
+    {
+      "name": "test/renderer/components/cli/CliStatusVisibility.test.ts: before matches official complete tree blob",
+      "pass": true
+    },
+    {
+      "name": "test/renderer/components/cli/CliStatusVisibility.test.ts: before full bytes/SHA256/Git blob/lines match manifest",
+      "pass": true
+    },
+    {
+      "name": "test/renderer/components/cli/CliStatusVisibility.test.ts: after full bytes/SHA256/Git blob/lines match manifest",
+      "pass": true
+    },
+    {
+      "name": "test/renderer/components/cli/CliStatusVisibility.test.ts: no new trailing whitespace",
+      "pass": true
+    },
+    {
+      "name": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts: before matches official complete tree blob",
+      "pass": true
+    },
+    {
+      "name": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts: before full bytes/SHA256/Git blob/lines match manifest",
+      "pass": true
+    },
+    {
+      "name": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts: after full bytes/SHA256/Git blob/lines match manifest",
+      "pass": true
+    },
+    {
+      "name": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts: no new trailing whitespace",
+      "pass": true
+    },
+    {
+      "name": ".github/workflows/host-emulated-acceptance.yml: before matches official complete tree blob",
+      "pass": true
+    },
+    {
+      "name": ".github/workflows/host-emulated-acceptance.yml: before full bytes/SHA256/Git blob/lines match manifest",
+      "pass": true
+    },
+    {
+      "name": ".github/workflows/host-emulated-acceptance.yml: after full bytes/SHA256/Git blob/lines match manifest",
+      "pass": true
+    },
+    {
+      "name": ".github/workflows/host-emulated-acceptance.yml: no new trailing whitespace",
+      "pass": true
+    },
+    {
+      "name": "Exactly four selected source paths",
+      "pass": true
+    },
+    {
+      "name": "Banner expression unique: enabled: openCodeDashboardStatus.enabled,",
+      "pass": true
+    },
+    {
+      "name": "Banner expression unique: isActive={isDashboardActive}",
+      "pass": true
+    },
+    {
+      "name": "Complete Banner inverse equals official before bytes",
+      "pass": true
+    },
+    {
+      "name": "Banner existing 2708-line exception not increased",
+      "pass": true
+    },
+    {
+      "name": "New mock-only line occurs exactly once: providers?: readonly unknown[];",
+      "pass": true
+    },
+    {
+      "name": "New mock-only line occurs exactly once: providers?: readonly unknown[];",
+      "pass": true
+    },
+    {
+      "name": "New mock-only line occurs exactly once: let quickConnectEnabled: boolean[] = [];",
+      "pass": true
+    },
+    {
+      "name": "New mock-only line occurs exactly once: quickConnectEnabled.push(props.enabled);",
+      "pass": true
+    },
+    {
+      "name": "New mock-only line occurs exactly once: quickConnectEnabled = [];",
+      "pass": true
+    },
+    {
+      "name": "One passive mock enabled type addition in exact context",
+      "pass": true
+    },
+    {
+      "name": "Every old test and mock byte restored by explicit inverse",
+      "pass": true
+    },
+    {
+      "name": "Only one actual Banner regression case added",
+      "pass": true
+    },
+    {
+      "name": "Parameterized declarations unchanged",
+      "pass": true
+    },
+    {
+      "name": "Real Settings Banner and existing Manage click",
+      "pass": true
+    },
+    {
+      "name": "All three passive reader gates observed",
+      "pass": true
+    },
+    {
+      "name": "Foreground dialog remains usable and retains provider",
+      "pass": true
+    },
+    {
+      "name": "Original status promise held then settled once",
+      "pass": true
+    },
+    {
+      "name": "Original revision 0/1/2 and inactive page gate",
+      "pass": true
+    },
+    {
+      "name": "No explicit catalog/global invalidation or install/login",
+      "pass": true
+    },
+    {
+      "name": "Original cleanup pattern",
+      "pass": true
+    },
+    {
+      "name": "Matcher API already used by existing tests",
+      "pass": true
+    },
+    {
+      "name": "Only one common supplementary test pin",
+      "pass": true
+    },
+    {
+      "name": "Windows Retry roster unchanged",
+      "pass": true
+    },
+    {
+      "name": "Single lint append restores complete workflow bytes",
+      "pass": true
+    },
+    {
+      "name": "Review route and all jobs/actions/timers otherwise byte exact",
+      "pass": true
+    },
+    {
+      "name": "Full published selected Plan60 bytes match",
+      "pass": true
+    },
+    {
+      "name": "Frozen manifest and patch match handoff",
+      "pass": true
+    },
+    {
+      "name": "Unchanged dependency matches official tree: src/renderer/components/dashboard/useOpenCodeDashboardStatus.ts",
+      "pass": true
+    },
+    {
+      "name": "Unchanged dependency matches official tree: src/renderer/components/dashboard/useProviderConnectionSummary.ts",
+      "pass": true
+    }
+  ],
+  "manualSemanticReview": [
+    "Both new production conditions use existing manageDialogOpen; no added state/effect/import/API/timer or unrelated production edit.",
+    "InstalledBanner isActive reaches its existing count-only summary opt-in and QuickConnect enabled prop. Foreground dialog remains outside that child and its disabled gate is still isBusy/cliStatusLoading/installed.",
+    "Status hook retains original active-page gate. Existing foreground OpenCode callback awaits the status promise and increments directory revision in finally; existing close callback increments once again.",
+    "Connected catalog disabled guard precedes refresh-revision consumption. Existing cleanup marks its own request cancelled, settles its waiter and cancels its own model subscriber groups without authority over foreign Host requests.",
+    "Supported OpenCode and ready V2 fixture is admitted by unchanged catalog policy blob3bbd44568d53de624570a447376144afa4d2ec6c, read in full from official current head. With no project scope, passiveProviderStatus is the unchanged global provider object.",
+    "Regression changes implementation of the same existing vi.fn object captured by the callback, so its deferred resolution covers actual callback ordering.",
+    "Actual Banner and original callbacks are exercised with existing passive-hook mocks. Coverage proves reader eligibility and refresh wiring; it does not prove native queue latency.",
+    "No captured-runtime readiness, cancellation ownership, cache data, explicit user action, C8 action, source pin, proof deadline or default-off scope is weakened."
+  ],
+  "unchangedDependencies": [
+    {
+      "path": "src/renderer/components/dashboard/useOpenCodeDashboardStatus.ts",
+      "gitBlob": "8e6e603a9ace5cdf536f91f47a2503ca70336d50",
+      "sha256": "7ab7fd5a19ad36b8173af02f244f6c4b6007e76fd22f4ce105b9e977ce865ea8"
+    },
+    {
+      "path": "src/renderer/components/dashboard/useProviderConnectionSummary.ts",
+      "gitBlob": "b4b719097a3c12f18fe21107f476402019d201ee",
+      "sha256": "6035c54696c15c9f04b7db5d69986090ae06538950406e6a24e448036dc3443b"
+    }
+  ],
+  "validation": {
+    "staticByteAndSourceChecks": 46,
+    "allPassed": true,
+    "compilerExecuted": false,
+    "projectTestsExecuted": false,
+    "providerOrGuiExecuted": false,
+    "ciActions": false
+  },
+  "remainingEvidence": "Original TS7/frontend and Settings/Models30s followed by C8 must pass on combined published head. Historical late cleanup rejection is not reassigned to an earlier request; no runtime PASS claimed."
+}

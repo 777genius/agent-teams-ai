@@ -1,0 +1,236 @@
+{
+  "kind": "INDEPENDENT_ACTUAL_PLAN54_WINDOWS_V1_SOURCE_HISTORY_FIXTURE_R2",
+  "decision": "APPROVE_SOURCE_ONLY_EXACT_TWO_SITE_FIXTURE_CORRECTION",
+  "scope": "Already-published Plan54 plus its sole existing test-file child; complete retained body/diff/tree review. No prior review chronology or CI outcome qualification.",
+  "readback": {
+    "path": "/tmp/migration-evidence-20261116/root/plan54-3be1-full-readback.json",
+    "gitBlob": "2126889252e426d99c8cc15e41b1667ff9255413",
+    "bytes": 83121,
+    "sha256": "65470243ea9c89aa070c484e092e9397f64cd3dd3d24deb1c3723965d0b8ab21"
+  },
+  "approvedBaseSourcePublicationR2": {
+    "path": "/tmp/migration-evidence-20261116/native/p10-b2-final-source-review/published-source-447a-r2.json",
+    "gitBlob": "70398c747f6eed1a42655511b129d8fb1cde5656",
+    "bytes": 9790,
+    "sha256": "3e2cac3d98de4f85ff27696718c5488483a968f569ef1708cd40e22c771cc21f"
+  },
+  "verifiedBaseMap": {
+    "path": "/tmp/migration-evidence-20261116/native/p10-b2-final-source-review/published-source-447a-leaf-map.json",
+    "gitBlob": "9625eceeb887b2e14aef9839482e8a2a672259fd",
+    "bytes": 3242909,
+    "sha256": "fe68790998f66152e9969a81a88c274689169b829a3fe882bc493ee0e619b53a"
+  },
+  "actualCommitChain": [
+    {
+      "commit": "2e83e103162363ca77228a109d5bf49f3a785344",
+      "soleParent": "447a4945e329c8c3b63942c63af951f964e0a14a",
+      "tree": "e6114d9fe7421eaa6da2364a30d20a8a2950b201",
+      "leaves": 11080,
+      "onlyChangedPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/54-windows-v1-source-history-fixture-2026-11-16.md",
+      "body": {
+        "gitBlob": "1a0fa9e2cb9ea7553d399cab78dd5f1991e7bbae",
+        "bytes": 5323,
+        "sha256": "491f37104e74a812601333f5098a715bb2cbd79a5caf0a21b0d87c5db11ffab3"
+      },
+      "status": "added",
+      "actualCommitPatch": {
+        "gitBlob": "80faaf9d860f7f92b0717a96e89ecceba13df8b5",
+        "bytes": 5393,
+        "sha256": "2612a571373f5826a0a7311a697a149429634b98e9b63c610e58cc82bcede65b"
+      },
+      "fullPatchDeltaVerified": true
+    },
+    {
+      "commit": "3be1fb3ec43d5682aa2ca77a6af62e6fa27b597b",
+      "soleParent": "2e83e103162363ca77228a109d5bf49f3a785344",
+      "tree": "341e1f9316471e30cda69ee55a72fa6e242c259d",
+      "leaves": 11080,
+      "onlyChangedPath": "test/features/agent-backend/capturedWindowsSourceHistory.test.ts",
+      "body": {
+        "gitBlob": "aadbde250814c9c74225be65154e2d77ca7104bd",
+        "bytes": 25216,
+        "sha256": "b1f860dc9aa9be5ab61984dc0baa6d6e4f72b5bf968ee388b8d340d92967e2b6"
+      },
+      "status": "modified",
+      "actualCommitPatch": {
+        "gitBlob": "85b825e62801cc80b8a792cdf52901b120439d5d",
+        "bytes": 1685,
+        "sha256": "3e8330461b8e683969387ee7f521180b0c6e2f5d0ffd0cb77dfc19656df1134a"
+      },
+      "fullPatchDeltaVerified": true
+    }
+  ],
+  "actualHead": {
+    "head": "3be1fb3ec43d5682aa2ca77a6af62e6fa27b597b",
+    "tree": "341e1f9316471e30cda69ee55a72fa6e242c259d",
+    "leaves": 11080,
+    "map": {
+      "path": "/tmp/migration-evidence-20261116/native/plan54-actual-fixture-review/current-3be1-leaf-map.json",
+      "gitBlob": "b130ec867485f0dd6d44a13f1a1a2d56daf6a9ce",
+      "bytes": 3243285,
+      "sha256": "3b01e9156bb4850c4da14e58bd5eddbe6d56794933ec363325f2ba514d94b86b"
+    }
+  },
+  "testFile": {
+    "path": "test/features/agent-backend/capturedWindowsSourceHistory.test.ts",
+    "before": {
+      "gitBlob": "dd54632d57813fcb142a1c88ca9ec801567d11ed",
+      "bytes": 25096,
+      "sha256": "1d52700b35b5f8c36e795e686f818b6877c4d6807caad2f2617bdca2bb173508"
+    },
+    "after": {
+      "gitBlob": "aadbde250814c9c74225be65154e2d77ca7104bd",
+      "bytes": 25216,
+      "sha256": "b1f860dc9aa9be5ab61984dc0baa6d6e4f72b5bf968ee388b8d340d92967e2b6"
+    },
+    "beforePhysicalLines": 336,
+    "afterPhysicalLines": 336,
+    "exactChangedLines": [
+      99,
+      115
+    ],
+    "addedBytes": 120,
+    "exactInsertionAtEachSite": ", ...(options.openCode ? { generation: 'v1' as const } : {})",
+    "insertionBytes": 60,
+    "insertions": 2,
+    "removingOnlyTwoInsertionsRestoresEntirePreimage": true,
+    "allNineExistingTestBodiesAndTailByteIdentical": true,
+    "existingCases": [
+      "same original image cannot transfer A source authority to B account and Team",
+      "same image and HOME still require exact original Team, scope and recipe association",
+      "the existing source grant can explicitly authorize B while preserving B own original namespace",
+      "an original template admits an eligible new Team/worktree, never relabels an existing Team",
+      "cold Main validates the original history and rechecks its successful receipt before resume",
+      "retained A and published B keep their entire environment through cold Main prepare and resume",
+      "published V1 source/default and two model-limit overlays admit eligible member and template management probes",
+      "published ordinary V1 management admits actual same-value limit reconstruction without normalizing captured bytes",
+      "published V1 general coordination uses its actual pure builders and keeps immutable entries in cold Main"
+    ],
+    "noTestAddedRemovedSkippedOrChanged": true
+  },
+  "immutableCurrentReferences": [
+    {
+      "canonicalPath": "packages/legacy-agent-host/src/composition/runtimeSourceQualification.ts",
+      "retainedReadPath": "/tmp/e2e-original-artifacts/reviews/1ef2-open-code-history-generation/source/packages/legacy-agent-host/src/composition/runtimeSourceQualification.ts",
+      "savedExactCopy": "/tmp/migration-evidence-20261116/native/plan54-actual-fixture-review/source-reference/packages/legacy-agent-host/src/composition/runtimeSourceQualification.ts",
+      "gitBlob": "fb25a317426e009f7920f2270a7f72d7f384f462",
+      "bytes": 2448,
+      "sha256": "7367091c531ccf26f38b29353ac7e7794184f7599f35bd4888edd7ad3c1badf6",
+      "currentTreeIdentityExact": true
+    },
+    {
+      "canonicalPath": "packages/legacy-agent-host/src/composition/runtimeSourceContracts.ts",
+      "retainedReadPath": "/tmp/e2e-original-artifacts/reviews/1ef2-open-code-history-generation/source/packages/legacy-agent-host/src/composition/runtimeSourceContracts.ts",
+      "savedExactCopy": "/tmp/migration-evidence-20261116/native/plan54-actual-fixture-review/source-reference/packages/legacy-agent-host/src/composition/runtimeSourceContracts.ts",
+      "gitBlob": "c50550eb815ae6083b1f20a299423e3f037ffccc",
+      "bytes": 7931,
+      "sha256": "3a4fd85c484e85f6544d9f7c03038db389440d73ddd12394207e12c82785c6fb",
+      "currentTreeIdentityExact": true
+    },
+    {
+      "canonicalPath": "packages/legacy-agent-host/src/management/profile.ts",
+      "retainedReadPath": "/tmp/e2e-original-artifacts/reviews/1ef2-open-code-history-generation/source/packages/legacy-agent-host/src/management/profile.ts",
+      "savedExactCopy": "/tmp/migration-evidence-20261116/native/plan54-actual-fixture-review/source-reference/packages/legacy-agent-host/src/management/profile.ts",
+      "gitBlob": "ccefb500c16a228e03b7a1e4a47e04897fbca4f1",
+      "bytes": 5699,
+      "sha256": "e4c99575480163cb5077d0768cc2a612f9f00bead9b228f3e9d56c0e2399896c",
+      "currentTreeIdentityExact": true
+    },
+    {
+      "canonicalPath": "packages/legacy-agent-host/tests/runtime-source-native-identity.test.ts",
+      "retainedReadPath": "/tmp/migration-evidence-20261116/native/a07-process-darwin-x64-133387301534/source-reference/runtime-source-native-identity.test.ts",
+      "savedExactCopy": "/tmp/migration-evidence-20261116/native/plan54-actual-fixture-review/source-reference/packages/legacy-agent-host/tests/runtime-source-native-identity.test.ts",
+      "gitBlob": "eaf21d42dc203d22778cfec4f02eb9bc6d62c0fa",
+      "bytes": 42655,
+      "sha256": "3cb9951ac6c712fb5911ebf83598d1c81d62a6fa6aa9bd03dc6c2df745e3a420",
+      "currentTreeIdentityExact": true
+    }
+  ],
+  "sourceFindings": [
+    {
+      "finding": "The fixture selects provider opencode/version1.19.4 only when options.openCode is true; otherwise it selects Codex0.162.0. The OpenCode management seed omits nativeGeneration and the unchanged seed schema permits that omission.",
+      "anchors": [
+        "capturedWindowsSourceHistory.test.ts:44,59-63",
+        "management/profile.ts:18,46-60"
+      ]
+    },
+    {
+      "finding": "The unchanged current policy defaults an omitted OpenCode seed nativeGeneration to v1, then requires candidate.nativeCli.generation to match. Thus the old missing candidate generation is statically refused at generation-change-unqualified. The new literal v1 satisfies only that existing condition; version/executable/custody/source/environment gates remain.",
+      "anchors": [
+        "runtimeSourceQualification.ts:23-40,48-53"
+      ],
+      "limit": "This is a source-derived conditional result, not an executed original failing-job or resulting-test PASS claim."
+    },
+    {
+      "finding": "The generic nativeCli schema has a strict optional v1/v2 generation field. Non-OpenCode policy requires generation to remain undefined. The conditional spread preserves actual omission for Codex rather than inserting an unconditional property.",
+      "anchors": [
+        "runtimeSourceContracts.ts:28-34,64-75,133-141",
+        "runtimeSourceQualification.ts:41-44"
+      ]
+    },
+    {
+      "finding": "The two nativeCli objects remain independently constructed: the next candidate uses next and the retained-original candidate uses original. No mutable alias/helper/publication bypass is introduced. Both preserve their existing executable path/hash association.",
+      "anchors": [
+        "capturedWindowsSourceHistory.test.ts:95-100,114-117"
+      ]
+    },
+    {
+      "finding": "The publication helper still computes request fingerprint, selection digest and source-history revision with runtimeDigest. publicationJson remains the actual request, nativeVersion stays equal to version, and no receipt generation field or constant substitute was added.",
+      "anchors": [
+        "capturedWindowsSourceHistory.test.ts:100-117"
+      ]
+    },
+    {
+      "finding": "All nine existing cases, including the three OpenCode scenarios and all positive/negative source/environment assertions, remain byte-identical. They still use original journals/Main policy with inert file bytes and original afterEach cleanup; this change does not execute native images or open a broker.",
+      "anchors": [
+        "capturedWindowsSourceHistory.test.ts:26-40,136-336"
+      ]
+    },
+    {
+      "finding": "An already-existing current Host native-identity fixture uses the same conditional OpenCode V1 pattern; its current blob is independently joined.",
+      "anchors": [
+        "packages/legacy-agent-host/tests/runtime-source-native-identity.test.ts:131-139"
+      ]
+    },
+    {
+      "finding": "All production policy/schema/source admission leaves and all workflow/dependency/configuration leaves are unchanged in the reconstructed two-commit delta. The fixture remains336 physical lines; no cap/deadline/test-routing change is present.",
+      "anchors": [
+        "actual whole-tree comparison447a→2e83→3be1"
+      ]
+    }
+  ],
+  "wholeTreePreservation": {
+    "baseLeaves": 11079,
+    "finalLeaves": 11080,
+    "newLeaves": [
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/54-windows-v1-source-history-fixture-2026-11-16.md"
+    ],
+    "onlyExistingLeafChanged": "test/features/agent-backend/capturedWindowsSourceHistory.test.ts",
+    "unchangedBaseLeaves": 11078,
+    "removals": 0,
+    "modeChanges": 0,
+    "allFivePublishedB2AfterimagesAndTwentyR1DocumentsPreserved": true,
+    "allIncomingPlan50Through53LeavesPreserved": true,
+    "entireP10Preserved": "1b017131e186f67ccaf62c4215de4bdb0f58af74"
+  },
+  "historicalEvidenceLimit": {
+    "planClaimsJob": "133504007033",
+    "planClaimsRun": "43925579157",
+    "planClaimsSource": "1ef2c16ae547129e6b6ab5c47e03caa6b3f169df",
+    "claimsNotIndependentlyAuditedHere": [
+      "canonical TypeScript Native compile/controller build completion",
+      "164 PASS / 0 FAIL / 3 SKIP contracts",
+      "54 PASS protocol",
+      "90 PASS and3 retained-history failures",
+      "log/artifact hashes and first-failure chronology"
+    ],
+    "noLogArtifactStatusRetrievalPerformed": true,
+    "reason": "Task expressly scopes this R2 to retained actual source/tree. The Plan54 cited original CI counts remain documentary claims until their original evidence is independently reviewed."
+  },
+  "limits": [
+    "This approves the exact already-published source semantics and two-commit tree; it does not attest unseen pre-publication reviewer chronology, construction timing, fresh refs/PR state or primary advancement.",
+    "No project tests/compiler/lint/build/module import, parser application, native/GUI/provider execution, CI action/poll, new API or log/archive retrieval occurred. Only scratch data reports and exact source-reference copies were written.",
+    "Resulting-source original source-history cases and their later assertions, followed by the unchanged original native/process/provider/source A/B gates, still require actual CI evidence; source review or prior-head results cannot qualify them.",
+    "No P08/P09/direct-I386/15s/vendor/release or overall migration PASS is inferred."
+  ]
+}

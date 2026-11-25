@@ -6,6 +6,7 @@
  * explain why OpenCode task changes were or were not backfilled.
  */
 
+import { getOptionalElectronMain } from '@main/utils/optionalElectronMain';
 import { appendFile, mkdir, stat, truncate } from 'fs/promises';
 import { join } from 'path';
 
@@ -14,8 +15,7 @@ const MAX_DIAG_FILE_BYTES = 1024 * 1024;
 
 function getElectronApp(): typeof import('electron').app | null {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports -- lazy for tests / non-Electron.
-    const { app } = require('electron') as typeof import('electron');
+    const app = getOptionalElectronMain()?.app;
     return app ?? null;
   } catch {
     return null;

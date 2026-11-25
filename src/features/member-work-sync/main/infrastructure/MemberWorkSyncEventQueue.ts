@@ -14,6 +14,7 @@ import {
 } from './memberWorkSyncLastSettlementStore';
 import {
   awaitMemberWorkSyncQueueTeamIdle,
+  MemberWorkSyncQueueIdleSignal,
   runMemberWorkSyncQueueScope,
   unrefMemberWorkSyncTimer,
 } from './memberWorkSyncQueueScope';
@@ -118,6 +119,7 @@ function getReconcileTimeoutSettlePromise(error: unknown): Promise<void> | null 
 }
 
 export class MemberWorkSyncEventQueue {
+  private readonly idleSignal = new MemberWorkSyncQueueIdleSignal();
   private readonly items = new Map<string, QueueItem>();
   private readonly running = new Map<string, RunningItem>();
   private readonly activeKeys = new Set<string>();
@@ -378,13 +380,11 @@ export class MemberWorkSyncEventQueue {
     };
   }
 
-  awaitTeamIdle(teamName: string): Promise<void> {
-    return awaitMemberWorkSyncQueueTeamIdle(
-      teamName,
-      this.inFlightByTeam,
-      this.settlingByTeam,
-      this.auditInFlightByTeam
-    );
+  awaitTeamIdle(teamName: string, options?: { includeQueued?: boolean }): Promise<void> {
+    const owners = [this.inFlightByTeam, this.settlingByTeam, this.auditInFlightByTeam];
+    return options?.includeQueued
+      ? this.idleSignal.drain(teamName, [this.items, this.running], owners)
+      : awaitMemberWorkSyncQueueTeamIdle(teamName, ...owners);
   }
 
   async stop(): Promise<void> {
@@ -396,6 +396,7 @@ export class MemberWorkSyncEventQueue {
     this.items.clear();
     this.running.clear();
     this.activeKeys.clear();
+    this.idleSignal.changed();
     resetMemberWorkSyncLastSettlements();
     while (this.inFlight.size > 0 || this.settling.size > 0 || this.auditInFlightByTeam.size > 0) {
       await Promise.allSettled([
@@ -407,6 +408,7 @@ export class MemberWorkSyncEventQueue {
   }
 
   private schedule(): void {
+    this.idleSignal.changed();
     if (this.stopped) {
       return;
     }
@@ -474,6 +476,7 @@ export class MemberWorkSyncEventQueue {
           failed = true;
           failure = error;
           if (error instanceof MemberWorkSyncTeamQuiescedError) {
+            this.idleSignal.refuse(item.teamName, error);
             // A quiesced team parks its queue work and is retried without consuming the
             // retry budget, so this is an expected state rather than a reconcile failure.
             this.counters.quiesced += 1;
@@ -737,6 +740,7 @@ export class MemberWorkSyncEventQueue {
     if (!teamPromises) return;
     teamPromises.delete(promise);
     if (teamPromises.size === 0) target.delete(teamName);
+    this.idleSignal.changed();
   }
 }
 

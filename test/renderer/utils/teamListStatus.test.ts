@@ -34,6 +34,26 @@ function progress(
 describe('team list status', () => {
   const nowMs = Date.parse('2026-04-28T20:00:00.000Z');
 
+
+  it('keeps an opt-in missing alive observation unknown and excludes stale running membership', () => {
+    expect(resolveTeamStatus(team(), 'atlas-hq-10', [], null, {}, nowMs, false)).toBe('unknown');
+    expect(resolveTeamStatus(team(), 'atlas-hq-10', ['atlas-hq-10'], null, {}, nowMs, false)).toBe('unknown');
+    expect(isTeamListStatusRunning('unknown')).toBe(false);
+    expect(resolveTeamStatus(team(), 'atlas-hq-10', [], null, {}, nowMs)).toBe('offline');
+    expect(resolveTeamStatus(team(), 'atlas-hq-10', ['atlas-hq-10'], null, {}, nowMs)).toBe('idle');
+  });
+
+  it('preserves independent provisioning and explicit activity evidence when aliveList is unknown', () => {
+    expect(resolveTeamStatus(team(), 'atlas-hq-10', [], progress('assembling', '2026-04-28T19:59:59.000Z'),
+      {}, nowMs, false)).toBe('provisioning');
+    expect(resolveTeamStatus(team(), 'atlas-hq-10', [], progress('ready', '2026-04-28T19:59:59.000Z'),
+      {}, nowMs, false)).toBe('idle');
+    expect(resolveTeamStatus(team(), 'atlas-hq-10', [], null, { 'atlas-hq-10': 'offline' },
+      nowMs, false)).toBe('offline');
+    expect(resolveTeamStatus(team({ teamLaunchState: 'partial_pending' }), 'atlas-hq-10', [], null,
+      {}, nowMs, false)).toBe('partial_pending');
+  });
+
   it('treats active provisioning as launching even if the previous lead state was offline', () => {
     expect(
       resolveTeamStatus(

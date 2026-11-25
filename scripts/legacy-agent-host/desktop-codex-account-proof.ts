@@ -1,8 +1,38 @@
 import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
+import { setTimeout as delay } from 'node:timers/promises';
 import { bounded } from './desktop-proof-bounds.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
+import { runDesktopCodexLoginUiProof } from './desktop-codex-login-ui-proof.ts';
+
+/** Original read-only readiness barrier; a missing handler is never a dispatched mutation. */
+export async function readDesktopCodexInitialAccount(cdp: UiCdpPort, options: {
+  evidence: Record<string, unknown>;
+  assertOwnedRenderer(): void;
+}): Promise<void> {
+  const readyUntil = Date.now() + 60_000;
+  let initial: Record<string, unknown> | undefined;
+  while (Date.now() < readyUntil) {
+    options.assertOwnedRenderer();
+    try {
+      const value = await bounded(cdp.evaluate('window.electronAPI.getCodexAccountSnapshot()'),
+        20_000, 'read account IPC readiness');
+      assert.ok(value && typeof value === 'object' && !Array.isArray(value));
+      initial = value as Record<string, unknown>;
+      break;
+    } catch (error) {
+      if (!(error instanceof Error) || !/No handler registered for ['"]codexAccount:getSnapshot/.test(error.message))
+        throw error;
+      await delay(100);
+    }
+  }
+  assert.ok(initial, 'Codex account handler becomes ready before any auth mutation');
+  options.evidence.codexInitialAccount = {
+    managedAccount: initial.managedAccount, appServerState: initial.appServerState,
+  };
+}
+
 /** Original Codex account diagnostic mode; keeps the captured renderer and exact operation sequence. */
 export async function runDesktopCodexAccountProof(
   cdp: UiCdpPort,
@@ -18,12 +48,13 @@ export async function runDesktopCodexAccountProof(
     assert.ok(value && typeof value === 'object' && !Array.isArray(value));
     return value as Record<string, unknown>;
   };
-  assert.ok(['codex-account-read', 'codex-account-auth'].includes(mode));
+  assert.ok(['codex-account-read', 'codex-account-auth', 'codex-login-ui'].includes(mode));
   assert.ok(
     process.env.LEGACY_DESKTOP_CODEX_PATH,
     'metadata proof needs the pinned native TEST profile'
   );
   options.assertOwnedRenderer();
+  if (mode === 'codex-login-ui') return runDesktopCodexLoginUiProof(cdp, options);
   if (mode === 'codex-account-auth') {
     const before = object(evidence.codexInitialAccount);
     assert.equal(object(before.managedAccount).type, 'api_key');

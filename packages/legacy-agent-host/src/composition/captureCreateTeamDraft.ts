@@ -10,6 +10,7 @@ import {
 } from './runtimeCaptureSource.js';
 import { teamModelProbeProfile, teamModelProbeEffort } from './teamLaunchModelProbe.js';
 import { resolveCapturedRuntimeRecipe } from './runtimeRecipe.js';
+import { captureRuntimeSourceProcessOrigin } from './captureRuntimeProcessOrigin.js';
 import type { TeamHostProfile } from './TeamHost.js';
 import type { RuntimeRecipeSources } from './runtimeSourceContracts.js';
 
@@ -144,6 +145,8 @@ export function captureCreateTeamDraft(
       memberName: members[index]!.name,
       selection,
       key: digest(selection),
+      processOrigin: captureRuntimeSourceProcessOrigin(explicit, definition.scope, teamId,
+        source, selected, sources),
     };
   });
   return {

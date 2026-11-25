@@ -1,0 +1,796 @@
+{
+  "kind": "Prospective exact Stage L atomic incoming35 adoption plus genuine stderr RED canary stage",
+  "prior": {
+    "head": "e3b661974cb7131cd3b1f7b6eaf6ede647b326f4",
+    "tree": "de63f46beda4d0aba7c0ff79e8b3f0b330a377f0"
+  },
+  "base": {
+    "head": "27b1acf48278dcd0fb348c626696eac2dc64de73",
+    "tree": "df57310cd096bfc628b31ca05b0caae91eb5ae09"
+  },
+  "incoming": {
+    "head": "1f9242563bec2641b25077c3aa83a999bd7f4871",
+    "tree": "f1214a8c4c7915ccdf6657ce56f7f8a204a2a9c8"
+  },
+  "incomingCommits": [
+    {
+      "head": "35cbd6e99b620e9b41802af936143d900f5e2aca",
+      "tree": "469ba5da864c690193d68c06c666cd1d40c17131",
+      "parents": [
+        "27b1acf48278dcd0fb348c626696eac2dc64de73"
+      ],
+      "subject": "fix: complete typed Thinking and bounded member Logs parity"
+    },
+    {
+      "head": "71d58a50edd4c8fbb8a49412f2beebef061e961a",
+      "tree": "483698018c251462ea287093c59c7d9086d79a45",
+      "parents": [
+        "35cbd6e99b620e9b41802af936143d900f5e2aca"
+      ],
+      "subject": "docs: bound remaining Thinking coordination consumer repair"
+    },
+    {
+      "head": "1f9242563bec2641b25077c3aa83a999bd7f4871",
+      "tree": "f1214a8c4c7915ccdf6657ce56f7f8a204a2a9c8",
+      "parents": [
+        "71d58a50edd4c8fbb8a49412f2beebef061e961a"
+      ],
+      "subject": "docs: bound scheduled Thinking and original stderr parity"
+    }
+  ],
+  "sourceLeaves": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "before": {
+        "bytes": 175252,
+        "blob": "be8ce36916e7b0def4bb3659be6d92d0356deaf4",
+        "sha256": "5833f2cb2e4b7fa4793c599e8c2256fe8cf0b507032bf656591e0ca13e3c4690"
+      },
+      "incoming": {
+        "bytes": 175238,
+        "blob": "de7e1b4d8388065a15345cca434f1868ec694fc5",
+        "sha256": "cf3fe1c70142669f97143a354b178e55c07cad9dd0a534de885280fe0cec7dce"
+      },
+      "selected": {
+        "bytes": 175238,
+        "blob": "de7e1b4d8388065a15345cca434f1868ec694fc5",
+        "sha256": "cf3fe1c70142669f97143a354b178e55c07cad9dd0a534de885280fe0cec7dce"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/candidate/.github/workflows/ci.yml",
+      "source": "exact incoming",
+      "lines": 2633
+    },
+    {
+      "path": "packages/legacy-agent-host/package.json",
+      "before": {
+        "bytes": 12180,
+        "blob": "c6248499ad8a3d7355cf3cc51062cc0207fbde04",
+        "sha256": "e2a0afb664136d6b79e694987fc0027ac1adde819a7d1c4d11cc3ec6ab9cf22d"
+      },
+      "incoming": {
+        "bytes": 12355,
+        "blob": "e39cb2ba89c125d850710828a65a30ae25b7344b",
+        "sha256": "77efb91a29ed4ba662ca7dcebc0843965d27305ad9d62f04ef6c84b517732e0b"
+      },
+      "selected": {
+        "bytes": 12355,
+        "blob": "e39cb2ba89c125d850710828a65a30ae25b7344b",
+        "sha256": "77efb91a29ed4ba662ca7dcebc0843965d27305ad9d62f04ef6c84b517732e0b"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/candidate/packages/legacy-agent-host/package.json",
+      "source": "exact incoming",
+      "lines": 304
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "before": {
+        "bytes": 6214,
+        "blob": "2d407fff63c9529c2d5933daeb01b81c08443c8f",
+        "sha256": "63e0001652cf96bf1aa08c6c7a647536ab06a753d9b3bd74baa123cb5c126810"
+      },
+      "incoming": {
+        "bytes": 7826,
+        "blob": "3b2b960722f878cf60ba94bae27176fb9e7d0bba",
+        "sha256": "c30d9a9d7357275864ede578ec9a4c66e335ffb1a613a5d916c6aced9061e1bc"
+      },
+      "selected": {
+        "bytes": 7826,
+        "blob": "3b2b960722f878cf60ba94bae27176fb9e7d0bba",
+        "sha256": "c30d9a9d7357275864ede578ec9a4c66e335ffb1a613a5d916c6aced9061e1bc"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/candidate/packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "source": "exact incoming",
+      "lines": 164
+    },
+    {
+      "path": "packages/legacy-agent-host/src/diagnostics/redactDiagnosticAssignments.ts",
+      "before": null,
+      "incoming": {
+        "bytes": 5376,
+        "blob": "b82e437c1e8f04726982af5d50fc54394725f138",
+        "sha256": "a1c2499af3048c0e656f66131ffa76540fe7493c1f3643e0486c8ffe6358d940"
+      },
+      "selected": {
+        "bytes": 5376,
+        "blob": "b82e437c1e8f04726982af5d50fc54394725f138",
+        "sha256": "a1c2499af3048c0e656f66131ffa76540fe7493c1f3643e0486c8ffe6358d940"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/candidate/packages/legacy-agent-host/src/diagnostics/redactDiagnosticAssignments.ts",
+      "source": "exact incoming",
+      "lines": 134
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/normalizeActivity.ts",
+      "before": {
+        "bytes": 5813,
+        "blob": "195541f5f1e98746728b11844dd68fdf845721b4",
+        "sha256": "d82735f9e66a78c4f2fc30631d6ed2daf829f554158d03fecc3a456134c39e94"
+      },
+      "incoming": {
+        "bytes": 5840,
+        "blob": "338f38de5b4ee60d5fa982aa895dd2f71fde981b",
+        "sha256": "2c2b72f7b9bea0e7f50cf4e95512ab022dbab50c8bcc6a697320aa35c823aede"
+      },
+      "selected": {
+        "bytes": 5840,
+        "blob": "338f38de5b4ee60d5fa982aa895dd2f71fde981b",
+        "sha256": "2c2b72f7b9bea0e7f50cf4e95512ab022dbab50c8bcc6a697320aa35c823aede"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/candidate/packages/legacy-agent-host/src/runtime/normalizeActivity.ts",
+      "source": "exact incoming",
+      "lines": 161
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/captured-claude-process.test.ts",
+      "before": {
+        "bytes": 11044,
+        "blob": "9e821dc3669a249411ef7999cb01aa566dc4ddb7",
+        "sha256": "46750c17a7bb630208cfd4e07167bee66e41f9542b47d0e6a1e9377079f781e7"
+      },
+      "incoming": {
+        "bytes": 14002,
+        "blob": "f84153e49a9ace1f07a5d1f7bb9cea486f5617af",
+        "sha256": "30c863da3e66b2d2e4be13e8a3394d09e75ade9e84ee38a7775806cd60acc868"
+      },
+      "selected": {
+        "bytes": 14002,
+        "blob": "f84153e49a9ace1f07a5d1f7bb9cea486f5617af",
+        "sha256": "30c863da3e66b2d2e4be13e8a3394d09e75ade9e84ee38a7775806cd60acc868"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/candidate/packages/legacy-agent-host/tests/captured-claude-process.test.ts",
+      "source": "exact incoming",
+      "lines": 314
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-windows-claude.ts",
+      "before": {
+        "bytes": 15798,
+        "blob": "ddf61eccc2d1385cf1b19c45581594ef49ce01be",
+        "sha256": "b454fa2c1bb75453712cf89f0d3782dddcb12fe67142d1654c613b8d2efca946"
+      },
+      "incoming": {
+        "bytes": 15811,
+        "blob": "c640bd2a538f3f063b764174b71d365574925345",
+        "sha256": "c06390dfcc504efdb693c1c7e3aa52375ea0916245f20461cd8be352a3a500d5"
+      },
+      "selected": {
+        "bytes": 15811,
+        "blob": "c640bd2a538f3f063b764174b71d365574925345",
+        "sha256": "c06390dfcc504efdb693c1c7e3aa52375ea0916245f20461cd8be352a3a500d5"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/candidate/packages/legacy-agent-host/tests/fixtures/native-windows-claude.ts",
+      "source": "exact incoming",
+      "lines": 269
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "before": {
+        "bytes": 6951,
+        "blob": "dc9658bb5b5802eb9f8e6749b5a09994f1806e8d",
+        "sha256": "6a29fb9c6b8040d467df0a36ff71b7a86433af9aa545d9a21985a560f2724496"
+      },
+      "incoming": {
+        "bytes": 12742,
+        "blob": "c073ab7b8c6025313747f75e50e8b0a14985d589",
+        "sha256": "f2c89ada2f51d13e42af390229cc6b2fc58e2c82a48bf64154c006c5feedc573"
+      },
+      "selected": {
+        "bytes": 14603,
+        "blob": "d1b52658270cc53a9e1ec345de55f840e7549011",
+        "sha256": "fd7504cd6196122a450cab25dc3bce50f5125c4ab589510c005f08e68c731510"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/candidate/packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "source": "composed",
+      "lines": 256
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/native-claude-host.native.ts",
+      "before": {
+        "bytes": 39595,
+        "blob": "c1708d23c9c958f2e0d73c6b3641b93b83ded853",
+        "sha256": "f75fc9dade4b589c9b484772ab00943794361cf1b7f1a3f67a583c5c02b01e33"
+      },
+      "incoming": {
+        "bytes": 39595,
+        "blob": "b0174217485fa7dadb4ba9692a3056798e2e3e9f",
+        "sha256": "3e93bd4ac4c0555d8f149781835584a7fd998c5e7e8f906669498e9cba7840eb"
+      },
+      "selected": {
+        "bytes": 39595,
+        "blob": "b0174217485fa7dadb4ba9692a3056798e2e3e9f",
+        "sha256": "3e93bd4ac4c0555d8f149781835584a7fd998c5e7e8f906669498e9cba7840eb"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/candidate/packages/legacy-agent-host/tests/native-claude-host.native.ts",
+      "source": "exact incoming",
+      "lines": 518
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/native-codex-team.native.ts",
+      "before": {
+        "bytes": 40907,
+        "blob": "23fac76661c04db7514e5f7cb5cb7f0fefe89ab9",
+        "sha256": "04ff89c17c35394b7287c398492af674340bd4fee376ab5bcf8d05944138344f"
+      },
+      "incoming": {
+        "bytes": 40907,
+        "blob": "0b179a8b5fcf089de2f42dd90f8eef9a9160b992",
+        "sha256": "1420bc3f28eae122436a520a8b85e4e23c21c674636548a37bd88570f80f1636"
+      },
+      "selected": {
+        "bytes": 40907,
+        "blob": "0b179a8b5fcf089de2f42dd90f8eef9a9160b992",
+        "sha256": "1420bc3f28eae122436a520a8b85e4e23c21c674636548a37bd88570f80f1636"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/candidate/packages/legacy-agent-host/tests/native-codex-team.native.ts",
+      "source": "exact incoming",
+      "lines": 790
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-activity.test.ts",
+      "before": {
+        "bytes": 52390,
+        "blob": "48d997a1308919dabaa141075b1666be9c960c4e",
+        "sha256": "befefa0db8afcf488c555d8806ab95bab9c2ebeef42b138f9550949bccd62d29"
+      },
+      "incoming": {
+        "bytes": 54523,
+        "blob": "5a4a258d7802ff54fc2d4c405fc95c2e8e48e86e",
+        "sha256": "2b0b8accbaf951b00d86537d6a0eb793e7ef1859d1ab401b06e93624f97269cb"
+      },
+      "selected": {
+        "bytes": 54523,
+        "blob": "5a4a258d7802ff54fc2d4c405fc95c2e8e48e86e",
+        "sha256": "2b0b8accbaf951b00d86537d6a0eb793e7ef1859d1ab401b06e93624f97269cb"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/candidate/packages/legacy-agent-host/tests/runtime-activity.test.ts",
+      "source": "exact incoming",
+      "lines": 1100
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "before": {
+        "bytes": 198908,
+        "blob": "c22601ad6648e7a5c47bf46d3214c0f8f3105e0f",
+        "sha256": "c5f732771761b0ebad511bdc8d407b146f9c9636be5f6542e0a356920a749f2c"
+      },
+      "incoming": {
+        "bytes": 191234,
+        "blob": "ac07c852895c6cfbabb5015f0c1ef0abe13b3a7c",
+        "sha256": "a98eaa6aef701eba667a9b02edc0e49ed124786705469d8820a36b7c27cfd210"
+      },
+      "selected": {
+        "bytes": 207427,
+        "blob": "c3f23b9a6b6bbc37668e57b94b3a26d03a2eab79",
+        "sha256": "5ecb1c76b7a3cccf205b9856f183095ef7da3fa06cd7617c2f403c37e3f41d2d"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/candidate/packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "source": "composed",
+      "lines": 3928
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "before": {
+        "bytes": 956809,
+        "blob": "1d2de1cff41f77932e3fbc6e88a3c4cfdb697cb7",
+        "sha256": "8ac1ad56c4856ade77cc3747bfc9ac6feb93def40b280b972fd7e0aeab2356b5"
+      },
+      "incoming": {
+        "bytes": 956788,
+        "blob": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+        "sha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c"
+      },
+      "selected": {
+        "bytes": 956788,
+        "blob": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+        "sha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/candidate/pnpm-lock.yaml",
+      "source": "exact incoming",
+      "lines": 26665
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "before": {
+        "bytes": 6944,
+        "blob": "d93f661224946a540596594db88fe2053a02b5df",
+        "sha256": "2c8088870b92344bb5731e366768da3a5504363137697c980a89b7024a05aa8b"
+      },
+      "incoming": {
+        "bytes": 6946,
+        "blob": "3999f1f503fc23c84db89cf9e964bcc3164122e5",
+        "sha256": "c3801a0cb971ad1c31e7236a61c328ff55c9c91d63b7b7042de8562ff39f00ea"
+      },
+      "selected": {
+        "bytes": 6946,
+        "blob": "3999f1f503fc23c84db89cf9e964bcc3164122e5",
+        "sha256": "c3801a0cb971ad1c31e7236a61c328ff55c9c91d63b7b7042de8562ff39f00ea"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/candidate/pnpm-workspace.yaml",
+      "source": "exact incoming",
+      "lines": 169
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-activity-ui-smoke.ts",
+      "before": {
+        "bytes": 21463,
+        "blob": "b030c7030ed39b1091c56dca6f1317e0f5372477",
+        "sha256": "a2777652fb2a4155bfc011a21ac278c810a1d381b938204245399877cee41dad"
+      },
+      "incoming": {
+        "bytes": 22826,
+        "blob": "797cf587243a6c6ba1cd466ed105d5bb6d81772e",
+        "sha256": "6677695937f2c532da1867df1b91afa43856229badf98035a6aa7467102d1791"
+      },
+      "selected": {
+        "bytes": 22826,
+        "blob": "797cf587243a6c6ba1cd466ed105d5bb6d81772e",
+        "sha256": "6677695937f2c532da1867df1b91afa43856229badf98035a6aa7467102d1791"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/candidate/scripts/legacy-agent-host/desktop-activity-ui-smoke.ts",
+      "source": "exact incoming",
+      "lines": 446
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "before": {
+        "bytes": 57268,
+        "blob": "069111cf2e035c084d54caa0bf3753b47c86b5ba",
+        "sha256": "8ebfdb03d72c73cef19456fd8f74c6c2b7c671e0733edd996a61b9faedd3d411"
+      },
+      "incoming": {
+        "bytes": 63953,
+        "blob": "345dc9a6b3fb9d197eaf2982e60840682d7b8fbd",
+        "sha256": "62be20083316c423e9f0814593aa8815b7abd56507138e84a473de3cd8791c92"
+      },
+      "selected": {
+        "bytes": 63441,
+        "blob": "8740d94021dd031b0be0248bc8654576484e6d1d",
+        "sha256": "f1c7645f19d8b4ab08da39a248ebff08b896fe85b49df0be1be945b24650e820"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/candidate/scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "source": "composed",
+      "lines": 732
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "before": {
+        "bytes": 20446,
+        "blob": "47d1d9520e794ea9048cd98d997e54fa70bfc4b6",
+        "sha256": "c5320e55fae9644cb48a8d711f9bab2499bb2f0e6d22d695b3f679a9679f822a"
+      },
+      "incoming": {
+        "bytes": 20778,
+        "blob": "9ebf57607eb1ca52fa4d7e29213bba99624167c8",
+        "sha256": "4e278c7717ae10c6208dfa1658042b07861af63000e0c02900a735d423986898"
+      },
+      "selected": {
+        "bytes": 20778,
+        "blob": "d8222627fd9f5ba303d1a2116246d63ba0d67516",
+        "sha256": "bfcc571e2c742ff2eb957bcc525c6a596ca9999e6d3d087cc2ca9dfab9e94681"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/candidate/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "source": "composed",
+      "lines": 320
+    },
+    {
+      "path": "src/renderer/components/team/members/HostMemberActivityLog.tsx",
+      "before": {
+        "bytes": 13931,
+        "blob": "f24568c549ed723ad9f5c228a6b3c6e04771869b",
+        "sha256": "84ec3e031568ec31c7a70b7614475cf0211b9cc3352f85aaa081e4febfff442c"
+      },
+      "incoming": {
+        "bytes": 14275,
+        "blob": "b0095b83b3544988b7b6d5ba10163c93411868f5",
+        "sha256": "3b0e5e8d661f1cf992d17a45e563f6348c9de33b32ee2795bfe4fe06394f2eba"
+      },
+      "selected": {
+        "bytes": 14275,
+        "blob": "b0095b83b3544988b7b6d5ba10163c93411868f5",
+        "sha256": "3b0e5e8d661f1cf992d17a45e563f6348c9de33b32ee2795bfe4fe06394f2eba"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/candidate/src/renderer/components/team/members/HostMemberActivityLog.tsx",
+      "source": "exact incoming",
+      "lines": 370
+    },
+    {
+      "path": "src/renderer/components/team/members/MemberLogsTab.tsx",
+      "before": {
+        "bytes": 28105,
+        "blob": "112623fefdd629c05c414951a57c81afb2f1ca79",
+        "sha256": "bc4e589274afd44768da770a8b9ccadba45e36bcd9821ed67ce72b8f18ff8e2b"
+      },
+      "incoming": {
+        "bytes": 28174,
+        "blob": "9aa14dbd08d23f75c91ceb38d25ce5161fc6be37",
+        "sha256": "7b1f49b1d53e461dfb120ec95b469259d57f178c4b9baf63628f5d1c2a5b886c"
+      },
+      "selected": {
+        "bytes": 28174,
+        "blob": "9aa14dbd08d23f75c91ceb38d25ce5161fc6be37",
+        "sha256": "7b1f49b1d53e461dfb120ec95b469259d57f178c4b9baf63628f5d1c2a5b886c"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/candidate/src/renderer/components/team/members/MemberLogsTab.tsx",
+      "source": "exact incoming",
+      "lines": 755
+    },
+    {
+      "path": "src/shared/utils/redactDiagnosticAssignments.ts",
+      "before": {
+        "bytes": 5376,
+        "blob": "b82e437c1e8f04726982af5d50fc54394725f138",
+        "sha256": "a1c2499af3048c0e656f66131ffa76540fe7493c1f3643e0486c8ffe6358d940"
+      },
+      "incoming": {
+        "bytes": 102,
+        "blob": "0a1bd348ab98e6f33af2577cad33e9f2be44e745",
+        "sha256": "8cfd0fa9fa6680e69c49ebabd4c8b0fd04771768677ad6ca8ec44da2d2de0e51"
+      },
+      "selected": {
+        "bytes": 102,
+        "blob": "0a1bd348ab98e6f33af2577cad33e9f2be44e745",
+        "sha256": "8cfd0fa9fa6680e69c49ebabd4c8b0fd04771768677ad6ca8ec44da2d2de0e51"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/candidate/src/shared/utils/redactDiagnosticAssignments.ts",
+      "source": "exact incoming",
+      "lines": 1
+    },
+    {
+      "path": "test/renderer/components/team/members/hostLogStatsTabs.test.tsx",
+      "before": {
+        "bytes": 20552,
+        "blob": "de455b7999a367b3ed697d6560b408991129c931",
+        "sha256": "f8e0a844d6fe578755358e6994c86e933369bf5c5648ebdb04847f8485917c87"
+      },
+      "incoming": {
+        "bytes": 21056,
+        "blob": "95bfc28a93043836fc08811dc129fb34492fe0a5",
+        "sha256": "c74aac40488ad0a971de188f35bda2d973c5c0b64612c2b40528b1f2cc4c6b73"
+      },
+      "selected": {
+        "bytes": 21056,
+        "blob": "95bfc28a93043836fc08811dc129fb34492fe0a5",
+        "sha256": "c74aac40488ad0a971de188f35bda2d973c5c0b64612c2b40528b1f2cc4c6b73"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/candidate/test/renderer/components/team/members/hostLogStatsTabs.test.tsx",
+      "source": "exact incoming",
+      "lines": 586
+    },
+    {
+      "path": "tools/owned-process-broker/debugServiceTest.h",
+      "before": {
+        "bytes": 7264,
+        "blob": "9edcec8fffca780706cbde634c35d7929552f9f6",
+        "sha256": "e2ad167bf03a8c4566d720a8bc23d9fff274971b2523397f02ac766d89d8944a"
+      },
+      "incoming": {
+        "bytes": 7271,
+        "blob": "f8a03669780c34de68010184ad6ca03a8440a2e4",
+        "sha256": "ec0665d1f6289492ea103bce13821c2a06847a2599396c8b47de21dde4e4f2a4"
+      },
+      "selected": {
+        "bytes": 7271,
+        "blob": "f8a03669780c34de68010184ad6ca03a8440a2e4",
+        "sha256": "ec0665d1f6289492ea103bce13821c2a06847a2599396c8b47de21dde4e4f2a4"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/candidate/tools/owned-process-broker/debugServiceTest.h",
+      "source": "exact incoming",
+      "lines": 153
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "before": {
+        "bytes": 31333,
+        "blob": "1734ab07e519f6c98f2c012718411c78b47f958b",
+        "sha256": "d9e4e0147c606feab45d83380ab06517012a7df0e65c5adf7c738c5b5c3fccc5"
+      },
+      "incoming": {
+        "bytes": 31783,
+        "blob": "6cdba0b52141348d97c593bf2ae6c224cdce5d73",
+        "sha256": "03f92320d8646353540bcea7a3626a0a35634b803a6af1599d23c1d882a6d962"
+      },
+      "selected": {
+        "bytes": 31783,
+        "blob": "6cdba0b52141348d97c593bf2ae6c224cdce5d73",
+        "sha256": "03f92320d8646353540bcea7a3626a0a35634b803a6af1599d23c1d882a6d962"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/candidate/tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "source": "exact incoming",
+      "lines": 458
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+      "before": {
+        "bytes": 38537,
+        "blob": "5de48ea5710cc24f3a7eb3527934073df0d57e1c",
+        "sha256": "f8f31dcdc969747144a5fc9bab14c84375bcca06929807556c9451f1b157e804"
+      },
+      "incoming": {
+        "bytes": 39026,
+        "blob": "76f5d1953816fd125f576a966c42caefcfc297e2",
+        "sha256": "94cc5c1faed9d9d6d82d6db8e5fb7e36f292fa7335ff60ffc0648009a0d2b43a"
+      },
+      "selected": {
+        "bytes": 39026,
+        "blob": "76f5d1953816fd125f576a966c42caefcfc297e2",
+        "sha256": "94cc5c1faed9d9d6d82d6db8e5fb7e36f292fa7335ff60ffc0648009a0d2b43a"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/candidate/tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+      "source": "exact incoming",
+      "lines": 562
+    },
+    {
+      "path": "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+      "before": {
+        "bytes": 19603,
+        "blob": "f8eb84e20fb323e5838b918a7934853785ab9ee5",
+        "sha256": "c37a7f0a4f2ded01700e9cb93e25fcdacd25e363b61c374c375b3ad493c80b27"
+      },
+      "incoming": {
+        "bytes": 20067,
+        "blob": "e3cb3ac88b3b46c8935f64bc2f2b0060e163676b",
+        "sha256": "3da229429f0dfa6c53449078a1b8125715130be2165986f2d4cc1fab31a53951"
+      },
+      "selected": {
+        "bytes": 20067,
+        "blob": "e3cb3ac88b3b46c8935f64bc2f2b0060e163676b",
+        "sha256": "3da229429f0dfa6c53449078a1b8125715130be2165986f2d4cc1fab31a53951"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/candidate/tools/owned-process-broker/nativeDebugServiceScenario.ts",
+      "source": "exact incoming",
+      "lines": 325
+    },
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-9423f600/README.md",
+      "before": null,
+      "incoming": {
+        "bytes": 909,
+        "blob": "70c7bdfb85ea427f0e6ff8df99955a29648ce642",
+        "sha256": "997daf83ca9219c648df14c2d50252aa75c3994f435e7a74575db2bc6933a25d"
+      },
+      "selected": {
+        "bytes": 909,
+        "blob": "70c7bdfb85ea427f0e6ff8df99955a29648ce642",
+        "sha256": "997daf83ca9219c648df14c2d50252aa75c3994f435e7a74575db2bc6933a25d"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/candidate/vendor/provider-migration/host-logs-thinking-9423f600/README.md",
+      "source": "exact incoming",
+      "lines": 7
+    },
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-implementations-0.0.0.tgz",
+      "before": null,
+      "incoming": {
+        "bytes": 185996,
+        "blob": "7130609dd29851148c9e2106e2764b75982739b1",
+        "sha256": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267"
+      },
+      "selected": {
+        "bytes": 185996,
+        "blob": "7130609dd29851148c9e2106e2764b75982739b1",
+        "sha256": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/candidate/vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-implementations-0.0.0.tgz",
+      "source": "exact incoming",
+      "patchRepresentation": "Binary archive copied byte-exact; authoritative identities and checked provenance retained separately."
+    },
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz",
+      "before": null,
+      "incoming": {
+        "bytes": 6230,
+        "blob": "33c2944ff8a52a9c087fba9d3cab1daffe2604d8",
+        "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc"
+      },
+      "selected": {
+        "bytes": 6230,
+        "blob": "33c2944ff8a52a9c087fba9d3cab1daffe2604d8",
+        "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/candidate/vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz",
+      "source": "exact incoming",
+      "patchRepresentation": "Binary archive copied byte-exact; authoritative identities and checked provenance retained separately."
+    },
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-9423f600/checked-artifact-receipt.json",
+      "before": null,
+      "incoming": {
+        "bytes": 597,
+        "blob": "7fe2a65c8281598cc20dbd4f59d445ce18faab40",
+        "sha256": "3105c0ea7166596390aa38ac3866661aeff98673803f986a2301a28f3232f375"
+      },
+      "selected": {
+        "bytes": 597,
+        "blob": "7fe2a65c8281598cc20dbd4f59d445ce18faab40",
+        "sha256": "3105c0ea7166596390aa38ac3866661aeff98673803f986a2301a28f3232f375"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/candidate/vendor/provider-migration/host-logs-thinking-9423f600/checked-artifact-receipt.json",
+      "source": "exact incoming",
+      "lines": 19
+    },
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-9423f600/source-receipt.json",
+      "before": null,
+      "incoming": {
+        "bytes": 2472,
+        "blob": "c8eddea34318da263326df30169b53b8e1f9d07c",
+        "sha256": "877083696f8a2812e49069dd056b84b1a595e16d3c7e93ce16ff814be759081a"
+      },
+      "selected": {
+        "bytes": 2472,
+        "blob": "c8eddea34318da263326df30169b53b8e1f9d07c",
+        "sha256": "877083696f8a2812e49069dd056b84b1a595e16d3c7e93ce16ff814be759081a"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/candidate/vendor/provider-migration/host-logs-thinking-9423f600/source-receipt.json",
+      "source": "exact incoming",
+      "lines": 61
+    }
+  ],
+  "sourceCount": 30,
+  "exactIncomingCount": 26,
+  "composedPaths": [
+    "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+    "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+    "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+    "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts"
+  ],
+  "actualParentCollisions": [
+    "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+    "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+    "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts"
+  ],
+  "newSourceFiles": 6,
+  "unchangedPriorLeaves": 9913,
+  "sourceOnlyProjection": {
+    "tree": "6d18e878f0ad0ed38b3a9f01ba3db5de2c8f4a8f",
+    "leaves": 9943,
+    "excludesFutureDocumentation": true
+  },
+  "patch": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/source.patch",
+    "bytes": 89885,
+    "blob": "bd842192a0b0aa9c7d73d9568bd46c5ebaed071f",
+    "sha256": "acf698c2c5c4d40bbcf551ec5ed6a37a824dbd76500759727cc2d72850ff5cc4"
+  },
+  "binaryArchivePaths": [
+    "vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-implementations-0.0.0.tgz",
+    "vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz"
+  ],
+  "changedGuardedSourceBounds": [
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "lines": 164
+    },
+    {
+      "path": "packages/legacy-agent-host/src/diagnostics/redactDiagnosticAssignments.ts",
+      "lines": 134
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/normalizeActivity.ts",
+      "lines": 161
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-activity-ui-smoke.ts",
+      "lines": 446
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "lines": 732
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "lines": 320
+    },
+    {
+      "path": "src/renderer/components/team/members/HostMemberActivityLog.tsx",
+      "lines": 370
+    },
+    {
+      "path": "src/renderer/components/team/members/MemberLogsTab.tsx",
+      "lines": 755
+    },
+    {
+      "path": "src/shared/utils/redactDiagnosticAssignments.ts",
+      "lines": 1
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "lines": 458
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+      "lines": 562
+    },
+    {
+      "path": "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+      "lines": 325
+    }
+  ],
+  "incomingDocuments": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "base": {
+        "bytes": 738253,
+        "blob": "411f9e7943bd9323006ea67ef470624b873419c9",
+        "sha256": "dd4ddc2afce399a3e9b49553ae0886fc87808e11a89268986df44583f99d2193"
+      },
+      "incoming": {
+        "bytes": 739731,
+        "blob": "8361210618ffe71d4a1fc8785d717d318563e274",
+        "sha256": "8d2fb01a02b4de9996e50cb2e1411c89a3a6559f03c383753cfa8fbcbf932042"
+      },
+      "exactAppendixBytes": 1478
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/32-host-log-view-parity-2026-11-15.md",
+      "base": {
+        "bytes": 19629,
+        "blob": "52227dc108a65347aa5dea7995d0ee6e3f3fbc45",
+        "sha256": "0d73881d457e53587d139129987b8ab24327509c9bc6f46e071400b363c793aa"
+      },
+      "incoming": {
+        "bytes": 36690,
+        "blob": "2305bbd7b340418f82b39e5bdb28f302735f7237",
+        "sha256": "4ed58ea26bab62673809a5c123a85492355671b58803b273a7d9757fa83d59b1"
+      },
+      "exactAppendixBytes": 17061
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/33-member-stderr-log-parity-2026-11-15.md",
+      "base": {
+        "bytes": 14790,
+        "blob": "5fbc886bdd2f4fe9c2914844b94bbd16f3224075",
+        "sha256": "7abcc59e586b8534f612f6edd90cd3e3db3b0a039403801db638fec5330b65f4"
+      },
+      "incoming": {
+        "bytes": 26918,
+        "blob": "f5176d68c3e9fa81472d0a81f0cb324a210a4854",
+        "sha256": "37b6f1e4e05970db1acd1cb8c1edbc0ba99e087bd48f96a80b712d99280efbb5"
+      },
+      "exactAppendixBytes": 12128
+    }
+  ],
+  "preservedHostWorkflow": {
+    "path": ".github/workflows/host-emulated-acceptance.yml",
+    "blob": "ae2e48f5dc013c8c2dd2ce6021dba2afd4ad66d5",
+    "sameTenFullTeamFilesAnd38OriginalLintOperands": true
+  },
+  "securityStage": {
+    "unfixedHelperBlob": "3b2b960722f878cf60ba94bae27176fb9e7d0bba",
+    "redTestBlob": "d1b52658270cc53a9e1ec345de55f840e7549011",
+    "laterReviewedGreenHelperBlob": "21aa3590f82939778a3fd657bbafa2d64c23d923",
+    "expectedFullFileCases": 23,
+    "expectedPass": 20,
+    "expectedSemanticFailures": 3,
+    "predictionsOnly": true,
+    "actualRedOrGreenExecuted": false
+  },
+  "executionVenue": "Original unchanged Host Emulated Acceptance workflow on exact resulting PR head; no local install/compiler/test or manual Actions operation authorized by this metadata.",
+  "unimplementedIncomingPlans": [
+    "71 management Thinking consumer R1",
+    "1f scheduled Thinking and stderr shared projection R1"
+  ],
+  "sourceApplied": false,
+  "projectExecution": false,
+  "createdUtc": "2026-11-15T23:32:40.182930+00:00"
+}

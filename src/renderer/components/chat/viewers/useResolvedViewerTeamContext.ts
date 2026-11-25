@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { useTaskDetailFileLink } from '@features/team-task-detail/renderer';
+import { useTaskDetailFileLink } from '@features/team-task-detail/renderer/shell';
 import { useStore } from '@renderer/store';
 import { useShallow } from 'zustand/react/shallow';
 

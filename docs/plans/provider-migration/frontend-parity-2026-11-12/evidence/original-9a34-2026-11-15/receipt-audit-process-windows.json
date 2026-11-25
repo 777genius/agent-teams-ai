@@ -1,0 +1,1673 @@
+{
+  "kind": "ORIGINAL_9A34_WINDOWS_PROCESS_FAILURE_AUDIT",
+  "sourceHead": "9a34bb28de0a0deee2eecc42099fd9500563eb1b",
+  "reports": [
+    {
+      "sourceHead": "9a34bb28de0a0deee2eecc42099fd9500563eb1b",
+      "runId": 43751070810,
+      "attempt": 1,
+      "jobId": 132924970626,
+      "failedStep": {
+        "number": 21,
+        "provider": "opencode",
+        "name": "Qualify original opencode source A B with TEST peer"
+      },
+      "archive": {
+        "id": 14176507630,
+        "file": "9a34-process-win-x64.zip",
+        "source": "9a34bb28de0a0deee2eecc42099fd9500563eb1b",
+        "run": 43751070810,
+        "bytes": 53840,
+        "sha256": "c0af0132336804cbc0f2b6e68561a7bed394a9ff1ee67bf075139fc087480736",
+        "directory": "/workspace/scratch/82d3f9ba6b85/native-audit-9a34/process_win_x64",
+        "zipPath": "/workspace/scratch/82d3f9ba6b85/native-audit-9a34/9a34-process-win-x64.zip",
+        "crcVerified": true,
+        "uniqueSafePaths": true,
+        "symlinks": false
+      },
+      "jobLog": {
+        "path": "/workspace/scratch/82d3f9ba6b85/native-audit-9a34/job-132924970626.log",
+        "bytes": 374179,
+        "sha256": "b1c0fcedb7a040375f07d80fe83bfe6366863ff3d2584b3f39add8ffb40d3967"
+      },
+      "receipt": {
+        "path": "/workspace/scratch/82d3f9ba6b85/native-audit-9a34/process_win_x64/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-opencode-receipt.json",
+        "bytes": 16676,
+        "sha256": "ff4f24b272b59d65e40fef5a4575eb032d5ce29377c156dbd36498a7e11c76be"
+      },
+      "providerLog": {
+        "path": "/workspace/scratch/82d3f9ba6b85/native-audit-9a34/process_win_x64/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-opencode.log",
+        "bytes": 8685,
+        "sha256": "ef2c89070ae085db7405b5545871a0287a6d0d4fb46f72389cdbe71fa4ff9c3f"
+      },
+      "sourceHeadFile": "9a34bb28de0a0deee2eecc42099fd9500563eb1b",
+      "nodeVersion": "v24.21.0",
+      "status": "INCOMPLETE",
+      "stage": "Team-A",
+      "failure": {
+        "code": "ERR_ASSERTION",
+        "message": "Original source Team readiness",
+        "actual": false,
+        "expected": true,
+        "stack": [
+          "nativeEmulatedSourceScenario.ts:61:12",
+          "nativeEmulatedSourceScenario.ts:442:9",
+          "nativeEmulatedSourceScenario.ts:497:36",
+          "nativeEmulatedProviderGate.ts:208:7",
+          "nativeEmulatedProviderGate.ts:231:85"
+        ]
+      },
+      "lastLaunchReadiness": {
+        "source": {
+          "sourceId": "3752f73316c031d081fefd65fbc49f166bcd8fc865b6521140f910950aa68fce",
+          "revision": "44d106102555ab104586c37f07286fa6f212e68410508a8a0d2e4c139ba4402d"
+        },
+        "image": "A",
+        "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+        "readCount": 68,
+        "elapsedMs": 14987.6806,
+        "lastRuntimeRead": {
+          "viewDigest": "2482152c872f99c40989051f1a3c09249dc8fb28fead0023e4d6a8c9bf5e39e2",
+          "memberId": "alice-id",
+          "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+          "phase": "held",
+          "sealed": false,
+          "custody": "unknown",
+          "nativeReady": false,
+          "attached": false,
+          "diagnostic": "open-unknown"
+        }
+      },
+      "runtimeProjection": {
+        "status": "observed",
+        "atomicWithFailure": false,
+        "viewDigest": "2482152c872f99c40989051f1a3c09249dc8fb28fead0023e4d6a8c9bf5e39e2",
+        "bindingMatches": true,
+        "recordReady": false,
+        "providerReady": null,
+        "ownerCurrent": null,
+        "nativeReady": false
+      },
+      "firstRefusal": {
+        "status": "observed",
+        "observations": [
+          {
+            "kind": "reference",
+            "commandDigest": "1cef2874b87d618ebb81b1d94f84abde74b65f984cd8f9b871848f29dcbfa39f",
+            "contextDigest": "c110111faeac64ee9d7e070f2d985726cb136258ddd69a9daf1704861887dd4f",
+            "phase": "probe-expiry",
+            "reason": "held",
+            "probeCutoff": 1794770284431,
+            "probeNow": 1794770284567,
+            "scopeCutoff": null,
+            "scopeNow": null,
+            "preparationCutoff": null,
+            "preparationNow": null,
+            "ordinal": 1,
+            "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+            "source": {
+              "sourceId": "3752f73316c031d081fefd65fbc49f166bcd8fc865b6521140f910950aa68fce",
+              "revision": "44d106102555ab104586c37f07286fa6f212e68410508a8a0d2e4c139ba4402d"
+            }
+          },
+          {
+            "kind": "consumer",
+            "actionDigest": "0999f35342307166abf6addfd3031950d31858d19f9b349ce1a23447a7d9253d",
+            "groupDigest": "2f398c35364b760fc625f2c96e5b0d78dc925b72b9ebe05d5d0a2d7e6f5c93d7",
+            "bindingDigest": "045d4e576e5b462456523bc8ddf253e4b1802b666aa1aee3f924bd88f203aa60",
+            "consumerId": "b12a61ff0995d92e6ea67977066bd2d6012afd9812264f6519bd80907ae80cce",
+            "phase": "reference",
+            "reason": "threw",
+            "cutoff": 1794770284431,
+            "observedAt": 1794770284216,
+            "ordinal": 2,
+            "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+            "source": {
+              "sourceId": "3752f73316c031d081fefd65fbc49f166bcd8fc865b6521140f910950aa68fce",
+              "revision": "44d106102555ab104586c37f07286fa6f212e68410508a8a0d2e4c139ba4402d"
+            }
+          }
+        ]
+      },
+      "epoch": {
+        "mainEpoch": "cfc9160d-789e-4153-bef6-1c2bce31c5f3",
+        "pending": {
+          "admitted": 1,
+          "revoked": 1
+        },
+        "serviceOperations": 0,
+        "firstCloseEntryMs": 20578.344800000003,
+        "jobs": [
+          {
+            "capability": "0876adeb-1e76-4ac4-8585-8ef077fd7efe",
+            "stagingTimings": {
+              "launch-chunk": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.09589999999980137,
+                "firstStartMs": 1448.3767,
+                "lastEndMs": 1448.4725999999998
+              },
+              "launch-commit": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.36169999999992797,
+                "firstStartMs": 1450.5948,
+                "lastEndMs": 1450.9565
+              }
+            },
+            "origin": null,
+            "root": {
+              "pid": 4176,
+              "birth": "01dd753600674f12"
+            },
+            "resumed": true,
+            "stopped": true,
+            "drained": true,
+            "released": true,
+            "originalHandleAbsent": true,
+            "entryStart": 0,
+            "entryEnd": 1,
+            "threadEphemeral": []
+          },
+          {
+            "capability": "7038d20e-33ee-48d8-a5a8-b245f922d872",
+            "stagingTimings": {
+              "launch-chunk": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.06739999999990687,
+                "firstStartMs": 3078.1054000000004,
+                "lastEndMs": 3078.1728000000003
+              },
+              "launch-commit": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.19640000000072177,
+                "firstStartMs": 3079.4698,
+                "lastEndMs": 3079.6662000000006
+              }
+            },
+            "origin": {
+              "sourceId": "3752f73316c031d081fefd65fbc49f166bcd8fc865b6521140f910950aa68fce",
+              "revision": "44d106102555ab104586c37f07286fa6f212e68410508a8a0d2e4c139ba4402d",
+              "origin": {
+                "kind": "runtime",
+                "scope": {
+                  "teamId": "TEST-source-team-A",
+                  "projectId": "TEST-project",
+                  "workspaceId": "TEST-workspace"
+                },
+                "projectPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg7163.tmp\\TEST-desktop-backend-opencode748eedacc4074b0eb5c72d323a8c76e2\\workspace",
+                "teamId": "TEST-source-team-A",
+                "memberId": "alice-id",
+                "recipeIdentity": "4e9229a77b3df82ee245954e613666e0258500f77ef1db7fcfebd7e9c23595d7"
+              }
+            },
+            "root": {
+              "pid": 1960,
+              "birth": "01dd75360165522e"
+            },
+            "resumed": true,
+            "stopped": true,
+            "drained": true,
+            "released": true,
+            "originalHandleAbsent": true,
+            "entryStart": 1,
+            "entryEnd": 2,
+            "threadEphemeral": []
+          },
+          {
+            "capability": "f84d36ac-ee32-4cbc-b0de-9729a162a271",
+            "stagingTimings": {
+              "launch-chunk": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.07400000000052387,
+                "firstStartMs": 10351.677099999999,
+                "lastEndMs": 10351.7511
+              },
+              "launch-commit": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.25749999999970896,
+                "firstStartMs": 11204.5136,
+                "lastEndMs": 11204.7711
+              }
+            },
+            "origin": {
+              "sourceId": "3752f73316c031d081fefd65fbc49f166bcd8fc865b6521140f910950aa68fce",
+              "revision": "44d106102555ab104586c37f07286fa6f212e68410508a8a0d2e4c139ba4402d",
+              "origin": {
+                "kind": "runtime",
+                "scope": {
+                  "teamId": "TEST-source-team-A",
+                  "projectId": "TEST-project",
+                  "workspaceId": "TEST-workspace"
+                },
+                "projectPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg7163.tmp\\TEST-desktop-backend-opencode748eedacc4074b0eb5c72d323a8c76e2\\workspace",
+                "teamId": "TEST-source-team-A",
+                "memberId": "alice-id",
+                "recipeIdentity": "4e9229a77b3df82ee245954e613666e0258500f77ef1db7fcfebd7e9c23595d7"
+              }
+            },
+            "root": {
+              "pid": 5532,
+              "birth": "01dd753606fd73f2"
+            },
+            "resumed": true,
+            "stopped": true,
+            "drained": true,
+            "released": true,
+            "originalHandleAbsent": true,
+            "entryStart": 2,
+            "entryEnd": 3,
+            "threadEphemeral": []
+          }
+        ]
+      },
+      "originalCleanupEvents": [
+        {
+          "kind": "TEST_SOURCE_CLEANUP",
+          "provider": "opencode",
+          "mainEpoch": "cfc9160d-789e-4153-bef6-1c2bce31c5f3",
+          "jobSlot": 0,
+          "source": null,
+          "rootCaptured": true,
+          "witnessCaptured": true,
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": true,
+          "custodyTimings": {
+            "allocate": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.7561000000000604,
+              "firstStartMs": 1443.6290999999999,
+              "lastEndMs": 1444.3852
+            },
+            "prepare": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 28.853100000000268,
+              "firstStartMs": 1453.0945,
+              "lastEndMs": 1481.9476000000002
+            },
+            "resume": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 9.01299999999992,
+              "firstStartMs": 1504.8561000000002,
+              "lastEndMs": 1513.8691000000001
+            },
+            "stop": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 1.1539999999999964,
+              "firstStartMs": 1789.7751999999998,
+              "lastEndMs": 1790.9291999999998
+            },
+            "drain": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.26549999999997453,
+              "firstStartMs": 1793.8201000000001,
+              "lastEndMs": 1794.0856
+            },
+            "release": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 2.2825000000002547,
+              "firstStartMs": 1795.4832,
+              "lastEndMs": 1797.7657000000002
+            }
+          },
+          "stagingTimings": {
+            "launch-chunk": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.09589999999980137,
+              "firstStartMs": 1448.3767,
+              "lastEndMs": 1448.4725999999998
+            },
+            "launch-commit": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.36169999999992797,
+              "firstStartMs": 1450.5948,
+              "lastEndMs": 1450.9565
+            }
+          },
+          "firstCloseEntryMs": 20578.344800000003
+        },
+        {
+          "kind": "TEST_SOURCE_CLEANUP",
+          "provider": "opencode",
+          "mainEpoch": "cfc9160d-789e-4153-bef6-1c2bce31c5f3",
+          "jobSlot": 1,
+          "source": {
+            "sourceId": "3752f73316c031d081fefd65fbc49f166bcd8fc865b6521140f910950aa68fce",
+            "revision": "44d106102555ab104586c37f07286fa6f212e68410508a8a0d2e4c139ba4402d"
+          },
+          "rootCaptured": true,
+          "witnessCaptured": true,
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": false,
+          "custodyTimings": {
+            "allocate": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.20850000000064028,
+              "firstStartMs": 3074.5638,
+              "lastEndMs": 3074.7723000000005
+            },
+            "prepare": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 65.24609999999939,
+              "firstStartMs": 3080.8847000000005,
+              "lastEndMs": 3146.1308
+            },
+            "resume": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 29.806799999999384,
+              "firstStartMs": 3170.4068000000007,
+              "lastEndMs": 3200.2136
+            },
+            "stop": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 11.672700000000077,
+              "firstStartMs": 4198.8063,
+              "lastEndMs": 4210.479
+            },
+            "drain": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.07260000000042055,
+              "firstStartMs": 4211.1669,
+              "lastEndMs": 4211.239500000001
+            },
+            "release": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 1.6598999999996522,
+              "firstStartMs": 4211.6131000000005,
+              "lastEndMs": 4213.273
+            }
+          },
+          "stagingTimings": {
+            "launch-chunk": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.06739999999990687,
+              "firstStartMs": 3078.1054000000004,
+              "lastEndMs": 3078.1728000000003
+            },
+            "launch-commit": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.19640000000072177,
+              "firstStartMs": 3079.4698,
+              "lastEndMs": 3079.6662000000006
+            }
+          },
+          "firstCloseEntryMs": 20578.344800000003
+        },
+        {
+          "kind": "TEST_SOURCE_CLEANUP",
+          "provider": "opencode",
+          "mainEpoch": "cfc9160d-789e-4153-bef6-1c2bce31c5f3",
+          "jobSlot": 2,
+          "source": {
+            "sourceId": "3752f73316c031d081fefd65fbc49f166bcd8fc865b6521140f910950aa68fce",
+            "revision": "44d106102555ab104586c37f07286fa6f212e68410508a8a0d2e4c139ba4402d"
+          },
+          "rootCaptured": true,
+          "witnessCaptured": true,
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": false,
+          "custodyTimings": {
+            "allocate": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.29280000000107975,
+              "firstStartMs": 9468.420699999999,
+              "lastEndMs": 9468.7135
+            },
+            "prepare": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 53.40359999999964,
+              "firstStartMs": 12478.4304,
+              "lastEndMs": 12531.833999999999
+            },
+            "resume": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 31.334200000001147,
+              "firstStartMs": 16026.372699999998,
+              "lastEndMs": 16057.7069
+            },
+            "stop": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 18.2000999999982,
+              "firstStartMs": 17409.8074,
+              "lastEndMs": 17428.0075
+            },
+            "drain": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.08429999999862048,
+              "firstStartMs": 17430.855900000002,
+              "lastEndMs": 17430.9402
+            },
+            "release": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 1.782100000000355,
+              "firstStartMs": 17431.4923,
+              "lastEndMs": 17433.274400000002
+            }
+          },
+          "stagingTimings": {
+            "launch-chunk": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.07400000000052387,
+              "firstStartMs": 10351.677099999999,
+              "lastEndMs": 10351.7511
+            },
+            "launch-commit": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.25749999999970896,
+              "firstStartMs": 11204.5136,
+              "lastEndMs": 11204.7711
+            }
+          },
+          "firstCloseEntryMs": 20578.344800000003
+        }
+      ],
+      "cleanup": {
+        "scenario": true,
+        "topLevelSentinel": true,
+        "allFinalJobFieldsTrue": true,
+        "originalController": {
+          "gateController": "drained",
+          "rootExitCode": 1,
+          "activeProcesses": 0
+        },
+        "controllerExit": {
+          "kind": "TEST_SOURCE_CONTROLLER_EXIT",
+          "provider": "opencode",
+          "exitCode": 104
+        }
+      },
+      "pinAudit": {
+        "path": "/workspace/scratch/82d3f9ba6b85/native-audit-9a34/source-pins-process_win_x64.json",
+        "sourceCount": 13,
+        "sourceRawGitMatches": 0,
+        "sourceCRLFMatches": 13,
+        "recordedBuiltOutputCount": 6,
+        "binaryPayloadsArchived": false
+      },
+      "originalPrerequisites": [
+        {
+          "framework": "node:test",
+          "cases": 163,
+          "pass": 160,
+          "fail": 0,
+          "skip": 3,
+          "cancelled": 0
+        },
+        {
+          "framework": "vitest",
+          "files": 3,
+          "pass": 53
+        },
+        {
+          "framework": "vitest",
+          "files": 8,
+          "pass": 78
+        }
+      ],
+      "limits": [
+        "finite TEST peer only; realProviderExecuted/desktopQualified/releaseQualified false",
+        "original A readiness failed; later B/standalone/cold/negative source stages not qualified by this failed scenario",
+        "runtimeProjection is non-atomic with failure; providerReady and ownerCurrent null mean not observed",
+        "intermediate originalHandleAbsent false is before original witness wait; final receipt separately records true",
+        "controller104 accompanies drained/rootExit1/active0, not emergency-fail",
+        "source hashes match explicit Windows CRLF transform of selected13Git leaves; built and generated payloads absent",
+        "no P08 or P09/resulting-source transfer, no causal performance conclusion, no rerun by auditor"
+      ]
+    },
+    {
+      "sourceHead": "9a34bb28de0a0deee2eecc42099fd9500563eb1b",
+      "runId": 43751070810,
+      "attempt": 1,
+      "jobId": 132924970687,
+      "failedStep": {
+        "number": 19,
+        "provider": "codex",
+        "name": "Qualify original codex source A B with TEST peer"
+      },
+      "archive": {
+        "id": 14176543927,
+        "file": "9a34-process-win-arm64.zip",
+        "source": "9a34bb28de0a0deee2eecc42099fd9500563eb1b",
+        "run": 43751070810,
+        "bytes": 32083,
+        "sha256": "4c24b40810fb48bdbc3dbc7f05ec347b6e618b5354fe4e8ffd21007183b320da",
+        "directory": "/workspace/scratch/82d3f9ba6b85/native-audit-9a34/process_win_arm",
+        "zipPath": "/workspace/scratch/82d3f9ba6b85/native-audit-9a34/9a34-process-win-arm64.zip",
+        "crcVerified": true,
+        "uniqueSafePaths": true,
+        "symlinks": false
+      },
+      "jobLog": {
+        "path": "/workspace/scratch/82d3f9ba6b85/native-audit-9a34/job-132924970687.log",
+        "bytes": 335696,
+        "sha256": "6ecbecbfc811e0578e88480fe860d3fc7a63b3a29c6bed7d726178aaee98a6a4"
+      },
+      "receipt": {
+        "path": "/workspace/scratch/82d3f9ba6b85/native-audit-9a34/process_win_arm/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-codex-receipt.json",
+        "bytes": 22370,
+        "sha256": "08f73a0c853502803b5ec53b13e8217f3e7f4c632f2f519b9ed535d2eeb48af9"
+      },
+      "providerLog": {
+        "path": "/workspace/scratch/82d3f9ba6b85/native-audit-9a34/process_win_arm/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-codex.log",
+        "bytes": 15035,
+        "sha256": "9c0ece82c5b61122fcab2e11d212068de3470231c3c85a2537398e323eedbcc7"
+      },
+      "sourceHeadFile": "9a34bb28de0a0deee2eecc42099fd9500563eb1b",
+      "nodeVersion": "v24.21.0",
+      "status": "INCOMPLETE",
+      "stage": "Team-A",
+      "failure": {
+        "code": "ERR_ASSERTION",
+        "message": "Original source Team readiness",
+        "actual": false,
+        "expected": true,
+        "stack": [
+          "nativeEmulatedSourceScenario.ts:61:12",
+          "nativeEmulatedSourceScenario.ts:442:9",
+          "nativeEmulatedSourceScenario.ts:497:36",
+          "nativeEmulatedProviderGate.ts:208:7",
+          "nativeEmulatedProviderGate.ts:231:85"
+        ]
+      },
+      "lastLaunchReadiness": {
+        "source": {
+          "sourceId": "bbc57a708062e1e134f58bfcead9a4ef650992fbf85814cca12d31af1e4698ec",
+          "revision": "9642cc7819e599488c8550072533a6ce3f5c6a2cb8e0c868988ec11e0dbc5c78"
+        },
+        "image": "A",
+        "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+        "readCount": 108,
+        "elapsedMs": 14980.300299999999,
+        "lastRuntimeRead": {
+          "viewDigest": "39f940b75a038e05c628b9d1142aab9a92bec4aa69e298f194bf35ca476ac495",
+          "memberId": "alice-id",
+          "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+          "phase": "allocated",
+          "sealed": false,
+          "custody": "owned",
+          "nativeReady": false,
+          "attached": true
+        }
+      },
+      "runtimeProjection": {
+        "status": "observed",
+        "atomicWithFailure": false,
+        "viewDigest": "39f940b75a038e05c628b9d1142aab9a92bec4aa69e298f194bf35ca476ac495",
+        "bindingMatches": true,
+        "recordReady": false,
+        "providerReady": null,
+        "ownerCurrent": null,
+        "nativeReady": false
+      },
+      "firstRefusal": {
+        "status": "unknown",
+        "reason": "empty"
+      },
+      "epoch": {
+        "mainEpoch": "3c950c19-38c2-4b20-b648-8915a45cf8f1",
+        "pending": {
+          "admitted": 1,
+          "revoked": 1
+        },
+        "serviceOperations": 0,
+        "firstCloseEntryMs": 24575.553200000002,
+        "jobs": [
+          {
+            "capability": "d9ee6385-6966-40ef-bee3-b3ff6f599dd6",
+            "stagingTimings": {
+              "launch-chunk": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.16119999999955326,
+                "firstStartMs": 3436.1449000000002,
+                "lastEndMs": 3436.3061
+              },
+              "launch-commit": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.5091999999995096,
+                "firstStartMs": 3439.2744000000002,
+                "lastEndMs": 3439.7835999999998
+              }
+            },
+            "origin": null,
+            "root": {
+              "pid": 7748,
+              "birth": "01dd753704d1e4a0"
+            },
+            "resumed": true,
+            "stopped": true,
+            "drained": true,
+            "released": true,
+            "originalHandleAbsent": true,
+            "entryStart": 0,
+            "entryEnd": 1,
+            "threadEphemeral": []
+          },
+          {
+            "capability": "a44bf1c6-681d-4008-8e1c-907a22e3b269",
+            "stagingTimings": {
+              "launch-chunk": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.09239999999954307,
+                "firstStartMs": 6458.4616000000005,
+                "lastEndMs": 6458.554
+              },
+              "launch-commit": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.4819999999999709,
+                "firstStartMs": 6558.115900000001,
+                "lastEndMs": 6558.597900000001
+              }
+            },
+            "origin": {
+              "sourceId": "bbc57a708062e1e134f58bfcead9a4ef650992fbf85814cca12d31af1e4698ec",
+              "revision": "9642cc7819e599488c8550072533a6ce3f5c6a2cb8e0c868988ec11e0dbc5c78",
+              "origin": {
+                "kind": "runtime",
+                "scope": {
+                  "teamId": "TEST-source-team-A",
+                  "projectId": "TEST-project",
+                  "workspaceId": "TEST-workspace"
+                },
+                "projectPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgDAFF.tmp\\TEST-desktop-backend-codex971b434f3b1c493e946a2743c226deb7\\workspace",
+                "teamId": "TEST-source-team-A",
+                "memberId": "alice-id",
+                "recipeIdentity": "29ad42998d3023003e1be15b8a1e78f4d31e4323ef2413ace3c53f51aa21b1c8"
+              }
+            },
+            "root": {
+              "pid": 3992,
+              "birth": "01dd753706e9ff81"
+            },
+            "resumed": true,
+            "stopped": true,
+            "drained": true,
+            "released": true,
+            "originalHandleAbsent": true,
+            "entryStart": 1,
+            "entryEnd": 2,
+            "threadEphemeral": []
+          },
+          {
+            "capability": "36100f68-20b3-45bf-82de-6331cdadab85",
+            "stagingTimings": {
+              "launch-chunk": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.07589999999981956,
+                "firstStartMs": 10847.5061,
+                "lastEndMs": 10847.582
+              },
+              "launch-commit": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.2374999999992724,
+                "firstStartMs": 10864.3207,
+                "lastEndMs": 10864.5582
+              }
+            },
+            "origin": {
+              "sourceId": "bbc57a708062e1e134f58bfcead9a4ef650992fbf85814cca12d31af1e4698ec",
+              "revision": "9642cc7819e599488c8550072533a6ce3f5c6a2cb8e0c868988ec11e0dbc5c78",
+              "origin": {
+                "kind": "runtime",
+                "scope": {
+                  "teamId": "TEST-source-team-A",
+                  "projectId": "TEST-project",
+                  "workspaceId": "TEST-workspace"
+                },
+                "projectPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgDAFF.tmp\\TEST-desktop-backend-codex971b434f3b1c493e946a2743c226deb7\\workspace",
+                "teamId": "TEST-source-team-A",
+                "memberId": "alice-id",
+                "recipeIdentity": "29ad42998d3023003e1be15b8a1e78f4d31e4323ef2413ace3c53f51aa21b1c8"
+              }
+            },
+            "root": {
+              "pid": 8272,
+              "birth": "01dd753709479bf5"
+            },
+            "resumed": true,
+            "stopped": true,
+            "drained": true,
+            "released": true,
+            "originalHandleAbsent": true,
+            "entryStart": 2,
+            "entryEnd": 3,
+            "threadEphemeral": []
+          },
+          {
+            "capability": "5dd91dfe-5cc5-475c-bd48-1baa42c16113",
+            "stagingTimings": {
+              "launch-chunk": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.07949999999982538,
+                "firstStartMs": 13424.593900000002,
+                "lastEndMs": 13424.673400000001
+              },
+              "launch-commit": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.3275999999968917,
+                "firstStartMs": 13534.369100000002,
+                "lastEndMs": 13534.696699999999
+              }
+            },
+            "origin": {
+              "sourceId": "bbc57a708062e1e134f58bfcead9a4ef650992fbf85814cca12d31af1e4698ec",
+              "revision": "9642cc7819e599488c8550072533a6ce3f5c6a2cb8e0c868988ec11e0dbc5c78",
+              "origin": {
+                "kind": "runtime",
+                "scope": {
+                  "teamId": "TEST-source-team-A",
+                  "projectId": "TEST-project",
+                  "workspaceId": "TEST-workspace"
+                },
+                "projectPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgDAFF.tmp\\TEST-desktop-backend-codex971b434f3b1c493e946a2743c226deb7\\workspace",
+                "teamId": "TEST-source-team-A",
+                "memberId": "alice-id",
+                "recipeIdentity": "29ad42998d3023003e1be15b8a1e78f4d31e4323ef2413ace3c53f51aa21b1c8"
+              }
+            },
+            "root": {
+              "pid": 6020,
+              "birth": "01dd75370aebfd5c"
+            },
+            "resumed": true,
+            "stopped": true,
+            "drained": true,
+            "released": true,
+            "originalHandleAbsent": true,
+            "entryStart": 3,
+            "entryEnd": 7,
+            "threadEphemeral": [
+              false
+            ]
+          },
+          {
+            "capability": "d7067c5c-a6cd-4a84-87f9-8ce4719adfe5",
+            "stagingTimings": {
+              "launch-chunk": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.06650000000081491,
+                "firstStartMs": 16534.560400000002,
+                "lastEndMs": 16534.626900000003
+              },
+              "launch-commit": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.5482999999985623,
+                "firstStartMs": 16552.8085,
+                "lastEndMs": 16553.3568
+              }
+            },
+            "origin": {
+              "sourceId": "bbc57a708062e1e134f58bfcead9a4ef650992fbf85814cca12d31af1e4698ec",
+              "revision": "9642cc7819e599488c8550072533a6ce3f5c6a2cb8e0c868988ec11e0dbc5c78",
+              "origin": {
+                "kind": "runtime",
+                "scope": {
+                  "teamId": "TEST-source-team-A",
+                  "projectId": "TEST-project",
+                  "workspaceId": "TEST-workspace"
+                },
+                "projectPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgDAFF.tmp\\TEST-desktop-backend-codex971b434f3b1c493e946a2743c226deb7\\workspace",
+                "teamId": "TEST-source-team-A",
+                "memberId": "alice-id",
+                "recipeIdentity": "29ad42998d3023003e1be15b8a1e78f4d31e4323ef2413ace3c53f51aa21b1c8"
+              }
+            },
+            "root": {
+              "pid": 4484,
+              "birth": "01dd75370ca9824e"
+            },
+            "resumed": true,
+            "stopped": true,
+            "drained": true,
+            "released": true,
+            "originalHandleAbsent": true,
+            "entryStart": 4,
+            "entryEnd": 5,
+            "threadEphemeral": []
+          },
+          {
+            "capability": "8126f468-ea0d-48ff-afa6-5a57f20582c1",
+            "stagingTimings": {
+              "launch-chunk": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.0753999999978987,
+                "firstStartMs": 20173.1564,
+                "lastEndMs": 20173.2318
+              },
+              "launch-commit": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.26270000000295113,
+                "firstStartMs": 20190.909399999997,
+                "lastEndMs": 20191.172100000003
+              }
+            },
+            "origin": {
+              "sourceId": "bbc57a708062e1e134f58bfcead9a4ef650992fbf85814cca12d31af1e4698ec",
+              "revision": "9642cc7819e599488c8550072533a6ce3f5c6a2cb8e0c868988ec11e0dbc5c78",
+              "origin": {
+                "kind": "runtime",
+                "scope": {
+                  "teamId": "TEST-source-team-A",
+                  "projectId": "TEST-project",
+                  "workspaceId": "TEST-workspace"
+                },
+                "projectPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgDAFF.tmp\\TEST-desktop-backend-codex971b434f3b1c493e946a2743c226deb7\\workspace",
+                "teamId": "TEST-source-team-A",
+                "memberId": "alice-id",
+                "recipeIdentity": "29ad42998d3023003e1be15b8a1e78f4d31e4323ef2413ace3c53f51aa21b1c8"
+              }
+            },
+            "root": {
+              "pid": 9752,
+              "birth": "01dd75370ed10996"
+            },
+            "resumed": true,
+            "stopped": true,
+            "drained": true,
+            "released": true,
+            "originalHandleAbsent": true,
+            "entryStart": 5,
+            "entryEnd": 6,
+            "threadEphemeral": []
+          },
+          {
+            "capability": "a713ffdd-e903-47a4-bafe-44022c3263de",
+            "stagingTimings": {
+              "launch-chunk": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.07890000000043074,
+                "firstStartMs": 23248.8588,
+                "lastEndMs": 23248.937700000002
+              },
+              "launch-commit": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.44499999999970896,
+                "firstStartMs": 23266.6137,
+                "lastEndMs": 23267.0587
+              }
+            },
+            "origin": {
+              "sourceId": "bbc57a708062e1e134f58bfcead9a4ef650992fbf85814cca12d31af1e4698ec",
+              "revision": "9642cc7819e599488c8550072533a6ce3f5c6a2cb8e0c868988ec11e0dbc5c78",
+              "origin": {
+                "kind": "runtime",
+                "scope": {
+                  "teamId": "TEST-source-team-A",
+                  "projectId": "TEST-project",
+                  "workspaceId": "TEST-workspace"
+                },
+                "projectPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgDAFF.tmp\\TEST-desktop-backend-codex971b434f3b1c493e946a2743c226deb7\\workspace",
+                "teamId": "TEST-source-team-A",
+                "memberId": "alice-id",
+                "recipeIdentity": "29ad42998d3023003e1be15b8a1e78f4d31e4323ef2413ace3c53f51aa21b1c8"
+              }
+            },
+            "root": {
+              "pid": 9696,
+              "birth": "01dd753710a51700"
+            },
+            "resumed": true,
+            "stopped": true,
+            "drained": true,
+            "released": true,
+            "originalHandleAbsent": true,
+            "entryStart": 6,
+            "entryEnd": 7,
+            "threadEphemeral": []
+          }
+        ]
+      },
+      "originalCleanupEvents": [
+        {
+          "kind": "TEST_SOURCE_CLEANUP",
+          "provider": "codex",
+          "mainEpoch": "3c950c19-38c2-4b20-b648-8915a45cf8f1",
+          "jobSlot": 0,
+          "source": null,
+          "rootCaptured": true,
+          "witnessCaptured": true,
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": true,
+          "custodyTimings": {
+            "allocate": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 1.2664000000004307,
+              "firstStartMs": 3429.482,
+              "lastEndMs": 3430.7484000000004
+            },
+            "prepare": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 341.7550000000001,
+              "firstStartMs": 3442.5076,
+              "lastEndMs": 3784.2626
+            },
+            "resume": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 275.35939999999937,
+              "firstStartMs": 4058.0768000000007,
+              "lastEndMs": 4333.4362
+            },
+            "stop": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 1.3919999999998254,
+              "firstStartMs": 4729.9925,
+              "lastEndMs": 4731.3845
+            },
+            "drain": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.3474000000005617,
+              "firstStartMs": 4735.2973,
+              "lastEndMs": 4735.644700000001
+            },
+            "release": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 3.1953000000012253,
+              "firstStartMs": 4737.335999999999,
+              "lastEndMs": 4740.531300000001
+            }
+          },
+          "stagingTimings": {
+            "launch-chunk": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.16119999999955326,
+              "firstStartMs": 3436.1449000000002,
+              "lastEndMs": 3436.3061
+            },
+            "launch-commit": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.5091999999995096,
+              "firstStartMs": 3439.2744000000002,
+              "lastEndMs": 3439.7835999999998
+            }
+          },
+          "firstCloseEntryMs": 24575.553200000002
+        },
+        {
+          "kind": "TEST_SOURCE_CLEANUP",
+          "provider": "codex",
+          "mainEpoch": "3c950c19-38c2-4b20-b648-8915a45cf8f1",
+          "jobSlot": 1,
+          "source": {
+            "sourceId": "bbc57a708062e1e134f58bfcead9a4ef650992fbf85814cca12d31af1e4698ec",
+            "revision": "9642cc7819e599488c8550072533a6ce3f5c6a2cb8e0c868988ec11e0dbc5c78"
+          },
+          "rootCaptured": true,
+          "witnessCaptured": true,
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": false,
+          "custodyTimings": {
+            "allocate": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.5278999999991356,
+              "firstStartMs": 6359.4604,
+              "lastEndMs": 6359.988299999999
+            },
+            "prepare": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 594.6693999999989,
+              "firstStartMs": 6702.085300000001,
+              "lastEndMs": 7296.7546999999995
+            },
+            "resume": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 296.07760000000053,
+              "firstStartMs": 7968.1998,
+              "lastEndMs": 8264.2774
+            },
+            "stop": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.912399999999252,
+              "firstStartMs": 8864.9431,
+              "lastEndMs": 8865.8555
+            },
+            "drain": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.09280000000035216,
+              "firstStartMs": 8866.5862,
+              "lastEndMs": 8866.679
+            },
+            "release": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 2.3233000000000175,
+              "firstStartMs": 8867.1612,
+              "lastEndMs": 8869.4845
+            }
+          },
+          "stagingTimings": {
+            "launch-chunk": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.09239999999954307,
+              "firstStartMs": 6458.4616000000005,
+              "lastEndMs": 6458.554
+            },
+            "launch-commit": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.4819999999999709,
+              "firstStartMs": 6558.115900000001,
+              "lastEndMs": 6558.597900000001
+            }
+          },
+          "firstCloseEntryMs": 24575.553200000002
+        },
+        {
+          "kind": "TEST_SOURCE_CLEANUP",
+          "provider": "codex",
+          "mainEpoch": "3c950c19-38c2-4b20-b648-8915a45cf8f1",
+          "jobSlot": 2,
+          "source": {
+            "sourceId": "bbc57a708062e1e134f58bfcead9a4ef650992fbf85814cca12d31af1e4698ec",
+            "revision": "9642cc7819e599488c8550072533a6ce3f5c6a2cb8e0c868988ec11e0dbc5c78"
+          },
+          "rootCaptured": true,
+          "witnessCaptured": true,
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": false,
+          "custodyTimings": {
+            "allocate": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.27000000000043656,
+              "firstStartMs": 10795.2174,
+              "lastEndMs": 10795.4874
+            },
+            "prepare": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 342.66060000000107,
+              "firstStartMs": 10923.5315,
+              "lastEndMs": 11266.1921
+            },
+            "resume": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 306.17739999999867,
+              "firstStartMs": 11606.3824,
+              "lastEndMs": 11912.559799999999
+            },
+            "stop": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.7524999999986903,
+              "firstStartMs": 12405.0526,
+              "lastEndMs": 12405.8051
+            },
+            "drain": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.08539999999993597,
+              "firstStartMs": 12439.630299999999,
+              "lastEndMs": 12439.715699999999
+            },
+            "release": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 2.249599999999191,
+              "firstStartMs": 12440.3667,
+              "lastEndMs": 12442.6163
+            }
+          },
+          "stagingTimings": {
+            "launch-chunk": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.07589999999981956,
+              "firstStartMs": 10847.5061,
+              "lastEndMs": 10847.582
+            },
+            "launch-commit": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.2374999999992724,
+              "firstStartMs": 10864.3207,
+              "lastEndMs": 10864.5582
+            }
+          },
+          "firstCloseEntryMs": 24575.553200000002
+        },
+        {
+          "kind": "TEST_SOURCE_CLEANUP",
+          "provider": "codex",
+          "mainEpoch": "3c950c19-38c2-4b20-b648-8915a45cf8f1",
+          "jobSlot": 3,
+          "source": {
+            "sourceId": "bbc57a708062e1e134f58bfcead9a4ef650992fbf85814cca12d31af1e4698ec",
+            "revision": "9642cc7819e599488c8550072533a6ce3f5c6a2cb8e0c868988ec11e0dbc5c78"
+          },
+          "rootCaptured": true,
+          "witnessCaptured": true,
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": false,
+          "custodyTimings": {
+            "allocate": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.2743999999984226,
+              "firstStartMs": 13313.5748,
+              "lastEndMs": 13313.849199999999
+            },
+            "prepare": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 341.10069999999905,
+              "firstStartMs": 13681.3232,
+              "lastEndMs": 14022.4239
+            },
+            "resume": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 315.71879999999874,
+              "firstStartMs": 14631.4,
+              "lastEndMs": 14947.118799999998
+            },
+            "stop": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 14.28099999999904,
+              "firstStartMs": 24809.333400000003,
+              "lastEndMs": 24823.6144
+            },
+            "drain": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.06899999999950523,
+              "firstStartMs": 24838.353900000002,
+              "lastEndMs": 24838.422899999998
+            },
+            "release": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 2.4877999999989697,
+              "firstStartMs": 24838.9023,
+              "lastEndMs": 24841.390099999997
+            }
+          },
+          "stagingTimings": {
+            "launch-chunk": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.07949999999982538,
+              "firstStartMs": 13424.593900000002,
+              "lastEndMs": 13424.673400000001
+            },
+            "launch-commit": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.3275999999968917,
+              "firstStartMs": 13534.369100000002,
+              "lastEndMs": 13534.696699999999
+            }
+          },
+          "firstCloseEntryMs": 24575.553200000002
+        },
+        {
+          "kind": "TEST_SOURCE_CLEANUP",
+          "provider": "codex",
+          "mainEpoch": "3c950c19-38c2-4b20-b648-8915a45cf8f1",
+          "jobSlot": 4,
+          "source": {
+            "sourceId": "bbc57a708062e1e134f58bfcead9a4ef650992fbf85814cca12d31af1e4698ec",
+            "revision": "9642cc7819e599488c8550072533a6ce3f5c6a2cb8e0c868988ec11e0dbc5c78"
+          },
+          "rootCaptured": true,
+          "witnessCaptured": true,
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": false,
+          "custodyTimings": {
+            "allocate": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.5851000000002387,
+              "firstStartMs": 16484.517699999997,
+              "lastEndMs": 16485.1028
+            },
+            "prepare": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 329.7527000000009,
+              "firstStartMs": 16611.008,
+              "lastEndMs": 16940.7607
+            },
+            "resume": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 294.8600000000006,
+              "firstStartMs": 17301.550199999998,
+              "lastEndMs": 17596.4102
+            },
+            "stop": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 1.0057999999989988,
+              "firstStartMs": 18090.3764,
+              "lastEndMs": 18091.3822
+            },
+            "drain": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.2739999999976135,
+              "firstStartMs": 18124.775800000003,
+              "lastEndMs": 18125.0498
+            },
+            "release": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 2.7653000000027532,
+              "firstStartMs": 18125.950299999997,
+              "lastEndMs": 18128.715600000003
+            }
+          },
+          "stagingTimings": {
+            "launch-chunk": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.06650000000081491,
+              "firstStartMs": 16534.560400000002,
+              "lastEndMs": 16534.626900000003
+            },
+            "launch-commit": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.5482999999985623,
+              "firstStartMs": 16552.8085,
+              "lastEndMs": 16553.3568
+            }
+          },
+          "firstCloseEntryMs": 24575.553200000002
+        },
+        {
+          "kind": "TEST_SOURCE_CLEANUP",
+          "provider": "codex",
+          "mainEpoch": "3c950c19-38c2-4b20-b648-8915a45cf8f1",
+          "jobSlot": 5,
+          "source": {
+            "sourceId": "bbc57a708062e1e134f58bfcead9a4ef650992fbf85814cca12d31af1e4698ec",
+            "revision": "9642cc7819e599488c8550072533a6ce3f5c6a2cb8e0c868988ec11e0dbc5c78"
+          },
+          "rootCaptured": true,
+          "witnessCaptured": true,
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": false,
+          "custodyTimings": {
+            "allocate": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.26590000000214786,
+              "firstStartMs": 20122.009899999997,
+              "lastEndMs": 20122.275800000003
+            },
+            "prepare": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 336.7221000000027,
+              "firstStartMs": 20218.7854,
+              "lastEndMs": 20555.5075
+            },
+            "resume": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 317.5410000000011,
+              "firstStartMs": 20927.4314,
+              "lastEndMs": 21244.9724
+            },
+            "stop": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.689699999998993,
+              "firstStartMs": 21748.6402,
+              "lastEndMs": 21749.329899999997
+            },
+            "drain": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.0845999999983178,
+              "firstStartMs": 21784.7483,
+              "lastEndMs": 21784.8329
+            },
+            "release": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 2.425699999999779,
+              "firstStartMs": 21785.3736,
+              "lastEndMs": 21787.7993
+            }
+          },
+          "stagingTimings": {
+            "launch-chunk": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.0753999999978987,
+              "firstStartMs": 20173.1564,
+              "lastEndMs": 20173.2318
+            },
+            "launch-commit": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.26270000000295113,
+              "firstStartMs": 20190.909399999997,
+              "lastEndMs": 20191.172100000003
+            }
+          },
+          "firstCloseEntryMs": 24575.553200000002
+        },
+        {
+          "kind": "TEST_SOURCE_CLEANUP",
+          "provider": "codex",
+          "mainEpoch": "3c950c19-38c2-4b20-b648-8915a45cf8f1",
+          "jobSlot": 6,
+          "source": {
+            "sourceId": "bbc57a708062e1e134f58bfcead9a4ef650992fbf85814cca12d31af1e4698ec",
+            "revision": "9642cc7819e599488c8550072533a6ce3f5c6a2cb8e0c868988ec11e0dbc5c78"
+          },
+          "rootCaptured": true,
+          "witnessCaptured": true,
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": false,
+          "custodyTimings": {
+            "allocate": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.2620999999999185,
+              "firstStartMs": 23197.968500000003,
+              "lastEndMs": 23198.230600000003
+            },
+            "prepare": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 329.6759999999995,
+              "firstStartMs": 23293.3595,
+              "lastEndMs": 23623.035499999998
+            },
+            "resume": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 298.8552000000018,
+              "firstStartMs": 23999.9792,
+              "lastEndMs": 24298.8344
+            },
+            "stop": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 16.817399999999907,
+              "firstStartMs": 24759.5371,
+              "lastEndMs": 24776.3545
+            },
+            "drain": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.06179999999949359,
+              "firstStartMs": 24810.6719,
+              "lastEndMs": 24810.733699999997
+            },
+            "release": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 2.6080000000001746,
+              "firstStartMs": 24812.3468,
+              "lastEndMs": 24814.9548
+            }
+          },
+          "stagingTimings": {
+            "launch-chunk": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.07890000000043074,
+              "firstStartMs": 23248.8588,
+              "lastEndMs": 23248.937700000002
+            },
+            "launch-commit": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.44499999999970896,
+              "firstStartMs": 23266.6137,
+              "lastEndMs": 23267.0587
+            }
+          },
+          "firstCloseEntryMs": 24575.553200000002
+        }
+      ],
+      "cleanup": {
+        "scenario": true,
+        "topLevelSentinel": true,
+        "allFinalJobFieldsTrue": true,
+        "originalController": {
+          "gateController": "drained",
+          "rootExitCode": 1,
+          "activeProcesses": 0
+        },
+        "controllerExit": {
+          "kind": "TEST_SOURCE_CONTROLLER_EXIT",
+          "provider": "codex",
+          "exitCode": 104
+        }
+      },
+      "pinAudit": {
+        "path": "/workspace/scratch/82d3f9ba6b85/native-audit-9a34/source-pins-process_win_arm.json",
+        "sourceCount": 13,
+        "sourceRawGitMatches": 0,
+        "sourceCRLFMatches": 13,
+        "recordedBuiltOutputCount": 5,
+        "binaryPayloadsArchived": false
+      },
+      "originalPrerequisites": [
+        {
+          "framework": "node:test",
+          "cases": 163,
+          "pass": 160,
+          "fail": 0,
+          "skip": 3,
+          "cancelled": 0
+        },
+        {
+          "framework": "vitest",
+          "files": 3,
+          "pass": 53
+        },
+        {
+          "framework": "vitest",
+          "files": 8,
+          "pass": 78
+        }
+      ],
+      "limits": [
+        "finite TEST peer only; realProviderExecuted/desktopQualified/releaseQualified false",
+        "original A readiness failed; later B/standalone/cold/negative source stages not qualified by this failed scenario",
+        "runtimeProjection is non-atomic with failure; providerReady and ownerCurrent null mean not observed",
+        "intermediate originalHandleAbsent false is before original witness wait; final receipt separately records true",
+        "controller104 accompanies drained/rootExit1/active0, not emergency-fail",
+        "source hashes match explicit Windows CRLF transform of selected13Git leaves; built and generated payloads absent",
+        "no P08 or P09/resulting-source transfer, no causal performance conclusion, no rerun by auditor"
+      ]
+    }
+  ],
+  "commonPinnedPaths": 18,
+  "commonPinnedHashMismatches": [],
+  "readOnly": true
+}

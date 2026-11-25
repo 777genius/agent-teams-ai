@@ -1,0 +1,144 @@
+{
+  "schemaVersion": 1,
+  "reviewedAt": "2026-11-15T23:08:29.589074+00:00",
+  "reviewType": "source-only counterexample and bounded design; no executable test or sanitizer invocation",
+  "verdict": "HOLD full35 stderr-security approval pending exact corrective R1/actual regression/source review",
+  "source": "35cbd6e99b620e9b41802af936143d900f5e2aca",
+  "comparisonSource": "27b1acf48278dcd0fb348c626696eac2dc64de73",
+  "sourceLeaves": [
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "bytes": 7826,
+      "lines": 164,
+      "gitBlob": "3b2b960722f878cf60ba94bae27176fb9e7d0bba",
+      "sha256": "c30d9a9d7357275864ede578ec9a4c66e335ffb1a613a5d916c6aced9061e1bc"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/diagnostics/redactDiagnosticAssignments.ts",
+      "bytes": 5376,
+      "lines": 134,
+      "gitBlob": "b82e437c1e8f04726982af5d50fc54394725f138",
+      "sha256": "a1c2499af3048c0e656f66131ffa76540fe7493c1f3643e0486c8ffe6358d940"
+    },
+    {
+      "path": "src/shared/utils/redactDiagnosticAssignments.ts",
+      "bytes": 102,
+      "lines": 1,
+      "gitBlob": "0a1bd348ab98e6f33af2577cad33e9f2be44e745",
+      "sha256": "8cfd0fa9fa6680e69c49ebabd4c8b0fd04771768677ad6ca8ec44da2d2de0e51"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/diagnostics/runtimeDiagnosticText.ts",
+      "bytes": 2888,
+      "lines": 60,
+      "gitBlob": "49183056d50b7815bde238e758c47c13302117f3",
+      "sha256": "6c8d7217b45893446430419d689185c0d3420183e6d003324c1f4cf5d7838c5e"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/diagnostics/diagnosticsRedaction.ts",
+      "bytes": 1836,
+      "lines": 50,
+      "gitBlob": "5fe2b1c75dc79aff685c9ef281b6cffd19e3a55b",
+      "sha256": "ce6281ee65275c72fc67d540bfb3fd70d902276ef0fabcefc4d471fa3df5efe2"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/runtimeProfile.ts",
+      "bytes": 10369,
+      "lines": 261,
+      "gitBlob": "7dcaecc2d76bf568347082b5f82f0d738e0bfaa1",
+      "sha256": "8d01aa3189e83512c25b1b5f2a5fc3f0a427da7be979291127179914489b9cc8"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/RuntimeActivityCoordinator.ts",
+      "bytes": 25074,
+      "lines": 589,
+      "gitBlob": "48f51dc20a9253c81c9b231b6aa115f6244bd18f",
+      "sha256": "c43e4da640daed957b098161fd0f85479eb24df4f7b1ccfe4b03c4d9690009cb"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "bytes": 12742,
+      "lines": 226,
+      "gitBlob": "c073ab7b8c6025313747f75e50e8b0a14985d589",
+      "sha256": "f2c89ada2f51d13e42af390229cc6b2fc58e2c82a48bf64154c006c5feedc573"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/captured-claude-process.test.ts",
+      "bytes": 14002,
+      "lines": 314,
+      "gitBlob": "f84153e49a9ace1f07a5d1f7bb9cea486f5617af",
+      "sha256": "30c863da3e66b2d2e4be13e8a3394d09e75ade9e84ee38a7775806cd60acc868"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "bytes": 191234,
+      "lines": 3715,
+      "gitBlob": "ac07c852895c6cfbabb5015f0c1ef0abe13b3a7c",
+      "sha256": "a98eaa6aef701eba667a9b02edc0e49ed124786705469d8820a36b7c27cfd210"
+    },
+    {
+      "path": "packages/legacy-agent-host/package.json",
+      "bytes": 12355,
+      "lines": 304,
+      "gitBlob": "e39cb2ba89c125d850710828a65a30ae25b7344b",
+      "sha256": "77efb91a29ed4ba662ca7dcebc0843965d27305ad9d62f04ef6c84b517732e0b"
+    }
+  ],
+  "counterexample": {
+    "heldSelectedEnvironment": {
+      "API_KEY": "TEST_HELD_PREFIX TEST_HELD_SUFFIX"
+    },
+    "originalTargetStderr": "Bearer TEST_HELD_PREFIX TEST_HELD_SUFFIX\n",
+    "scope": "An already-held, valid finite whitespace-containing selected secret, not an unknown or independently discovered credential. Runtime profile permits ordinary string environment values; existing helper tests expressly cover whitespace forms.",
+    "sourceDerivedSteps": [
+      {
+        "step": 1,
+        "value": "Bearer TEST_HELD_PREFIX TEST_HELD_SUFFIX",
+        "reason": "The bounded complete original stderr line is decoded and normalized; no ANSI/NUL/dump marker applies."
+      },
+      {
+        "step": 2,
+        "value": "Bearer [redacted] TEST_HELD_SUFFIX",
+        "reason": "redactSyntax runs before exact masking. The existing generic Bearer pattern consumes one non-whitespace token; assignment parsing does not alter this no-assignment line."
+      },
+      {
+        "step": 3,
+        "reason": "privateValues retains raw, JSON-escaped, URI-encoded, whitespace-folded and independently sanitized forms of the complete held value. Sanitizing the held value by itself has no external Bearer prefix and leaves its two words intact."
+      },
+      {
+        "step": 4,
+        "value": "Bearer [redacted] TEST_HELD_SUFFIX",
+        "reason": "No complete held form matches after context-dependent partial redaction. The marker union stabilizes [redacted] but does not remove TEST_HELD_SUFFIX."
+      },
+      {
+        "step": 5,
+        "reason": "The resulting short stderr text is within24KiB and the unchanged current-source Runtime writer can retain it. No native execution or actual stored receipt is asserted."
+      }
+    ],
+    "expectedCanaryViolation": "TEST_HELD_SUFFIX remains in the source-derived process-output text.",
+    "historicalQualification": "Not an observed CI/local failure. No fabricated RED against K27: its original exact-mask-first order would mask the complete two-word literal before the Bearer rewrite.",
+    "testSeam": "Existing member-process-stderr.test.ts fixture, actual exported observer and original PassThrough stderr; assert absence of TEST_HELD_SUFFIX after original end/flush. No missing-export/setup failure.",
+    "additionalFiniteVariant": "Use a tab between the emitted two words while captured value uses one space, to cover the existing whitespace-folding domain before destructive syntax classification."
+  },
+  "reviewedPositives": [
+    "The existing134-line assignments utility is moved byte-for-byte (same Git blob b82e437c1e8f04726982af5d50fc54394725f138); the old app module is a one-line package re-export. No second parser.",
+    "The entire original130-line seven-case framing test prefix is preserved. Twelve additional finite cases cover complete escaped/URI/whitespace forms, overlapping private spans, short-secret syntax protection, transformed standalone forms and discarded/ANSI dump openers. They do not include this contextual partial-redaction case.",
+    "Original buffer-framed UTF-8, final-tail once, no stdin/stdout taps, protected observer calls, listener removal and reentrant-close behavior remain. CapturedProcess/WindowsCapturedProcess, adapter attachment sites, source-grant/full-config/incarnation fence and Runtime storage budgets remain byte-identical.",
+    "24KiB raw pending/output checks and32KiB journal-event substitution remain. scanTail is512 code units; intermediate scan strings follow incoming chunk length, and held-form memory follows already-selected profile values. These are not a new total-heap/time bound.",
+    "No new credential discovery, Runtime action, readiness transition, task attribution or control authority is introduced. Added composition tests target opening/failed-open/closing/revoked/sealed/restored source boundaries."
+  ],
+  "boundedDesignOptions": {
+    "preferredForReview": {
+      "mechanism": "Compute syntax classification on the original normalized line. Also retain its whitespace-folded form. If syntax output differs from that folded original and exact held-value union masking changes either original or folded source, replace the whole line with the fixed existing [redacted] marker. Otherwise keep current syntax-result exact-mask path.",
+      "privacyReason": "No guess about which fragment survived; every ambiguous known-secret-containing line is withheld in full. Syntax still sees original keys/URLs before short held values can mutate them.",
+      "tradeoff": "May hide otherwise useful unrelated diagnostic context on a line that contains both a held private value and any syntax rewrite. This deliberate bounded loss must be described in R1; do not call it exact span preservation.",
+      "scope": "Existing observer helper plus existing focused test. Existing pure app sanitizer/default behavior and public parser API can remain unchanged. Existing source/CI pins must be checked at the actual adopted preimage.",
+      "cost": "Additional bounded in-memory matching over the already-read line; no OS/RPC/CDP read, timer, listener, retry, provider input, or deadline change."
+    },
+    "spanUnionAlternative": {
+      "scope": "An exact original-source union would need syntax spans from all relevant existing stages: assignments parser, runtimeDiagnosticText Bearer/URL etc, and diagnosticsRedaction flags/value patterns, together with offset preservation across rewrites and whitespace.",
+      "assessment": "Extending only assignments cannot repair this Bearer case. Duplicating parser regexes or guessing residual token fragments is not justified. Full span tracking is broader than the minimal fail-closed helper-local option."
+    }
+  },
+  "nextRequiredGate": "Root-selected future exact35-derived venue: publish reviewed R1, actual full existing helper-file canary RED, only approved source correction, full file GREEN plus retained original consumer/Host/static gates. This reviewer executed none of them. Preserve K27 three reviewed corrections in any later composition."
+}

@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
 import {
+  HOST_EMULATED_SUPERSESSION_GROUP,
   RUN_SUPERSESSION_POLICY,
   SUPERSESSION_CANCEL,
   SUPERSESSION_GROUP,
@@ -77,6 +78,15 @@ test('automatic checks use the canonical run supersession policy verbatim', () =
   }
 });
 
+test('only Host Desktop retains its exact isolated v2 namespace and canonical cancellation', () => {
+  assert.deepEqual(RUN_SUPERSESSION_POLICY.isolatedV2, ['host-emulated-acceptance']);
+  const trigger = workflow('host-emulated-acceptance').split('\njobs:')[0]
+    .replace(/^ {2}#[^\n]*\n/gm, '');
+  const isolatedConcurrency = `\nconcurrency:\n  group: ${HOST_EMULATED_SUPERSESSION_GROUP}\n  cancel-in-progress: ${SUPERSESSION_CANCEL}\n`;
+  assert.ok(trigger.includes(isolatedConcurrency), 'Host Desktop must retain the one exact migrated namespace');
+  assert.ok(!trigger.includes(canonicalConcurrency), 'the obsolete v1 group must not be restored');
+});
+
 test('policy tests run before main CI planning, without dependency installation', () => {
   const source = workflow('ci').split('\n  feedback:')[0];
   assert.match(source, /node --test test\/scripts\/ciOptionalWorkflows.test.mts/);
@@ -86,7 +96,7 @@ test('policy tests run before main CI planning, without dependency installation'
   assert.doesNotMatch(source, /Install dependencies/);
 });
 
-test('selected retained V1/Host V2 acceptance is required by the existing Full qualification', () => {
+test('selected native Desktop acceptance is required by the existing Full qualification', () => {
   const source = workflow('ci');
   const job = source.split('\n  retained-opencode-coexistence:\n')[1]?.split(/\n {2}[\w-]+:\n/)[0];
   const gate = source.split('\n  full-qualification:\n')[1];
@@ -120,4 +130,41 @@ test('selected retained V1/Host V2 acceptance is required by the existing Full q
   assert.match(sqlite, /require\('electron\/package\.json'\)\.version, '44\.10\.1'/);
   assert.match(sqlite, /pnpm exec electron-rebuild --module-dir \. --force --only better-sqlite3 --version 44\.10\.1/);
   assert.doesNotMatch(sqlite, /--input-type/, 'node-gyp file children cannot inherit a stdin-only Node input type');
+  const account = source.split('\n  codex-login-desktop:\n')[1]?.split(/\n {2}[\w-]+:\n/)[0];
+  const selectedAccount = account?.match(/\n {4}if: >-\n([\s\S]*?)\n {4}runs-on:/)?.[1].trim();
+  const requiredAccount = gate.match(/Require selected Codex login and protocol-peer schedule qualification\n {8}if: >-\n([\s\S]*?)\n {8}env:/)?.[1].trim();
+  assert.ok(selectedAccount && requiredAccount);
+  assert.equal(selectedAccount.replace(/\s+/g, ' '), requiredAccount.replace(/\s+/g, ' '),
+    'every selected Codex login/protocol-peer schedule run must succeed for the aggregate gate');
+  assert.match(gate, /needs: \[[^\]]*codex-login-desktop[^\]]*\]/);
+  assert.match(gate, /CODEX_LOGIN_RESULT: \$\{\{ needs\.codex-login-desktop\.result \}\}/);
+  assert.match(gate, /run: test "\$CODEX_LOGIN_RESULT" = success/);
+  assert.doesNotMatch(account!, /continue-on-error:/);
+  assert.match(account!, /uses: \.\/\.github\/actions\/prepare-host-emulated-inputs/);
+  assert.match(account!, /emulated-codex-login-ui emulated-claude-runtime-ui emulated-codex-runtime-ui/);
+  assert.doesNotMatch(account!, /LEGACY_DESKTOP_CODEX_PATH|LEGACY_DESKTOP_PROOF_MODE: ['"]codex-login-ui['"]|codex-account-auth/,
+    'native schedule qualification must not enable native Desktop vendor authentication');
+  const schedules = account!.split('      - name: Verify finite native Claude and Codex scheduled runs\n')[1]?.split('\n      - name:')[0];
+  assert.ok(schedules, 'the original P04/P10 native schedule proof remains mandatory when this job is selected');
+  assert.match(schedules, /spawnSync\(process\.execPath, \['--test', 'packages\/legacy-agent-host\/tests\/scheduled-run-host\.native\.ts'\]/);
+  assert.match(schedules, /LEGACY_SCHEDULE_NATIVE_GO: '1', LEGACY_SCHEDULE_SOURCE_HEAD: process\.env\.CODEX_LOGIN_SOURCE_HEAD/);
+  assert.match(schedules, /assert\.equal\(run\.error, undefined\); assert\.equal\(run\.status, 0\)/);
+  assert.match(schedules, /for \(const provider of \['claude', 'codex'\]\)/);
+  assert.match(schedules, /assert\.equal\(receipt\.status, 'PASS'\); assert\.equal\(receipt\.provider, provider\)/);
+  assert.match(schedules, /assert\.equal\(receipt\.sourceHead, process\.env\.CODEX_LOGIN_SOURCE_HEAD\)/);
+  assert.match(schedules, /assert\.equal\(receipt\.cleanup, true\); assert\.equal\(receipt\.frozen, true\)/);
+});
+
+test('GitHub Pages: production deployment requires the main branch', () => {
+  const source = workflow('landing');
+  const mainOnly = "github.event_name != 'pull_request' && github.ref == 'refs/heads/main'";
+  assert.match(source, / {2}workflow_dispatch:\n/);
+  for (const location of [
+    /- uses: actions\/configure-pages@v6\n\s+if: ([^\n]+)/,
+    /- uses: actions\/upload-pages-artifact@v5\n\s+if: ([^\n]+)/,
+    /\n {2}deploy:\n[\s\S]*?\n {4}if: ([^\n]+)/,
+    /\n {2}smoke:\n[\s\S]*?\n {4}if: ([^\n]+)/,
+  ]) {
+    assert.equal(source.match(location)?.[1], mainOnly);
+  }
 });

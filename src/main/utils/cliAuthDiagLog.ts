@@ -4,6 +4,7 @@
  * appends NDJSON lines under Electron's logs directory when possible.
  */
 
+import { getOptionalElectronMain } from '@main/utils/optionalElectronMain';
 import { appendFile, mkdir, stat, truncate } from 'fs/promises';
 import { join } from 'path';
 
@@ -14,8 +15,7 @@ const MAX_DIAG_FILE_BYTES = 512 * 1024;
 
 function resolveLogsDirectory(): string | null {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports -- lazy: tests / non-Electron
-    const { app } = require('electron') as typeof import('electron');
+    const app = getOptionalElectronMain()?.app;
     if (!app?.getPath) {
       return null;
     }

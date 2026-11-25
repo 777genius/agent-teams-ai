@@ -60,6 +60,14 @@ function payload(
   if (isBackendReviewOperation(operation)) return parseBackendReviewPayload(operation, value);
   if (operation.startsWith('group.')) return parseGroupPayload(operation, value);
   switch (operation) {
+    case 'host.recovery.start': {
+      const p = object(value, ['capability']);
+      const capability = text(p.capability, 36);
+      if (!/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(capability))
+        throw new InvalidBackendOperation();
+      return { capability };
+    }
+    case 'host.recovery.capture':
     case 'process.list':
     case 'process.pending.read':
     case 'crossTeam.lookup':
@@ -177,6 +185,19 @@ function payload(
       const p = object(value, ['taskId']);
       return { taskId: text(p.taskId) };
     }
+    case 'task.board.review-flow': {
+      const settings = object(value, ['settings']).settings;
+      if (settings === null) return { settings: null };
+      const selected = object(settings, ['reviewFlow', 'reviewFlowPrompt']);
+      if (!['agent_approval', 'human_approval', 'lead_then_human'].includes(text(selected.reviewFlow)))
+        throw new InvalidBackendOperation();
+      const prompt = description(selected.reviewFlowPrompt).trim();
+      if (prompt.length > 1000) throw new InvalidBackendOperation();
+      return { settings: {
+        reviewFlow: selected.reviewFlow as 'agent_approval' | 'human_approval' | 'lead_then_human',
+        reviewFlowPrompt: prompt,
+      } };
+    }
     case 'task.board.order': {
       const p = object(value, ['columnId', 'orderedTaskIds']);
       if (
@@ -244,6 +265,7 @@ function payload(
         'note',
         'notifyOwner',
         'suppressTaskComment',
+        'expectedReviewRequestId',
         'comment',
         'taskRefs',
       ]);
@@ -279,12 +301,19 @@ function payload(
             : { suppressTaskComment: p.suppressTaskComment as boolean }),
         };
       }
+      if (p.action === 'complete') {
+        object(value, ['taskId', 'action', 'expectedReviewRequestId', 'note']);
+        return { taskId, action: 'complete', expectedReviewRequestId: text(p.expectedReviewRequestId),
+          ...(p.note === undefined ? {} : { note: description(p.note) }) };
+      }
       if (p.action === 'request_changes') {
-        object(value, ['taskId', 'action', 'comment', 'taskRefs']);
+        object(value, ['taskId', 'action', 'comment', 'taskRefs', 'expectedReviewRequestId']);
         return {
           taskId,
           action: 'request_changes',
           comment: text(p.comment, 200_000),
+          ...(p.expectedReviewRequestId === undefined
+            ? {} : { expectedReviewRequestId: text(p.expectedReviewRequestId) }),
           ...(p.taskRefs === undefined ? {} : { taskRefs: refs(p.taskRefs) }),
         };
       }

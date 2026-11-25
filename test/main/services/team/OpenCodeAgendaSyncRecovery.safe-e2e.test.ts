@@ -427,7 +427,7 @@ function createFeature(input: {
 }
 
 describe('OpenCode agenda-sync proof-missing recovery safe e2e', () => {
-  it('delivers a Codex work-sync nudge during shadow collection with prefixed MCP aliases and schedules a Codex wake', async () => {
+  it('delivers a Codex work-sync nudge during shadow collection with session-scoped MCP instructions and schedules a Codex wake', async () => {
     const claudeRoot = makeTempRoot();
     setClaudeBasePathOverride(claudeRoot);
     const teamsBasePath = getTeamsBasePath();
@@ -459,10 +459,18 @@ describe('OpenCode agenda-sync proof-missing recovery safe e2e', () => {
         const inbox = await readInboxMessages({ teamsBasePath, teamName, memberName });
         const nudges = inbox.filter((message) => message.messageKind === 'member_work_sync_nudge');
         expect(nudges).toHaveLength(1);
-        expect(nudges[0]?.text).toContain('Required sync action: call member_work_sync_status');
-        expect(nudges[0]?.text).toContain('mcp__agent-teams__member_work_sync_status');
-        expect(nudges[0]?.text).toContain('mcp__agent-teams__member_work_sync_report');
-        expect(nudges[0]?.text).toContain('Do not search the filesystem');
+        const nudgeText = nudges[0]?.text ?? '';
+        expect(nudgeText).toContain(
+          'Required sync action: call member_work_sync_status using only the arguments declared in its schema, then call member_work_sync_report with the returned agendaFingerprint and reportToken.'
+        );
+        expect(nudgeText).toContain(
+          `For each tool, include teamName "${teamName}" and memberName "${memberName}" only when that field is declared in its schema; otherwise omit it.`
+        );
+        expect(nudgeText).toContain(
+          'Use the exact tool names and argument schemas exposed by this session, preserving any server prefix and including commandId when required.'
+        );
+        expect(nudgeText).not.toMatch(/mcp__(?:agent-teams|team)__/);
+        expect(nudgeText).toContain('Do not search the filesystem');
         await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
           phase2Readiness: { state: 'collecting_shadow_data' },
         });

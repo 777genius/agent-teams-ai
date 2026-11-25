@@ -1,0 +1,2278 @@
+{
+  "kind": "M0660_PACKAGED_MAC_X64_ORIGINAL_RELAUNCH_AUDIT",
+  "reviewedAtUtc": "2026-11-16T03:00:27.203230+00:00",
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "runId": 43780997349,
+  "jobId": 133040244403,
+  "artifactId": 14193391365,
+  "qualification": {
+    "originalJob": "SUCCESS",
+    "step37PackagedNativeV2": "PASS within manual localhost-scripted receipt scope",
+    "step39PackagedRelaunch": "PASS within observer-only successor scope",
+    "fullColdResumeActiveQueuedQuitQualified": false,
+    "successorNaturalExitQualified": false,
+    "successorNativeCustody": false,
+    "realVendorQualified": false,
+    "releaseQualified": false,
+    "privacyGreenQualified": false,
+    "newExecution": false
+  },
+  "originals": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-mac-x64/job-133040244403.log",
+      "bytes": 188943,
+      "gitBlob": "3c34a72c89daac377c96ec87c74e35df561aa86c",
+      "sha256": "dee3e6b917772d452fe996108ec215235179136d83470cf6e8d0a85aa8bcf05e"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-mac-x64/14193391365.zip",
+      "bytes": 800512,
+      "gitBlob": "37cb51e1a8ce9705fd39ef8c1063fada76ca6136",
+      "sha256": "f01a1f34cd8713e10150a1ab2dbe1655eb88aad12640c36e9e4dfbe3221e0178"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-mac-x64/archive-audit.json",
+      "bytes": 2700,
+      "gitBlob": "0dbe573f88c7e438c82a918cc9f3a7a7c9048456",
+      "sha256": "f52a3f4866c1905afcf3a426a8aabaa0afe560980d32dd3e99f4fda36c03043f"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/full-api-jobs-0254.json",
+      "bytes": 211665,
+      "gitBlob": "72f3035a8a2b4874ca5c83131e137d4072871d89",
+      "sha256": "b7812006bca1fe17e36f3d00e5b93b0956a6001ea003c2ed4036d22ebe222454"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/official-packaged-artifacts-0243.json",
+      "bytes": 3880,
+      "gitBlob": "bc09c9d602037652d63b11e18c261c4f28532f91",
+      "sha256": "3ea79b8fb547a914c4b639ed3bff3555ca8b5146ded0435dc0ee5789bfebe626"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-mac-x64/extracted/_temp/packaged-app-relaunch.json",
+      "bytes": 673443,
+      "gitBlob": "0ebf00484084d1b1ccebf9d2d842a293f9de2542",
+      "sha256": "8a8124512b9bcc86568e79fa876ea18f3082bc87543e8b89b7a91961001ae6e5"
+    }
+  ],
+  "officialArtifact": {
+    "id": 14193391365,
+    "name": "packaged-v2-host-darwin-x64-0660c748f88675063e3051fb0f8b2022e8f6f056",
+    "size_in_bytes": 800512,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14193391365",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14193391365/zip",
+    "expired": false,
+    "created_at": "2026-11-16T02:42:49Z",
+    "expires_at": "2026-11-23T02:42:48Z",
+    "updated_at": "2026-11-16T02:42:49Z",
+    "digest": "sha256:f01a1f34cd8713e10150a1ab2dbe1655eb88aad12640c36e9e4dfbe3221e0178",
+    "workflow_run": {
+      "id": 43780997349,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "0660c748f88675063e3051fb0f8b2022e8f6f056"
+    }
+  },
+  "originalJob": {
+    "id": 133040244403,
+    "name": "packaged smoke (darwin-x64)",
+    "status": "completed",
+    "conclusion": "success",
+    "run_id": 43780997349,
+    "logs_url": null,
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1
+      },
+      {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2
+      },
+      {
+        "name": "Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3
+      },
+      {
+        "name": "Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4
+      },
+      {
+        "name": "Run actions/setup-python@v6",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 5
+      },
+      {
+        "name": "Install Linux packaging tools",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 6
+      },
+      {
+        "name": "Restore node-gyp executable bit",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7
+      },
+      {
+        "name": "Verify selected provider archives against frozen lock before install",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8
+      },
+      {
+        "name": "Install frozen dependencies",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 9
+      },
+      {
+        "name": "Verify managed Git pins and archive path safety",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 10
+      },
+      {
+        "name": "Validate packaged OpenCode project-path smoke syntax early",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 11
+      },
+      {
+        "name": "Typecheck packaged CI policy with pinned compiler",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 12
+      },
+      {
+        "name": "Assert Electron binary was provisioned during install",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 13
+      },
+      {
+        "name": "Test bundled undici security version policy",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 14
+      },
+      {
+        "name": "Verify CI Node and Electron built-in undici versions",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 15
+      },
+      {
+        "name": "Verify native rebuild",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 16
+      },
+      {
+        "name": "Stage bundled runtime",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 17
+      },
+      {
+        "name": "Stage terminal platform runtime",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 18
+      },
+      {
+        "name": "Stage Windows console wrapper",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 19
+      },
+      {
+        "name": "Build app",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 20
+      },
+      {
+        "name": "Select exact Host Node for candidate staging",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 21
+      },
+      {
+        "name": "Prepare actual pinned V2 Bun, engine and admitted process custody",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 22
+      },
+      {
+        "name": "Prefill pinned macOS arm64 Host Node archive",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 23
+      },
+      {
+        "name": "Stage V2 Host closure in existing candidate extraResources",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 24
+      },
+      {
+        "name": "Typecheck and test packaged Host capture boundaries",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 25
+      },
+      {
+        "name": "Verify and stage original Windows scoped broker for packaged Retry",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 26
+      },
+      {
+        "name": "Package unsigned test bundle",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 27
+      },
+      {
+        "name": "Verify bundle native architecture",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 28
+      },
+      {
+        "name": "Smoke packaged SQLite and PTY modules",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 29
+      },
+      {
+        "name": "Smoke packaged Git without external installation",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 30
+      },
+      {
+        "name": "Smoke managed Git inside native Windows terminal",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 31
+      },
+      {
+        "name": "Smoke packaged MCP handshake",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 32
+      },
+      {
+        "name": "Verify macOS 13 minimum",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 33
+      },
+      {
+        "name": "Smoke packaged app",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 34
+      },
+      {
+        "name": "Qualify packaged macOS OpenCode project-path status and model list",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 35
+      },
+      {
+        "name": "Smoke packaged app under Xvfb",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 36
+      },
+      {
+        "name": "Qualify actual packaged V2 Host tools, MCP, Stop and cold Resume",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 37
+      },
+      {
+        "name": "Qualify packaged Windows same-Main Retry and original Processes UI Kill with finite peers",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 38
+      },
+      {
+        "name": "Qualify original packaged macOS app relaunch with finite SDK peer",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 39
+      },
+      {
+        "name": "Preserve exact packaged Host evidence",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 40
+      },
+      {
+        "name": "Post Select exact Host Node for candidate staging",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 77
+      },
+      {
+        "name": "Post Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 78
+      },
+      {
+        "name": "Post Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 79
+      },
+      {
+        "name": "Post Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 80
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 81
+      }
+    ]
+  },
+  "checkoutHeadOutputs": [
+    {
+      "line": 112,
+      "text": "2026-11-16T01:46:46.5552860Z 0660c748f88675063e3051fb0f8b2022e8f6f056"
+    },
+    {
+      "line": 219,
+      "text": "2026-11-16T01:46:52.9457620Z 0660c748f88675063e3051fb0f8b2022e8f6f056"
+    }
+  ],
+  "archive": {
+    "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+    "runId": 43780997349,
+    "jobId": 133040244403,
+    "artifactId": 14193391365,
+    "zip": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-mac-x64/14193391365.zip",
+      "bytes": 800512,
+      "gitBlob": "37cb51e1a8ce9705fd39ef8c1063fada76ca6136",
+      "sha256": "f01a1f34cd8713e10150a1ab2dbe1655eb88aad12640c36e9e4dfbe3221e0178"
+    },
+    "rawJob": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-mac-x64/job-133040244403.log",
+      "bytes": 188943,
+      "gitBlob": "3c34a72c89daac377c96ec87c74e35df561aa86c",
+      "sha256": "dee3e6b917772d452fe996108ec215235179136d83470cf6e8d0a85aa8bcf05e"
+    },
+    "safeUniquePaths": true,
+    "allCrcVerified": true,
+    "entries": [
+      {
+        "path": "agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+        "bytes": 1154723,
+        "sha256": "aa5e3091070f17a1462cda79ad204791267780868b656d88107762e5e1b24037",
+        "crc32": "1d00b5f3"
+      },
+      {
+        "path": "_temp/TEST-desktop-backend-0Q2h6H/ui-emulated-lifecycle-launch.png",
+        "bytes": 107172,
+        "sha256": "33681012e69834c9eaa80b3aba9d887b9807d7ebc78b3b248d24404f8904a0e9",
+        "crc32": "900da545"
+      },
+      {
+        "path": "_temp/TEST-desktop-backend-0Q2h6H/ui-automatic-app-relaunch-successor.png",
+        "bytes": 70777,
+        "sha256": "f38c74d526fb93b0dd77a96c64458daddfb65c1ac339858a8ed86b346ad707c5",
+        "crc32": "1da4fdd5"
+      },
+      {
+        "path": "_temp/TEST-desktop-backend-0Q2h6H/ui-emulated-lifecycle-stopped.png",
+        "bytes": 98035,
+        "sha256": "e64ad75b7d8b1f7f067b4aeb00df051ec070d2e117265f3001deb834dd4c0bc6",
+        "crc32": "8cc07148"
+      },
+      {
+        "path": "_temp/opencode-v2-packaged-inputs.json",
+        "bytes": 2370,
+        "sha256": "30b31bcfcc1c528e1e148729a88239d251f19ec7f6f3bff07ad6872df421af80",
+        "crc32": "7d60a973"
+      },
+      {
+        "path": "_temp/opencode-v2-packaged-native.json",
+        "bytes": 5304,
+        "sha256": "8dcf49a2646f8361c9240ee0141f7449aa5251f9ebbc61c64d5cff1c3abc7aa5",
+        "crc32": "30006c20"
+      },
+      {
+        "path": "_temp/opencode-v2-packaged.json",
+        "bytes": 1187,
+        "sha256": "930431646010b502ec9294c18d69ee9d3ddf7d21d28bb745897617a77ae139ca",
+        "crc32": "2ac28790"
+      },
+      {
+        "path": "_temp/packaged-app-relaunch.app.log",
+        "bytes": 4985,
+        "sha256": "c5b5c4c40ffc1997d21b75c2c16ca68fcbae22ab23cb441c63f95895c47cf62f",
+        "crc32": "3cd24320"
+      },
+      {
+        "path": "_temp/packaged-app-relaunch.json",
+        "bytes": 673443,
+        "sha256": "8a8124512b9bcc86568e79fa876ea18f3082bc87543e8b89b7a91961001ae6e5",
+        "crc32": "0cbbe495"
+      }
+    ]
+  },
+  "safeUniqueCrcAndExtractedByteEquality": true,
+  "sourceJoin": {
+    "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+    "beforeCount": 1760,
+    "afterCount": 1760,
+    "orderedBeforeEqualsAfter": true,
+    "uniquePaths": 1760,
+    "common1757Basis": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/opencode/source-pin-audit.json",
+      "bytes": 583301,
+      "gitBlob": "1c01b40f08d6ae98228dff19b84ce19b4f94a735",
+      "sha256": "d52ff557a2797f355e51af8449ae66cc7d55e4d4c9e5f7d35f6cfecb8dcc628d"
+    },
+    "common1757ArrayEqualsVerifiedGitBasis": true,
+    "commonBasisGitBytes": 20308016,
+    "freshDirectThree": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+        "gitBlob": "dd53c5b6c019dbe034dcde5375f03123b9b3e10a",
+        "gitBytes": 13285,
+        "sha256": "d9c331cfc2aed9a7aeaa7c815ce39de662a3b491cc31013df1e5f16ee029b514",
+        "lines": 180
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/opencode-v1-version-source.ts",
+        "gitBlob": "78cb6f0026821785b1d0c0c1ad21ddfe76cdaee4",
+        "gitBytes": 9765,
+        "sha256": "0ff252732bedb1807cf428370e41628922a4d719090f479a41f25117d7227979",
+        "lines": 186
+      },
+      {
+        "path": "scripts/e2e/comment-notification/cdp.mjs",
+        "gitBlob": "9397505b7889db88ef103dca62287e3d02a88cc9",
+        "gitBytes": 3704,
+        "sha256": "8e70fecbb1f2107abffa91d78644ee74f8e34546c8117587661f8376c27998aa",
+        "lines": 119
+      }
+    ],
+    "freshSelectedSourceReads": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+        "gitBlob": "dd53c5b6c019dbe034dcde5375f03123b9b3e10a",
+        "gitBytes": 13285,
+        "sha256": "d9c331cfc2aed9a7aeaa7c815ce39de662a3b491cc31013df1e5f16ee029b514",
+        "lines": 180
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/opencode-v1-version-source.ts",
+        "gitBlob": "78cb6f0026821785b1d0c0c1ad21ddfe76cdaee4",
+        "gitBytes": 9765,
+        "sha256": "0ff252732bedb1807cf428370e41628922a4d719090f479a41f25117d7227979",
+        "lines": 186
+      },
+      {
+        "path": "scripts/e2e/comment-notification/cdp.mjs",
+        "gitBlob": "9397505b7889db88ef103dca62287e3d02a88cc9",
+        "gitBytes": 3704,
+        "sha256": "8e70fecbb1f2107abffa91d78644ee74f8e34546c8117587661f8376c27998aa",
+        "lines": 119
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+        "gitBlob": "865494ab5f5e45c5158fbf74ac858987fb322608",
+        "gitBytes": 49613,
+        "sha256": "ce4d59cc5285eb78ed108dae13a44fae21d33cd73c544c720d512134f23b7f73",
+        "lines": 787
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts",
+        "gitBlob": "b33e5290e4ed86a48b902a24ffc80509f1c89236",
+        "gitBytes": 22845,
+        "sha256": "135cd81f2edde1f087b231d4dcbed83d8cc8beade5a0230a093e6cbfcb1923ee",
+        "lines": 253
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+        "gitBlob": "a9d725fbe11278dd98611b49d570c19d80684087",
+        "gitBytes": 22082,
+        "sha256": "3aa149837f6686e8307ba1803984874b4c673d8211094bd3e8e52b9ddb3d70cd",
+        "lines": 281
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-source-freeze.ts",
+        "gitBlob": "4ef2cc07ede3172aa594e0eac614a1d473a5f705",
+        "gitBytes": 3208,
+        "sha256": "b7db02503f45ee10136de234f96d4a0999d2dfbbfb421fefb499dfe7a27ec8f9",
+        "lines": 68
+      },
+      {
+        "path": "scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts",
+        "gitBlob": "27cf4112a25dec299a21d6f802a5c08d55e36f2d",
+        "gitBytes": 17320,
+        "sha256": "74444f48ffc2ddd4ca4bae52c9cbd7c2bddaa465508169d026e193661ce25787",
+        "lines": 298
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/runtimeSourceQualification.ts",
+        "gitBlob": "fb25a317426e009f7920f2270a7f72d7f384f462",
+        "gitBytes": 2448,
+        "sha256": "7367091c531ccf26f38b29353ac7e7794184f7599f35bd4888edd7ad3c1badf6",
+        "lines": 54
+      },
+      {
+        "path": ".github/workflows/electron-packaged-ci.yml",
+        "gitBlob": "0938e9f31bad7520fec025ebde6aad8e071cfe69",
+        "gitBytes": 19532,
+        "sha256": "443502b3620450fc174440d6bdf6db3777e97b7f00d56d42e2fbd624b569b73f",
+        "lines": 313
+      }
+    ],
+    "limit": "The 1757 common hashes reuse the already verified exact-head Git census, with full ordered equality to both original arrays. Only the three new direct sources and the named interpretation paths were freshly read here. No independent rebuild or complete packaged payload copy is claimed."
+  },
+  "originalLogRows": [
+    {
+      "line": 299,
+      "text": "2026-11-16T01:47:28.3865060Z node: v26.12.1"
+    },
+    {
+      "line": 1262,
+      "text": "2026-11-16T02:01:10.7794260Z node: v24.21.0"
+    },
+    {
+      "line": 1291,
+      "text": "2026-11-16T02:03:46.6725940Z {\"kind\":\"TEST_PACKAGED_OPENCODE_V2_INPUTS\",\"status\":\"STAGED\",\"sourceHead\":\"0660c748f88675063e3051fb0f8b2022e8f6f056\",\"platform\":\"darwin-x64\",\"manifestSha256\":\"aa5e3091070f17a1462cda79ad204791267780868b656d88107762e5e1b24037\",\"packages\":120,\"files\":8131,\"artifacts\":[{\"name\":\"@agent-teams/provider-implementations\",\"sha256\":\"24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267\"},{\"name\":\"@agent-teams/provider-session-contracts\",\"sha256\":\"0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc\"}]}"
+    },
+    {
+      "line": 1591,
+      "text": "2026-11-16T02:39:29.4771640Z {\"kind\":\"TEST_PACKAGED_V2_QUALIFICATION\",\"status\":\"PASS\",\"sourceHead\":\"0660c748f88675063e3051fb0f8b2022e8f6f056\",\"platform\":\"darwin-x64\",\"cleanup\":true,\"phase\":\"finished\",\"desktopJourneyQualified\":false,\"vendorAuthQualified\":false,\"releaseQualified\":false,\"cleanupObservation\":{\"originalExitObserved\":true,\"nativeReceiptParsed\":true,\"nativeReceiptBound\":true,\"nativeCleanupConfirmed\":true,\"firstFailure\":null,\"firstRestorationFailure\":null},\"appAsarSha256\":\"ae22c80e68685d0089dbae04a5602e2935890df95582968ff95e65f0aaf1c747\",\"candidateManifestSha256\":\"aa5e3091070f17a1462cda79ad204791267780868b656d88107762e5e1b24037\",\"hostEntrySha256\":\"7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add\",\"nodeSha256\":\"7abcf39bd37ab251015337ff75304d7555f0d8e88c6e0fbf04bce8ce34636f49\",\"nativeExit\":{\"code\":0,\"signal\":null},\"nativeReceiptSha256\":\"8dcf49a2646f8361c9240ee0141f7449aa5251f9ebbc61c64d5cff1c3abc7aa5\",\"sourceCheckoutUnavailable\":true,\"legacyRuntimeUnavailable\":true,\"sourceRestored\":true,\"bundleRestored\":true,\"legacyRuntimeRestored\":true}"
+    },
+    {
+      "line": 1634,
+      "text": "2026-11-16T02:42:46.4439880Z {\"kind\":\"TEST_PACKAGED_APP_RELAUNCH\",\"status\":\"PASS\",\"receipt\":\"/Users/runner/work/_temp/packaged-app-relaunch.json\",\"root\":\"/Users/runner/work/_temp/TEST-desktop-backend-0Q2h6H\"}"
+    },
+    {
+      "line": 1685,
+      "text": "2026-11-16T02:42:49.3178120Z Artifact packaged-v2-host-darwin-x64-0660c748f88675063e3051fb0f8b2022e8f6f056.zip successfully finalized. Artifact ID 14193391365"
+    },
+    {
+      "line": 1686,
+      "text": "2026-11-16T02:42:49.3183150Z Artifact packaged-v2-host-darwin-x64-0660c748f88675063e3051fb0f8b2022e8f6f056 has been successfully uploaded! Final size is 800512 bytes. Artifact ID is 14193391365"
+    }
+  ],
+  "prerequisites": {
+    "commands": [
+      "node --test scripts/stage-managed-git.test.mjs",
+      "node --test test/scripts/verify-bundled-undici.test.cjs",
+      "node --test scripts/legacy-agent-host/candidate-closure.test.ts scripts/legacy-agent-host/packaged-opencode-v2-inputs.test.ts scripts/legacy-agent-host/stage-node.test.ts"
+    ],
+    "counts": {
+      "tests": [
+        11,
+        2,
+        26
+      ],
+      "pass": [
+        11,
+        2,
+        25
+      ],
+      "fail": [
+        0,
+        0,
+        0
+      ],
+      "cancelled": [
+        0,
+        0,
+        0
+      ],
+      "skipped": [
+        0,
+        0,
+        1
+      ],
+      "todo": [
+        0,
+        0,
+        0
+      ],
+      "duration_ms": [
+        476.551054,
+        333.235139,
+        10926.027129
+      ]
+    },
+    "rawSummaryRows": [
+      {
+        "line": 835,
+        "text": "2026-11-16T01:53:27.0556630Z ℹ tests 11"
+      },
+      {
+        "line": 837,
+        "text": "2026-11-16T01:53:27.0563070Z ℹ pass 11"
+      },
+      {
+        "line": 838,
+        "text": "2026-11-16T01:53:27.0600390Z ℹ fail 0"
+      },
+      {
+        "line": 839,
+        "text": "2026-11-16T01:53:27.0601200Z ℹ cancelled 0"
+      },
+      {
+        "line": 840,
+        "text": "2026-11-16T01:53:27.0602000Z ℹ skipped 0"
+      },
+      {
+        "line": 841,
+        "text": "2026-11-16T01:53:27.0603840Z ℹ todo 0"
+      },
+      {
+        "line": 842,
+        "text": "2026-11-16T01:53:27.0604580Z ℹ duration_ms 476.551054"
+      },
+      {
+        "line": 880,
+        "text": "2026-11-16T01:53:29.1467400Z ℹ tests 2"
+      },
+      {
+        "line": 882,
+        "text": "2026-11-16T01:53:29.1471400Z ℹ pass 2"
+      },
+      {
+        "line": 883,
+        "text": "2026-11-16T01:53:29.1474590Z ℹ fail 0"
+      },
+      {
+        "line": 884,
+        "text": "2026-11-16T01:53:29.1476980Z ℹ cancelled 0"
+      },
+      {
+        "line": 885,
+        "text": "2026-11-16T01:53:29.1479240Z ℹ skipped 0"
+      },
+      {
+        "line": 886,
+        "text": "2026-11-16T01:53:29.1481380Z ℹ todo 0"
+      },
+      {
+        "line": 887,
+        "text": "2026-11-16T01:53:29.1483700Z ℹ duration_ms 333.235139"
+      },
+      {
+        "line": 1338,
+        "text": "2026-11-16T02:04:01.2687370Z ℹ tests 26"
+      },
+      {
+        "line": 1340,
+        "text": "2026-11-16T02:04:01.2711550Z ℹ pass 25"
+      },
+      {
+        "line": 1341,
+        "text": "2026-11-16T02:04:01.2740290Z ℹ fail 0"
+      },
+      {
+        "line": 1342,
+        "text": "2026-11-16T02:04:01.2749090Z ℹ cancelled 0"
+      },
+      {
+        "line": 1343,
+        "text": "2026-11-16T02:04:01.2770770Z ℹ skipped 1"
+      },
+      {
+        "line": 1344,
+        "text": "2026-11-16T02:04:01.2798460Z ℹ todo 0"
+      },
+      {
+        "line": 1345,
+        "text": "2026-11-16T02:04:01.2804450Z ℹ duration_ms 10926.027129"
+      }
+    ],
+    "totalPass": 38,
+    "totalSkip": 1,
+    "skip": "Windows builder preserves only the fully attested unused ia32 FFI with its real x64 target",
+    "toolchainRoles": "Initial repository/package phase reports Node26.12.1; exact Host/candidate staging switches to Node24.21.0 before the third finite command and original packaged scenarios. The first two commands are not reattributed to Node24.",
+    "limits": "Windows broker step26 and P08 step38 are skipped. No full eight Desktop helper command, Team ten-file privacy result or native53-suite result is claimed from this job."
+  },
+  "packedCandidate": {
+    "executable": "/Users/runner/work/agent-teams-ai/agent-teams-ai/release/mac/Agent Teams AI.app/Contents/MacOS/Agent Teams AI",
+    "executableSha256": "6f99f14f55e2dc41b449e10631b1aada39a917a3c93bcc214bed1128d77a7e4f",
+    "appAsar": "/Users/runner/work/agent-teams-ai/agent-teams-ai/release/mac/Agent Teams AI.app/Contents/Resources/app.asar",
+    "appAsarSha256": "ae22c80e68685d0089dbae04a5602e2935890df95582968ff95e65f0aaf1c747",
+    "rendererUrl": "file:///Users/runner/work/agent-teams-ai/agent-teams-ai/release/mac/Agent%20Teams%20AI.app/Contents/Resources/app.asar/out/renderer/index.html",
+    "capture": {
+      "resourcesRoot": "/Users/runner/work/agent-teams-ai/agent-teams-ai/release/mac/Agent Teams AI.app/Contents/Resources/legacy-agent-host",
+      "appAsar": "/Users/runner/work/agent-teams-ai/agent-teams-ai/release/mac/Agent Teams AI.app/Contents/Resources/app.asar",
+      "appAsarSha256": "ae22c80e68685d0089dbae04a5602e2935890df95582968ff95e65f0aaf1c747",
+      "manifestSha256": "aa5e3091070f17a1462cda79ad204791267780868b656d88107762e5e1b24037"
+    },
+    "node": "/Users/runner/work/agent-teams-ai/agent-teams-ai/release/mac/Agent Teams AI.app/Contents/Resources/legacy-agent-host/node/v24.21.0/darwin-x64/node",
+    "hostEntry": "/Users/runner/work/agent-teams-ai/agent-teams-ai/release/mac/Agent Teams AI.app/Contents/Resources/legacy-agent-host/host/packages/0000/dist/cli.js"
+  },
+  "pins": {
+    "nodeSha256": "7abcf39bd37ab251015337ff75304d7555f0d8e88c6e0fbf04bce8ce34636f49",
+    "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+    "corepackPackageSha256": "6f431b9a91afe6b4757f4b5a3855e2f79e2f366dd4242fd397713932aa3a2714",
+    "corepackLibrarySha256": "abd6f0e7b4e2af310243e202fd908ea64cda545786222f0a3d3f62426e8ad66e",
+    "pnpmStubSha256": "6f9edffd864f3617abe4db98336d55489a3aa3e2a2b380c37cf65c23fe995880",
+    "profileSha256": "742a25b2fd7a53b4ab1dccc2a10cf44bdb9acf21d5dd24a96e2ce0e7fb12c503",
+    "descriptorSha256": "2491f086b10f0dec25a198e0469f187d2265c8f57b016766e8e7fed6fb593e6a",
+    "sentinelSha256": "3bdee6d10d4ac6034f0a4907739e1ea0aa220e3f38adeddcd868e3e245eeb501",
+    "shellProbeSha256": "f753d0cffdba879f7431cb2da1fbcdfce86222ca71e392aacb794aa95989c643",
+    "providerArchiveSha256": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+    "pnpmSha256": "7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb",
+    "electronSha256": "6f99f14f55e2dc41b449e10631b1aada39a917a3c93bcc214bed1128d77a7e4f",
+    "smokeSourceSha256": "d9c331cfc2aed9a7aeaa7c815ce39de662a3b491cc31013df1e5f16ee029b514",
+    "fixtureSourceSha256": "58279362c05f6645881e4850807f78183eee5dc51dfb32f355ff4ded7e7c3589",
+    "uiSourceSha256": "9ea0a2063cae525d80b8a79eac4fcb79062d47fe81f9f2b72d843662a3e92abf"
+  },
+  "fixturePins": {
+    "executable": {
+      "path": "/Users/runner/work/_temp/TEST-desktop-backend-0Q2h6H/bin/TEST-claude-peer",
+      "sha256": "bb25781d60cdb8be2631fa1fdf2428f63a45728bf2fe7bb27d4cd1471475350b"
+    },
+    "sources": [
+      {
+        "path": "/Users/runner/work/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+        "sha256": "c443b410efbe4910839b02662fa1767b60e428936c012d729b26eeb82f182a87"
+      }
+    ],
+    "provider": "claude",
+    "lifecycleVariant": "cold-resume-active-quit-v1",
+    "protocolRevision": "sdk-0.3.305",
+    "runtimeConfigured": true,
+    "managementConfigured": true,
+    "vendorsAllowed": false
+  },
+  "startupOutcome": {
+    "elapsedMs": 4776,
+    "matchingMainFound": true,
+    "appExitCode": null,
+    "appSignalCode": null,
+    "spawnError": false
+  },
+  "originalApp": {
+    "pid": 58106,
+    "processGroup": 58106,
+    "identity": "Mon Nov 16 02:40:26 2026     /Users/runner/work/agent-teams-ai/agent-teams-ai/release/mac/Agent Teams AI.app/Contents/MacOS/Agent Teams AI --remote-debugging-port=9222",
+    "invocation": [
+      "/Users/runner/work/agent-teams-ai/agent-teams-ai/release/mac/Agent Teams AI.app/Contents/MacOS/Agent Teams AI",
+      "--remote-debugging-port=9222"
+    ]
+  },
+  "originalHost": {
+    "pid": 58400,
+    "ppid": 58106,
+    "pgid": 58106,
+    "observedBeforeShutdown": true
+  },
+  "launchStop": {
+    "proof": {
+      "status": "PASS",
+      "provider": "claude",
+      "steps": [
+        {
+          "action": "mouseMoved",
+          "label": "hover sidebar row before measuring click",
+          "subject": "TEST persisted Host sidebar seed",
+          "target": {
+            "x": 1261,
+            "y": 174.875
+          }
+        },
+        {
+          "action": "mouseClick",
+          "label": "sidebar task",
+          "subject": "TEST persisted Host sidebar seed",
+          "target": {
+            "x": 1261,
+            "y": 174.875
+          },
+          "state": "attempted"
+        },
+        {
+          "observation": "passive input delivery after sidebar click",
+          "value": {
+            "focused": true,
+            "visibility": "visible",
+            "events": [
+              {
+                "type": "pointerdown",
+                "timeMs": 51415,
+                "x": 1261,
+                "y": 174.875,
+                "button": 0,
+                "buttons": 1,
+                "trusted": true,
+                "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+                "target": {
+                  "tag": "SPAN",
+                  "id": "",
+                  "ariaLabel": null,
+                  "className": ""
+                },
+                "focusBefore": {
+                  "tag": "INPUT",
+                  "id": "",
+                  "ariaLabel": null,
+                  "className": "min-w-0 flex-1 bg-transparent text-base text-text outline-none placeholder:text-text-muted"
+                },
+                "defaultPreventedBefore": false,
+                "sidebarRow": false,
+                "taskId": null,
+                "activeSortable": [],
+                "dragAnnouncement": [
+                  ""
+                ],
+                "taskClarification": null,
+                "defaultPreventedAfterMicrotask": false,
+                "focusAfterMicrotask": {
+                  "tag": "INPUT",
+                  "id": "",
+                  "ariaLabel": null,
+                  "className": "min-w-0 flex-1 bg-transparent text-base text-text outline-none placeholder:text-text-muted"
+                },
+                "defaultPreventedAfterDispatch": false,
+                "focusAfterDispatch": {
+                  "tag": "BUTTON",
+                  "id": "",
+                  "ariaLabel": null,
+                  "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+                }
+              },
+              {
+                "type": "focusout",
+                "timeMs": 51420,
+                "trusted": true,
+                "buttonClass": null,
+                "target": {
+                  "tag": "INPUT",
+                  "id": "",
+                  "ariaLabel": null,
+                  "className": "min-w-0 flex-1 bg-transparent text-base text-text outline-none placeholder:text-text-muted"
+                },
+                "focusBefore": {
+                  "tag": "BODY",
+                  "id": "",
+                  "ariaLabel": null,
+                  "className": ""
+                },
+                "defaultPreventedBefore": false,
+                "sidebarRow": false,
+                "taskId": null,
+                "activeSortable": [],
+                "dragAnnouncement": [
+                  ""
+                ],
+                "defaultPreventedAfterMicrotask": false,
+                "focusAfterMicrotask": {
+                  "tag": "BODY",
+                  "id": "",
+                  "ariaLabel": null,
+                  "className": ""
+                },
+                "defaultPreventedAfterDispatch": false,
+                "focusAfterDispatch": {
+                  "tag": "BUTTON",
+                  "id": "",
+                  "ariaLabel": null,
+                  "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+                }
+              },
+              {
+                "type": "focusin",
+                "timeMs": 51424,
+                "trusted": true,
+                "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+                "target": {
+                  "tag": "BUTTON",
+                  "id": "",
+                  "ariaLabel": null,
+                  "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+                },
+                "focusBefore": {
+                  "tag": "BUTTON",
+                  "id": "",
+                  "ariaLabel": null,
+                  "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+                },
+                "defaultPreventedBefore": false,
+                "sidebarRow": false,
+                "taskId": null,
+                "activeSortable": [],
+                "dragAnnouncement": [
+                  ""
+                ],
+                "defaultPreventedAfterMicrotask": false,
+                "focusAfterMicrotask": {
+                  "tag": "BUTTON",
+                  "id": "",
+                  "ariaLabel": null,
+                  "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+                },
+                "defaultPreventedAfterDispatch": false,
+                "focusAfterDispatch": {
+                  "tag": "BUTTON",
+                  "id": "",
+                  "ariaLabel": null,
+                  "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+                }
+              },
+              {
+                "type": "pointerup",
+                "timeMs": 51433,
+                "x": 1261,
+                "y": 174.875,
+                "button": 0,
+                "buttons": 0,
+                "trusted": true,
+                "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+                "target": {
+                  "tag": "SPAN",
+                  "id": "",
+                  "ariaLabel": null,
+                  "className": ""
+                },
+                "focusBefore": {
+                  "tag": "BUTTON",
+                  "id": "",
+                  "ariaLabel": null,
+                  "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+                },
+                "defaultPreventedBefore": false,
+                "sidebarRow": false,
+                "taskId": null,
+                "activeSortable": [],
+                "dragAnnouncement": [
+                  ""
+                ],
+                "taskClarification": null,
+                "defaultPreventedAfterMicrotask": false,
+                "focusAfterMicrotask": {
+                  "tag": "BUTTON",
+                  "id": "",
+                  "ariaLabel": null,
+                  "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+                },
+                "defaultPreventedAfterDispatch": false,
+                "focusAfterDispatch": {
+                  "tag": "BUTTON",
+                  "id": "",
+                  "ariaLabel": null,
+                  "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+                }
+              },
+              {
+                "type": "click",
+                "timeMs": 51433,
+                "x": 1261,
+                "y": 174,
+                "button": 0,
+                "buttons": 0,
+                "trusted": true,
+                "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+                "target": {
+                  "tag": "SPAN",
+                  "id": "",
+                  "ariaLabel": null,
+                  "className": ""
+                },
+                "focusBefore": {
+                  "tag": "BUTTON",
+                  "id": "",
+                  "ariaLabel": null,
+                  "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+                },
+                "defaultPreventedBefore": false,
+                "sidebarRow": false,
+                "taskId": null,
+                "activeSortable": [],
+                "dragAnnouncement": [
+                  ""
+                ],
+                "taskClarification": null,
+                "defaultPreventedAfterMicrotask": false,
+                "focusAfterMicrotask": {
+                  "tag": "BUTTON",
+                  "id": "",
+                  "ariaLabel": null,
+                  "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+                },
+                "defaultPreventedAfterDispatch": false,
+                "focusAfterDispatch": {
+                  "tag": "BUTTON",
+                  "id": "",
+                  "ariaLabel": null,
+                  "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+                }
+              },
+              {
+                "type": "focusout",
+                "timeMs": 51484,
+                "trusted": true,
+                "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+                "target": {
+                  "tag": "BUTTON",
+                  "id": "",
+                  "ariaLabel": null,
+                  "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+                },
+                "focusBefore": {
+                  "tag": "BODY",
+                  "id": "",
+                  "ariaLabel": null,
+                  "className": ""
+                },
+                "defaultPreventedBefore": false,
+                "sidebarRow": false,
+                "taskId": null,
+                "activeSortable": [],
+                "dragAnnouncement": [
+                  ""
+                ],
+                "defaultPreventedAfterMicrotask": false,
+                "focusAfterMicrotask": {
+                  "tag": "BUTTON",
+                  "id": "",
+                  "ariaLabel": null,
+                  "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+                },
+                "defaultPreventedAfterDispatch": false,
+                "focusAfterDispatch": {
+                  "tag": "BUTTON",
+                  "id": "",
+                  "ariaLabel": null,
+                  "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+                }
+              },
+              {
+                "type": "focusin",
+                "timeMs": 51490,
+                "trusted": true,
+                "buttonClass": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--",
+                "target": {
+                  "tag": "BUTTON",
+                  "id": "",
+                  "ariaLabel": null,
+                  "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+                },
+                "focusBefore": {
+                  "tag": "BUTTON",
+                  "id": "",
+                  "ariaLabel": null,
+                  "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+                },
+                "defaultPreventedBefore": false,
+                "sidebarRow": false,
+                "taskId": null,
+                "activeSortable": [],
+                "dragAnnouncement": [
+                  ""
+                ],
+                "defaultPreventedAfterMicrotask": false,
+                "focusAfterMicrotask": {
+                  "tag": "BUTTON",
+                  "id": "",
+                  "ariaLabel": null,
+                  "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+                },
+                "defaultPreventedAfterDispatch": false,
+                "focusAfterDispatch": {
+                  "tag": "BUTTON",
+                  "id": "",
+                  "ariaLabel": null,
+                  "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "action": "mouseMoved",
+          "label": "hover Open team",
+          "selector": "[role=\"dialog\"] button",
+          "target": {
+            "x": 1036.2926025390625,
+            "y": 212.1437530517578,
+            "text": "Open team",
+            "tag": "BUTTON"
+          }
+        },
+        {
+          "action": "mouseClick",
+          "label": "Open team",
+          "selector": "[role=\"dialog\"] button",
+          "expectedText": "Open team",
+          "target": {
+            "x": 1053.9921875,
+            "y": 199.625,
+            "text": "Open team",
+            "tag": "BUTTON"
+          },
+          "state": "attempted"
+        },
+        {
+          "action": "mouseMoved",
+          "label": "hover original lifecycle saved Team Launch",
+          "selector": "button",
+          "target": {
+            "x": 1040.9375,
+            "y": 174,
+            "text": "Launch",
+            "tag": "BUTTON"
+          }
+        },
+        {
+          "action": "mouseClick",
+          "label": "original lifecycle saved Team Launch",
+          "selector": "button",
+          "expectedText": "Launch",
+          "target": {
+            "x": 1040.9375,
+            "y": 174,
+            "text": "Launch",
+            "tag": "BUTTON"
+          },
+          "state": "attempted"
+        },
+        {
+          "action": "mouseMoved",
+          "label": "hover expand original lifecycle saved settings",
+          "selector": "[role=\"dialog\"] button[aria-controls=\"_r_31_\"]",
+          "target": {
+            "x": 700,
+            "y": 504.25,
+            "text": "Optional launch settingsOptional•Anthropic•sonnet•low•+2",
+            "tag": "BUTTON"
+          }
+        },
+        {
+          "action": "mouseClick",
+          "label": "expand original lifecycle saved settings",
+          "selector": "[role=\"dialog\"] button[aria-controls=\"_r_31_\"]",
+          "target": {
+            "x": 700,
+            "y": 494.25,
+            "text": "Optional launch settingsOptional•Anthropic•sonnet•low•+2",
+            "tag": "BUTTON"
+          },
+          "state": "attempted"
+        },
+        {
+          "action": "mouseMoved",
+          "label": "hover focus original lifecycle input",
+          "selector": "[role=\"dialog\"] #dialog-prompt",
+          "target": {
+            "x": 694.5,
+            "y": 747.375,
+            "text": "",
+            "tag": "TEXTAREA"
+          }
+        },
+        {
+          "action": "mouseClick",
+          "label": "focus original lifecycle input",
+          "selector": "[role=\"dialog\"] #dialog-prompt",
+          "target": {
+            "x": 694.5,
+            "y": 747.375,
+            "text": "",
+            "tag": "TEXTAREA"
+          },
+          "state": "attempted"
+        },
+        {
+          "action": "mouseWheel",
+          "label": "original lifecycle Launch team",
+          "selector": "[role=\"dialog\"] button",
+          "deltaY": 600
+        },
+        {
+          "action": "mouseMoved",
+          "label": "hover original lifecycle Launch once",
+          "selector": "[role=\"dialog\"] button",
+          "target": {
+            "x": 998.1484375,
+            "y": 791.875,
+            "text": "Launch team",
+            "tag": "BUTTON"
+          }
+        },
+        {
+          "action": "mouseClick",
+          "label": "original lifecycle Launch once",
+          "selector": "[role=\"dialog\"] button",
+          "expectedText": "Launch team",
+          "target": {
+            "x": 998.1484375,
+            "y": 791.875,
+            "text": "Launch team",
+            "tag": "BUTTON"
+          },
+          "state": "attempted"
+        },
+        {
+          "action": "mouseMoved",
+          "label": "hover original lifecycle lead chat",
+          "selector": "button[aria-label^=\"alice,\"]",
+          "target": {
+            "x": 169.5,
+            "y": 178,
+            "text": "aliceYou: TEST_UI_BOOT02:41 AM",
+            "tag": "BUTTON"
+          }
+        },
+        {
+          "action": "mouseClick",
+          "label": "original lifecycle lead chat",
+          "selector": "button[aria-label^=\"alice,\"]",
+          "target": {
+            "x": 169.5,
+            "y": 178,
+            "text": "aliceYou: TEST_UI_BOOT02:41 AM",
+            "tag": "BUTTON"
+          },
+          "state": "attempted"
+        },
+        {
+          "action": "mouseWheel",
+          "label": "original lifecycle Team Stop",
+          "selector": "button[aria-label=\"Stop\"]",
+          "deltaY": -513
+        },
+        {
+          "action": "mouseMoved",
+          "label": "hover original lifecycle Stop once",
+          "selector": "button[aria-label=\"Stop\"]",
+          "target": {
+            "x": 998.515625,
+            "y": 68,
+            "text": "Stop",
+            "tag": "BUTTON"
+          }
+        },
+        {
+          "action": "mouseClick",
+          "label": "original lifecycle Stop once",
+          "selector": "button[aria-label=\"Stop\"]",
+          "expectedText": "Stop",
+          "target": {
+            "x": 998.515625,
+            "y": 68,
+            "text": "Stop",
+            "tag": "BUTTON"
+          },
+          "state": "attempted"
+        }
+      ],
+      "commands": [],
+      "nativeQualification": false,
+      "scope": "Original Launch, one successful SDK peer input and original Stop before automatic packaged app relaunch",
+      "excluded": [
+        "vendor inference/authentication",
+        "native provider qualification",
+        "cold checkpoint Resume",
+        "active/queued Quit"
+      ],
+      "launchScreenshot": {
+        "path": "/Users/runner/work/_temp/TEST-desktop-backend-0Q2h6H/ui-emulated-lifecycle-launch.png",
+        "sha256": "33681012e69834c9eaa80b3aba9d887b9807d7ebc78b3b248d24404f8904a0e9"
+      },
+      "capture": {
+        "commandId": "capture:launch:roster:65b877e2-e49f-4b71-986b-67a8bf1ee2f3",
+        "configurationRevision": "8bbbbe10934e6741e5e7c432c7e5b72b716da02571f34ef00eeac16d1c6635fb",
+        "launchId": "450c1527-a9b0-5823-a228-0aa2545798e3",
+        "members": [
+          {
+            "memberId": "alice-id",
+            "principalId": "agent:97af3ce1-25a5-5ec9-8207-db381f69a0d5",
+            "delivery": {
+              "backendId": "TEST-desktop-owner-TEST-desktop-backend-0Q2h6H",
+              "teamId": "TEST-desktop-team",
+              "teamName": "test-desktop-backend",
+              "runId": "450c1527-a9b0-5823-a228-0aa2545798e3",
+              "memberId": "alice-id",
+              "generation": "capture-a6cb6157-30b0-5e68-b1ee-776495fad3ba"
+            }
+          }
+        ],
+        "principalId": "TEST-human",
+        "fingerprint": "c345625e721833f1017e91ceeb1b358d26c0841955536a93ae841ba82dad4aef"
+      },
+      "source": {
+        "session": {
+          "schemaVersion": 1,
+          "binding": {
+            "backendId": "TEST-desktop-owner-TEST-desktop-backend-0Q2h6H",
+            "teamId": "TEST-desktop-team",
+            "runId": "450c1527-a9b0-5823-a228-0aa2545798e3",
+            "memberId": "alice-id",
+            "generation": "capture-a6cb6157-30b0-5e68-b1ee-776495fad3ba"
+          },
+          "profileId": "TEST-desktop-profile-TEST-desktop-backend-0Q2h6H",
+          "config": {
+            "tenantId": "TEST-desktop-owner-TEST-desktop-backend-0Q2h6H",
+            "projectId": "TEST-project-TEST-desktop-backend-0Q2h6H",
+            "sessionId": "be1e788d-7b1b-59fa-bf82-403967c34f7a",
+            "generation": 2,
+            "configRevision": "capture-8f56a104604fdb868bfeb3b08d81993bd070c9986fcb8e9db35801044f886951",
+            "requiredCapabilities": [
+              "session.conversation"
+            ]
+          },
+          "openFingerprint": "26556aeaf3fe7d3ee2bac70d3bc9e07f0e2909f9a480eb0fab18ade15a7ec386",
+          "hostIncarnation": "09e9bedb-c778-4c31-8422-be036667282d",
+          "phase": "closed",
+          "sealed": true,
+          "custody": "released",
+          "nativeReady": false,
+          "inputs": [
+            {
+              "intent": {
+                "binding": {
+                  "backendId": "TEST-desktop-owner-TEST-desktop-backend-0Q2h6H",
+                  "teamId": "TEST-desktop-team",
+                  "runId": "450c1527-a9b0-5823-a228-0aa2545798e3",
+                  "memberId": "alice-id",
+                  "generation": "capture-a6cb6157-30b0-5e68-b1ee-776495fad3ba"
+                },
+                "deliveryId": "c8c6a572-ffd4-5a8a-aacc-9a1bb363d796",
+                "inputId": "c8c6a572-ffd4-5a8a-aacc-9a1bb363d796",
+                "messageId": "9437ef1a-76cf-5ff2-8eb4-3fec879d3457",
+                "content": "TEST_UI_BOOT"
+              },
+              "fingerprint": "3abe4eaa0afab80f3477eb456eb30240d19db7db20d940539e2ef0814483468b",
+              "operationRef": "60a4d341-a3ae-4d49-b993-3235274e8f00",
+              "phase": "terminal",
+              "terminal": "succeeded"
+            }
+          ],
+          "interactions": [],
+          "conversation": {
+            "sequence": 8,
+            "digest": "cecd327e3cf048642ffd4672e76898c01b09937f65176d6db6d12b30746db29d",
+            "gaps": []
+          },
+          "activitySequence": 16,
+          "sessionRef": "be1e788d-7b1b-59fa-bf82-403967c34f7a",
+          "closeClaimed": true,
+          "checkpoints": [
+            {
+              "checkpointId": "stop-82286aa7c393ff0f267682015edb449346faeff3217aedf6e78220404b5d0671",
+              "fingerprint": "ceade18dc30403ca48484f2e44ab1fc3b087391f2b64f0bd257bf5ed6beaef8a",
+              "hostIncarnation": "09e9bedb-c778-4c31-8422-be036667282d",
+              "status": "published",
+              "reference": "cp1-4ed49c56ecf8884074d68527a52928c2d5d874be7adf2eb359603b8324325bda",
+              "historyDigest": "bf74851faacd44cfb567e87dcda8f58baa5d2423b8c2441c32ac7acc1e69a5d7",
+              "payloadDigest": "def0a01c967498c9b39bdc136dde4ec661a0f1f52e0ee4e134c4a463c055bb54"
+            }
+          ],
+          "diagnostic": "observe-ended"
+        },
+        "reference": "cp1-4ed49c56ecf8884074d68527a52928c2d5d874be7adf2eb359603b8324325bda",
+        "payloadFileSha256": "d598a9338036ce7a8dfe3b69e882e7012e8d6d3dc3b8512bbbd9414a0a67b910",
+        "historyPath": "/Users/runner/work/_temp/TEST-desktop-backend-0Q2h6H/TEST-peer-claude-scope/config/projects/TEST-desktop-peer/a3d577ae-f0e1-4d67-a0a3-0b03d2762e97.jsonl",
+        "historySha256": "73380a4e522687512740c7be7dcdedc781a50f2082a265e1554a53eada405f2f",
+        "nativeSession": "a3d577ae-f0e1-4d67-a0a3-0b03d2762e97",
+        "originalPids": [
+          59729
+        ]
+      },
+      "stoppedScreenshot": {
+        "path": "/Users/runner/work/_temp/TEST-desktop-backend-0Q2h6H/ui-emulated-lifecycle-stopped.png",
+        "sha256": "e64ad75b7d8b1f7f067b4aeb00df051ec070d2e117265f3001deb834dd4c0bc6"
+      }
+    },
+    "scope": "One original saved Team Launch, one successful SDK business input and original Stop. One model probe is separate.",
+    "stopRecordAndOriginalRelaunchSessionsEqual": true,
+    "liveBindingJoinedToCapture": true,
+    "checkpointLimit": "Checkpoint reference, payload file hash and history hash are retained in the receipt, but no checkpoint/history file or peer NDJSON is in this nine-member archive. Their contents/digests were not independently recomputed here."
+  },
+  "relaunch": {
+    "proof": {
+      "status": "PASS",
+      "scope": "Automatic packed app.relaunch, observer-only successor and one guarded public Quit",
+      "successorNativeCustody": false,
+      "numericPidSignalsAuthorized": false,
+      "providerRootCleanupQualification": "outside this observer-only app lifecycle scope",
+      "originalLease": {
+        "pid": 58400,
+        "token": "12b623ce-b9ed-48ee-9448-df6a5aad9019",
+        "dev": 16777220,
+        "ino": 12888861031
+      },
+      "originalSessions": [
+        {
+          "schemaVersion": 1,
+          "binding": {
+            "backendId": "TEST-desktop-owner-TEST-desktop-backend-0Q2h6H",
+            "teamId": "TEST-desktop-team",
+            "runId": "450c1527-a9b0-5823-a228-0aa2545798e3",
+            "memberId": "alice-id",
+            "generation": "capture-a6cb6157-30b0-5e68-b1ee-776495fad3ba"
+          },
+          "profileId": "TEST-desktop-profile-TEST-desktop-backend-0Q2h6H",
+          "config": {
+            "tenantId": "TEST-desktop-owner-TEST-desktop-backend-0Q2h6H",
+            "projectId": "TEST-project-TEST-desktop-backend-0Q2h6H",
+            "sessionId": "be1e788d-7b1b-59fa-bf82-403967c34f7a",
+            "generation": 2,
+            "configRevision": "capture-8f56a104604fdb868bfeb3b08d81993bd070c9986fcb8e9db35801044f886951",
+            "requiredCapabilities": [
+              "session.conversation"
+            ]
+          },
+          "openFingerprint": "26556aeaf3fe7d3ee2bac70d3bc9e07f0e2909f9a480eb0fab18ade15a7ec386",
+          "hostIncarnation": "09e9bedb-c778-4c31-8422-be036667282d",
+          "phase": "closed",
+          "sealed": true,
+          "custody": "released",
+          "nativeReady": false,
+          "inputs": [
+            {
+              "intent": {
+                "binding": {
+                  "backendId": "TEST-desktop-owner-TEST-desktop-backend-0Q2h6H",
+                  "teamId": "TEST-desktop-team",
+                  "runId": "450c1527-a9b0-5823-a228-0aa2545798e3",
+                  "memberId": "alice-id",
+                  "generation": "capture-a6cb6157-30b0-5e68-b1ee-776495fad3ba"
+                },
+                "deliveryId": "c8c6a572-ffd4-5a8a-aacc-9a1bb363d796",
+                "inputId": "c8c6a572-ffd4-5a8a-aacc-9a1bb363d796",
+                "messageId": "9437ef1a-76cf-5ff2-8eb4-3fec879d3457",
+                "content": "TEST_UI_BOOT"
+              },
+              "fingerprint": "3abe4eaa0afab80f3477eb456eb30240d19db7db20d940539e2ef0814483468b",
+              "operationRef": "60a4d341-a3ae-4d49-b993-3235274e8f00",
+              "phase": "terminal",
+              "terminal": "succeeded"
+            }
+          ],
+          "interactions": [],
+          "conversation": {
+            "sequence": 8,
+            "digest": "cecd327e3cf048642ffd4672e76898c01b09937f65176d6db6d12b30746db29d",
+            "gaps": []
+          },
+          "activitySequence": 16,
+          "sessionRef": "be1e788d-7b1b-59fa-bf82-403967c34f7a",
+          "closeClaimed": true,
+          "checkpoints": [
+            {
+              "checkpointId": "stop-82286aa7c393ff0f267682015edb449346faeff3217aedf6e78220404b5d0671",
+              "fingerprint": "ceade18dc30403ca48484f2e44ab1fc3b087391f2b64f0bd257bf5ed6beaef8a",
+              "hostIncarnation": "09e9bedb-c778-4c31-8422-be036667282d",
+              "status": "published",
+              "reference": "cp1-4ed49c56ecf8884074d68527a52928c2d5d874be7adf2eb359603b8324325bda",
+              "historyDigest": "bf74851faacd44cfb567e87dcda8f58baa5d2423b8c2441c32ac7acc1e69a5d7",
+              "payloadDigest": "def0a01c967498c9b39bdc136dde4ec661a0f1f52e0ee4e134c4a463c055bb54"
+            }
+          ],
+          "diagnostic": "observe-ended"
+        }
+      ],
+      "relaunchAttempted": true,
+      "relaunchReply": "acknowledged",
+      "originalExit": {
+        "exitCode": 0,
+        "signalCode": null,
+        "HostExitCode": "unavailable",
+        "HostSignalCode": "unavailable"
+      },
+      "leaseAfterOriginalExit": null,
+      "successorIdentity": {
+        "pid": 60137,
+        "executable": "/Users/runner/work/agent-teams-ai/agent-teams-ai/release/mac/Agent Teams AI.app/Contents/MacOS/Agent Teams AI",
+        "argv": "/Users/runner/work/agent-teams-ai/agent-teams-ai/release/mac/Agent Teams AI.app/Contents/MacOS/Agent Teams AI --remote-debugging-port=9222",
+        "started": "Mon Nov 16 02:41:57 2026",
+        "observationOnly": true
+      },
+      "successorHomeBeforeBackend": {
+        "defaultPath": "/Users/runner/work/_temp/TEST-desktop-backend-0Q2h6H/home/.claude",
+        "resolvedPath": "/Users/runner/work/_temp/TEST-desktop-backend-0Q2h6H/claude",
+        "customPath": null
+      },
+      "successorBinding": {
+        "rendererTarget": {
+          "id": "5DA3B7D02E54EF9312BE819D317BDDAF",
+          "url": "file:///Users/runner/work/agent-teams-ai/agent-teams-ai/release/mac/Agent%20Teams%20AI.app/Contents/Resources/app.asar/out/renderer/index.html"
+        },
+        "discoveryReadiness": {
+          "attempts": 1,
+          "transient": []
+        },
+        "discovery": {
+          "state": "ready",
+          "bindings": [
+            {
+              "handle": {
+                "handleId": "TEST-desktop-handle-TEST-desktop-backend-0Q2h6H"
+              },
+              "label": "TEST private backend",
+              "ownerResourceRef": "9303b318e06eb5424dd34caf1b889ea5a4c6b3e4ebc234467ba8a4d927e5903a",
+              "teamResourceRef": "d2f414d9-08b4-58c6-912b-b006120d08c5",
+              "members": [
+                {
+                  "memberId": "alice-id",
+                  "label": "alice"
+                }
+              ]
+            }
+          ]
+        },
+        "compiledBundleHashesAfterStartup": {
+          "appAsar": {
+            "path": "/Users/runner/work/agent-teams-ai/agent-teams-ai/release/mac/Agent Teams AI.app/Contents/Resources/app.asar",
+            "sha256": "ae22c80e68685d0089dbae04a5602e2935890df95582968ff95e65f0aaf1c747"
+          }
+        },
+        "bundleProvenance": "Actual captured packed executable/app.asar and candidate runtime census; no source bundle fallback",
+        "homePathProof": {
+          "defaultPath": "/Users/runner/work/_temp/TEST-desktop-backend-0Q2h6H/home/.claude",
+          "resolvedPath": "/Users/runner/work/_temp/TEST-desktop-backend-0Q2h6H/claude",
+          "customPath": null,
+          "canonicalDefaultPath": "/Users/runner/work/_temp/TEST-desktop-backend-0Q2h6H/home/.claude"
+        }
+      },
+      "writerOrdering": {
+        "originalHostAbsent": true,
+        "originalLease": {
+          "pid": 58400,
+          "token": "12b623ce-b9ed-48ee-9448-df6a5aad9019",
+          "dev": 16777220,
+          "ino": 12888861031
+        },
+        "newExclusiveLease": {
+          "pid": 60344,
+          "token": "1f85e6a2-b765-4fc4-ab1b-0489b46fbb92",
+          "dev": 16777220,
+          "ino": 12888870148
+        },
+        "rule": "Existing no-replace PID/token publication forbids overlap; original release versus dead-owner recovery is not inferred from a missed absence sample"
+      },
+      "successorQuitAttempted": true,
+      "successorQuitReply": "unconfirmed; no retry or signal",
+      "successorAbsence": {
+        "listenerAbsent": true,
+        "observedPidAbsent": true,
+        "HostPidAbsent": true,
+        "writerLockAbsent": true,
+        "exitCode": "unavailable",
+        "signalCode": "unavailable",
+        "naturalExitQualified": false
+      }
+    },
+    "sameHomeDiscoveryAndAsar": true,
+    "newRendererTarget": true,
+    "scope": "Existing current verified TEST CDP authorizes one public relaunch and one public successor Quit. Numeric PID observations do not grant native custody or signal authority.",
+    "quitFlagLimit": "Top-level quitRequested:false records no fallback original-renderer Quit. Nested successorQuitAttempted:true records the actual public successor Quit; its reply is unconfirmed and no action is retried.",
+    "writerLimit": "The sampled old lease is absent and the successor has a different PID/token. Original release versus dead-owner recovery is not inferred beyond the original no-replace contract."
+  },
+  "cleanup": {
+    "beforeHarnessCleanup": [],
+    "capturedApp": {
+      "remaining": [],
+      "capturedHostAbsent": true,
+      "hostPid": 58400
+    },
+    "originalInputEffects": [
+      {
+        "provider": "claude",
+        "role": "runtime",
+        "pid": 59332,
+        "event": "input",
+        "inputId": "fca40a28-2523-4fbe-8f17-23e2f9eae5e4",
+        "marker": "TEST_MODEL_PROBE",
+        "sessionId": "b42097ec-1aff-4162-b493-3136abd9d2d2",
+        "wrapped": false
+      },
+      {
+        "provider": "claude",
+        "role": "runtime",
+        "pid": 59729,
+        "event": "input",
+        "inputId": "548bf018-893a-466d-aba7-bb895d29a86d",
+        "marker": "TEST_UI_BOOT",
+        "sessionId": "a3d577ae-f0e1-4d67-a0a3-0b03d2762e97",
+        "wrapped": false
+      }
+    ],
+    "emulatedRuntimeCleanup": {
+      "originalPeerPids": [
+        58654,
+        59213,
+        59332,
+        59729,
+        60470
+      ],
+      "remaining": [],
+      "absent": true,
+      "effects": [
+        {
+          "provider": "claude",
+          "role": "management",
+          "pid": 58654,
+          "event": "launch",
+          "parentPid": 58400,
+          "sessionId": "84cef7af-ae8f-4ff6-a7fe-6b7b7acf98fc",
+          "restored": false
+        },
+        {
+          "provider": "claude",
+          "role": "management",
+          "pid": 58654,
+          "event": "started",
+          "sessionId": "84cef7af-ae8f-4ff6-a7fe-6b7b7acf98fc",
+          "restored": false
+        },
+        {
+          "provider": "claude",
+          "role": "management",
+          "pid": 58654,
+          "event": "initialized",
+          "sessionId": "84cef7af-ae8f-4ff6-a7fe-6b7b7acf98fc",
+          "restored": false,
+          "commands": [
+            "compact",
+            "usage",
+            "code-review",
+            "test-desktop-skill"
+          ]
+        },
+        {
+          "provider": "claude",
+          "role": "management",
+          "pid": 59213,
+          "event": "launch",
+          "parentPid": 58400,
+          "sessionId": "ff1c7516-e8f0-419e-b3d9-446f0d1d5484",
+          "restored": false
+        },
+        {
+          "provider": "claude",
+          "role": "management",
+          "pid": 59213,
+          "event": "started",
+          "sessionId": "ff1c7516-e8f0-419e-b3d9-446f0d1d5484",
+          "restored": false
+        },
+        {
+          "provider": "claude",
+          "role": "management",
+          "pid": 59213,
+          "event": "initialized",
+          "sessionId": "ff1c7516-e8f0-419e-b3d9-446f0d1d5484",
+          "restored": false,
+          "commands": [
+            "compact",
+            "usage",
+            "code-review",
+            "test-desktop-skill"
+          ]
+        },
+        {
+          "provider": "claude",
+          "role": "runtime",
+          "pid": 59332,
+          "event": "launch",
+          "parentPid": 58400,
+          "sessionId": "b42097ec-1aff-4162-b493-3136abd9d2d2",
+          "restored": false
+        },
+        {
+          "provider": "claude",
+          "role": "runtime",
+          "pid": 59332,
+          "event": "started",
+          "sessionId": "b42097ec-1aff-4162-b493-3136abd9d2d2",
+          "restored": false
+        },
+        {
+          "provider": "claude",
+          "role": "runtime",
+          "pid": 59332,
+          "event": "initialized",
+          "sessionId": "b42097ec-1aff-4162-b493-3136abd9d2d2",
+          "restored": false,
+          "commands": [
+            "compact",
+            "usage",
+            "code-review",
+            "test-desktop-skill"
+          ]
+        },
+        {
+          "provider": "claude",
+          "role": "runtime",
+          "pid": 59332,
+          "event": "input",
+          "inputId": "fca40a28-2523-4fbe-8f17-23e2f9eae5e4",
+          "marker": "TEST_MODEL_PROBE",
+          "sessionId": "b42097ec-1aff-4162-b493-3136abd9d2d2",
+          "wrapped": false
+        },
+        {
+          "provider": "claude",
+          "role": "runtime",
+          "pid": 59332,
+          "event": "terminal",
+          "inputId": "fca40a28-2523-4fbe-8f17-23e2f9eae5e4",
+          "marker": "Reply only OK. Do not use tools, access files or run commands.",
+          "outcome": "succeeded",
+          "text": "OK",
+          "usage": {
+            "input_tokens": 42,
+            "output_tokens": 18,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 0
+          },
+          "cumulativeCostUsd": 0.0123
+        },
+        {
+          "provider": "claude",
+          "role": "runtime",
+          "pid": 59729,
+          "event": "launch",
+          "parentPid": 58400,
+          "sessionId": "a3d577ae-f0e1-4d67-a0a3-0b03d2762e97",
+          "restored": false
+        },
+        {
+          "provider": "claude",
+          "role": "runtime",
+          "pid": 59729,
+          "event": "started",
+          "sessionId": "a3d577ae-f0e1-4d67-a0a3-0b03d2762e97",
+          "restored": false
+        },
+        {
+          "provider": "claude",
+          "role": "runtime",
+          "pid": 59729,
+          "event": "mcp-connected",
+          "sessionId": "a3d577ae-f0e1-4d67-a0a3-0b03d2762e97",
+          "tools": [
+            "group_chat_list",
+            "group_chat_create",
+            "group_chat_send",
+            "group_chat_react",
+            "group_chat_lookup",
+            "task_create",
+            "task_update",
+            "task_set_owner",
+            "task_lifecycle",
+            "task_set_status",
+            "task_add_comment",
+            "task_set_clarification",
+            "task_link",
+            "task_unlink",
+            "review_request",
+            "review_start",
+            "review_approve",
+            "review_request_changes",
+            "task_get",
+            "message_send",
+            "command_lookup",
+            "task_start",
+            "task_complete",
+            "task_restore",
+            "task_delete",
+            "cross_team_send",
+            "cross_team_list_targets",
+            "cross_team_get_outbox",
+            "cross_team_lookup",
+            "process_register",
+            "process_list",
+            "process_stop",
+            "process_unregister",
+            "process_lookup",
+            "team_member_create",
+            "team_member_create_lookup",
+            "team_member_action_prepare",
+            "team_member_action_execute",
+            "team_member_actions_read",
+            "team_member_action_lookup",
+            "team_member_retry",
+            "member_work_sync_status",
+            "member_work_sync_report",
+            "member_briefing",
+            "team_get",
+            "kanban_get",
+            "kanban_list_reviewers",
+            "task_get_comment",
+            "task_list",
+            "task_briefing",
+            "lead_briefing"
+          ]
+        },
+        {
+          "provider": "claude",
+          "role": "runtime",
+          "pid": 59729,
+          "event": "initialized",
+          "sessionId": "a3d577ae-f0e1-4d67-a0a3-0b03d2762e97",
+          "restored": false,
+          "commands": [
+            "compact",
+            "usage",
+            "code-review",
+            "test-desktop-skill"
+          ]
+        },
+        {
+          "provider": "claude",
+          "role": "runtime",
+          "pid": 59729,
+          "event": "input",
+          "inputId": "548bf018-893a-466d-aba7-bb895d29a86d",
+          "marker": "TEST_UI_BOOT",
+          "sessionId": "a3d577ae-f0e1-4d67-a0a3-0b03d2762e97",
+          "wrapped": false
+        },
+        {
+          "provider": "claude",
+          "role": "runtime",
+          "pid": 59729,
+          "event": "terminal",
+          "inputId": "548bf018-893a-466d-aba7-bb895d29a86d",
+          "marker": "TEST_UI_BOOT",
+          "outcome": "succeeded",
+          "text": "TEST boot ready",
+          "usage": {
+            "input_tokens": 42,
+            "output_tokens": 18,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 0
+          },
+          "cumulativeCostUsd": 0.0123
+        },
+        {
+          "provider": "claude",
+          "role": "management",
+          "pid": 60470,
+          "event": "launch",
+          "parentPid": 60344,
+          "sessionId": "b2cab5f9-742e-49c9-a471-29a3a13e0b64",
+          "restored": false
+        },
+        {
+          "provider": "claude",
+          "role": "management",
+          "pid": 60470,
+          "event": "started",
+          "sessionId": "b2cab5f9-742e-49c9-a471-29a3a13e0b64",
+          "restored": false
+        },
+        {
+          "provider": "claude",
+          "role": "management",
+          "pid": 60470,
+          "event": "initialized",
+          "sessionId": "b2cab5f9-742e-49c9-a471-29a3a13e0b64",
+          "restored": false,
+          "commands": [
+            "compact",
+            "usage",
+            "code-review",
+            "test-desktop-skill"
+          ]
+        }
+      ]
+    },
+    "eventCounts": {
+      "launch": 5,
+      "started": 5,
+      "initialized": 5,
+      "input": 2,
+      "terminal": 2,
+      "mcp-connected": 1
+    },
+    "finalSentinelCensus": [],
+    "packagedInputsUnchanged": true,
+    "limits": "All five recorded peer PIDs are absent; zero peer exit-code events are retained. The20-row effects projection and two input rows are in the receipt only, without an independently archived raw peer ledger. Original app exit0/null is distinct from unavailable original Host and successor app/Host exit codes. No TEST_MAIN_CHILD_PROCESS row occurs in the archived App log. Successor absence remains non-atomic observer evidence, not natural-exit/native custody."
+  },
+  "images": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-mac-x64/extracted/_temp/TEST-desktop-backend-0Q2h6H/ui-emulated-lifecycle-launch.png",
+      "bytes": 107172,
+      "gitBlob": "3ccb01926d5fd6ad58b7459d00893246e092f1d5",
+      "sha256": "33681012e69834c9eaa80b3aba9d887b9807d7ebc78b3b248d24404f8904a0e9",
+      "actuallyViewed": true,
+      "scope": "Original boot reply, Alice idle and green four completed launch steps are visible.",
+      "receiptDigestJoined": true,
+      "join": "Original receipt screenshot SHA256"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-mac-x64/extracted/_temp/TEST-desktop-backend-0Q2h6H/ui-emulated-lifecycle-stopped.png",
+      "bytes": 98035,
+      "gitBlob": "728d5976d7fdcef451ff02e835cb5d1bc50cf675",
+      "sha256": "e64ad75b7d8b1f7f067b4aeb00df051ec070d2e117265f3001deb834dd4c0bc6",
+      "actuallyViewed": true,
+      "scope": "Offline and Launch, Alice offline; no green launch progress block is visible in this frame. The lifecycle runner did not execute Selection convergence.",
+      "receiptDigestJoined": true,
+      "join": "Original receipt screenshot SHA256"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-mac-x64/extracted/_temp/TEST-desktop-backend-0Q2h6H/ui-automatic-app-relaunch-successor.png",
+      "bytes": 70777,
+      "gitBlob": "63918ecd552463e1de39243834f51db47b3a9630",
+      "sha256": "f38c74d526fb93b0dd77a96c64458daddfb65c1ac339858a8ed86b346ad707c5",
+      "actuallyViewed": true,
+      "scope": "Successor app Home, Select Team and No recent projects with the retained sidebar seed. Provider tiles are not all ready; no active Team is shown.",
+      "receiptDigestJoined": false,
+      "join": "Fixed original source capture filename and official ZIP membership; the receipt has no screenshot SHA field for this image"
+    }
+  ],
+  "separateStep37": {
+    "native": {
+      "kind": "TEST_PACKAGED_NATIVE_V2_HOST",
+      "status": "PASS",
+      "packaged": {
+        "executionOrigin": "packaged-extraResources",
+        "appAsarSha256": "ae22c80e68685d0089dbae04a5602e2935890df95582968ff95e65f0aaf1c747",
+        "candidateManifestSha256": "aa5e3091070f17a1462cda79ad204791267780868b656d88107762e5e1b24037",
+        "harnessSha256": "2f38f8d33650732b48ad5c8b31135e819eaf821826859f672afb9e4e3bbfd255",
+        "sourceCheckoutUnavailable": true,
+        "legacyRuntimeUnavailable": true,
+        "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+        "nodeArchiveSha256": "1462cb3b3046b815cf8ea436d3da450ec1a9f11dac7e5a46b0ada5305d7e8097",
+        "providerArtifacts": [
+          {
+            "name": "@agent-teams/provider-implementations",
+            "sha256": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267"
+          },
+          {
+            "name": "@agent-teams/provider-session-contracts",
+            "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc"
+          }
+        ],
+        "packages": 120,
+        "files": 8131
+      },
+      "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "platform": "darwin-x64",
+      "version": "2.1.4",
+      "approvalMode": "manual",
+      "nodeVersion": "v24.21.0",
+      "modelSelection": {
+        "providerId": "TEST-local",
+        "modelId": "TEST-model-B",
+        "variant": "high"
+      },
+      "configurationSelection": {
+        "scope": "project",
+        "original": "project-A",
+        "later": "project-B"
+      },
+      "preferencesSelection": {
+        "nativeDefault": "TEST-local/TEST-model",
+        "appDefault": "TEST-local/TEST-model-B"
+      },
+      "digests": {
+        "bun": "c35307c7d45d65c5a385a58c4a6cb0bb9499e4e626abdee207c177a77ba666ab",
+        "manifest": "7690030a5aba3026544e65f000475dd20f83213383e9bfddad3d98c1134a65fb",
+        "node": "7abcf39bd37ab251015337ff75304d7555f0d8e88c6e0fbf04bce8ce34636f49",
+        "hostSource": "802af77294547c258a7306e17598978305b6edf86705d0884196b98bc095cd39",
+        "hostDist": "2e9a3d32128d0659c02af024bc096dd56f1df28af8ddecb1fe5a0ad5ef1f22a0",
+        "provider": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267"
+      },
+      "steps": [
+        "original_host_embedded_native_and_mcp_ready",
+        "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+        "changed_project_config_did_not_retarget_running_native_session",
+        "original_uploaded_PNG_native_image_inference_and_public_readback",
+        "checkpoint_and_original_host_native_cleanup_confirmed",
+        "cold_host_restored_native_history_without_model_or_tool_replay"
+      ],
+      "cleanup": true,
+      "phaseElapsedMs": {
+        "original_host_embedded_native_and_mcp_ready": 84071,
+        "native_model_tool_effect_permission_mcp_task_and_reply_completed_once": 169868,
+        "changed_project_config_did_not_retarget_running_native_session": 169869,
+        "original_uploaded_PNG_native_image_inference_and_public_readback": 169869,
+        "checkpoint_and_original_host_native_cleanup_confirmed": 170822,
+        "cold_host_restored_native_history_without_model_or_tool_replay": 239369
+      },
+      "elapsedMs": 273990,
+      "cancelled": false,
+      "inputObservation": {
+        "reads": 226,
+        "last": {
+          "phase": "allocated",
+          "custody": "owned",
+          "nativeReady": true,
+          "attached": true,
+          "sealed": false,
+          "diagnostic": null,
+          "inputs": [
+            {
+              "phase": "terminal",
+              "terminal": "succeeded"
+            },
+            {
+              "phase": "terminal",
+              "terminal": "succeeded"
+            }
+          ],
+          "interactions": [
+            {
+              "kind": "permission",
+              "phase": "resolved"
+            },
+            {
+              "kind": "permission",
+              "phase": "resolved"
+            }
+          ]
+        }
+      },
+      "launchObservation": {
+        "openElapsedMs": 55336,
+        "afterOpen": {
+          "available": true,
+          "status": "ready",
+          "reason": "context-applied",
+          "elapsedSinceAttemptMs": 54132,
+          "capturedTimeoutMs": 120000,
+          "claimed": true,
+          "nativeReady": true,
+          "contextApplied": true,
+          "everReady": true,
+          "usable": true,
+          "controlAvailable": true,
+          "noAllocation": false
+        }
+      },
+      "failureCode": null,
+      "hosts": [
+        {
+          "exitCode": 0,
+          "signalCode": null,
+          "stdoutValid": true
+        },
+        {
+          "exitCode": 0,
+          "signalCode": null,
+          "stdoutValid": true
+        }
+      ],
+      "modelOrigin": "localhost-scripted",
+      "modelRequests": 11,
+      "modelProgress": [
+        {
+          "elapsedMs": 84263,
+          "requests": 0
+        },
+        {
+          "elapsedMs": 100659,
+          "requests": 1
+        },
+        {
+          "elapsedMs": 101261,
+          "requests": 2
+        },
+        {
+          "elapsedMs": 102700,
+          "requests": 3
+        },
+        {
+          "elapsedMs": 104242,
+          "requests": 4
+        },
+        {
+          "elapsedMs": 112722,
+          "requests": 5
+        },
+        {
+          "elapsedMs": 113451,
+          "requests": 6
+        },
+        {
+          "elapsedMs": 113991,
+          "requests": 7
+        },
+        {
+          "elapsedMs": 114271,
+          "requests": 8
+        },
+        {
+          "elapsedMs": 158286,
+          "requests": 9
+        },
+        {
+          "elapsedMs": 161613,
+          "requests": 10
+        },
+        {
+          "elapsedMs": 162256,
+          "requests": 11
+        }
+      ],
+      "coordination": {
+        "status": "unqualified",
+        "cleanup": null
+      },
+      "modelFailures": [],
+      "vendorAuthQualified": false,
+      "desktopQualified": false,
+      "releaseQualified": false
+    },
+    "summary": {
+      "kind": "TEST_PACKAGED_V2_QUALIFICATION",
+      "status": "PASS",
+      "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "platform": "darwin-x64",
+      "cleanup": true,
+      "phase": "finished",
+      "desktopJourneyQualified": false,
+      "vendorAuthQualified": false,
+      "releaseQualified": false,
+      "cleanupObservation": {
+        "originalExitObserved": true,
+        "nativeReceiptParsed": true,
+        "nativeReceiptBound": true,
+        "nativeCleanupConfirmed": true,
+        "firstFailure": null,
+        "firstRestorationFailure": null
+      },
+      "appAsarSha256": "ae22c80e68685d0089dbae04a5602e2935890df95582968ff95e65f0aaf1c747",
+      "candidateManifestSha256": "aa5e3091070f17a1462cda79ad204791267780868b656d88107762e5e1b24037",
+      "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+      "nodeSha256": "7abcf39bd37ab251015337ff75304d7555f0d8e88c6e0fbf04bce8ce34636f49",
+      "nativeExit": {
+        "code": 0,
+        "signal": null
+      },
+      "nativeReceiptSha256": "8dcf49a2646f8361c9240ee0141f7449aa5251f9ebbc61c64d5cff1c3abc7aa5",
+      "sourceCheckoutUnavailable": true,
+      "legacyRuntimeUnavailable": true,
+      "sourceRestored": true,
+      "bundleRestored": true,
+      "legacyRuntimeRestored": true
+    },
+    "inputs": {
+      "kind": "TEST_NATIVE_V2_EMBEDDED_INPUTS",
+      "status": "READY",
+      "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "platform": "darwin-x64",
+      "nodeVersion": "v24.21.0",
+      "productQualified": false,
+      "stage": "prepared",
+      "baseArchiveSha256": "fbaab0cb2a1b46241985ecabf4f256abf8f80051be264786cbf301857e46969a",
+      "runtimeSource": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "bun": {
+        "path": "/Users/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun",
+        "sha256": "c35307c7d45d65c5a385a58c4a6cb0bb9499e4e626abdee207c177a77ba666ab",
+        "version": "1.4.4"
+      },
+      "osBuild": "24G830",
+      "productTupleAdmitted": true,
+      "processArtifact": {
+        "manifest": {
+          "schemaVersion": 1,
+          "abi": "napi-8",
+          "platform": "darwin",
+          "architecture": "x64",
+          "osBuild": "24G830",
+          "library": "registered-process.node",
+          "sourceSha256": "a2f6d70bd04251308a1f70fe4374fe5fd343feb6939db3df7d030f03d7d1e6b5",
+          "binarySha256": "50e8af2e01f9a79387b13548d2d84f963e543baaa5c3fc842f4a38580ed6c973",
+          "compilerSha256": "4c458256bcdf913774de1bb4a37768244d3b41f32ad55afb2dfec3432f46f4fe",
+          "sdkSettingsSha256": "58a133735f0a55a624a1703067059f6e78925e51725ec6e1f966072e142c9c42",
+          "headers": [
+            {
+              "file": "node_api.h",
+              "sha256": "2d4560831e525b47b060ec8a0864ab73993df9e20215ce9f0fe7b24cd31af32a"
+            },
+            {
+              "file": "node_api_types.h",
+              "sha256": "a25356630d3058f0a0c8937d9f297e9471e037fda58c2696d8a505c2bd99cb00"
+            },
+            {
+              "file": "js_native_api.h",
+              "sha256": "8808ef8899a1691411928ef5dd7dae0537aedc93d3a34e223b2d89692e79c788"
+            },
+            {
+              "file": "js_native_api_types.h",
+              "sha256": "4f19cb90d240765cc0961d92a1ee20f65fdc50db7de1ab0a5cb6bc227224e1a0"
+            },
+            {
+              "file": "node_version.h",
+              "sha256": "bd056729fddf4bfa58687036219f07417c334c4ecfcb513ac256fa254451bfc9"
+            }
+          ]
+        },
+        "manifestSha256": "160c3052dda74b45ed6d78e8f1553091f52587399e5912590c01484b6b37e10e",
+        "directory": "/Users/runner/work/_temp/TEST-opencode-v2-inputs-G6XQBM/process-artifact"
+      },
+      "supportArchiveSha256": "f80837d4659bcd0ccc0275dbbff3731e517a50567572d24635bfdcf6447f1111",
+      "manifestSha256": "7690030a5aba3026544e65f000475dd20f83213383e9bfddad3d98c1134a65fb"
+    },
+    "manifest": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-mac-x64/extracted/agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+      "bytes": 1154723,
+      "gitBlob": "9990129690dab0443d89da16a3c411ef18476237",
+      "sha256": "aa5e3091070f17a1462cda79ad204791267780868b656d88107762e5e1b24037"
+    },
+    "manifestPackages": 120,
+    "manifestFiles": 8131,
+    "manifestArtifacts": [
+      {
+        "name": "@agent-teams/provider-implementations",
+        "sha256": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267"
+      },
+      {
+        "name": "@agent-teams/provider-session-contracts",
+        "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc"
+      }
+    ],
+    "allReceiptDigestsAndHeadsJoined": true,
+    "summaryEqualsOriginalStdout": true,
+    "limits": "Actual original packaged native V2 manual/localhost-scripted path; six steps,11 requests,two Host exits0/null, cold history/no replay and cleanup. Coordination remains unqualified. No real vendor, general Desktop, P08, release or privacy-helper GREEN transfer. Full8131 packaged payload files, executable and app.asar are not archived or independently rebuilt here."
+  },
+  "sourceInterpretation": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+      "firstLine": 75,
+      "lastLine": 180,
+      "text": "  assert.equal(fixture.pins.nodeSha256, candidate.manifest.node.binarySha256);\n  assert.equal(fixture.pins.hostEntrySha256, candidate.manifest.hostEntrySha256);\n  const pins = await verifyDesktopEmulatedRuntimeFixture(fixture);\n  const mode = 'emulated-claude-lifecycle-ui';\n  const evidence = await desktopProofEvidence({ mode, fixture, pnpm, pnpmSha256: await fileDigest(pnpm),\n    electron: executable, smokePath: import.meta.filename, conversationMode: false, nativeStopMode: false, uiMode: true });\n  Object.assign(evidence, { kind: 'TEST_PACKAGED_APP_RELAUNCH', sourceHead, platform: `${process.platform}-${process.arch}`,\n    scope: 'Actual packaged macOS Electron and bundled Host, one finite SDK Launch/Stop, automatic app.relaunch and one successor public Quit',\n    excluded: ['Claude/Codex executable execution', 'vendor inference/authentication', 'full cold Resume/active Quit', 'release qualification'],\n    packedCandidate: { ...packed, capture, node: candidate.node, hostEntry: candidate.entry },\n    fixturePins: pins, realVendorExecutions: 0, nativeProviderQualified: false, releaseQualified: false });\n  const sources = [...new Set([...desktopProofSources, 'scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts',\n    'packages/legacy-agent-host/tests/opencode-v1-version-source.ts', 'scripts/e2e/comment-notification/cdp.mjs'])];\n  const sourceHashes = await captureDesktopSourceHashes(repo, sources);\n  evidence.selectedSourceHashesBeforeApp = sourceHashes;\n  await writeFile(receiptPath, JSON.stringify(evidence, null, 2), { mode: 0o600, flag: 'wx' });\n  console.log(JSON.stringify({ phase: 'prepared', receipt: receiptPath, root: fixture.root }));\n  const require = createRequire(import.meta.url);\n  const cdpLibrary = require('../e2e/comment-notification/cdp.mjs') as DesktopCdpLibrary;\n  const logPath = receiptPath.replace(/\\.json$/u, '') + '.app.log';\n  const log = createWriteStream(logPath, { flags: 'wx', mode: 0o600 });\n  const invocation = [executable, `--remote-debugging-port=${selectedCdpPort}`];\n  const app = spawn(executable, invocation.slice(1), { cwd: fixture.root,\n    env: { ...fixture.appEnvironment, NODE_ENV: 'production', PATH: join(fixture.root, 'bin') + ':/usr/bin:/bin' },\n    detached: true, stdio: ['ignore', 'pipe', 'pipe'] });\n  app.stdout.pipe(log, { end: false }); app.stderr.pipe(log, { end: false });\n  let spawnError = false, appIdentity = '', hostPid: number | undefined, cdp: DesktopCdpPort | undefined;\n  let originalFailure: unknown, quitRequested = false;\n  app.once('error', () => { spawnError = true; });\n  const group = app.pid ?? 0;\n  const assertOwnedRenderer = () => assertOwnedCdpListener(group);\n  const relaunchAttempted = () => evidence.packedAppRelaunch !== undefined &&\n    record(evidence.packedAppRelaunch).relaunchAttempted === true;\n  try {\n    assert.ok(group > 0);\n    appIdentity = execFileSync('/bin/ps', ['-p', String(group), '-o', 'lstart=,command='],\n      { encoding: 'utf8', timeout: 3000 }).trim();\n    evidence.app = { pid: group, processGroup: group, identity: appIdentity, invocation };\n    const connected = await connectCapturedDesktopApp({ app, group, spawnError: () => spawnError, packed, cdpLibrary, evidence });\n    cdp = connected.cdp;\n    await verifyCapturedDesktopBinding({ cdp, group, mode, fixture, evidence, repo, packed });\n    await observeDesktopEmulatedRuntimeChildren(group, fixture, 'after-team-read');\n    await runDesktopEmulatedLifecycleUi(cdp, { fixture, evidence, assertOwnedRenderer, originalStopOnly: true,\n      restartSameProfile: async () => { throw new Error('Automatic app.relaunch cannot become a harness restart'); } });\n    assert.equal(record(evidence.emulatedLaunchStopUiProof).status, 'PASS');\n    assert.equal(evidence.emulatedLifecycleUiProof, undefined, 'This scope does not qualify the full cold Resume journey');\n    const originalEffects = await readDesktopEmulatedRuntimeEffects(fixture);\n    const inputEffects = originalEffects.filter(row => row.event === 'input');\n    assert.equal(inputEffects.filter(row => row.marker !== 'TEST_MODEL_PROBE').length, 1,\n      'One original SDK business input before relaunch');\n    await observeDesktopEmulatedRuntimeChildren(group, fixture, 'after-team-read');\n    const hosts = groupMembers(group).filter(row => command(row.pid) === `${fixture.node} ${fixture.hostEntry}`);\n    assert.equal(hosts.length, 1); hostPid = hosts[0]!.pid;\n    evidence.hostChild = { ...hosts[0], observedBeforeShutdown: true };\n    await observePackedAppRelaunch({ app, cdp, group, hostPid, packed, fixture, evidence, repo, cdpLibrary });\n    assert.equal(record(evidence.packedAppRelaunch).status, 'PASS');\n    assert.deepEqual((await readDesktopEmulatedRuntimeEffects(fixture)).filter(row => row.event === 'input'), inputEffects,\n      'Automatic relaunch cannot replay or add business input');\n    evidence.originalInputEffects = inputEffects;\n    evidence.status = 'PASS';\n  } catch (error) {\n    originalFailure = error; evidence.status = 'INCOMPLETE';\n    evidence.failure = error instanceof Error ? error.message.slice(0, 4000) : 'original packaged relaunch failed';\n    if (cdp && !relaunchAttempted()) {\n      await captureDesktopRendererFailure(cdp, { group, root: fixture.root,\n        screenshotName: 'ui-packaged-relaunch-failure.png', evidence });\n      await requestObservedDesktopClose(cdp, { assertOwnedRenderer, onAttempt: () => { quitRequested = true; },\n        listenerPresent: () => groupMembers(group).some(row => row.pid === evidence.cdpListener), evidence,\n        key: 'failureQuit' }).catch(() => { evidence.failureQuitUnconfirmed = true; });\n    }\n  } finally {\n    if (cdp) await bounded(cdp.close(), 3000, 'disconnect original packaged renderer').catch(() => undefined);\n    evidence.quitRequested = quitRequested;\n    const cleanup = await cleanupCapturedDesktopApp({ app, group, fixture, evidence, appIdentity,\n      hostPid, packedRelaunchMode: relaunchAttempted() });\n    evidence.cleanup = cleanup;\n    if (cleanup.cleanupFailure || cleanup.remaining === null || cleanup.remaining.length || !cleanup.capturedHostAbsent ||\n      app.exitCode !== 0 || app.signalCode !== null) evidence.status = 'INCOMPLETE';\n    try {\n      const peers = await observeDesktopEmulatedRuntimeCleanup(fixture);\n      evidence.emulatedRuntimeCleanup = peers; assert.equal(peers.absent, true);\n      const census = (await readFile(fixture.sentinelLog, 'utf8').catch(error => {\n        if ((error as NodeJS.ErrnoException).code === 'ENOENT') return ''; throw error;\n      })).trim().split('\\n').filter(Boolean).map(line => record(JSON.parse(line)));\n      evidence.finalSentinelCensus = census;\n      assert.ok(census.every(row => row.executable === 'shell-env' ? row.allowed === true :\n        row.allowed === false && row.argc === 1 && Array.isArray(row.flags) && row.flags.length === 1 && row.flags[0] === '--version'));\n      assert.deepEqual(await verifyDesktopEmulatedRuntimeFixture(fixture), pins);\n      assert.deepEqual(await readPackagedOpenCodeV2(capture), candidate);\n      assert.equal(await fileDigest(executable), packed.executableSha256);\n      evidence.packagedInputsUnchanged = true;\n    } catch (error) {\n      evidence.status = 'INCOMPLETE'; evidence.finalObservationFailure = error instanceof Error ? error.message.slice(0, 2000) : 'unknown';\n    }\n    await verifyDesktopSourceFreeze(repo, sources, sourceHashes, evidence);\n    app.stdout.unpipe(log); app.stderr.unpipe(log); app.stdout.resume(); app.stderr.resume();\n    await bounded(new Promise<void>(done => log.end(done)), 3000, 'close packaged relaunch log')\n      .catch(() => { evidence.status = 'INCOMPLETE'; evidence.logCleanupFailed = true; });\n    await writeFile(receiptPath, JSON.stringify(evidence, null, 2), { mode: 0o600 });\n    console.log(JSON.stringify({ kind: evidence.kind, status: evidence.status, receipt: receiptPath, root: fixture.root }));\n  }\n  if (originalFailure) throw originalFailure;\n  assert.equal(evidence.status, 'PASS', 'Original packaged relaunch and all cleanup must pass');\n}\n\nawait main();\n"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+      "firstLine": 287,
+      "lastLine": 381,
+      "text": "/** Observer-only automatic successor: public Quit authority is the current verified TEST CDP, never a PID. */\nexport async function observePackedAppRelaunch(options: {\n  app: ChildProcess; cdp: DesktopCdpPort; group: number; hostPid: number;\n  packed: NonNullable<Packed>; fixture: Fixture; evidence: Evidence; repo: string; cdpLibrary: DesktopCdpLibrary;\n}): Promise<void> {\n  const { app, cdp, packed, fixture, evidence, repo, cdpLibrary } = options;\n  const proof: Evidence = { status: 'UNKNOWN', scope: 'Automatic packed app.relaunch, observer-only successor and one guarded public Quit', successorNativeCustody: false, numericPidSignalsAuthorized: false, providerRootCleanupQualification: 'outside this observer-only app lifecycle scope' };\n  evidence.packedAppRelaunch = proof;\n  const leasePath = join(fixture.root, 'hoststore/.legacy-agent-host-writer.lock');\n  const lease = async () => {\n    try {\n      const info = await lstat(leasePath); assert.ok(info.isFile() && !info.isSymbolicLink() && info.size <= 256);\n      const match = /^([1-9][0-9]*)\\n([0-9]+)\\n([a-f0-9-]{36})\\n$/.exec(await readFile(leasePath, 'utf8'));\n      assert.ok(match); return { pid: Number(match[1]), token: match[3]!, dev: info.dev, ino: info.ino };\n    } catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null; throw error; }\n  };\n  const listener = () => {\n    try {\n      const rows = execFileSync('/usr/sbin/lsof', ['-nP', `-iTCP:${selectedCdpPort}`, '-sTCP:LISTEN', '-t'], { encoding: 'utf8', timeout: 3000 }).trim().split('\\n');\n      assert.ok(rows.every(row => /^[1-9][0-9]*$/.test(row))); const pids = [...new Set(rows.map(Number))]; assert.equal(pids.length, 1); return pids[0]!;\n    } catch (error) { const e = error as { status?: number; stdout?: string; stderr?: string }; if (e.status === 1 && !e.stdout?.trim() && !e.stderr?.trim()) return undefined; throw error; }\n  };\n  const identity = () => {\n    const pid = listener(); assert.ok(pid && pid !== app.pid);\n    const executablePath = execFileSync('/bin/ps', ['-p', String(pid), '-o', 'comm='], { encoding: 'utf8', timeout: 3000 }).trim();\n    assert.ok(executablePath === packed.executable, 'successor listener executable is not the captured candidate'); const executable = realpathSync(executablePath);\n    const argv = command(pid); assert.ok(argv === `${packed.executable} --remote-debugging-port=${selectedCdpPort}`, 'successor argv differs from the original TEST invocation');\n    return { pid, executable, argv, started: execFileSync('/bin/ps', ['-p', String(pid), '-o', 'lstart='], { encoding: 'utf8', timeout: 3000 }).trim() };\n  };\n  let successor: DesktopCdpPort | undefined;\n  try {\n    assert.equal(app.exitCode, null); assert.equal(app.signalCode, null); assertOwnedCdpListener(options.group);\n    const originalLease = await lease(); assert.ok(originalLease); assert.equal(originalLease.pid, options.hostPid); proof.originalLease = originalLease;\n    const originalSessions = (await readDesktopNativeStopSessions(fixture.root)).filter(row => Array.isArray(row.inputs) && row.inputs.length > 0);\n    assert.equal(originalSessions.length, 1); assert.ok(originalSessions.every(row => row.phase === 'closed' && row.custody === 'released')); proof.originalSessions = originalSessions;\n    await writeFile(join(fixture.root, 'original-app-relaunch-intent.json'), JSON.stringify({ action: 'existing public app:relaunch once', originalAppPid: app.pid, originalHostPid: options.hostPid, originalLease }), { flag: 'wx', mode: 0o600 });\n    proof.relaunchAttempted = true;\n    try { await bounded(cdp.evaluate('window.electronAPI.windowControls.relaunch()'), 3000, 'one original public app relaunch'); proof.relaunchReply = 'acknowledged'; }\n    catch { proof.relaunchReply = 'unconfirmed; original action is never repeated'; }\n    await bounded(cdp.close(), 3000, 'disconnect original relaunch renderer').catch(() => undefined);\n    const until = Date.now() + 180_000;\n    while (app.exitCode === null && app.signalCode === null && Date.now() < until) await tick();\n    proof.originalExit = { exitCode: app.exitCode, signalCode: app.signalCode, HostExitCode: 'unavailable', HostSignalCode: 'unavailable' };\n    assert.equal(app.exitCode, 0, 'original captured app exits without a harness signal'); assert.equal(app.signalCode, null);\n    assert.ok(!processTable().some(row => row.pid === options.hostPid), 'original Host must retire before successor qualification');\n    const boundaryLease = await lease(); proof.leaseAfterOriginalExit = boundaryLease;\n    assert.notEqual(boundaryLease?.token, originalLease.token, 'original writer token still published after shutdown; retain debt');\n    while (listener() === undefined && Date.now() < until) await tick();\n    assert.equal(await fileDigest(packed.executable), packed.executableSha256); assert.equal(await fileDigest(packed.appAsar), packed.appAsarSha256);\n    const observed = identity(); proof.successorIdentity = { ...observed, observationOnly: true };\n    const current = () => assert.deepEqual(identity(), observed, 'current successor listener remains the observed TEST process');\n    let pages: Evidence[] = [];\n    while (Date.now() < until) {\n      current(); pages = (await getTargets()).filter(row => row.type === 'page' && typeof row.url === 'string' && row.url.split(/[?#]/u)[0] === packed.rendererUrl);\n      assert.ok(pages.length <= 1); if (pages.length === 1) break; await tick();\n    }\n    assert.equal(pages.length, 1); assert.notEqual(pages[0]!.id, object(evidence.rendererTarget).id);\n    successor = await bounded(cdpLibrary.CdpClient.connect(String(pages[0]!.webSocketDebuggerUrl)), 5000, 'connect observed successor');\n    const homeExpression = `(async () => {\n      if (document.readyState !== 'complete' || document.getElementById('splash') || !window.electronAPI?.config?.getClaudeRootInfo) return null;\n      try { return await window.electronAPI.config.getClaudeRootInfo(); }\n      catch (error) { if (/No handler registered for ['\"]config:getClaudeRootInfo['\"]/.test(String(error))) return null; throw error; }\n    })()`;\n    const controls = createDesktopUiControls(successor, { assertOwnedRenderer: current, step: () => undefined });\n    const remainingStartupMs = Math.max(1, until - Date.now());\n    const home = object(await bounded(controls.waitRead(homeExpression, 'successor preload/config readiness', remainingStartupMs), remainingStartupMs, 'successor TEST home before backend discovery'));\n    assert.equal(home.resolvedPath, join(fixture.root, 'claude')); assert.equal(basename(String(home.defaultPath)), '.claude');\n    assert.equal(join(await realpath(dirname(String(home.defaultPath))), '.claude'), join(await realpath(join(fixture.root, 'home')), '.claude'));\n    proof.successorHomeBeforeBackend = home;\n    const second: Evidence = { rendererTarget: { id: pages[0]!.id, url: pages[0]!.url } }; proof.successorBinding = second;\n    await verifyCapturedDesktopBinding({ cdp: successor, mode: 'native-launch-ui', fixture, evidence: second, repo, packed, assertOwnedRenderer: current });\n    assert.deepEqual(second.homePathProof, evidence.homePathProof); assert.deepEqual(object(second.discovery).bindings, object(evidence.discovery).bindings);\n    const roots = object(second.homePathProof); assert.equal(roots.resolvedPath, join(fixture.root, 'claude'));\n    assert.equal(roots.canonicalDefaultPath, join(await realpath(join(fixture.root, 'home')), '.claude'));\n    const newLease = await lease(); assert.ok(newLease); assert.notEqual(newLease.token, originalLease.token); assert.notEqual(newLease.pid, originalLease.pid);\n    const host = processTable().find(row => row.pid === newLease.pid); assert.ok(host && host.ppid === observed.pid); assert.equal(command(host.pid), `${fixture.node} ${fixture.hostEntry}`);\n    proof.writerOrdering = { originalHostAbsent: true, originalLease, newExclusiveLease: newLease, rule: 'Existing no-replace PID/token publication forbids overlap; original release versus dead-owner recovery is not inferred from a missed absence sample' };\n    current(); assert.deepEqual((await readDesktopNativeStopSessions(fixture.root)).filter(row => Array.isArray(row.inputs) && row.inputs.length > 0), originalSessions);\n    const image = object(await successor.send('Page.captureScreenshot', { format: 'png', fromSurface: true }));\n    await writeFile(join(fixture.root, 'ui-automatic-app-relaunch-successor.png'), Buffer.from(String(image.data), 'base64'), { flag: 'wx', mode: 0o600 });\n    current(); assert.equal(String(await successor.evaluate('location.href')).split(/[?#]/u)[0], packed.rendererUrl);\n    assert.equal(await fileDigest(packed.executable), packed.executableSha256); assert.equal(await fileDigest(packed.appAsar), packed.appAsarSha256);\n    await writeFile(join(fixture.root, 'successor-public-quit-intent.json'), JSON.stringify({ action: 'current verified TEST successor public Quit once', observed }), { flag: 'wx', mode: 0o600 });\n    current(); proof.successorQuitAttempted = true;\n    try { await bounded(successor.evaluate('window.electronAPI.windowControls.close()'), 3000, 'one current successor guarded Quit'); proof.successorQuitReply = 'acknowledged'; }\n    catch { proof.successorQuitReply = 'unconfirmed; no retry or signal'; }\n    const closeUntil = Date.now() + 20_000;\n    while (Date.now() < closeUntil && (listener() !== undefined || processTable().some(row => row.pid === observed.pid || row.pid === host.pid) || await lease())) await tick();\n    proof.successorAbsence = { listenerAbsent: listener() === undefined, observedPidAbsent: !processTable().some(row => row.pid === observed.pid), HostPidAbsent: !processTable().some(row => row.pid === host.pid), writerLockAbsent: await lease() === null, exitCode: 'unavailable', signalCode: 'unavailable', naturalExitQualified: false };\n    const absent = object(proof.successorAbsence); assert.ok(absent.listenerAbsent && absent.observedPidAbsent && absent.HostPidAbsent && absent.writerLockAbsent);\n    const after = await readDesktopNativeStopSessions(fixture.root); assert.ok(after.every(row => row.phase === 'closed' && row.custody === 'released'));\n    assert.deepEqual(after.filter(row => Array.isArray(row.inputs) && row.inputs.length > 0), originalSessions);\n    proof.status = 'PASS';\n  } catch (error) { proof.failure = error instanceof Error ? error.message.slice(0, 2000) : 'unknown successor'; throw error; }\n  finally { await bounded(successor?.close() ?? Promise.resolve(), 3000, 'disconnect observed successor').catch(() => undefined); }\n"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+      "firstLine": 427,
+      "lastLine": 448,
+      "text": "    if (!packedRelaunchMode && appIdentity && hostPid !== undefined && remaining.length &&\n        !remaining.some((row) => row.pid === group)) {\n      const observed = await observeExitedAppGroup({ child: app, group, hostPid,\n        initialMembers: remaining, deadline: observationDeadline });\n      evidence.originalExitedGroup = observed;\n      if (observed.settled) remaining = observed.remaining!;\n    }\n    if (remaining.length) {\n      assert.ok(!packedRelaunchMode, 'observer-only app relaunch keeps UNKNOWN debt; no old-group signal or retry');\n      // A numeric PGID alone never authorizes signaling after its leader exits.\n      assert.ok(\n        appIdentity && remaining.some((row) => row.pid === group),\n        'captured leader absent; retain cleanup debt without signaling'\n      );\n      const observedIdentity = execFileSync('/bin/ps', ['-p', String(group), '-o', 'lstart=,command='], {\n        encoding: 'utf8', timeout: 3000,\n      }).trim();\n      if (observedIdentity !== appIdentity && hostPid !== undefined) {\n        const reaped = await observeOriginalAppReap({ child: app, group, hostPid,\n          initialMembers: remaining, expectedIdentity: appIdentity, observedIdentity,\n          deadline: observationDeadline });\n        evidence.originalAppReap = reaped;\n"
+    }
+  ],
+  "noActions": "Read-only raw/Git/image inspection and scratch evidence writing only. No project/runtime/provider replay, installation, changed action/oracle/deadline, source/ref/CI action or repair."
+}

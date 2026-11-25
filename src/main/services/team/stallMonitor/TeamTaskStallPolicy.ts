@@ -79,8 +79,12 @@ function getOpenReviewWindowStart(task: TeamTask): string | null {
     }
     if (
       event.type === 'review_approved' ||
+      event.type === 'review_completed' ||
+      event.type === 'human_approved' ||
+      event.type === 'review_requested' ||
       event.type === 'review_changes_requested' ||
-      (event.type === 'status_changed' && event.to === 'in_progress')
+      (event.type === 'status_changed' &&
+        (event.to === 'in_progress' || event.to === 'pending' || event.to === 'deleted'))
     ) {
       return null;
     }

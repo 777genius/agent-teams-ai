@@ -1,0 +1,298 @@
+{
+  "kind": "READ_ONLY_P08_CENSUS_PERFORMANCE_SOURCE_ASSESSMENT",
+  "generatedAt": "2026-11-16T03:06:33.939664+00:00",
+  "conclusion": "No bounded same-contract performance repair is established by the retained original observations and reviewed source. This is a finite assessment, not an impossibility claim or a new owner blocker.",
+  "authority": "Source/evidence reads only. No source candidate, R1 publication, query execution, extra native experiment, project command, provider execution, workflow action or ref mutation.",
+  "sourceBindings": [
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+      "refs": [
+        "0660c748f88675063e3051fb0f8b2022e8f6f056",
+        "608efb78823d7c74b35f8a674fcfb6faea8ecfc5"
+      ],
+      "identical": true,
+      "bytes": 12335,
+      "gitBlob": "71d5629149e8f499a45b54a99922145ee3cae09e",
+      "sha256": "32a6424daf52342445fd11febc7ea5d59fb1940209a677f063e5fcd5e65c8f2e",
+      "lines": 312
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+      "refs": [
+        "0660c748f88675063e3051fb0f8b2022e8f6f056",
+        "608efb78823d7c74b35f8a674fcfb6faea8ecfc5"
+      ],
+      "identical": true,
+      "bytes": 16835,
+      "gitBlob": "d04bcf2af48a696c71821f0346d5abdc2807ce9c",
+      "sha256": "52ef1c0770d96f93e25c6b6166b2efc133381ff8bd34410543e0e69f3641a697",
+      "lines": 331
+    },
+    {
+      "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+      "refs": [
+        "0660c748f88675063e3051fb0f8b2022e8f6f056",
+        "608efb78823d7c74b35f8a674fcfb6faea8ecfc5"
+      ],
+      "identical": true,
+      "bytes": 34285,
+      "gitBlob": "034d2253e0649bdeb5db0b12244656446150c31c",
+      "sha256": "a7057b647c13852fbabdebbb0d8da775a24d55382637d5947d06c733317213bc",
+      "lines": 597
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/packaged.mjs",
+      "refs": [
+        "0660c748f88675063e3051fb0f8b2022e8f6f056",
+        "608efb78823d7c74b35f8a674fcfb6faea8ecfc5"
+      ],
+      "identical": true,
+      "bytes": 27780,
+      "gitBlob": "7da83c7a4e631f7599fc57861f19e14629db6036",
+      "sha256": "5fd9116cb656ce7804dc3253decb3f386e2c17feda57cc40586cc6e0df6fd8d5",
+      "lines": 749
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/packaged.test.mjs",
+      "refs": [
+        "0660c748f88675063e3051fb0f8b2022e8f6f056",
+        "608efb78823d7c74b35f8a674fcfb6faea8ecfc5"
+      ],
+      "identical": true,
+      "bytes": 67288,
+      "gitBlob": "751d80c1ea409d84b42e486e48853cfa1cd2c4a1",
+      "sha256": "df5427548f5d16b89967fbe656ad489d931953170ca1a57847a11d115700d40e",
+      "lines": 1810
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/30-windows-same-main-retry-integration-2026-11-15.md",
+      "refs": [
+        "0660c748f88675063e3051fb0f8b2022e8f6f056",
+        "608efb78823d7c74b35f8a674fcfb6faea8ecfc5"
+      ],
+      "identical": true,
+      "bytes": 120803,
+      "gitBlob": "eb68d2643eb11527594d546d8a5088f48f8e2865",
+      "sha256": "d0828ee7c6a9f7444ed9aaec2035939957f87f39092515a198cc48520df637d0",
+      "lines": 420
+    }
+  ],
+  "originalEvidence": {
+    "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+    "runId": 43780997349,
+    "jobId": 133040244339,
+    "artifactId": 14192765823,
+    "receipt": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-x64/extracted/_temp/windows-same-main-process-ui.json",
+      "bytes": 750601,
+      "gitBlob": "13f00f66b65073fe972abd96c78f464d73023f2b",
+      "sha256": "b7201be98fe33679e7e6a5c8ee3366e942bde08a32090d39344a911cd342d2ae"
+    },
+    "independentCustodySourceReview": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-x64/independent-custody-source-review.json",
+      "bytes": 55527,
+      "gitBlob": "88f73005c5f578ee64a15ebcdeba744f4f5113e8",
+      "sha256": "1db9d0a8fdb39dd65042f83aaff03d592dd1764782c9c650e883053c0fb8eaea"
+    },
+    "rootCanonicalPacketReview": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-x64/root-canonical-packet-review.json",
+      "bytes": 8364,
+      "gitBlob": "93cd5ce0c84231fbaff49fa2e16376cba8246704",
+      "sha256": "63eb08e65a121c9abeb26272b15935eed659cca4215336771c000daee80b777e"
+    },
+    "phase": {
+      "phase": "one-explicit-same-Main-Retry",
+      "atMs": 37301.0172,
+      "budgetMs": 10000
+    },
+    "allCensusRows": 57,
+    "truncated": false,
+    "retryReadCount": 12,
+    "retryReadDurationSumMs": 8603.780899999983,
+    "combinedReadMinimumMs": 714.760000000002,
+    "combinedReadMaximumMs": 873.7762999999977,
+    "observations": [
+      {
+        "phase": "one-explicit-same-Main-Retry",
+        "operation": "process-listener-snapshot",
+        "startMs": 37303.3451,
+        "endMs": 38057.960999999996,
+        "returned": true,
+        "durationMs": 754.615899999997,
+        "relativeStartMs": 2.327899999996589,
+        "relativeEndMs": 756.9437999999936
+      },
+      {
+        "phase": "one-explicit-same-Main-Retry",
+        "operation": "process-listener-snapshot",
+        "startMs": 38062.6497,
+        "endMs": 38797.0705,
+        "returned": true,
+        "durationMs": 734.4207999999999,
+        "relativeStartMs": 761.6324999999997,
+        "relativeEndMs": 1496.0532999999996
+      },
+      {
+        "phase": "one-explicit-same-Main-Retry",
+        "operation": "process-listener-snapshot",
+        "startMs": 38804.3304,
+        "endMs": 39538.890699999996,
+        "returned": true,
+        "durationMs": 734.5602999999974,
+        "relativeStartMs": 1503.3131999999969,
+        "relativeEndMs": 2237.8734999999942
+      },
+      {
+        "phase": "one-explicit-same-Main-Retry",
+        "operation": "process-listener-snapshot",
+        "startMs": 39643.6165,
+        "endMs": 40382.4886,
+        "returned": true,
+        "durationMs": 738.8721000000005,
+        "relativeStartMs": 2342.5992999999944,
+        "relativeEndMs": 3081.471399999995
+      },
+      {
+        "phase": "one-explicit-same-Main-Retry",
+        "operation": "process-listener-snapshot",
+        "startMs": 40487.127499999995,
+        "endMs": 41201.8875,
+        "returned": true,
+        "durationMs": 714.760000000002,
+        "relativeStartMs": 3186.110299999993,
+        "relativeEndMs": 3900.870299999995
+      },
+      {
+        "phase": "one-explicit-same-Main-Retry",
+        "operation": "process-listener-snapshot",
+        "startMs": 41206.901099999995,
+        "endMs": 41948.0272,
+        "returned": true,
+        "durationMs": 741.1261000000013,
+        "relativeStartMs": 3905.8838999999934,
+        "relativeEndMs": 4647.009999999995
+      },
+      {
+        "phase": "one-explicit-same-Main-Retry",
+        "operation": "process-listener-snapshot",
+        "startMs": 41951.9743,
+        "endMs": 42672.164899999996,
+        "returned": true,
+        "durationMs": 720.1905999999944,
+        "relativeStartMs": 4650.9571,
+        "relativeEndMs": 5371.147699999994
+      },
+      {
+        "phase": "one-explicit-same-Main-Retry",
+        "operation": "process-census",
+        "startMs": 44120.732299999996,
+        "endMs": 44461.771799999995,
+        "returned": true,
+        "durationMs": 341.03949999999895,
+        "relativeStartMs": 6819.715099999994,
+        "relativeEndMs": 7160.754599999993
+      },
+      {
+        "phase": "one-explicit-same-Main-Retry",
+        "operation": "process-listener-snapshot",
+        "startMs": 44463.2763,
+        "endMs": 45201.641899999995,
+        "returned": true,
+        "durationMs": 738.3655999999974,
+        "relativeStartMs": 7162.259099999996,
+        "relativeEndMs": 7900.624699999993
+      },
+      {
+        "phase": "one-explicit-same-Main-Retry",
+        "operation": "process-listener-snapshot",
+        "startMs": 45306.5878,
+        "endMs": 46045.7382,
+        "returned": true,
+        "durationMs": 739.1503999999986,
+        "relativeStartMs": 8005.570599999999,
+        "relativeEndMs": 8744.720999999998
+      },
+      {
+        "phase": "one-explicit-same-Main-Retry",
+        "operation": "process-listener-snapshot",
+        "startMs": 46049.7838,
+        "endMs": 46923.560099999995,
+        "returned": true,
+        "durationMs": 873.7762999999977,
+        "relativeStartMs": 8748.766599999995,
+        "relativeEndMs": 9622.542899999993
+      },
+      {
+        "phase": "one-explicit-same-Main-Retry",
+        "operation": "process-listener-snapshot",
+        "startMs": 47206.771,
+        "endMs": 47979.6743,
+        "returned": true,
+        "durationMs": 772.9032999999981,
+        "relativeStartMs": 9905.753799999999,
+        "relativeEndMs": 10678.657099999997
+      }
+    ]
+  },
+  "sourcePath": [
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+      "lines": "8-24, 53-59, 136-151",
+      "finding": "processes() performs one original process query. windowsProcessListenerSnapshot() validates the port, invokes the existing executor exactly once with the process query followed by the listener query, and validates/parses its closed two-string envelope. The process query already selects only ProcessId, ParentProcessId, CreationDate and ExecutablePath."
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+      "lines": "12-24",
+      "finding": "The executor is already a direct execFileSync of the existing system Windows PowerShell executable with NoProfile, NonInteractive and EncodedCommand. The original ErrorActionPreference=Stop, UTF-16/base64 command, UTF-8 output, windowsHide and 30000 ms executor timeout remain. No shell wrapper or second interpreter exists inside one combined observation."
+    },
+    {
+      "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+      "lines": "182-212",
+      "finding": "observeCensus times the synchronous processes()/windowsProcessListenerSnapshot() read before validateCensus. The interval includes interpreter launch/execution, query work, formatting/output transfer and Node-side parsing. It excludes the following ownedTree, retained-lineage/orphan checks and remaining-budget validation; those cannot explain time already recorded inside this wrapper."
+    },
+    {
+      "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+      "lines": "163-179, 203-212, 502",
+      "finding": "The last combined call returned before the original post-census remaining() refusal. Controller, driver, Main and orphan/complete-census checks in validateCensus passed in source order. The later listener ownership check and the current process-owner DOM evaluation were not reached. The particular row/iteration is not retained."
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+      "lines": "40-93",
+      "finding": "The original tests explicitly retain successive fresh observations, one executor call, process-before-listener order, both original query strings, closed-envelope rejection, legitimate empty outputs, and the same executor failure without fallback/retry. This review reads these assertions; it does not execute them."
+    }
+  ],
+  "boundsAndHistory": {
+    "planPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/30-windows-same-main-retry-integration-2026-11-15.md",
+    "sections": "7; Select only the original four Windows census properties; 12 reconciliation",
+    "existingOptimizationsAlreadyPresent": "The separately reviewed one-interpreter batching and four-property projection are already present. Reapplying either would not be a new correction.",
+    "currentContract": "The published property cut explicitly retains a fresh interpreter per ownership sample, the full process census then original listener query, the two-string envelope/parsers, original errors, pre/post cutoffs and every original authority boundary. No process/listener sample is atomic.",
+    "separateCoObservation": "The separately staged two-outage-row co-observation is not present in the current Gate and is not silently authorized by the property cut. That block precedes the fresh Retry deadline; changing it is not evidence that it repairs this later Gate502 timeout.",
+    "originalOracles": "Retain the 10000 ms Retry budget, all fresh census and listener/current-renderer guards, exact births/full rows, three original HANDLE witnesses, two original UI Stops and original Quit/cleanup. No such requirement is proposed for removal."
+  },
+  "candidateDisposition": [
+    {
+      "direction": "Remove duplicated interpreter or census inside one snapshot",
+      "decision": "No such duplicated operation exists in the reviewed source."
+    },
+    {
+      "direction": "Reduce in-process command encoding or the nested JSON envelope work",
+      "decision": "Some encoding/serialization work is source-visible, but no retained component timing establishes its contribution or a meaningful repair; changing the envelope would require a new reviewed parser/query contract. No tiny optimization is proposed as a deadline fix."
+    },
+    {
+      "direction": "Reuse a PowerShell process or parallelize its two queries",
+      "decision": "Would change the original fresh-interpreter lifetime or process-before-listener observation order and related error/custody behavior. It is outside the unchanged contract requested here."
+    },
+    {
+      "direction": "Push LocalPort into a provider-side query, replace the cmdlet or suppress errors/progress",
+      "decision": "No source-backed equivalence for the original legitimate empty-result, permission/error and query semantics has been established. No OS survey or such change was performed/proposed."
+    }
+  ],
+  "missingProof": "The existing ledger retains only the total synchronous read interval, not component boundaries for interpreter startup, the two native queries, serialization/transport or Node parsing. The one process-only sample and eleven combined samples occur at different times/state; their elapsed differences are descriptive, not causal subtraction. These facts support prioritizing this read path, but not selecting an unmeasured same-contract repair.",
+  "scopeLimits": [
+    "The source hashes are equal at 0660 and 608efb, but this historical artifact qualifies only original 0660 job133040244339; it does not determine the pending N result.",
+    "The separate original ARM business-phase timeout has no final P08 receipt. Nothing here attributes its cause to the x64 timing pattern or transfers x64 source/custody observations.",
+    "Original x64 zero-of-two UI Stops and cleanup=false remain failed; its final containment and completed separate native prerequisite are not P08 success.",
+    "No new diagnostic instrumentation, benchmark, retry, cached observation, altered query, deadline, process rights or source/test change is authorized by this report.",
+    "The original N privacy 177/24 GREEN remains pending and is not inferred from source review or prior RED."
+  ]
+}

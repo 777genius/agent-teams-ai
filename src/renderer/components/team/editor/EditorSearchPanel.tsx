@@ -282,7 +282,7 @@ const EditorSearchPanelContent = ({
           {/* Search input */}
           <Input
             ref={searchInputRef}
-            className="h-[26px] min-w-[180px] flex-1 rounded border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-xs"
+            className="h-[26px] min-w-[180px] flex-1 rounded border-[var(--color-border)] bg-[var(--color-form-control-bg)] px-2 text-xs"
             placeholder={t('editor.search.placeholder')}
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
@@ -396,7 +396,7 @@ const EditorSearchPanelContent = ({
             <div className="w-5 shrink-0" />
 
             <Input
-              className="h-[26px] min-w-[180px] flex-1 rounded border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-xs"
+              className="h-[26px] min-w-[180px] flex-1 rounded border-[var(--color-border)] bg-[var(--color-form-control-bg)] px-2 text-xs"
               placeholder={t('editor.searchPanel.replacePlaceholder')}
               value={replaceText}
               onChange={(e) => setReplaceText(e.target.value)}

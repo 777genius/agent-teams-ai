@@ -1,0 +1,156 @@
+{
+  "result": "APPROVE",
+  "schemaVersion": 1,
+  "kind": "independent prospective source, canonical and execution-package R2",
+  "reviewer": "/root/migration_scope",
+  "recordedAtUtc": "2026-11-15T23:12:11.845612+00:00",
+  "manifest": {
+    "bytes": 223781,
+    "blob": "9ee92856321b14011122258e39e638ec1ca862b1",
+    "sha256": "3ee139e0911084f4a37bf944ef8594b8a80e72068f4a131be264ce731099037b"
+  },
+  "recorder": {
+    "bytes": 21172,
+    "blob": "7766822c39ed7581c1f8d883d34e33069e3170ac",
+    "sha256": "599f2e5c57cb57afa53e9666d57ccc087c242ac0ba362bffa3e2edb10ea1906b"
+  },
+  "canonicalR1": {
+    "bytes": 14216,
+    "blob": "fafc04e3a13dcc7b29756e196141ac148875ac30",
+    "sha256": "724d7e5787d53ddb3e0ca7b308b53256db21f8bd7bb00d28e6dfd509e5be2d8c"
+  },
+  "sourceContract": {
+    "bytes": 55002,
+    "blob": "6902dec99e572a2070ebf6257cccfb4fe3f30af6",
+    "sha256": "ce551d324c677bf00168f908535025a88b07ad296f792d5f8e17216bf4871a5a"
+  },
+  "template": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stage-k-adoption/validation/stage-bindings-template.json",
+    "bytes": 3098,
+    "blob": "41551e1ae4b131c808d8fd1e550f4921f73fa256",
+    "sha256": "64e323e8d36bb777423ad05ebd5c42ddf32627d35f2f76f914361dc84288a1c5"
+  },
+  "hostSourceClosure": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stage-k-adoption/validation/host-source-closure.json",
+    "bytes": 167939,
+    "blob": "a2eec0c7ed6829864e88668e4b2aa587bcb47ee4",
+    "sha256": "41d1f9502b2b9e9bc09def12d35f2c6dafd20929d74146ab192e2afeda20400b"
+  },
+  "ledgerTrackedClosure": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stage-k-adoption/validation/ledger-tracked-closure.json",
+    "bytes": 31442,
+    "blob": "26e56f14f97d04c5ebad44131f393cd65c0319bd",
+    "sha256": "cbced636cc096a5d550f0b28b67881994a160d29facb81799233b30d2306b8cf"
+  },
+  "prior": {
+    "head": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+    "tree": "7e3d627c23816db232cf6dbdc3497954f5f0ab85",
+    "parents": [
+      "6f74d7e8ecaa7f046826b6421ad105ab35eb09fa",
+      "462845722260dfd91111c37cb66fc54a01a3ecb7"
+    ]
+  },
+  "incoming": {
+    "head": "27b1acf48278dcd0fb348c626696eac2dc64de73",
+    "tree": "df57310cd096bfc628b31ca05b0caae91eb5ae09"
+  },
+  "prospectiveOrderedParents": [
+    "future independently reviewed docs-only child of exact J",
+    "27b1acf48278dcd0fb348c626696eac2dc64de73"
+  ],
+  "existingIndependentReviews": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/stage-k-adoption/independent-source-composition-review.json",
+      "bytes": 43834,
+      "blob": "f4f5766ca088eaa4a6a55fc93e1ce624ab2972f5",
+      "sha256": "607dea96032df46cd94b3bf3991769fa9ab302cacb328a4d30746e193504d502"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/stage-k-adoption/independent-canonical-review.json",
+      "bytes": 2610,
+      "blob": "37e02dd83076f5a21f253d18ce73c629cf960674",
+      "sha256": "239ad3e983a87bad318c44b9114b59c034dbb79bc3f372fc9e08bc07127e375c"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/stage-k-adoption/independent-two-candidate-review.json",
+      "bytes": 5432,
+      "blob": "2c1117812a81e7a8a7a16825edaa8849107e6333",
+      "sha256": "e158b5f3a8ada0f473c6013d031ac1cfd3f6c584a7930f570aca6c551eb516ef"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/stage-k-adoption/independent-retained-D-checkpoint-review.json",
+      "bytes": 1561,
+      "blob": "19fc716be3ab527833bfa9086bf393039dd1842f",
+      "sha256": "9dda4285ce107632fa7df3acbca6983e6d3c981d599289458354155589ef2c48"
+    }
+  ],
+  "fullSourceJoin": {
+    "integrationLeaves": 46,
+    "incomingExact": 43,
+    "corrected": 3,
+    "selectedSourceLeaves": 136,
+    "hostSourceFiles": 618,
+    "ledgerTrackedFiles": 119,
+    "allDeclaredGitPreimagesAndCandidateBytesExact": true,
+    "fullHostAndLedgerPathSetsExact": true,
+    "selectedDependencyInputs": 175,
+    "originalInputsPreserved": 94,
+    "priorInputsStructure": "17 original selected plus77 YAML inputs, all identities and realpaths retained",
+    "all175DependencyBytesAndRealpathsVerified": true,
+    "capturedNodeSHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+    "capturedNodeVersion": "v24.21.0; same binary joined to retained original runtime observations, no new Node invocation in this review"
+  },
+  "historicalEvidenceJoin": {
+    "oldProofFilesRehashed": 81,
+    "requiredActualRecordsVerified": 13,
+    "exactOriginalSourceTreeParentsCwdArgvExitPreflightAndRawLogJoins": true,
+    "originalExits": 0,
+    "noHistoricalOutcomeTransferredToK": true,
+    "old1446Outputs": "Verified archive6774a882 plus prior complete inventory897c958c and independent review19fc716b; recorder verifies original membership/CRC/content before first new build.",
+    "ledger": "119 exact tracked source/config leaves and216 output files preserved from original D. Host sources changed, so the1230 old Host outputs do not qualify K."
+  },
+  "commands": {
+    "count": 12,
+    "names": [
+      "host-build",
+      "host-test-types",
+      "scripts-types",
+      "team-tests",
+      "focused-vitest",
+      "diagnostic-consumers",
+      "helpers",
+      "scoped-fast-lint",
+      "size",
+      "architecture",
+      "workflow-yaml",
+      "diff"
+    ],
+    "allPreviousCommandsRequiredInExactOrder": true,
+    "sourceDefinedSelection": "Fresh original Host build; original Host TEST and legacy scripts compiler projects; exact10 whole Team Node files; six full focused renderer/backend Vitest files; three prospectively selected actual diagnostic consumers; original8 full Desktop helper files; exact43 changed JS/TS lint paths; original size and provisioning guards; one bounded Host workflow YAML parse; exact46-path diff check.",
+    "capturedNodeOnly": true,
+    "lintDeclaredBodyExact": true,
+    "rootVitestConfigUnchanged": true,
+    "caseCounts": "No predicted or author historical counts substituted for actual future outputs.",
+    "noLocalWorkspaceOrDedicatedBackendProjectCompilerRetry": true,
+    "noPackageManagerBootstrapInstallRealProviderNativeBrokerGraphicalOrCIExecution": true,
+    "finiteFixtureBoundary": "The named original suites may execute their finite controlled provider/Node children; they are not real vendor CLI or native broker qualification."
+  },
+  "recorderReview": {
+    "fullOriginal390LinesRead": true,
+    "final400LinesCoveredByFullPriorReadPlusExactNarrowInverse": true,
+    "recordingFix": "Final7766822c differs from prior42c039 only in pre-captured preflight identity, protected log and output-inventory identity capture, retained combined postflight errors, and metadata built from saved values. Reversing these exact changes reconstructs all20735 original bytes and hash42c039. Template inverse restores e6788fda exactly.",
+    "originalExitRetention": "Process exit, launch error and clocks are captured before postflight. Log/output read faults produce null identity plus retained postflight refusal; metadata no longer rereads those files outside protection.",
+    "exclusiveOutputs": "All command/preflight/log/metadata and first build inventories use exclusive creation; prior success records and immutable recording inputs are verified before each dependent command. No replay/retry/fallback route.",
+    "publicationAndAuthority": "Null template refuses. Requires exact independent review identities, actual docs/source readback artifacts, complete ordered parents/full tree deltas, full Plan29 prefix and exact canonical once, incoming complete Plans32/33, unchanged Plan30 and published manifest/recorder/closures.",
+    "freshBuild": "First current-source Host compiler command may change only Host dist under protected inventory; complete actual output inventory is retained even on command failure where readable. All216 ledger outputs must remain exact. Later commands require successful build exit/postflight and exact resulting full inventory, with no guessed output count.",
+    "noAtomicityClaim": "These are before/after observations and captured identities; no stronger filesystem or process atomicity is claimed."
+  },
+  "scopeAndLimits": [
+    "Prospective review only; no project compiler, test, lint, Node, native/provider, graphical workflow or CI command was invoked by this reviewer.",
+    "The source target remains exact incoming27 plus the three reviewed K corrections on J. Subsequent35/71 author work remains unadopted, as directed by root; this is not latest-PR qualification or authority to discard that history.",
+    "Current resulting-source full CI/Desktop/native checks, dedicated backend project and P08/P09 qualification remain separately required.",
+    "Provider9423 archive/native receipts and new35 stderr security are outside K; old installed provider pair, source dependencies and outcomes cannot be promoted to that future integration.",
+    "Actual docs-only publication and full independent published readback must precede source adoption; the actual source tree/readback and live binding must then be checked before root executes these commands."
+  ],
+  "reviewMethod": "Read complete manifest command semantics and whole recorder; pure Git/file/archive hash and structural comparisons. One audit-only assumption that prior I used a single94-element dependency list was corrected to its actual17+77 lists; all same94 entries match. No project execution or candidate modification."
+}

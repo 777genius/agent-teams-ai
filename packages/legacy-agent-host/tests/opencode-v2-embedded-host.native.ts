@@ -7,7 +7,6 @@ import { tmpdir } from 'node:os';
 import { basename, isAbsolute, join, resolve } from 'node:path';
 import { test } from 'node:test';
 import { pathToFileURL } from 'node:url';
-import { captureInitialRuntimeModelAdmission } from '../dist/composition/initialRuntimeModelAdmission.js';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import type { NativeCoordinationFixture } from './fixtures/native-opencode-team/coordination-probe.ts';
 import { record } from './fixtures/native-claude-team/model.ts';
@@ -15,7 +14,7 @@ import { fileHash, nativeHostEnvironment, startHost, tick, treeHash, writeNative
 import { CONTEXT_MARKER, startOpenCodeModel } from './fixtures/native-opencode-team/model.ts';
 import { captureOpenCodeConfigurationSource } from '../dist/adapters/providers/OpenCodeConfigurationSource.js';
 import { assertNativeV1Build, buildNativeV1Host } from './opencode-v1-version-source.ts';
-import { readNativeMessageImage, uploadNativeMessageImage } from './fixtures/native-message-image.ts';
+import { readNativeMessageMedia, uploadNativeMessageMedia } from './fixtures/native-message-media.ts';
 
 async function endpoint(): Promise<string> {
   const server = createServer();
@@ -77,6 +76,19 @@ function nativeLaunchProgress(reply: Record<string, unknown>) {
   };
 }
 
+/** TEST functional observation only: queue, driver poll and native requests retain their own anchors. */
+function captureNativeInputObservation(capturedTimeoutMs: number, scenarioStartedAt: number) {
+  assert.ok(Number.isSafeInteger(capturedTimeoutMs) && capturedTimeoutMs > 0 && capturedTimeoutMs <= 300_000);
+  const startedAt = performance.now(), deadline = startedAt + capturedTimeoutMs;
+  const evidence = Object.freeze({ policy: 'captured-runtime-functional-ceiling-v1' as const,
+    anchor: 'post-team-execute-ack' as const, ceilingMs: capturedTimeoutMs,
+    startedAtMs: Math.round(startedAt - scenarioStartedAt), deadlineMs: Math.round(deadline - scenarioStartedAt) });
+  const isCurrent = () => performance.now() < deadline;
+  return { evidence, isCurrent, assertCurrent() {
+    assert.ok(isCurrent(), 'Original native input observation exceeded captured functional ceiling');
+  } };
+}
+
 export interface PackagedNativeHostInputs {
   sourceHead: string;
   node: string;
@@ -118,6 +130,10 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
   if (packaged) assert.equal(packaged.sourceHead, sourceHead);
   const sourceBuild = packaged ? undefined : await buildNativeV1Host(repo, sourceHead);
   if (packaged && process.platform === 'darwin') assert.ok(packaged.processCustody);
+  // Resolve admission from the same selected Host closure; a relocated TEST harness cannot
+  // resolve that closure's CommonJS dependencies relative to its own temporary directory.
+  const { captureInitialRuntimeModelAdmission } = await import(pathToFileURL(join(pkg, 'dist/composition/initialRuntimeModelAdmission.js')).href) as
+    typeof import('../dist/composition/initialRuntimeModelAdmission.js');
   const { applyLaunchConfiguration } = await import(pathToFileURL(join(pkg, 'dist/composition/launchConfiguration.js')).href) as
     typeof import('../dist/composition/launchConfiguration.js');
   const { applyOpenCodeRuntimeSource } = await import(pathToFileURL(join(pkg, 'dist/composition/applyOpenCodeRuntimeSource.js')).href) as
@@ -138,6 +154,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
   let originalFailure: unknown;
   let lastInputProgress: ReturnType<typeof nativeInputProgress> | undefined;
   let inputReadCount = 0;
+  const inputObservationWindows: ReturnType<typeof captureNativeInputObservation>['evidence'][] = [];
   // Observation times from the existing read loop, not exact native request timestamps.
   const modelProgress: { elapsedMs: number; requests: number }[] = [];
   let originalOpenElapsedMs: number | undefined;
@@ -168,7 +185,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
       assert.ok((await stat(shell)).isFile(), 'actual Windows PowerShell is required for the native shell turn');
       windowsShellSha256 = await fileHash(shell);
     }
-    model = await startOpenCodeModel({ nativeGeneration: 'v2', nativeMessageImage: true,
+    model = await startOpenCodeModel({ nativeGeneration: 'v2', nativeMessageMedia: true,
       ...(qualifyCoordination ? { coordinationProof: true as const, localReadinessProof: true as const } : {}),
       selectedModel: { id: 'TEST-model-B', effort: 'high' },
       selectedConfiguration: { scope: 'project-A' } });
@@ -226,7 +243,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
         options: { baseURL: `${model.url}/v1`, ...(qualifyCoordination ? {} : { apiKey: 'TEST-LOCALHOST-ONLY' }) },
         models: Object.fromEntries(['TEST-model', 'TEST-model-B'].map(id => [id, {
           name: id, limit: { context: 200000, output: 2000 },
-          capabilities: { tools: true, input: ['text', 'image'], output: ['text'] },
+          capabilities: { tools: true, input: ['text', 'image', 'pdf'], output: ['text'] },
           body: { test_config_scope: 'global' }, headers: { 'x-test-config-scope': 'global' },
           ...(id.endsWith('-B') ? { variants: [{ id: 'high', body: { reasoning_effort: 'high' } }] } : {}),
         }])),
@@ -305,47 +322,56 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     lastInputProgress = nativeInputProgress(record(opened.value));
     assert.equal(record(opened.value).nativeReady, true, JSON.stringify(opened));
     completeStep('original_host_embedded_native_and_mcp_ready');
-    const imageReference = await uploadNativeMessageImage(host, envelope, 'carol');
+    const mediaReferences = await uploadNativeMessageMedia(host, envelope, 'carol');
     const commands = ['ONE', 'TWO'].map(label => envelope(`TEST-original-message-${label}`, {
       operation: 'message.send', payload: { to: 'carol', text: `OPENCODE_TEAM_${label}`,
-        ...(label === 'TWO' ? { attachments: [imageReference] } : {}) },
+        attachments: label === 'TWO' ? mediaReferences.two : mediaReferences.one },
     }));
     const originals: Record<string, unknown>[] = [], inputIds: string[] = [];
     const replies = new Set<string>();
     for (const command of commands) {
     const original = await host.rpc('team.execute', command); originals.push(original);
+    // One post-ACK TEST window from the captured runtime policy (120s here), including approvals.
+    // A smaller selected ceiling stays smaller; no progress/read/grant renews this anchor.
+    const observation = captureNativeInputObservation(profile.runtime!.members[0]!.limits.timeoutMs, startedAt);
+    inputObservationWindows.push(observation.evidence);
     assert.equal(original.ok, true); assert.equal(record(original.value).phase, 'completed');
     const inputId = record(record(original.value).effects).deliveryId;
     assert.equal(typeof inputId, 'string'); inputIds.push(inputId as string);
     let terminal = false;
-    const deadline = Date.now() + 90_000;
-    while (Date.now() < deadline) {
+    while (observation.isCurrent()) {
       assert.deepEqual(model.failures, []);
       if (modelProgress.length < 16 && modelProgress.at(-1)?.requests !== model.observations.length)
         modelProgress.push({ elapsedMs: elapsedMs(), requests: model.observations.length });
+      observation.assertCurrent();
       const result: Record<string, unknown> = await host.rpc('runtime.read', envelope('TEST-read', { memberId: 'carol-id' }));
       assert.equal(result.ok, true);
       const state = record(result.value);
       inputReadCount++;
       lastInputProgress = nativeInputProgress(state);
+      observation.assertCurrent(); // Retain the actual read above, but never accept a late terminal or grant.
       for (const interaction of (state.interactions as unknown[]).map(record).filter(row => row.phase === 'pending')) {
         assert.equal(interaction.kind, 'permission'); assert.equal(interaction.inputId, inputId);
         assert.equal(typeof interaction.interactionRef, 'string');
         const ref = interaction.interactionRef as string;
+        observation.assertCurrent();
         assert.ok(!replies.has(ref), 'one native grant, never retry an uncertain POST'); replies.add(ref);
         const granted: Record<string, unknown> = await host.rpc('runtime.interaction', envelope('TEST-once', {
           memberId: 'carol-id', expectedGeneration: '1', inputId, interactionRef: ref,
           reply: { kind: 'permission', decision: 'allow' },
         }));
+        observation.assertCurrent(); // A late ACK cannot authorize another grant or a terminal acceptance.
         assert.equal(granted.ok, true, JSON.stringify(granted));
       }
       const input = (state.inputs as unknown[]).map(record).find(row => row.inputId === inputId);
       if (input?.phase === 'terminal') {
+        observation.assertCurrent();
         assert.equal(input.terminal, 'succeeded', JSON.stringify(state)); terminal = true; break;
       }
       await tick();
+      observation.assertCurrent();
     }
-    assert.equal(terminal, true);
+    assert.equal(terminal, true, 'Original native input observation did not complete within captured functional ceiling');
     assert.deepEqual(await host.rpc('team.execute', command), original);
     }
     assert.equal(replies.size, approvalMode === 'manual' ? 2 : 0);
@@ -360,8 +386,8 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     assert.ok(model.observations.every(row => row.contextEffective));
     const imageObservations = model.observations.filter(row => row.turn === 'OPENCODE_TEAM_TWO');
     assert.equal(imageObservations.length, 3);
-    assert.ok(imageObservations.every(row => row.priorTurn && row.nativeImage?.exactCanonicalBytes));
-    const imageRead = await readNativeMessageImage(host, envelope, originals[1]!);
+    assert.ok(imageObservations.every(row => row.priorTurn && row.nativeMedia?.normalized && row.nativeMedia.pdf.exactBytes));
+    const imageRead = await readNativeMessageMedia(host, envelope, originals);
     assert.equal(await readFile(join(root, 'workspace/native-effect.txt'), 'utf8'), 'ONE\nTWO\n');
     const listed = await host.rpc('team.tasks.list', envelope('TEST-tasks', null));
     assert.equal(listed.ok, true); const tasks = listed.value as unknown[];
@@ -378,6 +404,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     completeStep('native_model_tool_effect_permission_mcp_task_and_reply_completed_once');
     completeStep('changed_project_config_did_not_retarget_running_native_session');
     completeStep('original_uploaded_PNG_native_image_inference_and_public_readback');
+    completeStep('all_image_MIMEs_exact_PDF_and_4MiB_PNG_native_normalization_and_public_readback');
     const checkpoint = await host.rpc('runtime.checkpoint', envelope('TEST-checkpoint', {
       memberId: 'carol-id', checkpointId: 'TEST-before-cold',
     }));
@@ -394,7 +421,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
       assert.deepEqual(await host.rpc('team.lookup', command), originals[index]);
       assert.deepEqual(await host.rpc('team.execute', command), originals[index]);
     }
-    assert.deepEqual(await readNativeMessageImage(host, envelope, originals[1]!), imageRead);
+    assert.deepEqual(await readNativeMessageMedia(host, envelope, originals), imageRead);
     const recovered = await host.rpc('runtime.read', envelope('TEST-recovered', { memberId: 'carol-id' }));
     assert.equal(recovered.ok, true); assert.equal(record(recovered.value).attached, false);
     const inputs = (record(recovered.value).inputs as unknown[]).map(record);
@@ -451,7 +478,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
         preferencesSelection: { nativeDefault: 'TEST-local/TEST-model', appDefault: 'TEST-local/TEST-model-B' },
         digests: { ...digests, ...(windowsShellSha256 ? { windowsShell: windowsShellSha256 } : {}) },
         steps, cleanup, phaseElapsedMs, elapsedMs: elapsedMs(), cancelled: signal?.aborted === true,
-        inputObservation: { reads: inputReadCount, last: lastInputProgress ?? null },
+        inputObservation: { windows: inputObservationWindows, reads: inputReadCount, last: lastInputProgress ?? null },
         launchObservation: { openElapsedMs: originalOpenElapsedMs ?? null, afterOpen: originalLaunchProgress ?? null },
         ...(passive ? { passiveNativeDiagnostics: passive.entries,
           originalHostCpu: { epoch: 1, scope: 'original-source-host-including-cleanup', ...originalHostCpu } } : {}),
@@ -463,6 +490,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
         modelOrigin: 'localhost-scripted', modelRequests: model?.observations.length ?? 0, modelProgress,
         coordination: coordination?.evidence ?? { status: 'unqualified', cleanup: null },
         modelFailures: model?.failures ?? [], vendorAuthQualified: false,
+        nativeMedia: model?.observations.find(row => row.nativeMedia)?.nativeMedia ?? null,
         desktopQualified: false, releaseQualified: false,
       };
       serialized = JSON.stringify(receipt, null, 2) + '\n';

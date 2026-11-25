@@ -1,0 +1,847 @@
+{
+  "verdict": "APPROVE full actual published docs Git-byte readback after completed fetch",
+  "head": "d556e23288c820b983a33808117f624cb2e93e39",
+  "tree": "e9004d75eace24307f5cc69a2110e434e6ad3e9c",
+  "parents": [
+    "4e74d36ba6212938c40a499603ee0419a183fc0a"
+  ],
+  "sourceIStillUnapplied": true,
+  "projectExecution": false,
+  "files": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/4dc-prospective-adoption-2026-11-15/canonical-R1.md",
+      "bytes": 22527,
+      "blob": "d62f158878d992d43b71bb0071f7a4561d149c9c",
+      "sha256": "5baad28fabf56507fce52de64757e8ad278ec02b6657d072d803b408e296837e"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/4dc-prospective-adoption-2026-11-15/incoming-4dc-plan29-appendix.md",
+      "bytes": 4307,
+      "blob": "0c2bde4490b4256daa7312a5dd4b4f34274a86ad",
+      "sha256": "e26f544363f7eb48614c136faae99cf0e0a3666675da8dd04e168fdc45c369e1"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/4dc-prospective-adoption-2026-11-15/integration-4dc-git-metadata.json",
+      "bytes": 13481,
+      "blob": "409fe1d2bc6da5d7544cadcc23fd984452bbc5ce",
+      "sha256": "baa1c5c9586ac620f5d7a8d6087dd92e5fcd9e0992b45fabaf9d6f5d679730f4"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/4dc-prospective-adoption-2026-11-15/integration-4dc-git.patch",
+      "bytes": 99306,
+      "blob": "f1f7782e497ef4ff9a09a64a4f6875db82ffd305",
+      "sha256": "44c9faaea863edcf26c467cc1601ebb8eed53ef15384635eb059eb094438f68d"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/4dc-prospective-adoption-2026-11-15/root-prospective-review.json",
+      "bytes": 2783,
+      "blob": "c664a5d7f332a50358659a3078e61d20bc49c290",
+      "sha256": "5721ac27bb9eaa8ffa3f45dec3e010c7700b995c07be63e8a98376b64188226c"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/4dc-prospective-adoption-2026-11-15/desktop-R1-appendix.md",
+      "bytes": 15521,
+      "blob": "82cb53f3c1d1032d4f2ac8ed510235d99cee52a5",
+      "sha256": "206130e4e9fc4cba14ca10a373a5d13cf71d5d6abdfd1a991541379add84a927"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/4dc-prospective-adoption-2026-11-15/desktop-candidate-metadata.json",
+      "bytes": 3469,
+      "blob": "6f8826bf2941b181434e705935d3bfa1cd26bcba",
+      "sha256": "060a4db357281f9d19ed8ed529114608d68b536153b13cf07ba54e594e97cb4d"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/4dc-prospective-adoption-2026-11-15/desktop-candidate.patch",
+      "bytes": 3949,
+      "blob": "cc6c78a7262f0fda7487645125dfb1ece69b064a",
+      "sha256": "828ebfa34771f683b101bd3c30cd08226b0ab8d935da4898624d0c628d36d42a"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/4dc-prospective-adoption-2026-11-15/native-a02-R1-appendix.md",
+      "bytes": 17813,
+      "blob": "11cd50e9fb387bb1133f50a12fbf974529dd5369",
+      "sha256": "70bbb4fedb2d8cb0920a881355918e0919b02a1bb7827a9d76dbec2aa2569975"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/4dc-prospective-adoption-2026-11-15/native-a02-candidate-git-metadata.json",
+      "bytes": 11642,
+      "blob": "e3846abc9e3c0330767d58dd32fed8ae5a0c08bf",
+      "sha256": "7ff1230740bd206100050a5be6d8c2f679edbd68c99478ace3c2e36674c3befb"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/4dc-prospective-adoption-2026-11-15/native-a02-candidate-git.patch",
+      "bytes": 52325,
+      "blob": "dd29fedf70528186a450c9ba2d56c16677f081eb",
+      "sha256": "e83a3af60599da49f6ceb30c210c63a4c4d61aad90c08ca2b60c22f45aaa9b82"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/4dc-prospective-adoption-2026-11-15/native-a02-verification-metadata.json",
+      "bytes": 23149,
+      "blob": "85a833ad3628a1c40dc2eac7b7a79fc246316cb3",
+      "sha256": "9953b515ceb5bcbeff5f0beaa62d4122062486f81b652d5701b7e24d090fc956"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/4dc-prospective-adoption-2026-11-15/native-a02-git-source-readback.json",
+      "bytes": 3096,
+      "blob": "ca990ccad0bcdcfebd2b869d3311e34c185ec7ef",
+      "sha256": "2b5022af920ebad4b9373b22e0533346693973a0333ac131d6e379543e584651"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/4dc-prospective-adoption-2026-11-15/native-4dc-R1-appendix.md",
+      "bytes": 14376,
+      "blob": "f895615bb6dadb270bc44b47ae04cfd31b99d089",
+      "sha256": "2df00ef5e77ad4a70f30f71cdbe42e85ac4d87dbcddf6bad49746abb032dede8"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/4dc-prospective-adoption-2026-11-15/native-4dc-candidate-git-metadata.json",
+      "bytes": 6278,
+      "blob": "4164c164b73a70efaa8d50f8a3f9812c243abc30",
+      "sha256": "706096786b0f4f4a0c49d4649a0c18f5e179c5c031bc1b07c4e0d0aff1b3e34c"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/4dc-prospective-adoption-2026-11-15/native-4dc-candidate-git.patch",
+      "bytes": 9375,
+      "blob": "42b702e183c36c8b90c3eeba5f1baafcf9d8fdad",
+      "sha256": "36c5a9e14c35821f9a9f27c7a6b94de4270e6490717c62b293c8659fa2eb70b8"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/4dc-prospective-adoption-2026-11-15/validation-manifest.json",
+      "bytes": 114714,
+      "blob": "c12e7f2c56649cdd8d2d21b08884bb876fd3a6d9",
+      "sha256": "bbc34c4aea78ce3cec706a8be9ffeb47d39e5fa76e9b5eaea834f9a69e0277e6"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/4dc-prospective-adoption-2026-11-15/run_check.py.txt",
+      "bytes": 26293,
+      "blob": "c3c983293c1ad0f2496b07b9d2262af71adb60c9",
+      "sha256": "acdea416258ae569c7d0891115697ffae201d799537d229fb775dc71c463aeb1"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/4dc-prospective-adoption-2026-11-15/stage-bindings.template.json",
+      "bytes": 6337,
+      "blob": "ae58ab25dc1a1a6cda7fb85cf50ec451e3192ed3",
+      "sha256": "1740dd2c6822bd4ae0df8117e52fa8ca7868819a0f6549467b9f14fb2cf5bdd0"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/4dc-prospective-adoption-2026-11-15/yaml-input-inventory.json",
+      "bytes": 25556,
+      "blob": "c25d2cd21ffb93ae702400f47a47bd1e24b94209",
+      "sha256": "e72a2eee3d268c9efa3a06543d6b5cb600fe162c8cad8a70562b139703e21417"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/4dc-prospective-adoption-2026-11-15/execution-plan.md",
+      "bytes": 11350,
+      "blob": "9b0f070ce3b45adb5305b3e6f128613fec5f9464",
+      "sha256": "72b0f371581a472b4f613ece997606028740c217c47abefd5b7ad9d8915308fa"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/4dc-prospective-adoption-2026-11-15/artifact-identities.json",
+      "bytes": 1872,
+      "blob": "b69575633feaef075dabc61af0cb22d2eb45bc9c",
+      "sha256": "015d9e0b03e6ed1b1593861b75545394b5b28a449968fcb3aa754e299348b009"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/4dc-prospective-adoption-2026-11-15/E-H-root-publication-review.json",
+      "bytes": 1282,
+      "blob": "882fc8f021b499be71042c5d337d42bfc6014045",
+      "sha256": "04de7d4353e18211de3c675739138603e021f62a84c12e28bb1207a7203206a0"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/4dc-prospective-adoption-2026-11-15/independent-prospective-review.json",
+      "bytes": 3442,
+      "blob": "16dab61825031361a256345d360e70e6b3439296",
+      "sha256": "c7e6b4376fb8751c89f975acf9097c5ab057aa68902e8129e4a8d289d9be5018"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/D-host-build-metadata.json",
+      "bytes": 1613,
+      "blob": "46fcbd461387e4ecc280845f6610c53c3ad2790a",
+      "sha256": "85ecadb70ae10c23e84e994324bd9efe42f9f374c6a9261c59a98ba76c029f4a"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/D-host-build-preflight.json",
+      "bytes": 15369,
+      "blob": "75c6e1773a58a426c99f45251081f2edb89aaf72",
+      "sha256": "0ddbc0b6df3265266c5da10e329ce35c01d233c42fba1d0297ce892bf3aebde8"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/D-host-build.log",
+      "bytes": 0,
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/D-ledger-build-metadata.json",
+      "bytes": 1620,
+      "blob": "35330f31c2c9a4d91d275270f4e9de5016870041",
+      "sha256": "8f30dd274ba8df816b01850217dca18cbe62a66e4227e95cf98cf92c85c3f2ba"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/D-ledger-build-preflight.json",
+      "bytes": 15373,
+      "blob": "c70be07ee32c4806b4c38ca2405fc2f7c3c2ce12",
+      "sha256": "c82945bf80708f4548af41de585693dd4380fcbe3f21a05f5f3b3963fa05c5a1"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/D-ledger-build.log",
+      "bytes": 0,
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/E-independent-actual-red-review.json",
+      "bytes": 4766,
+      "blob": "fd5bdfe1ee20c50dce3d10860bee0aaa3bbcb92e",
+      "sha256": "39199e48da542e0b0d85b06a2f34b36042dd6acc00a528e192b143f86a1033b9"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/E-independent-published-review.json",
+      "bytes": 1071,
+      "blob": "4024e14bf458c6d2b29c34640c5fd5936c95d958",
+      "sha256": "ad7660a3f61e0972410c05f97000872867ba7ef61718596457e53455df2ec34f"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/E-isolated-scope-review.json",
+      "bytes": 1353,
+      "blob": "858eb1fa0e6e8cdfd7649e8d46deea595b78c8e6",
+      "sha256": "5dfa9fab4fce9eed366665bfe9eecadab4d2045c375eca8e562e3145b90e5c17"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/E-journal-red-metadata.json",
+      "bytes": 3193,
+      "blob": "ac3e082818d1447f1521ed973a442133f9bee074",
+      "sha256": "cbba2a27b06a51149fd24d9dc669161b986fc042ae3c67fd16a0549e44ce2274"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/E-journal-red-preflight.json",
+      "bytes": 20364,
+      "blob": "6ab9710ef5dc4e525ea4d4b10b02d9679f64e55d",
+      "sha256": "19995b9c9d52407ad065847828dd326668e95009561cb761872ad0e1d41db8ac"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/E-journal-red.log",
+      "bytes": 14645,
+      "blob": "cb2c77b8154b051a0009cef4ddefb047561b4584",
+      "sha256": "24067417b0406975b2f8698f166c64f54e7aa1b8287c9fdb521c957f1fadb51e"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/E-published-readback.json",
+      "bytes": 10307,
+      "blob": "a2a1614dc4fb99999707a9653095e8779304a3e8",
+      "sha256": "0f39262924e6a3af1bdc9f2f6ea64d55d61ac377dcd00d2d057f24a5a5733439"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/E-runtime-red-metadata.json",
+      "bytes": 2735,
+      "blob": "c8c6017ac2b2bb686d9467cc8da9310ffe060ec7",
+      "sha256": "47e45ea23d069b161622d66c230c01a59249af9c33cc33120fe3c7f532afb144"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/E-runtime-red-preflight.json",
+      "bytes": 19138,
+      "blob": "2a83b6afbaed5db37be39b3907bbf0b16332799c",
+      "sha256": "5e6cff2d2f15699dc4549787932cbb6a4a215ef4def8d0c204dbd49ddf139a8d"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/E-runtime-red.log",
+      "bytes": 9993,
+      "blob": "f755173c9522c79891d6ede7a112f3f0fb1b8d93",
+      "sha256": "7df6a5d364a492c63536f7e3c93687eb313f9c01a3b1c88aa5e25832160c5670"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/F-independent-actual-green-review.json",
+      "bytes": 2796,
+      "blob": "e56243df43fd1bc5f5d9396db8963ac4f7f1e998",
+      "sha256": "852487edc25b1a54dd53aaca51414852f446b2ea33fb8c3874a86819e098c63e"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/F-independent-published-review.json",
+      "bytes": 629,
+      "blob": "32b43634ee6ac7bd8b450284b1b8e0a955300c6c",
+      "sha256": "191ae386bfbe8bef22ff5573661cf9ad9632c785a8d40fa5efc5ae8e7f1dfe87"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/F-published-readback.json",
+      "bytes": 10259,
+      "blob": "22fa828ca1f47be4ef0d21263a2969f3efa4731f",
+      "sha256": "b3363ee1acd36e015e47977e3001d978b4a455d299b626c2e494e8f4b0fb3c25"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/F-runtime-green-metadata.json",
+      "bytes": 2690,
+      "blob": "88bd38dad85a128264533c7443f5cd7727d374d5",
+      "sha256": "6f5e47487f087f2f3e40c8e17d2617bcb047083b3dfb43bb310004db3866630b"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/F-runtime-green-preflight.json",
+      "bytes": 20742,
+      "blob": "dfa14ffac7135ece54f119d15018d6e69312fada",
+      "sha256": "561a48e79ef45738d7bd92a09848f321559ad09b94158aff435c16550f50cf97"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/F-runtime-green.log",
+      "bytes": 5547,
+      "blob": "fbcbc4c2422eedbe5dabeec75715e196faeb0ec2",
+      "sha256": "d8364a1fec852e34c9d9f00d6d88ef8a1b497640333ce1f4ddec29554185ccac"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/G-independent-actual-green-review.json",
+      "bytes": 3191,
+      "blob": "c5ba10a6d1f60589b1e2e792d64aa0ceb1ec50a0",
+      "sha256": "f9391f4b6e7a5415b81be75186a13754901627fa9978559a3b60a09c600bc427"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/G-independent-published-review.json",
+      "bytes": 806,
+      "blob": "b245c8cac8f1bd6c79cfc2fc8dc54bcca27baa66",
+      "sha256": "3feb865b939f693926442012ae4346939ddc441f01887211ec11cddf7b778129"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/G-journal-green-metadata.json",
+      "bytes": 3146,
+      "blob": "31c2d1b91a293406d4fc238dd4559ae2646ccb5a",
+      "sha256": "a9744f9906caf3298d999dddd0d3c222d04cef4a979710a94601145e9abd26c7"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/G-journal-green-preflight.json",
+      "bytes": 22543,
+      "blob": "0d1bb56b1c9414c56a72f1169a58700a106b0fcb",
+      "sha256": "e62798371a5299ee7e3cabeb18721f4d1e20604583456e33ba35d3b471f00ae2"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/G-journal-green.log",
+      "bytes": 12416,
+      "blob": "2c8fa6ea4ed918ce9c5172c6f58e2eda67dde4c3",
+      "sha256": "eef1f40546520534fc46a878b70762e6280c3c943df44b22ede84425ce7e5841"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/G-published-readback.json",
+      "bytes": 10259,
+      "blob": "630acd28a1e185562717077e575600cfdabbfbe2",
+      "sha256": "aa6db5e7dced92742add811f44a0a673058dd1e012aa611788398eeb8640c2f3"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/H-architecture-metadata.json",
+      "bytes": 2643,
+      "blob": "fd037edb2ec2d7cd4d2e210fb05ef801467d4683",
+      "sha256": "c2ae8dd4b190ec273c3cf5aa6524948ad7111e1ce40084612bc8c41e70b3a43b"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/H-architecture-preflight.json",
+      "bytes": 26147,
+      "blob": "036a6cedd431fb31a50951c946c7f214024dd218",
+      "sha256": "5d735674552a7365d6d140d98ad0ab63473cdcb3d387542ec27934926428bc6e"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/H-architecture.log",
+      "bytes": 184,
+      "blob": "8cb9d8cb2385eb2e1c022c79e0af379ff3a1c601",
+      "sha256": "0f72f211f9285332305dc9d63650e47a7d741f2216f712df043bdccbc02f473d"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/H-diff-metadata.json",
+      "bytes": 3122,
+      "blob": "6e95e108ce4986838913e983f5b7c5c1f75d727a",
+      "sha256": "909c9982bf7f3607b06f2fcda9ba604ea3dc227ed9b38ffaf47552b7031c8333"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/H-diff-preflight.json",
+      "bytes": 27399,
+      "blob": "7fc116870ca16d862839d27fd48189d048b10702",
+      "sha256": "991ecded879fba5f950958ea71904dd2b13e26862105d699321774cf159c7e32"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/H-diff.log",
+      "bytes": 0,
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/H-host-test-types-metadata.json",
+      "bytes": 2699,
+      "blob": "30997970bc716a6962ade85b21369b45cb2f67a8",
+      "sha256": "69e966a51ad48ed5fde3b365235ff137c61df279ee425750fe792395bd029ff0"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/H-host-test-types-preflight.json",
+      "bytes": 23128,
+      "blob": "7122919b550c96d9c639fda6c19343100966bcde",
+      "sha256": "1a42a061e611d77b1cf08a732b307c0246190be508833f2cf5a03b6c5e971262"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/H-host-test-types.log",
+      "bytes": 0,
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/H-independent-actual-static-review.json",
+      "bytes": 8951,
+      "blob": "0009a7ff3ae1ae78b168c0b5d675bc954b4dc578",
+      "sha256": "9082c4a94d067e4adc2f5f65b460214fb74222ea7bfb9d190df39c572924bc36"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/H-independent-published-review.json",
+      "bytes": 806,
+      "blob": "6d5f13089f5e3cb3088ee83e4191c3e6c84d37a2",
+      "sha256": "c5343a1647071f7c952c068d5bfd8afad6d1a8c6a69b423d8c2625e0fedb708a"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/H-published-readback.json",
+      "bytes": 10259,
+      "blob": "03c2e316b11476cc3423d486f49d995e031c4ab0",
+      "sha256": "10bfcfd8350d0391e25261923e7ab5c5462b2aea8af546156f16881f9c1de9b8"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/H-scoped-fast-lint-metadata.json",
+      "bytes": 3115,
+      "blob": "185ef063f2d715a92e9ec841add4dd547f40814b",
+      "sha256": "18df9491562ebd822fbff88dbe0df191e4189b950cb47200e6513966796d8818"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/H-scoped-fast-lint-preflight.json",
+      "bytes": 25095,
+      "blob": "6bcd73b466264a0915ab48bf7cabce571bb5c28a",
+      "sha256": "226c2188ac6eda09788c8f36e61dfcf8fae9be5c252ffdc6356d0f0806a96ab7"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/H-scoped-fast-lint.log",
+      "bytes": 0,
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/H-scripts-types-metadata.json",
+      "bytes": 2691,
+      "blob": "907793bc9d93d77e396acfa30e2d60bec5a42583",
+      "sha256": "5e07da3045754d1fc843e736870df9fa2e32c21a1db51a3e49634e9bcfdb6466"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/H-scripts-types-preflight.json",
+      "bytes": 23898,
+      "blob": "c368c42f03bafa78d067bc4fddb09d7f86c4d5a7",
+      "sha256": "b1115d15d7463f5dc859e9a596dee1fadf3d341f9aaec58ebfd573264a4ed1ab"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/H-scripts-types.log",
+      "bytes": 0,
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/H-size-metadata.json",
+      "bytes": 2619,
+      "blob": "6ba1f16ea58d4d00611e815008929b7fae89877a",
+      "sha256": "12ca53b2ed180e028431456033aedd7a24a266881493836d94861d256851240c"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/H-size-preflight.json",
+      "bytes": 25378,
+      "blob": "e091f8fcc4e764acd1f762987f81f89a251cc35a",
+      "sha256": "15346f136a55f72264f693f3ac59875c63f31e64ce535b3585cf348c983493e0"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/H-size.log",
+      "bytes": 202,
+      "blob": "9e532b2a599bb5da3a6ea6de65a3e6a8db6c3b6b",
+      "sha256": "1eb83c975f69534c70814629b4eb6d3124c0367a12b2463dd9716b6741d1a167"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/actual-journal-green-review.json",
+      "bytes": 1213,
+      "blob": "101a6562d7da736782a6b968c079185138b1c4c1",
+      "sha256": "cb52f9cd206a1cca9fd5d623d123fb6ad24ba49c3ff859e0f16b8c50f67fa5df"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/actual-journal-review.json",
+      "bytes": 1202,
+      "blob": "aff289bb42ccf91df14bd18882be146749ba6247",
+      "sha256": "bf711146bacd90d33b2453e70a43cc78f9003450bd8ae70487b45032f0a0e6bc"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/actual-runtime-green-review.json",
+      "bytes": 1203,
+      "blob": "fe4d879d4ee2cce0288ae8438508b5f232eb5d9f",
+      "sha256": "5919cbe1968bb9e46611bd0d88c1abaa8d20f08335b0c311d755ede4eef5f133"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/actual-runtime-review.json",
+      "bytes": 1250,
+      "blob": "7076e70c0b5852896dd9156ad3c6ab9c2de21e79",
+      "sha256": "e47aaf69703306d4b2c9a24a7e8b5847d63929fad53b9a546e0884d857acfd70"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/host-source-closure.json",
+      "bytes": 144977,
+      "blob": "92fe358082aa8c5892c084798b2bdb8b5bdb106f",
+      "sha256": "288b4a26f4e81dc3d65bcaaab061b09af4800efafe575cb1e29e798f33234a10"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/previous-D-recorder.py.txt",
+      "bytes": 10606,
+      "blob": "40dd822fab131457747ed293230af578681328b1",
+      "sha256": "910b48fede377c05beaa6fc89d458aba5b7a566c89511013c868c587349fb0d9"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/previous-D-stage-bindings.json",
+      "bytes": 1344,
+      "blob": "45a6246f8eff9707c8b994a419a44010dae73f34",
+      "sha256": "f648e270989ac0bccd965ceff9f371d02384408e8248ca743add52012f2194d9"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/previous-D-validation-manifest.json",
+      "bytes": 46735,
+      "blob": "f460cdba964ceca57f99c7752bc8519c477fc9b2",
+      "sha256": "9cc33da77b7bd64abfa6d882bcfd89f2f90e2b24da543855635433b17aff4b74"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/published-r1-assembly-manifest.json",
+      "bytes": 51037,
+      "blob": "ec4398606df8c548da14a9c2bf4c2b14408b2ce4",
+      "sha256": "2c923dfd79fe13a8cf769c0a11bc65acfb3303cf7dc8da3104431d1b2d621e6f"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/published-r1-full-readback.json",
+      "bytes": 35128,
+      "blob": "fa575858ac4a11e9082b54728706236363e931de",
+      "sha256": "73ea0cf907a9119cd92ab421878b95442e69aaf14eaf0dceb2d63c746374f72a"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/retained-D-build-outputs.json",
+      "bytes": 280944,
+      "blob": "897c958cbb8e80120c22670e44614931f6436ba2",
+      "sha256": "babd0e295fbb1c79a3710f808bf6418f1b9e249f29085ee2d7a604ce72721dc8"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/run_check.py.txt",
+      "bytes": 17448,
+      "blob": "c340b62f3667f76678d4e3049613ac9cdd038ddd",
+      "sha256": "d150a5015780602de0cc0e48f05eb93526eca387d082a71d111dca820e674fa9"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/stage-bindings.json",
+      "bytes": 2639,
+      "blob": "93ec34298e25221ace11769db92dc5ed8d6e35d7",
+      "sha256": "d60a3d3abb3a1a0b62860f9e9410fa38079956b62c3c3e5318c7c5c882f7484b"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/stage-bindings.template.json",
+      "bytes": 939,
+      "blob": "a85c530392da43c4db2493cc11aa474164193829",
+      "sha256": "02000029ce177e9ef33ec52e0a71398d33feb504add98733949822c781c28696"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/raw/validation-manifest.json",
+      "bytes": 66013,
+      "blob": "7953713cb36794a7f504f99c18a686263cfc3371",
+      "sha256": "488189eb6ffe21c8c4a3961a6f79f15bebfce7e1b24f69f3b5d94d14b2df0b39"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/audit.json",
+      "bytes": 27110,
+      "blob": "29983339d6bde80d9089f9f1bb787c1fb5472f26",
+      "sha256": "5663f726d77b3347d1fe0a24b0b961c4467563aa2e5c00ad6d99275a76073df4"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/c28-eh-reconciliation-2026-11-15/inventory.json",
+      "bytes": 64609,
+      "blob": "2cde504e4bfb10166b299383fec1394d56b88629",
+      "sha256": "7ae2e80fff64fe272c88ab07b56acf40919e673954f492293123ae24c06006ec"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/general-terminal-checkpoints/general-3957-terminal-jobs.json",
+      "bytes": 4846,
+      "blob": "4be7ecc053fc5a71d1a690a29c29f8bb5d470be9",
+      "sha256": "c131d766c204b9f1f9ff47b739f050258bdf7aae00ffbeb66ef9806e3005d531"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/general-terminal-checkpoints/general-76-terminal-jobs.json",
+      "bytes": 4846,
+      "blob": "e7ac25bae843b9ce4b57dd0187234667d5b90ee4",
+      "sha256": "3a646585699932bbf91c2afa74573f5ed70a14a13a8b5cc59abeebfffb27c214"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/general-terminal-checkpoints/general-a02-terminal-jobs.json",
+      "bytes": 4846,
+      "blob": "daee3c336113b980f5f27dbaf7d6fbb6b82e68a4",
+      "sha256": "4080f8990048651cca324363ec08ad5c8c5618731921cb442875d1c0afa55883"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/general-terminal-checkpoints/general-c28-terminal-jobs.json",
+      "bytes": 4846,
+      "blob": "c55b1dcaf6e77d3c8caa4f4efaec926765e1a323",
+      "sha256": "207ed30b651c9281a7b46ef90c3f65c5dd88aa0302ebd9b1448cb7c580c3e359"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/a02-process-darwin-x64.zip",
+      "bytes": 12394,
+      "blob": "8eeb45bcc989ec940de7465765a5d31ed7de04ce",
+      "sha256": "9e95d33829f173a41002d0f3ab8854aebbb5221f86349b3c8d9932fb8c0d1d96"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/a02-process-win32-arm64.zip",
+      "bytes": 14568,
+      "blob": "057b43b670eb6e3af8070e79c4223d288befcd4a",
+      "sha256": "6854610bee9a18c7f67db25eb45c34909303e0b9be4ac4c356fe0c7b1d3dcc83"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/a02-process-win32-x64.zip",
+      "bytes": 14529,
+      "blob": "1a7cdff7f3d0b6e499c2eeaa4726f847714fa294",
+      "sha256": "1bacc81fbc0fc0ab7d638b5d74698dca0688a4a903fb37df160b55f011c22052"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/a02-v2-darwin-x64.zip",
+      "bytes": 10515,
+      "blob": "6fe5eb3595b834e0f0f3b93148d905f8498f150d",
+      "sha256": "afaa8fb9f404829d3abbaf8950ad517ad84816fde424e36b27d30c9c894ed839"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/archive-audit-process_darwin_x64.json",
+      "bytes": 3302,
+      "blob": "8e1caac4c4647de91ae71ea5a38c63391f5dda16",
+      "sha256": "c7e1f8ac2973bfb1ec3c66927da2d1fe5893b28d5129a05825756977024c0adc"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/archive-audit-process_win_arm.json",
+      "bytes": 4301,
+      "blob": "9b4b1ab6da7a26a9f20a4356705299f7230f4151",
+      "sha256": "85304ae0599d5676ae572ac3a293748baddfe2e8c5f67747636b722803283ecc"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/archive-audit-process_win_x64.json",
+      "bytes": 4297,
+      "blob": "4d271aa47bc1767c910cebe9184a71750a33c912",
+      "sha256": "839381216a99246b3cce75001d601e365d0ba8dfe88eb42492d825849607c292"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/archive-audit-v2_darwin_x64.json",
+      "bytes": 2437,
+      "blob": "2a89a423623ae86ad2f29b0ef668a77bc406eaa2",
+      "sha256": "d955520d6fcb8fff975f7b74dbede326eff07456e49d0f41dfa1397713191a7e"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/darwin-first-leaves-checkpoint-20261115-2130.json",
+      "bytes": 2739,
+      "blob": "dd58a141b746609f4128da775edae4978dc4ef70",
+      "sha256": "7c79b68176ff7cf3f74131dbd46bda348ff5b2aa54abfe15a6b05c45563a07db"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/independent-checkpoint-final-review.json",
+      "bytes": 2320,
+      "blob": "e8bc59d5accd29626ada0a82d88c361c930b6cc5",
+      "sha256": "95d33b95c67bf68a166691948d0f589634acbb620579c9c210418a0af6eec97a"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/independent-checkpoint-review.json",
+      "bytes": 8351,
+      "blob": "ba63b6bfc3fa91a5edb97bddb52c947e7693d60d",
+      "sha256": "45b80d66dec9aaaad3fb6766e1a684f235dc23ed541e1d9d6a615eb846623cf0"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/initial-jobs-snapshot-20261115-2125.json",
+      "bytes": 92726,
+      "blob": "c972923d758462f32dd68240f6f408a3d04addcb",
+      "sha256": "883653a2e045c189626bfe3c686bc66d0abe9530c47b4d1ddb3ef37e31dff4a6"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/job-132959932726.log",
+      "bytes": 111654,
+      "blob": "f457565e3bfbeaa5ea689969687a51e4152d637a",
+      "sha256": "96ca68135d37588aa68ca9aed53f26f3b5a06fe2e128e2cc577cbb94955c2f8c"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/job-132959932736.log",
+      "bytes": 128865,
+      "blob": "d55f42aec77d9498e62cd04dbaf25bf2656eb428",
+      "sha256": "9d4adf1f05f4fbf8bc2b7b9de77dc66009d832a65b97a233e9c6c61febf45238"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/job-132959932738.log",
+      "bytes": 152256,
+      "blob": "37c25d5e822ddd81a55b62374e603fb4bc034a55",
+      "sha256": "77e60dc919ecee333ba23307e228aa6752035bccaadb2ef6f29e6a018b89b6e7"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/job-132960007302.log",
+      "bytes": 109870,
+      "blob": "eeea32f195588a3690df54ec4072f1a1d952955f",
+      "sha256": "e0ffb2fe61663664dbf2d6236210553b23ad4279d61f1559fdd7fdc9909101b5"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/plan29-a02-darwin-first-leaves-appendix.md",
+      "bytes": 6624,
+      "blob": "c9cfc9ed183bdc3a0cc9bb4d6937f3f3f088337e",
+      "sha256": "47fe8ce234b204b6f8b0848d708399c9a774fe048ff04b9c6fead9fbaa7c8f3c"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/plan29-a02-windows-first-failure-appendix.md",
+      "bytes": 8012,
+      "blob": "728e6c8751b3dc39b9cba1d38cd09cc447d8426b",
+      "sha256": "5453d459b59dd79ea086b49c77c818840d9face290cdbdaf7bcb369112911986"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/receipt-audit-darwin-x64.json",
+      "bytes": 31536,
+      "blob": "2015897df44c28437e2b620bc4e6e6678c31bfe0",
+      "sha256": "c5ffad3f97261deb27b586cdf7757b528d484b99644ddc8fa4d81a3cab1a9d5f"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/receipt-audit-windows-first-failure.json",
+      "bytes": 65902,
+      "blob": "a1d5fbc3f5c2475702b2c9b24de01c9a1b8fa954",
+      "sha256": "cb958fff36f3de1722df664704b07cb3480ec95c096e17f958acca7eb19884b5"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/terminal-jobs-snapshot-20261115-2142.json",
+      "bytes": 123994,
+      "blob": "619f2369d9bdc7aa2b0d5c07d52c852d10ce8160",
+      "sha256": "10304a05045222c7ab52ccdaf33b91d276436d86f66fbd5b5cf6ef6f6323f813"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/windows-first-failure-checkpoint-20261115-2149.json",
+      "bytes": 2595,
+      "blob": "91ea8c001c8600a62a91f293db2c42a62c4287b2",
+      "sha256": "75eec9a53a98fe75a46968ccd136e81ee75eacd75a203f24bed4bf33e0e2ef6f"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-a02/windows-independent-checkpoint-review.json",
+      "bytes": 6282,
+      "blob": "612fd51e36a17085cab326cb0f346eee2f75a2e0",
+      "sha256": "e90bf96b0a4ab8ea1b96e45d6f0166f9e6f3dd727832e020f5ae5c822b085890"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-c28/archive-audit-process-arm.json",
+      "bytes": 7509,
+      "blob": "c38b0e78a03805805e73d903ef443c7802dcd5a6",
+      "sha256": "f53aab363b430a054b498423fd4bf6b25b8f2ce3c3b3b567a665832a659c780d"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-c28/archive-audit-process-x64.json",
+      "bytes": 7505,
+      "blob": "4b559ac051487acc762dadde4296a36a7473bb01",
+      "sha256": "e2398468a07c70a25fed5559ace82955ffed92717fbea25962ffb7048db40c43"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-c28/c28-process-win32-arm64.zip",
+      "bytes": 70776,
+      "blob": "c5477fbd51bdb6d45257c0d6144f439f9eb01f78",
+      "sha256": "cc403b00257f38946f0888905bfcf46842fe892685fede6f8e0433bbedf4767e"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-c28/c28-process-win32-x64.zip",
+      "bytes": 70615,
+      "blob": "a9db0217554ac27d569086047693d05039f5a90e",
+      "sha256": "b948518d266e7639ffb4f7f9aed3c2574b9f58902b65f40eaf90df6a266dd736"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-c28/independent-checkpoint-final-review.json",
+      "bytes": 3185,
+      "blob": "b6e8c75c62308d0ce3a056dae9db37d6f1dc71f4",
+      "sha256": "87203c0b57277d304935ad48e67e4693633c02463fa7203015682be9dbf0185c"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-c28/independent-checkpoint-review.json",
+      "bytes": 13405,
+      "blob": "75dbcd59ba164b5464f79c5eba30941b0f9aa40c",
+      "sha256": "7439dfc330adfd9636b430cbced4fc60917ceb8c9ed73f3fd64e34fe7560c5e9"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-c28/job-132949618051.log",
+      "bytes": 392398,
+      "blob": "8a0815102fb86e8bae68101426eef0e610fb8619",
+      "sha256": "c24268c1881ddf5f2b394f28d12654eeac6ddee5ddbc44262c3d04739e8384c4"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-c28/job-132949618151.log",
+      "bytes": 422323,
+      "blob": "ef79e459d5bec09e1f15679d97f4a48c6dc83b97",
+      "sha256": "d5cd48859cd830d62786967560c50892cba1542a66de78b87075f0fea8245356"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-c28/plan29-c28-windows-process-appendix.md",
+      "bytes": 8348,
+      "blob": "fca3d08d92b6a1e7ea9fd6f0e3fd3146281086e3",
+      "sha256": "1b6753cde76dfbbd7c6fac7fe19535b5d94c0d0d57e691f33610a801b935acad"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-c28/process-jobs-snapshot-20261115-2102.json",
+      "bytes": 30243,
+      "blob": "3fe942074d8193263502badb4e61e099ac1cb9a0",
+      "sha256": "6347ef5887913fd1a304bf1bca6b3ac27a46e16886e3ca7405237b71a912619d"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-c28/receipt-audit-process-windows-compact.json",
+      "bytes": 144148,
+      "blob": "622c35f2c32743cb2d53bf2e49b9e75eb0f36642",
+      "sha256": "f85d80b22935ed52f83dbdc07723cadb8b1d8f2c82c95ba85aece007916f8815"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-c28/source-c28-four-path-delta.json",
+      "bytes": 1101,
+      "blob": "61b17e60a4a9ce3b31bf2af675673769f223eede",
+      "sha256": "1be745baf6bb4b696b378f00252a8359154e9082b9bdf400afcc217e199aa214"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-c28/source-pins-process-arm.json",
+      "bytes": 35432,
+      "blob": "248c78bdbe83f1ea7197787c4bc00dda888d6074",
+      "sha256": "6c6fda443f6de27f1dba2ac8baea8316ecedc2f2b3e9852bf858efd3434ae9c2"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-c28/source-pins-process-x64.json",
+      "bytes": 37007,
+      "blob": "7eedb0cfd4bc1889d26b312ecda5e3b261a49165",
+      "sha256": "53dcf02be9f7913322179665b7993287d34e6bd7db9e66fdcff4342dc995efce"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/native-audit-c28/windows-process-checkpoint-20261115-2106.json",
+      "bytes": 4029,
+      "blob": "e0fdbf54040fb28b5d93e468486bd5eb60921552",
+      "sha256": "c4273c41ce7f7fb2c0f129cb04ef1deb4d614bde131acbe5db0ed451332c3063"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/publication-inventory.json",
+      "bytes": 51366,
+      "blob": "88ecc6326d66ba332386cfd65d1001800313d242",
+      "sha256": "e3bfeec9263cb0f72d619621ab7c386eb191b964d4d56208a5d230c82f83546f"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-c28-a02-checkpoints-2026-11-15/general-terminal-appendix.md",
+      "bytes": 2842,
+      "blob": "89067f499e94ef26a9d4d17c29f84a55589acfdb",
+      "sha256": "b76ebb47d9d84ed283de21ebf7a76ff2e50ea0c48f5431985676b03f178d79b4"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "bytes": 1072934,
+      "blob": "f48ed094dc7ed844be870ec03cf28499b75e18a2",
+      "sha256": "e0fb71c44ee54279d0ddcda193e718e8b2639e076bcdcbb359669df6a3a92be2"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/4dc-prospective-adoption-2026-11-15/late-332-disposition.md",
+      "bytes": 3516,
+      "blob": "56be6f87a9f67d6a140c50af1185377f18bf9901",
+      "sha256": "4bfc20bc41d693b75ce5c0a867006a9c794a4dca4303521c73b02c7d95d46aad"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/4dc-prospective-adoption-2026-11-15/publication-manifest.json",
+      "bytes": 66599,
+      "blob": "0040461e2ed08116229138540de1eac1872e37ed",
+      "sha256": "793314e4cb08e1250c8fc09502bfff24eb8c4a35e11f7a62cea7f6dfecf09c69"
+    }
+  ],
+  "fileCount": 137,
+  "bytes": 5038274,
+  "oldLeaves": 9663,
+  "newLeaves": 9799,
+  "oldUnrelatedUnchanged": 9662,
+  "plan29": {
+    "bytes": 1072934,
+    "blob": "f48ed094dc7ed844be870ec03cf28499b75e18a2",
+    "sha256": "e0fb71c44ee54279d0ddcda193e718e8b2639e076bcdcbb359669df6a3a92be2"
+  },
+  "plan29PrefixBytes": 945358,
+  "exactAppendixBlocks": 12,
+  "plan30Unchanged": true
+}

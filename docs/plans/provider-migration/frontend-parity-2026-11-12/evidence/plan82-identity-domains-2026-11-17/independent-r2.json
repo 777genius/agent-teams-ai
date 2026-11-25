@@ -1,0 +1,220 @@
+{
+  "schema": "plan82-prospective-independent-r2.v1",
+  "decision": "GO_PROSPECTIVE_PLAN82_ONE_HELPER_TEST_CORRECTION",
+  "blockers": [],
+  "base": {
+    "head": "cd6258fe557b16793fb28b6391d4601a059c8b53",
+    "tree": "797e11f34ff169a8f472959409295500ec7ad610",
+    "binding": "Root supplied current complete-tree identity and immutable leaf pins; this bounded source-only review independently fetched and hashed each cited body. No fresh complete-tree enumeration or Merkle recomputation is claimed here."
+  },
+  "document": {
+    "bytes": 5188,
+    "gitBlob": "6b901e05094303e3b56ceb34a64c58129b3b3981",
+    "sha256": "1ae145c4f02bb46e237b9db819abfb1a0469cb2bc413e1d11a63481f4391d882",
+    "lines": 32
+  },
+  "review": {
+    "document": "Full exact32-LF Plan82 body read; bytes/Git blob/SHA256 independently recomputed and matched.",
+    "acceptedPlan": "Full exact199-LF Plan73 read. Its distinct HELLO/custody and durable Runtime obligations are preserved.",
+    "source": "Full539-LF scenario,111-LF profile,64-LF CLI and48-LF prepareSessionOpen read. Other exact bodies hashed in full and direct identity/fence/native-custody windows read.",
+    "diagnosis": {
+      "bytes": 13312,
+      "gitBlob": "d4e1dbb2fc1d834feb3d30bc2de7a17d51ce1b00",
+      "sha256": "d9bbf330fe0f07ebce029e0b984bb5a0cdecba4e9359d11b599c974e648d0c61",
+      "lines": 214
+    },
+    "diagnosisStore": "p09.owner-loss-cd625.independent-source-diagnosis.v1"
+  },
+  "cause": {
+    "runtime": "Coordinator67fd:82 independently generates the Runtime epoch;160-174 injects it into RuntimeOwner. RuntimeOwner199-205 passes it to prepareSessionOpen41, which persists it before allocation.",
+    "transport": "HostServer755:97 independently generates HELLO;125 passes it to HostCustodyClient. CapturedHostClient436-448 uses actual HELLO for Main attachment, and native custody validates that same transport binding.",
+    "entry": "Profile34-36 enforces unpackaged Codex loss mode;77-86 imports original CLI;106 supplies profile path/digest. CLI29-44 enters TeamHost's profile branch. TeamHost254 and655 construct the two owners separately without a shared UUID.",
+    "classification": "Scenario375 is an invalid cross-domain TEST assertion. UUID mismatch does not establish a production custody defect, and production UUID unification is not selected.",
+    "invalidAlternative": "Strict native ProcessOwner26-27 has teamIncarnation/runId/laneId/processGeneration and no hostIncarnation; that nonexistent property is not a valid substitute."
+  },
+  "selectedDelta": {
+    "paths": [
+      "tools/owned-process-broker/nativeEmulatedOwnerLossScenario.ts"
+    ],
+    "preimage": {
+      "bytes": 38289,
+      "gitBlob": "d2d027f5aab70da3396c9b61fa6bf3c6f77a1f05",
+      "sha256": "caef7e9bc7fb22d8295f9a742b45682be1f6ded10339ec42caed8c565a965857",
+      "lines": 539
+    },
+    "edits": [
+      "Keep originalRecord = read() at the same boundary; remove only adjacent HELLO equality and add the specified single-line domain comment.",
+      "After existing TeamHost ownSources entry, add RuntimeTeamCoordinator.ts then packages/legacy-agent-host/src/index.ts, using the existing relative path convention."
+    ],
+    "expected": {
+      "addedLines": 4,
+      "removedLines": 1,
+      "finalLfLines": 542
+    },
+    "noAfterimage": true,
+    "provenance": "Two additional source pins bind the previously unpinned UUID producers. Existing path capture, deduplication and final unchanged-source hashing stay intact; no new authority is introduced."
+  },
+  "preservedOracles": [
+    "Transport: actual attachment==HELLO300; same Main299/profile301 and428; distinct A/B HELLO427; original child close/abort412-420.",
+    "Runtime: exact current binding/profile/fingerprint/nonempty incarnation176-182; actual original allocation/prepare310; retained config and original incarnation341/438/505.",
+    "Initial actual opening/allocated and nativeReady/input state376-400; source writes opening incarnation before allocation, and prior open fingerprint returns allocate:false.",
+    "Both closed modes, all input/effect/forwarding counts, held callback, actual one crash, cold read/reconcile/lookup, all stale/successor and PID refusals, retained UNKNOWN and no replay.",
+    "Original timing, first error, Main close, HANDLE witnesses, sentinel, incomplete/cleanup predicates and per-run source freeze."
+  ],
+  "evidenceLimits": {
+    "original": {
+      "job": "133870300375",
+      "run": "44033362637",
+      "step": 19,
+      "rawBytes": 332657,
+      "rawSha256": "85c201e7294814c340938141d69866fd63d9499f665beae0074b50473f463249",
+      "spanSha256": "92b27441c3d178557d36f8f5675a5d1c95906ab29f08e5a1a2acc9b6d1251a34"
+    },
+    "readAttribution": "Root read the complete42-line first-failure span; full raw is retained by observer. This reviewer did not independently read original raw/span/ZIP.",
+    "reach": "Source places the failure before intentional crash marker411 and all Host-B/cold/replay checks. Early finally cleanup does not prove the intended owner-loss sequence.",
+    "qualification": "Controller exit1/active0 is not scenario cleanup PASS. No after-fix, later W05, ARM, vendor, P09, W01/M16, release or Stage2 claim."
+  },
+  "gates": "Publish/read back/independently verify exact docs before source authoring; review full future source and strict patch directions; verify actual source/tree; retain useful jobs and fresh sole-observer guard before primary advance. Existing resulting-head original type/lint/build/contracts/native/controller/provider/cleanup requirements remain.",
+  "otherHolds": "Plan40 choice, P10 unavailable originals, genuine provider restrictions and other explicit holds unchanged.",
+  "sourceReferences": [
+    {
+      "label": "scenario",
+      "gitBlob": "d2d027f5aab70da3396c9b61fa6bf3c6f77a1f05",
+      "lines": [
+        138,
+        140,
+        164,
+        176,
+        182,
+        297,
+        307,
+        309,
+        347,
+        350,
+        539
+      ]
+    },
+    {
+      "label": "runtimeOwner",
+      "gitBlob": "a566efc5987b6859d004a8531cb8e6bac80bec30",
+      "lines": [
+        185,
+        214,
+        558,
+        564,
+        612,
+        637,
+        739,
+        751
+      ]
+    },
+    {
+      "label": "prepareSessionOpen",
+      "gitBlob": "f02e7aaa2b12d337c43c25aec58a1c113b96728b",
+      "lines": [
+        8,
+        48
+      ]
+    },
+    {
+      "label": "teamHost",
+      "gitBlob": "98fdd1c66ba139c9887ac54cf9166944c033fdd4",
+      "lines": [
+        254,
+        283,
+        655,
+        760
+      ]
+    },
+    {
+      "label": "runtimeCoordinator",
+      "gitBlob": "67fd5be49797569631a6ec26e631068bdd7adfef",
+      "lines": [
+        72,
+        174
+      ]
+    },
+    {
+      "label": "hostServer",
+      "gitBlob": "755158699496506a62132c540f19b225c5a6222d",
+      "lines": [
+        46,
+        68,
+        90,
+        130,
+        171,
+        200
+      ]
+    },
+    {
+      "label": "hostClient",
+      "gitBlob": "59397fb3ba4c85d8de126bc0d60f9bcdb00c59ac",
+      "lines": [
+        185,
+        285,
+        432,
+        455
+      ]
+    },
+    {
+      "label": "nativeCustody",
+      "gitBlob": "af69d8430ffd473d471a5e663606fcaea640d2e5",
+      "lines": [
+        26,
+        53,
+        145,
+        173,
+        257,
+        279,
+        355,
+        374
+      ]
+    },
+    {
+      "label": "windowsLaunch",
+      "gitBlob": "3b5a244c27d004af6e82fffa092fa83e1894de73",
+      "lines": [
+        110,
+        154,
+        235,
+        242,
+        314,
+        335,
+        391,
+        409
+      ]
+    },
+    {
+      "label": "profile",
+      "gitBlob": "19c40bcef71744dc9d5e89f438143f8d3b3c1a61",
+      "lines": [
+        1,
+        111
+      ]
+    },
+    {
+      "label": "cli",
+      "gitBlob": "ed2b6f201a74c19800d0570977f36258e2c64cc8",
+      "lines": [
+        1,
+        64
+      ]
+    },
+    {
+      "label": "acceptedPlan73",
+      "gitBlob": "74694e251c53303e9dffa7d52f44103fe5eed04e",
+      "lines": [
+        1,
+        199
+      ]
+    }
+  ],
+  "activity": {
+    "sourceEdits": 0,
+    "projectExecution": 0,
+    "nativeExecution": 0,
+    "actionsCalls": 0,
+    "filesystemCommands": 0,
+    "apiMutations": 0
+  }
+}

@@ -862,13 +862,11 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
           return;
         }
         // When the suggestion dropdown is open, let it consume Enter/Arrow keys first
-        if (isOpen && effectiveSuggestions.length > 0) {
-          mentionHandleKeyDown(e, effectiveSuggestions.length, (index) => {
-            const next = effectiveSuggestions[index];
-            if (next) handleActiveSelect(next);
-          });
-          if (e.defaultPrevented) return;
-        }
+        mentionHandleKeyDown(e, effectiveSuggestions.length, (index) => {
+          const next = effectiveSuggestions[index];
+          if (next) handleActiveSelect(next);
+        });
+        if (isOpen && effectiveSuggestions.length > 0 && e.defaultPrevented) return;
         // Native follow-up accepts only an empty editor with no active menu or
         // chip. No listener means unchanged native browser Tab navigation.
         if (
@@ -1142,7 +1140,7 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
             <div
               ref={backdropRef}
               className={cn(
-                'pointer-events-none absolute inset-0 z-0 overflow-hidden rounded-md border border-transparent px-3 py-2 text-sm text-[var(--color-text)]',
+                'pointer-events-none absolute inset-0 z-0 overflow-hidden rounded-md border border-transparent bg-[var(--color-form-control-bg)] px-3 py-2 text-sm text-[var(--color-text)]',
                 hasCornerActions && cornerInsetClass
               )}
               style={{
@@ -1290,9 +1288,9 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
           <AutoResizeTextarea
             ref={setRefs}
             value={value}
-            onChange={composedHandleChange}
-            onKeyDown={composedHandleKeyDown}
-            onSelect={composedHandleSelect}
+            onChange={textareaProps.readOnly ? undefined : composedHandleChange}
+            onKeyDown={textareaProps.readOnly ? undefined : composedHandleKeyDown}
+            onSelect={textareaProps.readOnly ? undefined : composedHandleSelect}
             {...textareaProps}
             className={cn(className, hasCornerActions && cornerInsetClass)}
             onScroll={handleScroll}
@@ -1361,7 +1359,7 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
         <MentionSuggestionsPopup
           placement={suggestionPlacement}
           anchorRef={surfaceShellRef}
-          open={isOpen}
+          open={isOpen && !textareaProps.readOnly}
           top={dropdownPosition?.top}
           dismiss={dismiss}
           suggestions={effectiveSuggestions}

@@ -1,0 +1,166 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-read-only-source-review",
+  "reviewer": "/root/migration_scope",
+  "recordedAtUtc": "2026-11-15T23:05:44.271861+00:00",
+  "sourceCommit": "35cbd6e99b620e9b41802af936143d900f5e2aca",
+  "sourceParent": "27b1acf48278dcd0fb348c626696eac2dc64de73",
+  "verdict": "APPROVE bounded atomic archive, dependency, pin and typed Thinking source review; whole incoming adoption remains pending explicit reconciliation and resulting-source qualification",
+  "scope": "Exact immutable pair, package/workspace/lock substitutions, current versus historical pins, normalizeActivity, finite Claude/V1 producer changes and the directly related Desktop observation boundary. Not a complete renderer/stderr/native or whole-commit review.",
+  "selectedSourceLeaves": [
+    {
+      "path": "packages/legacy-agent-host/package.json",
+      "bytes": 12355,
+      "gitBlob": "e39cb2ba89c125d850710828a65a30ae25b7344b",
+      "sha256": "77efb91a29ed4ba662ca7dcebc0843965d27305ad9d62f04ef6c84b517732e0b"
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "bytes": 6946,
+      "gitBlob": "3999f1f503fc23c84db89cf9e964bcc3164122e5",
+      "sha256": "c3801a0cb971ad1c31e7236a61c328ff55c9c91d63b7b7042de8562ff39f00ea"
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "bytes": 956788,
+      "gitBlob": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+      "sha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "bytes": 175238,
+      "gitBlob": "de7e1b4d8388065a15345cca434f1868ec694fc5",
+      "sha256": "cf3fe1c70142669f97143a354b178e55c07cad9dd0a534de885280fe0cec7dce"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/normalizeActivity.ts",
+      "bytes": 5840,
+      "gitBlob": "338f38de5b4ee60d5fa982aa895dd2f71fde981b",
+      "sha256": "2c2b72f7b9bea0e7f50cf4e95512ab022dbab50c8bcc6a697320aa35c823aede"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-activity.test.ts",
+      "bytes": 54523,
+      "gitBlob": "5a4a258d7802ff54fc2d4c405fc95c2e8e48e86e",
+      "sha256": "2b0b8accbaf951b00d86537d6a0eb793e7ef1859d1ab401b06e93624f97269cb"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "bytes": 191234,
+      "gitBlob": "ac07c852895c6cfbabb5015f0c1ef0abe13b3a7c",
+      "sha256": "a98eaa6aef701eba667a9b02edc0e49ed124786705469d8820a36b7c27cfd210"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-windows-claude.ts",
+      "bytes": 15811,
+      "gitBlob": "c640bd2a538f3f063b764174b71d365574925345",
+      "sha256": "c06390dfcc504efdb693c1c7e3aa52375ea0916245f20461cd8be352a3a500d5"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/native-claude-host.native.ts",
+      "bytes": 39595,
+      "gitBlob": "b0174217485fa7dadb4ba9692a3056798e2e3e9f",
+      "sha256": "3e93bd4ac4c0555d8f149781835584a7fd998c5e7e8f906669498e9cba7840eb"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/native-codex-team.native.ts",
+      "bytes": 40907,
+      "gitBlob": "0b179a8b5fcf089de2f42dd90f8eef9a9160b992",
+      "sha256": "1420bc3f28eae122436a520a8b85e4e23c21c674636548a37bd88570f80f1636"
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "bytes": 31783,
+      "gitBlob": "6cdba0b52141348d97c593bf2ae6c224cdce5d73",
+      "sha256": "03f92320d8646353540bcea7a3626a0a35634b803a6af1599d23c1d882a6d962"
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+      "bytes": 39026,
+      "gitBlob": "76f5d1953816fd125f576a966c42caefcfc297e2",
+      "sha256": "94cc5c1faed9d9d6d82d6db8e5fb7e36f292fa7335ff60ffc0648009a0d2b43a"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "bytes": 63953,
+      "gitBlob": "345dc9a6b3fb9d197eaf2982e60840682d7b8fbd",
+      "sha256": "62be20083316c423e9f0814593aa8815b7abd56507138e84a473de3cd8791c92"
+    }
+  ],
+  "pairedArchives": [
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-implementations-0.0.0.tgz",
+      "bytes": 185996,
+      "gitBlob": "7130609dd29851148c9e2106e2764b75982739b1",
+      "sha256": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+      "originalCheckedArtifactBytesEqual": true,
+      "sha512Integrity": "sha512-97w75rWGES5ITobUIXcPu2S4JNgsd4HH3IpyQLECi68+iCNr/BYj9W+Uc8h7gDtKHU5o6sW+mueG2VDiNvBFcQ=="
+    },
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz",
+      "bytes": 6230,
+      "gitBlob": "33c2944ff8a52a9c087fba9d3cab1daffe2604d8",
+      "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc",
+      "originalCheckedArtifactBytesEqual": true,
+      "sha512Integrity": "sha512-ONExHCowcHR4vsD86pOF3t91KlqkpVt83g43OXNM1tI+8nae32WkTI+UrIuYjg45PuR6KKgfEIHz9pNXPMFC4g=="
+    }
+  ],
+  "originalCheckedReceipt": {
+    "path": "vendor/provider-migration/host-logs-thinking-9423f600/checked-artifact-receipt.json",
+    "bytes": 597,
+    "gitBlob": "7fe2a65c8281598cc20dbd4f59d445ce18faab40",
+    "sha256": "3105c0ea7166596390aa38ac3866661aeff98673803f986a2301a28f3232f375",
+    "verbatimOriginal": true,
+    "qualification": "source-and-packed-consumer-only",
+    "nativeHostQualified": false,
+    "packagedElectronQualified": false
+  },
+  "dependencyFindings": {
+    "workspaceAndLockExactInverse": "Each full file is reconstructed exactly from 27 using only the two archive-path substitutions and the two independently recomputed SHA512 SRI substitutions. All other lock/workspace bytes are unchanged.",
+    "hostPackage": "Both file dependencies move together to the new directory. A separate browser-safe diagnostics/assignments export is also added and is outside this Thinking-only semantic verdict.",
+    "runtimeDependencies": "The archive package manifests retain the same external runtime dependency versions. The new implementation also includes the already merged opt-in prompt-suggestions export; this review makes no claim that the implementation diff is Thinking-only.",
+    "spiChanged": true,
+    "installedQualification": "No package install, lock resolution, compiler, project test, Host build or Desktop/provider execution was performed. Existing K dependency/output evidence is for the old pair and cannot qualify this future adoption."
+  },
+  "pins": {
+    "current": "All non-document/non-vendor occurrences of the previous implementation SHA91350 and 421fee9 archive path disappear. Current CI and native test pins select the verified new implementation bytes.",
+    "preservedHistorical": [
+      "ci.yml oldProvider donor9ede path and upgrade.contractsSha256",
+      "native-claude-host.native.ts DONOR_ARTIFACT/DONOR_SHA256/CONTRACTS_SHA256 used only in donorInputs",
+      "desktop-claude-checkpoint-upgrade.ts OLD_ARCHIVE/OLD_SHA/CONTRACTS_SHA resolving under donor root"
+    ],
+    "noHistoricalDonorRebindingObserved": true
+  },
+  "typedBoundary": {
+    "spi": "The checked contracts expose distinct text and thinking EventPayload union members; the app continues to import Event from this package.",
+    "normalizer": "Only the thinking case and kind:event.kind return change. Existing nonempty1024-character messageRef, safe nonnegative block, string text, snapshot/complete phase and24KiB UTF8 bound remain. Other cases are byte-identical.",
+    "activityRegression": "Original complete runtime-activity.test.ts prefix is exact. The appended case checks the original input/operation/message/block attribution, snapshot/complete, durable cold retention, no conversation/text projection and unchanged state/input/nativeReady. Source review only; no outcome claimed."
+  },
+  "finiteProducerSeams": {
+    "claude": "The existing TEST_UI_STREAM partial emits a thinking block at index1 and its final original assistant message includes the matching completed thinking block. The original text block, same input/message, release file and effect/action sequence remain. Signature is native fixture data, not a projected Thinking field.",
+    "opencodeV1": "The same existing stream turn adds one reasoning part and completes it at original finish. It uses the same selected finite TEST protocol peer and release gate.",
+    "codex": "New Desktop assertions explicitly exclude Codex Thinking; no unsupported producer parity claim.",
+    "desktop": "Extra original-journal validation, same-input/operation joins, DOM disclosure/filter/reload observations are real observation/UI costs. They reuse the same business inputs and release; this is not a zero-additional-observation claim."
+  },
+  "compositionRequirements": [
+    "Preserve frozen K27 and its exact validation. Do not retarget or apply35 in that stage.",
+    "Compose35 runtime UI345dc with K069111 both-Task-tab rich-fact and current expanded-title correction. Incoming35 lines694-703 still contain the old Activity pre/#sequence branch.",
+    "Compose runtime-team-host.test incomingac07 new stderr tests/assertions with the entire retained c226 deadline/capture test body. Whole ac07 adoption would drop our retained eight finite cases.",
+    "Preserve K common-roster53-line move, ten-file Team command and all38 lint operands; source closure and future lint/build inputs must explicitly include the newly selected artifacts and source files.",
+    "Freshly bind installed provider/SPI, resulting Host source/build and all required app/Desktop/native qualification to the later reconciled source; no old509/542 or K result transfer."
+  ],
+  "evidenceLimits": {
+    "providerOriginalEvidence": "Previously independently reviewed provider9423 source plus paired packed-consumer originals on Node24.21 and26.11.1;540 source+1+1 packed tests per environment, not old509 or a new app result.",
+    "newSourceReceipt": {
+      "path": "vendor/provider-migration/host-logs-thinking-9423f600/source-receipt.json",
+      "bytes": 2472,
+      "gitBlob": "c8eddea34318da263326df30169b53b8e1f9d07c",
+      "sha256": "877083696f8a2812e49069dd056b84b1a595e16d3c7e93ce16ff814be759081a",
+      "claim": "53 successful native matrix jobs,51 positive receipts and2 expected HOLD receipts",
+      "independentStatusAtThisReview": "53 job API success statuses were previously checked, but the51/2 raw receipt classification is not established by those statuses. Root is separately auditing original53 ZIPs; no duplicate downloads or upgraded qualification asserted here."
+    },
+    "authorAppCounts": "35 Plan32/33 reports106/57/107 and related local outcomes; these remain attributed author prose until exact raw evidence is joined.",
+    "security": "UI reviewer independently owns35 stderr/redaction security review; this bounded Thinking approval does not approve that helper.",
+    "actionsPerformed": "Pure Git/file/archive byte reads, source inspection and this derived scratch review only. No project execution, source/refs/PR/CI mutation."
+  }
+}

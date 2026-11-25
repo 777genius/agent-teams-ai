@@ -1,0 +1,51 @@
+{
+  "storedRoute": {
+    "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/currentness/publication-route-observation.json",
+    "bytes": 5169,
+    "blob": "6e58277ca9f1bbd40e31ab6ee9e4591c8a56525b",
+    "sha256": "8cec590c18768854112921fa469e8f012b1d2fe66b3da6711f1b473868d10c5b"
+  },
+  "pushWorkflows": {
+    ".github/workflows/announcements-content.yml": "branches: [main]",
+    ".github/workflows/ci.yml": "branches:\n      - main\n      # Long-lived integration branches: pushes here previously ran no CI at all,\n      # which let multi-day test regressions land unnoticed (they only surfaced\n      # through PR #252's merge CI).\n      - refactor/team-provisioning-round2-reapply\n      - refactor/hosted-web-feature-boundaries",
+    ".github/workflows/codeql.yml": "branches: [main]",
+    ".github/workflows/codex-runtime-smoke.yml": "branches: [main]",
+    ".github/workflows/electron-dev-profile-cross-platform.yml": "branches: [main]",
+    ".github/workflows/kanban-table-desktop-e2e.yml": "branches: [main]",
+    ".github/workflows/landing-hetzner-release.yml": "branches: [main]",
+    ".github/workflows/landing.yml": "branches: [main]",
+    ".github/workflows/provider-real-runtime-e2e.yml": "branches: [main]",
+    ".github/workflows/runtime-bootstrap-smoke.yml": "branches: [main]",
+    ".github/workflows/teams-create-page-desktop-e2e.yml": "branches: [main]"
+  },
+  "originalHelper": {
+    "mode": "100644",
+    "type": "blob",
+    "sha": "6b6c7003960eb4075d74ca449d303602e99ef83e"
+  },
+  "originalTest": {
+    "mode": "100644",
+    "type": "blob",
+    "sha": "0727339627757c3a96d54da2933eb7c1b60685f7"
+  },
+  "wholeTenFileLiteralPreserved": true,
+  "priorHostCensus": {
+    "archiveRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/native/M0660-native-evidence.zip",
+    "archive": {
+      "bytes": 664690,
+      "blob": "04a9ee0dbf3364352cf9af2fa7b4d77b882ed284",
+      "sha256": "f8c4afcd9ca7137022f103eb8474af319c214fec2b9ec2e82d8987ba3e65c801"
+    },
+    "member": "native-audit-M0660/host-source-M0660-git-audit.json",
+    "memberIdentity": {
+      "bytes": 163123,
+      "blob": "c6f687fc66ecfbd5ab750c1fa657af628e2329e7",
+      "sha256": "05d5046c29097f54d9fb6c48bb8ab4236240a883d5ebfda4854269c5779a2893"
+    },
+    "actualGitRecoveryExact": true
+  },
+  "currentSourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "clean": true,
+  "noSignedDownloadURLsInNonZipPayloads": true,
+  "limit": "Configured push branch filters and retained original observation only, not unknown external services or a future lease."
+}

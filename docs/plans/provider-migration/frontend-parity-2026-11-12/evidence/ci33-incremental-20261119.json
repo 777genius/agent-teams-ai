@@ -1,0 +1,1681 @@
+{
+  "kind": "CURRENT_SOURCE_33_INCREMENTAL_ACCEPTANCE",
+  "recordedAt": "2026-11-19T18:05:30.078581+00:00",
+  "sourceHead": "33ea959ad1b2496ab393e04fa50e610e092224ec",
+  "baseHead": "8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+  "eventMergeHead": "d7d98f85757e38ad885bb2de1779bb8a881849c6",
+  "teamAndTaskboard": {
+    "head": "33ea959ad1b2496ab393e04fa50e610e092224ec",
+    "observedAt": "2026-11-19 17:19 UTC",
+    "runId": 44565800673,
+    "jobs": [
+      {
+        "id": 135707276069,
+        "name": "Team",
+        "conclusion": "success",
+        "workspaceTypesAndOriginalTypedLint": "success",
+        "runtimeAndTeamContracts": "success",
+        "receipt": "/home/runner/work/_temp/TEST-desktop-backend-JRy7Bk/desktop-backend-receipt.json",
+        "log": "job-135707276069.log"
+      },
+      {
+        "id": 135707275138,
+        "name": "Taskboard",
+        "conclusion": "success"
+      }
+    ],
+    "artifacts": [
+      {
+        "id": 14556776207,
+        "name": "host-emulated-linux-x64-33ea959ad1b2496ab393e04fa50e610e092224ec-team",
+        "bytes": 671783,
+        "digest": "sha256:80d4694ff472820216cf890bfd389436dc78c87804bd3153faa7c1d9abb7d323",
+        "head": "33ea959ad1b2496ab393e04fa50e610e092224ec"
+      },
+      {
+        "id": 14555084190,
+        "name": "host-emulated-linux-x64-33ea959ad1b2496ab393e04fa50e610e092224ec-taskboard",
+        "bytes": 1644894,
+        "digest": "sha256:6df3d78ed04ee8a189d124b7cb5a4f67fac8fba3f081bbadca968eec188adbc1",
+        "head": "33ea959ad1b2496ab393e04fa50e610e092224ec"
+      }
+    ]
+  },
+  "windowsArm": {
+    "sourceHead": "33ea959ad1b2496ab393e04fa50e610e092224ec",
+    "run": 44565800920,
+    "job": 135707175233,
+    "artifact": {
+      "id": 14554405716,
+      "bytes": 47019,
+      "sha256": "0a61dcf1c4081d5ba8d17f3b3e2f714319013ac0f1410b36d5b8fec62f2eb3c6",
+      "hashMatchesGitHub": true
+    },
+    "status": "INCOMPLETE",
+    "stage": "Team-A",
+    "cleanup": true,
+    "scenarioCleanup": true,
+    "allOriginalHandleAbsence": true,
+    "jobCount": 7,
+    "lastLaunchReadiness": {
+      "source": {
+        "sourceId": "7a5573634ec89af7f0c9499181c880ae18eab00406e3c841240156f27ad05647",
+        "revision": "724cb3168a97b89537898036ac051d339e29505e67fa27e97f1d9dac4b1999f7"
+      },
+      "image": "A",
+      "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+      "readCount": 101,
+      "elapsedMs": 14975.882,
+      "lastRuntimeRead": {
+        "viewDigest": "39f940b75a038e05c628b9d1142aab9a92bec4aa69e298f194bf35ca476ac495",
+        "memberId": "alice-id",
+        "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+        "phase": "allocated",
+        "sealed": false,
+        "custody": "owned",
+        "nativeReady": false,
+        "attached": true
+      }
+    },
+    "codexReadinessObservation": {
+      "schemaVersion": 2,
+      "status": "observed",
+      "atomicWithFailure": false,
+      "samplePoint": "last-original-projection-with-matching-view-digest",
+      "source": {
+        "sourceId": "7a5573634ec89af7f0c9499181c880ae18eab00406e3c841240156f27ad05647",
+        "revision": "724cb3168a97b89537898036ac051d339e29505e67fa27e97f1d9dac4b1999f7"
+      },
+      "bindingDigest": "63a46161cb9173ea1df787daf37c6f3924ff9747582356544d5d00e756611a72",
+      "viewDigest": "39f940b75a038e05c628b9d1142aab9a92bec4aa69e298f194bf35ca476ac495",
+      "mainEpoch": "2f69224d-aa69-43ea-9c7d-270b88b192aa",
+      "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+      "observedEventCount": 13,
+      "events": [
+        [
+          1,
+          1,
+          "open",
+          "before-await",
+          null
+        ],
+        [
+          2,
+          2,
+          "catalog",
+          "before-await",
+          null
+        ],
+        [
+          3,
+          2,
+          "catalog",
+          "after-await",
+          null
+        ],
+        [
+          4,
+          2,
+          "catalog",
+          "returned",
+          true
+        ],
+        [
+          5,
+          3,
+          "catalog",
+          "before-await",
+          null
+        ],
+        [
+          6,
+          3,
+          "catalog",
+          "after-await",
+          null
+        ],
+        [
+          7,
+          3,
+          "catalog",
+          "returned",
+          true
+        ],
+        [
+          8,
+          4,
+          "catalog",
+          "before-await",
+          null
+        ],
+        [
+          9,
+          4,
+          "catalog",
+          "after-await",
+          null
+        ],
+        [
+          10,
+          4,
+          "catalog",
+          "returned",
+          true
+        ],
+        [
+          11,
+          1,
+          "open",
+          "after-await",
+          null
+        ],
+        [
+          12,
+          5,
+          "readiness",
+          "before-await",
+          null
+        ],
+        [
+          13,
+          6,
+          "catalog",
+          "before-await",
+          null
+        ]
+      ],
+      "timing": {
+        "samplePoint": "last-original-codex-phase-event",
+        "sequence": 13,
+        "elapsedDeciMs": [
+          2769,
+          3349,
+          27512,
+          27611,
+          58370,
+          83194,
+          83287,
+          94838,
+          119155,
+          119255,
+          124678,
+          125189,
+          125282
+        ],
+        "isCurrent": [
+          100,
+          9244,
+          139
+        ],
+        "canAllocate": [
+          50,
+          20307,
+          875
+        ],
+        "mcpSourceCurrent": [
+          148,
+          5,
+          0
+        ]
+      }
+    },
+    "firstRefusal": {
+      "status": "unknown",
+      "reason": "empty"
+    },
+    "sourcePeerReadiness": {
+      "status": "observed",
+      "provider": "codex",
+      "capturePoint": "existing-post-cleanup-effects-read",
+      "atomicWithReadinessFailure": false,
+      "events": [
+        {
+          "ordinal": 1,
+          "event": "launch",
+          "pid": 2544,
+          "role": "runtime",
+          "parentPid": 7372,
+          "argc": 3
+        },
+        {
+          "ordinal": 2,
+          "event": "mcp-catalog",
+          "pid": 2544,
+          "role": "runtime",
+          "configuredServers": 0
+        },
+        {
+          "ordinal": 3,
+          "event": "launch",
+          "pid": 10372,
+          "role": "runtime",
+          "parentPid": 10064,
+          "argc": 3
+        },
+        {
+          "ordinal": 4,
+          "event": "mcp-catalog",
+          "pid": 10372,
+          "role": "runtime",
+          "configuredServers": 0
+        },
+        {
+          "ordinal": 5,
+          "event": "launch",
+          "pid": 11028,
+          "role": "runtime",
+          "parentPid": 3924,
+          "argc": 7
+        },
+        {
+          "ordinal": 6,
+          "event": "launch",
+          "pid": 9480,
+          "role": "runtime",
+          "parentPid": 1800,
+          "argc": 3
+        },
+        {
+          "ordinal": 7,
+          "event": "mcp-catalog",
+          "pid": 9480,
+          "role": "runtime",
+          "configuredServers": 0
+        },
+        {
+          "ordinal": 8,
+          "event": "managed-configuration-read",
+          "pid": 11028,
+          "role": "runtime",
+          "selectedServerCount": 1,
+          "teamSelected": true
+        },
+        {
+          "ordinal": 9,
+          "event": "connected",
+          "pid": 11028,
+          "role": "runtime",
+          "toolCount": 52
+        },
+        {
+          "ordinal": 10,
+          "event": "launch",
+          "pid": 1092,
+          "role": "runtime",
+          "parentPid": 9768,
+          "argc": 3
+        },
+        {
+          "ordinal": 11,
+          "event": "mcp-catalog",
+          "pid": 1092,
+          "role": "runtime",
+          "configuredServers": 0
+        },
+        {
+          "ordinal": 12,
+          "event": "managed-configuration-read",
+          "pid": 11028,
+          "role": "runtime",
+          "selectedServerCount": 1,
+          "teamSelected": true
+        },
+        {
+          "ordinal": 13,
+          "event": "launch",
+          "pid": 4148,
+          "role": "runtime",
+          "parentPid": 6244,
+          "argc": 3
+        },
+        {
+          "ordinal": 14,
+          "event": "mcp-catalog",
+          "pid": 4148,
+          "role": "runtime",
+          "configuredServers": 0
+        }
+      ],
+      "truncated": false
+    },
+    "conclusion": "Current source Team-A readiness did not reach nativeReady within the original cutoff. The last matching phase event is catalog-before-await of the final readiness invocation, with no after-await or returned event. Final cleanup true and all seven original HANDLEs absent do not qualify source-A/B. Phase elapsed and harness elapsed have distinct anchors. No run repeated or modified."
+  },
+  "logs": [
+    {
+      "name": "job-135707276069.log",
+      "bytes": 2939562,
+      "sha256": "5bc50e7b56f6eb4ff9b123e74010806353b74726abd829e00f6c4ec9aecb41c7",
+      "kind": "GitHub decoded job log"
+    },
+    {
+      "name": "job-135707175233.log",
+      "bytes": 402388,
+      "sha256": "4d4097622fe389e3b826df8aec61ca697ee9baabb5103bf1527fcfa1866c5f10",
+      "kind": "GitHub decoded job log"
+    }
+  ],
+  "windowsReadOnlyAudit": {
+    "reviewer": "delivery_review",
+    "status": "No redundant-work fix proven",
+    "catalogOwnersInOrder": [
+      "capturedRuntimeMcpRecipes before provider diagnostic open",
+      "CodexMemberProvider.resolveConfiguration before runtime allocation",
+      "CodexDriverSession.open after initialize and before thread/start",
+      "D factory driver.checkReadiness after native thread creation and before factory return",
+      "RuntimeOwner.allocate fresh checkReadiness after custody attachment and before nativeReady"
+    ],
+    "originalLifetime": "Each readCodexMcpCatalog creates its own captured process/pending owner and waits original terminal plus dispose. Five catalog Jobs plus one runtime and one version match seven retained HANDLEs.",
+    "mainPrepareAndResume": "Each boundary independently resolves original source/profile/current selection, checks broker and captured launcher files, then checks currentness. Host validates its captured launcher at its own launch/prepare/installOwner boundaries.",
+    "completedCatalogJobTimings": {
+      "jobSlots": [
+        2,
+        4,
+        5
+      ],
+      "allocateToReleaseMsRange": [
+        1596,
+        1625
+      ],
+      "mainPreparePlusResumeMsApprox": 630,
+      "prepareReturnToResumeEntryMsRange": [
+        346,
+        376
+      ],
+      "resumeReturnToStopEntryMsRange": [
+        453,
+        498
+      ]
+    },
+    "timingBoundary": "Main-only intervals have one clock. Mapping provider invocation to a capability/job slot is inferred from ordered call chain and peer events, not a recorded exact join. Provider and harness elapsed values have different anchors and cannot be subtracted.",
+    "changes": [],
+    "reruns": 0
+  },
+  "qualificationBoundary": "Executed Team/Taskboard/workspace types/typed lint PASS on source33. Windows ARM Codex readiness and Windows x64 OpenCode probe-expiry remain INCOMPLETE with confirmed original cleanup. Retained original UI progressed past hydration, then failed its metadata-control effect assertion; its original cleanup passed. Other gates and contract A on checkpoint f6 remain independent.",
+  "windowsX64": {
+    "sourceHead": "33ea959ad1b2496ab393e04fa50e610e092224ec",
+    "run": 44565800920,
+    "job": 135707175584,
+    "step": {
+      "number": 22,
+      "name": "Qualify original opencode source A B with TEST peer"
+    },
+    "artifact": {
+      "id": 14557376299,
+      "bytes": 70176,
+      "sha256": "b5736dddde19b5a4453c446be74b2a240bef607ed69458d78cf0876dbbf6a8bc",
+      "hashMatchesGitHub": true
+    },
+    "status": "INCOMPLETE",
+    "cleanup": true,
+    "stage": "Team-A",
+    "scenarioCleanup": true,
+    "jobCount": 3,
+    "allOriginalHandleAbsence": true,
+    "lastLaunchReadiness": {
+      "source": {
+        "sourceId": "b81ca833478a988e20344d6cfd90684da48c155b55be5ffff176a67d337473cb",
+        "revision": "e1c6712dc9cf088346ff187ff3328e5e07c98955661c3cfe7fd092462d19237c"
+      },
+      "image": "A",
+      "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+      "readCount": 70,
+      "elapsedMs": 15001.439199999999,
+      "lastRuntimeRead": {
+        "viewDigest": "2482152c872f99c40989051f1a3c09249dc8fb28fead0023e4d6a8c9bf5e39e2",
+        "memberId": "alice-id",
+        "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+        "phase": "held",
+        "sealed": false,
+        "custody": "unknown",
+        "nativeReady": false,
+        "attached": false,
+        "diagnostic": "open-unknown"
+      }
+    },
+    "firstRefusal": {
+      "status": "observed",
+      "observations": [
+        {
+          "kind": "reference",
+          "commandDigest": "5887e44e795ae2a60433854aaa92ee6b763b73818fcf8ca214f19ff603af072d",
+          "contextDigest": "db03de97b8320dee5b5ef38fc8e6c0f5573024e72ab8d1bf02972abb845cb29f",
+          "phase": "probe-expiry",
+          "reason": "held",
+          "probeCutoff": 1795108899270,
+          "probeNow": 1795108899453,
+          "scopeCutoff": null,
+          "scopeNow": null,
+          "preparationCutoff": null,
+          "preparationNow": null,
+          "ordinal": 1,
+          "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+          "source": {
+            "sourceId": "b81ca833478a988e20344d6cfd90684da48c155b55be5ffff176a67d337473cb",
+            "revision": "e1c6712dc9cf088346ff187ff3328e5e07c98955661c3cfe7fd092462d19237c"
+          }
+        },
+        {
+          "kind": "consumer",
+          "actionDigest": "0999f35342307166abf6addfd3031950d31858d19f9b349ce1a23447a7d9253d",
+          "groupDigest": "cabddb9a5b980577e445e5fb58d89afec3d093de73c34f6b3825c586d3c2e2cb",
+          "bindingDigest": "142a96bb72230b7e4d8696f4150bad57fb907c663929aadfb7bb9702238d7c15",
+          "consumerId": "31996cbc44f3cee36a4ab91864043c61bcd0f5b75d957f67ab249852c01e3655",
+          "phase": "reference",
+          "reason": "threw",
+          "cutoff": 1795108899270,
+          "observedAt": 1795108899008,
+          "currentCalls": {
+            "count": 21,
+            "totalMs": 10424,
+            "maxMs": 546,
+            "lastMs": 505,
+            "truncated": false,
+            "regions": {
+              "initialAuthorityCount": 21,
+              "initialAuthorityMs": 449,
+              "readConsumerCount": 21,
+              "readConsumerMs": 104,
+              "referenceCount": 21,
+              "referenceMs": 9522,
+              "finalAuthorityCount": 20,
+              "finalAuthorityMs": 349,
+              "referenceAccountCount": 21,
+              "referenceAccountMs": 5419,
+              "referenceAccountAuthorityCount": 21,
+              "referenceAccountAuthorityMs": 4974
+            }
+          },
+          "ordinal": 2,
+          "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+          "source": {
+            "sourceId": "b81ca833478a988e20344d6cfd90684da48c155b55be5ffff176a67d337473cb",
+            "revision": "e1c6712dc9cf088346ff187ff3328e5e07c98955661c3cfe7fd092462d19237c"
+          }
+        },
+        {
+          "kind": "native",
+          "capability": "3a485e38-1182-423e-a868-da2d7b47c92e",
+          "phase": "resume",
+          "reason": "preparation-failed",
+          "dispatched": true,
+          "staged": true,
+          "rootCaptured": true,
+          "deadlineExpired": null,
+          "checkSite": null,
+          "ordinal": 3,
+          "mainEpoch": "fcfa604f-5872-4394-8db3-fa9441872389",
+          "jobSlot": 2,
+          "source": {
+            "sourceId": "b81ca833478a988e20344d6cfd90684da48c155b55be5ffff176a67d337473cb",
+            "revision": "e1c6712dc9cf088346ff187ff3328e5e07c98955661c3cfe7fd092462d19237c"
+          }
+        },
+        {
+          "kind": "opencode-open",
+          "bindingDigest": "142a96bb72230b7e4d8696f4150bad57fb907c663929aadfb7bb9702238d7c15",
+          "phase": "native-ready",
+          "reason": "threw",
+          "ordinal": 4,
+          "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+          "source": {
+            "sourceId": "b81ca833478a988e20344d6cfd90684da48c155b55be5ffff176a67d337473cb",
+            "revision": "e1c6712dc9cf088346ff187ff3328e5e07c98955661c3cfe7fd092462d19237c"
+          }
+        }
+      ]
+    }
+  },
+  "retainedOriginal": {
+    "sourceHead": "33ea959ad1b2496ab393e04fa50e610e092224ec",
+    "run": 44565800673,
+    "job": 135707275706,
+    "artifact": {
+      "id": 14556054395,
+      "bytes": 801212,
+      "sha256": "3077e4c13d2eeec848beb131981e9bb14b0a42ec8d72ef7d28b65f3ecab23658",
+      "hashMatchesGitHub": true
+    },
+    "status": "INCOMPLETE",
+    "mode": "emulated-retained-original-ui",
+    "failureSource": {
+      "kind": "assertion",
+      "frames": [
+        "scripts/legacy-agent-host/desktop-retained-original-ui.ts:113:10",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:415:69",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:789:29"
+      ]
+    },
+    "failure": "The expression evaluated to a falsy value:\n\n  assert.ok(reads.some(value => value.event === 'metadata-control' && value.operation === 'model'))\n",
+    "proof": {
+      "status": "INCOMPLETE",
+      "stepCount": 12,
+      "choiceScreenshot": {
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-Ctk5hq/ui-retained-original-choice.png",
+        "sha256": "3d888e731425d7f3c2cb6267ffaa795693abde22c77df27f608437db8a147c1c"
+      },
+      "readyScreenshot": null,
+      "launch": null,
+      "stop": null
+    },
+    "cleanup": {
+      "processGroup": 4810,
+      "remaining": [],
+      "appExitCode": 0,
+      "appSignalCode": null,
+      "capturedHostObserved": false,
+      "capturedHostAbsent": null,
+      "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+    },
+    "emulatedRuntimeCleanup": {
+      "originalPeerPids": [
+        6024,
+        6081
+      ],
+      "remaining": [],
+      "absent": true,
+      "effects": [
+        {
+          "provider": "claude",
+          "role": "management",
+          "pid": 6024,
+          "event": "launch",
+          "parentPid": 5171,
+          "sessionId": "96ad3099-0e3f-4012-af3b-2ae1237ccbfd",
+          "restored": false
+        },
+        {
+          "provider": "claude",
+          "role": "management",
+          "pid": 6024,
+          "event": "started",
+          "sessionId": "96ad3099-0e3f-4012-af3b-2ae1237ccbfd",
+          "restored": false
+        },
+        {
+          "provider": "claude",
+          "role": "management",
+          "pid": 6024,
+          "event": "initialized",
+          "sessionId": "96ad3099-0e3f-4012-af3b-2ae1237ccbfd",
+          "restored": false,
+          "commands": [
+            "compact",
+            "usage",
+            "code-review",
+            "test-desktop-skill"
+          ]
+        },
+        {
+          "provider": "claude",
+          "role": "management",
+          "pid": 6081,
+          "event": "launch",
+          "parentPid": 5171,
+          "command": [
+            "auth",
+            "status",
+            "--json"
+          ]
+        },
+        {
+          "provider": "claude",
+          "role": "management",
+          "pid": 6081,
+          "event": "auth-status",
+          "command": [
+            "auth",
+            "status",
+            "--json"
+          ]
+        },
+        {
+          "provider": "claude",
+          "role": "management",
+          "pid": 6081,
+          "event": "exited",
+          "code": 0
+        }
+      ]
+    },
+    "originalRequestedQuitExit": {
+      "initialExitCode": 0,
+      "initialSignalCode": null,
+      "exitCode": 0,
+      "signalCode": null
+    },
+    "inputFreeze": true
+  },
+  "darwinV2QuitActive": {
+    "sourceHead": "33ea959ad1b2496ab393e04fa50e610e092224ec",
+    "run": 44565800673,
+    "job": 135707275946,
+    "artifact": {
+      "id": 14556513289,
+      "bytes": 285352,
+      "sha256": "ffb5aa2dd12904aa995d574a8bb366d0b3e38434bcf3fe17a345a695bb9efd29",
+      "hashMatchesGitHub": true
+    },
+    "status": "INCOMPLETE",
+    "mode": "native-quit-ui",
+    "failure": "Original OpenCode setup observation deadline expired",
+    "failureSource": {
+      "kind": "assertion",
+      "frames": [
+        "scripts/legacy-agent-host/desktop-native-stop-fixture.ts:46:12",
+        "scripts/legacy-agent-host/desktop-native-stop-fixture.ts:51:23",
+        "scripts/legacy-agent-host/desktop-native-stop-fixture.ts:222:28",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:401:21",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:789:29"
+      ]
+    },
+    "cleanup": {
+      "processGroup": 9196,
+      "remaining": [],
+      "appExitCode": 0,
+      "appSignalCode": null,
+      "capturedHostObserved": false,
+      "capturedHostAbsent": null,
+      "hostExitCode": "not exposed by main-owned transport; consult per-flow native custody and physical child observations"
+    },
+    "originalRequestedQuitExit": {
+      "initialExitCode": 0,
+      "initialSignalCode": null,
+      "exitCode": 0,
+      "signalCode": null
+    },
+    "nativeLaunchProgressResponse": {
+      "ok": true,
+      "value": {
+        "launchId": "TEST-run-TEST-desktop-backend-L7Pfs1",
+        "rosterRevision": "86197411d2a0fae9c45d6fe90348895e7f251e235cbb7a888760d4e87b788e57",
+        "observedAtMs": 1795109610765,
+        "startedAtMs": 1795109565501,
+        "status": "pending",
+        "ready": 0,
+        "expected": 1,
+        "retryCapability": "same-binding-no-allocation-only",
+        "admission": {
+          "commandId": "TEST-explicit-sandbox-setup-launch",
+          "sourceRosterRevision": "9a6c75de7f9eae85cb438d1ea2a3999be28e77247ddb30b1672cef803e434845"
+        },
+        "members": [
+          {
+            "memberId": "alice-id",
+            "generation": "1",
+            "attemptId": "initial-47bf8041f32aacab93b02de7e125792001fba5974d88eddd7f91c37a389272a3",
+            "status": "unknown",
+            "nativeReady": false,
+            "usable": false,
+            "controlAvailable": false,
+            "noAllocation": false,
+            "reason": "custody-unresolved"
+          }
+        ]
+      }
+    },
+    "failureQuit": {
+      "attempted": true,
+      "scope": "Close only the verified TEST window before stopping its dev wrapper",
+      "reply": "acknowledged",
+      "listenerAbsent": true
+    },
+    "boundedSourceAudit": {
+      "originalSetupBudgetMs": 180000,
+      "launchStart": 1795109565501,
+      "lastLaunchObservation": 1795109610765,
+      "probe": {
+        "commandId": "action-probe-2561c466f0e47664adb993342a5306c232978c2bddc664943873635ba9ce60bf",
+        "phase": "completed",
+        "ok": true,
+        "resourceHeld": false,
+        "expiresAt": 1795109580311,
+        "scopeCutoff": 1795109580311,
+        "preparationExpiresAt": 1795109580311,
+        "recordSha256": "52ccfef0d7d402c429ae66278da13e548b996accb868d2aa96b543653a4133aa"
+      },
+      "absoluteClockDeltas": {
+        "probeExpiryMinusLaunchStartMs": 14810,
+        "lastObservationMinusLaunchStartMs": 45264
+      },
+      "boundary": "Stored absolute millisecond fields on the same original runner. This records remaining probe lifetime at launch, not the missing exact first-refusal phase. No timeout, grant or observed custody has been replaced. Failed setup does not qualify actual Quit journey."
+    }
+  },
+  "currentJobSnapshot": {
+    "head": "33ea959ad1b2496ab393e04fa50e610e092224ec",
+    "observedAt": "2026-11-19 17:55:56 UTC",
+    "runs": [
+      {
+        "runId": 44565801031,
+        "jobs": [
+          {
+            "id": 135707077494,
+            "name": "plan",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 135707079823,
+            "name": "Stage 1 process tuple diagnostic (unqualified)",
+            "status": "completed",
+            "conclusion": "skipped"
+          },
+          {
+            "id": 135707080369,
+            "name": "Stage 1 source Desktop (${{ matrix.label }})",
+            "status": "completed",
+            "conclusion": "skipped"
+          },
+          {
+            "id": 135707145397,
+            "name": "Stage 1 current-tuple process and packed qualification",
+            "status": "completed",
+            "conclusion": "skipped"
+          },
+          {
+            "id": 135743090099,
+            "name": "Retained OpenCode V1 and Host V2 original Desktop",
+            "status": "queued",
+            "conclusion": null
+          },
+          {
+            "id": 135743090204,
+            "name": "Fast feedback",
+            "status": "queued",
+            "conclusion": null
+          },
+          {
+            "id": 135743093381,
+            "name": "Renderer source validation",
+            "status": "completed",
+            "conclusion": "skipped"
+          },
+          {
+            "id": 135743093457,
+            "name": "Codex login Desktop (Linux x64)",
+            "status": "completed",
+            "conclusion": "skipped"
+          },
+          {
+            "id": 135743093701,
+            "name": "macOS DMG artwork end-to-end",
+            "status": "completed",
+            "conclusion": "skipped"
+          },
+          {
+            "id": 135743093771,
+            "name": "${{ (((github.event_name == 'pull_request') && (github.event.action == 'edited') && (((needs.plan.result != 'success') || (needs.plan.outputs.metadata != 'false'))) && 'Metadata lint') || 'lint') }} (${{ matrix.scope }})",
+            "status": "completed",
+            "conclusion": "skipped"
+          },
+          {
+            "id": 135743094064,
+            "name": "Focused documentation and asset validation",
+            "status": "completed",
+            "conclusion": "skipped"
+          },
+          {
+            "id": 135743094077,
+            "name": "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata validate' || 'validate'",
+            "status": "completed",
+            "conclusion": "skipped"
+          },
+          {
+            "id": 135743094361,
+            "name": "${{ (((github.event_name == 'pull_request') && (github.event.action == 'edited') && (((needs.plan.result != 'success') || (needs.plan.outputs.metadata != 'false'))) && 'Metadata test') || 'test') }} (${{ matrix.shard }}/4)",
+            "status": "completed",
+            "conclusion": "skipped"
+          },
+          {
+            "id": 135743094586,
+            "name": "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata Windows smoke' || 'Task change ledger Windows smoke'",
+            "status": "completed",
+            "conclusion": "skipped"
+          }
+        ]
+      },
+      {
+        "runId": 44565800673,
+        "jobs": [
+          {
+            "id": 135707275138,
+            "name": "Offline Host Desktop (linux-x64, taskboard)",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 135707275563,
+            "name": "Offline Host Desktop (linux-x64, management)",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 135707275583,
+            "name": "Offline Host Desktop (linux-x64, review)",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 135707275587,
+            "name": "Offline Host Desktop (darwin-arm64, installer)",
+            "status": "queued",
+            "conclusion": null
+          },
+          {
+            "id": 135707275600,
+            "name": "Offline Host Desktop (darwin-arm64, opencode-v2-resume)",
+            "status": "completed",
+            "conclusion": "failure",
+            "failedSteps": [
+              {
+                "number": 34,
+                "name": "Exercise original OpenCode V2 native Desktop journey"
+              },
+              {
+                "number": 37,
+                "name": "Verify original V2 journey receipts, source binding and cleanup"
+              }
+            ]
+          },
+          {
+            "id": 135707275609,
+            "name": "Offline Host Desktop (linux-x64, cross-team)",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 135707275617,
+            "name": "Offline Host Desktop (linux-x64, codex)",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 135707275666,
+            "name": "Offline Host Desktop (linux-x64, opencode-v2-management)",
+            "status": "completed",
+            "conclusion": "failure",
+            "failedSteps": [
+              {
+                "number": 32,
+                "name": "Exercise original V2 live Team Add Remove Restore Stop and cold history"
+              },
+              {
+                "number": 33,
+                "name": "Verify original V2 membership receipts and physical cleanup"
+              }
+            ]
+          },
+          {
+            "id": 135707275687,
+            "name": "Offline Host Desktop (linux-x64, codex-login)",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 135707275704,
+            "name": "Offline Host Desktop (linux-x64, import)",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 135707275706,
+            "name": "Offline Host Desktop (linux-x64, retained-original)",
+            "status": "completed",
+            "conclusion": "failure",
+            "failedSteps": [
+              {
+                "number": 19,
+                "name": "Exercise original collaboration, Extensions and import controls through finite peers"
+              },
+              {
+                "number": 38,
+                "name": "Verify exact source, original screenshots, receipts and cleanup"
+              }
+            ]
+          },
+          {
+            "id": 135707275717,
+            "name": "Offline Host Desktop (linux-x64, import-lifecycle)",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 135707275734,
+            "name": "Offline Host Desktop (linux-x64, skills)",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 135707275764,
+            "name": "Offline frontend tests (2/4)",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 135707275783,
+            "name": "Offline frontend tests (1/4)",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 135707275816,
+            "name": "Offline frontend tests (3/4)",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 135707275817,
+            "name": "Offline frontend tests (4/4)",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 135707275826,
+            "name": "Offline Host Desktop (linux-x64, claude-lifecycle)",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 135707275831,
+            "name": "Offline Host Desktop (linux-x64, selection)",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 135707275862,
+            "name": "Offline Host Desktop (linux-x64, processes)",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 135707275888,
+            "name": "Offline Host Desktop (linux-x64, claude)",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 135707275908,
+            "name": "Offline Host Desktop (linux-x64, extensions)",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 135707275920,
+            "name": "Offline Host Desktop (darwin-arm64, opencode-v2-chat-attachments)",
+            "status": "queued",
+            "conclusion": null
+          },
+          {
+            "id": 135707275946,
+            "name": "Offline Host Desktop (darwin-arm64, opencode-v2-quit-active)",
+            "status": "completed",
+            "conclusion": "failure",
+            "failedSteps": [
+              {
+                "number": 34,
+                "name": "Exercise original OpenCode V2 native Desktop journey"
+              },
+              {
+                "number": 37,
+                "name": "Verify original V2 journey receipts, source binding and cleanup"
+              }
+            ]
+          },
+          {
+            "id": 135707276024,
+            "name": "Offline Host Desktop (linux-x64, opencode)",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 135707276025,
+            "name": "Offline Host Desktop (darwin-arm64, opencode-v2-quit-pending-open)",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 135707276062,
+            "name": "Offline Host Desktop (linux-x64, collaboration)",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 135707276069,
+            "name": "Offline Host Desktop (linux-x64, team)",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 135707276104,
+            "name": "Offline Host Desktop (darwin-arm64, opencode-v2-review)",
+            "status": "completed",
+            "conclusion": "failure",
+            "failedSteps": [
+              {
+                "number": 34,
+                "name": "Exercise original OpenCode V2 native Desktop journey"
+              },
+              {
+                "number": 37,
+                "name": "Verify original V2 journey receipts, source binding and cleanup"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "runId": 44565800920,
+        "jobs": [
+          {
+            "id": 135707175233,
+            "name": "Host process fixtures (win32-arm64)",
+            "status": "completed",
+            "conclusion": "failure",
+            "failedSteps": [
+              {
+                "number": 20,
+                "name": "Qualify original codex source A B with TEST peer"
+              }
+            ]
+          },
+          {
+            "id": 135707175584,
+            "name": "Host process fixtures (win32-x64)",
+            "status": "completed",
+            "conclusion": "failure",
+            "failedSteps": [
+              {
+                "number": 22,
+                "name": "Qualify original opencode source A B with TEST peer"
+              }
+            ]
+          },
+          {
+            "id": 135707175607,
+            "name": "Host process fixtures (darwin-arm64)",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 135707175936,
+            "name": "Host process fixtures (linux-x64)",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 135707176302,
+            "name": "Host process fixtures (darwin-x64)",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "runId": 44565801263,
+        "jobs": [
+          {
+            "id": 135707443135,
+            "name": "Published V2.0.21 durable HTTP process (TEST discovery only)",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 135707443658,
+            "name": "Native V2.0.21 Host SPI instructions (Ubuntu TEST only)",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 135707443750,
+            "name": "Static V01 source test (windows-2022)",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 135707443783,
+            "name": "Embedded V2.1.4 original Host (darwin-x64)",
+            "status": "completed",
+            "conclusion": "failure",
+            "failedSteps": [
+              {
+                "number": 25,
+                "name": "Observe POSIX original-path exec and explicit mutation counterexamples"
+              }
+            ]
+          },
+          {
+            "id": 135707443946,
+            "name": "Static V01 source test (ubuntu-24.04)",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 135707443991,
+            "name": "Embedded V2.1.4 original Host (win32-x64)",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 135707444045,
+            "name": "Embedded V2.1.4 original Host (darwin-arm64)",
+            "status": "queued",
+            "conclusion": null
+          },
+          {
+            "id": 135707444061,
+            "name": "Embedded V2.1.4 original Host (linux-x64)",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 135707444379,
+            "name": "Embedded V2.1.4 original Host (win32-arm64)",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      }
+    ]
+  },
+  "membership": {
+    "sourceHead": "33ea959ad1b2496ab393e04fa50e610e092224ec",
+    "run": 44565800673,
+    "job": 135707275666,
+    "step": 32,
+    "artifact": {
+      "id": 14558106430,
+      "bytes": 1423647,
+      "sha256": "3c3c5e2cd58323603bedc4fb0bd456fe8b012b077e3679e7347b8203f732dc97",
+      "hashMatchesGitHub": true
+    },
+    "settingsReceiptStatus": "PASS",
+    "membershipReceiptStatus": "INCOMPLETE",
+    "failure": "original add completes",
+    "failureSource": {
+      "kind": "assertion",
+      "frames": [
+        "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts:106:14",
+        "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts:391:21",
+        "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts:497:19",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:489:92",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:789:29"
+      ]
+    },
+    "proof": {
+      "status": "INCOMPLETE",
+      "initialRecorded": true,
+      "stepCount": 57,
+      "lastAction": "one original live Add"
+    },
+    "liveMembershipCommands": [
+      {
+        "commandId": "4b42cca1-accd-4dec-abd5-28cdd480d465",
+        "phase": "held",
+        "deltaKind": "add",
+        "captureRecorded": true,
+        "cutoff": 1795109716482
+      }
+    ],
+    "cleanup": {
+      "processGroup": 16603,
+      "remaining": [],
+      "appExitCode": 0,
+      "appSignalCode": null,
+      "capturedHostObserved": false,
+      "capturedHostAbsent": null,
+      "hostExitCode": "not exposed by main-owned transport; consult per-flow native custody and physical child observations"
+    },
+    "originalRequestedQuitExit": {
+      "initialExitCode": 0,
+      "initialSignalCode": null,
+      "exitCode": 0,
+      "signalCode": null
+    },
+    "inputFreeze": true
+  },
+  "darwinV2Review": {
+    "sourceHead": "33ea959ad1b2496ab393e04fa50e610e092224ec",
+    "run": 44565800673,
+    "job": 135707276104,
+    "artifact": {
+      "id": 14558122472,
+      "sha256": "9b59f70ecb4b2a8a0ee3e5e6ec9e0c8a529066220b96eb34e687e8c735f90ea6",
+      "hashMatchesGitHub": true
+    },
+    "status": "INCOMPLETE",
+    "mode": "native-review-ui",
+    "failure": "UI read timed out: original captured V2 readiness permits Launch; no mutation retry",
+    "failureSource": {
+      "kind": "error",
+      "frames": [
+        "scripts/legacy-agent-host/desktop-ui-read-observation.ts:221:13",
+        "scripts/legacy-agent-host/desktop-opencode-v2-review-ui-smoke.ts:94:3",
+        "scripts/legacy-agent-host/desktop-native-review-compose.ts:48:7",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:451:7",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:789:29"
+      ]
+    },
+    "cleanup": {
+      "processGroup": 7288,
+      "remaining": [],
+      "appExitCode": 0,
+      "appSignalCode": null,
+      "capturedHostObserved": true,
+      "capturedHostAbsent": true,
+      "hostExitCode": "not exposed by main-owned transport; consult per-flow native custody and physical child observations"
+    },
+    "originalRequestedQuitExit": {
+      "initialExitCode": 0,
+      "initialSignalCode": null,
+      "exitCode": 0,
+      "signalCode": null
+    },
+    "failureQuit": {
+      "attempted": true,
+      "scope": "Close only the verified TEST window before stopping its dev wrapper",
+      "reply": "acknowledged",
+      "listenerAbsent": true
+    },
+    "inputFreeze": true
+  },
+  "darwinV2Resume": {
+    "sourceHead": "33ea959ad1b2496ab393e04fa50e610e092224ec",
+    "run": 44565800673,
+    "job": 135707275600,
+    "artifact": {
+      "id": 14558128722,
+      "sha256": "9ff3f4b9ff1715ecb962e33417eab21c6453556a08fa807c4c377a2ef8c50847",
+      "hashMatchesGitHub": true
+    },
+    "receipt": "/workspace/scratch/f45fed8e9067/audit1192/artifact-14558128722/TEST-desktop-backend-Tp258r/desktop-backend-receipt.json",
+    "status": "INCOMPLETE",
+    "mode": "native-resume-ui",
+    "failure": "UI read timed out: one original OpenCode preflight command; no mutation retry",
+    "failureSource": {
+      "kind": "error",
+      "frames": [
+        "scripts/legacy-agent-host/desktop-ui-read-observation.ts:221:13",
+        "scripts/legacy-agent-host/desktop-launch-ui-smoke.ts:165:3",
+        "scripts/legacy-agent-host/desktop-launch-ui-smoke.ts:544:31",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:514:7",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:789:29"
+      ]
+    },
+    "cleanup": {
+      "processGroup": 6689,
+      "remaining": [],
+      "appExitCode": 0,
+      "appSignalCode": null,
+      "capturedHostObserved": false,
+      "capturedHostAbsent": null,
+      "hostExitCode": "not exposed by main-owned transport; consult per-flow native custody and physical child observations"
+    },
+    "originalRequestedQuitExit": {
+      "initialExitCode": 0,
+      "initialSignalCode": null,
+      "exitCode": 0,
+      "signalCode": null
+    },
+    "failureQuit": {
+      "attempted": true,
+      "scope": "Close only the verified TEST window before stopping its dev wrapper",
+      "reply": "unconfirmed",
+      "reason": "timeout",
+      "listenerAbsent": true
+    },
+    "nativeResumeFailure": {
+      "schemaVersion": 1,
+      "status": "available",
+      "source": "retained-original-proof-markers",
+      "atomicWithFailure": false,
+      "identifiesTimedOutCall": false,
+      "establishesCauseOrEffects": false,
+      "firstEpoch": {
+        "source": "top-level-first-startup",
+        "startup": {
+          "rendererTargetRecorded": true,
+          "diagnosticsRecorded": true,
+          "documentStatus": "DOCUMENT_READY",
+          "commands": {
+            "count": 6,
+            "atCaptureLimit": false,
+            "lastRetainedCommand": {
+              "method": "Network.enable",
+              "outcome": "acknowledged"
+            }
+          },
+          "appReadiness": {
+            "status": "READY",
+            "observations": 24,
+            "atCaptureLimit": true
+          },
+          "discoveryReadinessRecorded": true
+        }
+      },
+      "coldBoundary": {
+        "recorded": false,
+        "status": null,
+        "firstQuitRecorded": false,
+        "firstCleanupRecorded": false,
+        "secondEpochRecorded": false,
+        "secondEpochStatus": null,
+        "secondEpochStartup": null
+      },
+      "launch": {
+        "recorded": true,
+        "status": "INCOMPLETE",
+        "stepCount": 21,
+        "captureRecorded": false,
+        "stopRecorded": false
+      },
+      "resume": {
+        "recorded": false,
+        "status": null,
+        "stepCount": null,
+        "lastRetainedPhase": null,
+        "sourceRecorded": false,
+        "readyLaunchRecorded": false,
+        "recoveryReferencesRecorded": false,
+        "recoverySnapshotRecorded": false,
+        "recoverySnapshotFailureRecorded": false
+      },
+      "postFailureSnapshot": {
+        "recorded": true,
+        "unavailable": null
+      }
+    },
+    "sourceHashesUnchanged": true
+  },
+  "darwinX64OldPosix": {
+    "sourceHead": "33ea959ad1b2496ab393e04fa50e610e092224ec",
+    "run": 44565801263,
+    "job": 135707443783,
+    "firstFailureSource": "packages/legacy-agent-host/tests/registered-process-executable.native.ts:476",
+    "firstFailure": "errno 13 != expected 0 in compiler-default:baseline",
+    "artifact": {
+      "id": 14558382670,
+      "sha256": "44f795ead41efac935ef31ff0f4d30f257852135e10ec2061bbe370eca9ff946",
+      "hashMatchesGitHub": true
+    },
+    "status": "INCOMPLETE",
+    "cleanup": true,
+    "qualification": {
+      "productQualified": false,
+      "installedRuntimeQualified": false,
+      "customExecutableQualified": false,
+      "scriptQualified": false,
+      "nativeFixtureQualified": false
+    },
+    "observations": [
+      {
+        "label": "compiler-default:plain",
+        "stage": "plain-exit",
+        "errno": 0,
+        "codeSigningError": 0,
+        "stoppedBeforeUser": false,
+        "payloadMarkersAbsentBeforeGate": false,
+        "kernelImageObserved": false,
+        "imageMatched": false,
+        "resumed": true,
+        "mutationAfterCheckErrno": -1,
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "markerLines": [
+          "LIB",
+          "BIN:A",
+          "MAIN:A"
+        ],
+        "result": "PASS"
+      },
+      {
+        "label": "compiler-default:baseline",
+        "stage": "kernel-image-validity",
+        "errno": 13,
+        "codeSigningError": -67062,
+        "stoppedBeforeUser": true,
+        "payloadMarkersAbsentBeforeGate": true,
+        "kernelImageObserved": false,
+        "imageMatched": false,
+        "resumed": false,
+        "mutationAfterCheckErrno": -1,
+        "exitCode": -1,
+        "exitSignal": 9,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "markerLines": [],
+        "result": "INCOMPLETE"
+      },
+      {
+        "label": "adhoc-test-only:plain",
+        "stage": "plain-exit",
+        "errno": 0,
+        "codeSigningError": 0,
+        "stoppedBeforeUser": false,
+        "payloadMarkersAbsentBeforeGate": false,
+        "kernelImageObserved": false,
+        "imageMatched": false,
+        "resumed": true,
+        "mutationAfterCheckErrno": -1,
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "markerLines": [
+          "LIB",
+          "BIN:A",
+          "MAIN:A"
+        ],
+        "result": "PASS"
+      },
+      {
+        "label": "adhoc-test-only:baseline",
+        "stage": "exit",
+        "errno": 0,
+        "codeSigningError": 0,
+        "stoppedBeforeUser": true,
+        "payloadMarkersAbsentBeforeGate": true,
+        "kernelImageObserved": true,
+        "imageMatched": true,
+        "resumed": true,
+        "mutationAfterCheckErrno": -1,
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "markerLines": [
+          "LIB",
+          "BIN:A",
+          "MAIN:A"
+        ],
+        "result": "PASS"
+      },
+      {
+        "label": "adhoc-test-only:rename",
+        "stage": "rejected-image",
+        "errno": 0,
+        "codeSigningError": 0,
+        "stoppedBeforeUser": true,
+        "payloadMarkersAbsentBeforeGate": true,
+        "kernelImageObserved": true,
+        "imageMatched": false,
+        "resumed": false,
+        "mutationAfterCheckErrno": -1,
+        "exitCode": -1,
+        "exitSignal": 9,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "markerLines": [],
+        "result": "PASS"
+      },
+      {
+        "label": "adhoc-test-only:inplace",
+        "stage": "rejected-image",
+        "errno": 0,
+        "codeSigningError": 0,
+        "stoppedBeforeUser": true,
+        "payloadMarkersAbsentBeforeGate": true,
+        "kernelImageObserved": true,
+        "imageMatched": false,
+        "resumed": false,
+        "mutationAfterCheckErrno": -1,
+        "exitCode": -1,
+        "exitSignal": 9,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "markerLines": [],
+        "result": "PASS"
+      },
+      {
+        "label": "adhoc-test-only:after-check",
+        "stage": "exit",
+        "errno": 0,
+        "codeSigningError": 0,
+        "stoppedBeforeUser": true,
+        "payloadMarkersAbsentBeforeGate": true,
+        "kernelImageObserved": true,
+        "imageMatched": true,
+        "resumed": true,
+        "mutationAfterCheckErrno": 0,
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "markerLines": [
+          "LIB",
+          "BIN:A",
+          "MAIN:A"
+        ],
+        "result": "INCOMPLETE"
+      },
+      {
+        "label": "adhoc-test-only:writer-open",
+        "stage": "exit",
+        "errno": 0,
+        "codeSigningError": 0,
+        "stoppedBeforeUser": true,
+        "payloadMarkersAbsentBeforeGate": true,
+        "kernelImageObserved": true,
+        "imageMatched": true,
+        "resumed": true,
+        "mutationAfterCheckErrno": 0,
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "markerLines": [
+          "LIB",
+          "BIN:A",
+          "MAIN:A"
+        ],
+        "result": "INCOMPLETE"
+      },
+      {
+        "label": "script:plain",
+        "stage": "plain-exit",
+        "errno": 0,
+        "codeSigningError": 0,
+        "stoppedBeforeUser": false,
+        "payloadMarkersAbsentBeforeGate": false,
+        "kernelImageObserved": false,
+        "imageMatched": false,
+        "resumed": true,
+        "mutationAfterCheckErrno": -1,
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "markerLines": [
+          "SCRIPT:A"
+        ],
+        "result": "PASS"
+      },
+      {
+        "label": "script:script-negative",
+        "stage": "exit",
+        "errno": 0,
+        "codeSigningError": 0,
+        "stoppedBeforeUser": true,
+        "payloadMarkersAbsentBeforeGate": true,
+        "kernelImageObserved": true,
+        "imageMatched": false,
+        "resumed": true,
+        "mutationAfterCheckErrno": 0,
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "markerLines": [
+          "SCRIPT:B"
+        ],
+        "result": "COUNTEREXAMPLE"
+      }
+    ]
+  },
+  "boundedMembershipAudit": {
+    "commandId": "4b42cca1-accd-4dec-abd5-28cdd480d465",
+    "join": "localModelReadinessOrigin.commandId in persisted original probe command",
+    "traceUtc": {
+      "run": "17:34:22.103",
+      "nativeReady": "17:34:36.846",
+      "credential": "17:34:41.516",
+      "expiry": "17:35:16.482",
+      "close": "17:35:16.491"
+    },
+    "missing": [
+      "attestation",
+      "session-create",
+      "driver-open",
+      "first-submit"
+    ],
+    "credential": "explicit inline key; no file token; secret value not exported",
+    "close": {
+      "runState": "threw",
+      "errorClass": "held",
+      "stage": "close-result",
+      "reason": "unconfirmed",
+      "transportCode": null,
+      "causeCode": null
+    },
+    "boundary": "OpenCodeV2SessionCredential.prepare includes original guards/catalog/integration/read-connect-read/dispose; first cause unproven",
+    "runtimeAllocatedForCarol": false
+  },
+  "boundedDarwinReviewAudit": {
+    "traceUtc": {
+      "run": "17:40:32.746",
+      "graphStart": "17:40:37.478",
+      "graphDone": "17:40:48.914",
+      "nativeLaunch": "17:40:48.915",
+      "nativeReady": "17:41:00.772",
+      "credential": "17:41:10.616",
+      "attestation": "17:41:11.599",
+      "probeExpiry": "17:41:58.927",
+      "mainScopeCutoff": "17:42:08.829",
+      "close": "17:42:00.249"
+    },
+    "missing": [
+      "session-create",
+      "driver-open",
+      "first-submit"
+    ],
+    "modelOracle": {
+      "probes": [],
+      "observations": [],
+      "failures": []
+    },
+    "boundary": "await attestOpenCodeV2ModelSelection then readiness.observeProvider before absent session-create marker",
+    "configuration": "embedded provider configuration, no initial configurationSource/file token; distinct from explicit membership credential path",
+    "firstCause": "unknown; proximity to expiry does not prove which call/guard failed"
+  },
+  "observerBoundary": "Snapshot1755 is the last old-source observation:0focusedrunning,5queued. Queued is not PASS or failure. A real reviewed source publication follows; no manual rerun/dispatch/cancel."
+}

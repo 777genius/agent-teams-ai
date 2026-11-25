@@ -13,6 +13,10 @@ import type { ToolEvidenceCapture } from '../../evidence/captureContracts.js';
 import type { CodexEvidenceCapture } from '../../evidence/codexCaptureContracts.js';
 import type { OpenCodeEvidenceCapture } from '../../evidence/opencodeCaptureContracts.js';
 import type { NativeSessionCommandCapability } from '../../team/nativeSessionCommand.js';
+import type { WindowsServiceIntent } from '../../owned-process/retainedServiceContracts.js';
+import type { HostWindowsLaunch } from '../../owned-process/HostWindowsLaunch.js';
+import type { RuntimeSourceProcessOrigin } from '../../composition/runtimeSourceProcessOrigin.js';
+import type { RuntimeProcessOutput } from '../../runtime/providerActivityContracts.js';
 
 /** Host-authenticated, optional native observation; never transports a product command. */
 export interface MemberPromptSuggestionBinding {
@@ -31,6 +35,9 @@ export interface MemberPromptSuggestionBinding {
 export interface MemberProviderContext {
   profile: RuntimeMemberProfile;
   processCustody?: RegisteredProcessRootSource;
+  /** Private original Main launch capability for process-backed providers. */
+  retainedWindowsLaunch?: HostWindowsLaunch;
+  processOrigin?: RuntimeSourceProcessOrigin;
   request: OpenConfig;
   endpoint: TeamMcpEndpoint;
   connection: TeamMcpConnection;
@@ -49,6 +56,7 @@ export interface MemberProviderContext {
   canCaptureRegisteredProcess?(): boolean;
   readCheckpoint(reference: string, request: OpenConfig): Promise<unknown>;
   readCheckpointSource?: NonNullable<ClaudeDriverHost['readCheckpointSource']>;
+  observeProcessOutput?(observation: RuntimeProcessOutput): void;
   onProgress(): void;
 }
 
@@ -58,6 +66,7 @@ export interface MemberProvider {
   /** Live captured provider capability, never a renderer-declared provider or arbitrary skill path. */
   sessionCommands?(): readonly NativeSessionCommandCapability[];
   captureRegisteredProcess?(pid: number, registrar: RegistrarBinding): RegisteredProcessCapture;
+  prepareRegisteredWindowsProcess?(pid: number, registrar: RegistrarBinding): WindowsServiceIntent;
   isReady(): boolean;
   /** Installed exact initial context, acknowledged through successful D native configuration/readiness. */
   initialContextEvidence?(): NativeContextEvidence | undefined;

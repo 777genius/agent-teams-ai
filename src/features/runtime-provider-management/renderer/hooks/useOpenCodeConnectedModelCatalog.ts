@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useRetainedLegacyLaunch } from '@features/agent-backend/renderer';
 import { api, isElectronMode } from '@renderer/api';
 import { isOpenCodeLocalProviderId } from '@shared/utils/opencodeModelRoute';
 
@@ -69,13 +70,15 @@ export function useOpenCodeConnectedModelCatalog(input: {
   /** Stable within the selected project/status context; success is display-only. */
   onCatalogRecovery?: (receipt: { projectPath: string | null; freshUntil: string | null }) => void;
 }) {
+  const retained = useRetainedLegacyLaunch();
+  const management = retained?.management;
   const [revision, setRevision] = useState(0);
   const lastRefresh = useRef({
     revision,
     external: input.refreshRevision,
     recovery: input.onCatalogRecovery,
   });
-  const scope = JSON.stringify([input.projectPath]);
+  const scope = JSON.stringify([retained?.choice.scopeId, input.projectPath]);
   const [state, setState] = useState<CatalogState>({
     scope: '',
     loading: false,
@@ -138,7 +141,7 @@ export function useOpenCodeConnectedModelCatalog(input: {
       let total: number | null = null;
       for (let page = 0; page < 20; page += 1) {
         if (!(await waitForStatus())) return;
-        const response = await api.runtimeProviderManagement.loadProviderDirectory({
+        const response = await (management ?? api.runtimeProviderManagement).loadProviderDirectory({
           runtimeId: 'opencode',
           projectPath: input.projectPath,
           summary: true,
@@ -194,7 +197,8 @@ export function useOpenCodeConnectedModelCatalog(input: {
               input.projectPath,
               sourceRequestGroup,
               current,
-              refreshRequested
+              refreshRequested,
+              (management ?? api.runtimeProviderManagement).loadModels
             );
             if (!current()) return;
             if (
@@ -271,7 +275,7 @@ export function useOpenCodeConnectedModelCatalog(input: {
       statusWaiter.current = null;
       if (isElectronMode()) {
         for (const group of activeGroups)
-          void api.runtimeProviderManagement
+          void (management ?? api.runtimeProviderManagement)
             .cancelModelLoad?.({ requestGroupId: group })
             .catch(() => undefined);
       }
@@ -281,6 +285,7 @@ export function useOpenCodeConnectedModelCatalog(input: {
     input.onCatalogRecovery,
     input.projectPath,
     input.refreshRevision,
+    management,
     revision,
     scope,
   ]);

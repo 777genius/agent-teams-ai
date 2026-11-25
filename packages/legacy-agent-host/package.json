@@ -23,6 +23,14 @@
       "types": "./dist/contracts.d.ts",
       "import": "./dist/contracts.js"
     },
+    "./diagnostics/runtime-text": {
+      "types": "./dist/diagnostics/runtimeDiagnosticText.d.ts",
+      "import": "./dist/diagnostics/runtimeDiagnosticText.js"
+    },
+    "./diagnostics/redaction": {
+      "types": "./dist/diagnostics/diagnosticsRedaction.d.ts",
+      "import": "./dist/diagnostics/diagnosticsRedaction.js"
+    },
     "./management/contracts": {
       "types": "./dist/management/contracts.d.ts",
       "import": "./dist/management/contracts.js"
@@ -75,6 +83,10 @@
     "./team-host": {
       "types": "./dist/composition/TeamHost.d.ts",
       "import": "./dist/composition/TeamHost.js"
+    },
+    "./team-host/readiness": {
+      "types": "./dist/composition/teamHostReadiness.d.ts",
+      "import": "./dist/composition/teamHostReadiness.js"
     },
     "./runtime/identity": {
       "types": "./dist/runtime/identity.d.ts",
@@ -263,6 +275,10 @@
     "./owned-process": {
       "types": "./dist/owned-process/index.d.ts",
       "import": "./dist/owned-process/index.js"
+    },
+    "./diagnostics/assignments": {
+      "types": "./dist/diagnostics/redactDiagnosticAssignments.d.ts",
+      "import": "./dist/diagnostics/redactDiagnosticAssignments.js"
     }
   },
   "bin": {
@@ -281,8 +297,8 @@
     "@typescript/native": "npm:typescript@7.0.2"
   },
   "dependencies": {
-    "@agent-teams/provider-implementations": "file:../../vendor/provider-migration/native-prompt-suggestions-18a1c276/agent-teams-provider-implementations-0.0.0.tgz",
-    "@agent-teams/provider-session-contracts": "file:../../vendor/provider-migration/opencode-v2-host-9ede557c/agent-teams-provider-session-contracts-0.0.0.tgz",
+    "@agent-teams/provider-implementations": "file:../../vendor/provider-migration/v2-catalog-56afd245/agent-teams-provider-implementations-0.0.0.tgz",
+    "@agent-teams/provider-session-contracts": "file:../../vendor/provider-migration/v2-media-aad5c2f8/agent-teams-provider-session-contracts-0.0.0.tgz",
     "@modelcontextprotocol/sdk": "1.32.0",
     "agent-teams-controller": "workspace:*",
     "zod": "4.6.7",

@@ -1,0 +1,398 @@
+{
+  "kind": "INDEPENDENT_B2_CURRENT_PARENT_SELECTION_BINDING_R2",
+  "decision": "APPROVE_EXACT_ROOT_SELECTION_PENDING_ACTUAL_PUBLISHED_R1",
+  "mode": "pure data/hash only; no source semantics repeated, no project or API execution",
+  "selection": {
+    "path": "/tmp/migration-evidence-20261116/root/b2-root-selection.json",
+    "gitBlob": "a09985320d0cc4fbbae54e822b0193b80f14cf94",
+    "bytes": 7978,
+    "sha256": "a7c4a95517fa03b265d312386584b24513a2b1f5e2e13cb5ecb466f2b7a58bdd"
+  },
+  "inheritedVerifiedMap": {
+    "path": "/tmp/migration-evidence-20261116/native/plan51-actual-source-review/derived-current-leaf-map.json",
+    "gitBlob": "be45d9b4f96c93e6c33cf7ce9ae1ba3859590be3",
+    "bytes": 3234555,
+    "sha256": "17a7b5b909ed43f06af6777cadbd8cc2dbbf5b18251ba00517536a4c4c5cd171"
+  },
+  "incomingPackets": [
+    {
+      "path": "/tmp/migration-evidence-20261116/root/plan50-52-efecd-doc-readback.json",
+      "gitBlob": "e95733d6f8b6e4091d5d98a12fd4bc319e0b23e3",
+      "bytes": 55682,
+      "sha256": "4a26dccd130f259e6328fff75cad57166146cd70d6593c6b520a57d01a973430"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/root/plan50-52-1ef2-full-readback.json",
+      "gitBlob": "b5de0e0f82b69bb060f5e443387388287dfd193b",
+      "bytes": 500875,
+      "sha256": "a2af305c27b0c44b7daf9540ab955f4bc81788b97766e5c39f4c2a4f50aa60ee"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/root/plan53-0d24-full-readback.json",
+      "gitBlob": "8556eeb03ede8ff37cb93c4378d7703d5f02f9a5",
+      "bytes": 453158,
+      "sha256": "b76ebb3e0a2168e00c1fd38e54db676d4c7b91606b314cb83202616c2d4e957d"
+    }
+  ],
+  "independentCommitTreeChain": [
+    {
+      "commit": "2c8633a355734a17f3447a7bc19cb548ecc91ba6",
+      "parent": "24df232166b6ac51817deaccc4a37008ebd971d3",
+      "tree": "f6ad65fd6c9270df82ce5e996a50fd5784b28928",
+      "leaves": 11058,
+      "paths": [
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/50-v2-management-view-stages-2026-11-16.md"
+      ],
+      "independentMerkle": true
+    },
+    {
+      "commit": "efecd96984eca3bb1fbe97492bd1984445befd24",
+      "parent": "2c8633a355734a17f3447a7bc19cb548ecc91ba6",
+      "tree": "bf33b5c717eaf1efaff11ed186eade663a5697d4",
+      "leaves": 11059,
+      "paths": [
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/52-windows-environment-refusal-narrowing-2026-11-16.md"
+      ],
+      "independentMerkle": true
+    },
+    {
+      "commit": "1951c2354e91fcdf6fc8d6ae5143ba0448b6dbd1",
+      "parent": "efecd96984eca3bb1fbe97492bd1984445befd24",
+      "tree": "c8ee207fb13667f5dc4291187f96a185ce937020",
+      "leaves": 11059,
+      "paths": [
+        "src/features/agent-backend/main/infrastructure/matchesWindowsLaunchEnvironment.ts"
+      ],
+      "independentMerkle": true
+    },
+    {
+      "commit": "6075b12398a1e8005e80a0f422a745f2605e35d0",
+      "parent": "1951c2354e91fcdf6fc8d6ae5143ba0448b6dbd1",
+      "tree": "7bc25d2e1b0ced12dc860d36fca41e60c21e2f7d",
+      "leaves": 11060,
+      "paths": [
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/53-opencode-v2-metadata-read-failures-2026-11-16.md"
+      ],
+      "independentMerkle": true
+    },
+    {
+      "commit": "1ef2c16ae547129e6b6ab5c47e03caa6b3f169df",
+      "parent": "6075b12398a1e8005e80a0f422a745f2605e35d0",
+      "tree": "e46e640469645cdd58cf5d0f7e0064d709940b9e",
+      "leaves": 11060,
+      "paths": [
+        ".github/workflows/host-emulated-acceptance.yml",
+        "scripts/legacy-agent-host/desktop-opencode-v2-management-smoke.ts",
+        "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+        "src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderManagementClient.ts",
+        "test/features/runtime-provider-management/capturedManagementClient.test.ts"
+      ],
+      "independentMerkle": true
+    },
+    {
+      "commit": "783b8f2ccfd2a80fc02c10dacc9f6305181a4547",
+      "parent": "1ef2c16ae547129e6b6ab5c47e03caa6b3f169df",
+      "tree": "6dcb4677bb7ae7c76d2a81f85047d1d62a1d232e",
+      "leaves": 11060,
+      "paths": [
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/53-opencode-v2-metadata-read-failures-2026-11-16.md"
+      ],
+      "independentMerkle": true
+    },
+    {
+      "commit": "0d24f086d5fd412d7fb2e37c38f9864f2699a941",
+      "parent": "783b8f2ccfd2a80fc02c10dacc9f6305181a4547",
+      "tree": "4c63e84f53bb74886284b44cbcf5389d5545a890",
+      "leaves": 11060,
+      "paths": [
+        ".github/workflows/host-emulated-acceptance.yml",
+        "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ManagementHost.ts",
+        "packages/legacy-agent-host/src/adapters/providers/createClaudeCloseDiagnostic.ts",
+        "src/features/agent-backend/main/infrastructure/CapturedHostClient.ts",
+        "src/features/agent-backend/main/infrastructure/decodeClaudeCloseDiagnostics.ts",
+        "test/features/agent-backend/claudeCloseDiagnostics.test.ts"
+      ],
+      "independentMerkle": true
+    }
+  ],
+  "fullChangedBodyPins": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/50-v2-management-view-stages-2026-11-16.md",
+      "after": {
+        "gitBlob": "fea4c731b0befea2c3fe5d082a8b138cb03c5cac",
+        "bytes": 12773,
+        "sha256": "305023e9835e651c61f007aa98884b76c59b9b6814846a5ff2ed47748b65b398"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/52-windows-environment-refusal-narrowing-2026-11-16.md",
+      "after": {
+        "gitBlob": "1a47ede0b6b1430486a160ce107ade5a906120e2",
+        "bytes": 3868,
+        "sha256": "adf80cff634105a87a3689de717d43128646899c66786599681882d2eb4f83df"
+      }
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/matchesWindowsLaunchEnvironment.ts",
+      "before": "8d3abd63b2098c33694f15e211f03753815aff81",
+      "after": {
+        "gitBlob": "80fb692b7e05afec6ddc30a2bc13a0185b071daf",
+        "bytes": 18859,
+        "sha256": "26395dde5ad01c5259b1cae985eed5351d49b8fa5b19bc148d52ba6eceac1b2d"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/53-opencode-v2-metadata-read-failures-2026-11-16.md",
+      "before": null,
+      "after": {
+        "gitBlob": "98132d365c399c6200d377eaf7ed7a1d85a9dce6",
+        "bytes": 13078,
+        "sha256": "f8c4abda3a48a33c1749f00282d08550791ff8ad666081e44d7817972af78e8c"
+      }
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "before": "2c57fc6733ddc0e0b7f61f8ef56550b1f4ad553a",
+      "after": {
+        "gitBlob": "53e17d0c4115fa029e9a12dc55859c52d7f448a3",
+        "bytes": 106313,
+        "sha256": "f8ebc45fe39ae9d94309555316ee4950d7997f2870500645aa6a76b367df251e"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-smoke.ts",
+      "before": "6f8e3da7ba0cda6a13d5cfbafd1ecaf58ac738dd",
+      "after": {
+        "gitBlob": "ba950ee03787427aaa837a0b77608c6a8760cab9",
+        "bytes": 12371,
+        "sha256": "3e221532ec7b77b71f2f55a847a2de9a0363f48af0b813119c73ed5a5db1fc58"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "before": "a3d7047a1d081852263726b59f3fa39ab0428a29",
+      "after": {
+        "gitBlob": "dba3426375f7bbd3db5f594f2fe68d58e3cc3e25",
+        "bytes": 22258,
+        "sha256": "cc130e893171483f19773b03a2ed79a138abd6c6d84206eb4d93c3b209269bc3"
+      }
+    },
+    {
+      "path": "src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderManagementClient.ts",
+      "before": "6849549eacb871ea1342a37f4cecd27ed7795c32",
+      "after": {
+        "gitBlob": "bd7ed1336cdfba524f37c39dbe4e3f5c3ac48418",
+        "bytes": 25194,
+        "sha256": "3eb50c6da39aa9da82656a741e341c7a780827731b7213135cd0d368403cad25"
+      }
+    },
+    {
+      "path": "test/features/runtime-provider-management/capturedManagementClient.test.ts",
+      "before": "653bd2392d49fe91cfcee7f2829dd50d3045bc62",
+      "after": {
+        "gitBlob": "f68d59b9804704da8a7fd635f4a69d36c1f956bc",
+        "bytes": 24134,
+        "sha256": "891858b0060ff3f180a26a77ae356e46fc498311898a35c76264f05ed9f7affd"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/53-opencode-v2-metadata-read-failures-2026-11-16.md",
+      "before": "98132d365c399c6200d377eaf7ed7a1d85a9dce6",
+      "after": {
+        "gitBlob": "9976d507d19007fe1e98f60f9c7e304ebefe32f8",
+        "bytes": 13352,
+        "sha256": "a65cac5a59c0f07733ec48ac06ff9af20ec05790b4f9ae8d32f65543bef60899"
+      }
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "before": "53e17d0c4115fa029e9a12dc55859c52d7f448a3",
+      "after": {
+        "gitBlob": "ff94e1d92c82a644a302ef61e64246f919f04d83",
+        "bytes": 106573,
+        "sha256": "09bfb26561b8d795b511b3e808fe7bcdedeb4cd405587394356b2bf0db828867"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ManagementHost.ts",
+      "before": "384b4c00a05d5886cce267ae76166c93d5892262",
+      "after": {
+        "gitBlob": "f050499bc5ef2191460e1d22fa6cda4825a0b000",
+        "bytes": 21535,
+        "sha256": "12ed489a313f075d4d5807f2d232fb6d5ff4cfbfa198a6159f685be5ce99f977"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/createClaudeCloseDiagnostic.ts",
+      "before": "6c8bfdfcf34298a7b513f7a9600301d0256bed32",
+      "after": {
+        "gitBlob": "40c4c789266a37daf646ed83bdddf0af8d9b6e16",
+        "bytes": 7618,
+        "sha256": "b060c75d39247c07a614dd6653a2c5b477da6c0655ec1a1860bbdf751a625811"
+      }
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/CapturedHostClient.ts",
+      "before": "6a1c96ed27c412c822e25df22eda858d20bbc6b8",
+      "after": {
+        "gitBlob": "c4389ac113de03138fd6a9b4b0c6070fb2f06d86",
+        "bytes": 32706,
+        "sha256": "33e65a4aa30e2edce5eba2e7354c55f89700e15c437611f42c5d06f49cf74b87"
+      }
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/decodeClaudeCloseDiagnostics.ts",
+      "before": "b2abe9c933e76f64c5046d3566fa3dd5d2174848",
+      "after": {
+        "gitBlob": "f6ae5712311d9d6bbb455d1fb5892db8d41e0ffe",
+        "bytes": 9935,
+        "sha256": "bfd6af4d362c385d2d5d44455b20261128388868064baad07f8db4ef2a2f7114"
+      }
+    },
+    {
+      "path": "test/features/agent-backend/claudeCloseDiagnostics.test.ts",
+      "before": "dfc44a77dc1193ed16ef4a751cfe7c6bac7dfee4",
+      "after": {
+        "gitBlob": "3fd06d0f117805e54a0d0ce3d88c5efdfaa516f5",
+        "bytes": 14262,
+        "sha256": "ec93a508e0b7a1148c2b07455198071caf4b94091583dc1d17c62d20bfccb7d2"
+      }
+    }
+  ],
+  "actualParent": {
+    "head": "0d24f086d5fd412d7fb2e37c38f9864f2699a941",
+    "tree": "4c63e84f53bb74886284b44cbcf5389d5545a890",
+    "leaves": 11060,
+    "map": {
+      "path": "/tmp/migration-evidence-20261116/native/p10-b2-final-source-review/parent-0d24-leaf-map.json",
+      "gitBlob": "6be02a086949bc4e954eb30c4133192f52f64b23",
+      "bytes": 3235282,
+      "sha256": "647a94750ea6cf120b912c9f8402daa35625b245ae4bb057261ca3a37ee95fb1"
+    }
+  },
+  "sourcePreimagesAndApprovedAfterimages": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-retained-opencode-model.ts",
+      "before": "fad33b79cb0e6f780d1c2caf435b11e07c03bf87",
+      "after": "369505df3d6a37b5833550954f4ef2a1c501b342",
+      "bytes": 17743,
+      "lines": 269,
+      "exactRoundtrip": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts",
+      "before": "507b2e4243e99a2285822ea8bce8103760c43022",
+      "after": "a910209438b29f04ea4a30f28e69620d98802183",
+      "bytes": 54340,
+      "lines": 727,
+      "exactRoundtrip": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-retained-opencode-app.ts",
+      "before": "71cc2aa1c55540d027bdf321120e850cb650f0c3",
+      "after": "4f686cdb2c99ef4f04bb060041bf8ccf6f8601db",
+      "bytes": 49147,
+      "lines": 727,
+      "exactRoundtrip": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-retained-opencode-model.test.ts",
+      "before": "053b6c09383aeae5186322b2e8b0b17fc8cd1021",
+      "after": "45f0d34a10f1928c0ecc7e102a5015188d193ccf",
+      "bytes": 14802,
+      "lines": 236,
+      "exactRoundtrip": true
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "before": "478323fbcb60bc0b0f29c0e430fdb3d001d0a456",
+      "after": "4e4554ec3330d0c06b0736e861348d7279511361",
+      "bytes": 199733,
+      "lines": 2927,
+      "exactRoundtrip": true
+    }
+  ],
+  "p10": {
+    "before": {
+      "gitBlob": "509311af179416e647f8571126746ab09333f5c0",
+      "bytes": 156904,
+      "sha256": "fc432aa050e41e27387e08fcc176880a0da86f7a475c20354d93b5988046bae0"
+    },
+    "appendix": {
+      "gitBlob": "a636d7f511e4f72a5e9354fc092ad25f49de15af",
+      "bytes": 18056,
+      "sha256": "d657ce15ec4fbf69a2f2ec420510d6d76eff220a83ce75fee261289ed8917113"
+    },
+    "after": {
+      "gitBlob": "1b017131e186f67ccaf62c4215de4bdb0f58af74",
+      "bytes": 174960,
+      "sha256": "0910ded3d5fc864d9b05a4dea4a7ddd4849e730aab5de22341d45f8d52801e03"
+    },
+    "exactDirectConcatenation": true,
+    "noExtraBlankByte": true
+  },
+  "namedSelectionEvidenceBodyChecks": [
+    {
+      "canonicalPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/donor-4a-task-review-2026-11-16/manifest.json",
+      "localPath": "/tmp/migration-evidence-20261116/migration-scope/p10-b2-inert-proposal/manifest.json",
+      "gitBlob": "33e812c165e45b6797409bc3f8fb52bb8a06882f",
+      "bytes": 8181,
+      "sha256": "4d91cd3d3b8ce1c2b8a88cf4c12249b6860c09794798be9ff313b5e34e794740"
+    },
+    {
+      "canonicalPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/donor-4a-task-review-2026-11-16/source-manifest.json",
+      "localPath": "/tmp/migration-evidence-20261116/migration-scope/p10-b2-inert-proposal/source-manifest.json",
+      "gitBlob": "b50e84079f0a4bf352417eedf2196cb2437944eb",
+      "bytes": 6056,
+      "sha256": "24a0cb750b4dd2c1ee160a62aae51c9896574a889185dc0b03a5b34f7863c51a"
+    },
+    {
+      "canonicalPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/donor-4a-task-review-2026-11-16/candidate.patch",
+      "localPath": "/tmp/migration-evidence-20261116/migration-scope/p10-b2-inert-proposal/candidate.patch",
+      "gitBlob": "00113be820c82452468f40c43e18833aba9aab72",
+      "bytes": 63740,
+      "sha256": "f703b2b8aa75e0b4064d9c21024d72c45fe1c1d8130cba2fc45c374cf2042d6f"
+    },
+    {
+      "canonicalPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/donor-4a-task-review-2026-11-16/validation-proposal.json",
+      "localPath": "/tmp/migration-evidence-20261116/migration-scope/p10-b2-inert-proposal/validation-proposal.json",
+      "gitBlob": "7c5eb5f63ea90077df09a36062cbb7e7adbaaf57",
+      "bytes": 4761,
+      "sha256": "41bf745cdd4a8d732d96825e8a52fc7fbfd61de5bc001cc20bcfb55f0c25e5ec"
+    },
+    {
+      "canonicalPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/donor-4a-task-review-2026-11-16/preservation-proof.json",
+      "localPath": "/tmp/migration-evidence-20261116/migration-scope/p10-b2-inert-proposal/preservation-proof.json",
+      "gitBlob": "a1d27c3e70fcb3c5519c11a5210f35ac6abf54bb",
+      "bytes": 15394,
+      "sha256": "68b77dc2f68d2c13bc2534ad60116ad42935f344b6238074bfce47824ea939e0"
+    },
+    {
+      "canonicalPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/donor-4a-task-review-2026-11-16/source-reference-index.json",
+      "localPath": "/tmp/migration-evidence-20261116/migration-scope/p10-b2-inert-proposal/source-reference-index.json",
+      "gitBlob": "64799967e6d0a83b70f8720fee334d23388fd528",
+      "bytes": 7302,
+      "sha256": "054999ec4830b412e9d5af6daf5fc7a26a5703dba36b7d54e951dadfb391344d"
+    },
+    {
+      "canonicalPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/donor-4a-task-review-2026-11-16/source-r2.json",
+      "localPath": "/tmp/migration-evidence-20261116/native/p10-b2-final-source-review/independent-r2.json",
+      "gitBlob": "0c257763f82542e570f85197ab452d782c196fc6",
+      "bytes": 24855,
+      "sha256": "e9f9d2b3495bc11727260a03de43878a54185ef30f699223f25e3b4ea4c9434c"
+    }
+  ],
+  "sourceSemanticR2": {
+    "path": "/tmp/migration-evidence-20261116/native/p10-b2-final-source-review/independent-r2.json",
+    "gitBlob": "0c257763f82542e570f85197ab452d782c196fc6",
+    "bytes": 24855,
+    "sha256": "e9f9d2b3495bc11727260a03de43878a54185ef30f699223f25e3b4ea4c9434c"
+  },
+  "scopeLimits": [
+    "Root selection binds the actual0d24 parent without replacing incoming Plan50/51/52/53 source or documents.",
+    "This approves the root-selection ancestry/preimage/prefix/evidence binding only, not unseen full20-file documentary child.",
+    "Fresh delivery lease remains root-owned immediately before publication.",
+    "Complete actual published documentary bodies/ancestry/tree and independent published-R1 R2 remain mandatory before applying the five source images.",
+    "No B2 source application, project/native/GUI/provider run, CI action or current pass is inferred."
+  ]
+}

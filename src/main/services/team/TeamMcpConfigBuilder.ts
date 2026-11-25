@@ -3,6 +3,7 @@ import { getDesktopMcpChildEnvironment } from '@features/external-agent-connecti
 import { execCli } from '@main/utils/childProcess';
 import { buildMergedCliPath } from '@main/utils/cliPathMerge';
 import { ensureMinimumNodeOldSpaceOptions } from '@main/utils/nodeOptions';
+import { getOptionalElectronMain } from '@main/utils/optionalElectronMain';
 import {
   getClaudeBasePath,
   getMcpConfigsBasePath,
@@ -69,9 +70,8 @@ type McpServerConfig = Record<string, unknown>;
 
 function isPackagedApp(): boolean {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { app } = require('electron') as typeof import('electron');
-    return app.isPackaged;
+    const app = getOptionalElectronMain()?.app;
+    return app ? app.isPackaged : false;
   } catch {
     return false;
   }
@@ -104,9 +104,8 @@ function normalizeMcpServerNodeOptions(config: McpServerConfig): McpServerConfig
 
 function getAppVersion(): string {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { app } = require('electron') as typeof import('electron');
-    return app.getVersion();
+    const app = getOptionalElectronMain()?.app;
+    return app ? app.getVersion() : '0.0.0-dev';
   } catch {
     return '0.0.0-dev';
   }

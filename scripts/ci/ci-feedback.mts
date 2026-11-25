@@ -61,6 +61,13 @@ export function selectFeedbackMode(eventName: unknown, event: unknown): 'fast' |
       }
       return pr.draft ? 'fast' : 'full';
     }
+    // Labels other than ci:full do not change draft qualification inputs.
+    // Preserve full checks for ready PRs and explicit ci:full requests.
+    if (payload.action === 'labeled' || payload.action === 'unlabeled') {
+      const label = object(payload.label).name;
+      if (typeof label !== 'string' || label.length === 0) return 'full';
+      return pr.draft && label !== 'ci:full' ? 'fast' : 'full';
+    }
     if (
       typeof payload.action !== 'string' ||
       !['opened', 'synchronize', 'reopened', 'ready_for_review', 'converted_to_draft'].includes(

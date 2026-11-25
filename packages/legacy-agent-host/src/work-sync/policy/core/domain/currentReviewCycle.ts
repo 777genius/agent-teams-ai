@@ -45,6 +45,9 @@ const REVIEW_EVENT_TYPES = new Set([
   'review_requested',
   'review_started',
   'review_approved',
+  'review_completed',
+  'human_approved',
+  'review_disapproved',
   'review_changes_requested',
   'task_created',
   'status_changed',
@@ -114,7 +117,9 @@ function collectOpenReviewCycle(
       continue;
     }
 
-    if (event.type === 'review_approved' || event.type === 'review_changes_requested') {
+    if (event.type === 'review_approved' || event.type === 'review_completed' ||
+        event.type === 'human_approved' || event.type === 'review_disapproved' ||
+        event.type === 'review_changes_requested') {
       openCycle = null;
     }
   }

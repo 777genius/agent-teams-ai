@@ -1,0 +1,31 @@
+{
+  "kind": "TEST_DARWIN_CUSTODY_PRODUCT_PATH",
+  "sourceHead": "d10409d1887d6a81955adcfad5c10d4a7596d0dc",
+  "hostBuild": {
+    "hostSourceDigest": "5a3554e5fcf13fcfd2eb6e90afacce1e385832dd919a6256194256e90afdc8df",
+    "hostDistDigest": "0e5c5f7a07a2620e9e42938c396a1759f02682b255fc604b6a01c2cd3d0e61cd",
+    "providerDigest": "73dbbfba5e8fed6719ccdeaae499a47284b72ac831c33a2c7206fbf2799f77b8"
+  },
+  "platform": "darwin",
+  "arch": "arm64",
+  "osBuild": "24H232",
+  "productQualified": false,
+  "bunSha256": "0a2237cdcfa0d16ef501d9acca9f0026309ef348bea7393a64e8d1e3609565cc",
+  "processArtifactManifestSha256": "89b0baf9c4fb0a9b408824ebd6936a756846b4072a02097d9460b3ea4fca0c55",
+  "original": {
+    "executablePath": "/private/var/folders/2s/vty41l455yv698g4xkgfv7z00000gn/T/TEST-native-darwin-executable-POfBCR/bun",
+    "executableSha256": "0a2237cdcfa0d16ef501d9acca9f0026309ef348bea7393a64e8d1e3609565cc",
+    "pid": 6408,
+    "startIdentity": "53F9C405-173C-444F-B7D9-A63C21C63BDF:6408:11114:6836052364"
+  },
+  "sibling": {
+    "executablePath": "/Users/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun",
+    "executableSha256": "0a2237cdcfa0d16ef501d9acca9f0026309ef348bea7393a64e8d1e3609565cc",
+    "pid": 6409,
+    "startIdentity": "53F9C405-173C-444F-B7D9-A63C21C63BDF:6409:11116:6839670873"
+  },
+  "replacementRefused": true,
+  "siblingSurvivedTargetStop": true,
+  "cleanup": "confirmed",
+  "status": "PASS"
+}

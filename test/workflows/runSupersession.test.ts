@@ -10,9 +10,11 @@ import { parse } from 'yaml';
 import { METADATA_GATE } from '../../scripts/ci/ci-feedback.mts';
 
 import {
-  type ExpressionValue,
   evaluateWorkflowValue,
+  type ExpressionValue,
+  HOST_EMULATED_SUPERSESSION_GROUP,
   RUN_SUPERSESSION_POLICY,
+  SUPERSESSION_CANCEL,
   SUPERSESSION_GROUP,
 } from './runSupersession.mts';
 
@@ -65,7 +67,7 @@ const workflows = new Map(
 );
 
 const policy = RUN_SUPERSESSION_POLICY;
-const automatic = [...policy.canonical, ...policy.ci];
+const automatic = [...policy.canonical, ...policy.isolatedV2, ...policy.ci];
 const superseding = [...automatic, ...policy.packaged, ...policy.pages];
 
 interface Scenario {
@@ -155,6 +157,18 @@ describe('run supersession policy', () => {
   it('extends the canonical group for CI', () => {
     const ci = String(workflows.get('ci')!.concurrency!.group);
     expect(ci.startsWith(`${SUPERSESSION_GROUP}-`), ci).toBe(true);
+  });
+
+  it('isolates only Host Desktop from its obsolete v1 group without changing cancellation', () => {
+    expect(policy.isolatedV2).toEqual(['host-emulated-acceptance']);
+    const name = policy.isolatedV2[0], workflow = workflows.get(name)!;
+    expect(workflow.concurrency).toEqual({ group: HOST_EMULATED_SUPERSESSION_GROUP,
+      cancel: SUPERSESSION_CANCEL });
+    const legacy = evaluateWorkflowValue(SUPERSESSION_GROUP, {
+      github: { workflow: workflow.name, event_name: 'pull_request',
+        event: { pull_request: { number: 7 } } },
+    });
+    expect(concurrency(name, pr(7, 101)).group).not.toBe(legacy);
   });
 
   it.each(superseding)('%s: a new PR revision cancels only that PR', (name) => {

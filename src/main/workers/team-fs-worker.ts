@@ -1625,7 +1625,9 @@ function normalizeHistoryEvents(parsed: ParsedTask): RawHistoryEvent[] | undefin
 }
 
 function normalizeReviewState(value: unknown): string {
-  return value === 'review' || value === 'needsFix' || value === 'approved' ? value : 'none';
+  return value === 'review' || value === 'needsFix' || value === 'reviewed' || value === 'approved'
+    ? value
+    : 'none';
 }
 
 function normalizeFallbackReviewState(value: unknown, status: string): string {
@@ -1634,7 +1636,7 @@ function normalizeFallbackReviewState(value: unknown, status: string): string {
   if (status === 'in_progress' || status === 'deleted') return 'none';
   if (status === 'pending') return reviewState === 'needsFix' ? 'needsFix' : 'none';
   if (status === 'completed') {
-    return reviewState === 'review' || reviewState === 'approved' || reviewState === 'needsFix'
+    return reviewState === 'review' || reviewState === 'approved' || reviewState === 'reviewed' || reviewState === 'needsFix'
       ? reviewState
       : 'none';
   }

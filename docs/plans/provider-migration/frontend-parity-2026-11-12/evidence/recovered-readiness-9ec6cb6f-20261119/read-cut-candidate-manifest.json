@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "sourceHead": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+  "sourceTree": "06ddfb2e88ee1e049f14a9c6c11290004d16dda2",
+  "createdAt": "2026-11-19T02:57:43.458578+00:00",
+  "scope": "Two existing TEST-only paths; preserve an existing optional read-cut finalReason label in the same first observation. No producer/runtime/cleanup/deadline changes.",
+  "changes": [
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+      "mode": "100644",
+      "before": {
+        "path": "/workspace/scratch/c714f5bce554/read-cut-finalreason-42a4-candidate/before/packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+        "bytes": 44790,
+        "lines": 690,
+        "sha256": "89bddd71c36ae06f8d6d398571175a6f31112039fed2b63f2bd51a031b676f4d",
+        "gitBlobComputed": "3022c10041dd8bceabdd9e9982ab78a305e9c167"
+      },
+      "after": {
+        "path": "/workspace/scratch/c714f5bce554/read-cut-finalreason-42a4-candidate/candidate/packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+        "bytes": 45233,
+        "lines": 695,
+        "sha256": "31a236606f13b7ac6b677d85a74060fe41221b488bd9a205c7f1b020f310e094",
+        "gitBlobComputed": "7675e9d9f09931ae793217e0fdd272e608ee026a"
+      },
+      "production": false
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/passive-driver-close-diagnostics.test.ts",
+      "mode": "100644",
+      "before": {
+        "path": "/workspace/scratch/c714f5bce554/read-cut-finalreason-42a4-candidate/before/packages/legacy-agent-host/tests/passive-driver-close-diagnostics.test.ts",
+        "bytes": 11220,
+        "lines": 182,
+        "sha256": "16f2216fbf96eced2addb983dc83d4a00f4116d3cb432511d70bb8143a5a4009",
+        "gitBlobComputed": "4dbce7ddf863f4b1513bdb018c67b29ec31eac71"
+      },
+      "after": {
+        "path": "/workspace/scratch/c714f5bce554/read-cut-finalreason-42a4-candidate/candidate/packages/legacy-agent-host/tests/passive-driver-close-diagnostics.test.ts",
+        "bytes": 19833,
+        "lines": 318,
+        "sha256": "a5f40a040b17bd438e32edc1a1eaf9a833f16d4c5e860a35c54a0c269ee40963",
+        "gitBlobComputed": "d888c0642b0755123176126ce35cf51250d6997f"
+      },
+      "production": false
+    }
+  ],
+  "patch": {
+    "path": "/workspace/scratch/c714f5bce554/read-cut-finalreason-42a4-candidate/candidate.patch",
+    "bytes": 11487,
+    "lines": 175,
+    "sha256": "ee931c90f03fe40ee6acf0ee8f0647422dacb6a3ab94716bd9723c8daef4ca69",
+    "gitBlobComputed": "8aaff8140d87f9ade9744da8c81ab50e19b5bddb"
+  },
+  "notPublicationChanges": [
+    "candidate/package.json (isolated ESM harness metadata)",
+    "candidate/packages/legacy-agent-host/tsconfig.final-reason-focused.json (focused noEmit harness configuration)"
+  ],
+  "frozenA7TreeRefsIndexUnchanged": true
+}

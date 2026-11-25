@@ -193,9 +193,11 @@ function fixture(
     cleanupFails?: boolean;
     providerMetadataInConfigOnly?: boolean;
     modelMetadata?: Record<string, unknown>;
+    unicodeDirectory?: boolean;
   } = {}
 ) {
-  const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-opencode-management-')));
+  const root = realpathSync(mkdtempSync(join(tmpdir(), options.unicodeDirectory
+    ? 'TEST-opencode-management-Я-%2F-' : 'TEST-opencode-management-')));
   const env: Record<string, string> = {};
   for (const [key, directory] of Object.entries({
     HOME: 'home',
@@ -279,7 +281,8 @@ function fixture(
         const request = new Request(input, init);
         assert.equal(new URL(request.url).origin, profile.endpoint);
         assert.equal(request.headers.get('authorization'), authorization);
-        assert.equal(request.headers.get('x-opencode-directory'), profile.cwd);
+        assert.equal(request.headers.get('x-opencode-directory'), encodeURIComponent(profile.cwd));
+        assert.equal(decodeURIComponent(request.headers.get('x-opencode-directory')!), profile.cwd);
         assert.equal(request.redirect, 'error');
         const path = new URL(request.url).pathname;
         calls.push({ path, method: request.method, body: await request.text() });
@@ -353,8 +356,24 @@ function fixture(
   };
 }
 
+test('OpenCode management preserves Unicode and literal percent directory identity without sessions', async (t) => {
+  const f = fixture({ unicodeDirectory: true });
+  t.after(() => f.cleanup());
+  await f.host.start();
+  const catalog = await f.host.run(client => readOpenCodeCatalog(client,
+    { profileId: f.profile.profileId, configRevision: f.profile.configRevision }, 'TEST-local'));
+  assert.equal(catalog.providers[0]?.models[0]?.modelId, 'TEST-model');
+  assert.equal(f.launches.length, 1); assert.equal(f.launches[0]!.cwd, f.profile.cwd);
+  assert.ok(f.calls.length > 0 && f.calls.every(row => row.method === 'GET' && !row.path.startsWith('/session')));
+  assert.equal(await f.host.close(), true); assert.equal(f.stopCount(), 1);
+});
+
 test('catalog and auth use captured native profile, without Session SPI or ambient credentials', async (t) => {
-  const f = fixture();
+  const f = fixture({ modelMetadata: { variants: {
+    low: { reasoningEffort: 'low', privateSetting: 'TEST-must-stay-private' },
+    high: {},
+    hidden: { disabled: true },
+  } } });
   t.after(() => f.cleanup());
   await Promise.all([f.host.start(), f.host.start()]);
   assert.equal(f.launches.length, 1);
@@ -391,6 +410,7 @@ test('catalog and auth use captured native profile, without Session SPI or ambie
       outputTokens: 1024,
       free: null,
       declaredInputModalities: null,
+      variants: ['low', 'high'],
     },
   ]);
   assert.equal(JSON.stringify([summary, models]).includes('TEST-must-stay-private'), false);

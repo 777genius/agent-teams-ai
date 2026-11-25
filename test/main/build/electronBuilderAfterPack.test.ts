@@ -14,6 +14,7 @@ const {
   parseElf,
   parseMachO,
   parsePortableExecutable,
+  pruneKnownIncompatibleNativeArtifacts,
   pruneNodePtyArtifacts,
   validateNativeBinaries,
 } = afterPackModule._internal;
@@ -453,7 +454,9 @@ describe('electron-builder afterPack', () => {
       foreignFiles.push(foreign);
     }
 
-    await afterPackModule({ appOutDir: tempDir, electronPlatformName: platform, arch: targetArch === 'arm64' ? 3 : 1 });
+    // Synthetic Linux headers exercise the pruning owner, not a packaged launcher.
+    if (platform === 'linux') await pruneKnownIncompatibleNativeArtifacts(tempDir, platform, targetArch);
+    else await afterPackModule({ appOutDir: tempDir, electronPlatformName: platform, arch: targetArch === 'arm64' ? 3 : 1 });
     const expectedForeignCounts = { win32: 18, linux: 16, darwin: 17 } as const;
     expect(foreignFiles.length).toBe(expectedForeignCounts[platform]);
     expect(foreignFiles.every(file => !fs.existsSync(file))).toBe(true);
@@ -621,7 +624,8 @@ describe('electron-builder afterPack', () => {
     const targetBytes = createTargetBinaryBuffer(platform, arch);
     const mixedDirectoryFile = path.join(graph, '@opencode/core/node_modules/tree-sitter-bash/prebuilds', platform === 'linux' ? 'darwin-arm64' : 'linux-arm64', 'compatible-extra.node');
     writeFile(mixedDirectoryFile, targetBytes);
-    await afterPackModule({appOutDir: tempDir, electronPlatformName: platform, arch: archCode});
+    if (platform === 'linux') await pruneKnownIncompatibleNativeArtifacts(tempDir, platform, arch);
+    else await afterPackModule({appOutDir: tempDir, electronPlatformName: platform, arch: archCode});
     // One tree-sitter target in each of the three graph positions and one or two hoisted bun-pty targets.
     expect(retained).toHaveLength(platform === 'linux' ? 5 : 4);
     for (const file of retained) expect(fs.readFileSync(file.path)).toEqual(file.bytes);
@@ -639,7 +643,9 @@ describe('electron-builder afterPack', () => {
     const resources = platform === 'darwin' ? 'Agent Teams AI.app/Contents/Resources' : 'resources';
     const graph = path.join(tempDir, resources, 'runtime/local-cli/node_modules');
     const retained = writePortableBunPtyFixtures(graph, platform, arch);
-    await afterPackModule({ appOutDir: tempDir, electronPlatformName: platform, arch: archCode });
+    // Linux ARM64 is a binary-pruning counterexample, not an admitted app tuple.
+    if (platform === 'linux') await pruneKnownIncompatibleNativeArtifacts(tempDir, platform, arch);
+    else await afterPackModule({ appOutDir: tempDir, electronPlatformName: platform, arch: archCode });
     expect(retained).toHaveLength(2); // Both Linux libc variants, or both Darwin architectures.
     for (const file of retained) expect(fs.readFileSync(file.path)).toEqual(file.bytes);
     await expect(validateNativeBinaries(tempDir, platform, arch)).resolves.toEqual([]);
@@ -765,14 +771,52 @@ describe('electron-builder afterPack', () => {
       'obj.target/extract/src/extract.o',
     ])
       writeFile(path.join(release, leaf), bytes);
-    await afterPackModule({ appOutDir: tempDir, electronPlatformName: 'linux', arch: 1 });
+    await pruneKnownIncompatibleNativeArtifacts(tempDir, 'linux', 'x64');
     for (const leaf of [
       'extract.node',
       'obj.target/extract.node',
       'obj.target/extract/src/extract.o',
     ])
       expect(fs.readFileSync(path.join(release, leaf))).toEqual(bytes);
+    await expect(validateNativeBinaries(tempDir, 'linux', 'x64')).resolves.toEqual([]);
   });
+
+  it.skipIf(process.platform !== 'linux' || process.arch !== 'x64')(
+    'requires the exact copied native Linux launcher in a complete afterPack pass',
+    async () => {
+      const { stageLinuxNodeExec } = require('../../../scripts/build/buildLinuxNodeExec.mjs');
+      const selected = stageLinuxNodeExec();
+      const sourceManifest = fs.readFileSync(path.join(selected.directory, 'manifest.json'));
+      const sourceImage = fs.readFileSync(selected.path);
+      const tempDir = createTempDir();
+      tempDirs.push(tempDir);
+      const copied = path.join(tempDir, 'resources/process-launch/linux-x64');
+      const context = { appOutDir: tempDir, electronPlatformName: 'linux', arch: 1 };
+
+      await expect(afterPackModule(context)).rejects.toThrow('ENOENT');
+      fs.mkdirSync(copied, { recursive: true, mode: 0o755 });
+      const manifestPath = path.join(copied, 'manifest.json');
+      const imagePath = path.join(copied, 'node-exec');
+      fs.copyFileSync(path.join(selected.directory, 'manifest.json'), manifestPath);
+      fs.copyFileSync(selected.path, imagePath);
+      fs.chmodSync(imagePath, 0o755);
+      await expect(afterPackModule(context)).resolves.toBeUndefined();
+
+      const changedImage = Buffer.from(sourceImage);
+      changedImage[changedImage.length - 1] ^= 1;
+      fs.writeFileSync(imagePath, changedImage);
+      await expect(afterPackModule(context)).rejects.toThrow('Linux Node process launcher is unavailable or changed');
+      fs.writeFileSync(imagePath, sourceImage);
+
+      const changedManifest = JSON.parse(sourceManifest.toString('utf8'));
+      changedManifest.compilerSha256 = '0'.repeat(64);
+      fs.writeFileSync(manifestPath, JSON.stringify(changedManifest) + '\n');
+      await expect(afterPackModule(context)).rejects.toThrow('differs from the selected build artifact');
+      expect(fs.readFileSync(path.join(selected.directory, 'manifest.json'))).toEqual(sourceManifest);
+      expect(fs.readFileSync(selected.path)).toEqual(sourceImage);
+    },
+    60_000
+  );
 
   it.each([
     'resources/runtime/local-cli/node_modules/msgpackr-extract/build/Release/other.node',

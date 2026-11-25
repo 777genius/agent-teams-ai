@@ -1,4 +1,8 @@
 import assert from 'node:assert/strict';
+import { createDesktopReadWait, type DesktopActionTiming } from './desktop-ui-read-observation.ts';
+import { PROVIDER_LAUNCH_AUTHORITY_MARKER_ATTRIBUTE, PROVIDER_LAUNCH_AUTHORITY_MARKER_LIMIT,
+  readProviderLaunchAuthorityMarker, UNKNOWN_PROVIDER_LAUNCH_AUTHORITY_MARKER
+} from '../../src/shared/utils/providerLaunchAuthorityMarker.ts';
 
 const literalEscapes: Readonly<Record<string, string>> = {
   '<': '\\u003c',
@@ -23,6 +27,26 @@ export interface UiCdpPort {
   evaluate(expression: string): Promise<unknown>;
   send(method: string, params?: Record<string, unknown>): Promise<unknown>;
 }
+interface ScrollBeforeClick {
+  label: string;
+  selector?: string;
+  requireCenterHit?: true;
+}
+
+/** Observe two visible renderer frames without changing focus, DOM, or input. */
+export function desktopAnimationFramesExpression(remainingMs: number): string {
+  assert.ok(Number.isFinite(remainingMs) && remainingMs > 0 && remainingMs <= 30_000);
+  return `new Promise(resolve => {
+    if(document.visibilityState!=='visible'){resolve(false);return;}
+    let frame=0,finished=false;
+    const finish=value=>{if(finished)return;finished=true;clearTimeout(timer);cancelAnimationFrame(frame);resolve(value);};
+    const timer=setTimeout(()=>finish(false),${remainingMs});
+    frame=requestAnimationFrame(()=>{
+      if(finished)return;
+      frame=requestAnimationFrame(()=>finish(document.visibilityState==='visible'));
+    });
+  })`;
+}
 const record = (value: unknown): Record<string, unknown> => {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value));
   return value as Record<string, unknown>;
@@ -46,6 +70,40 @@ export function createDesktopUiControls(
       window.__TEST_desktopInputEvents=[];
       window.__TEST_desktopDragEvents=[];
       const describe=el=>el instanceof Element?{tag:el.tagName,id:el.id,ariaLabel:el.getAttribute('aria-label'),className:String(el.className).slice(0,120)}:null;
+      const teamNavigation=e=>{
+        const own=(value,key)=>{if(!value||(typeof value!=='object'&&typeof value!=='function'))throw Error();const d=Object.getOwnPropertyDescriptor(value,key);if(!d||!('value'in d))throw Error();return d.value;};
+        const id=value=>typeof value==='string'&&value.length>0&&value.length<=128&&!/[^A-Za-z0-9_.:-]/.test(value);
+        const key=value=>{if(typeof value!=='string'||value.length>256||!value.startsWith('host-team:'))return false;const handle=decodeURIComponent(value.slice(10));return handle.length>0&&handle.length<=256&&!handle.includes('\\0')&&'host-team:'+encodeURIComponent(handle)===value;};
+        const sample=()=>{
+          try{
+            const store=own(window,'__agentTeamsDevStore'),getState=own(store,'getState');if(typeof getState!=='function')throw Error();
+            const state=getState.call(store),layout=own(state,'paneLayout'),focused=own(layout,'focusedPaneId'),panes=own(layout,'panes'),selected=own(state,'selectedTeamName');
+            if(!id(focused)||!(selected===null||key(selected))||!Array.isArray(panes))throw Error();
+            const paneCount=own(panes,'length');if(!Number.isSafeInteger(paneCount)||paneCount<1||paneCount>4)throw Error();
+            const seen=new Set();let pane=null;
+            for(let index=0;index<paneCount;index++){const item=own(panes,index),paneId=own(item,'id');if(!id(paneId)||seen.has(paneId))throw Error();seen.add(paneId);if(paneId===focused)pane=item;}
+            if(!pane)throw Error();const active=own(pane,'activeTabId'),tabs=own(pane,'tabs');
+            if(!(active===null||id(active))||!Array.isArray(tabs))throw Error();
+            const tabCount=own(tabs,'length');if(!Number.isSafeInteger(tabCount)||tabCount<0||tabCount>128)throw Error();
+            let tab=null,tabType=null,tabTeam=null;
+            if(active!==null){
+              for(let index=0;index<tabCount;index++){const item=own(tabs,index),tabId=own(item,'id');if(!id(tabId))throw Error();if(tabId===active){if(tab)throw Error();tab=item;}}
+              if(!tab)throw Error();const type=own(tab,'type');if(typeof type!=='string'||!type)throw Error();tabType=type==='team'?'team':'other';
+              if(tabType==='team'){tabTeam=own(tab,'teamName');if(!key(tabTeam))throw Error();}
+            }
+            return {status:'available',focusedPaneId:focused,activeTabId:active,activeTabType:tabType,activeTabTeamName:tabTeam,selectedTeamName:selected};
+          }catch{return {status:'unavailable'};}
+        };
+        let target=null;
+        try{const card=e.target instanceof Element?e.target.closest('[data-team-name]'):null;if(card&&card.matches('.team-row-zebra-card')){const name=card.getAttribute('data-team-name');target=key(name)?name:undefined;}}catch{target=undefined;}
+        let observation=target===null?null:typeof target==='string'?{schemaVersion:1,status:'available',source:'original-passive-input',atomicWithNavigation:false,targetTeamName:target,before:null,microtask:null,afterDispatch:null}:{schemaVersion:1,status:'unavailable',reason:'target'};
+        return (row,phase)=>{
+          try{
+            if(observation?.status==='available')observation=Object.freeze({...observation,[phase]:Object.freeze(sample())});
+            row.teamNavigation=JSON.stringify(observation).length<=4096?observation:{schemaVersion:1,status:'unavailable',reason:'projection-limit'};
+          }catch{}
+        };
+      };
       const taskClarification=e=>{
         try{
           const target=e.target instanceof Element?e.target:null,dialog=target?.closest('[role="dialog"]');
@@ -125,6 +183,7 @@ export function createDesktopUiControls(
       };
       for(const type of ['pointerdown','pointerup','pointercancel','pointermove','click','keydown','keyup','focusin','focusout'])document.addEventListener(type,e=>{
         if(type==='pointermove'&&!e.buttons)return;
+        const navigation=type==='pointerdown'||type==='pointerup'||type==='click'?teamNavigation(e):null;
         const dragging=type==='pointermove'||type==='pointercancel';
         const rows=dragging?window.__TEST_desktopDragEvents:window.__TEST_desktopInputEvents;if(rows.length>=(dragging?32:96))rows.shift();
         const el=e.target instanceof Element?e.target.closest('button'):null;
@@ -136,8 +195,10 @@ export function createDesktopUiControls(
           activeSortable:[...document.querySelectorAll('[aria-roledescription="sortable"][aria-pressed="true"]')].map(el=>({taskId:el.querySelector('.kanban-task-card')?.getAttribute('data-task-id'),transform:el.style.transform})),
           dragAnnouncement:[...document.querySelectorAll('[id^="DndLiveRegion-"]')].map(el=>el.textContent)};
         if(type==='pointerdown'||type==='pointerup'||type==='click')row.taskClarification=taskClarification(e);
+        if(navigation)navigation(row,'before');
         rows.push(row);queueMicrotask(()=>{row.defaultPreventedAfterMicrotask=e.defaultPrevented;row.focusAfterMicrotask=describe(document.activeElement);
-          setTimeout(()=>{row.defaultPreventedAfterDispatch=e.defaultPrevented;row.focusAfterDispatch=describe(document.activeElement);},0);});
+          if(navigation)navigation(row,'microtask');
+          setTimeout(()=>{row.defaultPreventedAfterDispatch=e.defaultPrevented;row.focusAfterDispatch=describe(document.activeElement);if(navigation)navigation(row,'afterDispatch');},0);});
       },{capture:true,passive:true});return true;
     })()`);
     assert.equal(
@@ -146,57 +207,133 @@ export function createDesktopUiControls(
       'captured TEST renderer is visible before dispatching user input'
     );
   };
-  const waitRead = async (
-    expression: string,
-    label: string,
-    timeoutMs = 30_000,
-    isReady: (value: unknown) => boolean = Boolean
-  ): Promise<unknown> => {
-    const deadline = Date.now() + timeoutMs;
-    while (Date.now() < deadline) {
-      options.assertOwnedRenderer();
-      try {
-        const value = await cdp.evaluate(expression);
-        if (isReady(value)) return value;
-      } catch (error) {
-        if (
-          !/execution context was destroyed|cannot find (?:default )?execution context|cannot find context with specified id/i.test(
-            String(error)
-          )
-        )
-          throw error;
-      }
-      await new Promise<void>((done) => setTimeout(done, 100));
-    }
-    throw new Error(`UI read timed out: ${label}; no mutation retry`);
-  };
+  const waitRead = createDesktopReadWait(cdp, options);
+  const finiteSourceCreate = (selector: string | undefined, label: string, text: string | undefined): boolean =>
+    selector === '[data-testid="create-team-page"] button' &&
+    label === 'Create and Launch original solo source exactly once' && text === 'Create';
+  const createFactsExpression = `(() => {
+    try {
+      const page=e.closest('[data-testid="create-team-page"]');
+      if(!page||document.querySelectorAll('[data-testid="create-team-page"]').length!==1)return {createPageUnique:false};
+      return {
+        createPageUnique:true,
+        createLaunchChecked:page.querySelector('#launch-team')?.getAttribute('data-state')==='checked',
+        createAuthorityDescribed:e.getAttribute('aria-describedby')==='create-team-launch-authority-blocker',
+        createAuthorityNoticePresent:Boolean(page.querySelector('#create-team-launch-authority-blocker')),
+        createSubmittingSpinner:Boolean(e.querySelector('svg.animate-spin')),
+        createAlertCount:Math.min(page.querySelectorAll('[role="alert"]').length,33),
+        createInvalidAttributeCount:Math.min(page.querySelectorAll('[aria-invalid="true"]').length,33),
+        createAuthorityMarker:(()=>{try{const notices=page.querySelectorAll('#create-team-launch-authority-blocker');
+          if(notices.length!==1)return null;
+          const marker=notices[0].getAttribute(${desktopJsLiteral(PROVIDER_LAUNCH_AUTHORITY_MARKER_ATTRIBUTE)});
+          return typeof marker==='string'&&marker.length<=${PROVIDER_LAUNCH_AUTHORITY_MARKER_LIMIT}?marker:null;
+        }catch{return null;}})()
+      };
+    } catch { return null; }
+  })()`;
   // Each expression is a read-only DOM lookup returning at most one exact target.
-  const target = (selector: string, text?: string): string => `(() => {
+  const target = (selector: string, text?: string, requiredContent?: string, createDiagnostics = false): string => `(() => {
     const elements = [...document.querySelectorAll(${desktopJsLiteral(selector)})].filter(e => {
       const r=e.getBoundingClientRect(); return r.width>0&&r.height>0${text === undefined ? '' : `&&e.textContent.trim()===${desktopJsLiteral(text)}`};
     });
-    if(elements.length!==1)return {unavailableTarget:true,matches:Math.min(elements.length,256)};
+    if(elements.length!==1)return {unavailableTarget:true,matches:Math.min(elements.length,256)};${requiredContent === undefined ? '' : `
+    if(!elements[0].textContent.includes(${desktopJsLiteral(requiredContent)}))return {unavailableTarget:true,matches:1};`}
     const e=elements[0], r=e.getBoundingClientRect(), x=r.x+r.width/2,y=r.y+r.height/2;
     const hit=document.elementFromPoint(x,y), disabled=e.matches(':disabled');
     if(!hit||!(hit===e||e.contains(hit))||disabled)return {
       unavailableTarget:true,matches:1,disabled,ariaDisabled:e.getAttribute('aria-disabled')==='true',
       pointerEventsNone:getComputedStyle(e).pointerEvents==='none',
-      centerInViewport:x>=0&&y>=0&&x<innerWidth&&y<innerHeight,hitPresent:Boolean(hit)
+      centerInViewport:x>=0&&y>=0&&x<innerWidth&&y<innerHeight,hitPresent:Boolean(hit)${createDiagnostics ? `,createFacts:${createFactsExpression}` : ''}
     };
-    return {x,y,text:e.textContent.trim().slice(0,300),tag:e.tagName};
+    const geometry=(() => {
+      try {
+        const rectangle=value => {
+          const numbers=[value.x,value.y,value.width,value.height];
+          return numbers.every(n=>typeof n==='number'&&Number.isFinite(n)&&Math.abs(n)<=1000000)?numbers:null;
+        };
+        const animations=value => {
+          if(!value||typeof value.getAnimations!=='function')return null;
+          const items=value.getAnimations();
+          return items.length>64?65:items.filter(item=>item.playState==='running'||item.pending===true).length;
+        };
+        const dialog=e.closest('[role="dialog"]'), fonts=document.fonts?.status;
+        return {targetRect:rectangle(r),dialogRect:dialog?rectangle(dialog.getBoundingClientRect()):null,
+          targetAnimations:animations(e),dialogAnimations:animations(dialog),
+          fonts:fonts==='loaded'||fonts==='loading'?fonts:null};
+      } catch { return null; }
+    })();
+    return {x,y,text:e.textContent.trim().slice(0,300),tag:e.tagName,geometry};
   })()`;
   const clickExpression = async (
     expression: string,
     label: string,
     selector?: string,
-    text?: string
+    text?: string,
+    readiness?: { waitForFinalReadiness?: true; waitForRenderFrames?: true; scrollBeforeClick?: ScrollBeforeClick },
+    timing?: DesktopActionTiming
   ): Promise<void> => {
+    timing?.start('bringToFront');
     await cdp.send('Page.bringToFront');
+    // Every passive phase spends the original first-read budget, including a
+    // temporarily pending owner at the final lookup. Never reset it after hover.
+    const readDeadline = Date.now() + 30_000;
+    timing?.end('bringToFront');
+    timing?.deadline(readDeadline);
+    const assertReadDeadline = (): void => {
+      if (Date.now() >= readDeadline) {
+        // Preserve any stricter caller-owned cutoff or renderer refusal.
+        options.assertOwnedRenderer();
+        throw new Error(`UI read timed out: ${label} final target; no mutation retry`);
+      }
+    };
+    const scroll = readiness?.scrollBeforeClick && { ...readiness.scrollBeforeClick };
+    const scrollBudget = { deadline: readDeadline, remainingWheels: 12 };
+    const prepareScroll = scroll ? async (): Promise<void> => {
+      assert.equal(typeof selector, 'string', 'original click selector is required for preparation');
+      options.assertOwnedRenderer();
+      assertReadDeadline();
+      await scrollTo(scroll.selector ?? selector!, scroll.label, text, 12,
+        { requireCenterHit: scroll.requireCenterHit }, scrollBudget);
+      options.assertOwnedRenderer();
+      assertReadDeadline();
+    } : undefined;
+    const geometryTrace: { samples: Record<string, unknown>[]; overflow: boolean } = { samples: [], overflow: false };
+    const observeGeometry = (phase: 'initial' | 'after-hover' | 'stable' | 'final', point: Record<string, unknown>): void => {
+      try {
+        if (geometryTrace.samples.length >= 18) { geometryTrace.overflow = true; return; }
+        const own = (value: unknown, key: string): unknown => {
+          if (!value || typeof value !== 'object') return undefined;
+          const descriptor = Object.getOwnPropertyDescriptor(value, key);
+          return descriptor && 'value' in descriptor ? descriptor.value : undefined;
+        };
+        const finite = (value: unknown): number | null =>
+          typeof value === 'number' && Number.isFinite(value) && Math.abs(value) <= 1_000_000 ? value : null;
+        const rectangle = (value: unknown): number[] | null => {
+          if (!Array.isArray(value) || own(value, 'length') !== 4) return null;
+          const numbers = ['0', '1', '2', '3'].map(key => finite(own(value, key)));
+          return numbers.every(number => number !== null) ? numbers as number[] : null;
+        };
+        const count = (value: unknown): number | null =>
+          typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 65 ? value : null;
+        const geometry = own(point, 'geometry'), tag = own(point, 'tag'), fonts = own(geometry, 'fonts');
+        geometryTrace.samples.push({
+          phase, unavailable: own(point, 'unavailableTarget') === true, x: finite(own(point, 'x')), y: finite(own(point, 'y')),
+          tag: tag === 'BUTTON' || tag === 'INPUT' || tag === 'TEXTAREA' ? tag : null,
+          targetRect: rectangle(own(geometry, 'targetRect')), dialogRect: rectangle(own(geometry, 'dialogRect')),
+          targetAnimations: count(own(geometry, 'targetAnimations')), dialogAnimations: count(own(geometry, 'dialogAnimations')),
+          fonts: fonts === 'loaded' || fonts === 'loading' ? fonts : null,
+        });
+      } catch {
+        // Missing diagnostic data never changes the original target or failure.
+      }
+    };
     // Reuse the original passive reads and deadline. Retain only closed facts,
-    // never DOM text, attributes, HTML or another request after a failed click.
+    // never raw DOM text/HTML, unvalidated attributes or another request after a failed click.
     const readPoint = async (phase: string): Promise<Record<string, unknown>> => {
       const bootstrapRead = phase === label && label === 'open existing More menu' &&
         selector === 'button[aria-label="More actions"]';
+      const launchRead = phase === label && label === 'open original Launch dialog' &&
+        selector === 'button' && text === 'Launch';
       const readExpression = bootstrapRead
         ? `(() => {
             const point = ${expression};
@@ -221,10 +358,36 @@ export function createDesktopUiControls(
               } };
             } catch { return point; }
           })()`
+        : launchRead ? `(() => {
+            const point = ${expression};
+            if (!point || point.unavailableTarget !== true) return point;
+            try {
+              const state = window.__agentTeamsDevStore?.getState();
+              if (!state || typeof state !== 'object' || Array.isArray(state))
+                return { ...point, launchFacts: { launchStoreAvailable: false } };
+              const data = state.selectedTeamData, selected = state.selectedTeamName;
+              const present = data !== null && typeof data === 'object' && !Array.isArray(data);
+              const loading = state.selectedTeamLoading, error = state.selectedTeamError;
+              return { ...point, launchFacts: {
+                launchStoreAvailable: true, launchTeamDataPresent: present,
+                ...(typeof loading === 'boolean' ? { launchTeamLoading: loading } : {}),
+                ...(error == null || typeof error === 'string' ? { launchTeamErrorPresent: Boolean(error) } : {}),
+                ...(present && typeof selected === 'string' && typeof data.teamName === 'string'
+                  ? { launchTeamDataMatches: data.teamName === selected } : {}),
+                ...(present && typeof data.isAlive === 'boolean' ? { launchTeamAlive: data.isAlive } : {})
+              } };
+            } catch { return point; }
+          })()`
         : expression;
-      let facts: Record<string, boolean | number> | undefined;
+      let facts: Record<string, boolean | number | string> | undefined;
+      let preparationPending = false;
+      const readOptions = prepareScroll ? { deadline: readDeadline, beforeRead: async () => {
+        preparationPending = true;
+        await prepareScroll();
+      } } : undefined;
       try {
-        return record(await waitRead(readExpression, phase, 30_000, value => {
+        const observed = record(await waitRead(readExpression, phase, readDeadline - Date.now(), value => {
+          preparationPending = false;
           if (value && typeof value === 'object' && !Array.isArray(value)) {
             const row = value as Record<string, unknown>;
             if (row.unavailableTarget === true) {
@@ -235,6 +398,27 @@ export function createDesktopUiControls(
                 pointerEventsNone: row.pointerEventsNone === true,
                 centerInViewport: row.centerInViewport === true, hitPresent: row.hitPresent === true,
               };
+              if (finiteSourceCreate(selector, label, text)) {
+                facts.createAuthorityMarker = UNKNOWN_PROVIDER_LAUNCH_AUTHORITY_MARKER;
+                try {
+                  const own = (value: unknown, key: string): unknown => {
+                    if (!value || typeof value !== 'object') return undefined;
+                    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+                    return descriptor && 'value' in descriptor ? descriptor.value : undefined;
+                  };
+                  const create = own(row, 'createFacts');
+                  for (const key of ['createPageUnique', 'createLaunchChecked', 'createAuthorityDescribed',
+                    'createAuthorityNoticePresent', 'createSubmittingSpinner']) {
+                    const value = own(create, key); if (typeof value === 'boolean') facts[key] = value;
+                  }
+                  for (const key of ['createAlertCount', 'createInvalidAttributeCount']) {
+                    const value = own(create, key);
+                    if (typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 33) facts[key] = value;
+                  }
+                  if (own(create, 'createPageUnique') === true)
+                    facts.createAuthorityMarker = readProviderLaunchAuthorityMarker(own(create, 'createAuthorityMarker'));
+                } catch { /* Optional closed facts cannot replace the original target refusal. */ }
+              }
               if (bootstrapRead && row.bootstrapFacts && typeof row.bootstrapFacts === 'object' &&
                   !Array.isArray(row.bootstrapFacts)) {
                 const bootstrap = row.bootstrapFacts as Record<string, unknown>;
@@ -248,41 +432,139 @@ export function createDesktopUiControls(
                     facts[key] = Math.min(Number(bootstrap[key]), limit);
                 }
               }
+              if (launchRead) {
+                // A passive renderer-state sample in this same unavailable-target evaluation.
+                // It cannot qualify the target or change the original deadline/owner refusal.
+                try {
+                  const descriptor = Object.getOwnPropertyDescriptor(row, 'launchFacts');
+                  const launch = descriptor && 'value' in descriptor ? descriptor.value : undefined;
+                  if (launch && typeof launch === 'object' && !Array.isArray(launch)) {
+                    for (const key of ['launchStoreAvailable', 'launchTeamLoading', 'launchTeamDataPresent',
+                      'launchTeamDataMatches', 'launchTeamAlive', 'launchTeamErrorPresent']) {
+                      const value = Object.getOwnPropertyDescriptor(launch, key);
+                      if (value && 'value' in value && typeof value.value === 'boolean') facts[key] = value.value;
+                    }
+                  }
+                } catch { /* Optional facts never replace the original target result. */ }
+              }
               return false;
             }
           }
           return Boolean(value);
-        }));
+        }, readOptions, phase === label ? 'initial' : phase === label + ' after pointer enter' ? 'after-hover' : 'stable',
+          timing?.reads[phase === label ? 'initial' : phase === label + ' after pointer enter' ? 'after-hover' : 'stable']));
+        observeGeometry(phase === label ? 'initial' : phase === label + ' after pointer enter' ? 'after-hover' : 'stable', observed);
+        return observed;
       } catch (error) {
+        // Never replace a preparation/transport refusal with earlier geometry facts.
+        if (preparationPending) throw error;
         if (facts) throw new Error(`UI target read failed: ${phase}; facts=${JSON.stringify(facts)}`, { cause: error });
         throw error;
       }
     };
     let point = await readPoint(label);
+    timing?.start('postInitialOwner');
     options.assertOwnedRenderer();
-    step({ action: 'mouseMoved', label: 'hover ' + label, selector, target: point });
+    timing?.end('postInitialOwner');
+    step({ action: 'mouseMoved', label: 'hover ' + label, selector, target: point, geometryTrace });
+    timing?.start('hoverDispatch');
     await cdp.send('Input.dispatchMouseEvent', {
       type: 'mouseMoved',
       x: point.x,
       y: point.y,
     });
+    timing?.end('hoverDispatch');
     point = await readPoint(label + ' after pointer enter');
     // Async Host hydration can shift the DOM after hover. Check the original
     // target is stable before ONE physical click, never replay an uncertain click.
-    let stableSamples = 0;
-    for (let sample = 0; sample < 15 && stableSamples < 2; sample++) {
+    let stableSamples = 0, remainingPointSamples = 16;
+    // Frame-gated clicks reserve a post-owner read inside the same 16-sample budget.
+    const finalReads = readiness?.waitForRenderFrames ? 2 : 1;
+    while (remainingPointSamples > finalReads && stableSamples < 2) {
       await new Promise<void>((done) => setTimeout(done, 100));
+      remainingPointSamples--;
       const next = await readPoint(label + ' stable target');
       stableSamples =
         next.x === point.x && next.y === point.y && next.tag === point.tag
           ? stableSamples + 1
           : 0;
       point = next;
+      if (stableSamples !== 2) continue;
+      assert.equal(typeof point.x, 'number');
+      assert.equal(typeof point.y, 'number');
+      options.assertOwnedRenderer();
+      remainingPointSamples--;
+      assertReadDeadline();
+      if (readiness?.waitForRenderFrames) {
+        const observed = await cdp.evaluate(desktopAnimationFramesExpression(readDeadline - Date.now()));
+        options.assertOwnedRenderer();
+        assertReadDeadline();
+        assert.equal(observed, true, 'Original UI target render frames did not settle');
+        step({ observation: 'two original renderer frames before final target read', label });
+      }
+      if (prepareScroll) {
+        await prepareScroll();
+        options.assertOwnedRenderer();
+        assertReadDeadline();
+      }
+      for (let finalRead = 0; finalRead < finalReads; finalRead++) {
+        if (finalRead === 1) {
+          // The original final ownership census can let the renderer move. Reacquire
+          // before the one input, then fence ownership again; this is not atomic.
+          options.assertOwnedRenderer();
+          assertReadDeadline();
+          remainingPointSamples--;
+        }
+        let finalValue = await cdp.evaluate(expression);
+        // A null owner observation is still pending, unlike an explicit unavailable
+        // target or transport rejection. Re-read only this original expression.
+        while (readiness?.waitForFinalReadiness && finalValue === null && Date.now() < readDeadline) {
+          options.assertOwnedRenderer();
+          await new Promise<void>((done) => setTimeout(done, Math.min(100, readDeadline - Date.now())));
+          assertReadDeadline();
+          options.assertOwnedRenderer();
+          if (prepareScroll) {
+            await prepareScroll();
+            options.assertOwnedRenderer();
+            assertReadDeadline();
+          }
+          finalValue = await cdp.evaluate(expression);
+        }
+        if (finalRead === 1) options.assertOwnedRenderer();
+        assertReadDeadline();
+        const finalPoint = record(finalValue);
+        observeGeometry('final', finalPoint);
+        let resample = false;
+        try {
+          assert.notEqual(finalPoint.unavailableTarget, true, 'Original UI target unavailable after ownership check');
+          resample = remainingPointSamples >= 2 + finalReads &&
+            [point.x, point.y, finalPoint.x, finalPoint.y].every(value => typeof value === 'number' && Number.isFinite(value)) &&
+            finalPoint.tag === point.tag &&
+            (!Object.is(finalPoint.x, point.x) || !Object.is(finalPoint.y, point.y));
+          if (!resample) assert.deepEqual(
+            [finalPoint.x, finalPoint.y, finalPoint.tag],
+            [point.x, point.y, point.tag],
+            'Original UI target moved after ownership check'
+          );
+        } catch (error) {
+          try {
+            console.log(JSON.stringify({ kind: 'TEST_DESKTOP_CLICK_GEOMETRY', geometry: geometryTrace }));
+          } catch {
+            // The exact original final-target refusal remains authoritative.
+          }
+          throw error;
+        }
+        if (resample) {
+          options.assertOwnedRenderer();
+          point = finalPoint;
+          stableSamples = 0;
+          break;
+        }
+      }
     }
     assert.ok(stableSamples === 2, 'Original UI target did not settle before one click');
-    assert.equal(typeof point.x, 'number');
-    assert.equal(typeof point.y, 'number');
-    options.assertOwnedRenderer();
+    if (finalReads === 1) options.assertOwnedRenderer();
+    assertReadDeadline();
     step({
       action: 'mouseClick',
       label,
@@ -292,6 +574,7 @@ export function createDesktopUiControls(
       state: 'attempted',
     });
     // Never repeat a click after an uncertain response.
+    timing?.start('pressDispatch');
     await cdp.send('Input.dispatchMouseEvent', {
       type: 'mousePressed',
       x: point.x,
@@ -299,6 +582,8 @@ export function createDesktopUiControls(
       button: 'left',
       clickCount: 1,
     });
+    timing?.end('pressDispatch');
+    timing?.start('releaseDispatch');
     await cdp.send('Input.dispatchMouseEvent', {
       type: 'mouseReleased',
       x: point.x,
@@ -306,9 +591,11 @@ export function createDesktopUiControls(
       button: 'left',
       clickCount: 1,
     });
+    timing?.end('releaseDispatch');
   };
-  const click = (selector: string, label: string, text?: string): Promise<void> =>
-    clickExpression(target(selector, text), label, selector, text);
+  const click = (selector: string, label: string, text?: string, requiredContent?: string,
+    readiness?: { scrollBeforeClick?: ScrollBeforeClick }, timing?: DesktopActionTiming): Promise<void> =>
+    clickExpression(target(selector, text, requiredContent, finiteSourceCreate(selector, label, text)), label, selector, text, readiness, timing);
   const hoverExpression = async (expression: string, label: string): Promise<void> => {
     let previous: { x: number; y: number } | undefined, stable = 0;
     // Canonical effects can settle before their renderer layout. Sample the
@@ -330,13 +617,22 @@ export function createDesktopUiControls(
     await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: point.x, y: point.y });
   };
   const scrollTo = async (
-    selector: string, label: string, text?: string, maxWheelEvents = 12
+    selector: string, label: string, text?: string, maxWheelEvents = 12,
+    scrollOptions: { requireCenterHit?: boolean } = {},
+    preparation?: { deadline: number; remainingWheels: number }
   ): Promise<void> => {
     assert.ok(Number.isSafeInteger(maxWheelEvents) && maxWheelEvents >= 1 && maxWheelEvents <= 32);
+    const assertPreparation = (): void => {
+      if (!preparation) return;
+      options.assertOwnedRenderer();
+      if (Date.now() >= preparation.deadline)
+        throw new Error(`UI read timed out: ${label}; no mutation retry`);
+    };
     // Allow one final visibility read after the last wheel; never dispatch
     // an extra input event after reaching the TEST-only bounded budget.
     for (let attempt = 0; attempt <= maxWheelEvents; attempt++) {
       options.assertOwnedRenderer();
+      assertPreparation();
       const found = record(
         await waitRead(
           `(() => {
@@ -347,18 +643,38 @@ export function createDesktopUiControls(
         while(parent&&!(parent.scrollHeight>parent.clientHeight&&/auto|scroll/.test(getComputedStyle(parent).overflowY)))parent=parent.parentElement;
         const p=(parent??document.documentElement).getBoundingClientRect();
         const top=Math.max(0,p.top),bottom=Math.min(innerHeight,p.bottom);
-        if(bottom<=top||!r.width||!r.height)return null;
-        const x=Math.max(1,Math.min(innerWidth-1,p.x+p.width/2)),y=(top+bottom)/2;
-        return {visible:r.top>=top&&r.bottom<=bottom,x,y,delta:Math.max(-600,Math.min(600,r.y+r.height/2-y))};
+        if(!r.width||!r.height)return null;
+        // An offscreen inner clip still owns visibility; reveal it using an outer wheel.
+        let wheelRect=p;
+        if(bottom<=top){
+          let outer=parent?.parentElement;
+          while(outer){
+            if(outer.scrollHeight>outer.clientHeight&&/auto|scroll/.test(getComputedStyle(outer).overflowY)){
+              const rect=outer.getBoundingClientRect();
+              if(Math.min(innerHeight,rect.bottom)>Math.max(0,rect.top)){wheelRect=rect;break;}
+            }
+            outer=outer.parentElement;
+          }
+          if(!outer)wheelRect=document.documentElement.getBoundingClientRect();
+        }
+        const wheelTop=Math.max(0,wheelRect.top),wheelBottom=Math.min(innerHeight,wheelRect.bottom);
+        if(wheelBottom<=wheelTop)return null;
+        const x=Math.max(1,Math.min(innerWidth-1,wheelRect.x+wheelRect.width/2)),y=(wheelTop+wheelBottom)/2;
+        const centerY=bottom<=top?(p.top+p.bottom)/2:r.y+r.height/2;
+        const hit=${scrollOptions.requireCenterHit === true ? 'document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)' : 'e'};
+        return {visible:bottom>top&&r.top>=top&&r.bottom<=bottom&&Boolean(hit&&(hit===e||e.contains(hit))),x,y,delta:Math.max(-600,Math.min(600,centerY-y))};
       })()`,
-          label
+          label, preparation ? preparation.deadline - Date.now() : 30_000, Boolean, preparation
         )
       );
+      assertPreparation();
       if (found.visible === true) return;
-      if (attempt === maxWheelEvents) break;
+      if (attempt === maxWheelEvents || preparation?.remainingWheels === 0) break;
       assert.equal(typeof found.x, 'number');
       assert.equal(typeof found.y, 'number');
       assert.equal(typeof found.delta, 'number');
+      assertPreparation();
+      if (preparation) preparation.remainingWheels--;
       step({ action: 'mouseWheel', label, selector, deltaY: found.delta });
       await cdp.send('Input.dispatchMouseEvent', {
         type: 'mouseWheel',
@@ -367,7 +683,9 @@ export function createDesktopUiControls(
         deltaX: 0,
         deltaY: found.delta,
       });
+      assertPreparation();
       await new Promise<void>((resolve) => setTimeout(resolve, 100));
+      assertPreparation();
     }
     throw new Error(`UI scroll timed out: ${label}; no effect retry`);
   };
@@ -378,7 +696,8 @@ export function createDesktopUiControls(
     return true;
   })()`;
   // Subject span selection is exact, and the click targets its ordinary button.
-  const clickSidebar = async (subject: string): Promise<void> => {
+  const clickSidebar = async (subject: string, readiness?: { waitForRenderFrames: true },
+    timing?: DesktopActionTiming): Promise<void> => {
     await cdp.send('Page.bringToFront');
     // The dev renderer can expose its bridge while modules and the first Team
     // snapshot are still loading. Only this initial read gets a startup budget;
@@ -440,7 +759,7 @@ export function createDesktopUiControls(
         '({focused:document.hasFocus(),visibility:document.visibilityState,events:window.__TEST_desktopInputEvents})'
       ),
     });
-    await click('[role="dialog"] button', 'Open team', 'Open team');
+    await clickExpression(target('[role="dialog"] button', 'Open team'), 'Open team', '[role="dialog"] button', 'Open team', readiness, timing);
   };
   return { observeInput, waitRead, click, clickExpression, clickSidebar, scrollTo, hoverExpression };
 }

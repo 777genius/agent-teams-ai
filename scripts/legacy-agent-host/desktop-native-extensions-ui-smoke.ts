@@ -1,9 +1,11 @@
 import { desktopJsLiteral } from './desktop-ui-controls.ts';
 import assert from "node:assert/strict";
-import { readFile, readdir, writeFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
+import { readFile, readdir, realpath, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import { fileDigest } from "./desktop-backend-fixture.ts";
+import { digest, fileDigest } from "./desktop-backend-fixture.ts";
+import { processTable } from "./desktop-backend-observations.ts";
 import { createDesktopUiControls } from "./desktop-ui-controls.ts";
 import {
   extensionMcpName,
@@ -59,10 +61,18 @@ export async function runDesktopNativeExtensionsUiSmoke(
     ],
     steps,
   };
+  if (selected.execution === 'finite-protocol-peer') {
+    proof.scope = 'Existing Settings Advanced → Extensions; original Plugin and MCP mutations through the captured finite CLI protocol peer';
+    proof.execution = selected.execution;
+    proof.excluded = [...proof.excluded as string[], 'vendor CLI qualification', 'plugin download or execution', 'live MCP server connection'];
+    proof.publicNetwork = ['original Main official plugin catalog resolution; no vendor model or native CLI'];
+  }
   options.evidence[options.pluginPhase ? "nativeExtension" + (options.pluginPhase === "install" ? "Install" : "Uninstall") + "Ui" : "nativeExtensionsUi"] = proof;
   if (options.pluginPhase) proof.scope = "Original Plugins panel: one " + options.pluginPhase + " through the captured native CLI";
   const screenshots: string[] = [];
+  const screenshotHashes: Record<string, string> = {};
   proof.screenshots = screenshots;
+  if (selected.execution === 'finite-protocol-peer') proof.screenshotHashes = screenshotHashes;
   const screenshot = async (name: string) => {
     options.assertOwnedRenderer();
     const image = record(
@@ -78,6 +88,9 @@ export async function runDesktopNativeExtensionsUiSmoke(
       { mode: 0o600, flag: "wx" },
     );
     screenshots.push(name);
+    if (selected.execution === 'finite-protocol-peer') {
+      screenshotHashes[name] = await fileDigest(join(options.root, name));
+    }
   };
   const ui = createDesktopUiControls(cdp, {
     assertOwnedRenderer: options.assertOwnedRenderer,
@@ -249,10 +262,34 @@ export async function runDesktopNativeExtensionsUiSmoke(
     `Array.from(document.querySelectorAll('[role="dialog"] button')).some(e=>e.textContent.trim()==='Uninstall'&&!e.disabled)`,
     "native plugin installed control",
   );
-  const nativePluginList = extensionNativeCli(selected.profile, [
-    "plugin",
-    "list",
-  ]);
+  let nativePluginList: string;
+  if (selected.execution === 'finite-protocol-peer') {
+    assert.equal(process.env.LEGACY_DESKTOP_BACKEND_GO, '1');
+    const app = record(options.evidence.app);
+    const originalApp = processTable().find(row => row.pid === app.pid);
+    assert.ok(originalApp);
+    assert.equal(originalApp.ppid, process.pid);
+    assert.equal(originalApp.pgid, app.processGroup);
+    assert.equal(await realpath(selected.profile.executable.path), selected.profile.executable.path);
+    assert.equal(await fileDigest(selected.profile.executable.path), selected.profile.executable.sha256);
+    const command = ['plugin', 'list'];
+    const result = spawnSync(selected.profile.executable.path, command, {
+      cwd: selected.profile.cwd, env: { ...selected.profile.environment },
+      timeout: 180_000, encoding: 'utf8', maxBuffer: 512 * 1024,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    proof.finitePluginInventoryRead = {
+      command, executable: selected.profile.executable, pid: result.pid,
+      parentPid: process.pid, app: originalApp, exitCode: result.status,
+      signal: result.signal, outputSha256: digest(result.stdout ?? ''),
+    };
+    assert.ifError(result.error);
+    assert.equal(result.status, 0); assert.equal(result.signal, null);
+    assert.ok(Number.isSafeInteger(result.pid) && result.pid > 1);
+    assert.equal(await fileDigest(selected.profile.executable.path), selected.profile.executable.sha256);
+    nativePluginList = result.stdout;
+    assert.equal(nativePluginList, 'Installed plugins:\n  ' + extensionPlugin + ' (user)\n');
+  } else nativePluginList = extensionNativeCli(selected.profile, ['plugin', 'list']);
   assert.ok(
     nativePluginList.includes("frontend-design"),
     "actual CLI lists UI-installed plugin",
@@ -283,8 +320,10 @@ export async function runDesktopNativeExtensionsUiSmoke(
     "close original Plugin detail",
     "Close",
   );
-  if (options.pluginPhase === "uninstall") {
+  if (selected.execution === 'finite-protocol-peer' || options.pluginPhase === "uninstall") {
     await screenshot("native-extensions-plugin-uninstalled.png");
+  }
+  if (options.pluginPhase === "uninstall") {
     await completePluginPhase(2);
     return;
   }

@@ -1,9 +1,11 @@
 import { z } from 'zod';
 import { createQualifiedDarwinProcessApi } from '../process/DarwinRegisteredProcess.js';
-import { readPackagedProcessArtifact } from '../process/readPackagedProcessArtifact.js';
+import { createQualifiedLinuxProcessApi } from '../process/LinuxRegisteredProcess.js';
+import { readPackagedLinuxProcessArtifact, readPackagedProcessArtifact } from '../process/readPackagedProcessArtifact.js';
+import type { RegistrarBinding, RegisteredProcessNative, RegisteredProcessRootSource } from '../process/registeredProcessContracts.js';
 
 /** Private captured packaging selection only. No renderer/IPC/env/argv selection. */
-export const processCustodyProfileSchema = z
+const posixCustody = z
   .object({
     directory: z
       .string()
@@ -13,12 +15,25 @@ export const processCustodyProfileSchema = z
     manifestSha256: z.string().regex(/^[a-f0-9]{64}$/),
   })
   .strict();
-export type ProcessCustody = ReturnType<typeof createQualifiedDarwinProcessApi>;
+/** Private delivery opt-in for the first qualified ordinary Claude bridge only. */
+export const processCustodyProfileSchema = z.union([
+  posixCustody,
+  z.object({ kind: z.literal('main-windows-v1') }).strict(),
+]);
+export type ProcessCustody = Required<RegisteredProcessRootSource> &
+  Pick<RegisteredProcessNative, 'observe' | 'signal' | 'acknowledgeAbsence'> & {
+    /** Trusted lifecycle cleanup after the exact Team's durable purge. */
+    releaseTeam?(binding: Pick<RegistrarBinding, 'backendId' | 'teamId'>): boolean;
+  };
 /** Loads the exact prebuilt tuple once. Absence never upgrades an unqualified PID. */
 export function createProcessCustody(
   selection: z.infer<typeof processCustodyProfileSchema> | undefined
 ): ProcessCustody | undefined {
-  return selection
-    ? createQualifiedDarwinProcessApi(readPackagedProcessArtifact(selection))
-    : undefined;
+  if (!selection) return undefined;
+  if ('kind' in selection) {
+    if (process.platform !== 'win32') throw new Error('Windows Main custody unavailable');
+    return undefined; // Main capabilities are not a POSIX captureRoot source.
+  }
+  if (process.platform === 'linux') return createQualifiedLinuxProcessApi(readPackagedLinuxProcessArtifact(selection));
+  return createQualifiedDarwinProcessApi(readPackagedProcessArtifact(selection));
 }

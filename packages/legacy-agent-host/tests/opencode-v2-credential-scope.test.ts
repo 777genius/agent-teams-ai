@@ -11,7 +11,7 @@ import { createOpenCodeV2OwnedSessionClient } from '@agent-teams/provider-implem
 import { captureOpenCodeV2SessionCredential } from '../dist/adapters/providers/OpenCodeV2SessionCredential.js';
 import { captureOpenCodeConfigurationSource } from '../dist/adapters/providers/OpenCodeConfigurationSource.js';
 import { captureOpenCodeV2Configuration } from '../dist/adapters/providers/OpenCodeV2CapturedConfiguration.js';
-import { OpenCodeV2CredentialScope } from '../dist/adapters/providers/OpenCodeV2CredentialScope.js';
+import { bindOpenCodeV2ConfigurationKey, OpenCodeV2CredentialScope } from '../dist/adapters/providers/OpenCodeV2CredentialScope.js';
 import { AcceptedOpenCodeV2FileKey, createOpenCodeV2FileMaterialization,
   openCodeV2SelectedSourceReference, selectedFilePaths,
 } from '../dist/adapters/providers/OpenCodeV2SelectedFileKey.js';
@@ -34,6 +34,62 @@ function fixture() {
     cleanup: () => rmSync(root, { force: true, recursive: true }),
   };
 }
+
+test('original captured credential absence rejects later keys, revoked owners and throwing callbacks', async t => {
+  const f = fixture(); t.after(f.cleanup);
+  let current = true;
+  const absent = captureOpenCodeV2SessionCredential(f.profile, 'TEST-provider', () => current);
+  assert.equal(absent.isAbsent(), true);
+  f.write({ 'TEST-provider': { type: 'api', key: 'TEST-later-key' } });
+  assert.equal(absent.isAbsent(), false, 'original absent capture cannot accept a newly present key');
+  assert.equal(captureOpenCodeV2SessionCredential(f.profile, 'TEST-provider', () => current).isAbsent(), false);
+  f.write({});
+  const revoked = captureOpenCodeV2SessionCredential(f.profile, 'TEST-provider', () => current);
+  current = false; assert.equal(revoked.isAbsent(), false);
+  const originalFailure = new Error('TEST original owner callback'); let throws = false;
+  const owner = () => { if (throws) throw originalFailure; return true; };
+  const key = bindOpenCodeV2ConfigurationKey(f.scope().capture(), owner);
+  const bound = captureOpenCodeV2SessionCredential(f.profile, 'TEST-provider', owner, key);
+  assert.equal(bound.isAbsent(), true);
+  throws = true; assert.equal(bound.isAbsent(), false, 'only new reuse eligibility fails closed');
+  await assert.rejects(bound.prepare({} as Parameters<typeof bound.prepare>[0],
+    {} as Parameters<typeof bound.prepare>[1]), error => error === originalFailure,
+  'original preparation failure is not swallowed by the compatibility predicate');
+});
+
+test('V2 literal configured key remains fresh only while original auth and owner stay unchanged', t => {
+  const f = fixture(); t.after(f.cleanup);
+  const cwd = join(f.root, 'TEST-config-only');
+  mkdirSync(cwd, { mode: 0o700 });
+  writeFileSync(join(cwd, 'opencode.json'), JSON.stringify({ provider: { 'TEST-provider': {
+    npm: '@ai-sdk/openai-compatible',
+    options: { baseURL: 'http://127.0.0.1:12345/v1', apiKey: 'TEST-config-only-key' },
+  } } }), { mode: 0o600 });
+  const profile: OpenCodeManagementProfile = {
+    ...f.profile, cwd, provider: 'opencode',
+    environment: { ...f.profile.environment, XDG_CONFIG_HOME: join(f.home, '.config') },
+    profileId: 'TEST-config-only', configRevision: 'TEST-config-only-revision',
+    executable: { path: process.execPath, sha256: 'a'.repeat(64) },
+    endpoint: 'http://127.0.0.1:12345', timeoutMs: 5000,
+    nativeGeneration: 'v2', protocolRevision: '2.1.4',
+    nativeModel: { providerId: 'TEST-provider', modelId: 'TEST-model' },
+    embedded: { version: '2.1.4', directory: f.root, manifestSha256: 'b'.repeat(64),
+      platform: process.platform === 'win32' ? 'win32' : process.platform === 'darwin' ? 'darwin' : 'linux',
+      arch: process.arch === 'arm64' ? 'arm64' : 'x64', externalDirectory: 'deny' },
+  };
+  profile.embedded!.configurationSource = captureOpenCodeConfigurationSource(profile).reference;
+  let ownerCurrent = true;
+  const captured = captureOpenCodeV2Configuration(profile,
+    { providerId: 'TEST-provider', modelId: 'TEST-model' }, () => ownerCurrent);
+  assert.ok(captured.key, 'configured literal must bind the original auth source');
+  assert.equal(captured.isCurrent(), true);
+  f.write({ 'TEST-provider': { type: 'api', key: 'TEST-rotated-foreign-key' } });
+  assert.equal(captured.isCurrent(), false, 'new auth bytes revoke original configuration');
+  f.write({});
+  assert.equal(captured.isCurrent(), true, 'restored original source is current');
+  ownerCurrent = false;
+  assert.equal(captured.isCurrent(), false, 'revoked owner is never hidden by the fast path');
+});
 
 test('V2 key publication survives a fresh scope, preserves foreign credentials and only rolls back its own entry', async t => {
   const f = fixture(); t.after(f.cleanup);
@@ -173,6 +229,7 @@ test('V2 key publication survives a fresh scope, preserves foreign credentials a
         { providerId: 'TEST-provider', modelId: 'TEST-model' }, () => true) : undefined;
       const prepared = captureOpenCodeV2SessionCredential(configProfile ?? f.profile, 'TEST-provider',
         originalConfiguration?.isCurrent ?? (() => true), originalConfiguration?.key);
+      assert.equal(prepared.isAbsent(), false, 'original stored/config key never grants absent-credential reuse');
       const original = prepared.prepare(config, owner);
       assert.equal(prepared.prepare(config, owner), original, 'same original pending Promise');
       if (accepted) {
@@ -185,7 +242,8 @@ test('V2 key publication survives a fresh scope, preserves foreign credentials a
         await assert.rejects(original, { code });
         assert.equal(prepared.prepare(config, owner), original, 'refusal cannot retry native preparation');
       }
-      const catalog = ['GET /api/provider', 'GET /api/model', 'GET /api/model/default'];
+      // The pinned SDK awaits native model activation before reading the provider snapshot.
+      const catalog = ['GET /api/model', 'GET /api/provider', 'GET /api/model/default'];
       const selection = explicit ? catalog : [...catalog, ...catalog, 'GET /api/integration'];
       const keyRead = 'GET /api/integration/' + integrationId;
       assert.deepEqual(requests, [...selection,
@@ -319,6 +377,7 @@ test('V2 key publication survives a fresh scope, preserves foreign credentials a
         signal: t.signal, deadline: Date.now() + 5000, readPassword: () => 'TEST-server-password' };
       owner = createOpenCodeV2OwnedSessionClient({ ...transport, nativeSessionId: 'ses_TEST' });
       const prepared = captureOpenCodeV2SessionCredential(profile, selection.providerId, configuration.isCurrent, undefined, source);
+      assert.equal(prepared.isAbsent(), false, 'original selected file never grants absent-credential reuse');
       type Binding = NonNullable<Parameters<typeof prepared.prepare>[3]>;
       const originalBinding: Binding = id => {
         assert.equal(id, selection.providerId);
@@ -337,8 +396,8 @@ test('V2 key publication survives a fresh scope, preserves foreign credentials a
         const result = await original; assert.ok(result);
         assert.equal(result.credentialId, 'cred_TEST'); assert.equal(result.scopeDigest, prepared.fileProof()?.scopeDigest);
       }
-      const selectionCalls = ['GET /api/provider', 'GET /api/model', 'GET /api/model/default',
-        'GET /api/provider', 'GET /api/model', 'GET /api/model/default', 'GET /api/integration'];
+      const selectionCalls = ['GET /api/model', 'GET /api/provider', 'GET /api/model/default',
+        'GET /api/model', 'GET /api/provider', 'GET /api/model/default', 'GET /api/integration'];
       const keyRead = 'GET /api/integration/TEST-provider';
       assert.deepEqual(requests, [...selectionCalls, keyRead, 'POST /api/integration/TEST-provider/connect/key', ...(success ? [keyRead] : [])]);
       assert.equal(materializations, 1); assert.equal(connected, true); assert.deepEqual(failures, []);
@@ -510,7 +569,7 @@ test('V2 key publication survives a fresh scope, preserves foreign credentials a
                 : mode === 'form' ? 'native_key_existing_or_unsupported' : 'held' });
           }
           const before = ['GET /api/info', 'GET /api/plugin', 'GET /api/permission/saved', 'GET /api/mcp',
-            'GET /api/provider', 'GET /api/model', 'GET /api/model/default'];
+            'GET /api/model', 'GET /api/provider', 'GET /api/model/default'];
           const directory = malformed ? before : [...before, 'GET /api/integration'];
           const keyRead = 'GET /api/integration/' + integrationId;
           assert.deepEqual(requests.slice(start), [...directory, ...(kind === 'key' && accepted
@@ -579,4 +638,36 @@ test('captured directories, symlinks and revoked owner cannot change the credent
     assert.throws(() => pending.publish(), { code: 'held' }, mode);
     assert.equal(readFileSync(f.file, 'utf8'), '{}');
   }
+});
+
+
+test('an explicit missing native integration never redirects a captured key to a same-ID integration', async t => {
+  const f = fixture(); t.after(f.cleanup);
+  f.write({ 'TEST-provider': { type: 'api', key: 'TEST-captured-private-key' } });
+  const credential = captureOpenCodeV2SessionCredential({
+    environment: { HOME: f.home, XDG_DATA_HOME: f.data }, accountBinding: 'TEST-account',
+  }, 'TEST-provider', () => true);
+  let directoryReads = 0;
+  const owner = {
+    readCatalog: async () => ({ provider: { id: 'TEST-provider', name: 'TEST-provider',
+      activation: 'enabled', integrationId: 'TEST-explicit-missing' }, defaultModel: null, models: [] }),
+    readDirectory: async () => { directoryReads++; return {
+      providers: [], models: [], defaultModel: null,
+      integrations: [{ id: 'TEST-provider', name: 'TEST-provider', plainKey: true }],
+    }; },
+  } as unknown as Parameters<typeof credential.prepare>[1];
+  const requests: { method: string; path: string }[] = [];
+  await assert.rejects(credential.prepare({
+    endpoint: 'http://127.0.0.1:19332', directory: f.root, version: '2.1.4',
+    deadline: Date.now() + 5000, readPassword: () => 'TEST-owned-native-password',
+    fetchImpl: async input => {
+      assert.ok(input instanceof Request);
+      requests.push({ method: input.method, path: new URL(input.url).pathname });
+      return new Response('{}', { status: 404, headers: { 'content-type': 'application/json' } });
+    },
+  }, owner));
+  assert.equal(directoryReads, 0, 'an explicit link cannot be replaced by implicit ID matching');
+  assert.deepEqual(requests, [{ method: 'GET', path: '/api/integration/TEST-explicit-missing' }]);
+  assert.deepEqual(JSON.parse(readFileSync(f.file, 'utf8')),
+    { 'TEST-provider': { type: 'api', key: 'TEST-captured-private-key' } });
 });

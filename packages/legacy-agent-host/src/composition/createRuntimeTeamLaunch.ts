@@ -1,4 +1,5 @@
-import { captureRuntimeControlAuthority } from './runtimeControlAuthority.js';
+import { captureDefaultRuntimeAllocationAuthority, bindDefaultFreshAllocationAuthority } from './runtimeControlAuthority.js';
+import { captureTeamAccountRead } from './captureTeamAccountRead.js';
 import { createCapturedTeamLaunch, memberInitialInstructions } from './TeamLaunchComposition.js';
 import { RuntimeOwnerError } from '../runtime/contracts.js';
 import { runtimeDigest } from '../runtime/identity.js';
@@ -61,26 +62,23 @@ export function createRuntimeTeamLaunch(options: {
       assertModelReadiness(memberId) {
         const entry = entries.find(candidate => candidate.profile.memberId === memberId);
         if (!entry || entry.profile.provider !== 'opencode') return;
+        const assertCurrent = () => {
+          options.assertWriter();
+          if (options.isSealed() || !options.isCurrent(entry)) throw new RuntimeOwnerError('hold');
+        };
         inspectMemberModelReadiness({ ...(options.modelReadiness ? { management: options.modelReadiness } : {}),
-          launch, entry, hostIncarnation: options.hostIncarnation,
-          assertCurrent: () => {
-            options.assertWriter();
-            if (options.isSealed() || !options.isCurrent(entry)) throw new RuntimeOwnerError('hold');
-          } });
+          launch, entry, hostIncarnation: options.hostIncarnation, assertCurrent,
+          withAccountRead: captureTeamAccountRead({ entry, principalId: options.principalId, assertCurrent }) });
       },
       captureAuthority(memberId) {
         const entry = entries.find((candidate) => candidate.profile.memberId === memberId);
         if (!entry) throw new RuntimeOwnerError('invalid');
-        const captured = captureRuntimeControlAuthority({
-          entry,
+        return captureDefaultRuntimeAllocationAuthority({
+          entry, team,
           principalId: options.principalId,
           assertWriter: options.assertWriter,
           isSealed: options.isSealed,
         });
-        return () => {
-          team.owner.assertExecutionAllowed(options.principalId);
-          captured();
-        };
       },
       read(memberId) {
         const entry = entries.find((candidate) => candidate.profile.memberId === memberId);
@@ -131,7 +129,7 @@ export function createRuntimeTeamLaunch(options: {
                     )
                   : runtime.openSession(
                       { binding: entry.binding, config: entry.config },
-                      assertAuthority
+                      assertAuthority && bindDefaultFreshAllocationAuthority(assertAuthority, entry)
                     );
               })()
         );

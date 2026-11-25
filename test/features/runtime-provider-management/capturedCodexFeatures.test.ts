@@ -219,3 +219,16 @@ it('automatic quota refresh remains a captured read and does not silently force 
     includeRateLimits: true,
   });
 });
+
+it('preserves nullable managed email and the existing unknown-plan projection without extra account fields', async () => {
+  const f = fixture();
+  for (const email of ['test@example.invalid', null]) {
+    Object.assign(f.value, { account: { type: 'chatgpt', email, planType: 'sci_plus' } });
+    expect(await f.accountFeature.getSnapshot()).toMatchObject({
+      managedAccount: { type: 'chatgpt', email, planType: 'unknown' },
+      effectiveAuthMode: 'chatgpt', launchAllowed: true,
+    });
+  }
+  Object.assign(f.value.account!, { workspaceName: 'TEST-private-workspace' });
+  await expect(f.accountFeature.getSnapshot()).rejects.toThrow('unavailable');
+});

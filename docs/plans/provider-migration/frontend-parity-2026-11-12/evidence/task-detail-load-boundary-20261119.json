@@ -1,0 +1,1234 @@
+{
+  "schemaVersion": 1,
+  "kind": "task-detail-public-shell-lazy-load-boundary",
+  "sourceBase": "63927aecd95c814f66db23d7bd4aef6975110168",
+  "updatedAt": "2026-11-19T21:24:20.317635+00:00",
+  "status": "LOCAL_IMPLEMENTATION_AND_INDEPENDENT_REVIEW_PASS_ORIGINAL_GUI_PENDING",
+  "scope": "Five explicit named exports from original modules; four import specifier changes; exact public shell exception in both lint configs; feature README; source-reachability regression; original Desktop supplementary source pin.",
+  "plan": {
+    "path": "cross-team-task-detail-shell-r1-plan-v2.json",
+    "bytes": 13135,
+    "sha256": "a791b1fc9b1f13cbcfa07ab77769bc5f1244eca720832778aa7e207286cb9548",
+    "record": {
+      "kind": "cross-team-task-detail-shell-public-entrypoint-r1-plan",
+      "status": "locked proposal; source implementation awaits parent approval",
+      "createdAt": "2026-11-19T21:01:33.499152+00:00",
+      "sourceHead": "63927aecd95c814f66db23d7bd4aef6975110168",
+      "scope": "Repair a proven static import edge that bypasses the existing lazy TaskDetail boundary; no claim that this caused the original Chromium ERR_INSUFFICIENT_RESOURCES.",
+      "evidence": [
+        {
+          "path": "/workspace/scratch/f45fed8e9067/audit1192/cross-team-3f78524-post-proof-source-audit.json",
+          "sha256": "1766b031907f989b08a2c0737ed7b3276df8f1ff18db641807cfd3d6d9f23ef5",
+          "bytes": 15797
+        },
+        {
+          "path": "/workspace/scratch/f45fed8e9067/audit1192/cross-team-3f78524-renderer-static-graph.json",
+          "sha256": "47d8a5143c8e461b1b1dc98d1114be72cba41c397269bdb63c731f9f5389cf8a",
+          "bytes": 26318
+        },
+        {
+          "path": "/workspace/scratch/f45fed8e9067/audit1192/cross-team-task-detail-shell-split-counterfactual.json",
+          "sha256": "10bb86cf0a2a9f7e225c44eb1baf2d39ed4b7d8d4c21d71afcff749b98e39dd3",
+          "bytes": 10622
+        }
+      ],
+      "ownership": {
+        "coexistence_audit": [
+          "src/renderer/components/layout/TabbedLayout.tsx",
+          "src/renderer/components/layout/SortableTab.tsx",
+          "src/renderer/components/chat/viewers/FileLink.tsx",
+          "src/renderer/components/chat/viewers/useResolvedViewerTeamContext.ts",
+          "eslint.config.js",
+          "src/features/team-task-detail/renderer/shell/index.ts",
+          "src/features/team-task-detail/README.md",
+          "test/features/team-task-detail/renderer/taskDetailLoadBoundary.test.ts",
+          "eslint.fast.config.js"
+        ],
+        "root": [
+          "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts"
+        ],
+        "noOverlap": "Parent owns Linux ModelProbe test changes, integration, refs and publication. No other source path is authorized by this plan."
+      },
+      "preimages": [
+        {
+          "path": "src/renderer/components/layout/TabbedLayout.tsx",
+          "sha256": "e3992267774a5e894ac3a4ca44e18f279348a79a97b02d7c6046b971232fcb44",
+          "bytes": 6925
+        },
+        {
+          "path": "src/renderer/components/layout/SortableTab.tsx",
+          "sha256": "6b82dd9d5f1e5902ed36edae7226b3ec09dbb636f67ac9e39eb070e715b43d6c",
+          "bytes": 8334
+        },
+        {
+          "path": "src/renderer/components/chat/viewers/FileLink.tsx",
+          "sha256": "6ddec8072098f2a8031a04b4a9948d4266b7779a403850831a048b0f585335ea",
+          "bytes": 6416
+        },
+        {
+          "path": "src/renderer/components/chat/viewers/useResolvedViewerTeamContext.ts",
+          "sha256": "0112c20758ea59222136571dd0a05572f5d52d43cf1ae8dd325c4c0ff27ee0bc",
+          "bytes": 1638
+        },
+        {
+          "path": "eslint.config.js",
+          "sha256": "8c28e3af29eca6659bcef7988af3a3de75101f7960b194f101215172968697a0",
+          "bytes": 38025
+        },
+        {
+          "path": "eslint.fast.config.js",
+          "sha256": "bf8a72be9244d217ad2e5687bfda735642592430924307bd9ba94666487f1335",
+          "bytes": 7350
+        }
+      ],
+      "newPaths": [
+        {
+          "path": "src/features/team-task-detail/renderer/shell/index.ts",
+          "exists": false
+        },
+        {
+          "path": "src/features/team-task-detail/README.md",
+          "exists": false
+        },
+        {
+          "path": "test/features/team-task-detail/renderer/taskDetailLoadBoundary.test.ts",
+          "exists": false
+        }
+      ],
+      "protectedPreimages": [
+        {
+          "path": "src/features/team-task-detail/renderer/index.ts",
+          "sha256": "39c80ec086b78e3fe6dc9b8d942a3a34f7b4bc78cfeebb47b7cd00889394b039",
+          "bytes": 1049
+        },
+        {
+          "path": "src/renderer/components/layout/PaneContent.tsx",
+          "sha256": "584d4eeaa5ba5191a3097ffae1905bb981676d796ff474f59b5b440b47408e02",
+          "bytes": 7986
+        },
+        {
+          "path": "src/renderer/components/layout/GlobalTaskDetailDialogSlot.tsx",
+          "sha256": "3644dbe07212e4158e9832e1ef8eae37f4c53e2960cde8bc796090ceb604daff",
+          "bytes": 1260
+        },
+        {
+          "path": "src/features/team-task-detail/renderer/context/TaskDetailFileLinkContext.tsx",
+          "sha256": "232e4b1abdd0f158ecf89da836e793c324b91f596984ef4429cbcc4069ccd25e",
+          "bytes": 1421
+        },
+        {
+          "path": "test/renderer/components/chat/viewers/MarkdownViewer.test.tsx",
+          "sha256": "443f0bbe1f276b31f32081b1c2e87b6d8436f3e1386d83899bbddcb722163b96",
+          "bytes": 8321
+        }
+      ],
+      "rootPin": {
+        "preimage": {
+          "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+          "sha256": "c08478d72877785a4be157c98fb1dfb9930b879762b6c336f572c4fa35942d40",
+          "bytes": 26529
+        },
+        "addExactlyOneLiteral": "src/features/team-task-detail/renderer/shell/index.ts",
+        "adjacentTo": "src/features/team-task-detail/renderer/adapters/TaskDetailReadCoordinator.tsx"
+      },
+      "exactChange": {
+        "publicEntrypoint": "src/features/team-task-detail/renderer/shell/index.ts",
+        "content": "export { TaskDetailEditorRouteFeedback } from '../adapters/TaskDetailEditorRouteFeedback';\nexport { TaskDetailReadCoordinator } from '../adapters/TaskDetailReadCoordinator';\nexport { TaskDetailReviewRouteFeedback } from '../adapters/TaskDetailReviewRouteFeedback';\nexport { useTaskDetailTabLabel } from '../hooks/useTaskDetailTabLabel';\nexport { useTaskDetailFileLink } from '../context/TaskDetailFileLinkContext';\n",
+        "consumerImports": [
+          {
+            "path": "src/renderer/components/layout/TabbedLayout.tsx",
+            "from": "@features/team-task-detail/renderer",
+            "to": "@features/team-task-detail/renderer/shell",
+            "change": "One module specifier only; preserve existing named imports and surrounding implementation."
+          },
+          {
+            "path": "src/renderer/components/layout/SortableTab.tsx",
+            "from": "@features/team-task-detail/renderer",
+            "to": "@features/team-task-detail/renderer/shell",
+            "change": "One module specifier only; preserve existing named imports and surrounding implementation."
+          },
+          {
+            "path": "src/renderer/components/chat/viewers/FileLink.tsx",
+            "from": "@features/team-task-detail/renderer",
+            "to": "@features/team-task-detail/renderer/shell",
+            "change": "One module specifier only; preserve existing named imports and surrounding implementation."
+          },
+          {
+            "path": "src/renderer/components/chat/viewers/useResolvedViewerTeamContext.ts",
+            "from": "@features/team-task-detail/renderer",
+            "to": "@features/team-task-detail/renderer/shell",
+            "change": "One module specifier only; preserve existing named imports and surrounding implementation."
+          }
+        ],
+        "lint": {
+          "rule": "no-restricted-imports in each independent full and fast configuration",
+          "addPatterns": [
+            "!@features/team-task-detail/renderer/shell",
+            "@features/team-task-detail/renderer/shell/**"
+          ],
+          "preserve": "All existing patterns, review-flow/http exception, rule scope and severity. The exact documented entrypoint is allowed; its descendants remain forbidden.",
+          "configurations": [
+            {
+              "path": "eslint.config.js",
+              "block": "feature-public-entrypoints-only"
+            },
+            {
+              "path": "eslint.fast.config.js",
+              "block": "fast-feature-entrypoints"
+            }
+          ]
+        },
+        "documentation": {
+          "path": "src/features/team-task-detail/README.md",
+          "contentScope": "Document the existing full renderer entrypoint plus the five-export shell public entrypoint, intended eager versus on-demand use, shared original context and unchanged ownership. Reference existing feature guidance. No global architecture standard edits, root facade, or broad alias exception."
+        }
+      },
+      "compatibility": [
+        "The existing full renderer/index.ts remains byte-identical, including every existing export.",
+        "The five named shell exports refer to original modules; no copied component, hook, store, cache, provider or React context.",
+        "PaneContent TaskDetailTab lazy import and GlobalTaskDetailDialogSlot lazy/preload/fallback/error behavior remain byte-identical.",
+        "Startup coordinator and recovery feedback remain eagerly reachable; their lifecycle, requests and subscriptions are unchanged.",
+        "File-link consumers and full detail provider share the exact original TaskDetailFileLinkContext module. Existing MarkdownViewer scoped-context UI regression runs against the real shell; no speculative new mock.",
+        "No native scenario actions, reloads, caches, cutoffs, deadlines, diagnostic layers or acceptance conditions change."
+      ],
+      "sourceGraphCounterfactual": {
+        "before": {
+          "localFiles": 924,
+          "scripts": 900,
+          "edges": 2473
+        },
+        "after": {
+          "localFiles": 819,
+          "scripts": 796,
+          "edges": 2050
+        },
+        "removedFiles": 106,
+        "addedFiles": 1,
+        "heavyLeavesNoLongerEager": [
+          "TaskDetailPage",
+          "TaskDetailTab",
+          "TaskDetailContent",
+          "TaskDetailBody",
+          "TaskDetailWorkflow",
+          "TaskDetailCommentImages",
+          "TiptapEditor",
+          "TaskCommentsSection",
+          "TaskCommentInput",
+          "TaskAttachments",
+          "task activity/member log views"
+        ],
+        "stillEager": "MarkdownViewer remains reachable through the provisioning loading UI.",
+        "limits": "Read-only conservative source AST reachability; explicit type-only edges omitted, some normally declared type-only usages may overcount. Local workspace import exports included, other bare packages not traversed. Not a Vite request count, heap/resource measurement, speed claim or proof of original native failure cause."
+      },
+      "regression": {
+        "path": "test/features/team-task-detail/renderer/taskDetailLoadBoundary.test.ts",
+        "method": "Node-environment Vitest; parse actual source import/export declarations and literal dynamic imports without evaluating app/native modules. Resolve local relative and configured aliases; exclude explicit type-only declarations/specifiers from static edges; dynamic edges remain separately observable. Conservative source-graph contract, not Vite proof.",
+        "eagerAssertions": "From actual src/renderer/main.tsx, heavy full TaskDetail barrel, content/body/page/tab and TiptapEditor are unreachable through value import/re-export edges; existing coordinator, route feedback, tab label and shared file-link context remain reachable. Emit an actual eager chain for a failure. No exact node-count assertion.",
+        "onDemandAssertions": "Actual existing PaneContent TaskDetail lazy edge and GlobalTaskDetailDialogSlot dialog edge remain; following each designated on-demand edge reaches original detail content (and TaskDetailTab for tab route), so passing cannot be obtained by deleting feature availability.",
+        "red": "Add regression test first and run only that test against original five existing source preimages, before creating shell or changing imports/lint. Archive original graph failure and hashes; expected failure is heavy eager reachability, not absent new file.",
+        "green": "Apply agreed source slice, rerun identical regression and affected existing UI suites once. Keep test source unchanged between RED and GREEN unless a concrete test defect requires recorded correction.",
+        "existingUiTests": [
+          "src/renderer/components/layout/GlobalTaskDetailDialogSlot.test.tsx",
+          "test/features/team-task-detail/renderer/taskDetailSession.integration.test.tsx",
+          "test/renderer/components/team/dialogs/TaskDetailDialog.test.ts",
+          "test/renderer/components/team/dialogs/GlobalTaskDetailDialog.test.ts",
+          "test/renderer/components/chat/viewers/MarkdownViewer.test.tsx",
+          "test/renderer/components/fileLink.test.ts"
+        ]
+      },
+      "validation": [
+        "Parent/reviewer R1 acceptance before source/test edits.",
+        "One original-source RED with the new graph regression; archive log, source preimages and exact test bytes.",
+        "One GREEN invocation for graph plus six affected existing UI files; no GUI, native or CI execution.",
+        "Canonical TS7 scoped type check for changed source/test closure using root tsconfig; coordinate with parent to avoid concurrent compiler pressure. No legacy compiler.",
+        "Scoped ESLint on changed sources/test with both eslint.config.js and eslint.fast.config.js; actual-config lintText positive acceptance of exact shell and negative rejection of shell descendants and unrelated feature internals must pass independently for each configuration.",
+        "Source-size and diff review for only agreed paths, protected byte equality and supplementary literal pin; independent R2 before parent publication."
+      ],
+      "deferred": "Original native cross-team cause and subsequent proof/cleanup debt remain unresolved; this slice qualifies only the intended source load boundary and affected controlled UI behavior.",
+      "revision": 2,
+      "supersedes": {
+        "path": "/workspace/scratch/f45fed8e9067/audit1192/cross-team-task-detail-shell-r1-plan.json",
+        "sha256": "642f0404ff559e4ef4c95d10aaf420101380859fdb166943bc06f712ce5d2891",
+        "reason": "Root R1 finding: independent fast-feature-entrypoints lint block also requires the exact public subentrypoint exception."
+      }
+    }
+  },
+  "independentR1": {
+    "path": "cross-team-task-detail-shell-root-r1.json",
+    "bytes": 2857,
+    "sha256": "db0ab92969f4d5ecb14e3165bdf750d7a34e20668e7935038b056e6aceeec67c",
+    "record": {
+      "kind": "root-independent-R1-task-detail-load-boundary",
+      "recordedAt": "2026-11-19T21:03:22.793257+00:00",
+      "sourceHead": "63927aecd95c814f66db23d7bd4aef6975110168",
+      "planSha256": "a791b1fc9b1f13cbcfa07ab77769bc5f1244eca720832778aa7e207286cb9548",
+      "reviewer": "/root",
+      "author": "/root/coexistence_audit",
+      "result": "PASS",
+      "resolvedFinding": "Both actual full and fast lint configurations own independent public-entrypoint restrictions; v2 now updates and verifies the same exact public shell allow and descendant deny in each.",
+      "approvedAgentPaths": [
+        "src/renderer/components/layout/TabbedLayout.tsx",
+        "src/renderer/components/layout/SortableTab.tsx",
+        "src/renderer/components/chat/viewers/FileLink.tsx",
+        "src/renderer/components/chat/viewers/useResolvedViewerTeamContext.ts",
+        "eslint.config.js",
+        "src/features/team-task-detail/renderer/shell/index.ts",
+        "src/features/team-task-detail/README.md",
+        "test/features/team-task-detail/renderer/taskDetailLoadBoundary.test.ts",
+        "eslint.fast.config.js"
+      ],
+      "rootOwnedPin": {
+        "preimage": {
+          "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+          "sha256": "c08478d72877785a4be157c98fb1dfb9930b879762b6c336f572c4fa35942d40",
+          "bytes": 26529
+        },
+        "addExactlyOneLiteral": "src/features/team-task-detail/renderer/shell/index.ts",
+        "adjacentTo": "src/features/team-task-detail/renderer/adapters/TaskDetailReadCoordinator.tsx"
+      },
+      "conditions": [
+        "Exactly five named reexports of original modules; four existing import specifiers only. No copied React context, hook or component, no new controller/state/cache.",
+        "Full public renderer barrel and both existing lazy loaders retain their exact preimages. The new narrow public surface is documented in the feature; general architecture guidance is unchanged.",
+        "AST test must resolve real relative/alias edges, fail on unresolved expected local modules, and prove both eager exclusion and continued on-demand availability; no exact graph-count oracle.",
+        "Run original-source RED before source edits, then the same test plus existing six affected UI files. No GUI/native/CI action.",
+        "Canonical pinned TS7 with unchanged inherited options; no concurrent compiler. Both real ESLint configs must allow the exact public entrypoint and reject its descendants/unrelated internals.",
+        "Root owns the one additional supplementary source literal; final independent R2 and actual source qualification remain required."
+      ],
+      "qualificationLimits": [
+        "Static reachability and controlled UI evidence do not identify the original resource-exhaustion cause or qualify complete native cross-team journey.",
+        "Observed counterfactual node counts are conservative source graph metrics, not Vite network/resource/performance measurements."
+      ]
+    }
+  },
+  "originalFailureSourceAudit": {
+    "path": "cross-team-3f78524-post-proof-source-audit.json",
+    "bytes": 15797,
+    "sha256": "1766b031907f989b08a2c0737ed7b3276df8f1ff18db641807cfd3d6d9f23ef5",
+    "record": {
+      "schemaVersion": 1,
+      "kind": "read-only-original-cross-team-post-proof-cdp-audit",
+      "sourceHead": "3f78524c84829d6b87025fde5c8fe9d8481a4485",
+      "original": {
+        "run": 44600150411,
+        "job": 135829200374,
+        "artifact": {
+          "id": 14572053733,
+          "bytes": 2019920,
+          "sha256": "cc7679a3c76fb8804159b2ba6629201663a43a15300f820a68bb26830553108b",
+          "hashMatchesGitHub": true
+        },
+        "receiptSha256": "02b477b11191bf005828b57dc3d715ae3419c18af1a716904eb3bba7868e0b9e",
+        "flowLogSha256": "18305cbd3e2c28403553c3742b840044a0e468ed09328b841767df5874e9d3e7",
+        "appErrorsSha256": "bd77cf73454bb825e5fea31a004c3c11dac223160facf1d7b3bc54dbfcb752d9",
+        "desktopAppLogSha256": "d27056f430851c1cf6989bc65f2bea1e1c1d69a13d3b07e85535773a07696dd3",
+        "artifactPath": "/workspace/scratch/f45fed8e9067/audit1192/artifact-14572053733/TEST-desktop-backend-ButpBo",
+        "priorAuditSha256": "22bf4958d0e23367bd7b08eaf1f8cb3f8bfb2de8d4308d94ff7288070ff4dd4b",
+        "custody": "Only previously fetched local original files read; no CI queries/downloads or native replay."
+      },
+      "acceptedSubproofs": {
+        "taskBoardUiProof": {
+          "status": "PASS",
+          "stepCount": 100
+        },
+        "taskReviewCycleUiProof": {
+          "status": "PASS",
+          "stepCount": 62
+        },
+        "reviewFlowUiProof": {
+          "status": "PASS",
+          "stepCount": 52
+        },
+        "taskNotificationUiProof": {
+          "status": "PASS",
+          "stepCount": 12
+        },
+        "crossTeamUiProof": {
+          "status": "PASS",
+          "stepCount": 40
+        }
+      },
+      "originalLastCrossTeamStep": {
+        "monotonicMs": 276786,
+        "action": "mouseClick",
+        "label": "reopen original Group chat after reload",
+        "selector": "button[aria-label^=\"Group chat,\"]",
+        "target": {
+          "x": 169.5,
+          "y": 152,
+          "text": "Group chattest-cross-beta.user: TEST_CROSS_TEAM_TWO08:40 PM",
+          "tag": "BUTTON",
+          "geometry": {
+            "targetRect": [
+              4,
+              125,
+              331,
+              54
+            ],
+            "dialogRect": null,
+            "targetAnimations": 0,
+            "dialogAnimations": null,
+            "fonts": "loaded"
+          }
+        },
+        "state": "attempted"
+      },
+      "postCrossSourceOrder": [
+        "runDesktopCrossTeamUiSmoke waits original reply history after its own renderer reload, compares both source receipt arrays unchanged, then sets status=PASS and both commandIds/conversationId.",
+        "runDesktopOfflineTaskBoardUiSmoke next calls runDesktopOversizedCommentUiSmoke. Its proof and steps are assigned into evidence only after the awaited function returns; missing fields do not prove the function was never entered.",
+        "Oversized-comment flow reads the original offline seed, canonical completed receipt, task and command-name list, then calls cdp.evaluate(performance.timeOrigin).",
+        "It sends Page.reload with ignoreCache:false, then ui.waitRead of performance.timeOrigin!==previousOrigin && Boolean(window.electronAPI) && !document.getElementById(splash), labelled cold original Task renderer.",
+        "Only after that wait does it observe input, locate the canonical Task and exercise the original large-comment UI. F08 and Trash follow successful oversized-comment completion. Owner-routing epochs require original overall PASS plus complete group cleanup."
+      ],
+      "originalReadWitness": {
+        "phase": "other",
+        "boundary": "evaluate",
+        "cutoff": "none",
+        "firstCheckAtMs": 1795120866660,
+        "lastCheckAtMs": 1795120871711,
+        "ownerStarted": 23,
+        "ownerResolved": 23,
+        "preparationStarted": 0,
+        "preparationResolved": 0,
+        "readsStarted": 23,
+        "readsResolved": 22,
+        "postReadLate": 0,
+        "contextRetries": 0,
+        "deadlineMs": 1795120896660
+      },
+      "readClockJoin": {
+        "originalStartupClock": {
+          "monotonicMs": 25447,
+          "epochMs": 1795120615113
+        },
+        "epochMinusMonotonicMs": 1795120589666,
+        "firstCheckMonotonicApproxMs": 276994,
+        "lastCheckMonotonicApproxMs": 282045,
+        "waitDeadlineMonotonicApproxMs": 306994,
+        "firstCheckUtc": "2026-11-19T20:41:06.660000+00:00",
+        "lastCheckUtc": "2026-11-19T20:41:11.711000+00:00",
+        "defaultCdpCommandLimitMs": 30000,
+        "basis": "Original sampled epoch/monotonic anchor; rounded to milliseconds. No extra original clock read is invented."
+      },
+      "earliestPostCrossFailureEvidence": {
+        "nextMainFrameNavigation": {
+          "monotonicMs": 277087,
+          "event": "Page.frameNavigated",
+          "mainFrame": true,
+          "path": "/"
+        },
+        "retainedNetworkScriptFailureCount": 33,
+        "networkErrorText": "net::ERR_INSUFFICIENT_RESOURCES",
+        "firstScriptFailure": {
+          "monotonicMs": 278807,
+          "event": "Network.loadingFailed",
+          "type": "Script",
+          "canceled": false,
+          "errorText": "net::ERR_INSUFFICIENT_RESOURCES"
+        },
+        "lastRetainedScriptFailure": {
+          "monotonicMs": 278816,
+          "event": "Network.loadingFailed",
+          "type": "Script",
+          "canceled": false,
+          "errorText": "net::ERR_INSUFFICIENT_RESOURCES"
+        },
+        "dynamicImportException": [
+          {
+            "monotonicMs": 278810,
+            "event": "Runtime.exceptionThrown",
+            "path": "/",
+            "line": 0,
+            "column": 0,
+            "className": "TypeError",
+            "moduleError": "TypeError: Failed to fetch dynamically imported module: /main.tsx"
+          }
+        ],
+        "eventsRetained": 96,
+        "sourceEventCap": 96,
+        "countIsLowerBound": true,
+        "newDocumentContextEvents": [
+          {
+            "monotonicMs": 277087,
+            "event": "contextsCleared"
+          },
+          {
+            "monotonicMs": 277087,
+            "event": "contextsCleared"
+          },
+          {
+            "monotonicMs": 277087,
+            "event": "frameNavigated",
+            "mainFrame": true,
+            "frameId": "9FA9E239999B1F18778FB00CBB08AA09",
+            "loaderId": "89D05EB3AFC80BACFEFCC383D5F0DD89"
+          },
+          {
+            "monotonicMs": 277087,
+            "event": "contextCreated",
+            "id": 13,
+            "frameId": "9FA9E239999B1F18778FB00CBB08AA09",
+            "default": true
+          },
+          {
+            "monotonicMs": 277087,
+            "event": "contextCreated",
+            "id": 14,
+            "frameId": "9FA9E239999B1F18778FB00CBB08AA09",
+            "default": false
+          },
+          {
+            "monotonicMs": 277121,
+            "event": "Page.domContentEventFired"
+          },
+          {
+            "monotonicMs": 277121,
+            "event": "Page.loadEventFired"
+          }
+        ]
+      },
+      "cdpAttribution": {
+        "terminalFailure": "CDP command timed out: Runtime.evaluate",
+        "sourceStronglySelectedCall": "Oversized-comment cold original Task renderer readiness wait, delegated to CdpClient.evaluate Runtime.evaluate(awaitPromise:true,returnByValue:true).",
+        "reason": "Cross-Team proof has already passed; following cold reload is observed at277087ms. The single failed wait began approximately276994ms, before that navigation, and recorded22 resolved polls before its23rd evaluate remained unresolved. This matches the first wait immediately after that Page.reload.",
+        "remainingLimit": "Original diagnostic stores no read label, expression hash, command id, sampled return values or per-call trace. This is a bounded source/order/time join, not a directly retained CDP call-id/expression witness. Other unseen protocol scheduling cannot be excluded merely from marker order."
+      },
+      "failureInterpretation": [
+        "The original cross-Team send, reply, receipt no-replay and reload history subproof passed. The full composed journey did not pass.",
+        "Original uncancelled module-load failures precede the final CDP timeout and a main.tsx dynamic-import TypeError is retained. Main bootstrap is therefore not established for the next cold renderer.",
+        "ERR_INSUFFICIENT_RESOURCES identifies a browser network/resource refusal; it does not identify OOM, file-descriptor exhaustion, exact request-count pressure, GPU failure or the responsible process.",
+        "Main FileWatcher logs continued during the failure interval. A stopped Main event loop is not established.",
+        "GPU/network-service errors and GPU fatal at20:42:03 appear after earlier failure observations and around harness TERM cleanup; they are not established as the initiating defect."
+      ],
+      "cleanup": {
+        "failureSnapshot": {
+          "unavailable": true
+        },
+        "screenshotFailure": "failure screenshot timed out; no mutation retry",
+        "failureQuit": {
+          "attempted": true,
+          "scope": "Close only the verified TEST window before stopping its dev wrapper",
+          "reply": "unconfirmed",
+          "reason": "timeout",
+          "listenerAbsent": false
+        },
+        "originalRequestedQuitExit": {
+          "initialExitCode": null,
+          "initialSignalCode": null,
+          "exitCode": null,
+          "signalCode": null
+        },
+        "beforeHarnessCleanup": [
+          {
+            "pid": 4397,
+            "ppid": 4363,
+            "pgid": 4397
+          },
+          {
+            "pid": 4412,
+            "ppid": 4397,
+            "pgid": 4397
+          },
+          {
+            "pid": 4413,
+            "ppid": 4412,
+            "pgid": 4397
+          },
+          {
+            "pid": 4434,
+            "ppid": 4413,
+            "pgid": 4397
+          },
+          {
+            "pid": 4458,
+            "ppid": 4434,
+            "pgid": 4397
+          },
+          {
+            "pid": 4472,
+            "ppid": 4458,
+            "pgid": 4397
+          },
+          {
+            "pid": 4519,
+            "ppid": 4458,
+            "pgid": 4397
+          },
+          {
+            "pid": 4521,
+            "ppid": 4519,
+            "pgid": 4397
+          },
+          {
+            "pid": 4522,
+            "ppid": 4519,
+            "pgid": 4397
+          },
+          {
+            "pid": 4596,
+            "ppid": 4521,
+            "pgid": 4397
+          },
+          {
+            "pid": 4600,
+            "ppid": 4519,
+            "pgid": 4397
+          },
+          {
+            "pid": 4616,
+            "ppid": 4522,
+            "pgid": 4397
+          },
+          {
+            "pid": 4772,
+            "ppid": 4519,
+            "pgid": 4397
+          }
+        ],
+        "hostChildOnFailure": {
+          "pid": 4772,
+          "ppid": 4519,
+          "pgid": 4397,
+          "command": "/opt/hostedtoolcache/node/24.21.0/x64/bin/node /home/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/dist/cli.js",
+          "observedBeforeHarnessCleanup": true
+        },
+        "result": {
+          "processGroup": 4397,
+          "remaining": [
+            {
+              "pid": 4616,
+              "ppid": 1,
+              "pgid": 4397
+            }
+          ],
+          "appExitCode": null,
+          "appSignalCode": "SIGTERM",
+          "capturedHostObserved": true,
+          "capturedHostAbsent": true,
+          "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+        },
+        "sourceMechanism": "Existing cleanup waits for original Quit, captures the original group/Host, verifies the still-current leader birth+command identity, sends one SIGTERM to that owned group, then observes up to30s. It does not issue SIGKILL or signal an orphaned group after leader authority disappears.",
+        "remainingDebt": "PID4616 is present before cleanup underPPID4522 and after cleanup underPPID1/PGID4397. No command/birth/stat for that PID is retained, so renderer/zygote/zombie classification and birth continuity remain unknown. Captured Host4772 is absent, which does not clear the remaining group debt."
+      },
+      "unqualifiedRemainder": [
+        "oversized comment cold readback",
+        "F08 original read timing",
+        "Trash/restore continuation",
+        "guarded application Quit",
+        "complete original process-group absence",
+        "owner-routing cold continuation epochs"
+      ],
+      "minimalRegressionFixProposal": null,
+      "whyNoJustifiedFunctionalFix": [
+        "The artifact lacks per-process resource/fd/memory evidence and complete module-request history; choosing bundling, changing resource limits, eliminating a reload or adding a retry would be speculative.",
+        "No evidence authorizes treating the remaining PID as dead or safely signaling it again after the original leader is absent.",
+        "The exact-label retention gap can be narrowed with separately reviewed passive finite phase metadata at existing oversized-comment boundaries, while preserving all controls/reads/deadlines/errors. That is an evidence improvement, not a claimed functional fix."
+      ],
+      "sourceProof": {
+        "beforeAfterDistinctPinCount": 1911,
+        "allOriginalBeforeAfterPinsEqual": true,
+        "references": [
+          {
+            "path": "scripts/legacy-agent-host/desktop-cross-team-ui-smoke.ts",
+            "originalSha256": "cab98f75e7c63f214b46e3ad86a680dee687847f121fd906796a5c0393b5ae40",
+            "currentReadBytesMatchOriginal": true,
+            "artifactBeforeAfterPinned": true
+          },
+          {
+            "path": "scripts/legacy-agent-host/desktop-task-board-cross-team-ui-smoke.ts",
+            "originalSha256": "2670c38db359c6ca321cf8ae2eeeff7cb9e1658b35d6ba9c22d03c20f97bcbe6",
+            "currentReadBytesMatchOriginal": true,
+            "artifactBeforeAfterPinned": true
+          },
+          {
+            "path": "scripts/legacy-agent-host/desktop-oversized-comment-ui-smoke.ts",
+            "originalSha256": "312e42b78ad2975b0a3d1fb83b63c4835eab0aaa89b7831c2e06c5050028ab44",
+            "currentReadBytesMatchOriginal": true,
+            "artifactBeforeAfterPinned": true
+          },
+          {
+            "path": "scripts/legacy-agent-host/desktop-ui-read-observation.ts",
+            "originalSha256": "a0e398f94b67ed797172cedcfbe9016da6f005be65b3ed8da97aa6bf7ec99468",
+            "currentReadBytesMatchOriginal": true,
+            "artifactBeforeAfterPinned": true
+          },
+          {
+            "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+            "originalSha256": "40a301b693434fba1e86532e30065a1572e46f1e2bed5b03529e40c0dc7bd094",
+            "currentReadBytesMatchOriginal": true,
+            "artifactBeforeAfterPinned": true
+          },
+          {
+            "path": "scripts/e2e/comment-notification/cdp.mjs",
+            "originalSha256": "8e70fecbb1f2107abffa91d78644ee74f8e34546c8117587661f8376c27998aa",
+            "currentReadBytesMatchOriginal": true,
+            "artifactBeforeAfterPinned": true
+          },
+          {
+            "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+            "originalSha256": "6ba21f2b357b0fbb3e6240cab8b9df9516868b38d80f0a83899b76801437bb7a",
+            "currentReadBytesMatchOriginal": true,
+            "artifactBeforeAfterPinned": true
+          },
+          {
+            "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+            "originalSha256": "51d056aeff4ce159eab1533ca68838c768dc978f851a41687bb81e49a4863221",
+            "currentReadBytesMatchOriginal": true,
+            "artifactBeforeAfterPinned": true
+          },
+          {
+            "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+            "originalSha256": "82fdc9bffaa99a5c961d285aa1af491df112098bcfe8024a61bf19ffbb8ee4b9",
+            "currentReadBytesMatchOriginal": true,
+            "artifactBeforeAfterPinned": true
+          },
+          {
+            "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.ts",
+            "originalSha256": "58e50bf74dca92c69ebe15e3e187ed063a1134a737f0f7310b9b58293de4224b",
+            "currentReadBytesMatchOriginal": true,
+            "artifactBeforeAfterPinned": true
+          },
+          {
+            "path": "scripts/legacy-agent-host/startup-passive-observer.ts",
+            "originalSha256": "4c64958f572aa2c06e8792244b40d923e5a4a12fecab41807b7580db851e5afc",
+            "currentReadBytesMatchOriginal": true,
+            "artifactBeforeAfterPinned": true
+          },
+          {
+            "path": "src/renderer/index.html",
+            "originalSha256": "9f93e99a694a7e0c6abf980df00c2250a1e32aebf132c4713f2e0ea55cd31ccf",
+            "currentReadBytesMatchOriginal": true,
+            "artifactBeforeAfterPinned": false
+          },
+          {
+            "path": "src/renderer/main.tsx",
+            "originalSha256": "b00a401b98ddce0ea75905f6cea16f1dd030b692f8a0f6bc6c136a5c801ffe05",
+            "currentReadBytesMatchOriginal": true,
+            "artifactBeforeAfterPinned": true
+          }
+        ]
+      },
+      "actions": {
+        "sourceEdits": false,
+        "buildOrTests": false,
+        "nativeExecution": false,
+        "ciQueryOrDownload": false,
+        "githubMutation": false
+      }
+    }
+  },
+  "finalCandidate": {
+    "kind": "task-detail-shell-nine-file-final-candidate-after-test-lint-fix",
+    "sourceHead": "63927aecd95c814f66db23d7bd4aef6975110168",
+    "r1Plan": {
+      "path": "/workspace/scratch/f45fed8e9067/audit1192/cross-team-task-detail-shell-r1-plan-v2.json",
+      "sha256": "a791b1fc9b1f13cbcfa07ab77769bc5f1244eca720832778aa7e207286cb9548"
+    },
+    "files": [
+      {
+        "path": "src/renderer/components/layout/TabbedLayout.tsx",
+        "sha256": "7ec848c1f7c101abbbbad09f9bce532e5a7991d0e4ec34e82a4ac22ce9f889bd",
+        "bytes": 6931,
+        "lines": 206
+      },
+      {
+        "path": "src/renderer/components/layout/SortableTab.tsx",
+        "sha256": "78ce6735ffb08eac58116ec07dff1f64b146df63bc80fbdb3f34986e57542e0e",
+        "bytes": 8340,
+        "lines": 263
+      },
+      {
+        "path": "src/renderer/components/chat/viewers/FileLink.tsx",
+        "sha256": "5778b7c48e3930ac3af4c0a3fe3a3d3bc2a553fce08a98063052ff121647d19d",
+        "bytes": 6422,
+        "lines": 195
+      },
+      {
+        "path": "src/renderer/components/chat/viewers/useResolvedViewerTeamContext.ts",
+        "sha256": "6e684999a5ebc2d185d39a78d192841cd433ee3847c25d62f4f6bfc602bdca38",
+        "bytes": 1644,
+        "lines": 44
+      },
+      {
+        "path": "eslint.config.js",
+        "sha256": "fb67fffe45be05bd394f24782ad2dd7719de80c66105497da35f11c3759a2170",
+        "bytes": 38119,
+        "lines": 1168
+      },
+      {
+        "path": "src/features/team-task-detail/renderer/shell/index.ts",
+        "sha256": "b5015d6478f1de029a090cfb3fd465da2664772effb63cb2ba7223076a67c76c",
+        "bytes": 415,
+        "lines": 5
+      },
+      {
+        "path": "src/features/team-task-detail/README.md",
+        "sha256": "b32e843118dbcde34ebead235bfeb3bd2ed9761b852ed8fe4112637b893c6f9e",
+        "bytes": 2183,
+        "lines": 46
+      },
+      {
+        "path": "test/features/team-task-detail/renderer/taskDetailLoadBoundary.test.ts",
+        "sha256": "0ff0c48b8d7ef4c7839cee04c4c46563279b2e486a0fa2119055abc26316e5d6",
+        "bytes": 6950,
+        "lines": 193
+      },
+      {
+        "path": "eslint.fast.config.js",
+        "sha256": "fcc7d6aefb1413787842a1d66950b039d5206381c3c92b7f83e33533a8bb2c52",
+        "bytes": 7476,
+        "lines": 260
+      }
+    ],
+    "protectedUnchanged": [
+      {
+        "path": "src/features/team-task-detail/renderer/index.ts",
+        "sha256": "39c80ec086b78e3fe6dc9b8d942a3a34f7b4bc78cfeebb47b7cd00889394b039",
+        "bytes": 1049
+      },
+      {
+        "path": "src/renderer/components/layout/PaneContent.tsx",
+        "sha256": "584d4eeaa5ba5191a3097ffae1905bb981676d796ff474f59b5b440b47408e02",
+        "bytes": 7986
+      },
+      {
+        "path": "src/renderer/components/layout/GlobalTaskDetailDialogSlot.tsx",
+        "sha256": "3644dbe07212e4158e9832e1ef8eae37f4c53e2960cde8bc796090ceb604daff",
+        "bytes": 1260
+      },
+      {
+        "path": "src/features/team-task-detail/renderer/context/TaskDetailFileLinkContext.tsx",
+        "sha256": "232e4b1abdd0f158ecf89da836e793c324b91f596984ef4429cbcc4069ccd25e",
+        "bytes": 1421
+      },
+      {
+        "path": "test/renderer/components/chat/viewers/MarkdownViewer.test.tsx",
+        "sha256": "443f0bbe1f276b31f32081b1c2e87b6d8436f3e1386d83899bbddcb722163b96",
+        "bytes": 8321
+      }
+    ],
+    "patch": {
+      "path": "/workspace/scratch/f45fed8e9067/audit1192/cross-team-task-detail-shell-final.patch",
+      "sha256": "9a07fdfea01fe9e265c9792f041f986e226773ab88992ad6381b020b1de5b91c",
+      "bytes": 13385
+    },
+    "snapshots": "/workspace/scratch/f45fed8e9067/audit1192/cross-team-task-detail-shell-final-postimage",
+    "rootPinIndependentReview": {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "sha256": "a4fef50688453c4ea1424019a07c0659f32c6c203b326bf1393e99eb74e796d1",
+      "exactSingleLiteralAddition": true,
+      "newModuleExists": true
+    },
+    "status": "READY_FOR_ROOT_DELIVERY: final source R2 PASS, affected AST4/4 PASS, canonical scoped TS7 PASS, both actual lint configs/probes PASS. Historical OOM and lint failure remain retained.",
+    "recordedAt": "2026-11-19T21:20:18.683661+00:00",
+    "previousCandidate": {
+      "path": "/workspace/scratch/f45fed8e9067/audit1192/cross-team-task-detail-shell-postimage.json",
+      "sha256": "727a8f30b75085e6d7bff99a4dc0cdb21aba89620aea94221707674a794a29ac"
+    },
+    "testLintRemediation": {
+      "beforeSha256": "cae3594f6918e62abedd6d86ec1d16f6772b881ae9a97c8683cb88f46e0d4596",
+      "afterSha256": "0ff0c48b8d7ef4c7839cee04c4c46563279b2e486a0fa2119055abc26316e5d6",
+      "patch": "/workspace/scratch/f45fed8e9067/audit1192/cross-team-task-detail-shell-lint-fix.patch",
+      "review": {
+        "path": "/workspace/scratch/f45fed8e9067/audit1192/cross-team-task-detail-shell-lint-fix-root-r2.json",
+        "sha256": "bd3a7117cc6c0e5bfa1c15925cd90ea5fe11d3a245b18844f57ef175e9765aaa",
+        "bytes": 4826
+      },
+      "reviewResult": "PASS_SOURCE_R2"
+    },
+    "finalChecks": {
+      "path": "/workspace/scratch/f45fed8e9067/audit1192/cross-team-task-detail-shell-final-checks.json",
+      "sha256": "06f9cdc941d102da41387aaea70cb66a1fc6a563be4306546645e9a4700d7267",
+      "bytes": 5692
+    },
+    "finalLint": {
+      "path": "/workspace/scratch/f45fed8e9067/audit1192/cross-team-task-detail-shell-lint-final.json",
+      "sha256": "1015c4deeb429c59d9c42a23919627b8b53ab08b9f57d61615bef0cc66f5bee9",
+      "bytes": 14122
+    },
+    "lintSummary": [
+      {
+        "config": "eslint.fast.config.js",
+        "errors": 0,
+        "warnings": 3,
+        "probePasses": 5,
+        "probeCount": 5,
+        "pass": true
+      },
+      {
+        "config": "eslint.config.js",
+        "errors": 0,
+        "warnings": 7,
+        "probePasses": 5,
+        "probeCount": 5,
+        "pass": true
+      }
+    ],
+    "originalIndependentR2": {
+      "path": "/workspace/scratch/f45fed8e9067/audit1192/cross-team-task-detail-shell-independent-r2.json",
+      "sha256": "71b5141dc530e3d4037ea1aa30dc95f2ee89edc48314be6884c084073e5a0529",
+      "bytes": 6029
+    },
+    "testExecutionInterpretation": "The original67 unaffected UI tests remain PASS on unchanged production/test bytes; the4 changed AST tests were rerun and PASS. This is not75 unique tests and is not native/CI qualification.",
+    "completedAt": "2026-11-19T21:22:08.714487+00:00"
+  },
+  "review": {
+    "kind": "root-final-source-and-evidence-join-task-detail-shell",
+    "recordedAt": "2026-11-19T21:24:20.234795+00:00",
+    "result": "PASS",
+    "sourceHead": "63927aecd95c814f66db23d7bd4aef6975110168",
+    "finalCandidate": {
+      "path": "cross-team-task-detail-shell-final-postimage.json",
+      "sha256": "224c0f0c9d383f567b710cb1538800973e4c756fac0f531875fd0d39fc1bd9e1"
+    },
+    "sourceReviews": [
+      {
+        "path": "cross-team-task-detail-shell-independent-r2.json",
+        "sha256": "71b5141dc530e3d4037ea1aa30dc95f2ee89edc48314be6884c084073e5a0529",
+        "result": "PASS_SOURCE_R2"
+      },
+      {
+        "path": "cross-team-task-detail-shell-lint-fix-root-r2.json",
+        "sha256": "bd3a7117cc6c0e5bfa1c15925cd90ea5fe11d3a245b18844f57ef175e9765aaa",
+        "result": "PASS_SOURCE_R2"
+      }
+    ],
+    "filesVerified": [
+      {
+        "path": "src/renderer/components/layout/TabbedLayout.tsx",
+        "sha256": "7ec848c1f7c101abbbbad09f9bce532e5a7991d0e4ec34e82a4ac22ce9f889bd",
+        "bytes": 6931,
+        "lines": 206
+      },
+      {
+        "path": "src/renderer/components/layout/SortableTab.tsx",
+        "sha256": "78ce6735ffb08eac58116ec07dff1f64b146df63bc80fbdb3f34986e57542e0e",
+        "bytes": 8340,
+        "lines": 263
+      },
+      {
+        "path": "src/renderer/components/chat/viewers/FileLink.tsx",
+        "sha256": "5778b7c48e3930ac3af4c0a3fe3a3d3bc2a553fce08a98063052ff121647d19d",
+        "bytes": 6422,
+        "lines": 195
+      },
+      {
+        "path": "src/renderer/components/chat/viewers/useResolvedViewerTeamContext.ts",
+        "sha256": "6e684999a5ebc2d185d39a78d192841cd433ee3847c25d62f4f6bfc602bdca38",
+        "bytes": 1644,
+        "lines": 44
+      },
+      {
+        "path": "eslint.config.js",
+        "sha256": "fb67fffe45be05bd394f24782ad2dd7719de80c66105497da35f11c3759a2170",
+        "bytes": 38119,
+        "lines": 1168
+      },
+      {
+        "path": "src/features/team-task-detail/renderer/shell/index.ts",
+        "sha256": "b5015d6478f1de029a090cfb3fd465da2664772effb63cb2ba7223076a67c76c",
+        "bytes": 415,
+        "lines": 5
+      },
+      {
+        "path": "src/features/team-task-detail/README.md",
+        "sha256": "b32e843118dbcde34ebead235bfeb3bd2ed9761b852ed8fe4112637b893c6f9e",
+        "bytes": 2183,
+        "lines": 46
+      },
+      {
+        "path": "test/features/team-task-detail/renderer/taskDetailLoadBoundary.test.ts",
+        "sha256": "0ff0c48b8d7ef4c7839cee04c4c46563279b2e486a0fa2119055abc26316e5d6",
+        "bytes": 6950,
+        "lines": 193
+      },
+      {
+        "path": "eslint.fast.config.js",
+        "sha256": "fcc7d6aefb1413787842a1d66950b039d5206381c3c92b7f83e33533a8bb2c52",
+        "bytes": 7476,
+        "lines": 260
+      }
+    ],
+    "protectedVerified": [
+      {
+        "path": "src/features/team-task-detail/renderer/index.ts",
+        "sha256": "39c80ec086b78e3fe6dc9b8d942a3a34f7b4bc78cfeebb47b7cd00889394b039",
+        "bytes": 1049
+      },
+      {
+        "path": "src/renderer/components/layout/PaneContent.tsx",
+        "sha256": "584d4eeaa5ba5191a3097ffae1905bb981676d796ff474f59b5b440b47408e02",
+        "bytes": 7986
+      },
+      {
+        "path": "src/renderer/components/layout/GlobalTaskDetailDialogSlot.tsx",
+        "sha256": "3644dbe07212e4158e9832e1ef8eae37f4c53e2960cde8bc796090ceb604daff",
+        "bytes": 1260
+      },
+      {
+        "path": "src/features/team-task-detail/renderer/context/TaskDetailFileLinkContext.tsx",
+        "sha256": "232e4b1abdd0f158ecf89da836e793c324b91f596984ef4429cbcc4069ccd25e",
+        "bytes": 1421
+      },
+      {
+        "path": "test/renderer/components/chat/viewers/MarkdownViewer.test.tsx",
+        "sha256": "443f0bbe1f276b31f32081b1c2e87b6d8436f3e1386d83899bbddcb722163b96",
+        "bytes": 8321
+      }
+    ],
+    "finalChecks": {
+      "path": "/workspace/scratch/f45fed8e9067/audit1192/cross-team-task-detail-shell-final-checks.json",
+      "sha256": "06f9cdc941d102da41387aaea70cb66a1fc6a563be4306546645e9a4700d7267",
+      "bytes": 5692
+    },
+    "finalLint": {
+      "path": "/workspace/scratch/f45fed8e9067/audit1192/cross-team-task-detail-shell-lint-final.json",
+      "sha256": "1015c4deeb429c59d9c42a23919627b8b53ab08b9f57d61615bef0cc66f5bee9",
+      "bytes": 14122
+    },
+    "lintSummary": [
+      {
+        "config": "eslint.fast.config.js",
+        "errors": 0,
+        "warnings": 3,
+        "probePasses": 5,
+        "probeCount": 5,
+        "pass": true
+      },
+      {
+        "config": "eslint.config.js",
+        "errors": 0,
+        "warnings": 7,
+        "probePasses": 5,
+        "probeCount": 5,
+        "pass": true
+      }
+    ],
+    "note": "The earlier root R2 captured the manifest while execution results were pending. Its nine source hashes are unchanged in the completed manifest. This final join verifies the completed manifest, actual file bytes, check receipts and zero-error lint; it does not rewrite historical results.",
+    "qualification": "Local source/check evidence only. Original resulting-source GUI and native CI remain required."
+  },
+  "checks": {
+    "originalRed": {
+      "result": "1 expected failure and 3 passes",
+      "testSha256": "cae3594f6918e62abedd6d86ec1d16f6772b881ae9a97c8683cb88f46e0d4596",
+      "receiptSha256": "4c0e001d3c5955b0502843f73243aab2427aa878eb6c6c8a99898d7b0943f0f5"
+    },
+    "initialGreen": {
+      "result": "71/71 across 7 files",
+      "receiptSha256": "682bed463c31bb2fdbf4b21e585fc6cb92562f3f507d4aa80f92a5322b79583a"
+    },
+    "finalAffected": {
+      "kind": "task-detail-shell-final-test-lint-remediation-checks",
+      "startedAt": "2026-11-19T21:19:51.575136+00:00",
+      "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+      "sourceFiles": [
+        {
+          "path": "src/renderer/components/layout/TabbedLayout.tsx",
+          "sha256": "7ec848c1f7c101abbbbad09f9bce532e5a7991d0e4ec34e82a4ac22ce9f889bd",
+          "bytes": 6931,
+          "lines": 206
+        },
+        {
+          "path": "src/renderer/components/layout/SortableTab.tsx",
+          "sha256": "78ce6735ffb08eac58116ec07dff1f64b146df63bc80fbdb3f34986e57542e0e",
+          "bytes": 8340,
+          "lines": 263
+        },
+        {
+          "path": "src/renderer/components/chat/viewers/FileLink.tsx",
+          "sha256": "5778b7c48e3930ac3af4c0a3fe3a3d3bc2a553fce08a98063052ff121647d19d",
+          "bytes": 6422,
+          "lines": 195
+        },
+        {
+          "path": "src/renderer/components/chat/viewers/useResolvedViewerTeamContext.ts",
+          "sha256": "6e684999a5ebc2d185d39a78d192841cd433ee3847c25d62f4f6bfc602bdca38",
+          "bytes": 1644,
+          "lines": 44
+        },
+        {
+          "path": "eslint.config.js",
+          "sha256": "fb67fffe45be05bd394f24782ad2dd7719de80c66105497da35f11c3759a2170",
+          "bytes": 38119,
+          "lines": 1168
+        },
+        {
+          "path": "src/features/team-task-detail/renderer/shell/index.ts",
+          "sha256": "b5015d6478f1de029a090cfb3fd465da2664772effb63cb2ba7223076a67c76c",
+          "bytes": 415,
+          "lines": 5
+        },
+        {
+          "path": "src/features/team-task-detail/README.md",
+          "sha256": "b32e843118dbcde34ebead235bfeb3bd2ed9761b852ed8fe4112637b893c6f9e",
+          "bytes": 2183,
+          "lines": 46
+        },
+        {
+          "path": "test/features/team-task-detail/renderer/taskDetailLoadBoundary.test.ts",
+          "sha256": "0ff0c48b8d7ef4c7839cee04c4c46563279b2e486a0fa2119055abc26316e5d6",
+          "bytes": 6950,
+          "lines": 193
+        },
+        {
+          "path": "eslint.fast.config.js",
+          "sha256": "fcc7d6aefb1413787842a1d66950b039d5206381c3c92b7f83e33533a8bb2c52",
+          "bytes": 7476,
+          "lines": 260
+        }
+      ],
+      "productionUnchangedFromIndependentR2": true,
+      "historicalRecordsPreserved": [
+        "cross-team-task-detail-shell-green.json",
+        "cross-team-task-detail-shell-types.json",
+        "cross-team-task-detail-shell-lint-initial.json",
+        "cross-team-task-detail-shell-lint-full.json",
+        "cross-team-task-detail-shell-independent-r2.json"
+      ],
+      "checks": [
+        {
+          "label": "ast",
+          "command": [
+            "/workspace/scratch/f45fed8e9067/audit1192/TEST-node-inputs/node/v24.21.0/linux-x64/node",
+            "node_modules/vitest/vitest.mjs",
+            "run",
+            "test/features/team-task-detail/renderer/taskDetailLoadBoundary.test.ts",
+            "--maxWorkers=1"
+          ],
+          "exitCode": 0,
+          "elapsedSeconds": 6.639,
+          "log": {
+            "path": "/workspace/scratch/f45fed8e9067/audit1192/cross-team-task-detail-shell-final-ast.log",
+            "sha256": "088b2276f6a4f34594431a6aeb337fcc55edd33b0c0141b69697887691296c4f"
+          }
+        },
+        {
+          "label": "types",
+          "command": [
+            "/workspace/scratch/f45fed8e9067/audit1192/TEST-node-inputs/node/v24.21.0/linux-x64/node",
+            "node_modules/@typescript/native/bin/tsc",
+            "--project",
+            "tsconfig.task-detail-shell-scope-final.json"
+          ],
+          "exitCode": 0,
+          "elapsedSeconds": 14.951,
+          "log": {
+            "path": "/workspace/scratch/f45fed8e9067/audit1192/cross-team-task-detail-shell-final-types.log",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        },
+        {
+          "label": "lint",
+          "command": [
+            "/workspace/scratch/f45fed8e9067/audit1192/TEST-node-inputs/node/v24.21.0/linux-x64/node",
+            "--max-old-space-size=6144",
+            "/workspace/scratch/f45fed8e9067/audit1192/cross-team-task-detail-shell-lint-final.mjs",
+            "eslint.fast.config.js",
+            "eslint.config.js"
+          ],
+          "exitCode": 0,
+          "elapsedSeconds": 91.868,
+          "log": {
+            "path": "/workspace/scratch/f45fed8e9067/audit1192/cross-team-task-detail-shell-final-lint.log",
+            "sha256": "82ea8350b8b143c9932a0b3a4cd03e3bd6796b1873062ff357c118216d66eec7"
+          }
+        }
+      ],
+      "typeScope": {
+        "path": "/workspace/scratch/f45fed8e9067/agent-teams-ai/tsconfig.task-detail-shell-scope-final.json",
+        "config": {
+          "extends": "./tsconfig.json",
+          "files": [
+            "src/renderer/components/layout/TabbedLayout.tsx",
+            "src/renderer/components/layout/SortableTab.tsx",
+            "src/renderer/components/chat/viewers/FileLink.tsx",
+            "src/renderer/components/chat/viewers/useResolvedViewerTeamContext.ts",
+            "src/features/team-task-detail/renderer/shell/index.ts",
+            "test/features/team-task-detail/renderer/taskDetailLoadBoundary.test.ts",
+            "src/renderer/components/layout/GlobalTaskDetailDialogSlot.test.tsx",
+            "test/features/team-task-detail/renderer/taskDetailSession.integration.test.tsx",
+            "test/renderer/components/team/dialogs/TaskDetailDialog.test.ts",
+            "test/renderer/components/team/dialogs/GlobalTaskDetailDialog.test.ts",
+            "test/renderer/components/chat/viewers/MarkdownViewer.test.tsx",
+            "test/renderer/components/fileLink.test.ts",
+            "test/types/better-sqlite3-node.d.ts",
+            "src/renderer/vite-env.d.ts",
+            "src/types/pica.d.ts",
+            "src/types/agent-teams-controller.d.ts"
+          ],
+          "include": []
+        },
+        "sha256": "74668ca1ff65eb75c0ea25d7d11de7de33a5e24da5f1faad38aba2932ae1702d",
+        "compilerOptionsOverridden": false,
+        "removed": true
+      },
+      "sourceFilesUnchangedAcrossChecks": true,
+      "protectedUnchanged": true,
+      "completedAt": "2026-11-19T21:21:45.436939+00:00",
+      "pass": true
+    },
+    "uniqueTestInterpretation": "67 unchanged prior UI tests plus 4 final AST tests; 71 unique cases, not 75.",
+    "lint": [
+      {
+        "config": "eslint.fast.config.js",
+        "errors": 0,
+        "warnings": 3,
+        "probePasses": 5,
+        "probeCount": 5,
+        "pass": true
+      },
+      {
+        "config": "eslint.config.js",
+        "errors": 0,
+        "warnings": 7,
+        "probePasses": 5,
+        "probeCount": 5,
+        "pass": true
+      }
+    ],
+    "warnings": "Three non-literal filesystem-path warnings in the graph reader; full config also reports four pre-existing FileLink warnings. No lint rules or severity were relaxed.",
+    "sourceFileGuard": {
+      "result": "PASS",
+      "productionFiles": 5167,
+      "frozenExceptions": 141,
+      "newFileLimit": 800,
+      "fullEslintLines": 1168,
+      "logSha256": "a17c96808e371616da562ab76fa4b5b079188f1ec4033f28b4ea5b189ee21af5"
+    },
+    "provisioningGuard": {
+      "result": "PASS",
+      "counts": [
+        22,
+        50,
+        31,
+        62,
+        154
+      ],
+      "logSha256": "7fe70e1bdd916d7a5694ada6ab418b58456de8373f0f8a9f560e5efcfb90f79c"
+    },
+    "historicalFailures": "Original oversized ESLint-config attempt, default-heap full lint OOM and three full-lint test errors are retained. Final config preserves the frozen cap and the syntax-only test correction passed independent root R2."
+  },
+  "sourcePin": {
+    "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+    "preimageSha256": "c08478d72877785a4be157c98fb1dfb9930b879762b6c336f572c4fa35942d40",
+    "postimageSha256": "a4fef50688453c4ea1424019a07c0659f32c6c203b326bf1393e99eb74e796d1",
+    "bytes": 26588,
+    "exactSingleLiteralAddition": true,
+    "selectedModule": {
+      "path": "src/features/team-task-detail/renderer/shell/index.ts",
+      "sha256": "b5015d6478f1de029a090cfb3fd465da2664772effb63cb2ba7223076a67c76c"
+    },
+    "qualification": "Original Desktop source-freeze membership only; no readiness or execution policy change."
+  },
+  "rawChecksArchive": {
+    "path": "task-detail-load-boundary-checks-20261119.tar.gz",
+    "bytes": 71349,
+    "sha256": "4ca5554aad5577aedd5e700f58838aabb6003c7b0a0146b8e1570526050f8f28",
+    "entries": 58
+  },
+  "limits": [
+    "No new context, state, provider, authority, transport, owner or controller. Full renderer barrel and original tab/dialog lazy loaders remain byte-identical.",
+    "AST source reachability is not Vite request, heap or elapsed-time measurement. No claim that this alone caused or fixes original Chromium ERR_INSUFFICIENT_RESOURCES.",
+    "Original-source GUI/native acceptance, cleanup and resulting-head CI remain separate required evidence.",
+    "No manual CI rerun, dispatch or cancellation; no real Claude/Codex execution, Ready, main merge, release, default activation or Stage2."
+  ]
+}

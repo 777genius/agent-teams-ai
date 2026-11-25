@@ -176,3 +176,61 @@ Any attempt to use tools is a critical violation. Respond with text ONLY.` };
     } finally { preparation?.disarm(); await host.close(); }
   }
 });
+
+test('selected donor continues one HISTORY through native Read and Edit IDs and refuses prompt or result replay', async () => {
+  const fixture = { filePath: '/TEST-donor/project/review.txt', before: 'TEST original file\n', after: 'TEST edited file\n' };
+  const marker = 'TEST_RETAINED_V1_HISTORY';
+  const user = { role: 'user', content: marker + ' #1' };
+  const tools = [
+    { type: 'function', function: { name: 'read', parameters: { type: 'object',
+      properties: { filePath: { type: 'string' } }, required: ['filePath'] } } },
+    { type: 'function', function: { name: 'edit', parameters: { type: 'object', properties: {
+      filePath: { type: 'string' }, oldString: { type: 'string' }, newString: { type: 'string' },
+      replaceAll: { type: 'boolean' } }, required: ['filePath', 'oldString', 'newString'] } } },
+  ];
+  const model = await startRetainedOpenCodeModel({ donorReview: fixture });
+  try {
+    const first = await request(model.url, { model: 'TEST-model', tools, messages: [user], stream: true });
+    assert.equal(first.status, 200);
+    const chunks = first.text.split('\n').filter(line => line.startsWith('data: {')).map(line => JSON.parse(line.slice(6)));
+    const call = chunks[0].choices[0].delta.tool_calls[0];
+    assert.equal(call.id, 'TEST_DONOR_REVIEW_READ'); assert.equal(call.function.name, 'read');
+    assert.deepEqual(JSON.parse(call.function.arguments), { filePath: fixture.filePath });
+    assert.equal(chunks[1].choices[0].finish_reason, 'tool_calls');
+    const history: Record<string, unknown>[] = [user, { role: 'assistant', tool_calls: [
+      { id: call.id, type: call.type, function: call.function },
+    ] }, { role: 'tool', tool_call_id: call.id, content: fixture.before }];
+    const second = await request(model.url, { model: 'TEST-model', tools, messages: history });
+    assert.equal(second.status, 200);
+    const editMessage = JSON.parse(second.text).choices[0].message, edit = editMessage.tool_calls[0];
+    assert.equal(edit.id, 'TEST_DONOR_REVIEW_EDIT'); assert.equal(edit.function.name, 'edit');
+    assert.deepEqual(JSON.parse(edit.function.arguments), { filePath: fixture.filePath,
+      oldString: fixture.before, newString: fixture.after, replaceAll: false });
+    history.push(editMessage, { role: 'tool', tool_call_id: edit.id, content: 'Edit applied successfully.' });
+    const final = await request(model.url, { model: 'TEST-model', tools, messages: history });
+    assert.equal(final.status, 200);
+    assert.equal(JSON.parse(final.text).choices[0].message.content, 'REPLY_' + marker);
+    assert.deepEqual(model.observations.map(row => row.donorStage), ['read', 'edit', 'reply']);
+    assert.deepEqual(model.observations.map(row => row.marker), [marker, null, null]);
+    assert.deepEqual(model.observations.map(row => row.toolResultIds), [[], ['TEST_DONOR_REVIEW_READ'],
+      ['TEST_DONOR_REVIEW_READ', 'TEST_DONOR_REVIEW_EDIT']]);
+    assert.deepEqual([...model.markers], [marker]); assert.deepEqual(model.failures, []);
+    assert.equal((await request(model.url, { model: 'TEST-model', tools, messages: history })).status, 500);
+    assert.equal(model.observations.length, 3, 'completed original input cannot be repeated');
+  } finally { await model.close(); }
+  for (const invalid of ['prompt replay', 'result replay', 'wrong result identity'] as const) {
+    const rejected = await startRetainedOpenCodeModel({ donorReview: fixture });
+    try {
+      const first = await request(rejected.url, { model: 'TEST-model', tools, messages: [user] });
+      assert.equal(first.status, 200);
+      const message = JSON.parse(first.text).choices[0].message;
+      const result = { role: 'tool', tool_call_id: invalid === 'wrong result identity' ? 'OTHER' :
+        message.tool_calls[0].id, content: fixture.before };
+      const history = [user, message, result, ...(invalid === 'prompt replay' ? [user] :
+        invalid === 'result replay' ? [result] : [])];
+      assert.equal((await request(rejected.url, { model: 'TEST-model', tools, messages: history })).status, 500);
+      assert.equal(rejected.observations.length, 1, 'refusal cannot dispatch the Edit');
+      assert.equal(rejected.failures.length, 1);
+    } finally { await rejected.close(); }
+  }
+});

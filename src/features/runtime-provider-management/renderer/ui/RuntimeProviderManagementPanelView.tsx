@@ -794,7 +794,7 @@ export const ProviderSetupFormPanel = ({
                 </div>
                 <div className="mt-0.5 leading-4">
                   {verifiesWithModel
-                    ? 'Saving the credential temporarily, then running one minimal model request. If the check fails, the new credential is removed and the previous connection is restored.'
+                    ? 'Saving the credential, then running one minimal model request.'
                     : 'Saving the credential in the app-managed OpenCode profile.'}
                 </div>
               </div>

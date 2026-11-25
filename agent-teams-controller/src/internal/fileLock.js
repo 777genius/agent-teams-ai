@@ -16,7 +16,7 @@ function codeOf(error) {
 
 function statOrMissing(name) {
   try {
-    return fs.lstatSync(name);
+    return fs.lstatSync(name, { throwIfNoEntry: false }) ?? null;
   } catch (error) {
     if (codeOf(error) === 'ENOENT') return null;
     throw error;

@@ -1,0 +1,127 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-read-only-source-review",
+  "reviewer": "/root/lint_review_ui_ci",
+  "observedAt": "2026-11-18 20:50:55 UTC",
+  "verdict": "PASS",
+  "reviewedHead": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+  "candidateRoot": "/workspace/scratch/c714f5bce554/finite-restart-candidate-swm0b76l",
+  "file": {
+    "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+    "baseSha256": "6eddff59c94ed0d9639d7066a0e2ce3aaf2954753f2370496c8cb793620b6e69",
+    "postSha256": "f92b0a41feaf0de8085b118f1642b514b4340cdcf6551b65fac48f153caaaa38",
+    "postGitBlob": "a47682f91e49ace6ea4dd80d1cd6280a421a6a4e",
+    "basePhysicalLines": 367,
+    "postPhysicalLines": 371,
+    "under800": true,
+    "baseBytes": 18422,
+    "postBytes": 18591,
+    "independentlyVerified": {
+      "base9fEqualsCurrent4f": true,
+      "exactCandidateHash": true,
+      "unchangedTailAfterReadinessIife": true
+    }
+  },
+  "diffScope": [
+    "Remove captureTeamAccountRead import and optional withAccountRead argument only at allocation consumeMemberModelReadiness composition.",
+    "Capture exact entry.team and its owner, check both identity pointers before and after the existing authority.assertCurrent plus assertAllocation callbacks.",
+    "No public API/type change, test change, lease/deadline/oracle change, global fence-reentrancy change or provider selection change.",
+    "Other 799 source files and unchanged test/loader/prepared-resource closure are recorded by the candidate owner's manifest; this reviewer independently checked the target bytes and read the exact diff."
+  ],
+  "mechanism": {
+    "conclusion": "The optional outer Team-owner read fence encloses an allocation callback that synchronously requests the same physical authority lock through a different TeamOwnerStore instance.",
+    "chain": [
+      {
+        "path": "packages/legacy-agent-host/src/composition/captureTeamAccountRead.ts",
+        "fact": "withLaunchAuthority(read) encloses the supplied read callback; entry.team and team.owner are pinned."
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+        "fact": "readPreparedModelReference invokes options.isCurrent inside inspect before account capture; optional withAccountRead encloses inspect."
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/createRuntimeTeamLaunch.ts",
+        "fact": "fresh-member allocation authority rechecks launch.readFreshMemberSource against the captured sourceBinding."
+      },
+      {
+        "path": "packages/legacy-agent-host/src/team-launch/TeamLaunchOwner.ts",
+        "fact": "readFreshMemberSource fences the launch store."
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/TeamLaunchComposition.ts",
+        "fact": "Launch composition constructs a separate TeamOwnerStore for the same root/team."
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/team/TeamOwnerStore.ts",
+        "fact": "fenceDepth is instance-local; both instances use teams/<team>/.host-owner/authority."
+      },
+      {
+        "path": "agent-teams-controller/src/internal/fileLock.js",
+        "fact": "The shared file fence cannot reenter through an independent instance; its synchronous acquisition timeout is 5000ms."
+      }
+    ],
+    "diagnosticAttribution": "Finite-test owner reported existing passive diagnostics: reference inspect threw before account capture or expiry checks; consumer reference phase had 71659ms cutoff margin. This reviewer did not execute diagnostics or infer expiry failure from total duration."
+  },
+  "identityAndPermissions": {
+    "exactOwnerPin": "The removed wrapper's mutable entry.team/team.owner identity protection is explicitly retained by assertCaptured before and after the unchanged composite authority/allocation checks.",
+    "canonical": "TeamOwner.capturedProviderAuthority obtains authorizeTeamGrant(state, store, original principal, read) and providerAuthorized before returning either current or roster-not-applicable.",
+    "legacyWithWriterNoPrelude": "captureMemberProviderAuthority uses original.team.owner.withLaunchAuthority(original principal, read, checkCurrent).",
+    "providerFallback": "With beforeTeamAuthority present, or without the canonical callback, authorizeRuntimeAccess(original principal, binding, provider, optional prelude) enters TeamDeliveryAuthority.runtimeAccess. Its provider branch requires memberAuthorized(admit) and recursively runtimeAccess(original principal, binding, control). The control branch authorizes that same principal for read; absent/revoked/read-less grants return false after the exception is caught.",
+    "implementation": "TeamOwner passes authorize to this.authorize; this.authorize calls authorizeTeamGrant(this.state(), this.store, principal, permission). authorizeTeamGrant rejects missing, revoked, or missing-permission grants.",
+    "productionCaller": "RuntimeTeamCoordinator is the sole production factory invocation found; it supplies assertWriter, canonical assertProviderAuthority and beforeTeamAuthority.",
+    "conclusion": "No extra permission fence is needed: all assertCurrent branches retain own-principal read authorization. Existing binding/config/profile/principal pinning, writer check, prelude and allocation guard are preserved.",
+    "sourcePaths": [
+      "packages/legacy-agent-host/src/composition/captureMemberProviderAuthority.ts",
+      "packages/legacy-agent-host/src/team/TeamDeliveryAuthority.ts",
+      "packages/legacy-agent-host/src/team/TeamOwner.ts",
+      "packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts"
+    ]
+  },
+  "defaultFreshness": {
+    "inspect": "Without withAccountRead, readPreparedModelReference calls the same inspect body directly. Fresh provider/model/effort/purpose/mechanism/currentness tests, account/source inspection, target and origin checks remain.",
+    "probeOwner": "ModelProbeOwner.captureReadinessReference retains admission, exact target/scope, retirement, completion/ok/resource closure, probe expiry, scope cutoff, preparation expiry, origin, purpose, readiness/account digest and reference projection checks.",
+    "consumer": "inspectMemberModelReadiness retains initial authority, original consumer/base identity, requirements, cutoff, fresh reference equality, and final authority before consumeModelReadiness.",
+    "credential": "Optional V2 credential capability still re-runs current(), fresh account.isCurrent() and exact scopeDigest equality using the default direct read path.",
+    "initial": "initialProfile delegates before readPreparedModelReference; inspectInitialRuntimeModelAdmission has no withAccountRead API and retains source/attempt/host/deadline checks.",
+    "continuation": "Continuation returns before account-reference inspection; existing restore reference/source-binding checks and composite authority remain.",
+    "preclaim": "Preclaim composition is unchanged and may still use its optional shared account wrapper because its authority callback does not contain this fresh-member allocation read.",
+    "performanceLimit": "This is a lock-correctness fix, not a throughput/native-performance qualification. The unwrapped allocation path may acquire independent Team fences more often. No caching or account freshness shortcut was added.",
+    "sourcePaths": [
+      "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+      "packages/legacy-agent-host/src/composition/initialRuntimeModelAdmission.ts",
+      "packages/legacy-agent-host/src/management/ModelProbeOwner.ts"
+    ]
+  },
+  "existingNegativeCases": [
+    {
+      "file": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+      "name": "existing probe journal retains original intents and exact opencode cleanup after roster without native Team allocation",
+      "fixtureClosure": "Local fixture uses RuntimeTeamCoordinator.createProvider that throws TEST-no-native-team-allocation. Both ModelProbeOwner instances have injected prepare/run/close. assertRetainedProductRosterTransfer's TeamLaunchOwner.runtime.open increments a counter then throws. TEST endpoints are data; no native/provider child or network path is called.",
+      "assertions": "Default inspect/consume without withAccountRead refuses changed Main origin, stale owner, exact unchanged expiry and changed credential; failures retain pending consumer/reference/journal; business allocation stays zero.",
+      "caution": "The unchanged original test owns Date/performance mocks and existing diagnostic subscribers; do not change them. It writes a fixed inert policy-plugin fixture file. No build/install needed with the approved source loader."
+    },
+    {
+      "file": "packages/legacy-agent-host/tests/native-member-actions.test.ts",
+      "name": "source grant lost inside native open before allocation commit cannot grant target lifetime",
+      "fixture": "packages/legacy-agent-host/tests/native-member-actions-fixture.ts",
+      "fixtureClosure": "RuntimeOwner.driverFactory.open creates only local class Driver implementing Session. TEST-never-executed executable is data. Actual captureMemberProviderAuthority is exercised, no actual provider factory/native child.",
+      "assertions": "Source grant revoked during successor open makes canAllocate false, assertAllocatedCurrent refuse and execute reject before target allocation.",
+      "limit": "Authority regression coverage, not direct factory-wrapper coverage."
+    },
+    {
+      "file": "packages/legacy-agent-host/tests/native-member-actions.test.ts",
+      "name": "committed native successor owns its new input after initiating DO ends; old callback cannot follow a replacement or revoked target grant",
+      "fixture": "packages/legacy-agent-host/tests/native-member-actions-fixture.ts",
+      "fixtureClosure": "Same in-process Driver and temporary filesystem fixture; t.after cleanup.",
+      "assertions": "Old callback cannot follow successor; committed target retains its own input lifetime; changed accountBinding and revoked target grant deny authority.",
+      "limit": "Authority regression coverage, not direct factory-wrapper coverage."
+    }
+  ],
+  "executionBoundary": {
+    "sourceMutationsByReviewer": false,
+    "testsRunByReviewer": false,
+    "realVendorExecution": false,
+    "candidateGreen": "Separately reported by finite-test owner: one unchanged original cross-provider test PASS with candidate. Its receipt/log is authoritative; this review does not replace test evidence."
+  },
+  "ciQualification": "This R2 does not qualify native OS or GUI jobs. Current original 4f Teams Windows job remains independently tracked; no source push while it executes."
+}

@@ -51,7 +51,7 @@ function compactResult(receipt: CommandReceipt): JsonValue | undefined {
       ...(result.task === undefined ? {} : { task: compactTask(result.task) }),
     };
   }
-  if (operation === 'task.board.order') return undefined;
+  if (operation === 'task.board.order' || operation === 'task.board.review-flow') return undefined;
   if (operation === 'message.send') return receipt.result;
   return compactTask(receipt.result!);
 }

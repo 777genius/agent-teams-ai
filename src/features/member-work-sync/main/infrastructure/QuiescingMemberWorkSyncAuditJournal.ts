@@ -32,9 +32,12 @@ export class QuiescingMemberWorkSyncAuditJournal implements MemberWorkSyncAuditJ
   }
 
   async awaitTeamIdle(teamName: string): Promise<void> {
+    const key = teamName.trim().toLowerCase();
     while (true) {
-      const admittedAppends = this.admittedAppendsByTeam.get(teamName);
-      if (!admittedAppends || admittedAppends.size === 0) {
+      const admittedAppends = [...this.admittedAppendsByTeam].flatMap(([name, work]) =>
+        name.trim().toLowerCase() === key ? [...work] : []
+      );
+      if (admittedAppends.length === 0) {
         return;
       }
 

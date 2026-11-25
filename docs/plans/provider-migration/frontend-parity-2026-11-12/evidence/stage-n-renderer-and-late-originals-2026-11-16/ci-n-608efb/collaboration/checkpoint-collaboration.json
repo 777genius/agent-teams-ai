@@ -1,0 +1,341 @@
+{
+  "kind": "N608_ORIGINAL_MIXED_COLLABORATION_CHECKPOINT",
+  "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "runId": 43795234483,
+  "jobId": 133062441513,
+  "status": "PASS within original finite mixed-provider scope",
+  "payloadCount": 10,
+  "payloads": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/collaboration/job-133062441513.log",
+      "bytes": 180094,
+      "gitBlob": "71c65331b34a697764b6fb08c6d4f42e0b2fda1a",
+      "sha256": "de025b7189548c000c96ceff111a993f611996dad8ee79cc15483eeed8c66da5"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/collaboration/original-job-log-response.json",
+      "bytes": 189951,
+      "gitBlob": "4e3b569573e137530117fcd414346d614703f8ff",
+      "sha256": "31bc83afce161e307e08f7b64c37fc29a030b375ad1c323508355ad1145a3c67"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/collaboration/artifact-14196287274.zip",
+      "bytes": 1656106,
+      "gitBlob": "542d049ab65f0755990eb81db5f499460b188bed",
+      "sha256": "97f5cd90c38715fc4327f1e9ca7ad818a3aefbc2c3fcd0f102bb38f1004d183a"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/collaboration/archive-retention.json",
+      "bytes": 10512,
+      "gitBlob": "b98bc1e19f64efa226ef5ac624e91ba3d047031f",
+      "sha256": "447ce70d3706cfe187953e9ce32d98e8f3c1c5d142f9bd37613dafba98528e6b"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/official-host-artifacts-0410.json",
+      "bytes": 9484,
+      "gitBlob": "f34ca6154c2b6e7016dcde8480bdd086e0f442e1",
+      "sha256": "badac9e3b213551e9b4ed59e9236c657320b8f834d2c9120b0009092d8feb670"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/owned-api-jobs-0409.json",
+      "bytes": 92338,
+      "gitBlob": "9da29cf8befc7c97ccbb75dad1157939de510308",
+      "sha256": "4569b37d23b0adccdf6b913ad913dec67c844b3ae0df68a68db7feeec87f5e43"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/host-original-run-0258.json",
+      "bytes": 30088,
+      "gitBlob": "ea302039d9efa1062aad0a3c3c062fb462c39774",
+      "sha256": "c1cefe9db820bb9a40b1e371d99d4aa628bd66d1826a35bd8787c99d5e7a9a10"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/cross-team/source-pin-audit.json",
+      "bytes": 461936,
+      "gitBlob": "bc23e5da6e447ed75d4d17adcc4fe1d5de5dbf64",
+      "sha256": "b3a5a97d7b4ba5406ef566cc61351eca3f04b7bbd2f7a6e3d673f56f8a85558a"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/collaboration/audit.json",
+      "bytes": 89066,
+      "gitBlob": "206802f4f9cda925f6affffbb80e21093a132619",
+      "sha256": "5b028611214b222fd5633d78bbe829435319ed8cdf588c045f8e5efdbe3092e3"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/collaboration/Plan29-collaboration-appendix.md",
+      "bytes": 7731,
+      "gitBlob": "06e7c1dd3f677b4ec6cb6ce4c3c0ea701af4c3f6",
+      "sha256": "225ce7a885eca1b6daeb51938b969e5e166c6c45ee2fc6d87cbfe251289b6cc0"
+    }
+  ],
+  "archiveMembers": [
+    {
+      "name": "TEST-desktop-backend-Ord8hX/TEST-peer-claude-scope/config/projects/TEST-desktop-peer/26fec325-8926-40ed-9c17-397bee70b5f9.jsonl",
+      "bytes": 6055,
+      "sha256": "6ff6d4c686c57894060c116ef0401c784440c65ab9608f0cdcee0b0310a5d69b",
+      "crc32": "f9d81001"
+    },
+    {
+      "name": "TEST-desktop-backend-Ord8hX/TEST-peer-claude-scope/effects.ndjson",
+      "bytes": 7015,
+      "sha256": "f873ebd9176231272146e896bd960633f586c4ff54f44362e3fcfb89a6ec1439",
+      "crc32": "c4711e0d"
+    },
+    {
+      "name": "TEST-desktop-backend-Ord8hX/TEST-peer-codex-scope/effects.ndjson",
+      "bytes": 7265,
+      "sha256": "b35e1ee7ad6a2093ba31b72c8919c7d2c97cbd162b22067de05e2498968b252f",
+      "crc32": "0fa8196f"
+    },
+    {
+      "name": "TEST-desktop-backend-Ord8hX/TEST-peer-opencode-scope/effects.ndjson",
+      "bytes": 6546,
+      "sha256": "e60e12b9eaa8f04ba71008b7d11d9468a31aa318959815dfa1b74c84312a1648",
+      "crc32": "d4c0b85e"
+    },
+    {
+      "name": "TEST-desktop-backend-Ord8hX/desktop-app.log",
+      "bytes": 26521,
+      "sha256": "d76c82f6fcff9cb29d4e22d16594d0d9bc7805838d76ebda97348e360e0d2aac",
+      "crc32": "236f25d6"
+    },
+    {
+      "name": "TEST-desktop-backend-Ord8hX/desktop-backend-receipt.json",
+      "bytes": 1000676,
+      "sha256": "44353817d4ebb4ada6a3f34a15b80dfbfb26841476ce7d672e65c94a9e698a46",
+      "crc32": "a7893b89"
+    },
+    {
+      "name": "TEST-desktop-backend-Ord8hX/desktop-descriptor.json",
+      "bytes": 3885,
+      "sha256": "1448185aea3add800bc891a01261f8d95848921059d61aa5825274ff5dcfdf34",
+      "crc32": "6557a8db"
+    },
+    {
+      "name": "TEST-desktop-backend-Ord8hX/home/Downloads/TEST-native-chat.txt",
+      "bytes": 40,
+      "sha256": "55af81cd5ddf9f9313ee38f2929d75f1f15429edd697b9196cf2d70e996d81af",
+      "crc32": "ea753fb5"
+    },
+    {
+      "name": "TEST-desktop-backend-Ord8hX/host-profile.json",
+      "bytes": 20027,
+      "sha256": "4903e5e6aa179d3bbb8621a35e97b5b8f4c4769f7bf7c570933522905453cecc",
+      "crc32": "35ece232"
+    },
+    {
+      "name": "TEST-desktop-backend-Ord8hX/hoststore/management-commands/a39757f8356feb82c97b9bcbfb712f374a7e43b28eb5b7838c3b70c698163b8e.json",
+      "bytes": 956,
+      "sha256": "0a335200805cd869a6cd26ea96462cfb0a0d9535c8f0eaa4ad20d8a436144158",
+      "crc32": "288e97df"
+    },
+    {
+      "name": "TEST-desktop-backend-Ord8hX/hoststore/management-commands/b45ee388653e25d2f9a7ca703910c62da2c63175cc818181155bfba425883514.json",
+      "bytes": 5826,
+      "sha256": "1bbc996bfaa292ef033cc68f2514959d923d71e4f865fef92c09f93ae809412a",
+      "crc32": "82a9a07e"
+    },
+    {
+      "name": "TEST-desktop-backend-Ord8hX/hoststore/management-commands/bd84aaf31de31e7dff596745bf50043caece125780dc0ab6c41ff203e67b913c.json",
+      "bytes": 5826,
+      "sha256": "4be5a469aacd922ff49898e1f36afa98b608bd61ed25dd20fa99b9aa36c53eab",
+      "crc32": "1c3f3d37"
+    },
+    {
+      "name": "TEST-desktop-backend-Ord8hX/hoststore/management-commands/c61f1c781975e22294438dec2c586aba1eef4e59e3cfa6f5cd9bcb21bd379654.json",
+      "bytes": 904,
+      "sha256": "2a43fed8b53acfb4bc12e1598c8a42f963b5c3b822d8346da11f10a1c0c1cd0b",
+      "crc32": "ae9f98d1"
+    },
+    {
+      "name": "TEST-desktop-backend-Ord8hX/hoststore/runtime-checkpoints/cp1-2580c747c9f13eabaf1996188656e4bafdf3f2a111b4c7da2cf14742f7b80cab.json",
+      "bytes": 2220,
+      "sha256": "17e820901ce58e6dc192b6ffd5e1c870bf84502d6898a0057d68324281fcf977",
+      "crc32": "ab31dd45"
+    },
+    {
+      "name": "TEST-desktop-backend-Ord8hX/hoststore/runtime-checkpoints/cp1-cb6b97228c88050c3ec12e84c640f301812784654fa2ca19d534329d46417672.json",
+      "bytes": 1780,
+      "sha256": "5a3c7605a0121c0c5abffcdd63ce44b250203e24a3a5203c8d8af2f162323914",
+      "crc32": "06fa22bc"
+    },
+    {
+      "name": "TEST-desktop-backend-Ord8hX/hoststore/runtime-checkpoints/cp1-f18b8ceb16056b2e5e6a9ff4b7c81069544d06a9d326c78deb7c698677ce119f.json",
+      "bytes": 2242,
+      "sha256": "45dcbf3923ffbf2773cb0df29cb3314eb448e12181de9fe8a6e63c4d31319860",
+      "crc32": "9643d33e"
+    },
+    {
+      "name": "TEST-desktop-backend-Ord8hX/hoststore/runtime-checkpoints/cp1-cba1ff2a6bfc28c588cc8cddd15c4040cdfefaa5f20a922d317ec9eab2690acc.json",
+      "bytes": 2030,
+      "sha256": "bc9ccfc6dc421879784d7f1176da41a0a1081271d5ca819ef4acc1b437c6f919",
+      "crc32": "91f81188"
+    },
+    {
+      "name": "TEST-desktop-backend-Ord8hX/hoststore/teams/test-desktop-backend/group-chat-reactions.json",
+      "bytes": 1251,
+      "sha256": "346ef64092df17d17ba0ec4d674bd79df1a0558ec1d35ce640eb43de7ed33a1b",
+      "crc32": "101033a7"
+    },
+    {
+      "name": "TEST-desktop-backend-Ord8hX/hoststore/teams/test-desktop-backend/group-chats.json",
+      "bytes": 361,
+      "sha256": "0594fa5ed6f12cf64e3d55c58448f057d35204375f881334259db4576e6655e4",
+      "crc32": "20f87ca1"
+    },
+    {
+      "name": "TEST-desktop-backend-Ord8hX/hoststore/teams/test-desktop-backend/inboxes/alice.json",
+      "bytes": 2545,
+      "sha256": "6c4bc64bf39afabf24f80cbdb12a7633d855d4c1979a4ed8c0a5cb39cd084f03",
+      "crc32": "f56421e1"
+    },
+    {
+      "name": "TEST-desktop-backend-Ord8hX/hoststore/teams/test-desktop-backend/inboxes/bob.json",
+      "bytes": 1004,
+      "sha256": "ba82e044bcbafdb6485ea980395e7bc277513d4afc75f7374f222ab9d5b87880",
+      "crc32": "525b3b20"
+    },
+    {
+      "name": "TEST-desktop-backend-Ord8hX/hoststore/teams/test-desktop-backend/inboxes/carol.json",
+      "bytes": 1439,
+      "sha256": "d1a4f1b0b52254db24c1c91105cf22f7e810b2bdb7bf6cf9e48cd046f8238e68",
+      "crc32": "0c5afdb9"
+    },
+    {
+      "name": "TEST-desktop-backend-Ord8hX/hoststore/teams/test-desktop-backend/inboxes/user.json",
+      "bytes": 2653,
+      "sha256": "7c13eba492261982e33657d9a821c3913ced24561a20a86f7dd64230e0ba8b32",
+      "crc32": "bd8f81ec"
+    },
+    {
+      "name": "TEST-desktop-backend-Ord8hX/native-chat-attachment-inputs/TEST-native-chat.png",
+      "bytes": 71,
+      "sha256": "5a852fbaaaecaf4cd14c01e150c7f881c5c5894b0a1e3c53be7e007c58374ee6",
+      "crc32": "fe7e0434"
+    },
+    {
+      "name": "TEST-desktop-backend-Ord8hX/native-chat-attachment-inputs/TEST-native-chat.prepared.png",
+      "bytes": 90,
+      "sha256": "43d614f0bc1b36ec2da1effa16b34498a3a62922caff5fd38238990423c50d49",
+      "crc32": "42e2a4e9"
+    },
+    {
+      "name": "TEST-desktop-backend-Ord8hX/native-chat-attachment-inputs/TEST-native-chat.txt",
+      "bytes": 40,
+      "sha256": "55af81cd5ddf9f9313ee38f2929d75f1f15429edd697b9196cf2d70e996d81af",
+      "crc32": "ea753fb5"
+    },
+    {
+      "name": "TEST-desktop-backend-Ord8hX/sentinel-invocations.ndjson",
+      "bytes": 96,
+      "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253",
+      "crc32": "9fc3bdb4"
+    },
+    {
+      "name": "TEST-desktop-backend-Ord8hX/ui-emulated-collaboration-attachments.png",
+      "bytes": 129276,
+      "sha256": "ab1e2779c8634d5be7b4bdce8386568be61aa4e97b7ab3a52675bdb1ce906c4b",
+      "crc32": "33040fe2"
+    },
+    {
+      "name": "TEST-desktop-backend-Ord8hX/ui-emulated-collaboration-direct.png",
+      "bytes": 113722,
+      "sha256": "a6a3b0c6f1b5351d3ab02c5a0bc066e4ba23c989d8c6423c0b71f95e2eb9a9cc",
+      "crc32": "d50bb3e8"
+    },
+    {
+      "name": "TEST-desktop-backend-Ord8hX/ui-emulated-collaboration-effects.json",
+      "bytes": 27680,
+      "sha256": "ff987bde0a323b2b3ef47022ec883d7230817add3e2445bf00ad2cd88e7c505d",
+      "crc32": "55a0ba14"
+    },
+    {
+      "name": "TEST-desktop-backend-Ord8hX/ui-emulated-collaboration-group.png",
+      "bytes": 117076,
+      "sha256": "a78aec6e3544ec7f5c7554a68161d36f0338b213c2a1fad91f7490de51cdb03b",
+      "crc32": "4b0e1352"
+    },
+    {
+      "name": "TEST-desktop-backend-Ord8hX/ui-emulated-collaboration-launch.png",
+      "bytes": 107901,
+      "sha256": "bbb53b3eaf61d6470892d1d75746ede228cd245759a85f8a57464dad77ada6ce",
+      "crc32": "07bf6ea1"
+    },
+    {
+      "name": "TEST-desktop-backend-Ord8hX/ui-emulated-collaboration-member-logs.png",
+      "bytes": 168223,
+      "sha256": "0278688a80b31fd0e4c5af35ffbea92ac93695c9174c3996e44fd21c42ac84a7",
+      "crc32": "55d70bb7"
+    },
+    {
+      "name": "TEST-desktop-backend-Ord8hX/ui-emulated-collaboration-restored.png",
+      "bytes": 155042,
+      "sha256": "72ef1ebf1a7568edcb1214495456d083ea96d74416945210cbdfcb4b8e9e259a",
+      "crc32": "730b7fca"
+    },
+    {
+      "name": "TEST-desktop-backend-Ord8hX/ui-emulated-collaboration-reloaded.png",
+      "bytes": 116302,
+      "sha256": "7fa882ae74da17ac82bee1d093f9d0b6055930a6018ba3d2fccc17ae1bffde77",
+      "crc32": "60549faf"
+    },
+    {
+      "name": "TEST-desktop-backend-Ord8hX/ui-emulated-collaboration-stopped.png",
+      "bytes": 151515,
+      "sha256": "3a36b6e540434ed6c863f15d23620063a751a09dc559bbe6fca060a9b68d18ed",
+      "crc32": "16068603"
+    },
+    {
+      "name": "TEST-desktop-backend-Ord8hX/ui-seed-receipt.json",
+      "bytes": 2685,
+      "sha256": "8b21f69a3fe66f048f5a9fb41cf9109f548410de0b8cdfd8231128b9d1441335",
+      "crc32": "6ed39005"
+    },
+    {
+      "name": "TEST-emulated-ui-inputs-jlJ59J/linux-child-exec/linux-child-exec",
+      "bytes": 790608,
+      "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45",
+      "crc32": "ed0ca14b"
+    },
+    {
+      "name": "TEST-emulated-ui-inputs-jlJ59J/linux-child-exec/manifest.json",
+      "bytes": 2406,
+      "sha256": "4ef7cd76c1a549d6fef41c4dc7561b5433547278d59b0c2907affe2be9a646f1",
+      "crc32": "e3de74e8"
+    },
+    {
+      "name": "host-emulated-emulated-collaboration-ui.log",
+      "bytes": 225,
+      "sha256": "6370120a1bedae15d45c2fb5711bb196a002436f5e0c6c80bf927a3bc3adfae5",
+      "crc32": "be00c228"
+    },
+    {
+      "name": "host-emulated-inputs.json",
+      "bytes": 1803,
+      "sha256": "b461a9238db2add5fa83242b9ea43af49aabf29dddbea001d7c59649a65d63c6",
+      "crc32": "2ef9518d"
+    },
+    {
+      "name": "host-emulated-linux-child-exec-selection.json",
+      "bytes": 271,
+      "sha256": "72a0dcb2ff6435fc4d899fa581c3facdb115a27116a35fb12b3d90f1b2d67a47",
+      "crc32": "44baa446"
+    },
+    {
+      "name": "host-emulated-summary.json",
+      "bytes": 1058,
+      "sha256": "39379b82eb83556580afc0ec85601bc22f13b4fa16a4561cc24087c991aa5c99",
+      "crc32": "f3c2110c"
+    }
+  ],
+  "actuallyViewedUiPngCount": 8,
+  "limits": [
+    "Finite TEST Claude/Codex/OpenCode peers, nativeQualificationfalse/vendorsAllowedfalse; no vendor/auth/native/release qualification.",
+    "Group frame shows Finishing launch/one still joining/Carolstarting; no continuous settled-roster claim. Later source-bound gates and frames remain distinct.",
+    "Stopped/reloaded images do not show oldM mutation-boundary Logs error; that does not explain or erase oldM evidence.",
+    "Thirty original peers absent, eighteen explicit exit0 ledger rows; twelve absences lack peer exit callbacks.",
+    "Group attachments remain unavailable in original contract.",
+    "Selected source and compiled hash observations are not a reproducible build or complete installed-dependency census.",
+    "No privacy/static/other-lane or future-source result transfer."
+  ],
+  "independentReviewPending": true
+}

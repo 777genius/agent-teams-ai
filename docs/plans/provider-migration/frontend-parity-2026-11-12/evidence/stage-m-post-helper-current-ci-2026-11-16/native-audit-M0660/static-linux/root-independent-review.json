@@ -1,0 +1,730 @@
+{
+  "schemaVersion": 1,
+  "kind": "ROOT_INDEPENDENT_M0660_UBUNTU_STATIC_AND_ORIGINAL_V1_R2",
+  "reviewedAtUtc": "2026-11-16T02:33:18.316120+00:00",
+  "reviewer": "/root, independent of native_failures author",
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "runId": 43780997620,
+  "jobId": 133017915059,
+  "conclusion": "Original exact-source leaf SUCCESS accepted within the stated limits; no resulting-helper GREEN or overall qualification transfer",
+  "checkpoint": {
+    "path": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/static-linux/checkpoint-static-linux.json",
+    "bytes": 13162,
+    "blob": "72934b09e045717ea627441b3b990a4535198cbb",
+    "sha256": "ffe6cd2c1b87be554dea5289bd4cc253e501c56f72e3c7034d368b887a3bb7d7"
+  },
+  "allNinePayloadBytesRecomputed": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/static-linux/job-133017915059.log",
+      "bytes": 114635,
+      "blob": "a72ded1fdd1fad34911b158465b050cbb92aa86d",
+      "sha256": "ee1abaa66c84763bb194e4861f5548a6f8efb1f343a8d83446decbba2ec636f6"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/static-linux/original-job-log-response.json",
+      "bytes": 116598,
+      "blob": "eff9b573f6fe735d041c51fd074175a08e745ea7",
+      "sha256": "5b71e679524d1e22c09e1e83f6f8e37631709b9065eb09b411a7705768e41eda"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/static-linux/official-artifacts-response.json",
+      "bytes": 6437,
+      "blob": "45df4e90dc67aeab76a22d1c84918f97e7814aac",
+      "sha256": "a9abc977f8317787a5541ec06aed0bcf1171ba913ddcd145aa9cfa6ef96f0260"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/static-linux/artifact-14192610672.zip",
+      "bytes": 4000,
+      "blob": "196950086facc7b3839ebfe2715e56d556633a38",
+      "sha256": "a40813439aae30d3e2042aa9b7b20e141a88e85de3f7748fc6a13c9b3c47bc53"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/static-linux/archive-audit.json",
+      "bytes": 10169,
+      "blob": "109aff4387ad75904c225dec78413b52b207c385",
+      "sha256": "f9524bcce01e7797d355256376d1a01f1231e7d2c139b29e018d463877208c25"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/static-linux/source-and-command-audit.json",
+      "bytes": 12463,
+      "blob": "a1881138200a09c6f9045b3d966808794e61ac21",
+      "sha256": "4c4147fb7dede7ce64db5290d9337ec6b837ee249f41fb2f31fa14ea13e959b1"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/static-linux/audit.json",
+      "bytes": 44928,
+      "blob": "27afc1f8fdef94387a4fc4829fc4269ea36269f2",
+      "sha256": "d1017c87d321939140c7769bed9c5f90a4de379ecda3d80a55b1067f5ee86c41"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/static-linux/Plan29-static-linux-appendix.md",
+      "bytes": 5026,
+      "blob": "6a5af5ad567a8a3da47efaf88f3a492f26e69192",
+      "sha256": "fee24b4598ded10717836954da75dcab3733b68896441d975967fc9a203423be"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/v2-jobs-api-0220.json",
+      "bytes": 42282,
+      "blob": "84caaf65ccc159ab08402d0448ef2cf7bb0812bb",
+      "sha256": "97444dffba6eed20a7ac527c5414a640ec78236228a98652ea062fe244b12c0d"
+    }
+  ],
+  "originalResponseEqualsFullLogBytes": true,
+  "terminalJobAndArtifactMetadataJoined": true,
+  "archive": {
+    "path": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/static-linux/artifact-14192610672.zip",
+    "bytes": 4000,
+    "blob": "196950086facc7b3839ebfe2715e56d556633a38",
+    "sha256": "a40813439aae30d3e2042aa9b7b20e141a88e85de3f7748fc6a13c9b3c47bc53"
+  },
+  "threeUniqueSafeCrcAndExactExtractedMembers": [
+    {
+      "name": "native-v1-1.19.4.json",
+      "bytes": 4479,
+      "blob": "098ee2bc1a4d3546edb10df1371a5eb72d23ab05",
+      "sha256": "6742fc5b78b37853629d8b7ac9802f73dde45e28177aba5bf6a917c8a3fa14f8",
+      "crc32": "68ae1466"
+    },
+    {
+      "name": "native-v1-1.19.5.json",
+      "bytes": 1723,
+      "blob": "594aff6794552296829c98ba9e3bd506347fb5fa",
+      "sha256": "2a3c2274cd9368d40f9c14acbbdcc50208a01cc3f9700f6b64a4406dddfa510e",
+      "crc32": "cfef82d9"
+    },
+    {
+      "name": "native-v1-latest.json",
+      "bytes": 1723,
+      "blob": "594aff6794552296829c98ba9e3bd506347fb5fa",
+      "sha256": "2a3c2274cd9368d40f9c14acbbdcc50208a01cc3f9700f6b64a4406dddfa510e",
+      "crc32": "cfef82d9"
+    }
+  ],
+  "originalCommandRows": [
+    {
+      "logLine": 36,
+      "command": "actions/checkout@v6"
+    },
+    {
+      "logLine": 168,
+      "command": "set -euo pipefail"
+    },
+    {
+      "logLine": 177,
+      "command": "actions/checkout@v6"
+    },
+    {
+      "logLine": 297,
+      "command": "git -C .current-product-lock rev-parse HEAD"
+    },
+    {
+      "logLine": 305,
+      "command": "pnpm/action-setup@v6"
+    },
+    {
+      "logLine": 334,
+      "command": "actions/setup-node@v6"
+    },
+    {
+      "logLine": 365,
+      "command": "node --test test/scripts/installDependenciesWithRetry.test.mjs"
+    },
+    {
+      "logLine": 388,
+      "command": "node ./scripts/ci/install-dependencies-with-retry.mjs"
+    },
+    {
+      "logLine": 753,
+      "command": "pnpm --filter @agent-teams/legacy-agent-host build"
+    },
+    {
+      "logLine": 764,
+      "command": "pnpm --filter @agent-teams/legacy-agent-host typecheck:test"
+    },
+    {
+      "logLine": 773,
+      "command": "node --test packages/legacy-agent-host/tests/opencode-v2-model-variant.test.ts packages/legacy-agent-host/tests/opencode-v2-model-variant-spi.test.ts"
+    },
+    {
+      "logLine": 832,
+      "command": "pnpm exec vitest run test/features/opencode-runtime-installer/installPolicy.test.ts test/main/services/infrastructure/OpenCodeRuntimeInstallerService.test.ts"
+    },
+    {
+      "logLine": 854,
+      "command": "node --test packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts packages/legacy-agent-host/tests/opencode-v2-static-capture.test.ts packages/legacy-agent-host/tests/opencode-v2-host-spi.test.ts packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs packages/legacy-agent-host/tests/opencode-v2-native-process-guard.test.mjs packages/legacy-agent-host/tests/opencode-v2-request-admission.test.ts packages/legacy-agent-host/tests/opencode-v1-version-receipt.test.ts packages/legacy-agent-host/tests/opencode-v1-version-source.test.ts"
+    },
+    {
+      "logLine": 1096,
+      "command": "node scripts/postinstall-electron.cjs"
+    },
+    {
+      "logLine": 1142,
+      "command": "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
+    }
+  ],
+  "nativeRunnerSecondCommandLine": 1098,
+  "reporterBlocksFromFullOriginalLog": [
+    {
+      "logLine": 380,
+      "tests": 7,
+      "suites": 0,
+      "pass": 7,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "duration_ms": 191.143569
+    },
+    {
+      "logLine": 824,
+      "tests": 41,
+      "suites": 0,
+      "pass": 41,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "duration_ms": 336.300553
+    },
+    {
+      "logLine": 1088,
+      "tests": 225,
+      "suites": 0,
+      "pass": 224,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 1,
+      "todo": 0,
+      "duration_ms": 6821.582903
+    },
+    {
+      "logLine": 1109,
+      "tests": 1,
+      "suites": 0,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "duration_ms": 38099.742349
+    },
+    {
+      "logLine": 1121,
+      "tests": 1,
+      "suites": 0,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "duration_ms": 24908.004333
+    },
+    {
+      "logLine": 1133,
+      "tests": 1,
+      "suites": 0,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "duration_ms": 25082.649141
+    }
+  ],
+  "vitest": {
+    "filesPass": 2,
+    "testsPass": 189,
+    "fail": 0
+  },
+  "originalTotals": {
+    "pass": 464,
+    "fail": 0,
+    "skip": 1,
+    "cancel": 0,
+    "todo": 0
+  },
+  "originalSkip": {
+    "log": "﹣ private V2 driver refuses drive-relative Windows cwd before network access (0.090896ms) # SKIP",
+    "source": {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-host-spi.test.ts",
+      "lines": [
+        "test('private V2 driver refuses drive-relative Windows cwd before network access',",
+        "  { skip: process.platform !== 'win32' }, async () => {",
+        "    const fixture = nativeV2Profile();",
+        "    fixture.cwd = 'C:TEST-only-opencode-v2';",
+        "    const { captured, calls } = owner(true);",
+        "    const provider = createOpenCodeV2MemberProvider(context(fixture), captured);"
+      ],
+      "guard": "process.platform !== 'win32'",
+      "actualSkipped": true
+    },
+    "notQualifiedOnLinux": true
+  },
+  "threeSeparatelyLoggedNativeInvocations": [
+    {
+      "selector": "1.19.4",
+      "resolved": "1.19.4",
+      "logLine": 1117
+    },
+    {
+      "selector": "1.19.5",
+      "resolved": "1.19.5",
+      "logLine": 1129
+    },
+    {
+      "selector": "latest",
+      "resolved": "1.19.5",
+      "logLine": 1141
+    }
+  ],
+  "nonbaselineReceiptBytesIdentical": true,
+  "noUnretainedDistinctNativePidsInferred": true,
+  "sharedHostCensus": {
+    "path": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/host-source-M0660-git-audit.json",
+    "bytes": 163123,
+    "blob": "c6f687fc66ecfbd5ab750c1fa657af628e2329e7",
+    "sha256": "05d5046c29097f54d9fb6c48bb8ab4236240a883d5ebfda4854269c5779a2893"
+  },
+  "hostSourceGitObjectJoin": {
+    "files": 619,
+    "bytes": 4111147,
+    "digest": "802af77294547c258a7306e17598978305b6edf86705d0884196b98bc095cd39",
+    "algorithm": "sorted relative path, NUL, exact Git blob bytes, NUL",
+    "allObjectsRehashed": true
+  },
+  "selected28GitLeaves": [
+    {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "bytes": 36013,
+      "blob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+      "sha256": "fddd1aface758ef115a5e904151cb61dd78dca04d8f52fb99f4326ddaff53a14"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v1-version-runner.ts",
+      "bytes": 7414,
+      "blob": "27d0ce8d8972cee4b23030b4173108c37460f322",
+      "sha256": "37970ed47f71395a4ca39da840eda56559e68f5514134d900441ce272ed02e1e"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v1-version-host.native.ts",
+      "bytes": 29510,
+      "blob": "754f3afad53828444de4c7c94bd4b34dd37ca1ae",
+      "sha256": "c241addb1fa9ba28397cbe1ff2f2e2f00f5d55444aad8788d7d0952b28568858"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v1-version-receipt.ts",
+      "bytes": 6793,
+      "blob": "4766e0024d8b975de767dc8db21c1bd73961acf2",
+      "sha256": "5dcd39109b7c3f53fd2ae4dd6a36c321f368f5c770d47af11733f5cdcd96c0b8"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v1-version-source.ts",
+      "bytes": 9765,
+      "blob": "78cb6f0026821785b1d0c0c1ad21ddfe76cdaee4",
+      "sha256": "0ff252732bedb1807cf428370e41628922a4d719090f479a41f25117d7227979"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-host.ts",
+      "bytes": 15303,
+      "blob": "bea17f976f5db7e9d6b471751ff7d871cd8ebcd5",
+      "sha256": "ea11710ab1833e4cad906bad58def351b852c89ba1dee834c69849b3a1995d01"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-installer.ts",
+      "bytes": 10659,
+      "blob": "078ca614e05e57d52639282d6bd1c9e96ef1afbb",
+      "sha256": "475a9c4c7b72837d472dfde184481ccb0b82c3da8254b681ffc54688123ac592"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-install-selection.ts",
+      "bytes": 4373,
+      "blob": "fbcffa2dc98801da7b9b4cf45ad30eb11c663962",
+      "sha256": "616f64bb5b09dcf766f1dde2a60ec7c82c6678394ff0770cde583151d93e9365"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts",
+      "bytes": 38584,
+      "blob": "ff0aeba42e3a4e845428146969360dff91c25de8",
+      "sha256": "f25659fe4c89e30072e9c2bc923fcdf6f1a3dd2efdca81387659e485170c74c3"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-host-spi.test.ts",
+      "bytes": 182299,
+      "blob": "de09aac5ead356339b87fcc568798f930067f1cc",
+      "sha256": "c3c736d96b9df0808b7841a593205afc2648a41f70e202b359244e756e9750da"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts",
+      "bytes": 37133,
+      "blob": "a346d346c617b8fb79192cd19970e7cde2e98854",
+      "sha256": "d0c5c343bb732f7c6d3063bc55edf2ad7e2431a14eb7c57dc99694e61d38844f"
+    },
+    {
+      "path": "scripts/ci/install-dependencies-with-retry.mjs",
+      "bytes": 5259,
+      "blob": "cbf2463eb47d22c3d87d9eec001edad26dd68ff0",
+      "sha256": "c8dc0b63fc490fd5a9a1b4abf0631b66c30e1ccda2199094c86e49a6e250d01e"
+    },
+    {
+      "path": "test/scripts/installDependenciesWithRetry.test.mjs",
+      "bytes": 4939,
+      "blob": "c1c0232d09e5cd898d7acabcc48b87bab58f3c82",
+      "sha256": "3aab9d6568157c883993c43b8057193175e69c16c31129ce3867a14e686a8f00"
+    },
+    {
+      "path": "scripts/postinstall-electron.cjs",
+      "bytes": 1841,
+      "blob": "71d2e9fc938c082bac2b6f5f0d66b6cc4eb9e78b",
+      "sha256": "28e967a5ebc00448d1c79ef388344e822ba893a6ec6fdc4e78cfdbaab7411dae"
+    },
+    {
+      "path": "package.json",
+      "bytes": 26839,
+      "blob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+      "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084"
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "bytes": 956788,
+      "blob": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+      "sha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c"
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "bytes": 6946,
+      "blob": "3999f1f503fc23c84db89cf9e964bcc3164122e5",
+      "sha256": "c3801a0cb971ad1c31e7236a61c328ff55c9c91d63b7b7042de8562ff39f00ea"
+    },
+    {
+      "path": "runtime.lock.json",
+      "bytes": 6127,
+      "blob": "1757d79786da78e739a322e8bba81cd3dc88dcaa",
+      "sha256": "fa614f6dcc672b47342a838300f4c1c7b82ae0f05899c108af17838c58c53a87"
+    },
+    {
+      "path": "legacy-host.lock.json",
+      "bytes": 947,
+      "blob": "6916f66ea9e4a7e8299c3ffd328e226d009ebd79",
+      "sha256": "7e382a493225141a4de4a15a5f829c1b2222ff44a8489c3dd4b6a3c24c942545"
+    },
+    {
+      "path": "packages/legacy-agent-host/package.json",
+      "bytes": 12355,
+      "blob": "e39cb2ba89c125d850710828a65a30ae25b7344b",
+      "sha256": "77efb91a29ed4ba662ca7dcebc0843965d27305ad9d62f04ef6c84b517732e0b"
+    },
+    {
+      "path": "packages/legacy-agent-host/tsconfig.json",
+      "bytes": 456,
+      "blob": "9fad9f8a73e1cfffd382c0ba76f2945e5c361531",
+      "sha256": "54be9b6021660d54c06c14fd25cc5c4484b7615f01d9eb033fc52edfded095ab"
+    },
+    {
+      "path": "packages/legacy-agent-host/tsconfig.test.json",
+      "bytes": 174,
+      "blob": "65edbd94041b7d9a986480badd6802b1dd0a8837",
+      "sha256": "5f1f3e6842c4087e0f834895fbde59769240c68a98ff15c24ac1677d0e5b9356"
+    },
+    {
+      "path": "packages/task-change-ledger/package.json",
+      "bytes": 2714,
+      "blob": "0fac5843889e1b28d53712f353bce1b0bae855a4",
+      "sha256": "a0db21117b905b414e825862d8bc93cfe9280975c8b91e1afa6cca2e1570a132"
+    },
+    {
+      "path": "packages/task-change-ledger/tsconfig.json",
+      "bytes": 378,
+      "blob": "ff7683dc99c69dbf8c884ba138382468c9c86314",
+      "sha256": "03d503904b76cc07fc4765a30493d288b99a2dbcf1325f3dda243592a407cb6c"
+    },
+    {
+      "path": "src/main/services/infrastructure/OpenCodeRuntimeInstallerService.ts",
+      "bytes": 37454,
+      "blob": "581a6578f0d8b96164bc310a9ed8a66ec446c32a",
+      "sha256": "8832c4797ab4d635b1903aeffd194c97a3b7a3a168f508347db96fe79b7188ba"
+    },
+    {
+      "path": "src/features/opencode-runtime-installer/main/infrastructure/packageSelection.ts",
+      "bytes": 8411,
+      "blob": "3498161c910d01acc9aae38f64aed960806a4c4f",
+      "sha256": "f2a41c1d55f9fae1d3dfbaa0f5878242960ad46fb217e357fb7cae874137493c"
+    },
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-implementations-0.0.0.tgz",
+      "bytes": 185996,
+      "blob": "7130609dd29851148c9e2106e2764b75982739b1",
+      "sha256": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267"
+    },
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz",
+      "bytes": 6230,
+      "blob": "33c2944ff8a52a9c087fba9d3cab1daffe2604d8",
+      "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc"
+    }
+  ],
+  "providerArchiveSha256": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+  "originalReceipts": {
+    "native-v1-1.19.4.json": {
+      "kind": "TEST_NATIVE_V1_VERSION_HOST",
+      "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "platform": "linux-x64",
+      "status": "PASS",
+      "cleanup": true,
+      "selectedCliVersion": "1.19.4",
+      "nativeVersion": "1.19.4",
+      "nativeDigest": "538fcb1b6408c8d4608822acee19f7ff5b3a3eb3383c0633c4f06170857312a7",
+      "nativeIntegrity": "sha512-rQ/l3jmJoxf8ZYnBargg9alURlz6buEilysGODtzkcmcYtcZ91LOgF034oUUHHQl8/y1hbRTDvg6ujqUjQsMXw==",
+      "wireProtocolRevision": "1.19.4",
+      "nodeVersion": "v24.21.0",
+      "nodeDigest": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+      "providerDigest": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+      "hostSourceDigest": "802af77294547c258a7306e17598978305b6edf86705d0884196b98bc095cd39",
+      "hostDistDigest": "2e9a3d32128d0659c02af024bc096dd56f1df28af8ddecb1fe5a0ad5ef1f22a0",
+      "steps": [
+        "native_version_package_integrity_and_source_measured",
+        "original_host_native_runtime_and_mcp_ready",
+        "managed_update_preserved_pending_native_session",
+        "native_model_tools_permission_task_and_reply_completed_once",
+        "original_host_runtime_stop_and_cleanup_confirmed",
+        "cold_receipt_readback_without_native_replay_or_source_mutation"
+      ],
+      "hosts": [
+        {
+          "exitCode": 0,
+          "signalCode": null,
+          "stdoutValid": true
+        },
+        {
+          "exitCode": 0,
+          "signalCode": null,
+          "stdoutValid": true
+        }
+      ],
+      "modelOrigin": "localhost-scripted",
+      "modelRequests": 8,
+      "coordination": {
+        "status": "unqualified",
+        "cleanup": null
+      },
+      "preferencesSelection": {
+        "defaultModelId": "TEST-local/TEST-model-B",
+        "contextTokens": 64000,
+        "outputTokens": 1024
+      },
+      "vendorAuthQualified": false,
+      "desktopQualified": false,
+      "releaseQualified": false,
+      "managedUpdate": {
+        "before": {
+          "native": {
+            "pid": 5011,
+            "parent": 5003,
+            "birth": "44323",
+            "device": "64512",
+            "inode": "1589021",
+            "executableSha256": "538fcb1b6408c8d4608822acee19f7ff5b3a3eb3383c0633c4f06170857312a7"
+          },
+          "binarySha256": "538fcb1b6408c8d4608822acee19f7ff5b3a3eb3383c0633c4f06170857312a7",
+          "profileSha256": "cdc08916a0fe27c678b6f23fb5b79b99581e5ea9f41e3807804c942b2a8c2595",
+          "sessionSha256": "ceddd2b7c99578d82aec95818f60e67b5c7b7d3151533005b81463e4ca8cd410",
+          "runtimeStateSha256": "74497894a25d9568a74958cb1776d62b5053b3764ab94660dd36938b541f4e46",
+          "projectionSha256": "6ed61218aa52084a5893b524c82b633a4fe25cdc39992d80f190e13bec503c81",
+          "checkpointSha256": "df4a5b43ac17cde6c54b1e2433263138365dd9d0a3c0d8a171541d220d0372e7"
+        },
+        "after": {
+          "native": {
+            "pid": 5011,
+            "parent": 5003,
+            "birth": "44323",
+            "device": "64512",
+            "inode": "1589021",
+            "executableSha256": "538fcb1b6408c8d4608822acee19f7ff5b3a3eb3383c0633c4f06170857312a7"
+          },
+          "binarySha256": "538fcb1b6408c8d4608822acee19f7ff5b3a3eb3383c0633c4f06170857312a7",
+          "profileSha256": "cdc08916a0fe27c678b6f23fb5b79b99581e5ea9f41e3807804c942b2a8c2595",
+          "sessionSha256": "ceddd2b7c99578d82aec95818f60e67b5c7b7d3151533005b81463e4ca8cd410",
+          "runtimeStateSha256": "74497894a25d9568a74958cb1776d62b5053b3764ab94660dd36938b541f4e46",
+          "projectionSha256": "6ed61218aa52084a5893b524c82b633a4fe25cdc39992d80f190e13bec503c81",
+          "checkpointSha256": "df4a5b43ac17cde6c54b1e2433263138365dd9d0a3c0d8a171541d220d0372e7"
+        },
+        "fromVersion": "1.19.4",
+        "toVersion": "1.19.5",
+        "source": "app-managed",
+        "updatedBinarySha256": "7df4e4136301f16589b0f30bf91a61380fca5f8ef22dd36570f5ebe1d4ec802c",
+        "updatedIntegrity": "sha512-i1qh7VooLGML9xX6ud93y0JA8j/1aPeDYRKjsmYXrJX1TjIWHgBBMkEbEJPZthpWbsJg//XfBgR6Kb7+NPaJiQ==",
+        "oldManifestSha256": "86d5ec9cc6b54c94915bc2e21cc9d5e7addc9e51f437b7217d06ffc32a1fc841",
+        "newManifestSha256": "d56f6bd646303c305903555999d659a74fd5b15084e558f16b73588eea8b5f00",
+        "installerBundleSha256": "d8a5deedf2396f1048f256d763cad0322207a32c15dde6a66d67ded3adc59288",
+        "installerSourceSha256": "c192bb70d39bb7d05154786ed6ceb669ffe32b7e6afcffbbe43809b09b9bf8e4",
+        "electronVersion": "44.10.1",
+        "electronSha256": "7722b3b95b0a31e24906f8046c1bf29cb03c1b99f67058b0b9a4c0e8681c0d87",
+        "installerProcesses": [
+          {
+            "exitCode": 0,
+            "signalCode": null,
+            "cleanup": true
+          },
+          {
+            "exitCode": 0,
+            "signalCode": null,
+            "cleanup": true
+          }
+        ]
+      }
+    },
+    "native-v1-1.19.5.json": {
+      "kind": "TEST_NATIVE_V1_VERSION_HOST",
+      "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "platform": "linux-x64",
+      "status": "PASS",
+      "cleanup": true,
+      "selectedCliVersion": "1.19.5",
+      "nativeVersion": "1.19.5",
+      "nativeDigest": "7df4e4136301f16589b0f30bf91a61380fca5f8ef22dd36570f5ebe1d4ec802c",
+      "nativeIntegrity": "sha512-i1qh7VooLGML9xX6ud93y0JA8j/1aPeDYRKjsmYXrJX1TjIWHgBBMkEbEJPZthpWbsJg//XfBgR6Kb7+NPaJiQ==",
+      "wireProtocolRevision": "1.19.4",
+      "nodeVersion": "v24.21.0",
+      "nodeDigest": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+      "providerDigest": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+      "hostSourceDigest": "802af77294547c258a7306e17598978305b6edf86705d0884196b98bc095cd39",
+      "hostDistDigest": "2e9a3d32128d0659c02af024bc096dd56f1df28af8ddecb1fe5a0ad5ef1f22a0",
+      "steps": [
+        "native_version_package_integrity_and_source_measured",
+        "original_host_native_runtime_and_mcp_ready",
+        "native_model_tools_permission_task_and_reply_completed_once",
+        "original_host_runtime_stop_and_cleanup_confirmed",
+        "cold_receipt_readback_without_native_replay_or_source_mutation"
+      ],
+      "hosts": [
+        {
+          "exitCode": 0,
+          "signalCode": null,
+          "stdoutValid": true
+        },
+        {
+          "exitCode": 0,
+          "signalCode": null,
+          "stdoutValid": true
+        }
+      ],
+      "modelOrigin": "localhost-scripted",
+      "modelRequests": 8,
+      "coordination": {
+        "status": "unqualified",
+        "cleanup": null
+      },
+      "preferencesSelection": {
+        "defaultModelId": "TEST-local/TEST-model-B",
+        "contextTokens": 64000,
+        "outputTokens": 1024
+      },
+      "vendorAuthQualified": false,
+      "desktopQualified": false,
+      "releaseQualified": false
+    },
+    "native-v1-latest.json": {
+      "kind": "TEST_NATIVE_V1_VERSION_HOST",
+      "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "platform": "linux-x64",
+      "status": "PASS",
+      "cleanup": true,
+      "selectedCliVersion": "1.19.5",
+      "nativeVersion": "1.19.5",
+      "nativeDigest": "7df4e4136301f16589b0f30bf91a61380fca5f8ef22dd36570f5ebe1d4ec802c",
+      "nativeIntegrity": "sha512-i1qh7VooLGML9xX6ud93y0JA8j/1aPeDYRKjsmYXrJX1TjIWHgBBMkEbEJPZthpWbsJg//XfBgR6Kb7+NPaJiQ==",
+      "wireProtocolRevision": "1.19.4",
+      "nodeVersion": "v24.21.0",
+      "nodeDigest": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+      "providerDigest": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+      "hostSourceDigest": "802af77294547c258a7306e17598978305b6edf86705d0884196b98bc095cd39",
+      "hostDistDigest": "2e9a3d32128d0659c02af024bc096dd56f1df28af8ddecb1fe5a0ad5ef1f22a0",
+      "steps": [
+        "native_version_package_integrity_and_source_measured",
+        "original_host_native_runtime_and_mcp_ready",
+        "native_model_tools_permission_task_and_reply_completed_once",
+        "original_host_runtime_stop_and_cleanup_confirmed",
+        "cold_receipt_readback_without_native_replay_or_source_mutation"
+      ],
+      "hosts": [
+        {
+          "exitCode": 0,
+          "signalCode": null,
+          "stdoutValid": true
+        },
+        {
+          "exitCode": 0,
+          "signalCode": null,
+          "stdoutValid": true
+        }
+      ],
+      "modelOrigin": "localhost-scripted",
+      "modelRequests": 8,
+      "coordination": {
+        "status": "unqualified",
+        "cleanup": null
+      },
+      "preferencesSelection": {
+        "defaultModelId": "TEST-local/TEST-model-B",
+        "contextTokens": 64000,
+        "outputTokens": 1024
+      },
+      "vendorAuthQualified": false,
+      "desktopQualified": false,
+      "releaseQualified": false
+    }
+  },
+  "sourceReview": {
+    "runner": "Full 122 lines: exact source/Linux x64/Node guard; clean build; exactly three receipt names; finite registry metadata; selector resolves once; private exact npm lock/integrity; original 480s/240s child test; verifier and build recheck then prefix cleanup.",
+    "native": "Full 461 lines: original /proc parent/birth/exe/dev/inode/hash samples; finite localhost model; one original permission reply without mutation retry; eight requests and failed-tool preservation; baseline managed update while pending; closed/released Stop; two captured Host exits; same durable original command looked up/reissued idempotently without extra model/effect bytes.",
+    "receipt": "Full 109 lines: closed original key schema, exact stages/hosts/source/build/version, explicit false broad qualification fields; baseline original before/after equality and changed selected executable/manifest plus two installer cleanup rows.",
+    "source": "Full 186 lines: clean Git boundary, installed provider archive census and exact bytes, both ledger and Host dist deleted/rebuilt by original runner, source/build rechecked. This review only remeasured immutable Git inputs; no compiler or installation run.",
+    "hostCleanup": "Original captured ChildProcess receives EOF and advertised dispose budget plus 2s; captured SIGTERM fallback only if not exited; original exit awaited and exact exit0/null/stdoutValid asserted. Receipt does not identify fallback use and is not a full process census.",
+    "installerCleanup": "Original CapturedProcess launch retained; original installer exit0/null, original confirmStopped and cleanup row; unchanged implementation/bundle/entry checks. No second launcher or audit-time native process.",
+    "sourceReviewedCriticalFiles": [
+      {
+        "path": "packages/legacy-agent-host/tests/opencode-v1-version-runner.ts",
+        "bytes": 7414,
+        "blob": "27d0ce8d8972cee4b23030b4173108c37460f322",
+        "sha256": "37970ed47f71395a4ca39da840eda56559e68f5514134d900441ce272ed02e1e"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/opencode-v1-version-host.native.ts",
+        "bytes": 29510,
+        "blob": "754f3afad53828444de4c7c94bd4b34dd37ca1ae",
+        "sha256": "c241addb1fa9ba28397cbe1ff2f2e2f00f5d55444aad8788d7d0952b28568858"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/opencode-v1-version-receipt.ts",
+        "bytes": 6793,
+        "blob": "4766e0024d8b975de767dc8db21c1bd73961acf2",
+        "sha256": "5dcd39109b7c3f53fd2ae4dd6a36c321f368f5c770d47af11733f5cdcd96c0b8"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/opencode-v1-version-source.ts",
+        "bytes": 9765,
+        "blob": "78cb6f0026821785b1d0c0c1ad21ddfe76cdaee4",
+        "sha256": "0ff252732bedb1807cf428370e41628922a4d719090f479a41f25117d7227979"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/native-host.ts",
+        "bytes": 15303,
+        "blob": "bea17f976f5db7e9d6b471751ff7d871cd8ebcd5",
+        "sha256": "ea11710ab1833e4cad906bad58def351b852c89ba1dee834c69849b3a1995d01"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-installer.ts",
+        "bytes": 10659,
+        "blob": "078ca614e05e57d52639282d6bd1c9e96ef1afbb",
+        "sha256": "475a9c4c7b72837d472dfde184481ccb0b82c3da8254b681ffc54688123ac592"
+      }
+    ]
+  },
+  "limits": [
+    "The separate product-lock checkout d9ac4a9b0bc652c813761e5e14fdb78e949b94aa is historical and distinct from PR source0660.",
+    "Host dist, Node/native CLI/Electron and dynamic installer hashes remain original runner measurements; three sanitized JSONs do not archive complete runtime binaries/model/session/stdio journals.",
+    "Managed-update identity is bounded, non-atomic original birth/executable observation, not P09 future-byte-consumption binding or a universal process-lifetime certificate.",
+    "The source has idempotent original command lookup/reissue; no additional native model call or effect is allowed by the original assertions. No new business input or mutation retry is introduced by this audit.",
+    "Coordination is explicitly unqualified/cleanupnull and vendorAuth/Desktop/release are false. No P08/P09, separate V2 SPI, real Claude/Codex, other compiler/lint/full-workspace, privacy GREEN, or merge-readiness transfer.",
+    "No project command, native/provider process, installation, compiler/test/lint invocation, workflow/ref/source mutation occurred during this read-only Python/Git audit."
+  ]
+}

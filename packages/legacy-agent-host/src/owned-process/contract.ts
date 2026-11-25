@@ -1,5 +1,15 @@
 import type { Readable, Writable } from 'node:stream';
 
+import type { OwnedServicePort } from './WindowsServiceOperations.js';
+
+export type {
+  OwnedServiceCommand,
+  OwnedServicePort,
+  OwnedServiceResult,
+  OwnedServiceSnapshot,
+  PendingServiceOperation,
+} from './WindowsServiceOperations.js';
+
 export type ProcessOwner = Readonly<{
   teamIncarnation: string;
   runId: string;
@@ -53,7 +63,7 @@ export type ControlCause =
   | 'broker-exit'
   | 'owner-abandoned'
   | 'release-unavailable';
-export type ControlPhase = 'idle' | 'prepare' | 'resume' | 'stop' | 'release';
+export type ControlPhase = 'idle' | 'prepare' | 'resume' | 'stop' | 'release' | 'service';
 export type NativeExitCategory =
   | 'owner-eof'
   | 'bootstrap'
@@ -77,12 +87,16 @@ export interface PendingOwnedProcess {
   /** Observed finite transport facts only; never a tree proof or new authority. */
   diagnostics(): ControlDiagnostics;
   stop(request: StopRequest): Promise<TreeOutcome>;
+  /** Independently bounded even when preparation failed; never a tree proof. */
+  drain(deadlineMs: number): Promise<TargetDrain>;
   /** Last-handle containment fallback; retains unknown evidence, never releases ownership. */
   abandonControl(expectedOwner: ProcessOwner): void;
   /** Requires this capability's genuine receipt and component-required coverage. */
   release(receipt: TreeReceipt, requiredCoverage: Coverage): Promise<void>;
 }
 export interface PreparedOwnedProcess extends PendingOwnedProcess {
+  /** Present only for an explicitly verified service-scopes-v1 broker. */
+  readonly services?: OwnedServicePort | undefined;
   readonly root: Readonly<{ pid: number; birth: string }>;
   readonly stdin: Writable;
   readonly stdout: Readable;
@@ -91,8 +105,6 @@ export interface PreparedOwnedProcess extends PendingOwnedProcess {
   observeTransportFailure(callback: (reason: string) => void): () => void;
   /** Persist exact owner and attach runtime observers in installOwner before native resume. */
   resume(expectedOwner: ProcessOwner, installOwner: () => Promise<void>): Promise<void>;
-  /** Lifecycle finalization must wait for this independently bounded drain. */
-  drain(deadlineMs: number): Promise<TargetDrain>;
 }
 export type Preparation =
   | Readonly<{ kind: 'prepared'; process: PreparedOwnedProcess }>

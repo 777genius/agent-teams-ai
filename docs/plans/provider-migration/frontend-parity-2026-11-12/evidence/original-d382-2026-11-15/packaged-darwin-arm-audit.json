@@ -1,0 +1,357 @@
+{
+  "sourceHead": "d382c393898d35c9340cd903d1c02fb868c18a8e",
+  "runId": 43736377103,
+  "runAttempt": 1,
+  "jobId": 132896821967,
+  "artifactId": 14173351874,
+  "archive": {
+    "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/d382-packaged-darwin-arm64.zip",
+    "bytes": 346953,
+    "sha256": "f97efa36f9b01883c96349893b41bac739d6d9abd27ad6c27d065c0c2d847543",
+    "crcPathAudit": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/archive-audit-packaged-darwin-arm.json"
+  },
+  "log": {
+    "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/job-132896821967.log",
+    "bytes": 153208,
+    "sha256": "a4c55d9c65b4d9e7e903fc0b14332356f9b73d9caaa2e575e33bf45b4245b0e9"
+  },
+  "files": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/packaged_darwin_arm/_temp/opencode-v2-packaged-inputs.json",
+      "bytes": 2374,
+      "sha256": "236c583b8bba638e83c77ce6e868924a201efde9a74fb1d4d3c4095d7785f005"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/packaged_darwin_arm/_temp/opencode-v2-packaged-native.json",
+      "bytes": 5286,
+      "sha256": "c536e22e6308d404ea60d718b55163a01e8b5ecb73cf9b1e8fd05aedba58386a"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/packaged_darwin_arm/_temp/opencode-v2-packaged.json",
+      "bytes": 1189,
+      "sha256": "84d60e88d8b2d0c72add6d9c4a180508779155f1d1f7cb456144ffc58f27ac80"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/packaged_darwin_arm/agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+      "bytes": 1151599,
+      "sha256": "e09932a9296a473c1f8652fb5b300edd232fa7eb78e2ce808e53ff80fc94c465"
+    }
+  ],
+  "checked": [
+    "original source/platform joins",
+    "raw native receipt digest",
+    "raw candidate manifest digest",
+    "recorded harness/Node/Host/Bun/engine/provider/custody joins",
+    "native custody C source hash matches exact Git blob",
+    "120 unique package paths and 8111 manifest file entries",
+    "manifest Host entry hash joins its file row",
+    "actual log final summary equals raw outer receipt",
+    "six original native steps and two successful original Host exits"
+  ],
+  "native": {
+    "kind": "TEST_PACKAGED_NATIVE_V2_HOST",
+    "status": "PASS",
+    "packaged": {
+      "executionOrigin": "packaged-extraResources",
+      "appAsarSha256": "2c809af9e11f53e71ed4dd94f322beb6211b6eb699488f499c4ee19108ee82c0",
+      "candidateManifestSha256": "e09932a9296a473c1f8652fb5b300edd232fa7eb78e2ce808e53ff80fc94c465",
+      "harnessSha256": "81ac537e615d431aeafa5e5bcdca3bff1d80d7bd1ae99c7c551e7e026a3af890",
+      "sourceCheckoutUnavailable": true,
+      "legacyRuntimeUnavailable": true,
+      "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+      "nodeArchiveSha256": "bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057",
+      "providerArtifacts": [
+        {
+          "name": "@agent-teams/provider-implementations",
+          "sha256": "91350f829b72f83e613505bb444ff0d9ef98fb0835e3e438b918bbea8d930f94"
+        },
+        {
+          "name": "@agent-teams/provider-session-contracts",
+          "sha256": "aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db"
+        }
+      ],
+      "packages": 120,
+      "files": 8111
+    },
+    "sourceHead": "d382c393898d35c9340cd903d1c02fb868c18a8e",
+    "platform": "darwin-arm64",
+    "version": "2.1.4",
+    "approvalMode": "manual",
+    "nodeVersion": "v24.21.0",
+    "modelSelection": {
+      "providerId": "TEST-local",
+      "modelId": "TEST-model-B",
+      "variant": "high"
+    },
+    "configurationSelection": {
+      "scope": "project",
+      "original": "project-A",
+      "later": "project-B"
+    },
+    "preferencesSelection": {
+      "nativeDefault": "TEST-local/TEST-model",
+      "appDefault": "TEST-local/TEST-model-B"
+    },
+    "digests": {
+      "bun": "0a2237cdcfa0d16ef501d9acca9f0026309ef348bea7393a64e8d1e3609565cc",
+      "manifest": "a6091937d1c8686b7e1f125b2ef69c52146867b208517eb0fab4cb7ea18c2204",
+      "node": "e4b5a3af0e05c75de2eae013904145f40fe7fc2a6e6f17510128bf45cca4e79b",
+      "hostSource": "0e5ed9a8773aa652ef8a7c2b917a5480488635e815be43d1a6215be145dbffa4",
+      "hostDist": "6c8c4b0cc19b33f7c6db5e456e51708a29f70c97eda769cfc24f441d8b68b1ce",
+      "provider": "91350f829b72f83e613505bb444ff0d9ef98fb0835e3e438b918bbea8d930f94"
+    },
+    "steps": [
+      "original_host_embedded_native_and_mcp_ready",
+      "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+      "changed_project_config_did_not_retarget_running_native_session",
+      "original_uploaded_PNG_native_image_inference_and_public_readback",
+      "checkpoint_and_original_host_native_cleanup_confirmed",
+      "cold_host_restored_native_history_without_model_or_tool_replay"
+    ],
+    "cleanup": true,
+    "phaseElapsedMs": {
+      "original_host_embedded_native_and_mcp_ready": 11038,
+      "native_model_tool_effect_permission_mcp_task_and_reply_completed_once": 17653,
+      "changed_project_config_did_not_retarget_running_native_session": 17653,
+      "original_uploaded_PNG_native_image_inference_and_public_readback": 17653,
+      "checkpoint_and_original_host_native_cleanup_confirmed": 17774,
+      "cold_host_restored_native_history_without_model_or_tool_replay": 26306
+    },
+    "elapsedMs": 29382,
+    "cancelled": false,
+    "inputObservation": {
+      "reads": 80,
+      "last": {
+        "phase": "allocated",
+        "custody": "owned",
+        "nativeReady": true,
+        "attached": true,
+        "sealed": false,
+        "diagnostic": null,
+        "inputs": [
+          {
+            "phase": "terminal",
+            "terminal": "succeeded"
+          },
+          {
+            "phase": "terminal",
+            "terminal": "succeeded"
+          }
+        ],
+        "interactions": [
+          {
+            "kind": "permission",
+            "phase": "resolved"
+          },
+          {
+            "kind": "permission",
+            "phase": "resolved"
+          }
+        ]
+      }
+    },
+    "launchObservation": {
+      "openElapsedMs": 7490,
+      "afterOpen": {
+        "available": true,
+        "status": "ready",
+        "reason": "context-applied",
+        "elapsedSinceAttemptMs": 7331,
+        "capturedTimeoutMs": 120000,
+        "claimed": true,
+        "nativeReady": true,
+        "contextApplied": true,
+        "everReady": true,
+        "usable": true,
+        "controlAvailable": true,
+        "noAllocation": false
+      }
+    },
+    "failureCode": null,
+    "hosts": [
+      {
+        "exitCode": 0,
+        "signalCode": null,
+        "stdoutValid": true
+      },
+      {
+        "exitCode": 0,
+        "signalCode": null,
+        "stdoutValid": true
+      }
+    ],
+    "modelOrigin": "localhost-scripted",
+    "modelRequests": 11,
+    "modelProgress": [
+      {
+        "elapsedMs": 11071,
+        "requests": 0
+      },
+      {
+        "elapsedMs": 12826,
+        "requests": 1
+      },
+      {
+        "elapsedMs": 12875,
+        "requests": 2
+      },
+      {
+        "elapsedMs": 12930,
+        "requests": 3
+      },
+      {
+        "elapsedMs": 12985,
+        "requests": 4
+      },
+      {
+        "elapsedMs": 13706,
+        "requests": 5
+      },
+      {
+        "elapsedMs": 13756,
+        "requests": 6
+      },
+      {
+        "elapsedMs": 13817,
+        "requests": 7
+      },
+      {
+        "elapsedMs": 13870,
+        "requests": 8
+      },
+      {
+        "elapsedMs": 16551,
+        "requests": 9
+      },
+      {
+        "elapsedMs": 16997,
+        "requests": 10
+      },
+      {
+        "elapsedMs": 17046,
+        "requests": 11
+      }
+    ],
+    "coordination": {
+      "status": "unqualified",
+      "cleanup": null
+    },
+    "modelFailures": [],
+    "vendorAuthQualified": false,
+    "desktopQualified": false,
+    "releaseQualified": false
+  },
+  "qualification": {
+    "kind": "TEST_PACKAGED_V2_QUALIFICATION",
+    "status": "PASS",
+    "sourceHead": "d382c393898d35c9340cd903d1c02fb868c18a8e",
+    "platform": "darwin-arm64",
+    "cleanup": true,
+    "phase": "finished",
+    "desktopJourneyQualified": false,
+    "vendorAuthQualified": false,
+    "releaseQualified": false,
+    "cleanupObservation": {
+      "originalExitObserved": true,
+      "nativeReceiptParsed": true,
+      "nativeReceiptBound": true,
+      "nativeCleanupConfirmed": true,
+      "firstFailure": null,
+      "firstRestorationFailure": null
+    },
+    "appAsarSha256": "2c809af9e11f53e71ed4dd94f322beb6211b6eb699488f499c4ee19108ee82c0",
+    "candidateManifestSha256": "e09932a9296a473c1f8652fb5b300edd232fa7eb78e2ce808e53ff80fc94c465",
+    "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+    "nodeSha256": "e4b5a3af0e05c75de2eae013904145f40fe7fc2a6e6f17510128bf45cca4e79b",
+    "nativeExit": {
+      "code": 0,
+      "signal": null
+    },
+    "nativeReceiptSha256": "c536e22e6308d404ea60d718b55163a01e8b5ecb73cf9b1e8fd05aedba58386a",
+    "sourceCheckoutUnavailable": true,
+    "legacyRuntimeUnavailable": true,
+    "sourceRestored": true,
+    "bundleRestored": true,
+    "legacyRuntimeRestored": true
+  },
+  "sourceFiles": [
+    {
+      "path": "scripts/legacy-agent-host/run-packaged-opencode-v2.ts",
+      "blob": "44ccc655c11bb48dd354b10c09acb3d0e2d65c91",
+      "bytes": 14137,
+      "sha256": "b6f0893cda4210adaa754d7b2af96f3ddd43dc9af64e0656a5736e26e79060e4"
+    },
+    {
+      "path": "scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts",
+      "blob": "27cf4112a25dec299a21d6f802a5c08d55e36f2d",
+      "bytes": 17320,
+      "sha256": "74444f48ffc2ddd4ca4bae52c9cbd7c2bddaa465508169d026e193661ce25787"
+    },
+    {
+      "path": "scripts/legacy-agent-host/stage-opencode-v2-packaged.ts",
+      "blob": "08fd0ad35418d66b9cd5b007213b58888fcf8a24",
+      "bytes": 9840,
+      "sha256": "a7d4b63db9a604114c46c9ee4f2dcaf27747e9cfd4753f2de79e0e6a9fee591d"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts",
+      "blob": "e4fd10d1c969bb5bf8a75e9789599a04dc0fc190",
+      "bytes": 33259,
+      "sha256": "e7a295816da293ff4e26a775f898f1bc144ece55e995c3d05bed8e543f2803ff"
+    },
+    {
+      "path": "packages/legacy-agent-host/native/registered-process-darwin.c",
+      "blob": "4f300228b8f28b870586794564ae63ccf1dee41f",
+      "bytes": 15524,
+      "sha256": "a2f6d70bd04251308a1f70fe4374fe5fd343feb6939db3df7d030f03d7d1e6b5"
+    }
+  ],
+  "originalCommands": [
+    {
+      "command": "node --test scripts/stage-managed-git.test.mjs",
+      "pass": 11,
+      "fail": 0,
+      "skip": 0,
+      "cancelled": 0
+    },
+    {
+      "command": "node --test test/scripts/verify-bundled-undici.test.cjs",
+      "pass": 2,
+      "fail": 0,
+      "skip": 0,
+      "cancelled": 0
+    },
+    {
+      "command": "node --test scripts/legacy-agent-host/candidate-closure.test.ts scripts/legacy-agent-host/packaged-opencode-v2-inputs.test.ts scripts/legacy-agent-host/stage-node.test.ts",
+      "pass": 25,
+      "fail": 0,
+      "skip": 1,
+      "cancelled": 0,
+      "retainedSkip": "Windows builder preserves only the fully attested unused ia32 FFI with its real x64 target"
+    }
+  ],
+  "sourceAssertions": {
+    "originalStop": "runtime.stop ok, phase closed, custody released before original Host close",
+    "coldResume": "lookup/execute return retained results; same two terminal input IDs; new native generation; unchanged 11 model requests and ONE/TWO effect; second Stop releases custody",
+    "verification": "same packaged manifest and harness before and after scenario, source checkout and legacy runtime absent, selected packaged Node; source restored and reverified only after original exit and native cleanup"
+  },
+  "startupSmoke": {
+    "pid": 8307,
+    "stableMs": 8128,
+    "sqlite": true,
+    "leaderExit": {
+      "code": 0,
+      "signal": null
+    }
+  },
+  "limits": [
+    "finite native OpenCode 2.1.4 scripted localhost model, not vendor authentication",
+    "no P08 Retry/Processes UI or P09 mutation qualification",
+    "desktopJourneyQualified/vendorAuthQualified/releaseQualified remain false",
+    "coordination remains unqualified",
+    "manifest records hashes; this archive lacks the 8111 staged payload bytes, ASAR, harness, Node and native binaries",
+    "aggregate Host source/dist and binary hashes were joined, not independently rebuilt or rehashed",
+    "no original native PID/HANDLE census or passive trace in this packaged receipt; original released-custody and retained-exit assertions are the cleanup evidence",
+    "does not qualify later composed source or prove a specific change caused PASS"
+  ]
+}

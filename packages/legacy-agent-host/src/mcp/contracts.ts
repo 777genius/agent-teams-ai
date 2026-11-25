@@ -6,6 +6,11 @@ import type { TeamMcpCrossTeamPort } from './nativeCrossTeamContracts.js';
 import type { TeamOwner } from '../team/TeamOwner.js';
 import type { DeliveryBinding } from '../team/contracts.js';
 
+type ProcessCommands = Pick<ReturnType<TeamOwner['processCommands']>, 'register' | 'metadata' | 'list' | 'lookup'>;
+/** Same catalog and projections; a retained native process operation may cross the private transport. */
+export type TeamMcpProcessPort = { [K in keyof ProcessCommands]:
+  (...args: Parameters<ProcessCommands[K]>) => ReturnType<ProcessCommands[K]> | Promise<ReturnType<ProcessCommands[K]>> };
+
 /** Captured by trusted composition using TeamOwner.connect(principalId). */
 export type TeamMcpConnection = Pick<
   ReturnType<TeamOwner['connect']>,
@@ -19,10 +24,7 @@ export type TeamMcpConnection = Pick<
   readonly workSync?: TeamMcpWorkSyncPort;
   readonly nativeMemberCreation?: TeamMcpNativeMemberCreationPort;
   readonly nativeMemberActions?: TeamMcpNativeMemberActionPort;
-  readonly process?: Pick<
-    ReturnType<TeamOwner['processCommands']>,
-    'register' | 'metadata' | 'list' | 'lookup'
-  >;
+  readonly process?: TeamMcpProcessPort;
 };
 
 export interface TeamMcpEndpointOptions {

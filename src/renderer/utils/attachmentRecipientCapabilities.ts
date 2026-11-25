@@ -72,6 +72,7 @@ export function resolveMemberAttachmentCapability(
       providerId,
       model,
       declaredInputModalities: declaration?.declaredInputModalities,
+      ...(member.nativeMediaTransport ? { nativeMediaTransport: member.nativeMediaTransport } : {}),
       nativeInboxTextAttachmentsSupported:
         !isLeadMember(member) &&
         member.nativeInboxAttachmentsSupported === true &&
@@ -154,6 +155,7 @@ export function validateAttachmentPayloadsForMember(input: {
         {
           providerId: getMemberProviderId(member),
           isLeadRecipient: isLeadMember(member),
+          ...(member.nativeMediaTransport ? { nativeMediaTransport: member.nativeMediaTransport.revision } : {}),
           ...(member.nativeInboxTextAttachmentsSupported !== undefined
             ? { nativeInboxTextAttachmentsSupported: member.nativeInboxTextAttachmentsSupported }
             : {}),
@@ -257,6 +259,7 @@ export function isReferenceAttachmentForMember(
       {
         providerId: getMemberProviderId(member),
         isLeadRecipient: isLeadMember(member),
+        ...(member.nativeMediaTransport ? { nativeMediaTransport: member.nativeMediaTransport.revision } : {}),
         ...(member.nativeInboxTextAttachmentsSupported !== undefined
           ? { nativeInboxTextAttachmentsSupported: member.nativeInboxTextAttachmentsSupported }
           : {}),

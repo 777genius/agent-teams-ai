@@ -3062,7 +3062,115 @@ describe('ProviderRuntimeSettingsDialog', () => {
     expect(host.textContent).toContain('Runtime updated, but failed to refresh provider status.');
   });
 
+  it('loads backend details only for the visible saved key after account and hidden-provider views', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const codex = createCodexProvider({
+      authMethod: 'chatgpt',
+      codex: {
+        effectiveAuthMode: 'chatgpt',
+        managedAccount: { type: 'chatgpt', email: 'TEST-account@example.test', planType: 'plus' },
+      },
+    });
+    let providers = [codex, createAnthropicProvider(), createOpenCodeProvider()];
+    const props = { onOpenChange: vi.fn(), onSelectBackend: vi.fn() };
+    let finishList!: (keys: StoreState['apiKeys']) => void;
+    const list = new Promise<StoreState['apiKeys']>((resolve) => { finishList = resolve; });
+    storeState.fetchApiKeys = vi.fn(async () => { storeState.apiKeys = await list; });
+    storeState.apiKeyStorageStatus = null;
+    storeState.fetchApiKeyStorageStatus = vi.fn(async () => {
+      storeState.apiKeyStorageStatus = { available: true, backend: 'macOS Keychain' };
+    });
+    const renderDialog = async (
+      open: boolean, initialProviderId: CliProviderStatus['providerId'] = 'codex'
+    ): Promise<void> => {
+      await act(async () => {
+        root.render(React.createElement(ProviderRuntimeSettingsDialog, {
+          ...props, providers, open, initialProviderId,
+        }));
+        await Promise.resolve();
+      });
+    };
+    const selectProvider = async (providerId: CliProviderStatus['providerId']): Promise<void> => {
+      await act(async () => {
+        (host.querySelector(`[role="tab"][data-value="${providerId}"]`) as HTMLButtonElement).click();
+        await Promise.resolve();
+      });
+    };
+    try {
+      await renderDialog(true);
+      expect(storeState.fetchApiKeys).toHaveBeenCalledTimes(1);
+      expect(storeState.fetchApiKeyStorageStatus).not.toHaveBeenCalled();
+      expect(host.textContent).toContain('TEST-account@example.test');
+      expect(host.textContent).toContain('App-server: healthy');
+      await renderDialog(true);
+      expect(storeState.fetchApiKeys).toHaveBeenCalledTimes(1);
+      expect(storeState.fetchApiKeyStorageStatus).not.toHaveBeenCalled();
+
+      await act(async () => {
+        finishList([
+          { id: 'TEST-openai-key', envVarName: 'OPENAI_API_KEY', scope: 'user',
+            name: 'TEST OpenAI key', maskedValue: 'TEST-masked-openai' },
+          { id: 'TEST-anthropic-key', envVarName: 'ANTHROPIC_API_KEY', scope: 'user',
+            name: 'TEST Anthropic key', maskedValue: 'TEST-masked-anthropic' },
+        ]);
+        await list;
+      });
+      await renderDialog(true);
+      expect(storeState.fetchApiKeyStorageStatus).toHaveBeenCalledTimes(1);
+      await renderDialog(true);
+      expect(host.textContent).toContain('TEST-masked-openai');
+      expect(host.textContent).toContain('macOS Keychain');
+      await selectProvider('anthropic');
+      expect(host.textContent).toContain('TEST-masked-anthropic');
+      expect(host.textContent).toContain('macOS Keychain');
+      expect(storeState.fetchApiKeyStorageStatus).toHaveBeenCalledTimes(1);
+
+      await renderDialog(false);
+      providers = [{ ...codex, connection: { ...codex.connection!, supportsOAuth: true } },
+        createAnthropicProvider(), createOpenCodeProvider()];
+      await renderDialog(true, 'opencode');
+      expect(host.querySelector('[data-testid="runtime-provider-management-panel"]')).not.toBeNull();
+      expect(storeState.fetchApiKeys).toHaveBeenCalledTimes(1);
+      expect(storeState.fetchApiKeyStorageStatus).toHaveBeenCalledTimes(1);
+      await selectProvider('codex');
+      expect(storeState.fetchApiKeys).toHaveBeenCalledTimes(2);
+      expect(host.querySelector('[data-testid="provider-api-key-icon"]')).toBeNull();
+      expect(host.textContent).toContain('TEST-account@example.test');
+      expect(storeState.fetchApiKeyStorageStatus).toHaveBeenCalledTimes(1);
+      await selectProvider('anthropic');
+      expect(storeState.fetchApiKeyStorageStatus).toHaveBeenCalledTimes(2);
+      await selectProvider('codex');
+      await selectProvider('anthropic');
+      expect(storeState.fetchApiKeys).toHaveBeenCalledTimes(2);
+      expect(storeState.fetchApiKeyStorageStatus).toHaveBeenCalledTimes(2);
+
+      await renderDialog(false);
+      await renderDialog(true);
+      expect(storeState.fetchApiKeys).toHaveBeenCalledTimes(3);
+      expect(host.querySelector('[data-testid="provider-api-key-icon"]')).toBeNull();
+      expect(storeState.fetchApiKeyStorageStatus).toHaveBeenCalledTimes(2);
+      await renderDialog(false, 'anthropic');
+      await renderDialog(true, 'anthropic');
+      expect(storeState.fetchApiKeys).toHaveBeenCalledTimes(4);
+      expect(storeState.fetchApiKeyStorageStatus).toHaveBeenCalledTimes(3);
+      expect(host.textContent).toContain('macOS Keychain');
+      expect(storeState.saveApiKey).not.toHaveBeenCalled();
+      expect(storeState.deleteApiKey).not.toHaveBeenCalled();
+      expect(storeState.updateConfig).not.toHaveBeenCalled();
+      expect(props.onSelectBackend).not.toHaveBeenCalled();
+    } finally {
+      finishList([]);
+      await act(async () => root.unmount());
+    }
+  });
+
   it('renders the OpenCode runtime provider management feature panel', async () => {
+    storeState.apiKeys = [{
+      id: 'TEST-visible-anthropic-key', envVarName: 'ANTHROPIC_API_KEY', scope: 'user',
+      name: 'TEST saved Anthropic key', maskedValue: 'TEST-masked-anthropic',
+    }];
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -3131,6 +3239,8 @@ describe('ProviderRuntimeSettingsDialog', () => {
       expect(storeState.fetchApiKeyStorageStatus).toHaveBeenCalledTimes(1);
       expect(host.querySelector('[data-testid="runtime-provider-management-panel"]')).toBeNull();
       expect(host.textContent).toContain('API key');
+      expect(host.textContent).toContain('TEST-masked-anthropic');
+      expect(host.textContent).toContain('keytar');
       await selectProvider('opencode');
       await selectProvider('codex');
       expect(storeState.fetchApiKeys).toHaveBeenCalledTimes(1);
@@ -3156,18 +3266,18 @@ describe('ProviderRuntimeSettingsDialog', () => {
       storeState.fetchApiKeys = vi.fn(() => Promise.resolve(undefined));
       await renderDialog(true, 'anthropic');
       expect(storeState.fetchApiKeys).toHaveBeenCalledTimes(1);
-      expect(storeState.fetchApiKeyStorageStatus).toHaveBeenCalledTimes(4);
+      expect(storeState.fetchApiKeyStorageStatus).toHaveBeenCalledTimes(3);
       storeState.fetchApiKeyStorageStatus = vi.fn(() => Promise.resolve(undefined));
       await renderDialog(true, 'anthropic');
-      expect(storeState.fetchApiKeys).toHaveBeenCalledTimes(2);
-      expect(storeState.fetchApiKeyStorageStatus).toHaveBeenCalledTimes(1);
+      expect(storeState.fetchApiKeys).toHaveBeenCalledTimes(1);
+      expect(storeState.fetchApiKeyStorageStatus).not.toHaveBeenCalled();
       await renderDialog(true, 'anthropic');
-      expect(storeState.fetchApiKeys).toHaveBeenCalledTimes(2);
-      expect(storeState.fetchApiKeyStorageStatus).toHaveBeenCalledTimes(1);
+      expect(storeState.fetchApiKeys).toHaveBeenCalledTimes(1);
+      expect(storeState.fetchApiKeyStorageStatus).not.toHaveBeenCalled();
 
       await renderDialog(true, 'anthropic', true);
-      expect(storeState.fetchApiKeys).toHaveBeenCalledTimes(4);
-      expect(storeState.fetchApiKeyStorageStatus).toHaveBeenCalledTimes(3);
+      expect(storeState.fetchApiKeys).toHaveBeenCalledTimes(3);
+      expect(storeState.fetchApiKeyStorageStatus).toHaveBeenCalledTimes(1);
       expect(storeState.saveApiKey).not.toHaveBeenCalled();
       expect(storeState.deleteApiKey).not.toHaveBeenCalled();
       expect(storeState.updateConfig).not.toHaveBeenCalled();

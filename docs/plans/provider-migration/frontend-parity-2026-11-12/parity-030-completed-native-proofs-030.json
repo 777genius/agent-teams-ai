@@ -1,0 +1,1028 @@
+{
+  "schemaVersion": 1,
+  "kind": "current030-original-terminal-native-and-static-proofs",
+  "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "repository": "777genius/agent-teams-ai",
+  "event": "pull_request",
+  "runAttempt": 1,
+  "capturedAt": "2026-11-18T22:51:53.029628+00:00",
+  "notFullCohortClosure": true,
+  "jobs": {
+    "135167674048": {
+      "id": 135167674048,
+      "run_id": 44407826476,
+      "name": "Embedded V2.1.4 original Host (darwin-x64)",
+      "status": "completed",
+      "conclusion": "failure",
+      "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "run_attempt": 1,
+      "started_at": "2026-11-18T22:35:40Z",
+      "completed_at": "2026-11-18T22:45:49Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826476/job/135167674048",
+      "steps": [
+        {
+          "number": 1,
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 2,
+          "name": "Enable Windows long paths",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 3,
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 4,
+          "name": "Require immutable source HEAD and record actual runner tuple",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 5,
+          "name": "Run pnpm/action-setup@v6",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 6,
+          "name": "Run actions/setup-node@v6",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 7,
+          "name": "Install exact source workspace dependencies",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 8,
+          "name": "Build original Host and its pinned provider implementation",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 9,
+          "name": "Check original graph and custody boundaries",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 10,
+          "name": "Stage checksum-pinned base archive without executing the legacy CLI",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 11,
+          "name": "Prepare exact Bun, engine graph and original-process artifact",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 12,
+          "name": "Prove actual Darwin executable custody and adversarial cleanup",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 13,
+          "name": "Require complete Darwin evidence for this exact candidate or product tuple",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 14,
+          "name": "Prove original Windows Job custody and surviving descendant cleanup",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 15,
+          "name": "Require exact Windows original-process evidence",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 16,
+          "name": "Check original Desktop private recipe composition",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 17,
+          "name": "Exercise native model, tool, MCP, approval, Stop and cold Host Resume",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 18,
+          "name": "Exercise Windows automatic approval and cold Host Resume",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 19,
+          "name": "Exercise native catalog and model probe without tool allocation",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 20,
+          "name": "Exercise native key connection, saved-key reuse and cold original-intent recovery",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 21,
+          "name": "Exercise effective permissions and active Stop with a surviving sibling",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 22,
+          "name": "Exercise captured external MCP and app-only through the native Host",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 23,
+          "name": "Require complete native management and permission evidence",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 24,
+          "name": "Require product-path Host proof after exact candidate qualification",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 25,
+          "name": "Observe POSIX original-path exec and explicit mutation counterexamples",
+          "status": "completed",
+          "conclusion": "failure"
+        },
+        {
+          "number": 26,
+          "name": "Preserve exact native evidence or candidate HOLD",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 50,
+          "name": "Post Run actions/setup-node@v6",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 51,
+          "name": "Post Run pnpm/action-setup@v6",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 52,
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 53,
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    },
+    "135167673257": {
+      "id": 135167673257,
+      "run_id": 44407826476,
+      "name": "Static V01 source test (windows-2022)",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "run_attempt": 1,
+      "started_at": "2026-11-18T22:42:15Z",
+      "completed_at": "2026-11-18T22:44:31Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826476/job/135167673257",
+      "steps": [
+        {
+          "number": 1,
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 2,
+          "name": "Enable Windows long paths",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 3,
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 4,
+          "name": "Require immutable PR source HEAD",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 5,
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 6,
+          "name": "Record exact current product commit",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 7,
+          "name": "Run pnpm/action-setup@v6",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 8,
+          "name": "Run actions/setup-node@v6",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 9,
+          "name": "Prove retry classification on the exact source HEAD",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 10,
+          "name": "Install pinned workspace dependencies",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 11,
+          "name": "Build Stage1 Host without launching providers",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 12,
+          "name": "Typecheck Host TEST contracts",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 13,
+          "name": "Verify captured and native model variants through Host SPI",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 14,
+          "name": "Verify generation-preserving install and update policy",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 15,
+          "name": "Execute V2 static preflight, current-main lock and FIFO negatives",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 16,
+          "name": "Native V1 baseline and latest Host compatibility (Linux TEST)",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 17,
+          "name": "Preserve native V1 version evidence",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 31,
+          "name": "Post Run actions/setup-node@v6",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 32,
+          "name": "Post Run pnpm/action-setup@v6",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 33,
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 34,
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 35,
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    },
+    "135167669208": {
+      "id": 135167669208,
+      "run_id": 44407826280,
+      "name": "Host process fixtures (linux-x64)",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "run_attempt": 1,
+      "started_at": "2026-11-18T22:45:20Z",
+      "completed_at": "2026-11-18T22:49:13Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826280/job/135167669208",
+      "steps": [
+        {
+          "number": 1,
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 2,
+          "name": "Enable Windows long paths",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 3,
+          "name": "Run actions/checkout@v7.0.1",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 4,
+          "name": "Run actions/setup-node@v7.0.0",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 5,
+          "name": "Select the pinned package manager with bundled Corepack",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 6,
+          "name": "Run actions/setup-node@v7.0.0",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 7,
+          "name": "Bind exact source and actual process tuple",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 8,
+          "name": "Install frozen workspace without Desktop postinstall",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 9,
+          "name": "Build existing controller and Host",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 10,
+          "name": "Verify process contracts and retained Main Host transport",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 11,
+          "name": "Verify original POSIX Node and shell lifecycle fixtures",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 12,
+          "name": "Prepare pinned Electron for native process fixtures",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 13,
+          "name": "Verify Linux Node exec descriptor closure under both original parents",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 14,
+          "name": "Qualify original Linux pidfs and retained pidfd under Host Node",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 15,
+          "name": "Qualify original Linux pidfs and retained pidfd under Electron Node",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 16,
+          "name": "Build original Windows product broker and C++ fixtures",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 17,
+          "name": "Qualify original Windows Job and control under Host Node",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 18,
+          "name": "Qualify original Windows Job and control under Electron Node",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 19,
+          "name": "Qualify Windows wrappers and actual Main Host provider routes with TEST peers",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 20,
+          "name": "Qualify original codex source A B with TEST peer",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 21,
+          "name": "Qualify original claude source A B with TEST peer",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 22,
+          "name": "Qualify original opencode source A B with TEST peer",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "number": 23,
+          "name": "Require completed original platform receipts and unchanged source",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 24,
+          "name": "Preserve original process evidence including failures",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 46,
+          "name": "Post Run actions/setup-node@v7.0.0",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 47,
+          "name": "Post Run actions/setup-node@v7.0.0",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 48,
+          "name": "Post Run actions/checkout@v7.0.1",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 49,
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    }
+  },
+  "logReferences": [
+    {
+      "jobId": 135167673257,
+      "requestedAt": "2026-11-18T22:46:23.941265+00:00",
+      "status": "captured-permanently-retired",
+      "localPath": "/workspace/scratch/c714f5bce554/ci-current-030/job-135167673257-terminal.log",
+      "sha256": "4cde79f147a9e55086f539320e325e108d6c7976ba64624318e97f1490a0634e",
+      "bytes": 112198,
+      "gitBlob": "76fd67264df65a32c0f73cc9013ce708a4a51c2a",
+      "exactImmutableReadback": true
+    },
+    {
+      "jobId": 135167674048,
+      "requestedAt": "2026-11-18T22:47:03.153695+00:00",
+      "status": "captured-permanently-retired",
+      "localPath": "/workspace/scratch/c714f5bce554/ci-current-030/job-135167674048-terminal.log",
+      "sha256": "8f34bf271d99a11ced6a35ad195dda2a4eacf7c9f63f953b9d5672333a9fa63d",
+      "bytes": 118872,
+      "gitBlob": "bbfc41223746ce473a264cf9a1c3a71b45690e5c",
+      "exactImmutableReadback": true
+    },
+    {
+      "jobId": 135167669208,
+      "requestedAt": "2026-11-18T22:50:29.369494+00:00",
+      "status": "captured-permanently-retired",
+      "localPath": "/workspace/scratch/c714f5bce554/ci-current-030/job-135167669208-terminal.log",
+      "sha256": "7da7cf3b88d0cbc32de2068e6f4a459652f7c7028926c5f04be8baa930103cc1",
+      "bytes": 187903,
+      "gitBlob": "bd41841cf4679ce74bb4128a525ceb83836250d2",
+      "exactImmutableReadback": true
+    }
+  ],
+  "darwinNative": {
+    "kind": "TEST_NATIVE_V2_EMBEDDED_HOST",
+    "status": "PASS",
+    "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "platform": "darwin-x64",
+    "version": "2.1.4",
+    "approvalMode": "manual",
+    "nodeVersion": "v24.21.0",
+    "steps": [
+      "original_host_embedded_native_and_mcp_ready",
+      "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+      "changed_project_config_did_not_retarget_running_native_session",
+      "original_uploaded_PNG_native_image_inference_and_public_readback",
+      "all_image_MIMEs_exact_PDF_and_4MiB_PNG_native_normalization_and_public_readback",
+      "checkpoint_and_original_host_native_cleanup_confirmed",
+      "cold_host_restored_native_history_without_model_or_tool_replay"
+    ],
+    "cleanup": true,
+    "elapsedMs": 176237,
+    "cancelled": false,
+    "failureCode": null,
+    "modelRequests": 11,
+    "modelFailures": [],
+    "vendorAuthQualified": false,
+    "desktopQualified": false,
+    "releaseQualified": false
+  },
+  "correctedMediaRoster": {
+    "actualCurrentOriginalStep24": "success",
+    "requiredMediaStepPresent": "all_image_MIMEs_exact_PDF_and_4MiB_PNG_native_normalization_and_public_readback",
+    "manualScenarioStep17": "success",
+    "automaticStep18": "skipped",
+    "managementSteps19through23": "skipped"
+  },
+  "p09": {
+    "scope": "Independent original POSIX diagnostic, separately from native product-path callback and verifier",
+    "originalReceipt": {
+      "name": "opencode-v2-posix-exec.json",
+      "path": "/workspace/scratch/c714f5bce554/ci-current-030/artifact-14478787057/opencode-v2-posix-exec.json",
+      "bytes": 14538,
+      "sha256": "32b479c4fdaf1919562fade6e5da67c83366e306f8e74840bea4f449460c6333",
+      "gitBlob": "56c6721dbe3f30ab61ee10417f4fa3c279c441b2",
+      "exactImmutableReadback": true
+    },
+    "resultCounts": {
+      "PASS": 6,
+      "INCOMPLETE": 3,
+      "COUNTEREXAMPLE": 1
+    },
+    "fields": {
+      "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "sourceSha256": "085eeb378d9b500490300dcf1c595bf13e7979c1218f2f37f4ba6e18787441e9",
+      "platform": "darwin",
+      "arch": "x64",
+      "nodeVersion": "v24.21.0",
+      "osBuild": "24G830",
+      "cleanup": true,
+      "nativeFixtureQualified": false,
+      "productQualified": false,
+      "installedRuntimeQualified": false,
+      "customExecutableQualified": false,
+      "scriptQualified": false,
+      "status": "INCOMPLETE"
+    },
+    "observations": [
+      {
+        "label": "compiler-default:plain",
+        "result": "PASS",
+        "stage": "plain-exit",
+        "errno": 0,
+        "execErrno": 0,
+        "kernelImageObserved": false,
+        "imageMatched": false,
+        "resumed": true,
+        "mutationAfterCheckErrno": -1,
+        "codeSigningError": 0,
+        "exitCode": 0,
+        "exitSignal": 0,
+        "markerLines": [
+          "LIB",
+          "BIN:A",
+          "MAIN:A"
+        ],
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "controllerInterrupted": false
+      },
+      {
+        "label": "compiler-default:baseline",
+        "result": "INCOMPLETE",
+        "stage": "kernel-image-validity",
+        "errno": 13,
+        "execErrno": 0,
+        "kernelImageObserved": false,
+        "imageMatched": false,
+        "resumed": false,
+        "mutationAfterCheckErrno": -1,
+        "codeSigningError": -67062,
+        "exitCode": -1,
+        "exitSignal": 9,
+        "markerLines": [],
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "controllerInterrupted": false
+      },
+      {
+        "label": "adhoc-test-only:plain",
+        "result": "PASS",
+        "stage": "plain-exit",
+        "errno": 0,
+        "execErrno": 0,
+        "kernelImageObserved": false,
+        "imageMatched": false,
+        "resumed": true,
+        "mutationAfterCheckErrno": -1,
+        "codeSigningError": 0,
+        "exitCode": 0,
+        "exitSignal": 0,
+        "markerLines": [
+          "LIB",
+          "BIN:A",
+          "MAIN:A"
+        ],
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "controllerInterrupted": false
+      },
+      {
+        "label": "adhoc-test-only:baseline",
+        "result": "PASS",
+        "stage": "exit",
+        "errno": 0,
+        "execErrno": 0,
+        "kernelImageObserved": true,
+        "imageMatched": true,
+        "resumed": true,
+        "mutationAfterCheckErrno": -1,
+        "codeSigningError": 0,
+        "exitCode": 0,
+        "exitSignal": 0,
+        "markerLines": [
+          "LIB",
+          "BIN:A",
+          "MAIN:A"
+        ],
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "controllerInterrupted": false
+      },
+      {
+        "label": "adhoc-test-only:rename",
+        "result": "PASS",
+        "stage": "rejected-image",
+        "errno": 0,
+        "execErrno": 0,
+        "kernelImageObserved": true,
+        "imageMatched": false,
+        "resumed": false,
+        "mutationAfterCheckErrno": -1,
+        "codeSigningError": 0,
+        "exitCode": -1,
+        "exitSignal": 9,
+        "markerLines": [],
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "controllerInterrupted": false
+      },
+      {
+        "label": "adhoc-test-only:inplace",
+        "result": "PASS",
+        "stage": "rejected-image",
+        "errno": 0,
+        "execErrno": 0,
+        "kernelImageObserved": true,
+        "imageMatched": false,
+        "resumed": false,
+        "mutationAfterCheckErrno": -1,
+        "codeSigningError": 0,
+        "exitCode": -1,
+        "exitSignal": 9,
+        "markerLines": [],
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "controllerInterrupted": false
+      },
+      {
+        "label": "adhoc-test-only:after-check",
+        "result": "INCOMPLETE",
+        "stage": "exit",
+        "errno": 0,
+        "execErrno": 0,
+        "kernelImageObserved": true,
+        "imageMatched": true,
+        "resumed": true,
+        "mutationAfterCheckErrno": 0,
+        "codeSigningError": 0,
+        "exitCode": 0,
+        "exitSignal": 0,
+        "markerLines": [
+          "LIB",
+          "BIN:A",
+          "MAIN:A"
+        ],
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "controllerInterrupted": false
+      },
+      {
+        "label": "adhoc-test-only:writer-open",
+        "result": "INCOMPLETE",
+        "stage": "exit",
+        "errno": 0,
+        "execErrno": 0,
+        "kernelImageObserved": true,
+        "imageMatched": true,
+        "resumed": true,
+        "mutationAfterCheckErrno": 0,
+        "codeSigningError": 0,
+        "exitCode": 0,
+        "exitSignal": 0,
+        "markerLines": [
+          "LIB",
+          "BIN:A",
+          "MAIN:A"
+        ],
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "controllerInterrupted": false
+      },
+      {
+        "label": "script:plain",
+        "result": "PASS",
+        "stage": "plain-exit",
+        "errno": 0,
+        "execErrno": 0,
+        "kernelImageObserved": false,
+        "imageMatched": false,
+        "resumed": true,
+        "mutationAfterCheckErrno": -1,
+        "codeSigningError": 0,
+        "exitCode": 0,
+        "exitSignal": 0,
+        "markerLines": [
+          "SCRIPT:A"
+        ],
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "controllerInterrupted": false
+      },
+      {
+        "label": "script:script-negative",
+        "result": "COUNTEREXAMPLE",
+        "stage": "exit",
+        "errno": 0,
+        "execErrno": 0,
+        "kernelImageObserved": true,
+        "imageMatched": false,
+        "resumed": true,
+        "mutationAfterCheckErrno": 0,
+        "codeSigningError": 0,
+        "exitCode": 0,
+        "exitSignal": 0,
+        "markerLines": [
+          "SCRIPT:B"
+        ],
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "controllerInterrupted": false
+      }
+    ],
+    "interpretation": [
+      "First compiler-default baseline refusal precedes writer mutation; errno13/codeSigningError-67062.",
+      "After-check and writer-open native cases resume selected image A; LIB/BIN:A/MAIN:A observed, replacement B markers absent. Existing oracle records INCOMPLETE.",
+      "Script negative case observed SCRIPT:B after successful mutation; COUNTEREXAMPLE stays separate from native qualification.",
+      "These are current fixture observations, not a proof that all operating-system designs are impossible."
+    ]
+  },
+  "originalNativeArtifact": {
+    "artifactId": 14478787057,
+    "expectedDigestProvenance": "original job upload log",
+    "fileId": "file_00000000077c81f4904c0b3082e17631",
+    "zipBytes": 11199,
+    "zipSha256": "58bd949b51e88a835820b3e825e401cf4fbd8cb44c71c8cf312d646f29c43f71",
+    "members": [
+      {
+        "name": "opencode-v2-embedded-inputs.json",
+        "path": "/workspace/scratch/c714f5bce554/ci-current-030/artifact-14478787057/opencode-v2-embedded-inputs.json",
+        "bytes": 2370,
+        "sha256": "c8c27dbfbb31f01599753ef0fc5a2edc85950e6573c0caed4a821b40470c155d"
+      },
+      {
+        "name": "opencode-v2-darwin-custody.json",
+        "path": "/workspace/scratch/c714f5bce554/ci-current-030/artifact-14478787057/opencode-v2-darwin-custody.json",
+        "bytes": 1444,
+        "sha256": "b29e524a9d4849c3bf6def6e86bfd1dea1237079d8090b73701462bdc46d0c17"
+      },
+      {
+        "name": "opencode-v2-embedded-host.json",
+        "path": "/workspace/scratch/c714f5bce554/ci-current-030/artifact-14478787057/opencode-v2-embedded-host.json",
+        "bytes": 96849,
+        "sha256": "432d47350272c6612dcce9524d540de85ba6c61d9d289ca815e9524d1d2cbf44"
+      },
+      {
+        "name": "opencode-v2-posix-exec.json",
+        "path": "/workspace/scratch/c714f5bce554/ci-current-030/artifact-14478787057/opencode-v2-posix-exec.json",
+        "bytes": 14538,
+        "sha256": "32b479c4fdaf1919562fade6e5da67c83366e306f8e74840bea4f449460c6333"
+      }
+    ],
+    "verifiedAt": "2026-11-18T22:48:07.518367+00:00"
+  },
+  "originalJsonReferences": [
+    {
+      "name": "opencode-v2-embedded-inputs.json",
+      "path": "/workspace/scratch/c714f5bce554/ci-current-030/artifact-14478787057/opencode-v2-embedded-inputs.json",
+      "bytes": 2370,
+      "sha256": "c8c27dbfbb31f01599753ef0fc5a2edc85950e6573c0caed4a821b40470c155d",
+      "gitBlob": "eddd10cd7bd496d72e9a0a586997ff721833fde2",
+      "exactImmutableReadback": true
+    },
+    {
+      "name": "opencode-v2-darwin-custody.json",
+      "path": "/workspace/scratch/c714f5bce554/ci-current-030/artifact-14478787057/opencode-v2-darwin-custody.json",
+      "bytes": 1444,
+      "sha256": "b29e524a9d4849c3bf6def6e86bfd1dea1237079d8090b73701462bdc46d0c17",
+      "gitBlob": "3f41df77d3b696bcfe5c588d88cdb5d30b331419",
+      "exactImmutableReadback": true
+    },
+    {
+      "name": "opencode-v2-embedded-host.json",
+      "path": "/workspace/scratch/c714f5bce554/ci-current-030/artifact-14478787057/opencode-v2-embedded-host.json",
+      "bytes": 96849,
+      "sha256": "432d47350272c6612dcce9524d540de85ba6c61d9d289ca815e9524d1d2cbf44",
+      "gitBlob": "83878792549eb0f33cbb8942729af8afb43f8e88",
+      "exactImmutableReadback": true
+    },
+    {
+      "name": "opencode-v2-posix-exec.json",
+      "path": "/workspace/scratch/c714f5bce554/ci-current-030/artifact-14478787057/opencode-v2-posix-exec.json",
+      "bytes": 14538,
+      "sha256": "32b479c4fdaf1919562fade6e5da67c83366e306f8e74840bea4f449460c6333",
+      "gitBlob": "56c6721dbe3f30ab61ee10417f4fa3c279c441b2",
+      "exactImmutableReadback": true
+    }
+  ],
+  "staticWindows": {
+    "sourceCheckout": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "retryClassification": {
+      "pass": 7,
+      "fail": 0,
+      "skip": 0
+    },
+    "modelVariantSPI": {
+      "pass": 41,
+      "fail": 0,
+      "skip": 0
+    },
+    "finalStaticPreflight": {
+      "tests": 263,
+      "pass": 262,
+      "fail": 0,
+      "skip": 1
+    },
+    "hostBuildAndHostTestTypecheck": "PASS",
+    "installerPolicyStep": "PASS",
+    "notCanonicalFullD1": true
+  },
+  "hostLinux": {
+    "sourceBinding": "Exact030 source bound and unchanged-source verifier success",
+    "nodeContracts": {
+      "tests": 192,
+      "pass": 192,
+      "fail": 0,
+      "skip": 0
+    },
+    "broker": {
+      "files": 4,
+      "pass": 63
+    },
+    "retainedMain": {
+      "files": 9,
+      "pass": 128
+    },
+    "posixLifecycle": {
+      "tests": 29,
+      "pass": 29,
+      "fail": 0,
+      "skip": 0
+    },
+    "descriptorClosure": {
+      "hostNodePass": 6,
+      "electronNodePass": 6,
+      "fail": 0,
+      "skip": 0
+    },
+    "pidfdContractSuite": {
+      "files": 1,
+      "pass": 63
+    },
+    "originalNativeReceipts": [
+      {
+        "directory": "/home/runner/work/_temp/TEST-process-node24-44407826280/artifact",
+        "manifestSha256": "b9e4d9e8546a22a3d3b1b0cfcd81f395761210023b3c1c62a766b83f44718555",
+        "actor": "/home/runner/work/_temp/TEST-process-node24-44407826280/registered-process-actor",
+        "linuxChildExec": {
+          "manifestPath": "/home/runner/work/_temp/TEST-process-node24-44407826280/linux-child-exec/manifest.json",
+          "manifestSha256": "c7a9de31f589d168495922a21a4d769cdd81ee33492961eef4d25ddfc2fbf484",
+          "binarySha256": "be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110"
+        },
+        "completed": true,
+        "cleaned": true,
+        "automaticAndWarm": true,
+        "binarySha256": "a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217",
+        "libc": {
+          "family": "glibc",
+          "minimumVersion": "2.33"
+        },
+        "scope": "Linux automatic custody and retained pidfd native/Host proof; SDK, Desktop and older ABI remain separate"
+      },
+      {
+        "directory": "/home/runner/work/_temp/TEST-process-electron-44407826280/artifact",
+        "manifestSha256": "b9e4d9e8546a22a3d3b1b0cfcd81f395761210023b3c1c62a766b83f44718555",
+        "actor": "/home/runner/work/_temp/TEST-process-electron-44407826280/registered-process-actor",
+        "linuxChildExec": {
+          "manifestPath": "/home/runner/work/_temp/TEST-process-electron-44407826280/linux-child-exec/manifest.json",
+          "manifestSha256": "c7a9de31f589d168495922a21a4d769cdd81ee33492961eef4d25ddfc2fbf484",
+          "binarySha256": "be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110"
+        },
+        "completed": true,
+        "cleaned": true,
+        "automaticAndWarm": true,
+        "binarySha256": "a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217",
+        "libc": {
+          "family": "glibc",
+          "minimumVersion": "2.33"
+        },
+        "scope": "Linux automatic custody and retained pidfd native/Host proof; SDK, Desktop and older ABI remain separate"
+      }
+    ],
+    "scope": "Linux automatic custody and retained pidfd native/Host; SDK, Desktop, older ABI and Windows sourceA/B remain separate",
+    "artifactReportedOnly": {
+      "id": 14479492155,
+      "zipBytes": 1525498,
+      "sha256": "ade9cc415f6a20d6ac84cf43a21577b5621d52fa9835f47464a1bf03902102c4",
+      "notDownloaded": true
+    }
+  },
+  "limitations": [
+    "Host and Stage1 workflows still have queued/running platforms; terminal job results do not imply whole workflow success.",
+    "Actual Darwin manual native+corrected verifier success does not override P09 failure, skipped automatic/management scopes or unqualified vendor auth/Desktop/release.",
+    "No native program, application, provider or original test was rerun to construct this projection."
+  ]
+}

@@ -44,6 +44,7 @@ import { createMemberWorkSyncBusySignal } from './createMemberWorkSyncBusySignal
 import { createMemberWorkSyncPersistence } from './createMemberWorkSyncPersistence';
 import { type MemberWorkSyncRestoreParticipant } from './createMemberWorkSyncRestoreParticipant';
 import {
+  captureLegacySourceReadFence,
   createLegacySourceWorkSyncAdmission,
   createLegacyWorkSyncConfigReader,
   withLegacySourceReadFence,
@@ -436,7 +437,7 @@ export function createMemberWorkSyncFeature(deps: {
     return summary;
   };
   const queue = new MemberWorkSyncEventQueue({
-    captureExecutionScope: deps.sourceWriteAdmission?.bindExecution,
+    captureExecutionScope: sourceAdmission.bindExecution,
     reconcile: async (request, context: MemberWorkSyncReconcileContext) => {
       await sourceAdmission.run(request.teamName, async (admission) => {
         await new MemberWorkSyncReconciler(bindDeps(request.teamName, admission)).execute(
@@ -701,6 +702,14 @@ export function createMemberWorkSyncFeature(deps: {
       }
       return result.status;
     });
+  const sourceReadFencePorts = {
+    gate: operationGate,
+    ingress: sourceAdmission,
+    router,
+    queue,
+    audit: auditJournal,
+    isCurrent: () => !disposePromise,
+  };
   return {
     startBackground,
     getStatus: (request) =>
@@ -725,13 +734,10 @@ export function createMemberWorkSyncFeature(deps: {
       ),
     scheduleProofMissingRecovery: (request) =>
       sourceAdmission.run(request.teamName, () => scheduleProofMissingRecovery(request)),
+    captureNativeStopFence: (teamName) =>
+      captureLegacySourceReadFence(teamName, sourceReadFencePorts),
     withStoppedImportFence: (teamName, read) =>
-      withLegacySourceReadFence(teamName, read, {
-        gate: operationGate,
-        router,
-        queue,
-        audit: auditJournal,
-      }),
+      withLegacySourceReadFence(teamName, read, sourceReadFencePorts),
     prepareTeamDeletion: (teamName, deletionIdentityId, options) =>
       deletionCoordinator.prepare(teamName, deletionIdentityId, options),
     completeTeamDeletion: (teamName) => deletionCoordinator.complete(teamName),

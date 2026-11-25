@@ -1,6 +1,7 @@
 import { readFileSync } from 'fs';
 
 import { spawnSyncWithLinuxChildLaunch } from './linuxChildLaunch';
+import { traceTestUnixProcessTableResult } from './testChildProcessTrace';
 
 export interface UnixProcessIdentity {
   pid: number;
@@ -23,6 +24,7 @@ export function readUnixProcessTable(rootPid: number): Map<number, UnixProcessId
       encoding: 'utf8',
       windowsHide: true,
     });
+    traceTestUnixProcessTableResult(result);
     if (result.error || result.status !== 0 || typeof result.stdout !== 'string') {
       throw new Error(`Failed to inspect Unix process tree ${rootPid}`);
     }

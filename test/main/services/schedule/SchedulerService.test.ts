@@ -110,6 +110,12 @@ function createMockRepository(): ScheduleRepository {
       if (options?.mustExist && !schedules.has(schedule.id)) throw new Error('Schedule no longer exists');
       schedules.set(schedule.id, schedule);
     }),
+    updateSchedule: vi.fn(async (id: string, update: (current: Schedule) => Schedule | null) => {
+      const current = schedules.get(id);
+      const updated = current ? update(current) : null;
+      if (updated) schedules.set(id, updated);
+      return updated;
+    }),
     deleteSchedule: vi.fn(async (id: string, onCommitted?: () => void | Promise<void>) => {
       schedules.delete(id);
       await onCommitted?.();
@@ -831,7 +837,10 @@ describe('SchedulerService', () => {
     }).cronJobs.get(schedule.id);
     expect(cron).toBeDefined();
     const pauseSpy = vi.spyOn(cron!, 'pause');
-    vi.mocked(repo.saveSchedule).mockRejectedValueOnce(new Error('storage unavailable'));
+    vi.mocked(repo.updateSchedule).mockImplementationOnce(async (_id, update) => {
+      update(failing);
+      throw new Error('storage unavailable');
+    });
 
     const subject = service as unknown as {
       incrementConsecutiveFailures(input: Schedule): Promise<void>;

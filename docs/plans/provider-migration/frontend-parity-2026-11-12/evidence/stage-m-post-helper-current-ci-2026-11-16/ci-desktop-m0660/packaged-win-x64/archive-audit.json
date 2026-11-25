@@ -1,0 +1,69 @@
+{
+  "artifactId": 14192765823,
+  "officialDigestVerified": true,
+  "safeUniquePaths": true,
+  "crcAllPassed": true,
+  "originalZip": {
+    "bytes": 625025,
+    "blob": "ed207c9bf138be138427abcd2f93066716e439b0",
+    "sha256": "d84e424a053851aaab9c98e58fd3d2683632e8ad068b950bce926003cdd5f076"
+  },
+  "entries": [
+    {
+      "path": "_temp/opencode-v2-packaged-native.json",
+      "bytes": 5382,
+      "blob": "bd0f1dc8bd060e5d88cf74b34127a5f51837abd5",
+      "sha256": "bdb5ca3216b29b614a987a8c0916a8c4847b2b83c5441302f366883e7161f079",
+      "crc32": "5f5373a3"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+      "bytes": 1154517,
+      "blob": "c938cf81f8141b52f080b44e670e98ba8f789b06",
+      "sha256": "3962998118a070023cc160e39e7c8cb88d9b72feebe97438ee79f7be8f171288",
+      "crc32": "dc157fd2"
+    },
+    {
+      "path": "_temp/opencode-v2-packaged-inputs.json",
+      "bytes": 780,
+      "blob": "28ad81eada9b2576778a1f8dca4328da068fc117",
+      "sha256": "aff88b8d6fa750b9caa673e6b79570ec8fe33b3ec77f1ffd6dac469c94579aef",
+      "crc32": "2e455caa"
+    },
+    {
+      "path": "_temp/opencode-v2-packaged.json",
+      "bytes": 1186,
+      "blob": "cdfde45c5485f9a340d175672686e3b462e860d1",
+      "sha256": "fdaa0c94021a8f0035e517750eb052bd4cea168eaf777dc2777214e25d2ca38a",
+      "crc32": "c91bf6b1"
+    },
+    {
+      "path": "_temp/windows-same-main-process-ui.app.log",
+      "bytes": 4766,
+      "blob": "8bd0f24b93c92901da992c19b0cd59b152178e3d",
+      "sha256": "68281bffce158378af8edbc15f166a6b6b9efb1ae1a01f13d15417d89fd14e0f",
+      "crc32": "39f8d49a"
+    },
+    {
+      "path": "_temp/windows-same-main-process-ui.before-crash.png",
+      "bytes": 79896,
+      "blob": "1c16d610142abf298c038fba12d9ef1553f039b9",
+      "sha256": "347f6b6883726b0ccaebfb5c181cdeea0c85005cf7ec957360a61dc551404221",
+      "crc32": "0488afdb"
+    },
+    {
+      "path": "_temp/windows-same-main-process-ui.controller.log",
+      "bytes": 42469,
+      "blob": "4472e4302c6dc7a54684fbedc42785915ecfc0c4",
+      "sha256": "b76513cb574dd577b0e2d382760ef5b95494ad9212aab210365149c141c73c3c",
+      "crc32": "5ba30e2f"
+    },
+    {
+      "path": "_temp/windows-same-main-process-ui.json",
+      "bytes": 750601,
+      "blob": "13f00f66b65073fe972abd96c78f464d73023f2b",
+      "sha256": "b7201be98fe33679e7e6a5c8ee3366e942bde08a32090d39344a911cd342d2ae",
+      "crc32": "b1bb0816"
+    }
+  ]
+}

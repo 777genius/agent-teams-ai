@@ -1,12 +1,14 @@
 import assert from 'node:assert/strict';
 import childProcess, { ChildProcess } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import fs from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { createRequire, syncBuiltinESMExports } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join, sep, toNamespacedPath } from 'node:path';
 import { test } from 'node:test';
 import { buildProcessNativeArtifact } from '../scripts/buildProcessNativeArtifact.ts';
+import { buildLinuxProcessNativeArtifact } from '../scripts/buildLinuxProcessNativeArtifact.ts';
 import { createQualifiedDarwinProcessApi } from '../dist/process/DarwinRegisteredProcess.js';
 import { readPackagedProcessArtifact } from '../dist/process/readPackagedProcessArtifact.js';
 import { validateProcessCapture } from '../dist/process/validateProcessRecords.js';
@@ -37,6 +39,27 @@ function selected(t: TestContext, osBuild: string, architecture = process.arch) 
     binarySha256: hash(path) }));
   return { directory, manifestSha256: hash(manifestPath) };
 }
+
+test('Linux builder refuses an existing or linked output leaf before any compiler dispatch',
+  { skip: process.platform !== 'linux' || process.arch !== 'x64' }, t => {
+    const root = sandbox(t), headersRoot = join(root, 'headers'); mkdirSync(headersRoot);
+    const compiler = join(root, 'TEST-compiler'), inspector = join(root, 'TEST-inspector'), source = join(root, 'TEST-source.c');
+    for (const path of [compiler, inspector, source]) writeFileSync(path, 'TEST pinned input; never execute');
+    const headers = ['node_api.h', 'node_api_types.h', 'js_native_api.h', 'js_native_api_types.h'].map(file => {
+      const path = join(headersRoot, file); writeFileSync(path, `TEST ${file}`); return { file, sha256: hash(path) };
+    });
+    const shared = join(root, 'shared'), existing = join(root, 'existing'), linked = join(root, 'linked');
+    mkdirSync(shared); chmodSync(shared, 0o777); mkdirSync(existing, { mode: 0o700 }); symlinkSync(existing, linked);
+    let compiled = 0;
+    t.mock.method(childProcess, 'execFileSync', () => { compiled++; throw new Error('TEST compiler must not be reached'); });
+    syncBuiltinESMExports();
+    t.after(() => { t.mock.restoreAll(); syncBuiltinESMExports(); });
+    const input = { compiler, compilerSha256: hash(compiler), inspector, inspectorSha256: hash(inspector),
+      headersRoot, headers, source, sourceSha256: hash(source) };
+    for (const outputDirectory of [shared, existing, linked])
+      assert.throws(() => buildLinuxProcessNativeArtifact({ ...input, outputDirectory }), /new empty private artifact directory/u);
+    assert.equal(compiled, 0);
+  });
 
 // Synthetic ABI boundary only: the exact TEST addon load is mocked; no native bytes execute.
 function bridge(t: TestContext, osBuild: QualifiedDarwinBuild = '24G624') {
@@ -200,12 +223,14 @@ test('native executable observations reuse the original captured child and rejec
   const child = new ChildProcess(); Object.defineProperty(child, 'pid', { value: 1000 });
   assert.throws(() => api.readRootExecutable(child, executable), /unavailable/);
   assert.equal(state.executableReads, 0, 'a numeric PID does not grant executable observation');
-  let current = true;
-  api.captureRoot(child, () => current);
+  let current = true, currentReads = 0;
+  api.captureRoot(child, () => { currentReads++; return current; });
+  currentReads = 0;
   const first = api.readRootExecutable(child, executable);
   assert.deepEqual(first, { executablePath: binary, executableSha256: executable.sha256,
     pid: 1000, startIdentity: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa:1000:2:12345' });
   assert.equal(state.executableReads, 2, 'kernel identity is rechecked after the file hash');
+  assert.equal(currentReads, 5, 'the second native observation closes authority once before returning');
   assert.throws(() => api.captureRoot(child, () => true), /unavailable/, 'the same handle is never recaptured');
   const replacement = new ChildProcess(); Object.defineProperty(replacement, 'pid', { value: 1000 });
   assert.throws(() => api.readRootExecutable(replacement, executable), /unavailable/);
@@ -225,6 +250,63 @@ test('native executable observations reuse the original captured child and rejec
   current = true; child.emit('exit', 0, null);
   assert.throws(() => api.readRootExecutable(child, executable), /unavailable/);
 });
+
+for (const boundary of [1, 2]) {
+  test(`Darwin executable custody refuses owner revocation during native observation ${boundary}`, t => {
+    darwin(t);
+    const { artifact, state } = bridge(t);
+    const binary = join(sandbox(t), 'TEST-bun');
+    writeFileSync(binary, 'TEST selected executable bytes; never executed');
+    const executable = { path: binary, sha256: hash(binary) };
+    state.executablePath = binary;
+    const api = createQualifiedDarwinProcessApi(artifact);
+    const child = new ChildProcess(); Object.defineProperty(child, 'pid', { value: 1000 });
+    let current = true;
+    api.captureRoot(child, () => current);
+    state.afterExecutableRead = () => { if (state.executableReads === boundary) current = false; };
+    assert.throws(() => api.readRootExecutable(child, executable), /unavailable/);
+    assert.equal(state.executableReads, boundary, 'revocation fences any later native observation');
+    assert.throws(() => api.readRootExecutable(child, executable), /unavailable/);
+    assert.equal(state.executableReads, boundary, 'a later API call reobserves revoked ownership before native access');
+  });
+}
+
+for (const mutation of ['replace', 'overwrite'] as const) {
+  test(`Darwin executable custody refuses ${mutation} during the actual image read and closes its fd`, t => {
+    darwin(t);
+    const { artifact, state } = bridge(t);
+    const root = sandbox(t), binary = join(root, 'TEST-bun');
+    const bytes = Buffer.from('TEST selected executable bytes; never executed');
+    writeFileSync(binary, bytes);
+    const executable = { path: binary, sha256: hash(binary) }, before = fs.lstatSync(binary);
+    state.executablePath = binary;
+    const api = createQualifiedDarwinProcessApi(artifact);
+    const child = new ChildProcess(); Object.defineProperty(child, 'pid', { value: 1000 });
+    api.captureRoot(child, () => true);
+    const originalRead = fs.readSync;
+    let ownedFile: number | undefined;
+    t.mock.method(fs, 'readSync', ((file, buffer, offset, length, position) => {
+      const observed = fs.fstatSync(file);
+      const selected = ownedFile === undefined && observed.dev === before.dev && observed.ino === before.ino;
+      if (selected) {
+        ownedFile = file;
+        if (mutation === 'overwrite') writeFileSync(binary, Buffer.alloc(bytes.length, 99));
+      }
+      const count = originalRead(file, buffer, offset, length, position ?? null);
+      if (selected && mutation === 'replace') {
+        fs.renameSync(binary, join(root, 'TEST-original-image'));
+        writeFileSync(binary, bytes);
+      }
+      return count;
+    }) as typeof fs.readSync);
+    syncBuiltinESMExports();
+    t.after(() => { t.mock.restoreAll(); syncBuiltinESMExports(); });
+    assert.throws(() => api.readRootExecutable(child, executable), /unavailable/);
+    assert.notEqual(ownedFile, undefined, 'mutation happened inside the real executable digest');
+    assert.throws(() => fs.fstatSync(ownedFile!), { code: 'EBADF' });
+    assert.equal(state.executableReads, 1, 'the changed image is refused before a second native observation');
+  });
+}
 
 test('x64 selects only its own finite OS artifact; this synthetic boundary is not a native qualification', t => {
   darwin(t, 'x64');

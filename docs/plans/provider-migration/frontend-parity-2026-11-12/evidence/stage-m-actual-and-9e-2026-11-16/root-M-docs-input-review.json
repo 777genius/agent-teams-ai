@@ -1,0 +1,14 @@
+{
+  "result": "APPROVE_COMPLETE_INPUT_BYTES",
+  "manifest": {
+    "bytes": 40560,
+    "blob": "b392a79fe228c497b2b38eb7e38325a294af15ef",
+    "sha256": "48b533dcefa948da36d8f1dc1761d930e4d3449d422f10ea731dd7fbae16fa27"
+  },
+  "files": 45,
+  "bytes": 14029952,
+  "allFileBytesExact": true,
+  "trackedWorktreeClean": true,
+  "sourceApplied": false,
+  "projectExecution": false
+}

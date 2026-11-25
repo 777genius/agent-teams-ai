@@ -1,0 +1,39 @@
+{
+  "stage": "J",
+  "commandName": "J-diff",
+  "sourceHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+  "sourceTree": "7e3d627c23816db232cf6dbdc3497954f5f0ab85",
+  "parents": [
+    "6f74d7e8ecaa7f046826b6421ad105ab35eb09fa",
+    "462845722260dfd91111c37cb66fc54a01a3ecb7"
+  ],
+  "argv": [
+    "git",
+    "diff",
+    "--check",
+    "6f74d7e8ecaa7f046826b6421ad105ab35eb09fa..9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+    "--",
+    "tools/owned-process-broker/nativeFixture.cpp"
+  ],
+  "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+  "startedAtUTC": "2026-11-15T22:36:50.921777+00:00",
+  "finishedAtUTC": "2026-11-15T22:36:50.926200+00:00",
+  "elapsedSeconds": 0.004405149011290632,
+  "exitCode": 0,
+  "log": {
+    "bytes": 0,
+    "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "preflight": {
+    "bytes": 28893,
+    "blob": "ed158607414a277a4261338ab13f7644ae5b2325",
+    "sha256": "cfa400556cfc3829797cf007016a0a628e5963d5f962673aff7442e949b3b343"
+  },
+  "postflightExact": true,
+  "postflightError": null,
+  "projectTestsExecuted": false,
+  "nodeInvoked": false,
+  "buildPerformed": false,
+  "windowsCompileOrRuntimeQualification": false
+}

@@ -18,6 +18,7 @@ import { awaitOpenCodeV2OwnerReadback } from './OpenCodeV2OwnerReadback.js';
 import { raceOpenCodeV2Revocation } from './OpenCodeV2RevocationWait.js';
 import { createOpenCodeV2RequestAdmission } from './OpenCodeV2RequestAdmission.js';
 import { bindOpenCodeV2AttachmentPort } from './OpenCodeV2AttachmentPort.js';
+import { openCodeV2MediaRevision } from './OpenCodeV2MediaReceipt.js';
 import type { MemberProvider, MemberProviderContext } from './MemberProvider.js';
 import type { Session } from '@agent-teams/provider-session-contracts';
 import type { OpenCodeV2OwnedSession } from './OpenCodeV2OwnedSession.js';
@@ -123,10 +124,9 @@ export function createOpenCodeV2MemberProvider(
   // Process custody callbacks are part of the original captured owner. Never
   // look them up again after a native callback could replace the methods and
   // redirect physical cleanup or fabricate a stopped PID.
-  // These method identities belong to the original TEST-owned engine. An
-  // asynchronous native callback must not replace its custody, permission,
-  // instruction or credential reader before the next Host admission check.
   const capturedReadPassword = captureDataCallback(owned, 'readPassword');
+  const mediaDescriptor = Object.getOwnPropertyDescriptor(owned, 'verifyMediaReceipt');
+  const capturedMediaVerifier = mediaDescriptor ? captureDataCallback(owned, 'verifyMediaReceipt') : undefined;
   const capturedProbe = captureDataCallback(owned, 'probe');
   const capturedReadNativeCustody = captureDataCallback(owned, 'readNativeCustody');
   const capturedReadNativeEffectivePermissions = captureDataCallback(owned, 'readNativeEffectivePermissions');
@@ -134,8 +134,6 @@ export function createOpenCodeV2MemberProvider(
   const capturedReadAndAttestInitialContext = captureDataCallback(owned, 'readAndAttestInitialContext');
   const capturedStopOwned = captureDataCallback(owned, 'stopOwned');
   const capturedConfirmStopped = captureDataCallback(owned, 'confirmStopped');
-  // Capture the required product policy ONCE. A mutable owner object must
-  // never turn an original external-directory deny into a later ask.
   const requiredExternalDirectory = owned.requiredExternalDirectory;
   if (requiredExternalDirectory !== 'ask' && requiredExternalDirectory !== 'deny')
     throw new Error('OpenCode V2 requires a captured out-of-project policy');
@@ -305,6 +303,10 @@ export function createOpenCodeV2MemberProvider(
           generation: request.generation,
         },
         limits: profile.limits,
+        ...(embedded && capturedAttachments && capturedMediaVerifier ? { mediaReceipt: { revision: openCodeV2MediaRevision as typeof openCodeV2MediaRevision,
+          verify(proof: Parameters<NonNullable<OpenCodeV2OwnedSession['verifyMediaReceipt']>>[0]) {
+            return admissionSettled() && current() && capturedMediaVerifier(proof) === true && current();
+          } } } : {}),
         ...(embedded && capturedEvidence ? { capture: capturedEvidence } : {}),
         ...(embedded && capturedAttachments ? { attachments: bindOpenCodeV2AttachmentPort(
           capturedAttachments, trustedBinding,
@@ -370,9 +372,6 @@ export function createOpenCodeV2MemberProvider(
             pinnedProcessIdentity ??= {
               pid: admittedCustody.pid, startIdentity: admittedCustody.startIdentity,
             };
-            // Source-only candidate plus owner-supplied native readback. The
-            // production owner still must prove genuine engine custody and
-            // cannot claim qualification from a scripted TEST receipt.
             const effective = snapshotOpenCodeV2PermissionReadback(
               await awaitOpenCodeV2OwnerReadback(() => capturedReadNativeEffectivePermissions(combined), combined));
             // Permissions must be read from THIS exact native session and

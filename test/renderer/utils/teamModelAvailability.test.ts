@@ -1427,3 +1427,185 @@ describe('teamModelAvailability', () => {
     );
   });
 });
+
+describe('captured Claude SDK team model catalog', () => {
+  type Catalog = NonNullable<TeamModelRuntimeProviderStatus['modelCatalog']>;
+
+  const offeredModel: Catalog['models'][number] = {
+    id: 'sonnet',
+    launchModel: 'TEST-claude-sonnet',
+    displayName: 'TEST Claude Sonnet',
+    hidden: false,
+    supportedReasoningEfforts: [],
+    defaultReasoningEffort: null,
+    inputModalities: ['text'],
+    supportsPersonality: false,
+    isDefault: true,
+    upgrade: false,
+    source: 'claude-sdk',
+    badgeLabel: null,
+  };
+  const catalog: Catalog = {
+    schemaVersion: 1,
+    providerId: 'anthropic',
+    source: 'claude-sdk',
+    status: 'ready',
+    fetchedAt: '2026-11-17T00:00:00.000Z',
+    staleAt: '2026-11-17T00:10:00.000Z',
+    defaultModelId: offeredModel.id,
+    defaultLaunchModel: offeredModel.launchModel,
+    models: [offeredModel],
+    diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+  };
+  const baseStatus: TeamModelRuntimeProviderStatus = {
+    providerId: 'anthropic',
+    models: [],
+    authMethod: 'oauth',
+    backend: null,
+    authenticated: false,
+    supported: true,
+    modelVerificationState: 'idle',
+    modelAvailability: [],
+    verificationState: 'unknown',
+    modelCatalog: catalog,
+  };
+
+  it('uses only the resolved SDK offer without promoting its alias or authentication facts', () => {
+    const providerStatus: TeamModelRuntimeProviderStatus = { ...baseStatus };
+    const options = getAvailableTeamProviderModelOptions('anthropic', providerStatus);
+
+    expect(options.map((option) => option.value)).toEqual(['', 'TEST-claude-sonnet']);
+    expect(options[1]).toMatchObject({
+      value: 'TEST-claude-sonnet',
+      label: 'TEST Claude Sonnet',
+      availabilityStatus: 'available',
+    });
+    expect(getAvailableTeamProviderModels('anthropic', providerStatus)).toEqual([
+      'TEST-claude-sonnet',
+    ]);
+    expect(isTeamModelAvailableForUi('anthropic', 'TEST-claude-sonnet', providerStatus)).toBe(
+      true
+    );
+    expect(normalizeTeamModelForUi('anthropic', 'TEST-claude-sonnet', providerStatus)).toBe(
+      'TEST-claude-sonnet'
+    );
+    expect(getTeamModelSelectionError('anthropic', 'TEST-claude-sonnet', providerStatus)).toBeNull();
+
+    for (const unoffered of ['sonnet', 'opus', 'claude-opus-4-6']) {
+      expect(isTeamModelAvailableForUi('anthropic', unoffered, providerStatus)).toBe(false);
+      expect(normalizeTeamModelForUi('anthropic', unoffered, providerStatus)).toBe('');
+      expect(getTeamModelSelectionError('anthropic', unoffered, providerStatus)).toContain(
+        'not available'
+      );
+    }
+    expect(providerStatus.authenticated).toBe(false);
+    expect(providerStatus.verificationState).toBe('unknown');
+    expect(providerStatus.modelVerificationState).toBe('idle');
+  });
+
+  it('keeps hidden and unavailable SDK rows refused without falling back when all offers are unavailable', () => {
+    const hiddenModel: Catalog['models'][number] = {
+      ...offeredModel,
+      id: 'hidden-sonnet',
+      launchModel: 'TEST-hidden-claude',
+      displayName: 'Hidden TEST Claude',
+      hidden: true,
+      isDefault: false,
+    };
+    const unavailableModel: Catalog['models'][number] = {
+      ...offeredModel,
+      id: 'unavailable-sonnet',
+      launchModel: 'TEST-unavailable-claude',
+      displayName: 'Unavailable TEST Claude',
+      isDefault: false,
+    };
+    const reason = 'Captured runtime refused this model';
+    const providerStatus: TeamModelRuntimeProviderStatus = {
+      ...baseStatus,
+      modelCatalog: { ...catalog, models: [offeredModel, hiddenModel, unavailableModel] },
+      modelAvailability: [
+        { modelId: unavailableModel.launchModel, status: 'unavailable', reason, checkedAt: null },
+      ],
+    };
+    const options = getAvailableTeamProviderModelOptions('anthropic', providerStatus);
+
+    expect(options.map((option) => option.value)).toEqual([
+      '',
+      offeredModel.launchModel,
+      unavailableModel.launchModel,
+    ]);
+    expect(options[2]).toMatchObject({
+      value: unavailableModel.launchModel,
+      availabilityStatus: 'unavailable',
+      availabilityReason: reason,
+    });
+    expect(getAvailableTeamProviderModels('anthropic', providerStatus)).toEqual([
+      offeredModel.launchModel,
+    ]);
+    expect(normalizeTeamModelForUi('anthropic', offeredModel.launchModel, providerStatus)).toBe(
+      offeredModel.launchModel
+    );
+    for (const refused of [
+      hiddenModel.launchModel,
+      unavailableModel.launchModel,
+      'TEST-unoffered-claude',
+    ]) {
+      expect(isTeamModelAvailableForUi('anthropic', refused, providerStatus)).toBe(false);
+      expect(normalizeTeamModelForUi('anthropic', refused, providerStatus)).toBe('');
+      expect(getTeamModelSelectionError('anthropic', refused, providerStatus)).toContain(
+        'not available'
+      );
+    }
+
+    const allUnavailable: TeamModelRuntimeProviderStatus = {
+      ...providerStatus,
+      modelCatalog: { ...catalog, models: [hiddenModel, unavailableModel] },
+    };
+    const unavailableOptions = getAvailableTeamProviderModelOptions('anthropic', allUnavailable);
+    expect(unavailableOptions.map((option) => option.value)).toEqual([
+      '',
+      unavailableModel.launchModel,
+    ]);
+    expect(unavailableOptions[1]).toMatchObject({
+      availabilityStatus: 'unavailable',
+      availabilityReason: reason,
+    });
+    expect(getAvailableTeamProviderModels('anthropic', allUnavailable)).toEqual([]);
+    expect(normalizeTeamModelForUi('anthropic', unavailableModel.launchModel, allUnavailable)).toBe(
+      ''
+    );
+  });
+
+  it('retains curated fallback for unavailable SDK catalogs or ready catalogs without visible values', () => {
+    const fallbackValues = getAvailableTeamProviderModelOptions('anthropic').map(
+      (option) => option.value
+    );
+    const fallbackCatalogs: Catalog[] = [
+      { ...catalog, status: 'unavailable' },
+      { ...catalog, models: [] },
+      { ...catalog, models: [{ ...offeredModel, hidden: true }] },
+      { ...catalog, models: [{ ...offeredModel, id: ' ', launchModel: ' ' }] },
+    ];
+
+    for (const modelCatalog of fallbackCatalogs) {
+      const providerStatus: TeamModelRuntimeProviderStatus = { ...baseStatus, modelCatalog };
+      expect(
+        getAvailableTeamProviderModelOptions('anthropic', providerStatus).map(
+          (option) => option.value
+        )
+      ).toEqual(fallbackValues);
+      expect(isTeamModelAvailableForUi('anthropic', 'sonnet', providerStatus)).toBe(true);
+      expect(normalizeTeamModelForUi('anthropic', 'sonnet', providerStatus)).toBe('sonnet');
+      expect(getTeamModelSelectionError('anthropic', 'sonnet', providerStatus)).toBeNull();
+      expect(
+        isTeamModelAvailableForUi('anthropic', offeredModel.launchModel, providerStatus)
+      ).toBe(false);
+      expect(normalizeTeamModelForUi('anthropic', offeredModel.launchModel, providerStatus)).toBe(
+        ''
+      );
+      expect(
+        getTeamModelSelectionError('anthropic', offeredModel.launchModel, providerStatus)
+      ).toContain('not available');
+    }
+  });
+});

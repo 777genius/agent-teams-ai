@@ -1,0 +1,80 @@
+{
+  "observedAt": "2026-11-15 19:04:05 UTC",
+  "sourceHead": "d382c393898d35c9340cd903d1c02fb868c18a8e",
+  "runId": 43736377103,
+  "attempt": 1,
+  "status": "completed",
+  "conclusion": "cancelled",
+  "jobs": [
+    {
+      "id": 132879770312,
+      "name": "classify packaged smoke",
+      "status": "completed",
+      "conclusion": "success",
+      "activeSteps": [],
+      "failedSteps": []
+    },
+    {
+      "id": 132896821958,
+      "name": "packaged smoke (win32-arm64)",
+      "status": "completed",
+      "conclusion": "failure",
+      "activeSteps": [],
+      "failedSteps": [
+        {
+          "name": "Qualify packaged Windows same-Main Retry and original Processes UI Kill with finite peers",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 38
+        }
+      ]
+    },
+    {
+      "id": 132896821967,
+      "name": "packaged smoke (darwin-arm64)",
+      "status": "completed",
+      "conclusion": "success",
+      "activeSteps": [],
+      "failedSteps": []
+    },
+    {
+      "id": 132896821996,
+      "name": "packaged smoke (win32-x64)",
+      "status": "completed",
+      "conclusion": "failure",
+      "activeSteps": [],
+      "failedSteps": [
+        {
+          "name": "Qualify packaged Windows same-Main Retry and original Processes UI Kill with finite peers",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 38
+        }
+      ]
+    },
+    {
+      "id": 132896822005,
+      "name": "packaged smoke (linux-x64)",
+      "status": "completed",
+      "conclusion": "success",
+      "activeSteps": [],
+      "failedSteps": []
+    },
+    {
+      "id": 132896822023,
+      "name": "packaged smoke (darwin-x64)",
+      "status": "completed",
+      "conclusion": "success",
+      "activeSteps": [],
+      "failedSteps": []
+    },
+    {
+      "id": 132920256725,
+      "name": "packaged full gate",
+      "status": "completed",
+      "conclusion": "cancelled",
+      "activeSteps": [],
+      "failedSteps": []
+    }
+  ]
+}

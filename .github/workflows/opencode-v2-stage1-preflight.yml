@@ -20,6 +20,8 @@ on:
       - packages/legacy-agent-host/tests/**
       - packages/legacy-agent-host/native/**
       - packages/legacy-agent-host/scripts/**
+      # Host's ControllerAdapter consumes this workspace dependency directly.
+      - agent-teams-controller/**
       - scripts/legacy-agent-host/**
       - scripts/stage-runtime.mjs
       - scripts/lib/opencode-v2-base-inventory.mts
@@ -59,6 +61,10 @@ jobs:
       AGENT_TEAMS_INSTALL_PROFILE: node-ci
       ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
     steps:
+      - name: Enable Windows long paths
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: git config --global core.longpaths true
       - uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.head.sha }}
@@ -359,6 +365,10 @@ jobs:
       OPENCODE_V2_EMBEDDED_WINDOWS_CUSTODY_RECEIPT: ${{ github.workspace }}/opencode-v2-windows-custody.json
       OPENCODE_V2_EMBEDDED_HOST_RECEIPT: ${{ github.workspace }}/opencode-v2-embedded-host.json
     steps:
+      - name: Enable Windows long paths
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: git config --global core.longpaths true
       - uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.head.sha }}
@@ -380,7 +390,7 @@ jobs:
       - name: Build original Host and its pinned provider implementation
         run: pnpm --filter @agent-teams/legacy-agent-host build
       - name: Check original graph and custody boundaries
-        run: node --test packages/legacy-agent-host/tests/opencode-v2-embedded-graph.test.ts packages/legacy-agent-host/tests/registered-process-build-selection.test.ts packages/legacy-agent-host/tests/windows-job-custody.test.ts packages/legacy-agent-host/tests/opencode-v2-native-paths.test.ts packages/legacy-agent-host/tests/owner-scoped-backup.test.ts packages/legacy-agent-host/tests/member-attachment-delivery.test.ts
+        run: node --test packages/legacy-agent-host/tests/opencode-v2-embedded-graph.test.ts packages/legacy-agent-host/tests/registered-process-build-selection.test.ts packages/legacy-agent-host/tests/windows-job-custody.test.ts packages/legacy-agent-host/tests/opencode-v2-native-paths.test.ts packages/legacy-agent-host/tests/owner-scoped-backup.test.ts packages/legacy-agent-host/tests/member-attachment-delivery.test.ts packages/legacy-agent-host/tests/native-v2-input-observation-budget.test.ts
       - name: Stage checksum-pinned base archive without executing the legacy CLI
         env:
           GH_TOKEN: ${{ github.token }}
@@ -586,6 +596,7 @@ jobs:
               'native_model_tool_effect_permission_mcp_task_and_reply_completed_once',
               'changed_project_config_did_not_retarget_running_native_session',
               'original_uploaded_PNG_native_image_inference_and_public_readback',
+              'all_image_MIMEs_exact_PDF_and_4MiB_PNG_native_normalization_and_public_readback',
               'checkpoint_and_original_host_native_cleanup_confirmed',
               'cold_host_restored_native_history_without_model_or_tool_replay',
             ]);
@@ -594,6 +605,14 @@ jobs:
             if (process.platform === 'win32') assert.match(r.digests.windowsShell, /^[a-f0-9]{64}$/);
             }
           "
+      - name: Verify POSIX trusted-writer contract A and preserve strict mutation counterexamples
+        if: always() && runner.os != 'Windows'
+        env:
+          OPENCODE_V2_POSIX_EXEC_GO: '1'
+          OPENCODE_V2_POSIX_EXEC_RECEIPT: ${{ github.workspace }}/opencode-v2-posix-exec.json
+          # Original product path plus separate legacy strict verdicts; no tuple override or module mock.
+          OPENCODE_V2_EMBEDDED_DARWIN_CANDIDATE_BUILD: ''
+        run: node --test --test-name-pattern='^POSIX original-path' packages/legacy-agent-host/tests/registered-process-executable.native.ts
       - name: Preserve exact native evidence or candidate HOLD
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -611,3 +630,4 @@ jobs:
             opencode-v2-credentials.json
             opencode-v2-permission-lifecycle.json
             opencode-v2-captured-mcp.json
+            opencode-v2-posix-exec.json

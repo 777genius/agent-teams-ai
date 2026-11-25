@@ -201,6 +201,9 @@ export async function prepareCapturedTeamModels(options: {
               ? request.cwd
               : row.selected.workspace;
           const needsDraft =
+            // A retained OpenCode check is transferred across the subsequent full roster CAS.
+            // Its explicit destination binds the product revision even when choices are unchanged.
+            (Boolean(request.preparationId) && choice.providerId === 'opencode') ||
             isDefaultProviderModelSelection(choice.model) ||
             (choice.effort === undefined && row?.selected?.effort !== undefined) ||
             !row?.selected ||
@@ -253,15 +256,17 @@ export async function prepareCapturedTeamModels(options: {
             'The edited models need an explicit member mapping before they can be checked.'
           );
         const choice = matches[0];
-        const reset =
-          choice &&
-          (isDefaultProviderModelSelection(choice.model) ||
-            (choice.effort === undefined && saved.effort !== undefined));
+        const needsDraft =
+          (Boolean(request.preparationId) &&
+            (choice?.providerId ?? providerId(saved.provider)) === 'opencode') ||
+          (choice &&
+            (isDefaultProviderModelSelection(choice.model) ||
+              (choice.effort === undefined && saved.effort !== undefined)));
         planned.push({
           memberId: member.memberId,
           saved,
           choice,
-          ...(reset
+          ...(needsDraft
             ? {
                 draft: {
                   providerId: providerId(saved.provider) as 'anthropic' | 'codex' | 'opencode',
@@ -293,7 +298,7 @@ export async function prepareCapturedTeamModels(options: {
       if (choice) represented.add(checkKey(choice));
       const desiredProvider = choice?.providerId ?? (saved && providerId(saved.provider));
       const model = draft
-        ? choice!.model
+        ? choice?.model ?? saved!.model
         : !choice || isDefaultProviderModelSelection(choice.model)
           ? saved!.model
           : choice.model;

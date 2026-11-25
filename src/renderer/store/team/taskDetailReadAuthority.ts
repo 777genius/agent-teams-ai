@@ -132,6 +132,28 @@ export function rejectLiveTeamSnapshot(
   acceptedLiveTeamSnapshotByContextAndTeam.delete(key);
 }
 
+/** Defer an existing demand only behind the latest original metadata observation. */
+export function taskDetailSnapshotReadDisposition(
+  scope: TaskDetailReadScope
+): 'pending' | 'failed' | null {
+  const key = acceptedLiveTeamSnapshotKey(scope);
+  const current = snapshotEligibilityTokenByContextAndTeam.get(key);
+  if (
+    !current ||
+    !isTaskDetailReadScopeCurrent(scope, scope.contextId, scope.teamName) ||
+    !isSameTaskDetailReadScope(current.token.scope, scope) ||
+    !isTaskDetailTokenCurrent(current.token, scope)
+  )
+    return null;
+  if (current.error !== null) return 'failed';
+  const accepted = acceptedLiveTeamSnapshotByContextAndTeam.get(key);
+  return accepted &&
+    isAcceptedLiveTeamSnapshotCurrent(accepted, scope) &&
+    accepted.token === current.token
+    ? null
+    : 'pending';
+}
+
 function liveTeamSnapshotError(scope: TaskDetailReadScope): string | null {
   const current = snapshotEligibilityTokenByContextAndTeam.get(acceptedLiveTeamSnapshotKey(scope));
   return current &&
@@ -232,6 +254,7 @@ export function markLiveTeamMetadataUnavailable(
     ...unavailable,
     phase: 'unavailable',
     error: error || 'Live team metadata unavailable',
+    refreshPending: entry.refreshPending || taskDetailSnapshotReadDisposition(scope) === 'pending',
   };
 }
 

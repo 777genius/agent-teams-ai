@@ -203,12 +203,23 @@ async function stopTeamRuntimeFlow<TRun extends TeamProvisioningStopRun>(
   ports.cleanupRun(run);
 }
 
-export async function stopTeamFlow<TRun extends TeamProvisioningStopRun>(
+async function executeTeamStopFlow<TRun extends TeamProvisioningStopRun>(
   teamName: string,
   ports: TeamProvisioningStopTeamPorts<TRun>,
-  publication?: LegacyNativeStopPublication | null
-): Promise<void> {
+  publication?: LegacyNativeStopPublication | null,
+  deferPublication = false
+): Promise<(() => Promise<void>) | undefined> {
   let cleanup: (() => void) | undefined;
+  let completion: Promise<void> | undefined;
+  const finalize = () =>
+    (completion ??= (async () => {
+      if (publication && !(await publication.complete())) {
+        throw new Error(
+          'Team process stopped; native release publication is unconfirmed. Retry Stop to confirm original ownership release.'
+        );
+      }
+      cleanup?.();
+    })());
   // Keep the team lock until both branches settle, including runtime-owned
   // cleanup on runtime success even when durable cancellation fails.
   let stopFailed = false;
@@ -221,14 +232,7 @@ export async function stopTeamFlow<TRun extends TeamProvisioningStopRun>(
         await ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam(teamName);
       }),
     ]);
-    if (publication) {
-      if (!(await publication.complete())) {
-        throw new Error(
-          'Team process stopped; native release publication is unconfirmed. Retry Stop to confirm original ownership release.'
-        );
-      }
-      cleanup?.();
-    }
+    if (publication && !deferPublication) await finalize();
   } catch (error) {
     stopFailed = true;
     stopFailure = error;
@@ -246,6 +250,26 @@ export async function stopTeamFlow<TRun extends TeamProvisioningStopRun>(
   }
   if (stopFailed) throw stopFailure;
   if (pauseFailed) throw new Error('task_activity_interval_pause_failed_after_stop');
+  return publication && deferPublication ? finalize : undefined;
+}
+
+export async function stopTeamFlow<TRun extends TeamProvisioningStopRun>(
+  teamName: string,
+  ports: TeamProvisioningStopTeamPorts<TRun>,
+  publication?: LegacyNativeStopPublication | null
+): Promise<void> {
+  await executeTeamStopFlow(teamName, ports, publication);
+}
+
+/** Native teardown and the final team-wide pause stay in the original team lock. */
+export async function prepareNativeStopTeamFlow<TRun extends TeamProvisioningStopRun>(
+  teamName: string,
+  ports: TeamProvisioningStopTeamPorts<TRun>,
+  publication: LegacyNativeStopPublication
+): Promise<() => Promise<void>> {
+  const finalize = await executeTeamStopFlow(teamName, ports, publication, true);
+  if (!finalize) throw new Error('Original native Stop completion is unavailable');
+  return finalize;
 }
 
 export async function stopAllTeamsFlow(ports: TeamProvisioningStopAllPorts): Promise<void> {

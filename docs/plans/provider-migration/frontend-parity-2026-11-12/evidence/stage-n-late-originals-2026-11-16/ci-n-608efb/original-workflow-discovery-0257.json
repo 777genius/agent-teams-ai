@@ -1,0 +1,286 @@
+{
+  "observedAt": "2026-11-16 02:57:55 UTC",
+  "response": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Action completed."
+      }
+    ],
+    "structuredContent": {
+      "workflow_runs": [
+        {
+          "id": 43795234795,
+          "name": "Windows official installer fresh and native OTA",
+          "status": "queued",
+          "conclusion": null,
+          "run_number": 1123,
+          "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234795/jobs",
+          "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234795/logs",
+          "workflow_id": 375548930
+        },
+        {
+          "id": 43795234913,
+          "name": "Host process fixture acceptance",
+          "status": "queued",
+          "conclusion": null,
+          "run_number": 86,
+          "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234913/jobs",
+          "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234913/logs",
+          "workflow_id": 417565613
+        },
+        {
+          "id": 43795234791,
+          "name": "OpenCode packaged Windows E2E",
+          "status": "completed",
+          "conclusion": "skipped",
+          "run_number": 1057,
+          "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234791/jobs",
+          "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234791/logs",
+          "workflow_id": 354658917
+        },
+        {
+          "id": 43795234474,
+          "name": "Dependency Review",
+          "status": "queued",
+          "conclusion": null,
+          "run_number": 2339,
+          "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234474/jobs",
+          "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234474/logs",
+          "workflow_id": 282510049
+        },
+        {
+          "id": 43795234580,
+          "name": "Anthropic compatible status packaged Windows E2E",
+          "status": "completed",
+          "conclusion": "skipped",
+          "run_number": 1472,
+          "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234580/jobs",
+          "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234580/logs",
+          "workflow_id": 364835390
+        },
+        {
+          "id": 43795234688,
+          "name": "CI proof: PR=1192 | head=608efb78823d7c74b35f8a674fcfb6faea8ecfc5 | base=def734338f13bcc3209e78079a0cedbc48f05a5b | merge=3524510a5e0aec149a0c1d01a57ea10df7307c44 | action=synchronize | draft=true",
+          "status": "queued",
+          "conclusion": null,
+          "run_number": 11978,
+          "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234688/jobs",
+          "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234688/logs",
+          "workflow_id": 236915316
+        },
+        {
+          "id": 43795234485,
+          "name": "Native updater feasibility (Linux predecessor)",
+          "status": "queued",
+          "conclusion": null,
+          "run_number": 1186,
+          "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234485/jobs",
+          "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234485/logs",
+          "workflow_id": 375243389
+        },
+        {
+          "id": 43795234704,
+          "name": "Teams creation page Electron E2E",
+          "status": "queued",
+          "conclusion": null,
+          "run_number": 751,
+          "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234704/jobs",
+          "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234704/logs",
+          "workflow_id": 410738474
+        },
+        {
+          "id": 43795234721,
+          "name": "OpenCode V2 Stage1 static preflight (TEST only)",
+          "status": "queued",
+          "conclusion": null,
+          "run_number": 735,
+          "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234721/jobs",
+          "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234721/logs",
+          "workflow_id": 408464117
+        },
+        {
+          "id": 43795234716,
+          "name": "Announcements Content",
+          "status": "queued",
+          "conclusion": null,
+          "run_number": 5372,
+          "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234716/jobs",
+          "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234716/logs",
+          "workflow_id": 350445454
+        },
+        {
+          "id": 43795234671,
+          "name": "Windows native updater predecessor feasibility",
+          "status": "queued",
+          "conclusion": null,
+          "run_number": 1094,
+          "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234671/jobs",
+          "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234671/logs",
+          "workflow_id": 375294731
+        },
+        {
+          "id": 43795234695,
+          "name": "Native Linux package updater",
+          "status": "queued",
+          "conclusion": null,
+          "run_number": 1079,
+          "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234695/jobs",
+          "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234695/logs",
+          "workflow_id": 375389856
+        },
+        {
+          "id": 43795234652,
+          "name": "Public Runtime Bootstrap Smoke",
+          "status": "completed",
+          "conclusion": "skipped",
+          "run_number": 887,
+          "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234652/jobs",
+          "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234652/logs",
+          "workflow_id": 314773900
+        },
+        {
+          "id": 43795234535,
+          "name": "Kanban Table Desktop E2E",
+          "status": "completed",
+          "conclusion": "skipped",
+          "run_number": 577,
+          "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234535/jobs",
+          "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234535/logs",
+          "workflow_id": 410354645
+        },
+        {
+          "id": 43795234558,
+          "name": "Real Runtime Provider Count E2E",
+          "status": "completed",
+          "conclusion": "skipped",
+          "run_number": 206,
+          "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234558/jobs",
+          "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234558/logs",
+          "workflow_id": 411332435
+        },
+        {
+          "id": 43795234608,
+          "name": "CodeQL",
+          "status": "completed",
+          "conclusion": "skipped",
+          "run_number": 7759,
+          "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234608/jobs",
+          "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234608/logs",
+          "workflow_id": 287665407
+        },
+        {
+          "id": 43795234707,
+          "name": "OpenCode V2 cold Dashboard packaged E2E",
+          "status": "completed",
+          "conclusion": "skipped",
+          "run_number": 217,
+          "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234707/jobs",
+          "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234707/logs",
+          "workflow_id": 412550494
+        },
+        {
+          "id": 43795234735,
+          "name": "Anthropic environment portability",
+          "status": "completed",
+          "conclusion": "skipped",
+          "run_number": 927,
+          "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234735/jobs",
+          "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234735/logs",
+          "workflow_id": 398730798
+        },
+        {
+          "id": 43795234490,
+          "name": "Windows packaged backfill diagnostic",
+          "status": "completed",
+          "conclusion": "skipped",
+          "run_number": 1661,
+          "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234490/jobs",
+          "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234490/logs",
+          "workflow_id": 353684594
+        },
+        {
+          "id": 43795234590,
+          "name": "Build Hetzner landing and docs release",
+          "status": "queued",
+          "conclusion": null,
+          "run_number": 472,
+          "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234590/jobs",
+          "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234590/logs",
+          "workflow_id": 409757946
+        },
+        {
+          "id": 43795234502,
+          "name": "Prepare immutable Windows native updater inputs",
+          "status": "queued",
+          "conclusion": null,
+          "run_number": 1100,
+          "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234502/jobs",
+          "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234502/logs",
+          "workflow_id": 375535509
+        },
+        {
+          "id": 43795234552,
+          "name": "Deploy Landing to GitHub Pages",
+          "status": "queued",
+          "conclusion": null,
+          "run_number": 1940,
+          "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234552/jobs",
+          "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234552/logs",
+          "workflow_id": 250250191
+        },
+        {
+          "id": 43795234604,
+          "name": "OpenCode diagnostics desktop E2E",
+          "status": "completed",
+          "conclusion": "skipped",
+          "run_number": 729,
+          "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234604/jobs",
+          "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234604/logs",
+          "workflow_id": 354578294
+        },
+        {
+          "id": 43795234478,
+          "name": "Sentry owned process native gates",
+          "status": "completed",
+          "conclusion": "skipped",
+          "run_number": 374,
+          "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234478/jobs",
+          "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234478/logs",
+          "workflow_id": 375930633
+        },
+        {
+          "id": 43795234711,
+          "name": "Electron packaged CI",
+          "status": "queued",
+          "conclusion": null,
+          "run_number": 2067,
+          "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234711/jobs",
+          "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234711/logs",
+          "workflow_id": 368482949
+        },
+        {
+          "id": 43795234701,
+          "name": "Codex Runtime Smoke",
+          "status": "completed",
+          "conclusion": "skipped",
+          "run_number": 3058,
+          "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234701/jobs",
+          "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234701/logs",
+          "workflow_id": 276323833
+        },
+        {
+          "id": 43795234483,
+          "name": "Host Emulated Acceptance",
+          "status": "queued",
+          "conclusion": null,
+          "run_number": 87,
+          "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234483/jobs",
+          "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43795234483/logs",
+          "workflow_id": 417564953
+        }
+      ]
+    },
+    "isError": false
+  }
+}

@@ -21,6 +21,8 @@ export const nativeProcessProfileSchema = z.object({
     sha256: z.string().regex(/^[a-f0-9]{64}$/),
     arch: z.enum(['x64', 'arm64']),
     protocol: z.literal(1),
+    /** Exact product-delivery feature; absence preserves schema1 and its original reference. */
+    capability: z.literal('service-scopes-v1').optional(),
   }).strict().optional(),
 });
 

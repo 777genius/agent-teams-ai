@@ -47,12 +47,14 @@ test('candidate reader refuses old or rebound code-mode metadata before native b
 
 test(
   'packed paths with spaces come only from captured resources; private runtime dirs remain caller-owned',
-  { skip: process.platform !== 'darwin' || process.arch !== 'arm64' },
+  { skip: !((process.platform === 'darwin' && process.arch === 'arm64') ||
+    (process.platform === 'linux' && process.arch === 'x64')) },
   async (t) => {
     const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST packed candidate ')));
     t.after(() => rm(root, { recursive: true, force: true }));
     const bundleRoot = join(root, 'App Bundle.app');
-    const resources = join(bundleRoot, 'Contents/Resources/legacy-agent-host');
+    const resources = join(bundleRoot, process.platform === 'linux'
+      ? 'resources/legacy-agent-host' : 'Contents/Resources/legacy-agent-host');
     const files = [
       ['node/v24.21.0/TEST/node', 'TEST-node', true],
       ['host/packages/0000/dist/cli.js', 'TEST-host', false],
@@ -97,9 +99,11 @@ test(
     const bridge = {
       schemaVersion: 1,
       abi: 'napi-8',
-      platform: 'darwin',
-      architecture: 'arm64',
-      osBuild: '24G90',
+      platform: process.platform,
+      architecture: process.arch,
+      ...(process.platform === 'linux'
+        ? { kernelCapability: 'pidfs-inode64-v1', libc: { family: 'glibc', minimumVersion: '2.33' } }
+        : { osBuild: '24G90' }),
       library: 'registered-process.node',
       binarySha256: await candidateDigest(join(resources, files[6][0])),
     };
@@ -144,9 +148,9 @@ test(
     await writeFile(path, JSON.stringify(manifest));
     const digest = await candidateDigest(path);
     const selected = await readCandidateRuntimePaths(resources, digest);
-    await mkdir(join(bundleRoot, 'Contents/MacOS'));
-    const appExecutable = join(bundleRoot, 'Contents/MacOS/Test App');
-    const appAsar = join(bundleRoot, 'Contents/Resources/app.asar');
+    if (process.platform !== 'linux') await mkdir(join(bundleRoot, 'Contents/MacOS'));
+    const appExecutable = join(bundleRoot, process.platform === 'linux' ? 'Test App' : 'Contents/MacOS/Test App');
+    const appAsar = join(bundleRoot, process.platform === 'linux' ? 'resources/app.asar' : 'Contents/Resources/app.asar');
     await writeFile(appExecutable, 'TEST-app-unrunnable-bytes');
     await chmod(appExecutable, 0o755);
     await writeFile(appAsar, 'TEST-ASAR-unrunnable-bytes');

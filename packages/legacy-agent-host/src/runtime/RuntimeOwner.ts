@@ -2,8 +2,10 @@ import { normalizeRuntimeDelivery, findRuntimeInput, runtimeAdmission } from './
 import { prepareSessionOpen } from './prepareSessionOpen.js';
 import { preparedInputProof, prepareRuntimeInput, recordContextEpoch } from './inputPreparation.js';
 import { randomUUID } from 'node:crypto';
+import { createRuntimeOpenDiagnostic } from '../diagnostics/runtimeOpenDiagnostic.js';
+import type { RuntimeOpenPhase } from '../diagnostics/runtimeOpenDiagnostic.js';
 
-import type { RuntimeProviderActivity } from './providerActivityContracts.js';
+import type { RuntimeProcessOutput, RuntimeProviderActivity } from './providerActivityContracts.js';
 import { RuntimeOwnerError } from './contracts.js';
 import { CheckpointCoordinator } from './CheckpointCoordinator.js';
 import { RuntimeActivityCoordinator } from './RuntimeActivityCoordinator.js';
@@ -11,6 +13,7 @@ import type {
   RuntimeActivityCursor,
   RuntimeActivityFeed,
   RuntimeActivitySnapshot,
+  RuntimeConversationRead,
 } from './activityContracts.js';
 import {
   activeInput as active,
@@ -85,10 +88,19 @@ export class RuntimeOwner {
   readActivityFeed(binding: RuntimeBinding, cursor: RuntimeActivityCursor): RuntimeActivityFeed {
     return this.activity.feed(binding, cursor);
   }
+  /** Trusted composition read, under the original member authority and fence. */
+  readConversation(binding: RuntimeBinding, mode: 'metadata' | 'messages', requireRecord = false): RuntimeConversationRead {
+    return this.activity.conversation(binding, mode, requireRecord);
+  }
 
   /** Private Host composition input, not exposed by RPC or the provider Session SPI. */
   observeProviderActivity(binding: RuntimeBinding, sessionRef: string, observation: RuntimeProviderActivity): void {
     this.activity.observeProviderActivity(normalizeBinding(binding), sessionRef, observation);
+  }
+
+  /** Original process observation, including startup before a Session reference exists. */
+  observeProcessOutput(binding: RuntimeBinding, config: OpenConfig, observation: RuntimeProcessOutput, assertSourceCurrent: () => void): void {
+    this.activity.observeProcessOutput(normalizeBinding(binding), normalizeOpenConfig(config, true), observation, assertSourceCurrent);
   }
 
   captureCheckpoint(input: {
@@ -209,9 +221,15 @@ export class RuntimeOwner {
     config: OpenConfig,
     assertAuthority?: () => void
   ): Promise<RuntimeSessionRecord> {
+    const observeOpen = createRuntimeOpenDiagnostic({
+      profileId: this.options.profileId, configuration: config, source: 'runtime',
+    });
+    let openPhase: RuntimeOpenPhase = 'authority';
     try {
       assertAuthority?.();
+      openPhase = 'driver-open';
       const opened = await this.options.driverFactory.open(config, assertAuthority);
+      openPhase = 'session-ref';
       this.drivers.set(this.key(binding), opened.driver);
       if (
         typeof opened.driver.sessionRef !== 'string' ||
@@ -219,15 +237,20 @@ export class RuntimeOwner {
         opened.driver.sessionRef.length > 1024
       )
         throw new RuntimeOwnerError('hold');
+      openPhase = 'publish';
       let record = this.publish(binding, (current) => {
         if (!this.options.authorize(binding, 'admit') || !this.authorityCurrent(assertAuthority)) current.sealed = true;
         current.sessionRef = opened.driver.sessionRef;
         current.custody = 'owned';
         current.phase = current.sealed ? 'closing' : 'allocated';
       });
+      openPhase = 'observe';
       void this.observe(binding, opened.driver);
+      openPhase = 'sealed-close';
       if (record.sealed) return await this.stopOwned(binding, true);
+      openPhase = 'readiness';
       const ready = await opened.driver.checkReadiness();
+      openPhase = 'readiness-publish';
       record = this.publish(binding, (current) => {
         if (current.phase !== 'allocated' || current.sealed) return;
         current.nativeReady =
@@ -238,7 +261,8 @@ export class RuntimeOwner {
         if (!current.nativeReady) current.diagnostic = 'readiness-unavailable';
       });
       return record;
-    } catch {
+    } catch (error) {
+      observeOpen(openPhase, error);
       return this.publish(binding, (current) => {
         if (current.phase === 'closed') return;
         current.phase = 'held';

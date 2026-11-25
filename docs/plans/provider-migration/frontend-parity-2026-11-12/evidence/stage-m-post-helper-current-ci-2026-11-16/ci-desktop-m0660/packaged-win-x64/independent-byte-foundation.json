@@ -1,0 +1,453 @@
+{
+  "kind": "TEST_INDEPENDENT_M0660_PACKAGED_WINDOWS_X64_BYTE_FOUNDATION",
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "artifact": {
+    "id": 14192765823,
+    "name": "packaged-v2-host-win32-x64-0660c748f88675063e3051fb0f8b2022e8f6f056",
+    "size_in_bytes": 625025,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14192765823",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14192765823/zip",
+    "expired": false,
+    "created_at": "2026-11-16T02:15:34Z",
+    "expires_at": "2026-11-23T02:15:33Z",
+    "updated_at": "2026-11-16T02:15:34Z",
+    "digest": "sha256:d84e424a053851aaab9c98e58fd3d2683632e8ad068b950bce926003cdd5f076",
+    "workflow_run": {
+      "id": 43780997349,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "0660c748f88675063e3051fb0f8b2022e8f6f056"
+    }
+  },
+  "job": {
+    "id": 133040244339,
+    "name": "packaged smoke (win32-x64)",
+    "status": "completed",
+    "conclusion": "failure",
+    "run_id": 43780997349,
+    "logs_url": null,
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1
+      },
+      {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2
+      },
+      {
+        "name": "Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3
+      },
+      {
+        "name": "Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4
+      },
+      {
+        "name": "Run actions/setup-python@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5
+      },
+      {
+        "name": "Install Linux packaging tools",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 6
+      },
+      {
+        "name": "Restore node-gyp executable bit",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7
+      },
+      {
+        "name": "Verify selected provider archives against frozen lock before install",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8
+      },
+      {
+        "name": "Install frozen dependencies",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 9
+      },
+      {
+        "name": "Verify managed Git pins and archive path safety",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 10
+      },
+      {
+        "name": "Validate packaged OpenCode project-path smoke syntax early",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 11
+      },
+      {
+        "name": "Typecheck packaged CI policy with pinned compiler",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 12
+      },
+      {
+        "name": "Assert Electron binary was provisioned during install",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 13
+      },
+      {
+        "name": "Test bundled undici security version policy",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 14
+      },
+      {
+        "name": "Verify CI Node and Electron built-in undici versions",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 15
+      },
+      {
+        "name": "Verify native rebuild",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 16
+      },
+      {
+        "name": "Stage bundled runtime",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 17
+      },
+      {
+        "name": "Stage terminal platform runtime",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 18
+      },
+      {
+        "name": "Stage Windows console wrapper",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 19
+      },
+      {
+        "name": "Build app",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 20
+      },
+      {
+        "name": "Select exact Host Node for candidate staging",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 21
+      },
+      {
+        "name": "Prepare actual pinned V2 Bun, engine and admitted process custody",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 22
+      },
+      {
+        "name": "Prefill pinned macOS arm64 Host Node archive",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 23
+      },
+      {
+        "name": "Stage V2 Host closure in existing candidate extraResources",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 24
+      },
+      {
+        "name": "Typecheck and test packaged Host capture boundaries",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 25
+      },
+      {
+        "name": "Verify and stage original Windows scoped broker for packaged Retry",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 26
+      },
+      {
+        "name": "Package unsigned test bundle",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 27
+      },
+      {
+        "name": "Verify bundle native architecture",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 28
+      },
+      {
+        "name": "Smoke packaged SQLite and PTY modules",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 29
+      },
+      {
+        "name": "Smoke packaged Git without external installation",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 30
+      },
+      {
+        "name": "Smoke managed Git inside native Windows terminal",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 31
+      },
+      {
+        "name": "Smoke packaged MCP handshake",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 32
+      },
+      {
+        "name": "Verify macOS 13 minimum",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 33
+      },
+      {
+        "name": "Smoke packaged app",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 34
+      },
+      {
+        "name": "Qualify packaged macOS OpenCode project-path status and model list",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 35
+      },
+      {
+        "name": "Smoke packaged app under Xvfb",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 36
+      },
+      {
+        "name": "Qualify actual packaged V2 Host tools, MCP, Stop and cold Resume",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 37
+      },
+      {
+        "name": "Qualify packaged Windows same-Main Retry and original Processes UI Kill with finite peers",
+        "status": "completed",
+        "conclusion": "failure",
+        "number": 38
+      },
+      {
+        "name": "Qualify original packaged macOS app relaunch with finite SDK peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 39
+      },
+      {
+        "name": "Preserve exact packaged Host evidence",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 40
+      },
+      {
+        "name": "Post Select exact Host Node for candidate staging",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 76
+      },
+      {
+        "name": "Post Run actions/setup-python@v6",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 77
+      },
+      {
+        "name": "Post Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 78
+      },
+      {
+        "name": "Post Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 79
+      },
+      {
+        "name": "Post Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 80
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 81
+      }
+    ]
+  },
+  "apiEvidence": [
+    {
+      "path": "ci-desktop-m0660/official-packaged-artifacts-0220.json",
+      "bytes": 2023,
+      "blob": "14cbc8c0c56d232877a0934b966fdcf5b651904a",
+      "sha256": "da68a3637c026dcc031780492f60517efb0fadf6042cd79539a867c9a1ca7487"
+    },
+    {
+      "path": "ci-desktop-m0660/full-api-jobs-0225.json",
+      "bytes": 210964,
+      "blob": "73e6774f138b77b61aff42522ccf9e8065b1762f",
+      "sha256": "d51bd60401a56507c6cd36408e6c60fc62cf736a39405a61fda9df11e383d7a5"
+    }
+  ],
+  "selectedPayloads": [
+    {
+      "path": "ci-desktop-m0660/packaged-win-x64/artifact-14192765823.zip",
+      "bytes": 625025,
+      "blob": "ed207c9bf138be138427abcd2f93066716e439b0",
+      "sha256": "d84e424a053851aaab9c98e58fd3d2683632e8ad068b950bce926003cdd5f076"
+    },
+    {
+      "path": "ci-desktop-m0660/packaged-win-x64/job-133040244339.log",
+      "bytes": 312815,
+      "blob": "54d03abce960911fabeea18886c7d307591245ef",
+      "sha256": "88401bfac2583e744b54b65d39593cb773e4de2c7b54bce90dbdea1d90d7d1fc"
+    },
+    {
+      "path": "ci-desktop-m0660/packaged-win-x64/archive-audit.json",
+      "bytes": 2456,
+      "blob": "1e1abb1589aaf3f421b2cd1fe61711a7de1679f9",
+      "sha256": "921e66ee396cb714990b981e052a5976fc6dd79cc8629d8e007bbcab219e43d1"
+    },
+    {
+      "path": "ci-desktop-m0660/packaged-win-x64/ui-phase-source-review.json",
+      "bytes": 12686,
+      "blob": "a5c6bcbffe16d2d699375e335be0a194704131c6",
+      "sha256": "eae7757371d43db93f86630ac88ccd92b2cabac5b568e29dbd928810981479f9"
+    }
+  ],
+  "zip": {
+    "bytes": 625025,
+    "blob": "ed207c9bf138be138427abcd2f93066716e439b0",
+    "sha256": "d84e424a053851aaab9c98e58fd3d2683632e8ad068b950bce926003cdd5f076",
+    "memberCount": 8,
+    "safeUniqueRegularMembers": true,
+    "allCrcPassed": true,
+    "allExtractedBytesExact": true,
+    "members": [
+      {
+        "path": "_temp/opencode-v2-packaged-native.json",
+        "bytes": 5382,
+        "blob": "bd0f1dc8bd060e5d88cf74b34127a5f51837abd5",
+        "sha256": "bdb5ca3216b29b614a987a8c0916a8c4847b2b83c5441302f366883e7161f079",
+        "crc32": "5f5373a3",
+        "safeUniqueRegularMember": true,
+        "extractedBytesExact": true
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+        "bytes": 1154517,
+        "blob": "c938cf81f8141b52f080b44e670e98ba8f789b06",
+        "sha256": "3962998118a070023cc160e39e7c8cb88d9b72feebe97438ee79f7be8f171288",
+        "crc32": "dc157fd2",
+        "safeUniqueRegularMember": true,
+        "extractedBytesExact": true
+      },
+      {
+        "path": "_temp/opencode-v2-packaged-inputs.json",
+        "bytes": 780,
+        "blob": "28ad81eada9b2576778a1f8dca4328da068fc117",
+        "sha256": "aff88b8d6fa750b9caa673e6b79570ec8fe33b3ec77f1ffd6dac469c94579aef",
+        "crc32": "2e455caa",
+        "safeUniqueRegularMember": true,
+        "extractedBytesExact": true
+      },
+      {
+        "path": "_temp/opencode-v2-packaged.json",
+        "bytes": 1186,
+        "blob": "cdfde45c5485f9a340d175672686e3b462e860d1",
+        "sha256": "fdaa0c94021a8f0035e517750eb052bd4cea168eaf777dc2777214e25d2ca38a",
+        "crc32": "c91bf6b1",
+        "safeUniqueRegularMember": true,
+        "extractedBytesExact": true
+      },
+      {
+        "path": "_temp/windows-same-main-process-ui.app.log",
+        "bytes": 4766,
+        "blob": "8bd0f24b93c92901da992c19b0cd59b152178e3d",
+        "sha256": "68281bffce158378af8edbc15f166a6b6b9efb1ae1a01f13d15417d89fd14e0f",
+        "crc32": "39f8d49a",
+        "safeUniqueRegularMember": true,
+        "extractedBytesExact": true
+      },
+      {
+        "path": "_temp/windows-same-main-process-ui.before-crash.png",
+        "bytes": 79896,
+        "blob": "1c16d610142abf298c038fba12d9ef1553f039b9",
+        "sha256": "347f6b6883726b0ccaebfb5c181cdeea0c85005cf7ec957360a61dc551404221",
+        "crc32": "0488afdb",
+        "safeUniqueRegularMember": true,
+        "extractedBytesExact": true
+      },
+      {
+        "path": "_temp/windows-same-main-process-ui.controller.log",
+        "bytes": 42469,
+        "blob": "4472e4302c6dc7a54684fbedc42785915ecfc0c4",
+        "sha256": "b76513cb574dd577b0e2d382760ef5b95494ad9212aab210365149c141c73c3c",
+        "crc32": "5ba30e2f",
+        "safeUniqueRegularMember": true,
+        "extractedBytesExact": true
+      },
+      {
+        "path": "_temp/windows-same-main-process-ui.json",
+        "bytes": 750601,
+        "blob": "13f00f66b65073fe972abd96c78f464d73023f2b",
+        "sha256": "b7201be98fe33679e7e6a5c8ee3366e942bde08a32090d39344a911cd342d2ae",
+        "crc32": "b1bb0816",
+        "safeUniqueRegularMember": true,
+        "extractedBytesExact": true
+      }
+    ]
+  },
+  "sourceAudit": {
+    "path": "ci-desktop-m0660/packaged-win-x64/independent-source-pin-audit.json",
+    "bytes": 769896,
+    "blob": "1e24dc0aff1b7092325864003d72238b99581210",
+    "sha256": "3f97c11cd8e162e9e23881b9276429c37822941fe6c665fb99ae2138ae259510"
+  },
+  "sourceSummary": {
+    "kind": "TEST_INDEPENDENT_M0660_PACKAGED_WINDOWS_X64_SOURCE_JOIN",
+    "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+    "prePostArraysExact": true,
+    "count": 1798,
+    "uniquePaths": 1798,
+    "gitBytes": 21139539,
+    "observedRenderedBytes": 21660108,
+    "matchCounts": {
+      "git-text-rendered-CRLF": 1798
+    },
+    "mismatches": 0,
+    "method": "Read each exact commit:path with git cat-file --batch; independently recompute Git blob and SHA-256; match receipt SHA-256 to original Git bytes or explicit LF-normalized CRLF rendering for NUL-free text. This is byte attribution, not an independent rebuild or runtime authority. No worktree source was executed."
+  },
+  "qualification": "Archive/source/log retention independently verified. Native/browser outcomes require separate semantic source/receipt review; no application, project, native, provider, CI or ref action was run by this audit."
+}

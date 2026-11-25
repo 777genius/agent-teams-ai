@@ -1,0 +1,76 @@
+{
+  "artifactId": 14191980301,
+  "officialDigestVerified": true,
+  "safeUniquePaths": true,
+  "crcAllPassed": true,
+  "originalZip": {
+    "bytes": 1064941,
+    "blob": "352cc91ca6171eb0527c20c1601e703c3f561fd6",
+    "sha256": "258cf232660e4cf40e62ae086b61e57d30766f2cf8eb0d62cc16353f21d560f4"
+  },
+  "entries": [
+    {
+      "path": "_temp/TEST-desktop-backend-ZV8aRp/ui-automatic-app-relaunch-successor.png",
+      "crc32": "d5b7ff04",
+      "bytes": 138434,
+      "blob": "e387dcf9704addf9a8be1324605d185cb5767cf9",
+      "sha256": "65d152c93300287c8965a43a8c744aa19f23aa373b0166abf7d37fdfa093b525"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+      "crc32": "f7e2343e",
+      "bytes": 1154733,
+      "blob": "7dac409c388ce50383d81589ab0053134d5de6cc",
+      "sha256": "6422c2cfd0452aa36785dcb0fce1f40a5a25418c1e935c77352402ba938c4ea4"
+    },
+    {
+      "path": "_temp/TEST-desktop-backend-ZV8aRp/ui-emulated-lifecycle-stopped.png",
+      "crc32": "5a17132d",
+      "bytes": 200291,
+      "blob": "971a2ed199baa4495fd4254c339c041752b69d57",
+      "sha256": "317641f4db8d21a440565b59cf48f60cd83dd8a1f08c61b6f092f06e05db163c"
+    },
+    {
+      "path": "_temp/TEST-desktop-backend-ZV8aRp/ui-emulated-lifecycle-launch.png",
+      "crc32": "d67b7412",
+      "bytes": 222139,
+      "blob": "c02f9d1cb89ed4ff9a9fe69412c703ac5e3bf0e3",
+      "sha256": "45cf8802df8b2dcbffecf68c4b43910938d38953ea102536b0e3775f5c0a328e"
+    },
+    {
+      "path": "_temp/opencode-v2-packaged-inputs.json",
+      "crc32": "cb392043",
+      "bytes": 2374,
+      "blob": "406b91ef5b662c0220d07be3f1b298c336df5cdc",
+      "sha256": "e76f226bd7c13480b7ea0a2e3d30726a5fafe4b29c39faaee817efa9cf112efd"
+    },
+    {
+      "path": "_temp/opencode-v2-packaged-native.json",
+      "crc32": "16ec5e78",
+      "bytes": 5286,
+      "blob": "067986746476d89891158551cce6ca954160fa4f",
+      "sha256": "dd19e8a267f6f3b667dfd55507a52370ca399337a65433b820f07b64e5bd0823"
+    },
+    {
+      "path": "_temp/opencode-v2-packaged.json",
+      "crc32": "c340f117",
+      "bytes": 1189,
+      "blob": "6ece4759c3195c00d9af4a91bb4e4714ebcba78d",
+      "sha256": "aaa29556e746bb9874a68f8d164365cad872a751de3755bb96c143974c52a9e9"
+    },
+    {
+      "path": "_temp/packaged-app-relaunch.app.log",
+      "crc32": "7f4eb463",
+      "bytes": 3027,
+      "blob": "d6c002ab238c65be78d56386922bcfc8339813f6",
+      "sha256": "39ed4f7f99c7d506a4e0efc127e21ee77118a8f01cfe93151a31c3837e522601"
+    },
+    {
+      "path": "_temp/packaged-app-relaunch.json",
+      "crc32": "3146263f",
+      "bytes": 671444,
+      "blob": "bd185ddf48db1674db7c5272fcaaf54077109656",
+      "sha256": "70e3815884691a6be4155c9ad61a55329b48ec416ea7ae959346ece4f526f293"
+    }
+  ]
+}

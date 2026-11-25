@@ -1,0 +1,28 @@
+{
+  "stage": "diff",
+  "sourceHead": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+  "sourceTree": "95984c5c4aa1e7ff8c4d910dec582e6bc163e9b7",
+  "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+  "argv": [
+    "git",
+    "diff",
+    "--check",
+    "9bc238045fe09f438343105e52e9f4fcf10073c5..4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+    "--",
+    "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+    "scripts/legacy-agent-host/desktop-native-process-ui.test.ts"
+  ],
+  "nodeVersion": "v24.21.0",
+  "nodeSHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "startedAtUTC": "2026-11-15T19:24:46.970016+00:00",
+  "finishedAtUTC": "2026-11-15T19:24:46.973311+00:00",
+  "elapsedSeconds": 0.0032802750065457076,
+  "exitCode": 0,
+  "preflightMetadataSHA256": "f5851f75464396fd8aa87df9ee7ed2e094fabaf3103c8c7b9e25c0963e828f87",
+  "logBytes": 0,
+  "logSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "sourceHeadAfter": "4ede3d7477dbe31e8fdbfbd3898c11d2725f77f5",
+  "statusAfter": "",
+  "selectedLeavesUnchanged": true,
+  "selectedDependencyInputsUnchanged": true
+}

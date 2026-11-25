@@ -27,6 +27,12 @@ export function buildMemberWorkSyncRuntimeTurnSettledEnvironment(input: {
 }
 
 export interface MemberWorkSyncFeatureFacade {
+  /** Main Stop only: capture before native teardown; drain outside all owner locks. */
+  captureNativeStopFence(teamName: string): {
+    drain(): Promise<void>;
+    assertDrained(): void;
+    release(): void;
+  };
   /** Main-only read fence; never invoke from an admitted WorkSync operation. */
   withStoppedImportFence<T>(teamName: string, read: () => Promise<T>): Promise<T>;
   getStatus(request: MemberWorkSyncStatusRequest): Promise<MemberWorkSyncStatus>;

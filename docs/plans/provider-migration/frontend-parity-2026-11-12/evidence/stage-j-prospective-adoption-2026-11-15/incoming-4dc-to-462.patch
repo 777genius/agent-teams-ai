@@ -1,0 +1,571 @@
+diff --git a/docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md b/docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md
+index c0342a10992d24f3706e5134b96cd73b017a537b..411f9e7943bd9323006ea67ef470624b873419c9 100644
+--- a/docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md
++++ b/docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md
+@@ -3615,3 +3615,118 @@ TypeScript7.0.2 and the complete legacy-host-scripts compiler, focused lint, sou
+ The full-workspace typecheck was terminated with code137, including a separate
+ memory-bounded invocation; neither is a PASS. Both actual Windows native runs
+ remain required, and no product fix or P08/P09 acceptance is asserted.
++
++## Original Windows WOW64 path binding — 15 November 2026
++
++### R1: observed fixture refusal and bounded correction
++
++Exact diagnostic source `4dc08dea7eeed5c286cf310e09a2ba26d84a9546`
++fails the original [ARM64 job132968371746](https://github.com/777genius/agent-teams-ai/actions/runs/43765103075/job/132968371746).
++At `2026-11-15T21:52:59.7797577Z` the retained record is:
++
++```json
++{"nativeServiceReadinessFailure":{"rootExitCode":62,"rootCount":1,"childCount":0,"rootChildCount":0,"wow64Completed":false,"churnCompleted":false,"prerequisite":{"stage":5}}}
++```
++
++Stage5 is `Wow64Path`: `wow64Command()` returned empty before the x86
++child was created. Both preceding application-breakpoint checks completed.
++The original ten-second readiness error is now preserved through cleanup;
++the outer controller drains with rootExitCode1 and activeProcesses0.
++Source A/B is not reached. The same-source
++[x64 job132968371549](https://github.com/777genius/agent-teams-ai/actions/runs/43765103075/job/132968371549)
++is still queued at this review and has no qualification result.
++
++The helper currently asks the physical `Kernel32.dll` module for
++`GetSystemWow64Directory2W`. Microsoft's generated
++[Windows SDK import mappings](https://github.com/microsoft/win32metadata/blob/main/generation/WinSDK/libMappings.rsp)
++instead map that entry to `api-ms-win-core-wow64-l1-1-1.dll`, while mapping
++`IsWow64Process2` and `GetSystemWow64DirectoryW` to `KERNEL32.dll`.
++Microsoft's [API-set guidance](https://learn.microsoft.com/en-us/windows/win32/apiindex/windows-apisets)
++explains that the contract routes to its implementation independently of a
++physical module name. A missing physical-module export is therefore the leading
++source-level explanation, not a measured `GetProcAddress` error: stage5 also
++groups a zero or oversized directory result. No breakpoint-policy or deadline
++change is justified by this evidence.
++
++Keep the correction in `tools/owned-process-broker/nativeFixture.cpp`:
++
++- Define `_WIN32_WINNT 0x0A00` before `windows.h`, matching the existing broker.
++- Replace the helper's module/function-pointer lookup with the declared SDK call
++  `GetSystemWow64Directory2W(path,MAX_PATH,IMAGE_FILE_MACHINE_I386)`.
++- Keep the existing zero/oversized-result refusal, `MAX_PATH` buffer, suffix and
++  `IsWow64Process2` verification of the actual child. Preserve the closed stage5
++  diagnostic, return62/63, original child actions, waits, handle closes,
++  CREATE_NEW publication, application-breakpoint checks and eighty-child churn.
++
++The [official SDK header](https://github.com/microsoft/win32metadata/blob/main/generation/WinSDK/RecompiledIdlHeaders/um/wow64apiset.h)
++declares this function under `_WIN32_WINNT >= 0x0A00`; no NTDDI change is needed.
++The [API reference](https://learn.microsoft.com/en-us/windows/win32/api/wow64apiset/nf-wow64apiset-getsystemwow64directory2w)
++names `Kernel32.lib` and Windows10 version1511 or later. The fixture already uses
++the ordinary MSVC/CMake Windows SDK libraries, including Kernel32; no additional
++umbrella library, runtime module loader or fallback path is planned. The observed
++ARM build selects SDK10.0.26100.0 for Windows10.0.26200 with MSVC19.51.36260.0.
++This checks the declaration and intended link contract; actual resulting-source
++x64/ARM64 native compilation and execution remain required.
++
++Estimate: about10 changed TEST lines, zero product lines; complexity2/10,
++reliability8/10, confidence8/10 in correcting the binding, with the original
++stage5 subcause not independently measured. Root and qualification audit agree
++on this narrow correction; publish this plan before source changes, then review
++the exact source diff independently. Retain the prior failure evidence and await
++both original resulting-source Windows gates. Superseded queued work remains
++unqualified. No fallback, new process probe, ownership oracle, workflow, provider
++invocation, Draft/base, main, release or activation change is included.
++
++R2 `/root` independently read the exact ARM job log, Microsoft SDK import mapping,
++SDK declaration and local CMake targets. GO for this TEST-only binding correction
++after plan publication. The reviewed code must retain actual I386 verification;
++the API mapping supports the correction but does not prove the unmeasured stage5
++subcause or resulting native PASS. No additional product change is authorized by
++this failure localization.
++
++## Windows SDK import-library correction — 15 November 2026
++
++Both original jobs for `332fbe3420c811c095dac4187d3f9664e8c47179`
++failed before native qualification: [x64 job132973378700](https://github.com/777genius/agent-teams-ai/actions/runs/43766708055/job/132973378700)
++at22:10:20Z and [ARM64 job132973379104](https://github.com/777genius/agent-teams-ai/actions/runs/43766708055/job/132973379104)
++at22:12:43Z. Both report LNK2019 for
++`__imp_GetSystemWow64Directory2W`, then LNK1120. This falsifies the previous
++assumption that the ordinary Kernel32 import library is sufficient; neither
++job reached the original runtime gate.
++
++R1 `/root/qualification_audit` inspected Microsoft's official
++[Windows SDK26100.1 x64 package](https://api.nuget.org/v3-flatcontainer/microsoft.windows.sdk.cpp.x64/10.0.26100.1/microsoft.windows.sdk.cpp.x64.10.0.26100.1.nupkg)
++and [ARM64 package](https://api.nuget.org/v3-flatcontainer/microsoft.windows.sdk.cpp.arm64/10.0.26100.1/microsoft.windows.sdk.cpp.arm64.10.0.26100.1.nupkg).
++Their Kernel32.Lib lacks this import. Both OneCore.Lib archives define the exact
++import symbol and route its COFF import member to
++`api-ms-win-core-wow64-l1-1-1.dll`; ZIP entries and CRCs were checked.
++The inspected OneCore.Lib SHA-256 values are
++`038b7c879acc32eb122597c9938af1025c8601ed1103558a52ef04c837439a44`
++for x64 (2374038 bytes) and
++`ede054272d34f637af76b9cb57e798afe2bbcf21a3875677fda5ae9132fbb46f`
++for ARM64 (6585362 bytes). These are source-investigation artifacts, not
++substitutes for the runner's selected SDK or native PASS.
++
++A fixture-only OneCore link was reviewed as a possible repair. Before its plan
++could be published, concurrent commit
++[`bb48cb81493fbadb8b1e451ba5c35d7bc8488952`](https://github.com/777genius/agent-teams-ai/commit/bb48cb81493fbadb8b1e451ba5c35d7bc8488952)
++instead repaired this helper through the documented API-set contract. The
++compare-and-swap correctly rejected the stale plan publication. Preserve that
++contributor's commit and do not add an unused import library on top of it.
++
++Exact blob `ca0ded66441b8818bdf5726ee7d8ffa95abb8518` loads only
++`api-ms-win-core-wow64-l1-1-1.dll` with
++`LOAD_LIBRARY_SEARCH_SYSTEM32`, obtains the SDK-typed function pointer, makes
++the same one I386 directory query and checks one FreeLibrary on every successful
++load path. A missing entry still closes the module and returns the same refusal.
++The decltype reference is unevaluated and introduces no static SDK import.
++There is no directory fallback, new process probe, product edit or changed
++action, timeout, child identity, release/cleanup check or control-channel rule.
++
++R2 `/root/qualification_audit` independently accepted that exact preserved
++source diff; `/root` inspected and imported it without overwriting concurrent
++history. Microsoft's API-set guidance supports loading the named contract.
++The SDK archive investigation above corroborates its contract name, but neither
++review establishes the original stage5 subcause or a native PASS. Await both
++original resulting-source Windows compile/runtime jobs. The earlier linker
++failures and P08/P09 INCOMPLETE status remain explicit.
+diff --git a/docs/plans/provider-migration/frontend-parity-2026-11-12/32-host-log-view-parity-2026-11-15.md b/docs/plans/provider-migration/frontend-parity-2026-11-12/32-host-log-view-parity-2026-11-15.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..1a2930d8ff1c5332a35126d7b161f7ea255b2d29
+--- /dev/null
++++ b/docs/plans/provider-migration/frontend-parity-2026-11-12/32-host-log-view-parity-2026-11-15.md
+@@ -0,0 +1,209 @@
++# Restore the existing Host Logs workflow
++
++Date: 15 November 2026. Status: R1 and independent R2 reviewed; publication
++precedes implementation. This is a staged repair, not a
++full Logs parity claim. No implementation or test PASS is claimed.
++
++## Authority and inspected sources
++
++- [Frontend parity goal](README.md#цель-и-исходное-состояние) requires all previously
++  working controls and supersedes completion by disabling an unsupported feature.
++- [Stage 1 §6.4](../stage-1-legacy-host.md#64-config-context-и-наблюдение) requires
++  exact source/message/block/tool identities, partial/complete deduplication,
++  subagent filtering and explicit gaps. It forbids fabricated Claude transcripts,
++  tool results or usage to satisfy the old parser. Normalization permits a typed
++  representation; it does not permit deleting working Thinking or stream controls.
++- Application baseline inspected: `a02ab70edfdcb4169627e804f0337c9ad6b52af6`;
++  original frontend baseline: `4a0e06277fe216d9f82dbbede362668fe46622ee`.
++  The relevant application paths remain unchanged in the inspected `4dc08dea` checkout.
++- Consumed provider source: `421fee918811b8a0b0c73d0ff3e761b9a1c5ecb0`, archive
++  SHA-256 `91350f829b72f83e613505bb444ff0d9ef98fb0835e3e438b918bbea8d930f94`.
++  [Provider PR #8](https://github.com/agent-teams-ai/old-provider-implementations/pull/8)
++  is now at `37baf6e4b7065fe1b730c928db0d9c54809f7fc5`; preserve its intervening work.
++
++## Established defects and baseline boundaries
++
++`ClaudeLogsSection` enables `getClaudeLogs` for default Lead, including Host teams.
++`createHostTeamsApi` has no such operation and rejects it. Its existing typed
++`getMemberLogs` operation is available. Nonlead sources also enter the legacy
++member-stream path before an error-driven typed fallback. Existing Desktop proof
++opens Member Detail Logs and therefore does not exercise this default Lead route.
++
++| Capability | Source evidence and required result |
++| --- | --- |
++| Search, filters, fullscreen and source selection | Existing `ClaudeLogsSection`, `ClaudeLogsPanel`, `ClaudeLogsFilterPopover`; retain their controls and shared presentation state. |
++| Claude Thinking | Frozen `useClaudeLogsController` filters/searches thinking blocks and `streamJsonParser` renders them. Consumed `claude-sdk/normalize` drops both thinking deltas and final blocks. Restore actual exposed content. |
++| OpenCode V1 Thinking | Frozen `OpenCodeRuntimeProjectionMapper` and the real comet-hub fixture in `memberLogSources.test.ts` retain thinking. Provider V1 transcript projection retains reasoning, but its Session driver drops it. |
++| Codex / OpenCode V2 Thinking | Prior working display is not established. Codex's original lead parser lacks reasoning mapping and member-wide native stream explicitly reports unsupported. Do not add speculative provider behavior in this cut. |
++| stdout / stderr | Legacy capture retains real markers; the filter excludes only a known unselected stream. Unmarked persisted transcript rows pass either selection. SDK/HTTP observations remain unmarked; neither is relabeled stdout. |
++| Raw diagnostics | The frozen controller's empty-query/default-filter path returns raw normalized input, and `streamJsonParser` renders non-JSON lines as output. Therefore ordinary captured stderr was visible. Host currently drains it. This is a real remaining parity gap; preserving controls alone does not repair it. A separate bounded capture/ownership/redaction plan is required before implementation; never tap stdout protocol frames or persist unsanitized credentials. |
++| Rich content | Reuse existing markdown, copy, highlighting and collapse primitives with real typed content. Missing clocks and retention remain explicit; never construct fake dates or Claude JSON. |
++
++## Finite implementation
++
++### Existing renderer surface
++
++| Exact application path | Change |
++| --- | --- |
++| `src/renderer/components/team/ClaudeLogsSection.tsx` | Route canonical Host selection to actual roster Lead/member typed logs; disable raw reads. Do not query the invented fallback `team-lead` when no real Host Lead is present. Preserve compact, inline, sidebar, fullscreen and source selection. |
++| `src/renderer/components/team/ClaudeLogsPanel.tsx` | Extract the current search/filter toolbar as a named presentational export in this file. Raw panel and Host source use the same toolbar with explicit handlers/metadata. No optional raw DTO body mode or second controller. |
++| `src/renderer/components/team/members/MemberLogStreamWithLegacyFallback.tsx` | Route Host directly to `MemberLogsTab`, carrying enabled and presentation options; skip legacy stream IPC. Propagate enabled through existing fallback paths. |
++| `src/renderer/components/team/members/MemberLogsTab.tsx` | Carry typed query/filter/view options. Poll active Host member reads using existing `useCompletionRead`, with its settlement-driven five-second scheduling and scope fence. Keep retained facts visible alongside a background read error. |
++| `src/renderer/components/team/members/HostMemberActivityLog.tsx` | Apply query and all content filters after identity-based deduplication. Render actual output/thinking using existing `BaseItem`/`MarkdownViewer`; reuse tool input/output render helpers where applicable. Keep subagent identity and independent collapse, gap warnings and unknown metadata. |
++
++Keep `ClaudeLogsFilterPopover.tsx` and `claudeLogsFilterState.ts` controls intact:
++stdout, stderr, Output, Thinking and Tools. Use the existing controller's persisted
++query/filter/view state with raw fetching disabled for Host; no new store or poll owner.
++Absent stream provenance follows the original unmarked-row rule, without a fake label.
++Filter text and thinking separately; tool calls/results retain their actual tool identity.
++Dedup keys include input, kind, message/block or tool and child identity where present.
++A completed block cannot be replaced by its later stale snapshot; identical text from
++different messages remains distinct. Do not suppress retained gaps with a content filter.
++Preserve expansion and the viewed position when moving between compact and fullscreen;
++the compact reader is unmounted while the dialog owns the body. Never create two read owners.
++Use existing UI primitives directly when richer transcript components require invented
++timestamps. No global chat-model refactor, new viewer framework or fabricated token estimates.
++
++### Provider dependency and Host projection
++
++The provider change is a reviewed child continuation of current PR #8, owned by root.
++Add a separate `EventPayload` variant
++`{ kind: 'thinking'; messageRef: string; block: number; text: string; phase: 'snapshot' | 'complete' }`.
++Do not combine `kind: 'text' | 'thinking'` in one union member: existing `Extract` users
++must keep their text-only meaning. Preserve native block indexes, input/operation
++attribution, limits and child routing; ignore signatures and redacted-thinking payloads.
++
++Provider source scope is exactly `packages/provider-session-contracts/src/features/provider-session-contracts/contracts/session.ts`
++and, under `packages/provider-implementations/src/features/provider-session-implementation/adapters/`,
++`claude-sdk/normalize.ts` and `opencode-protocol/v1-driver-output.ts`.
++Changes belong in that repository and a checked immutable artifact, never vendored `dist`.
++Provider PR creation is conditional on existing workflow safety: Claude source paths
++also trigger a Codex native workflow. Root must avoid prohibited real-provider execution;
++use the existing safe qualification route or retain an explicit delivery hold.
++
++| Exact application path | Change |
++| --- | --- |
++| `packages/legacy-agent-host/src/runtime/normalizeActivity.ts` | Validate/bound the distinct thinking event through the existing normalization boundary. |
++| `packages/legacy-agent-host/src/composition/runtimeActivityProjection.ts` | Add the thinking fields to the existing explicit projection whitelist. |
++| `packages/legacy-agent-host/src/composition/readTeamActivity.ts` | Retain thinking in authorized member/task reads; count each message identity once across output and thinking. Preserve retention, attribution and unknown usage. |
++| `src/shared/types/teamActivity.ts` | Add the distinct thinking content variant, including the existing nested subagent content union. |
++| `src/features/agent-backend/contracts/operations.ts` | Carry the same typed variant across existing IPC/HTTP contracts. |
++| `src/features/agent-backend/main/adapters/output/projectBackendResult.ts` | Validate thinking with the existing text-shaped codec; preserve strict fields and bounds. |
++| `src/features/agent-backend/renderer/createHostTaskActivityApi.ts` | Count unique message identities across both content kinds when deriving the existing exact task view. |
++
++The existing generic bounded activity journal already stores typed events. No new RPC,
++schema version, cursor store, retention expansion or `latest.thinking` cache is needed.
++Keep thinking out of ordinary conversation output and preserve Stats token/cost semantics.
++`projectTeamActivity.ts` remains the existing selection/budget boundary. The strict codec
++file is 793 lines; add only the shared switch case and stay below 800, without formatting
++compression or a cap exception. `MemberLogsTab` is 729 lines and must also remain below 800.
++
++### Dependency-safe staging
++
++First implement the independent renderer route/presentation/read polling and the
++read-side DTO, strict codec and projection changes against the currently checked
++packages. Their controlled fixtures establish only the selected layer's behavior.
++Keep `normalizeActivity(event: Event)` bound to the installed Session SPI. Prepare
++the exact thinking-case change for review, then apply it atomically with both new
++checked archives and all current package/lock/receipt pins. Do not widen a local
++Event alias, cast through unknown, suppress type errors, copy dist or install an
++unqualified archive to make this producer compile. Producer-to-renderer Thinking
++E2E remains on HOLD until that atomic adoption and its original acceptance run.
++
++The stderr gap is tracked explicitly outside the finite implementation tables
++above. The follow-up must retain only the original selected member's stderr,
++including startup failure, sanitize before persistence, keep bounded framing and
++existing journal ownership, and avoid invented input/task attribution. It needs
++its own concrete source review; this staged repair cannot close full Logs parity
++while stderr or the checked provider dependency remains outstanding.
++
++### Artifact pins and evidence closure
++
++Adopt both checked archives and original receipts under one new `vendor/provider-migration/`
++directory. Update `packages/legacy-agent-host/package.json`, `pnpm-workspace.yaml` and
++`pnpm-lock.yaml` together. The exact directory/digests come from the actual checked build.
++Update current-consumer pins in `.github/workflows/ci.yml` (current lines 774, 1259,
++1454–1455, 1488–1489, 1503), `packages/legacy-agent-host/tests/native-codex-team.native.ts`
++and `packages/legacy-agent-host/tests/native-claude-host.native.ts`. Keep workflow behavior,
++commands, required gates and deadlines. Historical donor archives/contracts hashes in
++`scripts/legacy-agent-host/desktop-claude-checkpoint-upgrade.ts` and CI remain unchanged.
++
++Extend the already-composed `desktopProofSupplementarySources` array in
++`scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts` with missing renderer inputs.
++The importing `desktop-proof-sources.ts` is already 800 physical lines; preserve
++its existing composition rather than adding another roster or a cap exception:
++`ClaudeLogsSection.tsx`, `ClaudeLogsPanel.tsx`, `ClaudeLogsFilterPopover.tsx`,
++`claudeLogsFilterState.ts`, `teamLogSources.ts`, `useClaudeLogsController.ts` under the
++existing team directory, and `members/MemberLogStreamWithLegacyFallback.tsx`.
++Include the actual reused markdown/collapse/tool-render leaves and member-log read owner;
++keep existing pins and roster order. Host/types/task projection paths are already listed.
++Runtime UI and finite peer files are already in `desktop-proof-management-sources.ts`.
++
++## Acceptance and review record
++
++Extend existing renderer suites `ClaudeLogsSection.test.ts`, `hostLogStatsTabs.test.tsx`
++and `MemberLogsPolling.test.ts` for the actual source route, dedup-before-filter, completed
++block precedence, independent child identity, all controls and no legacy reads. Deferred
++reads must not overlap or publish after hidden-tab/context/member changes. Reuse existing
++`runtime-activity.test.ts`, `team-activity-read.test.ts`, `runtimeActivityFacade.test.ts`
++and `hostTaskActivity.test.ts` for bound typed propagation, cold read and task attribution.
++Provider tests cover actual Claude/V1 decoding and packed-consumer type compatibility.
++
++Extend `scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts` and existing finite
++`tools/owned-process-broker/fixtures/claudeProviderPeer.mjs` / `providerDesktopPeer.mjs`.
++Use the existing `TEST_UI_STREAM` turn and release gate: observe Lead Logs partial then
++complete by live refresh, true thinking, search/no-match/clear, all filters, rich copy/collapse
++and fullscreen. Scope assertions to Logs so conversation text cannot satisfy them.
++Use existing collaboration UI for a real second member source. After the existing reload,
++read the same retained facts; inputs, effects, deadlines and original actions remain unchanged.
++No new business turn or native Claude/Codex call is authorized. Existing safe OpenCode
++native acceptance remains required; finite peers are not relabeled native qualification.
++
++R1 `/root/migration_scope_audit` established route and upstream content-loss defects.
++R2 `/root` rejected route-only repair and dropping filters; the proposal now retains all
++controls and includes real thinking propagation. `/root/p09_review` independently confirmed
++the dedicated SPI shape, Claude/V1 scope, subagent boundary and absent stream provenance.
++Exact-document R2 `/root/p09_review` rejected the initial raw-stderr baseline claim
++and required atomic checked-SPI adoption. Both corrections are recorded above;
++independent R2 GO for the corrected staged plan was given on its exact blob
++`ae793e5206485f188106cffb88da2c78a4a97999`. Root inspected the existing renderer
++route, read owner, DTOs, strict codec and Host projection and accepts this staged
++scope. Emulated provider Thinking fixtures/assertions are part of the held atomic
++adoption; current independently green UI checks may use typed fixtures without
++claiming producer E2E. Publish this record before source edits. No tests were run here.
++Estimate: application 240–420 production lines changed/added, provider 20–45; focused
++tests/fixtures 200–350 and existing E2E additions 70–120. These are planning ranges, not quotas.
++Complexity 4/10; source confidence 9/10; expected reliability 8/10 pending actual qualification.
++Keep Draft/base, contributor history, P08/P09 outstanding gates and the no-real-Claude/Codex,
++no-main-merge, no-release, no-default-activation and no-Stage2 boundaries.
++
++## Bounded acceptance amendment after source inspection
++
++R1 `/root` found the root proof roster already at 800 lines and the existing
++Host Emulated workflow already running all four safe offline Vitest shards.
++Independent R2 `/root/p09_review` confirmed both exact sources at `332fbe3420`.
++Use the existing supplementary roster for the finite dependency leaves above,
++keeping every previous entry and its order. Add only the missing
++`packages/legacy-agent-host/tests/team-activity-read.test.ts` to the existing
++`matrix.lane == 'team'` Node test command in
++`.github/workflows/host-emulated-acceptance.yml`. The five planned frontend test
++files already run in the four offline shards; do not duplicate their invocation.
++This strengthens controlled acceptance without altering workflow selectors,
++matrices, required gates, timeouts or native-provider execution. R2 GO recorded
++before these source/workflow edits. Exact implementation and actual test outcomes
++remain required; no checked-provider or native acceptance is inferred.
++
++## Preserve the existing activity UI proof
++
++Source review found `desktop-activity-ui-smoke.ts` and the existing Task Log
++Stream assertion in `desktop-emulated-runtime-ui.ts` selecting the old plain
++`pre` representation. Update only those existing assertions to the real rich
++rows: exact retained eventId/sequence/kind, correlated tool identity, actual
++error indicator and result content, then original childId/parentToolRef/phase
++and counters. Expand the actual BaseItem controls and inspect visible content.
++Retain the original inputs, generation checks, timestamps-unavailable notice,
++no-replay/no-write invariants and all native gates. No hidden proof markup or
++weakened semantic oracle is allowed. R1 `/root` found these consumers; R2
++`/root/migration_scope_audit` reviewed the precise actual-DOM adaptation before
++its implementation. This is an existing-test compatibility correction for
++the already-planned rich rendering, not a new business workflow.
+diff --git a/docs/plans/provider-migration/frontend-parity-2026-11-12/33-member-stderr-log-parity-2026-11-15.md b/docs/plans/provider-migration/frontend-parity-2026-11-12/33-member-stderr-log-parity-2026-11-15.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..a12546e75cdfa2cc3fa4661f78ba1d92f45f06de
+--- /dev/null
++++ b/docs/plans/provider-migration/frontend-parity-2026-11-12/33-member-stderr-log-parity-2026-11-15.md
+@@ -0,0 +1,196 @@
++# Preserve the existing native stderr Logs surface
++
++Date: 15 November 2026. Status: R1 and independent R2 reviewed; publication
++precedes implementation. This continues Plan32's explicitly outstanding raw-stderr
++gap. It is not a Logs parity or native-provider qualification claim.
++
++## Demonstrated baseline and exact scope
++
++Frozen frontend `4a0e06277fe216d9f82dbbede362668fe46622ee` returns normalized raw
++capture unchanged under empty search/default filters. Its stream JSON parser
++renders non-JSON lines as Output. The previous claim that plain stderr never
++rendered was incorrect. The current Host original process adapters drain target
++stderr without retaining it, so the working default Logs surface loses diagnostics.
++
++Retain actual stderr for selected Claude/Codex member processes through their
++existing original-child launch callbacks. Their stdin/stdout are native protocol,
++not a raw Logs input. Do not tap either stream or expose control/readiness frames.
++Do not modify CapturedProcess, WindowsCapturedProcess or OwnedProcessFacade.
++
++The frozen OpenCode aggregate run has no child/stream turn loop and initializes
++empty raw capture. Its working member logs use transcript projection. Accordingly,
++this repair does not add speculative V1 server logs or reopen V2's deliberately
++private engine diagnostics. Their established normalized frontend features remain
++under the existing parity plans, including V1 Thinking in Plan32.
++
++## One bounded observational path
++
++Add a small optional MemberProviderContext callback for a closed observation:
++`{ kind: 'process-output'; stream: 'stderr'; text: string }`, or the existing
++`{ kind: 'gap'; reason: 'oversized' }` when capture cannot safely retain a line.
++Keep provider diagnostic codes and the external provider Session SPI unchanged.
++
++An outer adapter helper attaches to the SAME original child's stderr immediately
++after custody.launch returns. Windows already exposes only target IO on its
++facade, separately from broker control. Metadata probes, catalog commands and
++other process users receive no observer. No new process/stream owner or observer
++of ambient resources is introduced.
++
++Trusted composition closes over the original binding, OpenConfig and existing
++provider authority. It calls a narrow RuntimeOwner observation method, backed by
++RuntimeActivityCoordinator's existing member fence and journal. Recheck the
++captured source grant before each observation. Under the fence require matching
++normalized binding, the full captured OpenConfig including checkpointRef, original
++profile/config/open fingerprint, original Host incarnation and an
++opening/allocated/held/closing record whose custody has not been released.
++Never weaken the existing subagent observer's session or input attribution rule.
++
++Startup observations must be accepted while the original record is already
++opening and before allocate installs sessionRef; a failed open must retain the
++diagnostic. Closing observations remain observational only while the original
++source authority is valid. Do not use canAllocate/assertAllocatedCurrent, which
++would drop startup or closing diagnostics. Runtime sealed alone neither grants nor
++forbids this narrow observation; original composition-wide sealing and revocation
++still reject it. Replaced/revoked/config-mismatched sources and closed or released
++records produce no new retained diagnostic. No guessed current input,
++operation, task, native timestamp, PID, session path or authority may be assigned.
++
++Use the existing eventId/sequence, high water, storage fault handling and
++retention bounds. These facts never update conversation text, message counts,
++usage/cost, tool statistics, readiness, input terminal state or custody. Exact
++task reads exclude the unattributed process facts as they already exclude
++unattributed session events. Member reads retain them across cold recovery.
++
++## Sanitize before persistence and bound framing
++
++Reuse the pure existing runtimeDiagnosticText and diagnosticsRedaction utilities.
++Move their implementations into a browser-safe Host diagnostic utility subpath;
++keep existing app imports as re-exports. No new package or duplicated redactor.
++
++One new small observeMemberProcessStderr helper owns incremental UTF-8 framing,
++bounded pending bytes and observer cleanup. Maximum raw line is 24KiB; JSON
++escaping can make its serialized event larger. Preserve the existing 32KiB
++serialized-event check, which substitutes an oversized gap, and the 1MiB/256-event
++journal limits. Normalize NUL before persistence so the existing strict text codec
++can read the same retained bytes; decode invalid UTF-8 safely without throwing.
++Redact the complete bounded line BEFORE truncation. For an oversized line, discard through
++its terminator and emit the existing oversized gap; never publish a suffix whose
++secret prefix was discarded. Flush a final bounded tail on end/close exactly
++once. Diagnostic observation failures cannot throw out of the stream callback or
++change provider outcomes; use existing storage-degradation behavior.
++
++Replace actual private values ALREADY held by the selected launch: its Team MCP
++bearer, selected secret environment entries, selected MCP authorization/header
++values and explicit credential-bearing arguments. Do not read more credentials.
++Normalize ANSI before matching the already-captured secret values; otherwise
++removing ANSI later could reconstruct a secret that exact matching missed. Replace
++longer values first, including nonempty line components of captured multiline
++secret values, then reuse existing assignment, URL and structured dump redaction.
++Reuse or export the existing pure ANSI/dump classifiers; do not copy their regexes
++into a second sanitizer. Treat a detected multiline
++dump as suppressed until an explicit finite end marker or stream end; do not
++re-enable raw suffix publication on the next ordinary newline. An oversized-line
++transition must preserve a detected dump-suppression state, including an oversized
++dump opener followed by continuation lines. Keep the existing
++sanitizer's behavior for all old app callers. The heuristic is not a universal
++proof for secrets the native process invents or reads independently.
++
++Tests must include captured-value canaries split across chunks, ANSI embedded
++inside captured secrets, multiline captured values, valid/invalid UTF-8 and NUL,
++dump continuations and an oversized dump opener, oversized secrets, escape-heavy
++serialized events and final tails. No candidate is qualified
++if a canary appears in persisted journal bytes or projected output.
++
++## Finite production budget
++
++New helper:
++- packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts
++
++Existing member/composition owners:
++- packages/legacy-agent-host/src/adapters/providers/MemberProvider.ts
++- packages/legacy-agent-host/src/adapters/providers/ClaudeMemberProvider.ts
++- packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts
++- packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts
++- packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts
++
++Existing writer and private contract:
++- packages/legacy-agent-host/src/runtime/RuntimeOwner.ts
++- packages/legacy-agent-host/src/runtime/RuntimeActivityCoordinator.ts
++- packages/legacy-agent-host/src/runtime/providerActivityContracts.ts
++
++Pure utility move and existing import compatibility:
++- packages/legacy-agent-host/src/diagnostics/runtimeDiagnosticText.ts
++- packages/legacy-agent-host/src/diagnostics/diagnosticsRedaction.ts
++- packages/legacy-agent-host/package.json (utility exports only)
++- src/shared/utils/runtimeDiagnosticText.ts
++- src/shared/utils/diagnosticsRedaction.ts
++
++Reuse Plan32's read whitelist, typed contracts, strict activity codec and
++HostMemberActivityLog. Add a distinct top-level process-output variant; do not
++implicitly allow it as a nested subagent fact. It is Output with actual stderr
++provenance; the existing stream filter can exclude it. SDK/HTTP facts stay
++unmarked. Search, rich copy, fullscreen and gaps use the existing viewer path.
++
++RuntimeTeamCoordinator is 798 lines; the explicit two-line callback delegation
++must fit at 800 without compression or a cap exception. Plan32's activity codec
++is 794 lines: if strict top-level-only validation needs more than the remaining
++space, extract the existing activity codec together with its private helpers
++into one focused output-adapter module and import it, preserving every existing
++call and decoder check. Move the existing five shared primitives (row, string,
++boolean, oneOf, array) with that block and import them for the existing caller;
++never copy them or import back from projectBackendResult to create a cycle. Do not distribute individual cases into unrelated files
++or delete formatting to defeat the limit. Root must review the exact extraction
++before its source commit; no other projection refactor is included.
++
++Extend the existing desktopProofSupplementarySources roster with the actual
++new/changed producers and reused diagnostic utilities; the importing root roster
++already has 800 lines. Preserve its existing composition, without a new roster. Preserve existing source receipts, order and all other
++pins. No provider archive, lockfile, RPC, schema version, retention increase,
++workflow selector, timeout, default activation or Stage2 change is included.
++
++## Required controlled acceptance
++
++Use existing suites where their owned seam already exists:
++- captured-claude-process / codex-member-provider: original stderr versus
++  stdout protocol canary, finite subprocesses only.
++- runtime-activity / member-provider-authority: opening failure persistence,
++  original config/incarnation fencing, revocation, closing and cold read.
++- team-activity-read / runtimeActivityFacade / hostTaskActivity: strict bounded
++  projection, no fabricated task attribution, no conversation/Stats effect.
++- hostLogStatsTabs: real stderr filtering, query and retained gap behavior.
++- existing Windows provider/facade routing fixture: target stderr attaches before
++  original resume; broker/control bytes remain absent.
++
++The new capture helper may have one focused TEST suite if an existing suite
++would mix unrelated ownership. Redactor compatibility must be covered by the
++existing diagnostic consumer tests plus the capture canaries. The startup test
++must emit through the factory callback before sessionRef is installed and then
++reject open, retaining the diagnostic under held/open-unknown without inventing
++input, terminal state, readiness or custody.
++
++Extend only existing finite peers and desktop-emulated-runtime-ui. Emit a benign
++stderr line during the existing bootstrap/stream sequence, no extra business
++turn. Assert it within actual Team Logs; exercise stderr selection, search,
++fullscreen, copy and cold reload, and prove it absent from exact task logs.
++This is emulated application acceptance, not native Claude/Codex qualification.
++The no-real-Claude/Codex instruction remains in force.
++
++Estimated change: 180–300 new/changed production lines plus about 110 moved
++utility lines, 180–260 targeted test/fixture lines. Complexity 5/10; review must
++resolve redaction/framing and opening/closing identity before source publication.
++The executor became unavailable on 15 November during independent Plan32 work.
++Read-only GitHub source review and immutable candidate blobs are available; no
++local execution PASS may be inferred. Use only existing authorized CI on the
++reviewed exact commit for any unavailable checks. Keep all delivery holds explicit.
++
++## Independent review record
++
++R1 `/root` inspected the frozen raw-capture/parser path, current original-child
++adapters, member factory authority and Runtime journal. R2 `/root/p09_review`
++confirmed the pre-session opening record and the separate observational seam;
++R2 `/root/qualification_audit` confirmed full OpenConfig/incarnation fencing and
++required the framing, ANSI/multiline-secret, NUL and serialized-size clarifications
++recorded above. Both retained the existing subagent observer unchanged and require
++exact source review before publication. No source or acceptance PASS is claimed.
++The executor was restored after the outage; local checks may resume on the exact
++reviewed working tree. Missing checks remain explicitly unqualified.
+diff --git a/tools/owned-process-broker/nativeFixture.cpp b/tools/owned-process-broker/nativeFixture.cpp
+index 579a7aadf70a284cb44f7ec3690dab32c4d76e92..ca0ded66441b8818bdf5726ee7d8ffa95abb8518 100644
+--- a/tools/owned-process-broker/nativeFixture.cpp
++++ b/tools/owned-process-broker/nativeFixture.cpp
+@@ -1,4 +1,5 @@
+ #define WIN32_LEAN_AND_MEAN
++#define _WIN32_WINNT 0x0A00
+ #include <windows.h>
+ #include <cstdint>
+ #include <cstring>
+@@ -43,14 +44,15 @@ static bool prerequisiteFailure(PrerequisiteStage stage,const DWORD* result=null
+   std::fflush(stdout); return false;
+ }
+ static std::wstring wow64Command() {
+-  const auto module=GetModuleHandleW(L"Kernel32.dll");
++  // Resolve the documented API-set contract with one bounded module lifetime.
++  const auto module=LoadLibraryExW(L"api-ms-win-core-wow64-l1-1-1.dll",nullptr,LOAD_LIBRARY_SEARCH_SYSTEM32);
+   if(!module) return {};
+-  const auto directory=reinterpret_cast<UINT (WINAPI*)(LPWSTR,UINT,WORD)>(
++  const auto directory=reinterpret_cast<decltype(&GetSystemWow64Directory2W)>(
+     GetProcAddress(module,"GetSystemWow64Directory2W"));
+-  if(!directory) return {};
+   wchar_t path[MAX_PATH]{};
+-  const auto length=directory(path,MAX_PATH,IMAGE_FILE_MACHINE_I386);
+-  if(!length||length>=MAX_PATH) return {};
++  const auto length=directory?directory(path,MAX_PATH,IMAGE_FILE_MACHINE_I386):0;
++  const bool closed=FreeLibrary(module)!=FALSE;
++  if(!closed||!length||length>=MAX_PATH) return {};
+   return std::wstring(path)+L"\\cmd.exe";
+ }
+ static bool wow64Startup() {

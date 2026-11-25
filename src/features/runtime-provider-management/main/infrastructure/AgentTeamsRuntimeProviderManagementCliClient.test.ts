@@ -380,6 +380,51 @@ describe('AgentTeamsRuntimeProviderManagementCliClient passive directory timeout
     expectDirectoryWarnings(1);
   });
 
+  it('retains concurrent refresh deduplication across directory pages and fences older reads', async () => {
+    const older = deferred<ReturnType<typeof directoryOutput>>();
+    const refresh100 = deferred<ReturnType<typeof directoryOutput>>();
+    const refresh250 = deferred<ReturnType<typeof directoryOutput>>();
+    const latest = directoryResponse();
+    latest.directory!.diagnostics = ['latest'];
+    execCliMock
+      .mockReturnValueOnce(older.promise)
+      .mockReturnValueOnce(refresh100.promise)
+      .mockReturnValueOnce(refresh250.promise)
+      .mockResolvedValueOnce(directoryOutput(latest));
+    const client = new AgentTeamsRuntimeProviderManagementCliClient();
+    const oldLoad = client.loadProviderDirectory(directoryInput);
+    await vi.waitFor(() => expect(execCliMock).toHaveBeenCalledTimes(1));
+    const first = client.loadProviderDirectory({ ...directoryInput, refresh: true });
+    await vi.waitFor(() => expect(execCliMock).toHaveBeenCalledTimes(2));
+    const otherPage = client.loadProviderDirectory({
+      ...directoryInput,
+      limit: 250,
+      refresh: true,
+    });
+    await vi.waitFor(() => expect(execCliMock).toHaveBeenCalledTimes(3));
+    const joined = client.loadProviderDirectory({ ...directoryInput, refresh: true });
+    const passive = client.loadProviderDirectory(directoryInput);
+    const refreshed = directoryResponse();
+    refreshed.directory!.diagnostics = ['refresh100'];
+    refresh100.resolve(directoryOutput(refreshed));
+    refresh250.resolve(directoryOutput(directoryResponse()));
+    const [left, right, observed] = await Promise.all([first, joined, passive, otherPage]);
+    expect(left).toEqual(right);
+    expect(observed).toEqual(left);
+    expect(execCliMock).toHaveBeenCalledTimes(3);
+
+    // The second refresh retired the first refresh's cache generation, and the
+    // pre-refresh passive request must no longer be joinable or publish a cache entry.
+    await expect(client.loadProviderDirectory(directoryInput)).resolves.toEqual(latest);
+    expect(execCliMock).toHaveBeenCalledTimes(4);
+    const oldResponse = directoryResponse();
+    oldResponse.directory!.diagnostics = ['older'];
+    older.resolve(directoryOutput(oldResponse));
+    await oldLoad;
+    await expect(client.loadProviderDirectory(directoryInput)).resolves.toEqual(latest);
+    expect(execCliMock).toHaveBeenCalledTimes(4);
+  });
+
   it('normalizes timeout JSON recovered from a failed command without caching it', async () => {
     execCliMock.mockRejectedValue(
       Object.assign(new Error('Command failed after JSON'), {

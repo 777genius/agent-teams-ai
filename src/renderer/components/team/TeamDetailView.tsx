@@ -13,6 +13,7 @@ import {
 } from 'react';
 
 import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
+import { HostBackendRetryAction, isHostReadUnavailable } from '@features/agent-backend/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import {
   assertMemberSettingsRelaunchRoster,
@@ -31,8 +32,7 @@ import {
 } from '@features/team-task-detail/renderer';
 import { TerminalWorkspaceFloatingLauncher } from '@features/terminal-workspace/renderer';
 import { classifyAnalyticsError, recordTeamStop } from '@renderer/analytics/productAnalytics';
-import { api } from '@renderer/api';
-import { SessionPanel } from '@renderer/components/chat/session-panel';
+import { api, isElectronMode } from '@renderer/api';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { resolveBranchDeviation } from '@renderer/components/team/members/memberWorkspace';
 import { Button } from '@renderer/components/ui/button';
@@ -111,24 +111,20 @@ import {
 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
-import { AddMemberDialog } from './dialogs/AddMemberDialog';
-import { EditTeamDialog } from './dialogs/EditTeamDialog';
 import { LaunchTeamDialogLoadingFallback } from './dialogs/LaunchTeamDialogLoadingFallback';
-import { ReviewDialog } from './dialogs/ReviewDialog';
 import { executeTeamRelaunch } from './dialogs/teamRelaunchFlow';
 import { useStoppedTeamLaunchDialog } from './dialogs/useStoppedTeamLaunchDialog';
 import { useTeamCreateTaskDialog } from './dialogs/useTeamCreateTaskDialog';
 import { KanbanSearchInput } from './kanban/KanbanSearchInput';
 import { TeamKanbanBoardBridge } from './kanban/TeamKanbanBoardBridge';
-import { TrashDialog } from './kanban/TrashDialog';
 import { useTeamTaskFilters } from './kanban/useTeamTaskFilters';
-import { MemberDetailDialog } from './members/MemberDetailDialog';
 import { type MemberActivityFilter, type MemberDetailTab } from './members/memberDetailTypes';
 import { deriveMetrics } from './context-metric-alias';
 import { TeamDeleteButton } from './TeamDeleteButton';
 import { showTeamDeleteError } from './teamDeleteErrorDialog';
 import { runTeamDeleteOnce } from './teamDeleteProgress';
 import { resolvePinnedTeamActionTop } from './teamDetailLayout';
+import { AddMemberDialog, EditTeamDialog, ReviewDialog, TrashDialog } from './TeamDetailLazyDialogs';
 import { TeamStatusBadge } from './TeamStatusBadge';
 import { useTeamStopControl } from './useTeamStopControl';
 
@@ -137,9 +133,17 @@ import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMod
 import type { InboxMessage } from '@shared/types';
 import type { ComponentProps, CSSProperties } from 'react';
 
+const hostUi = { useStore, api, isElectronMode };
+
 const sumInjectionTokens = tokenMath[
   ['sum', 'Con' + 'text', 'InjectionTokens'].join('') as keyof typeof tokenMath
 ] as (injections: readonly unknown[]) => number;
+const SessionPanel = lazy(() =>
+  import('@renderer/components/chat/session-panel').then((m) => ({ default: m.SessionPanel }))
+);
+const MemberDetailDialog = lazy(() =>
+  import('./members/MemberDetailDialog').then((m) => ({ default: m.MemberDetailDialog }))
+);
 const LaunchTeamDialog = lazy(() =>
   import('./dialogs/LaunchTeamDialog').then((m) => ({ default: m.LaunchTeamDialog }))
 );
@@ -200,6 +204,7 @@ import { getLaunchJoinMilestonesFromMembers, getLaunchJoinState } from './provis
 import { TeamChangesSection } from './TeamChangesSection';
 import { TeamLoadingSkeleton } from './TeamLoadingSkeleton';
 import { setPendingRepliesForTeam, useTeamPendingReplies } from './teamPendingRepliesStore';
+import { isTeamProcessAlive } from './teamProcessLiveness';
 import { TeamProvisioningBanner } from './TeamProvisioningBanner';
 import { loadTeamSessionMetadata } from './teamSessionFetchGuards';
 import { TeamSessionsSection } from './TeamSessionsSection';
@@ -301,7 +306,6 @@ const TaskDetailDialogHost = memo(
         setSelectedIdentity(null);
       }
     }, [contextId, selectedIdentity, teamName]);
-
     const registeredIdentity =
       selectedIdentity?.contextId === contextId && selectedIdentity.teamName === teamName
         ? selectedIdentity
@@ -582,7 +586,6 @@ interface LeadLoadBridgeProps {
 const EMPTY_MESSAGES_PANEL_TASKS: TeamTaskWithKanban[] = [];
 const TEAM_HEADER_NAV_ACTION_CLASS =
   'inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-md border border-[var(--color-border-emphasis)] bg-transparent px-2.5 text-[11px] font-medium text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-border-emphasis)]';
-
 function buildMessagesPanelTasksSignature(tasks: readonly TeamTaskWithKanban[]): string {
   return JSON.stringify(
     tasks.map((task) => [
@@ -810,7 +813,6 @@ const LeadLoadBridge = memo(function LeadLoadBridge({
 
     const stats = leadSessionContextStats.get(targetAiGroupId);
     const injections = stats?.accumulatedInjections ?? [];
-
     let lastUsage: UsageLike | null = null;
     let lastModelName: string | undefined;
     const targetItem = leadConversation.items.find(
@@ -899,18 +901,20 @@ const LeadLoadBridge = memo(function LeadLoadBridge({
       {isContextPanelVisible && (
         <div className="w-80 shrink-0">
           {leadSessionLoaded ? (
-            <SessionPanel
-              injections={allContextInjections}
-              onClose={() => setContextPanelVisible(false)}
-              projectRoot={leadSessionDetail?.session?.projectPath ?? fallbackProjectRoot}
-              contextMetrics={contextMetrics}
-              sessionMetrics={leadSessionDetail?.metrics}
-              subagentCostUsd={leadSubagentCostUsd}
-              phaseInfo={leadSessionPhaseInfo ?? undefined}
-              selectedPhase={selectedContextPhase}
-              onPhaseChange={setSelectedContextPhase}
-              side="left"
-            />
+            <Suspense fallback={null}>
+              <SessionPanel
+                injections={allContextInjections}
+                onClose={() => setContextPanelVisible(false)}
+                projectRoot={leadSessionDetail?.session?.projectPath ?? fallbackProjectRoot}
+                contextMetrics={contextMetrics}
+                sessionMetrics={leadSessionDetail?.metrics}
+                subagentCostUsd={leadSubagentCostUsd}
+                phaseInfo={leadSessionPhaseInfo ?? undefined}
+                selectedPhase={selectedContextPhase}
+                onPhaseChange={setSelectedContextPhase}
+                side="left"
+              />
+            </Suspense>
           ) : (
             <div
               className="flex h-full flex-col border-r border-[var(--color-border)] bg-[var(--color-surface)]"
@@ -1285,18 +1289,20 @@ const TeamMemberDetailDialogBridge = memo(function TeamMemberDetailDialogBridge(
     ).hasMembersStillJoining;
   }, [launchMembers, memberSpawnSnapshot, memberSpawnStatuses, progress?.state, runtimeEntries]);
 
-  return (
-    <MemberDetailDialog
-      {...props}
-      teamName={teamName}
-      member={liveMember ?? member}
-      isLaunchSettling={isLaunchSettling}
-      leadActivity={leadActivity}
-      spawnEntry={spawnEntry}
-      runtimeEntry={runtimeEntry}
-      runtimeRunId={runtimeRunId}
-    />
-  );
+  return props.open ? (
+    <Suspense fallback={null}>
+      <MemberDetailDialog
+        {...props}
+        teamName={teamName}
+        member={liveMember ?? member}
+        isLaunchSettling={isLaunchSettling}
+        leadActivity={leadActivity}
+        spawnEntry={spawnEntry}
+        runtimeEntry={runtimeEntry}
+        runtimeRunId={runtimeRunId}
+      />
+    </Suspense>
+  ) : null;
 });
 
 export const TeamDetailView = memo(function TeamDetailView({
@@ -1376,7 +1382,6 @@ export const TeamDetailView = memo(function TeamDetailView({
       state.setActiveTab(existingUsageTab.id);
       return;
     }
-
     state.openTab({
       type: 'token-usage',
       label: 'Usage',
@@ -1760,7 +1765,6 @@ export const TeamDetailView = memo(function TeamDetailView({
       return;
     }
     interactiveTeamRef.current = teamName;
-
     void (async () => {
       try {
         const headResult = await refreshTeamMessagesHead(teamName);
@@ -2047,7 +2051,6 @@ export const TeamDetailView = memo(function TeamDetailView({
     if (memberRosterHydrationRetryRef.current === memberRosterHydrationRetryKey) {
       return;
     }
-
     const timer = window.setTimeout(() => {
       const state = useStore.getState();
       if (state.selectedTeamName !== teamName) {
@@ -2161,14 +2164,10 @@ export const TeamDetailView = memo(function TeamDetailView({
   const handleChangeLeadRuntime = useCallback(
     (memberSettingsDraft?: MemberSettingsRelaunchDraft) => {
       setEditTarget(null);
-      setLaunchDialogState({
-        open: true,
-        mode: data?.isAlive && !isTeamProvisioning ? 'relaunch' : 'launch',
-        memberSettingsDraft,
-        baselineMembers: membersWithLiveBranches,
-      });
+      const settings = { memberSettingsDraft, baselineMembers: membersWithLiveBranches };
+      openLaunchDialog(data?.isAlive && !isTeamProvisioning ? 'relaunch' : 'launch', settings);
     },
-    [data?.isAlive, isTeamProvisioning, membersWithLiveBranches, setLaunchDialogState]
+    [data?.isAlive, isTeamProvisioning, membersWithLiveBranches, openLaunchDialog]
   );
   const handleRestartMember = useCallback(
     async (memberName: string, expectedSecondary?: boolean): Promise<void> => {
@@ -2326,7 +2325,6 @@ export const TeamDetailView = memo(function TeamDetailView({
         : pendingTeamSectionFocus.section === 'tasks'
           ? 'kanban'
           : pendingTeamSectionFocus.section;
-
     if (sectionId === 'overview') {
       const revealOverview = (): void =>
         contentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -2645,7 +2643,6 @@ export const TeamDetailView = memo(function TeamDetailView({
           // best-effort
         }
       }
-
       closeCreateTaskDialog();
     } finally {
       setCreatingTask(false);
@@ -2815,7 +2812,7 @@ export const TeamDetailView = memo(function TeamDetailView({
       );
     }
 
-    if (error) {
+    if (error && !(data && isHostReadUnavailable(teamName, error, isElectronMode()))) {
       return (
         <div className="flex size-full items-center justify-center p-6">
           <div className="text-center">
@@ -3287,9 +3284,9 @@ export const TeamDetailView = memo(function TeamDetailView({
                   variant="flat"
                   title={t('processes.title')}
                   icon={<Terminal size={14} />}
-                  badge={data.isAlive ? data.processes.filter((p) => !p.stoppedAt).length : 0}
+                  badge={data.processes.filter((p) => isTeamProcessAlive(p, data.isAlive)).length}
                   headerExtra={
-                    data.isAlive && data.processes.some((p) => !p.stoppedAt) ? (
+                    data.processes.some((p) => isTeamProcessAlive(p, data.isAlive)) ? (
                       <span
                         className="pointer-events-none relative inline-flex size-2 shrink-0"
                         title={t('detail.status.active')}
@@ -3707,7 +3704,9 @@ export const TeamDetailView = memo(function TeamDetailView({
     <>
       {spawnStatusWatcher}
       {teamAgentRuntimeWatcher}
-      {renderBody()}
+      <HostBackendRetryAction teamName={teamName} dependencies={hostUi} onReady={refreshTeamData}>
+        {renderBody()}
+      </HostBackendRetryAction>
       {launchDialogOpen && (
         <Suspense
           fallback={
@@ -3734,7 +3733,7 @@ export const TeamDetailView = memo(function TeamDetailView({
             onClose={closeLaunchDialog}
             onLaunch={launchTeam}
             onRelaunch={handleRelaunchDialogSubmit}
-            memberSettingsDraft={launchDialogState.memberSettingsDraft}
+            memberSettingsDraft={launchDialogState.memberSettingsDraft} retainedLegacyLaunch={launchDialogState.retainedLegacyLaunch}
             validateMemberSettings={validateMemberSettingsRelaunch}
           />
         </Suspense>

@@ -35,6 +35,7 @@ describe('taskGraphSemantics', () => {
       })
     ).toBe('todo');
     expect(resolveTaskGraphColumn({ status: 'pending', reviewState: 'needsFix' })).toBe('review');
+    expect(resolveTaskGraphColumn({ status: 'completed', reviewState: 'reviewed' })).toBe('done');
   });
 
   it('treats approved blockers as finished dependencies', () => {

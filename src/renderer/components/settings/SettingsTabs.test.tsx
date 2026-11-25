@@ -53,6 +53,10 @@ describe('settings navigation', () => {
       )
     );
     expect(external?.getAttribute('aria-current')).toBe('page');
+    const reviewFlow = buttons.find((button) => button.textContent === 'tabs.reviewFlow.label');
+    expect(reviewFlow).toBeDefined();
+    act(() => reviewFlow?.click());
+    expect(onSectionChange).toHaveBeenCalledWith('reviewFlow');
     act(() => root.unmount());
   });
   it('keeps shared navigation available outside Electron', () => {
@@ -70,6 +74,7 @@ describe('settings navigation', () => {
     expect(labels).not.toContain('runtimeProvider.tabs.providers');
     expect(labels).not.toContain('tabs.gatewayProviders.label');
     expect(labels).not.toContain('general.externalAgentConnection.title');
+    expect(labels).not.toContain('tabs.reviewFlow.label');
     act(() => root.unmount());
   });
 });

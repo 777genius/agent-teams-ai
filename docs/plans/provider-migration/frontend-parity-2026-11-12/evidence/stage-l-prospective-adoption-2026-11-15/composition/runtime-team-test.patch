@@ -1,0 +1,136 @@
+diff --git a/packages/legacy-agent-host/tests/runtime-team-host.test.ts b/packages/legacy-agent-host/tests/runtime-team-host.test.ts
+--- a/packages/legacy-agent-host/tests/runtime-team-host.test.ts
++++ b/packages/legacy-agent-host/tests/runtime-team-host.test.ts
+@@ -2499,6 +2499,111 @@
+   }
+ );
+ 
++test('composed original stderr survives failed startup before Runtime installs a native session', async t => {
++  const opening = deferred<void>();
++  let observations = 0;
++  const f = await fixture(t, {
++    open: opening.promise.then(() => { throw new Error('TEST original startup failed'); }),
++    onProvider(context) {
++      const binding = normalizeBinding(context.endpoint.binding), store = new FileRuntimeStore(context.profile.cwd);
++      const before = store.fenced(binding, tx => tx.get())!;
++      assert.equal(before.phase, 'opening'); assert.equal(before.sessionRef, undefined);
++      assert.deepEqual(before.inputs, []);
++      const conversation = store.readConversation(binding), observe = context.observeProcessOutput;
++      assert.ok(observe, 'the actual provider composition must supply the retained callback');
++      observe({ kind: 'process-output', stream: 'stderr', text: 'TEST original startup diagnostic' });
++      const after = store.fenced(binding, tx => tx.get())!;
++      assert.equal(after.phase, before.phase); assert.equal(after.custody, before.custody);
++      assert.equal(after.nativeReady, before.nativeReady); assert.equal(after.sessionRef, undefined);
++      assert.deepEqual(after.inputs, before.inputs); assert.deepEqual(after.interactions, before.interactions);
++      assert.deepEqual(store.readConversation(binding), conversation);
++      observations++;
++    },
++  });
++  const pending = f.rpc('runtime.open', { memberId: 'alice-id' });
++  try {
++    await eventually(() => f.opens() === 1, 'the original provider open remains pending');
++    assert.equal(observations, 1);
++    opening.resolve(); await pending;
++    const store = new FileRuntimeStore(f.root), record = store.fenced(f.runtimeBinding, tx => tx.get())!;
++    assert.equal(record.phase, 'held'); assert.equal(record.diagnostic, 'open-unknown');
++    assert.equal(record.custody, 'unknown'); assert.equal(record.nativeReady, false);
++    assert.equal(record.sessionRef, undefined); assert.deepEqual(record.inputs, []);
++    const diagnostics = store.readActivity(f.runtimeBinding)!.events.filter(row => row.data.kind === 'process-output');
++    assert.equal(diagnostics.length, 1);
++    assert.equal(diagnostics[0]!.data.text, 'TEST original startup diagnostic');
++    assert.equal(diagnostics[0]!.inputId, undefined); assert.equal(diagnostics[0]!.operationRef, undefined);
++    assert.equal(store.readConversation(f.runtimeBinding), undefined);
++    assert.equal(f.handoffs(), 0); assert.equal(f.session().submits.length, 0);
++  } finally { opening.resolve(); await pending; }
++});
++
++test('composed original stderr accepts closing diagnostics without settling Runtime state or inputs', async t => {
++  const f = await fixture(t);
++  assert.equal((await f.rpc('runtime.open', { memberId: 'alice-id' }) as { ok: boolean }).ok, true);
++  const context = f.contexts[0]!, observe = context.observeProcessOutput, store = new FileRuntimeStore(f.root);
++  assert.ok(observe);
++  const conversation = store.readConversation(f.runtimeBinding), close = f.session().close;
++  let observations = 0;
++  f.session().close = async () => {
++    const before = store.fenced(f.runtimeBinding, tx => tx.get())!;
++    assert.equal(before.phase, 'closing'); assert.equal(before.sealed, true);
++    assert.equal(before.custody, 'owned'); assert.equal(before.nativeReady, false);
++    assert.equal(context.isCurrent(), true, 'the original source grant remains valid while closing');
++    observe({ kind: 'process-output', stream: 'stderr', text: 'TEST original closing diagnostic' });
++    const after = store.fenced(f.runtimeBinding, tx => tx.get())!;
++    assert.equal(after.phase, before.phase); assert.equal(after.custody, before.custody);
++    assert.equal(after.sealed, before.sealed); assert.equal(after.nativeReady, before.nativeReady);
++    assert.deepEqual(after.inputs, before.inputs); assert.deepEqual(after.interactions, before.interactions);
++    assert.deepEqual(store.readConversation(f.runtimeBinding), conversation);
++    observations++;
++    return close();
++  };
++  const stopped = await f.rpc('runtime.stop', { memberId: 'alice-id' }) as {
++    ok: boolean; value: { phase: string; custody: string };
++  };
++  assert.equal(stopped.ok, true); assert.equal(stopped.value.phase, 'closed');
++  assert.equal(stopped.value.custody, 'released'); assert.equal(observations, 1);
++  const activity = store.readActivity(f.runtimeBinding)!;
++  const diagnostics = activity.events.filter(row => row.data.kind === 'process-output');
++  assert.equal(diagnostics.length, 1); assert.equal(diagnostics[0]!.data.text, 'TEST original closing diagnostic');
++  assert.equal(diagnostics[0]!.inputId, undefined); assert.equal(diagnostics[0]!.operationRef, undefined);
++  observe({ kind: 'process-output', stream: 'stderr', text: 'TEST after original release' });
++  assert.deepEqual(store.readActivity(f.runtimeBinding), activity);
++  assert.deepEqual(store.readConversation(f.runtimeBinding), conversation);
++  assert.equal(f.session().submits.length, 0); assert.equal(f.session().closeCalls, 1);
++});
++
++test('composed original stderr rejects changed member authority, revocation and a sealed Host', async t => {
++  const f = await fixture(t);
++  assert.equal((await f.rpc('runtime.open', { memberId: 'alice-id' }) as { ok: boolean }).ok, true);
++  const context = f.contexts[0]!, observe = context.observeProcessOutput, store = new FileRuntimeStore(f.root);
++  assert.ok(observe);
++  observe({ kind: 'process-output', stream: 'stderr', text: 'TEST original current diagnostic' });
++  const activity = store.readActivity(f.runtimeBinding), record = store.fenced(f.runtimeBinding, tx => tx.get());
++  const conversation = store.readConversation(f.runtimeBinding), memberId = context.profile.memberId;
++  try {
++    context.profile.memberId = 'bob-id';
++    assert.doesNotThrow(() => observe({ kind: 'process-output', stream: 'stderr', text: 'TEST wrong member' }));
++  } finally { context.profile.memberId = memberId; }
++  const path = join(f.root, 'teams/test-runtime-host/.host-owner/state.json'), original = readFileSync(path, 'utf8');
++  const state = JSON.parse(original) as { grants: { principalId: string; revoked?: boolean }[] };
++  state.grants.find(grant => grant.principalId === context.profile.principalId)!.revoked = true;
++  try {
++    writeFileSync(path, JSON.stringify(state));
++    assert.doesNotThrow(() => observe({ kind: 'process-output', stream: 'stderr', text: 'TEST revoked source' }));
++  } finally { writeFileSync(path, original); }
++  assert.deepEqual(store.readActivity(f.runtimeBinding), activity);
++  assert.deepEqual(store.fenced(f.runtimeBinding, tx => tx.get()), record);
++  assert.deepEqual(store.readConversation(f.runtimeBinding), conversation);
++  assert.equal(context.isCurrent(), true, 'restoring the exact original grant restores the same authority');
++  assert.equal((await f.dispose()).cleanup, 'completed');
++  const closed = store.readActivity(f.runtimeBinding);
++  observe({ kind: 'process-output', stream: 'stderr', text: 'TEST sealed Host diagnostic' });
++  assert.deepEqual(store.readActivity(f.runtimeBinding), closed);
++  assert.equal(f.session().submits.length, 0); assert.equal(f.opens(), 1);
++});
++
+ test(
+   'activity RPC pages normalized native observations with opaque cursor, bounded snapshots and explicit gaps',
+   // Persisting and paging this bounded native event fixture validates correctness, not latency.
+@@ -3284,6 +3389,20 @@
+   assert.notEqual(result.value.generation, opened.value.generation);
+   assert.deepEqual(f.restored, [{ history: ['TEST_HISTORY_A'] }]);
+   assert.equal(f.contexts.at(-1)?.request.generation, 2);
++  const restoredContext = f.contexts.at(-1)!, restoredBinding = normalizeBinding(restoredContext.endpoint.binding);
++  const diagnosticStore = new FileRuntimeStore(f.root), beforeDiagnostic = diagnosticStore.fenced(restoredBinding, tx => tx.get())!;
++  assert.equal(beforeDiagnostic.config?.checkpointRef, captured.value.reference);
++  assert.ok(restoredContext.observeProcessOutput);
++  const restoredConversation = diagnosticStore.readConversation(restoredBinding);
++  restoredContext.observeProcessOutput({ kind: 'process-output', stream: 'stderr', text: 'TEST exact restored process diagnostic' });
++  const restoredDiagnostic = diagnosticStore.readActivity(restoredBinding)!.events.find(row => row.data.kind === 'process-output')!;
++  assert.equal(restoredDiagnostic.data.text, 'TEST exact restored process diagnostic');
++  assert.equal(restoredDiagnostic.inputId, undefined); assert.equal(restoredDiagnostic.operationRef, undefined);
++  const afterDiagnostic = diagnosticStore.fenced(restoredBinding, tx => tx.get())!;
++  assert.deepEqual(afterDiagnostic.inputs, beforeDiagnostic.inputs);
++  assert.equal(afterDiagnostic.phase, beforeDiagnostic.phase); assert.equal(afterDiagnostic.nativeReady, beforeDiagnostic.nativeReady);
++  assert.equal(afterDiagnostic.custody, beforeDiagnostic.custody);
++  assert.deepEqual(diagnosticStore.readConversation(restoredBinding), restoredConversation);
+   const restoredProfile = f.contexts.at(-1)!.profile;
+   assert.equal(restoredProfile.model, 'TEST-selected-model');
+   assert.equal(restoredProfile.provider, 'claude');

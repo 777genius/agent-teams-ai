@@ -1,0 +1,645 @@
+{
+  "schemaVersion": 1,
+  "kind": "current030-original-packaged-Windows-x64-module-resolution-failure",
+  "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "event": "pull_request",
+  "runAttempt": 1,
+  "runId": 44407826409,
+  "jobId": 135200650478,
+  "job": {
+    "id": 135200650478,
+    "run_id": 44407826409,
+    "workflow_name": "Electron packaged CI",
+    "head_branch": "fix/frontend-parity-completion-20261113",
+    "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44407826409",
+    "run_attempt": 1,
+    "node_id": "CR_kwDORVTEtM8AAAAfepY07g",
+    "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/135200650478",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826409/job/135200650478",
+    "status": "completed",
+    "conclusion": "failure",
+    "created_at": "2026-11-18T23:02:59Z",
+    "started_at": "2026-11-18T23:57:12Z",
+    "completed_at": "2026-11-19T00:29:32Z",
+    "name": "packaged smoke (win32-x64)",
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1,
+        "started_at": "2026-11-18T23:57:13Z",
+        "completed_at": "2026-11-18T23:57:15Z"
+      },
+      {
+        "name": "Enable Windows long paths",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2,
+        "started_at": "2026-11-18T23:57:15Z",
+        "completed_at": "2026-11-18T23:57:15Z"
+      },
+      {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3,
+        "started_at": "2026-11-18T23:57:15Z",
+        "completed_at": "2026-11-18T23:57:38Z"
+      },
+      {
+        "name": "Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4,
+        "started_at": "2026-11-18T23:57:38Z",
+        "completed_at": "2026-11-18T23:57:53Z"
+      },
+      {
+        "name": "Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5,
+        "started_at": "2026-11-18T23:57:53Z",
+        "completed_at": "2026-11-18T23:58:32Z"
+      },
+      {
+        "name": "Run actions/setup-python@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 6,
+        "started_at": "2026-11-18T23:58:32Z",
+        "completed_at": "2026-11-18T23:58:33Z"
+      },
+      {
+        "name": "Install Linux packaging tools",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 7,
+        "started_at": "2026-11-18T23:58:33Z",
+        "completed_at": "2026-11-18T23:58:33Z"
+      },
+      {
+        "name": "Restore node-gyp executable bit",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8,
+        "started_at": "2026-11-18T23:58:33Z",
+        "completed_at": "2026-11-18T23:58:34Z"
+      },
+      {
+        "name": "Verify selected provider archives against frozen lock before install",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 9,
+        "started_at": "2026-11-18T23:58:34Z",
+        "completed_at": "2026-11-18T23:58:35Z"
+      },
+      {
+        "name": "Install frozen dependencies",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 10,
+        "started_at": "2026-11-18T23:58:35Z",
+        "completed_at": "2026-11-19T00:02:13Z"
+      },
+      {
+        "name": "Verify managed Git pins and archive path safety",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 11,
+        "started_at": "2026-11-19T00:02:13Z",
+        "completed_at": "2026-11-19T00:02:14Z"
+      },
+      {
+        "name": "Validate packaged OpenCode project-path smoke syntax early",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 12,
+        "started_at": "2026-11-19T00:02:14Z",
+        "completed_at": "2026-11-19T00:02:14Z"
+      },
+      {
+        "name": "Typecheck packaged CI policy with pinned compiler",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 13,
+        "started_at": "2026-11-19T00:02:14Z",
+        "completed_at": "2026-11-19T00:02:14Z"
+      },
+      {
+        "name": "Assert Electron binary was provisioned during install",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 14,
+        "started_at": "2026-11-19T00:02:14Z",
+        "completed_at": "2026-11-19T00:02:15Z"
+      },
+      {
+        "name": "Test bundled undici security version policy",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 15,
+        "started_at": "2026-11-19T00:02:15Z",
+        "completed_at": "2026-11-19T00:02:15Z"
+      },
+      {
+        "name": "Verify CI Node and Electron built-in undici versions",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 16,
+        "started_at": "2026-11-19T00:02:15Z",
+        "completed_at": "2026-11-19T00:02:16Z"
+      },
+      {
+        "name": "Verify native rebuild",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 17,
+        "started_at": "2026-11-19T00:02:16Z",
+        "completed_at": "2026-11-19T00:03:58Z"
+      },
+      {
+        "name": "Stage bundled runtime",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 18,
+        "started_at": "2026-11-19T00:03:58Z",
+        "completed_at": "2026-11-19T00:04:06Z"
+      },
+      {
+        "name": "Stage terminal platform runtime",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 19,
+        "started_at": "2026-11-19T00:04:06Z",
+        "completed_at": "2026-11-19T00:04:08Z"
+      },
+      {
+        "name": "Stage Windows console wrapper",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 20,
+        "started_at": "2026-11-19T00:04:08Z",
+        "completed_at": "2026-11-19T00:04:09Z"
+      },
+      {
+        "name": "Build app",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 21,
+        "started_at": "2026-11-19T00:04:09Z",
+        "completed_at": "2026-11-19T00:06:16Z"
+      },
+      {
+        "name": "Select exact Host Node for candidate staging",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 22,
+        "started_at": "2026-11-19T00:06:16Z",
+        "completed_at": "2026-11-19T00:06:23Z"
+      },
+      {
+        "name": "Prepare actual pinned V2 Bun, engine and admitted process custody",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 23,
+        "started_at": "2026-11-19T00:06:23Z",
+        "completed_at": "2026-11-19T00:07:06Z"
+      },
+      {
+        "name": "Prefill pinned macOS arm64 Host Node archive",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 24,
+        "started_at": "2026-11-19T00:07:06Z",
+        "completed_at": "2026-11-19T00:07:06Z"
+      },
+      {
+        "name": "Stage V2 Host closure in existing candidate extraResources",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 25,
+        "started_at": "2026-11-19T00:07:06Z",
+        "completed_at": "2026-11-19T00:07:49Z"
+      },
+      {
+        "name": "Typecheck and test packaged Host capture boundaries",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 26,
+        "started_at": "2026-11-19T00:07:49Z",
+        "completed_at": "2026-11-19T00:08:02Z"
+      },
+      {
+        "name": "Verify and stage original Windows scoped broker for packaged Retry",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 27,
+        "started_at": "2026-11-19T00:08:02Z",
+        "completed_at": "2026-11-19T00:08:34Z"
+      },
+      {
+        "name": "Package unsigned test bundle",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 28,
+        "started_at": "2026-11-19T00:08:34Z",
+        "completed_at": "2026-11-19T00:25:06Z"
+      },
+      {
+        "name": "Verify bundle native architecture",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 29,
+        "started_at": "2026-11-19T00:25:06Z",
+        "completed_at": "2026-11-19T00:25:32Z"
+      },
+      {
+        "name": "Smoke packaged SQLite and PTY modules",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 30,
+        "started_at": "2026-11-19T00:25:32Z",
+        "completed_at": "2026-11-19T00:25:40Z"
+      },
+      {
+        "name": "Smoke packaged Git without external installation",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 31,
+        "started_at": "2026-11-19T00:25:40Z",
+        "completed_at": "2026-11-19T00:25:41Z"
+      },
+      {
+        "name": "Smoke managed Git inside native Windows terminal",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 32,
+        "started_at": "2026-11-19T00:25:41Z",
+        "completed_at": "2026-11-19T00:25:43Z"
+      },
+      {
+        "name": "Smoke packaged MCP handshake",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 33,
+        "started_at": "2026-11-19T00:25:43Z",
+        "completed_at": "2026-11-19T00:25:44Z"
+      },
+      {
+        "name": "Verify macOS 13 minimum",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 34,
+        "started_at": "2026-11-19T00:25:44Z",
+        "completed_at": "2026-11-19T00:25:44Z"
+      },
+      {
+        "name": "Smoke packaged app",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 35,
+        "started_at": "2026-11-19T00:25:44Z",
+        "completed_at": "2026-11-19T00:25:54Z"
+      },
+      {
+        "name": "Qualify packaged macOS OpenCode project-path status and model list",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 36,
+        "started_at": "2026-11-19T00:25:54Z",
+        "completed_at": "2026-11-19T00:25:54Z"
+      },
+      {
+        "name": "Smoke packaged app under Xvfb",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 37,
+        "started_at": "2026-11-19T00:25:54Z",
+        "completed_at": "2026-11-19T00:25:54Z"
+      },
+      {
+        "name": "Qualify actual packaged V2 Host tools, MCP, Stop and cold Resume",
+        "status": "completed",
+        "conclusion": "failure",
+        "number": 38,
+        "started_at": "2026-11-19T00:25:54Z",
+        "completed_at": "2026-11-19T00:29:24Z"
+      },
+      {
+        "name": "Qualify packaged Windows same-Main Retry and original Processes UI Kill with finite peers",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 39,
+        "started_at": "2026-11-19T00:29:24Z",
+        "completed_at": "2026-11-19T00:29:24Z"
+      },
+      {
+        "name": "Qualify original packaged macOS app relaunch with finite SDK peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 40,
+        "started_at": "2026-11-19T00:29:24Z",
+        "completed_at": "2026-11-19T00:29:24Z"
+      },
+      {
+        "name": "Preserve exact packaged Host evidence",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 41,
+        "started_at": "2026-11-19T00:29:24Z",
+        "completed_at": "2026-11-19T00:29:26Z"
+      },
+      {
+        "name": "Post Select exact Host Node for candidate staging",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 78,
+        "started_at": "2026-11-19T00:29:26Z",
+        "completed_at": "2026-11-19T00:29:26Z"
+      },
+      {
+        "name": "Post Run actions/setup-python@v6",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 79,
+        "started_at": "2026-11-19T00:29:26Z",
+        "completed_at": "2026-11-19T00:29:26Z"
+      },
+      {
+        "name": "Post Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 80,
+        "started_at": "2026-11-19T00:29:26Z",
+        "completed_at": "2026-11-19T00:29:26Z"
+      },
+      {
+        "name": "Post Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 81,
+        "started_at": "2026-11-19T00:29:26Z",
+        "completed_at": "2026-11-19T00:29:26Z"
+      },
+      {
+        "name": "Post Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 82,
+        "started_at": "2026-11-19T00:29:26Z",
+        "completed_at": "2026-11-19T00:29:28Z"
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 83,
+        "started_at": "2026-11-19T00:29:28Z",
+        "completed_at": "2026-11-19T00:29:28Z"
+      }
+    ],
+    "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/135200650478",
+    "labels": [
+      "windows-2022"
+    ],
+    "runner_id": 1000395537,
+    "runner_name": "GitHub Actions 1000395537",
+    "runner_group_id": 0,
+    "runner_group_name": "GitHub Actions"
+  },
+  "canonicalJobsPage": {
+    "path": "/workspace/scratch/c714f5bce554/ci-current-030/poll-47-jobs.json",
+    "sha256": "9d7cf80d58f1b038459db6bdf7ecc35176c0ae43a0c55157d833cce19ada546c"
+  },
+  "rawLog": {
+    "gitBlob": "c4c35b6dadc22df8ddcee79cd608a63babe76fce",
+    "sha256": "1be4b08f53267173ebee2617f1dc42f77351b432ce8d1611c45a96720242736b",
+    "bytes": 228246,
+    "path": "/workspace/scratch/c714f5bce554/ci-current-030/job-135200650478-terminal.log",
+    "endpointPermanentlyRetired": true,
+    "exactImmutableReadback": true
+  },
+  "firstNativeError": {
+    "code": "MODULE_NOT_FOUND",
+    "missingModule": "../../dist/attachments/contracts.js",
+    "stack": [
+      "2026-11-19T00:29:23.9947407Z     at attachmentContracts (file:///D:/a/_temp/TEST-packaged-v2-host-e69945df-238a-441f-bdee-b2c6d012431f.mjs:21214:33)",
+      "2026-11-19T00:29:23.9948826Z     at Object.rpc (file:///D:/a/_temp/TEST-packaged-v2-host-e69945df-238a-441f-bdee-b2c6d012431f.mjs:21063:74) {"
+    ]
+  },
+  "wrapperAssertion": {
+    "path": "scripts/legacy-agent-host/run-packaged-opencode-v2.ts:169:10",
+    "expected": {
+      "code": 0,
+      "signal": null
+    },
+    "actual": {
+      "code": 1,
+      "signal": null
+    }
+  },
+  "originalReceipts": [
+    {
+      "name": "packaged-win-x64-original-native-receipt.json",
+      "path": "/workspace/scratch/c714f5bce554/ci-current-030/packaged-win-x64-original-native-receipt.json",
+      "bytes": 6426,
+      "sha256": "a9c0b9c63e1893fa5113dfdd7ef8ad957c34ccd42a389e283f79012bb180e8e7",
+      "sourceLogLine": 1800,
+      "originalSerializedContent": "{\n  \"kind\": \"TEST_PACKAGED_NATIVE_V2_HOST\",\n  \"status\": \"INCOMPLETE\",\n  \"packaged\": {\n    \"executionOrigin\": \"packaged-extraResources\",\n    \"appAsarSha256\": \"869adc280c62274fc1a7c770050cac2babf6e358ed23540b5bedf5b7e9fbc2f3\",\n    \"candidateManifestSha256\": \"e0e6ac112f946aba373b0e130fd33e53c957485f45e98e5db5b7929883a29955\",\n    \"harnessSha256\": \"d580f81f4cd77409258ced5a50dbdcc76d314a9aea65cbd3abb19437460cf933\",\n    \"sourceCheckoutUnavailable\": true,\n    \"legacyRuntimeUnavailable\": true,\n    \"hostEntrySha256\": \"4e1841072540175636a776082693780021827ce56d0b5c2aa11f9e8511d132ba\",\n    \"nodeArchiveSha256\": \"158f7685b44de51f6c0df1d153526cbcd3e1bc739a8dfc607721cef75de9e541\",\n    \"providerArtifacts\": [\n      {\n        \"name\": \"@agent-teams/provider-implementations\",\n        \"sha256\": \"ad05bd8c799c4d2c366a6eab72f937466355a5994eac6bd201ee754217cf5aa7\"\n      },\n      {\n        \"name\": \"@agent-teams/provider-session-contracts\",\n        \"sha256\": \"0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc\"\n      }\n    ],\n    \"packages\": 120,\n    \"files\": 8171\n  },\n  \"sourceHead\": \"030b21f0765d1a6e6572f46d262c672d63e69eb7\",\n  \"platform\": \"win32-x64\",\n  \"version\": \"2.1.4\",\n  \"approvalMode\": \"manual\",\n  \"nodeVersion\": \"v24.21.0\",\n  \"modelSelection\": {\n    \"providerId\": \"TEST-local\",\n    \"modelId\": \"TEST-model-B\",\n    \"variant\": \"high\"\n  },\n  \"configurationSelection\": {\n    \"scope\": \"project\",\n    \"original\": \"project-A\",\n    \"later\": \"project-B\"\n  },\n  \"preferencesSelection\": {\n    \"nativeDefault\": \"TEST-local/TEST-model\",\n    \"appDefault\": \"TEST-local/TEST-model-B\"\n  },\n  \"digests\": {\n    \"bun\": \"095db4abae203d42f29fdec26da4a882fcde6333cdd84e40c0c7828c0cf543f6\",\n    \"manifest\": \"b15576ab97dca04f002f3b07972e49290f0933e0f66c51b7332703a5b76ad628\",\n    \"node\": \"ba4e6d110e8c1592a1ecd390f6b05f3da124b13871a5be62b341a07a853c6c32\",\n    \"hostSource\": \"17ded62852eb00cb741452a56b6e161041d40611cf9765135ee45703915dd35b\",\n    \"hostDist\": \"0147ae16ef6b984234f3be6a0b3a4600e933956d871087ce58a83e9fd9ce7aa7\",\n    \"provider\": \"ad05bd8c799c4d2c366a6eab72f937466355a5994eac6bd201ee754217cf5aa7\",\n    \"windowsShell\": \"38f4384643b3fa0de714d2367b712c2e0fa1c89e2cfd131ae6b831ad962b1033\"\n  },\n  \"steps\": [\n    \"original_host_embedded_native_and_mcp_ready\"\n  ],\n  \"cleanup\": true,\n  \"phaseElapsedMs\": {\n    \"original_host_embedded_native_and_mcp_ready\": 48196\n  },\n  \"elapsedMs\": 151429,\n  \"cancelled\": false,\n  \"inputObservation\": {\n    \"reads\": 495,\n    \"last\": {\n      \"phase\": \"allocated\",\n      \"custody\": \"owned\",\n      \"nativeReady\": true,\n      \"attached\": true,\n      \"sealed\": false,\n      \"diagnostic\": null,\n      \"inputs\": [\n        {\n          \"phase\": \"terminal\",\n          \"terminal\": \"succeeded\"\n        },\n        {\n          \"phase\": \"terminal\",\n          \"terminal\": \"succeeded\"\n        }\n      ],\n      \"interactions\": [\n        {\n          \"kind\": \"permission\",\n          \"phase\": \"resolved\"\n        },\n        {\n          \"kind\": \"permission\",\n          \"phase\": \"resolved\"\n        }\n      ]\n    }\n  },\n  \"launchObservation\": {\n    \"openElapsedMs\": 31961,\n    \"afterOpen\": {\n      \"available\": true,\n      \"status\": \"ready\",\n      \"reason\": \"context-applied\",\n      \"elapsedSinceAttemptMs\": 31427,\n      \"capturedTimeoutMs\": 120000,\n      \"claimed\": true,\n      \"nativeReady\": true,\n      \"contextApplied\": true,\n      \"everReady\": true,\n      \"usable\": true,\n      \"controlAvailable\": true,\n      \"noAllocation\": false\n    }\n  },\n  \"failureCode\": null,\n  \"hosts\": [\n    {\n      \"exitCode\": 0,\n      \"signalCode\": null,\n      \"stdoutValid\": true\n    }\n  ],\n  \"modelOrigin\": \"localhost-scripted\",\n  \"modelRequests\": 11,\n  \"modelProgress\": [\n    {\n      \"elapsedMs\": 48733,\n      \"requests\": 0\n    },\n    {\n      \"elapsedMs\": 57415,\n      \"requests\": 1\n    },\n    {\n      \"elapsedMs\": 57637,\n      \"requests\": 2\n    },\n    {\n      \"elapsedMs\": 57921,\n      \"requests\": 3\n    },\n    {\n      \"elapsedMs\": 58171,\n      \"requests\": 4\n    },\n    {\n      \"elapsedMs\": 96571,\n      \"requests\": 5\n    },\n    {\n      \"elapsedMs\": 96791,\n      \"requests\": 6\n    },\n    {\n      \"elapsedMs\": 97058,\n      \"requests\": 7\n    },\n    {\n      \"elapsedMs\": 97261,\n      \"requests\": 8\n    },\n    {\n      \"elapsedMs\": 116592,\n      \"requests\": 9\n    },\n    {\n      \"elapsedMs\": 147844,\n      \"requests\": 10\n    },\n    {\n      \"elapsedMs\": 148064,\n      \"requests\": 11\n    }\n  ],\n  \"coordination\": {\n    \"status\": \"unqualified\",\n    \"cleanup\": null\n  },\n  \"modelFailures\": [],\n  \"vendorAuthQualified\": false,\n  \"nativeMedia\": {\n    \"images\": [\n      {\n        \"mime\": \"image/png\",\n        \"originalSha256\": \"5a852fbaaaecaf4cd14c01e150c7f881c5c5894b0a1e3c53be7e007c58374ee6\",\n        \"nativeSha256\": \"5a852fbaaaecaf4cd14c01e150c7f881c5c5894b0a1e3c53be7e007c58374ee6\",\n        \"originalBytes\": 71,\n        \"nativeBytes\": 71,\n        \"normalized\": false\n      },\n      {\n        \"mime\": \"image/jpeg\",\n        \"originalSha256\": \"d81a2cce79d189fcbffba4f6726421ec66b21fab327dd32a782dd431eabd8495\",\n        \"nativeSha256\": \"d81a2cce79d189fcbffba4f6726421ec66b21fab327dd32a782dd431eabd8495\",\n        \"originalBytes\": 633,\n        \"nativeBytes\": 633,\n        \"normalized\": false\n      },\n      {\n        \"mime\": \"image/gif\",\n        \"originalSha256\": \"a757db5a1dcbd4e24910118675cf01f81f93655f3a0b34cc71978baf0c37270b\",\n        \"nativeSha256\": \"a757db5a1dcbd4e24910118675cf01f81f93655f3a0b34cc71978baf0c37270b\",\n        \"originalBytes\": 44,\n        \"nativeBytes\": 44,\n        \"normalized\": false\n      },\n      {\n        \"mime\": \"image/webp\",\n        \"originalSha256\": \"9625303047061475ef5d91abc31ca6f0da73d01fcb5cbb07c2af467f65a2a4bd\",\n        \"nativeSha256\": \"9625303047061475ef5d91abc31ca6f0da73d01fcb5cbb07c2af467f65a2a4bd\",\n        \"originalBytes\": 68,\n        \"nativeBytes\": 68,\n        \"normalized\": false\n      }\n    ],\n    \"normalization\": {\n      \"originalBytes\": 4194304,\n      \"originalSha256\": \"1aacd41f731c7b22a4b096ad93fd8ddbd6125a65b40a21b2dd2ac74f64c4104e\",\n      \"nativeBytes\": 159,\n      \"nativeSha256\": \"77e59ffc558ccd27419cf72f7187bfdca1553f8e415016f3a695da08acbce23b\",\n      \"width\": 2000,\n      \"height\": 1,\n      \"exactRedPixels\": true\n    },\n    \"pdf\": {\n      \"mime\": \"application/pdf\",\n      \"sha256\": \"b68de0aed59787410cbdbc3040bdeac362fb7ec9210896066c07b1e4e0cc942c\",\n      \"byteLength\": 589,\n      \"exactBytes\": true\n    },\n    \"normalized\": true\n  },\n  \"desktopQualified\": false,\n  \"releaseQualified\": false\n}\n",
+      "envelopeDetails": {
+        "receiptWritten": true,
+        "hosts": [
+          {
+            "diagnosticBytes": 0,
+            "frames": [
+              {
+                "id": 505,
+                "method": "runtime.read",
+                "ok": true
+              },
+              {
+                "id": 506,
+                "method": "runtime.read",
+                "ok": true
+              },
+              {
+                "id": 507,
+                "method": "runtime.read",
+                "ok": true
+              },
+              {
+                "id": 508,
+                "method": "runtime.read",
+                "ok": true
+              },
+              {
+                "id": 509,
+                "method": "runtime.read",
+                "ok": true
+              },
+              {
+                "id": 510,
+                "method": "runtime.read",
+                "ok": true
+              },
+              {
+                "id": 511,
+                "method": "runtime.read",
+                "ok": true
+              },
+              {
+                "id": 512,
+                "method": "runtime.read",
+                "ok": true
+              },
+              {
+                "id": 513,
+                "method": "runtime.read",
+                "ok": true
+              },
+              {
+                "id": 514,
+                "method": "runtime.read",
+                "ok": true
+              },
+              {
+                "id": 515,
+                "method": "runtime.read",
+                "ok": true
+              },
+              {
+                "id": 516,
+                "method": "runtime.read",
+                "ok": true
+              },
+              {
+                "id": 517,
+                "method": "runtime.read",
+                "ok": true
+              },
+              {
+                "id": 518,
+                "method": "runtime.read",
+                "ok": true
+              },
+              {
+                "id": 519,
+                "method": "runtime.read",
+                "ok": true
+              },
+              {
+                "id": 520,
+                "method": "team.execute",
+                "ok": true
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "packaged-win-x64-original-qualification-receipt.json",
+      "path": "/workspace/scratch/c714f5bce554/ci-current-030/packaged-win-x64-original-qualification-receipt.json",
+      "bytes": 1186,
+      "sha256": "bd8c8bf73d8d574e9f463a10d0724fcb3199d456198b6abfc48a8b26edf4887a",
+      "sourceLogLine": 1825,
+      "originalSerializedContent": "{\n  \"kind\": \"TEST_PACKAGED_V2_QUALIFICATION\",\n  \"status\": \"INCOMPLETE\",\n  \"sourceHead\": \"030b21f0765d1a6e6572f46d262c672d63e69eb7\",\n  \"platform\": \"win32-x64\",\n  \"cleanup\": true,\n  \"phase\": \"finished\",\n  \"desktopJourneyQualified\": false,\n  \"vendorAuthQualified\": false,\n  \"releaseQualified\": false,\n  \"cleanupObservation\": {\n    \"originalExitObserved\": true,\n    \"nativeReceiptParsed\": true,\n    \"nativeReceiptBound\": true,\n    \"nativeCleanupConfirmed\": true,\n    \"firstFailure\": {\n      \"stage\": \"scenario-checks\",\n      \"code\": \"ERR_ASSERTION\"\n    },\n    \"firstRestorationFailure\": null\n  },\n  \"appAsarSha256\": \"869adc280c62274fc1a7c770050cac2babf6e358ed23540b5bedf5b7e9fbc2f3\",\n  \"candidateManifestSha256\": \"e0e6ac112f946aba373b0e130fd33e53c957485f45e98e5db5b7929883a29955\",\n  \"hostEntrySha256\": \"4e1841072540175636a776082693780021827ce56d0b5c2aa11f9e8511d132ba\",\n  \"nodeSha256\": \"ba4e6d110e8c1592a1ecd390f6b05f3da124b13871a5be62b341a07a853c6c32\",\n  \"nativeExit\": {\n    \"code\": 1,\n    \"signal\": null\n  },\n  \"nativeReceiptSha256\": \"a9c0b9c63e1893fa5113dfdd7ef8ad957c34ccd42a389e283f79012bb180e8e7\",\n  \"sourceRestored\": true,\n  \"bundleRestored\": true,\n  \"legacyRuntimeRestored\": true\n}\n",
+      "envelopeDetails": {
+        "receiptWritten": true
+      }
+    }
+  ],
+  "observation": {
+    "nativeStatus": "INCOMPLETE",
+    "cleanup": true,
+    "steps": [
+      "original_host_embedded_native_and_mcp_ready"
+    ],
+    "modelRequests": 11,
+    "modelFailures": [],
+    "hosts": [
+      {
+        "exitCode": 0,
+        "signalCode": null,
+        "stdoutValid": true
+      }
+    ],
+    "wrapperCleanup": true,
+    "nativeExit": {
+      "code": 1,
+      "signal": null
+    },
+    "sourceRestored": true,
+    "bundleRestored": true,
+    "legacyRuntimeRestored": true
+  },
+  "qualification": [
+    "Original pull_request attempt1 at exact source head030; no rerun or dispatch.",
+    "Source-bound packaged-extraResources execution with source checkout and legacy runtime intentionally unavailable.",
+    "Native callback INCOMPLETE; observed model requests and recorded media checks do not qualify remaining scenario assertions.",
+    "Original Host exit and outer native harness exit are separate observations; original receipts retain their independent cleanup/restoration values.",
+    "Same missing generated relative-require module as original Darwin ARM64 and Windows ARM64; parent already has a separately verified loader candidate. This observation does not qualify that unpublished fix.",
+    "Original inline producer receipt bytes validated against their recorded lengths and SHA256. No artifact download or native/app rerun used."
+  ],
+  "failureExcerpt": {
+    "startLine": 1805,
+    "endLine": 1850,
+    "lines": [
+      "2026-11-19T00:29:23.9937925Z Error: Cannot find module '../../dist/attachments/contracts.js'",
+      "2026-11-19T00:29:23.9938594Z Require stack:",
+      "2026-11-19T00:29:23.9939343Z - D:\\a\\_temp\\TEST-packaged-v2-host-e69945df-238a-441f-bdee-b2c6d012431f.mjs",
+      "2026-11-19T00:29:23.9940353Z     at Module._resolveFilename (node:internal/modules/cjs/loader:1564:15)",
+      "2026-11-19T00:29:23.9941291Z     at wrapResolveFilename (node:internal/modules/cjs/loader:1118:27)",
+      "2026-11-19T00:29:23.9942289Z     at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1142:10)",
+      "2026-11-19T00:29:23.9943319Z     at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1169:12)",
+      "2026-11-19T00:29:23.9944126Z     at Module._load (node:internal/modules/cjs/loader:1341:5)",
+      "2026-11-19T00:29:23.9944887Z     at wrapModuleLoad (node:internal/modules/cjs/loader:261:19)",
+      "2026-11-19T00:29:23.9945619Z     at Module.require (node:internal/modules/cjs/loader:1674:12)",
+      "2026-11-19T00:29:23.9946312Z     at require (node:internal/modules/helpers:157:16)",
+      "2026-11-19T00:29:23.9947407Z     at attachmentContracts (file:///D:/a/_temp/TEST-packaged-v2-host-e69945df-238a-441f-bdee-b2c6d012431f.mjs:21214:33)",
+      "2026-11-19T00:29:23.9948826Z     at Object.rpc (file:///D:/a/_temp/TEST-packaged-v2-host-e69945df-238a-441f-bdee-b2c6d012431f.mjs:21063:74) {",
+      "2026-11-19T00:29:23.9949732Z   code: 'MODULE_NOT_FOUND',",
+      "2026-11-19T00:29:23.9950120Z   requireStack: [",
+      "2026-11-19T00:29:23.9950772Z     'D:\\\\a\\\\_temp\\\\TEST-packaged-v2-host-e69945df-238a-441f-bdee-b2c6d012431f.mjs'",
+      "2026-11-19T00:29:23.9951764Z   ]",
+      "2026-11-19T00:29:23.9952128Z }",
+      "2026-11-19T00:29:23.9952325Z ",
+      "2026-11-19T00:29:23.9952498Z Node.js v24.21.0",
+      "2026-11-19T00:29:24.2881179Z node:internal/modules/run_main:107",
+      "2026-11-19T00:29:24.2881573Z     triggerUncaughtException(",
+      "2026-11-19T00:29:24.2881885Z     ^",
+      "2026-11-19T00:29:24.2882032Z ",
+      "2026-11-19T00:29:24.2882392Z AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:",
+      "2026-11-19T00:29:24.2882868Z + actual - expected",
+      "2026-11-19T00:29:24.2883053Z ",
+      "2026-11-19T00:29:24.2883145Z   {",
+      "2026-11-19T00:29:24.2883397Z +   code: 1,",
+      "2026-11-19T00:29:24.2883632Z -   code: 0,",
+      "2026-11-19T00:29:24.2883870Z     signal: null",
+      "2026-11-19T00:29:24.2884133Z   }",
+      "2026-11-19T00:29:24.2884268Z ",
+      "2026-11-19T00:29:24.2884696Z     at file:///D:/a/agent-teams-ai/agent-teams-ai/scripts/legacy-agent-host/run-packaged-opencode-v2.ts:169:10",
+      "2026-11-19T00:29:24.2885511Z     at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {",
+      "2026-11-19T00:29:24.2886027Z   generatedMessage: true,",
+      "2026-11-19T00:29:24.2886328Z   code: 'ERR_ASSERTION',",
+      "2026-11-19T00:29:24.2886681Z   actual: { code: 1, signal: null },",
+      "2026-11-19T00:29:24.2887035Z   expected: { code: 0, signal: null },",
+      "2026-11-19T00:29:24.2887407Z   operator: 'deepStrictEqual',",
+      "2026-11-19T00:29:24.2887711Z   diff: 'simple'",
+      "2026-11-19T00:29:24.2887954Z }",
+      "2026-11-19T00:29:24.2888088Z ",
+      "2026-11-19T00:29:24.2888216Z Node.js v24.21.0",
+      "2026-11-19T00:29:24.3025441Z ##[error]Process completed with exit code 1."
+    ]
+  },
+  "artifactUploadObservation": {
+    "artifactId": 14485453376,
+    "zipBytes": 349143,
+    "zipSha256": "a8d65f316d85fbe2b1cf7887886fa5ff28c56b54564551104670d894cfdedac9",
+    "downloadAttempted": false,
+    "reason": "Original inline receipts and terminal log provide bounded failure evidence."
+  }
+}

@@ -1,0 +1,126 @@
+{
+  "rawObservations": 13,
+  "combinedCount": 12,
+  "standaloneCount": 1,
+  "totalMs": 8536.39350000002,
+  "combinedMs": 8218.622900000031,
+  "standaloneMs": 317.7705999999889,
+  "preclickCount": 7,
+  "preclickMs": 4651.838500000027,
+  "phaseRecordAtMs": 35031.234,
+  "deadlineUpperBoundMs": 45031.234,
+  "last": {
+    "phase": "one-explicit-same-Main-Retry",
+    "operation": "process-listener-snapshot",
+    "startMs": 44691.21000000001,
+    "endMs": 45377.524900000004,
+    "returned": true,
+    "durationMs": 686.3148999999976
+  },
+  "rows": [
+    {
+      "phase": "one-explicit-same-Main-Retry",
+      "operation": "process-listener-snapshot",
+      "startMs": 35033.720400000006,
+      "endMs": 35724.400299999994,
+      "returned": true,
+      "durationMs": 690.6798999999883
+    },
+    {
+      "phase": "one-explicit-same-Main-Retry",
+      "operation": "process-listener-snapshot",
+      "startMs": 35728.9185,
+      "endMs": 36396.3986,
+      "returned": true,
+      "durationMs": 667.4801000000007
+    },
+    {
+      "phase": "one-explicit-same-Main-Retry",
+      "operation": "process-listener-snapshot",
+      "startMs": 36402.939,
+      "endMs": 37071.1557,
+      "returned": true,
+      "durationMs": 668.2167000000045
+    },
+    {
+      "phase": "one-explicit-same-Main-Retry",
+      "operation": "process-listener-snapshot",
+      "startMs": 37175.462199999994,
+      "endMs": 37831.058600000004,
+      "returned": true,
+      "durationMs": 655.5964000000095
+    },
+    {
+      "phase": "one-explicit-same-Main-Retry",
+      "operation": "process-listener-snapshot",
+      "startMs": 37935.4507,
+      "endMs": 38580.76640000001,
+      "returned": true,
+      "durationMs": 645.3157000000065
+    },
+    {
+      "phase": "one-explicit-same-Main-Retry",
+      "operation": "process-listener-snapshot",
+      "startMs": 38584.7999,
+      "endMs": 39233.25200000001,
+      "returned": true,
+      "durationMs": 648.4521000000095
+    },
+    {
+      "phase": "one-explicit-same-Main-Retry",
+      "operation": "process-listener-snapshot",
+      "startMs": 39237.0162,
+      "endMs": 39913.11380000001,
+      "returned": true,
+      "durationMs": 676.0976000000082
+    },
+    {
+      "phase": "one-explicit-same-Main-Retry",
+      "operation": "process-census",
+      "startMs": 41142.610100000005,
+      "endMs": 41460.380699999994,
+      "returned": true,
+      "durationMs": 317.7705999999889
+    },
+    {
+      "phase": "one-explicit-same-Main-Retry",
+      "operation": "process-listener-snapshot",
+      "startMs": 41462.0147,
+      "endMs": 42120.9651,
+      "returned": true,
+      "durationMs": 658.9504000000015
+    },
+    {
+      "phase": "one-explicit-same-Main-Retry",
+      "operation": "process-listener-snapshot",
+      "startMs": 42224.879499999995,
+      "endMs": 42890.2619,
+      "returned": true,
+      "durationMs": 665.3824000000022
+    },
+    {
+      "phase": "one-explicit-same-Main-Retry",
+      "operation": "process-listener-snapshot",
+      "startMs": 42994.143,
+      "endMs": 43761.1164,
+      "returned": true,
+      "durationMs": 766.9734000000026
+    },
+    {
+      "phase": "one-explicit-same-Main-Retry",
+      "operation": "process-listener-snapshot",
+      "startMs": 43764.68429999999,
+      "endMs": 44553.847599999994,
+      "returned": true,
+      "durationMs": 789.1633000000002
+    },
+    {
+      "phase": "one-explicit-same-Main-Retry",
+      "operation": "process-listener-snapshot",
+      "startMs": 44691.21000000001,
+      "endMs": 45377.524900000004,
+      "returned": true,
+      "durationMs": 686.3148999999976
+    }
+  ]
+}

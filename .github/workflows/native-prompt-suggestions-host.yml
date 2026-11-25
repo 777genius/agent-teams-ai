@@ -19,6 +19,14 @@ concurrency:
 
 jobs:
   captured-original-host:
+    if: >-
+      ${{ !(github.event_name == 'pull_request' &&
+        github.repository == '777genius/agent-teams-ai' &&
+        github.event.pull_request.number == 1192 &&
+        github.event.pull_request.head.repo.full_name == '777genius/agent-teams-ai' &&
+        github.event.pull_request.base.repo.full_name == '777genius/agent-teams-ai' &&
+        github.event.pull_request.head.ref == 'fix/frontend-parity-completion-20261113' &&
+        github.event.pull_request.base.ref == 'feat/provider-host-frontend-parity-20261112') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:

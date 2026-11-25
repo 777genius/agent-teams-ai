@@ -1,0 +1,149 @@
+✔ offline Desktop admission refuses inherited native selections before preparing a fixture (7.05829ms)
+✔ TEST management admission retains only the exact direct detached Host peer without signaling (6.457436ms)
+✔ Linux CDP diagnostics retain the original bounded descriptor read without accepting a second holder (15.962989ms)
+✔ Linux zero-group rows remain observable without becoming owned app groups; malformed census stays an error (2.360936ms)
+✔ the same original-root oracle uses each existing caller deadline after a long provider phase, without renewing reads (2.901561ms)
+✔ read-only discovery survives navigation during the actual IPC read, then reads the new context (0.859429ms)
+✔ unregistered initial discovery waits, but owner failures are never hidden as navigation (1.011186ms)
+✔ initial discovery passes only its remaining captured budget to the IPC await (0.395099ms)
+✔ exhausted initial observation never dispatches the backend IPC (0.394578ms)
+✔ other discovery callers retain the default CDP budget (0.316922ms)
+✔ an explicit IPC observation budget lets the same read settle after30s within60s (1.269441ms)
+✔ default CDP evaluations still reject at30s without a resend (0.418073ms)
+✔ macOS original Node zombie is the same unreaped harness child, never a changed live command (0.794463ms)
+✔ live stat can become original defunct before the guard; only original child reap and whole-group absence settle it (1.938036ms)
+✔ changed command/start, wrong child/group and initial descendants never authorize a recovery observation (0.397172ms)
+✔ an already observed original natural exit still requires fresh group and captured Host absence (0.362981ms)
+✔ original crash/signal and process-table failures remain debt (0.360597ms)
+✔ the original deadline is not renewed after initial settlement consumed it (0.223933ms)
+✔ numeric group absence without this original child exit observation expires within the remaining original budget (0.358654ms)
+✔ a process-table read that crosses the original deadline cannot qualify natural exit (0.271094ms)
+✔ an already reaped original child waits for actual descendant and original Host absence (0.766291ms)
+✔ an orphan descendant, moved captured descendant or original Host cannot be cleared by an expired budget (0.689717ms)
+✔ absent leader observation rejects wrong child, live/crashed/signaled child and invalid captured identities (0.410722ms)
+✔ a reused leader PID and unavailable full process census retain debt without signaling (0.323602ms)
+✔ absent leader observation never renews the original deadline or accepts a late census (0.337322ms)
+✔ requested Quit lets the original child report its natural exit before the cleanup census (712.223684ms)
+✔ finite Codex exact native MCP catalog exits with empty inventory without allocating a Runtime (267.737964ms)
+✔ finite Codex catalog refuses changed argv, Runtime authority and nonempty selected configuration (291.13811ms)
+✔ finite Codex answers the original D managed config before connecting its selected Team on thread start (519.644552ms)
+✔ finite managed Codex policy refuses alternate syntax, extra servers and enabled apps before connection (225.011297ms)
+✔ runtime-derived Codex ordinary model probe (default) completes through original Host/D once (165.365732ms)
+✔ runtime-derived Codex ordinary model probe (low) completes through original Host/D once (93.41893ms)
+✔ finite Codex standalone retains empty MCP readiness and completes only its original ephemeral thread (115.998253ms)
+✔ finite Codex standalone refuses Team authority, persistent threads and unselected thread work (579.687204ms)
+✔ extensions Settings peer exposes only isolated auth status through original custody (605.599529ms)
+✔ saved-import Settings peer exposes only isolated auth status through original custody (259.102483ms)
+✔ finite extension status uses the original Host auth command and retains its exact private namespace (112.267106ms)
+✔ finite extensions run through original Host ownership, persist four commands and survive inventory reload without replay (428.488703ms)
+✔ finite extension CLI refuses changed names/scopes and does not overwrite selected config (329.110255ms)
+✔ saved-import finite metadata and actual original probe receipt preserve model/effort with no extra input on lookup (3399.764457ms)
+✔ saved-import peer refuses a business input without producing a probe or touching Host receipts (465.708846ms)
+✔ receipt summaries retain only the original nested mixed Settings owner (1.697477ms)
+✔ retained c226 original rejected-key receipt joins its published seed and exact observed native probe (103.638497ms)
+✔ V2 receipt binding rejects foreign revisions, scope, seed owner, engine and executable (12.098545ms)
+✔ V2 publication rejects an internally rehashed foreign descriptor grant or replacement executable (10.129514ms)
+✔ V2 source history accounts for every publication and the exact retained current chain (14.728984ms)
+✔ original Host rejects old other-project cwd and accepts only its separate exact private-account seed (2.080208ms)
+✔ archived V2 tuple isolation restores the real runner and preserves foreign-platform refusal (2.945256ms)
+✔ original V2 default intent joins its selected saving row within the same receipt deadline (18.770233ms)
+✔ published receipt reads survive the real controller writer before its atomic rename (145.358611ms)
+✔ receipt reads reject foreign staging names, directories and symbolic links (45.130083ms)
+✔ captured UI discovery waits for Main admission and actual mount while early diagnostics remain active (204.870481ms)
+✔ the original remaining startup deadline rejects a pending snapshot without late discovery or a reset (500.915331ms)
+✔ packed file readiness executes the actual diagnostic expression using exact href instead of Electron opaque origin (9.494477ms)
+✔ HTTP readiness keeps exact origin and document path guards when the runtime location origin is untrusted (3.516026ms)
+✔ isolated shell fixture emits the actual framed environment and refuses shell effects (222.872868ms)
+✔ original in-progress Task comment prerequisite requires its exact stage without an assignment control (10.450511ms)
+✔ Task attachment comment waits for its original focused owner after one click before inserting text (217.517854ms)
+✔ original Task assignment prerequisite refuses receipt-only, pending and stale renderer state (4.702492ms)
+✔ original Task assignment prerequisite rejects a foreign context, Team, Task or rebound surface (3.021539ms)
+✔ original desktop click waits for stable target geometry, without repeating input (303.780507ms)
+✔ original Task hover waits through layout and unavailability before its one physical move (603.257491ms)
+✔ original desktop click refuses a constantly moving target before dispatch (1531.974354ms)
+✔ original owner-qualified click rereads its full expression through unavailability at unchanged coordinates (302.947585ms)
+✔ login failure facts retain only bounded original attempts and confirmed milestones (2.028319ms)
+✔ finite readiness failure summaries keep only bounded states and never private snapshot data (1.462767ms)
+✔ Taskboard failure summaries compare retained identities without exposing private snapshot values (2.043812ms)
+✔ installer failure summaries preserve original wait sites and attempts without inferring installation effects (2.288156ms)
+✔ installer failure projection does not invoke input getters and leaves oversized observations unknown (0.516008ms)
+✔ installer CDP and cleanup projection retains only exact finite observations (0.582327ms)
+✔ Selection target summaries retain the exact original phase and six closed facts (1.2772ms)
+✔ Selection target projection rejects unknown or malformed facts without exposing text or invoking getters (0.452233ms)
+✔ Taskboard focus diagnostics preserve last samples and bounded transitions without exposing private input (1.456247ms)
+✔ original desktop click refuses a target unavailable during the final ownership check (201.287279ms)
+✔ original desktop click refuses a target moved during the final ownership check (202.714696ms)
+✔ original default scroll preserves a disabled control before its readiness wait (1.170352ms)
+✔ original scroll opt-in reveals a covered checkbox with one bounded wheel (101.991623ms)
+✔ original desktop click rechecks owner after its pending final target read (202.52682ms)
+✔ original desktop click rechecks cutoff after its pending final target read (351.982545ms)
+✔ original clarification lookup admits its retained read without completing the assignment prerequisite (22.17773ms)
+✔ original clarification lookup refuses changed owner, revision, refresh and retained-read joins (49.534225ms)
+✔ original owner availability admits three captured A Teams through its actual first DOM read (3.964771ms)
+✔ original owner availability retains singleton, subset and duplicate-row cardinality semantics (3.680659ms)
+✔ original owner availability refuses foreign identities and preserves its existing aggregate guards (46.511539ms)
+✔ original owner availability refuses invalid captured discovery before navigation (0.81976ms)
+✔ owner availability admits every captured A Team through the actual first observation (0.946218ms)
+✔ owner availability refuses healthy B in unavailable A rows (0.660523ms)
+✔ owner availability refuses captured foreign owner in unavailable A rows (0.361077ms)
+✔ owner availability refuses unknown Team in unavailable A rows (0.897185ms)
+✔ owner availability refuses malformed Team in unavailable A rows (0.555827ms)
+✔ owner availability refuses missing selected A before original navigation (0.892468ms)
+✔ owner availability refuses non-string A handle before original navigation (0.494015ms)
+✔ owner availability refuses empty A handle before original navigation (1.48522ms)
+✔ owner availability refuses duplicate A handle before original navigation (0.179256ms)
+✔ owner availability refuses over-bound capture before original navigation (0.300428ms)
+✖ original Selection final Stop joins physical absence with its exact stopped UI within the same poll budget (7.561655ms)
+✖ Selection stopped convergence refuses wrong identity, unaccepted progress, visible progress and exhausted observation budget (1.92801ms)
+✔ ordinary Node imports and synchronous observations remain inert (1.570239ms)
+✔ constructor subscription observes the original async child after pid assignment (125.148685ms)
+✔ the observer preserves an actual unhandled child-process error (202.906132ms)
+✔ failed reads, writes and unknown child fields cannot change the original operation (1.164664ms)
+✔ the original TEST helper path exposes only its closed requested target class (0.678751ms)
+✔ event and pending-child bounds explicitly preserve incomplete coverage (0.829695ms)
+ℹ tests 103
+ℹ suites 0
+ℹ pass 101
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6998.509965
+
+✖ failing tests:
+
+test at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:1731:1
+✖ original Selection final Stop joins physical absence with its exact stopped UI within the same poll budget (7.561655ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  3 !== 2
+  
+      at selectionStoppedConvergence (file:///workspace/scratch/82d3f9ba6b85/agent-teams-e2e/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:1661:73)
+      at async TestContext.<anonymous> (file:///workspace/scratch/82d3f9ba6b85/agent-teams-e2e/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:1732:13)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 3,
+    expected: 2,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:1747:1
+✖ Selection stopped convergence refuses wrong identity, unaccepted progress, visible progress and exhausted observation budget (1.92801ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  3 !== 2
+  
+      at selectionStoppedConvergence (file:///workspace/scratch/82d3f9ba6b85/agent-teams-e2e/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:1661:73)
+      at async TestContext.<anonymous> (file:///workspace/scratch/82d3f9ba6b85/agent-teams-e2e/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:1751:15)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 3,
+    expected: 2,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

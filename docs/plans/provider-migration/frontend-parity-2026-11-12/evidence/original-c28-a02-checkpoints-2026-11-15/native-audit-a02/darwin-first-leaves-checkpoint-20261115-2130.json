@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "kind": "frozen original-a02 first Darwin leaves evidence-only checkpoint",
+  "sourceHead": "a02ab70edfdcb4169627e804f0337c9ad6b52af6",
+  "observedJobsAt": "2026-11-15 21:25:25 UTC",
+  "selectionCount": 9,
+  "selectedBytes": 381058,
+  "files": [
+    {
+      "path": "a02-process-darwin-x64.zip",
+      "bytes": 12394,
+      "gitBlob": "8eeb45bcc989ec940de7465765a5d31ed7de04ce",
+      "sha256": "9e95d33829f173a41002d0f3ab8854aebbb5221f86349b3c8d9932fb8c0d1d96"
+    },
+    {
+      "path": "a02-v2-darwin-x64.zip",
+      "bytes": 10515,
+      "gitBlob": "6fe5eb3595b834e0f0f3b93148d905f8498f150d",
+      "sha256": "afaa8fb9f404829d3abbaf8950ad517ad84816fde424e36b27d30c9c894ed839"
+    },
+    {
+      "path": "job-132959932726.log",
+      "bytes": 111654,
+      "gitBlob": "f457565e3bfbeaa5ea689969687a51e4152d637a",
+      "sha256": "96ca68135d37588aa68ca9aed53f26f3b5a06fe2e128e2cc577cbb94955c2f8c"
+    },
+    {
+      "path": "job-132960007302.log",
+      "bytes": 109870,
+      "gitBlob": "eeea32f195588a3690df54ec4072f1a1d952955f",
+      "sha256": "e0ffb2fe61663664dbf2d6236210553b23ad4279d61f1559fdd7fdc9909101b5"
+    },
+    {
+      "path": "archive-audit-process_darwin_x64.json",
+      "bytes": 3302,
+      "gitBlob": "8e1caac4c4647de91ae71ea5a38c63391f5dda16",
+      "sha256": "c7e1f8ac2973bfb1ec3c66927da2d1fe5893b28d5129a05825756977024c0adc"
+    },
+    {
+      "path": "archive-audit-v2_darwin_x64.json",
+      "bytes": 2437,
+      "gitBlob": "2a89a423623ae86ad2f29b0ef668a77bc406eaa2",
+      "sha256": "d955520d6fcb8fff975f7b74dbede326eff07456e49d0f41dfa1397713191a7e"
+    },
+    {
+      "path": "receipt-audit-darwin-x64.json",
+      "bytes": 31536,
+      "gitBlob": "2015897df44c28437e2b620bc4e6e6678c31bfe0",
+      "sha256": "c5ffad3f97261deb27b586cdf7757b528d484b99644ddc8fa4d81a3cab1a9d5f"
+    },
+    {
+      "path": "initial-jobs-snapshot-20261115-2125.json",
+      "bytes": 92726,
+      "gitBlob": "c972923d758462f32dd68240f6f408a3d04addcb",
+      "sha256": "883653a2e045c189626bfe3c686bc66d0abe9530c47b4d1ddb3ef37e31dff4a6"
+    },
+    {
+      "path": "plan29-a02-darwin-first-leaves-appendix.md",
+      "bytes": 6624,
+      "gitBlob": "c9cfc9ed183bdc3a0cc9bb4d6937f3f3f088337e",
+      "sha256": "47fe8ce234b204b6f8b0848d708399c9a774fe048ff04b9c6fead9fbaa7c8f3c"
+    }
+  ],
+  "recoverability": "Original ZIP bytes include every extracted member; extraction duplicates, b64 transport, scripts and temporary download URLs are excluded.",
+  "sourceOrRefOrCiChanges": false,
+  "nativeOrProviderOrTestExecution": false,
+  "qualification": "Darwin Process bounded PASS; V2 overall original P09 FAIL with separate manual Host PASS. No Windows/P08/P09/product/Desktop/release/composed-source promotion."
+}

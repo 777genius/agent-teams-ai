@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "kind": "MANIFEST_SELECTED_PROVIDER_RECEIPT_SCHEMA_CORRECTION",
+  "recordedAt": "2026-11-19T23:05:48.491652+00:00",
+  "sourceHeadBeforeCorrection": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+  "scope": {
+    "changedProductCode": false,
+    "changedTestOrDecoder": false,
+    "path": "vendor/provider-migration/v2-admission-45a569bd/source-receipt.json",
+    "beforeSha256": "abdb69a1e33c1c862eb2f2953dc532412c2244b79405ea97dcdd9afb1152ee2d",
+    "afterSha256": "68ce815a45ebccbb5e7e18fd9b9c61ec66739711e5a8ad0424f0b8fcac672f9b",
+    "semanticDelta": "Move the unchanged implementation and Session SPI metadata objects under the existing canonical packages map, using their archive basenames. All other fields unchanged.",
+    "archiveSha256": "ee1ed16c939dbdab4ee6b31941b4bff5d7e1e423224f8ca32e65f3a6ec25aed4",
+    "archiveManifestLockReaderAndTestBytesUnchanged": true
+  },
+  "originalFailure": {
+    "run": 44629178809,
+    "job": 135931029036,
+    "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44629178809/job/135931029036",
+    "buildsPassed": [
+      "legacy-agent-host",
+      "agent-teams-controller",
+      "agent-teams-mcp"
+    ],
+    "failedTest": "the selected provider receipt digest matches the actual manifest-selected archive bytes",
+    "reason": "Existing strict decoder received undefined at object(receipt.packages).",
+    "desktopJourneyStarted": false,
+    "terminalResult": "FAIL",
+    "sameFirstErrorConfirmedJobs": [
+      135931029385,
+      135931029257
+    ]
+  },
+  "verification": {
+    "originalUnchangedTests": {
+      "before": {
+        "pass": 3,
+        "fail": 1,
+        "skip": 0
+      },
+      "after": {
+        "pass": 4,
+        "fail": 0,
+        "skip": 0
+      }
+    },
+    "originalInstalledVerifier": "PASS for actual manifest-selected archive hash and installed compiled JavaScript bytes",
+    "newTestsAdded": false,
+    "compilerRunNeeded": false,
+    "reasonNoCompilerRun": "Only receipt JSON shape changed; existing source/test/decoder bytes remain unchanged.",
+    "checks": {
+      "recordedAt": "2026-11-19T22:58:42.637418+00:00",
+      "candidate": {
+        "status": "EXACT_CANONICAL_SHAPE_ONLY",
+        "path": "/workspace/scratch/f45fed8e9067/agent-teams-ai/vendor/provider-migration/v2-admission-45a569bd/source-receipt.json",
+        "bytes": 6135,
+        "sha256": "68ce815a45ebccbb5e7e18fd9b9c61ec66739711e5a8ad0424f0b8fcac672f9b",
+        "metadataObjectsUnchanged": true,
+        "otherFieldsUnchanged": true,
+        "archiveManifestLockReaderAndTestUnchanged": true
+      },
+      "protectedBytesUnchanged": true,
+      "results": [
+        {
+          "name": "green",
+          "command": [
+            "/workspace/scratch/f45fed8e9067/audit1192/TEST-node-inputs/node/v24.21.0/linux-x64/node",
+            "--test",
+            "--test-reporter=tap",
+            "--test-name-pattern=^(the selected provider receipt|provider receipt |every present provider implementation digest)",
+            "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+          ],
+          "exitCode": 0,
+          "durationMs": 1874.136,
+          "log": "/workspace/scratch/f45fed8e9067/audit1192/app-provider-receipt-schema-green.log",
+          "logBytes": 1147,
+          "logSha256": "036f0b216dee828d9a7d1564bb962ab00d5688ff25fdbc3b31d652abc8d132a3",
+          "tail": "  duration_ms: 36.250543\n  type: 'test'\n  ...\n1..4\n# tests 4\n# suites 0\n# pass 4\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 1691.494537"
+        },
+        {
+          "name": "installed",
+          "command": [
+            "/workspace/scratch/f45fed8e9067/audit1192/TEST-node-inputs/node/v24.21.0/linux-x64/node",
+            "--input-type=module",
+            "-e",
+            "const { readNativeProviderArtifact, verifyNativeProviderArtifact } = await import('./packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts'); const selected = await readNativeProviderArtifact(process.cwd()); await verifyNativeProviderArtifact(process.cwd(), selected); console.log(JSON.stringify({ status: 'PASS_ORIGINAL_MANIFEST_SELECTED_ARCHIVE_AND_INSTALLED_JS', selected }));"
+          ],
+          "exitCode": 0,
+          "durationMs": 2465.411,
+          "log": "/workspace/scratch/f45fed8e9067/audit1192/app-provider-receipt-schema-installed.log",
+          "logBytes": 263,
+          "logSha256": "7cc3806ec0c7567b77616d02e48e65e2a2528ecca68f21c025fd6852c4dbafe4",
+          "tail": "{\"status\":\"PASS_ORIGINAL_MANIFEST_SELECTED_ARCHIVE_AND_INSTALLED_JS\",\"selected\":{\"path\":\"vendor/provider-migration/v2-admission-45a569bd/agent-teams-provider-implementations-0.0.0.tgz\",\"sha256\":\"ee1ed16c939dbdab4ee6b31941b4bff5d7e1e423224f8ca32e65f3a6ec25aed4\"}}"
+        }
+      ]
+    }
+  },
+  "independentR2": {
+    "path": "app-provider-receipt-schema-independent-r2.json",
+    "sha256": "5a84c291ebf1d8d137851c204945755020e056ad562b920752e700274941b14f",
+    "status": "PASS_SCOPED_RECEIPT_SCHEMA_SOURCE_AND_SAVED_EVIDENCE_R2",
+    "findings": []
+  },
+  "rawEvidence": {
+    "path": "provider-receipt-schema-checks-20261119.tar.gz",
+    "bytes": 49036,
+    "sha256": "94218252005a5aadc0303a936499aa59112f26e2a0cb5e9e0deb4873bf7ee1a5"
+  },
+  "limits": [
+    "Original d8 Desktop prerequisite failures remain failures; no GUI journey was reached.",
+    "This closes the demonstrated local receipt-schema prerequisite only; next published-source original Desktop CI remains necessary.",
+    "No archive repack, dependency change, native-provider execution, deadline change or relaxed decoder/test oracle."
+  ]
+}

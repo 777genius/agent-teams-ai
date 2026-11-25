@@ -1,0 +1,79 @@
+{
+  "kind": "Independent published docs and isolated stage I source R2; no project execution by reviewer",
+  "verdict": "APPROVE",
+  "recordedAtUtc": "2026-11-15T22:17:01.841889+00:00",
+  "documentation": {
+    "head": "d556e23288c820b983a33808117f624cb2e93e39",
+    "tree": "e9004d75eace24307f5cc69a2110e434e6ad3e9c",
+    "parents": [
+      "4e74d36ba6212938c40a499603ee0419a183fc0a"
+    ],
+    "apiAndGitTupleExact": true,
+    "fullLeafCount": 9799,
+    "changedDocumentationPaths": 137,
+    "newEvidencePaths": 136,
+    "actualGitFilesRead": 137,
+    "actualGitBytesRead": 5038274,
+    "otherExistingLeavesAndModesExact": 9662,
+    "plan29": {
+      "bytes": 1072934,
+      "blob": "f48ed094dc7ed844be870ec03cf28499b75e18a2",
+      "sha256": "e0fb71c44ee54279d0ddcda193e718e8b2639e076bcdcbb359669df6a3a92be2"
+    },
+    "fullPriorPlan29PrefixBytes": 945358,
+    "exactAppendedBlocks": 12,
+    "rootReadbackProof": {
+      "path": "4dc-adoption-publication/late-332-v2/published-readback.json",
+      "bytes": 46069,
+      "blob": "aa68892e9b9befb66111b09f3d9e0dc2aa770ae8",
+      "sha256": "653dad90f4b788002890ca14ae356e2d18de15dacd094944f161f9d8e6abfae3"
+    }
+  },
+  "stageI": {
+    "head": "88ada74cfc4598b1bff2ab3bc0f9d08177862dbf",
+    "tree": "6ea25725dec09d0617c2bc438472d6b77f3354ec",
+    "parents": [
+      "d556e23288c820b983a33808117f624cb2e93e39",
+      "4dc08dea7eeed5c286cf310e09a2ba26d84a9546"
+    ],
+    "apiAndGitOrderedTupleExact": true,
+    "fullLeafCount": 9800,
+    "changedPaths": 20,
+    "existingPathsModified": 19,
+    "newPaths": 1,
+    "otherLeavesAndModesExact": 9780,
+    "selectedGitAndWorktreeFiles": 76,
+    "selectedGitAndWorktreeBytes": 1679123,
+    "hostGitAndWorktreeFiles": 615,
+    "hostGitAndWorktreeBytes": 4084414,
+    "hostSourceClosureUnchanged": true,
+    "validationManifest": "c12e7f2c56649cdd8d2d21b08884bb876fd3a6d9",
+    "hostSourceClosure": "92fe358082aa8c5892c084798b2bdb8b5bdb106f",
+    "plan29Unchanged": "f48ed094dc7ed844be870ec03cf28499b75e18a2",
+    "plan30Unchanged": "eb68d2643eb11527594d546d8a5088f48f8e2865",
+    "worktreeHeadAndCleanStateObservedBeforeExecution": true,
+    "rootReadbackProof": {
+      "path": "a02-adoption-local/published-source-readback.json",
+      "bytes": 19867,
+      "blob": "d268335336d2f999309f1924cde2e95e0c504b08",
+      "sha256": "62b1d48e22b26c15377cd7d630a5b54656847e419527897be9c705d9b7a143dd"
+    }
+  },
+  "outstandingIncoming": {
+    "head": "6e90f38155f5a8edf57b0336b6d79e4ca60c110b",
+    "tree": "d1d1b7cedb6e828ae4d08fa160af132fa2f1031e",
+    "soleParent": "332fbe3420c811c095dac4187d3f9664e8c47179",
+    "apiConfirmedOnlyTwoDocumentationPaths": true,
+    "adoptedIntoI": false,
+    "laterHistoryAndPlan32AndPlan33PreservationRequired": true,
+    "isolatedIPRRefUpdateAuthorized": false
+  },
+  "boundaries": [
+    "Full source and documentation byte review only; original frozen ten commands remain to be executed and attributed by root.",
+    "No tests, compilers, Node runtime, native providers, CI jobs, commits, refs or PR changes were executed by this reviewer.",
+    "The 76 selected-source and 615 Host sets may overlap; their byte counts describe each independently checked set.",
+    "Workspace clean-state observation is before stage I execution; it is not a postflight claim.",
+    "No source-based review is a native/Desktop, whole-workspace, backend-project or latest incoming PR qualification.",
+    "The preceding uncommitted 656ffc and ff8e proposals remain historical; only corrected docs e900 are the published source-stage parent."
+  ]
+}

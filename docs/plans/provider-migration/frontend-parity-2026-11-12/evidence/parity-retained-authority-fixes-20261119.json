@@ -1,0 +1,110 @@
+{
+  "kind": "PARITY_RETAINED_AND_DEFAULT_AUTHORITY_FIXES",
+  "recordedAt": "2026-11-19T17:55:18.874723+00:00",
+  "baseSourceHead": "f6c223c9f83224218214e6c79643588a3369e3ba",
+  "files": [
+    {
+      "path": "packages/legacy-agent-host/src/composition/createRuntimeTeamLaunch.ts",
+      "baseSha256": "3bbf8f1ce6c0ff67e1bcccbe1d69dd58c0ce5bffe5453884a9136014573db8bb",
+      "sha256": "51b2e2f1d685214c430b105dd777e74f8a185b1244c2acecb7b3262267fadc6b",
+      "bytes": 9037,
+      "lines": 188
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-control-authority.test.ts",
+      "baseSha256": "781d17ce052ab2390f9c8abac8542b9a47be0da930f524c3281dc3858adcee3a",
+      "sha256": "321bfc99f1a86a71f12039cf2d2e461f2121f8c3bc23d90a489b4c816e75e21a",
+      "bytes": 15994,
+      "lines": 278
+    },
+    {
+      "path": "src/main/composition/captureDesktopRetainedLegacyRuntime.ts",
+      "baseSha256": "244ec262c005254f4cfe86aaa2d5eb5899d77a93a2a2d41f63dced3e13a4616b",
+      "sha256": "885064386e8d63b5221294e55011aa96663a095131d3fcec1c018c386b410f78",
+      "bytes": 18788,
+      "lines": 460
+    },
+    {
+      "path": "test/features/agent-backend/retainedLegacyRuntimeIdentity.test.ts",
+      "baseSha256": "f2e23ba575a0046f8c709586b1fa5b63701e0a537a1e92c33e7fcd504d022385",
+      "sha256": "cc58d7d8c619ecc67f77a031e0652bd867779b84a84d44acc183069c9ae8e537",
+      "bytes": 19192,
+      "lines": 474
+    }
+  ],
+  "defaultLaunchAuthority": {
+    "originalFailureSource": "33ea959 Windows x64 OpenCode source A probe expired by183ms; account authority callbacks consumed4974ms. No exact millisecond improvement is inferred.",
+    "change": "Retain one original same-Team lock across the existing synchronous execution/admin/lifecycle and captured revision/control checks; reuse captureTeamAccountRead. No generic allocation/launch-store enclosure, caching, action/order/deadline change.",
+    "regression": "Actual createRuntimeTeamLaunch default startMember to RuntimeOwner.openSession callback; preimage RED with2publications, postimage1; all5original state reads retained plus1outer grant read; later invocation has a fresh token.",
+    "controlledTests": {
+      "passed": 18,
+      "failed": 0,
+      "skipped": 0
+    },
+    "hostBuild": "PASS_TS7",
+    "hostTestTypes": "PASS_TS7",
+    "sourceGuard": "PASS",
+    "fastLint": "PASS",
+    "independentReview": {
+      "reviewer": "parity_review",
+      "status": "PASS",
+      "unresolved": []
+    },
+    "nativeReadinessQualified": false
+  },
+  "retainedControlPublication": {
+    "originalFailureSource": "33ea959 retained-original UI progressed through hydration, then no model metadata effect; original scope reported team/runtime changed.",
+    "cause": "Actual Main control endpoint publication deletes then sets CLAUDE_TEAM_CONTROL_URL, invalidating a full ambient process.env identity snapshot before metadata dispatch.",
+    "change": "Private projection omits only Main-owned process CLAUDE_TEAM_CONTROL_URL at3identity observations; frozen child processEnv/shellEnv and other source/account/config/executable guards stay unchanged. Child control URL still comes from the existing Main resolver.",
+    "red": {
+      "cases": 2,
+      "failures": 2,
+      "reason": "account-changed; original publication/atomic source-write guard"
+    },
+    "green": {
+      "passed": 33,
+      "failed": 0,
+      "skipped": 0,
+      "identityCases": 27,
+      "existingPublicationCases": 6,
+      "testShaBeforeOneLineIsolationFix": "38a3a4199a2f0faea1785596a66cfe503ea85156a21b9691caa250be6405488e"
+    },
+    "finalTestIsolation": "One vi.stubEnv registration restores a pre-existing process control URL; independently reviewed, no repeated suite.",
+    "negativeCases": [
+      "account environment",
+      "credential bytes",
+      "PATH",
+      "original Team configuration",
+      "cached shell control URL"
+    ],
+    "fastLint": "PASS before the reviewed one-line test cleanup adjustment",
+    "sourceGuard": "PASS",
+    "independentReview": {
+      "reviewer": "delivery_review",
+      "status": "PASS",
+      "unresolved": []
+    },
+    "originalDesktopQualified": false
+  },
+  "scopedTypes": {
+    "compiler": "TypeScript7.0.2",
+    "result": "PASS",
+    "exitCode": 0,
+    "command": "GOMEMLIMIT=1536MiB GOMAXPROCS=2 node node_modules/@typescript/native/bin/tsc --noEmit -p node_modules/.cache/parity-typecheck/retained-control-publication.json",
+    "sourceFiles": 2,
+    "repositoryAmbientDeclarations": 6,
+    "explicitPinnedReactDeclaration": "@types/react19.2.14/index.d.ts",
+    "reactDeclarationSha256": "dc0a7f107690ee5cd8afc8dbf05c4df78085471ce16bdd9881642ec738bc81fe",
+    "compilerOptionsOverridden": false,
+    "preliminaryAttempts": "Two scoped attempts lacked the React namespace required by unchanged transitive triggerColors. The first omitted that existing dependency; the next include was filtered by the original node_modules exclusion. Final files entry includes the actual pinned declaration (no stub); --showConfig verified all9roots.",
+    "fullWorkspaceQualification": false
+  },
+  "artifacts": {
+    "archive": "parity-retained-authority-checks-20261119.tar.gz",
+    "bytes": 6112,
+    "sha256": "f8cd39cd89fefcf9574b7991c28074f798d0e0193f5e6e8d7065974392d85ab8",
+    "authorityLogsProvenance": "Clearly labelled transcripts of completed tool outputs, not original redirected process logs; no command rerun to produce them.",
+    "retainedLogsProvenance": "Original redirected command output."
+  },
+  "remaining": "Original current-source Windows readiness and retained Desktop must execute; P09A and other pending native/GUI gates remain separate. No native/real Claude/Codex execution or CI rerun/dispatch/cancel performed for these local checks."
+}

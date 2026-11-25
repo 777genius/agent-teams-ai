@@ -1,0 +1,886 @@
+{
+  "sourceHead": "d382c393898d35c9340cd903d1c02fb868c18a8e",
+  "runId": 43736377103,
+  "runAttempt": 1,
+  "jobId": 132896821996,
+  "artifactId": 14174176364,
+  "archive": {
+    "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/d382-packaged-win-x64.zip",
+    "bytes": 616083,
+    "sha256": "5ca3d420c35d1151b75003d5a7a0aa18d1f74bd08f7bf276ab9e0fd8d5ba3d7a",
+    "crcPathAudit": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/archive-audit-packaged-win-x64.json"
+  },
+  "log": {
+    "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/job-132896821996.log",
+    "bytes": 310419,
+    "sha256": "728048342acbaa379168b4d9e1fabcddf6cd76cc1265a002a62aafd74a45c47e"
+  },
+  "files": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/packaged_win_x64/_temp/opencode-v2-packaged-inputs.json",
+      "bytes": 780,
+      "sha256": "1d22ff263b13c9bc84e8a567d159bec063c4e31e944c09b3266f4a9ff2cff705"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/packaged_win_x64/_temp/opencode-v2-packaged-native.json",
+      "bytes": 5383,
+      "sha256": "3acae31e636e64ecf63ad7614f3f8e0f72201adc018f62320eea4cad1f423f0c"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/packaged_win_x64/_temp/opencode-v2-packaged.json",
+      "bytes": 1186,
+      "sha256": "4dd2556e633d02095b7e12640d8e7b244bd95e97dca56d6ed33ba781982c6d4b"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/packaged_win_x64/agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+      "bytes": 1151383,
+      "sha256": "8141d84734e494617ecdbdb7559b3473a175675fc313249d94d660a1b515e342"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/packaged_win_x64/_temp/windows-same-main-process-ui.json",
+      "bytes": 715795,
+      "sha256": "d5c1e06384bd68208f110deef14bcb73c03c4d653d1670bcc7941bb4af067bff"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/packaged_win_x64/_temp/windows-same-main-process-ui.app.log",
+      "bytes": 5210,
+      "sha256": "40e5cd8545928bea1b16cba32abb00607abe9e6ab291ab8d01b3b64fd9925c77"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/packaged_win_x64/_temp/windows-same-main-process-ui.controller.log",
+      "bytes": 41259,
+      "sha256": "95a0f3e657d72a97df6d7a751609c6ff6664e9564724ba30423b4bc7b799e894"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/packaged_win_x64/_temp/windows-same-main-process-ui.before-crash.png",
+      "bytes": 79694,
+      "sha256": "224a9a8a0d95912d3fab29396d53211961adf27ad1d955bd94a7ce87c59549d4"
+    }
+  ],
+  "sourceQualification": {
+    "pins": 1736,
+    "beforeAfterEqual": true,
+    "exactGitRawMatches": 0,
+    "exactGitLfToCrlfMatches": 1736,
+    "missingOrContentMismatches": 0,
+    "audit": "/workspace/scratch/82d3f9ba6b85/native-audit-d382/packaged-win-x64-source-crlf-audit.json",
+    "keyLeaves": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "blob": "2ea000d33b7c872a4a1bcd5f2a510c8418924fe5",
+        "gitBytes": 25052,
+        "gitLF": 456,
+        "gitCRLF": 0,
+        "recordedSha256": "d66be68fdd7972145f4b807f32a44f3dd750a1c02f67e8fea423bcd5bb03f309",
+        "gitRawSha256": "9e9d4115a2216bee4f1f6bd5cdec6c0ceef5f0aef9b3968ac4611a7955a2e0c7",
+        "gitLfToCrlfSha256": "d66be68fdd7972145f4b807f32a44f3dd750a1c02f67e8fea423bcd5bb03f309",
+        "gitLfToCrlfBytes": 25508,
+        "rawMatches": false,
+        "crlfMatches": true
+      },
+      {
+        "path": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+        "blob": "0b1bbc3ef47cd55ac3e23c13890fce281de01c98",
+        "gitBytes": 31223,
+        "gitLF": 485,
+        "gitCRLF": 0,
+        "recordedSha256": "9be5af55b58539523c03194b62ebb68f5b1b5363c8c3994deee833d91fed7499",
+        "gitRawSha256": "4c037ffe4be03b64ef9e5d9172246a9744f3fc1cf55b48af630811a4c580eaa2",
+        "gitLfToCrlfSha256": "9be5af55b58539523c03194b62ebb68f5b1b5363c8c3994deee833d91fed7499",
+        "gitLfToCrlfBytes": 31708,
+        "rawMatches": false,
+        "crlfMatches": true
+      },
+      {
+        "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+        "blob": "eae01eedc52f8f83a4ffb7f4f9a0a80ab7b7822b",
+        "gitBytes": 31871,
+        "gitLF": 547,
+        "gitCRLF": 0,
+        "recordedSha256": "edc181f4b9567b3f99655fe446166c63d117dbcf54a1f644bc694aa759b2a4cf",
+        "gitRawSha256": "57c5025eab6c6217c82be2d01e3f42f7820802a0d4a00901b469da66d2f0212c",
+        "gitLfToCrlfSha256": "edc181f4b9567b3f99655fe446166c63d117dbcf54a1f644bc694aa759b2a4cf",
+        "gitLfToCrlfBytes": 32418,
+        "rawMatches": false,
+        "crlfMatches": true
+      },
+      {
+        "path": "tools/owned-process-broker/nativeGateContext.ts",
+        "blob": "27c6da3bac59ac276c40e79f7c4e1c548adb9d31",
+        "gitBytes": 7278,
+        "gitLF": 192,
+        "gitCRLF": 0,
+        "recordedSha256": "3f868f0e0c0066bf7a0ecb169dd897274e11d50479c6cfba8aed11f31760dfb6",
+        "gitRawSha256": "7e9096550ed0b90589a91978f8621572424d5b6c24137c13c641f3dde7897200",
+        "gitLfToCrlfSha256": "3f868f0e0c0066bf7a0ecb169dd897274e11d50479c6cfba8aed11f31760dfb6",
+        "gitLfToCrlfBytes": 7470,
+        "rawMatches": false,
+        "crlfMatches": true
+      },
+      {
+        "path": "tools/owned-process-broker/gateController.cpp",
+        "blob": "ebc96f50b2a901aae4b97b3b4dcb484f449170a5",
+        "gitBytes": 5935,
+        "gitLF": 108,
+        "gitCRLF": 0,
+        "recordedSha256": "604a73ce8f1e31c3ee094a1ceb7a866c71270590ba40f94c70d7f0c1a7543518",
+        "gitRawSha256": "45d1ce375fbbcce05bc37f885071f8331387bd87c6b9c5fce1b075be56a32532",
+        "gitLfToCrlfSha256": "604a73ce8f1e31c3ee094a1ceb7a866c71270590ba40f94c70d7f0c1a7543518",
+        "gitLfToCrlfBytes": 6043,
+        "rawMatches": false,
+        "crlfMatches": true
+      },
+      {
+        "path": "scripts/e2e/opencode-diagnostics/packaged.mjs",
+        "blob": "7da83c7a4e631f7599fc57861f19e14629db6036",
+        "gitBytes": 27780,
+        "gitLF": 749,
+        "gitCRLF": 0,
+        "recordedSha256": "866967ed1d8d4a15593de409336c09f3154d0907c9d3dab09745a8a0bd0d611a",
+        "gitRawSha256": "5fd9116cb656ce7804dc3253decb3f386e2c17feda57cc40586cc6e0df6fd8d5",
+        "gitLfToCrlfSha256": "866967ed1d8d4a15593de409336c09f3154d0907c9d3dab09745a8a0bd0d611a",
+        "gitLfToCrlfBytes": 28529,
+        "rawMatches": false,
+        "crlfMatches": true
+      },
+      {
+        "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+        "blob": "71d5629149e8f499a45b54a99922145ee3cae09e",
+        "gitBytes": 12335,
+        "gitLF": 312,
+        "gitCRLF": 0,
+        "recordedSha256": "8b44f15d068ebda80de79947b58cd41ef0c8e7f86006ca2897d0b046394b9bdf",
+        "gitRawSha256": "32a6424daf52342445fd11febc7ea5d59fb1940209a677f063e5fcd5e65c8f2e",
+        "gitLfToCrlfSha256": "8b44f15d068ebda80de79947b58cd41ef0c8e7f86006ca2897d0b046394b9bdf",
+        "gitLfToCrlfBytes": 12647,
+        "rawMatches": false,
+        "crlfMatches": true
+      }
+    ]
+  },
+  "packagedV2": {
+    "native": {
+      "kind": "TEST_PACKAGED_NATIVE_V2_HOST",
+      "status": "PASS",
+      "packaged": {
+        "executionOrigin": "packaged-extraResources",
+        "appAsarSha256": "f71aaaf1b5fd82d5f8c3a2ff09ebd13188126f06b282a5228ae215f24fd4b447",
+        "candidateManifestSha256": "8141d84734e494617ecdbdb7559b3473a175675fc313249d94d660a1b515e342",
+        "harnessSha256": "a17e501e88cb3b031c647fb511e8ebfdcb780964f70039f9c465c1a1533181dc",
+        "sourceCheckoutUnavailable": true,
+        "legacyRuntimeUnavailable": true,
+        "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+        "nodeArchiveSha256": "158f7685b44de51f6c0df1d153526cbcd3e1bc739a8dfc607721cef75de9e541",
+        "providerArtifacts": [
+          {
+            "name": "@agent-teams/provider-implementations",
+            "sha256": "91350f829b72f83e613505bb444ff0d9ef98fb0835e3e438b918bbea8d930f94"
+          },
+          {
+            "name": "@agent-teams/provider-session-contracts",
+            "sha256": "aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db"
+          }
+        ],
+        "packages": 120,
+        "files": 8111
+      },
+      "sourceHead": "d382c393898d35c9340cd903d1c02fb868c18a8e",
+      "platform": "win32-x64",
+      "version": "2.1.4",
+      "approvalMode": "manual",
+      "nodeVersion": "v24.21.0",
+      "modelSelection": {
+        "providerId": "TEST-local",
+        "modelId": "TEST-model-B",
+        "variant": "high"
+      },
+      "configurationSelection": {
+        "scope": "project",
+        "original": "project-A",
+        "later": "project-B"
+      },
+      "preferencesSelection": {
+        "nativeDefault": "TEST-local/TEST-model",
+        "appDefault": "TEST-local/TEST-model-B"
+      },
+      "digests": {
+        "bun": "095db4abae203d42f29fdec26da4a882fcde6333cdd84e40c0c7828c0cf543f6",
+        "manifest": "b15576ab97dca04f002f3b07972e49290f0933e0f66c51b7332703a5b76ad628",
+        "node": "ba4e6d110e8c1592a1ecd390f6b05f3da124b13871a5be62b341a07a853c6c32",
+        "hostSource": "3d3b738c08e5574fbad598b10904c98c27095cd72810fc9466d63574b54a979c",
+        "hostDist": "6c8c4b0cc19b33f7c6db5e456e51708a29f70c97eda769cfc24f441d8b68b1ce",
+        "provider": "91350f829b72f83e613505bb444ff0d9ef98fb0835e3e438b918bbea8d930f94",
+        "windowsShell": "38f4384643b3fa0de714d2367b712c2e0fa1c89e2cfd131ae6b831ad962b1033"
+      },
+      "steps": [
+        "original_host_embedded_native_and_mcp_ready",
+        "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+        "changed_project_config_did_not_retarget_running_native_session",
+        "original_uploaded_PNG_native_image_inference_and_public_readback",
+        "checkpoint_and_original_host_native_cleanup_confirmed",
+        "cold_host_restored_native_history_without_model_or_tool_replay"
+      ],
+      "cleanup": true,
+      "phaseElapsedMs": {
+        "original_host_embedded_native_and_mcp_ready": 49606,
+        "native_model_tool_effect_permission_mcp_task_and_reply_completed_once": 136382,
+        "changed_project_config_did_not_retarget_running_native_session": 136382,
+        "original_uploaded_PNG_native_image_inference_and_public_readback": 136382,
+        "checkpoint_and_original_host_native_cleanup_confirmed": 136791,
+        "cold_host_restored_native_history_without_model_or_tool_replay": 170895
+      },
+      "elapsedMs": 185938,
+      "cancelled": false,
+      "inputObservation": {
+        "reads": 487,
+        "last": {
+          "phase": "allocated",
+          "custody": "owned",
+          "nativeReady": true,
+          "attached": true,
+          "sealed": false,
+          "diagnostic": null,
+          "inputs": [
+            {
+              "phase": "terminal",
+              "terminal": "succeeded"
+            },
+            {
+              "phase": "terminal",
+              "terminal": "succeeded"
+            }
+          ],
+          "interactions": [
+            {
+              "kind": "permission",
+              "phase": "resolved"
+            },
+            {
+              "kind": "permission",
+              "phase": "resolved"
+            }
+          ]
+        }
+      },
+      "launchObservation": {
+        "openElapsedMs": 32981,
+        "afterOpen": {
+          "available": true,
+          "status": "ready",
+          "reason": "context-applied",
+          "elapsedSinceAttemptMs": 32322,
+          "capturedTimeoutMs": 120000,
+          "claimed": true,
+          "nativeReady": true,
+          "contextApplied": true,
+          "everReady": true,
+          "usable": true,
+          "controlAvailable": true,
+          "noAllocation": false
+        }
+      },
+      "failureCode": null,
+      "hosts": [
+        {
+          "exitCode": 0,
+          "signalCode": null,
+          "stdoutValid": true
+        },
+        {
+          "exitCode": 0,
+          "signalCode": null,
+          "stdoutValid": true
+        }
+      ],
+      "modelOrigin": "localhost-scripted",
+      "modelRequests": 11,
+      "modelProgress": [
+        {
+          "elapsedMs": 49717,
+          "requests": 0
+        },
+        {
+          "elapsedMs": 55654,
+          "requests": 1
+        },
+        {
+          "elapsedMs": 55837,
+          "requests": 2
+        },
+        {
+          "elapsedMs": 56090,
+          "requests": 3
+        },
+        {
+          "elapsedMs": 56281,
+          "requests": 4
+        },
+        {
+          "elapsedMs": 94068,
+          "requests": 5
+        },
+        {
+          "elapsedMs": 94351,
+          "requests": 6
+        },
+        {
+          "elapsedMs": 94534,
+          "requests": 7
+        },
+        {
+          "elapsedMs": 94792,
+          "requests": 8
+        },
+        {
+          "elapsedMs": 105874,
+          "requests": 9
+        },
+        {
+          "elapsedMs": 134113,
+          "requests": 10
+        },
+        {
+          "elapsedMs": 134284,
+          "requests": 11
+        }
+      ],
+      "coordination": {
+        "status": "unqualified",
+        "cleanup": null
+      },
+      "modelFailures": [],
+      "vendorAuthQualified": false,
+      "desktopQualified": false,
+      "releaseQualified": false
+    },
+    "qualification": {
+      "kind": "TEST_PACKAGED_V2_QUALIFICATION",
+      "status": "PASS",
+      "sourceHead": "d382c393898d35c9340cd903d1c02fb868c18a8e",
+      "platform": "win32-x64",
+      "cleanup": true,
+      "phase": "finished",
+      "desktopJourneyQualified": false,
+      "vendorAuthQualified": false,
+      "releaseQualified": false,
+      "cleanupObservation": {
+        "originalExitObserved": true,
+        "nativeReceiptParsed": true,
+        "nativeReceiptBound": true,
+        "nativeCleanupConfirmed": true,
+        "firstFailure": null,
+        "firstRestorationFailure": null
+      },
+      "appAsarSha256": "f71aaaf1b5fd82d5f8c3a2ff09ebd13188126f06b282a5228ae215f24fd4b447",
+      "candidateManifestSha256": "8141d84734e494617ecdbdb7559b3473a175675fc313249d94d660a1b515e342",
+      "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+      "nodeSha256": "ba4e6d110e8c1592a1ecd390f6b05f3da124b13871a5be62b341a07a853c6c32",
+      "nativeExit": {
+        "code": 0,
+        "signal": null
+      },
+      "nativeReceiptSha256": "3acae31e636e64ecf63ad7614f3f8e0f72201adc018f62320eea4cad1f423f0c",
+      "sourceCheckoutUnavailable": true,
+      "legacyRuntimeUnavailable": true,
+      "sourceRestored": true,
+      "bundleRestored": true,
+      "legacyRuntimeRestored": true
+    },
+    "packages": 120,
+    "manifestFileEntries": 8111
+  },
+  "p08": {
+    "status": "INCOMPLETE",
+    "cleanup": false,
+    "counts": {
+      "mainStarts": 1,
+      "initialRuntimeOpen": 1,
+      "businessInput": 1,
+      "refreshClicks": 1,
+      "retryClicks": 1,
+      "uiStops": 0,
+      "quit": 1
+    },
+    "firstFailure": "Error: UI read timed out: original refreshed Team after positive product recovery; no mutation retry\n    at Object.waitRead (D:\\a\\agent-teams-ai\\agent-teams-ai\\scripts\\legacy-agent-host\\desktop-ui-controls.ts:171:11)\n    at async file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:449:3",
+    "cleanupFailure": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n0 !== 2\n\n    at Object.afterQuit (D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeWindowsAppFixture.ts:467:16)\n    at file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:498:56\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async within (file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:140:20)\n    at async file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:498:29",
+    "phases": [
+      {
+        "phase": "packaged-App-startup",
+        "atMs": 0.0643000000018219,
+        "budgetMs": 120000
+      },
+      {
+        "phase": "one-initial-Runtime-Open",
+        "atMs": 5413.562099999999,
+        "budgetMs": 45000
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "atMs": 10539.848699999999,
+        "budgetMs": 35000
+      },
+      {
+        "phase": "actual-Host-A-exit-and-metadata-Refresh",
+        "atMs": 33862.908599999995,
+        "budgetMs": 10000
+      },
+      {
+        "phase": "one-explicit-same-Main-Retry",
+        "atMs": 43859.8974,
+        "budgetMs": 10000
+      },
+      {
+        "phase": "original-product-Quit",
+        "atMs": 53939.3193,
+        "budgetMs": 30000
+      }
+    ],
+    "elapsedMs": 78851.86510000001,
+    "originalController": {
+      "pid": 6044,
+      "parent": 6880,
+      "birth": "2026-11-15T18:10:31.3155190Z",
+      "executable": "D:\\a\\_temp\\TEST-Windows-UI-build-43736377103-X64\\Release\\owned-process-gate-controller.exe"
+    },
+    "originalDriver": {
+      "pid": 7348,
+      "parent": 6044,
+      "birth": "2026-11-15T18:10:31.3236200Z",
+      "executable": "C:\\hostedtoolcache\\windows\\node\\24.21.0\\x64\\node.exe"
+    },
+    "originalMain": {
+      "pid": 1988,
+      "parent": 7348,
+      "birth": "2026-11-15T18:10:53.8738890Z",
+      "executable": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\AgentTeamsAI.exe"
+    },
+    "originalHost": {
+      "identity": {
+        "pid": 7796,
+        "parent": 1988,
+        "birth": "2026-11-15T18:10:56.9180370Z",
+        "executable": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\resources\\legacy-agent-host\\node\\v24.21.0\\win32-x64\\node.exe"
+      },
+      "writer": {
+        "pid": 7796,
+        "token": "5811ff30-02d2-400c-8123-74177ebe1bf8",
+        "publishedAtMs": 1794766258615,
+        "sha256": "d29d6d48d68497d2711b0688f462df4558205e7c9267f1299abe5fd27030ab1c",
+        "dev": "2695480082",
+        "ino": "1125899908187203"
+      }
+    },
+    "successorHost": {
+      "identity": {
+        "pid": 5228,
+        "parent": 1988,
+        "birth": "2026-11-15T18:11:44.0506520Z",
+        "executable": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\resources\\legacy-agent-host\\node\\v24.21.0\\win32-x64\\node.exe"
+      },
+      "writer": {
+        "pid": 5228,
+        "token": "bd036ddc-e9cb-499a-90cc-c5252063d112",
+        "publishedAtMs": 1794766305385,
+        "sha256": "381c125417711b969b21e1a52f04c39f23a7263bd9bf727930e5cf82368fa9f7",
+        "dev": "2695480082",
+        "ino": "1407374884897859"
+      }
+    },
+    "actualHostSuccessors": 1,
+    "readError": "Host team read unavailable",
+    "originalProcesses": {
+      "source": {
+        "mainEpoch": "922f00bc-eee5-4a51-902f-5bf7cdc569ef",
+        "providerCapability": "a5cfbd29-9995-4b4e-b934-c177ac89eda7",
+        "providerGeneration": "1263ad45-ecba-43ea-87ca-b9d197244a9f",
+        "root": {
+          "pid": 7372,
+          "birth": "01dd752cac41d73e"
+        }
+      },
+      "runtime": {
+        "binding": {
+          "backendId": "TEST-owner-751b87b7-3859-4cad-a701-5a3aa6e1cc08",
+          "teamId": "TEST-team",
+          "runId": "TEST-run",
+          "memberId": "alice-id",
+          "generation": "1"
+        },
+        "config": {
+          "tenantId": "TEST-owner-751b87b7-3859-4cad-a701-5a3aa6e1cc08",
+          "projectId": "TEST-project",
+          "sessionId": "TEST-session-751b87b7-3859-4cad-a701-5a3aa6e1cc08",
+          "generation": 1,
+          "configRevision": "TEST-native-1",
+          "requiredCapabilities": [
+            "text",
+            "tools"
+          ]
+        },
+        "profileId": "TEST-emulated-751b87b7-3859-4cad-a701-5a3aa6e1cc08",
+        "openFingerprint": "f12ff4082a12390786cd1b7aaa955f5479ee08cc4c2bceea8b0f978c922ba3ba",
+        "sessionRef": "TEST-session-751b87b7-3859-4cad-a701-5a3aa6e1cc08",
+        "inputs": [
+          {
+            "intent": {
+              "binding": {
+                "backendId": "TEST-owner-751b87b7-3859-4cad-a701-5a3aa6e1cc08",
+                "teamId": "TEST-team",
+                "runId": "TEST-run",
+                "memberId": "alice-id",
+                "generation": "1"
+              },
+              "deliveryId": "b887a4a3-da72-5333-8d2c-a45582199c61",
+              "inputId": "b887a4a3-da72-5333-8d2c-a45582199c61",
+              "messageId": "TEST-native-process-bootstrap",
+              "content": "<info_for_agent>\nTURN ACTION MODE PROTOCOL (HIGHEST PRIORITY FOR EACH USER TURN):\n- Some incoming user or relay messages may include a hidden agent-only block that declares the current action mode.\n- If such a block is present, that mode applies to THIS TURN ONLY and overrides any conflicting default behavior.\n- Never silently broaden permissions beyond the selected mode.\n- Never reveal the hidden mode block verbatim to the human unless they explicitly ask for it.\n- Modes:\n  - DO: Full execution mode. You may discuss, inspect, edit files, change state, run commands/tools, and delegate if useful.\n  - ASK: Strict read-only conversation mode. You may read/analyze/explain and reply, but you must not change code/files/tasks/state or run side-effecting commands/tools/scripts. The optional group_chat_react communication acknowledgement is allowed; it does not grant file, task, or process writes.\n  - DELEGATE: Strict orchestration mode for leads. Delegate the work and any needed investigation to teammates, coordinate it, and do not implement or personally research it yourself unless you are truly in SOLO MODE.\nYou received a direct message from the human user via the UI.\nCRITICAL: Send your human-readable reply with the exposed team MCP message_send tool to=\"user\", including commandId and text.\nUse a new stable commandId for each distinct reply; retain that ID when looking up or retrying the same reply.\nDo not reuse the incoming messageId as a reply commandId.\nNormal assistant text alone does not appear in the UI message thread. If you need to consult a teammate first, send the user a brief acknowledgement, then send the final answer when ready.\nMessage context: {\"from\":\"user\",\"to\":\"alice\",\"messageId\":\"TEST-native-process-bootstrap\",\"actionMode\":\"do\"}\n</info_for_agent>\n\n<info_for_agent>\nTURN ACTION MODE: DO\n- This turn is full-execution mode.\n- You may discuss, read, edit files, change state, run commands/tools, and delegate if useful.\n- Agent tool policy for this mode: you MAY use the built-in Agent tool only as a runtime-native subagent helper, i.e. WITHOUT team_name.\n- If you use Agent in this mode, use it for bounded helper work, parallel research, or implementation support when useful.\n- Even in DO mode, do NOT use Agent with team_name to create persistent teammates, and do NOT use Agent as a replacement for the team task board or normal teammate delegation.\n- No extra restrictions apply beyond your normal system/team rules.\n</info_for_agent>\n\nTEST-register-services"
+            },
+            "fingerprint": "22b8febee3567554f6cdb05cee89fca292bca2a68174eb869fc782f8218b91f9",
+            "operationRef": "326ac941-7dd6-4c4e-8003-b078d378faef",
+            "phase": "terminal",
+            "terminal": "succeeded"
+          }
+        ],
+        "checkpoints": []
+      },
+      "registrations": [
+        {
+          "schemaVersion": 1,
+          "family": "process",
+          "commandId": "TEST-register-TEST-primary",
+          "operation": "register",
+          "requestDigest": "4f6fe0a6361386c91eb985cabe97d4fbe385ce3f9e547e827ae0a8f2cbdf835d",
+          "principalId": "alice-session",
+          "binding": {
+            "backendId": "TEST-owner-751b87b7-3859-4cad-a701-5a3aa6e1cc08",
+            "teamId": "TEST-team",
+            "teamName": "test-emulated-processes"
+          },
+          "authorityRevision": 1,
+          "fingerprint": "d24f1e72bf688624b9bef6312abaa9b6b5945f3631cc6dcd9717eecb1127dea0",
+          "phase": "completed",
+          "state": {
+            "phase": "completed",
+            "native": "not-requested"
+          },
+          "nativeIntent": {
+            "mainEpoch": "922f00bc-eee5-4a51-902f-5bf7cdc569ef",
+            "providerCapability": "a5cfbd29-9995-4b4e-b934-c177ac89eda7",
+            "providerGeneration": "1263ad45-ecba-43ea-87ca-b9d197244a9f",
+            "root": {
+              "pid": 7372,
+              "birth": "01dd752cac41d73e"
+            },
+            "operationRef": "bb57d257-e22a-4b98-8fee-d713624b356c",
+            "command": {
+              "operation": "capture",
+              "pid": 6392,
+              "registrar": {
+                "backendId": "TEST-owner-751b87b7-3859-4cad-a701-5a3aa6e1cc08",
+                "teamId": "TEST-team",
+                "runId": "TEST-run",
+                "memberId": "alice-id",
+                "generation": "1"
+              }
+            }
+          },
+          "originalRegistration": {
+            "input": {
+              "pid": 6392,
+              "label": "TEST-primary"
+            },
+            "memberName": "alice",
+            "policyRequested": true
+          },
+          "capture": {
+            "mainEpoch": "922f00bc-eee5-4a51-902f-5bf7cdc569ef",
+            "providerCapability": "a5cfbd29-9995-4b4e-b934-c177ac89eda7",
+            "providerGeneration": "1263ad45-ecba-43ea-87ca-b9d197244a9f",
+            "root": {
+              "pid": 7372,
+              "birth": "01dd752cac41d73e"
+            },
+            "version": 5,
+            "platform": "win32",
+            "admission": "main-owned-job-scope-v1",
+            "target": {
+              "pid": 6392,
+              "key": "0000000000000002",
+              "birth": "01dd752caf535a47"
+            },
+            "registrar": {
+              "backendId": "TEST-owner-751b87b7-3859-4cad-a701-5a3aa6e1cc08",
+              "teamId": "TEST-team",
+              "runId": "TEST-run",
+              "memberId": "alice-id",
+              "generation": "1"
+            }
+          },
+          "original": {
+            "id": "392367cf-efa6-4e5d-b202-6fff9d7eecee",
+            "label": "TEST-primary",
+            "pid": 6392,
+            "registeredBy": "alice",
+            "registeredAt": "2026-11-15T18:11:08.131Z",
+            "capturedNative": {
+              "mainEpoch": "922f00bc-eee5-4a51-902f-5bf7cdc569ef",
+              "providerCapability": "a5cfbd29-9995-4b4e-b934-c177ac89eda7",
+              "providerGeneration": "1263ad45-ecba-43ea-87ca-b9d197244a9f",
+              "root": {
+                "pid": 7372,
+                "birth": "01dd752cac41d73e"
+              },
+              "version": 5,
+              "platform": "win32",
+              "admission": "main-owned-job-scope-v1",
+              "target": {
+                "pid": 6392,
+                "key": "0000000000000002",
+                "birth": "01dd752caf535a47"
+              },
+              "registrar": {
+                "backendId": "TEST-owner-751b87b7-3859-4cad-a701-5a3aa6e1cc08",
+                "teamId": "TEST-team",
+                "runId": "TEST-run",
+                "memberId": "alice-id",
+                "generation": "1"
+              }
+            },
+            "capturedByCommand": "TEST-register-TEST-primary"
+          },
+          "result": {
+            "id": "392367cf-efa6-4e5d-b202-6fff9d7eecee",
+            "pid": 6392,
+            "label": "TEST-primary",
+            "registeredAt": "2026-11-15T18:11:08.131Z",
+            "registeredBy": "alice",
+            "processRef": "p1:392367cf-efa6-4e5d-b202-6fff9d7eecee:3ecf2dc1f8c82afc566e95235edc3df0ba8b6747cb81c969c96edb56cfba6e7f",
+            "observation": "unknown",
+            "canTerminate": false
+          }
+        },
+        {
+          "schemaVersion": 1,
+          "family": "process",
+          "commandId": "TEST-register-TEST-neighbor",
+          "operation": "register",
+          "requestDigest": "c6e7403ae2550732ff0acf9e85eb17f3bf97fe4e6381f0931367bde16461f6a0",
+          "principalId": "alice-session",
+          "binding": {
+            "backendId": "TEST-owner-751b87b7-3859-4cad-a701-5a3aa6e1cc08",
+            "teamId": "TEST-team",
+            "teamName": "test-emulated-processes"
+          },
+          "authorityRevision": 1,
+          "fingerprint": "22307683d078a4366caf525c71bc76a47350d1e8c1a43316d0913416d17f19e3",
+          "phase": "completed",
+          "state": {
+            "phase": "completed",
+            "native": "not-requested"
+          },
+          "nativeIntent": {
+            "mainEpoch": "922f00bc-eee5-4a51-902f-5bf7cdc569ef",
+            "providerCapability": "a5cfbd29-9995-4b4e-b934-c177ac89eda7",
+            "providerGeneration": "1263ad45-ecba-43ea-87ca-b9d197244a9f",
+            "root": {
+              "pid": 7372,
+              "birth": "01dd752cac41d73e"
+            },
+            "operationRef": "f86b19b4-c0b2-426d-a302-d77af4ea913f",
+            "command": {
+              "operation": "capture",
+              "pid": 7456,
+              "registrar": {
+                "backendId": "TEST-owner-751b87b7-3859-4cad-a701-5a3aa6e1cc08",
+                "teamId": "TEST-team",
+                "runId": "TEST-run",
+                "memberId": "alice-id",
+                "generation": "1"
+              }
+            }
+          },
+          "originalRegistration": {
+            "input": {
+              "pid": 7456,
+              "label": "TEST-neighbor"
+            },
+            "memberName": "alice",
+            "policyRequested": true
+          },
+          "capture": {
+            "mainEpoch": "922f00bc-eee5-4a51-902f-5bf7cdc569ef",
+            "providerCapability": "a5cfbd29-9995-4b4e-b934-c177ac89eda7",
+            "providerGeneration": "1263ad45-ecba-43ea-87ca-b9d197244a9f",
+            "root": {
+              "pid": 7372,
+              "birth": "01dd752cac41d73e"
+            },
+            "version": 5,
+            "platform": "win32",
+            "admission": "main-owned-job-scope-v1",
+            "target": {
+              "pid": 7456,
+              "key": "0000000000000004",
+              "birth": "01dd752caffefaee"
+            },
+            "registrar": {
+              "backendId": "TEST-owner-751b87b7-3859-4cad-a701-5a3aa6e1cc08",
+              "teamId": "TEST-team",
+              "runId": "TEST-run",
+              "memberId": "alice-id",
+              "generation": "1"
+            }
+          },
+          "original": {
+            "id": "a22a9263-6877-4fb0-a758-53965150d288",
+            "label": "TEST-neighbor",
+            "pid": 7456,
+            "registeredBy": "alice",
+            "registeredAt": "2026-11-15T18:11:08.994Z",
+            "capturedNative": {
+              "mainEpoch": "922f00bc-eee5-4a51-902f-5bf7cdc569ef",
+              "providerCapability": "a5cfbd29-9995-4b4e-b934-c177ac89eda7",
+              "providerGeneration": "1263ad45-ecba-43ea-87ca-b9d197244a9f",
+              "root": {
+                "pid": 7372,
+                "birth": "01dd752cac41d73e"
+              },
+              "version": 5,
+              "platform": "win32",
+              "admission": "main-owned-job-scope-v1",
+              "target": {
+                "pid": 7456,
+                "key": "0000000000000004",
+                "birth": "01dd752caffefaee"
+              },
+              "registrar": {
+                "backendId": "TEST-owner-751b87b7-3859-4cad-a701-5a3aa6e1cc08",
+                "teamId": "TEST-team",
+                "runId": "TEST-run",
+                "memberId": "alice-id",
+                "generation": "1"
+              }
+            },
+            "capturedByCommand": "TEST-register-TEST-neighbor"
+          },
+          "result": {
+            "id": "a22a9263-6877-4fb0-a758-53965150d288",
+            "pid": 7456,
+            "label": "TEST-neighbor",
+            "registeredAt": "2026-11-15T18:11:08.994Z",
+            "registeredBy": "alice",
+            "processRef": "p1:a22a9263-6877-4fb0-a758-53965150d288:cc456350aeec523d0b023296c2bc58948b81cdc856b304b93430d1960bf9bc72",
+            "observation": "unknown",
+            "canTerminate": false
+          }
+        }
+      ],
+      "rows": [
+        {
+          "id": "392367cf-efa6-4e5d-b202-6fff9d7eecee",
+          "pid": 6392,
+          "label": "TEST-primary",
+          "registeredAt": "2026-11-15T18:11:08.131Z",
+          "registeredBy": "alice",
+          "processRef": "p1:392367cf-efa6-4e5d-b202-6fff9d7eecee:3ecf2dc1f8c82afc566e95235edc3df0ba8b6747cb81c969c96edb56cfba6e7f",
+          "observation": "unknown",
+          "canTerminate": false
+        },
+        {
+          "id": "a22a9263-6877-4fb0-a758-53965150d288",
+          "pid": 7456,
+          "label": "TEST-neighbor",
+          "registeredAt": "2026-11-15T18:11:08.994Z",
+          "registeredBy": "alice",
+          "processRef": "p1:a22a9263-6877-4fb0-a758-53965150d288:cc456350aeec523d0b023296c2bc58948b81cdc856b304b93430d1960bf9bc72",
+          "observation": "unknown",
+          "canTerminate": false
+        }
+      ]
+    },
+    "peer": {
+      "provider": "codex",
+      "connected": 1,
+      "registrations": 1,
+      "serviceExitObservations": 0,
+      "failures": 0,
+      "metadata": {
+        "events": 0,
+        "claudeVersions": 0,
+        "codexVersions": 0,
+        "refused": 0
+      },
+      "modelRequests": 0,
+      "probes": 0,
+      "realVendorExecutions": 0
+    },
+    "quit": {
+      "attempted": true,
+      "endpoint": "ws://127.0.0.1:9222/devtools/browser/ea61115c-3cc9-41e5-aced-5b804523aa7e",
+      "command": {
+        "at": 1794766311653,
+        "id": 1,
+        "method": "Browser.close"
+      },
+      "socketClosed": {
+        "at": 1794766312971,
+        "afterSend": true
+      },
+      "acknowledgement": "socket-closed"
+    },
+    "appExit": {
+      "code": 0,
+      "signal": null
+    },
+    "finalCensus": {
+      "rows": 131,
+      "lineageRows": 17,
+      "ownedRemaining": [],
+      "listenerPids": [],
+      "drained": true,
+      "trackedStillPresent": [
+        {
+          "pid": 6044,
+          "parent": 6880,
+          "birth": "2026-11-15T18:10:31.3155190Z",
+          "executable": "D:\\a\\_temp\\TEST-Windows-UI-build-43736377103-X64\\Release\\owned-process-gate-controller.exe"
+        },
+        {
+          "pid": 7348,
+          "parent": 6044,
+          "birth": "2026-11-15T18:10:31.3236200Z",
+          "executable": "C:\\hostedtoolcache\\windows\\node\\24.21.0\\x64\\node.exe"
+        }
+      ],
+      "trackedAbsent": [
+        1988,
+        5228,
+        6392,
+        6480,
+        7372,
+        7456,
+        7796
+      ]
+    },
+    "outerController": {
+      "gateController": "drained",
+      "rootExitCode": 1,
+      "activeProcesses": 0
+    },
+    "fixtureCloseFailureRecorded": false,
+    "nativeCleanupRecorded": false,
+    "originalRuntimeGenerations": null
+  },
+  "limits": [
+    "P08 remains INCOMPLETE/cleanupfalse; post-Retry refreshed Team observation timed out, exact false DOM operand/remaining budget not retained",
+    "same Main writer succession observed but product Retry completion/afterRetry witness checks/2 original UI Stops not reached",
+    "final census and controller physical drain do not replace original three-HANDLE and Stop receipt oracles; afterQuit refused first at stops.size0vs2",
+    "fixture.close awaited disposal with no failure field; its result/individual witness exit codes were not retained",
+    "only before-crash PNG; no completed Retry/Stop screenshot",
+    "1736 source pins match exact Git content after LF-to-CRLF, not raw Git LF byte hashes; original17 input hashes retained, binary payloads absent",
+    "separate six-step packaged V2 native PASS does not qualify P08, DarwinP09, later composition, vendor authentication or release",
+    "manifest records8111 file hashes; payloads/ASAR/Node/native binaries unavailable for independent rehash; aggregate joins only",
+    "PowerShell XML stderr diagnostics are retained but not established first cause; no source mechanism or performance cause inferred",
+    "no native rerun, tests, compiler or provider execution performed in this audit"
+  ]
+}

@@ -13,6 +13,6 @@ export function isUserTaskStartIntent(command: TeamCommand): boolean {
 
 /** Only these product intents require the captured human Task actor. */
 export function requiresHumanTaskActor(command: TeamCommand): boolean {
-  return isUserTaskStartIntent(command) ||
+  return isUserTaskStartIntent(command) || command.operation === 'task.board.review-flow' ||
     (command.operation === 'task.review' && command.payload.action === 'disapprove');
 }

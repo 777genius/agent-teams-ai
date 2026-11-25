@@ -1,0 +1,1545 @@
+{
+  "schemaVersion": 1,
+  "kind": "Recoverable publication bundle of original provider9423 evidence; no execution/adoption",
+  "createdAtUTC": "2026-11-15T23:34:40.995364+00:00",
+  "sourceCommit": "9423f600dfb04d04448326dbced89919924b0b5f",
+  "sourceTree": "a873a5f9ad8e6da1d8894db22a02d8c8efb37199",
+  "repo": "agent-teams-ai/old-provider-implementations",
+  "originalPayloadCount": 110,
+  "originalPayloadBytes": 1732460,
+  "originalFilesByteIdentical": true,
+  "originalFiles": [
+    {
+      "archivePath": "provider-9423-native-receipts/14182479829.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14182479829.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 1014,
+      "blob": "9ecdec5b21bc3fd28ac0bbf398036c78b97da638",
+      "sha256": "4f1b8ada9efdb7e5b758b30cec00faf4ec03afc76aa1f197e2c262cd027732ad"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14182769993.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14182769993.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 1257,
+      "blob": "92027b3a1aa467df4cb839362535f96d9a5739ba",
+      "sha256": "74377e355b38227cae5e74e65ccba8e61e2ad2400037113ac2ec192ec4d0092d"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14182778215.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14182778215.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 603,
+      "blob": "0329a965c587df0d6725a877ad629bc9eb9d517c",
+      "sha256": "8db2dbbbc62a932f7e892637d0c42b8632b2aa925697d71d7331b93931a9b22e"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14182778751.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14182778751.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 610,
+      "blob": "53a7284a22132c328321ef0be89256a1994fcf7f",
+      "sha256": "1ef3697d4403ed986ce72982519aef0a06675d3b97dff4d7ada0ca9c9d3060ae"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14182789973.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14182789973.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 1014,
+      "blob": "ccf64afa363ba16806c1ee4a52c4376e16206e0d",
+      "sha256": "c53ac60ca31f53a7e6c4ac429c31d59fe7a6089bb10137f9d516886f70253def"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14182924250.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14182924250.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 610,
+      "blob": "3924748102ffbba1d97cafceb0fbf842855000b8",
+      "sha256": "3ab914a660b7e39df76678131645feef2bdd7b7487b6343086e58549a3e33d3e"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14182929382.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14182929382.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 1257,
+      "blob": "c8661029ab837de0ebc3c5180976cddcb66fc1d7",
+      "sha256": "7ea8c6349e5b87dae7dc7eacf05a3f963a9f19f3fd5184f126f4b5989ea46cb6"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14182959948.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14182959948.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 1014,
+      "blob": "2edbac831f223eefd197d7e92de4b27352e489e8",
+      "sha256": "05cf481891c5f1e1ebfc193362f64556b27dfe2ee8dd071904a6bcec8daf950c"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14182964408.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14182964408.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 1705,
+      "blob": "e71529cfa362a3c142678351a3a3df37994992db",
+      "sha256": "3f4ccdecdc7e1e0eea41392e2ef4c10e3d0c284b8650b8f7e8f836a2f3bcf424"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14182974654.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14182974654.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 603,
+      "blob": "2a1711c13c0b970b295ef0024c4d1fe752c73f76",
+      "sha256": "89126f4c184c082fcaf12efbaa6e45e2cf95b92a7b0828e7dc5c966d6064a3a9"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14182979281.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14182979281.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 584,
+      "blob": "cdbae635ca91ad0a430af6409abff47a24bb34a0",
+      "sha256": "484f9653d3b2ab718d66cf2e1999457b5a65581f83d0ed7b4c86f42cabecedc5"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14182999823.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14182999823.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 1271,
+      "blob": "4ff68d9f4fbffb5eaaef4cc4379beb1906abcc91",
+      "sha256": "49f14efea212605d690b5d342105f034fbf99b7507af6ce7ddc1487af703f753"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14183029114.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14183029114.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 1705,
+      "blob": "dc7c25d98050ef1ffd6a2926710c162263fa2cae",
+      "sha256": "66b96127e29ef9de5ad0373d0818de6d456f4998fb0898702b9841936744c322"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14183033467.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14183033467.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 603,
+      "blob": "3bd2601ed0aaaaf72107f345818a64c67f4316eb",
+      "sha256": "ec9d887ddb85ef49513aaa431a4795b81b60926e46e997a56ad8ba7862b7755a"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14183059130.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14183059130.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 610,
+      "blob": "1ecf1855b0e945473726165c06607bbbd6d2a3db",
+      "sha256": "935fc49bf301caf88ca20604a0ccd57741b0544963730143c89cee047565c25d"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14183157287.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14183157287.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 603,
+      "blob": "11715892ac562cd78374685a50793a380d4f26fa",
+      "sha256": "5501a2fa0a685a9a971e5f8aea4019b7beec5bc8462b58514f91a971b1b15290"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14183177863.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14183177863.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 1269,
+      "blob": "1af3f90f772dc166102c7dacad97a226f8166477",
+      "sha256": "126590077a79d354bd79836f6118987d40c969483d928acf57f707eab0524afa"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14183243255.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14183243255.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 597,
+      "blob": "97959aea03604ddc52d276b60af18ea27b72f409",
+      "sha256": "3ccbda3ba09a30478cdf877f83afb955a4011d0be2f5c5a9ac92e76366d7f369"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14183263358.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14183263358.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 1733,
+      "blob": "6aa60d660dd0b16e29ee2f7d45bf345d7913a87e",
+      "sha256": "e1eff92e408ad78034cac2de6de7b98fd6395bac3ca799c45de33ffef5ba67d1"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14183288240.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14183288240.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 1268,
+      "blob": "f471b6e02ee1112d2b3988680ee82f2afecbbacc",
+      "sha256": "2c9e81a028e5e4386edcfd12da4c51b8bddbb9c9836ff67d8e68963d52bba525"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14183289192.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14183289192.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 1016,
+      "blob": "f05783246cf0e37e9b88246f5cec3abc86e97a24",
+      "sha256": "153a6aa76c1731ae0774869a016b7972a3912f39846a889ed7cbc9711805761d"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14183318713.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14183318713.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 1016,
+      "blob": "2f40331cb9384b21590019e59f9e12c33e59c4b8",
+      "sha256": "4cc4b3ec8f82031ff626eb99ee118bab1f931301dce9ddf2afe3c365f0970acf"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14183421536.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14183421536.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 1060,
+      "blob": "321f7ba4111a4e72ad838121d6416475921dc8b2",
+      "sha256": "91993242e012dbb19f9e5fcd7543ce7b870b9c729ec311b7deaea914421ffd79"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14183482519.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14183482519.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 1257,
+      "blob": "b59bd382e24a81e2f7098fc89cabef72474bb7ab",
+      "sha256": "859685b97ba3c12ce64ab60cd055c8a8c532bff14eb507994dd58734398fe0fd"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14183502111.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14183502111.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 1016,
+      "blob": "f4cd3e1e963f95458af72c3208db07056f8ed51c",
+      "sha256": "32852c6bc5bfce0c252bb5c84eec56092b79c9fd03ff71af41508b7b3abf4180"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14183513084.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14183513084.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 1705,
+      "blob": "6c5607f1fca0fbf9bd178bf027cc9f7ed8c9a339",
+      "sha256": "7623d580953d19ca7cb483a85bd47bb3c4142ce0a0ae56b325d613e34117a70d"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14183516199.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14183516199.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 1733,
+      "blob": "3903e51ebd2cfcdd7768915d368d894475d8cd7b",
+      "sha256": "4775f6240adaf75fff8ea9c67ddb802d67505f6d1d32fa5e60cb367c7296e6ef"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14183546134.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14183546134.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 597,
+      "blob": "1418ca9d636c0b4e6f31160cb3fb814de05b48fb",
+      "sha256": "7f055caf8528fc93f7d9155f787a50a8d3f0560709b09adbdd4f22140952144c"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14183546789.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14183546789.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 610,
+      "blob": "2c427a56cfee02b22379bccd94342d8ceb49cbfe",
+      "sha256": "f8afda4576b0cdb99cfdefe1d85aadaf47532b71892620a8448d6b4cadf7643c"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14183551152.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14183551152.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 597,
+      "blob": "24f6e3d997071f06a16b289bd88ae3e20bfb82f4",
+      "sha256": "9ade563c75f6d8544b1624893a96e98a6dd9db6666117ff7556040a5398869c4"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14183626509.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14183626509.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 1257,
+      "blob": "b0b8fe6a00e0b36f97158dc99bf82f66eefe4183",
+      "sha256": "2f6f817a5c035d876a26aecfeda551b3c6d4c413d4c6179117c5531913942f6a"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14183661434.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14183661434.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 1257,
+      "blob": "302ba6c9b2a74425d3220f9e5ff137cc8eea33e0",
+      "sha256": "83db0080ff999931ecdc3b2c9addde5f2e63b74687c016eb1f2f47e03fd7069b"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14183705762.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14183705762.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 1257,
+      "blob": "f64f5fed5d0765d4d10caf9a4eb86efff5cc82b3",
+      "sha256": "a771c175f78baafd5c0e0edcd9b6d84aa257ec9a0b85488c2d23209c8abe0bfc"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14183760226.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14183760226.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 584,
+      "blob": "092b930af88c8f5b9111461246ef9ee3ea6741d1",
+      "sha256": "2042a7245f87abf7f5948c513b8b95baae92bfde040c945746d74090fd51c283"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14183770672.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14183770672.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 2094,
+      "blob": "2ce7388b68d83ddde22e7577982a6f132d32177b",
+      "sha256": "7f4709f549d1d857df3ba0efe6b02d2609e396dbf07c93b3a7dea6f8d7ea658a"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14183780935.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14183780935.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 1257,
+      "blob": "95ef22a7762ae1fba65900cc81242c6454fd37bb",
+      "sha256": "840de9b3c3ec99f1a67ab31ceb6514ef240aa4f5286bf37179edee2dbb94f6d8"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14183785549.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14183785549.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 1269,
+      "blob": "e6902d318548ecca6e7c91e20b8c6342e5a97d6e",
+      "sha256": "1c81f8a20a5e97bbfd9640d38a8f92cbae192042bd8e28a0ebb429da16de090f"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14183805711.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14183805711.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 1014,
+      "blob": "b1d9c7431ae2b3998d1a6affb4a1d7b373be8268",
+      "sha256": "743ea4883b1402ec61604cf216032a9e0057b35312765d127cdb916087961568"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14183815436.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14183815436.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 1257,
+      "blob": "3a86d4139b4d8e4089e664147eed62bd938a0598",
+      "sha256": "e20184d66858c854cfb9088f85ff4b8149c09560bc491ebae7a5f394ef90b160"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14183815479.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14183815479.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 1733,
+      "blob": "b281e8a70fcc0b64aa1df2cab56ced3461c1723a",
+      "sha256": "a66adf5c715f8b58546254b56b9f2829dd32dfc96ed4311f4015c1ec77dbb48c"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14183845266.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14183845266.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 467,
+      "blob": "6cc59623ba055534228762a942eca0ec7dc66c2c",
+      "sha256": "c602c63d9152e4531b50af1fde981b5aedaba617f0d1f7ba27b66d6e9f5bf517"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14183846180.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14183846180.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 1268,
+      "blob": "0292ace0561b8cc4d168e8dbc49d0bacb66ea09f",
+      "sha256": "ab66cce5790114066a397358035981f485743dbb30060b8a1a0672a6a55bb612"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14183856085.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14183856085.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 1705,
+      "blob": "3a6a5f76e14423de995606fe2f6d44cbdbc8a814",
+      "sha256": "8fce16c99d18a07cbd1b4a0efb776077e6717e068442b333ab2f5ae262546812"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14183875150.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14183875150.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 1257,
+      "blob": "45f3544d44f6c55aa876966ecf5250972c3b4b9a",
+      "sha256": "fbcef1c471c7faa75d68e2917dc1f9f7c7cec165c745ced255da6471cb6d99e4"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14183901123.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14183901123.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 1016,
+      "blob": "556690773522e93c5b4ab30fe7daabce5bda04ed",
+      "sha256": "2a706b816a210c461def35264dba5065f2c583fe1fa7599c3eeb337502d83391"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14183910647.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14183910647.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 597,
+      "blob": "5663f6eb03312975ab88d9b7383720da4634a2a0",
+      "sha256": "15f283889728569fc1b067b4964eb8613449604d2504e6dfabe724b1eb291ef5"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14183910948.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14183910948.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 597,
+      "blob": "bf71d17238856d6c77c48d03b064bdd2c138ad8f",
+      "sha256": "39943127b9d8204036f4792b8831a2ae4920de957740bceb2e679829ddff6329"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14183925055.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14183925055.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 1016,
+      "blob": "663329f820bcb26b74ef939e025ad8c7b6236d93",
+      "sha256": "2aee86935aeb9d0a131ce465525bb53887697499f87ae16c60c23c4d65cdd8a3"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14183940024.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14183940024.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 1733,
+      "blob": "85aa851302be704dda8b20dd7c92cc0307c3587b",
+      "sha256": "ab1cb9ba6c5606a724a811ba4e23c7de2e179313fd9cba8b2f467689c0a50f17"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14183965712.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14183965712.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 1705,
+      "blob": "eb0a9fda9b56524874481f87886bba7003019da3",
+      "sha256": "fd2e4d0e103a02a36f3697ef649eea2e0511c87af00431adc3bccec5b95d99c5"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14184025418.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14184025418.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 1257,
+      "blob": "4e0cdf1a964078d786c2bbf82d508cb7c5858739",
+      "sha256": "6f070390303b6fc15cd5851958a7c322a6833eb08e433e6866245eebb174e485"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14184115206.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14184115206.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 610,
+      "blob": "b15879605dd84b822ac69934199ed0f0ddf70cca",
+      "sha256": "6eda25fb9b29f76eb767468b2555f25a6dabd613dc50096e29dbcffe10053dd3"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/14184265104.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/14184265104.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 1733,
+      "blob": "0cd69d9c56b26136d599157b71c6b55d0f3d6b1d",
+      "sha256": "48121ea69ce20d6f5c0afd2a7bd3b7aee40cacdb1a4942b7a39ab1168fdf9dc2"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/artifact-member-inventory.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/artifact-member-inventory.json",
+      "classification": "retained-api-or-source-audit",
+      "bytes": 81782,
+      "blob": "fc7ed4c1b062e6eb90d87a18e6a8ac1d56cb1674",
+      "sha256": "83cefbc197ea37eb4f466678c933e5da86b415feb911573867de1156c3c09a88"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/artifacts-api.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/artifacts-api.json",
+      "classification": "retained-api-or-source-audit",
+      "bytes": 49972,
+      "blob": "0e042af3c135c62a9607c8e185ec7265917a87c0",
+      "sha256": "c85c22c194a14797f8770d8d276c82e3a270a38e140cdc4ba81ef11e99917445"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/helper-source-joins.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/helper-source-joins.json",
+      "classification": "retained-api-or-source-audit",
+      "bytes": 1903,
+      "blob": "9fe0e603b16735c84a60006e3941cb86cdc2f758",
+      "sha256": "da984082ba911c31967df706b42654fe1499cab41dbb6a75895c9f042c4c694c"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/receipt-classification-audit.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/receipt-classification-audit.json",
+      "classification": "retained-api-or-source-audit",
+      "bytes": 39758,
+      "blob": "6fd0f27d3f7c2f9cc272aa99d9be6a3d0609cf45",
+      "sha256": "aadd580dbd4a599665b171eddb672e15f5b44ea5f75ace77b1a15d5b47de0efa"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/run-api.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/run-api.json",
+      "classification": "retained-api-or-source-audit",
+      "bytes": 16755,
+      "blob": "3deaa02a899c43134d0584cba80cad5ec0a050aa",
+      "sha256": "03614089ca22b263cf546c28a3fe2e254620cf826d9d3c9ab1b2f2952fe4bba4"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/source/verify-native-v2-cli-hold.mjs",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/source/verify-native-v2-cli-hold.mjs",
+      "classification": "pinned-source-file",
+      "bytes": 2713,
+      "blob": "5e3f7d0d3e9f1e0e7e82da39215acb3fe7df2de0",
+      "sha256": "0cc7792db99e9eef02235d4afde4bf60d76223f4eab7c4f278cef9ed20fe249c"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/source/verify-native-v2-embedded-floor-hold.mjs",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/source/verify-native-v2-embedded-floor-hold.mjs",
+      "classification": "pinned-source-file",
+      "bytes": 867,
+      "blob": "7f9d7a77df42514a52748a3c1c07d5f4e681f4b2",
+      "sha256": "a2c5ebdc17d0c895821e9d1538042d96c9579182ea35b1eecbcc7165c7f38652"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/source/verify-native-v2-interrupt-proof.mjs",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/source/verify-native-v2-interrupt-proof.mjs",
+      "classification": "pinned-source-file",
+      "bytes": 2499,
+      "blob": "fb79a81a833de90a7a771e6c513d46f8aa8d5311",
+      "sha256": "346b6fa0feae32658487148fef3437ce728139da3df6b505b64a435d0a93d3e0"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts/source/verify-native-v2-receipt-safety.mjs",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts/source/verify-native-v2-receipt-safety.mjs",
+      "classification": "pinned-source-file",
+      "bytes": 3233,
+      "blob": "4e8ae0e05ab4a23a72ee367cef8057d152878481",
+      "sha256": "9f0adf1cb30a37c965392dc36658c518d777b60456f42f6dbace25d6d893792d"
+    },
+    {
+      "archivePath": "provider-9423-native-receipts-independent/independent-review.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-native-receipts-independent/independent-review.json",
+      "classification": "independent-review",
+      "bytes": 59538,
+      "blob": "09584beb04c9493317a68d5d2dbd68767b840b67",
+      "sha256": "0f0f67a79933a66620556dd12427c05cced50919dcbf4abd24fee45c8269f2f4"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/api/ci-artifacts-api.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/api/ci-artifacts-api.json",
+      "classification": "retained-api-or-source-audit",
+      "bytes": 947,
+      "blob": "51163abb4cb62cee8a47eedae55c6ebc3e267b63",
+      "sha256": "ab9a9e9a9c84d849b3e3743a17e4ec45214111a0f4a4a658424ff93af4ec4c00"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/api/compare-37-to-9423-api.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/api/compare-37-to-9423-api.json",
+      "classification": "retained-api-or-source-audit",
+      "bytes": 47689,
+      "blob": "24f5247884f3676858b86f6d2f8d1e61e71f9692",
+      "sha256": "41a3a13f034f799aca96885a76647e4c260e45c70145de94cbf945cc69ea658b"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/api/jobs-43768692096-api.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/api/jobs-43768692096-api.json",
+      "classification": "retained-api-or-source-audit",
+      "bytes": 257508,
+      "blob": "ea20d57b8f84f0135ab29bfc65207c7a8700ca63",
+      "sha256": "40b56ff673c10893d537ed9698b148b5ece988559317c887f7ad0ca451b4431e"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/api/jobs-43768692098-api.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/api/jobs-43768692098-api.json",
+      "classification": "retained-api-or-source-audit",
+      "bytes": 1036,
+      "blob": "c8da5a720b36b40fc80b91793a920d7ec63e2ed5",
+      "sha256": "477f59a72fd85661af3e3ccb6bec6ba927216e62200c41478bfbb66e970cc201"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/api/jobs-43768692114-api.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/api/jobs-43768692114-api.json",
+      "classification": "retained-api-or-source-audit",
+      "bytes": 6700,
+      "blob": "05baf50f47e0b3bdc8dcd2c5492d0bc407d78a00",
+      "sha256": "fb324594143dec62759e2ca930098710be5e0addf13df815adaf37e6fdc784c5"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/api/jobs-43768692131-api.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/api/jobs-43768692131-api.json",
+      "classification": "retained-api-or-source-audit",
+      "bytes": 1042,
+      "blob": "e891c1d8f98b883026bad3333aa500f20bc2fb64",
+      "sha256": "5e014ed528a8d5145fc674a8e9c04cbe3b9e1b0e2575db438386810f48b29006"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/api/pr8-api.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/api/pr8-api.json",
+      "classification": "retained-api-or-source-audit",
+      "bytes": 20107,
+      "blob": "b257300e29c0ad73bb834c1c8e764c001042aad5",
+      "sha256": "e88568fcbcd4493e9c2e33d31a15ea49f97ea8017f3864d010f0d0f9fdfbe008"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/api/runs-at-initial-read-api.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/api/runs-at-initial-read-api.json",
+      "classification": "retained-api-or-source-audit",
+      "bytes": 75318,
+      "blob": "1ea1a6024c8aeec4a3b5c25d2a4d1a8dff93448d",
+      "sha256": "2758742d65e8442102562653cf5c2423d7fddb5f3b8f35ed60b7589ad1ab6781"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/checked-artifact-audit.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/checked-artifact-audit.json",
+      "classification": "retained-api-or-source-audit",
+      "bytes": 83489,
+      "blob": "ae72b006847885900a4a3f189fed0fdf9c11ff9f",
+      "sha256": "ad856eab5f1292cd9b6ee9c01b6fcb1f93b32ff12c7cf5a25c0db890fb230bfc"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/independent-provider-review.md",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/independent-provider-review.md",
+      "classification": "retained-api-or-source-audit",
+      "bytes": 9752,
+      "blob": "5607305d33cb2d23c142e940d4adc8db2eb68444",
+      "sha256": "96dc82eb13bbcee9c31080784f26297c3a36cddd1849e56ab4f1e18137c541b8"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/inventory.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/inventory.json",
+      "classification": "retained-api-or-source-audit",
+      "bytes": 12283,
+      "blob": "dd0c9d01d05db79f0c42f81e5dcefdde89153e33",
+      "sha256": "776df728d4469ecb7864815511f8865dc4195e157c3f812b66e57e49f3b7a0f4"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/job-132979503956.log",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/job-132979503956.log",
+      "classification": "original-full-decoded-ci-log",
+      "bytes": 100255,
+      "blob": "e0b49b16bafc17d20c03f536e39c0cbc43d658a1",
+      "sha256": "dc91a8dd0e8a4982feefdbfafdd0c186278156ded24e2f4b58bc36a894c3e1c6"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/job-132979504266.log",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/job-132979504266.log",
+      "classification": "original-full-decoded-ci-log",
+      "bytes": 105744,
+      "blob": "43e405a2c890f17c3eccaa6fe9272c93d51cc291",
+      "sha256": "424d7af4c52aa56ead46896c0de02f8222917f55814d7571bb111f3639acbc5d"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/old-source-tree.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/old-source-tree.json",
+      "classification": "retained-api-or-source-audit",
+      "bytes": 116018,
+      "blob": "6a072866f9303b4cc28ad7a7a7a5609afda8c3b3",
+      "sha256": "d813cf18b48fc031538c0c57305ae14c170bf35e1324aaa3d321f4b504115ad1"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/original-ci-audit.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/original-ci-audit.json",
+      "classification": "retained-api-or-source-audit",
+      "bytes": 3825,
+      "blob": "ebba25e5fabc2baf8376ff794c4f536d3b69f69a",
+      "sha256": "a127cda80e2d511d0c175e41eb827559bd5f3ca22b71a8d7929b2c7502a9bf9e"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/provider-9423-checked.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/provider-9423-checked.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 193146,
+      "blob": "0665dbb70353b6b652c57fcbbcfc7635e10c44ea",
+      "sha256": "01aa79d2dbca55c9dbcb6d271d0ee745339e03c5a226b8f1067b851fbed4ff96"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/source/.github/workflows/ci.yml",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/source/.github/workflows/ci.yml",
+      "classification": "pinned-source-file",
+      "bytes": 4457,
+      "blob": "7e2bb17761d783b7d0ed298c62c56680a6636279",
+      "sha256": "e3ed45b8e012981adbe924d9ffdc1c2ff08ebbc5bdb057604bcad36da043d022"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/source/.github/workflows/native-prompt-suggestions-claude.yml",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/source/.github/workflows/native-prompt-suggestions-claude.yml",
+      "classification": "pinned-source-file",
+      "bytes": 2062,
+      "blob": "ebf288d5b6e6143de244fcf813cfb00d30fd4e21",
+      "sha256": "f179ea60437706aa689f7ae39f2e46593e56be6b64befa046b6ceff58fbe6a03"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/source/.github/workflows/native-prompt-suggestions.yml",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/source/.github/workflows/native-prompt-suggestions.yml",
+      "classification": "pinned-source-file",
+      "bytes": 2898,
+      "blob": "4276d8995ee6118283af3c83f33f79d51d67edb2",
+      "sha256": "ff2c1cb9a094d08dfb9800bfac13a30cd0e7206e8e2539921d71cdef89e7a806"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/source/.github/workflows/native-v2-readonly.yml",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/source/.github/workflows/native-v2-readonly.yml",
+      "classification": "pinned-source-file",
+      "bytes": 17330,
+      "blob": "b4b88ce1c41c89559a584cce830de59fb5ec0fc0",
+      "sha256": "971cad0c24cb60cdcfb4dd344d91b70d9527ebe01bc88f1495dc09bded25517a"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/source/package.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/source/package.json",
+      "classification": "pinned-source-file",
+      "bytes": 559,
+      "blob": "615ee7b9ca8a8c70ee3d129772aa89cc1cd2ae60",
+      "sha256": "6b5902a50bb68780eef1af030f63852bb0df7c7136bcd1b18dc11c2f906dadc3"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/source/packages/provider-implementations/package.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/source/packages/provider-implementations/package.json",
+      "classification": "pinned-source-file",
+      "bytes": 2457,
+      "blob": "4628124ce991ab036fbb2923297b179bdb107d25",
+      "sha256": "6de207907fe0a49376b7533c166b579214ea3b173772bbd477e4d4882ec923f4"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/source/packages/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/factory.ts",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/source/packages/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/factory.ts",
+      "classification": "pinned-source-file",
+      "bytes": 3219,
+      "blob": "a8beab8fed0c30a64315930845bf9f38070ffc6a",
+      "sha256": "e628663f9436a38bbe5b3c57d431f335b64014517a0a15a17bfd9df498c7cd9c"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/source/packages/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/normalize.ts",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/source/packages/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/normalize.ts",
+      "classification": "pinned-source-file",
+      "bytes": 6182,
+      "blob": "0a3da44e99c6a5f8cdaf201066a431811c29aa83",
+      "sha256": "f24e1ea0af388317e9325df031227887db39fca6afee63c13817377f46e65605"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/source/packages/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/session.ts",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/source/packages/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/session.ts",
+      "classification": "pinned-source-file",
+      "bytes": 35504,
+      "blob": "51b1e49aea3db62fbc991edba4c8e207edb65cab",
+      "sha256": "ee07c82352a13a3ea839c0f7618750445a7547836a594b3544f133879bf5e548"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/source/packages/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/subagents.ts",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/source/packages/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/subagents.ts",
+      "classification": "pinned-source-file",
+      "bytes": 18473,
+      "blob": "a74bedabd788aaa07e0fe3f20df60208224c1e85",
+      "sha256": "524e9fb7d120bd4d31e8a124c4c87c34c04a273afa39693db902b0c169cfca6d"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/source/packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/driver-session.ts",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/source/packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/driver-session.ts",
+      "classification": "pinned-source-file",
+      "bytes": 15849,
+      "blob": "6cea8b4842161ceef56750dde740799f506a1037",
+      "sha256": "4ad4c92e799e35bfcef4e8884b22f798e40bd381357739c696278ecff9058843"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/source/packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v1-driver-backend.ts",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/source/packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v1-driver-backend.ts",
+      "classification": "pinned-source-file",
+      "bytes": 5074,
+      "blob": "7cd58181b0306e456249617665ac29a6a89be3b8",
+      "sha256": "cae70c414824d217753deaf91f5a07385aa9c3884b57ae3e46de9774dad0c373"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/source/packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v1-driver-cut.ts",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/source/packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v1-driver-cut.ts",
+      "classification": "pinned-source-file",
+      "bytes": 8710,
+      "blob": "3c915ce68c8e48684f091064387ef1ee7b6d6311",
+      "sha256": "aad083804d43e113e629c48b7e1867f322b361509c02e1c935cf8f698b8b8a73"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/source/packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v1-driver-output.ts",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/source/packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v1-driver-output.ts",
+      "classification": "pinned-source-file",
+      "bytes": 1810,
+      "blob": "d0df18a1b4a11d82545277e6ae890b461b154930",
+      "sha256": "63df45a003ecc8e17d7ae1243d207e51256b58343420ed8e65b5c9bab130da7a"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/source/packages/provider-implementations/tests/features/provider-session-implementation/claude-sdk/factory.test.ts",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/source/packages/provider-implementations/tests/features/provider-session-implementation/claude-sdk/factory.test.ts",
+      "classification": "pinned-source-file",
+      "bytes": 28751,
+      "blob": "0c4d5532256b6f57fe8419b8baec37adf376501c",
+      "sha256": "05670cc40a13ddd7a47b356a83c1ed69138251d3840e2742f227cd8e31b69186"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/source/packages/provider-implementations/tests/features/provider-session-implementation/claude-sdk/normalize.test.ts",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/source/packages/provider-implementations/tests/features/provider-session-implementation/claude-sdk/normalize.test.ts",
+      "classification": "pinned-source-file",
+      "bytes": 6730,
+      "blob": "4daceed134f36949af6283b1043c6ea5d1d7eed5",
+      "sha256": "b9c7437b9370f0e5b77ee4588661a7dda531bf9f7916d008ed4edd6f3d0e2a70"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/source/packages/provider-implementations/tests/features/provider-session-implementation/claude-sdk/subagents.test.ts",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/source/packages/provider-implementations/tests/features/provider-session-implementation/claude-sdk/subagents.test.ts",
+      "classification": "pinned-source-file",
+      "bytes": 16683,
+      "blob": "0ee68d58ce4b4bc3abbd6fe06f7ed247bc5f768c",
+      "sha256": "0139059821e2e3d0047fbe4e129b23c24c2d5ec6da6a53f2ad24c094136b3fc5"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/source/packages/provider-implementations/tests/features/provider-session-implementation/claude-sdk/support.ts",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/source/packages/provider-implementations/tests/features/provider-session-implementation/claude-sdk/support.ts",
+      "classification": "pinned-source-file",
+      "bytes": 2339,
+      "blob": "9913ef382e0c26f068f76d1ade13d29a0d467365",
+      "sha256": "744366965c1d7cbde8a0df8d736c371387eaacf211e2a4de361d0ca2991e239e"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/source/packages/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v1-driver-peer.ts",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/source/packages/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v1-driver-peer.ts",
+      "classification": "pinned-source-file",
+      "bytes": 6985,
+      "blob": "11add3ebafd1b6db51b764bc25375872c8442f88",
+      "sha256": "728fe8e077e446f5b83f8e0055ad0f99c062fd845c42d6b4b2fad26679613f71"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/source/packages/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v1-driver.test.ts",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/source/packages/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v1-driver.test.ts",
+      "classification": "pinned-source-file",
+      "bytes": 24803,
+      "blob": "1433ac589d1f2f505a2ed8fdbe21347a76f49380",
+      "sha256": "25d3ba725d538a4a852f10c4e7cebbb30369c4e23c0cd88a156a1b84bfc2498c"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/source/packages/provider-implementations/tests/package/install-consumer.ts",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/source/packages/provider-implementations/tests/package/install-consumer.ts",
+      "classification": "pinned-source-file",
+      "bytes": 4059,
+      "blob": "699739f34e979be1244fec6f7bc244d5055651dd",
+      "sha256": "2e882ad93238f50e089789d79a3b42c8160342f6c0c5ca12228d66c15cf9dd81"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/source/packages/provider-implementations/tests/package/packed-consumer.test.ts",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/source/packages/provider-implementations/tests/package/packed-consumer.test.ts",
+      "classification": "pinned-source-file",
+      "bytes": 15919,
+      "blob": "17f3f9bf22208d87b2c97a803b5b8aa3353ff383",
+      "sha256": "b4cb5640fe49cb92b689f2d6d777bf0378d3a835d7f27dfd218341b817436b3e"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/source/packages/provider-session-contracts/package.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/source/packages/provider-session-contracts/package.json",
+      "classification": "pinned-source-file",
+      "bytes": 1021,
+      "blob": "12d320d3bc7972a40ef2bce9dd1db90087d379f3",
+      "sha256": "dbd58a29636a3e752bc2d6e00f066c0903e9421d1202c6f2f46fe1259c9e45b2"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/source/packages/provider-session-contracts/src/features/provider-session-contracts/contracts/session.ts",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/source/packages/provider-session-contracts/src/features/provider-session-contracts/contracts/session.ts",
+      "classification": "pinned-source-file",
+      "bytes": 4383,
+      "blob": "1614599ce10109bdd82d20918cee8e87145e0e4e",
+      "sha256": "0dd99634fb85da1c746228b819369366b745ee55e4222dba92ad7bbac7829424"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/source-and-workflow-audit.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/source-and-workflow-audit.json",
+      "classification": "retained-api-or-source-audit",
+      "bytes": 4855,
+      "blob": "13e067c2607467be15da0c78911bc1a76fd8331e",
+      "sha256": "13b27fac355534261ba7102eddf0ded7fcfe3f9b0a5700c864cf68e26a29af15"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/source-manifest.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/source-manifest.json",
+      "classification": "retained-api-or-source-audit",
+      "bytes": 6454,
+      "blob": "0c7726d8fa79136573badd64c1e5ff4b4d4ad880",
+      "sha256": "1ce2d712aaea1ba3d36e98b846a4ba08d43ab4155d0662dd01e3360b96476ef3"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/source-tree.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/source-tree.json",
+      "classification": "retained-api-or-source-audit",
+      "bytes": 116018,
+      "blob": "885f240b5577b0891825fb1a3789874b08cdffa2",
+      "sha256": "7dd9e5a6d84b131ccddfeb1083dad3be28d02c886fa125c9ab4a5efa967bbdec"
+    },
+    {
+      "archivePath": "provider-9423-readonly-audit/workflow-inverse-proof.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-readonly-audit/workflow-inverse-proof.json",
+      "classification": "retained-api-or-source-audit",
+      "bytes": 470,
+      "blob": "4a111e43642a88358d80660790dab7deab80e103",
+      "sha256": "21dbb12f9309b7ffa9f6366cf91f3a445e7b20706ada763c3d0b719c9f50428d"
+    },
+    {
+      "archivePath": "provider-9423-independent-r2/base-commit-api.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-independent-r2/base-commit-api.json",
+      "classification": "independent-review",
+      "bytes": 2948,
+      "blob": "644d9459bd6e084e6d488ee64cd8d5109ea07144",
+      "sha256": "00ed11983af13405f00347b4648c83dd4c819a258d7e38695e2e54dbafca8981"
+    },
+    {
+      "archivePath": "provider-9423-independent-r2/head-commit-api.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-independent-r2/head-commit-api.json",
+      "classification": "independent-review",
+      "bytes": 1279,
+      "blob": "466f63a5cb05c3d788e0cfdcc85b677d98649619",
+      "sha256": "908e687fddb8e164e23f59934125e360e1c25238e266a901e97ff624cd5331af"
+    },
+    {
+      "archivePath": "provider-9423-independent-r2/independent-review.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/provider-9423-independent-r2/independent-review.json",
+      "classification": "independent-review",
+      "bytes": 11823,
+      "blob": "f9055e52b2c24db0aa5a9f56c783bb0fcb342ea3",
+      "sha256": "97a835f1699d21e02677083b4606a80a803c5d4895b013f91a1997986d0e4128"
+    }
+  ],
+  "generatedFiles": [
+    {
+      "archivePath": "README.md",
+      "classification": "generated-bundle-explanation",
+      "bytes": 3716,
+      "blob": "6800fdfabb0856142046a7e2f0606fc148232a70",
+      "sha256": "e8fa145609f89561e84f25a742a05bc85a322712c1ccf88152cd5c5f095ad4db"
+    }
+  ],
+  "recoverableOmissions": [
+    {
+      "originalPath": "provider-9423-native-receipts/members/14184265104/native-v2-embedded-pinned-tool-proof.json",
+      "bytes": 5288,
+      "blob": "c1a8afde7c5e74fad822ce3967c95962fa42d5a6",
+      "sha256": "1563d405b2828de3aa0676ee0cfb789290cd7a8e9c2fabe4a9775fb8e05b7356",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14184265104.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-pinned-tool-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14184115206/native-v2-embedded-target-mcp-proof.json",
+      "bytes": 616,
+      "blob": "fb47e945112708dc5afccfb91e57fe3dfa4d33f3",
+      "sha256": "19b1e12a829302c345e4513ef8b0b053fbd5a4f924c8bed1f0ff8a7231519d46",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14184115206.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-target-mcp-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14184025418/native-v2-embedded-target-interrupt-proof.json",
+      "bytes": 2758,
+      "blob": "ce46a70c89c0b16178dfdf871b22411d40afdb67",
+      "sha256": "8b033c87fdc42dd8945af9d694110a2f359c07c94738987dc71f622cf64dbe36",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14184025418.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-target-interrupt-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14183965712/native-v2-embedded-target-tool-proof.json",
+      "bytes": 5434,
+      "blob": "06632d8c9f574705e41dbe9d9972160b396cb9f0",
+      "sha256": "a03f7b9136652ee70002e4b2ecfa84a12561377268b2ac640ec93ff79ab982f3",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14183965712.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-target-tool-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14183940024/native-v2-embedded-pinned-tool-proof.json",
+      "bytes": 5288,
+      "blob": "c1a8afde7c5e74fad822ce3967c95962fa42d5a6",
+      "sha256": "1563d405b2828de3aa0676ee0cfb789290cd7a8e9c2fabe4a9775fb8e05b7356",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14183940024.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-pinned-tool-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14183925055/native-v2-embedded-target-model-proof.json",
+      "bytes": 1851,
+      "blob": "c138979cd1deab3561a168a4ab442203e43288c3",
+      "sha256": "9b51bd5a09662ee0228264d55e6d26a0e6210cce500a09419d0a4363b5016d43",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14183925055.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-target-model-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14183910948/native-v2-embedded-mcp-proof.json",
+      "bytes": 617,
+      "blob": "3e1bbd91e2c687e829573e13667a282845490a4a",
+      "sha256": "271a2c19f47dc5920e2d28a8217af2dd1cedb88a77eff796f0d616003b90723f",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14183910948.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-mcp-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14183910647/native-v2-embedded-mcp-proof.json",
+      "bytes": 617,
+      "blob": "3e1bbd91e2c687e829573e13667a282845490a4a",
+      "sha256": "271a2c19f47dc5920e2d28a8217af2dd1cedb88a77eff796f0d616003b90723f",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14183910647.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-mcp-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14183901123/native-v2-embedded-target-model-proof.json",
+      "bytes": 1851,
+      "blob": "c138979cd1deab3561a168a4ab442203e43288c3",
+      "sha256": "9b51bd5a09662ee0228264d55e6d26a0e6210cce500a09419d0a4363b5016d43",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14183901123.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-target-model-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14183875150/native-v2-embedded-target-interrupt-proof.json",
+      "bytes": 2758,
+      "blob": "ce46a70c89c0b16178dfdf871b22411d40afdb67",
+      "sha256": "8b033c87fdc42dd8945af9d694110a2f359c07c94738987dc71f622cf64dbe36",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14183875150.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-target-interrupt-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14183856085/native-v2-embedded-target-tool-proof.json",
+      "bytes": 5434,
+      "blob": "06632d8c9f574705e41dbe9d9972160b396cb9f0",
+      "sha256": "a03f7b9136652ee70002e4b2ecfa84a12561377268b2ac640ec93ff79ab982f3",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14183856085.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-target-tool-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14183846180/native-v2-embedded-target-spi-proof.json",
+      "bytes": 1839,
+      "blob": "8df76d9e8ab9f1860d539b569f139f684d0372a4",
+      "sha256": "70a535af2d03fa312ae4a449badd77537fd7ceacc7a279fa954f4a8a6d63c1a8",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14183846180.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-target-spi-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14183845266/native-v2-embedded-floor-proof.json",
+      "bytes": 215,
+      "blob": "ad6ec942ced61f7af56ad64bf00a07663f909f11",
+      "sha256": "9f83f2f7fb3daa179c0cd8a515ec06d5948287928bd28ec4f47c05e6d6f8fc5c",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14183845266.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-floor-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14183815479/native-v2-embedded-pinned-tool-proof.json",
+      "bytes": 5288,
+      "blob": "c1a8afde7c5e74fad822ce3967c95962fa42d5a6",
+      "sha256": "1563d405b2828de3aa0676ee0cfb789290cd7a8e9c2fabe4a9775fb8e05b7356",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14183815479.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-pinned-tool-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14183815436/native-v2-embedded-interrupt-proof.json",
+      "bytes": 2770,
+      "blob": "31a9a1b0e44d821162f827e568a69c7912759fec",
+      "sha256": "fd49c154d61da5050e840485c3bd1d8abe35723359f2b6d3bb982b4689bc1b90",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14183815436.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-interrupt-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14183805711/native-v2-embedded-model-proof.json",
+      "bytes": 1863,
+      "blob": "8b5c94130085869f1dfe4f083758b0d69b187f75",
+      "sha256": "0363e1e0230ece99efd196eff93914686b562191ba5333abedeecc517254f4b9",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14183805711.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-model-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14183785549/native-v2-embedded-target-spi-proof.json",
+      "bytes": 1837,
+      "blob": "5c673e886a506e980ba910f26184335641528944",
+      "sha256": "7d67060de113e0e994d2d609c0a79c3e9701b9914c391b1606b0821cb16465e9",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14183785549.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-target-spi-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14183780935/native-v2-embedded-target-interrupt-proof.json",
+      "bytes": 2758,
+      "blob": "ce46a70c89c0b16178dfdf871b22411d40afdb67",
+      "sha256": "8b033c87fdc42dd8945af9d694110a2f359c07c94738987dc71f622cf64dbe36",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14183780935.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-target-interrupt-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14183770672/native-v2-readonly-proof.json",
+      "bytes": 5625,
+      "blob": "dd8efb68aad8d901e1e2fa7016b741ee351a6362",
+      "sha256": "3b1a5e389a1ab5ae1ede3ff95587012572a4efc06b24278e4f21f3aaf3af227d",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14183770672.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-readonly-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14183760226/native-v2-embedded-target-proof.json",
+      "bytes": 519,
+      "blob": "514c100dd586ce844c96ae24b3938b8c5bfdab5e",
+      "sha256": "b7f814890e05b54fd58e94b96ea2ee30590c6b6e92e1f271252815a4e1c33426",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14183760226.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-target-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14183705762/native-v2-embedded-interrupt-proof.json",
+      "bytes": 2770,
+      "blob": "31a9a1b0e44d821162f827e568a69c7912759fec",
+      "sha256": "fd49c154d61da5050e840485c3bd1d8abe35723359f2b6d3bb982b4689bc1b90",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14183705762.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-interrupt-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14183661434/native-v2-embedded-interrupt-proof.json",
+      "bytes": 2770,
+      "blob": "31a9a1b0e44d821162f827e568a69c7912759fec",
+      "sha256": "fd49c154d61da5050e840485c3bd1d8abe35723359f2b6d3bb982b4689bc1b90",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14183661434.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-interrupt-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14183626509/native-v2-embedded-interrupt-proof.json",
+      "bytes": 2770,
+      "blob": "31a9a1b0e44d821162f827e568a69c7912759fec",
+      "sha256": "fd49c154d61da5050e840485c3bd1d8abe35723359f2b6d3bb982b4689bc1b90",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14183626509.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-interrupt-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14183551152/native-v2-embedded-mcp-proof.json",
+      "bytes": 617,
+      "blob": "3e1bbd91e2c687e829573e13667a282845490a4a",
+      "sha256": "271a2c19f47dc5920e2d28a8217af2dd1cedb88a77eff796f0d616003b90723f",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14183551152.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-mcp-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14183546789/native-v2-embedded-target-mcp-proof.json",
+      "bytes": 616,
+      "blob": "fb47e945112708dc5afccfb91e57fe3dfa4d33f3",
+      "sha256": "19b1e12a829302c345e4513ef8b0b053fbd5a4f924c8bed1f0ff8a7231519d46",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14183546789.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-target-mcp-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14183546134/native-v2-embedded-mcp-proof.json",
+      "bytes": 617,
+      "blob": "3e1bbd91e2c687e829573e13667a282845490a4a",
+      "sha256": "271a2c19f47dc5920e2d28a8217af2dd1cedb88a77eff796f0d616003b90723f",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14183546134.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-mcp-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14183516199/native-v2-embedded-pinned-tool-proof.json",
+      "bytes": 5288,
+      "blob": "c1a8afde7c5e74fad822ce3967c95962fa42d5a6",
+      "sha256": "1563d405b2828de3aa0676ee0cfb789290cd7a8e9c2fabe4a9775fb8e05b7356",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14183516199.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-pinned-tool-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14183513084/native-v2-embedded-target-tool-proof.json",
+      "bytes": 5434,
+      "blob": "06632d8c9f574705e41dbe9d9972160b396cb9f0",
+      "sha256": "a03f7b9136652ee70002e4b2ecfa84a12561377268b2ac640ec93ff79ab982f3",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14183513084.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-target-tool-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14183502111/native-v2-embedded-target-model-proof.json",
+      "bytes": 1851,
+      "blob": "c138979cd1deab3561a168a4ab442203e43288c3",
+      "sha256": "9b51bd5a09662ee0228264d55e6d26a0e6210cce500a09419d0a4363b5016d43",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14183502111.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-target-model-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14183482519/native-v2-embedded-target-interrupt-proof.json",
+      "bytes": 2758,
+      "blob": "ce46a70c89c0b16178dfdf871b22411d40afdb67",
+      "sha256": "8b033c87fdc42dd8945af9d694110a2f359c07c94738987dc71f622cf64dbe36",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14183482519.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-target-interrupt-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14183421536/native-v2-model-candidate.json",
+      "bytes": 2029,
+      "blob": "c0447d0cbc36342e061125b508407d9d58ef9320",
+      "sha256": "8d94f921c2003f84b9d874dfb4050d3bd9ce3a1dab9fb699ddc2fce69caec7ed",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14183421536.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-model-candidate.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14183318713/native-v2-embedded-target-model-proof.json",
+      "bytes": 1851,
+      "blob": "c138979cd1deab3561a168a4ab442203e43288c3",
+      "sha256": "9b51bd5a09662ee0228264d55e6d26a0e6210cce500a09419d0a4363b5016d43",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14183318713.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-target-model-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14183289192/native-v2-embedded-target-model-proof.json",
+      "bytes": 1851,
+      "blob": "c138979cd1deab3561a168a4ab442203e43288c3",
+      "sha256": "9b51bd5a09662ee0228264d55e6d26a0e6210cce500a09419d0a4363b5016d43",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14183289192.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-target-model-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14183288240/native-v2-embedded-target-spi-proof.json",
+      "bytes": 1837,
+      "blob": "1aa127efaf29fa26026cc9b9855b4f9d09634b02",
+      "sha256": "e531649ac52ca50c1c358c19dc7328edc57d64506b9d6524acc8600661fcb7be",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14183288240.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-target-spi-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14183263358/native-v2-embedded-pinned-tool-proof.json",
+      "bytes": 5288,
+      "blob": "c1a8afde7c5e74fad822ce3967c95962fa42d5a6",
+      "sha256": "1563d405b2828de3aa0676ee0cfb789290cd7a8e9c2fabe4a9775fb8e05b7356",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14183263358.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-pinned-tool-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14183243255/native-v2-embedded-mcp-proof.json",
+      "bytes": 617,
+      "blob": "3e1bbd91e2c687e829573e13667a282845490a4a",
+      "sha256": "271a2c19f47dc5920e2d28a8217af2dd1cedb88a77eff796f0d616003b90723f",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14183243255.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-mcp-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14183177863/native-v2-embedded-target-spi-proof.json",
+      "bytes": 1838,
+      "blob": "33aa4a0d1f40bd8e6f892a1fd8f42194016575c7",
+      "sha256": "9aac019738de2f8d6cbbe9fb85f1612e4ee3bc6e3ee34e1a9f659db812190343",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14183177863.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-target-spi-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14183157287/native-v2-embedded-proof.json",
+      "bytes": 580,
+      "blob": "cfbaa175b1c74ecb39ce73bca377822bf897ea5d",
+      "sha256": "4ef46e78e7c3333a4c8115ea4c6ed5fecfe33095ca0a46d2db03f34301c73ed8",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14183157287.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14183059130/native-v2-embedded-target-mcp-proof.json",
+      "bytes": 616,
+      "blob": "fb47e945112708dc5afccfb91e57fe3dfa4d33f3",
+      "sha256": "19b1e12a829302c345e4513ef8b0b053fbd5a4f924c8bed1f0ff8a7231519d46",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14183059130.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-target-mcp-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14183033467/native-v2-embedded-proof.json",
+      "bytes": 580,
+      "blob": "cfbaa175b1c74ecb39ce73bca377822bf897ea5d",
+      "sha256": "4ef46e78e7c3333a4c8115ea4c6ed5fecfe33095ca0a46d2db03f34301c73ed8",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14183033467.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14183029114/native-v2-embedded-target-tool-proof.json",
+      "bytes": 5434,
+      "blob": "06632d8c9f574705e41dbe9d9972160b396cb9f0",
+      "sha256": "a03f7b9136652ee70002e4b2ecfa84a12561377268b2ac640ec93ff79ab982f3",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14183029114.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-target-tool-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14182999823/native-v2-embedded-target-spi-proof.json",
+      "bytes": 1840,
+      "blob": "fd2b4ffb1da1fb7286440d1477a1033ba1c6092b",
+      "sha256": "6a598b9de6790945de5fc0a523ba4bace6eaa946f21b2531694d90326426f27e",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14182999823.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-target-spi-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14182979281/native-v2-embedded-target-proof.json",
+      "bytes": 519,
+      "blob": "514c100dd586ce844c96ae24b3938b8c5bfdab5e",
+      "sha256": "b7f814890e05b54fd58e94b96ea2ee30590c6b6e92e1f271252815a4e1c33426",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14182979281.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-target-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14182974654/native-v2-embedded-proof.json",
+      "bytes": 580,
+      "blob": "cfbaa175b1c74ecb39ce73bca377822bf897ea5d",
+      "sha256": "4ef46e78e7c3333a4c8115ea4c6ed5fecfe33095ca0a46d2db03f34301c73ed8",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14182974654.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14182964408/native-v2-embedded-target-tool-proof.json",
+      "bytes": 5434,
+      "blob": "06632d8c9f574705e41dbe9d9972160b396cb9f0",
+      "sha256": "a03f7b9136652ee70002e4b2ecfa84a12561377268b2ac640ec93ff79ab982f3",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14182964408.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-target-tool-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14182959948/native-v2-embedded-model-proof.json",
+      "bytes": 1863,
+      "blob": "8b5c94130085869f1dfe4f083758b0d69b187f75",
+      "sha256": "0363e1e0230ece99efd196eff93914686b562191ba5333abedeecc517254f4b9",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14182959948.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-model-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14182929382/native-v2-embedded-interrupt-proof.json",
+      "bytes": 2770,
+      "blob": "31a9a1b0e44d821162f827e568a69c7912759fec",
+      "sha256": "fd49c154d61da5050e840485c3bd1d8abe35723359f2b6d3bb982b4689bc1b90",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14182929382.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-interrupt-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14182924250/native-v2-embedded-target-mcp-proof.json",
+      "bytes": 616,
+      "blob": "fb47e945112708dc5afccfb91e57fe3dfa4d33f3",
+      "sha256": "19b1e12a829302c345e4513ef8b0b053fbd5a4f924c8bed1f0ff8a7231519d46",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14182924250.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-target-mcp-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14182789973/native-v2-embedded-model-proof.json",
+      "bytes": 1863,
+      "blob": "8b5c94130085869f1dfe4f083758b0d69b187f75",
+      "sha256": "0363e1e0230ece99efd196eff93914686b562191ba5333abedeecc517254f4b9",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14182789973.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-model-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14182778751/native-v2-embedded-target-mcp-proof.json",
+      "bytes": 616,
+      "blob": "fb47e945112708dc5afccfb91e57fe3dfa4d33f3",
+      "sha256": "19b1e12a829302c345e4513ef8b0b053fbd5a4f924c8bed1f0ff8a7231519d46",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14182778751.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-target-mcp-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14182778215/native-v2-embedded-proof.json",
+      "bytes": 580,
+      "blob": "cfbaa175b1c74ecb39ce73bca377822bf897ea5d",
+      "sha256": "4ef46e78e7c3333a4c8115ea4c6ed5fecfe33095ca0a46d2db03f34301c73ed8",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14182778215.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14182769993/native-v2-embedded-target-interrupt-proof.json",
+      "bytes": 2758,
+      "blob": "ce46a70c89c0b16178dfdf871b22411d40afdb67",
+      "sha256": "8b033c87fdc42dd8945af9d694110a2f359c07c94738987dc71f622cf64dbe36",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14182769993.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-target-interrupt-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-native-receipts/members/14182479829/native-v2-embedded-model-proof.json",
+      "bytes": 1863,
+      "blob": "8b5c94130085869f1dfe4f083758b0d69b187f75",
+      "sha256": "0363e1e0230ece99efd196eff93914686b562191ba5333abedeecc517254f4b9",
+      "reason": "Exact derivative bytes recoverable from the retained original official ZIP; not duplicated.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-native-receipts/14182479829.zip",
+        "memberName": "old-provider-implementations/old-provider-implementations/native-v2-embedded-model-proof.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-readonly-audit/original-members/agent-teams-provider-session-contracts-0.0.0.tgz",
+      "bytes": 6230,
+      "blob": "33c2944ff8a52a9c087fba9d3cab1daffe2604d8",
+      "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc",
+      "reason": "Exact extracted checked-pair member recoverable from retained original Node24 official ZIP.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-readonly-audit/provider-9423-checked.zip",
+        "memberName": "agent-teams-provider-session-contracts-0.0.0.tgz"
+      }
+    },
+    {
+      "originalPath": "provider-9423-readonly-audit/original-members/receipt.json",
+      "bytes": 597,
+      "blob": "7fe2a65c8281598cc20dbd4f59d445ce18faab40",
+      "sha256": "3105c0ea7166596390aa38ac3866661aeff98673803f986a2301a28f3232f375",
+      "reason": "Exact extracted checked-pair member recoverable from retained original Node24 official ZIP.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-readonly-audit/provider-9423-checked.zip",
+        "memberName": "receipt.json"
+      }
+    },
+    {
+      "originalPath": "provider-9423-readonly-audit/original-members/agent-teams-provider-implementations-0.0.0.tgz",
+      "bytes": 185996,
+      "blob": "7130609dd29851148c9e2106e2764b75982739b1",
+      "sha256": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+      "reason": "Exact extracted checked-pair member recoverable from retained original Node24 official ZIP.",
+      "recoverFrom": {
+        "archivePath": "provider-9423-readonly-audit/provider-9423-checked.zip",
+        "memberName": "agent-teams-provider-implementations-0.0.0.tgz"
+      }
+    }
+  ],
+  "omittedDerivativeCount": 56,
+  "omittedDerivativeBytes": 317363,
+  "signedTransportUrlsFoundOrIncluded": 0,
+  "preservedOriginalNativeArchiveCount": 53,
+  "preservedOriginalNativeArchiveBytes": 58477,
+  "originalNativeReceiptClassification": {
+    "completedTrue": 51,
+    "completedFalseNegativeControls": 2,
+    "cleanupTrue": 53,
+    "qualifiedFalse": 53
+  },
+  "checkedPair": {
+    "providerSha256": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+    "spiSha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc",
+    "nativeHostQualified": false,
+    "packagedElectronQualified": false
+  },
+  "assemblyRestrictions": {
+    "projectExecution": false,
+    "sourceOrRefMutation": false,
+    "ciAction": false,
+    "providerCommand": false,
+    "installOrArchiveCodeImport": false
+  },
+  "inventorySelfHash": "External bundle-metadata.json; not recursive."
+}

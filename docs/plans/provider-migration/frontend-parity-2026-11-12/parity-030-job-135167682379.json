@@ -1,0 +1,110 @@
+{
+  "schema": "current-head-original-finite-provider-ui-success-v1",
+  "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "event": "pull_request",
+  "runAttempt": 1,
+  "runId": 44407826474,
+  "lane": "codex",
+  "job": {
+    "id": 135167682379,
+    "name": "Offline Host Desktop (linux-x64, codex)",
+    "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "run_id": 44407826474,
+    "run_attempt": 1,
+    "status": "completed",
+    "conclusion": "success",
+    "started_at": "2026-11-18T23:03:07Z",
+    "completed_at": "2026-11-18T23:09:46Z",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167682379",
+    "runner_name": "GitHub Actions 1000395321"
+  },
+  "rawLog": {
+    "phase": "permanently-retired",
+    "jobId": 135167682379,
+    "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "runId": 44407826474,
+    "runAttempt": 1,
+    "conclusion": "success",
+    "requestedAt": "2026-11-18 23:11:47 UTC",
+    "bytes": 293791,
+    "sha256": "8959186dac5f466d71c1bfbb99f8518d507cfacb6ba91d216524ce7835194dd5",
+    "computedGitBlobSha": "40fdca84404543c598be2fe985d28980bdc8ed3b",
+    "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682379-terminal.log",
+    "endpointRetired": true,
+    "publishedBlobSha": "40fdca84404543c598be2fe985d28980bdc8ed3b",
+    "exactReadback": true
+  },
+  "originalUnitSummaryLines": [
+    "ℹ tests 503",
+    "ℹ pass 503",
+    "ℹ fail 0",
+    "ℹ cancelled 0",
+    "ℹ skipped 0",
+    "ℹ todo 0",
+    "ℹ duration_ms 31292.749803",
+    "ℹ tests 7",
+    "ℹ pass 7",
+    "ℹ fail 0",
+    "ℹ cancelled 0",
+    "ℹ skipped 0",
+    "ℹ todo 0",
+    "ℹ duration_ms 196.869548"
+  ],
+  "originalConsolePass": [
+    {
+      "status": "PASS",
+      "receipt": "/home/runner/work/_temp/TEST-desktop-backend-QsqkEw/desktop-backend-receipt.json"
+    }
+  ],
+  "originalScenarioAndVerificationSteps": [
+    {
+      "name": "Verify original checkout and runner tuple",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 5,
+      "started_at": "2026-11-18T23:03:49Z",
+      "completed_at": "2026-11-18T23:03:49Z"
+    },
+    {
+      "name": "Exercise original provider conversations and schedules through pinned TEST peers",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 22,
+      "started_at": "2026-11-18T23:06:10Z",
+      "completed_at": "2026-11-18T23:09:39Z"
+    },
+    {
+      "name": "Verify exact source, original screenshots, receipts and cleanup",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 38,
+      "started_at": "2026-11-18T23:09:39Z",
+      "completed_at": "2026-11-18T23:09:39Z"
+    }
+  ],
+  "originalEmulatedGuardAndCleanupVerifierLines": [
+    "  LEGACY_DESKTOP_EMULATED_ONLY: 1",
+    "  LEGACY_DESKTOP_PROOF_MODE: emulated-codex-runtime-ui",
+    "assert.equal(inputs.nativeProviders, 'forbidden');",
+    "    assert.equal(proof.fixturePins.vendorsAllowed, false);",
+    "    assert.equal(receipt.emulatedRuntimeCleanup.absent, true);",
+    "    assert.deepEqual(receipt.emulatedRuntimeCleanup.remaining, []);",
+    "    assert.equal(proof.fixturePins.vendorsAllowed, false);",
+    "    assert.equal(receipt.emulatedRuntimeCleanup.absent, true); assert.deepEqual(receipt.emulatedRuntimeCleanup.remaining, []);",
+    "    assert.equal(proof.fixturePins.vendorsAllowed, false); assert.equal(proof.fixturePins.runtimeConfigured, true);",
+    "    assert.equal(receipt.emulatedRuntimeCleanup.absent, true); assert.deepEqual(receipt.emulatedRuntimeCleanup.remaining, []);",
+    "  nativeProviders: 'not executed', vendorAuthQualified: false, releaseQualified: false,",
+    "  LEGACY_DESKTOP_EMULATED_ONLY: 1",
+    "  LEGACY_DESKTOP_EMULATED_ONLY: 1"
+  ],
+  "artifactFromOriginalUploadLog": {
+    "artifactId": 14480521679,
+    "bytes": 2965168,
+    "sha256": "3a709c12073bfe68895c4b1dc0b57f32582eb6e9a70afecbda9acc5d9405e057",
+    "downloaded": false,
+    "visualInspection": false
+  },
+  "scope": "Original app provider conversations and schedules through pinned TEST peers in selected finite emulated lane; no real codex executable or vendor authentication/inference qualification is claimed.",
+  "verificationLimit": "Original selected-lane scenario PASS plus source/receipt/cleanup verifier SUCCESS. Artifact receipts have not been separately downloaded or visually inspected. Common503+7 source tests repeat across these jobs and are not added as unique tests.",
+  "jobLogEndpointRetired": true
+}

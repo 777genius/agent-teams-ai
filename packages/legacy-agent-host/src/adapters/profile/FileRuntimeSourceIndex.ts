@@ -46,6 +46,7 @@ const indexSchema = z
   })
   .strict();
 type SourceIndex = z.infer<typeof indexSchema>;
+type DecodedIndex = { bytes: Buffer; digest: string; value: SourceIndex };
 const maximumBytes = 8 * 1024 * 1024;
 const held = (): never => {
   throw new ManagementCommandError('held');
@@ -56,15 +57,18 @@ export class FileRuntimeSourceIndex {
   private readonly directory: string;
   private readonly identity: { dev: number; ino: number };
   private observedDigest: string | undefined;
+  // One bounded decode only. Every use still opens and reads the original file.
+  private decoded: DecodedIndex | undefined;
 
   constructor(
     root: string,
-    private readonly assertWriter: () => void
+    private readonly assertWriter: () => void,
+    private readonly readOnly = false
   ) {
     assertWriter();
     if (!isAbsolute(root) || resolve(root) !== root || realpathSync(root) !== root) held();
     this.directory = join(root, 'runtime-sources');
-    try {
+    if (!readOnly) try {
       mkdirSync(this.directory, { mode: 0o700 });
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
@@ -80,6 +84,9 @@ export class FileRuntimeSourceIndex {
   }
 
   read(): SourceIndex {
+    const previous = this.decoded;
+    this.decoded = undefined;
+    let completed: DecodedIndex | undefined;
     this.check();
     const path = join(this.directory, 'index.json');
     let before;
@@ -113,41 +120,50 @@ export class FileRuntimeSourceIndex {
         before.mtimeMs !== after.mtimeMs
       )
         held();
-      const { digest, ...body } = JSON.parse(
-        new TextDecoder('utf-8', { fatal: true }).decode(bytes)
-      ) as Record<string, unknown>;
-      if (digest !== runtimeDigest(body) || (this.observedDigest !== undefined && digest !== this.observedDigest)) held();
-      const parsed = indexSchema.parse(body);
-      if (
-        new Set(parsed.records.map((row) => row.revision)).size !== parsed.records.length ||
-        new Set(parsed.records.map((row) => row.commandId)).size !== parsed.records.length ||
-        new Set(parsed.current.map((row) => row.sourceId)).size !== parsed.current.length
-      )
-        held();
-      for (const record of parsed.records) {
-        const { revision, ...selection } = record;
-        if (revision !== runtimeDigest(selection)) held();
-      }
-      for (const pointer of parsed.current) {
-        const record = parsed.records.find((row) => row.revision === pointer.revision);
-        if (
-          !record ||
-          record.grant.targetId !== pointer.sourceId ||
-          record.commandId !== pointer.commandId
-        )
-          held();
-      }
+      const decoded = previous?.bytes.equals(bytes) ? previous : this.decode(bytes);
+      if (this.observedDigest !== undefined && decoded.digest !== this.observedDigest) held();
       this.check();
-      this.observedDigest = runtimeDigest(body);
-      return parsed;
+      this.observedDigest = decoded.digest;
+      // The caller owns its copy, including nested grants and candidates.
+      const result = structuredClone(decoded.value);
+      completed = decoded;
+      return result;
     } catch {
       return held();
     } finally {
+      // A failed close must not publish (or retain a reentrant read's) decode.
+      this.decoded = undefined;
       if (fd !== undefined) closeSync(fd);
+      this.decoded = completed;
     }
   }
 
+  private decode(bytes: Buffer): DecodedIndex {
+    const { digest, ...body } = JSON.parse(
+      new TextDecoder('utf-8', { fatal: true }).decode(bytes)
+    ) as Record<string, unknown>;
+    const bodyDigest = runtimeDigest(body);
+    if (digest !== bodyDigest) held();
+    const parsed = indexSchema.parse(body);
+    if (
+      new Set(parsed.records.map((row) => row.revision)).size !== parsed.records.length ||
+      new Set(parsed.records.map((row) => row.commandId)).size !== parsed.records.length ||
+      new Set(parsed.current.map((row) => row.sourceId)).size !== parsed.current.length
+    ) held();
+    for (const record of parsed.records) {
+      const { revision, ...selection } = record;
+      if (revision !== runtimeDigest(selection)) held();
+    }
+    for (const pointer of parsed.current) {
+      const record = parsed.records.find((row) => row.revision === pointer.revision);
+      if (!record || record.grant.targetId !== pointer.sourceId || record.commandId !== pointer.commandId)
+        held();
+    }
+    return { bytes, digest: bodyDigest, value: parsed };
+  }
+
   publish(record: RuntimeSourceRecord, seedRevision: string): void {
+    if (this.readOnly) held();
     const index = this.read();
     if (
       index.records.some(

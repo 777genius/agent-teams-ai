@@ -1,5 +1,9 @@
 import { parseHostTeamRunId } from '../contracts/teamRunSelection';
 
+import {
+  captureHostProvisioningMemberSnapshot,
+  projectHostMemberSpawnStatuses,
+} from './createHostMemberSpawnStatuses';
 import { createHostTeamLifecycle } from './createHostTeamLifecycle';
 import { projectHostProvisioningProgress } from './projectHostProvisioningProgress';
 import { readHostLaunchConfiguration } from './readHostLaunchConfiguration';
@@ -64,9 +68,10 @@ export function createHostTeamProvisioning(
     async getProvisioningStatus(runId: string) {
       const selected = await capture(runId);
       selected.assertCurrent();
-      return projectHostProvisioningProgress(
-        selected.connection.handle.handleId,
-        selected.configuration
+      return captureHostProvisioningMemberSnapshot(
+        projectHostProvisioningProgress(selected.connection.handle.handleId, selected.configuration),
+        projectHostMemberSpawnStatuses(selected.connection.handle.handleId, selected.configuration),
+        selected.assertCurrent
       );
     },
     async cancelProvisioning(runId: string): Promise<void> {

@@ -1,0 +1,415 @@
+{
+  "schema": "current-head-original-ui-job-failure-v1",
+  "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "event": "pull_request",
+  "runAttempt": 1,
+  "runId": 44407826474,
+  "job": {
+    "id": 135167683004,
+    "name": "Offline Host Desktop (darwin-arm64, opencode-v2-quit-active)",
+    "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "run_id": 44407826474,
+    "run_attempt": 1,
+    "status": "completed",
+    "conclusion": "failure",
+    "started_at": "2026-11-18T22:14:27Z",
+    "completed_at": "2026-11-18T22:23:53Z",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167683004",
+    "runner_name": "GitHub Actions 1000395102"
+  },
+  "failedSteps": [
+    {
+      "name": "Exercise original OpenCode V2 native Desktop journey",
+      "status": "completed",
+      "conclusion": "failure",
+      "number": 34,
+      "started_at": "2026-11-18T22:19:21Z",
+      "completed_at": "2026-11-18T22:23:35Z"
+    },
+    {
+      "name": "Verify original V2 journey receipts, source binding and cleanup",
+      "status": "completed",
+      "conclusion": "failure",
+      "number": 37,
+      "started_at": "2026-11-18T22:23:35Z",
+      "completed_at": "2026-11-18T22:23:38Z"
+    }
+  ],
+  "rawLog": {
+    "phase": "permanently-retired",
+    "jobId": 135167683004,
+    "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "runId": 44407826474,
+    "runAttempt": 1,
+    "conclusion": "failure",
+    "requestedAt": "2026-11-18 22:25:24 UTC",
+    "bytes": 242897,
+    "sha256": "bdc77944ffc5fc8592968b514572967c9554a23005aec8e4a1cd9ba3eeda3237",
+    "computedGitBlobSha": "c4e55bf7ee1ea175ecb2f0e6a08ddbc4d73bdd14",
+    "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167683004-terminal.log",
+    "endpointRetired": true,
+    "publishedBlobSha": "c4e55bf7ee1ea175ecb2f0e6a08ddbc4d73bdd14",
+    "exactReadback": true
+  },
+  "artifact": {
+    "artifactId": 14477940072,
+    "phase": "GitHub-download-endpoint-permanently-retired",
+    "fileId": "file_000000001ccc81f4923f1cca4ffaf71e",
+    "bytes": 353592,
+    "sha256": "2baab3f820127148e345d4d700edb45ef312b384787d6160b8b14a7b279a5f86",
+    "zipLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/030-quit-active-darwin-arm64-14477940072.zip"
+  },
+  "originalReceipt": {
+    "artifactId": 14477940072,
+    "name": "TEST-desktop-backend-Aezb43/desktop-backend-receipt.json",
+    "bytes": 868450,
+    "sha256": "5586886bf6658565b38cb01be29766175a0bf1bf4a2a4723407bdcbef0a95595"
+  },
+  "artifactOriginalInputs": {
+    "host-emulated-inputs.json": {
+      "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "platform": "darwin",
+      "architecture": "arm64",
+      "nativeProviders": "OpenCode V2 with finite localhost model only",
+      "values": {
+        "LEGACY_DESKTOP_BACKEND_GO": "1",
+        "LEGACY_DESKTOP_EMULATED_ONLY": "1",
+        "LEGACY_DESKTOP_COREPACK_HOME": "/Users/runner/work/_temp/TEST-emulated-ui-inputs-9jI9YQ/cache",
+        "LEGACY_DESKTOP_NODE_SHA256": "e4b5a3af0e05c75de2eae013904145f40fe7fc2a6e6f17510128bf45cca4e79b",
+        "LEGACY_DESKTOP_HOST_ENTRY_SHA256": "4e1841072540175636a776082693780021827ce56d0b5c2aa11f9e8511d132ba",
+        "LEGACY_DESKTOP_PNPM_PATH": "/Users/runner/work/_temp/TEST-emulated-ui-inputs-9jI9YQ/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+        "LEGACY_DESKTOP_PNPM_SHA256": "7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb",
+        "LEGACY_DESKTOP_COREPACK_PACKAGE_SHA256": "6f431b9a91afe6b4757f4b5a3855e2f79e2f366dd4242fd397713932aa3a2714",
+        "LEGACY_DESKTOP_COREPACK_LIBRARY_SHA256": "abd6f0e7b4e2af310243e202fd908ea64cda545786222f0a3d3f62426e8ad66e"
+      }
+    },
+    "host-emulated-opencode-v2-inputs.json": {
+      "kind": "TEST_NATIVE_V2_EMBEDDED_INPUTS",
+      "status": "READY",
+      "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "platform": "darwin-arm64",
+      "nodeVersion": "v24.21.0",
+      "productQualified": false,
+      "stage": "prepared",
+      "baseArchiveSha256": "facece83f619c4b1c1ec3a76cff25727d85a2b75d18812cbc3a5b729e855ecc9",
+      "runtimeSource": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "bun": {
+        "path": "/Users/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun",
+        "sha256": "0a2237cdcfa0d16ef501d9acca9f0026309ef348bea7393a64e8d1e3609565cc",
+        "version": "1.4.4"
+      },
+      "osBuild": "24H232",
+      "productTupleAdmitted": true,
+      "processArtifact": {
+        "manifest": {
+          "schemaVersion": 1,
+          "abi": "napi-8",
+          "platform": "darwin",
+          "architecture": "arm64",
+          "osBuild": "24H232",
+          "library": "registered-process.node",
+          "sourceSha256": "a2f6d70bd04251308a1f70fe4374fe5fd343feb6939db3df7d030f03d7d1e6b5",
+          "binarySha256": "662b16ef15beb4aa2667c4a770ea4ffa17f15990bfc12f1a2444bf778ea76adc",
+          "compilerSha256": "4c458256bcdf913774de1bb4a37768244d3b41f32ad55afb2dfec3432f46f4fe",
+          "sdkSettingsSha256": "58a133735f0a55a624a1703067059f6e78925e51725ec6e1f966072e142c9c42",
+          "headers": [
+            {
+              "file": "node_api.h",
+              "sha256": "2d4560831e525b47b060ec8a0864ab73993df9e20215ce9f0fe7b24cd31af32a"
+            },
+            {
+              "file": "node_api_types.h",
+              "sha256": "a25356630d3058f0a0c8937d9f297e9471e037fda58c2696d8a505c2bd99cb00"
+            },
+            {
+              "file": "js_native_api.h",
+              "sha256": "8808ef8899a1691411928ef5dd7dae0537aedc93d3a34e223b2d89692e79c788"
+            },
+            {
+              "file": "js_native_api_types.h",
+              "sha256": "4f19cb90d240765cc0961d92a1ee20f65fdc50db7de1ab0a5cb6bc227224e1a0"
+            },
+            {
+              "file": "node_version.h",
+              "sha256": "bd056729fddf4bfa58687036219f07417c334c4ecfcb513ac256fa254451bfc9"
+            }
+          ]
+        },
+        "manifestSha256": "89b0baf9c4fb0a9b408824ebd6936a756846b4072a02097d9460b3ea4fca0c55",
+        "directory": "/Users/runner/work/_temp/TEST-opencode-v2-inputs-5GTvnU/process-artifact"
+      },
+      "supportArchiveSha256": "63776ffeade65263c217042e431bbf71d3d75c0b0b59f6515a0e503e068f012b",
+      "manifestSha256": "a6091937d1c8686b7e1f125b2ef69c52146867b208517eb0fab4cb7ea18c2204"
+    }
+  },
+  "observed": {
+    "status": "INCOMPLETE",
+    "mode": "native-quit-ui",
+    "nativeProvider": "opencode",
+    "nativeGeneration": "v2",
+    "scope": "Original Composer twice, one real native inference held and one durably queued input, original guarded Quit via semantic public UI API; no human menu click or Stop",
+    "excluded": [
+      "vendor model qualification",
+      "automatic app.relaunch",
+      "pending provider-open",
+      "human macOS menu/window click",
+      "Stage2",
+      "Desktop team launch",
+      "full P4/P8",
+      "full fork-free/P5 sentinel qualification",
+      "legacy maintenance cutover"
+    ],
+    "startupOutcome": {
+      "elapsedMs": 37740,
+      "matchingMainFound": true,
+      "appExitCode": null,
+      "appSignalCode": null,
+      "spawnError": false
+    },
+    "failureSource": {
+      "kind": "assertion",
+      "frames": [
+        "scripts/legacy-agent-host/desktop-native-quit-ui-smoke.ts:39:12",
+        "scripts/legacy-agent-host/desktop-native-quit-ui-smoke.ts:262:24",
+        "scripts/legacy-agent-host/desktop-native-quit-ui-smoke.ts:25:9",
+        "scripts/legacy-agent-host/desktop-native-quit-ui-smoke.ts:261:5",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:448:16",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:789:29"
+      ]
+    },
+    "failure": "The expression evaluated to a falsy value:\n\n  assert.ok(\n",
+    "nativeBeforeFailureQuit": {
+      "phase": "before guarded failure Quit",
+      "capturedPids": [
+        16512
+      ],
+      "presentPids": [
+        16512
+      ]
+    },
+    "failureQuit": {
+      "attempted": true,
+      "scope": "Close only the verified TEST window before stopping its dev wrapper",
+      "reply": "acknowledged",
+      "listenerAbsent": true
+    },
+    "quitRequested": true,
+    "originalRequestedQuitExit": {
+      "initialExitCode": 0,
+      "initialSignalCode": null,
+      "exitCode": 0,
+      "signalCode": null
+    },
+    "beforeHarnessCleanup": [],
+    "cleanup": {
+      "processGroup": 8839,
+      "remaining": [],
+      "appExitCode": 0,
+      "appSignalCode": null,
+      "capturedHostObserved": true,
+      "capturedHostAbsent": true,
+      "hostExitCode": "not exposed by main-owned transport; consult per-flow native custody and physical child observations"
+    },
+    "finalSentinelCensus": {
+      "invocations": [
+        {
+          "executable": "claude-multimodel",
+          "allowed": true,
+          "argc": 1,
+          "command": null,
+          "flags": [
+            "--version"
+          ]
+        },
+        {
+          "executable": "opencode",
+          "allowed": true,
+          "argc": 1,
+          "command": null,
+          "flags": [
+            "--version"
+          ]
+        },
+        {
+          "executable": "shell-env",
+          "allowed": true,
+          "argc": 2,
+          "flags": [
+            "-lic"
+          ]
+        },
+        {
+          "executable": "opencode",
+          "allowed": true,
+          "argc": 1,
+          "command": null,
+          "flags": [
+            "--version"
+          ]
+        }
+      ],
+      "preQuitCount": null,
+      "postQuitOrCleanupInvocations": null,
+      "refusedInvocations": [],
+      "qualification": "Sentinels refuse nonversion commands without launching providers. Post-Quit/cleanup refusals are retained legacy maintenance gaps; they do not prove native execution or full fork-free/P5 qualification."
+    }
+  },
+  "nativeSetup": {
+    "scope": "Explicit selected model/effort setup via actual app IPC; ordinary launch UI is not qualified",
+    "configuration": {
+      "members": [
+        {
+          "memberId": "alice-id",
+          "model": "test-local/TEST-model",
+          "permissions": "bypass"
+        }
+      ]
+    },
+    "status": "ready",
+    "launch": {
+      "launchId": "TEST-run-TEST-desktop-backend-Aezb43",
+      "rosterRevision": "e036db237a9fb2d00a1f53ff81fb502ccd47d2931ee73090b60ea162af26cc44",
+      "observedAtMs": 1795040590549,
+      "startedAtMs": 1795040564118,
+      "status": "ready",
+      "ready": 1,
+      "expected": 1,
+      "retryCapability": "same-binding-no-allocation-only",
+      "admission": {
+        "commandId": "TEST-explicit-sandbox-setup-launch",
+        "sourceRosterRevision": "593b52568f2f24a09705f9ecd81eb4af4cc92380fc19afeb98ed95cbc303b7cd"
+      },
+      "members": [
+        {
+          "memberId": "alice-id",
+          "generation": "1",
+          "attemptId": "initial-2d629dfaaae75b74551942edaeb87128167b32689e2abd77335445d9156a79bd",
+          "status": "ready",
+          "nativeReady": true,
+          "usable": true,
+          "controlAvailable": true,
+          "noAllocation": false,
+          "reason": "context-applied"
+        }
+      ]
+    },
+    "nativeChildren": [
+      {
+        "pid": 16512,
+        "ppid": 9994,
+        "pgid": 16512
+      }
+    ],
+    "nativeExecutableSha256": "0a2237cdcfa0d16ef501d9acca9f0026309ef348bea7393a64e8d1e3609565cc"
+  },
+  "originalNativeQuitUiProof": {
+    "status": "INCOMPLETE",
+    "scope": "Original Composer twice, real native first request held by localhost inference, original guarded Quit semantic public UI API; no human menu click",
+    "excluded": [
+      "automatic app.relaunch",
+      "pending provider-open",
+      "vendor inference/authentication",
+      "Stage2"
+    ]
+  },
+  "originalNativeQuitUiProofStepCount": 15,
+  "originalNativeQuitUiProofStepLabels": [
+    {
+      "action": "mouseMoved",
+      "label": "hover sidebar row before measuring click",
+      "subject": "TEST persisted Host sidebar seed"
+    },
+    {
+      "action": "mouseClick",
+      "label": "sidebar task",
+      "subject": "TEST persisted Host sidebar seed",
+      "state": "attempted"
+    },
+    {
+      "observation": "passive input delivery after sidebar click"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover Open team"
+    },
+    {
+      "action": "mouseClick",
+      "label": "Open team",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover open original alice direct chat"
+    },
+    {
+      "action": "mouseClick",
+      "label": "open original alice direct chat",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover focus original Composer"
+    },
+    {
+      "action": "mouseClick",
+      "label": "focus original Composer",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover original Send once"
+    },
+    {
+      "action": "mouseClick",
+      "label": "original Send once",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover focus original Composer"
+    },
+    {
+      "action": "mouseClick",
+      "label": "focus original Composer",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover original Send once"
+    },
+    {
+      "action": "mouseClick",
+      "label": "original Send once",
+      "state": "attempted"
+    }
+  ],
+  "originalRuntimeEntryShapeDiagnostics": [
+    {
+      "kind": "TEST_DESKTOP_RECORD_ENTRY_SHAPE",
+      "shape": {
+        "count": 3,
+        "sampled": 3,
+        "truncated": false,
+        "regular": 3,
+        "validJsonName": 2,
+        "regularJson": 2,
+        "directory": 0,
+        "symbolicLink": 0,
+        "otherType": 0
+      }
+    }
+  ],
+  "sourceHashesBeforeAndAfterEqual": true,
+  "classification": {
+    "stage": "Main and finite OpenCode native setup ready; two original Composer Send click attempts recorded before the durable command-directory assertion and intended active Quit",
+    "firstFailure": "files() desktop-native-quit-ui-smoke.ts:39:12 while wait at261/262 reads durable commands",
+    "secondaryFailure": "workflow step37 receipt.status INCOMPLETE does not equal PASS",
+    "cleanup": "guarded failure Quit acknowledged; original app exit0; remaining[]; capturedHostAbsent true",
+    "qualification": "This failed run does not qualify active guarded Quit or cold readback; no vendor inference/authentication qualification. Final artifact has three command JSON files but does not identify the non-JSON regular file seen at assertion time."
+  },
+  "retiredEndpoints": {
+    "jobLog": true,
+    "artifactDownload": true
+  },
+  "artifactVisualInspection": false
+}

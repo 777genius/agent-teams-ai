@@ -1,0 +1,224 @@
+{
+  "kind": "INDEPENDENT_P10_B2_ACTUAL_FIVE_SOURCE_PUBLICATION_R2",
+  "decision": "APPROVE_EXACT_ACTUAL_FIVE_SOURCE_CHILD_AND_WHOLE_TREE_PRESERVATION",
+  "mode": "Pure retained-data full-byte/hash/JSON/unified-diff/Merkle review only; no project or source execution.",
+  "actualReadbackPacket": {
+    "path": "/tmp/migration-evidence-20261116/root/b2-published-source-447a-readback.json",
+    "gitBlob": "c49c69f4670479245ba6dadcf11aa520b513526a",
+    "bytes": 418775,
+    "sha256": "def72aad7e8d577ec9056a2254ce1e3f96351a5b7ca218be7c6a28af456adf6b"
+  },
+  "approvedOriginalAuthorPackage": {
+    "path": "/tmp/migration-evidence-20261116/native/p10-b2-final-source-review/final-reviewed-packet.json",
+    "gitBlob": "56bc875e024b46e7fe1404ec610d843ddaca98a1",
+    "bytes": 764423,
+    "sha256": "200b51a00e94a2f0470f9d6094f2640df88723b07730c3ecb49a4f8d75e6ecf1"
+  },
+  "approvedSourceAndProseR2": {
+    "path": "/tmp/migration-evidence-20261116/native/p10-b2-final-source-review/independent-r2.json",
+    "gitBlob": "0c257763f82542e570f85197ab452d782c196fc6",
+    "bytes": 24855,
+    "sha256": "e9f9d2b3495bc11727260a03de43878a54185ef30f699223f25e3b4ea4c9434c"
+  },
+  "approvedRootSelection": {
+    "path": "/tmp/migration-evidence-20261116/root/b2-root-selection.json",
+    "gitBlob": "a09985320d0cc4fbbae54e822b0193b80f14cf94",
+    "bytes": 7978,
+    "sha256": "a7c4a95517fa03b265d312386584b24513a2b1f5e2e13cb5ecb466f2b7a58bdd"
+  },
+  "approvedActualPublishedR1R2": {
+    "path": "/tmp/migration-evidence-20261116/native/p10-b2-final-source-review/published-r1-5f300-r2.json",
+    "gitBlob": "3912d3d2d26d92dd484fdbdb6b299317d17879b2",
+    "bytes": 19090,
+    "sha256": "43c5b16f1af81960f23b6090fed6d69f9343e73e156bbbab75b0798738d1423b"
+  },
+  "actualPublication": {
+    "head": "447a4945e329c8c3b63942c63af951f964e0a14a",
+    "soleParent": "5f30025ae2a0a3018bbb922ef90f031514ef005e",
+    "parentTree": "3934a8dca3e02e667d694126b10f6a493601ad07",
+    "tree": "f0f4731efb37a079dd91492bcbfb2dbd0091c882",
+    "leaves": 11079,
+    "changedSourcePaths": 5,
+    "fullActualSourcePayloadBytes": 335765,
+    "actualCommitDelta": {
+      "total": 565,
+      "additions": 539,
+      "deletions": 26
+    }
+  },
+  "fullActualSourceChecks": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-retained-opencode-model.ts",
+      "before": {
+        "gitBlob": "fad33b79cb0e6f780d1c2caf435b11e07c03bf87",
+        "bytes": 12509,
+        "sha256": "c797fe0d8e9c9f9819a79dbcc638bd4d96d5e56f32f4101a85e4f2d7ff3ae917"
+      },
+      "actualAfter": {
+        "gitBlob": "369505df3d6a37b5833550954f4ef2a1c501b342",
+        "bytes": 17743,
+        "sha256": "ba42719bae92fb4c5a6e6a307100e873b096a03594a2c6755b1fddd15ed695a8"
+      },
+      "physicalLines": 269,
+      "rawUtf8BodyEqualsApprovedCandidate": true,
+      "actualGitHubDiff": {
+        "patch": {
+          "gitBlob": "ca11417a5c7b409f970dec680784690dfd3d8476",
+          "bytes": 10251,
+          "sha256": "6f92fd66f113ab45a21e4ef2c6bc5776ae3d7523d4f41bfdcf5242b4cacc7188"
+        },
+        "hunks": 4,
+        "additions": 75,
+        "deletions": 6,
+        "forwardRestoresCompleteActualAfter": true,
+        "inverseRestoresCompleteBefore": true
+      },
+      "modePreserved": "100644"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts",
+      "before": {
+        "gitBlob": "507b2e4243e99a2285822ea8bce8103760c43022",
+        "bytes": 43481,
+        "sha256": "cf7f4fd9661ffaccac2b520bda40c455f0ec3954f4c5c1efbcaf74270f3c9fe7"
+      },
+      "actualAfter": {
+        "gitBlob": "a910209438b29f04ea4a30f28e69620d98802183",
+        "bytes": 54340,
+        "sha256": "df5a4d103e63525991854ce8054588b2fcd9d56e21e90efd7ebd6d95414432bc"
+      },
+      "physicalLines": 727,
+      "rawUtf8BodyEqualsApprovedCandidate": true,
+      "actualGitHubDiff": {
+        "patch": {
+          "gitBlob": "15a4c485828090f814b016c04806f79aa2d3c0da",
+          "bytes": 13851,
+          "sha256": "ac57b75cd4e6e55be95abd7dca2d6df53aeb2ff2cb16d908f2f2265c1980d640"
+        },
+        "hunks": 4,
+        "additions": 131,
+        "deletions": 4,
+        "forwardRestoresCompleteActualAfter": true,
+        "inverseRestoresCompleteBefore": true
+      },
+      "modePreserved": "100644"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-retained-opencode-app.ts",
+      "before": {
+        "gitBlob": "71cc2aa1c55540d027bdf321120e850cb650f0c3",
+        "bytes": 37580,
+        "sha256": "2930df9471446610ed3cf4a5642bc6d6314b8f946a5669e343ffee7058a205d9"
+      },
+      "actualAfter": {
+        "gitBlob": "4f686cdb2c99ef4f04bb060041bf8ccf6f8601db",
+        "bytes": 49147,
+        "sha256": "11e064039a9ff28261a2daf41c247d0f6a947e192af03541fc0974d49a0e15ef"
+      },
+      "physicalLines": 727,
+      "rawUtf8BodyEqualsApprovedCandidate": true,
+      "actualGitHubDiff": {
+        "patch": {
+          "gitBlob": "6d258eaf110b4f6f9d54390b27d2cddda1aedc95",
+          "bytes": 18876,
+          "sha256": "eece6419a4a449f47045eeb4524c13018fcb35e0005421300d9fb42d726ba8cd"
+        },
+        "hunks": 6,
+        "additions": 160,
+        "deletions": 10,
+        "forwardRestoresCompleteActualAfter": true,
+        "inverseRestoresCompleteBefore": true
+      },
+      "modePreserved": "100644"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-retained-opencode-model.test.ts",
+      "before": {
+        "gitBlob": "053b6c09383aeae5186322b2e8b0b17fc8cd1021",
+        "bytes": 10565,
+        "sha256": "1eb5e8a3e14eee4babe9102074fc17b1c1dffee5e1a04ae4993319fefc6f3336"
+      },
+      "actualAfter": {
+        "gitBlob": "45f0d34a10f1928c0ecc7e102a5015188d193ccf",
+        "bytes": 14802,
+        "sha256": "4088858201c2ba46b2c6d2d0957340f7b313ec1a5cfb391240c1a759ada926d7"
+      },
+      "physicalLines": 236,
+      "rawUtf8BodyEqualsApprovedCandidate": true,
+      "actualGitHubDiff": {
+        "patch": {
+          "gitBlob": "adcbfe8f371f964139e5ec78b59fea65da41079b",
+          "bytes": 4465,
+          "sha256": "4e2a7f322c9872a04d75326c520d0864c6c0a45b037b7aeb82b2d8e004ec7162"
+        },
+        "hunks": 1,
+        "additions": 58,
+        "deletions": 0,
+        "forwardRestoresCompleteActualAfter": true,
+        "inverseRestoresCompleteBefore": true
+      },
+      "modePreserved": "100644"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "before": {
+        "gitBlob": "478323fbcb60bc0b0f29c0e430fdb3d001d0a456",
+        "bytes": 189024,
+        "sha256": "b65900ed9394287e42c67d147fa15349f098c6fa074d74403789112c27f7f1b4"
+      },
+      "actualAfter": {
+        "gitBlob": "4e4554ec3330d0c06b0736e861348d7279511361",
+        "bytes": 199733,
+        "sha256": "76e4d2d8e21ba6d2fefdc7aa8c06eb24cc831caa0c2d08939a6a66ec378dc66b"
+      },
+      "physicalLines": 2927,
+      "rawUtf8BodyEqualsApprovedCandidate": true,
+      "actualGitHubDiff": {
+        "patch": {
+          "gitBlob": "52f6abb6f30bd6118b56490ec9d4230cef8b65f4",
+          "bytes": 16822,
+          "sha256": "e430c46d19dfaecfaa631fba58b8a530578947457e9d5134c74c64035e96c47f"
+        },
+        "hunks": 6,
+        "additions": 115,
+        "deletions": 6,
+        "forwardRestoresCompleteActualAfter": true,
+        "inverseRestoresCompleteBefore": true
+      },
+      "modePreserved": "100644"
+    }
+  ],
+  "wholeTreeProof": {
+    "inputParentMap": {
+      "path": "/tmp/migration-evidence-20261116/native/p10-b2-final-source-review/published-docs-5f300-leaf-map.json",
+      "gitBlob": "b85031c65fc59a5c86e4e5072ef933396365d220",
+      "bytes": 3242851,
+      "sha256": "8bd9cfb8786b0b837b7a01173f35e486ba301feea1f4ae76e4c0ebac0786b835"
+    },
+    "independentlyRecomputedParentTree": "3934a8dca3e02e667d694126b10f6a493601ad07",
+    "actualTreeEqualsPriorIndependentlyProjectedFiveSourceTree": true,
+    "actualAllLeavesEqualPriorProjectedMap": true,
+    "unmodifiedLeaves": 11074,
+    "removedLeaves": 0,
+    "newLeaves": 0,
+    "renamedLeaves": 0,
+    "modeChanges": 0,
+    "allTwentyPublishedR1DocumentsPreserved": true,
+    "fullP10BlobPreserved": "1b017131e186f67ccaf62c4215de4bdb0f58af74",
+    "allIncomingPlan50Through53SourceAndDocumentLeavesPreserved": true,
+    "actualMap": {
+      "path": "/tmp/migration-evidence-20261116/native/p10-b2-final-source-review/published-source-447a-leaf-map.json",
+      "gitBlob": "9625eceeb887b2e14aef9839482e8a2a672259fd",
+      "bytes": 3242909,
+      "sha256": "fe68790998f66152e9969a81a88c274689169b829a3fe882bc493ee0e619b53a"
+    }
+  },
+  "semanticsAndLimits": [
+    "The full five actual source bodies exactly match frozen author package56bc875e, source/prose R20c257763, root selectiona099853 and actual published-R1 R23912d3d2; no new source design or semantic exception is introduced.",
+    "Actual commit parent is the reviewed published documentary R1; all five actual GitHub diff patches independently forward/inverse reconstruct the complete reviewed bytes.",
+    "The separate Plan53 lifecycle parser integration correction is neither applied nor approved by this five-source review; every incoming0d24 leaf outside these five paths remains intact.",
+    "This verifies retained actual commit/body readbacks and a whole-tree Merkle reconstruction, not a fresh network ref/PR/CI observation or evidence of primary advancement.",
+    "Source publication is not original resulting-source strict types/lint/model-contract/native donor/Task Changes/PNG/current-cold/cleanup qualification. All those original gates and the remaining P08/P09/import/release/vendor boundaries remain mandatory.",
+    "No tests, compiler, lint, parser application, package import, project/native/GUI/provider execution, API call, status poll, Actions mutation, Git/index/ref write, canonical edit or primary advancement was performed by this reviewer."
+  ]
+}

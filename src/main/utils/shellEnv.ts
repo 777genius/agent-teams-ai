@@ -9,12 +9,17 @@
  * and any other service that needs the user's shell environment.
  */
 
+import { readOriginalRuntimeScope } from '@main/services/runtime/OriginalRuntimeScope';
 import { getHomeDir } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import { randomUUID } from 'crypto';
 import { accessSync, constants as fsConstants } from 'fs';
 
-import { observeLinuxChildLaunchFailure, remainingLinuxChildLaunchTime, spawnWithLinuxChildLaunch } from './linuxChildLaunch';
+import {
+  observeLinuxChildLaunchFailure,
+  remainingLinuxChildLaunchTime,
+  spawnWithLinuxChildLaunch,
+} from './linuxChildLaunch';
 import { isLinuxChildLaunchFailure } from './linuxChildLaunchSelection';
 
 const logger = createLogger('Utils:shellEnv');
@@ -197,25 +202,32 @@ async function readShellEnv(shellPath: string, mode: '-lic' | '-ic'): Promise<No
     const chunks: Buffer[] = [];
     let launchFailure: Error | undefined;
     let settled = false;
-    let timeoutHandle: NodeJS.Timeout | null = setTimeout(() => {
-      timeoutHandle = null;
-      child.kill();
-      // SIGKILL fallback if SIGTERM is ignored (e.g., shell stuck on .zshrc)
-      setTimeout(() => {
-        try {
-          child.kill('SIGKILL');
-        } catch {
-          /* already dead */
+    let timeoutHandle: NodeJS.Timeout | null = setTimeout(
+      () => {
+        timeoutHandle = null;
+        child.kill();
+        // SIGKILL fallback if SIGTERM is ignored (e.g., shell stuck on .zshrc)
+        setTimeout(() => {
+          try {
+            child.kill('SIGKILL');
+          } catch {
+            /* already dead */
+          }
+        }, 3000);
+        if (!settled) {
+          settled = true;
+          reject(launchFailure ?? new Error('shell env resolve timeout'));
         }
-      }, 3000);
-      if (!settled) {
-        settled = true;
-        reject(launchFailure ?? new Error('shell env resolve timeout'));
-      }
-    }, remainingLinuxChildLaunchTime(child, SHELL_ENV_TIMEOUT_MS));
+      },
+      remainingLinuxChildLaunchTime(child, SHELL_ENV_TIMEOUT_MS)
+    );
     observeLinuxChildLaunchFailure(child, (error) => {
       launchFailure = error;
-      try { child.kill(); } catch { /* Keep the original timer and close owner. */ }
+      try {
+        child.kill();
+      } catch {
+        /* Keep the original timer and close owner. */
+      }
     });
 
     child.stdout?.on('data', (chunk: Buffer) => {
@@ -237,7 +249,10 @@ async function readShellEnv(shellPath: string, mode: '-lic' | '-ic'): Promise<No
       }
       if (!settled) {
         settled = true;
-        if (launchFailure) { reject(launchFailure); return; }
+        if (launchFailure) {
+          reject(launchFailure);
+          return;
+        }
         const content = Buffer.concat(chunks).toString('utf8');
         const startIndex = content.indexOf(startMarker);
         const dumpStart = startIndex + startMarker.length;
@@ -334,6 +349,8 @@ export async function resolveInteractiveShellEnv(
 export async function resolveInteractiveShellEnvBestEffort(
   options: ShellEnvBestEffortResolveOptions = {}
 ): Promise<NodeJS.ProcessEnv> {
+  const original = readOriginalRuntimeScope();
+  if (original) return { ...original.shellEnv };
   if (cachedInteractiveShellEnv) {
     emitProgress(options, 'shell-env-cached', 'Using cached shell environment...');
     return cachedInteractiveShellEnv;
@@ -397,6 +414,8 @@ export async function resolveInteractiveShellEnvBestEffort(
 
 /** Wait for an existing probe's successful cache result, or null when it fails. */
 export async function waitForPendingShellEnv(): Promise<NodeJS.ProcessEnv | null> {
+  const original = readOriginalRuntimeScope();
+  if (original) return { ...original.shellEnv };
   const pending = shellEnvResolvePromise;
   if (!pending) return cachedInteractiveShellEnv;
   const resolved = await pending;
@@ -422,6 +441,11 @@ export function clearShellEnvCache(): void {
  * (e.g. synchronous PATH enrichment with async pre-warming at startup).
  */
 export function getCachedShellEnv(): NodeJS.ProcessEnv | null {
+  return readOriginalRuntimeScope()?.shellEnv ?? cachedInteractiveShellEnv;
+}
+
+/** Main scope capture reads the ambient cache without re-entering its own freshness guard. */
+export function getAmbientCachedShellEnv(): NodeJS.ProcessEnv | null {
   return cachedInteractiveShellEnv;
 }
 

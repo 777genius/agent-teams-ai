@@ -1,0 +1,63 @@
+{
+  "kind": "P11 prospective R1 wording-only v2; unchanged source candidates",
+  "original": {
+    "path": "/workspace/scratch/82d3f9ba6b85/p11-v2-live-membership-proposal/DESIGN-R1-draft.md",
+    "bytes": 20995,
+    "lines": 75,
+    "blob": "0f834435fdaad97c817bfad8ce4598ef176b205a",
+    "sha256": "924aa5c6a12948642106a67b5121c39c8bc6b51201d8556e045f9a42d5b57722"
+  },
+  "candidate": {
+    "path": "/workspace/scratch/82d3f9ba6b85/p11-v2-live-membership-proposal/DESIGN-R1-draft-v2.md",
+    "bytes": 22937,
+    "lines": 75,
+    "blob": "99c9c114eb6ba6b31d21550f94f617a1e377d1da",
+    "sha256": "df8e2c7e72ce93e4b1eab7a5f0a3c1827a4270e407012583681b80acfee4147f"
+  },
+  "patch": {
+    "path": "/workspace/scratch/82d3f9ba6b85/p11-v2-live-membership-proposal/R1-v2-wording-only.patch",
+    "bytes": 12870,
+    "lines": 32,
+    "blob": "1cf30db5a7bc1dd5b9d376005512ab0f3c55c5d8",
+    "sha256": "921178599daf32cfe625517c2dc15ea243c5bf934bcc636080c0d401fed95aba"
+  },
+  "changes": [
+    {
+      "number": 1,
+      "before": "The separately proposed UI diagnostics'93→94 lint edit is not composed here. Any later combination must preserve both complete operand sets and original order under a fresh exact review; no final combined count is assumed.",
+      "after": "The separately proposed UI diagnostics'93→94 lint edit is not composed here. Any later combination must preserve both complete operand sets and original order under a fresh exact review; no final combined count is assumed. No P11 test or source stage may precede the actual prescribed current-M full ten-file privacy semantic RED and the separately approved one-helper required original-CI GREEN, with useful evidence retained under the existing rule. The dormant navigation diagnostic and this P11 proposal overlap the Team test prefix and workflow; they are not automatically parallel or directly composable on these frozen0660 preimages. Before either overlapping source stage is applied, root must select its order and publish a fresh exact composition/R1 with independent R2, preserving every original assertion, both additions and all existing lint operands. Neither test-only P11 stage A nor a documentation checkpoint authorizes cancelling or bypassing the privacy cohort."
+    },
+    {
+      "number": 2,
+      "before": "This is a non-atomic read-only observation, not a kernel lease or native proof by itself. Existing source/metadata/held birth checks continue to evaluate its returned facts, and original physical PID-absence checks stay in place.",
+      "after": "This is a non-atomic read-only observation, not a kernel lease or native proof by itself. The adapter does not join its first `/proc` starttime to the earlier `ps` lstart/birth field. Its final stat read rechecks starttime, parent and group, but it does not re-read the executable; a same-process exec between these observations is not excluded by an unchanged starttime. No atomic birth/executable snapshot or executable-generation seal is claimed. Existing source/metadata/held birth checks continue to evaluate its returned facts, and original physical PID-absence checks stay in place."
+    },
+    {
+      "number": 3,
+      "before": "Cleanup observation is protected, retains missing/failed data as INCOMPLETE, and cannot authorize a signal or suppress original failure/cleanup/receipt handling.",
+      "after": "The shared finite-effects reader tolerates ENOENT for journals not yet present before an observation. Consequently, if both journals disappear, protected cleanup observation can retain an empty peer set with auxiliary `absent:true`; it does not necessarily label every missing-data path INCOMPLETE. That auxiliary result is not enough to pass the final verifier: the retained nonzero initial Claude/Codex preparation-probe counts must equal the later finite counts, so disappearance after the original initial proof is refused there. Other observed reader failures remain protected observations; no auxiliary row can authorize a signal or suppress the original failure/cleanup/receipt handling. No additional missing-journal source hardening is implied by this prose."
+    },
+    {
+      "number": 4,
+      "before": "The proposed ordinary CI venue requires no manual trigger or altered command. A different local venue would need its own exact source/toolchain/build approval and is not authorized by this draft. Root alone owns invocation and preservation of useful cohorts before any necessary PR advance; queued work is not an automatic blocker or universal all-terminal gate.",
+      "after": "The venue is only the existing original CI under the governing L/M restriction: no local project test, compiler, lint, install, bootstrap or alternate local fallback is authorized. There is no manual trigger or altered command. Stage A starts only after the privacy RED and separate one-helper original-CI GREEN required in§1, and after exact published reconciliation of any diagnostic test/workflow overlap. Root alone owns necessary ordinary source advances and preservation of useful cohorts before them; queued work is not an automatic blocker or universal all-terminal gate."
+    }
+  ],
+  "inverseExact": true,
+  "candidateMetadataUnchanged": {
+    "bytes": 27500,
+    "lines": 532,
+    "blob": "1458fe354a53b6b4929fb7db4dd8f8cf5fed1e41",
+    "sha256": "b9e8fc1a3198bc9c2b45a6059270ff8a330b126e68d9b2248f972575c26d9bbc"
+  },
+  "completePatchUnchanged": {
+    "bytes": 72151,
+    "lines": 949,
+    "blob": "d342940e4f50f95aaf38f8df578698b955bfb4da",
+    "sha256": "ef0e8eabf254c3284ce1ebc7d7c56030414a307e5b47847f677f9df7a22c0b4c"
+  },
+  "notIncludedInCurrent65Docs": true,
+  "notApplied": true,
+  "noProjectExecution": true,
+  "requiresIndependentFinalWordingReview": true
+}

@@ -3,7 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { constants } from 'node:fs';
 import { lstat, open, readFile, realpath } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { fileHash } from './native-host.ts';
 
 const object = (value: unknown): Record<string, unknown> => {
@@ -19,8 +19,21 @@ export async function readNativeProviderArtifact(repo: string) {
     /^file:\.\.\/\.\.\/vendor\/provider-migration\/[a-z0-9-]+\/agent-teams-provider-implementations-0\.0\.0\.tgz$/.test(dependency));
   const path = dependency.slice('file:../../'.length);
   const receipt = object(JSON.parse(await readFile(join(repo, dirname(path), 'source-receipt.json'), 'utf8')));
-  const sha256 = object(object(receipt.packages)['provider-implementations']).newSha256;
+  const packages = object(receipt.packages);
+  const implementations = ['provider-implementations', basename(path)]
+    .filter(key => Object.hasOwn(packages, key))
+    .map(key => object(packages[key]));
+  assert.ok(implementations.length > 0);
+  const digests = implementations.flatMap(implementation => {
+    const values = ['newSha256', 'sha256']
+      .filter(key => Object.hasOwn(implementation, key))
+      .map(key => implementation[key]);
+    assert.ok(values.length > 0);
+    return values;
+  });
+  const sha256 = digests[0];
   assert.ok(typeof sha256 === 'string' && /^[a-f0-9]{64}$/.test(sha256));
+  assert.ok(digests.every(value => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value) && value === sha256));
   return { path, sha256 };
 }
 

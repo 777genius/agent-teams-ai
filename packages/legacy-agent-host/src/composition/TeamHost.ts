@@ -13,7 +13,9 @@ import { TeamOwnerStore } from '../adapters/team/TeamOwnerStore.js';
 import { admitTeamNamespace } from '../adapters/team/admitTeamNamespace.js';
 import { createRuntimeHostMethods } from './createRuntimeHostMethods.js';
 import { createHostCrossTeamComposition } from './createHostCrossTeamComposition.js';
-import { createProcessCustody, processCustodyProfileSchema } from './processCustody.js';
+import { createProcessCustody } from './processCustody.js';
+import { HostWindowsLaunch } from '../owned-process/HostWindowsLaunch.js';
+import { HOST_CUSTODY_LAUNCH_MS } from '../owned-process/hostCustody.js';
 import { createTeamProcessComposition } from './createTeamProcessComposition.js';
 import { createTeamReviewComposition } from './TeamReviewComposition.js';
 import { createStoppedImportComposition } from './createStoppedImportComposition.js';
@@ -32,17 +34,17 @@ import { TEAM_HOST_DISPOSE_TIMEOUT_MS } from '../contracts.js';
 import { TeamOwnerError } from '../team/contracts.js';
 import { RuntimeOwnerError } from '../runtime/contracts.js';
 import { TeamLaunchError } from '../team-launch/contracts.js';
-import { runtimeProfileSchema } from './runtimeProfile.js';
 import { RuntimeTeamCoordinator } from './RuntimeTeamCoordinator.js';
 import { type CapturedPromptSuggestionNotice, PROMPT_SUGGESTION_PROVIDERS, type PromptSuggestionProvider } from './createCapturedPromptSuggestionBinding.js';
 import { hasRetainedTeamRuntime } from './RuntimeTeamCaptures.js';
-import { providerManagementProfileSchema } from '../management/profile.js';
 import type { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
 import { assertAccountNamespaces } from './assertAccountNamespaces.js';
 import { ManagementCommandError } from '../management/commandRecords.js';
 import { executeTeamModelProbe } from './teamLaunchModelProbe.js';
 import { replaceRosterPayloadSchema } from '../team/rosterSchema.js';
 import { CreateTeamLaunchCoordinator } from './CreateTeamLaunchCoordinator.js';
+import { teamHostProfileSchema } from './teamHostProfile.js';
+import type { TeamHostProfile } from './teamHostProfile.js';
 
 import type { HostMethod, HostServer, HostServerOptions } from '../index.js';
 import type { JsonValue } from '../contracts.js';
@@ -51,31 +53,11 @@ import type { TeamCommand } from '../team/contracts.js';
 import type { HostedTeam } from './RuntimeTeamCoordinator.js';
 import type { MemberProvider, MemberProviderContext } from '../adapters/providers/MemberProvider.js';
 import type { ScheduledRunProvider, ScheduledRunProviderContext } from '../adapters/providers/ScheduledRunProvider.js';
+export { teamHostProfileSchema } from './teamHostProfile.js';
+export type { TeamHostProfile } from './teamHostProfile.js';
 
 const id = z.string().min(1).max(256);
 const segment = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/);
-
-/** Private captured composition data, never an IPC/tool argument or renderer DTO. */
-export const teamHostProfileSchema = z
-  .object({
-    schemaVersion: z.literal(1),
-    owner: hostOwnerSchema,
-    principalId: id,
-    reviewTransport: z.literal('review-v1').optional(),
-    /** Default off, captured per native Query/session; never auto-restarts a teammate. */
-    promptSuggestions: z.object({ enabled: z.boolean() }).strict().optional(),
-    runtime: runtimeProfileSchema.optional(),
-    processCustody: processCustodyProfileSchema.optional(),
-    management: z.array(providerManagementProfileSchema).max(16).optional(),
-    creation: z
-      .object({ contextIds: z.array(id).min(1).max(256) })
-      .strict()
-      .optional(),
-    teams: z.array(hostedTeamDefinitionSchema).max(256),
-  })
-  .strict();
-
-export type TeamHostProfile = z.infer<typeof teamHostProfileSchema>;
 
 /**
  * Captured product owner and optional real provider Runtime. Aggregate bootstrap
@@ -87,7 +69,7 @@ export function createTeamHost(
   composition?: { createProvider?(context: MemberProviderContext): MemberProvider;
     createScheduledProvider?(context: ScheduledRunProviderContext): ScheduledRunProvider;
     /** Separate captured app preference per provider, evaluated only when the Host is constructed. */
-    promptSuggestionProviders?: readonly PromptSuggestionProvider[] }
+    promptSuggestionProviders?: readonly PromptSuggestionProvider[]; reviewFlowDefaultsDirectory?: string }
 ): HostServer {
   const profile = structuredClone(teamHostProfileSchema.parse(rawProfile));
   // CLI/Main owns this app-level preference. Profile remains digest-bound and
@@ -107,10 +89,12 @@ export function createTeamHost(
   let emitPromptSuggestion: ((notice: CapturedPromptSuggestionNotice) => void) | undefined;
   try {
     const processCustody = createProcessCustody(profile.processCustody);
+    const retainedWindowsLaunch = profile.processCustody && 'kind' in profile.processCustody
+      ? new HostWindowsLaunch(() => server.nativeCustody) : undefined;
     const providerManagement = createHostProviderManagementComposition(profile, () => {
       if (sealed) throw new ManagementCommandError('held');
       lease.assertCurrent();
-    }, snapshot => emitOAuthProgress?.(snapshot), processCustody, () => lease.assertCurrent());
+    }, snapshot => emitOAuthProgress?.(snapshot), processCustody, () => lease.assertCurrent(), retainedWindowsLaunch);
     management = providerManagement.management;
     const sources = providerManagement.sources;
     const teams = new Map<string, HostedTeam>();
@@ -121,6 +105,7 @@ export function createTeamHost(
     if (profile.runtime) scheduledRuns = createHostScheduledRunComposition({ profile, teams,
       assertWriter: () => lease.assertCurrent(), ...(sources ? { sources } : {}),
       ...(processCustody ? { processCustody } : {}),
+      ...(retainedWindowsLaunch ? { retainedWindowsLaunch } : {}),
       ...(composition?.createScheduledProvider ? { createProvider: composition.createScheduledProvider } : {}) });
     const crossTeam = createHostCrossTeamComposition({
       profile,
@@ -140,6 +125,7 @@ export function createTeamHost(
       teams,
       assertCurrent,
       ...(processCustody ? { native: processCustody } : {}),
+      ...(retainedWindowsLaunch ? { windows: retainedWindowsLaunch.registeredProcesses } : {}),
     });
     const lifecycle = createHostTeamLifecycleComposition({
       profile,
@@ -150,6 +136,7 @@ export function createTeamHost(
       runtime: () => runtime,
       importer: () => imports,
       ...(processCustody ? { processCustody } : {}),
+      ...(retainedWindowsLaunch ? { windows: retainedWindowsLaunch.registeredProcesses } : {}),
     });
     const workSync = createHostWorkSyncComposition({
       teamsBasePath: join(profile.owner.storageRoot, 'teams'),
@@ -179,6 +166,7 @@ export function createTeamHost(
       const team = createFilesystemTeamOwner({
         store,
         root: profile.owner.storageRoot,
+        ...(composition?.reviewFlowDefaultsDirectory ? { reviewFlowDefaultsDirectory: composition.reviewFlowDefaultsDirectory } : {}),
         binding: definition.binding,
         crossTeamSourceAuthority: crossTeam.sourceAuthorized,
         ...(definition.savedSettings === undefined
@@ -208,7 +196,7 @@ export function createTeamHost(
       teams.set(definition.binding.teamId, {
         definition,
         owner: team,
-        connection: team.connect(profile.principalId),
+        connection: team.connect(profile.principalId, (capture, mode) => runtime?.readConversation(capture, mode)),
         operatorPrincipalId: profile.principalId,
       });
     };
@@ -283,6 +271,7 @@ export function createTeamHost(
             }
           : {}),
         ...(processCustody ? { processCustody } : {}),
+        ...(retainedWindowsLaunch ? { retainedWindowsLaunch } : {}),
         groups: (entry, capture, current) => groups.member(entry, capture, current),
         crossTeam: (team, principal, binding, current) =>
           crossTeam.memberPort(team, principal, binding, current),
@@ -315,7 +304,7 @@ export function createTeamHost(
         | 'lookup'
         | 'getTask'
         | 'listTasks'
-        | 'snapshot'
+        | 'snapshot' | 'review-flow.read'
         | 'messages.page'
         | 'activity.logs'
         | 'activity.stats'
@@ -342,6 +331,11 @@ export function createTeamHost(
             if (input.liveRoster.phase === 'continue') throw new TeamOwnerError('hold');
           }
           const connection = selected.connection;
+          if (operation === 'review-flow.read') {
+            z.object({}).strict().parse(input.payload);
+            if (!connection.readQueries) throw new TeamOwnerError('hold');
+            return { ok: true, value: json({ kind: 'review-flow', ...connection.readQueries.getReviewFlowSettings() }) };
+          }
           if (operation === 'roster.read' || operation === 'roster.lookup') {
             if (operation === 'roster.read') {
               z.object({}).strict().parse(input.payload);
@@ -664,15 +658,16 @@ export function createTeamHost(
       },
     });
 
-    const server = createHostServer({
+    const server: HostServer = createHostServer({
       ...streams,
+      ...(retainedWindowsLaunch ? { nativeCustody: { timeoutMs: HOST_CUSTODY_LAUNCH_MS } } : {}),
       // Runtime/provider drain and final backup must finish before the original lease is released.
       limits: { disposeTimeoutMs: TEAM_HOST_DISPOSE_TIMEOUT_MS, ...streams.limits },
       ...(profile.reviewTransport ? { reviewTransport: profile.reviewTransport } : {}),
       buildId: profile.owner.buildId,
       capabilities: [
         'team.task',
-        'team.snapshot',
+        'team.snapshot', 'team.review-flow.read',
         'team.messages.page',
         'team.roster',
         'team.product-changes',
@@ -715,6 +710,7 @@ export function createTeamHost(
         'team.task.get': method('getTask'),
         'team.tasks.list': method('listTasks'),
         'team.snapshot': method('snapshot'),
+        'team.review-flow.read': method('review-flow.read'),
         'team.messages.page': method('messages.page'),
         'team.roster.read': method('roster.read'),
         'team.roster.lookup': method('roster.lookup'),

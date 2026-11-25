@@ -1,0 +1,32 @@
+{
+  "schema": "recoverable-native-bundle-publication/v1",
+  "cohort": "27b",
+  "source": "27b1acf48278dcd0fb348c626696eac2dc64de73",
+  "archive": {
+    "path": "27b-native-evidence.zip",
+    "bytes": 181613,
+    "blob": "29839a0783a1b8f40001f2bcf374859693ecacef",
+    "sha256": "7b512f95d6190cfedcbbf580499f4148455ca6bf6cdf20c05d17318c9653cc61"
+  },
+  "inventory": {
+    "path": "27b-inventory.json",
+    "bytes": 4779,
+    "blob": "ee692ed067a41a34498d769a8c8ed4086d28eeaa",
+    "sha256": "865c11bb79700b02a684ef71e402701e2034bcf239162ea0787323e4dc2df4af"
+  },
+  "readme": {
+    "path": "27b-README.md",
+    "bytes": 1042,
+    "blob": "57942e31d12bf9e93c5cb1470321339c28c38465",
+    "sha256": "1c397724124dbca95af3c3cf8ddde73bfdb91ccf9d0120a81f2a55a1b473e61e"
+  },
+  "payloadFileCount": 17,
+  "payloadBytes": 762481,
+  "outerMembers": 19,
+  "originalArchiveCount": 3,
+  "allOriginalPayloadHashesMatched": true,
+  "fullOuterByteReadbackExact": true,
+  "outerCRCAllPass": true,
+  "originalZipCRCsChecked": true,
+  "signedUrlScanPassed": true
+}

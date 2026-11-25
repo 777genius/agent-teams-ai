@@ -1,0 +1,38 @@
+{
+  "source": "72e6ec04444969d343d73834c70bc4e261100fc9",
+  "run": 43831885807,
+  "job": 133178913159,
+  "attempt": 1,
+  "files": {
+    "job-133178913159.log": {
+      "bytes": 94289,
+      "blob": "4f7af0d5218f6c2b34457e63a4dcce05f4f2ce84",
+      "sha256": "79164ffcbff3edb86387a7d11786602b5e24f2e8fd159fb5b8cf409e4c1c9d97"
+    },
+    "capture-metadata.json": {
+      "bytes": 21812,
+      "blob": "9a21d51466a6156d474e383100f5116f406b256c",
+      "sha256": "05a8b235cd79d0feb4c95ab5a6fb58670d3eba2de4ce57b2896d79677222f35d"
+    },
+    "source-binding.json": {
+      "bytes": 7565,
+      "blob": "f004b5988b32e0444bb4c3d706142c839b57ed18",
+      "sha256": "218176b99508cad9fb30cc841fc0e104347308c8339dc022734ccae404a85a54"
+    },
+    "case-comparison.json": {
+      "bytes": 47214,
+      "blob": "1e123cc7f4975864d808d38b01ce306d5fe95e73",
+      "sha256": "151f089d33d644ede4eebcb4acbf8b8bfbf73a0ad1a37947f14d90346fd8fe45"
+    },
+    "audit.json": {
+      "bytes": 9395,
+      "blob": "02a74823ed7cd2926119d0bc8477afffab886a2a",
+      "sha256": "1e7f162a56cb57985cb6b4da47b6ca314c35909f0b8be46bdaad0f5366867ff6"
+    },
+    "review.md": {
+      "bytes": 2579,
+      "blob": "d311bcf36eccb98083bae4198fd6754a38513967",
+      "sha256": "13909f87f46c0654f2010a01f6c012754e6c9dbc98156224574bce8c724fa2ed"
+    }
+  }
+}

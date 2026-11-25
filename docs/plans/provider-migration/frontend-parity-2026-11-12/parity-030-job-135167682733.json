@@ -1,0 +1,109 @@
+{
+  "schema": "current-head-original-selected-ui-lane-success-v1",
+  "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "event": "pull_request",
+  "runAttempt": 1,
+  "runId": 44407826474,
+  "job": {
+    "id": 135167682733,
+    "name": "Offline Host Desktop (linux-x64, management)",
+    "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "run_id": 44407826474,
+    "run_attempt": 1,
+    "status": "completed",
+    "conclusion": "success",
+    "started_at": "2026-11-18T23:48:22Z",
+    "completed_at": "2026-11-18T23:52:24Z",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167682733",
+    "runner_name": "GitHub Actions 1000395499"
+  },
+  "rawLog": {
+    "phase": "permanently-retired",
+    "jobId": 135167682733,
+    "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "runId": 44407826474,
+    "runAttempt": 1,
+    "conclusion": "success",
+    "requestedAt": "2026-11-18 23:53:30 UTC",
+    "bytes": 295262,
+    "sha256": "cdc7ae1864bcaf6873498f6629f3217ea6ab19015b504beb3db15724481b6ef2",
+    "computedGitBlobSha": "a27c5dab7051b047eed01569acbc6938afc54544",
+    "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682733-terminal.log",
+    "endpointRetired": true,
+    "publishedBlobSha": "a27c5dab7051b047eed01569acbc6938afc54544",
+    "exactReadback": true
+  },
+  "originalUnitSummaryLines": [
+    "ℹ tests 503",
+    "ℹ pass 503",
+    "ℹ fail 0",
+    "ℹ cancelled 0",
+    "ℹ skipped 0",
+    "ℹ todo 0",
+    "ℹ duration_ms 32753.699751",
+    "ℹ tests 7",
+    "ℹ pass 7",
+    "ℹ fail 0",
+    "ℹ cancelled 0",
+    "ℹ skipped 0",
+    "ℹ todo 0",
+    "ℹ duration_ms 203.925251"
+  ],
+  "originalConsolePass": [
+    {
+      "status": "PASS",
+      "receipt": "/home/runner/work/_temp/TEST-desktop-backend-gm6qc9/desktop-backend-receipt.json"
+    }
+  ],
+  "originalScenarioAndVerificationSteps": [
+    {
+      "name": "Verify original checkout and runner tuple",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 5,
+      "started_at": "2026-11-18T23:48:49Z",
+      "completed_at": "2026-11-18T23:48:49Z"
+    },
+    {
+      "name": "Exercise model, effort and credential controls with the pinned TEST peer",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 18,
+      "started_at": "2026-11-18T23:50:46Z",
+      "completed_at": "2026-11-18T23:52:19Z"
+    },
+    {
+      "name": "Verify exact source, original screenshots, receipts and cleanup",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 38,
+      "started_at": "2026-11-18T23:52:19Z",
+      "completed_at": "2026-11-18T23:52:20Z"
+    }
+  ],
+  "originalSafetyAndCleanupVerifierLines": [
+    "  LEGACY_DESKTOP_EMULATED_ONLY: 1",
+    "  LEGACY_DESKTOP_PROOF_MODE: emulated-management-ui",
+    "assert.equal(inputs.nativeProviders, 'forbidden');",
+    "    assert.equal(proof.fixturePins.vendorsAllowed, false);",
+    "    assert.equal(receipt.emulatedRuntimeCleanup.absent, true);",
+    "    assert.deepEqual(receipt.emulatedRuntimeCleanup.remaining, []);",
+    "    assert.equal(proof.fixturePins.vendorsAllowed, false);",
+    "    assert.equal(receipt.emulatedRuntimeCleanup.absent, true); assert.deepEqual(receipt.emulatedRuntimeCleanup.remaining, []);",
+    "    assert.equal(proof.fixturePins.vendorsAllowed, false); assert.equal(proof.fixturePins.runtimeConfigured, true);",
+    "    assert.equal(receipt.emulatedRuntimeCleanup.absent, true); assert.deepEqual(receipt.emulatedRuntimeCleanup.remaining, []);",
+    "  nativeProviders: 'not executed', vendorAuthQualified: false, releaseQualified: false,",
+    "  LEGACY_DESKTOP_EMULATED_ONLY: 1",
+    "  LEGACY_DESKTOP_EMULATED_ONLY: 1"
+  ],
+  "artifactFromOriginalUploadLog": {
+    "artifactId": 14483102890,
+    "bytes": 1150406,
+    "sha256": "f42d04dbfe78c1c50ea8dd24da697b26851390a0beb36a598a9d881e58f10781",
+    "downloaded": false,
+    "visualInspection": false
+  },
+  "scope": "Original model, effort and credential controls with pinned TEST peer and original exact-source/receipt/cleanup verifier. Does not qualify vendor authentication or inference.",
+  "verificationLimit": "Original scenario PASS plus original source/receipt/cleanup verifier SUCCESS; full artifact receipt not separately downloaded. Common source unit tests repeat across jobs and are not summed as unique tests.",
+  "jobLogEndpointRetired": true
+}

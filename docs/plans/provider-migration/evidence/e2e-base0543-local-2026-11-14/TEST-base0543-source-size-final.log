@@ -1,0 +1,3 @@
+$ node ./scripts/ci/check-source-file-size.mjs
+Source file size guard passed: 4952 production files checked, 141 frozen legacy exceptions, 800-line limit.
+88 legacy file(s) are below their frozen caps; lower those caps when committing the refactor.

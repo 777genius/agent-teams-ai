@@ -1233,6 +1233,10 @@
       "awaitingLead": "Awaiting clarification from team lead",
       "awaitingUser": "Awaiting clarification from you"
     },
+    "leadSignoff": {
+      "badge": "Lead sign-off",
+      "hint": "The team lead signs off on this task before it reaches Done."
+    },
     "description": {
       "add": "Click to add description...",
       "edit": "Edit description",
@@ -1314,13 +1318,17 @@
       "unassignedFrom": "Unassigned from",
       "ownerChanged": "Owner changed",
       "reviewRequested": "Review requested",
+      "leadSignoffRequested": "Lead sign-off requested",
       "reviewStarted": "Review started",
+      "reviewCompleted": "AI review completed",
+      "humanApproved": "Approved by user",
       "changesRequested": "Changes requested",
       "approved": "Approved",
       "unknownEvent": "Unknown event"
     },
     "reviewStates": {
       "approved": "Approved",
+      "reviewed": "Reviewed",
       "needsFix": "Needs fix",
       "inReview": "In review"
     }
@@ -1753,6 +1761,28 @@
     "warningUnsafeTaskCall": "Could not safely rewrite Task call: {{call}}"
   },
   "list": {
+    "aggregate": {
+      "partialTeams": "Some teams could not be loaded",
+      "partialTasks": "Some tasks could not be loaded",
+      "staleTeams": "Teams could not be refreshed",
+      "staleTasks": "Tasks could not be refreshed",
+      "teamsDescription": "Showing loaded teams only. Counts and filters do not include unavailable results.",
+      "tasksDescription": "Showing loaded tasks only. Counts and filters do not include unavailable results.",
+      "staleDescription": "Previously loaded results remain visible. Their counts may be out of date.",
+      "unavailableTeams_one": "{{count}} unavailable team",
+      "unavailableTeams_other": "{{count}} unavailable teams",
+      "unavailableOwners_one": "{{count}} unavailable owner; team count unknown",
+      "unavailableOwners_other": "{{count}} unavailable owners; team count unknown",
+      "loadedCount": "{{count}} loaded",
+      "loadedTrash": "Trash ({{count}} loaded)",
+      "loadedTasks": "Loaded tasks",
+      "unknown": "Unknown",
+      "unknownTasks": "Task counts unavailable",
+      "emptyTeams": "No loaded teams match this view.",
+      "emptyTasks": "No loaded tasks match this view.",
+      "openTeam": "Open {{name}}",
+      "refresh": "Refresh"
+    },
     "actions": {
       "importTeam": "Import",
       "copyTeam": "Copy team",
@@ -2722,6 +2752,81 @@
       "approved": "APPROVED"
     }
   },
+  "reviewFlow": {
+    "unavailable": "Settings for {{count}} team or owner could not be read. Retry before editing those teams.",
+    "title": "Review flow",
+    "intro": "After a reviewer checks a task, it either goes straight to Approved or waits in Done for you. Set the default for all teams here, and give individual teams their own settings when they need them.",
+    "flowLegend": "Who gives final approval",
+    "flows": {
+      "agent_approval": {
+        "label": "Agents approve",
+        "description": "The reviewer approves and the task moves to Approved."
+      },
+      "human_approval": {
+        "label": "I give final approval",
+        "description": "The reviewer finishes the review and the task stays in Done as reviewed. Only you move it to Approved."
+      },
+      "lead_then_human": {
+        "label": "Lead signs off, then I approve",
+        "description": "After the reviewer, the team lead signs off in a second review. Then the task waits in Done for you. Only you move it to Approved."
+      }
+    },
+    "humanApprovalNote": "In this mode agents can never move a task to Approved. Only you can.",
+    "promptLabel": "Instructions for agents (optional)",
+    "promptPlaceholder": "For example: run the e2e tests before deciding.",
+    "promptHint": "Sent to reviewers with each review request and visible to agents on the board. It does not change who may approve.",
+    "save": "Save",
+    "cancel": "Cancel",
+    "discard": "Discard changes",
+    "retry": "Retry",
+    "loading": "Loading review flow settings…",
+    "loadError": "Could not load review flow settings. {{message}}",
+    "badges": {
+      "default": "Default",
+      "custom": "Custom",
+      "repair": "Needs repair"
+    },
+    "scope": {
+      "label": "Settings for",
+      "defaultOption": "All teams (default)",
+      "searchPlaceholder": "Search teams",
+      "empty": "No teams found."
+    },
+    "editor": {
+      "defaultHeading": "Default for all teams",
+      "teamHeading": "This team",
+      "followingTeams": "Teams following the default: {{count}}"
+    },
+    "useDefault": {
+      "label": "Use the default settings",
+      "following": "Following the default: {{flow}}",
+      "custom": "This team has its own review flow."
+    },
+    "feedback": {
+      "saved": "Saved",
+      "saving": "Saving…",
+      "error": "Could not save: {{message}}"
+    },
+    "overrides": {
+      "heading": "Teams with custom settings ({{count}})",
+      "empty": "All teams follow the default.",
+      "reset": "Reset to default",
+      "resetLabel": "Reset {{team}} to the default"
+    },
+    "popover": {
+      "openSettings": "Change the default for all teams…"
+    },
+    "broken": {
+      "defaults": "The saved default for all teams can't be read, so review actions are paused in every team until you save a new default.",
+      "defaultsHint": "The form shows the built-in values. Save them, or change them first, to repair the default.",
+      "details": "Details: {{message}}",
+      "fixDefaults": "Fix the default",
+      "teamHint": "This team's saved settings can't be read, so review actions are paused here. Save new settings, or choose the default and save, to repair it."
+    },
+    "unreadable": {
+      "heading": "Teams with unreadable settings ({{count}})"
+    }
+  },
   "worktreeGitReadiness": {
     "checking": "Checking Git repository status for teammate worktrees...",
     "ready": "Git worktrees are ready.",
@@ -2791,6 +2896,7 @@
       "allFlagsValid": "All flags valid",
       "unknownFlags": "Unknown: {{flags}}",
       "protectedFlags": "Protected: {{flags}}",
+      "missingValue": "Missing value: {{flags}}",
       "failed": "Validation failed"
     },
     "placeholders": {
@@ -3328,7 +3434,7 @@
     "label": "Team template",
     "placeholder": "Start from a team template",
     "confirmTitle": "Apply team template?",
-    "confirmMessage": "This replaces the description, prompt and teammates, resets runtime selection, disables Run after create and Solo team, and enables model sync. Continue?",
+    "confirmMessage": "This will replace your teammates, instructions and team settings with the template’s values.",
     "confirmAction": "Apply template",
     "names": {
       "software-product": "Software Product Team",
@@ -3372,7 +3478,7 @@
       "failed": "Run failed",
       "cancelled": "Cancelled"
     },
-    "title": "Manage teams with a prompt",
+    "title": "Manage with a prompt",
     "description": "Write a request for your external agent. Templates below are read-only references.",
     "taskLabel": "What should the agent do?",
     "taskTooLong": "Native runs support requests up to {{limit}} characters. Shorten the request to run it.",

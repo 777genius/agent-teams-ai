@@ -1,11 +1,10 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
+import { DetailReadCoordinator, useCompletionRead } from '@features/member-log-reads/renderer';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { DetailReadCoordinator, useCompletionRead } from '@features/member-log-reads/renderer';
-
-import type { EnhancedUserChunk, ParsedMessage, MemberLogSummary } from '@shared/types';
+import type { EnhancedUserChunk, MemberLogSummary, ParsedMessage } from '@shared/types';
 
 const fixtures = vi.hoisted(() => ({
   summary: vi.fn(),
@@ -57,6 +56,7 @@ vi.mock('@renderer/components/ui/tooltip', () => ({
 }));
 
 import { MemberLogsTab } from '@renderer/components/team/members/MemberLogsTab';
+import { createDefaultClaudeLogsSidebarUiState } from '@renderer/components/team/sidebar/teamSidebarUiState';
 import { invalidateContextScopedRequestEpoch } from '@renderer/store/utils/contextScopedRequestEpoch';
 
 function deferred<T>() {
@@ -399,5 +399,82 @@ describe('mounted synthetic member-log read ownership', () => {
       await flush(() => otherRoot.unmount());
       otherContainer.remove();
     }
+  });
+
+  const hostView = {
+    ...createDefaultClaudeLogsSidebarUiState(),
+    onViewerStateChange: vi.fn(),
+  };
+  const hostProps = {
+    teamName: 'host-team:TEST-polling',
+    memberName: 'test-member',
+    taskId: undefined,
+    taskOwner: undefined,
+    hostView,
+  };
+  const hostLog = (text: string, memberName = 'test-member'): MemberLogSummary => ({
+    kind: 'host_activity',
+    sessionId: 'host-' + memberName,
+    memberId: memberName,
+    memberName,
+    generation: '1',
+    description: 'Captured runtime activity',
+    startTime: null,
+    durationMs: null,
+    messageCount: 1,
+    isOngoing: null,
+    gaps: [],
+    events: [
+      {
+        eventId: text,
+        sequence: 1,
+        inputId: 'original-input',
+        data: { kind: 'text', messageRef: 'original-message', block: 0, text, phase: 'complete' },
+      },
+    ],
+  });
+
+  it('refreshes active Host member facts only after settlement and keeps them beside a background error', async () => {
+    const initial = deferred<MemberLogSummary[]>(),
+      refresh = deferred<MemberLogSummary[]>();
+    fixtures.summary.mockReturnValueOnce(initial.promise).mockReturnValueOnce(refresh.promise);
+    await render(hostProps);
+    expect(fixtures.summary).toHaveBeenCalledWith(hostProps.teamName, 'test-member');
+    await advance(15_000);
+    expect(fixtures.summary).toHaveBeenCalledTimes(1);
+    await flush(() => initial.resolve([hostLog('retained Host output')]));
+    expect(container.textContent).toContain('retained Host output');
+    await advance(4999);
+    expect(fixtures.summary).toHaveBeenCalledTimes(1);
+    await advance(1);
+    expect(fixtures.summary).toHaveBeenCalledTimes(2);
+    await advance(15_000);
+    expect(fixtures.summary).toHaveBeenCalledTimes(2);
+    await flush(() => refresh.reject(new Error('Host read temporarily unavailable')));
+    expect(container.textContent).toContain('retained Host output');
+    expect(container.textContent).toContain('Host read temporarily unavailable');
+    expect(fixtures.detail).not.toHaveBeenCalled();
+    expect(fixtures.subagent).not.toHaveBeenCalled();
+  });
+
+  it('retires Host member reads on disable, source change and a hidden tab', async () => {
+    const first = deferred<MemberLogSummary[]>(),
+      second = deferred<MemberLogSummary[]>();
+    fixtures.summary.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+    await render({ ...hostProps, enabled: false });
+    expect(fixtures.summary).not.toHaveBeenCalled();
+    await render(hostProps);
+    expect(fixtures.summary).toHaveBeenCalledTimes(1);
+    await render({ ...hostProps, memberName: 'other-member' });
+    expect(fixtures.summary).toHaveBeenCalledTimes(2);
+    await flush(() => first.resolve([hostLog('stale original member')]));
+    expect(container.textContent).not.toContain('stale original member');
+    fixtures.state.activeTabId = 'other-test-tab';
+    await render({ ...hostProps, memberName: 'other-member' });
+    await flush(() => second.resolve([hostLog('stale hidden member', 'other-member')]));
+    expect(container.textContent).not.toContain('stale hidden member');
+    await advance(20_000);
+    expect(fixtures.summary).toHaveBeenCalledTimes(2);
+    expect(fixtures.detail).not.toHaveBeenCalled();
   });
 });

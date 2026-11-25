@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { useRetainedLegacyLaunch } from '@features/agent-backend/renderer';
 import { api } from '@renderer/api';
 
 import { countCompleteDirectoryConnections } from '../connectedCountObservationPolicy';
@@ -43,8 +44,13 @@ export function useRuntimeProviderQuickConnect({
   refreshKey = 0,
   runtimeRevision,
 }: UseRuntimeProviderQuickConnectOptions): RuntimeProviderQuickConnectDirectoryState {
+  const retained = useRetainedLegacyLaunch();
+  const management = retained?.management;
   const currentProjectScope = projectPath?.trim() ?? '';
-  const initialDirectoryCache = getRuntimeProviderDirectoryCacheSnapshot(projectPath, runtimeRevision);
+  const initialDirectoryCache = retained ? null : getRuntimeProviderDirectoryCacheSnapshot(
+    projectPath,
+    runtimeRevision
+  );
   const cacheSeenOnMount = useRef(initialDirectoryCache);
   const requestSequence = useRef(0);
   const previousRefreshKey = useRef(refreshKey);
@@ -83,12 +89,11 @@ export function useRuntimeProviderQuickConnect({
 
   useEffect(() => {
     if (runtimeRevision !== null) {
-      observeRuntimeProviderDirectoryRevision(runtimeRevision);
+      if (!retained) observeRuntimeProviderDirectoryRevision(runtimeRevision);
       if (
         (previousRuntimeRevision.current !== null &&
           runtimeRevision !== previousRuntimeRevision.current) ||
-        (cacheSeenOnMount.current &&
-          cacheSeenOnMount.current.runtimeRevision !== runtimeRevision)
+        (cacheSeenOnMount.current && cacheSeenOnMount.current.runtimeRevision !== runtimeRevision)
       ) {
         setEntries([]);
         setLoaded(false);
@@ -97,7 +102,7 @@ export function useRuntimeProviderQuickConnect({
       cacheSeenOnMount.current = null;
       previousRuntimeRevision.current = runtimeRevision;
     }
-  }, [runtimeRevision]);
+  }, [runtimeRevision, retained]);
 
   useEffect(() => {
     if (!enabled) {
@@ -117,7 +122,7 @@ export function useRuntimeProviderQuickConnect({
     const projectScopeChanged = previousProjectScope.current !== projectScope;
     previousProjectScope.current = projectScope;
     if (projectScopeChanged) {
-      const cachedDirectory = getRuntimeProviderDirectoryCacheSnapshot(
+      const cachedDirectory = retained ? null : getRuntimeProviderDirectoryCacheSnapshot(
         projectPath,
         requestRuntimeRevision
       );
@@ -132,13 +137,13 @@ export function useRuntimeProviderQuickConnect({
 
     const loadDirectory = async (): Promise<void> => {
       const readToken = getRuntimeProviderDirectoryReadToken(projectPath);
-      stopCountCheck = beginRuntimeProviderConnectedCountCheck(projectPath, readToken);
+      if (!retained) stopCountCheck = beginRuntimeProviderConnectedCountCheck(projectPath, readToken);
       let connectedProbeStarted = false;
       setLoading(true);
       setError(null);
 
       try {
-        const response = await api.runtimeProviderManagement.loadProviderDirectory({
+        const response = await (management ?? api.runtimeProviderManagement).loadProviderDirectory({
           runtimeId: 'opencode',
           summary: true,
           projectPath,
@@ -160,7 +165,7 @@ export function useRuntimeProviderQuickConnect({
           return;
         }
         setEntries(response.directory.entries);
-        publishRuntimeProviderDirectoryCache({
+        if (!retained) publishRuntimeProviderDirectoryCache({
           projectPath,
           entries: response.directory.entries,
           fetchedAt: response.directory.fetchedAt,
@@ -171,7 +176,7 @@ export function useRuntimeProviderQuickConnect({
         // A complete, healthy summary is enough for a display-only connected
         // count. No models or full directory need to be loaded.
         const observedCount = countCompleteDirectoryConnections(response.directory, 'all');
-        if (requestRuntimeRevision && observedCount !== null) {
+        if (!retained && requestRuntimeRevision && observedCount !== null) {
           publishRuntimeProviderConnectedCount({
             projectPath,
             readToken,
@@ -181,7 +186,7 @@ export function useRuntimeProviderQuickConnect({
             source: 'summary-all',
           });
         } else if (
-          requestRuntimeRevision &&
+          !retained && requestRuntimeRevision &&
           (response.directory.nextCursor != null ||
             response.directory.totalCount > response.directory.entries.length)
         ) {
@@ -189,7 +194,7 @@ export function useRuntimeProviderQuickConnect({
           // summary is truncated. The existing all-summary rows remain the
           // fallback for cards; never escalate to model or full inventory reads.
           connectedProbeStarted = true;
-          void api.runtimeProviderManagement
+          void (management ?? api.runtimeProviderManagement)
             .loadProviderDirectory({
               runtimeId: 'opencode',
               summary: true,
@@ -258,7 +263,7 @@ export function useRuntimeProviderQuickConnect({
       stopCountCheck?.();
       window.clearTimeout(timeout);
     };
-  }, [enabled, projectPath, refreshKey, refreshRequestSequence]);
+  }, [retained, management, enabled, projectPath, refreshKey, refreshRequestSequence, settledRuntimeRevision]);
 
   // Passive effects run after React commits. Gate the returned snapshot during
   // that short transition so providers from the previous project or runtime
@@ -270,7 +275,7 @@ export function useRuntimeProviderQuickConnect({
         previousRuntimeRevision.current !== runtimeRevision) ||
         (cacheSeenOnMount.current !== null &&
           cacheSeenOnMount.current.runtimeRevision !== runtimeRevision)));
-  const transitionDirectoryCache = isScopeTransition
+  const transitionDirectoryCache = !retained && isScopeTransition
     ? getRuntimeProviderDirectoryCacheSnapshot(projectPath, runtimeRevision)
     : null;
 

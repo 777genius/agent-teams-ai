@@ -8,6 +8,7 @@ import { hostTeamSelectionKey } from '../../../src/features/agent-backend/contra
 import { projectLaunchSnapshot } from '../../../src/features/agent-backend/main/adapters/output/projectLaunchSnapshot';
 import { createHostTeamProvisioning } from '../../../src/features/agent-backend/renderer/createHostTeamProvisioning';
 import { createHostTeamsApi } from '../../../src/features/agent-backend/renderer/createHostTeamsApi';
+import { shouldIgnoreProvisioningProgressRegression } from '../../../src/renderer/store/team/teamProvisioningStateRules';
 
 import type { BackendLaunchConfigurationView } from '../../../src/features/agent-backend/contracts/launch';
 import type {
@@ -160,18 +161,26 @@ describe('existing Host provisioning status API', () => {
   });
   it('shows partial/human/unknown/failed/stopped states without declaring the whole Team ready', async () => {
     const f = fixture();
+    const initial = await f.teams.getProvisioningStatus(selectedRun);
+    expect(initial.state).toBe('ready');
     const member = f.configuration.launch.members[0];
     for (const [status, reason, state] of [
       ['pending-bootstrap', 'context-unconfirmed', 'assembling'],
       ['pending-human', 'human-decision', 'verifying'],
       ['unknown', 'custody-unresolved', 'disconnected'],
       ['failed', 'bootstrap-timeout', 'failed'],
-      ['failed', 'stopped', 'cancelled'],
+      ['failed', 'stopped', 'disconnected'],
     ] as const) {
       Object.assign(member, { status, reason, nativeReady: false, usable: false });
       f.configuration.launch.status = status === 'failed' ? 'failed' : 'pending';
       f.configuration.launch.ready = 0;
-      expect((await f.teams.getProvisioningStatus(selectedRun)).state).toBe(state);
+      const progress = await f.teams.getProvisioningStatus(selectedRun);
+      if (reason === 'stopped') {
+        expect(progress.runId).toBe(initial.runId);
+        expect(progress.startedAt).toBe(initial.startedAt);
+        expect(shouldIgnoreProvisioningProgressRegression(initial.state, progress.state)).toBe(false);
+      }
+      expect(progress.state).toBe(state);
     }
     f.configuration.launch.members.push({ ...member, memberId: 'worker', status: 'unknown' });
     f.configuration.members.push({

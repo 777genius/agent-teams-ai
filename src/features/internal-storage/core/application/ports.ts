@@ -5,6 +5,7 @@ import type {
   MemberWorkSyncOutboxEnsureRecordInput,
   MemberWorkSyncOutboxEnsureRecordResult,
   MemberWorkSyncOutboxItemRecord,
+  MemberWorkSyncPrimaryImport,
   MemberWorkSyncReportIntentRecord,
   MemberWorkSyncReportJournalOpResult,
   MemberWorkSyncStatusCompareAndWriteInput,
@@ -158,7 +159,12 @@ export interface MemberWorkSyncStorageGateway {
     sinceIso: string;
   }): Promise<MemberWorkSyncOutboxItemRecord | null>;
   listTeamSnapshot(teamName: string): Promise<MemberWorkSyncTeamSnapshotRecords>;
-  importTeam(teamName: string, snapshot: MemberWorkSyncTeamSnapshotRecords): Promise<void>;
+  readPrimaryIncarnation(teamName: string): Promise<string | null>;
+  importTeam(
+    teamName: string,
+    snapshot: MemberWorkSyncTeamSnapshotRecords,
+    binding?: MemberWorkSyncPrimaryImport
+  ): Promise<void>;
   recordStoreImport(storeId: string, teamName: string, entryCount: number): Promise<void>;
   hasStoreImport(storeId: string, teamName: string): Promise<boolean>;
 }

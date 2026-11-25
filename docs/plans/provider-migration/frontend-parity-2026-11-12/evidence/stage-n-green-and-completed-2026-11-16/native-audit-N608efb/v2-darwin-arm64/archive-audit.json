@@ -1,0 +1,35 @@
+{
+  "archive": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/v2-darwin-arm64/artifact-14194589394.zip",
+  "bytes": 10492,
+  "sha256": "fcbee0cda12a3f52e358c48e87d3a5a943c3a2450ed6f15e495bf6cfa82966d8",
+  "CRC": true,
+  "safeNames": true,
+  "uniqueNames": true,
+  "noSymlinks": true,
+  "members": [
+    {
+      "name": "opencode-v2-embedded-inputs.json",
+      "bytes": 2374,
+      "blob": "129d9ccea4fbf1ec28918f788c9cce307bb55aff",
+      "sha256": "7c52f94bec86c77e7ec22c5a88ef07e9a5df76039d1b04e7ca9a92fba77004cd"
+    },
+    {
+      "name": "opencode-v2-posix-exec.json",
+      "bytes": 14583,
+      "blob": "9c1111a7fdf057d6b4e8309a5957c975cdc51764",
+      "sha256": "111f2238b96e7799ea2ac8ace3d5d15b56a949cdbfb2325e70c3b64c1cb9c86e"
+    },
+    {
+      "name": "opencode-v2-embedded-host.json",
+      "bytes": 94998,
+      "blob": "e9f62c29d40ea25ee99e61e13328fecd255669c2",
+      "sha256": "bea67388615638593b6b32ab2bfb63b7dfc07b528063dc2a28b1765b5331ff18"
+    },
+    {
+      "name": "opencode-v2-darwin-custody.json",
+      "bytes": 1444,
+      "blob": "55b78872b7c3256c2a89243d87e380a6ba63c2b4",
+      "sha256": "c45cd3cdd9c216345ba9e6b1fda52f366a946e2f11ef70e43ec01c7c6b5cd47b"
+    }
+  ]
+}

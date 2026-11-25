@@ -4,6 +4,7 @@ import {
 } from '@shared/utils/providerStatusAuthority';
 
 import {
+  createPendingProviderStatus,
   createRuntimeStatusErrorProviderStatus,
   sanitizeProviderStatusAuthority,
 } from '../runtime/providerStatusCheckContract';
@@ -12,11 +13,7 @@ import type { CliInstallationStatus, CliProviderId, CliProviderStatus } from '@s
 
 type CloneInstallationStatus = (status: CliInstallationStatus) => CliInstallationStatus;
 
-export const FRONTEND_PROVIDER_IDS: readonly CliProviderId[] = [
-  'anthropic',
-  'codex',
-  'opencode',
-];
+export const FRONTEND_PROVIDER_IDS: readonly CliProviderId[] = ['anthropic', 'codex', 'opencode'];
 const FRONTEND_PROVIDER_ID_SET = new Set<CliProviderId>(FRONTEND_PROVIDER_IDS);
 
 export function isFrontendProvider(providerId: CliProviderId): boolean {
@@ -39,6 +36,24 @@ export function hasAuthenticatedFrontendProvider(providers: CliProviderStatus[])
 
 export function filterFrontendProviders(providers: CliProviderStatus[]): CliProviderStatus[] {
   return providers.filter((provider) => isFrontendProvider(provider.providerId));
+}
+
+export function createObsoleteProviderStatus(providerId: CliProviderId): CliProviderStatus {
+  return createRuntimeStatusErrorProviderStatus(
+    providerId,
+    new Error('Provider runtime changed during status check. Refresh to retry.')
+  );
+}
+
+/** A superseded read cannot turn a transport failure into current provider evidence. */
+export function createProviderReadFailureStatus(
+  providerId: CliProviderId,
+  error: unknown,
+  readIsCurrent: boolean | undefined
+): CliProviderStatus {
+  return readIsCurrent === false
+    ? createPendingProviderStatus(providerId)
+    : createRuntimeStatusErrorProviderStatus(providerId, error);
 }
 
 export function projectProviderAuthority(

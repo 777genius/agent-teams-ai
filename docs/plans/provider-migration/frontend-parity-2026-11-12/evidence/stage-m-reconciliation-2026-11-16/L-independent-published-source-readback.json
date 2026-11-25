@@ -1,0 +1,436 @@
+{
+  "result": "APPROVE",
+  "independentReadbackExact": true,
+  "reviewedAtUTC": "2026-11-15T23:56:51.554414+00:00",
+  "head": "db8b470bf3c530928fef9ad4a2b582a417d436bd",
+  "tree": "a36be1fc640e0750a1d792ef3e26fd49a731f9eb",
+  "parents": [
+    "6341437d2344bbba9cf63640d90502188216e759",
+    "1f9242563bec2641b25077c3aa83a999bd7f4871"
+  ],
+  "remoteCommitApiTupleIndependentlyRead": true,
+  "remoteCommitUrl": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/db8b470bf3c530928fef9ad4a2b582a417d436bd",
+  "scope": "Actual published L RED-only source: complete selected Git/worktree/candidate bytes and full tree/author history; no resulting CI or installed dependency qualification.",
+  "sourceContract": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/source-and-history.json",
+    "bytes": 32233,
+    "blob": "0845a6c2f6623b15b1f2a4649b48e5d4f742e2c0",
+    "sha256": "c7d64f26c074825d7ba52630ef09200e9a1901ca62d372963ca1901e60311800"
+  },
+  "canonicalR1": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/canonical-R1.md",
+    "bytes": 16135,
+    "blob": "43b41001269e32ccb6f3c4d4483faea7c63bc9cd",
+    "sha256": "1f517f360c100a8f5dc3bd12e1bd8c896dfa1af3f14af3541007c99fe7812d4a"
+  },
+  "independentSourceCompositionReview": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/independent-source-composition-review.json",
+    "bytes": 32317,
+    "blob": "54d66c9c0c9f2d5783698b2076594a7e873c205b",
+    "sha256": "70e55feec597975467c588bc95ba732ab78e1963b9eac0de955d63e960b5d677"
+  },
+  "independentCanonicalReview": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/independent-canonical-v2-review.json",
+    "bytes": 12555,
+    "blob": "4e59d2fe76ec47208e1c591e642f901b0bc10ce8",
+    "sha256": "5e713461f6b0d7fbee8d3dccc2aebdebef03f0a85b2b055518d374517ae1dd22"
+  },
+  "independentImmutableSourceTreeReview": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/independent-source-tree-review.json",
+    "bytes": 16128,
+    "blob": "11cbc7c877de9674c789f717674c02c9f80e86b5",
+    "sha256": "f8a0bf8e7e1cbe9077a123f84105ff50ff3a2709e74c595d29d7d43a1ca7eb35"
+  },
+  "independentPublishedDocumentationReview": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stage-l-publication-independent-published-review.json",
+    "bytes": 29303,
+    "blob": "52c56dad82cd51c0af4c997b5c3f2bd4ad8a3a54",
+    "sha256": "a34877401c7cb85779b65494b79328777951ece5c7e9a4e0baade563a658bf08"
+  },
+  "publishedDocumentationManifest": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stage-l-publication/upload-manifest.json",
+    "bytes": 42649,
+    "blob": "8877ee6b25ad68529cd7a0eb77ae48e9ed150c12",
+    "sha256": "b6d48b3e30d56936bdf8f148f28f8256315afef802227aba297b7f30bbb9fb14"
+  },
+  "exactChangedPaths": [
+    ".github/workflows/ci.yml",
+    "packages/legacy-agent-host/package.json",
+    "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+    "packages/legacy-agent-host/src/diagnostics/redactDiagnosticAssignments.ts",
+    "packages/legacy-agent-host/src/runtime/normalizeActivity.ts",
+    "packages/legacy-agent-host/tests/captured-claude-process.test.ts",
+    "packages/legacy-agent-host/tests/fixtures/native-windows-claude.ts",
+    "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+    "packages/legacy-agent-host/tests/native-claude-host.native.ts",
+    "packages/legacy-agent-host/tests/native-codex-team.native.ts",
+    "packages/legacy-agent-host/tests/runtime-activity.test.ts",
+    "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+    "pnpm-lock.yaml",
+    "pnpm-workspace.yaml",
+    "scripts/legacy-agent-host/desktop-activity-ui-smoke.ts",
+    "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+    "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+    "src/renderer/components/team/members/HostMemberActivityLog.tsx",
+    "src/renderer/components/team/members/MemberLogsTab.tsx",
+    "src/shared/utils/redactDiagnosticAssignments.ts",
+    "test/renderer/components/team/members/hostLogStatsTabs.test.tsx",
+    "tools/owned-process-broker/debugServiceTest.h",
+    "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+    "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+    "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+    "vendor/provider-migration/host-logs-thinking-9423f600/README.md",
+    "vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-implementations-0.0.0.tgz",
+    "vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz",
+    "vendor/provider-migration/host-logs-thinking-9423f600/checked-artifact-receipt.json",
+    "vendor/provider-migration/host-logs-thinking-9423f600/source-receipt.json"
+  ],
+  "selectedSourceFiles": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "mode": "100644",
+      "type": "blob",
+      "source": "exact incoming",
+      "bytes": 175238,
+      "blob": "de7e1b4d8388065a15345cca434f1868ec694fc5",
+      "sha256": "cf3fe1c70142669f97143a354b178e55c07cad9dd0a534de885280fe0cec7dce",
+      "gitWorktreeAndCandidateBytesEqual": true
+    },
+    {
+      "path": "packages/legacy-agent-host/package.json",
+      "mode": "100644",
+      "type": "blob",
+      "source": "exact incoming",
+      "bytes": 12355,
+      "blob": "e39cb2ba89c125d850710828a65a30ae25b7344b",
+      "sha256": "77efb91a29ed4ba662ca7dcebc0843965d27305ad9d62f04ef6c84b517732e0b",
+      "gitWorktreeAndCandidateBytesEqual": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "mode": "100644",
+      "type": "blob",
+      "source": "exact incoming",
+      "bytes": 7826,
+      "blob": "3b2b960722f878cf60ba94bae27176fb9e7d0bba",
+      "sha256": "c30d9a9d7357275864ede578ec9a4c66e335ffb1a613a5d916c6aced9061e1bc",
+      "gitWorktreeAndCandidateBytesEqual": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/diagnostics/redactDiagnosticAssignments.ts",
+      "mode": "100644",
+      "type": "blob",
+      "source": "exact incoming",
+      "bytes": 5376,
+      "blob": "b82e437c1e8f04726982af5d50fc54394725f138",
+      "sha256": "a1c2499af3048c0e656f66131ffa76540fe7493c1f3643e0486c8ffe6358d940",
+      "gitWorktreeAndCandidateBytesEqual": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/normalizeActivity.ts",
+      "mode": "100644",
+      "type": "blob",
+      "source": "exact incoming",
+      "bytes": 5840,
+      "blob": "338f38de5b4ee60d5fa982aa895dd2f71fde981b",
+      "sha256": "2c2b72f7b9bea0e7f50cf4e95512ab022dbab50c8bcc6a697320aa35c823aede",
+      "gitWorktreeAndCandidateBytesEqual": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/captured-claude-process.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "source": "exact incoming",
+      "bytes": 14002,
+      "blob": "f84153e49a9ace1f07a5d1f7bb9cea486f5617af",
+      "sha256": "30c863da3e66b2d2e4be13e8a3394d09e75ade9e84ee38a7775806cd60acc868",
+      "gitWorktreeAndCandidateBytesEqual": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-windows-claude.ts",
+      "mode": "100644",
+      "type": "blob",
+      "source": "exact incoming",
+      "bytes": 15811,
+      "blob": "c640bd2a538f3f063b764174b71d365574925345",
+      "sha256": "c06390dfcc504efdb693c1c7e3aa52375ea0916245f20461cd8be352a3a500d5",
+      "gitWorktreeAndCandidateBytesEqual": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "source": "composed",
+      "bytes": 14603,
+      "blob": "d1b52658270cc53a9e1ec345de55f840e7549011",
+      "sha256": "fd7504cd6196122a450cab25dc3bce50f5125c4ab589510c005f08e68c731510",
+      "gitWorktreeAndCandidateBytesEqual": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/native-claude-host.native.ts",
+      "mode": "100644",
+      "type": "blob",
+      "source": "exact incoming",
+      "bytes": 39595,
+      "blob": "b0174217485fa7dadb4ba9692a3056798e2e3e9f",
+      "sha256": "3e93bd4ac4c0555d8f149781835584a7fd998c5e7e8f906669498e9cba7840eb",
+      "gitWorktreeAndCandidateBytesEqual": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/native-codex-team.native.ts",
+      "mode": "100644",
+      "type": "blob",
+      "source": "exact incoming",
+      "bytes": 40907,
+      "blob": "0b179a8b5fcf089de2f42dd90f8eef9a9160b992",
+      "sha256": "1420bc3f28eae122436a520a8b85e4e23c21c674636548a37bd88570f80f1636",
+      "gitWorktreeAndCandidateBytesEqual": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-activity.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "source": "exact incoming",
+      "bytes": 54523,
+      "blob": "5a4a258d7802ff54fc2d4c405fc95c2e8e48e86e",
+      "sha256": "2b0b8accbaf951b00d86537d6a0eb793e7ef1859d1ab401b06e93624f97269cb",
+      "gitWorktreeAndCandidateBytesEqual": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "source": "composed",
+      "bytes": 207427,
+      "blob": "c3f23b9a6b6bbc37668e57b94b3a26d03a2eab79",
+      "sha256": "5ecb1c76b7a3cccf205b9856f183095ef7da3fa06cd7617c2f403c37e3f41d2d",
+      "gitWorktreeAndCandidateBytesEqual": true
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "mode": "100644",
+      "type": "blob",
+      "source": "exact incoming",
+      "bytes": 956788,
+      "blob": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+      "sha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c",
+      "gitWorktreeAndCandidateBytesEqual": true
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "mode": "100644",
+      "type": "blob",
+      "source": "exact incoming",
+      "bytes": 6946,
+      "blob": "3999f1f503fc23c84db89cf9e964bcc3164122e5",
+      "sha256": "c3801a0cb971ad1c31e7236a61c328ff55c9c91d63b7b7042de8562ff39f00ea",
+      "gitWorktreeAndCandidateBytesEqual": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-activity-ui-smoke.ts",
+      "mode": "100644",
+      "type": "blob",
+      "source": "exact incoming",
+      "bytes": 22826,
+      "blob": "797cf587243a6c6ba1cd466ed105d5bb6d81772e",
+      "sha256": "6677695937f2c532da1867df1b91afa43856229badf98035a6aa7467102d1791",
+      "gitWorktreeAndCandidateBytesEqual": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "mode": "100644",
+      "type": "blob",
+      "source": "composed",
+      "bytes": 63441,
+      "blob": "8740d94021dd031b0be0248bc8654576484e6d1d",
+      "sha256": "f1c7645f19d8b4ab08da39a248ebff08b896fe85b49df0be1be945b24650e820",
+      "gitWorktreeAndCandidateBytesEqual": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "mode": "100644",
+      "type": "blob",
+      "source": "composed",
+      "bytes": 20778,
+      "blob": "d8222627fd9f5ba303d1a2116246d63ba0d67516",
+      "sha256": "bfcc571e2c742ff2eb957bcc525c6a596ca9999e6d3d087cc2ca9dfab9e94681",
+      "gitWorktreeAndCandidateBytesEqual": true
+    },
+    {
+      "path": "src/renderer/components/team/members/HostMemberActivityLog.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "source": "exact incoming",
+      "bytes": 14275,
+      "blob": "b0095b83b3544988b7b6d5ba10163c93411868f5",
+      "sha256": "3b0e5e8d661f1cf992d17a45e563f6348c9de33b32ee2795bfe4fe06394f2eba",
+      "gitWorktreeAndCandidateBytesEqual": true
+    },
+    {
+      "path": "src/renderer/components/team/members/MemberLogsTab.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "source": "exact incoming",
+      "bytes": 28174,
+      "blob": "9aa14dbd08d23f75c91ceb38d25ce5161fc6be37",
+      "sha256": "7b1f49b1d53e461dfb120ec95b469259d57f178c4b9baf63628f5d1c2a5b886c",
+      "gitWorktreeAndCandidateBytesEqual": true
+    },
+    {
+      "path": "src/shared/utils/redactDiagnosticAssignments.ts",
+      "mode": "100644",
+      "type": "blob",
+      "source": "exact incoming",
+      "bytes": 102,
+      "blob": "0a1bd348ab98e6f33af2577cad33e9f2be44e745",
+      "sha256": "8cfd0fa9fa6680e69c49ebabd4c8b0fd04771768677ad6ca8ec44da2d2de0e51",
+      "gitWorktreeAndCandidateBytesEqual": true
+    },
+    {
+      "path": "test/renderer/components/team/members/hostLogStatsTabs.test.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "source": "exact incoming",
+      "bytes": 21056,
+      "blob": "95bfc28a93043836fc08811dc129fb34492fe0a5",
+      "sha256": "c74aac40488ad0a971de188f35bda2d973c5c0b64612c2b40528b1f2cc4c6b73",
+      "gitWorktreeAndCandidateBytesEqual": true
+    },
+    {
+      "path": "tools/owned-process-broker/debugServiceTest.h",
+      "mode": "100644",
+      "type": "blob",
+      "source": "exact incoming",
+      "bytes": 7271,
+      "blob": "f8a03669780c34de68010184ad6ca03a8440a2e4",
+      "sha256": "ec0665d1f6289492ea103bce13821c2a06847a2599396c8b47de21dde4e4f2a4",
+      "gitWorktreeAndCandidateBytesEqual": true
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "mode": "100644",
+      "type": "blob",
+      "source": "exact incoming",
+      "bytes": 31783,
+      "blob": "6cdba0b52141348d97c593bf2ae6c224cdce5d73",
+      "sha256": "03f92320d8646353540bcea7a3626a0a35634b803a6af1599d23c1d882a6d962",
+      "gitWorktreeAndCandidateBytesEqual": true
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+      "mode": "100644",
+      "type": "blob",
+      "source": "exact incoming",
+      "bytes": 39026,
+      "blob": "76f5d1953816fd125f576a966c42caefcfc297e2",
+      "sha256": "94cc5c1faed9d9d6d82d6db8e5fb7e36f292fa7335ff60ffc0648009a0d2b43a",
+      "gitWorktreeAndCandidateBytesEqual": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+      "mode": "100644",
+      "type": "blob",
+      "source": "exact incoming",
+      "bytes": 20067,
+      "blob": "e3cb3ac88b3b46c8935f64bc2f2b0060e163676b",
+      "sha256": "3da229429f0dfa6c53449078a1b8125715130be2165986f2d4cc1fab31a53951",
+      "gitWorktreeAndCandidateBytesEqual": true
+    },
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-9423f600/README.md",
+      "mode": "100644",
+      "type": "blob",
+      "source": "exact incoming",
+      "bytes": 909,
+      "blob": "70c7bdfb85ea427f0e6ff8df99955a29648ce642",
+      "sha256": "997daf83ca9219c648df14c2d50252aa75c3994f435e7a74575db2bc6933a25d",
+      "gitWorktreeAndCandidateBytesEqual": true
+    },
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-implementations-0.0.0.tgz",
+      "mode": "100644",
+      "type": "blob",
+      "source": "exact incoming",
+      "bytes": 185996,
+      "blob": "7130609dd29851148c9e2106e2764b75982739b1",
+      "sha256": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+      "gitWorktreeAndCandidateBytesEqual": true
+    },
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz",
+      "mode": "100644",
+      "type": "blob",
+      "source": "exact incoming",
+      "bytes": 6230,
+      "blob": "33c2944ff8a52a9c087fba9d3cab1daffe2604d8",
+      "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc",
+      "gitWorktreeAndCandidateBytesEqual": true
+    },
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-9423f600/checked-artifact-receipt.json",
+      "mode": "100644",
+      "type": "blob",
+      "source": "exact incoming",
+      "bytes": 597,
+      "blob": "7fe2a65c8281598cc20dbd4f59d445ce18faab40",
+      "sha256": "3105c0ea7166596390aa38ac3866661aeff98673803f986a2301a28f3232f375",
+      "gitWorktreeAndCandidateBytesEqual": true
+    },
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-9423f600/source-receipt.json",
+      "mode": "100644",
+      "type": "blob",
+      "source": "exact incoming",
+      "bytes": 2472,
+      "blob": "c8eddea34318da263326df30169b53b8e1f9d07c",
+      "sha256": "877083696f8a2812e49069dd056b84b1a595e16d3c7e93ce16ff814be759081a",
+      "gitWorktreeAndCandidateBytesEqual": true
+    }
+  ],
+  "selectedSourceBytes": 2022240,
+  "selectedSourceFilesCount": 30,
+  "exactIncomingCount": 26,
+  "composedCount": 4,
+  "newSourceFiles": 6,
+  "modifiedExistingSourceFiles": 24,
+  "baseDocumentationLeaves": 9983,
+  "publishedLeaves": 9989,
+  "allUnselectedLeavesUnchanged": 9959,
+  "deletedPaths": 0,
+  "fullNormalizedLeafMap": {
+    "bytes": 1569531,
+    "blob": "75efe004bfafb0a6db230a4dfdc02e4f6dcff067",
+    "sha256": "0ffc1b33143f4f31aaf920ad3c4ba3bb3dd9d4a1b0b3b25c44d1328aa2cfc493"
+  },
+  "allPathsModesAndBlobsEqualIndependentlyReviewedImmutableTree": true,
+  "all49PublishedDocumentationGitBlobsRecheckedExact": true,
+  "fullPlansAndPriorHistoryPreserved": true,
+  "bothParentsKAndIncomingAreAncestors": true,
+  "trackedWorktreeCleanBeforeAndAfter": true,
+  "actualWorktreeHead": "db8b470bf3c530928fef9ad4a2b582a417d436bd",
+  "originalHostWorkflowUnchanged": {
+    "blob": "ae2e48f5dc013c8c2dd2ce6021dba2afd4ad66d5",
+    "wholeTeamCommandFiles": 10,
+    "existingScopedLintOperands": 38
+  },
+  "redOnlyBoundary": {
+    "helper": "3b2b960722f878cf60ba94bae27176fb9e7d0bba",
+    "canaryTest": "d1b52658270cc53a9e1ec345de55f840e7549011",
+    "laterGreen21aaNotApplied": true,
+    "actualCiRedObserved": false,
+    "sourceOnlyApprovalNotProjectPass": true
+  },
+  "newExternalPrHead": {
+    "sha": "9e542899f36c47598a88c764c9e6745589fea3e1",
+    "provenance": "Root steering reports later incoming PR at23:50; not independently polled or adopted in this review.",
+    "doesNotRetargetThisPublishedLSource": true
+  },
+  "limits": [
+    "Actual published API/Git/worktree identities prove readback independently of the missing fetch-session completion receipt. This review does not assert that the separate fetch process completed successfully.",
+    "No test, compiler, package-manager/install/bootstrap, Node/native/provider command, workflow query/replay/cancel, checkout or source/ref mutation was performed.",
+    "Old compiled/installed inputs are not a fresh L build or installed9423 qualification. Original CI remains selected for the actual privacy RED and later one-helper GREEN.",
+    "23stderr-file cases and20PASS/3FAIL remain predictions; prerequisite/import/setup/type failures do not establish the expected semantic privacy RED.",
+    "The four composite sources retain reviewed K assertions/fences; complete frozen future71/1f plan prose is preserved without implementing those future source cuts.",
+    "Current/previous native source-bound evidence does not transfer to composed L, P08/P09, graphical or release qualification. K43/L file-scoped lint gap remains explicit and pending."
+  ]
+}

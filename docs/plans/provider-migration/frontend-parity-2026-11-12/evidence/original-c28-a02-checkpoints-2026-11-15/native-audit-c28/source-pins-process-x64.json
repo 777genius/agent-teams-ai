@@ -1,0 +1,675 @@
+{
+  "kind": "selected-original-c28-Windows-x64-source-pin-audit",
+  "sourceHead": "c28f1aa890c909c7b981254c5e30b874cbc84287",
+  "gitBase": "9a34bb28de0a0deee2eecc42099fd9500563eb1b",
+  "deltaDependencies": [
+    "../native-audit-2cb/source-2cb-seven-path-delta.json",
+    "source-c28-four-path-delta.json"
+  ],
+  "providers": {
+    "codex": {
+      "sourcePinCount": 13,
+      "builtPinCount": 5,
+      "otherPinCount": 9,
+      "sourcePins": [
+        {
+          "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+          "gitBlob": "91098e2083ed64dc4bd551df2424f40fbec064ee",
+          "gitLfSha256": "69f6948490d5f4c88f090135912bf8c8189c3558e2480eb1ee4ac69ac15a2c5c",
+          "windowsCrlfSha256": "34ff05cd50faab2f309cfa242cf8a0b1a57865c0641b2bdbe3fc9af4e5e445e3",
+          "receiptSha256": "34ff05cd50faab2f309cfa242cf8a0b1a57865c0641b2bdbe3fc9af4e5e445e3",
+          "match": [
+            "WindowsCRLF"
+          ],
+          "sourceJoin": "Exact retained 2cb override"
+        },
+        {
+          "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+          "gitBlob": "8b4f0e8840773aa29e94758688211ffe138ebe04",
+          "gitLfSha256": "b6fc6bcbeea221fbb9efc139a073d1cae633b8bdd33247edc18f748461bf6a2a",
+          "windowsCrlfSha256": "c6ad336320f475687b019d42e0a798f5a778a5977d47e2ff369ee754dd446ed9",
+          "receiptSha256": "c6ad336320f475687b019d42e0a798f5a778a5977d47e2ff369ee754dd446ed9",
+          "match": [
+            "WindowsCRLF"
+          ],
+          "sourceJoin": "Exact c28 scenario override"
+        },
+        {
+          "path": "tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+          "gitBlob": "31a6c30bd3962500e20e99786353cb9ec418adaf",
+          "gitLfSha256": "5ecad2b6f6c7f5819e0e18430b5625a9a86ef1120e7e99f595dbd3ad73126bbd",
+          "windowsCrlfSha256": "421200fecd4c91a5c4c19a0dd765e795b2007beec1116a338c359988da2de3ce",
+          "receiptSha256": "421200fecd4c91a5c4c19a0dd765e795b2007beec1116a338c359988da2de3ce",
+          "match": [
+            "WindowsCRLF"
+          ],
+          "sourceJoin": "9a34 Git blob unchanged across full 2cb seven-path and c28 four-path deltas"
+        },
+        {
+          "path": "tools/owned-process-broker/nativeEmulatedProfile.ts",
+          "gitBlob": "67180ac5c567cbeb089d4ef3248391c792e1ba4d",
+          "gitLfSha256": "8cdc9a1bcc80b61998e93813959f53542a85cb5953c93ae1feb2397e37d9080e",
+          "windowsCrlfSha256": "19ad26755e1655bcc8c2169a9d03d84d15dd8f8bfea17750f2194bf6a9c8d961",
+          "receiptSha256": "19ad26755e1655bcc8c2169a9d03d84d15dd8f8bfea17750f2194bf6a9c8d961",
+          "match": [
+            "WindowsCRLF"
+          ],
+          "sourceJoin": "9a34 Git blob unchanged across full 2cb seven-path and c28 four-path deltas"
+        },
+        {
+          "path": "tools/owned-process-broker/nativeGateContext.ts",
+          "gitBlob": "27c6da3bac59ac276c40e79f7c4e1c548adb9d31",
+          "gitLfSha256": "7e9096550ed0b90589a91978f8621572424d5b6c24137c13c641f3dde7897200",
+          "windowsCrlfSha256": "3f868f0e0c0066bf7a0ecb169dd897274e11d50479c6cfba8aed11f31760dfb6",
+          "receiptSha256": "3f868f0e0c0066bf7a0ecb169dd897274e11d50479c6cfba8aed11f31760dfb6",
+          "match": [
+            "WindowsCRLF"
+          ],
+          "sourceJoin": "9a34 Git blob unchanged across full 2cb seven-path and c28 four-path deltas"
+        },
+        {
+          "path": "tools/owned-process-broker/nativeGateEvents.ts",
+          "gitBlob": "1dbbf60801213f80f97cb9b0b0031acdf41d738a",
+          "gitLfSha256": "2f06d37ad0ea51fda654501d4c08a6066a1914a9cfe59c2d73d4f29db4c8ba7d",
+          "windowsCrlfSha256": "d8c7b487bbaac95d4fb25080ce57d8d3d36c04c9a2a7297157993dd98698e0c4",
+          "receiptSha256": "d8c7b487bbaac95d4fb25080ce57d8d3d36c04c9a2a7297157993dd98698e0c4",
+          "match": [
+            "WindowsCRLF"
+          ],
+          "sourceJoin": "9a34 Git blob unchanged across full 2cb seven-path and c28 four-path deltas"
+        },
+        {
+          "path": "tools/owned-process-broker/nativeEmulatedSourceReadiness.ts",
+          "gitBlob": "a7e45d6cadba355ec46a516a68297d46147d741e",
+          "gitLfSha256": "83d26a98fd977696a05aafbceae9e28a1fbf71c553bc9c1db565c20567fcf470",
+          "windowsCrlfSha256": "119802fbff75a78790b6b28e4e366b81ed266ddcf4005500e45c1b9772d1e0d2",
+          "receiptSha256": "119802fbff75a78790b6b28e4e366b81ed266ddcf4005500e45c1b9772d1e0d2",
+          "match": [
+            "WindowsCRLF"
+          ],
+          "sourceJoin": "9a34 Git blob unchanged across full 2cb seven-path and c28 four-path deltas"
+        },
+        {
+          "path": "tools/owned-process-broker/fixtures/providerPeer.mjs",
+          "gitBlob": "44c8cba99e4932905da77539a59c904a39da4e36",
+          "gitLfSha256": "e34c78358e85d3e841e4f9fb7941e77ce9b5f8b757dac434c3fe5ec5dbfdccdd",
+          "windowsCrlfSha256": "039f2e29a17d40cb21a287770eb41354191f495f06e8e9f350eb8a3453e7bddc",
+          "receiptSha256": "039f2e29a17d40cb21a287770eb41354191f495f06e8e9f350eb8a3453e7bddc",
+          "match": [
+            "WindowsCRLF"
+          ],
+          "sourceJoin": "9a34 Git blob unchanged across full 2cb seven-path and c28 four-path deltas"
+        },
+        {
+          "path": "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+          "gitBlob": "77b2f17c47b1bda1506aaf124ea079db1680199f",
+          "gitLfSha256": "385450afd8694a813b66ae64b56acb9ae836e07b5f18abac0d8da501315c9de4",
+          "windowsCrlfSha256": "747b4ddf324040209fe579b94dcd41cbbfd9046b8cd325a542dd8502add389f0",
+          "receiptSha256": "747b4ddf324040209fe579b94dcd41cbbfd9046b8cd325a542dd8502add389f0",
+          "match": [
+            "WindowsCRLF"
+          ],
+          "sourceJoin": "9a34 Git blob unchanged across full 2cb seven-path and c28 four-path deltas"
+        },
+        {
+          "path": "packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts",
+          "gitBlob": "3b5a244c27d004af6e82fffa092fa83e1894de73",
+          "gitLfSha256": "447a3ae82ab6ce0ec866305af2cd426619df3618fbec2397931212379d945784",
+          "windowsCrlfSha256": "564187147dd3bb26fe284929f67496b40d22b927202b19dcae079a961fae3748",
+          "receiptSha256": "564187147dd3bb26fe284929f67496b40d22b927202b19dcae079a961fae3748",
+          "match": [
+            "WindowsCRLF"
+          ],
+          "sourceJoin": "9a34 Git blob unchanged across full 2cb seven-path and c28 four-path deltas"
+        },
+        {
+          "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+          "gitBlob": "b9dd573db23b3033b5f3db7024b317681ce31499",
+          "gitLfSha256": "89fbe1d8736a5797aa3198df213b89d5861a07012675e91aff78d1302459cf14",
+          "windowsCrlfSha256": "f514e025dfd60394442348f9f0871592e4315072067779b0aef2ad55812f7cbc",
+          "receiptSha256": "f514e025dfd60394442348f9f0871592e4315072067779b0aef2ad55812f7cbc",
+          "match": [
+            "WindowsCRLF"
+          ],
+          "sourceJoin": "9a34 Git blob unchanged across full 2cb seven-path and c28 four-path deltas"
+        },
+        {
+          "path": "packages/legacy-agent-host/src/management/ModelProbeOwner.ts",
+          "gitBlob": "a870a9c2c213b802ae43a3dee9a0694a67feda7e",
+          "gitLfSha256": "fe9227bedef2284945618382289b36681757175e0f9ffa9f50cf219809f4ced2",
+          "windowsCrlfSha256": "db3058dc894c6d0555d55c60b2af92e51ad155d64667d3c7942484021b508361",
+          "receiptSha256": "db3058dc894c6d0555d55c60b2af92e51ad155d64667d3c7942484021b508361",
+          "match": [
+            "WindowsCRLF"
+          ],
+          "sourceJoin": "9a34 Git blob unchanged across full 2cb seven-path and c28 four-path deltas"
+        },
+        {
+          "path": "packages/legacy-agent-host/src/composition/projectRuntimeMember.ts",
+          "gitBlob": "65d53a2beff3b3a36d554601dcf57d67b086aa0f",
+          "gitLfSha256": "352c62fcce347599a89658a5dc98d3d05d35d4a6d26618cc87faa6ece2f995df",
+          "windowsCrlfSha256": "1d319cb57b85ef47d22b0e4a99ee4960cbada129cd85d08fa924c79b672bf079",
+          "receiptSha256": "1d319cb57b85ef47d22b0e4a99ee4960cbada129cd85d08fa924c79b672bf079",
+          "match": [
+            "WindowsCRLF"
+          ],
+          "sourceJoin": "9a34 Git blob unchanged across full 2cb seven-path and c28 four-path deltas"
+        }
+      ],
+      "builtPinComparison": [
+        {
+          "path": "packages/legacy-agent-host/dist/cli.js",
+          "receiptSha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+          "prior2cbSha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+          "matchesPrior2cbReceipt": true
+        },
+        {
+          "path": "packages/legacy-agent-host/dist/owned-process/HostWindowsLaunch.js",
+          "receiptSha256": "975108117efd64201c73fb9f565ac890d8b156f7c0a06eb46d5bb6fc15018cb4",
+          "prior2cbSha256": "975108117efd64201c73fb9f565ac890d8b156f7c0a06eb46d5bb6fc15018cb4",
+          "matchesPrior2cbReceipt": true
+        },
+        {
+          "path": "packages/legacy-agent-host/dist/composition/prepareTeamModelReadiness.js",
+          "receiptSha256": "265208df5743490006ea59f2f4016ab3cd59619c37af575162576c319e2d416f",
+          "prior2cbSha256": "265208df5743490006ea59f2f4016ab3cd59619c37af575162576c319e2d416f",
+          "matchesPrior2cbReceipt": true
+        },
+        {
+          "path": "packages/legacy-agent-host/dist/management/ModelProbeOwner.js",
+          "receiptSha256": "7201def22b57f351f0c85f20270240c918e203691bb029a44b278580f6b25283",
+          "prior2cbSha256": "7201def22b57f351f0c85f20270240c918e203691bb029a44b278580f6b25283",
+          "matchesPrior2cbReceipt": true
+        },
+        {
+          "path": "packages/legacy-agent-host/dist/composition/projectRuntimeMember.js",
+          "receiptSha256": "371c569579af59881eaf03a3cd5a622a67a62b2fb780267d0ff78fd8e6fe6770",
+          "prior2cbSha256": "371c569579af59881eaf03a3cd5a622a67a62b2fb780267d0ff78fd8e6fe6770",
+          "matchesPrior2cbReceipt": true
+        }
+      ],
+      "otherPins": [
+        {
+          "path": "C:\\hostedtoolcache\\windows\\node\\24.21.0\\x64\\node.exe",
+          "sha256": "ba4e6d110e8c1592a1ecd390f6b05f3da124b13871a5be62b341a07a853c6c32"
+        },
+        {
+          "path": "D:\\a\\_temp\\TEST-process-scoped-stage-x64\\owned-process-broker.exe",
+          "sha256": "79bb0d734c211eb24cdfa248ef122da019f3f823880bc5966d530b1545bce321"
+        },
+        {
+          "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgC77E.tmp\\TEST-desktop-backend-codex70497d3e536d4123b06b1fa6dc34ed17\\TEST-source-host.mjs",
+          "sha256": "b3a9910c449c77635dce408b7deda1003fa1ca40803409957994e6defd4ded8c"
+        },
+        {
+          "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgC77E.tmp\\TEST-desktop-backend-codex70497d3e536d4123b06b1fa6dc34ed17\\TEST-source-profile.json",
+          "sha256": "d0b74cdd2b44e96d9907d9c10860de36a4723aabbd5fda9c9257378ab32baa7f"
+        },
+        {
+          "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgC77E.tmp\\TEST-desktop-backend-codex70497d3e536d4123b06b1fa6dc34ed17\\TEST-source-descriptor.json",
+          "sha256": "1b008db54ecc05b6467574e09722eb897258345168afab642ba3901261e744ed"
+        },
+        {
+          "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgC77E.tmp\\TEST-desktop-backend-codex70497d3e536d4123b06b1fa6dc34ed17\\bin\\TEST source A.cmd",
+          "sha256": "334a8791d7b8d37eed2fd0c6ecda8f68eca7dca142d38eb628449397773cb8cf"
+        },
+        {
+          "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgC77E.tmp\\TEST-desktop-backend-codex70497d3e536d4123b06b1fa6dc34ed17\\bin\\TEST-source-A.mjs",
+          "sha256": "bb818429b2805581031a80f59ec71fd59051ad8a34be5bab9148ecab10c6ad13"
+        },
+        {
+          "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgC77E.tmp\\TEST-desktop-backend-codex70497d3e536d4123b06b1fa6dc34ed17\\bin\\TEST source B.cmd",
+          "sha256": "8668d922b01a3a800e69151ae62c112e84dbf618c9c01d7a94b4465387b3e3bb"
+        },
+        {
+          "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgC77E.tmp\\TEST-desktop-backend-codex70497d3e536d4123b06b1fa6dc34ed17\\bin\\TEST-source-B.mjs",
+          "sha256": "8dbd7234ea558af295b02a8298c866f44dfe58209f0b648680dbbc772cafc9d3"
+        }
+      ]
+    },
+    "claude": {
+      "sourcePinCount": 12,
+      "builtPinCount": 5,
+      "otherPinCount": 9,
+      "sourcePins": [
+        {
+          "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+          "gitBlob": "91098e2083ed64dc4bd551df2424f40fbec064ee",
+          "gitLfSha256": "69f6948490d5f4c88f090135912bf8c8189c3558e2480eb1ee4ac69ac15a2c5c",
+          "windowsCrlfSha256": "34ff05cd50faab2f309cfa242cf8a0b1a57865c0641b2bdbe3fc9af4e5e445e3",
+          "receiptSha256": "34ff05cd50faab2f309cfa242cf8a0b1a57865c0641b2bdbe3fc9af4e5e445e3",
+          "match": [
+            "WindowsCRLF"
+          ],
+          "sourceJoin": "Exact retained 2cb override"
+        },
+        {
+          "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+          "gitBlob": "8b4f0e8840773aa29e94758688211ffe138ebe04",
+          "gitLfSha256": "b6fc6bcbeea221fbb9efc139a073d1cae633b8bdd33247edc18f748461bf6a2a",
+          "windowsCrlfSha256": "c6ad336320f475687b019d42e0a798f5a778a5977d47e2ff369ee754dd446ed9",
+          "receiptSha256": "c6ad336320f475687b019d42e0a798f5a778a5977d47e2ff369ee754dd446ed9",
+          "match": [
+            "WindowsCRLF"
+          ],
+          "sourceJoin": "Exact c28 scenario override"
+        },
+        {
+          "path": "tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+          "gitBlob": "31a6c30bd3962500e20e99786353cb9ec418adaf",
+          "gitLfSha256": "5ecad2b6f6c7f5819e0e18430b5625a9a86ef1120e7e99f595dbd3ad73126bbd",
+          "windowsCrlfSha256": "421200fecd4c91a5c4c19a0dd765e795b2007beec1116a338c359988da2de3ce",
+          "receiptSha256": "421200fecd4c91a5c4c19a0dd765e795b2007beec1116a338c359988da2de3ce",
+          "match": [
+            "WindowsCRLF"
+          ],
+          "sourceJoin": "9a34 Git blob unchanged across full 2cb seven-path and c28 four-path deltas"
+        },
+        {
+          "path": "tools/owned-process-broker/nativeEmulatedProfile.ts",
+          "gitBlob": "67180ac5c567cbeb089d4ef3248391c792e1ba4d",
+          "gitLfSha256": "8cdc9a1bcc80b61998e93813959f53542a85cb5953c93ae1feb2397e37d9080e",
+          "windowsCrlfSha256": "19ad26755e1655bcc8c2169a9d03d84d15dd8f8bfea17750f2194bf6a9c8d961",
+          "receiptSha256": "19ad26755e1655bcc8c2169a9d03d84d15dd8f8bfea17750f2194bf6a9c8d961",
+          "match": [
+            "WindowsCRLF"
+          ],
+          "sourceJoin": "9a34 Git blob unchanged across full 2cb seven-path and c28 four-path deltas"
+        },
+        {
+          "path": "tools/owned-process-broker/nativeGateContext.ts",
+          "gitBlob": "27c6da3bac59ac276c40e79f7c4e1c548adb9d31",
+          "gitLfSha256": "7e9096550ed0b90589a91978f8621572424d5b6c24137c13c641f3dde7897200",
+          "windowsCrlfSha256": "3f868f0e0c0066bf7a0ecb169dd897274e11d50479c6cfba8aed11f31760dfb6",
+          "receiptSha256": "3f868f0e0c0066bf7a0ecb169dd897274e11d50479c6cfba8aed11f31760dfb6",
+          "match": [
+            "WindowsCRLF"
+          ],
+          "sourceJoin": "9a34 Git blob unchanged across full 2cb seven-path and c28 four-path deltas"
+        },
+        {
+          "path": "tools/owned-process-broker/nativeGateEvents.ts",
+          "gitBlob": "1dbbf60801213f80f97cb9b0b0031acdf41d738a",
+          "gitLfSha256": "2f06d37ad0ea51fda654501d4c08a6066a1914a9cfe59c2d73d4f29db4c8ba7d",
+          "windowsCrlfSha256": "d8c7b487bbaac95d4fb25080ce57d8d3d36c04c9a2a7297157993dd98698e0c4",
+          "receiptSha256": "d8c7b487bbaac95d4fb25080ce57d8d3d36c04c9a2a7297157993dd98698e0c4",
+          "match": [
+            "WindowsCRLF"
+          ],
+          "sourceJoin": "9a34 Git blob unchanged across full 2cb seven-path and c28 four-path deltas"
+        },
+        {
+          "path": "tools/owned-process-broker/nativeEmulatedSourceReadiness.ts",
+          "gitBlob": "a7e45d6cadba355ec46a516a68297d46147d741e",
+          "gitLfSha256": "83d26a98fd977696a05aafbceae9e28a1fbf71c553bc9c1db565c20567fcf470",
+          "windowsCrlfSha256": "119802fbff75a78790b6b28e4e366b81ed266ddcf4005500e45c1b9772d1e0d2",
+          "receiptSha256": "119802fbff75a78790b6b28e4e366b81ed266ddcf4005500e45c1b9772d1e0d2",
+          "match": [
+            "WindowsCRLF"
+          ],
+          "sourceJoin": "9a34 Git blob unchanged across full 2cb seven-path and c28 four-path deltas"
+        },
+        {
+          "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+          "gitBlob": "45cc6900fbc5ce462ccaa4da512fcc34174f1386",
+          "gitLfSha256": "d4cf4bbee16fbd047c07d94fb80109a886f34c88b1e2c778ba4ce3f6adbbc8b8",
+          "windowsCrlfSha256": "3eca2845a01db117108838e739b234a6dc3bba0abddaf3b2b33e58ae17b764c8",
+          "receiptSha256": "3eca2845a01db117108838e739b234a6dc3bba0abddaf3b2b33e58ae17b764c8",
+          "match": [
+            "WindowsCRLF"
+          ],
+          "sourceJoin": "9a34 Git blob unchanged across full 2cb seven-path and c28 four-path deltas"
+        },
+        {
+          "path": "packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts",
+          "gitBlob": "3b5a244c27d004af6e82fffa092fa83e1894de73",
+          "gitLfSha256": "447a3ae82ab6ce0ec866305af2cd426619df3618fbec2397931212379d945784",
+          "windowsCrlfSha256": "564187147dd3bb26fe284929f67496b40d22b927202b19dcae079a961fae3748",
+          "receiptSha256": "564187147dd3bb26fe284929f67496b40d22b927202b19dcae079a961fae3748",
+          "match": [
+            "WindowsCRLF"
+          ],
+          "sourceJoin": "9a34 Git blob unchanged across full 2cb seven-path and c28 four-path deltas"
+        },
+        {
+          "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+          "gitBlob": "b9dd573db23b3033b5f3db7024b317681ce31499",
+          "gitLfSha256": "89fbe1d8736a5797aa3198df213b89d5861a07012675e91aff78d1302459cf14",
+          "windowsCrlfSha256": "f514e025dfd60394442348f9f0871592e4315072067779b0aef2ad55812f7cbc",
+          "receiptSha256": "f514e025dfd60394442348f9f0871592e4315072067779b0aef2ad55812f7cbc",
+          "match": [
+            "WindowsCRLF"
+          ],
+          "sourceJoin": "9a34 Git blob unchanged across full 2cb seven-path and c28 four-path deltas"
+        },
+        {
+          "path": "packages/legacy-agent-host/src/management/ModelProbeOwner.ts",
+          "gitBlob": "a870a9c2c213b802ae43a3dee9a0694a67feda7e",
+          "gitLfSha256": "fe9227bedef2284945618382289b36681757175e0f9ffa9f50cf219809f4ced2",
+          "windowsCrlfSha256": "db3058dc894c6d0555d55c60b2af92e51ad155d64667d3c7942484021b508361",
+          "receiptSha256": "db3058dc894c6d0555d55c60b2af92e51ad155d64667d3c7942484021b508361",
+          "match": [
+            "WindowsCRLF"
+          ],
+          "sourceJoin": "9a34 Git blob unchanged across full 2cb seven-path and c28 four-path deltas"
+        },
+        {
+          "path": "packages/legacy-agent-host/src/composition/projectRuntimeMember.ts",
+          "gitBlob": "65d53a2beff3b3a36d554601dcf57d67b086aa0f",
+          "gitLfSha256": "352c62fcce347599a89658a5dc98d3d05d35d4a6d26618cc87faa6ece2f995df",
+          "windowsCrlfSha256": "1d319cb57b85ef47d22b0e4a99ee4960cbada129cd85d08fa924c79b672bf079",
+          "receiptSha256": "1d319cb57b85ef47d22b0e4a99ee4960cbada129cd85d08fa924c79b672bf079",
+          "match": [
+            "WindowsCRLF"
+          ],
+          "sourceJoin": "9a34 Git blob unchanged across full 2cb seven-path and c28 four-path deltas"
+        }
+      ],
+      "builtPinComparison": [
+        {
+          "path": "packages/legacy-agent-host/dist/cli.js",
+          "receiptSha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+          "prior2cbSha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+          "matchesPrior2cbReceipt": true
+        },
+        {
+          "path": "packages/legacy-agent-host/dist/owned-process/HostWindowsLaunch.js",
+          "receiptSha256": "975108117efd64201c73fb9f565ac890d8b156f7c0a06eb46d5bb6fc15018cb4",
+          "prior2cbSha256": "975108117efd64201c73fb9f565ac890d8b156f7c0a06eb46d5bb6fc15018cb4",
+          "matchesPrior2cbReceipt": true
+        },
+        {
+          "path": "packages/legacy-agent-host/dist/composition/prepareTeamModelReadiness.js",
+          "receiptSha256": "265208df5743490006ea59f2f4016ab3cd59619c37af575162576c319e2d416f",
+          "prior2cbSha256": "265208df5743490006ea59f2f4016ab3cd59619c37af575162576c319e2d416f",
+          "matchesPrior2cbReceipt": true
+        },
+        {
+          "path": "packages/legacy-agent-host/dist/management/ModelProbeOwner.js",
+          "receiptSha256": "7201def22b57f351f0c85f20270240c918e203691bb029a44b278580f6b25283",
+          "prior2cbSha256": "7201def22b57f351f0c85f20270240c918e203691bb029a44b278580f6b25283",
+          "matchesPrior2cbReceipt": true
+        },
+        {
+          "path": "packages/legacy-agent-host/dist/composition/projectRuntimeMember.js",
+          "receiptSha256": "371c569579af59881eaf03a3cd5a622a67a62b2fb780267d0ff78fd8e6fe6770",
+          "prior2cbSha256": "371c569579af59881eaf03a3cd5a622a67a62b2fb780267d0ff78fd8e6fe6770",
+          "matchesPrior2cbReceipt": true
+        }
+      ],
+      "otherPins": [
+        {
+          "path": "C:\\hostedtoolcache\\windows\\node\\24.21.0\\x64\\node.exe",
+          "sha256": "ba4e6d110e8c1592a1ecd390f6b05f3da124b13871a5be62b341a07a853c6c32"
+        },
+        {
+          "path": "D:\\a\\_temp\\TEST-process-scoped-stage-x64\\owned-process-broker.exe",
+          "sha256": "79bb0d734c211eb24cdfa248ef122da019f3f823880bc5966d530b1545bce321"
+        },
+        {
+          "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg8AED.tmp\\TEST-desktop-backend-claude0acf60b54ff046e2ba297df7f7f273ba\\TEST-source-host.mjs",
+          "sha256": "90a242a1856ddea305385f7bcb19a1a884e40e89686c6d4f0ad5f186577ea86b"
+        },
+        {
+          "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg8AED.tmp\\TEST-desktop-backend-claude0acf60b54ff046e2ba297df7f7f273ba\\TEST-source-profile.json",
+          "sha256": "a39accb466a64548e084022d1d9a877d325165669ce9c92fc84f8a4cfa1a1697"
+        },
+        {
+          "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg8AED.tmp\\TEST-desktop-backend-claude0acf60b54ff046e2ba297df7f7f273ba\\TEST-source-descriptor.json",
+          "sha256": "922628e00197a65cf49e9720d04c6c7055b47e12d3f55fff95797ce880f97482"
+        },
+        {
+          "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg8AED.tmp\\TEST-desktop-backend-claude0acf60b54ff046e2ba297df7f7f273ba\\bin\\TEST source A.cmd",
+          "sha256": "12c280498650980ba3a53ca720f8922648f3f0c183a55551b3504eb2667ab3fc"
+        },
+        {
+          "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg8AED.tmp\\TEST-desktop-backend-claude0acf60b54ff046e2ba297df7f7f273ba\\bin\\TEST-source-A.mjs",
+          "sha256": "4ea29c253c8c6ef8de4b144bbe1425baa43ef879c6f6fc5ed68123643eca2430"
+        },
+        {
+          "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg8AED.tmp\\TEST-desktop-backend-claude0acf60b54ff046e2ba297df7f7f273ba\\bin\\TEST source B.cmd",
+          "sha256": "67acd798e8051c82a76c9dc63c36152d83bfb944345bd77bbbd1fea95e5d1741"
+        },
+        {
+          "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg8AED.tmp\\TEST-desktop-backend-claude0acf60b54ff046e2ba297df7f7f273ba\\bin\\TEST-source-B.mjs",
+          "sha256": "217bf3c9b6c3de1e8bfc64de3c46180f9072a055ecf82c9e03e29d56ec90c05e"
+        }
+      ]
+    },
+    "opencode": {
+      "sourcePinCount": 13,
+      "builtPinCount": 6,
+      "otherPinCount": 10,
+      "sourcePins": [
+        {
+          "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+          "gitBlob": "91098e2083ed64dc4bd551df2424f40fbec064ee",
+          "gitLfSha256": "69f6948490d5f4c88f090135912bf8c8189c3558e2480eb1ee4ac69ac15a2c5c",
+          "windowsCrlfSha256": "34ff05cd50faab2f309cfa242cf8a0b1a57865c0641b2bdbe3fc9af4e5e445e3",
+          "receiptSha256": "34ff05cd50faab2f309cfa242cf8a0b1a57865c0641b2bdbe3fc9af4e5e445e3",
+          "match": [
+            "WindowsCRLF"
+          ],
+          "sourceJoin": "Exact retained 2cb override"
+        },
+        {
+          "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+          "gitBlob": "8b4f0e8840773aa29e94758688211ffe138ebe04",
+          "gitLfSha256": "b6fc6bcbeea221fbb9efc139a073d1cae633b8bdd33247edc18f748461bf6a2a",
+          "windowsCrlfSha256": "c6ad336320f475687b019d42e0a798f5a778a5977d47e2ff369ee754dd446ed9",
+          "receiptSha256": "c6ad336320f475687b019d42e0a798f5a778a5977d47e2ff369ee754dd446ed9",
+          "match": [
+            "WindowsCRLF"
+          ],
+          "sourceJoin": "Exact c28 scenario override"
+        },
+        {
+          "path": "tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+          "gitBlob": "31a6c30bd3962500e20e99786353cb9ec418adaf",
+          "gitLfSha256": "5ecad2b6f6c7f5819e0e18430b5625a9a86ef1120e7e99f595dbd3ad73126bbd",
+          "windowsCrlfSha256": "421200fecd4c91a5c4c19a0dd765e795b2007beec1116a338c359988da2de3ce",
+          "receiptSha256": "421200fecd4c91a5c4c19a0dd765e795b2007beec1116a338c359988da2de3ce",
+          "match": [
+            "WindowsCRLF"
+          ],
+          "sourceJoin": "9a34 Git blob unchanged across full 2cb seven-path and c28 four-path deltas"
+        },
+        {
+          "path": "tools/owned-process-broker/nativeEmulatedProfile.ts",
+          "gitBlob": "67180ac5c567cbeb089d4ef3248391c792e1ba4d",
+          "gitLfSha256": "8cdc9a1bcc80b61998e93813959f53542a85cb5953c93ae1feb2397e37d9080e",
+          "windowsCrlfSha256": "19ad26755e1655bcc8c2169a9d03d84d15dd8f8bfea17750f2194bf6a9c8d961",
+          "receiptSha256": "19ad26755e1655bcc8c2169a9d03d84d15dd8f8bfea17750f2194bf6a9c8d961",
+          "match": [
+            "WindowsCRLF"
+          ],
+          "sourceJoin": "9a34 Git blob unchanged across full 2cb seven-path and c28 four-path deltas"
+        },
+        {
+          "path": "tools/owned-process-broker/nativeGateContext.ts",
+          "gitBlob": "27c6da3bac59ac276c40e79f7c4e1c548adb9d31",
+          "gitLfSha256": "7e9096550ed0b90589a91978f8621572424d5b6c24137c13c641f3dde7897200",
+          "windowsCrlfSha256": "3f868f0e0c0066bf7a0ecb169dd897274e11d50479c6cfba8aed11f31760dfb6",
+          "receiptSha256": "3f868f0e0c0066bf7a0ecb169dd897274e11d50479c6cfba8aed11f31760dfb6",
+          "match": [
+            "WindowsCRLF"
+          ],
+          "sourceJoin": "9a34 Git blob unchanged across full 2cb seven-path and c28 four-path deltas"
+        },
+        {
+          "path": "tools/owned-process-broker/nativeGateEvents.ts",
+          "gitBlob": "1dbbf60801213f80f97cb9b0b0031acdf41d738a",
+          "gitLfSha256": "2f06d37ad0ea51fda654501d4c08a6066a1914a9cfe59c2d73d4f29db4c8ba7d",
+          "windowsCrlfSha256": "d8c7b487bbaac95d4fb25080ce57d8d3d36c04c9a2a7297157993dd98698e0c4",
+          "receiptSha256": "d8c7b487bbaac95d4fb25080ce57d8d3d36c04c9a2a7297157993dd98698e0c4",
+          "match": [
+            "WindowsCRLF"
+          ],
+          "sourceJoin": "9a34 Git blob unchanged across full 2cb seven-path and c28 four-path deltas"
+        },
+        {
+          "path": "tools/owned-process-broker/nativeEmulatedSourceReadiness.ts",
+          "gitBlob": "a7e45d6cadba355ec46a516a68297d46147d741e",
+          "gitLfSha256": "83d26a98fd977696a05aafbceae9e28a1fbf71c553bc9c1db565c20567fcf470",
+          "windowsCrlfSha256": "119802fbff75a78790b6b28e4e366b81ed266ddcf4005500e45c1b9772d1e0d2",
+          "receiptSha256": "119802fbff75a78790b6b28e4e366b81ed266ddcf4005500e45c1b9772d1e0d2",
+          "match": [
+            "WindowsCRLF"
+          ],
+          "sourceJoin": "9a34 Git blob unchanged across full 2cb seven-path and c28 four-path deltas"
+        },
+        {
+          "path": "tools/owned-process-broker/fixtures/providerPeer.mjs",
+          "gitBlob": "44c8cba99e4932905da77539a59c904a39da4e36",
+          "gitLfSha256": "e34c78358e85d3e841e4f9fb7941e77ce9b5f8b757dac434c3fe5ec5dbfdccdd",
+          "windowsCrlfSha256": "039f2e29a17d40cb21a287770eb41354191f495f06e8e9f350eb8a3453e7bddc",
+          "receiptSha256": "039f2e29a17d40cb21a287770eb41354191f495f06e8e9f350eb8a3453e7bddc",
+          "match": [
+            "WindowsCRLF"
+          ],
+          "sourceJoin": "9a34 Git blob unchanged across full 2cb seven-path and c28 four-path deltas"
+        },
+        {
+          "path": "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+          "gitBlob": "77b2f17c47b1bda1506aaf124ea079db1680199f",
+          "gitLfSha256": "385450afd8694a813b66ae64b56acb9ae836e07b5f18abac0d8da501315c9de4",
+          "windowsCrlfSha256": "747b4ddf324040209fe579b94dcd41cbbfd9046b8cd325a542dd8502add389f0",
+          "receiptSha256": "747b4ddf324040209fe579b94dcd41cbbfd9046b8cd325a542dd8502add389f0",
+          "match": [
+            "WindowsCRLF"
+          ],
+          "sourceJoin": "9a34 Git blob unchanged across full 2cb seven-path and c28 four-path deltas"
+        },
+        {
+          "path": "packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts",
+          "gitBlob": "3b5a244c27d004af6e82fffa092fa83e1894de73",
+          "gitLfSha256": "447a3ae82ab6ce0ec866305af2cd426619df3618fbec2397931212379d945784",
+          "windowsCrlfSha256": "564187147dd3bb26fe284929f67496b40d22b927202b19dcae079a961fae3748",
+          "receiptSha256": "564187147dd3bb26fe284929f67496b40d22b927202b19dcae079a961fae3748",
+          "match": [
+            "WindowsCRLF"
+          ],
+          "sourceJoin": "9a34 Git blob unchanged across full 2cb seven-path and c28 four-path deltas"
+        },
+        {
+          "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+          "gitBlob": "b9dd573db23b3033b5f3db7024b317681ce31499",
+          "gitLfSha256": "89fbe1d8736a5797aa3198df213b89d5861a07012675e91aff78d1302459cf14",
+          "windowsCrlfSha256": "f514e025dfd60394442348f9f0871592e4315072067779b0aef2ad55812f7cbc",
+          "receiptSha256": "f514e025dfd60394442348f9f0871592e4315072067779b0aef2ad55812f7cbc",
+          "match": [
+            "WindowsCRLF"
+          ],
+          "sourceJoin": "9a34 Git blob unchanged across full 2cb seven-path and c28 four-path deltas"
+        },
+        {
+          "path": "packages/legacy-agent-host/src/management/ModelProbeOwner.ts",
+          "gitBlob": "a870a9c2c213b802ae43a3dee9a0694a67feda7e",
+          "gitLfSha256": "fe9227bedef2284945618382289b36681757175e0f9ffa9f50cf219809f4ced2",
+          "windowsCrlfSha256": "db3058dc894c6d0555d55c60b2af92e51ad155d64667d3c7942484021b508361",
+          "receiptSha256": "db3058dc894c6d0555d55c60b2af92e51ad155d64667d3c7942484021b508361",
+          "match": [
+            "WindowsCRLF"
+          ],
+          "sourceJoin": "9a34 Git blob unchanged across full 2cb seven-path and c28 four-path deltas"
+        },
+        {
+          "path": "packages/legacy-agent-host/src/composition/projectRuntimeMember.ts",
+          "gitBlob": "65d53a2beff3b3a36d554601dcf57d67b086aa0f",
+          "gitLfSha256": "352c62fcce347599a89658a5dc98d3d05d35d4a6d26618cc87faa6ece2f995df",
+          "windowsCrlfSha256": "1d319cb57b85ef47d22b0e4a99ee4960cbada129cd85d08fa924c79b672bf079",
+          "receiptSha256": "1d319cb57b85ef47d22b0e4a99ee4960cbada129cd85d08fa924c79b672bf079",
+          "match": [
+            "WindowsCRLF"
+          ],
+          "sourceJoin": "9a34 Git blob unchanged across full 2cb seven-path and c28 four-path deltas"
+        }
+      ],
+      "builtPinComparison": [
+        {
+          "path": "packages/legacy-agent-host/dist/cli.js",
+          "receiptSha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+          "prior2cbSha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+          "matchesPrior2cbReceipt": true
+        },
+        {
+          "path": "packages/legacy-agent-host/dist/adapters/providers/OpenCodeMcpPolicyPlugin.js",
+          "receiptSha256": "64d2db6a0a14d6214e37e2f81a6e9b3afffd9f901f37bcd351026f98bf64f02b",
+          "prior2cbSha256": "64d2db6a0a14d6214e37e2f81a6e9b3afffd9f901f37bcd351026f98bf64f02b",
+          "matchesPrior2cbReceipt": true
+        },
+        {
+          "path": "packages/legacy-agent-host/dist/owned-process/HostWindowsLaunch.js",
+          "receiptSha256": "975108117efd64201c73fb9f565ac890d8b156f7c0a06eb46d5bb6fc15018cb4",
+          "prior2cbSha256": "975108117efd64201c73fb9f565ac890d8b156f7c0a06eb46d5bb6fc15018cb4",
+          "matchesPrior2cbReceipt": true
+        },
+        {
+          "path": "packages/legacy-agent-host/dist/composition/prepareTeamModelReadiness.js",
+          "receiptSha256": "265208df5743490006ea59f2f4016ab3cd59619c37af575162576c319e2d416f",
+          "prior2cbSha256": "265208df5743490006ea59f2f4016ab3cd59619c37af575162576c319e2d416f",
+          "matchesPrior2cbReceipt": true
+        },
+        {
+          "path": "packages/legacy-agent-host/dist/management/ModelProbeOwner.js",
+          "receiptSha256": "7201def22b57f351f0c85f20270240c918e203691bb029a44b278580f6b25283",
+          "prior2cbSha256": "7201def22b57f351f0c85f20270240c918e203691bb029a44b278580f6b25283",
+          "matchesPrior2cbReceipt": true
+        },
+        {
+          "path": "packages/legacy-agent-host/dist/composition/projectRuntimeMember.js",
+          "receiptSha256": "371c569579af59881eaf03a3cd5a622a67a62b2fb780267d0ff78fd8e6fe6770",
+          "prior2cbSha256": "371c569579af59881eaf03a3cd5a622a67a62b2fb780267d0ff78fd8e6fe6770",
+          "matchesPrior2cbReceipt": true
+        }
+      ],
+      "otherPins": [
+        {
+          "path": "C:\\hostedtoolcache\\windows\\node\\24.21.0\\x64\\node.exe",
+          "sha256": "ba4e6d110e8c1592a1ecd390f6b05f3da124b13871a5be62b341a07a853c6c32"
+        },
+        {
+          "path": "D:\\a\\_temp\\TEST-process-scoped-stage-x64\\owned-process-broker.exe",
+          "sha256": "79bb0d734c211eb24cdfa248ef122da019f3f823880bc5966d530b1545bce321"
+        },
+        {
+          "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgEDAE.tmp\\TEST-desktop-backend-opencodec23597c0ccd44e4d834e9e7ae9208354\\TEST-source-host.mjs",
+          "sha256": "775f0c162ec32a0e119a266207714ee4e150eec00362603846c11ee17ec2cb26"
+        },
+        {
+          "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgEDAE.tmp\\TEST-desktop-backend-opencodec23597c0ccd44e4d834e9e7ae9208354\\TEST-source-profile.json",
+          "sha256": "6bc42ce835a6c9bd98e6f4e46ff5f78a10bbf7d834e5cf817b43f951491d946b"
+        },
+        {
+          "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgEDAE.tmp\\TEST-desktop-backend-opencodec23597c0ccd44e4d834e9e7ae9208354\\TEST-source-descriptor.json",
+          "sha256": "c15b43cf121c9857fe892ab9e78c0f0b80be02cbfadde23a1c88ffb26316f206"
+        },
+        {
+          "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgEDAE.tmp\\TEST-desktop-backend-opencodec23597c0ccd44e4d834e9e7ae9208354\\bin\\TEST source A.cmd",
+          "sha256": "8bfd756a21353210ecbd83abbde727fb2f8b431afd735fc67156d0023c6e6dee"
+        },
+        {
+          "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgEDAE.tmp\\TEST-desktop-backend-opencodec23597c0ccd44e4d834e9e7ae9208354\\bin\\TEST-source-A.mjs",
+          "sha256": "bacbea7bbc825ad83a2488469dfd702b25dd768f86ab8dbf835685c11c7348e1"
+        },
+        {
+          "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgEDAE.tmp\\TEST-desktop-backend-opencodec23597c0ccd44e4d834e9e7ae9208354\\bin\\TEST source B.cmd",
+          "sha256": "ece0bdd73b580471dfc1bbb24a6b5ddc26a73b5d9bc4083c6d91e1a382f39ec1"
+        },
+        {
+          "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgEDAE.tmp\\TEST-desktop-backend-opencodec23597c0ccd44e4d834e9e7ae9208354\\bin\\TEST-source-B.mjs",
+          "sha256": "55739db2c7ce4833b9a425c8b2fd02470d203c25372e5c8e1a4e23f9be76eafe"
+        },
+        {
+          "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgEDAE.tmp\\TEST-desktop-backend-opencodec23597c0ccd44e4d834e9e7ae9208354\\workspace\\opencode.json",
+          "sha256": "1b9a87390b69c62078e0d95bbb7f42504b7b5cd6ead47068730d116f93bbe528"
+        }
+      ]
+    }
+  },
+  "limits": [
+    "Only retained selected pins are independently joined; no full native source-roster claim.",
+    "Generated dist pins compare exact hashes with the separately preserved 2cb receipt; no generated output was rebuilt or archived payload independently rehashed.",
+    "Native binary/profile/temp wrapper payloads are not in this ZIP; original captured digest and native assertions are retained without claiming payload recovery."
+  ]
+}

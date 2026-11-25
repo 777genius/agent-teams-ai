@@ -5,25 +5,42 @@ import { memberBinding } from '../team/DeliveryRecovery.js';
 import { runtimeDigest } from '../runtime/identity.js';
 import { TeamLaunchError } from '../team-launch/contracts.js';
 import { runtimeLaunchMembers } from './runtimeLaunchMembers.js';
-import type { TeamMember } from '../team/contracts.js';
+import type { RuntimeMemberBinding, TeamMember } from '../team/contracts.js';
 import type { RuntimeOwner } from '../runtime/RuntimeOwner.js';
 import type { TeamLaunchOwner } from '../team-launch/TeamLaunchOwner.js';
 import type { MemberEntry, HostedTeam } from './MemberEntry.js';
+import type { CapturedProviderCurrent } from '../team/TeamOwner.js';
 export interface RetainedLaunchInspection {
   team: HostedTeam;
   launch: TeamLaunchOwner;
   entries?: readonly MemberEntry[];
 }
 
-/** A static native capture must not silently launch old options after a saved roster edit. */
-export function assertCapturedRosterCurrent(team: HostedTeam, principalId?: string): void {
+function capturedRosterExpectation(team: HostedTeam, principalId?: string) {
   const capturePrincipal = principalId ?? team.operatorPrincipalId;
   const actor = team.definition.grants.find(row => row.principalId === capturePrincipal)?.memberName;
   const member = team.definition.members.find(row => row.name === actor) ?? team.definition.members.find(row => row.role === 'lead');
-  if (capturePrincipal && member && team.owner.nativeRoster.capturedMemberCurrent(capturePrincipal,
-    team.configurationRevision ?? teamRosterRevision(team.definition.members, 0, team.definition.savedSettings),
-    { memberId: member.memberId, name: member.name, role: member.role,
-      ...(member.settings ? { settings: member.settings } : {}), ...(member.delivery ? { delivery: member.delivery } : {}) }, team.definition.savedSettings)) return;
+  return {
+    principalId: capturePrincipal,
+    revision: team.configurationRevision ?? teamRosterRevision(team.definition.members, 0, team.definition.savedSettings),
+    member: member && { memberId: member.memberId, name: member.name, role: member.role,
+      ...(member.settings ? { settings: member.settings } : {}), ...(member.delivery ? { delivery: member.delivery } : {}) },
+  };
+}
+
+/** Closed provider path; only validated unavailable native lineage may use the old fallback. */
+export function readCapturedProviderAuthority(team: HostedTeam, principalId: string, binding: RuntimeMemberBinding,
+  onCurrent?: CapturedProviderCurrent) {
+  const expected = capturedRosterExpectation(team, principalId);
+  return team.owner.capturedProviderAuthority(principalId, binding, expected.revision,
+    expected.member, team.definition.savedSettings, onCurrent);
+}
+
+/** A static native capture must not silently launch old options after a saved roster edit. */
+export function assertCapturedRosterCurrent(team: HostedTeam, principalId?: string): void {
+  const expected = capturedRosterExpectation(team, principalId), capturePrincipal = expected.principalId;
+  if (capturePrincipal && expected.member && team.owner.nativeRoster.capturedMemberCurrent(capturePrincipal,
+    expected.revision, expected.member, team.definition.savedSettings)) return;
 
   const selected =
     capturePrincipal === undefined ? undefined : team.owner.runtimeCapture(capturePrincipal);
@@ -108,7 +125,7 @@ export function readCreatedLaunchAdmission(options: {
   return { launch, partialCreated: true as const };
 }
 
-/** A prospective model check is available only before any admission on the current complete capture. */
+/** An unadmitted seed or complete capture can inspect prospective models only with released custody. */
 export function isUnstartedCaptureEditable(options: {
   team: HostedTeam | undefined;
   launch: TeamLaunchOwner | undefined;
@@ -117,13 +134,23 @@ export function isUnstartedCaptureEditable(options: {
   runtime: RuntimeOwner;
 }): boolean {
   const { team, launch } = options;
-  if (!team?.capture || !launch || !neverStarted(launch.read())) return false;
-  assertCapturedRosterCurrent(team);
-  for (const retained of options.retainedLaunches.values()) {
-    if (retained.team.definition.binding.teamId !== team.definition.binding.teamId) continue;
-    const entries = retained.entries ?? options.entries.filter(entry => entry.team === retained.team);
-    assertRosterEditable({ members: runtimeLaunchMembers(retained.team, entries), entries,
-      launch: retained.launch, runtime: options.runtime, action: 'read' });
+  if (!team || !launch) return false;
+  const seed = team.capture === undefined && team.configurationRevision === undefined &&
+    team.launchId === undefined;
+  if (!team.capture && !seed) return false;
+  try {
+    if (!neverStarted(launch.read())) return false;
+    assertCapturedRosterCurrent(team);
+    for (const retained of options.retainedLaunches.values()) {
+      if (retained.team.definition.binding.teamId !== team.definition.binding.teamId) continue;
+      const entries = retained.entries ?? options.entries.filter(entry => entry.team === retained.team);
+      assertRosterEditable({ members: runtimeLaunchMembers(retained.team, entries), entries,
+        launch: retained.launch, runtime: options.runtime, action: 'read' });
+    }
+    return true;
+  } catch (error) {
+    // A seed keeps its retained model read when prospective release cannot be proven.
+    if (seed) return false;
+    throw error;
   }
-  return true;
 }

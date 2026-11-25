@@ -15,6 +15,8 @@ import {
   type SentryArtifactPolicy,
 } from '@shared/utils/sentryArtifactPolicy';
 
+import { getOptionalElectronMain } from './utils/optionalElectronMain';
+
 /** Read at most one bounded sidecar from an application-owned path, including asar. */
 function readInventory(file: string, expected: SentryBuildIdentity): SentryRuntimeInventory | null {
   let descriptor: number | undefined;
@@ -35,9 +37,7 @@ function readInventory(file: string, expected: SentryBuildIdentity): SentryRunti
 export function loadMainSentryArtifactPolicy(): SentryArtifactPolicy | null {
   try {
     // Electron stays optional in standalone mode; no user config or event supplies this root.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports -- optional Electron startup dependency.
-    const electron = require('electron') as { app?: { getAppPath(): string } };
-    const root = electron.app?.getAppPath();
+    const root = getOptionalElectronMain()?.app?.getAppPath();
     if (!root) return null;
     const identity = { release: APP_RELEASE, buildId: BUILD_ID, gitSha: BUILD_GIT_SHA };
     const main = readInventory(join(root, 'dist-electron/main', SENTRY_INVENTORY_FILE), identity);

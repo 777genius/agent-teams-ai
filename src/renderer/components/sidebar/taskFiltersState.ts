@@ -74,7 +74,7 @@ export function isDefaultTaskFiltersState(filters: TaskFiltersState): boolean {
 export function taskMatchesStatus(
   task: {
     status: string;
-    reviewState?: 'none' | 'review' | 'needsFix' | 'approved';
+    reviewState?: 'none' | 'review' | 'needsFix' | 'reviewed' | 'approved';
     kanbanColumn?: 'review' | 'approved';
   },
   statusIds: Set<TaskStatusFilterId>

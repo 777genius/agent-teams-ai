@@ -1,0 +1,28 @@
+{
+  "decision": "GO_PLAN85_PROSPECTIVE_SELECTION",
+  "blockers": [],
+  "document": {
+    "bytes": 3753,
+    "lf": 36,
+    "gitBlob": "b4760d8ec76858d01f2df3da67f2df77070a3f77",
+    "sha256": "4c96fe195a7eab7289d96eb3770eba3ef2e54e73131bf6cbbf2775631164cbd7"
+  },
+  "parent": {
+    "head": "c3405dd78bfe47708410b5714d2025d2ae7a70d9",
+    "tree": "4ff0837019c9b3034625e44672ff3520b955cad9"
+  },
+  "writable": {
+    "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts": "65e479949a0905cc309226923d4e79ad0a41f94a",
+    "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts": "ef4f3d6334dee7f390b7c8a7f16fd483ba6804e1"
+  },
+  "checks": {
+    "provenance": "Eleven authorized immutable GETs. Seven complete bodies hashed and joined; both full Merkle trees reconstructed: 11243 leaves, 1735 directory hashes including root. Actual Source84 solely descends from fb977f5d88caf82cd6e27010f9f9c43db6909bd0, changing only the Windows matcher. All held sources remain exact.",
+    "document": "Full bound document rehashed. Only lines 3 and 22 change: parent binding and supplementary identity. Strict textual inverse restores the 3447-byte draft.",
+    "selector": "Controls 209/458 filter optional textContent.trim(); MembersEditorSection 500-511 declares an icon-only button with aria-label and sibling tooltip. English members.editor.editAsJson independently parses as Edit as JSON. The two scoped selectors retain one scroll, one click, labels, geometry/currentness checks and subsequent input/assertions.",
+    "guards": "Retain !hideContent, !singleMemberMode, showJsonEditor and !jsonEditorOpen. Wrapper defaults/forwarding and current Create dialog hideMembersContent=soloTeam verified. Actual visibility/solo hydration remains unknown; no toggle, fallback, retry or forced state.",
+    "scope": "Exactly two writable paths; runner remains 585 LF and supplementary 372→375 LF. Three normative leaves absent from common declaration; append once preserving old order. Process 27 and WindowsRetry 46 remain unchanged, including the existing locale retry pin.",
+    "composition": "Expanded common 1825→1828 and unchanged fast 147 are root-attributed; imported vectors/workflow body were not independently fetched. Current workflow blob 50ce74a2a562a66858de8326e97baecce396aa10 independently joined.",
+    "metadata": "Root checked workflow and full verifier f6aa6fa7140a0145f2671fba942a6f65f1f98c54: neither consumes removed expectedText metadata or JSON-editor click text. Root-attributed finding; no verifier change selected."
+  },
+  "limits": "Prospective GO after root-reported Source84 actual closure. No source afterimage, execution, filesystem, Actions, refs or mutations. Original failure raw was not independently reviewed. Actual-document gate precedes authoring; frozen source/patch/tree, actual publication and resulting-head CI remain required. No runtime PASS or unique original failure cause claimed."
+}

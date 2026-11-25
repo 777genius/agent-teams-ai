@@ -67,7 +67,28 @@ function configuredLimit(providerId: string): Record<string, unknown> | undefine
     ? (limit as Record<string, unknown>)
     : undefined;
 }
+// The Desktop save-only journey supplies this native catalog input; it grants no model execution.
+const providerConfig = config.provider;
+const localCatalog = !!providerConfig && typeof providerConfig === 'object' &&
+  !Array.isArray(providerConfig) && Object.hasOwn(providerConfig, 'local');
+if (localCatalog) {
+  assert.equal(config.model, 'local/TEST-model');
+  assert.deepEqual(providerConfig, {
+    local: {
+      npm: '@ai-sdk/openai-compatible',
+      options: { baseURL: 'http://127.0.0.1:19999/v1' },
+      models: { 'TEST-model': {
+        name: 'TEST model', limit: { context: 4096, output: 1024 },
+        variants: {
+          low: { reasoningEffort: 'low', privateSetting: 'TEST-private-variant-setting' },
+          high: { reasoningEffort: 'high' },
+        },
+      } },
+    },
+  });
+}
 const providers = ['TEST-oauth-code', 'TEST-oauth-auto', 'TEST-api'];
+const catalogProviders = [...providers, ...(localCatalog ? ['local'] : [])];
 const authorized = new Set<string>();
 const sessions = new Set<string>();
 let sessionSequence = 0;
@@ -75,7 +96,7 @@ const server = createServer((request, response) => {
   void (async () => {
     if (
       request.headers.authorization !== authHeader ||
-      request.headers['x-opencode-directory'] !== process.cwd()
+      request.headers['x-opencode-directory'] !== encodeURIComponent(process.cwd())
     ) {
       json(response, { error: 'TEST unauthorized' }, 401);
       return;
@@ -98,17 +119,21 @@ const server = createServer((request, response) => {
       return;
     }
     if (request.method === 'GET' && ['/provider', '/config/providers'].includes(url.pathname)) {
-      const all = providers.map((id) => ({
+      const all = catalogProviders.map((id) => ({
         id,
         name: id,
         source: 'config',
-        ...(id === 'TEST-api'
+        ...(id === 'TEST-api' || id === 'local'
           ? { npm: '@ai-sdk/openai-compatible', options: { baseURL: 'http://127.0.0.1:19999/v1' } }
           : {}),
         models: {
           'TEST-model': {
             name: 'TEST model',
             limit: configuredLimit(id) ?? { context: 4096, output: 1024 },
+            variants: {
+              low: { reasoningEffort: 'low', privateSetting: 'TEST-private-variant-setting' },
+              high: { reasoningEffort: 'high' },
+            },
           },
           ...(id === 'TEST-api' ? { 'TEST-blocked': { name: 'TEST blocked model' } } : {}),
         },
@@ -182,7 +207,10 @@ const server = createServer((request, response) => {
         events({ event: 'authorize', providerId });
         json(response, {
           url: `http://127.0.0.1:${port}/TEST-browser?state=TEST-private-state`,
-          instructions: 'TEST-private-instructions',
+          instructions: (providerId.endsWith('auto')
+            ? 'Enter A7F0-835A in your browser.'
+            : 'Finish sign-in in your browser and paste the returned code.') +
+            ` token=TEST-private-instructions http://127.0.0.1:${port}/TEST-browser?state=TEST-private-state`,
           method: providerId.endsWith('auto') ? 'auto' : 'code',
         });
         return;

@@ -12,6 +12,7 @@ import { createNativeNextPromptBridge } from '@features/native-prompt-suggestion
 import { createOrganizationsBridge } from '@features/organizations/preload';
 import { createProjectFolderBridge } from '@features/project-folder/preload';
 import { createRecentProjectsBridge } from '@features/recent-projects/preload';
+import { createReviewFlowBridge } from '@features/review-flow/preload';
 import { createRuntimeProviderManagementBridge } from '@features/runtime-provider-management/preload';
 import { createTeamGroupChatsBridge } from '@features/team-group-chats/preload';
 import { createTeamImportBridge } from '@features/team-import/preload';
@@ -514,13 +515,14 @@ ipcRenderer.on(
 // =============================================================================
 
 const electronAPI: ElectronAPI = {
-  agentBackend: createAgentBackendBridge(ipcRenderer, ipcRenderer, ipcRenderer),
+  agentBackend: createAgentBackendBridge(ipcRenderer, ipcRenderer, ipcRenderer, ipcRenderer),
   externalAgentConnection: createExternalAgentConnectionBridge(ipcRenderer),
   appCloseCoordination: createAppCloseCoordinationBridge(ipcRenderer),
   ...createCodexAccountBridge({
     ipcRenderer,
   }),
   ...createRecentProjectsBridge(),
+  reviewFlow: createReviewFlowBridge(),
   teamGroupChats: createTeamGroupChatsBridge(),
   announcements: createAnnouncementsBridge(),
   gatewayProvider: createGatewayProviderBridge(),

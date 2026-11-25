@@ -1,3 +1,7 @@
+import { act, createElement, type ReactElement } from 'react';
+import { createRoot } from 'react-dom/client';
+
+import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock idb-keyval before importing draftStorage
@@ -86,6 +90,80 @@ describe('chip draft persistence via draftStorage', () => {
     // Raw value is returned; consumer (useChipDraftPersistence) handles parse errors
     expect(raw).toBe('not valid json{{{');
     expect(() => JSON.parse(raw!)).toThrow();
+  });
+
+  it('ignores a prior chips write after switching keys and back', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    let releaseSave!: () => void;
+    const oldWrite = new Promise<void>((resolve) => { releaseSave = resolve; });
+    const save = vi.spyOn(draftStorage, 'saveDraft').mockImplementation(() => oldWrite);
+    const load = vi.spyOn(draftStorage, 'loadDraft').mockResolvedValue(null);
+    let draft!: ReturnType<typeof useChipDraftPersistence>;
+    function Input({ draftKey }: { draftKey: string }): ReactElement {
+      draft = useChipDraftPersistence(draftKey);
+      return createElement('span', { 'data-saved': draft.isSaved });
+    }
+    const root = createRoot(document.createElement('div'));
+    vi.useFakeTimers();
+    try {
+      await act(async () => { root.render(createElement(Input, { draftKey: 'chips:A' })); });
+      await act(async () => { draft.setChips([makeChip()]); });
+      await act(async () => { await vi.advanceTimersByTimeAsync(500); });
+      expect(save).toHaveBeenCalledTimes(1);
+      await act(async () => { root.render(createElement(Input, { draftKey: 'chips:B' })); });
+      await act(async () => { root.render(createElement(Input, { draftKey: 'chips:A' })); });
+      expect(draft.isSaved).toBe(false);
+      await act(async () => { releaseSave(); await Promise.resolve(); });
+      expect(draft.chips).toEqual([]);
+      expect(draft.isSaved).toBe(false);
+    } finally {
+      await act(async () => { root.unmount(); });
+      vi.useRealTimers();
+      save.mockRestore();
+      load.mockRestore();
+      vi.unstubAllGlobals();
+    }
+  });
+  it('does not show Saved when an older chip write finishes after an edit', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    let releaseSave!: () => void;
+    let releaseNewSave!: () => void;
+    const oldWrite = new Promise<void>((resolve) => { releaseSave = resolve; });
+    const newWrite = new Promise<void>((resolve) => { releaseNewSave = resolve; });
+    const save = vi.spyOn(draftStorage, 'saveDraft')
+      .mockImplementationOnce(() => oldWrite)
+      .mockImplementationOnce(() => newWrite)
+      .mockResolvedValue(undefined);
+    let draft!: ReturnType<typeof useChipDraftPersistence>;
+    function Input(): ReactElement {
+      draft = useChipDraftPersistence('createTeam:prompt:chips');
+      return createElement('span', { 'data-saved': draft.isSaved });
+    }
+    const root = createRoot(document.createElement('div'));
+    vi.useFakeTimers();
+    try {
+      await act(async () => { root.render(createElement(Input)); });
+      await act(async () => { draft.setChips([makeChip()]); });
+      await act(async () => { await vi.advanceTimersByTimeAsync(500); });
+      expect(save).toHaveBeenCalledTimes(1);
+      await act(async () => { draft.setChips([makeChip({ id: 'newer-chip' })]); });
+      await act(async () => { releaseSave(); await Promise.resolve(); });
+      expect(draft.chips[0]?.id).toBe('newer-chip');
+      expect(draft.isSaved).toBe(false);
+      await act(async () => { await vi.advanceTimersByTimeAsync(500); });
+      expect(save).toHaveBeenCalledTimes(2);
+      expect(save.mock.calls[1]?.slice(0, 2)).toEqual([
+        'createTeam:prompt:chips', JSON.stringify([makeChip({ id: 'newer-chip' })]),
+      ]);
+      expect(draft.isSaved).toBe(false);
+      await act(async () => { releaseNewSave(); await Promise.resolve(); });
+      expect(draft.isSaved).toBe(true);
+    } finally {
+      await act(async () => { root.unmount(); });
+      vi.useRealTimers();
+      save.mockRestore();
+      vi.unstubAllGlobals();
+    }
   });
 
   it('handles empty array', async () => {

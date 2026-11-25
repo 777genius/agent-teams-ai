@@ -1,6 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { readOriginalRuntimeScope } from './OriginalRuntimeScope';
+
 export const OPENCODE_RUNTIME_BINARY_PATH_ENV = 'CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH';
 export const OPENCODE_LEGACY_BINARY_PATH_ENV = 'OPENCODE_BIN_PATH';
 /** Env the console wrapper reads to find the real OpenCode binary. */
@@ -22,6 +24,11 @@ export interface OpenCodeBinaryOverride {
 export function readOpenCodeBinaryOverride(
   ...envs: (NodeJS.ProcessEnv | null | undefined)[]
 ): OpenCodeBinaryOverride | null {
+  const original = readOriginalRuntimeScope();
+  if (original)
+    return original.openCodeBinaryPath
+      ? { binaryPath: original.openCodeBinaryPath, envName: OPENCODE_RUNTIME_BINARY_PATH_ENV }
+      : null;
   for (const env of envs) {
     for (const envName of [OPENCODE_RUNTIME_BINARY_PATH_ENV, OPENCODE_LEGACY_BINARY_PATH_ENV]) {
       const binaryPath = env?.[envName]?.trim();

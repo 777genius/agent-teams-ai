@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { link, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
+import { link, mkdir, mkdtemp, readFile, realpath, rename, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
@@ -18,6 +18,8 @@ const nativeTuple =
 const tupleOptions = { skip: !nativeTuple };
 const requiredBunVersion =
   process.platform === 'darwin' ? '1.4.4' : process.platform === 'win32' ? '1.4.3' : '1.3.11';
+const progressPhases = ['graph-manifest-verified', 'graph-inventory-indexed', 'graph-census-returned',
+  'graph-files-quarter', 'graph-files-half', 'graph-files-three-quarters', 'graph-files-returned'];
 
 async function fixture(t: TestContext) {
   const directory = await realpath(await mkdtemp(path.join(tmpdir(), 'TEST-embedded-delivery-')));
@@ -84,6 +86,61 @@ test(
   }
 );
 
+test('graph progress is ordered and throwing observers cannot replace the original result', tupleOptions, async t => {
+  const { selection } = await fixture(t);
+  const expected = await verifyOpenCodeV2EmbeddedGraph(selection);
+  const phases: string[] = [];
+  const actual = await verifyOpenCodeV2EmbeddedGraph(selection, undefined, phase => {
+    phases.push(phase);
+    throw new Error('TEST observer failure');
+  });
+  assert.deepEqual(actual, expected);
+  assert.deepEqual(phases, progressPhases);
+});
+
+test('graph progress does not await a diagnostic return value', { ...tupleOptions, timeout: 2000 }, async t => {
+  const { selection } = await fixture(t);
+  let calls = 0;
+  const result = await verifyOpenCodeV2EmbeddedGraph(selection, undefined, () => {
+    calls++;
+    return new Promise<never>(() => {});
+  });
+  assert.equal(result.requiredBunVersion, requiredBunVersion);
+  assert.equal(calls, progressPhases.length);
+});
+
+test('graph progress preserves the original cancellation reason at the next existing check', tupleOptions, async t => {
+  const { selection } = await fixture(t);
+  const controller = new AbortController(), original = new Error('TEST original cancellation');
+  const phases: string[] = [];
+  await assert.rejects(verifyOpenCodeV2EmbeddedGraph(selection, controller.signal, phase => {
+    phases.push(phase);
+    if (phase === 'graph-manifest-verified') controller.abort(original);
+    throw new Error('TEST observer failure');
+  }), error => error === original);
+  assert.deepEqual(phases, progressPhases.slice(0, 2));
+});
+
+test('small graph milestones stay ordered and never qualify failed module resolution', tupleOptions, async t => {
+  const { directory, selection, files } = await fixture(t);
+  const retained = Object.keys(files)[0]!;
+  for (const name of Object.keys(files)) if (name !== retained) await rm(path.join(directory, name));
+  // Remove now-unlisted directories; retain exactly one real manifest entry.
+  await rm(path.join(directory, 'local-cli/node_modules/effect'), { recursive: true });
+  await rm(path.join(directory, server, 'dist'), { recursive: true });
+  if (process.platform === 'win32')
+    await rm(path.join(directory, `local-cli/node_modules/@yuuang`), { recursive: true });
+  const manifestPath = path.join(directory, 'opencode-v2-engine-manifest.json');
+  const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+  manifest.files = manifest.files.filter((entry: { path: string }) => entry.path === retained);
+  const bytes = JSON.stringify(manifest);
+  await writeFile(manifestPath, bytes);
+  const phases: string[] = [];
+  await assert.rejects(verifyOpenCodeV2EmbeddedGraph({ ...selection, manifestSha256: hash(bytes) },
+    undefined, phase => { phases.push(phase); }));
+  assert.deepEqual(phases, progressPhases);
+});
+
 for (const mutation of [
   'file',
   'manifest',
@@ -120,6 +177,41 @@ test('delivery validation rejects symlinked graph files', tupleOptions, async (t
   await rm(target);
   await symlink(file, target);
   await assert.rejects(verifyOpenCodeV2EmbeddedGraph(selection));
+});
+
+test('delivery inventory rejects a linked manifest directory', tupleOptions, async (t) => {
+  const { directory, selection } = await fixture(t);
+  const external = await mkdtemp(path.join(tmpdir(), 'TEST-embedded-external-'));
+  t.after(() => rm(external, { recursive: true, force: true }));
+  const selected = path.join(directory, effect, 'dist');
+  const moved = path.join(external, 'dist');
+  await rename(selected, moved);
+  await symlink(moved, selected, process.platform === 'win32' ? 'junction' : 'dir');
+  await assert.rejects(verifyOpenCodeV2EmbeddedGraph(selection));
+});
+
+test('delivery inventory checks every branch of a wide manifest tree', tupleOptions, async (t) => {
+  const { directory, selection } = await fixture(t);
+  const manifestPath = path.join(directory, 'opencode-v2-engine-manifest.json');
+  const original = JSON.parse(await readFile(manifestPath, 'utf8'));
+  let last = '';
+  for (let index = 0; index < 17; index++) {
+    last = `local-cli/node_modules/TEST-branch-${String(index).padStart(2, '0')}/nested/index.js`;
+    const bytes = 'export const TEST = true;\n';
+    await mkdir(path.dirname(path.join(directory, last)), { recursive: true });
+    await writeFile(path.join(directory, last), bytes, { mode: 0o600 });
+    original.files.push({ path: last, bytes: Buffer.byteLength(bytes), sha256: hash(bytes), executable: false });
+  }
+  const manifest = JSON.stringify(original);
+  await writeFile(manifestPath, manifest);
+  const captured = { ...selection, manifestSha256: hash(manifest) };
+  await verifyOpenCodeV2EmbeddedGraph(captured);
+  const unexpected = path.join(path.dirname(path.join(directory, last)), 'foreign.js');
+  await writeFile(unexpected, 'TEST unlisted graph file');
+  await assert.rejects(verifyOpenCodeV2EmbeddedGraph(captured));
+  await rm(unexpected);
+  await rm(path.join(directory, last));
+  await assert.rejects(verifyOpenCodeV2EmbeddedGraph(captured));
 });
 
 test(

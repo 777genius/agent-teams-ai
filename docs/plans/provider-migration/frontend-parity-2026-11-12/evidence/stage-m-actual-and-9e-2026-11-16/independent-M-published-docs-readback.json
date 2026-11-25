@@ -1,0 +1,542 @@
+{
+  "schemaVersion": 1,
+  "result": "APPROVE",
+  "independentReadbackExact": true,
+  "reviewedAtUtc": "2026-11-16T00:13:34.347252+00:00",
+  "head": "8720846612797759f36f27061dd21d4e9f75fbe9",
+  "tree": "dfc7c99ede984603c3b7f0dabf18ac11211f78c6",
+  "parents": [
+    "db8b470bf3c530928fef9ad4a2b582a417d436bd"
+  ],
+  "apiCommitTupleIndependentlyFetchedAndEqual": true,
+  "remoteApiCommitUrl": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/8720846612797759f36f27061dd21d4e9f75fbe9",
+  "fullActualGitLeafMapMatchesIndependentlyVerifiedRemoteTree": true,
+  "leaves": 10031,
+  "exactChangedPaths": [
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/32-host-log-view-parity-2026-11-15.md",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/33-member-stderr-log-parity-2026-11-15.md",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/native-historical-2026-11-16/1f924-README.md",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/native-historical-2026-11-16/1f924-bundle-metadata.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/native-historical-2026-11-16/1f924-inventory.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/native-historical-2026-11-16/1f924-native-evidence.zip",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/native-historical-2026-11-16/27b-README.md",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/native-historical-2026-11-16/27b-bundle-metadata.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/native-historical-2026-11-16/27b-inventory.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/native-historical-2026-11-16/27b-native-evidence.zip",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/native-historical-2026-11-16/root-independent-bundle-review.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/L-independent-immutable-source-tree-review.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/L-independent-published-docs-readback.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/L-independent-published-source-readback.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/L-root-published-docs-readback.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/L-root-published-source-readback.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/Plan29-L-actual-readback-appendix.md",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/canonical-R1.md",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/future-green/candidate-metadata.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/future-green/candidate.patch",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/future-green/observeMemberProcessStderr.ts.txt",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/general-original-1f-terminal-and-9e-initial.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/general-original-9e-0008.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/incoming-core-source-R2.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/incoming-provider-source-R2-original.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/incoming-provider-source-R2.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/incoming-ui-roster-workflow-R2.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/independent-canonical-source-review.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/inventory.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/lint-coverage-metadata.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/native-independent-canonical-review.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/previews/.github--workflows--host-emulated-acceptance.yml.txt",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/previews/packages--legacy-agent-host--tests--member-process-stderr.test.ts.txt",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/previews/scripts--legacy-agent-host--desktop-emulated-runtime-ui.ts.txt",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/previews/scripts--legacy-agent-host--desktop-proof-supplementary-sources.ts.txt",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/roster-composition-metadata.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/roster-composition.patch",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/source-and-history.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/source.patch",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/ui-historical-2026-11-16/README.md",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/ui-historical-2026-11-16/bundle-metadata.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/ui-historical-2026-11-16/inventory.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/ui-historical-2026-11-16/original-ui-evidence.zip",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/ui-historical-2026-11-16/root-independent-bundle-review.json"
+  ],
+  "selectedLeafCount": 45,
+  "totalSelectedBytes": 14029952,
+  "newLeaves": 42,
+  "modifiedExistingLeaves": 3,
+  "all9986OtherLeavesModeBlobPreserved": true,
+  "all45GitWorktreeAndScratchBytesExact": true,
+  "all18PendingMSourceGitWorktreeBytesStillL": [
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "bytes": 97517,
+      "blob": "ae2e48f5dc013c8c2dd2ce6021dba2afd4ad66d5",
+      "sha256": "0e70cd2ef2ab7658085e4dadaeedaddd3db6f8a94d08f995419fcd596b8ff336",
+      "stillPublishedLPreimage": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeCoordinationProbe.ts",
+      "bytes": 25660,
+      "blob": "ed25bfd57ff19730328fd13c4d338e8a3649e2a3",
+      "sha256": "2e988f1529b49a11c41a8678a964f0a38d4951a89a0dac3db18ab3e149b49958",
+      "stillPublishedLPreimage": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/ScheduledRunProvider.ts",
+      "bytes": 9613,
+      "blob": "85929131823d19197651cc5f984096cde9b1fd6e",
+      "sha256": "e4e048ad5880cedd77ac7f105152322d26fa3bc60473b28a4a9d562a7c666dcc",
+      "stillPublishedLPreimage": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "bytes": 7826,
+      "blob": "3b2b960722f878cf60ba94bae27176fb9e7d0bba",
+      "sha256": "c30d9a9d7357275864ede578ec9a4c66e335ffb1a613a5d916c6aced9061e1bc",
+      "stillPublishedLPreimage": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/HostScheduledRuns.ts",
+      "bytes": 15423,
+      "blob": "1db38b33e308071130543fecb62e8caaaa2c90b2",
+      "sha256": "fe9f75f954c4f15ad50396dd8757d34409d6ad533622ac512777b4d903da1323",
+      "stillPublishedLPreimage": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/scheduledRunProjection.ts",
+      "bytes": 4235,
+      "blob": "86d4ec120fb4deba4c53bb5426fc771f4e1ee5b7",
+      "sha256": "79bbdce726ef5ba8d85e6d877686d93604531e361c341e1710fcf336c1a77142",
+      "stillPublishedLPreimage": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/RuntimeActivityCoordinator.ts",
+      "bytes": 25074,
+      "blob": "48f51dc20a9253c81c9b231b6aa115f6244bd18f",
+      "sha256": "c43e4da640daed957b098161fd0f85479eb24df4f7b1ccfe4b03c4d9690009cb",
+      "stillPublishedLPreimage": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/activityContracts.ts",
+      "bytes": 4266,
+      "blob": "22503cf7430200a8e221c7495a320740bbe7a474",
+      "sha256": "415b5ba4edbcd78f587ad8826d5e2661aa7eb4f7245e2914b2a7e55e288f21ae",
+      "stillPublishedLPreimage": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/captured-claude-process.test.ts",
+      "bytes": 14002,
+      "blob": "f84153e49a9ace1f07a5d1f7bb9cea486f5617af",
+      "sha256": "30c863da3e66b2d2e4be13e8a3394d09e75ade9e84ee38a7775806cd60acc868",
+      "stillPublishedLPreimage": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/management-model-probe.test.ts",
+      "bytes": 45583,
+      "blob": "06bdfb8243c035f10f82b6025fbe98e171716831",
+      "sha256": "e0703be3ad202f8f1b6e358e32cc5fdc18bc2d71297019ac26ca903ea571bf89",
+      "stillPublishedLPreimage": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "bytes": 14603,
+      "blob": "d1b52658270cc53a9e1ec345de55f840e7549011",
+      "sha256": "fd7504cd6196122a450cab25dc3bce50f5125c4ab589510c005f08e68c731510",
+      "stillPublishedLPreimage": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-activity.test.ts",
+      "bytes": 54523,
+      "blob": "5a4a258d7802ff54fc2d4c405fc95c2e8e48e86e",
+      "sha256": "2b0b8accbaf951b00d86537d6a0eb793e7ef1859d1ab401b06e93624f97269cb",
+      "stillPublishedLPreimage": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/scheduled-run-host.test.ts",
+      "bytes": 28745,
+      "blob": "96a7f6ac29bbd830dffb60d80a910e3f26e76949",
+      "sha256": "2f55707a65dcdb1a4e23cbd84dcbe78c672982819d0b642c876ab9dc6191c3e4",
+      "stillPublishedLPreimage": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/team-activity-read.test.ts",
+      "bytes": 13673,
+      "blob": "4f2de43f25fa57005dec41cd9f3501b72d17eb6f",
+      "sha256": "ec56b1bea503eae250a4c2e7c9c3e7e8fc7fa53775b200a3c12a85bea43837be",
+      "stillPublishedLPreimage": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "bytes": 63441,
+      "blob": "8740d94021dd031b0be0248bc8654576484e6d1d",
+      "sha256": "f1c7645f19d8b4ab08da39a248ebff08b896fe85b49df0be1be945b24650e820",
+      "stillPublishedLPreimage": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "bytes": 20778,
+      "blob": "d8222627fd9f5ba303d1a2116246d63ba0d67516",
+      "sha256": "bfcc571e2c742ff2eb957bcc525c6a596ca9999e6d3d087cc2ca9dfab9e94681",
+      "stillPublishedLPreimage": true
+    },
+    {
+      "path": "test/renderer/components/team/taskLogs/hostTaskActivityTabs.test.tsx",
+      "bytes": 6944,
+      "blob": "eb380c206e9d2c49984a1bf732ceddaddb9449ae",
+      "sha256": "765a4c8d5825d3e353a83953cf9ef018b2bbcee34fc11e446e8bbe1d3b5b0e13",
+      "stillPublishedLPreimage": true
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "bytes": 31783,
+      "blob": "6cdba0b52141348d97c593bf2ae6c224cdce5d73",
+      "sha256": "03f92320d8646353540bcea7a3626a0a35634b803a6af1599d23c1d882a6d962",
+      "stillPublishedLPreimage": true
+    }
+  ],
+  "completePlan29PrefixAndTenBlockAssemblyExact": true,
+  "plans32And33ExactIncoming9e": true,
+  "selectedLeaves": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "bytes": 1242743,
+      "blob": "d9df9f3b161793e7cc318f431b86d6244768daa8",
+      "sha256": "1cb80a58475bd1a99c2e12b36975f7850141906ba584cd92978df96863c3a997",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/32-host-log-view-parity-2026-11-15.md",
+      "bytes": 49788,
+      "blob": "27f455b058d999213277e396343016789163660f",
+      "sha256": "32cb9313cd505b9576662fc0453d2349f522b2ce0bb42092a2369b82b7539c05",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/33-member-stderr-log-parity-2026-11-15.md",
+      "bytes": 28750,
+      "blob": "77cb678aef27ac3b744258e856deba479ea8c414",
+      "sha256": "1678842870b90126aef267c0bdb2e834254420d59d77c3c813dea310dd23b00f",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/canonical-R1.md",
+      "bytes": 18894,
+      "blob": "6d0e62e631e61dd22e4087451a4e3fadaa4e4343",
+      "sha256": "8db8a2e2706c1e09631114d84be561cfc6af0cd1294b3ebe47a500cfe38a50df",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/source-and-history.json",
+      "bytes": 23604,
+      "blob": "166e3c37f4227cd4cee48339d0733267f5313ce6",
+      "sha256": "5306f2db5b82f318fef9d7e54661eb77d17ffcf13fb9821aaa15a554389dbca8",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/source.patch",
+      "bytes": 78799,
+      "blob": "a28b2f93f3c24d3bd75cf9a31d7b68078bdc5af4",
+      "sha256": "5cb5a2a290df19084078fb6f05b042149cf53e0065a63e9fd917a440a9c7d331",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/roster-composition-metadata.json",
+      "bytes": 1348,
+      "blob": "0e582347ff726bb920ee1afc576f12580a990e3d",
+      "sha256": "2ed226f4cfacd5d366171b10cac5033978de657d6f8d7989c0264ddd4e1fe34b",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/roster-composition.patch",
+      "bytes": 687,
+      "blob": "28a42cf75c17a032f6be7203f7b84d8b5adc7431",
+      "sha256": "ef86348ee760df18e160227a4adddcab87db8972ae52447357cb381807cdd8d3",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/lint-coverage-metadata.json",
+      "bytes": 27853,
+      "blob": "7ad92d8f54a40a7aebef1d9e5cdcd12ff8c10e08",
+      "sha256": "b54628c5178b5c1cf7a2f6753a539166a04d3d692a9474b256abe15ea915669f",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/native-independent-canonical-review.json",
+      "bytes": 7829,
+      "blob": "a57f550eb2dd4e6bca2842f8a67dcb7fae26d3bd",
+      "sha256": "7b49c9dc8867bd0bb5ecae1a4ad14cd52208c02d67c2e14e9857f09c83984d13",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/independent-canonical-source-review.json",
+      "bytes": 30736,
+      "blob": "306ecdc050ce58d765957cb83ce2e2a7b29f02b3",
+      "sha256": "a952770f699b56eef4f4c8e4ded44702c1664ad75818da4a904cbc20eda15592",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/Plan29-L-actual-readback-appendix.md",
+      "bytes": 1976,
+      "blob": "764e5aac50f68d89cc428e103f53616862927d7a",
+      "sha256": "d243b74b3943743990eb69730381fbfc05b87122ed8c98d6f9d52cdcbcc8bfd6",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/incoming-core-source-R2.json",
+      "bytes": 13729,
+      "blob": "4ea8fabb1aea20f46d2f145ea7a7415e72350cc5",
+      "sha256": "80a1b89c3dde7ade64907c2827efedcffa4f51da45054e2a05d5f66669df275b",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/incoming-ui-roster-workflow-R2.json",
+      "bytes": 11973,
+      "blob": "540de857cf1de102ab758321304a5316fe5a0ea6",
+      "sha256": "27d158edb91d21966074b0a9ee70c0923c1e24b336b3d74a402e79dfb24a67d8",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/incoming-provider-source-R2-original.json",
+      "bytes": 14606,
+      "blob": "b65c4630f4a31f21047d547fe3fcad227e46a2e8",
+      "sha256": "f97a9527e182afdd1924b8cf020c00e8acd8430e353c5e0179cf44a4580186c8",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/incoming-provider-source-R2.json",
+      "bytes": 14802,
+      "blob": "815b6be47bb2f393915949375f03a51d8cefc3ee",
+      "sha256": "11bbeec59a8b9a6a72a5231891304b83697dd2ec86b63d3371501b00e1791a54",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/L-root-published-docs-readback.json",
+      "bytes": 24471,
+      "blob": "0da626d2b7fdfa8b83ab3103b672618e95320eda",
+      "sha256": "64f8c5dc199b80a6bf8c3e66a475a6f7a25e944d0339a440bba72652f57972bd",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/L-independent-published-docs-readback.json",
+      "bytes": 29303,
+      "blob": "52c56dad82cd51c0af4c997b5c3f2bd4ad8a3a54",
+      "sha256": "a34877401c7cb85779b65494b79328777951ece5c7e9a4e0baade563a658bf08",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/L-independent-immutable-source-tree-review.json",
+      "bytes": 16128,
+      "blob": "11cbc7c877de9674c789f717674c02c9f80e86b5",
+      "sha256": "f8a0bf8e7e1cbe9077a123f84105ff50ff3a2709e74c595d29d7d43a1ca7eb35",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/L-root-published-source-readback.json",
+      "bytes": 11914,
+      "blob": "aeb039082e529a3d68d0fcce7c9ea00d79d4ee1e",
+      "sha256": "784d70bfb402687df4c12ca810dca2832e41c226380a4ad66d90eab075270f1e",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/L-independent-published-source-readback.json",
+      "bytes": 18863,
+      "blob": "0a1b0ef218fd6f67da715e34676e683af6a24f41",
+      "sha256": "61dd8f6b7f604608e927f79b198c7aa1882128aaaf2cd26c1a73a48d206fda43",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/general-original-1f-terminal-and-9e-initial.json",
+      "bytes": 7863,
+      "blob": "ea2c2b77a9a462182ab73caf36d0127de34deb81",
+      "sha256": "fa7b1111ff975dfc531c2e6bec02b509b2833d4bc46bb78e6d797e6b73929b95",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/general-original-9e-0008.json",
+      "bytes": 2322,
+      "blob": "14c1f5b118cd3ba4c2506cfc22443371dcdb79f7",
+      "sha256": "a78be6a608fba037bd3a809183dcb0b3b94a3f65004b05a184856f14bf5173a5",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/previews/.github--workflows--host-emulated-acceptance.yml.txt",
+      "bytes": 101741,
+      "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+      "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/previews/packages--legacy-agent-host--tests--member-process-stderr.test.ts.txt",
+      "bytes": 16103,
+      "blob": "0727339627757c3a96d54da2933eb7c1b60685f7",
+      "sha256": "2a738fca4120ae3361483abd948f7746d2025f32012b189e695085845bc3e191",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/previews/scripts--legacy-agent-host--desktop-emulated-runtime-ui.ts.txt",
+      "bytes": 68760,
+      "blob": "1bde37adb7cba710ad77784eedbbe0d6c6e556df",
+      "sha256": "6ca239d1ea242a3ac64323bf28d41b84450fc1d5d7e4ae2324a069d03bff18ad",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/previews/scripts--legacy-agent-host--desktop-proof-supplementary-sources.ts.txt",
+      "bytes": 20996,
+      "blob": "f1bfeb0235ed6fc4f80daba16aefda0364ee7e9d",
+      "sha256": "7789d31cd807d8e71fd40d45038ed3266eff98e9c877cc738fcae688e3b5e37b",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/future-green/candidate-metadata.json",
+      "bytes": 1601,
+      "blob": "017125ff914da8c11bb6edb6b3f6e7e96c0e8ab4",
+      "sha256": "28b744940a841add648a39ace91b1ace62f7a7957348ea1fb7a8b890dc934382",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/future-green/candidate.patch",
+      "bytes": 1081,
+      "blob": "958de68314a85da4ef85237c3af79d72d3d623d1",
+      "sha256": "1de755555f8fa3963abab4f0dd744456b96f4db3191e0f40eac19093ab555196",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/future-green/observeMemberProcessStderr.ts.txt",
+      "bytes": 8310,
+      "blob": "0b0fc2a68fe678ebbce24227bf6e6002d12701d9",
+      "sha256": "10da3dd44dedec7e1230e1821f5ff75d9b6ec3aeb7a8352cb6820c26e40528c7",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/native-historical-2026-11-16/1f924-README.md",
+      "bytes": 1044,
+      "blob": "32e5b5ccdfdab0f2b92bb84f166241b7878831fe",
+      "sha256": "ea35ca2cde7a3fd0c5c4c51514eb4c1f002af50b507f90a21fbb3dc17e96a5f0",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/native-historical-2026-11-16/1f924-bundle-metadata.json",
+      "bytes": 1053,
+      "blob": "32c728a44a14de463ae515b2ac8e08b473d9eb46",
+      "sha256": "e581eac169263b3ee8c04d0903dfb471e9728fa5d841b2645be33299971f07e3",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/native-historical-2026-11-16/1f924-inventory.json",
+      "bytes": 10936,
+      "blob": "9655b94ec28a8e76c917047cd3f2b2bf78d73d14",
+      "sha256": "6bd1f669eed230c7da2c530a913ad0f36bc0a381f85b10abda1e933419daec38",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/native-historical-2026-11-16/1f924-native-evidence.zip",
+      "bytes": 628187,
+      "blob": "eac84d0558575cb6c58f8a9a2e858f2ea5a88764",
+      "sha256": "bc75cc356f898018bd49f2526cb72dbeb60e2d4e2a3f7d627b98461b1da9cb3c",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/native-historical-2026-11-16/27b-README.md",
+      "bytes": 1042,
+      "blob": "57942e31d12bf9e93c5cb1470321339c28c38465",
+      "sha256": "1c397724124dbca95af3c3cf8ddde73bfdb91ccf9d0120a81f2a55a1b473e61e",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/native-historical-2026-11-16/27b-bundle-metadata.json",
+      "bytes": 1043,
+      "blob": "df3aa2a43cbbde5a9e461044e931d5da3f83b6cd",
+      "sha256": "d6cee77fbdfa5800851308ea6bc33c16ff9f50b0b39ebdf9de69bb81366eac41",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/native-historical-2026-11-16/27b-inventory.json",
+      "bytes": 4779,
+      "blob": "ee692ed067a41a34498d769a8c8ed4086d28eeaa",
+      "sha256": "865c11bb79700b02a684ef71e402701e2034bcf239162ea0787323e4dc2df4af",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/native-historical-2026-11-16/27b-native-evidence.zip",
+      "bytes": 181613,
+      "blob": "29839a0783a1b8f40001f2bcf374859693ecacef",
+      "sha256": "7b512f95d6190cfedcbbf580499f4148455ca6bf6cdf20c05d17318c9653cc61",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/native-historical-2026-11-16/root-independent-bundle-review.json",
+      "bytes": 1130,
+      "blob": "3ec450e437b13ae30354a7e9209e7a1e36e19ab4",
+      "sha256": "b1fb5ea55b76980bc070ac8cef9a73ad5c8309b3ea110e0253057404f4effea3",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/ui-historical-2026-11-16/README.md",
+      "bytes": 4081,
+      "blob": "4899e7f42d0e6878ce875bd6583f53dd4c33f749",
+      "sha256": "16770722e0d6c2f230cc1713ea8249e898e83ba151f7b1466164fbe89db6740a",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/ui-historical-2026-11-16/bundle-metadata.json",
+      "bytes": 1365,
+      "blob": "7058203d6693f95695637fb0c3acae1360b4b492",
+      "sha256": "ddfd1bf085712bdc8789ac298d989903c684a4e674d3ceea3ef8edd468494cc3",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/ui-historical-2026-11-16/inventory.json",
+      "bytes": 137900,
+      "blob": "e063af8d85f0c1566cbe98c2c6000501d8c834f3",
+      "sha256": "397ca5d4bd376b7b838bce481ec8ae222f4ab464d9135e2d59e8b540e5e772fb",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/ui-historical-2026-11-16/original-ui-evidence.zip",
+      "bytes": 11117559,
+      "blob": "f75e5fbdb2721378b116549156f0e742b68964c1",
+      "sha256": "7aafb02556d24998b01eb56eeb688632e0504970c9995a6b8cf672d764db8fb9",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/ui-historical-2026-11-16/root-independent-bundle-review.json",
+      "bytes": 839,
+      "blob": "420b4101b552c2fbceb89282077afb3c2bb6af08",
+      "sha256": "886560c28219b2e67d84fe07e611ea354225f0dbdf5be02b083bcfd88b769966",
+      "gitWorktreeScratchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/inventory.json",
+      "bytes": 39808,
+      "blob": "42eb2a987001bf44f8d450528f4bf806f455c2f1",
+      "sha256": "0147f8ef913f507d4fd20b9659276b4bd7261726adfcca8360493c7540d9ba10",
+      "gitWorktreeScratchExact": true
+    }
+  ],
+  "uploadManifest": {
+    "bytes": 40560,
+    "blob": "b392a79fe228c497b2b38eb7e38325a294af15ef",
+    "sha256": "48b533dcefa948da36d8f1dc1761d930e4d3449d422f10ea731dd7fbae16fa27"
+  },
+  "priorIndependentReviews": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/stage-m-publication-independent-assembly-review.json",
+      "bytes": 27630,
+      "blob": "2cef3a36ca031d4853bf9798c5d26a73658cc9ca",
+      "sha256": "7131999fb75020a75404ccf3fd6e8fe57702c9fc2a527fae0a3c12ff6e3fa5f0"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/stage-m-publication-independent-remote-tree-review.json",
+      "bytes": 1986,
+      "blob": "c6cfb7d11761d1a190103d3b73d0acb151cfe6eb",
+      "sha256": "a556aa449b5a491db019e0b6050d2df179f2fc8759b58dcc9f576ca385f186e0"
+    }
+  ],
+  "trackedStatusBeforeAfter": "clean",
+  "headBeforeAfter": "8720846612797759f36f27061dd21d4e9f75fbe9",
+  "qualificationLimits": [
+    "Published documentation/readback only; Msource is not applied by this commit or this review.",
+    "Native/UI recoverability and original source-bound limitations remain as approved in assembly; no new semantic, visual or native qualification.",
+    "No project install/build/compiler/test/lint/Node/provider/native/CI execution or ref mutation by reviewer.",
+    "Actual source-tree application/readback and original prescribed CI semanticRED remain separate subsequent gates."
+  ]
+}

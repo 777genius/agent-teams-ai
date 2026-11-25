@@ -16,6 +16,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { isAbsolute, join, resolve } from 'node:path';
+import type { BigIntStats } from 'node:fs';
 
 import {
   ManagementCommandError,
@@ -27,20 +28,30 @@ import type {
   StoredManagementCommand,
 } from '../../management/commandRecords.js';
 
+function sameRecordFile(before: BigIntStats, after: BigIntStats): boolean {
+  return after.isFile() && !after.isSymbolicLink() &&
+    after.dev === before.dev && after.ino === before.ino &&
+    after.size === before.size && after.mtimeNs === before.mtimeNs &&
+    (process.platform === 'win32' || (after.mode & 0o077n) === 0n);
+}
+
 const ordinaryReceiptBytes = 64 * 1024;
 // The source snapshot retains up to 256 original descriptor scopes; JSON string escaping can double it.
 const sourceReceiptBytes = 4 * 1024 * 1024 + ordinaryReceiptBytes;
+type DecodedCommand = { path: string; bytes: Buffer; value: StoredManagementCommand };
 
 /** One profile writer lease owns these atomic, private receipts. No auth values or native URLs. */
 export class FileManagementCommandStore implements ManagementCommandStore {
   private readonly directory: string;
   private readonly identity: { dev: number; ino: number };
+  // Two pure decodes share the original single-receipt byte budget; never filesystem authority.
+  private decoded: DecodedCommand[] = [];
 
-  constructor(root: string) {
+  constructor(root: string, private readonly readOnly = false) {
     if (!isAbsolute(root) || resolve(root) !== root || realpathSync(root) !== root)
       throw new ManagementCommandError('invalid');
     this.directory = join(root, 'management-commands');
-    try {
+    if (!readOnly) try {
       mkdirSync(this.directory, { mode: 0o700 });
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
@@ -56,19 +67,27 @@ export class FileManagementCommandStore implements ManagementCommandStore {
   }
 
   read(commandId: string): StoredManagementCommand | undefined {
-    this.checkDirectory();
-    const path = this.path(commandId);
+    let path: string;
+    try {
+      this.checkDirectory();
+      path = this.path(commandId);
+    } catch (error) {
+      this.decoded = [];
+      throw error;
+    }
     try {
       const parsed = this.parse(path);
       if (parsed.commandId !== commandId) throw new ManagementCommandError('held');
       return parsed;
     } catch (error) {
+      this.decoded = [];
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined;
       throw new ManagementCommandError('held');
     }
   }
 
   write(record: StoredManagementCommand): void {
+    if (this.readOnly) throw new ManagementCommandError('held');
     this.checkDirectory();
     const body = storedManagementCommandSchema.parse(record);
     const path = this.path(body.commandId);
@@ -95,23 +114,27 @@ export class FileManagementCommandStore implements ManagementCommandStore {
       }
       this.checkDirectory();
       renameSync(temporary, path);
-      const directoryFd = openSync(
-        this.directory,
-        constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0)
-      );
-      try {
-        const directoryStat = fstatSync(directoryFd);
-        if (
-          !directoryStat.isDirectory() ||
-          directoryStat.dev !== this.identity.dev ||
-          directoryStat.ino !== this.identity.ino
-        )
-          throw new ManagementCommandError('held');
-        fsyncSync(directoryFd);
-        this.checkDirectory();
-      } finally {
-        closeSync(directoryFd);
+      // Match the source index's platform policy: Windows cannot use a POSIX directory fsync.
+      // The file itself was flushed above, and the original directory is still rechecked.
+      if (process.platform !== 'win32') {
+        const directoryFd = openSync(
+          this.directory,
+          constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0)
+        );
+        try {
+          const directoryStat = fstatSync(directoryFd);
+          if (
+            !directoryStat.isDirectory() ||
+            directoryStat.dev !== this.identity.dev ||
+            directoryStat.ino !== this.identity.ino
+          )
+            throw new ManagementCommandError('held');
+          fsyncSync(directoryFd);
+        } finally {
+          closeSync(directoryFd);
+        }
       }
+      this.checkDirectory();
     } finally {
       try {
         unlinkSync(temporary);
@@ -123,19 +146,24 @@ export class FileManagementCommandStore implements ManagementCommandStore {
   }
 
   *list(): Iterable<StoredManagementCommand> {
-    this.checkDirectory();
-    for (const name of readdirSync(this.directory)) {
-      if (/^\.tmp-[a-f0-9-]{36}$/.test(name)) {
-        const temporary = lstatSync(join(this.directory, name));
-        if (!temporary.isFile() || temporary.isSymbolicLink())
-          throw new ManagementCommandError('held');
-        continue; // A pre-publication crash has no authoritative receipt.
+    try {
+      this.checkDirectory();
+      for (const name of readdirSync(this.directory)) {
+        if (/^\.tmp-[a-f0-9-]{36}$/.test(name)) {
+          const temporary = lstatSync(join(this.directory, name));
+          if (!temporary.isFile() || temporary.isSymbolicLink())
+            throw new ManagementCommandError('held');
+          continue; // A pre-publication crash has no authoritative receipt.
+        }
+        if (!/^[a-f0-9]{64}\.json$/.test(name)) throw new ManagementCommandError('held');
+        const path = join(this.directory, name);
+        const saved = this.parse(path);
+        if (this.path(saved.commandId) !== path) throw new ManagementCommandError('held');
+        yield saved;
       }
-      if (!/^[a-f0-9]{64}\.json$/.test(name)) throw new ManagementCommandError('held');
-      const path = join(this.directory, name);
-      const saved = this.parse(path);
-      if (this.path(saved.commandId) !== path) throw new ManagementCommandError('held');
-      yield saved;
+    } catch (error) {
+      this.decoded = [];
+      throw error;
     }
   }
 
@@ -143,39 +171,61 @@ export class FileManagementCommandStore implements ManagementCommandStore {
     return join(this.directory, managementDigest(commandId) + '.json');
   }
   private parse(path: string): StoredManagementCommand {
+    const previous = this.decoded;
+    this.decoded = [];
+    let completed: DecodedCommand[] = [];
     let fd: number | undefined;
+    let observed = false;
     try {
-      fd = openSync(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
-      const before = fstatSync(fd);
-      if (!before.isFile() || before.size > sourceReceiptBytes || (before.mode & 0o077) !== 0)
+      const before = lstatSync(path, { bigint: true });
+      observed = true;
+      if (!before.isFile() || before.isSymbolicLink() || before.size > BigInt(sourceReceiptBytes) ||
+          (process.platform !== 'win32' && (before.mode & 0o077n) !== 0n))
         throw new ManagementCommandError('held');
-      const buffer = Buffer.alloc(before.size + 1);
+      fd = openSync(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+      if (!sameRecordFile(before, fstatSync(fd, { bigint: true })))
+        throw new ManagementCommandError('held');
+      // Only this already-bounded byte count is converted; file identities stay exact.
+      const buffer = Buffer.alloc(Number(before.size) + 1);
       let length = 0,
         count = 0;
       do {
         count = readSync(fd, buffer, length, buffer.length - length, null);
         length += count;
       } while (count && length < buffer.length);
-      const after = fstatSync(fd);
+      const after = fstatSync(fd, { bigint: true });
+      const named = lstatSync(path, { bigint: true });
       if (
-        length > sourceReceiptBytes ||
-        before.size !== after.size ||
-        before.mtimeMs !== after.mtimeMs
+        length > sourceReceiptBytes || BigInt(length) !== before.size ||
+        !sameRecordFile(before, after) || !sameRecordFile(before, named)
       )
         throw new ManagementCommandError('held');
-      const raw = JSON.parse(
-        new TextDecoder('utf-8', { fatal: true }).decode(buffer.subarray(0, length))
-      ) as Record<string, unknown>;
-      const { digest, ...body } = raw;
-      if (body.kind !== 'runtime.source' && length > ordinaryReceiptBytes)
-        throw new ManagementCommandError('held');
-      if (digest !== managementDigest(body)) throw new ManagementCommandError('held');
-      return storedManagementCommandSchema.parse(body);
+      this.checkDirectory();
+      const bytes = buffer.subarray(0, length);
+      let decoded = previous.find(entry => entry.path === path && entry.bytes.equals(bytes));
+      if (!decoded) {
+        const raw = JSON.parse(
+          new TextDecoder('utf-8', { fatal: true }).decode(bytes)
+        ) as Record<string, unknown>;
+        const { digest, ...body } = raw;
+        if (body.kind !== 'runtime.source' && length > ordinaryReceiptBytes)
+          throw new ManagementCommandError('held');
+        if (digest !== managementDigest(body)) throw new ManagementCommandError('held');
+        decoded = { path, bytes, value: storedManagementCommandSchema.parse(body) };
+      }
+      const result = structuredClone(decoded.value);
+      completed = [decoded];
+      const retained = previous.find(entry => entry.path !== path);
+      if (retained && retained.bytes.length + decoded.bytes.length <= sourceReceiptBytes)
+        completed.push(retained);
+      return result;
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') throw error;
+      if (!observed && (error as NodeJS.ErrnoException).code === 'ENOENT') throw error;
       throw new ManagementCommandError('held');
     } finally {
+      this.decoded = [];
       if (fd !== undefined) closeSync(fd);
+      this.decoded = completed;
     }
   }
   private checkDirectory(): void {

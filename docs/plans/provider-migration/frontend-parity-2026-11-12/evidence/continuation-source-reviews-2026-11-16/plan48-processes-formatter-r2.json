@@ -1,0 +1,87 @@
+{
+  "kind": "INDEPENDENT_ACTUAL_899_PLAN48_SOURCE_R2",
+  "verdict": "APPROVE_CURRENT_SOURCE_SEMANTICS_AND_RETAINED_COMMIT_BINDING",
+  "blockers": [],
+  "source": {
+    "commit": "8996fee80282d1e17ecdaaf2dd537cec647026d3",
+    "parent": "27478c66fe5aa12d89dcec8bd16630b46b53b71f",
+    "tree": "d50b59c1328a7751db4689819bc412c97b9f1349",
+    "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+    "before": {
+      "bytes": 25185,
+      "lines": 352,
+      "gitBlob": "217b189f231af2ea39b290d70568a1ae42379a53",
+      "sha256": "d63879ef91fc767f1d5633cdce509308e9fecafaa4bc880ae4e1307be77650b6"
+    },
+    "after": {
+      "bytes": 25519,
+      "lines": 356,
+      "gitBlob": "38efaed8954940698d93b40d9355332ea9f56d75",
+      "sha256": "ad8f8b5ae40f5fae5728ed6321819227969c32986f636e83e56af9ac67bf05d7"
+    }
+  },
+  "inputs": {
+    "retainedFullParentDelta": {
+      "path": "/tmp/migration-evidence-20261116/root/p10-donor-four-path/parent-899-delta.json",
+      "bytes": 44080,
+      "lines": 320,
+      "gitBlob": "d5c524327e67c7c828ec12f490791a422449c4ba",
+      "sha256": "ba59fc8ecd51144d3aa68c90326ca99397e4f4ac38af013c1e6a6bc5b96d1362"
+    },
+    "governingPlan48": {
+      "path": "/tmp/migration-evidence-20261116/frontend/processes-formatter-seam-inert-proposal/reference/48-process-test-formatter-binding-2026-11-16.md",
+      "bytes": 3785,
+      "lines": 33,
+      "gitBlob": "1765f43b6c42ab4b43019539dfd13f48af367354",
+      "sha256": "6ca134c449f02815ee0c14201629c1944f3f14ee9a2c0819ae822f6702525f22"
+    },
+    "actualGate": {
+      "path": "/tmp/migration-evidence-20261116/frontend/processes-formatter-seam-inert-proposal/reference/nativeWindowsAppGate.mjs.txt",
+      "bytes": 38528,
+      "lines": 666,
+      "gitBlob": "40d7c19142de2cafdb0a7b433bbedddc216e99da",
+      "sha256": "feccb3979905fb65ee65d9d925d6d50496c9123c6d6b9fadec3ea11a7f0654ea"
+    },
+    "priorCompleteStaticReview": {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/plan48-formatter-seam-r2/independent-r2.json",
+      "bytes": 8808,
+      "lines": 147,
+      "gitBlob": "8b3ea32a866246c68ffb0915fcd7b4a37e267763",
+      "sha256": "08b8942343fdea287c44d575a1a3e963863b8236041db39833c849071c39b8d1"
+    }
+  },
+  "independentChecks": {
+    "actualFullBodyRehashed": true,
+    "retainedCompareExactlyOnePath": true,
+    "commitParentTreeJoinsMatch": true,
+    "literalInverseRestoresEntire217bPreimage": true,
+    "caseNamesAndOrderEqual": [
+      "post-Stop observer continues past stale original and pending alternate to fresh stopped props",
+      "initial original-ref observation remains exact and cannot select a replacement ref",
+      "background acceptance waits for atomic service publication without masking corrupt readiness",
+      "captured no-provider Processes fixture rejects mixed inputs before allocating and seeds no Runtime",
+      "original same-Main Retry retains a bounded first UI refusal without changing the read or its error",
+      "original first failure retains one bounded stdout prefix before the unchanged cleanup boundary"
+    ],
+    "netBytes": 334,
+    "netLines": 4,
+    "actualDiff": {
+      "bytes": 1878,
+      "lines": 24,
+      "gitBlob": "12bc72c12ffdd154878cd3ab569bb60fd737a7a0",
+      "sha256": "c03b327b63ebc9a66013defacfc327f3cf06290856fb308f095cb0c2790fb5ae"
+    },
+    "differenceFromHistorical541": "Only the same three-line formatter extraction/unique-anchor block is placed after the original catch extraction instead of before it. Removing that block makes the two entire afterimages byte-identical. Same Function declaration, assert binding, actual formatter and all original assertions.",
+    "currentAnchorOrder": "Actual source first validates/extracts original catch, then validates/extracts pure formatter; both operate only on the same already-read string before existing Function construction. On exact Gate40d both anchors are unique and ordered; source formatting and closure semantics are unchanged."
+  },
+  "semantics": "Carries forward the independently reviewed real formatter declaration and assert dependency, no stub/export/production import/new module. Original diagnostic fallback, Error/proof identity, one format call, bounded FD1/newline/prefix/UTF8 cap, throwing and partial sink cases, and cleanup boundary remain. This closes the concrete missing binding in the isolated test; it does not change the real Windows Gate.",
+  "qualification": "Actual historical original a07 remains5PASS/1FAIL. No new test, UI, compiler, lint, native or cleanup result is claimed. Original resulting-source full6 and downstream gates remain mandatory; no additional RED-only cycle is selected.",
+  "historyDisposition": "Our never-applied541bd candidate and8b3ea static review are historical supporting evidence only. No replacement/application/publication of541bd is authorized; preserve external899 and Plan48.",
+  "limits": [
+    "No fresh external API/ref/CI polling was performed; commit/tree/compare binding uses root's retained immutable full readback.",
+    "The package reports root's complete Merkle reconstruction and11054leaves; this bounded source review does not relabel that full-tree work as an independent recomputation.",
+    "No external prepublication review chronology is attributed to this retrospective review.",
+    "No project/import/test/compiler/lint/native/GUI/Actions/Git/index/ref/canonical writes occurred; only standard-library text/hash/JSON and scratch report writes."
+  ],
+  "publicationAuthority": false
+}

@@ -4,10 +4,12 @@ import { resolveCapturedRuntimeRecipe, resolveRuntimeRecipe, runtimeProviderId }
 import { applyLaunchConfiguration } from './launchConfiguration.js';
 import { selectedOpenCodeManagedLimits } from './openCodeManagedPreferences.js';
 import { withOpenCodeModelLimits } from '../adapters/providers/withOpenCodeModelLimits.js';
+import { captureRecipeProcessOrigin } from './captureRuntimeProcessOrigin.js';
 import type { HostedTeam } from './MemberEntry.js';
 import type { RuntimeMemberProfile, RuntimeProfile } from './runtimeProfile.js';
 import type { TeamModelProbeSelection } from './teamLaunchModelProbe.js';
 import type { RuntimeRecipeSources, RuntimeSourceReference } from './runtimeSourceContracts.js';
+import type { RuntimeSourceProcessOrigin } from './runtimeSourceProcessOrigin.js';
 
 /** Model-only draft selection. It creates no roster, grants, capture or conversation bindings. */
 export function resolveTeamModelProbeRecipe(options: {
@@ -17,11 +19,14 @@ export function resolveTeamModelProbeRecipe(options: {
   saved: RuntimeMemberProfile | undefined;
   sources?: RuntimeRecipeSources;
   sourceReference?: RuntimeSourceReference | undefined;
+  sourceProjectPath?: string | undefined;
+  onProcessOrigin?(origin: RuntimeSourceProcessOrigin | undefined): void;
 }): RuntimeMemberProfile {
   const { input, saved, team } = options;
   const draft = input.draft;
   if (!draft) {
     if (!saved) throw new TeamLaunchError('invalid', 'probe-member');
+    savedOrigin(saved);
     return saved;
   }
   const desiredProviderId = draft.providerId;
@@ -45,6 +50,7 @@ export function resolveTeamModelProbeRecipe(options: {
     throw new TeamLaunchError('conflict', 'probe-draft-target');
   const sameProvider = saved && runtimeProviderId(saved) === draft.providerId;
   const recipe = sameProvider ? structuredClone(saved) : privateRecipe();
+  if (sameProvider) savedOrigin(saved);
   const savedV1Preferences = sameProvider && saved.provider === 'opencode' &&
     saved.nativeGeneration !== 'v2' && saved.managedPreferences;
   if (sameProvider && (input.model === '__provider_default__' || input.effort === undefined || savedV1Preferences)) {
@@ -149,7 +155,19 @@ export function resolveTeamModelProbeRecipe(options: {
     const projectPath = roster.savedSettings?.cwd ?? team.definition.savedSettings?.cwd ?? seed.cwd;
     const reference = sameProvider ? options.sourceReference :
       options.sources?.currentForRecipe(team.definition.scope, projectPath, seed);
+    if (options.onProcessOrigin && seed.windowsBroker && !sameProvider)
+      options.onProcessOrigin(captureRecipeProcessOrigin({ runtime: options.runtime,
+        sources: options.sources, reference, scope: team.definition.scope, projectPath,
+        teamId: team.definition.binding.teamId, memberId: input.memberId, provider: seed.provider }));
     return resolveCapturedRuntimeRecipe(seed, reference, team.definition.scope, projectPath, options.sources);
+  }
+  function savedOrigin(profile: RuntimeMemberProfile): void {
+    if (!options.onProcessOrigin || !profile.windowsBroker) return;
+    options.onProcessOrigin(captureRecipeProcessOrigin({ runtime: options.runtime,
+      sources: options.sources, reference: options.sourceReference, scope: team.definition.scope,
+      projectPath: options.sourceProjectPath ?? team.connection.readRoster().savedSettings?.cwd ??
+        team.definition.savedSettings?.cwd ?? profile.cwd,
+      teamId: team.definition.binding.teamId, memberId: input.memberId, provider: profile.provider }));
   }
   if (draft.workspace !== undefined) recipe.cwd = draft.workspace;
   return recipe;

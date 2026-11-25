@@ -1399,6 +1399,66 @@ These annotations do not emit runtime code, suppress an error, weaken an asserti
 
 Root and an independent peer check the two exact annotations and branch-specific preimages before source publication. The existing scripts typecheck and original affected CI lanes must pass on the new coherent head. The executor is currently unavailable; source review is not a compiler/native PASS. Publish the reviewed correction normally without cancelling or rerunning the still-active native matrix.
 
+
+**Concurrent audit provenance (2026-11-13):** The appendices below retain the independently published additions from `f0d275e6ee8ed5072ec393a9c714f4b8f519e8c8` and base `e29dbde300ea73ec4e46e5f57f9e007ca5473552`. Their original section numbers, titles, source references and qualification limits are preserved; repeated numbers refer to the distinct titled audits, not to a replacement or a combined acceptance result.
+
+## 30. Work-sync nudge: actual session tool names and argument schemas
+
+### Round 1 — existing contracts and the disproved alias suspicion
+
+At d714028e7202a0aea911c99745b5214c14a2aa65, Host src/mcp/tools.ts registers
+task_complete through its existing fixed-action loop. The actual pinned
+Claude SDK / Node TEST peer also observed that tool in listTools. The alias
+exists and remains unchanged. The separate TEST task-list failure was a
+fixture reading description from the compact inventory, not a missing tool.
+
+The shared policy's domain and task-repair templates hardcode the legacy
+mcp__agent-teams__ prefix; Host exposes the existing team server. The domain
+templates also demand teamName/memberName arguments. Legacy
+mcp-server/src/tools/workSyncTools.ts requires teamName and accepts memberName.
+Host src/mcp/workSyncTools.ts instead declares strict actor-bound schemas:
+status accepts commandId and optional forceNudge; report accepts commandId,
+state, original fingerprint/token and bounded report fields. Neither accepts
+a public actor or Team selector. Sending the legacy selector fields is rejected
+by the actual Host boundary.
+
+### Round 2 — six wording substitutions in the existing owner
+
+Change only the existing MemberWorkSyncNudge.ts and
+MemberWorkSyncNudgeOutboxPlanner.ts under
+packages/legacy-agent-host/src/work-sync/policy/core, plus their existing
+domain/invariant cases. Frontend already re-exports this policy.
+
+Three prefix sentences now require the exact exposed tool names and argument
+schemas, preserve any server prefix, and include commandId when required.
+The agenda retains its ban on filesystem/resource discovery before the first
+direct tool attempt. Two status/report instructions retain the original order
+and returned agendaFingerprint/reportToken, while making each legacy selector
+conditional on that field being declared in the individual tool's schema.
+The memberName warning has the same condition. This preserves exact original
+team/member values for legacy schemas without admitting them to Host schemas.
+
+Keep comment → task_complete → status → report order, task IDs, authority,
+payload hashing, admission tickets, intent identity, recovery leases and
+scheduler behavior. New rendered text uses the existing payload-hash/refresh
+path; no retained durable row is edited. No schema relaxation, provider branch,
+new helper or alias change is introduced.
+
+### Round 3 — independent review and verification boundary
+
+Independent pr_chain review found no blocker and tightened the selector wording
+so independently optional fields are included only when each is declared.
+Existing domain cases now reject either hardcoded prefix and assert conditional
+legacy values; the existing planner invariant checks the recovery payload along
+with its original no-repeat/identity assertions.
+
+The executor became unavailable after a separately observed kernel OOM before
+these source edits could be applied or tested locally. The patch is reconstructed
+against the exact GitHub d714 blobs with unique replacement checks. Targeted
+domain/invariant suites, lint/types and current CI remain required; source
+review is not an execution PASS. Finite emulation does not establish that an
+arbitrary model obeyed the prose or qualify a real vendor CLI.
+
 ## 30. Existing offline-runtime tests must assert their intentional warnings
 
 ### Review 1 — actual root-shard failure and unchanged product behavior
@@ -1460,6 +1520,16 @@ Add the explicit Row[] annotation to exactly the reported replies declaration in
 
 Root publishes this plan before the source. Independent source review verifies that the only emitted-code-neutral delta is the two Row[] annotations. The unchanged pinned script type project and existing packaged/ordinary Desktop CI lanes remain required; source review does not qualify their execution. No workflow, runner, retry or budget change belongs to this correction.
 
+
+---
+
+## Incoming base history preserved at 0543d437
+
+The following append-only entries are retained verbatim from base
+`0543d437695318f0157e6d600d76abdce5c51e8e`. Their original section numbers
+refer to that branch history; they do not renumber or replace the completion
+branch entries above. Current integration is governed by plan 12.
+
 ## §33 — read the original public Windows runtime archive through its release URL
 
 ### Review 1 — observed download failure and current release evidence
@@ -1479,3 +1549,170 @@ Remove the now-unused dispatch-token environment from this one read step. Keep t
 ### Review 3 — source review and the existing Windows E2E
 
 Root and a peer review the one-step diff and unchanged checksum/consumer path before source publication. No new unit test is useful for this reversible workflow change. The next ordinary exact-head workflow must download and hash the original bytes, stage/build/package successfully, and run both existing packaged UI cases. A public metadata read or source-only review cannot satisfy those execution gates. Wait for the currently running PR checks before advancing their heads; do not cancel or rerun the failed job to hide the first result.
+
+
+## §34 — actual donor4a/runtime0.0.160 history in the existing retained Desktop job (2026-11-16)
+
+### R1 — selected boundary, immutable parent and exact four-path change
+
+This implements only the already selected §9 native-history row: the actual old frontend creates a task, one business message and a native reply; its original owner performs Stop/Quit; the current frontend and a cold current frontend read the same retained history without another inference. The existing 0.0.158/current-frontend coexistence proof is preserved. This is a prospective source selection, **SOURCE_ONLY_UNEXECUTED**, not a native acceptance result.
+
+The reviewed source parent is `8996fee80282d1e17ecdaaf2dd537cec647026d3`, tree `d50b59c1328a7751db4689819bc412c97b9f1349`. Its 11,054-leaf tree and the incoming Plan43/44/45/48 source changes and Plan46/47 selections were reconciled; those changes are not part of this cut. The complete prior P10 blob `69f6b93ff9a0bfddbbfc6fd783ce9d61dc06c80d` (142,154 bytes, SHA256 `44658f6a807d50ff720f247df692e4b30801d3e09c0bd14aa984c005a24d5c30`) remains an unchanged prefix. Publish this appendix and the independent raw source R2 first. Only after full publication readback and independent published-R1 review may the following four exact source afterimages be applied.
+
+| Existing path | Before Git blob | Selected after Git blob | After bytes / lines |
+| --- | --- | --- | --- |
+| scripts/legacy-agent-host/prepare-retained-opencode-coexistence.ts | 56436aac409d1a96d08ab47782483cfdf8f5391d | 9f9900c7f9166de2a14eaf840fd88d12ae49841d | 26197 / 379 |
+| scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts | 5116a321fa2edda4ccb802fa80840be690259072 | 507b2e4243e99a2285822ea8bce8103760c43022 | 43481 / 600 |
+| scripts/legacy-agent-host/desktop-retained-opencode-app.ts | e752dc2fcce988d50f8eb77a9afb90455373d8f0 | 71cc2aa1c55540d027bdf321120e850cb650f0c3 | 37580 / 577 |
+| .github/workflows/ci.yml | da94c393b024d3c8a40159edbf9975cd528007a6 | 478323fbcb60bc0b0f29c0e430fdb3d001d0a456 | 189024 / 2818 |
+
+Afterimage SHA256 values, in the same order, are `ddf230ff582d01a6026f3dab5d752920a1afdb1d15defc95fe562c076b8493e4`, `cf7f4fd9661ffaccac2b520bda40c455f0ec3954f4c5c1efbcaf74270f3c9fe7`, `2930df9471446610ed3cf4a5642bc6d6314b8f946a5669e343ffee7058a205d9`, and `b65900ed9394287e42c67d147fa15349f098c6fa074d74403789112c27f7f1b4`. Both complete source patches reconstruct their original files exactly in reverse and their selected afterimages exactly forward. All three TypeScript files remain below 800 lines; no source cap, frozen budget or exclusion is raised.
+
+There is no new production owner, runner, registry, release writer, API, type configuration, framework or unit suite. The only shared extraction is the existing 51-line native-history reader into the existing app helper: the old caller still supplies `bob`, its original Team and original observation slot, and retains all provider/lane/session/member/reply/UUID/content-hash and ambiguity predicates. The donor caller supplies the actual lead from the resulting config.
+
+### Original producer and preparation
+
+The producer is frontend `4a0e06277fe216d9f82dbbede362668fe46622ee`, tree `4bb456a5b35b6fca0e795bc8b19a13f5f1f6defd`. Its [original lock](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/runtime.lock.json) selects runtime0.0.160 / CLI2.777.777 and Linux-x64 archive SHA256 `09b174841e74c95337f8b1be986f1501a71582ce190671c548bf4c70ab814e10`. Its runtime source is `e13edcd3d4ffbecc0272ae30195cc6b15b710ee7`, tree `a5ed6ffc453a68a5454328bd79a9422ce1e4e3e9`.
+
+The existing job obtains separate immutable ignored checkouts at `.runtime-download/TEST-donor-4a` and `.runtime-download/TEST-donor-runtime-source`. It uses the donor's original frozen-install retry, strict Electron installer, pinned SQLite rebuild, runtime stager, controller build and MCP build. Existing pnpm11.22.0 with its full integrity, Node24.21.0 and Electron44.10.1 remain selected. The donor's tracked `.node-version`26.12.1 is retained as evidence; its declared engines accept the selected Node. Preparation does not create product sessions.
+
+The standard preparation branch alone adds `donor`, kind `TEST_DONOR_4A_RUNTIME_160_INPUTS`, to the original inputs receipt. V1/V2 source-selection branches and all existing input/status/error/environment fields remain. Its closed 22-file roster covers original package/lock/workspace/npm/node/runtime files, Vite/stager and immediate helpers, invoked install scripts, controller/MCP build inputs and staged VERSION/COMMIT_SHA. The runner checks the same ordered roster. Canonical roots, both complete tracked/unignored source states, commits/trees and every selected source/image/manifest digest are checked before/after preparation and each UI epoch.
+
+The [original runtime packaging source](https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/.github/workflows/release-runtime.yml) writes the stripped runtime version followed by LF, so capture and consumer require VERSION.trim() === '0.0.160'. Root's full source reference is Git blob `562dcab30d18b9fda15138f3f8a2ea548a189c15`, SHA256 `e491e440d8785381ad5d3e98770679e0dcfa7876fc922b190ea3b83ca3571cf9`. Packaging-source inspection and public asset metadata do not establish downloaded archive bytes. Actual CI must run the original checksum-verifying stager and record the resulting runtime image, VERSION and COMMIT_SHA.
+
+The selected custody image is the original packaged Linux-x64 helper if present. Its directories/image cannot redirect through symlinks. A present invalid image, bad sidecar/source hash/permissions/ELF, unreadable component or missing image with a surviving sidecar refuses. Only actual absence selects the unchanged exact-e13 stock builder under the existing pinned Bun, minimal PATH and original 60-second build bound. Both branches use the unchanged stock validator within five seconds; validation failure cannot fall back. Sidecar reading is bounded at 16KiB, all six normalized validated fields are compared, and whole files are repinned. The stock builder may reuse a valid dist artifact; its execution and the recorded cc version do not prove a fresh compiler invocation. Record `PUBLISHED_RUNTIME_ASSET` or `EXACT_RELEASE_SOURCE_BUILD` honestly, with `publishedRuntimeComplete=false` in both branches.
+
+### Isolated actual UI production and retained reads
+
+After the full original 0.0.158 journey has ordinarily quit and its observed native identities are absent, the same runner invokes the donor addition before its sole final `passed = true`. A separate fresh profile/project and separate instance of the existing finite model serve exactly three app epochs: donor, current, cold. No Host descriptor, release, task, run, message or native session is seeded. Only the existing pure TEST sentinel and shell-environment sources are reused.
+
+The environment is a closed map with private HOME, user data, CLAUDE/CODEX/XDG/config/cache/runtime-data roots, explicit selected OpenCode/runtime/helper paths, explicit TEST display and optional corepack fields. It does not inherit ambient credentials or arbitrary process environment. Claude/Codex overrides and private executable search locations select refusal sentinels; the private managed Codex current.json must stay absent. Original resolvers can stat global candidates, so this is not a claim of zero filesystem discovery. No real Claude/Codex process, version command, authentication or session is permitted.
+
+The donor launches its own electron-vite entry. A closed donor-only option checks that revision's actual teams/memberLogStream/externalAgentConnection preload surface; current readiness retains its original agentBackend predicate. Actual original UI controls create one solo OpenCode team. OpenCode is selected before cwd; the existing model picker is read before a needed opening click, and its actual selected state is observed before closing it. The original task dialog has Start immediately deselected, preserving one business message. Task creation closes the dialog before the lead is opened again. Exactly one Send submits `TEST_RETAINED_V1_HISTORY`; the unchanged model returns `REPLY_TEST_RETAINED_V1_HISTORY` within its existing 32-observation/body limits.
+
+Read-only product observations capture the real lead, run, member, lane, native session, task ID, message ID and native assistant UUID/content hash. Each epoch checks the same saved task/message records, visible sidebar task identity, original Logs message/reply text and exact native-history tuple. Multiple nested DOM matches are accepted only within the bounded 1..32 range. Current/cold consumers read through the retained owner without import, Launch or a new Host descriptor. Their inference counts equal the count after donor Quit, including a final check after closing the finite model. Actual screenshots and physical input-step records are retained.
+
+### Original termination, stopped corpus and independently checked evidence
+
+The donor uses its original scoped Stop and requires processAlive=false within the unchanged 60-second boundary, followed by the existing ordinary Quit. Each epoch requires original launcher exit0/null, original Electron birth absence, original group release, absence of collected native birth identities and a separate empty TEST-namespace census. At least the selected V1 image must be observed; fork/helper identities are also collected when observed. Do not reinterpret a wrapper exit as separately observed natural native/Host termination. Failure cleanup retains original custody and the first failure; it cannot qualify success.
+
+After donor Stop/Quit and absence, before the first current read, preserve genuine stopped product/history bytes as nonhidden numbered copies with a manifest. Selected roots are claude, runtime-data, data, state, config/opencode and project/opencode.json. The actual e13 managed-path/profile owners place native history under `runtime-data/opencode/profiles/<key>/data/opencode/`; the offline native reader uses that same profile path. Root-level data/opencode is not a substitute. Original team/task/native-history coverage is mandatory.
+
+Exclude only generated sentinel executables, the source-defined host-authority sealed-image directories, the stock profile's shared node_modules link and its tmp directory. Other symlinks/nonregular files/hardlinks/foreign ownership refuse. Before/after device, inode, size and timestamp observations must agree. Preserve at most 4096 files, 64MiB per file and 256MiB total. These are raw producer copies before incidental consumer reads/migrations; no complete-profile immutability or complete Electron-cache capture is claimed.
+
+The nested `donorHistory` receipt carries prepared inputs, actual identity, ordered epochs, Stop, corpus, inferenceAtDonorQuit, final model observations/failures and cleanup. The existing standard CI verifier retains all old assertions and independently joins the new input record, immutable source identities/roster, exact task/message/native tuple, six distinct launcher/Electron births, captured native PID/birth sets, visible results, original Quit/absence and unchanged inference counts. It rereads the manifest and every raw copy, checking safe unique paths, bytes, hashes, coverage and bounds. A PASS flag alone is insufficient.
+
+Eleven selected artifact rows add the bounded corpus, three donor/current/cold screenshots, app logs/failure JSONs for epochs3/4/5 and sentinel-invocations.ndjson under the existing private TEST root. Existing artifacts remain; there is no blanket hidden-file inclusion or whole-profile upload.
+
+### Existing CI route, unchanged acceptance gates and publication sequence
+
+General CI currently skips this job on Draft1192. Preserve its entire old full/Ready/manual predicate and add only the exact same-repository Draft1192 route: successful plan, scope=full, full=false, metadata=false, reuse=false, repository777genius/agent-teams-ai, base feat/provider-host-frontend-parity-20261112 and head fix/frontend-parity-completion-20261113. Mirror it byte-for-byte modulo whitespace at the existing required-outcome step. The existing ciOptionalWorkflows test checks that pair. No planner/trigger/other-lane/concurrency/permission/Ready policy changes; the original full qualification gate still refuses Draft merge qualification.
+
+Replace only the stale V1 source-selection verifier digest with the existing adjacent V2 pattern: readNativeProviderArtifact supplies the checked-in source receipt, compared to the producer's independently measured selected installed/archive digest. All other assertions remain. This preserves exact equality; it does not accept an arbitrary provider digest.
+
+Reuse the existing strict legacy scripts type project and scoped fast lint of the three changed TypeScript files after the existing Host build. No type configuration is added. The original complete retained coexistence test, unchanged model test, original V1/V2 source-selection journeys, receipt verifiers and paired-selector policy test remain the execution gates. Retain the 30-minute job, 900000ms whole native test and every old phase/action/read/cleanup bound. Additional installs, hashes, source reads, three app starts and corpus copying consume those same ceilings. A failure requires diagnosis, not budget extension, removed old proof or retrying a business action. No extra mandatory RED-only cycle is introduced.
+
+The independent source R2 is published at `evidence/donor-4a-native-history-2026-11-16/source-r2.json`. Root publishes docs first with ordinary expected-parent push, reads back complete files/tree, obtains an independent published-R1 R2, then applies only the four bound afterimages and verifies their full readback. Incoming work is preserved. Every commit is immediately pushed normally. Primary advancement additionally requires a fresh complete six-cohort/ref/PR guard, with watchers paused, and preservation of useful started original jobs; queued-only work does not create a new gate. No rerun, dispatch or cancellation is selected.
+
+Neither this plan nor source review is an executed compiler/lint/E2E PASS. The actual new coherent CI head must establish donor history, both retained reads, all original journeys and cleanup. Donor Review/tool-change/attachment evidence, raw historical Darwin captures, actual stopped solo-Claude release/import, P08/P09, real-vendor and release qualification remain their separately stated boundaries. Launched donor import without a genuine original release remains unsupported; this cut does not synthesize one. P11's completed actual A/B gates are not reopened.
+## 35. B2 genuine donor Task attachment and native Task Changes readback — prospective five-path R1
+
+### Status and immutable boundary
+
+This is an INERT, source-only preparation for the already required old-donor B2 acceptance row. No project source was imported or executed, no test/build/compiler/lint/native/UI command was run, and no canonical file, Git index/object/ref, CI run or publication was changed by this preparation. Root must bind the exact current parent and complete current P10 prefix before documentary selection, then publish and fully read back the separate R1 and obtain its independent R2 before applying this exact five-path source cut. The retained source/preimage identities below, complete before/after payloads, unified patch and inverse proof make that later action reviewable. They do not themselves authorize publication.
+
+Append after the complete current P10 blob `509311af179416e647f8571126746ab09333f5c0` (156904 bytes), preserving every byte of that prefix. The unselected Settings error-category proposal was retired; this is the next section 35. Current-parent reconciliation belongs to root; this draft does not infer a ref from an old snapshot or overwrite incoming authored changes. The five preimages were reported unchanged through the latest root readback of incoming Plan50/51/52/53 work. A fresh exact lease and full tree binding remain mandatory at publication. Existing useful jobs, source custody, original acceptance requirements and all other plans remain preserved.
+
+| Existing source path | Exact before Git blob | Exact after Git blob | After bytes / lines |
+|---|---|---|---|
+| `scripts/legacy-agent-host/desktop-retained-opencode-model.ts` | `fad33b79cb0e6f780d1c2caf435b11e07c03bf87` | `369505df3d6a37b5833550954f4ef2a1c501b342` | 17743 / 269 |
+| `scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts` | `507b2e4243e99a2285822ea8bce8103760c43022` | `a910209438b29f04ea4a30f28e69620d98802183` | 54340 / 727 |
+| `scripts/legacy-agent-host/desktop-retained-opencode-app.ts` | `71cc2aa1c55540d027bdf321120e850cb650f0c3` | `4f686cdb2c99ef4f04bb060041bf8ccf6f8601db` | 49147 / 727 |
+| `scripts/legacy-agent-host/desktop-retained-opencode-model.test.ts` | `053b6c09383aeae5186322b2e8b0b17fc8cd1021` | `45f0d34a10f1928c0ecc7e102a5015188d193ccf` | 14802 / 236 |
+| `.github/workflows/ci.yml` | `478323fbcb60bc0b0f29c0e430fdb3d001d0a456` | `4e4554ec3330d0c06b0736e861348d7279511361` | 199733 / 2927 |
+
+The unified patch is `00113be820c82452468f40c43e18833aba9aab72` (63740 bytes; SHA256 `f703b2b8aa75e0b4064d9c21024d72c45fe1c1d8130cba2fc45c374cf2042d6f`). The complete five-file images are in `source-images.json`; `preservation-proof.json` independently reconstructs the complete old and new texts. The four TypeScript files remain below the existing 800-line source limit without raising its baseline; the existing workflow is outside that source-file cap. No module, framework, fixture suite, product owner or configuration project is added.
+
+### Required behavior and the existing seams
+
+The published donor epoch already creates a genuine solo OpenCode team and a task through the original 4a frontend, sends one HISTORY message, observes its real runtime 0.0.160/native 2.777.777 history, invokes ordinary Stop and Quit, and opens the same corpus in current and cold current frontend epochs. It did not yet produce the B2 Task attachment and task-attributed native file-change evidence. This cut extends those same epochs and the same one physical business Send. It leaves the original 0.0.158 literal-bob retained-owner/Host V2 coexistence journey, both owner Stop-isolation checks, V1/V2 source-selection branches, their markers, commands and validators intact.
+
+The selected fixture is one private Git project under the existing donor root, one preexisting text file `TEST-donor-review.txt`, and one 71-byte genuine 2×1 PNG `TEST-donor-task.png`. Its fixed PNG SHA256 is `5a852fbaaaecaf4cd14c01e150c7f881c5c5894b0a1e3c53be7e007c58374ee6`. Future CI creates the initial Git commit using the existing bounded runner, explicit TEST identity/date, empty templates, disabled hooks/signing and closed environment. Only the selected text file is staged; private `opencode.json` is excluded. The observed initial commit and tree, exact text before/after SHA256 and selected PNG identity are recorded. No Git or index operation was performed during preparation. This is genuine fixture input for the native snapshot owner, not a synthetic transcript, change ledger or native release receipt.
+
+After creating the actual task, the original Task detail attachment input uploads that PNG once. Every epoch checks the same attachment metadata and exact returned bytes, as well as the visible thumbnail's bytes and 2×1 dimensions. Each existing attachment read additionally samples the unique actual enabled Expand/Collapse header once, with currentness checks immediately before and after the CDP evaluation. If that header is collapsed, it performs at most one original scroll/click to Expand before the unchanged PNG oracle. This avoids assuming that a remounted useState(defaultOpen) follows later attachment-count data. It adds no wait, timer, timeout, retry, Send or new selector owner; malformed or ambiguous state refuses. The bounded conditional physical action and read cost are charged to the same enclosing budgets. The original Task mention picker supplies the actual display ID and encoded task reference. The one Send now contains `TEST_RETAINED_V1_HISTORY #<actual displayId>`; this intentional change from the earlier marker-only message is checked against the saved message, its exact taskRefs, its native visible text and the actual UI. The final reply remains `REPLY_TEST_RETAINED_V1_HISTORY`. The created task identity is retained before Review; the full task snapshot and equality are taken after each actual Changes read because the product itself can attach changePresence then.
+
+Only this donor's separate finite model instance receives the new `donorReview` option. It requires the genuine advertised `read` and `edit` tools and their string/boolean JSON-schema fields, emits the exact Read call `TEST_DONOR_REVIEW_READ`, then the exact Edit call `TEST_DONOR_REVIEW_EDIT`, and finally the unchanged reply. Read must return the selected preexisting text before Edit is emitted. Each continuation must preserve the original user content and carry the exact preceding assistant tool call, tool-result ID and arguments. A repeated prompt/result, wrong call/result identity, extra tool result, incorrect schema or fourth donor turn refuses and seals the finite oracle. The HISTORY marker is counted once; the two tool continuations have no new business marker. Existing 32-request and 2000000-byte request-body caps remain unchanged. Ordinary preflight and source-selection modes retain their old behavior and tests.
+
+The native engine, rather than the oracle, performs the filesystem Read/Edit. The oracle's HTTP responses alone do not prove a native effect. The fixture later requires actual edited bytes, actual successful native tool evidence, original snapshot/blob contents and original visible Task Changes before/after. The e13 repository provides the selected runtime reconstruction owners but not a verified complete native `read.ts`/`edit.ts` owner body. Therefore this R1 claims actual-advertised-schema admission and future actual tool/effect proof, not uninspected native-engine source equivalence with the V2 reference. The existing V2 review model was used only as a protocol-shape reference; its `path` argument was not transferred to this V1 `filePath` route.
+
+### Genuine owner and persistence chain
+
+The source chain is pinned in the retained donor packets and source-reference index. The old Send dialog extracts the real taskRef, the Team handler persists the actual `user_sent` message ID, and the original OpenCode relay/delivery owner stores the same task, team, member, run, lane and native session. `OpenCodeRuntimeMessagePayload` (`fb018b024ee7a0297904f06da1cf9c5476312076`) carries text and taskRefs separately; the first-attempt body helpers (`1dd4651dc47867707c0a912d1ad165651b567ecd`, `f4139022c7aeda192866e1362fcb1f322e1f4194`) preserve the original text unless actual existing notice/repair context is present. No test-authored task-context wrapper is injected. The runtime's original identity reminder is handled by the existing log projection/UI stripping.
+
+The actual native OpenCode task-ledger backfill joins its native session, native message/tool part and parent user-message ID to the persisted delivery's exact taskRefs. The required attribution is `delivery-ledger-taskrefs`, with a canonical taskRef/work phase, source `opencode_toolpart_edit`, runtime/provider `opencode`, exact selected file and tool ID, succeeded/modify/high-confidence evidence and the actual snapshot ID. Only the original `opencode-snapshot` or `inverse-edit-chain` evidence proofs qualify, with matching full before/after content-addressed blobs and selected bytes. This is Task Changes; it is not mislabeled Agent Review and no Claude transcript is synthesized.
+
+The donor opens original Task Changes before Stop/Quit so the old frontend itself requests and persists this evidence. The collector reads the existing private delivery and task-ledger files, validates owner/regular-file/single-link/realpath/bounded-size and before/after stat identity, folds only actual superseded/suppressed event records, and requires one active event for the same native Edit. It preserves the exact stable binding/delivery/event/content projection across donor/current/cold. Each epoch retains its source-file hashes separately; a live whole-file hash is not falsely required to equal a later stopped-file hash when unrelated envelope metadata can change. The copied stopped raw delivery, journal and blobs are independently joined by the CI verifier to the same selected stable projection.
+
+The original durable allowlist in `OpenCodeRuntimeManifestEvidenceReader` (`7ed52f614a43d36757b5141b3e74952e0ac966b5`, lines 46–54/856) explicitly retains the prompt-delivery ledger and lock. `OpenCodeRuntimeLaneStorageClear` (`2a66bc31458f23ee6448066234eaadc08332102c`, lines 64–72) removes only entries outside that allowlist. This actual cleanup path governs; the older dispatch-preparation comment claiming ledger deletion on Stop does not override it. A UI Send may be delivered first by the original `ui-send` path or original inbox `watcher`; both qualify only with the identical saved inbox/task/run/lane/member/session join. Manual, watchdog or unrelated sender rows do not qualify.
+
+Native snapshots resolve through `OpenCodeSnapshotGitStoreReader` (`21a3001f976d683133af5bca8bc9c1a5475d6afd`, lines 670–685) to the selected profile's `data/opencode/snapshot/<projectId>/<sha1(worktree)>`. They remain in the existing stopped runtime-data corpus. The copier adds only the selected project text and that task's real attachment directory. It requires original native snapshot files and the old Task Changes journal in the corpus; it does not broadly admit project `.git`, hooks or other project content. Existing exclusions for the stock dependency symlink/profile temp directories, no-symlink/no-hardlink/same-owner checks, 4096-file, 64MiB-per-file and 256MiB-total limits remain unchanged. The CI verifier hashes all copied files under those original limits and retains only the six selected small provenance/attachment/content files for its extra joins.
+
+### Readiness, budgets, cleanup and limits
+
+The existing 900000ms test timeout and 30-minute retained job timeout are unchanged. All original 0.0.158, source-selection, ordinary Stop/Quit and final cleanup behavior remains. B2 adds actual fixture Git setup, one native Read and one native Edit, actual Task attachment/mention/Changes UI observations, bounded private-file reads/hashes and six new Task/Review PNGs inside those unchanged enclosing budgets. Those operations consume time; no runtime speedup, fixed total duration or extra budget is claimed.
+
+After each actual Changes view, one new read-only predicate requires the same exact delivery row to finish publishing `responded`. It accepts only pending/accepted/responded for that already joined row. Pending/accepted returns null after the same-row/team/run/member/lane/session/taskRefs/source checks; only responded must additionally carry its nonempty deliveredUserMessageId before the predicate returns the row. It performs no Send, product mutation, retry of inference or alternate owner lookup. Any invalid envelope, ambiguous/missing matched row, changed identity, wrong source or other state raises its assertion; it does not become a successful observation. The existing CDP `waitFor` (`1e2573088eabbca71aeb758d56a22836668f5bdc`, lines 6–13) is called with nominal 30000ms and serial reads separated by 100ms. It uses Date.now, propagates read failures and has no per-read cancellation. Each selected file read is bounded to 8MiB; the loop's elapsed limit is nominal, and an in-flight filesystem read can overrun it. There is no claimed hard total read-count bound under wall-clock adjustments or hard per-read deadline. Its cost and the additional assertions remain inside the original enclosing test/job controls; neither original timeout is increased.
+
+The initial Git commands and the two new read-only HEAD/tree checks use the same closed donor environment with system/global Git configuration disabled; ambient GIT_* variables cannot redirect these calls. They have explicit existing-style 5000ms subprocess bounds. Initial project preparation is CI-only, before native sessions. The profile's ordinary permission preference remains unchanged: the old fresh-profile preference/default and runtime launch approval policy are used, with no new skip-permissions toggle, seeded consent or widened product permission. The model only requests the selected in-project file tools; actual advertised schema/effect failures remain refusal.
+
+All three original app epochs must Quit normally and confirm original launcher/Electron/observed native identities absent; existing namespace and cleanup error aggregation remain required. Stop acknowledgement alone is not relabeled natural native process exit. The final runner status becomes PASS only after the full donor/current/cold path, model closure with no late extra inference/failure, actual file effect and complete original cleanup. Capture is a bounded observation with the stated before/after identity checks, not an atomic filesystem transaction or an unqualified OS custody/release guarantee. No P08/P09/full-native/release/vendor qualification is borrowed from this fixture; historical Darwin/source Stop-import rows and separate full Review decision journeys keep their existing requirements.
+
+### Exact validation and acceptance
+
+This is one separately reviewed five-file cut. No additional test-only RED cycle, absent-field cycle, new workflow job, manual dispatch, retry lane or mandatory standalone CI round is introduced. Independent static R2 and actual published documentary binding R2 must precede source application; all resulting-source original CI gates remain mandatory. Preserve every unrelated current source and plan, useful already-started jobs and the existing ref/PR/base/Draft guard at any later primary advancement.
+
+The existing retained job still runs `pnpm typecheck:legacy-host-scripts` after the Host build. Its current package script pin is `f80ec83172d0aec0dec8a8ab055426b4fca4a1f7` and strict project pin is `538fdfe23d7aa6bac6f18a483d5d364aef644a39`; no type config is changed. The existing `pnpm lint:fast:files --` invocation keeps its three operands in order (prepare, native runner, app helper) and appends exactly the changed model and existing model test, making five. No lint rule, deadline or top-level workflow run command is added; the new fixture Git commands and inline receipt assertions are the explicitly described B2 work. The original `node --test scripts/legacy-agent-host/desktop-retained-opencode-model.test.ts` command remains before the original full native coexistence command. Every old test byte is preserved as the complete 10565-byte/178-line prefix; one real-HTTP contract case checks the selected Read→Edit→reply protocol and prompt/result replay refusal through the actual server. It does not mirror a string extraction or substitute for real native effects. No test was executed in preparation and no predicted result is reported as an actual pass.
+
+The full original native command remains `node --test scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts` with the original environment/output tee. Both original source-selection invocations and their validators remain byte-preserved. The standard receipt verifier now requires the exact new task mention/message, three finite tool stages/IDs, same PNG bytes/metadata/visible dimensions, actual stable delivery→native Edit→task snapshot/blob provenance, all three original visible Changes views, raw stopped corpus joins, unchanged model count after donor Quit and complete ordinary cleanup before it accepts the existing PASS. Its artifact allowlist preserves every old entry and adds exactly the six selected Task/Review PNGs; the existing nonhidden raw corpus path already retains native snapshots, task journal/blobs and the chosen PNG/file.
+
+Actual acceptance must retain the complete resulting-source original commands, toolchain/source identities, raw output, full receipts/corpus/PNG artifacts and independent source/effect/cleanup review. A setup, type/lint, schema, native tool, task attribution, visible UI, corpus, timeout or cleanup failure is an actual incomplete result requiring its own bounded diagnosis; no oracle relaxation or budget extension is pre-approved. This candidate implements the selected B2 evidence path but does not claim that the end-to-end migration or any still-pending acceptance row has passed.
+
+## 36. Preserve original captured-HANDLE evidence after a pre-resume refusal
+
+This continuation selects the exact one-path cleanup-observation correction described in [the full R1](evidence/original-handle-cleanup-2026-11-16/prospective-r1.md), its [source review](evidence/original-handle-cleanup-2026-11-16/source-r2.json), and [the current-parent selection](evidence/original-handle-cleanup-2026-11-16/root-selection.json). The original evidence is the 3be1 Windows x64 Process job 133531812580; it remains an incomplete original readiness scenario.
+
+The only source path is `tools/owned-process-broker/nativeEmulatedSourceScenario.ts`: `9b3a19c372ab3c52e28848b19f67c99fe8bab1f5` becomes `b1f0e95ce23ac56ee4ce400157be3316afddbd29`, retaining exactly 800 physical lines. The [exact patch](evidence/original-handle-cleanup-2026-11-16/candidate.patch) changes only the existing four-line window. The original pre-wait custody conjunction is saved, the same memoized captured-HANDLE wait must return zero before its flag is set, and the saved conjunction is then asserted with the same message.
+
+A captured pre-resume failure can now reach that existing wait. This is real bounded failure-path work and may change the first secondary cleanup error. The unresumed conjunction still refuses, and the original readiness failure remains first in the outer aggregate. The historical slot2 HANDLE outcome is unobserved; neither outer cleanup nor controller drain supplies it. No historical receipt is upgraded.
+
+Preserve all existing deadlines, successful-path predicates, process/source authority, original Host-only Windows source A/B routes, separate Host/Electron Job-control routes, source caps and full CI/type/lint gates. No new test, workflow operand, helper, provider route, retry, local project execution, or mandatory extra RED/CI round is selected. Publish and independently verify this bound R1 before applying the exact source child; resulting-source original CI still determines the outcome.
+
+## 37. Original 3be1 outcomes and independent review of the published continuation
+
+The six original CI cohorts below belong to `3be1fb3ec43d5682aa2ca77a6af62e6fa27b597b`. All became terminal; cancelled, skipped and unreached work remains unqualified. No earlier result is transferred to a later continuation head. This section records source review and original evidence; it does not declare Stage1 or the migration complete.
+
+### Published repairs and their exact limits
+
+- Section36 was published before source commit `46569f056198eea85d850833039fea52337d91ba`. The [published R1 review](evidence/continuation-source-reviews-2026-11-16/cleanup-published-r1-r2.json), [preserved incoming parent review](evidence/continuation-source-reviews-2026-11-16/cleanup-source-parent-r2.json) and [actual source review](evidence/continuation-source-reviews-2026-11-16/cleanup-published-source-r2.json) confirm its sole four-line window, exact800-line file, original custody predicate and unchanged deadlines. The original unresumed slot's HANDLE outcome remains unobserved.
+- [Plan55](55-v2-native-review-draft-route-2026-11-16.md) source `209aab743e0da2a8bce68b708281ebcb826c2570` adds the original Darwin ARM warm/cold native Review route. Its [actual source review](evidence/plan55-v2-native-review-2026-11-16/source-r2.json) checks the original helpers, source roster, receipt fields, native effect and cleanup predicates. Actual resulting-source warm/cold receipts and two original screenshots remain required.
+- [Plan56](56-v1-readiness-adjacent-authority-checks-2026-11-16.md) source `1f174b343cc0c01465907d1b316982d006900a4b` removes only adjacent duplicate authority checks inside the existing private V1 bracket. The [independent actual-source review](evidence/plan56-readiness-2026-11-16/source-r2.json) preserves every closing/currentness check and all negative cases. It is neither a performance measurement nor a native PASS.
+- [Plan57](57-team-cancellation-liveness-fixture-2026-11-16.md) source `769078797e96df86ceadd0c3bdf563abc265932f` restores the omitted liveness selector in the existing mock with `undefined`, matching the fixture's real unknown state. Its [actual source review](evidence/plan57-team-cancellation-fixture-2026-11-16/incoming-source-r2.json) preserves all four original cases and every other byte.
+- [Plan58](58-original-test-fixture-types-2026-11-16.md) source `4900dcd71399b118b9dcc0a2e525280da9a06be0` addresses the nine original workspace compiler diagnostics in three existing test files; the [exact source review](evidence/plan58-fixture-types-2026-11-16/source-r2.json) preserves all original direct and parameterized test declarations. The current callable type, explicit V1 fixture precondition, unchanged environment map and existing partial-event seam remain the selected scope. The actual full workspace compiler and original suites must still pass on the resulting source.
+
+The alternative unpublished local three-test afterimages and inline old-archive staging proposal were not applied. Published Plans58 and59 govern those corrections. Incoming author commits, all existing production/source caps and the complete current P10 prefix remain preserved. External published source reviews above do not claim to have observed another writer's private prepublication review or lease chronology.
+
+### Original successes and failures remain separate
+
+The [Host cohort](https://github.com/777genius/agent-teams-ai/actions/runs/43933487563) completed frontend shards3/4 and Selection, Import, Codex, Processes and Collaboration successfully. Shard1 failed on the omitted cancellation-fixture selector. The Settings journey failed its original first30-second Models/default-inheritance wait while catalog was pending; its later shutdown-triggered rejection is not the cause of that preceding wait. The subsequent C8 portion was unreached. Plan60 addresses source-proven competing passive catalog readers without assigning recorded metadata PIDs to uncorrelated requests or predicting latency. Other cancelled Host rows remain open.
+
+The [General cohort](https://github.com/777genius/agent-teams-ai/actions/runs/43933487486) failed the exact workspace type chain and the old-release preparation prerequisite. The compiler's actual synthetic merge tree equals the complete3be1 tree; its Node26.12.1 workspace route must not be mislabeled the separate Node24.21 Host route. The retained job staged current0.0.160 and then refused it against original0.0.158/f5; old coexistence, donor4a B2 and subsequent source-selection business were not reached. Plan59 keeps those inputs separate using the immutable historical checkout and unchanged stager.
+
+The [Process cohort](https://github.com/777genius/agent-teams-ai/actions/runs/43933487270) passed Linux and Darwin x64. Windows x64 failed original OpenCode readiness and Windows ARM failed the original15-second Codex boundary even though its last observation became ready after that boundary. Their distinct original timing/cleanup evidence is retained; neither source review nor a later cleanup observation repairs an earlier failed deadline. Darwin ARM was cancelled before its steps.
+
+The [V2 cohort](https://github.com/777genius/agent-teams-ai/actions/runs/43933486802) passed the two static jobs, SPI, durable HTTP and Windows ARM. The Windows ARM original manual/automatic native journeys preserve their own120-second admission scope and do not qualify the separate15-second Process scenario. Windows x64 stopped at its original90-second first-input boundary. Linux's third credential/probe Host exited1 during ordinary close. Darwin x64/ARM native-image fixtures remained INCOMPLETE despite separate manual Host successes. Their causal and P09 qualification limits remain open; no timeout, oracle, cleanup or executable-path contract is weakened.
+
+The [creation cohort](https://github.com/777genius/agent-teams-ai/actions/runs/43933486866) completed all three platform jobs. In the [packaged cohort](https://github.com/777genius/agent-teams-ai/actions/runs/43933487470), Darwin ARM completed the packaged V2 and automatic relaunch scenarios; the other four platform jobs and aggregate were cancelled. The [original Darwin ARM audit](evidence/continuation-source-reviews-2026-11-16/packaged-darwin-arm64-3be1-audit.json) retains hashes for all9 artifact members and joins the actual native receipt,11 finite model requests, two zero-exit Hosts, cold no-replay, original Launch/Stop,1779 unchanged source observations and the original screenshots. It explicitly does not claim a full1779 source-body or packaged-binary rehash. The successor's one public Quit reply was unconfirmed; later listener/process/writer-lock absence does not qualify natural exit or successor native custody. Genuine Claude/Codex execution was zero.
+
+### Remaining delivery rule
+
+Deliver the coherent reviewed continuation only through the existing Draft PR1192 and original base, with the fresh ref/complete-cohort guard and useful already-started job preservation. Keep original workspace types, typed/scoped lint, all source tests and every applicable native/packaged/UI gate. No local project execution, manual dispatch/rerun/cancel, extra RED-only cycle, main merge, release/default activation or Stage2 is selected here. Same-head original CI and its retained source/effect/cleanup evidence determine the remaining result. P09's explicit executable-image contract decision and any still-missing historical or genuine-vendor evidence remain separate owner/acceptance boundaries.

@@ -1,5 +1,7 @@
 import { spawnCli } from '@main/utils/childProcess';
 
+import { withOriginalRuntimeLaunchAdmission } from '../runtime/OriginalRuntimeScope';
+
 import {
   applyLeadRuntimeSettingsToTeamMeta,
   assessLeadRuntimeRestart,
@@ -21,6 +23,7 @@ import { TeamMemberWorktreeManager } from './TeamMemberWorktreeManager';
 import { TeamMetaStore } from './TeamMetaStore';
 import { TeamSentMessagesStore } from './TeamSentMessagesStore';
 
+import type { CaptureLegacyNativeStopSourceFence } from './provisioning/LegacyNativeStopPublication';
 import type { ProvisioningGroupChatCallbacks } from './provisioning/TeamProvisioningGroupChatPorts';
 import type { MemberGatewayRuntimeSeams } from './provisioning/TeamProvisioningMemberGatewayRuntime';
 import type { ResolveOpenCodeInputDeclaration } from '@features/agent-attachments';
@@ -72,7 +75,8 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
     private readonly attachmentStore: TeamAttachmentStore = new TeamAttachmentStore(),
     groupChats?: ProvisioningGroupChatCallbacks,
     resolveOpenCodeInputDeclaration?: ResolveOpenCodeInputDeclaration,
-    memberGatewayRuntimeSeams: MemberGatewayRuntimeSeams | null = null
+    memberGatewayRuntimeSeams: MemberGatewayRuntimeSeams | null = null,
+    private readonly captureNativeStopSourceFence?: CaptureLegacyNativeStopSourceFence
   ) {
     super(resolveOpenCodeInputDeclaration, memberGatewayRuntimeSeams);
     this.initializeTeamProvisioningService(groupChats);
@@ -109,6 +113,10 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
 
   setTeamChangeEmitter(emitter: ((event: TeamChangeEvent) => void) | null): void {
     this.teamChangeEmitter = emitter;
+  }
+
+  override stopTeam(teamName: string): Promise<void> {
+    return super.stopTeam(teamName, this.captureNativeStopSourceFence);
   }
 
   /** Teams of other app profiles and native sessions are read-only for background passes. */
@@ -307,11 +315,16 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
     request: TeamLaunchRequest,
     onProgress: (progress: TeamProvisioningProgress) => void
   ): Promise<TeamLaunchResponse> {
-    return this.withLaunchAdmission(async () => {
-      await this.waitForOpenCodeAggregatePrimaryRestart(request.teamName);
-      await this.waitForMemberLifecycleOperations(request.teamName);
-      return this.requestAdmissionBoundary.launchTeam(request, onProgress);
-    });
+    return withOriginalRuntimeLaunchAdmission(request.teamName, (assertCurrent) =>
+      this.withLaunchAdmission(async () => {
+        assertCurrent();
+        await this.waitForOpenCodeAggregatePrimaryRestart(request.teamName);
+        assertCurrent();
+        await this.waitForMemberLifecycleOperations(request.teamName);
+        assertCurrent();
+        return this.requestAdmissionBoundary.launchTeam(request, onProgress);
+      })
+    );
   }
 }
 
@@ -319,7 +332,8 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
 export function createDefaultTeamProvisioningService(
   getGroupChats: () => ProvisioningGroupChatCallbacks,
   resolveOpenCodeInputDeclaration?: ResolveOpenCodeInputDeclaration,
-  memberGatewayRuntimeSeams: MemberGatewayRuntimeSeams | null = null
+  memberGatewayRuntimeSeams: MemberGatewayRuntimeSeams | null = null,
+  captureNativeStopSourceFence?: CaptureLegacyNativeStopSourceFence
 ) {
   return new TeamProvisioningService(
     undefined,
@@ -338,6 +352,7 @@ export function createDefaultTeamProvisioningService(
         getGroupChats().hasAcknowledgedInbound?.(input) ?? Promise.resolve(false),
     },
     resolveOpenCodeInputDeclaration,
-    memberGatewayRuntimeSeams
+    memberGatewayRuntimeSeams,
+    captureNativeStopSourceFence
   );
 }

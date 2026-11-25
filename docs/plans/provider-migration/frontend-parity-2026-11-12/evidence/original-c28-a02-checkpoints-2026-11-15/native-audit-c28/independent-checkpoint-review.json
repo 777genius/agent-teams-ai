@@ -1,0 +1,413 @@
+{
+  "checkpoint": {
+    "path": "windows-process-checkpoint-20261115-2106.json",
+    "bytes": 4029,
+    "gitBlob": "e0fdbf54040fb28b5d93e468486bd5eb60921552",
+    "sha256": "c4273c41ce7f7fb2c0f129cb04ef1deb4d614bde131acbe5db0ed451332c3063"
+  },
+  "payloads": [
+    {
+      "path": "native-audit-c28/c28-process-win32-x64.zip",
+      "bytes": 70615,
+      "gitBlob": "a9db0217554ac27d569086047693d05039f5a90e",
+      "sha256": "b948518d266e7639ffb4f7f9aed3c2574b9f58902b65f40eaf90df6a266dd736"
+    },
+    {
+      "path": "native-audit-c28/c28-process-win32-arm64.zip",
+      "bytes": 70776,
+      "gitBlob": "c5477fbd51bdb6d45257c0d6144f439f9eb01f78",
+      "sha256": "cc403b00257f38946f0888905bfcf46842fe892685fede6f8e0433bbedf4767e"
+    },
+    {
+      "path": "native-audit-c28/job-132949618051.log",
+      "bytes": 392398,
+      "gitBlob": "8a0815102fb86e8bae68101426eef0e610fb8619",
+      "sha256": "c24268c1881ddf5f2b394f28d12654eeac6ddee5ddbc44262c3d04739e8384c4"
+    },
+    {
+      "path": "native-audit-c28/job-132949618151.log",
+      "bytes": 422323,
+      "gitBlob": "ef79e459d5bec09e1f15679d97f4a48c6dc83b97",
+      "sha256": "d5cd48859cd830d62786967560c50892cba1542a66de78b87075f0fea8245356"
+    },
+    {
+      "path": "native-audit-c28/archive-audit-process-x64.json",
+      "bytes": 7505,
+      "gitBlob": "4b559ac051487acc762dadde4296a36a7473bb01",
+      "sha256": "e2398468a07c70a25fed5559ace82955ffed92717fbea25962ffb7048db40c43"
+    },
+    {
+      "path": "native-audit-c28/archive-audit-process-arm.json",
+      "bytes": 7509,
+      "gitBlob": "c38b0e78a03805805e73d903ef443c7802dcd5a6",
+      "sha256": "f53aab363b430a054b498423fd4bf6b25b8f2ce3c3b3b567a665832a659c780d"
+    },
+    {
+      "path": "native-audit-c28/source-pins-process-x64.json",
+      "bytes": 37007,
+      "gitBlob": "7eedb0cfd4bc1889d26b312ecda5e3b261a49165",
+      "sha256": "53dcf02be9f7913322179665b7993287d34e6bd7db9e66fdcff4342dc995efce"
+    },
+    {
+      "path": "native-audit-c28/source-pins-process-arm.json",
+      "bytes": 35432,
+      "gitBlob": "248c78bdbe83f1ea7197787c4bc00dda888d6074",
+      "sha256": "6c6fda443f6de27f1dba2ac8baea8316ecedc2f2b3e9852bf858efd3434ae9c2"
+    },
+    {
+      "path": "native-audit-c28/receipt-audit-process-windows-compact.json",
+      "bytes": 144148,
+      "gitBlob": "622c35f2c32743cb2d53bf2e49b9e75eb0f36642",
+      "sha256": "f85d80b22935ed52f83dbdc07723cadb8b1d8f2c82c95ba85aece007916f8815"
+    },
+    {
+      "path": "native-audit-c28/source-c28-four-path-delta.json",
+      "bytes": 1101,
+      "gitBlob": "61b17e60a4a9ce3b31bf2af675673769f223eede",
+      "sha256": "1be745baf6bb4b696b378f00252a8359154e9082b9bdf400afcc217e199aa214"
+    },
+    {
+      "path": "native-audit-c28/process-jobs-snapshot-20261115-2102.json",
+      "bytes": 30243,
+      "gitBlob": "3fe942074d8193263502badb4e61e099ac1cb9a0",
+      "sha256": "6347ef5887913fd1a304bf1bca6b3ac27a46e16886e3ca7405237b71a912619d"
+    },
+    {
+      "path": "native-audit-c28/plan29-c28-windows-process-appendix.md",
+      "bytes": 8348,
+      "gitBlob": "fca3d08d92b6a1e7ea9fd6f0e3fd3146281086e3",
+      "sha256": "1b6753cde76dfbbd7c6fac7fe19535b5d94c0d0d57e691f33610a801b935acad"
+    },
+    {
+      "path": "native-audit-c28/../native-audit-2cb/source-2cb-seven-path-delta.json",
+      "bytes": 1726,
+      "gitBlob": "72a2f7ca850def9ba5e2b5fb77d92d4f570e235c",
+      "sha256": "46e1691a10fd57cb8eedf0b4336738fd7c5fe7379372f84af752b6dccf4367eb"
+    }
+  ],
+  "payloadCount": 13,
+  "payloadBytes": 1229131,
+  "archives": [
+    {
+      "name": "c28-process-win32-arm64.zip",
+      "bytes": 70776,
+      "gitBlob": "c5477fbd51bdb6d45257c0d6144f439f9eb01f78",
+      "sha256": "cc403b00257f38946f0888905bfcf46842fe892685fede6f8e0433bbedf4767e",
+      "artifactId": 14179294406,
+      "runId": 43759098052,
+      "members": 19,
+      "allCrcValid": true,
+      "allPathsSafeUniqueRegular": true,
+      "allExtractedBytesEqual": true
+    },
+    {
+      "name": "c28-process-win32-x64.zip",
+      "bytes": 70615,
+      "gitBlob": "a9db0217554ac27d569086047693d05039f5a90e",
+      "sha256": "b948518d266e7639ffb4f7f9aed3c2574b9f58902b65f40eaf90df6a266dd736",
+      "artifactId": 14179847488,
+      "runId": 43759098052,
+      "members": 19,
+      "allCrcValid": true,
+      "allPathsSafeUniqueRegular": true,
+      "allExtractedBytesEqual": true
+    }
+  ],
+  "sourcePinVerification": {
+    "sourceHead": "c28f1aa890c909c7b981254c5e30b874cbc84287",
+    "uniqueGitSourcePaths": 14,
+    "sourceCountsPerArchitecture": {
+      "codex": 13,
+      "claude": 12,
+      "opencode": 13
+    },
+    "allExactGitLfAndReceiptWindowsCrlf": true,
+    "generatedPinsAreDigestOnly": true
+  },
+  "originalReceiptVerification": {
+    "x64": {
+      "sourceHead": "c28f1aa890c909c7b981254c5e30b874cbc84287",
+      "nodeVersion": "v24.21.0",
+      "originalCommandSummaries": {
+        "host-contracts.log": {
+          "pass": 160,
+          "skip": 3,
+          "identity": {
+            "bytes": 20045,
+            "gitBlob": "8c9775dfbb82e50aace5f1b2796dce5a516a4ae4",
+            "sha256": "dc59d245b7911304ceb6d2b47d23d062c45a53dfd97b7834d75544ee38ff4721"
+          }
+        },
+        "protocol.log": {
+          "pass": 53,
+          "skip": 0,
+          "identity": {
+            "bytes": 757,
+            "gitBlob": "46085e00ee2a0c349b522f78ed258f9d2ef1a980",
+            "sha256": "0fe7ee739efc828efe27f0d76fcf21e35776489e766cf3cd59697df52c421664"
+          }
+        },
+        "retained-main.log": {
+          "pass": 81,
+          "skip": 0,
+          "identity": {
+            "bytes": 9371,
+            "gitBlob": "71751174a42a30a6e0e5dca6b8caba1dac88fc32",
+            "sha256": "63dac8379c541256e5fe02fa288f2b4359a77accc4bae68a557f56a2547d1cf6"
+          }
+        }
+      },
+      "containmentControllers": 6,
+      "nativeScenarioCounts": [
+        23,
+        23
+      ],
+      "wrapperForms": 5,
+      "providerAdapters": 2,
+      "providers": {
+        "codex": {
+          "readiness": [
+            {
+              "image": "A",
+              "readCount": 84,
+              "elapsedMs": 8389.218400000002
+            },
+            {
+              "image": "B",
+              "readCount": 81,
+              "elapsedMs": 8223.189599999998
+            }
+          ],
+          "standaloneCompletion": {
+            "source": {
+              "sourceId": "faeba59ef3db4b23834879d44881bceee283615d5b1d4a047d9f60c02a19dc0d",
+              "revision": "6fc55ef25cae263a24ca9ea6ccac586b29d5641155ee4b4b480a2a709df3ec97"
+            },
+            "runId": "TEST-source-standalone-B",
+            "scheduleId": "TEST-source-schedule-B",
+            "readCount": 100,
+            "elapsedMs": 8791.367700000003,
+            "lastRunRead": {
+              "phase": "completed",
+              "cleanup": "confirmed",
+              "exitCode": 0
+            }
+          },
+          "jobsPerEpoch": [
+            25,
+            0
+          ],
+          "allFinalJobCustodyFlags": true,
+          "failureOnlyDiagnosticsAbsent": true
+        },
+        "claude": {
+          "readiness": [
+            {
+              "image": "A",
+              "readCount": 19,
+              "elapsedMs": 2624.2237999999998
+            },
+            {
+              "image": "B",
+              "readCount": 22,
+              "elapsedMs": 2781.403199999999
+            }
+          ],
+          "standaloneCompletion": {
+            "source": {
+              "sourceId": "c0c968b5832c6289cc0b57d4df3adc73ea0c12172d879afd6a39c784c141ee97",
+              "revision": "04db4ce2cbf456b4c3e9e4d723611608581f6ba8b6830c258f27cb0c51c8972a"
+            },
+            "runId": "TEST-source-standalone-B",
+            "scheduleId": "TEST-source-schedule-B",
+            "readCount": 19,
+            "elapsedMs": 1541.2515000000003,
+            "lastRunRead": {
+              "phase": "completed",
+              "cleanup": "confirmed",
+              "exitCode": 0
+            }
+          },
+          "jobsPerEpoch": [
+            8,
+            1
+          ],
+          "allFinalJobCustodyFlags": true,
+          "failureOnlyDiagnosticsAbsent": true
+        },
+        "opencode": {
+          "readiness": [
+            {
+              "image": "A",
+              "readCount": 14,
+              "elapsedMs": 20899.2409
+            },
+            {
+              "image": "B",
+              "readCount": 14,
+              "elapsedMs": 20230.551100000004
+            }
+          ],
+          "standaloneCompletion": null,
+          "jobsPerEpoch": [
+            7,
+            0
+          ],
+          "allFinalJobCustodyFlags": true,
+          "failureOnlyDiagnosticsAbsent": true
+        }
+      },
+      "jobsWithAllFinalFlags": 41,
+      "qualifiedFlags": {
+        "nativeProviderRuntimeQualified": false,
+        "darwinNativeRegistrationQualified": false,
+        "posixExecutableAdmissionQualified": false,
+        "desktopQualified": false,
+        "releaseQualified": false
+      }
+    },
+    "arm": {
+      "sourceHead": "c28f1aa890c909c7b981254c5e30b874cbc84287",
+      "nodeVersion": "v24.21.0",
+      "originalCommandSummaries": {
+        "host-contracts.log": {
+          "pass": 160,
+          "skip": 3,
+          "identity": {
+            "bytes": 20050,
+            "gitBlob": "6bf6ecf0ab65a04b619cdb2d4c34949c032477b2",
+            "sha256": "0c05c638e58304ab3e7f05522095979200473648b11549b168084283ad5a9472"
+          }
+        },
+        "protocol.log": {
+          "pass": 53,
+          "skip": 0,
+          "identity": {
+            "bytes": 757,
+            "gitBlob": "f11b25dcf0944f09467f08023e2e5f1c8f23fc9f",
+            "sha256": "10df8df00532f32acfefe450d458156bb2981d3a6d51910b084a42fe6d094488"
+          }
+        },
+        "retained-main.log": {
+          "pass": 81,
+          "skip": 0,
+          "identity": {
+            "bytes": 9713,
+            "gitBlob": "6bffe372b1c0f35f09ee42ff5cc49216e427f970",
+            "sha256": "d076df616263259e797469f1763393483665504d73cf4138e224131e02152591"
+          }
+        }
+      },
+      "containmentControllers": 6,
+      "nativeScenarioCounts": [
+        23,
+        23
+      ],
+      "wrapperForms": 5,
+      "providerAdapters": 2,
+      "providers": {
+        "codex": {
+          "readiness": [
+            {
+              "image": "A",
+              "readCount": 115,
+              "elapsedMs": 15947.801200000002
+            },
+            {
+              "image": "B",
+              "readCount": 116,
+              "elapsedMs": 16054.177499999998
+            }
+          ],
+          "standaloneCompletion": {
+            "source": {
+              "sourceId": "d3a995bef9f266e12d956f8f97ba16cd4242deaad8ce8275e92ee907107dfd18",
+              "revision": "1aa0f79a7ce6514aa276e19d04b0e786e41e75243c472748cc1b5443f7104cb5"
+            },
+            "runId": "TEST-source-standalone-B",
+            "scheduleId": "TEST-source-schedule-B",
+            "readCount": 151,
+            "elapsedMs": 18056.598100000003,
+            "lastRunRead": {
+              "phase": "completed",
+              "cleanup": "confirmed",
+              "exitCode": 0
+            }
+          },
+          "jobsPerEpoch": [
+            25,
+            0
+          ],
+          "allFinalJobCustodyFlags": true,
+          "failureOnlyDiagnosticsAbsent": true
+        },
+        "claude": {
+          "readiness": [
+            {
+              "image": "A",
+              "readCount": 18,
+              "elapsedMs": 3475.367
+            },
+            {
+              "image": "B",
+              "readCount": 17,
+              "elapsedMs": 3664.0754000000015
+            }
+          ],
+          "standaloneCompletion": {
+            "source": {
+              "sourceId": "c1f50b9d7176d15dbc260d87dec6076c2a50ec9c8e7510f47b3b0b4f9e7e1a50",
+              "revision": "9c8d7efbeab3675ce066876aa8977749a84436ab0aae4e8724292a15d48bcfee"
+            },
+            "runId": "TEST-source-standalone-B",
+            "scheduleId": "TEST-source-schedule-B",
+            "readCount": 21,
+            "elapsedMs": 1759.938399999999,
+            "lastRunRead": {
+              "phase": "completed",
+              "cleanup": "confirmed",
+              "exitCode": 0
+            }
+          },
+          "jobsPerEpoch": [
+            8,
+            1
+          ],
+          "allFinalJobCustodyFlags": true,
+          "failureOnlyDiagnosticsAbsent": true
+        },
+        "opencode": {
+          "readiness": [
+            {
+              "image": "A",
+              "readCount": 14,
+              "elapsedMs": 33421.275200000004
+            },
+            {
+              "image": "B",
+              "readCount": 14,
+              "elapsedMs": 33504.7456
+            }
+          ],
+          "standaloneCompletion": null,
+          "jobsPerEpoch": [
+            7,
+            0
+          ],
+          "allFinalJobCustodyFlags": true,
+          "failureOnlyDiagnosticsAbsent": true
+        }
+      },
+      "jobsWithAllFinalFlags": 41,
+      "qualifiedFlags": {
+        "nativeProviderRuntimeQualified": false,
+        "darwinNativeRegistrationQualified": false,
+        "posixExecutableAdmissionQualified": false,
+        "desktopQualified": false,
+        "releaseQualified": false
+      }
+    }
+  },
+  "reviewScope": "Read-only exact retained bytes, CRC/path safety, immutable Git source joins and original receipt/log limits; no project execution, source/ref or CI action.",
+  "verdict": "APPROVE"
+}

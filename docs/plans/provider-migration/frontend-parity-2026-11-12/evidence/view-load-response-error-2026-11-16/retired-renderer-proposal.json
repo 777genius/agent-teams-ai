@@ -1,0 +1,46 @@
+{
+  "kind": "RETIRED_UNAPPLIED_RENDERER_RESPONSE_ERROR_DIAGNOSTIC",
+  "decision": "Retire the four-file renderer response-error category proposal and its prospective P10 section35 before canonical publication. Continue the selected original Main await-stage observation in Plan50, then original resulting-source CI.",
+  "observedAt": "2026-11-16T17:48:05Z",
+  "sourceContext": "aa01c426d0abe52504ba8ca21f929e4072024315",
+  "incomingDelivery": "24df232166b6ac51817deaccc4a37008ebd971d3",
+  "reason": "The original Models wait had already failed before recorded shutdown; the renderer error arrived during cleanup. Late error categories cannot locate the earlier pending Main await and may describe cleanup fallout. No exact abort/cause is inferred.",
+  "timing": {
+    "start": "2026-11-16T17:09:35.9413995Z",
+    "firstFailure": "2026-11-16T17:10:06.5189937Z",
+    "firstShutdownWait": "2026-11-16T17:10:06.785Z",
+    "backendCleanupWaitStarted": "2026-11-16T17:10:06.786Z",
+    "responseError": "2026-11-16T17:10:06.9239460Z",
+    "auditBlob": "225530d6d5e94a898ce947af6fe6cd1007755454"
+  },
+  "retired": {
+    "rootSelection": "2c852be1e341383f2ae522d147c05f4ded093601",
+    "appendix": "7d80806bfc2573ab511793f306efbe26f6f17c70",
+    "completeP10After": "9ad38366bfcdddc3f52783d2a33c16248253ac78",
+    "patch": "1ac231f50111e0e208843a635721be8823274840",
+    "sourceR2": "330c06980a8b67d9bf796bd776ed398339bfd8c3",
+    "sourceAfterBlobs": [
+      "5e212fddcc3cadec7ed2c3a192df967bcbcc054e",
+      "0999f43abd866074de416605546f975736af3491",
+      "3fd72bac03f558f797dd6d474111a5ae3df9d59f",
+      "c1d02400d4077aab5486ab3b2458238306443542"
+    ],
+    "sourceApplied": false,
+    "canonicalDocumentationCommitCreated": false,
+    "refUpdated": false,
+    "execution": false
+  },
+  "preservation": {
+    "currentP10": "509311af179416e647f8571126746ab09333f5c0",
+    "nextB2Section": 35,
+    "allFourOriginalSourceLeavesUnchangedAt24df": true,
+    "preparedUnreferencedDocumentaryBlobsAreNotPublication": true
+  },
+  "alternative": {
+    "planPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/50-v2-management-view-stages-2026-11-16.md",
+    "planBlob": "9de1e41f8d275c734cbd6ea99bfc233a590590a0",
+    "planCommit": "6b1d34a8219e7909d0ad834f72d6bfb8f08e8031",
+    "sourceImplementationStatus": "Prospective only at observed24df; actual implementation still requires full review/readback and original CI."
+  },
+  "noQualificationTransfer": true
+}

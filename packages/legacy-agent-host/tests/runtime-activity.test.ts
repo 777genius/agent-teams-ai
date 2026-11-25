@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import { syncBuiltinESMExports } from 'node:module';
 import {
   mkdtemp,
   readFile,
@@ -13,17 +15,341 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { RuntimeOwner } from '../dist/runtime/RuntimeOwner.js';
+import { projectRuntimeActivity } from '../dist/composition/runtimeActivityProjection.js';
 import { FileRuntimeStore } from '../dist/adapters/runtime/FileRuntimeStore.js';
 import { RuntimeOwnerError } from '../dist/runtime/contracts.js';
 import { runtimeDigest } from '../dist/runtime/identity.js';
+import { CONVERSATION_GAPS, CONVERSATION_LIMITS } from '../dist/runtime/activityContracts.js';
 import type { RuntimeBinding, RuntimeOwnerOptions } from '../dist/runtime/contracts.js';
 import type {
   RuntimeActivityRecord,
   RuntimeEventStorage,
+  RuntimeConversationRecord,
 } from '../dist/runtime/activityContracts.js';
 import type { Event, Input, Session } from '@agent-teams/provider-session-contracts';
 
 const tick = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
+test('conversation materialization keeps 150 distinct original replies across mixed-ring eviction without nontext or poll IO', async t => {
+  const f = await setup(t), owner = f.make();
+  const { session, attribution } = await f.open(owner);
+  assert.deepEqual(owner.readConversation(binding(), 'messages').gaps, []);
+  const path = join(f.root, 'runtime-events', runtimeDigest(binding()) + '.conversation.json');
+  await assert.rejects(stat(path), { code: 'ENOENT' }, 'fresh empty marker allocates no derived file');
+  session.emit({ ...attribution, kind: 'text', messageRef: 'message-0', block: 2, text: 'last', phase: 'snapshot' });
+  await tick();
+  const first = owner.readConversation(binding(), 'messages').messages![0]!;
+  session.emit({ ...attribution, kind: 'text', messageRef: 'message-0', block: 0, text: 'first', phase: 'complete' });
+  session.emit({ ...attribution, kind: 'text', messageRef: 'message-0', block: 2, text: 'last complete', phase: 'complete' });
+  session.emit({ ...attribution, kind: 'text', messageRef: 'message-0', block: 2, text: 'stale partial', phase: 'snapshot' });
+  for (let index = 1; index < 150; index++) session.emit({ ...attribution, kind: 'text',
+    messageRef: 'message-' + index, block: 0, text: 'TEST reply ' + index, phase: 'complete' });
+  await tick();
+  const kept = owner.readConversation(binding(), 'messages');
+  assert.equal(kept.messages!.length, 150);
+  assert.equal(kept.messages![0]!.messageId, first.messageId);
+  assert.equal(kept.messages![0]!.observedAt, first.observedAt);
+  assert.deepEqual(kept.messages![0]!.blocks.map(row => [row.block, row.text]), [[0, 'first'], [2, 'last complete']]);
+  const before = await readFile(path, 'utf8');
+  for (let index = 0; index < 150; index++) session.emit({ ...attribution, kind: 'text',
+    messageRef: 'empty-' + index, block: 0, text: index % 2 ? '' : ' \n\t', phase: 'complete' });
+  await tick();
+  assert.deepEqual(owner.readConversation(binding(), 'messages'), kept,
+    'brand-new blank messages cannot evict visible replies');
+  assert.equal(await readFile(path, 'utf8'), before);
+  let reads = 0, writes = 0;
+  const read = f.store.readConversation.bind(f.store), write = f.store.writeConversation.bind(f.store);
+  t.mock.method(f.store, 'readConversation', (target: RuntimeBinding) => { reads++; return read(target); });
+  t.mock.method(f.store, 'writeConversation', (value: RuntimeConversationRecord) => { writes++; write(value); });
+  for (let index = 0; index < 270; index++) session.emit({ ...attribution, kind: 'tool',
+    messageRef: 'message-149', toolRef: 'tool-' + index, name: 'TEST-read', input: { index } });
+  session.emit({ ...attribution, kind: 'usage', inputTokens: 4 });
+  session.emit({ ...attribution, kind: 'result', outcome: 'succeeded' });
+  await tick();
+  assert.equal(owner.readActivitySnapshot(binding()).latest.text.length, 0, 'the original mixed ring really evicted the text');
+  for (let index = 0; index < 3; index++) assert.equal(owner.readConversation(binding(), 'metadata').revision, kept.revision);
+  assert.equal(reads, 0); assert.equal(writes, 0, 'tool/state/usage and marker polls do not open the large file');
+  assert.equal(await readFile(path, 'utf8'), before);
+  assert.deepEqual(owner.readConversation(binding(), 'messages'), kept);
+  assert.ok((await stat(f.path())).size <= f.store.activityLimits.maxBytes);
+  const cold = f.make('cold-host');
+  assert.deepEqual(cold.readConversation(binding(), 'messages'), kept);
+  assert.equal(await readFile(path, 'utf8'), before, 'cold read cannot migrate or rewrite derived history');
+  assert.equal(session.submits.length, 1);
+});
+
+test('conversation failure never rewrites terminal facts or accepts an older publication as current', async t => {
+  const f = await setup(t), owner = f.make();
+  const { session, attribution } = await f.open(owner);
+  session.emit({ ...attribution, kind: 'text', messageRef: 'retained', block: 0, text: 'before', phase: 'snapshot' });
+  await tick();
+  const path = join(f.root, 'runtime-events', runtimeDigest(binding()) + '.conversation.json');
+  const original = await readFile(path, 'utf8');
+  t.mock.method(f.store, 'writeConversation', () => { throw new Error('TEST interrupted derived publication'); });
+  session.emit({ ...attribution, kind: 'text', messageRef: 'retained', block: 0, text: 'after', phase: 'complete' });
+  session.emit({ ...attribution, kind: 'result', outcome: 'succeeded' });
+  await tick();
+  assert.equal(owner.readSession(binding()).record!.inputs[0]!.terminal, 'succeeded');
+  assert.equal(await readFile(path, 'utf8'), original);
+  assert.ok(owner.readConversation(binding(), 'metadata').gaps.includes('storage'));
+  assert.throws(() => owner.readConversation(binding(), 'messages'), { code: 'hold' });
+  assert.throws(() => f.make('cold').readConversation(binding(), 'messages'), { code: 'hold' });
+  assert.equal((await owner.stopCapturedSession(binding())).custody, 'released');
+  assert.equal(session.submits.length, 1);
+});
+
+test('legacy conversation reads use only dated original input events and never migrate or invent timestamps', async t => {
+  const f = await setup(t), owner = f.make();
+  const { session, attribution } = await f.open(owner);
+  session.emit({ ...attribution, kind: 'text', messageRef: 'dated', block: 0, text: 'original dated reply', phase: 'complete' });
+  session.emit({ ...attribution, kind: 'text', messageRef: 'undated', block: 0, text: 'unknown time', phase: 'complete' });
+  await tick();
+  const activity = JSON.parse(await readFile(f.path(), 'utf8')) as RuntimeActivityRecord;
+  delete activity.events.find(row => row.data.messageRef === 'undated')!.observedAt;
+  const { digest, ...body } = activity; void digest;
+  activity.digest = runtimeDigest(body);
+  await writeFile(f.path(), JSON.stringify(activity));
+  f.store.fenced(binding(), tx => { const record = tx.get()!; delete record.conversation; tx.put(record); });
+  await rm(join(f.root, 'runtime-events', runtimeDigest(binding()) + '.conversation.json'));
+  const before = await readFile(f.path(), 'utf8');
+  const view = f.make('cold').readConversation(binding(), 'messages');
+  assert.deepEqual(view.gaps, ['legacy-history', 'undated']);
+  assert.equal(view.messages!.length, 1);
+  assert.equal(view.messages![0]!.observedAt, activity.events.find(row => row.data.messageRef === 'dated')!.observedAt);
+  assert.equal(await readFile(f.path(), 'utf8'), before);
+  assert.equal(f.store.fenced(binding(), tx => tx.get()!.conversation), undefined);
+  assert.equal(session.submits.length, 1);
+});
+
+test('conversation corrupt, missing, oversized and foreign derived records hold under the original member read grant', async t => {
+  const f = await setup(t), owner = f.make();
+  const { session, attribution } = await f.open(owner);
+  session.emit({ ...attribution, kind: 'text', messageRef: 'exact', block: 0, text: 'original', phase: 'complete' });
+  await tick();
+  const path = join(f.root, 'runtime-events', runtimeDigest(binding()) + '.conversation.json');
+  const original = await readFile(path, 'utf8');
+  for (const bytes of ['{', ' '.repeat(8 * 1024 * 1024 + 1), original.replace('TEST-team', 'TEST-foreign-team')]) {
+    await writeFile(path, bytes);
+    assert.throws(() => owner.readConversation(binding(), 'messages'), { code: 'hold' });
+  }
+  await rm(path);
+  assert.throws(() => owner.readConversation(binding(), 'messages'), { code: 'hold' });
+  await writeFile(path, original);
+  let allowed = true;
+  const reader = f.make('reader', { authorize: () => allowed });
+  assert.equal(reader.readConversation(binding(), 'messages').messages!.length, 1);
+  allowed = false;
+  for (const mode of ['metadata', 'messages'] as const)
+    assert.throws(() => reader.readConversation(binding(), mode), { code: 'forbidden' });
+  assert.equal(await readFile(path, 'utf8'), original);
+});
+
+test('conversation missing original state refuses retained observations without decoding large files or resetting authority', async t => {
+  const f = await setup(t), owner = f.make();
+  assert.deepEqual(owner.readConversation(binding(), 'messages').messages, [], 'never-created original binding is empty');
+  const { session, attribution } = await f.open(owner);
+  session.emit({ ...attribution, kind: 'text', messageRef: 'original', block: 0, text: 'retained reply', phase: 'complete' });
+  await tick();
+  const target = binding(), member = { backendId: target.backendId, teamId: target.teamId, memberId: target.memberId };
+  const statePath = join(f.root, 'runtime-sessions', runtimeDigest(member), runtimeDigest(target) + '.json');
+  const derivedPath = join(f.root, 'runtime-events', runtimeDigest(target) + '.conversation.json');
+  const state = await readFile(statePath), ring = await readFile(f.path()), derived = await readFile(derivedPath);
+  const cold = f.make('cold');
+  let reads = 0;
+  t.mock.method(f.store, 'readConversation', () => { reads++; throw new Error('unexpected large read'); });
+  try {
+    await rm(statePath);
+    for (const only of ['both', 'derived', 'ring'] as const) {
+      if (only === 'derived') await rm(f.path());
+      if (only === 'ring') { await writeFile(f.path(), ring); await rm(derivedPath); }
+      for (const mode of ['metadata', 'messages'] as const)
+        assert.throws(() => cold.readConversation(target, mode), { code: 'hold' });
+      await assert.rejects(stat(statePath), { code: 'ENOENT' }, 'read cannot recreate lost original authority');
+    }
+    assert.equal(reads, 0, 'absence check uses only the two exact observation paths');
+  } finally {
+    await writeFile(statePath, state); await writeFile(f.path(), ring); await writeFile(derivedPath, derived);
+  }
+  assert.equal(session.submits.length, 1);
+});
+
+test('conversation rows require the original input, operation and delivery fingerprint after cold read', async t => {
+  const f = await setup(t), owner = f.make();
+  const { session, attribution } = await f.open(owner);
+  session.emit({ ...attribution, kind: 'text', messageRef: 'original', block: 0, text: 'original reply', phase: 'complete' });
+  await tick();
+  const target = binding(), member = { backendId: target.backendId, teamId: target.teamId, memberId: target.memberId };
+  const path = join(f.root, 'runtime-sessions', runtimeDigest(member), runtimeDigest(target) + '.json');
+  const original = await readFile(path, 'utf8'), cold = f.make('cold');
+  try {
+    for (const mutation of ['missing-input', 'operation', 'fingerprint'] as const) {
+      const record = JSON.parse(original);
+      if (mutation === 'missing-input') record.inputs = [];
+      else if (mutation === 'operation') record.inputs[0].operationRef = 'TEST-foreign-operation';
+      else record.inputs[0].intent.content = 'changed without original fingerprint';
+      await writeFile(path, JSON.stringify(record));
+      assert.throws(() => cold.readConversation(target, 'messages'), { code: 'hold' });
+    }
+  } finally { await writeFile(path, original); }
+  assert.equal(cold.readConversation(target, 'messages').messages!.length, 1);
+  assert.equal(session.submits.length, 1);
+});
+
+for (const stage of ['symlink', 'before-open', 'after-open', 'symlink-before-open', 'disappeared-before-open'] as const) {
+  test('conversation finite FD read refuses ' + stage + ' without adopting replacement bytes', async t => {
+    const f = await setup(t), owner = f.make();
+    const { session, attribution } = await f.open(owner);
+    session.emit({ ...attribution, kind: 'text', messageRef: 'original', block: 0, text: 'original reply', phase: 'complete' });
+    await tick();
+    const path = join(f.root, 'runtime-events', runtimeDigest(binding()) + '.conversation.json');
+    const retained = join(f.root, 'TEST-retained-conversation.json'), bytes = await readFile(path);
+    const nativeOpen = fs.openSync;
+    let originalFd: number | undefined, armed = true;
+    const replace = () => {
+      fs.renameSync(path, retained);
+      if (stage === 'disappeared-before-open') return;
+      if (stage === 'symlink' || stage === 'symlink-before-open') fs.symlinkSync(retained, path, 'file');
+      else fs.writeFileSync(path, bytes, { flag: 'wx' });
+    };
+    try {
+      if (stage === 'symlink') replace();
+      t.mock.method(fs, 'openSync', (...args: Parameters<typeof nativeOpen>) => {
+        if (args[0] !== path || !armed) return nativeOpen(...args);
+        armed = false;
+        if (typeof args[1] === 'number') args[1] &= ~(fs.constants.O_NOFOLLOW ?? 0);
+        if (stage !== 'after-open') replace();
+        const fd = nativeOpen(...args); originalFd = fd;
+        if (stage === 'after-open') replace();
+        return fd;
+      });
+      syncBuiltinESMExports();
+      assert.throws(() => owner.readConversation(binding(), 'messages'), { code: 'hold' });
+      assert.equal(armed, stage === 'symlink', 'initial aliases refuse before open; races use original open boundary');
+      const closedFd = originalFd;
+      if (closedFd !== undefined) assert.throws(() => fs.fstatSync(closedFd), { code: 'EBADF' });
+      assert.deepEqual(await readFile(retained), bytes, 'original bytes were not overwritten or repaired');
+    } finally {
+      t.mock.restoreAll(); syncBuiltinESMExports();
+      await rm(path, { force: true }); await writeFile(path, bytes);
+    }
+    assert.equal(session.submits.length, 1);
+  });
+}
+
+test('conversation fresh empty marker refuses a nonempty retained file instead of adopting it', async t => {
+  const f = await setup(t), owner = f.make();
+  const { session, attribution } = await f.open(owner);
+  const target = binding(), member = { backendId: target.backendId, teamId: target.teamId, memberId: target.memberId };
+  const path = join(f.root, 'runtime-sessions', runtimeDigest(member), runtimeDigest(target) + '.json');
+  const emptyState = await readFile(path);
+  session.emit({ ...attribution, kind: 'text', messageRef: 'original', block: 0, text: 'original reply', phase: 'complete' });
+  await tick();
+  const original = await readFile(path);
+  try {
+    await writeFile(path, emptyState);
+    assert.throws(() => f.make('cold').readConversation(target, 'messages'), { code: 'hold' });
+  } finally { await writeFile(path, original); }
+});
+
+test('conversation equal text remains input-distinct, existing blocks may clear, and 65 blocks survive count retention', async t => {
+  const f = await setup(t), owner = f.make();
+  const { session, attribution } = await f.open(owner);
+  session.emit({ ...attribution, kind: 'text', messageRef: 'same-native-ref', block: 0, text: 'same reply', phase: 'complete' });
+  await tick();
+  const first = owner.readConversation(binding(), 'messages').messages![0]!;
+  session.emit({ ...attribution, kind: 'text', messageRef: 'same-native-ref', block: 0, text: '', phase: 'complete' });
+  await tick();
+  const cleared = owner.readConversation(binding(), 'messages').messages![0]!;
+  assert.equal(cleared.messageId, first.messageId); assert.equal(cleared.observedAt, first.observedAt);
+  assert.equal(cleared.blocks[0]!.text, '', 'an existing visible block may still be cleared');
+  session.emit({ ...attribution, kind: 'text', messageRef: 'same-native-ref', block: 0, text: 'same reply', phase: 'complete' });
+  session.emit({ ...attribution, kind: 'result', outcome: 'succeeded' });
+  await tick();
+  await owner.admitDelivery({ binding: binding(), deliveryId: 'TEST-second-input', inputId: 'TEST-second-input',
+    messageId: 'TEST-second-message', content: 'TEST second work' });
+  await owner.dispatchNext(binding());
+  const secondInput = session.submits[1]!, second = { inputId: secondInput.inputId, operationRef: secondInput.operationRef };
+  session.emit({ ...second, kind: 'text', messageRef: 'same-native-ref', block: 0, text: 'same reply', phase: 'complete' });
+  await tick();
+  const distinct = owner.readConversation(binding(), 'messages');
+  assert.equal(distinct.messages!.length, 2);
+  assert.notEqual(distinct.messages![0]!.messageId, distinct.messages![1]!.messageId);
+  const path = join(f.root, 'runtime-events', runtimeDigest(binding()) + '.conversation.json');
+  const before = await readFile(path);
+  session.emit({ ...second, kind: 'text', messageRef: 'local-command:TEST-cost', block: 0,
+    text: 'published by the existing local-command owner', phase: 'complete' });
+  await tick();
+  assert.deepEqual(owner.readConversation(binding(), 'messages'), distinct);
+  assert.deepEqual(await readFile(path), before, 'existing local-command publisher is never duplicated');
+  for (let index = 0; index < 149; index++) session.emit({ ...second, kind: 'text', messageRef: 'next-' + index,
+    block: 0, text: 'visible reply ' + index, phase: 'complete' });
+  await tick();
+  const retained = owner.readConversation(binding(), 'messages');
+  assert.equal(retained.messages!.length, 150); assert.deepEqual(retained.gaps, ['retention']);
+  assert.equal(retained.messages!.some(row => row.messageId === first.messageId), false);
+  assert.deepEqual(retained.messages![0], distinct.messages![1], 'oldest distinct reply, not updated block, is evicted');
+  for (let block = 1; block <= 64; block++) session.emit({ ...second, kind: 'text', messageRef: 'next-148',
+    block, text: 'block ' + block, phase: 'complete' });
+  await tick();
+  const limited = owner.readConversation(binding(), 'messages');
+  assert.equal(limited.messages!.at(-1)!.blocks.length, 65);
+  assert.deepEqual(limited.gaps, ['retention']);
+  assert.ok((await stat(path)).size <= 8 * 1024 * 1024);
+  assert.equal(session.submits.length, 2);
+});
+
+test('conversation partial storage ports remain explicitly unsupported and cannot publish an unchecked marker', async t => {
+  const f = await setup(t);
+  let reads = 0, writes = 0;
+  const events: RuntimeEventStorage = { activityLimits: f.store.activityLimits,
+    readActivity: f.store.readActivity.bind(f.store), writeActivity: f.store.writeActivity.bind(f.store),
+    readConversation: () => { reads++; throw new Error('unsupported derived read'); },
+    writeConversation: () => { writes++; throw new Error('unsupported derived write'); } };
+  const owner = f.make('partial', { events });
+  const { session, attribution } = await f.open(owner);
+  session.emit({ ...attribution, kind: 'text', messageRef: 'original', block: 0, text: 'original reply', phase: 'complete' });
+  session.emit({ ...attribution, kind: 'result', outcome: 'succeeded' });
+  await tick();
+  const view = owner.readConversation(binding(), 'messages');
+  assert.deepEqual(view.gaps, ['unsupported']); assert.deepEqual(view.messages, []);
+  assert.equal(reads, 0); assert.equal(writes, 0);
+  assert.equal(f.store.fenced(binding(), tx => tx.get()!.conversation), undefined);
+  assert.equal(owner.readSession(binding()).record!.inputs[0]!.terminal, 'succeeded');
+});
+
+test('conversation exact reserved-envelope budget retains the reply and one extra byte reports loss without evicting it', async t => {
+  const f = await setup(t), owner = f.make();
+  const { session, attribution } = await f.open(owner);
+  for (let index = 0; index < 20; index++) session.emit({ ...attribution, kind: 'usage', inputTokens: index });
+  session.emit({ ...attribution, kind: 'text', messageRef: 'original-budget', block: 0, text: 'seed', phase: 'complete' });
+  await tick();
+  const path = join(f.root, 'runtime-events', runtimeDigest(binding()) + '.conversation.json');
+  const original = JSON.parse(await readFile(path, 'utf8')) as RuntimeConversationRecord;
+  const nextSequence = f.store.fenced(binding(), tx => tx.get()!.activitySequence!) + 1;
+  const envelope = structuredClone(original);
+  envelope.sequence = Number.MAX_SAFE_INTEGER; envelope.gaps = [...CONVERSATION_GAPS];
+  envelope.messages[0]!.blocks[0]!.sequence = nextSequence;
+  envelope.messages[0]!.blocks[0]!.text = '';
+  const text = 'x'.repeat(CONVERSATION_LIMITS.bytes - Buffer.byteLength(JSON.stringify(envelope, null, 2)));
+  envelope.messages[0]!.blocks[0]!.text = text;
+  assert.equal(Buffer.byteLength(JSON.stringify(envelope, null, 2)), CONVERSATION_LIMITS.bytes);
+  session.emit({ ...attribution, kind: 'text', messageRef: 'original-budget', block: 0, text, phase: 'complete' });
+  await tick();
+  const fitted = owner.readConversation(binding(), 'messages');
+  assert.equal(fitted.messages![0]!.blocks[0]!.text, text);
+  assert.deepEqual(fitted.gaps, []);
+  assert.equal(fitted.messages![0]!.observedAt, original.messages[0]!.observedAt);
+  assert.ok((await stat(path)).size <= CONVERSATION_LIMITS.bytes);
+  session.emit({ ...attribution, kind: 'text', messageRef: 'original-budget', block: 0, text: text + 'x', phase: 'complete' });
+  session.emit({ ...attribution, kind: 'result', outcome: 'succeeded' });
+  await tick();
+  const lost = owner.readConversation(binding(), 'messages');
+  assert.deepEqual(lost.gaps, ['oversized']);
+  assert.deepEqual(lost.messages, fitted.messages, 'one oversized replacement cannot discard the last valid reply');
+  assert.ok((await stat(path)).size <= CONVERSATION_LIMITS.bytes, 'the loss marker still fits the same file budget');
+  assert.equal(owner.readSession(binding()).record!.inputs[0]!.terminal, 'succeeded');
+  assert.deepEqual(f.make('cold').readConversation(binding(), 'messages'), lost);
+  assert.equal(session.submits.length, 1);
+});
 const binding = (memberId = 'TEST-A'): RuntimeBinding => ({
   backendId: 'TEST-backend',
   teamId: 'TEST-team',
@@ -675,4 +1001,234 @@ test('private child activity shares the original Runtime input/fence and snapsho
   const closed = owner.readActivitySnapshot(binding());
   owner.observeProviderActivity(binding(), session.sessionRef, { ...attribution, data });
   assert.equal(owner.readActivitySnapshot(binding()).cursor.sequence, closed.cursor.sequence, 'sealed parent cannot publish late child activity');
+});
+
+test('original process diagnostics keep config and incarnation fences and survive only unreleased closing', async t => {
+  const f = await setup(t), owner = f.make(), { session, attribution } = await f.open(owner);
+  const original = owner.readSession(binding()).record!, config = original.config!;
+  const before = owner.readActivitySnapshot(binding());
+  const conversation = owner.readConversation(binding(), 'messages');
+  const data = { kind: 'process-output' as const, stream: 'stderr' as const, text: 'TEST stderr' };
+  let grant = true, checks = 0;
+  const current = () => { checks++; if (!grant) throw new RuntimeOwnerError('forbidden'); };
+  owner.observeProcessOutput(binding(), config, { ...data, ...attribution }, current);
+  const retained = owner.readActivityFeed(binding(), before.cursor);
+  assert.deepEqual(retained.events.map(event => event.data), [data]);
+  assert.equal(retained.events[0]!.inputId, undefined);
+  assert.equal(retained.events[0]!.operationRef, undefined);
+  assert.deepEqual(owner.readConversation(binding(), 'messages'), conversation);
+  const { activitySequence: ignored, ...after } = owner.readSession(binding()).record!;
+  const { activitySequence: previous, ...prior } = original; void ignored; void previous;
+  assert.deepEqual(after, prior, 'diagnostics change only the existing journal high water');
+  owner.observeProcessOutput(binding(), { ...config, checkpointRef: 'TEST-other-checkpoint' }, data, current);
+  owner.observeProcessOutput(binding(), { ...config, configRevision: 'TEST-other-config' }, data, current);
+  owner.observeProcessOutput(binding('TEST-foreign'), config, data, current);
+  f.make('other-host').observeProcessOutput(binding(), config, data, current);
+  f.make('host-1', { profileId: 'other-profile' }).observeProcessOutput(binding(), config, data, current);
+  grant = false;
+  owner.observeProcessOutput(binding(), config, data, current);
+  assert.equal(owner.readActivitySnapshot(binding()).cursor.sequence, retained.cursor.sequence);
+  grant = true;
+  session.close = async () => {
+    const closing = owner.readSession(binding()).record!;
+    assert.equal(closing.phase, 'closing'); assert.equal(closing.sealed, true);
+    owner.observeProcessOutput(binding(), config, { ...data, text: 'TEST closing' }, current);
+    session.end();
+    return { logicallyClosed: true, cleanup: 'confirmed' };
+  };
+  assert.equal((await owner.stopCapturedSession(binding())).custody, 'released');
+  const closed = owner.readActivitySnapshot(binding());
+  assert.ok(owner.readActivityFeed(binding(), retained.cursor).events.some(event => event.data.text === 'TEST closing'));
+  owner.observeProcessOutput(binding(), config, data, current);
+  assert.equal(owner.readActivitySnapshot(binding()).cursor.sequence, closed.cursor.sequence);
+  assert.equal(checks, 9, 'every observation checks the captured source under the member fence');
+});
+
+test('process diagnostics use the existing serialized event budget and storage degradation without changing control', async t => {
+  const f = await setup(t), owner = f.make();
+  await f.open(owner);
+  const original = owner.readSession(binding()).record!, config = original.config!;
+  const before = owner.readActivitySnapshot(binding());
+  owner.observeProcessOutput(binding(), config, { kind: 'process-output', stream: 'stderr', text: '\\'.repeat(24 * 1024) }, () => {});
+  const oversized = owner.readActivityFeed(binding(), before.cursor);
+  assert.deepEqual(oversized.events.map(event => event.data), [{ kind: 'gap', reason: 'oversized' }]);
+  assert.equal(oversized.cursor.sequence, before.cursor.sequence + 1);
+  const failed = t.mock.method(f.store, 'writeActivity', () => { throw Error('TEST-storage-failure'); });
+  assert.doesNotThrow(() => owner.observeProcessOutput(binding(), config, { kind: 'process-output', stream: 'stderr', text: 'TEST lost' }, () => {}));
+  assert.equal(owner.readActivitySnapshot(binding()).gap?.reason, 'storage');
+  failed.mock.restore();
+  owner.observeProcessOutput(binding(), config, { kind: 'process-output', stream: 'stderr', text: 'TEST recovered' }, () => {});
+  const recovered = owner.readActivityFeed(binding(), oversized.cursor);
+  assert.deepEqual(recovered.events.map(event => event.data), [
+    { kind: 'gap', reason: 'storage' }, { kind: 'process-output', stream: 'stderr', text: 'TEST recovered' },
+  ]);
+  const { activitySequence: ignored, ...after } = owner.readSession(binding()).record!;
+  const { activitySequence: previous, ...prior } = original; void ignored; void previous;
+  assert.deepEqual(after, prior);
+  assert.ok((await stat(f.path())).size <= f.store.activityLimits.maxBytes);
+});
+
+
+test('typed thinking survives the original bounded journal cold read and projection without a provider', async (t) => {
+  const f = await setup(t), target = binding(), resource = runtimeDigest(target);
+  const thinking = {
+    kind: 'thinking', messageRef: 'TEST-message', block: 1, text: 'TEST retained thought', phase: 'complete',
+  };
+  const child = {
+    kind: 'subagent', childId: 'child-' + 'a'.repeat(64), parentToolRef: 'tool-' + 'b'.repeat(64),
+    phase: 'fact', fact: thinking,
+  };
+  const facts: RuntimeActivityRecord['events'][number]['data'][] = [
+    { ...thinking, privateNative: 'PRIVATE-source' }, child,
+  ];
+  const body = {
+    schemaVersion: 1 as const, binding: target, sequence: 2, writerIncarnation: 'host-1',
+    stateDigest: runtimeDigest({}),
+    events: facts.map((data, index) => ({
+      sequence: index + 1, eventId: resource + ':' + (index + 1),
+      inputId: 'TEST-input', operationRef: 'PRIVATE-operation', data,
+    })),
+  };
+  const retained: RuntimeActivityRecord = { ...body, digest: runtimeDigest(body) };
+  f.store.fenced(target, () => f.store.writeActivity(retained));
+  const originalBytes = await readFile(f.path(), 'utf8');
+  const cold = new FileRuntimeStore(f.root);
+  const read = cold.fenced(target, () => cold.readActivity(target));
+  assert.deepEqual(read, retained);
+  assert.ok(read);
+  const projected = projectRuntimeActivity({
+    memberId: target.memberId,
+    source: {
+      binding: target, cursor: { resource, hostIncarnation: 'cold-host', sequence: 2 },
+      retainedFrom: 1, events: read.events, hasMore: false,
+    },
+    nativeReady: false,
+  });
+  assert.ok(projected && typeof projected === 'object' && !Array.isArray(projected));
+  assert.deepEqual(projected.events, [
+    { sequence: 1, eventId: resource + ':1', inputId: 'TEST-input', data: thinking },
+    { sequence: 2, eventId: resource + ':2', inputId: 'TEST-input', data: child },
+  ]);
+  assert.ok(!JSON.stringify(projected).includes('PRIVATE-'));
+  assert.equal(await readFile(f.path(), 'utf8'), originalBytes);
+  assert.equal(cold.fenced(target, () => cold.readConversation(target)), undefined);
+  assert.equal(f.sessions.length, 0, 'read-side fixture does not create a provider or conversation cache');
+});
+
+test('distinct Thinking retains original attribution without becoming text, conversation or state', async t => {
+  const f = await setup(t), owner = f.make(), { session, attribution } = await f.open(owner);
+  const before = owner.readSession(binding()).record!;
+  const cursor = owner.readActivitySnapshot(binding()).cursor;
+  session.emit({ ...attribution, kind: 'text', messageRef: 'TEST-message', block: 0,
+    text: 'TEST visible answer', phase: 'complete' });
+  const thought: Extract<Event, { kind: 'thinking' }> = { ...attribution,
+    sessionRef: session.sessionRef, kind: 'thinking', messageRef: 'TEST-message', block: 0,
+    text: 'TEST distinct thought', phase: 'snapshot' };
+  session.raw(thought);
+  session.raw({ ...thought, text: 'TEST completed thought', phase: 'complete' });
+  await tick();
+  const feed = owner.readActivityFeed(binding(), cursor);
+  const thinking = feed.events.filter(event => event.data.kind === 'thinking');
+  assert.equal(thinking.length, 2);
+  assert.ok(thinking.every(event => event.inputId === attribution.inputId &&
+    event.operationRef === attribution.operationRef && event.data.block === 0 &&
+    event.data.messageRef === 'TEST-message'));
+  assert.deepEqual(thinking.map(event => event.data.phase), ['snapshot', 'complete']);
+  const latest = owner.readActivitySnapshot(binding()).latest.text;
+  assert.deepEqual(latest.map(event => event.data.text), ['TEST visible answer']);
+  const conversation = owner.readConversation(binding(), 'messages');
+  assert.ok(JSON.stringify(conversation).includes('TEST visible answer'));
+  assert.equal(JSON.stringify(conversation).includes('thought'), false);
+  const after = owner.readSession(binding()).record!;
+  assert.deepEqual(after.inputs, before.inputs);
+  assert.equal(after.phase, before.phase); assert.equal(after.nativeReady, before.nativeReady);
+  const cold = f.make('cold-host'), restored = cold.readActivitySnapshot(binding());
+  const retained = cold.readActivityFeed(binding(), { ...restored.cursor, sequence: cursor.sequence });
+  assert.deepEqual(retained.events.filter(event => event.data.kind === 'thinking'), thinking);
+});
+
+test('scheduled log projection is one read of original Thinking identities and unattributed stderr, including cold recovery', async t => {
+  const f = await setup(t), owner = f.make(), { session, attribution } = await f.open(owner);
+  const cursor = owner.readActivitySnapshot(binding()).cursor;
+  const thought: WithoutSession<Extract<Event, { kind: 'thinking' }>> = {
+    ...attribution, kind: 'thinking', messageRef: 'TEST-same-message', block: 0,
+    text: 'TEST partial', phase: 'snapshot',
+  };
+  session.emit(thought);
+  session.emit({ ...thought, text: 'TEST same thought', phase: 'complete' });
+  session.emit({ ...thought, text: 'TEST stale snapshot' });
+  session.emit({ ...thought, messageRef: 'TEST-other-message', text: 'TEST same thought', phase: 'complete' });
+  session.emit({ ...thought, block: 1, text: 'TEST same thought', phase: 'complete' });
+  session.emit({ ...attribution, kind: 'text', messageRef: 'TEST-same-message', block: 0,
+    text: 'TEST original answer', phase: 'complete' });
+  session.emit({ ...attribution, kind: 'result', outcome: 'succeeded' });
+  await tick();
+  await owner.admitDelivery({ binding: binding(), deliveryId: 'TEST-second', inputId: 'TEST-second',
+    messageId: 'TEST-second', content: 'TEST second input' });
+  await owner.dispatchNext(binding());
+  const second = session.submits[1]!;
+  session.emit({ ...thought, inputId: second.inputId, operationRef: second.operationRef,
+    text: 'TEST same thought', phase: 'complete' });
+  await tick();
+  const config = owner.readSession(binding()).record!.config!;
+  for (let index = 0; index < 2; index++) owner.observeProcessOutput(binding(), config,
+    { kind: 'process-output', stream: 'stderr', text: 'TEST same stderr' }, () => {});
+  owner.observeProviderActivity(binding(), session.sessionRef, { inputId: second.inputId,
+    operationRef: second.operationRef, data: { kind: 'subagent', childId: 'TEST-child',
+      parentToolRef: 'TEST-parent', phase: 'fact', fact: { kind: 'thinking',
+        messageRef: 'TEST-child-message', block: 0, text: 'TEST child thought', phase: 'complete' } } });
+  const retained = await readFile(f.path(), 'utf8');
+  let reads = 0;
+  const read = f.store.readActivity.bind(f.store);
+  const spy = t.mock.method(f.store, 'readActivity', (target: RuntimeBinding) => { reads++; return read(target); });
+  const snapshot = owner.readActivitySnapshot(binding());
+  assert.equal(reads, 1, 'the auxiliary groups reuse the original snapshot journal read');
+  spy.mock.restore();
+  const projected = snapshot.logProjection!;
+  assert.equal(projected.truncated, false);
+  assert.equal(projected.thinking.length, 4, 'equal bodies from distinct messages, blocks and inputs stay distinct');
+  assert.ok(projected.thinking.every(event => event.data.phase === 'complete' && event.data.text === 'TEST same thought'));
+  assert.equal(new Set(projected.thinking.map(event => event.inputId)).size, 2);
+  assert.equal(projected.stderr.length, 2, 'separate original stderr facts are not deduplicated by body');
+  assert.ok(projected.stderr.every(event => event.inputId === undefined && event.operationRef === undefined));
+  const feed = owner.readActivityFeed(binding(), cursor);
+  assert.deepEqual(projected.thinking, feed.events.filter(event =>
+    event.data.kind === 'thinking' && event.data.phase === 'complete'));
+  assert.deepEqual(projected.stderr, feed.events.filter(event => event.data.kind === 'process-output'));
+  assert.equal(snapshot.latest.subagents.length, 1, 'child Thinking stays in its original child projection');
+  assert.deepEqual(snapshot.latest.text.map(event => event.data.text), ['TEST original answer']);
+  assert.equal(JSON.stringify(owner.readConversation(binding(), 'messages')).includes('thought'), false);
+  const cold = f.make('TEST-cold').readActivitySnapshot(binding());
+  assert.deepEqual(cold.logProjection, projected);
+  assert.equal(cold.gap?.reason, 'incarnation');
+  assert.equal(await readFile(f.path(), 'utf8'), retained, 'hot/cold derived reads never rewrite the journal');
+  assert.equal(f.sessions.length, 1); assert.equal(session.submits.length, 2);
+});
+
+test('auxiliary log trimming shares the existing byte budget without changing original groups or their completeness', async t => {
+  const f = await setup(t), owner = f.make(), { session, attribution } = await f.open(owner);
+  session.emit({ ...attribution, kind: 'text', messageRef: 'TEST-answer', block: 0,
+    text: 'TEST answer', phase: 'complete' });
+  session.emit({ ...attribution, kind: 'usage', inputTokens: 5, outputTokens: 2, cumulativeCostUsd: 0.25 });
+  await tick();
+  const original = owner.readActivitySnapshot(binding());
+  assert.equal(original.gap, undefined);
+  for (let index = 0; index < 20; index++) session.emit({ ...attribution, kind: 'thinking',
+    messageRef: 'TEST-thought-' + index, block: 0, phase: 'complete', text: 'x'.repeat(16 * 1024) });
+  await tick();
+  owner.observeProcessOutput(binding(), owner.readSession(binding()).record!.config!,
+    { kind: 'process-output', stream: 'stderr', text: 'TEST bounded stderr' }, () => {});
+  const snapshot = owner.readActivitySnapshot(binding());
+  assert.equal(snapshot.retainedFrom, original.retainedFrom, 'the journal itself has not lost any events');
+  assert.equal(snapshot.logProjection?.truncated, true);
+  assert.ok(snapshot.logProjection!.thinking.length > 0 && snapshot.logProjection!.thinking.length < 20);
+  assert.deepEqual(snapshot.latest, original.latest, 'old groups retain their original priority and exact observations');
+  assert.equal(snapshot.gap, undefined, 'auxiliary display loss must not become a global Stats gap');
+  assert.deepEqual(snapshot.state, original.state);
+  const events = [...snapshot.latest.usage, ...snapshot.latest.interactions, ...snapshot.latest.tools,
+    ...snapshot.latest.text, ...snapshot.latest.subagents, ...snapshot.logProjection!.thinking,
+    ...snapshot.logProjection!.stderr];
+  assert.ok(events.reduce((bytes, event) => bytes + Buffer.byteLength(JSON.stringify(event)), 0) <= 256 * 1024);
+  assert.ok((await stat(f.path())).size < f.store.activityLimits.maxBytes);
+  assert.equal(session.submits.length, 1);
 });

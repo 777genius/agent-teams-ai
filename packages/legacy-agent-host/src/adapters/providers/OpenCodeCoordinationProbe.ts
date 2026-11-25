@@ -5,6 +5,9 @@ import { dirname, join } from 'node:path';
 import { createOpenCodeV1DriverFactory } from '@agent-teams/provider-implementations/opencode';
 
 import { captureOpenCodeConfigurationSource } from './OpenCodeConfigurationSource.js';
+import { coordinationAgent, coordinationV1Permissions, selectOpenCodeCoordinationProvider,
+  buildOpenCodeCoordinationEnvironment, buildOpenCodeCoordinationConfig } from './nativeLaunchEnvironment.js';
+export { coordinationAgent, coordinationV1Permissions } from './nativeLaunchEnvironment.js';
 import {
   coordinationNames, coordinationPrompt, coordinationServer, OpenCodeCoordinationEndpoint, closeCoordinationByDeadline,
 } from './OpenCodeCoordinationEndpoint.js';
@@ -27,7 +30,6 @@ export interface OpenCodeV1Coordination {
   isCurrent(): boolean;
   beforeAllocation(): void;
 }
-export const coordinationAgent = 'agent-teams-local-coordination';
 const unavailable = (): never => { throw new ManagementCommandError('held'); };
 const invalid = (): never => { throw new ManagementCommandError('invalid'); };
 const row = (value: unknown): Record<string, unknown> => {
@@ -136,11 +138,6 @@ export function captureCoordinationConfiguration(profile: OpenCodeManagementProf
   });
 }
 
-export function coordinationV1Permissions() {
-  return { '*': 'deny', ...Object.fromEntries(coordinationNames
-    .map(name => [coordinationServer + '_' + name, 'allow'])) };
-}
-
 export function assertCoordinationDeadline(deadline: number, signal: AbortSignal,
   isCurrent: () => boolean): void {
   signal.throwIfAborted();
@@ -217,7 +214,7 @@ async function observeCoordination(
         return challenge ? { status: 'unavailable', reason: 'native-rejected' }
           : { status: 'incompatible', reason: 'challenge-failed' };
       return undefined; // Unknown/cancelled/foreign/expired is not a warning.
-    } else if (event.kind !== 'usage') return undefined;
+    } else if (event.kind !== 'usage' && event.kind !== 'thinking') return undefined;
   }
   return undefined;
 }
@@ -305,14 +302,8 @@ type GeneralProvider = { provider: Record<string, unknown>; key?: string };
 function captureLocalCoordinationConfiguration(profile: OpenCodeManagementProfile,
   input: ModelProbeInput, ownerCurrent: () => boolean, selected: GeneralProvider) {
   const source = captureOpenCodeConfigurationSource(profile, undefined, ownerCurrent);
-  const provider = structuredClone(selected.provider), options = row(provider.options ?? {});
-  const modelId = input.modelId.startsWith(input.providerId + '/')
-    ? input.modelId.slice(input.providerId.length + 1) : input.modelId;
-  if (provider.npm !== '@ai-sdk/openai-compatible' || !provider.models ||
-      !Object.hasOwn(row(provider.models), modelId)) return undefined;
-  if (selected.key !== undefined && options.apiKey === undefined) options.apiKey = selected.key;
-  provider.options = options;
-  provider.models = { [modelId]: row(provider.models)[modelId] };
+  const provider = selectOpenCodeCoordinationProvider(selected.provider, input, selected.key);
+  if (!provider) return undefined;
   const system = process.platform === 'win32' ? join(profile.environment.ProgramData || 'C:\\ProgramData', 'opencode')
     : process.platform === 'darwin' ? '/Library/Application Support/opencode' : '/etc/opencode';
   const managed = ['opencode.json', 'opencode.jsonc'].map(name => join(system, name));
@@ -356,26 +347,14 @@ function captureLocalCoordinationConfiguration(profile: OpenCodeManagementProfil
       };
       const home = directory('home'), config = directory('config'), data = directory('data');
       const cache = directory('cache'), state = directory('state');
-      const environment = Object.fromEntries(Object.entries(profile.environment)
-        .filter(([key]) => !key.toUpperCase().startsWith('OPENCODE_')));
-      prepared = { ...profile, environment: { ...environment, HOME: home, USERPROFILE: home,
-        XDG_CONFIG_HOME: config, XDG_DATA_HOME: data, XDG_CACHE_HOME: cache, XDG_STATE_HOME: state,
-        OPENCODE_PURE: '1', OPENCODE_DISABLE_PROJECT_CONFIG: '1', OPENCODE_DISABLE_DEFAULT_PLUGINS: '1',
-        OPENCODE_DISABLE_AUTOUPDATE: '1', OPENCODE_DISABLE_MODELS_FETCH: '1' } };
+      prepared = { ...profile, environment: buildOpenCodeCoordinationEnvironment(
+        profile.environment, { home, config, data, cache, state }) };
       assertCoordinationDeadline(deadline, signal, () => { check(); return true; });
       return prepared;
     },
     v1Config(endpoint: OpenCodeCoordinationEndpoint) {
       check();
-      const model = input.providerId + '/' + modelId, permission = coordinationV1Permissions();
-      return { autoupdate: false, share: 'disabled', enabled_providers: [input.providerId],
-        model, small_model: model, default_agent: coordinationAgent, plugin: [], instructions: [],
-        permission, compaction: { auto: false }, provider: { [input.providerId]: provider },
-        agent: { title: { disable: true }, summary: { disable: true },
-          [coordinationAgent]: { mode: 'primary', model, permission, steps: 3 } },
-        mcp: { [coordinationServer]: { type: 'remote', url: endpoint.url,
-          headers: { Authorization: 'Bearer ' + endpoint.bearerToken }, oauth: false, enabled: true,
-          timeout: Math.min(profile.modelProbeTimeoutMs ?? 90000, 90000) } } };
+      return buildOpenCodeCoordinationConfig(profile, input, provider, endpoint);
     },
     close(deadline: number) {
       if (!root) return true;

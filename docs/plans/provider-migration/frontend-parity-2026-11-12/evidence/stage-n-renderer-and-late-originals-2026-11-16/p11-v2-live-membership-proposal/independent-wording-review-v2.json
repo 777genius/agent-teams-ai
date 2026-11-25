@@ -1,0 +1,48 @@
+{
+  "kind": "Independent prospective P11 wording-only v2 review",
+  "reviewedAtUtc": "2026-11-16T01:36:45.317117+00:00",
+  "verdict": "APPROVE exact wording corrections, source-only; application/execution not authorized by this review",
+  "candidate": {
+    "path": "/workspace/scratch/82d3f9ba6b85/p11-v2-live-membership-proposal/DESIGN-R1-draft-v2.md",
+    "bytes": 22937,
+    "blob": "99c9c114eb6ba6b31d21550f94f617a1e377d1da",
+    "sha256": "df8e2c7e72ce93e4b1eab7a5f0a3c1827a4270e407012583681b80acfee4147f"
+  },
+  "original": {
+    "path": "/workspace/scratch/82d3f9ba6b85/p11-v2-live-membership-proposal/DESIGN-R1-draft.md",
+    "bytes": 20995,
+    "blob": "0f834435fdaad97c817bfad8ce4598ef176b205a",
+    "sha256": "924aa5c6a12948642106a67b5121c39c8bc6b51201d8556e045f9a42d5b57722"
+  },
+  "metadata": {
+    "path": "/workspace/scratch/82d3f9ba6b85/p11-v2-live-membership-proposal/R1-v2-wording-only-metadata.json",
+    "bytes": 5746,
+    "blob": "6e8f4cb7adb58d22deb4f82e9f4994699b06b8e8",
+    "sha256": "943e4b4bff70f79112825c0057cb74086fb9e67679b6aa7030156cf4e7448c0e"
+  },
+  "patch": {
+    "path": "/workspace/scratch/82d3f9ba6b85/p11-v2-live-membership-proposal/R1-v2-wording-only.patch",
+    "bytes": 12870,
+    "blob": "1cf30db5a7bc1dd5b9d376005512ab0f3c55c5d8",
+    "sha256": "921178599daf32cfe625517c2dc15ea243c5bf934bcc636080c0d401fed95aba"
+  },
+  "previousSourceReview": {
+    "path": "/workspace/scratch/82d3f9ba6b85/p11-v2-live-membership-proposal/independent-source-design-review-v1.json",
+    "bytes": 22609,
+    "blob": "71d3072dffafdf4016bef204da9a42d9a0da1ee2",
+    "sha256": "9e8e090834cb1d4f228d1170bddeb13cbfcb7c37d1c48db7312b969ae7783402"
+  },
+  "inverseFourLiteralReplacementsExact": true,
+  "sourceMetadataAndCompletePatchUnchanged": true,
+  "findings": [
+    "The missing-journal paragraph now distinguishes tolerated ENOENT and auxiliary empty absent:true from the full verifier mandatory nonzero initial probe-count comparison; it no longer falsely claims every missing-data path writes INCOMPLETE. No new source hardening is implied.",
+    "The Linux paragraph now explicitly preserves non-atomic observation limits: no first-starttime to prior ps-lstart join, no final executable reread, and no proof excluding same-process exec. Existing original source/metadata/physical-absence checks remain; no kernel lease, generation seal or P09 qualification is claimed.",
+    "The only execution venue is the existing original CI. No local project/test/compiler/lint/install/bootstrap or fallback is authorized, and no manual trigger/altered command substitutes for the genuine original three semantic poll REDs.",
+    "Current privacy actual full-ten-file semantic RED and separately approved one-helper original-CI GREEN precede every P11 test/source stage. Useful cohort preservation is explicit; test/workflow overlap with the dormant diagnostics needs fresh exact ordered composition, published R1 and independent R2.",
+    "All predictions remain unexecuted. Source reviewed at frozen0660 preimages has not been applied. The unchanged original poll command reachability and no-real-provider boundaries remain as in the prior detailed source review."
+  ],
+  "limits": [
+    "This review approves the four precise prose corrections; it is not an executed acceptance result, a new source implementation, a universal native identity claim or permission to bypass privacy sequencing.",
+    "No files inside the tracked checkout, Git refs, CI state, installed dependency or project runtime were modified or executed."
+  ]
+}

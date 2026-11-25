@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "sourceCommit": "9423f600dfb04d04448326dbced89919924b0b5f",
+  "packages": [
+    {
+      "file": "agent-teams-provider-implementations-0.0.0.tgz",
+      "bytes": 185996,
+      "sha256": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267"
+    },
+    {
+      "file": "agent-teams-provider-session-contracts-0.0.0.tgz",
+      "bytes": 6230,
+      "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc"
+    }
+  ],
+  "qualification": "source-and-packed-consumer-only",
+  "nativeHostQualified": false,
+  "packagedElectronQualified": false
+}

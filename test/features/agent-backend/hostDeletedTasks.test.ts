@@ -211,6 +211,8 @@ it('retrieves >1 MiB deleted task history and details via bounded Trash pages be
       operation: 'task.comment',
       payload: { taskId, text },
     });
+    // Service the runner's RPC acknowledgements during this synchronous fixture.
+    if ((index + 1) % 16 === 0) await new Promise<void>((resolve) => setImmediate(resolve));
   }
   const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
   f.human.execute({
@@ -253,6 +255,60 @@ it('retrieves >1 MiB deleted task history and details via bounded Trash pages be
   const restored = await f.teams.getTask(f.key, taskId);
   expect(restored?.comments?.map((row) => row.text)).toEqual(expected);
 }, 90_000);
+
+it('reassembles one oversized deleted comment without duplicating its identity or text', async () => {
+  const f = fixture();
+  const taskId = f.human.execute({
+    commandId: 'TEST-single-comment-create',
+    operation: 'task.create',
+    payload: { subject: 'TEST single retained comment', owner: 'team-lead' },
+  }).effects.taskId;
+  const ref = { taskId, displayId: taskId, teamName: f.binding.teamName };
+  const text = 'TEST retained Unicode ' + '漢'.repeat(360_000);
+  expect(Buffer.byteLength(text)).toBeGreaterThan(1024 * 1024);
+  for (const [index, value] of ['TEST before', text, 'TEST after'].entries()) {
+    f.human.execute({
+      commandId: 'TEST-single-comment-' + index,
+      operation: 'task.comment',
+      payload: { taskId, text: value, ...(index === 1 ? { taskRefs: [ref] } : {}) },
+    });
+  }
+  const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  try {
+    f.human.execute({
+      commandId: 'TEST-single-comment-delete',
+      operation: 'task.lifecycle',
+      payload: { taskId, action: 'delete' },
+    });
+    expect(warning).toHaveBeenCalledExactlyOnceWith(
+      `[tasks] retracted 4 queued notification(s) for deleted task ${taskId}`
+    );
+  } finally {
+    warning.mockRestore();
+  }
+  const retained = f.human.getTask(taskId).comments as {
+    text: string;
+    taskRefs?: { taskId: string; displayId: string; teamName: string }[];
+  }[];
+  const expected = retained.map(comment => ({
+    ...comment,
+    ...(comment.taskRefs ? { taskRefs: comment.taskRefs.map(taskRef => ({ ...taskRef, teamName: f.key })) } : {}),
+  }));
+  const trash = await f.teams.getDeletedTasks(f.key);
+  expect(trash).toHaveLength(1);
+  expect(trash[0]?.comments).toHaveLength(3);
+  expect(trash[0]?.comments).toEqual(expected);
+  const detail = await f.teams.getTask(f.key, taskId);
+  expect(detail?.comments).toEqual(expected);
+  expect(vi.mocked(f.backend.invoke).mock.calls.filter(
+    ([request]) => request.operation === 'tasks.list'
+  ).length).toBeGreaterThan(2);
+  expect(vi.mocked(f.backend.invoke).mock.calls.some(
+    ([request]) => request.operation === 'task.get'
+  )).toBe(false);
+  expect(f.legacy.getTask).not.toHaveBeenCalled();
+  expect(f.legacy.getDeletedTasks).not.toHaveBeenCalled();
+}, 30_000);
 
 it.each(['context', 'mutation'] as const)(
   'refuses a held Trash response after the original %s boundary changes',
@@ -362,4 +418,28 @@ it('checks original read authority on the canonical Trash port after revocation'
   const f = fixture();
   f.human.revoke('human');
   expect(() => f.human.readDeletedTasks()).toThrow();
+});
+
+it('keeps canonical Trash refusal independent of a partial active-task aggregate', async () => {
+  const f = fixture(), { created } = await deletedTask(f);
+  const path = join(f.root, 'tasks', f.binding.teamName, created.id + '.json');
+  const original = readFileSync(path, 'utf8'), invoke = f.backend.invoke;
+  f.backend.invoke = vi.fn<AgentBackendApi['invoke']>(async (request) =>
+    request.operation === 'team.snapshot'
+      ? { ok: false, code: 'unavailable', outcome: 'unknown' }
+      : invoke(request));
+  const aggregate = await f.teams.getAllTasks();
+  if (Array.isArray(aggregate)) throw new Error('Expected the original unavailable Task resource');
+  expect(aggregate).toEqual({ items: [], unavailable: [{
+    kind: 'team', teamName: f.key, displayName: 'TEST Host', code: 'unavailable', outcome: 'unknown',
+  }] });
+  await expect(f.teams.getDeletedTasks(f.key)).rejects.toThrow('Host team read unavailable');
+  expect(f.legacy.getDeletedTasks).not.toHaveBeenCalled();
+  expect(vi.mocked(f.backend.invoke).mock.calls.every(([request]) => request.operation === 'team.snapshot')).toBe(true);
+  expect(readFileSync(path, 'utf8')).toBe(original);
+  f.backend.invoke = invoke;
+  const retained = await f.teams.getDeletedTasks(f.key);
+  expect(retained.map((task) => task.id)).toEqual([created.id]);
+  expect(retained[0]?.comments?.[0]?.text).toBe('TEST retained comment');
+  expect(readFileSync(path, 'utf8')).toBe(original);
 });

@@ -19,11 +19,15 @@ import { desktopBackendEnvironment, desktopRuntimeSourceEnvironment, prepareDesk
 import type { DesktopOpenCodeSourceSelection } from './desktop-runtime-source-fixture.ts';
 export { desktopBackendEnvironment } from './desktop-runtime-source-fixture.ts';
 import type { DesktopOpenCodeV2Selection } from './desktop-opencode-v2-fixture.ts';
+import { desktopCodexSha256, prepareDesktopCodexLoginOpener } from './desktop-codex-login-fixture.ts';
+export { desktopCodexSha256 } from './desktop-codex-login-fixture.ts';
+import { desktopClaudeSha256 } from './desktop-claude-native-selection.ts';
 import { DESKTOP_MCP_MEMBERS, prepareDesktopCapturedMcpRecipes } from './desktop-opencode-v2-mcp-fixture.ts';
+import { fileDigest } from './desktop-file-digest.ts';
+export { fileDigest } from './desktop-file-digest.ts';
 
 export const digest = (bytes: Uint8Array | string): string =>
   createHash('sha256').update(bytes).digest('hex');
-export const fileDigest = async (path: string): Promise<string> => digest(await readFile(path));
 
 const quoteShellArgument = (value: string): string => "'" + value.replaceAll("'", "'\\''") + "'";
 
@@ -67,7 +71,7 @@ process.stderr.write('TEST sentinel refuses native agent invocation\\n');process
 export async function prepareDesktopBackendFixture(
   repo: string,
   options: {
-    candidateRuntime?: CandidateRuntimePaths;
+    candidateRuntime?: Pick<CandidateRuntimePaths, 'nodeExecutable' | 'nodeVersion' | 'hostEntry' | 'processCustody'>;
     diagnosticHostEntry?: { path: string; sha256: string };
     claudeCheckpointDonor?: { repo: string; hostEntrySha256: string };
     approvalUi?: boolean;
@@ -77,6 +81,7 @@ export async function prepareDesktopBackendFixture(
     taskBoardGroup?: boolean;
     seedUiPreferences?: boolean;
     seedCodexApiKey?: boolean;
+    observeCodexLoginOpen?: boolean;
     launchDialog?: boolean;
     configuredLaunchSetup?: true;
     creation?: boolean;
@@ -84,6 +89,7 @@ export async function prepareDesktopBackendFixture(
     nativeReviewUi?: boolean;
     stoppedImportUi?: boolean;
     donorSavedOnly?: true;
+    finiteStoppedImport?: true;
     pnpmEntry: string;
     nativeCodex?: { path: string; sha256: string };
     nativeClaude?: { path: string; sha256: string; modelUrl?: string };
@@ -113,6 +119,12 @@ export async function prepareDesktopBackendFixture(
     options.claudeCheckpointDonor || options.diagnosticHostEntry || options.capturedMcpNonce ||
     options.nativeGroupChats || options.nativeChatAttachments || options.nativeReviewUi || options.reviewUi || options.approvalUi))
     throw new Error('Saved-only donor requires its original isolated Claude Create fixture');
+  if (options.finiteStoppedImport !== undefined && (options.finiteStoppedImport !== true ||
+    process.env.LEGACY_DESKTOP_EMULATED_ONLY !== '1' ||
+    process.env.LEGACY_DESKTOP_PROOF_MODE !== 'emulated-import-lifecycle-ui' ||
+    options.creation !== true || options.seedUiPreferences !== true ||
+    Object.keys(options).some(key => !['pnpmEntry', 'seedUiPreferences', 'creation', 'finiteStoppedImport'].includes(key))))
+    throw new Error('Finite stopped import requires its original isolated emulated Claude Create fixture');
   const nativeNextPromptUi = process.env.LEGACY_DESKTOP_NATIVE_NEXT_PROMPT_UI === '1';
   if (nativeNextPromptUi && (!options.nativeClaude?.modelUrl || !options.seedUiTask ||
       options.nativeOpenCodeV2 || options.nativeChatAttachments || options.nativeGroupChats))
@@ -120,7 +132,7 @@ export async function prepareDesktopBackendFixture(
   const linuxChildExec = readDesktopLinuxChildExecInput();
   const node =
     options.candidateRuntime?.nodeExecutable ??
-    (await realpath(options.nativeOpenCodeV2 || options.nativeOpenCodeSourceSelection ? process.execPath :
+    (await realpath(options.nativeOpenCodeV2 || options.nativeOpenCodeSourceSelection || process.platform === 'linux' || process.env.LEGACY_DESKTOP_EMULATED_ONLY === '1' ? process.execPath :
       join(repo, 'resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node')));
   const hostEntry =
     options.candidateRuntime?.hostEntry ??
@@ -185,6 +197,8 @@ export async function prepareDesktopBackendFixture(
     ? "#!/bin/sh\nprintf 'TEST refuses package-manager execution in packed app\\n' >&2\nexit 78\n"
     : `#!/bin/sh\nexec ${quoteShellArgument(node)} ${quoteShellArgument(pnpmEntry)} "$@"\n`;
   await writeFile(join(root, 'bin/pnpm'), pnpmStubSource, { mode: 0o700 });
+  if (options.observeCodexLoginOpen)
+    await prepareDesktopCodexLoginOpener(root, desktopNodeScriptHeader(node));
   if (options.approvalUi) {
     for (const [name, content] of [
       ['approval-preview.txt', 'TEST_ORIGINAL_PRIVATE_BYTES\n'],
@@ -276,8 +290,7 @@ export async function prepareDesktopBackendFixture(
     if (
       binary !== options.nativeClaude.path ||
       (await fileDigest(binary)) !== options.nativeClaude.sha256 ||
-      options.nativeClaude.sha256 !==
-        'ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f'
+      options.nativeClaude.sha256 !== desktopClaudeSha256()
     )
       throw new Error('Unqualified TEST Claude executable');
     for (const directory of [
@@ -484,8 +497,7 @@ export async function prepareDesktopBackendFixture(
     if (
       binary !== options.nativeCodex.path ||
       (await fileDigest(binary)) !== options.nativeCodex.sha256 ||
-      options.nativeCodex.sha256 !==
-        '8238273076041e55beded03ba1d51e034f997b7d100b0642d36daf036620fe57'
+      options.nativeCodex.sha256 !== desktopCodexSha256()
     )
       throw new Error('Unqualified TEST Codex executable');
     await writeFile(
@@ -663,7 +675,7 @@ export async function prepareDesktopBackendFixture(
           ...(options.reviewUi || options.nativeReviewUi ? { reviewTransport: 'review-v1' } : {}),
           nodeExecutable: node,
           nodeVersion: options.candidateRuntime?.nodeVersion ??
-            (options.nativeOpenCodeV2 || options.nativeOpenCodeSourceSelection ? process.version : 'v24.21.0'),
+            (options.nativeOpenCodeV2 || options.nativeOpenCodeSourceSelection || process.platform === 'linux' ? process.version : 'v24.21.0'),
           nodeSha256,
           hostEntry,
           hostEntrySha256,
@@ -733,7 +745,7 @@ export async function prepareDesktopBackendFixture(
   const sentinelLog = join(root, 'sentinel-invocations.ndjson');
   // No inherited environment or user config. The sentinel can never run an agent.
   const sentinelSource = desktopAgentSentinelSource(node, sentinelLog, lock.cliVersion,
-    options.candidateRuntime ? 'refused' : options.donorSavedOnly ? 'donor-saved-only' : 'metadata');
+    options.candidateRuntime ? 'refused' : options.donorSavedOnly || options.finiteStoppedImport ? 'donor-saved-only' : 'metadata');
   for (const name of [
     'claude',
     'codex',
@@ -786,4 +798,3 @@ export async function prepareDesktopBackendFixture(
       options.nativeOpenCodeSourceSelection),
   };
 }
-

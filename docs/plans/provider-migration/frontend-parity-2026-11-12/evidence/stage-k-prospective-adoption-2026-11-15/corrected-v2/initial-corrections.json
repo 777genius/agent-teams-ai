@@ -1,0 +1,22 @@
+{
+  "kind": "Prospective K corrections; no tracked source application",
+  "files": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "local": "/workspace/scratch/82d3f9ba6b85/stage-k-adoption/corrected-v2/candidate/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "bytes": 20446,
+      "blob": "47d1d9520e794ea9048cd98d997e54fa70bfc4b6",
+      "sha256": "c5320e55fae9644cb48a8d711f9bab2499bb2f0e6d22d695b3f679a9679f822a"
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "local": "/workspace/scratch/82d3f9ba6b85/stage-k-adoption/corrected-v2/candidate/.github/workflows/host-emulated-acceptance.yml",
+      "bytes": 97517,
+      "blob": "ae2e48f5dc013c8c2dd2ce6021dba2afd4ad66d5",
+      "sha256": "0e70cd2ef2ab7658085e4dadaeedaddd3db6f8a94d08f995419fcd596b8ff336"
+    }
+  ],
+  "teamCommand": "node --test --test-concurrency=1 packages/legacy-agent-host/tests/runtime-activity.test.ts packages/legacy-agent-host/tests/runtime-team-host.test.ts packages/legacy-agent-host/tests/team-snapshot.test.ts packages/legacy-agent-host/tests/team-product-changes.test.ts packages/legacy-agent-host/tests/team-activity-read.test.ts packages/legacy-agent-host/tests/captured-claude-process.test.ts packages/legacy-agent-host/tests/codex-member-provider.test.ts packages/legacy-agent-host/tests/member-process-stderr.test.ts packages/legacy-agent-host/tests/member-provider-authority.test.ts packages/legacy-agent-host/tests/owned-process-facade.test.ts",
+  "sourceRosterBlockLines": 53,
+  "sourceRosterLiteralCount": 52
+}
