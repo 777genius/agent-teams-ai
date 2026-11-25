@@ -39,28 +39,20 @@ Target branch: `main`; immutable release source `2a4e1c2938923826cb1555e8fb894a3
 
 <!-- RELEASE_BODY_START v2.19.0 -->
 
-Manage requests from all your teams in one place, route notifications to your preferred channels, and keep work organized by project. Create reusable teams and connect external AI agents to the desktop app.
-
 ### What's New
 
-- Keep tasks and conversations separate for each project while using the same team.
-- See unread messages and tasks needing your attention in a cross-team inbox.
-- Choose notification destinations for each event, including Telegram and custom HTTPS webhooks.
-- Create, edit, import, and export reusable team templates.
-- Choose human approval or lead sign-off as part of your task review flow.
-- Connect external AI agents to the running desktop app using guided setup.
-
-### Improvements
-
-- Answer task clarifications directly from Attention to return the task to the agent.
-- Edit project-team settings and schedule runs without losing the separation between projects.
-- Use the app in Traditional Chinese (Taiwan).
+- Find tasks and unread messages across all teams on the new Attention page, with a header indicator.
+- Create, edit, import, and export your own team templates, or use built-in templates (big thanks to [@hassanbht](https://github.com/hassanbht?utm_source=chatgpt.com))
+- Connect external AI agents to the running desktop app with guided setup.
+- Route notifications by event to Telegram, Discord, Slack, Microsoft Teams, Google Chat, or custom HTTPS webhooks.
+- Choose human approval or require team lead sign-off before final approval.
+- New teams keep tasks and conversations separate for each project by default. Existing teams retain their shared history.
+- Traditional Chinese (Taiwan) is now available (thanks [@keepinmind2054](https://github.com/keepinmind2054?utm_source=chatgpt.com) 🙏🏼)
 
 ### Fixes
 
 - Prevent unwanted console windows when Windows teammates run commands.
-- Fix Linux startup failures when launching managed OpenCode teammates.
-- Avoid duplicate unread counts for OpenCode replies already read in Messenger.
+- Fix startup failures when launching OpenCode teammates on Linux.
 - Prevent Settings crashes while provider model statuses refresh.
 - Reuse only the correct Git worktree when restarting a teammate.
 - Recover interrupted project-team launches with clearer retry guidance.
