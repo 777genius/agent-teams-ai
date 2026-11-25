@@ -38,6 +38,12 @@ export class TeamBudgetStopObserver {
           if (decision.action !== 'stop_team' || decision.state !== 'exceeded') return;
           const nativeNames = await this.ports.resolveRuntimeNames?.(teamName) ?? [teamName];
           for (const name of new Set(nativeNames)) {
+            // A slow stop can overlap a user raising the limit or disabling
+            // enforcement. Recheck before stopping each remaining runtime.
+            const latest = evaluateTeamBudgetEnforcement(
+              await this.ports.readCurrentStatus(), teamName
+            );
+            if (latest.action !== 'stop_team' || latest.state !== 'exceeded') break;
             try {
               if (!this.ports.aliveTeams().includes(name)) continue;
               if (!(await this.ports.ownsTeam(name))) {
