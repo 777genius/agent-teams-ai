@@ -26,18 +26,17 @@ export function evaluateTeamBudgetEnforcement(
   const action = target?.onExceeded ?? 'notify';
   if (!target || action === 'notify') return { action, state: 'disabled' };
 
-  // A delayed or degraded ledger must never authorize additional spending.
-  // A stale status also cannot justify terminating a process.
-  if (status.stale || status.degraded || !target.metrics.length)
-    return { action, state: 'unknown' };
-
+  // The already-observed monthly total is sufficient to stop at the limit,
+  // even when another usage source is lagging. Unknown totals never grant
+  // launch permission or justify a stop on their own.
   const exceeded = target.metrics.some(
     (metric) =>
       !metric.incomplete && metric.value !== null && metric.value >= metric.limit
   );
   if (exceeded) return { action, state: 'exceeded' };
 
-  if (target.metrics.some((metric) => metric.incomplete || metric.value === null))
+  if (status.stale || status.degraded || !target.metrics.length ||
+      target.metrics.some((metric) => metric.incomplete || metric.value === null))
     return { action, state: 'unknown' };
   return { action, state: 'within_limit' };
 }
