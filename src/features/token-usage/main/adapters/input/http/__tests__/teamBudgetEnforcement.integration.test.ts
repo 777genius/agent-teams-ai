@@ -34,7 +34,7 @@ vi.mock('@features/team-project-context/main', () => ({
       resolveOwnedExecutionAliases: async (names: string[]) => new Map(
         names.map((name) => [name, { alias: null }])
       ),
-      listRetained: async () => [],
+      listOwnedStopCandidates: async () => ({ candidates: [], refused: [] }),
     }),
   },
 }));
