@@ -40,3 +40,11 @@ Existing monthly global/team/project token and API-equivalent USD budgets alert,
 
 ## Estimate / engineering quality
 Production 650–1150 LOC plus 350–700 LOC tests, complexity 5/10, reliability target 8/10, design confidence 8/10. Keep any new UI helper focused; avoid growing the large team-list file substantially.
+
+## Follow-up review - project contexts and initial launch
+
+- The budget includes verified `ptc-` project-runtime aliases under their logical team, using the existing profile-owned registry; do not conflate foreign aliases.
+- Admission resolves the same alias before checking the logical budget. Stopping enumerates owned copies; no blind process kill.
+- Missing first-use data triggers one metering refresh before admission. Notification settings cannot disable enforcement refresh.
+- Known exceeded subtotals block launches and permit stop despite unrelated source degradation. Unknown data only blocks new launches.
+- All 30 language catalogs have the new labels. Focused integration tests exercise first-use, alias attribution, and owner checks.

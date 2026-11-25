@@ -22,7 +22,7 @@ function makeStatus(action: 'notify' | 'block_launch' | 'stop_team' = 'stop_team
 
 const settle = async () => {
   // The observer schedules an async read -> ownership check -> stop -> postcondition.
-  for (let index = 0; index < 6; index++) await Promise.resolve();
+  for (let index = 0; index < 30; index++) await Promise.resolve();
 };
 
 describe('team budget stop observer', () => {
@@ -80,4 +80,22 @@ describe('team budget stop observer', () => {
     expect(stop).toHaveBeenCalledOnce();
     expect(warn).toHaveBeenCalledOnce();
   });
+  it('never signals a foreign project runtime', async () => {
+    const stop = vi.fn(async () => undefined);
+    const warn = vi.fn();
+    const observer = new TeamBudgetStopObserver({
+      readCurrentStatus: async () => makeStatus(),
+      aliveTeams: () => ['ptc-foreign'],
+      resolveRuntimeNames: async () => ['ptc-foreign'],
+      ownsTeam: async () => false,
+      stopTeam: stop,
+      isTeamAlive: async () => true,
+      warn,
+    });
+    observer.observe(makeStatus());
+    for (let n = 0; n < 30; n++) await Promise.resolve();
+    expect(stop).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledOnce();
+  });
+
 });

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createTeamBudgetControls } from '../createTeamBudgetControls';
 
@@ -6,6 +6,27 @@ import type {
   TokenUsageBudgetExceededAction,
   TokenUsageBudgetStatusDto,
 } from '@features/token-usage/contracts';
+
+const registry = vi.hoisted(() => ({
+  aliases: new Map<string, string>(),
+  nativeNames: ['alpha'] as string[],
+}));
+vi.mock('@features/team-project-context/main', () => ({
+  TeamProjectContextRegistry: {
+    fromCurrentApp: () => ({
+      resolveOwnedExecutionAliases: async (names: string[]) => new Map(
+        names.map((name) => [name, {
+          alias: registry.aliases.has(name)
+            ? { logicalTeamName: registry.aliases.get(name), context: {} }
+            : null,
+        }])
+      ),
+      listRetained: async () => registry.nativeNames
+        .filter((name) => name !== 'alpha')
+        .map((executionTeamName) => ({ executionTeamName })),
+    }),
+  },
+}));
 
 const budgetStatus = (input: {
   action?: TokenUsageBudgetExceededAction;
@@ -35,6 +56,7 @@ function setup(initial: {
   action?: TokenUsageBudgetExceededAction;
   used?: number;
   stale?: boolean;
+  aliveName?: string;
 }) {
   let state = initial;
   let alive = true;
@@ -49,7 +71,7 @@ function setup(initial: {
     setTeamBudgetAdmissionGuard: (callback: (name: string) => Promise<void>) => {
       guard = callback;
     },
-    getAliveTeams: () => alive ? ['alpha'] : [],
+    getAliveTeams: () => alive ? [state.aliveName ?? 'alpha'] : [],
     isTeamManagedByThisProfile: async () => true,
     stopTeam: stop,
     isTeamAlive: async () => alive,
@@ -78,6 +100,8 @@ function setup(initial: {
 }
 
 describe('team budget composition - no live provider required', () => {
+  beforeEach(() => { registry.aliases.clear(); registry.nativeNames = ['alpha']; });
+
   it('refreshes first-use evidence once, then permits an under-budget launch', async () => {
     const { guard, refresh } = setup({ action: 'block_launch', stale: true });
     await expect(guard()).resolves.toBeUndefined();
@@ -104,4 +128,21 @@ describe('team budget composition - no live provider required', () => {
     expect(stop).toHaveBeenCalledOnce();
     expect(warn).not.toHaveBeenCalled();
   });
+  it('never bypasses logical budget by launching a physical project alias', async () => {
+    registry.aliases.set('ptc-copy-1', 'alpha');
+    const { guard } = setup({ action: 'block_launch', used: 120 });
+    await expect(guard('ptc-copy-1')).rejects.toThrow('TEAM_BUDGET_BLOCKED');
+  });
+
+  it('stops an owned physical project copy when the logical team reaches its limit', async () => {
+    registry.nativeNames = ['ptc-copy-1'];
+    const { controls, stop, warn } = setup({
+      action: 'stop_team', used: 120, aliveName: 'ptc-copy-1',
+    });
+    controls.observer.observe(budgetStatus({ action: 'stop_team', used: 120 }));
+    for (let n = 0; n < 30; n++) await Promise.resolve();
+    expect(stop).toHaveBeenCalledExactlyOnceWith('ptc-copy-1');
+    expect(warn).not.toHaveBeenCalled();
+  });
+
 });

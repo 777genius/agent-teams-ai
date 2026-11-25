@@ -28,6 +28,32 @@ export function project(runs = [testRun()], events = [testEvent()]) {
 }
 
 describe('Budget monthly projection', () => {
+  it('counts verified project copy usage against the logical team budget', () => {
+    const projected = buildBudgetStatus({
+      now,
+      settings: {
+        teams: {
+          'team:alpha': { monthlyTokenLimit: 100, thresholds: [80, 100],
+            notificationsEnabled: true, onExceeded: 'stop_team' },
+        },
+      },
+      ledger: {
+        runs: [testRun({ teamName: 'ptc-copy-1' })],
+        events: [testEvent()],
+      },
+      teamNameAliases: new Map([['ptc-copy-1', 'alpha']]),
+      degraded: false,
+      usageUpdatedAt: now.toISOString(),
+      policy: { enabled: true, nativeToasts: false },
+      gateway: { degradedTeamIds: ['team:ptc-copy-1'] },
+    });
+    const team = projected.targets.find((target) => target.id === 'team:alpha');
+    expect(team?.metrics[0].value).toBe(100);
+    expect(team?.metrics[0].incomplete).toBe(true);
+    expect(projected.options.some((item) => item.id === 'team:ptc-copy-1')).toBe(false);
+  });
+
+
   it('excludes old local charges once a run is recognized as gateway-owned', () => {
     const status = project(
       [testRun({ gatewayUsageRef: 'late-gateway' }), testRun({ appRunId: 'ordinary' })],
