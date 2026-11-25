@@ -50,27 +50,17 @@ import {
   TeamProvisioningServiceMemberLifecycleFacade,
 } from './TeamProvisioningServiceMemberLifecycleFacade';
 
-import type { ResolveOpenCodeInputDeclaration } from '@features/agent-attachments';
 import type {
   OpenCodeTeamRuntimeMessageResult,
   TeamLaunchRuntimeAdapter,
   TeamRuntimeLaunchResult,
 } from '../runtime';
 import type { RetryFailedOpenCodeSecondaryLanesResult, TeamCreateRequest } from '@shared/types';
-import type { MemberGatewayRuntimeSeams } from './TeamProvisioningMemberGatewayRuntime';
 
 const logger = createLogger('Service:TeamProvisioning');
 
 /** Owns serialized lifecycle and aggregate-primary restart orchestration. */
 export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends TeamProvisioningServiceMemberLifecycleFacade {
-  constructor(
-    resolveOpenCodeInputDeclaration?: ResolveOpenCodeInputDeclaration,
-    memberGatewayRuntimeSeams: MemberGatewayRuntimeSeams | null = null,
-    private readonly admitNewRuntime: (teamName: string) => Promise<void> = async () => undefined
-  ) {
-    super(resolveOpenCodeInputDeclaration, memberGatewayRuntimeSeams);
-  }
-
   private readonly aggregatePrimaryLaneHost: OpenCodeAggregatePrimaryLaneWiringHost &
     OpenCodePrimaryLaneRebootstrapWiringHost = {
     usesRetainedProgressState: () =>
@@ -129,25 +119,15 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
   );
 
   private runAfterInFlightTeamOperation<T>(
-    teamName: string,
-    operation: () => Promise<T>,
-    createsRuntime = false
+    teamName: string, operation: () => Promise<T>, createsRuntime = false
   ): Promise<T> {
-    // Usage and limits may change while another team operation is pending.
-    // Gate at execution time, immediately before starting another runtime.
-    const admittedOperation = createsRuntime
-      ? async () => {
-          await this.admitNewRuntime(teamName);
-          return operation();
-        }
-      : operation;
-    if (this.isLiveRosterMutationLockHeld(teamName)) {
-      return admittedOperation();
-    }
-    const pendingTeamOperation = this.teamOpLocks.get(teamName);
-    return pendingTeamOperation
-      ? pendingTeamOperation.then(admittedOperation)
-      : admittedOperation();
+    const run = async () => {
+      if (createsRuntime) await this.assertRuntimeSpawnAllowed(teamName);
+      return operation();
+    };
+    if (this.isLiveRosterMutationLockHeld(teamName)) return run();
+    const pending = this.teamOpLocks.get(teamName);
+    return pending ? pending.then(run) : run();
   }
   protected async waitForMemberLifecycleOperations(teamName: string): Promise<void> {
     await waitForAggregateMemberLifecycleOperations({
@@ -610,11 +590,9 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     memberName: string,
     options?: { reason?: LiveRosterAttachReason }
   ): Promise<void> {
-    return this.runAfterInFlightTeamOperation(
-      teamName,
-      () => this.memberLifecycleController.attachLiveRosterMember(teamName, memberName, options),
-      true
-    );
+    return this.runAfterInFlightTeamOperation(teamName, () =>
+      this.memberLifecycleController.attachLiveRosterMember(teamName, memberName, options)
+    , true);
   }
 
   override async detachLiveRosterMember(teamName: string, memberName: string): Promise<void> {
@@ -701,11 +679,9 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
   override async retryFailedOpenCodeSecondaryLanes(
     teamName: string
   ): Promise<RetryFailedOpenCodeSecondaryLanesResult> {
-    return this.runAfterInFlightTeamOperation(
-      teamName,
-      () => this.memberLifecycleController.retryFailedOpenCodeSecondaryLanes(teamName),
-      true
-    );
+    return this.runAfterInFlightTeamOperation(teamName, () =>
+      this.memberLifecycleController.retryFailedOpenCodeSecondaryLanes(teamName)
+    , true);
   }
 
   override async reattachOpenCodeOwnedMemberLane(
@@ -713,11 +689,9 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     memberName: string,
     options?: { reason?: 'member_added' | 'member_updated' | 'manual_restart' }
   ): Promise<void> {
-    return this.runAfterInFlightTeamOperation(
-      teamName,
-      () => this.memberLifecycleController.reattachOpenCodeOwnedMemberLane(teamName, memberName, options),
-      true
-    );
+    return this.runAfterInFlightTeamOperation(teamName, () =>
+      this.memberLifecycleController.reattachOpenCodeOwnedMemberLane(teamName, memberName, options)
+    , true);
   }
 
   override async detachOpenCodeOwnedMemberLane(

@@ -22,7 +22,6 @@ import { TeamMetaStore } from './TeamMetaStore';
 import { TeamSentMessagesStore } from './TeamSentMessagesStore';
 
 import type { ProvisioningGroupChatCallbacks } from './provisioning/TeamProvisioningGroupChatPorts';
-import type { LiveRosterAttachReason } from './provisioning/TeamProvisioningMemberLifecycleTypes';
 import type { MemberGatewayRuntimeSeams } from './provisioning/TeamProvisioningMemberGatewayRuntime';
 import type { ResolveOpenCodeInputDeclaration } from '@features/agent-attachments';
 
@@ -51,7 +50,6 @@ import type {
   EffortLevel,
   TeamChangeEvent,
   TeamCreateRequest,
-  RetryFailedOpenCodeSecondaryLanesResult,
   TeamCreateResponse,
   TeamLaunchRequest,
   TeamLaunchResponse,
@@ -89,6 +87,10 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
   }
 
   assertTeamBudgetAdmission(teamName: string): Promise<void> {
+    return this.budgetAdmission(teamName);
+  }
+
+  protected override assertRuntimeSpawnAllowed(teamName: string): Promise<void> {
     return this.budgetAdmission(teamName);
   }
 
@@ -298,50 +300,6 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
       stopMixedSecondaryRuntimeLanes: (teamName) => this.stopMixedSecondaryRuntimeLanes(teamName),
       invalidateRuntimeSnapshot: (teamName) => this.invalidateRuntimeSnapshotCaches(teamName),
     });
-  }
-
-  /** Every user-driven runtime creation path must respect the same team budget. */
-  override async restartMember(
-    teamName: string,
-    memberName: string,
-    expectedSecondary?: boolean
-  ): Promise<void> {
-    await this.assertTeamBudgetAdmission(teamName);
-    return super.restartMember(teamName, memberName, expectedSecondary);
-  }
-
-  override async attachLiveRosterMember(
-    teamName: string,
-    memberName: string,
-    options?: { reason?: LiveRosterAttachReason }
-  ): Promise<void> {
-    await this.assertTeamBudgetAdmission(teamName);
-    return super.attachLiveRosterMember(teamName, memberName, options);
-  }
-
-  override async retryFailedOpenCodeSecondaryLanes(
-    teamName: string
-  ): Promise<RetryFailedOpenCodeSecondaryLanesResult> {
-    await this.assertTeamBudgetAdmission(teamName);
-    return super.retryFailedOpenCodeSecondaryLanes(teamName);
-  }
-
-  override async reattachOpenCodeOwnedMemberLane(
-    teamName: string,
-    memberName: string,
-    options?: { reason?: 'member_added' | 'member_updated' | 'manual_restart' }
-  ): Promise<void> {
-    await this.assertTeamBudgetAdmission(teamName);
-    return super.reattachOpenCodeOwnedMemberLane(teamName, memberName, options);
-  }
-
-  override async rebootstrapOpenCodeAggregatePrimaryLane(
-    teamName: string,
-    reason: string,
-    expectedRunId: string | null
-  ): Promise<boolean> {
-    await this.assertTeamBudgetAdmission(teamName);
-    return super.rebootstrapOpenCodeAggregatePrimaryLane(teamName, reason, expectedRunId);
   }
 
   async createTeam(

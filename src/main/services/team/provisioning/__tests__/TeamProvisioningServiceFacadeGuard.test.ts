@@ -32,7 +32,6 @@ const TEAM_PROVISIONING_SERVICE_CLASS_NAME = 'TeamProvisioningService';
 const DECLARED_PUBLIC_SERVICE_ENTRYPOINTS = [
   'assertTeamBudgetAdmission',
   'assessLeadRuntimeRestart',
-  'attachLiveRosterMember',
   'createTeam',
   // The launch prompt reaches the lead through the inbox rather than the
   // orchestrator leadPrompt, and the launch flow drives it from outside.
@@ -45,14 +44,10 @@ const DECLARED_PUBLIC_SERVICE_ENTRYPOINTS = [
   'isTeamManagedByThisProfileSync',
   'launchTeam',
   // Opening a team repairs crash-stale task intervals only for teams this profile manages.
-  'reattachOpenCodeOwnedMemberLane',
-  'rebootstrapOpenCodeAggregatePrimaryLane',
   'repairStaleTaskActivityIntervalsBeforeSnapshot',
   // Human message send may explicitly repair a verified OpenCode recipient identity.
   'resolveRuntimeRecipientProviderIdForUserSend',
   'restartLeadRuntime',
-  'restartMember',
-  'retryFailedOpenCodeSecondaryLanes',
   // Both watchdog passes are admitted only for teams this profile manages.
   'scanOpenCodePromptDeliveryWatchdog',
   'setLaunchAdmissionGuard',

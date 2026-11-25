@@ -150,6 +150,11 @@ function preserveProvisioningRemovalTombstones(store: TeamMembersMetaStore): Tea
 
 /** Owns lifecycle host construction and launch-preparation adaptation. */
 export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamProvisioningServiceRuntimeStateFacade {
+  /** Narrow, optional runtime-start seam; the production service injects budget admission. */
+  protected assertRuntimeSpawnAllowed(_teamName: string): Promise<void> {
+    return Promise.resolve();
+  }
+
   /** Read-only admission evidence: includes active and queued stops, launches and roster mutations. */
   hasTeamOperationInProgress(teamName: string): boolean {
     return this.teamOpLocks.has(teamName.trim().toLowerCase());
