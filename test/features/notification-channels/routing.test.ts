@@ -29,7 +29,9 @@ describe('Notification Channels domain', () => {
 
   it('accepts the supported custom webhook provider without a Telegram chat ID', () => {
     const secret = 'https://hooks.example.org/events';
-    expect(normalizeChannelInput({ ...base, provider: 'webhook', secret })).toMatchObject({
+    expect(
+      normalizeChannelInput({ ...base, provider: 'webhook', chatId: undefined, secret })
+    ).toMatchObject({
       provider: 'webhook',
       chatId: undefined,
       secret,
