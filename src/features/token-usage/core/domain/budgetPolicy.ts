@@ -162,6 +162,7 @@ export function buildBudgetStatus(input: {
       label: options.get(optionKey)!.label,
       thresholds: [...config.thresholds],
       notificationsEnabled: config.notificationsEnabled,
+      onExceeded: config.onExceeded,
       metrics,
     };
   });
