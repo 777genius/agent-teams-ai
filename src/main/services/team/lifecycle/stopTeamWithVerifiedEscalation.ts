@@ -3,6 +3,10 @@
  * The bounded normal stop escalates only on failure. It never signals
  * a shared runtime without the existing lane/ownership evidence.
  */
+import { getTeamsBasePath } from '@main/utils/pathDecoder';
+
+import { assertEscalatedStopConfirmed } from '../provisioning/TeamProvisioningOpenCodeRuntimeStopOutcome';
+import { TeamLaunchStateStore } from '../TeamLaunchStateStore';
 import {
   clearPendingOpenCodePromptDeliveriesForTeam,
   countLiveRecordedRuntimeHostsForTeam,
@@ -15,9 +19,6 @@ import {
   stopTeamWithEscalation,
 } from './teamForceStopFlow';
 import { reapCursorAgentLeadTreesForStoppedTeam } from './teamLeadProcessTreeReap';
-import { assertEscalatedStopConfirmed } from '../provisioning/TeamProvisioningOpenCodeRuntimeStopOutcome';
-import { TeamLaunchStateStore } from '../TeamLaunchStateStore';
-import { getTeamsBasePath } from '@main/utils/pathDecoder';
 
 export interface EscalatedTeamStopRuntimePort {
   stopTeam(teamName: string): Promise<void>;
