@@ -51,9 +51,12 @@ export function validateBudgetLimit(value: unknown): TokenUsageBudgetLimitDto {
     throw new BudgetValidationError('Invalid budget notification policy');
   result.notificationsEnabled = source.notificationsEnabled;
   if (source.onExceeded !== undefined) {
-    if (!['notify', 'block_launch', 'stop_team'].includes(String(source.onExceeded)))
-      throw new BudgetValidationError('Invalid budget exceedance action');
-    result.onExceeded = source.onExceeded as NonNullable<TokenUsageBudgetLimitDto['onExceeded']>;
+    if (
+      source.onExceeded !== 'notify' &&
+      source.onExceeded !== 'block_launch' &&
+      source.onExceeded !== 'stop_team'
+    ) throw new BudgetValidationError('Invalid budget exceedance action');
+    result.onExceeded = source.onExceeded;
   }
   return result;
 }
