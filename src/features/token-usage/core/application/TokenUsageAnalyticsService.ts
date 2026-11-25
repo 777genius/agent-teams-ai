@@ -209,11 +209,12 @@ export class TokenUsageAnalyticsService implements TokenUsageAnalyticsServicePor
         throw error;
       }
       const active =
-        status.notificationPolicy.enabled &&
-        status.targets.some(
-          (target) =>
-            target.notificationsEnabled && target.thresholds.length > 0 && target.metrics.length > 0
-        );
+        status.targets.some((target) => target.onExceeded && target.onExceeded !== 'notify') ||
+        (status.notificationPolicy.enabled &&
+          status.targets.some(
+            (target) =>
+              target.notificationsEnabled && target.thresholds.length > 0 && target.metrics.length > 0
+          ));
       const refreshAge = now.getTime() - Date.parse(this.usageUpdatedAt ?? '');
       const recentlyRefreshed = refreshAge >= 0 && refreshAge < 120_000;
       const attemptAge = now.getTime() - this.lastRefreshAttempt;
