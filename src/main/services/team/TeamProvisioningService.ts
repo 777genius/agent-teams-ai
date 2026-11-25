@@ -370,7 +370,7 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
 /** Keep group callbacks lazy while using the desktop service's normal dependency defaults. */
 export function createDefaultTeamProvisioningService(
   getGroupChats: () => ProvisioningGroupChatCallbacks,
-  resolveOpenCodeInputDeclaration?: ResolveOpenCodeInputDeclaration,
+  resolveOpenCodeInputDeclaration: ResolveOpenCodeInputDeclaration | undefined,
   memberGatewayRuntimeSeams: MemberGatewayRuntimeSeams | null,
   budgetAdmission: (teamName: string) => Promise<void>
 ) {
