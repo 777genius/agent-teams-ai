@@ -202,7 +202,14 @@ import { TeamWorktreeGitService } from '../services/team/TeamWorktreeGitService'
 
 import { waitForOpenCodeRuntimeRelayForUi } from './teams/openCodeRuntimeDeliveryRelayUi';
 import { validateTaskRefs } from './teams/taskReferenceValidation';
-import { deleteLogicalTeamWithContexts, isLogicalTeamProcessAlive, permanentlyDeleteLogicalTeam, projectAliveTeamNames, restoreLogicalTeamWithContexts, stopLogicalTeam } from './teams/teamContextLifecycle';
+import {
+  deleteLogicalTeamWithContexts,
+  isLogicalTeamProcessAlive,
+  permanentlyDeleteLogicalTeam,
+  projectAliveTeamNames,
+  restoreLogicalTeamWithContexts,
+  stopLogicalTeam,
+} from './teams/teamContextLifecycle';
 import { withTeamLaunchAdmission } from './teams/teamLaunchAdmission';
 import { assertLiveRosterMutationAllowed } from './teams/teamLiveRosterMutationPolicy';
 import { teamMessageNotificationScanner } from './teams/teamMessageNotificationScanner';
@@ -215,11 +222,18 @@ import {
 } from './teams/teamNativeRosterMutation';
 import { TeamPermanentDeletionTransactionCoordinator } from './teams/TeamPermanentDeletionTransactionCoordinator';
 import { createTeamWithProjectContext } from './teams/teamProjectContextCreate';
-import { buildTeamProgressReporter, type ProjectContextProgressMapper, withPreparedContextLaunch } from './teams/teamProjectContextLaunch';
+import {
+  buildTeamProgressReporter,
+  type ProjectContextProgressMapper,
+  withPreparedContextLaunch,
+} from './teams/teamProjectContextLaunch';
 import * as projectEdit from './teams/teamProjectDefinitionEdit';
 import { discardQueuedUserMessages, listQueuedUserMessages } from './teams/teamQueuedUserMessages';
 import { createTeamReviewFlowService } from './teams/teamReviewFlow';
-import { parseRosterMutationMembers, preflightRosterMutation } from './teams/teamRosterMutationPreflight';
+import {
+  parseRosterMutationMembers,
+  preflightRosterMutation,
+} from './teams/teamRosterMutationPreflight';
 import { createTeamSoftDeleteRequests } from './teams/teamSoftDeleteFlow';
 import { parseUpdateConfigRequest, preflightConfigUpdate } from './teams/teamUpdateConfigRequest';
 import { withTimeoutValue } from './teams/withTimeoutValue';
@@ -726,8 +740,28 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_UPDATE_TASK_STATUS, handleUpdateTaskStatus);
   ipcMain.handle(TEAM_UPDATE_TASK_OWNER, handleUpdateTaskOwner);
   ipcMain.handle(TEAM_UPDATE_TASK_FIELDS, handleUpdateTaskFields);
-  ipcMain.handle(TEAM_DELETE_TEAM, (e, n) => deleteLogicalTeamWithContexts(n, (t) => handleStopTeam(e, t), (t) => getTeamDataService().deleteTeam(t), () => handleDeleteTeam(e, n), undefined, undefined, undefined, { physical: (t) => getTeamDataService().restoreTeam(t), logical: () => handleRestoreTeam(e, n) }));
-  ipcMain.handle(TEAM_RESTORE, (e, n) => restoreLogicalTeamWithContexts(n, (t) => getTeamDataService().restoreTeam(t), () => handleRestoreTeam(e, n)));
+  ipcMain.handle(TEAM_DELETE_TEAM, (e, n) =>
+    deleteLogicalTeamWithContexts(
+      n,
+      (t) => handleStopTeam(e, t),
+      (t) => getTeamDataService().deleteTeam(t),
+      () => handleDeleteTeam(e, n),
+      undefined,
+      undefined,
+      undefined,
+      {
+        physical: (t) => getTeamDataService().restoreTeam(t),
+        logical: () => handleRestoreTeam(e, n),
+      }
+    )
+  );
+  ipcMain.handle(TEAM_RESTORE, (e, n) =>
+    restoreLogicalTeamWithContexts(
+      n,
+      (t) => getTeamDataService().restoreTeam(t),
+      () => handleRestoreTeam(e, n)
+    )
+  );
   ipcMain.handle(TEAM_PERMANENTLY_DELETE, handleProjectAwarePermanentDelete);
   ipcMain.handle(TEAM_PROCESS_SEND, handleProcessSend);
   ipcMain.handle(TEAM_PROCESS_ALIVE, handleProcessAlive);
@@ -748,16 +782,52 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_GET_TASK_EXACT_LOG_SUMMARIES, handleGetTaskExactLogSummaries);
   ipcMain.handle(TEAM_GET_TASK_EXACT_LOG_DETAIL, handleGetTaskExactLogDetail);
   ipcMain.handle(TEAM_GET_MEMBER_STATS, handleGetMemberStats);
-  ipcMain.handle(TEAM_UPDATE_CONFIG, projectEdit.route(handleUpdateConfig, projectEdit.refuseLeadPromptOfNativeTeam, undefined, preflightConfigUpdate));
+  ipcMain.handle(
+    TEAM_UPDATE_CONFIG,
+    projectEdit.route(
+      handleUpdateConfig,
+      projectEdit.refuseLeadPromptOfNativeTeam,
+      undefined,
+      preflightConfigUpdate
+    )
+  );
   ipcMain.handle(TEAM_START_TASK, handleStartTask);
   ipcMain.handle(TEAM_START_TASK_BY_USER, handleStartTaskByUser);
   ipcMain.handle(TEAM_GET_ALL_TASKS, handleGetAllTasks);
   ipcMain.handle(TEAM_ADD_TASK_COMMENT, handleAddTaskComment);
-  ipcMain.handle(TEAM_ADD_MEMBER, projectEdit.route(handleAddMember, undefined, undefined, (team, ...args) => preflightRosterMutation(getTeamDataService(), team, 'add', ...args)));
-  ipcMain.handle(TEAM_REPLACE_MEMBERS, projectEdit.route(handleReplaceMembers, undefined, projectEdit.refuseSettingsRelaunchOfDefinition, (team, ...args) => preflightRosterMutation(getTeamDataService(), team, 'replace', ...args)));
-  ipcMain.handle(TEAM_REMOVE_MEMBER, projectEdit.route(handleRemoveMember, undefined, undefined, (team, ...args) => preflightRosterMutation(getTeamDataService(), team, 'remove', ...args)));
-  ipcMain.handle(TEAM_RESTORE_MEMBER, projectEdit.route(handleRestoreMember, undefined, undefined, (team, ...args) => preflightRosterMutation(getTeamDataService(), team, 'restore', ...args)));
-  ipcMain.handle(TEAM_UPDATE_MEMBER_ROLE, projectEdit.route(handleUpdateMemberRole, undefined, undefined, (team, ...args) => preflightRosterMutation(getTeamDataService(), team, 'role', ...args)));
+  ipcMain.handle(
+    TEAM_ADD_MEMBER,
+    projectEdit.route(handleAddMember, undefined, undefined, (team, ...args) =>
+      preflightRosterMutation(getTeamDataService(), team, 'add', ...args)
+    )
+  );
+  ipcMain.handle(
+    TEAM_REPLACE_MEMBERS,
+    projectEdit.route(
+      handleReplaceMembers,
+      undefined,
+      projectEdit.refuseSettingsRelaunchOfDefinition,
+      (team, ...args) => preflightRosterMutation(getTeamDataService(), team, 'replace', ...args)
+    )
+  );
+  ipcMain.handle(
+    TEAM_REMOVE_MEMBER,
+    projectEdit.route(handleRemoveMember, undefined, undefined, (team, ...args) =>
+      preflightRosterMutation(getTeamDataService(), team, 'remove', ...args)
+    )
+  );
+  ipcMain.handle(
+    TEAM_RESTORE_MEMBER,
+    projectEdit.route(handleRestoreMember, undefined, undefined, (team, ...args) =>
+      preflightRosterMutation(getTeamDataService(), team, 'restore', ...args)
+    )
+  );
+  ipcMain.handle(
+    TEAM_UPDATE_MEMBER_ROLE,
+    projectEdit.route(handleUpdateMemberRole, undefined, undefined, (team, ...args) =>
+      preflightRosterMutation(getTeamDataService(), team, 'role', ...args)
+    )
+  );
   ipcMain.handle(TEAM_GET_PROJECT_BRANCH, handleGetProjectBranch);
   ipcMain.handle(TEAM_GET_ATTACHMENTS, handleGetAttachments);
   ipcMain.handle(TEAM_KILL_PROCESS, handleKillProcess);
@@ -1461,7 +1531,9 @@ async function handleRestoreTeam(
   });
 }
 async function handleProjectAwarePermanentDelete(
-  event: IpcMainInvokeEvent, name: unknown, forceDraft = false
+  event: IpcMainInvokeEvent,
+  name: unknown,
+  forceDraft = false
 ): Promise<IpcResult<void>> {
   const checked = validateTeamName(name);
   if (!checked.valid) return { success: false, error: checked.error ?? 'Invalid teamName' };
@@ -1469,10 +1541,12 @@ async function handleProjectAwarePermanentDelete(
     stopNative: (alias) => handleStopTeam(event, alias),
     deleteNative: (alias, draft) =>
       getPermanentDeletionCoordinator().permanentlyDelete(alias, { draft }),
-    deleteLogical: (draft) => wrapTeamHandler('permanentlyDeleteTeam', () =>
-      getPermanentDeletionCoordinator().permanentlyDelete(checked.value!, {
-        draft: draft || forceDraft,
-      })),
+    deleteLogical: (draft) =>
+      wrapTeamHandler('permanentlyDeleteTeam', () =>
+        getPermanentDeletionCoordinator().permanentlyDelete(checked.value!, {
+          draft: draft || forceDraft,
+        })
+      ),
   });
 }
 async function handleUpdateConfig(
@@ -1486,14 +1560,14 @@ async function handleUpdateConfig(
   }
   const parsed = parseUpdateConfigRequest(updates);
   if (!parsed.ok) return { success: false, error: parsed.error };
-  return wrapTeamHandler('updateConfig', () => updateNativeTeamConfiguration(
-    validated.value!, parsed.value, {
+  return wrapTeamHandler('updateConfig', () =>
+    updateNativeTeamConfiguration(validated.value!, parsed.value, {
       data: getTeamDataService(),
       isTeamAlive: (name) => getTeamRuntimeApi().isTeamAlive(name),
       notify: (name, message) => getTeamMessagingApi().sendMessageToTeam(name, message),
       invalidate: (name) => getTeamDataWorkerClient().invalidateTeamConfig(name),
-    }
-  ));
+    })
+  );
 }
 
 function isProvisioningTeamName(teamName: string): boolean {
@@ -1900,11 +1974,17 @@ async function handleLaunchTeamUnlocked(
   }
 
   const tn = validatedTeamName.value!;
-  const rerouted = contextAlreadyResolved ? null : await withPreparedContextLaunch(
-    { ...payload, teamName: tn, cwd } as TeamLaunchRequest,
-    { data: getTeamDataService(), runtime: getTeamRuntimeApi(), run: getTeamProvisioningRunApi() },
-    (selected, mapper) => handleLaunchTeamUnlocked(event, selected, mapper, true)
-  ).catch((error: unknown) => teamReadFailureResult<TeamLaunchResponse>(error));
+  const rerouted = contextAlreadyResolved
+    ? null
+    : await withPreparedContextLaunch(
+        { ...payload, teamName: tn, cwd } as TeamLaunchRequest,
+        {
+          data: getTeamDataService(),
+          runtime: getTeamRuntimeApi(),
+          run: getTeamProvisioningRunApi(),
+        },
+        (selected, mapper) => handleLaunchTeamUnlocked(event, selected, mapper, true)
+      ).catch((error: unknown) => teamReadFailureResult<TeamLaunchResponse>(error));
   if (rerouted) return rerouted;
   const configPath = path.join(getTeamsBasePath(), tn, 'config.json');
   let isDraft = false;
@@ -2320,7 +2400,8 @@ async function handleLaunchFailureDiagnostics(
   const validatedRunId = typeof runId === 'string' && runId.trim() ? runId.trim() : undefined;
   return wrapTeamHandler('launchFailureDiagnostics', () =>
     readTeamLaunchFailureDiagnosticsBundle(
-      resolveProjectRunDiagnosticsTeam(validatedTeamName.value!, validatedRunId), validatedRunId
+      resolveProjectRunDiagnosticsTeam(validatedTeamName.value!, validatedRunId),
+      validatedRunId
     )
   );
 }
@@ -3259,7 +3340,9 @@ async function handleProcessAlive(
     return { success: false, error: validatedTeamName.error ?? 'Invalid teamName' };
   }
   return wrapTeamHandler('processAlive', () =>
-    isLogicalTeamProcessAlive(validatedTeamName.value!, (name) => getTeamRuntimeApi().isTeamAlive(name))
+    isLogicalTeamProcessAlive(validatedTeamName.value!, (name) =>
+      getTeamRuntimeApi().isTeamAlive(name)
+    )
   );
 }
 async function handleCreateConfig(
@@ -3528,7 +3611,10 @@ async function handleGetMemberStats(
 }
 async function handleAliveList(_event: IpcMainInvokeEvent): Promise<IpcResult<string[]>> {
   return wrapTeamHandler('aliveList', async () =>
-    projectAliveTeamNames(getTeamRuntimeApi().getAliveTeams(), await getTeamDataService().listTeams())
+    projectAliveTeamNames(
+      getTeamRuntimeApi().getAliveTeams(),
+      await getTeamDataService().listTeams()
+    )
   );
 }
 
@@ -4487,9 +4573,11 @@ async function handleAddTaskComment(
     return { success: false, error: validatedTaskRefs.error };
   }
   const answerId = payload.answerClarificationRequestId;
-  if (answerId !== undefined &&
-      (typeof answerId !== 'string' ||
-        !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(answerId))) {
+  if (
+    answerId !== undefined &&
+    (typeof answerId !== 'string' ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(answerId))
+  ) {
     return { success: false, error: 'Invalid clarification request identity' };
   }
 
