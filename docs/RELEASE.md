@@ -7,6 +7,7 @@ Release notes are for product users, not maintainers. Explain what changed in th
 Writing rules:
 
 - Verify every claim against the commits and merged pull requests since the previous published tag.
+- Describe changes relative to the previous publicly released version, not intermediate development states. Bug fixes made during the development of a new feature must not appear as separate release notes. Describe the final user-facing capability instead.
 - Include only changes shipped from the release target. Do not include work from unrelated branches.
 - Start with the main user-visible change in one or two sentences, using no more than 40 words.
 - Keep each bullet to one user-visible change and no more than 20 words.
@@ -20,11 +21,14 @@ Writing rules:
 - Do not write vague claims such as `improved reliability` or `better performance`. State the failure that was fixed.
 - Do not repeat the same change in the introduction and multiple sections.
 - Keep required download and installation notes factual and unchanged unless the release process changes.
+- Always credit contributors whose work ships in the release. Verify their GitHub usernames and contributions against the merged pull requests and commit authorship, including work integrated through follow-up PRs. Mention them with `@username` and a short description of their contribution, either alongside the relevant change or in a dedicated `Contributors` section before `Downloads`. Group related contributions without dropping credit; do not attribute unshipped work.
 
 Before publishing:
 
 - Read the introduction and every bullet independently. Each must be clear without repository context.
 - Remove any bullet that does not change what a user can do, see, or rely on.
+- Check that no intermediate feature-development bug fixes are listed as standalone release changes.
+- Confirm all contributors to the shipped changes are credited with their correct GitHub usernames.
 - Confirm version numbers, runtime gates, asset names, and download links.
 - Confirm the GitHub release title is exactly the tag (`v2.15.0`), not `Agent Teams v2.15.0`.
 - Keep the body in this document identical to the GitHub release body.
