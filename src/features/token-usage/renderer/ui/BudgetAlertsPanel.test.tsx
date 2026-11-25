@@ -164,8 +164,23 @@ describe('Budget Save/Cancel and standalone status', () => {
     await open();
     expect(document.body.textContent).toContain('tokenUsage.budgets.editor.onExceeded');
     await input('tokenUsage.budgets.tokenLimit', '100');
+    const policy = document.querySelector('[role="dialog"] [aria-label="tokenUsage.budgets.editor.onExceeded"]');
+    expect(policy).not.toBeNull();
+    await act(async () =>
+      policy!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    );
+    const stop = [...document.querySelectorAll('[role="option"]')].find(
+      (item) => item.textContent === 'tokenUsage.budgets.editor.stopTeam'
+    );
+    expect(stop).not.toBeUndefined();
+    await act(async () =>
+      stop!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    );
     await button('tokenUsage.budgets.editor.save');
-    expect(save.mock.calls[0][0].settings.teams['team:new-team'].monthlyTokenLimit).toBe(100);
+    expect(save.mock.calls[0][0].settings.teams['team:new-team']).toMatchObject({
+      monthlyTokenLimit: 100,
+      onExceeded: 'stop_team',
+    });
   });
 
   // These assertions go red under the old autosave form even before touching disk.
