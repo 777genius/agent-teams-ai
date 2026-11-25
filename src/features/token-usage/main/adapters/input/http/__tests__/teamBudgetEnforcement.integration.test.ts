@@ -80,9 +80,12 @@ describe('team budget real persistence, HTTP, admission and stop E2E', () => {
       teamsBasePath,
       importers: [],
       budgetTeamNameAliases: controls.resolveBudgetAliases,
-      publisher: { publishBudgetStatus: (status) => controls.observer.observe(status) },
+      publisher: {
+        publishSnapshot: () => undefined,
+        publishBudgetStatus: (status) => controls.observer.observe(status),
+      },
     });
-    cleanup.push(async () => feature?.dispose());
+    cleanup.push(async () => { feature?.dispose(); });
     const app = Fastify();
     registerTokenUsageHttp(app, feature);
     cleanup.push(() => app.close());
