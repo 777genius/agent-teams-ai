@@ -14,9 +14,9 @@ import { ListFilter } from 'lucide-react';
 
 import {
   attentionFilterCount,
-  DEFAULT_ATTENTION_FILTERS,
   type AttentionFilters,
   type AttentionTeamOption,
+  DEFAULT_ATTENTION_FILTERS,
 } from '../view-models/filterAttentionEntries';
 
 interface FilterSelectProps {

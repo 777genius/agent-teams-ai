@@ -7,10 +7,10 @@ import { AlertCircle, Inbox, MessageCircle, RefreshCw } from 'lucide-react';
 
 import {
   attentionFilterCount,
+  type AttentionFilters,
   attentionTeamOptions,
   DEFAULT_ATTENTION_FILTERS,
   filterAttentionEntries,
-  type AttentionFilters,
 } from '../view-models/filterAttentionEntries';
 import { relativeAttentionAge, toAttentionChatRow } from '../view-models/toAttentionChatRow';
 
