@@ -1,6 +1,8 @@
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { SaveAsTemplateAction } from '@features/custom-team-templates/renderer';
+import { useTeamBudgetStatus } from '@features/token-usage/renderer/hooks/useTeamBudgetStatus';
+import { TeamBudgetProgress } from '@features/token-usage/renderer/ui/TeamBudgetProgress';
 import { useAppTranslation } from '@features/localization/renderer';
 import { recordRecentProjectOpenPaths } from '@features/recent-projects/renderer';
 import { classifyAnalyticsError, recordTeamStop } from '@renderer/analytics/productAnalytics';
@@ -62,7 +64,7 @@ import { assignCreatedTeamToOrganization } from './dialogs/assignCreatedTeamToOr
 import { CreateTeamPageLoadingFallback } from './dialogs/CreateTeamPageLoadingFallback';
 import { LaunchTeamDialogLoadingFallback } from './dialogs/LaunchTeamDialogLoadingFallback';
 import { executeTeamRelaunch } from './dialogs/teamRelaunchFlow';
-import { buildCopiedTeamMembers } from './teamCopyData';
+import { buildCopiedTeamMembers, generateUniqueName } from './teamCopyData';
 import { TeamDeleteButton } from './TeamDeleteButton';
 import { showTeamDeleteError } from './teamDeleteErrorDialog';
 import { runTeamDeleteOnce } from './teamDeleteProgress';
@@ -111,17 +113,6 @@ const ImportTeamDialog = lazy(() =>
 
 const TEAM_SECTION_INITIAL_VISIBLE_COUNT = 24;
 const TEAM_SECTION_PAGE_SIZE = 24;
-
-function generateUniqueName(sourceName: string, existingNames: string[]): string {
-  const base = sourceName.replace(/-\d+$/, '');
-  const existing = new Set(existingNames);
-  for (let i = 1; ; i++) {
-    const candidate = `${base}-${i}`;
-    if (!existing.has(candidate)) {
-      return candidate;
-    }
-  }
-}
 
 function getRecentProjects(team: TeamSummary): string[] {
   const history = team.projectPathHistory;
@@ -231,6 +222,7 @@ type TeamT = ReturnType<typeof useAppTranslation>['t'];
 interface ActiveTeamCardProps {
   managementChange?: TeamManagementCommittedChange;
   team: TeamSummary;
+  budgetStatus: ReturnType<typeof useTeamBudgetStatus>;
   status: TeamStatus;
   teamColorSet: TeamColorSet;
   isLight: boolean;
@@ -256,6 +248,7 @@ interface ActiveTeamCardProps {
 const ActiveTeamCard = ({
   managementChange,
   team,
+  budgetStatus,
   status,
   teamColorSet,
   isLight,
@@ -437,6 +430,7 @@ const ActiveTeamCard = ({
             </Badge>
           )}
         </div>
+        <TeamBudgetProgress teamName={team.teamName} status={budgetStatus} />
         <div className="mt-auto">
           <TeamTaskStatusSummary counts={taskCounts} />
           {renderTeamRecentPaths(team, status, matchesCurrentProject, isLight, currentProjectPath)}
@@ -456,6 +450,7 @@ export const TeamListView = memo(function TeamListView({
   const { isLight } = useTheme();
   const { t } = useAppTranslation('team');
   const { t: tCommon } = useAppTranslation('common');
+  const budgetStatus = useTeamBudgetStatus();
   const teamStopControl = useTeamStopControl();
   const electronMode = isElectronMode();
   const creationTab = useStore((s) =>
@@ -1400,6 +1395,7 @@ export const TeamListView = memo(function TeamListView({
                         <ActiveTeamCard
                           key={team.teamName}
                           team={team}
+                          budgetStatus={budgetStatus}
                           managementChange={teamManagementNoticeByTeam[team.teamName]}
                           status={status}
                           teamColorSet={teamColorSet}
