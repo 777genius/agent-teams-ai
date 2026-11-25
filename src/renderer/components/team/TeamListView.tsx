@@ -1,7 +1,6 @@
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { SaveAsTemplateAction } from '@features/custom-team-templates/renderer';
-
 import { useAppTranslation } from '@features/localization/renderer';
 import { recordRecentProjectOpenPaths } from '@features/recent-projects/renderer';
 import { TeamBudgetProgress, useTeamBudgetStatus } from '@features/token-usage/renderer';
