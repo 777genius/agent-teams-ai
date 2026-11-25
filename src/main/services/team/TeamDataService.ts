@@ -2509,6 +2509,7 @@ export class TeamDataService {
     if (answerClarificationRequestId) {
       try {
         await this.runTaskCommentNotificationsCoalesced(teamName, taskId, {
+          seedHistoricalIfJournalMissing: true,
           recoverPending: true,
         });
       } catch (error) {
