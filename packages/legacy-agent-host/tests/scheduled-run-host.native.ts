@@ -1,18 +1,25 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { constants } from 'node:fs';
-import { chmod, copyFile, mkdir, mkdtemp, readdir, readFile, realpath, writeFile } from 'node:fs/promises';
+import { chmod, copyFile, mkdir, mkdtemp, open, readdir, readFile, realpath, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 import { test } from 'node:test';
 import { setTimeout as delay } from 'node:timers/promises';
 import { verifyNativeProviderArtifact } from './fixtures/native-provider-artifact.ts';
 import { scheduledRunSnapshotSchema } from '../dist/composition/scheduledRunContracts.js';
-import { fileHash, startHost, treeHash } from './fixtures/native-host.ts';
+import { digestOpenExecutable } from '../dist/process/digestOpenExecutable.js';
+import { startHost, treeHash } from './fixtures/native-host.ts';
 import { scheduledNativePrompt, startScheduledNativeModel } from './fixtures/native-scheduled-model.ts';
 import type { ScheduledNativeMode } from './fixtures/native-scheduled-model.ts';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import type { ScheduledRunInput } from '../dist/composition/scheduledRunContracts.js';
+
+async function fileHash(path: string): Promise<string> {
+  const file = await open(path, 'r');
+  try { return digestOpenExecutable(file.fd); }
+  finally { await file.close(); }
+}
 
 const pins = {
   claude: '86cb722ab68348877dba7971e4d0c659919e05e6228c05e006e83da320e656ef',
