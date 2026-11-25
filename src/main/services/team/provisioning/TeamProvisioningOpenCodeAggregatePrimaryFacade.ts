@@ -125,8 +125,8 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       if (createsRuntime) await this.assertRuntimeSpawnAllowed(teamName);
       return operation();
     };
-    if (this.isLiveRosterMutationLockHeld(teamName)) return run();
-    const pending = this.teamOpLocks.get(teamName);
+    const pending = this.isLiveRosterMutationLockHeld(teamName)
+      ? null : this.teamOpLocks.get(teamName);
     return pending ? pending.then(run) : run();
   }
   protected async waitForMemberLifecycleOperations(teamName: string): Promise<void> {
