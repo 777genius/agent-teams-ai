@@ -49,18 +49,33 @@ test('original captured Host forwards native Claude follow-up for the exact huma
   const errors: string[] = [];
   let host: ReturnType<typeof startHost> | undefined;
   let server: ReturnType<typeof createServer> | undefined;
-  let receipt: Record<string, unknown> = { passed: false, note: 'not executed' };
-  const frames = (response: import('node:http').ServerResponse, id: number) => {
+  let receipt: Record<string, unknown> = { passed: false, nativeSdk: sdkPackage.version,
+    nativeBinarySha256: binarySha256, node: process.version, vendorAuth: false,
+    environment: nativePlatform };
+  let phase = 'local-model-setup';
+  let warmupTerminal = false;
+  let terminal = false;
+  let warmupReadIssued = false;
+  let warmupReadReturned = false;
+  const warmupToolId = 'TEST-native-warmup-team-read';
+  type ModelBlock = { type: 'text'; text: string } |
+    { type: 'tool_use'; id: string; name: string; input: Record<string, unknown> };
+  const frames = (response: import('node:http').ServerResponse, id: number, block: ModelBlock) => {
     const event = (type: string, body: object) => response.write(
       'event: '+type+'\ndata: '+JSON.stringify({type,...body})+'\n\n'
     );
     response.writeHead(200,{'content-type':'text/event-stream'});
     event('message_start',{message:{id:'msg_TEST_'+id,type:'message',role:'assistant',
       model:'claude-sonnet-4-6',content:[],stop_reason:null,stop_sequence:null,usage:{input_tokens:20,output_tokens:0}}});
-    event('content_block_start',{index:0,content_block:{type:'text',text:''}});
-    event('content_block_delta',{index:0,delta:{type:'text_delta',text:id===1?'Completed TEST user request.':'Review the completed TEST request.'}});
+    if (block.type === 'tool_use') {
+      event('content_block_start',{index:0,content_block:{...block,input:{}}});
+      event('content_block_delta',{index:0,delta:{type:'input_json_delta',partial_json:JSON.stringify(block.input)}});
+    } else {
+      event('content_block_start',{index:0,content_block:{type:'text',text:''}});
+      event('content_block_delta',{index:0,delta:{type:'text_delta',text:block.text}});
+    }
     event('content_block_stop',{index:0});
-    event('message_delta',{delta:{stop_reason:'end_turn',stop_sequence:null},usage:{output_tokens:9}});
+    event('message_delta',{delta:{stop_reason:block.type==='tool_use'?'tool_use':'end_turn',stop_sequence:null},usage:{output_tokens:9}});
     event('message_stop',{});
     response.end();
   };
@@ -76,10 +91,42 @@ test('original captured Host forwards native Claude follow-up for the exact huma
         const data=scalar(JSON.parse(buffer.toString('utf8')));
         const source=JSON.stringify(data.messages??[]);
         const hasHuman=source.includes(prompt)||source.includes(warmupPrompt);
-        bodies.push({inputHasHuman:hasHuman,kind:hasHuman?'human-context':'unknown',tools:Array.isArray(data.tools)?data.tools.length:0});
         assert.equal(hasHuman,true,'native inference belongs to exact original human message');
+        const secondHuman = source.includes(prompt);
+        const suggestion = source.includes('[SUGGESTION MODE: Suggest what the user might naturally type next into Claude Code.]');
+        let kind: string;
+        let block: ModelBlock;
+        if (suggestion) {
+          assert.equal(warmupReadReturned, true, 'native sampling follows the genuine read-only warm-up');
+          kind = secondHuman ? 'human-suggestion' : 'warmup-suggestion';
+          block = { type: 'text', text: 'Review the completed TEST request.' };
+        } else if (!secondHuman && !warmupReadIssued) {
+          const tools = (Array.isArray(data.tools) ? data.tools : []).map(scalar);
+          assert.ok(tools.some(tool => tool.name === 'mcp__team__team_get'),
+            'the actual native request exposes the original read-only Team tool');
+          warmupReadIssued = true;
+          kind = 'warmup-tool';
+          block = { type: 'tool_use', id: warmupToolId, name: 'mcp__team__team_get', input: {} };
+        } else {
+          if (!secondHuman) {
+            assert.equal(warmupReadReturned, false, 'one original read-only warm-up tool round trip');
+            const messages = (Array.isArray(data.messages) ? data.messages : []).map(scalar);
+            const blocks = messages.flatMap(message =>
+              Array.isArray(message.content) ? message.content.map(scalar) : []);
+            const result = blocks.find(value => value.type === 'tool_result' && value.tool_use_id === warmupToolId);
+            assert.ok(result, 'the original native tool result reaches the next inference');
+            assert.notEqual(result.is_error, true);
+            const returned = JSON.stringify(result.content);
+            assert.ok(returned.includes(teamBinding.teamName) && returned.includes(warmupPrompt),
+              'the real Team read returns this captured TEST team and original human message');
+            warmupReadReturned = true;
+          }
+          kind = secondHuman ? 'human-result' : 'warmup-result';
+          block = { type: 'text', text: 'Completed TEST user request.' };
+        }
+        bodies.push({inputHasHuman:hasHuman,kind,tools:Array.isArray(data.tools)?data.tools.length:0});
         assert.ok(bodies.length<=7,'do not amplify model calls without user request');
-        frames(res,bodies.length);
+        frames(res,bodies.length,block);
       })().catch((err:unknown)=>{
         errors.push(String(err instanceof Error?err.message:'unknown'));
         if(!res.headersSent)res.writeHead(400);
@@ -145,17 +192,20 @@ test('original captured Host forwards native Claude follow-up for the exact huma
       onNotification:(method,value)=>{
         if(method==='runtime.prompt-suggestion.updated')received.push(scalar(value));
       }});
+    phase = 'host-handshake';
     const initial=await host.rpc('host.handshake',{protocolVersion:1});
     assert.ok((initial.capabilities as string[]).includes('runtime.member-session'));
     const launchRead=await host.rpc('team.launch.read',envelope('TEST-launch-read',{}));
     assert.equal(launchRead.ok,true);
     const selection=scalar(launchRead.value);
+    phase = 'native-launch';
     const started=await host.rpc('team.launch.start',envelope('TEST-launch',{
       launchId:selection.launchId,rosterRevision:selection.rosterRevision,
       configuration:{members:[{memberId:'alice-id',model:'claude-sonnet-4-6',
         effort:'low',fastMode:false,permissions:'bypass',context:'model-default'}]},
     }));
     assert.equal(started.ok,true,'original Host launches same selected native SDK');
+    phase = 'native-readiness';
     const readyUntil=Date.now()+35_000;let ready=false;
     while(Date.now()<readyUntil){
       const state=await host.rpc('runtime.read',envelope('TEST-ready',{memberId:'alice-id'}));
@@ -169,9 +219,11 @@ test('original captured Host forwards native Claude follow-up for the exact huma
     assert.ok(baseline.every(row=>typeof row.inputId==='string'),'native Runtime input IDs are projected');
     const baselineIds=new Set(baseline.map(row=>String(row.inputId)));
     assert.equal(baselineIds.size,baseline.length,'original Runtime inputs are unique');
-    // Native Claude may suppress its first session-turn suggestion. Warm up
-    // through a genuine human DM without manufacturing a provider candidate.
+    // The pinned SDK suppresses suggestions with fewer than two assistant messages.
+    // One genuine read-only MCP round trip qualifies this original human DM;
+    // its native suggestion must settle before a successor can make ownership ambiguous.
     const warmupMessageId='TEST-warmup-message-'+namespace;
+    phase = 'warmup-human-dm';
     const warmup=await host.rpc('team.execute',envelope(warmupMessageId,{
       operation:'message.send',payload:{
         to:'alice',text:warmupPrompt,summary:'TEST native warm-up',messageId:warmupMessageId,actionMode:'do',
@@ -182,20 +234,23 @@ test('original captured Host forwards native Claude follow-up for the exact huma
     const warmupDeliveryId=scalar(scalar(warmup.value).effects).deliveryId;
     assert.ok(typeof warmupDeliveryId==='string'&&warmupDeliveryId.length>0);
     const warmupDeadline=Date.now()+55_000;
-    let warmupTerminal=false;
     while(Date.now()<warmupDeadline){
       assert.deepEqual(errors,[]);
       const state=await host.rpc('runtime.read',envelope('TEST-warmup-read',{memberId:'alice-id'}));
       const inputs=(scalar(state.value).inputs as unknown[]|undefined)?.map(scalar)??[];
       if(inputs.some(row=>row.inputId===warmupDeliveryId&&row.phase==='terminal'&&row.terminal==='succeeded')){
         warmupTerminal=true;
-        break;
       }
+      if(warmupTerminal&&received.some(row=>row.messageId===warmupMessageId))break;
       await tick();
     }
     assert.equal(warmupTerminal,true,'first original human DM has a durable native terminal');
+    assert.equal(warmupReadReturned,true,'warm-up completed one genuine read-only native MCP round trip');
+    assert.equal(received.filter(row=>row.messageId===warmupMessageId).length,1,
+      'the original warm-up suggestion settles before the qualified second human DM');
 
     const messageId='TEST-human-message-'+namespace;
+    phase = 'second-human-dm';
     const sent=await host.rpc('team.execute',envelope(messageId,{
       operation:'message.send',payload:{
         to:'alice',text:prompt,summary:'TEST native human direct',messageId,actionMode:'do',
@@ -207,7 +262,6 @@ test('original captured Host forwards native Claude follow-up for the exact huma
     assert.ok(typeof deliveryId==='string'&&deliveryId.length>0,
       'original saved human delivery has an input identity');
     const deadline=Date.now()+55_000;
-    let terminal=false;
     let latestGeneration: unknown;
     while(Date.now()<deadline){
       assert.deepEqual(errors,[]);
@@ -233,9 +287,10 @@ test('original captured Host forwards native Claude follow-up for the exact huma
     assert.ok(received.every(row=>[warmupMessageId,messageId].includes(String(row.messageId))),
       'no foreign message may produce a Host suggestion');
     const offers=received.filter(row=>row.messageId===messageId);
+    phase = 'native-suggestion-proof';
     assert.equal(offers.length,1,'exactly one native suggestion for the qualified second human DM');
     assert.ok(received.filter(row=>row.messageId===warmupMessageId).length<=1,
-      'optional warm-up suggestion must not amplify');
+      'the settled warm-up suggestion must not amplify');
     const event=offers[0]!;
     assert.equal(event.provider,'claude');
     assert.equal(event.teamId,scope.teamId);
@@ -252,6 +307,7 @@ test('original captured Host forwards native Claude follow-up for the exact huma
     const originalOperationRef = event.operationRef;
     assert.ok(typeof originalOperationRef === 'string' && originalOperationRef.length > 0,
       'Host notice carries a bounded original operation');
+    phase = 'host-operation-proof';
     const proofPayload={memberId:'alice-id',expectedGeneration:latestGeneration,
       nativePromptProof:{inputId:deliveryId,operationRef:originalOperationRef}};
     const verified=await host.rpc('runtime.read',envelope('TEST-prove-original-operation',proofPayload));
@@ -266,11 +322,13 @@ test('original captured Host forwards native Claude follow-up for the exact huma
     assert.equal(rejected.ok,true);
     assert.equal(scalar(rejected.value).nativePromptCurrent,false,
       'wrong operation is rejected rather than self-matching browser candidate fields');
+    phase = 'native-stop';
     const stopped=await host.rpc('runtime.stop',envelope('TEST-stop',{memberId:'alice-id',expectedGeneration:latestGeneration}));
     assert.equal(stopped.ok,true);
-    receipt={passed:true,nativeSdk:'0.3.305',nativeBinarySha256:binarySha256,normalHumanMessages:2,originalHostNotifications:received.length,qualifiedHostNotifications:offers.length,
+    receipt={...receipt,passed:true,nativeSdk:'0.3.305',nativeBinarySha256:binarySha256,normalHumanMessages:2,originalHostNotifications:received.length,qualifiedHostNotifications:offers.length,
       localhostModelCalls:bodies.length,allModelCallsContainOriginalHuman:bodies.every(x=>x.inputHasHuman),
       vendorAuth:false,environment:process.platform+'-'+process.arch,nativeCustody:'released'};
+    phase = 'completed';
   }finally{
     let closeError: unknown;
     try{await host?.close()}catch(error){closeError=error}
@@ -278,7 +336,17 @@ test('original captured Host forwards native Claude follow-up for the exact huma
     if(closeError && receipt.passed===true)
       receipt={...receipt,passed:false,nativeCustody:'unverified',
         cleanupError:closeError instanceof Error?closeError.message:'Host cleanup failed'};
-    try{server?.closeAllConnections();await new Promise<void>(resolve=>server?.close(()=>resolve())??resolve())}catch{}
+    const facts = host?.facts();
+    receipt = { ...receipt, phase, warmupTerminal, originalHumanTerminal: terminal,
+      localhostModelCalls: bodies.length, modelCallKinds: bodies.slice(0, 8).map(body => body.kind),
+      originalHostNotifications: received.length, localModelErrors: errors.length,
+      warmupReadIssued, warmupReadReturned,
+      hostExitCode: facts?.exitCode ?? null, hostSignalCode: facts?.signalCode ?? null,
+      hostStdoutValid: facts?.stdoutValid ?? null, hostDiagnosticBytes: facts?.diagnosticBytes ?? 0,
+      cleanupCompleted: host !== undefined && closeError === undefined };
+    try{server?.closeAllConnections();await new Promise<void>(resolve=>server?.close(()=>resolve())??resolve())}catch{
+      /* Local server cleanup must not replace the original native failure. */
+    }
     await writeFile(join(root,'receipt.json'),JSON.stringify(receipt,null,2),{mode:0o600});
     if (process.env.NATIVE_SUGGESTIONS_HOST_RECEIPT)
       await writeFile(process.env.NATIVE_SUGGESTIONS_HOST_RECEIPT,JSON.stringify(receipt,null,2)+'\n',{mode:0o600});
