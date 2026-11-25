@@ -23,7 +23,6 @@ import { formatProgressDump } from './memberWorkSyncLiveHarness';
 import {
   createOpenCodeLiveHarness,
   type OpenCodeLiveHarness,
-  waitForOpenCodeLanesStopped,
   waitUntil,
 } from './openCodeLiveTestHarness';
 
@@ -55,19 +54,21 @@ liveDescribe('OpenCode local provider app launch live e2e', () => {
   });
 
   afterEach(async () => {
-    if (harness && teamName) {
-      await harness.svc.stopTeam(teamName).catch(() => undefined);
-      await waitForOpenCodeLanesStopped(teamName);
+    try {
+      if (harness && teamName) {
+        await stopAndVerifyOpenCodeTeam(harness.svc, teamName);
+      }
+    } finally {
+      await harness?.dispose().catch(() => undefined);
+      await fakeServer?.close().catch(() => undefined);
+      setClaudeBasePathOverride(null);
+      if (process.env.OPENCODE_E2E_KEEP_TEMP === '1') {
+        console.info(`[OpenCodeLocalProviderAppLaunch.live] preserved temp dir: ${tempDir}`);
+      } else {
+        await fs.rm(tempDir, { recursive: true, force: true });
+      }
+      clearBenignSlowConfigReadWarnings();
     }
-    await harness?.dispose().catch(() => undefined);
-    await fakeServer?.close().catch(() => undefined);
-    setClaudeBasePathOverride(null);
-    if (process.env.OPENCODE_E2E_KEEP_TEMP === '1') {
-      console.info(`[OpenCodeLocalProviderAppLaunch.live] preserved temp dir: ${tempDir}`);
-    } else {
-      await fs.rm(tempDir, { recursive: true, force: true });
-    }
-    clearBenignSlowConfigReadWarnings();
   }, 90_000);
 
   it('creates and stops an OpenCode team through the app service using a configured authless local provider', async () => {
@@ -195,8 +196,7 @@ liveDescribe('OpenCode local provider app launch live e2e', () => {
       500
     );
 
-    await harness.svc.stopTeam(teamName);
-    await waitForOpenCodeLanesStopped(teamName);
+    await stopAndVerifyOpenCodeTeam(harness.svc, teamName);
     clearBenignSlowConfigReadWarnings();
   }, 300_000);
 
@@ -416,13 +416,114 @@ liveDescribe('OpenCode local provider app launch live e2e', () => {
       500
     );
 
-    await harness.svc.stopTeam(teamName);
-    await waitForOpenCodeLanesStopped(teamName);
+    await stopAndVerifyOpenCodeTeam(harness.svc, teamName);
     clearBenignSlowConfigReadWarnings();
   }, 720_000);
 });
 
 describe('OpenCode local provider fixture', () => {
+  it.each(['absent', 'empty'] as const)(
+    'retains slow-stop timing only after the owned stop succeeds and the lane index is %s',
+    async (terminalIndex) => {
+      const teamsBasePath = await fs.mkdtemp(path.join(os.tmpdir(), 'TEST-opencode-stop-'));
+      const teamName = 'TEST-owned-stop';
+      const indexPath = getOpenCodeRuntimeLaneIndexPath(teamsBasePath, teamName);
+      const successfulWarning = `[Service:TeamProvisioning] [${teamName}] Slow OpenCode stop: primary lane stop took 10244ms (stopped=true)`;
+      const otherWarnings: unknown[][] = [
+        [successfulWarning.replace('stopped=true', 'stopped=false')],
+        [successfulWarning.replace(teamName, 'TEST-other-team')],
+        [successfulWarning.replace('10244ms', 'invalidms')],
+        [`${successfulWarning} cleanup_unknown`],
+        [`${successfulWarning}\n`],
+        [successfulWarning, new Error('cleanup failed')],
+        ['unrelated warning'],
+      ];
+      const warn = vi.mocked(console.warn);
+      const error = vi.mocked(console.error);
+      const info = vi.spyOn(console, 'info').mockImplementation(() => undefined);
+      try {
+        const index = { version: 1, updatedAt: new Date().toISOString(), lanes: {} };
+        await fs.mkdir(path.dirname(indexPath), { recursive: true });
+        await fs.writeFile(
+          indexPath,
+          JSON.stringify({ ...index, lanes: { primary: { state: 'active' } } }),
+          'utf8'
+        );
+        const svc = {
+          stopTeam: vi.fn(async () => {
+            console.warn(successfulWarning);
+            for (const call of otherWarnings) console.warn(...call);
+            console.error(successfulWarning);
+            if (terminalIndex === 'absent') await fs.rm(indexPath);
+            else await fs.writeFile(indexPath, JSON.stringify(index), 'utf8');
+          }),
+        };
+
+        await stopAndVerifyOpenCodeTeam(svc, teamName, { teamsBasePath });
+
+        expect(svc.stopTeam).toHaveBeenCalledWith(teamName);
+        expect(warn.mock.calls).toEqual(otherWarnings);
+        expect(error.mock.calls).toEqual([[successfulWarning]]);
+        expect(info).toHaveBeenCalledExactlyOnceWith(
+          `[OpenCodeLocalProviderAppLaunch.live] verified successful stop: ${successfulWarning}`
+        );
+      } finally {
+        warn.mockClear();
+        error.mockClear();
+        info.mockRestore();
+        await fs.rm(teamsBasePath, { recursive: true, force: true });
+      }
+    }
+  );
+
+  it.each(['stop rejected', 'corrupt index', 'nonempty index'] as const)(
+    'keeps slow-stop warnings when verification fails: %s',
+    async (failure) => {
+      const teamsBasePath = await fs.mkdtemp(path.join(os.tmpdir(), 'TEST-opencode-stop-'));
+      const teamName = 'TEST-owned-stop';
+      const indexPath = getOpenCodeRuntimeLaneIndexPath(teamsBasePath, teamName);
+      const warning = `[Service:TeamProvisioning] [${teamName}] Slow OpenCode stop: primary lane stop took 13564ms (stopped=true)`;
+      const warn = vi.mocked(console.warn);
+      const info = vi.spyOn(console, 'info').mockImplementation(() => undefined);
+      try {
+        const raw =
+          failure === 'corrupt index'
+            ? '{'
+            : JSON.stringify({
+                version: 1,
+                updatedAt: 'now',
+                lanes: failure === 'stop rejected' ? {} : { primary: {} },
+              });
+        await fs.mkdir(path.dirname(indexPath), { recursive: true });
+        await fs.writeFile(indexPath, raw, 'utf8');
+        const svc = {
+          stopTeam: async () => {
+            console.warn(warning);
+            if (failure === 'stop rejected') throw new Error('Stop rejected');
+          },
+        };
+
+        const expectedError =
+          failure === 'stop rejected'
+            ? 'Stop rejected'
+            : failure === 'corrupt index'
+              ? SyntaxError
+              : 'Timed out';
+        await expect(
+          stopAndVerifyOpenCodeTeam(svc, teamName, { teamsBasePath, timeoutMs: 50 })
+        ).rejects.toThrow(expectedError);
+
+        expect(warn.mock.calls).toEqual([[warning]]);
+        expect(info).not.toHaveBeenCalled();
+        expect(await fs.readFile(indexPath, 'utf8')).toBe(raw);
+      } finally {
+        warn.mockClear();
+        info.mockRestore();
+        await fs.rm(teamsBasePath, { recursive: true, force: true });
+      }
+    }
+  );
+
   it('checks the canonical lane index without accepting corrupt evidence as empty', async () => {
     const teamsBasePath = await fs.mkdtemp(path.join(os.tmpdir(), 'TEST-opencode-lane-index-'));
     const teamName = 'TEST-lane-index';
@@ -501,6 +602,36 @@ interface FakeOpenAiCompatibleServer {
   requests: string[];
   chatBodies: unknown[];
   close: () => Promise<void>;
+}
+
+async function stopAndVerifyOpenCodeTeam(
+  svc: Pick<OpenCodeLiveHarness['svc'], 'stopTeam'>,
+  teamName: string,
+  options: { teamsBasePath?: string; timeoutMs?: number } = {}
+): Promise<void> {
+  await svc.stopTeam(teamName);
+  const timeoutMs = options.timeoutMs ?? 90_000;
+  await waitUntil(
+    () => hasNoOpenCodeRuntimeLanes(options.teamsBasePath ?? getTeamsBasePath(), teamName),
+    timeoutMs,
+    Math.min(500, timeoutMs)
+  );
+
+  // Source-launcher overhead can cross the production timing warning threshold.
+  // Accept only this owned, verified stop, and retain its latency in the evidence.
+  const prefix = `[Service:TeamProvisioning] [${teamName}] Slow OpenCode stop: primary lane stop took `;
+  const warn = vi.mocked(console.warn);
+  for (let index = warn.mock.calls.length - 1; index >= 0; index -= 1) {
+    const rendered = warn.mock.calls[index].map((part) => String(part)).join(' ');
+    if (
+      rendered.startsWith(prefix) &&
+      rendered.endsWith('(stopped=true)') &&
+      /^\d+ms \(stopped=true\)$/.test(rendered.slice(prefix.length))
+    ) {
+      console.info(`[OpenCodeLocalProviderAppLaunch.live] verified successful stop: ${rendered}`);
+      warn.mock.calls.splice(index, 1);
+    }
+  }
 }
 
 async function hasNoOpenCodeRuntimeLanes(
