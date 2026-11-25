@@ -39,13 +39,25 @@ Target branch: `main`; immutable release source `2a4e1c2938923826cb1555e8fb894a3
 
 <!-- RELEASE_BODY_START v2.19.0 -->
 
+<img width="1312" height="820" alt="image" src="https://github.com/user-attachments/assets/5e3cdd84-4038-43ed-8132-76dbda36dd19" />
+
+<img width="1312" height="824" alt="image" src="https://github.com/user-attachments/assets/6bece93e-a727-464b-adf3-e8ed66e3a5d0" />
+
+<img width="1310" height="818" alt="image" src="https://github.com/user-attachments/assets/7d21abea-bfaf-45e7-bfe1-ebb2cf305e94" />
+
+<img width="1312" height="821" alt="image" src="https://github.com/user-attachments/assets/569c0fa5-a771-4cfd-afee-a03afd4b7ce8" />
+
+<img width="1312" height="823" alt="image" src="https://github.com/user-attachments/assets/81c0334a-d93f-45d7-8528-fbabd5dbb974" />
+
+
+
 ### What's New
 
 - Find tasks and unread messages across all teams on the new Attention page, with a header indicator.
 - Create, edit, import, and export your own team templates, or use built-in templates (big thanks to [@hassanbht](https://github.com/hassanbht?utm_source=chatgpt.com))
 - Connect external AI agents to the running desktop app with guided setup.
 - Route notifications by event to Telegram, Discord, Slack, Microsoft Teams, Google Chat, or custom HTTPS webhooks.
-- Choose human approval or require team lead sign-off before final approval.
+- Choose review flow settings
 - New teams keep tasks and conversations separate for each project by default. Existing teams retain their shared history.
 - Traditional Chinese (Taiwan) is now available (thanks [@keepinmind2054](https://github.com/keepinmind2054?utm_source=chatgpt.com) 🙏🏼)
 
