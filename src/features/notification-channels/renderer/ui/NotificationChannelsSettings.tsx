@@ -107,8 +107,8 @@ export function NotificationChannelsSettings({
             <BellPlus className="size-4" /> Delivery Channels
           </h3>
           <p className="mt-1 text-xs" style={{ color: 'var(--color-text-muted)' }}>
-            Telegram, Discord, Slack, Teams, Google Chat, and Custom Webhook. Configure once,
-            then select it beside notification types below. Only safe event labels are sent.
+            Telegram, Discord, Slack, Teams, Google Chat, and Custom Webhook. Configure once, then
+            select it beside notification types below. Only safe event labels are sent.
           </p>
           {autoDeliveryPauseReason && channels.length > 0 && (
             <p className="mt-2 text-xs text-amber-500" role="status">
@@ -123,7 +123,13 @@ export function NotificationChannelsSettings({
           )}
         </div>
         <div className="flex items-center gap-2">
-          <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={() => void refresh()}>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            disabled={busy}
+            onClick={() => void refresh()}
+          >
             <RefreshCw className="size-3.5" /> Refresh status
           </Button>
           <Button
@@ -168,9 +174,10 @@ export function NotificationChannelsSettings({
                 {channel.hasCredential
                   ? displayTest(channel.lastTest)
                   : 'Credential unavailable: edit to re-enter'}{' '}
-                · {channel.events.length === 0
-                    ? 'Choose notification types below'
-                    : `${channel.events.length} event type${channel.events.length === 1 ? '' : 's'} selected`}
+                ·{' '}
+                {channel.events.length === 0
+                  ? 'Choose notification types below'
+                  : `${channel.events.length} event type${channel.events.length === 1 ? '' : 's'} selected`}
               </div>
               {channel.lastDelivery && (
                 <p className="mt-1 text-xs text-[var(--color-text-muted)]" role="status">
@@ -278,7 +285,10 @@ export function NotificationChannelsSettings({
               {DELIVERY_PROVIDERS.find((item) => item.id === draft.provider)?.hint}
             </p>
             {providerGuide && (
-              <div className="mt-2 space-y-2 rounded-md border p-3 text-xs" style={{ borderColor: 'var(--color-border-subtle)' }}>
+              <div
+                className="mt-2 space-y-2 rounded-md border p-3 text-xs"
+                style={{ borderColor: 'var(--color-border-subtle)' }}
+              >
                 <p>{t(`notifications.delivery.providerSetup.${draft.provider}`)}</p>
                 <p className="text-[var(--color-text-muted)]">
                   {t('notifications.delivery.exampleFormat')}
@@ -287,18 +297,30 @@ export function NotificationChannelsSettings({
                   {providerGuide.example}
                 </code>
                 <div className="flex flex-wrap items-center gap-4">
-                  <a href={providerGuide.officialUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 underline">
+                  <a
+                    href={providerGuide.officialUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 underline"
+                  >
                     {t('notifications.delivery.officialGuide')} <ExternalLink className="size-3" />
                   </a>
-                  <a href={(isRussian
-                      ? CHANNEL_SETUP_DOCS_URL.replace('/guide/', '/ru/guide/')
-                      : CHANNEL_SETUP_DOCS_URL) +
+                  <a
+                    href={
+                      (isRussian
+                        ? CHANNEL_SETUP_DOCS_URL.replace('/guide/', '/ru/guide/')
+                        : CHANNEL_SETUP_DOCS_URL) +
                       '#' +
                       (draft.provider === 'ms-teams'
-                          ? 'microsoft-teams-workflows'
-                          : draft.provider === 'webhook'
-                            ? 'custom-webhook'
-                            : draft.provider)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 underline">
+                        ? 'microsoft-teams-workflows'
+                        : draft.provider === 'webhook'
+                          ? 'custom-webhook'
+                          : draft.provider)
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 underline"
+                  >
                     {t('notifications.delivery.agentGuide')} <ExternalLink className="size-3" />
                   </a>
                 </div>
@@ -375,7 +397,8 @@ export function NotificationChannelsSettings({
             </Button>
           </div>
           <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-            Next: save → click Test → enable the channel → select notification destinations below. Secrets are encrypted locally and never displayed again.
+            Next: save → click Test → enable the channel → select notification destinations below.
+            Secrets are encrypted locally and never displayed again.
           </p>
         </div>
       )}
