@@ -256,12 +256,14 @@ test(
     const donorLog = join(donorFixture, 'sentinels.ndjson');
     const donorBin = join(donorFixture, 'bin');
     const donorVendor = join(donorFixture, 'claude/local/node_modules/.bin');
-    for (const directory of [donorRoot, donorBin, donorVendor, join(donorFixture, 'home'),
+    const donorRuntimeDirectory = join(donorFixture, 'runtime/payload-v1');
+    const donorRuntime = join(donorRuntimeDirectory, 'claude-multimodel');
+    for (const directory of [donorRoot, donorBin, donorVendor, donorRuntimeDirectory, join(donorFixture, 'home'),
       join(donorFixture, 'config/codex'), join(donorFixture, 'userData'), join(donorRoot, 'node_modules/.bin')])
       await mkdir(directory, { recursive: true, mode: 0o700 });
+    await writeFile(donorRuntime, 'TEST donor runtime never executed', { mode: 0o700 });
     const donorSentinel = desktopAgentSentinelSource(spacedNode, donorLog, 'TEST-version', 'donor-saved-only');
-    for (const directory of [donorBin, donorVendor])
-      await writeFile(join(directory, 'codex'), donorSentinel, { mode: 0o700 });
+    await writeFile(join(donorBin, 'codex'), donorSentinel, { mode: 0o700 });
     const donorShell = desktopShellEnvironmentProbeSource(spacedNode, donorLog);
     await writeFile(join(donorBin, 'shell-env'), donorShell, { mode: 0o700 });
     const originalPackageManager = join(donorFixture, 'TEST original pnpm.mjs');
@@ -275,7 +277,7 @@ test(
       shellQuote(originalPackageManager) + ' "$@"\n';
     await writeFile(join(donorBin, 'pnpm'), originalShim, { mode: 0o700 });
     const donorPackageManager = await prepareDonorSavedPackageManager({
-      root: donorFixture, donorRoot, node: spacedNode,
+      root: donorFixture, donorRoot, node: spacedNode, runtimePath: donorRuntime,
       pnpmStubSha256: await candidateDigest(join(donorBin, 'pnpm')),
       sentinelSha256: await candidateDigest(join(donorBin, 'codex')),
       shellProbeSha256: await candidateDigest(join(donorBin, 'shell-env')),
@@ -286,6 +288,7 @@ test(
       AGENT_TEAMS_ELECTRON_CLAUDE_ROOT: join(donorFixture, 'claude'),
       CLAUDE_ROOT: join(donorFixture, 'claude'), CLAUDE_CONFIG_DIR: join(donorFixture, 'claude'),
       CODEX_HOME: join(donorFixture, 'config/codex'), SHELL: join(donorBin, 'shell-env'),
+      CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: donorRuntime,
       PATH: './node_modules/.bin:' + donorPackageManager.bin,
     };
     const donorVersion = spawnSync(join(donorBin, 'codex'), ['--version'],
@@ -315,22 +318,30 @@ test(
     const foreignEffect = join(donorFixture, 'TEST foreign effect must not exist');
     const managed = join(donorFixture, 'userData/data/runtimes/codex/current.json');
     await mkdir(join(donorFixture, 'userData/data/runtimes/codex'), { recursive: true, mode: 0o700 });
-    for (const failure of ['foreign', 'pin', 'override', 'managed'] as const) {
+    for (const failure of ['vendor', 'runtime', 'foreign', 'pin', 'override', 'runtime-override', 'sentinel-path', 'managed'] as const) {
+      const injected = failure === 'vendor' ? join(donorVendor, 'codex') :
+        failure === 'runtime' ? join(donorRuntimeDirectory, 'codex') : null;
+      if (injected) await writeFile(injected, donorSentinel, { mode: 0o700 });
       if (failure === 'foreign') await writeFile(foreign,
         desktopNodeScriptHeader(spacedNode) + "import {writeFileSync} from 'node:fs';\nwriteFileSync(" +
         JSON.stringify(foreignEffect) + ",'TEST unexpected invocation');\n", { mode: 0o700 });
-      if (failure === 'pin') await writeFile(join(donorVendor, 'codex'), donorSentinel + '// TEST changed pin\n');
+      if (failure === 'pin') await writeFile(join(donorBin, 'codex'), donorSentinel + '// TEST changed pin\n');
       if (failure === 'managed') await writeFile(managed, '{}', { mode: 0o600 });
-      const refused = invokeDonorShim(failure === 'override' ? { ...donorEnv, CODEX_CLI_PATH: foreign } : donorEnv);
+      const refused = invokeDonorShim(failure === 'override' ? { ...donorEnv, CODEX_CLI_PATH: foreign } :
+        failure === 'runtime-override' ? { ...donorEnv, CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: foreign } :
+        failure === 'sentinel-path' ? { ...donorEnv, PATH: donorBin + ':' + donorEnv.PATH } : donorEnv);
       assert.equal(refused.error, undefined); assert.notEqual(refused.status, 0, failure);
-      assert.match(refused.stderr, failure === 'foreign' ? /Unexpected donor Codex candidate/ :
+      assert.match(refused.stderr, ['vendor', 'runtime', 'foreign', 'sentinel-path'].includes(failure) ? /Unexpected donor Codex candidate/ :
         failure === 'pin' ? /Donor metadata pin changed/ : failure === 'override' ?
-          /Donor Codex override must be absent/ : /Donor managed Codex manifest must be absent/);
+          /Donor Codex override must be absent/ : failure === 'runtime-override' ?
+            /Original donor environment binding: CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH/ :
+            /Donor managed Codex manifest must be absent/);
       await assert.rejects(readFile(originalCalls), { code: 'ENOENT' });
       await assert.rejects(readFile(foreignEffect), { code: 'ENOENT' });
       await assert.rejects(readFile(donorPackageManager.receiptPath), { code: 'ENOENT' });
+      if (injected) await rm(injected);
       if (failure === 'foreign') await rm(foreign);
-      if (failure === 'pin') await writeFile(join(donorVendor, 'codex'), donorSentinel);
+      if (failure === 'pin') await writeFile(join(donorBin, 'codex'), donorSentinel);
       if (failure === 'managed') await rm(managed);
     }
     const copiedShim = await readFile(join(donorPackageManager.bin, 'pnpm'), 'utf8');
@@ -341,8 +352,10 @@ test(
     const availability = JSON.parse(await readFile(donorPackageManager.receiptPath, 'utf8'));
     assert.equal(availability.kind, 'donor-saved-codex-unavailable');
     assert.deepEqual(availability.invocation, originalArgs);
-    assert.ok(availability.observations.some((row: { path: string; kind: string }) =>
-      row.path === foreign && row.kind === 'absent'));
+    assert.equal(availability.runtimePath, donorRuntime);
+    assert.ok(availability.observations.every((row: { kind: string }) => row.kind === 'absent'));
+    for (const path of [foreign, join(donorVendor, 'codex'), join(donorRuntimeDirectory, 'codex')])
+      assert.ok(availability.observations.some((row: { path: string }) => row.path === path));
     const duplicate = invokeDonorShim();
     assert.equal(duplicate.error, undefined); assert.notEqual(duplicate.status, 0);
     assert.match(duplicate.stderr, /EEXIST/);

@@ -381,6 +381,8 @@ export async function prepareDesktopBackendFixture(
             SHELL: '/bin/sh',
             ANTHROPIC_API_KEY: 'TEST-LOCALHOST-ONLY',
             ANTHROPIC_BASE_URL: options.nativeClaude.modelUrl ?? 'http://127.0.0.1:9',
+            ANTHROPIC_CUSTOM_MODEL_OPTION: 'claude-opus-4-6',
+            ANTHROPIC_CUSTOM_MODEL_OPTION_NAME: 'Opus 4.6',
             CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1',
             CLAUDE_CODE_DISABLE_AUTO_MEMORY: '1',
             DISABLE_AUTOUPDATER: '1',
@@ -759,8 +761,11 @@ export async function prepareDesktopBackendFixture(
   // shell environment cache is warm; keep cold discovery behind the same guard.
   const vendorBin = join(root, 'claude/local/node_modules/.bin');
   await mkdir(vendorBin, { recursive: true, mode: 0o700 });
+  // Saved-only donor status uses executable discovery without --version validation.
+  // Keep Codex absent from that PATH; the consumer bin sentinel still refuses every agent call.
   for (const name of ['claude', 'codex', 'opencode', 'gemini', 'claude-multimodel']
-    .filter(name => !options.nativeOpenCodeSourceSelection || name !== 'opencode'))
+    .filter(name => (!options.nativeOpenCodeSourceSelection || name !== 'opencode') &&
+      (!options.donorSavedOnly || name !== 'codex')))
     await writeFile(join(vendorBin, name), sentinelSource, { mode: 0o700 });
   // Startup's shell environment resolver may otherwise source login files and
   // replace the isolated PATH/HOME. This TEST executable performs no shell eval.
