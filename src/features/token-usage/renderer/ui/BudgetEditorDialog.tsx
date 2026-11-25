@@ -204,6 +204,26 @@ export const BudgetEditorDialog = ({
             </label>
           ))}
         </div>
+        {targetKey.startsWith('team:team:') && (
+          <div className="space-y-2">
+            <p className="text-xs text-text-secondary">{t('tokenUsage.budgets.editor.onExceeded')}</p>
+            <Select
+              disabled={busy}
+              value={value.onExceeded}
+              onValueChange={(next) => update({ onExceeded: next as BudgetDraftLimit['onExceeded'] })}
+            >
+              <SelectTrigger aria-label={t('tokenUsage.budgets.editor.onExceeded')}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="notify">{t('tokenUsage.budgets.editor.notifyOnly')}</SelectItem>
+                <SelectItem value="block_launch">{t('tokenUsage.budgets.editor.blockLaunch')}</SelectItem>
+                <SelectItem value="stop_team">{t('tokenUsage.budgets.editor.stopTeam')}</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-text-muted">{t('tokenUsage.budgets.editor.enforcementHint')}</p>
+          </div>
+        )}
         <label className="flex items-center justify-between gap-3 text-sm text-text-secondary">
           {t('tokenUsage.budgets.editor.notifications')}
           <Switch
