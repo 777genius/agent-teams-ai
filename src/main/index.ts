@@ -131,7 +131,9 @@ import {
 import {
   TOKEN_USAGE_SNAPSHOT_CHANGED,
   TOKEN_USAGE_BUDGET_STATUS_CHANGED,
+  namedTeamId,
 } from '@features/token-usage/contracts';
+import { assertTeamBudgetLaunchAllowed } from '@features/token-usage/core/domain';
 import {
   createApplicationCommandLedgerFeature,
   NodeApplicationCommandHasher,
@@ -209,6 +211,7 @@ import { TeamTranscriptProjectResolver } from '@main/services/team/TeamTranscrip
 import { killTrackedCliProcesses } from '@main/utils/childProcess';
 import { extractNotificationContent } from '@main/utils/inboxNotificationContent';
 import { createBudgetNotificationSink } from '@features/token-usage/main';
+import { TeamBudgetStopObserver } from '@main/services/team/budget/TeamBudgetStopObserver';
 import { RendererRecoveryController } from '@main/utils/RendererRecoveryController';
 import { resolveRendererEntry } from '@main/utils/rendererEntry';
 import { getWindowsElevationStatus } from '@main/utils/windowsElevation';
@@ -2341,6 +2344,17 @@ async function initializeServices(): Promise<void> {
     logger: createLogger('Feature:TerminalWorkspace'),
   });
   const tokenUsageLogger = createLogger('Feature:TokenUsage');
+  const teamBudgetStopObserver = new TeamBudgetStopObserver({
+    readCurrentStatus: async () => {
+      if (!tokenUsageFeature) throw new Error('Budget service not ready');
+      return tokenUsageFeature.getBudgetStatus();
+    },
+    aliveTeams: () => teamProvisioningService.getAliveTeams(),
+    ownsTeam: (name) => teamProvisioningService.isTeamManagedByThisProfile(name),
+    stopTeam: (name) => teamProvisioningService.stopTeam(name),
+    isTeamAlive: (name) => teamProvisioningService.isTeamAlive(name),
+    warn: (message, error) => tokenUsageLogger.warn(message, error),
+  });
   tokenUsageFeature = createTokenUsageFeature({
     ledgerPath: join(getAppDataPath(), 'token-usage', 'ledger.json'),
     budgetSettingsPath: join(getAppDataPath(), 'token-usage', 'budget-settings.json'),
@@ -2379,6 +2393,7 @@ async function initializeServices(): Promise<void> {
       publishBudgetStatus: (status) => {
         safeSendToRenderer(mainWindow, TOKEN_USAGE_BUDGET_STATUS_CHANGED, status);
         httpServer?.broadcast(TOKEN_USAGE_BUDGET_STATUS_CHANGED, status);
+        teamBudgetStopObserver.observe(status);
       },
       publishSnapshot: (snapshot) => {
         safeSendToRenderer(mainWindow, TOKEN_USAGE_SNAPSHOT_CHANGED, snapshot);
@@ -2387,6 +2402,13 @@ async function initializeServices(): Promise<void> {
     },
     taskAttributionSource: new TeamTaskUsageAttributionSource(new TeamTaskReader()),
     logger: tokenUsageLogger,
+  });
+  teamProvisioningService.setTeamBudgetAdmissionGuard(async (teamName) => {
+    if (!tokenUsageFeature) throw new Error('TEAM_BUDGET_BLOCKED: Budget service unavailable');
+    const settings = await tokenUsageFeature.getBudgetSettings();
+    const policy = settings.teams?.[namedTeamId(teamName)]?.onExceeded ?? 'notify';
+    if (policy === 'notify') return;
+    assertTeamBudgetLaunchAllowed(await tokenUsageFeature.getBudgetStatus(), teamName);
   });
   const tokenUsageStartupRefreshTimer = setTimeout(() => {
     void tokenUsageFeature?.refreshSnapshot().catch((error: unknown) => {
