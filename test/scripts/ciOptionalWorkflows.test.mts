@@ -142,8 +142,17 @@ test('selected native Desktop acceptance is required by the existing Full qualif
   assert.doesNotMatch(account!, /continue-on-error:/);
   assert.match(account!, /uses: \.\/\.github\/actions\/prepare-host-emulated-inputs/);
   assert.match(account!, /emulated-codex-login-ui emulated-claude-runtime-ui emulated-codex-runtime-ui/);
-  assert.doesNotMatch(account!, /LEGACY_(?:DESKTOP_CODEX_PATH|SCHEDULE_NATIVE_GO|SCHEDULE_CLAUDE|SCHEDULE_CODEX)|scheduled-run-host\.native|codex-0\.162\.0-linux-x64/,
-    'Ready qualification must keep Claude and Codex behind the existing finite protocol peers');
+  assert.doesNotMatch(account!, /LEGACY_DESKTOP_CODEX_PATH|LEGACY_DESKTOP_PROOF_MODE: ['"]codex-login-ui['"]|codex-account-auth/,
+    'native schedule qualification must not enable native Desktop vendor authentication');
+  const schedules = account!.split('      - name: Verify finite native Claude and Codex scheduled runs\n')[1]?.split('\n      - name:')[0];
+  assert.ok(schedules, 'the original P04/P10 native schedule proof remains mandatory when this job is selected');
+  assert.match(schedules, /spawnSync\(process\.execPath, \['--test', 'packages\/legacy-agent-host\/tests\/scheduled-run-host\.native\.ts'\]/);
+  assert.match(schedules, /LEGACY_SCHEDULE_NATIVE_GO: '1', LEGACY_SCHEDULE_SOURCE_HEAD: process\.env\.CODEX_LOGIN_SOURCE_HEAD/);
+  assert.match(schedules, /assert\.equal\(run\.error, undefined\); assert\.equal\(run\.status, 0\)/);
+  assert.match(schedules, /for \(const provider of \['claude', 'codex'\]\)/);
+  assert.match(schedules, /assert\.equal\(receipt\.status, 'PASS'\); assert\.equal\(receipt\.provider, provider\)/);
+  assert.match(schedules, /assert\.equal\(receipt\.sourceHead, process\.env\.CODEX_LOGIN_SOURCE_HEAD\)/);
+  assert.match(schedules, /assert\.equal\(receipt\.cleanup, true\); assert\.equal\(receipt\.frozen, true\)/);
 });
 
 test('GitHub Pages: production deployment requires the main branch', () => {

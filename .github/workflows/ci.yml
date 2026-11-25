@@ -1240,6 +1240,60 @@ jobs:
           pnpm --filter @agent-teams/legacy-agent-host build
           pnpm --filter agent-teams-controller build
           pnpm --filter agent-teams-mcp build
+      - name: Prepare pinned Codex for the original finite native schedule proof
+        run: |
+          set -euo pipefail
+          selected_inputs="$(mktemp -d "$RUNNER_TEMP/TEST-scheduled-native-inputs-XXXXXX")"
+          curl --fail --location --retry 2 --output "$selected_inputs/codex.tgz" https://registry.npmjs.org/@openai/codex/-/codex-0.162.0-linux-x64.tgz
+          printf '%s  %s\n' dbd342e7ad896d53dbb505e926f1b82314b79a9d33e209b0b7616ced6b06c983 "$selected_inputs/codex.tgz" | sha256sum -c -
+          tar -xzf "$selected_inputs/codex.tgz" -C "$selected_inputs"
+          selected_codex="$selected_inputs/package/vendor/x86_64-unknown-linux-musl/bin/codex"
+          printf '%s  %s\n' 50ed828f357c655a3c82054d346cab8434f24901f14ec19b8267571bdd008b38 "$selected_codex" | sha256sum -c -
+          printf 'LEGACY_SCHEDULE_CODEX=%s\n' "$selected_codex" >> "$GITHUB_ENV"
+      - name: Verify finite native Claude and Codex scheduled runs
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { spawnSync } from 'node:child_process';
+          import { mkdtempSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+          import { join, resolve } from 'node:path';
+          import { fileHash } from './packages/legacy-agent-host/tests/fixtures/native-host.ts';
+          import { readNativeProviderArtifact, verifyNativeProviderArtifact } from './packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts';
+          const repo = process.cwd(), selected = await readNativeProviderArtifact(repo);
+          await verifyNativeProviderArtifact(repo, selected);
+          const providerRoot = realpathSync('packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations');
+          const sdkRoot = realpathSync(resolve(providerRoot, '../../@anthropic-ai/claude-agent-sdk'));
+          assert.equal(JSON.parse(readFileSync(join(sdkRoot, 'package.json'), 'utf8')).version, '0.3.305');
+          const claude = realpathSync(resolve(sdkRoot, '../claude-agent-sdk-linux-x64/claude'));
+          assert.equal(await fileHash(claude), '86cb722ab68348877dba7971e4d0c659919e05e6228c05e006e83da320e656ef');
+          const output = mkdtempSync(join(process.env.RUNNER_TEMP, 'TEST-scheduled-native-evidence-'));
+          const logPath = join(output, 'native-schedules.log'), maxOutputBytes = 8 * 1024 * 1024;
+          const run = spawnSync(process.execPath, ['--test', 'packages/legacy-agent-host/tests/scheduled-run-host.native.ts'], {
+              cwd: repo, timeout: 650_000, maxBuffer: maxOutputBytes, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env,
+                LEGACY_SCHEDULE_NATIVE_GO: '1', LEGACY_SCHEDULE_SOURCE_HEAD: process.env.CODEX_LOGIN_SOURCE_HEAD,
+                LEGACY_SCHEDULE_CLAUDE: claude,
+                LEGACY_NATIVE_PROVIDER_ARTIFACT: realpathSync(selected.path), LEGACY_NATIVE_PROVIDER_SHA256: selected.sha256,
+                LEGACY_SCHEDULE_NATIVE_EVIDENCE: output,
+              },
+          });
+          const chunks = [run.stdout ?? Buffer.alloc(0), run.stderr ?? Buffer.alloc(0)];
+          const capturedBytes = chunks.reduce((bytes, chunk) => bytes + chunk.length, 0);
+          const log = Buffer.concat(chunks, Math.min(capturedBytes, maxOutputBytes));
+          writeFileSync(logPath, log, { mode: 0o600 });
+          console.log(log.toString('utf8'));
+          assert.ok(capturedBytes <= maxOutputBytes, 'original native schedule output exceeded its bound');
+          assert.equal(run.error, undefined); assert.equal(run.status, 0);
+          for (const provider of ['claude', 'codex']) {
+            const receipt = JSON.parse(readFileSync(join(output, `${provider}-scheduled-native.json`), 'utf8'));
+            assert.equal(receipt.status, 'PASS'); assert.equal(receipt.provider, provider);
+            assert.equal(receipt.sourceHead, process.env.CODEX_LOGIN_SOURCE_HEAD);
+            assert.equal(receipt.providerSha256, selected.sha256);
+            assert.equal(receipt.cleanup, true); assert.equal(receipt.frozen, true);
+            assert.deepEqual(receipt.modelFailures, []);
+            assert.equal(receipt.desktopQualified, false); assert.equal(receipt.vendorAuthQualified, false);
+          }
+          NODE
       - name: Capture finite account and schedule inputs without vendor executables
         uses: ./.github/actions/prepare-host-emulated-inputs
         with:
@@ -1306,6 +1360,7 @@ jobs:
           path: |
             ${{ runner.temp }}/host-emulated-inputs.json
             ${{ runner.temp }}/host-account-*.log
+            ${{ runner.temp }}/TEST-scheduled-native-evidence-*/*
             ${{ runner.temp }}/TEST-desktop-backend-*/desktop-backend-receipt.json
 
   stage1-desktop:

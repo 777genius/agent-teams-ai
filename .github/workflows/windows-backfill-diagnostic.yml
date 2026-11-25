@@ -96,6 +96,9 @@ jobs:
           "WINDOWS_BACKFILL_RUNTIME_ARCHIVE_SHA256=$digest" >> $env:GITHUB_ENV
           "WINDOWS_BACKFILL_RUNTIME_SOURCE_SHA=$source" >> $env:GITHUB_ENV
 
+      - name: Enable Windows long paths
+        run: git config --global core.longpaths true
+
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
