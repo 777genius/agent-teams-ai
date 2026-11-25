@@ -2,7 +2,6 @@ import { closeSync, fstatSync, openSync, readSync } from 'node:fs';
 import { join, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { getOptionalElectronMain } from '@main/utils/optionalElectronMain';
 import { APP_RELEASE, BUILD_GIT_SHA, BUILD_ID } from '@shared/utils/buildMetadata';
 import {
   parseSentryArtifactInventory,
@@ -15,6 +14,8 @@ import {
   createMainSentryArtifactPolicy,
   type SentryArtifactPolicy,
 } from '@shared/utils/sentryArtifactPolicy';
+
+import { getOptionalElectronMain } from './utils/optionalElectronMain';
 
 /** Read at most one bounded sidecar from an application-owned path, including asar. */
 function readInventory(file: string, expected: SentryBuildIdentity): SentryRuntimeInventory | null {
