@@ -53,7 +53,6 @@ export const TabBarActions = (): React.JSX.Element => {
   );
 
   // Hover states for buttons
-  const [notificationsHover, setNotificationsHover] = useState(false);
   const [githubHover, setGithubHover] = useState(false);
   const [discordHover, setDiscordHover] = useState(false);
   const [expandHover, setExpandHover] = useState(false);
@@ -149,18 +148,12 @@ export const TabBarActions = (): React.JSX.Element => {
         <TooltipTrigger asChild>
           <button
             onClick={openNotificationsTab}
-            onMouseEnter={() => setNotificationsHover(true)}
-            onMouseLeave={() => setNotificationsHover(false)}
-            className="relative rounded-md p-2 transition-colors"
-            style={{
-              color: notificationsHover ? '#93c5fd' : '#60a5fa',
-              backgroundColor: notificationsHover ? 'var(--color-surface-raised)' : 'transparent',
-            }}
+            className="relative rounded-md p-2 text-info transition-colors hover:bg-surface-raised"
             aria-label={t('notifications.title')}
           >
             <Bell className="size-4" />
             {unreadCount > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-500 px-1 text-[10px] font-medium text-white">
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-medium text-white">
                 {unreadCount > 99 ? '99+' : unreadCount}
               </span>
             )}
@@ -201,13 +194,13 @@ export const TabBarActions = (): React.JSX.Element => {
                   aria-hidden="true"
                 >
                   {attentionModel.taskCount > 0 && (
-                    <span className="inline-flex h-6 min-w-6 items-center justify-center gap-1 rounded-full bg-red-500 px-1.5 text-xs text-white">
+                    <span className="inline-flex h-6 min-w-6 items-center justify-center gap-1 rounded-full bg-red-600 px-1.5 text-xs text-white">
                       <AlertCircle size={12} />
                       {attentionModel.taskCount > 99 ? '99+' : attentionModel.taskCount}
                     </span>
                   )}
                   {attentionModel.chatCount > 0 && (
-                    <span className="inline-flex h-6 min-w-6 items-center justify-center gap-1 rounded-full bg-red-500 px-1.5 text-xs text-white">
+                    <span className="inline-flex h-6 min-w-6 items-center justify-center gap-1 rounded-full bg-red-600 px-1.5 text-xs text-white">
                       <MessageCircle size={12} />
                       {attentionModel.chatCount > 99 ? '99+' : attentionModel.chatCount}
                     </span>
