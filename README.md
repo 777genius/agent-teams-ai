@@ -15,7 +15,9 @@
 </p>
 
 <p align="center">
-  <sub>Free cross-platform desktop app for AI agent teams. Start with a free model with no auth - no signup, API key, or card - or connect Claude Code, Codex, OpenCode, Cursor, SuperGrok, GitHub Copilot, Z.AI, MiniMax, Kiro, and many more. For coding and broader project work.</sub>
+  <strong>You're the boss. Your agents are the team.</strong><br />
+  Give your team a goal. Agents create tasks, delegate, talk to each other and review each other's work. Follow progress across projects and organizations, and step in when your team needs you.<br />
+  <sub>Free, open-source desktop app for macOS, Windows and Linux. For coding and broader project work. <strong>300+ models · 200+ LLM providers · Free models with no auth</strong> — no signup, API key or credit card needed to get started. Connect Claude Code, Codex, OpenCode, Cursor, SuperGrok, GitHub Copilot, Kiro, Z.AI, Xiaomi, MiniMax, Kimi and more.</sub>
 
   <sub>Check also:
   - [universal-agent-plugins](https://universal-agent-plugins.com) - Multi-agent CLI to install, update, repair, and remove Agent Plugins 1.0 and Agent Skills across Codex/ChatGPT, Claude, Cursor, Gemini, Copilot, Qoder, Pi, OpenCode, and more. 1,500+ plugins. SDK for universal plugins (hooks, detect, install/manage) 
@@ -163,7 +165,11 @@ No prerequisites - the app can detect installed Claude Code, Codex, and OpenCode
 </td>
 <td align="center">
   <a href="https://github.com/777genius/agent-teams-ai/releases/latest/download/Agent.Teams.AI.Setup.exe">
-    <img src="https://img.shields.io/badge/Windows-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows" />
+    <img src="https://img.shields.io/badge/Windows_x64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows x64" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/latest/download/Agent.Teams.AI.Setup-arm64.exe">
+    <img src="https://img.shields.io/badge/Windows_ARM64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows ARM64" />
   </a>
   <br />
   <sub>May trigger SmartScreen - click "More info" -> "Run anyway"</sub>
@@ -220,24 +226,35 @@ No prerequisites - the app can detect installed Claude Code, Codex, and OpenCode
 
 ## What is this
 
-An orchestration layer for AI agent teams across Codex/Claude/OpenCode/Cursor/Grok/GitHub/Kiro/Z.AI/Xiaomi/MiniMax/Kimi...(300+ models, 200+ LLM providers, free models no auth)
-- **Assemble your team** — create agent teams (using 1 prompt) with different roles that work autonomously in parallel
-- **Sit back and watch** — tasks change status on the kanban board while agents handle everything on their own
+Agent Teams AI is a free, open-source workspace for building and running AI teams across Codex, Claude Code, OpenCode, Cursor, Grok, GitHub Copilot, Kiro, Z.AI, Xiaomi, MiniMax, Kimi and more (300+ models, 200+ LLM providers through supported runtimes and provider integrations, free models with no auth).
+
+Ask the lead to deliver a feature, investigate a problem or run a project. The lead can break the work into tasks, assign them to teammates and ask another agent to review the result. A task has a life beyond the chat: an owner, dependencies, comments, attachments, execution logs and, for coding work, code changes. You can see the same work the agents are coordinating, from one task to an entire organization.
+- **Assemble your team** — create agent teams using one prompt or a template, with different roles that work autonomously in parallel
+- **Sit back and watch** — agents move work through a live Kanban board; switch to the sortable task table or open a task to inspect ownership, blockers and progress
 - **Agents talk to each other** — they communicate, create and manage their own tasks, review, leave comments
 - **Cross-team communication** — agents can fully communicate across different teams; you can configure or prompt them to collaborate and message each other between teams
-- **Built-in review workflow** — easily see how agents review each other's tasks to make sure everything went exactly as planned
+- **Built-in review workflow** — see how agents review each other's tasks, what feedback they leave and how the work progresses. Configure the review flow for your team
 - **Token analytics and budgets** — see input, output, cache, and reasoning usage across teams, agents, tasks, projects, models, runtimes, sessions, commands, and runs. Spot expensive work, track trends and forecasts, set monthly token or estimated-cost budgets, and get alerts at 80% and 100%
 - **Organizations and global overview** — group teams into departments, squads, or any nested structure. Track every organization on one live map with team and agent status, task progress, dependencies, delegation, and cross-team communication
 - **Stay in control** — send a direct message to any agent (DM or group chat), drop a comment on a task, or pick a quick action right on the kanban card whenever you want to clarify something or add new work
+- **Attention across all teams** — see tasks requiring your attention and unread messages in one place, with a header indicator and a dedicated Attention page. Go straight to the task or conversation instead of opening every team
 - **Flexible autonomy** — let agents run fully autonomous, or review and approve supported tool actions one by one (you'll get a notification) — configure the level of control that fits your security needs
 - **Task-specific logs and messages** — clearly see agent/runtime logs (tools), actions and messages in isolation for each individual task, making it easy to trace what happened for any assignment
 - **Integrated terminal workspace** — run commands in a visual PTY scoped to each team and project, with local shell tabs, persistent history, autocomplete, and terminal settings
 - **Solo mode** — one-member team: a single agent that creates its own tasks and shows live progress. Saves tokens; can expand to a full team anytime
-- **Multi-provider orchestration** — start with a free model with no auth, auto-detect available Claude Code, Codex, and OpenCode runtimes, or connect Cursor, SuperGrok, GitHub Copilot, Z.AI, MiniMax, Kiro and more, using the subscriptions or API keys you already have
-- **Review changes like in Cursor** — see what code each task changed, then approve, reject, or comment
+- **Multi-provider orchestration** — choose a runtime and model for each teammate. Mix Claude Code, Codex, OpenCode, Cursor, SuperGrok, GitHub Copilot, Z.AI, MiniMax, Kiro and more in the same team. Start with a free model with no auth or use the subscriptions or API keys you already have
+- **Separate project context** — reuse a team across projects without mixing their tasks and conversations. New teams use separate project histories by default; existing teams retain their shared history
+- **Scheduled automation** — schedule individual agents or entire teams, optionally link runs to board tasks, inspect run history and set scheduled-run budget caps
+- **Review changes like in Cursor** — see what code each task changed, then approve, reject, or comment on individual hunks
 
 <details>
 <summary><strong>More features</strong></summary>
+
+- **Reusable team templates** — create, edit, import and export your own templates or use built-in ones. Reuse roles and instructions without copying task or conversation history. Thanks to [@hassanbht](https://github.com/hassanbht).
+
+- **Group chats with agents** — create named conversations with selected teammates, link them to tasks, reply in threads, attach supported files and view OpenUI charts, tables and Mermaid diagrams directly in chat.
+
+- **External agent connection** — connect external AI agents to the running desktop app with guided local MCP setup for supported team management operations.
 
 - **Live process section** — see registered background services, stop them, and open their URLs directly in the browser
 
@@ -257,9 +274,9 @@ An orchestration layer for AI agent teams across Codex/Claude/OpenCode/Cursor/Gr
 
 - **Zero-setup onboarding** — start with the free model with no auth, then connect paid/account providers only when you need them
 
-- **29 interface languages** - choose the app language and preferred agent communication language. Includes English, Chinese, Spanish, Hindi, Portuguese, French, Arabic, German, Japanese, Korean, Russian, Ukrainian, and 17 more.
+- **30 interface languages** — choose the app language and preferred agent communication language. Includes English, Simplified Chinese, Traditional Chinese (Taiwan), Spanish, Hindi, Portuguese, French, Arabic, German, Japanese, Korean, Russian, Ukrainian, and 17 more. Thanks to [@keepinmind2054](https://github.com/keepinmind2054) for Traditional Chinese.
 
-- **Built-in code editor** — edit project files with Git support without leaving the app
+- **Built-in code editor** — edit project files with Git support without leaving the app. Built-in Git handles app diffs, worktrees and cloning without a separate Git installation
 
 - **Branch strategy** - choose per teammate at launch: use the main checkout or run selected agents in their own git worktree. You can still spell out branch rules in the provisioning prompt.
 
@@ -267,7 +284,7 @@ An orchestration layer for AI agent teams across Codex/Claude/OpenCode/Cursor/Gr
 
 - **Attach code context** — reference files or snippets in messages, like in Cursor. You can also mention tasks using `#task-id`, or refer to another team with `@team-name` in your messages.
 
-- **Notification system** — configurable alerts when tasks complete, agents need your response, new comments arrive, or errors occur
+- **Notification system** — configurable alerts when tasks complete, agents need your response, new comments arrive, or errors occur. Route selected events to Telegram, Discord, Slack, Microsoft Teams, Google Chat or custom HTTPS webhooks
 
 - **MCP integration** — supports the built-in `mcp-server` (see [mcp-server folder](./mcp-server)) for integrating external tools and extensible agent plugins out of the box
 
@@ -330,8 +347,8 @@ Research refreshed November 6, 2026 using published releases and official docs: 
 
 1. **Download** the app for your platform (see [Installation](#installation))
 2. **Launch the desktop app** - start with the free model with no auth, or let the setup wizard detect runtimes and guide provider authentication
-3. **Create a team** — Pick a project, define roles, write a provisioning prompt
-4. **Watch** — Agents spawn, create tasks, and work. You see it all on the kanban board
+3. **Create a team** — Pick a project, define roles and choose runtimes/models. Describe the team in one prompt or use a built-in or custom template
+4. **Watch** — Give the lead a goal. Agents create tasks, collaborate and review work. Follow the board, chats and task logs; check Attention when a task or message needs you
 
 The desktop app is the main product. The web version is currently in development.
 
@@ -344,7 +361,7 @@ The desktop app is the main product. The web version is currently in development
 <br />
 We're seeing an interesting trend. First, AI agents started communicating with each other (something Claude and Codex didn't support before). Then we started seeing messenger-style AI assistants like Grok Bot, Meta Muse and OpenAI Dots, where you can create a team (or even multiple teams, as in Grok) and communicate with agents just like in a regular messenger. This is a much more natural and familiar way for people to interact with AI (like with humans).
 
-For the general audience, that might be enough. But people often need to build many/large/complex  projects, and that's where bigger teams of agents become necessary, each with their own roles and responsibilities.
+A chat-first assistant is a good fit for many everyday jobs. For larger or longer-running projects, tasks need owners, dependencies and reviews, and several teams may be working at once. That's where a shared workspace matters.
 
 And when you have a lot of teammates, you need a good way to organize and manage them. That's exactly where Agent Teams comes in. You can see everything clearly in a visual interface, understand what's happening across your teams, and easily interact with individual agents.
 
@@ -386,7 +403,7 @@ Send a direct message to course-correct, or open the teammate status to inspect 
 <details>
 <summary><strong>Does it support multiple projects and teams?</strong></summary>
 <br />
-Yes. Run multiple teams in one project or across different projects, even simultaneously. To avoid Git conflicts, enable git worktree isolation for selected teammates when launching the team, and use the provisioning prompt for any extra branch or merge rules.
+Yes. Run multiple teams in one project or across different projects, even simultaneously. New teams keep tasks and conversations separate by project by default; existing teams keep their shared history. To avoid Git conflicts, enable git worktree isolation for selected teammates when launching the team, and use the provisioning prompt for any extra branch or merge rules.
 </details>
 
 <details>
