@@ -278,12 +278,14 @@ vi.mock('@tanstack/react-virtual', () => ({
 }));
 
 import { OpenCodeDefaultMaterializationContext } from '@renderer/components/team/dialogs/openCodeDefaultMaterialization';
+import { OpenCodeSourceDirectoryContext, OpenCodeSourceDirectoryProvider, useOpenCodeSourceDirectory } from '@renderer/components/team/dialogs/OpenCodeSourceDirectoryProvider';
 import { TeamModelSelector } from '@renderer/components/team/dialogs/TeamModelSelector';
-import { OpenCodeSourceDirectoryContext } from '@renderer/components/team/dialogs/OpenCodeSourceDirectoryProvider';
+import { LeadModelRow } from '@renderer/components/team/members/LeadModelRow';
 import {
   getCliProviderStatusScopeKey,
   MULTIMODEL_PROVIDER_IDS,
 } from '@renderer/store/slices/cliInstallerSlice';
+import { invalidateContextScopedRequestEpoch } from '@renderer/store/utils/contextScopedRequestEpoch';
 
 /** Renders inside the Create/Launch roster, where OpenCode Default names its route. */
 const inMaterializingRoster = (element: React.ReactElement): React.ReactElement =>
@@ -294,6 +296,133 @@ const inMaterializingRoster = (element: React.ReactElement): React.ReactElement 
   );
 
 describe('TeamModelSelector disabled Codex models', () => {
+  it('defers display-only OpenCode discovery until the original lead model picker opens', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers();
+    storeState.cliStatus = { flavor: 'agent_teams_orchestrator', providers: [] };
+    storeState.openCodeRuntimeStatus = {
+      installed: true, state: 'ready', source: 'path', version: '1.17.18', binaryPath: '/TEST/opencode',
+    };
+    const loadModels = vi.fn(async (input: RuntimeProviderManagementLoadModelsInput) =>
+      providerModelsResponse(input.providerId, [input.providerId + '/TEST-model']));
+    installLoadModelsApi(loadModels);
+    const loadProviderDirectory = vi.fn(async () => ({
+      schemaVersion: 1, runtimeId: 'opencode', directory: {
+        runtimeId: 'opencode', entries: [], totalCount: 0, returnedCount: 0,
+        filter: 'all', query: null, limit: 100, cursor: null, nextCursor: null,
+        diagnostics: [], fetchedAt: new Date().toISOString(),
+      },
+    }));
+    Object.assign(window.electronAPI!.runtimeProviderManagement, { loadProviderDirectory });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(OpenCodeSourceDirectoryProvider, {
+        enabled: true, deferDiscovery: true, projectPath: '/TEST/original-project',
+        children: React.createElement(LeadModelRow, {
+          providerId: 'opencode', model: 'test-local/TEST-model', limitContext: false,
+          projectPath: '/TEST/original-project', syncModelsWithTeammates: false,
+          onProviderChange: vi.fn(), onModelChange: vi.fn(), onEffortChange: vi.fn(),
+          onLimitContextChange: vi.fn(), onSyncModelsWithTeammatesChange: vi.fn(),
+        }),
+      }));
+    });
+    await act(async () => { await vi.advanceTimersByTimeAsync(200); });
+    expect(loadProviderDirectory).not.toHaveBeenCalled();
+    expect(host.querySelector('[data-testid="team-model-selector-refresh-providers"]')).toBeNull();
+    const picker = host.querySelector<HTMLButtonElement>('button[aria-label="OpenCode provider, TEST-model"]');
+    expect(picker).not.toBeNull();
+    await act(async () => { picker!.click(); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(200); });
+    expect(host.querySelector('[data-testid="team-model-selector-refresh-providers"]')).not.toBeNull();
+    expect(loadProviderDirectory).toHaveBeenCalledExactlyOnceWith({
+      runtimeId: 'opencode', summary: true, projectPath: '/TEST/original-project',
+      query: null, filter: 'all', limit: 100, cursor: null, refresh: false,
+    });
+    await act(async () => { picker!.click(); });
+    expect(host.querySelector('[data-testid="team-model-selector-refresh-providers"]')).toBeNull();
+    await act(async () => { await vi.advanceTimersByTimeAsync(200); });
+    expect(loadProviderDirectory).toHaveBeenCalledTimes(1);
+  });
+
+  it('binds deferred discovery refresh to the current project and owner epoch and ignores late old replies', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers();
+    storeState.openCodeRuntimeStatus = {
+      installed: true, state: 'ready', source: 'path', version: '1.17.18', binaryPath: '/TEST/opencode',
+    };
+    installLoadModelsApi(async input => providerModelsResponse(input.providerId));
+    const first = createDeferred<unknown>();
+    const second = createDeferred<unknown>();
+    const loadProviderDirectory = vi.fn()
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise)
+      .mockResolvedValue({ schemaVersion: 1, runtimeId: 'opencode', directory: {
+        runtimeId: 'opencode', entries: [], totalCount: 0, returnedCount: 0,
+        filter: 'all', query: null, limit: 100, cursor: null, nextCursor: null,
+        diagnostics: [], fetchedAt: new Date().toISOString(),
+      } });
+    Object.assign(window.electronAPI!.runtimeProviderManagement, { loadProviderDirectory });
+    let observed!: NonNullable<ReturnType<typeof useOpenCodeSourceDirectory>>;
+    const Observe = ({ path }: { path: string }) => {
+      const directory = useOpenCodeSourceDirectory(path);
+      if (directory) observed = directory;
+      return null;
+    };
+    const root = createRoot(document.createElement('div'));
+    const render = (path: string, enabled = true) => root.render(
+      React.createElement(OpenCodeSourceDirectoryProvider, {
+        enabled, deferDiscovery: true, projectPath: path,
+        children: React.createElement(Observe, { path }),
+      })
+    );
+    await act(async () => { render('/TEST/project-A'); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(200); });
+    expect(loadProviderDirectory).not.toHaveBeenCalled();
+    const oldProject = observed;
+    await act(async () => { observed.refresh(); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(200); });
+    expect(loadProviderDirectory).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+      projectPath: '/TEST/project-A', summary: true, refresh: true,
+    }));
+    await act(async () => { render('/TEST/project-B'); });
+    await act(async () => {
+      oldProject.refresh();
+      oldProject.retainDiscovery?.()();
+      await vi.advanceTimersByTimeAsync(200);
+    });
+    expect(loadProviderDirectory).toHaveBeenCalledTimes(1);
+    await act(async () => { observed.refresh(); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(200); });
+    expect(loadProviderDirectory).toHaveBeenLastCalledWith(expect.objectContaining({
+      projectPath: '/TEST/project-B', summary: true, refresh: true,
+    }));
+    const oldOwner = observed;
+    await act(async () => { invalidateContextScopedRequestEpoch(); });
+    await act(async () => {
+      oldOwner.refresh();
+      oldOwner.retainDiscovery?.()();
+      await vi.advanceTimersByTimeAsync(200);
+    });
+    expect(loadProviderDirectory).toHaveBeenCalledTimes(2);
+    const oldFailure = { schemaVersion: 1, runtimeId: 'opencode',
+      error: { code: 'runtime-unhealthy', message: 'TEST old owner reply', recoverable: true } };
+    await resolveDeferred(first, oldFailure);
+    await resolveDeferred(second, oldFailure);
+    expect(observed.error).toBeNull();
+    await act(async () => { observed.refresh(); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(200); });
+    expect(loadProviderDirectory).toHaveBeenCalledTimes(3);
+    expect(observed.loaded).toBe(true);
+    expect(observed.error).toBeNull();
+    await act(async () => { render('/TEST/project-B', false); });
+    await act(async () => { render('/TEST/project-B'); });
+    await act(async () => { render('/TEST/project-A'); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(200); });
+    expect(loadProviderDirectory).toHaveBeenCalledTimes(3);
+  });
+
   it('invalidates the selected Create Team preflight before opening provider Settings', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliStatus = {
