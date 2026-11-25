@@ -2,6 +2,7 @@ import { TeamProjectContextRegistry } from '@features/team-project-context/main'
 import { namedTeamId } from '@features/token-usage/contracts';
 import { assertTeamBudgetLaunchAllowed } from '@features/token-usage/core/domain';
 
+import { stopTeamWithVerifiedEscalation } from '../lifecycle/stopTeamWithVerifiedEscalation';
 import { TeamBudgetStopObserver } from './TeamBudgetStopObserver';
 
 import type {
@@ -101,7 +102,9 @@ export function createTeamBudgetControls(
       return [logicalTeam, ...candidates];
     },
     ownsTeam: (teamName) => runtime.isTeamManagedByThisProfile(teamName),
-    stopTeam: (teamName) => runtime.stopTeam(teamName),
+    stopTeam: (teamName) => stopTeamWithVerifiedEscalation(teamName, runtime, {
+      warn: (message) => warn(message, undefined),
+    }),
     isTeamAlive: (teamName) => runtime.isTeamAlive(teamName),
     warn,
   });

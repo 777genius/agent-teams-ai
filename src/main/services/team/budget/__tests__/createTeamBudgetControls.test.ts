@@ -13,6 +13,13 @@ const registry = vi.hoisted(() => ({
   failedCopies: [] as string[],
   nativeNames: ['alpha'] as string[],
 }));
+// Budget integration must use the same verified stop path as HTTP; here only
+// the native process is a fake, so delegate the shared boundary to that fake.
+vi.mock('@main/services/team/lifecycle/stopTeamWithVerifiedEscalation', () => ({
+  stopTeamWithVerifiedEscalation: (name: string, runtime: { stopTeam(team: string): Promise<void> }) =>
+    runtime.stopTeam(name),
+}));
+
 vi.mock('@features/team-project-context/main', () => ({
   TeamProjectContextRegistry: {
     fromCurrentApp: () => ({

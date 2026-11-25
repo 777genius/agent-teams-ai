@@ -33,11 +33,9 @@ import {
   releaseLoopbackRuntimesReservedByTeam,
   releaseSharedRuntimeResourcesAfterStop,
   runTeamForceStopFlow,
-  STOP_ESCALATION_TIMEOUT_MS,
-  stopTeamWithEscalation,
 } from '@main/services/team/lifecycle/teamForceStopFlow';
 import { reapCursorAgentLeadTreesForStoppedTeam } from '@main/services/team/lifecycle/teamLeadProcessTreeReap';
-import { assertEscalatedStopConfirmed } from '@main/services/team/provisioning/TeamProvisioningOpenCodeRuntimeStopOutcome';
+import { stopTeamWithVerifiedEscalation } from '@main/services/team/lifecycle/stopTeamWithVerifiedEscalation';
 import { validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 import { TeamLaunchStateStore } from '@main/services/team/TeamLaunchStateStore';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
@@ -135,64 +133,12 @@ export function registerTeamLifecycleRoutes(
       : state;
   }
 
-  // Stops exactly one native team and rejects unless the stop is confirmed.
+  // HTTP and budget enforcement use one native stop with identical escalation semantics.
   async function stopExactTeam(
     teamName: string,
     teamRuntimeApi: TeamHttpRuntimeApi
   ): Promise<void> {
-    // Same semantics as the in-app Stop control: the regular stop gets a
-    // bounded budget, and only if it does not deliver does the force-stop
-    // cleanup guarantee the team is down.
-    const result = await stopTeamWithEscalation(teamName, {
-      stopTeam: (name) => teamRuntimeApi.stopTeam(name),
-      observeOwnedRuntimeRunIds: (name) =>
-        readOwnedOpenCodeRuntimeRunIdsForTeam({ teamName: name }),
-      observeOwnedRuntimeLaneIds: (name) =>
-        readOpenCodeRuntimeLaneIdsForTeam(getTeamsBasePath(), name),
-      killRetainedRuntimeProcesses: (name, context) =>
-        killRetainedOpenCodeRuntimeProcessesForTeam({
-          teamName: name,
-          requestedAtMs: context.requestedAtMs,
-          otherAliveTeams: teamRuntimeApi.getAliveTeams().filter((alive) => alive !== name),
-        }),
-      clearPendingPromptDeliveries: (name, context) =>
-        clearPendingOpenCodePromptDeliveriesForTeam({
-          teamName: name,
-          ownedRunIds: context.ownedRunIds,
-          ownedLaneIds: context.ownedLaneIds,
-          requestedAtMs: context.requestedAtMs,
-        }),
-      logWarning: (message) => logger.warn(message),
-      stopTimeoutMs: STOP_ESCALATION_TIMEOUT_MS,
-      countLiveRuntimeHosts: (name) => countLiveRecordedRuntimeHostsForTeam({ teamName: name }),
-      markTeamStopped: (name, authority) => new TeamLaunchStateStore().markStopped(name, authority),
-      reapOwnedLeadProcessTrees: (name, context) =>
-        reapCursorAgentLeadTreesForStoppedTeam({
-          teamName: name,
-          requestedAtMs: context.requestedAtMs,
-          otherAliveTeams: teamRuntimeApi.getAliveTeams().filter((alive) => alive !== name),
-        }),
-      releaseSharedRuntimeResources: (name) =>
-        releaseSharedRuntimeResourcesAfterStop({
-          teamName: name,
-          otherAliveTeams: teamRuntimeApi.getAliveTeams().filter((alive) => alive !== name),
-          releaseSharedLocalRuntime: () =>
-            releaseLoopbackRuntimesReservedByTeam(getTeamsBasePath(), name),
-        }),
-    });
-    if (result.stopOutcome === 'runtime_already_down') {
-      logger.info(
-        `[${teamName}] Runtime hosts were already down; finished the stop without the orchestrator acknowledgement (killed ${result.killedRuntimePids.length} runtime pid(s), cancelled ${result.clearedPendingDeliveries} pending deliveries)`
-      );
-    } else if (result.stopOutcome !== 'stopped') {
-      logger.warn(
-        `[${teamName}] Regular stop ${result.stopOutcome}; escalated to force stop (killed ${result.killedRuntimePids.length} runtime pid(s), cancelled ${result.clearedPendingDeliveries} pending deliveries)`
-      );
-    }
-    // Same rejection as the in-app Stop control: a stop that did not
-    // confirm is a failure here too, never a 200 carrying runtime state
-    // a headless caller would trust.
-    assertEscalatedStopConfirmed(result);
+    await stopTeamWithVerifiedEscalation(teamName, teamRuntimeApi, logger);
   }
 
   function forceStopExactTeam(
