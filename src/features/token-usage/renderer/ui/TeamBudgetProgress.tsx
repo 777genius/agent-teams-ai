@@ -19,8 +19,13 @@ export function TeamBudgetProgress({ teamName, status }: TeamBudgetProgressProps
   const metric = target.metrics.reduce((best, current) =>
     (current.percent ?? -1) > (best.percent ?? -1) ? current : best
   );
-  const uncertain = Boolean(status?.stale || status?.degraded || metric.incomplete || metric.value === null);
-  const reached = !uncertain && (metric.percent ?? 0) >= 100;
+  const reached = target.metrics.some(
+    (item) => !item.incomplete && item.value !== null && item.value >= item.limit
+  );
+  const uncertain = !reached && Boolean(
+    status?.stale || status?.degraded ||
+    target.metrics.some((item) => item.incomplete || item.value === null)
+  );
   const enforced = (target.onExceeded ?? 'notify') !== 'notify';
   const display = (amount: number | null): string => {
     if (amount === null) return '?';

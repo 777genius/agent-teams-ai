@@ -209,7 +209,7 @@ import { TeamTranscriptProjectResolver } from '@main/services/team/TeamTranscrip
 import { killTrackedCliProcesses } from '@main/utils/childProcess';
 import { extractNotificationContent } from '@main/utils/inboxNotificationContent';
 import { createBudgetNotificationSink } from '@features/token-usage/main';
-import { createTeamBudgetControls } from '@main/services/team/budget/createTeamBudgetControls';
+import { createTeamBudgetAdmission, createTeamBudgetControls } from '@main/services/team/budget/createTeamBudgetControls';
 import { RendererRecoveryController } from '@main/utils/RendererRecoveryController';
 import { resolveRendererEntry } from '@main/utils/rendererEntry';
 import { getWindowsElevationStatus } from '@main/utils/windowsElevation';
@@ -1955,7 +1955,8 @@ async function initializeServices(): Promise<void> {
   teamProvisioningService = createDefaultTeamProvisioningService(
     () => teamGroupChatsFeature,
     resolveOpenCodeInputDeclaration,
-    gatewayLaunchRuntime.seams
+    gatewayLaunchRuntime.seams,
+    createTeamBudgetAdmission(() => tokenUsageFeature)
   );
   teamDataService.setTeamProfileOwnership((teamName) =>
     teamProvisioningService.isTeamManagedByThisProfile(teamName)

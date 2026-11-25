@@ -72,26 +72,22 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
     private readonly attachmentStore: TeamAttachmentStore = new TeamAttachmentStore(),
     groupChats?: ProvisioningGroupChatCallbacks,
     resolveOpenCodeInputDeclaration?: ResolveOpenCodeInputDeclaration,
-    memberGatewayRuntimeSeams: MemberGatewayRuntimeSeams | null = null
+    memberGatewayRuntimeSeams: MemberGatewayRuntimeSeams | null = null,
+    private readonly budgetAdmission: (teamName: string) => Promise<void> = async () => undefined
   ) {
     super(resolveOpenCodeInputDeclaration, memberGatewayRuntimeSeams);
     this.initializeTeamProvisioningService(groupChats);
   }
 
   private launchAdmissionGuard: (() => void) | null = null;
-  private teamBudgetAdmissionGuard: ((teamName: string) => Promise<void>) | null = null;
   private pendingLaunchAdmissions = 0;
 
   setLaunchAdmissionGuard(guard: () => void): void {
     this.launchAdmissionGuard = guard;
   }
 
-  setTeamBudgetAdmissionGuard(guard: (teamName: string) => Promise<void>): void {
-    this.teamBudgetAdmissionGuard = guard;
-  }
-
   assertTeamBudgetAdmission(teamName: string): Promise<void> {
-    return this.teamBudgetAdmissionGuard?.(teamName) ?? Promise.resolve();
+    return this.budgetAdmission(teamName);
   }
 
   private async withLaunchAdmission<T>(launch: () => Promise<T>): Promise<T> {
@@ -328,7 +324,8 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
 export function createDefaultTeamProvisioningService(
   getGroupChats: () => ProvisioningGroupChatCallbacks,
   resolveOpenCodeInputDeclaration?: ResolveOpenCodeInputDeclaration,
-  memberGatewayRuntimeSeams: MemberGatewayRuntimeSeams | null = null
+  memberGatewayRuntimeSeams: MemberGatewayRuntimeSeams | null = null,
+  budgetAdmission: (teamName: string) => Promise<void>
 ) {
   return new TeamProvisioningService(
     undefined,
@@ -347,6 +344,7 @@ export function createDefaultTeamProvisioningService(
         getGroupChats().hasAcknowledgedInbound?.(input) ?? Promise.resolve(false),
     },
     resolveOpenCodeInputDeclaration,
-    memberGatewayRuntimeSeams
+    memberGatewayRuntimeSeams,
+    budgetAdmission
   );
 }
