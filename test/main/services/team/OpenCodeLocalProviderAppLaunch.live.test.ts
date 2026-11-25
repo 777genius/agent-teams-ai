@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import * as http from 'node:http';
 import * as os from 'node:os';
@@ -35,67 +36,41 @@ const liveDescribe =
 
 const LOCAL_PROVIDER_ID = 'local-lab';
 const LOCAL_MODEL = `${LOCAL_PROVIDER_ID}/qwen-test:0.5b`;
+const liveCases: LocalProviderLiveCases = { active: null, enrolled: null };
 
 liveDescribe('OpenCode local provider app launch live e2e', () => {
-  let tempDir: string;
-  let tempClaudeRoot: string;
-  let fakeServer: FakeOpenAiCompatibleServer | null;
-  let harness: OpenCodeLiveHarness | null;
-  let teamName: string | null;
+  const cases = liveCases;
 
   beforeEach(async () => {
-    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'opencode-local-provider-app-launch-'));
-    tempClaudeRoot = path.join(tempDir, '.claude');
-    await fs.mkdir(tempClaudeRoot, { recursive: true });
-    setClaudeBasePathOverride(tempClaudeRoot);
-    fakeServer = null;
-    harness = null;
-    teamName = null;
-  });
+    const owned = enterLocalProviderLiveCase(cases,
+      path.join(os.tmpdir(), `opencode-local-provider-app-launch-${randomUUID()}`)
+    );
+    await runLiveCaseStage(owned, 'prepare owned case directory', async () => {
+      await fs.mkdir(owned.tempClaudeRoot, { recursive: true });
+      assertLiveCaseOpen(owned, 'activate owned case directory');
+      setClaudeBasePathOverride(owned.tempClaudeRoot);
+    }, 20_000);
+  }, 30_000);
 
   afterEach(async () => {
-    try {
-      if (harness && teamName) {
-        await stopAndVerifyOpenCodeTeam(harness.svc, teamName);
-      }
-    } finally {
-      await harness?.dispose().catch(() => undefined);
-      await fakeServer?.close().catch(() => undefined);
-      setClaudeBasePathOverride(null);
-      if (process.env.OPENCODE_E2E_KEEP_TEMP === '1') {
-        console.info(`[OpenCodeLocalProviderAppLaunch.live] preserved temp dir: ${tempDir}`);
-      } else {
-        await fs.rm(tempDir, { recursive: true, force: true });
-      }
-      clearBenignSlowConfigReadWarnings();
-    }
-  }, 90_000);
+    await cleanupEnrolledLocalProviderLiveCase(cases);
+  }, 450_000);
 
   it('creates and stops an OpenCode team through the app service using a configured authless local provider', async () => {
-    const projectPath = path.join(tempDir, 'project');
-    await fs.mkdir(projectPath, { recursive: true });
-    await fs.writeFile(
+    const owned = cases.enrolled!;
+    const { projectPath, fakeServer, harness } = await prepareLocalProviderLiveCase(
+      owned,
+      'project',
+      LOCAL_MODEL
+    );
+    await runLiveCaseStage(owned, 'write test project README', () => fs.writeFile(
       path.join(projectPath, 'README.md'),
       '# OpenCode local provider app launch live e2e\n',
       'utf8'
-    );
-    fakeServer = await startFakeOpenAiCompatibleServer();
-    await writeFakeLocalOpenCodeConfig({
-      projectPath,
-      baseUrl: fakeServer.baseUrl,
-    });
-
-    harness = await createOpenCodeLiveHarness({
-      tempDir,
-      selectedModel: LOCAL_MODEL,
-      projectPath,
-      runtimeAdapterOptions: {
-        inspectLocalModelRuntime: inspectOpenCodeLocalModelRuntimeReadiness,
-      },
-    });
+    ), 10_000);
 
     const verificationModes: Array<'compatibility' | 'deep' | undefined> = [];
-    const preflight = await runProviderPrepareDiagnostics({
+    const preflight = await runLiveCaseStage(owned, 'compatibility and deep provider preflight', () => runProviderPrepareDiagnostics({
       cwd: projectPath,
       providerId: 'opencode',
       selectedModelIds: [LOCAL_MODEL],
@@ -108,8 +83,9 @@ liveDescribe('OpenCode local provider app launch live e2e', () => {
         modelVerificationMode,
         modelChecks
       ) => {
+        assertLiveCaseOpen(owned, `provider ${modelVerificationMode} preflight`);
         verificationModes.push(modelVerificationMode);
-        return harness!.svc.prepareForProvisioning(cwd, {
+        return harness.svc.prepareForProvisioning(cwd, {
           providerId,
           providerIds,
           modelIds,
@@ -118,7 +94,7 @@ liveDescribe('OpenCode local provider app launch live e2e', () => {
           modelChecks,
         });
       },
-    });
+    }), 240_000);
     expect(verificationModes).toEqual(['compatibility', 'deep']);
     expect(preflight.status, JSON.stringify(preflight, null, 2)).toBe('notes');
     expect(
@@ -131,9 +107,9 @@ liveDescribe('OpenCode local provider app launch live e2e', () => {
       expect.stringContaining('does not expose enough runtime metadata'),
     ]);
 
-    teamName = `opencode-local-provider-app-${Date.now()}`;
-    const progressEvents: TeamProvisioningProgress[] = [];
-    const { runId } = await harness.svc.createTeam(
+    const teamName = owned.teamName = `opencode-local-provider-app-${Date.now()}`;
+    const progressEvents = owned.progressEvents;
+    const { runId } = await runLiveCaseStage(owned, 'create local team', () => harness.svc.createTeam(
       {
         teamName,
         cwd: projectPath,
@@ -151,7 +127,7 @@ liveDescribe('OpenCode local provider app launch live e2e', () => {
         ],
       },
       (progress) => progressEvents.push(progress)
-    );
+    ), 300_000);
 
     const progressDump = formatProgressDump(progressEvents);
     expect(runId, progressDump).toBeTruthy();
@@ -164,7 +140,7 @@ liveDescribe('OpenCode local provider app launch live e2e', () => {
     expect(progressDump).not.toContain('OpenCode team launch is not enabled');
     expect(fakeServer.requests, progressDump).toContain('POST /v1/chat/completions');
 
-    const runtimeSnapshot = await harness.svc.getTeamAgentRuntimeSnapshot(teamName);
+    const runtimeSnapshot = await runLiveCaseStage(owned, 'read launched runtime snapshot', () => harness.svc.getTeamAgentRuntimeSnapshot(teamName), 30_000);
     expect(runtimeSnapshot.runId).toBe(runId);
     expect(runtimeSnapshot.members.bob).toMatchObject({
       alive: true,
@@ -177,7 +153,7 @@ liveDescribe('OpenCode local provider app launch live e2e', () => {
 
     const deliveryMarker = `local-provider-delivery-${Date.now()}`;
     const chatBodyCountBeforeDelivery = fakeServer.chatBodies.length;
-    const delivery = await harness.svc.deliverOpenCodeMemberMessage(teamName, {
+    const delivery = await runLiveCaseStage(owned, 'deliver local provider message', () => harness.svc.deliverOpenCodeMemberMessage(teamName, {
       memberName: 'bob',
       messageId: `local-provider-delivery-${Date.now()}`,
       replyRecipient: 'user',
@@ -186,41 +162,34 @@ liveDescribe('OpenCode local provider app launch live e2e', () => {
         `Local provider delivery marker: ${deliveryMarker}`,
         'Answer with PONG. Do not edit files.',
       ].join('\n'),
-    });
+    }), 120_000);
     expect(delivery.delivered, JSON.stringify(delivery, null, 2)).toBe(true);
-    await waitUntil(
+    await waitForLiveCase(owned, 'prove delivered prompt',
       async () =>
-        fakeServer!.chatBodies.length > chatBodyCountBeforeDelivery &&
-        fakeServer!.chatBodies.some((body) => JSON.stringify(body).includes(deliveryMarker)),
+        fakeServer.chatBodies.length > chatBodyCountBeforeDelivery &&
+        fakeServer.chatBodies.some((body) => JSON.stringify(body).includes(deliveryMarker)),
       60_000,
       500
     );
 
-    await stopAndVerifyOpenCodeTeam(harness.svc, teamName);
+    await runLiveCaseStage(owned, 'stop and verify owned team', () =>
+      stopAndVerifyOpenCodeTeam(harness.svc, teamName, {
+        teamsBasePath: owned.teamsBasePath, isCurrentCase: () => cases.active === owned,
+      }), 180_000);
     clearBenignSlowConfigReadWarnings();
-  }, 300_000);
+  }, 600_000);
 
   it('fails app service launch for an unknown local model before creating OpenCode lanes', async () => {
-    const projectPath = path.join(tempDir, 'unknown-model-project');
-    await fs.mkdir(projectPath, { recursive: true });
-    fakeServer = await startFakeOpenAiCompatibleServer();
-    await writeFakeLocalOpenCodeConfig({
-      projectPath,
-      baseUrl: fakeServer.baseUrl,
-    });
+    const owned = cases.enrolled!;
+    const { projectPath, fakeServer, harness } = await prepareLocalProviderLiveCase(
+      owned,
+      'unknown-model-project',
+      `${LOCAL_PROVIDER_ID}/missing-test:0.5b`
+    );
 
-    harness = await createOpenCodeLiveHarness({
-      tempDir,
-      selectedModel: `${LOCAL_PROVIDER_ID}/missing-test:0.5b`,
-      projectPath,
-      runtimeAdapterOptions: {
-        inspectLocalModelRuntime: inspectOpenCodeLocalModelRuntimeReadiness,
-      },
-    });
-
-    teamName = `opencode-local-provider-unknown-${Date.now()}`;
-    const progressEvents: TeamProvisioningProgress[] = [];
-    const { runId } = await harness.svc.createTeam(
+    const teamName = owned.teamName = `opencode-local-provider-unknown-${Date.now()}`;
+    const progressEvents = owned.progressEvents;
+    const { runId } = await runLiveCaseStage(owned, 'reject unknown local model', () => harness.svc.createTeam(
       {
         teamName,
         cwd: projectPath,
@@ -237,9 +206,9 @@ liveDescribe('OpenCode local provider app launch live e2e', () => {
         ],
       },
       (progress) => progressEvents.push(progress)
-    );
+    ), 120_000);
     expect(runId).toBeTruthy();
-    await waitUntil(
+    await waitForLiveCase(owned, 'wait for failed progress',
       async () => progressEvents.some((progress) => progress.state === 'failed'),
       30_000,
       500
@@ -252,8 +221,8 @@ liveDescribe('OpenCode local provider app launch live e2e', () => {
     ).toBe(true);
     expect(progressDump).toMatch(/missing-test:0\.5b|not available|unavailable/i);
     expect(fakeServer.requests, progressDump).not.toContain('POST /v1/chat/completions');
-    await waitUntil(() => hasNoOpenCodeRuntimeLanes(getTeamsBasePath(), teamName!), 15_000, 500);
-    const failedSnapshot = await harness.svc.getTeamAgentRuntimeSnapshot(teamName);
+    await waitForLiveCase(owned, 'prove no runtime lanes',() => hasNoOpenCodeRuntimeLanes(owned.teamsBasePath, teamName), 15_000, 500);
+    const failedSnapshot = await runLiveCaseStage(owned, 'read failed runtime snapshot', () => harness.svc.getTeamAgentRuntimeSnapshot(teamName), 30_000);
     expect(
       failedSnapshot.members['team-lead']?.alive,
       JSON.stringify(failedSnapshot, null, 2)
@@ -263,29 +232,21 @@ liveDescribe('OpenCode local provider app launch live e2e', () => {
   }, 180_000);
 
   it('preserves the active lane when the local server is offline during restart and recovers cleanly', async () => {
-    const projectPath = path.join(tempDir, 'restart-recovery-project');
-    await fs.mkdir(projectPath, { recursive: true });
-    fakeServer = await startFakeOpenAiCompatibleServer();
+    const owned = cases.enrolled!;
+    const prepared = await prepareLocalProviderLiveCase(
+      owned,
+      'restart-recovery-project',
+      LOCAL_MODEL
+    );
+    const { projectPath, harness } = prepared;
+    let { fakeServer } = prepared;
     const localServerPort = fakeServer.port;
-    await writeFakeLocalOpenCodeConfig({
-      projectPath,
-      baseUrl: fakeServer.baseUrl,
-    });
 
-    harness = await createOpenCodeLiveHarness({
-      tempDir,
-      selectedModel: LOCAL_MODEL,
-      projectPath,
-      runtimeAdapterOptions: {
-        inspectLocalModelRuntime: inspectOpenCodeLocalModelRuntimeReadiness,
-      },
-    });
-
-    teamName = `opencode-local-provider-restart-${Date.now()}`;
-    const progressEvents: TeamProvisioningProgress[] = [];
-    await withLiveStageTimeout(
+    const teamName = owned.teamName = `opencode-local-provider-restart-${Date.now()}`;
+    const progressEvents = owned.progressEvents;
+    await runLiveCaseStage(owned,
       'initial local team create',
-      harness.svc.createTeam(
+      () => harness.svc.createTeam(
         {
           teamName,
           cwd: projectPath,
@@ -311,29 +272,29 @@ liveDescribe('OpenCode local provider app launch live e2e', () => {
       progressEvents.some((progress) => progress.message.includes('OpenCode team launch is ready')),
       formatProgressDump(progressEvents)
     ).toBe(true);
-    const beforeOutage = await harness.svc.getTeamAgentRuntimeSnapshot(teamName);
+    const beforeOutage = await runLiveCaseStage(owned, 'read runtime before outage', () => harness.svc.getTeamAgentRuntimeSnapshot(teamName), 30_000);
     expect(beforeOutage.members.bob).toMatchObject({
       alive: true,
       providerId: 'opencode',
       runtimeModel: LOCAL_MODEL,
     });
-    const beforeOutageLaneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName);
+    const beforeOutageLaneIndex = await runLiveCaseStage(owned, 'read lane before outage', () => readOpenCodeRuntimeLaneIndex(owned.teamsBasePath, teamName), 10_000);
     expect(beforeOutageLaneIndex.lanes.primary).toMatchObject({
       laneId: 'primary',
       state: 'active',
     });
 
-    await fakeServer.close();
-    fakeServer = null;
+    await runLiveCaseStage(owned, 'take local provider offline', () => fakeServer.close(), 10_000);
+    owned.fakeServer = null;
 
     const blockedRestartStartedAt = Date.now();
-    const blockedRestartError = await withLiveStageTimeout(
+    const blockedRestartError = await runLiveCaseStage(owned,
       'offline local restart preflight',
-      harness.svc.restartMember(teamName, 'bob'),
+      () => harness.svc.restartMember(teamName, 'bob').then(
+        () => null,
+        (error: unknown) => error
+      ),
       30_000
-    ).then(
-      () => null,
-      (error: unknown) => error
     );
     expect(Date.now() - blockedRestartStartedAt).toBeLessThan(15_000);
     expect(blockedRestartError).toBeInstanceOf(Error);
@@ -343,29 +304,32 @@ liveDescribe('OpenCode local provider app launch live e2e', () => {
     );
     clearExpectedLocalServerOutageErrors(localServerPort);
 
-    const afterBlockedRestart = await harness.svc.getTeamAgentRuntimeSnapshot(teamName);
+    const afterBlockedRestart = await runLiveCaseStage(owned, 'read runtime after blocked restart', () => harness.svc.getTeamAgentRuntimeSnapshot(teamName), 30_000);
     expect(afterBlockedRestart.members.bob).toMatchObject({
       alive: true,
       providerId: 'opencode',
       runtimeModel: LOCAL_MODEL,
     });
-    const afterBlockedRestartLaneIndex = await readOpenCodeRuntimeLaneIndex(
-      getTeamsBasePath(),
+    const afterBlockedRestartLaneIndex = await runLiveCaseStage(owned, 'read lane after blocked restart', () => readOpenCodeRuntimeLaneIndex(
+      owned.teamsBasePath,
       teamName
-    );
+    ), 10_000);
     expect(afterBlockedRestartLaneIndex).toEqual(beforeOutageLaneIndex);
 
-    fakeServer = await startFakeOpenAiCompatibleServer(localServerPort);
-    await withLiveStageTimeout(
+    fakeServer = await runLiveCaseStage(owned, 'restore local provider', async () => {
+      owned.fakeServer = await startFakeOpenAiCompatibleServer(localServerPort);
+      return owned.fakeServer;
+    }, 10_000);
+    await runLiveCaseStage(owned,
       'recovered local teammate restart',
-      harness.svc.restartMember(teamName, 'bob'),
+      () => harness.svc.restartMember(teamName, 'bob'),
       360_000
     );
-    await waitUntil(
+    await waitForLiveCase(owned, 'prove recovered runtime and lane',
       async () => {
         const [snapshot, laneIndex] = await Promise.all([
-          harness!.svc.getTeamAgentRuntimeSnapshot(teamName!),
-          readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName!),
+          harness.svc.getTeamAgentRuntimeSnapshot(teamName),
+          readOpenCodeRuntimeLaneIndex(owned.teamsBasePath, teamName),
         ]);
         return (
           snapshot.members.bob?.alive === true &&
@@ -378,14 +342,14 @@ liveDescribe('OpenCode local provider app launch live e2e', () => {
       1_000,
       async () => {
         const [snapshot, laneIndex] = await Promise.all([
-          harness!.svc.getTeamAgentRuntimeSnapshot(teamName!),
-          readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName!),
+          harness.svc.getTeamAgentRuntimeSnapshot(teamName),
+          readOpenCodeRuntimeLaneIndex(owned.teamsBasePath, teamName),
         ]);
         return JSON.stringify({ snapshot, laneIndex }, null, 2);
       }
     );
 
-    const recovered = await harness.svc.getTeamAgentRuntimeSnapshot(teamName);
+    const recovered = await runLiveCaseStage(owned, 'read recovered runtime snapshot', () => harness.svc.getTeamAgentRuntimeSnapshot(teamName), 30_000);
     expect(recovered.members['team-lead']).toMatchObject({
       alive: true,
       providerId: 'opencode',
@@ -403,7 +367,7 @@ liveDescribe('OpenCode local provider app launch live e2e', () => {
 
     const recoveryMarker = `local-provider-recovery-${Date.now()}`;
     const recoveryBodyCount = fakeServer.chatBodies.length;
-    const delivery = await harness.svc.deliverOpenCodeMemberMessage(teamName, {
+    const delivery = await runLiveCaseStage(owned, 'deliver recovery message', () => harness.svc.deliverOpenCodeMemberMessage(teamName, {
       memberName: 'bob',
       messageId: recoveryMarker,
       replyRecipient: 'user',
@@ -411,23 +375,261 @@ liveDescribe('OpenCode local provider app launch live e2e', () => {
       text: [`Recovery marker: ${recoveryMarker}`, 'Answer with PONG. Do not edit files.'].join(
         '\n'
       ),
-    });
+    }), 120_000);
     expect(delivery.delivered, JSON.stringify(delivery, null, 2)).toBe(true);
-    await waitUntil(
+    await waitForLiveCase(owned, 'prove recovery delivery',
       async () =>
-        fakeServer!.chatBodies.length > recoveryBodyCount &&
-        fakeServer!.chatBodies.some((body) => JSON.stringify(body).includes(recoveryMarker)),
+        fakeServer.chatBodies.length > recoveryBodyCount &&
+        fakeServer.chatBodies.some((body) => JSON.stringify(body).includes(recoveryMarker)),
       60_000,
       500
     );
 
     retainVerifiedLocalRestartWarning(teamName, 'bob');
-    await stopAndVerifyOpenCodeTeam(harness.svc, teamName);
+    await runLiveCaseStage(owned, 'stop and verify owned team', () =>
+      stopAndVerifyOpenCodeTeam(harness.svc, teamName, {
+        teamsBasePath: owned.teamsBasePath, isCurrentCase: () => cases.active === owned,
+      }), 180_000);
     clearBenignSlowConfigReadWarnings();
   }, 720_000);
 });
 
 describe('OpenCode local provider fixture', () => {
+  beforeEach(() => assertPreviousLiveCaseSettled(liveCases.active));
+
+  it('keeps a delayed cleanup confined to its captured case and diagnostics', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'TEST-owned-case-cleanup-'));
+    const previousRoot = path.dirname(getTeamsBasePath());
+    const owned = createLocalProviderLiveCase(path.join(root, 'old'));
+    const next = createLocalProviderLiveCase(path.join(root, 'next'));
+    const stop = deferredOperation();
+    const dispose = vi.fn(async () => undefined);
+    const close = vi.fn(async () => undefined);
+    owned.harness = { svc: { stopTeam: vi.fn(() => stop.promise) }, dispose };
+    owned.fakeServer = { close };
+    owned.teamName = 'TEST-old-case';
+    next.harness = { svc: { stopTeam: vi.fn(async () => undefined) }, dispose: vi.fn(async () => undefined) };
+    next.fakeServer = { close: vi.fn(async () => undefined) };
+    const cases: LocalProviderLiveCases = { active: owned, enrolled: owned };
+    const warn = vi.mocked(console.warn);
+    try {
+      await fs.mkdir(owned.tempClaudeRoot, { recursive: true });
+      await fs.mkdir(next.tempClaudeRoot, { recursive: true });
+      setClaudeBasePathOverride(owned.tempClaudeRoot);
+      const cleanup = cleanupEnrolledLocalProviderLiveCase(cases);
+      expect(cleanupLocalProviderLiveCase(owned, () => cases.active === owned)).toBe(cleanup);
+      await Promise.resolve();
+      cases.active = cases.enrolled = next;
+      setClaudeBasePathOverride(next.tempClaudeRoot);
+      console.warn('[getConfig] slow read diag=next-case');
+      const nextWarnings = [...warn.mock.calls];
+      stop.resolve();
+      await cleanup;
+
+      expect(dispose).toHaveBeenCalledTimes(1);
+      expect(close).toHaveBeenCalledTimes(1);
+      expect(next.harness.dispose).not.toHaveBeenCalled();
+      expect(next.fakeServer.close).not.toHaveBeenCalled();
+      expect(getTeamsBasePath()).toBe(next.teamsBasePath);
+      expect(warn.mock.calls).toEqual(nextWarnings);
+      await expect(fs.stat(next.tempDir)).resolves.toBeDefined();
+    } finally {
+      stop.resolve();
+      await owned.cleanupPromise?.catch(() => undefined);
+      warn.mockClear();
+      setClaudeBasePathOverride(previousRoot);
+      await fs.rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it('keeps the admission fence when a rejected next setup is followed by afterEach', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'TEST-case-admission-'));
+    const previousRoot = path.dirname(getTeamsBasePath());
+    const cases: LocalProviderLiveCases = { active: null, enrolled: null };
+    const owned = enterLocalProviderLiveCase(cases, path.join(root, 'old'));
+    const stop = deferredOperation();
+    const stopTeam = vi.fn(() => stop.promise);
+    const dispose = vi.fn(async () => undefined);
+    owned.harness = { svc: { stopTeam }, dispose };
+    owned.teamName = 'TEST-pending-case';
+    try {
+      setClaudeBasePathOverride(owned.tempClaudeRoot);
+      const cleanup = cleanupEnrolledLocalProviderLiveCase(cases);
+      await Promise.resolve();
+      expect(() => enterLocalProviderLiveCase(cases, path.join(root, 'next'))).toThrow('Previous case');
+      expect(cases.enrolled).toBeNull();
+      await cleanupEnrolledLocalProviderLiveCase(cases);
+      expect(() => enterLocalProviderLiveCase(cases, path.join(root, 'third'))).toThrow('Previous case');
+      expect(stopTeam).toHaveBeenCalledTimes(1);
+      expect(getTeamsBasePath()).toBe(owned.teamsBasePath);
+      stop.resolve();
+      await cleanup;
+      expect(dispose).toHaveBeenCalledTimes(1);
+      expect(() => enterLocalProviderLiveCase(cases, path.join(root, 'settled-next'))).not.toThrow();
+    } finally {
+      stop.resolve();
+      await owned.cleanupPromise?.catch(() => undefined);
+      setClaudeBasePathOverride(previousRoot);
+      await fs.rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it('verifies the original default lane root after Stop awaits across a root change', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'TEST-stop-root-snapshot-'));
+    const previousRoot = path.dirname(getTeamsBasePath());
+    const oldRoot = path.join(root, 'old');
+    const nextRoot = path.join(root, 'next');
+    const teamName = 'TEST-root-snapshot';
+    const indexPath = getOpenCodeRuntimeLaneIndexPath(path.join(oldRoot, 'teams'), teamName);
+    const stop = deferredOperation();
+    try {
+      await fs.mkdir(path.dirname(indexPath), { recursive: true });
+      await fs.writeFile(indexPath, JSON.stringify({ version: 1, updatedAt: 'now', lanes: { primary: {} } }));
+      setClaudeBasePathOverride(oldRoot);
+      const verification = stopAndVerifyOpenCodeTeam({ stopTeam: () => stop.promise }, teamName, { timeoutMs: 20 });
+      const rejected = expect(verification).rejects.toThrow('Timed out');
+      setClaudeBasePathOverride(nextRoot);
+      stop.resolve();
+      await rejected;
+      expect(getTeamsBasePath()).toBe(path.join(nextRoot, 'teams'));
+      expect(await hasNoOpenCodeRuntimeLanes(path.join(oldRoot, 'teams'), teamName)).toBe(false);
+    } finally {
+      stop.resolve();
+      setClaudeBasePathOverride(previousRoot);
+      await fs.rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it('does not start another operation when an in-flight stage finishes after case closure', async () => {
+    const owned = createLocalProviderLiveCase('/TEST-closed-stage');
+    const first = deferredOperation();
+    const next = vi.fn(async () => undefined);
+    const running = runLiveCaseStage(owned, 'pending launch', () => first.promise, 1_000);
+    const rejected = expect(running).rejects.toThrow('closed before stage: pending launch completion');
+    await Promise.resolve();
+    owned.closed = true;
+    first.resolve();
+    await rejected;
+    await expect(runLiveCaseStage(owned, 'next delivery', next, 1_000)).rejects.toThrow('closed before stage');
+    expect(next).not.toHaveBeenCalled();
+    expect(owned.pending.size).toBe(0);
+  });
+
+  it('tracks a timed-out setup until settlement and disposes its late registered harness', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'TEST-late-setup-'));
+    const owned = createLocalProviderLiveCase(root);
+    const setup = deferredOperation();
+    const dispose = vi.fn(async () => undefined);
+    vi.useFakeTimers();
+    try {
+      const running = runLiveCaseStage(owned, 'slow setup', async () => {
+        await setup.promise;
+        owned.harness = { svc: { stopTeam: vi.fn(async () => undefined) }, dispose };
+      }, 10);
+      const rejected = expect(running).rejects.toThrow('slow setup timed out after 10ms');
+      await vi.advanceTimersByTimeAsync(11);
+      await rejected;
+      expect(owned.pending.size).toBe(1);
+      expect(() => assertPreviousLiveCaseSettled(owned)).toThrow('Previous case');
+      const cleanup = cleanupLocalProviderLiveCase(owned, () => false);
+      setup.resolve();
+      await cleanup;
+      expect(dispose).toHaveBeenCalledTimes(1);
+      expect(owned.pending.size).toBe(0);
+      expect(() => assertPreviousLiveCaseSettled(owned)).not.toThrow();
+    } finally {
+      setup.resolve();
+      vi.useRealTimers();
+      await fs.rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it('preserves the owned root, files and failure fence when pending setup outlives cleanup', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'TEST-unsettled-setup-'));
+    const previousRoot = path.dirname(getTeamsBasePath());
+    const owned = createLocalProviderLiveCase(root);
+    const setup = deferredOperation();
+    vi.useFakeTimers();
+    try {
+      setClaudeBasePathOverride(owned.tempClaudeRoot);
+      const running = runLiveCaseStage(owned, 'unsettled setup', () => setup.promise, 10);
+      const rejected = expect(running).rejects.toThrow('timed out');
+      await vi.advanceTimersByTimeAsync(11);
+      await rejected;
+      const cleanup = cleanupLocalProviderLiveCase(owned, () => true);
+      const failedCleanup = expect(cleanup).rejects.toThrow('settle owned operations timed out');
+      await vi.advanceTimersByTimeAsync(30_001);
+      await failedCleanup;
+      expect(getTeamsBasePath()).toBe(owned.teamsBasePath);
+      await expect(fs.stat(root)).resolves.toBeDefined();
+      expect(() => assertPreviousLiveCaseSettled(owned)).toThrow('Previous case');
+      setup.resolve();
+      await Promise.allSettled([...owned.pending.keys()]);
+      expect(owned.cleanupFailed).toBe(true);
+      expect(() => assertPreviousLiveCaseSettled(owned)).toThrow('Previous case');
+    } finally {
+      setup.resolve();
+      await Promise.allSettled([...owned.pending.keys()]);
+      vi.useRealTimers();
+      setClaudeBasePathOverride(previousRoot);
+      await fs.rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it('reports the original Stop error together with disposal failures', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'TEST-cleanup-errors-'));
+    const owned = createLocalProviderLiveCase(root);
+    owned.teamName = 'TEST-stop-failure';
+    owned.harness = {
+      svc: { stopTeam: async () => { throw new Error('strict Stop rejected'); } },
+      dispose: async () => { throw new Error('dispose rejected'); },
+    };
+    const close = vi.fn(async () => undefined);
+    owned.fakeServer = { close };
+    try {
+      const error = await cleanupLocalProviderLiveCase(owned, () => false).catch((cause: unknown) => cause);
+      expect(error).toBeInstanceOf(AggregateError);
+      expect((error as AggregateError).errors).toHaveLength(2);
+      expect((error as Error).message).toContain('strict Stop rejected');
+      expect((error as Error).message).toContain('dispose rejected');
+      expect(close).toHaveBeenCalledTimes(1);
+      expect(() => assertPreviousLiveCaseSettled(owned)).toThrow('Previous case');
+    } finally {
+      await fs.rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it('keeps both warning spies intact when Stop finishes after a spy replacement', async () => {
+    const teamsBasePath = await fs.mkdtemp(path.join(os.tmpdir(), 'TEST-stop-warning-owner-'));
+    const teamName = 'TEST-warning-owner';
+    const warning = `[Service:TeamProvisioning] [${teamName}] Slow OpenCode stop: primary lane stop took 12345ms (stopped=true)`;
+    const stop = deferredOperation();
+    const originalWarn = console.warn;
+    const capturedWarn = vi.mocked(originalWarn);
+    const replacementWarn = vi.fn();
+    const info = vi.spyOn(console, 'info').mockImplementation(() => undefined);
+    try {
+      console.warn(warning);
+      const verification = stopAndVerifyOpenCodeTeam({ stopTeam: () => stop.promise }, teamName, {
+        teamsBasePath,
+        isCurrentCase: () => true,
+      });
+      console.warn = replacementWarn;
+      console.warn(warning);
+      stop.resolve();
+      await verification;
+      expect(capturedWarn.mock.calls).toEqual([[warning]]);
+      expect(replacementWarn.mock.calls).toEqual([[warning]]);
+      expect(info).not.toHaveBeenCalled();
+    } finally {
+      stop.resolve();
+      console.warn = originalWarn;
+      capturedWarn.mockClear();
+      info.mockRestore();
+      await fs.rm(teamsBasePath, { recursive: true, force: true });
+    }
+  });
+
   it('retains only the owned restart metadata warning alongside pending stop diagnostics', () => {
     const teamName = 'TEST-owned-restart';
     const prefix = '[Service:TeamProvisioning]';
@@ -650,15 +852,236 @@ interface FakeOpenAiCompatibleServer {
   close: () => Promise<void>;
 }
 
+interface LocalProviderLiveCase {
+  readonly tempDir: string;
+  readonly tempClaudeRoot: string;
+  readonly teamsBasePath: string;
+  readonly startedAt: number;
+  readonly progressEvents: TeamProvisioningProgress[];
+  readonly pending: Map<Promise<unknown>, string>;
+  harness: {
+    svc: Pick<OpenCodeLiveHarness['svc'], 'stopTeam'>;
+    dispose: () => Promise<void>;
+  } | null;
+  fakeServer: Pick<FakeOpenAiCompatibleServer, 'close'> | null;
+  teamName: string | null;
+  closed: boolean;
+  cleanupFinished: boolean;
+  cleanupFailed: boolean;
+  cleanupPromise: Promise<void> | null;
+}
+
+interface LocalProviderLiveCases {
+  active: LocalProviderLiveCase | null;
+  enrolled: LocalProviderLiveCase | null;
+}
+
+function deferredOperation() {
+  let resolve!: () => void;
+  const promise = new Promise<void>((settle) => { resolve = settle; });
+  return { promise, resolve };
+}
+
+function enterLocalProviderLiveCase(cases: LocalProviderLiveCases, tempDir: string) {
+  // Vitest can call afterEach even when this admission fails. It must have no new owner.
+  cases.enrolled = null;
+  assertPreviousLiveCaseSettled(cases.active);
+  const owned = createLocalProviderLiveCase(tempDir);
+  cases.active = cases.enrolled = owned;
+  return owned;
+}
+
+function cleanupEnrolledLocalProviderLiveCase(cases: LocalProviderLiveCases): Promise<void> {
+  const owned = cases.enrolled;
+  return owned
+    ? cleanupLocalProviderLiveCase(owned, () => cases.active === owned)
+    : Promise.resolve();
+}
+
+function createLocalProviderLiveCase(tempDir: string): LocalProviderLiveCase {
+  return {
+    tempDir,
+    tempClaudeRoot: path.join(tempDir, '.claude'),
+    teamsBasePath: path.join(tempDir, '.claude', 'teams'),
+    startedAt: Date.now(),
+    progressEvents: [],
+    pending: new Map(),
+    harness: null,
+    fakeServer: null,
+    teamName: null,
+    closed: false,
+    cleanupFinished: false,
+    cleanupFailed: false,
+    cleanupPromise: null,
+  };
+}
+
+function assertPreviousLiveCaseSettled(owned: LocalProviderLiveCase | null): void {
+  if (owned && (!owned.cleanupFinished || owned.cleanupFailed || owned.pending.size > 0)) {
+    throw new Error(
+      `Previous case ${owned.tempDir} has unfinished or failed cleanup; pending stages: ${
+        [...owned.pending.values()].join(', ') || 'none'
+      }`
+    );
+  }
+}
+
+function assertLiveCaseOpen(owned: LocalProviderLiveCase, stage: string): void {
+  if (owned.closed) throw new Error(`Case ${owned.tempDir} closed before stage: ${stage}`);
+}
+
+async function runLiveCaseStage<T>(
+  owned: LocalProviderLiveCase,
+  stage: string,
+  operation: () => Promise<T>,
+  timeoutMs: number
+): Promise<T> {
+  assertLiveCaseOpen(owned, stage);
+  return recordLiveCaseStage(owned, stage, async () => {
+    assertLiveCaseOpen(owned, stage);
+    const value = await operation();
+    assertLiveCaseOpen(owned, `${stage} completion`);
+    return value;
+  }, timeoutMs);
+}
+
+function waitForLiveCase(
+  owned: LocalProviderLiveCase,
+  stage: string,
+  ...[condition, timeoutMs, intervalMs, diagnostics]: Parameters<typeof waitUntil>
+): Promise<void> {
+  return runLiveCaseStage(owned, stage, () => waitUntil(async () => {
+    assertLiveCaseOpen(owned, stage);
+    return condition();
+  }, timeoutMs, intervalMs, diagnostics), timeoutMs + 5_000);
+}
+
+async function recordLiveCaseStage<T>(
+  owned: LocalProviderLiveCase,
+  stage: string,
+  operation: () => Promise<T>,
+  timeoutMs: number
+): Promise<T> {
+  const startedAt = Date.now();
+  const label = `[OpenCodeLocalProviderAppLaunch.live] ${path.basename(owned.tempDir)} ${stage}`;
+  console.info(`${label}: started (case elapsed ${startedAt - owned.startedAt}ms)`);
+  const pending = Promise.resolve().then(operation);
+  owned.pending.set(pending, stage);
+  // A timeout rejects the waiter, not the operation. Keep its ownership until actual settlement.
+  void pending.then(() => owned.pending.delete(pending), () => owned.pending.delete(pending));
+  try {
+    const value = await withLiveStageTimeout(stage, pending, timeoutMs);
+    console.info(`${label}: completed in ${Date.now() - startedAt}ms (case elapsed ${Date.now() - owned.startedAt}ms)`);
+    return value;
+  } catch (cause) {
+    const detail = cause instanceof Error ? cause.message : String(cause);
+    throw new Error(
+      `${label}: failed after ${Date.now() - startedAt}ms (case elapsed ${Date.now() - owned.startedAt}ms); ` +
+      `latest progress: ${owned.progressEvents.at(-1)?.message ?? 'none'}; ${detail}`,
+      { cause }
+    );
+  }
+}
+
+async function prepareLocalProviderLiveCase(
+  owned: LocalProviderLiveCase,
+  projectName: string,
+  selectedModel: string
+) {
+  const projectPath = path.join(owned.tempDir, projectName);
+  await runLiveCaseStage(owned, 'prepare test project', () => fs.mkdir(projectPath, { recursive: true }), 10_000);
+  const fakeServer = await runLiveCaseStage(owned, 'start local provider', async () => {
+    const server = await startFakeOpenAiCompatibleServer();
+    owned.fakeServer = server;
+    return server;
+  }, 10_000);
+  await runLiveCaseStage(owned, 'configure local provider', () => writeFakeLocalOpenCodeConfig({
+    projectPath,
+    baseUrl: fakeServer.baseUrl,
+  }), 30_000);
+  const harness = await runLiveCaseStage(owned, 'create app harness', async () => {
+    const created = await createOpenCodeLiveHarness({
+      tempDir: owned.tempDir,
+      selectedModel,
+      projectPath,
+      runtimeAdapterOptions: { inspectLocalModelRuntime: inspectOpenCodeLocalModelRuntimeReadiness },
+    });
+    owned.harness = created;
+    return created;
+  }, 30_000);
+  return { projectPath, fakeServer, harness };
+}
+
+function cleanupLocalProviderLiveCase(
+  owned: LocalProviderLiveCase,
+  isCurrentCase: () => boolean
+): Promise<void> {
+  if (owned.cleanupPromise) return owned.cleanupPromise;
+  owned.closed = true;
+  const warningSpy = vi.mocked(console.warn);
+  owned.cleanupPromise = (async () => {
+    const errors: unknown[] = [];
+    const attempt = async (stage: string, operation: () => Promise<unknown>, timeoutMs: number) => {
+      try {
+        await recordLiveCaseStage(owned, stage, operation, timeoutMs);
+      } catch (error) {
+        errors.push(error);
+      }
+    };
+    // 180s pending native launch + 90s Stop + 90s lane proof; total cleanup <= 440s.
+    if (owned.harness && owned.teamName) {
+      const { svc } = owned.harness;
+      const teamName = owned.teamName;
+      await attempt('cleanup Stop and lane proof', () => stopAndVerifyOpenCodeTeam(svc, teamName, {
+        teamsBasePath: owned.teamsBasePath,
+        isCurrentCase,
+      }), 360_000);
+    }
+    const pending = [...owned.pending.keys()];
+    await attempt('settle owned operations', () => Promise.allSettled(pending), 30_000);
+    // Setup may have registered these resources while the pending operation settled.
+    if (owned.harness) {
+      const harness = owned.harness;
+      await attempt('dispose owned harness', () => harness.dispose(), 30_000);
+    }
+    if (owned.fakeServer) {
+      const server = owned.fakeServer;
+      await attempt('close owned local server', () => server.close(), 10_000);
+    }
+    if (owned.pending.size > 0) {
+      errors.push(new Error(`Owned operations still pending: ${[...owned.pending.values()].join(', ')}`));
+    }
+    if (owned.pending.size === 0) {
+      if (isCurrentCase() && getTeamsBasePath() === owned.teamsBasePath) {
+        setClaudeBasePathOverride(null);
+        if (console.warn === warningSpy) clearBenignSlowConfigReadWarnings();
+      }
+      if (process.env.OPENCODE_E2E_KEEP_TEMP !== '1' && errors.length === 0) {
+        await attempt('remove owned test directory', () => fs.rm(owned.tempDir, { recursive: true, force: true }), 10_000);
+      } else {
+        console.info(`[OpenCodeLocalProviderAppLaunch.live] preserved temp dir: ${owned.tempDir}`);
+      }
+    }
+    owned.cleanupFinished = true;
+    owned.cleanupFailed = errors.length > 0 || owned.pending.size > 0;
+    if (errors.length > 0) {
+      throw new AggregateError(errors, `Cleanup failed for ${owned.tempDir}: ${errors.map(String).join('; ')}`);
+    }
+  })();
+  return owned.cleanupPromise;
+}
+
 async function stopAndVerifyOpenCodeTeam(
   svc: Pick<OpenCodeLiveHarness['svc'], 'stopTeam'>,
   teamName: string,
-  options: { teamsBasePath?: string; timeoutMs?: number } = {}
+  options: { teamsBasePath?: string; timeoutMs?: number; isCurrentCase?: () => boolean } = {}
 ): Promise<void> {
+  const teamsBasePath = options.teamsBasePath ?? getTeamsBasePath();
+  const warn = vi.mocked(console.warn);
   await svc.stopTeam(teamName);
   const timeoutMs = options.timeoutMs ?? 90_000;
   await waitUntil(
-    () => hasNoOpenCodeRuntimeLanes(options.teamsBasePath ?? getTeamsBasePath(), teamName),
+    () => hasNoOpenCodeRuntimeLanes(teamsBasePath, teamName),
     timeoutMs,
     Math.min(500, timeoutMs)
   );
@@ -666,7 +1089,7 @@ async function stopAndVerifyOpenCodeTeam(
   // Source-launcher overhead can cross the production timing warning threshold.
   // Accept only this owned, verified stop, and retain its latency in the evidence.
   const prefix = `[Service:TeamProvisioning] [${teamName}] Slow OpenCode stop: primary lane stop took `;
-  const warn = vi.mocked(console.warn);
+  if (console.warn !== warn || (options.isCurrentCase && !options.isCurrentCase())) return;
   for (let index = warn.mock.calls.length - 1; index >= 0; index -= 1) {
     const rendered = warn.mock.calls[index].map((part) => String(part)).join(' ');
     if (
