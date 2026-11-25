@@ -44,12 +44,21 @@ describe('team budget enforcement', () => {
     expect(() => assertTeamBudgetLaunchAllowed(status({ action: 'stop_team', value: 0, period: '2026-12' }), 'alpha')).not.toThrow();
   });
   it.each([{ stale: true }, { degraded: true }, { incomplete: true }, { value: null }])(
-    'fails closed for launch but never declares an actionable stop with %o', (overrides) => {
-      const decision = evaluateTeamBudgetEnforcement(status({ action: 'stop_team', ...overrides }), 'alpha');
+    'never authorizes launches with %o', (overrides) => {
+      const decision = evaluateTeamBudgetEnforcement(
+        status({ action: 'stop_team', value: 0, ...overrides }), 'alpha'
+      );
       expect(decision.state).toBe('unknown');
-      expect(() => assertTeamBudgetLaunchAllowed(status({ action: 'stop_team', ...overrides }), 'alpha')).toThrow('TEAM_BUDGET_BLOCKED');
+      expect(() => assertTeamBudgetLaunchAllowed(
+        status({ action: 'stop_team', value: 0, ...overrides }), 'alpha'
+      )).toThrow('TEAM_BUDGET_BLOCKED');
     }
   );
+  it('stops when a complete counter already exceeded despite an unrelated degraded source', () => {
+    expect(evaluateTeamBudgetEnforcement(
+      status({ action: 'stop_team', value: 120, degraded: true }), 'alpha'
+    ).state).toBe('exceeded');
+  });
   it('allows under-limit usage', () => {
     expect(evaluateTeamBudgetEnforcement(status({ action: 'stop_team', value: 80 }), 'alpha').state).toBe('within_limit');
   });
