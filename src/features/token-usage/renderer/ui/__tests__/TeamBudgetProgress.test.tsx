@@ -67,6 +67,17 @@ describe('team budget card', () => {
     expect(container.textContent).toContain('teamCardUnknown');
   });
 
+  it('displays a confirmed exceeded counter rather than a larger incomplete estimate', async () => {
+    const data = status({ policy: 'stop_team', value: 22 });
+    data.targets[0].metrics.push({
+      metric: 'tokens', value: 900, limit: 100, percent: 900, remaining: 0,
+      incomplete: true,
+    });
+    await act(async () => root.render(<TeamBudgetProgress teamName="alpha" status={data} />));
+    expect(container.textContent).toContain('$22.00 / $20.00');
+    expect(container.textContent).toContain('teamCardBlocked');
+  });
+
   it('never shows a healthy budget if another configured metric is incomplete', async () => {
     const data = status({ value: 18, policy: 'block_launch' });
     data.targets[0].metrics.push({
