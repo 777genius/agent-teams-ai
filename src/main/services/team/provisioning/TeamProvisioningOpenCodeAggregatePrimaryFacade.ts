@@ -590,8 +590,8 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     options?: { reason?: LiveRosterAttachReason }
   ): Promise<void> {
     return this.runAfterInFlightTeamOperation(teamName, () =>
-      this.memberLifecycleController.attachLiveRosterMember(teamName, memberName, options)
-    , true);
+      this.memberLifecycleController.attachLiveRosterMember(teamName, memberName, options),
+      true);
   }
 
   override async detachLiveRosterMember(teamName: string, memberName: string): Promise<void> {
@@ -679,8 +679,8 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     teamName: string
   ): Promise<RetryFailedOpenCodeSecondaryLanesResult> {
     return this.runAfterInFlightTeamOperation(teamName, () =>
-      this.memberLifecycleController.retryFailedOpenCodeSecondaryLanes(teamName)
-    , true);
+      this.memberLifecycleController.retryFailedOpenCodeSecondaryLanes(teamName),
+      true);
   }
 
   override async reattachOpenCodeOwnedMemberLane(
@@ -689,8 +689,8 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     options?: { reason?: 'member_added' | 'member_updated' | 'manual_restart' }
   ): Promise<void> {
     return this.runAfterInFlightTeamOperation(teamName, () =>
-      this.memberLifecycleController.reattachOpenCodeOwnedMemberLane(teamName, memberName, options)
-    , true);
+      this.memberLifecycleController.reattachOpenCodeOwnedMemberLane(teamName, memberName, options),
+      true);
   }
 
   override async detachOpenCodeOwnedMemberLane(
