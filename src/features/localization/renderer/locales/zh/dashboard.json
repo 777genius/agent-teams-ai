@@ -472,7 +472,7 @@
       "editor": {
         "onExceeded": "达到预算上限时的操作",
         "notifyOnly": "仅通知",
-        "blockLaunch": "阻止团队重新启动",
+        "blockLaunch": "阻止团队的新启动",
         "stopTeam": "停止正在运行的团队并阻止启动",
         "enforcementHint": "使用数据缺失或延迟时，将阻止新启动。费用为估算值，实际账单可能超过限额。"
       }

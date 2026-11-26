@@ -114,13 +114,13 @@ export function buildBudgetStatus(input: {
   for (const event of attributed.attributed) {
     const run = runById.get(event.appRunId);
     const teamName = normalizeName(run?.teamName ?? event.teamName);
-    const team = teamScope(teamName);
+    const teamId = teamIdForName(teamName);
     const project = run ? runProjectKey(run) : null;
     const cost = normalizeCostBreakdown(event.cost);
     const tokens = normalizeTokenBreakdown(event.tokens).totalTokens;
     for (const [scope, id] of [
       ['global', 'global'],
-      ['team', team.id],
+      ['team', teamId],
       ...(teamName === undefined || teamName === 'unassigned'
         ? [['team', LEGACY_COMBINED_TEAM_ID]]
         : []),

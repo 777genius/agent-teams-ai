@@ -48,6 +48,9 @@ function createBudgetAccess(getReader: () => TeamBudgetReader | null) {
         unresolvedNames.push(name);
       } else if (result.alias) {
         aliases.set(name, result.alias.logicalTeamName);
+      } else if (isProjectCopyName(name)) {
+        // Generated copy usage without a verified owner is incomplete evidence.
+        unresolvedNames.push(name);
       }
     }
     return { aliases, unresolvedNames };

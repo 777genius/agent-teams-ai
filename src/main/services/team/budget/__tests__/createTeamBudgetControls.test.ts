@@ -220,6 +220,16 @@ describe('team budget composition - no live provider required', () => {
     await expect(guard('ptc-native')).resolves.toBeUndefined();
   });
 
+  it('marks unowned generated copy usage unresolved without rejecting ordinary team names', async () => {
+    const missing = `ptc-${'a'.repeat(24)}`;
+    const owned = `ptc-${'b'.repeat(24)}`;
+    registry.aliases.set(owned, 'alpha');
+    const { controls } = setup({ action: 'block_launch' });
+    const lookup = await controls.resolveBudgetAliases([missing, owned, 'ptc-native', 'alpha']);
+    expect(lookup.unresolvedNames).toEqual([missing]);
+    expect(lookup.aliases).toEqual(new Map([[owned, 'alpha']]));
+  });
+
   it('preserves good alias mappings and reports unreadable aliases without hiding the budget', async () => {
     registry.aliases.set('ptc-good', 'alpha');
     registry.failNames.add('ptc-bad');

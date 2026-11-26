@@ -57,6 +57,32 @@ describe('Budget monthly projection', () => {
     expect(projected.options.some((item) => item.id === 'team:ptc-copy-1')).toBe(false);
   });
 
+  it('resolves event attribution and gateway coverage through exactly one alias hop', () => {
+    const executionName = `ptc-${'a'.repeat(24)}`;
+    const logicalName = `ptc-${'b'.repeat(24)}`;
+    const limit = { monthlyTokenLimit: 100, thresholds: [100], notificationsEnabled: true };
+    const status = buildBudgetStatus({
+      now,
+      settings: { teams: { [`team:${logicalName}`]: limit, 'team:alpha': limit } },
+      ledger: { runs: [testRun({ teamName: executionName })], events: [testEvent()] },
+      teamNameAliases: new Map([
+        [executionName, logicalName],
+        [logicalName, 'alpha'],
+      ]),
+      degraded: false,
+      usageUpdatedAt: now.toISOString(),
+      policy: { enabled: true, nativeToasts: false },
+      gateway: { degradedTeamIds: [`team:${executionName}`] },
+    });
+    const logical = status.targets.find((target) => target.id === `team:${logicalName}`);
+    expect(logical?.metrics[0]).toMatchObject({ value: 100, incomplete: true });
+    expect(status.targets.find((target) => target.id === 'team:alpha')?.metrics[0]).toMatchObject({
+      value: 0,
+      incomplete: false,
+    });
+    expect(status.options.some((option) => option.id === `team:${executionName}`)).toBe(false);
+  });
+
   it('excludes old local charges once a run is recognized as gateway-owned', () => {
     const status = project(
       [testRun({ gatewayUsageRef: 'late-gateway' }), testRun({ appRunId: 'ordinary' })],
