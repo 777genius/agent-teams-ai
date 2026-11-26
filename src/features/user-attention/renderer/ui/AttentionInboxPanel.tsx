@@ -4,6 +4,9 @@ import { useAppTranslation } from '@features/localization/renderer';
 import { ChatListRow } from '@features/team-direct-chats/renderer';
 import { ParticipantAvatar } from '@renderer/components/team/ParticipantAvatar';
 import { Input } from '@renderer/components/ui/input';
+import { agentAvatarUrl, displayMemberName } from '@renderer/utils/memberHelpers';
+import { AlertCircle, Inbox, MessageCircle, RefreshCw } from 'lucide-react';
+
 import {
   attentionFilterCount,
   type AttentionFilters,
@@ -11,9 +14,6 @@ import {
   DEFAULT_ATTENTION_FILTERS,
   filterAttentionEntries,
 } from '../view-models/filterAttentionEntries';
-import { agentAvatarUrl, displayMemberName } from '@renderer/utils/memberHelpers';
-import { AlertCircle, Inbox, MessageCircle, RefreshCw } from 'lucide-react';
-
 import { relativeAttentionAge, toAttentionChatRow } from '../view-models/toAttentionChatRow';
 
 import { AttentionFiltersDialog } from './AttentionFiltersDialog';
@@ -58,16 +58,10 @@ export const AttentionInboxPanel = ({
   // One shared pure policy combines search and the full-page filters.
   // The compact Dashboard always shows the original unfiltered priority order.
   const applied = variant === 'full' ? filters : DEFAULT_ATTENTION_FILTERS;
-  const { tasks, chats } = useMemo(
-    () =>
-      filterAttentionEntries(
-        model,
-        applied,
-        variant === 'full' ? searchQuery : '',
-        now
-      ),
-    [model, applied, searchQuery, variant, now]
-  );
+  const { tasks, chats } = useMemo(() =>
+    filterAttentionEntries(model, applied,
+      variant === 'full' ? searchQuery : '', now),
+  [model, applied, searchQuery, variant, now]);
   const teams = useMemo(() => attentionTeamOptions(model), [model]);
   const filteredEmpty =
     variant === 'full' &&
