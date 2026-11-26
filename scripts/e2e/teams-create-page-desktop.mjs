@@ -1356,6 +1356,35 @@ async function openCreateTemplatePicker(client, label) {
   }
 }
 
+// Wait for Radix to own focus before sending Escape. Hydrated options alone
+// do not prove that the newly opened dialog can receive native keyboard input.
+async function dismissCreateTemplatePicker(client, label) {
+  const dismissed = `!${templatePickerRoot}`;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    if (await client.evaluate(dismissed)) return;
+    await client.waitFor(`(() => {
+      const picker = ${templatePickerRoot};
+      const dialog = picker?.closest('[role="dialog"]');
+      return !picker || Boolean(dialog?.contains(document.activeElement) &&
+        !dialog.getAnimations({ subtree: true }).some(animation => animation.playState === 'running'));
+    })()`, `${label}: picker ready for Escape`, 15_000);
+    if (await client.evaluate(dismissed)) return;
+    await client.send('Input.dispatchKeyEvent', {
+      type: 'rawKeyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27,
+    });
+    await client.send('Input.dispatchKeyEvent', {
+      type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27,
+    });
+    try {
+      await client.waitFor(dismissed, `${label}: picker dismissed`, 3_500);
+      return;
+    } catch (error) {
+      if (await client.evaluate(dismissed)) return;
+      if (attempt === 2) throw error;
+    }
+  }
+}
+
 // The template button remains clickable while the four persisted drafts load.
 // The picker itself disables its options until all drafts have hydrated.
 // Verify the real renderer gate, then dismiss it without changing the draft.
@@ -1369,13 +1398,7 @@ async function waitForCreateTemplateHydration(client, label) {
     "document.querySelector('[data-testid=create-team-template-picker] [data-testid=create-template-option-none]')?.disabled === false",
     label, 45_000
   );
-  await client.send('Input.dispatchKeyEvent', {
-    type: 'rawKeyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27,
-  });
-  await client.send('Input.dispatchKeyEvent', {
-    type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27,
-  });
-  await client.waitFor(`!${templatePickerRoot}`, `${label}: picker dismissed`);
+  await dismissCreateTemplatePicker(client, label);
 }
 
 async function main() {
@@ -2053,10 +2076,46 @@ async function main() {
     assert.equal(await cdp.evaluate("document.querySelector('#team-description')?.value"),
       copiedDescription, 'Canceling template replacement discarded the copied description');
     await selectTemplate();
-    await cdp.click(
+    const applyTemplateButton =
       `Array.from((${templateConfirmationExpression})?.querySelectorAll('button') ?? [])` +
-      ".find(button => button.textContent?.trim() === 'Apply template')"
-    );
+      ".find(button => button.textContent?.trim() === 'Apply template')";
+    // On Windows the reopened Radix confirmation can still be moving or
+    // acquiring focus after it enters the DOM. Keep using native clicks, and
+    // accept one only when it actually dismisses this confirmation.
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      if (attempt > 0 && await cdp.evaluate(confirmationDismissed)) break;
+      await cdp.waitFor(`(() => {
+        const dialog = ${templateConfirmationExpression};
+        const button = ${applyTemplateButton};
+        if (!dialog?.contains(document.activeElement) || !button?.isConnected || button.disabled)
+          return false;
+        if (dialog.getAnimations({ subtree: true }).some(animation => animation.playState === 'running'))
+          return false;
+        button.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
+        const rect = button.getBoundingClientRect();
+        const x = rect.left + rect.width / 2;
+        const y = rect.top + rect.height / 2;
+        const hit = document.elementFromPoint(x, y);
+        return rect.width > 0 && rect.height > 0 &&
+          x >= 0 && x < innerWidth && y >= 0 && y < innerHeight &&
+          Boolean(hit && (hit === button || button.contains(hit)));
+      })()`, 'settled and unobstructed Apply template button', 15_000);
+      await cdp.click(applyTemplateButton);
+      try {
+        await cdp.waitFor(confirmationDismissed,
+          'template replacement confirmation dismissed after Apply', 3_000);
+        break;
+      } catch (error) {
+        if (attempt !== 2) continue;
+        const state = await cdp.evaluate(`(() => ({
+          confirmationPresent: Boolean(${templateConfirmationExpression}),
+          applyPresent: Boolean(${applyTemplateButton}),
+          focusedElement: document.activeElement?.outerHTML?.slice(0, 250) ?? null,
+        }))()`);
+        throw new Error(`Template Apply did not dismiss confirmation: ${JSON.stringify(state)}`,
+          { cause: error });
+      }
+    }
     await cdp.waitFor(
       "document.querySelector('#team-description')?.value === " +
       JSON.stringify('Design, build and validate apps, websites and digital products.'),
@@ -2072,13 +2131,7 @@ async function main() {
       "document.querySelector('#team-prompt')?.value?.includes('Coordinate a small software product team.')",
       'applied built-in prompt retained in editable form'
     );
-    await cdp.send('Input.dispatchKeyEvent', {
-      type: 'rawKeyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27,
-    });
-    await cdp.send('Input.dispatchKeyEvent', {
-      type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27,
-    });
-    await cdp.waitFor(`!${templatePickerRoot}`, 'verified template picker dismissed');
+    await dismissCreateTemplatePicker(cdp, 'verified template picker');
     await captureScreenshot(cdp, fixture, 'template-confirmed');
 
     log('create from actual Organization Map and verify native placement');
