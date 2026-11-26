@@ -575,7 +575,11 @@ export async function restartLeadRuntime(
         }
       }
       if (!hasExactRestartOwnership(input.teamName, input.expectedRunId, run, ports)) {
-        throw restartFailure('Lead restart ownership changed during rollback', false, rollbackError);
+        throw restartFailure(
+          'Lead restart ownership changed during rollback',
+          false,
+          rollbackError
+        );
       }
       const degradedOwner = rollbackCandidate ?? replacementCandidate ?? previousChild;
       try {
