@@ -118,16 +118,6 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     this.aggregatePrimaryLaneHost
   );
 
-  private runAfterInFlightTeamOperation<T>(
-    teamName: string, operation: () => Promise<T>, createsRuntime = false
-  ): Promise<T> {
-    const run = async () => {
-      if (createsRuntime) await this.assertRuntimeSpawnAllowed(teamName);
-      return operation();
-    };
-    const pending = this.teamOpLocks.get(teamName);
-    return pending && !this.isLiveRosterMutationLockHeld(teamName) ? pending.then(run) : run();
-  }
   protected async waitForMemberLifecycleOperations(teamName: string): Promise<void> {
     await waitForAggregateMemberLifecycleOperations({
       teamName,
@@ -182,7 +172,7 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     reason: string,
     expectedRunId: string | null
   ): Promise<boolean> {
-    return this.runAfterInFlightTeamOperation(teamName, async () => {
+    return this.runAfterInFlightSpawnOperation(teamName, async () => {
       const outcome = await rebootstrapOpenCodeAggregatePrimaryLaneHelper(
         { teamName, reason, expectedRunId },
         createOpenCodePrimaryLaneRebootstrapPorts(
@@ -191,7 +181,7 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
         )
       );
       return outcome.rebootstrapped;
-    }, true);
+    });
   }
 
   protected async waitForOpenCodeAggregatePrimaryRestart(
@@ -589,9 +579,9 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     memberName: string,
     options?: { reason?: LiveRosterAttachReason }
   ): Promise<void> {
-    return this.runAfterInFlightTeamOperation(teamName, () =>
-      this.memberLifecycleController.attachLiveRosterMember(teamName, memberName, options),
-      true);
+    return this.runAfterInFlightSpawnOperation(teamName, () =>
+      this.memberLifecycleController.attachLiveRosterMember(teamName, memberName, options)
+    );
   }
 
   override async detachLiveRosterMember(teamName: string, memberName: string): Promise<void> {
@@ -605,7 +595,7 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     memberName: string,
     expectedSecondary?: boolean
   ): Promise<void> {
-    return this.runAfterInFlightTeamOperation(teamName, async () => {
+    return this.runAfterInFlightSpawnOperation(teamName, async () => {
       const activeRestart = this.openCodeAggregatePrimaryRestartByTeam.get(
         teamName.trim().toLowerCase()
       );
@@ -634,6 +624,9 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       );
       try {
         await Promise.all(restart.lease.precedingLifecycleOperations);
+        await this.assertRuntimeSpawnAllowed(teamName);
+        if (restart.lease.cancelRequested)
+          throw getCancelledAggregateRestartError(teamName, memberName);
         if (candidate.run) {
           await this.memberLifecycleOperationUseCases.runMemberLifecycleOperation(
             teamName,
@@ -672,15 +665,15 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
           })
           .catch((error: unknown) => logger.warn(`OpenCode restart wake failed: ${String(error)}`));
       }
-    }, true);
+    });
   }
 
   override async retryFailedOpenCodeSecondaryLanes(
     teamName: string
   ): Promise<RetryFailedOpenCodeSecondaryLanesResult> {
-    return this.runAfterInFlightTeamOperation(teamName, () =>
-      this.memberLifecycleController.retryFailedOpenCodeSecondaryLanes(teamName),
-      true);
+    return this.runAfterInFlightSpawnOperation(teamName, () =>
+      this.memberLifecycleController.retryFailedOpenCodeSecondaryLanes(teamName)
+    );
   }
 
   override async reattachOpenCodeOwnedMemberLane(
@@ -688,9 +681,9 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     memberName: string,
     options?: { reason?: 'member_added' | 'member_updated' | 'manual_restart' }
   ): Promise<void> {
-    return this.runAfterInFlightTeamOperation(teamName, () =>
-      this.memberLifecycleController.reattachOpenCodeOwnedMemberLane(teamName, memberName, options),
-      true);
+    return this.runAfterInFlightSpawnOperation(teamName, () =>
+      this.memberLifecycleController.reattachOpenCodeOwnedMemberLane(teamName, memberName, options)
+    );
   }
 
   override async detachOpenCodeOwnedMemberLane(

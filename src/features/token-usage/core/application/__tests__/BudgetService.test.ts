@@ -13,9 +13,7 @@ import type {
 import type { TokenUsageAnalyticsServiceDeps } from '../TokenUsageAnalyticsService';
 
 // Catches closed-screen freshness starvation, concurrent importer writes, erased failure health and month reuse.
-function fixture(
-  budgetTeamNameAliases?: TokenUsageAnalyticsServiceDeps['budgetTeamNameAliases']
-) {
+function fixture(budgetTeamNameAliases?: TokenUsageAnalyticsServiceDeps['budgetTeamNameAliases']) {
   let now = new Date('2026-10-03T12:00:00.000Z');
   let runs: TokenUsageRunDto[] = [testRun()];
   let events: TokenUsageEventDto[] = [testEvent()];
@@ -232,7 +230,8 @@ describe('Budget service lifecycle', () => {
     expect((await f.service.refreshSnapshot()).summary.totalTokens).toBe(100);
     await expect(f.service.ingestEvents([testEvent()])).resolves.toBeUndefined();
     await expect(f.service.getBudgetStatus()).rejects.toThrow('config corrupt');
-  });  it('keeps other budget projections readable when a project alias registry entry fails', async () => {
+  });
+  it('keeps other budget projections readable when a project alias registry entry fails', async () => {
     const resolver = vi.fn(async () => {
       throw new Error('Corrupt unrelated project history');
     });
@@ -253,5 +252,4 @@ describe('Budget service lifecycle', () => {
     expect(evaluateTeamBudgetEnforcement(result, 'sandbox-team').state).toBe('exceeded');
     expect(f.statuses.at(-1)?.targets.find((t) => t.id === 'team:sandbox-team')).toBeDefined();
   });
-
 });

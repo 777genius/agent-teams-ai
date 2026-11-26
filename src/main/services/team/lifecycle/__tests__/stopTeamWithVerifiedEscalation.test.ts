@@ -30,28 +30,38 @@ describe('shared exact-team stop escalation', () => {
       stopTeam: stopped,
       getAliveTeams: () => ['alpha'],
     };
-    runStopFlow.mockImplementationOnce(async (
-      name: string,
-      ports: { stopTeam(teamName: string): Promise<void>; stopTimeoutMs?: number }
-    ) => {
-      expect(name).toBe('alpha');
-      expect(ports.stopTimeoutMs).toBeGreaterThan(0);
-      await ports.stopTeam(name);
-      return outcome('stopped', 'completed');
-    });
-    await expect(stopTeamWithVerifiedEscalation('alpha', runtime, {
-      warn: vi.fn(),
-    })).resolves.toBeUndefined();
+    runStopFlow.mockImplementationOnce(
+      async (
+        name: string,
+        ports: { stopTeam(teamName: string): Promise<void>; stopTimeoutMs?: number }
+      ) => {
+        expect(name).toBe('alpha');
+        expect(ports.stopTimeoutMs).toBeGreaterThan(0);
+        await ports.stopTeam(name);
+        return outcome('stopped', 'completed');
+      }
+    );
+    await expect(
+      stopTeamWithVerifiedEscalation('alpha', runtime, {
+        warn: vi.fn(),
+      })
+    ).resolves.toBeUndefined();
     expect(stopped).toHaveBeenCalledExactlyOnceWith('alpha');
   });
 
   it('refuses to report success for incomplete native cleanup', async () => {
     const warned = vi.fn();
     runStopFlow.mockResolvedValueOnce(outcome('timed_out', 'incomplete'));
-    await expect(stopTeamWithVerifiedEscalation('alpha', {
-      stopTeam: vi.fn(async () => undefined),
-      getAliveTeams: () => ['alpha'],
-    }, { warn: warned })).rejects.toThrow('team_stop_unconfirmed:timed_out');
+    await expect(
+      stopTeamWithVerifiedEscalation(
+        'alpha',
+        {
+          stopTeam: vi.fn(async () => undefined),
+          getAliveTeams: () => ['alpha'],
+        },
+        { warn: warned }
+      )
+    ).rejects.toThrow('team_stop_unconfirmed:timed_out');
     expect(warned).toHaveBeenCalled();
   });
 });

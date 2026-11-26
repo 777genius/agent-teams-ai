@@ -10,11 +10,14 @@ import type { TokenUsageBudgetStatusDto } from '../../contracts';
 export function useKnownBudgetTeams(): TokenUsageBudgetStatusDto['options'] {
   const teams = useStore((state) => state.teams);
   return useMemo(
-    () => teams.filter((team) => !team.deletedAt).map((team) => ({
-      scope: 'team' as const,
-      id: namedTeamId(team.teamName),
-      label: team.displayName,
-    })),
+    () =>
+      teams
+        .filter((team) => !team.deletedAt)
+        .map((team) => ({
+          scope: 'team' as const,
+          id: namedTeamId(team.teamName),
+          label: team.displayName,
+        })),
     [teams]
   );
 }

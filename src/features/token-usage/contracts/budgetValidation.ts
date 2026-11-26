@@ -55,7 +55,8 @@ export function validateBudgetLimit(value: unknown): TokenUsageBudgetLimitDto {
       source.onExceeded !== 'notify' &&
       source.onExceeded !== 'block_launch' &&
       source.onExceeded !== 'stop_team'
-    ) throw new BudgetValidationError('Invalid budget exceedance action');
+    )
+      throw new BudgetValidationError('Invalid budget exceedance action');
     result.onExceeded = source.onExceeded;
   }
   return result;
@@ -77,8 +78,11 @@ export function validateBudgetSettings(value: unknown): TokenUsageBudgetSettings
         if (!id.trim() || id !== id.trim() || (scope === 'teams' && !isCanonicalTeamId(id)))
           throw new BudgetValidationError('Invalid budget identity');
         const parsed = validateBudgetLimit(limit);
-        if (parsed.onExceeded && parsed.onExceeded !== 'notify' &&
-            (scope !== 'teams' || !id.startsWith('team:')))
+        if (
+          parsed.onExceeded &&
+          parsed.onExceeded !== 'notify' &&
+          (scope !== 'teams' || !id.startsWith('team:'))
+        )
           throw new BudgetValidationError('Runtime enforcement is only supported for named teams');
         return [id, parsed];
       })

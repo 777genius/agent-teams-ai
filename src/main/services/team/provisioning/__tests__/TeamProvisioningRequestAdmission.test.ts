@@ -98,9 +98,10 @@ describe('TeamProvisioningRequestAdmission', () => {
         launchOpenCodeTeamThroughRuntimeAdapter: launch,
       });
       const boundary = createTeamProvisioningRequestAdmissionBoundary(host, async () => null);
-      const promise = operation === 'create'
-        ? boundary.createTeam(createRequest, vi.fn())
-        : boundary.launchTeam(launchRequest, vi.fn());
+      const promise =
+        operation === 'create'
+          ? boundary.createTeam(createRequest, vi.fn())
+          : boundary.launchTeam(launchRequest, vi.fn());
       await expect(promise).rejects.toThrow('TEAM_BUDGET_BLOCKED');
       expect(host.lockCalls).toEqual(['alpha']);
       expect(budgetGuard).toHaveBeenCalledOnce();
@@ -108,7 +109,6 @@ describe('TeamProvisioningRequestAdmission', () => {
       expect(launch).not.toHaveBeenCalled();
     }
   );
-
 
   it.each(['team-lock', 'preparation'])(
     'keeps original launch admission across %s awaits',

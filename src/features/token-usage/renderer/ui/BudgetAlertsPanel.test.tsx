@@ -165,7 +165,9 @@ describe('Budget Save/Cancel and standalone status', () => {
     expect(document.body.textContent).toContain('tokenUsage.budgets.editor.onExceeded');
     expect(document.body.textContent).not.toContain('tokenUsage.budgets.editor.enforcementHint');
     await input('tokenUsage.budgets.tokenLimit', '100');
-    const policy = document.querySelector('[role="dialog"] [aria-label="tokenUsage.budgets.editor.onExceeded"]');
+    const policy = document.querySelector(
+      '[role="dialog"] [aria-label="tokenUsage.budgets.editor.onExceeded"]'
+    );
     expect(policy).not.toBeNull();
     await act(async () =>
       policy!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))

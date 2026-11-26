@@ -77,10 +77,16 @@ export function createTeamBudgetAdmission(
       assertTeamBudgetLaunchAllowed(status, logicalTeam);
     }
     // Refresh first-use and rolled-over budgets once. No stale/unknown zero-spend assumption.
-    if (status.stale || status.degraded || status.targets.some(
-      (target) => target.scope === 'team' && target.id === namedTeamId(logicalTeam) &&
-        target.metrics.some((metric) => metric.incomplete || metric.value === null)
-    )) {
+    if (
+      status.stale ||
+      status.degraded ||
+      status.targets.some(
+        (target) =>
+          target.scope === 'team' &&
+          target.id === namedTeamId(logicalTeam) &&
+          target.metrics.some((metric) => metric.incomplete || metric.value === null)
+      )
+    ) {
       await reader.refreshSnapshot();
       status = await reader.getBudgetStatus();
     }
@@ -110,9 +116,10 @@ export function createTeamBudgetControls(
       return [logicalTeam, ...candidates];
     },
     ownsTeam: (teamName) => runtime.isTeamManagedByThisProfile(teamName),
-    stopTeam: (teamName) => stopTeamWithVerifiedEscalation(teamName, runtime, {
-      warn: (message) => warn(message, undefined),
-    }),
+    stopTeam: (teamName) =>
+      stopTeamWithVerifiedEscalation(teamName, runtime, {
+        warn: (message) => warn(message, undefined),
+      }),
     isTeamAlive: (teamName) => runtime.isTeamAlive(teamName),
     warn,
   });

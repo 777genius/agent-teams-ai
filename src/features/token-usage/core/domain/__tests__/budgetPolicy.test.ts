@@ -33,8 +33,12 @@ describe('Budget monthly projection', () => {
       now,
       settings: {
         teams: {
-          'team:alpha': { monthlyTokenLimit: 100, thresholds: [80, 100],
-            notificationsEnabled: true, onExceeded: 'stop_team' },
+          'team:alpha': {
+            monthlyTokenLimit: 100,
+            thresholds: [80, 100],
+            notificationsEnabled: true,
+            onExceeded: 'stop_team',
+          },
         },
       },
       ledger: {
@@ -52,7 +56,6 @@ describe('Budget monthly projection', () => {
     expect(team?.metrics[0].incomplete).toBe(true);
     expect(projected.options.some((item) => item.id === 'team:ptc-copy-1')).toBe(false);
   });
-
 
   it('excludes old local charges once a run is recognized as gateway-owned', () => {
     const status = project(

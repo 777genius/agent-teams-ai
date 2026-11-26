@@ -155,6 +155,26 @@ export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamP
     return Promise.resolve();
   }
 
+  protected runAfterInFlightTeamOperation<T>(
+    teamName: string,
+    operation: () => Promise<T>
+  ): Promise<T> {
+    const pending = this.teamOpLocks.get(teamName);
+    return pending && !this.isLiveRosterMutationLockHeld(teamName)
+      ? pending.then(operation)
+      : operation();
+  }
+
+  protected runAfterInFlightSpawnOperation<T>(
+    teamName: string,
+    operation: () => Promise<T>
+  ): Promise<T> {
+    return this.runAfterInFlightTeamOperation(teamName, async () => {
+      await this.assertRuntimeSpawnAllowed(teamName);
+      return operation();
+    });
+  }
+
   /** Read-only admission evidence: includes active and queued stops, launches and roster mutations. */
   hasTeamOperationInProgress(teamName: string): boolean {
     return this.teamOpLocks.has(teamName.trim().toLowerCase());

@@ -217,7 +217,9 @@ export class TokenUsageAnalyticsService implements TokenUsageAnalyticsServicePor
         (status.notificationPolicy.enabled &&
           status.targets.some(
             (target) =>
-              target.notificationsEnabled && target.thresholds.length > 0 && target.metrics.length > 0
+              target.notificationsEnabled &&
+              target.thresholds.length > 0 &&
+              target.metrics.length > 0
           ));
       const refreshAge = now.getTime() - Date.parse(this.usageUpdatedAt ?? '');
       const recentlyRefreshed = refreshAge >= 0 && refreshAge < 120_000;
@@ -258,7 +260,8 @@ export class TokenUsageAnalyticsService implements TokenUsageAnalyticsServicePor
     });
     const currentRunIds = new Set(currentEvents.map((event) => event.appRunId));
     const rawNames = [
-      ...(ledger?.runs ?? []).filter((run) => currentRunIds.has(run.appRunId))
+      ...(ledger?.runs ?? [])
+        .filter((run) => currentRunIds.has(run.appRunId))
         .map((run) => run.teamName),
       ...currentEvents.map((event) => event.teamName),
       ...health.degradedTeamIds.map(rawTeamName),
@@ -279,7 +282,10 @@ export class TokenUsageAnalyticsService implements TokenUsageAnalyticsServicePor
       ledger,
       teamNameAliases: aliasResolution?.aliases,
       usageUpdatedAt: this.usageUpdatedAt,
-      degraded: this.refreshDegraded || readFailed || health.degraded ||
+      degraded:
+        this.refreshDegraded ||
+        readFailed ||
+        health.degraded ||
         Boolean(aliasResolution?.unresolvedNames.length),
       policy: { enabled: policy?.enabled ?? false, nativeToasts: policy?.nativeToasts ?? false },
       gateway: {

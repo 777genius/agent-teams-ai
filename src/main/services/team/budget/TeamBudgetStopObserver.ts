@@ -38,17 +38,21 @@ export class TeamBudgetStopObserver {
           if (decision.action !== 'stop_team' || decision.state !== 'exceeded') return;
           let nativeNames: readonly string[] = [teamName];
           try {
-            nativeNames = await this.ports.resolveRuntimeNames?.(teamName) ?? nativeNames;
+            nativeNames = (await this.ports.resolveRuntimeNames?.(teamName)) ?? nativeNames;
           } catch (error) {
             // A damaged project index must not hide an independently owned
             // native team. Never guess any project alias from that index.
-            this.ports.warn(`Budget stop could not enumerate project copies of "${teamName}"`, error);
+            this.ports.warn(
+              `Budget stop could not enumerate project copies of "${teamName}"`,
+              error
+            );
           }
           for (const name of new Set([teamName, ...nativeNames])) {
             // A slow stop can overlap a user raising the limit or disabling
             // enforcement. Recheck before stopping each remaining runtime.
             const latest = evaluateTeamBudgetEnforcement(
-              await this.ports.readCurrentStatus(), teamName
+              await this.ports.readCurrentStatus(),
+              teamName
             );
             if (latest.action !== 'stop_team' || latest.state !== 'exceeded') break;
             try {
@@ -57,7 +61,8 @@ export class TeamBudgetStopObserver {
                 throw new Error('Cannot prove runtime ownership for budget stop');
               }
               const confirmed = evaluateTeamBudgetEnforcement(
-                await this.ports.readCurrentStatus(), teamName
+                await this.ports.readCurrentStatus(),
+                teamName
               );
               if (confirmed.action !== 'stop_team' || confirmed.state !== 'exceeded') break;
               await this.ports.stopTeam(name);

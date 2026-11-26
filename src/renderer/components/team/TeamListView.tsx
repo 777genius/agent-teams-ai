@@ -136,10 +136,17 @@ function resolveLaunchDialogMembers(members: readonly TeamMemberSnapshot[]): Res
   });
 }
 
-function resolveSavedLaunchDialogMembers(members: TeamCreateRequest['members']): ResolvedTeamMember[] {
+function resolveSavedLaunchDialogMembers(
+  members: TeamCreateRequest['members']
+): ResolvedTeamMember[] {
   return members.map((member) => ({
-    ...member, joinedAt: 0, currentTaskId: null, taskCount: 0,
-    messageCount: 0, lastActiveAt: null, status: 'idle' as const,
+    ...member,
+    joinedAt: 0,
+    currentTaskId: null,
+    taskCount: 0,
+    messageCount: 0,
+    lastActiveAt: null,
+    status: 'idle' as const,
   }));
 }
 
@@ -944,12 +951,18 @@ export const TeamListView = memo(function TeamListView({
       e.stopPropagation();
       if (!projectPath) return;
       const requestId = ++launchRequestIdRef.current;
-      const projectContextMode = teams.find((team) => team.teamName === teamName)?.projectContextMode;
+      const projectContextMode = teams.find(
+        (team) => team.teamName === teamName
+      )?.projectContextMode;
       let permissionTeamName: string | null | undefined;
       if (projectContextMode === 'per_project') {
         try {
           const context = await api.teams.getProjectContextView(teamName, projectPath);
-          permissionTeamName = resolveTeamListProjectPermissionAlias(teamName, projectPath, context);
+          permissionTeamName = resolveTeamListProjectPermissionAlias(
+            teamName,
+            projectPath,
+            context
+          );
         } catch {
           // An unverified project runtime never inherits auto-approval from the logical team.
           permissionTeamName = null;
@@ -1063,7 +1076,10 @@ export const TeamListView = memo(function TeamListView({
     void fetchAllTasks();
   }, [electronMode, fetchTeams, fetchAllTasks]);
 
-  const taskCountsByTeam = useMemo(() => buildTaskCountsByTeam(globalTasks, teams), [globalTasks, teams]);
+  const taskCountsByTeam = useMemo(
+    () => buildTaskCountsByTeam(globalTasks, teams),
+    [globalTasks, teams]
+  );
 
   const activeTeams = useMemo<ActiveTeamRef[]>(() => {
     const aliveSet = new Set(aliveTeams);

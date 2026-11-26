@@ -1,4 +1,9 @@
-import { LEGACY_COMBINED_TEAM_ID, teamIdentityLabel, teamIdForName, rawTeamName } from '../../contracts';
+import {
+  LEGACY_COMBINED_TEAM_ID,
+  teamIdentityLabel,
+  teamIdForName,
+  rawTeamName,
+} from '../../contracts';
 
 import { keepOnlyMappedUsageEvents } from './attributionPolicy';
 import { runProjectKey } from './budgetScopeKeys';

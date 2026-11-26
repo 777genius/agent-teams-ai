@@ -1,9 +1,6 @@
 import { namedTeamId } from '../../contracts';
 
-import type {
-  TokenUsageBudgetExceededAction,
-  TokenUsageBudgetStatusDto,
-} from '../../contracts';
+import type { TokenUsageBudgetExceededAction, TokenUsageBudgetStatusDto } from '../../contracts';
 
 export type TeamBudgetDecisionState = 'disabled' | 'within_limit' | 'exceeded' | 'unknown';
 
@@ -34,8 +31,12 @@ export function evaluateTeamBudgetEnforcement(
   );
   if (exceeded) return { action, state: 'exceeded' };
 
-  if (status.stale || status.degraded || !target.metrics.length ||
-      target.metrics.some((metric) => metric.incomplete || metric.value === null))
+  if (
+    status.stale ||
+    status.degraded ||
+    !target.metrics.length ||
+    target.metrics.some((metric) => metric.incomplete || metric.value === null)
+  )
     return { action, state: 'unknown' };
   return { action, state: 'within_limit' };
 }

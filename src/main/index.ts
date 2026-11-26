@@ -209,7 +209,10 @@ import { TeamTranscriptProjectResolver } from '@main/services/team/TeamTranscrip
 import { killTrackedCliProcesses } from '@main/utils/childProcess';
 import { extractNotificationContent } from '@main/utils/inboxNotificationContent';
 import { createBudgetNotificationSink } from '@features/token-usage/main';
-import { createTeamBudgetAdmission, createTeamBudgetControls } from '@main/services/team/budget/createTeamBudgetControls';
+import {
+  createTeamBudgetAdmission,
+  createTeamBudgetControls,
+} from '@main/services/team/budget/createTeamBudgetControls';
 import { RendererRecoveryController } from '@main/utils/RendererRecoveryController';
 import { resolveRendererEntry } from '@main/utils/rendererEntry';
 import { getWindowsElevationStatus } from '@main/utils/windowsElevation';
@@ -2321,9 +2324,10 @@ async function initializeServices(): Promise<void> {
   userAttentionFeature = createUserAttentionFeature({
     getContextId: () => contextRegistry.getActive().id,
     getTeamDataService: () => teamDataService,
-    listGroupNames: async (teamName) => Object.fromEntries(
-      (await teamGroupChatsFeature.list({ teamName })).map(({ id, name }) => [id, name])
-    ),
+    listGroupNames: async (teamName) =>
+      Object.fromEntries(
+        (await teamGroupChatsFeature.list({ teamName })).map(({ id, name }) => [id, name])
+      ),
   });
   recentProjectsFeature = createRecentProjectsFeature({
     getActiveContext: () => contextRegistry.getActive(),

@@ -11,6 +11,8 @@ export function useTeamBudgetStatus(): TokenUsageBudgetStatusDto | null {
     let alive = true;
     let current: TokenUsageBudgetStatusDto | null = null;
     let reading = false;
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    let retryDelay = 250;
     const pending = new Map<string, TokenUsageBudgetStatusDto>();
 
     const accept = (next: TokenUsageBudgetStatusDto): void => {
@@ -26,7 +28,7 @@ export function useTeamBudgetStatus(): TokenUsageBudgetStatusDto | null {
     // Epoch UUIDs are opaque. Only a current status read can establish a new
     // epoch; events can advance its sequence, but cannot replace it by arrival order.
     const refresh = async (): Promise<void> => {
-      if (reading || !alive) return;
+      if (reading || !alive || retry !== undefined) return;
       reading = true;
       let refreshAgain = false;
       try {
@@ -39,10 +41,18 @@ export function useTeamBudgetStatus(): TokenUsageBudgetStatusDto | null {
         // Another epoch appeared while the read was in flight. A second read
         // settles that race without guessing which producer was newer.
         refreshAgain = [...pending.keys()].some((key) => key !== epoch);
-      } catch {
-        // A transient status read failure must not fabricate an under-budget state.
-      } finally {
         pending.clear();
+        retryDelay = 250;
+      } catch {
+        // Keep buffered events until an authoritative read succeeds.
+        if (alive) {
+          retry = setTimeout(() => {
+            retry = undefined;
+            void refresh();
+          }, retryDelay);
+          retryDelay = Math.min(retryDelay * 2, 4000);
+        }
+      } finally {
         reading = false;
         if (refreshAgain && alive) void refresh();
       }
@@ -55,7 +65,7 @@ export function useTeamBudgetStatus(): TokenUsageBudgetStatusDto | null {
         accept(next);
         return;
       }
-      if (reading) {
+      if (reading || retry !== undefined) {
         const buffered = pending.get(order.epoch)?.statusOrder;
         if (!buffered || order.sequence > buffered.sequence) pending.set(order.epoch, next);
       } else {
@@ -66,6 +76,7 @@ export function useTeamBudgetStatus(): TokenUsageBudgetStatusDto | null {
     void refresh();
     return () => {
       alive = false;
+      if (retry !== undefined) clearTimeout(retry);
       unsubscribe();
     };
   }, []);

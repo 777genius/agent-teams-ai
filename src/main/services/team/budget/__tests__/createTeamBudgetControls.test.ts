@@ -16,8 +16,10 @@ const registry = vi.hoisted(() => ({
 // Budget integration must use the same verified stop path as HTTP; here only
 // the native process is a fake, so delegate the shared boundary to that fake.
 vi.mock('@main/services/team/lifecycle/stopTeamWithVerifiedEscalation', () => ({
-  stopTeamWithVerifiedEscalation: (name: string, runtime: { stopTeam(team: string): Promise<void> }) =>
-    runtime.stopTeam(name),
+  stopTeamWithVerifiedEscalation: (
+    name: string,
+    runtime: { stopTeam(team: string): Promise<void> }
+  ) => runtime.stopTeam(name),
 }));
 
 vi.mock('@features/team-project-context/main', () => ({
@@ -26,20 +28,22 @@ vi.mock('@features/team-project-context/main', () => ({
       const aliases = new Map(registry.aliases);
       const nativeNames = [...registry.nativeNames];
       return {
-        resolveOwnedExecutionAliases: async (names: string[]) => new Map(
-          names.map((name) => [name, registry.failNames.has(name)
-            ? { error: new Error('Unresolved project owner') }
-            : {
-                alias: aliases.has(name)
-                  ? { logicalTeamName: aliases.get(name), context: {} }
-                  : null,
-              }])
-        ),
+        resolveOwnedExecutionAliases: async (names: string[]) =>
+          new Map(
+            names.map((name) => [
+              name,
+              registry.failNames.has(name)
+                ? { error: new Error('Unresolved project owner') }
+                : {
+                    alias: aliases.has(name)
+                      ? { logicalTeamName: aliases.get(name), context: {} }
+                      : null,
+                  },
+            ])
+          ),
         resolveOwnedExecutionAlias: async (name: string) => {
           if (registry.failNames.has(name)) throw new Error('Unresolved project owner');
-          return aliases.has(name)
-            ? { logicalTeamName: aliases.get(name), context: {} }
-            : null;
+          return aliases.has(name) ? { logicalTeamName: aliases.get(name), context: {} } : null;
         },
         listOwnedStopCandidates: async () => ({
           candidates: nativeNames.filter((name) => name !== 'alpha'),
@@ -59,22 +63,36 @@ const budgetStatus = (input: {
   stale?: boolean;
 }): TokenUsageBudgetStatusDto => ({
   period: {
-    key: '2026-11', from: '2026-11-01T00:00:00Z',
-    to: '2026-12-01T00:00:00Z', timeZone: 'UTC',
+    key: '2026-11',
+    from: '2026-11-01T00:00:00Z',
+    to: '2026-12-01T00:00:00Z',
+    timeZone: 'UTC',
   },
   computedAt: '2026-11-25T14:00:00Z',
   stale: input.stale ?? false,
   degraded: false,
   notificationPolicy: { enabled: false, nativeToasts: false },
   options: [{ scope: 'team', id: 'team:alpha', label: 'alpha' }],
-  targets: [{
-    scope: 'team', id: 'team:alpha', label: 'alpha',
-    thresholds: [80, 100], notificationsEnabled: false, onExceeded: input.action,
-    metrics: [{
-      metric: 'tokens', value: input.used ?? 0, limit: 100,
-      percent: input.used ?? 0, remaining: 100 - (input.used ?? 0), incomplete: false,
-    }],
-  }],
+  targets: [
+    {
+      scope: 'team',
+      id: 'team:alpha',
+      label: 'alpha',
+      thresholds: [80, 100],
+      notificationsEnabled: false,
+      onExceeded: input.action,
+      metrics: [
+        {
+          metric: 'tokens',
+          value: input.used ?? 0,
+          limit: 100,
+          percent: input.used ?? 0,
+          remaining: 100 - (input.used ?? 0),
+          incomplete: false,
+        },
+      ],
+    },
+  ],
 });
 
 function setup(initial: {
@@ -89,27 +107,34 @@ function setup(initial: {
     state = { ...state, stale: false };
     return {};
   });
-  const stop = vi.fn(async () => { alive = false; });
+  const stop = vi.fn(async () => {
+    alive = false;
+  });
   const warn = vi.fn();
   const runtime = {
-    getAliveTeams: () => alive ? [state.aliveName ?? 'alpha'] : [],
+    getAliveTeams: () => (alive ? [state.aliveName ?? 'alpha'] : []),
     isTeamManagedByThisProfile: async () => true,
     stopTeam: stop,
     isTeamAlive: async () => alive,
   };
   const reader = {
     getBudgetSettings: async () => ({
-      teams: { 'team:alpha': {
-        monthlyTokenLimit: 100, thresholds: [80, 100],
-        notificationsEnabled: false, onExceeded: state.action,
-      } },
+      teams: {
+        'team:alpha': {
+          monthlyTokenLimit: 100,
+          thresholds: [80, 100],
+          notificationsEnabled: false,
+          onExceeded: state.action,
+        },
+      },
     }),
     getBudgetStatus: async () => budgetStatus(state),
     refreshSnapshot: refresh,
   };
   const guard = createTeamBudgetAdmission(() => reader);
   const controls = createTeamBudgetControls(
-    () => reader, runtime,
+    () => reader,
+    runtime,
     () => ({
       notifyOnUsageBudgetAlerts: false,
       notifyOnUsageBudgetWarning: false,
@@ -163,7 +188,9 @@ describe('team budget composition - no live provider required', () => {
   });
   it('uses the current root for admission, attribution and stop enumeration', async () => {
     const { guard, controls, stop } = setup({
-      action: 'stop_team', used: 120, aliveName: 'ptc-new-root',
+      action: 'stop_team',
+      used: 120,
+      aliveName: 'ptc-new-root',
     });
     registry.aliases.set('ptc-new-root', 'alpha');
     registry.nativeNames = ['ptc-new-root'];
@@ -196,7 +223,9 @@ describe('team budget composition - no live provider required', () => {
     registry.failedCopies = ['ptc-unverified'];
     registry.nativeNames = ['ptc-healthy'];
     const { controls, stop, warn } = setup({
-      action: 'stop_team', used: 120, aliveName: 'ptc-healthy',
+      action: 'stop_team',
+      used: 120,
+      aliveName: 'ptc-healthy',
     });
     controls.observer.observe(budgetStatus({ action: 'stop_team', used: 120 }));
     for (let n = 0; n < 30; n++) await Promise.resolve();
@@ -210,12 +239,13 @@ describe('team budget composition - no live provider required', () => {
   it('stops an owned physical project copy when the logical team reaches its limit', async () => {
     registry.nativeNames = ['ptc-copy-1'];
     const { controls, stop, warn } = setup({
-      action: 'stop_team', used: 120, aliveName: 'ptc-copy-1',
+      action: 'stop_team',
+      used: 120,
+      aliveName: 'ptc-copy-1',
     });
     controls.observer.observe(budgetStatus({ action: 'stop_team', used: 120 }));
     for (let n = 0; n < 30; n++) await Promise.resolve();
     expect(stop).toHaveBeenCalledExactlyOnceWith('ptc-copy-1');
     expect(warn).not.toHaveBeenCalled();
   });
-
 });

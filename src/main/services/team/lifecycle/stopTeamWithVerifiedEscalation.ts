@@ -37,8 +37,7 @@ export async function stopTeamWithVerifiedEscalation(
 ): Promise<void> {
   const result = await stopTeamWithEscalation(teamName, {
     stopTeam: (name) => runtime.stopTeam(name),
-    observeOwnedRuntimeRunIds: (name) =>
-      readOwnedOpenCodeRuntimeRunIdsForTeam({ teamName: name }),
+    observeOwnedRuntimeRunIds: (name) => readOwnedOpenCodeRuntimeRunIdsForTeam({ teamName: name }),
     observeOwnedRuntimeLaneIds: (name) =>
       readOpenCodeRuntimeLaneIdsForTeam(getTeamsBasePath(), name),
     killRetainedRuntimeProcesses: (name, context) =>

@@ -23,17 +23,18 @@ import type { TokenUsageFeatureFacade } from '../../../../composition/createToke
 // The native process path is exercised separately in team-stop escalation tests.
 // Here the process adapter is fake; never inspect real profile-owned runtime paths.
 vi.mock('@main/services/team/lifecycle/stopTeamWithVerifiedEscalation', () => ({
-  stopTeamWithVerifiedEscalation: (name: string, runtime: { stopTeam(team: string): Promise<void> }) =>
-    runtime.stopTeam(name),
+  stopTeamWithVerifiedEscalation: (
+    name: string,
+    runtime: { stopTeam(team: string): Promise<void> }
+  ) => runtime.stopTeam(name),
 }));
 
 vi.mock('@features/team-project-context/main', () => ({
   TeamProjectContextRegistry: {
     fromCurrentApp: () => ({
       resolveOwnedExecutionAlias: async () => null,
-      resolveOwnedExecutionAliases: async (names: string[]) => new Map(
-        names.map((name) => [name, { alias: null }])
-      ),
+      resolveOwnedExecutionAliases: async (names: string[]) =>
+        new Map(names.map((name) => [name, { alias: null }])),
       listOwnedStopCandidates: async () => ({ candidates: [], refused: [] }),
     }),
   },
@@ -53,7 +54,9 @@ describe('team budget real persistence, HTTP, admission and stop E2E', () => {
 
     let alive = true;
     let stopped!: () => void;
-    const stopObserved = new Promise<void>((resolve) => { stopped = resolve; });
+    const stopObserved = new Promise<void>((resolve) => {
+      stopped = resolve;
+    });
     const stopTeam = vi.fn(async (name: string) => {
       expect(name).toBe('alpha');
       alive = false;
@@ -62,17 +65,22 @@ describe('team budget real persistence, HTTP, admission and stop E2E', () => {
     const warn = vi.fn();
     let feature: TokenUsageFeatureFacade | null = null;
     const getFeature = () => feature;
-    const controls = createTeamBudgetControls(getFeature, {
-      getAliveTeams: () => alive ? ['alpha'] : [],
-      isTeamManagedByThisProfile: async () => true,
-      stopTeam,
-      isTeamAlive: async () => alive,
-    }, () => ({
-      notifyOnUsageBudgetAlerts: false,
-      notifyOnUsageBudgetWarning: false,
-      notifyOnUsageBudgetCritical: false,
-      notifyOnUsageBudgetNativeToast: false,
-    }), warn);
+    const controls = createTeamBudgetControls(
+      getFeature,
+      {
+        getAliveTeams: () => (alive ? ['alpha'] : []),
+        isTeamManagedByThisProfile: async () => true,
+        stopTeam,
+        isTeamAlive: async () => alive,
+      },
+      () => ({
+        notifyOnUsageBudgetAlerts: false,
+        notifyOnUsageBudgetWarning: false,
+        notifyOnUsageBudgetCritical: false,
+        notifyOnUsageBudgetNativeToast: false,
+      }),
+      warn
+    );
     const settingsPath = join(directory, 'budget-settings.json');
     feature = createTokenUsageFeature({
       ledgerPath: join(directory, 'ledger.json'),
@@ -85,7 +93,9 @@ describe('team budget real persistence, HTTP, admission and stop E2E', () => {
         publishBudgetStatus: (status) => controls.observer.observe(status),
       },
     });
-    cleanup.push(async () => { feature?.dispose(); });
+    cleanup.push(async () => {
+      feature?.dispose();
+    });
     const app = Fastify();
     registerTokenUsageHttp(app, feature);
     cleanup.push(() => app.close());
@@ -99,8 +109,10 @@ describe('team budget real persistence, HTTP, admission and stop E2E', () => {
         settings: {
           teams: {
             'team:alpha': {
-              monthlyTokenLimit: 100, thresholds: [80, 100],
-              notificationsEnabled: false, onExceeded: 'stop_team',
+              monthlyTokenLimit: 100,
+              thresholds: [80, 100],
+              notificationsEnabled: false,
+              onExceeded: 'stop_team',
             },
           },
         },
@@ -126,13 +138,15 @@ describe('team budget real persistence, HTTP, admission and stop E2E', () => {
 
     const observed = await app.inject(TOKEN_USAGE_BUDGET_STATUS_ROUTE);
     expect(observed.statusCode).toBe(200);
-    expect(observed.json().targets).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        id: 'team:alpha',
-        onExceeded: 'stop_team',
-        metrics: [expect.objectContaining({ value: 100, limit: 100 })],
-      }),
-    ]));
+    expect(observed.json().targets).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'team:alpha',
+          onExceeded: 'stop_team',
+          metrics: [expect.objectContaining({ value: 100, limit: 100 })],
+        }),
+      ])
+    );
     await expect(admit('alpha')).rejects.toThrow('TEAM_BUDGET_BLOCKED');
 
     const relaxed = await app.inject({
@@ -144,8 +158,10 @@ describe('team budget real persistence, HTTP, admission and stop E2E', () => {
         settings: {
           teams: {
             'team:alpha': {
-              monthlyTokenLimit: 200, thresholds: [80, 100],
-              notificationsEnabled: false, onExceeded: 'stop_team',
+              monthlyTokenLimit: 200,
+              thresholds: [80, 100],
+              notificationsEnabled: false,
+              onExceeded: 'stop_team',
             },
           },
         },

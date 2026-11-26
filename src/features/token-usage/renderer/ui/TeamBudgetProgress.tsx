@@ -10,7 +10,10 @@ interface TeamBudgetProgressProps {
   status: TokenUsageBudgetStatusDto | null;
 }
 
-export function TeamBudgetProgress({ teamName, status }: TeamBudgetProgressProps): React.JSX.Element | null {
+export function TeamBudgetProgress({
+  teamName,
+  status,
+}: TeamBudgetProgressProps): React.JSX.Element | null {
   const { t } = useAppTranslation('dashboard');
   const target = status?.targets.find(
     (item) => item.scope === 'team' && item.id === namedTeamId(teamName)
@@ -31,10 +34,13 @@ export function TeamBudgetProgress({ teamName, status }: TeamBudgetProgressProps
     (current.percent ?? -1) > (best.percent ?? -1) ? current : best
   );
   const reached = exceededMetrics.length > 0;
-  const uncertain = !reached && Boolean(
-    status?.stale || status?.degraded ||
-    target.metrics.some((item) => item.incomplete || item.value === null)
-  );
+  const uncertain =
+    !reached &&
+    Boolean(
+      status?.stale ||
+      status?.degraded ||
+      target.metrics.some((item) => item.incomplete || item.value === null)
+    );
   const enforced = (target.onExceeded ?? 'notify') !== 'notify';
   const display = (amount: number | null): string => {
     if (amount === null) return '?';
@@ -50,11 +56,7 @@ export function TeamBudgetProgress({ teamName, status }: TeamBudgetProgressProps
       : reached
         ? t('tokenUsage.budgets.critical')
         : t('tokenUsage.budgets.teamCardBudget');
-  const barClass = uncertain
-    ? 'bg-gray-500/50'
-    : reached
-      ? 'bg-red-400'
-      : 'bg-emerald-500/70';
+  const barClass = uncertain ? 'bg-gray-500/50' : reached ? 'bg-red-400' : 'bg-emerald-500/70';
 
   return (
     <div className="mt-2 space-y-1" aria-label={`${label}: ${value}`}>
@@ -63,7 +65,12 @@ export function TeamBudgetProgress({ teamName, status }: TeamBudgetProgressProps
         <span className="tabular-nums">{value}</span>
       </div>
       <div className="h-1 overflow-hidden rounded bg-[var(--color-surface-raised)]">
-        <div className={`h-full rounded ${barClass}`} style={{ width: uncertain ? '0%' : `${Math.min(100, Math.max(0, metric.percent ?? 0))}%` }} />
+        <div
+          className={`h-full rounded ${barClass}`}
+          style={{
+            width: uncertain ? '0%' : `${Math.min(100, Math.max(0, metric.percent ?? 0))}%`,
+          }}
+        />
       </div>
     </div>
   );

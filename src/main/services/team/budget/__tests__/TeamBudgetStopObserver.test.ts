@@ -4,19 +4,35 @@ import { TeamBudgetStopObserver } from '../TeamBudgetStopObserver';
 
 import type { TokenUsageBudgetStatusDto } from '@features/token-usage/contracts';
 
-function makeStatus(action: 'notify' | 'block_launch' | 'stop_team' = 'stop_team', value = 120): TokenUsageBudgetStatusDto {
+function makeStatus(
+  action: 'notify' | 'block_launch' | 'stop_team' = 'stop_team',
+  value = 120
+): TokenUsageBudgetStatusDto {
   return {
     computedAt: '2026-11-25T00:00:00.000Z',
-    period: { key: '2026-11', from: '2026-11-01T00:00:00Z', to: '2026-12-01T00:00:00Z', timeZone: 'UTC' },
+    period: {
+      key: '2026-11',
+      from: '2026-11-01T00:00:00Z',
+      to: '2026-12-01T00:00:00Z',
+      timeZone: 'UTC',
+    },
     stale: false,
     degraded: false,
     notificationPolicy: { enabled: false, nativeToasts: false },
     options: [],
-    targets: [{
-      id: 'team:alpha', label: 'alpha', scope: 'team',
-      notificationsEnabled: false, thresholds: [100], onExceeded: action,
-      metrics: [{ metric: 'tokens', value, limit: 100, remaining: 0, percent: value, incomplete: false }],
-    }],
+    targets: [
+      {
+        id: 'team:alpha',
+        label: 'alpha',
+        scope: 'team',
+        notificationsEnabled: false,
+        thresholds: [100],
+        onExceeded: action,
+        metrics: [
+          { metric: 'tokens', value, limit: 100, remaining: 0, percent: value, incomplete: false },
+        ],
+      },
+    ],
   };
 }
 
@@ -28,12 +44,14 @@ const settle = async () => {
 describe('team budget stop observer', () => {
   it('stops only owned live teams, without duplicate concurrent stops', async () => {
     let alive = true;
-    const stop = vi.fn(async () => { alive = false; });
+    const stop = vi.fn(async () => {
+      alive = false;
+    });
     const warn = vi.fn();
     const current = makeStatus();
     const observer = new TeamBudgetStopObserver({
       readCurrentStatus: async () => current,
-      aliveTeams: () => alive ? ['alpha'] : [],
+      aliveTeams: () => (alive ? ['alpha'] : []),
       ownsTeam: async () => true,
       stopTeam: stop,
       isTeamAlive: async () => alive,
@@ -91,11 +109,30 @@ describe('team budget stop observer', () => {
       isTeamAlive: async () => true,
       warn,
     });
-    observer.observe({ ...makeStatus(), stale: true, targets: [{ ...makeStatus().targets[0], metrics: [{ ...makeStatus().targets[0].metrics[0], value: 0 }] }] });
+    observer.observe({
+      ...makeStatus(),
+      stale: true,
+      targets: [
+        {
+          ...makeStatus().targets[0],
+          metrics: [{ ...makeStatus().targets[0].metrics[0], value: 0 }],
+        },
+      ],
+    });
     await settle();
     expect(stop).not.toHaveBeenCalled();
     expect(warn).not.toHaveBeenCalled();
-    observer.observe({ ...makeStatus(), targets: [{ ...makeStatus().targets[0], metrics: [{ ...makeStatus().targets[0].metrics[0], incomplete: true, value: 0, percent: 0 }] }] });
+    observer.observe({
+      ...makeStatus(),
+      targets: [
+        {
+          ...makeStatus().targets[0],
+          metrics: [
+            { ...makeStatus().targets[0].metrics[0], incomplete: true, value: 0, percent: 0 },
+          ],
+        },
+      ],
+    });
     await settle();
     expect(stop).not.toHaveBeenCalled();
     expect(warn).not.toHaveBeenCalled();
@@ -143,12 +180,16 @@ describe('team budget stop observer', () => {
 
   it('still stops the owned native team if its project index is unreadable', async () => {
     let alive = true;
-    const stop = vi.fn(async () => { alive = false; });
+    const stop = vi.fn(async () => {
+      alive = false;
+    });
     const warn = vi.fn();
     const observer = new TeamBudgetStopObserver({
       readCurrentStatus: async () => makeStatus(),
-      aliveTeams: () => alive ? ['alpha'] : [],
-      resolveRuntimeNames: async () => { throw new Error('Corrupt project index'); },
+      aliveTeams: () => (alive ? ['alpha'] : []),
+      resolveRuntimeNames: async () => {
+        throw new Error('Corrupt project index');
+      },
       ownsTeam: async () => true,
       stopTeam: stop,
       isTeamAlive: async () => alive,
@@ -180,5 +221,4 @@ describe('team budget stop observer', () => {
     expect(warn).toHaveBeenCalledTimes(1);
     expect(warn.mock.calls[0][0]).toContain('ptc-broken');
   });
-
 });

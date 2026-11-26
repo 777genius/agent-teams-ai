@@ -284,6 +284,9 @@ async function spawnReplacement(
   const context = run.spawnContext;
   if (!context) throw new Error('Lead spawn context is unavailable');
   await ports.beforeSpawn?.();
+  if (!hasExactRestartOwnership(run.teamName, run.runId, run, ports)) {
+    throw new Error('Lead restart ownership changed before spawn');
+  }
   const child = ports.spawn(context.claudePath, args, {
     cwd: context.cwd,
     env: { ...context.env },
@@ -570,6 +573,9 @@ export async function restartLeadRuntime(
             new AggregateError([replacementError, rollbackError, killError])
           );
         }
+      }
+      if (!hasExactRestartOwnership(input.teamName, input.expectedRunId, run, ports)) {
+        throw restartFailure('Lead restart ownership changed during rollback', false, rollbackError);
       }
       const degradedOwner = rollbackCandidate ?? replacementCandidate ?? previousChild;
       try {

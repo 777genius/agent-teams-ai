@@ -10,17 +10,22 @@ import type { TokenUsageBudgetStatusDto } from '../../../contracts';
 const bus = vi.hoisted(() => ({
   listener: null as ((status: TokenUsageBudgetStatusDto) => void) | null,
   resolveRead: null as ((status: TokenUsageBudgetStatusDto) => void) | null,
+  rejectRead: null as ((error: Error) => void) | null,
 }));
 
 vi.mock('@renderer/api', () => ({
   api: {
     tokenUsage: {
-      getBudgetStatus: () => new Promise<TokenUsageBudgetStatusDto>((resolve) => {
-        bus.resolveRead = resolve;
-      }),
+      getBudgetStatus: () =>
+        new Promise<TokenUsageBudgetStatusDto>((resolve, reject) => {
+          bus.resolveRead = resolve;
+          bus.rejectRead = reject;
+        }),
       onBudgetStatusChanged: (listener: (status: TokenUsageBudgetStatusDto) => void) => {
         bus.listener = listener;
-        return () => { bus.listener = null; };
+        return () => {
+          bus.listener = null;
+        };
       },
     },
   },
@@ -46,7 +51,11 @@ function status(epoch: string, sequence: number): TokenUsageBudgetStatusDto {
 
 function Probe(): React.JSX.Element {
   const value = useTeamBudgetStatus();
-  return <output>{value?.statusOrder?.epoch ?? 'empty'}:{value?.statusOrder?.sequence ?? 0}</output>;
+  return (
+    <output>
+      {value?.statusOrder?.epoch ?? 'empty'}:{value?.statusOrder?.sequence ?? 0}
+    </output>
+  );
 }
 
 async function withProbe(run: (container: HTMLElement) => Promise<void>): Promise<void> {
@@ -62,6 +71,7 @@ async function withProbe(run: (container: HTMLElement) => Promise<void>): Promis
     container.remove();
     bus.listener = null;
     bus.resolveRead = null;
+    bus.rejectRead = null;
     vi.unstubAllGlobals();
   }
 }
@@ -74,6 +84,26 @@ const read = async (epoch: string, sequence: number): Promise<void> => {
 };
 
 describe('team budget event ordering', () => {
+  it('retries failed reads, retains buffered events and cancels retries on unmount', async () => {
+    vi.useFakeTimers();
+    try {
+      await withProbe(async (container) => {
+        await event('current', 7);
+        await act(async () => bus.rejectRead?.(new Error('temporary read failure')));
+        expect(container.textContent).toBe('empty:0');
+        await act(async () => vi.advanceTimersByTimeAsync(250));
+        await read('current', 6);
+        expect(container.textContent).toBe('current:7');
+        await event('next', 1);
+        await act(async () => bus.rejectRead?.(new Error('temporary read failure')));
+        expect(vi.getTimerCount()).toBe(1);
+      });
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('retains a newer event from the same epoch after a late initial GET', async () => {
     await withProbe(async (container) => {
       await event('current', 7);
