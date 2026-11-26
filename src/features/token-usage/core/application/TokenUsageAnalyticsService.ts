@@ -259,14 +259,19 @@ export class TokenUsageAnalyticsService implements TokenUsageAnalyticsServicePor
       return occurredAt >= Date.parse(period.from) && occurredAt < Date.parse(period.to);
     });
     const currentRunIds = new Set(currentEvents.map((event) => event.appRunId));
-    const rawNames = [
+    const currentNames = [
       ...(ledger?.runs ?? [])
         .filter((run) => currentRunIds.has(run.appRunId))
         .map((run) => run.teamName),
       ...currentEvents.map((event) => event.teamName),
       ...health.degradedTeamIds.map(rawTeamName),
     ].filter((name): name is string => typeof name === 'string');
-    const uniqueNames = [...new Set(rawNames)];
+    // Resolve all retained run names so historical project copies do not reappear
+    // as selectable physical-team targets after the monthly usage window rolls over.
+    const historicalRunNames = (ledger?.runs ?? [])
+      .map((run) => run.teamName)
+      .filter((name): name is string => typeof name === 'string');
+    const uniqueNames = [...new Set([...historicalRunNames, ...currentNames])];
     let aliasResolution: TokenUsageBudgetTeamAliasResolution | undefined;
     if (this.deps.budgetTeamNameAliases && uniqueNames.length) {
       try {
@@ -286,7 +291,7 @@ export class TokenUsageAnalyticsService implements TokenUsageAnalyticsServicePor
         this.refreshDegraded ||
         readFailed ||
         health.degraded ||
-        Boolean(aliasResolution?.unresolvedNames.length),
+        Boolean(aliasResolution?.unresolvedNames.some((name) => currentNames.includes(name))),
       policy: { enabled: policy?.enabled ?? false, nativeToasts: policy?.nativeToasts ?? false },
       gateway: {
         degradedTeamIds: health.degradedTeamIds,

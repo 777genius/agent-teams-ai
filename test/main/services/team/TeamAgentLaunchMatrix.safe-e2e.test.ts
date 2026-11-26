@@ -463,15 +463,28 @@ describe(
           creatingSettled = true;
         }
       );
+      let assertionFailed = false;
+      let assertionFailure: unknown;
       try {
         await waitForLaunchMilestone(handshakeEntered, creating, 'the Stop handshake');
         await new Promise<void>((resolve) => setImmediate(resolve));
         expect(creatingSettled).toBe(false);
         expect(svc.isTeamAlive(teamName)).toBe(false);
+      } catch (error) {
+        assertionFailed = true;
+        assertionFailure = error;
       } finally {
         releaseHandshake();
-        await Promise.allSettled([creating, stopping]);
+        try {
+          await settleLaunchOperationsWithin([creating, stopping], 5_000, 'Stop handshake');
+        } catch (drainError) {
+          assertionFailure = assertionFailed
+            ? new AggregateError([assertionFailure, drainError], 'Stop handshake assertion and drain failed')
+            : drainError;
+          assertionFailed = true;
+        }
       }
+      if (assertionFailed) throw assertionFailure;
       await creating;
       expect(await stopping).toEqual({ status: 'fulfilled', value: undefined });
       await waitForLaunchStateQueueIdle(svc, teamName);
@@ -502,6 +515,7 @@ describe(
       const events: string[] = [];
       const failure = new Error('primary stop failed before secondary cleanup settled');
       let primaryAttempts = 0;
+      let secondaryCleanupSettled = false;
       let releaseSecondary!: () => void;
       let markSecondaryEntered!: () => void;
       let abortPrimaryWait!: () => void;
@@ -523,6 +537,7 @@ describe(
             events.push('primary_failed');
             throw failure;
           }
+          expect(secondaryCleanupSettled).toBe(true);
           const laneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName);
           expect(laneIndex.lanes['secondary:opencode:atlas']).toBeUndefined();
           events.push('secondary_cleanup_settled');
@@ -532,6 +547,7 @@ describe(
         const result = await originalStop(input);
         markSecondaryEntered();
         await secondaryReleased;
+        secondaryCleanupSettled = true;
         return result;
       };
       const svc = new TeamProvisioningService();
@@ -644,12 +660,7 @@ describe(
         stopping = svc.stopTeam(teamName);
       } finally {
         launchGate.release();
-        try {
-          await settleLaunchOperationsWithin([creating, stopping], 5_000, 'queued Stop lock');
-        } catch (error) {
-          launchGate.abort();
-          throw error;
-        }
+        await settleLaunchOperationsWithin([creating, stopping], 5_000, 'queued Stop lock');
       }
       await Promise.all([creating, stopping]);
       await waitForLaunchStateQueueIdle(svc, teamName);

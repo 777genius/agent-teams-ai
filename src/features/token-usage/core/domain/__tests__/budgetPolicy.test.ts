@@ -57,6 +57,32 @@ describe('Budget monthly projection', () => {
     expect(projected.options.some((item) => item.id === 'team:ptc-copy-1')).toBe(false);
   });
 
+  it('does not expose an unresolved historical project alias as an enforceable team target', () => {
+    const physicalName = `ptc-${'c'.repeat(24)}`;
+    const status = buildBudgetStatus({
+      now,
+      settings: {
+        teams: {
+          [`team:${physicalName}`]: {
+            monthlyTokenLimit: 100,
+            thresholds: [100],
+            notificationsEnabled: true,
+            onExceeded: 'block_launch',
+          },
+        },
+      },
+      ledger: { runs: [testRun({ teamName: physicalName })], events: [] },
+      teamNameAliases: new Map(),
+      degraded: false,
+      usageUpdatedAt: now.toISOString(),
+      policy: { enabled: true, nativeToasts: false },
+    });
+
+    expect(status.options.some((option) => option.scope === 'team' && option.id === `team:${physicalName}`)).toBe(false);
+    expect(status.targets.some((target) => target.scope === 'team' && target.id === `team:${physicalName}`)).toBe(false);
+    expect(status.options.some((option) => option.scope === 'project')).toBe(true);
+  });
+
   it('resolves event attribution and gateway coverage through exactly one alias hop', () => {
     const executionName = `ptc-${'a'.repeat(24)}`;
     const logicalName = `ptc-${'b'.repeat(24)}`;

@@ -60,7 +60,7 @@ liveDescribe('OpenCode local provider app launch live e2e', () => {
 
   afterEach(async () => {
     await cleanupEnrolledLocalProviderLiveCase(cases);
-  }, 450_000);
+  }, 840_000);
 
   it('creates and stops an OpenCode team through the app service using a configured authless local provider', async () => {
     const owned = cases.enrolled!;
@@ -508,6 +508,31 @@ liveDescribe('OpenCode local provider app launch live e2e', () => {
 
 describe('OpenCode local provider fixture', () => {
   beforeEach(() => assertPreviousLiveCaseSettled(liveCases.active));
+
+  it('closes the fake server after a timed-out harness disposal settles without disposing twice', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'TEST-deferred-dispose-'));
+    const owned = createLocalProviderLiveCase(path.join(root, 'case'));
+    const disposal = deferredOperation();
+    const dispose = vi.fn(() => disposal.promise);
+    const close = vi.fn(async () => undefined);
+    const harness = { svc: { stopTeam: vi.fn(async () => undefined) }, dispose };
+    const server = { close };
+    owned.harness = harness;
+    owned.fakeServer = server;
+    try {
+      const originalDisposal = dispose();
+      deferOwnedLocalProviderServerClose(owned, harness, originalDisposal, server);
+      expect(close).not.toHaveBeenCalled();
+      disposal.resolve();
+      await vi.waitFor(() => expect(close).toHaveBeenCalledTimes(1));
+      expect(dispose).toHaveBeenCalledTimes(1);
+      expect(owned.harness).toBeNull();
+      expect(owned.fakeServer).toBeNull();
+    } finally {
+      disposal.resolve();
+      await fs.rm(root, { recursive: true, force: true });
+    }
+  });
 
   it('keeps a delayed cleanup confined to its captured case and diagnostics', async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'TEST-owned-case-cleanup-'));
@@ -1401,7 +1426,8 @@ function cleanupLocalProviderLiveCase(
         errors.push(error);
       }
     };
-    // 180s pending native launch + 90s Stop + 90s lane proof; total cleanup <= 440s.
+    // Worst case: 360s initial Stop + 30s settle + 360s final Stop + 30s dispose
+    // + 10s server close + 10s temp cleanup = 800s; afterEach allows 840s.
     if (owned.harness && owned.teamName) {
       const { svc } = owned.harness;
       const teamName = owned.teamName;
@@ -1446,8 +1472,13 @@ function cleanupLocalProviderLiveCase(
       } else {
         if (owned.harness) {
           const harness = owned.harness;
-          await attempt('dispose owned harness', () => harness.dispose(), 30_000);
-          if (owned.pending.size === 0 && owned.harness === harness) owned.harness = null;
+          const disposal = Promise.resolve().then(() => harness.dispose());
+          await attempt('dispose owned harness', () => disposal, 30_000);
+          if (owned.pending.size === 0 && owned.harness === harness) {
+            owned.harness = null;
+          } else if (owned.fakeServer) {
+            deferOwnedLocalProviderServerClose(owned, harness, disposal, owned.fakeServer);
+          }
         }
         if (owned.fakeServer && owned.pending.size === 0) {
           const server = owned.fakeServer;
@@ -1482,6 +1513,34 @@ function cleanupLocalProviderLiveCase(
     }
   })();
   return owned.cleanupPromise;
+}
+
+function deferOwnedLocalProviderServerClose(
+  owned: LocalProviderLiveCase,
+  harness: NonNullable<LocalProviderLiveCase['harness']>,
+  disposal: Promise<void>,
+  server: NonNullable<LocalProviderLiveCase['fakeServer']>
+): void {
+  const closeServer = async () => {
+    if (owned.fakeServer !== server) return;
+    try {
+      await server.close();
+      owned.fakeServer = null;
+    } catch (error) {
+      console.error(`Deferred fake server close failed for ${owned.tempDir}`, error);
+    }
+  };
+  void disposal.then(
+    async () => {
+      if (owned.harness === harness) owned.harness = null;
+      await closeServer();
+    },
+    async (error: unknown) => {
+      console.error(`Owned harness disposal failed for ${owned.tempDir}`, error);
+      if (owned.harness === harness) owned.harness = null;
+      await closeServer();
+    }
+  );
 }
 
 function deferOwnedLocalProviderResourceRelease(
@@ -1543,8 +1602,9 @@ async function stopAndVerifyOpenCodeTeam(
   options: { teamsBasePath?: string; timeoutMs?: number; isCurrentCase?: () => boolean } = {}
 ): Promise<void> {
   const teamsBasePath = options.teamsBasePath ?? getTeamsBasePath();
-  const warn = vi.mocked(console.warn);
-  const warningStart = warn.mock.calls.length;
+  const warn = console.warn;
+  const warningSpy = vi.isMockFunction(warn) ? vi.mocked(warn) : null;
+  const warningStart = warningSpy?.mock.calls.length ?? 0;
   await svc.stopTeam(teamName);
   const timeoutMs = options.timeoutMs ?? 90_000;
   await waitUntil(
@@ -1556,16 +1616,20 @@ async function stopAndVerifyOpenCodeTeam(
   // Source-launcher overhead can cross the production timing warning threshold.
   // Accept only this owned, verified stop, and retain its latency in the evidence.
   const prefix = `[Service:TeamProvisioning] [${teamName}] Slow OpenCode stop: primary lane stop took `;
-  if (console.warn !== warn || (options.isCurrentCase && !options.isCurrentCase())) return;
-  for (let index = warn.mock.calls.length - 1; index >= warningStart; index -= 1) {
-    const rendered = warn.mock.calls[index].map((part) => String(part)).join(' ');
+  if (
+    !warningSpy ||
+    console.warn !== warn ||
+    (options.isCurrentCase && !options.isCurrentCase())
+  ) return;
+  for (let index = warningSpy.mock.calls.length - 1; index >= warningStart; index -= 1) {
+    const rendered = warningSpy.mock.calls[index].map((part) => String(part)).join(' ');
     if (
       rendered.startsWith(prefix) &&
       rendered.endsWith('(stopped=true)') &&
       /^\d+ms \(stopped=true\)$/.test(rendered.slice(prefix.length))
     ) {
       console.info(`[OpenCodeLocalProviderAppLaunch.live] verified successful stop: ${rendered}`);
-      warn.mock.calls.splice(index, 1);
+      warningSpy.mock.calls.splice(index, 1);
     }
   }
 }

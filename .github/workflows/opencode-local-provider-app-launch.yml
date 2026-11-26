@@ -15,6 +15,7 @@ on:
       - 'src/main/services/team/provisioning/**'
       - 'src/main/services/team/runtime/OpenCode*.ts'
       - 'src/main/services/team/opencode/**'
+      - 'src/features/runtime-provider-management/**'
       - 'agent-teams-controller/**'
       - 'mcp-server/**'
       - '.node-version'

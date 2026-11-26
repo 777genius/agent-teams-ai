@@ -774,13 +774,25 @@ describe('team provisioning stop flow', () => {
     });
     vi.mocked(ports.hasSecondaryRuntimeRuns).mockReturnValue(true);
     const failure = new Error('primary Stop failed');
-    vi.mocked(ports.stopOpenCodeRuntimeAdapterTeam).mockRejectedValue(failure);
+    let markPrimaryRejected!: () => void;
+    const primaryRejected = new Promise<void>((resolve) => {
+      markPrimaryRejected = resolve;
+    });
+    vi.mocked(ports.stopOpenCodeRuntimeAdapterTeam).mockImplementation(async () => {
+      markPrimaryRejected();
+      throw failure;
+    });
+    let markSecondaryStarted!: () => void;
+    const secondaryStarted = new Promise<void>((resolve) => {
+      markSecondaryStarted = resolve;
+    });
     let releaseSecondary!: () => void;
-    vi.mocked(ports.stopMixedSecondaryRuntimeLanes).mockReturnValue(
-      new Promise<void>((resolve) => {
+    vi.mocked(ports.stopMixedSecondaryRuntimeLanes).mockImplementation(async () => {
+      markSecondaryStarted();
+      await new Promise<void>((resolve) => {
         releaseSecondary = resolve;
-      })
-    );
+      });
+    });
     let settled = false;
     const stopping = stopTeamFlow(teamName, ports).then(
       () => {
@@ -793,7 +805,7 @@ describe('team provisioning stop flow', () => {
       }
     );
     try {
-      await new Promise<void>((resolve) => setImmediate(resolve));
+      await Promise.all([primaryRejected, secondaryStarted]);
       expect(settled).toBe(false);
       expect(ports.cleanupRun).not.toHaveBeenCalled();
     } finally {

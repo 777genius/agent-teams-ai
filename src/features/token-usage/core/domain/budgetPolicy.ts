@@ -75,6 +75,8 @@ export function buildBudgetStatus(input: {
   const gatewayMarkedProjects = new Set<string>();
   const normalizeName = (name: string | undefined): string | undefined =>
     name === undefined ? undefined : (input.teamNameAliases?.get(name) ?? name);
+  const isUnresolvedProjectRuntimeAlias = (name: string | undefined): boolean =>
+    name?.startsWith('ptc-') === true && !input.teamNameAliases?.has(name);
   const teamScope = (name: string | undefined) => {
     const id = teamIdForName(normalizeName(name));
     return { id, label: teamIdentityLabel(id) };
@@ -83,7 +85,9 @@ export function buildBudgetStatus(input: {
   for (const run of runs) {
     const team = teamScope(run.teamName);
     const project = runProjectKey(run);
-    addOption('team', team.id, team.label);
+    if (!isUnresolvedProjectRuntimeAlias(run.teamName)) {
+      addOption('team', team.id, team.label);
+    }
     addOption('project', project.id, project.label);
     if (run.gatewayUsageRef) gatewayMarkedProjects.add(project.id);
   }
@@ -140,8 +144,10 @@ export function buildBudgetStatus(input: {
     NonNullable<TokenUsageBudgetSettingsDto['global']>,
   ][] = [];
   if (input.settings.global) configs.push(['global', 'global', input.settings.global]);
-  for (const [id, config] of Object.entries(input.settings.teams ?? {}))
+  for (const [id, config] of Object.entries(input.settings.teams ?? {})) {
+    if (isUnresolvedProjectRuntimeAlias(rawTeamName(id))) continue;
     configs.push(['team', id, config]);
+  }
   for (const [id, config] of Object.entries(input.settings.projects ?? {}))
     configs.push(['project', id, config]);
   const targets = configs.map(([scope, id, config]) => {
