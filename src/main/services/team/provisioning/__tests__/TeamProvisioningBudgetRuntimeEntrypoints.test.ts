@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { TeamProvisioningService } from '../../TeamProvisioningService';
 
+import type { TeamProvisioningMemberLifecycleOperationRunner } from '../TeamProvisioningMemberLifecycleOperationRunner';
+
 function createBudgetedService(
   admit: (teamName: string) => Promise<void>
 ): TeamProvisioningService {
@@ -151,6 +153,98 @@ describe('budget checks at execution time of queued runtime operations', () => {
     expect(admit).toHaveBeenCalledTimes(2);
     expect(restart).not.toHaveBeenCalled();
     expect(internals.openCodeAggregatePrimaryRestartByTeam.has('alpha')).toBe(false);
+  });
+
+  it.each(['primary_member_added', 'opencode_member_updated'] as const)(
+    'rechecks budget after the aggregate restart wait for %s',
+    async (kind) => {
+      let release!: () => void;
+      const completion = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      let exceeded = false;
+      const admit = vi.fn(async (_teamName: string) => {
+        if (exceeded) throw new Error('TEAM_BUDGET_BLOCKED');
+      });
+      const service = createBudgetedService(admit);
+      const restarts = Reflect.get(service, 'openCodeAggregatePrimaryRestartByTeam') as Map<
+        string,
+        unknown
+      >;
+      restarts.set('alpha', { memberName: 'alice', runId: 'run-1', completion });
+      const runner = Reflect.get(
+        service,
+        'memberLifecycleOperationRunner'
+      ) as TeamProvisioningMemberLifecycleOperationRunner;
+      const spawn = vi.fn(async () => undefined);
+
+      // Simulate successful outer admission before entering the lifecycle wait.
+      await admit('alpha');
+      const operation = runner.runMemberLifecycleOperation('alpha', 'bob', kind, spawn);
+      expect(spawn).not.toHaveBeenCalled();
+      exceeded = true;
+      release();
+      await expect(operation).rejects.toThrow('TEAM_BUDGET_BLOCKED');
+      expect(admit).toHaveBeenCalledTimes(2);
+      expect(admit).toHaveBeenLastCalledWith('alpha');
+      expect(spawn).not.toHaveBeenCalled();
+      expect(runner.isMemberLifecycleOperationActive('alpha', 'bob')).toBe(false);
+    }
+  );
+
+  it('does not start a member operation after Stop during aggregate admission', async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const admit = vi.fn(() => gate);
+    const service = createBudgetedService(admit);
+    const restarts = Reflect.get(service, 'openCodeAggregatePrimaryRestartByTeam') as Map<
+      string,
+      unknown
+    >;
+    restarts.set('alpha', {
+      memberName: 'alice',
+      runId: 'run-1',
+      completion: Promise.resolve(),
+    });
+    const runner = Reflect.get(
+      service,
+      'memberLifecycleOperationRunner'
+    ) as TeamProvisioningMemberLifecycleOperationRunner;
+    const generation = Reflect.get(service, 'stopTeamGenerationByTeam') as Map<string, number>;
+    const spawn = vi.fn(async () => undefined);
+    const operation = runner.runMemberLifecycleOperation('alpha', 'bob', 'opencode_retry', spawn);
+    await vi.waitFor(() => expect(admit).toHaveBeenCalledWith('alpha'));
+    generation.set('alpha', 1);
+    release();
+    await expect(operation).rejects.toThrow('superseded by Stop');
+    expect(spawn).not.toHaveBeenCalled();
+    expect(runner.isMemberLifecycleOperationActive('alpha', 'bob')).toBe(false);
+  });
+
+  it('does not block member removal after an aggregate restart wait', async () => {
+    const admit = vi.fn(async () => {
+      throw new Error('TEAM_BUDGET_BLOCKED');
+    });
+    const service = createBudgetedService(admit);
+    const restarts = Reflect.get(service, 'openCodeAggregatePrimaryRestartByTeam') as Map<
+      string,
+      unknown
+    >;
+    restarts.set('alpha', {
+      memberName: 'alice',
+      runId: 'run-1',
+      completion: Promise.resolve(),
+    });
+    const runner = Reflect.get(
+      service,
+      'memberLifecycleOperationRunner'
+    ) as TeamProvisioningMemberLifecycleOperationRunner;
+    const remove = vi.fn(async () => undefined);
+    await runner.runMemberLifecycleOperation('alpha', 'bob', 'primary_member_removed', remove);
+    expect(remove).toHaveBeenCalledOnce();
+    expect(admit).not.toHaveBeenCalled();
   });
 
   it('allows the original member controller to run after successful admission', async () => {

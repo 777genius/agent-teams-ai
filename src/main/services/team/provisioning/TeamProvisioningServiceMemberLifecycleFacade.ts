@@ -165,13 +165,10 @@ export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamP
       : operation();
   }
 
-  protected runAfterInFlightSpawnOperation<T>(
-    teamName: string,
-    operation: () => Promise<T>
-  ): Promise<T> {
+  private captureRuntimeSpawnAdmissionFence(teamName: string): () => void {
     const stopAllGeneration = this.stopAllTeamsGeneration;
     const stopTeamGeneration = this.getStopTeamGeneration(teamName);
-    const assertCurrent = (): void => {
+    return (): void => {
       if (
         this.stopAllTeamsGeneration !== stopAllGeneration ||
         this.getStopTeamGeneration(teamName) !== stopTeamGeneration
@@ -179,6 +176,13 @@ export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamP
         throw new Error('Runtime spawn admission superseded by Stop');
       }
     };
+  }
+
+  protected runAfterInFlightSpawnOperation<T>(
+    teamName: string,
+    operation: () => Promise<T>
+  ): Promise<T> {
+    const assertCurrent = this.captureRuntimeSpawnAdmissionFence(teamName);
     return this.runAfterInFlightTeamOperation(teamName, async () => {
       assertCurrent();
       await this.assertRuntimeSpawnAllowed(teamName);
@@ -291,8 +295,23 @@ export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamP
               token,
               completion,
             });
+            const canSpawn =
+              kind !== 'skip_for_launch' &&
+              kind !== 'opencode_member_removed' &&
+              kind !== 'primary_member_removed';
+            const assertCurrent = this.captureRuntimeSpawnAdmissionFence(teamName);
             try {
-              await this.waitForOpenCodeAggregatePrimaryRestart(teamName, memberName);
+              const restartRunId = await this.waitForOpenCodeAggregatePrimaryRestart(
+                teamName,
+                memberName
+              );
+              if (canSpawn) {
+                assertCurrent();
+                if (restartRunId !== null) {
+                  await this.assertRuntimeSpawnAllowed(teamName);
+                  assertCurrent();
+                }
+              }
               return await operation();
             } finally {
               resolveCompletion();
