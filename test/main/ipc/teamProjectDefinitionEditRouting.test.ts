@@ -410,7 +410,7 @@ describe('every team definition writer goes through the router', () => {
     'TEAM_UPDATE_MEMBER_ROLE',
   ])('%s is registered through the definition edit router', (channel) => {
     expect(source).toMatch(
-      new RegExp(`ipcMain\\.handle\\(${channel}, projectEdit\\.route\\(`)
+      new RegExp(`ipcMain\\.handle\\(\\s*${channel},\\s*projectEdit\\.route\\(`)
     );
   });
 });
