@@ -18,6 +18,7 @@ on:
       - 'agent-teams-controller/**'
       - 'mcp-server/**'
       - '.node-version'
+      - 'runtime.lock.json'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
