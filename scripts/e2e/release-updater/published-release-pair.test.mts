@@ -102,6 +102,33 @@ test('rejects drafts, prereleases, a stale latest release, and altered asset met
   assert.throws(() =>
     verifyPublished219Pair(
       valid.predecessor,
+      { ...valid.target, prerelease: true },
+      valid.latest,
+      published219Pair.predecessor.applicationSha,
+      published219Pair.target.applicationSha
+    )
+  );
+  assert.throws(() =>
+    verifyPublished219Pair(
+      valid.predecessor,
+      { ...valid.target, assets: valid.target.assets.map((asset, index) => index === 0 ? { ...asset, id: asset.id + 1 } : asset) },
+      valid.latest,
+      published219Pair.predecessor.applicationSha,
+      published219Pair.target.applicationSha
+    )
+  );
+  assert.throws(() =>
+    verifyPublished219Pair(
+      valid.predecessor,
+      { ...valid.target, assets: valid.target.assets.map((asset, index) => index === 0 ? { ...asset, size: asset.size + 1 } : asset) },
+      valid.latest,
+      published219Pair.predecessor.applicationSha,
+      published219Pair.target.applicationSha
+    )
+  );
+  assert.throws(() =>
+    verifyPublished219Pair(
+      valid.predecessor,
       valid.target,
       { ...valid.predecessor },
       published219Pair.predecessor.applicationSha,
