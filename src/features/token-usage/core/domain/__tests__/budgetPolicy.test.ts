@@ -39,6 +39,12 @@ describe('Budget monthly projection', () => {
             notificationsEnabled: true,
             onExceeded: 'stop_team',
           },
+          'team:ptc-copy-1': {
+            monthlyTokenLimit: 10,
+            thresholds: [100],
+            notificationsEnabled: true,
+            onExceeded: 'block_launch',
+          },
         },
       },
       ledger: {
@@ -55,6 +61,7 @@ describe('Budget monthly projection', () => {
     expect(team?.metrics[0].value).toBe(100);
     expect(team?.metrics[0].incomplete).toBe(true);
     expect(projected.options.some((item) => item.id === 'team:ptc-copy-1')).toBe(false);
+    expect(projected.targets.some((item) => item.id === 'team:ptc-copy-1')).toBe(false);
   });
 
   it('does not expose an unresolved historical project alias as an enforceable team target', () => {

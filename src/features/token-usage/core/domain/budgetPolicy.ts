@@ -77,6 +77,9 @@ export function buildBudgetStatus(input: {
     name === undefined ? undefined : (input.teamNameAliases?.get(name) ?? name);
   const isUnresolvedProjectRuntimeAlias = (name: string | undefined): boolean =>
     name?.startsWith('ptc-') === true && !input.teamNameAliases?.has(name);
+  const logicalAliasTargets = new Set(input.teamNameAliases?.values() ?? []);
+  const isPhysicalProjectRuntimeTarget = (name: string | undefined): boolean =>
+    name?.startsWith('ptc-') === true && !logicalAliasTargets.has(name);
   const teamScope = (name: string | undefined) => {
     const id = teamIdForName(normalizeName(name));
     return { id, label: teamIdentityLabel(id) };
@@ -145,7 +148,8 @@ export function buildBudgetStatus(input: {
   ][] = [];
   if (input.settings.global) configs.push(['global', 'global', input.settings.global]);
   for (const [id, config] of Object.entries(input.settings.teams ?? {})) {
-    if (isUnresolvedProjectRuntimeAlias(rawTeamName(id))) continue;
+    // Admission is keyed by the logical team, never by its physical project-copy name.
+    if (isPhysicalProjectRuntimeTarget(rawTeamName(id))) continue;
     configs.push(['team', id, config]);
   }
   for (const [id, config] of Object.entries(input.settings.projects ?? {}))
