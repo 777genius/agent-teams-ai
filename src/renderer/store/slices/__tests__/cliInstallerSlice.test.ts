@@ -16,6 +16,19 @@ import type {
 } from '@shared/types/cliInstaller';
 import type { StateCreator } from 'zustand';
 
+// Keep the real slice and Zustand; only the external preload API is controlled here.
+vi.mock('@renderer/api', () => ({
+  api: new Proxy(
+    {},
+    {
+      get(_target, property) {
+        return Reflect.get(window.electronAPI ?? {}, property);
+      },
+    }
+  ),
+  isElectronMode: () => Boolean(window.electronAPI),
+}));
+
 function createCliInstallerStore() {
   return createStore<CliInstallerSlice>()(
     createCliInstallerSlice as unknown as StateCreator<CliInstallerSlice>
@@ -522,6 +535,303 @@ describe('OpenCode runtime rejection state', () => {
       restoreApi();
     }
   });
+});
+
+describe('provider status loading ownership', () => {
+  function pendingStatusStore() {
+    const store = createCliInstallerStore();
+    const previousApi = window.electronAPI;
+    const base = createLoadingMultimodelCliStatus();
+    const ready = (
+      model: string,
+      providerId: CliProviderStatus['providerId'] = 'opencode'
+    ): CliProviderStatus => ({
+      ...base.providers.find((provider) => provider.providerId === providerId)!,
+      supported: true,
+      authenticated: true,
+      verificationState: 'verified',
+      statusCheckOutcome: 'authoritative',
+      statusCheckErrorCode: undefined,
+      statusMessage: null,
+      capabilities: {
+        ...base.providers.find((provider) => provider.providerId === providerId)!.capabilities,
+        teamLaunch: true,
+      },
+      models: [model],
+      modelCatalogRefreshState: 'ready',
+      modelCatalog: {
+        schemaVersion: 1,
+        providerId,
+        source: 'app-server',
+        status: 'ready',
+        fetchedAt: new Date().toISOString(),
+        staleAt: new Date(Date.now() + 60_000).toISOString(),
+        defaultModelId: model,
+        defaultLaunchModel: model,
+        models: [
+          {
+            id: model,
+            launchModel: model,
+            displayName: model,
+            hidden: false,
+            supportedReasoningEfforts: [],
+            defaultReasoningEffort: null,
+            inputModalities: ['text'],
+            supportsPersonality: false,
+            isDefault: true,
+            upgrade: false,
+            source: 'app-server',
+          },
+        ],
+        diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+      },
+    });
+    const responses: {
+      resolve: (value: CliProviderStatus) => void;
+      reject: (reason: unknown) => void;
+    }[] = [];
+    const reads: Promise<boolean>[] = [];
+    const getProviderStatus = vi.fn(
+      () => new Promise<CliProviderStatus>((resolve, reject) => responses.push({ resolve, reject }))
+    );
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      writable: true,
+      value: {
+        cliInstaller: { getProviderStatus, invalidateStatus: vi.fn(async () => undefined) },
+      },
+    });
+    store.setState({
+      cliStatus: { ...base, installed: true, providers: [ready('opencode/global-previous')] },
+    });
+    return {
+      store,
+      ready,
+      responses,
+      getProviderStatus,
+      fetch(
+        options: Parameters<CliInstallerSlice['fetchCliProviderStatus']>[1],
+        providerId: CliProviderStatus['providerId'] = 'opencode'
+      ) {
+        const read = store.getState().fetchCliProviderStatus(providerId, options);
+        reads.push(read);
+        return read;
+      },
+      async cleanup() {
+        for (const response of responses) response.resolve(ready('opencode/cleanup'));
+        await Promise.allSettled(reads);
+        store.setState({ cliStatus: null });
+        try {
+          await store.getState().invalidateCliStatus();
+        } finally {
+          Object.defineProperty(window, 'electronAPI', {
+            configurable: true,
+            writable: true,
+            value: previousApi,
+          });
+        }
+      },
+    };
+  }
+
+  it('keeps provider loading while a project request outlives a global request', async () => {
+    const fixture = pendingStatusStore();
+    const projectPath = '/sandbox/opencode-overlapping-status';
+    const scopeKey = getCliProviderStatusScopeKey('opencode', projectPath);
+    fixture.store.setState({
+      cliProviderStatusByScope: { [scopeKey]: fixture.ready('ollama/project-previous') },
+    });
+    try {
+      const globalRead = fixture.fetch({ silent: false });
+      const projectRead = fixture.fetch({ projectPath, silent: false });
+      expect(fixture.getProviderStatus).toHaveBeenCalledTimes(2);
+      expect(fixture.getProviderStatus).toHaveBeenNthCalledWith(1, 'opencode');
+      expect(fixture.getProviderStatus).toHaveBeenNthCalledWith(2, 'opencode', { projectPath });
+      expect(fixture.store.getState().cliProviderStatusLoading.opencode).toBe(true);
+      fixture.responses[0].resolve(fixture.ready('opencode/global-current'));
+      await expect(globalRead).resolves.toBe(true);
+      const pending = fixture.store.getState();
+      expect(pending.cliStatus?.providers[0].models).toEqual(['opencode/global-current']);
+      expect(pending.cliProviderStatusByScope[scopeKey]).toMatchObject({
+        statusCheckOutcome: 'pending',
+        models: ['ollama/project-previous'],
+      });
+      expect(pending.cliProviderStatusLoading.opencode).toBe(true);
+      fixture.responses[1].resolve(fixture.ready('ollama/project-current'));
+      await expect(projectRead).resolves.toBe(true);
+      expect(fixture.store.getState().cliProviderStatusLoading.opencode).toBe(false);
+      expect(fixture.store.getState().cliProviderStatusByScope[scopeKey]?.models).toEqual([
+        'ollama/project-current',
+      ]);
+      expect(fixture.store.getState().cliStatus?.providers[0].models).toEqual([
+        'opencode/global-current',
+      ]);
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it('keeps an independent silent global read quiet', async () => {
+    const fixture = pendingStatusStore();
+    try {
+      const read = fixture.fetch({ silent: true });
+      expect(fixture.store.getState().cliProviderStatusLoading.opencode).toBeUndefined();
+      fixture.responses[0].resolve(fixture.ready('opencode/quiet-current'));
+      await expect(read).resolves.toBe(true);
+      expect(fixture.store.getState().cliProviderStatusLoading.opencode).toBeUndefined();
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it('does not transfer project loading to an independent silent global read', async () => {
+    const fixture = pendingStatusStore();
+    try {
+      const projectRead = fixture.fetch({
+        projectPath: '/sandbox/opencode-silent-project',
+        silent: true,
+      });
+      const globalRead = fixture.fetch({ silent: true });
+      expect(fixture.getProviderStatus).toHaveBeenCalledTimes(2);
+      expect(fixture.store.getState().cliProviderStatusLoading.opencode).toBe(true);
+      fixture.responses[0].resolve(fixture.ready('ollama/project-current'));
+      await expect(projectRead).resolves.toBe(true);
+      expect(fixture.store.getState().cliProviderStatusLoading.opencode).toBe(false);
+      fixture.responses[1].resolve(fixture.ready('opencode/quiet-current'));
+      await expect(globalRead).resolves.toBe(true);
+      expect(fixture.store.getState().cliProviderStatusLoading.opencode).toBe(false);
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it('keeps a visible global request loading when the project response finishes first', async () => {
+    const fixture = pendingStatusStore();
+    try {
+      const globalRead = fixture.fetch({ silent: false });
+      const projectRead = fixture.fetch({
+        projectPath: '/sandbox/opencode-project-first',
+        silent: false,
+      });
+      fixture.responses[1].resolve(fixture.ready('ollama/project-current'));
+      await expect(projectRead).resolves.toBe(true);
+      expect(fixture.store.getState().cliProviderStatusLoading.opencode).toBe(true);
+      expect(fixture.store.getState().cliStatus?.providers[0].models).toEqual([
+        'opencode/global-previous',
+      ]);
+      fixture.responses[0].resolve(fixture.ready('opencode/global-current'));
+      await expect(globalRead).resolves.toBe(true);
+      expect(fixture.store.getState().cliProviderStatusLoading.opencode).toBe(false);
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it('keeps project loading when the visible global request rejects', async () => {
+    const fixture = pendingStatusStore();
+    try {
+      const globalRead = fixture.fetch({ silent: false });
+      const projectRead = fixture.fetch({
+        projectPath: '/sandbox/opencode-after-global-rejection',
+        silent: false,
+      });
+      const error = new Error('TEST global status rejected');
+      fixture.responses[0].reject(error);
+      await expect(globalRead).resolves.toBe(false);
+      expect(vi.mocked(console.error).mock.calls).toEqual([
+        ['[Store:cliInstaller]', 'Failed to fetch opencode CLI status:', error],
+      ]);
+      vi.mocked(console.error).mockClear();
+      expect(fixture.store.getState().cliProviderStatusLoading.opencode).toBe(true);
+      fixture.responses[1].resolve(fixture.ready('ollama/project-current'));
+      await expect(projectRead).resolves.toBe(true);
+      expect(fixture.store.getState().cliProviderStatusLoading.opencode).toBe(false);
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it('does not keep OpenCode loading for a different pending provider', async () => {
+    const fixture = pendingStatusStore();
+    try {
+      const codexRead = fixture.fetch({ silent: false }, 'codex');
+      const openCodeRead = fixture.fetch({ silent: false });
+      fixture.responses[1].resolve(fixture.ready('opencode/current'));
+      await expect(openCodeRead).resolves.toBe(true);
+      expect(fixture.store.getState().cliProviderStatusLoading).toMatchObject({
+        opencode: false,
+        codex: true,
+      });
+      fixture.responses[0].resolve(fixture.ready('codex/current', 'codex'));
+      await expect(codexRead).resolves.toBe(true);
+      expect(fixture.store.getState().cliProviderStatusLoading.codex).toBe(false);
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it.each([true, false])(
+    'retires only project loading while a global request remains silent=%s',
+    async (silent) => {
+      const fixture = pendingStatusStore();
+      const projectPath = '/sandbox/opencode-retired-project';
+      try {
+        const projectRead = fixture.fetch({ projectPath, silent: true });
+        const globalRead = fixture.fetch({ silent });
+        fixture.store.getState().invalidateCliProviderModelCatalog({ scopedOnly: true });
+        expect(fixture.store.getState().cliProviderStatusLoading.opencode).toBe(
+          silent ? undefined : true
+        );
+        fixture.responses[0].resolve(fixture.ready('ollama/obsolete-project'));
+        await expect(projectRead).resolves.toBe(false);
+        expect(fixture.store.getState().cliProviderStatusByScope).not.toHaveProperty(
+          getCliProviderStatusScopeKey('opencode', projectPath)
+        );
+        expect(fixture.store.getState().cliProviderStatusLoading.opencode).toBe(
+          silent ? undefined : true
+        );
+        fixture.responses[1].resolve(fixture.ready('opencode/global-current'));
+        await expect(globalRead).resolves.toBe(true);
+        expect(fixture.store.getState().cliProviderStatusLoading.opencode).toBe(
+          silent ? undefined : false
+        );
+      } finally {
+        await fixture.cleanup();
+      }
+    }
+  );
+
+  it.each(['old-first', 'new-first'] as const)(
+    'settles visible loading when a silent model request supersedes it (%s)',
+    async (order) => {
+      const fixture = pendingStatusStore();
+      try {
+        const oldRead = fixture.fetch({ silent: false });
+        const currentRead = fixture.fetch({ silent: true, requireModelList: true });
+        expect(fixture.getProviderStatus).toHaveBeenCalledTimes(2);
+        expect(fixture.store.getState().cliProviderStatusLoading.opencode).toBe(true);
+        if (order === 'old-first') {
+          fixture.responses[0].resolve(fixture.ready('opencode/obsolete'));
+          await expect(oldRead).resolves.toBe(false);
+          expect(fixture.store.getState().cliProviderStatusLoading.opencode).toBe(true);
+          expect(fixture.store.getState().cliStatus?.providers[0].models).toEqual([
+            'opencode/global-previous',
+          ]);
+        }
+        fixture.responses[1].resolve(fixture.ready('opencode/newest'));
+        await expect(currentRead).resolves.toBe(true);
+        expect(fixture.store.getState().cliProviderStatusLoading.opencode).toBe(false);
+        fixture.responses[0].resolve(fixture.ready('opencode/obsolete'));
+        await expect(oldRead).resolves.toBe(false);
+        expect(fixture.store.getState().cliProviderStatusLoading.opencode).toBe(false);
+        expect(fixture.store.getState().cliStatus?.providers[0].models).toEqual([
+          'opencode/newest',
+        ]);
+      } finally {
+        await fixture.cleanup();
+      }
+    }
+  );
 });
 
 describe('provider catalog invalidation races', () => {

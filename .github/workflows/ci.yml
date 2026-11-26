@@ -1191,7 +1191,7 @@ jobs:
 
   codex-login-desktop:
     name: Codex login Desktop (Linux x64)
-    # Bounded frontend-parity qualification, including a Ready stacked test PR.
+    # Bounded frontend-parity qualification, including Ready Stage 1 children.
     # This does not change Stage 1's broader native/UI gate or qualify account completion.
     needs: plan
     if: >-
@@ -1200,6 +1200,7 @@ jobs:
        (github.event_name == 'pull_request' && github.event.pull_request.draft == false &&
         github.event.pull_request.head.repo.full_name == github.repository &&
         (github.event.pull_request.base.ref == 'feat/provider-host-frontend-parity-20261112' ||
+         github.event.pull_request.base.ref == 'feat/provider-migration-stage-1' ||
          github.event.pull_request.head.ref == 'feat/provider-host-frontend-parity-20261112' ||
          (github.event.pull_request.number == 982 &&
           github.event.pull_request.head.ref == 'feat/provider-migration-stage-1'))))
@@ -2963,6 +2964,7 @@ jobs:
            (github.event_name == 'pull_request' && github.event.pull_request.draft == false &&
             github.event.pull_request.head.repo.full_name == github.repository &&
             (github.event.pull_request.base.ref == 'feat/provider-host-frontend-parity-20261112' ||
+             github.event.pull_request.base.ref == 'feat/provider-migration-stage-1' ||
              github.event.pull_request.head.ref == 'feat/provider-host-frontend-parity-20261112' ||
              (github.event.pull_request.number == 982 &&
               github.event.pull_request.head.ref == 'feat/provider-migration-stage-1'))))

@@ -14,6 +14,7 @@ describe('executeTeamRelaunch', () => {
     const replaceMembers = vi.fn().mockResolvedValue(undefined);
     const launchTeam = vi.fn().mockRejectedValueOnce(new Error('unknown')).mockResolvedValue({});
     const options = {
+      rosterReadOnly: false,
       teamName: 'host-team:TEST-owner',
       isTeamAlive: true,
       request: { teamName: 'host-team:TEST-owner', cwd: '/TEST/project' },
@@ -48,10 +49,17 @@ describe('executeTeamRelaunch', () => {
       replaceAttempted: false,
       replaceConfirmed: false,
     };
-    const stopRun = vi.fn().mockRejectedValueOnce(new Error('stop unknown')).mockResolvedValue(undefined);
-    const replaceMembers = vi.fn().mockRejectedValueOnce(new Error('roster unknown')).mockResolvedValue(undefined);
+    const stopRun = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('stop unknown'))
+      .mockResolvedValue(undefined);
+    const replaceMembers = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('roster unknown'))
+      .mockResolvedValue(undefined);
     const validate = vi.fn().mockResolvedValue(undefined);
     const options = {
+      rosterReadOnly: false,
       teamName: 'host-team:TEST-owner',
       isTeamAlive: true,
       request: { teamName: 'host-team:TEST-owner', cwd: '/TEST/project' },
@@ -75,17 +83,29 @@ describe('executeTeamRelaunch', () => {
   });
 
   it('refuses an alive Host relaunch without the original run before stopping or replacing', async () => {
-    const stopTeam = vi.fn(), replaceMembers = vi.fn(), launchTeam = vi.fn();
-    await expect(executeTeamRelaunch({
-      teamName: 'host-team:TEST-owner',
-      isTeamAlive: true,
-      request: { teamName: 'host-team:TEST-owner', cwd: '/TEST/project' },
-      members: [],
-      rosterMetadata: { relaunch: {
-        originalRunId: undefined, stopConfirmed: false, replaceAttempted: false, replaceConfirmed: false,
-      } },
-      stopTeam, replaceMembers, launchTeam,
-    })).rejects.toThrow('Original team run unavailable');
+    const stopTeam = vi.fn(),
+      replaceMembers = vi.fn(),
+      launchTeam = vi.fn();
+    await expect(
+      executeTeamRelaunch({
+        rosterReadOnly: false,
+        teamName: 'host-team:TEST-owner',
+        isTeamAlive: true,
+        request: { teamName: 'host-team:TEST-owner', cwd: '/TEST/project' },
+        members: [],
+        rosterMetadata: {
+          relaunch: {
+            originalRunId: undefined,
+            stopConfirmed: false,
+            replaceAttempted: false,
+            replaceConfirmed: false,
+          },
+        },
+        stopTeam,
+        replaceMembers,
+        launchTeam,
+      })
+    ).rejects.toThrow('Original team run unavailable');
     expect(stopTeam).not.toHaveBeenCalled();
     expect(replaceMembers).not.toHaveBeenCalled();
     expect(launchTeam).not.toHaveBeenCalled();
@@ -101,6 +121,7 @@ describe('executeTeamRelaunch', () => {
     };
     const replaceMembers = vi.fn();
     await executeTeamRelaunch({
+      rosterReadOnly: false,
       teamName: 'host-team:TEST-owner',
       isTeamAlive: true,
       request: { teamName: 'host-team:TEST-owner', cwd: '/TEST/project' },

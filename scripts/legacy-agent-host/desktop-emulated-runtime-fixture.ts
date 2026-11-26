@@ -270,23 +270,26 @@ export async function observeDesktopEmulatedRuntimeChildren(group: number,
   const census = () => {
     const remaining = Math.floor(deadline - performance.now());
     assert.ok(remaining > 0, 'Original peer observation deadline');
-    const output = execFileSync('/bin/ps', ['-axww', '-o', 'pid=,ppid=,pgid=,lstart=,command='], {
+    const output = execFileSync('/bin/ps', ['-axww', '-o', 'pid=,ppid=,pgid=,lstart=,stat=,command='], {
       encoding: 'utf8', timeout: Math.min(3000, remaining), maxBuffer: 2 * 1024 * 1024,
       env: { PATH: '/usr/bin:/bin', LC_ALL: process.platform === 'linux' ? 'C.UTF-8' : 'en_US.UTF-8' },
     });
     const lines = output.trim().split('\n'); assert.ok(lines.length <= 20_000);
+    const zombies = new Set<number>();
     const rows = lines.map(line => {
-      const match = /^\s*(\d+)\s+(\d+)\s+(\d+)\s+(\S{3}\s+\S{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}\s+\d{4})\s+(.+)$/u.exec(line);
-      assert.ok(match, 'Original census includes peer birth and argv');
+      const match = /^\s*(\d+)\s+(\d+)\s+(\d+)\s+(\S{3}\s+\S{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}\s+\d{4})\s+(\S{1,16})\s+(.+)$/u.exec(line);
+      assert.ok(match, 'Original census includes peer birth, state and argv');
       const pid = Number(match[1]), ppid = Number(match[2]), pgid = Number(match[3]);
       assert.ok(Number.isSafeInteger(pid) && pid > 0 && Number.isSafeInteger(ppid) && ppid >= 0 && Number.isSafeInteger(pgid) && pgid >= 0);
-      return { pid, ppid, pgid, birth: match[4]!, command: match[5]!.trim() };
+      assert.match(match[5]!, /^[A-Za-z?][A-Za-z0-9+<>-]{0,15}$/u, 'Original census includes a bounded process state');
+      if (match[5]!.startsWith('Z')) zombies.add(pid);
+      return { pid, ppid, pgid, birth: match[4]!, command: match[6]!.trim() };
     });
     assert.equal(new Set(rows.map(row => row.pid)).size, rows.length, 'Unambiguous original census');
     assert.ok(performance.now() < deadline, 'Original peer census exceeded its deadline');
-    return rows;
+    return { rows, zombies };
   };
-  const table = census(), hosts = table.filter(row => row.pgid === group && row.command === `${fixture.node} ${fixture.hostEntry}`);
+  const table = census(), hosts = table.rows.filter(row => row.pgid === group && row.command === `${fixture.node} ${fixture.hostEntry}`);
   if (phase === 'before-first-team-read') assert.ok(hosts.length <= 1); else assert.equal(hosts.length, 1);
   await readDesktopEmulatedRuntimeEffects(fixture);
   assert.ok(performance.now() < deadline, 'Original peer launch read exceeded its deadline');
@@ -294,7 +297,7 @@ export async function observeDesktopEmulatedRuntimeChildren(group: number,
   assert.ok(performance.now() < deadline, 'Original peer observation deadline');
   const prefixes = [fixture.emulatedRuntime.commandPrefix,
     ...(installed ? [`${fixture.node} ${installed.executable.path} `] : [])];
-  for (const host of hosts) for (const child of table.filter(row => row.ppid === host.pid)) {
+  for (const host of hosts) for (const child of table.rows.filter(row => row.ppid === host.pid)) {
     assert.equal(child.pgid, child.pid);
     const pinnedExecutable = prefixes.some(prefix => child.command.startsWith(prefix));
     if (!pinnedExecutable && !peerRefusals.has(fixture)) try {
@@ -306,7 +309,7 @@ export async function observeDesktopEmulatedRuntimeChildren(group: number,
         parentPid: child.ppid, processGroup: child.pgid, commandBytes: Buffer.byteLength(child.command), commandKind }));
     } catch { /* Diagnostic failure cannot change the original assertion. */ }
     assert.ok(pinnedExecutable, 'Only an exact pinned TEST executable from the original seed or stock installation');
-    let absent = false;
+    let absent = false, retiring = table.zombies.has(child.pid);
     for (;;) {
       assert.ok(performance.now() < deadline, 'Original peer observation deadline');
       const launches: Row[] = (await readDesktopEmulatedRuntimeEffects(fixture)).filter(row => row.event === 'launch' && row.pid === child.pid);
@@ -314,13 +317,23 @@ export async function observeDesktopEmulatedRuntimeChildren(group: number,
       assert.ok(launches.length <= 1, 'One original peer launch; PID reuse remains ambiguous');
       if (launches.length) assert.equal(launches[0]!.parentPid, host.pid, 'Original peer parent');
       const current = census();
-      assert.deepEqual(current.find(row => row.pid === host.pid), host, 'Original Host birth and argv remain current');
-      const peer = current.find(row => row.pid === child.pid);
+      assert.deepEqual(current.rows.find(row => row.pid === host.pid), host, 'Original Host birth and argv remain current');
+      const peer = current.rows.find(row => row.pid === child.pid);
       if (peer) {
         assert.equal(absent, false, 'An absent original peer PID must not reappear');
-        assert.deepEqual(peer, child, 'Original peer birth, parent, group and argv remain current');
+        if (current.zombies.has(peer.pid)) {
+          // A known metadata peer may finish during the journal read. Explicit Z
+          // only keeps this observation pending until fresh absence in its original scope.
+          assert.deepEqual({ pid: peer.pid, ppid: peer.ppid, pgid: peer.pgid, birth: peer.birth },
+            { pid: child.pid, ppid: child.ppid, pgid: child.pgid, birth: child.birth },
+            'Original peer birth, parent and group remain current during zombie retirement');
+          retiring = true;
+        } else {
+          assert.equal(retiring, false, 'Original peer must not revive after zombie retirement');
+          assert.deepEqual(peer, child, 'Original peer birth, parent, group and argv remain current');
+        }
       } else absent = true;
-      if (launches.length) break;
+      if (launches.length && (!retiring || peer === undefined)) break;
       await new Promise<void>(resolve => setTimeout(resolve, Math.min(25, Math.max(0, deadline - performance.now()))));
     }
     if (!fixture.emulatedRuntime.observedPeerPids.includes(child.pid)) fixture.emulatedRuntime.observedPeerPids.push(child.pid);

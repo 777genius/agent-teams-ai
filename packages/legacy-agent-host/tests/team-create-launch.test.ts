@@ -351,7 +351,10 @@ function fixture(withSources = false, provider: 'claude' | 'opencode' = 'claude'
   runtime = createRuntime();
   const projects = new HostTeamProjectContexts({ principalId: profile.principalId, registry,
     team: id => teams.get(id), store: team => projectStores.get(team.definition.binding.teamId)!, assertCurrent,
-    assertStopped: team => runtime.assertRosterEditable(team.definition.binding.teamId, team.definition.members) });
+    assertStopped: team => runtime.assertRosterEditable(team.definition.binding.teamId,
+      team.definition.members.map(({ delivery, ...member }) => ({
+        ...member, ...(delivery === undefined ? {} : { delivery }),
+      }))) });
   const createCoordinator = () =>
     new CreateTeamLaunchCoordinator({
       profile,

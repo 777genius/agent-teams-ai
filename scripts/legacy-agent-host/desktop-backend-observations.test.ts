@@ -1453,6 +1453,7 @@ function emulatedObserverFixture(t: TestContext, mode: string,
       if (mode === 'startup-late-read') now = 10000;
       if (mode === 'startup-near-cutoff') now = 9900;
       if (mode === 'startup-two-peers' && journalReads >= 2) now = journalReads === 2 ? 6000 : 10000;
+      if (mode === 'retirement-stuck' && journalReads >= 2) now = (journalReads - 1) * 1000;
     }
     return value;
   });
@@ -1470,19 +1471,29 @@ function emulatedObserverFixture(t: TestContext, mode: string,
     if (file.endsWith('/lsof')) return process.platform === 'linux'
       ? 'p4100\nf61\ntIPv4\nD0xabcd\ni12345\nPTCP\nTST=LISTEN\nn127.0.0.1:9222\n' : '4100\n';
     assert.equal(file, '/bin/ps');
-    if (args.includes('pid=,ppid=,pgid=,lstart=,command=')) {
+    const withState = args.includes('pid=,ppid=,pgid=,lstart=,stat=,command=');
+    if (withState || args.includes('pid=,ppid=,pgid=,lstart=,command=')) {
       censusReads++; assert.ok(options?.timeout && options.timeout <= 3000);
       censusTimeouts.push(options.timeout);
       if (mode === 'startup-late-census' || mode === 'startup-late-recheck' && censusReads === 2) now = 10000;
       assert.equal(options.env?.LC_ALL, process.platform === 'linux' ? 'C.UTF-8' : 'en_US.UTF-8');
-      const host = '4100 4000 4100 Sun Nov 15 00:00:00 2026 /TEST/electron\n' +
-        (emptyPhase === 'before-first-team-read' ? '' : '4101 4100 4100 Sun Nov 15 00:00:00 2026 /TEST/node /TEST/host.js\n');
+      const state = (value: string) => withState ? value + ' ' : '';
+      const host = `4100 4000 4100 Sun Nov 15 00:00:00 2026 ${state('S')}/TEST/electron\n` +
+        (emptyPhase === 'before-first-team-read' ? '' : `4101 4100 4100 Sun Nov 15 00:00:00 2026 ${state('S')}/TEST/node /TEST/host.js\n`);
       if (emptyPhase !== undefined || censusReads > 1 && mode === 'exit') return host;
-      const birth = censusReads > 1 && mode === 'reuse' ? '00:00:01' : '00:00:00';
-      const parent = censusReads > 1 && mode === 'reparent' ? 4999 : 4101;
-      const argv = censusReads > 1 && mode === 'argv' ? originalCommand + ' --other' : initialCensusCommand;
-      return host + `4200 ${parent} 4200 Sun Nov 15 ${birth} 2026 ${argv}\n` +
-        (mode === 'startup-two-peers' ? `4201 4101 4201 Sun Nov 15 00:00:00 2026 ${originalCommand}\n` : '');
+      if (mode === 'retirement-exit' && censusReads >= 3) {
+        assert.deepEqual(fixture.emulatedRuntime.observedPeerPids, [], 'a present zombie has not qualified retirement');
+        return host;
+      }
+      const retiring = censusReads > 1 && mode.startsWith('retirement-');
+      const revived = mode === 'retirement-revived' && censusReads > 2;
+      const zombie = retiring && !revived && mode !== 'retirement-live-display';
+      const birth = censusReads > 1 && (mode === 'reuse' || mode === 'retirement-birth') ? '00:00:01' : '00:00:00';
+      const parent = censusReads > 1 && (mode === 'reparent' || mode === 'retirement-parent') ? 4999 : 4101;
+      const group = censusReads > 1 && mode === 'retirement-group' ? 4999 : 4200;
+      const argv = retiring && !revived ? '(node)' : censusReads > 1 && mode === 'argv' ? originalCommand + ' --other' : initialCensusCommand;
+      return host + `4200 ${parent} ${group} Sun Nov 15 ${birth} 2026 ${state(zombie ? 'Z' : 'S')}${argv}\n` +
+        (mode === 'startup-two-peers' ? `4201 4101 4201 Sun Nov 15 00:00:00 2026 ${state('S')}${originalCommand}\n` : '');
     }
     if (args[0] === '-ax') return '4100 4000 4100\n' +
       (emptyPhase === 'before-first-team-read' ? '' : '4101 4100 4100\n') +
@@ -1597,6 +1608,32 @@ test(`original peer observation accepts ${mode} only with its retained launch ro
   assert.deepEqual(f.fixture.emulatedRuntime.observedPeerPids, [4200]);
   assert.ok(f.reads().censusReads >= 2);
   if (mode === 'later-row') assert.equal(f.reads().journalReads, 2);
+});
+
+test('original peer observation waits for fresh absence after same-identity explicit zombie retirement', async t => {
+  const f = emulatedObserverFixture(t, 'retirement-exit');
+  await f.observe();
+  assert.deepEqual(f.fixture.emulatedRuntime.observedPeerPids, [4200]);
+  assert.deepEqual(f.reads(), { censusReads: 3, journalReads: 3, signalCalls: 0 });
+  assert.deepEqual(f.censusTimeouts(), [3000, 3000, 3000]);
+  assert.equal(fs.readFileSync(f.journal, 'utf8'), f.journalText);
+});
+
+test('original peer observation retains the original cutoff while zombie retirement remains pending', async t => {
+  const f = emulatedObserverFixture(t, 'retirement-stuck');
+  await assert.rejects(f.observe(), /Original peer .*deadline/);
+  assert.deepEqual(f.fixture.emulatedRuntime.observedPeerPids, []);
+  assert.deepEqual(f.censusTimeouts(), [3000, 2000, 1000]);
+  assert.equal(f.reads().signalCalls, 0);
+});
+
+for (const mode of ['retirement-birth', 'retirement-parent', 'retirement-group', 'retirement-revived', 'retirement-live-display'])
+test(`original peer observation refuses ${mode} without admitting its PID`, async t => {
+  const f = emulatedObserverFixture(t, mode);
+  await assert.rejects(f.observe(), /Original peer/);
+  assert.deepEqual(f.fixture.emulatedRuntime.observedPeerPids, []);
+  assert.equal(f.reads().signalCalls, 0);
+  assert.equal(fs.readFileSync(f.journal, 'utf8'), f.journalText);
 });
 
 for (const mode of ['reuse', 'reparent', 'argv', 'duplicate', 'missing', 'late'])

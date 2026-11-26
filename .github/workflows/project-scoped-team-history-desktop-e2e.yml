@@ -106,14 +106,14 @@ jobs:
     env:
       AGENT_TEAMS_INSTALL_PROFILE: node-ci
     steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          persist-credentials: false
       - name: Enable Windows long paths
         if: runner.os == 'Windows'
         shell: pwsh
         run: git config --global core.longpaths true
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
         with:
@@ -126,6 +126,8 @@ jobs:
           sudo apt-get install -y xvfb
       - name: Install frozen dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Build isolated Host before Electron startup
+        run: pnpm --filter @agent-teams/legacy-agent-host build
       - name: Verify Electron binary
         run: node ./scripts/ensure-electron-install.cjs --strict
       - name: Stage pinned terminal runtime on Windows

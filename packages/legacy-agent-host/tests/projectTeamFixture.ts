@@ -36,7 +36,13 @@ export function openProjectTeamFixture(root: string, options: {
     if (teams.has(definition.binding.teamId)) return;
     const store = new TeamOwnerStore(root, definition.binding.teamName);
     const owner = createFilesystemTeamOwner({ root, store, binding: definition.binding,
-      ...(definition.savedSettings ? { savedSettings: definition.savedSettings } : {}), members: definition.members, grants: definition.grants,
+      ...(definition.savedSettings ? { savedSettings: definition.savedSettings } : {}),
+      members: definition.members.map(({ delivery, ...member }) => ({
+        ...member, ...(delivery === undefined ? {} : { delivery }),
+      })),
+      grants: definition.grants.map(({ revoked, ...grant }) => ({
+        ...grant, ...(revoked === undefined ? {} : { revoked }),
+      })),
       assertRosterEditable: () => { const team = teams.get(definition.binding.teamId); if (team) assertStopped(team); } });
     const connection = owner.connect(principalId);
     connection.readRoster(); stores.set(definition.binding.teamId, store);

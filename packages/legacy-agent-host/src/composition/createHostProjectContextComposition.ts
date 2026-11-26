@@ -4,7 +4,7 @@ import { TeamOwnerError } from '../team/contracts.js';
 import { replaceRosterPayloadSchema } from '../team/rosterSchema.js';
 import { createHostProjectReviewFlowComposition } from './createHostProjectReviewFlowComposition.js';
 import { parsePreparationEnvelope, selectBoundHostTeam, json } from './teamHostEnvelope.js';
-import type { HostMethod } from '../index.js';
+import type { HostMethod, JsonValue } from '../index.js';
 import type { TeamHostProfile } from './teamHostProfile.js';
 import type { HostedTeam, RuntimeTeamCoordinator } from './RuntimeTeamCoordinator.js';
 import type { TeamRegistry } from '../team-registry/TeamRegistry.js';
@@ -78,7 +78,7 @@ export function createHostProjectContextComposition(options: {
     const operation = `team.project-context.${action}`;
     methods[operation] = {
       lane: action === 'prepare' ? 'work' : 'control',
-      handle(raw) {
+      handle(raw): JsonValue {
         try {
           options.assertCurrent();
           const input = parsePreparationEnvelope(raw, operation);

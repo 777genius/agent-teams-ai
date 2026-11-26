@@ -2464,13 +2464,15 @@ async function selectionStoppedConvergence(options: {
     const {assert,effects,ui,cdp,options,processTable,literal,hostTeamSelectionKey,hostTeamRunId,Date,setTimeout}=environment;
     ${actual}
     return stop;`) as (environment: Record<string, unknown>) => (live: unknown, observeStoppedUi?: boolean) => Promise<unknown>;
-  const key = hostTeamSelectionKey('TEST-selection-owner'), runId = hostTeamRunId('TEST-selection-owner', 'TEST-launch', 'TEST-roster');
+  const key = hostTeamSelectionKey('TEST-selection-owner');
+  const execution = { handleId: 'TEST-selection-execution' };
+  const runId = hostTeamRunId(execution.handleId, 'TEST-launch', 'TEST-roster');
   const binding = { backendId: 'TEST-backend', teamId: 'TEST-team', runId: 'TEST-launch', memberId: 'TEST-lead', generation: 'TEST-generation' };
   const trace: string[] = [], delays: number[] = [], budgets: number[] = [], values: boolean[] = [];
   const failure = new Error('TEST original stopped observation refusal');
   let now = 0, reads = 0, guards = 0, tables = 0, sessions = 0, storeReads = 0;
   const box = (visible = true) => ({ visible, getBoundingClientRect: () => ({ width: 100, height: 30 }) });
-  const live = { handleId: 'TEST-selection-owner', definition: { launchId: 'TEST-launch', rosterRevision: 'TEST-roster' },
+  const live = { handleId: 'TEST-selection-owner', execution, definition: { launchId: 'TEST-launch', rosterRevision: 'TEST-roster' },
     initial: { binding }, thread: { pid: 104 }, async session() {
       sessions++; trace.push('session');
       return { phase: 'closed', custody: 'released', binding: options.bindingMismatch ? { ...binding, generation: 'TEST-other' } : { ...binding } };
@@ -2491,7 +2493,7 @@ async function selectionStoppedConvergence(options: {
     cdp: { async evaluate(expression: string, timeoutMs: number) {
       trace.push('evaluate'); budgets.push(timeoutMs); const index = reads++, mode = options.modes?.[index];
       if (mode === undefined) throw failure;
-      const changed = hostTeamRunId('TEST-selection-owner', 'TEST-launch', 'TEST-other-roster');
+      const changed = hostTeamRunId(execution.handleId, 'TEST-launch', 'TEST-other-roster');
       const observedRun = mode === 'other-revision' ? changed : runId;
       const state = { selectedTeamName: mode === 'other-owner' ? hostTeamSelectionKey('TEST-other-owner') : key,
         currentProvisioningRunIdByTeam: { [key]: mode === 'provisioning-pin' ? changed : observedRun },

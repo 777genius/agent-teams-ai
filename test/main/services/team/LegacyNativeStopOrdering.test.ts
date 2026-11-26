@@ -196,6 +196,11 @@ function fixture() {
       events.push('native-stop-once');
       recordVerifiedCliProcessRelease(child, [processIdentity]);
     }),
+    stopOriginalWindowsDirectMembers: vi.fn(
+      async (processes: ReadonlySet<ChildProcess> | undefined) => {
+        expect(processes).toBeUndefined();
+      }
+    ),
     updateProgress: (current, state, message) => ({
       runId: current.runId,
       teamName,
