@@ -3,6 +3,7 @@ import {
   createLoadingMultimodelCliStatus,
   getCliProviderStatusScopeKey,
   reconcileCliStatus,
+  refreshCodexProviderStatusAfterRuntimeInstall,
 } from '@renderer/store/slices/cliInstallerSlice';
 import { describe, expect, it, vi } from 'vitest';
 import { createStore } from 'zustand/vanilla';
@@ -10,6 +11,7 @@ import { createStore } from 'zustand/vanilla';
 import type { CliInstallerSlice } from '@renderer/store/slices/cliInstallerSlice';
 import type { ElectronAPI } from '@shared/types/api';
 import type {
+  CliInstallationStatus,
   CliProviderReasoningEffort,
   CliProviderStatus,
   OpenCodeRuntimeStatus,
@@ -657,9 +659,11 @@ describe('provider status loading ownership', () => {
         models: ['ollama/project-previous'],
       });
       expect(pending.cliProviderStatusLoading.opencode).toBe(true);
+      expect(pending.cliStatus?.authStatusChecking).toBe(true);
       fixture.responses[1].resolve(fixture.ready('ollama/project-current'));
       await expect(projectRead).resolves.toBe(true);
       expect(fixture.store.getState().cliProviderStatusLoading.opencode).toBe(false);
+      expect(fixture.store.getState().cliStatus?.authStatusChecking).toBe(false);
       expect(fixture.store.getState().cliProviderStatusByScope[scopeKey]?.models).toEqual([
         'ollama/project-current',
       ]);
@@ -670,6 +674,241 @@ describe('provider status loading ownership', () => {
       await fixture.cleanup();
     }
   });
+
+  it.each(['reject', 'invalidate'] as const)(
+    'settles aggregate auth after the final project read ends with %s',
+    async (outcome) => {
+      const fixture = pendingStatusStore();
+      const projectPath = '/sandbox/TEST-opencode-auth-settlement';
+      try {
+        const globalRead = fixture.fetch({ silent: false });
+        const projectRead = fixture.fetch({ projectPath });
+        fixture.responses[0].resolve(fixture.ready('opencode/global-current'));
+        await expect(globalRead).resolves.toBe(true);
+        expect(fixture.store.getState().cliStatus?.authStatusChecking).toBe(true);
+        if (outcome === 'reject') {
+          const error = new Error('TEST project status rejected');
+          fixture.responses[1].reject(error);
+          await expect(projectRead).resolves.toBe(false);
+          expect(vi.mocked(console.error).mock.calls).toEqual([
+            ['[Store:cliInstaller]', 'Failed to fetch opencode CLI status:', error],
+          ]);
+          vi.mocked(console.error).mockClear();
+        } else {
+          fixture.store.getState().invalidateCliProviderModelCatalog({ scopedOnly: true });
+          expect(fixture.store.getState().cliStatus?.authStatusChecking).toBe(false);
+          fixture.responses[1].resolve(fixture.ready('ollama/obsolete-project'));
+          await expect(projectRead).resolves.toBe(false);
+        }
+        expect(fixture.store.getState().cliProviderStatusLoading.opencode).not.toBe(true);
+        expect(fixture.store.getState().cliStatus).toMatchObject({
+          authStatusChecking: false,
+          authLoggedIn: true,
+          providers: [{ models: ['opencode/global-current'] }],
+        });
+      } finally {
+        await fixture.cleanup();
+      }
+    }
+  );
+
+  it.each([
+    { outcome: 'resolve', successor: false, projectPath: undefined },
+    { outcome: 'reject', successor: false, projectPath: '/sandbox/TEST-codex-install-epoch' },
+    { outcome: 'resolve', successor: true, projectPath: '/sandbox/TEST-codex-install-epoch' },
+    { outcome: 'reject', successor: true, projectPath: undefined },
+  ] as const)(
+    'retires old-epoch loading on Codex install: $outcome, successor=$successor, scope=$projectPath',
+    async ({ outcome, successor, projectPath }) => {
+      const fixture = pendingStatusStore();
+      const codexReady: CliProviderStatus = {
+        ...fixture.ready('codex/installed', 'codex'),
+        availableBackends: [
+          {
+            id: 'codex-native',
+            label: 'TEST Codex runtime',
+            description: 'TEST app-managed runtime',
+            available: true,
+            selectable: true,
+            recommended: true,
+          },
+        ],
+      };
+      let refresh: Promise<void> | undefined;
+      try {
+        const oldRead = fixture.fetch({ projectPath });
+        refresh = refreshCodexProviderStatusAfterRuntimeInstall(fixture.store.getState);
+        await vi.waitFor(() => expect(fixture.getProviderStatus).toHaveBeenCalledTimes(2));
+        expect(fixture.getProviderStatus).toHaveBeenCalledTimes(2);
+        expect(fixture.getProviderStatus).toHaveBeenNthCalledWith(2, 'codex');
+        fixture.responses[1].resolve(codexReady);
+        await refresh;
+        expect(fixture.store.getState().cliProviderStatusLoading.opencode).not.toBe(true);
+        expect(fixture.store.getState().cliStatus?.authStatusChecking).toBe(false);
+
+        const currentRead = successor ? fixture.fetch({ projectPath }) : null;
+        if (outcome === 'reject') {
+          const error = new Error('TEST retired epoch rejected');
+          fixture.responses[0].reject(error);
+          await expect(oldRead).resolves.toBe(false);
+          expect(vi.mocked(console.error).mock.calls).toEqual([
+            ['[Store:cliInstaller]', 'Failed to fetch opencode CLI status:', error],
+          ]);
+          vi.mocked(console.error).mockClear();
+        } else {
+          fixture.responses[0].resolve(fixture.ready('opencode/obsolete-epoch'));
+          await expect(oldRead).resolves.toBe(false);
+        }
+        expect(fixture.store.getState().cliStatus?.authStatusChecking).toBe(successor);
+        expect(fixture.store.getState().cliStatus?.providers[0].models).toEqual([
+          'opencode/global-previous',
+        ]);
+        if (currentRead) {
+          expect(fixture.store.getState().cliProviderStatusLoading.opencode).toBe(true);
+          fixture.responses[2].resolve(fixture.ready('opencode/current-epoch'));
+          await expect(currentRead).resolves.toBe(true);
+        }
+        expect(fixture.store.getState().cliProviderStatusLoading.opencode).not.toBe(true);
+        expect(fixture.store.getState().cliStatus?.authStatusChecking).toBe(false);
+      } finally {
+        fixture.responses[1]?.resolve(codexReady);
+        try {
+          await refresh;
+        } finally {
+          await fixture.cleanup();
+        }
+      }
+    }
+  );
+
+  it.each([false, true])(
+    'retires whole-status ownership on Codex install without disturbing a successor=%s',
+    async (successor) => {
+      const fixture = pendingStatusStore();
+      const metadataResponses: ((status: CliInstallationStatus) => void)[] = [];
+      const metadataReads: Promise<void>[] = [];
+      const getStatus = vi.fn(
+        () => new Promise<CliInstallationStatus>((resolve) => metadataResponses.push(resolve))
+      );
+      Object.assign(window.electronAPI!.cliInstaller, { getStatus });
+      const codexReady: CliProviderStatus = {
+        ...fixture.ready('codex/installed', 'codex'),
+        availableBackends: [
+          {
+            id: 'codex-native',
+            label: 'TEST Codex runtime',
+            description: 'TEST app-managed runtime',
+            available: true,
+            selectable: true,
+            recommended: true,
+          },
+        ],
+      };
+      const currentMetadata: CliInstallationStatus = {
+        ...createLoadingMultimodelCliStatus(),
+        installed: false,
+        launchError: 'TEST current metadata',
+      };
+      let refresh: Promise<void> | undefined;
+      try {
+        const oldRead = fixture.store.getState().fetchCliStatus();
+        metadataReads.push(oldRead);
+        expect(fixture.store.getState().cliStatusLoading).toBe(true);
+        refresh = refreshCodexProviderStatusAfterRuntimeInstall(fixture.store.getState);
+        await vi.waitFor(() => expect(fixture.getProviderStatus).toHaveBeenCalledTimes(1));
+        fixture.responses[0].resolve(codexReady);
+        await refresh;
+        expect(fixture.store.getState().cliStatusLoading).toBe(false);
+        const currentRead = successor ? fixture.store.getState().fetchCliStatus() : null;
+        if (currentRead) metadataReads.push(currentRead);
+        expect(getStatus).toHaveBeenCalledTimes(successor ? 2 : 1);
+        metadataResponses[0]({ ...currentMetadata, launchError: 'TEST obsolete metadata' });
+        await oldRead;
+        expect(fixture.store.getState().cliStatusLoading).toBe(successor);
+        expect(fixture.store.getState().cliStatus?.launchError).toBeNull();
+        if (currentRead) {
+          metadataResponses[1](currentMetadata);
+          await currentRead;
+          expect(fixture.store.getState().cliStatus?.launchError).toBe('TEST current metadata');
+        }
+        expect(fixture.store.getState().cliStatusLoading).toBe(false);
+      } finally {
+        fixture.responses[0]?.resolve(codexReady);
+        for (const resolve of metadataResponses) resolve(currentMetadata);
+        try {
+          await Promise.all([...metadataReads, refresh]);
+        } finally {
+          await fixture.cleanup();
+        }
+      }
+    }
+  );
+
+  it.each(['invalidation', 'provider', 'retry-delay'] as const)(
+    'does not let an install refresh superseded during %s adopt a newer invalidation',
+    async (stage) => {
+      vi.useFakeTimers();
+      const fixture = pendingStatusStore();
+      const invalidateStatus = vi.mocked(window.electronAPI!.cliInstaller.invalidateStatus);
+      let acknowledgeOld!: () => void;
+      let acknowledgeNew!: () => void;
+      const oldAcknowledgement = new Promise<void>((resolve) => {
+        acknowledgeOld = resolve;
+      });
+      const newAcknowledgement = new Promise<void>((resolve) => {
+        acknowledgeNew = resolve;
+      });
+      const codexReady: CliProviderStatus = {
+        ...fixture.ready('codex/installed', 'codex'),
+        availableBackends: [
+          {
+            id: 'codex-native',
+            label: 'TEST Codex runtime',
+            description: 'TEST app-managed runtime',
+            available: true,
+            selectable: true,
+            recommended: true,
+          },
+        ],
+      };
+      if (stage === 'invalidation') invalidateStatus.mockReturnValueOnce(oldAcknowledgement);
+      else invalidateStatus.mockResolvedValueOnce(undefined);
+      invalidateStatus.mockReturnValueOnce(newAcknowledgement);
+      let refresh: Promise<void> | undefined;
+      let newerInvalidation: Promise<void> | undefined;
+      try {
+        refresh = refreshCodexProviderStatusAfterRuntimeInstall(fixture.store.getState);
+        await vi.advanceTimersByTimeAsync(0);
+        if (stage === 'retry-delay') {
+          fixture.responses[0].resolve(fixture.ready('codex/not-installed', 'codex'));
+          await vi.advanceTimersByTimeAsync(0);
+          expect(vi.getTimerCount()).toBe(1);
+        }
+        const providersBeforeInvalidation = fixture.store.getState().cliStatus?.providers;
+        newerInvalidation = fixture.store.getState().invalidateCliStatus();
+        acknowledgeOld();
+        if (stage === 'provider') fixture.responses[0].resolve(codexReady);
+        await vi.advanceTimersByTimeAsync(700);
+        expect(invalidateStatus).toHaveBeenCalledTimes(2);
+        expect(fixture.getProviderStatus).toHaveBeenCalledTimes(stage === 'invalidation' ? 0 : 1);
+        expect(fixture.store.getState().cliProviderStatusLoading.codex).not.toBe(true);
+        expect(fixture.store.getState().cliStatus?.providers).toEqual(providersBeforeInvalidation);
+        await refresh;
+      } finally {
+        acknowledgeOld();
+        acknowledgeNew();
+        fixture.getProviderStatus.mockResolvedValue(codexReady);
+        for (const response of fixture.responses) response.resolve(codexReady);
+        try {
+          await vi.advanceTimersByTimeAsync(2_100);
+          await Promise.all([refresh, newerInvalidation]);
+        } finally {
+          await fixture.cleanup();
+          vi.useRealTimers();
+        }
+      }
+    }
+  );
 
   it('keeps an independent silent global read quiet', async () => {
     const fixture = pendingStatusStore();
@@ -782,6 +1021,7 @@ describe('provider status loading ownership', () => {
         expect(fixture.store.getState().cliProviderStatusLoading.opencode).toBe(
           silent ? undefined : true
         );
+        expect(fixture.store.getState().cliStatus?.authStatusChecking).toBe(!silent);
         fixture.responses[0].resolve(fixture.ready('ollama/obsolete-project'));
         await expect(projectRead).resolves.toBe(false);
         expect(fixture.store.getState().cliProviderStatusByScope).not.toHaveProperty(
@@ -917,6 +1157,7 @@ describe('provider catalog invalidation races', () => {
       expect(store.getState().cliProviderStatusLoading.codex).toBe(true);
       store.getState().invalidateCliProviderModelCatalog();
       expect(store.getState().cliProviderStatusLoading.codex).toBeUndefined();
+      expect(store.getState().cliStatus?.authStatusChecking).toBe(false);
       resolveStatus({
         providerId: 'codex',
         models: [],

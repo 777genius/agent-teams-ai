@@ -2074,7 +2074,7 @@ jobs:
             assert.equal(source.status, 'PASS'); assert.equal(source.sourceKind, 'actual-current-native-solo');
             assert.deepEqual(source, receipt.currentStoppedProducer);
             assert.equal(source.producer.commit, process.env.OPENCODE_V2_TEST_SOURCE_HEAD);
-            assert.equal(source.producer.runtime.version, '0.0.160');
+            assert.equal(source.producer.runtime.version, '0.0.161');
             assert.equal(source.producer.runtime.cacheValidated, true);
             assert.equal(source.hostDescriptorPresent, false); assert.equal(source.sourceFrozen, true);
             assert.deepEqual(source.ordinaryQuit, { requestedOnce: true, exitCode: 0, signalCode: null,

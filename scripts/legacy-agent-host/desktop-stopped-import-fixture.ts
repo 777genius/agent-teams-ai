@@ -133,11 +133,11 @@ export async function captureCurrentStoppedSourceInputs(directory: string, node:
   );
   const fileDigest = async (path: string) => digest(await readFile(path));
   const lock = await read(join(root, 'runtime.lock.json'));
-  assert.equal(lock.version, '0.0.160');
+  assert.equal(lock.version, '0.0.161');
   const asset = row(row(lock.assets)['darwin-arm64']);
-  assert.equal(asset.sha256, 'facece83f619c4b1c1ec3a76cff25727d85a2b75d18812cbc3a5b729e855ecc9');
+  assert.equal(asset.sha256, '8c436b746dce35eb91e7125b3cc6e3fcbe1965008dded29d4655fb28c4382d7b');
   const cache = await realpath(process.env.LEGACY_DESKTOP_CURRENT_RUNTIME_CACHE!);
-  const payload = join(cache, '0.0.160/darwin-arm64/payload-v1');
+  const payload = join(cache, '0.0.161/darwin-arm64/payload-v1');
   const native = await realpath(join(payload, String(asset.binaryName)));
   assert.equal(dirname(native), payload);
   const validator = await import(
