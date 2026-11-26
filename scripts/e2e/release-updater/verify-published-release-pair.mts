@@ -28,30 +28,16 @@ const evidence = verifyPublished219Pair(
   predecessorTagSha,
   targetTagSha
 );
-const publicAssets = [
-  'Agent.Teams.AI.Setup.2.19.0.exe',
-  'Agent.Teams.AI.Setup.2.19.0-arm64.exe',
-  'Agent.Teams.AI-2.19.0-arm64.dmg',
-  'Agent.Teams.AI-2.19.0-x64.dmg',
-  'Agent.Teams.AI-2.19.0.AppImage',
-  'agent-teams-ai_2.19.0_amd64.deb',
-  'agent-teams-ai-2.19.0.x86_64.rpm',
-  'agent-teams-ai-2.19.0.pacman',
-  'latest.yml',
-  'latest-mac.yml',
-  'latest-linux.yml',
-];
-for (const name of publicAssets) {
-  const pin = published219Pair.targetAssets.find((asset) => asset.name === name);
-  assert(pin, 'Missing public URL pin: ' + name);
-  await port.publicAsset(published219Pair.repository, published219Pair.target.tag, name);
+const publicAssets = published219Pair.targetAssets;
+for (const pin of publicAssets) {
+  await port.publicAsset(published219Pair.repository, published219Pair.target.tag, pin.name);
 }
 process.stdout.write(
   JSON.stringify(
     {
       ...evidence,
       tagRefs: { predecessor: predecessorTagSha, target: targetTagSha },
-      publicAssetsHeadChecked: publicAssets,
+      publicAssetsHeadChecked: publicAssets.map((asset) => asset.name),
       releaseMutation: false,
     },
     null,

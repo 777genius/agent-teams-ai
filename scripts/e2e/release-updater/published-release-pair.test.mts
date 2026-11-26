@@ -135,6 +135,15 @@ test('rejects drafts, prereleases, a stale latest release, and altered asset met
       published219Pair.target.applicationSha
     )
   );
+  assert.throws(() =>
+    verifyPublished219Pair(
+      valid.predecessor,
+      valid.target,
+      { ...valid.latest, target_commitish: 'c'.repeat(40) },
+      published219Pair.predecessor.applicationSha,
+      published219Pair.target.applicationSha
+    )
+  );
   const changed = {
     ...valid.target,
     assets: valid.target.assets.map((asset, index) =>

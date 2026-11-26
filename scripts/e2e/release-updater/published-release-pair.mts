@@ -111,6 +111,7 @@ export function verifyPublished219Pair(
   checkRelease(latest, undefined, false);
   assert.equal(latest.id, target.id, 'GitHub latest release ID');
   assert.equal(latest.tag_name, target.tag_name, 'GitHub latest release tag');
+  assert.equal(latest.target_commitish, target.target_commitish, 'GitHub latest target commit');
   assert(older(predecessor.tag_name, target.tag_name), 'Target must be newer than predecessor');
   return {
     repository: published219Pair.repository,
