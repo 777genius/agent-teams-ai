@@ -410,6 +410,7 @@ describe(
             }),
             runId: input.runId,
             capabilitySnapshotId,
+            expectedCapabilitySnapshotId: capabilitySnapshotId,
             beforeHandshakeReply: async () => {
               markHandshakeEntered();
               await handshakeReleased;
@@ -487,8 +488,8 @@ describe(
         runId: null,
       });
       await expect(
-        readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
-      ).resolves.toMatchObject({ lanes: {} });
+        readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName).then((index) => index.lanes)
+      ).resolves.toStrictEqual({});
       await expect(
         fs.access(path.join(getTeamsBasePath(), teamName, 'launch-state.json'))
       ).rejects.toMatchObject({ code: 'ENOENT' });
@@ -503,6 +504,10 @@ describe(
       let primaryAttempts = 0;
       let releaseSecondary!: () => void;
       let markSecondaryEntered!: () => void;
+      let abortPrimaryWait!: () => void;
+      const primaryWaitAborted = new Promise<void>((resolve) => {
+        abortPrimaryWait = resolve;
+      });
       const secondaryReleased = new Promise<void>((resolve) => {
         releaseSecondary = resolve;
       });
@@ -514,17 +519,19 @@ describe(
           primaryAttempts += 1;
           if (primaryAttempts === 1) {
             adapter.stopInputs.push(input);
-            await secondaryEntered;
+            await Promise.race([secondaryEntered, primaryWaitAborted]);
             events.push('primary_failed');
             throw failure;
           }
+          const laneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName);
+          expect(laneIndex.lanes['secondary:opencode:atlas']).toBeUndefined();
+          events.push('secondary_cleanup_settled');
           events.push('primary_retry');
           return originalStop(input);
         }
         const result = await originalStop(input);
         markSecondaryEntered();
         await secondaryReleased;
-        events.push('secondary_stopped');
         return result;
       };
       const svc = new TeamProvisioningService();
@@ -574,12 +581,13 @@ describe(
         await new Promise<void>((resolve) => setImmediate(resolve));
         expect(stoppingSettled).toBe(false);
       } finally {
+        abortPrimaryWait();
         releaseSecondary();
-        await Promise.allSettled([creating, stopping]);
+        await settleLaunchOperationsWithin([creating, stopping], 5_000, 'secondary Stop cleanup');
       }
       await creating;
       expect(await stopping).toEqual({ status: 'rejected', reason: failure });
-      expect(events).toEqual(['primary_failed', 'secondary_stopped', 'primary_retry']);
+      expect(events).toEqual(['primary_failed', 'secondary_cleanup_settled', 'primary_retry']);
       expect(
         adapter.stopInputs.filter((input) => input.laneId === 'secondary:opencode:atlas')
       ).toHaveLength(1);
@@ -589,8 +597,8 @@ describe(
         runId: null,
       });
       await expect(
-        readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
-      ).resolves.toMatchObject({ lanes: {} });
+        readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName).then((index) => index.lanes)
+      ).resolves.toStrictEqual({});
       await expect(
         fs.access(path.join(getTeamsBasePath(), teamName, 'launch-state.json'))
       ).rejects.toMatchObject({ code: 'ENOENT' });
@@ -636,7 +644,12 @@ describe(
         stopping = svc.stopTeam(teamName);
       } finally {
         launchGate.release();
-        await Promise.allSettled([creating, stopping]);
+        try {
+          await settleLaunchOperationsWithin([creating, stopping], 5_000, 'queued Stop lock');
+        } catch (error) {
+          launchGate.abort();
+          throw error;
+        }
       }
       await Promise.all([creating, stopping]);
       await waitForLaunchStateQueueIdle(svc, teamName);
@@ -646,8 +659,8 @@ describe(
         runId: null,
       });
       await expect(
-        readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
-      ).resolves.toMatchObject({ lanes: {} });
+        readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName).then((index) => index.lanes)
+      ).resolves.toStrictEqual({});
     });
 
     it('launches a pure OpenCode team through the runtime adapter and exposes live members', async () => {
@@ -3242,6 +3255,7 @@ describe(
         manifestReader,
         runId,
         capabilitySnapshotId,
+        expectedCapabilitySnapshotId: capabilitySnapshotId,
       });
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([stopFixture.adapter]));
       const app = Fastify();
@@ -22499,6 +22513,7 @@ function createStaleWatermarkStopAdapterFixture(input: {
   manifestReader: OpenCodeRuntimeManifestEvidenceReader;
   runId: string;
   capabilitySnapshotId: string;
+  expectedCapabilitySnapshotId?: string | null;
   beforeHandshakeReply?: () => Promise<void>;
 }): {
   adapter: OpenCodeTeamRuntimeAdapter;
@@ -22509,6 +22524,10 @@ function createStaleWatermarkStopAdapterFixture(input: {
   const handshakeExpectedWatermarks: Array<number | null> = [];
   const stopExpectedWatermarks: Array<number | null> = [];
   const stoppedRunIds: string[] = [];
+  const expectedCapabilitySnapshotId =
+    input.expectedCapabilitySnapshotId === undefined
+      ? input.capabilitySnapshotId
+      : input.expectedCapabilitySnapshotId;
   const clientIdentity = createOpenCodeBridgeClientIdentity({
     appVersion: 'issue-504-fixture-e2e',
     buildId: 'issue-504-fixture-e2e',
@@ -22537,10 +22556,9 @@ function createStaleWatermarkStopAdapterFixture(input: {
         };
         expect(request).toMatchObject({
           expectedRunId: input.runId,
-          expectedCapabilitySnapshotId: request.allowEmptyLaneStop
-            ? null
-            : input.capabilitySnapshotId,
+          expectedCapabilitySnapshotId,
         });
+        expect(request.allowEmptyLaneStop === true).toBe(expectedCapabilitySnapshotId === null);
         handshakeExpectedWatermarks.push(request.expectedManifestHighWatermark);
         await input.beforeHandshakeReply?.();
         const server: OpenCodeBridgePeerIdentity = {
@@ -22594,16 +22612,13 @@ function createStaleWatermarkStopAdapterFixture(input: {
         };
         expect(request).toMatchObject({
           runId: input.runId,
-          expectedCapabilitySnapshotId: request.allowEmptyLaneStop
-            ? null
-            : input.capabilitySnapshotId,
+          expectedCapabilitySnapshotId,
           preconditions: {
             expectedRunId: input.runId,
-            expectedCapabilitySnapshotId: request.allowEmptyLaneStop
-              ? null
-              : input.capabilitySnapshotId,
+            expectedCapabilitySnapshotId,
           },
         });
+        expect(request.allowEmptyLaneStop === true).toBe(expectedCapabilitySnapshotId === null);
         stopExpectedWatermarks.push(request.preconditions.expectedManifestHighWatermark);
         stoppedRunIds.push(request.runId);
         return {
@@ -22691,6 +22706,7 @@ class FakeOpenCodeRuntimeAdapter implements TeamLaunchRuntimeAdapter {
   private nextPrimaryLaunchGate: {
     entered: () => void;
     released: Promise<void>;
+    aborted: Promise<never>;
   } | null = null;
   private nextLaneStopGate: {
     laneId: string;
@@ -22723,17 +22739,29 @@ class FakeOpenCodeRuntimeAdapter implements TeamLaunchRuntimeAdapter {
     this.nextPrimaryMemberOutcomes = { outcomes, remaining: Math.max(1, times) };
   }
 
-  holdNextPrimaryLaunch(): { entered: Promise<void>; release: () => void } {
+  holdNextPrimaryLaunch(): {
+    entered: Promise<void>;
+    release: () => void;
+    abort: () => void;
+  } {
     let markEntered!: () => void;
     let release!: () => void;
+    let abort!: (reason: Error) => void;
     const entered = new Promise<void>((resolve) => {
       markEntered = resolve;
     });
     const released = new Promise<void>((resolve) => {
       release = resolve;
     });
-    this.nextPrimaryLaunchGate = { entered: markEntered, released };
-    return { entered, release };
+    const aborted = new Promise<never>((_resolve, reject) => {
+      abort = reject;
+    });
+    this.nextPrimaryLaunchGate = { entered: markEntered, released, aborted };
+    return {
+      entered,
+      release,
+      abort: () => abort(new Error('Aborted primary launch fixture gate during teardown')),
+    };
   }
 
   holdNextLaneStop(laneId: string): { entered: Promise<void>; release: () => void } {
@@ -22777,7 +22805,7 @@ class FakeOpenCodeRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       const gate = this.nextPrimaryLaunchGate;
       this.nextPrimaryLaunchGate = null;
       gate.entered();
-      await gate.released;
+      await Promise.race([gate.released, gate.aborted]);
     }
     if (input.laneId === 'primary' && this.nextPrimaryLaunchError) {
       const failure = this.nextPrimaryLaunchError;
@@ -23194,17 +23222,54 @@ class BlockingOpenCodeRuntimeAdapter extends FakeOpenCodeRuntimeAdapter {
   }
 }
 
+async function settleLaunchOperationsWithin(
+  operations: readonly (Promise<unknown> | undefined)[],
+  timeoutMs: number,
+  description: string
+): Promise<void> {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const settled = await Promise.race([
+      Promise.allSettled(
+        operations.filter((operation): operation is Promise<unknown> => operation !== undefined)
+      ).then(() => true),
+      new Promise<boolean>((resolve) => {
+        timeout = setTimeout(() => resolve(false), timeoutMs);
+      }),
+    ]);
+    if (!settled) {
+      throw new Error(
+        `Timed out waiting for ${description} operations to settle after ${timeoutMs}ms`
+      );
+    }
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
+}
+
 async function waitForLaunchMilestone(
   milestone: Promise<void>,
   creating: Promise<unknown>,
-  description: string
+  description: string,
+  timeoutMs = LAUNCH_MATRIX_SAFE_E2E_TIMEOUT_MS
 ): Promise<void> {
-  await Promise.race([
-    milestone,
-    creating.then(() => {
-      throw new Error(`Launch completed before ${description}`);
-    }),
-  ]);
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await Promise.race([
+      milestone,
+      creating.then(() => {
+        throw new Error(`Launch completed before ${description}`);
+      }),
+      new Promise<never>((_resolve, reject) => {
+        timeout = setTimeout(
+          () => reject(new Error(`Timed out waiting for ${description} after ${timeoutMs}ms`)),
+          timeoutMs
+        );
+      }),
+    ]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
 }
 
 /**
