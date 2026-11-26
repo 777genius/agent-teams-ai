@@ -37,11 +37,12 @@ const openCodeHash = '417af53923f3d529759ab85ce3e8dd09116f742efcd332de591d2da6eb
 /** Identity is read from the original capture AND its live registered grant. */
 export function readMixedCapturedPrincipal(
   root: string,
-  provider: 'claude' | 'codex' | 'opencode'
+  provider: 'claude' | 'codex' | 'opencode',
+  readProjectState?: () => unknown
 ) {
   assert.match(basename(root), /^TEST-desktop-backend-/);
   const state = record(
-    JSON.parse(
+    readProjectState ? readProjectState() : JSON.parse(
       readFileSync(
         join(root, 'hoststore/teams', mixedDesktopTeamName, '.host-owner/state.json'),
         'utf8'
@@ -188,18 +189,32 @@ export function readMixedLiveMembershipIdentity(root: string, provider: 'claude'
 }
 
 /** Called only inside the explicitly authorized desktop proof; no agent starts here. */
-export async function startDesktopMixedModels(root: () => string, options: { nativeGeneration?: 'v2'; liveMembership?: true } = {}) {
+export async function startDesktopMixedModels(root: () => string, options: {
+  nativeGeneration?: 'v2'; liveMembership?: true; readProjectState?: () => unknown;
+} = {}) {
   assert.equal(process.env.LEGACY_DESKTOP_BACKEND_GO, '1');
   if (options.liveMembership) assert.equal(process.env.LEGACY_DESKTOP_MIXED_MEMBERSHIP_UI, '1');
   let membershipPhase: LiveMembershipModelPhase = 'idle', membershipTarget: DesktopLiveMemberSelection | undefined;
   let membershipOwner: DesktopProjectExecutionOwner | undefined;
+  const projectState = () => {
+    assert.ok(options.readProjectState, 'original mixed project owner reader is required');
+    return record(options.readProjectState());
+  };
+  const executionTeamName = () => {
+    const name = record(projectState().binding).teamName;
+    assert.ok(typeof name === 'string' && /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(name));
+    assert.notEqual(name, mixedDesktopTeamName, 'native work belongs to the exact project execution');
+    return name;
+  };
+  const notices = (actor: 'team-lead' | 'bob' | 'carol') =>
+    createMixedTaskNoticeReader(root, actor, options.liveMembership ? undefined : executionTeamName);
   const membershipIdentity = (provider: 'claude' | 'codex' | 'opencode', target?: DesktopLiveMemberSelection) => {
     assert.ok(membershipOwner, 'the original project execution is captured before any membership request');
     return readMixedLiveMembershipIdentity(root(), provider, target, membershipOwner);
   };
   const principal = (provider: 'claude' | 'codex' | 'opencode') => options.liveMembership
     ? membershipIdentity(provider, provider === 'opencode' ? membershipTarget : undefined).principalId
-    : readMixedCapturedPrincipal(root(), provider);
+    : readMixedCapturedPrincipal(root(), provider, projectState);
   let claudeProbePhase: 'native' | 'cold-readback' = 'native';
   let settingsProbe: SettingsModelProbe | 'idle' | undefined = 'idle';
   const settingsExpected: SettingsModelProbe[] = [
@@ -211,7 +226,7 @@ export async function startDesktopMixedModels(root: () => string, options: { nat
   ];
   const settingsCompleted: SettingsModelProbe['step'][] = [];
   const claude = await startNativeTeamModel({
-      mixedTaskNotifications: createMixedTaskNoticeReader(root, 'team-lead'),
+    mixedTaskNotifications: notices('team-lead'),
     allowModelProbes: true,
     nativeModelProbeLimit: 9,
     modelProbePhase: () => claudeProbePhase,
@@ -224,7 +239,7 @@ export async function startDesktopMixedModels(root: () => string, options: { nat
   let opencode: Awaited<ReturnType<typeof startOpenCodeModel>> | undefined;
   try {
     codex = await startCodexModel({
-      mixedTaskNotifications: createMixedTaskNoticeReader(root, 'bob'),
+      mixedTaskNotifications: notices('bob'),
       allowModelProbes: true,
       modelProbeWorkspace: () => join(root(), 'workspace'),
       mixedGroups: true,
@@ -232,7 +247,7 @@ export async function startDesktopMixedModels(root: () => string, options: { nat
     });
     opencode = await startOpenCodeModel({
       ...(options.nativeGeneration ? { nativeGeneration: options.nativeGeneration } : {}),
-      ...(!options.liveMembership ? { mixedTaskNotifications: createMixedTaskNoticeReader(root, 'carol'),
+      ...(!options.liveMembership ? { mixedTaskNotifications: notices('carol'),
         mixedGroups: true, settingsProbe: () => settingsProbe,
         ...(!options.nativeGeneration ? { selectedBusinessOutputTokens: 1536 } : {}) } : {
         uiGeneratedMessageIds: true, liveMembershipPhase: () => membershipPhase }),
@@ -244,6 +259,8 @@ export async function startDesktopMixedModels(root: () => string, options: { nat
     let evidenceRoot: string | undefined;
     return {
       ...selected,
+      executionTeamName,
+      principalId: principal,
       openCodeGeneration: options.nativeGeneration ?? 'v1' as const,
       openCodeProviderId: options.nativeGeneration ? 'test-local' as const : 'local' as const,
       ...(options.liveMembership ? { membership: {

@@ -69,10 +69,13 @@ export interface MixedTaskNotice {
 export function readMixedTaskNotices(
   root: string,
   actor: MixedNoticeActor,
-  binding?: MixedNoticeRow
+  binding?: MixedNoticeRow,
+  teamName = 'test-created-native-mixed'
 ): MixedTaskNotice[] {
-  const directory = join(root, 'hoststore/teams/test-created-native-mixed/.host-owner');
+  assert.match(teamName, /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/);
+  const directory = join(root, 'hoststore/teams', teamName, '.host-owner');
   const state = read(join(directory, 'state.json'));
+  if (teamName !== 'test-created-native-mixed') assert.equal(mixedNoticeRow(state.binding).teamName, teamName);
   const members = mixedNoticeRows(state.members).filter((member) => member.name === actor);
   assert.equal(members.length, 1);
   const target = binding ?? mixedBinding(members[0]!.delivery);
@@ -181,11 +184,12 @@ function currentNoticeTextMatches(text: string, expected: string): boolean {
 /** Only the CURRENT original input can qualify; old business/group history never supplies a notice. */
 export function createMixedTaskNoticeReader(
   root: () => string,
-  actor: MixedNoticeActor
+  actor: MixedNoticeActor,
+  teamName?: () => string
 ): MixedTaskNoticeReader {
   const seen = new Set<string>();
   return (text) => {
-    const notices = readMixedTaskNotices(root(), actor);
+    const notices = readMixedTaskNotices(root(), actor, undefined, teamName?.());
     const sessions = readMixedNoticeSessions(root());
     const matches: ObservedMixedTaskNotice[] = [];
     for (const notice of notices) {

@@ -55,6 +55,7 @@ interface LeadModelRowProps {
   limitContext: boolean;
   onProviderChange: (providerId: TeamProviderId) => void;
   onModelChange: (model: string) => void;
+  preserveSelectedModel?: boolean;
   onEffortChange: (effort: string) => void;
   onEffortAutoReset?: () => void;
   onLimitContextChange: (value: boolean) => void;
@@ -85,6 +86,7 @@ export const LeadModelRow = ({
   limitContext,
   onProviderChange,
   onModelChange,
+  preserveSelectedModel = false,
   onEffortChange,
   onEffortAutoReset,
   onLimitContextChange,
@@ -294,6 +296,7 @@ export const LeadModelRow = ({
             value={model}
             limitContext={limitContext}
             onValueChange={onModelChange}
+            preserveSelectedModel={preserveSelectedModel}
             projectPath={projectPath}
             id="lead-model"
             disableGeminiOption={disableGeminiOption}

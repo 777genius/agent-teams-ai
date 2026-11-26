@@ -34,7 +34,8 @@ export function mixedInputAccounting(
   turns: MixedBusinessTurns,
   currentBindings?: readonly Row[]
 ) {
-  const directory = join(root, 'hoststore/teams/test-created-native-mixed/.host-owner');
+  const teamName = models.executionTeamName();
+  const directory = join(root, 'hoststore/teams', teamName, '.host-owner');
   const state = read(join(directory, 'state.json'));
   const commands = readdirSync(join(directory, 'commands'))
     .filter((name) => /^[a-f0-9]{64}\.json$/.test(name))
@@ -82,7 +83,7 @@ export function mixedInputAccounting(
       business.push(matching[0]!);
       expected.add(String(row(matching[0]!.intent).inputId));
     }
-    const notifications = readMixedTaskNotices(root, actor, binding);
+    const notifications = readMixedTaskNotices(root, actor, binding, teamName);
     const noticeIds: string[] = [];
     for (const notice of notifications) {
       if (!notice.outbox) {

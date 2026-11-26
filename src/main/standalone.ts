@@ -1,6 +1,5 @@
 import { join } from 'node:path';
 
-import { captureHostTeamReads, DesktopBackendFeature } from '@features/agent-backend/main';
 import { createApplicationCommandLedgerFeature } from '@features/application-command-ledger/main';
 /**
  * Standalone (non-Electron) entry point for Agent Teams AI.
@@ -49,6 +48,7 @@ import type { NotificationManager } from './services/infrastructure/Notification
 import type { ServiceContext } from './services/infrastructure/ServiceContext';
 import type { SshConnectionManager } from './services/infrastructure/SshConnectionManager';
 import type { UpdaterService } from './services/infrastructure/UpdaterService';
+import type { DesktopBackendFeature } from '@features/agent-backend/main';
 import type { InternalStorageFeature } from '@features/internal-storage/main';
 
 const logger = createLogger('Standalone');
@@ -131,9 +131,17 @@ async function start(): Promise<void> {
     logger.info(`Using APP_DATA_DIR: ${APP_DATA_DIR}`);
   }
 
-  // Import services after applying CLAUDE_ROOT so ConfigManager picks up the correct base path.
-  const [{ HttpServer }, { NotificationManager }, { ServiceContext }, { ConfigManager }] =
+  // The backend entrypoint also loads legacy services with ConfigManager singletons.
+  // Import every such service after applying the standalone profile overrides.
+  const [
+    { captureHostTeamReads, DesktopBackendFeature },
+    { HttpServer },
+    { NotificationManager },
+    { ServiceContext },
+    { ConfigManager },
+  ] =
     await Promise.all([
+      import('@features/agent-backend/main'),
       import('./services/infrastructure/HttpServer'),
       import('./services/infrastructure/NotificationManager'),
       import('./services/infrastructure/ServiceContext'),

@@ -10,7 +10,7 @@ import { desktopNativeExtensionScenario } from './desktop-native-extension-consu
 import { startDesktopCapturedMcpModel } from './desktop-opencode-v2-mcp-fixture.ts';
 import { startProcessModel } from './desktop-native-process-model.ts';
 import { readProcessServices } from './desktop-native-process-fixture.ts';
-import { startDesktopMixedModels } from './desktop-mixed-native-fixture.ts';
+import { mixedDesktopTeamName, startDesktopMixedModels } from './desktop-mixed-native-fixture.ts';
 import { startDesktopApprovalModel } from './desktop-approval-model.ts';
 import { LEGACY_IMPORT_TEAM, CURRENT_LEGACY_SOURCE_PROMPT, CURRENT_LEGACY_SOURCE_REPLY } from './desktop-stopped-import-fixture.ts';
 import { startNativeReviewModel } from './desktop-native-review-model.ts';
@@ -29,7 +29,8 @@ import { startOpenCodeModel } from '../../packages/legacy-agent-host/tests/fixtu
 export async function prepareDesktopProofMode(
   mode: string,
   fixtureRoot: () => string,
-  processBashCommand?: () => string
+  processBashCommand?: () => string,
+  readCreatedProjectState?: (logicalName: string) => OwnerState
 ) {
   assert.ok(
     [
@@ -205,6 +206,10 @@ export async function prepareDesktopProofMode(
     (nativeReviewMode && !nativeReviewReadbackMode);
   const createConfigMode = mode === 'create-config-ui' || mode === 'native-create-ui' || mixedMode;
   const createLaunchMode = mode === 'native-create-ui';
+  const createdState = (logicalName = 'test-created-native') => {
+    assert.ok(readCreatedProjectState, 'original created project owner reader is required');
+    return readCreatedProjectState(logicalName);
+  };
   const nativeStopMode =
     mode === 'native-stop-ui' || mode === 'native-quit-ui' || conversationMode || approvalUiMode;
   // Codex login owns a separate real-control journey: the generic Team UI failure
@@ -236,6 +241,7 @@ export async function prepareDesktopProofMode(
   if (resumeProvider === 'opencode') assert.ok(resumeMode && openCodeLifecycleMode);
   if (openCodeLifecycleMode && resumeMode) assert.equal(resumeProvider, 'opencode');
   const mixedModels = mixedMode ? await startDesktopMixedModels(fixtureRoot, {
+    readProjectState: () => createdState(mixedDesktopTeamName),
     ...(openCodeGeneration === 'v2' ? { nativeGeneration: 'v2' as const } : {}),
     ...(membershipFlag === '1' ? { liveMembership: true as const } : {}),
   }) : undefined;
@@ -243,12 +249,7 @@ export async function prepareDesktopProofMode(
     createLaunchMode && process.env.LEGACY_DESKTOP_NATIVE_MEMBER_CREATE === '1'
       ? {
           capture: () => {
-            const state = JSON.parse(
-              readFileSync(
-                join(fixtureRoot(), 'hoststore/teams/test-created-native/.host-owner/state.json'),
-                'utf8'
-              )
-            ) as OwnerState;
+            const state = createdState();
             assert.equal(state.savedSettings?.model, 'claude-opus-4-6');
             assert.equal(state.savedSettings.effort, 'medium');
             assert.notEqual(state.savedSettings.syncModelsWithLead, false);
@@ -272,12 +273,7 @@ export async function prepareDesktopProofMode(
             };
           },
           principalId: (name: string) => {
-            const state = JSON.parse(
-              readFileSync(
-                join(fixtureRoot(), 'hoststore/teams/test-created-native/.host-owner/state.json'),
-                'utf8'
-              )
-            ) as OwnerState;
+            const state = createdState();
             const member = state.members.find((value) => value.name === name);
             assert.ok(member);
             const grants = state.grants.filter(
@@ -443,11 +439,11 @@ export async function prepareDesktopProofMode(
                     ...(createLaunchMode ? { memberName: 'team-lead' as const } : {}),
                     principalId: () => {
                       const state = record(
-                        JSON.parse(
+                        createLaunchMode ? createdState() : JSON.parse(
                           readFileSync(
                             join(
                               fixtureRoot(),
-                              `hoststore/teams/${createLaunchMode ? 'test-created-native' : 'test-desktop-backend'}/.host-owner/state.json`
+                              'hoststore/teams/test-desktop-backend/.host-owner/state.json'
                             ),
                             'utf8'
                           )

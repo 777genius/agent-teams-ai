@@ -16,10 +16,6 @@ import {
 } from './desktop-mixed-process-proof.ts';
 import { createDesktopUiControls, desktopJsLiteral } from './desktop-ui-controls.ts';
 import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
-import {
-  mixedDesktopTeamName,
-  readMixedCapturedPrincipal,
-} from './desktop-mixed-native-fixture.ts';
 import { revealDesktopReply } from './desktop-reply-visibility.ts';
 import type { DesktopMixedModels } from './desktop-mixed-native-fixture.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
@@ -56,7 +52,7 @@ export async function runDesktopMixedMemberRestartUiSmoke(
 ) {
   const ui = createDesktopUiControls(cdp, options);
   const read = async (path: string): Promise<Row> => row(JSON.parse(await readFile(path, 'utf8')));
-  const teamRoot = join(options.root, 'hoststore/teams', mixedDesktopTeamName);
+  const teamRoot = join(options.root, 'hoststore/teams', options.models.executionTeamName());
   const launchPath = join(
     teamRoot,
     '.host-owner/launches',
@@ -77,7 +73,7 @@ export async function runDesktopMixedMemberRestartUiSmoke(
   assertMixedInputAccounting(options.root, before, options.models, initialMixedBusinessTurns);
   const bob = one(rows(beforeOwner.members), (value) => value.name === 'bob');
   const source = one(before, (value) => row(value.binding).memberId === bob.memberId);
-  const principalId = readMixedCapturedPrincipal(options.root, 'codex');
+  const principalId = options.models.principalId('codex');
   const profile = await read(join(options.root, 'host-profile.json'));
   const executablePaths = Object.fromEntries(
     ['claude', 'codex', 'opencode'].map((provider) => [
@@ -230,7 +226,7 @@ export async function runDesktopMixedMemberRestartUiSmoke(
   for (const key of ['runtimeCaptures', 'members', 'grants'])
     assert.deepEqual(afterOwner[key], beforeOwner[key]);
   assert.equal(
-    readMixedCapturedPrincipal(options.root, 'codex'),
+    options.models.principalId('codex'),
     principalId,
     'restart preserves the captured native principal and run'
   );
@@ -330,7 +326,7 @@ export async function runDesktopMixedMemberRestartUiSmoke(
       provider,
       turn,
       reply,
-      principalId: readMixedCapturedPrincipal(options.root, provider),
+      principalId: options.models.principalId(provider),
       binding: session.binding,
       input: admitted[0],
       outbox,

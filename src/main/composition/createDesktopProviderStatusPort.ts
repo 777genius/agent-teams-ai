@@ -29,7 +29,7 @@ export function createDesktopProviderStatusPort(options: {
     captureClaude: capture('claude'),
     captureCodex: capture('codex'),
     resolveLatestOpenCodeVersion: (version) =>
-      resolveLatestOpenCodeVersion(version, getOpenCodeRuntimePlatformCandidates()),
+      resolveLatestOpenCodeVersion(version, getOpenCodeRuntimePlatformCandidates(), 'captured-host'),
     qualifiedOpenCodeV2Version: getLatestQualifiedOpenCodeV2Version(process.platform, process.arch),
     captureSources: () => {
       const context = options.captureSelection();

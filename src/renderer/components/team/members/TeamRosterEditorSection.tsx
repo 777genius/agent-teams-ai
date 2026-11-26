@@ -48,6 +48,8 @@ interface TeamRosterEditorSectionProps {
   providerReadyById?: Partial<Record<TeamProviderId, boolean>>;
   onProviderChange: (providerId: TeamProviderId) => void;
   onModelChange: (model: string) => void;
+  /** Inspecting saved choices must not replace unavailable models with Default. */
+  preserveSelectedModel?: boolean;
   onEffortChange: (effort: string) => void;
   onEffortAutoReset?: () => void;
   onLimitContextChange: (value: boolean) => void;
@@ -116,6 +118,7 @@ const TeamRosterEditorSectionImpl = ({
   providerReadyById,
   onProviderChange,
   onModelChange,
+  preserveSelectedModel = false,
   onEffortChange,
   onEffortAutoReset,
   onLimitContextChange,
@@ -207,6 +210,7 @@ const TeamRosterEditorSectionImpl = ({
         providerReadyById={providerReadyById}
         inheritModelSettingsByDefault={inheritModelSettingsByDefault}
         lockProviderModel={lockProviderModel}
+        preserveSelectedModel={preserveSelectedModel}
         forceInheritedModelSettings={forceInheritedModelSettings}
         modelLockReason={modelLockReason}
         softDeleteMembers={softDeleteMembers}
@@ -233,6 +237,7 @@ const TeamRosterEditorSectionImpl = ({
               limitContext={limitContext}
               onProviderChange={onProviderChange}
               onModelChange={onModelChange}
+              preserveSelectedModel={preserveSelectedModel}
               onEffortChange={onEffortChange}
               onEffortAutoReset={onEffortAutoReset}
               onLimitContextChange={onLimitContextChange}

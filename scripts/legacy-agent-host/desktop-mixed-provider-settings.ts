@@ -248,8 +248,8 @@ export async function createMixedProviderSettingsProof(options: {
       receipt.configRevision === 'runtime-source:' + row.revision);
     assert.equal(selected.length, 1, 'probe belongs to its original retained source');
     assert.equal(selected[0]!.grant.runtimeId, 'opencode');
-    assert.equal(selected[0]!.grant.projectPath, join(root, 'workspace'),
-      'global saving still verifies in the original explicitly selected project');
+    assert.equal(selected[0]!.grant.projectPath, step === 'global-default' ? null : join(root, 'workspace'),
+      'global defaults use the global binding; project checks retain the explicitly selected workspace');
     assert.equal(receipt.modelId, step === 'project-default' || step === 'project-test' ? modelB : modelA);
     if (step === 'local-limits') assert.deepEqual(receipt.limits, { contextTokens: 65536, outputTokens: 1536 });
     else assert.equal(receipt.limits, undefined);
@@ -461,7 +461,7 @@ export async function createMixedProviderSettingsProof(options: {
     models.settingsProbes.assertComplete();
     await assertPreferences(null, local);
     assert.equal(typeof capture.launchId, 'string');
-    const file = (await snapshot(join(root, 'hoststore/teams', mixedDesktopTeamName,
+    const file = (await snapshot(join(root, 'hoststore/teams', models.executionTeamName(),
       '.host-owner/launches', runtimeDigest(capture.launchId) + '.json')))!;
     const launch = file.value as unknown as TeamLaunchRecord;
     assert.equal(launch.fingerprint, runtimeDigest(launch.definition));

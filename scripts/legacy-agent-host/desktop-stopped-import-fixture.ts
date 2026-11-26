@@ -1,15 +1,40 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { mkdir, readFile, readdir, realpath, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, readFile, readdir, realpath, writeFile } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
+import type { createDesktopUiControls } from './desktop-ui-controls.ts';
 
 export const LEGACY_IMPORT_TEAM = 'test-stopped-legacy';
 export const LEGACY_IMPORT_LABEL = 'TEST never-launched legacy saved Team';
 export const CURRENT_LEGACY_SOURCE_PROMPT = 'TEST_CURRENT_LEGACY_SOLO_ONE';
 export const CURRENT_LEGACY_SOURCE_REPLY = 'REPLY_TEST_CURRENT_LEGACY_SOLO_ONE';
+
+/** The stopped legacy corpus owns one original Team namespace, selected through the ordinary Create control. */
+export async function selectDesktopStoppedImportSharedHistory(
+  ui: Pick<ReturnType<typeof createDesktopUiControls>, 'scrollTo' | 'click' | 'waitRead'>
+): Promise<void> {
+  const selector = '[data-testid="create-team-page"] #team-project-context-mode';
+  await ui.scrollTo(selector, 'original legacy shared history');
+  await ui.click(selector, 'open original legacy Team history');
+  await ui.click('[role="option"]', 'select original shared legacy scope', 'Shared across projects');
+  await ui.waitRead(`document.querySelector('${selector}')?.textContent.trim()==='Shared across projects'`,
+    'original shared legacy scope retained before Create');
+}
+
+/** Read only the original legacy metadata; a project alias is a different source and never qualifies. */
+export async function readDesktopStoppedImportSharedMeta(teamRoot: string): Promise<Record<string, unknown>> {
+  const bytes = await readFile(join(teamRoot, 'team.meta.json'));
+  assert.ok(bytes.length <= 64 * 1024, 'bounded original legacy metadata');
+  const meta: unknown = JSON.parse(bytes.toString('utf8'));
+  assert.ok(meta && typeof meta === 'object' && !Array.isArray(meta));
+  assert.equal((meta as Record<string, unknown>).projectContextMode, 'shared');
+  await assert.rejects(lstat(join(teamRoot, 'project-contexts.json')), { code: 'ENOENT' },
+    'the original shared source has no project execution alias');
+  return meta as Record<string, unknown>;
+}
 
 /** Expected wire value for the existing pinned SDK0.3.305 fixture, never a saved-setting default. */
 export function expectedStoppedImportNativeEffort(

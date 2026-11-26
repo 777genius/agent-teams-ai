@@ -1,14 +1,17 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, readdirSync, readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { runInNewContext } from 'node:vm';
-import { projectTeamFixture } from '../../packages/legacy-agent-host/tests/projectTeamFixture.ts';
+import { openProjectTeamFixture, projectTeamFixture } from '../../packages/legacy-agent-host/tests/projectTeamFixture.ts';
 import { storedTeamCreationSchema } from '../../packages/legacy-agent-host/dist/team-registry/state.js';
 import { effectId } from '../../packages/legacy-agent-host/dist/team/identity.js';
 import { hostTeamSelectionKey } from '../../src/features/agent-backend/contracts/teamSelection.ts';
-import { assertDesktopMembershipProjectBindings, createDesktopSelectedProjectReadPort, desktopProjectSelectionExpression, selectDesktopProjectExecution } from './desktop-created-project-selection.ts';
+import { assertDesktopMembershipProjectBindings, createDesktopSelectedProjectReadPort, desktopProjectSelectionExpression, readDesktopProjectExecutionState, selectDesktopProjectExecution } from './desktop-created-project-selection.ts';
 import { createDesktopUiControls } from './desktop-ui-controls.ts';
+import type { OwnerState } from '../../packages/legacy-agent-host/dist/team/ownerState.js';
 
 function fixture(t: Parameters<typeof projectTeamFixture>[0]) {
   const f = projectTeamFixture(t), logical = f.create().record;
@@ -34,6 +37,91 @@ test('Desktop original oracle selects exact owner/logical/workspace child throug
   assert.deepEqual(selected.logical, logical);
   assert.deepEqual(selected.execution, execution);
   assert.notEqual(selected.logical.teamName, selected.execution.teamName);
+});
+
+function executionStateFixture(t: Parameters<typeof projectTeamFixture>[0]) {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-desktop-project-state-')));
+  mkdirSync(join(root, 'hoststore'));
+  const f = openProjectTeamFixture(join(root, 'hoststore'));
+  t.after(() => { f.close(); rmSync(root, { recursive: true, force: true }); });
+  const logical = f.create('test-created-native').record;
+  f.prepare(logical, 'TEST-first-project');
+  const first = f.child(logical);
+  const projectPath = join(root, 'workspace'); mkdirSync(projectPath);
+  f.prepare(logical, 'TEST-exact-project', projectPath);
+  const execution = f.child(logical, projectPath);
+  const profilePath = join(root, 'host-profile.json'), descriptorPath = join(root, 'desktop-descriptor.json');
+  const handleId = 'TEST-original-seed', owner = { ownerId: f.profile.owner.ownerId, revision: f.profile.owner.revision };
+  const profileBytes = JSON.stringify(f.profile), descriptorBytes = JSON.stringify({ schemaVersion: 1,
+    handles: [{ handleId, contextId: f.contextId, owner }], creation: { owner, contextIds: [f.contextId] } });
+  writeFileSync(profilePath, profileBytes, { mode: 0o600 });
+  writeFileSync(descriptorPath, descriptorBytes, { mode: 0o600 });
+  const digest = (value: string) => createHash('sha256').update(value).digest('hex');
+  const files = { root, profilePath, descriptorPath, handleId,
+    pins: { profileSha256: digest(profileBytes), descriptorSha256: digest(descriptorBytes) } };
+  const ownerPath = (team: typeof logical) => join(f.root, 'teams', team.teamName, '.host-owner/state.json');
+  const logicalPath = ownerPath(logical), executionPath = ownerPath(execution);
+  const registryDirectory = join(f.root, '.host-team-registry/records');
+  const sources = [profilePath, descriptorPath, logicalPath, ownerPath(first), executionPath,
+    ...readdirSync(registryDirectory).map(name => join(registryDirectory, name))];
+  return { files, logical, first, execution, projectPath, logicalPath, executionPath, sources,
+    logicalState: JSON.parse(readFileSync(logicalPath, 'utf8')) as OwnerState,
+    executionState: JSON.parse(readFileSync(executionPath, 'utf8')) as OwnerState,
+    read: () => readDesktopProjectExecutionState(files, logical.teamName, projectPath) };
+}
+
+test('Desktop model reader selects the exact second project execution and preserves every original source', t => {
+  const f = executionStateFixture(t);
+  const before = new Map(f.sources.map(path => [path, readFileSync(path)]));
+  const selected = f.read();
+  assert.deepEqual(selected, f.executionState);
+  assert.equal(selected.binding.teamId, f.execution.teamId);
+  assert.notEqual(selected.binding.teamId, f.first.teamId);
+  assert.notEqual(selected.binding.teamId, f.logical.teamId);
+  assert.equal(selected.savedSettings?.projectContextMode, 'shared');
+  assert.equal(selected.savedSettings?.cwd, f.projectPath);
+  for (const [path, bytes] of before) assert.deepEqual(readFileSync(path), bytes, path);
+});
+
+test('Desktop model reader refuses changed pinned files and substituted project owner state without writing', t => {
+  const f = executionStateFixture(t);
+  const captured = { logicalHandleId: f.logical.binding.handleId, executionHandleId: f.execution.binding.handleId };
+  assert.deepEqual(readDesktopProjectExecutionState(f.files, f.logical.teamName, f.projectPath, captured), f.executionState);
+  for (const substituted of [
+    { ...captured, logicalHandleId: 'TEST-foreign-logical' },
+    { ...captured, executionHandleId: f.first.binding.handleId },
+  ]) assert.throws(() => readDesktopProjectExecutionState(f.files, f.logical.teamName, f.projectPath, substituted));
+  for (const path of [f.files.profilePath, f.files.descriptorPath]) {
+    const before = readFileSync(path), changed = Buffer.concat([before, Buffer.from('\n')]);
+    try {
+      writeFileSync(path, changed);
+      assert.throws(f.read);
+      assert.deepEqual(readFileSync(path), changed);
+    } finally { writeFileSync(path, before); }
+  }
+  const cases = [
+    { path: f.executionPath, state: { ...f.executionState, binding: { ...f.executionState.binding, teamId: 'TEST-foreign-team' } } },
+    { path: f.executionPath, state: { ...f.executionState, savedSettings: { ...f.executionState.savedSettings, cwd: f.files.root } } },
+    { path: f.executionPath, state: { ...f.executionState, savedSettings: { ...f.executionState.savedSettings, projectContextMode: 'per_project' } } },
+    { path: f.logicalPath, state: { ...f.logicalState, runtimeCaptures: [{ commandId: 'TEST-logical-capture',
+      configurationRevision: 'TEST-revision', launchId: 'TEST-logical-launch', members: [],
+      principalId: 'TEST-user', fingerprint: 'a'.repeat(64) }] } },
+  ];
+  for (const { path, state } of cases) {
+    const before = readFileSync(path), changed = JSON.stringify(state);
+    try {
+      writeFileSync(path, changed);
+      assert.throws(f.read);
+      assert.equal(readFileSync(path, 'utf8'), changed);
+    } finally { writeFileSync(path, before); }
+  }
+  for (const path of [f.logicalPath, f.executionPath]) {
+    const source = path + '.TEST-original';
+    renameSync(path, source);
+    try { symlinkSync(source, path); assert.throws(f.read); }
+    finally { rmSync(path, { force: true }); renameSync(source, path); }
+  }
+  assert.deepEqual(f.read(), f.executionState, 'all refusals leave the original readable source intact');
 });
 
 test('Desktop original oracle refuses owner, relation, workspace, duplicate, held and original-context substitution', t => {

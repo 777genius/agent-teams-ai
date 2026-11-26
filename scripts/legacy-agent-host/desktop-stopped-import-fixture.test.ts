@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdtemp, mkdir, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { test } from 'node:test';
@@ -10,12 +10,39 @@ import { assertStoppedImportModelChecks } from './desktop-stopped-import-ui-smok
 import {
   readDesktopStoppedImportSeed,
   prepareDesktopStoppedImport,
+  readDesktopStoppedImportSharedMeta,
   stoppedImportSourceBytes,
 } from './desktop-stopped-import-fixture.ts';
 
 const pnpmEntry = process.env.LEGACY_DESKTOP_PNPM_PATH ?? '/opt/homebrew/Cellar/node@24/24.18.0/lib/node_modules/corepack/dist/pnpm.js';
 const repo = resolve(import.meta.dirname, '../..');
 const json = async (path: string) => JSON.parse(await readFile(path, 'utf8'));
+test('current stopped legacy shared history preserves its original namespace and refuses project aliases', async t => {
+  const root = await mkdtemp(join(tmpdir(), 'TEST-stopped-shared-history-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const path = join(root, 'team.meta.json'), index = join(root, 'project-contexts.json');
+  const meta = { version: 1, projectContextMode: 'shared', cwd: '/TEST-original-workspace',
+    prompt: 'TEST-original-solo', providerId: 'anthropic', model: 'claude-sonnet-4-6' };
+  const bytes = JSON.stringify(meta, null, 2) + '\n';
+  await writeFile(path, bytes, { mode: 0o600 });
+  assert.deepEqual(await readDesktopStoppedImportSharedMeta(root), meta);
+  assert.equal(await readFile(path, 'utf8'), bytes, 'source metadata is read-only');
+  for (const projectContextMode of ['per_project', undefined, 'TEST-unknown']) {
+    const changed = JSON.stringify({ ...meta, projectContextMode });
+    await writeFile(path, changed);
+    await assert.rejects(readDesktopStoppedImportSharedMeta(root), assert.AssertionError);
+    assert.equal(await readFile(path, 'utf8'), changed);
+  }
+  await writeFile(path, bytes);
+  const alias = JSON.stringify({ version: 1, logicalTeamName: 'test-stopped-legacy', contexts: [{
+    projectPath: meta.cwd, executionTeamName: 'ptc-TEST-foreign-execution', state: 'reserved',
+  }] });
+  await writeFile(index, alias, { mode: 0o600 });
+  await assert.rejects(readDesktopStoppedImportSharedMeta(root), assert.AssertionError);
+  assert.equal(await readFile(path, 'utf8'), bytes);
+  assert.equal(await readFile(index, 'utf8'), alias, 'a refused alias is never removed or rewritten');
+});
+
 test(
   'prior-run source fixture publishes the actual captured child release without claiming old inference',
   { skip: process.platform === 'win32' },

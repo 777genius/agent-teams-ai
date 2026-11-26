@@ -3,6 +3,7 @@ import {
   chooseOpenCodeInstallGeneration,
   DEFAULT_OPENCODE_V1_INSTALL_VERSION,
   parseOpenCodeInstallOptions,
+  requestedOpenCodeInstallVersion,
 } from '@features/opencode-runtime-installer';
 import {
   selectOpenCodeInstallPackage,
@@ -44,8 +45,34 @@ describe('OpenCode installation policy', () => {
     { generation: 'v1', supportOnly: true },
     { version: '2.99.0' },
     { generation: 'v2', url: 'https://other.test' },
+    { generation: 'v2', target: 'captured-host' },
   ])('rejects invalid install options %j', (input) => {
     expect(() => parseOpenCodeInstallOptions(input)).toThrow();
+  });
+
+  it.each([
+    { target: 'legacy-runtime' as const, requested: '2.1.4', selected: '2.1.4' },
+    { target: 'captured-host' as const, requested: 'latest', selected: '2.9.0' },
+  ])('selects the V2 CLI qualified for the $target owner', async ({ target, requested, selected }) => {
+    const fetchMetadata = vi.fn().mockResolvedValueOnce({
+      name: '@opencode/cli', version: selected,
+      optionalDependencies: { '@opencode/cli-windows-x64': selected },
+    }).mockResolvedValueOnce({ name: '@opencode/cli-windows-x64', version: selected, dist });
+    const result = await selectOpenCodeInstallPackage(
+      'v2', '2.1.4', [{ packageName: 'opencode-windows-x64' }], fetchMetadata,
+      requestedOpenCodeInstallVersion('v2', '2.1.4', target)
+    );
+    expect(result.metadata.version).toBe(selected);
+    expect(fetchMetadata.mock.calls).toEqual([
+      ['@opencode/cli', requested], ['@opencode/cli-windows-x64', selected],
+    ]);
+    expect(requestedOpenCodeInstallVersion('v1', '2.1.4', target)).toBe('latest');
+  });
+
+  it('refuses a missing legacy qualification before resolving a package', () => {
+    expect(() => requestedOpenCodeInstallVersion('v2', null, 'legacy-runtime')).toThrow(
+      'No compatible OpenCode V2'
+    );
   });
 
   it('resolves a fresh V1 latest tag once, then fetches exact native bytes', async () => {

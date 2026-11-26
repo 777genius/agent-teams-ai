@@ -4,7 +4,7 @@ import { constants, realpathSync } from 'node:fs';
 import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
 import { runtimeDigest } from '../../packages/legacy-agent-host/dist/runtime/identity.js';
 import { createDesktopUiControls } from './desktop-ui-controls.ts';
-import { assertDesktopMembershipProjectBindings, type DesktopProjectBindingCapture } from './desktop-created-project-selection.ts';
+import { assertDesktopMembershipProjectBindings, readDesktopProjectExecutionState, type DesktopProjectBindingCapture } from './desktop-created-project-selection.ts';
 import { copyFile, lstat, mkdir, readFile, readdir, realpath, writeFile } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { performance } from 'node:perf_hooks';
@@ -580,13 +580,15 @@ export async function restartCapturedDesktopApp(options: {
       assert.deepEqual(bindings.map(row => object(row.handle).handleId).sort(),
         [fixture.handleId, options.createdHandleId!].sort());
       for (const row of bindings) {
-        assert.deepEqual(Object.keys(row).sort(), ['handle', 'label', 'members', 'ownerResourceRef', 'teamResourceRef']);
+        const seed = object(row.handle).handleId === fixture.handleId;
+        assert.deepEqual(Object.keys(row).sort(), ['handle', 'label', 'members', 'ownerResourceRef', 'teamResourceRef', ...(!seed ? ['projectContextMode'] : [])].sort());
+        if (!seed) assert.equal(row.projectContextMode, 'per_project');
         assert.match(String(row.ownerResourceRef), /^[a-f0-9]{64}$/);
         assert.match(String(row.teamResourceRef), /^[a-f0-9]{8}-[a-f0-9]{4}-5[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/);
         assert.deepEqual(Object.keys(object(row.handle)), ['handleId']);
         assert.equal(typeof row.label, 'string');
         assert.ok(Array.isArray(row.members));
-        assert.equal(row.members.length, object(row.handle).handleId === fixture.handleId ? 1 : 3);
+        assert.equal(row.members.length, seed ? 1 : 3);
         const memberIds = row.members.map(value => {
           const member = object(value);
           assert.deepEqual(Object.keys(member).sort(), ['label', 'memberId']);
@@ -625,12 +627,16 @@ export async function restartCapturedDesktopApp(options: {
   };
   let membershipHistory: Evidence | undefined;
   const readMembershipHistory = async () => {
-    const directory = join(fixture.root, 'hoststore/teams/test-created-native-mixed/.host-owner');
+    assert.ok(options.createdProject);
+    const original = readDesktopProjectExecutionState(fixture, 'test-created-native-mixed',
+      join(fixture.root, 'workspace'), options.createdProject);
+    const directory = join(fixture.root, 'hoststore/teams', original.binding.teamName, '.host-owner');
     const read = async (path: string) => {
       const stat = await lstat(path); assert.ok(stat.isFile() && !stat.isSymbolicLink() && stat.size <= 1024 * 1024);
       const bytes = await readFile(path); assert.equal(bytes.length, stat.size); return object(JSON.parse(bytes.toString('utf8')));
     };
     const state = await read(join(directory, 'state.json'));
+    assert.deepEqual(state, original, 'same original captured project execution');
     assert.ok(Array.isArray(state.runtimeCaptures) && state.runtimeCaptures.length === 1);
     assert.ok(Array.isArray(state.rosterCommands) && Array.isArray(state.members) && state.members.length === 3);
     const commands = state.rosterCommands.map(object).filter(row => row.liveMembership !== undefined);

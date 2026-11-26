@@ -32,7 +32,10 @@ export function initializeOpenCodeRuntimeHandlers(
   openCodeRuntimeService: OpenCodeRuntimeInstallerService
 ): void {
   service = openCodeRuntimeService;
-  capturedInstaller = createCapturedOpenCodeRuntimeInstaller(openCodeRuntimeService);
+  capturedInstaller = createCapturedOpenCodeRuntimeInstaller({
+    install: (options) => openCodeRuntimeService.install(options, 'captured-host'),
+    getReadinessStatus: () => openCodeRuntimeService.getReadinessStatus('captured-host'),
+  });
 }
 
 export function registerOpenCodeRuntimeHandlers(ipcMain: IpcMain): void {
@@ -127,7 +130,7 @@ async function withV2Maintenance(
   const retained = identity(original);
   let stock: OpenCodeRuntimeStatus | undefined;
   try {
-    stock = await requireService().getReadinessStatus();
+    stock = await requireService().getReadinessStatus('captured-host');
   } catch {
     // An optional CLI discovery failure does not alter the original engine evidence.
   }

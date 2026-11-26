@@ -265,7 +265,6 @@ const TruncatedTitle = ({
     },
     [updateOverflowState]
   );
-
   const title = (
     <h5
       ref={titleRef}
@@ -282,6 +281,7 @@ const TruncatedTitle = ({
       <TooltipTrigger asChild>{title}</TooltipTrigger>
       <TooltipContent
         side="top"
+        align={prominent ? 'start' : 'center'}
         sideOffset={6}
         collisionPadding={12}
         className="max-w-80 text-pretty break-words leading-relaxed"

@@ -16,6 +16,7 @@ import { deliveryFingerprint } from '../dist/runtime/identity.js';
 import { startTeamMcpEndpoint } from '../dist/mcp/index.js';
 import { cleanupCapturedCodexChild, nativeCodexDriver, projectCodexMetadataObservation } from './fixtures/native-codex-team/driver.ts';
 import { record, startCodexModel } from './fixtures/native-codex-team/model.ts';
+import { readNativeProviderArtifact, verifyNativeProviderArtifact } from './fixtures/native-provider-artifact.ts';
 import type { CommandReceipt, DeliveryBinding, TeamCommand } from '../dist/team/contracts.js';
 import type { RuntimeBinding, RuntimeSessionRecord } from '../dist/runtime/contracts.js';
 import type { Event, Input, Session } from '@agent-teams/provider-session-contracts';
@@ -154,9 +155,14 @@ test(
     if (candidateVersion) {
       assert.equal(process.platform, 'darwin'); assert.equal(process.arch, 'arm64');
       assert.equal(process.version, 'v24.21.0');
-      assert.equal(expectedProviderSha, nativeSuggestions
-        ? '26f8fc7083dbc470dd9d3a656e24873b73c78af3da3ffeea802a09a98f253e3c'
-        : 'b045b19866c522fddaf7b879f7c37b5fbe00d7880f8798d80e0b99cc69b9751a');
+      if (nativeSuggestions) {
+        assert.equal(expectedProviderSha, '26f8fc7083dbc470dd9d3a656e24873b73c78af3da3ffeea802a09a98f253e3c');
+      } else {
+        const currentArchive = await readNativeProviderArtifact(repo);
+        assert.equal(selectedArtifact, currentArchive.path, 'Current provider artifact matches the frozen Host dependency');
+        assert.equal(expectedProviderSha, currentArchive.sha256);
+        await verifyNativeProviderArtifact(repo, currentArchive);
+      }
       await runCodexCandidate({ root, selectedNode, providerArtifact, deadline: candidateDeadline,
         owner, delivery, endpoint, model, selectModel: value => { candidateModel = value; },
         current: () => current(delivery), cleanup: setupCleanup,

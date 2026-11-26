@@ -435,7 +435,7 @@ describe('EditTeamDialog canonical settings', () => {
       await click('Save');
       expect(api.teams.replaceMembers).toHaveBeenCalledOnce();
       expect(onClose).not.toHaveBeenCalled();
-      const original = structuredClone(vi.mocked(api.teams.replaceMembers).mock.calls[0]);
+      const original = structuredClone(vi.mocked(api.teams.replaceMembers).mock.calls[0]!);
       expect(original[1].configuration?.savedSettings?.prompt).toBe(prompt);
 
       await render(members, true, prompt);
@@ -489,7 +489,8 @@ describe('EditTeamDialog canonical settings', () => {
     values.prompt = 'TEST replacement prompt';
     resolve(saved);
     await firstResult;
-    const original = structuredClone(vi.mocked(api.teams.replaceMembers).mock.calls[0]);
+    expect(api.teams.replaceMembers).toHaveBeenCalledOnce();
+    const original = structuredClone(vi.mocked(api.teams.replaceMembers).mock.calls[0]!);
     expect(original[1].configuration?.savedSettings?.prompt).toBe('TEST original authored prompt');
     await expect(submission.submit(values)).rejects.toThrow('Retry its original settings');
     expect(api.teams.replaceMembers).toHaveBeenCalledOnce();

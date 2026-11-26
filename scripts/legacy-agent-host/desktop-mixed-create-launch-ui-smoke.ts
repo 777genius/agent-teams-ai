@@ -29,10 +29,8 @@ import type { ProcessFact } from '../../packages/legacy-agent-host/tests/fixture
 import { command } from './desktop-backend-observations.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { openOriginalCreateForm } from './desktop-create-config-ui-smoke.ts';
-import {
-  mixedDesktopTeamName,
-  readMixedCapturedPrincipal,
-} from './desktop-mixed-native-fixture.ts';
+import { mixedDesktopTeamName } from './desktop-mixed-native-fixture.ts';
+import { captureDesktopProjectOracle } from './desktop-created-project-selection.ts';
 import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
 import { revealDesktopReply } from './desktop-reply-visibility.ts';
 import { createDesktopUiControls } from './desktop-ui-controls.ts';
@@ -176,11 +174,13 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
     assert.ok(accepts(value), label);
     return value;
   };
-  const teamRoot = join(fixture.root, 'hoststore/teams', mixedDesktopTeamName);
+  const logicalRoot = join(fixture.root, 'hoststore/teams', mixedDesktopTeamName);
+  let teamRoot = logicalRoot;
   const ownerState = () => read(join(teamRoot, '.host-owner/state.json'));
   const workspace = join(fixture.root, 'workspace');
   const settings = await createMixedProviderSettingsProof({ ...options, evidence: proof, assertCurrent });
   await settings.runPrelude(cdp, ui);
+  let projectOracle = await captureDesktopProjectOracle(cdp, fixture, workspace);
   await openOriginalCreateForm(cdp, ui, workspace, mixedDesktopTeamName);
   await configureMixedCreateSettings(cdp, ui);
   await ui.scrollTo('[data-testid="create-team-page"] #launch-team', 'original Create save-only checkbox');
@@ -255,6 +255,7 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
     (state) => Array.isArray(state.members) && state.members.length === 3,
     'three saved members'
   );
+  assert.equal(record(saved.savedSettings).projectContextMode, 'per_project');
   let configuredBeforeLaunch = assertMixedSavedSettings(saved, workspace, settings.defaultModel);
   proof.configuredAfterCreate = configuredBeforeLaunch;
   const members = (saved.members as unknown[]).map(record);
@@ -321,6 +322,13 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
     },
   });
   cdp = edited.cdp;
+  const coldProjectOracle = await captureDesktopProjectOracle(cdp, fixture, workspace);
+  assert.deepEqual(coldProjectOracle.identity, projectOracle.identity);
+  projectOracle = coldProjectOracle;
+  const projectUi = createDesktopUiControls(projectOracle.selectedProjectReads(String(handleId)), {
+    assertOwnedRenderer: assertCurrent,
+    step: (row) => steps.push({ monotonicMs: Math.round(performance.now()), ...row }),
+  });
   ui = createDesktopUiControls(cdp, { assertOwnedRenderer: assertCurrent,
     step: (row) => steps.push({ monotonicMs: Math.round(performance.now()), ...row }) });
   proof.editTeam = edited.proof;
@@ -331,7 +339,7 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
     mixedEditedDescription
   );
   proof.configuredBeforeLaunch = configuredBeforeLaunch;
-  await ui.click('button', 'open original mixed Launch dialog', 'Launch');
+  await projectUi.click('button', 'open original mixed Launch dialog', 'Launch');
   await ui.waitRead(
     `Boolean(document.querySelector('[role="dialog"]'))`,
     'original mixed Launch form'
@@ -354,7 +362,7 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
     configuredBeforeLaunch
   );
   assert.equal(((await ownerState()).runtimeCaptures as unknown[] | undefined)?.length ?? 0, 0);
-  await ui.click('button', 'reopen original mixed Launch before Submit', 'Launch');
+  await projectUi.click('button', 'reopen original mixed Launch before Submit', 'Launch');
   proof.reopenedLaunchHydration = await assertMixedLaunchHydration(cdp, ui, settings.defaultModel);
   // Preserve a bounded, credential-free timing trace for each original provider
   // preflight. All three native model checks and the original 90s deadline remain mandatory.
@@ -422,12 +430,23 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
     'original mixed Launch closes',
     90_000
   );
+  const projectSelection = await projectOracle.select(mixedDesktopTeamName);
+  assert.equal(projectSelection.logical.binding.handleId, handleId);
+  teamRoot = projectSelection.executionRoot;
+  const definition = await read(join(logicalRoot, '.host-owner/state.json'));
+  assert.deepEqual(definition.binding, saved.binding);
+  assert.equal(record(definition.savedSettings).projectContextMode, 'per_project');
+  assert.deepEqual(definition.runtimeCaptures ?? [], []);
+  assert.equal(models.executionTeamName(), projectSelection.execution.teamName);
+  proof.projectAssociation = projectSelection.bindingCapture;
   const state = await poll(
     ownerState,
     (row) => Array.isArray(row.runtimeCaptures) && row.runtimeCaptures.length === 1,
     'exactly one fresh mixed capture'
   );
   const capture = record((state.runtimeCaptures as unknown[])[0]);
+  assert.deepEqual(state.binding, projectSelection.owner.binding);
+  await projectSelection.assertRun(capture.launchId);
   assert.ok(Array.isArray(capture.members) && capture.members.length === 3);
   proof.capture = capture;
   assert.equal(record(state.savedSettings).allowExperimentalLocalModels, false);
@@ -440,6 +459,7 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
       ...configuredBeforeLaunch,
       savedSettings: {
         ...configuredBeforeLaunch.savedSettings,
+        projectContextMode: 'shared',
         allowExperimentalLocalModels: false,
       },
     },
@@ -480,7 +500,7 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
         `original mixed Back to chats before ${provider}`
       );
     }
-    const principalId = readMixedCapturedPrincipal(fixture.root, provider);
+    const principalId = models.principalId(provider);
     const displayName = name === 'team-lead' ? 'lead' : name;
     await ui.click(
       `button[aria-label^=${JSON.stringify(displayName + ',')}]`,
@@ -544,7 +564,7 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
   proof.nativeTerminalInputs = terminalSessions;
   proof.mixedGroup = await runDesktopMixedGroupUiSmoke(cdp, {
     root: fixture.root,
-    teamName: mixedDesktopTeamName,
+    teamName: projectSelection.execution.teamName,
     models,
     launchId: capture.launchId,
     assertOwnedRenderer: assertCurrent,
@@ -581,9 +601,9 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
     'ONE\nONE\nONE\nTWO\nTWO\nTWO\n'
   );
   const tasks = await Promise.all(
-    (await readdir(join(fixture.root, 'hoststore/tasks', mixedDesktopTeamName)))
+    (await readdir(projectSelection.taskRoot))
       .filter((name) => /^[A-Za-z0-9_-]+\.json$/.test(name))
-      .map((name) => read(join(fixture.root, 'hoststore/tasks', mixedDesktopTeamName, name)))
+      .map((name) => read(join(projectSelection.taskRoot, name)))
   );
   assert.equal(tasks.length, 3);
   assert.ok(tasks.every((row) => row.status === 'completed'));
@@ -653,6 +673,7 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
   await ui.click('button', 'original saved Teams after mixed Stop/reload', 'Teams');
   await ui.scrollTo(teamSelector, 'original mixed saved Team survives Stop/reload');
   await ui.click(teamSelector, 'read original mixed saved Team after Stop/reload');
+  await projectSelection.assertCurrent();
   const after = await ownerState();
   assert.equal(
     (after.runtimeCaptures as unknown[]).length,
@@ -672,7 +693,7 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
   // This grants neither a new native business input nor a repeated Launch submission.
   const nativeClaudeProbeCount = models.beginColdReadbackProbes();
   proof.nativeClaudeProbeCount = nativeClaudeProbeCount;
-  await ui.click('button', 'reopen original mixed Launch after Stop/reload', 'Launch');
+  await projectUi.click('button', 'reopen original mixed Launch after Stop/reload', 'Launch');
   try {
     await poll(
       async () => models.claude.probes.length,

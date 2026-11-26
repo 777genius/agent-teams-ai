@@ -65,6 +65,8 @@ function statusFixture() {
     invalidateStatusCache,
     legacy,
     invoke: () => handlers.get(OPENCODE_RUNTIME_GET_STATUS)!({} as IpcMainInvokeEvent),
+    invokeInstall: (options?: unknown) =>
+      handlers.get(OPENCODE_RUNTIME_INSTALL)!({} as IpcMainInvokeEvent, options),
     invalidate: (mode?: unknown) =>
       handlers.get(OPENCODE_RUNTIME_INVALIDATE_STATUS)!({} as IpcMainInvokeEvent, mode),
   };
@@ -247,6 +249,9 @@ it('adds only qualified CLI maintenance beside the original selected engine', as
   expect(s.read).toHaveBeenCalledTimes(3);
   expect(s.sources.current).toHaveBeenCalledTimes(6);
   expect(f.getReadinessStatus).toHaveBeenCalledTimes(3);
+  expect(f.getReadinessStatus.mock.calls).toEqual([
+    ['captured-host'], ['captured-host'], ['captured-host'],
+  ]);
   expect(f.getStatus).not.toHaveBeenCalled();
   expect(f.install).not.toHaveBeenCalled();
   expectNoSourceMutation(s.sources);
@@ -365,6 +370,24 @@ describe('OpenCode runtime install IPC', () => {
     await expect(invoke({} as IpcMainInvokeEvent, { binaryPath: '/other' })).resolves.toMatchObject(
       { success: false }
     );
+    await expect(invoke({} as IpcMainInvokeEvent, {
+      generation: 'v2', target: 'captured-host',
+    })).resolves.toMatchObject({ success: false });
     expect(install).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses Host acquisition policy only after Main captures the original runtime source', async () => {
+    const f = statusFixture();
+    const s = sourceFixture();
+    f.install.mockResolvedValue({ installed: false, source: 'missing', state: 'failed',
+      error: 'TEST native acquisition unavailable' });
+    await expect(f.invokeInstall({ generation: 'v2' })).resolves.toMatchObject({
+      success: true, data: { state: 'failed', error: 'TEST native acquisition unavailable' },
+    });
+    expect(s.sources.current).toHaveBeenCalledExactlyOnceWith();
+    expect(s.sources.recover).toHaveBeenCalledExactlyOnceWith();
+    expect(f.install).toHaveBeenCalledExactlyOnceWith({ generation: 'v2' }, 'captured-host');
+    expect(s.sources.publish).not.toHaveBeenCalled();
+    expect(f.getStatus).not.toHaveBeenCalled();
   });
 });

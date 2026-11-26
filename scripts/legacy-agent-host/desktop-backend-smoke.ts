@@ -54,6 +54,7 @@ import { runDesktopOfflineTaskBoardUiSmoke } from './desktop-task-board-cross-te
 import { prepareDesktopOversizedCommentUiFixture } from './desktop-oversized-comment-ui-smoke.ts';
 import { runDesktopComposerUiSmoke } from './desktop-composer-ui-smoke.ts';
 import { prepareDesktopProofMode } from './desktop-proof-mode.ts';
+import { readDesktopProjectExecutionState } from './desktop-created-project-selection.ts';
 import { runDesktopLaunchUiSmoke } from './desktop-launch-ui-smoke.ts';
 import { runDesktopCapturedMcpUiProof } from './desktop-opencode-v2-mcp-ui-proof.ts';
 import { runDesktopCreateUiSmoke } from './desktop-create-launch-ui-smoke.ts';
@@ -94,7 +95,6 @@ import {
   verifyDesktopNativeStopArtifact,
 } from './desktop-native-stop-fixture.ts';
 import { runDesktopBackendBridgeProof } from './desktop-backend-bridge-proof.ts';
-
 let questionModel: Awaited<ReturnType<typeof startDesktopCodexQuestionModel>> | undefined;
 let suggestionMixedModels: Awaited<ReturnType<typeof startDesktopNativeNextPromptMixedModels>> | undefined;
 let mixedModels: DesktopMixedModels | undefined;
@@ -144,7 +144,8 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   if (donorSavedOnly) assert.ok(mode === 'stopped-import-ui' && !packed && !process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH, 'one actual donor saved-only scope');
   if (process.env.LEGACY_DESKTOP_OPENCODE_MCP_UI === '1') assert.ok(!packed && !packedRelaunchMode, 'captured MCP uses the existing source Launch scope');
   const { mixedMode, extensionsUiMode, capturedMcpUiMode, capturedMcpModel: selectedCapturedMcpModel, mixedModels: selectedMixedModels, processUiMode, controlledProcessMode, processReadbackMode, processModel, nativeReviewMode, nativeReviewReadbackMode, nativeReviewContinuationMode, readbackMode, reviewUiMode, reviewReadbackMode, legacyImportMode, conversationMode, taskBoardUiMode, approvalUiMode, nativeStopMode, uiMode, launchDialogMode, createConfigMode, model, codexResumeMode, codexResumeModel: selectedCodexResumeModel, openCodeLifecycleMode, openCodeLifecycleModel: selectedOpenCodeModel, openCodeReviewModel: selectedOpenCodeReviewModel } =
-    await prepareDesktopProofMode(questionUiMode || suggestionMixedMode || startupDiagnosticMode || emulatedManagementMode || emulatedRuntimeMode ? 'team-ui' : mode, () => fixture.root, () => processFixtureBashCommand(fixture));
+    await prepareDesktopProofMode(questionUiMode || suggestionMixedMode || startupDiagnosticMode || emulatedManagementMode || emulatedRuntimeMode ? 'team-ui' : mode, () => fixture.root, () => processFixtureBashCommand(fixture),
+      logicalName => readDesktopProjectExecutionState(fixture, logicalName, join(fixture.root, 'workspace')));
   conversationModel = model; mixedModels = selectedMixedModels;
   codexResumeModel = selectedCodexResumeModel;
   openCodeLifecycleModel = selectedOpenCodeModel; openCodeReviewModel = selectedOpenCodeReviewModel;
@@ -675,7 +676,6 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
         };
       }
     }
-
     throw error;
   } finally {
     disposeMixedReadObservations?.();

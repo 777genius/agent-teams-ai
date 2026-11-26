@@ -2610,20 +2610,32 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
   });
 
-  it('keeps catalog Ollama visible after an empty authoritative local overlay lookup', async () => {
+  it.each([
+    { sourceId: 'ollama', model: 'qwen', catalogScope: undefined, routeTag: 'local', projectPath: undefined },
+    { sourceId: 'test-local', model: 'TEST-model', catalogScope: 'TEST-captured-host', routeTag: 'configured', projectPath: undefined },
+    { sourceId: 'test-local', model: 'TEST-model', catalogScope: 'TEST-captured-project', routeTag: 'configured', projectPath: '/tmp/TEST-captured-project' },
+  ])('keeps $sourceId catalog models visible after an empty app-local overlay lookup ($catalogScope)', async ({ sourceId, model, catalogScope, routeTag, projectPath }) => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    const loadModels = vi.fn(async () => providerModelsResponse('ollama'));
+    const loadModels = vi.fn(async () => {
+      const response = providerModelsResponse(sourceId, [`${sourceId}/${model}`]);
+      response.models!.models.forEach((entry) => {
+        entry.routeKind = 'configured_local';
+        entry.accessKind = 'configured_authless';
+      });
+      return response;
+    });
     installLoadModelsApi(loadModels);
-    const localModelId = 'ollama/qwen';
+    const localModelId = `${sourceId}/${model}`;
     const provider = {
       providerId: 'opencode',
-      authenticated: true,
+      catalogScope,
+      authenticated: !catalogScope,
       supported: true,
-      verificationState: 'verified',
-      statusCheckOutcome: 'authoritative',
+      verificationState: catalogScope ? 'unknown' : 'verified',
+      statusCheckOutcome: catalogScope ? 'model_only' : 'authoritative',
       detailMessage: null,
       statusMessage: null,
-      capabilities: { teamLaunch: true },
+      capabilities: { teamLaunch: !catalogScope },
       models: [localModelId],
       modelCatalogRefreshState: 'ready',
       modelCatalog: {
@@ -2639,7 +2651,7 @@ describe('TeamModelSelector disabled Codex models', () => {
           {
             id: localModelId,
             launchModel: localModelId,
-            displayName: 'qwen',
+            displayName: model,
             hidden: false,
             supportedReasoningEfforts: [],
             defaultReasoningEffort: null,
@@ -2650,9 +2662,9 @@ describe('TeamModelSelector disabled Codex models', () => {
             source: 'app-server',
             metadata: {
               opencode: {
-                providerId: 'ollama',
-                modelId: 'qwen',
-                sourceLabel: 'Ollama',
+                providerId: sourceId,
+                modelId: model,
+                sourceLabel: sourceId,
                 accessKind: 'configured_authless',
                 routeKind: 'configured_local',
                 proofState: 'needs_probe',
@@ -2671,6 +2683,11 @@ describe('TeamModelSelector disabled Codex models', () => {
       flavor: 'agent_teams_orchestrator',
       providers: [provider],
     };
+    if (projectPath) {
+      storeState.cliProviderStatusByScope = {
+        [getCliProviderStatusScopeKey('opencode', projectPath)]: provider,
+      };
+    }
 
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -2681,8 +2698,9 @@ describe('TeamModelSelector disabled Codex models', () => {
         React.createElement(TeamModelSelector, {
           providerId: 'opencode',
           onProviderChange: () => undefined,
-          value: '',
+          value: catalogScope ? localModelId : '',
           onValueChange: () => undefined,
+          projectPath,
         })
       );
       await Promise.resolve();
@@ -2690,15 +2708,22 @@ describe('TeamModelSelector disabled Codex models', () => {
     await flushFailClosedAuthorityClocks();
 
     await vi.waitFor(() => {
-      expect(host.textContent).toContain('qwen');
+      expect(host.querySelector(`[data-testid="team-model-selector-model-option"][aria-label^="${model}"]`)).not.toBeNull();
     });
     expect(
-      host.querySelector('[data-testid="team-model-selector-provider-nav-ollama"]')
+      host.querySelector(`[data-testid="team-model-selector-provider-nav-${sourceId}"]`)
     ).toBeNull();
     expect(
-      host.querySelector('[data-testid="team-model-selector-opencode-route-tag-local"]')
+      host.querySelector(`[data-testid="team-model-selector-opencode-route-tag-${routeTag}"]`)
     ).not.toBeNull();
-    expect(loadModels).not.toHaveBeenCalled();
+    if (catalogScope) {
+      expect(loadModels).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+        runtimeId: 'opencode', providerId: sourceId, projectPath: projectPath ?? null,
+      }));
+      expect(provider).toMatchObject({
+        authenticated: false, statusCheckOutcome: 'model_only', capabilities: { teamLaunch: false },
+      });
+    } else expect(loadModels).not.toHaveBeenCalled();
 
     await act(async () => {
       root.unmount();

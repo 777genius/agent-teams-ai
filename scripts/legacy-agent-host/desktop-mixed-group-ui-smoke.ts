@@ -4,7 +4,6 @@ import {
   mixedInputAccounting,
 } from './desktop-mixed-input-proof.ts';
 import { runtimeDigest } from '../../packages/legacy-agent-host/dist/runtime/identity.js';
-import { readMixedCapturedPrincipal } from './desktop-mixed-native-fixture.ts';
 import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -89,12 +88,12 @@ export async function runDesktopMixedGroupUiSmoke(cdp: UiCdpPort, options: {
   for (const [actor, provider] of [['team-lead', 'claude'], ['bob', 'codex'], ['carol', 'opencode']] as const) {
     const ack = groupCommands.filter(value => value.commandId === 'TEST-mixed-group-ack-' + actor);
     assert.equal(ack.length, 1);
-    assert.equal(ack[0]!.principalId, readMixedCapturedPrincipal(options.root, provider));
+    assert.equal(ack[0]!.principalId, options.models.principalId(provider));
     assert.equal(row(ack[0]!.request).operation, 'reaction.ack');
   }
   const nativeSends = sends.filter(value => value.commandId === 'TEST-mixed-group-reply');
   assert.equal(nativeSends.length, 1);
-  assert.equal(nativeSends[0]!.principalId, readMixedCapturedPrincipal(options.root, 'codex'));
+  assert.equal(nativeSends[0]!.principalId, options.models.principalId('codex'));
   const inputProofs: Row[] = [];
   for (const source of sends) {
     const logicalId = row(source.request).messageId;

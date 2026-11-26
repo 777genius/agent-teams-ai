@@ -169,6 +169,62 @@ it('global default explicitly selects the global binding and project clear revea
   expect(unavailable.view).not.toHaveProperty('configuredModels');
 });
 
+async function globalDefaultsFixture() {
+  const f = await fixture();
+  const refreshConfiguration = vi.fn<NonNullable<CapturedProviderManagement['refreshConfiguration']>>();
+  const target: CapturedProviderManagement = {
+    ...f.target,
+    preferences: { projectRoot: null, globalRoot: f.globalRoot },
+    refreshConfiguration,
+  };
+  refreshConfiguration.mockResolvedValue(target);
+  f.capture.mockResolvedValue(target);
+  const projectBytes = JSON.stringify({ schemaVersion: 2, defaultModelId: 'TEST-provider/TEST-project-override',
+    custom: 'TEST-preserved-project', modelLimitOverrides: {} }, null, 2) + '\n';
+  const globalBytes = JSON.stringify({ schemaVersion: 2, defaultModelId: 'TEST-provider/TEST-global-before',
+    custom: 'TEST-preserved-global', modelLimitOverrides: {} }, null, 2) + '\n';
+  await writeFile(f.projectFile, projectBytes, { mode: 0o600 });
+  await writeFile(f.globalFile, globalBytes, { mode: 0o600 });
+  return { ...f, target, refreshConfiguration, projectBytes, globalBytes };
+}
+
+it('global default from a selected project captures the neutral global owner once and preserves the project override', async () => {
+  const f = await globalDefaultsFixture();
+  const result = await f.port.setDefaultModel({ ...input, projectPath: f.projectRoot, scope: 'all_projects' });
+  expect(result.error).toBeUndefined();
+  expect(result.view).toMatchObject({
+    projectDefaultModel: null,
+    allProjectsDefaultModel: input.modelId,
+    defaultModel: input.modelId,
+    defaultModelSource: 'all_projects',
+  });
+  expect(f.capture).toHaveBeenCalledTimes(1);
+  expect(f.capture).toHaveBeenCalledWith(null);
+  expect(f.target.preferences?.projectRoot).toBeNull();
+  expect(f.calls.filter(call => call === 'probe.start')).toHaveLength(1);
+  expect(f.refreshConfiguration).toHaveBeenCalledTimes(1);
+  await expect(f.refreshConfiguration.mock.results[0]!.value).resolves.toBe(f.target);
+  expect(JSON.parse(await readFile(f.globalFile, 'utf8'))).toMatchObject({
+    defaultModelId: input.modelId,
+    custom: 'TEST-preserved-global',
+  });
+  expect(await readFile(f.projectFile, 'utf8')).toBe(f.projectBytes);
+});
+
+it('failed global verification from a selected project preserves both preference files byte-for-byte', async () => {
+  const f = await globalDefaultsFixture();
+  f.failProbe();
+  const result = await f.port.setDefaultModel({ ...input, projectPath: f.projectRoot, scope: 'all_projects' });
+  expect(result.error).toBeDefined();
+  expect(f.capture).toHaveBeenCalledTimes(1);
+  expect(f.capture).toHaveBeenCalledWith(null);
+  expect(f.target.preferences?.projectRoot).toBeNull();
+  expect(f.calls.filter(call => call === 'probe.start')).toHaveLength(1);
+  expect(f.refreshConfiguration).not.toHaveBeenCalled();
+  expect(await readFile(f.globalFile, 'utf8')).toBe(f.globalBytes);
+  expect(await readFile(f.projectFile, 'utf8')).toBe(f.projectBytes);
+});
+
 it('probe failure, missing model, corrupt preferences and a stale context never publish a new default', async () => {
   const f = await fixture();
   f.failProbe();

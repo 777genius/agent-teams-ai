@@ -14,7 +14,7 @@ import {
   captureCurrentStoppedSourceInputs,
   projectCurrentStoppedProducerFailure,
   readStoppedImportSourceDiagnostics,
-  stoppedImportSourceBytes,
+  stoppedImportSourceBytes, selectDesktopStoppedImportSharedHistory, readDesktopStoppedImportSharedMeta,
 } from './desktop-stopped-import-fixture.ts';
 import type { CurrentNativeStoppedImportSeed } from './desktop-stopped-import-fixture.ts';
 import {
@@ -128,7 +128,7 @@ export async function produceDesktopCurrentStoppedTeam(options: {
       producer: inputs,
       steps,
       scope:
-        'Current frontend creates solo Claude, one local text turn, original Stop, UI Task and ordinary Quit before Host import',
+        'Current frontend creates shared-history solo Claude, one local text turn, original Stop, UI Task and ordinary Quit before Host import',
       excluded: [
         'donor4a native history',
         'vendor authentication',
@@ -237,6 +237,7 @@ export async function produceDesktopCurrentStoppedTeam(options: {
       await ui.scrollTo(selector, 'current launch settings');
       await ui.click(selector, 'expand current launch settings once');
     }
+    await selectDesktopStoppedImportSharedHistory(ui);
     await ui.scrollTo(page + ' #team-prompt', 'current original prompt');
     await ui.click(page + ' #team-prompt', 'type one current source input');
     await renderer.send('Input.insertText', { text: CURRENT_LEGACY_SOURCE_PROMPT });
@@ -471,7 +472,7 @@ export async function produceDesktopCurrentStoppedTeam(options: {
       }
     }
     assert.ok(roots.includes(team) && roots.includes(taskRoot));
-    const meta = await read(join(team, 'team.meta.json'));
+    const meta = await readDesktopStoppedImportSharedMeta(team);
     assert.equal(meta.cwd, join(fixture.root, 'workspace'));
     assert.equal(meta.prompt, CURRENT_LEGACY_SOURCE_PROMPT);
     assert.equal(meta.providerId, 'anthropic');

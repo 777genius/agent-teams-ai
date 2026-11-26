@@ -12,7 +12,7 @@ vi.mock('@shared/utils/logger', async (importOriginal) => {
 });
 
 import { createHash } from 'crypto';
-import { link, lstat, mkdir, mkdtemp, readdir, readFile, realpath, rm, writeFile } from 'fs/promises';
+import { link, lstat, mkdir, mkdtemp, readdir, readFile, realpath, rm, truncate, writeFile } from 'fs/promises';
 import os from 'os';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -40,6 +40,7 @@ vi.mock('@main/utils/shellEnv', () => ({
   ) => resolveInteractiveShellEnvBestEffortMock(...args),
 }));
 
+import { legacyOpenCodeRuntimeBinarySizeError } from '@main/services/infrastructure/openCodeLegacyRuntimeCompatibility';
 import {
   clearOpenCodeRuntimeBinaryResolverCache,
   extractOpenCodeRuntimeBinaryFromTarball,
@@ -52,6 +53,10 @@ import {
   resolveVerifiedOpenCodeRuntimeBinaryPath,
   verifyOpenCodeRuntimePackageIntegrity,
 } from '@main/services/infrastructure/OpenCodeRuntimeInstallerService';
+import {
+  resolveLatestOpenCodeVersion,
+  withLatestOpenCodeVersion,
+} from '@main/services/infrastructure/openCodeRuntimeLatestVersion';
 import { collectWindowsNativeOpenCodeBinaryCandidates } from '@main/services/infrastructure/openCodeWindowsNpmBinaryDiscovery';
 import { ensureOpenCodeBridgeRuntimeBinaryEnv } from '@main/services/runtime/openCodeBridgeRuntimeEnv';
 import { setAppDataBasePath } from '@main/utils/pathDecoder';
@@ -66,6 +71,13 @@ function createNativeOnlyInstaller(): OpenCodeRuntimeInstallerService {
     ),
     install: vi.fn(async () => undefined),
   });
+}
+
+async function getCapturedNativeUpdateStatus(service = createNativeOnlyInstaller()) {
+  const status = await service.getReadinessStatus('captured-host');
+  return withLatestOpenCodeVersion(status, () =>
+    resolveLatestOpenCodeVersion(status.version, getOpenCodeRuntimePlatformCandidates(), 'captured-host')
+  );
 }
 
 let tempRoot: string | null = null;
@@ -2102,7 +2114,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       });
       vi.stubGlobal('fetch', fetchMetadata);
       const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-      const result = await createNativeOnlyInstaller().install({ generation });
+      const result = await createNativeOnlyInstaller().install({ generation }, 'captured-host');
       expect(result).toMatchObject({ installed: true, source: 'app-managed', state: 'failed',
         version: previousVersion, binaryPath });
       expect(result.error).toMatch(scenario.startsWith('older-') ? /would downgrade/
@@ -2364,7 +2376,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     await expect(isSupportedOpenCodeRuntimeBinaryPath(wrapper)).resolves.toBe(true);
   });
 
-  it('coalesces identical install requests but rejects a racing generation choice before effects', async () => {
+  it('coalesces identical install requests but rejects a racing generation or owner before effects', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const download = deferred<Response>();
     const fetchMock = vi.fn(() => download.promise);
@@ -2373,6 +2385,9 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     const first = service.install({ generation: 'v1' });
     const same = service.install({ generation: 'v1' });
     await expect(service.install({ generation: 'v2' })).rejects.toThrow(
+      'different OpenCode generation'
+    );
+    await expect(service.install({ generation: 'v1' }, 'captured-host')).rejects.toThrow(
       'different OpenCode generation'
     );
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
@@ -2465,6 +2480,87 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     );
     return { packageName, version };
   }
+
+  it('keeps legacy V2 install and update discovery on the bundled runtime qualification', async () => {
+    const { packageName, version } = await mockV2Download();
+    const service = createNativeOnlyInstaller();
+    const installed = await service.install({ generation: 'v2' });
+    expect(installed).toMatchObject({ installed: true, state: 'ready', version });
+    const rootUrl = `https://registry.npmjs.org/${encodeURIComponent('@opencode/cli')}/${version}`;
+    const nativeUrl = `https://registry.npmjs.org/${encodeURIComponent(packageName)}/${version}`;
+    expect(vi.mocked(fetch).mock.calls.map(([url]) => String(url))).toEqual([
+      rootUrl, nativeUrl, 'https://example.test/native.tgz',
+    ]);
+    vi.mocked(fetch).mockClear();
+    service.invalidateStatusCache();
+    await expect(service.getStatus()).resolves.toMatchObject({
+      installed: true, state: 'ready', version, latestVersion: version, updateAvailable: false,
+      binaryPath: installed.binaryPath,
+    });
+    expect(vi.mocked(fetch).mock.calls.map(([url]) => String(url))).toEqual([rootUrl, nativeUrl]);
+  });
+
+  it('rejects an oversized existing native CLI for legacy use while preserving Host selection and bytes', async () => {
+    const { version } = await mockV2Download({ cliVersion: '2.4.2' });
+    const service = createNativeOnlyInstaller();
+    const installed = await service.install({ generation: 'v2' }, 'captured-host');
+    expect(installed).toMatchObject({ installed: true, state: 'ready', version });
+    const binaryPath = installed.binaryPath!;
+    // Sparse TEST file, never executed: the official 2.4.2 Windows native entry has this length.
+    await truncate(binaryPath, 278_504_840);
+    const before = await lstat(binaryPath);
+    const manifestPath = path.join(tempRoot!, 'data', 'runtimes', 'opencode', 'current.json');
+    const manifest = await readFile(manifestPath, 'utf8');
+    await mockV2Download();
+    execCliMock.mockResolvedValue({ stdout: `opencode v${version}\n`, stderr: '' });
+    const unchanged = { installed: true, version, binaryPath, source: 'app-managed' };
+    await expect(service.getReadinessStatus('captured-host')).resolves.toMatchObject({
+      ...unchanged, state: 'ready',
+    });
+    const rejected = { ...unchanged, state: 'failed', updateAvailable: false,
+      error: expect.stringContaining('exceeds the size supported by the bundled runtime') };
+    await expect(service.getReadinessStatus()).resolves.toMatchObject(rejected);
+    await expect(service.getStatus()).resolves.toMatchObject({
+      ...rejected, progress: { phase: 'failed' },
+    });
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    await expect(service.install({ generation: 'v2' })).resolves.toMatchObject({
+      ...unchanged, state: 'failed', error: expect.stringContaining('would downgrade'),
+    });
+    expect(fetch).toHaveBeenCalledTimes(2);
+    vi.mocked(fetch).mockClear();
+    const support = {
+      withStatus: vi.fn(async (status: import('@shared/types').OpenCodeRuntimeStatus) =>
+        ({ ...status, state: 'idle' as const, v2Support: 'required' as const })),
+      install: vi.fn(async () => undefined),
+    };
+    await expect(new OpenCodeRuntimeInstallerService(support).install({ supportOnly: true }))
+      .resolves.toMatchObject({ ...unchanged, state: 'failed', error: rejected.error });
+    expect(support.install).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
+    expect(await readFile(manifestPath, 'utf8')).toBe(manifest);
+    expect(await lstat(binaryPath)).toMatchObject({ ino: before.ino, size: before.size });
+    expect(await resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath()).toBe(binaryPath);
+  });
+
+  it('allows an explicit same-version legacy repair while preserving the incompatible original bytes', async () => {
+    const { version } = await mockV2Download();
+    const service = createNativeOnlyInstaller();
+    const previous = await service.install({ generation: 'v2' }, 'captured-host');
+    await truncate(previous.binaryPath!, 278_504_840);
+    const before = await lstat(previous.binaryPath!);
+    const repaired = await service.install({ generation: 'v2' });
+    expect(repaired).toMatchObject({ installed: true, state: 'ready', version });
+    expect(repaired.binaryPath).not.toBe(previous.binaryPath);
+    expect(await lstat(previous.binaryPath!)).toMatchObject({ ino: before.ino, size: before.size });
+    expect(await resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath()).toBe(repaired.binaryPath);
+    await expect(service.getReadinessStatus()).resolves.toMatchObject({ state: 'ready', version });
+  });
+
+  it('keeps the bundled runtime native byte bound exact for fresh package admission', () => {
+    expect(legacyOpenCodeRuntimeBinarySizeError(268_435_456)).toBeNull();
+    expect(legacyOpenCodeRuntimeBinarySizeError(268_435_457)).toContain('exceeds the size');
+  });
 
   it('keeps the prior native selection when fresh V2 support acquisition fails', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
@@ -2646,7 +2742,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
         })
       );
       vi.stubGlobal('fetch', fetchMetadata);
-      const status = await createNativeOnlyInstaller().getStatus();
+      const status = await getCapturedNativeUpdateStatus();
       expect(status).toMatchObject({ installed: true, state: 'ready', version });
       expect(status.latestVersion).toBeUndefined();
       expect(status.updateAvailable).not.toBe(true);
@@ -2685,7 +2781,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
         throw new Error(`Unexpected fetch: ${url}`);
       });
       vi.stubGlobal('fetch', fetchMetadata);
-      await expect(createNativeOnlyInstaller().getStatus()).resolves.toMatchObject({
+      await expect(getCapturedNativeUpdateStatus()).resolves.toMatchObject({
         installed: true,
         version,
         latestVersion: '2.9.0',
@@ -2711,7 +2807,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       install: vi.fn(async () => undefined),
     };
     const service = new OpenCodeRuntimeInstallerService(support);
-    await expect(service.install({ generation: 'v2' })).resolves.toMatchObject({
+    await expect(service.install({ generation: 'v2' }, 'captured-host')).resolves.toMatchObject({
       installed: true,
       state: 'ready',
       version,
@@ -2723,7 +2819,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
         String(url).endsWith(`${encodeURIComponent('@opencode/cli')}/latest`)
       )
     ).toBe(true);
-    const status = await service.getStatus();
+    const status = await getCapturedNativeUpdateStatus(service);
     expect(status).toMatchObject({ version, latestVersion: version, updateAvailable: false });
     expect(getLatestQualifiedOpenCodeV2Version(process.platform, process.arch)).toBe(qualifiedEngine);
     });

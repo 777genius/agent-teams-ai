@@ -1,5 +1,8 @@
 import { getLatestQualifiedOpenCodeV2Version } from '@features/opencode-compatibility';
-import { chooseOpenCodeInstallGeneration } from '@features/opencode-runtime-installer';
+import {
+  chooseOpenCodeInstallGeneration,
+  requestedOpenCodeInstallVersion,
+} from '@features/opencode-runtime-installer';
 import { selectOpenCodeInstallPackage } from '@features/opencode-runtime-installer/main';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
@@ -7,6 +10,7 @@ import { isVersionOlder } from '@shared/utils/version';
 
 import { fetchOpenCodePackageMetadata } from './openCodeRuntimePackageMetadata';
 
+import type { OpenCodeInstallTarget } from '@features/opencode-runtime-installer';
 import type { OpenCodeRuntimeStatus } from '@shared/types';
 
 const logger = createLogger('OpenCodeRuntimeInstallerService');
@@ -44,7 +48,8 @@ export function preserveKnownOpenCodeUpdate(
 /** Offer the same CLI release as installation, not the separate V2 engine version. */
 export async function resolveLatestOpenCodeVersion(
   installedVersion: string | undefined,
-  candidates: readonly { packageName: string }[]
+  candidates: readonly { packageName: string }[],
+  target: OpenCodeInstallTarget = 'legacy-runtime'
 ): Promise<string> {
   const qualifiedV2Version = getLatestQualifiedOpenCodeV2Version(process.platform, process.arch);
   const generation = chooseOpenCodeInstallGeneration(
@@ -56,7 +61,8 @@ export async function resolveLatestOpenCodeVersion(
     generation,
     qualifiedV2Version,
     candidates,
-    (name, version) => fetchOpenCodePackageMetadata(name, version, 3_000)
+    (name, version) => fetchOpenCodePackageMetadata(name, version, 3_000),
+    requestedOpenCodeInstallVersion(generation, qualifiedV2Version, target)
   );
   return metadata.version;
 }

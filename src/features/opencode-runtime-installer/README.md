@@ -9,8 +9,9 @@ The existing IPC/preload/store transports accept an optional generation choice.
 Focused tests cover package identity, archive safety and managed activation.
 
 Fresh installs select V1 by default, including platforms with qualified V2 support.
-A first-time implicit install and explicit updates resolve the latest supported
-stable release within the selected generation. If the global npm `latest` tag
+A first-time implicit V1 install and explicit V1 updates resolve the latest supported
+stable release within that generation. Captured Host V2 acquisition and updates
+also resolve the latest stable CLI within the Host qualification contract. If the global npm `latest` tag
 moves outside that range or its native platform package is unavailable, a root
 registry snapshot and at most one snapshot per platform package select the highest
 compatible, installable release. The selected exact version is retained through native package lookup and
@@ -19,6 +20,14 @@ Package identity and sha512 transport integrity are verified before activation.
 Existing V1/V2 installs remain in their selected generation on update; explicit
 V2 requests and support-only repair are preserved. The dashboard does not promote
 V2 during first-time installation.
+
+Bundled legacy V2 acquisition and update discovery use the exact native CLI from
+the bundled runtime qualification. Main captures this policy from the original
+runtime owner; renderer options cannot select it. The legacy runtime retains its
+256 MiB native acquisition bound. A previously installed CLI exceeding that bound
+is reported as incompatible for legacy use, with its selected path, version,
+manifest and bytes preserved. Captured Host selection retains its existing
+verification and publication contract independently.
 
 External V2 support is an optional ZIP delivery pinned by the runtime lock. The
 main support installer streams verified archive records into immutable UUID

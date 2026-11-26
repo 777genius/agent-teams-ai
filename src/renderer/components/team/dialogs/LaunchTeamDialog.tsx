@@ -2745,6 +2745,7 @@ const LaunchTeamDialogContent = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   providerReadyById={providerReadyById}
                   onProviderChange={setSelectedProviderId}
                   onModelChange={setSelectedModel}
+                  preserveSelectedModel
                   onEffortChange={setSelectedEffort}
                   onEffortAutoReset={autoResetSelectedEffort}
                   onLimitContextChange={setLimitContext}

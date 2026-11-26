@@ -11,6 +11,7 @@ import { pathToFileURL } from 'node:url';
 
 import { CONTEXT_MARKER, record, startNativeTeamModel } from './fixtures/native-claude-team/model.ts';
 import { fileHash, tick, treeHash, startHost } from './fixtures/native-host.ts';
+import { readNativeProviderArtifact, verifyNativeProviderArtifact } from './fixtures/native-provider-artifact.ts';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import type { ClaudeConfig } from '@agent-teams/provider-implementations/claude';
 
@@ -20,7 +21,6 @@ const DONOR_COMMIT = '1d0f97f55de566036c970eab4f36b84620afdb3f';
 const DONOR_ARTIFACT = 'vendor/provider-migration/opencode-v2-host-9ede557c/agent-teams-provider-implementations-0.0.0.tgz';
 const DONOR_SHA256 = 'fc8a821aff5b96b649647dac3853c831acf83d1555a480dc1f9645006600cb89';
 const CONTRACTS_SHA256 = 'aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db';
-const CURRENT_SHA256 = 'b045b19866c522fddaf7b879f7c37b5fbe00d7880f8798d80e0b99cc69b9751a';
 
 function donorSourceCurrent(repo: string): void {
   assert.equal(execFileSync('git', ['-C', repo, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), DONOR_COMMIT);
@@ -240,7 +240,12 @@ test('standalone Host applies selected model/effort to actual native requests an
     [artifacts.host.distSha256, process.env.LEGACY_NATIVE_HOST_DIST_SHA256],
   ]) { assert.match(expected ?? '', /^[a-f0-9]{64}$/); assert.equal(actual, expected); }
   const currentArtifact = process.env.LEGACY_NATIVE_CURRENT_PROVIDER_ARTIFACT;
-  if (donor) assert.match(currentArtifact ?? '', /^vendor\/provider-migration\/[a-z0-9-]+\/agent-teams-provider-implementations-0\.0\.0\.tgz$/u);
+  const currentArchive = donor ? await readNativeProviderArtifact(repo) : undefined;
+  if (currentArchive) {
+    assert.match(currentArtifact ?? '', /^vendor\/provider-migration\/[a-z0-9-]+\/agent-teams-provider-implementations-0\.0\.0\.tgz$/u);
+    assert.equal(currentArtifact, currentArchive.path, 'Current provider artifact matches the frozen Host dependency');
+    await verifyNativeProviderArtifact(repo, currentArchive);
+  }
   const donorInputs = donor ? {
     donorCommit: DONOR_COMMIT,
     providerDistSha256: await treeHash(await realpath(join(pkg, 'node_modules/@agent-teams/provider-implementations/dist')), '.js'),
@@ -254,7 +259,7 @@ test('standalone Host applies selected model/effort to actual native requests an
   if (donorInputs) {
     assert.equal(artifact, DONOR_ARTIFACT); assert.equal(artifacts.provider.sha256, DONOR_SHA256);
     assert.equal(donorInputs.contractsSha256, CONTRACTS_SHA256);
-    assert.equal(donorInputs.currentProviderSha256, CURRENT_SHA256);
+    assert.equal(donorInputs.currentProviderSha256, currentArchive!.sha256);
     assert.equal(donorInputs.providerDistSha256, process.env.LEGACY_NATIVE_PROVIDER_DIST_SHA256);
     assert.equal(donorInputs.currentProviderDistSha256, process.env.LEGACY_NATIVE_CURRENT_PROVIDER_DIST_SHA256);
   }

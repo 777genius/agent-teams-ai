@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { constants, closeSync, fstatSync, lstatSync, openSync, readSync, readdirSync, realpathSync } from 'node:fs';
 import { readFile, readdir, realpath } from 'node:fs/promises';
 import { join } from 'node:path';
 import { readTeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/readProfile.js';
@@ -11,6 +13,7 @@ import type { prepareDesktopBackendFixture } from './desktop-backend-fixture.ts'
 import type { UiCdpPort } from './desktop-ui-controls.ts';
 import type { TeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/TeamHost.js';
 import type { StoredTeamCreation } from '../../packages/legacy-agent-host/dist/team-registry/state.js';
+import type { OwnerState } from '../../packages/legacy-agent-host/dist/team/ownerState.js';
 
 type Row = Record<string, unknown>;
 const row = (value: unknown): Row => { assert.ok(value && typeof value === 'object' && !Array.isArray(value)); return value as Row; };
@@ -19,6 +22,10 @@ const one = (values: Row[], select: (value: Row) => boolean) => {
   const found = values.filter(select); assert.equal(found.length, 1, 'one exact original binding'); return found[0]!;
 };
 type Expected = { profile: TeamHostProfile; contextId: string; ownerResourceRef: string; projectPath: string };
+type ProjectFixtureFiles = Pick<Awaited<ReturnType<typeof prepareDesktopBackendFixture>>,
+  'root' | 'profilePath' | 'descriptorPath' | 'handleId'> & {
+  pins: Pick<Awaited<ReturnType<typeof prepareDesktopBackendFixture>>['pins'], 'profileSha256' | 'descriptorSha256'>;
+};
 export interface DesktopProjectExecutionOwner {
   readonly binding: Readonly<{ backendId: string; teamId: string; teamName: string }>;
   readonly workspace: string;
@@ -90,7 +97,8 @@ export function createDesktopSelectedProjectReadPort(cdp: UiCdpPort,
 }
 
 /** Read-only original registry validation; none of these ports can create or attach a Team. */
-export function selectDesktopProjectExecution(records: StoredTeamCreation[], expected: Expected, logicalName: string, discovery: unknown) {
+export function selectDesktopProjectRegistryExecution(records: StoredTeamCreation[],
+  expected: Pick<Expected, 'profile' | 'contextId' | 'projectPath'>, logicalName: string) {
   const refuse = (): never => { throw new Error('TEST read-only project oracle cannot write or attach'); };
   const profile = expected.profile;
   const registry = new TeamRegistry({ ownerId: profile.owner.ownerId, profileId: profile.owner.profileId,
@@ -116,6 +124,11 @@ export function selectDesktopProjectExecution(records: StoredTeamCreation[], exp
   const execution = selected[0]!;
   assert.notEqual(execution.teamId, logical.teamId); assert.notEqual(execution.binding.handleId, logical.binding.handleId);
   assert.equal(execution.projectContextMode, 'shared');
+  return { logical: structuredClone(logical), execution: structuredClone(execution) };
+}
+
+export function selectDesktopProjectExecution(records: StoredTeamCreation[], expected: Expected, logicalName: string, discovery: unknown) {
+  const { logical, execution } = selectDesktopProjectRegistryExecution(records, expected, logicalName);
   const source = row(discovery); assert.equal(source.state, 'ready');
   const bindings = rows(source.bindings);
   const original = one(bindings, value => row(value.handle).handleId === logical.binding.handleId);
@@ -129,6 +142,72 @@ export function selectDesktopProjectExecution(records: StoredTeamCreation[], exp
     projectPath: expected.projectPath, workContextId: execution.projectContext!.workContextId });
   assert.equal(rows(source.unavailableOwners ?? []).some(value => value.ownerResourceRef === expected.ownerResourceRef), false);
   return { logical: structuredClone(logical), execution: structuredClone(execution) };
+}
+
+function projectOwnerJson(path: string, expectedSha256?: string): Row {
+  const before = lstatSync(path);
+  assert.ok(before.isFile() && !before.isSymbolicLink() && before.nlink === 1);
+  assert.ok(before.size <= 8 * 1024 * 1024, 'bounded original owner source');
+  const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+  try {
+    const opened = fstatSync(fd);
+    assert.equal(opened.dev, before.dev); assert.equal(opened.ino, before.ino);
+    const bytes = Buffer.alloc(before.size + 1); let length = 0;
+    while (length < bytes.length) {
+      const count = readSync(fd, bytes, length, bytes.length - length, null);
+      if (count === 0) break;
+      length += count;
+    }
+    for (const after of [fstatSync(fd), lstatSync(path)]) {
+      assert.ok(after.isFile() && !after.isSymbolicLink() && after.nlink === 1);
+      for (const key of ['dev', 'ino', 'size', 'mtimeMs', 'ctimeMs'] as const) assert.equal(after[key], before[key]);
+    }
+    assert.equal(length, before.size, 'original owner source did not change during the read');
+    const content = bytes.subarray(0, length);
+    if (expectedSha256) assert.equal(createHash('sha256').update(content).digest('hex'), expectedSha256);
+    return row(JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(content)));
+  } finally { closeSync(fd); }
+}
+
+/** Model callbacks read the exact registry-owned project execution, without creating or recovering it. */
+export function readDesktopProjectExecutionState(fixture: ProjectFixtureFiles, logicalName: string,
+  requestedProject: string, captured?: Pick<DesktopProjectBindingCapture, 'logicalHandleId' | 'executionHandleId'>): OwnerState {
+  const profile = readTeamHostProfile(fixture.profilePath, fixture.pins.profileSha256);
+  assert.equal(profile.owner.storageRoot, join(fixture.root, 'hoststore'));
+  const descriptor = projectOwnerJson(fixture.descriptorPath, fixture.pins.descriptorSha256);
+  const seeded = one(rows(descriptor.handles), value => value.handleId === fixture.handleId);
+  const contextId = String(seeded.contextId), projectPath = realpathSync(requestedProject);
+  assert.deepEqual(seeded.owner, { ownerId: profile.owner.ownerId, revision: profile.owner.revision });
+  assert.deepEqual(row(descriptor.creation).owner, seeded.owner);
+  assert.ok(profile.creation?.contextIds.includes(contextId));
+  assert.ok((row(descriptor.creation).contextIds as unknown[]).includes(contextId));
+  const directory = join(profile.owner.storageRoot, '.host-team-registry/records');
+  assert.equal(realpathSync(directory), directory);
+  const entries = readdirSync(directory, { withFileTypes: true });
+  assert.ok(entries.length <= 256, 'bounded TEST registry');
+  const records = entries.filter(entry => /^[a-f0-9]{64}\.json$/.test(entry.name)).map(entry => {
+    assert.ok(entry.isFile() && !entry.isSymbolicLink());
+    return storedTeamCreationSchema.parse(projectOwnerJson(join(directory, entry.name)));
+  });
+  const { logical, execution } = selectDesktopProjectRegistryExecution(records, { profile, contextId, projectPath }, logicalName);
+  if (captured) {
+    assert.equal(logical.binding.handleId, captured.logicalHandleId);
+    assert.equal(execution.binding.handleId, captured.executionHandleId);
+  }
+  const readOwner = (team: typeof logical) => {
+    const ownerDirectory = join(profile.owner.storageRoot, 'teams', team.teamName, '.host-owner');
+    assert.equal(realpathSync(ownerDirectory), ownerDirectory);
+    const state = projectOwnerJson(join(ownerDirectory, 'state.json'));
+    assert.deepEqual(state.binding, { backendId: profile.owner.ownerId, teamId: team.teamId, teamName: team.teamName });
+    return state;
+  };
+  const definition = readOwner(logical);
+  assert.equal(row(definition.savedSettings).projectContextMode, 'per_project');
+  assert.deepEqual(definition.runtimeCaptures ?? [], [], 'logical definition never owns native captures');
+  const state = readOwner(execution);
+  assert.equal(row(state.savedSettings).projectContextMode, 'shared');
+  assert.equal(row(state.savedSettings).cwd, projectPath);
+  return state as unknown as OwnerState;
 }
 
 /** Capture the pinned TEST owner and original context before the existing Create or Launch action. */

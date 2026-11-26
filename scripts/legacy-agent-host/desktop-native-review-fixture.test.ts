@@ -18,6 +18,8 @@ import {
 } from './desktop-native-review-model.ts';
 import { prepareDesktopProofMode } from './desktop-proof-mode.ts';
 import { readSavedDesktopFixture } from './desktop-readback-fixture.ts';
+import { prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
+import { desktopClaudeSha256 } from './desktop-claude-native-selection.ts';
 import { CONTEXT_MARKER } from '../../packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts';
 
 function notification(task: string, tool: string): string {
@@ -40,6 +42,40 @@ async function fixture() {
   await prepareNativeReviewWorkspace(root);
   return root;
 }
+
+test('native Review publishes its intended Sonnet custom option while ordinary Launch keeps Opus', async (t) => {
+  const repo = await realpath(join(import.meta.dirname, '../..'));
+  const nativePackage = `@anthropic-ai/claude-agent-sdk-${process.platform}-${process.arch}`;
+  const nativeClaude = {
+    path: await realpath(join(repo, 'node_modules/.pnpm',
+      `${nativePackage.replace('/', '+')}@0.3.305`, 'node_modules', nativePackage, 'claude')),
+    sha256: desktopClaudeSha256(), modelUrl: 'http://127.0.0.1:9',
+  };
+  for (const nativeReviewUi of [false, true]) {
+    // The fixture only writes private TEST inputs and verifies pinned bytes; no native process opens.
+    const prepared = await prepareDesktopBackendFixture(repo, {
+      nativeReviewUi, launchDialog: true, nativeClaude,
+      pnpmEntry: process.env.LEGACY_DESKTOP_PNPM_PATH ??
+        '/opt/homebrew/Cellar/node@24/24.18.0/lib/node_modules/corepack/dist/pnpm.js',
+    });
+    t.after(() => rm(prepared.root, { recursive: true, force: true }));
+    const profile = JSON.parse(await readFile(prepared.profilePath, 'utf8'));
+    const selected = profile.runtime.members[0];
+    const management = profile.management[0];
+    for (const environment of [selected.environment, management.environment]) {
+      assert.equal(environment.ANTHROPIC_CUSTOM_MODEL_OPTION,
+        nativeReviewUi ? 'claude-sonnet-4-6' : 'claude-opus-4-6');
+      assert.equal(environment.ANTHROPIC_CUSTOM_MODEL_OPTION_NAME,
+        nativeReviewUi ? 'Sonnet 4.6' : 'Opus 4.6');
+      assert.equal(environment.ANTHROPIC_BASE_URL, nativeClaude.modelUrl);
+    }
+    assert.deepEqual(selected.executable, { path: nativeClaude.path, sha256: nativeClaude.sha256 });
+    assert.deepEqual(management.executable, selected.executable);
+    assert.equal(management.sdkRevision, '0.3.305');
+    assert.equal(selected.model, 'claude-sonnet-4-6');
+  }
+});
+
 test('native review setup stages only dirty workspace/index bytes, never a Task or ledger', async (t) => {
   const root = await fixture();
   t.after(() => rm(root, { recursive: true, force: true }));

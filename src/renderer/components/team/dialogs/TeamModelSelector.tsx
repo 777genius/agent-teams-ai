@@ -1557,7 +1557,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
               shouldRetainOpenCodeLocalCatalogModel(
                 option.value,
                 catalogModelById.get(option.value),
-                openCodeLocalModelOverlay.modelIds
+                openCodeLocalModelOverlay.modelIds, runtimeProviderStatus?.catalogScope
               )
           )
         : unscopedRuntimeOptions;
@@ -1637,7 +1637,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
           !shouldRetainOpenCodeLocalCatalogModel(
             launchModel || catalogModelId,
             model,
-            openCodeLocalModelOverlay.modelIds
+            openCodeLocalModelOverlay.modelIds, runtimeProviderStatus?.catalogScope
           )
         ) {
           continue;
@@ -1665,7 +1665,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     openCodeLocalProviderLookupAuthoritative,
     openCodeLocalModelOverlay.catalogModels,
     openCodeLocalModelOverlay.modelIds,
-    runtimeProviderStatus?.modelCatalog,
+    runtimeProviderStatus?.modelCatalog, runtimeProviderStatus?.catalogScope,
   ]);
   const openCodeModelMetadata = useMemo<OpenCodeModelOptionMetadata[]>(() => {
     if (effectiveProviderId !== 'opencode') {

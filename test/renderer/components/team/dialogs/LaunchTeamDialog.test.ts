@@ -1812,6 +1812,7 @@ describe('LaunchTeamDialog', () => {
         model: 'claude-sonnet-4-6',
         effort: 'low',
         limitContext: true,
+        preserveSelectedModel: true,
       });
       expect(host.querySelector('[data-testid="fast-mode-selector"]')?.textContent).toContain(
         'fast:off'

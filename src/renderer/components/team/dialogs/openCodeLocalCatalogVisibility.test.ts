@@ -65,6 +65,18 @@ describe('openCodeLocalCatalogVisibility', () => {
       shouldRetainOpenCodeLocalCatalogModel('corp-local/model', null, new Set(['corp-local/model']))
     ).toBe(true);
   });
+
+  it('uses captured display provenance only for an actual catalog row', () => {
+    const model = {
+      id: 'test-local/TEST-model',
+      metadata: {
+        opencode: { providerId: 'test-local', routeKind: 'configured_local' },
+      },
+    };
+    expect(shouldRetainOpenCodeLocalCatalogModel(model.id, model, new Set(), 'TEST-host')).toBe(true);
+    expect(shouldRetainOpenCodeLocalCatalogModel(model.id, model, new Set(), ' ')).toBe(false);
+    expect(shouldRetainOpenCodeLocalCatalogModel(model.id, null, new Set(), 'TEST-host')).toBe(false);
+  });
 });
 
 describe('v2.14.1 vs current OpenCode local-provider status', () => {

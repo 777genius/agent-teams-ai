@@ -416,6 +416,10 @@ test('mixed principal callback requires exact canonical capture delivery and liv
     ['opencode', 'agent:TEST-registered-2'],
   ] as const)
     assert.equal(readMixedCapturedPrincipal(root, provider), principal);
+  await writeFile(join(directory, 'state.json'), JSON.stringify({ ...state, runtimeCaptures: [] }));
+  assert.throws(() => readMixedCapturedPrincipal(root, 'codex'));
+  assert.equal(readMixedCapturedPrincipal(root, 'codex', () => state), 'agent:TEST-registered-1');
+  await save();
   await writeFile(
     join(directory, 'state.json'),
     JSON.stringify({
@@ -576,16 +580,16 @@ test('live membership reads the exact registry-selected project execution and re
 });
 
 // Known-shape canonical retained files exercise the TEST reader, never production admission/native effects.
-async function notificationFiles(t: TestContext) {
+async function notificationFiles(t: TestContext, teamName = mixedDesktopTeamName) {
   const root = await mkdtemp(join(tmpdir(), 'TEST-desktop-backend-'));
   t.after(() => rm(root, { recursive: true, force: true }));
-  const directory = join(root, 'hoststore/teams', mixedDesktopTeamName, '.host-owner');
+  const directory = join(root, 'hoststore/teams', teamName, '.host-owner');
   for (const name of ['commands', 'task-plans', 'outbox'])
     await mkdir(join(directory, name), { recursive: true });
   const stateBinding = {
     backendId: 'TEST-owner',
     teamId: 'TEST-team',
-    teamName: mixedDesktopTeamName,
+    teamName,
   };
   const bindings = ['team-lead', 'bob', 'carol'].map((memberId) => ({
     backendId: 'TEST-owner',
@@ -599,7 +603,7 @@ async function notificationFiles(t: TestContext) {
     members: bindings.map((binding) => ({
       name: binding.memberId,
       memberId: binding.memberId,
-      delivery: { ...binding, teamName: mixedDesktopTeamName },
+      delivery: { ...binding, teamName },
     })),
   };
   const sources: Record<
@@ -655,7 +659,7 @@ async function notificationFiles(t: TestContext) {
       preparation: { prefix: 'TEST captured original prefix\n' },
     };
     const outbox = {
-      binding: { ...binding, teamName: mixedDesktopTeamName },
+      binding: { ...binding, teamName },
       commandId,
       deliveryId: id,
       inputId: id,
@@ -688,6 +692,27 @@ async function notificationFiles(t: TestContext) {
       writeFile(sources[actor]!.path, JSON.stringify(sources[actor]!.session)),
   };
 }
+test('mixed task notices retain exact project execution and reject foreign owner, replay and traversal', async t => {
+  const teamName = 'TEST-exact-project-execution';
+  const f = await notificationFiles(t, teamName);
+  for (const actor of ['team-lead', 'bob', 'carol'] as const) {
+    const source = f.sources[actor]!;
+    const reader = createMixedTaskNoticeReader(() => f.root, actor, () => teamName);
+    const notice = reader(source.text);
+    assert.ok(notice);
+    assert.deepEqual(notice.binding, mixedBinding(source.session.binding));
+    assert.equal(notice.inputId, source.outbox.inputId);
+    assert.throws(() => reader(source.text), 'the exact original input cannot be replayed');
+    assert.throws(() => createMixedTaskNoticeReader(() => f.root, actor)(source.text),
+      'logical definition cannot substitute the project owner');
+  }
+  f.state.binding.teamName = 'TEST-foreign-owner';
+  await writeFile(join(f.directory, 'state.json'), JSON.stringify(f.state));
+  const text = f.sources.bob!.text;
+  assert.throws(() => createMixedTaskNoticeReader(() => f.root, 'bob', () => teamName)(text));
+  assert.throws(() => createMixedTaskNoticeReader(() => f.root, 'bob', () => '../TEST-foreign')(text));
+});
+
 const noticeProviders = [
   {
     provider: 'claude',
@@ -942,7 +967,7 @@ test('mixed terminal accounting rejects extra business and uses the explicitly q
     );
     await f.saveSession(actor);
   }
-  const models = modelRows as unknown as DesktopMixedModels,
+  const models = { ...modelRows, executionTeamName: () => mixedDesktopTeamName } as unknown as DesktopMixedModels,
     sessions = f.bindings.map((binding) => f.sources[binding.memberId]!.session);
   assert.equal(
     mixedInputAccounting(f.root, sessions, models, initialMixedBusinessTurns).ready,

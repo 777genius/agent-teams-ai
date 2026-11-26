@@ -199,3 +199,68 @@ The same barrier correction was independently published in external commit
 Its complete executable source matches the reviewed candidate; only the
 explanatory comment differs. This batch is based on that commit and preserves
 its header unchanged.
+
+## Consolidated E2E corrections after `5bf15be`
+
+The stack is consolidated into #982; the current open-PR inventory contains no
+remaining child of `feat/provider-migration-stage-1`. The integration head before
+this batch is `5bf15beb1a667683bc7110bea2cbcda09648cbd8`, against main
+`054e686fa653a8dd81243d882b441bf7735db0cb`. #982 stays open, unmerged and without
+auto-merge. This batch keeps all runtime lock, stopped-producer and immutable
+donor inputs unchanged.
+
+The following corrections address observed failures, with one combined source
+update rather than one branch or CI cycle per scenario:
+
+| Observed failure | Correction and preserved boundary |
+| --- | --- |
+| Mixed/native Create inspected the logical definition after a project launch | Resolve the exact logical-to-project execution relation from the captured registry and owner. Keep config-only checks on the logical definition; route native identities, notices, groups, restarts, history and cold readback to the exact execution. Reject another project, captured handle, changed binding or linked source. |
+| Global provider-default proof expected a project grant | Assert the neutral global grant and preserve the separate project override and source bytes. |
+| Claude/Codex native gates compared the current Host to an obsolete entry hash | Verify the current pinned Host manifest, archive and installed entry. Immutable donor and native-provider pins remain separate and unchanged. |
+| Stopped legacy producer silently selected the new per-project default | Select Shared across projects through the existing Create control. Require the resulting shared metadata and absence of a project alias before retaining the original legacy corpus. The original native team-name, Stop and cleanup proofs remain. |
+| Task title tooltip covered the original Complete action | Align a prominent card's tooltip to its start; keep the original clickability assertion and existing compact-card alignment. |
+| A captured OpenCode model disappeared despite a successful native catalog read | Retain the scoped catalog row when the app-local provider inventory belongs to a different profile. This affects display only; authentication, capability and launch-readiness checks are unchanged. |
+| Expanding a saved Claude model row silently selected Default | Pass the existing saved-selection preservation contract through Launch's lead/member rows. An unavailable explicit model remains visible and held; a deliberate user Default selection still works. Create retains its previous normalization behavior. |
+| The native Review fixture advertised Opus while its saved and wire contract requires Sonnet | Scope the existing TEST custom-model option to Sonnet for Review only, preserving Opus in the other modes. The actual native catalog and launch readiness remain authoritative. |
+| Standalone notification setup read configuration before TEST path overrides | Defer the backend value import until those original overrides are applied. The same eight endpoint/vault assertions pass locally. |
+| Legacy V2 installation selected an oversized newer CLI | Capture the installer target in Main. Use the bundled qualification for legacy acquisition/update discovery and the Host qualification for captured Host acquisition. Preserve the existing byte bounds, no-downgrade checks and shared install exclusion. Report an existing oversized legacy selection truthfully. No orchestrator release is needed. |
+| Canonical validation reported TS2532 in two prompt regressions | Assert the single API call before taking its non-null tuple; retain the same exact prompt assertions. The complete existing file passes all 19 cases. |
+
+Local Node 24.21.0 and the pinned pnpm 11.22.0 were used with a frozen lockfile.
+The Host/MCP builds, Host test type project, Desktop Host script type project,
+source-size ratchet and provisioning architecture guard pass. Focused regression
+results include 25 mixed fixture cases, nine project-selection cases, nine
+captured-default cases, four receipt cases, 24 Kanban card cases and the original
+shared-history integration. Installer/IPC policy passes 208 cases and the captured
+Main/Host publication/status suite passes 24. The scoped model visibility suite
+passes 106 renderer cases; real saved-model picker/roster coverage passes 13,
+with the original Host launch CAS regression also passing. The native Review
+fixture suite passes ten cases, including real private-profile preparation
+without starting Host or a vendor executable. Both model-display regressions
+first failed against the preceding implementation. These are finite/local
+proofs, not native Desktop acceptance. The complete canonical typecheck was
+attempted normally and twice with bounded Go memory/parallelism; all ended with
+exit 137 and no compiler diagnostic. Its full gate remains pending in CI.
+
+On the preceding published head, 26 of 32 workflows succeeded; the notification,
+packaged Anthropic endpoint and V2 cold Dashboard workflows failed, and three
+workflows were still queued or running. Native owned-process gates and Host
+process fixtures succeeded on all their required platforms. The canonical
+Desktop matrix and Host emulated acceptance still require a final source cohort;
+successes from preceding commits do not qualify this batch.
+
+Retained failures remain explicit: the Anthropic endpoint scenario now captures
+bounded read-only form/card identities and redacted renderer exceptions to
+distinguish reset from publication failure. The V2 Review failure on source
+`0043bc8` consumed a probe with expiry `1795723930677`; the original Runtime
+model-readiness refusal was recorded at `1795723930711`. This is an expired
+original proof, not permission to extend its lifetime or allocate anyway. No
+readiness deadline, retry, native assertion or cleanup gate is weakened.
+
+The later saved-import artifact `15153379851` retained a passing UI proof and
+ordinary app exit zero, but cleanup correctly remained incomplete: build-service
+PID 9609 (esbuild, originally parent 9521) survived the original three-second
+observation. Host PID 10836 was absent. No native Host leak is inferred from the
+build-service PID, no further signal is authorized by that old group, and no
+cleanup deadline or success criterion is changed. The next source cohort must
+complete both the UI flow and its original empty-process census.
