@@ -225,7 +225,41 @@ export function projectDesktopTaskBoardFailure(value: unknown) {
     let originalTaskCardObserved: boolean | null = expected && cardCount !== null ? false : null;
     if (expected && cardCount !== null) for (let index = 0; index < Math.min(cardCount, 24); index++)
       if (own(cardRows, String(index)) === task) originalTaskCardObserved = true;
+    const message = text(own(value, 'failure'), 4000);
+    const methods = ['Runtime.evaluate', 'Runtime.enable', 'Page.enable', 'Page.captureScreenshot',
+      'Page.bringToFront', 'Page.reload', 'Input.dispatchMouseEvent', 'Input.dispatchKeyEvent', 'Input.insertText'];
+    const method = methods.find(name => message === 'CDP command timed out: ' + name) ?? null;
+    const cdpFailure = {
+      kind: method !== null ? 'command-timeout' : message === 'CDP connection closed' ? 'connection-closed' :
+        message === 'Renderer evaluation failed' ? 'evaluation-failed' : null,
+      method,
+    };
+    const steps = own(board, 'steps'), stepCount = length(steps);
+    let rendererReloadAttempts: number | null = stepCount !== null && stepCount <= 1024 ? 0 : null;
+    if (rendererReloadAttempts !== null && stepCount !== null) for (let index = 0; index < stepCount; index++) {
+      const step = own(steps, String(index));
+      if (!record(step)) { rendererReloadAttempts = null; break; }
+      const action = Object.getOwnPropertyDescriptor(step, 'action'), state = Object.getOwnPropertyDescriptor(step, 'state');
+      if ((action && !('value' in action)) || (state && !('value' in state))) {
+        rendererReloadAttempts = null; break;
+      }
+      if (action?.value === 'Page.reload' && state?.value === 'attempted') rendererReloadAttempts++;
+    }
+    const retainedProgress = {
+      source: 'retained-taskboard-proof', atomicWithFailure: false, establishesCauseOrEffects: false,
+      durableDraftEmpty: boolean(own(own(attachments, 'commentDraftBeforeReload'), 'durableEmpty')),
+      rendererReloadAttempts,
+      imageAfterReloadRecorded: record(own(attachments, 'imageAfterReload')),
+      imageOwnerReadRecorded: record(own(attachments, 'imageOwnerRead')),
+      commentOwnerReadRecorded: record(own(attachments, 'commentOwnerRead')),
+      downloadAttemptRecorded: record(own(attachments, 'downloadAttempt')),
+      downloadRecorded: record(own(attachments, 'download')),
+      removeReceiptPhase: choice(own(own(attachments, 'removeReceipt'), 'phase'),
+        ['prepared', 'applying', 'completed', 'rejected', 'held']),
+      attachmentProofStatus: choice(own(attachments, 'status'), ['PASS', 'INCOMPLETE']),
+    };
     const result = { schemaVersion: 1, status: 'available', source: 'retained-failure-snapshot', atomicWithFailure: false,
+      cdpFailure, retainedProgress,
       original: { submittedRecorded: record(submitted), identityConsistent: expected,
         commentReceiptCompleted: own(own(attachments, 'commentReceipt'), 'phase') === 'completed',
         submittedEmpty: typeof own(submitted, 'commentText') === 'string' ? own(submitted, 'commentText') === '' : null,

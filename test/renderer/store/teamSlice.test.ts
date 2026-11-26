@@ -34,8 +34,8 @@ import {
   getTeamRefreshFanoutSnapshotForTests,
   type TeamRefreshFanoutSnapshot,
 } from '../../../src/renderer/store/teamRefreshFanoutDiagnostics';
-import { getContextScopedTeamResetState } from '../../../src/renderer/store/utils/stateResetHelpers';
 import { invalidateContextScopedRequestEpoch } from '../../../src/renderer/store/utils/contextScopedRequestEpoch';
+import { getContextScopedTeamResetState } from '../../../src/renderer/store/utils/stateResetHelpers';
 
 import type { BackendLaunchConfigurationView } from '../../../src/features/agent-backend/contracts/launch';
 import type {

@@ -1156,6 +1156,131 @@ test('finite readiness failure summaries keep only bounded states and never priv
   assert.ok(Buffer.byteLength(JSON.stringify(overflow)) <= 8192);
 });
 
+test('native Review failure summaries reuse the bounded retained readiness projection', () => {
+  const secret = 'TEST-private-value https://TEST-private.example/token /TEST-secret/path';
+  const evidence = { status: 'INCOMPLETE',
+    nativeReviewUiProof: { provider: 'opencode-v2', status: 'INCOMPLETE', steps: [] },
+    rendererFailureSnapshot: { dialogs: [{
+      text: 'Runtime environment unavailable. OpenCode provider status is still loading. Selected model could not be verified. ' + secret,
+      buttons: [{ text: 'Launch team', disabled: true }, { text: 'Skip preflight and launch', disabled: false },
+        { text: secret, disabled: false }],
+    }] } };
+  const original = structuredClone(evidence);
+  const result = projectDesktopEmulatedReadinessFailure(evidence);
+  assert.ok('retainedDialogs' in result && result.retainedDialogs);
+  assert.deepEqual(result.retainedDialogs.items[0]!.buttons.launchTeam,
+    { matches: 1, enabled: 0, disabled: 1, unknown: 0 });
+  assert.equal(result.retainedDialogs.items[0]!.text.runtimeUnavailable, true);
+  assert.equal(result.retainedDialogs.items[0]!.text.providerStatusLoading, true);
+  assert.equal(result.retainedDialogs.items[0]!.text.modelUnverified, true);
+  assert.equal(result.retainedDialogs.atomicWithFailedWait, false);
+  assert.equal(result.retainedDialogs.completeDom, false);
+  assert.equal(result.retainedDialogs.actualTruncationKnown, false);
+  assert.equal(result.importRecorded, false);
+  assert.equal(result.peerCleanup.recorded, false);
+  const options = { mode: 'native-review-ui', receiptPath: 'TEST-receipt', mixedMode: false };
+  const summary = projectDesktopProofReceiptSummary(evidence, options);
+  assert.ok('nativeReviewReadinessFailure' in summary && 'nativeReviewFailure' in summary);
+  assert.deepEqual(summary.nativeReviewReadinessFailure, result);
+  assert.ok(Buffer.byteLength(JSON.stringify(summary.nativeReviewFailure)) <= 2048);
+  assert.ok(Buffer.byteLength(JSON.stringify(result)) <= 8192);
+  assert.ok(Buffer.byteLength(JSON.stringify({ nativeReviewFailure: summary.nativeReviewFailure,
+    nativeReviewReadinessFailure: result })) <= 10296);
+  assert.doesNotMatch(JSON.stringify(summary), /TEST-private|https:|\/TEST-secret|Runtime environment unavailable/);
+  assert.deepEqual(evidence, original);
+  assert.equal('nativeReviewReadinessFailure' in projectDesktopProofReceiptSummary(
+    { ...evidence, status: 'PASS' }, options), false);
+  for (const mode of ['team-ui', 'emulated-opencode-runtime-ui', 'native-resume-ui'])
+    assert.equal('nativeReviewReadinessFailure' in projectDesktopProofReceiptSummary(
+      evidence, { ...options, mode }), false);
+  let getterReads = 0;
+  const accessor = { ...evidence, rendererFailureSnapshot: Object.defineProperty({}, 'dialogs', {
+    get() { getterReads++; throw new Error(secret); },
+  }) };
+  const accessorSummary = projectDesktopProofReceiptSummary(accessor, options);
+  assert.equal(getterReads, 0);
+  assert.doesNotMatch(JSON.stringify(accessorSummary), /TEST-private|https:|\/TEST-secret/);
+  const refused = projectDesktopProofReceiptSummary({ ...evidence, rendererFailureSnapshot:
+    new Proxy({}, { getOwnPropertyDescriptor() { throw new Error(secret); } }) }, options);
+  assert.ok('nativeReviewReadinessFailure' in refused);
+  assert.deepEqual(refused.nativeReviewReadinessFailure,
+    { schemaVersion: 1, status: 'unavailable', reason: 'projection-failed' });
+  assert.doesNotMatch(JSON.stringify(refused), /TEST-private|https:|\/TEST-secret/);
+});
+
+test('native cold readback summaries expose only retained route and renderer facts', () => {
+  const secret = 'TEST-private-value https://TEST-private.example/token /TEST-secret/path';
+  const evidence = { status: 'INCOMPLETE', failureSource: { kind: 'error', frames: ['TEST-original-frame'] },
+    savedNativeReadback: { status: 'INCOMPLETE', steps: [
+      { action: 'mouseClick', label: 'sidebar task', state: 'attempted', subject: secret },
+      { action: 'mouseClick', label: 'Open team', state: 'attempted', selector: secret },
+      { observation: 'passive input delivery after sidebar click', value: { secret } },
+    ] },
+    rendererFailureSnapshot: {
+      store: { selectedTeamName: 'host-team:' + secret, selectedTeamError: 'Host runtime unavailable ' + secret },
+      commandComposer: { observedAfterFailure: true, atomicWithInput: false,
+        textareaCount: 1, textareaOverflow: false, single: { value: secret } },
+      visibleTaskCardIds: [secret, 'TEST-other-task'], dialogs: [],
+    } };
+  const original = structuredClone(evidence);
+  const options = { mode: 'native-readback-ui', receiptPath: 'TEST-receipt', mixedMode: false };
+  const summary = projectDesktopProofReceiptSummary(evidence, options);
+  const result = summary.nativeReadbackFailure as Record<string, unknown>;
+  assert.deepEqual(result.readback, { recorded: true, status: 'INCOMPLETE', stepCount: 3,
+    clickAttempts: { sidebarTask: 1, openTeam: 1, openDirectChat: 0 }, runtimeRecordUnchanged: null });
+  assert.deepEqual(result.renderer, { recorded: true, unavailable: null, selectedHostTeam: true,
+    composerRecorded: true, textareaCount: 1, textareaOverflow: false, visibleTaskCardCount: 2 });
+  assert.deepEqual(result.readiness, projectDesktopEmulatedReadinessFailure(evidence));
+  assert.equal(result.atomicWithFailedWait, false);
+  assert.equal(result.completeDom, false);
+  assert.equal(result.establishesCauseOrEffects, false);
+  assert.equal(summary.status, 'INCOMPLETE');
+  assert.equal(summary.failureSource, evidence.failureSource);
+  assert.ok(Buffer.byteLength(JSON.stringify(result)) <= 10240);
+  assert.doesNotMatch(JSON.stringify(summary), /TEST-private|https:|\/TEST-secret|Host runtime unavailable/);
+  assert.deepEqual(evidence, original);
+  const clicked = structuredClone(evidence);
+  clicked.savedNativeReadback.steps.push({ action: 'mouseClick',
+    label: 'open saved ordinary direct chat', state: 'attempted', selector: secret });
+  const clickedResult = projectDesktopProofReceiptSummary(clicked, options).nativeReadbackFailure as Record<string, unknown>;
+  assert.deepEqual((clickedResult.readback as Record<string, unknown>).clickAttempts,
+    { sidebarTask: 1, openTeam: 1, openDirectChat: 1 });
+  assert.equal('nativeReadbackFailure' in projectDesktopProofReceiptSummary(
+    { ...evidence, status: 'PASS' }, options), false);
+  for (const mode of ['team-ui', 'native-conversation-ui', 'native-review-ui', 'native-quit-readback-ui'])
+    assert.equal('nativeReadbackFailure' in projectDesktopProofReceiptSummary(
+      evidence, { ...options, mode }), false);
+});
+
+test('native cold readback projection keeps absent facts unknown and refuses hostile retained data', () => {
+  const options = { mode: 'native-readback-ui', receiptPath: 'TEST-receipt', mixedMode: false };
+  const empty = projectDesktopProofReceiptSummary({ status: 'INCOMPLETE' }, options).nativeReadbackFailure as Record<string, unknown>;
+  assert.deepEqual(empty.readback, { recorded: false, status: null, stepCount: null,
+    clickAttempts: null, runtimeRecordUnchanged: null });
+  assert.deepEqual(empty.renderer, { recorded: false, unavailable: null, selectedHostTeam: null,
+    composerRecorded: false, textareaCount: null, textareaOverflow: null, visibleTaskCardCount: null });
+  const secret = 'TEST-private-error /TEST-secret/path';
+  let getterReads = 0;
+  const poisonedStep = Object.defineProperty({ action: 'mouseClick', state: 'attempted' }, 'label', {
+    get() { getterReads++; throw new Error(secret); },
+  });
+  const hostile = [
+    { savedNativeReadback: { status: 'INCOMPLETE', steps: [poisonedStep] } },
+    { savedNativeReadback: { status: 'INCOMPLETE', steps: Array(257).fill({}) } },
+    { rendererFailureSnapshot: { commandComposer: { textareaCount: 6 } } },
+    { rendererFailureSnapshot: { visibleTaskCardIds: Array(25).fill(secret) } },
+    { rendererFailureSnapshot: new Proxy({}, { getOwnPropertyDescriptor() { throw new Error(secret); } }) },
+  ];
+  for (const fields of hostile) {
+    const summary = projectDesktopProofReceiptSummary({ status: 'INCOMPLETE', ...fields }, options);
+    assert.deepEqual(summary.nativeReadbackFailure,
+      { schemaVersion: 1, status: 'unavailable', reason: 'invalid-retained-markers' });
+    assert.equal(summary.status, 'INCOMPLETE');
+    assert.doesNotMatch(JSON.stringify(summary), /TEST-private|\/TEST-secret/);
+  }
+  assert.equal(getterReads, 0);
+});
+
 test('Taskboard failure summaries compare retained identities without exposing private snapshot values', () => {
   const secret = 'TEST-private-value https://TEST-private.example/token /TEST-private/path';
   const identity = { contextId: 'local', teamName: 'TEST-private-owner', taskId: 'TEST-private-task' };
@@ -1448,6 +1573,92 @@ test('Selection target projection rejects unknown or malformed facts without exp
   for (const value of [input, null, [], {}, { failure: 1 }, Object.create({ failure: prefix + JSON.stringify(facts) })])
     assert.equal(projectDesktopSelectionTargetFailure(value).status, 'unavailable');
   assert.equal(reads, 0, 'accessors and inherited values are not retained observations');
+});
+
+test('Taskboard failure progress reports retained checkpoints and closed CDP failures without replay', () => {
+  const secret = 'TEST-private-reply-path-token';
+  const evidence = { status: 'INCOMPLETE', failure: 'CDP command timed out: Runtime.evaluate',
+    taskBoardUiProof: { steps: [{ action: 'Page.reload', state: 'attempted' }, { action: secret, state: 'attempted' }],
+      attachments: { status: 'INCOMPLETE', commentDraftBeforeReload: { durableEmpty: true, secret },
+        imageAfterReload: { secret }, imageOwnerRead: { secret }, commentOwnerRead: { secret },
+        downloadAttempt: { path: secret }, download: { path: secret }, removeReceipt: { phase: 'completed', secret } } } };
+  const before = JSON.stringify(evidence), result = projectDesktopTaskBoardFailure(evidence);
+  assert.ok('retainedProgress' in result && result.retainedProgress);
+  assert.deepEqual(result.cdpFailure, { kind: 'command-timeout', method: 'Runtime.evaluate' });
+  assert.deepEqual(result.retainedProgress, {
+    source: 'retained-taskboard-proof', atomicWithFailure: false, establishesCauseOrEffects: false,
+    durableDraftEmpty: true, rendererReloadAttempts: 1,
+    imageAfterReloadRecorded: true, imageOwnerReadRecorded: true, commentOwnerReadRecorded: true,
+    downloadAttemptRecorded: true, downloadRecorded: true, removeReceiptPhase: 'completed',
+    attachmentProofStatus: 'INCOMPLETE',
+  });
+  const summary = projectDesktopProofReceiptSummary(evidence, {
+    receiptPath: 'TEST-receipt', mode: 'task-board-cross-team-ui', mixedMode: false,
+  });
+  assert.deepEqual(summary.taskBoardFailure, result);
+  assert.ok(Buffer.byteLength(JSON.stringify(result)) <= 8192);
+  assert.equal(JSON.stringify(result).includes(secret), false);
+  assert.equal(JSON.stringify(evidence), before);
+  for (const [failure, kind, method] of [
+    ['CDP connection closed', 'connection-closed', null],
+    ['Renderer evaluation failed', 'evaluation-failed', null],
+    ['CDP command timed out: Page.reload', 'command-timeout', 'Page.reload'],
+    ['CDP command timed out: Runtime.evaluate ' + secret, null, null],
+    ['CDP command timed out: ' + secret, null, null],
+    [secret.repeat(401), null, null],
+  ] as const) {
+    const projected = projectDesktopTaskBoardFailure({ ...evidence, failure });
+    assert.ok('cdpFailure' in projected && projected.cdpFailure);
+    assert.deepEqual(projected.cdpFailure, { kind, method });
+    assert.equal(JSON.stringify(projected).includes(secret), false);
+  }
+  for (const value of [
+    projectDesktopProofReceiptSummary({ ...evidence, status: 'PASS' }, {
+      receiptPath: 'TEST-receipt', mode: 'task-board-cross-team-ui', mixedMode: false,
+    }),
+    projectDesktopProofReceiptSummary(evidence, {
+      receiptPath: 'TEST-receipt', mode: 'native-stop-ui', mixedMode: false,
+    }),
+  ]) assert.equal('taskBoardFailure' in value, false);
+});
+
+test('Taskboard retained progress keeps missing or unreadable checkpoints unknown and bounds its scan', () => {
+  let getterReads = 0;
+  const unreadable = () => { getterReads++; throw new Error('TEST-private-accessor'); };
+  const project = (value: unknown) => {
+    const result = projectDesktopTaskBoardFailure(value);
+    assert.ok('retainedProgress' in result && result.retainedProgress);
+    return result;
+  };
+  const absent = project({});
+  assert.deepEqual(absent.cdpFailure, { kind: null, method: null });
+  assert.equal(absent.retainedProgress.durableDraftEmpty, null);
+  assert.equal(absent.retainedProgress.rendererReloadAttempts, null);
+  assert.equal(absent.retainedProgress.removeReceiptPhase, null);
+  const guarded = project(Object.defineProperty({
+    taskBoardUiProof: { steps: [Object.defineProperty({}, 'action', { get: unreadable })],
+      attachments: Object.defineProperty({}, 'commentDraftBeforeReload', { get: unreadable }) },
+  }, 'failure', { get: unreadable }));
+  assert.deepEqual(guarded.cdpFailure, { kind: null, method: null });
+  assert.equal(guarded.retainedProgress.durableDraftEmpty, null);
+  assert.equal(guarded.retainedProgress.rendererReloadAttempts, null);
+  assert.equal(getterReads, 0);
+  const inherited = project(Object.create({ failure: 'CDP connection closed', taskBoardUiProof: {
+    steps: [{ action: 'Page.reload', state: 'attempted' }],
+  } }));
+  assert.deepEqual(inherited.retainedProgress, absent.retainedProgress);
+  for (const steps of [[], [{ observation: 'retained passive sample' }]]) {
+    const result = project({ taskBoardUiProof: { steps } });
+    assert.equal(result.retainedProgress.rendererReloadAttempts, 0);
+  }
+  for (const steps of [Array(1), [null], Array.from({ length: 1025 }, () => ({ action: 'Page.reload', state: 'attempted' }))]) {
+    assert.equal(project({ taskBoardUiProof: { steps } }).retainedProgress.rendererReloadAttempts, null);
+  }
+  const failure = projectDesktopTaskBoardFailure({ taskBoardUiProof: {
+    steps: new Proxy([], { getOwnPropertyDescriptor() { throw new Error('TEST-private-proxy'); } }),
+  } });
+  assert.deepEqual(failure, { schemaVersion: 1, status: 'unavailable', reason: 'projection-failed' });
+  assert.equal(getterReads, 0);
 });
 
 test('Taskboard focus diagnostics preserve last samples and bounded transitions without exposing private input', () => {

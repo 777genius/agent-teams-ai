@@ -28,11 +28,13 @@ export function createHostProjectRuntimeApi(options: {
   const check = (current: () => boolean) => {
     if (!current()) throw new HostTeamOperationError('context-changed', 'not-dispatched');
   };
-  async function catalog(current: () => boolean) {
+  async function catalog(current: () => boolean, allowEmptyUnconfigured = false) {
     check(current);
     const value = await options.backend.getConnections();
     check(current);
-    if (value.state !== 'ready') throw new HostTeamOperationError('unavailable', 'not-dispatched');
+    if (value.state !== 'ready' && !(allowEmptyUnconfigured && value.state === 'unconfigured' &&
+      value.bindings.length === 0 && (value.unavailableOwners?.length ?? 0) === 0))
+      throw new HostTeamOperationError('unavailable', 'not-dispatched');
     return structuredClone(value);
   }
   async function observe(connection: HostProjectConnection, current: () => boolean, missingLaunchUnsupported = false) {
@@ -98,11 +100,13 @@ export function createHostProjectRuntimeApi(options: {
       }
     },
     async aliveList(): Promise<string[]> {
-      const current = options.captureScope(), snapshot = await catalog(current);
+      const current = options.captureScope(), snapshot = await catalog(current, true);
       const observations = new Map<string, Awaited<ReturnType<typeof observe>>>();
       for (const binding of snapshot.bindings)
         observations.set(binding.handle.handleId, await observe(binding, current));
-      const latest: BackendConnectionSnapshot = await catalog(current), result: string[] = [];
+      const latest: BackendConnectionSnapshot = await catalog(current, true), result: string[] = [];
+      if (latest.state !== snapshot.state)
+        throw new HostTeamOperationError('unavailable', 'not-dispatched');
       for (const binding of snapshot.bindings) {
         const key = hostTeamSelectionKey(binding.handle.handleId), family = captureHostProjectFamily(snapshot, key);
         family.assertSame(latest);
