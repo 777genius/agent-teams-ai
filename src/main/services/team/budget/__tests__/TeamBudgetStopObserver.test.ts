@@ -61,6 +61,25 @@ describe('team budget stop observer', () => {
     expect(stop).not.toHaveBeenCalled();
   });
 
+  it('honors a policy change during asynchronous ownership verification', async () => {
+    let action: 'stop_team' | 'notify' = 'stop_team';
+    const stop = vi.fn(async () => undefined);
+    const observer = new TeamBudgetStopObserver({
+      readCurrentStatus: async () => makeStatus(action),
+      aliveTeams: () => ['alpha'],
+      ownsTeam: async () => {
+        action = 'notify';
+        return true;
+      },
+      stopTeam: stop,
+      isTeamAlive: async () => true,
+      warn: vi.fn(),
+    });
+    observer.observe(makeStatus());
+    await settle();
+    expect(stop).not.toHaveBeenCalled();
+  });
+
   it('does not stop on unknown data, and records unconfirmed stops as failures', async () => {
     const stop = vi.fn(async () => undefined);
     const warn = vi.fn();
@@ -73,8 +92,13 @@ describe('team budget stop observer', () => {
       warn,
     });
     observer.observe({ ...makeStatus(), stale: true, targets: [{ ...makeStatus().targets[0], metrics: [{ ...makeStatus().targets[0].metrics[0], value: 0 }] }] });
-    observer.observe({ ...makeStatus(), targets: [{ ...makeStatus().targets[0], metrics: [{ ...makeStatus().targets[0].metrics[0], incomplete: true, value: 0, percent: 0 }] }] });
+    await settle();
     expect(stop).not.toHaveBeenCalled();
+    expect(warn).not.toHaveBeenCalled();
+    observer.observe({ ...makeStatus(), targets: [{ ...makeStatus().targets[0], metrics: [{ ...makeStatus().targets[0].metrics[0], incomplete: true, value: 0, percent: 0 }] }] });
+    await settle();
+    expect(stop).not.toHaveBeenCalled();
+    expect(warn).not.toHaveBeenCalled();
     observer.observe(makeStatus());
     await settle();
     expect(stop).toHaveBeenCalledOnce();

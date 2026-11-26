@@ -56,6 +56,10 @@ export class TeamBudgetStopObserver {
               if (!(await this.ports.ownsTeam(name))) {
                 throw new Error('Cannot prove runtime ownership for budget stop');
               }
+              const confirmed = evaluateTeamBudgetEnforcement(
+                await this.ports.readCurrentStatus(), teamName
+              );
+              if (confirmed.action !== 'stop_team' || confirmed.state !== 'exceeded') break;
               await this.ports.stopTeam(name);
               if (await this.ports.isTeamAlive(name)) {
                 throw new Error('Stop returned without a confirmed stopped runtime');

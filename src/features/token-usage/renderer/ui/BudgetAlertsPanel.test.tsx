@@ -163,6 +163,7 @@ describe('Budget Save/Cancel and standalone status', () => {
     await render(config, status, [{ scope: 'team', id: 'team:new-team', label: 'New team' }]);
     await open();
     expect(document.body.textContent).toContain('tokenUsage.budgets.editor.onExceeded');
+    expect(document.body.textContent).not.toContain('tokenUsage.budgets.editor.enforcementHint');
     await input('tokenUsage.budgets.tokenLimit', '100');
     const policy = document.querySelector('[role="dialog"] [aria-label="tokenUsage.budgets.editor.onExceeded"]');
     expect(policy).not.toBeNull();
@@ -176,6 +177,7 @@ describe('Budget Save/Cancel and standalone status', () => {
     await act(async () =>
       stop!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
     );
+    expect(document.body.textContent).toContain('tokenUsage.budgets.editor.enforcementHint');
     await button('tokenUsage.budgets.editor.save');
     expect(save.mock.calls[0][0].settings.teams['team:new-team']).toMatchObject({
       monthlyTokenLimit: 100,

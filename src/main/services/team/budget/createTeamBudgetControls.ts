@@ -34,9 +34,9 @@ export interface TeamBudgetNotificationFlags {
 }
 
 function createBudgetAccess(getReader: () => TeamBudgetReader | null) {
-  const projectContexts = TeamProjectContextRegistry.fromCurrentApp();
+  const projectContexts = () => TeamProjectContextRegistry.fromCurrentApp();
   const resolveBudgetAliases = async (names: readonly string[]) => {
-    const lookup = await projectContexts.resolveOwnedExecutionAliases(names);
+    const lookup = await projectContexts().resolveOwnedExecutionAliases(names);
     const aliases = new Map<string, string>();
     const unresolvedNames: string[] = [];
     for (const name of names) {
@@ -66,7 +66,7 @@ export function createTeamBudgetAdmission(
   return async (teamName) => {
     const reader = read();
     // Admission is strict: never treat an unreadable runtime alias as a native team.
-    const owner = await projectContexts.resolveOwnedExecutionAlias(teamName);
+    const owner = await projectContexts().resolveOwnedExecutionAlias(teamName);
     const logicalTeam = owner?.logicalTeamName ?? teamName;
     const settings = await reader.getBudgetSettings();
     if ((settings.teams?.[namedTeamId(logicalTeam)]?.onExceeded ?? 'notify') === 'notify') return;
@@ -100,7 +100,7 @@ export function createTeamBudgetControls(
     readCurrentStatus: async () => read().getBudgetStatus(),
     aliveTeams: () => runtime.getAliveTeams(),
     resolveRuntimeNames: async (logicalTeam) => {
-      const { candidates, refused } = await projectContexts.listOwnedStopCandidates(logicalTeam);
+      const { candidates, refused } = await projectContexts().listOwnedStopCandidates(logicalTeam);
       for (const failure of refused) {
         warn(
           `Budget stop skipped unverified runtime "${failure.executionTeamName}" for "${logicalTeam}"`,

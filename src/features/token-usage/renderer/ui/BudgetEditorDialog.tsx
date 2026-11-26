@@ -221,7 +221,11 @@ export const BudgetEditorDialog = ({
                 <SelectItem value="stop_team">{t('tokenUsage.budgets.editor.stopTeam')}</SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-xs text-text-muted">{t('tokenUsage.budgets.editor.enforcementHint')}</p>
+            {value.onExceeded !== 'notify' && (
+              <p className="text-xs text-text-muted">
+                {t('tokenUsage.budgets.editor.enforcementHint')}
+              </p>
+            )}
           </div>
         )}
         <label className="flex items-center justify-between gap-3 text-sm text-text-secondary">

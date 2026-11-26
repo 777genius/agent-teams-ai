@@ -22,30 +22,34 @@ vi.mock('@main/services/team/lifecycle/stopTeamWithVerifiedEscalation', () => ({
 
 vi.mock('@features/team-project-context/main', () => ({
   TeamProjectContextRegistry: {
-    fromCurrentApp: () => ({
-      resolveOwnedExecutionAliases: async (names: string[]) => new Map(
-        names.map((name) => [name, registry.failNames.has(name)
-          ? { error: new Error('Unresolved project owner') }
-          : {
-              alias: registry.aliases.has(name)
-                ? { logicalTeamName: registry.aliases.get(name), context: {} }
-                : null,
-            }])
-      ),
-      resolveOwnedExecutionAlias: async (name: string) => {
-        if (registry.failNames.has(name)) throw new Error('Unresolved project owner');
-        return registry.aliases.has(name)
-          ? { logicalTeamName: registry.aliases.get(name), context: {} }
-          : null;
-      },
-      listOwnedStopCandidates: async () => ({
-        candidates: registry.nativeNames.filter((name) => name !== 'alpha'),
-        refused: registry.failedCopies.map((executionTeamName) => ({
-          executionTeamName,
-          error: new Error('Unverified project runtime'),
-        })),
-      }),
-    }),
+    fromCurrentApp: () => {
+      const aliases = new Map(registry.aliases);
+      const nativeNames = [...registry.nativeNames];
+      return {
+        resolveOwnedExecutionAliases: async (names: string[]) => new Map(
+          names.map((name) => [name, registry.failNames.has(name)
+            ? { error: new Error('Unresolved project owner') }
+            : {
+                alias: aliases.has(name)
+                  ? { logicalTeamName: aliases.get(name), context: {} }
+                  : null,
+              }])
+        ),
+        resolveOwnedExecutionAlias: async (name: string) => {
+          if (registry.failNames.has(name)) throw new Error('Unresolved project owner');
+          return aliases.has(name)
+            ? { logicalTeamName: aliases.get(name), context: {} }
+            : null;
+        },
+        listOwnedStopCandidates: async () => ({
+          candidates: nativeNames.filter((name) => name !== 'alpha'),
+          refused: registry.failedCopies.map((executionTeamName) => ({
+            executionTeamName,
+            error: new Error('Unverified project runtime'),
+          })),
+        }),
+      };
+    },
   },
 }));
 
@@ -157,6 +161,20 @@ describe('team budget composition - no live provider required', () => {
     expect(stop).toHaveBeenCalledOnce();
     expect(warn).not.toHaveBeenCalled();
   });
+  it('uses the current root for admission, attribution and stop enumeration', async () => {
+    const { guard, controls, stop } = setup({
+      action: 'stop_team', used: 120, aliveName: 'ptc-new-root',
+    });
+    registry.aliases.set('ptc-new-root', 'alpha');
+    registry.nativeNames = ['ptc-new-root'];
+    await expect(guard('ptc-new-root')).rejects.toThrow('TEAM_BUDGET_BLOCKED');
+    const lookup = await controls.resolveBudgetAliases(['ptc-new-root']);
+    expect(lookup.aliases.get('ptc-new-root')).toBe('alpha');
+    controls.observer.observe(budgetStatus({ action: 'stop_team', used: 120 }));
+    for (let n = 0; n < 30; n++) await Promise.resolve();
+    expect(stop).toHaveBeenCalledExactlyOnceWith('ptc-new-root');
+  });
+
   it('never bypasses logical budget by launching a physical project alias', async () => {
     registry.aliases.set('ptc-copy-1', 'alpha');
     const { guard } = setup({ action: 'block_launch', used: 120 });

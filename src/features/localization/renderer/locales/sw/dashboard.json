@@ -472,9 +472,9 @@
       "editor": {
         "onExceeded": "Hatua kikomo kinapofikiwa",
         "notifyOnly": "Arifa pekee",
-        "blockLaunch": "Zuia kuanza upya kwa timu",
+        "blockLaunch": "Zuia uzinduzi mpya wa timu",
         "stopTeam": "Simamisha timu na uzuie kuanza",
-        "enforcementHint": "Data ya matumizi ikikosekana au kuchelewa, kuanza upya huzuiwa. Gharama ni makadirio na bili inaweza kuzidi kikomo."
+        "enforcementHint": "Data ya matumizi ikikosekana au kuchelewa, uzinduzi mpya wa timu huzuiwa. Gharama ni makadirio na bili inaweza kuzidi kikomo."
       }
     }
   }
