@@ -1208,6 +1208,124 @@ test('native Review failure summaries reuse the bounded retained readiness proje
   assert.doesNotMatch(JSON.stringify(refused), /TEST-private|https:|\/TEST-secret/);
 });
 
+async function savedNativeNavigationFixture(t: import('node:test').TestContext, options: {
+  surface?: 'delayed' | 'alice' | 'bob' | 'foreign' | 'dialog' | 'duplicate'; retired?: boolean;
+} = {}) {
+  const { stripTypeScriptTypes } = await import('node:module');
+  const { desktopJsLiteral } = await import('./desktop-ui-controls.ts');
+  const source = await readFile(new URL('./desktop-readback-fixture.ts', import.meta.url), 'utf8');
+  const first = 'export async function runDesktopNativeReadback(', last = '  const geometry = await revealDesktopReply(cdp, reply, {';
+  assert.equal(source.split(first).length, 2); assert.equal(source.split(last).length, 2);
+  const prefix = stripTypeScriptTypes(source.slice(source.indexOf(first), source.indexOf(last)).replace(/^export /u, '') + '\n}');
+  const handleId = 'TEST-original-handle', team = hostTeamSelectionKey(handleId);
+  const selector = '[data-team-sidebar-host="team"][data-team-name=' + JSON.stringify(team) + ']';
+  const surface = options.surface ?? 'delayed', refusal = new Error('TEST original renderer retired');
+  const calls: { method: string; params?: Record<string, unknown> }[] = [], steps: Record<string, unknown>[] = [];
+  let now = 0, selected = false, opened = surface === 'alice', reads = 0, ownerChecks = 0;
+  const waits: number[] = [];
+  t.mock.method(Date, 'now', () => now);
+  t.mock.method(globalThis, 'setTimeout', (done: () => void, ms: number) => {
+    assert.equal(ms, 100, 'original passive-read and click-settling cadence');
+    waits.push(ms); now += ms; queueMicrotask(done); return 1 as unknown as NodeJS.Timeout;
+  });
+  const visible = () => surface !== 'foreign' && (surface !== 'delayed' || now >= 200);
+  const rect = () => ({ x: 40, y: 50, width: 200, height: 32 });
+  const recipient = { textContent: surface === 'bob' ? 'bob' : 'alice', getBoundingClientRect: rect };
+  const textarea = { getBoundingClientRect: rect };
+  const composer = { getBoundingClientRect: rect,
+    querySelectorAll(query: string) { assert.equal(query, 'textarea'); return [textarea]; },
+    querySelector(query: string) { assert.equal(query, '.message-composer-target-selectors'); return recipient; } };
+  const alice = { textContent: 'alice REPLY_NATIVE_ONE', tagName: 'BUTTON', getBoundingClientRect: rect,
+    matches(query: string) { assert.equal(query, ':disabled'); return false; }, contains: () => false,
+    closest: () => null, getAttribute: () => null, getAnimations: () => [] };
+  const sidebar = { getBoundingClientRect: rect,
+    querySelectorAll(query: string) {
+      if (query === '.message-composer-flat-layout') return opened || surface === 'bob' ? [composer] : [];
+      if (query === 'button[aria-label^="alice,"]') return opened || surface === 'bob' ? [] : [alice];
+      assert.fail('unexpected original Team query: ' + query);
+    },
+    get innerText() { return opened || surface === 'bob' ? 'REPLY_NATIVE_ONE' : 'TEST original Team overview'; },
+  };
+  const dialog = { getBoundingClientRect: rect };
+  const document = {
+    querySelector(query: string) {
+      if (query === '.message-composer-flat-layout textarea') return textarea; // The old global shortcut sees the foreign/task composer.
+      if (query === selector) return visible() ? sidebar : null;
+      assert.fail('unexpected document query: ' + query);
+    },
+    querySelectorAll(query: string) {
+      if (query === '[role="dialog"]') return surface === 'dialog' || surface === 'delayed' && now < 200 ? [dialog] : [];
+      if (query === selector) return !visible() ? [] : surface === 'duplicate' ? [sidebar, sidebar] : [sidebar];
+      if (query === selector + ' button[aria-label^="alice,"]' || query === 'button[aria-label^="alice,"]')
+        return visible() && !opened && surface !== 'bob' ? [alice] : [];
+      assert.fail('unexpected document query list: ' + query);
+    },
+    elementFromPoint: () => alice,
+    body: { get innerText() { return opened || surface !== 'delayed' ? 'REPLY_NATIVE_ONE' : 'TEST stale task composer'; } },
+  };
+  const cdp = {
+    async evaluate(expression: string) {
+      assert.ok(selected, 'no navigation read before the original sidebar/Open Team intent');
+      reads++;
+      return runInNewContext(expression, { document, innerWidth: 1200, innerHeight: 900,
+        getComputedStyle: () => ({ pointerEvents: 'auto' }) });
+    },
+    async send(method: string, params?: Record<string, unknown>) {
+      calls.push({ method, params });
+      assert.ok(method === 'Page.bringToFront' || method === 'Input.dispatchMouseEvent');
+      if (params?.type === 'mouseReleased') opened = true;
+      return {};
+    },
+  };
+  const make = Function('dependencies', `'use strict'; const {assert,readDesktopNativeStopSessions,readFile,join,process,record,
+    createDesktopUiControls,desktopJsLiteral,hostTeamSelectionKey}=dependencies; ${prefix}; return runDesktopNativeReadback;`) as
+    (dependencies: Record<string, unknown>) => (port: typeof cdp, input: Record<string, unknown>) => Promise<void>;
+  const run = make({ assert, readDesktopNativeStopSessions: async () => [{ phase: 'closed', custody: 'released' }],
+    readFile: async () => JSON.stringify({ nativeProvider: 'claude', discovery: { state: 'ready',
+      bindings: [{ handle: { handleId } }] } }), join, process: { env: {} }, desktopJsLiteral, hostTeamSelectionKey,
+    record(value: unknown) { assert.ok(value && typeof value === 'object' && !Array.isArray(value)); return value; },
+    createDesktopUiControls(port: typeof cdp, input: Parameters<typeof createDesktopUiControls>[1]) {
+      const controls = createDesktopUiControls(port, { ...input, step(value) { steps.push(value); input.step(value); } });
+      return { ...controls, async observeInput() {}, async clickSidebar(subject: string) {
+        assert.equal(subject, 'TEST saved task'); assert.equal(selected, false); selected = true;
+      } };
+    },
+  });
+  return { calls, steps, waits, refusal, counts: () => ({ now, reads, ownerChecks }),
+    run: () => run(cdp, { root: '/TEST-original-root', seed: { taskId: '1', subject: 'TEST saved task' },
+      evidence: {}, assertNoNativeChildren() { assert.fail('this finite prefix stops before native custody reads'); },
+      assertOwnedRenderer() { ownerChecks++; if (options.retired) throw refusal; } }) };
+}
+
+test('saved native readback settles the original Team before one Alice intent despite a stale foreign composer', { timeout: 5000 }, async t => {
+  const f = await savedNativeNavigationFixture(t);
+  await f.run();
+  assert.deepEqual(f.calls.filter(call => call.method === 'Input.dispatchMouseEvent').map(call => call.params?.type),
+    ['mouseMoved', 'mousePressed', 'mouseReleased']);
+  assert.equal(f.steps.filter(step => step.action === 'mouseClick').length, 1);
+  assert.equal(f.steps.find(step => step.action === 'mouseClick')?.label, 'open saved ordinary direct chat');
+  assert.equal(f.counts().now, 400, '200ms route settling plus original 200ms stable click; no new input');
+});
+
+test('saved native readback keeps an already open original Alice chat without another click', { timeout: 5000 }, async t => {
+  const f = await savedNativeNavigationFixture(t, { surface: 'alice' }); await f.run();
+  assert.deepEqual(f.calls, []); assert.deepEqual(f.steps, []); assert.equal(f.counts().now, 0);
+});
+
+for (const surface of ['bob', 'foreign', 'dialog', 'duplicate'] as const)
+test('saved native readback refuses ' + surface + ' despite a globally visible old reply', { timeout: 5000 }, async t => {
+  const f = await savedNativeNavigationFixture(t, { surface });
+  await assert.rejects(f.run(), /UI read timed out: .*; no mutation retry/);
+  assert.equal(f.counts().now, 30_000, 'one original30s classification budget without a reset');
+  assert.equal(f.counts().reads, 300); assert.deepEqual(f.calls, []); assert.deepEqual(f.steps, []);
+});
+
+test('saved native readback preserves the original renderer refusal before navigation input', { timeout: 5000 }, async t => {
+  const f = await savedNativeNavigationFixture(t, { retired: true });
+  await assert.rejects(f.run(), error => error === f.refusal);
+  assert.deepEqual(f.calls, []); assert.deepEqual(f.steps, []); assert.equal(f.counts().now, 0);
+});
+
 test('native cold readback summaries expose only retained route and renderer facts', () => {
   const secret = 'TEST-private-value https://TEST-private.example/token /TEST-secret/path';
   const evidence = { status: 'INCOMPLETE', failureSource: { kind: 'error', frames: ['TEST-original-frame'] },
@@ -2656,6 +2774,163 @@ for (const label of ['missing selected A', 'non-string A handle', 'empty A handl
   });
 }
 
+
+test('Selection project navigation registers only the two original zero-session fixture scopes', async t => {
+  const { stripTypeScriptTypes } = await import('node:module');
+  const source = (await readFile(new URL('./desktop-emulated-runtime-fixture.ts', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
+  const begin = 'export async function prepareDesktopEmulatedRuntimeFixture(', end = '  const selectedSources = ';
+  for (const marker of [begin, end]) assert.equal(source.split(marker).length, 2);
+  const actual = stripTypeScriptTypes(source.slice(source.indexOf(begin), source.indexOf(end))
+    .replace(/^export /u, '') + '  return fixture;\n}');
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-selection-project-discovery-')));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  await mkdir(join(root, 'claude')); await mkdir(join(root, 'workspace'));
+  const configPath = join(root, 'claude/agent-teams-config.json');
+  const initial = { general: { appLocale: 'en', agentLanguage: 'en', theme: 'dark' }, providerConnections: [] };
+  const make = Function('environment', `'use strict';
+    const {assert,process,prepareDesktopBackendFixture,readFile,writeFile,join}=environment;
+    ${actual}
+    return prepareDesktopEmulatedRuntimeFixture;`) as (environment: Record<string, unknown>) =>
+      (repo: string, pnpm: string, provider: string, variant?: string) => Promise<unknown>;
+  let calls = 0;
+  const prepare = make({ assert, process: { platform: 'darwin', arch: 'arm64', env: {} }, readFile, writeFile, join,
+    async prepareDesktopBackendFixture(repo: string, options: unknown) {
+      calls++; assert.equal(repo, 'TEST-repo');
+      assert.deepEqual(options, { pnpmEntry: 'TEST-pnpm', seedUiPreferences: true, creation: true }); return { root };
+    } });
+  for (const [provider, variant] of [['codex', 'selection'], ['codex', 'installer'], ['codex', undefined],
+    ['claude', undefined], ['claude', 'lifecycle'], ['opencode', undefined]] as const) {
+    const before = JSON.stringify(initial); await writeFile(configPath, before, { mode: 0o600 });
+    await prepare('TEST-repo', 'TEST-pnpm', provider, variant);
+    const after = await readFile(configPath, 'utf8');
+    if (variant === 'selection' || variant === 'installer') {
+      assert.deepEqual(JSON.parse(after), { ...initial, general: { ...initial.general, customProjectPaths: [join(root, 'workspace')] } });
+    } else assert.equal(after, before, 'unrelated fixture configuration remains byte-identical');
+  }
+  assert.equal(calls, 6, 'only the original preparation prefix runs; no peer or native process is started');
+});
+
+function selectionProjectNavigationState() {
+  const key = hostTeamSelectionKey('TEST-selection-B'), seed = hostTeamSelectionKey('TEST-selection-A');
+  return {
+    activeContextId: 'local', selectedTeamName: null as string | null,
+    selectedProjectId: 'TEST-project', activeProjectId: 'TEST-project',
+    selectedRepositoryId: null as string | null, selectedWorktreeId: null as string | null,
+    projects: [{ id: 'TEST-project', path: join('/TEST-selection-navigation', 'workspace') }],
+    repositoryGroups: [] as { id: string; worktrees: { id: string; path: string }[] }[],
+    paneLayout: { focusedPaneId: 'TEST-pane', panes: [{ id: 'TEST-pane', activeTabId: 'TEST-tab-B',
+      tabs: [{ id: 'TEST-tab-B', type: 'team', teamName: key, taskDetail: undefined as object | undefined }] }] },
+    teamByName: {
+      [seed]: { teamName: seed, ownerResourceRef: 'TEST-original-owner', projectContextMode: 'shared' },
+      [key]: { teamName: key, ownerResourceRef: 'TEST-original-owner', projectContextMode: 'per_project' },
+    },
+  };
+}
+
+async function selectionProjectNavigation(state: unknown) {
+  const { stripTypeScriptTypes } = await import('node:module');
+  const { desktopJsLiteral: literal } = await import('./desktop-ui-controls.ts');
+  const { record } = await import('./desktop-resume-records.ts');
+  const source = (await readFile(new URL('./desktop-emulated-selection-ui.ts', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
+  const begin = '  const openTeam = async (', end = '  const openLaunch = async (';
+  for (const marker of [begin, end]) assert.equal(source.split(marker).length, 2);
+  const actual = stripTypeScriptTypes(source.slice(source.indexOf(begin), source.indexOf(end)));
+  const make = Function('environment', `'use strict';
+    const {assert,ui,hostTeamSelectionKey,literal,record,fixture,proof,projectOracle,join}=environment;
+    ${actual}
+    return openTeam;`) as (environment: Record<string, unknown>) => (selected: unknown) => Promise<void>;
+  const key = hostTeamSelectionKey('TEST-selection-B'), selector = `[data-team-name=${literal(key)}]`;
+  const actions: string[] = [], values: boolean[] = [], failure = new Error('TEST original selection wait refused');
+  const open = make({ assert, hostTeamSelectionKey, literal, record, join, fixture: { root: '/TEST-selection-navigation' },
+    projectOracle: { identity: Object.freeze({ contextId: 'local', ownerResourceRef: 'TEST-original-owner',
+      projectPath: join('/TEST-selection-navigation', 'workspace') }) }, proof: { creation: { record: {
+      contextId: 'local', teamName: 'TEST-selection-next', binding: { handleId: 'TEST-selection-B' },
+    } } },
+    ui: { async click(target: string, label: string, text?: string) {
+      if (label === 'open original application menu') assert.equal(target, 'button[aria-label="More actions"]');
+      else if (label === 'open original Teams list') { assert.equal(target, 'button'); assert.equal(text, 'Teams'); }
+      else { assert.equal(label, 'open original captured Team'); assert.equal(target, selector); }
+      actions.push(label);
+    }, async scrollTo(target: string, label: string) {
+      assert.equal(target, selector); assert.equal(label, 'original captured Team card'); actions.push(label);
+    }, async waitRead(...args: unknown[]) {
+      assert.equal(args.length, 2, 'the original 30s read budget is not replaced');
+      assert.equal(args[1], 'original selected Team identity'); actions.push(String(args[1]));
+      const value: unknown = runInNewContext(String(args[0]), { window: { __agentTeamsDevStore: { getState: () => state } } });
+      assert.equal(typeof value, 'boolean'); values.push(value as boolean); if (!value) throw failure; return value;
+    } },
+  });
+  return { key, values, actions, failure, run: (projectDefinition = true) => open({
+    name: 'TEST-selection-next', handleId: 'TEST-selection-B', projectDefinition,
+  }) };
+}
+
+const selectionProjectNavigationActions = ['open original application menu', 'open original Teams list',
+  'original captured Team card', 'open original captured Team', 'original selected Team identity'];
+
+test('Selection project navigation admits the focused logical tab and explicit exact project before any Runtime exists', async () => {
+  const { stripTypeScriptTypes } = await import('node:module');
+  const source = (await readFile(new URL('../../src/renderer/components/team/teamProjectSelection.ts', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
+  const begin = 'function findWorktreeSelection(', end = '/**\n * A previously shared team';
+  for (const marker of [begin, end]) assert.equal(source.split(marker).length, 2);
+  const actual = stripTypeScriptTypes(source.slice(source.indexOf(begin), source.indexOf(end)).replace('export function ', 'function '));
+  const resolve = Function(`${actual}\nreturn resolveTeamProjectSelection;`)() as
+    (state: ReturnType<typeof selectionProjectNavigationState>) => { projectPath: string | null };
+  for (const grouped of [false, true]) {
+    const state = selectionProjectNavigationState();
+    if (grouped) {
+      state.selectedRepositoryId = 'TEST-repository'; state.selectedWorktreeId = state.selectedProjectId;
+      state.repositoryGroups = [{ id: state.selectedRepositoryId, worktrees: state.projects }]; state.projects = [];
+      state.selectedTeamName = hostTeamSelectionKey('TEST-selection-A');
+    }
+    assert.equal(resolve(state).projectPath, join('/TEST-selection-navigation', 'workspace'),
+      'the actual renderer resolver selects the same captured workspace');
+    const f = await selectionProjectNavigation(state); await f.run();
+    assert.deepEqual(f.values, [true]); assert.deepEqual(f.actions, selectionProjectNavigationActions);
+  }
+});
+
+test('Selection project navigation refuses other panes, logical owners, contexts and project fallbacks', async () => {
+  const key = hostTeamSelectionKey('TEST-selection-B'), seed = hostTeamSelectionKey('TEST-selection-A');
+  const mutations: [string, (state: ReturnType<typeof selectionProjectNavigationState>) => void][] = [
+    ['unfocused B', s => { s.paneLayout.panes.push({ id: 'TEST-other-pane', activeTabId: 'TEST-other', tabs: [] }); s.paneLayout.focusedPaneId = 'TEST-other-pane'; }],
+    ['duplicate pane', s => { s.paneLayout.panes.push(structuredClone(s.paneLayout.panes[0]!)); }],
+    ['duplicate active tab', s => { s.paneLayout.panes[0]!.tabs.push(structuredClone(s.paneLayout.panes[0]!.tabs[0]!)); }],
+    ['inactive B', s => { s.paneLayout.panes[0]!.activeTabId = 'TEST-missing-tab'; }],
+    ['task detail', s => { s.paneLayout.panes[0]!.tabs[0]!.taskDetail = {}; }],
+    ['graph tab', s => { s.paneLayout.panes[0]!.tabs[0]!.type = 'graph'; }],
+    ['physical execution tab', s => { s.paneLayout.panes[0]!.tabs[0]!.teamName = hostTeamSelectionKey('TEST-execution-B'); }],
+    ['foreign context', s => { s.activeContextId = 'TEST-other-context'; }],
+    ['foreign owner', s => { s.teamByName[key]!.ownerResourceRef = 'TEST-foreign'; }],
+    ['unavailable owner', s => { s.teamByName[seed]!.ownerResourceRef = ''; s.teamByName[key]!.ownerResourceRef = ''; }],
+    ['missing logical summary', s => { Reflect.deleteProperty(s.teamByName, key); }],
+    ['wrong logical summary', s => { s.teamByName[key]!.teamName = seed; }],
+    ['execution summary', s => { s.teamByName[key]!.projectContextMode = 'shared'; }],
+    ['no selected project', s => { s.selectedProjectId = ''; }],
+    ['no discovered project', s => { s.projects = []; }],
+    ['wrong project despite correct active fallback', s => { s.projects.push({ id: 'TEST-other-project', path: '/TEST-other-workspace' }); s.selectedProjectId = 'TEST-other-project'; }],
+    ['wrong project path', s => { s.projects[0]!.path = '/TEST-other-workspace'; }],
+    ['duplicate flat ID', s => { s.projects.unshift({ id: 'TEST-project', path: '/TEST-other-workspace' }); }],
+    ['repository fallback only', s => { s.repositoryGroups = [{ id: 'TEST-repository', worktrees: s.projects }]; s.projects = []; s.selectedProjectId = ''; s.selectedRepositoryId = 'TEST-repository'; }],
+    ['wrong selected repository', s => { s.repositoryGroups = [{ id: 'TEST-repository', worktrees: s.projects }]; s.projects = []; s.selectedWorktreeId = s.selectedProjectId; s.selectedRepositoryId = 'TEST-other-repository'; }],
+    ['duplicate worktree ID', s => { s.repositoryGroups = [{ id: 'TEST-other-repository', worktrees: [{ id: 'TEST-project', path: '/TEST-other-workspace' }] }, { id: 'TEST-repository', worktrees: s.projects }]; s.projects = []; s.selectedWorktreeId = s.selectedProjectId; s.selectedRepositoryId = 'TEST-repository'; }],
+  ];
+  for (const [label, mutate] of mutations) {
+    const state = selectionProjectNavigationState(); state.selectedTeamName = key; mutate(state);
+    const f = await selectionProjectNavigation(state);
+    await assert.rejects(f.run(), error => error === f.failure, label);
+    assert.deepEqual(f.values, [false], label); assert.deepEqual(f.actions, selectionProjectNavigationActions, label);
+  }
+});
+
+test('Selection project navigation preserves the original shared Runtime selection guard', async () => {
+  const key = hostTeamSelectionKey('TEST-selection-B');
+  const current = await selectionProjectNavigation({ selectedTeamName: key }); await current.run(false);
+  assert.deepEqual(current.values, [true]); assert.deepEqual(current.actions, selectionProjectNavigationActions);
+  const wrong = await selectionProjectNavigation({ selectedTeamName: hostTeamSelectionKey('TEST-other-runtime') });
+  await assert.rejects(wrong.run(false), error => error === wrong.failure);
+  assert.deepEqual(wrong.values, [false]); assert.deepEqual(wrong.actions, selectionProjectNavigationActions);
+});
 
 async function selectionStoppedConvergence(options: {
   modes?: string[]; tables?: boolean[]; guardMs?: number[]; readMs?: number[]; bindingMismatch?: boolean;

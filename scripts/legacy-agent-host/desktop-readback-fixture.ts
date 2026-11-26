@@ -12,7 +12,8 @@ import { desktopBackendEnvironment, fileDigest } from './desktop-backend-fixture
 import type { prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
 import { readDesktopLinuxChildExecInput } from './desktop-runtime-source-fixture.ts';
 import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
-import { createDesktopUiControls } from './desktop-ui-controls.ts';
+import { createDesktopUiControls, desktopJsLiteral } from './desktop-ui-controls.ts';
+import { hostTeamSelectionKey } from '../../src/features/agent-backend/contracts/teamSelection.ts';
 import { revealDesktopReply } from './desktop-reply-visibility.ts';
 import { verifyNativeChatAttachmentMessage } from './desktop-native-chat-attachments-ui.ts';
 import { checkpoint } from './desktop-resume-records.ts';
@@ -218,6 +219,12 @@ export async function runDesktopNativeReadback(
   if (process.env.LEGACY_DESKTOP_OPENCODE_GENERATION === 'v2') assert.equal(openCode, true);
   if (openCode) assert.equal(options.metadataProcessCount, 1, 'the exact original cold metadata child is captured before UI reads');
   const reply = openCode ? 'REPLY_OPENCODE_ONE' : 'REPLY_NATIVE_ONE';
+  const discovery = record(source.discovery), bindings = discovery.bindings;
+  assert.equal(discovery.state, 'ready');
+  assert.ok(Array.isArray(bindings) && bindings.length === 1);
+  const handleId = record(record(bindings[0]).handle).handleId;
+  assert.ok(typeof handleId === 'string' && handleId.length > 0 && handleId.length <= 256 && !handleId.includes('\0'));
+  const sidebar = '[data-team-sidebar-host="team"][data-team-name=' + JSON.stringify(hostTeamSelectionKey(handleId)) + ']';
   const ui = createDesktopUiControls(cdp, {
     assertOwnedRenderer: options.assertOwnedRenderer,
     step: (value) => {
@@ -226,12 +233,23 @@ export async function runDesktopNativeReadback(
   });
   await ui.observeInput();
   await ui.clickSidebar(options.seed.subject);
-  if (
-    !(await cdp.evaluate(
-      `Boolean(document.querySelector('.message-composer-flat-layout textarea'))`
-    ))
-  )
-    await ui.click('button[aria-label^="alice,"]', 'open saved ordinary direct chat');
+  // Open team acknowledges input before its portal settles. Classify only the
+  // original Team surface; a stale task/foreign composer cannot skip Alice.
+  const surface = await ui.waitRead(`(() => {
+    const visible=e=>{const r=e.getBoundingClientRect();return r.width>0&&r.height>0;};
+    if([...document.querySelectorAll('[role="dialog"]')].some(visible))return null;
+    const hosts=[...document.querySelectorAll(${desktopJsLiteral(sidebar)})].filter(visible);
+    if(hosts.length!==1)return null;
+    const host=hosts[0],composers=[...host.querySelectorAll('.message-composer-flat-layout')].filter(visible);
+    if(composers.length){
+      const composer=composers[0],recipient=composer.querySelector('.message-composer-target-selectors');
+      return composers.length===1&&[...composer.querySelectorAll('textarea')].filter(visible).length===1&&
+        recipient?.textContent.trim()==='alice'?'alice':null;
+    }
+    return [...host.querySelectorAll('button[aria-label^="alice,"]')].filter(visible).length===1?'list':null;
+  })()`, 'saved original Team conversation surface');
+  if (surface === 'list')
+    await ui.click(sidebar + ' button[aria-label^="alice,"]', 'open saved ordinary direct chat');
   await ui.waitRead(
     `document.body.innerText.includes(${JSON.stringify(reply)})`,
     'saved native reply rendered'

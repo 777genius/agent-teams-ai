@@ -73,7 +73,31 @@ export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort & { evaluate(
     await ui.click('button', 'open original Teams list', 'Teams');
     const key = hostTeamSelectionKey(selected.handleId), selector = `[data-team-name=${literal(key)}]`;
     await ui.scrollTo(selector, 'original captured Team card'); await ui.click(selector, 'open original captured Team');
-    await ui.waitRead(`window.__agentTeamsDevStore?.getState().selectedTeamName===${literal(key)}`, 'original selected Team identity');
+    // An unlaunched logical definition has no global execution selection yet.
+    // Require its focused ordinary tab and the explicit project selected by the original card click.
+    await ui.waitRead(selected.projectDefinition ? `(()=>{const s=window.__agentTeamsDevStore?.getState();
+      if(!s||s.activeContextId!==${literal(projectOracle.identity.contextId)})return false;
+      const layout=s.paneLayout;if(!layout||!Array.isArray(layout.panes))return false;
+      const panes=layout.panes.filter(p=>p.id===layout.focusedPaneId);if(panes.length!==1)return false;
+      const pane=panes[0];if(!Array.isArray(pane.tabs)||typeof pane.activeTabId!=='string')return false;
+      const tabs=pane.tabs.filter(t=>t.id===pane.activeTabId);if(tabs.length!==1)return false;
+      const tab=tabs[0];if(tab.type!=='team'||tab.taskDetail||tab.teamName!==${literal(key)})return false;
+      const team=s.teamByName?.[${literal(key)}];
+      if(!team||team.teamName!==${literal(key)}||team.projectContextMode!=='per_project'||
+        team.ownerResourceRef!==${literal(projectOracle.identity.ownerResourceRef)})return false;
+      const id=s.selectedProjectId;
+      if(typeof id!=='string'||!id||s.activeProjectId!==id||!Array.isArray(s.projects)||!Array.isArray(s.repositoryGroups))return false;
+      if(s.selectedWorktreeId===null&&s.selectedRepositoryId===null){
+        const projects=s.projects.filter(p=>p.id===id);
+        return projects.length===1&&projects[0].path===${literal(projectOracle.identity.projectPath)};
+      }
+      if(s.selectedWorktreeId!==id||typeof s.selectedRepositoryId!=='string'||!s.selectedRepositoryId||
+        s.repositoryGroups.some(g=>!g||!Array.isArray(g.worktrees))||
+        s.repositoryGroups.filter(g=>g.id===s.selectedRepositoryId).length!==1)return false;
+      const worktrees=s.repositoryGroups.flatMap(g=>g.worktrees.filter(w=>w.id===id).map(w=>({repositoryId:g.id,path:w.path})));
+      return worktrees.length===1&&worktrees[0].repositoryId===s.selectedRepositoryId&&
+        worktrees[0].path===${literal(projectOracle.identity.projectPath)}})()` :
+      `window.__agentTeamsDevStore?.getState().selectedTeamName===${literal(key)}`, 'original selected Team identity');
   };
   const openLaunch = async (selected: Team, chooseLow = false) => {
     await ui.click('button', 'open original saved Team Launch', 'Launch');

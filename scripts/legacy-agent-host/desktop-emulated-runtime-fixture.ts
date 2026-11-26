@@ -63,6 +63,13 @@ export async function prepareDesktopEmulatedRuntimeFixture(repo: string, pnpmEnt
   }
   const fixture = await prepareDesktopBackendFixture(repo, { pnpmEntry, seedUiPreferences: true, creation: true,
     ...(candidateRuntime ? { candidateRuntime } : {}), ...(finiteStoppedImport ? { finiteStoppedImport } : {}) });
+  if (variant === 'selection' || variant === 'installer') {
+    // Ordinary custom-folder discovery makes this zero-session TEST project selectable after reload.
+    const configPath = join(fixture.root, 'claude/agent-teams-config.json');
+    const config = JSON.parse(await readFile(configPath, 'utf8')) as { general: Record<string, unknown> };
+    config.general.customProjectPaths = [join(fixture.root, 'workspace')];
+    await writeFile(configPath, JSON.stringify(config), { mode: 0o600 });
+  }
   const selectedSources = provider === 'claude' ? ['tools/owned-process-broker/fixtures/claudeProviderPeer.mjs'] :
     [...desktopRuntimePeerSources, ...(provider === 'opencode'
       ? ['packages/legacy-agent-host/dist/adapters/providers/OpenCodeMcpPolicyPlugin.js'] : [])];

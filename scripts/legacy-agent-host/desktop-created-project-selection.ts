@@ -91,6 +91,8 @@ export async function captureDesktopProjectOracle(cdp: UiCdpPort,
     return { records, discovery: await cdp.evaluate('window.electronAPI.agentBackend.getConnections()') };
   }
   return {
+    identity: Object.freeze({ contextId: expected.contextId, ownerResourceRef: expected.ownerResourceRef,
+      projectPath: expected.projectPath }),
     async select(logicalName: string) {
       const source = await originalSources();
       const selected = selectDesktopProjectExecution(source.records, expected, logicalName, source.discovery);
