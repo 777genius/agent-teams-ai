@@ -42,7 +42,7 @@ function validPair() {
   return { predecessor, target, latest: target };
 }
 
-test('authenticates the exact public v2.18.7 to v2.19.0 release pair and all native assets', () => {
+test('authenticates the exact public v2.18.7 to v2.19.0 pair and all installer, blockmap, and feed assets', () => {
   const { predecessor, target, latest } = validPair();
   const evidence = verifyPublished219Pair(
     predecessor,
