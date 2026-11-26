@@ -221,4 +221,87 @@ describe('team budget stop observer', () => {
     expect(warn).toHaveBeenCalledTimes(1);
     expect(warn.mock.calls[0][0]).toContain('ptc-broken');
   });
+
+  it.each(['reject', 'unconfirmed'] as const)(
+    'retries a %s stop even after cancellation hides the runtime from the alive projection',
+    async (outcome) => {
+      let projectedAlive = true;
+      let running = true;
+      const stop = vi.fn(async () => {
+        projectedAlive = false;
+        if (stop.mock.calls.length === 1) {
+          if (outcome === 'reject') throw new Error('Termination failed');
+          return;
+        }
+        running = false;
+      });
+      const warn = vi.fn();
+      const observer = new TeamBudgetStopObserver({
+        readCurrentStatus: async () => makeStatus(),
+        aliveTeams: () => (projectedAlive ? ['alpha'] : []),
+        ownsTeam: async () => true,
+        stopTeam: stop,
+        isTeamAlive: async () => running,
+        warn,
+      });
+      observer.observe(makeStatus());
+      await settle();
+      expect(stop).toHaveBeenCalledOnce();
+      expect(warn).toHaveBeenCalledOnce();
+      observer.observe(makeStatus());
+      observer.observe(makeStatus());
+      await settle();
+      expect(stop).toHaveBeenCalledTimes(2);
+      expect(running).toBe(false);
+      observer.observe(makeStatus());
+      await settle();
+      expect(stop).toHaveBeenCalledTimes(2);
+      expect(warn).toHaveBeenCalledOnce();
+    }
+  );
+
+  it('revalidates policy, alias enumeration and ownership before retrying a failed copy', async () => {
+    let action: 'stop_team' | 'notify' = 'stop_team';
+    let projectedAlive = true;
+    let owned = true;
+    let candidates = ['ptc-copy'];
+    const stop = vi.fn(async (_name: string) => {
+      projectedAlive = false;
+      if (stop.mock.calls.length === 1) throw new Error('Termination failed');
+    });
+    const observer = new TeamBudgetStopObserver({
+      readCurrentStatus: async () => makeStatus(action),
+      aliveTeams: () => (projectedAlive ? ['ptc-copy'] : []),
+      resolveRuntimeNames: async () => candidates,
+      ownsTeam: async () => owned,
+      stopTeam: stop,
+      isTeamAlive: async () => false,
+      warn: vi.fn(),
+    });
+    observer.observe(makeStatus());
+    await settle();
+    expect(stop).toHaveBeenCalledOnce();
+
+    action = 'notify';
+    observer.observe(makeStatus());
+    await settle();
+    expect(stop).toHaveBeenCalledOnce();
+
+    action = 'stop_team';
+    candidates = [];
+    observer.observe(makeStatus());
+    await settle();
+    expect(stop).toHaveBeenCalledOnce();
+
+    candidates = ['ptc-copy'];
+    owned = false;
+    observer.observe(makeStatus());
+    await settle();
+    expect(stop).toHaveBeenCalledOnce();
+
+    owned = true;
+    observer.observe(makeStatus());
+    await settle();
+    expect(stop.mock.calls).toEqual([['ptc-copy'], ['ptc-copy']]);
+  });
 });

@@ -20,6 +20,7 @@ export interface TeamBudgetStopPorts {
  */
 export class TeamBudgetStopObserver {
   private readonly inFlight = new Set<string>();
+  private readonly unconfirmedStops = new Map<string, Set<string>>();
 
   constructor(private readonly ports: TeamBudgetStopPorts) {}
 
@@ -47,6 +48,9 @@ export class TeamBudgetStopObserver {
               error
             );
           }
+          const retryNames = this.unconfirmedStops.get(teamName) ?? new Set<string>();
+          // Retry only currently enumerated names: a retained failure is not
+          // evidence of project ownership after a root or alias change.
           for (const name of new Set([teamName, ...nativeNames])) {
             // A slow stop can overlap a user raising the limit or disabling
             // enforcement. Recheck before stopping each remaining runtime.
@@ -56,7 +60,7 @@ export class TeamBudgetStopObserver {
             );
             if (latest.action !== 'stop_team' || latest.state !== 'exceeded') break;
             try {
-              if (!this.ports.aliveTeams().includes(name)) continue;
+              if (!retryNames.has(name) && !this.ports.aliveTeams().includes(name)) continue;
               if (!(await this.ports.ownsTeam(name))) {
                 throw new Error('Cannot prove runtime ownership for budget stop');
               }
@@ -65,10 +69,17 @@ export class TeamBudgetStopObserver {
                 teamName
               );
               if (confirmed.action !== 'stop_team' || confirmed.state !== 'exceeded') break;
+              // A failed stop may already mark the run cancelled and remove
+              // it from the logical alive projection. Keep it eligible until
+              // the shared stop path and its postcondition both succeed.
+              retryNames.add(name);
+              this.unconfirmedStops.set(teamName, retryNames);
               await this.ports.stopTeam(name);
               if (await this.ports.isTeamAlive(name)) {
                 throw new Error('Stop returned without a confirmed stopped runtime');
               }
+              retryNames.delete(name);
+              if (retryNames.size === 0) this.unconfirmedStops.delete(teamName);
             } catch (error) {
               // One broken project runtime must not prevent stopping its siblings.
               this.ports.warn(`Budget stop failed for "${teamName}" runtime "${name}"`, error);
