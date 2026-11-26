@@ -46,8 +46,9 @@ export async function runDesktopHostRoutingProof(
       ['launchTeam', request],
       ['createTeam', request],
       ['createConfig', request],
+      // Supported member settings must reject mismatched command identity before owner reads.
       ['updateMemberSettings', {teamName: request.teamName, memberName: 'alice',
-        commandId: 'TEST-not-dispatched', idempotencyKey: 'TEST-not-dispatched',
+        commandId: 'TEST-not-dispatched', idempotencyKey: 'TEST-mismatched-intent',
         expectedFingerprint: 'TEST-not-dispatched', targetKind: 'member', settings: {}}],
       ['showMessageNotification', {teamName: request.teamName, teamDisplayName: 'TEST',
         from: 'alice', body: 'TEST route probe', nativeSessionId: 'TEST-forbidden-selector'}],
@@ -75,13 +76,15 @@ export async function runDesktopHostRoutingProof(
         ? 'Host team operation launch-source-required (not-dispatched)'
         : (probe as Record<string, unknown>).method === 'showMessageNotification'
           ? 'Invalid captured Host notification'
-          : 'This operation is not supported for Host teams',
+          : (probe as Record<string, unknown>).method === 'updateMemberSettings'
+            ? 'Host team operation invalid-definition-edit (not-dispatched)'
+            : 'This operation is not supported for Host teams',
       'exact renderer routing refusal, not an arbitrary legacy validation or transport failure'
     );
   evidence.hostRequestRouting = {
     status: 'PASS',
     scope:
-      'Actual renderer unified API rejects unsupported Host destinations, source-less Launch and malformed notification selectors before mutation dispatch. This negative API probe does not qualify ordinary Launch/config/member/notification functionality.',
+      'Actual renderer unified API rejects unsupported Host destinations, source-less Launch, malformed member-settings command identity and malformed notification selectors before mutation dispatch. This negative API probe does not qualify ordinary Launch/config/member/notification functionality.',
     probes,
   };
 }

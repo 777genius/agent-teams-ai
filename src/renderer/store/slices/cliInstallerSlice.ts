@@ -27,8 +27,9 @@ import {
   shouldRetryCliProviderStatusCheck,
 } from './cliInstallerStatusReconciliation';
 import {
-  captureCliProviderStatusRead,
+  applyCliProviderAuthState,
   type CliProviderStatusRead,
+  createCliProviderStatusOwnership,
   getCliProviderStatusScopeKey,
   invalidateCliProviderScopeReads,
   setBoundedScopedProviderStatus,
@@ -195,15 +196,6 @@ function isHydratedMultimodelProviderStatus(provider: CliProviderStatus | undefi
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function clearCliProviderStatusInFlight(providerId: CliProviderId): void {
-  for (const key of cliProviderStatusInFlight.keys()) {
-    if (key.startsWith(`${providerId}:`)) cliProviderStatusInFlight.delete(key);
-  }
-  for (const key of cliProviderStatusActiveRequestIds.keys()) {
-    if (key.startsWith(`${providerId}\0`)) cliProviderStatusActiveRequestIds.delete(key);
-  }
 }
 
 function getProviderStatus(
@@ -709,8 +701,14 @@ export async function refreshCodexProviderStatusAfterRuntimeInstall(
   for (let attempt = 1; attempt <= CODEX_PROVIDER_INSTALL_REFRESH_ATTEMPTS; attempt += 1) {
     // Capture our synchronous invalidation epoch before subscribers can start a newer owner.
     const epoch = cliStatusEpoch + 1;
+    const recover = cliProviderStatusOwnership.captureRecovery('codex', get);
     if (refreshOwner) refreshOwner.epoch = epoch;
-    await get().invalidateCliStatus();
+    try {
+      await get().invalidateCliStatus();
+    } catch (error) {
+      recover();
+      throw error;
+    }
     if (epoch !== cliStatusEpoch) return;
     await get().fetchCliProviderStatus('codex', {
       silent: false,
@@ -769,13 +767,13 @@ function buildCliProviderLoadingState(
   return {
     cliProviderStatusLoading,
     cliStatus: isMultimodelCliStatus(cliStatus)
-      ? {
-          ...cliStatus,
-          ...buildMultimodelCliAuthState({
+      ? applyCliProviderAuthState(
+          cliStatus,
+          buildMultimodelCliAuthState({
             status: cliStatus,
             providerLoading: cliProviderStatusLoading,
-          }),
-        }
+          })
+        )
       : cliStatus,
   };
 }
@@ -900,8 +898,14 @@ const cliProviderStatusInFlight = new Map<string, Promise<boolean>>();
 const cliProviderStatusReads = new WeakMap<Promise<boolean>, CliProviderStatusRead>();
 let cliStatusEpoch = 0;
 let cliProviderStatusGeneration = 0;
-let cliProviderStatusRequestId = 0;
 const cliProviderStatusActiveRequestIds = new Map<string, number>();
+const cliProviderStatusOwnership = createCliProviderStatusOwnership(
+  cliProviderStatusInFlight,
+  cliProviderStatusReads,
+  cliProviderStatusActiveRequestIds,
+  () => ({ epoch: cliStatusEpoch, generation: cliProviderStatusGeneration })
+);
+const clearCliProviderStatusInFlight = cliProviderStatusOwnership.clear;
 const codexCatalogLoadingRefreshAttempts = new Map<CliProviderId, number>();
 const codexCatalogLoadingRefreshTimers = new Map<CliProviderId, ReturnType<typeof setTimeout>>();
 const codexCatalogLoadingRefreshActive = new Map<CliProviderId, (() => boolean) | undefined>();
@@ -1239,27 +1243,20 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     const inFlight = cliProviderStatusInFlight.get(requestKey);
     if (inFlight && cliProviderStatusReads.get(inFlight)?.epoch === requestEpoch) return inFlight;
     const requestGeneration = cliProviderStatusGeneration;
-    const requestId = ++cliProviderStatusRequestId;
     const silent = options?.silent === true;
     const requestStartedAtMs = Date.now();
     const previousProviderStatus = getProviderStatus(get().cliStatus, providerId);
-    const { read, hasOtherVisibleRead } = captureCliProviderStatusRead(
-      cliProviderStatusInFlight,
-      cliProviderStatusReads,
-      cliProviderStatusActiveRequestIds,
-      { epoch: requestEpoch, generation: requestGeneration, scopeKey, requestId },
-      !silent || projectPath !== null
-    );
-    cliProviderStatusActiveRequestIds.set(scopeKey, requestId);
-    const isCurrentRequest = () =>
-      requestEpoch === cliStatusEpoch &&
-      requestGeneration === cliProviderStatusGeneration &&
-      cliProviderStatusActiveRequestIds.get(scopeKey) === requestId;
+    const { read, hasOtherVisibleRead, isCurrentRequest, visible } =
+      cliProviderStatusOwnership.capture(providerId, options, {
+        epoch: requestEpoch,
+        generation: requestGeneration,
+        scopeKey,
+      });
     // Assigned before the first awaited continuation and referenced by its own cleanup.
     let request!: Promise<boolean>;
     // eslint-disable-next-line prefer-const
     request = (async () => {
-      if (!silent || projectPath) {
+      if (visible) {
         set((state) => {
           const nextLoading = {
             ...state.cliProviderStatusLoading,
@@ -1289,6 +1286,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
         });
       }
       try {
+        if (!isCurrentRequest()) return false;
         const requestProviderStatus = async (): Promise<CliProviderStatus | null> =>
           verifyModels
             ? api.cliInstaller.verifyProviderModels(providerId)
@@ -1505,13 +1503,15 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
         if (cliProviderStatusInFlight.get(requestKey) === request) {
           cliProviderStatusInFlight.delete(requestKey);
         }
-        if (cliProviderStatusActiveRequestIds.get(scopeKey) === requestId) {
+        if (cliProviderStatusActiveRequestIds.get(scopeKey) === read.requestId) {
           cliProviderStatusActiveRequestIds.delete(scopeKey);
         }
       }
     })();
-    cliProviderStatusInFlight.set(requestKey, request);
-    cliProviderStatusReads.set(request, read);
+    if (isCurrentRequest()) {
+      cliProviderStatusInFlight.set(requestKey, request);
+      cliProviderStatusReads.set(request, read);
+    }
     return request;
   },
 

@@ -72,6 +72,7 @@ function fixture() {
         const snapshot: BackendTeamSnapshot = {
           teamName: `team-${index}`,
           revision: 'a'.repeat(64),
+          runtimeNeverLaunched: true,
           feed: {
             streamId: '33333333-3333-4333-8333-333333333333',
             sequence: 0,
@@ -155,9 +156,7 @@ describe('Host aggregate reads respect one finite owner transport', () => {
     expect(teams.slice(1).map((team) => team.description)).toEqual(
       f.bindings.map((_, i) => `Saved ${i}`)
     );
-    expect(teams.slice(1).map((team) => team.projectPath)).toEqual(
-      f.bindings.map(() => '/TEST')
-    );
+    expect(teams.slice(1).map((team) => team.projectPath)).toEqual(f.bindings.map(() => '/TEST'));
     expect(f.busyRefusals()).toBe(0);
     expect(f.backend.getConnections).toHaveBeenCalledTimes(1);
   });
@@ -171,9 +170,7 @@ describe('Host aggregate reads respect one finite owner transport', () => {
     expect(tasks.slice(1).map((task) => [task.id, task.teamName])).toEqual(
       f.bindings.map((binding, i) => [`task-${i}`, hostTeamSelectionKey(binding.handle.handleId)])
     );
-    expect(tasks.slice(1).map((task) => task.projectPath)).toEqual(
-      f.bindings.map(() => '/TEST')
-    );
+    expect(tasks.slice(1).map((task) => task.projectPath)).toEqual(f.bindings.map(() => '/TEST'));
     expect(f.busyRefusals()).toBe(0);
     expect(f.backend.getConnections).toHaveBeenCalledTimes(1);
   });
@@ -190,13 +187,16 @@ describe('Host aggregate reads respect one finite owner transport', () => {
     expect(f.busyRefusals()).toBe(0);
   });
 
-  it('reads all 40 stopped Host Teams while preserving the original alive legacy neighbor', async () => {
+  it('reads all 40 never-launched Host Teams while preserving the original alive legacy neighbor', async () => {
     const f = fixture();
     await expect(f.api.aliveList()).resolves.toEqual(['legacy-neighbor']);
-    expect(f.requests.map((request) => request.handle.handleId)).toEqual(
-      f.bindings.map((binding) => binding.handle.handleId)
+    expect(f.requests.map((request) => [request.handle.handleId, request.operation])).toEqual(
+      f.bindings.flatMap((binding) => [
+        [binding.handle.handleId, 'team.launch.read'],
+        [binding.handle.handleId, 'team.snapshot'],
+      ])
     );
-    expect(f.requests.every((request) => request.operation === 'team.launch.read')).toBe(true);
+    expect(f.requests).toHaveLength(80);
     expect(f.busyRefusals()).toBe(0);
   });
 
@@ -231,44 +231,81 @@ describe('Host aggregate reads respect one finite owner transport', () => {
 
 describe.each(['list', 'getAllTasks'] as const)('Host partial %s reads', (method) => {
   it.each([
-    ['unavailable', 'unknown'], ['busy', 'not-dispatched'], ['shutting-down', 'rejected'],
-  ] as const)('retains healthy original siblings and the exact %s outcome', async (code, outcome) => {
-    const f = fixture(), failed = f.bindings[2]!;
-    const invoke = vi.mocked(f.backend.invoke).getMockImplementation()!;
-    vi.mocked(f.backend.invoke).mockImplementation(async (request) =>
-      request.operation === 'team.snapshot' && request.handle.handleId === failed.handle.handleId
-        ? { ok: false, code, outcome } : invoke(request));
-    const result = await f.api[method]();
-    if (Array.isArray(result)) throw new Error('Expected explicit partial availability');
-    expect(result.unavailable).toEqual([{ kind: 'team',
-      teamName: hostTeamSelectionKey(failed.handle.handleId), displayName: failed.label, code, outcome }]);
-    expect(result.items).toHaveLength(40);
-    expect(result.items.map((row) => row.teamName)).toEqual([
-      'legacy-neighbor', ...f.bindings.filter((row) => row !== failed)
-        .map((row) => hostTeamSelectionKey(row.handle.handleId)),
-    ]);
-    expect(result.items.slice(1).every((row) => row.ownerResourceRef === 'TEST-one-owner')).toBe(true);
-    expect(vi.mocked(f.backend.invoke).mock.calls.filter(([request]) => request.operation === 'team.snapshot')
-      .map(([request]) => request.handle.handleId)).toEqual(f.bindings.map((row) => row.handle.handleId));
-    expect(f.busyRefusals()).toBe(0);
-    expect(f.backend.getConnections).toHaveBeenCalledTimes(1);
-    expect(f.legacy.getData).not.toHaveBeenCalled();
-  });
+    ['unavailable', 'unknown'],
+    ['busy', 'not-dispatched'],
+    ['shutting-down', 'rejected'],
+  ] as const)(
+    'retains healthy original siblings and the exact %s outcome',
+    async (code, outcome) => {
+      const f = fixture(),
+        failed = f.bindings[2]!;
+      const invoke = vi.mocked(f.backend.invoke).getMockImplementation()!;
+      vi.mocked(f.backend.invoke).mockImplementation(async (request) =>
+        request.operation === 'team.snapshot' && request.handle.handleId === failed.handle.handleId
+          ? { ok: false, code, outcome }
+          : invoke(request)
+      );
+      const result = await f.api[method]();
+      if (Array.isArray(result)) throw new Error('Expected explicit partial availability');
+      expect(result.unavailable).toEqual([
+        {
+          kind: 'team',
+          teamName: hostTeamSelectionKey(failed.handle.handleId),
+          displayName: failed.label,
+          code,
+          outcome,
+        },
+      ]);
+      expect(result.items).toHaveLength(40);
+      expect(result.items.map((row) => row.teamName)).toEqual([
+        'legacy-neighbor',
+        ...f.bindings
+          .filter((row) => row !== failed)
+          .map((row) => hostTeamSelectionKey(row.handle.handleId)),
+      ]);
+      expect(result.items.slice(1).every((row) => row.ownerResourceRef === 'TEST-one-owner')).toBe(
+        true
+      );
+      expect(
+        vi
+          .mocked(f.backend.invoke)
+          .mock.calls.filter(([request]) => request.operation === 'team.snapshot')
+          .map(([request]) => request.handle.handleId)
+      ).toEqual(f.bindings.map((row) => row.handle.handleId));
+      expect(f.busyRefusals()).toBe(0);
+      expect(f.backend.getConnections).toHaveBeenCalledTimes(1);
+      expect(f.legacy.getData).not.toHaveBeenCalled();
+    }
+  );
 
   it('retains the original unknown owner enumeration separately from healthy rows', async () => {
     const f = fixture();
-    const unavailable = [{ kind: 'owner' as const, ownerResourceRef: 'TEST-original-unavailable-owner',
-      code: 'unavailable' as const, outcome: 'unknown' as const }];
+    const unavailable = [
+      {
+        kind: 'owner' as const,
+        ownerResourceRef: 'TEST-original-unavailable-owner',
+        code: 'unavailable' as const,
+        outcome: 'unknown' as const,
+      },
+    ];
     vi.mocked(f.backend.getConnections).mockResolvedValue({
-      state: 'ready', bindings: structuredClone(f.bindings), unavailableOwners: unavailable,
+      state: 'ready',
+      bindings: structuredClone(f.bindings),
+      unavailableOwners: unavailable,
     });
     const result = await f.api[method]();
     if (Array.isArray(result)) throw new Error('Expected explicit unavailable owner');
     expect(result.unavailable).toEqual(unavailable);
     expect(result.items).toHaveLength(41);
-    expect(result.items.slice(1).every((row) => row.ownerResourceRef === 'TEST-one-owner')).toBe(true);
-    expect(vi.mocked(f.backend.invoke).mock.calls.filter(([request]) => request.operation === 'team.snapshot')
-      .map(([request]) => request.handle.handleId)).toEqual(f.bindings.map((row) => row.handle.handleId));
+    expect(result.items.slice(1).every((row) => row.ownerResourceRef === 'TEST-one-owner')).toBe(
+      true
+    );
+    expect(
+      vi
+        .mocked(f.backend.invoke)
+        .mock.calls.filter(([request]) => request.operation === 'team.snapshot')
+        .map(([request]) => request.handle.handleId)
+    ).toEqual(f.bindings.map((row) => row.handle.handleId));
     expect(f.backend.getConnections).toHaveBeenCalledTimes(1);
     expect(f.busyRefusals()).toBe(0);
     expect(f.legacy.getData).not.toHaveBeenCalled();
@@ -277,30 +314,48 @@ describe.each(['list', 'getAllTasks'] as const)('Host partial %s reads', (method
   it('never presents unavailable original Teams as a complete empty array', async () => {
     const f = fixture();
     vi.mocked(f.legacy[method]).mockResolvedValue([]);
-    vi.mocked(f.backend.invoke).mockResolvedValue({ ok: false, code: 'busy', outcome: 'not-dispatched' });
+    vi.mocked(f.backend.invoke).mockResolvedValue({
+      ok: false,
+      code: 'busy',
+      outcome: 'not-dispatched',
+    });
     const result = await f.api[method]();
     if (Array.isArray(result)) throw new Error('Expected original unavailable resources');
     expect(result.items).toEqual([]);
-    expect(result.unavailable).toEqual(f.bindings.map((row) => ({
-      kind: 'team', teamName: hostTeamSelectionKey(row.handle.handleId), displayName: row.label,
-      code: 'busy', outcome: 'not-dispatched',
-    })));
+    expect(result.unavailable).toEqual(
+      f.bindings.map((row) => ({
+        kind: 'team',
+        teamName: hostTeamSelectionKey(row.handle.handleId),
+        displayName: row.label,
+        code: 'busy',
+        outcome: 'not-dispatched',
+      }))
+    );
     expect(f.backend.invoke).toHaveBeenCalledTimes(40);
     expect(f.legacy.getData).not.toHaveBeenCalled();
   });
 
   it('rejects unexpected legacy aggregate metadata before any Host snapshot', async () => {
     const f = fixture();
-    vi.mocked(f.legacy[method]).mockResolvedValue({ items: [], unavailable: [{
-      kind: 'owner', ownerResourceRef: 'TEST-unqualified-legacy-owner', code: 'unavailable', outcome: 'unknown',
-    }] });
+    vi.mocked(f.legacy[method]).mockResolvedValue({
+      items: [],
+      unavailable: [
+        {
+          kind: 'owner',
+          ownerResourceRef: 'TEST-unqualified-legacy-owner',
+          code: 'unavailable',
+          outcome: 'unknown',
+        },
+      ],
+    });
     await expect(f.api[method]()).rejects.toThrow('Unexpected legacy');
     expect(f.backend.invoke).not.toHaveBeenCalled();
     expect(f.backend.getConnections).toHaveBeenCalledTimes(1);
   });
 
   it('does not classify an arbitrary thrown transport error as resource availability', async () => {
-    const f = fixture(), error = new Error('Host team read unavailable');
+    const f = fixture(),
+      error = new Error('Host team read unavailable');
     Object.assign(error, { code: 'unavailable', outcome: 'unknown' });
     vi.mocked(f.backend.invoke).mockRejectedValue(error);
     await expect(f.api[method]()).rejects.toBe(error);

@@ -1,7 +1,18 @@
-import type { CliInstallerSlice } from './cliInstallerSlice';
-import type { CliProviderId, CliProviderStatus } from '@shared/types';
+import type { CliInstallerSlice, CliProviderStatusFetchOptions } from './cliInstallerSlice';
+import type { CliInstallationStatus, CliProviderId, CliProviderStatus } from '@shared/types';
 
 export const CLI_PROVIDER_STATUS_SCOPE_CACHE_LIMIT = 12;
+
+export function applyCliProviderAuthState(
+  status: CliInstallationStatus,
+  auth: Pick<CliInstallationStatus, 'authLoggedIn' | 'authMethod' | 'authStatusChecking'>
+): CliInstallationStatus {
+  return status.authLoggedIn === auth.authLoggedIn &&
+    status.authMethod === auth.authMethod &&
+    status.authStatusChecking === auth.authStatusChecking
+    ? status
+    : { ...status, ...auth };
+}
 
 export interface CliProviderStatusRead {
   readonly epoch: number;
@@ -41,6 +52,96 @@ export function captureCliProviderStatusRead(
   return {
     read: { ...current, visible: visible || hasVisibleRead(true) },
     hasOtherVisibleRead: () => hasVisibleRead(false),
+  };
+}
+
+/** Ownership witnesses survive completion; they never make a retired response current. */
+export function createCliProviderStatusOwnership(
+  pending: Map<string, Promise<boolean>>,
+  reads: WeakMap<Promise<boolean>, CliProviderStatusRead>,
+  activeRequestIds: Map<string, number>,
+  current: () => Pick<CliProviderStatusRead, 'epoch' | 'generation'>
+) {
+  let requestId = 0;
+  const globalIntents = new Map<
+    CliProviderId,
+    { read: CliProviderStatusRead; options: CliProviderStatusFetchOptions }
+  >();
+  const recoveryVisibility = new WeakMap<CliProviderStatusFetchOptions, boolean>();
+  return {
+    capture(
+      providerId: CliProviderId,
+      options: CliProviderStatusFetchOptions | undefined,
+      identity: Omit<CliProviderStatusRead, 'visible' | 'requestId'>
+    ) {
+      const global = identity.scopeKey === `${providerId}\0`;
+      const visible =
+        options?.silent !== true ||
+        !global ||
+        (options !== undefined && recoveryVisibility.get(options) === true);
+      const captured = captureCliProviderStatusRead(
+        pending,
+        reads,
+        activeRequestIds,
+        { ...identity, requestId: ++requestId },
+        Boolean(visible)
+      );
+      const read = captured.read;
+      activeRequestIds.set(read.scopeKey, read.requestId);
+      if (global) globalIntents.set(providerId, { read, options: { ...options } });
+      return {
+        ...captured,
+        visible,
+        isCurrentRequest: () => {
+          const owner = current();
+          return (
+            read.epoch === owner.epoch &&
+            read.generation === owner.generation &&
+            activeRequestIds.get(read.scopeKey) === read.requestId
+          );
+        },
+      };
+    },
+    captureRecovery(
+      excluded: CliProviderId,
+      get: () => Pick<CliInstallerSlice, 'fetchCliProviderStatus'>
+    ) {
+      const previous = current();
+      const expected = { epoch: previous.epoch + 1, generation: previous.generation + 1 };
+      const intents = [...globalIntents.entries()].filter(
+        ([providerId, { read }]) =>
+          providerId !== excluded &&
+          read.epoch === previous.epoch &&
+          read.generation === previous.generation &&
+          activeRequestIds.get(read.scopeKey) === read.requestId
+      );
+      return () => {
+        for (const [providerId, intent] of intents) {
+          const owner = current();
+          if (owner.epoch !== expected.epoch || owner.generation !== expected.generation) return;
+          if (globalIntents.get(providerId) !== intent) continue;
+          const options = { ...intent.options, epoch: expected.epoch };
+          recoveryVisibility.set(options, intent.read.visible);
+          // Recovery is a fresh read; neither it nor a subscriber may replace the IPC error.
+          try {
+            void get()
+              .fetchCliProviderStatus(providerId, options)
+              .catch(() => undefined);
+          } catch {
+            // A synchronous subscriber failure does not erase the original invalidation failure.
+          }
+        }
+      };
+    },
+    clear(providerId: CliProviderId): void {
+      globalIntents.delete(providerId);
+      for (const key of pending.keys()) {
+        if (key.startsWith(`${providerId}:`)) pending.delete(key);
+      }
+      for (const key of activeRequestIds.keys()) {
+        if (key.startsWith(`${providerId}\0`)) activeRequestIds.delete(key);
+      }
+    },
   };
 }
 

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
 
-import { EditTeamDialog } from '../dialogs/EditTeamDialog';
+import { EditTeamDialog } from '../TeamDetailLazyDialogs';
 
 import { buildDefinitionEditorInput } from './definitionEditorInput';
 import { DefinitionLoadErrorDialog } from './DefinitionLoadErrorDialog';
