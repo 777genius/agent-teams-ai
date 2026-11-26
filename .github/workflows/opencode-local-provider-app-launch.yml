@@ -82,7 +82,7 @@ jobs:
           assert.match(candidate?.sourceCommit ?? '', /^[a-f0-9]{40}$/);
           assert.notEqual(candidate.sourceCommit, lock.opencodeV2Delivery['darwin-x64'].sourceCommit);
           assert.notEqual(candidate.runtimeVersion, lock.opencodeV2Delivery['darwin-x64'].runtimeVersion);
-          appendFileSync(process.env.GITHUB_OUTPUT, `sha=${candidate.sourceCommit}\\n`);
+          appendFileSync(process.env.GITHUB_OUTPUT, `sha=${candidate.sourceCommit}\n`);
           NODE
       - uses: actions/checkout@v6
         with:
