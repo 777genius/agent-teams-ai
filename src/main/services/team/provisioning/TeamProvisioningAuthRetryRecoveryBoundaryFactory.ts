@@ -29,6 +29,7 @@ export type TeamProvisioningAuthRetryRecoveryServiceAdapter<
   TRun extends TeamProvisioningAuthRetryRun,
 > = Pick<
   TeamProvisioningAuthRetryPorts<TRun>,
+  | 'assertTeamBudgetAdmission'
   | 'getStopAllTeamsGeneration'
   | 'stopFilesystemMonitor'
   | 'stopStallWatchdog'
@@ -92,6 +93,7 @@ export function createTeamProvisioningAuthRetryRecoveryBoundary<
               mcpConfigPath,
               options
             ),
+          assertTeamBudgetAdmission: (teamName) => deps.service.assertTeamBudgetAdmission(teamName),
           spawnCli: spawnWindowsTeamRuntimeCli,
           getStopAllTeamsGeneration: () => deps.service.getStopAllTeamsGeneration(),
           isStopAllTeamsGenerationChanged: (stopAllGenerationAtStart) =>

@@ -161,6 +161,7 @@ function makePorts(): TeamProvisioningAuthRetryPorts<TeamProvisioningAuthRetryRu
     writeDeterministicBootstrapSpecFile: vi.fn(async () => '/restored-spec'),
     removeDeterministicBootstrapSpecFile: vi.fn(async () => undefined),
     validateAgentTeamsMcpRuntime: vi.fn(async () => undefined),
+    assertTeamBudgetAdmission: vi.fn(async () => undefined),
     spawnCli: vi.fn(() => spawnedChild),
     isStopAllTeamsGenerationChanged: vi.fn(() => false),
     getStopAllTeamsGeneration: vi.fn(() => 7),
@@ -197,6 +198,33 @@ function makePorts(): TeamProvisioningAuthRetryPorts<TeamProvisioningAuthRetryRu
 }
 
 describe('team provisioning auth retry recovery', () => {
+  it('does not respawn when the team budget blocks the authentication retry', async () => {
+    const run = makeRun();
+    const ports = makePorts();
+    ports.assertTeamBudgetAdmission = vi.fn(async () => {
+      throw new Error('TEAM_BUDGET_BLOCKED');
+    });
+    await respawnCliAfterAuthFailure(run, ports, { preflightAuthRetryDelayMs: 1 });
+    expect(ports.assertTeamBudgetAdmission).toHaveBeenCalledWith(run.teamName);
+    expect(ports.spawnCli).not.toHaveBeenCalled();
+    expect(run.progress.error).toContain('TEAM_BUDGET_BLOCKED');
+    expect(run.authRetryInProgress).toBe(false);
+  });
+
+  it('does not respawn when Stop cancels the run during budget admission', async () => {
+    const run = makeRun();
+    const ports = makePorts();
+    const gate = deferred();
+    ports.assertTeamBudgetAdmission = vi.fn(() => gate.promise);
+    const retry = respawnCliAfterAuthFailure(run, ports, { preflightAuthRetryDelayMs: 1 });
+    await vi.waitFor(() => expect(ports.assertTeamBudgetAdmission).toHaveBeenCalled());
+    run.cancelRequested = true;
+    gate.resolve();
+    await retry;
+    expect(ports.spawnCli).not.toHaveBeenCalled();
+    expect(run.authRetryInProgress).toBe(false);
+  });
+
   it('gives a replacement attempt its own first-turn deadline and bootstrap sequence', async () => {
     vi.useFakeTimers();
     try {

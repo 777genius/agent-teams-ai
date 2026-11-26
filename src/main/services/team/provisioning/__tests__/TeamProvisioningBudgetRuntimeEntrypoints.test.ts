@@ -88,6 +88,25 @@ describe('budget checks at execution time of queued runtime operations', () => {
     expect(restart).not.toHaveBeenCalled();
   });
 
+  it('does not start a member operation after Stop during budget admission', async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const admit = vi.fn(() => gate);
+    const service = createBudgetedService(admit);
+    const restart = vi
+      .spyOn(restartController(service), 'restartMember')
+      .mockResolvedValue(undefined);
+    const generation = Reflect.get(service, 'stopTeamGenerationByTeam') as Map<string, number>;
+    const operation = service.restartMember('alpha', 'bob');
+    await vi.waitFor(() => expect(admit).toHaveBeenCalledWith('alpha'));
+    generation.set('alpha', 1);
+    release();
+    await expect(operation).rejects.toThrow('superseded by Stop');
+    expect(restart).not.toHaveBeenCalled();
+  });
+
   it('rechecks budget after a preceding aggregate lifecycle operation', async () => {
     let release!: () => void;
     const pending = new Promise<void>((resolve) => {

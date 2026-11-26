@@ -169,8 +169,20 @@ export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamP
     teamName: string,
     operation: () => Promise<T>
   ): Promise<T> {
+    const stopAllGeneration = this.stopAllTeamsGeneration;
+    const stopTeamGeneration = this.getStopTeamGeneration(teamName);
+    const assertCurrent = (): void => {
+      if (
+        this.stopAllTeamsGeneration !== stopAllGeneration ||
+        this.getStopTeamGeneration(teamName) !== stopTeamGeneration
+      ) {
+        throw new Error('Runtime spawn admission superseded by Stop');
+      }
+    };
     return this.runAfterInFlightTeamOperation(teamName, async () => {
+      assertCurrent();
       await this.assertRuntimeSpawnAllowed(teamName);
+      assertCurrent();
       return operation();
     });
   }

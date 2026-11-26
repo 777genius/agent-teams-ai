@@ -77,6 +77,7 @@ export interface TeamProvisioningAuthRetryPorts<TRun extends TeamProvisioningAut
     mcpConfigPath: string,
     options: { isCancelled(): boolean }
   ): Promise<void>;
+  assertTeamBudgetAdmission(teamName: string): Promise<void>;
   spawnCli(
     command: string,
     args: string[],
@@ -438,6 +439,14 @@ export async function respawnCliAfterAuthFailure<TRun extends TeamProvisioningAu
       ) {
         throw new Error('Team launch cancelled by app shutdown');
       }
+    }
+    await ports.assertTeamBudgetAdmission(run.teamName);
+    if (
+      run.cancelRequested ||
+      run.processKilled ||
+      ports.isStopAllTeamsGenerationChanged(stopAllGenerationAtStart)
+    ) {
+      throw new Error('Authentication retry cancelled before replacement spawn');
     }
     child = ports.spawnCli(ctx.claudePath, ctx.args, {
       cwd: ctx.cwd,
