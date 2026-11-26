@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { safeSegment } from '../../../packages/legacy-agent-host/src/team/identity';
 import { validateTeamCommand } from '../../../packages/legacy-agent-host/src/team/validateTeamCommand';
 import { parseBackendOperation } from '../../../src/features/agent-backend/main/adapters/input/validateBackendOperation';
+import { projectBackendResult } from '../../../src/features/agent-backend/main/adapters/output/projectBackendResult';
 import { projectTeamSnapshot } from '../../../src/features/agent-backend/main/adapters/output/projectTeamSnapshot';
 import {
   createHostTeamsApi,
@@ -150,13 +151,20 @@ describe('ordinary Host Team mutation adapters', () => {
 
   it('preserves the exact current clarification request on product snapshot projection', () => {
     const cycle = '11111111-1111-4111-8111-111111111111';
+    const requestedAt = '2026-11-26T12:00:00.000Z';
     const snapshot = projectTeamSnapshot({ teamName: 'TEST-team', revision: 'a'.repeat(64),
       feed: { streamId: '33333333-3333-4333-8333-333333333333', sequence: 0,
         cursor: '11111111-1111-4111-8111-111111111111' }, members: [], messages: [],
       tasks: [{ id: 'TEST-task', subject: 'TEST question', status: 'pending',
-        needsClarification: 'user', clarificationRequestId: cycle }],
+        needsClarification: 'user', clarificationRequestId: cycle, clarificationRequestedAt: requestedAt }],
       kanbanState: { teamName: 'TEST-team', reviewers: [], tasks: {} } });
-    expect(snapshot.tasks[0]).toMatchObject({ needsClarification: 'user', clarificationRequestId: cycle });
+    expect(snapshot.tasks[0]).toMatchObject({ needsClarification: 'user', clarificationRequestId: cycle,
+      clarificationRequestedAt: requestedAt });
+    expect(projectBackendResult({ handle: { handleId: 'TEST-A' }, commandId: 'TEST-read-question',
+      operation: 'task.get', payload: { taskId: 'TEST-task' } }, { ok: true, value: {
+      id: 'TEST-task', status: 'pending', needsClarification: 'user',
+      clarificationRequestId: cycle, clarificationRequestedAt: requestedAt,
+    } })).toMatchObject({ ok: true, value: { clarificationRequestedAt: requestedAt } });
   });
 
   it('routes original processSend once to the exact lead from its captured snapshot and translates canonical TaskRefs', async () => {

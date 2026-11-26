@@ -7,6 +7,7 @@ import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildProcessNativeArtifact } from '../../packages/legacy-agent-host/scripts/buildProcessNativeArtifact.ts';
+import { isQualifiedDarwinBuild } from '../../packages/legacy-agent-host/src/process/qualifiedDarwinBuild.ts';
 import { treeHash } from '../../packages/legacy-agent-host/tests/fixtures/native-host.ts';
 import { captureCandidateElectron, readCapturedCandidateElectron } from './candidate-electron.ts';
 import { desktopProofSources } from './desktop-proof-sources.ts';
@@ -88,7 +89,8 @@ export async function runProcessQualification(inputsDirectory: string) {
     assert.equal(nodeManifest.archiveSha256, 'bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057');
     assert.equal(nodeManifest.binarySha256, node.sha256);
     const osBuild = execFileSync('/usr/sbin/sysctl', ['-n', 'kern.osversion'], { encoding: 'utf8' }).trim();
-    assert.equal(osBuild, '24H232', 'this prospective Draft qualification selects only the observed current tuple');
+    assert.ok(isQualifiedDarwinBuild(osBuild, process.arch),
+      'process qualification requires an already qualified Darwin custody tuple');
     proof.tuple = { platform: process.platform, architecture: process.arch, osBuild, nodeVersion: process.version };
     proof.gitSha = execFileSync('/usr/bin/git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
     if (process.env.GITHUB_SHA) assert.equal(proof.gitSha, process.env.GITHUB_SHA);

@@ -12,8 +12,12 @@ import {
   invalidateContextScopedRequestEpoch,
   resetContextScopedRequestEpochForTests,
 } from '../../../../../src/renderer/store/utils/contextScopedRequestEpoch';
+
+import type { TeamsAPI } from '../../../../../src/shared/types/api';
+
 const f = vi.hoisted(() => ({
   getData: vi.fn(),
+  getSavedRequest: vi.fn<TeamsAPI['getSavedRequest']>(),
   getConnections: vi.fn(),
   stoppedImport: vi.fn(),
   confirm: vi.fn(),
@@ -28,13 +32,14 @@ const f = vi.hoisted(() => ({
 vi.mock('@renderer/api', () => ({
   api: {
     agentBackend: { getConnections: f.getConnections, stoppedImport: f.stoppedImport },
-    teams: { getData: f.getData },
+    teams: { getData: f.getData, getSavedRequest: f.getSavedRequest },
   },
 }));
 vi.mock('@renderer/components/common/ConfirmDialog', () => ({ confirm: f.confirm }));
 vi.mock('@renderer/store', () => ({
   useStore: {
     getState: () => ({
+      teamByName: {},
       selectedTeamData: f.selected,
       selectedTeamName: f.selectedTeamName,
       selectedTeamError: f.selectedTeamError,
@@ -51,6 +56,7 @@ beforeEach(() => {
   f.selectedTeamError = null;
   f.getConnections.mockResolvedValue({ state: 'ready', bindings: [] });
   f.stoppedImport.mockResolvedValue({ ok: true, selection: 'host-team:TEST-import' });
+  f.getSavedRequest.mockResolvedValue(null);
   f.getData.mockImplementation(async (teamName: string) => ({
     teamName,
     isAlive: false,
@@ -75,6 +81,7 @@ describe('existing stopped Team Launch dialog handoff', () => {
       members: [],
       projectPath: '/TEST/imported',
     });
+    expect(f.getSavedRequest).toHaveBeenCalledExactlyOnceWith('host-team:TEST-import');
     expect(f.stoppedImport).toHaveBeenCalledExactlyOnceWith({
       teamName: 'TEST-legacy',
       action: 'prepare',
@@ -132,6 +139,7 @@ describe('existing stopped Team Launch dialog handoff', () => {
       members: [],
       projectPath: '/TEST/source',
     });
+    expect(f.getSavedRequest).toHaveBeenCalledExactlyOnceWith('TEST-legacy');
     expect(f.stoppedImport).not.toHaveBeenCalled();
   });
   it('hydrates original list dialog from the canonical imported Host configuration with no automatic Launch', async () => {
@@ -141,6 +149,7 @@ describe('existing stopped Team Launch dialog handoff', () => {
       members: [],
       projectPath: '/TEST/workspace',
     });
+    expect(f.getSavedRequest).toHaveBeenCalledExactlyOnceWith('host-team:TEST-import');
     expect(f.getData.mock.calls.map((call) => call[0])).toEqual([
       'TEST-legacy',
       'host-team:TEST-import',

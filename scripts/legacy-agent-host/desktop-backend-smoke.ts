@@ -332,7 +332,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     return { app, group, identity: appIdentity, invocation, spawnError: () => spawnError };
   };
   const restartSameProfile = async (selection: Pick<Parameters<typeof restartCapturedDesktopApp>[0],
-    'model' | 'provider' | 'boundary' | 'createdHandleId' | 'afterOriginalSettingsQuit' | 'afterOriginalMembershipQuit'> & { codexSourceSelectionRestart?: typeof restartCapturedDesktopApp }) => {
+    'model' | 'provider' | 'boundary' | 'createdHandleId' | 'createdProject' | 'afterOriginalSettingsQuit' | 'afterOriginalMembershipQuit'> & { codexSourceSelectionRestart?: typeof restartCapturedDesktopApp }) => {
     assert.ok(cdp && !packed && selection.model);
     return (selection.codexSourceSelectionRestart ?? restartCapturedDesktopApp)({
       app, cdp, group, fixture, repo, mode, evidence, cdpLibrary, ...selection,
@@ -489,9 +489,9 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
       const mixed: { finishSettings(): Promise<void>; disposeReadObservations?(): void } = await (mixedModels.membership ? runDesktopLiveMembershipUiSmoke : runDesktopMixedCreateLaunchUiSmoke)(cdp, {
         fixture, models: mixedModels, capturedGroup: () => group, evidence,
         assertOwnedRenderer: () => assertOwnedCdpListener(group),
-        restartSameProfile: (createdHandleId, afterOriginalQuit) => restartSameProfile(mixedModels!.membership ? {
+        restartSameProfile: (createdHandleId, afterOriginalQuit, createdProject?: Parameters<typeof restartCapturedDesktopApp>[0]['createdProject']) => restartSameProfile(mixedModels!.membership ? {
           model: mixedModels!.opencode, provider: 'opencode', boundary: 'live-membership-after-stop',
-          createdHandleId, afterOriginalMembershipQuit: afterOriginalQuit,
+          createdHandleId, ...(createdProject ? { createdProject } : {}), afterOriginalMembershipQuit: afterOriginalQuit,
         } : {
           model: mixedModels!.claude, provider: 'claude', boundary: 'settings-saved-before-launch',
           createdHandleId, afterOriginalSettingsQuit: afterOriginalQuit,

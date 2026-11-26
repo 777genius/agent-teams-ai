@@ -17,6 +17,7 @@ interface EditTeamValues {
   name: string;
   description: string;
   color: string;
+  prompt?: string;
   members: TeamProvisioningMemberInput[];
 }
 
@@ -48,6 +49,7 @@ export function createEditTeamHostSubmission(options: {
       (saved.displayName ?? baseline.name).trim() !== baseline.name.trim() ||
       (saved.description ?? '').trim() !== baseline.description.trim() ||
       (saved.color ?? '').trim() !== baseline.color.trim() ||
+      (baseline.prompt !== undefined && (saved.prompt ?? '').trim() !== baseline.prompt.trim()) ||
       roster(saved.members) !== roster(baseline.members)
     )
       throw new Error('The saved team configuration changed. Refresh the team before editing.');
@@ -81,6 +83,7 @@ export function createEditTeamHostSubmission(options: {
             displayName: captured.name.trim(),
             description: captured.description.trim(),
             color: captured.color.trim(),
+            ...(captured.prompt !== undefined ? { prompt: captured.prompt.trim() } : {}),
           },
         },
       };

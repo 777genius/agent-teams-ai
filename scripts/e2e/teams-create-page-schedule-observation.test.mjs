@@ -322,7 +322,7 @@ function actualScheduleClick(options = {}) {
   assert.ok(first > 0 && last > first);
   const helpers = readFileSync(new URL('./teams-create-page-schedule-observation.mjs', import.meta.url), 'utf8')
     .replace(/^import .*;\r?\n/gm, '').replace(/^export /gm, '');
-  const c = { now: 0, frames: 0, hoverFrames: 0, hovers: 0, presses: 0, releases: 0,
+  const c = { now: 0, frames: 0, hoverFrames: 0, hovers: 0, presses: 0, releases: 0, clicks: 0,
     referenceReleases: 0, scrolls: 0, uiMutations: 0, selected: '', open: true, moved: false,
     rect: { left: 130, top: 249, width: 753, height: 44 }, listeners: [], calls: [], writes: [],
     snapshots: [], waits: [], handles: new Map(), finalReads: 0, detached: false,
@@ -401,6 +401,14 @@ function actualScheduleClick(options = {}) {
     process: { stderr: { write(value) { c.writes.push(value); } } },
   });
   const client = new actual.CdpClient({ on() {}, close() {} });
+  const click = client.click.bind(client);
+  client.click = async (...args) => {
+    c.clicks++;
+    const firstCall = c.calls.length;
+    try { return await click(...args); }
+    catch (error) { c.clickError = error; throw error; }
+    finally { c.clickCalls = c.calls.slice(firstCall); }
+  };
   const copy = value => value === undefined ? undefined : JSON.parse(JSON.stringify(value));
   const emit = (kind, phase, target, point) => {
     for (const row of [...c.listeners]) if (row.kind === kind && row.capture === (phase === 'capture'))
@@ -576,11 +584,20 @@ test('final schedule refusal retains failed animation, hit and bounds facts with
 test('schedule preparation preserves its original absolute deadline across hover, frame and final awaits', async () => {
   for (const boundary of ['afterHover', 'onFrame', 'afterFinal']) for (const elapsed of [30_000, 30_001]) {
     const h = actualScheduleClick({ [boundary](c) { c.now = elapsed; } });
-    await assert.rejects(h.select(), /E2E click target deadline/);
+    await assert.rejects(h.select(), error => error === h.c.clickError && /E2E click target deadline/.test(error.message));
+    assert.equal(h.c.clicks, 1); assert.ok(h.c.clickCalls.length > 0);
     assert.equal(h.c.presses, 0); assert.equal(h.c.releases, 0);
     assert.equal(h.c.referenceReleases, 1); assert.equal(h.c.handles.size, 0);
-    for (const row of h.c.calls.filter(row => row.timeoutMs !== undefined && row.method !== 'Runtime.releaseObject'))
-      assert.ok(row.timeoutMs > 0 && row.timeoutMs <= 30_000 - row.at, 'no new per-command preparation budget');
+    // Check the real click's entire interval, including its bounded reference cleanup.
+    for (const row of h.c.clickCalls) {
+      if (row.method === 'Runtime.releaseObject') assert.equal(row.timeoutMs, Math.max(0, 30_000 - row.at));
+      else assert.ok(row.timeoutMs > 0 && row.timeoutMs <= 30_000 - row.at, 'no new per-command preparation budget');
+    }
+    // The original observer reads its passive evidence after the click has already refused.
+    const afterClick = h.c.calls.slice(h.c.clickCalls.length);
+    assert.equal(afterClick.length, 1); assert.equal(afterClick[0].method, 'Runtime.evaluate');
+    assert.match(afterClick[0].params.expression, /window\.__teamsScheduleOptionObservation\?\.read\(/);
+    assert.equal(afterClick[0].at, elapsed); assert.equal(afterClick[0].timeoutMs, 30_000);
   }
 });
 

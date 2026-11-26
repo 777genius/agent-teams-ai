@@ -17,6 +17,7 @@ import type { GateClock } from '../../scripts/ci/ci-feedback.mts';
 import type { ChangeScope } from '../../scripts/ci/ci-change-scope.mts';
 import { REPOSITORY, WORKFLOW } from '../../scripts/ci/ci-feedback-reuse.mts';
 import type { GitHubRead, JsonObject } from '../../scripts/ci/ci-feedback-reuse.mts';
+import { nativeProofFixture } from './ciNativeProofFixture.mts';
 
 const repository = { id: 1163183284, full_name: REPOSITORY };
 const headSha = 'a'.repeat(40);
@@ -78,13 +79,18 @@ function fixture(input: JsonObject = event(), status = (input.pull_request as Js
   const step = (name: string): JsonObject => ({ name, status: 'completed', conclusion: 'success' });
   const names = ['plan', 'Fast feedback', 'validate', 'Full qualification',
     ...Array.from({ length: shards }, (_, index) => `test (${index + 1}/${shards})`), 'lint (main)', 'lint (renderer)', 'lint (features)', 'Task change ledger Windows smoke'];
-  const jobs = status === 'completed' ? names.map((name, index) => ({
+  const jobs: JsonObject[] = status === 'completed' ? names.map((name, index) => ({
     id: index + 1, run_id: 100, run_attempt: 1, head_sha: headSha, name,
     status: 'completed', conclusion: name === 'Fast feedback' ? 'skipped' : 'success',
     steps: name === 'plan' ? [step(`CI source proof: PR=12 | base=${(pr.base as JsonObject).sha} | head=${headSha}`),
       step('Plan feedback and verify reusable evidence')]
       : name === 'Full qualification' ? [step('Require complete current-code qualification')] : [],
   })) : [];
+  if (status === 'completed') {
+    const native = nativeProofFixture(pr, producer, pr.draft ? 'draft' : 'full');
+    jobs.push(...native.jobs);
+    (jobs.find((job) => job.name === 'Full qualification')!.steps as JsonObject[]).push(...native.gateSteps);
+  }
   const bytes = readFileSync(new URL('../../.github/workflows/ci.yml', import.meta.url));
   const blob = createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex');
   const workflow = { type: 'file', path: WORKFLOW, sha: blob };
@@ -185,6 +191,58 @@ test('valid title/body edits skip heavy work for ready and draft PRs, including 
     full_name: 'contributor/agent-teams-ai',
   };
   assert.equal((await plan(fork)).full, false);
+});
+
+test('metadata retains a completed original Stage1 producer with its exact native job set', async () => {
+  const input = event();
+  ((input.pull_request as JsonObject).base as JsonObject).ref = 'feat/provider-migration-stage-1';
+  const data = fixture(input, 'completed', 4);
+  assert.equal(jobs(data).filter((job) => String(job.name).startsWith('Stage 1 source Desktop (')).length,
+    17, 'retain the complete original Desktop matrix');
+  const decision = await plan(input, { CI_ROOT_TEST_SHARDS: '4' }, data, 'full');
+  assert.equal(decision.metadata, true, decision.reason);
+  assert.equal(decision.full, false);
+});
+
+test('native producer jobs and receipt steps refuse incomplete, substituted or skipped proof', async () => {
+  const desktop = 'Stage 1 source Desktop (mixed Create and Launch)';
+  const receipt = 'Require the original retained receipt to report PASS';
+  const nativeGate = 'Require selected retained V1 and Host V2 native Desktop qualification';
+  const steps = (data: Map<string, unknown>, name: string) => job(data, name).steps as JsonObject[];
+  const mutations: [string, (data: Map<string, unknown>) => void][] = [
+    ['missing matrix row', (data) => { jobs(data).splice(jobs(data).findIndex((item) => item.name === desktop), 1); }],
+    ['extra matrix row', (data) => { jobs(data).push({ ...job(data, desktop), id: 2000, name: 'Stage 1 source Desktop (extra)' }); }],
+    ['unknown job', (data) => { jobs(data).push({ ...job(data, desktop), id: 2000, name: 'Unexpected qualification' }); }],
+    ['duplicate native name', (data) => { jobs(data).push({ ...job(data, desktop), id: 2000 }); }],
+    ['selected job skipped', (data) => { Object.assign(job(data, desktop), { conclusion: 'skipped', steps: [] }); }],
+    ['pending job', (data) => { job(data, desktop).status = 'in_progress'; }],
+    ['failed job', (data) => { job(data, desktop).conclusion = 'failure'; }],
+    ['cancelled job', (data) => { job(data, desktop).conclusion = 'cancelled'; }],
+    ['wrong run', (data) => { job(data, desktop).run_id = 99; }],
+    ['wrong attempt', (data) => { job(data, desktop).run_attempt = 2; }],
+    ['wrong source', (data) => { job(data, desktop).head_sha = 'f'.repeat(40); }],
+    ['unselected diagnostic executed', (data) => { job(data, 'Stage 1 process tuple diagnostic (unqualified)').conclusion = 'success'; }],
+    ['skipped diagnostic contains steps', (data) => { steps(data, 'Stage 1 process tuple diagnostic (unqualified)').push(completedStep('Unexpected command')); }],
+    ['missing receipt', (data) => { const list = steps(data, desktop); list.splice(list.findIndex((item) => item.name === receipt), 1); }],
+    ['duplicate receipt', (data) => { steps(data, desktop).push(completedStep(receipt)); }],
+    ['skipped receipt', (data) => { steps(data, desktop).find((item) => item.name === receipt)!.conclusion = 'skipped'; }],
+    ['failed receipt', (data) => { steps(data, desktop).find((item) => item.name === receipt)!.conclusion = 'failure'; }],
+    ['pending receipt', (data) => { steps(data, desktop).find((item) => item.name === receipt)!.status = 'in_progress'; }],
+    ['missing native gate', (data) => { const list = steps(data, 'Full qualification'); list.splice(list.findIndex((item) => item.name === nativeGate), 1); }],
+    ['duplicate native gate', (data) => { steps(data, 'Full qualification').push(completedStep(nativeGate)); }],
+    ['selected native gate skipped', (data) => { steps(data, 'Full qualification').find((item) => item.name === nativeGate)!.conclusion = 'skipped'; }],
+    ['core tests skipped despite native success', (data) => { job(data, 'test (1/4)').conclusion = 'skipped'; }],
+  ];
+  for (const [label, mutate] of mutations) {
+    const input = event();
+    ((input.pull_request as JsonObject).base as JsonObject).ref = 'feat/provider-migration-stage-1';
+    const data = fixture(input, 'completed', 4);
+    mutate(data);
+    (data.get(jobsEndpoint) as JsonObject).total_count = jobs(data).length;
+    const decision = await plan(input, { CI_ROOT_TEST_SHARDS: '4' }, data, 'full');
+    assert.equal(decision.metadata, false, label);
+    assert.equal(decision.full, true, label);
+  }
 });
 
 test('base, unknown or malformed edits conservatively require full qualification', async () => {
@@ -367,7 +425,10 @@ function draftFixture(shards: 2 | 4 = 2): Map<string, unknown> {
   const skipped = heavySkips.map((name) => name.replace('/2)', `/${shards})`))
     .map((name, index) => ({ ...plan, id: 4 + index, name,
     conclusion: 'skipped', steps: [] }));
-  data.set(jobsEndpoint, { total_count: 7, jobs: [plan, feedback, gate, ...skipped] });
+  const native = nativeProofFixture(data.get(`${prefix}/pulls/12`) as JsonObject, source(data), 'draft');
+  gate.steps.push(...native.gateSteps);
+  const selectedJobs = [plan, feedback, gate, ...skipped, ...native.jobs];
+  data.set(jobsEndpoint, { total_count: selectedJobs.length, jobs: selectedJobs });
   return data;
 }
 
@@ -519,8 +580,11 @@ test('successful completed metadata can carry continuity only to an authenticate
       .map((name, index) => ({ ...baseJob, id: 3 + index, name, conclusion: 'skipped', steps: [] })),
   ];
   const endpoint = `${prefix}/actions/runs/150/attempts/1/jobs?per_page=100`;
+  const native = nativeProofFixture(input.pull_request as JsonObject, metadataRun, 'metadata');
+  metadataJobs.push(...native.jobs);
+  (metadataJobs[1]!.steps as JsonObject[]).push(...native.gateSteps);
   data.set(`${prefix}/actions/runs/150`, metadataRun);
-  data.set(endpoint, { total_count: 7, jobs: metadataJobs });
+  data.set(endpoint, { total_count: metadataJobs.length, jobs: metadataJobs });
   const listing = data.get(listEndpoint) as JsonObject;
   listing.total_count = 3;
   (listing.workflow_runs as JsonObject[]).splice(1, 0, metadataRun);
@@ -653,10 +717,15 @@ const capturedDraftGateSteps: JsonObject[] = [
   { number: 12, name: 'Complete runner', status: 'completed', conclusion: 'success' },
   { number: 13, name: 'Complete job', status: 'completed', conclusion: 'success' },
 ];
+function currentDraftGateSteps(data: Map<string, unknown>): JsonObject[] {
+  // Preserve the historical cleanup facts, adding the current YAML's qualification steps.
+  const native = nativeProofFixture(data.get(`${prefix}/pulls/12`) as JsonObject, source(data), 'draft');
+  return [...structuredClone(capturedDraftGateSteps), ...native.gateSteps];
+}
 
 test('observed successful draft feedback preserves checks when only Node post-cleanup is skipped after the deliberate failed gate', async () => {
   const data = draftFixture();
-  job(data, 'Full qualification').steps = structuredClone(capturedDraftGateSteps);
+  job(data, 'Full qualification').steps = currentDraftGateSteps(data);
   assert.equal((await plan(event(undefined, true), {}, data)).metadata, true);
 });
 
@@ -675,7 +744,7 @@ test('draft cleanup exceptions never hide failed setup, missing source proof or 
   ];
   for (const [index, mutate] of mutations.entries()) {
     const data = draftFixture();
-    const steps = structuredClone(capturedDraftGateSteps);
+    const steps = currentDraftGateSteps(data);
     job(data, 'Full qualification').steps = steps;
     mutate(data, steps);
     assert.equal((await plan(event(undefined, true), {}, data)).full, true, `mutation ${index}`);
@@ -695,7 +764,7 @@ test('four-shard metadata preservation authenticates the exact configured full a
     assert.equal((await plan(event(), { CI_ROOT_TEST_SHARDS: '4' }, missing)).full, true, name);
   }
   const draft = draftFixture(4);
-  job(draft, 'Full qualification').steps = structuredClone(capturedDraftGateSteps);
+  job(draft, 'Full qualification').steps = currentDraftGateSteps(draft);
   assert.equal((await plan(event(undefined, true), { CI_ROOT_TEST_SHARDS: '4' }, draft)).metadata, true);
   assert.equal((await plan(event(undefined, true), { CI_ROOT_TEST_SHARDS: '2' }, draft)).full, true);
 });
@@ -1102,7 +1171,7 @@ void test('completed real metadata qualification preserves continuity to its com
   const data = fixture(input, 'completed');
   const prior = { ...source(data), id: 150, display_title: runTitle(input, 'edited') };
   const base = { run_id: 150, run_attempt: 1, head_sha: headSha, status: 'completed' };
-  const previousJobs = [
+  const previousJobs: JsonObject[] = [
     {
       ...base,
       id: 1,
@@ -1128,9 +1197,12 @@ void test('completed real metadata qualification preserves continuity to its com
       "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata fast feedback' || 'Fast feedback'",
     ].map((name, index) => ({ ...base, id: index + 3, name, conclusion: 'skipped', steps: [] })),
   ];
+  const native = nativeProofFixture(input.pull_request as JsonObject, prior, 'metadata');
+  previousJobs.push(...native.jobs);
+  (previousJobs[1]!.steps as JsonObject[]).push(...native.gateSteps);
   data.set(`${prefix}/actions/runs/150`, prior);
   data.set(`${prefix}/actions/runs/150/attempts/1/jobs?per_page=100`, {
-    total_count: 7,
+    total_count: previousJobs.length,
     jobs: previousJobs,
   });
   const listing = data.get(listEndpoint) as JsonObject;
@@ -1149,7 +1221,7 @@ void test('a Full qualification metadata run is crossed only when its gate re-au
     const base = { run_id: 150, run_attempt: 1, head_sha: headSha, status: 'completed' };
     const feedbackSkip =
       "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata fast feedback' || 'Fast feedback'";
-    const previousJobs = [
+    const previousJobs: JsonObject[] = [
       { ...base, id: 1, name: 'Metadata CI plan', conclusion: 'success', steps: [
         completedStep(`CI source proof: PR=12 | base=${baseSha} | head=${headSha}`),
         completedStep('Plan feedback and verify reusable evidence')] },
@@ -1159,8 +1231,11 @@ void test('a Full qualification metadata run is crossed only when its gate re-au
       ...[...heavySkips, feedbackSkip].map((name, index) =>
         ({ ...base, id: index + 3, name, conclusion: 'skipped', steps: [] })),
     ];
+    const native = nativeProofFixture(input.pull_request as JsonObject, prior, 'metadata');
+    previousJobs.push(...native.jobs);
+    (previousJobs[1]!.steps as JsonObject[]).push(...native.gateSteps);
     data.set(`${prefix}/actions/runs/150`, prior);
-    data.set(`${prefix}/actions/runs/150/attempts/1/jobs?per_page=100`, { total_count: 7, jobs: previousJobs });
+    data.set(`${prefix}/actions/runs/150/attempts/1/jobs?per_page=100`, { total_count: previousJobs.length, jobs: previousJobs });
     const listing = data.get(listEndpoint) as JsonObject;
     listing.total_count = 3;
     (listing.workflow_runs as JsonObject[]).splice(1, 0, prior);
@@ -1179,6 +1254,18 @@ void test('a Full qualification metadata run is crossed only when its gate re-au
   const failed = await plan(input, {}, withMetadataRun('failure'));
   assert.equal(failed.metadata, false);
   assert.equal(failed.full, true);
+  for (const change of ['executed job', 'missing gate', 'duplicate gate', 'executed gate']) {
+    const data = withMetadataRun('success');
+    const rows = (data.get(`${prefix}/actions/runs/150/attempts/1/jobs?per_page=100`) as JsonObject).jobs as JsonObject[];
+    const steps = rows.find((item) => item.name === 'Full qualification')!.steps as JsonObject[];
+    const gateName = 'Require selected Codex login and protocol-peer schedule qualification';
+    const index = steps.findIndex((step) => step.name === gateName);
+    if (change === 'executed job') rows.find((item) => item.name === 'Codex login Desktop (Linux x64)')!.conclusion = 'success';
+    if (change === 'missing gate') steps.splice(index, 1);
+    if (change === 'duplicate gate') steps.push({ ...steps[index]! });
+    if (change === 'executed gate') steps[index]!.conclusion = 'success';
+    assert.equal((await plan(input, {}, data)).metadata, false, change);
+  }
 });
 
 void test('metadata gate reauthenticates completed full evidence and rejects unfinished, missing-attempt and changed-source claims', gateTimeout, async () => {

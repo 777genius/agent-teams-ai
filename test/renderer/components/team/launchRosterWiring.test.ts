@@ -36,10 +36,25 @@ describe('launch dialog wiring of per-project teams', () => {
     const dialogs = launchDialogElements(source);
     expect(dialogs).toHaveLength(1);
     expect(dialogs[0]).toContain('rosterReadOnly={Boolean(logicalTeamName)}');
-    expect(source).toMatch(/setLaunchDialogState\(\s*buildChangeRuntimeLaunchState\(\{/);
+    const changeRuntime = source.slice(
+      source.indexOf('const handleChangeLeadRuntime ='),
+      source.indexOf('const memberActions =')
+    );
+    expect(changeRuntime).toMatch(/const next = buildChangeRuntimeLaunchState\(\{/);
+    // The owned opener preserves retained-team selection and the complete settings intent.
+    const launchSettings = changeRuntime.match(
+      /openLaunchDialog\(\s*next\.mode,\s*\{([\s\S]*?)\}\s*\)/
+    )?.[1];
+    expect(launchSettings).toBeDefined();
+    for (const field of ['memberSettingsDraft', 'baselineMembers', 'memberSettingsCommandId']) {
+      expect(launchSettings).toMatch(new RegExp(`\\b${field}:\\s*next\\.${field}\\b`));
+    }
+    expect(changeRuntime).not.toContain('setLaunchDialogState(');
     // A per-project relaunch returns before the shared relaunch flow, which is for ordinary teams.
     const handler = source.slice(source.indexOf('const handleRelaunchDialogSubmit'));
-    expect(handler.indexOf('if (logicalTeamName) {')).toBeLessThan(handler.indexOf('executeTeamRelaunch({'));
+    expect(handler.indexOf('if (logicalTeamName) {')).toBeLessThan(
+      handler.indexOf('executeTeamRelaunch({')
+    );
     expect(relaunchCall(source)).toContain('rosterReadOnly: false');
   });
 
@@ -48,7 +63,9 @@ describe('launch dialog wiring of per-project teams', () => {
     const dialogs = launchDialogElements(source);
     expect(dialogs).toHaveLength(2);
     for (const dialog of dialogs) {
-      expect(dialog).toContain('rosterReadOnly={launchDialogProjectPermissionTeamName !== undefined}');
+      expect(dialog).toContain(
+        'rosterReadOnly={launchDialogProjectPermissionTeamName !== undefined}'
+      );
     }
     expect(relaunchCall(source)).toContain(
       'rosterReadOnly: launchDialogProjectPermissionTeamName !== undefined'

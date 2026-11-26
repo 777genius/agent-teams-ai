@@ -34,8 +34,8 @@ import {
   getTeamRefreshFanoutSnapshotForTests,
   type TeamRefreshFanoutSnapshot,
 } from '../../../src/renderer/store/teamRefreshFanoutDiagnostics';
-import { getContextScopedTeamResetState } from '../../../src/renderer/store/utils/stateResetHelpers';
 import { invalidateContextScopedRequestEpoch } from '../../../src/renderer/store/utils/contextScopedRequestEpoch';
+import { getContextScopedTeamResetState } from '../../../src/renderer/store/utils/stateResetHelpers';
 
 import type { BackendLaunchConfigurationView } from '../../../src/features/agent-backend/contracts/launch';
 import type {
@@ -537,6 +537,18 @@ describe('teamSlice actions', () => {
     });
     store.setState({
       getAllPaneTabs: vi.fn(() => [existing]),
+      projects: [
+        {
+          id: 'current-project',
+          path: '/TEST/current-project',
+          name: 'current-project',
+          sessions: [],
+          totalSessions: 0,
+          createdAt: 0,
+          mostRecentSession: 0,
+        },
+      ],
+      selectedProjectId: 'current-project',
       teamByName: {
         builders: {
           teamName: 'builders',

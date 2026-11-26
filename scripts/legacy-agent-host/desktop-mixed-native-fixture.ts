@@ -1,7 +1,7 @@
 import { createMixedTaskNoticeReader } from '../../packages/legacy-agent-host/tests/fixtures/native-mixed-task-notifications.ts';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import { readFileSync, lstatSync } from 'node:fs';
+import { readFileSync, lstatSync, realpathSync } from 'node:fs';
 import { mkdir, readFile, realpath, writeFile, open } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { startNativeTeamModel } from '../../packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts';
@@ -24,6 +24,7 @@ import type { DesktopOpenCodeV2Selection } from './desktop-opencode-v2-fixture.t
 import type { prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
 import type { TeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/TeamHost.js';
 import type { DesktopFiniteMembership } from './desktop-live-membership-controlled.ts';
+import type { DesktopProjectExecutionOwner } from './desktop-created-project-selection.ts';
 
 const record = (value: unknown): Record<string, unknown> => {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value));
@@ -83,9 +84,12 @@ export interface DesktopLiveMemberSelection { commandId: string; memberId: strin
 
 /** One explicit case reads original owner files; it does not admit work or select a latest result. */
 export function readMixedLiveMembershipIdentity(root: string, provider: 'claude' | 'codex' | 'opencode',
-  target?: DesktopLiveMemberSelection) {
+  target?: DesktopLiveMemberSelection, executionOwner?: DesktopProjectExecutionOwner) {
   assert.match(basename(root), /^TEST-desktop-backend-/);
-  const directory = join(root, 'hoststore/teams', mixedDesktopTeamName, '.host-owner');
+  const ownerName = executionOwner?.binding.teamName ?? mixedDesktopTeamName;
+  assert.match(ownerName, /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/);
+  const directory = join(root, 'hoststore/teams', ownerName, '.host-owner');
+  if (executionOwner) { assert.notEqual(ownerName, mixedDesktopTeamName); assert.equal(realpathSync(directory), directory); }
   const read = (name: string) => {
     const path = join(directory, name), before = lstatSync(path);
     assert.ok(before.isFile() && !before.isSymbolicLink() && before.size <= 1024 * 1024);
@@ -98,7 +102,13 @@ export function readMixedLiveMembershipIdentity(root: string, provider: 'claude'
   const rows = (value: unknown, maximum: number) => {
     assert.ok(Array.isArray(value) && value.length <= maximum); return value.map(record);
   };
-  const state = read('state.json'), captures = rows(state.runtimeCaptures, 1);
+  const state = read('state.json');
+  if (executionOwner) {
+    assert.deepEqual(state.binding, executionOwner.binding);
+    assert.equal(record(state.savedSettings).cwd, executionOwner.workspace);
+    assert.equal(record(state.savedSettings).projectContextMode, 'shared');
+  }
+  const captures = rows(state.runtimeCaptures, 1);
   assert.equal(captures.length, 1);
   const capture = captures[0]!, original = rows(capture.members, 2), members = rows(state.members, 3);
   assert.equal(original.length, 2, 'the original capture contains only the two non-OpenCode peers');
@@ -182,8 +192,13 @@ export async function startDesktopMixedModels(root: () => string, options: { nat
   assert.equal(process.env.LEGACY_DESKTOP_BACKEND_GO, '1');
   if (options.liveMembership) assert.equal(process.env.LEGACY_DESKTOP_MIXED_MEMBERSHIP_UI, '1');
   let membershipPhase: LiveMembershipModelPhase = 'idle', membershipTarget: DesktopLiveMemberSelection | undefined;
+  let membershipOwner: DesktopProjectExecutionOwner | undefined;
+  const membershipIdentity = (provider: 'claude' | 'codex' | 'opencode', target?: DesktopLiveMemberSelection) => {
+    assert.ok(membershipOwner, 'the original project execution is captured before any membership request');
+    return readMixedLiveMembershipIdentity(root(), provider, target, membershipOwner);
+  };
   const principal = (provider: 'claude' | 'codex' | 'opencode') => options.liveMembership
-    ? readMixedLiveMembershipIdentity(root(), provider, provider === 'opencode' ? membershipTarget : undefined).principalId
+    ? membershipIdentity(provider, provider === 'opencode' ? membershipTarget : undefined).principalId
     : readMixedCapturedPrincipal(root(), provider);
   let claudeProbePhase: 'native' | 'cold-readback' = 'native';
   let settingsProbe: SettingsModelProbe | 'idle' | undefined = 'idle';
@@ -233,6 +248,11 @@ export async function startDesktopMixedModels(root: () => string, options: { nat
       openCodeProviderId: options.nativeGeneration ? 'test-local' as const : 'local' as const,
       ...(options.liveMembership ? { membership: {
         get phase() { return membershipPhase; },
+        captureExecution(owner: DesktopProjectExecutionOwner) {
+          assert.equal(membershipOwner, undefined); assert.equal(membershipPhase, 'idle');
+          membershipOwner = Object.freeze({ binding: Object.freeze({ ...owner.binding }), workspace: owner.workspace });
+          membershipIdentity('claude'); membershipIdentity('codex');
+        },
         advance(next: Exclude<LiveMembershipModelPhase, 'idle'>, target?: DesktopLiveMemberSelection) {
           const phases: LiveMembershipModelPhase[] = ['idle', 'add', 'add-ready', 'remove', 'restore', 'restore-ready', 'stopped'];
           const index = phases.indexOf(membershipPhase);
@@ -244,7 +264,7 @@ export async function startDesktopMixedModels(root: () => string, options: { nat
             assert.equal(model.observations.length, 0); assert.equal(model.notificationObservations?.length ?? 0, 0);
           }
           if (next === 'add-ready' || next === 'restore-ready') {
-            assert.ok(target); readMixedLiveMembershipIdentity(root(), 'opencode', target);
+            assert.ok(target); membershipIdentity('opencode', target);
             membershipTarget = Object.freeze({ ...target });
           } else assert.equal(target, undefined);
           membershipPhase = next;

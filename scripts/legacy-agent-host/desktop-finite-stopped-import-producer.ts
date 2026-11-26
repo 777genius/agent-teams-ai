@@ -138,6 +138,13 @@ export async function produceDesktopFiniteStoppedTeam(options: {
       const selector = page + ' button[aria-controls=' + literal(optional.id) + ']';
       await ui.scrollTo(selector, 'original source options'); await ui.click(selector, 'expand original source options');
     }
+    // This import source uses the legacy shared team identity, not a per-project execution name.
+    const historyMode = page + ' #team-project-context-mode', sharedHistory = 'Shared across projects';
+    await ui.scrollTo(historyMode, 'original source history mode');
+    await ui.click(historyMode, 'open original source history mode');
+    await ui.scrollTo('[role="listbox"] [role="option"]', 'original shared source history option', sharedHistory);
+    await ui.click('[role="listbox"] [role="option"]', 'select original shared source history', sharedHistory);
+    await ui.waitRead(`document.querySelector(${literal(historyMode)})?.textContent?.trim()===${literal(sharedHistory)}`, 'original source shared history selected');
     await ui.scrollTo(page + ' #team-prompt', 'original source prompt'); await ui.click(page + ' #team-prompt', 'type source input');
     await renderer.send('Input.insertText', { text: FINITE_SOURCE_PROMPT });
     await ui.waitRead(`document.querySelector('${page} #team-prompt')?.value===${literal(FINITE_SOURCE_PROMPT)}`, 'exact source prompt');

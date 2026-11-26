@@ -9,6 +9,7 @@ import { hostTeamSelectionKey } from '../../../src/features/agent-backend/contra
 import { normalizeOrganizationMapRequest } from '../../../src/features/organizations/contracts';
 import { getAgentId, getTeamNodeId } from '../../../src/features/organizations/core/domain/organizationIds';
 import { registerOrganizationsHttp } from '../../../src/features/organizations/main/adapters/input/http/registerOrganizationsHttp';
+import { HostRoutedOrganizationSource } from '../../../src/features/organizations/main/adapters/output/HostRoutedOrganizationSource';
 import { createOrganizationsFeature } from '../../../src/features/organizations/main/composition/createOrganizationsFeature';
 import { JsonOrganizationStructureRepository } from '../../../src/features/organizations/main/infrastructure/JsonOrganizationStructureRepository';
 import { setClaudeBasePathOverride } from '../../../src/main/utils/pathDecoder';
@@ -86,6 +87,28 @@ it('refuses an incomplete owner catalog rather than presenting it as an empty di
   f.setSnapshot({ ...f.snapshot(), unavailableOwners: [{ kind: 'owner', ownerResourceRef: 'TEST-missing', code: 'unavailable', outcome: 'unknown' }] });
   await expect(f.map()).rejects.toThrow('catalog is incomplete');
 });
+
+it.each([new Error('TEST original failure'), 'TEST rejected value', undefined])(
+  'retains a failed captured organization request without issuing another read (%s)',
+  async (reason) => {
+    const f = fixture();
+    const directory = { listTeams: vi.fn().mockRejectedValue(reason) };
+    const messages = { listRecentMessages: vi.fn(async () => []) };
+    const host = await f.capture();
+    if (!host) throw new Error('TEST Host read scope was not captured');
+    const source = new HostRoutedOrganizationSource(host, directory, messages);
+    await expect(source.listTeams({ includeDeletedTeams: false })).rejects.toBe(reason);
+    let failure: unknown;
+    try { source.assertCurrent(); } catch (error) { failure = error; }
+    expect(failure).toBeInstanceOf(Error);
+    if (reason instanceof Error) expect(failure).toBe(reason);
+    else expect((failure as Error).cause).toBe(reason);
+    await expect(source.listTeams({ includeDeletedTeams: false })).rejects.toBe(failure);
+    await expect(source.listRecentMessages({ teamNames: [], maxMessages: 1 })).rejects.toBe(failure);
+    expect(directory.listTeams).toHaveBeenCalledTimes(1);
+    expect(messages.listRecentMessages).not.toHaveBeenCalled();
+  }
+);
 
 it('rejects the original read if its context is revoked during the actual Host snapshot', async () => {
   const f = fixture(); f.addTeam();

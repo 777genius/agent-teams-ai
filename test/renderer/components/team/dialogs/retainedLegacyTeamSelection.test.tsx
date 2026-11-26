@@ -54,6 +54,7 @@ vi.mock('@renderer/components/common/ConfirmDialog', () => ({ confirm: f.confirm
 vi.mock('@renderer/store', () => ({
   useStore: {
     getState: () => ({
+      teamByName: {},
       selectedTeamData: f.selected,
       selectedTeamName: 'TEST-legacy',
       selectedTeamError: null,
@@ -332,6 +333,7 @@ describe('explicit original-runtime team selection', () => {
       projectPath: '/TEST/fresh-project',
       retainedLegacyLaunch: choice,
     });
+    expect(f.getSavedRequest).toHaveBeenCalledExactlyOnceWith('TEST-legacy');
     expect(f.cancelProvisioning).toHaveBeenCalledTimes(1);
     expect(f.stoppedImport).not.toHaveBeenCalled();
   });

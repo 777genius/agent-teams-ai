@@ -49,11 +49,43 @@ it('serves actual Host Tasks/messages over HTTP with no legacy Host-key lookup',
     const snapshot = response.json();
     expect(snapshot.complete).toBe(true);
     expect(snapshot.teams).toHaveLength(1);
-    expect(snapshot.teams[0].tasks[0].taskId).toBe(taskId);
+    const persisted = team.human.getTask(taskId);
+    expect(typeof persisted.clarificationRequestedAt).toBe('string');
+    expect(snapshot.teams[0].tasks[0]).toMatchObject({
+      taskId, owner: 'team-lead', requestedAt: persisted.clarificationRequestedAt,
+    });
     expect(snapshot.teams[0].messages[0].messageId).toBe('TEST-direct-answer');
     expect(legacy.getUserAttentionTasks).not.toHaveBeenCalled();
     expect(legacy.getMessageFeed).not.toHaveBeenCalled();
   } finally { await app.close(); }
+});
+
+it('keeps a completed agent review readable while awaiting human approval', async () => {
+  const { f, feature } = fixture();
+  const team = f.addTeam({ grants: [
+    { principalId: 'human', memberName: 'user', permissions: ['read', 'admin', 'task.write', 'message.write'] },
+    { principalId: 'alice', memberName: 'alice', permissions: ['read', 'task.write', 'message.write'] },
+  ] });
+  team.human.execute({ commandId: 'TEST-review-policy', operation: 'task.board.review-flow',
+    payload: { settings: { reviewFlow: 'human_approval', reviewFlowPrompt: '' } } });
+  const taskId = team.human.execute({ commandId: 'TEST-create-review', operation: 'task.create',
+    payload: { subject: 'TEST human approval', owner: 'team-lead' } }).effects.taskId;
+  team.human.execute({ commandId: 'TEST-finish-task', operation: 'task.lifecycle',
+    payload: { taskId, action: 'complete' } });
+  team.human.execute({ commandId: 'TEST-request-review', operation: 'task.review',
+    payload: { taskId, action: 'request', reviewer: 'alice' } });
+  const reviewer = team.owner.connect('alice');
+  const started = reviewer.execute({ commandId: 'TEST-start-review', operation: 'task.review',
+    payload: { taskId, action: 'start' } }).result as { reviewRequestId: string };
+  reviewer.execute({ commandId: 'TEST-complete-review', operation: 'task.review',
+    payload: { taskId, action: 'complete', expectedReviewRequestId: started.reviewRequestId } });
+  expect(team.human.getTask(taskId).reviewState).toBe('reviewed');
+  const captured = await f.capture();
+  if (!captured) throw new Error('Expected the captured TEST Host');
+  expect((await captured.product(team.key)).data.tasks[0]).toMatchObject({
+    id: taskId, reviewState: 'reviewed',
+  });
+  expect((await feature.getUserAttentionSnapshot(team.key)).complete).toBe(true);
 });
 
 it.each(['per_project', 'shared'] as const)('keeps project navigation under the original %s logical Team while reading the retained execution child', async projectContextMode => {

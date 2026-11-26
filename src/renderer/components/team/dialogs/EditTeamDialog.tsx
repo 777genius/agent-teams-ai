@@ -214,6 +214,7 @@ export const EditTeamDialog = ({
                   name: currentName,
                   description: currentDescription,
                   color: currentColor,
+                  prompt: currentLeadPrompt,
                   members: currentMembers,
                 },
                 isCurrent: () =>
@@ -460,7 +461,9 @@ export const EditTeamDialog = ({
         if (isHostTeamSelectionKey(teamName)) {
           const submission = hostSubmissionRef.current;
           if (!submission) throw new Error('Saved team configuration unavailable.');
-          await submission.submit({ name, description, color, members: builtMembers });
+          // Live props may acknowledge a save before its reply; retries retain the draft.
+          const prompt = currentLeadPrompt !== undefined ? leadPrompt.trim() : undefined;
+          await submission.submit({ name, description, color, members: builtMembers, prompt });
           configSaved = true;
           membersSaved = true;
           gatewayBindings.markSaved(builtMembers.map((member) => member.name));

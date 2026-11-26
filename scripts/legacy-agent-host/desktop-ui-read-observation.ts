@@ -149,6 +149,31 @@ export function createDesktopOriginalActionReadTiming(clock: () => number = () =
   return { data, openTeam: controller(data.actions[0]), openLaunch: controller(data.actions[1]) };
 }
 
+/** Closed facts from an existing click read; blocked-target and readiness predicates stay with the caller. */
+export function projectDesktopUnavailableTargetFacts(row: Record<string, unknown>): Record<string, number | boolean> {
+  return {
+    matches: Number.isSafeInteger(row.matches) && Number(row.matches) >= 0
+      ? Math.min(Number(row.matches), 256) : 0,
+    disabled: row.disabled === true, ariaDisabled: row.ariaDisabled === true,
+    pointerEventsNone: row.pointerEventsNone === true,
+    centerInViewport: row.centerInViewport === true, hitPresent: row.hitPresent === true,
+  };
+}
+
+/** Closed facts from existing sidebar reads; this projection never determines readiness. */
+export function projectDesktopSidebarFacts(value: unknown): Record<string, number | boolean> {
+  const projected: Record<string, number | boolean> = {};
+  for (const key of ['matches', 'width', 'height', 'top', 'bottom', 'clipTop', 'clipBottom']) {
+    const n = Object.getOwnPropertyDescriptor(Object(value), key)?.value;
+    if (typeof n === 'number' && Number.isFinite(n) && Math.abs(n) <= 1_000_000) projected[key] = n;
+  }
+  for (const key of ['keyMatches', 'positiveSize', 'centerInViewport', 'hitPresent', 'hitWithinTarget']) {
+    const flag = Object.getOwnPropertyDescriptor(Object(value), key)?.value;
+    if (typeof flag === 'boolean') projected[key] = flag;
+  }
+  return projected;
+}
+
 /** The original read loop; observation never supplies readiness or deadline inputs. */
 export function createDesktopReadWait(
   cdp: { evaluate(expression: string): Promise<unknown> },

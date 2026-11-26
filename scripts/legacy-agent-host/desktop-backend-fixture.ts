@@ -15,9 +15,9 @@ import type { TeamHostProfile } from '../../packages/legacy-agent-host/dist/comp
 import { prepareNativeReviewWorkspace } from './desktop-native-review-fixture.ts';
 import { prepareDesktopReviewLedger } from './desktop-review-fixture.ts';
 import { prepareDesktopStoppedImport } from './desktop-stopped-import-fixture.ts';
-import { desktopBackendEnvironment, desktopRuntimeSourceEnvironment, prepareDesktopRuntimeProfile, readDesktopLinuxChildExecInput } from './desktop-runtime-source-fixture.ts';
+import { desktopBackendEnvironment, desktopNodeScriptHeader, quoteShellArgument, desktopRuntimeSourceEnvironment, prepareDesktopRuntimeProfile, readDesktopLinuxChildExecInput } from './desktop-runtime-source-fixture.ts';
 import type { DesktopOpenCodeSourceSelection } from './desktop-runtime-source-fixture.ts';
-export { desktopBackendEnvironment } from './desktop-runtime-source-fixture.ts';
+export { desktopBackendEnvironment, desktopNodeScriptHeader } from './desktop-runtime-source-fixture.ts';
 import type { DesktopOpenCodeV2Selection } from './desktop-opencode-v2-fixture.ts';
 import { desktopCodexSha256, prepareDesktopCodexLoginOpener } from './desktop-codex-login-fixture.ts';
 export { desktopCodexSha256 } from './desktop-codex-login-fixture.ts';
@@ -28,14 +28,6 @@ export { fileDigest } from './desktop-file-digest.ts';
 
 export const digest = (bytes: Uint8Array | string): string =>
   createHash('sha256').update(bytes).digest('hex');
-
-const quoteShellArgument = (value: string): string => "'" + value.replaceAll("'", "'\\''") + "'";
-
-/** Shell bootstrap preserves the captured absolute Node even inside an app bundle path. */
-export function desktopNodeScriptHeader(node: string): string {
-  if (!node.startsWith('/') || /[\0\r\n]/u.test(node)) throw new Error('Invalid TEST Node path');
-  return `#!/bin/sh\n':' //; exec ${quoteShellArgument(node)} "$0" "$@"\n`;
-}
 
 /** Emits only the two known environment probes; never evaluates shell input. */
 export function desktopShellEnvironmentProbeSource(node: string, sentinelLog: string): string {
@@ -381,6 +373,8 @@ export async function prepareDesktopBackendFixture(
             SHELL: '/bin/sh',
             ANTHROPIC_API_KEY: 'TEST-LOCALHOST-ONLY',
             ANTHROPIC_BASE_URL: options.nativeClaude.modelUrl ?? 'http://127.0.0.1:9',
+            ANTHROPIC_CUSTOM_MODEL_OPTION: 'claude-opus-4-6',
+            ANTHROPIC_CUSTOM_MODEL_OPTION_NAME: 'Opus 4.6',
             CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1',
             CLAUDE_CODE_DISABLE_AUTO_MEMORY: '1',
             DISABLE_AUTOUPDATER: '1',
@@ -759,8 +753,11 @@ export async function prepareDesktopBackendFixture(
   // shell environment cache is warm; keep cold discovery behind the same guard.
   const vendorBin = join(root, 'claude/local/node_modules/.bin');
   await mkdir(vendorBin, { recursive: true, mode: 0o700 });
+  // Saved-only donor status uses executable discovery without --version validation.
+  // Keep Codex absent from that PATH; the consumer bin sentinel still refuses every agent call.
   for (const name of ['claude', 'codex', 'opencode', 'gemini', 'claude-multimodel']
-    .filter(name => !options.nativeOpenCodeSourceSelection || name !== 'opencode'))
+    .filter(name => (!options.nativeOpenCodeSourceSelection || name !== 'opencode') &&
+      (!options.donorSavedOnly || name !== 'codex')))
     await writeFile(join(vendorBin, name), sentinelSource, { mode: 0o700 });
   // Startup's shell environment resolver may otherwise source login files and
   // replace the isolated PATH/HOME. This TEST executable performs no shell eval.

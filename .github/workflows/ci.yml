@@ -1191,7 +1191,7 @@ jobs:
 
   codex-login-desktop:
     name: Codex login Desktop (Linux x64)
-    # Bounded frontend-parity qualification, including a Ready stacked test PR.
+    # Bounded frontend-parity qualification, including Ready Stage 1 children.
     # This does not change Stage 1's broader native/UI gate or qualify account completion.
     needs: plan
     if: >-
@@ -1200,6 +1200,7 @@ jobs:
        (github.event_name == 'pull_request' && github.event.pull_request.draft == false &&
         github.event.pull_request.head.repo.full_name == github.repository &&
         (github.event.pull_request.base.ref == 'feat/provider-host-frontend-parity-20261112' ||
+         github.event.pull_request.base.ref == 'feat/provider-migration-stage-1' ||
          github.event.pull_request.head.ref == 'feat/provider-host-frontend-parity-20261112' ||
          (github.event.pull_request.number == 982 &&
           github.event.pull_request.head.ref == 'feat/provider-migration-stage-1'))))
@@ -1368,11 +1369,16 @@ jobs:
 
   stage1-desktop:
     name: Stage 1 source Desktop (${{ matrix.label }})
+    needs: plan
     # Run native/UI acceptance on ready Stage1 source PR and its integration PRs.
-    # Draft, forked and unrelated PRs do not allocate these macOS proof jobs.
+    # Main-bound umbrella selection requires the same repository.
     if: >-
-      (github.event_name == 'workflow_dispatch' && inputs.stage1_desktop) ||
-      (github.event_name == 'pull_request' && github.event.pull_request.draft == false && (github.event.pull_request.base.ref == 'feat/provider-migration-stage-1' || (github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.ref == 'feat/provider-migration-stage-1' && github.event.pull_request.head.repo.full_name == github.repository)))
+      needs.plan.outputs.full == 'true' &&
+      needs.plan.outputs.metadata == 'false' &&
+      (
+        (github.event_name == 'workflow_dispatch' && inputs.stage1_desktop) ||
+        (github.event_name == 'pull_request' && github.event.pull_request.draft == false && (github.event.pull_request.base.ref == 'feat/provider-migration-stage-1' || (github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.ref == 'feat/provider-migration-stage-1' && github.event.pull_request.head.repo.full_name == github.repository)))
+      )
     runs-on: ${{ vars.CI_MACOS_ARM_RUNNER || 'macos-15' }}
     timeout-minutes: 45
     strategy:
@@ -1615,7 +1621,7 @@ jobs:
             sha256: 'fc8a821aff5b96b649647dac3853c831acf83d1555a480dc1f9645006600cb89',
           };
           const currentProvider = await readNativeProviderArtifact(repo);
-          assert.equal(currentProvider.sha256, 'b045b19866c522fddaf7b879f7c37b5fbe00d7880f8798d80e0b99cc69b9751a');
+          assert.equal(currentProvider.sha256, 'ab18b535ef17d42c6033b29205e6f0a8748bbc1df5b2b889acf8c081c18cf1db');
           await verifyNativeProviderArtifact(donor, oldProvider);
           await verifyNativeProviderArtifact(repo, currentProvider);
           const node = realpathSync('resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node');
@@ -1810,8 +1816,8 @@ jobs:
           import { readNativeProviderArtifact, verifyNativeProviderArtifact } from './packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts';
           const provider = await readNativeProviderArtifact(process.cwd());
           assert.deepEqual(provider, {
-            path: 'vendor/provider-migration/v2-lifecycle-f5d632a6/agent-teams-provider-implementations-0.0.0.tgz',
-            sha256: 'b045b19866c522fddaf7b879f7c37b5fbe00d7880f8798d80e0b99cc69b9751a',
+            path: 'vendor/provider-migration/v2-catalog-56afd245/agent-teams-provider-implementations-0.0.0.tgz',
+            sha256: 'ab18b535ef17d42c6033b29205e6f0a8748bbc1df5b2b889acf8c081c18cf1db',
           });
           await verifyNativeProviderArtifact(process.cwd(), provider);
           const stage = process.env.CODEX_CANDIDATE_STAGE;
@@ -1844,8 +1850,8 @@ jobs:
           LEGACY_CODEX_TEAM_GO=1 \
           LEGACY_CODEX_CANDIDATE_VERSION=0.169.0 \
           LEGACY_CODEX_CANDIDATE_INPUTS="$candidate_stage/input-pins.json" \
-          LEGACY_NATIVE_PROVIDER_ARTIFACT=vendor/provider-migration/v2-lifecycle-f5d632a6/agent-teams-provider-implementations-0.0.0.tgz \
-          LEGACY_NATIVE_PROVIDER_SHA256=b045b19866c522fddaf7b879f7c37b5fbe00d7880f8798d80e0b99cc69b9751a \
+          LEGACY_NATIVE_PROVIDER_ARTIFACT=vendor/provider-migration/v2-catalog-56afd245/agent-teams-provider-implementations-0.0.0.tgz \
+          LEGACY_NATIVE_PROVIDER_SHA256=ab18b535ef17d42c6033b29205e6f0a8748bbc1df5b2b889acf8c081c18cf1db \
           "$selected_node" --test packages/legacy-agent-host/tests/native-codex-team.native.ts 2>&1 | tee "$RUNNER_TEMP/stage1-codex-0169-candidate.log"
           "$selected_node" --input-type=module <<'NODE'
           import assert from 'node:assert/strict';
@@ -1859,7 +1865,7 @@ jobs:
           assert.equal(receipt.status, 'PASS'); assert.equal(receipt.cleanup, true);
           assert.equal(receipt.nativeVersion, 'codex-cli 0.169.0');
           assert.equal(receipt.scope, 'public-D Codex 0.169.0 candidate Darwin ARM64');
-          assert.equal(receipt.artifacts.provider.sha256, 'b045b19866c522fddaf7b879f7c37b5fbe00d7880f8798d80e0b99cc69b9751a');
+          assert.equal(receipt.artifacts.provider.sha256, 'ab18b535ef17d42c6033b29205e6f0a8748bbc1df5b2b889acf8c081c18cf1db');
           assert.equal(receipt.artifacts.node.version, 'v24.21.0');
           assert.equal(receipt.artifacts.inputs.archive.sha256, 'd67d443253294438a21fde15753d7c1174e6a32147d842eb84428479d664c93d');
           assert.equal(receipt.catalog.originalChildExited, true);
@@ -2073,7 +2079,7 @@ jobs:
             assert.equal(source.status, 'PASS'); assert.equal(source.sourceKind, 'actual-current-native-solo');
             assert.deepEqual(source, receipt.currentStoppedProducer);
             assert.equal(source.producer.commit, process.env.OPENCODE_V2_TEST_SOURCE_HEAD);
-            assert.equal(source.producer.runtime.version, '0.0.158');
+            assert.equal(source.producer.runtime.version, '0.0.161');
             assert.equal(source.producer.runtime.cacheValidated, true);
             assert.equal(source.hostDescriptorPresent, false); assert.equal(source.sourceFrozen, true);
             assert.deepEqual(source.ordinaryQuit, { requestedOnce: true, exitCode: 0, signalCode: null,
@@ -2745,6 +2751,7 @@ jobs:
             /private/tmp/TEST-desktop-backend-*/*.png
             /private/tmp/TEST-desktop-backend-*/*.log
             /private/tmp/TEST-desktop-backend-*/*.ndjson
+            /private/tmp/TEST-desktop-backend-*/userData/logs/app-errors*.ndjson
             /private/tmp/TEST-desktop-backend-*/hoststore/**
             /private/tmp/TEST-desktop-backend-*/owner-routing/**
             /private/tmp/TEST-desktop-backend-*/userData/agent-backend/bindings/**
@@ -2813,10 +2820,15 @@ jobs:
 
   stage1-process-qualification:
     name: Stage 1 current-tuple process and packed qualification
+    needs: plan
     # Original P7/positive-M19 receipt must bind both selected Stage1 and its integration tree.
     if: >-
-      (github.event_name == 'workflow_dispatch' && inputs.stage1_process_qualification) ||
-      (github.event_name == 'pull_request' && github.event.pull_request.draft == false && (github.event.pull_request.base.ref == 'feat/provider-migration-stage-1' || (github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.ref == 'feat/provider-migration-stage-1' && github.event.pull_request.head.repo.full_name == github.repository)))
+      needs.plan.outputs.full == 'true' &&
+      needs.plan.outputs.metadata == 'false' &&
+      (
+        (github.event_name == 'workflow_dispatch' && inputs.stage1_process_qualification) ||
+        (github.event_name == 'pull_request' && github.event.pull_request.draft == false && (github.event.pull_request.base.ref == 'feat/provider-migration-stage-1' || (github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.ref == 'feat/provider-migration-stage-1' && github.event.pull_request.head.repo.full_name == github.repository)))
+      )
     runs-on: ${{ vars.CI_MACOS_ARM_RUNNER || 'macos-15' }}
     timeout-minutes: 45
     env:
@@ -2962,6 +2974,7 @@ jobs:
            (github.event_name == 'pull_request' && github.event.pull_request.draft == false &&
             github.event.pull_request.head.repo.full_name == github.repository &&
             (github.event.pull_request.base.ref == 'feat/provider-host-frontend-parity-20261112' ||
+             github.event.pull_request.base.ref == 'feat/provider-migration-stage-1' ||
              github.event.pull_request.head.ref == 'feat/provider-host-frontend-parity-20261112' ||
              (github.event.pull_request.number == 982 &&
               github.event.pull_request.head.ref == 'feat/provider-migration-stage-1'))))

@@ -355,10 +355,18 @@ async function fixture(mode: 'http' | 'custody' | 'stop-unknown' | 'final-cut' |
   };
 }
 
-test('driver-open rejected read retains its real sibling HTTP until settlement before owner cleanup', async () => {
+test.each(['absent', 'healthy', 'throws'] as const)(
+  'driver-open rejected read retains its real sibling HTTP until settlement with %s diagnostics', async sink => {
   type OwnerClient = ReturnType<typeof import('../../../packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist/opencode.js').createOpenCodeV2OwnedSessionClient>;
   const failedRead = Promise.withResolvers<unknown>(), siblingReturned = Promise.withResolvers<void>();
-  const disposals: number[] = [];
+  const disposals: number[] = [], calls: string[] = [], records: OpenCodeProbeDiagnostic[] = [];
+  const originalDiagnostic = probeDiagnostics.createOpenCodeProbeDiagnostic;
+  const diagnostic = vi.spyOn(probeDiagnostics, 'createOpenCodeProbeDiagnostic')
+    .mockImplementation((selected, command, digest) => sink === 'absent' ? () => {}
+      : originalDiagnostic(selected, command, digest, line => {
+        records.push(JSON.parse(line.slice(probePrefix.length)) as OpenCodeProbeDiagnostic);
+        if (sink === 'throws') throw new Error('TEST private observer error');
+      }));
   let owners = 0, siblingSettled = false, runSettled = false;
   controlled.observeClient = raw => {
     const client = raw as OwnerClient, owner = ++owners;
@@ -367,13 +375,19 @@ test('driver-open rejected read retains its real sibling HTTP until settlement b
     if (owner !== 2) return;
     const readSession = client.readSession.bind(client), readMcp = client.readMcp.bind(client);
     vi.spyOn(client, 'readSession').mockImplementation(async () => {
+      calls.push('session');
       try { return await readSession(); }
       catch (error) { failedRead.resolve(error); throw error; }
     });
     vi.spyOn(client, 'readMcp').mockImplementation(async () => {
+      calls.push('mcp');
       try { return await readMcp(); }
       finally { siblingSettled = true; siblingReturned.resolve(); }
     });
+    for (const [method, name] of [['savedPermissionsEmpty', 'permissions'], ['builtinPluginsOnly', 'plugins']] as const) {
+      const original = client[method].bind(client);
+      vi.spyOn(client, method).mockImplementation(() => { calls.push(name); return original(); });
+    }
   };
   const f = await fixture('open-read-failed');
   try {
@@ -386,6 +400,8 @@ test('driver-open rejected read retains its real sibling HTTP until settlement b
     expect(disposals, 'owner disposal must not cancel its still-pending sibling').toEqual([1]);
     expect(siblingSettled).toBe(false); expect(runSettled).toBe(false);
     expect(f.openRead.cancelled).toEqual([]); expect(f.counts().physicalStops).toBe(0);
+    expect(calls).toEqual(['session', 'permissions', 'plugins', 'mcp']);
+    const pendingPhases = records.map(record => record.phase);
     const before = f.counts();
     f.openRead.releaseSibling(); await within(siblingReturned.promise, 'original MCP body settlement');
     await expect(within(running, 'failed driver-open settlement')).rejects.toThrow('opencode.driver.dependency-unavailable');
@@ -393,7 +409,21 @@ test('driver-open rejected read retains its real sibling HTTP until settlement b
     await expect(f.probe.close()).resolves.toBe(true);
     expect(f.counts().requests).toBe(before.requests); expect(f.counts().passwordReads).toBe(before.passwordReads);
     f.assertClosed({ logReads: 0, promptPosts: 0 }); expect(f.observations).toEqual([]);
-  } finally { await f.dispose(); controlled.observeClient = undefined; }
+    expect(calls).toEqual(['session', 'permissions', 'plugins', 'mcp']);
+    const starts = calls.map(name => `driver-readiness-${name}-start`);
+    const settled = calls.map(name => `driver-readiness-${name}-settled`);
+    expect(records.filter(record => starts.includes(record.phase)).map(record => record.phase))
+      .toEqual(sink === 'absent' ? [] : starts);
+    expect(records.filter(record => settled.includes(record.phase)).map(record => record.phase).sort())
+      .toEqual(sink === 'absent' ? [] : settled.sort());
+    if (sink !== 'absent') {
+      expect(pendingPhases).toContain('driver-readiness-session-settled');
+      expect(pendingPhases).not.toContain('driver-readiness-mcp-settled');
+      expect(records.filter(record => record.phase === 'driver-readiness-currentness-summary'))
+        .toEqual([expect.objectContaining({ currentCalls: expect.any(Number), currentElapsedMs: expect.any(Number) })]);
+    }
+    expect(JSON.stringify(records)).not.toContain('TEST private');
+  } finally { await f.dispose(); controlled.observeClient = undefined; diagnostic.mockRestore(); }
 });
 
 test.each(['close', 'parent-signal'] as const)(
@@ -598,7 +628,8 @@ const catalogPhases = ([1, 2, 3] as const).flatMap(index => [
 const currentnessPhases = ['identity-currentness-summary', 'catalog-1-currentness-summary',
   'catalog-2-currentness-summary', 'catalog-3-currentness-summary'];
 function assertCurrentnessSummaries(records: OpenCodeProbeDiagnostic[], expected: string[]) {
-  const summaries = records.filter(record => currentnessPhases.includes(record.phase));
+  const summaries = records.filter(record => currentnessPhases.includes(record.phase) ||
+    record.phase === 'driver-readiness-currentness-summary');
   expect(summaries.map(record => record.phase)).toEqual(expected);
   for (const record of summaries) {
     expect(Number.isSafeInteger(record.currentCalls)).toBe(true);
@@ -943,13 +974,23 @@ test('phase sink failure preserves the original probe HTTP, single run and physi
       baseline ??= before;
       expect(before).toEqual(baseline);
       expect(before).toMatchObject({ nativeCreations: 1, sessionCreates: 1, logReads: 1, promptPosts: 0 });
-      const originals = records.filter(record => !currentnessPhases.includes(record.phase));
-      expect(originals.map(record => record.phase)).toEqual(phases);
-      expect(originals.map(record => record.sequence)).toEqual(phases.map((_phase, index) => index + 1));
-      expect(records.map(record => record.phase)).toEqual(phases.flatMap(phase =>
+      const summaries = [...currentnessPhases, 'driver-readiness-currentness-summary'];
+      const readiness = records.filter(record => /^driver-readiness-(session|permissions|plugins|mcp)-(start|settled)$/.test(record.phase));
+      const names = ['session', 'permissions', 'plugins', 'mcp'];
+      expect(readiness.filter(record => record.phase.endsWith('-start')).map(record => record.phase))
+        .toEqual(names.map(name => `driver-readiness-${name}-start`));
+      expect(readiness.filter(record => record.phase.endsWith('-settled')).map(record => record.phase).sort())
+        .toEqual(names.map(name => `driver-readiness-${name}-settled`).sort());
+      const expectedPhases = phases.flatMap(phase => phase === 'driver-open'
+        ? [phase, ...readiness.map(record => record.phase)] : [phase]);
+      const originals = records.filter(record => !summaries.includes(record.phase));
+      expect(originals.map(record => record.phase)).toEqual(expectedPhases);
+      expect(originals.map(record => record.sequence)).toEqual(expectedPhases.map((_phase, index) => index + 1));
+      expect(records.map(record => record.phase)).toEqual(expectedPhases.flatMap(phase =>
         /^(identity|catalog-[123])-request-admitted$/.test(phase)
-          ? [phase, phase.replace('request-admitted', 'currentness-summary')] : [phase]));
-      assertCurrentnessSummaries(records, currentnessPhases);
+          ? [phase, phase.replace('request-admitted', 'currentness-summary')]
+          : phase === 'driver-open-returned' ? ['driver-readiness-currentness-summary', phase] : [phase]));
+      assertCurrentnessSummaries(records, summaries);
       expect(records.every(record => record.probeDigest === records[0]!.probeDigest)).toBe(true);
       expect(records.every(record => /^[a-f0-9]{64}$/.test(record.probeDigest))).toBe(true);
       // first-submit only observes entry: the original D queue still blocks the native prompt POST.
@@ -959,7 +1000,7 @@ test('phase sink failure preserves the original probe HTTP, single run and physi
       await expect(f.probe.close()).resolves.toBe(true);
       expect(f.counts().requests).toBe(before.requests);
       expect(f.counts().passwordReads).toBe(before.passwordReads);
-      expect(records).toHaveLength(phases.length + currentnessPhases.length + 1);
+      expect(records).toHaveLength(expectedPhases.length + summaries.length + 1);
       expect(records.at(-1)).toMatchObject({ phase: 'first-submit-returned', submitStatus: 'refused' });
       f.assertClosed(); expect(f.observations).toEqual([]);
     } finally { diagnostic.mockRestore(); await f?.dispose(); }

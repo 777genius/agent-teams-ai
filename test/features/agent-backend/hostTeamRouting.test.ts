@@ -1,5 +1,8 @@
+import { runInNewContext } from 'node:vm';
+
 import { describe, expect, it, vi } from 'vitest';
 
+import { runDesktopHostRoutingProof } from '../../../scripts/legacy-agent-host/desktop-host-routing-proof';
 import {
   createHostTeamsApi,
   hostTeamSelectionKey,
@@ -23,7 +26,119 @@ function fixture() {
   return { backend, legacy, methods, teams: createHostTeamsApi(Object.freeze(legacy), backend) };
 }
 
+function desktopProof(teams: TeamsAPI) {
+  const evidence: Record<string, unknown> = {};
+  const imports: string[] = [];
+  const cdp = {
+    send: vi.fn(async () => ({})),
+    async evaluate(expression: string) {
+      return runInNewContext(expression.replaceAll('await import(', 'await __testImport('), {
+        Error,
+        window: { __claudeTeamsUiDidInit: true },
+        async __testImport(path: string) {
+          imports.push(path);
+          expect(path).toBe('/api/index.ts');
+          return { api: { teams } };
+        },
+      });
+    },
+  };
+  return {
+    evidence,
+    imports,
+    run: () =>
+      runDesktopHostRoutingProof(
+        cdp,
+        { handleId: 'TEST-routing-owner', root: '/TEST-routing' },
+        evidence
+      ),
+  };
+}
+
 describe('request-shaped Host Team authority', () => {
+  it('runs all six original Desktop routing probes without Host or legacy dispatch', async () => {
+    const f = fixture();
+    vi.mocked(f.backend.getConnections).mockResolvedValue({
+      state: 'ready',
+      bindings: [{ handle: { handleId: 'TEST-routing-owner' }, label: 'TEST owner', members: [] }],
+    });
+    vi.mocked(f.backend.invoke).mockImplementation(async (request) => {
+      expect(request.operation).toBe('team.roster.read');
+      return {
+        ok: true,
+        value: {
+          revision: 'a'.repeat(64),
+          members: [
+            {
+              memberId: 'TEST-alice',
+              name: 'alice',
+              role: 'member',
+              settings: {},
+              settingsFingerprint: 'b'.repeat(64),
+            },
+          ],
+          removedMembers: [],
+        },
+      };
+    });
+    const proof = desktopProof(f.teams);
+    await proof.run();
+    expect(proof.imports).toEqual(['/api/index.ts']);
+    expect(proof.evidence.hostRequestRouting).toMatchObject({
+      status: 'PASS',
+      probes: [
+        {
+          method: 'launchTeam',
+          outcome: 'Host team operation launch-source-required (not-dispatched)',
+        },
+        { method: 'createTeam', outcome: 'This operation is not supported for Host teams' },
+        { method: 'createConfig', outcome: 'This operation is not supported for Host teams' },
+        {
+          method: 'updateMemberSettings',
+          outcome: 'Host team operation invalid-definition-edit (not-dispatched)',
+        },
+        { method: 'showMessageNotification', outcome: 'Invalid captured Host notification' },
+        { method: 'showMessageNotification', outcome: 'Invalid captured Host notification' },
+      ],
+    });
+    expect(f.backend.getConnections).not.toHaveBeenCalled();
+    expect(f.backend.invoke).not.toHaveBeenCalled();
+    for (const method of f.methods) expect(f.legacy[method]).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['resolved conflict', async () => ({ outcome: 'target_conflict' })],
+    ['resolved completed edit', async () => ({ outcome: 'completed', effect: 'persisted_only' })],
+    [
+      'old unsupported refusal',
+      async () => {
+        throw new Error('This operation is not supported for Host teams');
+      },
+    ],
+    [
+      'unknown dispatch outcome',
+      async () => {
+        throw new Error('Host team operation invalid-definition-edit (unknown)');
+      },
+    ],
+  ] as const)(
+    'refuses %s as proof of malformed member-settings routing',
+    async (_label, update) => {
+      const f = fixture();
+      const teams = new Proxy(f.teams, {
+        get(target, property) {
+          return property === 'updateMemberSettings' ? update : Reflect.get(target, property);
+        },
+      });
+      const proof = desktopProof(teams);
+      await expect(proof.run()).rejects.toThrow('exact renderer routing refusal');
+      expect(proof.evidence.hostRequestRouting).toMatchObject({ status: 'INCOMPLETE' });
+      expect(f.backend.getConnections).not.toHaveBeenCalled();
+      expect(f.backend.invoke).not.toHaveBeenCalled();
+      for (const method of f.methods) expect(f.legacy[method]).not.toHaveBeenCalled();
+    }
+  );
+
   it('keeps rejected request-shaped Host operations away from legacy filesystem routing', async () => {
     const f = fixture();
     for (const method of ['createTeam', 'createConfig', 'updateMemberSettings'] as const) {

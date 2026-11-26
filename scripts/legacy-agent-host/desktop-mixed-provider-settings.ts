@@ -283,10 +283,12 @@ export async function createMixedProviderSettingsProof(options: {
     const target = '[role="dialog"] button[aria-label=' + JSON.stringify(label) + ']';
     await ui.scrollTo(target, label);
     await ui.click(target, label);
-    const header = '[role="dialog"] [data-testid=' +
-      JSON.stringify('runtime-provider-row-' + models.openCodeProviderId + '-header') + ']';
-    const content = '[role="dialog"] [data-testid=' +
-      JSON.stringify('runtime-provider-row-' + models.openCodeProviderId + '-content') + ']';
+    const providerPart = (part: 'header' | 'content') =>
+      ['runtime-provider-row-', 'runtime-provider-directory-row-'].map(prefix =>
+        '[role="dialog"] [data-testid=' + JSON.stringify(prefix + models.openCodeProviderId + '-' + part) + ']'
+      ).join(', ');
+    const header = providerPart('header');
+    const content = providerPart('content');
     if (!(await cdp.evaluate(`Boolean(document.querySelector(${desktopJsLiteral(content)}))`))) {
       await ui.scrollTo(header, 'original configured provider');
       await ui.click(header, 'expand original configured provider');

@@ -35,13 +35,13 @@ export function isMultimodelCliStatus(
 export function settleCliProviderStatusLoading(
   currentLoading: Partial<Record<CliProviderId, boolean>>,
   providerId: CliProviderId,
-  options: { silent: boolean; projectPath?: string | null }
+  options: { visible: boolean; pending: boolean }
 ): Partial<Record<CliProviderId, boolean>> {
-  return options.silent && !options.projectPath
+  return !options.visible
     ? currentLoading
     : {
         ...currentLoading,
-        [providerId]: false,
+        [providerId]: options.pending,
       };
 }
 

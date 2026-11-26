@@ -497,7 +497,9 @@ function nativeReviewFailureSummary(evidence: Record<string, unknown>, mode: str
   try {
     const status = Object.getOwnPropertyDescriptor(evidence, 'status');
     if (!status || !('value' in status) || status.value === 'PASS') return {};
-    return { nativeReviewFailure: projectDesktopNativeReviewFailure(evidence) };
+    // Reuse only the retained partial snapshot; it is not an atomic Launch observation.
+    return { nativeReviewFailure: projectDesktopNativeReviewFailure(evidence),
+      nativeReviewReadinessFailure: projectDesktopEmulatedReadinessFailure(evidence) };
   } catch {
     return {};
   }
@@ -679,11 +681,55 @@ function projectDesktopNativeResumeFailure(value: unknown): Record<string, unkno
   } catch { return { schemaVersion: 1, status: 'unavailable', reason: 'invalid-retained-markers' }; }
 }
 
+
+/** Closed facts from the original cold-readback capture, never another read or a replay. */
+function projectDesktopNativeReadbackFailure(value: unknown): Record<string, unknown> {
+  try {
+    const r = retainedFailureReader(value), { own, optional } = r;
+    const proof = optional(own(r.evidence, 'savedNativeReadback'));
+    const snapshot = optional(own(r.evidence, 'rendererFailureSnapshot'));
+    const storeValue = snapshot ? own(snapshot, 'store') : undefined;
+    const store = storeValue == null ? undefined : r.row(storeValue);
+    const composer = snapshot ? optional(own(snapshot, 'commandComposer')) : undefined;
+    const items = proof ? own(proof, 'steps') : undefined;
+    const stepCount = items === undefined ? null : r.count(items, 256);
+    const clicks = { sidebarTask: 0, openTeam: 0, openDirectChat: 0 };
+    if (stepCount !== null) for (let index = 0; index < stepCount; index++) {
+      const step = r.row(own(items, String(index)));
+      if (own(step, 'action') !== 'mouseClick' || own(step, 'state') !== 'attempted') continue;
+      const label = own(step, 'label');
+      if (label === 'sidebar task') clicks.sidebarTask++;
+      else if (label === 'Open team') clicks.openTeam++;
+      else if (label === 'open saved ordinary direct chat') clicks.openDirectChat++;
+    }
+    const selected = store ? own(store, 'selectedTeamName') : undefined;
+    const textareas = composer ? own(composer, 'textareaCount') : undefined;
+    if (textareas !== undefined && (typeof textareas !== 'number' ||
+      !Number.isSafeInteger(textareas) || textareas < 0 || textareas > 5)) throw new Error();
+    const cards = snapshot ? own(snapshot, 'visibleTaskCardIds') : undefined;
+    const result = { schemaVersion: 1, status: 'available', source: 'retained-cold-readback-markers',
+      atomicWithFailedWait: false, completeDom: false, establishesCauseOrEffects: false,
+      readback: { recorded: proof !== undefined, status: r.status(proof), stepCount,
+        clickAttempts: stepCount === null ? null : clicks,
+        runtimeRecordUnchanged: proof ? r.boolean(own(proof, 'runtimeRecordUnchanged')) : null },
+      renderer: { recorded: snapshot !== undefined,
+        unavailable: snapshot ? r.boolean(own(snapshot, 'unavailable')) : null,
+        selectedHostTeam: selected == null ? null : r.text(selected, 4096).startsWith('host-team:'),
+        composerRecorded: composer !== undefined, textareaCount: textareas ?? null,
+        textareaOverflow: composer ? r.boolean(own(composer, 'textareaOverflow')) : null,
+        visibleTaskCardCount: cards === undefined ? null : r.count(cards, 24) },
+      readiness: projectDesktopEmulatedReadinessFailure(value) };
+    return JSON.stringify(result).length <= 10240 ? result
+      : { schemaVersion: 1, status: 'unavailable', reason: 'overflow' };
+  } catch { return { schemaVersion: 1, status: 'unavailable', reason: 'invalid-retained-markers' }; }
+}
+
 function retainedFlowFailureSummary(evidence: Record<string, unknown>, mode: string): Record<string, unknown> {
-  if (mode !== 'emulated-retained-original-ui' && mode !== 'native-resume-ui') return {};
+  if (mode !== 'emulated-retained-original-ui' && mode !== 'native-resume-ui' && mode !== 'native-readback-ui') return {};
   try {
     const status = Object.getOwnPropertyDescriptor(evidence, 'status');
     if (!status || !('value' in status) || status.value === 'PASS') return {};
+    if (mode === 'native-readback-ui') return { nativeReadbackFailure: projectDesktopNativeReadbackFailure(evidence) };
     return mode === 'emulated-retained-original-ui'
       ? { retainedOriginalFailure: projectDesktopRetainedOriginalFailure(evidence) }
       : { nativeResumeFailure: projectDesktopNativeResumeFailure(evidence) };

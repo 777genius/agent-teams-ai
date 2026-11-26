@@ -278,7 +278,8 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     await waitLegacyControl();
     await app.call(`window.electronAPI.config.addCustomProjectPath(${literal(legacyProject)})`);
     legacySubmitted = true;
-    const created = await callTeams('createTeam', [{ teamName: legacyTeam, cwd: legacyProject,
+    // Reproduce the pre-project-isolation shared team whose original name owns the retained history.
+    const created = await callTeams('createTeam', [{ teamName: legacyTeam, cwd: legacyProject, projectContextMode: 'shared',
       providerId: 'opencode', model: 'test-legacy/TEST-model', skipPermissions: true,
       runtimeSelectionVersion: 1, members: [{ name: 'bob', role: 'Developer', providerId: 'opencode', model: 'test-legacy/TEST-model', mcpPolicy: { mode: 'appOnly' } }] }], 240_000);
     assert.equal(typeof created.runId, 'string');

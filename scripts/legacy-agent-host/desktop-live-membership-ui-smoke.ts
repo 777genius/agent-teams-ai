@@ -34,6 +34,7 @@ import type { DesktopSourceMetadataLineage } from './desktop-opencode-metadata-l
 import { revealDesktopReply } from './desktop-reply-visibility.ts';
 import { createDesktopUiControls, desktopJsLiteral as literal } from './desktop-ui-controls.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
+import { captureDesktopProjectOracle, type DesktopProjectBindingCapture } from './desktop-created-project-selection.ts';
 
 type Row = Record<string, unknown>;
 type Provider = 'claude' | 'codex' | 'opencode';
@@ -75,7 +76,7 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
   };
   models: DesktopMixedModels;
   capturedGroup(): number;
-  restartSameProfile(handleId: string, afterOriginalQuit: () => Promise<void>): Promise<UiCdpPort>;
+  restartSameProfile(handleId: string, afterOriginalQuit: () => Promise<void>, createdProject?: DesktopProjectBindingCapture): Promise<UiCdpPort>;
   evidence: Row;
   assertOwnedRenderer(): void;
 }) {
@@ -113,7 +114,9 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
     assert.ok(accepts(value), label); return value;
   };
   const workspace = join(fixture.root, 'workspace');
-  const ownerDirectory = join(fixture.root, 'hoststore/teams', mixedDesktopTeamName, '.host-owner');
+  const logicalDirectory = join(fixture.root, 'hoststore/teams', mixedDesktopTeamName, '.host-owner');
+  const logicalOwner = () => read(join(logicalDirectory, 'state.json'));
+  let ownerDirectory = logicalDirectory;
   const owner = () => read(join(ownerDirectory, 'state.json'));
   const profile = await read(fixture.profilePath), descriptor = await read(fixture.descriptorPath);
   const originalOwner = record(profile.owner), templates = rows(record(profile.runtime).providerTemplates, 3);
@@ -313,6 +316,7 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
   try {
     armMetadataCensus();
     await pins(); await ui.observeInput();
+    let projectOracle = await captureDesktopProjectOracle(cdp, fixture, workspace); current();
     await openOriginalCreateForm(cdp, ui, workspace, mixedDesktopTeamName);
     const create = '[data-testid="create-team-page"]';
     await checked(cdp, ui, create + ' #sync-models-with-lead', false);
@@ -367,6 +371,7 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
     const saved = await poll(owner, value => rows(value.members).length === 2, 'two saved members');
     assert.deepEqual(rows(saved.members).map(row => [row.name, row.role]), [['team-lead', 'lead'], ['bob', 'member']]);
     assert.equal(record(saved.savedSettings).cwd, workspace);
+    assert.equal(record(saved.savedSettings).projectContextMode, 'per_project');
     assert.equal(record(saved.savedSettings).providerId, 'anthropic');
     assert.equal(record(saved.savedSettings).model, finite ? 'TEST-claude-sonnet' : 'claude-opus-4-6');
     assert.equal(record(saved.savedSettings).effort, 'medium');
@@ -393,7 +398,8 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
     await openTeam(); await observe([]);
     if (initialLaunchDeadline !== undefined)
       assert.ok(Date.now() < initialLaunchDeadline, 'original initial Launch readiness deadline');
-    await ui.click('button', 'open original Launch dialog once', 'Launch');
+    await createDesktopUiControls(projectOracle.selectedProjectReads(handleId), { assertOwnedRenderer: current, step })
+      .click('button', 'open original Launch dialog once', 'Launch');
     await ui.waitRead('Boolean(document.querySelector("[role=dialog]"))', 'original Launch dialog');
     await ui.waitRead('[...document.querySelectorAll("[role=dialog] button")].some(e=>e.textContent.trim()==="Launch team"&&!e.disabled)',
       'original selected provider preflights enable Launch', 90_000, Boolean,
@@ -403,8 +409,22 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
     await ui.scrollTo('[role="dialog"] button', 'original Launch team control', 'Launch team');
     await ui.click('[role="dialog"] button', 'one original empty-prompt Launch', 'Launch team');
     await ui.waitRead('!document.querySelector("[role=dialog]")', 'original Launch closes', 90_000);
+    const projectSelection = await projectOracle.select(mixedDesktopTeamName); current();
+    assert.equal(projectSelection.logical.binding.handleId, handleId);
+    const executionOwner = projectSelection.owner, executionHandleId = projectSelection.execution.binding.handleId;
+    assert.equal(ownerDirectory, logicalDirectory); ownerDirectory = join(projectSelection.executionRoot, '.host-owner');
+    const assertLogicalDefinition = async () => {
+      const logical = await logicalOwner(); assert.deepEqual(logical.binding, saved.binding);
+      assert.equal(record(logical.savedSettings).projectContextMode, 'per_project');
+      assert.equal(record(logical.savedSettings).cwd, workspace); assert.deepEqual(logical.runtimeCaptures ?? [], []);
+      assert.deepEqual(logical.members, saved.members); assert.deepEqual(logical.grants, saved.grants);
+      assert.deepEqual(logical.savedSettings, saved.savedSettings);
+    };
+    await assertLogicalDefinition();
     const launched = await poll(owner, value => rows(value.runtimeCaptures ?? []).length === 1, 'one original native capture');
     const capture = rows(launched.runtimeCaptures)[0]!, launchId = text(capture.launchId);
+    assert.deepEqual(launched.binding, executionOwner.binding);
+    await projectSelection.assertRun(launchId); membership.captureExecution(executionOwner);
     assert.equal(rows(capture.members).length, 2);
     const launch = () => read(join(ownerDirectory, 'launches', runtimeDigest(launchId) + '.json'));
     const sessions = async () => (await readDesktopNativeStopSessions(fixture.root)).filter(row => record(row.binding).runId === launchId);
@@ -413,17 +433,18 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
       row.phase === 'allocated' && row.custody === 'owned' && row.nativeReady === true && row.sealed === false), 'two original native sessions ready');
     for (const row of initialSessions) assert.deepEqual(row.inputs, []);
     const peerProviders = ['claude', 'codex'] as const, initialPhysical = await observe(peerProviders);
-    const peers = peerProviders.map(provider => ({ provider, identity: readMixedLiveMembershipIdentity(fixture.root, provider),
+    const peers = peerProviders.map(provider => ({ provider, identity: readMixedLiveMembershipIdentity(fixture.root, provider, undefined, executionOwner),
       physical: initialPhysical.get(provider)! }));
     const peerProbeCounts = finite ? await peerProbeCountsNow() : [models.claude.probes.length, models.codex.probes.length];
     assert.ok(peerProbeCounts[0]! >= 1 && peerProbeCounts[0]! <= 9 && peerProbeCounts[1]! >= 1 && peerProbeCounts[1]! <= 8);
-    proof.initial = { handleId, capture, sessions: initialSessions, peers, probeCounts: peerProbeCounts,
+    proof.initial = { handleId, executionHandleId, projectAssociation: projectSelection.bindingCapture, capture, sessions: initialSessions, peers, probeCounts: peerProbeCounts,
       source: await sourceProfiles(), project: { path: project.path, sha256: project.sha256 } };
     const assertPeers = async (physical?: Map<Provider, ProcessFact>) => {
       current(); assert.deepEqual(finite ? await peerProbeCountsNow() : [models.claude.probes.length, models.codex.probes.length], peerProbeCounts);
+      await projectSelection.assertCurrent(); await projectOracle.assertSelected(handleId); await assertLogicalDefinition(); current();
       const selected = await sessions();
       for (const peer of peers) {
-        assert.deepEqual(readMixedLiveMembershipIdentity(fixture.root, peer.provider), peer.identity);
+        assert.deepEqual(readMixedLiveMembershipIdentity(fixture.root, peer.provider, undefined, executionOwner), peer.identity);
         const original = initialSessions.find(row => runtimeDigest(row.binding) === runtimeDigest(peer.identity.binding)); assert.ok(original);
         assert.deepEqual(selected.find(row => runtimeDigest(row.binding) === runtimeDigest(peer.identity.binding)), original);
         if (physical) assert.deepEqual(physical.get(peer.provider), peer.physical);
@@ -440,7 +461,7 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
       return { state, command, target: { commandId: text(command.commandId), memberId: text(record(decision.delta).targetId) } };
     };
     const ready = async (target: DesktopLiveMemberSelection, expectedProbeCount: 1 | 2) => {
-      const identity = readMixedLiveMembershipIdentity(fixture.root, 'opencode', target);
+      const identity = readMixedLiveMembershipIdentity(fixture.root, 'opencode', target, executionOwner);
       const state = await owner(), commands = rows(state.rosterCommands).filter(row => row.commandId === target.commandId);
       assert.equal(commands.length, 1); const decision = record(commands[0]!.liveMembership), view = record(decision.capture);
       const commandId = 'live-model-' + runtimeDigest({ commandId: target.commandId, capture: view.captureDigest });
@@ -567,7 +588,7 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
     await poll(async () => processFacts(), table => !table.some(row => row.pid === addedReady.physical.pid), 'original removed native process absent');
     current();
     const configurationResult = record(await cdp.evaluate('window.electronAPI.agentBackend.invoke({handle:' +
-      literal({ handleId }) + ',commandId:crypto.randomUUID(),operation:"team.launch.configuration.read",payload:' + literal({ launchId }) + '})'));
+      literal({ handleId: executionHandleId }) + ',commandId:crypto.randomUUID(),operation:"team.launch.configuration.read",payload:' + literal({ launchId }) + '})'));
     current(); assert.equal(configurationResult.ok, true);
     const configuration = record(configurationResult.value);
     assert.equal(record(configuration.launch).launchId, launchId);
@@ -627,7 +648,7 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
       disposeReadObservations();
       host = undefined; lineage = undefined; metadataBirths = []; epochCensuses = [];
       armMetadataCensus(options.capturedGroup()); // Armed before original spawnNext, without an old renderer guard.
-    });
+    }, projectSelection.bindingCapture);
     assert.ok(afterQuitProbes);
     metadataCensus?.sample();
     ui = createDesktopUiControls(cdp, { assertOwnedRenderer: current, step });
@@ -640,10 +661,17 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
     assert.deepEqual(coldOwner.runtimeCaptures, beforeColdOwner.runtimeCaptures);
     assert.deepEqual(rows(coldOwner.members).map(row => ({ memberId: row.memberId, delivery: row.delivery })), currentBindings);
     assert.deepEqual(await launch(), beforeColdLaunch);
-    await openTeam(); await backToChats(); await ui.click('button[aria-label^="carol,"]', 'original restored Carol cold history');
+    const coldOracle = await captureDesktopProjectOracle(cdp, fixture, workspace);
+    assert.deepEqual(coldOracle.identity, projectOracle.identity); projectOracle = coldOracle;
+    const coldProject = await projectOracle.select(mixedDesktopTeamName);
+    assert.deepEqual(coldProject.owner, executionOwner); assert.deepEqual(coldProject.bindingCapture, projectSelection.bindingCapture);
+    await coldProject.assertCurrent(); await assertLogicalDefinition(); current();
+    await openTeam(); await backToChats();
+    await createDesktopUiControls(projectOracle.selectedProjectReads(handleId), { assertOwnedRenderer: current, step })
+      .click('button[aria-label^="carol,"]', 'original restored Carol cold history');
     await ui.waitRead('document.body.innerText.includes("TEST_LIVE_MEMBERSHIP_ADD")&&document.body.innerText.includes("TEST_LIVE_MEMBERSHIP_RESTORE")',
       'both original user input histories visible without sending');
-    assert.deepEqual(readMixedLiveMembershipIdentity(fixture.root, 'opencode', restored.target), restoredReady.identity);
+    assert.deepEqual(readMixedLiveMembershipIdentity(fixture.root, 'opencode', restored.target, executionOwner), restoredReady.identity);
     assert.deepEqual([models.opencode.probes.length, models.opencode.observations.length], [2, 4]);
     assert.deepEqual(finite ? await peerProbeCountsNow() : [models.claude.probes.length, models.codex.probes.length], peerProbeCounts);
     assert.deepEqual(await sessions(), stopped); await observe([]); await pins();

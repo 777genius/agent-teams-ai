@@ -76,6 +76,7 @@ export function capturedHostTeamReadsFixture() {
     projectContext?: Connection['projectContext'];
     savedSettings?: OwnerOptions['savedSettings'];
     members?: OwnerOptions['members'];
+    grants?: OwnerOptions['grants'];
   } = {}) {
     const name: string = options.name ?? `test-team-${teams.size + 1}`;
     const binding = { backendId: 'TEST-backend', teamId: 'TEST-id-' + name, teamName: name };
@@ -86,7 +87,7 @@ export function capturedHostTeamReadsFixture() {
           role: 'Reviewer', workflow: 'Review the TEST change.' } },
       ],
       savedSettings: options.savedSettings ?? { cwd: join(root, 'TEST-project'), prompt: 'TEST saved prompt' },
-      grants: [{ principalId: 'human', memberName: 'user',
+      grants: options.grants ?? [{ principalId: 'human', memberName: 'user',
         permissions: ['read', 'admin', 'task.write', 'message.write'] }],
     });
     const connection: Connection = {

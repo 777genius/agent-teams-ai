@@ -41,7 +41,7 @@ const tick = () => new Promise<void>((resolve) => setTimeout(resolve, 100));
 
 /** Preserve the original copied pnpm exec after one read-only donor availability prelude. */
 export async function prepareDonorSavedPackageManager(options: {
-  root: string; donorRoot: string; node: string;
+  root: string; donorRoot: string; node: string; runtimePath: string;
   pnpmStubSha256: string; sentinelSha256: string; shellProbeSha256: string;
 }) {
   const bin = join(options.root, 'donor-bin'), shimPath = join(bin, 'pnpm');
@@ -56,18 +56,20 @@ export async function prepareDonorSavedPackageManager(options: {
   const checkSource = `import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { lstatSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 const expected = ${JSON.stringify({ ...options, receiptPath })};
 const invocation = process.argv.slice(2);
 assert.deepEqual(invocation.slice(0, 3), ['exec', 'electron-vite', 'dev']);
 assert.equal(realpathSync(process.cwd()), expected.donorRoot);
 assert.equal(realpathSync(process.execPath), realpathSync(expected.node));
+assert.equal(realpathSync(expected.runtimePath), expected.runtimePath, 'Original donor runtime path is canonical');
 for (const [name, value] of Object.entries({
   HOME: join(expected.root, 'home'), CFFIXED_USER_HOME: join(expected.root, 'home'),
   AGENT_TEAMS_ELECTRON_USER_DATA_DIR: join(expected.root, 'userData'),
   AGENT_TEAMS_ELECTRON_CLAUDE_ROOT: join(expected.root, 'claude'),
   CLAUDE_ROOT: join(expected.root, 'claude'), CLAUDE_CONFIG_DIR: join(expected.root, 'claude'),
   CODEX_HOME: join(expected.root, 'config/codex'), SHELL: join(expected.root, 'bin/shell-env'),
+  CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: expected.runtimePath,
 })) assert.equal(process.env[name], value, 'Original donor environment binding: ' + name);
 assert.equal(process.env.CODEX_CLI_PATH, undefined, 'Donor Codex override must be absent');
 const absent = path => {
@@ -80,8 +82,7 @@ const pinned = (path, sha256) => {
   assert.equal(realpathSync(path), path);
   assert.equal(createHash('sha256').update(readFileSync(path)).digest('hex'), sha256, 'Donor metadata pin changed');
 };
-const sentinels = [join(expected.root, 'bin/codex'), join(expected.root, 'claude/local/node_modules/.bin/codex')];
-for (const path of sentinels) pinned(path, expected.sentinelSha256);
+pinned(join(expected.root, 'bin/codex'), expected.sentinelSha256);
 pinned(process.env.SHELL, expected.shellProbeSha256);
 const managed = join(expected.root, 'userData/data/runtimes/codex/current.json');
 assert.ok(absent(managed), 'Donor managed Codex manifest must be absent');
@@ -89,6 +90,7 @@ const pathValue = process.env.PATH;
 assert.ok(typeof pathValue === 'string' && pathValue.length <= 16 * 1024);
 const home = join(expected.root, 'home');
 const directories = [...pathValue.split(':').map(value => value.trim()).filter(Boolean),
+  dirname(expected.runtimePath),
   join(expected.donorRoot, 'node_modules/.bin'), join(expected.root, 'claude/local/node_modules/.bin'),
   ...['.bun/bin', '.local/bin', '.npm-global/bin', '.npm/bin', '.asdf/shims', '.local/share/mise/shims',
     '.volta/bin', 'Library/pnpm', '.local/share/pnpm', '.cargo/bin', '.nix-profile/bin'].map(value => join(home, value)),
@@ -96,12 +98,11 @@ const directories = [...pathValue.split(':').map(value => value.trim()).filter(B
 const candidates = [...new Set(directories.map(directory => resolve(expected.donorRoot, directory, 'codex')))];
 assert.ok(candidates.length <= 128, 'Finite original donor resolver candidates');
 const observations = candidates.map(path => {
-  if (sentinels.includes(path)) return { path, kind: 'pinned-refusal' };
   assert.ok(absent(path), 'Unexpected donor Codex candidate: ' + path);
   return { path, kind: 'absent' };
 });
 const receipt = JSON.stringify({ schemaVersion: 1, kind: 'donor-saved-codex-unavailable',
-  cwd: expected.donorRoot, invocation, sentinelSha256: expected.sentinelSha256,
+  cwd: expected.donorRoot, invocation, runtimePath: expected.runtimePath, sentinelSha256: expected.sentinelSha256,
   shellProbeSha256: expected.shellProbeSha256, observations });
 assert.ok(Buffer.byteLength(receipt) <= 64 * 1024);
 writeFileSync(expected.receiptPath, receipt, { mode: 0o600, flag: 'wx' });
@@ -133,7 +134,7 @@ export async function produceDesktopDonorSavedTeam(options: {
   const selectedRuntime = () => selectedDesktopRuntime(inputs.runtime.path);
   assert.deepEqual(selectedRuntime(), [], 'unique donor runtime has no previous process');
   const donorPackageManager = await prepareDonorSavedPackageManager({
-    root: fixture.root, donorRoot: inputs.root, node: fixture.node,
+    root: fixture.root, donorRoot: inputs.root, node: fixture.node, runtimePath: inputs.runtime.path,
     pnpmStubSha256: fixture.pins.pnpmStubSha256, sentinelSha256: fixture.pins.sentinelSha256,
     shellProbeSha256: fixture.pins.shellProbeSha256,
   });

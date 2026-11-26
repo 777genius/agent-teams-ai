@@ -19,6 +19,75 @@ const one = (values: Row[], select: (value: Row) => boolean) => {
   const found = values.filter(select); assert.equal(found.length, 1, 'one exact original binding'); return found[0]!;
 };
 type Expected = { profile: TeamHostProfile; contextId: string; ownerResourceRef: string; projectPath: string };
+export interface DesktopProjectExecutionOwner {
+  readonly binding: Readonly<{ backendId: string; teamId: string; teamName: string }>;
+  readonly workspace: string;
+}
+export interface DesktopProjectBindingCapture {
+  readonly logicalHandleId: string;
+  readonly executionHandleId: string;
+  readonly original: readonly Row[];
+}
+
+/** P11 keeps the original published bindings separate from its three-member live roster. */
+export function assertDesktopMembershipProjectBindings(value: unknown, seedHandleId: string, captured: DesktopProjectBindingCapture) {
+  const bindings = rows(value), expected = rows(captured.original);
+  assert.equal(expected.length, 2); assert.equal(bindings.length, 3);
+  const handles = [seedHandleId, captured.logicalHandleId, captured.executionHandleId];
+  assert.equal(new Set(handles).size, 3);
+  assert.deepEqual(bindings.map(value => row(value.handle).handleId).sort(), [...handles].sort());
+  const logical = one(expected, value => row(value.handle).handleId === captured.logicalHandleId);
+  const execution = one(expected, value => row(value.handle).handleId === captured.executionHandleId);
+  assert.equal(logical.projectContextMode, 'per_project'); assert.equal(logical.projectContext, undefined);
+  assert.equal(execution.projectContextMode, 'shared');
+  assert.equal(row(execution.projectContext).logicalHandleId, captured.logicalHandleId);
+  assert.equal(new Set(bindings.map(value => value.ownerResourceRef)).size, 1);
+  assert.equal(new Set(bindings.map(value => value.teamResourceRef)).size, 3);
+  for (const binding of bindings) {
+    const handleId = row(binding.handle).handleId, seed = handleId === seedHandleId;
+    assert.deepEqual(Object.keys(binding).sort(), ['handle', 'label', 'members', 'ownerResourceRef', 'teamResourceRef',
+      ...(!seed ? ['projectContextMode'] : []), ...(handleId === captured.executionHandleId ? ['projectContext'] : [])].sort());
+    assert.deepEqual(Object.keys(row(binding.handle)), ['handleId']);
+    assert.match(String(binding.ownerResourceRef), /^[a-f0-9]{64}$/);
+    assert.match(String(binding.teamResourceRef), /^[a-f0-9]{8}-[a-f0-9]{4}-5[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/);
+    assert.equal(typeof binding.label, 'string');
+    const members = rows(binding.members); assert.equal(members.length, seed ? 1 : 2);
+    for (const member of members) {
+      assert.deepEqual(Object.keys(member).sort(), ['label', 'memberId']);
+      assert.equal(typeof member.memberId, 'string'); assert.equal(typeof member.label, 'string');
+    }
+    assert.equal(new Set(members.map(member => member.memberId)).size, members.length);
+    if (!seed) assert.deepEqual(binding, handleId === captured.logicalHandleId ? logical : execution);
+  }
+}
+
+/** Read the exact ordinary focused Team/project tuple; never choose a project or mutate the store. */
+export function desktopProjectSelectionExpression(identity: Readonly<Pick<Expected, 'contextId' | 'ownerResourceRef' | 'projectPath'>>, logicalHandleId: string) {
+  const key = hostTeamSelectionKey(logicalHandleId);
+  return `(()=>{const s=window.__agentTeamsDevStore?.getState();
+        if(!s||s.activeContextId!==${JSON.stringify(identity.contextId)})return false;
+        const panes=s.paneLayout?.panes?.filter(p=>p.id===s.paneLayout.focusedPaneId);if(panes?.length!==1)return false;
+        const tabs=panes[0].tabs?.filter(t=>t.id===panes[0].activeTabId);if(tabs?.length!==1)return false;
+        const t=tabs[0],team=s.teamByName?.[${JSON.stringify(key)}];
+        if(t.type!=='team'||t.taskDetail||t.teamName!==${JSON.stringify(key)}||team?.projectContextMode!=='per_project'||
+          team.ownerResourceRef!==${JSON.stringify(identity.ownerResourceRef)})return false;
+        const id=s.selectedProjectId;if(typeof id!=='string'||!id||s.activeProjectId!==id||
+          !Array.isArray(s.projects)||!Array.isArray(s.repositoryGroups))return false;
+        if(s.selectedWorktreeId===null&&s.selectedRepositoryId===null){const p=s.projects.filter(p=>p.id===id);
+          return p.length===1&&p[0].path===${JSON.stringify(identity.projectPath)}}
+        if(s.selectedWorktreeId!==id||typeof s.selectedRepositoryId!=='string'||!s.selectedRepositoryId||
+          s.repositoryGroups.some(g=>!g||!Array.isArray(g.worktrees))||s.repositoryGroups.filter(g=>g.id===s.selectedRepositoryId).length!==1)return false;
+        const w=s.repositoryGroups.flatMap(g=>g.worktrees.filter(w=>w.id===id).map(w=>({repositoryId:g.id,path:w.path})));
+        return w.length===1&&w[0].repositoryId===s.selectedRepositoryId&&w[0].path===${JSON.stringify(identity.projectPath)}})()`;
+}
+
+/** Fence only the caller's existing passive click reads; original input and deadline stay in its UI controls. */
+export function createDesktopSelectedProjectReadPort(cdp: UiCdpPort,
+  identity: Readonly<Pick<Expected, 'contextId' | 'ownerResourceRef' | 'projectPath'>>, logicalHandleId: string): UiCdpPort {
+  const selected = desktopProjectSelectionExpression(identity, logicalHandleId);
+  return { send: (method, params) => cdp.send(method, params),
+    evaluate: expression => cdp.evaluate(`(${selected}) ? (${expression}) : null`) };
+}
 
 /** Read-only original registry validation; none of these ports can create or attach a Team. */
 export function selectDesktopProjectExecution(records: StoredTeamCreation[], expected: Expected, logicalName: string, discovery: unknown) {
@@ -91,12 +160,32 @@ export async function captureDesktopProjectOracle(cdp: UiCdpPort,
     return { records, discovery: await cdp.evaluate('window.electronAPI.agentBackend.getConnections()') };
   }
   return {
+    identity: Object.freeze({ contextId: expected.contextId, ownerResourceRef: expected.ownerResourceRef,
+      projectPath: expected.projectPath }),
+    selectedProjectReads(logicalHandleId: string): UiCdpPort {
+      return createDesktopSelectedProjectReadPort(cdp, expected, logicalHandleId);
+    },
+    async assertSelected(logicalHandleId: string) {
+      assert.equal(await cdp.evaluate(desktopProjectSelectionExpression(expected, logicalHandleId)), true,
+        'original focused logical Team and canonical selected project');
+    },
     async select(logicalName: string) {
       const source = await originalSources();
       const selected = selectDesktopProjectExecution(source.records, expected, logicalName, source.discovery);
       const logicalRoot = join(profile.owner.storageRoot, 'teams', selected.logical.teamName);
       const executionRoot = join(profile.owner.storageRoot, 'teams', selected.execution.teamName);
-      return { ...selected, logicalRoot, executionRoot,
+      const bindings = rows(row(source.discovery).bindings);
+      const capturedBindings = [selected.logical, selected.execution].map(team => {
+        const binding = structuredClone(one(bindings, value => row(value.handle).handleId === team.binding.handleId));
+        Object.freeze(row(binding.handle)); rows(binding.members).forEach(Object.freeze); Object.freeze(binding.members);
+        if (binding.projectContext) Object.freeze(row(binding.projectContext));
+        return Object.freeze(binding);
+      });
+      const bindingCapture: DesktopProjectBindingCapture = Object.freeze({ logicalHandleId: selected.logical.binding.handleId,
+        executionHandleId: selected.execution.binding.handleId, original: Object.freeze(capturedBindings) });
+      const owner: DesktopProjectExecutionOwner = Object.freeze({ binding: Object.freeze({ backendId: profile.owner.ownerId,
+        teamId: selected.execution.teamId, teamName: selected.execution.teamName }), workspace: expected.projectPath });
+      return { ...selected, logicalRoot, executionRoot, owner, bindingCapture,
         taskRoot: join(profile.owner.storageRoot, 'tasks', selected.execution.teamName),
         async assertCurrent() {
           const fresh = await originalSources();

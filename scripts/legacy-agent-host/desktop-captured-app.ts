@@ -4,6 +4,7 @@ import { constants, realpathSync } from 'node:fs';
 import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
 import { runtimeDigest } from '../../packages/legacy-agent-host/dist/runtime/identity.js';
 import { createDesktopUiControls } from './desktop-ui-controls.ts';
+import { assertDesktopMembershipProjectBindings, type DesktopProjectBindingCapture } from './desktop-created-project-selection.ts';
 import { copyFile, lstat, mkdir, readFile, readdir, realpath, writeFile } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { performance } from 'node:perf_hooks';
@@ -205,7 +206,7 @@ export async function connectCapturedDesktopApp(options: {
 export async function verifyCapturedDesktopBinding(options: {
   cdp: DesktopCdpPort; mode: string; fixture: Fixture; evidence: Evidence; repo: string; packed: Packed;
   remainingStartupMs?: number;
-  savedTeamBindings?: { handleId: string; original: readonly Evidence[] };
+  savedTeamBindings?: { handleId: string; executionHandleId?: string; original: readonly Evidence[] };
 } & ({ group: number; assertOwnedRenderer?: never } | { group?: never; assertOwnedRenderer(): void })): Promise<void> {
   const { cdp, group, mode, fixture, evidence, repo, packed } = options;
   const assertCurrent = options.assertOwnedRenderer ?? (() => { assert.ok(group !== undefined); assertOwnedCdpListener(group); });
@@ -237,9 +238,9 @@ export async function verifyCapturedDesktopBinding(options: {
     assert.equal(mode, 'native-mixed-create-launch-ui');
     const { handleId, original } = options.savedTeamBindings;
     assert.notEqual(handleId, fixture.handleId);
-    assert.equal(original.length, 2);
+    assert.equal(original.length, options.savedTeamBindings.executionHandleId ? 3 : 2);
     assert.deepEqual(connections.bindings.map(value => object(object(value).handle).handleId).sort(),
-      [fixture.handleId, handleId].sort(), 'exact original fixture and created Team handles');
+      [fixture.handleId, handleId, ...(options.savedTeamBindings.executionHandleId ? [options.savedTeamBindings.executionHandleId] : [])].sort(), 'exact original fixture and created Team handles');
     for (const retained of original) {
       const matches: unknown[] = connections.bindings.filter(value =>
         object(object(value).handle).handleId === object(retained.handle).handleId);
@@ -515,7 +516,7 @@ export async function restartCapturedDesktopApp(options: {
   provider: 'claude' | 'codex' | 'opencode';
   model: { observations: readonly unknown[]; failures: readonly string[] };
   boundary: 'resume-after-stop' | 'extensions-before-launch' | 'settings-saved-before-launch' | 'live-membership-after-stop';
-  createdHandleId?: string;
+  createdHandleId?: string; createdProject?: DesktopProjectBindingCapture;
   afterOriginalSettingsQuit?(): Promise<void>;
   afterOriginalMembershipQuit?(): Promise<void>;
   checkpointUpgrade?: DesktopClaudeCheckpointUpgrade;
@@ -546,7 +547,7 @@ export async function restartCapturedDesktopApp(options: {
   if (membership) {
     assert.equal(process.env.LEGACY_DESKTOP_MIXED_MEMBERSHIP_UI, '1'); assert.equal(provider, 'opencode');
     assert.equal(options.afterOriginalSettingsQuit, undefined);
-  } else assert.equal(options.afterOriginalMembershipQuit, undefined);
+  } else { assert.equal(options.afterOriginalMembershipQuit, undefined); assert.equal(options.createdProject, undefined); }
   if (extensions) {
     assert.equal(process.env.LEGACY_DESKTOP_EXTENSIONS_CONSUMPTION_UI, '1');
     assert.equal(provider, 'claude');
@@ -564,7 +565,7 @@ export async function restartCapturedDesktopApp(options: {
       rendererTarget: evidence.rendererTarget, compiledBundleHashesAfterStartup: evidence.compiledBundleHashesAfterStartup,
       discovery: evidence.discovery, homePathProof: evidence.homePathProof, host: originalHost } };
   evidence[membership ? 'coldMembershipBoundary' : settings ? 'coldSettingsBoundary' : initial ? 'coldExtensionBoundary' : 'coldResumeBoundary'] = proof;
-  let savedTeamBindings: { handleId: string; original: readonly Evidence[] } | undefined;
+  let savedTeamBindings: { handleId: string; executionHandleId?: string; original: readonly Evidence[] } | undefined;
   if (settings || membership) {
     const observed = await readRendererBackendConnections(cdp);
     assert.equal(observed.kind, 'read');
@@ -572,28 +573,33 @@ export async function restartCapturedDesktopApp(options: {
     assert.equal(selected.state, 'ready');
     assert.ok(Array.isArray(selected.bindings));
     const bindings = selected.bindings.map(object);
-    assert.deepEqual(bindings.map(row => object(row.handle).handleId).sort(),
-      [fixture.handleId, options.createdHandleId!].sort());
-    for (const row of bindings) {
-      assert.deepEqual(Object.keys(row).sort(), ['handle', 'label', 'members', 'ownerResourceRef', 'teamResourceRef']);
-      assert.match(String(row.ownerResourceRef), /^[a-f0-9]{64}$/);
-      assert.match(String(row.teamResourceRef), /^[a-f0-9]{8}-[a-f0-9]{4}-5[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/);
-      assert.deepEqual(Object.keys(object(row.handle)), ['handleId']);
-      assert.equal(typeof row.label, 'string');
-      assert.ok(Array.isArray(row.members));
-      assert.equal(row.members.length, object(row.handle).handleId === fixture.handleId ? 1 : 3);
-      const memberIds = row.members.map(value => {
-        const member = object(value);
-        assert.deepEqual(Object.keys(member).sort(), ['label', 'memberId']);
-        assert.equal(typeof member.memberId, 'string');
-        assert.equal(typeof member.label, 'string');
-        return member.memberId;
-      });
-      assert.equal(new Set(memberIds).size, memberIds.length);
+    if (membership) {
+      assert.ok(options.createdProject); assert.equal(options.createdProject.logicalHandleId, options.createdHandleId);
+      assertDesktopMembershipProjectBindings(bindings, fixture.handleId, options.createdProject);
+    } else {
+      assert.deepEqual(bindings.map(row => object(row.handle).handleId).sort(),
+        [fixture.handleId, options.createdHandleId!].sort());
+      for (const row of bindings) {
+        assert.deepEqual(Object.keys(row).sort(), ['handle', 'label', 'members', 'ownerResourceRef', 'teamResourceRef']);
+        assert.match(String(row.ownerResourceRef), /^[a-f0-9]{64}$/);
+        assert.match(String(row.teamResourceRef), /^[a-f0-9]{8}-[a-f0-9]{4}-5[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/);
+        assert.deepEqual(Object.keys(object(row.handle)), ['handleId']);
+        assert.equal(typeof row.label, 'string');
+        assert.ok(Array.isArray(row.members));
+        assert.equal(row.members.length, object(row.handle).handleId === fixture.handleId ? 1 : 3);
+        const memberIds = row.members.map(value => {
+          const member = object(value);
+          assert.deepEqual(Object.keys(member).sort(), ['label', 'memberId']);
+          assert.equal(typeof member.memberId, 'string');
+          assert.equal(typeof member.label, 'string');
+          return member.memberId;
+        });
+        assert.equal(new Set(memberIds).size, memberIds.length);
+      }
+      assert.equal(bindings[0]!.ownerResourceRef, bindings[1]!.ownerResourceRef);
+      assert.notEqual(bindings[0]!.teamResourceRef, bindings[1]!.teamResourceRef);
     }
-    assert.equal(bindings[0]!.ownerResourceRef, bindings[1]!.ownerResourceRef);
-    assert.notEqual(bindings[0]!.teamResourceRef, bindings[1]!.teamResourceRef);
-    savedTeamBindings = { handleId: options.createdHandleId!, original: structuredClone(bindings) };
+    savedTeamBindings = { handleId: options.createdHandleId!, ...(membership ? { executionHandleId: options.createdProject!.executionHandleId } : {}), original: structuredClone(bindings) };
     proof.originalSavedTeamBindings = savedTeamBindings.original;
   }
   const readSessions = () => readDesktopNativeStopSessions(fixture.root).catch(

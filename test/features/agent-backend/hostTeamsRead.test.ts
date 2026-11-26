@@ -24,6 +24,7 @@ import {
 
 import { mockOwnerMessagesPage } from './hostMessagesPageFixture';
 
+import type { BackendConnectionSnapshot } from '../../../src/features/agent-backend/contracts/connections';
 import type { BackendLaunchSnapshot } from '../../../src/features/agent-backend/contracts/launch';
 import type { AgentBackendApi } from '../../../src/features/agent-backend/contracts/operations';
 import type { BackendRuntimeSnapshot } from '../../../src/features/agent-backend/contracts/operations';
@@ -1106,4 +1107,141 @@ describe('Host aggregate refusal publication fences', () => {
       expect(f.legacy.getData).not.toHaveBeenCalled();
     }
   );
+});
+
+describe('legacy liveness with explicitly unconfigured Host discovery', () => {
+  function unconfiguredFixture() {
+    const f = fixture();
+    const aliveList = vi.fn().mockResolvedValue(['TEST-legacy-live', f.key]);
+    const legacy = Object.freeze({ ...f.legacy, aliveList });
+    const empty: BackendConnectionSnapshot = { state: 'unconfigured', bindings: [] };
+    vi.mocked(f.backend.getConnections).mockResolvedValue(empty);
+    return { ...f, legacy, aliveList, empty };
+  }
+
+  it.each([{ unavailableOwners: undefined }, { unavailableOwners: [] }])(
+    'preserves legacy liveness with empty Host owner declarations %j',
+    async ({ unavailableOwners }) => {
+      const f = unconfiguredFixture();
+      vi.mocked(f.backend.getConnections).mockResolvedValue({ ...f.empty, unavailableOwners });
+      const teams = createHostTeamsApi(f.legacy, f.backend);
+      expect(await teams.list()).toEqual([
+        expect.objectContaining({ teamName: 'same-display-team', displayName: 'Legacy' }),
+      ]);
+      vi.mocked(f.backend.getConnections).mockClear();
+      await expect(teams.aliveList()).resolves.toEqual(['TEST-legacy-live']);
+      expect(f.backend.getConnections).toHaveBeenCalledTimes(2);
+      expect(f.aliveList).toHaveBeenCalledTimes(1);
+      expect(f.aliveList.mock.contexts).toEqual([f.legacy]);
+      expect(f.backend.invoke).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each(['hold', 'shutting-down', 'bindings', 'unavailable-owner'] as const)(
+    'refuses %s at both opening and closing discovery without hiding Host uncertainty',
+    async (kind) => {
+      for (const closing of [false, true]) {
+        const f = unconfiguredFixture();
+        const refused: BackendConnectionSnapshot =
+          kind === 'hold' || kind === 'shutting-down'
+            ? { state: kind, bindings: [] }
+            : kind === 'bindings'
+              ? {
+                  state: 'unconfigured',
+                  bindings: [{ handle: { handleId: 'TEST-original-A' }, label: 'Host', members: [] }],
+                }
+              : {
+                  state: 'unconfigured',
+                  bindings: [],
+                  unavailableOwners: [
+                    {
+                      kind: 'owner',
+                      ownerResourceRef: 'TEST-unavailable-owner',
+                      code: 'unavailable',
+                      outcome: 'unknown',
+                    },
+                  ],
+                };
+        vi.mocked(f.backend.getConnections).mockResolvedValue(refused);
+        if (closing) vi.mocked(f.backend.getConnections).mockResolvedValueOnce(f.empty);
+        const teams = createHostTeamsApi(f.legacy, f.backend);
+        await expect(teams.aliveList()).rejects.toMatchObject({
+          code: 'unavailable',
+          outcome: 'not-dispatched',
+        });
+        expect(f.backend.getConnections).toHaveBeenCalledTimes(closing ? 2 : 1);
+        expect(f.aliveList).toHaveBeenCalledTimes(1);
+        expect(f.backend.invoke).not.toHaveBeenCalled();
+      }
+    }
+  );
+
+  it.each(['unconfigured', 'ready'] as const)(
+    'refuses a closing discovery state change from %s even when both catalogs are empty',
+    async (state) => {
+      const f = unconfiguredFixture();
+      vi.mocked(f.backend.getConnections)
+        .mockResolvedValueOnce({ state, bindings: [] })
+        .mockResolvedValueOnce({ state: state === 'ready' ? 'unconfigured' : 'ready', bindings: [] });
+      const teams = createHostTeamsApi(f.legacy, f.backend);
+      await expect(teams.aliveList()).rejects.toMatchObject({
+        code: 'unavailable',
+        outcome: 'not-dispatched',
+      });
+      expect(f.backend.getConnections).toHaveBeenCalledTimes(2);
+      expect(f.backend.invoke).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each([1, 2])('refuses context retirement during discovery read %i', async (retireAt) => {
+    const f = unconfiguredFixture();
+    let current = true;
+    let reads = 0;
+    vi.mocked(f.backend.getConnections).mockImplementation(async () => {
+      if (++reads === retireAt) current = false;
+      return f.empty;
+    });
+    const teams = createHostTeamsApi(f.legacy, f.backend, () => () => current);
+    await expect(teams.aliveList()).rejects.toMatchObject({
+      code: 'context-changed',
+      outcome: 'not-dispatched',
+    });
+    expect(f.backend.getConnections).toHaveBeenCalledTimes(retireAt);
+    expect(f.backend.invoke).not.toHaveBeenCalled();
+  });
+
+  it('keeps selected Host runtime operations unavailable with no legacy fallback', async () => {
+    const f = unconfiguredFixture();
+    const teams = createHostTeamsApi(f.legacy, f.backend);
+    for (const pending of [
+      () => teams.processAlive(f.key),
+      () => teams.stop(f.key),
+      () => teams.getTeamAgentRuntime(f.key),
+    ]) {
+      await expect(pending()).rejects.toMatchObject({
+        code: 'unavailable',
+        outcome: 'not-dispatched',
+      });
+    }
+    expect(f.backend.getConnections).toHaveBeenCalledTimes(3);
+    expect(f.backend.invoke).not.toHaveBeenCalled();
+    expect(f.legacy.processAlive).not.toHaveBeenCalled();
+    expect(f.legacy.stop).not.toHaveBeenCalled();
+    expect(f.aliveList).not.toHaveBeenCalled();
+  });
+
+  it('does not turn ready Host runtime uncertainty into a legacy-only live list', async () => {
+    const f = fixture();
+    const aliveList = vi.fn().mockResolvedValue(['TEST-legacy-live']);
+    const teams = createHostTeamsApi({ ...f.legacy, aliveList }, f.backend);
+    await expect(teams.aliveList()).rejects.toThrow('Host runtime state unavailable');
+    expect(aliveList).toHaveBeenCalledTimes(1);
+    expect(f.backend.invoke).toHaveBeenCalledWith(
+      expect.objectContaining({ operation: 'team.launch.read' })
+    );
+    expect(f.backend.invoke).toHaveBeenCalledWith(
+      expect.objectContaining({ operation: 'team.snapshot' })
+    );
+    expect(f.legacy.getData).not.toHaveBeenCalled();
+  });
 });
