@@ -269,7 +269,9 @@ export class SchedulerService {
       throw error;
     }
     if (reschedule) {
-      if (nextJob) this.activateCronJob(updated, nextJob);
+      // A queued update can finish after stop(): keep the save, start no job.
+      if (nextJob && this.stopped) nextJob.stop();
+      else if (nextJob) this.activateCronJob(updated, nextJob);
       else this.removeCronJob(id);
     }
     this.emitChange({
@@ -357,7 +359,9 @@ export class SchedulerService {
       job.stop();
       throw error;
     }
-    this.activateCronJob(updated, job);
+    // A queued resume can finish after stop(): keep the save, start no job.
+    if (this.stopped) job.stop();
+    else this.activateCronJob(updated, job);
     this.emitChange({
       type: 'schedule-updated',
       scheduleId: id,
