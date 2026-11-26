@@ -37,7 +37,6 @@ import {
   getProjectSelectionResetState,
   getWorktreeNavigationState,
 } from '@renderer/store/utils/stateResetHelpers';
-import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import {
   buildTaskCountsByTeam,
   normalizePath,
@@ -70,6 +69,7 @@ import { runTeamDeleteOnce } from './teamDeleteProgress';
 import { TeamEmptyState } from './TeamEmptyState';
 import { EMPTY_TEAM_FILTER } from './TeamListFilterPopover';
 import { TeamListHeader } from './TeamListHeader';
+import { renderMemberNames } from './teamListMemberNames';
 import { TeamListSkeleton } from './TeamListSkeleton';
 import { TeamManagementNotice } from './TeamManagementNotice';
 import {
@@ -97,7 +97,6 @@ import type {
   TeamLaunchRequest,
   TeamMemberSnapshot,
   TeamSummary,
-  TeamSummaryMember,
 } from '@shared/types';
 
 const CreateTeamDialog = lazy(() =>
@@ -148,31 +147,6 @@ function resolveSavedLaunchDialogMembers(
     lastActiveAt: null,
     status: 'idle' as const,
   }));
-}
-
-function renderMemberNames(members: TeamSummaryMember[]): React.JSX.Element {
-  const teamColorMap = buildMemberColorMap(members);
-  return (
-    <>
-      {members.map((m) => {
-        const resolvedColor = teamColorMap.get(m.name);
-        const memberColor = resolvedColor ? getTeamColorSet(resolvedColor) : null;
-        return (
-          <span key={m.name} className="inline-flex items-center gap-1">
-            <span
-              className="text-[10px] font-medium tracking-wide"
-              style={memberColor ? { color: memberColor.text } : undefined}
-            >
-              {m.name}
-            </span>
-            {m.role ? (
-              <span className="text-[9px] text-[var(--color-text-muted)]">{m.role}</span>
-            ) : null}
-          </span>
-        );
-      })}
-    </>
-  );
 }
 
 function renderTeamRecentPaths(
