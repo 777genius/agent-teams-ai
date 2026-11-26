@@ -1338,11 +1338,8 @@ async function recordLiveCaseStage<T>(
 }
 
 async function registerLocalProviderFakeServer<
-  TServer extends Pick<FakeOpenAiCompatibleServer, 'close'>
->(
-  owned: LocalProviderLiveCase,
-  server: TServer
-): Promise<TServer> {
+  TServer extends Pick<FakeOpenAiCompatibleServer, 'close'>,
+>(owned: LocalProviderLiveCase, server: TServer): Promise<TServer> {
   if (owned.closed) {
     await server.close();
     return server;
@@ -1352,7 +1349,7 @@ async function registerLocalProviderFakeServer<
 }
 
 async function registerLocalProviderHarness<
-  THarness extends NonNullable<LocalProviderLiveCase['harness']>
+  THarness extends NonNullable<LocalProviderLiveCase['harness']>,
 >(owned: LocalProviderLiveCase, harness: THarness): Promise<THarness> {
   if (owned.closed) {
     await harness.dispose();
@@ -1450,11 +1447,9 @@ function cleanupLocalProviderLiveCase(
       errors.push(
         new Error(`Owned operations still pending: ${[...owned.pending.values()].join(', ')}`)
       );
-      owned.deferredReleasePromise = deferOwnedLocalProviderResourceRelease(
-        owned,
-        isCurrentCase,
-        [...owned.pending.keys()]
-      );
+      owned.deferredReleasePromise = deferOwnedLocalProviderResourceRelease(owned, isCurrentCase, [
+        ...owned.pending.keys(),
+      ]);
     } else {
       if (pendingBeforeSettle.length > 0 && owned.harness && owned.teamName) {
         const { svc } = owned.harness;
@@ -1632,11 +1627,7 @@ async function stopAndVerifyOpenCodeTeam(
   // Source-launcher overhead can cross the production timing warning threshold.
   // Accept only this owned, verified stop, and retain its latency in the evidence.
   const prefix = `[Service:TeamProvisioning] [${teamName}] Slow OpenCode stop: primary lane stop took `;
-  if (
-    !warningSpy ||
-    console.warn !== warn ||
-    (options.isCurrentCase && !options.isCurrentCase())
-  ) {
+  if (!warningSpy || console.warn !== warn || (options.isCurrentCase && !options.isCurrentCase())) {
     return;
   }
   for (let index = warningSpy.mock.calls.length - 1; index >= warningStart; index -= 1) {
@@ -1702,9 +1693,7 @@ async function assertNoQuarantinedOpenCodeLaneIndex(runtimeDirectory: string): P
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
     throw error;
   }
-  const quarantinedIndexes = runtimeFiles.filter((name) =>
-    /^lanes\.invalid\..+\.json$/.test(name)
-  );
+  const quarantinedIndexes = runtimeFiles.filter((name) => /^lanes\.invalid\..+\.json$/.test(name));
   if (quarantinedIndexes.length > 0) {
     throw new Error(
       `Quarantined OpenCode lane index: ${quarantinedIndexes.join(', ')} in ${runtimeDirectory}`
