@@ -486,9 +486,8 @@ describe(
         isAlive: false,
         runId: null,
       });
-      await expect(
-        readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
-      ).resolves.toMatchObject({ lanes: {} });
+      const laneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName);
+      expect(laneIndex.lanes).toStrictEqual({});
       await expect(
         fs.access(path.join(getTeamsBasePath(), teamName, 'launch-state.json'))
       ).rejects.toMatchObject({ code: 'ENOENT' });
@@ -501,6 +500,12 @@ describe(
       const events: string[] = [];
       const failure = new Error('primary stop failed before secondary cleanup settled');
       let primaryAttempts = 0;
+      const primaryStopWaitAbort = new AbortController();
+      const primaryStopWaitAborted = new Promise<void>((resolve) => {
+        const resolveOnAbort = () => resolve();
+        if (primaryStopWaitAbort.signal.aborted) resolveOnAbort();
+        else primaryStopWaitAbort.signal.addEventListener('abort', resolveOnAbort, { once: true });
+      });
       let releaseSecondary!: () => void;
       let markSecondaryEntered!: () => void;
       const secondaryReleased = new Promise<void>((resolve) => {
@@ -514,17 +519,20 @@ describe(
           primaryAttempts += 1;
           if (primaryAttempts === 1) {
             adapter.stopInputs.push(input);
-            await secondaryEntered;
+            await Promise.race([secondaryEntered, primaryStopWaitAborted]);
+            if (primaryStopWaitAbort.signal.aborted) return originalStop(input);
             events.push('primary_failed');
             throw failure;
           }
+          const laneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName);
+          expect(laneIndex.lanes['secondary:opencode:atlas']).toBeUndefined();
+          events.push('secondary_stopped');
           events.push('primary_retry');
           return originalStop(input);
         }
         const result = await originalStop(input);
         markSecondaryEntered();
         await secondaryReleased;
-        events.push('secondary_stopped');
         return result;
       };
       const svc = new TeamProvisioningService();
@@ -575,6 +583,7 @@ describe(
         expect(stoppingSettled).toBe(false);
       } finally {
         releaseSecondary();
+        primaryStopWaitAbort.abort();
         await Promise.allSettled([creating, stopping]);
       }
       await creating;
@@ -588,9 +597,8 @@ describe(
         isAlive: false,
         runId: null,
       });
-      await expect(
-        readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
-      ).resolves.toMatchObject({ lanes: {} });
+      const laneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName);
+      expect(laneIndex.lanes).toStrictEqual({});
       await expect(
         fs.access(path.join(getTeamsBasePath(), teamName, 'launch-state.json'))
       ).rejects.toMatchObject({ code: 'ENOENT' });
@@ -645,9 +653,8 @@ describe(
         isAlive: false,
         runId: null,
       });
-      await expect(
-        readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
-      ).resolves.toMatchObject({ lanes: {} });
+      const laneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName);
+      expect(laneIndex.lanes).toStrictEqual({});
     });
 
     it('launches a pure OpenCode team through the runtime adapter and exposes live members', async () => {
@@ -23197,14 +23204,26 @@ class BlockingOpenCodeRuntimeAdapter extends FakeOpenCodeRuntimeAdapter {
 async function waitForLaunchMilestone(
   milestone: Promise<void>,
   creating: Promise<unknown>,
-  description: string
+  description: string,
+  timeoutMs = 30_000
 ): Promise<void> {
-  await Promise.race([
-    milestone,
-    creating.then(() => {
-      throw new Error(`Launch completed before ${description}`);
-    }),
-  ]);
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await Promise.race([
+      milestone,
+      creating.then(() => {
+        throw new Error(`Launch completed before ${description}`);
+      }),
+      new Promise<never>((_, reject) => {
+        timeout = setTimeout(
+          () => reject(new Error(`Timed out waiting for ${description} after ${timeoutMs}ms`)),
+          timeoutMs
+        );
+      }),
+    ]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
 }
 
 /**
