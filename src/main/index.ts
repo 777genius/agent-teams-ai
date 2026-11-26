@@ -1,6 +1,3 @@
-import { captureHostTeamReads } from '@features/agent-backend/main';
-import { OwnerRoutedTeamConfigurationSnapshotAdapter } from '@features/custom-team-templates/main';
-
 import type { createGatewayLaunchRuntime } from '@main/services/gateway/createGatewayLaunchRuntime';
 // Increase UV thread pool size BEFORE async I/O: startup binary resolution,
 // subprocess work, watchers, and IPC filesystem requests share this pool.
@@ -16,6 +13,8 @@ import {
 } from './bootstrapUserDataMigration';
 import { earlyAnnouncementsProfile } from './bootstrapAnnouncementsProfile';
 import './sentryBootstrap';
+import { captureHostTeamReads } from '@features/agent-backend/main';
+import { OwnerRoutedTeamConfigurationSnapshotAdapter } from '@features/custom-team-templates/main';
 import { cleanupOrphanedDeterministicBootstrapSpecs } from '@main/services/team/provisioning/TeamProvisioningBootstrapSpec';
 
 import {
