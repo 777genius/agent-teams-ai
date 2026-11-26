@@ -787,11 +787,12 @@ describe('team provisioning stop flow', () => {
       markSecondaryStarted = resolve;
     });
     let releaseSecondary!: () => void;
+    const secondaryReleased = new Promise<void>((resolve) => {
+      releaseSecondary = resolve;
+    });
     vi.mocked(ports.stopMixedSecondaryRuntimeLanes).mockImplementation(async () => {
       markSecondaryStarted();
-      await new Promise<void>((resolve) => {
-        releaseSecondary = resolve;
-      });
+      await secondaryReleased;
     });
     let settled = false;
     const stopping = stopTeamFlow(teamName, ports).then(
@@ -805,7 +806,12 @@ describe('team provisioning stop flow', () => {
       }
     );
     try {
-      await Promise.all([primaryRejected, secondaryStarted]);
+      await Promise.race([
+        Promise.all([primaryRejected, secondaryStarted]),
+        stopping.then(() => {
+          throw new Error('Stop settled before both cleanup branches started');
+        }),
+      ]);
       expect(settled).toBe(false);
       expect(ports.cleanupRun).not.toHaveBeenCalled();
     } finally {

@@ -1,3 +1,5 @@
+import { isProjectCopyName } from '@features/team-project-context/core';
+
 import {
   LEGACY_COMBINED_TEAM_ID,
   rawTeamName,
@@ -76,10 +78,12 @@ export function buildBudgetStatus(input: {
   const normalizeName = (name: string | undefined): string | undefined =>
     name === undefined ? undefined : (input.teamNameAliases?.get(name) ?? name);
   const isUnresolvedProjectRuntimeAlias = (name: string | undefined): boolean =>
-    name?.startsWith('ptc-') === true && !input.teamNameAliases?.has(name);
+    name !== undefined && isProjectCopyName(name) && !input.teamNameAliases?.has(name);
   const logicalAliasTargets = new Set(input.teamNameAliases?.values() ?? []);
   const isPhysicalProjectRuntimeTarget = (name: string | undefined): boolean =>
-    name?.startsWith('ptc-') === true && !logicalAliasTargets.has(name);
+    name !== undefined &&
+    (isProjectCopyName(name) || input.teamNameAliases?.has(name) === true) &&
+    !logicalAliasTargets.has(name);
   const teamScope = (name: string | undefined) => {
     const id = teamIdForName(normalizeName(name));
     return { id, label: teamIdentityLabel(id) };

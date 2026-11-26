@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildBudgetStatus, buildTokenUsageSnapshot, normalizeCostBreakdown } from '..';
+import {
+  assertTeamBudgetLaunchAllowed,
+  buildBudgetStatus,
+  buildTokenUsageSnapshot,
+  evaluateTeamBudgetEnforcement,
+  normalizeCostBreakdown,
+} from '..';
 
 import { testEvent, testRun } from './budgetFixtures';
 
@@ -89,6 +95,42 @@ describe('Budget monthly projection', () => {
     expect(status.targets.some((target) => target.scope === 'team' && target.id === `team:${physicalName}`)).toBe(false);
     expect(status.options.some((option) => option.scope === 'project')).toBe(true);
   });
+
+  it.each(['block_launch', 'stop_team'] as const)(
+    'enforces %s for ordinary teams whose names start with ptc-',
+    (onExceeded) => {
+      const teamName = 'ptc-marketing';
+      const id = `team:${teamName}`;
+      const input = {
+        now,
+        ledger: { runs: [testRun({ teamName })], events: [testEvent()] },
+        teamNameAliases: new Map<string, string>(),
+        degraded: false,
+        usageUpdatedAt: now.toISOString(),
+        policy: { enabled: true, nativeToasts: false },
+      };
+      const unconfigured = buildBudgetStatus({ ...input, settings: {} });
+      expect(unconfigured.options).toContainEqual(expect.objectContaining({ scope: 'team', id }));
+      const status = buildBudgetStatus({
+        ...input,
+        settings: {
+          teams: {
+            [id]: {
+              monthlyTokenLimit: 100,
+              thresholds: [100],
+              notificationsEnabled: true,
+              onExceeded,
+            },
+          },
+        },
+      });
+      expect(evaluateTeamBudgetEnforcement(status, teamName)).toEqual({
+        action: onExceeded,
+        state: 'exceeded',
+      });
+      expect(() => assertTeamBudgetLaunchAllowed(status, teamName)).toThrow('TEAM_BUDGET_BLOCKED');
+    }
+  );
 
   it('resolves event attribution and gateway coverage through exactly one alias hop', () => {
     const executionName = `ptc-${'a'.repeat(24)}`;
