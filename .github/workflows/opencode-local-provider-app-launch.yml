@@ -49,7 +49,6 @@ jobs:
       EXPECTED_APP_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       # A maintainer opt-in is read on source events; changing a label starts no run.
       PROVE_BIG_PICKLE: ${{ (github.event_name == 'workflow_dispatch' && inputs.prove_big_pickle) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && contains(github.event.pull_request.labels.*.name, 'opencode-free-model-e2e')) }}
-      SDK_SHA: '275251d2b4d0d3258149040a3f5936ff50e1f686'
       AGENT_TEAMS_INSTALL_PROFILE: node-ci
       ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
       pnpm_config_package_import_method: copy
@@ -68,10 +67,27 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
+      - name: Resolve local-provider SDK candidate from runtime lock
+        id: sdk
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync, appendFileSync } from 'node:fs';
+          const lock = JSON.parse(readFileSync('runtime.lock.json', 'utf8'));
+          const candidate = lock.opencodeV2LocalProviderCandidate;
+          assert.equal(candidate?.sourceRepository, '777genius/agent_teams_orchestrator');
+          assert.equal(candidate?.runtimeVersion, '0.0.162');
+          assert.equal(candidate?.qualificationScope, 'authless-local-provider-app-launch');
+          assert.equal(candidate?.deliveryStatus, 'candidate-not-delivered');
+          assert.match(candidate?.sourceCommit ?? '', /^[a-f0-9]{40}$/);
+          assert.notEqual(candidate.sourceCommit, lock.opencodeV2Delivery['darwin-x64'].sourceCommit);
+          assert.notEqual(candidate.runtimeVersion, lock.opencodeV2Delivery['darwin-x64'].runtimeVersion);
+          appendFileSync(process.env.GITHUB_OUTPUT, `sha=${candidate.sourceCommit}\\n`);
+          NODE
       - uses: actions/checkout@v6
         with:
           repository: 777genius/agent_teams_orchestrator
-          ref: ${{ env.SDK_SHA }}
+          ref: ${{ steps.sdk.outputs.sha }}
           path: TEST-local-provider-sdk
           persist-credentials: false
       - uses: pnpm/action-setup@v6
@@ -81,6 +97,8 @@ jobs:
           cache: pnpm
       - name: Verify exact sources and resolve qualified native pins
         id: pins
+        env:
+          SDK_SHA: ${{ steps.sdk.outputs.sha }}
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$EXPECTED_APP_SHA"
@@ -126,6 +144,7 @@ jobs:
       - name: Record exact native sources
         id: source
         env:
+          SDK_SHA: ${{ steps.sdk.outputs.sha }}
           CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH: ${{ env.TEST_NATIVE }}/node_modules/@opencode/cli-darwin-x64/bin/opencode
           EXPECTED_BUN: ${{ steps.pins.outputs.bun }}
           EXPECTED_OPENCODE: ${{ steps.pins.outputs.opencode }}
@@ -143,7 +162,12 @@ jobs:
           const opencode = execFileSync(binary, ['--version'], { encoding: 'utf8', timeout: 15_000 }).trim();
           assert.equal(bun, process.env.EXPECTED_BUN);
           assert.equal(opencode.replace(/^opencode v?/, ''), process.env.EXPECTED_OPENCODE);
+          const lock = JSON.parse(readFileSync('runtime.lock.json', 'utf8'));
+          const qualification = lock.opencodeV2LocalProviderCandidate;
+          assert.equal(qualification.sourceCommit, process.env.SDK_SHA);
           const receipt = { appSha: process.env.EXPECTED_APP_SHA, sdkSha: process.env.SDK_SHA,
+            sdkRuntimeVersion: qualification.runtimeVersion, qualificationScope: qualification.qualificationScope,
+            deliveryStatus: qualification.deliveryStatus,
             platform: `${process.platform}-${process.arch}`, node: process.version, bun, opencode,
             binary, binarySha256: createHash('sha256').update(readFileSync(binary)).digest('hex'),
             model: 'local-lab/qwen-test:0.5b', runtimeMode: 'cli-source' };
