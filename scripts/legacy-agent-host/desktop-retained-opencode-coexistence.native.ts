@@ -533,7 +533,7 @@ async function runDonorHistory(input: {
   };
   await assertInputs();
   await mkdir(root, { mode: 0o700 });
-  for (const directory of ['home', 'tmp', 'config/opencode', 'config/codex', 'data', 'cache', 'state',
+  for (const directory of ['home', 'tmp', 'config/opencode', 'config/codex', 'data/opencode', 'cache', 'state',
     'userData', 'claude', 'claude/local/node_modules/.bin', 'bin', 'project', 'runtime-data', 'runtime-cache', 'evidence-corpus'])
     await mkdir(join(root, directory), { recursive: true, mode: 0o700 });
   proof.inputs = donor; proof.root = root;
@@ -592,6 +592,10 @@ async function runDonorHistory(input: {
         models: { 'TEST-model': { name: 'TEST-model', tool_call: true, limit: { context: 200000, output: 2000 } } } } } };
     for (const path of ['project/opencode.json', 'config/opencode/opencode.json'])
       await writeFile(join(root, path), JSON.stringify(config), { mode: 0o600, flag: 'wx' });
+    // Original V1 inventories connected providers from its auth store, not options.apiKey.
+    await writeFile(join(root, 'data/opencode/auth.json'),
+      JSON.stringify({ 'test-legacy': { type: 'api', key: 'TEST-LOCALHOST-ONLY' } }),
+      { mode: 0o600, flag: 'wx' });
     await exerciseRetainedDonorHistory({ repo, sourceHead: input.head, root, node: input.node,
       port: await reservePort(), donor: { root: donorRoot, commit: String(donor.commit), tree: String(donor.tree),
         node: { path: String(node.path) }, runtime: { path: String(runtime.path), sha256: String(runtime.sha256) },
