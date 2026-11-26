@@ -1,5 +1,7 @@
+import { api } from '@renderer/api';
 import { isOrdinaryTeamTab } from '@renderer/types/tabs';
 import { normalizePath } from '@renderer/utils/pathNormalize';
+import { isTeamReadUnavailable } from '@shared/utils/normalizeTeamAggregateRead';
 
 import {
   captureContextScopedRequestEpoch,
@@ -149,12 +151,20 @@ export function createOpenTeamTabAction(
       openOrdinaryTeamTab(state, teamName);
       return;
     }
+    const savedPath = target.projectPath;
+    const canRegister =
+      state.activeContextId === 'local' &&
+      target.deletedAt === undefined &&
+      !state.teamsError &&
+      !isTeamReadUnavailable(state.teamsUnavailable, target) &&
+      typeof savedPath === 'string' &&
+      normalizePath(savedPath) === path;
     const focus = focusedNavigation(state);
     if (
       !focus ||
       state.isContextSwitching ||
       (!state.repositoryGroupsLoading &&
-        (state.repositoryGroupsInitialized || state.repositoryGroupsError))
+        (state.repositoryGroupsError || (state.repositoryGroupsInitialized && !canRegister)))
     )
       return;
 
@@ -165,6 +175,7 @@ export function createOpenTeamTabAction(
     let expectedProject = projectSelection(state);
     let loadingObserved = state.repositoryGroupsLoading;
     let selecting = false;
+    let registration: 'idle' | 'pending' | 'refresh' | 'done' = 'idle';
     const cancel = (): void => {
       unsubscribeState();
       unsubscribeEpoch();
@@ -182,19 +193,62 @@ export function createOpenTeamTabAction(
         currentTarget.projectContextMode === 'per_project' &&
         currentTarget.ownerResourceRef === ownerResourceRef &&
         currentTarget.deletedAt === deletedAt &&
+        (!canRegister ||
+          (currentTarget.projectPath === savedPath &&
+            !current.teamsError &&
+            !isTeamReadUnavailable(current.teamsUnavailable, currentTarget))) &&
         sameValues(focus, focusedNavigation(current)) &&
         sameValues(expectedProject, projectSelection(current))
       );
+    };
+    const register = (): void => {
+      if (
+        !canRegister ||
+        typeof savedPath !== 'string' ||
+        registration !== 'idle' ||
+        !isCurrent()
+      ) {
+        cancel();
+        return;
+      }
+      registration = 'pending';
+      // This existing global-config IPC is not cancellable once sent. Only its original
+      // live navigation may send it; acknowledgement grants no successor navigation.
+      void (async () => {
+        try {
+          await api.config.addCustomProjectPath(savedPath);
+          if (!isCurrent()) {
+            cancel();
+            return;
+          }
+          registration = 'refresh';
+          observe();
+        } catch {
+          cancel();
+        }
+      })();
     };
     const observe = (): void => {
       if (!isCurrent()) {
         cancel();
         return;
       }
-      if (selecting) return;
+      if (selecting || registration === 'pending') return;
       const current = get();
       if (current.repositoryGroupsLoading) {
         loadingObserved = true;
+        return;
+      }
+      if (registration === 'refresh') {
+        // An older read admitted while registration was pending must settle first.
+        // This read is admitted after the acknowledgement; never synthesize a row.
+        registration = 'done';
+        loadingObserved = false;
+        if (current.repositoryGroupsError) {
+          cancel();
+          return;
+        }
+        void get().fetchRepositoryGroups();
         return;
       }
       if (!loadingObserved) return;
@@ -203,7 +257,14 @@ export function createOpenTeamTabAction(
           ? findProject(current, path)
           : undefined;
       if (!resolved) {
-        cancel();
+        if (
+          current.repositoryGroupsInitialized &&
+          !current.repositoryGroupsError &&
+          canRegister &&
+          registration === 'idle'
+        )
+          register();
+        else cancel();
         return;
       }
       // Select before exposing the target tab. Reentrant subscribers may supersede this intent.
@@ -227,6 +288,9 @@ export function createOpenTeamTabAction(
     const unsubscribeState = store.subscribe(observe);
     const unsubscribeEpoch = subscribeContextScopedRequestEpoch(cancel);
     // Joining an existing fetch observes its settlement; its action returns early when loading.
-    if (isCurrent() && !get().repositoryGroupsLoading) void get().fetchRepositoryGroups();
+    if (isCurrent() && !get().repositoryGroupsLoading) {
+      if (state.repositoryGroupsInitialized && canRegister) register();
+      else void get().fetchRepositoryGroups();
+    }
   };
 }

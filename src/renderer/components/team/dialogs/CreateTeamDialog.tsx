@@ -98,6 +98,7 @@ import { AnthropicFastModeSelector } from './AnthropicFastModeSelector';
 import { assignCreatedTeamToOrganization } from './assignCreatedTeamToOrganization';
 import { CodexFastModeSelector } from './CodexFastModeSelector';
 import { CodexReconnectPrompt, shouldShowCodexReconnectPrompt } from './CodexReconnectPrompt';
+import { captureCreatedTeamHandoff } from './createdTeamHandoff';
 import { consumeTeamCopySeedOnce } from './createTeamCopySeed';
 import { CreateTeamHeaderActions } from './CreateTeamHeaderActions';
 import { buildInitialRosterMemberDrafts } from './createTeamInitialRoster';
@@ -1515,35 +1516,32 @@ export const CreateTeamDialog = ({
   const createContext = createdReadiness.context;
   const qualifyCreatePlan = createdReadiness.qualifyPlan;
   const runCreatePreflight = createdReadiness.runPreflight;
-  const shortLivedModelIssueReasons = useMemo(
-    () => {
-      void prepareChecks;
-      void selectedModelChecksByProviderSignature;
-      return readLaunchPrepareModelIssues({
-        context: createContext,
-        isLaunchMode: true,
-        selectedMemberProviders,
-        runtimeBackendSummaryByProvider,
-        runtimeProviderStatusById,
-        selectedModelChecksByProvider,
-        cwd: effectiveCwd,
-        limitContext: effectiveAnthropicRuntimeLimitContext,
-        invalidationEpochByProviderId: prepareProviderInvalidationEpochById,
-      });
-    },
-    [
-      createContext,
-      effectiveAnthropicRuntimeLimitContext,
-      effectiveCwd,
-      prepareChecks,
-      prepareProviderInvalidationEpochById,
+  const shortLivedModelIssueReasons = useMemo(() => {
+    void prepareChecks;
+    void selectedModelChecksByProviderSignature;
+    return readLaunchPrepareModelIssues({
+      context: createContext,
+      isLaunchMode: true,
+      selectedMemberProviders,
       runtimeBackendSummaryByProvider,
       runtimeProviderStatusById,
       selectedModelChecksByProvider,
-      selectedModelChecksByProviderSignature,
-      selectedMemberProviders,
-    ]
-  );
+      cwd: effectiveCwd,
+      limitContext: effectiveAnthropicRuntimeLimitContext,
+      invalidationEpochByProviderId: prepareProviderInvalidationEpochById,
+    });
+  }, [
+    createContext,
+    effectiveAnthropicRuntimeLimitContext,
+    effectiveCwd,
+    prepareChecks,
+    prepareProviderInvalidationEpochById,
+    runtimeBackendSummaryByProvider,
+    runtimeProviderStatusById,
+    selectedModelChecksByProvider,
+    selectedModelChecksByProviderSignature,
+    selectedMemberProviders,
+  ]);
   const launchGuard = createLaunchGuard(
     selectedMemberProviders,
     runtimeProviderStatusById,
@@ -2077,29 +2075,6 @@ export const CreateTeamDialog = ({
     setConflictDismissed(false);
   }, [conflictingTeam?.teamName, effectiveCwd]);
 
-  /** Complete accepted work without stealing focus or deleting a remounted editor's edits. */
-  const finishAcceptedCreation = async (name: string, cwd?: string): Promise<void> => {
-    const generation = createGenerationRef.current;
-    if (presentation === 'page' && !isCreateTeamDraftGenerationCurrent(generation)) return;
-    if (!stillOwnsCreatePage(generation)) {
-      // With no open editor, there is no newer in-progress form to retire.
-      if (
-        !useStore
-          .getState()
-          .getAllPaneTabs()
-          .some((tab) => tab.type === 'teams' && tab.teamsCreationPage)
-      )
-        await resetCreateTeamDraft();
-      return;
-    }
-    await resetFormState();
-    if (!stillOwnsCreatePage(generation + 1)) return;
-    const tab = presentation === 'page' ? useStore.getState().getActiveTab() : null;
-    if (presentation !== 'page' || (tab?.type === 'teams' && tab.teamsCreationPage)) {
-      onOpenTeam(name, cwd);
-    }
-    onClose();
-  };
   const handleSubmit = (): void => {
     if (gatewayBindings.pending) return;
     if (!canCreate || !draftLoaded) return;
@@ -2166,6 +2141,19 @@ export const CreateTeamDialog = ({
     setLocalError(null);
     submittedTeamNameRef.current = request.teamName;
     setIsSubmitting(true);
+    const finishAcceptedCreation = captureCreatedTeamHandoff({
+      presentation,
+      projectContextMode: request.projectContextMode,
+      getGeneration: () => createGenerationRef.current,
+      isGenerationCurrent: isCreateTeamDraftGenerationCurrent,
+      ownsPage: stillOwnsCreatePage,
+      getState: useStore.getState,
+      subscribe: useStore.subscribe,
+      resetDraft: resetCreateTeamDraft,
+      resetForm: resetFormState,
+      onClose,
+      onOpenTeam,
+    });
     if (!launchTeam) {
       void (async () => {
         try {
@@ -2234,6 +2222,7 @@ export const CreateTeamDialog = ({
             error instanceof Error ? error.message : t('create.errors.createConfigFailed')
           );
         } finally {
+          finishAcceptedCreation.dispose();
           submissionFence.release();
           submittedTeamNameRef.current = null;
           setIsSubmitting(false);
@@ -2262,6 +2251,7 @@ export const CreateTeamDialog = ({
           setLocalError(error.message);
         }
       } finally {
+        finishAcceptedCreation.dispose();
         submissionFence.release();
         submittedTeamNameRef.current = null;
         setIsSubmitting(false);

@@ -1,3 +1,4 @@
+import { EventEmitter, errorMonitor } from 'node:events';
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext, runInNewContext } from 'node:vm';
 import test from 'node:test';
@@ -401,4 +402,204 @@ test('actual diagnostic serialization failure leaves the original failure snapsh
   assert.equal(dump.taskTabObservation, null); assert.equal(h.control.sinkCalls, 1);
   assert.equal(h.calls.length, priorCalls + 1); assert.equal(h.control.stateReads, 2);
   assert.equal(h.control.listeners.length, 0);
+});
+
+function processFailureHarness({ holdRenderer = false } = {}) {
+  const children = [], sockets = [], writes = [], timerHistory = [], timers = new Map();
+  const control = { now: 1000, failClock: false, failDiagnosticWrite: false,
+    screenshots: 0, cleanupCalls: 0, onCleanup: () => {}, cleanupError: null, processReads: 0 };
+  let nextTimer = 0, releaseRenderer, rendererEntered;
+  const rendererStarted = new Promise(resolve => { rendererEntered = resolve; });
+  const rendererGate = new Promise(resolve => { releaseRenderer = resolve; });
+  class TestSocket extends EventEmitter {
+    constructor() { super(); this.frames = []; sockets.push(this); queueMicrotask(() => this.emit('open')); }
+    send(value) { this.frames.push(JSON.parse(value)); }
+    close() { this.emit('close'); }
+  }
+  const fakeProcess = { platform: 'win32', execPath: '/TEST/node', env: {}, stderr: {
+    write(value) {
+      if (control.failDiagnosticWrite && value.startsWith('CREATE_PAGE_PROCESS_DIAGNOSTIC '))
+        throw new Error('TEST unavailable diagnostic sink');
+      writes.push(value);
+    },
+  } };
+  const globals = actualBlock('const appLogTail = [];', '// Use an explicit, available port:', true);
+  const startup = actualBlock('async function startApp(fixture) {', '\nfunction installTaskTabObservation(', true);
+  const failureTail = actualBlock('  } catch (error) {\n    failure = error;', '\n  assert(qualifiedResult,', true);
+  const finalError = actualBlock('main().catch(async (error) => {', '\n});');
+  const actual = runInNewContext([
+    globals, startup, clientSource, dumpSource,
+    'async function fail(primary, client) { cdp = client; const fixture = {};',
+    'let failure = null, cleanupFailure = null; try { throw primary;',
+    failureTail, '}',
+    'async function finish(error) {', finalError, '}',
+    '({ startApp, CdpClient, fail, finish })',
+  ].join('\n'), {
+    assert, Error, AggregateError, errorMonitor, extendOwnedHistory, WebSocket: TestSocket,
+    process: fakeProcess, repoRoot: '/TEST/repo',
+    Date: { now() { if (control.failClock) throw new Error('TEST unavailable clock'); return control.now; } },
+    realpath: async value => value, findFreeInspectorPort: async () => 45550,
+    spawn(command, args, options) {
+      assert.equal(command, 'cmd.exe'); assert.deepEqual(Array.from(args), ['/d', '/s', '/c', 'pnpm dev:mcp --inspect=45550']);
+      assert.equal(options.cwd, '/TEST/repo'); assert.equal(options.windowsHide, true);
+      const child = new EventEmitter(); child.pid = 100 + children.length;
+      child.stdout = new EventEmitter(); child.stderr = new EventEmitter();
+      const originalOn = child.stdout.on;
+      child.stdout.on = function (event, listener) {
+        originalOn.call(this, event, listener);
+        if (event === 'data') this.emit('data',
+          'DevTools listening on ws://127.0.0.1:9222/devtools/browser/TEST\n' +
+          'Debugger listening on ws://127.0.0.1:45550/abcdef\n');
+        return this;
+      };
+      children.push(child); return child;
+    },
+    processes() { control.processReads++; return children.map(child => row(child.pid, 1, '2026-01-01T00:00:00Z')); },
+    waitForRenderer(port) {
+      assert.equal(port, 9222); rendererEntered();
+      return holdRenderer ? rendererGate : Promise.resolve({ webSocketDebuggerUrl: 'ws://127.0.0.1:9222/devtools/page/TEST' });
+    },
+    setTimeout(callback, ms) {
+      const id = ++nextTimer; timers.set(id, callback); timerHistory.push({ id, ms }); return id;
+    },
+    clearTimeout(id) { timers.delete(id); },
+    async captureScreenshot() { control.screenshots++; throw new Error('TEST screenshot disconnected'); },
+    async cleanup() {
+      control.cleanupCalls++; control.onCleanup(); if (control.cleanupError) throw control.cleanupError;
+    },
+  });
+  const fixture = { providerCliPaths: { codex: '/TEST/codex', claude: '/TEST/claude' } };
+  for (const key of ['claudeRoot', 'userDataRoot', 'claudeConfigDir', 'multimodelDataHome',
+    'multimodelCacheHome', 'xdgConfigHome', 'xdgDataHome', 'xdgCacheHome', 'xdgStateHome',
+    'xdgRuntimeDir', 'runtimeWrapperPath', 'codexHome']) fixture[key] = '/TEST/' + key;
+  return {
+    control, children, sockets, writes, timers, timerHistory, fakeProcess, rendererStarted,
+    start: () => actual.startApp(fixture), release: () => releaseRenderer({ webSocketDebuggerUrl: 'ws://127.0.0.1:9222/devtools/page/TEST' }),
+    connect: () => actual.CdpClient.connect('ws://127.0.0.1:9222/devtools/page/TEST'),
+    fail: (error, client) => actual.fail(error, client), finish: error => actual.finish(error),
+    fire(id) { const callback = timers.get(id); assert.equal(typeof callback, 'function'); timers.delete(id); callback(); },
+    receipt() {
+      const value = writes.filter(line => line.startsWith('CREATE_PAGE_PROCESS_DIAGNOSTIC ')).at(-1);
+      return value ? JSON.parse(value.slice('CREATE_PAGE_PROCESS_DIAGNOSTIC '.length)) : null;
+    },
+  };
+}
+
+test('process diagnostics retain a late original launcher exit after startup and a newer launch', async () => {
+  const h = processFailureHarness();
+  const first = await h.start();
+  assert.equal(first.port, 9222); assert.equal(first.inspectorWebSocketDebuggerUrl, 'ws://127.0.0.1:45550/abcdef');
+  const oldClient = await h.connect();
+  await h.start();
+  h.control.now = 1200; h.children[0].emit('exit', 3221225477, null);
+  h.control.now = 1300; h.sockets[0].emit('close');
+  await h.finish(new Error('TEST read retained lifecycle'));
+  const receipt = h.receipt(); assert.ok(receipt, 'late process facts must survive the already-settled startup race');
+  assert.deepEqual(receipt.events.map(value => [value.event, value.launch]),
+    [['launcher-spawn', 1], ['launcher-spawn', 2], ['launcher-exit', 1], ['cdp-close', 1]]);
+  assert.deepEqual(receipt.events[2], { event: 'launcher-exit', launch: 1, at: 1200, code: 3221225477, signal: null });
+  assert.equal(receipt.events[3].pendingCount, 0); assert.equal(oldClient.pending.size, 0);
+  assert.equal(h.control.processReads, 4); assert.equal(h.timerHistory.length, 0);
+});
+
+test('process diagnostics preserve the original startup-exit rejection and do not add an error handler', async () => {
+  const h = processFailureHarness({ holdRenderer: true });
+  const starting = h.start(); const result = starting.catch(error => error);
+  await h.rendererStarted;
+  h.children[0].emit('exit', null, 'SIGTERM');
+  const error = await result;
+  assert.match(error.message, /^pnpm dev:mcp exited before CDP was ready \(SIGTERM\)/);
+  h.release(); await h.finish(error);
+  const receipt = h.receipt(); assert.ok(receipt);
+  assert.equal(receipt.events.at(-1).signal, 'SIGTERM'); assert.equal(h.children[0].listenerCount('error'), 0);
+
+  const live = processFailureHarness(); await live.start();
+  const original = Object.assign(new Error('TEST private spawn path must not be projected'), { code: 'ENOENT' });
+  let accessorReads = 0;
+  Object.defineProperty(original, 'path', { get() { accessorReads++; throw new Error('TEST forbidden path read'); } });
+  assert.throws(() => live.children[0].emit('error', original), value => value === original);
+  assert.equal(live.children[0].listenerCount('error'), 0); assert.equal(accessorReads, 0);
+  await live.finish(original);
+  assert.deepEqual(live.receipt().events.at(-1), { event: 'launcher-error', launch: 1, at: 1000, code: 'ENOENT' });
+  assert.equal(JSON.stringify(live.receipt()).includes('private spawn'), false);
+});
+
+test('process diagnostics retain pending method names while preserving CDP close errors and command timers', async () => {
+  const h = processFailureHarness(); await h.start(); const client = await h.connect();
+  const originals = [], pending = [];
+  for (let i = 0; i < 10; i++) {
+    const method = i === 0 ? 'Runtime.evaluate' : i === 1 ? 'Input.dispatchMouseEvent' : 'TEST private method ' + i;
+    pending.push(client.send(method, { expression: 'TEST private renderer input' }).catch(error => error));
+    const entry = client.pending.get(client.nextId), reject = entry.reject;
+    entry.reject = error => { originals.push(error); reject(error); };
+  }
+  h.control.now = 1500; h.sockets[0].emit('close');
+  const errors = await Promise.all(pending);
+  assert.equal(client.pending.size, 0); assert.equal(h.timers.size, 0);
+  errors.forEach((error, index) => { assert.equal(error, originals[index]); assert.equal(error.message, 'CDP connection closed'); });
+  assert.equal(h.sockets[0].frames.length, 10);
+  assert.ok(h.timerHistory.every(value => value.ms === 30000));
+  await h.finish(errors[0]);
+  const receipt = h.receipt(); assert.ok(receipt);
+  const closed = receipt.events.find(value => value.event === 'cdp-close');
+  assert.equal(closed.pendingCount, 10); assert.equal(closed.pendingMethodsCapped, true);
+  assert.deepEqual(closed.pendingMethods, ['Runtime.evaluate', 'Input.dispatchMouseEvent', null, null, null, null, null, null]);
+  assert.equal(JSON.stringify(receipt).includes('private'), false);
+
+  const afterClose = client.send('Runtime.evaluate').catch(error => error);
+  assert.equal(client.pending.size, 1, 'observation must not add a new closed-socket refusal path');
+  const timer = h.timerHistory.at(-1); assert.equal(timer.ms, 30000);
+  h.fire(timer.id);
+  assert.equal((await afterClose).message, 'CDP command timed out: Runtime.evaluate');
+  assert.equal(client.pending.size, 0); assert.equal(h.sockets[0].frames.length, 11);
+});
+
+test('process diagnostics order the original failure before secondary dump and cleanup without replacing it', async () => {
+  const h = processFailureHarness(); await h.start();
+  const original = new Error('CDP connection closed'), secondary = new Error('CDP command timed out: Runtime.evaluate');
+  h.control.onCleanup = () => { h.control.now = 1800; h.children[0].emit('exit', 3221225477, null); };
+  let dumpCalls = 0;
+  const client = { async evaluate() { dumpCalls++; h.control.now = 1700; throw secondary; } };
+  await assert.rejects(h.fail(original, client), value => value === original);
+  await h.finish(original);
+  const receipt = h.receipt(); assert.ok(receipt);
+  assert.deepEqual(receipt.events.map(value => value.event),
+    ['launcher-spawn', 'primary-failure', 'cleanup-started', 'launcher-exit']);
+  assert.deepEqual(receipt.events[1], { event: 'primary-failure', launch: 1, at: 1000, kind: 'cdp-closed', method: null });
+  assert.equal(receipt.events[2].at, 1700); assert.equal(receipt.events[3].at, 1800);
+  assert.equal(dumpCalls, 1); assert.equal(h.control.screenshots, 1); assert.equal(h.control.cleanupCalls, 1);
+  assert.ok(h.writes.some(value => value.startsWith('Renderer dump failed: Error: CDP command timed out: Runtime.evaluate')));
+  assert.equal(h.fakeProcess.exitCode, 1);
+});
+
+test('process diagnostics preserve the original failure and cleanup aggregate identities', async () => {
+  const h = processFailureHarness(); await h.start();
+  const primary = new Error('TEST original work'), cleanup = new Error('TEST original cleanup');
+  h.control.cleanupError = cleanup;
+  let result;
+  await assert.rejects(h.fail(primary, { async evaluate() { throw new Error('TEST diagnostic-only failure'); } }), error => {
+    result = error;
+    return error instanceof AggregateError && error.errors[0] === primary && error.errors[1] === cleanup;
+  });
+  await h.finish(result);
+  assert.equal(h.control.cleanupCalls, 1); assert.equal(h.receipt().events[1].kind, 'other');
+  assert.equal(h.fakeProcess.exitCode, 1);
+});
+
+test('process diagnostics stay bounded and observational when clocks or sinks fail', async () => {
+  const h = processFailureHarness(); await h.start(); await h.connect();
+  for (let i = 0; i < 40; i++) h.sockets[0].emit('close');
+  await h.finish(new Error('TEST retained bounded events'));
+  const receipt = h.receipt(); assert.ok(receipt);
+  assert.equal(receipt.events.length, 16); assert.equal(receipt.eventsCapped, true);
+  assert.equal(receipt.recordingFailed, false); assert.ok(JSON.stringify(receipt).length <= 8192);
+  assert.equal(h.timerHistory.length, 0); assert.equal(h.sockets[0].frames.length, 0);
+
+  const broken = processFailureHarness(); await broken.start();
+  broken.control.failClock = true; broken.control.failDiagnosticWrite = true;
+  const original = new Error('TEST same original error');
+  await assert.rejects(broken.fail(original, { async evaluate() { throw new Error('TEST secondary dump'); } }), error => error === original);
+  await broken.finish(original);
+  assert.equal(broken.fakeProcess.exitCode, 1); assert.equal(broken.control.cleanupCalls, 1);
+  assert.equal(broken.writes.some(value => value.includes('TEST same original error')), true);
 });

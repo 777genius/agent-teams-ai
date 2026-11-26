@@ -1492,7 +1492,9 @@ export interface TeamSlice extends SidebarLogsHeightSlice, DeletedTaskFeed {
     change: TeamManagementCommittedChange
   ) => Promise<boolean>;
   clearDeletedTeamLocalState: (teamName: string) => void;
-  fetchTeams: () => Promise<void>;
+  fetchTeams: (options?: {
+    onCurrentRead?: (teams: readonly TeamSummary[]) => void;
+  }) => Promise<void>;
   fetchAllTasks: () => Promise<void>;
   openTeamsTab: (projectPath?: string) => void;
   openTeamTab: (teamName: string, projectPath?: string) => void;
@@ -2034,7 +2036,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     }
   },
 
-  fetchTeams: async () => {
+  fetchTeams: async (options) => {
     // Guard: prevent concurrent fetches (component mount + centralized init chain).
     // Only effective during initial load (when teamsLoading is set to true below).
     // Refreshes are already serialized by the throttle timer in onTeamChange.
@@ -2124,6 +2126,16 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           teamManagementNoticeByTeam: nextNotices,
         };
       });
+      try {
+        if (
+          isContextRequestScopeCurrent(get, requestScope) &&
+          latestTeamsFetchRequestId === requestId
+        ) {
+          options?.onCurrentRead?.(teams);
+        }
+      } catch {
+        // Optional read witnesses cannot turn a successful list into a failed list.
+      }
     } catch (error) {
       if (
         !isContextRequestScopeCurrent(get, requestScope) ||

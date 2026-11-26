@@ -16,6 +16,7 @@ import type { Project, RepositoryGroup } from '../../../src/renderer/types/data'
 const apiMock = vi.hoisted(() => ({
   getProjects: vi.fn(),
   getRepositoryGroups: vi.fn(),
+  config: { addCustomProjectPath: vi.fn() },
 }));
 
 vi.mock('@renderer/api', () => ({
@@ -663,6 +664,246 @@ describe('explicit Team project navigation', () => {
 
     expect(store.getState().selectedProjectId).toBeNull();
     expect(store.getState().fetchSessionsInitial).not.toHaveBeenCalled();
+    expect(apiMock.getRepositoryGroups).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('saved custom Team project navigation', () => {
+  function savedNavigationStore(activeContextId = 'local') {
+    const store = createTeamNavigationStore();
+    const target = { ...store.getState().teamByName.builders, projectPath: '/TEST/new-project' };
+    store.setState({
+      activeContextId,
+      teamByName: { builders: target },
+      repositoryGroupsInitialized: true,
+    });
+    return store;
+  }
+
+  beforeEach(() => {
+    resetContextScopedRequestEpochForTests();
+    apiMock.getRepositoryGroups.mockReset();
+    apiMock.config.addCustomProjectPath.mockReset().mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    resetContextScopedRequestEpochForTests();
+    vi.restoreAllMocks();
+  });
+
+  it('registers an accepted saved custom path and opens only its fresh real catalog row', async () => {
+    const store = createTeamNavigationStore();
+    const target = { ...store.getState().teamByName.builders, projectPath: '/TEST/new-project' };
+    store.setState({ teamByName: { builders: target }, repositoryGroupsInitialized: true });
+    const registered = deferred<void>();
+    const catalog = deferred<RepositoryGroup[]>();
+    apiMock.config.addCustomProjectPath.mockReturnValueOnce(registered.promise);
+    apiMock.getRepositoryGroups.mockReturnValueOnce(catalog.promise);
+
+    store.getState().openTeamTab('builders', '/TEST/new-project');
+    expect(apiMock.config.addCustomProjectPath).toHaveBeenCalledExactlyOnceWith(
+      '/TEST/new-project'
+    );
+    expect(apiMock.getRepositoryGroups).not.toHaveBeenCalled();
+    expect(store.getState().getAllPaneTabs()).toHaveLength(0);
+    registered.resolve();
+    await vi.waitFor(() => expect(apiMock.getRepositoryGroups).toHaveBeenCalledTimes(1));
+    expect(store.getState().selectedProjectId).toBeNull();
+    catalog.resolve([repositoryGroup('new-project', '/TEST/new-project')]);
+    await vi.waitFor(() => expect(store.getState().repositoryGroupsLoading).toBe(false));
+    expect(store.getState().selectedProjectId).toBe('new-project-worktree');
+    expect(store.getState().getActiveTab()).toMatchObject({ type: 'team', teamName: 'builders' });
+    expect(store.getState().fetchSessionsInitial).toHaveBeenCalledExactlyOnceWith(
+      'new-project-worktree'
+    );
+  });
+
+  it('passes the original saved Windows path rather than the comparison-only key', async () => {
+    const store = savedNavigationStore();
+    const originalPath = 'C:\\TEST\\New Project';
+    store.setState({
+      teamByName: {
+        builders: { ...store.getState().teamByName.builders, projectPath: originalPath },
+      },
+    });
+    apiMock.getRepositoryGroups.mockResolvedValue([repositoryGroup('windows', originalPath)]);
+    store.getState().openTeamTab('builders', 'c:/test/new project');
+    await vi.waitFor(() => expect(store.getState().selectedProjectId).toBe('windows-worktree'));
+    expect(apiMock.config.addCustomProjectPath).toHaveBeenCalledExactlyOnceWith(originalPath);
+  });
+
+  it('reads a cold catalog first and registers once only after its published miss', async () => {
+    const store = savedNavigationStore();
+    store.setState({ repositoryGroupsInitialized: false });
+    const initial = deferred<RepositoryGroup[]>();
+    apiMock.getRepositoryGroups
+      .mockReturnValueOnce(initial.promise)
+      .mockResolvedValueOnce([repositoryGroup('new-project', '/TEST/new-project')]);
+    store.getState().openTeamTab('builders', '/TEST/new-project');
+    expect(apiMock.config.addCustomProjectPath).not.toHaveBeenCalled();
+    initial.resolve([]);
+    await vi.waitFor(() => expect(store.getState().selectedProjectId).toBe('new-project-worktree'));
+    expect(apiMock.config.addCustomProjectPath).toHaveBeenCalledTimes(1);
+    expect(apiMock.getRepositoryGroups).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not register an initialized unknown SSH path in local configuration', () => {
+    const store = savedNavigationStore('ssh-TEST');
+    store.getState().openTeamTab('builders', '/TEST/new-project');
+    expect(apiMock.config.addCustomProjectPath).not.toHaveBeenCalled();
+    expect(apiMock.getRepositoryGroups).not.toHaveBeenCalled();
+    expect(store.getState().getAllPaneTabs()).toHaveLength(0);
+  });
+
+  it.each([true, false])(
+    'preserves the real known SSH catalog path, initialized=%s',
+    async (initialized) => {
+      const store = savedNavigationStore('ssh-TEST');
+      const groups = [repositoryGroup('remote', '/TEST/new-project')];
+      store.setState({
+        repositoryGroupsInitialized: initialized,
+        repositoryGroups: initialized ? groups : [],
+      });
+      apiMock.getRepositoryGroups.mockResolvedValue(groups);
+      store.getState().openTeamTab('builders', '/TEST/new-project');
+      await vi.waitFor(() => expect(store.getState().selectedProjectId).toBe('remote-worktree'));
+      expect(apiMock.getRepositoryGroups).toHaveBeenCalledTimes(initialized ? 0 : 1);
+      expect(apiMock.config.addCustomProjectPath).not.toHaveBeenCalled();
+      expect(store.getState().getActiveTab()).toMatchObject({ type: 'team', teamName: 'builders' });
+    }
+  );
+
+  it('keeps registration rejection separate from accepted Team creation and navigation', async () => {
+    const store = savedNavigationStore();
+    const rejected = Promise.reject(new Error('TEST registration rejected'));
+    apiMock.config.addCustomProjectPath.mockReturnValueOnce(rejected);
+    expect(() => store.getState().openTeamTab('builders', '/TEST/new-project')).not.toThrow();
+    await rejected.catch(() => undefined);
+    expect(apiMock.getRepositoryGroups).not.toHaveBeenCalled();
+    expect(store.getState().teamByName.builders.projectPath).toBe('/TEST/new-project');
+    expect(store.getState().getAllPaneTabs()).toHaveLength(0);
+  });
+
+  it('does not synthesize a row or retry when the fresh post-registration catalog still misses', async () => {
+    const store = savedNavigationStore();
+    apiMock.getRepositoryGroups.mockResolvedValueOnce([]);
+    store.getState().openTeamTab('builders', '/TEST/new-project');
+    await vi.waitFor(() => expect(apiMock.getRepositoryGroups).toHaveBeenCalledTimes(1));
+    await vi.waitFor(() => expect(store.getState().repositoryGroupsLoading).toBe(false));
+    store.setState({ repositoryGroups: [repositoryGroup('late', '/TEST/new-project')] });
+    expect(apiMock.config.addCustomProjectPath).toHaveBeenCalledTimes(1);
+    expect(store.getState().getAllPaneTabs()).toHaveLength(0);
+    expect(store.getState().fetchSessionsInitial).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    'catalog error',
+    'Team read error',
+    'unavailable owner',
+    'different saved path',
+  ] as const)('refuses registration from %s', (reason) => {
+    const store = savedNavigationStore();
+    if (reason === 'catalog error') store.setState({ repositoryGroupsError: 'TEST read failed' });
+    if (reason === 'Team read error') store.setState({ teamsError: 'TEST read failed' });
+    if (reason === 'unavailable owner')
+      store.setState({
+        teamsUnavailable: [
+          {
+            kind: 'owner',
+            ownerResourceRef: 'TEST-original-owner',
+            code: 'unavailable',
+            outcome: 'unknown',
+          },
+        ],
+      });
+    if (reason === 'different saved path')
+      store.setState({
+        teamByName: {
+          builders: { ...store.getState().teamByName.builders, projectPath: '/TEST/other-project' },
+        },
+      });
+    store.getState().openTeamTab('builders', '/TEST/new-project');
+    expect(apiMock.config.addCustomProjectPath).not.toHaveBeenCalled();
+    expect(apiMock.getRepositoryGroups).not.toHaveBeenCalled();
+    expect(store.getState().getAllPaneTabs()).toHaveLength(0);
+  });
+
+  it.each(['context ABA', 'epoch', 'saved owner', 'saved path'] as const)(
+    'retires the already-sent registration continuation on %s',
+    async (change) => {
+      const store = savedNavigationStore();
+      const registration = deferred<void>();
+      apiMock.config.addCustomProjectPath.mockReturnValueOnce(registration.promise);
+      store.getState().openTeamTab('builders', '/TEST/new-project');
+      if (change === 'context ABA') {
+        store.setState({ activeContextId: 'ssh-TEST' });
+        store.setState({ activeContextId: 'local' });
+      }
+      if (change === 'epoch') invalidateContextScopedRequestEpoch();
+      if (change === 'saved owner')
+        store.setState({
+          teamByName: {
+            builders: {
+              ...store.getState().teamByName.builders,
+              ownerResourceRef: 'TEST-successor',
+            },
+          },
+        });
+      if (change === 'saved path')
+        store.setState({
+          teamByName: {
+            builders: { ...store.getState().teamByName.builders, projectPath: '/TEST/successor' },
+          },
+        });
+      registration.resolve();
+      await registration.promise;
+      expect(apiMock.config.addCustomProjectPath).toHaveBeenCalledTimes(1);
+      expect(apiMock.getRepositoryGroups).not.toHaveBeenCalled();
+      expect(store.getState().getAllPaneTabs()).toHaveLength(0);
+    }
+  );
+
+  it('drains a read started before the registration acknowledgement before its one fresh read', async () => {
+    const store = savedNavigationStore();
+    const registration = deferred<void>(),
+      oldRead = deferred<RepositoryGroup[]>(),
+      freshRead = deferred<RepositoryGroup[]>();
+    apiMock.config.addCustomProjectPath.mockReturnValueOnce(registration.promise);
+    apiMock.getRepositoryGroups
+      .mockReturnValueOnce(oldRead.promise)
+      .mockReturnValueOnce(freshRead.promise);
+    store.getState().openTeamTab('builders', '/TEST/new-project');
+    const old = store.getState().fetchRepositoryGroups();
+    registration.resolve();
+    await registration.promise;
+    expect(apiMock.getRepositoryGroups).toHaveBeenCalledTimes(1);
+    oldRead.resolve([repositoryGroup('old', '/TEST/new-project')]);
+    await old;
+    expect(apiMock.getRepositoryGroups).toHaveBeenCalledTimes(2);
+    expect(store.getState().getAllPaneTabs()).toHaveLength(0);
+    freshRead.resolve([repositoryGroup('fresh', '/TEST/new-project')]);
+    await vi.waitFor(() => expect(store.getState().selectedProjectId).toBe('fresh-worktree'));
+    expect(store.getState().fetchSessionsInitial).toHaveBeenCalledExactlyOnceWith('fresh-worktree');
+  });
+
+  it('does not let an older registration settlement cancel a newer navigation', async () => {
+    const store = savedNavigationStore();
+    const first = deferred<void>(),
+      second = deferred<void>();
+    apiMock.config.addCustomProjectPath
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise);
+    apiMock.getRepositoryGroups.mockResolvedValueOnce([
+      repositoryGroup('new-project', '/TEST/new-project'),
+    ]);
+    store.getState().openTeamTab('builders', '/TEST/new-project');
+    store.getState().openTeamTab('builders', '/TEST/new-project');
+    first.resolve();
+    await first.promise;
+    expect(apiMock.getRepositoryGroups).not.toHaveBeenCalled();
+    second.resolve();
+    await vi.waitFor(() => expect(store.getState().selectedProjectId).toBe('new-project-worktree'));
+    expect(apiMock.config.addCustomProjectPath).toHaveBeenCalledTimes(2);
     expect(apiMock.getRepositoryGroups).toHaveBeenCalledTimes(1);
   });
 });

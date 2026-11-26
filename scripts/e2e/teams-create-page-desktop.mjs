@@ -5,6 +5,7 @@
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
+import { errorMonitor } from 'node:events';
 import { chmod, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import http from 'node:http';
 import { createServer } from 'node:net';
@@ -50,6 +51,73 @@ function rememberAppLog(chunk, stream) {
   appLogTail.push(...lines.filter(Boolean));
   if (appLogTail.length > 200) appLogTail.splice(0, appLogTail.length - 200);
 }
+
+function createProcessFailureObservation() {
+  const methods = new Set([
+    'Runtime.evaluate', 'Runtime.callFunctionOn', 'Runtime.enable', 'Log.enable', 'Page.enable',
+    'Input.dispatchMouseEvent', 'Input.dispatchKeyEvent', 'Input.insertText', 'Page.captureScreenshot',
+    'Emulation.setDeviceMetricsOverride', 'Emulation.clearDeviceMetricsOverride',
+  ]);
+  const signals = new Set(['SIGABRT', 'SIGBUS', 'SIGFPE', 'SIGILL', 'SIGINT', 'SIGKILL', 'SIGSEGV', 'SIGTERM']);
+  const codes = new Set(['ENOENT', 'EACCES', 'EPERM', 'ENOMEM', 'E2BIG', 'EINVAL']);
+  const events = [];
+  let launch = 0, eventsCapped = false, recordingFailed = false;
+  const note = (event, owner, fields = () => ({})) => {
+    try {
+      if (events.length >= 16) { eventsCapped = true; return; }
+      const at = Date.now();
+      events.push({ event, launch: owner, at: Number.isSafeInteger(at) && at >= 0 ? at : null, ...fields() });
+    } catch { recordingFailed = true; /* Observation cannot replace the original outcome. */ }
+  };
+  return {
+    begin() {
+      launch = Number.isSafeInteger(launch) && launch < 65535 ? launch + 1 : null;
+      note('launcher-spawn', launch); return launch;
+    },
+    owner() { return launch; },
+    method(value) { return methods.has(value) ? value : null; },
+    exit(owner, code, signal) {
+      note('launcher-exit', owner, () => ({
+        code: Number.isSafeInteger(code) && code >= -2147483648 && code <= 4294967295 ? code : null,
+        signal: signals.has(signal) ? signal : null,
+      }));
+    },
+    error(owner, error) {
+      note('launcher-error', owner, () => {
+        const code = Object.getOwnPropertyDescriptor(error ?? {}, 'code')?.value;
+        return { code: codes.has(code) ? code : null };
+      });
+    },
+    closed(owner, pending) {
+      note('cdp-close', owner, () => {
+        const pendingMethods = [];
+        for (const entry of pending.values()) {
+          if (pendingMethods.length >= 8) break;
+          pendingMethods.push(methods.has(entry.method) ? entry.method : null);
+        }
+        return { pendingCount: Math.min(pending.size, 65535), pendingMethods,
+          pendingMethodsCapped: pending.size > pendingMethods.length };
+      });
+    },
+    primary(error) {
+      note('primary-failure', launch, () => {
+        const message = Object.getOwnPropertyDescriptor(error ?? {}, 'message')?.value;
+        const method = typeof message === 'string' && message.startsWith('CDP command timed out: ')
+          ? message.slice('CDP command timed out: '.length) : null;
+        return { kind: message === 'CDP connection closed' ? 'cdp-closed' :
+          methods.has(method) ? 'cdp-timeout' : 'other', method: methods.has(method) ? method : null };
+      });
+    },
+    cleanup() { note('cleanup-started', launch); },
+    write() {
+      try {
+        const json = JSON.stringify({ schemaVersion: 1, events, eventsCapped, recordingFailed });
+        if (json.length <= 8192) process.stderr.write('CREATE_PAGE_PROCESS_DIAGNOSTIC ' + json + '\n');
+      } catch { /* Preserve the original error and exit status if diagnostics cannot be written. */ }
+    },
+  };
+}
+const processFailureObservation = createProcessFailureObservation();
 
 // Use an explicit, available port: electron-vite treats --inspect=0 as disabled.
 async function findFreeInspectorPort() {
@@ -323,6 +391,8 @@ async function startApp(fixture) {
       env,
     }
   );
+  const observationOwner = processFailureObservation.begin();
+  appProcess.on(errorMonitor, error => processFailureObservation.error(observationOwner, error));
   appProcessGroupId = appProcess.pid;
   appProcess.stdout.on('data', (chunk) => rememberAppLog(chunk, 'stdout'));
   appProcess.stderr.on('data', (chunk) => rememberAppLog(chunk, 'stderr'));
@@ -333,6 +403,7 @@ async function startApp(fixture) {
   }
   const exitedBeforeRenderer = new Promise((_, reject) => {
     appProcess.once('exit', (code, signal) => {
+      processFailureObservation.exit(observationOwner, code, signal);
       reject(
         new Error(
           `pnpm dev:mcp exited before CDP was ready (${code ?? signal ?? 'unknown'})\n` +
@@ -509,8 +580,10 @@ function installTaskTabObservation(browser, document, element, identity) {
 }
 
 class CdpClient {
-  constructor(socket) {
+  constructor(socket, failureObservation = null) {
     this.socket = socket;
+    this.failureObservation = failureObservation;
+    this.observationOwner = failureObservation?.owner() ?? null;
     this.nextId = 0;
     this.pending = new Map();
     this.listeners = new Map();
@@ -532,6 +605,7 @@ class CdpClient {
       }
     });
     socket.on('close', () => {
+      this.failureObservation?.closed(this.observationOwner, this.pending);
       for (const pending of this.pending.values()) {
         clearTimeout(pending.timer);
         pending.reject(new Error('CDP connection closed'));
@@ -546,7 +620,7 @@ class CdpClient {
       socket.once('open', resolve);
       socket.once('error', reject);
     });
-    return new CdpClient(socket);
+    return new CdpClient(socket, processFailureObservation);
   }
 
   on(method, listener) {
@@ -562,7 +636,7 @@ class CdpClient {
         this.pending.delete(id);
         reject(new Error(`CDP command timed out: ${method}`));
       }, timeoutMs);
-      this.pending.set(id, { resolve, reject, timer });
+      this.pending.set(id, { resolve, reject, timer, method: this.failureObservation?.method(method) ?? null });
       this.socket.send(JSON.stringify({ id, method, params }));
     });
   }
@@ -2659,11 +2733,13 @@ async function main() {
 
   } catch (error) {
     failure = error;
+    processFailureObservation.primary(error);
     await dumpRenderer(cdp, 'teams-create-page-failure');
     if (cdp) {
       try { await captureScreenshot(cdp, fixture, 'failure'); } catch { /* disconnected */ }
     }
   } finally {
+    processFailureObservation.cleanup();
     try {
       await cleanup(fixture);
     } catch (error) {
@@ -2695,5 +2771,6 @@ async function main() {
 main().catch(async (error) => {
   process.stderr.write(`${error instanceof Error ? error.stack : String(error)}\n`);
   process.stderr.write(`${appLogTail.slice(-40).join('\n')}\n`);
+  processFailureObservation.write();
   process.exitCode = 1;
 });
