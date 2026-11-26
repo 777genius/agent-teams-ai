@@ -42,7 +42,7 @@ function validPair() {
   return { predecessor, target, latest: target };
 }
 
-test('authenticates the exact public v2.18.7 to v2.19.0 pair and all installer, blockmap, and feed assets', () => {
+void test('authenticates the exact public v2.18.7 to v2.19.0 pair and all installer, blockmap, and feed assets', () => {
   const { predecessor, target, latest } = validPair();
   const evidence = verifyPublished219Pair(
     predecessor,
@@ -57,7 +57,7 @@ test('authenticates the exact public v2.18.7 to v2.19.0 pair and all installer, 
   assert.equal(evidence.target.tag, 'v2.19.0');
 });
 
-test('rejects a different predecessor, target, or tag commit', () => {
+void test('rejects a different predecessor, target, or tag commit', () => {
   const valid = validPair();
   assert.throws(() =>
     verifyPublished219Pair(
@@ -88,7 +88,7 @@ test('rejects a different predecessor, target, or tag commit', () => {
   );
 });
 
-test('rejects drafts, prereleases, a stale latest release, and altered asset metadata', () => {
+void test('rejects drafts, prereleases, a stale latest release, and altered asset metadata', () => {
   const valid = validPair();
   assert.throws(() =>
     verifyPublished219Pair(
@@ -161,7 +161,7 @@ test('rejects drafts, prereleases, a stale latest release, and altered asset met
   );
 });
 
-test('rejects byte changes even when the requested filename is unchanged', async () => {
+void test('rejects byte changes even when the requested filename is unchanged', async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'TEST-published-release-pair-'));
   const file = path.join(directory, 'fixture.bin');
   const bytes = Buffer.from('official installer bytes');
