@@ -254,6 +254,22 @@ describe('JsonScheduleRepository', () => {
       warnSpy.mockRestore();
     });
 
+    it('preserves a deletion while another repository instance updates a different schedule', async () => {
+      const first = makeSchedule({ id: 'first' });
+      const second = makeSchedule({ id: 'second' });
+      await repo.saveSchedule(first);
+      await repo.saveSchedule(second);
+
+      const other = new JsonScheduleRepository();
+      await Promise.all([
+        repo.deleteSchedule(first.id),
+        other.saveSchedule({ ...second, status: 'paused' }),
+      ]);
+
+      expect(await repo.getSchedule(first.id)).toBeNull();
+      expect((await repo.getSchedule(second.id))?.status).toBe('paused');
+    });
+
     it('handles concurrent saves without data loss', async () => {
       const promises = Array.from({ length: 5 }, (_, i) =>
         repo.saveSchedule(makeSchedule({ id: `sched-${i}` }))
@@ -261,8 +277,13 @@ describe('JsonScheduleRepository', () => {
       await Promise.all(promises);
 
       const schedules = await repo.listSchedules();
-      // At least some should be saved (atomic writes prevent corruption)
-      expect(schedules.length).toBeGreaterThan(0);
+      expect(schedules.map((schedule) => schedule.id).sort()).toEqual([
+        'sched-0',
+        'sched-1',
+        'sched-2',
+        'sched-3',
+        'sched-4',
+      ]);
     });
   });
 });

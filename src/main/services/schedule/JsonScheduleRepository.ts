@@ -9,6 +9,7 @@
  *     logs/{scheduleId}/{runId}.err  — stderr (max 16KB)
  */
 
+import { withFileLock } from '@main/services/team/fileLock';
 import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import { getSchedulesBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
@@ -59,22 +60,37 @@ export class JsonScheduleRepository implements ScheduleRepository {
   }
 
   async saveSchedule(schedule: Schedule): Promise<void> {
-    const schedules = await this.readSchedulesFile();
-    const idx = schedules.findIndex((s) => s.id === schedule.id);
-    if (idx >= 0) {
-      schedules[idx] = schedule;
-    } else {
-      schedules.push(schedule);
-    }
-    await this.writeSchedulesFile(schedules);
+    const filePath = this.schedulesFilePath;
+    // All schedule IDs share one JSON array; atomic rename alone cannot protect its read-modify-write.
+    await withFileLock(
+      filePath,
+      async () => {
+        const schedules = await this.readJsonFile<Schedule[]>(filePath, []);
+        const idx = schedules.findIndex((s) => s.id === schedule.id);
+        if (idx >= 0) {
+          schedules[idx] = schedule;
+        } else {
+          schedules.push(schedule);
+        }
+        await this.writeSchedulesFile(filePath, schedules);
+      },
+      { preventLiveOwnerTakeover: true }
+    );
   }
 
   async deleteSchedule(id: string): Promise<void> {
-    const schedules = await this.readSchedulesFile();
-    const filtered = schedules.filter((s) => s.id !== id);
-    if (filtered.length !== schedules.length) {
-      await this.writeSchedulesFile(filtered);
-    }
+    const filePath = this.schedulesFilePath;
+    await withFileLock(
+      filePath,
+      async () => {
+        const schedules = await this.readJsonFile<Schedule[]>(filePath, []);
+        const filtered = schedules.filter((s) => s.id !== id);
+        if (filtered.length !== schedules.length) {
+          await this.writeSchedulesFile(filePath, filtered);
+        }
+      },
+      { preventLiveOwnerTakeover: true }
+    );
     // Clean up runs and logs
     const runsFile = this.runsFilePath(id);
     await fs.promises.unlink(runsFile).catch(() => undefined);
@@ -139,8 +155,8 @@ export class JsonScheduleRepository implements ScheduleRepository {
     return this.readJsonFile<Schedule[]>(this.schedulesFilePath, []);
   }
 
-  private async writeSchedulesFile(schedules: Schedule[]): Promise<void> {
-    await atomicWriteAsync(this.schedulesFilePath, JSON.stringify(schedules, null, 2));
+  private async writeSchedulesFile(filePath: string, schedules: Schedule[]): Promise<void> {
+    await atomicWriteAsync(filePath, JSON.stringify(schedules, null, 2));
   }
 
   private async readRunsFile(scheduleId: string): Promise<ScheduleRun[]> {
