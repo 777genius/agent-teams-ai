@@ -208,6 +208,18 @@ describe('team budget composition - no live provider required', () => {
     await expect(guard('ptc-copy-1')).rejects.toThrow('TEAM_BUDGET_BLOCKED');
   });
 
+  it('fails closed when a generated project copy has no verified logical owner', async () => {
+    const { guard } = setup({ action: 'notify' });
+    await expect(guard(`ptc-${'a'.repeat(24)}`)).rejects.toThrow(
+      'TEAM_BUDGET_BLOCKED: Cannot verify project runtime ownership'
+    );
+  });
+
+  it('does not infer project-copy identity from a prefix alone', async () => {
+    const { guard } = setup({ action: 'notify' });
+    await expect(guard('ptc-native')).resolves.toBeUndefined();
+  });
+
   it('preserves good alias mappings and reports unreadable aliases without hiding the budget', async () => {
     registry.aliases.set('ptc-good', 'alpha');
     registry.failNames.add('ptc-bad');

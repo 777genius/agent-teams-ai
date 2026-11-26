@@ -1,3 +1,4 @@
+import { isProjectCopyName } from '@features/team-project-context/core';
 import { TeamProjectContextRegistry } from '@features/team-project-context/main';
 import { namedTeamId } from '@features/token-usage/contracts';
 import {
@@ -68,6 +69,11 @@ export function createTeamBudgetAdmission(
     const reader = read();
     // Admission is strict: never treat an unreadable runtime alias as a native team.
     const owner = await projectContexts().resolveOwnedExecutionAlias(teamName);
+    if (!owner && isProjectCopyName(teamName)) {
+      throw new Error(
+        `TEAM_BUDGET_BLOCKED: Cannot verify project runtime ownership for "${teamName}"`
+      );
+    }
     const logicalTeam = owner?.logicalTeamName ?? teamName;
     const settings = await reader.getBudgetSettings();
     if ((settings.teams?.[namedTeamId(logicalTeam)]?.onExceeded ?? 'notify') === 'notify') return;
