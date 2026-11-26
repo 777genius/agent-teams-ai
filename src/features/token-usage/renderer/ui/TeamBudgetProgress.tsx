@@ -6,8 +6,8 @@ import type { TokenUsageBudgetStatusDto } from '../../contracts';
 import type React from 'react';
 
 interface TeamBudgetProgressProps {
-  teamName: string;
-  status: TokenUsageBudgetStatusDto | null;
+  readonly teamName: string;
+  readonly status: TokenUsageBudgetStatusDto | null;
 }
 
 export function TeamBudgetProgress({

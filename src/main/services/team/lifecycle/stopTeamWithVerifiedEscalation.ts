@@ -7,6 +7,7 @@ import { getTeamsBasePath } from '@main/utils/pathDecoder';
 
 import { assertEscalatedStopConfirmed } from '../provisioning/TeamProvisioningOpenCodeRuntimeStopOutcome';
 import { TeamLaunchStateStore } from '../TeamLaunchStateStore';
+
 import {
   clearPendingOpenCodePromptDeliveriesForTeam,
   countLiveRecordedRuntimeHostsForTeam,

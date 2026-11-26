@@ -1,8 +1,8 @@
 import {
   LEGACY_COMBINED_TEAM_ID,
+  rawTeamName,
   teamIdentityLabel,
   teamIdForName,
-  rawTeamName,
 } from '../../contracts';
 
 import { keepOnlyMappedUsageEvents } from './attributionPolicy';

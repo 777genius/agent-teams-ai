@@ -6,6 +6,7 @@ import {
 } from '@features/token-usage/main';
 
 import { stopTeamWithVerifiedEscalation } from '../lifecycle/stopTeamWithVerifiedEscalation';
+
 import { TeamBudgetStopObserver } from './TeamBudgetStopObserver';
 
 import type {

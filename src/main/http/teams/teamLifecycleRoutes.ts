@@ -24,6 +24,7 @@ import {
   stopLogicalContexts,
   TeamTargetUnresolvedError,
 } from '@features/team-project-context/main';
+import { stopTeamWithVerifiedEscalation } from '@main/services/team/lifecycle/stopTeamWithVerifiedEscalation';
 import {
   clearPendingOpenCodePromptDeliveriesForTeam,
   countLiveRecordedRuntimeHostsForTeam,
@@ -34,7 +35,6 @@ import {
   releaseSharedRuntimeResourcesAfterStop,
   runTeamForceStopFlow,
 } from '@main/services/team/lifecycle/teamForceStopFlow';
-import { stopTeamWithVerifiedEscalation } from '@main/services/team/lifecycle/stopTeamWithVerifiedEscalation';
 import { reapCursorAgentLeadTreesForStoppedTeam } from '@main/services/team/lifecycle/teamLeadProcessTreeReap';
 import { validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 import { TeamLaunchStateStore } from '@main/services/team/TeamLaunchStateStore';
