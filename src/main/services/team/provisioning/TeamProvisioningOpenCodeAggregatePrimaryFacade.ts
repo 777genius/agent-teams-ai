@@ -14,6 +14,7 @@ import {
   retainSecondaryAggregateOwnership,
 } from './OpenCodeAggregatePrimaryIncarnation';
 import {
+  assertUnstartedOpenCodePrimaryAdmission,
   stopFailedOpenCodeAggregatePrimaryRelaunchCandidate as stopFailedOpenCodeAggregatePrimaryRelaunchCandidateHelper,
   stopUnretainableOpenCodePrimaryLane as stopUnretainableOpenCodePrimaryLaneHelper,
 } from './OpenCodeAggregatePrimaryLaneStopHelpers';
@@ -286,7 +287,6 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     const previousExpectedMembers = [...run.expectedMembers];
     const previousSecondaryLanes = [...run.mixedSecondaryLanes];
     const leadMemberName = this.getRunLeadName(run).trim().toLowerCase();
-
     const currentPrimaryRun = this.runtimeAdapterRunByTeam.get(teamName);
     const assertPrimaryRuntimeOwnerCurrent = (): void => {
       if (
@@ -314,7 +314,6 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       ],
     });
     assertRestartCurrent();
-    assertPrimaryRuntimeOwnerCurrent();
     if (localModelPreflight && !localModelPreflight.ok) {
       throw new Error(
         localModelPreflight.diagnostics[0] ??
@@ -350,6 +349,12 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     };
     const advancePrimaryIncarnation = (): void =>
       advanceOpenCodePrimaryIncarnation(run, restartLease, incarnationPorts);
+    const admit = () => this.assertRuntimeSpawnAllowed(teamName);
+    const assertSpawnAllowed = () =>
+      assertUnstartedOpenCodePrimaryAdmission(run, admit, assertRestartCurrent);
+    await admit();
+    assertRestartCurrent();
+    assertPrimaryRuntimeOwnerCurrent();
     await this.stopOpenCodeRuntimeAdapterTeam(teamName, run.runId);
     assertRestartCurrent();
     advancePrimaryIncarnation();
@@ -386,6 +391,7 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
 
     let primaryRelaunchResult: TeamRuntimeLaunchResult | null;
     try {
+      await assertSpawnAllowed();
       primaryRelaunchResult = await this.launchOpenCodeAggregatePrimaryLane({
         run,
         adapter,
@@ -452,6 +458,7 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       try {
         assertRestartCurrent();
         advancePrimaryIncarnation();
+        await assertSpawnAllowed();
         const rollbackResult = await this.launchOpenCodeAggregatePrimaryLane({
           run,
           adapter,

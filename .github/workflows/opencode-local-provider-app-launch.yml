@@ -12,6 +12,7 @@ on:
       - 'test/main/services/team/memberWorkSyncLiveHarness.ts'
       - 'test/workflows/runSupersession.mts'
       - 'scripts/prove-opencode-semantic-messaging.mjs'
+      - 'src/main/services/team/TeamProvisioningService.ts'
       - 'src/main/services/team/provisioning/**'
       - 'src/main/services/team/runtime/OpenCode*.ts'
       - 'src/main/services/team/opencode/**'

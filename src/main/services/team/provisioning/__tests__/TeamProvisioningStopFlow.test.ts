@@ -812,6 +812,7 @@ describe('team provisioning stop flow', () => {
           throw new Error('Stop settled before both cleanup branches started');
         }),
       ]);
+      await new Promise<void>((resolve) => setImmediate(resolve));
       expect(settled).toBe(false);
       expect(ports.cleanupRun).not.toHaveBeenCalled();
     } finally {

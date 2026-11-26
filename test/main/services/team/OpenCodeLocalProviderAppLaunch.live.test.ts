@@ -749,15 +749,15 @@ describe('OpenCode local provider fixture', () => {
       expect(close).not.toHaveBeenCalled();
       expect(() => assertPreviousLiveCaseSettled(owned)).toThrow('Previous case');
       setup.resolve();
-      await Promise.allSettled([...owned.pending.keys()]);
-      await Promise.resolve();
-      await Promise.resolve();
+      expect(owned.deferredReleasePromise).not.toBeNull();
+      await owned.deferredReleasePromise;
       expect(dispose).toHaveBeenCalledTimes(1);
       expect(close).toHaveBeenCalledTimes(1);
       expect(owned.cleanupFailed).toBe(true);
       expect(() => assertPreviousLiveCaseSettled(owned)).toThrow('Previous case');
     } finally {
       setup.resolve();
+      await owned.deferredReleasePromise;
       await Promise.allSettled([...owned.pending.keys()]);
       vi.useRealTimers();
       setClaudeBasePathOverride(previousRoot);
@@ -792,15 +792,15 @@ describe('OpenCode local provider fixture', () => {
       expect(close).not.toHaveBeenCalled();
 
       stop.resolve();
-      await Promise.allSettled([...owned.pending.keys()]);
-      await Promise.resolve();
-      await Promise.resolve();
+      expect(owned.deferredReleasePromise).not.toBeNull();
+      await owned.deferredReleasePromise;
       expect(stopCalls).toBe(2);
       expect(dispose).toHaveBeenCalledTimes(1);
       expect(close).toHaveBeenCalledTimes(1);
       expect(owned.cleanupFailed).toBe(true);
     } finally {
       stop.resolve();
+      await owned.deferredReleasePromise;
       await Promise.allSettled([...owned.pending.keys()]);
       vi.useRealTimers();
       await fs.rm(root, { recursive: true, force: true });
@@ -1167,6 +1167,7 @@ interface LocalProviderLiveCase {
   cleanupFinished: boolean;
   cleanupFailed: boolean;
   cleanupPromise: Promise<void> | null;
+  deferredReleasePromise: Promise<void> | null;
 }
 
 interface LocalProviderLiveCases {
@@ -1213,6 +1214,7 @@ function createLocalProviderLiveCase(tempDir: string): LocalProviderLiveCase {
     cleanupFinished: false,
     cleanupFailed: false,
     cleanupPromise: null,
+    deferredReleasePromise: null,
   };
 }
 
@@ -1448,7 +1450,11 @@ function cleanupLocalProviderLiveCase(
       errors.push(
         new Error(`Owned operations still pending: ${[...owned.pending.values()].join(', ')}`)
       );
-      deferOwnedLocalProviderResourceRelease(owned, isCurrentCase, [...owned.pending.keys()]);
+      owned.deferredReleasePromise = deferOwnedLocalProviderResourceRelease(
+        owned,
+        isCurrentCase,
+        [...owned.pending.keys()]
+      );
     } else {
       if (pendingBeforeSettle.length > 0 && owned.harness && owned.teamName) {
         const { svc } = owned.harness;
@@ -1468,7 +1474,11 @@ function cleanupLocalProviderLiveCase(
         errors.push(
           new Error(`Owned operations still pending: ${[...owned.pending.values()].join(', ')}`)
         );
-        deferOwnedLocalProviderResourceRelease(owned, isCurrentCase, [...owned.pending.keys()]);
+        owned.deferredReleasePromise = deferOwnedLocalProviderResourceRelease(
+          owned,
+          isCurrentCase,
+          [...owned.pending.keys()]
+        );
       } else {
         if (owned.harness) {
           const harness = owned.harness;
@@ -1477,7 +1487,12 @@ function cleanupLocalProviderLiveCase(
           if (owned.pending.size === 0 && owned.harness === harness) {
             owned.harness = null;
           } else if (owned.fakeServer) {
-            deferOwnedLocalProviderServerClose(owned, harness, disposal, owned.fakeServer);
+            owned.deferredReleasePromise = deferOwnedLocalProviderServerClose(
+              owned,
+              harness,
+              disposal,
+              owned.fakeServer
+            );
           }
         }
         if (owned.fakeServer && owned.pending.size === 0) {
@@ -1520,7 +1535,7 @@ function deferOwnedLocalProviderServerClose(
   harness: NonNullable<LocalProviderLiveCase['harness']>,
   disposal: Promise<void>,
   server: NonNullable<LocalProviderLiveCase['fakeServer']>
-): void {
+): Promise<void> {
   const closeServer = async () => {
     if (owned.fakeServer !== server) return;
     try {
@@ -1530,7 +1545,7 @@ function deferOwnedLocalProviderServerClose(
       console.error(`Deferred fake server close failed for ${owned.tempDir}`, error);
     }
   };
-  void disposal.then(
+  return disposal.then(
     async () => {
       if (owned.harness === harness) owned.harness = null;
       await closeServer();
@@ -1547,13 +1562,14 @@ function deferOwnedLocalProviderResourceRelease(
   owned: LocalProviderLiveCase,
   isCurrentCase: () => boolean,
   pending: Promise<unknown>[]
-): void {
-  void Promise.allSettled(pending)
+): Promise<void> {
+  return Promise.allSettled(pending)
     .then(async () => {
       await Promise.resolve();
       if (owned.pending.size > 0) {
-        deferOwnedLocalProviderResourceRelease(owned, isCurrentCase, [...owned.pending.keys()]);
-        return;
+        return deferOwnedLocalProviderResourceRelease(owned, isCurrentCase, [
+          ...owned.pending.keys(),
+        ]);
       }
 
       const errors: unknown[] = [];
@@ -1620,7 +1636,9 @@ async function stopAndVerifyOpenCodeTeam(
     !warningSpy ||
     console.warn !== warn ||
     (options.isCurrentCase && !options.isCurrentCase())
-  ) return;
+  ) {
+    return;
+  }
   for (let index = warningSpy.mock.calls.length - 1; index >= warningStart; index -= 1) {
     const rendered = warningSpy.mock.calls[index].map((part) => String(part)).join(' ');
     if (

@@ -592,15 +592,18 @@ describe(
           }
         }
       );
-      try {
-        await waitForLaunchMilestone(secondaryEntered, creating, 'secondary lane cleanup');
-        await new Promise<void>((resolve) => setImmediate(resolve));
-        expect(stoppingSettled).toBe(false);
-      } finally {
-        abortPrimaryWait();
-        releaseSecondary();
-        await settleLaunchOperationsWithin([creating, stopping], 5_000, 'secondary Stop cleanup');
-      }
+      await runWithLaunchDrain(
+        async () => {
+          await waitForLaunchMilestone(secondaryEntered, creating, 'secondary lane cleanup');
+          await new Promise<void>((resolve) => setImmediate(resolve));
+          expect(stoppingSettled).toBe(false);
+        },
+        () => {
+          abortPrimaryWait();
+          releaseSecondary();
+          return settleLaunchOperationsWithin([creating, stopping], 5_000, 'secondary Stop cleanup');
+        }
+      );
       await creating;
       expect(await stopping).toEqual({ status: 'rejected', reason: failure });
       expect(events).toEqual(['primary_failed', 'secondary_cleanup_settled', 'primary_retry']);
@@ -655,13 +658,16 @@ describe(
         }
       );
       let stopping: Promise<void> | undefined;
-      try {
-        await waitForLaunchMilestone(launchGate.entered, creating, 'the primary launch gate');
-        stopping = svc.stopTeam(teamName);
-      } finally {
-        launchGate.release();
-        await settleLaunchOperationsWithin([creating, stopping], 5_000, 'queued Stop lock');
-      }
+      await runWithLaunchDrain(
+        async () => {
+          await waitForLaunchMilestone(launchGate.entered, creating, 'the primary launch gate');
+          stopping = svc.stopTeam(teamName);
+        },
+        () => {
+          launchGate.release();
+          return settleLaunchOperationsWithin([creating, stopping], 5_000, 'queued Stop lock');
+        }
+      );
       await Promise.all([creating, stopping]);
       await waitForLaunchStateQueueIdle(svc, teamName);
       expect(progress.some((next) => next.state === 'ready')).toBe(false);
@@ -2058,6 +2064,92 @@ describe(
       expect(laneIndex.lanes['secondary:opencode:alice']).toBeUndefined();
       expect(svc.isTeamAlive(teamName)).toBe(true);
     });
+
+    it.each(['preflight', 'stop', 'rollback'] as const)(
+      'rechecks aggregate primary restart admission at %s',
+      async (boundary) => {
+        const teamName = `pure-opencode-budget-restart-${boundary}`;
+        const adapter = new FakeOpenCodeRuntimeAdapter();
+        const svc = new TeamProvisioningService();
+        svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
+        await svc.createTeam(
+          {
+            teamName,
+            cwd: projectPath,
+            providerId: 'opencode',
+            model: 'xai/grok-4.5',
+            skipPermissions: true,
+            members: [
+              {
+                name: 'tom',
+                role: 'Same-model teammate',
+                providerId: 'opencode',
+                model: 'xai/grok-4.5',
+              },
+              {
+                name: 'alice',
+                role: 'Side-lane teammate',
+                providerId: 'opencode',
+                model: 'zai-coding-plan/glm-5.1',
+              },
+            ],
+          },
+          () => undefined
+        );
+        let exceeded = false;
+        const admit = vi
+          .spyOn(
+            svc as unknown as { assertRuntimeSpawnAllowed(teamName: string): Promise<void> },
+            'assertRuntimeSpawnAllowed'
+          )
+          .mockImplementation(async () => {
+            if (exceeded) throw new Error('TEAM_BUDGET_BLOCKED');
+          });
+        const preflight: NonNullable<TeamLaunchRuntimeAdapter['preflightLocalModels']> =
+          async () => {
+            if (boundary === 'preflight') exceeded = true;
+            return { ok: true, warnings: [], diagnostics: [] };
+          };
+        Object.assign(adapter, { preflightLocalModels: preflight });
+        if (boundary === 'stop') {
+          const originalStop = adapter.stop.bind(adapter);
+          vi.spyOn(adapter, 'stop').mockImplementation(async (input) => {
+            const result = await originalStop(input);
+            if (input.laneId === 'primary') exceeded = true;
+            return result;
+          });
+        }
+        if (boundary === 'rollback') {
+          const originalLaunch = adapter.launch.bind(adapter);
+          adapter.failNextPrimaryLaunch('primary candidate failed');
+          vi.spyOn(adapter, 'launch').mockImplementation(async (input) => {
+            try {
+              return await originalLaunch(input);
+            } catch (error) {
+              exceeded = true;
+              throw error;
+            }
+          });
+        }
+        const primaryLaunchCount = () =>
+          adapter.launchInputs.filter((input) => input.laneId === 'primary').length;
+        const beforeLaunch = primaryLaunchCount();
+        const beforeStop = adapter.stopInputs.length;
+        try {
+          await expect(svc.restartMember(teamName, 'tom')).rejects.toThrow('TEAM_BUDGET_BLOCKED');
+          expect(exceeded).toBe(true);
+          expect(primaryLaunchCount() - beforeLaunch).toBe(boundary === 'rollback' ? 1 : 0);
+          if (boundary === 'preflight') {
+            expect(adapter.stopInputs).toHaveLength(beforeStop);
+            expect(svc.isTeamAlive(teamName)).toBe(true);
+          }
+        } finally {
+          admit.mockRestore();
+          await svc.stopTeam(teamName);
+          await waitForLaunchStateQueueIdle(svc, teamName);
+        }
+      }
+    );
 
     it('restores the original OpenCode primary lane when member restart relaunch fails', async () => {
       const teamName = 'pure-opencode-primary-restart-rollback-safe-e2e';
@@ -23233,6 +23325,23 @@ class BlockingOpenCodeRuntimeAdapter extends FakeOpenCodeRuntimeAdapter {
   }
 }
 
+async function runWithLaunchDrain(
+  action: () => Promise<void>,
+  drain: () => Promise<void>
+): Promise<void> {
+  try {
+    await action();
+  } catch (error) {
+    try {
+      await drain();
+    } catch (drainError) {
+      throw new AggregateError([error, drainError], 'Launch assertion and drain failed');
+    }
+    throw error;
+  }
+  await drain();
+}
+
 async function settleLaunchOperationsWithin(
   operations: readonly (Promise<unknown> | undefined)[],
   timeoutMs: number,
@@ -23262,7 +23371,7 @@ async function waitForLaunchMilestone(
   milestone: Promise<void>,
   creating: Promise<unknown>,
   description: string,
-  timeoutMs = LAUNCH_MATRIX_SAFE_E2E_TIMEOUT_MS
+  timeoutMs = LAUNCH_MATRIX_SAFE_E2E_TIMEOUT_MS - 10_000
 ): Promise<void> {
   let timeout: ReturnType<typeof setTimeout> | undefined;
   try {
