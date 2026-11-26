@@ -53,7 +53,7 @@ jobs:
       - name: Verify exact public v2.18.7 to v2.19.0 release identities and updater URLs
         env:
           GH_TOKEN: ${{ github.token }}
-        run: node scripts/e2e/release-updater/verify-published-release-pair.mts
+        run: pnpm exec tsx scripts/e2e/release-updater/verify-published-release-pair.mts
       - name: Diagnose actual read-only token visibility of the existing draft
         env:
           GH_TOKEN: ${{ github.token }}
