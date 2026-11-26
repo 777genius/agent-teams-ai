@@ -19,6 +19,7 @@ export interface AttentionTaskCandidate {
   taskId: string;
   displayId?: string;
   subject: string;
+  owner?: string;
   requestedAt: string | null;
   projectPath?: string;
 }

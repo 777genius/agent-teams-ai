@@ -441,7 +441,10 @@ export const NotificationsSection = ({
           backgroundColor: 'var(--color-surface-raised)',
         }}
       >
-        <div className="grid grid-cols-1 gap-x-6">
+        <div
+          className="grid gap-x-6"
+          style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 32rem), 1fr))' }}
+        >
           <SettingRow
             wrapControls
             label={t('notifications.team.leadInbox.label')}
@@ -562,6 +565,7 @@ export const NotificationsSection = ({
             )}
           </SettingRow>
           <SettingRow
+            wrapControls
             label={t('notifications.team.toolApproval.label')}
             description={t('notifications.team.toolApproval.description')}
             icon={<ShieldQuestion className="size-4" />}
@@ -576,7 +580,7 @@ export const NotificationsSection = ({
             </span>
           </SettingRow>
           {/* Task Status Change Notifications — nested within team card */}
-          <div className="*:last:border-b-0 lg:col-span-2">
+          <div className="*:last:border-b-0" style={{ gridColumn: '1 / -1' }}>
             <SettingRow
               wrapControls
               label={t('notifications.team.statusChange.label')}
