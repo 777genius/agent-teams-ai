@@ -1326,7 +1326,7 @@ async function hasNoOpenCodeRuntimeLanes(
   }
   // The production reader quarantines malformed indexes and removes lanes.json.
   // A missing canonical file is not proof of cleanup if that evidence was quarantined.
-  const quarantinedIndexes = runtimeFiles.filter((name) => /^lanes\\.invalid\\.\\d+\\.json$/.test(name));
+  const quarantinedIndexes = runtimeFiles.filter((name) => /^lanes\.invalid\.\d+\.json$/.test(name));
   if (quarantinedIndexes.length > 0) {
     throw new Error(
       `Quarantined OpenCode lane index: ${quarantinedIndexes.join(', ')} in ${runtimeDirectory}`
