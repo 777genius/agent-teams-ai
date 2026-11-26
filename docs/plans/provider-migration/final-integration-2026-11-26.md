@@ -22,8 +22,9 @@ Stage 2, default activation and paid-provider testing are outside this work.
    TypeScript 7 and source/architecture guards. Independently review both fixes.
    Record native runtime results separately from finite local checks.
 5. Publish the existing child, consolidate it into #982 and verify the merged
-   tree. Complete runtime #233 and verified dependency delivery without changing
-   provenance or treating queued, skipped or failed checks as successful.
+   tree. Qualify the selected Host against the existing verified runtime assets;
+   keep separate legacy-runtime maintenance outside this acceptance boundary.
+   Never treat queued, skipped or failed checks as successful.
 
 ## Scope decision
 
@@ -81,16 +82,29 @@ remaining platform evidence.
   preceding exact source passed the complete 145-case restart file locally and
   native custody in CI. Current Windows qualification remains distinct.
 
-## Remaining dependency boundary
+## Verified dependency boundary
 
-The app still consumes runtime 0.0.161. Source draft 459500689 for 0.0.162 is
-saved with target `6021bfb3a40cbe7dfb1f322ebd03937a51f030c2`, but the remote
-tag and binary release do not exist yet. Creating the immutable tag and starting
-release workflows awaits the required owner authorization. After real artifact
-qualification and approved publication, update `runtime.lock.json`, the current
-stopped producer and its CI assertion together; retain historical donor pins.
-The release manifest, archive hashes and support provenance must be actual
-verified delivery data. Keep #982 open and unmerged into main throughout.
+The existing published runtime 0.0.161 is sufficient for this Host integration.
+Keep `runtime.lock.json`, the current stopped-producer version/archive hash and
+its CI assertion unchanged. Runtime 0.0.162, its tag/publication and the old
+orchestrator CI are not acceptance gates for #982.
+
+The selected Host starts its own entry under pinned Node 24.21.0 through
+`CapturedHostClient`. The existing runtime archive supplies verified Bun and
+embedded OpenCode 2.1.4 assets; `prepare-opencode-v2-native.ts` explicitly never
+executes `cli.js`. `OpenCodeV2EmbeddedChild` imports the verified embedded graph
+directly. The Host has its own authless-loopback policy and 1 GiB native-selector
+identity bound. The separate old CLI's Windows OpenCode 2.4.2 file-size and
+authless-admission fixes do not change these Host dependencies.
+
+The stopped legacy-import proof deliberately captures the original frontend
+producer 0.0.161. Retained legacy sources continue to use their original runtime;
+updating that separate path is outside this task. The 17 Desktop scenarios and
+P7 use their existing pinned provider tuple, not a new orchestrator release.
+Final platform acceptance also includes Retained OpenCode V1/Host V2 original
+Desktop and Codex login Desktop, with their original schedule/history controls.
+Complete one final app source cohort and preserve all original receipt checks.
+Keep #982 open and unmerged into main throughout.
 
 ## Accepted Create and custom-project navigation
 
@@ -152,13 +166,11 @@ a bounded V8 heap. The upstream template-picker readiness fix remains present.
 Runtime follow-up #234 is now merged at
 `b47fbce22748602b9002219f8b4c25ae4ba00ea6`. Its fixture grows the same owned
 installer-size file and clears the prior tail, preserving every original byte
-layout, full hash and the 15-second deadline. Current Windows qualification is
-pending. Any eventual runtime tag and delivery manifest must bind the qualified
-current runtime commit; the earlier source draft target is not automatically
-updated by that merge. Runtime 0.0.161 remains pinned until actual 0.0.162
-delivery is qualified and published. All 17 Stage 1 Desktop lanes, P7 and the
-mandatory current-source gates remain required; #982 stays open and unmerged.
-
+layout, full hash and the 15-second deadline. This is separate legacy-runtime
+maintenance. The unpublished preparation draft targets that exact commit, but
+its qualification or publication is not needed for #982. Preserve runtime
+0.0.161 and the original stopped-producer pins for this Host integration.
+The current app/Host platform gates remain required; #982 stays unmerged.
 
 ## Windows TEST admission barrier publication
 
