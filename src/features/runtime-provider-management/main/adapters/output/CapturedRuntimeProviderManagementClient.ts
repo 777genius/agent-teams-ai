@@ -106,7 +106,13 @@ export function createCapturedRuntimeProviderManagementClient(
     // explicit limits-editor test sends proposed values before they are saved.
     new CapturedModelProbe(selectedCapture, undefined, deps.captureClaude);
   const probes = createProbe(deps.capture);
-  const modelCatalogReads = new Map<string, ReturnType<CapturedProviderManagement['request']>>();
+  const modelCatalogReads = new Map<
+    string,
+    {
+      origin: CapturedProviderManagement;
+      promise: ReturnType<CapturedProviderManagement['request']>;
+    }
+  >();
   const readModelCatalog = async (target: CapturedProviderManagement, providerId: string) => {
     if (!target.isCurrent()) throw new Error('Provider catalog context changed');
     // Separate UI subscribers may share only this still-pending, fully bound native read.
@@ -118,12 +124,13 @@ export function createCapturedRuntimeProviderManagementClient(
       providerId,
     ]);
     let pending = modelCatalogReads.get(key);
-    if (!pending) {
-      pending = target.request('catalog', { providerId });
+    // A descriptor can return after navigation while its original capture remains retired.
+    if (!pending || !pending.origin.isCurrent()) {
+      pending = { origin: target, promise: target.request('catalog', { providerId }) };
       modelCatalogReads.set(key, pending);
     }
     try {
-      const raw = await pending;
+      const raw = await pending.promise;
       if (!target.isCurrent()) throw new Error('Provider catalog context changed');
       return raw;
     } finally {

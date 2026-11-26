@@ -2,6 +2,7 @@
 import { expect, it, vi } from 'vitest';
 
 import { CapturedRuntimeSourceError } from '../../../src/features/agent-backend/main';
+import { captureProviderManagement } from '../../../src/features/agent-backend/main/infrastructure/CapturedProviderManagement';
 import { parseManagementCatalog } from '../../../src/features/runtime-provider-management/main/adapters/output/capturedManagementCatalog';
 import * as managementPreferences from '../../../src/features/runtime-provider-management/main/adapters/output/capturedManagementPreferences';
 import { createCapturedRuntimeProviderManagementClient } from '../../../src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderManagementClient';
@@ -355,6 +356,84 @@ it('shares only an in-flight captured model catalog while keeping each subscribe
     await Promise.allSettled([first, second]);
   }
 });
+
+it.each(['retired', 'current'] as const)(
+  'starts a fresh same-key catalog after navigation with the %s request settling first',
+  async (settlesFirst) => {
+    const f = fixture();
+    let selection = {};
+    let draining = false;
+    const releases: (() => void)[] = [];
+    const targets: CapturedProviderManagement[] = [];
+    const request = vi.fn(async (method: string, payload?: JsonValue): Promise<JsonValue> => {
+      expect(method).toBe('management.catalog');
+      expect(payload).toEqual({ ...binding, providerId: 'TEST-provider' });
+      if (!draining) await new Promise<void>((resolve) => releases.push(resolve));
+      return f.target.request('catalog', { providerId: 'TEST-provider' });
+    });
+    const capture = vi.fn(async () => {
+      const originalSelection = selection;
+      const target = captureProviderManagement({
+        ...binding,
+        targetId: f.target.targetId,
+        client: { request },
+        start: async () => undefined,
+        ownerAvailable: () => true,
+        foregroundCurrent: () => originalSelection === selection,
+      });
+      targets.push(target);
+      return target;
+    });
+    const port = createCapturedRuntimeProviderManagementClient({ capture });
+    const input = { runtimeId: 'opencode' as const, providerId: 'TEST-provider' };
+    const retired = port.loadModels(input);
+    const pending = [retired];
+    try {
+      await vi.waitFor(() => expect(request).toHaveBeenCalledTimes(1));
+      // Registry selections never revive on A -> B -> A, although descriptor identity does.
+      selection = {};
+      const current = port.loadModels(input);
+      pending.push(current);
+      await vi.waitFor(() => expect(request).toHaveBeenCalledTimes(2));
+      expect(targets[0].isCurrent()).toBe(false);
+      expect(targets[1].isCurrent()).toBe(true);
+      expect(targets[0].targetId).toBe(targets[1].targetId);
+      releases[settlesFirst === 'retired' ? 0 : 1]();
+      if (settlesFirst === 'retired') {
+        expect((await retired).models).toBeUndefined();
+      } else {
+        expect((await current).models?.models).toEqual([
+          expect.objectContaining({ modelId: 'TEST-provider/TEST-model' }),
+        ]);
+      }
+      const next = port.loadModels(input);
+      pending.push(next);
+      await vi.waitFor(() => expect(capture).toHaveBeenCalledTimes(3));
+      if (settlesFirst === 'retired') {
+        // The retired request's finally must leave the replacement pending entry intact.
+        expect(request).toHaveBeenCalledTimes(2);
+        releases[1]();
+        expect((await current).models?.models).toHaveLength(1);
+      } else {
+        // Completed responses are not cached; an old finally cannot delete this new read.
+        await vi.waitFor(() => expect(request).toHaveBeenCalledTimes(3));
+        releases[0]();
+        expect((await retired).models).toBeUndefined();
+        const joining = port.loadModels(input);
+        pending.push(joining);
+        await vi.waitFor(() => expect(capture).toHaveBeenCalledTimes(4));
+        expect(request).toHaveBeenCalledTimes(3);
+        releases[2]();
+        expect((await joining).models?.models).toHaveLength(1);
+      }
+      expect((await next).models?.models).toHaveLength(1);
+    } finally {
+      draining = true;
+      for (const release of releases) release();
+      await Promise.allSettled(pending);
+    }
+  }
+);
 
 it.each(['targetId', 'profileId', 'configRevision', 'providerId'] as const)(
   'does not share a captured model read across changed %s',

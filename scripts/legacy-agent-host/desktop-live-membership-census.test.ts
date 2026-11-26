@@ -175,20 +175,23 @@ async function originalRelease(f: ReturnType<typeof fixture>, calls: string[], s
 }
 
 async function originalRestart(releasedEpoch: () => Promise<void>, calls: string[]) {
+  const projectSelection = { bindingCapture: Object.freeze({ logicalHandleId: 'TEST-original-handle',
+    executionHandleId: 'TEST-original-execution', original: Object.freeze([]) }) };
   const source = await readFile(new URL('./desktop-live-membership-ui-smoke.ts', import.meta.url), 'utf8');
   const begin = '    cdp = await options.restartSameProfile(handleId, async () => {', end = '    assert.ok(afterQuitProbes);';
   assert.equal(source.split(begin).length, 2); assert.equal(source.split(end).length, 2);
   const actual = stripTypeScriptTypes(source.slice(source.indexOf(begin), source.indexOf(end)));
   const run = Function('environment', `return (async () => {
-    const {assert,options,releasedEpoch,probeLedger,beforeQuitProbes,proof,disposeReadObservations,armMetadataCensus}=environment;
+    const {assert,options,releasedEpoch,probeLedger,beforeQuitProbes,proof,disposeReadObservations,armMetadataCensus,projectSelection}=environment;
     let cdp,afterQuitProbes,host,lineage,metadataBirths=[],epochCensuses=[];
     const handleId='TEST-original-handle',metadataCensus={assertHealthy(){}};
     ${actual}
   })();`) as (environment: Record<string, unknown>) => Promise<void>;
-  await run({ assert, releasedEpoch, beforeQuitProbes: [], proof: {},
+  await run({ assert, releasedEpoch, projectSelection, beforeQuitProbes: [], proof: {},
     probeLedger: async () => { calls.push('original-probe-ledger'); return []; },
     disposeReadObservations: () => calls.push('dispose-original'), armMetadataCensus: () => calls.push('arm-cold'),
-    options: { capturedGroup: () => 2, restartSameProfile: async (handleId: string, afterQuit: () => Promise<void>) => {
+    options: { capturedGroup: () => 2, restartSameProfile: async (handleId: string, afterQuit: () => Promise<void>, createdProject: unknown) => {
+      assert.equal(createdProject, projectSelection.bindingCapture);
       assert.equal(handleId, 'TEST-original-handle'); calls.push('original-Quit'); await afterQuit(); calls.push('cold-spawn');
     } },
   });
