@@ -89,7 +89,8 @@ inline void waitAdmissionBarrier(const wchar_t* suffix) {
   const auto release=admissionPath+suffix;
   for(;;) {
     checkAdmissionDeadline();
-    HANDLE file=CreateFileW(release.c_str(),GENERIC_READ,FILE_SHARE_READ,nullptr,OPEN_EXISTING,
+    // The renamed nonce is visible before the publisher closes its DELETE handle.
+    HANDLE file=CreateFileW(release.c_str(),GENERIC_READ,FILE_SHARE_READ|FILE_SHARE_DELETE,nullptr,OPEN_EXISTING,
       FILE_ATTRIBUTE_NORMAL,nullptr);
     if(file!=INVALID_HANDLE_VALUE) {
       char actual[37]{}; DWORD count=0;
