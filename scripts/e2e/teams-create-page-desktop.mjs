@@ -1356,6 +1356,35 @@ async function openCreateTemplatePicker(client, label) {
   }
 }
 
+// Wait for Radix to own focus before sending Escape. Hydrated options alone
+// do not prove that the newly opened dialog can receive native keyboard input.
+async function dismissCreateTemplatePicker(client, label) {
+  const dismissed = `!${templatePickerRoot}`;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    if (await client.evaluate(dismissed)) return;
+    await client.waitFor(`(() => {
+      const picker = ${templatePickerRoot};
+      const dialog = picker?.closest('[role="dialog"]');
+      return !picker || Boolean(dialog?.contains(document.activeElement) &&
+        !dialog.getAnimations({ subtree: true }).some(animation => animation.playState === 'running'));
+    })()`, `${label}: picker ready for Escape`, 15_000);
+    if (await client.evaluate(dismissed)) return;
+    await client.send('Input.dispatchKeyEvent', {
+      type: 'rawKeyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27,
+    });
+    await client.send('Input.dispatchKeyEvent', {
+      type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27,
+    });
+    try {
+      await client.waitFor(dismissed, `${label}: picker dismissed`, 3_500);
+      return;
+    } catch (error) {
+      if (await client.evaluate(dismissed)) return;
+      if (attempt === 2) throw error;
+    }
+  }
+}
+
 // The template button remains clickable while the four persisted drafts load.
 // The picker itself disables its options until all drafts have hydrated.
 // Verify the real renderer gate, then dismiss it without changing the draft.
@@ -1369,13 +1398,7 @@ async function waitForCreateTemplateHydration(client, label) {
     "document.querySelector('[data-testid=create-team-template-picker] [data-testid=create-template-option-none]')?.disabled === false",
     label, 45_000
   );
-  await client.send('Input.dispatchKeyEvent', {
-    type: 'rawKeyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27,
-  });
-  await client.send('Input.dispatchKeyEvent', {
-    type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27,
-  });
-  await client.waitFor(`!${templatePickerRoot}`, `${label}: picker dismissed`);
+  await dismissCreateTemplatePicker(client, label);
 }
 
 async function main() {
@@ -2108,13 +2131,7 @@ async function main() {
       "document.querySelector('#team-prompt')?.value?.includes('Coordinate a small software product team.')",
       'applied built-in prompt retained in editable form'
     );
-    await cdp.send('Input.dispatchKeyEvent', {
-      type: 'rawKeyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27,
-    });
-    await cdp.send('Input.dispatchKeyEvent', {
-      type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27,
-    });
-    await cdp.waitFor(`!${templatePickerRoot}`, 'verified template picker dismissed');
+    await dismissCreateTemplatePicker(cdp, 'verified template picker');
     await captureScreenshot(cdp, fixture, 'template-confirmed');
 
     log('create from actual Organization Map and verify native placement');
