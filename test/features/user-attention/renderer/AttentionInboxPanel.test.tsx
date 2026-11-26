@@ -69,6 +69,23 @@ afterEach(() => {
 });
 
 describe('AttentionInboxPanel renderer', () => {
+  it('shows and announces the assigned member without changing ownerless labels', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+    await act(async () => root.render(
+      <AttentionInboxPanel variant="full" model={{ ...model, tasks: [{ ...tasks[0], owner: 'team-lead' }, tasks[1]], taskCount: 2 }}
+        loading={false} error={null} onOpenTask={onOpenTask} onOpenChat={onOpenChat} onRetry={onRetry} />
+    ));
+    expect(host.textContent).toContain('lead');
+    const rows = host.querySelectorAll('[aria-label^="attention.openTask"]');
+    expect(rows[0].getAttribute('aria-label')).toBe('attention.openTask · lead');
+    expect(rows[1].getAttribute('aria-label')).toBe('attention.openTask');
+    expect(rows[0].querySelector('img')?.getAttribute('alt')).toBe('');
+    await act(async () => root.unmount());
+  });
+
   it('shows a full-page filter dialog beside search, not on the Dashboard', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');

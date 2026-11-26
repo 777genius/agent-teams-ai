@@ -78,7 +78,7 @@ export function filterAttentionEntries(
   return {
     tasks: filters.type === 'chats' ? [] : (model?.tasks ?? []).filter((task) =>
       teamMatches(task) && waitingMatches(task.requestedAt) &&
-      matches(task.subject, task.teamName, task.teamDisplayName)),
+      matches(task.subject, task.teamName, task.teamDisplayName, task.owner)),
     chats: filters.type === 'tasks' ? [] : (model?.chats ?? []).filter((chat) =>
       teamMatches(chat) &&
       (filters.conversation === 'all' || chat.scope.kind === filters.conversation) &&

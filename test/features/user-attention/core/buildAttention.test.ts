@@ -37,6 +37,7 @@ describe('Attention Inbox pure domain', () => {
       status: 'in_progress',
       needsClarification: 'user',
       clarificationRequestedAt: '2026-11-23T11:00:00Z',
+      owner: i === 0 ? 'maya' : undefined,
     }));
     tasks.push(
       { id: 'lead', subject: 'Lead', status: 'pending', needsClarification: 'lead' },
@@ -47,6 +48,8 @@ describe('Attention Inbox pure domain', () => {
     expect(candidates).toHaveLength(520);
     expect(candidates[519].taskId).toBe('task-519');
     expect(candidates[0].requestedAt).toBe('2026-11-23T11:00:00Z');
+    expect(candidates[0].owner).toBe('maya');
+    expect(candidates[1].owner).toBeUndefined();
   });
 
   it('keeps direct user messages and explicit group mentions, not agent chatter or group copies', () => {

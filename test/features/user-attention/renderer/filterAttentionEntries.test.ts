@@ -72,6 +72,15 @@ describe('full Attention Inbox filter policy', () => {
     }
   });
 
+  it('searches task owners without changing the source task identity', () => {
+    const owned: AttentionModel = {
+      ...model,
+      tasks: [{ ...model.tasks[0], owner: 'alice' }, model.tasks[1], model.tasks[2]],
+    };
+    expect(filterAttentionEntries(owned, DEFAULT_ATTENTION_FILTERS, 'alice', now).tasks)
+      .toEqual([owned.tasks[0]]);
+  });
+
   it('excludes unknown dates only when filtering by task wait duration', () => {
     expect(filtered({ waiting: 'day' }).tasks.map((task) => task.taskId))
       .toEqual(['old']);
