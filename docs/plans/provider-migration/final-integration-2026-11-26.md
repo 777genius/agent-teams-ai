@@ -61,6 +61,21 @@ remaining platform evidence.
   including the final canonical retry's Host prebuild. No compiler diagnostic
   or full typecheck success is claimed. The earlier successful Host build and
   focused tests are separate completed invocations.
+- A later bounded-memory Host build and 10 supplemental TypeScript projects
+  passed. The root graph and Host test graph still terminated without a result.
+  Windows Creation CI on child `0043bc8` then identified two TS2532 errors in
+  the new prompt assertions; its TypeScript inputs match integration `25322a4`.
+  Guard the optional `savedSettings` in both assertions. A missing prompt still
+  fails the same exact-value assertion. Independent review, final fast lint,
+  format and whitespace checks passed. Subsequent local dialog and canonical
+  typecheck attempts were killed before a verdict; the preceding 19-test success
+  does not qualify this revised test file.
+- Each of the four existing safe offline-frontend shards was attempted once
+  with the original exclusions and test deadline. The first completed nine
+  files (787 passing tests and one skipped test) before SIGKILL; the other three
+  terminated before a file verdict. No complete shard or complete suite passed.
+  Official Node 26.12.1, the Node 24.21.0 Host runtime, MCP build and the canonical
+  Node SQLite rebuild were prepared and verified; Electron SQLite was unchanged.
 - Runtime #233 is merged at `6021bfb3a40cbe7dfb1f322ebd03937a51f030c2`.
   The final test-only stdin change passed 17 affected synthetic cases; the
   preceding exact source passed the complete 145-case restart file locally and
