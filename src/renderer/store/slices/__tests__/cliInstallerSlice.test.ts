@@ -8,6 +8,7 @@ import {
 import { describe, expect, it, vi } from 'vitest';
 import { createStore } from 'zustand/vanilla';
 
+import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
 import type { CliInstallerSlice } from '@renderer/store/slices/cliInstallerSlice';
 import type { ElectronAPI } from '@shared/types/api';
 import type {
@@ -540,6 +541,13 @@ describe('OpenCode runtime rejection state', () => {
 });
 
 describe('provider status loading ownership', () => {
+  async function waitForCompletion(promise: Promise<unknown>): Promise<void> {
+    const completed = vi.fn();
+    void promise.then(completed, completed);
+    await vi.waitFor(() => expect(completed).toHaveBeenCalledTimes(1));
+    await promise;
+  }
+
   function pendingStatusStore() {
     const store = createCliInstallerStore();
     const previousApi = window.electronAPI;
@@ -742,7 +750,7 @@ describe('provider status loading ownership', () => {
         expect(fixture.getProviderStatus).toHaveBeenCalledTimes(2);
         expect(fixture.getProviderStatus).toHaveBeenNthCalledWith(2, 'codex');
         fixture.responses[1].resolve(codexReady);
-        await refresh;
+        await waitForCompletion(refresh);
         expect(fixture.store.getState().cliProviderStatusLoading.opencode).not.toBe(true);
         expect(fixture.store.getState().cliStatus?.authStatusChecking).toBe(false);
 
@@ -771,9 +779,10 @@ describe('provider status loading ownership', () => {
         expect(fixture.store.getState().cliProviderStatusLoading.opencode).not.toBe(true);
         expect(fixture.store.getState().cliStatus?.authStatusChecking).toBe(false);
       } finally {
+        fixture.getProviderStatus.mockResolvedValue(codexReady);
         fixture.responses[1]?.resolve(codexReady);
         try {
-          await refresh;
+          if (refresh) await waitForCompletion(refresh);
         } finally {
           await fixture.cleanup();
         }
@@ -817,7 +826,7 @@ describe('provider status loading ownership', () => {
         refresh = refreshCodexProviderStatusAfterRuntimeInstall(fixture.store.getState);
         await vi.waitFor(() => expect(fixture.getProviderStatus).toHaveBeenCalledTimes(1));
         fixture.responses[0].resolve(codexReady);
-        await refresh;
+        await waitForCompletion(refresh);
         expect(fixture.store.getState().cliStatusLoading).toBe(false);
         const currentRead = successor ? fixture.store.getState().fetchCliStatus() : null;
         if (currentRead) metadataReads.push(currentRead);
@@ -833,16 +842,227 @@ describe('provider status loading ownership', () => {
         }
         expect(fixture.store.getState().cliStatusLoading).toBe(false);
       } finally {
+        fixture.getProviderStatus.mockResolvedValue(codexReady);
         fixture.responses[0]?.resolve(codexReady);
         for (const resolve of metadataResponses) resolve(currentMetadata);
         try {
-          await Promise.all([...metadataReads, refresh]);
+          await waitForCompletion(Promise.all([...metadataReads, refresh]));
         } finally {
           await fixture.cleanup();
         }
       }
     }
   );
+
+  it.each([false, true])(
+    'publishes Codex install invalidation errors only for the current epoch: superseded=%s',
+    async (superseded) => {
+      const fixture = pendingStatusStore();
+      const invalidateStatus = vi.mocked(window.electronAPI!.cliInstaller.invalidateStatus);
+      let rejectInvalidation!: (error: Error) => void;
+      let resolveInvalidation!: () => void;
+      const acknowledgement = new Promise<void>((resolve, reject) => {
+        resolveInvalidation = resolve;
+        rejectInvalidation = reject;
+      });
+      invalidateStatus.mockReturnValueOnce(acknowledgement);
+      const installed: CodexRuntimeStatus = {
+        installed: true,
+        binaryPath: '/sandbox/TEST-codex-install/codex',
+        version: 'TEST-codex-runtime',
+        latestVersion: 'TEST-codex-runtime',
+        updateAvailable: false,
+        source: 'app-managed',
+        state: 'ready',
+      };
+      const currentOwnerError = 'TEST current backend error';
+      const currentStatus: CodexRuntimeStatus = {
+        ...installed,
+        version: 'TEST-current-backend-runtime',
+        error: currentOwnerError,
+      };
+      const runtime = {
+        install: vi.fn(async () => installed),
+        invalidateStatus: vi.fn(async () => undefined),
+        getStatus: vi.fn(async () => currentStatus),
+      };
+      Object.assign(window.electronAPI!, { codexRuntime: runtime });
+      let install: Promise<void> | undefined;
+      const error = new Error('TEST install invalidation rejected');
+      try {
+        install = fixture.store.getState().installCodexRuntime();
+        await vi.waitFor(() => expect(invalidateStatus).toHaveBeenCalledTimes(1));
+        expect(runtime.install).toHaveBeenCalledTimes(1);
+        expect(runtime.invalidateStatus).toHaveBeenCalledTimes(1);
+        expect(fixture.store.getState().codexRuntimeStatus).toBe(installed);
+        if (superseded) {
+          await fixture.store.getState().invalidateCliStatus();
+          await fixture.store.getState().fetchCodexRuntimeStatus();
+          expect(fixture.store.getState().codexRuntimeError).toBe(currentOwnerError);
+        }
+        rejectInvalidation(error);
+        await waitForCompletion(install);
+        expect(fixture.store.getState().codexRuntimeError).toBe(
+          superseded ? currentOwnerError : error.message
+        );
+        expect(fixture.store.getState().codexRuntimeStatus).toBe(
+          superseded ? currentStatus : installed
+        );
+        expect(fixture.store.getState().codexRuntimeStatusLoading).toBe(false);
+        expect(invalidateStatus).toHaveBeenCalledTimes(superseded ? 2 : 1);
+        expect(runtime.getStatus).toHaveBeenCalledTimes(superseded ? 1 : 0);
+        expect(fixture.getProviderStatus).not.toHaveBeenCalled();
+        expect(vi.mocked(console.warn).mock.calls).toEqual(
+          superseded
+            ? []
+            : [['[Store:cliInstaller]', 'Codex status refresh after installation failed:', error]]
+        );
+        vi.mocked(console.warn).mockClear();
+      } finally {
+        invalidateStatus.mockReset().mockResolvedValue(undefined);
+        const cleanupProvider: CliProviderStatus = {
+          ...fixture.ready('codex/cleanup', 'codex'),
+          availableBackends: [
+            {
+              id: 'codex-native',
+              label: 'TEST Codex cleanup',
+              description: 'TEST app-managed runtime',
+              available: true,
+              selectable: true,
+              recommended: true,
+            },
+          ],
+        };
+        fixture.getProviderStatus.mockResolvedValue(cleanupProvider);
+        resolveInvalidation();
+        for (const response of fixture.responses) {
+          response.resolve(cleanupProvider);
+        }
+        try {
+          if (install) await waitForCompletion(install);
+        } finally {
+          await fixture.cleanup();
+        }
+      }
+    }
+  );
+
+  it('publishes the current Codex install error from the second invalidation attempt', async () => {
+    vi.useFakeTimers();
+    const fixture = pendingStatusStore();
+    const invalidateStatus = vi.mocked(window.electronAPI!.cliInstaller.invalidateStatus);
+    let rejectRetry!: (error: Error) => void;
+    let resolveRetry!: () => void;
+    const retryAcknowledgement = new Promise<void>((resolve, reject) => {
+      resolveRetry = resolve;
+      rejectRetry = reject;
+    });
+    invalidateStatus.mockResolvedValueOnce(undefined).mockReturnValueOnce(retryAcknowledgement);
+    const installed: CodexRuntimeStatus = {
+      installed: true,
+      binaryPath: '/sandbox/TEST-codex-retry/codex',
+      latestVersion: null,
+      updateAvailable: false,
+      source: 'app-managed',
+      state: 'ready',
+    };
+    Object.assign(window.electronAPI!, {
+      codexRuntime: {
+        install: vi.fn(async () => installed),
+        invalidateStatus: vi.fn(async () => undefined),
+      },
+    });
+    let install: Promise<void> | undefined;
+    const error = new Error('TEST current second invalidation rejected');
+    try {
+      install = fixture.store.getState().installCodexRuntime();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(invalidateStatus).toHaveBeenCalledTimes(1);
+      expect(fixture.getProviderStatus).toHaveBeenCalledExactlyOnceWith('codex');
+      fixture.responses[0].resolve(fixture.ready('codex/not-installed', 'codex'));
+      await vi.advanceTimersByTimeAsync(699);
+      expect(invalidateStatus).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(invalidateStatus).toHaveBeenCalledTimes(2);
+      rejectRetry(error);
+      await vi.advanceTimersByTimeAsync(0);
+      await waitForCompletion(install);
+      expect(fixture.store.getState().codexRuntimeError).toBe(error.message);
+      expect(fixture.store.getState().codexRuntimeStatus).toBe(installed);
+      expect(fixture.store.getState().codexRuntimeStatusLoading).toBe(false);
+      expect(fixture.getProviderStatus).toHaveBeenCalledTimes(1);
+      expect(vi.getTimerCount()).toBe(0);
+      expect(vi.mocked(console.warn).mock.calls).toEqual([
+        ['[Store:cliInstaller]', 'Codex status refresh after installation failed:', error],
+      ]);
+      vi.mocked(console.warn).mockClear();
+    } finally {
+      invalidateStatus.mockReset().mockResolvedValue(undefined);
+      const cleanupProvider: CliProviderStatus = {
+        ...fixture.ready('codex/cleanup', 'codex'),
+        availableBackends: [
+          {
+            id: 'codex-native',
+            label: 'TEST Codex cleanup',
+            description: 'TEST app-managed runtime',
+            available: true,
+            selectable: true,
+            recommended: true,
+          },
+        ],
+      };
+      fixture.getProviderStatus.mockResolvedValue(cleanupProvider);
+      resolveRetry();
+      for (const response of fixture.responses) response.resolve(cleanupProvider);
+      try {
+        await vi.advanceTimersByTimeAsync(2_100);
+        if (install) await waitForCompletion(install);
+      } finally {
+        await fixture.cleanup();
+        vi.useRealTimers();
+      }
+    }
+  });
+
+  it('publishes a Codex runtime invalidation error before CLI refresh acquires an epoch', async () => {
+    const fixture = pendingStatusStore();
+    const error = new Error('TEST runtime invalidation rejected');
+    const installed: CodexRuntimeStatus = {
+      installed: true,
+      binaryPath: '/sandbox/TEST-codex-runtime-invalidation/codex',
+      latestVersion: null,
+      updateAvailable: false,
+      source: 'app-managed',
+      state: 'ready',
+    };
+    const runtime = {
+      install: vi.fn(async () => installed),
+      invalidateStatus: vi.fn().mockRejectedValue(error),
+    };
+    Object.assign(window.electronAPI!, { codexRuntime: runtime });
+    let install: Promise<void> | undefined;
+    try {
+      install = fixture.store.getState().installCodexRuntime();
+      await waitForCompletion(install);
+      expect(fixture.store.getState().codexRuntimeError).toBe(error.message);
+      expect(fixture.store.getState().codexRuntimeStatus).toBe(installed);
+      expect(fixture.store.getState().codexRuntimeStatusLoading).toBe(false);
+      expect(runtime.install).toHaveBeenCalledTimes(1);
+      expect(runtime.invalidateStatus).toHaveBeenCalledTimes(1);
+      expect(window.electronAPI!.cliInstaller.invalidateStatus).not.toHaveBeenCalled();
+      expect(fixture.getProviderStatus).not.toHaveBeenCalled();
+      expect(vi.mocked(console.warn).mock.calls).toEqual([
+        ['[Store:cliInstaller]', 'Codex status refresh after installation failed:', error],
+      ]);
+      vi.mocked(console.warn).mockClear();
+    } finally {
+      try {
+        if (install) await waitForCompletion(install);
+      } finally {
+        await fixture.cleanup();
+      }
+    }
+  });
 
   it.each(['invalidation', 'provider', 'retry-delay'] as const)(
     'does not let an install refresh superseded during %s adopt a newer invalidation',

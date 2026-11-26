@@ -698,15 +698,18 @@ export async function refreshOpenCodeProviderStatusAfterRuntimeInstall(
 }
 
 export async function refreshCodexProviderStatusAfterRuntimeInstall(
-  get: () => Pick<CliInstallerSlice, 'cliStatus' | 'fetchCliProviderStatus' | 'invalidateCliStatus'>
+  get: () => Pick<
+    CliInstallerSlice,
+    'cliStatus' | 'fetchCliProviderStatus' | 'invalidateCliStatus'
+  >,
+  refreshOwner?: { epoch?: number }
 ): Promise<void> {
-  if (!api.cliInstaller) {
-    return;
-  }
+  if (!api.cliInstaller) return;
 
   for (let attempt = 1; attempt <= CODEX_PROVIDER_INSTALL_REFRESH_ATTEMPTS; attempt += 1) {
     // Capture our synchronous invalidation epoch before subscribers can start a newer owner.
     const epoch = cliStatusEpoch + 1;
+    if (refreshOwner) refreshOwner.epoch = epoch;
     await get().invalidateCliStatus();
     if (epoch !== cliStatusEpoch) return;
     await get().fetchCliProviderStatus('codex', {
@@ -1605,10 +1608,12 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
         durationMs: elapsedMsSince(installStartedAtMs),
       });
       if (!completed) return;
+      const refreshOwner: { epoch?: number } = {};
       try {
         await api.codexRuntime.invalidateStatus();
-        await refreshCodexProviderStatusAfterRuntimeInstall(get);
+        await refreshCodexProviderStatusAfterRuntimeInstall(get, refreshOwner);
       } catch (error) {
+        if (refreshOwner.epoch !== undefined && refreshOwner.epoch !== cliStatusEpoch) return;
         logger.warn('Codex status refresh after installation failed:', error);
         set({
           codexRuntimeError:
