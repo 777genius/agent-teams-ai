@@ -66,15 +66,17 @@ function navigation(state: AppState) {
 /** Capture before Create; an accepted result grants no authority over a successor editor. */
 export function captureCreatedTeamHandoff(input: CreatedTeamHandoff) {
   const scopedPage = input.presentation === 'page' && input.projectContextMode === 'per_project';
-  const original = input.getState();
-  const originalOwner = owner(original);
-  const originalNavigation = navigation(original);
+  const original = scopedPage ? input.getState() : null;
+  const originalOwner = original ? owner(original) : null;
+  const originalNavigation = original ? navigation(original) : null;
   const epoch = captureContextScopedRequestEpoch();
   const generation = input.getGeneration();
   let expectedGeneration = generation;
   let phase: 'pending' | 'resetting' | 'closing' | 'closed' = 'pending';
   let closeObserved = false;
-  let live = !original.isContextSwitching && originalNavigation?.creationPage === true;
+  let live = Boolean(
+    original && !original.isContextSwitching && originalNavigation?.creationPage === true
+  );
   let targetCurrent: (() => boolean) | undefined;
   const waiters = new Set<() => void>();
   let unsubscribeState = () => {};
