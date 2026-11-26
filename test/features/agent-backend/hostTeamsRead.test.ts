@@ -585,6 +585,7 @@ describe('ordinary Host team read selection', () => {
 
   it('decorates frozen nonconfigurable contextBridge methods and preserves legacy receivers', async () => {
     const f = fixture();
+    f.snapshot.runtimeNeverLaunched = true;
     const bridge = Object.freeze({
       ...f.legacy,
       aliveList: function (this: TeamsAPI) {

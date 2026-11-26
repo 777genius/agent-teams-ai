@@ -6,7 +6,19 @@ import type {
   TaskDetailSession,
   TaskDetailSubmitPart,
 } from '../../contracts';
-import type { AddTaskCommentRequest } from '@shared/types/team';
+import type { AddTaskCommentRequest, TeamTask } from '@shared/types/team';
+
+/** The first draft content captures its question; a later snapshot cannot rebind an unsent answer. */
+export function taskDetailDraftClarificationRequestId(
+  session: TaskDetailSession,
+  task: Pick<TeamTask, 'needsClarification' | 'clarificationRequestId'> | null | undefined
+): string | null | undefined {
+  const hasContent = Boolean(session.commentText.trim() || session.commentChips.length ||
+    session.pendingAttachments.length || session.reply);
+  if (!hasContent) return undefined;
+  if (session.answerClarificationRequestId !== undefined) return session.answerClarificationRequestId;
+  return task?.needsClarification === 'user' ? task.clarificationRequestId ?? null : null;
+}
 
 const zeroPartRevisions = (): TaskDetailPartRevisions => ({
   commentText: 0,
@@ -19,6 +31,7 @@ const zeroPartRevisions = (): TaskDetailPartRevisions => ({
 
 export const EMPTY_TASK_DETAIL_SESSION: TaskDetailSession = {
   commentText: '',
+  answerClarificationRequestId: undefined,
   commentChips: [],
   pendingAttachments: [],
   reply: null,
@@ -88,8 +101,27 @@ export function updateTaskDetailPart(
 
 export function hydrateTaskDetailDraft(
   session: TaskDetailSession,
-  draft: { text?: string; commentChips?: TaskDetailSession['commentChips'] }
+  draft: {
+    text?: string;
+    commentChips?: TaskDetailSession['commentChips'];
+    answerClarificationRequestId?: string | null;
+  }
 ): TaskDetailSession {
+  // A draft is a single snapshot (content + clarification generation).
+  // Never mix a late-hydrated A snapshot with an already-started B composer:
+  // that could submit A's answer with B's ID and erroneously clear B.
+  const localCompositionStarted =
+    session.answerClarificationRequestId !== undefined ||
+    session.partRevisions.commentText > 0 ||
+    session.partRevisions.commentChips > 0 ||
+    session.partRevisions.pendingAttachments > 0 ||
+    session.partRevisions.reply > 0;
+  if (localCompositionStarted &&
+      (session.answerClarificationRequestId ?? null) !==
+        (draft.answerClarificationRequestId ?? null)) {
+    return session;
+  }
+
   let next = session;
   if (draft.text && next.partRevisions.commentText === 0 && next.commentText === '') {
     next = updateTaskDetailPart(next, 'commentText', draft.text);
@@ -101,6 +133,14 @@ export function hydrateTaskDetailDraft(
     next.commentChips.length === 0
   ) {
     next = updateTaskDetailPart(next, 'commentChips', draft.commentChips);
+  }
+  // Existing text/chips belong to the original draft, never silently
+  // rebind to whatever clarification happens to be current after hydration.
+  if (next !== session && session.answerClarificationRequestId === undefined) {
+    next = {
+      ...next,
+      answerClarificationRequestId: draft.answerClarificationRequestId ?? null,
+    };
   }
   return next;
 }
@@ -164,12 +204,22 @@ export function completeTaskDetailSubmit(
   );
   const nextPartRevisions = { ...session.partRevisions };
   for (const part of clearParts) nextPartRevisions[part] += 1;
+  const commentText = clearParts.has('commentText') ? '' : session.commentText;
+  const commentChips = clearParts.has('commentChips') ? [] : session.commentChips;
+  const pendingAttachments = clearParts.has('pendingAttachments') ? [] : session.pendingAttachments;
+  const reply = clearParts.has('reply') ? null : session.reply;
+  // A changed part can still end up empty (e.g. the user removed an attachment
+  // while sending). Do not retain a consumed request ID on an empty composer.
+  const hasRemainingDraft = Boolean(commentText.trim() || commentChips.length ||
+    pendingAttachments.length || reply);
   return {
     ...session,
-    commentText: clearParts.has('commentText') ? '' : session.commentText,
-    commentChips: clearParts.has('commentChips') ? [] : session.commentChips,
-    pendingAttachments: clearParts.has('pendingAttachments') ? [] : session.pendingAttachments,
-    reply: clearParts.has('reply') ? null : session.reply,
+    commentText,
+    commentChips,
+    pendingAttachments,
+    reply,
+    answerClarificationRequestId:
+      hasRemainingDraft ? session.answerClarificationRequestId : undefined,
     partRevisions: nextPartRevisions,
     editRevision: session.editRevision + (clearParts.size > 0 ? 1 : 0),
     submittedPartRevisions: null,

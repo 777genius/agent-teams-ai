@@ -60,8 +60,13 @@ import {
   captureTeamManagementRefreshScope,
   continueAcceptedTeamManagementChange,
 } from './team/teamManagementNotices';
+import {
+  addIgnoredTeamRun,
+  isTeamRunIgnored,
+  removeIgnoredTeamRunOwner,
+} from './team/teamProvisioningRunIdentity';
 import { scheduleAllToolApprovalSettingsSync } from './team/teamToolApprovalSettingsSync';
-import { getVisibleTeamNamesInAnyPane } from './team/teamViewVisibility';
+import { getVisibleTeamNamesInAnyPane, subscribeVisiblePhysicalTeamChanges } from './team/teamViewVisibility';
 import { applyToolApprovalEvent } from './team/toolApprovalEvents';
 import { installCodexStartupStatusRevalidation } from './codexStartupStatusRevalidation';
 import { nextTeamAliveFromLeadActivity } from './leadActivityTeamAlive';
@@ -1328,6 +1333,7 @@ export function initializeNotificationListeners(): () => void {
     };
 
     syncVisibleTeamTracking();
+    const unsubscribePhysicalTeams = subscribeVisiblePhysicalTeamChanges(syncVisibleTeamTracking);
 
     const unsubscribeVisibleTeamTracking = useStore.subscribe((state, prevState) => {
       if (state.paneLayout === prevState.paneLayout) {
@@ -1337,6 +1343,7 @@ export function initializeNotificationListeners(): () => void {
     });
 
     cleanupFns.push(() => {
+      unsubscribePhysicalTeams();
       unsubscribeVisibleTeamTracking();
       for (const teamName of trackedTeamNames) {
         void api.teams.setToolActivityTracking(teamName, false).catch(() => undefined);
@@ -1561,8 +1568,8 @@ export function initializeNotificationListeners(): () => void {
         if (!event.runId) return false;
         const state = useStore.getState();
         return (
-          state.ignoredProvisioningRunIds[event.runId] === event.teamName ||
-          state.ignoredRuntimeRunIds[event.runId] === event.teamName
+          isTeamRunIgnored(state.ignoredProvisioningRunIds, event.runId, event.teamName) ||
+          isTeamRunIgnored(state.ignoredRuntimeRunIds, event.runId, event.teamName)
         );
       })();
       if (isIgnoredRuntimeRun) {
@@ -1586,11 +1593,7 @@ export function initializeNotificationListeners(): () => void {
               ...prev.currentRuntimeRunIdByTeam,
               [event.teamName]: event.runId ?? null,
             },
-            ignoredRuntimeRunIds: Object.fromEntries(
-              Object.entries(prev.ignoredRuntimeRunIds).filter(
-                ([, teamName]) => teamName !== event.teamName
-              )
-            ),
+            ignoredRuntimeRunIds: removeIgnoredTeamRunOwner(prev.ignoredRuntimeRunIds, event.teamName),
           }));
         }
       };
@@ -1648,10 +1651,7 @@ export function initializeNotificationListeners(): () => void {
             nextState.currentRuntimeRunIdByTeam = { ...prev.currentRuntimeRunIdByTeam };
             delete nextState.currentRuntimeRunIdByTeam[event.teamName];
             nextState.ignoredRuntimeRunIds = event.runId
-              ? {
-                  ...prev.ignoredRuntimeRunIds,
-                  [event.runId]: event.teamName,
-                }
+              ? addIgnoredTeamRun(prev.ignoredRuntimeRunIds, event.runId, event.teamName)
               : prev.ignoredRuntimeRunIds;
             clearToolActivityTimersForTeam(event.teamName);
             clearTaskLogActivityTimersForTeam(event.teamName);
@@ -2416,9 +2416,7 @@ export function initializeNotificationListeners(): () => void {
     }
   }
 
-  // Listen for SSH connection status changes from main process
-  // NOTE: Only syncs connection status here. Data fetching is handled by
-  // connectionSlice.connectSsh/disconnectSsh and contextSlice.switchContext.
+  // Sync SSH status; connection and context slices own data fetching.
   if (api.ssh?.onStatus) {
     const cleanup = api.ssh.onStatus((_event: unknown, status: unknown) => {
       const s = status as { state: string; host: string | null; error: string | null };

@@ -172,6 +172,7 @@ describe('HTTP team route parsers', () => {
       })
     ).toEqual({
       teamName: 'new-team',
+      projectContextMode: 'per_project',
       displayName: 'New Team',
       description: 'Saved draft',
       members: [
@@ -196,6 +197,14 @@ describe('HTTP team route parsers', () => {
       limitContext: false,
     });
 
+    expect(parseCreateTeamRequest({ teamName: 'new-team', projectContextMode: 'shared' })).toMatchObject({
+      projectContextMode: 'shared',
+    });
+    expectBadRequest(
+      () => parseCreateTeamRequest({ teamName: 'new-team', projectContextMode: 'invalid' }),
+      'projectContextMode must be shared or per_project'
+    );
+
     expectBadRequest(
       () => parseCreateTeamRequest({ teamName: 'new-team', members: 'builder' }),
       'members must be an array'
@@ -208,6 +217,7 @@ describe('HTTP team route parsers', () => {
 
     expect(parseCreateTeamRequest({ teamName: 'new-team' })).toEqual({
       teamName: 'new-team',
+      projectContextMode: 'per_project',
       members: [],
     });
 
@@ -248,6 +258,7 @@ describe('HTTP team route parsers', () => {
 
     expect(request).toMatchObject({
       teamName: 'draft-team',
+      projectContextMode: 'shared',
       displayName: 'Draft Team',
       description: 'Saved draft',
       color: '#3366ff',
@@ -269,6 +280,12 @@ describe('HTTP team route parsers', () => {
       parseDraftLaunchCreateRequest({ ...savedRequest, allowExperimentalLocalModels: true }, {})
         .allowExperimentalLocalModels
     ).toBeUndefined();
+    expect(parseDraftLaunchCreateRequest({
+      ...savedRequest, projectContextMode: 'per_project',
+    }, {}).projectContextMode).toBe('per_project');
+    expect(parseDraftLaunchCreateRequest({
+      ...savedRequest, projectContextMode: 'shared',
+    }, { projectContextMode: 'per_project' }).projectContextMode).toBe('shared');
 
     expectBadRequest(
       () =>

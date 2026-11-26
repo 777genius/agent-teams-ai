@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { qualifyPackagedRuntimeAdditions } from '../../scripts/e2e/anthropic-compatible-status/packaged-default-additions';
 
 const wrapper = 'opencode-console/opencode.exe';
+const teammate = 'teammate-console/teammate.exe';
 const digest = (value: string) => createHash('sha256').update(value).digest('hex');
 
 describe('packaged runtime additions', () => {
@@ -20,8 +21,10 @@ describe('packaged runtime additions', () => {
     root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'packaged-additions-')));
     repo = path.join(root, 'repo');
     runtime = path.join(root, 'app/resources/runtime');
-    await mkdir(path.join(repo, 'resources/runtime/opencode-console'), { recursive: true });
-    await mkdir(path.join(runtime, 'opencode-console'), { recursive: true });
+    for (const name of ['opencode-console', 'teammate-console']) {
+      await mkdir(path.join(repo, 'resources/runtime', name), { recursive: true });
+      await mkdir(path.join(runtime, name), { recursive: true });
+    }
   });
 
   afterEach(async () => {
@@ -37,10 +40,16 @@ describe('packaged runtime additions', () => {
       platform
     );
 
-  async function stageWrapper(staged = 'compiled wrapper', bundled = staged) {
-    await writeFile(path.join(repo, 'resources/runtime', wrapper), staged);
-    await writeFile(path.join(runtime, wrapper), bundled);
+  async function stageWrapper(staged = 'compiled wrapper', bundled = staged, file = wrapper) {
+    await writeFile(path.join(repo, 'resources/runtime', file), staged);
+    await writeFile(path.join(runtime, file), bundled);
     return digest(bundled);
+  }
+  async function stageBoth(): Promise<[string, string][]> {
+    return [
+      [wrapper, await stageWrapper()],
+      [teammate, await stageWrapper('compiled teammate', 'compiled teammate', teammate)],
+    ];
   }
 
   it.each([
@@ -54,23 +63,20 @@ describe('packaged runtime additions', () => {
     );
   });
 
-  it('records only the exact Windows wrapper with matching production-staged bytes', async () => {
-    const hash = await stageWrapper();
-    const additions = await qualify([[wrapper, hash]]);
-    expect(additions).toEqual([
-      {
-        file: wrapper,
-        staged: { path: path.join(repo, 'resources/runtime', wrapper), sha256: hash },
-        bundled: { path: path.join(runtime, wrapper), sha256: hash },
-      },
-    ]);
+  it('records exactly both Windows wrappers with matching production-staged bytes', async () => {
+    const staged = await stageBoth();
+    const additions = await qualify(staged);
+    expect(additions).toEqual(staged.map(([file, sha256]) => ({
+      file,
+      staged: { path: path.join(repo, 'resources/runtime', file), sha256 },
+      bundled: { path: path.join(runtime, file), sha256 },
+    })));
   });
 
-  it('rejects omission of the production-staged Windows wrapper from the package', async () => {
-    await writeFile(path.join(repo, 'resources/runtime', wrapper), 'compiled wrapper');
-    await writeFile(path.join(runtime, 'VERSION'), '0.0.127');
-    await expect(qualify([])).rejects.toThrow(
-      `Required Windows runtime wrapper missing: ${wrapper}`
+  it.each([wrapper, teammate])('requires Windows wrapper %s in the package', async (missing) => {
+    const staged = await stageBoth();
+    await expect(qualify(staged.filter(([file]) => file !== missing))).rejects.toThrow(
+      `Required Windows runtime wrapper missing: ${missing}`
     );
   });
 
@@ -81,7 +87,8 @@ describe('packaged runtime additions', () => {
   it('leaves an archive-owned wrapper under the original strict comparison', async () => {
     const hash = digest('public archive wrapper');
     await writeFile(path.join(runtime, wrapper), 'public archive wrapper');
-    const archive = new Map([...original, [wrapper, hash]]);
+    const teammateHash = await stageWrapper('archived teammate', 'archived teammate', teammate);
+    const archive = new Map([...original, [wrapper, hash], [teammate, teammateHash]]);
     await expect(
       qualifyPackagedRuntimeAdditions(archive, new Map(archive), repo, runtime, 'win32')
     ).resolves.toEqual([]);
@@ -89,14 +96,16 @@ describe('packaged runtime additions', () => {
 
   it('rejects a modified or stale wrapper even at the allowlisted path', async () => {
     const hash = await stageWrapper('current compiled wrapper', 'stale wrapper');
-    await expect(qualify([[wrapper, hash]])).rejects.toThrow(
+    const otherHash = await stageWrapper('teammate', 'teammate', teammate);
+    await expect(qualify([[wrapper, hash], [teammate, otherHash]])).rejects.toThrow(
       'Packaged addition differs from production-staged file'
     );
   });
 
   it('rejects a wrapper changed after the bundled inventory was taken', async () => {
     await stageWrapper();
-    await expect(qualify([[wrapper, digest('earlier wrapper')]])).rejects.toThrow(
+    const otherHash = await stageWrapper('teammate', 'teammate', teammate);
+    await expect(qualify([[wrapper, digest('earlier wrapper')], [teammate, otherHash]])).rejects.toThrow(
       'Package addition changed after inventory'
     );
   });
@@ -108,7 +117,8 @@ describe('packaged runtime additions', () => {
 
   it('requires a real production-staged counterpart', async () => {
     await writeFile(path.join(runtime, wrapper), 'wrapper');
-    await expect(qualify([[wrapper, digest('wrapper')]])).rejects.toThrow('ENOENT');
+    const otherHash = await stageWrapper('teammate', 'teammate', teammate);
+    await expect(qualify([[wrapper, digest('wrapper')], [teammate, otherHash]])).rejects.toThrow('ENOENT');
   });
 
   it('rejects a symbolic-link staged counterpart', async () => {
@@ -116,6 +126,7 @@ describe('packaged runtime additions', () => {
     await writeFile(target, 'wrapper');
     await symlink(target, path.join(repo, 'resources/runtime', wrapper));
     await writeFile(path.join(runtime, wrapper), 'wrapper');
-    await expect(qualify([[wrapper, digest('wrapper')]])).rejects.toThrow('regular file');
+    const otherHash = await stageWrapper('teammate', 'teammate', teammate);
+    await expect(qualify([[wrapper, digest('wrapper')], [teammate, otherHash]])).rejects.toThrow('regular file');
   });
 });

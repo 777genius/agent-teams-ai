@@ -1275,10 +1275,24 @@ export class NotificationManager extends EventEmitter {
       return null;
     }
 
-    // Team-specific toast policy: enabled/snoozed + suppressToast + dedupeKey throttle only
+    // Source-suppressed/initial-fetch events never go out. Budget thresholds are
+    // the sole exception when the producer disabled *only* its native toast.
+    const budgetExternalOnly =
+      payload.permitExternalDeliveryWhenToastSuppressed === true &&
+      (payload.teamEventType === 'usage_budget_warning' ||
+        payload.teamEventType === 'usage_budget_exceeded');
+    if ((!payload.suppressToast || budgetExternalOnly) && !stored.isRead) {
+      this.emit('notification-delivery', stored);
+    }
+
+    // Desktop selection is independent from the event gate and external routing.
+    const desktopDisabled = this.configManager
+      .getConfig()
+      .notifications.desktopDisabledEvents?.includes(payload.teamEventType) ?? false;
     const enabled = this.areNotificationsEnabled();
     const throttled = this.isToastThrottled(error);
-    const shouldShow = stored.isRead !== true && !payload.suppressToast && enabled && !throttled;
+    const shouldShow =
+      stored.isRead !== true && !payload.suppressToast && !desktopDisabled && enabled && !throttled;
     logger.debug(
       `[team-notification] toast decision: type=${payload.teamEventType} suppressToast=${String(payload.suppressToast ?? false)} enabled=${String(enabled)} throttled=${String(throttled)} → show=${String(shouldShow)}`
     );

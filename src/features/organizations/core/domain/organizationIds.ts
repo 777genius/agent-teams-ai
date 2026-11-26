@@ -13,8 +13,15 @@ export function getOrganizationNodeId(organizationId: string): string {
   return `org:${normalizeOrganizationId(organizationId)}`;
 }
 
+export function organizationTeamIdentity(teamName: string, fallback = 'unknown-team'): string {
+  // Percent-encoded opaque Host handles must not collide through punctuation normalization.
+  return teamName.startsWith('host-team:')
+    ? `host-team:key:${Array.from(teamName, character => character.charCodeAt(0).toString(16).padStart(2, '0')).join('')}`
+    : normalizeOrganizationId(teamName, fallback);
+}
+
 export function getTeamNodeId(teamName: string): string {
-  return `team:${normalizeOrganizationId(teamName, 'unknown-team')}`;
+  return `team:${organizationTeamIdentity(teamName)}`;
 }
 
 export function getOrgUnitNodeId(unitId: string, fallback = 'unit'): string {
@@ -27,5 +34,5 @@ export function getRelationId(kind: string, sourceNodeId: string, targetNodeId: 
 }
 
 export function getAgentId(teamName: string, memberName: string): string {
-  return `agent:${normalizeOrganizationId(teamName, 'team')}:${normalizeOrganizationId(memberName, 'member')}`;
+  return `agent:${organizationTeamIdentity(teamName, 'team')}:${normalizeOrganizationId(memberName, 'member')}`;
 }

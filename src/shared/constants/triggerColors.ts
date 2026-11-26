@@ -5,6 +5,8 @@
  * Supports both preset color keys and custom hex strings (e.g., '#ff6600').
  */
 
+import type { CSSProperties } from 'react';
+
 export type TriggerColorKey =
   | 'red'
   | 'orange'
@@ -84,7 +86,7 @@ export const HIGHLIGHT_CLASSES: Record<TriggerColorKey, string> = {
  */
 export function getHighlightProps(color: TriggerColor | undefined): {
   className: string;
-  style?: React.CSSProperties;
+  style?: CSSProperties;
 } {
   const key = color ?? DEFAULT_TRIGGER_COLOR;
   if (isPresetColorKey(key)) return { className: HIGHLIGHT_CLASSES[key] };
@@ -114,7 +116,7 @@ export const TOOL_HIGHLIGHT_CLASSES: Record<TriggerColorKey, string> = {
  */
 export function getToolHighlightProps(color: TriggerColor | undefined): {
   className: string;
-  style?: React.CSSProperties;
+  style?: CSSProperties;
 } {
   const key = color ?? DEFAULT_TRIGGER_COLOR;
   if (isPresetColorKey(key)) return { className: TOOL_HIGHLIGHT_CLASSES[key] };

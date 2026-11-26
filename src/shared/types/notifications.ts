@@ -294,6 +294,8 @@ export interface AppConfig {
     enabled: boolean;
     /** Whether to play sound with notifications */
     soundEnabled: boolean;
+    /** Event types whose native desktop toast is disabled; defaults to none. */
+    desktopDisabledEvents?: TeamEventType[];
     /** Regex patterns for errors to ignore */
     ignoredRegex: string[];
     /** Repository group IDs to ignore for notifications */
@@ -374,6 +376,8 @@ export interface AppConfig {
     telemetryEnabled: boolean;
     /** Full renderer CDP access; changes apply after an app restart. */
     externalAgentCdpEnabled?: boolean;
+    /** Records the one-time migration to the default-on CDP preference. */
+    externalAgentCdpSettingsVersion?: number;
   };
   /** Provider connection preferences for app-launched multimodel sessions */
   providerConnections: {

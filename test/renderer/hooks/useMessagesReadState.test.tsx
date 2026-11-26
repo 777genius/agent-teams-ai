@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 
 import { useGroupChatHistory } from '@features/team-group-chats/renderer';
 import { useMessagesReadState } from '@renderer/components/team/messages/useMessagesReadState';
-import { getReadSet, markRead } from '@renderer/utils/teamMessageReadStorage';
+import { getReadSet, getTeamMessageReadStorageKey, markRead } from '@renderer/utils/teamMessageReadStorage';
 import { expect, it, vi } from 'vitest';
 
 import type { InboxMessage, MessagesPage } from '@shared/types';
@@ -11,13 +11,15 @@ import type { InboxMessage, MessagesPage } from '@shared/types';
 const historyApi = vi.hoisted(() => ({ getMessagesPage: vi.fn() }));
 vi.mock('@renderer/api', () => ({ api: { teams: historyApi } }));
 
-it('shares scoped group reads across rows/thread/aggregate without finalizing a partial team feed or changing DM reads', async () => {
+it('isolates both direct and group reads across roots without finalizing a partial feed', async () => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   localStorage.clear();
   const group = { from: 'alice', to: 'user', timestamp: 'now', text: 'group', read: false,
     messageId: 'canonical', groupMessageId: 'canonical', groupChatId: 'group-a' } as InboxMessage;
   const dm = { ...group, messageId: 'dm', groupChatId: undefined, groupMessageId: undefined };
-  markRead('sandbox', 'dm');
+  const directA = getTeamMessageReadStorageKey('sandbox', 'root-a');
+  const directB = getTeamMessageReadStorageKey('sandbox', 'root-b');
+  markRead(directA, 'dm');
   // Old unscoped group state must not leak into the new root-isolated projection.
   markRead('sandbox', 'canonical');
   let view: ReturnType<typeof useMessagesReadState>;
@@ -31,16 +33,19 @@ it('shares scoped group reads across rows/thread/aggregate without finalizing a 
     await act(async () => root.render(<Harness scope="root-a" partial />));
     expect(view!.readSet.has('dm')).toBe(true);
     expect(view!.readSet.has('canonical')).toBe(false);
-    expect(localStorage.getItem('team-messages-read-backfill:sandbox')).toBeNull();
+    expect(localStorage.getItem('team-messages-read-backfill:' + directA)).toBeNull();
     await act(async () => view!.markAllRead(['canonical']));
     expect(view!.readSet.has('canonical')).toBe(true);
     await act(async () => root.render(<Harness scope="root-b" partial />));
     expect(view!.readSet.has('canonical')).toBe(false);
-    expect(view!.readSet.has('dm')).toBe(true);
+    expect(view!.readSet.has('dm')).toBe(false);
+    expect(getReadSet(directB).has('dm')).toBe(false);
+    await act(async () => view!.markAllRead(['dm']));
+    expect(getReadSet(directB).has('dm')).toBe(true);
     await act(async () => root.render(<Harness scope="root-a" partial={false} />));
     expect(view!.readSet.has('canonical')).toBe(true);
-    expect(localStorage.getItem('team-messages-read-backfill:sandbox')).toBe('1');
-    expect(getReadSet('sandbox').has('dm')).toBe(true);
+    expect(localStorage.getItem('team-messages-read-backfill:' + directA)).toBe('1');
+    expect(getReadSet(directA).has('dm')).toBe(true);
   } finally {
     await act(async () => root.unmount());
     localStorage.clear();

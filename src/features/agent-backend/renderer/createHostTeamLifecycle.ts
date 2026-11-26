@@ -48,7 +48,9 @@ export function createHostTeamLifecycle(backend: AgentBackendApi) {
     // Keep one control request in flight even for the maximum roster, rather
     // than exhausting the Host's reserved control slots with our own read.
     const sessions: BackendRuntimeSnapshot[] = [];
-    const unknownMembers: string[] = [];
+    const unknownMembers = launch.members
+      .filter((member) => member.generation === null && !member.noAllocation)
+      .map((member) => member.memberId);
     for (const member of launch.members.filter((member) => member.generation !== null)) {
       current(check);
       try {
@@ -112,7 +114,11 @@ export function createHostTeamLifecycle(backend: AgentBackendApi) {
         operation: 'runtime.stop' as const,
         payload: { memberId: member.memberId, expectedGeneration: member.generation! },
       }));
-    const failures: unknown[] = [];
+    // An absent binding is not an original no-allocation proof. Release every
+    // known generation, while retaining uncertainty for any unbound allocation.
+    const failures: unknown[] = launch.members.some(member => member.generation === null && !member.noAllocation)
+      ? [new HostTeamOperationError('hold', 'unknown')]
+      : [];
     for (const request of requests) {
       try {
         current(check);

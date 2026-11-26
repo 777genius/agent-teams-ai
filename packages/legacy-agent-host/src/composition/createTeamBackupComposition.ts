@@ -139,8 +139,8 @@ export function createTeamBackupComposition(options: {
         return selected.team.owner.lifecycleCommands(options.principalId).execute(command);
       });
     },
-    async purge(teamId: string, commandId: string, expectedRevision: string) {
-      const deadline = performance.now() + 10000; // Before initialization/lookup, never renewed per scope.
+    async purge(teamId: string, commandId: string, expectedRevision: string, originalDeadline?: number) {
+      const deadline = originalDeadline ?? performance.now() + 10000; // Never renew a captured family deadline.
       await initialize();
       const hooks = options.purge;
       if (!hooks) throw new TeamOwnerError('hold');

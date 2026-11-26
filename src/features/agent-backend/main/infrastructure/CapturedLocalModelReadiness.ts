@@ -20,6 +20,7 @@ import { getNodeValue, parseTree } from 'jsonc-parser';
 
 import { parseLaunchModelPreparation } from '../adapters/input/teamOperationValues';
 import { projectBackendResult } from '../adapters/output/projectBackendResult';
+import { projectProjectLaunchSource } from '../adapters/output/projectProjectContext';
 import { assertBackendRequestGuard, BackendRoutingError } from '../application/backendBinding';
 import { capturedTeamModelProbeRootId } from '../application/prepareCapturedTeamModels';
 
@@ -190,6 +191,8 @@ function providers(raw: string | null): { invalid: boolean; providers: Scope['pr
 export async function captureLocalModelReadinessOrigin(options: {
   kind: 'create' | 'team'; owner: BackendOwnerBinding; contextId: string; commandId: string;
   selection: unknown; workspaces: readonly string[]; current(): void; budget: LocalModelReadinessContext;
+  /** Private Host-issued selection commitment for one original project-definition child continuation. */
+  projectDefinitionSelectionDigest?: string;
   targets: readonly { workspace: string; providerId: string | null }[];
   home?: string; environment?: NodeJS.ProcessEnv;
   readApprovals?: ReturnType<JsonLocalProviderPrivateNetworkApprovalStore['capture']>;
@@ -199,7 +202,9 @@ export async function captureLocalModelReadinessOrigin(options: {
   const readApprovals = options.readApprovals ?? new JsonLocalProviderPrivateNetworkApprovalStore().capture();
   const identity = { schemaVersion: 1 as const, kind: options.kind,
     ownerDigest: readinessOriginDigest(options.owner), contextId: options.contextId,
-    commandId: options.commandId, selectionDigest: readinessOriginDigest(options.selection) };
+    commandId: options.commandId, selectionDigest: options.projectDefinitionSelectionDigest ?? readinessOriginDigest(options.selection) };
+  if (options.projectDefinitionSelectionDigest !== undefined &&
+      !/^[a-f0-9]{64}$/.test(options.projectDefinitionSelectionDigest)) return held();
   const requested = [...new Set(options.workspaces)];
   const targets = options.targets.map(row => ({ ...row }));
   if (!requested.length || requested.length > 256 ||
@@ -511,12 +516,28 @@ export async function requestWithLocalModelReadiness(
   if (!definition || !payload) return held();
   const { owner, current } = currentReadiness(router, definition, command.guard, budget);
   if (savedCapture) {
-    if (!routing.intents || !routing.rosterCommands || typeof payload.rosterCommandId !== 'string') return held();
-    const originalRoster = await routing.rosterCommands.readOriginalIntent(handle.handleId, payload.rosterCommandId, command.guard);
+    if (!routing.intents || typeof payload.rosterCommandId !== 'string') return held();
+    let originalRoster: { commandId: string; payload: import('../../contracts/roster').BackendRosterReplacement };
+    let probeHandle = handle;
+    if (locator.projectContext) {
+      const raw = await router.request(handle, { commandId: `project-source:${readinessOriginDigest({ handle, commandId: command.commandId })}`,
+        method: 'team.project-context.launch-source.read', payload: {
+          logicalHandleId: locator.projectContext.logicalHandleId, commandId: locator.projectContext.commandId },
+        control: true, guard: command.guard });
+      current();
+      if (!object(raw) || raw.ok !== true) return held();
+      const source = projectProjectLaunchSource(raw.value);
+      if (source.logicalHandleId !== locator.projectContext.logicalHandleId || source.roster.commandId !== payload.rosterCommandId) return held();
+      originalRoster = { commandId: source.roster.commandId, payload: source.roster.expected };
+      probeHandle = { handleId: source.logicalHandleId };
+    } else {
+      if (!routing.rosterCommands) return held();
+      originalRoster = await routing.rosterCommands.readOriginalIntent(handle.handleId, payload.rosterCommandId, command.guard);
+    }
     current();
     const probes = [];
     for (const selection of locator.selections) {
-      const retained = await routing.intents.read(capturedTeamModelProbeRootId(handle, selection), locator.preparationId);
+      const retained = await routing.intents.read(capturedTeamModelProbeRootId(probeHandle, selection), locator.preparationId);
       current();
       if (!retained.retained) return held();
       probes.push({ commandId: retained.commandId, selection });
@@ -524,6 +545,7 @@ export async function requestWithLocalModelReadiness(
     return router.request(handle, { ...command, requestBudget: budget, localModelReadinessTransfer: {
       preparationId: locator.preparationId, probes,
       roster: { commandId: originalRoster.commandId, expected: originalRoster.payload },
+      ...(locator.projectContext ? { projectContext: locator.projectContext } : {}),
     } });
   }
   if (live) {
@@ -534,14 +556,19 @@ export async function requestWithLocalModelReadiness(
     const response = parseLiveRosterResponse(raw);
     if (!response.ok || !('liveRosterCapture' in response)) throw new BackendRoutingError('hold', 'unknown');
     const capture = response.liveRosterCapture;
-    if (capture.commandId !== command.commandId || capture.teamId !== definition.scope.teamId ||
-      capture.requestDigest !== readinessOriginDigest({ commandId: command.commandId, payload }) ||
-      capture.expectedRevision !== payload.expectedRevision) return held();
+    const project = response.projectDefinition;
+    if (project ? project.logicalCommandId !== command.commandId || project.logicalHandleId !== handle.handleId ||
+        project.logicalTeamId !== definition.scope.teamId || project.logicalExpectedRevision !== payload.expectedRevision ||
+        project.logicalRequestDigest !== readinessOriginDigest({ commandId: command.commandId, payload })
+      : capture.commandId !== command.commandId || capture.teamId !== definition.scope.teamId ||
+        capture.requestDigest !== readinessOriginDigest({ commandId: command.commandId, payload }) ||
+        capture.expectedRevision !== payload.expectedRevision) return held();
     let origin: CapturedReadinessOrigin | undefined;
     if (capture.target.provider === 'opencode') {
       const inputs = captureReadinessInputs();
       origin = createReadinessPreparation(await captureLocalModelReadinessOrigin({ ...inputs, kind: 'team', owner,
-        contextId: definition.contextId, commandId: command.commandId,
+        contextId: definition.contextId, commandId: project ? capture.commandId : command.commandId,
+        ...(project ? { projectDefinitionSelectionDigest: project.selectionDigest } : {}),
         selection: { handleId: handle.handleId, scope: definition.scope, payload, liveRosterCapture: capture },
         workspaces: [capture.target.workspace], targets: [{ workspace: capture.target.workspace,
           providerId: capture.target.modelProviderId }], current, budget }), budget);
@@ -643,10 +670,11 @@ export function captureCreatedTeamConversation(options: {
   };
   const hasOpenCode = (input: CreateTeamLaunchPreparationInput) =>
     input.draft.savedSettings.providerId === 'opencode' || input.draft.members.some(row => row.memberSettings.providerId === 'opencode');
-  const retain = async <T extends { creation: { commandId: string; phase: string; record: TeamRegistryRecord } }>(commandId: string, result: T) => {
+  const retain = async <T extends { creation: { commandId: string; phase: string; record: TeamRegistryRecord }; execution?: TeamRegistryRecord }>(commandId: string, result: T) => {
     if (result.creation.commandId !== commandId || result.creation.phase !== 'published')
       throw new BackendRoutingError('hold', 'unknown');
     await options.register(result.creation.record);
+    if (result.execution) await options.register(result.execution);
     return result;
   };
   return {
@@ -677,8 +705,9 @@ export function captureCreatedTeamConversation(options: {
         return retain(commandId, retained);
       }
       await retain(commandId, result);
-      const handle = { handleId: result.creation.record.binding.handleId };
-      const definition = { owner: options.owner, contextId: options.contextId, scope: result.creation.record.binding.scope };
+      const execution = result.execution ?? result.creation.record;
+      const handle = { handleId: execution.binding.handleId };
+      const definition = { owner: options.owner, contextId: options.contextId, scope: execution.binding.scope };
       const read = await readCapturedLaunchReadiness({ router: options.router, handle, definition, commandId,
         launchId: result.launch.launchId, rosterRevision: result.launch.rosterRevision,
         guard: options.guard, budget, capture: true });

@@ -1,0 +1,155 @@
+name: Project-scoped team history Electron E2E
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - '.github/workflows/project-scoped-team-history-desktop-e2e.yml'
+      - 'scripts/e2e/project-scoped-team-history-desktop.ts'
+      - 'src/features/team-project-context/**'
+      - 'src/features/user-attention/renderer/hooks/*Navigation.ts'
+      - 'src/features/user-attention/core/application/GetAttentionSnapshot.ts'
+      - 'src/main/ipc/teams.ts'
+      - 'src/main/ipc/teams/teamProjectContext*.ts'
+      - 'src/main/http/teams.ts'
+      - 'src/main/http/teams/teamLaunchRoute.ts'
+      - 'src/main/teamProjectContextLaunchPort.ts'
+      - 'src/renderer/components/team/ProjectScopedTeamDetailView.tsx'
+      - 'src/renderer/components/team/TeamDetailView.tsx'
+      - 'src/main/services/team/TeamTaskReader.ts'
+      - 'src/main/services/team/TeamMessageFeedService.ts'
+      - 'src/main/services/team/CrossTeamService.ts'
+      - 'src/main/http/crossTeam.ts'
+      - 'agent-teams-controller/src/internal/crossTeam.js'
+      - 'agent-teams-controller/src/internal/runtime.js'
+      - 'src/main/http/index.ts'
+      - 'src/main/services/team/provisioning/TeamProvisioningRuntimeDeliveryIdentity.ts'
+      - 'src/renderer/components/team/activity/CrossTeamTeamBadge.tsx'
+      - 'src/main/ipc/teams/teamProjectDefinitionEdit.ts'
+      - 'src/main/composeTeamMemberSettings.ts'
+      - 'src/renderer/components/team/definitionEdit/**'
+      - 'src/features/team-provisioning/main/**'
+      - 'src/features/team-provisioning/renderer/ui/**'
+      - 'src/features/team-provisioning/core/application/use-cases/UpdateMemberSettingsUseCase.ts'
+      - 'src/main/services/team/provisioning/TeamProvisioningServiceMemberLifecycleFacade.ts'
+      - 'src/features/review-flow/**'
+      - 'src/main/ipc/teams/teamReviewFlow.ts'
+      - 'src/main/services/team/TeamMetaStore.ts'
+      - 'src/main/http/teams/projectBoardRoute.ts'
+      - 'src/main/http/teams/projectContextHttp.ts'
+      - 'mcp-server/src/**'
+      - 'src/main/services/team/contracts/TeamProvisioningApis.ts'
+      - 'src/main/services/team/provisioning/**'
+      - 'agent-teams-controller/src/internal/appRouting.js'
+      - 'agent-teams-controller/src/internal/controlApiClient.js'
+      - 'agent-teams-controller/src/mcpToolCatalog.js'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/project-scoped-team-history-desktop-e2e.yml'
+      - 'scripts/e2e/project-scoped-team-history-desktop.ts'
+      - 'src/features/team-project-context/**'
+      - 'src/features/user-attention/renderer/hooks/*Navigation.ts'
+      - 'src/features/user-attention/core/application/GetAttentionSnapshot.ts'
+      - 'src/main/ipc/teams.ts'
+      - 'src/main/ipc/teams/teamProjectContext*.ts'
+      - 'src/main/http/teams.ts'
+      - 'src/main/http/teams/teamLaunchRoute.ts'
+      - 'src/main/teamProjectContextLaunchPort.ts'
+      - 'src/renderer/components/team/ProjectScopedTeamDetailView.tsx'
+      - 'src/renderer/components/team/TeamDetailView.tsx'
+      - 'src/main/services/team/TeamTaskReader.ts'
+      - 'src/main/services/team/TeamMessageFeedService.ts'
+      - 'src/main/services/team/CrossTeamService.ts'
+      - 'src/main/http/crossTeam.ts'
+      - 'agent-teams-controller/src/internal/crossTeam.js'
+      - 'agent-teams-controller/src/internal/runtime.js'
+      - 'src/main/http/index.ts'
+      - 'src/main/services/team/provisioning/TeamProvisioningRuntimeDeliveryIdentity.ts'
+      - 'src/renderer/components/team/activity/CrossTeamTeamBadge.tsx'
+      - 'src/main/ipc/teams/teamProjectDefinitionEdit.ts'
+      - 'src/main/composeTeamMemberSettings.ts'
+      - 'src/renderer/components/team/definitionEdit/**'
+      - 'src/features/team-provisioning/main/**'
+      - 'src/features/team-provisioning/renderer/ui/**'
+      - 'src/features/team-provisioning/core/application/use-cases/UpdateMemberSettingsUseCase.ts'
+      - 'src/main/services/team/provisioning/TeamProvisioningServiceMemberLifecycleFacade.ts'
+      - 'src/features/review-flow/**'
+      - 'src/main/ipc/teams/teamReviewFlow.ts'
+      - 'src/main/services/team/TeamMetaStore.ts'
+      - 'src/main/http/teams/projectBoardRoute.ts'
+      - 'src/main/http/teams/projectContextHttp.ts'
+      - 'mcp-server/src/**'
+      - 'src/main/services/team/contracts/TeamProvisioningApis.ts'
+      - 'src/main/services/team/provisioning/**'
+      - 'agent-teams-controller/src/internal/appRouting.js'
+      - 'agent-teams-controller/src/internal/controlApiClient.js'
+      - 'agent-teams-controller/src/mcpToolCatalog.js'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'merge_group' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')) && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}
+
+jobs:
+  desktop-history:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft != true
+    name: Team history A-B-A (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    env:
+      AGENT_TEAMS_INSTALL_PROFILE: node-ci
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Enable Windows long paths
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: git config --global core.longpaths true
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Prepare Linux virtual display
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb
+      - name: Install frozen dependencies
+        run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Verify Electron binary
+        run: node ./scripts/ensure-electron-install.cjs --strict
+      - name: Stage pinned terminal runtime on Windows
+        if: runner.os == 'Windows'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node ./scripts/ensure-terminal-platform-runtime.mjs
+      - name: Exercise real desktop project history isolation
+        shell: bash
+        env:
+          PROJECT_TEAM_E2E_ARTIFACT_DIR: ${{ runner.temp }}/project-team-history-evidence
+        run: |
+          if [[ "$RUNNER_OS" == "Linux" ]]; then
+            xvfb-run -a pnpm exec tsx scripts/e2e/project-scoped-team-history-desktop.ts
+          else
+            pnpm exec tsx scripts/e2e/project-scoped-team-history-desktop.ts
+          fi
+      - name: Upload sanitized project history evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: project-team-history-${{ matrix.os }}-${{ github.event.pull_request.head.sha || github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/project-team-history-evidence/*.png
+            ${{ runner.temp }}/project-team-history-evidence/*.json

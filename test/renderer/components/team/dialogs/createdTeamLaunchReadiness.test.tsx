@@ -22,23 +22,29 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { TeamSlice } from '@renderer/store/slices/teamSlice';
 import type { CreatedTeamReadiness, TeamCreateRequest, TeamProviderId } from '@shared/types/team';
 
-const { context, createConfig, createTeam } = vi.hoisted(() => ({
+const { context, createConfig, createTeam, getConnections, getProjectContextView } = vi.hoisted(() => ({
   context: { activeContextId: 'TEST-local' },
   createConfig: vi.fn(),
   createTeam: vi.fn(),
+  getConnections: vi.fn(),
+  getProjectContextView: vi.fn(),
 }));
 vi.mock('@renderer/store', () => ({
   useStore: Object.assign((select: (value: unknown) => unknown) => select(context), {
     getState: () => context,
   }),
 }));
-vi.mock('@renderer/api', () => ({ api: { teams: { createConfig, createTeam } } }));
+vi.mock('@renderer/api', () => ({ api: {
+  teams: { createConfig, createTeam, getProjectContextView }, agentBackend: { getConnections },
+} }));
 let dispose = () => {};
 afterEach(() => {
   dispose();
   context.activeContextId = 'TEST-local';
   createConfig.mockReset();
   createTeam.mockReset();
+  getConnections.mockReset();
+  getProjectContextView.mockReset();
   __resetRetainedCreateSubmissionForTests();
   resetContextScopedRequestEpochForTests();
   vi.useRealTimers();
@@ -470,5 +476,66 @@ describe('original Create launch flow scoped evidence', () => {
       (await runProviderPrepareDiagnostics({ ...input, prepareProvisioning: prepare }))
         .createdTeamReadiness
     ).toBeUndefined();
+  });
+});
+
+describe('Create project definition and original execution identity', () => {
+  function projectCreate() {
+    const logical = hostTeamSelectionKey('TEST-logical'), child = hostTeamSelectionKey('TEST-child');
+    const projectContext = { logicalHandleId: 'TEST-logical', projectPath: '/TEST/selected', workContextId: 'TEST-work' };
+    const response = { teamName: logical, executionTeamName: child,
+      runId: hostTeamRunId('TEST-child', 'TEST-launch', 'TEST-roster'), projectContext };
+    const snapshot = { state: 'ready', bindings: [
+      { handle: { handleId: 'TEST-logical' }, ownerResourceRef: 'TEST-owner', teamResourceRef: 'TEST-logical-ref', projectContextMode: 'per_project' },
+      { handle: { handleId: 'TEST-child' }, ownerResourceRef: 'TEST-owner', teamResourceRef: 'TEST-child-ref', projectContext },
+    ] };
+    const view = { mode: 'per_project', state: 'ready', executionTeamName: child,
+      projectPath: projectContext.projectPath, workContextId: projectContext.workContextId };
+    const request: TeamCreateRequest = { teamName: 'TEST-new', cwd: '/TEST/selected', members: [], projectContextMode: 'per_project' };
+    const state = { subscribeProvisioningProgress: vi.fn(), fetchTeams: vi.fn(async () => {}),
+      getProvisioningStatus: vi.fn(async () => {}) }, poll = vi.fn();
+    createTeam.mockResolvedValue(response);
+    getConnections.mockResolvedValue(snapshot);
+    getProjectContextView.mockResolvedValue(view);
+    return { logical, child, response, snapshot, view, request, state, poll,
+      run: () => createHostTeamFromDialog(request, () => state as unknown as TeamSlice, poll) };
+  }
+
+  it('opens the logical team while polling the verified child run for the captured selected workspace', async () => {
+    const f = projectCreate();
+    await expect(f.run()).resolves.toEqual(f.response);
+    expect(getProjectContextView).toHaveBeenCalledExactlyOnceWith(f.logical, '/TEST/selected');
+    expect(f.state.getProvisioningStatus).toHaveBeenCalledExactlyOnceWith(f.response.runId);
+    expect(f.poll).toHaveBeenCalledWith(expect.any(Function), f.response.runId);
+    expect(createTeam).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['owner', 'team-resource', 'path', 'work-context', 'execution-handle'] as const)(
+    'refuses mismatched %s evidence after Create without polling or issuing another Create', async mismatch => {
+      const f = projectCreate();
+      if (mismatch === 'owner') f.snapshot.bindings[1].ownerResourceRef = 'TEST-foreign';
+      if (mismatch === 'team-resource') f.snapshot.bindings[1].teamResourceRef = f.snapshot.bindings[0].teamResourceRef;
+      if (mismatch === 'path') f.view.projectPath = '/TEST/other-project';
+      if (mismatch === 'work-context') f.view.workContextId = 'TEST-other-work';
+      if (mismatch === 'execution-handle') f.response.executionTeamName = hostTeamSelectionKey('TEST-foreign-child');
+      await expect(f.run()).rejects.toThrow('Create');
+      expect(f.state.getProvisioningStatus).not.toHaveBeenCalled();
+      expect(f.poll).not.toHaveBeenCalled();
+      expect(createTeam).toHaveBeenCalledTimes(1);
+    }
+  );
+
+  it('retains unconfirmed project Create without starting a status loop and refuses a context switch before publication', async () => {
+    const f = projectCreate();
+    createTeam.mockResolvedValue({ ...f.response, launchStatus: 'unconfirmed' });
+    await expect(f.run()).resolves.toMatchObject({ launchStatus: 'unconfirmed', teamName: f.logical });
+    expect(f.state.getProvisioningStatus).not.toHaveBeenCalled();
+    expect(f.poll).not.toHaveBeenCalled();
+    getProjectContextView.mockImplementation(async () => {
+      invalidateContextScopedRequestEpoch();
+      return f.view;
+    });
+    await expect(f.run()).rejects.toThrow('Team context changed after Create');
+    expect(f.state.fetchTeams).toHaveBeenCalledTimes(1);
   });
 });

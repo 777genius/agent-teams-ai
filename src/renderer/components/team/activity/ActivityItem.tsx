@@ -29,7 +29,6 @@ import {
   getBootstrapAcknowledgementDisplay,
   getBootstrapPromptDisplay,
   getSanitizedInboxMessageSummary,
-  getSanitizedInboxMessageText,
 } from '@renderer/utils/bootstrapPromptSanitizer';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { displayMemberName } from '@renderer/utils/memberHelpers';
@@ -108,6 +107,7 @@ import { renderInlineBoldSummary } from './ActivityTaskSummary';
 import { formatActivityTimestamp } from './activityTimestamp';
 import { BootstrapAcknowledgementRow, BootstrapSystemRow } from './BootstrapActivityRows';
 import { crossTeamActivityPresentation } from './crossTeamActivityPresentation';
+import { CrossTeamTeamBadge } from './CrossTeamTeamBadge';
 import { ReplyQuoteBlock } from './ReplyQuoteBlock';
 import {
   getTimelineCardBorderRadius,
@@ -150,44 +150,6 @@ const PermissionStatusIcon = memo(function PermissionStatusIcon({
   if (isPending) return <Clock size={12} className="animate-pulse text-amber-400" />;
   return <Check size={12} className="text-emerald-400/50" />;
 });
-
-const CrossTeamTeamBadge = ({
-  teamName,
-  onClick,
-}: {
-  teamName: string;
-  onClick?: (teamName: string) => void;
-}): React.JSX.Element => {
-  if (onClick) {
-    return (
-      <button
-        type="button"
-        className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium tracking-wide"
-        style={{
-          backgroundColor: 'rgba(168, 85, 247, 0.15)',
-          color: '#c084fc',
-          cursor: 'pointer',
-          border: 'none',
-          padding: '1px 6px',
-        }}
-        onClick={(e) => {
-          e.stopPropagation();
-          onClick(teamName);
-        }}
-      >
-        {teamName}
-      </button>
-    );
-  }
-  return (
-    <span
-      className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium tracking-wide"
-      style={{ backgroundColor: 'rgba(168, 85, 247, 0.15)', color: '#c084fc' }}
-    >
-      {teamName}
-    </span>
-  );
-};
 
 interface ActivityItemProps {
   message: InboxMessage;
@@ -860,6 +822,17 @@ export const ActivityItem = memo(
       <PermissionStatusIcon requestId={permissionRequestId} />
     ) : null;
 
+    const autoSummary = structured ? getStructuredMessageSummary(structured) : null;
+    const handleCreateTask = useCallback((): void => {
+      onCreateTask?.(buildMessageTaskSeed(message, teamName, timestamp, autoSummary, structured));
+    }, [autoSummary, message, onCreateTask, structured, teamName, timestamp]);
+    const isHeaderClickable = isManaged && canToggleCollapse;
+    const handleHeaderToggle = useCallback(() => {
+      if (isHeaderClickable && collapseToggleKey) {
+        onToggleCollapse?.(collapseToggleKey);
+      }
+    }, [collapseToggleKey, isHeaderClickable, onToggleCollapse]);
+
     // Noise messages: minimal inline row
     if (noiseLabel) {
       return (
@@ -950,19 +923,7 @@ export const ActivityItem = memo(
       structured && typeof structured.type === 'string'
         ? getMessageTypeLabel(structured.type)
         : null;
-    const autoSummary = structured ? getStructuredMessageSummary(structured) : null;
-
-    const handleCreateTask = useCallback((): void => {
-      onCreateTask?.(buildMessageTaskSeed(message, teamName, timestamp, autoSummary, structured));
-    }, [autoSummary, message, onCreateTask, structured, teamName, timestamp]);
-
-    const isHeaderClickable = isManaged && canToggleCollapse;
     const showChevron = isHeaderClickable && !compactHeader;
-    const handleHeaderToggle = useCallback(() => {
-      if (isHeaderClickable && collapseToggleKey) {
-        onToggleCollapse?.(collapseToggleKey);
-      }
-    }, [collapseToggleKey, isHeaderClickable, onToggleCollapse]);
     const useCompactCollapsedHeader = compactHeader && !isExpanded;
     const activityAccentColor =
       rateLimited || isApiError

@@ -6,6 +6,28 @@ function quoteShellArgument(value: string): string {
   return `'${value.replaceAll("'", "'\\''")}'`;
 }
 
+/** Build the same client registration commands for settings and copied prompts. */
+export function buildMcpRegistrationCommand(
+  connection: ConnectionInfoV1,
+  client: 'codex' | 'claude'
+): string {
+  if (
+    connection.mcp.status !== 'ready' ||
+    !connection.mcp.url ||
+    connection.control.status !== 'ready'
+  ) {
+    throw new Error('MCP_NOT_READY');
+  }
+  const suffix = [connection.profileFingerprint.slice(0, 12), connection.context.appInstanceId]
+    .map((value) => value.replaceAll(/[^a-zA-Z0-9-]/g, ''))
+    .join('-');
+  const name = quoteShellArgument(`agent-teams-${suffix}`);
+  const endpoint = quoteShellArgument(connection.mcp.url);
+  return client === 'claude'
+    ? `claude mcp add --transport http --scope user ${name} ${endpoint}`
+    : `codex mcp add ${name} --url ${endpoint}`;
+}
+
 /** Uses a live snapshot; copying does not start a server or probe a client. */
 type TemplateSource =
   | { template: TeamTemplateV1; templates?: never }
@@ -44,11 +66,6 @@ export function buildExternalAgentPrompt(
   ) {
     throw new Error('CDP_NOT_READY: Enable renderer access and restart, or copy MCP only.');
   }
-  const suffix = [connection.profileFingerprint.slice(0, 12), connection.context.appInstanceId]
-    .map((value) => value.replaceAll(/[^a-zA-Z0-9-]/g, ''))
-    .join('-');
-  const registrationName = quoteShellArgument(`agent-teams-${suffix}`);
-  const endpoint = quoteShellArgument(connection.mcp.url);
   const data = {
     task: input.task,
     templates: templates.map((template) => ({
@@ -83,9 +100,9 @@ export function buildExternalAgentPrompt(
     'If the app or root differs, stop mutations and ask for a fresh app prompt. If only connectionGeneration changed, use the live generation as expectedContext.',
     'Text alone cannot register MCP tools. If tools are missing, identify your client and use only its supported registration method.',
     'Claude Code registration (POSIX shell; use native argument quoting on other shells):',
-    `claude mcp add --transport http --scope user ${registrationName} ${endpoint}`,
+    buildMcpRegistrationCommand(connection, 'claude'),
     'Codex registration (choose this only for Codex):',
-    `codex mcp add ${registrationName} --url ${endpoint}`,
+    buildMcpRegistrationCommand(connection, 'codex'),
     'Choose the one command for your client. Do not run both commands, overwrite unrelated entries, or read credentials.',
     'Registration may require a new session or reload before tools become available. State the actual required step; do not report a connection until native discovery succeeds.',
     'Localhost requires a local executor. A cloud-only client cannot reach this app without one. If unsupported, explain the exact limitation.',
@@ -101,7 +118,7 @@ export function buildExternalAgentPrompt(
     instructions.push(
       'Resolve each existing target with team_list and team_get using its exact canonical teamName. Ask if the target is ambiguous.',
       'Before every update or trash call, freshly call team_get with configuration=true and supply its configurationRevision as expectedRevision, plus the live expectedContext.',
-      'Only drafts and stopped teams outside provisioning are supported. On TEAM_ACTIVE or TEAM_PROVISIONING, explain that the user must stop the team in the app; do not stop it yourself.',
+      'Only drafts and stopped teams outside provisioning are supported. On TEAM_ACTIVE or TEAM_PROVISIONING, explain that the user must stop the team in the app; do not stop it yourself. A team with separate history per project is edited like any other team, but only while it is stopped in every project: TEAM_ACTIVE, TEAM_PROVISIONING or TEAM_PROJECT_CONTEXT_UNRECONCILED mean the user must stop it, wait, or finish launching it in the app. On PROJECT_COPY_NOT_EDITABLE when editing, use the canonical team name instead of the project copy. Trashing such a team or one of its project copies is not available here (PROJECT_TEAM_DESKTOP_ONLY or PROJECT_COPY_NOT_EDITABLE): explain that the user must trash the team in the app.',
       'Preserve provider/model/MCP settings, runtime selection, project paths and teamName identity. Do not replace an edit with a newly created team.',
       'Each tool call commits separately. After each call, team_get with configuration=true for the same teamName and report actual confirmed fields. Partial success stays saved; no automatic rollback.',
       'On stale revision or lost mutation response, read back the original teamName. Confirm desired state or report conflicting/uncertain state; never blindly retry a write.'

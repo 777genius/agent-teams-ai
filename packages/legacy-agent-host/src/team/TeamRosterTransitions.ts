@@ -1,4 +1,5 @@
 import { nativeRosterSuccessor } from './nativeRosterSuccessor.js';
+import { isAuthoredRosterChange, validateAuthoredRosterChanges } from './authoredRosterChanges.js';
 import { TeamLiveRosterMembership, validateLiveRosterMembership } from './liveRosterMembership.js';
 import { TeamNativeMemberCreation } from './TeamNativeMemberCreation.js';
 import { validateNativeMemberCreationRecords } from './validateNativeMemberCreation.js';
@@ -274,13 +275,66 @@ export class TeamRosterTransitions {
       };
       next.rosterCommands = [
         ...(state.rosterCommands ?? []),
-        { ...receipt, principalId, fingerprint },
+        { ...receipt, principalId, fingerprint, expectedRevision: input.expectedRevision },
       ];
       this.validate(next);
       // Decision and original receipt are one atomic Team state publication.
       this.options.store.write('state.json', next);
       this.options.invalidate();
       this.recover(next);
+      return receipt;
+    });
+  }
+
+  /** Original pre-CAS revision is private provenance, never selected by a later renderer. */
+  readExpectation(principalId: string, commandId: string): { revision: string; expectedRevision: string } | undefined {
+    return this.options.store.fenced(() => {
+      this.options.authorize(principalId, 'read');
+      const state = this.options.state(); this.validate(state);
+      const row = state.rosterCommands?.find(row => row.commandId === commandId);
+      if (!row) return undefined;
+      if (row.principalId !== principalId) throw new TeamOwnerError('forbidden');
+      const expectedRevision = row.expectedRevision ?? row.liveMembership?.input.expectedRevision ?? row.nativeCreation?.expectedRosterRevision;
+      if (!expectedRevision || !/^[a-f0-9]{64}$/.test(expectedRevision)) throw new TeamOwnerError('hold');
+      return { revision: row.revision, expectedRevision };
+    });
+  }
+
+  /** Authored text/metadata may change while original native bindings and runtime choices stay captured. */
+  replaceAuthored(principalId: string, raw: ReplaceTeamRoster): TeamRosterReceipt | undefined {
+    const input = replaceRosterSchema.parse(raw), fingerprint = this.replacementFingerprint(principalId, input);
+    return this.options.store.fenced(() => {
+      this.options.authorize(principalId, 'admin'); this.options.authorize(principalId, 'read');
+      const state = this.options.state(); this.validate(state);
+      const prior = this.replay(state, principalId, input.commandId, fingerprint);
+      if (prior) return prior;
+      assertTeamExecutionAllowed(state, this.options.store);
+      if (teamRosterRevision(state.members, state.rosterVersion, state.savedSettings) !== input.expectedRevision)
+        throw new TeamOwnerError('conflict');
+      validateMemberSettingsRelaunch(this.options.binding, state, input, input.expectedRevision);
+      const members = this.members(state, input), savedSettings = input.savedSettings ?? state.savedSettings;
+      if (!isAuthoredRosterChange(state.members, members, state.savedSettings, savedSettings)) return undefined;
+      if (this.options.store.read(`commands/${digest(input.commandId)}.json`) ||
+          state.runtimeCaptures?.some(row => row.commandId === input.commandId)) throw new TeamOwnerError('conflict');
+      this.assertNoPendingCommands();
+      const next = structuredClone(state);
+      const changed = teamRosterRevision(members, state.rosterVersion, savedSettings) !== input.expectedRevision;
+      if (changed) {
+        next.members = members;
+        if (savedSettings === undefined) delete next.savedSettings; else next.savedSettings = savedSettings;
+        next.rosterVersion = (state.rosterVersion ?? 0) + 1;
+        const before = this.options.store.read<JsonValue>('../config.json');
+        if (!before || typeof before !== 'object' || Array.isArray(before)) throw new TeamOwnerError('hold');
+        next.rosterProjection = { before, after: controllerProjection(next, before) };
+      }
+      const receipt = { commandId: input.commandId, revision: teamRosterRevision(next.members, next.rosterVersion, next.savedSettings) };
+      next.rosterCommands = [...(state.rosterCommands ?? []), { ...receipt, principalId, fingerprint,
+        expectedRevision: input.expectedRevision, ...(changed ? { authored: { input, beforeVersion: state.rosterVersion ?? 0,
+          afterVersion: next.rosterVersion!, beforeRevision: input.expectedRevision, afterRevision: receipt.revision,
+          before: structuredClone(state.members), after: structuredClone(next.members),
+          ...(state.savedSettings ? { beforeSettings: state.savedSettings } : {}),
+          ...(next.savedSettings ? { afterSettings: next.savedSettings } : {}) } } : {}) }];
+      this.validate(next); this.options.store.write('state.json', next); this.options.invalidate(); this.recover(next);
       return receipt;
     });
   }
@@ -363,6 +417,7 @@ export class TeamRosterTransitions {
   }
 
   private validate(state: OwnerState): void {
+    validateAuthoredRosterChanges(state);
     validateNativeMemberCreationRecords(state);
     validateLiveRosterMembership(state);
     if (

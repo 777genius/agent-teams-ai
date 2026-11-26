@@ -7,6 +7,7 @@ Release notes are for product users, not maintainers. Explain what changed in th
 Writing rules:
 
 - Verify every claim against the commits and merged pull requests since the previous published tag.
+- Describe changes relative to the previous publicly released version, not intermediate development states. Bug fixes made during the development of a new feature must not appear as separate release notes. Describe the final user-facing capability instead.
 - Include only changes shipped from the release target. Do not include work from unrelated branches.
 - Start with the main user-visible change in one or two sentences, using no more than 40 words.
 - Keep each bullet to one user-visible change and no more than 20 words.
@@ -20,14 +21,87 @@ Writing rules:
 - Do not write vague claims such as `improved reliability` or `better performance`. State the failure that was fixed.
 - Do not repeat the same change in the introduction and multiple sections.
 - Keep required download and installation notes factual and unchanged unless the release process changes.
+- Always credit contributors whose work ships in the release. Verify their GitHub usernames and contributions against the merged pull requests and commit authorship, including work integrated through follow-up PRs. Mention them with `@username` and a short description of their contribution, either alongside the relevant change or in a dedicated `Contributors` section before `Downloads`. Group related contributions without dropping credit; do not attribute unshipped work.
 
 Before publishing:
 
 - Read the introduction and every bullet independently. Each must be clear without repository context.
 - Remove any bullet that does not change what a user can do, see, or rely on.
+- Check that no intermediate feature-development bug fixes are listed as standalone release changes.
+- Confirm all contributors to the shipped changes are credited with their correct GitHub usernames.
 - Confirm version numbers, runtime gates, asset names, and download links.
 - Confirm the GitHub release title is exactly the tag (`v2.15.0`), not `Agent Teams v2.15.0`.
 - Keep the body in this document identical to the GitHub release body.
+
+## v2.19.0 (Published 2026-11-25)
+
+Target branch: `main`; immutable release source `2a4e1c2938923826cb1555e8fb894a3fdbb4447e`. Includes Agent Teams runtime `0.0.161` and Terminal Platform `0.3.4`. The [five-platform build](https://github.com/777genius/agent-teams-ai/actions/runs/45464122669) and [draft promotion](https://github.com/777genius/agent-teams-ai/actions/runs/45606957151) passed. Published at 11:54 UTC on November 25, 2026; confirmed as GitHub's stable latest release. All five packaged-app smoke tests passed; macOS signatures and notarization passed on both architectures. Windows installers are unsigned (no code signing certificate configured). All 40 published assets have SHA-256 digests, and the official updater guard passed for all three feeds. The GitHub release body matches the public notes below. The [exact-head product CI](https://github.com/777genius/agent-teams-ai/actions/runs/45462291108) concluded `FAILURE`; previously identified noncritical issues were accepted for this release and tracked separately. Fresh installed-app launch, actual native OTA from 2.18.7, and live mixed Codex/OpenCode E2E remain unconfirmed; successful publication is not evidence of these scenarios. The feeds were generated before the final notes edit, so their embedded notes may still contain the generated changelog; this does not establish an updater installation failure.
+
+<!-- RELEASE_BODY_START v2.19.0 -->
+
+### What's New
+
+- Find tasks and unread messages across all teams on the new Attention page, with a header indicator.
+- Create, edit, import, and export your own team templates, or use built-in templates (big thanks to [@hassanbht](https://github.com/hassanbht?utm_source=chatgpt.com))
+- Connect external AI agents to the running desktop app with guided setup.
+- Route notifications by event to Telegram, Discord, Slack, Microsoft Teams, Google Chat, or custom HTTPS webhooks.
+- Choose human approval or require team lead sign-off before final approval.
+- New teams keep tasks and conversations separate for each project by default. Existing teams retain their shared history.
+- Traditional Chinese (Taiwan) is now available (thanks [@keepinmind2054](https://github.com/keepinmind2054?utm_source=chatgpt.com) 🙏🏼)
+
+### Fixes
+
+- Prevent unwanted console windows when Windows teammates run commands.
+- Fix startup failures when launching OpenCode teammates on Linux.
+- Prevent Settings crashes while provider model statuses refresh.
+- Reuse only the correct Git worktree when restarting a teammate.
+- Recover interrupted project-team launches with clearer retry guidance.
+
+### Downloads
+
+<table>
+<tr>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.19.0/Agent.Teams.AI-2.19.0-arm64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Apple_Silicon-.dmg-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Apple Silicon" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.19.0/Agent.Teams.AI-2.19.0-x64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Intel-.dmg-434343?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel" />
+  </a>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.19.0/Agent.Teams.AI.Setup.2.19.0.exe">
+    <img src="https://img.shields.io/badge/Windows_x64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows x64" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.19.0/Agent.Teams.AI.Setup.2.19.0-arm64.exe">
+    <img src="https://img.shields.io/badge/Windows_ARM64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows ARM64" />
+  </a>
+  <br />
+  <sub>May trigger SmartScreen - click "More info" then "Run anyway"</sub>
+  <br />
+  <sub>Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.</sub>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.19.0/Agent.Teams.AI-2.19.0.AppImage">
+    <img src="https://img.shields.io/badge/Linux-Download_.AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.19.0/agent-teams-ai_2.19.0_amd64.deb">
+    <img src="https://img.shields.io/badge/.deb-E95420?style=flat-square&logo=ubuntu&logoColor=white" alt=".deb" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.19.0/agent-teams-ai-2.19.0.x86_64.rpm">
+    <img src="https://img.shields.io/badge/.rpm-294172?style=flat-square&logo=redhat&logoColor=white" alt=".rpm" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.19.0/agent-teams-ai-2.19.0.pacman">
+    <img src="https://img.shields.io/badge/.pacman-1793D1?style=flat-square&logo=archlinux&logoColor=white" alt=".pacman" />
+  </a>
+</td>
+</tr>
+</table>
+
+<!-- RELEASE_BODY_END v2.19.0 -->
 
 ## v2.18.7 (Published 2026-11-11)
 

@@ -254,7 +254,7 @@ export const ScheduleRunLogDialog = ({
             <Button variant="outline" size="sm" onClick={() => {
               const opened = openTaskDetailTab({
                 contextId: activeContextId,
-                teamName: run.teamName,
+                teamName: run.executionTeamName ?? run.teamName,
                 taskId: run.linkedTaskId!,
               });
               if (opened) onClose();

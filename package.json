@@ -1,7 +1,7 @@
 {
   "name": "agent-teams-ai",
   "type": "module",
-  "version": "2.18.7",
+  "version": "2.19.0",
   "dynamicFlags": {
     "showSponsorFluxion": false
   },
@@ -128,7 +128,9 @@
     "test:real:suggestions:ui": "node scripts/e2e/native-prompt-suggestions-real/ui.ts",
     "test:legacy-agent-host": "pnpm --filter @agent-teams/legacy-agent-host test && pnpm exec vitest run test/features/agent-backend --maxWorkers=1",
     "stage:legacy-host-node": "node scripts/legacy-agent-host/stage-node.ts",
-    "typecheck:legacy-host-scripts": "node node_modules/@typescript/native/bin/tsc --project tsconfig.legacy-agent-host-scripts.json"
+    "typecheck:legacy-host-scripts": "node node_modules/@typescript/native/bin/tsc --project tsconfig.legacy-agent-host-scripts.json",
+    "test:e2e:custom-template-import-export": "tsx scripts/e2e/custom-template-import-export-desktop.ts",
+    "test:e2e:notification-channels": "node scripts/e2e/notification-channels-desktop.mjs"
   },
   "lint-staged": {
     "src/**/*.{ts,tsx,js,jsx}": [
@@ -205,6 +207,7 @@
     "@terminal-platform/workspace-elements": "file:vendor/terminal-platform/sdk/terminal-platform-workspace-elements-0.1.0.tgz",
     "@terminal-platform/workspace-gateway-node": "file:vendor/terminal-platform/sdk/terminal-platform-workspace-gateway-node-0.1.0.tgz",
     "@terminal-platform/workspace-react": "file:vendor/terminal-platform/sdk/terminal-platform-workspace-react-0.1.0.tgz",
+    "@thinwrap/notifications": "1.2.0",
     "@tiptap/extension-placeholder": "3.30.5",
     "@tiptap/markdown": "3.30.5",
     "@tiptap/pm": "3.30.5",

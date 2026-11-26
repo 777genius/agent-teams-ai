@@ -3,12 +3,10 @@ import { TeamOwnerError } from '../team/contracts.js';
 import { digest } from '../team/identity.js';
 import type { HostMethod } from '../index.js';
 import type { JsonValue } from '../contracts.js';
-import type { TeamOwner } from '../team/TeamOwner.js';
-import type { HostedTeamDefinition } from '../team-registry/definition.js';
-interface TeamLifecycleTarget { owner: TeamOwner; definition: HostedTeamDefinition }
+import type { HostedTeam } from './MemberEntry.js';
+import type { HostProjectTeamLifecycle } from '../team-project-context/HostProjectTeamLifecycle.js';
 import type { TeamRuntimeDeliveryPort } from '../team/contracts.js';
 import type { createTeamBackupComposition } from './createTeamBackupComposition.js';
-import type { TeamLifecycleReceipt } from '../team/lifecycleContracts.js';
 import type { QueuedDiscardReceipt } from '../team/queuedDiscardContracts.js';
 import type { createTeamLifecycleRetirement } from './createTeamLifecycleRetirement.js';
 const id = z.string().min(1).max(256).refine(value => !!value.trim() && !value.includes('\0'));
@@ -16,19 +14,16 @@ const change = z.object({ expectedRevision: z.string().regex(/^[a-f0-9]{64}$/), 
 const purge = z.object({ expectedRevision: z.string().regex(/^[a-f0-9]{64}$/) }).strict();
 const discard = z.object({ member: id, messageIds: z.array(id).max(4096).refine(ids => new Set(ids).size === ids.length) }).strict();
 const envelope = z.object({ binding: z.object({ schemaVersion: z.literal(1), handleId: id, owner: z.unknown(), scope: z.unknown() }).strict(), commandId: id, payload: z.unknown() }).strict();
-const lifecycleValue = (receipt: TeamLifecycleReceipt) => ({ kind: 'team_lifecycle', commandId: receipt.commandId,
-  revision: digest(receipt.after), deletedAt: receipt.after.deletedAt ?? null, cleanupPending: receipt.after.cleanupPending });
 const queueValue = (receipt: QueuedDiscardReceipt) => receipt.phase === 'completed'
   ? { kind: 'queued_discard', commandId: receipt.commandId, phase: receipt.phase, discarded: receipt.discardedMessageIds!.length, remainingQueued: receipt.remainingQueued! }
   : { kind: 'queued_discard', commandId: receipt.commandId, phase: receipt.phase };
 /** Existing Team controls; raw cleanup bindings, source receipts and native selectors stay private. */
 export function createTeamLifecycleMethods(options: {
-  profile: { owner: unknown; principalId: string }; teams: ReadonlyMap<string, TeamLifecycleTarget>;
+  profile: { owner: unknown; principalId: string }; teams: ReadonlyMap<string, HostedTeam>;
   storage: ReturnType<typeof createTeamBackupComposition>; assertCurrent(): void;
   retirement: ReturnType<typeof createTeamLifecycleRetirement>;
+  projects: Pick<HostProjectTeamLifecycle, 'read' | 'change' | 'lookup' | 'purge' | 'lookupPurge'>;
   delivery(): TeamRuntimeDeliveryPort;
-  /** Bounded original cleanup; failure retains product tombstone/debt and never claims provider closure. */
-  afterTrash(team: TeamLifecycleTarget, commandId: string): Promise<void>;
 }) {
   const methods: Record<string, HostMethod> = {};
   methods['team.lifecycle.retired.read'] = { lane: 'control', async handle(raw): Promise<JsonValue> {
@@ -50,35 +45,30 @@ export function createTeamLifecycleMethods(options: {
           if (operation === 'lifecycle.purge.lookup') {
             const payload = z.object({ expected: purge }).strict().parse(input.payload);
             const value = selected && !options.retirement.isRetired(selected.definition)
-              ? await options.storage.lookupPurge(selected.definition.binding.teamId, input.commandId, payload.expected.expectedRevision)
+              ? await options.projects.lookupPurge({ team: selected, handleId: input.binding.handleId }, input.commandId, payload.expected.expectedRevision)
               : await options.retirement.lookup(input.binding, input.commandId, payload.expected.expectedRevision);
             options.assertCurrent();
             return { ok: true, value: JSON.parse(JSON.stringify(value)) as JsonValue };
           }
           if (!selected || digest(input.binding.owner) !== digest(options.profile.owner) || digest(input.binding.scope) !== digest(selected.definition.scope)) throw new TeamOwnerError('forbidden');
-          const lifecycle = selected.owner.lifecycleCommands(options.profile.principalId);
+          const target = { team: selected, handleId: input.binding.handleId };
           let value: unknown;
           switch (operation) {
             case 'lifecycle.read': {
               z.object({}).strict().parse(input.payload);
-              const state = lifecycle.view(), pendingPurge = options.storage.pendingPurge(selected.definition.binding.teamId);
-              value = { kind: 'team_lifecycle', revision: state.revision, deletedAt: state.deletedAt, cleanupPending: state.cleanupPending,
-                ...(pendingPurge ? { pendingPurge } : {}) }; break;
+              value = options.projects.read(target); break;
             }
             case 'lifecycle.change': {
               const payload = change.parse(input.payload); effect = true;
-              const receipt = await options.storage.changeLifecycle(selected.definition.binding.teamId, { commandId: input.commandId, operation: payload.action, expectedRevision: payload.expectedRevision });
-              if (receipt.operation === 'trash') { try { await options.afterTrash(selected, receipt.commandId); } catch { /* Original cleanup debt stays retained. */ } }
-              value = lifecycleValue(receipt); break;
+              value = await options.projects.change(target, input.commandId, payload); break;
             }
             case 'lifecycle.purge': {
               const payload = purge.parse(input.payload); effect = true;
-              value = await options.storage.purge(selected.definition.binding.teamId, input.commandId, payload.expectedRevision); break;
+              value = await options.projects.purge(target, input.commandId, payload.expectedRevision); break;
             }
             case 'lifecycle.lookup': {
               const payload = z.object({ expected: change }).strict().parse(input.payload);
-              const receipt = lifecycle.lookup(input.commandId, { operation: payload.expected.action, expectedRevision: payload.expected.expectedRevision });
-              value = receipt ? lifecycleValue(receipt) : null; break;
+              value = options.projects.lookup(target, input.commandId, payload.expected); break;
             }
             case 'queue.read': {
               const payload = z.object({ member: id }).strict().parse(input.payload);

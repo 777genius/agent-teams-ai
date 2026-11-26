@@ -320,8 +320,14 @@ function payload(
       throw new InvalidBackendOperation();
     }
     case 'task.comment': {
-      const p = object(value, ['taskId', 'text', 'taskRefs', 'attachments']);
+      const p = object(value, ['taskId', 'text', 'taskRefs', 'attachments', 'answerClarificationRequestId']);
+      if (p.answerClarificationRequestId !== undefined &&
+          (typeof p.answerClarificationRequestId !== 'string' ||
+           !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(p.answerClarificationRequestId)))
+        throw new InvalidBackendOperation();
       return {
+        ...(p.answerClarificationRequestId === undefined ? {} :
+          { answerClarificationRequestId: text(p.answerClarificationRequestId, 256) }),
         taskId: text(p.taskId),
         text: text(p.text, 200_000),
         ...(p.attachments === undefined

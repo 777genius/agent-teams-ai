@@ -9,6 +9,13 @@ const id = z
   .refine((value) => !!value.trim() && !value.includes('\0'));
 const segment = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/);
 
+/** Only Host project-context composition can issue this relation. It is never accepted in a Create DTO. */
+export const teamProjectContextRelationSchema = z.object({
+  logicalTeamId: segment, logicalHandleId: id, workContextId: id,
+  projectKey: z.string().regex(/^[a-f0-9]{64}$/), projectPath: z.string().min(1).max(8192),
+}).strict();
+export type TeamProjectContextRelation = z.infer<typeof teamProjectContextRelationSchema>;
+
 /** Product intent only. Context authority and the principal come from trusted composition. */
 export const createTeamRegistryPayloadSchema = z
   .object({
@@ -55,6 +62,8 @@ export const teamRegistryRecordSchema = z
     teamId: segment,
     teamName: segment,
     displayName: z.string().max(256).optional(),
+    projectContextMode: z.enum(['shared', 'per_project']).optional(),
+    projectContext: teamProjectContextRelationSchema.optional(),
     description: z
       .string()
       .max(64 * 1024)

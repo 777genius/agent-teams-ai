@@ -9,11 +9,12 @@ import type { BackendLaunchConfigurationView, BackendLaunchModelPreparation, Bac
 import type { BackendOperationPayloads, BackendOperationRequest,
   BackendRuntimeSnapshot, BackendTaskRecipient } from '../../../contracts/operations';
 import type { BackendRosterConfiguration } from '../../../contracts/roster';
+import type { CapturedHostProjectScheduleContext } from '../../application/captureHostProjectScheduleContext';
 import type { CapturedHostScheduleTarget } from '../../application/captureHostScheduleTarget';
 import type { ExecutionRequest, ScheduledTaskResult } from '@main/services/schedule/ScheduledTaskExecutor';
 import type { SmartScheduleRuntimePort } from '@main/services/schedule/SmartScheduleDispatcher';
-import type { CreateTaskRequest, MemberSpawnStatusesSnapshot, ScheduleRun, TeamAgentRuntimeSnapshot,
-  TeamCreateRequest, TeamLaunchRequest, TeamLaunchResponse, TeamTask } from '@shared/types';
+import type { CreateTaskRequest, MemberSpawnStatusesSnapshot, Schedule, ScheduleRun,
+  TeamAgentRuntimeSnapshot, TeamCreateRequest, TeamLaunchRequest, TeamLaunchResponse, TeamTask } from '@shared/types';
 
 type Value = Extract<Awaited<ReturnType<CapturedHostScheduleTarget['invoke']>>, { ok: true }>['value'];
 
@@ -25,19 +26,23 @@ function safeUnopened(state: BackendRuntimeSnapshot): boolean {
 export class HostSmartScheduleRuntimeAdapter implements SmartScheduleRuntimePort {
   readonly targetKind = 'host' as const;
   private rosterRevision?: string;
+  private logicalRevision?: string;
+  private target: CapturedHostScheduleTarget;
+  private selection: string;
 
   constructor(private readonly options: {
     target: CapturedHostScheduleTarget;
     selection: string;
+    project?: CapturedHostProjectScheduleContext;
     runId?: string;
     taskFirst?: true;
     getPreviousRuns(scheduleId: string, runId: string): Promise<ScheduleRun[]>;
     isCancelled?(): boolean;
-    runOneShot?(request: ExecutionRequest, expectedRosterRevision: string): Promise<ScheduledTaskResult>;
-  }) {}
+    runOneShot?(request: ExecutionRequest, expectedRosterRevision: string, target: CapturedHostScheduleTarget): Promise<ScheduledTaskResult>;
+  }) { this.target = options.target; this.selection = options.selection; }
 
   private assertTeam(team: string): void {
-    if (team !== this.options.selection || !this.options.target.isCurrent() || this.options.isCancelled?.())
+    if (team !== this.selection || !this.target.isCurrent() || !this.options.target.isCurrent() || this.options.isCancelled?.())
       throw new Error('Original scheduled team is unavailable');
   }
 
@@ -48,8 +53,8 @@ export class HostSmartScheduleRuntimeAdapter implements SmartScheduleRuntimePort
 
   private async call<K extends keyof BackendOperationPayloads>(operation: K,
     payload: BackendOperationPayloads[K], commandId: string = randomUUID()): Promise<Value> {
-    this.assertTeam(this.options.selection);
-    const result = await this.options.target.invoke({ commandId, operation, payload } as Omit<BackendOperationRequest, 'handle'>);
+    this.assertTeam(this.selection);
+    const result = await this.target.invoke({ commandId, operation, payload } as Omit<BackendOperationRequest, 'handle'>);
     if (!result.ok) throw new Error(`Scheduled ${operation} ${result.outcome} (${result.code})`);
     return result.value;
   }
@@ -63,7 +68,7 @@ export class HostSmartScheduleRuntimeAdapter implements SmartScheduleRuntimePort
   }
 
   private async launch(): Promise<BackendLaunchSnapshot | null> {
-    const state = await readHostScheduleState(this.options.target);
+    const state = await readHostScheduleState(this.target);
     if (state.first.runtimeNeverLaunched === true) return null;
     const value = await this.call('team.launch.read', {});
     if (!value || !('retryCapability' in value)) throw new Error('Scheduled launch state is unavailable');
@@ -77,17 +82,57 @@ export class HostSmartScheduleRuntimeAdapter implements SmartScheduleRuntimePort
     return value;
   }
 
+  private async logicalRoster(): Promise<BackendRosterConfiguration> {
+    if (!this.options.target.isCurrent() || this.options.isCancelled?.())
+      throw new Error('Original scheduled team is unavailable');
+    const result = await this.options.target.invoke({ operation: 'team.roster.read', commandId: randomUUID(), payload: {} });
+    if (!this.options.target.isCurrent() || !result.ok || !result.value || !('removedMembers' in result.value))
+      throw new Error('Scheduled logical definition is unavailable');
+    if (this.logicalRevision !== undefined && result.value.revision !== this.logicalRevision)
+      throw new Error('Scheduled logical definition changed');
+    this.logicalRevision ??= result.value.revision;
+    return result.value;
+  }
+
   async getSavedRequest(team: string): Promise<TeamCreateRequest | null> {
-    this.assertTeam(team);
-    const roster = await this.roster();
+    const logical = this.options.project && team === this.options.selection;
+    if (!logical) this.assertTeam(team);
+    const roster = logical ? await this.logicalRoster() : await this.roster();
     if (!roster.savedSettings) return null;
-    this.rosterRevision ??= roster.revision;
+    if (!logical) this.rosterRevision ??= roster.revision;
     if (roster.members.filter(row => row.role === 'lead').length !== 1)
       throw new Error('Scheduled team lead is unavailable');
     return { ...structuredClone(roster.savedSettings), teamName: team,
+      ...(this.options.project ? { cwd: this.options.project.projectPath } : {}),
       savedSettingsFingerprint: roster.revision,
       members: roster.members.filter(row => row.role !== 'lead').map(row =>
         ({ ...structuredClone(row.settings), name: row.name })) };
+  }
+
+  async resolveTarget(_schedule: Schedule) {
+    if (!this.options.project) return { kind: 'native' as const };
+    const resolved = await this.options.project.resolve();
+    if ('refused' in resolved) return { kind: 'refused' as const, reason: resolved.refused };
+    if (this.selection !== resolved.selection) this.rosterRevision = undefined;
+    this.target = resolved.target; this.selection = resolved.selection;
+    this.assertTeam(this.selection);
+    return { kind: 'project' as const, executionTeamName: resolved.selection, projectPath: resolved.projectPath };
+  }
+
+  async launchProjectTeam(_schedule: Schedule, request: TeamLaunchRequest): Promise<TeamLaunchResponse> {
+    if (!this.options.project) throw new Error('Original project schedule is unavailable');
+    return this.launchTeam(request);
+  }
+
+  private async prepareProjectRoster() {
+    const roster = await this.logicalRoster();
+    const prepared = await this.options.project!.prepare(roster.revision);
+    if (prepared.selection !== this.selection) throw new Error('Original scheduled project changed');
+    this.target = prepared.target;
+    this.rosterRevision = undefined;
+    const child = await this.roster();
+    this.rosterRevision = child.revision;
+    return prepared.rosterCommandId;
   }
 
   async hasLaunchConfig(team: string): Promise<boolean> {
@@ -140,23 +185,25 @@ export class HostSmartScheduleRuntimeAdapter implements SmartScheduleRuntimePort
   }
   async hasActiveOwnedTask(team: string, owner: string): Promise<boolean> {
     this.assertTeam(team);
-    return (await readHostScheduleState(this.options.target)).tasks.some(row =>
+    return (await readHostScheduleState(this.target)).tasks.some(row =>
       row.owner === owner && isTeamTaskActivelyWorked(row));
   }
   getPreviousRuns = (scheduleId: string, runId: string) => this.options.getPreviousRuns(scheduleId, runId);
   async getTask(team: string, taskId: string): Promise<TeamTask | null> {
     this.assertTeam(team);
-    return (await readHostScheduleState(this.options.target)).tasks.find(row => row.id === taskId) ?? null;
+    return (await readHostScheduleState(this.target)).tasks.find(row => row.id === taskId) ?? null;
   }
   async resolvePreviousTask(team: string, run: ScheduleRun): Promise<TeamTask | null> {
     this.assertTeam(team);
     const original = this.options.target.target, previous = run.hostTarget;
+    if (this.options.project && run.executionTeamName !== undefined && run.executionTeamName !== this.selection)
+      throw new Error('Previous occurrence belongs to another project history');
     if (!previous || (['kind', 'handleId', 'ownerResourceRef', 'teamResourceRef'] as const).some(key =>
       previous[key] !== original[key]))
       throw new Error('Previous occurrence belongs to another captured team');
     if (run.linkedTaskId) return this.getTask(team, run.linkedTaskId);
     const commandId = run.pendingTaskCommandId ?? run.id;
-    const result = await this.options.target.invoke({ operation: 'command.lookup', commandId, payload: {} });
+    const result = await this.target.invoke({ operation: 'command.lookup', commandId, payload: {} });
     if (!result.ok) throw new ScheduledTaskCreationPending(commandId);
     if (result.value === null) return null;
     if (!('operation' in result.value) || result.value.operation !== 'task.create' ||
@@ -192,7 +239,7 @@ export class HostSmartScheduleRuntimeAdapter implements SmartScheduleRuntimePort
       ...(request.notifyOwner === false ? { notifyOwner: false } : {}),
       ...(expectedRecipient ? { expectedRecipient } : {}) };
     let result;
-    try { result = await this.options.target.invoke({ operation: 'task.create', commandId, payload }); }
+    try { result = await this.target.invoke({ operation: 'task.create', commandId, payload }); }
     catch { throw new ScheduledTaskCreationPending(commandId); }
     if (!result.ok) {
       if (result.outcome === 'unknown') throw new ScheduledTaskCreationPending(commandId);
@@ -226,7 +273,7 @@ export class HostSmartScheduleRuntimeAdapter implements SmartScheduleRuntimePort
     const expected = await this.recipient(name, recipient), state = await this.runtime(expected.memberId, expected.generation);
     if (!safeUnopened(state))
       throw new Error('Scheduled member cannot be attached without a manual restart');
-    const opened = await this.options.target.invoke({ operation: 'runtime.open', commandId: this.id(`attach:${expected.memberId}`),
+    const opened = await this.target.invoke({ operation: 'runtime.open', commandId: this.id(`attach:${expected.memberId}`),
       payload: { memberId: expected.memberId, expectedGeneration: expected.generation } },
       { launchId: expected.runId, memberId: expected.memberId, expectedGeneration: expected.generation });
     if (!opened.ok) throw new Error(`Scheduled runtime.open ${opened.outcome} (${opened.code})`);
@@ -235,7 +282,9 @@ export class HostSmartScheduleRuntimeAdapter implements SmartScheduleRuntimePort
   private async prepareLaunchModels(roster: BackendRosterConfiguration): Promise<BackendLaunchModelPreparation | undefined> {
     if (roster.members.every(row => ['anthropic', 'codex'].includes(
       row.settings.providerId ?? roster.savedSettings?.providerId ?? ''))) return undefined;
-    const configuration = await this.call('team.launch.model.configuration.read', {});
+    const configurationResult = await this.options.target.invoke({ operation: 'team.launch.model.configuration.read', commandId: randomUUID(), payload: {} });
+    if (!configurationResult.ok) throw new Error('Scheduled model configuration is unavailable');
+    const configuration = configurationResult.value;
     if (!configuration || !('source' in configuration) || !('members' in configuration) ||
       configuration.members.some(row => !row.selected)) throw new Error('Scheduled model selection is unavailable');
     const targets = configuration.members.filter(row => row.selected!.provider === 'opencode');
@@ -246,14 +295,15 @@ export class HostSmartScheduleRuntimeAdapter implements SmartScheduleRuntimePort
       ...(row.selected!.effort === undefined ? {} : { effort: row.selected!.effort }),
       targets: [row.role === 'lead' ? { kind: 'lead' as const } : { kind: 'member' as const, name: row.label }] }));
     const preparationId = this.id('models');
-    const result = await this.options.target.prepareModels({ preparationId, cwd: lead.workspace,
+    const result = await this.options.target.prepareModels({ preparationId, cwd: this.options.project?.projectPath ?? lead.workspace,
       modelChecks: checks, selectedModelChecks: checks });
-    this.assertTeam(this.options.selection);
+    this.assertTeam(this.selection);
     const original = result.capturedTeamReadiness;
     if (!result.ready || !original?.selections?.length || original.preparationId !== preparationId ||
       original.launchId !== configuration.source.sourceId || original.rosterRevision !== configuration.source.rosterRevision)
       throw new Error('Scheduled model check awaits confirmation');
-    return { preparationId, selections: original.selections };
+    return { preparationId, selections: original.selections, ...(this.options.project ? { projectContext: {
+      logicalHandleId: this.options.target.target.handleId, commandId: this.id('project') } } : {}) };
   }
 
   async launchTeam(request: TeamLaunchRequest): Promise<TeamLaunchResponse> {
@@ -262,14 +312,19 @@ export class HostSmartScheduleRuntimeAdapter implements SmartScheduleRuntimePort
     if (await this.isTeamAlive(request.teamName)) return { runId: existing!.launchId, launchStatus: 'already_running' };
     if (await this.isTeamLaunching(request.teamName)) return { runId: existing!.launchId, launchStatus: 'already_launching' };
     if (await this.isTeamBusy(request.teamName)) throw new Error('Scheduled team launch is held');
-    const roster = await this.roster();
+    const roster = this.options.project ? await this.logicalRoster() : await this.roster();
     const modelPreparation = await this.prepareLaunchModels(roster);
-    const replaced = await this.call('team.roster.replace', { expectedRevision: roster.revision,
-      members: roster.members.filter(row => row.role !== 'lead').map(row => ({ ...row.settings, name: row.name })) }, this.id('roster'));
-    if (!replaced || !('revision' in replaced) || !('commandId' in replaced) || replaced.commandId !== this.id('roster'))
-      throw new Error('Scheduled roster admission awaits confirmation');
-    this.rosterRevision = replaced.revision;
-    const captured = await this.call('team.launch.capture', { rosterCommandId: this.id('roster'),
+    let rosterCommandId: string;
+    if (this.options.project) rosterCommandId = await this.prepareProjectRoster();
+    else {
+      const replaced = await this.call('team.roster.replace', { expectedRevision: roster.revision,
+        members: roster.members.filter(row => row.role !== 'lead').map(row => ({ ...row.settings, name: row.name })) }, this.id('roster'));
+      if (!replaced || !('revision' in replaced) || !('commandId' in replaced) || replaced.commandId !== this.id('roster'))
+        throw new Error('Scheduled roster admission awaits confirmation');
+      this.rosterRevision = replaced.revision;
+      rosterCommandId = this.id('roster');
+    }
+    const captured = await this.call('team.launch.capture', { rosterCommandId,
       ...(modelPreparation ? { modelPreparation } : {}) }, this.id('capture'));
     if (!captured || !('launch' in captured) || !('members' in captured)) throw new Error('Scheduled launch capture awaits confirmation');
     const view: BackendLaunchConfigurationView = captured;
@@ -282,10 +337,25 @@ export class HostSmartScheduleRuntimeAdapter implements SmartScheduleRuntimePort
   }
 
   async runOneShot(request: ExecutionRequest): Promise<ScheduledTaskResult> {
-    this.assertTeam(this.options.selection);
     if (!this.options.runOneShot) throw new Error('Host standalone schedule owner is unavailable');
+    if (this.options.project) {
+      const resolved = await this.options.project.resolve();
+      if ('refused' in resolved) throw new Error(resolved.refused);
+      if (this.selection !== resolved.selection) this.rosterRevision = undefined;
+      this.target = resolved.target; this.selection = resolved.selection;
+      this.assertTeam(this.selection);
+      if (await this.isTeamLaunching(this.selection) || await this.isTeamBusy(this.selection))
+        throw new Error('Scheduled project lifecycle is busy');
+      // A finite standalone run can coexist with the selected live project. Never replace its live roster.
+      if (!(await this.isTeamAlive(this.selection))) await this.prepareProjectRoster();
+      const repeated = await this.options.project.resolve();
+      if ('refused' in repeated || repeated.selection !== this.selection)
+        throw new Error('Original scheduled project changed before standalone admission');
+      this.target = repeated.target;
+    }
+    this.assertTeam(this.selection);
     const roster = await this.roster();
-    this.assertTeam(this.options.selection);
-    return this.options.runOneShot(request, roster.revision);
+    this.assertTeam(this.selection);
+    return this.options.runOneShot(request, roster.revision, this.target);
   }
 }

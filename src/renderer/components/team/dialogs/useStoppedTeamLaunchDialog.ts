@@ -19,8 +19,11 @@ interface State {
   memberSettingsDraft?: MemberSettingsRelaunchDraft;
   baselineMembers?: ResolvedTeamMember[];
   retainedLegacyLaunch?: RetainedLegacyLaunchChoice;
+  memberSettingsCommandId?: string;
+  memberSettingsCommitted?: boolean;
 }
-export function useStoppedTeamLaunchDialog(teamName: string) {
+export function useStoppedTeamLaunchDialog(teamName: string,
+  project: { logicalTeamName?: string; retainedHistory?: boolean } = {}) {
   const [launchDialogState, setLaunchDialogState] = useState<State>({
     open: false,
     mode: 'launch',
@@ -34,8 +37,12 @@ export function useStoppedTeamLaunchDialog(teamName: string) {
   const openLaunchDialog = useCallback(
     (
       mode: TeamLaunchDialogMode,
-      settings?: Pick<State, 'memberSettingsDraft' | 'baselineMembers'>
+      settings?: Pick<State, 'memberSettingsDraft' | 'baselineMembers' | 'memberSettingsCommandId' | 'memberSettingsCommitted'>
     ) => {
+      if (project.retainedHistory && project.logicalTeamName) {
+        useStore.getState().openTeamTab(project.logicalTeamName);
+        return;
+      }
       const intent = owner.begin();
       let choice: RetainedLegacyLaunchChoice | undefined;
       void (async () => {
@@ -45,15 +52,16 @@ export function useStoppedTeamLaunchDialog(teamName: string) {
           const draft =
             state.selectedTeamName === teamName && state.selectedTeamError === 'TEAM_DRAFT';
           let original: Awaited<ReturnType<typeof api.teams.getData>> | undefined;
+          const requestedTeam = project.logicalTeamName ?? teamName;
           const target = await stoppedTeamLaunchSelection(
-            teamName,
+            requestedTeam,
             selected?.teamName === teamName ? selected.isAlive : draft ? false : undefined,
             (selectedChoice) => {
               choice = selectedChoice;
             },
             intent.signal,
             {
-              mode,
+              mode: project.logicalTeamName ? 'relaunch' : mode,
               ...settings,
               onOriginalData: (data) => {
                 original = data;
@@ -64,7 +72,7 @@ export function useStoppedTeamLaunchDialog(teamName: string) {
             void closeRetainedLegacyLaunch(choice);
             return;
           }
-          if (target !== teamName) {
+          if (target !== requestedTeam) {
             const data = await api.teams.getData(target, { includeMemberBranches: false });
             if (!owner.current(intent)) {
               void closeRetainedLegacyLaunch(choice);
@@ -88,7 +96,7 @@ export function useStoppedTeamLaunchDialog(teamName: string) {
             setLaunchTarget(
               original
                 ? {
-                    teamName,
+                    teamName: requestedTeam,
                     cwd: original.config.projectPath,
                     members: original.members.map((member) => ({
                       ...member,
@@ -101,7 +109,7 @@ export function useStoppedTeamLaunchDialog(teamName: string) {
             );
             setLaunchDialogState({
               open: true,
-              mode: choice ? 'launch' : mode,
+              mode: choice ? 'launch' : project.logicalTeamName ? 'relaunch' : mode,
               ...settings,
               retainedLegacyLaunch: choice,
             });
@@ -112,7 +120,7 @@ export function useStoppedTeamLaunchDialog(teamName: string) {
         }
       })();
     },
-    [owner, teamName]
+    [owner, teamName, project.logicalTeamName, project.retainedHistory]
   );
   const closeLaunchDialog = useCallback(() => {
     owner.close();

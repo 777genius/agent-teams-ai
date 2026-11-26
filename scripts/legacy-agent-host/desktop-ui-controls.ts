@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { createDesktopReadWait, type DesktopActionTiming } from './desktop-ui-read-observation.ts';
+import { createDesktopReadWait, projectDesktopSidebarFacts, projectDesktopUnavailableTargetFacts, type DesktopActionTiming } from './desktop-ui-read-observation.ts';
 import { PROVIDER_LAUNCH_AUTHORITY_MARKER_ATTRIBUTE, PROVIDER_LAUNCH_AUTHORITY_MARKER_LIMIT,
   readProviderLaunchAuthorityMarker, UNKNOWN_PROVIDER_LAUNCH_AUTHORITY_MARKER
 } from '../../src/shared/utils/providerLaunchAuthorityMarker.ts';
@@ -57,6 +57,7 @@ export function createDesktopUiControls(
   options: {
     assertOwnedRenderer(): void;
     step(value: Record<string, unknown>): void;
+    prepareBlockedTarget?(deadline: number): Promise<void>;
   }
 ) {
   const step = options.step;
@@ -381,9 +382,14 @@ export function createDesktopUiControls(
         : expression;
       let facts: Record<string, boolean | number | string> | undefined;
       let preparationPending = false;
-      const readOptions = prepareScroll ? { deadline: readDeadline, beforeRead: async () => {
+      let blockedTarget = false;
+      const readOptions = prepareScroll || options.prepareBlockedTarget ? { deadline: readDeadline, beforeRead: async () => {
         preparationPending = true;
-        await prepareScroll();
+        if (blockedTarget && options.prepareBlockedTarget) {
+          blockedTarget = false;
+          await options.prepareBlockedTarget(readDeadline);
+        }
+        await prepareScroll?.();
       } } : undefined;
       try {
         const observed = record(await waitRead(readExpression, phase, readDeadline - Date.now(), value => {
@@ -391,13 +397,9 @@ export function createDesktopUiControls(
           if (value && typeof value === 'object' && !Array.isArray(value)) {
             const row = value as Record<string, unknown>;
             if (row.unavailableTarget === true) {
-              facts = {
-                matches: Number.isSafeInteger(row.matches) && Number(row.matches) >= 0
-                  ? Math.min(Number(row.matches), 256) : 0,
-                disabled: row.disabled === true, ariaDisabled: row.ariaDisabled === true,
-                pointerEventsNone: row.pointerEventsNone === true,
-                centerInViewport: row.centerInViewport === true, hitPresent: row.hitPresent === true,
-              };
+              blockedTarget = row.matches === 1 && row.disabled === false && row.ariaDisabled === false &&
+                row.pointerEventsNone === true && row.centerInViewport === true && row.hitPresent === true;
+              facts = projectDesktopUnavailableTargetFacts(row);
               if (finiteSourceCreate(selector, label, text)) {
                 facts.createAuthorityMarker = UNKNOWN_PROVIDER_LAUNCH_AUTHORITY_MARKER;
                 try {
@@ -618,7 +620,7 @@ export function createDesktopUiControls(
   };
   const scrollTo = async (
     selector: string, label: string, text?: string, maxWheelEvents = 12,
-    scrollOptions: { requireCenterHit?: boolean } = {},
+    scrollOptions: { requireCenterHit?: boolean; sidebarTaskKey?: string; observe?(value: unknown): void } = {},
     preparation?: { deadline: number; remainingWheels: number }
   ): Promise<void> => {
     assert.ok(Number.isSafeInteger(maxWheelEvents) && maxWheelEvents >= 1 && maxWheelEvents <= 32);
@@ -637,13 +639,18 @@ export function createDesktopUiControls(
         await waitRead(
           `(() => {
         const rows=[...document.querySelectorAll(${desktopJsLiteral(selector)})]${text === undefined ? '' : `.filter(e=>e.textContent.trim()===${desktopJsLiteral(text)})`};
-        if(rows.length!==1)return null;
-        const e=rows[0],r=e.getBoundingClientRect();
+        const facts={matches:Math.min(rows.length,256)};
+        if(rows.length!==1)return ${scrollOptions.observe ? '{unavailableTarget:true,facts}' : 'null'};
+        const e=${scrollOptions.sidebarTaskKey === undefined ? 'rows[0]' : "rows[0].closest('.sidebar-task-item')"},keyMatches=${scrollOptions.sidebarTaskKey === undefined ? 'true' : `e?.getAttribute('data-task-key')===${desktopJsLiteral(scrollOptions.sidebarTaskKey)}`};
+        if(!keyMatches)return {unavailableTarget:true,facts:{...facts,keyMatches}};
+        const r=e.getBoundingClientRect();
         let parent=e.parentElement;
         while(parent&&!(parent.scrollHeight>parent.clientHeight&&/auto|scroll/.test(getComputedStyle(parent).overflowY)))parent=parent.parentElement;
         const p=(parent??document.documentElement).getBoundingClientRect();
         const top=Math.max(0,p.top),bottom=Math.min(innerHeight,p.bottom);
-        if(!r.width||!r.height)return null;
+        Object.assign(facts,{keyMatches,width:r.width,height:r.height,top:r.top,bottom:r.bottom,clipTop:top,clipBottom:bottom,
+          positiveSize:r.width>0&&r.height>0,centerInViewport:r.x+r.width/2>=0&&r.x+r.width/2<innerWidth&&r.y+r.height/2>=0&&r.y+r.height/2<innerHeight});
+        if(!r.width||!r.height)return ${scrollOptions.observe ? '{unavailableTarget:true,facts}' : 'null'};
         // An offscreen inner clip still owns visibility; reveal it using an outer wheel.
         let wheelRect=p;
         if(bottom<=top){
@@ -658,13 +665,17 @@ export function createDesktopUiControls(
           if(!outer)wheelRect=document.documentElement.getBoundingClientRect();
         }
         const wheelTop=Math.max(0,wheelRect.top),wheelBottom=Math.min(innerHeight,wheelRect.bottom);
-        if(wheelBottom<=wheelTop)return null;
+        if(wheelBottom<=wheelTop)return ${scrollOptions.observe ? '{unavailableTarget:true,facts}' : 'null'};
         const x=Math.max(1,Math.min(innerWidth-1,wheelRect.x+wheelRect.width/2)),y=(wheelTop+wheelBottom)/2;
         const centerY=bottom<=top?(p.top+p.bottom)/2:r.y+r.height/2;
         const hit=${scrollOptions.requireCenterHit === true ? 'document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)' : 'e'};
-        return {visible:bottom>top&&r.top>=top&&r.bottom<=bottom&&Boolean(hit&&(hit===e||e.contains(hit))),x,y,delta:Math.max(-600,Math.min(600,centerY-y))};
+        Object.assign(facts,{hitPresent:Boolean(hit),hitWithinTarget:Boolean(hit&&(hit===e||e.contains(hit)))});
+        return {visible:bottom>top&&r.top>=top&&r.bottom<=bottom&&Boolean(hit&&(hit===e||e.contains(hit))),x,y,delta:Math.max(-600,Math.min(600,centerY-y)),facts};
       })()`,
-          label, preparation ? preparation.deadline - Date.now() : 30_000, Boolean, preparation
+          label, preparation ? preparation.deadline - Date.now() : 30_000, value => {
+            try { scrollOptions.observe?.(Object.getOwnPropertyDescriptor(Object(value), 'facts')?.value); } catch { /* Observation cannot qualify a target. */ }
+            return Boolean(value) && Object.getOwnPropertyDescriptor(Object(value), 'unavailableTarget')?.value !== true;
+          }, preparation
         )
       );
       assertPreparation();
@@ -693,73 +704,97 @@ export function createDesktopUiControls(
     const rows=[...document.querySelectorAll('#sidebar-tasks-panel .sidebar-task-item')];
     const found=rows.filter(e=>[...e.querySelectorAll('span')].some(s=>s.textContent.trim()===${desktopJsLiteral(subject)}));
     if(found.length!==1)return null;
-    return true;
+    return {key:found[0].getAttribute('data-task-key')};
   })()`;
   // Subject span selection is exact, and the click targets its ordinary button.
   const clickSidebar = async (subject: string, readiness?: { waitForRenderFrames: true },
     timing?: DesktopActionTiming): Promise<void> => {
-    await cdp.send('Page.bringToFront');
-    // The dev renderer can expose its bridge while modules and the first Team
-    // snapshot are still loading. Only this initial read gets a startup budget;
-    // clicks and mutation outcomes retain their existing bounds/no-retry rule.
-    await waitRead(sidebarExpression(subject), 'canonical sidebar task', 90_000);
-    const expression = `(() => {
-      const rows=[...document.querySelectorAll('#sidebar-tasks-panel .sidebar-task-item')];
-      const found=rows.filter(e=>[...e.querySelectorAll('span')].some(s=>s.textContent.trim()===${desktopJsLiteral(subject)}));
-      if(found.length!==1)return null;
-      const e=found[0],r=e.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,hit=document.elementFromPoint(x,y);
-      return r.width>0&&r.height>0&&hit&&(e===hit||e.contains(hit))?{x,y}:null;
-    })()`;
-    const hoverPoint = record(await waitRead(expression, 'visible sidebar seed row'));
-    options.assertOwnedRenderer();
-    step({
-      action: 'mouseMoved',
-      label: 'hover sidebar row before measuring click',
-      subject,
-      target: hoverPoint,
-    });
-    await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', ...hoverPoint });
-    // The ordinary row reveals owner/team details on pointer enter, changing its
-    // height. Measure after that layout, as a human moving the mouse would do.
-    // Background Electron windows throttle animation frames; use bounded reads
-    // of the actual geometry instead of waiting for renderer frame callbacks.
-    let point = record(await waitRead(expression, 'hovered sidebar row'));
-    let stable = false;
-    for (let sample = 0; sample < 10; sample++) {
-      await new Promise<void>((done) => setTimeout(done, 100));
-      const next = record(await waitRead(expression, 'hovered sidebar row geometry'));
-      stable = point.x === next.x && point.y === next.y;
-      point = next;
-      if (stable) break;
+    let facts: Record<string, unknown> | undefined;
+    const observe = (value: unknown): void => { facts = projectDesktopSidebarFacts(value); };
+    try {
+      await cdp.send('Page.bringToFront');
+      // The dev renderer can expose its bridge while modules and the first Team
+      // snapshot are still loading. Only this initial read gets a startup budget;
+      // clicks and mutation outcomes retain their existing bounds/no-retry rule.
+      const taskKey = record(await waitRead(sidebarExpression(subject), 'canonical sidebar task', 90_000)).key;
+      assert.ok(typeof taskKey === 'string');
+      const keyParts: unknown = JSON.parse(taskKey);
+      assert.ok(Array.isArray(keyParts) && keyParts.length === 2 && keyParts.every(value => typeof value === 'string' && value.length > 0));
+      assert.equal(JSON.stringify(keyParts), taskKey);
+      const visibility = { deadline: Date.now() + 30_000, remainingWheels: 12 };
+      await scrollTo('#sidebar-tasks-panel .sidebar-task-item [data-task-card-field="subject"]', 'reveal original sidebar task',
+        subject, 12, { requireCenterHit: true, sidebarTaskKey: taskKey, observe }, visibility);
+      const expression = `(() => {
+        const rows=[...document.querySelectorAll('#sidebar-tasks-panel .sidebar-task-item')];
+        const found=rows.filter(e=>[...e.querySelectorAll('span')].some(s=>s.textContent.trim()===${desktopJsLiteral(subject)}));
+        if(found.length!==1)return {unavailableTarget:true,facts:{matches:Math.min(found.length,256)}};
+        const e=found[0],keyMatches=e.getAttribute('data-task-key')===${desktopJsLiteral(taskKey)},r=e.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,hit=document.elementFromPoint(x,y);
+        const facts={matches:1,keyMatches,width:r.width,height:r.height,top:r.top,bottom:r.bottom,positiveSize:r.width>0&&r.height>0,
+          centerInViewport:x>=0&&y>=0&&x<innerWidth&&y<innerHeight,hitPresent:Boolean(hit),hitWithinTarget:Boolean(hit&&(e===hit||e.contains(hit)))};
+        return keyMatches&&r.width>0&&r.height>0&&hit&&(e===hit||e.contains(hit))?{x,y,facts}:{unavailableTarget:true,facts};
+      })()`;
+      const readPoint = async (label: string, deadline?: number): Promise<Record<string, unknown>> => {
+        const point = record(await waitRead(expression, label, 30_000, value => {
+          if (!value) return false;
+          const row = record(value); try { observe(row.facts); } catch { /* Keep the original target predicate. */ }
+          return row.unavailableTarget !== true;
+        }, deadline === undefined ? undefined : { deadline }));
+        return { x: point.x, y: point.y };
+      };
+      const hoverPoint = await readPoint('visible sidebar seed row', visibility.deadline);
+      options.assertOwnedRenderer();
+      step({
+        action: 'mouseMoved',
+        label: 'hover sidebar row before measuring click',
+        subject,
+        target: hoverPoint,
+      });
+      await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', ...hoverPoint });
+      // The ordinary row reveals owner/team details on pointer enter, changing its
+      // height. Measure after that layout, as a human moving the mouse would do.
+      // Background Electron windows throttle animation frames; use bounded reads
+      // of the actual geometry instead of waiting for renderer frame callbacks.
+      let point = await readPoint('hovered sidebar row');
+      let stable = false;
+      for (let sample = 0; sample < 10; sample++) {
+        await new Promise<void>((done) => setTimeout(done, 100));
+        const next = await readPoint('hovered sidebar row geometry');
+        stable = point.x === next.x && point.y === next.y;
+        point = next;
+        if (stable) break;
+      }
+      assert.ok(stable, 'hovered row geometry stabilizes before the one click');
+      options.assertOwnedRenderer();
+      step({
+        action: 'mouseClick',
+        label: 'sidebar task',
+        subject,
+        target: point,
+        state: 'attempted',
+      });
+      await cdp.send('Input.dispatchMouseEvent', {
+        type: 'mousePressed',
+        ...point,
+        button: 'left',
+        clickCount: 1,
+      });
+      await cdp.send('Input.dispatchMouseEvent', {
+        type: 'mouseReleased',
+        ...point,
+        button: 'left',
+        clickCount: 1,
+      });
+      step({
+        observation: 'passive input delivery after sidebar click',
+        value: await cdp.evaluate(
+          '({focused:document.hasFocus(),visibility:document.visibilityState,events:window.__TEST_desktopInputEvents})'
+        ),
+      });
+      await clickExpression(target('[role="dialog"] button', 'Open team'), 'Open team', '[role="dialog"] button', 'Open team', readiness, timing);
+    } catch (error) {
+      try { step({ observation: 'last sidebar target observation before failure', facts: facts ?? null }); } catch { /* Preserve the original failure. */ }
+      throw error;
     }
-    assert.ok(stable, 'hovered row geometry stabilizes before the one click');
-    options.assertOwnedRenderer();
-    step({
-      action: 'mouseClick',
-      label: 'sidebar task',
-      subject,
-      target: point,
-      state: 'attempted',
-    });
-    await cdp.send('Input.dispatchMouseEvent', {
-      type: 'mousePressed',
-      ...point,
-      button: 'left',
-      clickCount: 1,
-    });
-    await cdp.send('Input.dispatchMouseEvent', {
-      type: 'mouseReleased',
-      ...point,
-      button: 'left',
-      clickCount: 1,
-    });
-    step({
-      observation: 'passive input delivery after sidebar click',
-      value: await cdp.evaluate(
-        '({focused:document.hasFocus(),visibility:document.visibilityState,events:window.__TEST_desktopInputEvents})'
-      ),
-    });
-    await clickExpression(target('[role="dialog"] button', 'Open team'), 'Open team', '[role="dialog"] button', 'Open team', readiness, timing);
   };
   return { observeInput, waitRead, click, clickExpression, clickSidebar, scrollTo, hoverExpression };
 }

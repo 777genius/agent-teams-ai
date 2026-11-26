@@ -1,40 +1,40 @@
 {
-  "version": "0.0.160",
+  "version": "0.0.161",
   "cliVersion": "2.777.777",
-  "sourceRef": "v0.0.160",
+  "sourceRef": "v0.0.161",
   "sourceRepository": "777genius/agent_teams_orchestrator",
   "releaseRepository": "777genius/agent_teams_orchestrator_binaries",
-  "releaseTag": "runtime-v0.0.160",
+  "releaseTag": "runtime-v0.0.161",
   "assets": {
     "darwin-arm64": {
-      "file": "agent-teams-runtime-darwin-arm64-v0.0.160.tar.gz",
+      "file": "agent-teams-runtime-darwin-arm64-v0.0.161.tar.gz",
       "archiveKind": "tar.gz",
       "binaryName": "claude-multimodel",
-      "sha256": "facece83f619c4b1c1ec3a76cff25727d85a2b75d18812cbc3a5b729e855ecc9"
+      "sha256": "8c436b746dce35eb91e7125b3cc6e3fcbe1965008dded29d4655fb28c4382d7b"
     },
     "darwin-x64": {
-      "file": "agent-teams-runtime-darwin-x64-v0.0.160.tar.gz",
+      "file": "agent-teams-runtime-darwin-x64-v0.0.161.tar.gz",
       "archiveKind": "tar.gz",
       "binaryName": "claude-multimodel",
-      "sha256": "fbaab0cb2a1b46241985ecabf4f256abf8f80051be264786cbf301857e46969a"
+      "sha256": "9d1788cd5d1bf36e442629071e2f8baf188cbe7db38edfe63cea941978189037"
     },
     "linux-x64": {
-      "file": "agent-teams-runtime-linux-x64-v0.0.160.tar.gz",
+      "file": "agent-teams-runtime-linux-x64-v0.0.161.tar.gz",
       "archiveKind": "tar.gz",
       "binaryName": "claude-multimodel",
-      "sha256": "09b174841e74c95337f8b1be986f1501a71582ce190671c548bf4c70ab814e10"
+      "sha256": "3d389fe0b213019672092a784e801dcd0bd13ecac9c45943df0578d76cb22a70"
     },
     "win32-arm64": {
-      "file": "agent-teams-runtime-win32-arm64-v0.0.160.zip",
+      "file": "agent-teams-runtime-win32-arm64-v0.0.161.zip",
       "archiveKind": "zip",
       "binaryName": "claude-multimodel.exe",
-      "sha256": "6455e6269b41ac044357de847e07b783000a56ca7503a340739510c446ad004a"
+      "sha256": "3cf39af52d594a204b731158face331a6d72a50befd6c62f95dbd805a19e7594"
     },
     "win32-x64": {
-      "file": "agent-teams-runtime-win32-x64-v0.0.160.zip",
+      "file": "agent-teams-runtime-win32-x64-v0.0.161.zip",
       "archiveKind": "zip",
       "binaryName": "claude-multimodel.exe",
-      "sha256": "fafa3d891922cb3a5df6d1bd7dec80cc105352c619b39e298761657add677f49"
+      "sha256": "b1ef5a4026629525f5be807ee5235e948cee1c4b6085aa4a9f69702ee42a269f"
     }
   },
   "opencodeV2": {
@@ -65,8 +65,8 @@
   "opencodeV2Delivery": {
     "darwin-arm64": {
       "schemaVersion": 1,
-      "runtimeVersion": "0.0.160",
-      "sourceCommit": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "runtimeVersion": "0.0.161",
+      "sourceCommit": "5841f978fa0c03345eb8c1fd05ed94530d8ed612",
       "bridgeProtocol": 1,
       "platform": "darwin",
       "arch": "arm64",
@@ -75,24 +75,24 @@
         "2.1.4"
       ],
       "archive": {
-        "file": "agent-teams-opencode-v2-support-darwin-arm64-v0.0.160.zip",
+        "file": "agent-teams-opencode-v2-support-darwin-arm64-v0.0.161.zip",
         "kind": "zip",
-        "sha256": "63776ffeade65263c217042e431bbf71d3d75c0b0b59f6515a0e503e068f012b",
-        "bytes": 58083567,
+        "sha256": "cb84031bfebc4ab36c9e4b42be6b769ffb951b3c7a2b4b170c5e6b0cc6cc422e",
+        "bytes": 58084261,
         "entries": 24620,
-        "expandedBytes": 206161162
+        "expandedBytes": 206162382
       },
       "manifest": {
         "file": "opencode-v2-engine-manifest.json",
-        "sha256": "a6091937d1c8686b7e1f125b2ef69c52146867b208517eb0fab4cb7ea18c2204",
+        "sha256": "3de6f5925ff6915ec8f0ecc75bec72ef7c4b3b7767e147e224cceb45da332ae0",
         "bytes": 6704219,
         "files": 24619
       }
     },
     "darwin-x64": {
       "schemaVersion": 1,
-      "runtimeVersion": "0.0.160",
-      "sourceCommit": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "runtimeVersion": "0.0.161",
+      "sourceCommit": "5841f978fa0c03345eb8c1fd05ed94530d8ed612",
       "bridgeProtocol": 1,
       "platform": "darwin",
       "arch": "x64",
@@ -101,24 +101,24 @@
         "2.1.4"
       ],
       "archive": {
-        "file": "agent-teams-opencode-v2-support-darwin-x64-v0.0.160.zip",
+        "file": "agent-teams-opencode-v2-support-darwin-x64-v0.0.161.zip",
         "kind": "zip",
-        "sha256": "f80837d4659bcd0ccc0275dbbff3731e517a50567572d24635bfdcf6447f1111",
-        "bytes": 59387369,
+        "sha256": "fa33d7efc20e6002ee9abe30a99c8379d19196530056056e6fd57cfe4a93ca26",
+        "bytes": 59388050,
         "entries": 24620,
-        "expandedBytes": 209639276
+        "expandedBytes": 209640496
       },
       "manifest": {
         "file": "opencode-v2-engine-manifest.json",
-        "sha256": "7690030a5aba3026544e65f000475dd20f83213383e9bfddad3d98c1134a65fb",
+        "sha256": "ee8b490099a8a3ee166a6db440926d633e0413fd2c416d23b9eef16a74d2bb9a",
         "bytes": 6704111,
         "files": 24619
       }
     },
     "linux-x64": {
       "schemaVersion": 1,
-      "runtimeVersion": "0.0.160",
-      "sourceCommit": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "runtimeVersion": "0.0.161",
+      "sourceCommit": "5841f978fa0c03345eb8c1fd05ed94530d8ed612",
       "bridgeProtocol": 1,
       "platform": "linux",
       "arch": "x64",
@@ -127,24 +127,24 @@
         "2.1.4"
       ],
       "archive": {
-        "file": "agent-teams-opencode-v2-support-linux-x64-v0.0.160.zip",
+        "file": "agent-teams-opencode-v2-support-linux-x64-v0.0.161.zip",
         "kind": "zip",
-        "sha256": "c49a71cd1b4f253ed2d1392b44db419eaa28d91764f278c78b8c0fabe35a06ee",
-        "bytes": 72703295,
+        "sha256": "7cfe54a59681926edbdb9e0d0050bcf093ec2171c3e897f8bdbc83bf2b3bdad7",
+        "bytes": 72703524,
         "entries": 24665,
-        "expandedBytes": 247385122
+        "expandedBytes": 247386598
       },
       "manifest": {
         "file": "opencode-v2-engine-manifest.json",
-        "sha256": "30fef1cda05763154901c6349b010bd3ea530c0da9454514d721284288db98ce",
+        "sha256": "8ca2573bd9624d72f80c8aff266ae3255636b64c9ba40bb536249d1d2d1fec10",
         "bytes": 6717370,
         "files": 24664
       }
     },
     "win32-arm64": {
       "schemaVersion": 1,
-      "runtimeVersion": "0.0.160",
-      "sourceCommit": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "runtimeVersion": "0.0.161",
+      "sourceCommit": "5841f978fa0c03345eb8c1fd05ed94530d8ed612",
       "bridgeProtocol": 1,
       "platform": "win32",
       "arch": "arm64",
@@ -153,24 +153,24 @@
         "2.1.4"
       ],
       "archive": {
-        "file": "agent-teams-opencode-v2-support-win32-arm64-v0.0.160.zip",
+        "file": "agent-teams-opencode-v2-support-win32-arm64-v0.0.161.zip",
         "kind": "zip",
-        "sha256": "c52b4ba9f8ec03d40d71e5f60a37978596dc22030be3a41ca46190e766e15f2e",
-        "bytes": 61766367,
+        "sha256": "6c22ed31dd8bcf4a372a9878823ee208b7116c08c32b499c7d190289941da194",
+        "bytes": 61767048,
         "entries": 24629,
-        "expandedBytes": 219949713
+        "expandedBytes": 219950933
       },
       "manifest": {
         "file": "opencode-v2-engine-manifest.json",
-        "sha256": "64fb47f2378124e0fbe5564e9ffb0221272ffb4937d326756551edfa27cf76f5",
+        "sha256": "7ba804ae8f675d91da8405a7e9a3128339120924a5b8c811fe2637ead4756403",
         "bytes": 6707055,
         "files": 24628
       }
     },
     "win32-x64": {
       "schemaVersion": 1,
-      "runtimeVersion": "0.0.160",
-      "sourceCommit": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "runtimeVersion": "0.0.161",
+      "sourceCommit": "5841f978fa0c03345eb8c1fd05ed94530d8ed612",
       "bridgeProtocol": 1,
       "platform": "win32",
       "arch": "x64",
@@ -179,16 +179,16 @@
         "2.1.4"
       ],
       "archive": {
-        "file": "agent-teams-opencode-v2-support-win32-x64-v0.0.160.zip",
+        "file": "agent-teams-opencode-v2-support-win32-x64-v0.0.161.zip",
         "kind": "zip",
-        "sha256": "9cea106d78a0482a0ea8bd05b0a7cb44c604fcf4f6de3fdac5549a5ba552787c",
-        "bytes": 63641132,
+        "sha256": "d8306a19294716a42a0f56cba8bebd207c9e6b0bfe6568e5bd8262e0891affb9",
+        "bytes": 63641811,
         "entries": 24632,
-        "expandedBytes": 226199498
+        "expandedBytes": 226200718
       },
       "manifest": {
         "file": "opencode-v2-engine-manifest.json",
-        "sha256": "b15576ab97dca04f002f3b07972e49290f0933e0f66c51b7332703a5b76ad628",
+        "sha256": "306eb1ba9740c71d19515b5b565b6afd59145c5f61af01e0271ae841c406dc35",
         "bytes": 6707619,
         "files": 24631
       }

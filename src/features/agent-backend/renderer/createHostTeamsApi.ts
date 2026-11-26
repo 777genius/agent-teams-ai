@@ -2,6 +2,7 @@ import { captureHostNotification } from '../contracts/hostNotification';
 import { readBackendProcesses } from '../contracts/processes';
 import { isHostTeamRunId } from '../contracts/teamRunSelection';
 
+import { createHostDefinitionEdits } from './createHostDefinitionEdits';
 import { createHostLeadApi } from './createHostLeadApi';
 import { createHostLogStatsApi } from './createHostLogStatsApi';
 import { createHostMemberActions } from './createHostMemberActions';
@@ -9,6 +10,8 @@ import { createHostMemberSpawnStatuses } from './createHostMemberSpawnStatuses';
 import { createHostMessageAttachmentRead } from './createHostMessageAttachmentRead';
 import { createHostProcessControls } from './createHostProcessControls';
 import { createHostProductLifecycleApi } from './createHostProductLifecycleApi';
+import { readHostProjectContext } from './createHostProjectContextApi';
+import { createHostProjectRuntimeApi } from './createHostProjectRuntimeApi';
 import { createHostSavedMemberMutations } from './createHostSavedMemberMutations';
 import { createHostTaskActivityApi } from './createHostTaskActivityApi';
 import { createHostTaskAttachmentRead } from './createHostTaskAttachmentRead';
@@ -27,6 +30,7 @@ import {
 } from './hostTeamRouting';
 import { projectHostMemberAttachmentCapabilities } from './projectHostMemberAttachmentCapabilities';
 import { projectHostSavedTeamRequest } from './projectHostSavedTeamRequest';
+import { projectHostTeamSummaries } from './projectHostTeamSummaries';
 import { readHostMessagesPage } from './readHostMessagesPage';
 import { HostTeamReadUnavailableError, readHostPagedSnapshot } from './readHostPagedSnapshot';
 import {
@@ -182,6 +186,7 @@ export function createHostTeamsApi(
   readOrder = new TeamProductReadOrder()
 ): TeamsAPI {
   const lifecycle = createHostTeamLifecycle(backend);
+  const projectRuntime = createHostProjectRuntimeApi({ backend, captureScope, readOrder, lifecycle });
   const approvals = createHostToolApprovals({ backend, captureScope, readOrder });
   const provisioning = createHostTeamProvisioning(backend, captureScope, readOrder);
   const getMemberSpawnStatuses = createHostMemberSpawnStatuses(backend, captureScope, readOrder);
@@ -269,6 +274,7 @@ export function createHostTeamsApi(
         displayName = binding.label,
         color: string | undefined;
       let projectPath: string | undefined;
+      let projectContextMode = binding.projectContextMode;
       try {
         const configuration = await readHostRosterConfiguration(backend, binding.handle);
         assertMatchingConfiguration(data, configuration);
@@ -276,12 +282,14 @@ export function createHostTeamsApi(
         displayName = configuration.savedSettings?.displayName ?? binding.label;
         color = configuration.savedSettings?.color;
         projectPath = savedProjectPath(configuration);
+        projectContextMode = configuration.savedSettings?.projectContextMode ?? projectContextMode;
       } catch {
         // Unavailable saved settings leave ordinary product records readable.
       }
       observed.push(read.assertCurrent);
       hostTeams.push({
         teamName: data.teamName,
+        ...(projectContextMode === undefined ? {} : { projectContextMode }),
         ...(binding.ownerResourceRef === undefined ? {} : { ownerResourceRef: binding.ownerResourceRef }),
         ...(data.lifecycle?.deletedAt ? { deletedAt: data.lifecycle.deletedAt } : {}),
         displayName,
@@ -306,7 +314,7 @@ export function createHostTeamsApi(
     current(check);
     for (const assertCurrent of observed) assertCurrent();
     // Reserved keys cannot be treated as real legacy filesystem team names.
-    const items = [...oldTeams.filter((team) => !isHostTeamSelectionKey(team.teamName)), ...hostTeams];
+    const items = [...oldTeams.filter((team) => !isHostTeamSelectionKey(team.teamName)), ...projectHostTeamSummaries(hostTeams, bindings)];
     return unavailable.length ? { items, unavailable } : items;
   }
   async function getAllTasks() {
@@ -463,6 +471,8 @@ export function createHostTeamsApi(
             ...(saved.displayName === undefined ? {} : { name: saved.displayName }),
             ...(saved.description === undefined ? {} : { description: saved.description }),
             ...(saved.color === undefined ? {} : { color: saved.color }),
+            ...(configuration.savedSettings?.language === undefined ? {} : { language: configuration.savedSettings.language }),
+            ...(saved.projectContextMode === undefined ? {} : { projectContextMode: saved.projectContextMode }),
           };
         }
       } catch {
@@ -479,35 +489,8 @@ export function createHostTeamsApi(
         ];
       return result;
     },
-    async processAlive(key: string) {
-      const check = captureScope();
-      const connection = await resolveConnection(key, check);
-      readOrder.capture(check);
-      const readFence = readOrder.readFence(connection.handle.handleId);
-      const state = await lifecycle.read(connection, check);
-      readFence();
-      if (!state) {
-        const observed = await snapshot(connection, check);
-        observed.assertCurrent();
-        readFence();
-        if (observed.data.runtimeNeverLaunched && !observed.data.lifecycle?.cleanupPending)
-          return false;
-      }
-      if (!state || state.alive === undefined)
-        throw new Error('Host team runtime state unavailable');
-      return state.alive;
-    },
-    async stop(key: string) {
-      const check = captureScope();
-      const connection = await resolveConnection(key, check);
-      readOrder.capture(check);
-      readOrder.invalidateReads(connection.handle.handleId);
-      try {
-        await lifecycle.stop(connection, check);
-      } finally {
-        if (check()) readOrder.invalidateReads(connection.handle.handleId);
-      }
-    },
+    processAlive: projectRuntime.processAlive,
+    stop: projectRuntime.stop,
     async getMessagesPage(
       key: string,
       options?: { cursor?: string | null; limit?: number; groupChatId?: string }
@@ -558,6 +541,7 @@ export function createHostTeamsApi(
   };
   const productLifecycle = createHostProductLifecycleApi(productLifecycleOptions);
   const savedMembers = createHostSavedMemberMutations(productLifecycleOptions);
+  const definitions = createHostDefinitionEdits(productLifecycleOptions);
   const attachmentOptions = {
     backend,
     captureScope,
@@ -618,6 +602,7 @@ export function createHostTeamsApi(
     invalidateReads: (handleId) => readOrder.invalidateReads(handleId),
   });
   const supported = {
+    getTeamAgentRuntime: projectRuntime.getTeamAgentRuntime,
     getMemberSpawnStatuses,
     ...memberActions,
     async showMessageNotification(raw: Parameters<TeamsAPI['showMessageNotification']>[0]) {
@@ -634,6 +619,11 @@ export function createHostTeamsApi(
     ...roster,
     ...productLifecycle,
     ...savedMembers,
+    ...definitions,
+    async getProjectContextView(key: string, projectPath?: string | null) {
+      const check = captureScope(), connection = structuredClone(await resolveConnection(key, check));
+      return (await readHostProjectContext(backend, connection, check, projectPath)).view;
+    },
     ...logStats,
     ...lead,
     ...taskActivity,
@@ -654,6 +644,11 @@ export function createHostTeamsApi(
     { ...legacy },
     {
       get(_target, property) {
+        if (property === 'definitionEdits') return Object.fromEntries(
+          ['updateConfig', 'addMember', 'replaceMembers', 'removeMember', 'restoreMember', 'updateMemberRole'].map(method => [method,
+            (...args: unknown[]) => isHostTeamSelectionKey(args[0])
+              ? Reflect.apply(Reflect.get(supported, method), supported, args)
+              : Reflect.apply(Reflect.get(legacy, method), legacy, args)]));
         if (property === 'createTeam' || property === 'createConfig') return creation[property];
         if (property === 'updateToolApprovalSettings')
           return (...args: Parameters<TeamsAPI['updateToolApprovalSettings']>) =>
@@ -733,48 +728,31 @@ export function createHostTeamsApi(
           };
         if (property === 'list') return list;
         if (property === 'getAllTasks') return getAllTasks;
-        if (property === 'aliveList')
-          return async () => {
-            const check = captureScope();
-            const [legacyAlive, bindings] = await Promise.all([
-              legacy.aliveList(),
-              connections(check),
-            ]);
-            const state = [];
-            for (const connection of bindings) {
-              readOrder.capture(check);
-              const assertCurrent = readOrder.readFence(connection.handle.handleId);
-              const runtimeState = await lifecycle.read(connection, check);
-              state.push({ connection, state: runtimeState, assertCurrent });
-            }
-            current(check);
-            for (const entry of state) entry.assertCurrent();
-            if (state.some((entry) => entry.state && entry.state.alive === undefined))
-              throw new Error('Host team runtime state unavailable');
-            return [
-              ...legacyAlive.filter((name) => !isHostTeamSelectionKey(name)),
-              ...state
-                .filter((entry) => entry.state?.alive)
-                .map((entry) => hostTeamSelectionKey(entry.connection.handle.handleId)),
-            ];
-          };
+        if (property === 'aliveList') return async () => {
+          const check = captureScope();
+          const [old, host] = await Promise.all([legacy.aliveList(), projectRuntime.aliveList()]);
+          current(check);
+          return [...old.filter(name => !isHostTeamSelectionKey(name)), ...host];
+        };
         const original = Reflect.get(legacy, property) as unknown;
-        if (typeof original !== 'function') return original;
+        if (typeof original !== 'function' && !Object.hasOwn(supported, property)) return original;
         return (...args: unknown[]) => {
           if (isHostTeamRunId(args[0])) {
             if (property === 'getProvisioningStatus')
               return provisioning.getProvisioningStatus(args[0]);
             if (property === 'cancelProvisioning') return provisioning.cancelProvisioning(args[0]);
           }
-          if (!hasHostTeamDestination(property, args[0]))
+          if (!hasHostTeamDestination(property, args[0])) {
+            if (typeof original !== 'function') throw new Error('Team operation unavailable');
             return Reflect.apply(original, legacy, args);
+          }
           if (property === 'launchTeam')
             return launchTeam(args[0] as Parameters<TeamsAPI['launchTeam']>[0]);
           if (property === 'showMessageNotification')
             return supported.showMessageNotification(
               args[0] as Parameters<TeamsAPI['showMessageNotification']>[0]
             );
-          if (isHostTeamSelectionKey(args[0]) && Object.hasOwn(supported, property))
+          if (Object.hasOwn(supported, property))
             return Reflect.apply(
               Reflect.get(supported, property) as (...args: unknown[]) => unknown,
               supported,

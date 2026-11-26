@@ -579,13 +579,14 @@ describe('actual legacy source owners and existing fences', () => {
     }
   );
 
-  it('imports actual save-only service output without manufacturing a native config or lead session', async () => {
+  it.each([undefined, 'shared', 'per_project'] as const)('imports actual save-only %s service output without native config or lead session', async (projectContextMode) => {
     const f = fixture();
     rmSync(f.team, { recursive: true });
     rmSync(join(f.root, 'claude/tasks', f.teamName), { recursive: true });
     await f.data.createTeamConfig({
       teamName: f.teamName,
       displayName: 'TEST Saved draft',
+      ...(projectContextMode ? { projectContextMode } : {}),
       cwd: '/TEST/workspace',
       providerId: 'anthropic',
       model: 'TEST-draft-model',
@@ -596,6 +597,7 @@ describe('actual legacy source owners and existing fences', () => {
     const snapshot = await exportStoppedTeam(f.source);
     expect(validateStoppedSnapshot(snapshot)).toEqual(snapshot);
     expect(snapshot.header.sourceKind).toBe('saved-draft');
+    expect(snapshot.header.savedSettings.projectContextMode).toBe(projectContextMode ?? 'per_project');
     expect(snapshot.header.savedSettings).toMatchObject({ displayName: 'TEST Saved draft' });
     expect(snapshot.header.members).toMatchObject([
       { name: 'team-lead', role: 'lead', settings: { model: 'TEST-draft-model' } },
@@ -840,12 +842,16 @@ describe('actual legacy source owners and existing fences', () => {
   it('derives closure from real owner maps/ledger scope and preserves exact saved policy without native effects', async () => {
     const f = fixture(),
       before = readFileSync(join(f.team, 'team.meta.json'));
+    const configPath = join(f.team, 'config.json');
+    const config = JSON.parse(readFileSync(configPath, 'utf8'));
+    writeFileSync(configPath, JSON.stringify({ ...config, language: 'Русский' }));
     const snapshot = await exportStoppedTeam(f.source);
     expect(snapshot.header.removedMembers).toBeUndefined();
     expect(snapshot.header.savedSettings).toMatchObject({
       providerId: 'codex',
       skipPermissions: false,
       fastMode: 'off',
+      language: 'Русский',
     });
     expect(snapshot.header.members[0]).toMatchObject({
       memberId: 'team-lead',

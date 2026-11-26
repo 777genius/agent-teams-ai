@@ -185,11 +185,7 @@ export const WorkspaceSection = (): React.JSX.Element => {
     >
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label
-            htmlFor="ws-profile-name"
-            className="mb-1 block text-xs"
-            style={{ color: 'var(--color-text-muted)' }}
-          >
+          <label htmlFor="ws-profile-name" className="mb-1 block text-xs text-text">
             {t('workspaceProfiles.form.name')}
           </label>
           <input
@@ -203,11 +199,7 @@ export const WorkspaceSection = (): React.JSX.Element => {
           />
         </div>
         <div>
-          <label
-            htmlFor="ws-profile-host"
-            className="mb-1 block text-xs"
-            style={{ color: 'var(--color-text-muted)' }}
-          >
+          <label htmlFor="ws-profile-host" className="mb-1 block text-xs text-text">
             {t('workspaceProfiles.form.host')}
           </label>
           <input
@@ -224,11 +216,7 @@ export const WorkspaceSection = (): React.JSX.Element => {
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label
-            htmlFor="ws-profile-port"
-            className="mb-1 block text-xs"
-            style={{ color: 'var(--color-text-muted)' }}
-          >
+          <label htmlFor="ws-profile-port" className="mb-1 block text-xs text-text">
             {t('workspaceProfiles.form.port')}
           </label>
           <input
@@ -242,11 +230,7 @@ export const WorkspaceSection = (): React.JSX.Element => {
           />
         </div>
         <div>
-          <label
-            htmlFor="ws-profile-username"
-            className="mb-1 block text-xs"
-            style={{ color: 'var(--color-text-muted)' }}
-          >
+          <label htmlFor="ws-profile-username" className="mb-1 block text-xs text-text">
             {t('workspaceProfiles.form.username')}
           </label>
           <input
@@ -262,7 +246,7 @@ export const WorkspaceSection = (): React.JSX.Element => {
       </div>
 
       <div>
-        <label className="mb-1 block text-xs" style={{ color: 'var(--color-text-muted)' }}>
+        <label className="mb-1 block text-xs text-text">
           {t('workspaceProfiles.form.authentication')}
         </label>
         <SettingsSelect
@@ -275,11 +259,7 @@ export const WorkspaceSection = (): React.JSX.Element => {
 
       {formAuthMethod === 'privateKey' && (
         <div>
-          <label
-            htmlFor="ws-profile-private-key-path"
-            className="mb-1 block text-xs"
-            style={{ color: 'var(--color-text-muted)' }}
-          >
+          <label htmlFor="ws-profile-private-key-path" className="mb-1 block text-xs text-text">
             {t('workspaceProfiles.form.privateKeyPath')}
           </label>
           <input

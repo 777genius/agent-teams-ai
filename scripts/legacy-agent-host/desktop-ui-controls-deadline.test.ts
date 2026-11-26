@@ -6,6 +6,7 @@ import { createProviderLaunchAuthorityMarker, PROVIDER_LAUNCH_AUTHORITY_MARKER_A
 } from '../../src/shared/utils/providerLaunchAuthorityMarker.ts';
 
 import { createDesktopUiControls, desktopAnimationFramesExpression } from './desktop-ui-controls.ts';
+import { createDesktopUpdateNoticePreparation, dismissOriginalUpdateNotice } from './desktop-update-notice.ts';
 
 type Frame = { settlesAt: number; value: unknown; animationFrames?: true };
 const offeredValue = { kind: 'TEST-read-value' };
@@ -1018,3 +1019,144 @@ for (const boundary of ['read', 'owner'] as const) {
     });
   });
 }
+
+function windowsUpdateFixture(mode = 'available', afterFirstRead?: () => void, afterNoticeHover?: () => void) {
+  let shown = mode !== 'absent' && mode !== 'late-after-hover', reads = 0, revoked = false, appeared = false;
+  const sends: string[] = [], steps: Record<string, unknown>[] = [];
+  const dispatches: { method: string; params?: Record<string, unknown> }[] = [];
+  const originalExpression = 'TEST_originalPackagedTarget()';
+  const refusal = new Error('TEST original Windows phase/owner refusal');
+  const deadline = Date.now() + 35_000;
+  const title = { textContent: mode === 'different-title' ? 'Update Ready' : 'Update available' };
+  const button = {
+    textContent: mode === 'different-button' ? 'Download' : 'Later',
+    getBoundingClientRect() { return { x: 40, y: 80, width: 80, height: 32 }; },
+    matches(selector: string) { assert.equal(selector, ':disabled'); return mode === 'disabled'; },
+    getAttribute() { return null; },
+    contains(value: unknown) { return value === button; },
+  };
+  const dialog = {
+    getBoundingClientRect() { return { x: 20, y: 20, width: 200, height: shown ? 140 : 0 }; },
+    getAttribute(name: string) {
+      return name === 'data-testid' ? mode === 'different-dialog' ? 'other-dialog' : 'update-dialog'
+        : name === 'aria-labelledby' ? 'TEST-update-title' : null;
+    },
+    contains(value: unknown) { return value === title || value === button; },
+    querySelectorAll(selector: string) {
+      assert.equal(selector, 'button'); return mode === 'duplicate-button' ? [button, button] : [button];
+    },
+  };
+  const assertOwnedRenderer = () => {
+    if (revoked || Date.now() >= deadline) throw refusal;
+  };
+  const cdp = {
+    async evaluate(expression: string) {
+      if (expression === originalExpression) return shown
+        ? { unavailableTarget: true, matches: 1, disabled: false, ariaDisabled: false,
+          pointerEventsNone: true, centerInViewport: true, hitPresent: true }
+        : { x: 300, y: 100, text: 'Open team', tag: 'BUTTON' };
+      const result: unknown = runInNewContext(expression, {
+        document: {
+          querySelectorAll(selector: string) {
+            assert.ok(selector === '[role="dialog"]' || selector === '[data-testid="update-dialog"][role="dialog"]');
+            const updates = shown ? mode === 'duplicate-update' ? [dialog, dialog] : [dialog] : [];
+            return selector === '[role="dialog"]' && (mode === 'two-dialogs' || mode === 'late-after-hover')
+              ? [{ ...dialog, getAttribute() { return 'original-task-dialog'; } }, ...updates] : updates;
+          },
+          getElementById(id: string) { assert.equal(id, 'TEST-update-title'); return title; },
+          elementFromPoint() { return mode === 'other-overlay' ? dialog : button; },
+        },
+        getComputedStyle() { return { display: 'block', visibility: mode === 'hidden' ? 'hidden' : 'visible' }; },
+      });
+      if (++reads === 1) {
+        if (mode === 'revoked-after-read') revoked = true;
+        afterFirstRead?.();
+      }
+      return result;
+    },
+    async send(method: string, params?: Record<string, unknown>) {
+      assertOwnedRenderer();
+      dispatches.push({ method, params });
+      const kind = String(params?.type ?? method); sends.push(kind);
+      if (kind === 'mouseMoved' && params?.x === 300 && mode === 'late-after-hover' && !appeared) {
+        appeared = true; shown = true;
+      }
+      if (kind === 'mouseMoved' && params?.x === 80) afterNoticeHover?.();
+      if (kind === 'mousePressed' && mode === 'uncertain-click') throw refusal;
+      if (kind === 'mouseReleased') shown = false;
+      return {};
+    },
+  };
+  const ui = createDesktopUiControls(cdp, { assertOwnedRenderer, step: value => steps.push(value) });
+  const controlOptions = { assertOwnedRenderer, step: (value: Record<string, unknown>) => steps.push(value) };
+  const prepareBlockedTarget = createDesktopUpdateNoticePreparation(cdp, controlOptions);
+  return { sends, steps, dispatches, refusal, run: () => dismissOriginalUpdateNotice(cdp, ui, {
+    assertOwnedRenderer, remainingMs() { assertOwnedRenderer(); return deadline - Date.now(); },
+  }), late: () => createDesktopUiControls(cdp, { ...controlOptions, prepareBlockedTarget })
+    .clickExpression(originalExpression, 'Open team') };
+}
+
+test('Windows startup dismisses the actual available update with one ordinary Later click', async () => {
+  const f = windowsUpdateFixture();
+  assert.equal(await f.run(), true);
+  assert.deepEqual(f.sends, ['Page.bringToFront', 'mouseMoved', 'mousePressed', 'mouseReleased']);
+  assert.equal(f.steps.filter(row => row.action === 'mouseClick').length, 1);
+  assert.equal(f.steps.find(row => row.action === 'mouseClick')?.expectedText, 'Later');
+});
+
+for (const mode of ['absent', 'hidden', 'different-title', 'different-button', 'different-dialog',
+  'duplicate-button', 'duplicate-update', 'disabled', 'other-overlay']) {
+  test(`Windows startup does not dismiss an unavailable or unrelated update surface: ${mode}`, async () => {
+    const f = windowsUpdateFixture(mode);
+    assert.equal(await f.run(), false);
+    assert.deepEqual(f.sends, []);
+    assert.deepEqual(f.steps, []);
+  });
+}
+
+test('Windows update preparation preserves original owner refusal after its passive read', async () => {
+  const f = windowsUpdateFixture('revoked-after-read');
+  await assert.rejects(f.run(), error => error === f.refusal);
+  assert.deepEqual(f.sends, []);
+});
+
+test('Windows update preparation cannot renew the original 35-second phase deadline', async t => {
+  try {
+    t.mock.timers.enable({ apis: ['Date'], now: 0 });
+    const f = windowsUpdateFixture('available', () => t.mock.timers.setTime(35_000));
+    await assert.rejects(f.run(), error => error === f.refusal);
+    assert.deepEqual(f.sends, []);
+  } finally { t.mock.timers.reset(); }
+});
+
+test('Windows update dismissal never retries an uncertain physical click', async () => {
+  const f = windowsUpdateFixture('uncertain-click');
+  await assert.rejects(f.run(), error => error === f.refusal);
+  assert.deepEqual(f.sends, ['Page.bringToFront', 'mouseMoved', 'mousePressed']);
+  assert.equal(f.steps.filter(row => row.action === 'mouseClick').length, 1);
+});
+
+
+test('packaged update notice is dismissed above the original task dialog without dismissing that task', async () => {
+  const f = windowsUpdateFixture('two-dialogs');
+  assert.equal(await f.run(), true);
+  assert.deepEqual(f.dispatches.filter(row => row.params?.type === 'mousePressed').map(row => row.params?.x), [80]);
+});
+
+test('packaged update appearing after original hover is dismissed once before one original business click', async () => {
+  const f = windowsUpdateFixture('late-after-hover');
+  await f.late();
+  assert.deepEqual(f.dispatches.filter(row => row.params?.type === 'mousePressed').map(row => row.params?.x), [80, 300]);
+  assert.equal(f.steps.filter(row => row.action === 'mouseClick' && row.label === 'dismiss original available update notice').length, 1);
+  assert.equal(f.steps.filter(row => row.action === 'mouseClick' && row.label === 'Open team').length, 1);
+});
+
+test('late packaged update preparation spends the original target deadline before any business click', async t => {
+  try {
+    t.mock.timers.enable({ apis: ['Date'], now: 0 });
+    const f = windowsUpdateFixture('late-after-hover', () => t.mock.timers.setTime(100),
+      () => t.mock.timers.setTime(30_000));
+    await assert.rejects(f.late(), /Original UI update notice preparation exceeded its captured deadline; no mutation retry/);
+    assert.deepEqual(f.dispatches.filter(row => row.params?.type === 'mousePressed'), []);
+  } finally { t.mock.timers.reset(); }
+});

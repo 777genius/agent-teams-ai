@@ -365,7 +365,8 @@ export class TeamMemberResolver {
         taskCount: ownedTasks.length,
         color: configMember?.color ?? metaMember?.color ?? getMemberColorByName(name),
         agentType: configMember?.agentType ?? metaMember?.agentType,
-        role: configMember?.role ?? metaMember?.role,
+        // Authored roles (including clearing one) live in metadata; config may retain an old run.
+        role: configuredMember?.role,
         workflow: configMember?.workflow ?? metaMember?.workflow,
         isolation: configMember?.isolation ?? metaMember?.isolation,
         providerId: effectiveProviderId,

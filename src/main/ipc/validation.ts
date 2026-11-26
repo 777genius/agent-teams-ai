@@ -49,7 +49,10 @@ function isPathContained(fullPath: string, basePath: string): boolean {
   const normalizedBase = normalizeForContainment(basePath);
   const relative = path.relative(normalizedBase, normalizedFull);
 
-  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+  // Reject a first segment made only of dots and spaces ('..', '.. ', '...'), as before.
+  // Names such as '..data' are inside the root.
+  const firstSegment = relative.split(path.sep)[0];
+  return relative === '' || (!/^\.\.[. ]*$/.test(firstSegment) && !path.isAbsolute(relative));
 }
 
 function normalizeForContainment(value: string): string {

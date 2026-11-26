@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { safeSegment } from '../../../packages/legacy-agent-host/src/team/identity';
 import { validateTeamCommand } from '../../../packages/legacy-agent-host/src/team/validateTeamCommand';
+import { parseBackendOperation } from '../../../src/features/agent-backend/main/adapters/input/validateBackendOperation';
 import { projectTeamSnapshot } from '../../../src/features/agent-backend/main/adapters/output/projectTeamSnapshot';
 import {
   createHostTeamsApi,
@@ -127,6 +128,37 @@ function fixture() {
 }
 
 describe('ordinary Host Team mutation adapters', () => {
+  it('retains the original clarification cycle in the finite answer and refuses rebinding its command', async () => {
+    const f = fixture(), cycle = '11111111-1111-4111-8111-111111111111';
+    const request = { text: 'TEST original answer', answerClarificationRequestId: cycle,
+      command: { commandId: 'TEST-answer-intent', idempotencyKey: 'TEST-answer-intent' } };
+    await f.teams.addTaskComment(f.key, 'TEST-task', request);
+    const sent = f.invoke.mock.calls.map(([value]) => value).filter(value => value.operation === 'task.comment');
+    expect(sent).toHaveLength(1);
+    expect(parseBackendOperation(sent[0])).toMatchObject({ handle: { handleId: 'TEST-A' },
+      commandId: request.command.commandId, operation: 'task.comment',
+      payload: { taskId: 'TEST-task', text: request.text, answerClarificationRequestId: cycle } });
+    await expect(f.teams.addTaskComment(f.key, 'TEST-task', { ...request,
+      answerClarificationRequestId: '22222222-2222-4222-8222-222222222222' })).rejects.toThrow();
+    expect(f.invoke.mock.calls.filter(([value]) => value.operation === 'task.comment')).toHaveLength(1);
+    expect(f.legacy.addTaskComment).not.toHaveBeenCalled();
+    for (const invalid of ['', 'TEST-not-a-cycle', '11111111-1111-1111-8111-111111111111'])
+      expect(() => parseBackendOperation({ ...sent[0], payload: {
+        ...sent[0]!.payload, answerClarificationRequestId: invalid,
+      } })).toThrow();
+  });
+
+  it('preserves the exact current clarification request on product snapshot projection', () => {
+    const cycle = '11111111-1111-4111-8111-111111111111';
+    const snapshot = projectTeamSnapshot({ teamName: 'TEST-team', revision: 'a'.repeat(64),
+      feed: { streamId: '33333333-3333-4333-8333-333333333333', sequence: 0,
+        cursor: '11111111-1111-4111-8111-111111111111' }, members: [], messages: [],
+      tasks: [{ id: 'TEST-task', subject: 'TEST question', status: 'pending',
+        needsClarification: 'user', clarificationRequestId: cycle }],
+      kanbanState: { teamName: 'TEST-team', reviewers: [], tasks: {} } });
+    expect(snapshot.tasks[0]).toMatchObject({ needsClarification: 'user', clarificationRequestId: cycle });
+  });
+
   it('routes original processSend once to the exact lead from its captured snapshot and translates canonical TaskRefs', async () => {
     const f = fixture();
     const invoke = f.invoke.getMockImplementation()!;

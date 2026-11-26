@@ -456,3 +456,52 @@ test('interrupted direct clear resumes exact prepared board bytes', async (t) =>
   assert.equal(f.boardBytes(), board);
   assert.equal(f.bytes(f.a), task);
 });
+
+// The accepted answer and user-to-owner notice share one original durable plan.
+test('bound user answer retains its exact cycle, notice and reply through cold recovery', t => {
+  const f = fixture(t);
+  f.human.execute({ commandId: 'TEST-question-1', operation: 'task.clarification',
+    payload: { taskId: f.a, value: 'user' } });
+  const requestId = String(f.human.getTask(f.a).clarificationRequestId);
+  const command: TeamCommand = { commandId: 'TEST-answer-1', operation: 'task.comment',
+    payload: { taskId: f.a, text: 'Use the original decision.', answerClarificationRequestId: requestId } };
+  assert.equal(f.owner.connect('alice').execute({ ...command, commandId: 'TEST-agent-cannot-answer' }).phase, 'rejected');
+  const accepted = f.human.execute(command);
+  assert.equal(accepted.phase, 'completed');
+  assert.equal(accepted.effects.commentId, `clarification-answer-${requestId}`);
+  assert.equal(f.human.getTask(f.a).needsClarification, undefined);
+  const inboxFile = join(f.root, 'teams', f.binding.teamName, 'inboxes/alice.json');
+  const bytes = readFileSync(inboxFile, 'utf8');
+  const notice = JSON.parse(bytes).filter((row: { commentId?: string }) => row.commentId === accepted.effects.commentId);
+  assert.equal(notice.length, 1); assert.equal(notice[0].from, 'user');
+  assert.match(notice[0].text, /Re-read the task's CURRENT state/);
+  const recovered = f.reopen().connect('user');
+  assert.equal(recovered.execute(command).phase, 'completed');
+  assert.equal(readFileSync(inboxFile, 'utf8'), bytes);
+  recovered.execute({ commandId: 'TEST-question-2', operation: 'task.clarification',
+    payload: { taskId: f.a, value: 'user' } });
+  const secondCycle = recovered.getTask(f.a).clarificationRequestId;
+  assert.notEqual(secondCycle, requestId);
+  assert.equal(recovered.execute(command).phase, 'completed');
+  assert.equal(recovered.getTask(f.a).clarificationRequestId, secondCycle);
+  assert.equal(recovered.execute({ ...command, commandId: 'TEST-stale-answer-new-command' }).phase, 'rejected');
+  assert.equal(recovered.getTask(f.a).needsClarification, 'user');
+  assert.equal(readFileSync(inboxFile, 'utf8'), bytes);
+});
+
+test('partial answer publication resumes only its original notice without duplicating the answer handoff', t => {
+  const f = fixture(t);
+  f.human.execute({ commandId: 'TEST-partial-question', operation: 'task.clarification',
+    payload: { taskId: f.a, value: 'user' } });
+  const requestId = String(f.human.getTask(f.a).clarificationRequestId);
+  const command: TeamCommand = { commandId: 'TEST-partial-answer', operation: 'task.comment',
+    payload: { taskId: f.a, text: 'Exact retained answer.', answerClarificationRequestId: requestId } };
+  f.plan.fail = true;
+  assert.throws(() => f.human.execute(command), (error) => error instanceof TeamOwnerError && error.code === 'hold');
+  const reopened = f.reopen().connect('user');
+  assert.equal(reopened.execute(command).phase, 'completed');
+  const task = reopened.getTask(f.a);
+  assert.equal((task.comments as Array<{ id: string }>).filter(row => row.id === `clarification-answer-${requestId}`).length, 1);
+  const rows = JSON.parse(readFileSync(join(f.root, 'teams', f.binding.teamName, 'inboxes/alice.json'), 'utf8'));
+  assert.equal(rows.filter((row: { commentId?: string }) => row.commentId === `clarification-answer-${requestId}`).length, 1);
+});

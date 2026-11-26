@@ -10,10 +10,12 @@ import {
   readOpenCodeV2Contract,
 } from '../../../src/features/opencode-compatibility/core/domain/openCodeV2Contract.ts';
 import {
+  V2_DELIVERY_LIMITS,
   parseOpenCodeV2DeliveryManifest,
   parseOpenCodeV2InstalledReceipt,
   readOpenCodeV2DeliveryMap,
 } from '../../../src/features/opencode-runtime-installer/core/domain/v2Delivery.ts';
+import { MAX_OPENCODE_BINARY_BYTES } from '../../../src/features/opencode-runtime-installer/main/infrastructure/packageExtraction.ts';
 
 const HELPER = 'local-cli/opencodeV2RunOwner.js';
 const QUALIFICATION = readOpenCodeV2Contract(runtimeLock.opencodeV2);
@@ -40,7 +42,7 @@ async function physical(root, relative, directory = false) {
   return file;
 }
 
-async function digest(file, maximum = 256 * 1024 ** 2) {
+async function digest(file, maximum = V2_DELIVERY_LIMITS.file) {
   const before = await lstat(file);
   assert(before.isFile() && !before.isSymbolicLink() && before.size <= maximum);
   const hash = createHash('sha256');
@@ -132,11 +134,9 @@ export async function v2SupportSnapshot(data, verifyFiles = 'all') {
       assert.equal(await digest(file), row.sha256, 'Installed support checksum mismatch');
     }
   }));
-  // Native packages use packageExtraction.ts's 350 MiB bound; support files retain
-  // the separate 256 MiB digest default.
   return { descriptor, receipt, instanceRoot, engineVersion, filesVerified: rows.length,
     native: { binaryPath: nativeFile, version: current.version, platformPackage: current.platformPackage,
-      integrity: current.integrity, currentSha256: sha(currentBytes), sha256: await digest(nativeFile, 350 * 1024 ** 2) } };
+      integrity: current.integrity, currentSha256: sha(currentBytes), sha256: await digest(nativeFile, MAX_OPENCODE_BINARY_BYTES) } };
 }
 
 /** Warm starts must reuse the exact successfully installed cold selection. */

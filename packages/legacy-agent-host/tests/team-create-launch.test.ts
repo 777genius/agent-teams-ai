@@ -26,6 +26,7 @@ import { admitRegistryTeamNamespace } from '../dist/adapters/team-registry/admit
 import { captureCreateTeamDraft } from '../dist/composition/captureCreateTeamDraft.js';
 import { runtimeMemberProfileSchema } from '../dist/composition/runtimeProfile.js';
 import { CreateTeamLaunchCoordinator } from '../dist/composition/CreateTeamLaunchCoordinator.js';
+import { HostTeamProjectContexts } from '../dist/team-project-context/HostTeamProjectContexts.js';
 import { ClaudeManagementCoordinator } from '../dist/composition/ClaudeManagementCoordinator.js';
 import { ProviderManagementCoordinator } from '../dist/composition/ProviderManagementCoordinator.js';
 import { createOpenCodeLocalModelReadiness } from '../dist/adapters/providers/OpenCodeLocalModelReadiness.js';
@@ -50,6 +51,40 @@ import type { ProviderManagementProfile } from '../dist/management/profile.js';
 import type { LocalModelReadinessPreparation, ReadinessSourceReference } from '../dist/management/commandRecords.js';
 
 const tick = () => new Promise<void>((resolve) => setImmediate(resolve));
+
+for (const provider of ['claude', 'opencode'] as const) test(`per-project Create retains logical navigation and allocates only its original ${provider} child`, async () => {
+  const f = fixture(false, provider);
+  f.input.draft.savedSettings.projectContextMode = 'per_project';
+  try {
+    await f.coordinator.prepare('start', f.input, f.origin()); await f.green();
+    if (provider === 'opencode') { await f.coordinator.prepare('start', f.input, f.origin()); await f.green(); }
+    assert.equal((await f.coordinator.prepare('read', f.input)).ready, true);
+    const captured = provider === 'opencode' ? await f.coordinator.capture('TEST-project-create', f.input, 90000) : undefined;
+    if (captured) {
+      assert.equal(captured.partialCreated, true); assert.equal(f.opens(), 0);
+      assert.ok(captured.execution, 'actual child was captured with the original create probes');
+    }
+    const result = await f.coordinator.submit('TEST-project-create', f.input, captured
+      ? { launchId: captured.launch.launchId, rosterRevision: captured.launch.rosterRevision } : undefined);
+    const logical = result.creation.record, child = result.execution!;
+    assert.ok(child); assert.notEqual(child.teamId, logical.teamId);
+    assert.equal(logical.projectContextMode, 'per_project');
+    assert.equal(child.projectContext?.logicalTeamId, logical.teamId);
+    assert.equal(child.projectContext?.logicalHandleId, logical.binding.handleId);
+    assert.equal(child.projectContext?.projectPath, realpathSync(f.input.draft.savedSettings.cwd));
+    assert.equal(f.teams.get(logical.teamId)!.owner.runtimeCaptures(f.profile.principalId).length, 0);
+    assert.equal(f.teams.get(child.teamId)!.owner.runtimeCaptures(f.profile.principalId).length, 1);
+    await f.waitForOriginalAllocation(result.launch.members);
+    assert.equal(f.opens(), 2);
+    assert.ok(result.launch.members.every(row => row.binding?.teamId === child.teamId));
+    const recovered = f.coordinator.lookup('TEST-project-create', f.input)!;
+    assert.equal(recovered.execution?.teamId, child.teamId);
+    assert.equal(recovered.launch.launchId, result.launch.launchId);
+    assert.equal(f.registry.list('TEST-context').teams.length, 2);
+    await f.coordinator.submit('TEST-project-create', f.input);
+    assert.equal(f.opens(), 2, 'original retry never creates a replacement native session');
+  } finally { await f.close(); }
+});
 
 // Complete TEST file references, computed independently of the bounded production reader.
 function readinessReference(path: string, root: string): ReadinessSourceReference {
@@ -164,6 +199,7 @@ function fixture(withSources = false, provider: 'claude' | 'opencode' = 'claude'
   let resolveAllocated!: () => void;
   const allocated = new Promise<void>(resolve => { resolveAllocated = resolve; });
   const teams = new Map<string, HostedTeam>();
+  const projectStores = new Map<string, TeamOwnerStore>();
   const registry = new TeamRegistry({
     ownerId: profile.owner.ownerId,
     profileId: profile.owner.profileId,
@@ -176,8 +212,11 @@ function fixture(withSources = false, provider: 'claude' | 'opencode' = 'claude'
       admitRegistryTeamNamespace(root, definition.binding, fresh, published),
     attach: (definition) => {
       if (teams.has(definition.binding.teamId)) return;
+      const projectStore = new TeamOwnerStore(root, definition.binding.teamName);
+      projectStores.set(definition.binding.teamId, projectStore);
       const owner = createFilesystemTeamOwner({
         root,
+        store: projectStore,
         binding: definition.binding,
         members: definition.members.map(({ memberId, name, role, settings, delivery }) => ({
           memberId,
@@ -310,11 +349,15 @@ function fixture(withSources = false, provider: 'claude' | 'opencode' = 'claude'
     },
   };
   runtime = createRuntime();
+  const projects = new HostTeamProjectContexts({ principalId: profile.principalId, registry,
+    team: id => teams.get(id), store: team => projectStores.get(team.definition.binding.teamId)!, assertCurrent,
+    assertStopped: team => runtime.assertRosterEditable(team.definition.binding.teamId, team.definition.members) });
   const createCoordinator = () =>
     new CreateTeamLaunchCoordinator({
       profile,
       ...(sources ? { sources: sources.index } : {}),
       registry,
+      projects,
       runtime,
       assertCurrent,
       team: (id) => teams.get(id),

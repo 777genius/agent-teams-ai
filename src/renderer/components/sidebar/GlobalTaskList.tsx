@@ -595,8 +595,14 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
   );
   const incomplete = globalTasksUnavailable.length > 0 || globalTasksError !== null;
   const isTeamOffline = useTaskTeamStatus();
+  const teamCatalog = useStore((s) => s.teams);
   const sidebarTeams = useStore((s) => selectSidebarTeamsDerived(s.teams));
-  const teamCatalogKey = useStore((s) => s.teams.map((team) => team.teamName).join('|'));
+  const teamCatalogKey = useMemo(
+    () => teamCatalog.map((team) => [
+      team.teamName, ...(team.projectHistoryContexts ?? []).map((context) => context.executionTeamName),
+    ].join(':')).join('|'),
+    [teamCatalog]
+  );
   // Membership only: task add/remove invalidates the deleted feed, status churn must not.
   const globalTaskIdsKey = useMemo(
     () => globalTasks.map((task) => task.id).join('|'),
@@ -857,6 +863,7 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
         searchQuery,
         archiveMode: filters.showArchived ? 'all' : 'active',
         getEffectiveSubject,
+        teamCatalog,
       },
       readState,
       (task) => getTaskLocalPresentation(task).archived
@@ -869,6 +876,7 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
     readState,
     getEffectiveSubject,
     getTaskLocalPresentation,
+    teamCatalog,
   ]);
 
   // Split into pinned and normal (non-pinned) tasks

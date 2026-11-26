@@ -1,3 +1,5 @@
+import { projectContextPrepareSchema, projectContextReadSchema, projectReadinessLocatorSchema } from '@agent-teams/legacy-agent-host/team-project-context/contracts';
+
 import {
   readMemberActionLookup,
   readMemberActionQuery,
@@ -124,7 +126,7 @@ function launchModelSelection(value: unknown): BackendLaunchModelSelection {
 }
 
 export function parseLaunchModelPreparation(value: unknown): BackendLaunchModelPreparation {
-  const source = object(value, ['preparationId', 'selections']);
+  const source = object(value, ['preparationId', 'selections', 'projectContext']);
   const preparationId = text(source.preparationId);
   if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/.test(preparationId) ||
       !Array.isArray(source.selections) || !source.selections.length || source.selections.length > 256 ||
@@ -132,7 +134,8 @@ export function parseLaunchModelPreparation(value: unknown): BackendLaunchModelP
   const selections = source.selections.map(launchModelSelection);
   if (new Set(selections.map(selection => JSON.stringify(selection))).size !== selections.length)
     throw new InvalidBackendOperation();
-  return { preparationId, selections };
+  return { preparationId, selections, ...(source.projectContext === undefined ? {} : {
+    projectContext: projectReadinessLocatorSchema.parse(source.projectContext) }) };
 }
 
 export function parseBackendTeamOperation(
@@ -140,6 +143,9 @@ export function parseBackendTeamOperation(
   value: unknown
 ): BackendOperationPayloads[keyof BackendOperationPayloads] {
   switch (operation) {
+    case 'team.project-context.read': return projectContextReadSchema.parse(value);
+    case 'team.project-context.prepare': return projectContextPrepareSchema.parse(value);
+    case 'team.project-context.launch-source.read': return projectReadinessLocatorSchema.parse(value);
     case 'team.review-flow.read':
     case 'team.lead.activity.read':
     case 'team.lead.context.read':

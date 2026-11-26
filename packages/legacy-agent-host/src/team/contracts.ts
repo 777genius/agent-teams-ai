@@ -145,6 +145,7 @@ export type TeamCommand = { commandId: string } & (
       payload: {
         taskId: string;
         text: string;
+        answerClarificationRequestId?: string;
         taskRefs?: TaskRef[];
         attachments?: AttachmentReference[];
       };

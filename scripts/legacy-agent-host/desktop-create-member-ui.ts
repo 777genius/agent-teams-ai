@@ -27,6 +27,7 @@ export async function runDesktopCreateMemberUi(
   cdp: UiCdpPort,
   options: {
     root: string;
+    executionRoot: string;
     launchId: unknown;
     model: Awaited<ReturnType<typeof startNativeTeamModel>>;
     evidence: Row;
@@ -39,12 +40,12 @@ export async function runDesktopCreateMemberUi(
   assert.ok(observations, 'explicit native member TEST oracle required');
   const read = async (path: string) => row(JSON.parse(await readFile(path, 'utf8')));
   const statePath = join(
-    options.root,
-    'hoststore/teams/test-created-native/.host-owner/state.json'
+    options.executionRoot,
+    '.host-owner/state.json'
   );
   const launchPath = join(
-    options.root,
-    'hoststore/teams/test-created-native/.host-owner/launches',
+    options.executionRoot,
+    '.host-owner/launches',
     runtimeDigest(options.launchId) + '.json'
   );
   const sessions = async () =>

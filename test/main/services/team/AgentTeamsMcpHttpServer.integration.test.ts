@@ -347,6 +347,10 @@ describe('packaged Agent Teams MCP launch integration', () => {
       JSON.stringify({ name: 'agent-teams-mcp-e2e', private: true }),
       'utf8'
     );
+    // The fake Electron binary is executable without any chmod: a symlink or a hard
+    // link shares the mode of the real Node binary and copyFile keeps it. Never chmod
+    // it here: through a link that changes the permissions of the developer's Node
+    // and fails with EPERM when Node belongs to another user (a system install).
     try {
       await symlink(nodeBinary, electronBinary, 'file');
     } catch {
@@ -355,9 +359,6 @@ describe('packaged Agent Teams MCP launch integration', () => {
       } catch {
         await copyFile(nodeBinary, electronBinary);
       }
-    }
-    if (process.platform !== 'win32') {
-      await chmod(electronBinary, 0o755);
     }
 
     try {
@@ -406,6 +407,11 @@ describe('packaged Agent Teams MCP launch integration', () => {
       server = new AgentTeamsMcpHttpServer({
         statePath: path.join(tempDir!, 'packaged-entry-fallback-mcp-http-state.json'),
         disableOrphanCleanup: true,
+        // Without an allocator the server scans the app's stable port range (43100 plus a
+        // hash of the profile path, 20 ports) and warns when a port in it is taken by any
+        // other listener, which test/setup.ts turns into a failure. Port choice is not
+        // under test here, so ask for a free loopback port instead.
+        allocatePort: () => allocateLoopbackPort(),
         resolveLaunchSpec: () =>
           Promise.resolve({
             command: nodeBinary,
@@ -441,6 +447,7 @@ describe('packaged Agent Teams MCP launch integration', () => {
       server = new AgentTeamsMcpHttpServer({
         statePath: path.join(tempDir!, 'packaged-env-mcp-http-state.json'),
         disableOrphanCleanup: true,
+        allocatePort: () => allocateLoopbackPort(),
         resolveLaunchSpec: () =>
           Promise.resolve({
             command,
@@ -507,6 +514,8 @@ describePosix('AgentTeamsMcpHttpServer integration', () => {
     scriptPath: string;
     controlFile: string;
     allocatePort?: () => Promise<number>;
+    /** Only the stable-port behaviour tests: go through the real stable port scan. */
+    useStablePort?: boolean;
     statePath?: string;
   }): AgentTeamsMcpHttpServer {
     const server = new AgentTeamsMcpHttpServer({
@@ -517,7 +526,9 @@ describePosix('AgentTeamsMcpHttpServer integration', () => {
           command: process.execPath,
           args: [input.scriptPath],
         }),
-      allocatePort: input.allocatePort,
+      allocatePort: input.useStablePort
+        ? undefined
+        : (input.allocatePort ?? (() => allocateLoopbackPort())),
     });
     servers.push(server);
 
@@ -529,6 +540,7 @@ describePosix('AgentTeamsMcpHttpServer integration', () => {
     const server = new AgentTeamsMcpHttpServer({
       statePath: path.join(tempDir!, 'actual-mcp-http-state.json'),
       disableOrphanCleanup: true,
+      allocatePort: () => allocateLoopbackPort(),
     });
     servers.push(server);
 
@@ -618,7 +630,7 @@ describePosix('AgentTeamsMcpHttpServer integration', () => {
     }
 
     process.env.CLAUDE_TEAM_OPENCODE_MCP_HTTP_PORT = String(stablePort);
-    const server = createControlledServer({ scriptPath, controlFile });
+    const server = createControlledServer({ scriptPath, controlFile, useStablePort: true });
 
     try {
       const handle = await server.ensureStarted();

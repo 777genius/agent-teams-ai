@@ -19,6 +19,7 @@ export function createCrossTeamPairAuthority(options: {
   profile: Pick<TeamHostProfile, 'owner' | 'principalId'>;
   teams: ReadonlyMap<string, HostedTeam>;
   assertCurrent(): void;
+  assertPair?(source: HostedTeam, target: HostedTeam): void;
 }) {
   const ownerFingerprint = digest(options.profile.owner);
   function selected(side: CapturedCrossTeamSide): HostedTeam {
@@ -132,6 +133,7 @@ export function createCrossTeamPairAuthority(options: {
   }
   function assertSource(intent: CapturedCrossTeamIntent): void {
     assertPair(intent);
+    options.assertPair?.(selected(intent.pair.source), selected(intent.pair.target));
     const original = intent.pair.source,
       team = selected(original);
     if (digest(source(team, original.principalId, original.handleId)) !== digest(original))

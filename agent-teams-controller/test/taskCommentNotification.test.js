@@ -3,7 +3,8 @@ const {
   stripAgentBlocks,
   wrapAgentBlock,
 } = require('../src/internal/agentBlocks.js');
-const { buildCommentNotificationMessage } = require('../src/internal/taskCommentNotification.js');
+const { buildCommentNotificationMessage,
+  buildTaskCommentForwardNotificationText } = require('../src/internal/taskCommentNotification.js');
 
 const CONTEXT = { teamName: 'docs-team' };
 const TASK = {
@@ -11,6 +12,24 @@ const TASK = {
   displayId: 'b46e9832',
   subject: 'Write docs/PROJECT_SUMMARY.md from both comments',
 };
+
+describe('buildTaskCommentForwardNotificationText', () => {
+  it.each([
+    '<info_for_agent>\nTEST hidden\n</info_for_agent>',
+    '<agent-block>\nTEST hidden\n</agent-block>',
+    '```info_for_agent\nTEST hidden\n```',
+    '<opencode_runtime_identity>\nTEST hidden\n</opencode_runtime_identity>',
+    '<opencode_app_message_delivery>\nTEST hidden\n</opencode_app_message_delivery>',
+  ])('preserves Main sanitization in the shared Host handoff for %s', block => {
+    const message = buildTaskCommentForwardNotificationText(TASK,
+      { author: 'user', text: 'TEST answer\n' + block + '\nTEST context' }, true);
+    expect(message).not.toContain('TEST hidden');
+    expect(message).toContain('> TEST answer\n> TEST context');
+    expect(message).toContain('The user answered a previous clarification on this task.');
+    expect(message).toContain("Re-read the task's CURRENT state before acting.");
+    expect(extractAgentBlockContents(message)).toHaveLength(1);
+  });
+});
 
 /** The dependency-resolved comment the board writes for a blocked task. */
 function depResolvedCommentText() {

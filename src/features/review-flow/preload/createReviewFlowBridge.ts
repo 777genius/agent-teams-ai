@@ -10,7 +10,8 @@ import {
 
 async function invoke<T>(channel: string, ...args: unknown[]): Promise<T> {
   const result = (await ipcRenderer.invoke(channel, ...args)) as ReviewFlowIpcResult<T>;
-  if (!result.ok) throw new Error(result.error);
+  // Only the message crosses the context bridge: a known error travels as its code.
+  if (!result.ok) throw new Error(result.code ?? result.error);
   return result.value;
 }
 

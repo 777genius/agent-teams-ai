@@ -1,13 +1,16 @@
 import {
   hostTeamSelectionKey,
   isHostTeamRunId,
+  isHostTeamSelectionKey,
   parseHostTeamRunId,
 } from '@features/agent-backend/contracts';
-import { hostMemberSpawnSnapshotCurrentness } from '@features/agent-backend/renderer';
+import { hostMemberSpawnSnapshotCurrentness, hostProjectProgressOwners } from '@features/agent-backend/renderer';
 
 import { areMemberSpawnSnapshotsSemanticallyEqual } from './teamMemberSpawnSnapshotEquality';
+import { addIgnoredTeamRun, isTeamRunIgnored } from './teamProvisioningRunIdentity';
 import { isTerminalProvisioningState } from './teamProvisioningStateRules';
 
+import type { IgnoredTeamRunOwners } from './teamProvisioningRunIdentity';
 import type {
   LeadActivityState,
   MemberSpawnStatus,
@@ -32,18 +35,37 @@ export function captureHostProvisioningStatusRead(
   get: () => {
     currentProvisioningRunIdByTeam: Record<string, string | null>;
     currentRuntimeRunIdByTeam: Record<string, string | null>;
+    teamByName?: Record<string, unknown>;
   },
   captureScopeCurrentness: (teamName: string) => () => boolean
-): () => boolean {
+): (progress?: TeamProvisioningProgress) => boolean {
   if (!isHostTeamRunId(runId)) return () => true;
   const teamName = hostTeamSelectionKey(parseHostTeamRunId(runId).handleId);
-  const isScopeCurrent = captureScopeCurrentness(teamName);
-  const previousRunId = get().currentProvisioningRunIdByTeam[teamName];
-  const previousRuntimeRunId = get().currentRuntimeRunIdByTeam[teamName];
-  return () =>
-    isScopeCurrent() &&
-    get().currentProvisioningRunIdByTeam[teamName] === previousRunId &&
-    get().currentRuntimeRunIdByTeam[teamName] === previousRuntimeRunId;
+  const original = get();
+  const owned = (state: ReturnType<typeof get>) => new Set([teamName,
+    ...Object.entries(state.currentProvisioningRunIdByTeam).filter(([, id]) => id === runId).map(([name]) => name),
+    ...Object.entries(state.currentRuntimeRunIdByTeam).filter(([, id]) => id === runId).map(([name]) => name)]);
+  const originalOwners = owned(original);
+  const names = new Set([teamName, ...Object.keys(original.teamByName ?? {}),
+    ...Object.keys(original.currentProvisioningRunIdByTeam), ...Object.keys(original.currentRuntimeRunIdByTeam)]);
+  const captured = new Map([...names].filter(isHostTeamSelectionKey).map(name => [name, {
+    current: captureScopeCurrentness(name), provisioning: original.currentProvisioningRunIdByTeam[name],
+    runtime: original.currentRuntimeRunIdByTeam[name],
+  }]));
+  return progress => {
+    const next = get(), latestOwners = owned(next);
+    if (latestOwners.size !== originalOwners.size || [...latestOwners].some(name => !originalOwners.has(name))) return false;
+    const proved = progress ? hostProjectProgressOwners(progress) : undefined;
+    if (proved === null) return false;
+    const required = new Set([...originalOwners, ...(proved ?? [])]);
+    if (progress && progress.teamName !== teamName && !proved?.includes(progress.teamName)) return false;
+    for (const name of required) {
+      const pin = captured.get(name);
+      if (!pin || !pin.current() || next.currentProvisioningRunIdByTeam[name] !== pin.provisioning ||
+        next.currentRuntimeRunIdByTeam[name] !== pin.runtime) return false;
+    }
+    return true;
+  };
 }
 
 export function isPinnedRuntimeRunFullyStopped(
@@ -63,12 +85,15 @@ export function resolveIncomingRuntimeRunAdoption(input: {
   teamName: string;
   snapshotRunId?: string | null;
   currentRuntimeRunId?: string | null;
-  ignoredRuntimeRunIds: Record<string, string>;
+  ignoredRuntimeRunIds: IgnoredTeamRunOwners;
   leadActivity?: string;
   pinnedSpawnStatuses?: Record<string, SpawnStatusLike>;
 }): IncomingRuntimeRunAdoption {
   const snapshotRunId = input.snapshotRunId?.trim() || null;
-  if (snapshotRunId && input.ignoredRuntimeRunIds[snapshotRunId] === input.teamName) {
+  if (
+    snapshotRunId &&
+    isTeamRunIgnored(input.ignoredRuntimeRunIds, snapshotRunId, input.teamName)
+  ) {
     return 'reject';
   }
 
@@ -91,13 +116,13 @@ export function resolveIncomingRuntimeRunAdoption(input: {
   return 'reject';
 }
 
-function isSameHostLaunchRevision(teamName: string, previous: string, next: string): boolean {
+function isSameHostLaunchRevision(teamName: string, previous: string, next: string, verifiedProject = false): boolean {
   if (previous === next) return false;
   try {
     const before = parseHostTeamRunId(previous),
       after = parseHostTeamRunId(next);
     return (
-      hostTeamSelectionKey(before.handleId) === teamName &&
+      (hostTeamSelectionKey(before.handleId) === teamName || verifiedProject) &&
       before.handleId === after.handleId &&
       before.launchId === after.launchId &&
       before.rosterRevision !== after.rosterRevision
@@ -111,13 +136,17 @@ export function shouldAdoptSuccessorProvisioningRun(input: {
   teamName: string;
   previousRunId?: string | null;
   previousState?: TeamProvisioningProgress['state'];
+  previousStartedAt?: string;
+  nextStartedAt?: string;
+  nextRunObserved?: boolean;
   nextRunId?: string | null;
   currentRuntimeRunId?: string | null;
-  ignoredRuntimeRunIds: Record<string, string>;
+  ignoredRuntimeRunIds: IgnoredTeamRunOwners;
   pinnedSpawnStatuses?: Record<string, SpawnStatusLike>;
+  verifiedHostProjectOwner?: boolean;
 }): boolean {
   const nextRunId = input.nextRunId?.trim() || null;
-  if (!nextRunId || input.ignoredRuntimeRunIds[nextRunId] === input.teamName) {
+  if (!nextRunId || isTeamRunIgnored(input.ignoredRuntimeRunIds, nextRunId, input.teamName)) {
     return false;
   }
 
@@ -127,7 +156,7 @@ export function shouldAdoptSuccessorProvisioningRun(input: {
   }
 
   // Only a fresh captured snapshot can first move the same Host launch's runtime pin.
-  if (isSameHostLaunchRevision(input.teamName, previousRunId, nextRunId))
+  if (isSameHostLaunchRevision(input.teamName, previousRunId, nextRunId, input.verifiedHostProjectOwner))
     return input.currentRuntimeRunId === nextRunId;
 
   const previousIsTerminal =
@@ -136,9 +165,18 @@ export function shouldAdoptSuccessorProvisioningRun(input: {
     return false;
   }
 
+  // A stopped project's historical runtime pointer must not prove that a late
+  // event is a successor of the current project. An exact current runtime ID
+  // remains authoritative; an implicit successor must be strictly newer.
+  if (input.currentRuntimeRunId === nextRunId) return true;
+  if (
+    input.previousStartedAt &&
+    input.nextStartedAt &&
+    input.nextStartedAt <= input.previousStartedAt
+  )
+    return false;
   return (
-    input.currentRuntimeRunId === nextRunId ||
-    isPinnedRuntimeRunFullyStopped(input.pinnedSpawnStatuses)
+    input.nextRunObserved === true || isPinnedRuntimeRunFullyStopped(input.pinnedSpawnStatuses)
   );
 }
 
@@ -163,8 +201,8 @@ export function nextRuntimeRunIdByTeamAfterAdoption(
 }
 
 export interface IncomingMemberSpawnProjectionState {
-  ignoredRuntimeRunIds: Record<string, string>;
-  ignoredProvisioningRunIds?: Record<string, string>;
+  ignoredRuntimeRunIds: IgnoredTeamRunOwners;
+  ignoredProvisioningRunIds?: IgnoredTeamRunOwners;
   currentRuntimeRunIdByTeam: Record<string, string | null>;
   leadActivityByTeam: Record<string, LeadActivityState>;
   memberSpawnStatusesByTeam: Record<string, Record<string, MemberSpawnStatusEntry>>;
@@ -183,23 +221,20 @@ export function projectIncomingMemberSpawnSnapshot(input: {
   const hostRevision =
     typeof previousRunId === 'string' &&
     typeof snapshot.runId === 'string' &&
-    isSameHostLaunchRevision(teamName, previousRunId, snapshot.runId);
+    isSameHostLaunchRevision(teamName, previousRunId, snapshot.runId, hostCurrent === true);
   if (hostCurrent === false || (hostRevision && hostCurrent !== true)) return {};
   if (
     hostRevision &&
     [previousRunId, snapshot.runId].some(
       (runId) =>
-        prev.ignoredRuntimeRunIds[runId!] === teamName ||
-        prev.ignoredProvisioningRunIds?.[runId!] === teamName
+        isTeamRunIgnored(prev.ignoredRuntimeRunIds, runId!, teamName) ||
+        isTeamRunIgnored(prev.ignoredProvisioningRunIds ?? {}, runId!, teamName)
     )
   )
     return {};
   const retired = hostRevision
     ? {
-        ignoredRuntimeRunIds: {
-          ...prev.ignoredRuntimeRunIds,
-          [previousRunId]: teamName,
-        },
+        ignoredRuntimeRunIds: addIgnoredTeamRun(prev.ignoredRuntimeRunIds, previousRunId, teamName),
       }
     : {};
   const adoption = hostRevision

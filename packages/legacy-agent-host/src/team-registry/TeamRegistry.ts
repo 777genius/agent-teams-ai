@@ -1,9 +1,10 @@
 import { TeamOwnerError } from '../team/contracts.js';
 import { digest, effectId } from '../team/identity.js';
-import { createTeamRegistryPayloadSchema, teamRegistryListSchema } from './contracts.js';
+import { createTeamRegistryPayloadSchema, teamRegistryListSchema, teamProjectContextRelationSchema } from './contracts.js';
 
 import type {
   CreateTeamRegistryPayload,
+  TeamProjectContextRelation,
   TeamRegistryList,
   TeamRegistryReceipt,
 } from './contracts.js';
@@ -50,13 +51,14 @@ export class TeamRegistry {
     return catalog;
   }
 
-  private fingerprint(commandId: string, intent: CreateTeamRegistryPayload): string {
+  private fingerprint(commandId: string, intent: CreateTeamRegistryPayload, projectContext?: TeamProjectContextRelation): string {
     return digest({
       ownerId: this.options.ownerId,
       profileId: this.options.profileId,
       principalId: this.options.principalId,
       commandId,
       intent,
+      ...(projectContext ? { projectContext } : {}),
     });
   }
 
@@ -67,7 +69,7 @@ export class TeamRegistry {
       record.principalId !== this.options.principalId
     )
       throw new TeamOwnerError('forbidden');
-    const expected = this.prepare(record.commandId, record.intent);
+    const expected = this.prepare(record.commandId, record.intent, record.projectContext);
     if (
       (record.phase === 'published' && !record.bootstrapPublished) ||
       (record.phase === 'pending' && record.bootstrapPublished) ||
@@ -78,7 +80,7 @@ export class TeamRegistry {
       throw new TeamOwnerError('hold');
   }
 
-  private prepare(commandId: string, intent: CreateTeamRegistryPayload): StoredTeamCreation {
+  private prepare(commandId: string, intent: CreateTeamRegistryPayload, projectContext?: TeamProjectContextRelation): StoredTeamCreation {
     const identity = [
       this.options.ownerId,
       this.options.profileId,
@@ -114,7 +116,8 @@ export class TeamRegistry {
       profileId: this.options.profileId,
       principalId: this.options.principalId,
       commandId,
-      fingerprint: this.fingerprint(commandId, intent),
+      fingerprint: this.fingerprint(commandId, intent, projectContext),
+      ...(projectContext ? { projectContext } : {}),
       intent,
       definition: {
         scope,
@@ -133,6 +136,8 @@ export class TeamRegistry {
         contextId: intent.contextId,
         teamId,
         teamName: intent.teamName,
+        ...(intent.savedSettings.projectContextMode ? { projectContextMode: intent.savedSettings.projectContextMode } : {}),
+        ...(projectContext ? { projectContext } : {}),
         ...(displayName === undefined ? {} : { displayName }),
         ...(description === undefined ? {} : { description }),
         ...(color === undefined ? {} : { color }),
@@ -218,6 +223,15 @@ export class TeamRegistry {
   }
 
   create(commandId: string, raw: unknown): TeamRegistryReceipt {
+    return this.createOwned(commandId, raw);
+  }
+
+  /** Private Host composition only; parent authority is verified before a project history is materialized. */
+  createProjectContext(commandId: string, raw: unknown, relation: TeamProjectContextRelation): TeamRegistryReceipt {
+    return this.createOwned(commandId, raw, teamProjectContextRelationSchema.parse(relation));
+  }
+
+  private createOwned(commandId: string, raw: unknown, projectContext?: TeamProjectContextRelation): TeamRegistryReceipt {
     this.validateCommandId(commandId);
     const intent = createTeamRegistryPayloadSchema.parse(raw);
     this.authorize(intent.contextId);
@@ -227,7 +241,7 @@ export class TeamRegistry {
       const prior = records.find((record) => record.commandId === commandId);
       if (prior) {
         this.validate(prior);
-        if (prior.fingerprint !== this.fingerprint(commandId, intent))
+        if (prior.fingerprint !== this.fingerprint(commandId, intent, projectContext))
           throw new TeamOwnerError('conflict');
         return this.complete(prior);
       }
@@ -242,7 +256,7 @@ export class TeamRegistry {
         throw new TeamOwnerError('conflict');
       if (records.length + this.options.staticTeams.length + additional.length >= 256)
         throw new TeamOwnerError('hold');
-      const record = this.prepare(commandId, intent);
+      const record = this.prepare(commandId, intent, projectContext);
       this.options.admit(record.definition, true, false);
       // Intent and generated identities become durable before any Team bootstrap effect.
       this.options.assertWriter();
@@ -265,7 +279,7 @@ export class TeamRegistry {
     if (
       expected !== undefined &&
       record.fingerprint !==
-        this.fingerprint(commandId, createTeamRegistryPayloadSchema.parse(expected))
+        this.fingerprint(commandId, createTeamRegistryPayloadSchema.parse(expected), record.projectContext)
     )
       throw new TeamOwnerError('conflict');
     return this.receipt(record);

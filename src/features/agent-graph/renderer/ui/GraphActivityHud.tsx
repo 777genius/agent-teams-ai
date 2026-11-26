@@ -144,7 +144,7 @@ export const GraphActivityHud = ({
   }, [entryMapByOwnerNodeId, expandedItem]);
   const messageContext = useMemo(() => buildMessageContext(members), [members]);
   const { teamNames, teamColorByName } = useStableTeamMentionMeta(teams);
-  const { readSet } = useTeamMessagesRead(teamName, messages);
+  const { readSet } = useTeamMessagesRead(teamName, messages, false, contextId);
 
   useEffect(() => {
     setExpandedItem(null);

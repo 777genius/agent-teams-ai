@@ -322,6 +322,44 @@
     }
   },
   "notifications": {
+    "delivery": {
+      "eventLabels": {
+        "lead_inbox": "Team lead inbox message",
+        "user_inbox": "Message for you",
+        "task_clarification": "Clarification needed",
+        "task_status_change": "Task status changed",
+        "task_comment": "New task comment",
+        "task_created": "Task created",
+        "cross_team_message": "Cross-team message",
+        "team_launched": "Team launched",
+        "schedule_completed": "Scheduled run completed",
+        "usage_budget_warning": "Usage budget warning",
+        "task_review_requested": "Review requested",
+        "task_blocked": "Task blocked",
+        "all_tasks_completed": "All tasks completed",
+        "team_launch_incomplete": "Team launch needs attention",
+        "runtime_recovery": "Runtime recovery",
+        "schedule_failed": "Scheduled run failed",
+        "usage_budget_exceeded": "Usage budget exceeded"
+      },
+      "routingHint": "Choose destinations beside each notification type. Turning a type off disables it everywhere; Desktop is the default.",
+      "desktopOnly": "Desktop only",
+      "additionalEvents": "Additional delivery events",
+      "pausedDisabled": "Automatische bezorging is gepauzeerd: systeemmeldingen staan uit. Schakel ze in om te hervatten. Handmatig testen blijft mogelijk.",
+      "pausedSnoozed": "Automatic delivery is snoozed until {{time}}. Click Clear Snooze above to resume. Manual Test still works.",
+      "pausedSnoozedUnknown": "Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works.",
+      "agentGuide": "Stapsgewijze handleiding voor Agent Teams",
+      "exampleFormat": "Voorbeeldformaat (geen echte inloggegevens):",
+      "officialGuide": "Officiële instructies van de aanbieder",
+      "providerSetup": {
+        "telegram": "Maak met @BotFather (/newbot) een bot, start een chat en vul de token en chat-ID of @kanaalnaam in.",
+        "discord": "Open in het gewenste Discord-kanaal Kanaal bewerken → Integraties → Webhooks, maak een webhook en kopieer de volledige URL.",
+        "slack": "Maak een Slack-app, schakel Incoming Webhooks in, installeer deze in je werkruimte en kopieer de URL.",
+        "ms-teams": "Gebruik Teams Workflows → Send webhook alerts to a channel. Kies Anyone bij een aangepaste trigger en houd de URL geheim.",
+        "google-chat": "Open in de Google Chat-ruimte Apps en integraties → Webhooks toevoegen, maak een webhook en kopieer de volledige URL.",
+        "webhook": "Maak een openbare HTTPS-webhook (bijvoorbeeld in n8n), kopieer de volledige ondertekende URL en test deze. Lokale URL's worden geblokkeerd."
+      }
+    },
     "recovery": {
       "title": "Automatic agent recovery",
       "transient": {

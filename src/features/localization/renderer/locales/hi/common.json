@@ -952,5 +952,21 @@
       "unavailable": "News is available in the desktop app.",
       "state_unavailable": "Reading is available, but your progress cannot be saved right now. Automatic news is paused."
     }
+  },
+  "attention": {
+    "title": "आपके ध्यान की आवश्यकता है",
+    "tab": "ध्यान दें",
+    "viewAll": "सभी देखें",
+    "refresh": "स्थिति ताज़ा करें",
+    "loading": "लोड हो रहा है…",
+    "loadFailed": "ध्यान देने योग्य स्थिति लोड नहीं हुई",
+    "retry": "फिर से कोशिश करें",
+    "partial": "कुछ टीमें लोड नहीं हो सकीं। संख्या अधूरी हो सकती है।",
+    "nothing": "आपके निर्णय की प्रतीक्षा कर रहे कार्य और टीम की अपठित चैट यहाँ दिखाई देंगी।",
+    "tasks": "आपके निर्णय की प्रतीक्षा",
+    "chats": "बिना पढ़ी चैट",
+    "openTask": "कार्य खोलें: {{subject}} — {{team}}",
+    "timeUnknown": "समय अज्ञात",
+    "teamAttention": "ध्यान दें"
   }
 }

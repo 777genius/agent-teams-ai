@@ -214,6 +214,7 @@ export function useTaskDetailSession({
       useStore.getState().hydrateTaskDetailSessionDraft(identity, {
         text: hydration.text ?? undefined,
         commentChips: hydration.commentChips ?? undefined,
+        answerClarificationRequestId: hydration.answerClarificationRequestId,
       });
       if (
         identity.contextId === 'local' &&
@@ -225,6 +226,7 @@ export function useTaskDetailSession({
           {
             text: next?.commentText ?? hydration.legacyText ?? '',
             commentChips: next?.commentChips ?? hydration.legacyCommentChips ?? [],
+            answerClarificationRequestId: next?.answerClarificationRequestId ?? null,
           },
           { migrateLegacy: true }
         );
@@ -367,10 +369,19 @@ export function useTaskDetailSession({
     clarificationRead !== null && (clarificationRead.entry.loading || requireOwner());
 
   const persistDraft = useCallback(
-    (value: { text?: string; commentChips?: InlineChip[] }) => {
+    () => {
+      const draft = useStore.getState().taskDetailSessionById[identityKey];
+      if (!draft) return;
       setIsDraftSaved(false);
+      // Capture a COMPLETE same-revision snapshot. Persisting only one changed
+      // field could pair stale on-disk text with a new request identity if an
+      // earlier save failed. Never merge the generation with unrelated content.
       void taskDraftStorage
-        .save(identity, value)
+        .save(identity, {
+          text: draft.commentText,
+          commentChips: draft.commentChips,
+          answerClarificationRequestId: draft.answerClarificationRequestId ?? null,
+        })
         .then(() => {
           if (isOriginCurrent()) setIsDraftSaved(true);
         })
@@ -378,14 +389,14 @@ export function useTaskDetailSession({
           if (isOriginCurrent()) setIsDraftSaved(false);
         });
     },
-    [identity, isOriginCurrent, setIsDraftSaved]
+    [identity, identityKey, isOriginCurrent, setIsDraftSaved]
   );
 
   const setCommentText = useCallback(
     (text: string) => {
       if (!requireOwner()) return;
       useStore.getState().updateTaskDetailSessionPart(identity, 'commentText', text);
-      persistDraft({ text });
+      persistDraft();
     },
     [identity, persistDraft, requireOwner]
   );
@@ -394,7 +405,7 @@ export function useTaskDetailSession({
     (chips: InlineChip[]) => {
       if (!requireOwner()) return;
       useStore.getState().updateTaskDetailSessionPart(identity, 'commentChips', chips);
-      persistDraft({ commentChips: chips });
+      persistDraft();
     },
     [identity, persistDraft, requireOwner]
   );
@@ -532,11 +543,23 @@ export function useTaskDetailSession({
               base64Data: attachment.base64Data,
             }))
           : undefined;
+      const activeTask = state.taskDetailById[identityKey]?.full;
+      const boundCycle = current.answerClarificationRequestId;
+      const activeCycle = activeTask?.needsClarification === 'user'
+        ? activeTask.clarificationRequestId : undefined;
+      if (activeCycle && boundCycle !== activeCycle) {
+        const revision = state.beginTaskDetailSubmitSession(identity);
+        useStore.getState().failTaskDetailSubmitSession(identity, revision,
+          'The clarification changed while this answer was drafted. Copy your text and start a fresh answer.');
+        return;
+      }
+      const answerClarificationRequestId = typeof boundCycle === 'string' ? boundCycle : undefined;
       const commandId = isHostTeamSelectionKey(identity.teamName) ? crypto.randomUUID() : null;
       request = {
         text,
         attachments,
         taskRefs,
+        ...(answerClarificationRequestId ? { answerClarificationRequestId } : {}),
         ...(commandId ? { command: { commandId, idempotencyKey: commandId } } : {}),
       };
     }
@@ -557,7 +580,7 @@ export function useTaskDetailSession({
         if (after.commentText === '' && after.commentChips.length === 0) {
           void taskDraftStorage.clear(identity);
         } else {
-          persistDraft({ text: after.commentText, commentChips: after.commentChips });
+          persistDraft();
         }
       }
     } catch (error) {

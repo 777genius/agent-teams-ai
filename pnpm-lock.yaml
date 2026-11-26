@@ -338,6 +338,9 @@ importers:
       '@terminal-platform/workspace-react':
         specifier: file:vendor/terminal-platform/sdk/terminal-platform-workspace-react-0.1.0.tgz
         version: file:vendor/terminal-platform/sdk/terminal-platform-workspace-react-0.1.0.tgz(@types/react@19.2.14)(react@19.2.4)
+      '@thinwrap/notifications':
+        specifier: 1.2.0
+        version: 1.2.0
       '@tiptap/extension-placeholder':
         specifier: 3.30.5
         version: 3.30.5(@tiptap/extensions@3.30.5(@tiptap/core@3.30.5(@tiptap/pm@3.30.5))(@tiptap/pm@3.30.5))
@@ -5114,6 +5117,10 @@ packages:
     resolution: {integrity: sha512-GrNNlAImfQhYRtGE95YNAjcTclUUMPHs9JeE9vMgfcoKcOmZ6GsbWUdN0hA55xqwGaUjnroOVtf77K9z1EbkJQ==}
     peerDependencies:
       '@tiptap/core': 3.30.5
+
+  '@thinwrap/notifications@1.2.0':
+    resolution: {integrity: sha512-O073RdFNQ9S+dFB3VPgyt4PHg2JMnRzxSGw3lwCH+rCrEA79dTq7rx5R2QCXEw8/oWl2DGWvYBthEr1Vq/PEoA==, tarball: https://registry.npmjs.org/@thinwrap/notifications/-/notifications-1.2.0.tgz}
+    engines: {node: '>=18'}
 
   '@tiptap/extension-placeholder@3.30.5':
     resolution: {integrity: sha512-WgkX4ImAAeV+Qe7ATJ+Gio2MmKWON1CKpCKPHWgCObaoMEaSmdoxXPmI9wXMuM+AJydJepp4n7U/V4TVts14rg==}
@@ -17259,6 +17266,8 @@ snapshots:
       react: 19.2.4
     transitivePeerDependencies:
       - '@types/react'
+
+  '@thinwrap/notifications@1.2.0': {}
 
   '@tiptap/core@3.30.5(@tiptap/pm@3.30.5)':
     dependencies:

@@ -48,6 +48,8 @@ export interface TeamNotificationPayload {
    * but the user opted out of OS interruptions for this event type.
    */
   suppressToast?: boolean;
+  /** Budget alerts may have native toast disabled without disabling opt-in external routes. */
+  permitExternalDeliveryWhenToastSuppressed?: boolean;
 }
 
 // =============================================================================

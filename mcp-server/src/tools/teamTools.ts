@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { getController } from '../controller';
 import { jsonTextContent } from '../utils/format';
+import { asClientRefusal } from '../utils/appRefusal';
 import { teamMemberMcpPolicySchema } from '../utils/schemas';
 
 const controlContextSchema = {
@@ -50,6 +51,39 @@ export function registerTeamTools(server: Pick<FastMCP, 'addTool'>) {
     parameters: z.object({}).strict(),
     execute: async () =>
       jsonTextContent(await getController('agent-teams-control').runtime.getConnectionInfo()),
+  });
+  server.addTool({
+    name: 'app_show_connection_confirmation',
+    description:
+      'Show the user that this MCP client reached the desktop app. First call app_get_connection_info and pass its current context. Only set cdpVerified after verifying the live renderer through CDP; name and CDP verification are self-reported.',
+    parameters: z
+      .object({
+        agentName: z
+          .string()
+          .trim()
+          .min(1)
+          .max(80)
+          // eslint-disable-next-line no-control-regex -- control characters cannot appear in the displayed name
+          .regex(/^[^\u0000-\u001f\u007f]+$/),
+        cdpVerified: z
+          .boolean()
+          .optional()
+          .describe(
+            'Whether this client verified the live renderer over CDP; this is self-reported.'
+          ),
+        expectedContext: z
+          .object({
+            appInstanceId: z.string().min(1),
+            dataRootFingerprint: z.string().min(1),
+            connectionGeneration: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+          })
+          .strict(),
+      })
+      .strict(),
+    execute: async (args) =>
+      jsonTextContent(
+        await getController('agent-teams-control').runtime.showConnectionConfirmation(args)
+      ),
   });
   server.addTool({
     name: 'team_list',
@@ -100,7 +134,7 @@ export function registerTeamTools(server: Pick<FastMCP, 'addTool'>) {
   server.addTool({
     name: 'team_update',
     description:
-      'Edit exactly one configuration group of a stopped or draft team. Get its current configurationRevision first. Does not launch or stop agents.',
+      'Edit one configuration group using a fresh configurationRevision. Supported edits also work while the team is ready and running; unsupported live changes return RESTART_REQUIRED. Lead instructions apply at next launch. Never stops or relaunches the whole team implicitly.',
     parameters: z
       .object({
         ...managementTargetSchema,
@@ -135,13 +169,18 @@ export function registerTeamTools(server: Pick<FastMCP, 'addTool'>) {
           ).length === 1,
         'Specify exactly one configuration group'
       ),
-    execute: async ({ teamName, claudeDir, controlUrl, waitTimeoutMs, ...payload }) =>
-      jsonTextContent(
-        await getController(teamName, claudeDir).runtime.updateTeam({
-          ...controlFlags({ controlUrl, waitTimeoutMs }),
-          ...payload,
-        })
-      ),
+    execute: async ({ teamName, claudeDir, controlUrl, waitTimeoutMs, ...payload }) => {
+      try {
+        return jsonTextContent(
+          await getController(teamName, claudeDir).runtime.updateTeam({
+            ...controlFlags({ controlUrl, waitTimeoutMs }),
+            ...payload,
+          })
+        );
+      } catch (error) {
+        throw asClientRefusal(error);
+      }
+    },
   });
   server.addTool({
     name: 'team_trash',
@@ -160,11 +199,15 @@ export function registerTeamTools(server: Pick<FastMCP, 'addTool'>) {
   server.addTool({
     name: 'team_create',
     description:
-      'Create a draft team configuration through the local Agent Teams control API. This does not launch the team.',
+      'Create a draft team configuration through the local Agent Teams control API. This does not launch the team. ' +
+      'projectContextMode (required, fixed at creation): shared keeps one history for all project folders; ' +
+      'per_project keeps tasks and chats separate for every project folder the team is launched in (team_launch with cwd), ' +
+      'and the task, message, review and other board tools then take that folder in projectPath.',
     parameters: z
       .object({
         ...teamContextSchema,
         runtimeSelectionVersion: z.literal(1).optional(),
+        projectContextMode: z.enum(['shared', 'per_project']),
         expectedContext: z
           .object({
             appInstanceId: z.string().min(1),
@@ -203,6 +246,7 @@ export function registerTeamTools(server: Pick<FastMCP, 'addTool'>) {
       controlUrl,
       waitTimeoutMs,
       runtimeSelectionVersion,
+      projectContextMode,
       expectedContext,
       syncModelsWithLead,
       displayName,
@@ -225,6 +269,7 @@ export function registerTeamTools(server: Pick<FastMCP, 'addTool'>) {
         await getController(teamName, claudeDir).runtime.createTeam({
           ...controlFlags({ controlUrl, waitTimeoutMs }),
           ...(runtimeSelectionVersion !== undefined ? { runtimeSelectionVersion } : {}),
+          projectContextMode,
           ...(expectedContext ? { expectedContext } : {}),
           ...(syncModelsWithLead !== undefined ? { syncModelsWithLead } : {}),
           ...(displayName ? { displayName } : {}),

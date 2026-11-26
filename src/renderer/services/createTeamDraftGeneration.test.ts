@@ -36,6 +36,7 @@ describe('creation draft generation fence', () => {
     draft.teamName = 'old-copy';
     await createTeamDraftStorage.saveSnapshot(draft, old);
     await draftStorage.saveDraft('createTeam:prompt', 'old prompt', old);
+    await draftStorage.saveDraft('createTeam:templateSelection', '{"source":"custom","value":"custom:old"}', old);
 
     await resetCreateTeamDraft();
     expect(discardGateway).toHaveBeenCalledWith('createTeam');
@@ -46,11 +47,13 @@ describe('creation draft generation fence', () => {
     await draftStorage.saveDraft('createTeam:prompt', 'late old prompt', old);
     await draftStorage.saveDraft('createTeam:description', 'late description', old);
     await draftStorage.saveDraft('createTeam:prompt:chips', '[]', old);
+    await draftStorage.saveDraft('createTeam:templateSelection', '{"source":"custom","value":"custom:stale"}', old);
 
     expect(await createTeamDraftStorage.loadSnapshot()).toBeNull();
     expect(await draftStorage.loadDraft('createTeam:prompt')).toBeNull();
     expect(await draftStorage.loadDraft('createTeam:description')).toBeNull();
     expect(await draftStorage.loadDraft('createTeam:prompt:chips')).toBeNull();
+    expect(await draftStorage.loadDraft('createTeam:templateSelection')).toBeNull();
   });
 
   it('lets a new editor persist after replacement without affecting other drafts', async () => {

@@ -1788,6 +1788,162 @@ for (const uncertain of ['mousePressed', 'mouseReleased'] as const) {
   });
 }
 
+function originalSidebarRevealFixture(t: import('node:test').TestContext, visible = false) {
+  t.mock.timers.enable({ apis: ['Date'], now: 1000 });
+  t.mock.method(globalThis, 'setTimeout', (done: () => void, delay: number) => {
+    t.mock.timers.setTime(Date.now() + delay); done();
+    return {} as ReturnType<typeof setTimeout>;
+  });
+  const subject = 'TEST original sidebar subject';
+  const originalKey = JSON.stringify(['TEST team "quoted" \\ name', 'TEST-task']);
+  const state = { top: visible ? 200 : 900, key: originalKey, subject, duplicate: false,
+    ownerCurrent: true, covered: false, hitRow: false, wheels: 0, rowPresses: 0, rowReleases: 0,
+    dialogPresses: 0, dialogReleases: 0, dialogOpen: false };
+  const refusal = new Error('TEST original sidebar owner revoked');
+  const commands: Record<string, unknown>[] = [], steps: Record<string, unknown>[] = [], reads: string[] = [];
+  const hooks: { afterRead?(kind: string): void; afterInput?(type: string): void } = {};
+  const rect = (x: number, y: number, width: number, height: number) =>
+    ({ x, y, top: y, bottom: y + height, left: x, right: x + width, width, height });
+  const scroller = { parentElement: null, scrollHeight: 1400, clientHeight: 600,
+    getBoundingClientRect: () => rect(0, 80, 900, 600) };
+  const span = { get textContent() { return state.subject; }, parentElement: undefined as unknown,
+    getBoundingClientRect: () => rect(320, state.top + 10, 200, 20),
+    closest(selector: string): unknown { assert.equal(selector, '.sidebar-task-item'); return row; },
+    contains: (node: unknown) => node === span };
+  const row = { parentElement: scroller, textContent: subject + ' owner team status',
+    getAttribute(name: string) { assert.equal(name, 'data-task-key'); return state.key; },
+    querySelectorAll(selector: string) { assert.equal(selector, 'span'); return [span]; },
+    getBoundingClientRect: () => rect(300, state.top, 300, 60),
+    contains: (node: unknown) => node === span };
+  span.parentElement = row;
+  const dialog = { getBoundingClientRect: () => rect(50, 50, 300, 200), getAnimations: () => [] };
+  const button = { textContent: 'Open team', tagName: 'BUTTON',
+    getBoundingClientRect: () => rect(70, 70, 100, 40), matches: () => false,
+    closest: () => dialog, getAnimations: () => [] };
+  const ui = createDesktopUiControls({
+    async evaluate(expression: string) {
+      let kind = 'passive';
+      const value = runInNewContext(expression, {
+        innerWidth: 1000, innerHeight: 720,
+        getComputedStyle: (node: unknown) => ({ overflowY: node === scroller ? 'auto' : 'visible', pointerEvents: 'auto' }),
+        document: { documentElement: scroller, fonts: { status: 'loaded' }, visibilityState: 'visible', hasFocus: () => true,
+          querySelectorAll(selector: string) {
+            if (selector === '#sidebar-tasks-panel .sidebar-task-item') {
+              kind = 'row'; return state.duplicate ? [row, row] : [row];
+            }
+            if (selector === '#sidebar-tasks-panel .sidebar-task-item [data-task-card-field="subject"]') {
+              kind = 'scroll'; return state.duplicate ? [span, span] : [span];
+            }
+            assert.equal(selector, '[role="dialog"] button'); kind = 'dialog';
+            return state.dialogOpen ? [button] : [];
+          },
+          elementFromPoint(x: number, y: number) {
+            if (state.dialogOpen && x >= 70 && x <= 170 && y >= 70 && y <= 110) return button;
+            if (state.covered) return {};
+            return y >= 80 && y <= 680 && y >= state.top && y <= state.top + 60 ? (state.hitRow ? row : span) : null;
+          } },
+        window: { __TEST_desktopInputEvents: [] },
+      });
+      reads.push(kind); hooks.afterRead?.(kind); return value;
+    },
+    async send(method: string, params: Record<string, unknown> = {}) {
+      commands.push({ method, ...params });
+      if (method !== 'Input.dispatchMouseEvent') return {};
+      const type = String(params.type);
+      if (type === 'mouseWheel') { state.wheels++; if (!state.covered) state.top = 200; }
+      const dialogInput = Number(params.x) < 200;
+      if (type === 'mousePressed') {
+        if (dialogInput) state.dialogPresses++; else state.rowPresses++;
+      }
+      if (type === 'mouseReleased') {
+        if (dialogInput) state.dialogReleases++;
+        else { state.rowReleases++; state.dialogOpen = true; }
+      }
+      hooks.afterInput?.(type); return {};
+    },
+  }, { assertOwnedRenderer() { if (!state.ownerCurrent) throw refusal; }, step(value) { steps.push(value); } });
+  return { ui, subject, originalKey, state, hooks, refusal, commands, steps, reads };
+}
+
+for (const visible of [false, true]) {
+  test(`original sidebar reveals its exact task before one row and Open team click (visible=${visible})`, { timeout: 5000 }, async t => {
+    const f = originalSidebarRevealFixture(t, visible);
+    try {
+      await f.ui.clickSidebar(f.subject);
+      assert.equal(f.state.wheels, visible ? 0 : 1, 'only a physical wheel reveals an initially clipped task');
+      assert.deepEqual([f.state.rowPresses, f.state.rowReleases, f.state.dialogPresses, f.state.dialogReleases], [1, 1, 1, 1]);
+      assert.ok(f.commands.filter(row => row.type === 'mousePressed').every(row => Number(row.y) < 680));
+      assert.equal(f.state.key, f.originalKey);
+    } finally { t.mock.restoreAll(); t.mock.timers.reset(); }
+  });
+}
+
+test('original sidebar retains whole-row hit eligibility for a wrapped subject', { timeout: 5000 }, async t => {
+  const f = originalSidebarRevealFixture(t, true); f.state.hitRow = true;
+  try {
+    await f.ui.clickSidebar(f.subject);
+    assert.equal(f.state.wheels, 0, 'inline text whitespace must not require scrolling a visible row');
+    assert.deepEqual([f.state.rowPresses, f.state.rowReleases, f.state.dialogPresses, f.state.dialogReleases], [1, 1, 1, 1]);
+  } finally { t.mock.restoreAll(); t.mock.timers.reset(); }
+});
+
+for (const changed of ['key', 'subject', 'duplicate'] as const) {
+  test('original sidebar reveal refuses changed ' + changed + ' before input', { timeout: 5000 }, async t => {
+    const f = originalSidebarRevealFixture(t);
+    f.hooks.afterRead = kind => {
+      if (kind !== 'row' || f.reads.length !== 1) return;
+      if (changed === 'key') f.state.key = JSON.stringify(['TEST another team', 'TEST-task']);
+      else if (changed === 'subject') f.state.subject = 'TEST replaced subject';
+      else f.state.duplicate = true;
+    };
+    try {
+      await assert.rejects(f.ui.clickSidebar(f.subject), /UI read timed out/);
+      assert.equal(f.state.wheels, 0); assert.equal(f.state.rowPresses, 0);
+      assert.equal(f.state.dialogPresses, 0);
+    } finally { t.mock.restoreAll(); t.mock.timers.reset(); }
+  });
+}
+
+for (const boundary of ['read-deadline', 'wheel-deadline', 'owner', 'wheel-transport'] as const) {
+  test('original sidebar reveal preserves ' + boundary + ' before hover', { timeout: 5000 }, async t => {
+    const f = originalSidebarRevealFixture(t, boundary === 'read-deadline');
+    const transport = new Error('TEST original sidebar wheel transport failed');
+    if (boundary === 'read-deadline') f.hooks.afterRead = kind => {
+      if (kind === 'scroll') t.mock.timers.setTime(31_000);
+    };
+    else f.hooks.afterInput = type => {
+      if (type !== 'mouseWheel') return;
+      if (boundary === 'owner') f.state.ownerCurrent = false;
+      else if (boundary === 'wheel-transport') throw transport;
+      else t.mock.timers.setTime(31_000);
+    };
+    try {
+      await assert.rejects(f.ui.clickSidebar(f.subject), error => boundary === 'owner' ? error === f.refusal
+        : boundary === 'wheel-transport' ? error === transport : /UI read timed out/.test(String(error)));
+      assert.equal(f.commands.filter(row => row.type === 'mouseMoved').length, 0);
+      assert.equal(f.state.rowPresses, 0); assert.equal(f.state.dialogPresses, 0);
+      assert.equal(f.reads.filter(kind => kind === 'row').length, 1, 'no hover lookup after failed reveal');
+      assert.equal(f.state.wheels, boundary === 'read-deadline' ? 0 : 1);
+    } finally { t.mock.restoreAll(); t.mock.timers.reset(); }
+  });
+}
+
+test('original sidebar obstruction remains a refusal with bounded same-read facts', { timeout: 5000 }, async t => {
+  const f = originalSidebarRevealFixture(t, true); f.state.covered = true;
+  try {
+    await assert.rejects(f.ui.clickSidebar(f.subject), /UI scroll timed out/);
+    assert.equal(f.state.wheels, 12); assert.equal(f.state.rowPresses, 0); assert.equal(f.state.dialogPresses, 0);
+    const report = f.steps.filter(row => row.observation === 'last sidebar target observation before failure');
+    assert.equal(report.length, 1);
+    const facts = report[0]!.facts as Record<string, unknown>;
+    assert.equal(facts.matches, 1); assert.equal(facts.keyMatches, true);
+    assert.equal(facts.positiveSize, true); assert.equal(facts.centerInViewport, true);
+    assert.equal(facts.hitPresent, true); assert.equal(facts.hitWithinTarget, false);
+    assert.ok(JSON.stringify(report).length < 1024);
+    assert.doesNotMatch(JSON.stringify(report), /quoted|replaced|TEST original sidebar subject/);
+  } finally { t.mock.restoreAll(); t.mock.timers.reset(); }
+});
+
 for (const requireCenterHit of [false, true]) {
   test(requireCenterHit
     ? 'original scroll opt-in reveals a covered checkbox with one bounded wheel'

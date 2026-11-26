@@ -40,6 +40,22 @@ export default interface Resources {
       },
       "title": "News"
     },
+    "attention": {
+      "chats": "Unread chats",
+      "loadFailed": "Unable to load attention status",
+      "loading": "Loading attention status…",
+      "nothing": "Nothing needs your attention right now.",
+      "openTask": "Open task: {{subject}} in {{team}}",
+      "partial": "Some teams could not be loaded. Counts may be incomplete.",
+      "refresh": "Refresh attention status",
+      "retry": "Retry",
+      "tab": "Attention",
+      "tasks": "Awaiting your decision",
+      "teamAttention": "Attention",
+      "timeUnknown": "Time unknown",
+      "title": "Needs your attention",
+      "viewAll": "View all"
+    },
     "brand": {
       "claude": "Claude"
     },
@@ -2713,13 +2729,57 @@ export default interface Resources {
         "title": "Browser Access"
       },
       "externalAgentConnection": {
-        "cdpDescription": "Grants local processes full renderer access, including the preload API. The browser endpoint can see other app targets. Enabling and disabling require an app restart.",
-        "cdpLabel": "Allow full renderer access (CDP)",
-        "description": "Local agents can create saved drafts through the app's MCP server. Connection readiness does not mean an external client is connected. Cloud agents need a local executor.",
-        "localOnly": "External connections are available in the local desktop app context only.",
+        "addressChanges": "If the address changes after a restart, remove the old server entry from your client, then register the new command or address shown here.",
+        "advanced": "Advanced: UI access and diagnostics",
+        "cdpDescription": "Optional. Local processes gain full access to the app interface and its exposed APIs; the browser endpoint can see other app targets. Enabling or disabling requires restarting the app.",
+        "cdpEnableHint": "Enable this to connect both MCP and the interface. A regular app launch requires a restart.",
+        "cdpError": "Interface access is unavailable. Check diagnostics or restart the app.",
+        "cdpLabel": "Allow interface access (CDP)",
+        "cdpReady": "Interface access is ready. This does not confirm an agent is connected.",
+        "cdpShortDescription": "Local processes get full access to the app interface and its exposed APIs.",
+        "cdpStarting": "Preparing interface access…",
+        "chooseClient": "Set up manually",
+        "chooseMethod": "Choose how to connect",
+        "cliInstructions": "Run this command in a macOS/Linux terminal or Windows PowerShell where your agent is installed.",
+        "confirmationBoth": "{{agentName}} reports it connected to both MCP and the interface (CDP). The app received this request through MCP; the client reports its name and CDP verification.",
+        "confirmationClose": "Done",
+        "confirmationDescription": "{{agentName}} reached this app through MCP and requested this confirmation. The agent name is supplied by the client.",
+        "confirmationTitle": "Agent connected to this app",
+        "connectButton": "Manage with AI",
+        "copied": "Copied. Complete the setup in your agent.",
+        "copyAddress": "Copy address",
+        "copyCommand": "Copy command",
+        "copyFailed": "Could not copy. Refresh the connection and try again.",
+        "copyPrompt": "Copy connection prompt",
+        "copyUnavailable": "The app connection changed or became unavailable. Wait for the current connection and try again.",
+        "copyingPrompt": "Copying…",
+        "dashboardLine1": "Connect AI",
+        "dashboardLine2": "to this app",
+        "description": "Connect your agent to this app’s MCP tools and interface (CDP).",
+        "disabledExplanation": "The MCP HTTP bridge is disabled by the CLAUDE_TEAM_OPENCODE_MCP_HTTP environment setting. Remove the disabling value and restart the app, then return here.",
+        "heading": "Connect AI to this app",
+        "localExecutor": "The agent must run on this computer or use a local executor; a cloud-only agent cannot reach 127.0.0.1 directly.",
+        "localExecutorShort": "Keep the app open. Cloud agents need a local executor.",
+        "localOnly": "Switch to the local desktop app context to connect an agent.",
+        "manualCardHelp": "Use a command or MCP address.",
+        "manualCdpHelp": "For CDP, use a compatible client and the renderer address in Advanced. The MCP registration command does not set up CDP.",
+        "mcpTrust": "Connect trusted agents only: they can use this app’s tools.",
+        "nextStep": "What happens next?",
+        "nextStepHelp": "Open Teams to give your agent a request or manage saved teams.",
+        "openTeams": "Open Teams",
+        "otherClient": "Other MCP client",
+        "otherInstructions": "Add an MCP server using Streamable HTTP in your client and paste this address.",
+        "promptCardHelp": "Send a ready-made request to your agent.",
+        "promptHeading": "With a prompt",
+        "promptHelp": "Send the prompt to your agent to connect both MCP and CDP. After verifying both, it can show a confirmation here.",
+        "readyExplanation": "The app server is available. This does not confirm that an agent is connected.",
         "restartRequired": "Restart the app to apply the saved setting.",
         "retry": "Retry connection",
         "retrying": "Retrying...",
+        "serverReady": "MCP server is ready",
+        "serverStarting": "Preparing the app connection…",
+        "serverUnavailable": "Connection unavailable",
+        "setupUnavailable": "The command or address will appear when the app connection is ready.",
         "status": "MCP: {{mcp}}; control: {{control}}; renderer CDP: {{cdp}}",
         "statuses": {
           "disabled": "disabled",
@@ -2730,8 +2790,10 @@ export default interface Resources {
           "starting": "starting",
           "stopped": "stopped"
         },
-        "stillOpen": "Renderer access is still open until restart.",
-        "title": "External agent connection"
+        "stillOpen": "Interface access is currently open. To close it, restart the app without debugging access.",
+        "title": "AI connection",
+        "verifyInstructions": "Reload your agent’s MCP tools or start a new session, then ask it to call app_get_connection_info.",
+        "waitExplanation": "Wait for the connection, or retry if it does not start."
       },
       "localClaudeRoot": {
         "actions": {
@@ -2929,6 +2991,44 @@ export default interface Resources {
       }
     },
     "notifications": {
+      "delivery": {
+        "additionalEvents": "Additional delivery events",
+        "agentGuide": "Agent Teams step-by-step guide",
+        "desktopOnly": "Desktop only",
+        "exampleFormat": "Example format (not a real credential):",
+        "eventLabels": {
+          "all_tasks_completed": "All tasks completed",
+          "cross_team_message": "Cross-team message",
+          "lead_inbox": "Team lead inbox message",
+          "runtime_recovery": "Runtime recovery",
+          "schedule_completed": "Scheduled run completed",
+          "schedule_failed": "Scheduled run failed",
+          "task_blocked": "Task blocked",
+          "task_clarification": "Clarification needed",
+          "task_comment": "New task comment",
+          "task_created": "Task created",
+          "task_review_requested": "Review requested",
+          "task_status_change": "Task status changed",
+          "team_launch_incomplete": "Team launch needs attention",
+          "team_launched": "Team launched",
+          "usage_budget_exceeded": "Usage budget exceeded",
+          "usage_budget_warning": "Usage budget warning",
+          "user_inbox": "Message for you"
+        },
+        "officialGuide": "Official provider instructions",
+        "pausedDisabled": "Automatic delivery is paused: Enable System Notifications is OFF. Enable system notifications to resume. Manual Test still works.",
+        "pausedSnoozed": "Automatic delivery is snoozed until {{time}}. Click Clear Snooze above to resume. Manual Test still works.",
+        "pausedSnoozedUnknown": "Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works.",
+        "providerSetup": {
+          "discord": "In the target Discord channel choose Edit Channel → Integrations → Webhooks, create a webhook and copy its complete URL.",
+          "google-chat": "In the Google Chat space choose Apps & integrations → Add webhooks, create a webhook and copy the complete URL.",
+          "ms-teams": "Use Teams Workflows → Send webhook alerts to a channel. For a custom trigger choose Anyone; keep the URL secret.",
+          "slack": "Create a Slack app, enable Incoming Webhooks, install it to the workspace, then copy the generated URL.",
+          "telegram": "Create a bot with @BotFather (/newbot), start a chat with it, then enter the token and Chat ID or @channelname.",
+          "webhook": "Create a public HTTPS webhook (for example in n8n), copy the complete signed URL and test it. Local/private URLs are blocked."
+        },
+        "routingHint": "Choose destinations beside each notification type. Turning a type off disables it everywhere; Desktop is the default."
+      },
       "dev": {
         "descriptionPrefix": "Notifications may not work in development mode. macOS identifies the app as \"Electron\" (bundle ID",
         "descriptionSuffix": ") instead of the production app name. Check System Settings > Notifications > Electron to verify permissions.",
@@ -3999,8 +4099,10 @@ export default interface Resources {
       "memberModelLockReason": "This teammate is synced with the lead model. Turn off sync to set a custom provider, model, or effort.",
       "onDisk": "On disk:",
       "optional": {
-        "launchSettingsDescription": "Prompt, safety, and CLI overrides live here when you need them.",
+        "historyOnlyDescription": "Choose how this team keeps its tasks and chats.",
+        "launchSettingsDescription": "Team history, prompt, safety, and CLI overrides live here when you need them.",
         "launchSettingsTitle": "Optional launch settings",
+        "settingsTitle": "Optional settings",
         "summary": {
           "anthropicLimitedContext": "Anthropic limited to 200K context",
           "autoApproveTools": "Auto-approve tools",
@@ -4010,6 +4112,8 @@ export default interface Resources {
           "fastDefault": "Fast default",
           "fastDisabled": "Fast disabled",
           "fastMode": "Fast mode",
+          "historyPerProject": "Per-project history",
+          "historyShared": "Shared history",
           "leadPrompt": "Lead prompt",
           "worktree": "Worktree: {{name}}"
         },
@@ -4056,6 +4160,12 @@ export default interface Resources {
         "someProvidersNeedAttention": "Some selected providers need attention.",
         "unsupportedPreload": "Current preload version does not support team:prepareProvisioning. Restart the dev app."
       },
+      "projectContextMode": {
+        "description": "This can't be changed after the team is created.",
+        "label": "Team history",
+        "perProject": "Separate tasks and chats for each project (default)",
+        "shared": "Shared across projects"
+      },
       "saved": "Saved",
       "solo": {
         "description": "Only the team lead (main process) will be started - no teammates will be spawned. Works like a regular agent session in your chosen runtime (Claude Code, Codex, OpenCode, Gemini) but with access to the task board for planning. Saves tokens by avoiding teammate coordination overhead. You can add members later from the team settings.",
@@ -4077,6 +4187,256 @@ export default interface Resources {
         "selectWorkingDirectory": "Select working directory (cwd)",
         "teamLaunching": "Team is currently launching",
         "teamNameExists": "Team name already exists"
+      }
+    },
+    "customTemplates": {
+      "bulk": {
+        "create": "Create Template",
+        "createTitle": "Create template",
+        "chooseTemplate": "Choose a template",
+        "invalidEditorJson": "Use a JSON object with name, description, teamPrompt and members. Each member accepts only name, role and workflow as text.",
+        "createDescription": "Choose a name and add instructions and members for this reusable template.",
+        "createUnresolved": "The template may have been saved. Close this dialog and check your library before trying again.",
+        "exportAll": "Export All",
+        "exporting": "Exporting…",
+        "exported": "All templates exported.",
+        "exportFailed": "Could not export templates. Please try again.",
+        "tooLarge": "The library is too large to export as one file. Export templates individually instead.",
+        "importDone": "Template import finished",
+        "importSummary": "{{imported}} imported, {{skipped}} skipped because their names already exist.",
+        "importStopped": "Import stopped because an item could not be imported; check your library before trying again."
+      },
+      "actions": {
+        "addMember": "Add member",
+        "copyToMyTemplates": "Copy to My Templates",
+        "delete": "Delete",
+        "duplicate": "Duplicate",
+        "edit": "Edit",
+        "export": "Export",
+        "myTemplates": "My Templates",
+        "recheck": "Re-check outcome",
+        "removeMember": "Remove member",
+        "retry": "Retry",
+        "save": "Save template",
+        "saveAsTemplate": "Save as Template",
+        "templates": "Templates"
+      },
+      "copyBuiltin": {
+        "action": "Copy to My Templates",
+        "copying": "Copying…",
+        "description": "Create an independent copy of a built-in template in My Templates.",
+        "membersCount_few": "{{count}} members",
+        "membersCount_many": "{{count}} members",
+        "membersCount_one": "{{count}} member",
+        "membersCount_other": "{{count}} members",
+        "nameFieldLabel": "Template name",
+        "readOnlySource": "Built-in template (read-only source)",
+        "selectTemplate": "Select a template",
+        "title": "Copy built-in template"
+      },
+      "createFromTemplate": {
+        "builtinGroup": "Built-in templates",
+        "customGroup": "My templates",
+        "description": "Apply a built-in or saved custom template to prefill the team prompt and members. You can still edit everything before creating the team.",
+        "membersCount_few": "{{count}} members",
+        "membersCount_many": "{{count}} members",
+        "membersCount_one": "{{count}} member",
+        "membersCount_other": "{{count}} members",
+        "noneHint": "Create a blank team with the usual settings.",
+        "noneLabel": "No template",
+        "readOnlySource": "Built-in template (read-only source)",
+        "sourceCustom": "Custom template (read-only source)",
+        "staleWarning": "The selected custom template no longer exists. The form keeps the previously applied values — choose another template to replace them, or continue with the current values.",
+        "title": "Start from a template (optional)"
+      },
+      "delete": {
+        "confirm": "Delete this template?",
+        "conflictBody": "This template changed since you opened it. Reload and try again.",
+        "conflictTitle": "Template changed",
+        "deleting": "Deleting…",
+        "description": "Delete this saved template. This cannot be undone.",
+        "title": "Delete template"
+      },
+      "duplicate": {
+        "action": "Duplicate",
+        "defaultName": "{{name}} (copy)",
+        "description": "Create an independent copy of this template.",
+        "duplicating": "Duplicating…",
+        "nameFieldLabel": "Template name",
+        "title": "Duplicate template"
+      },
+      "edit": {
+        "conflictBody": "This template changed since you opened it. Reload and try again.",
+        "conflictOverwrite": "Overwrite with your changes",
+        "conflictReload": "Reload latest version",
+        "conflictTitle": "Template changed",
+        "description": "Edit this saved template.",
+        "descriptionLabel": "Description",
+        "memberHeader": "Members",
+        "memberNameLabel": "Member name",
+        "memberNamePlaceholder": "Member name",
+        "memberRoleLabel": "Role",
+        "memberRolePlaceholder": "Role",
+        "memberWorkflowLabel": "Workflow",
+        "memberWorkflowPlaceholder": "Workflow",
+        "membersEmpty": "No members recorded.",
+        "membersLabel": "Members",
+        "nameFieldLabel": "Template name",
+        "promptLabel": "Team prompt",
+        "promptPlaceholder": "Team prompt",
+        "save": "Save changes",
+        "saved": "Template saved",
+        "savedBody": "“{{name}}” was updated.",
+        "saving": "Saving…",
+        "title": "Edit template"
+      },
+      "errors": {
+        "builtinNotFound": "Built-in template not found.",
+        "issues": {
+          "duplicateMemberName": "A member with this name already exists.",
+          "invalidContent": "The team content cannot be saved as a template.",
+          "memberNameInvalid": "Member name is invalid.",
+          "memberNameRequired": "Member name is required.",
+          "memberRoleTooLong": "Member role is too long.",
+          "memberWorkflowTooLong": "Member workflow is too long.",
+          "previewTokenExpired": "This preview expired. Review the refreshed preview before saving.",
+          "previewTokenInvalid": "This preview is no longer valid. Review the refreshed preview before saving.",
+          "teamPromptInvalidType": "The team prompt must be a text value.",
+          "teamPromptTooLong": "Team prompt is too long.",
+          "templateDescriptionTooLong": "The description is too long.",
+          "templateNameInvalidCharacters": "The template name contains unsupported characters.",
+          "templateNameRequired": "A template name is required.",
+          "templateNameTooLong": "The template name is too long.",
+          "tooManyMembers": "Too many members.",
+          "unexpectedProperty": "The file contains an unexpected property “{{property}}”."
+        },
+        "nameConflict": "A template with this name already exists. Change the name — existing templates are never overwritten.",
+        "notFound": "Template not found.",
+        "requestFailed": "The request failed. Try again.",
+        "rosterUnreadable": "Team member information could not be read, so this team cannot be saved as a template.",
+        "saveOutcomeUnknown": "The save request failed, so its outcome is unknown. Re-check before saving again.",
+        "sourceNotFound": "Source template not found.",
+        "sourceUnavailable": "This team's saved configuration is no longer available.",
+        "sourceUnreadable": "Source template could not be read.",
+        "storageUnavailable": "The template library is unavailable. Nothing was saved.",
+        "storageUnavailableRecheck": "The template library is unavailable, so the outcome could not be checked.",
+        "storageUnavailableSave": "The template library refused the write. Nothing was saved — you can try again.",
+        "templateIdConflict": "A different stored template already owns this identity. Nothing was overwritten.",
+        "unreadableRecord": "This stored template could not be read. Reload the library before editing it again."
+      },
+      "export": {
+        "action": "Export",
+        "description": "Export “{{name}}” as a portable JSON file.",
+        "errors": {
+          "downloadFailed": "The download could not be started. Try again.",
+          "transportFailed": "The export request could not be completed. Try again.",
+          "filePickerFailed": "The file picker could not be opened.",
+          "fileWriteFailed": "The file could not be written. Try again.",
+          "invalidRequest": "The export request was invalid."
+        },
+        "exporting": "Exporting…",
+        "success": "Export successful",
+        "successBody": "“{{name}}” has been exported as a JSON file.",
+        "title": "Export Template"
+      },
+      "import": {
+        "action": "Import Template",
+        "confirmImport": "Confirm import",
+        "description": "Import a portable team template from a JSON file.",
+        "errors": {
+          "fileChanged": "The file changed while it was being read.",
+          "filePickerFailed": "The file picker could not be opened.",
+          "fileReadFailed": "The file could not be read.",
+          "fileTooLarge": "The file is too large to import.",
+          "invalidEncoding": "The file is not valid UTF-8.",
+          "invalidJson": "The file is not valid JSON.",
+          "storageUnavailable": "The template library is unavailable. Nothing was imported.",
+          "transportFailed": "The import request could not be completed. Try again.",
+          "unsupportedFormat": "The file format is not supported.",
+          "unsupportedVersion": "The template schema version is not supported.",
+          "validationFailed": "The template content failed validation."
+        },
+        "fileHint": "Choose a .json file exported from Agent Teams.",
+        "importing": "Importing…",
+        "nameConflictBody": "A template named “{{name}}” already exists. Choose a different name to import as a new template.",
+        "nameConflictTitle": "Template already exists",
+        "platformBrowser": "Browser file import",
+        "platformElectron": "Native file picker",
+        "platformUnavailable": "File import is not available in this environment.",
+        "renameNameFieldLabel": "Template name",
+        "selectFileLabel": "Select JSON file",
+        "success": "Import successful",
+        "successBody": "The template has been imported into My Templates.",
+        "title": "Import Template"
+      },
+      "library": {
+        "builtInDescription": "Ready-made team setups with roles and responsibilities.",
+        "createdAt": "Saved {{date}}",
+        "description": "Browse ready-made team setups and your saved templates.",
+        "empty": "No saved templates yet",
+        "emptyDescription": "Open a team and choose Save as Template to create one.",
+        "loadFailed": "The template library could not be loaded.",
+        "loading": "Loading templates…",
+        "memberNames": "Members: {{names}}",
+        "noDescription": "No description",
+        "noMembers": "Prompt-only template — no members recorded",
+        "storageUnavailable": "The template library is unavailable right now.",
+        "tabs": {
+          "builtIn": "Built-in",
+          "myTemplates": "My Templates"
+        },
+        "title": "Templates",
+        "unreadableRecords_few": "{{count}} stored templates could not be read and are missing from this list.",
+        "unreadableRecords_many": "{{count}} stored templates could not be read and are missing from this list.",
+        "unreadableRecords_one": "{{count}} stored template could not be read and is missing from this list.",
+        "unreadableRecords_other": "{{count}} stored templates could not be read and are missing from this list."
+      },
+      "preview": {
+        "membersEmpty": "No members recorded — a prompt-only template",
+        "membersLabel": "Members",
+        "prompt": "Team prompt",
+        "promptEmpty": "No team prompt recorded — this template keeps an empty prompt",
+        "roleLabel": "Role",
+        "roleMissing": "No role",
+        "sourceTeam": "Source team",
+        "title": "Template preview",
+        "warningsLabel": "Preview warnings",
+        "workflowLabel": "Workflow",
+        "workflowMissing": "No workflow"
+      },
+      "save": {
+        "description": "Review exactly what will be saved. Only the name and description can be changed.",
+        "descriptionLabel": "Description",
+        "nameFieldLabel": "Template name",
+        "title": "Save as Template"
+      },
+      "states": {
+        "loading": "Loading…",
+        "notSaved": "Confirmed: this template was not saved. You can save it again.",
+        "preparing": "Preparing preview…",
+        "previewExpired": "This preview is no longer valid. Review the refreshed preview before saving.",
+        "rechecking": "Re-checking the save outcome…",
+        "saved": "Template saved",
+        "savedAlready": "This template was already saved.",
+        "savedBody": "“{{name}}” is now in My Templates.",
+        "saving": "Saving…",
+        "stalePreview": "The saved team configuration changed since this preview. Review the refreshed preview, then save again.",
+        "unresolvedBody": "The save could not be confirmed, so nothing was retried automatically. Re-check the original save before trying again.",
+        "unresolvedDeleteBody": "The deletion could not be confirmed, so nothing was retried automatically. Check My Templates before trying again — the template may already be gone.",
+        "unresolvedImportBody": "The import could not be confirmed, so nothing was retried automatically. Check My Templates before trying again — the template may already have been imported.",
+        "unresolvedMutationBody": "The change could not be confirmed, so nothing was retried automatically. Check My Templates before trying again — the change may already have been applied.",
+        "unresolvedTitle": "Outcome not confirmed"
+      },
+      "warnings": {
+        "emptyRoster": "The roster was read successfully and is empty. A prompt-only template is valid.",
+        "missingMemberRole": "{{member}} has no recorded role.",
+        "missingMemberWorkflow": "{{member}} has no recorded workflow.",
+        "missingTeamPrompt": "The team has no prompt; the saved template keeps an empty prompt.",
+        "noRecordedRoster": "No roster was recorded for this team. A prompt-only template is valid.",
+        "removedMembersExcluded_few": "{{count}} removed team members were excluded.",
+        "removedMembersExcluded_many": "{{count}} removed team members were excluded.",
+        "removedMembersExcluded_one": "{{count}} removed team member was excluded.",
+        "removedMembersExcluded_other": "{{count}} removed team members were excluded."
       }
     },
     "detail": {
@@ -4119,6 +4479,11 @@ export default interface Resources {
         "member_other": "members",
         "title": "Team not launched yet"
       },
+      "editDefinition": {
+        "loadFailed": "Could not load the team settings",
+        "memberNotFound": "This member is no longer in the team settings. Reopen the team to see its current members.",
+        "notFound": "The team settings could not be found"
+      },
       "invalidTab": "Invalid team tab",
       "kanbanSafeData": "Failed to fully load kanban. Displaying safe data.",
       "loadFailed": "Failed to load team",
@@ -4160,6 +4525,7 @@ export default interface Resources {
         "deleteTeam": "Delete team",
         "editTeam": "Edit team",
         "editUnavailableProvisioning": "Edit team is unavailable while provisioning is still in progress",
+        "editUnavailableRunningProject": "Stop this team in every project to edit it",
         "openBuiltInEditor": "Open project in built-in editor",
         "openTeamGraph": "Open team graph",
         "openTeamUsage": "Open usage dashboard",
@@ -4198,6 +4564,9 @@ export default interface Resources {
         "memberNamesUnique": "Member names must be unique before saving",
         "newLiveTeammates": "Add new teammates from the dedicated Add member dialog while the team is live. Edit Team only supports updating existing teammates.",
         "provisioning": "Team settings cannot be edited while provisioning is still in progress. Wait for launch to finish, then try again.",
+        "refusedProjectCopy": "This is a project copy of a team. Change its settings in the team itself.",
+        "refusedProjectUnreconciled": "A project of this team is still being prepared, or its last start was interrupted. Launch the team in that project again, then edit it.",
+        "refusedTeamUnreadable": "The saved settings of this team cannot be read, so nothing was changed.",
         "restartFailedMany": "Team saved, but failed to restart these teammates: {{failures}}",
         "restartFailedOne": "Team saved, but failed to restart this teammate: {{failures}}",
         "saveFailed": "Failed to save",
@@ -4211,8 +4580,10 @@ export default interface Resources {
       "fields": {
         "colorOptional": "Color (optional)",
         "description": "Description",
+        "leadPrompt": "Lead instructions (optional)",
         "name": "Name"
       },
+      "leadPromptHint": "Used the next time the team starts in any project. A prompt typed in the launch dialog applies to that start only; afterwards the team goes back to these saved instructions (or to none, if this field is empty).",
       "leadRestartWarning": "Saving will restart the lead to apply model or effort changes. Teammate processes will keep running.",
       "memberRestartWarning": "Saving will restart this teammate to apply role, workflow, worktree isolation, provider, model, effort, or MCP access changes.",
       "notices": {
@@ -4225,6 +4596,7 @@ export default interface Resources {
       },
       "placeholders": {
         "description": "Team description (optional)",
+        "leadPrompt": "Saved instructions for the team lead",
         "teamName": "Team name"
       },
       "teamLead": {
@@ -4632,6 +5004,7 @@ export default interface Resources {
         "someProvidersNeedAttention": "Some selected providers need attention.",
         "unsupportedPreload": "Current preload version does not support team:prepareProvisioning. Restart the dev app."
       },
+      "projectScopedRosterReadOnly": "The team roster is shared across projects and cannot be edited while launching this project.",
       "prompt": {
         "label": "Prompt",
         "oneShotPrefix": "This prompt will be passed to",
@@ -5897,6 +6270,20 @@ export default interface Resources {
       "stoppedAgo": "stopped {{time}} ago",
       "title": "CLI Processes"
     },
+    "projectContextView": {
+      "incomplete": "The team launch in project “{{project}}” did not finish. Retry the launch.";
+      "unknown": "The previous run in project “{{project}}” has not been confirmed stopped. Check its status before launching again.";
+      "retryLaunch": "Retry launch";
+      "recoveryProject": "Check the unfinished launch in project “{{project}}” before editing this team.";
+      "openProject": "Open project";
+      "empty": "{{team}} has no tasks or chats in this project yet. Click Launch to start it here.",
+      "emptyTitle": "Not launched in this project yet",
+      "loading": "Loading team project history…",
+      "pending": "Preparing this project's team context. Tasks and messages will appear once the runtime is ready.",
+      "projectMissing": "This history belongs to a project that is no longer in your project list.",
+      "retry": "Retry",
+      "selectProject": "Open a project to see this team's tasks and chats."
+    },
     "projectPath": {
       "browse": "Browse",
       "createAutomatically": "If the directory does not exist, it will be created automatically.",
@@ -5956,6 +6343,7 @@ export default interface Resources {
         "bootstrapStalledWithOpenCodeWait": "{{stalled}}; Waiting for OpenCode: {{names}}",
         "countPendingDiagnostic": "{{count}} {{label}}",
         "failed": {
+          "manualPermissionUnsupported": "This launch method does not support manual tool approval. Choose a launch method that supports approvals, then retry.";
           "memberFailedToStart": "{{name}} failed to start",
           "teammatesFailedRatio": "{{count}}/{{total}} teammates failed to start",
           "teammatesFailedToStart": "{{count}} teammates failed to start"
@@ -6436,6 +6824,7 @@ export default interface Resources {
       "badges": {
         "custom": "Custom",
         "default": "Default",
+        "differ": "Differs by project",
         "repair": "Needs repair"
       },
       "broken": {
@@ -6454,6 +6843,7 @@ export default interface Resources {
       },
       "feedback": {
         "error": "Could not save: {{message}}",
+        "notApplied": "Saved for the team, but not applied yet in every project: they are listed above. Save again to apply it there.",
         "saved": "Saved",
         "saving": "Saving…"
       },
@@ -6484,6 +6874,18 @@ export default interface Resources {
       },
       "popover": {
         "openSettings": "Change the default for all teams…"
+      },
+      "projects": {
+        "differ": "The projects of this team use different review flows. Saving applies the settings below to all of them:",
+        "followsDefault": "the default",
+        "item": "{{project}}: {{flow}}",
+        "notApplied": "Not applied yet in these projects. Save to apply it there; a project also takes it when it is launched:",
+        "notSaved": "These settings come from its projects and are not saved for the team yet: a project launched for the first time starts on the default. Save to keep them for every project.",
+        "prompt": "Instructions: \"{{prompt}}\"",
+        "scope": "One review flow for every project of this team.",
+        "unreadable": "settings that can't be read",
+        "unreadableProjects": "The projects of this team cannot be read, so its review flow cannot be shown or changed: {{message}}",
+        "use": "Use these settings"
       },
       "promptHint": "Sent to reviewers with each review request and visible to agents on the board. It does not change who may approve.",
       "promptLabel": "Instructions for agents (optional)",

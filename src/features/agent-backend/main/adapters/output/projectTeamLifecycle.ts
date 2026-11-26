@@ -45,12 +45,21 @@ function lifecycle(value: Record<string, unknown>): BackendTeamLifecycle {
     : undefined;
   if (pendingPurge && !/^[a-f0-9]{64}$/.test(pendingPurge.expectedRevision))
     throw new Error('Invalid prepared deletion CAS');
+  const change = value.pendingChange === undefined ? undefined
+    : row(value.pendingChange, ['commandId', 'expectedRevision', 'action']);
+  if (change && (change.action !== 'trash' && change.action !== 'restore'))
+    throw new Error('Invalid prepared lifecycle action');
+  const pendingChange = change ? { commandId: id(change.commandId),
+    expectedRevision: id(change.expectedRevision), action: change.action as 'trash' | 'restore' } : undefined;
+  if (pendingChange && (!/^[a-f0-9]{64}$/.test(pendingChange.expectedRevision) || pendingPurge))
+    throw new Error('Invalid prepared lifecycle CAS');
   return {
     kind: 'team_lifecycle',
     revision,
     deletedAt: value.deletedAt === null ? null : id(value.deletedAt),
     cleanupPending: value.cleanupPending,
     ...(pendingPurge ? { pendingPurge } : {}),
+    ...(pendingChange ? { pendingChange } : {}),
   };
 }
 export function projectTeamLifecycle(
@@ -61,7 +70,7 @@ export function projectTeamLifecycle(
   if (value === null && operation.endsWith('.lookup')) return null;
   if (operation === 'team.lifecycle.read')
     return lifecycle(
-      row(value, ['kind', 'revision', 'deletedAt', 'cleanupPending', 'pendingPurge'])
+      row(value, ['kind', 'revision', 'deletedAt', 'cleanupPending', 'pendingPurge', 'pendingChange'])
     );
   if (operation === 'team.lifecycle.purge' || operation === 'team.lifecycle.purge.lookup') {
     const source = row(value, ['kind', 'commandId', 'transactionId', 'phase']);

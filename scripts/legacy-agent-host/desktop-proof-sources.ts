@@ -1,3 +1,4 @@
+import { desktopProofIntegrationSources } from './desktop-proof-integration-sources.ts';
 import { desktopProofUiSources } from './desktop-proof-ui-sources.ts';
 import { desktopProofSupplementarySources, desktopProofProcessSources } from './desktop-proof-supplementary-sources.ts';
 import { desktopProofIntegratedSources } from './desktop-proof-integrated-sources.ts';
@@ -793,6 +794,7 @@ export const desktopProofSources = [
     ...desktopProofBaseSources,
     ...desktopProofSupplementarySources,
     ...desktopProofIntegratedSources,
+    ...desktopProofIntegrationSources,
     ...desktopProofManagementSources,
   ]),
 ];

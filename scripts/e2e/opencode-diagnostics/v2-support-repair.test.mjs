@@ -6,6 +6,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { assertV2SupportWarmReuse, prepareV2SupportRepair, v2SupportSnapshot, verifyV2SupportRepair } from './v2-support-repair.mjs';
 
+import { MAX_OPENCODE_BINARY_BYTES } from '../../../src/features/opencode-runtime-installer/main/infrastructure/packageExtraction.ts';
+
 const sha = (bytes) => createHash('sha256').update(bytes).digest('hex');
 const helper = 'local-cli/opencodeV2RunOwner.js';
 
@@ -112,55 +114,6 @@ test('stable V2 CLI retains the exact qualified engine through cold, warm, repai
   } finally { await rm(f.root, { recursive: true, force: true }); }
 });
 
-test('native snapshots hash bytes beyond the support-file limit and detect later changes', async () => {
-  const f = await fixture('2.4.1');
-  try {
-    const bytes = 256 * 1024 ** 2 + 1;
-    await truncate(f.nativeFile, bytes);
-    const snapshots = [];
-    for (const value of [1, 2]) {
-      const handle = await open(f.nativeFile, 'r+');
-      try {
-        assert.equal((await handle.write(Buffer.from([value]), 0, 1, bytes - 1)).bytesWritten, 1);
-      } finally { await handle.close(); }
-      snapshots.push(await v2SupportSnapshot(f.data));
-    }
-    assert.equal(snapshots[0].native.version, '2.4.1');
-    assert.equal(snapshots[0].filesVerified, Object.keys(f.files).length);
-    assert.notEqual(snapshots[0].native.sha256, snapshots[1].native.sha256);
-    assert.throws(() => assertV2SupportWarmReuse(snapshots[0], snapshots[1]), /native selection or bytes/);
-  } finally { await rm(f.root, { recursive: true, force: true }); }
-});
-
-test('native and support snapshots retain their separate upper size limits', async () => {
-  const f = await fixture();
-  try {
-    const originalNative = await readFile(f.nativeFile);
-    await truncate(f.nativeFile, 350 * 1024 ** 2 + 1);
-    await assert.rejects(v2SupportSnapshot(f.data), { code: 'ERR_ASSERTION' });
-    await writeFile(f.nativeFile, originalNative);
-
-    const descriptorFile = path.join(path.dirname(f.data.artifact.orchestrator.path), 'opencode-v2-delivery.json');
-    const descriptor = JSON.parse(await readFile(descriptorFile));
-    const manifestFile = path.join(f.original, descriptor.manifest.file);
-    const manifest = JSON.parse(await readFile(manifestFile));
-    const oversized = manifest.files.find(file => file.path === helper);
-    assert.ok(oversized);
-    oversized.bytes = 256 * 1024 ** 2 + 1;
-    await truncate(path.join(f.original, helper), oversized.bytes);
-    const manifestBytes = Buffer.from(JSON.stringify(manifest));
-    descriptor.manifest.bytes = manifestBytes.length;
-    descriptor.manifest.sha256 = sha(manifestBytes);
-    descriptor.archive.expandedBytes = manifestBytes.length + manifest.files.reduce((sum, file) => sum + file.bytes, 0);
-    await writeFile(manifestFile, manifestBytes);
-    await writeFile(descriptorFile, JSON.stringify(descriptor));
-    const receiptFile = path.join(f.directory, 'installed.json');
-    const receipt = JSON.parse(await readFile(receiptFile));
-    await writeFile(receiptFile, JSON.stringify({ ...receipt, manifestSha256: descriptor.manifest.sha256 }));
-    await assert.rejects(v2SupportSnapshot(f.data), /Invalid pinned OpenCode V2 support delivery/);
-  } finally { await rm(f.root, { recursive: true, force: true }); }
-});
-
 test('support proof rejects unsupported CLI generations and changed engine qualification', async () => {
   const f = await fixture('2.2.7');
   try {
@@ -255,5 +208,28 @@ test('support proof rejects escaping receipt instances and linked profile ancest
           userData: path.join(linkedRoot, 'user-data') }), /root alias/);
       } finally { await rm(linkedRoot); }
     }
+  } finally { await rm(f.root, { recursive: true, force: true }); }
+});
+
+// The pinned Windows native 2.x executable exceeds the distinct support-file cap.
+test('native proof keeps the installer bound and hashes every byte of the larger pinned layout', async () => {
+  const f = await fixture('2.2.7');
+  try {
+    const pinnedBytes = 278_383_496;
+    await truncate(f.nativeFile, pinnedBytes);
+    const cold = await v2SupportSnapshot(f.data, 'selected');
+    assert.equal(cold.native.binaryPath, f.nativeFile);
+    assertV2SupportWarmReuse(cold, await v2SupportSnapshot(f.data, 'selected'));
+    const held = await open(f.nativeFile, 'r+');
+    try { await held.write(Buffer.from([1]), 0, 1, pinnedBytes - 1); }
+    finally { await held.close(); }
+    const changed = await v2SupportSnapshot(f.data, 'selected');
+    assert.notEqual(changed.native.sha256, cold.native.sha256);
+    assert.throws(() => assertV2SupportWarmReuse(cold, changed), /native selection or bytes/);
+    await truncate(f.nativeFile, MAX_OPENCODE_BINARY_BYTES + 1);
+    await assert.rejects(v2SupportSnapshot(f.data, 'selected'));
+    await truncate(f.nativeFile, pinnedBytes);
+    await truncate(path.join(f.original, helper), 256 * 1024 ** 2 + 1);
+    await assert.rejects(v2SupportSnapshot(f.data, 'selected'));
   } finally { await rm(f.root, { recursive: true, force: true }); }
 });

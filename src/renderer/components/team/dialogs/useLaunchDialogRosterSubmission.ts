@@ -72,6 +72,33 @@ export function useLaunchDialogRosterSubmission(
           request.effort ?? null,
           members
         );
+    if (props.rosterReadOnly) {
+      let launchRequest = request;
+      let continuation: Metadata | undefined;
+      if (isHostTeamSelectionKey(request.teamName)) {
+        const captured = source.current;
+        if (!captured || captured.teamName !== request.teamName || !captured.savedSettingsFingerprint)
+          throw new Error('Saved team configuration unavailable. Close and reopen launch.');
+        const commandId = submitted.current?.commandId ?? `launch:${preparationId}`;
+        launchRequest = { ...request, savedSettingsFingerprint: captured.savedSettingsFingerprint,
+          command: { commandId, idempotencyKey: commandId } };
+        const signature = JSON.stringify({ request: launchRequest, members, intent });
+        if (submitted.current && submitted.current.signature !== signature)
+          throw new Error('The previous launch intent changed. Close and reopen launch before submitting changes.');
+        const relaunch = props.mode === 'relaunch' ? submitted.current?.relaunch ?? {
+          originalRunId: props.runtimeRunId, stopConfirmed: false,
+          replaceAttempted: false, replaceConfirmed: false,
+        } : undefined;
+        submitted.current = { commandId, signature, intent: structuredClone(intent),
+          ...(relaunch ? { relaunch } : {}) };
+        if (relaunch) continuation = { relaunch };
+      }
+      await props.validateMemberSettings?.();
+      if (props.mode === 'relaunch')
+        await props.onRelaunch(launchRequest, members, intent, continuation, onMembersSaved);
+      else await props.onLaunch(launchRequest);
+      return;
+    }
     if (retained) {
       await props.validateMemberSettings?.();
       await retained.replaceMembers(teamName, { members, memberSettingsRelaunch: intent });

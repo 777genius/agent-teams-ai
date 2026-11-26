@@ -15,9 +15,9 @@ import type { TeamHostProfile } from '../../packages/legacy-agent-host/dist/comp
 import { prepareNativeReviewWorkspace } from './desktop-native-review-fixture.ts';
 import { prepareDesktopReviewLedger } from './desktop-review-fixture.ts';
 import { prepareDesktopStoppedImport } from './desktop-stopped-import-fixture.ts';
-import { desktopBackendEnvironment, desktopRuntimeSourceEnvironment, prepareDesktopRuntimeProfile, readDesktopLinuxChildExecInput } from './desktop-runtime-source-fixture.ts';
+import { desktopBackendEnvironment, desktopNodeScriptHeader, quoteShellArgument, desktopRuntimeSourceEnvironment, prepareDesktopRuntimeProfile, readDesktopLinuxChildExecInput } from './desktop-runtime-source-fixture.ts';
 import type { DesktopOpenCodeSourceSelection } from './desktop-runtime-source-fixture.ts';
-export { desktopBackendEnvironment } from './desktop-runtime-source-fixture.ts';
+export { desktopBackendEnvironment, desktopNodeScriptHeader } from './desktop-runtime-source-fixture.ts';
 import type { DesktopOpenCodeV2Selection } from './desktop-opencode-v2-fixture.ts';
 import { desktopCodexSha256, prepareDesktopCodexLoginOpener } from './desktop-codex-login-fixture.ts';
 export { desktopCodexSha256 } from './desktop-codex-login-fixture.ts';
@@ -28,14 +28,6 @@ export { fileDigest } from './desktop-file-digest.ts';
 
 export const digest = (bytes: Uint8Array | string): string =>
   createHash('sha256').update(bytes).digest('hex');
-
-const quoteShellArgument = (value: string): string => "'" + value.replaceAll("'", "'\\''") + "'";
-
-/** Shell bootstrap preserves the captured absolute Node even inside an app bundle path. */
-export function desktopNodeScriptHeader(node: string): string {
-  if (!node.startsWith('/') || /[\0\r\n]/u.test(node)) throw new Error('Invalid TEST Node path');
-  return `#!/bin/sh\n':' //; exec ${quoteShellArgument(node)} "$0" "$@"\n`;
-}
 
 /** Emits only the two known environment probes; never evaluates shell input. */
 export function desktopShellEnvironmentProbeSource(node: string, sentinelLog: string): string {

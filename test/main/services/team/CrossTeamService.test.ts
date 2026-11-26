@@ -1,3 +1,4 @@
+import { trackProjectCopyLaunch } from '@features/team-project-context/main';
 import {
   type CrossTeamRecipientMetadataReader,
   CrossTeamService,
@@ -19,7 +20,9 @@ import type { TeamProvisioningService } from '@main/services/team/TeamProvisioni
 import type { CrossTeamSendRequest, TeamConfig } from '@shared/types';
 
 vi.mock('@main/utils/pathDecoder', () => ({
+  getAppDataBasePath: () => `${process.cwd()}/.cross-team-test-nonexistent-dir-${process.pid}`,
   getTeamsBasePath: () => `${process.cwd()}/.cross-team-test-nonexistent-dir-${process.pid}/teams`,
+  getTasksBasePath: () => `${process.cwd()}/.cross-team-test-nonexistent-dir-${process.pid}/tasks`,
   getClaudeBasePath: () => `${process.cwd()}/.cross-team-test-nonexistent-dir-${process.pid}`,
 }));
 
@@ -115,6 +118,8 @@ describe('CrossTeamService', () => {
   };
 
   beforeEach(() => {
+    // The controller used for cross-path parity asks no app: none runs here.
+    vi.stubEnv('CLAUDE_TEAM_CONTROL_URL', '');
     fs.rmSync(MOCK_TEAMS_BASE_PATH, { recursive: true, force: true });
     configReader = {
       getConfig: vi.fn().mockResolvedValue(makeConfig()),
@@ -152,10 +157,167 @@ describe('CrossTeamService', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllEnvs();
     fs.rmSync(MOCK_TEAMS_BASE_PATH, { recursive: true, force: true });
   });
 
   describe('send', () => {
+    it('refuses a per-project target when the sender has no project, before inbox writes', async () => {
+      const directory = path.join(MOCK_TEAMS_BASE_PATH, 'teams', 'team-b');
+      fs.mkdirSync(directory, { recursive: true });
+      fs.writeFileSync(path.join(directory, 'team.meta.json'), JSON.stringify({
+        version: 1, cwd: '/sandbox/project', projectContextMode: 'per_project',
+      }));
+      await expect(service.send(makeRequest())).rejects.toMatchObject({
+        code: 'SENDER_PROJECT_UNKNOWN',
+      });
+      expect(inboxWriter.sendMessage).not.toHaveBeenCalled();
+    });
+
+    describe('to a per-project team', () => {
+      const copies: Record<string, string> = { '/work/alpha': 'ptc-alpha', '/work/beta': 'ptc-beta' };
+      const copyOf = (projectPath: string): string | null => copies[projectPath] ?? null;
+      const routed = (senderProject: string | undefined) => {
+        configReader.getConfig.mockImplementation((teamName: string) =>
+          Promise.resolve(
+            teamName === 'team-a' ? makeConfig({ name: 'team-a', projectPath: senderProject }) : makeConfig()
+          )
+        );
+        return new CrossTeamService(
+          configReader as unknown as TeamConfigReader,
+          dataService as unknown as TeamDataService,
+          inboxWriter as unknown as TeamInboxWriter,
+          provisioning as unknown as TeamProvisioningService,
+          recipientMetadataReader,
+          {
+            findCopyOwners: (names) =>
+              Promise.resolve(new Map(names.map((name) => [name, { alias: null }]))),
+            getMode: (teamName) =>
+              Promise.resolve(teamName === 'builders' ? 'per_project' : 'shared'),
+            inspectContext: (_team, projectPath) => {
+              const executionTeamName = copyOf(projectPath);
+              return Promise.resolve(
+                executionTeamName
+                  ? { id: 'id', projectKey: projectPath, projectPath, executionTeamName, state: 'ready' }
+                  : null
+              );
+            },
+          }
+        );
+      };
+
+      it('delivers into the copy of the sender project and reports that copy', async () => {
+        const result = await routed('/work/beta').send(makeRequest({ toTeam: 'builders' }));
+        expect(result).toMatchObject({ deliveredToInbox: true, toTeam: 'ptc-beta' });
+        expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(1);
+        expect(inboxWriter.sendMessage.mock.calls[0][0]).toBe('ptc-beta');
+        // Reply bookkeeping is keyed by the copy: its lead answers under that name.
+        expect(provisioning.resolveCrossTeamReplyMetadata).toHaveBeenCalledWith('team-a', 'ptc-beta');
+        expect(provisioning.registerPendingCrossTeamReplyExpectation).toHaveBeenCalledWith(
+          'team-a',
+          'ptc-beta',
+          expect.any(String)
+        );
+      });
+
+      it('refuses a project without history and writes nothing', async () => {
+        await expect(
+          routed('/work/gamma').send(makeRequest({ toTeam: 'builders' }))
+        ).rejects.toMatchObject({ code: 'NO_PROJECT_HISTORY' });
+        expect(inboxWriter.sendMessage).not.toHaveBeenCalled();
+        expect(provisioning.registerPendingCrossTeamReplyExpectation).not.toHaveBeenCalled();
+      });
+
+      it('answers the same copy for a resolve request as for a send', async () => {
+        await expect(routed('/work/alpha').resolveRecipient('team-a', 'builders')).resolves.toEqual({
+          teamName: 'ptc-alpha',
+          logicalTeamName: 'builders',
+          projectPath: '/work/alpha',
+        });
+        await expect(routed('/work/alpha').resolveRecipient('team-a', 'team-b')).resolves.toEqual({
+          teamName: 'team-b',
+        });
+      });
+
+      // The wiring of "a launch runs": a tracked launch of the copy, or its live team, reads as
+      // pending; otherwise its launch failed and the sender is told to launch again. Both by the
+      // team's name and by the copy's exact name.
+      it('tells a pending copy that is being launched from one whose launch failed', async () => {
+        const gamma = {
+          id: 'gamma',
+          projectKey: '/work/gamma',
+          projectPath: '/work/gamma',
+          executionTeamName: 'ptc-gamma',
+          state: 'reserved' as const,
+        };
+        configReader.getConfig.mockImplementation((teamName: string) =>
+          Promise.resolve(
+            teamName === 'team-a' ? makeConfig({ name: 'team-a', projectPath: '/work/gamma' }) : makeConfig()
+          )
+        );
+        const service = new CrossTeamService(
+          configReader as unknown as TeamConfigReader,
+          dataService as unknown as TeamDataService,
+          inboxWriter as unknown as TeamInboxWriter,
+          provisioning as unknown as TeamProvisioningService,
+          recipientMetadataReader,
+          {
+            findCopyOwners: (names) =>
+              Promise.resolve(
+                new Map(
+                  names.map((name) => [
+                    name,
+                    { alias: name === 'ptc-gamma' ? { logicalTeamName: 'builders', context: gamma } : null },
+                  ])
+                )
+              ),
+            getMode: (teamName) =>
+              Promise.resolve(teamName === 'builders' ? 'per_project' : 'shared'),
+            inspectContext: () => Promise.resolve(gamma),
+          }
+        );
+        const codes = () =>
+          Promise.all(
+            ['builders', 'ptc-gamma'].map((toTeam) =>
+              service.resolveRecipient('team-a', toTeam).then(
+                () => 'delivered',
+                (error: { code?: string }) => error.code
+              )
+            )
+          );
+        const failed = ['PROJECT_LAUNCH_INCOMPLETE', 'PROJECT_LAUNCH_INCOMPLETE'];
+        const pending = ['PROJECT_LAUNCH_PENDING', 'PROJECT_LAUNCH_PENDING'];
+        expect(await codes()).toEqual(failed);
+        const launch = trackProjectCopyLaunch('ptc-gamma');
+        expect(await codes()).toEqual(pending);
+        launch.end();
+        provisioning.isTeamAlive.mockImplementation((teamName: string) => teamName === 'ptc-gamma');
+        expect(await codes()).toEqual(pending);
+      });
+    });
+
+    it('refuses delivery when the metadata of a team cannot be read, with its own text', async () => {
+      const directory = path.join(MOCK_TEAMS_BASE_PATH, 'teams', 'team-b');
+      fs.mkdirSync(directory, { recursive: true });
+      fs.writeFileSync(path.join(directory, 'team.meta.json'), '{not json');
+      await expect(service.send(makeRequest())).rejects.toThrow(
+        'Team metadata is unreadable; refusing cross-team delivery'
+      );
+      expect(inboxWriter.sendMessage).not.toHaveBeenCalled();
+    });
+
+    it('rejects direct sends FROM a per-project team: it has no inbox of its own', async () => {
+      const directory = path.join(MOCK_TEAMS_BASE_PATH, 'teams', 'team-a');
+      fs.mkdirSync(directory, { recursive: true });
+      fs.writeFileSync(path.join(directory, 'team.meta.json'), JSON.stringify({
+        version: 1, cwd: '/sandbox/project', projectContextMode: 'per_project',
+      }));
+      await expect(service.send(makeRequest())).rejects.toMatchObject({
+        code: 'SENDER_IS_PROJECT_TEAM',
+      });
+      expect(inboxWriter.sendMessage).not.toHaveBeenCalled();
+    });
+
     it('delivers message to inbox via inboxWriter', async () => {
       const result = await service.send(makeRequest());
 
@@ -1035,7 +1197,7 @@ describe('CrossTeamService', () => {
           taskRefs,
         } satisfies CrossTeamSendRequest;
 
-        const jsFirst = sourceController.crossTeam.sendCrossTeamMessage(sharedRequest) as {
+        const jsFirst = (await sourceController.crossTeam.sendCrossTeamMessage(sharedRequest)) as {
           messageId: string;
         };
         const tsLeadRetry = await filesystemService.send({
@@ -1066,10 +1228,10 @@ describe('CrossTeamService', () => {
           toMember: 'Captain',
           text: 'TypeScript writes this shared row first',
         });
-        const jsLeadRetry = sourceController.crossTeam.sendCrossTeamMessage({
+        const jsLeadRetry = (await sourceController.crossTeam.sendCrossTeamMessage({
           ...sharedRequest,
           text: 'TypeScript writes this shared row first',
-        }) as { messageId: string; deduplicated?: boolean };
+        })) as { messageId: string; deduplicated?: boolean };
         expect(jsLeadRetry).toMatchObject({
           messageId: tsFirst.messageId,
           deduplicated: true,
@@ -1084,7 +1246,9 @@ describe('CrossTeamService', () => {
           summary: sharedRequest.summary,
         } satisfies CrossTeamSendRequest;
         const reverseFirst = await filesystemService.send(reverseRequest);
-        const reverseRetry = targetController.crossTeam.sendCrossTeamMessage(reverseRequest) as {
+        const reverseRetry = (await targetController.crossTeam.sendCrossTeamMessage(
+          reverseRequest
+        )) as {
           messageId: string;
           deduplicated?: boolean;
         };
@@ -1298,6 +1462,47 @@ describe('CrossTeamService', () => {
       dataService.listTeams.mockRejectedValue(new Error('ENOENT'));
       const result = await service.listAvailableTargets();
       expect(result).toEqual([]);
+    });
+
+    it('offers a per-project team under its own name, never its copies or its sender copy', async () => {
+      const scoped = {
+        teamName: 'scoped-team', displayName: 'Scoped', memberCount: 2,
+        projectContextMode: 'per_project' as const, pendingCreate: false,
+        projectHistoryContexts: [
+          { executionTeamName: 'ptc-scoped-a', projectPath: '/work/a' },
+          { executionTeamName: 'ptc-scoped-b', projectPath: '/work/b' },
+        ],
+      };
+      dataService.listTeams.mockResolvedValue([
+        scoped,
+        { teamName: 'never-launched', displayName: 'Draft', memberCount: 1,
+          projectContextMode: 'per_project', pendingCreate: true },
+        { teamName: 'legacy-target', displayName: 'Legacy', memberCount: 2,
+          members: [], pendingCreate: false },
+      ]);
+      provisioning.isTeamAlive.mockImplementation((teamName: string) => teamName === 'ptc-scoped-b');
+
+      const all = await service.listAvailableTargets();
+      expect(all.map((target) => [target.teamName, target.isOnline])).toEqual([
+        ['scoped-team', true],
+        ['legacy-target', false],
+      ]);
+      // A copy that asks sees every other team, but not the team it belongs to.
+      const fromCopy = await service.listAvailableTargets('ptc-scoped-a');
+      expect(fromCopy.map((target) => target.teamName)).toEqual(['legacy-target']);
+    });
+
+    it('keeps a shared team with retained copies as before: offered to them, online by its own name', async () => {
+      dataService.listTeams.mockResolvedValue([
+        { teamName: 'retaining', displayName: 'Retaining', memberCount: 1, members: [],
+          projectContextMode: 'shared', pendingCreate: false,
+          projectHistoryContexts: [{ executionTeamName: 'ptc-retained', projectPath: '/old' }] },
+      ]);
+      provisioning.isTeamAlive.mockImplementation((teamName: string) => teamName === 'ptc-retained');
+      const targets = await service.listAvailableTargets('ptc-retained');
+      expect(targets.map((target) => [target.teamName, target.isOnline])).toEqual([
+        ['retaining', false],
+      ]);
     });
 
     it('uses team summaries instead of verified config reads for target discovery', async () => {

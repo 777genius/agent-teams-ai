@@ -166,7 +166,9 @@ export const ConfirmDialog = (): React.JSX.Element | null => {
   const isDanger = state.variant === 'danger';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    // Keep this confirmation above Radix z-50 popover exit layers; otherwise an
+    // outgoing actions menu can intercept Cancel/Delete clicks on Windows.
+    <div className="fixed inset-0 z-[60] flex items-center justify-center">
       {/* Backdrop */}
       <button
         className="absolute inset-0 cursor-default"

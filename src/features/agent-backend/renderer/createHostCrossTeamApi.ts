@@ -1,3 +1,4 @@
+import { readHostProjectContext } from './createHostProjectContextApi';
 import { HostTeamOperationError } from './createHostTeamMutations';
 import { hostTeamSelectionKey, isHostTeamSelectionKey } from './hostTeamRouting';
 import {
@@ -67,50 +68,44 @@ export function createHostCrossTeamApi(
       };
     });
   }
-  return {
-    async listTargets(excludeTeam) {
-      // The caller supplies the originating selection before awaiting. Legacy callers retain their API.
-      if (!isHostTeamSelectionKey(excludeTeam)) return legacy.listTargets(excludeTeam);
-      const current = captureScope();
-      const rows = await connections(current);
-      const source = selected(rows, excludeTeam);
-      if (!source.ownerResourceRef)
-        throw new HostTeamOperationError('unavailable', 'not-dispatched');
-      const targets = [];
-      // The captured transport refuses more than 32 outstanding requests.
-      // Preserve every same-owner destination without a competing queue.
-      for (const row of rows.filter(
-        (entry) =>
-          entry.ownerResourceRef === source.ownerResourceRef &&
-          hostTeamSelectionKey(entry.handle.handleId) !== excludeTeam
-      )) {
+  async function executionTarget(rows: Connection[], source: Connection, requested: Connection,
+    current: () => boolean): Promise<Connection> {
+    if (!source.ownerResourceRef || source.ownerResourceRef !== requested.ownerResourceRef ||
+        source.projectContextMode === 'per_project' && !source.projectContext)
+      throw new HostTeamOperationError('unsupported', 'not-dispatched');
+    let target = requested;
+    if (requested.projectContextMode === 'per_project' && !requested.projectContext) {
+      let projectPath = source.projectContext?.projectPath;
+      if (!projectPath) {
+        const result = await backend.invoke({ handle: source.handle, commandId: crypto.randomUUID(),
+          operation: 'team.roster.read', payload: {} });
         assertCurrent(current);
-        const product = await snapshot(row.handle, current);
-        // Trashed teams remain readable, but cannot receive messages.
-        if (product.lifecycle && product.lifecycle.deletedAt !== null) continue;
-        const lead = product.members.find((member) => member.role === 'lead');
-        targets.push({
-          teamName: hostTeamSelectionKey(row.handle.handleId),
-          displayName: row.label,
-          ...(lead ? { leadName: lead.name } : {}),
-          members: product.members.map((member) => ({ name: member.name })),
-        });
+        if (!result.ok || !result.value || !('savedSettings' in result.value))
+          throw new HostTeamOperationError('unavailable', 'not-dispatched');
+        projectPath = result.value.savedSettings?.cwd;
       }
-      assertCurrent(current);
-      return targets;
-    },
-    async send(input) {
-      const request = structuredClone(input);
-      const fromHost = isHostTeamSelectionKey(request.fromTeam),
-        toHost = isHostTeamSelectionKey(request.toTeam);
-      if (!fromHost && !toHost) return legacy.send(request);
-      if (!fromHost || !toHost || request.requireRuntimeDelivery)
-        throw new HostTeamOperationError('unsupported', 'not-dispatched', request.messageId);
-      const current = captureScope();
-      const commandId = request.messageId ?? crypto.randomUUID();
+      if (!projectPath) throw new HostTeamOperationError('unavailable', 'not-dispatched');
+      const result = await readHostProjectContext(backend, requested, current, projectPath);
+      if (result.view.mode !== 'per_project' || result.view.state !== 'ready')
+        throw new HostTeamOperationError('unavailable', 'not-dispatched');
+      const view = result.view;
+      target = selected(rows, view.executionTeamName);
+      if (target.ownerResourceRef !== source.ownerResourceRef ||
+          target.projectContext?.logicalHandleId !== requested.handle.handleId ||
+          target.projectContext.projectPath !== view.projectPath ||
+          target.projectContext.workContextId !== view.workContextId)
+        throw new HostTeamOperationError('project-context-changed', 'not-dispatched');
+    }
+    if (source.handle.handleId === target.handle.handleId ||
+        source.projectContext && target.projectContext &&
+        source.projectContext.logicalHandleId === target.projectContext.logicalHandleId)
+      throw new HostTeamOperationError('invalid', 'not-dispatched');
+    return target;
+  }
+  async function captureSend(request: CrossTeamSendRequest, commandId: string, current: () => boolean) {
       const rows = await connections(current);
-      const source = selected(rows, request.fromTeam),
-        target = selected(rows, request.toTeam);
+      const source = selected(rows, request.fromTeam);
+      const target = await executionTarget(rows, source, selected(rows, request.toTeam), current);
       if (!source.ownerResourceRef || source.ownerResourceRef !== target.ownerResourceRef)
         throw new HostTeamOperationError('unsupported', 'not-dispatched', commandId);
       if (source.handle.handleId === target.handle.handleId)
@@ -143,6 +138,69 @@ export function createHostCrossTeamApi(
         ...(request.chainDepth === undefined ? {} : { chainDepth: request.chainDepth }),
         ...(taskRefs === undefined ? {} : { taskRefs }),
       };
+    assertCurrent(current, commandId);
+    return { source, payload, current };
+  }
+  const captures = new Map<string, { signature: string; current: () => boolean;
+    captured: ReturnType<typeof captureSend> }>();
+  return {
+    async listTargets(excludeTeam) {
+      // The caller supplies the originating selection before awaiting. Legacy callers retain their API.
+      if (!isHostTeamSelectionKey(excludeTeam)) return legacy.listTargets(excludeTeam);
+      const current = captureScope();
+      const rows = await connections(current);
+      const source = selected(rows, excludeTeam);
+      if (!source.ownerResourceRef)
+        throw new HostTeamOperationError('unavailable', 'not-dispatched');
+      const targets = [];
+      // The captured transport refuses more than 32 outstanding requests.
+      // Preserve every same-owner destination without a competing queue.
+      for (const row of rows.filter(
+        (entry) =>
+          entry.ownerResourceRef === source.ownerResourceRef && !entry.projectContext &&
+          entry.handle.handleId !== source.projectContext?.logicalHandleId &&
+          hostTeamSelectionKey(entry.handle.handleId) !== excludeTeam
+      )) {
+        assertCurrent(current);
+        let execution: Connection;
+        try { execution = await executionTarget(rows, source, row, current); }
+        catch (error) { assertCurrent(current); if (error instanceof HostTeamOperationError) continue; throw error; }
+        const product = await snapshot(execution.handle, current);
+        // Trashed teams remain readable, but cannot receive messages.
+        if (product.lifecycle && product.lifecycle.deletedAt !== null) continue;
+        const lead = product.members.find((member) => member.role === 'lead');
+        targets.push({
+          teamName: hostTeamSelectionKey(row.handle.handleId),
+          displayName: row.label,
+          ...(lead ? { leadName: lead.name } : {}),
+          members: product.members.map((member) => ({ name: member.name })),
+        });
+      }
+      assertCurrent(current);
+      return targets;
+    },
+    async send(input) {
+      const request = structuredClone(input);
+      const fromHost = isHostTeamSelectionKey(request.fromTeam),
+        toHost = isHostTeamSelectionKey(request.toTeam);
+      if (!fromHost && !toHost) return legacy.send(request);
+      if (!fromHost || !toHost || request.requireRuntimeDelivery)
+        throw new HostTeamOperationError('unsupported', 'not-dispatched', request.messageId);
+      const commandId = request.messageId ?? crypto.randomUUID();
+      const signature = JSON.stringify(request);
+      let retained = captures.get(commandId);
+      if (retained && retained.signature !== signature)
+        throw new HostTeamOperationError('conflict', 'not-dispatched', commandId);
+      if (!retained) {
+        if (captures.size >= 1024) throw new HostTeamOperationError('busy', 'not-dispatched', commandId);
+        const current = captureScope();
+        // Reserve before the first await: concurrent retries share the original pair and payload.
+        retained = { signature, current,
+          captured: Promise.resolve().then(() => captureSend(request, commandId, current)) };
+        captures.set(commandId, retained);
+      }
+      assertCurrent(retained.current, commandId);
+      const { source, payload, current } = await retained.captured;
       assertCurrent(current, commandId);
       let result;
       try {

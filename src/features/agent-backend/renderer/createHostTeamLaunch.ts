@@ -73,7 +73,8 @@ export function createHostTeamLaunch(
     view: BackendLaunchConfigurationView,
     configuration?: BackendLaunchConfiguration,
     originalCommandId?: string,
-    modelPreparation?: BackendLaunchModelPreparation
+    modelPreparation?: BackendLaunchModelPreparation,
+    initialPrompt?: string | null
   ): Promise<BackendLaunchSnapshot> {
     assertCurrent();
     const original = originalCommandId && view.launch.admission?.commandId === originalCommandId;
@@ -104,6 +105,7 @@ export function createHostTeamLaunch(
           rosterRevision: intent.rosterRevision,
           ...(modelPreparation ? { modelPreparation } : {}),
           ...(configuration === undefined ? {} : { configuration }),
+          ...(initialPrompt === undefined ? {} : { initialPrompt }),
         },
       });
     } catch {

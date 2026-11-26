@@ -58,6 +58,8 @@ export function applyTeamTask(
       return json(
         board.addTaskComment(command.payload.taskId, {
           text: command.payload.text,
+          ...(command.payload.answerClarificationRequestId === undefined ? {} :
+            { answerClarificationRequestId: command.payload.answerClarificationRequestId }),
           taskRefs: command.payload.taskRefs,
           ...(command.payload.attachments?.length
             ? {

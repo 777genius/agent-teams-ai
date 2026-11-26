@@ -135,7 +135,7 @@ async function main() {
     remainingStartupMs('peer-observation');
     await observeDesktopEmulatedRuntimeChildren(group, fixture, 'after-team-read', startupDeadline);
     remainingStartupMs('complete');
-    await runDesktopEmulatedLifecycleUi(cdp, { fixture, evidence, assertOwnedRenderer, originalStopOnly: true,
+    await runDesktopEmulatedLifecycleUi(cdp, { fixture, evidence, assertOwnedRenderer, originalStopOnly: true, prepareUpdateNotice: true,
       restartSameProfile: async () => { throw new Error('Automatic app.relaunch cannot become a harness restart'); } });
     assert.equal(record(evidence.emulatedLaunchStopUiProof).status, 'PASS');
     assert.equal(evidence.emulatedLifecycleUiProof, undefined, 'This scope does not qualify the full cold Resume journey');

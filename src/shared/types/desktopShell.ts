@@ -26,3 +26,30 @@ export interface WindowsElevationStatus {
   checkFailed: boolean;
   error: string | null;
 }
+
+/** Existing shell and window controls exposed by the Desktop preload. */
+export interface DesktopShellApi {
+  // Shell operations
+  openPath: (
+    targetPath: string,
+    projectRoot?: string,
+    userSelectedFromDialog?: boolean
+  ) => Promise<{ success: boolean; error?: string }>;
+  showInFolder: (filePath: string) => Promise<void>;
+  openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
+  getDiscordMemberCount: () => Promise<{ count: number | null; error?: string }>;
+
+  // Window controls (when title bar is hidden, e.g. Windows / Linux)
+  windowControls: {
+    minimize: () => Promise<void>;
+    maximize: () => Promise<void>;
+    close: () => Promise<void>;
+    isMaximized: () => Promise<boolean>;
+    isFullScreen: () => Promise<boolean>;
+    relaunch: () => Promise<void>;
+  };
+
+  /** Subscribe to fullscreen changes (e.g. to remove macOS traffic light padding in fullscreen) */
+  onFullScreenChange: (callback: (isFullScreen: boolean) => void) => () => void;
+
+}

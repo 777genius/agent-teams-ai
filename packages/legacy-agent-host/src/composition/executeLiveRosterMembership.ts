@@ -490,6 +490,8 @@ export async function executeLiveRosterMembership(options: LiveRosterExecutionOp
     return options.trackOpening(continueFirst(options, flight, input));
   }
   if (known) return known;
+  const authored = team.owner.nativeRoster.replaceAuthored(options.profile.principalId, original);
+  if (authored) return parseLiveRosterResponse({ ok: true, value: authored });
   const preview = owner.preview(options.profile.principalId, original);
   const selected = selectedLiveLead(options, team);
   const targets = preview ? targetEntries(options, team, preview.delta.targetId) : [];

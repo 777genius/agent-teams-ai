@@ -40,6 +40,23 @@ describe('ConfirmDialog modes', () => {
     await expect(result).resolves.toBe(true);
   });
 
+  it('keeps confirmation controls above an exiting actions popover', async () => {
+    let result!: Promise<boolean>;
+    await act(async () => {
+      result = confirm({ title: 'Delete', message: 'Delete this schedule?' });
+    });
+
+    const dialog = host.querySelector('[role="dialog"]')!;
+    // Radix PopoverContent uses z-50 and remains mounted for its exit animation.
+    // At the same z-index it can cover Cancel on a Windows desktop.
+    expect(dialog.parentElement?.classList.contains('z-[60]')).toBe(true);
+    await act(async () => {
+      (dialog.querySelector('button:not([data-confirm-btn])') as HTMLButtonElement).click();
+    });
+    await expect(result).resolves.toBe(false);
+    expect(host.querySelector('[role="dialog"]')).toBeNull();
+  });
+
   it('recaptures focus restored late to a background field', async () => {
     const background = document.createElement('input');
     document.body.appendChild(background);

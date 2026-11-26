@@ -1196,10 +1196,13 @@ jobs:
     needs: plan
     if: >-
       needs.plan.outputs.metadata == 'false' &&
-      github.event_name == 'pull_request' && github.event.pull_request.draft == false &&
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      (github.event.pull_request.base.ref == 'feat/provider-host-frontend-parity-20261112' ||
-       github.event.pull_request.head.ref == 'feat/provider-host-frontend-parity-20261112')
+      ((github.event_name == 'workflow_dispatch' && inputs.stage1_desktop) ||
+       (github.event_name == 'pull_request' && github.event.pull_request.draft == false &&
+        github.event.pull_request.head.repo.full_name == github.repository &&
+        (github.event.pull_request.base.ref == 'feat/provider-host-frontend-parity-20261112' ||
+         github.event.pull_request.head.ref == 'feat/provider-host-frontend-parity-20261112' ||
+         (github.event.pull_request.number == 982 &&
+          github.event.pull_request.head.ref == 'feat/provider-migration-stage-1'))))
     runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     timeout-minutes: 41
     defaults:
@@ -2742,6 +2745,7 @@ jobs:
             /private/tmp/TEST-desktop-backend-*/*.png
             /private/tmp/TEST-desktop-backend-*/*.log
             /private/tmp/TEST-desktop-backend-*/*.ndjson
+            /private/tmp/TEST-desktop-backend-*/userData/logs/app-errors*.ndjson
             /private/tmp/TEST-desktop-backend-*/hoststore/**
             /private/tmp/TEST-desktop-backend-*/owner-routing/**
             /private/tmp/TEST-desktop-backend-*/userData/agent-backend/bindings/**
@@ -2955,10 +2959,13 @@ jobs:
       - name: Require selected Codex login and protocol-peer schedule qualification
         if: >-
           needs.plan.outputs.metadata == 'false' &&
-          github.event_name == 'pull_request' && github.event.pull_request.draft == false &&
-          github.event.pull_request.head.repo.full_name == github.repository &&
-          (github.event.pull_request.base.ref == 'feat/provider-host-frontend-parity-20261112' ||
-           github.event.pull_request.head.ref == 'feat/provider-host-frontend-parity-20261112')
+          ((github.event_name == 'workflow_dispatch' && inputs.stage1_desktop) ||
+           (github.event_name == 'pull_request' && github.event.pull_request.draft == false &&
+            github.event.pull_request.head.repo.full_name == github.repository &&
+            (github.event.pull_request.base.ref == 'feat/provider-host-frontend-parity-20261112' ||
+             github.event.pull_request.head.ref == 'feat/provider-host-frontend-parity-20261112' ||
+             (github.event.pull_request.number == 982 &&
+              github.event.pull_request.head.ref == 'feat/provider-migration-stage-1'))))
         env:
           CODEX_LOGIN_RESULT: ${{ needs.codex-login-desktop.result }}
         run: test "$CODEX_LOGIN_RESULT" = success

@@ -15,6 +15,8 @@ export interface BackendConnectionSnapshot {
     /** Captured scope identities for navigation only, never send authority. */
     teamResourceRef?: string;
     ownerResourceRef?: string;
+    projectContextMode?: 'shared' | 'per_project';
+    projectContext?: { logicalHandleId: string; projectPath: string; workContextId: string };
     members: { memberId: string; label: string }[];
   }[];
 }

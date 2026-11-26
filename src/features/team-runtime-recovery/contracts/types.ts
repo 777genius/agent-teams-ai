@@ -61,8 +61,8 @@ export interface TeamRuntimeRecoveryConfig {
 }
 
 export const DEFAULT_TEAM_RUNTIME_RECOVERY_CONFIG: TeamRuntimeRecoveryConfig = {
-  transientErrorsEnabled: false,
-  rateLimitsEnabled: false,
+  transientErrorsEnabled: true,
+  rateLimitsEnabled: true,
   initialDelaySeconds: 60,
   maxAttempts: 2,
 };

@@ -261,6 +261,9 @@ export class DesktopBackendFeature {
       owner,
       contextId,
       label: record.displayName || record.teamName,
+      ...(record.projectContextMode ? { projectContextMode: record.projectContextMode } : {}),
+      ...(record.projectContext ? { projectContext: { logicalHandleId: record.projectContext.logicalHandleId,
+        projectPath: record.projectContext.projectPath, workContextId: record.projectContext.workContextId } } : {}),
       members: record.members,
       scope: record.binding.scope,
     };
@@ -496,6 +499,8 @@ export class DesktopBackendFeature {
               .map((entry) => ({
                 handle: { handleId: entry.handleId },
                 label: entry.label,
+                ...(entry.projectContextMode ? { projectContextMode: entry.projectContextMode } : {}),
+                ...(entry.projectContext ? { projectContext: structuredClone(entry.projectContext) } : {}),
                 ownerResourceRef: router.ownerDisplayRef(entry.owner),
                 teamResourceRef: crossTeamTeamResourceRef(
                   router.ownerDisplayRef(entry.owner),

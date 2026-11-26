@@ -11,6 +11,14 @@ import type { DesktopOpenCodeV2Selection } from './desktop-opencode-v2-fixture.t
 import type { OpenCodeMemberProfile } from '../../packages/legacy-agent-host/dist/composition/runtimeProfile.js';
 import type { TeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/TeamHost.js';
 
+export const quoteShellArgument = (value: string): string => "'" + value.replaceAll("'", "'\\''") + "'";
+
+/** Shell bootstrap preserves the captured absolute Node even inside an app bundle path. */
+export function desktopNodeScriptHeader(node: string): string {
+  if (!node.startsWith('/') || /[\0\r\n]/u.test(node)) throw new Error('Invalid TEST Node path');
+  return `#!/bin/sh\n':' //; exec ${quoteShellArgument(node)} "$0" "$@"\n`;
+}
+
 export interface DesktopOpenCodeSourceSelection {
   readonly packageDirectory: string;
   readonly executable: { readonly path: string; readonly sha256: string };
@@ -254,7 +262,9 @@ export function desktopBackendEnvironment(
   return {
     HOME: join(root, 'home'),
     TMPDIR: join(root, 'tmp'),
-    XDG_CONFIG_HOME: join(root, 'config'),
+    // The ordinary global readiness selector requires the application's canonical HOME config.
+    // Native provider recipes retain their separately captured configuration directories.
+    XDG_CONFIG_HOME: join(root, 'home', '.config'),
     // Chromium's macOS GetHomeDir uses NSHomeDirectory, not getenv(HOME).
     // Apple's CFPlatform.c prioritizes this override before the passwd home.
     CFFIXED_USER_HOME: join(root, 'home'),

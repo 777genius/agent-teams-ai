@@ -16,6 +16,9 @@ import type { RuntimeRecipeSources } from './runtimeSourceContracts.js';
 import type { HostedTeam } from './MemberEntry.js';
 import type { TeamRegistry } from '../team-registry/TeamRegistry.js';
 import type { RuntimeTeamCoordinator } from './RuntimeTeamCoordinator.js';
+import type { HostTeamProjectContexts } from '../team-project-context/HostTeamProjectContexts.js';
+import type { TeamRegistryReceipt } from '../team-registry/contracts.js';
+import { captureCreatedProjectReadinessTransfer } from '../team-project-context/projectReadinessTransfer.js';
 import type {
   CreateTeamLaunchCaptureResult,
   CreateTeamLaunchPreparationSnapshot,
@@ -36,7 +39,8 @@ export class CreateTeamLaunchCoordinator {
     private readonly options: {
       profile: TeamHostProfile;
       sources?: RuntimeRecipeSources;
-      registry: Pick<TeamRegistry, 'create' | 'lookup'>;
+      registry: Pick<TeamRegistry, 'create' | 'lookup'> & Partial<Pick<TeamRegistry, 'list'>>;
+      projects?: HostTeamProjectContexts;
       runtime: Pick<RuntimeTeamCoordinator, 'executeLaunch' | 'readLaunchAdmission'> &
         Partial<Pick<RuntimeTeamCoordinator, 'readLaunchSourceSelections'>>;
       management: TeamProbeManagement;
@@ -258,6 +262,35 @@ export class CreateTeamLaunchCoordinator {
     return this.readOriginal(commandId, raw);
   }
 
+  private execution(commandId: string, creation: TeamRegistryReceipt, input: ReturnType<typeof createTeamLaunchPreparationInputSchema.parse>, capture = true) {
+    const logical = this.options.team(creation.record.teamId), ids = this.children(commandId);
+    if (!logical) throw new TeamLaunchError('hold', 'creation-team-unavailable');
+    if (input.draft.savedSettings.projectContextMode !== 'per_project')
+      return { team: logical, record: creation.record, rosterCommandId: ids.roster };
+    const projects = this.options.projects;
+    if (!projects || !this.options.registry.list) throw new TeamLaunchError('hold', 'creation-project-unavailable');
+    const target = { team: logical, handleId: creation.record.binding.handleId };
+    const view = projects.read(target, { projectPath: input.draft.savedSettings.cwd }).view;
+    if (view.mode !== 'per_project' || view.state !== 'ready') throw new TeamLaunchError('hold', 'creation-project-pending');
+    const record = this.options.registry.list(input.draft.contextId).teams.find(row => row.binding.handleId === view.executionHandleId);
+    const team = record && this.options.team(record.teamId);
+    if (!record || !team || record.projectContext?.logicalHandleId !== target.handleId ||
+        record.projectContext.logicalTeamId !== creation.record.teamId || record.projectContext.projectPath !== view.projectPath ||
+        record.projectContext.workContextId !== view.workContextId) throw new TeamLaunchError('hold', 'creation-project-changed');
+    if (!capture) return { team, record, rosterCommandId: ids.roster };
+    const proof = projects.readLaunchSource({ team, handleId: record.binding.handleId },
+      { logicalHandleId: target.handleId, commandId: ids.project });
+    return { team, record, rosterCommandId: proof.roster.commandId, proof };
+  }
+
+  private launch<T>(execution: ReturnType<CreateTeamLaunchCoordinator['execution']>, action: () => Promise<T>): Promise<T> {
+    if (execution.record.projectContext) {
+      if (!this.options.projects) throw new TeamLaunchError('hold', 'creation-project-unavailable');
+      return this.options.projects.withLaunch({ team: execution.team, handleId: execution.record.binding.handleId }, action);
+    }
+    return action();
+  }
+
   private readOriginal(commandId: string, raw: unknown, continueCapture = false): CreateTeamLaunchSubmitResult | null {
     this.options.assertCurrent();
     const input = createTeamLaunchPreparationInputSchema.parse(raw);
@@ -267,8 +300,7 @@ export class CreateTeamLaunchCoordinator {
     const creation = this.options.registry.lookup(commandId, input.draft.contextId, input.draft);
     if (!creation) return null;
     if (creation.phase !== 'published') throw new TeamLaunchError('hold', 'creation-pending');
-    const team = this.options.team(creation.record.teamId);
-    if (!team) throw new TeamLaunchError('hold', 'creation-team-unavailable');
+    const execution = this.execution(commandId, creation, input, false), team = execution.team;
     const ids = this.children(commandId);
     const registered = team.owner
       .runtimeCaptures(this.options.profile.principalId)
@@ -278,11 +310,11 @@ export class CreateTeamLaunchCoordinator {
       throw new TeamLaunchError('hold', 'creation-capture-pending');
     }
     const result = this.options.runtime.readLaunchAdmission(
-      creation.record.teamId,
+      execution.record.teamId,
       registered.launchId,
       ids.start
     );
-    return { creation, ...result };
+    return { creation, ...(execution.record.projectContext ? { execution: execution.record } : {}), ...result };
   }
 
   /** Original first submission only; actual cwd is returned before a changed-cwd Main capture. */
@@ -293,8 +325,9 @@ export class CreateTeamLaunchCoordinator {
     const prior = this.readOriginal(commandId, raw, true), ids = this.children(commandId);
     if (prior) {
       // Repeated capture revokes the warm continuation; lookup alone remains read-only.
-      await this.options.runtime.executeLaunch(prior.creation.record.teamId, 'capture', ids.capture,
-        { rosterCommandId: ids.roster });
+      const execution = this.execution(commandId, prior.creation, createTeamLaunchPreparationInputSchema.parse(raw));
+      await this.launch(execution, () => this.options.runtime.executeLaunch(execution.record.teamId, 'capture', ids.capture,
+        { rosterCommandId: execution.rosterCommandId }));
       return createTeamLaunchCaptureResultSchema.parse(prior);
     }
     const input = createTeamLaunchPreparationInputSchema.parse(raw);
@@ -315,17 +348,19 @@ export class CreateTeamLaunchCoordinator {
     if (prior?.partialCreated && !captured) return prior;
     if (prior) {
       // Resume the same admitted prompt/start command only; claimed native attempts cannot open twice.
-      const launch = await this.options.runtime.executeLaunch(
-        prior.creation.record.teamId,
+      const execution = this.execution(commandId, prior.creation, createTeamLaunchPreparationInputSchema.parse(raw));
+      const launch = await this.launch(execution, () => this.options.runtime.executeLaunch(
+        execution.record.teamId,
         'start',
         ids.start,
         {
           launchId: prior.launch.launchId,
           rosterRevision: prior.launch.rosterRevision,
         }
-      );
+      ));
       return createTeamLaunchSubmitResultSchema.parse({
         creation: prior.creation,
+        ...(prior.execution ? { execution: prior.execution } : {}),
         launch,
       });
     }
@@ -376,28 +411,42 @@ export class CreateTeamLaunchCoordinator {
         throw new TeamLaunchError('conflict', 'creation-roster-changed');
       team.connection.replaceRoster({ ...payload, commandId: ids.roster });
     }
+    if (input.draft.savedSettings.projectContextMode === 'per_project') {
+      if (!this.options.projects) throw new TeamLaunchError('hold', 'creation-project-unavailable');
+      this.options.projects.prepare({ team, handleId: creation.record.binding.handleId }, ids.project,
+        { projectPath: input.draft.savedSettings.cwd, expectedRevision, rosterCommandId: ids.roster });
+    }
+    const execution = this.execution(commandId, creation, input);
     const hasOpenCode = selected.selections.some(row => row.selection.profile.provider === 'opencode');
-    const transfer: CreationModelReadinessTransfer | undefined = hasOpenCode ? {
+    let transfer: CreationModelReadinessTransfer | undefined = hasOpenCode ? {
       kind: 'create', input, draftDigest: selected.draftDigest,
       cutoff: Math.min(captureCutoff ?? Infinity, ...prepared.probes.map(row => row.expiresAt)),
-      roster: { commandId: ids.roster, expected: payload },
+      roster: execution.proof?.roster ?? { commandId: ids.roster, expected: payload },
       probes: selected.selections.filter(row => row.selection.profile.provider === 'opencode').map(row => {
         const first = selected.selections.find(candidate => candidate.key === row.key)!;
         return { memberName: row.memberName, commandId: this.probeCommand(input.preparationId, first.memberName),
           context: this.probeContext(input, first.memberName) };
       }),
     } : undefined;
-    const captured = (await this.options.runtime.executeLaunch(
-      creation.record.teamId,
+    if (transfer && execution.proof) {
+      const authority = team.owner.withLaunchAuthority(this.options.profile.principalId, 'control', revision => revision);
+      transfer = captureCreatedProjectReadinessTransfer(transfer, execution.proof.roster.expected.savedSettings!, () => {
+        if (digest(this.execution(commandId, creation, input).proof) !== digest(execution.proof) ||
+            team.owner.withLaunchAuthority(this.options.profile.principalId, 'control', revision => revision) !== authority)
+          throw new TeamLaunchError('forbidden', 'creation-project-changed');
+      });
+    }
+    const captured = (await this.launch(execution, () => this.options.runtime.executeLaunch(
+      execution.record.teamId,
       'capture',
       ids.capture,
-      { rosterCommandId: ids.roster },
+      { rosterCommandId: execution.rosterCommandId },
       transfer
-    )) as { launch: { launchId: string; rosterRevision: string }; members: {
+    ))) as { launch: { launchId: string; rosterRevision: string }; members: {
       memberId: string; label: string; selected: { provider: string; workspace: string } | null }[] };
     if (this.options.sources) {
       const actual = this.options.runtime.readLaunchSourceSelections?.(
-        creation.record.teamId,
+        execution.record.teamId,
         captured.launch.launchId
       );
       if (!actual || digest(actual) !== digest(selected.sourceSelections))
@@ -407,17 +456,18 @@ export class CreateTeamLaunchCoordinator {
       selected.selections.find(row => row.memberName === member.label)?.selection.profile.cwd !== member.selected.workspace);
     if (captureCutoff !== undefined || actualWorkspaceChanged)
       return createTeamLaunchCaptureResultSchema.parse({ creation,
-        ...this.options.runtime.readLaunchAdmission(creation.record.teamId, captured.launch.launchId, ids.start) });
-    const launch = await this.options.runtime.executeLaunch(
-      creation.record.teamId,
+        ...(execution.record.projectContext ? { execution: execution.record } : {}),
+        ...this.options.runtime.readLaunchAdmission(execution.record.teamId, captured.launch.launchId, ids.start) });
+    const launch = await this.launch(execution, () => this.options.runtime.executeLaunch(
+      execution.record.teamId,
       'start',
       ids.start,
       {
         launchId: captured.launch.launchId,
         rosterRevision: captured.launch.rosterRevision,
       }
-    );
-    return createTeamLaunchSubmitResultSchema.parse({ creation, launch });
+    ));
+    return createTeamLaunchSubmitResultSchema.parse({ creation, ...(execution.record.projectContext ? { execution: execution.record } : {}), launch });
   }
 
   private children(commandId: string) {
@@ -429,6 +479,7 @@ export class CreateTeamLaunchCoordinator {
     });
     return {
       roster: effectId('creation-roster', owner, commandId),
+      project: effectId('creation-project', owner, commandId),
       capture: effectId('creation-capture', owner, commandId),
       start: effectId('creation-start', owner, commandId),
     };

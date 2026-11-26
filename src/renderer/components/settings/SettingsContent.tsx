@@ -234,6 +234,7 @@ export const SettingsContent = ({
           {activeSection === 'externalAgentConnection' && isElectronMode() && (
             <ExternalAgentConnectionSettings
               api={api.externalAgentConnection}
+              onOpenTeams={() => useStore.getState().openTeamsTab()}
               local={connectionMode === 'local'}
               cdpEnabled={safeConfig.general.externalAgentCdpEnabled}
               saving={saving}
@@ -251,6 +252,7 @@ export const SettingsContent = ({
               ignoredRepositoryItems={ignoredRepositoryItems}
               excludedRepositoryIds={excludedRepositoryIds}
               onNotificationToggle={handlers.handleNotificationToggle}
+              onDesktopDestinationsChange={handlers.handleDesktopDestinationsChange}
               onTeamRuntimeRecoveryUpdate={handlers.handleTeamRuntimeRecoveryUpdate}
               onSnooze={handlers.handleSnooze}
               onClearSnooze={handlers.handleClearSnooze}

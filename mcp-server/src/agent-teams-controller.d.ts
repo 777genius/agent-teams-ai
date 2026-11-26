@@ -211,13 +211,15 @@ declare module 'agent-teams-controller' {
   }
 
   export interface ControllerCrossTeamApi {
-    sendCrossTeamMessage(flags: Record<string, unknown>): unknown;
-    listCrossTeamTargets(flags?: Record<string, unknown>): unknown;
+    /** Routes `toTeam` through the app, then writes the message; the result names `toTeam`. */
+    sendCrossTeamMessage(flags: Record<string, unknown>): Promise<Record<string, unknown>>;
+    listCrossTeamTargets(flags?: Record<string, unknown>): Promise<unknown>;
     getCrossTeamOutbox(): unknown;
   }
 
   export interface ControllerRuntimeApi {
     getConnectionInfo(): Promise<unknown>;
+    showConnectionConfirmation(flags: Record<string, unknown>): Promise<unknown>;
     listTeams(flags?: Record<string, unknown>): Promise<unknown>;
     getTeam(flags?: Record<string, unknown>): Promise<unknown>;
     createTeam(flags: Record<string, unknown>): Promise<unknown>;
@@ -230,6 +232,12 @@ declare module 'agent-teams-controller' {
     runtimeDeliverMessage(flags: Record<string, unknown>): Promise<unknown>;
     runtimeTaskEvent(flags: Record<string, unknown>): Promise<unknown>;
     runtimeHeartbeat(flags: Record<string, unknown>): Promise<unknown>;
+  }
+
+  /** What the app decides about a team name; `null` when the app cannot be reached. */
+  export interface ControllerAppRoutingApi {
+    /** The team holding this team's board in a project, as the app answers. */
+    getBoardTarget(projectPath?: string): Promise<Record<string, unknown> | null>;
   }
 
   export interface ControllerWorkSyncApi {
@@ -272,6 +280,7 @@ declare module 'agent-teams-controller' {
     maintenance: ControllerMaintenanceApi;
     crossTeam: ControllerCrossTeamApi;
     runtime: ControllerRuntimeApi;
+    appRouting: ControllerAppRoutingApi;
     workSync: ControllerWorkSyncApi;
   }
 
@@ -319,9 +328,12 @@ declare module 'agent-teams-controller' {
   export interface AgentTeamsMcpToolGroup {
     id: AgentTeamsMcpToolGroupId;
     teammateOperational: boolean;
+    /** Its tools work on the board of one team and take the project of a per-project team. */
+    projectBoard: boolean;
     toolNames: readonly string[];
   }
 
+  export const AGENT_TEAMS_PROJECT_BOARD_TOOL_NAMES: readonly string[];
   export const AGENT_TEAMS_MANAGEMENT_TOOL_NAMES: readonly string[];
   export const AGENT_TEAMS_TASK_TOOL_NAMES: readonly string[];
   export const AGENT_TEAMS_LEAD_TOOL_NAMES: readonly string[];

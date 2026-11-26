@@ -307,6 +307,7 @@ it.each([false, true])(
       return setup.allEffectiveMemberSpecs;
     };
     await executeTeamRelaunch({
+      rosterReadOnly: false,
       teamName,
       isTeamAlive: true,
       request,
@@ -393,6 +394,7 @@ it.each([false, true])(
     request.model = 'lead-three';
     const nextLaunch = vi.fn(launch);
     await executeTeamRelaunch({
+      rosterReadOnly: false,
       teamName,
       isTeamAlive: false,
       request,

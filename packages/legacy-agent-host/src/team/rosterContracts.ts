@@ -79,6 +79,8 @@ export interface TeamRosterConfiguration {
 export interface StoredRosterReceipt extends TeamRosterReceipt {
   principalId: string;
   fingerprint: string;
+  expectedRevision?: string;
+  authored?: import('./authoredRosterChanges.js').AuthoredRosterChange;
   nativeCreation?: import('./nativeMemberCreationContracts.js').NativeMemberCreationRecord;
   /** Private admin membership decision on this original receipt, never a public success flag. */
   liveMembership?: LiveRosterMembershipRecord;

@@ -34,6 +34,11 @@ const ExtensionStoreView = lazy(() =>
     default: module.ExtensionStoreView,
   }))
 );
+const AttentionInboxView = lazy(() =>
+  import('@features/user-attention/renderer').then((module) => ({
+    default: module.AttentionInboxView,
+  }))
+);
 const NotificationsView = lazy(() =>
   import('../notifications/NotificationsView').then((module) => ({
     default: module.NotificationsView,
@@ -50,8 +55,8 @@ const SchedulesView = lazy(() =>
   }))
 );
 const TeamDetailView = lazy(() =>
-  import('../team/TeamDetailView').then((module) => ({
-    default: module.TeamDetailView,
+  import('../team/ProjectScopedTeamDetailView').then((module) => ({
+    default: module.ProjectScopedTeamDetailView,
   }))
 );
 const TeamListView = lazy(() =>
@@ -176,6 +181,7 @@ const PaneTabSlot = ({ tab, isActive, isPaneFocused }: PaneTabSlotProps): React.
         <Suspense fallback={fallback}>
           {tab.type === 'dashboard' && <DashboardView isActive={isActive} />}
           {tab.type === 'notifications' && <NotificationsView />}
+          {tab.type === 'attention' && <AttentionInboxView />}
           {tab.type === 'settings' && <SettingsView isActive={isActive} />}
           {tab.type === 'teams' && <TeamListView tabId={tab.id} isActive={isActive} />}
           {tab.type === 'organizations' && (

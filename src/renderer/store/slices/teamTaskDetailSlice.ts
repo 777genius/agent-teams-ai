@@ -25,6 +25,7 @@ import {
   retireTaskDetailSessionWork,
   setTaskDetailDeletionIntent,
   type TaskDetailDeletionIntent,
+  taskDetailDraftClarificationRequestId,
   type TaskDetailEditPart,
   type TaskDetailIdentity,
   taskDetailKey,
@@ -118,7 +119,11 @@ export interface TeamTaskDetailSlice {
   ) => void;
   hydrateTaskDetailSessionDraft: (
     identity: TaskDetailIdentity,
-    draft: { text?: string; commentChips?: TaskDetailSession['commentChips'] }
+    draft: {
+      text?: string;
+      commentChips?: TaskDetailSession['commentChips'];
+      answerClarificationRequestId?: string | null;
+    }
   ) => void;
   updateTaskDetailSession: (
     identity: TaskDetailIdentity,
@@ -536,6 +541,10 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
       if (part === 'reply') next.reply = value as TaskDetailSession['reply'];
       if (part === 'subject') next.subjectDraft = String(value);
       if (part === 'description') next.descriptionDraft = String(value);
+      if (part === 'commentText' || part === 'commentChips' || part === 'reply') {
+        next.answerClarificationRequestId = taskDetailDraftClarificationRequestId(
+          next, state.taskDetailById[key]?.full);
+      }
       return {
         taskDetailSessionById: { ...state.taskDetailSessionById, [key]: next },
       };
@@ -631,15 +640,22 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
   beginTaskDetailPendingAttachmentSession: (rawIdentity, attachment) => {
     const identity = normalizeTaskDetailIdentity(rawIdentity);
     const key = taskDetailKey(identity);
-    set((state) => ({
-      taskDetailSessionById: {
-        ...state.taskDetailSessionById,
-        [key]: beginTaskDetailPendingAttachment(
-          state.taskDetailSessionById[key] ?? EMPTY_TASK_DETAIL_SESSION,
-          attachment
-        ),
-      },
-    }));
+    set((state) => {
+      const current = state.taskDetailSessionById[key] ?? EMPTY_TASK_DETAIL_SESSION;
+      const next = beginTaskDetailPendingAttachment(current, attachment);
+      if (next === current) return state;
+      if (next.answerClarificationRequestId === undefined) {
+        return { taskDetailSessionById: {
+          ...state.taskDetailSessionById,
+          [key]: {
+            ...next,
+            answerClarificationRequestId: taskDetailDraftClarificationRequestId(
+              next, state.taskDetailById[key]?.full),
+          },
+        } };
+      }
+      return { taskDetailSessionById: { ...state.taskDetailSessionById, [key]: next } };
+    });
   },
 
   completeTaskDetailPendingAttachmentSession: (rawIdentity, id, attachment) => {
@@ -666,7 +682,12 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
       return {
         taskDetailSessionById: {
           ...state.taskDetailSessionById,
-          [key]: ignoreTaskDetailPendingAttachment(current, id),
+          [key]: (() => {
+            const next = ignoreTaskDetailPendingAttachment(current, id);
+            return next.commentText.trim() || next.commentChips.length ||
+              next.pendingAttachments.length || next.reply
+              ? next : { ...next, answerClarificationRequestId: undefined };
+          })(),
         },
       };
     });

@@ -13,6 +13,7 @@ import { registerKanbanTools } from './kanbanTools';
 import { registerLeadTools } from './leadTools';
 import { registerMessageTools } from './messageTools';
 import { registerProcessTools } from './processTools';
+import { withProjectBoards } from './projectBoard';
 import { registerReviewTools } from './reviewTools';
 import { registerRuntimeTools } from './runtimeTools';
 import { registerTaskTools } from './taskTools';
@@ -52,7 +53,9 @@ export function registerTools(server: Pick<FastMCP, 'addTool'>, profile: McpTool
     });
     return;
   }
+  // Board tools resolve their team in one place, so a per-project team works through every one.
+  const boards = withProjectBoards(server);
   for (const group of AGENT_TEAMS_MCP_REGISTRATION_GROUPS) {
-    group.register(server);
+    group.register(boards);
   }
 }

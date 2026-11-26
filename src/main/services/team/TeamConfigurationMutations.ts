@@ -13,24 +13,37 @@ export interface TeamConfigurationMutationStores {
   invalidate(teamName: string): void;
 }
 /** Canonical manual and external writes share metadata preservation, without inventing saved requests. */
+export interface TeamConfigurationUpdate {
+  name?: string;
+  description?: string;
+  color?: string;
+  /** Saved lead instructions. They live in team.meta.json only, never in config.json. */
+  prompt?: string;
+}
 export async function updateTeamConfiguration(
   teamName: string,
-  updates: { name?: string; description?: string; color?: string },
+  updates: TeamConfigurationUpdate,
   stores: TeamConfigurationMutationStores
 ): Promise<TeamConfig | null> {
   const config = await stores.configReader.getConfig(teamName);
-  if (!config) throw new Error(`Team not found: ${teamName}`);
+  if (!config) return updateProjectTeamDefinitionMetadata(teamName, updates, stores);
   if (config.deletedAt) throw new Error('TEAM_TRASHED: Restore the team before editing');
   const meta = await stores.teamMetaStore.getMeta(teamName);
+  if (updates.prompt !== undefined && !meta) {
+    // Never drop an edit silently: without saved launch settings there is nowhere to keep it.
+    throw new Error('This team has no saved launch settings to keep lead instructions in');
+  }
+  const { prompt, ...configUpdates } = updates;
   const applyMetadata = (current: NonNullable<typeof meta>) => ({
     ...current,
     ...(updates.name !== undefined ? { displayName: updates.name } : {}),
     ...(updates.description !== undefined ? { description: updates.description } : {}),
     ...(updates.color !== undefined ? { color: updates.color } : {}),
+    ...(prompt !== undefined ? { prompt: prompt.trim() || undefined } : {}),
   });
   // Validate the complete saved launch settings before the first config write.
   if (meta) stores.teamMetaStore.serializeMeta(applyMetadata(meta));
-  const updated = await stores.configReader.updateConfig(teamName, updates);
+  const updated = await stores.configReader.updateConfig(teamName, configUpdates);
   if (meta)
     await stores.teamMetaStore.updateMeta(teamName, (current) => {
       if (!current) throw new Error('Saved team configuration disappeared');
@@ -39,6 +52,46 @@ export async function updateTeamConfiguration(
   stores.invalidate(teamName);
   return updated;
 }
+/**
+ * A per-project team has no config.json: its definition is team.meta.json plus
+ * members.meta.json, and that is where the display name, description and color
+ * live. Any other team without a config is not editable here.
+ */
+async function updateProjectTeamDefinitionMetadata(
+  teamName: string,
+  updates: TeamConfigurationUpdate,
+  stores: TeamConfigurationMutationStores
+): Promise<TeamConfig> {
+  const meta = await stores.teamMetaStore.getMeta(teamName);
+  if (meta?.projectContextMode !== 'per_project') {
+    throw new Error(`Team not found: ${teamName}`);
+  }
+  if (meta.deletedAt) throw new Error('TEAM_TRASHED: Restore the team before editing');
+  const applyMetadata = (current: NonNullable<typeof meta>) => ({
+    ...current,
+    ...(updates.name?.trim() ? { displayName: updates.name.trim() } : {}),
+    ...(updates.description !== undefined
+      ? { description: updates.description.trim() || undefined }
+      : {}),
+    ...(updates.color !== undefined ? { color: updates.color.trim() || undefined } : {}),
+    ...(updates.prompt !== undefined ? { prompt: updates.prompt.trim() || undefined } : {}),
+  });
+  // Validate the complete saved settings before the first write.
+  stores.teamMetaStore.serializeMeta(applyMetadata(meta));
+  await stores.teamMetaStore.updateMeta(teamName, (current) => {
+    if (!current) throw new Error('Saved team configuration disappeared');
+    return applyMetadata(current);
+  });
+  TeamConfigReader.invalidateListTeamsCache();
+  stores.invalidate(teamName);
+  const saved = applyMetadata(meta);
+  return {
+    name: saved.displayName?.trim() || teamName,
+    ...(saved.description ? { description: saved.description } : {}),
+    ...(saved.color ? { color: saved.color } : {}),
+  };
+}
+
 export async function setTeamDeleted(
   teamName: string,
   deleted: boolean,

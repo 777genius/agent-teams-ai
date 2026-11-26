@@ -27,6 +27,7 @@ import { captureDesktopSourceHashes, verifyDesktopSourceFreeze } from '../../scr
 import { desktopProofSources } from '../../scripts/legacy-agent-host/desktop-proof-sources.ts';
 import { desktopProofWindowsRetrySources } from '../../scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts';
 import { createDesktopUiControls, desktopJsLiteral } from '../../scripts/legacy-agent-host/desktop-ui-controls.ts';
+import { dismissOriginalUpdateNotice } from '../../scripts/legacy-agent-host/desktop-update-notice.ts';
 import { desktopProcessOwnerExpression, readDesktopProcessData } from '../../scripts/legacy-agent-host/desktop-native-process-ui.ts';
 import { hostTeamSelectionKey } from '../../src/features/agent-backend/contracts/teamSelection.ts';
 import { prepareNativeWindowsAppFixture } from './nativeWindowsAppFixture.ts';
@@ -474,6 +475,7 @@ try {
   });
   await ui.observeInput();
   await ui.waitRead('Boolean(document.querySelector("#sidebar-tasks-panel"))', 'original sidebar', remaining());
+  await dismissOriginalUpdateNotice(port, ui, { assertOwnedRenderer, remainingMs: remaining });
   await ui.clickSidebar(fixture.uiSeed.subject);
   await ui.waitRead('Boolean(document.querySelector(\'[data-section-id="processes"]\'))', 'original Processes rows', remaining());
   if (await port.evaluate('Boolean(document.querySelector(\'[data-section-id="processes"] button[aria-label="Expand section"]\'))'))

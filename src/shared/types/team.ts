@@ -46,6 +46,8 @@ export type {
   NativeAttachmentDeliveryEnvelope,
 } from '@features/agent-attachments/contracts';
 
+export type TeamProjectContextMode = 'shared' | 'per_project';
+
 export interface TeamMember {
   name: string;
   agentId?: string;
@@ -95,6 +97,8 @@ export interface TeamUpdateConfigRequest {
   description?: string;
   color?: string;
   language?: string;
+  /** Saved lead instructions (team.meta.json), used by the next launch. */
+  prompt?: string;
 }
 
 export interface TeamSummaryMember {
@@ -122,6 +126,18 @@ export interface TeamSummary {
   teamName: string;
   /** Opaque captured owner identity for display and availability only. */
   ownerResourceRef?: string;
+  /** Absent on old/foreign teams; never interpret as an isolated history. */
+  projectContextMode?: TeamProjectContextMode;
+  /** Verified, ready native histories folded into this logical row. For reads only, not authorization. */
+  projectHistoryContexts?: readonly {
+    executionTeamName: string;
+    projectPath: string;
+    /** Native teammate count, absent until the owned physical summary is available. */
+    memberCount?: number;
+    /** Native session associations, retained only for verified physical histories. */
+    leadSessionId?: string;
+    sessionHistory?: readonly string[];
+  }[];
   displayName: string;
   description: string;
   color?: string;
@@ -410,6 +426,10 @@ export interface TeamTask {
   comments?: TaskComment[];
   /** Signals that the agent is blocked and needs clarification. "lead" = ask team lead, "user" = escalated to human. */
   needsClarification?: 'lead' | 'user';
+  /** Exact first transition into awaiting human response; legacy tasks may not contain it. */
+  clarificationRequestedAt?: string;
+  /** Opaque identity of the current human clarification cycle; absent on legacy tasks. */
+  clarificationRequestId?: string;
   /** ISO timestamp — when the task was soft-deleted. Only set for status === 'deleted'. */
   deletedAt?: string;
   /** Attachments associated with this task. Metadata only — actual files stored on disk. */
@@ -719,6 +739,8 @@ export interface AddTaskCommentRequest {
   /** One immutable comment intent across uncertain acknowledgement and explicit lookup. */
   command?: ApplicationCommandRequestIdentity;
   text: string;
+  /** Optional exact user clarification cycle answered by this task-scoped comment. */
+  answerClarificationRequestId?: string;
   attachments?: CommentAttachmentPayload[];
   taskRefs?: TaskRef[];
 }
@@ -920,6 +942,8 @@ export interface TeamLaunchRequest extends TeamProvisioningTypes.LocalModelLaunc
   /** One existing-dialog launch intent, including its confirmed saved-roster operation. */
   command?: ApplicationCommandRequestIdentity;
   savedRosterCommandId?: string;
+  /** Original logical settings captured before a readonly project launch. */
+  savedSettingsFingerprint?: string;
   modelPreparation?: TeamProvisioningTypes.CapturedTeamModelPreparation;
   cwd: string;
   prompt?: string;
@@ -1326,26 +1350,13 @@ export interface TeamProvisioningMemberInput {
   mcpPolicy?: TeamMemberMcpPolicy;
 }
 
-export type TeamWorktreeGitBlockReason =
-  | 'invalid_project_path'
-  | 'not_git_repo'
-  | 'missing_head'
-  | 'git_unavailable'
-  | 'git_error';
-export interface TeamWorktreeGitStatus {
-  projectPath: string;
-  isGitRepo: boolean;
-  hasHead: boolean;
-  canUseWorktrees: boolean;
-  rootPath?: string;
-  branch?: string;
-  reason?: TeamWorktreeGitBlockReason;
-  message?: string;
-}
+export type { TeamWorktreeGitBlockReason, TeamWorktreeGitStatus } from './teamWorktree';
 
 export interface TeamCreateRequest extends TeamProvisioningTypes.LocalModelLaunchOptions {
   command?: ApplicationCommandRequestIdentity;
   createdTeamReadiness?: CreatedTeamReadiness;
+  /** New logical teams default to per-project history; missing legacy stored mode means shared. */
+  projectContextMode?: TeamProjectContextMode;
   /** Read-only saved defaults token returned by getSavedRequest. */
   savedSettingsFingerprint?: string;
   teamName: string;
@@ -1374,6 +1385,7 @@ export interface TeamCreateConfigRequest extends TeamProvisioningTypes.RuntimeSe
   /** One save intent, retained across an uncertain transport response. */
   command?: ApplicationCommandRequestIdentity;
   teamName: string;
+  projectContextMode?: TeamProjectContextMode;
   displayName?: string;
   description?: string;
   color?: string;
@@ -1404,6 +1416,9 @@ export interface TeamCreateResponse {
   runId: string;
   /** Canonical owner-qualified selection returned by the selected Host. */
   teamName?: string;
+  /** Verified original execution history when the displayed team is a project definition. */
+  executionTeamName?: string;
+  projectContext?: { logicalHandleId: string; projectPath: string; workContextId: string };
   launchStatus?: 'started' | 'already_launching' | 'already_running' | 'unconfirmed';
   alreadyLaunching?: boolean;
   alreadyRunning?: boolean;
