@@ -10,7 +10,14 @@ import { projectTeamPosition } from './projectTeamChanges';
 import { projectTeamLifecycleSnapshot } from './projectTeamLifecycle';
 
 import type { BackendTeamSnapshot } from '../../../contracts/teamSnapshot';
-import type { KanbanState, TaskComment, TaskHistoryEvent, TaskReviewInterval, TaskWorkInterval, TeamTaskWithKanban } from '@shared/types/team';
+import type {
+  KanbanState,
+  TaskComment,
+  TaskHistoryEvent,
+  TaskReviewInterval,
+  TaskWorkInterval,
+  TeamTaskWithKanban,
+} from '@shared/types/team';
 
 function row(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value))
@@ -86,44 +93,89 @@ function workflowEvent(value: unknown): TaskHistoryEvent {
     case 'task_created':
       return { ...base, type: 'task_created', status: choice(source.status, taskStates) };
     case 'status_changed':
-      return { ...base, type: 'status_changed',
-        from: choice(source.from, taskStates), to: choice(source.to, taskStates) };
+      return {
+        ...base,
+        type: 'status_changed',
+        from: choice(source.from, taskStates),
+        to: choice(source.to, taskStates),
+      };
     case 'owner_changed':
-      return { ...base, type: 'owner_changed',
+      return {
+        ...base,
+        type: 'owner_changed',
         ...(source.from === undefined ? {} : { from: text(source.from) }),
-        ...(source.to === undefined ? {} : { to: text(source.to) }) };
+        ...(source.to === undefined ? {} : { to: text(source.to) }),
+      };
     case 'review_requested':
-      return { ...base, type: 'review_requested', from: choice(source.from, reviewStates),
+      return {
+        ...base,
+        type: 'review_requested',
+        from: choice(source.from, reviewStates),
         to: choice(source.to, ['review'] as const),
         ...(source.reviewer === undefined ? {} : { reviewer: text(source.reviewer) }),
-        ...(source.stage === undefined ? {} : { stage: choice(source.stage, ['lead_signoff'] as const) }),
-        ...(source.afterReviewRequestId === undefined ? {} : { afterReviewRequestId: text(source.afterReviewRequestId) }),
-        ...(source.note === undefined ? {} : { note: text(source.note) }) };
-    case 'review_changes_requested':
-      return { ...base, type: 'review_changes_requested', from: choice(source.from, reviewStates),
-        to: choice(source.to, ['needsFix'] as const),
-        ...(source.note === undefined ? {} : { note: text(source.note) }) };
-    case 'review_approved':
-      return { ...base, type: 'review_approved', from: choice(source.from, reviewStates),
-        to: choice(source.to, ['approved'] as const),
-        ...(source.note === undefined ? {} : { note: text(source.note) }) };
-    case 'review_completed':
-      return { ...base, type: 'review_completed', from: choice(source.from, ['review'] as const),
-        to: choice(source.to, ['reviewed'] as const), reviewRequestId: text(source.reviewRequestId),
+        ...(source.stage === undefined
+          ? {}
+          : { stage: choice(source.stage, ['lead_signoff'] as const) }),
+        ...(source.afterReviewRequestId === undefined
+          ? {}
+          : { afterReviewRequestId: text(source.afterReviewRequestId) }),
         ...(source.note === undefined ? {} : { note: text(source.note) }),
-        ...(source.leadSignoffSkipped === undefined ? {} : {
-          leadSignoffSkipped: choice(source.leadSignoffSkipped, ['actor_is_lead', 'work_by_lead', 'no_lead'] as const),
-        }) };
+      };
+    case 'review_changes_requested':
+      return {
+        ...base,
+        type: 'review_changes_requested',
+        from: choice(source.from, reviewStates),
+        to: choice(source.to, ['needsFix'] as const),
+        ...(source.note === undefined ? {} : { note: text(source.note) }),
+      };
+    case 'review_approved':
+      return {
+        ...base,
+        type: 'review_approved',
+        from: choice(source.from, reviewStates),
+        to: choice(source.to, ['approved'] as const),
+        ...(source.note === undefined ? {} : { note: text(source.note) }),
+      };
+    case 'review_completed':
+      return {
+        ...base,
+        type: 'review_completed',
+        from: choice(source.from, ['review'] as const),
+        to: choice(source.to, ['reviewed'] as const),
+        reviewRequestId: text(source.reviewRequestId),
+        ...(source.note === undefined ? {} : { note: text(source.note) }),
+        ...(source.leadSignoffSkipped === undefined
+          ? {}
+          : {
+              leadSignoffSkipped: choice(source.leadSignoffSkipped, [
+                'actor_is_lead',
+                'work_by_lead',
+                'no_lead',
+              ] as const),
+            }),
+      };
     case 'human_approved':
-      return { ...base, type: 'human_approved', from: choice(source.from, reviewStates),
-        to: choice(source.to, ['approved'] as const) };
+      return {
+        ...base,
+        type: 'human_approved',
+        from: choice(source.from, reviewStates),
+        to: choice(source.to, ['approved'] as const),
+      };
     case 'review_disapproved':
-      return { ...base, type: 'review_disapproved',
+      return {
+        ...base,
+        type: 'review_disapproved',
         from: choice(source.from, ['approved'] as const),
-        to: choice(source.to, ['none'] as const) };
+        to: choice(source.to, ['none'] as const),
+      };
     case 'review_started':
-      return { ...base, type: 'review_started', from: choice(source.from, reviewStates),
-        to: choice(source.to, ['review'] as const) };
+      return {
+        ...base,
+        type: 'review_started',
+        from: choice(source.from, reviewStates),
+        to: choice(source.to, ['review'] as const),
+      };
     default:
       throw new Error('Invalid task workflow event');
   }
@@ -145,6 +197,7 @@ export function projectTeamTask(value: unknown, teamName: string): TeamTaskWithK
       'updatedAt',
       'activeForm',
       'deletedAt',
+      'clarificationRequestedAt',
     ]),
   };
   for (const key of ['blocks', 'blockedBy', 'related'] as const)
@@ -166,12 +219,7 @@ export function projectTeamTask(value: unknown, teamName: string): TeamTaskWithK
   if (source.attachments !== undefined)
     result.attachments = projectAttachmentMetadata(source.attachments);
   if (source.reviewState !== undefined)
-    result.reviewState = choice(source.reviewState, [
-      'none',
-      'review',
-      'needsFix',
-      'approved',
-    ] as const);
+    result.reviewState = choice(source.reviewState, reviewStates);
   if (source.clarificationRequestId !== undefined)
     result.clarificationRequestId = text(source.clarificationRequestId);
   if (source.needsClarification !== undefined)
@@ -250,8 +298,13 @@ function kanban(value: unknown, teamName: string): KanbanState {
     };
   }
   if (source.reviewFlow !== undefined) {
-    result.reviewFlow = choice(source.reviewFlow, ['agent_approval', 'human_approval', 'lead_then_human'] as const);
-    if (source.reviewFlowPrompt !== undefined) result.reviewFlowPrompt = text(source.reviewFlowPrompt);
+    result.reviewFlow = choice(source.reviewFlow, [
+      'agent_approval',
+      'human_approval',
+      'lead_then_human',
+    ] as const);
+    if (source.reviewFlowPrompt !== undefined)
+      result.reviewFlowPrompt = text(source.reviewFlowPrompt);
   } else if (source.reviewFlowPrompt !== undefined) throw new Error('Invalid review flow override');
   if (source.columnOrder !== undefined) {
     result.columnOrder = {};
@@ -262,7 +315,6 @@ function kanban(value: unknown, teamName: string): KanbanState {
   }
   return result;
 }
-
 
 /** Signed page offsets describe projected rows, never unvalidated raw payloads. */
 interface PartIndex {
@@ -279,43 +331,71 @@ function readPartIndexes(
 ): { total: number; parts: PartIndex[] } | undefined {
   if (source[totalKey] === undefined && source[partsKey] === undefined) return undefined;
   const total = source[totalKey];
-  if (typeof total !== 'number' || !Number.isSafeInteger(total) || total < 1 ||
-      !Array.isArray(source[itemsKey])) throw new Error('Invalid snapshot part count');
+  if (
+    typeof total !== 'number' ||
+    !Number.isSafeInteger(total) ||
+    total < 1 ||
+    !Array.isArray(source[itemsKey])
+  )
+    throw new Error('Invalid snapshot part count');
   const parts = array(source[partsKey], (value) => {
     const part = row(value);
-    const index = part.index, position = part.part, count = part.total;
-    if (typeof index !== 'number' || !Number.isSafeInteger(index) || index < 0 || index >= total ||
-        typeof position !== 'number' || !Number.isSafeInteger(position) || position < 0 ||
-        typeof count !== 'number' || !Number.isSafeInteger(count) || count < 1 || position >= count)
+    const index = part.index,
+      position = part.part,
+      count = part.total;
+    if (
+      typeof index !== 'number' ||
+      !Number.isSafeInteger(index) ||
+      index < 0 ||
+      index >= total ||
+      typeof position !== 'number' ||
+      !Number.isSafeInteger(position) ||
+      position < 0 ||
+      typeof count !== 'number' ||
+      !Number.isSafeInteger(count) ||
+      count < 1 ||
+      position >= count
+    )
       throw new Error('Invalid snapshot part index');
     if (part.commentPart !== undefined) {
       if (partsKey !== 'taskParts' || position === 0)
         throw new Error('Invalid Host comment fragment');
       const comment = row(part.commentPart);
       const { index: commentIndex, part: commentPosition, total: commentTotal } = comment;
-      if (typeof commentIndex !== 'number' || !Number.isSafeInteger(commentIndex) ||
-          commentIndex < 0 ||
-          typeof commentPosition !== 'number' || !Number.isSafeInteger(commentPosition) ||
-          commentPosition < 0 ||
-          typeof commentTotal !== 'number' || !Number.isSafeInteger(commentTotal) ||
-          commentTotal < 2 || commentPosition >= commentTotal)
+      if (
+        typeof commentIndex !== 'number' ||
+        !Number.isSafeInteger(commentIndex) ||
+        commentIndex < 0 ||
+        typeof commentPosition !== 'number' ||
+        !Number.isSafeInteger(commentPosition) ||
+        commentPosition < 0 ||
+        typeof commentTotal !== 'number' ||
+        !Number.isSafeInteger(commentTotal) ||
+        commentTotal < 2 ||
+        commentPosition >= commentTotal
+      )
         throw new Error('Invalid Host comment fragment');
       return {
-        index, part: position, total: count,
+        index,
+        part: position,
+        total: count,
         commentPart: { index: commentIndex, part: commentPosition, total: commentTotal },
       };
     }
     return { index, part: position, total: count };
   });
-  if (parts.length !== source[itemsKey].length)
-    throw new Error('Invalid snapshot part count');
+  if (parts.length !== source[itemsKey].length) throw new Error('Invalid snapshot part count');
   return { total, parts };
 }
-export function projectTaskParts(source: Record<string, unknown>): Pick<BackendTeamSnapshot, 'taskTotal' | 'taskParts'> {
+export function projectTaskParts(
+  source: Record<string, unknown>
+): Pick<BackendTeamSnapshot, 'taskTotal' | 'taskParts'> {
   const value = readPartIndexes(source, 'taskTotal', 'taskParts', 'tasks');
   return value ? { taskTotal: value.total, taskParts: value.parts } : {};
 }
-function projectMessageParts(source: Record<string, unknown>): Pick<BackendTeamSnapshot, 'messageTotal' | 'messageParts'> {
+function projectMessageParts(
+  source: Record<string, unknown>
+): Pick<BackendTeamSnapshot, 'messageTotal' | 'messageParts'> {
   const value = readPartIndexes(source, 'messageTotal', 'messageParts', 'messages');
   return value ? { messageTotal: value.total, messageParts: value.parts } : {};
 }
@@ -332,7 +412,8 @@ export function projectTeamSnapshot(value: unknown): BackendTeamSnapshot {
     nextCursor !== undefined &&
     nextCursor !== null &&
     (typeof nextCursor !== 'string' || !/^[1-9][0-9]{0,8}\.[a-f0-9]{64}$/.test(nextCursor))
-  ) throw new Error('Invalid snapshot page cursor');
+  )
+    throw new Error('Invalid snapshot page cursor');
   const configurationRevision = source.configurationRevision;
   if (
     configurationRevision !== undefined &&

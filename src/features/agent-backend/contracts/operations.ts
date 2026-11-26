@@ -170,7 +170,13 @@ export interface BackendOperationPayloads
         notifyOwner?: boolean;
         suppressTaskComment?: boolean;
       }
-    | { taskId: string; action: 'request_changes'; comment: string; taskRefs?: BackendTaskRef[]; expectedReviewRequestId?: string };
+    | {
+        taskId: string;
+        action: 'request_changes';
+        comment: string;
+        taskRefs?: BackendTaskRef[];
+        expectedReviewRequestId?: string;
+      };
   'task.comment': {
     taskId: string;
     text: string;
@@ -311,6 +317,7 @@ export interface BackendTask {
   status: string;
   needsClarification?: 'lead' | 'user';
   clarificationRequestId?: string;
+  clarificationRequestedAt?: string;
   reviewState?: 'none' | 'review' | 'reviewed' | 'approved' | 'needsFix';
   subject?: string;
   description?: string;
