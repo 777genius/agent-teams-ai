@@ -834,9 +834,7 @@ function getProviderStatusErrorCode(error: unknown): CliProviderStatusCheckError
   }
 }
 
-// =============================================================================
 // Slice Interface
-// =============================================================================
 
 export interface CliInstallerSlice {
   // State
@@ -897,6 +895,7 @@ let cliStatusInFlight: Promise<void> | null = null;
 const cliProviderStatusInFlight = new Map<string, Promise<boolean>>();
 const cliProviderStatusReads = new WeakMap<Promise<boolean>, CliProviderStatusRead>();
 let cliStatusEpoch = 0;
+let pendingCliStatusInvalidation: number | null = null;
 let cliProviderStatusGeneration = 0;
 const cliProviderStatusActiveRequestIds = new Map<string, number>();
 const cliProviderStatusOwnership = createCliProviderStatusOwnership(
@@ -971,9 +970,7 @@ function scheduleCodexCatalogLoadingRefreshes(
   scheduleCodexCatalogLoadingRefresh(get, 'codex', isActive);
 }
 
-// =============================================================================
 // Slice Creator
-// =============================================================================
 
 export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstallerSlice> = (
   set,
@@ -1224,14 +1221,12 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
   },
 
   fetchCliProviderStatus: async (providerId, options) => {
-    if (!api.cliInstaller) return false;
-    if (get().cliStatus && !get().cliStatus?.installed) {
-      return false;
-    }
+    if (!api.cliInstaller || (get().cliStatus && !get().cliStatus?.installed)) return false;
     const requestEpoch = options?.epoch ?? cliStatusEpoch;
     if (requestEpoch !== cliStatusEpoch) return false;
     const verifyModels = options?.verifyModels === true && providerId !== 'opencode';
     const projectPath = options?.projectPath?.trim() || null;
+    if (projectPath && pendingCliStatusInvalidation !== null) return false;
     const mode = verifyModels ? 'verify' : options?.requireModelList ? 'models' : 'status';
     const requestKey = `${providerId}:${mode}:${projectPath ?? ''}`;
     // A lighter status read can join the current model refresh, never retire it.
@@ -1535,21 +1530,26 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
   invalidateCliStatus: async () => {
     clearCodexCatalogLoadingRefresh('codex');
     const epoch = ++cliStatusEpoch;
+    pendingCliStatusInvalidation = epoch;
     cliProviderStatusGeneration += 1;
     cliStatusInFlight = null;
     cliProviderStatusInFlight.clear();
     cliProviderStatusActiveRequestIds.clear();
-    set({
-      cliProviderStatusByScope: {},
-      cliStatusLoading: false,
-      ...buildCliProviderLoadingState(get().cliStatus, {}),
-    });
+    let acknowledged = false;
     try {
+      set({
+        cliProviderStatusByScope: {},
+        cliStatusLoading: false,
+        ...buildCliProviderLoadingState(get().cliStatus, {}),
+      });
       await api.cliInstaller?.invalidateStatus();
+      acknowledged = true;
       if (epoch === cliStatusEpoch) scheduleCodexCatalogLoadingRefreshes(get);
     } finally {
-      // Even an older IPC completion can retire a cache read made before main invalidation.
-      get().invalidateCliProviderModelCatalog({ scopedOnly: true });
+      // A successful Main invalidation still retires reads that may predate its effect.
+      const current = pendingCliStatusInvalidation === epoch;
+      if (current) pendingCliStatusInvalidation = null;
+      if (current || acknowledged) get().invalidateCliProviderModelCatalog({ scopedOnly: true });
     }
   },
   installCli: () => {

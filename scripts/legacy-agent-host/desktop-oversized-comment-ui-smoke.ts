@@ -131,17 +131,17 @@ export async function runDesktopOversizedCommentUiSmoke(
   );
   await ui.observeInput();
   const card = '.kanban-task-card[data-task-id=' + desktopJsLiteral(options.taskId) + ']';
-  if (!(await cdp.evaluate('Boolean(document.querySelector(' + desktopJsLiteral(card) + '))')))
-    await ui.clickSidebar(options.subject);
+  const navigatedFromSidebar = !(await cdp.evaluate('Boolean(document.querySelector(' + desktopJsLiteral(card) + '))'));
+  if (navigatedFromSidebar) await ui.clickSidebar(options.subject);
   const commentSelector = '[role="dialog"] [data-task-comment-id=' +
     desktopJsLiteral(commentId) + ']';
-  const requestedTaskDetailAlreadyOpen = await cdp.evaluate(
+  const requestedTaskDetailAlreadyOpen = !navigatedFromSidebar && await cdp.evaluate(
     'Boolean(document.querySelector(' + desktopJsLiteral(commentSelector) + '))'
   );
-  // The original sidebar Task row may have already opened its own detail.
-  // Do not click through a modal overlay or generate a second Task action.
+  // Open team closes the sidebar detail asynchronously. Reuse an open detail
+  // only when no such navigation happened; otherwise settle before one Task click.
   if (!requestedTaskDetailAlreadyOpen) {
-    await ui.waitRead('Boolean(document.querySelector(' + desktopJsLiteral(card) + '))',
+    await ui.waitRead('!document.querySelector(\'[role="dialog"]\') && Boolean(document.querySelector(' + desktopJsLiteral(card) + '))',
       'original Task card after cold readback');
     // The completed Task may be below the visible Kanban grid row.
     await ui.scrollTo(card + ' h5', 'visible completed Task card after cold readback');

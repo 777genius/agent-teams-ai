@@ -15,7 +15,10 @@ import {
   selectedPreferences,
 } from './capturedManagementPreferences';
 import { CapturedModelProbe } from './CapturedModelProbe';
-import { CapturedCredentialVerificationRejected, CapturedProviderCredentials } from './CapturedProviderCredentials';
+import {
+  CapturedCredentialVerificationRejected,
+  CapturedProviderCredentials,
+} from './CapturedProviderCredentials';
 import { CapturedProviderOAuth } from './CapturedProviderOAuth';
 import { withCapturedClaudeAuthentication } from './withCapturedClaudeAuthentication';
 
@@ -42,14 +45,17 @@ const unavailable = (error?: unknown) => ({
   schemaVersion: 1 as const,
   runtimeId: 'opencode' as const,
   error: {
-    code: error instanceof CapturedRuntimeSourceError &&
+    code:
+      error instanceof CapturedRuntimeSourceError &&
       ['configuration-invalid', 'configuration-changed'].includes(error.reason)
-      ? 'runtime-misconfigured' as const : 'runtime-unhealthy' as const,
-    message: error instanceof CapturedRuntimeSourceError && error.reason === 'configuration-invalid'
-      ? 'OpenCode configuration could not be applied. Check the selected provider and model settings, then refresh.'
-      : error instanceof CapturedRuntimeSourceError && error.reason === 'configuration-changed'
-        ? 'OpenCode configuration changed during this action. Refresh provider settings and try again.'
-        : 'Unable to confirm provider state. Refresh provider settings before repeating this action.',
+        ? ('runtime-misconfigured' as const)
+        : ('runtime-unhealthy' as const),
+    message:
+      error instanceof CapturedRuntimeSourceError && error.reason === 'configuration-invalid'
+        ? 'OpenCode configuration could not be applied. Check the selected provider and model settings, then refresh.'
+        : error instanceof CapturedRuntimeSourceError && error.reason === 'configuration-changed'
+          ? 'OpenCode configuration changed during this action. Refresh provider settings and try again.'
+          : 'Unable to confirm provider state. Refresh provider settings before repeating this action.',
     recoverable: true,
   },
 });
@@ -100,6 +106,30 @@ export function createCapturedRuntimeProviderManagementClient(
     // explicit limits-editor test sends proposed values before they are saved.
     new CapturedModelProbe(selectedCapture, undefined, deps.captureClaude);
   const probes = createProbe(deps.capture);
+  const modelCatalogReads = new Map<string, ReturnType<CapturedProviderManagement['request']>>();
+  const readModelCatalog = async (target: CapturedProviderManagement, providerId: string) => {
+    if (!target.isCurrent()) throw new Error('Provider catalog context changed');
+    // Separate UI subscribers may share only this still-pending, fully bound native read.
+    // Their cancellation, preferences and response projection remain independent.
+    const key = JSON.stringify([
+      target.targetId,
+      target.profileId,
+      target.configRevision,
+      providerId,
+    ]);
+    let pending = modelCatalogReads.get(key);
+    if (!pending) {
+      pending = target.request('catalog', { providerId });
+      modelCatalogReads.set(key, pending);
+    }
+    try {
+      const raw = await pending;
+      if (!target.isCurrent()) throw new Error('Provider catalog context changed');
+      return raw;
+    } finally {
+      if (modelCatalogReads.get(key) === pending) modelCatalogReads.delete(key);
+    }
+  };
   let observedViews = 0;
   const observeView = (projectPath: string | null | undefined): ViewObservation | undefined => {
     if (process.env.LEGACY_DESKTOP_STARTUP_DIAGNOSTICS !== '1' || observedViews >= 32)
@@ -133,10 +163,7 @@ export function createCapturedRuntimeProviderManagementClient(
     if (!provider) throw new Error('Provider unavailable');
     return provider;
   };
-  const readCatalog = async (
-    target: CapturedProviderManagement,
-    observe?: ViewObservation
-  ) => {
+  const readCatalog = async (target: CapturedProviderManagement, observe?: ViewObservation) => {
     observe?.('catalog');
     const raw = await target.request('catalog', {});
     return {
@@ -154,7 +181,8 @@ export function createCapturedRuntimeProviderManagementClient(
     let current: Awaited<ReturnType<typeof readCatalog>>;
     let degraded = false;
     try {
-      if (refreshConfiguration && target.refreshConfiguration) target = await target.refreshConfiguration();
+      if (refreshConfiguration && target.refreshConfiguration)
+        target = await target.refreshConfiguration();
       current = await readCatalog(target, observe);
     } catch (error) {
       if (!previous || !target.isCurrent()) throw error;
@@ -190,7 +218,9 @@ export function createCapturedRuntimeProviderManagementClient(
         ...(preferences.store
           ? {
               configuredModels: preferenceModelRows(
-                current.providers.filter((provider) => provider.configured || provider.connected).flatMap(models),
+                current.providers
+                  .filter((provider) => provider.configured || provider.connected)
+                  .flatMap(models),
                 resolved
               ),
               projectDefaultModel: resolved.projectDefaultModel,
@@ -213,7 +243,10 @@ export function createCapturedRuntimeProviderManagementClient(
     input: Dto.RuntimeProviderManagementForgetInput,
     key?: string,
     metadata?: Record<string, string> | null,
-    selection: Pick<Dto.RuntimeProviderManagementConnectInput, 'authMethodIndex' | 'authOptionId'> = {}
+    selection: Pick<
+      Dto.RuntimeProviderManagementConnectInput,
+      'authMethodIndex' | 'authOptionId'
+    > = {}
   ): Promise<Dto.RuntimeProviderManagementProviderResponse> => {
     // Copy before any await: caller mutation must not change an already captured intent.
     const captured = { ...input };
@@ -227,12 +260,16 @@ export function createCapturedRuntimeProviderManagementClient(
       )
         throw new Error('Invalid credential');
       const target = await capture(captured);
-      await credentials.execute(target, {
-        kind: key === undefined ? 'credential.forget' : 'credential.set',
-        providerId: captured.providerId,
-        ...(key === undefined ? {} : { key }),
-        ...(capturedMetadata ? { metadata: capturedMetadata } : {}),
-      }, capturedSelection);
+      await credentials.execute(
+        target,
+        {
+          kind: key === undefined ? 'credential.forget' : 'credential.set',
+          providerId: captured.providerId,
+          ...(key === undefined ? {} : { key }),
+          ...(capturedMetadata ? { metadata: capturedMetadata } : {}),
+        },
+        capturedSelection
+      );
       // Refresh against the same capture, never a new default/current context.
       return {
         schemaVersion: 1,
@@ -242,11 +279,17 @@ export function createCapturedRuntimeProviderManagementClient(
         ),
       };
     } catch (error) {
-      if (error instanceof CapturedCredentialVerificationRejected) return {
-        schemaVersion: 1, runtimeId: 'opencode', error: { code: 'auth-failed',
-          message: 'The key was saved, but the model check failed. Check the key and connect again.',
-          recoverable: true },
-      };
+      if (error instanceof CapturedCredentialVerificationRejected)
+        return {
+          schemaVersion: 1,
+          runtimeId: 'opencode',
+          error: {
+            code: 'auth-failed',
+            message:
+              'The key was saved, but the model check failed. Check the key and connect again.',
+            recoverable: true,
+          },
+        };
       return unavailable(error);
     }
   };
@@ -325,7 +368,7 @@ export function createCapturedRuntimeProviderManagementClient(
       try {
         const target = await capture(captured);
         controller.signal.throwIfAborted();
-        const raw = await target.request('catalog', { providerId: captured.providerId });
+        const raw = await readModelCatalog(target, captured.providerId);
         const provider = selected(parseManagementCatalog(raw, target), captured.providerId);
         const preferences = await selectedPreferences(target, nativeDefaultModel(raw));
         controller.signal.throwIfAborted();
@@ -375,7 +418,9 @@ export function createCapturedRuntimeProviderManagementClient(
       };
       if (captured.method === 'api' && typeof captured.apiKey === 'string')
         return credential(captured, captured.apiKey, captured.metadata, {
-          ...(captured.authMethodIndex === undefined ? {} : { authMethodIndex: captured.authMethodIndex }),
+          ...(captured.authMethodIndex === undefined
+            ? {}
+            : { authMethodIndex: captured.authMethodIndex }),
           ...(captured.authOptionId === undefined ? {} : { authOptionId: captured.authOptionId }),
         });
       if (captured.method !== 'oauth' || !oauth || !captured.oauthOperationId) return unsupported();
@@ -450,10 +495,16 @@ export function createCapturedRuntimeProviderManagementClient(
             method: first?.method ?? (api ? 'api' : 'manual'),
             supported: !!first || api,
             title: `Connect ${provider.displayName}`,
-            description: provider.runtimeGeneration === 'v2' && api
-              ? 'Connect this key and verify the selected provider with one model request.' : null,
-            submitLabel: first?.method === 'oauth' ? 'Sign in with browser'
-              : provider.runtimeGeneration === 'v2' && api ? 'Connect' : 'Save API key',
+            description:
+              provider.runtimeGeneration === 'v2' && api
+                ? 'Connect this key and verify the selected provider with one model request.'
+                : null,
+            submitLabel:
+              first?.method === 'oauth'
+                ? 'Sign in with browser'
+                : provider.runtimeGeneration === 'v2' && api
+                  ? 'Connect'
+                  : 'Save API key',
             disabledReason: first || api ? null : 'Browser sign-in is currently unavailable.',
             source: 'opencode-auth',
             secret: api
@@ -462,8 +513,10 @@ export function createCapturedRuntimeProviderManagementClient(
             prompts: first?.prompts ?? [],
             authOptions: options,
             defaultAuthOptionId: first?.id ?? null,
-            verification: provider.runtimeGeneration === 'v2' && api
-              ? { kind: 'model-request', freeModelPreferred: false, mayUseQuotaOrBalance: true } : null,
+            verification:
+              provider.runtimeGeneration === 'v2' && api
+                ? { kind: 'model-request', freeModelPreferred: false, mayUseQuotaOrBalance: true }
+                : null,
           },
         };
       } catch (error) {
@@ -581,7 +634,11 @@ export function createCapturedRuntimeProviderManagementClient(
           captured.outputTokens
         );
         let refreshed = true;
-        try { await target.refreshConfiguration?.(); } catch { refreshed = false; }
+        try {
+          await target.refreshConfiguration?.();
+        } catch {
+          refreshed = false;
+        }
         return {
           schemaVersion: 1,
           runtimeId: 'opencode',
@@ -593,7 +650,11 @@ export function createCapturedRuntimeProviderManagementClient(
             saved: true,
             verified: true,
             message: 'Model limits were applied, tested and saved for this project.',
-            diagnostics: refreshed ? [] : ['Model preferences were saved, but provider status could not be refreshed. Refresh before launching.'],
+            diagnostics: refreshed
+              ? []
+              : [
+                  'Model preferences were saved, but provider status could not be refreshed. Refresh before launching.',
+                ],
           },
         };
       } catch (error) {

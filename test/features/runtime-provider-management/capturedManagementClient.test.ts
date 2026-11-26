@@ -5,6 +5,7 @@ import { CapturedRuntimeSourceError } from '../../../src/features/agent-backend/
 import { parseManagementCatalog } from '../../../src/features/runtime-provider-management/main/adapters/output/capturedManagementCatalog';
 import * as managementPreferences from '../../../src/features/runtime-provider-management/main/adapters/output/capturedManagementPreferences';
 import { createCapturedRuntimeProviderManagementClient } from '../../../src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderManagementClient';
+import { createRuntimeProviderManagementFeature } from '../../../src/features/runtime-provider-management/main/composition/createRuntimeProviderManagementFeature';
 import * as logging from '../../../src/shared/utils/logger';
 
 import type {
@@ -307,6 +308,228 @@ it('cancels only the original model-load subscribers and hides their late catalo
       })
     ).models?.models
   ).toHaveLength(1);
+});
+
+it('shares only an in-flight captured model catalog while keeping each subscriber cancellation independent', async () => {
+  const f = fixture();
+  const unused = async () => {
+    throw new Error('TEST unexpected local-provider operation');
+  };
+  // Main's registered IPC handlers retain this same feature/port between calls.
+  const feature = createRuntimeProviderManagementFeature({
+    port: f.port,
+    companionRegistry: new Map(),
+    localProviderConnector: {
+      listLocalProviders: unused,
+      scanLocalProviders: unused,
+      probeLocalProvider: unused,
+      configureLocalProvider: unused,
+    },
+  });
+  let release!: () => void;
+  f.setBarrier(
+    new Promise<void>((done) => {
+      release = done;
+    })
+  );
+  const input = { runtimeId: 'opencode' as const, providerId: 'TEST-provider', refresh: true };
+  const first = feature.loadModels({ ...input, requestGroupId: 'TEST-dialog' });
+  await vi.waitFor(() => expect(f.calls).toHaveLength(1));
+  const second = feature.loadModels({ ...input, requestGroupId: 'TEST-picker' });
+  try {
+    await vi.waitFor(() => expect(f.capture).toHaveBeenCalledTimes(2));
+    expect(f.calls).toEqual([{ operation: 'catalog', payload: { providerId: 'TEST-provider' } }]);
+    expect(await feature.cancelModelLoad({ requestGroupId: 'TEST-dialog' })).toEqual({ ok: true });
+    release();
+    expect((await first).models).toBeUndefined();
+    expect((await second).models?.models).toEqual([
+      expect.objectContaining({ modelId: 'TEST-provider/TEST-model' }),
+    ]);
+    expect(
+      (await feature.loadModels({ ...input, requestGroupId: 'TEST-after-settlement' })).models
+        ?.models
+    ).toHaveLength(1);
+    expect(f.calls).toHaveLength(2);
+  } finally {
+    release();
+    await Promise.allSettled([first, second]);
+  }
+});
+
+it.each(['targetId', 'profileId', 'configRevision', 'providerId'] as const)(
+  'does not share a captured model read across changed %s',
+  async (field) => {
+    const f = fixture();
+    let release!: () => void;
+    f.setBarrier(
+      new Promise<void>((done) => {
+        release = done;
+      })
+    );
+    const original = f.target;
+    const changed: CapturedProviderManagement =
+      field === 'providerId'
+        ? original
+        : { ...original, [field]: field === 'targetId' ? 'b'.repeat(64) : 'TEST-new-binding' };
+    const capture = vi.fn().mockResolvedValueOnce(original).mockResolvedValueOnce(changed);
+    const port = createCapturedRuntimeProviderManagementClient({ capture });
+    const input = { runtimeId: 'opencode' as const, providerId: 'TEST-provider', refresh: true };
+    const first = port.loadModels(input);
+    await vi.waitFor(() => expect(f.calls).toHaveLength(1));
+    const second = port.loadModels({
+      ...input,
+      providerId: field === 'providerId' ? 'TEST-other-provider' : input.providerId,
+    });
+    try {
+      await vi.waitFor(() => expect(f.calls).toHaveLength(2));
+      release();
+      expect((await first).models?.models).toHaveLength(1);
+      const result = await second;
+      if (field === 'targetId') expect(result.models?.models).toHaveLength(1);
+      else expect(result.models).toBeUndefined();
+    } finally {
+      release();
+      await Promise.allSettled([first, second]);
+    }
+  }
+);
+
+it.each(['before joining', 'after the native read'] as const)(
+  'refuses only the captured subscriber whose owner changed %s',
+  async (when) => {
+    const f = fixture();
+    let release!: () => void;
+    f.setBarrier(
+      new Promise<void>((done) => {
+        release = done;
+      })
+    );
+    let current = when !== 'before joining';
+    const subscriber: CapturedProviderManagement = { ...f.target, isCurrent: () => current };
+    const capture = vi.fn().mockResolvedValueOnce(f.target).mockResolvedValueOnce(subscriber);
+    const port = createCapturedRuntimeProviderManagementClient({ capture });
+    const input = { runtimeId: 'opencode' as const, providerId: 'TEST-provider' };
+    const first = port.loadModels(input);
+    await vi.waitFor(() => expect(f.calls).toHaveLength(1));
+    const second = port.loadModels(input);
+    try {
+      await vi.waitFor(() => expect(capture).toHaveBeenCalledTimes(2));
+      current = false;
+      release();
+      expect((await first).models?.models).toHaveLength(1);
+      expect((await second).models).toBeUndefined();
+      expect(f.calls).toHaveLength(1);
+    } finally {
+      release();
+      await Promise.allSettled([first, second]);
+    }
+  }
+);
+
+it('retires a rejected shared model read before a fresh request without exposing native errors', async () => {
+  const f = fixture();
+  let release!: () => void;
+  f.setBarrier(
+    new Promise<void>((done) => {
+      release = done;
+    })
+  );
+  let reject = true;
+  const original = f.target.request;
+  f.target.request = async (...args) => {
+    const raw = await original(...args);
+    if (reject) throw new Error('TEST-private-native-error');
+    return raw;
+  };
+  const input = { runtimeId: 'opencode' as const, providerId: 'TEST-provider', refresh: true };
+  const first = f.port.loadModels(input);
+  await vi.waitFor(() => expect(f.calls).toHaveLength(1));
+  const second = f.port.loadModels(input);
+  try {
+    await vi.waitFor(() => expect(f.capture).toHaveBeenCalledTimes(2));
+    expect(f.calls).toHaveLength(1);
+    release();
+    const results = await Promise.all([first, second]);
+    for (const result of results) expect(result.error?.code).toBe('runtime-unhealthy');
+    expect(JSON.stringify(results)).not.toContain('TEST-private-native-error');
+    reject = false;
+    expect((await f.port.loadModels(input)).models?.models).toHaveLength(1);
+    expect(f.calls).toHaveLength(2);
+  } finally {
+    release();
+    await Promise.allSettled([first, second]);
+  }
+});
+
+it('keeps an all-cancelled model read owned until it settles and then releases it', async () => {
+  const f = fixture();
+  let release!: () => void;
+  f.setBarrier(
+    new Promise<void>((done) => {
+      release = done;
+    })
+  );
+  const input = { runtimeId: 'opencode' as const, providerId: 'TEST-provider' };
+  let settled = 0;
+  const first = f.port.loadModels({ ...input, requestGroupId: 'TEST-first' }).finally(() => {
+    settled++;
+  });
+  await vi.waitFor(() => expect(f.calls).toHaveLength(1));
+  const second = f.port.loadModels({ ...input, requestGroupId: 'TEST-second' }).finally(() => {
+    settled++;
+  });
+  try {
+    await vi.waitFor(() => expect(f.capture).toHaveBeenCalledTimes(2));
+    await f.port.cancelModelLoad({ requestGroupId: 'TEST-first' });
+    await f.port.cancelModelLoad({ requestGroupId: 'TEST-second' });
+    expect(settled).toBe(0);
+    expect(f.calls).toHaveLength(1);
+    release();
+    const results = await Promise.all([first, second]);
+    expect(settled).toBe(2);
+    for (const result of results) expect(result.models).toBeUndefined();
+    expect((await f.port.loadModels(input)).models?.models).toHaveLength(1);
+    expect(f.calls).toHaveLength(2);
+  } finally {
+    release();
+    await Promise.allSettled([first, second]);
+  }
+});
+
+it('projects each shared native catalog with separate preferences and filters without mutating raw data', async () => {
+  const f = fixture();
+  let release!: () => void;
+  f.setBarrier(
+    new Promise<void>((done) => {
+      release = done;
+    })
+  );
+  let rawResult: JsonValue = null;
+  let originalBytes = '';
+  const original = f.target.request;
+  f.target.request = async (...args) => {
+    rawResult = await original(...args);
+    originalBytes = JSON.stringify(rawResult);
+    return rawResult;
+  };
+  const preferences = vi.spyOn(managementPreferences, 'selectedPreferences');
+  const input = { runtimeId: 'opencode' as const, providerId: 'TEST-provider' };
+  const first = f.port.loadModels({ ...input, query: 'TEST model' });
+  await vi.waitFor(() => expect(f.calls).toHaveLength(1));
+  const second = f.port.loadModels({ ...input, query: 'TEST absent model' });
+  try {
+    await vi.waitFor(() => expect(f.capture).toHaveBeenCalledTimes(2));
+    expect(f.calls).toHaveLength(1);
+    release();
+    expect((await first).models?.models).toHaveLength(1);
+    expect((await second).models?.models).toEqual([]);
+    expect(preferences).toHaveBeenCalledTimes(2);
+    expect(JSON.stringify(rawResult)).toBe(originalBytes);
+  } finally {
+    release();
+    await Promise.allSettled([first, second]);
+    preferences.mockRestore();
+  }
 });
 
 it('keeps pending parity explicit and never silently falls back to the old implementation', async () => {

@@ -388,13 +388,26 @@ export function createOpenCodeV2ModelProbe(
           },
           probe: async (probeSignal) =>
             withClient(probeSignal, async (client) => {
+              const read = <T>(name: 'session' | 'permissions' | 'plugins' | 'mcp', action: () => Promise<T>): Promise<T> => {
+                const observe = (stage: 'start' | 'settled') => {
+                  try { observePhase?.(`driver-readiness-${name}-${stage}`); }
+                  catch { /* A diagnostic cannot change the original read or rejection. */ }
+                };
+                observe('start');
+                let original: Promise<T>;
+                try { original = action(); }
+                catch (error) { observe('settled'); throw error; }
+                // Return the original promise; observation neither joins nor replaces it.
+                void original.then(() => observe('settled'), () => observe('settled'));
+                return original;
+              };
               // Independent native reads keep their original custody/currentness gates.
               // Await all before comparing so no check is silently skipped.
               const [session, permissions, plugins, mcpResult] = await Promise.allSettled([
-                client.readSession(),
-                client.savedPermissionsEmpty(),
-                client.builtinPluginsOnly(),
-                client.readMcp(),
+                read('session', () => client.readSession()),
+                read('permissions', () => client.savedPermissionsEmpty()),
+                read('plugins', () => client.builtinPluginsOnly()),
+                read('mcp', () => client.readMcp()),
               ]);
               // Settle every native request/lease before owner-client dispose, even
               // if an earlier request failed.
@@ -424,12 +437,15 @@ export function createOpenCodeV2ModelProbe(
       },
     });
     observePhase?.('driver-open');
-    const opened = await factory.open({
-      ...binding,
-      configRevision: profile.configRevision,
-      requiredCapabilities: coordination ? ['text', 'tools'] : ['text'],
-    });
-    driver = opened.driver;
+    const finishReadinessCurrentness = currentnessTiming.begin('driver-readiness');
+    try {
+      const opened = await factory.open({
+        ...binding,
+        configRevision: profile.configRevision,
+        requiredCapabilities: coordination ? ['text', 'tools'] : ['text'],
+      });
+      driver = opened.driver;
+    } finally { finishReadinessCurrentness(); }
     observePhase?.('driver-open-returned');
     assertCurrent(signal);
   }

@@ -537,6 +537,18 @@ describe('teamSlice actions', () => {
     });
     store.setState({
       getAllPaneTabs: vi.fn(() => [existing]),
+      projects: [
+        {
+          id: 'current-project',
+          path: '/TEST/current-project',
+          name: 'current-project',
+          sessions: [],
+          totalSessions: 0,
+          createdAt: 0,
+          mostRecentSession: 0,
+        },
+      ],
+      selectedProjectId: 'current-project',
       teamByName: {
         builders: {
           teamName: 'builders',

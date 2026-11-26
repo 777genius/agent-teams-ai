@@ -14,13 +14,40 @@ const stages = new Set([
 ]);
 const runtimeOpenPrefix = 'legacy-agent-host: runtime-open ';
 const runtimeOpenPhases = {
-  factory: new Set(['selection', 'authority', 'worktree', 'model-readiness', 'bindings',
-    'endpoint', 'provider-prepare', 'provider-create', 'interactions', 'driver-open', 'driver-wrap']),
-  runtime: new Set(['authority', 'driver-open', 'session-ref', 'publish', 'observe',
-    'sealed-close', 'readiness', 'readiness-publish']),
+  factory: new Set([
+    'selection',
+    'authority',
+    'worktree',
+    'model-readiness',
+    'bindings',
+    'endpoint',
+    'provider-prepare',
+    'provider-create',
+    'interactions',
+    'driver-open',
+    'driver-wrap',
+  ]),
+  runtime: new Set([
+    'authority',
+    'driver-open',
+    'session-ref',
+    'publish',
+    'observe',
+    'sealed-close',
+    'readiness',
+    'readiness-publish',
+  ]),
 };
-const runtimeOpenCategories = new Set(['invalid', 'conflict', 'forbidden', 'held',
-  'busy', 'aborted', 'deadline', 'unknown']);
+const runtimeOpenCategories = new Set([
+  'invalid',
+  'conflict',
+  'forbidden',
+  'held',
+  'busy',
+  'aborted',
+  'deadline',
+  'unknown',
+]);
 export interface RuntimeOpenDiagnostic {
   readonly profileHash: string;
   readonly configurationHash: string;
@@ -43,12 +70,33 @@ const probeClosePrefix = 'legacy-agent-host: opencode-probe-close-failed ';
 const probeCloseRunStates = new Set(['not-started', 'pending', 'true', 'false', 'threw']);
 const probeCloseOutcomes = new Set(['unobserved', 'succeeded', 'failed', 'cancelled', 'unknown']);
 const probeCloseErrorClasses = new Set(['none', 'held', 'invalid', 'conflict', 'busy', 'unknown']);
-const probeCloseStages = new Set(['request-drain', 'owner-client', 'driver-close', 'server-stop', 'namespace', 'close-result']);
+const probeCloseStages = new Set([
+  'request-drain',
+  'owner-client',
+  'driver-close',
+  'server-stop',
+  'namespace',
+  'close-result',
+]);
 const probeCloseReasons = new Set(['unconfirmed', 'threw', 'identity']);
-const probeCloseCodes = new Set(['ABORT_ERR', 'ECONNRESET', 'ECONNREFUSED', 'EPIPE', 'ETIMEDOUT',
-  'UND_ERR_ABORTED', 'UND_ERR_SOCKET', 'UND_ERR_HEADERS_TIMEOUT', 'UND_ERR_BODY_TIMEOUT',
-  'cleanup_unknown', 'authority_or_deadline', 'authority_mismatch', 'transport_failure',
-  'http_failure', 'invalid_response', 'disposed']);
+const probeCloseCodes = new Set([
+  'ABORT_ERR',
+  'ECONNRESET',
+  'ECONNREFUSED',
+  'EPIPE',
+  'ETIMEDOUT',
+  'UND_ERR_ABORTED',
+  'UND_ERR_SOCKET',
+  'UND_ERR_HEADERS_TIMEOUT',
+  'UND_ERR_BODY_TIMEOUT',
+  'cleanup_unknown',
+  'authority_or_deadline',
+  'authority_mismatch',
+  'transport_failure',
+  'http_failure',
+  'invalid_response',
+  'disposed',
+]);
 export interface OpenCodeProbeCloseDiagnostic {
   readonly profileHash: string;
   readonly commandHash: string;
@@ -61,27 +109,103 @@ export interface OpenCodeProbeCloseDiagnostic {
   readonly runErrorCode?: string | null;
   readonly runCauseCode?: string | null;
 }
-const probePhases = new Set(['run', 'graph-start', 'graph-done', 'native-launch', 'native-ready',
-  'graph-manifest-verified', 'graph-inventory-indexed', 'graph-census-returned',
-  'graph-files-quarter', 'graph-files-half', 'graph-files-three-quarters', 'graph-files-returned',
-  'native-launch-returned', 'native-endpoint-resolved', 'startup-timer-aborted',
-  'startup-parent-aborted', 'startup-lifecycle-aborted', 'startup-failed',
-  'identity-start', 'identity-request-start', 'identity-custody-start', 'identity-custody-returned', 'identity-request-admitted',
-  'catalog-1-request-start', 'catalog-1-custody-start', 'catalog-1-custody-returned', 'catalog-1-request-admitted', 'catalog-1-lease-released',
-  'catalog-2-request-start', 'catalog-2-custody-start', 'catalog-2-custody-returned', 'catalog-2-request-admitted', 'catalog-2-lease-released',
-  'catalog-3-request-start', 'catalog-3-custody-start', 'catalog-3-custody-returned', 'catalog-3-request-admitted', 'catalog-3-lease-released',
-  'credential-catalog-start', 'credential-catalog-returned', 'credential-directory-start', 'credential-directory-returned',
-  'credential-connect-start', 'credential-connect-returned', 'credential-restore-start', 'credential-restore-returned',
-  'credential-dispose-start', 'credential-dispose-returned', 'credential-returned',
-  'catalog-read-returned', 'catalog-current-returned', 'catalog-repeat',
-  'attestation-observe-returned', 'session-current-returned', 'session-create-returned',
-  'credential', 'attestation', 'attestation-returned', 'session-create', 'driver-open', 'first-submit',
-  'driver-open-returned', 'first-submit-current-returned', 'first-submit-returned']);
-const submitFailureCodes = new Set(['invalid-config', 'unavailable', 'dependency-unavailable', 'backpressure',
-  'stale', 'unsupported', 'checkpoint-incompatible', 'checkpoint-missing', 'provider-failure', 'output-limit', 'unknown']);
-const currentnessPhases = new Set(['identity-currentness-summary', 'catalog-1-currentness-summary',
-  'catalog-2-currentness-summary', 'catalog-3-currentness-summary',
-  'credential-catalog-currentness-summary', 'credential-directory-currentness-summary', 'credential-connect-currentness-summary']);
+const probePhases = new Set([
+  'run',
+  'graph-start',
+  'graph-done',
+  'native-launch',
+  'native-ready',
+  'graph-manifest-verified',
+  'graph-inventory-indexed',
+  'graph-census-returned',
+  'graph-files-quarter',
+  'graph-files-half',
+  'graph-files-three-quarters',
+  'graph-files-returned',
+  'native-launch-returned',
+  'native-endpoint-resolved',
+  'startup-timer-aborted',
+  'startup-parent-aborted',
+  'startup-lifecycle-aborted',
+  'startup-failed',
+  'identity-start',
+  'identity-request-start',
+  'identity-custody-start',
+  'identity-custody-returned',
+  'identity-request-admitted',
+  'catalog-1-request-start',
+  'catalog-1-custody-start',
+  'catalog-1-custody-returned',
+  'catalog-1-request-admitted',
+  'catalog-1-lease-released',
+  'catalog-2-request-start',
+  'catalog-2-custody-start',
+  'catalog-2-custody-returned',
+  'catalog-2-request-admitted',
+  'catalog-2-lease-released',
+  'catalog-3-request-start',
+  'catalog-3-custody-start',
+  'catalog-3-custody-returned',
+  'catalog-3-request-admitted',
+  'catalog-3-lease-released',
+  'credential-catalog-start',
+  'credential-catalog-returned',
+  'credential-directory-start',
+  'credential-directory-returned',
+  'credential-connect-start',
+  'credential-connect-returned',
+  'credential-restore-start',
+  'credential-restore-returned',
+  'credential-dispose-start',
+  'credential-dispose-returned',
+  'credential-returned',
+  'driver-readiness-session-start',
+  'driver-readiness-session-settled',
+  'driver-readiness-permissions-start',
+  'driver-readiness-permissions-settled',
+  'driver-readiness-plugins-start',
+  'driver-readiness-plugins-settled',
+  'driver-readiness-mcp-start',
+  'driver-readiness-mcp-settled',
+  'catalog-read-returned',
+  'catalog-current-returned',
+  'catalog-repeat',
+  'attestation-observe-returned',
+  'session-current-returned',
+  'session-create-returned',
+  'credential',
+  'attestation',
+  'attestation-returned',
+  'session-create',
+  'driver-open',
+  'first-submit',
+  'driver-open-returned',
+  'first-submit-current-returned',
+  'first-submit-returned',
+]);
+const submitFailureCodes = new Set([
+  'invalid-config',
+  'unavailable',
+  'dependency-unavailable',
+  'backpressure',
+  'stale',
+  'unsupported',
+  'checkpoint-incompatible',
+  'checkpoint-missing',
+  'provider-failure',
+  'output-limit',
+  'unknown',
+]);
+const currentnessPhases = new Set([
+  'identity-currentness-summary',
+  'catalog-1-currentness-summary',
+  'catalog-2-currentness-summary',
+  'catalog-3-currentness-summary',
+  'credential-catalog-currentness-summary',
+  'credential-directory-currentness-summary',
+  'credential-connect-currentness-summary',
+  'driver-readiness-currentness-summary',
+]);
 export interface OpenCodeProbeDiagnostic {
   readonly profileHash: string;
   readonly commandHash: string;
@@ -120,13 +244,43 @@ interface OpenCodeMetadataReadFailureDiagnostic extends OpenCodeMetadataIdentity
 export type OpenCodeMetadataDiagnostic =
   | OpenCodeMetadataLifecycleDiagnostic
   | OpenCodeMetadataReadFailureDiagnostic;
-const metadataReadStages = new Set(['admission', 'native-client', 'identity', 'plugins',
-  'permissions', 'mcp', 'credential', 'directory', 'activation-wait', 'current',
-  'projection', 'dispose', 'result-current']);
-const metadataReadReasons = new Set(['held', 'conflict', 'invalid', 'busy', 'deadline', 'cleanup_unknown',
-  'transport_failure', 'authority_mismatch', 'disposed', 'http_failure', 'media_type', 'body_limit',
-  'frame_limit', 'invalid_response', 'invalid_native_catalog', 'native_catalog_binding_mismatch',
-  'capabilities_pending', 'unqualified_version', 'ABORT_ERR', 'unknown']);
+const metadataReadStages = new Set([
+  'admission',
+  'native-client',
+  'identity',
+  'plugins',
+  'permissions',
+  'mcp',
+  'credential',
+  'directory',
+  'activation-wait',
+  'current',
+  'projection',
+  'dispose',
+  'result-current',
+]);
+const metadataReadReasons = new Set([
+  'held',
+  'conflict',
+  'invalid',
+  'busy',
+  'deadline',
+  'cleanup_unknown',
+  'transport_failure',
+  'authority_mismatch',
+  'disposed',
+  'http_failure',
+  'media_type',
+  'body_limit',
+  'frame_limit',
+  'invalid_response',
+  'invalid_native_catalog',
+  'native_catalog_binding_mismatch',
+  'capabilities_pending',
+  'unqualified_version',
+  'ABORT_ERR',
+  'unknown',
+]);
 const managementPrefix = 'legacy-agent-host: claude-management ';
 const managementStages = new Set([
   'auth-cleanup',
@@ -211,26 +365,55 @@ export function decodeClaudeCloseDiagnostics(
       if (text.startsWith(catalogPrefix)) {
         if (!retainCatalog || line.length + 1 > 256) return;
         const value: unknown = JSON.parse(text.slice(catalogPrefix.length));
-        if (!exact(value, ['requestIdHash', 'inputKind', 'phase']) || !hash(value.requestIdHash) ||
-            typeof value.inputKind !== 'string' || !catalogInputKinds.has(value.inputKind) ||
-            typeof value.phase !== 'string' || !catalogPhases.has(value.phase)) return;
-        const diagnostic = Object.freeze({ requestIdHash: value.requestIdHash, inputKind: value.inputKind, phase: value.phase });
-        void Promise.resolve(retainCatalog(diagnostic)).catch(() => { /* Never reject transport. */ });
+        if (
+          !exact(value, ['requestIdHash', 'inputKind', 'phase']) ||
+          !hash(value.requestIdHash) ||
+          typeof value.inputKind !== 'string' ||
+          !catalogInputKinds.has(value.inputKind) ||
+          typeof value.phase !== 'string' ||
+          !catalogPhases.has(value.phase)
+        )
+          return;
+        const diagnostic = Object.freeze({
+          requestIdHash: value.requestIdHash,
+          inputKind: value.inputKind,
+          phase: value.phase,
+        });
+        void Promise.resolve(retainCatalog(diagnostic)).catch(() => {
+          /* Never reject transport. */
+        });
         return;
       }
       if (text.startsWith(runtimeOpenPrefix)) {
         if (!retainRuntimeOpen) return;
         const value: unknown = JSON.parse(text.slice(runtimeOpenPrefix.length));
-        if (!exact(value, ['profileHash', 'configurationHash', 'source', 'phase', 'category', 'observedAtMs']) ||
-            !hash(value.profileHash) || !hash(value.configurationHash) ||
-            !(value.source === 'factory' || value.source === 'runtime') ||
-            typeof value.phase !== 'string' || !runtimeOpenPhases[value.source].has(value.phase) ||
-            typeof value.category !== 'string' || !runtimeOpenCategories.has(value.category) ||
-            typeof value.observedAtMs !== 'number' || !Number.isSafeInteger(value.observedAtMs) ||
-            value.observedAtMs < 0) return;
+        if (
+          !exact(value, [
+            'profileHash',
+            'configurationHash',
+            'source',
+            'phase',
+            'category',
+            'observedAtMs',
+          ]) ||
+          !hash(value.profileHash) ||
+          !hash(value.configurationHash) ||
+          !(value.source === 'factory' || value.source === 'runtime') ||
+          typeof value.phase !== 'string' ||
+          !runtimeOpenPhases[value.source].has(value.phase) ||
+          typeof value.category !== 'string' ||
+          !runtimeOpenCategories.has(value.category) ||
+          typeof value.observedAtMs !== 'number' ||
+          !Number.isSafeInteger(value.observedAtMs) ||
+          value.observedAtMs < 0
+        )
+          return;
         const diagnostic: RuntimeOpenDiagnostic = Object.freeze({
-          profileHash: value.profileHash, configurationHash: value.configurationHash,
-          source: value.source, phase: value.phase, category: value.category,
+          profileHash: value.profileHash,
+          configurationHash: value.configurationHash,
+          source: value.source,
+          phase: value.phase,
+          category: value.category,
           observedAtMs: value.observedAtMs,
         });
         void Promise.resolve(retainRuntimeOpen(diagnostic)).catch(() => {
@@ -241,26 +424,50 @@ export function decodeClaudeCloseDiagnostics(
       if (text.startsWith(probeClosePrefix)) {
         if (!retainProbeClose || line.length + 1 > 768) return;
         const value: unknown = JSON.parse(text.slice(probeClosePrefix.length));
-        const keys = ['profileHash', 'commandHash', 'probeDigest', 'runState', 'outcome', 'errorClass', 'stage', 'reason'];
+        const keys = [
+          'profileHash',
+          'commandHash',
+          'probeDigest',
+          'runState',
+          'outcome',
+          'errorClass',
+          'stage',
+          'reason',
+        ];
         if (!exact(value, keys) && !exact(value, [...keys, 'runErrorCode', 'runCauseCode'])) return;
-        if (!hash(value.profileHash) || !hash(value.commandHash) || !hash(value.probeDigest) ||
-            typeof value.runState !== 'string' || !probeCloseRunStates.has(value.runState) ||
-            typeof value.outcome !== 'string' || !probeCloseOutcomes.has(value.outcome) ||
-            typeof value.errorClass !== 'string' || !probeCloseErrorClasses.has(value.errorClass) ||
-            typeof value.stage !== 'string' || !probeCloseStages.has(value.stage) ||
-            typeof value.reason !== 'string' || !probeCloseReasons.has(value.reason) ||
-            (value.runState === 'threw') !== Object.hasOwn(value, 'runErrorCode')) return;
+        if (
+          !hash(value.profileHash) ||
+          !hash(value.commandHash) ||
+          !hash(value.probeDigest) ||
+          typeof value.runState !== 'string' ||
+          !probeCloseRunStates.has(value.runState) ||
+          typeof value.outcome !== 'string' ||
+          !probeCloseOutcomes.has(value.outcome) ||
+          typeof value.errorClass !== 'string' ||
+          !probeCloseErrorClasses.has(value.errorClass) ||
+          typeof value.stage !== 'string' ||
+          !probeCloseStages.has(value.stage) ||
+          typeof value.reason !== 'string' ||
+          !probeCloseReasons.has(value.reason) ||
+          (value.runState === 'threw') !== Object.hasOwn(value, 'runErrorCode')
+        )
+          return;
         const code = (field: unknown): field is string | null =>
-          field === null || typeof field === 'string' && probeCloseCodes.has(field);
+          field === null || (typeof field === 'string' && probeCloseCodes.has(field));
         let runCodes: { runErrorCode: string | null; runCauseCode: string | null } | undefined;
         if (value.runState === 'threw') {
           if (!code(value.runErrorCode) || !code(value.runCauseCode)) return;
           runCodes = { runErrorCode: value.runErrorCode, runCauseCode: value.runCauseCode };
         }
         const diagnostic: OpenCodeProbeCloseDiagnostic = Object.freeze({
-          profileHash: value.profileHash, commandHash: value.commandHash, probeDigest: value.probeDigest,
-          runState: value.runState, outcome: value.outcome, errorClass: value.errorClass,
-          stage: value.stage, reason: value.reason,
+          profileHash: value.profileHash,
+          commandHash: value.commandHash,
+          probeDigest: value.probeDigest,
+          runState: value.runState,
+          outcome: value.outcome,
+          errorClass: value.errorClass,
+          stage: value.stage,
+          reason: value.reason,
           ...runCodes,
         });
         void Promise.resolve(retainProbeClose(diagnostic)).catch(() => {
@@ -271,39 +478,104 @@ export function decodeClaudeCloseDiagnostics(
       if (text.startsWith(probePrefix)) {
         if (!retainProbe) return;
         const value: unknown = JSON.parse(text.slice(probePrefix.length));
-        const keys = ['profileHash', 'commandHash', 'probeDigest', 'phase', 'sequence', 'elapsedMs'];
-        if (!exact(value, keys) && !exact(value, [...keys, 'currentCalls', 'currentElapsedMs']) &&
-            !exact(value, [...keys, 'submitStatus', 'submitCode', 'submitDelivery']) &&
-            !exact(value, [...keys, 'catalogProviderPresent', 'catalogModelPresent'])) return;
+        const keys = [
+          'profileHash',
+          'commandHash',
+          'probeDigest',
+          'phase',
+          'sequence',
+          'elapsedMs',
+        ];
+        if (
+          !exact(value, keys) &&
+          !exact(value, [...keys, 'currentCalls', 'currentElapsedMs']) &&
+          !exact(value, [...keys, 'submitStatus', 'submitCode', 'submitDelivery']) &&
+          !exact(value, [...keys, 'catalogProviderPresent', 'catalogModelPresent'])
+        )
+          return;
         const summary = typeof value.phase === 'string' && currentnessPhases.has(value.phase);
         const submitted = value.phase === 'first-submit-returned';
         const catalogRepeat = Object.hasOwn(value, 'catalogProviderPresent');
-        if (summary !== Object.hasOwn(value, 'currentCalls') || submitted !== Object.hasOwn(value, 'submitStatus') ||
-            !hash(value.profileHash) || !hash(value.commandHash) || !hash(value.probeDigest) ||
-            typeof value.phase !== 'string' || !(probePhases.has(value.phase) || summary) ||
-            typeof value.sequence !== 'number' || !Number.isSafeInteger(value.sequence) ||
-            value.sequence < 1 || value.sequence > probePhases.size ||
-            typeof value.elapsedMs !== 'number' || !Number.isSafeInteger(value.elapsedMs) ||
-            value.elapsedMs < 0 || value.elapsedMs > 3_600_000) return;
-        if (summary && (typeof value.currentCalls !== 'number' || !Number.isSafeInteger(value.currentCalls) ||
-            value.currentCalls < 0 || value.currentCalls > 1_000_000 ||
-            typeof value.currentElapsedMs !== 'number' || !Number.isSafeInteger(value.currentElapsedMs) ||
-            value.currentElapsedMs < 0 || value.currentElapsedMs > 3_600_000)) return;
-        if (submitted && (!(value.submitStatus === 'ok' || value.submitStatus === 'refused' || value.submitStatus === 'unclassified') ||
-            !(value.submitCode === null || typeof value.submitCode === 'string' && submitFailureCodes.has(value.submitCode)) ||
+        if (
+          summary !== Object.hasOwn(value, 'currentCalls') ||
+          submitted !== Object.hasOwn(value, 'submitStatus') ||
+          !hash(value.profileHash) ||
+          !hash(value.commandHash) ||
+          !hash(value.probeDigest) ||
+          typeof value.phase !== 'string' ||
+          !(probePhases.has(value.phase) || summary) ||
+          typeof value.sequence !== 'number' ||
+          !Number.isSafeInteger(value.sequence) ||
+          value.sequence < 1 ||
+          value.sequence > probePhases.size ||
+          typeof value.elapsedMs !== 'number' ||
+          !Number.isSafeInteger(value.elapsedMs) ||
+          value.elapsedMs < 0 ||
+          value.elapsedMs > 3_600_000
+        )
+          return;
+        if (
+          summary &&
+          (typeof value.currentCalls !== 'number' ||
+            !Number.isSafeInteger(value.currentCalls) ||
+            value.currentCalls < 0 ||
+            value.currentCalls > 1_000_000 ||
+            typeof value.currentElapsedMs !== 'number' ||
+            !Number.isSafeInteger(value.currentElapsedMs) ||
+            value.currentElapsedMs < 0 ||
+            value.currentElapsedMs > 3_600_000)
+        )
+          return;
+        if (
+          submitted &&
+          (!(
+            value.submitStatus === 'ok' ||
+            value.submitStatus === 'refused' ||
+            value.submitStatus === 'unclassified'
+          ) ||
+            !(
+              value.submitCode === null ||
+              (typeof value.submitCode === 'string' && submitFailureCodes.has(value.submitCode))
+            ) ||
             !(value.submitDelivery === 'known-not-sent' || value.submitDelivery === 'unobserved') ||
-            value.submitStatus !== 'refused' && (value.submitCode !== null || value.submitDelivery !== 'unobserved'))) return;
-        if (catalogRepeat && (value.phase !== 'catalog-repeat' || typeof value.catalogProviderPresent !== 'boolean' ||
-            typeof value.catalogModelPresent !== 'boolean' || (value.catalogProviderPresent && value.catalogModelPresent))) return;
+            (value.submitStatus !== 'refused' &&
+              (value.submitCode !== null || value.submitDelivery !== 'unobserved')))
+        )
+          return;
+        if (
+          catalogRepeat &&
+          (value.phase !== 'catalog-repeat' ||
+            typeof value.catalogProviderPresent !== 'boolean' ||
+            typeof value.catalogModelPresent !== 'boolean' ||
+            (value.catalogProviderPresent && value.catalogModelPresent))
+        )
+          return;
         const diagnostic: OpenCodeProbeDiagnostic = Object.freeze({
-          profileHash: value.profileHash, commandHash: value.commandHash, probeDigest: value.probeDigest,
-          phase: value.phase, sequence: value.sequence, elapsedMs: value.elapsedMs,
-          ...(summary ? { currentCalls: value.currentCalls as number, currentElapsedMs: value.currentElapsedMs as number } : {}),
-          ...(submitted ? { submitStatus: value.submitStatus as OpenCodeProbeDiagnostic['submitStatus'],
-            submitCode: value.submitCode as string | null,
-            submitDelivery: value.submitDelivery as OpenCodeProbeDiagnostic['submitDelivery'] } : {}),
-          ...(catalogRepeat ? { catalogProviderPresent: value.catalogProviderPresent as boolean,
-            catalogModelPresent: value.catalogModelPresent as boolean } : {}),
+          profileHash: value.profileHash,
+          commandHash: value.commandHash,
+          probeDigest: value.probeDigest,
+          phase: value.phase,
+          sequence: value.sequence,
+          elapsedMs: value.elapsedMs,
+          ...(summary
+            ? {
+                currentCalls: value.currentCalls as number,
+                currentElapsedMs: value.currentElapsedMs as number,
+              }
+            : {}),
+          ...(submitted
+            ? {
+                submitStatus: value.submitStatus as OpenCodeProbeDiagnostic['submitStatus'],
+                submitCode: value.submitCode as string | null,
+                submitDelivery: value.submitDelivery as OpenCodeProbeDiagnostic['submitDelivery'],
+              }
+            : {}),
+          ...(catalogRepeat
+            ? {
+                catalogProviderPresent: value.catalogProviderPresent as boolean,
+                catalogModelPresent: value.catalogModelPresent as boolean,
+              }
+            : {}),
         });
         void Promise.resolve(retainProbe(diagnostic)).catch(() => {
           /* Missing observations cannot settle the original probe or its cleanup. */
@@ -313,21 +585,47 @@ export function decodeClaudeCloseDiagnostics(
       if (text.startsWith(metadataPrefix)) {
         if (!retainMetadata) return;
         const value: unknown = JSON.parse(text.slice(metadataPrefix.length));
-        if (exact(value, ['profileHash', 'mode', 'providerHash', 'stage', 'readStage', 'reason',
-          'elapsedMs', 'deadlineExpired', 'aborted']) && value.stage === 'read-failed') {
-          if (!hash(value.profileHash) || !(value.mode === 'directory' || value.mode === 'provider') ||
-              !(value.providerHash === null || hash(value.providerHash)) ||
-              ((value.mode === 'directory') !== (value.providerHash === null)) ||
-              typeof value.readStage !== 'string' || !metadataReadStages.has(value.readStage) ||
-              typeof value.reason !== 'string' || !metadataReadReasons.has(value.reason) ||
-              typeof value.elapsedMs !== 'number' || !Number.isSafeInteger(value.elapsedMs) ||
-              value.elapsedMs < 0 || value.elapsedMs > 3_600_000 ||
-              typeof value.deadlineExpired !== 'boolean' ||
-              !(value.aborted === null || typeof value.aborted === 'boolean')) return;
+        if (
+          exact(value, [
+            'profileHash',
+            'mode',
+            'providerHash',
+            'stage',
+            'readStage',
+            'reason',
+            'elapsedMs',
+            'deadlineExpired',
+            'aborted',
+          ]) &&
+          value.stage === 'read-failed'
+        ) {
+          if (
+            !hash(value.profileHash) ||
+            !(value.mode === 'directory' || value.mode === 'provider') ||
+            !(value.providerHash === null || hash(value.providerHash)) ||
+            (value.mode === 'directory') !== (value.providerHash === null) ||
+            typeof value.readStage !== 'string' ||
+            !metadataReadStages.has(value.readStage) ||
+            typeof value.reason !== 'string' ||
+            !metadataReadReasons.has(value.reason) ||
+            typeof value.elapsedMs !== 'number' ||
+            !Number.isSafeInteger(value.elapsedMs) ||
+            value.elapsedMs < 0 ||
+            value.elapsedMs > 3_600_000 ||
+            typeof value.deadlineExpired !== 'boolean' ||
+            !(value.aborted === null || typeof value.aborted === 'boolean')
+          )
+            return;
           const diagnostic: OpenCodeMetadataDiagnostic = Object.freeze({
-            profileHash: value.profileHash, mode: value.mode, providerHash: value.providerHash,
-            stage: 'read-failed', readStage: value.readStage, reason: value.reason,
-            elapsedMs: value.elapsedMs, deadlineExpired: value.deadlineExpired, aborted: value.aborted,
+            profileHash: value.profileHash,
+            mode: value.mode,
+            providerHash: value.providerHash,
+            stage: 'read-failed',
+            readStage: value.readStage,
+            reason: value.reason,
+            elapsedMs: value.elapsedMs,
+            deadlineExpired: value.deadlineExpired,
+            aborted: value.aborted,
           });
           void Promise.resolve(retainMetadata(diagnostic)).catch(() => {
             /* Failure diagnostics never determine the original read or cleanup outcome. */
@@ -339,15 +637,25 @@ export function decodeClaudeCloseDiagnostics(
           !hash(value.profileHash) ||
           !(value.mode === 'directory' || value.mode === 'provider') ||
           !(value.providerHash === null || hash(value.providerHash)) ||
-          ((value.mode === 'directory') !== (value.providerHash === null)) ||
-          typeof value.pid !== 'number' || !Number.isSafeInteger(value.pid) || value.pid <= 1 ||
+          (value.mode === 'directory') !== (value.providerHash === null) ||
+          typeof value.pid !== 'number' ||
+          !Number.isSafeInteger(value.pid) ||
+          value.pid <= 1 ||
           !safeId(value.startIdentity) ||
-          !(value.stage === 'ready' || value.stage === 'released' || value.stage === 'cleanup-unknown')
+          !(
+            value.stage === 'ready' ||
+            value.stage === 'released' ||
+            value.stage === 'cleanup-unknown'
+          )
         )
           return;
         const diagnostic: OpenCodeMetadataDiagnostic = Object.freeze({
-          profileHash: value.profileHash, mode: value.mode, providerHash: value.providerHash,
-          pid: value.pid, startIdentity: value.startIdentity, stage: value.stage,
+          profileHash: value.profileHash,
+          mode: value.mode,
+          providerHash: value.providerHash,
+          pid: value.pid,
+          startIdentity: value.startIdentity,
+          stage: value.stage,
         });
         void Promise.resolve(retainMetadata(diagnostic)).catch(() => {
           /* A private observation never changes transport or cleanup outcomes. */

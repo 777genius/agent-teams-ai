@@ -1326,6 +1326,130 @@ test('saved native readback preserves the original renderer refusal before navig
   assert.deepEqual(f.calls, []); assert.deepEqual(f.steps, []); assert.equal(f.counts().now, 0);
 });
 
+async function oversizedCommentNavigationFixture(t: import('node:test').TestContext, options: {
+  surface?: 'closing' | 'retained' | 'card' | 'blocked' | 'wrong-card'; retired?: boolean;
+} = {}) {
+  const { stripTypeScriptTypes } = await import('node:module');
+  const { desktopJsLiteral } = await import('./desktop-ui-controls.ts');
+  const { teamCommandPath } = await import('../../packages/legacy-agent-host/dist/team/commandEntries.js');
+  const source = await readFile(new URL('./desktop-oversized-comment-ui-smoke.ts', import.meta.url), 'utf8');
+  const first = 'export async function runDesktopOversizedCommentUiSmoke(', last = "  await ui.scrollTo(\n    commentSelector + ' div.relative.flex.justify-center > button',";
+  assert.equal(source.split(first).length, 2); assert.equal(source.split(last).length, 2);
+  const prefix = stripTypeScriptTypes(source.slice(source.indexOf(first), source.indexOf(last)).replace(/^export /u, '') + '\n}');
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-oversized-dialog-navigation-')));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const teamName = 'test-desktop-backend', taskId = 'TEST-original-task', commentId = 'TEST-original-comment';
+  const commandId = 'TEST-large-accepted-task-comment', largeText = '漢'.repeat(200_000);
+  const textSha256 = createHash('sha256').update(largeText).digest('hex');
+  const ownerRoot = join(root, 'hoststore/teams', teamName, '.host-owner');
+  await mkdir(join(ownerRoot, 'commands'), { recursive: true });
+  await mkdir(join(root, 'hoststore/tasks', teamName), { recursive: true });
+  await writeFile(join(root, 'large-comment-seed-proof.json'), JSON.stringify({ commandId, commentId, textBytes: Buffer.byteLength(largeText), textSha256 }));
+  await writeFile(join(ownerRoot, teamCommandPath(commandId)), JSON.stringify({ phase: 'completed',
+    command: { operation: 'task.comment', payload: { text: largeText } } }));
+  await writeFile(join(root, 'hoststore/tasks', teamName, taskId + '.json'), JSON.stringify({
+    subject: 'TEST original task', comments: [{ id: commentId, text: largeText }] }));
+  const card = '.kanban-task-card[data-task-id=' + JSON.stringify(taskId) + ']';
+  const comment = '[role="dialog"] [data-task-comment-id=' + JSON.stringify(commentId) + ']';
+  const surface = options.surface ?? 'closing', refusal = new Error('TEST original renderer retired');
+  const calls: { method: string; params?: Record<string, unknown> }[] = [], steps: Record<string, unknown>[] = [];
+  let now = 0, origin = 1, selected = false, sidebarClicks = 0, opened = surface === 'retained', ownerChecks = 0;
+  t.mock.method(Date, 'now', () => now);
+  t.mock.method(globalThis, 'setTimeout', (done: () => void, ms: number) => {
+    assert.equal(ms, 100, 'original passive-read and click-settling cadence');
+    now += ms; queueMicrotask(done); return 1 as unknown as NodeJS.Timeout;
+  });
+  const dialogOpen = () => opened || selected && (surface === 'blocked' || now < 200);
+  const cardReady = () => surface === 'retained' || surface === 'card' || selected && now >= 100 && surface !== 'wrong-card';
+  const rect = () => ({ x: 40, y: 50, top: 50, bottom: 82, width: 200, height: 32 });
+  const cardTitle = { textContent: 'TEST original task', tagName: 'H5', getBoundingClientRect: rect, matches: () => false, contains: () => false,
+    closest: () => null, getAttribute: () => null, getAnimations: () => [] };
+  const document = {
+    querySelector(query: string) {
+      if (query === card) return cardReady() ? cardTitle : null;
+      if (query === comment) return dialogOpen() ? { textContent: largeText } : null;
+      if (query === '[role="dialog"]') return dialogOpen() ? {} : null;
+      assert.fail('unexpected original Task document query: ' + query);
+    },
+    querySelectorAll(query: string) {
+      assert.equal(query, card + ' h5', 'only the captured original Task is a new click target');
+      return cardReady() ? [cardTitle] : [];
+    },
+    getElementById(id: string) { assert.equal(id, 'splash'); return null; },
+    elementFromPoint: () => dialogOpen() ? {} : cardTitle,
+    documentElement: { getBoundingClientRect: () => ({ top: 0, bottom: 900 }) },
+  };
+  const cdp = {
+    async evaluate(expression: string) {
+      return runInNewContext(expression, { document, window: { electronAPI: {} }, performance: { timeOrigin: origin },
+        innerWidth: 1200, innerHeight: 900, getComputedStyle: () => ({ pointerEvents: 'auto' }) });
+    },
+    async send(method: string, params?: Record<string, unknown>) {
+      calls.push({ method, params });
+      assert.ok(['Page.reload', 'Page.bringToFront', 'Input.dispatchMouseEvent'].includes(method));
+      if (method === 'Page.reload') origin++;
+      if (params?.type === 'mousePressed') assert.equal(dialogOpen(), false, 'never click through the outgoing sidebar dialog');
+      if (params?.type === 'mouseReleased') opened = true;
+      return {};
+    },
+  };
+  const run = Function('environment', `'use strict'; const {assert,createDesktopUiControls,join,readFile,readdir,
+    teamCommandPath,desktopJsLiteral,largeText,textSha256,teamName,commandId,Buffer,record}=environment;
+    ${prefix}; return runDesktopOversizedCommentUiSmoke;`)({ assert, join, readFile,
+    readdir: (await import('node:fs/promises')).readdir, teamCommandPath, desktopJsLiteral, largeText,
+    textSha256, teamName, commandId, Buffer,
+    record(value: unknown) { assert.ok(value && typeof value === 'object' && !Array.isArray(value)); return value; },
+    createDesktopUiControls(port: typeof cdp, input: Parameters<typeof createDesktopUiControls>[1]) {
+      const controls = createDesktopUiControls(port, input);
+      return { ...controls, async observeInput() {}, async clickSidebar(subject: string) {
+        assert.equal(subject, 'TEST original task'); assert.equal(sidebarClicks++, 0);
+        selected = true; // The real helper has dispatched its one Open team intent; its old dialog is still present.
+      } };
+    },
+  }) as (port: typeof cdp, input: Record<string, unknown>) => Promise<void>;
+  return { calls, steps, refusal, counts: () => ({ now, sidebarClicks, ownerChecks }),
+    run: () => run(cdp, { root, handleId: 'TEST-original-handle', taskId, subject: 'TEST original task',
+      step(value: Record<string, unknown>) { steps.push(value); },
+      assertOwnedRenderer() { ownerChecks++; if (options.retired && selected) throw refusal; } }) };
+}
+
+test('oversized comment navigation settles Open team before opening the original Task exactly once', { timeout: 5000 }, async t => {
+  const f = await oversizedCommentNavigationFixture(t); await f.run();
+  assert.equal(f.counts().sidebarClicks, 1);
+  assert.deepEqual(f.calls.filter(call => call.method === 'Input.dispatchMouseEvent').map(call => call.params?.type),
+    ['mouseMoved', 'mousePressed', 'mouseReleased']);
+  assert.equal(f.steps.filter(step => step.action === 'mouseClick').length, 1);
+  assert.equal(f.steps.find(step => step.action === 'mouseClick')?.label, 'open original Task detail after large comment');
+  assert.equal(f.counts().now, 400, '200ms original route settling plus original 200ms stable click');
+});
+
+test('oversized comment navigation reuses an already open original Task without a sidebar transition', { timeout: 5000 }, async t => {
+  const f = await oversizedCommentNavigationFixture(t, { surface: 'retained' }); await f.run();
+  assert.equal(f.counts().sidebarClicks, 0); assert.equal(f.counts().now, 0);
+  assert.deepEqual(f.calls.map(call => call.method), ['Page.reload']); assert.deepEqual(f.steps, []);
+});
+
+test('oversized comment navigation opens an already selected original Task exactly once', { timeout: 5000 }, async t => {
+  const f = await oversizedCommentNavigationFixture(t, { surface: 'card' }); await f.run();
+  assert.equal(f.counts().sidebarClicks, 0); assert.equal(f.counts().now, 200);
+  assert.equal(f.calls.filter(call => call.params?.type === 'mouseReleased').length, 1);
+});
+
+for (const surface of ['blocked', 'wrong-card'] as const)
+test('oversized comment navigation refuses ' + surface + ' within the original read budget without another action', { timeout: 5000 }, async t => {
+  const f = await oversizedCommentNavigationFixture(t, { surface });
+  await assert.rejects(f.run(), /UI read timed out: original Task card after cold readback; no mutation retry/);
+  assert.equal(f.counts().now, 30_000); assert.equal(f.counts().sidebarClicks, 1);
+  assert.deepEqual(f.calls.map(call => call.method), ['Page.reload']);
+});
+
+test('oversized comment navigation preserves renderer retirement before any Task input', { timeout: 5000 }, async t => {
+  const f = await oversizedCommentNavigationFixture(t, { retired: true });
+  await assert.rejects(f.run(), error => error === f.refusal);
+  assert.equal(f.counts().now, 0); assert.equal(f.counts().sidebarClicks, 1);
+  assert.deepEqual(f.calls.map(call => call.method), ['Page.reload']);
+});
+
 test('native cold readback summaries expose only retained route and renderer facts', () => {
   const secret = 'TEST-private-value https://TEST-private.example/token /TEST-secret/path';
   const evidence = { status: 'INCOMPLETE', failureSource: { kind: 'error', frames: ['TEST-original-frame'] },
@@ -4693,6 +4817,40 @@ test('finite V2 P11 admission rejects mixed selectors before any fixture or proc
     await assert.rejects(select({ ...context, ...override }), assert.AssertionError);
   await assert.rejects(select(allowed, 'darwin'), assert.AssertionError);
   await assert.rejects(select(allowed, 'linux', 'arm64'), assert.AssertionError);
+});
+
+test('finite V2 P11 registers its original zero-session workspace before preparing peers', async t => {
+  const { stripTypeScriptTypes } = await import('node:module');
+  const source = (await readFile(new URL('./desktop-live-membership-controlled.ts', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
+  const begin = 'export async function prepareDesktopFiniteMembershipFixture(', end = '  const sources = await Promise.all(';
+  for (const marker of [begin, end]) assert.equal(source.split(marker).length, 2);
+  const actual = stripTypeScriptTypes(source.slice(source.indexOf(begin), source.indexOf(end))
+    .replace(/^export /u, '') + '  return base;\n}');
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-finite-p11-project-discovery-')));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  await mkdir(join(root, 'claude')); await mkdir(join(root, 'workspace'));
+  const configPath = join(root, 'claude/agent-teams-config.json');
+  const initial = { general: { appLocale: 'en', agentLanguage: 'en', theme: 'dark' },
+    providerConnections: { anthropic: { nativeNextPromptSuggestionsEnabled: false }, codex: { nativeNextPromptSuggestionsEnabled: false } } };
+  const before = JSON.stringify(initial); await writeFile(configPath, before, { mode: 0o600 });
+  let admitted = false, calls = 0; const base = { root };
+  const prepare = Function('environment', `'use strict';
+    const {assert,desktopFiniteV2MembershipSelected,prepareDesktopBackendFixture,readFile,writeFile,join}=environment;
+    ${actual}
+    return prepareDesktopFiniteMembershipFixture;`)({ assert, readFile, writeFile, join,
+    desktopFiniteV2MembershipSelected: () => admitted,
+    async prepareDesktopBackendFixture(repo: string, options: unknown) {
+      assert.equal(repo, 'TEST-repo'); assert.deepEqual(options, { pnpmEntry: 'TEST-pnpm', seedUiPreferences: true, creation: true });
+      calls++; return base;
+    } }) as (repo: string, pnpm: string) => Promise<typeof base>;
+  await assert.rejects(prepare('TEST-repo', 'TEST-pnpm'), assert.AssertionError);
+  assert.equal(calls, 0); assert.equal(await readFile(configPath, 'utf8'), before);
+  admitted = true;
+  assert.equal(await prepare('TEST-repo', 'TEST-pnpm'), base);
+  assert.equal(calls, 1, 'only the admitted original preparation prefix runs; no peer or native process starts');
+  assert.deepEqual(JSON.parse(await readFile(configPath, 'utf8')), {
+    ...initial, general: { ...initial.general, customProjectPaths: [join(root, 'workspace')] },
+  });
 });
 
 test('finite V2 P11 effects count exact probes from both original profile roles and refuse business inputs', async t => {

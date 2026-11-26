@@ -156,6 +156,7 @@ export type OpenCodeProbePhase = OpenCodeV2GraphPhase | OpenCodeCurrentnessPhase
   | 'identity-start' | 'identity-request-start' | 'identity-custody-start' | 'identity-custody-returned' | 'identity-request-admitted'
   | `catalog-${1 | 2 | 3}-${'request-start' | 'custody-start' | 'custody-returned' | 'request-admitted' | 'lease-released'}`
   | `credential-${'catalog' | 'directory' | 'connect' | 'restore' | 'dispose'}-${'start' | 'returned'}`
+  | `driver-readiness-${'session' | 'permissions' | 'plugins' | 'mcp'}-${'start' | 'settled'}`
   | 'credential-returned' | 'catalog-read-returned' | 'catalog-current-returned' | 'catalog-repeat'
   | 'attestation-observe-returned' | 'session-current-returned' | 'session-create-returned'
   | 'native-ready' | 'credential' | 'attestation' | 'attestation-returned' | 'session-create' | 'driver-open' | 'first-submit'
@@ -172,13 +173,18 @@ const probePhases = new Set<OpenCodeProbePhase>(['run', 'graph-start', 'graph-do
   'credential-catalog-start', 'credential-catalog-returned', 'credential-directory-start', 'credential-directory-returned',
   'credential-connect-start', 'credential-connect-returned', 'credential-restore-start', 'credential-restore-returned',
   'credential-dispose-start', 'credential-dispose-returned', 'credential-returned',
+  'driver-readiness-session-start', 'driver-readiness-session-settled',
+  'driver-readiness-permissions-start', 'driver-readiness-permissions-settled',
+  'driver-readiness-plugins-start', 'driver-readiness-plugins-settled',
+  'driver-readiness-mcp-start', 'driver-readiness-mcp-settled',
   'catalog-read-returned', 'catalog-current-returned', 'catalog-repeat',
   'attestation-observe-returned', 'session-current-returned', 'session-create-returned',
   'native-ready', 'credential', 'attestation', 'attestation-returned', 'session-create', 'driver-open', 'first-submit',
   'driver-open-returned', 'first-submit-current-returned', 'first-submit-returned']);
 const currentnessPhases = new Set<OpenCodeProbePhase>(['identity-currentness-summary',
   'catalog-1-currentness-summary', 'catalog-2-currentness-summary', 'catalog-3-currentness-summary',
-  'credential-catalog-currentness-summary', 'credential-directory-currentness-summary', 'credential-connect-currentness-summary']);
+  'credential-catalog-currentness-summary', 'credential-directory-currentness-summary', 'credential-connect-currentness-summary',
+  'driver-readiness-currentness-summary']);
 
 function currentnessStats(value: unknown): OpenCodeCurrentnessStats | undefined {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return;

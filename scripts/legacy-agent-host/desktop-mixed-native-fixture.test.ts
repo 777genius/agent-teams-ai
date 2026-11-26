@@ -18,7 +18,7 @@ import { runDesktopMixedGroupUiSmoke } from './desktop-mixed-group-ui-smoke.ts';
 import type { DesktopMixedModels } from './desktop-mixed-native-fixture.ts';
 import type { TestContext } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -36,6 +36,8 @@ import {
   readMixedCapturedPrincipal,
   readMixedLiveMembershipIdentity,
 } from './desktop-mixed-native-fixture.ts';
+import { openProjectTeamFixture } from '../../packages/legacy-agent-host/tests/projectTeamFixture.ts';
+import { selectDesktopProjectExecution } from './desktop-created-project-selection.ts';
 
 const prompt = 'Reply only OK. Do not use tools, access files or run commands.';
 
@@ -516,6 +518,61 @@ test('mixed principal callback requires exact canonical capture delivery and liv
   assert.equal(JSON.stringify({ liveState, launch }), unchanged, 'the TEST reader has no publication effect');
   launch.definition.members.at(-1)!.configurationDigest = 'f'.repeat(64); await saveLive();
   assert.throws(() => readMixedLiveMembershipIdentity(root, 'opencode', second));
+});
+
+test('live membership reads the exact registry-selected project execution and refuses substituted owner state', async t => {
+  const root = await mkdtemp(join(tmpdir(), 'TEST-desktop-backend-'));
+  await mkdir(join(root, 'hoststore'));
+  const f = openProjectTeamFixture(join(root, 'hoststore'));
+  t.after(async () => { f.close(); await rm(root, { recursive: true, force: true }); });
+  const logical = f.registry.create('TEST-original-logical-create', { contextId: f.contextId,
+    teamName: mixedDesktopTeamName, savedSettings: { cwd: f.project, projectContextMode: 'per_project', providerId: 'anthropic' },
+    members: [{ name: 'bob', memberSettings: { providerId: 'codex' } }] }).record;
+  f.prepare(logical, 'TEST-original-project-launch');
+  const child = f.child(logical), registryPath = join(f.root, '.host-team-registry/records');
+  const records = await Promise.all((await readdir(registryPath)).map(async name => JSON.parse(await readFile(join(registryPath, name), 'utf8'))));
+  const discovery = { state: 'ready', bindings: f.registry.list(f.contextId).teams.map(value => ({
+    handle: { handleId: value.binding.handleId }, ownerResourceRef: 'TEST-original-owner',
+    teamResourceRef: `TEST-team:${value.teamId}`, projectContextMode: value.projectContextMode,
+    ...(value.projectContext ? { projectContext: { logicalHandleId: value.projectContext.logicalHandleId,
+      projectPath: value.projectContext.projectPath, workContextId: value.projectContext.workContextId } } : {}),
+  })) };
+  const selected = selectDesktopProjectExecution(records, { profile: f.profile, contextId: f.contextId,
+    projectPath: f.project, ownerResourceRef: 'TEST-original-owner' }, logical.teamName, discovery);
+  assert.equal(selected.execution.teamId, child.teamId);
+  const directory = join(root, 'hoststore/teams', child.teamName, '.host-owner');
+  const logicalPath = join(root, 'hoststore/teams', logical.teamName, '.host-owner/state.json');
+  const originalLogical = await readFile(logicalPath, 'utf8');
+  const state = JSON.parse(await readFile(join(directory, 'state.json'), 'utf8'));
+  const runId = 'TEST-original-project-run';
+  const members = state.members.map((member: Record<string, unknown>, index: number) => ({ ...member,
+    delivery: { ...state.binding, runId, memberId: member.memberId, generation: `TEST-peer-${index}` } }));
+  const source = { commandId: 'TEST-project-capture', configurationRevision: 'a'.repeat(64), members };
+  const capture = { ...source, launchId: runId, members: members.map((member: Record<string, unknown>, index: number) => ({
+    memberId: member.memberId, principalId: `agent:TEST-project-${index}`, delivery: member.delivery })) };
+  state.members = members; state.runtimeCaptures = [capture];
+  state.grants = members.map((member: Record<string, unknown>, index: number) => ({ memberName: member.name,
+    principalId: capture.members[index].principalId, permissions: ['read', 'task.write', 'message.write', 'process.write'] }));
+  const launch = { definition: { launchId: runId, capture: source, members: members.map((member: Record<string, unknown>) => {
+    const { teamName: _name, ...binding } = member.delivery as Record<string, unknown>;
+    return { memberId: member.memberId, binding, configurationDigest: 'b'.repeat(64) };
+  }) } };
+  await mkdir(join(directory, 'launches'), { recursive: true });
+  await writeFile(join(directory, 'state.json'), JSON.stringify(state));
+  await writeFile(join(directory, 'launches', digest(runId) + '.json'), JSON.stringify(launch));
+  const executionOwner = Object.freeze({ binding: Object.freeze({ backendId: f.profile.owner.ownerId,
+    teamId: selected.execution.teamId, teamName: selected.execution.teamName }), workspace: f.project });
+  const originalExecution = await readFile(join(directory, 'state.json'), 'utf8');
+  for (const [provider, index] of [['claude', 0], ['codex', 1]] as const)
+    assert.equal(readMixedLiveMembershipIdentity(root, provider, undefined, executionOwner).principalId, capture.members[index].principalId);
+  for (const field of ['backendId', 'teamId'] as const)
+    assert.throws(() => readMixedLiveMembershipIdentity(root, 'claude', undefined,
+      { ...executionOwner, binding: { ...executionOwner.binding, [field]: 'TEST-foreign' } }));
+  assert.throws(() => readMixedLiveMembershipIdentity(root, 'claude', undefined, { ...executionOwner, workspace: root }));
+  assert.throws(() => readMixedLiveMembershipIdentity(root, 'claude', undefined,
+    { ...executionOwner, binding: { ...executionOwner.binding, teamName: logical.teamName } }));
+  assert.equal(await readFile(logicalPath, 'utf8'), originalLogical, 'logical definition has no runtime capture or reader mutation');
+  assert.equal(await readFile(join(directory, 'state.json'), 'utf8'), originalExecution, 'execution proof is read-only');
 });
 
 // Known-shape canonical retained files exercise the TEST reader, never production admission/native effects.

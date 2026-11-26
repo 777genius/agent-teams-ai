@@ -10,14 +10,20 @@ import type { DesktopBackendFeature } from '../composition/DesktopBackendFeature
 import type { CapturedHostScheduleTarget } from './captureHostScheduleTarget';
 import type { ScheduleFolderChange } from '@main/services/schedule/scheduleTarget';
 
-const fixedProject = 'The project of a schedule can not be changed. Create a new schedule for the other project';
+const fixedProject =
+  'The project of a schedule can not be changed. Create a new schedule for the other project';
 const missingCopy = 'Launch the team in this project once before running its schedule';
 const samePath = (left: string, right: string) => {
-  const a = path.resolve(left), b = path.resolve(right);
+  const a = path.resolve(left),
+    b = path.resolve(right);
   return process.platform === 'win32' ? a.toLowerCase() === b.toLowerCase() : a === b;
 };
 type ReadyProject = Extract<BackendProjectContextSnapshot['view'], { workContextId: string }>;
-type ResolvedProject = { target: CapturedHostScheduleTarget; selection: string; projectPath: string };
+interface ResolvedProject {
+  target: CapturedHostScheduleTarget;
+  selection: string;
+  projectPath: string;
+}
 
 /** Read-only admission; only prepare() may synchronize the already selected history. */
 export async function captureHostProjectScheduleContext(options: {
@@ -28,53 +34,94 @@ export async function captureHostProjectScheduleContext(options: {
   runId?: string;
 }) {
   const assertCurrent = () => {
-    if (!options.logical.isCurrent()) throw new Error('Original scheduled project owner is unavailable');
+    if (!options.logical.isCurrent())
+      throw new Error('Original scheduled project owner is unavailable');
   };
   const read = async () => {
     assertCurrent();
-    const result = await options.logical.invoke({ operation: 'team.project-context.read',
-      commandId: randomUUID(), payload: { projectPath: options.projectPath, scheduleAdmission: true } });
+    const result = await options.logical.invoke({
+      operation: 'team.project-context.read',
+      commandId: randomUUID(),
+      payload: { projectPath: options.projectPath, scheduleAdmission: true },
+    });
     assertCurrent();
-    if (!result.ok || !result.value || !('kind' in result.value) || result.value.kind !== 'team-project-context')
+    if (
+      !result.ok ||
+      !result.value ||
+      !('kind' in result.value) ||
+      result.value.kind !== 'team-project-context'
+    )
       throw new Error('Scheduled project admission is unavailable');
     return result.value;
   };
   const initial = await read();
   if (initial.view.mode === 'shared') return undefined;
-  if (initial.view.state === 'redirect') throw new Error('Schedule the logical team, not its project copy');
-  if (options.folderChange?.cwd !== undefined && options.folderChange.from !== undefined &&
-      !samePath(options.folderChange.cwd, options.folderChange.from)) throw new Error(fixedProject);
+  if (initial.view.state === 'redirect')
+    throw new Error('Schedule the logical team, not its project copy');
+  if (
+    options.folderChange?.cwd !== undefined &&
+    options.folderChange.from !== undefined &&
+    !samePath(options.folderChange.cwd, options.folderChange.from)
+  )
+    throw new Error(fixedProject);
   const selected = initial.view.state === 'ready' ? structuredClone(initial.view) : undefined;
   let verified: ResolvedProject | undefined;
-  let preparation: Promise<ResolvedProject & { rosterCommandId: string; sourceRevision: string }> | undefined;
+  let preparation:
+    | Promise<ResolvedProject & { rosterCommandId: string; sourceRevision: string }>
+    | undefined;
   let preparationRevision: string | undefined;
 
   const verify = async (view: ReadyProject): Promise<ResolvedProject> => {
     assertCurrent();
-    if (!selected || view.executionTeamName !== selected.executionTeamName ||
-        view.workContextId !== selected.workContextId || view.projectPath !== selected.projectPath)
+    if (
+      !selected ||
+      view.executionTeamName !== selected.executionTeamName ||
+      view.workContextId !== selected.workContextId ||
+      view.projectPath !== selected.projectPath
+    )
       throw new Error('Original scheduled project history changed');
     const handleId = parseHostTeamSelectionKey(view.executionTeamName);
-    const snapshot = await options.feature.discoverBindings(options.logical.target.contextId, { isCurrent: options.logical.isCurrent });
+    const snapshot = await options.feature.discoverBindings(options.logical.target.contextId, {
+      isCurrent: options.logical.isCurrent,
+    });
     assertCurrent();
-    const binding = snapshot.bindings.find(row => row.handle.handleId === handleId);
+    const binding = snapshot.bindings.find((row) => row.handle.handleId === handleId);
     const sameRelation = () => {
       if (!options.logical.isCurrent()) return false;
-      const current = options.feature.listBindings(options.logical.target.contextId).bindings.find(row => row.handle.handleId === handleId);
-      return current?.ownerResourceRef === options.logical.target.ownerResourceRef &&
+      const current = options.feature
+        .listBindings(options.logical.target.contextId)
+        .bindings.find((row) => row.handle.handleId === handleId);
+      return (
+        current?.ownerResourceRef === options.logical.target.ownerResourceRef &&
         current.projectContext?.logicalHandleId === options.logical.target.handleId &&
-        current.projectContext.workContextId === view.workContextId && current.projectContext.projectPath === view.projectPath;
+        current.projectContext.workContextId === view.workContextId &&
+        current.projectContext.projectPath === view.projectPath
+      );
     };
     if (snapshot.state !== 'ready' || !binding || !sameRelation())
       throw new Error('Scheduled project owner changed');
-    const captured = await captureHostScheduleTarget(options.feature, options.logical.target.contextId,
-      view.executionTeamName, { isCurrent: sameRelation });
-    if (verified && (captured.handleId !== verified.target.target.handleId ||
-        captured.ownerResourceRef !== verified.target.target.ownerResourceRef || captured.teamResourceRef !== verified.target.target.teamResourceRef))
+    const captured = await captureHostScheduleTarget(
+      options.feature,
+      options.logical.target.contextId,
+      view.executionTeamName,
+      { isCurrent: sameRelation }
+    );
+    if (
+      verified &&
+      (captured.handleId !== verified.target.target.handleId ||
+        captured.ownerResourceRef !== verified.target.target.ownerResourceRef ||
+        captured.teamResourceRef !== verified.target.target.teamResourceRef)
+    )
       throw new Error('Original scheduled project binding changed');
-    const target = await restoreHostScheduleTarget(options.feature, view.executionTeamName, captured, sameRelation);
+    const target = await restoreHostScheduleTarget(
+      options.feature,
+      view.executionTeamName,
+      captured,
+      sameRelation
+    );
     assertCurrent();
-    return verified = { target, selection: view.executionTeamName, projectPath: view.projectPath };
+    verified = { target, selection: view.executionTeamName, projectPath: view.projectPath };
+    return verified;
   };
 
   return {
@@ -91,25 +138,46 @@ export async function captureHostProjectScheduleContext(options: {
       if (preparationRevision !== undefined && expectedRevision !== preparationRevision)
         throw new Error('Original scheduled project definition changed');
       preparationRevision ??= expectedRevision;
-      return preparation ??= (async () => {
+      preparation ??= (async () => {
         const current = await read();
-        if (!selected || current.view.mode !== 'per_project' || current.view.state !== 'ready') throw new Error(missingCopy);
+        if (!selected || current.view.mode !== 'per_project' || current.view.state !== 'ready')
+          throw new Error(missingCopy);
         await verify(current.view);
-        const result = await options.logical.invoke({ operation: 'team.project-context.prepare',
-          commandId: `${options.runId}:project`, payload: { projectPath: selected.projectPath, expectedRevision } });
+        const result = await options.logical.invoke({
+          operation: 'team.project-context.prepare',
+          commandId: `${options.runId}:project`,
+          payload: { projectPath: selected.projectPath, expectedRevision },
+        });
         assertCurrent();
-        if (!result.ok || !result.value || !('kind' in result.value) || result.value.kind !== 'team-project-context' ||
-            result.value.view.mode !== 'per_project' || result.value.view.state !== 'ready')
+        if (
+          !result.ok ||
+          !result.value ||
+          !('kind' in result.value) ||
+          result.value.kind !== 'team-project-context' ||
+          result.value.view.mode !== 'per_project' ||
+          result.value.view.state !== 'ready'
+        )
           throw new Error('Original scheduled project preparation awaits confirmation');
         const prepared = result.value.prepared;
-        if (!prepared || prepared.sourceRevision !== expectedRevision ||
-            prepared.executionHandle.handleId !== parseHostTeamSelectionKey(selected.executionTeamName))
+        if (
+          !prepared ||
+          prepared.sourceRevision !== expectedRevision ||
+          prepared.executionHandle.handleId !==
+            parseHostTeamSelectionKey(selected.executionTeamName)
+        )
           throw new Error('Original scheduled project preparation changed');
         const execution = await verify(result.value.view);
-        return { ...execution, rosterCommandId: prepared.rosterCommandId, sourceRevision: prepared.sourceRevision };
+        return {
+          ...execution,
+          rosterCommandId: prepared.rosterCommandId,
+          sourceRevision: prepared.sourceRevision,
+        };
       })();
+      return preparation;
     },
   };
 }
 
-export type CapturedHostProjectScheduleContext = NonNullable<Awaited<ReturnType<typeof captureHostProjectScheduleContext>>>;
+export type CapturedHostProjectScheduleContext = NonNullable<
+  Awaited<ReturnType<typeof captureHostProjectScheduleContext>>
+>;

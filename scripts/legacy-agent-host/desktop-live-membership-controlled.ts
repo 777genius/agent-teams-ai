@@ -50,6 +50,11 @@ export function desktopFiniteV2MembershipSelected(): boolean {
 export async function prepareDesktopFiniteMembershipFixture(repo: string, pnpmEntry: string) {
   assert.equal(desktopFiniteV2MembershipSelected(), true);
   const base = await prepareDesktopBackendFixture(repo, { pnpmEntry, seedUiPreferences: true, creation: true });
+  // Ordinary custom-folder discovery makes this zero-session TEST project selectable before Launch.
+  const configPath = join(base.root, 'claude/agent-teams-config.json');
+  const config = JSON.parse(await readFile(configPath, 'utf8')) as { general: Record<string, unknown> };
+  config.general.customProjectPaths = [join(base.root, 'workspace')];
+  await writeFile(configPath, JSON.stringify(config), { mode: 0o600 });
   const sources = await Promise.all([
     'tools/owned-process-broker/fixtures/claudeProviderPeer.mjs',
     'tools/owned-process-broker/fixtures/providerPeer.mjs',

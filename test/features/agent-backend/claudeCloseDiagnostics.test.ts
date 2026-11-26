@@ -213,6 +213,8 @@ const catalogPhases = ([1, 2, 3] as const).flatMap(index => [
 ] as const);
 const credentialPhases = (['catalog', 'directory', 'connect', 'restore', 'dispose'] as const).flatMap(stage =>
   [`credential-${stage}-start`, `credential-${stage}-returned`] as const);
+const driverReadinessPhases = (['session', 'permissions', 'plugins', 'mcp'] as const).flatMap(stage =>
+  [`driver-readiness-${stage}-start`, `driver-readiness-${stage}-settled`] as const);
 const probePhases = ['run', 'graph-start', 'graph-done', 'native-launch', 'native-launch-returned', 'native-endpoint-resolved', 'native-ready',
   'graph-manifest-verified', 'graph-inventory-indexed', 'graph-census-returned',
   'graph-files-quarter', 'graph-files-half', 'graph-files-three-quarters', 'graph-files-returned',
@@ -220,7 +222,7 @@ const probePhases = ['run', 'graph-start', 'graph-done', 'native-launch', 'nativ
   'credential', ...credentialPhases, 'credential-returned', 'attestation', ...catalogPhases,
   'catalog-read-returned', 'catalog-current-returned', 'catalog-repeat', 'attestation-returned',
   'attestation-observe-returned', 'session-create', 'session-current-returned', 'session-create-returned', 'driver-open', 'first-submit',
-  'driver-open-returned', 'first-submit-current-returned', 'first-submit-returned'] as const;
+  ...driverReadinessPhases, 'driver-open-returned', 'first-submit-current-returned', 'first-submit-returned'] as const;
 const startupFailurePhases = ['startup-timer-aborted', 'startup-parent-aborted', 'startup-lifecycle-aborted', 'startup-failed'] as const;
 const allowedProbePhases = [...probePhases, ...startupFailurePhases];
 
@@ -237,7 +239,7 @@ test('probe phase observations retain captured hashes, a lazy clock and at most 
   assert.equal(clockReads, 0, 'unknown phases cannot consume a sequence slot or read the clock');
   for (const phase of allowedProbePhases) { observe(phase); clock += 7; }
   for (let repeat = 0; repeat < 20; repeat++) for (const phase of allowedProbePhases) observe(phase);
-  assert.equal(lines.length, allowedProbePhases.length); assert.equal(lines.length, 64);
+  assert.equal(lines.length, allowedProbePhases.length); assert.equal(lines.length, 72);
   assert.equal(clockReads, allowedProbePhases.length, 'duplicate transitions do not read the clock or write again');
   assert.ok(lines.every(line => Buffer.byteLength(line) < 8192));
   assert.equal(lines.join('').includes(secret), false);
@@ -272,9 +274,10 @@ test.each(startupFailurePhases)('probe decoder retains only the existing startup
 
 const currentnessPhases = ['identity-currentness-summary', 'catalog-1-currentness-summary',
   'catalog-2-currentness-summary', 'catalog-3-currentness-summary',
-  'credential-catalog-currentness-summary', 'credential-directory-currentness-summary', 'credential-connect-currentness-summary'] as const;
+  'credential-catalog-currentness-summary', 'credential-directory-currentness-summary', 'credential-connect-currentness-summary',
+  'driver-readiness-currentness-summary'] as const;
 
-test('four request and three credential summaries preserve the original phase fields and sequence slots', () => {
+test('request, credential and driver readiness summaries preserve original phase fields and sequence slots', () => {
   const lines: string[] = [], records: OpenCodeProbeDiagnostic[] = [];
   let clock = 10;
   const observe = createOpenCodeProbeDiagnostic({ profileId: 'TEST-profile', configRevision: 'TEST-revision' },
@@ -288,11 +291,11 @@ test('four request and three credential summaries preserve the original phase fi
   observe('graph-start');
   const decode = decodeClaudeCloseDiagnostics(() => {}, undefined, undefined, value => { records.push(value); });
   for (const byte of Buffer.from(lines.join(''))) decode(Buffer.from([byte]));
-  assert.equal(records.length, 9); assert.ok(records.every(Object.isFrozen));
-  assert.deepEqual(records.map(record => record.sequence), [1, 1, 1, 1, 1, 1, 1, 1, 2]);
-  for (const record of [records[0]!, records[8]!]) assert.deepEqual(Object.keys(record).sort(),
+  assert.equal(records.length, 10); assert.ok(records.every(Object.isFrozen));
+  assert.deepEqual(records.map(record => record.sequence), [1, 1, 1, 1, 1, 1, 1, 1, 1, 2]);
+  for (const record of [records[0]!, records[9]!]) assert.deepEqual(Object.keys(record).sort(),
     ['commandHash', 'elapsedMs', 'phase', 'probeDigest', 'profileHash', 'sequence']);
-  assert.deepEqual(records.slice(1, 8).map(({ phase, currentCalls, currentElapsedMs }) =>
+  assert.deepEqual(records.slice(1, 9).map(({ phase, currentCalls, currentElapsedMs }) =>
     ({ phase, currentCalls, currentElapsedMs })), currentnessPhases.map((phase, index) =>
     ({ phase, currentCalls: index, currentElapsedMs: index * 10 })));
 });
@@ -338,11 +341,12 @@ test('summary decoder rejects missing, extra, nonfinite, unbounded or authority-
     { ...valid, currentElapsedMs: null }, { ...valid, pid: 31 }, { ...valid, ready: true },
     { ...valid, phase: 'catalog-4-currentness-summary' }, { ...valid, phase: 'identity-currentness-summary-extra' },
     { ...valid, phase: 'credential-dispose-currentness-summary' }, { ...valid, phase: 'credential-restore-currentness-summary' },
-    { ...valid, phase: 'run' }, { ...valid, sequence: 65 },
+    { ...valid, phase: 'driver-readiness-currentness-summary-extra' },
+    { ...valid, phase: 'run' }, { ...valid, sequence: allowedProbePhases.length + 1 },
   ]) decode(frame(unsafe));
   assert.deepEqual(values, []);
   decode(frame(valid));
-  const maximum = { ...valid, phase: 'catalog-3-currentness-summary', sequence: 64,
+  const maximum = { ...valid, phase: 'catalog-3-currentness-summary', sequence: allowedProbePhases.length,
     elapsedMs: 3_600_000, currentCalls: 1_000_000, currentElapsedMs: 3_600_000 };
   decode(frame(maximum));
   assert.deepEqual(values, [valid, maximum]);
@@ -431,6 +435,8 @@ test('probe decoder rejects raw, nonfinite, extra and custody-like fields and re
     { ...valid, phase: 'attestation-returned-extra' },
     { ...valid, phase: 'catalog-0-request-start' }, { ...valid, phase: 'catalog-4-request-start' },
     { ...valid, phase: 'catalog-1-http-succeeded' }, { ...valid, phase: 'catalog-3-lease-released-extra' },
+    { ...valid, phase: 'driver-readiness-private-start' }, { ...valid, phase: 'driver-readiness-session-succeeded' },
+    { ...valid, phase: 'driver-readiness-mcp-settled-extra' },
     { ...valid, sequence: 0 }, { ...valid, sequence: allowedProbePhases.length + 1 }, { ...valid, sequence: 1.5 },
     { ...valid, elapsedMs: -1 }, { ...valid, elapsedMs: 3_600_001 },
     { ...valid, elapsedMs: null }, { ...valid, elapsedMs: undefined },
@@ -617,7 +623,7 @@ test('passive probe handoff decoder accepts the exact reply shape only at the re
     { ...valid, submitStatus: 'ok' }, { ...valid, submitStatus: 'unclassified' },
     { ...valid, phase: 'run' }, { ...valid, phase: 'first-submit-current-returned' },
     { ...valid, phase: 'identity-currentness-summary', currentCalls: 1, currentElapsedMs: 0 },
-    { ...valid, currentCalls: 1, currentElapsedMs: 0 }, { ...valid, sequence: 65 },
+    { ...valid, currentCalls: 1, currentElapsedMs: 0 }, { ...valid, sequence: allowedProbePhases.length + 1 },
     { ...valid, value: 'TEST-private' }]) decode(frame(invalid));
   assert.deepEqual(values, []);
   decode(frame(valid));
@@ -679,7 +685,7 @@ test('catalog repeat decoder accepts exactly the optional missing-selection pair
     { ...valid, catalogModelPresent: 'TEST-private' }, { ...valid, phase: 'catalog-read-returned' },
     { ...valid, phase: 'run' }, { ...valid, currentCalls: 1, currentElapsedMs: 0 },
     { ...valid, submitStatus: 'ok', submitCode: null, submitDelivery: 'unobserved' },
-    { ...valid, ready: true }, { ...valid, sequence: 65 },
+    { ...valid, ready: true }, { ...valid, sequence: allowedProbePhases.length + 1 },
   ]) decode(frame(invalid));
   assert.deepEqual(values, []);
   for (const value of [base, valid, { ...valid, catalogModelPresent: false },
