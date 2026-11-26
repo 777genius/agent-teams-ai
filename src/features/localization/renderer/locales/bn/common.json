@@ -967,6 +967,18 @@
     "chats": "অপঠিত চ্যাট",
     "openTask": "কাজ খুলুন: {{subject}} — {{team}}",
     "timeUnknown": "সময় অজানা",
-    "teamAttention": "মনোযোগ"
+    "teamAttention": "মনোযোগ",
+    "filters": {
+      "title": "ফিল্টার",
+      "description": "ইনবক্সে কী দেখানো হবে তা বেছে নিন।",
+      "itemType": "আইটেমের ধরন",
+      "conversationType": "চ্যাটের ধরন",
+      "direct": "সরাসরি বার্তা",
+      "group": "গ্রুপ চ্যাট",
+      "teamFeed": "টিম ফিড",
+      "waiting": "কাজের অপেক্ষার সময়",
+      "olderDay": "২৪ ঘণ্টার বেশি",
+      "olderWeek": "৭ দিনের বেশি"
+    }
   }
 }

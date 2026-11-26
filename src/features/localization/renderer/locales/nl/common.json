@@ -967,6 +967,18 @@
     "chats": "Ongelezen chats",
     "openTask": "Taak openen: {{subject}} in {{team}}",
     "timeUnknown": "Tijd onbekend",
-    "teamAttention": "Aandacht"
+    "teamAttention": "Aandacht",
+    "filters": {
+      "title": "Filters",
+      "description": "Kies wat in de inbox wordt weergegeven.",
+      "itemType": "Itemtype",
+      "conversationType": "Chattype",
+      "direct": "Directe berichten",
+      "group": "Groepschats",
+      "teamFeed": "Teamoverzicht",
+      "waiting": "Wachttijd van taak",
+      "olderDay": "Langer dan 24 uur",
+      "olderWeek": "Langer dan 7 dagen"
+    }
   }
 }

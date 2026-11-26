@@ -967,6 +967,18 @@
     "chats": "Chats sin leer",
     "openTask": "Abrir tarea: {{subject}} en {{team}}",
     "timeUnknown": "Hora desconocida",
-    "teamAttention": "Atención"
+    "teamAttention": "Atención",
+    "filters": {
+      "title": "Filtros",
+      "description": "Elige qué aparece en la bandeja de entrada.",
+      "itemType": "Tipo de elemento",
+      "conversationType": "Tipo de chat",
+      "direct": "Mensajes directos",
+      "group": "Chats de grupo",
+      "teamFeed": "Actividad del equipo",
+      "waiting": "Tiempo de espera de la tarea",
+      "olderDay": "Más de 24 horas",
+      "olderWeek": "Más de 7 días"
+    }
   }
 }

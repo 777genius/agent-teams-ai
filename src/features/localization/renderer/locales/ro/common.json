@@ -967,6 +967,18 @@
     "chats": "Conversații necitite",
     "openTask": "Deschide sarcina: {{subject}} în {{team}}",
     "timeUnknown": "Ora necunoscută",
-    "teamAttention": "Atenție"
+    "teamAttention": "Atenție",
+    "filters": {
+      "title": "Filtre",
+      "description": "Alege ce apare în căsuța de primire.",
+      "itemType": "Tipul elementului",
+      "conversationType": "Tipul conversației",
+      "direct": "Mesaje directe",
+      "group": "Conversații de grup",
+      "teamFeed": "Fluxul echipei",
+      "waiting": "Timpul de așteptare al sarcinii",
+      "olderDay": "Peste 24 de ore",
+      "olderWeek": "Peste 7 zile"
+    }
   }
 }

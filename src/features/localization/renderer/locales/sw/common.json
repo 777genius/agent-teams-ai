@@ -967,6 +967,18 @@
     "chats": "Mazungumzo ambayo hayajasomwa",
     "openTask": "Fungua kazi: {{subject}} katika {{team}}",
     "timeUnknown": "Wakati haujulikani",
-    "teamAttention": "Umakini"
+    "teamAttention": "Umakini",
+    "filters": {
+      "title": "Vichujio",
+      "description": "Chagua kinachoonekana kwenye kikasha.",
+      "itemType": "Aina ya kipengee",
+      "conversationType": "Aina ya mazungumzo",
+      "direct": "Ujumbe wa moja kwa moja",
+      "group": "Mazungumzo ya kikundi",
+      "teamFeed": "Mtiririko wa timu",
+      "waiting": "Muda wa kusubiri kazi",
+      "olderDay": "Zaidi ya saa 24",
+      "olderWeek": "Zaidi ya siku 7"
+    }
   }
 }
