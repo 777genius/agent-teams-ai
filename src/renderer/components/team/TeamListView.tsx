@@ -88,6 +88,7 @@ import { TeamTaskStatusSummary } from './TeamTaskStatusSummary';
 import { useTeamStopControl } from './useTeamStopControl';
 
 import type { ActiveTeamRef, TeamCopyData } from './dialogs/CreateTeamDialog';
+import type { TeamLaunchDialogMode } from './dialogs/LaunchTeamDialog.types';
 import type { TeamListFilterState } from './TeamListFilterPopover';
 import type { OrganizationPlacementSelection } from '@features/organizations/contracts';
 import type { TeamManagementCommittedChange } from '@features/team-prompt-management/contracts';

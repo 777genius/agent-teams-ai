@@ -77,7 +77,7 @@ export function capturedHostTeamReadsFixture() {
     savedSettings?: OwnerOptions['savedSettings'];
     members?: OwnerOptions['members'];
   } = {}) {
-    const name = options.name ?? `test-team-${teams.size + 1}`;
+    const name: string = options.name ?? `test-team-${teams.size + 1}`;
     const binding = { backendId: 'TEST-backend', teamId: 'TEST-id-' + name, teamName: name };
     const owner = createFilesystemTeamOwner({ root, binding,
       members: options.members ?? [

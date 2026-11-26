@@ -1,3 +1,4 @@
+import assert from 'node:assert/strict';
 import { mkdtempSync, realpathSync, mkdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -10,7 +11,7 @@ import { createFilesystemTeamOwner } from '../dist/adapters/team/createFilesyste
 import { HostTeamProjectContexts } from '../dist/team-project-context/HostTeamProjectContexts.js';
 import { HostProjectDefinitionEdits } from '../dist/team-project-context/HostProjectDefinitionEdits.js';
 import { createHostProjectReviewFlowComposition } from '../dist/composition/createHostProjectReviewFlowComposition.js';
-import { TeamOwnerError } from '../dist/team/contracts.js';
+import { type TeamMember, TeamOwnerError } from '../dist/team/contracts.js';
 import { replaceRosterPayloadSchema } from '../dist/team/rosterSchema.js';
 import type { HostedTeam } from '../dist/composition/MemberEntry.js';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
@@ -19,6 +20,14 @@ import type { TeamRegistryRecord } from '../dist/team-registry/contracts.js';
 import type { TeamSavedSettings } from '../dist/team/rosterSchema.js';
 import type { LiveRosterOperation } from '../dist/composition/executeLiveRosterMembership.js';
 import type { TestContext } from 'node:test';
+
+/** Creation definitions cannot carry active process custody into a fixture owner. */
+export function stoppedDefinitionMembers(members: HostedTeamDefinition['members']): TeamMember[] {
+  return members.map(({ delivery, ...member }) => {
+    assert.equal(delivery, undefined, 'TEST stopped definition cannot carry delivery custody');
+    return member;
+  });
+}
 
 export function openProjectTeamFixture(root: string, options: {
   executeLive?(input: LiveRosterOperation): Promise<unknown>;
@@ -36,7 +45,11 @@ export function openProjectTeamFixture(root: string, options: {
     if (teams.has(definition.binding.teamId)) return;
     const store = new TeamOwnerStore(root, definition.binding.teamName);
     const owner = createFilesystemTeamOwner({ root, store, binding: definition.binding,
-      ...(definition.savedSettings ? { savedSettings: definition.savedSettings } : {}), members: definition.members, grants: definition.grants,
+      ...(definition.savedSettings ? { savedSettings: definition.savedSettings } : {}),
+      members: stoppedDefinitionMembers(definition.members),
+      grants: definition.grants.map(({ revoked, ...grant }) => ({
+        ...grant, ...(revoked === undefined ? {} : { revoked }),
+      })),
       assertRosterEditable: () => { const team = teams.get(definition.binding.teamId); if (team) assertStopped(team); } });
     const connection = owner.connect(principalId);
     connection.readRoster(); stores.set(definition.binding.teamId, store);

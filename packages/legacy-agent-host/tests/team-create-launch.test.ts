@@ -41,6 +41,7 @@ import { TeamRegistry } from '../dist/team-registry/TeamRegistry.js';
 import { TeamLaunchError } from '../dist/team-launch/contracts.js';
 import { digest } from '../dist/team/identity.js';
 import { runtimeSourceSelectionFixture } from './fixtures/runtime-source-selection.ts';
+import { stoppedDefinitionMembers } from './projectTeamFixture.ts';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import type { HostedTeam } from '../dist/composition/MemberEntry.js';
 import type { CreateTeamLaunchPreparationInput } from '../dist/team-registry/createLaunchContracts.js';
@@ -351,7 +352,7 @@ function fixture(withSources = false, provider: 'claude' | 'opencode' = 'claude'
   runtime = createRuntime();
   const projects = new HostTeamProjectContexts({ principalId: profile.principalId, registry,
     team: id => teams.get(id), store: team => projectStores.get(team.definition.binding.teamId)!, assertCurrent,
-    assertStopped: team => runtime.assertRosterEditable(team.definition.binding.teamId, team.definition.members) });
+    assertStopped: team => runtime.assertRosterEditable(team.definition.binding.teamId, stoppedDefinitionMembers(team.definition.members)) });
   const createCoordinator = () =>
     new CreateTeamLaunchCoordinator({
       profile,

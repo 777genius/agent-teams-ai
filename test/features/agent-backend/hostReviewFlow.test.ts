@@ -14,7 +14,7 @@ const key = hostTeamSelectionKey('TEST-original');
 
 function fixture() {
   const legacy: ReviewFlowElectronApi = {
-    getOverview: vi.fn(async () => ({ defaults: human, overrides: { legacy: human }, unreadableTeams: [] })),
+    getOverview: vi.fn(async () => ({ defaults: human, overrides: { legacy: human }, unreadableTeams: [], projectTeams: {} })),
     setDefaults: vi.fn(async settings => settings),
     setTeamOverride: vi.fn(async (_teamName, settings) => settings),
   };

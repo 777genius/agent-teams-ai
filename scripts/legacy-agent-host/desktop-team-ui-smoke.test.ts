@@ -2315,6 +2315,7 @@ async function selectionStoppedConvergence(options: {
   let now = 0, reads = 0, guards = 0, tables = 0, sessions = 0, storeReads = 0;
   const box = (visible = true) => ({ visible, getBoundingClientRect: () => ({ width: 100, height: 30 }) });
   const live = { handleId: 'TEST-selection-owner', definition: { launchId: 'TEST-launch', rosterRevision: 'TEST-roster' },
+    execution: { handleId: 'TEST-selection-owner' },
     initial: { binding }, thread: { pid: 104 }, async session() {
       sessions++; trace.push('session');
       return { phase: 'closed', custody: 'released', binding: options.bindingMismatch ? { ...binding, generation: 'TEST-other' } : { ...binding } };

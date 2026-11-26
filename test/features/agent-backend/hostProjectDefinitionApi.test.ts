@@ -43,7 +43,7 @@ function fixture() {
       if (request.operation === 'team.project-context.prepare') return { ok: true, value: { kind: 'team-project-context', histories: [],
         view: { mode: 'per_project', state: 'ready', executionTeamName: childKey, projectPath: '/TEST/project', workContextId: 'TEST-work-context' },
         prepared: { executionHandle: childHandle, rosterCommandId: 'TEST-original-child-roster', sourceRevision: nextRevision } } };
-      return { ok: false, code: 'unsupported', outcome: 'not-dispatched' };
+      return { ok: false, code: 'invalid', outcome: 'not-dispatched' };
     }),
   };
   const legacy = { getProjectContextView: vi.fn(), updateConfig: vi.fn(), updateMemberSettings: vi.fn(), getMemberSettingsTarget: vi.fn(),
@@ -125,7 +125,7 @@ describe('Host project definition boundary', () => {
   it('mutating the connection-list object during an await never retargets the original preparation', async () => {
     const f = fixture(), invoke = f.backend.invoke;
     f.backend.invoke = vi.fn<AgentBackendApi['invoke']>(async request => {
-      if (request.operation === 'team.project-context.read') f.bindings[0].handle.handleId = 'TEST-replacement';
+      if (request.operation === 'team.project-context.read') Object.assign(f.bindings[0].handle, { handleId: 'TEST-replacement' });
       return invoke(request);
     });
     await expect(prepareHostProjectLaunch({ backend: f.backend, resolve: async () => f.bindings[0] }, launch(), f.current)).rejects.toThrow('project-context-changed');

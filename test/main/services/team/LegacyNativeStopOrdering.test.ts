@@ -192,6 +192,9 @@ function fixture() {
       tracked.delete(name);
     },
     killTeamProcess: vi.fn(),
+    stopOriginalWindowsDirectMembers: vi.fn(async (processes: ReadonlySet<ChildProcess> | undefined) => {
+      expect(processes).toBeUndefined();
+    }),
     killTeamProcessAndWait: vi.fn(async () => {
       events.push('native-stop-once');
       recordVerifiedCliProcessRelease(child, [processIdentity]);

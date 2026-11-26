@@ -9,6 +9,10 @@ const policy = { reviewFlow: 'human_approval' as const, reviewFlowPrompt: 'TEST 
 const command = (commandId: string, settings: typeof policy | null = policy) => ({
   commandId, operation: 'task.board.review-flow' as const, payload: { settings },
 });
+function projectReviewView(view: ReturnType<ReturnType<typeof projectTeamFixture>['review']['read']>) {
+  assert.ok('projectTeam' in view, 'TEST selected logical project definition');
+  return view;
+}
 function family(t: Parameters<typeof projectTeamFixture>[0]) {
   const f = projectTeamFixture(t), logical = f.create().record;
   f.prepare(logical, 'TEST-project-one');
@@ -21,11 +25,11 @@ function family(t: Parameters<typeof projectTeamFixture>[0]) {
 
 test('logical review policy covers every existing project, including running histories, and aliases remain read-only', t => {
   const f = family(t);
-  assert.equal(f.review.read(f.selected).projectTeam?.saved, false);
+  assert.equal(projectReviewView(f.review.read(f.selected)).projectTeam?.saved, false);
   for (const child of f.children) f.live.add(child.teamId);
   const receipt = f.review.execute(f.selected, command('TEST-policy'));
   assert.equal(receipt?.phase, 'completed');
-  assert.equal(f.review.read(f.selected).projectTeam?.saved, true);
+  assert.equal(projectReviewView(f.review.read(f.selected)).projectTeam?.saved, true);
   for (const child of f.children) {
     assert.deepEqual(f.target(child).team.connection.readQueries!.getReviewFlowSettings().settings, policy);
     assert.throws(() => f.review.execute(f.target(child), command('TEST-no-alias-write')));
@@ -35,8 +39,8 @@ test('logical review policy covers every existing project, including running his
   f.prepare(f.logical, 'TEST-project-three', third);
   assert.deepEqual(f.target(f.child(f.logical, third)).team.connection.readQueries!.getReviewFlowSettings().settings, policy);
   f.review.execute(f.selected, command('TEST-remove', null));
-  assert.deepEqual(f.review.read(f.selected).projectTeam?.settings, null);
-  assert.equal(f.review.read(f.selected).projectTeam?.saved, true, 'explicit inheritance differs from never saved');
+  assert.deepEqual(projectReviewView(f.review.read(f.selected)).projectTeam?.settings, null);
+  assert.equal(projectReviewView(f.review.read(f.selected)).projectTeam?.saved, true, 'explicit inheritance differs from never saved');
 });
 
 test('failed policy still attempts the remaining captured boards; cold read/lookup is inert and exact original resumes', t => {
@@ -54,7 +58,7 @@ test('failed policy still attempts the remaining captured boards; cold read/look
   const cold = openProjectTeamFixture(f.root);
   try {
     const selected = cold.target(f.logical);
-    assert.deepEqual(cold.review.read(selected).pending, { commandId: 'TEST-original', settings: policy });
+    assert.deepEqual(projectReviewView(cold.review.read(selected)).pending, { commandId: 'TEST-original', settings: policy });
     assert.equal(cold.review.lookup(selected, 'TEST-original'), null);
     assert.deepEqual(cold.stores.get(f.logical.teamId)!.read('project-review-flow/current.json'), prepared);
     assert.equal(cold.review.execute(selected, command('TEST-original'))?.phase, 'completed');
@@ -80,7 +84,7 @@ test('atomic current publication after a settled policy survives interruption be
   f.close();
   const cold = openProjectTeamFixture(f.root);
   try {
-    assert.deepEqual(cold.review.read(cold.target(f.logical)).pending, { commandId: 'TEST-next', settings: null });
+    assert.deepEqual(projectReviewView(cold.review.read(cold.target(f.logical))).pending, { commandId: 'TEST-next', settings: null });
     assert.equal(cold.review.execute(cold.target(f.logical), command('TEST-next', null))?.phase, 'completed');
     assert.equal(cold.review.lookup(cold.target(f.logical), 'TEST-settled')?.commandId, 'TEST-settled');
   } finally { cold.close(); }

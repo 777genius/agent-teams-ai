@@ -24,13 +24,17 @@ function fixture() {
 }
 
 describe('request-shaped Host Team authority', () => {
-  it('keeps unsupported request-shaped Host config operations away from legacy filesystem routing', async () => {
+  it('keeps rejected request-shaped Host operations away from legacy filesystem routing', async () => {
     const f = fixture();
     for (const method of ['createTeam', 'createConfig', 'updateMemberSettings'] as const) {
       for (const teamName of [hostTeamSelectionKey('TEST-missing-owner'), 'host-team:%']) {
-        await expect(Reflect.apply(f.teams[method], f.teams, [{ teamName }])).rejects.toThrow(
-          'not supported for Host teams'
-        );
+        const operation = Reflect.apply(f.teams[method], f.teams, [{ teamName }]);
+        if (method === 'updateMemberSettings')
+          await expect(operation).rejects.toMatchObject({
+            code: 'invalid-definition-edit',
+            outcome: 'not-dispatched',
+          });
+        else await expect(operation).rejects.toThrow('not supported for Host teams');
       }
       expect(f.legacy[method]).not.toHaveBeenCalled();
     }
