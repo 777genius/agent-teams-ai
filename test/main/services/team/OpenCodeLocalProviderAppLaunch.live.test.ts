@@ -938,6 +938,12 @@ describe('OpenCode local provider fixture', () => {
         'utf8'
       );
       expect(await hasNoOpenCodeRuntimeLanes(teamsBasePath, teamName)).toBe(false);
+
+      await fs.rm(indexPath, { force: true });
+      await fs.writeFile(path.join(path.dirname(indexPath), 'lanes.invalid.123.json'), '{', 'utf8');
+      await expect(hasNoOpenCodeRuntimeLanes(teamsBasePath, teamName)).rejects.toThrow(
+        /Quarantined OpenCode lane index/
+      );
     } finally {
       await fs.rm(teamsBasePath, { recursive: true, force: true });
     }
@@ -1310,6 +1316,22 @@ async function hasNoOpenCodeRuntimeLanes(
   teamName: string
 ): Promise<boolean> {
   const indexPath = getOpenCodeRuntimeLaneIndexPath(teamsBasePath, teamName);
+  const runtimeDirectory = path.dirname(indexPath);
+  let runtimeFiles: string[];
+  try {
+    runtimeFiles = await fs.readdir(runtimeDirectory);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return true;
+    throw error;
+  }
+  // The production reader quarantines malformed indexes and removes lanes.json.
+  // A missing canonical file is not proof of cleanup if that evidence was quarantined.
+  const quarantinedIndexes = runtimeFiles.filter((name) => /^lanes\\.invalid\\.\\d+\\.json$/.test(name));
+  if (quarantinedIndexes.length > 0) {
+    throw new Error(
+      `Quarantined OpenCode lane index: ${quarantinedIndexes.join(', ')} in ${runtimeDirectory}`
+    );
+  }
   let raw: string;
   try {
     raw = await fs.readFile(indexPath, 'utf8');
