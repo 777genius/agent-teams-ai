@@ -1,4 +1,6 @@
 // Only authenticated GitHub metadata can qualify reuse. No artifacts or PR prose are inputs.
+import { NATIVE_QUALIFICATION_GATE_STEPS, withoutProvenNativeJobs } from './ci-feedback-native-jobs.mts';
+
 export const REPOSITORY = '777genius/agent-teams-ai';
 export const WORKFLOW = '.github/workflows/ci.yml';
 export const MAX_AGE_MS = 24 * 60 * 60 * 1000;
@@ -161,6 +163,7 @@ function proveMetadataJobs(jobs: JsonObject[], run: JsonObject, now: number, sha
       : [
           decisionStep,
           'Require complete current-code qualification',
+          ...NATIVE_QUALIFICATION_GATE_STEPS,
         ];
     for (const stepName of required) {
       requireProof(
@@ -179,7 +182,8 @@ function proveMetadataJobs(jobs: JsonObject[], run: JsonObject, now: number, sha
           step.status === 'completed' && typeof step.name === 'string' &&
           (allowed.includes(step.name) || (planning && step.name.startsWith('CI source proof:'))) &&
           step.conclusion ===
-            (step.name === 'Require complete current-code qualification' ? 'skipped' : 'success')
+            (step.name === 'Require complete current-code qualification' ||
+              NATIVE_QUALIFICATION_GATE_STEPS.some((name) => name === step.name) ? 'skipped' : 'success')
         ),
       'Unknown, incomplete or unsafe metadata step'
     );
@@ -353,6 +357,7 @@ export async function provePostmergeReuse(
       // The plan name is assigned before strict event classification. Only the
       // result names a metadata decision, and its complete job proof must pass.
       if (candidateJobs.some(isMetadataGate)) {
+        candidateJobs = withoutProvenNativeJobs(candidateJobs, candidateRun, pr, REPOSITORY, 'metadata', false);
         proveMetadataJobs(candidateJobs, candidateRun, context.now, shardCount);
         const metadataBase = readSourceBase(
           candidateJobs, candidateRun, prNumber, headSha, repoId, 'Metadata CI plan'
@@ -360,6 +365,7 @@ export async function provePostmergeReuse(
         metadata.push({ run: candidateRun, jobs: candidateJobs, base: metadataBase });
         continue;
       }
+      candidateJobs = withoutProvenNativeJobs(candidateJobs, candidateRun, pr, REPOSITORY, 'full', false);
       selected = { run: candidateRun, jobs: candidateJobs };
       break;
     }

@@ -20,6 +20,7 @@ import {
   WORKFLOW,
 } from '../../scripts/ci/ci-feedback-reuse.mts';
 import type { JsonObject, ReuseContext } from '../../scripts/ci/ci-feedback-reuse.mts';
+import { nativeProofFixture } from './ciNativeProofFixture.mts';
 
 const headSha = 'a'.repeat(40);
 const baseSha = 'b'.repeat(40);
@@ -111,6 +112,12 @@ function fixture(shards: 2 | 4 = 2): Map<string, unknown> {
       },
     ],
   };
+  const pr = {
+    number: 12, draft: false, merged: true, state: 'closed',
+    merge_commit_sha: currentSha, merged_at: recent,
+    head: { sha: headSha, ref: 'fix/ci', repo: repository },
+    base: { ref: 'main', repo: repository },
+  };
   const names = [
     'plan',
     'Fast feedback',
@@ -122,7 +129,7 @@ function fixture(shards: 2 | 4 = 2): Map<string, unknown> {
     'lint (features)',
     'Task change ledger Windows smoke',
   ];
-  const jobs = names.map((name, index) => {
+  const jobs: JsonObject[] = names.map((name, index) => {
     const windows = name === 'Task change ledger Windows smoke';
     const runnerClass = windows ? 'windows-latest' : context.linuxRunner;
     const step = (name: string, conclusion = 'success'): JsonObject => ({
@@ -193,6 +200,9 @@ function fixture(shards: 2 | 4 = 2): Map<string, unknown> {
       steps,
     };
   });
+  const native = nativeProofFixture(pr, sourceRun, 'full');
+  jobs.push(...native.jobs);
+  (jobs.find((job) => job.name === 'Full qualification')!.steps as JsonObject[]).push(...native.gateSteps);
   return new Map<string, unknown>([
     [prefix, repository],
     [`${prefix}/actions/workflows/ci.yml`, { id: 456, path: WORKFLOW, state: 'active' }],
@@ -202,15 +212,7 @@ function fixture(shards: 2 | 4 = 2): Map<string, unknown> {
     ],
     [
       `${prefix}/pulls/12`,
-      {
-        number: 12,
-        merged: true,
-        state: 'closed',
-        merge_commit_sha: currentSha,
-        merged_at: recent,
-        head: { sha: headSha, repo: repository },
-        base: { ref: 'main', repo: repository },
-      },
+      pr,
     ],
     [listEndpoint, { total_count: 1, workflow_runs: [sourceRun] }],
     [runEndpoint, sourceRun],
@@ -470,7 +472,7 @@ function metadataFixture(count = 1, shards: 2 | 4 = 2): Map<string, unknown> {
       name, status: 'completed', conclusion,
     });
     const skippedNames = metadataSkippedNames.map((name) => name.replace('/2)', `/${shards})`));
-    const jobs = ['Metadata CI plan', 'Metadata CI result', ...skippedNames].map(
+    const jobs: JsonObject[] = ['Metadata CI plan', 'Metadata CI result', ...skippedNames].map(
       (name, offset) => ({
         id: index * 10 + offset, run_id: run.id, run_attempt: 1, head_sha: headSha,
         name, status: 'completed', conclusion: offset < 2 ? 'success' : 'skipped',
@@ -484,6 +486,9 @@ function metadataFixture(count = 1, shards: 2 | 4 = 2): Map<string, unknown> {
             : [],
       })
     );
+    const native = nativeProofFixture(record(data, `${prefix}/pulls/12`), run, 'metadata');
+    jobs.push(...native.jobs);
+    (jobs[1]!.steps as JsonObject[]).push(...native.gateSteps);
     data.set(`${prefix}/actions/runs/${run.id}/attempts/1/jobs?per_page=100`,
       { total_count: jobs.length, jobs });
   }
@@ -569,6 +574,45 @@ test('proven metadata edits preserve the closest full qualification, including W
   const droppedLinks = metadataFixture();
   record(droppedLinks, `${prefix}/actions/runs/101`).pull_requests = [];
   assert.equal((await proof(droppedLinks)).reuse, true);
+});
+
+test('postmerge reuse never carries selected native qualification, even if its jobs claim skipped', async () => {
+  for (const scenario of ['required but skipped', 'selected and successful', 'metadata follower']) {
+    const data = scenario === 'metadata follower' ? metadataFixture() : fixture();
+    const pr = record(data, `${prefix}/pulls/12`);
+    const rows = record(data, jobsEndpoint).jobs as JsonObject[];
+    const oldNative = nativeProofFixture(pr, record(data, runEndpoint), 'full');
+    (pr.head as JsonObject).ref = 'feat/provider-migration-stage-1';
+    if (scenario === 'selected and successful') {
+      const native = nativeProofFixture(pr, record(data, runEndpoint), 'full');
+      const names = new Set(oldNative.jobs.map((item) => item.name));
+      const kept = rows.filter((item) => !names.has(item.name));
+      const gate = kept.find((item) => item.name === 'Full qualification')!;
+      const gateNames = new Set(oldNative.gateSteps.map((item) => item.name));
+      gate.steps = [...(gate.steps as JsonObject[]).filter((step) => !gateNames.has(step.name)), ...native.gateSteps];
+      kept.push(...native.jobs);
+      data.set(jobsEndpoint, { total_count: kept.length, jobs: kept });
+    }
+    const result = await proof(data);
+    assert.equal(result.reuse, false, scenario);
+    assert.match(result.reason, /Selected native qualification is outside postmerge reuse/, scenario);
+  }
+});
+
+test('postmerge metadata normalization refuses executed native work and missing or extra result steps', async () => {
+  for (const change of ['executed job', 'job identity', 'missing gate', 'duplicate gate', 'executed gate']) {
+    const data = metadataFixture();
+    const rows = metadataJobs(data);
+    const native = rows.find((item) => item.name === 'Retained OpenCode V1 and Host V2 original Desktop')!;
+    const steps = rows.find((item) => item.name === 'Metadata CI result')!.steps as JsonObject[];
+    const index = steps.findIndex((step) => step.name === 'Require selected retained V1 and Host V2 native Desktop qualification');
+    if (change === 'executed job') native.conclusion = 'success';
+    if (change === 'job identity') native.run_attempt = 2;
+    if (change === 'missing gate') steps.splice(index, 1);
+    if (change === 'duplicate gate') steps.push({ ...steps[index]! });
+    if (change === 'executed gate') steps[index]!.conclusion = 'success';
+    assert.equal((await proof(data)).reuse, false, change);
+  }
 });
 
 test('only fully proven harmless metadata may precede full reuse', async () => {
