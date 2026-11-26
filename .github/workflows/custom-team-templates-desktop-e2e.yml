@@ -44,6 +44,7 @@ jobs:
           sudo apt-get install -y xvfb fonts-noto-cjk
       - name: Install frozen dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      # Installing workspace packages does not produce the Host's dist exports.
       - name: Build isolated Host before Electron startup
         run: pnpm --filter @agent-teams/legacy-agent-host build
       - name: Ensure Electron is installed

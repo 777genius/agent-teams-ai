@@ -16,14 +16,6 @@ import type { JsonValue } from '@agent-teams/legacy-agent-host/contracts';
 
 type Connection = BackendConnectionSnapshot['bindings'][number];
 type OwnerOptions = Parameters<typeof createFilesystemTeamOwner>[0];
-type Owner = ReturnType<typeof createFilesystemTeamOwner>;
-type CapturedTeam = {
-  owner: Owner;
-  human: ReturnType<Owner['connect']>;
-  binding: OwnerOptions['binding'];
-  connection: Connection;
-  key: string;
-};
 
 /** Real filesystem Team owners and Main projections, with only the private transport in process. */
 export function capturedHostTeamReadsFixture() {
@@ -84,8 +76,8 @@ export function capturedHostTeamReadsFixture() {
     projectContext?: Connection['projectContext'];
     savedSettings?: OwnerOptions['savedSettings'];
     members?: OwnerOptions['members'];
-  } = {}): CapturedTeam {
-    const name = options.name ?? `test-team-${teams.size + 1}`;
+  } = {}) {
+    const name: string = options.name ?? `test-team-${teams.size + 1}`;
     const binding = { backendId: 'TEST-backend', teamId: 'TEST-id-' + name, teamName: name };
     const owner = createFilesystemTeamOwner({ root, binding,
       members: options.members ?? [

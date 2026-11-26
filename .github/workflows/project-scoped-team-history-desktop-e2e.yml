@@ -104,7 +104,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     env:
-      AGENT_TEAMS_INSTALL_PROFILE: node-ci
+      AGENT_TEAMS_INSTALL_PROFILE: desktop
     steps:
       - name: Enable Windows long paths
         if: runner.os == 'Windows'
@@ -126,6 +126,7 @@ jobs:
           sudo apt-get install -y xvfb
       - name: Install frozen dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      # Workspace exports and native modules must match the actual Electron process.
       - name: Build isolated Host before Electron startup
         run: pnpm --filter @agent-teams/legacy-agent-host build
       - name: Verify Electron binary
