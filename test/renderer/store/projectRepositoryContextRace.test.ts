@@ -1,15 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { create } from 'zustand';
 
-import { createPaneSlice } from '../../../src/renderer/store/slices/paneSlice';
 import { createProjectSlice } from '../../../src/renderer/store/slices/projectSlice';
 import { createRepositorySlice } from '../../../src/renderer/store/slices/repositorySlice';
-import { createTabSlice } from '../../../src/renderer/store/slices/tabSlice';
-import { createTeamSlice } from '../../../src/renderer/store/slices/teamSlice';
 import {
   invalidateContextScopedRequestEpoch,
   resetContextScopedRequestEpochForTests,
 } from '../../../src/renderer/store/utils/contextScopedRequestEpoch';
+
+import { createTestStore } from './storeTestUtils';
 
 import type { AppState } from '../../../src/renderer/store/types';
 import type { Project, RepositoryGroup } from '../../../src/renderer/types/data';
@@ -243,23 +242,17 @@ function createTeamNavigationStore() {
       ownerResourceRef: 'TEST-original-owner',
     })
   );
-  return create<AppState>()(
-    (set, get, store) =>
-      ({
-        ...createTeamSlice(set, get, store),
-        ...createProjectSlice(set, get, store),
-        ...createRepositorySlice(set, get, store),
-        ...createPaneSlice(set, get, store),
-        ...createTabSlice(set, get, store),
-        activeContextId: 'local',
-        isContextSwitching: false,
-        teams,
-        teamByName: Object.fromEntries(teams.map((team) => [team.teamName, team])),
-        // These two external data consumers are not navigation or catalog authority.
-        fetchSessionsInitial: vi.fn(async () => undefined),
-        selectTeam: vi.fn(async () => undefined),
-      }) as AppState
-  );
+  const store = createTestStore();
+  store.setState({
+    activeContextId: 'local',
+    isContextSwitching: false,
+    teams,
+    teamByName: Object.fromEntries(teams.map((team) => [team.teamName, team])),
+    // These two external data consumers are not navigation or catalog authority.
+    fetchSessionsInitial: vi.fn(async () => undefined),
+    selectTeam: vi.fn(async () => undefined),
+  });
+  return store;
 }
 
 describe('explicit Team project navigation', () => {

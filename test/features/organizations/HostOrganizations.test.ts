@@ -94,7 +94,9 @@ it.each([new Error('TEST original failure'), 'TEST rejected value', undefined])(
     const f = fixture();
     const directory = { listTeams: vi.fn().mockRejectedValue(reason) };
     const messages = { listRecentMessages: vi.fn(async () => []) };
-    const source = new HostRoutedOrganizationSource(await f.capture(), directory, messages);
+    const host = await f.capture();
+    if (!host) throw new Error('TEST Host read scope was not captured');
+    const source = new HostRoutedOrganizationSource(host, directory, messages);
     await expect(source.listTeams({ includeDeletedTeams: false })).rejects.toBe(reason);
     let failure: unknown;
     try { source.assertCurrent(); } catch (error) { failure = error; }
