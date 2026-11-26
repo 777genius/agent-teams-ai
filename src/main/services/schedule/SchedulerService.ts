@@ -786,10 +786,12 @@ export class SchedulerService {
   // ===========================================================================
 
   private async resetConsecutiveFailures(schedule: Schedule): Promise<void> {
-    if (schedule.consecutiveFailures === 0) return;
+    // Reload fresh: a pause, edit or delete made while the run executed must survive.
+    const fresh = await this.repository.getSchedule(schedule.id);
+    if (!fresh || fresh.consecutiveFailures === 0) return;
 
     const updated: Schedule = {
-      ...schedule,
+      ...fresh,
       consecutiveFailures: 0,
       updatedAt: new Date().toISOString(),
     };
@@ -797,13 +799,16 @@ export class SchedulerService {
   }
 
   private async incrementConsecutiveFailures(schedule: Schedule): Promise<void> {
-    const newCount = schedule.consecutiveFailures + 1;
-    const shouldAutoPause = newCount >= schedule.maxConsecutiveFailures;
+    // Reload fresh: a pause, edit or delete made while the run executed must survive.
+    const fresh = await this.repository.getSchedule(schedule.id);
+    if (!fresh) return;
+    const newCount = fresh.consecutiveFailures + 1;
+    const shouldAutoPause = newCount >= fresh.maxConsecutiveFailures;
 
     const updated: Schedule = {
-      ...schedule,
+      ...fresh,
       consecutiveFailures: newCount,
-      status: shouldAutoPause ? 'paused' : schedule.status,
+      status: shouldAutoPause ? 'paused' : fresh.status,
       updatedAt: new Date().toISOString(),
     };
 

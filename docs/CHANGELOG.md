@@ -20,6 +20,7 @@ The format is based on Keep a Changelog and this project follows Semantic Versio
 
 ### Fixed
 
+- A schedule run that ends keeps a pause, edit or delete made while it ran. Before, a failed run (or a successful one after earlier failures) saved the schedule as it was when the run started, which un-paused it and reverted the edit, and a failed run of a deleted schedule saved it again.
 - A cross-team message to a project whose first launch failed is refused with `PROJECT_LAUNCH_INCOMPLETE` instead of `PROJECT_LAUNCH_PENDING`, which asked to wait for a launch that no longer runs. A copy whose launch is still in flight (from its reservation until it was confirmed) or whose team runs is still reported as pending. A cancelled run may still retain runtime ownership while cleanup is incomplete; stop and cleanup must finish before another launch. OpenCode runtime delivery can only observe the launch tracker, not a separately running team.
 - Windows: direct-process teammates now spawn non-detached with the app's hidden console, reducing terminal-window flashes during Bash, git, and PowerShell tool calls. Native GUI validation and process-tree cleanup of tool subprocesses after app termination remain to be verified.
 - Windows: ccusage/tokscale token-usage importer child processes now request `windowsHide: true`; physical GUI verification of zero flashes remains pending.
