@@ -3,11 +3,14 @@ import { readBackendProcesses } from '../contracts/processes';
 import { isHostTeamRunId } from '../contracts/teamRunSelection';
 
 import { createHostDefinitionEdits } from './createHostDefinitionEdits';
+import { createHostLaunchDiagnostics } from './createHostLaunchDiagnostics';
 import { createHostLeadApi } from './createHostLeadApi';
 import { createHostLogStatsApi } from './createHostLogStatsApi';
 import { createHostMemberActions } from './createHostMemberActions';
+import { createHostMemberActivityMeta } from './createHostMemberActivityMeta';
 import { createHostMemberSpawnStatuses } from './createHostMemberSpawnStatuses';
 import { createHostMessageAttachmentRead } from './createHostMessageAttachmentRead';
+import { createHostMessageDeliveryStatus } from './createHostMessageDeliveryStatus';
 import { createHostProcessControls } from './createHostProcessControls';
 import { createHostProductLifecycleApi } from './createHostProductLifecycleApi';
 import { readHostProjectContext } from './createHostProjectContextApi';
@@ -31,6 +34,7 @@ import {
 import { projectHostMemberAttachmentCapabilities } from './projectHostMemberAttachmentCapabilities';
 import { projectHostSavedTeamRequest } from './projectHostSavedTeamRequest';
 import { projectHostTeamSummaries } from './projectHostTeamSummaries';
+import { projectHostTeamView as view } from './projectHostTeamView';
 import { readHostMessagesPage } from './readHostMessagesPage';
 import { HostTeamReadUnavailableError, readHostPagedSnapshot } from './readHostPagedSnapshot';
 import {
@@ -52,7 +56,7 @@ import type { AgentBackendApi } from '../contracts/operations';
 import type { BackendTeamSnapshot } from '../contracts/teamSnapshot';
 import type { HostActivityReadOptions } from './readHostActivityLogs';
 import type { TeamsAPI } from '@shared/types/api';
-import type { TeamReadUnavailable, TeamTaskWithKanban, TeamViewSnapshot } from '@shared/types/team';
+import type { TeamReadUnavailable, TeamTaskWithKanban } from '@shared/types/team';
 
 export { hostTeamSelectionKey, isHostTeamSelectionKey } from './hostTeamRouting';
 
@@ -118,66 +122,6 @@ function remapSnapshot(
     messages: remapHostCrossTeamMessages(snapshot.messages, snapshot.teamName, selection, bindings),
   };
 }
-/**
- * Host member id by name, from the connection's own captured member bindings. This lets the composer
- * identify a member (native next-prompt suggestions need it) without waiting for, or depending on, the
- * separate roster read. A name that is absent or ambiguous yields no id; the roster read stays authoritative.
- */
-function hostMemberIdsByName(connection: Connection): Map<string, string> {
-  const byName = new Map<string, string | null>();
-  for (const { memberId, label } of connection.members) {
-    const key = label.trim().toLowerCase();
-    byName.set(key, byName.has(key) ? null : memberId);
-  }
-  return new Map([...byName].filter((entry): entry is [string, string] => entry[1] !== null));
-}
-
-function view(
-  snapshot: BackendTeamSnapshot,
-  connection: Connection,
-  alive?: boolean
-): TeamViewSnapshot {
-  const hostMemberIds = hostMemberIdsByName(connection);
-  return {
-    teamName: snapshot.teamName,
-    config: {
-      name: connection.label,
-      ...(snapshot.lifecycle?.deletedAt ? { deletedAt: snapshot.lifecycle.deletedAt } : {}),
-      members: snapshot.members.map((member) => ({
-        ...member,
-        agentType: member.role === 'lead' ? 'team-lead' : 'general-purpose',
-      })),
-    },
-    tasks: snapshot.tasks,
-    members: snapshot.members.map((member) => ({
-      ...member,
-      runtimeOwner: 'captured-host',
-      ...(hostMemberIds.has(member.name.toLowerCase())
-        ? { hostMemberId: hostMemberIds.get(member.name.toLowerCase()) }
-        : {}),
-      agentType: member.role === 'lead' ? 'team-lead' : 'general-purpose',
-      taskCount: snapshot.tasks.filter(
-        (task) => task.owner === member.name && task.status !== 'deleted'
-      ).length,
-      currentTaskId:
-        snapshot.tasks.find((task) => task.owner === member.name && task.status === 'in_progress')
-          ?.id ?? null,
-    })),
-    kanbanState: snapshot.kanbanState,
-    // Team snapshots contain product records only; no native/process/session state is inferred.
-    processes: snapshot.processes ?? [],
-    ...(alive === undefined ? {} : { isAlive: alive }),
-    warnings: [
-      ...(alive === undefined
-        ? ['Host product snapshot: runtime processes, sessions and readiness are not included.']
-        : []),
-      ...(snapshot.lifecycle?.cleanupPending
-        ? ['Team cleanup is pending. Runtime resources may still be held.']
-        : []),
-    ],
-  };
-}
-
 /** Decorates ordinary Team reads while keeping legacy and captured Host authority disjoint. */
 export function createHostTeamsApi(
   legacy: TeamsAPI,
@@ -186,7 +130,12 @@ export function createHostTeamsApi(
   readOrder = new TeamProductReadOrder()
 ): TeamsAPI {
   const lifecycle = createHostTeamLifecycle(backend);
-  const projectRuntime = createHostProjectRuntimeApi({ backend, captureScope, readOrder, lifecycle });
+  const projectRuntime = createHostProjectRuntimeApi({
+    backend,
+    captureScope,
+    readOrder,
+    lifecycle,
+  });
   const approvals = createHostToolApprovals({ backend, captureScope, readOrder });
   const provisioning = createHostTeamProvisioning(backend, captureScope, readOrder);
   const getMemberSpawnStatuses = createHostMemberSpawnStatuses(backend, captureScope, readOrder);
@@ -196,7 +145,10 @@ export function createHostTeamsApi(
     selectionKey: hostTeamSelectionKey,
     readOrder,
   });
-  async function connections(check: CurrentScope, unavailable?: TeamReadUnavailable[]): Promise<Connection[]> {
+  async function connections(
+    check: CurrentScope,
+    unavailable?: TeamReadUnavailable[]
+  ): Promise<Connection[]> {
     const state = await backend.getConnections();
     current(check);
     if (state.state !== 'ready' && state.state !== 'unconfigured')
@@ -241,22 +193,34 @@ export function createHostTeamsApi(
     };
   }
   async function aggregateSnapshot(
-    binding: Connection, check: CurrentScope, observed: (() => void)[], unavailable: TeamReadUnavailable[]
+    binding: Connection,
+    check: CurrentScope,
+    observed: (() => void)[],
+    unavailable: TeamReadUnavailable[]
   ) {
-    try { return await snapshot(binding, check); }
-    catch (error) {
+    try {
+      return await snapshot(binding, check);
+    } catch (error) {
       if (!(error instanceof HostTeamReadUnavailableError)) throw error;
       error.assertCurrent();
       observed.push(error.assertCurrent);
-      unavailable.push({ kind: 'team', teamName: hostTeamSelectionKey(binding.handle.handleId),
-        displayName: binding.label, code: error.code, outcome: error.outcome });
+      unavailable.push({
+        kind: 'team',
+        teamName: hostTeamSelectionKey(binding.handle.handleId),
+        displayName: binding.label,
+        code: error.code,
+        outcome: error.outcome,
+      });
       return null;
     }
   }
   async function list() {
     const check = captureScope();
     const unavailable: TeamReadUnavailable[] = [];
-    const [oldTeams, bindings] = await Promise.all([legacy.list(), connections(check, unavailable)]);
+    const [oldTeams, bindings] = await Promise.all([
+      legacy.list(),
+      connections(check, unavailable),
+    ]);
     if (!Array.isArray(oldTeams)) throw new Error('Unexpected legacy Team aggregate');
     const observed: (() => void)[] = [];
     const hostTeams = [];
@@ -290,7 +254,9 @@ export function createHostTeamsApi(
       hostTeams.push({
         teamName: data.teamName,
         ...(projectContextMode === undefined ? {} : { projectContextMode }),
-        ...(binding.ownerResourceRef === undefined ? {} : { ownerResourceRef: binding.ownerResourceRef }),
+        ...(binding.ownerResourceRef === undefined
+          ? {}
+          : { ownerResourceRef: binding.ownerResourceRef }),
         ...(data.lifecycle?.deletedAt ? { deletedAt: data.lifecycle.deletedAt } : {}),
         displayName,
         description,
@@ -314,13 +280,19 @@ export function createHostTeamsApi(
     current(check);
     for (const assertCurrent of observed) assertCurrent();
     // Reserved keys cannot be treated as real legacy filesystem team names.
-    const items = [...oldTeams.filter((team) => !isHostTeamSelectionKey(team.teamName)), ...projectHostTeamSummaries(hostTeams, bindings)];
+    const items = [
+      ...oldTeams.filter((team) => !isHostTeamSelectionKey(team.teamName)),
+      ...projectHostTeamSummaries(hostTeams, bindings),
+    ];
     return unavailable.length ? { items, unavailable } : items;
   }
   async function getAllTasks() {
     const check = captureScope();
     const unavailable: TeamReadUnavailable[] = [];
-    const [oldTasks, bindings] = await Promise.all([legacy.getAllTasks(), connections(check, unavailable)]);
+    const [oldTasks, bindings] = await Promise.all([
+      legacy.getAllTasks(),
+      connections(check, unavailable),
+    ]);
     if (!Array.isArray(oldTasks)) throw new Error('Unexpected legacy Task aggregate');
     const observed: (() => void)[] = [];
     const hostTasks = [];
@@ -348,7 +320,9 @@ export function createHostTeamsApi(
           ...task,
           teamName: data.teamName,
           teamDisplayName: displayName,
-          ...(binding.ownerResourceRef === undefined ? {} : { ownerResourceRef: binding.ownerResourceRef }),
+          ...(binding.ownerResourceRef === undefined
+            ? {}
+            : { ownerResourceRef: binding.ownerResourceRef }),
           ...(projectPath === undefined ? {} : { projectPath }),
         }))
       );
@@ -471,8 +445,12 @@ export function createHostTeamsApi(
             ...(saved.displayName === undefined ? {} : { name: saved.displayName }),
             ...(saved.description === undefined ? {} : { description: saved.description }),
             ...(saved.color === undefined ? {} : { color: saved.color }),
-            ...(configuration.savedSettings?.language === undefined ? {} : { language: configuration.savedSettings.language }),
-            ...(saved.projectContextMode === undefined ? {} : { projectContextMode: saved.projectContextMode }),
+            ...(configuration.savedSettings?.language === undefined
+              ? {}
+              : { language: configuration.savedSettings.language }),
+            ...(saved.projectContextMode === undefined
+              ? {}
+              : { projectContextMode: saved.projectContextMode }),
           };
         }
       } catch {
@@ -581,7 +559,10 @@ export function createHostTeamsApi(
   const taskActivity = createHostTaskActivityApi({
     ...activityReadOptions,
     readTask: (key, taskId, check, assertOriginal) =>
-      createHostTaskReads(backend, (key) => selected(key, check, assertOriginal)).getTask(key, taskId),
+      createHostTaskReads(backend, (key) => selected(key, check, assertOriginal)).getTask(
+        key,
+        taskId
+      ),
   });
   const killProcess = createHostProcessControls({
     backend,
@@ -602,6 +583,10 @@ export function createHostTeamsApi(
     invalidateReads: (handleId) => readOrder.invalidateReads(handleId),
   });
   const supported = {
+    setToolActivityTracking: approvals.setToolActivityTracking,
+    getHostMessageDeliveryStatus: createHostMessageDeliveryStatus(backend, captureScope, readOrder),
+    getLaunchFailureDiagnostics: createHostLaunchDiagnostics(backend, captureScope, readOrder),
+    getMemberActivityMeta: createHostMemberActivityMeta(backend, captureScope, readOrder),
     getTeamAgentRuntime: projectRuntime.getTeamAgentRuntime,
     getMemberSpawnStatuses,
     ...memberActions,
@@ -621,7 +606,8 @@ export function createHostTeamsApi(
     ...savedMembers,
     ...definitions,
     async getProjectContextView(key: string, projectPath?: string | null) {
-      const check = captureScope(), connection = structuredClone(await resolveConnection(key, check));
+      const check = captureScope(),
+        connection = structuredClone(await resolveConnection(key, check));
       return (await readHostProjectContext(backend, connection, check, projectPath)).view;
     },
     ...logStats,
@@ -644,11 +630,23 @@ export function createHostTeamsApi(
     { ...legacy },
     {
       get(_target, property) {
-        if (property === 'definitionEdits') return Object.fromEntries(
-          ['updateConfig', 'addMember', 'replaceMembers', 'removeMember', 'restoreMember', 'updateMemberRole'].map(method => [method,
-            (...args: unknown[]) => isHostTeamSelectionKey(args[0])
-              ? Reflect.apply(Reflect.get(supported, method), supported, args)
-              : Reflect.apply(Reflect.get(legacy, method), legacy, args)]));
+        if (property === 'definitionEdits')
+          return Object.fromEntries(
+            [
+              'updateConfig',
+              'addMember',
+              'replaceMembers',
+              'removeMember',
+              'restoreMember',
+              'updateMemberRole',
+            ].map((method) => [
+              method,
+              (...args: unknown[]) =>
+                isHostTeamSelectionKey(args[0])
+                  ? Reflect.apply(Reflect.get(supported, method), supported, args)
+                  : Reflect.apply(Reflect.get(legacy, method), legacy, args),
+            ])
+          );
         if (property === 'createTeam' || property === 'createConfig') return creation[property];
         if (property === 'updateToolApprovalSettings')
           return (...args: Parameters<TeamsAPI['updateToolApprovalSettings']>) =>
@@ -712,6 +710,7 @@ export function createHostTeamsApi(
         if (property === 'onTeamChange')
           return (callback: Parameters<TeamsAPI['onTeamChange']>[0]) => {
             const stopHost = changes.subscribe(callback);
+            const stopActivity = approvals.subscribeActivity(callback);
             let stopLegacy: (() => void) | undefined;
             try {
               stopLegacy = legacy.onTeamChange?.call(legacy, (event, change) => {
@@ -719,24 +718,29 @@ export function createHostTeamsApi(
               });
             } catch (error) {
               stopHost();
+              stopActivity();
               throw error;
             }
             return () => {
               stopHost();
+              stopActivity();
               stopLegacy?.();
             };
           };
         if (property === 'list') return list;
         if (property === 'getAllTasks') return getAllTasks;
-        if (property === 'aliveList') return async () => {
-          const check = captureScope();
-          const [old, host] = await Promise.all([legacy.aliveList(), projectRuntime.aliveList()]);
-          current(check);
-          return [...old.filter(name => !isHostTeamSelectionKey(name)), ...host];
-        };
+        if (property === 'aliveList')
+          return async () => {
+            const check = captureScope();
+            const [old, host] = await Promise.all([legacy.aliveList(), projectRuntime.aliveList()]);
+            current(check);
+            return [...old.filter((name) => !isHostTeamSelectionKey(name)), ...host];
+          };
         const original = Reflect.get(legacy, property) as unknown;
         if (typeof original !== 'function' && !Object.hasOwn(supported, property)) return original;
         return (...args: unknown[]) => {
+          if (property === 'getLaunchFailureDiagnostics' && isHostTeamRunId(args[1]))
+            return supported.getLaunchFailureDiagnostics(args[0] as string, args[1]);
           if (isHostTeamRunId(args[0])) {
             if (property === 'getProvisioningStatus')
               return provisioning.getProvisioningStatus(args[0]);

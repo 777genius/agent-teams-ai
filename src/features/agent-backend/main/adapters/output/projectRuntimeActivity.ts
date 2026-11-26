@@ -264,9 +264,17 @@ export function activityEvent(value: unknown): BackendActivityEvent {
   const data = activityData(source.data);
   if (data.kind === 'process-output' && source.inputId !== undefined)
     throw new Error('Attributed process output');
+  if (
+    source.observedAt !== undefined &&
+    (typeof source.observedAt !== 'string' ||
+      !Number.isFinite(Date.parse(source.observedAt)) ||
+      new Date(source.observedAt).toISOString() !== source.observedAt)
+  )
+    throw new Error('Invalid activity observation time');
   return {
     sequence: finite(source.sequence, true),
     eventId: activityText(source.eventId),
+    ...(source.observedAt === undefined ? {} : { observedAt: source.observedAt as string }),
     ...(source.inputId === undefined ? {} : { inputId: activityText(source.inputId) }),
     data,
   };

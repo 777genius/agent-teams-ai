@@ -3,6 +3,7 @@ import { parseHostTeamSelectionKey } from '../contracts/teamSelection';
 import { readBackendToolApprovalSettings } from '../contracts/toolApprovals';
 
 import { HostTeamOperationError } from './createHostTeamMutations';
+import { createHostToolActivity } from './createHostToolActivity';
 import { hostTeamSelectionKey } from './hostTeamRouting';
 import {
   captureHostToolReply,
@@ -71,6 +72,15 @@ export function createHostToolApprovals(options: {
   let polling = false;
   let epoch = 0;
   let priorScope: Current | undefined;
+  const tools = createHostToolActivity({ ...options, wake });
+  const hasListeners = () => listeners.size > 0 || tools.hasWork();
+  function wake(): void {
+    if (!hasListeners()) {
+      epoch++;
+      if (timer) clearTimeout(timer);
+      timer = undefined;
+    } else if (!timer && !polling) void poll();
+  }
 
   function emit(event: ToolApprovalEvent): void {
     for (const [token, listener] of [...listeners]) {
@@ -112,7 +122,10 @@ export function createHostToolApprovals(options: {
     if (!result.ok) throw new HostTeamOperationError(result.code, result.outcome);
     return result.value;
   }
-  async function activity(resource: Resource, check: Current): Promise<BackendActivitySnapshot> {
+  async function activity(
+    resource: Resource,
+    check: Current
+  ): Promise<{ view: BackendActivitySnapshot; resynced: boolean }> {
     const payload = {
       memberId: resource.memberId,
       expectedGeneration: resource.generation,
@@ -136,7 +149,7 @@ export function createHostToolApprovals(options: {
           event.data.kind === 'interaction' ? [[event.data.interactionRef, event] as const] : []
         )
       );
-      return value;
+      return { view: value, resynced: true };
     };
     if (!resource.cursor) return snapshot();
     const value = await read(
@@ -161,15 +174,18 @@ export function createHostToolApprovals(options: {
     for (const key of resource.interactions.keys())
       if (!retained.has(key)) resource.interactions.delete(key);
     return {
-      ...value,
-      state: resource.state,
-      latest: {
-        text: [],
-        tools: [],
-        usage: [],
-        compaction: null,
-        interactions: [...resource.interactions.values()],
+      view: {
+        ...value,
+        state: resource.state,
+        latest: {
+          text: [],
+          tools: [],
+          usage: [],
+          compaction: null,
+          interactions: [...resource.interactions.values()],
+        },
       },
+      resynced: false,
     };
   }
   function accept(resource: Resource, facts: HostPendingInteraction[], check: Current): void {
@@ -216,26 +232,34 @@ export function createHostToolApprovals(options: {
         forget(entry);
   }
   async function poll(): Promise<void> {
-    if (polling || !listeners.size) return;
+    if (polling) return;
+    if (!hasListeners()) {
+      tools.clear();
+      return;
+    }
     polling = true;
     const capturedEpoch = epoch;
     const check = options.captureScope();
-    const active = () => check() && capturedEpoch === epoch && listeners.size > 0;
+    const active = () => check() && capturedEpoch === epoch && hasListeners();
     try {
       if (priorScope && !priorScope()) {
         for (const entry of [...pending.values()]) forget(entry);
         resources.clear();
+        tools.clear();
       }
       priorScope = check;
       const connections = await options.backend.getConnections();
       if (!active()) return;
       if (connections.state !== 'ready') {
         for (const entry of pending.values()) hide(entry);
+        tools.clear();
         return;
       }
+      const toolCycle = tools.begin(connections, active);
       const retained = new Set<string>();
       for (const connection of connections.bindings) {
         if (!active()) return;
+        if (!listeners.size && !toolCycle.tracks(connection.handle.handleId)) continue;
         try {
           const launch = await read(
             {
@@ -277,16 +301,89 @@ export function createHostToolApprovals(options: {
               resources.set(key, resource);
             }
             try {
-              const snapshot = await activity(resource, active);
+              const toolResource = {
+                ...resource,
+                rosterRevision: launch.rosterRevision,
+                connection: structuredClone(connection),
+                label:
+                  connection.members.find((row) => row.memberId === member.memberId)?.label ??
+                  member.memberId,
+                key: JSON.stringify([key, launch.rosterRevision]),
+              };
+              if (
+                toolCycle.tracks(connection.handle.handleId) &&
+                !tools.hasResource(toolResource.key)
+              )
+                resource.cursor = undefined;
+              const observed = await activity(resource, active);
               if (!active()) return;
-              accept(resource, pendingHostToolInteractions(snapshot, Date.now()), check);
+              if (listeners.size)
+                accept(resource, pendingHostToolInteractions(observed.view, Date.now()), check);
+              if (toolCycle.tracks(connection.handle.handleId)) {
+                try {
+                  const runtime = await read(
+                    {
+                      handle: connection.handle,
+                      commandId: crypto.randomUUID(),
+                      operation: 'runtime.read',
+                      payload: { memberId: member.memberId, expectedGeneration: member.generation },
+                    },
+                    active
+                  );
+                  if (
+                    !runtime ||
+                    !('attached' in runtime) ||
+                    runtime.memberId !== member.memberId ||
+                    runtime.generation !== member.generation
+                  )
+                    throw new Error('Changed tool activity generation');
+                  toolCycle.stage(toolResource, observed.view, runtime, observed.resynced);
+                } catch {
+                  if (!active()) return;
+                  // Graph evidence is optional; the independently observed approval remains pending.
+                }
+              }
             } catch {
               if (!active()) return;
               for (const entry of pending.values()) if (entry.resource.key === key) hide(entry);
             }
           }
+          if (toolCycle.tracks(connection.handle.handleId)) {
+            try {
+              const latest = await read(
+                {
+                  handle: connection.handle,
+                  commandId: crypto.randomUUID(),
+                  operation: 'team.launch.read',
+                  payload: {},
+                },
+                active
+              );
+              const identity = (value: typeof launch) =>
+                JSON.stringify([
+                  value.launchId,
+                  value.rosterRevision,
+                  value.members.map(({ memberId, generation, attemptId }) => [
+                    memberId,
+                    generation,
+                    attemptId,
+                  ]),
+                ]);
+              if (
+                !latest ||
+                !('launchId' in latest) ||
+                !('members' in latest) ||
+                identity(latest) !== identity(launch)
+              )
+                throw new Error('Changed tool activity launch');
+            } catch {
+              if (!active()) return;
+              toolCycle.reject(connection.handle.handleId);
+            }
+          }
         } catch {
           if (!active()) return;
+          toolCycle.reject(connection.handle.handleId);
           // Failed reads grant nothing and never resolve the original user decision.
           for (const [key, resource] of resources)
             if (resource.connection.handle.handleId === connection.handle.handleId) {
@@ -296,6 +393,16 @@ export function createHostToolApprovals(options: {
         }
       }
       if (!active()) return;
+      if (toolCycle.hasWork) {
+        try {
+          const finalConnections = await options.backend.getConnections();
+          if (!active()) return;
+          toolCycle.commit(finalConnections);
+        } catch {
+          tools.clear();
+          if (!active()) return;
+        }
+      }
       for (const [key] of resources)
         if (!retained.has(key)) {
           for (const entry of [...pending.values()]) if (entry.resource.key === key) forget(entry);
@@ -303,9 +410,11 @@ export function createHostToolApprovals(options: {
         }
     } catch {
       if (active()) for (const entry of pending.values()) hide(entry);
+      tools.clear();
     } finally {
       polling = false;
-      if (listeners.size)
+      if (!check()) tools.clear();
+      if (hasListeners())
         timer = setTimeout(() => {
           timer = undefined;
           void poll();
@@ -321,7 +430,7 @@ export function createHostToolApprovals(options: {
     if (!timer && !polling) void poll();
     return () => {
       listeners.delete(token);
-      if (listeners.size) return;
+      if (hasListeners()) return;
       epoch++;
       if (timer) clearTimeout(timer);
       timer = undefined;
@@ -535,6 +644,8 @@ export function createHostToolApprovals(options: {
   }
   return {
     subscribe,
+    subscribeActivity: tools.subscribe,
+    setToolActivityTracking: tools.setTracking,
     respond,
     updateSettings,
     readPreview,

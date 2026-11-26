@@ -264,3 +264,67 @@ observation. Host PID 10836 was absent. No native Host leak is inferred from the
 build-service PID, no further signal is authorized by that old group, and no
 cleanup deadline or success criterion is changed. The next source cohort must
 complete both the UI flow and its original empty-process census.
+
+## Post-publication frontend route audit
+
+The consolidated corrections were published as
+`565824e1e6beb52d18a60115174d316d20308457`, tree
+`f788a73b3ba8615084ceb9f8c70f54b3cb3fb935`. The published tree exactly matches the
+locally reviewed tree. #982 remains open, unmerged and without auto-merge. Its
+32 natural workflows were queued at the latest observation; the canonical plan
+had no allocated runner. No manual rerun or change to a gate was made.
+
+Comparing the actual frontend callers with the Host adapter found four further
+missing routes. Existing draft deletion, legacy secondary-lane actions and raw
+Claude logs were checked against their real UI gates rather than being counted
+as missing Host behavior merely because a legacy method exists.
+
+| User-visible route | Completed implementation and boundary |
+| --- | --- |
+| Copy launch diagnostics | Read the exact Host launch and Runtime observations, preserving launch/roster/member generation/attempt, project family, scope and mutation fences. The bundle explicitly identifies Host evidence, marks partial observations and redacts private values; it does not invent legacy artifact paths or classifications. The existing legacy copy format is preserved. |
+| Member activity metadata after message refresh | Read the latest 200 logical messages through the original signed Host pages, retaining the 100-record page cap, fragment assembly and one feed revision. Reuse the existing pure legacy projection and authored timestamps. Message counts and termination signals are message facts, not native readiness authority. |
+| Group delivery confirmation | Project a minimal original delivery identity from authorized completed command lookup. Read only that member/generation/input and recheck the original command and owner. Native acceptance or its terminal observation confirms delivery, not successful task execution. Pending or unknown delivery remains explicit under the original UI observation budget; there is no resend, legacy ledger fabrication or cross-principal adoption. Host-local commands without an actual delivery ID remain without native delivery. |
+| Live tools on the team graph | Reuse the existing approval activity observer and its single timer. Project recorded Host observation times and actual tool/result events into the ordinary store and graph. Check the captured physical team, launch, roster, member generation, attempt and exact active input; reset uncertain activity on gaps, context changes and unavailable observations. Undated retained events do not acquire invented times. |
+
+Independent source review found no remaining blocking findings in these four
+routes. Completed local proofs include 32 launch-diagnostics API/UI cases,
+27 member-activity/transport/legacy cases, and 54 combined original-receipt,
+Host delivery API and group-notice cases. The unchanged Host mutation and task
+submission recovery suites each passed another 22 cases. The new tool activity
+suite passes all 14 cases through the real API, store and graph; the existing
+approval UI suite passes ten cases. The final approval-read suite passes six
+cases, including three injected graph-observation failures that preserve an
+independently observed pending approval without relaxing its response gate.
+Each regression verifies that its injected failure was actually reached. The
+unchanged Runtime activity facade suite passes all 12 cases, including the
+NDJSON-to-production-facade route after canonical Team input.
+
+The original tests, timeouts and native checks remain intact. Shared-memory
+pressure killed local workers before a verdict and briefly disconnected the
+executor. The worktree survived restoration. The final six approval-read and
+12 Runtime-facade cases then passed together with the same assertions and
+timeouts, using the pinned Node executable and a bounded V8 heap. Neither a
+killed worker nor previous-head CI is counted as final acceptance. Current-source
+canonical validation, native Desktop and Host emulated acceptance remain
+required before this integration is declared complete. Runtime 0.0.162 and
+merging #982 into main remain outside the task.
+
+The normal `pnpm typecheck` was attempted once more after the environment
+restored its available memory. Its Host and task-ledger prebuilds passed, but
+the root compiler was killed with exit 137 before any TypeScript diagnostic;
+this is not a successful typecheck. No scope or compiler checks were removed.
+Formatting and the unchanged 800-line guard required extracting the existing
+Host team-view projection into its own module. Both function bodies were
+compared exactly with the original; only the exported name and import changed.
+All three adjusted frozen legacy caps are lower than their values in the parent
+commit.
+
+The existing `test/features/agent-backend/tsconfig.json` project found three
+type errors at the message-receipt union boundary. The delivery reader now
+explicitly rejects the group-product discriminant before reading a message
+receipt, without a cast or relaxed identity check. Independent review passed;
+the unchanged feature TypeScript project then passed with zero diagnostics.
+The final Host delivery API suite passed all 28 cases, including two new
+wrong-receipt cases, after the earlier combined 54-case delivery run. Final
+fast lint, formatting, whitespace, source-size and provisioning-architecture
+checks passed. The focused typecheck is not a substitute for canonical CI.

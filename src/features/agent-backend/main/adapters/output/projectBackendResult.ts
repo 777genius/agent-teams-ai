@@ -28,6 +28,7 @@ import { projectLaunchSnapshot } from './projectLaunchSnapshot';
 import { projectLeadObservation } from './projectLeadObservation';
 import { isMemberActionRequest, projectMemberActionResult } from './projectMemberActionResult';
 import { projectMemberCheckpoints } from './projectMemberCheckpoints';
+import { projectMessageDelivery } from './projectMessageDelivery';
 import { projectNativeSessionCommands } from './projectNativeSessionCommands';
 import { projectProcessResult } from './projectProcessResult';
 import { projectProjectContext, projectProjectLaunchSource } from './projectProjectContext';
@@ -199,6 +200,8 @@ function receipt(value: unknown, request: BackendOperationRequest): BackendComma
       result.comment = comment(applied.comment);
     } else result.task = task(applied);
   }
+  const messageDelivery = projectMessageDelivery(source, request);
+  if (messageDelivery !== undefined) result.messageDelivery = messageDelivery;
   return result;
 }
 function runtime(value: unknown, request: BackendOperationRequest): BackendRuntimeSnapshot {

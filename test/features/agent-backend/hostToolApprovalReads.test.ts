@@ -187,11 +187,65 @@ async function fixture() {
     calls,
     legacy,
     scope,
+    source,
+    events,
     corrupt: () => {
       corrupt = true;
     },
   };
 }
+
+it.each(['runtime', 'launch', 'connections'])(
+  'keeps the pending approval when optional graph %s observation fails',
+  async (failure) => {
+    const f = await fixture();
+    const invoke = f.source.invoke,
+      connections = f.source.getConnections;
+    let launchReads = 0,
+      finalConnections = false,
+      injectedFailures = 0;
+    f.source.invoke = async (request) => {
+      if (request.operation === 'team.launch.read') launchReads++;
+      if (
+        (failure === 'runtime' && request.operation === 'runtime.read') ||
+        (failure === 'launch' && request.operation === 'team.launch.read' && launchReads === 2)
+      ) {
+        injectedFailures++;
+        throw new Error('TEST optional graph observation unavailable');
+      }
+      const result = await invoke(request);
+      if (request.operation === 'team.launch.read' && launchReads === 2) finalConnections = true;
+      return result;
+    };
+    f.source.getConnections = async () => {
+      if (failure === 'connections' && finalConnections) {
+        injectedFailures++;
+        throw new Error('TEST graph destination read unavailable');
+      }
+      return connections();
+    };
+    const changes = vi.fn();
+    stops.push(f.api.onTeamChange(changes));
+    await f.api.setToolActivityTracking(f.key, true);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(injectedFailures).toBe(1);
+    expect(f.events).toHaveLength(1);
+    expect(f.events[0]).toMatchObject({
+      requestId: f.scope.requestId,
+      teamName: f.key,
+      toolName: 'Write',
+    });
+    expect(changes.mock.calls.some(([_event, event]) => event.type === 'tool-activity')).toBe(
+      false
+    );
+    if (failure === 'runtime') {
+      await expect(
+        f.api.respondToToolApproval(f.key, f.scope.runId, f.scope.requestId, true)
+      ).rejects.toThrow();
+      expect(f.calls.some((request) => request.operation === 'runtime.interaction')).toBe(false);
+    }
+  }
+);
 
 it('preserves all five policy preferences through the actual read-order wrapper and finite Main schema', async () => {
   const f = await fixture();

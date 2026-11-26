@@ -16,6 +16,7 @@ import type { TeamManagementCommittedChange } from '@features/team-prompt-manage
 
 export type * from './kanbanReviewFlow';
 export type * from './teamBoardTask';
+export type * from './teamLaunchDiagnostics';
 export type { MessagesPage } from './teamMessages';
 export type {
   FileLineStats,
@@ -826,9 +827,7 @@ export interface OpenCodeRuntimeDeliveryUserVisibleImpact {
   observedAt?: string;
   nextReviewAt?: string;
 }
-export type {
-  ProcessStopSelection as CapturedTeamProcessStop,
-} from '@features/agent-backend/contracts';
+export type { ProcessStopSelection as CapturedTeamProcessStop } from '@features/agent-backend/contracts';
 export interface TeamProcess {
   processRef?: string;
   observation?: 'same-live' | 'absent' | 'stale' | 'unknown' | 'metadata-stopped';
@@ -1544,35 +1543,6 @@ export interface TeamLaunchDiagnosticItem {
   label: string;
   detail?: string;
   observedAt: string;
-}
-
-export interface TeamLaunchFailureDiagnosticsFile {
-  label: string;
-  path: string;
-  content?: string;
-  issue?: string;
-}
-
-export interface TeamLaunchFailureDiagnosticsBundle {
-  teamName: string;
-  runId?: string;
-  latestPath: string;
-  artifactDirectory?: string;
-  manifestPath?: string;
-  classification?: {
-    code?: string;
-    confidence?: number;
-    evidence?: string[];
-  } | null;
-  bootstrapTransportBreadcrumb?: {
-    lastTransportStage?: string | null;
-    submitRejected?: boolean;
-    retryable?: boolean | null;
-    noStdinWarning?: boolean;
-    bootstrapSubmitted?: boolean;
-    evidence?: string[];
-  } | null;
-  files: TeamLaunchFailureDiagnosticsFile[];
 }
 
 export interface TeamRuntimeState {

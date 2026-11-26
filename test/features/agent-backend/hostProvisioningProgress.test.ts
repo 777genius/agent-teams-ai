@@ -15,6 +15,7 @@ import type {
   AgentBackendApi,
   BackendOperationRequest,
   BackendOperationResult,
+  BackendRuntimeSnapshot,
 } from '../../../src/features/agent-backend/contracts/operations';
 import type { TeamsAPI } from '../../../src/shared/types/api';
 import type { TeamProvisioningProgress } from '../../../src/shared/types/team';
@@ -48,6 +49,20 @@ function view(): BackendLaunchConfigurationView {
     members: [{ memberId: 'lead', label: 'captured-lead', role: 'lead', selected: null }],
   };
 }
+function runtime(): BackendRuntimeSnapshot {
+  return {
+    memberId: 'lead',
+    generation: 'generation-1',
+    phase: 'open-unknown',
+    custody: 'unknown',
+    attached: false,
+    sealed: false,
+    nativeReady: false,
+    diagnostic: 'Readiness observation unavailable',
+    inputs: [],
+    interactions: [],
+  };
+}
 function fixture() {
   const configuration = view();
   let context = 'original';
@@ -63,6 +78,7 @@ function fixture() {
     invoke: vi.fn<AgentBackendApi['invoke']>(async (request) => {
       if (request.operation === 'team.launch.configuration.read')
         return { ok: true, value: structuredClone(configuration) };
+      if (request.operation === 'runtime.read') return { ok: true, value: runtime() };
       if (request.operation === 'runtime.stop')
         return {
           ok: true,
@@ -83,6 +99,7 @@ function fixture() {
   };
   const legacy = {
     getProvisioningStatus: vi.fn(async () => ({ legacy: true })),
+    getLaunchFailureDiagnostics: vi.fn(async () => ({ legacy: true })),
     cancelProvisioning: vi.fn(),
     other: vi.fn(),
   } as unknown as TeamsAPI;
@@ -98,6 +115,269 @@ function fixture() {
   };
 }
 const selectedRun = hostTeamRunId('owner-A', 'run', 'revision');
+
+describe('existing Copy diagnostics API for Host launches', () => {
+  it('copies real captured launch/runtime evidence with no legacy artifacts, native effects or secrets', async () => {
+    const f = fixture();
+    Object.assign(f.configuration.launch, { status: 'failed', ready: 0 });
+    Object.assign(f.configuration.launch.members[0], {
+      status: 'failed',
+      reason: 'bootstrap-timeout',
+      usable: false,
+      nativeReady: false,
+    });
+    f.configuration.members[0].label = 'captured-lead Authorization: Bearer launch-secret';
+    Object.assign(f.configuration.members[0], { selected: { privateConfig: 'must-not-copy' } });
+    const invoke = vi.mocked(f.backend.invoke).getMockImplementation()!;
+    vi.mocked(f.backend.invoke).mockImplementation(async (request) =>
+      request.operation === 'runtime.read'
+        ? {
+            ok: true,
+            value: { ...runtime(), diagnostic: 'OPENAI_API_KEY=runtime-secret unavailable' },
+          }
+        : invoke(request)
+    );
+    const result = await f.teams.getLaunchFailureDiagnostics(
+      hostTeamSelectionKey('owner-A'),
+      selectedRun
+    );
+    expect(result).toMatchObject({ source: 'captured-host', runId: selectedRun, files: [] });
+    expect(result).not.toHaveProperty('latestPath');
+    expect(result).not.toHaveProperty('classification');
+    expect(result).not.toHaveProperty('bootstrapTransportBreadcrumb');
+    expect(result.observations).toHaveLength(2);
+    expect(JSON.parse(result.observations![0].content!)).toMatchObject({
+      launchId: 'run',
+      rosterRevision: 'revision',
+      startedAtMs: start,
+      observedAtMs: start + 5000,
+      status: 'failed',
+      members: [{ memberId: 'lead', generation: 'generation-1', reason: 'bootstrap-timeout' }],
+    });
+    expect(JSON.parse(result.observations![1].content!)).toMatchObject({
+      memberId: 'lead',
+      generation: 'generation-1',
+      phase: 'open-unknown',
+      custody: 'unknown',
+      nativeReady: false,
+    });
+    const serialized = JSON.stringify(result);
+    for (const privateValue of ['launch-secret', 'runtime-secret', 'must-not-copy'])
+      expect(serialized).not.toContain(privateValue);
+    expect(
+      vi.mocked(f.backend.invoke).mock.calls.map(([request]) => ({
+        operation: request.operation,
+        handle: request.handle,
+        payload: request.payload,
+      }))
+    ).toEqual([
+      {
+        operation: 'team.launch.configuration.read',
+        handle: { handleId: 'owner-A' },
+        payload: { launchId: 'run' },
+      },
+      {
+        operation: 'runtime.read',
+        handle: { handleId: 'owner-A' },
+        payload: { memberId: 'lead', expectedGeneration: 'generation-1' },
+      },
+      {
+        operation: 'team.launch.configuration.read',
+        handle: { handleId: 'owner-A' },
+        payload: { launchId: 'run' },
+      },
+    ]);
+    expect(f.legacy.getLaunchFailureDiagnostics).not.toHaveBeenCalled();
+    expect(await f.teams.getLaunchFailureDiagnostics('legacy-team', 'legacy-run')).toEqual({
+      legacy: true,
+    });
+    expect(vi.mocked(f.legacy.getLaunchFailureDiagnostics).mock.contexts[0]).toBe(f.legacy);
+  });
+
+  it('resolves a logical project selection only to its exact captured execution run', async () => {
+    const f = fixture();
+    const logical = {
+      handle: { handleId: 'logical' },
+      label: 'Team',
+      members: [],
+      ownerResourceRef: 'owner',
+      teamResourceRef: 'logical-team',
+      projectContextMode: 'per_project' as const,
+    };
+    const execution = {
+      ...logical,
+      handle: { handleId: 'owner-A' },
+      teamResourceRef: 'execution-team',
+      projectContext: {
+        logicalHandleId: 'logical',
+        projectPath: '/TEST-project',
+        workContextId: 'work',
+      },
+    };
+    vi.mocked(f.backend.getConnections).mockResolvedValue({
+      state: 'ready',
+      bindings: [
+        logical,
+        execution,
+        {
+          ...execution,
+          handle: { handleId: 'other-project' },
+          teamResourceRef: 'other-execution',
+          projectContext: {
+            ...execution.projectContext,
+            projectPath: '/TEST-other',
+            workContextId: 'other-work',
+          },
+        },
+      ],
+    });
+    const result = await f.teams.getLaunchFailureDiagnostics(
+      hostTeamSelectionKey('logical'),
+      selectedRun
+    );
+    expect(result.teamName).toBe(hostTeamSelectionKey('logical'));
+    expect(result.runId).toBe(selectedRun);
+    expect(
+      vi.mocked(f.backend.invoke).mock.calls.every(([r]) => r.handle.handleId === 'owner-A')
+    ).toBe(true);
+    vi.mocked(f.backend.invoke).mockClear();
+    await expect(
+      f.teams.getLaunchFailureDiagnostics(hostTeamSelectionKey('other-project'), selectedRun)
+    ).rejects.toThrow('conflict');
+    expect(f.backend.invoke).not.toHaveBeenCalled();
+    expect(f.legacy.getLaunchFailureDiagnostics).not.toHaveBeenCalled();
+  });
+
+  it('refuses malformed, foreign and replaced run/roster selections without falling back to legacy', async () => {
+    const f = fixture();
+    for (const [team, run] of [
+      [hostTeamSelectionKey('owner-A'), 'host-run:%'],
+      ['legacy-team', selectedRun],
+      [hostTeamSelectionKey('owner-B'), selectedRun],
+      [hostTeamSelectionKey('owner-A'), hostTeamRunId('owner-B', 'run', 'revision')],
+    ])
+      await expect(f.teams.getLaunchFailureDiagnostics(team, run)).rejects.toThrow();
+    expect(f.backend.invoke).not.toHaveBeenCalled();
+    for (const run of [
+      hostTeamRunId('owner-A', 'replaced', 'revision'),
+      hostTeamRunId('owner-A', 'run', 'replaced'),
+    ])
+      await expect(
+        f.teams.getLaunchFailureDiagnostics(hostTeamSelectionKey('owner-A'), run)
+      ).rejects.toThrow('conflict');
+    expect(
+      vi
+        .mocked(f.backend.invoke)
+        .mock.calls.every(([r]) => r.operation === 'team.launch.configuration.read')
+    ).toBe(true);
+    expect(f.legacy.getLaunchFailureDiagnostics).not.toHaveBeenCalled();
+  });
+
+  it('preserves partial runtime unavailability without disclosing a transport error body', async () => {
+    for (const failure of ['finite', 'transport'] as const) {
+      const f = fixture();
+      const invoke = vi.mocked(f.backend.invoke).getMockImplementation()!;
+      vi.mocked(f.backend.invoke).mockImplementation(async (request) => {
+        if (request.operation !== 'runtime.read') return invoke(request);
+        if (failure === 'transport')
+          throw new Error('private transport OPENAI_API_KEY=runtime-secret');
+        return { ok: false, code: 'hold', outcome: 'unknown' };
+      });
+      const result = await f.teams.getLaunchFailureDiagnostics(
+        hostTeamSelectionKey('owner-A'),
+        selectedRun
+      );
+      expect(result.observations).toHaveLength(2);
+      expect(result.observations![0].content).toContain('"launchId": "run"');
+      expect(result.observations![1]).toEqual({
+        label: 'Runtime lead',
+        issue: failure === 'finite' ? 'hold (unknown)' : 'Runtime observation unavailable',
+      });
+      expect(JSON.stringify(result)).not.toContain('private transport');
+      expect(JSON.stringify(result)).not.toContain('runtime-secret');
+    }
+  });
+
+  it('refuses runtime access rejection and a snapshot from another generation', async () => {
+    for (const failure of ['forbidden', 'conflict', 'generation'] as const) {
+      const f = fixture();
+      const invoke = vi.mocked(f.backend.invoke).getMockImplementation()!;
+      vi.mocked(f.backend.invoke).mockImplementation(async (request) => {
+        if (request.operation !== 'runtime.read') return invoke(request);
+        return failure === 'generation'
+          ? { ok: true, value: { ...runtime(), generation: 'replacement' } }
+          : { ok: false, code: failure, outcome: 'not-dispatched' };
+      });
+      await expect(
+        f.teams.getLaunchFailureDiagnostics(hostTeamSelectionKey('owner-A'), selectedRun)
+      ).rejects.toThrow(failure === 'generation' ? 'invalid-result' : failure);
+    }
+  });
+
+  it('rejects a changed context, attempt, generation, roster or destination while copying', async () => {
+    for (const change of [
+      'context',
+      'attemptId',
+      'generation',
+      'rosterRevision',
+      'destination',
+    ] as const) {
+      const f = fixture();
+      const invoke = vi.mocked(f.backend.invoke).getMockImplementation()!;
+      vi.mocked(f.backend.invoke).mockImplementation(async (request) => {
+        const result = await invoke(request);
+        if (request.operation === 'runtime.read') {
+          if (change === 'context') f.changeContext();
+          else if (change === 'rosterRevision')
+            f.configuration.launch.rosterRevision = 'replacement';
+          else if (change === 'destination')
+            vi.mocked(f.backend.getConnections).mockResolvedValue({ state: 'ready', bindings: [] });
+          else f.configuration.launch.members[0][change] = 'replacement';
+        }
+        return result;
+      });
+      await expect(
+        f.teams.getLaunchFailureDiagnostics(hostTeamSelectionKey('owner-A'), selectedRun)
+      ).rejects.toThrow();
+      expect(f.legacy.getLaunchFailureDiagnostics).not.toHaveBeenCalled();
+    }
+  });
+
+  it('cannot publish pre-stop observations after a mutation but does not retire normal progress reads', async () => {
+    const f = fixture();
+    let resolve!: (result: BackendOperationResult) => void;
+    const invoke = vi.mocked(f.backend.invoke).getMockImplementation()!;
+    vi.mocked(f.backend.invoke).mockImplementation((request) =>
+      request.operation === 'runtime.read'
+        ? new Promise((done) => {
+            resolve = done;
+          })
+        : invoke(request)
+    );
+    const copy = f.teams.getLaunchFailureDiagnostics(hostTeamSelectionKey('owner-A'), selectedRun);
+    const rejected = expect(copy).rejects.toThrow('mutation boundary');
+    await vi.waitFor(() => expect(resolve).toBeTypeOf('function'));
+    expect((await f.teams.getProvisioningStatus(selectedRun)).state).toBe('ready');
+    await f.teams.cancelProvisioning(selectedRun);
+    resolve({ ok: true, value: runtime() });
+    await rejected;
+
+    const other = fixture();
+    vi.mocked(other.backend.invoke).mockImplementationOnce(
+      () =>
+        new Promise((done) => {
+          resolve = done;
+        })
+    );
+    const progress = other.teams.getProvisioningStatus(selectedRun);
+    await vi.waitFor(() => expect(other.backend.invoke).toHaveBeenCalledTimes(1));
+    expect(
+      (await other.teams.getLaunchFailureDiagnostics(hostTeamSelectionKey('owner-A'))).source
+    ).toBe('captured-host');
+    resolve({ ok: true, value: view() });
+    expect((await progress).state).toBe('ready');
+  });
+});
 
 describe('existing Host provisioning status API', () => {
   afterEach(() => {
@@ -178,7 +458,9 @@ describe('existing Host provisioning status API', () => {
       if (reason === 'stopped') {
         expect(progress.runId).toBe(initial.runId);
         expect(progress.startedAt).toBe(initial.startedAt);
-        expect(shouldIgnoreProvisioningProgressRegression(initial.state, progress.state)).toBe(false);
+        expect(shouldIgnoreProvisioningProgressRegression(initial.state, progress.state)).toBe(
+          false
+        );
       }
       expect(progress.state).toBe(state);
     }

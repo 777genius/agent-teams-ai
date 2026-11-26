@@ -7,7 +7,11 @@
  * Shared between preload and renderer processes.
  */
 import type { CliArgsValidationResult } from '../utils/cliArgsParser';
-import type { ClaudeRootFolderSelection, ClaudeRootInfo, WslClaudeRootCandidate } from './claudeRoot';
+import type {
+  ClaudeRootFolderSelection,
+  ClaudeRootInfo,
+  WslClaudeRootCandidate,
+} from './claudeRoot';
 import type { CliInstallerAPI, OpenCodeRuntimeAPI } from './cliInstaller';
 import type { DesktopShellApi } from './desktopShell';
 import type { TelemetryAPI, WindowsElevationStatus } from './desktopShell';
@@ -79,7 +83,6 @@ import type {
   LeadContextUsageSnapshot,
   MemberLogSummary,
   MemberSpawnStatusesSnapshot,
-  OpenCodeRuntimeDeliveryStatus,
   ProjectBranchChangeEvent,
   QueuedUserMessagesSnapshot,
   RetryFailedOpenCodeSecondaryLanesResult,
@@ -127,6 +130,7 @@ import type {
 } from './teamActivity';
 import type { TeamDefinitionEditApi, TeamDefinitionEditsTransport } from './teamDefinitionEdit';
 import type { TeamMemberRestartResult } from './teamMemberRestart';
+import type { TeamMessageDeliveryApi } from './teamMessageDelivery';
 import type { TerminalAPI } from './terminal';
 import type { TmuxAPI } from './tmux';
 import type { WaterfallData } from './visualization';
@@ -185,7 +189,11 @@ import type {
   SessionsPaginationOptions,
   SubagentDetail,
 } from '@main/types';
-export type { ClaudeRootFolderSelection, ClaudeRootInfo, WslClaudeRootCandidate } from './claudeRoot';
+export type {
+  ClaudeRootFolderSelection,
+  ClaudeRootInfo,
+  WslClaudeRootCandidate,
+} from './claudeRoot';
 export type {
   SentryTelemetryContext,
   SentryTelemetryStatus,
@@ -444,6 +452,7 @@ export interface TeamsAPI
     TeamMemberSettingsApi,
     TeamReadLegacyApi,
     TeamProjectContextViewApi,
+    TeamMessageDeliveryApi,
     TeamDefinitionEditApi {
   definitionEdits?: TeamDefinitionEditsTransport;
   readRecovery?: TeamReadRecoveryApi;
@@ -481,10 +490,6 @@ export interface TeamsAPI
   ) => Promise<TeamLaunchFailureDiagnosticsBundle>;
   cancelProvisioning: (runId: string) => Promise<void>;
   sendMessage: (teamName: string, request: SendMessageRequest) => Promise<SendMessageResult>;
-  getOpenCodeRuntimeDeliveryStatus: (
-    teamName: string,
-    messageId: string
-  ) => Promise<OpenCodeRuntimeDeliveryStatus | null>;
   createTask: (teamName: string, request: CreateTaskRequest) => Promise<TeamTask>;
   getTask: (teamName: string, taskId: string) => Promise<TeamTaskWithKanban | null>;
   requestReview: (teamName: string, taskId: string) => Promise<void>;

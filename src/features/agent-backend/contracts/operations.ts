@@ -368,6 +368,8 @@ export interface BackendCommandReceipt {
   comment?: BackendComment;
   messageId?: string;
   deliveryId?: string;
+  /** Exact original message delivery, available only from an authorized completed command lookup. */
+  messageDelivery?: { memberId: string; generation: string; inputId: string };
   notifiedOwner?: boolean;
 }
 
@@ -458,6 +460,8 @@ export type BackendActivityData =
 export interface BackendActivityEvent {
   sequence: number;
   eventId: string;
+  /** Original Host observation time; absent on older retained events. */
+  observedAt?: string;
   inputId?: string;
   data: BackendActivityData;
 }
