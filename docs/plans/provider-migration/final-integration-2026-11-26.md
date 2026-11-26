@@ -41,3 +41,38 @@ and the already reviewed main delta. Complexity: 5/10; expected reliability: 8/1
 confidence before final validation: 8/10. These are planning estimates, not a
 completion claim. The PR description records actual commits, test results and
 remaining platform evidence.
+
+## Consolidation and local execution
+
+- Child #1310 is merged into #982 at `7401a0254699cefdbc7120cba06ee384efd73acb`.
+  Its tree `60b7fb12ab45210d71e950a23c10b5c7969d22e4` matches the reviewed
+  local tree. The 49 Host/filesystem/HTTP/Attention tests and 19 existing dialog
+  tests passed; canonical Host build, touched-file fast lint and format,
+  source-size and provisioning architecture guards passed.
+- The existing real Electron definition-edit bridge smoke exposed a stale
+  esbuild-only renderer setup: the current localization graph requires Vite's
+  `import.meta.glob` transform. Use the normal Vite dev server, the production
+  dependency target, an owned loopback port and sandbox cache. The original
+  assertions and 15-second/25-second deadlines remain. The repaired smoke passed
+  with actual production preload, renderer API and exactly nine IPC calls.
+  Its Main responses are scripted; it does not qualify vendor execution or all
+  Host UI flows. Independent source review and fast lint/format passed.
+- Full TypeScript attempts remain incomplete: exit 137 under memory pressure,
+  including the final canonical retry's Host prebuild. No compiler diagnostic
+  or full typecheck success is claimed. The earlier successful Host build and
+  focused tests are separate completed invocations.
+- Runtime #233 is merged at `6021bfb3a40cbe7dfb1f322ebd03937a51f030c2`.
+  The final test-only stdin change passed 17 affected synthetic cases; the
+  preceding exact source passed the complete 145-case restart file locally and
+  native custody in CI. Current Windows qualification remains distinct.
+
+## Remaining dependency boundary
+
+The app still consumes runtime 0.0.161. Source draft 459500689 for 0.0.162 is
+saved with target `6021bfb3a40cbe7dfb1f322ebd03937a51f030c2`, but the remote
+tag and binary release do not exist yet. Creating the immutable tag and starting
+release workflows awaits the required owner authorization. After real artifact
+qualification and approved publication, update `runtime.lock.json`, the current
+stopped producer and its CI assertion together; retain historical donor pins.
+The release manifest, archive hashes and support provenance must be actual
+verified delivery data. Keep #982 open and unmerged into main throughout.
