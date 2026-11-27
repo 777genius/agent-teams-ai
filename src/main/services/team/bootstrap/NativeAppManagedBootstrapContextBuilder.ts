@@ -89,7 +89,11 @@ function boundText(input: string, maxChars: number): string {
   if (canonical.length <= maxChars) {
     return canonical;
   }
-  return `${canonical.slice(0, maxChars)}\n[truncated native bootstrap context]`;
+  const marker = '\n[truncated native bootstrap context]';
+  const preview = canonical
+    .slice(0, Math.max(0, maxChars - marker.length))
+    .replace(/[\uD800-\uDBFF]$/u, '');
+  return preview + marker;
 }
 
 function buildContextText(params: {
@@ -113,10 +117,7 @@ function buildContextText(params: {
   const suffix = '\n</member_briefing_context_data>\n</agent_teams_native_bootstrap_context>';
   const maxChars = params.maxContextChars ?? MAX_NATIVE_BOOTSTRAP_CONTEXT_CHARS;
   const briefing = buildChatVisualizationBriefing(
-    boundText(
-      redactNativeBootstrapContextText(params.briefing),
-      MAX_NATIVE_BOOTSTRAP_BRIEFING_CHARS
-    ),
+    params.briefing,
     Math.min(MAX_NATIVE_BOOTSTRAP_BRIEFING_CHARS, maxChars - prefix.length - suffix.length)
   );
   return prefix + briefing + suffix;
@@ -356,11 +357,10 @@ export async function buildNativeAppManagedBootstrapSpecsWithDiagnostics(params:
         });
       }
     }
-    const boundedBriefing = boundText(
-      redactNativeBootstrapContextText(briefing),
-      MAX_NATIVE_BOOTSTRAP_BRIEFING_CHARS
+    const canonicalBriefing = canonicalizeNativeBootstrapContextText(
+      redactNativeBootstrapContextText(briefing)
     );
-    if (!boundedBriefing) {
+    if (!canonicalBriefing) {
       throw new Error(`Native app-managed member briefing was empty for ${member.name}`);
     }
     const contextText = buildContextText({
@@ -368,7 +368,7 @@ export async function buildNativeAppManagedBootstrapSpecsWithDiagnostics(params:
       memberName: member.name,
       providerId,
       cwd: member.cwd?.trim() || params.cwd,
-      briefing: boundedBriefing,
+      briefing: canonicalBriefing,
       maxContextChars,
     });
     totalContextChars += contextText.length;
@@ -381,7 +381,7 @@ export async function buildNativeAppManagedBootstrapSpecsWithDiagnostics(params:
       mode: 'startup_context_file',
       contextText,
       contextHash: hashNativeBootstrapText(contextText),
-      briefingHash: hashNativeBootstrapText(boundedBriefing),
+      briefingHash: hashNativeBootstrapText(canonicalBriefing),
       generatedAt: new Date().toISOString(),
     });
   }

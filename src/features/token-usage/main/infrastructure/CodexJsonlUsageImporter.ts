@@ -14,6 +14,8 @@ type UnknownRecord = Record<string, unknown>;
 const DEFAULT_MAX_LOG_BYTES = 64 * 1024 * 1024;
 const CODEX_JSONL_IMPORTER_VERSION = 'codex-jsonl-v1';
 
+class CodexLogSizeLimitError extends Error {}
+
 interface CodexJsonlUsageImporterOptions {
   projectsBasePath: string;
   maxLogBytes?: number;
@@ -34,6 +36,7 @@ interface CodexUsageRecord {
   sessionId: string;
   model?: string;
   tokens: TokenUsageEventDto['tokens'];
+  reasoningOutputTokens?: number;
   occurredAt: string;
 }
 
@@ -76,6 +79,8 @@ export class CodexJsonlUsageImporter implements TokenUsageImporterPort {
         records = await parseCodexUsageJsonl(logPath, source.sessionId, this.#maxLogBytes);
       } catch (error) {
         this.#logger?.warn('Failed to parse Codex token usage JSONL', { logPath, error });
+        // The caller must keep prior usage stale/degraded instead of treating an unread log as empty.
+        if (error instanceof CodexLogSizeLimitError) throw error;
         continue;
       }
 
@@ -109,6 +114,9 @@ export class CodexJsonlUsageImporter implements TokenUsageImporterPort {
             sourceName: 'codex-jsonl',
             parserVersion: CODEX_JSONL_IMPORTER_VERSION,
             requestKey: record.requestKey,
+            ...(record.reasoningOutputTokens === undefined
+              ? {}
+              : { reasoningOutputTokens: record.reasoningOutputTokens }),
           },
           occurredAt: record.occurredAt,
           createdAt: importedAt,
@@ -183,8 +191,11 @@ async function parseCodexUsageJsonl(
     throw error;
   });
   if (!fileStat) return [];
-  if (!fileStat.isFile() || fileStat.size <= 0 || fileStat.size > maxLogBytes) {
+  if (!fileStat.isFile() || fileStat.size <= 0) {
     return [];
+  }
+  if (fileStat.size > maxLogBytes) {
+    throw new CodexLogSizeLimitError('Codex usage log exceeds the bounded import size limit');
   }
 
   const records: CodexUsageRecord[] = [];
@@ -223,19 +234,31 @@ function readCodexTurnCompletedUsage(
 
   const requestKey =
     readString(record.turn_id) ?? readString(record.id) ?? readString(record.uuid) ?? occurredAt;
+  // Native Codex input includes cached input; the ledger prices these as disjoint buckets.
+  const inputTokens = Math.max(0, readNumber(usage.input_tokens) ?? 0);
+  const outputTokens = Math.max(0, readNumber(usage.output_tokens) ?? 0);
+  const cacheReadTokens = Math.min(
+    inputTokens,
+    Math.max(
+      0,
+      readNumber(usage.cached_input_tokens) ?? readNumber(usage.cache_read_input_tokens) ?? 0
+    )
+  );
   return {
     requestKey,
     requestId: readString(record.request_id) ?? readString(record.requestId),
     sessionId: readString(record.sessionId) ?? readString(record.session_id) ?? fallbackSessionId,
     model: readString(record.model),
     tokens: normalizeTokenBreakdown({
-      inputTokens: readNumber(usage.input_tokens),
-      outputTokens: readNumber(usage.output_tokens),
-      cacheReadTokens:
-        readNumber(usage.cached_input_tokens) ?? readNumber(usage.cache_read_input_tokens),
+      inputTokens: inputTokens - cacheReadTokens,
+      outputTokens,
+      cacheReadTokens,
       cacheCreationTokens: readNumber(usage.cache_creation_input_tokens),
       reasoningTokens: readNumber(usage.reasoning_tokens),
+      totalTokens: inputTokens + outputTokens,
     }),
+    // Native reasoning is already part of output, not another additive ledger/chart bucket.
+    reasoningOutputTokens: readNumber(usage.reasoning_output_tokens),
     occurredAt,
   };
 }
