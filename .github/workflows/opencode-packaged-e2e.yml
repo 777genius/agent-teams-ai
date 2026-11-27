@@ -59,6 +59,7 @@ on:
       - src/features/runtime-provider-management/core/domain/openCodeProviderCompatibility.ts
       - src/features/runtime-provider-management/renderer/ui/OpenCodeProviderCompatibilityStatus.tsx
       - scripts/e2e/opencode-diagnostics/packaged*.mjs
+      - scripts/e2e/opencode-diagnostics/packaged*.ts
       - scripts/e2e/opencode-diagnostics/v2-support-repair*.mjs
       - scripts/e2e/opencode-diagnostics/stage-candidate*.mjs
       - scripts/e2e/opencode-diagnostics/run-packaged.mjs
@@ -169,7 +170,7 @@ jobs:
           python-version: '3.11'
       - run: node ./scripts/ci/install-dependencies-with-retry.mjs
       - name: Verify harness contracts
-        run: node --test scripts/e2e/opencode-diagnostics/platform.test.mjs scripts/e2e/opencode-diagnostics/packaged.test.mjs scripts/e2e/opencode-diagnostics/catalog.test.mjs scripts/e2e/opencode-diagnostics/stage-candidate.test.mjs scripts/e2e/opencode-diagnostics/v2-support-repair.test.mjs
+        run: node --test scripts/e2e/opencode-diagnostics/platform.test.mjs scripts/e2e/opencode-diagnostics/packaged.test.mjs scripts/e2e/opencode-diagnostics/packaged-crash-artifacts.test.ts scripts/e2e/opencode-diagnostics/catalog.test.mjs scripts/e2e/opencode-diagnostics/stage-candidate.test.mjs scripts/e2e/opencode-diagnostics/v2-support-repair.test.mjs
       - name: Typecheck admission diagnostic
         run: node node_modules/@typescript/native/bin/tsc --noEmit -p scripts/e2e/opencode-diagnostics/selected-identity-diagnostic.tsconfig.json
       - name: Stage pinned runtime
@@ -246,6 +247,15 @@ jobs:
           $roots = @($qualificationOutput | Where-Object { $_ -match '^Packaged artifacts/profile: ' })
           if ($roots.Count -eq 1) { "root=$($roots[0].Substring('Packaged artifacts/profile: '.Length))" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append }
           if ($qualificationExit -ne 0) { exit $qualificationExit }
+      - name: Preserve existing crash files from the original test profile
+        if: always() && steps.qualify.outcome == 'failure'
+        continue-on-error: true
+        shell: pwsh
+        env:
+          QUALIFICATION_ROOT: ${{ steps.qualify.outputs.root }}
+        run: |
+          $receipt = Join-Path $env:RUNNER_TEMP 'packaged-crash-collection.json'
+          node scripts/e2e/opencode-diagnostics/packaged-crash-artifacts.ts "$env:QUALIFICATION_ROOT" | Set-Content $receipt -Encoding utf8
       - name: Checkout exact SDK admission source
         id: sdk_source
         if: always() && failure() && steps.qualify.outcome == 'failure'
@@ -293,8 +303,12 @@ jobs:
             & $bun --no-install scripts/e2e/opencode-diagnostics/selected-identity-diagnostic.mts $sdk "$env:QUALIFICATION_ROOT" $packaged $receipt
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
-      - name: Archive qualified Windows test build
+      - name: Archive Windows test build with qualification status
+        id: archive_test_build
+        if: always() && (steps.qualify.outcome == 'success' || steps.qualify.outcome == 'failure')
         shell: pwsh
+        env:
+          QUALIFICATION_OUTCOME: ${{ steps.qualify.outcome }}
         run: |
           $archive = "AgentTeamsAI-windows-test-$env:GITHUB_SHA.zip"
           Compress-Archive -Path $env:NATIVE_APP_DIRECTORY -DestinationPath "release/$archive"
@@ -302,6 +316,8 @@ jobs:
           "$digest  $archive" | Set-Content release/test-build-SHA256SUMS.txt
           @"
           Windows test build, not an installer or an updater release.
+          Qualification outcome: $env:QUALIFICATION_OUTCOME
+          A failed qualification artifact is retained only for diagnosis and is not a passing build.
           Source commit: $env:GITHUB_SHA
           Runtime payload version: $((Get-Content runtime.lock.json | ConvertFrom-Json).version)
           Runtime candidate source (empty for published pin): ${{ inputs.runtime_candidate_sha }}
@@ -311,7 +327,8 @@ jobs:
           Do not launch teams in real projects.
           Qualification reports and screenshots are in opencode-packaged-windows-$env:GITHUB_SHA.
           "@ | Set-Content release/test-build-README.txt
-      - name: Preserve qualified Windows test build
+      - name: Preserve Windows test build and qualification status
+        if: always() && steps.archive_test_build.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: opencode-windows-test-build-${{ github.sha }}
@@ -332,6 +349,8 @@ jobs:
           if-no-files-found: warn
           path: |
             ${{ runner.temp }}/selected-identity-diagnostic.json
+            ${{ runner.temp }}/packaged-crash-collection.json
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/crash-artifacts-*/**
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/*.json
             scripts/e2e/opencode-diagnostics/windows-attachments.mts
             runtime-candidate-evidence.json
