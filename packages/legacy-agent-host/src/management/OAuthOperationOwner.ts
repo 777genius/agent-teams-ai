@@ -320,11 +320,22 @@ export class OAuthOperationOwner {
   async cancel(raw: unknown): Promise<ProviderOAuthSnapshot> {
     const input = identity.parse(raw);
     this.assertAdmission();
-    const saved = this.readOriginal(input);
-    if (!saved) throw new ManagementCommandError('invalid');
     const entry = this.active.get(input.operationId);
+    const captured = entry && entry.saved.profileId === input.profileId &&
+      entry.saved.configRevision === input.configRevision ? entry : undefined;
+    let saved: StoredOAuthCommand | undefined;
+    try { saved = this.readOriginal(input); }
+    catch (error) { this.fenceChangedReceipt(captured, true); throw error; }
+    if (!saved) {
+      this.fenceChangedReceipt(captured, true);
+      throw new ManagementCommandError(captured ? 'conflict' : 'invalid');
+    }
+    if (captured && !managementValuesEqual(captured.saved, saved)) {
+      this.fenceChangedReceipt(captured, true);
+      throw new ManagementCommandError('conflict');
+    }
     if (!entry) return this.snapshot(saved);
-    // Close the original capture even if its namespace/config changed; never select a replacement.
+    // Close only the original capture; never reselect a replacement after conflict.
     await this.stop(entry, 'cancelled');
     return this.snapshot(entry.saved);
   }
