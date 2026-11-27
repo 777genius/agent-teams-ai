@@ -296,3 +296,20 @@ This correction changes only diagnostic source validation. The existing CodeQL
 workflow and analysis gates are unchanged. The next ordinary analysis artifact
 still needs inspection; even a complete supported-subset report does not prove
 that it contains every path from the historical eight-flow alert.
+
+### Follow-up: current-head Selection fixture regression
+
+On `1e64ea3`, ordinary emulated acceptance job `140764956945` failed its
+unit prerequisites before any Desktop/native journey. Three Selection project
+navigation tests still expected the broad Team attribute selector after the
+existing navigation code had narrowed it to the actual `role="button"` card.
+All three failures reproduced locally with Node 24.21.0.
+
+The fixture now expects that same qualified card selector. Its exact target,
+navigation rejection identity, project/context/owner guards, action order and
+original wait budget assertions remain intact. Independent source review
+confirmed the selector against both the navigation code and `TeamListView`.
+The complete changed test file passed **318/318, zero failures or skips**.
+This changes one test line and no production code; complexity: **1/10**.
+Ordinary CI still needs to validate the new head. This local unit result does
+not qualify the Desktop/native journey that the earlier CI failure prevented.
