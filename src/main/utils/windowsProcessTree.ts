@@ -36,9 +36,13 @@ function execute(command: string, args: string[], timeout: number): Promise<stri
 
 export function parseWindowsProcessCensus(value: string): WindowsProcessIdentity[] {
   const data: unknown = JSON.parse(value);
-  const rows = Array.isArray(data) ? data : [data];
-  if (!rows.length || rows.length > MAX_CENSUS_ROWS)
+  const rawRows = Array.isArray(data) ? data : [data];
+  if (!rawRows.length || rawRows.length > MAX_CENSUS_ROWS)
     throw new Error('Invalid Windows process census size');
+  // Win32_Process includes System Idle Process (PID 0), which is not killable.
+  const rows = rawRows.filter(raw => !(raw && typeof raw === 'object' && !Array.isArray(raw) &&
+    (raw as Record<string, unknown>).pid === 0));
+  if (!rows.length) throw new Error('Invalid Windows process census size');
   const visited = new Set<number>();
   return rows.map((raw: unknown) => {
     const item = raw && typeof raw === 'object' && !Array.isArray(raw)
@@ -89,6 +93,40 @@ export function captureWindowsProcessTree(
   return captured;
 }
 
+/**
+ * Keep every descendant identity observed across successive censuses, even if
+ * its parent later exits. Otherwise a surviving grandchild may become invisible
+ * to the last retirement check when its intermediate parent has disappeared.
+ */
+export function extendObservedWindowsProcessTree(
+  originals: readonly WindowsProcessIdentity[], now: readonly WindowsProcessIdentity[]
+): WindowsProcessIdentity[] {
+  const byParent = new Map<number, WindowsProcessIdentity[]>();
+  for (const row of now) {
+    const siblings = byParent.get(row.parentPid) ?? [];
+    siblings.push(row);
+    byParent.set(row.parentPid, siblings);
+  }
+  const observed = [...originals];
+  const known = new Set(observed.map(row => row.pid + ':' + row.birth));
+  for (let i = 0; i < observed.length; i++) {
+    const parent = observed[i]!;
+    if (!parent.birth) throw new Error('Windows observed parent identity unavailable');
+    for (const child of byParent.get(parent.pid) ?? []) {
+      // A reused PID is not the same original birth; fail conservatively if
+      // a current child cannot be authenticated by its creation timestamp.
+      if (!child.birth) throw new Error('Windows observed descendant identity unavailable');
+      if (BigInt(child.birth) < BigInt(parent.birth)) continue;
+      const key = child.pid + ':' + child.birth;
+      if (known.has(key)) continue;
+      known.add(key);
+      observed.push(child);
+      if (observed.length > 512) throw new Error('Windows observed process tree too large');
+    }
+  }
+  return observed;
+}
+
 /** Raced taskkill is a success only if every original birth identity retired. */
 export function windowsProcessTreeRetired(
   originals: readonly WindowsProcessIdentity[], now: readonly WindowsProcessIdentity[]
@@ -120,10 +158,28 @@ export async function killWindowsProcessTreeAndWait(
   catch { /* An unreadable census cannot later qualify a failed taskkill. */ }
   if (child.exitCode !== null || child.signalCode !== null) {
     if (originals) {
-      try { if (windowsProcessTreeRetired(originals, await census())) return; }
-      catch { /* Unknown original descendant state. */ }
+      try {
+        const now = await census();
+        originals = extendObservedWindowsProcessTree(originals, now);
+        if (windowsProcessTreeRetired(originals, now)) return;
+      } catch { /* Unknown original descendant state. */ }
     }
     throw new Error('Windows original root exited during census; descendants unconfirmed');
+  }
+  // Preserve the evidence across attempts. Any unreadable follow-up census
+  // permanently disqualifies a raced taskkill; a later clean read is not proof.
+  let observed = originals;
+  let censusTrusted = true;
+  async function observedTreeRetired(): Promise<boolean> {
+    if (!observed || !censusTrusted) return false;
+    try {
+      const now = await census();
+      observed = extendObservedWindowsProcessTree(observed, now);
+      return windowsProcessTreeRetired(observed, now);
+    } catch {
+      censusTrusted = false;
+      return false;
+    }
   }
   let taskkillError: unknown;
   try {
@@ -131,20 +187,14 @@ export async function killWindowsProcessTreeAndWait(
       ['/T', '/F', '/PID', String(child.pid)], TASKKILL_TIMEOUT_MS);
     return;
   } catch (error) { taskkillError = error; }
-  if (originals) {
-    try { if (windowsProcessTreeRetired(originals, await census())) return; }
-    catch { /* Unverified retirement remains a failure. */ }
-  }
+  if (await observedTreeRetired()) return;
   let fallbackError: unknown = null;
   try { child.kill(signal); }
   catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ESRCH') fallbackError = error;
   }
   // Handle-bound fallback may finish after taskkill reported a raced child.
-  if (!fallbackError && originals) {
-    try { if (windowsProcessTreeRetired(originals, await census())) return; }
-    catch { /* Never turn failed process inspection into success. */ }
-  }
+  if (!fallbackError && await observedTreeRetired()) return;
   const message = taskkillError instanceof Error ? taskkillError.message : String(taskkillError);
   throw new Error('Failed to verify termination of Windows process tree ' + child.pid +
     ': taskkill failed (' + message + '); ' +
