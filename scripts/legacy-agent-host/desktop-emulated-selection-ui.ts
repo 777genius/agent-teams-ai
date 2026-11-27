@@ -71,7 +71,7 @@ export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort & { evaluate(
   const openTeam = async (selected: Team) => {
     await ui.click('button[aria-label="More actions"]', 'open original application menu');
     await ui.click('button', 'open original Teams list', 'Teams');
-    const key = hostTeamSelectionKey(selected.handleId), selector = `[data-team-name=${literal(key)}]`;
+    const key = hostTeamSelectionKey(selected.handleId), selector = `[role="button"][data-team-name=${literal(key)}]`;
     await ui.scrollTo(selector, 'original captured Team card'); await ui.click(selector, 'open original captured Team');
     // An unlaunched logical definition has no global execution selection yet.
     // Require its focused ordinary tab and the explicit project selected by the original card click.
