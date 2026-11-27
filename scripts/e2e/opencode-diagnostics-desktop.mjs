@@ -535,6 +535,18 @@ if (mode === 'seed-packaged') {
   });
   let id = 0;
   const pending = new Map();
+  let transportError;
+  const failTransport = (error) => {
+    if (transportError) return;
+    transportError = error;
+    for (const item of pending.values()) {
+      clearTimeout(item.timer);
+      item.reject(error);
+    }
+    pending.clear();
+  };
+  ws.on('close', () => failTransport(new Error('CDP connection closed')));
+  ws.on('error', () => failTransport(new Error('CDP connection error')));
   const preloadScripts = [];
   const scriptMetadata = [];
   ws.on('message', (raw) => {
@@ -571,13 +583,24 @@ if (mode === 'seed-packaged') {
   });
   const send = (method, params = {}) =>
     new Promise((resolve, reject) => {
+      if (transportError || ws.readyState !== WebSocket.OPEN) {
+        failTransport(transportError ?? new Error('CDP connection closed'));
+        reject(transportError);
+        return;
+      }
       const key = ++id;
       const timer = setTimeout(() => {
         pending.delete(key);
         reject(new Error(`CDP timeout: ${method} ${params.expression?.slice(0, 80) ?? ''}`));
       }, 15000);
       pending.set(key, { resolve, reject, timer });
-      ws.send(JSON.stringify({ id: key, method, params }));
+      try {
+        ws.send(JSON.stringify({ id: key, method, params }), (error) => {
+          if (error) failTransport(new Error('CDP connection error'));
+        });
+      } catch {
+        failTransport(new Error('CDP connection error'));
+      }
     });
   const evaluate = async (expression) => {
     const result = await send('Runtime.evaluate', {
