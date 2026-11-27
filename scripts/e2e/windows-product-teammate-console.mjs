@@ -14,7 +14,7 @@ import { CdpClient } from './comment-notification/cdp.mjs';
 import { prepareNativeDesktopEnvironment } from './opencode-native-desktop-environment.ts';
 import { startGroupChatModelServer } from './group-chat-model-server.ts';
 import { getExpectedRuntimeCliVersion, matchesRuntimeCliVersion } from '../lib/runtime-cli-version.mjs';
-import { proveNativeBudgetStop } from './team-budget-stop-native.mjs';
+import { proveNativeBudgetStop, seedNativeBudgetStopLedger } from './team-budget-stop-native.mjs';
 
 assert.equal(process.platform, 'win32', 'This proof requires a Windows GUI runner');
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -292,6 +292,10 @@ async function run() {
     JSON.stringify({ general: { appLocale: 'en', agentLanguage: 'en', theme: 'dark',
       defaultTab: 'teams', multimodelEnabled: true } }));
   await mkdir(path.join(env.AGENT_TEAMS_ELECTRON_CLAUDE_ROOT, 'projects'), { recursive: true });
+  const budgetSeed=await seedNativeBudgetStopLedger({
+    root,userDataRoot:env.AGENT_TEAMS_ELECTRON_USER_DATA_DIR,
+    teamName:teamName+'-budget',
+  });
   phase = 'electron-startup';
   const port = await freePort();
   const inspectorPort = await freePort();
@@ -615,6 +619,7 @@ async function run() {
     userDataRoot: env.AGENT_TEAMS_ELECTRON_USER_DATA_DIR,
     request, foreignIdentity: forceExitMember,
     expected, heldToolPidPath, waitForOwnedPowerShellDescendant,
+    seed:budgetSeed,
   });
   assert(await ownedStillAlive(forceExitMember) && await ownedStillAlive(forceExitHeldTool),
     'Budget auto-stop retired the unrelated held-tool team');

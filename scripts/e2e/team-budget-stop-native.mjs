@@ -5,8 +5,46 @@ import {randomUUID} from 'node:crypto';
 import {mkdir,readFile,rename,rm,writeFile} from 'node:fs/promises';
 import path from 'node:path';
 
-export async function proveNativeBudgetStop({client,api,wait,getProcess,ownedStillAlive,root,userDataRoot,request,foreignIdentity,expected,heldToolPidPath,waitForOwnedPowerShellDescendant}){
+export async function seedNativeBudgetStopLedger({root,userDataRoot,teamName}){
+  const userData=path.resolve(userDataRoot),fixtureRoot=path.resolve(root);
+  assert(userData.startsWith(fixtureRoot+path.sep),
+    'Budget fixture must remain under the disposable Electron profile');
+  const ledgerPath=path.join(userData,'data','token-usage','ledger.json');
+  // Seed before the app starts. No competing analytics writer can clobber this
+  // fixture, unlike a live read/rename performed during import refresh.
+  await mkdir(path.dirname(ledgerPath),{recursive:true});
+  const existing=await readFile(ledgerPath,'utf8').catch(e=>{
+    if(e?.code==='ENOENT')return null;
+    throw e;
+  });
+  assert.equal(existing,null,'Budget fixture may seed only a fresh, never-opened profile');
+  const runId='budget-stop-e2e-'+randomUUID(),eventId=runId+'-usage';
+  const at=new Date().toISOString();
+  const ledger={schemaVersion:1,
+    runs:{[runId]:{
+      appRunId:runId,teamName,runtimeKind:'anthropic',startedAt:at,endedAt:at,
+      status:'completed',source:'manual_import',sources:[]
+    }},
+    events:{[eventId]:{
+      id:eventId,appRunId:runId,teamName,runtimeKind:'anthropic',
+      tokens:{inputTokens:140,outputTokens:10,cacheCreationTokens:0,cacheReadTokens:0,
+        reasoningTokens:0,audioTokens:0,imageTokens:0,totalTokens:150},
+      cost:{estimatedUsd:0,billableUsd:0,apiEquivalentUsd:0,
+        source:'unknown',billingMode:'unknown'},
+      usageSourceKind:'log_parsed',occurredAt:at,createdAt:at
+    }},
+    sourceStates:{}
+  };
+  const temp=ledgerPath+'.'+randomUUID()+'.tmp';
+  await writeFile(temp,JSON.stringify(ledger,null,2)+'\n');
+  await rename(temp,ledgerPath);
+  return{teamName,runId,eventId,ledgerPath,amount:150};
+}
+
+export async function proveNativeBudgetStop({client,api,wait,getProcess,ownedStillAlive,root,userDataRoot,request,foreignIdentity,expected,heldToolPidPath,waitForOwnedPowerShellDescendant,seed}){
   const nativeTeamName = request.teamName + '-budget';
+  assert(seed?.teamName===nativeTeamName && seed?.amount===150,
+    'Budget test must use the pre-start, owned 150-token fixture');
   const userData = path.resolve(userDataRoot);
   const fixtureRoot = path.resolve(root);
   assert(userData.startsWith(fixtureRoot + path.sep),
@@ -63,32 +101,8 @@ export async function proveNativeBudgetStop({client,api,wait,getProcess,ownedSti
     assert(typeof saved.updatedAt==='string','Native budget settings CAS revision missing');
     assert(await ownedStillAlive(original) && await ownedStillAlive(held),
       'Native budget worker or held tool exited before over-budget evidence');
-    const ledgerPath=path.join(userData,'data','token-usage','ledger.json');
-    await mkdir(path.dirname(ledgerPath),{recursive:true});
-    const previous=await readFile(ledgerPath,'utf8').then(JSON.parse).catch(e=>{
-      if(e?.code==='ENOENT')return{schemaVersion:1,runs:{},events:{},sourceStates:{}};
-      throw e;
-    });
-    assert.equal(previous.schemaVersion,1,'Unexpected existing usage ledger schema');
-    const id='budget-stop-e2e-'+randomUUID();
-    const at=new Date().toISOString();
-    previous.runs[id]={
-      appRunId:id,teamName:nativeTeamName,runtimeKind:'anthropic',
-      startedAt:at,endedAt:at,status:'completed',source:'manual_import',sources:[]
-    };
-    previous.events[id+'-usage']={
-      id:id+'-usage',appRunId:id,teamName:nativeTeamName,runtimeKind:'anthropic',
-      tokens:{
-        inputTokens:140,outputTokens:10,cacheCreationTokens:0,cacheReadTokens:0,
-        reasoningTokens:0,audioTokens:0,imageTokens:0,totalTokens:150
-      },
-      cost:{estimatedUsd:0,billableUsd:0,apiEquivalentUsd:0,
-        source:'unknown',billingMode:'unknown'},
-      usageSourceKind:'log_parsed',occurredAt:at,createdAt:at
-    };
-    const temp=ledgerPath+'.'+randomUUID()+'.tmp';
-    await writeFile(temp,JSON.stringify(previous,null,2)+'\n');
-    await rename(temp,ledgerPath);
+    // Reuse the already-serialized application ledger; never write to it
+    // while the genuine Electron importers and budget observer are running.
     await api('window.electronAPI.tokenUsage.refreshSnapshot()');
     const receipt=await wait('budget stop retires original native worker',async()=>{
       const status=await api('window.electronAPI.tokenUsage.getBudgetStatus()');
@@ -106,6 +120,15 @@ export async function proveNativeBudgetStop({client,api,wait,getProcess,ownedSti
            settingsRevision:saved.updatedAt,ownedRuntimeStopped:true}
         : false;
     },180000);
+    // Verify this exact synthetic event survived through native app imports.
+    // Aggregate spend alone could otherwise give a false-positive stop proof.
+    const ledger=JSON.parse(await readFile(seed.ledgerPath,'utf8'));
+    assert.equal(ledger.runs?.[seed.runId]?.teamName,nativeTeamName,
+      'Fixture run was overwritten by a concurrent writer');
+    assert.equal(ledger.events?.[seed.eventId]?.appRunId,seed.runId,
+      'Unique budget fixture usage event was lost');
+    assert.equal(ledger.events[seed.eventId].tokens?.totalTokens,seed.amount,
+      'Fixture attribution amount was unexpectedly changed');
     assert(await ownedStillAlive(foreignIdentity),
       'Budget stop crossed team ownership and retired unrelated native teammate');
     qualified=true;
