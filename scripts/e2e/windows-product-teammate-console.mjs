@@ -14,6 +14,7 @@ import { CdpClient } from './comment-notification/cdp.mjs';
 import { prepareNativeDesktopEnvironment } from './opencode-native-desktop-environment.ts';
 import { startGroupChatModelServer } from './group-chat-model-server.ts';
 import { getExpectedRuntimeCliVersion, matchesRuntimeCliVersion } from '../lib/runtime-cli-version.mjs';
+import { proveNativeBudgetStop } from './team-budget-stop-native.mjs';
 
 assert.equal(process.platform, 'win32', 'This proof requires a Windows GUI runner');
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -595,6 +596,17 @@ async function run() {
     'Owned Windows Job launcher retired before forced Electron Main shutdown');
   assert(await ownedStillAlive(forceExitMember),
     'Forced-exit teammate had already retired before Electron Main was killed');
+  // This third native team has its own physical worker. A known monthly budget
+  // overage must automatically stop that worker but NOT the still-live forced-exit team.
+  phase = 'real-native-budget-auto-stop';
+  const nativeBudgetStop = await proveNativeBudgetStop({
+    client, api, wait, getProcess, ownedStillAlive, root,
+    userDataRoot: env.AGENT_TEAMS_ELECTRON_USER_DATA_DIR,
+    request, foreignIdentity: forceExitMember,
+  });
+  assert(await ownedStillAlive(forceExitMember),
+    'Unrelated forced-exit native teammate died during budget stop');
+  phase = 'forced-actual-electron-main-exit';
   // Qualify the actual Electron force-exit path with a live native tool
   // descendant too; the separate app-shaped fixture is not product proof.
   await rm(heldToolPidPath, { force: true });
@@ -677,7 +689,7 @@ async function run() {
     forceExitTeammatePid: forceExitMember.pid,
     forceExitOwnedLauncherPid: forceExitOwnedLauncher.pid,
     forceExitHeldToolPid: forceExitHeldTool.pid,
-    forceExitPidEvidence,
+    forceExitPidEvidence, nativeBudgetStop,
     screenshot: path.basename(screenshot), runtimeVersion: lock.version,
   };
   await writeFile(receiptPath, JSON.stringify(evidence, null, 2) + '\n');
