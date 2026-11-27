@@ -236,7 +236,17 @@ result.originalWorkerAndToolRetired=true;
 result.originalBirthRetirement={
   workerPid:restartedWorkerIdentity.pid,workerBirth:restartedWorkerIdentity.birth,
   toolPid:originalToolIdentity.pid,toolBirth:originalToolIdentity.birth
-};result.success=true;result.phase='product-local-model-qualified';
+};
+// Physical child retirement alone is not proof that the product has cleared
+// its active-run tracking. Verify the same team through the public product IPC.
+await until('product active run retired after Stop',async()=>{
+  const active=await api('window.electronAPI.teams.processAlive('+literal(team)+')');
+  const names=await api('window.electronAPI.teams.aliveList()');
+  if(!Array.isArray(names))throw Error('Product active team inventory unreadable');
+  return active===false&&!names.includes(team);
+},30000);
+result.productRunRetiredAfterStop=true;
+result.success=true;result.phase='product-local-model-qualified';
 }catch(e){result.error=String(e).slice(0,1500);result.toolNames=toolsAvailable;result.toolRequests=toolRequests;throw e;}
 finally{if(teamCreated&&client)await api('window.electronAPI.teams.stop('+literal(team)+')').catch(()=>{});
 try{client?.socket?.close();}catch{}try{inspector?.socket?.close();}catch{}
