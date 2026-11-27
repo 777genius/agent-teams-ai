@@ -65,7 +65,8 @@ export class DefaultProcessLedger {
     throw new Error('Owned process identity unavailable');
   }
   sample() {
-    const snapshot = processes() as ProcessIdentity[];
+    const requiredPids = [...new Set([...this.observed.values()].map((p) => p.pid))];
+    const snapshot = processes(requiredPids) as ProcessIdentity[];
     for (const root of [...this.roots, ...this.observed.values()]) {
       if (!snapshot.some((p) => this.key(p) === this.key(root))) continue;
       for (const p of ownedTree(snapshot, root) as ProcessIdentity[])
@@ -92,7 +93,7 @@ export class DefaultProcessLedger {
       }
       if (executable && executable.toLowerCase() === appExecutable.toLowerCase()) continue;
       // A process may have exited after the snapshot. Unknown live children fail closed.
-      if ((processes() as ProcessIdentity[]).some((p) => this.key(p) === this.key(identity)))
+      if ((processes([identity.pid]) as ProcessIdentity[]).some((p) => this.key(p) === this.key(identity)))
         active.push({ ...identity, executable });
     }
     return active;
@@ -182,7 +183,7 @@ export class DefaultProcessLedger {
     return { remaining: current, observed: [...this.observed.values()], commands: this.commands };
   }
   private signal(expected: ProcessIdentity, signal: NodeJS.Signals = 'SIGTERM') {
-    const current = (processes() as ProcessIdentity[]).find((p) => p.pid === expected.pid);
+    const current = (processes([expected.pid]) as ProcessIdentity[]).find((p) => p.pid === expected.pid);
     if (!current) return;
     sameIdentity(expected, current);
     try {
