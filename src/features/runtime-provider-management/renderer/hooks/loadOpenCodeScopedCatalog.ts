@@ -14,7 +14,8 @@ export function loadOpenCodeScopedCatalog(
   requestGroupId: string,
   isCurrentRequest: () => boolean,
   refresh = true,
-  loadModels: RuntimeProviderManagementApi['loadModels'] = (request) => api.runtimeProviderManagement.loadModels(request)
+  loadModels: RuntimeProviderManagementApi['loadModels'] = (request) =>
+    api.runtimeProviderManagement.loadModels(request)
 ) {
   return loadScopedCatalog(
     loadModels,

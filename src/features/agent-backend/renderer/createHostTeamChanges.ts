@@ -3,7 +3,10 @@ import {
   projectHostMemberSpawnStatuses,
 } from './createHostMemberSpawnStatuses';
 import { captureHostProjectFamily } from './hostProjectBindings';
-import { cloneHostProjectProgress, projectHostProjectProgress } from './hostProjectProvisioningOwner';
+import {
+  cloneHostProjectProgress,
+  projectHostProjectProgress,
+} from './hostProjectProvisioningOwner';
 import { projectHostProvisioningProgress } from './projectHostProvisioningProgress';
 import { readHostLaunchConfiguration } from './readHostLaunchConfiguration';
 
@@ -68,9 +71,15 @@ export function createHostTeamChanges(options: {
         if (!active()) return;
         const handleId = binding.handle.handleId;
         let family;
-        try { family = captureHostProjectFamily(snapshot, options.selectionKey(handleId)); }
-        catch { continue; }
-        const destinations = new Set([options.selectionKey(handleId), options.selectionKey(family.logical.handle.handleId)]);
+        try {
+          family = captureHostProjectFamily(snapshot, options.selectionKey(handleId));
+        } catch {
+          continue;
+        }
+        const destinations = new Set([
+          options.selectionKey(handleId),
+          options.selectionKey(family.logical.handle.handleId),
+        ]);
         if (progressListeners.size) {
           const readFence = options.readOrder.launchReadFence(handleId);
           try {
@@ -84,7 +93,10 @@ export function createHostTeamChanges(options: {
                 readFence();
               };
               const progress = projectHostProjectProgress(
-                projectHostProvisioningProgress(handleId, configuration), snapshot, assertCurrent);
+                projectHostProvisioningProgress(handleId, configuration),
+                snapshot,
+                assertCurrent
+              );
               // Observation time alone is not a product change. New subscribers
               // clear this signature and receive their own current projection.
               const signature = JSON.stringify({
@@ -139,9 +151,14 @@ export function createHostTeamChanges(options: {
           )
             continue;
           const feed = result.value;
-          if (!options.readOrder.observeFeed(handleId, {
-            streamId: feed.streamId, sequence: feed.sequence, cursor: feed.cursor,
-          })) continue;
+          if (
+            !options.readOrder.observeFeed(handleId, {
+              streamId: feed.streamId,
+              sequence: feed.sequence,
+              cursor: feed.cursor,
+            })
+          )
+            continue;
           cursors.set(handleId, feed.cursor);
           const force = resync.delete(handleId);
           const acknowledged = delivered.get(handleId);
@@ -158,7 +175,7 @@ export function createHostTeamChanges(options: {
           if (!productChanged && !conversationChanged) continue;
           // These are full-read invalidations, not synthesized business events.
           // Existing consumers refresh roster/board/global tasks and message head.
-          const types = productChanged ? ['config', 'inbox'] as const : ['inbox'] as const;
+          const types = productChanged ? (['config', 'inbox'] as const) : (['inbox'] as const);
           for (const type of types) {
             for (const [token, listener] of [...listeners]) {
               if (!listeners.has(token)) continue;
@@ -167,12 +184,15 @@ export function createHostTeamChanges(options: {
                 for (const teamName of destinations) {
                   if (!active() || !listeners.has(token)) break;
                   listener(undefined, {
-                    type, teamName,
+                    type,
+                    teamName,
                     detail: feed.gap
                       ? 'host-product-gap'
                       : force
                         ? 'host-subscription-resync'
-                        : productChanged ? 'host-product-invalidated' : 'host-conversation-invalidated',
+                        : productChanged
+                          ? 'host-product-invalidated'
+                          : 'host-conversation-invalidated',
                   });
                 }
               } catch {

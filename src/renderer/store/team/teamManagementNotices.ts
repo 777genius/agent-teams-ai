@@ -80,9 +80,15 @@ export function reconcileTeamManagementNotices(
   const hasUnknownOwner = unavailable.some((row) => row.kind === 'owner');
   const stale = Object.keys(current).filter(
     (name) =>
-      current[name] === atReadStart[name] && !names.has(name) && current[name].kind !== 'trashed' &&
+      current[name] === atReadStart[name] &&
+      !names.has(name) &&
+      current[name].kind !== 'trashed' &&
       !isTeamReadUnavailable(unavailable, previous[name] ?? { teamName: name }) &&
-      !(hasUnknownOwner && isHostTeamSelectionKey(name) && previous[name]?.ownerResourceRef === undefined)
+      !(
+        hasUnknownOwner &&
+        isHostTeamSelectionKey(name) &&
+        previous[name]?.ownerResourceRef === undefined
+      )
   );
   if (!stale.length) return current;
   const next = { ...current };

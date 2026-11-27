@@ -91,8 +91,10 @@ export async function createConfiguredHostTeam(options: {
     identity.idempotencyKey !== identity.commandId
   )
     throw new BackendRoutingError('invalid-binding');
-  const payload = captureConfiguredHostTeamDraft(options.contextId,
-    { ...draft, projectContextMode: draft.projectContextMode ?? 'per_project' });
+  const payload = captureConfiguredHostTeamDraft(options.contextId, {
+    ...draft,
+    projectContextMode: draft.projectContextMode ?? 'per_project',
+  });
   assertBackendRequestGuard(options.guard);
   const handle = await options.feature.createConfiguredTeam(
     options.contextId,

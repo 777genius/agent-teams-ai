@@ -150,8 +150,12 @@ export async function cleanupManagedOpenCodeServeProcesses(
     budget && budget.remainingMs() === 0 ? Promise.resolve(null) : readStartTimeImpl(pid);
   const disposeServeHost = options.disposeServeHost ?? disposeOpenCodeServeHost;
   const readServeHostConfig = (baseUrl: string): Promise<string | null> =>
-    budget && budget.remainingMs() === 0 ? Promise.resolve(null) :
-      (options.readServeHostConfig ?? ((url) => readOpenCodeServeHostConfig(url, budget?.capMs(1_000))))(baseUrl);
+    budget && budget.remainingMs() === 0
+      ? Promise.resolve(null)
+      : (
+          options.readServeHostConfig ??
+          ((url) => readOpenCodeServeHostConfig(url, budget?.capMs(1_000)))
+        )(baseUrl);
   const killProcess = options.killProcess;
   const isProcessAlive = options.isProcessAlive ?? isNativeProcessAlive;
   const sleepMs = options.sleepMs ?? sleep;
@@ -175,10 +179,14 @@ export async function cleanupManagedOpenCodeServeProcesses(
 
     if (budget && budget.remainingMs() < 5_000) {
       result.candidates.push({
-        pid: row.pid, ppid: row.ppid, action: 'failed',
+        pid: row.pid,
+        ppid: row.ppid,
+        action: 'failed',
         reason: 'startup cleanup budget exhausted; manual retry required',
       });
-      result.diagnostics.push(`Unprocessed managed host candidate pid=${row.pid}: budget exhausted`);
+      result.diagnostics.push(
+        `Unprocessed managed host candidate pid=${row.pid}: budget exhausted`
+      );
       continue;
     }
     const baseUrl = getOpenCodeServeLoopbackBaseUrl(row.command);
@@ -391,11 +399,18 @@ export async function cleanupManagedOpenCodeServeProcesses(
       };
 
       const confirmTargetIdentity = async (): Promise<boolean> => {
-        const confirmed = budget ? await confirmCandidateIdentity() === 'confirmed' :
-          Number.isFinite(startedAtMs) && startedAtMs !== null &&
-          (await readStartTimeMs(row.pid)) === startedAtMs;
-        return canAdmit() && confirmed && (!budget || (budget.remainingMs() >= 5_000 &&
-          !(options.mode === 'orphaned' && row.ppid > 0 && isProcessAlive(row.ppid))));
+        const confirmed = budget
+          ? (await confirmCandidateIdentity()) === 'confirmed'
+          : Number.isFinite(startedAtMs) &&
+            startedAtMs !== null &&
+            (await readStartTimeMs(row.pid)) === startedAtMs;
+        return (
+          canAdmit() &&
+          confirmed &&
+          (!budget ||
+            (budget.remainingMs() >= 5_000 &&
+              !(options.mode === 'orphaned' && row.ppid > 0 && isProcessAlive(row.ppid))))
+        );
       };
 
       const identityBeforeDispose = await confirmCandidateIdentity();
@@ -653,7 +668,10 @@ async function disposeOpenCodeServeHost(baseUrl: string): Promise<void> {
   }
 }
 
-async function readOpenCodeServeHostConfig(baseUrl: string, timeoutMs = 1_000): Promise<string | null> {
+async function readOpenCodeServeHostConfig(
+  baseUrl: string,
+  timeoutMs = 1_000
+): Promise<string | null> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {

@@ -163,9 +163,17 @@ export function createHostProductLifecycleApi(options: {
       );
     const preparedChange = result.value.pendingChange;
     if (preparedChange && preparedChange.action !== action)
-      throw new HostTeamOperationError('original-lifecycle-change-pending', 'not-dispatched', preparedChange.commandId);
+      throw new HostTeamOperationError(
+        'original-lifecycle-change-pending',
+        'not-dispatched',
+        preparedChange.commandId
+      );
     if (result.value.pendingPurge && action !== 'purge')
-      throw new HostTeamOperationError('original-purge-pending', 'not-dispatched', result.value.pendingPurge.commandId);
+      throw new HostTeamOperationError(
+        'original-purge-pending',
+        'not-dispatched',
+        result.value.pendingPurge.commandId
+      );
     const pending = action === 'purge' ? result.value.pendingPurge : preparedChange;
     if (
       pending &&
@@ -191,7 +199,10 @@ export function createHostProductLifecycleApi(options: {
             handle: original.handle,
             commandId: pending?.commandId ?? original.commandId,
             operation: 'team.lifecycle.change',
-            payload: { expectedRevision: pending?.expectedRevision ?? result.value.revision, action },
+            payload: {
+              expectedRevision: pending?.expectedRevision ?? result.value.revision,
+              action,
+            },
           };
     await mutate(request, original.current);
   }

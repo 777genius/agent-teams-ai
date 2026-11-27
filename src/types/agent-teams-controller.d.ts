@@ -1,7 +1,9 @@
 declare module 'agent-teams-controller' {
   export function buildTaskCommentForwardNotificationText(
     task: { id: string; displayId?: string; subject?: string },
-    comment: { text: string; author: string }, isUserAnswer?: boolean, taskLabel?: string
+    comment: { text: string; author: string },
+    isUserAnswer?: boolean,
+    taskLabel?: string
   ): string;
   export function validateKanbanSafetyState(value: unknown, teamName: string): void;
   export interface TaskFieldUpdates {

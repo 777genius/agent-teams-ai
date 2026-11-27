@@ -31,7 +31,10 @@ export {
   type BoundBackendCommand,
   type CapturedBackendOwner,
 } from './application/BackendOwnerRouter';
-export type { CapturedHostReadScope, CaptureHostTeamReads } from './application/CapturedHostTeamReads';
+export type {
+  CapturedHostReadScope,
+  CaptureHostTeamReads,
+} from './application/CapturedHostTeamReads';
 export { CapturedHostTeamReads, captureHostTeamReads } from './application/CapturedHostTeamReads';
 export { captureHostProjectScheduleContext } from './application/captureHostProjectScheduleContext';
 export {

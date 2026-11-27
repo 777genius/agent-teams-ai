@@ -40,6 +40,11 @@ import type {
   CodexCustomProviderConfig,
 } from '../infrastructure/ConfigManager';
 import type {
+  CodexLaunchSnapshotRefreshOptions,
+  ExternalCredential,
+  StoredApiKeyAccessOptions,
+} from './providerConnectionTypes';
+import type {
   CodexAccountAuthMode,
   CodexAccountSnapshotDto,
 } from '@features/codex-account/contracts';
@@ -60,22 +65,6 @@ import type {
   CliProviderReasoningEffort,
   CliProviderStatus,
 } from '@shared/types';
-
-type ExternalCredential = {
-  label: string;
-  value: string;
-} | null;
-
-interface StoredApiKeyAccessOptions {
-  allowStoredApiKeyDecryption?: boolean;
-  allowedStoredApiKeyEnvVarNames?: readonly string[];
-  allowClaudeUserSettingsAuthEnv?: boolean;
-}
-
-interface CodexLaunchSnapshotRefreshOptions {
-  refreshRuntimeMissing?: boolean;
-  refreshBlockedLaunch?: boolean;
-}
 
 const PROVIDER_CAPABILITIES: Record<
   CliProviderId,
@@ -418,7 +407,8 @@ export class ProviderConnectionService {
   private codexAccountFeature: CodexAccountSnapshotReader | null = null;
   private codexModelCatalogFeature: Pick<CodexModelCatalogFeatureFacade, 'getCatalog'> | null =
     null;
-  private readonly anthropicApiKeyVerificationCache = new Map<string,
+  private readonly anthropicApiKeyVerificationCache = new Map<
+    string,
     { result: AnthropicApiKeyVerificationResult; at: number }
   >();
 
@@ -430,7 +420,9 @@ export class ProviderConnectionService {
   ) {}
 
   static getInstance(): ProviderConnectionService {
-    ProviderConnectionService.instance ??= originalRuntimeProviderConnectionPort(new ProviderConnectionService());
+    ProviderConnectionService.instance ??= originalRuntimeProviderConnectionPort(
+      new ProviderConnectionService()
+    );
     return ProviderConnectionService.instance;
   }
 

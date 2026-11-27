@@ -1,3 +1,6 @@
+import { assembleHostMessageParts } from './assembleHostMessageParts';
+import { assembleHostTaskSubject, type HostTaskSubjectFragment } from './assembleHostTaskSubject';
+
 import type { BackendConnectionSnapshot } from '../../contracts/connections';
 import type { AgentBackendApi } from '../../contracts/operations';
 import type { BackendTeamSnapshot } from '../../contracts/teamSnapshot';
@@ -22,17 +25,28 @@ export class HostTeamReadUnavailableError extends Error {
 const MAX_PAGES = 128;
 const TASK_TEXT_FIELDS = ['description', 'prompt'] as const;
 const TASK_ARRAY_FIELDS = [
-  'comments', 'historyEvents', 'workIntervals', 'reviewIntervals',
-  'attachments', 'descriptionTaskRefs', 'promptTaskRefs',
-  'blocks', 'blockedBy', 'related',
+  'comments',
+  'historyEvents',
+  'workIntervals',
+  'reviewIntervals',
+  'attachments',
+  'descriptionTaskRefs',
+  'promptTaskRefs',
+  'blocks',
+  'blockedBy',
+  'related',
 ] as const;
 type Task = BackendTeamSnapshot['tasks'][number];
 type Message = BackendTeamSnapshot['messages'][number];
-type CommentPart = NonNullable<NonNullable<BackendTeamSnapshot['taskParts']>[number]['commentPart']>;
+type CommentPart = NonNullable<
+  NonNullable<BackendTeamSnapshot['taskParts']>[number]['commentPart']
+>;
 interface TaskGroup {
   total: number;
   values: Map<number, Task>;
   commentParts?: Map<number, CommentPart>;
+  historyParts?: Map<number, CommentPart>;
+  subjectParts?: Map<number, { part: number; total: number }>;
 }
 
 /** Merge only projected task parts; never publish incomplete nested history. */
@@ -44,59 +58,135 @@ export function assembleTaskParts(
   const tasks: BackendTeamSnapshot['tasks'] = [];
   for (let index = 0; index < taskTotal; index++) {
     const group = groups.get(index);
-    if (!group || group.values.size !== group.total) throw new Error('Incomplete Host task history');
+    if (!group || group.values.size !== group.total)
+      throw new Error('Incomplete Host task history');
     const base = group.values.get(0);
     if (!base) throw new Error('Missing Host task base');
     const merged: Record<string, unknown> = { ...base };
-    let pendingComment: {
-      index: number;
-      total: number;
-      next: number;
-      metadata: string;
-      value: NonNullable<Task['comments']>[number];
-    } | undefined;
+    const subjects = new Map<number, HostTaskSubjectFragment>();
+    let pendingComment:
+      | {
+          field: 'comments' | 'historyEvents';
+          index: number;
+          total: number;
+          next: number;
+          metadata: string;
+          value: Record<string, unknown>;
+        }
+      | undefined;
     for (let part = 1; part < group.total; part++) {
       const value = group.values.get(part);
-      if (!value || value.id !== base.id || value.subject !== base.subject ||
-          value.status !== base.status) throw new Error('Mismatched Host task fragment');
+      if (!value || value.id !== base.id || value.status !== base.status)
+        throw new Error('Mismatched Host task fragment');
       const extra = value as unknown as Record<string, unknown>;
-      const fragment = group.commentParts?.get(part);
+      const subjectPart = group.subjectParts?.get(part);
+      if (subjectPart) {
+        if (
+          base.subject !== '' ||
+          pendingComment ||
+          group.commentParts?.has(part) ||
+          group.historyParts?.has(part) ||
+          subjects.has(subjectPart.part) ||
+          subjectPart.part !== subjects.size ||
+          Object.keys(extra).some(
+            (key) => !['id', 'subject', 'status', 'kanbanColumn', 'reviewer'].includes(key)
+          )
+        )
+          throw new Error('Invalid Host subject fragment');
+        subjects.set(subjectPart.part, { total: subjectPart.total, subject: value.subject });
+        continue;
+      }
+      if (value.subject !== base.subject) throw new Error('Mismatched Host task fragment');
+      const commentPart = group.commentParts?.get(part);
+      const historyPart = group.historyParts?.get(part);
+      if (commentPart && historyPart) throw new Error('Mixed Host history fragment');
+      const fragment = commentPart ?? historyPart;
       if (fragment) {
-        // Publish only a complete comment from projected, identity-matched parts.
-        const items = extra.comments;
-        if (!Array.isArray(items) || items.length !== 1 ||
-            TASK_ARRAY_FIELDS.some((field) => field !== 'comments' && extra[field] !== undefined) ||
-            TASK_TEXT_FIELDS.some((field) => extra[field] !== undefined))
+        // Publish only a complete comment or event from matching projected parts.
+        const field = historyPart ? 'historyEvents' : 'comments';
+        const textField = historyPart ? 'note' : 'text';
+        const items = extra[field];
+        if (
+          !Array.isArray(items) ||
+          items.length !== 1 ||
+          TASK_ARRAY_FIELDS.some((other) => other !== field && extra[other] !== undefined) ||
+          TASK_TEXT_FIELDS.some((field) => extra[field] !== undefined) ||
+          extra.sourceMessage !== undefined
+        )
           throw new Error('Invalid Host comment fragment');
-        const comment = items[0] as NonNullable<Task['comments']>[number] | undefined;
-        if (!comment || typeof comment.text !== 'string')
+        const comment = items[0] as Record<string, unknown> | undefined;
+        if (!comment || typeof comment[textField] !== 'string')
           throw new Error('Invalid Host comment text');
-        const { text, ...identity } = comment;
+        const { [textField]: text, ...identity } = comment;
         const metadata = JSON.stringify(identity);
         if (fragment.part === 0) {
-          if (pendingComment ||
-              fragment.index !== ((merged.comments as unknown[] | undefined)?.length ?? 0))
+          if (
+            pendingComment ||
+            fragment.index !== ((merged[field] as unknown[] | undefined)?.length ?? 0)
+          )
             throw new Error('Out-of-order Host comment fragment');
           pendingComment = {
-            index: fragment.index, total: fragment.total, next: 0,
-            metadata, value: { ...comment, text: '' },
+            field,
+            index: fragment.index,
+            total: fragment.total,
+            next: 0,
+            metadata,
+            value: { ...comment, [textField]: '' },
           };
         }
-        if (!pendingComment || pendingComment.index !== fragment.index ||
-            pendingComment.total !== fragment.total || pendingComment.next !== fragment.part ||
-            pendingComment.metadata !== metadata)
+        if (
+          !pendingComment ||
+          pendingComment.field !== field ||
+          pendingComment.index !== fragment.index ||
+          pendingComment.total !== fragment.total ||
+          pendingComment.next !== fragment.part ||
+          pendingComment.metadata !== metadata
+        )
           throw new Error('Mismatched Host comment fragment');
-        pendingComment.value.text += text;
+        pendingComment.value[textField] = (pendingComment.value[textField] as string) + text;
         pendingComment.next++;
         if (pendingComment.next === pendingComment.total) {
-          merged.comments = [
-            ...((merged.comments as unknown[] | undefined) ?? []), pendingComment.value,
+          merged[field] = [
+            ...((merged[field] as unknown[] | undefined) ?? []),
+            pendingComment.value,
           ];
           pendingComment = undefined;
         }
         continue;
       }
       if (pendingComment) throw new Error('Incomplete Host comment fragment');
+      if (value.sourceMessage !== undefined) {
+        const source = value.sourceMessage;
+        if (
+          !base.sourceMessage ||
+          base.sourceMessage.text !== '' ||
+          !base.sourceMessageId ||
+          value.sourceMessageId !== base.sourceMessageId ||
+          source.from !== base.sourceMessage.from ||
+          source.timestamp !== base.sourceMessage.timestamp ||
+          source.source !== base.sourceMessage.source ||
+          typeof source.text !== 'string' ||
+          Object.keys(source).some(
+            (key) => !['from', 'timestamp', 'source', 'text'].includes(key)
+          ) ||
+          Object.keys(extra).some(
+            (key) =>
+              ![
+                'id',
+                'subject',
+                'status',
+                'sourceMessageId',
+                'sourceMessage',
+                'kanbanColumn',
+                'reviewer',
+              ].includes(key)
+          )
+        )
+          throw new Error('Mismatched Host source message fragment');
+        const previous = merged.sourceMessage as NonNullable<Task['sourceMessage']>;
+        merged.sourceMessage = { ...previous, text: previous.text + source.text };
+        continue;
+      }
       for (const field of TASK_ARRAY_FIELDS) {
         if (extra[field] === undefined) continue;
         const items = extra[field];
@@ -104,19 +194,19 @@ export function assembleTaskParts(
         const prior = merged[field];
         if (prior !== undefined && !Array.isArray(prior))
           throw new Error('Mismatched Host task history');
-        merged[field] = [...(prior as unknown[] | undefined ?? []), ...items];
+        merged[field] = [...((prior as unknown[] | undefined) ?? []), ...items];
       }
       for (const field of TASK_TEXT_FIELDS) {
         const chunk = extra[field];
         if (chunk === undefined) continue;
         const previous = merged[field];
-        if (typeof chunk !== 'string' ||
-            (previous !== undefined && typeof previous !== 'string'))
+        if (typeof chunk !== 'string' || (previous !== undefined && typeof previous !== 'string'))
           throw new Error('Mismatched Host task text fragment');
         merged[field] = (previous ?? '') + chunk;
       }
     }
     if (pendingComment) throw new Error('Incomplete Host comment fragment');
+    if (group.subjectParts?.size) merged.subject = assembleHostTaskSubject(subjects);
     tasks.push(merged as unknown as Task);
   }
   return tasks;
@@ -133,18 +223,7 @@ function assembleMessageParts(
     const group = groups.get(index);
     if (!group || group.values.size !== group.total)
       throw new Error('Incomplete Host message text');
-    const base = group.values.get(0);
-    if (!base) throw new Error('Missing Host message base');
-    let text = base.text;
-    for (let part = 1; part < group.total; part++) {
-      const fragment = group.values.get(part);
-      if (!fragment || fragment.messageId !== base.messageId ||
-          fragment.from !== base.from || fragment.timestamp !== base.timestamp ||
-          fragment.read !== base.read)
-        throw new Error('Mismatched Host message fragment');
-      text += fragment.text;
-    }
-    messages.push({ ...base, text });
+    messages.push(assembleHostMessageParts(group));
   }
   return messages;
 }
@@ -167,8 +246,10 @@ export async function readHostPagedSnapshot(
     assertScope();
     readFence();
     const position = readOrder.position(handleId);
-    if (position?.streamId !== refusedPosition?.streamId ||
-        position?.sequence !== refusedPosition?.sequence)
+    if (
+      position?.streamId !== refusedPosition?.streamId ||
+      position?.sequence !== refusedPosition?.sequence
+    )
       throw new Error('Stale Host product snapshot');
   };
   let cursor: string | undefined;
@@ -190,7 +271,11 @@ export async function readHostPagedSnapshot(
     assertScope();
     if (!result.ok) {
       assertRefusalCurrent();
-      if (result.code === 'busy' || result.code === 'unavailable' || result.code === 'shutting-down')
+      if (
+        result.code === 'busy' ||
+        result.code === 'unavailable' ||
+        result.code === 'shutting-down'
+      )
         throw new HostTeamReadUnavailableError(result.code, result.outcome, assertRefusalCurrent);
       throw new Error('Host team read ' + result.code);
     }
@@ -208,7 +293,8 @@ export async function readHostPagedSnapshot(
         Boolean(page.taskParts) !== Boolean(first.taskParts) ||
         page.messageTotal !== first.messageTotal ||
         Boolean(page.messageParts) !== Boolean(first.messageParts)
-      ) throw new Error('Host team changed during paged read');
+      )
+        throw new Error('Host team changed during paged read');
     } else {
       first = page;
     }
@@ -230,6 +316,14 @@ export async function readHostPagedSnapshot(
         if (marker.commentPart) {
           group.commentParts ??= new Map();
           group.commentParts.set(marker.part, marker.commentPart);
+        }
+        if (marker.historyPart) {
+          group.historyParts ??= new Map();
+          group.historyParts.set(marker.part, marker.historyPart);
+        }
+        if (marker.subjectPart) {
+          group.subjectParts ??= new Map();
+          group.subjectParts.set(marker.part, marker.subjectPart);
         }
       }
     } else {
@@ -256,12 +350,13 @@ export async function readHostPagedSnapshot(
     }
     // Page-local Kanban fragments are not a complete board. Reconstruct the
     // original ordered map and column arrays before exposing any product view.
-    if (!kanbanState) kanbanState = {
-      ...page.kanbanState,
-      tasks: {},
-      reviewers: [],
-      ...(page.kanbanState.columnOrder ? { columnOrder: {} } : {}),
-    };
+    if (!kanbanState)
+      kanbanState = {
+        ...page.kanbanState,
+        tasks: {},
+        reviewers: [],
+        ...(page.kanbanState.columnOrder ? { columnOrder: {} } : {}),
+      };
     kanbanState.reviewers.push(...page.kanbanState.reviewers);
     for (const [taskId, entry] of Object.entries(page.kanbanState.tasks)) {
       if (Object.hasOwn(kanbanState.tasks, taskId))

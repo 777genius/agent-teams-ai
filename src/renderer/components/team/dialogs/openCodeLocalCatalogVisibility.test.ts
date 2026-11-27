@@ -73,9 +73,13 @@ describe('openCodeLocalCatalogVisibility', () => {
         opencode: { providerId: 'test-local', routeKind: 'configured_local' },
       },
     };
-    expect(shouldRetainOpenCodeLocalCatalogModel(model.id, model, new Set(), 'TEST-host')).toBe(true);
+    expect(shouldRetainOpenCodeLocalCatalogModel(model.id, model, new Set(), 'TEST-host')).toBe(
+      true
+    );
     expect(shouldRetainOpenCodeLocalCatalogModel(model.id, model, new Set(), ' ')).toBe(false);
-    expect(shouldRetainOpenCodeLocalCatalogModel(model.id, null, new Set(), 'TEST-host')).toBe(false);
+    expect(shouldRetainOpenCodeLocalCatalogModel(model.id, null, new Set(), 'TEST-host')).toBe(
+      false
+    );
   });
 });
 

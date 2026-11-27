@@ -7,6 +7,48 @@ Consolidate reviewed child changes into #982 while leaving #982 unmerged into
 main. Keep the existing UI, process ownership, retry and cleanup contracts.
 Stage 2, default activation and paid-provider testing are outside this work.
 
+## Current correction scope — 27 November 2026
+
+Continue in the existing #982 branch. All four child PRs are already integrated;
+do not repeat their merges or merge #982 into main. The first continuation commit
+`8a825543` completes the existing Claude model fixture without a type assertion.
+
+1. Close the seven confirmed general-review findings: bounded physical message
+   pages, lossless summaries and task subjects, recoverable large command
+   acknowledgements, retirement of completed cross-team captures, bounded Trash
+   reads and accessible provider-management help.
+2. Preserve all current review-history event types, correlated lead sign-off and
+   accepted notes. Independently found follow-up: compact retained history when
+   it exceeds Main's existing projection limits even if the whole acknowledgement
+   still fits the transport envelope. Preserve the complete canonical history.
+3. Remove redundant profile compilation during saved-model freshness checks while
+   retaining fresh authority, roster, runtime source and selected recipe checks.
+   Preserve the original credential witnesses and cold-session identities; the
+   proposed scrypt/version migration is excluded as unnecessary scope.
+4. Correct the two failing original UI observations: inspect the saved model and
+   effort summary before expansion, and choose Shared through the real history
+   control for the save-only owner-routing scenario. Keep native assertions,
+   deadlines, readiness expiry and cleanup unchanged.
+5. Close the new inline P1 for oversized MCP comment reads with signed, lossless
+   continuations. Preserve small responses and short references, and forward the
+   existing task and board pagers through the actual HTTP endpoint. Exercise that
+   entry point with the real local MCP SDK and unchanged output limits.
+6. Verify the combined source with the existing finite Host, renderer and
+   transport regressions, pinned TypeScript 7.0.2, and source/architecture guards.
+   Review extracted declarations independently, then publish to the same branch
+   and qualify the original Desktop/native matrix through ordinary CI.
+
+The notification workflow now supplies a concrete failure listing 251 changed
+production files that require formatting. Its exact affected files and the small
+declaration extractions needed to retain the 800-line rule belong to this batch;
+unrelated cosmetic rewrites do not. This supersedes the earlier assumption below
+that the remaining formatting was outside the applicable workflow scope.
+
+Two independent review passes refined this scope: preserve credential identities,
+and cover the smaller Main history boundary before receipt compaction's fast path.
+Finite tests and source review are separate from native Desktop acceptance. Prior
+logs, killed processes, skipped cases and queued checks are not current passes.
+
 ## Plan and review refinements
 
 1. Recover the missing leader-prompt change and retain the current #1310 project

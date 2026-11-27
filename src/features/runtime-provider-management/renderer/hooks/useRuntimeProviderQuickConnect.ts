@@ -47,10 +47,9 @@ export function useRuntimeProviderQuickConnect({
   const retained = useRetainedLegacyLaunch();
   const management = retained?.management;
   const currentProjectScope = projectPath?.trim() ?? '';
-  const initialDirectoryCache = retained ? null : getRuntimeProviderDirectoryCacheSnapshot(
-    projectPath,
-    runtimeRevision
-  );
+  const initialDirectoryCache = retained
+    ? null
+    : getRuntimeProviderDirectoryCacheSnapshot(projectPath, runtimeRevision);
   const cacheSeenOnMount = useRef(initialDirectoryCache);
   const requestSequence = useRef(0);
   const previousRefreshKey = useRef(refreshKey);
@@ -122,10 +121,9 @@ export function useRuntimeProviderQuickConnect({
     const projectScopeChanged = previousProjectScope.current !== projectScope;
     previousProjectScope.current = projectScope;
     if (projectScopeChanged) {
-      const cachedDirectory = retained ? null : getRuntimeProviderDirectoryCacheSnapshot(
-        projectPath,
-        requestRuntimeRevision
-      );
+      const cachedDirectory = retained
+        ? null
+        : getRuntimeProviderDirectoryCacheSnapshot(projectPath, requestRuntimeRevision);
       cacheSeenOnMount.current = cachedDirectory;
       setDirectoryProjectScope(projectScope);
       setEntries(cachedDirectory?.entries ?? []);
@@ -137,7 +135,8 @@ export function useRuntimeProviderQuickConnect({
 
     const loadDirectory = async (): Promise<void> => {
       const readToken = getRuntimeProviderDirectoryReadToken(projectPath);
-      if (!retained) stopCountCheck = beginRuntimeProviderConnectedCountCheck(projectPath, readToken);
+      if (!retained)
+        stopCountCheck = beginRuntimeProviderConnectedCountCheck(projectPath, readToken);
       let connectedProbeStarted = false;
       setLoading(true);
       setError(null);
@@ -165,14 +164,15 @@ export function useRuntimeProviderQuickConnect({
           return;
         }
         setEntries(response.directory.entries);
-        if (!retained) publishRuntimeProviderDirectoryCache({
-          projectPath,
-          entries: response.directory.entries,
-          fetchedAt: response.directory.fetchedAt,
-          authoritative: false,
-          runtimeRevision: requestRuntimeRevision,
-          readToken,
-        });
+        if (!retained)
+          publishRuntimeProviderDirectoryCache({
+            projectPath,
+            entries: response.directory.entries,
+            fetchedAt: response.directory.fetchedAt,
+            authoritative: false,
+            runtimeRevision: requestRuntimeRevision,
+            readToken,
+          });
         // A complete, healthy summary is enough for a display-only connected
         // count. No models or full directory need to be loaded.
         const observedCount = countCompleteDirectoryConnections(response.directory, 'all');
@@ -186,7 +186,8 @@ export function useRuntimeProviderQuickConnect({
             source: 'summary-all',
           });
         } else if (
-          !retained && requestRuntimeRevision &&
+          !retained &&
+          requestRuntimeRevision &&
           (response.directory.nextCursor != null ||
             response.directory.totalCount > response.directory.entries.length)
         ) {
@@ -263,7 +264,15 @@ export function useRuntimeProviderQuickConnect({
       stopCountCheck?.();
       window.clearTimeout(timeout);
     };
-  }, [retained, management, enabled, projectPath, refreshKey, refreshRequestSequence, settledRuntimeRevision]);
+  }, [
+    retained,
+    management,
+    enabled,
+    projectPath,
+    refreshKey,
+    refreshRequestSequence,
+    settledRuntimeRevision,
+  ]);
 
   // Passive effects run after React commits. Gate the returned snapshot during
   // that short transition so providers from the previous project or runtime
@@ -275,9 +284,10 @@ export function useRuntimeProviderQuickConnect({
         previousRuntimeRevision.current !== runtimeRevision) ||
         (cacheSeenOnMount.current !== null &&
           cacheSeenOnMount.current.runtimeRevision !== runtimeRevision)));
-  const transitionDirectoryCache = !retained && isScopeTransition
-    ? getRuntimeProviderDirectoryCacheSnapshot(projectPath, runtimeRevision)
-    : null;
+  const transitionDirectoryCache =
+    !retained && isScopeTransition
+      ? getRuntimeProviderDirectoryCacheSnapshot(projectPath, runtimeRevision)
+      : null;
 
   return {
     entries: isScopeTransition ? (transitionDirectoryCache?.entries ?? []) : entries,

@@ -73,8 +73,14 @@ export function createHostTeamProvisioning(
       const selected = await capture(runId);
       selected.assertCurrent();
       return captureHostProvisioningMemberSnapshot(
-        projectHostProjectProgress(projectHostProvisioningProgress(selected.connection.handle.handleId, selected.configuration),
-          selected.captured, selected.assertCurrent),
+        projectHostProjectProgress(
+          projectHostProvisioningProgress(
+            selected.connection.handle.handleId,
+            selected.configuration
+          ),
+          selected.captured,
+          selected.assertCurrent
+        ),
         projectHostMemberSpawnStatuses(selected.connection.handle.handleId, selected.configuration),
         selected.assertCurrent
       );

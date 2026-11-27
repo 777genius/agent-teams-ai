@@ -57,7 +57,11 @@ export const ProviderLaunchAuthorityNotice = ({
     backendSummary: getProvisioningProviderBackendSummary(blocker.providerStatus),
     details: [blocker.detail],
   }));
-  const authorityMarker = createProviderLaunchAuthorityMarker(blockers, checks, activeProviderLoading);
+  const authorityMarker = createProviderLaunchAuthorityMarker(
+    blockers,
+    checks,
+    activeProviderLoading
+  );
   if (checks.every((check) => check.status === 'checking'))
     return (
       <p

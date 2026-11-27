@@ -166,17 +166,25 @@ describe('closed provider notice marker', () => {
 
   it('projects the original checking render without another authority/status calculation', () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    const host = document.createElement('div'), root = createRoot(host);
+    const host = document.createElement('div'),
+      root = createRoot(host);
     const provider = scopedRefresh('anthropic');
     const guard = createLaunchGuard(['anthropic'], new Map([['anthropic', provider]]));
     const blockers = guard.blockers(true);
     const originalCheck = vi.spyOn(runtimeLoading, 'isTeamProviderRuntimeStatusLoading');
     const settings = vi.fn();
     try {
-      act(() => root.render(
-        <ProviderLaunchAuthorityNotice id="provider-notice" action="launch" blockers={blockers}
-          providerLoading={{ anthropic: true }} onOpenProviderSettings={settings} />
-      ));
+      act(() =>
+        root.render(
+          <ProviderLaunchAuthorityNotice
+            id="provider-notice"
+            action="launch"
+            blockers={blockers}
+            providerLoading={{ anthropic: true }}
+            onOpenProviderSettings={settings}
+          />
+        )
+      );
       const notice = host.querySelector('#provider-notice');
       expect(notice?.getAttribute('role')).toBe('status');
       expect(notice?.textContent).toBe('launch.prepare.checkingProviders');
@@ -186,10 +194,17 @@ describe('closed provider notice marker', () => {
       const marker = notice?.getAttribute(PROVIDER_LAUNCH_AUTHORITY_MARKER_ATTRIBUTE);
       expect(readProviderLaunchAuthorityMarker(marker)).toBe(marker);
       expect(JSON.parse(marker!).providers[0]).toEqual({
-        provider: 'anthropic', check: 'checking', loading: true,
-        supported: true, authenticated: false, teamLaunch: provider.capabilities.teamLaunch,
-        outcome: 'pending', error: 'partial_response', verification: 'unknown',
-        refresh: 'loading', modelCheck: provider.modelVerificationState ?? null,
+        provider: 'anthropic',
+        check: 'checking',
+        loading: true,
+        supported: true,
+        authenticated: false,
+        teamLaunch: provider.capabilities.teamLaunch,
+        outcome: 'pending',
+        error: 'partial_response',
+        verification: 'unknown',
+        refresh: 'loading',
+        modelCheck: provider.modelVerificationState ?? null,
         catalog: provider.modelCatalog?.status ?? null,
       });
       expect(guard.blocked(true)).toBe(true); // The marker never admits Create.
@@ -202,23 +217,64 @@ describe('closed provider notice marker', () => {
   it('copies only closed own data and never reads raw details, models, credentials or a clock', () => {
     const input = markerInputs();
     let privateReads = 0;
-    for (const value of [input.blockers[0], input.checks[0], input.status, input.status.modelCatalog]) {
-      for (const key of ['details', 'detail', 'message', 'models', 'account', 'path', 'fetchedAt',
-        'staleAt', 'toJSON', 'canSkipPreflight', 'permits', 'readiness']) {
-        Object.defineProperty(value, key, { get() { privateReads++; throw new Error('PRIVATE'); } });
+    for (const value of [
+      input.blockers[0],
+      input.checks[0],
+      input.status,
+      input.status.modelCatalog,
+    ]) {
+      for (const key of [
+        'details',
+        'detail',
+        'message',
+        'models',
+        'account',
+        'path',
+        'fetchedAt',
+        'staleAt',
+        'toJSON',
+        'canSkipPreflight',
+        'permits',
+        'readiness',
+      ]) {
+        Object.defineProperty(value, key, {
+          get() {
+            privateReads++;
+            throw new Error('PRIVATE');
+          },
+        });
       }
     }
-    vi.spyOn(Date, 'now').mockImplementation(() => { throw new Error('no diagnostic clock'); });
+    vi.spyOn(Date, 'now').mockImplementation(() => {
+      throw new Error('no diagnostic clock');
+    });
     const marker = createProviderLaunchAuthorityMarker(input.blockers, input.checks, input.loading);
     expect(marker).not.toBe(UNKNOWN_PROVIDER_LAUNCH_AUTHORITY_MARKER);
     expect(readProviderLaunchAuthorityMarker(marker)).toBe(marker);
-    expect(JSON.parse(marker)).toEqual({ v: 1, state: 'observed', providers: [{
-      provider: 'anthropic', check: 'checking', loading: true, supported: true,
-      authenticated: false, teamLaunch: false, outcome: 'pending', error: 'partial_response',
-      verification: 'unknown', refresh: 'loading', modelCheck: 'verifying', catalog: 'stale',
-    }] });
+    expect(JSON.parse(marker)).toEqual({
+      v: 1,
+      state: 'observed',
+      providers: [
+        {
+          provider: 'anthropic',
+          check: 'checking',
+          loading: true,
+          supported: true,
+          authenticated: false,
+          teamLaunch: false,
+          outcome: 'pending',
+          error: 'partial_response',
+          verification: 'unknown',
+          refresh: 'loading',
+          modelCheck: 'verifying',
+          catalog: 'stale',
+        },
+      ],
+    });
     expect(privateReads).toBe(0);
-    expect(marker).not.toMatch(/PRIVATE|details|models|account|path|fetchedAt|staleAt|permits|readiness/);
+    expect(marker).not.toMatch(
+      /PRIVATE|details|models|account|path|fetchedAt|staleAt|permits|readiness/
+    );
     expect(marker).toMatch(/^[\x20-\x7e]+$/);
     expect(marker.length).toBeLessThanOrEqual(PROVIDER_LAUNCH_AUTHORITY_MARKER_LIMIT);
   });
@@ -226,75 +282,150 @@ describe('closed provider notice marker', () => {
   it('retains an absent status as unknown fields, never fabricated launch readiness', () => {
     const marker = createProviderLaunchAuthorityMarker(
       [{ providerId: 'codex', providerStatus: null }],
-      [{ providerId: 'codex', status: 'failed' }], {}
+      [{ providerId: 'codex', status: 'failed' }],
+      {}
     );
-    expect(JSON.parse(marker)).toEqual({ v: 1, state: 'observed', providers: [{
-      provider: 'codex', check: 'failed', loading: null, supported: null,
-      authenticated: null, teamLaunch: null, outcome: null, error: null,
-      verification: null, refresh: null, modelCheck: null, catalog: null,
-    }] });
+    expect(JSON.parse(marker)).toEqual({
+      v: 1,
+      state: 'observed',
+      providers: [
+        {
+          provider: 'codex',
+          check: 'failed',
+          loading: null,
+          supported: null,
+          authenticated: null,
+          teamLaunch: null,
+          outcome: null,
+          error: null,
+          verification: null,
+          refresh: null,
+          modelCheck: null,
+          catalog: null,
+        },
+      ],
+    });
   });
 
   it('refuses accessors and thrown descriptors without invoking or forwarding them', () => {
-    for (const location of ['blocker', 'check', 'loading', 'status', 'capabilities', 'catalog', 'index'] as const) {
+    for (const location of [
+      'blocker',
+      'check',
+      'loading',
+      'status',
+      'capabilities',
+      'catalog',
+      'index',
+    ] as const) {
       const input = markerInputs();
       let reads = 0;
-      const [target, key]: [object, string] = location === 'blocker' ? [input.blockers[0], 'providerStatus'] :
-        location === 'check' ? [input.checks[0], 'status'] :
-        location === 'loading' ? [input.loading, 'anthropic'] :
-        location === 'status' ? [input.status, 'authenticated'] :
-        location === 'capabilities' ? [input.status.capabilities, 'teamLaunch'] :
-        location === 'catalog' ? [input.status.modelCatalog, 'status'] : [input.blockers, '0'];
-      Object.defineProperty(target, key, { get() { reads++; throw new Error('PRIVATE-accessor'); } });
-      expect(createProviderLaunchAuthorityMarker(input.blockers, input.checks, input.loading))
-        .toBe(UNKNOWN_PROVIDER_LAUNCH_AUTHORITY_MARKER);
+      const [target, key]: [object, string] =
+        location === 'blocker'
+          ? [input.blockers[0], 'providerStatus']
+          : location === 'check'
+            ? [input.checks[0], 'status']
+            : location === 'loading'
+              ? [input.loading, 'anthropic']
+              : location === 'status'
+                ? [input.status, 'authenticated']
+                : location === 'capabilities'
+                  ? [input.status.capabilities, 'teamLaunch']
+                  : location === 'catalog'
+                    ? [input.status.modelCatalog, 'status']
+                    : [input.blockers, '0'];
+      Object.defineProperty(target, key, {
+        get() {
+          reads++;
+          throw new Error('PRIVATE-accessor');
+        },
+      });
+      expect(createProviderLaunchAuthorityMarker(input.blockers, input.checks, input.loading)).toBe(
+        UNKNOWN_PROVIDER_LAUNCH_AUTHORITY_MARKER
+      );
       expect(reads).toBe(0);
     }
     const input = markerInputs();
     const broken = new Proxy(input.loading, {
-      getOwnPropertyDescriptor() { throw new Error('PRIVATE-descriptor'); },
+      getOwnPropertyDescriptor() {
+        throw new Error('PRIVATE-descriptor');
+      },
     });
-    expect(createProviderLaunchAuthorityMarker(input.blockers, input.checks, broken))
-      .toBe(UNKNOWN_PROVIDER_LAUNCH_AUTHORITY_MARKER);
+    expect(createProviderLaunchAuthorityMarker(input.blockers, input.checks, broken)).toBe(
+      UNKNOWN_PROVIDER_LAUNCH_AUTHORITY_MARKER
+    );
   });
 
   it('refuses mismatched identities, duplicate providers, malformed values and overflow', () => {
     for (const mutate of [
-      (value: ReturnType<typeof markerInputs>) => { value.checks[0].providerId = 'codex'; },
-      (value: ReturnType<typeof markerInputs>) => { value.status.providerId = 'codex'; },
-      (value: ReturnType<typeof markerInputs>) => { value.status.statusCheckOutcome = 'PRIVATE'; },
-      (value: ReturnType<typeof markerInputs>) => { value.status.statusCheckErrorCode = 'PRIVATE'; },
-      (value: ReturnType<typeof markerInputs>) => { value.status.modelCatalog.status = 'PRIVATE'; },
-      (value: ReturnType<typeof markerInputs>) => { value.status.modelCatalog.providerId = 'codex'; },
-      (value: ReturnType<typeof markerInputs>) => { value.status.modelCatalog.schemaVersion = 2; },
-      (value: ReturnType<typeof markerInputs>) => { value.checks[0].status = 'ready'; },
-      (value: ReturnType<typeof markerInputs>) => { value.blockers.push(value.blockers[0]); value.checks.push(value.checks[0]); },
+      (value: ReturnType<typeof markerInputs>) => {
+        value.checks[0].providerId = 'codex';
+      },
+      (value: ReturnType<typeof markerInputs>) => {
+        value.status.providerId = 'codex';
+      },
+      (value: ReturnType<typeof markerInputs>) => {
+        value.status.statusCheckOutcome = 'PRIVATE';
+      },
+      (value: ReturnType<typeof markerInputs>) => {
+        value.status.statusCheckErrorCode = 'PRIVATE';
+      },
+      (value: ReturnType<typeof markerInputs>) => {
+        value.status.modelCatalog.status = 'PRIVATE';
+      },
+      (value: ReturnType<typeof markerInputs>) => {
+        value.status.modelCatalog.providerId = 'codex';
+      },
+      (value: ReturnType<typeof markerInputs>) => {
+        value.status.modelCatalog.schemaVersion = 2;
+      },
+      (value: ReturnType<typeof markerInputs>) => {
+        value.checks[0].status = 'ready';
+      },
+      (value: ReturnType<typeof markerInputs>) => {
+        value.blockers.push(value.blockers[0]);
+        value.checks.push(value.checks[0]);
+      },
     ]) {
-      const input = markerInputs(); mutate(input);
-      expect(createProviderLaunchAuthorityMarker(input.blockers, input.checks, input.loading))
-        .toBe(UNKNOWN_PROVIDER_LAUNCH_AUTHORITY_MARKER);
+      const input = markerInputs();
+      mutate(input);
+      expect(createProviderLaunchAuthorityMarker(input.blockers, input.checks, input.loading)).toBe(
+        UNKNOWN_PROVIDER_LAUNCH_AUTHORITY_MARKER
+      );
     }
     const input = markerInputs();
     for (const blockers of [[], new Array(5), null, {}, Object.create(input.blockers)]) {
-      expect(createProviderLaunchAuthorityMarker(blockers, input.checks, input.loading))
-        .toBe(UNKNOWN_PROVIDER_LAUNCH_AUTHORITY_MARKER);
+      expect(createProviderLaunchAuthorityMarker(blockers, input.checks, input.loading)).toBe(
+        UNKNOWN_PROVIDER_LAUNCH_AUTHORITY_MARKER
+      );
     }
   });
 
   it('accepts four distinct closed providers and rejects malformed transport without echoing it', () => {
     const providers = ['anthropic', 'codex', 'gemini', 'opencode'];
     const marker = createProviderLaunchAuthorityMarker(
-      providers.map(providerId => ({ providerId, providerStatus: null })),
-      providers.map(providerId => ({ providerId, status: 'checking' })), {}
+      providers.map((providerId) => ({ providerId, providerStatus: null })),
+      providers.map((providerId) => ({ providerId, status: 'checking' })),
+      {}
     );
     expect(marker.length).toBeLessThanOrEqual(PROVIDER_LAUNCH_AUTHORITY_MARKER_LIMIT);
     expect(JSON.parse(marker).providers).toHaveLength(4);
     expect(readProviderLaunchAuthorityMarker(marker)).toBe(marker);
-    for (const value of [undefined, null, {}, '', 'PRIVATE', 'é', marker + ' ',
-      marker.replace('"v":1', '"v":1,"v":1'), marker.replace('"check":"checking"', '"check":"ready"'),
+    for (const value of [
+      undefined,
+      null,
+      {},
+      '',
+      'PRIVATE',
+      'é',
+      marker + ' ',
+      marker.replace('"v":1', '"v":1,"v":1'),
+      marker.replace('"check":"checking"', '"check":"ready"'),
       marker.replace('"state":"observed"', '"state":"observed","path":"PRIVATE"'),
-      'x'.repeat(PROVIDER_LAUNCH_AUTHORITY_MARKER_LIMIT + 1)]) {
-      expect(readProviderLaunchAuthorityMarker(value)).toBe(UNKNOWN_PROVIDER_LAUNCH_AUTHORITY_MARKER);
+      'x'.repeat(PROVIDER_LAUNCH_AUTHORITY_MARKER_LIMIT + 1),
+    ]) {
+      expect(readProviderLaunchAuthorityMarker(value)).toBe(
+        UNKNOWN_PROVIDER_LAUNCH_AUTHORITY_MARKER
+      );
     }
   });
 });

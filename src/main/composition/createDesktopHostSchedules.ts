@@ -26,44 +26,73 @@ export function createDesktopHostSchedules(current: () => DesktopScheduleScope |
     const original = active.get(runId);
     if (!original) return;
     const result = await (await original).cancel(runId);
-    if (result.cleanup === 'confirmed') { if (active.get(runId) === original) active.delete(runId); }
-    else throw new Error('Original scheduled process cleanup remains unconfirmed');
+    if (result.cleanup === 'confirmed') {
+      if (active.get(runId) === original) active.delete(runId);
+    } else throw new Error('Original scheduled process cleanup remains unconfirmed');
   };
   return {
     /** Only the authenticated foreground may create/rebind a background schedule target. */
     async capture(event: IpcMainInvokeEvent, teamName: string) {
-      const original = current(), selection = original?.captureSelection(),
+      const original = current(),
+        selection = original?.captureSelection(),
         contextId = original?.captureSender(event);
       if (!original?.selected || !contextId || contextId !== selection?.contextId)
         throw new Error('Captured Host schedule context unavailable');
-      const isCurrent = () => current() === original && selection.isCurrent() &&
+      const isCurrent = () =>
+        current() === original &&
+        selection.isCurrent() &&
         original.captureSender(event) === contextId;
-      const target = await captureHostScheduleTarget(original.feature, contextId, teamName, { isCurrent });
+      const target = await captureHostScheduleTarget(original.feature, contextId, teamName, {
+        isCurrent,
+      });
       return { target, isCurrent };
     },
     /** Cron restores its original owner independently of the currently visible tab. */
-    create: (async options => {
+    create: (async (options) => {
       const original = current();
       if (!original?.selected) throw new Error('Captured Host scheduler is unavailable');
-      const target = await restoreHostScheduleTarget(original.feature, options.schedule.teamName,
-        options.schedule.hostTarget, () => current() === original && original.selected);
-      const project = await captureHostProjectScheduleContext({ feature: original.feature, logical: target,
-        projectPath: options.schedule.launchConfig.cwd, folderChange: options.folderChange, runId: options.runId });
-      return new HostSmartScheduleRuntimeAdapter({ target, project, selection: options.schedule.teamName,
-        runId: options.runId, taskFirst: options.schedule.taskFirst, getPreviousRuns: options.getPreviousRuns,
+      const target = await restoreHostScheduleTarget(
+        original.feature,
+        options.schedule.teamName,
+        options.schedule.hostTarget,
+        () => current() === original && original.selected
+      );
+      const project = await captureHostProjectScheduleContext({
+        feature: original.feature,
+        logical: target,
+        projectPath: options.schedule.launchConfig.cwd,
+        folderChange: options.folderChange,
+        runId: options.runId,
+      });
+      return new HostSmartScheduleRuntimeAdapter({
+        target,
+        project,
+        selection: options.schedule.teamName,
+        runId: options.runId,
+        taskFirst: options.schedule.taskFirst,
+        getPreviousRuns: options.getPreviousRuns,
         isCancelled: options.isCancelled,
         async runOneShot(request, expectedRosterRevision, executionTarget) {
           const scheduleId = options.schedule.id;
           if (!scheduleId || request.runId !== options.runId || active.has(request.runId))
             throw new Error('Scheduled occurrence is already admitted');
-          const captured = original.feature.captureScheduledRuns(executionTarget.target.contextId,
-            { handleId: executionTarget.target.handleId }, scheduleId, { isCurrent: executionTarget.isCurrent });
+          const captured = original.feature.captureScheduledRuns(
+            executionTarget.target.contextId,
+            { handleId: executionTarget.target.handleId },
+            scheduleId,
+            { isCurrent: executionTarget.isCurrent }
+          );
           active.set(request.runId, captured);
           let port: CapturedScheduleRunPort | undefined;
           try {
             port = await captured;
-            const result = await runCapturedScheduledTask(port, request, expectedRosterRevision, scheduleId,
-              () => options.isCancelled?.() === true);
+            const result = await runCapturedScheduledTask(
+              port,
+              request,
+              expectedRosterRevision,
+              scheduleId,
+              () => options.isCancelled?.() === true
+            );
             if (active.get(request.runId) === captured) active.delete(request.runId);
             return result;
           } catch (error) {
@@ -72,12 +101,13 @@ export function createDesktopHostSchedules(current: () => DesktopScheduleScope |
             else if (active.get(request.runId) === captured) active.delete(request.runId); // No start was sent.
             throw error;
           }
-        } });
+        },
+      });
     }) satisfies HostScheduleRuntimeFactory['create'],
     cancel,
     async cancelAll() {
       const results = await Promise.allSettled([...active.keys()].map(cancel));
-      const failure = results.find(value => value.status === 'rejected');
+      const failure = results.find((value) => value.status === 'rejected');
       if (failure?.status === 'rejected') throw failure.reason;
     },
   };

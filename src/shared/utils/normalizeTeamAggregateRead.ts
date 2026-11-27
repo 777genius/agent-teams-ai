@@ -19,6 +19,7 @@ export function isTeamReadUnavailable(
   return unavailable.some((row) =>
     row.kind === 'team'
       ? row.teamName === resource.teamName
-      : resource.ownerResourceRef !== undefined && row.ownerResourceRef === resource.ownerResourceRef
+      : resource.ownerResourceRef !== undefined &&
+        row.ownerResourceRef === resource.ownerResourceRef
   );
 }

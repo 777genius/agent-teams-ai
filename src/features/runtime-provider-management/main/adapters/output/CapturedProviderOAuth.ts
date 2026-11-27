@@ -24,7 +24,10 @@ export interface CapturedProviderOAuthDependencies {
   openExternal(url: string): Promise<void>;
   emitProgress?(event: Dto.RuntimeProviderOAuthProgressDto): void;
 }
-type OAuthPresentation = Pick<Dto.RuntimeProviderOAuthProgressDto, 'authorizationUrl' | 'instructions'>;
+type OAuthPresentation = Pick<
+  Dto.RuntimeProviderOAuthProgressDto,
+  'authorizationUrl' | 'instructions'
+>;
 
 const failed = () => ({ ok: false, error: 'Unable to confirm the original sign-in operation.' });
 const object = (value: unknown): Record<string, unknown> => {
@@ -256,7 +259,11 @@ export class CapturedProviderOAuth {
         sequence = snapshot.sequence;
       }
       if (snapshot.phase === 'completed') return;
-      if (snapshot.phase === 'held' || snapshot.phase === 'cancelled' || snapshot.phase === 'failed')
+      if (
+        snapshot.phase === 'held' ||
+        snapshot.phase === 'cancelled' ||
+        snapshot.phase === 'failed'
+      )
         throw new Error('OAuth outcome unconfirmed');
       if (Date.now() >= snapshot.expiresAt) {
         await target.request('oauth.cancel', { operationId: intent.operationId });
@@ -326,7 +333,10 @@ export class CapturedProviderOAuth {
             presentation = {
               instructions: sanitizeOAuthInstructions(authorization.instructions as string),
               authorizationUrl: isSafeOAuthAuthorizationUrl(authorization.authorizationUrl)
-                ? getCopyableOAuthAuthorizationUrl(intent.providerId, authorization.authorizationUrl)
+                ? getCopyableOAuthAuthorizationUrl(
+                    intent.providerId,
+                    authorization.authorizationUrl
+                  )
                 : null,
             };
             this.emit(intent, snapshot, presentation);

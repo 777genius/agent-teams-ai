@@ -1286,9 +1286,10 @@ export class NotificationManager extends EventEmitter {
     }
 
     // Desktop selection is independent from the event gate and external routing.
-    const desktopDisabled = this.configManager
-      .getConfig()
-      .notifications.desktopDisabledEvents?.includes(payload.teamEventType) ?? false;
+    const desktopDisabled =
+      this.configManager
+        .getConfig()
+        .notifications.desktopDisabledEvents?.includes(payload.teamEventType) ?? false;
     const enabled = this.areNotificationsEnabled();
     const throttled = this.isToastThrottled(error);
     const shouldShow =

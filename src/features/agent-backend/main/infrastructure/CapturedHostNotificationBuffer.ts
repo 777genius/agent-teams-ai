@@ -1,4 +1,8 @@
-import { HOST_GAP_METHOD, type HostLimits, type RpcNotification } from '@agent-teams/legacy-agent-host/contracts';
+import {
+  HOST_GAP_METHOD,
+  type HostLimits,
+  type RpcNotification,
+} from '@agent-teams/legacy-agent-host/contracts';
 
 /** Bounded auxiliary observations; request/native processing stays with the Client. */
 export class CapturedHostNotificationBuffer {
@@ -10,10 +14,16 @@ export class CapturedHostNotificationBuffer {
 
   receive(message: RpcNotification, frameBytes: number, limits: HostLimits): void {
     if (message.method === HOST_GAP_METHOD) this.notificationGap = true;
-    else if (message.method === 'runtime.prompt-suggestion.updated' && this.onNativePromptSuggestion) {
+    else if (
+      message.method === 'runtime.prompt-suggestion.updated' &&
+      this.onNativePromptSuggestion
+    ) {
       // The selected Main owner consumes this ephemeral offer synchronously.
-      try { this.onNativePromptSuggestion(message.params); }
-      catch { /* Auxiliary observations never change a Host result. */ }
+      try {
+        this.onNativePromptSuggestion(message.params);
+      } catch {
+        /* Auxiliary observations never change a Host result. */
+      }
     } else if (
       this.notifications.length >= limits.maxDataNotifications ||
       this.notificationBytes + frameBytes > limits.maxDataBytes

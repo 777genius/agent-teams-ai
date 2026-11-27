@@ -33,10 +33,15 @@ function description(value: unknown): string {
 
 function taskRecipient(value: unknown): BackendTaskRecipient {
   const row = object(value, ['name', 'memberId', 'runId', 'generation', 'requireIdle']);
-  if (row.requireIdle !== undefined && row.requireIdle !== true) throw new InvalidBackendOperation();
-  return { name: text(row.name, 256), memberId: text(row.memberId, 256),
-    runId: text(row.runId, 256), generation: text(row.generation, 256),
-    ...(row.requireIdle === true ? { requireIdle: true as const } : {}) };
+  if (row.requireIdle !== undefined && row.requireIdle !== true)
+    throw new InvalidBackendOperation();
+  return {
+    name: text(row.name, 256),
+    memberId: text(row.memberId, 256),
+    runId: text(row.runId, 256),
+    generation: text(row.generation, 256),
+    ...(row.requireIdle === true ? { requireIdle: true as const } : {}),
+  };
 }
 
 function refs(value: unknown): BackendTaskRef[] {
@@ -78,10 +83,12 @@ function payload(
     case 'tasks.list': {
       const p = object(value, ['deleted', 'cursor']);
       if (p.deleted !== undefined && p.deleted !== true) throw new InvalidBackendOperation();
-      if (p.cursor !== undefined &&
-          (p.deleted !== true ||
-           typeof p.cursor !== 'string' ||
-           !/^[1-9][0-9]{0,8}\.[a-f0-9]{64}$/.test(p.cursor)))
+      if (
+        p.cursor !== undefined &&
+        (p.deleted !== true ||
+          typeof p.cursor !== 'string' ||
+          !/^[1-9][0-9]{0,8}\.[a-f0-9]{64}$/.test(p.cursor))
+      )
         throw new InvalidBackendOperation();
       return p.deleted === true
         ? { deleted: true, ...(p.cursor === undefined ? {} : { cursor: p.cursor }) }
@@ -153,7 +160,8 @@ function payload(
         throw new InvalidBackendOperation();
       if (p.startImmediately !== undefined && typeof p.startImmediately !== 'boolean')
         throw new InvalidBackendOperation();
-      if (p.notifyOwner !== undefined && p.notifyOwner !== false) throw new InvalidBackendOperation();
+      if (p.notifyOwner !== undefined && p.notifyOwner !== false)
+        throw new InvalidBackendOperation();
       return {
         subject: text(p.subject, 20_000),
         ...(p.groupChatId === undefined ? {} : { groupChatId: p.groupChatId }),
@@ -162,7 +170,9 @@ function payload(
         ...(p.promptTaskRefs === undefined ? {} : { promptTaskRefs: refs(p.promptTaskRefs) }),
         ...(p.startImmediately === undefined ? {} : { startImmediately: p.startImmediately }),
         ...(p.notifyOwner === false ? { notifyOwner: false as const } : {}),
-        ...(p.expectedRecipient === undefined ? {} : { expectedRecipient: taskRecipient(p.expectedRecipient) }),
+        ...(p.expectedRecipient === undefined
+          ? {}
+          : { expectedRecipient: taskRecipient(p.expectedRecipient) }),
         ...(p.description === undefined ? {} : { description: description(p.description) }),
         ...(p.owner === undefined ? {} : { owner: text(p.owner) }),
         ...(p.blockedBy === undefined ? {} : { blockedBy: stringArray(p.blockedBy) }),
@@ -189,14 +199,21 @@ function payload(
       const settings = object(value, ['settings']).settings;
       if (settings === null) return { settings: null };
       const selected = object(settings, ['reviewFlow', 'reviewFlowPrompt']);
-      if (!['agent_approval', 'human_approval', 'lead_then_human'].includes(text(selected.reviewFlow)))
+      if (
+        !['agent_approval', 'human_approval', 'lead_then_human'].includes(text(selected.reviewFlow))
+      )
         throw new InvalidBackendOperation();
       const prompt = description(selected.reviewFlowPrompt).trim();
       if (prompt.length > 1000) throw new InvalidBackendOperation();
-      return { settings: {
-        reviewFlow: selected.reviewFlow as 'agent_approval' | 'human_approval' | 'lead_then_human',
-        reviewFlowPrompt: prompt,
-      } };
+      return {
+        settings: {
+          reviewFlow: selected.reviewFlow as
+            | 'agent_approval'
+            | 'human_approval'
+            | 'lead_then_human',
+          reviewFlowPrompt: prompt,
+        },
+      };
     }
     case 'task.board.order': {
       const p = object(value, ['columnId', 'orderedTaskIds']);
@@ -245,8 +262,13 @@ function payload(
       const p = object(value, ['taskId', 'notification', 'expectedRecipient']);
       if (p.notification !== 'legacy' && p.notification !== 'user')
         throw new InvalidBackendOperation();
-      return { taskId: text(p.taskId), notification: p.notification,
-        ...(p.expectedRecipient === undefined ? {} : { expectedRecipient: taskRecipient(p.expectedRecipient) }) };
+      return {
+        taskId: text(p.taskId),
+        notification: p.notification,
+        ...(p.expectedRecipient === undefined
+          ? {}
+          : { expectedRecipient: taskRecipient(p.expectedRecipient) }),
+      };
     }
     case 'task.lifecycle': {
       const p = object(value, ['taskId', 'action']);
@@ -303,8 +325,12 @@ function payload(
       }
       if (p.action === 'complete') {
         object(value, ['taskId', 'action', 'expectedReviewRequestId', 'note']);
-        return { taskId, action: 'complete', expectedReviewRequestId: text(p.expectedReviewRequestId),
-          ...(p.note === undefined ? {} : { note: description(p.note) }) };
+        return {
+          taskId,
+          action: 'complete',
+          expectedReviewRequestId: text(p.expectedReviewRequestId),
+          ...(p.note === undefined ? {} : { note: description(p.note) }),
+        };
       }
       if (p.action === 'request_changes') {
         object(value, ['taskId', 'action', 'comment', 'taskRefs', 'expectedReviewRequestId']);
@@ -313,21 +339,33 @@ function payload(
           action: 'request_changes',
           comment: text(p.comment, 200_000),
           ...(p.expectedReviewRequestId === undefined
-            ? {} : { expectedReviewRequestId: text(p.expectedReviewRequestId) }),
+            ? {}
+            : { expectedReviewRequestId: text(p.expectedReviewRequestId) }),
           ...(p.taskRefs === undefined ? {} : { taskRefs: refs(p.taskRefs) }),
         };
       }
       throw new InvalidBackendOperation();
     }
     case 'task.comment': {
-      const p = object(value, ['taskId', 'text', 'taskRefs', 'attachments', 'answerClarificationRequestId']);
-      if (p.answerClarificationRequestId !== undefined &&
-          (typeof p.answerClarificationRequestId !== 'string' ||
-           !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(p.answerClarificationRequestId)))
+      const p = object(value, [
+        'taskId',
+        'text',
+        'taskRefs',
+        'attachments',
+        'answerClarificationRequestId',
+      ]);
+      if (
+        p.answerClarificationRequestId !== undefined &&
+        (typeof p.answerClarificationRequestId !== 'string' ||
+          !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+            p.answerClarificationRequestId
+          ))
+      )
         throw new InvalidBackendOperation();
       return {
-        ...(p.answerClarificationRequestId === undefined ? {} :
-          { answerClarificationRequestId: text(p.answerClarificationRequestId, 256) }),
+        ...(p.answerClarificationRequestId === undefined
+          ? {}
+          : { answerClarificationRequestId: text(p.answerClarificationRequestId, 256) }),
         taskId: text(p.taskId),
         text: text(p.text, 200_000),
         ...(p.attachments === undefined
@@ -348,9 +386,13 @@ function payload(
         'attachments',
       ]);
       const native = parseStandaloneSlashCommand(text(p.text, 200_000));
-      if ((p.nativeCommand !== undefined && p.nativeCommand !== true) ||
+      if (
+        (p.nativeCommand !== undefined && p.nativeCommand !== true) ||
         Boolean(native) !== (p.nativeCommand === true) ||
-        (native && p.attachments !== undefined && messageAttachmentReferencesSchema.parse(p.attachments).length > 0))
+        (native &&
+          p.attachments !== undefined &&
+          messageAttachmentReferencesSchema.parse(p.attachments).length > 0)
+      )
         throw new InvalidBackendOperation();
       if (
         p.actionMode !== undefined &&

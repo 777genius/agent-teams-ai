@@ -75,7 +75,9 @@ export class SqliteMemberWorkSyncStore
   }
 
   private async ready(teamName: string): Promise<void> {
-    await this.mutex.run(normalizeTeamKey(teamName), () => this.deps.importer.ensureImported(teamName));
+    await this.mutex.run(normalizeTeamKey(teamName), () =>
+      this.deps.importer.ensureImported(teamName)
+    );
   }
 
   /** Caller already owns lifecycle/replica ordering; no public store operation may race restore. */
@@ -101,7 +103,11 @@ export class SqliteMemberWorkSyncStore
   prepareCanonicalStatus(
     teamName: string,
     incarnation?: string,
-    prepared?: { records: MemberWorkSyncTeamSnapshotRecords; filesToArchive: readonly string[]; imported?: boolean }
+    prepared?: {
+      records: MemberWorkSyncTeamSnapshotRecords;
+      filesToArchive: readonly string[];
+      imported?: boolean;
+    }
   ): Promise<void> {
     return this.mutex.run(normalizeTeamKey(teamName), async () => {
       if (incarnation !== undefined) {

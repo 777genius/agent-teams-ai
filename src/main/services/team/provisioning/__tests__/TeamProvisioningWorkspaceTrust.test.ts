@@ -129,7 +129,9 @@ describe('TeamProvisioningWorkspaceTrust', () => {
 
   it('collects workspace trust candidates with injected path and git ports', async () => {
     const ports = createWorkspacePorts({
-      resolveGitRoot: vi.fn(async (cwd) => (cwd === '/repo/worktree' ? '/repo/.git/worktree' : '/repo')),
+      resolveGitRoot: vi.fn(async (cwd) =>
+        cwd === '/repo/worktree' ? '/repo/.git/worktree' : '/repo'
+      ),
     });
 
     const result = await collectWorkspaceTrustWorkspaces({
@@ -150,9 +152,7 @@ describe('TeamProvisioningWorkspaceTrust', () => {
 
   it('does not promote a stale Git root when its canonical path is unreadable', async () => {
     const ports = createWorkspacePorts({
-      realpath: vi.fn(async (value) =>
-        value === '/stale/git-root' ? null : `/real${value}`
-      ),
+      realpath: vi.fn(async (value) => (value === '/stale/git-root' ? null : `/real${value}`)),
       resolveGitRoot: vi.fn(async () => '/stale/git-root'),
     });
 
@@ -216,10 +216,7 @@ describe('TeamProvisioningWorkspaceTrust', () => {
     const hookSettingsProvider = vi.fn(async () => ({ hooks: { Stop: [{ command: 'sync' }] } }));
 
     await expect(
-      buildRuntimeTurnSettledHookSettingsArgs(
-        { providerId: 'anthropic' },
-        { hookSettingsProvider }
-      )
+      buildRuntimeTurnSettledHookSettingsArgs({ providerId: 'anthropic' }, { hookSettingsProvider })
     ).resolves.toEqual(['--settings', JSON.stringify({ hooks: { Stop: [{ command: 'sync' }] } })]);
     await expect(
       buildRuntimeTurnSettledHookSettingsArgs({ providerId: 'codex' }, { hookSettingsProvider })

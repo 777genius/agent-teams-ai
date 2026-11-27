@@ -39,9 +39,19 @@ function declaredInputs(value: unknown): readonly string[] | null {
     : null;
 }
 function variants(value: unknown): readonly string[] {
-  if (!Array.isArray(value) || value.length > 256 ||
-      value.some((item) => typeof item !== 'string' || !item || item.length > 256 ||
-        item.trim() !== item || item.includes('\0')) || new Set(value).size !== value.length)
+  if (
+    !Array.isArray(value) ||
+    value.length > 256 ||
+    value.some(
+      (item) =>
+        typeof item !== 'string' ||
+        !item ||
+        item.length > 256 ||
+        item.trim() !== item ||
+        item.includes('\0')
+    ) ||
+    new Set(value).size !== value.length
+  )
     throw new Error('Invalid management response');
   return [...value];
 }
@@ -146,10 +156,15 @@ export function parseManagementCatalog(
     )
       throw new Error('Invalid management response');
     return {
-      ...(catalog.runtime && typeof catalog.runtime === 'object' && !Array.isArray(catalog.runtime) &&
-        'generation' in catalog.runtime && catalog.runtime.generation === 'v2' &&
-        'version' in catalog.runtime && catalog.runtime.version === '2.1.4'
-        ? { runtimeGeneration: 'v2' as const } : {}),
+      ...(catalog.runtime &&
+      typeof catalog.runtime === 'object' &&
+      !Array.isArray(catalog.runtime) &&
+      'generation' in catalog.runtime &&
+      catalog.runtime.generation === 'v2' &&
+      'version' in catalog.runtime &&
+      catalog.runtime.version === '2.1.4'
+        ? { runtimeGeneration: 'v2' as const }
+        : {}),
       providerId: text(provider.providerId),
       displayName: text(provider.displayName),
       connected: provider.connected,
@@ -215,23 +230,29 @@ export function connection(provider: CatalogProvider): Dto.RuntimeProviderConnec
         ownershipScope: 'runtime',
       },
       ...(provider.configured && provider.modelCount > 0
-        ? [{
-            id: 'test',
-            label: 'Test',
-            enabled: true,
-            disabledReason: null,
-            requiresSecret: false,
-            ownershipScope: 'runtime',
-          } as const]
+        ? [
+            {
+              id: 'test',
+              label: 'Test',
+              enabled: true,
+              disabledReason: null,
+              requiresSecret: false,
+              ownershipScope: 'runtime',
+            } as const,
+          ]
         : []),
-      ...(provider.runtimeGeneration === 'v2' ? [] : [{
-        id: 'forget',
-        label: 'Forget credential',
-        enabled: provider.connected,
-        disabledReason: provider.connected ? null : 'No connected credential reported',
-        requiresSecret: false,
-        ownershipScope: 'local',
-      } as const]),
+      ...(provider.runtimeGeneration === 'v2'
+        ? []
+        : [
+            {
+              id: 'forget',
+              label: 'Forget credential',
+              enabled: provider.connected,
+              disabledReason: provider.connected ? null : 'No connected credential reported',
+              requiresSecret: false,
+              ownershipScope: 'local',
+            } as const,
+          ]),
     ],
     detail: provider.connected
       ? provider.runtimeGeneration === 'v2'

@@ -3,12 +3,18 @@ import { createRoot } from 'react-dom/client';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { OpenCodeSourceDirectoryProvider, useOpenCodeSourceDirectory } from './OpenCodeSourceDirectoryProvider';
+import {
+  OpenCodeSourceDirectoryProvider,
+  useOpenCodeSourceDirectory,
+} from './OpenCodeSourceDirectoryProvider';
 
 const storeState = vi.hoisted(() => ({
   current: {
     openCodeRuntimeStatus: {
-      installed: true, state: 'ready', version: '1.17.18', binaryPath: '/opt/opencode',
+      installed: true,
+      state: 'ready',
+      version: '1.17.18',
+      binaryPath: '/opt/opencode',
     } as { installed: boolean; state: string; version: string; binaryPath: string } | null,
     openCodeRuntimeStatusLoading: false,
     openCodeRuntimeError: null,
@@ -18,29 +24,36 @@ const storeState = vi.hoisted(() => ({
   },
 }));
 
-const quickConnect = vi.hoisted(() => vi.fn(() => ({
-  entries: [],
-  loading: false,
-  loaded: false,
-  authoritativeLoaded: false,
-  authoritativePending: true,
-  error: null,
-  refresh: vi.fn(),
-})));
+const quickConnect = vi.hoisted(() =>
+  vi.fn(() => ({
+    entries: [],
+    loading: false,
+    loaded: false,
+    authoritativeLoaded: false,
+    authoritativePending: true,
+    error: null,
+    refresh: vi.fn(),
+  }))
+);
 
 vi.mock('@renderer/store', () => ({
-  useStore: (selector: (state: unknown) => unknown) =>
-    selector(storeState.current),
+  useStore: (selector: (state: unknown) => unknown) => selector(storeState.current),
 }));
-vi.mock('@features/runtime-provider-management/renderer/hooks/useRuntimeProviderQuickConnect', () => ({
-  useRuntimeProviderQuickConnect: quickConnect,
-}));
+vi.mock(
+  '@features/runtime-provider-management/renderer/hooks/useRuntimeProviderQuickConnect',
+  () => ({
+    useRuntimeProviderQuickConnect: quickConnect,
+  })
+);
 
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   quickConnect.mockClear();
   storeState.current.openCodeRuntimeStatus = {
-    installed: true, state: 'ready', version: '1.17.18', binaryPath: '/opt/opencode',
+    installed: true,
+    state: 'ready',
+    version: '1.17.18',
+    binaryPath: '/opt/opencode',
   };
   storeState.current.fetchOpenCodeRuntimeStatus.mockClear();
 });
@@ -52,29 +65,51 @@ describe('OpenCodeSourceDirectoryProvider', () => {
       return null;
     };
     const root = createRoot(document.createElement('div'));
-    const render = (path: string, consumers: number, enabled = true) => root.render(
-      <OpenCodeSourceDirectoryProvider enabled={enabled} deferDiscovery projectPath={path}>
-        {Array.from({ length: consumers }, (_, index) => <Demand key={index} path={path} />)}
-      </OpenCodeSourceDirectoryProvider>
-    );
-    const expectEnabled = (enabled: boolean, path: string) => expect(quickConnect).toHaveBeenLastCalledWith({
-      enabled, projectPath: path, runtimeRevision: JSON.stringify(['ready', '1.17.18', '/opt/opencode']),
-    });
+    const render = (path: string, consumers: number, enabled = true) =>
+      root.render(
+        <OpenCodeSourceDirectoryProvider enabled={enabled} deferDiscovery projectPath={path}>
+          {Array.from({ length: consumers }, (_, index) => (
+            <Demand key={index} path={path} />
+          ))}
+        </OpenCodeSourceDirectoryProvider>
+      );
+    const expectEnabled = (enabled: boolean, path: string) =>
+      expect(quickConnect).toHaveBeenLastCalledWith({
+        enabled,
+        projectPath: path,
+        runtimeRevision: JSON.stringify(['ready', '1.17.18', '/opt/opencode']),
+      });
     try {
-      await act(async () => { render('/TEST/project-A', 0); });
+      await act(async () => {
+        render('/TEST/project-A', 0);
+      });
       expectEnabled(false, '/TEST/project-A');
-      await act(async () => { render('/TEST/project-A', 2); });
+      await act(async () => {
+        render('/TEST/project-A', 2);
+      });
       expectEnabled(true, '/TEST/project-A');
-      await act(async () => { render('/TEST/project-A', 1); });
+      await act(async () => {
+        render('/TEST/project-A', 1);
+      });
       expectEnabled(true, '/TEST/project-A');
-      await act(async () => { render('/TEST/project-B', 0); });
+      await act(async () => {
+        render('/TEST/project-B', 0);
+      });
       expectEnabled(false, '/TEST/project-B');
-      await act(async () => { render('/TEST/project-A', 0); });
+      await act(async () => {
+        render('/TEST/project-A', 0);
+      });
       expectEnabled(false, '/TEST/project-A');
-      await act(async () => { render('/TEST/project-A', 1); });
+      await act(async () => {
+        render('/TEST/project-A', 1);
+      });
       expectEnabled(true, '/TEST/project-A');
-      await act(async () => { render('/TEST/project-A', 0, false); });
-      await act(async () => { render('/TEST/project-A', 0); });
+      await act(async () => {
+        render('/TEST/project-A', 0, false);
+      });
+      await act(async () => {
+        render('/TEST/project-A', 0);
+      });
       expectEnabled(false, '/TEST/project-A');
     } finally {
       await act(async () => root.unmount());

@@ -178,7 +178,7 @@ export function createMemberWorkSyncPersistence(input: {
     ),
     authority: new MemberWorkSyncStatusAuthority({
       interruption: internalStorageInterruption,
-        diagnosticDetail: readFailureDetail,
+      diagnosticDetail: readFailureDetail,
       identity: input.lifecycleIdentity,
       withPreparedBackend: (identity, operation) => store.withPreparedBackend(identity, operation),
     }),

@@ -12,7 +12,10 @@ export class SchedulerStopBarrier {
     finish: () => void;
   }>();
 
-  async withAdmission<T>(scheduleId: string, action: (isCurrent: () => boolean) => Promise<T>): Promise<T> {
+  async withAdmission<T>(
+    scheduleId: string,
+    action: (isCurrent: () => boolean) => Promise<T>
+  ): Promise<T> {
     const marker = { current: true };
     let pending = this.admissions.get(scheduleId);
     if (!pending) {
@@ -34,7 +37,9 @@ export class SchedulerStopBarrier {
 
   beginFinalization(): () => void {
     let resolve!: () => void;
-    const pending = new Promise<void>((done) => { resolve = done; });
+    const pending = new Promise<void>((done) => {
+      resolve = done;
+    });
     this.finalizations.add(pending);
     return () => {
       this.finalizations.delete(pending);
@@ -74,7 +79,8 @@ export class SchedulerStopBarrier {
         Promise.all([...this.finalizations]),
         new Promise<never>((_, reject) => {
           timeout = setTimeout(
-            () => reject(new Error('Scheduler stop timed out waiting for durable run finalization')),
+            () =>
+              reject(new Error('Scheduler stop timed out waiting for durable run finalization')),
             STOP_DRAIN_TIMEOUT_MS
           );
           timeout.unref();

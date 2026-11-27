@@ -11,7 +11,11 @@ export interface HostNotificationSource {
   initialize(): Promise<void>;
   isCurrent(): boolean;
   connection(handle: BackendHandle): Connection | undefined;
-  readSnapshot(handle: BackendHandle, isCurrent: () => boolean, cursor?: string): Promise<BackendTeamSnapshot>;
+  readSnapshot(
+    handle: BackendHandle,
+    isCurrent: () => boolean,
+    cursor?: string
+  ): Promise<BackendTeamSnapshot>;
 }
 
 /** Existing Desktop store owns notifications; Host supplies only original product identity. */
@@ -63,7 +67,8 @@ export async function prepareHostNotification(source: HostNotificationSource, ra
       next.revision !== first.revision ||
       next.feed.streamId !== first.feed.streamId ||
       next.feed.sequence !== first.feed.sequence
-    ) throw new Error('Host notification source changed during paged read');
+    )
+      throw new Error('Host notification source changed during paged read');
     tasks.push(...next.tasks);
     cursor = next.nextCursor;
   }

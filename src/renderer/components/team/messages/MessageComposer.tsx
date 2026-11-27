@@ -39,7 +39,10 @@ import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { buildMemberAvatarMap, buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { nameColorSet } from '@renderer/utils/projectColor';
 import { getSuggestedSlashCommandsForProvider } from '@renderer/utils/providerSlashCommands';
-import { buildCapturedSlashCommandSuggestions, buildSlashCommandSuggestions } from '@renderer/utils/skillCommandSuggestions';
+import {
+  buildCapturedSlashCommandSuggestions,
+  buildSlashCommandSuggestions,
+} from '@renderer/utils/skillCommandSuggestions';
 import {
   extractTaskRefsFromText,
   stripEncodedTaskReferenceMetadata,
@@ -72,10 +75,7 @@ import { acquireRevisionOperation, releaseRevisionOperation } from './revisionOp
 import { TeamFeedMessageComposer } from './TeamFeedMessageComposer';
 import { TextMessageComposer, type TextMessageComposerProps } from './TextMessageComposer';
 import { useAutoDelegateActionMode } from './useAutoDelegateActionMode';
-import {
-  type ComposerDraftAddressRequest,
-  useComposerDraftAddressRequest,
-} from './useComposerDraftAddressRequest';
+import { useComposerDraftAddressRequest } from './useComposerDraftAddressRequest';
 import { useComposerSubmissionFeedback } from './useComposerSubmissionFeedback';
 import { useComposerFocus, useComposerTextarea } from './useComposerTextarea';
 import { useFileRestrictionNotice } from './useFileRestrictionNotice';
@@ -83,81 +83,14 @@ import { useFloatingComposerWidth } from './useFloatingComposerWidth';
 import { useMessageComposerDraft } from './useMessageComposerDraft';
 import { useMessageComposerRevisionCancel } from './useMessageComposerRevisionCancel';
 
-import type { CapturedCrossTeamReply, ComposerCrossTeamSend } from './capturedCrossTeamReply';
-import type { TeamGroupChatDTO } from '@features/team-group-chats/contracts';
+import type { MemberMessageComposerProps } from './MessageComposer.types';
 import type { ActionMode } from '@renderer/components/team/messages/ActionModeSelector';
-import type { ComposerDraftDestination } from '@renderer/components/team/messages/composerDraftDestination';
-import type { MessageRevisionTargetController } from '@renderer/components/team/messages/messageRevisionTarget';
 import type {
-  ComposerDraftAddress,
   ComposerPreparedRequest,
   ComposerWorkingSummary,
-  MessageRevisionContext,
 } from '@renderer/types/composerDraft';
 import type { MentionSuggestion } from '@renderer/types/mention';
-import type { OpenCodeRuntimeDeliveryDebugDetails } from '@renderer/utils/openCodeRuntimeDeliveryDiagnostics';
-import type {
-  AttachmentPayload,
-  ResolvedTeamMember,
-  SendMessageResult,
-  TaskRef,
-} from '@shared/types';
-
-export interface MemberMessageComposerProps {
-  teamName: string;
-  members: ResolvedTeamMember[];
-  layout?: 'default' | 'compact';
-  widthMode?: 'full' | 'floating-adaptive';
-  isTeamAlive?: boolean;
-  sending: boolean;
-  sendError: string | null;
-  sendWarning?: string | null;
-  sendDebugDetails?: OpenCodeRuntimeDeliveryDebugDetails | null;
-  lastResult?: SendMessageResult | null;
-  revisionRequest?: MessageRevisionRequest | null;
-  revisionPreparation?: { kind: 'preparing' | 'occupied'; recipient: string } | null;
-  revisableMessageId?: string | null;
-  cornerActionPrefix?: React.ReactNode;
-  lockedRecipient?: string;
-  initialRecipient?: string;
-  onSelectAll?: () => void;
-  groupBroadcast?: { group?: TeamGroupChatDTO };
-  /** Ref to the underlying textarea element for external focus management. */
-  textareaRef?: React.Ref<HTMLTextAreaElement>;
-  suggestionPlacement?: 'above';
-  /** Bump this when a chat thread is opened so the composer steals keyboard focus. */
-  autoFocusKey?: number;
-  draftAddressRequest?: ComposerDraftAddressRequest | null;
-  crossTeamReply?: CapturedCrossTeamReply | null;
-  workingDraftSummaries?: readonly ComposerWorkingSummary[];
-  onSend: (
-    recipient: string,
-    text: string,
-    summary?: string,
-    attachments?: AttachmentPayload[],
-    actionMode?: ActionMode,
-    taskRefs?: TaskRef[],
-    messageId?: string
-  ) => Promise<SendMessageResult>;
-  onCrossTeamSend?: ComposerCrossTeamSend;
-  onSubmitIntent?: () => void;
-  onDraftMutation?: () => void;
-  onRecoveryDestinationChange?: (destination: ComposerDraftDestination | null) => void;
-  onRevisionPreparationChange?: (controller: MessageRevisionTargetController | null) => void;
-  onRevisionCancel?: (
-    revision?: MessageRevisionContext | null,
-    address?: ComposerDraftAddress
-  ) => boolean | void | Promise<boolean>;
-  onRevisionComplete?: (requestId: string, address: ComposerDraftAddress) => void;
-}
-
-export interface MessageRevisionRequest {
-  requestId: string;
-  originalMessageId: string;
-  originalText: string;
-  recipient: string;
-  actionMode?: ActionMode;
-}
+import type { ResolvedTeamMember } from '@shared/types';
 
 const EMPTY_MENTION_SUGGESTIONS: MentionSuggestion[] = [];
 const EMPTY_SKILL_CATALOG = [] as const;
@@ -452,8 +385,9 @@ const MemberMessageComposer = ({
       })),
     [members, colorMap]
   );
-  const commandLead = useMemo(() => members.find(member => isLeadMember(member)), [members]);
-  const leadProviderId = normalizeOptionalTeamProviderId(commandLead?.providerId) ??
+  const commandLead = useMemo(() => members.find((member) => isLeadMember(member)), [members]);
+  const leadProviderId =
+    normalizeOptionalTeamProviderId(commandLead?.providerId) ??
     inferTeamProviderIdFromModel(commandLead?.model);
 
   const { suggestions: teamMentionSuggestions } = useTeamSuggestions(teamName, {
@@ -589,9 +523,11 @@ const MemberMessageComposer = ({
           : !isTeamAlive
             ? t('messageComposer.slash.restrictions.leadOffline')
             : selectedMember?.runtimeOwner === 'captured-host' &&
-              !selectedMember.sessionCommands?.some(command => command.name === standaloneSlashCommand.name)
+                !selectedMember.sessionCommands?.some(
+                  (command) => command.name === standaloneSlashCommand.name
+                )
               ? t('modelSelector.unavailableInRuntime')
-            : null
+              : null
     : null;
   const canSend =
     effectiveRecipient.length > 0 &&
@@ -630,16 +566,29 @@ const MemberMessageComposer = ({
   });
   const isCompactLayout = layout === 'compact';
   const nativeSuggestion = useComposerNativeNextPrompt({
-    teamName, recipient: effectiveRecipient,
-    memberId: selectedMember?.runtimeOwner === 'captured-host' ? selectedMember.hostMemberId : undefined,
-    draft, focusComposerTextarea,
-    editable: draft.address.target.kind === 'direct' && !groupChatSelected &&
-      !isCrossTeam && !!isTeamAlive && !sending && !isContextSwitching &&
-      !isLaunchBlocking && draft.isLoaded && !draft.isRestoring,
+    teamName,
+    recipient: effectiveRecipient,
+    memberId:
+      selectedMember?.runtimeOwner === 'captured-host' ? selectedMember.hostMemberId : undefined,
+    draft,
+    focusComposerTextarea,
+    editable:
+      draft.address.target.kind === 'direct' &&
+      !groupChatSelected &&
+      !isCrossTeam &&
+      !!isTeamAlive &&
+      !sending &&
+      !isContextSwitching &&
+      !isLaunchBlocking &&
+      draft.isLoaded &&
+      !draft.isRestoring,
     editingQueueOrRevision: activeRevision !== null || revisionPreparation != null,
     compact: isCompactLayout,
-    labels: [t('messageComposer.suggestions.insert'), t('messageComposer.suggestions.dismiss'),
-      t('messageComposer.suggestions.tab')],
+    labels: [
+      t('messageComposer.suggestions.insert'),
+      t('messageComposer.suggestions.dismiss'),
+      t('messageComposer.suggestions.tab'),
+    ],
   });
   const handleCycleActionMode = useCallback(() => {
     if (sending) return;
@@ -649,8 +598,11 @@ const MemberMessageComposer = ({
   }, [actionMode, canDelegate, sending, setActionMode]);
 
   const { fileRestrictionError, setFileRestrictionError, showFileRestrictionError } =
-    useFileRestrictionNotice(t('messageComposer.attachments.restrictions.leadOnly'),
-      attachmentRestrictionReason, attachmentPayloadRestrictionReason);
+    useFileRestrictionNotice(
+      t('messageComposer.attachments.restrictions.leadOnly'),
+      attachmentRestrictionReason,
+      attachmentPayloadRestrictionReason
+    );
 
   const { validateFiles: validateSelectedAttachmentFiles, validatePayloads } =
     useAttachmentValidation(selectedMember, resolveDeclaration, showFileRestrictionError);
@@ -792,7 +744,6 @@ const MemberMessageComposer = ({
     },
     [canAttach, draftAddFiles, showFileRestrictionError, validateSelectedAttachmentFiles]
   );
-
 
   const handleDragEnter = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -1173,3 +1124,5 @@ const MemberMessageComposer = ({
     </ComposerSurface>
   );
 };
+
+export type { MemberMessageComposerProps, MessageRevisionRequest } from './MessageComposer.types';

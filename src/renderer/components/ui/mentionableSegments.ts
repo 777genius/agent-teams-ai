@@ -7,7 +7,10 @@ type MentionTextSegment =
   | { type: 'mention'; value: string; suggestion: MentionSuggestion };
 
 /** Tokenize plain text and direct @mentions, separate from the editor UI. */
-export function parseMentionSegments(text: string, suggestions: MentionSuggestion[]): MentionTextSegment[] {
+export function parseMentionSegments(
+  text: string,
+  suggestions: MentionSuggestion[]
+): MentionTextSegment[] {
   if (!text || suggestions.length === 0) return [{ type: 'text', value: text }];
 
   // Sort by name length descending for greedy matching
@@ -69,4 +72,3 @@ export function parseMentionSegments(text: string, suggestions: MentionSuggestio
 
   return segments;
 }
-

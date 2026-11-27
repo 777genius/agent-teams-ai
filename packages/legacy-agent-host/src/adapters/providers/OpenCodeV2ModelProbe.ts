@@ -11,7 +11,7 @@ import {
 import { hasUntrustedOpenCodeBinaryOverride } from '../../composition/openCodeV2Environment.js';
 import { selectOpenCodeV2ManagementModel } from '../../composition/openCodeV2ModelSelection.js';
 import { ManagementCommandError } from '../../management/commandRecords.js';
-import { managementDigest } from '../../management/identity.js';
+import { managementDigest, managementValuesEqual } from '../../management/identity.js';
 import { openCodeManagementProfileSchema } from '../../management/profile.js';
 import { createOpenCodeV2EmbeddedServer } from './OpenCodeV2EmbeddedServer.js';
 import type { AcceptedOpenCodeV2FileKey } from './OpenCodeV2SelectedFileKey.js';
@@ -157,8 +157,8 @@ export function createOpenCodeV2ModelProbe(
     npm: typeof configured.package === 'string' ? configured.package.replace(/^aisdk:/, '') : undefined,
     options: configured.settings ?? {}, models: configured.models ?? {},
   } : {};
-  if (options.readiness?.expectedProvider && managementDigest(observedProvider) !==
-      managementDigest(options.readiness.expectedProvider)) return unavailable();
+  if (options.readiness?.expectedProvider && !managementValuesEqual(observedProvider,
+      options.readiness.expectedProvider)) return unavailable();
   let config: Record<string, unknown> = noTool.config;
   let selection: OpenCodeV2OwnedSessionSelection = noTool.selection;
   let finishCredentialCurrentness: (() => void) | undefined;
@@ -420,12 +420,12 @@ export function createOpenCodeV2ModelProbe(
               const pluginsOnly = plugins.value;
               const mcp = mcpResult.value;
               return (
-                managementDigest({
+                managementValuesEqual({
                   agent: observed.agent,
                   model: observed.model,
                   permissions: observed.permissions,
                   ...(observed.credential ? { credential: observed.credential } : {}),
-                }) === managementDigest({ ...selection, ...(nativeCredential ? { credential: nativeCredential } : {}) }) &&
+                }, { ...selection, ...(nativeCredential ? { credential: nativeCredential } : {}) }) &&
                 permissionsEmpty &&
                 pluginsOnly &&
                 (coordination ? mcp.length === 1 && mcp[0]?.name === coordinationServer &&

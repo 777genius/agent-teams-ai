@@ -25,7 +25,8 @@ export function runtimeProviderDirectoryInteraction(
   return {
     canSelectModels,
     canOpenConnect:
-      provider.state !== 'connected' && enabled('connect') &&
+      provider.state !== 'connected' &&
+      enabled('connect') &&
       !((readOnlyModels || testModels) && canSelectModels),
   };
 }

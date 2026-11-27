@@ -88,5 +88,10 @@ export function resolveTeamStatus(
 }
 
 export function isTeamListStatusRunning(status: TeamStatus): boolean {
-  return status !== 'unknown' && status !== 'offline' && status !== 'partial_failure' && status !== 'partial_pending';
+  return (
+    status !== 'unknown' &&
+    status !== 'offline' &&
+    status !== 'partial_failure' &&
+    status !== 'partial_pending'
+  );
 }

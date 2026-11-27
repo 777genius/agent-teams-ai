@@ -15,7 +15,8 @@ function areResolvedMembersEqual(
       prevMember.name !== nextMember.name ||
       prevMember.runtimeOwner !== nextMember.runtimeOwner ||
       prevMember.nativeInboxAttachmentsSupported !== nextMember.nativeInboxAttachmentsSupported ||
-      prevMember.nativeInboxTextAttachmentsSupported !== nextMember.nativeInboxTextAttachmentsSupported ||
+      prevMember.nativeInboxTextAttachmentsSupported !==
+        nextMember.nativeInboxTextAttachmentsSupported ||
       !areSessionCommandsEqual(prevMember.sessionCommands, nextMember.sessionCommands) ||
       prevMember.agentId !== nextMember.agentId ||
       prevMember.joinedAt !== nextMember.joinedAt ||

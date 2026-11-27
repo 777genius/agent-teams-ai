@@ -121,11 +121,16 @@ export function useTeamReviewFlow(boardName: string): TeamReviewFlow {
   const { defaults, overrides, unreadableTeams, projectTeams, load, saveTeamOverride } = overview;
   const { t } = useAppTranslation('team');
   const teams = useStore((state) => state.teams);
-  const unavailableHere = [teamName, boardName,
+  const unavailableHere = [
+    teamName,
+    boardName,
     ...(rawProjectTeams[teamName]?.projects.map((project) => project.executionTeamName) ?? []),
-  ].some((name) => isReviewFlowTeamUnavailable(
-    teams.find((entry) => entry.teamName === name) ?? { teamName: name }, overview.unavailable
-  ));
+  ].some((name) =>
+    isReviewFlowTeamUnavailable(
+      teams.find((entry) => entry.teamName === name) ?? { teamName: name },
+      overview.unavailable
+    )
+  );
   const override = overrides[teamName];
   const policy = useMemo(() => resolveReviewFlowPolicy(defaults, override), [defaults, override]);
   return {

@@ -80,8 +80,11 @@ export function reviewFlowBoardsOf(
 ): TeamIdentity[] {
   return teams.flatMap((team): TeamIdentity[] => {
     if (projectCopies.has(team.teamName)) return [];
-    const own = { teamName: team.teamName, displayName: team.displayName,
-      ...(team.ownerResourceRef ? { ownerResourceRef: team.ownerResourceRef } : {}) };
+    const own = {
+      teamName: team.teamName,
+      displayName: team.displayName,
+      ...(team.ownerResourceRef ? { ownerResourceRef: team.ownerResourceRef } : {}),
+    };
     if (team.projectContextMode === 'per_project') return [own];
     const copies = (team.projectHistoryContexts ?? []).map((context) => ({
       teamName: context.executionTeamName,
@@ -232,7 +235,9 @@ export function isReviewFlowTeamUnavailable(
   team: TeamIdentity,
   unavailable: NonNullable<ReviewFlowOverview['unavailable']>
 ): boolean {
-  return unavailable.some((item) => item.kind === 'team'
-    ? item.teamName === team.teamName
-    : team.ownerResourceRef !== undefined && item.ownerResourceRef === team.ownerResourceRef);
+  return unavailable.some((item) =>
+    item.kind === 'team'
+      ? item.teamName === team.teamName
+      : team.ownerResourceRef !== undefined && item.ownerResourceRef === team.ownerResourceRef
+  );
 }

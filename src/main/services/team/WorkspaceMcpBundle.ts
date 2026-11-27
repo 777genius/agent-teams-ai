@@ -99,11 +99,15 @@ async function buildCurrentBundle(
   const outputDirectory = path.join(outputRoot, 'dev', `${process.pid}-${randomUUID()}`);
   const entry = path.join(outputDirectory, 'index.js');
   try {
-    const launch = await resolveElectronNodeLaunch(node, [
-      await fs.realpath(path.join(server, 'node_modules', 'tsup', 'dist', 'cli-default.js')),
-      '--out-dir',
-      outputDirectory,
-    ], 'generic');
+    const launch = await resolveElectronNodeLaunch(
+      node,
+      [
+        await fs.realpath(path.join(server, 'node_modules', 'tsup', 'dist', 'cli-default.js')),
+        '--out-dir',
+        outputDirectory,
+      ],
+      'generic'
+    );
     await execCli(launch.command, launch.args, {
       cwd: server,
       timeout: BUILD_TIMEOUT_MS,

@@ -51,9 +51,12 @@ export async function assertMemberWorkSyncDirtyPrimaryOwnership(
 ): Promise<void> {
   if (
     (primaryIncarnation !== identity.incarnation && !canonical.statuses.length) ||
-    canonical.statuses.some((status) => status.statusRevision?.incarnation !== identity.incarnation) ||
+    canonical.statuses.some(
+      (status) => status.statusRevision?.incarnation !== identity.incarnation
+    ) ||
     (await gateway.ping()).integrity !== 'ok'
-  ) throw new MemberWorkSyncSafetyJsonReadError('unavailable');
+  )
+    throw new MemberWorkSyncSafetyJsonReadError('unavailable');
 }
 
 /** The existing replica mutex owns this entire capture, mutation and publication sequence. */
@@ -78,7 +81,12 @@ export async function captureMemberWorkSyncReplicaPublication(
     if (binding.state === 'dirty') {
       const canonical = recordsToSnapshot(teamName, records);
       validateMemberWorkSyncAuthoritySnapshot(identity, canonical);
-      await assertMemberWorkSyncDirtyPrimaryOwnership(identity, canonical, primaryIncarnation, gateway);
+      await assertMemberWorkSyncDirtyPrimaryOwnership(
+        identity,
+        canonical,
+        primaryIncarnation,
+        gateway
+      );
     }
   }
   const assertNoUnboundImport = async () => {

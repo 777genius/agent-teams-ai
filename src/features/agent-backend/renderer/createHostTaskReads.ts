@@ -44,17 +44,25 @@ export function createHostTaskReads(
       read.assertCurrent();
       if (!result.ok) throw new HostTeamOperationError(result.code, result.outcome);
       const page = result.value;
-      if (!page || !('kind' in page) || page.kind !== 'deleted-tasks' ||
-          page.teamName !== read.canonicalTeamName ||
-          page.tasks.some((task) => task.status !== 'deleted'))
+      if (
+        !page ||
+        !('kind' in page) ||
+        page.kind !== 'deleted-tasks' ||
+        page.teamName !== read.canonicalTeamName ||
+        page.tasks.some((task) => task.status !== 'deleted')
+      )
         throw new HostTeamOperationError('invalid-result', 'unknown');
 
       if (index === 0) {
         revision = page.revision;
         taskTotal = page.taskTotal;
         fragmented = !!page.taskParts;
-      } else if (!revision || page.revision !== revision ||
-                 page.taskTotal !== taskTotal || !!page.taskParts !== fragmented) {
+      } else if (
+        !revision ||
+        page.revision !== revision ||
+        page.taskTotal !== taskTotal ||
+        !!page.taskParts !== fragmented
+      ) {
         throw new Error('Host deleted tasks changed during paged read');
       }
       if (page.taskParts) {
@@ -76,6 +84,14 @@ export function createHostTaskReads(
             group.commentParts ??= new Map();
             group.commentParts.set(marker.part, marker.commentPart);
           }
+          if (marker.historyPart) {
+            group.historyParts ??= new Map();
+            group.historyParts.set(marker.part, marker.historyPart);
+          }
+          if (marker.subjectPart) {
+            group.subjectParts ??= new Map();
+            group.subjectParts.set(marker.part, marker.subjectPart);
+          }
         }
       } else {
         tasks.push(...page.tasks);
@@ -90,9 +106,7 @@ export function createHostTaskReads(
       cursor = page.nextCursor;
     }
     if (!completed) throw new Error('Host deleted tasks exceeded page budget');
-    return read.remapTasks(fragmented
-      ? assembleTaskParts(parts, taskTotal ?? 0)
-      : tasks);
+    return read.remapTasks(fragmented ? assembleTaskParts(parts, taskTotal ?? 0) : tasks);
   };
   return {
     async getTask(key, taskId) {

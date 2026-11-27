@@ -18,16 +18,16 @@ export function projectDeletedTasks(value: unknown): BackendDeletedTasks {
     throw new Error('Invalid deleted tasks');
 
   const revision = source.revision;
-  if (revision !== undefined &&
-      (typeof revision !== 'string' || !/^[a-f0-9]{64}$/.test(revision)))
+  if (revision !== undefined && (typeof revision !== 'string' || !/^[a-f0-9]{64}$/.test(revision)))
     throw new Error('Invalid deleted task revision');
   const nextCursor = source.nextCursor;
-  if (nextCursor !== undefined && nextCursor !== null &&
-      (typeof nextCursor !== 'string' ||
-       !/^[1-9][0-9]{0,8}\.[a-f0-9]{64}$/.test(nextCursor)))
+  if (
+    nextCursor !== undefined &&
+    nextCursor !== null &&
+    (typeof nextCursor !== 'string' || !/^[1-9][0-9]{0,8}\.[a-f0-9]{64}$/.test(nextCursor))
+  )
     throw new Error('Invalid deleted task continuation');
-  if ((nextCursor !== undefined || source.taskParts !== undefined) &&
-      revision === undefined)
+  if ((nextCursor !== undefined || source.taskParts !== undefined) && revision === undefined)
     throw new Error('Missing deleted task revision');
 
   const teamName = source.teamName;

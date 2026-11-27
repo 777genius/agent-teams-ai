@@ -61,7 +61,11 @@ function captureReviewContext(): () => boolean {
 function hostAdapter(impl: ElectronAPI): ReturnType<typeof createHostBackendRenderer> {
   let adapter = hostAdapters.get(impl);
   if (!adapter) {
-    adapter = createHostBackendRenderer(withTeamDefinitionEdits(impl.teams), impl.agentBackend, captureReviewContext);
+    adapter = createHostBackendRenderer(
+      withTeamDefinitionEdits(impl.teams),
+      impl.agentBackend,
+      captureReviewContext
+    );
     hostAdapters.set(impl, adapter);
   }
   return adapter;
@@ -152,7 +156,11 @@ export const api: ElectronAPI = new Proxy({} as ElectronAPI, {
         if (!impl.reviewFlow) return undefined;
         let reviewFlow = hostReviewFlowAdapters.get(impl);
         if (!reviewFlow) {
-          reviewFlow = createHostReviewFlowApi(impl.reviewFlow, adapter.backend, captureReviewContext);
+          reviewFlow = createHostReviewFlowApi(
+            impl.reviewFlow,
+            adapter.backend,
+            captureReviewContext
+          );
           hostReviewFlowAdapters.set(impl, reviewFlow);
         }
         return reviewFlow;

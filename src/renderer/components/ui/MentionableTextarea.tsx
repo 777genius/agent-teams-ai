@@ -870,8 +870,14 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
         // Native follow-up accepts only an empty editor with no active menu or
         // chip. No listener means unchanged native browser Tab navigation.
         if (
-          e.key === 'Tab' && !e.shiftKey && !e.altKey && !e.ctrlKey && !e.metaKey &&
-          !isOpen && value.length === 0 && chips.length === 0 &&
+          e.key === 'Tab' &&
+          !e.shiftKey &&
+          !e.altKey &&
+          !e.ctrlKey &&
+          !e.metaKey &&
+          !isOpen &&
+          value.length === 0 &&
+          chips.length === 0 &&
           onNativeNextPromptTab?.(e)
         ) {
           e.preventDefault();

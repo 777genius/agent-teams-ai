@@ -163,7 +163,14 @@ export function createHostCrossTeamApi(
   }
   const captures = new Map<
     string,
-    { signature: string; current: () => boolean; captured: ReturnType<typeof captureSend> }
+    {
+      signature: string;
+      current: () => boolean;
+      captured: ReturnType<typeof captureSend>;
+      active: number;
+      uncertainAttempts: number;
+      completed: boolean;
+    }
   >();
   return {
     async listTargets(excludeTeam) {
@@ -222,52 +229,85 @@ export function createHostCrossTeamApi(
       if (retained && retained.signature !== signature)
         throw new HostTeamOperationError('conflict', 'not-dispatched', commandId);
       if (!retained) {
+        // Completed acknowledgements are bounded recovery history, not a lifetime
+        // send quota. Never evict an uncertain or currently shared capture.
+        for (const [id, capture] of captures) {
+          if (captures.size < 1024) break;
+          if (capture.completed && capture.active === 0) captures.delete(id);
+        }
         if (captures.size >= 1024)
           throw new HostTeamOperationError('busy', 'not-dispatched', commandId);
         const current = captureScope();
+        assertCurrent(current, commandId);
         // Reserve before the first await: concurrent retries share the original pair and payload.
         retained = {
           signature,
           current,
           captured: Promise.resolve().then(() => captureSend(request, commandId, current)),
+          active: 0,
+          uncertainAttempts: 0,
+          completed: false,
         };
         captures.set(commandId, retained);
       }
-      assertCurrent(retained.current, commandId);
-      const { source, payload, current } = await retained.captured;
-      assertCurrent(current, commandId);
-      let result;
+      retained.active += 1;
       try {
-        result = await backend.invoke({
-          handle: source.handle,
-          commandId,
-          operation: 'crossTeam.send',
-          payload,
-        });
-      } catch {
-        throw new HostTeamOperationError('transport-unavailable', 'unknown', commandId);
+        assertCurrent(retained.current, commandId, retained.uncertainAttempts > 0);
+        const { source, payload, current } = await retained.captured;
+        assertCurrent(current, commandId, retained.uncertainAttempts > 0);
+        let result;
+        retained.uncertainAttempts += 1;
+        try {
+          result = await backend.invoke({
+            handle: source.handle,
+            commandId,
+            operation: 'crossTeam.send',
+            payload,
+          });
+        } catch {
+          throw new HostTeamOperationError('transport-unavailable', 'unknown', commandId);
+        }
+        assertCurrent(current, commandId, true);
+        if (!result.ok) {
+          if (result.outcome === 'not-dispatched') retained.uncertainAttempts -= 1;
+          const outcome =
+            result.outcome === 'not-dispatched' && retained.uncertainAttempts > 0
+              ? 'unknown'
+              : result.outcome;
+          throw new HostTeamOperationError(result.code, outcome, commandId);
+        }
+        const receipt = result.value;
+        if (
+          !receipt ||
+          !('kind' in receipt) ||
+          receipt.kind !== 'cross-team-receipt' ||
+          receipt.commandId !== commandId ||
+          receipt.messageId !== commandId ||
+          (payload.conversationId !== undefined &&
+            receipt.conversationId !== payload.conversationId)
+        )
+          throw new HostTeamOperationError('invalid-result', 'unknown', commandId);
+        if (receipt.phase !== 'completed')
+          throw new HostTeamOperationError('hold', 'unknown', commandId);
+        retained.completed = true;
+        return {
+          messageId: commandId,
+          deliveredToInbox: true,
+          deduplicated: receipt.deduplicated,
+          toTeam: request.toTeam,
+          toMember: receipt.toMember,
+        };
+      } finally {
+        retained.active -= 1;
+        // Failed selection and explicit no-dispatch refusals have no effect to
+        // recover. A prior lost acknowledgement remains retained on later refusal.
+        if (
+          retained.active === 0 &&
+          retained.uncertainAttempts === 0 &&
+          captures.get(commandId) === retained
+        )
+          captures.delete(commandId);
       }
-      assertCurrent(current, commandId, true);
-      if (!result.ok) throw new HostTeamOperationError(result.code, result.outcome, commandId);
-      const receipt = result.value;
-      if (
-        !receipt ||
-        !('kind' in receipt) ||
-        receipt.kind !== 'cross-team-receipt' ||
-        receipt.commandId !== commandId ||
-        receipt.messageId !== commandId ||
-        (payload.conversationId !== undefined && receipt.conversationId !== payload.conversationId)
-      )
-        throw new HostTeamOperationError('invalid-result', 'unknown', commandId);
-      if (receipt.phase !== 'completed')
-        throw new HostTeamOperationError('hold', 'unknown', commandId);
-      return {
-        messageId: commandId,
-        deliveredToInbox: true,
-        deduplicated: receipt.deduplicated,
-        toTeam: request.toTeam,
-        toMember: receipt.toMember,
-      };
     },
     async getOutbox(teamName) {
       if (!isHostTeamSelectionKey(teamName)) return legacy.getOutbox(teamName);

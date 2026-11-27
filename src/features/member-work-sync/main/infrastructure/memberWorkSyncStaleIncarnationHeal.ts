@@ -6,10 +6,7 @@ import {
   InternalStorageOperationInterruptedError,
   listPreSqliteArchiveGenerations,
 } from '@features/internal-storage/main';
-import {
-  atomicWriteAsync,
-  syncDirectoryDurably,
-} from '@main/utils/atomicWrite';
+import { atomicWriteAsync, syncDirectoryDurably } from '@main/utils/atomicWrite';
 
 import { readMemberWorkSyncStatusRevision } from '../../core/domain/MemberWorkSyncStatusRevision';
 
@@ -17,7 +14,10 @@ import {
   decodeMemberWorkSyncStoredStatus,
   MemberWorkSyncStatusDecodeError,
 } from './decodeMemberWorkSyncStoredStatus';
-import { validateMemberWorkSyncAuthoritySnapshot, validateMemberWorkSyncPrimaryRecords } from './memberWorkSyncAuthorityPreparation';
+import {
+  validateMemberWorkSyncAuthoritySnapshot,
+  validateMemberWorkSyncPrimaryRecords,
+} from './memberWorkSyncAuthorityPreparation';
 import { mergeDomainSnapshots } from './memberWorkSyncDomainSnapshotMerge';
 import { readIncarnationMismatch } from './memberWorkSyncPreparationDiagnostics';
 import { areSnapshotRecordSetsEquivalent, recordsToSnapshot } from './memberWorkSyncSqliteMappers';
@@ -404,9 +404,7 @@ async function corroborate(input: StaleIncarnationHealInput, plan: Plan): Promis
   }
   let birth: number | null;
   try {
-    const stats = input.readTeamRootStats
-      ? await input.readTeamRootStats(root)
-      : await lstat(root);
+    const stats = input.readTeamRootStats ? await input.readTeamRootStats(root) : await lstat(root);
     birth = getVerifiedTeamRootBirthtimeMs(stats);
   } catch {
     return 'team_root_unreadable';

@@ -91,12 +91,16 @@ export function captureProviderManagement(options: {
     profileId,
     configRevision,
     ...(options.preferences ? { preferences: Object.freeze({ ...options.preferences }) } : {}),
-    ...(options.refreshConfiguration ? { refreshConfiguration: async () => {
-      check(false, 'not-dispatched');
-      const target = await options.refreshConfiguration!();
-      check(false, 'unknown');
-      return target;
-    } } : {}),
+    ...(options.refreshConfiguration
+      ? {
+          refreshConfiguration: async () => {
+            check(false, 'not-dispatched');
+            const target = await options.refreshConfiguration!();
+            check(false, 'unknown');
+            return target;
+          },
+        }
+      : {}),
     isCurrent: current,
     async request(operation: ProviderManagementOperation, payload: Record<string, JsonValue>) {
       if (

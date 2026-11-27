@@ -64,7 +64,8 @@ export class JsonScheduleRepository implements ScheduleRepository {
     await this.writeMetadata(async () => {
       const schedules = await this.readSchedulesFile(true);
       const idx = schedules.findIndex((s) => s.id === schedule.id);
-      if (idx < 0 && options?.mustExist) throw new Error(`Schedule no longer exists: ${schedule.id}`);
+      if (idx < 0 && options?.mustExist)
+        throw new Error(`Schedule no longer exists: ${schedule.id}`);
       if (idx >= 0) schedules[idx] = schedule;
       else schedules.push(schedule);
       await this.writeSchedulesFile(schedules);
@@ -88,7 +89,8 @@ export class JsonScheduleRepository implements ScheduleRepository {
   }
 
   async updateSchedule(
-    id: string, update: (current: Schedule) => Schedule | null
+    id: string,
+    update: (current: Schedule) => Schedule | null
   ): Promise<Schedule | null> {
     return this.writeMetadata(async () => {
       const schedules = await this.readSchedulesFile(true);
@@ -180,7 +182,11 @@ export class JsonScheduleRepository implements ScheduleRepository {
     await atomicWriteAsync(this.runsFilePath(scheduleId), JSON.stringify(runs, null, 2));
   }
 
-  private async readJsonFile<T>(filePath: string, defaultValue: T, requireReadable = false): Promise<T> {
+  private async readJsonFile<T>(
+    filePath: string,
+    defaultValue: T,
+    requireReadable = false
+  ): Promise<T> {
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), READ_TIMEOUT_MS);

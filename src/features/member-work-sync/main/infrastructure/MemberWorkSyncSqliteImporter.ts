@@ -8,7 +8,11 @@ import {
 } from './memberWorkSyncAuthorityPreparation';
 import { MemberWorkSyncSafetyJsonReadError } from './memberWorkSyncSafetyJson';
 import { mergeMemberWorkSyncSnapshots } from './memberWorkSyncSnapshotMerge';
-import { areSnapshotRecordSetsEquivalent, recordsToSnapshot, snapshotToRecords } from './memberWorkSyncSqliteMappers';
+import {
+  areSnapshotRecordSetsEquivalent,
+  recordsToSnapshot,
+  snapshotToRecords,
+} from './memberWorkSyncSqliteMappers';
 
 import type {
   JsonMemberWorkSyncStore,
@@ -135,15 +139,25 @@ export class MemberWorkSyncSqliteImporter {
     const canonicalRecords = await this.deps.gateway.listTeamSnapshot(teamName);
     if (identity) validateMemberWorkSyncPrimaryRecords(identity, canonicalRecords);
     const withReplica = replicaSnapshot
-      ? mergeMemberWorkSyncSnapshots(teamName, canonicalRecords, snapshotToRecords(teamName, replicaSnapshot))
+      ? mergeMemberWorkSyncSnapshots(
+          teamName,
+          canonicalRecords,
+          snapshotToRecords(teamName, replicaSnapshot)
+        )
       : canonicalRecords;
     const records = mergeMemberWorkSyncSnapshots(teamName, withReplica, incomingRecords);
     if (identity) {
       validateMemberWorkSyncPrimaryRecords(identity, records);
       validateMemberWorkSyncAuthoritySnapshot(identity, recordsToSnapshot(teamName, records));
     }
-    return { canonicalRecords, records, snapshot, activeSnapshot, usedArchivedSnapshot,
-      filesToArchive: activeSnapshot?.filesToArchive ?? [] };
+    return {
+      canonicalRecords,
+      records,
+      snapshot,
+      activeSnapshot,
+      usedArchivedSnapshot,
+      filesToArchive: activeSnapshot?.filesToArchive ?? [],
+    };
   }
 
   private async importTeamOnce(teamName: string): Promise<void> {

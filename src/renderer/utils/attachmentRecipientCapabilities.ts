@@ -155,7 +155,9 @@ export function validateAttachmentPayloadsForMember(input: {
         {
           providerId: getMemberProviderId(member),
           isLeadRecipient: isLeadMember(member),
-          ...(member.nativeMediaTransport ? { nativeMediaTransport: member.nativeMediaTransport.revision } : {}),
+          ...(member.nativeMediaTransport
+            ? { nativeMediaTransport: member.nativeMediaTransport.revision }
+            : {}),
           ...(member.nativeInboxTextAttachmentsSupported !== undefined
             ? { nativeInboxTextAttachmentsSupported: member.nativeInboxTextAttachmentsSupported }
             : {}),
@@ -259,7 +261,9 @@ export function isReferenceAttachmentForMember(
       {
         providerId: getMemberProviderId(member),
         isLeadRecipient: isLeadMember(member),
-        ...(member.nativeMediaTransport ? { nativeMediaTransport: member.nativeMediaTransport.revision } : {}),
+        ...(member.nativeMediaTransport
+          ? { nativeMediaTransport: member.nativeMediaTransport.revision }
+          : {}),
         ...(member.nativeInboxTextAttachmentsSupported !== undefined
           ? { nativeInboxTextAttachmentsSupported: member.nativeInboxTextAttachmentsSupported }
           : {}),

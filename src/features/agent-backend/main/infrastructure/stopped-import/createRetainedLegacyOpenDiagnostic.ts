@@ -58,10 +58,7 @@ function operationHash(request: unknown, mainPid: number): string | undefined {
   }
 }
 
-function normalized(
-  phase: RetainedLegacyOpenDiagnosticPhase,
-  error: unknown
-): RefusalObservation {
+function normalized(phase: RetainedLegacyOpenDiagnosticPhase, error: unknown): RefusalObservation {
   const classification: Pick<RetainedLegacyOpenDiagnostic, 'category'> = { category: 'unknown' };
   createStoppedImportDiagnostic('desktop', (observation) => {
     classification.category = observation.category;
@@ -117,7 +114,9 @@ export function createRetainedLegacyOpenDiagnostic(
           phase: refusal.phase,
           category: refusal.category,
           outcome,
-          ...(refusal.sourceBoundary === undefined ? {} : { sourceBoundary: refusal.sourceBoundary }),
+          ...(refusal.sourceBoundary === undefined
+            ? {}
+            : { sourceBoundary: refusal.sourceBoundary }),
           ...(refusal.ownerFacts === undefined ? {} : { ownerFacts: refusal.ownerFacts }),
         });
         void Promise.resolve(sink(observation)).catch(() => {

@@ -68,7 +68,10 @@ export interface MemberWorkSyncStorageGateway {
   ): Promise<MemberWorkSyncStatusCompareAndWriteResult>;
   statusList(teamName: string): Promise<MemberWorkSyncStatusRecord[]>;
   /** Atomically delete only exact status rows, never rewriting other data. */
-  statusDeleteMatching(teamName: string, targets: MemberWorkSyncStatusDeleteTarget[]): Promise<number>;
+  statusDeleteMatching(
+    teamName: string,
+    targets: MemberWorkSyncStatusDeleteTarget[]
+  ): Promise<number>;
   metricEventsList(teamName: string): Promise<MemberWorkSyncMetricEventRecord[]>;
   reportsAppend(record: MemberWorkSyncReportIntentRecord): Promise<void>;
   reportsListPending(teamName: string): Promise<MemberWorkSyncReportIntentRecord[]>;

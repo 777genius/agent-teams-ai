@@ -34,7 +34,9 @@ describe('settings navigation', () => {
     act(() => gateway?.click());
     expect(onSectionChange).toHaveBeenCalledWith('gatewayProviders');
     act(() =>
-      root.render(<SettingsTabs activeSection="gatewayProviders" onSectionChange={onSectionChange} />)
+      root.render(
+        <SettingsTabs activeSection="gatewayProviders" onSectionChange={onSectionChange} />
+      )
     );
     expect(gateway?.getAttribute('aria-current')).toBe('page');
     const appearance = buttons.find((button) => button.textContent === 'general.appearance.title');

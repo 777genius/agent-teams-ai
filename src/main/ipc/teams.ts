@@ -1019,7 +1019,10 @@ async function wrapTeamHandler<T>(
     if (operation === 'createConfig' && error instanceof TeamDraftPreflightCollisionError) {
       // Existing on-disk team/tasks detected before this Create allocated anything.
       // Post-allocation errors, transport failures, and uncertain side effects remain held.
-      return teamCreationFailureResult(new TeamCreationRefusal('conflict', 'not-dispatched'), message);
+      return teamCreationFailureResult(
+        new TeamCreationRefusal('conflict', 'not-dispatched'),
+        message
+      );
     }
     return teamReadFailureResult(error);
   }

@@ -7,7 +7,7 @@ import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
 
 import { selectOpenCodeV2ConfigurationKey } from '../../composition/openCodeSelectedProviderConfiguration.js';
 import { ManagementCommandError } from '../../management/commandRecords.js';
-import { managementDigest } from '../../management/identity.js';
+import { managementDigest, managementValuesEqual } from '../../management/identity.js';
 import { DeferredOpenCodeV2FileKey, isOpenCodeV2ManagedFileSpelling } from './OpenCodeV2SelectedFileKey.js';
 import type { OpenCodeManagementProfile } from '../../management/profile.js';
 import type { BigIntStats } from 'node:fs';
@@ -370,7 +370,7 @@ export class OpenCodeV2CredentialScope {
       const latest = this.selected();
       // Compare immediately before publication under the Host writer lease. This is not a
       // cross-process CAS against an external CLI that does not participate in that lease.
-      if (latest.digest !== selected.digest || managementDigest(latest.store) !== managementDigest(selected.store)) held();
+      if (latest.digest !== selected.digest || !managementValuesEqual(latest.store, selected.store)) held();
       renameSync(temporary, path);
       if (process.platform !== 'win32') {
         fd = openSync(directory, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));

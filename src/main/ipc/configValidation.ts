@@ -9,7 +9,6 @@ import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import * as path from 'path';
 
 import type {
-  AppConfig,
   DisplayConfig,
   GeneralConfig,
   HttpServerConfig,
@@ -19,31 +18,14 @@ import type {
   RuntimeConfig,
   SshPersistConfig,
 } from '../services';
+import type {
+  ConfigSection,
+  ConfigUpdateValidationResult,
+  ValidationFailure,
+  ValidationSuccess,
+} from './configValidationTypes';
 import type { TeamRuntimeRecoveryConfig } from '@features/team-runtime-recovery/contracts';
-
-type ConfigSection = keyof AppConfig;
-
-interface ValidationSuccess<K extends ConfigSection> {
-  valid: true;
-  section: K;
-  data: Partial<AppConfig[K]>;
-}
-
-interface ValidationFailure {
-  valid: false;
-  error: string;
-}
-
-export type ConfigUpdateValidationResult =
-  | ValidationSuccess<'notifications'>
-  | ValidationSuccess<'teamRuntimeRecovery'>
-  | ValidationSuccess<'general'>
-  | ValidationSuccess<'providerConnections'>
-  | ValidationSuccess<'runtime'>
-  | ValidationSuccess<'display'>
-  | ValidationSuccess<'httpServer'>
-  | ValidationSuccess<'ssh'>
-  | ValidationFailure;
+export type { ConfigUpdateValidationResult } from './configValidationTypes';
 
 const VALID_SECTIONS = new Set<ConfigSection>([
   'notifications',
@@ -244,11 +226,18 @@ function validateNotificationsSection(
         if (
           !isStringArray(value) ||
           value.length > NOTIFICATION_DESKTOP_ROUTABLE_EVENTS.length ||
-          value.some((event) => !(NOTIFICATION_DESKTOP_ROUTABLE_EVENTS as readonly string[]).includes(event))
+          value.some(
+            (event) => !(NOTIFICATION_DESKTOP_ROUTABLE_EVENTS as readonly string[]).includes(event)
+          )
         ) {
-          return { valid: false, error: 'notifications.desktopDisabledEvents contains unsupported events' };
+          return {
+            valid: false,
+            error: 'notifications.desktopDisabledEvents contains unsupported events',
+          };
         }
-        result.desktopDisabledEvents = [...new Set(value)] as NotificationConfig['desktopDisabledEvents'];
+        result.desktopDisabledEvents = [
+          ...new Set(value),
+        ] as NotificationConfig['desktopDisabledEvents'];
         break;
       case 'includeSubagentErrors':
         if (typeof value !== 'boolean')

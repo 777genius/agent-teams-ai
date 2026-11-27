@@ -1,13 +1,14 @@
 import { type JSX, useState } from 'react';
 
-import { useRetainedLegacyAccount, useRetainedLegacyInstallers, useRetainedLegacyLaunch, useRetainedLegacyRuntimeStatus } from '@features/agent-backend/renderer';
+import {
+  useRetainedLegacyAccount,
+  useRetainedLegacyInstallers,
+  useRetainedLegacyLaunch,
+  useRetainedLegacyRuntimeStatus,
+} from '@features/agent-backend/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@renderer/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
 import { MULTIMODEL_PROVIDER_IDS } from '@renderer/store/slices/cliInstallerSlice';
@@ -53,10 +54,16 @@ export const TeamModelProviderActions = ({
     setRefreshError(false);
     if (retained) {
       try {
-        const results = await Promise.all([original.refresh(), installers.refresh(), account.refresh()]);
+        const results = await Promise.all([
+          original.refresh(),
+          installers.refresh(),
+          account.refresh(),
+        ]);
         if (results.some((result) => !result)) setRefreshError(true);
         directory?.refresh();
-      } finally { setRefreshing(false); }
+      } finally {
+        setRefreshing(false);
+      }
       return;
     }
     // Runtime installation snapshots have their own caches and gate model discovery.
@@ -123,24 +130,34 @@ export const TeamModelProviderActions = ({
   return (
     <div className="mb-1 space-y-1">
       <div className="flex w-full items-center gap-1">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          data-testid="team-model-selector-manage-providers"
-          className="h-8 min-w-0 flex-1 justify-start gap-2 border-[var(--color-border)] bg-black/[0.025] px-2.5 text-xs font-medium text-[var(--color-text-secondary)] hover:bg-black/[0.05] hover:text-[var(--color-text)] dark:bg-white/[0.03] dark:hover:bg-white/[0.06]"
-          disabled={!!retained}
-          title={retained ? 'Close Launch before changing the original runtime connection.' : undefined}
-          onClick={() => {
-            onManageProviders?.(providerId);
-            openSettingsTab('providers');
-          }}
-        >
-          <Settings2 className="size-4 shrink-0" aria-hidden="true" />
-          <span className="min-w-0 truncate">
-            {dashboardT('cliStatus.actions.manageProviders')}
-          </span>
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="flex min-w-0 flex-1" tabIndex={retained ? 0 : undefined}>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                data-testid="team-model-selector-manage-providers"
+                className="h-8 min-w-0 flex-1 justify-start gap-2 border-[var(--color-border)] bg-black/[0.025] px-2.5 text-xs font-medium text-[var(--color-text-secondary)] hover:bg-black/[0.05] hover:text-[var(--color-text)] dark:bg-white/[0.03] dark:hover:bg-white/[0.06]"
+                disabled={!!retained}
+                onClick={() => {
+                  onManageProviders?.(providerId);
+                  openSettingsTab('providers');
+                }}
+              >
+                <Settings2 className="size-4 shrink-0" aria-hidden="true" />
+                <span className="min-w-0 truncate">
+                  {dashboardT('cliStatus.actions.manageProviders')}
+                </span>
+              </Button>
+            </span>
+          </TooltipTrigger>
+          {retained ? (
+            <TooltipContent>
+              Close Launch before changing the original runtime connection.
+            </TooltipContent>
+          ) : null}
+        </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -165,9 +182,11 @@ export const TeamModelProviderActions = ({
           </TooltipContent>
         </Tooltip>
       </div>
-      {retained ? <p className="px-2 text-[11px] text-[var(--color-text-secondary)]">
-        Using the original runtime connection. Close Launch to change its settings.
-      </p> : null}
+      {retained ? (
+        <p className="px-2 text-[11px] text-[var(--color-text-secondary)]">
+          Using the original runtime connection. Close Launch to change its settings.
+        </p>
+      ) : null}
       {refreshError ? (
         <span role="alert" className="px-2 text-[11px] text-red-600 dark:text-red-300">
           {commonT('states.error')} · {commonT('actions.retry')}

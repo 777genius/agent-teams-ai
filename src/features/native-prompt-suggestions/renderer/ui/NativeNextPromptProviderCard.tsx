@@ -37,7 +37,12 @@ export function NativeNextPromptProviderCard({
             {description}
           </div>
         </div>
-        <SettingsToggle enabled={enabled} ariaLabel={title} disabled={saving || disabled} onChange={onChange} />
+        <SettingsToggle
+          enabled={enabled}
+          ariaLabel={title}
+          disabled={saving || disabled}
+          onChange={onChange}
+        />
       </div>
       {error ? (
         <div

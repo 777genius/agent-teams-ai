@@ -28,7 +28,11 @@ export interface DesktopBackendDescriptor {
     readonly contextId: string;
     readonly label: string;
     readonly projectContextMode?: 'shared' | 'per_project';
-    readonly projectContext?: { readonly logicalHandleId: string; readonly projectPath: string; readonly workContextId: string };
+    readonly projectContext?: {
+      readonly logicalHandleId: string;
+      readonly projectPath: string;
+      readonly workContextId: string;
+    };
     readonly members: readonly { readonly memberId: string; readonly label: string }[];
     readonly scope: BackendScope;
   }[];

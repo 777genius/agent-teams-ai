@@ -1,6 +1,9 @@
 import { useEffect, useMemo } from 'react';
 
-import { useRetainedLegacyLaunch, useRetainedLegacyRuntimeStatus } from '@features/agent-backend/renderer';
+import {
+  useRetainedLegacyLaunch,
+  useRetainedLegacyRuntimeStatus,
+} from '@features/agent-backend/renderer';
 import {
   isCodexAccountSnapshotPending,
   mergeCodexCliStatusWithSnapshot,
@@ -178,7 +181,9 @@ export function useEffectiveCliProviderStatus(
     );
   });
 
-  const scopedProviderStatus = retained ? (original.status?.providers.find((p) => p.providerId === providerId) ?? null) : storedProviderStatus;
+  const scopedProviderStatus = retained
+    ? (original.status?.providers.find((p) => p.providerId === providerId) ?? null)
+    : storedProviderStatus;
   const loadingCliStatus = useMemo(
     () =>
       !cliStatus && cliStatusLoading && multimodelEnabled

@@ -194,7 +194,12 @@ function createPorts(
 describe('OpenCode runtime adapter team flow', () => {
   it.each([
     { name: 'fresh explicit selection', requested: 1, stored: undefined, expected: 1 },
-    { name: 'fresh legacy selection', requested: undefined, stored: undefined, expected: undefined },
+    {
+      name: 'fresh legacy selection',
+      requested: undefined,
+      stored: undefined,
+      expected: undefined,
+    },
     { name: 'existing explicit selection', requested: undefined, stored: 1, expected: 1 },
   ] as const)('preserves $name through persisted creation and cold read', async (selection) => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'TEST-opencode-create-selection-'));
@@ -217,15 +222,19 @@ describe('OpenCode runtime adapter team flow', () => {
         });
       }
       await expect(
-        createOpenCodeTeamThroughRuntimeAdapterFlow(request, vi.fn(), createPorts([], {
-          getTeamsBasePathsToProbe: () => [
-            { location: 'configured', basePath: path.join(root, 'teams') },
-          ],
-          getTeamsBasePath: () => path.join(root, 'teams'),
-          getTasksBasePath: () => path.join(root, 'tasks'),
-          mkdir: (directoryPath) => fs.mkdir(directoryPath, { recursive: true }),
-          writeTeamMeta: (teamName, data) => store.writeMeta(teamName, data),
-        }))
+        createOpenCodeTeamThroughRuntimeAdapterFlow(
+          request,
+          vi.fn(),
+          createPorts([], {
+            getTeamsBasePathsToProbe: () => [
+              { location: 'configured', basePath: path.join(root, 'teams') },
+            ],
+            getTeamsBasePath: () => path.join(root, 'teams'),
+            getTasksBasePath: () => path.join(root, 'tasks'),
+            mkdir: (directoryPath) => fs.mkdir(directoryPath, { recursive: true }),
+            writeTeamMeta: (teamName, data) => store.writeMeta(teamName, data),
+          })
+        )
       ).resolves.toEqual({ runId: 'adapter-run' });
       const persisted = JSON.parse(
         await fs.readFile(path.join(root, 'teams', request.teamName, 'team.meta.json'), 'utf8')

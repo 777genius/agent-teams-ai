@@ -1,4 +1,8 @@
-import { assertBackendRequestGuard, BackendRoutingError, ownerKey } from '../application/backendBinding';
+import {
+  assertBackendRequestGuard,
+  BackendRoutingError,
+  ownerKey,
+} from '../application/backendBinding';
 
 import { readCapturedTeamRetirements } from './readCapturedTeamRetirements';
 import { HostClientError } from './selectedHostProfile';
@@ -8,8 +12,9 @@ import type { BackendOwnerRef, BackendRequestGuard } from '../application/backen
 import type { BackendOwnerRouter, CapturedBackendOwner } from '../application/BackendOwnerRouter';
 import type { DesktopBackendDescriptor } from './loadDesktopBackendDescriptor';
 
-export type CapturedConnectionUnavailable =
-  NonNullable<BackendConnectionSnapshot['unavailableOwners']>[number];
+export type CapturedConnectionUnavailable = NonNullable<
+  BackendConnectionSnapshot['unavailableOwners']
+>[number];
 
 /** Classifies only the original captured read; registration and publication stay outside this catch. */
 export async function readCapturedOwnerAvailability<T>(options: {
@@ -27,19 +32,32 @@ export async function readCapturedOwnerAvailability<T>(options: {
     return { value };
   } catch (error) {
     assertCurrent();
-    if (error instanceof HostClientError &&
-      (error.code === 'transport-closed' || error.code === 'shutting-down')) {
-      return { unavailable: { kind: 'owner', ownerResourceRef,
-        code: error.code === 'transport-closed' ? 'unavailable' : 'shutting-down',
-        outcome: error.outcome } };
+    if (
+      error instanceof HostClientError &&
+      (error.code === 'transport-closed' || error.code === 'shutting-down')
+    ) {
+      return {
+        unavailable: {
+          kind: 'owner',
+          ownerResourceRef,
+          code: error.code === 'transport-closed' ? 'unavailable' : 'shutting-down',
+          outcome: error.outcome,
+        },
+      };
     }
     if (error instanceof BackendRoutingError && error.code === 'unavailable') {
       // A registered active owner is not an outage. Unknown/sealed-global states remain fatal.
       if (router.ownerDisplayRef(owner, true) !== ownerResourceRef)
         throw new BackendRoutingError('hold');
       assertCurrent();
-      return { unavailable: { kind: 'owner', ownerResourceRef,
-        code: 'unavailable', outcome: error.outcome } };
+      return {
+        unavailable: {
+          kind: 'owner',
+          ownerResourceRef,
+          code: 'unavailable',
+          outcome: error.outcome,
+        },
+      };
     }
     throw error;
   }
@@ -59,21 +77,30 @@ export async function readCapturedConnectionAvailability(options: {
   unavailable: CapturedConnectionUnavailable[];
 }> {
   const { contextId, router, clients, entries, assertCurrent, guard } = options;
-  const owners = new Map(entries.map(entry => [ownerKey(entry.owner), entry.owner]));
-  const replaced = new Set<string>(), retired = new Set<string>();
+  const owners = new Map(entries.map((entry) => [ownerKey(entry.owner), entry.owner]));
+  const replaced = new Set<string>(),
+    retired = new Set<string>();
   const unavailable: CapturedConnectionUnavailable[] = [];
   for (const [key, owner] of owners) {
     assertCurrent();
     const captured = clients.get(key);
     if (!captured) throw new BackendRoutingError('hold');
     const result = await readCapturedOwnerAvailability({
-      router, owner, assertCurrent,
-      read: () => readCapturedTeamRetirements({
-        owner: router.ownerBinding(owner), contextId, client: captured.client,
-        start: () => router.startOwner(owner),
-        available: () => { assertCurrent(); return true; },
-        ...(guard ? { guard } : {}),
-      }),
+      router,
+      owner,
+      assertCurrent,
+      read: () =>
+        readCapturedTeamRetirements({
+          owner: router.ownerBinding(owner),
+          contextId,
+          client: captured.client,
+          start: () => router.startOwner(owner),
+          available: () => {
+            assertCurrent();
+            return true;
+          },
+          ...(guard ? { guard } : {}),
+        }),
     });
     if ('unavailable' in result) {
       unavailable.push(result.unavailable);

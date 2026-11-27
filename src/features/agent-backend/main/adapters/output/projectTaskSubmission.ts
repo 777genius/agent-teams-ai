@@ -1,5 +1,7 @@
 import { parseBackendOperation } from '../input/validateBackendOperation';
 
+import { projectCompactTaskSubmission } from './projectCompactTaskSubmission';
+
 import type {
   BackendCommandReceipt,
   BackendOperationRequest,
@@ -18,7 +20,12 @@ function string(value: unknown): string {
 export function projectTaskSubmission(
   source: Record<string, unknown>,
   request: BackendOperationRequest
-): Pick<BackendCommandReceipt, 'taskSubmission' | 'taskSubmissionNoEffect'> {
+): Pick<
+  BackendCommandReceipt,
+  'taskSubmission' | 'taskSubmissionProof' | 'taskSubmissionNoEffect'
+> {
+  if (source.taskSubmissionProof !== undefined)
+    return projectCompactTaskSubmission(source, request);
   const raw = row(source.command);
   if (Object.keys(raw).some((key) => !['commandId', 'operation', 'payload'].includes(key)))
     throw new Error('Invalid original task command');

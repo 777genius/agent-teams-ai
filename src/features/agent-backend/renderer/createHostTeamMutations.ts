@@ -151,8 +151,11 @@ export function createHostTeamMutations(options: {
       source?.forEach((ref) => collect(ref.teamName));
     }
     const target = await options.resolve(key, current, [...referenceTeams]);
-    if (payload.nativeCommand === true &&
-      target.members?.filter(member => member.name === payload.to && member.role === 'lead').length !== 1)
+    if (
+      payload.nativeCommand === true &&
+      target.members?.filter((member) => member.name === payload.to && member.role === 'lead')
+        .length !== 1
+    )
       return unsupported();
     if (destination === 'captured-lead') {
       const leads = target.members?.filter((member) => member.role === 'lead') ?? [];
@@ -239,7 +242,11 @@ export function createHostTeamMutations(options: {
     const receipt = structuredClone(result.value) as BackendCommandReceipt;
     if (receipt.operation !== command.operation)
       throw new HostTeamOperationError('invalid-result', 'unknown', command.commandId);
-    attempt?.received(receipt);
+    if (attempt) {
+      await attempt.received(receipt);
+      if (!current())
+        throw new HostTeamOperationError('context-changed', 'unknown', command.commandId);
+    }
     if (receipt.phase !== 'completed')
       throw new HostTeamOperationError(
         receipt.phase,
@@ -500,7 +507,13 @@ export function createHostTeamMutations(options: {
           current: options.captureScope(),
         },
         async (attempt) => {
-          object(request, ['command', 'text', 'taskRefs', 'attachments', 'answerClarificationRequestId']);
+          object(request, [
+            'command',
+            'text',
+            'taskRefs',
+            'attachments',
+            'answerClarificationRequestId',
+          ]);
           const files = attachments(request.attachments, 'task');
           const taskRefs = refs(request.taskRefs);
           attempt.attachments(
@@ -514,8 +527,9 @@ export function createHostTeamMutations(options: {
               payload: {
                 taskId,
                 text: request.text,
-                ...(request.answerClarificationRequestId === undefined ? {} :
-                  { answerClarificationRequestId: request.answerClarificationRequestId }),
+                ...(request.answerClarificationRequestId === undefined
+                  ? {}
+                  : { answerClarificationRequestId: request.answerClarificationRequestId }),
                 ...(taskRefs === undefined ? {} : { taskRefs }),
               },
             },

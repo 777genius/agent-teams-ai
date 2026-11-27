@@ -94,17 +94,18 @@ export function createReviewFlowStore(
       if (status === 'ready' && !options?.force) return Promise.resolve();
       if (status !== 'ready') set({ status: 'loading', error: null });
       inFlight = readFreshOverview()
-        .then(({ defaults, defaultsError, overrides, unreadableTeams, unavailable, projectTeams }) =>
-          set({
-            status: 'ready',
-            defaults,
-            defaultsError: defaultsError ?? null,
-            overrides,
-            unreadableTeams,
-            unavailable: unavailable ?? [],
-            projectTeams: projectTeams ?? {},
-            error: null,
-          })
+        .then(
+          ({ defaults, defaultsError, overrides, unreadableTeams, unavailable, projectTeams }) =>
+            set({
+              status: 'ready',
+              defaults,
+              defaultsError: defaultsError ?? null,
+              overrides,
+              unreadableTeams,
+              unavailable: unavailable ?? [],
+              projectTeams: projectTeams ?? {},
+              error: null,
+            })
         )
         .catch((error: unknown) => {
           // Retain data for retry, but do not present a stale policy as a current editable read.

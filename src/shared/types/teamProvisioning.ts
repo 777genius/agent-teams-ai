@@ -1,4 +1,7 @@
-import type { BackendLaunchModelPreparation, BackendLaunchModelSelection } from '@features/agent-backend/contracts';
+import type {
+  BackendLaunchModelPreparation,
+  BackendLaunchModelSelection,
+} from '@features/agent-backend/contracts';
 
 export type CapturedTeamModelPreparation = BackendLaunchModelPreparation;
 

@@ -177,7 +177,8 @@ export function createTeamProvisioningStopFlowDepsFromService<TRun extends TeamP
     killTeamProcessAndWait:
       options.killTeamProcessAndWait ??
       (killTeamProcessAndWaitDefault as TeamProvisioningStopFlowFactoryDeps<TRun>['killTeamProcessAndWait']),
-    stopOriginalWindowsDirectMembers: options.stopOriginalWindowsDirectMembers ?? stopWindowsMembersDefault,
+    stopOriginalWindowsDirectMembers:
+      options.stopOriginalWindowsDirectMembers ?? stopWindowsMembersDefault,
     updateProgress: (run, state, message) => options.updateProgress(run, state, message),
     cleanupRun: (run) => service.cleanupRun(run),
     emitTeamChange: (event) => service.teamChangeEmitter?.(event),
@@ -272,7 +273,8 @@ export function createTeamProvisioningStopTeamPortsFromDeps<TRun extends TeamPro
     deleteAliveRunId: (teamName) => deps.deleteAliveRunId(teamName),
     killTeamProcess: (child) => deps.killTeamProcess(child),
     killTeamProcessAndWait: (child) => deps.killTeamProcessAndWait(child),
-    stopOriginalWindowsDirectMembers: (processes) => deps.stopOriginalWindowsDirectMembers(processes),
+    stopOriginalWindowsDirectMembers: (processes) =>
+      deps.stopOriginalWindowsDirectMembers(processes),
     updateProgress: (run, state, message) => deps.updateProgress(run, state, message),
     cleanupRun: (run) => deps.cleanupRun(run),
     logger: deps.logger,

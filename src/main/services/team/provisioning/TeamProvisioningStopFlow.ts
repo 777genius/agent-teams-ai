@@ -121,8 +121,8 @@ async function stopTeamRuntimeFlow<TRun extends TeamProvisioningStopRun>(
   const trackedStopRunId = ports.getTrackedRunId(teamName);
   const trackedStopRun = trackedStopRunId ? ports.runs.get(trackedStopRunId) : undefined;
   const fallbackStopRunId = ports.getAliveRunId(teamName);
-  const ownedWindowsMemberRun = trackedStopRun ??
-    (fallbackStopRunId ? ports.runs.get(fallbackStopRunId) : undefined);
+  const ownedWindowsMemberRun =
+    trackedStopRun ?? (fallbackStopRunId ? ports.runs.get(fallbackStopRunId) : undefined);
   const deferPersistentProcessScan =
     process.platform === 'win32' && !!ownedWindowsMemberRun?.directMemberProcesses?.size;
   if (!deferPersistentProcessScan) ports.stopPersistentTeamMembers(teamName);

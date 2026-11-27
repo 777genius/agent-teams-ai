@@ -36,7 +36,8 @@ export async function prepareMemberWorkSyncColdPrimary(input: {
         pending.expectedDigest)
   )
     throw new MemberWorkSyncSafetyJsonReadError('unavailable');
-  const source = pending?.snapshot ?? (await replica.readForPrimary(teamName, input.allowDirtyRecovery));
+  const source =
+    pending?.snapshot ?? (await replica.readForPrimary(teamName, input.allowDirtyRecovery));
   const plan = await sqlite.prepareCanonicalImport(teamName, source, incarnation);
   const expected = recordsToSnapshot(teamName, plan.records);
   publication.validateImport(expected, plan.records);

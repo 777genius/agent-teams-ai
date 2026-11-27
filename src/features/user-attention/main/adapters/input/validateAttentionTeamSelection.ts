@@ -1,4 +1,7 @@
-import { isHostTeamSelectionKey, parseHostTeamSelectionKey } from '@features/agent-backend/contracts/teamSelection';
+import {
+  isHostTeamSelectionKey,
+  parseHostTeamSelectionKey,
+} from '@features/agent-backend/contracts/teamSelection';
 import { validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 
 /** Host handles use their finite opaque-key grammar; legacy names keep their original grammar. */

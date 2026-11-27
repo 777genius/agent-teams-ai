@@ -1739,7 +1739,9 @@ async function initializeServices(): Promise<void> {
   initializeAgentBackendConnection(contextRegistry, {
     getMainWindow: () => mainWindow,
     rendererIndexPath: resolveRendererIndexPath(__dirname),
-    nativeNextPromptProviders: selectNativeNextPromptProviders(configManager.getConfig().providerConnections),
+    nativeNextPromptProviders: selectNativeNextPromptProviders(
+      configManager.getConfig().providerConnections
+    ),
     // Fail closed for browser SSE: /api/events broadcasts to every connected
     // client without per-owner authorization. Never publish private human-DM
     // follow-ups there until a scoped authenticated SSE transport exists.
@@ -1841,8 +1843,10 @@ async function initializeServices(): Promise<void> {
     void internalStorageFeature.probeBackend();
   }
   const captureHostReads = () => captureHostTeamReads(captureDesktopAgentBackendHttpScope());
-  customTeamTemplatesFeature = startCustomTeamTemplatesFeature(internalStorageFeature,
-    new OwnerRoutedTeamConfigurationSnapshotAdapter(captureHostReads));
+  customTeamTemplatesFeature = startCustomTeamTemplatesFeature(
+    internalStorageFeature,
+    new OwnerRoutedTeamConfigurationSnapshotAdapter(captureHostReads)
+  );
   teamDataService = new TeamDataService();
   void teamDataService
     .listTeams()
@@ -2255,9 +2259,10 @@ async function initializeServices(): Promise<void> {
     captureHost: captureHostReads,
     getContextId: () => contextRegistry.getActive().id,
     getTeamDataService: () => teamDataService,
-    listGroupNames: async (teamName) => Object.fromEntries(
-      (await teamGroupChatsFeature.list({ teamName })).map(({ id, name }) => [id, name])
-    ),
+    listGroupNames: async (teamName) =>
+      Object.fromEntries(
+        (await teamGroupChatsFeature.list({ teamName })).map(({ id, name }) => [id, name])
+      ),
   });
   recentProjectsFeature = createRecentProjectsFeature({
     getActiveContext: () => contextRegistry.getActive(),
@@ -2518,7 +2523,8 @@ async function initializeServices(): Promise<void> {
     });
   const preparedMemberWorkSyncFeature = createMemberWorkSyncFeature({
     sourceWriteAdmission: createDesktopWorkSyncSourceAdmission(
-      initializedBackupOwner, () => teamBackupService === initializedBackupOwner
+      initializedBackupOwner,
+      () => teamBackupService === initializedBackupOwner
     ),
     lifecycleIdentity: initializedBackupOwner.workSyncIdentity,
     operationGate: workSyncRestoreGate,

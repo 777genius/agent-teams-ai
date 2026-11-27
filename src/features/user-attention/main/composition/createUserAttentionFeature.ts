@@ -13,17 +13,20 @@ export function createUserAttentionFeature(deps: {
   captureHost?: CaptureHostTeamReads;
   getContextId(): string;
   listGroupNames?: (teamName: string) => Promise<Record<string, string>>;
-  getTeamDataService(): Pick<TeamDataService,
-    'listTeams' | 'getUserAttentionTasks' | 'getMessageFeed'>;
+  getTeamDataService(): Pick<
+    TeamDataService,
+    'listTeams' | 'getUserAttentionTasks' | 'getMessageFeed'
+  >;
 }): UserAttentionFeatureFacade {
   const source = new TeamDataAttentionSource(deps);
   return {
     async getUserAttentionSnapshot(teamName) {
       const host = await deps.captureHost?.();
-      const result = await new GetAttentionSnapshot(new HostRoutedAttentionSource(source, host))
-        .getUserAttentionSnapshot(teamName);
+      const result = await new GetAttentionSnapshot(
+        new HostRoutedAttentionSource(source, host)
+      ).getUserAttentionSnapshot(teamName);
       host?.assertCurrent();
-      return { ...result, complete: result.complete && !(host?.unavailableOwners.length) };
+      return { ...result, complete: result.complete && !host?.unavailableOwners.length };
     },
   };
 }

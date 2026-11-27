@@ -3,7 +3,10 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 import { pruneDeletedTeamBackups } from '@agent-teams/legacy-agent-host/lifecycle';
-import { backupProjectTeamDefinitionSafely, recoverMissingProjectTeamDefinitions } from '@features/team-project-context/main';
+import {
+  backupProjectTeamDefinitionSafely,
+  recoverMissingProjectTeamDefinitions,
+} from '@features/team-project-context/main';
 import {
   atomicWriteAsync,
   atomicWriteSync,

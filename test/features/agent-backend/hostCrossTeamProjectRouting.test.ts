@@ -44,11 +44,16 @@ function fixture() {
   });
   const getConnections = vi.fn<AgentBackendApi['getConnections']>(async () => ({ state: 'ready', bindings: rows }));
   const legacy: CrossTeamAPI = { send: vi.fn(), listTargets: vi.fn(), getOutbox: vi.fn() };
-  const api = createHostCrossTeamApi(legacy, { invoke, getConnections }, () => () => true);
+  let scopeEpoch = 0;
+  const api = createHostCrossTeamApi(legacy, { invoke, getConnections }, () => {
+    const capturedEpoch = scopeEpoch;
+    return () => capturedEpoch === scopeEpoch;
+  });
   const request = { fromTeam: key(source.handle.handleId), fromMember: 'user',
     toTeam: key(target.handle.handleId), messageId: 'TEST-message', text: 'TEST original input' };
   return { api, legacy, invoke, getConnections, root, source, target, child, rows, request,
-    empty: () => { ready = false; }, loseAck: () => { failSend = true; } };
+    empty: () => { ready = false; }, loseAck: () => { failSend = true; },
+    changeScope: () => { scopeEpoch += 1; } };
 }
 
 it('lists logical destinations and captures the existing same-project execution child', async () => {
@@ -111,4 +116,83 @@ it('reserves command identity before an awaited catalog and shares the original 
   const sends = f.invoke.mock.calls.filter(([r]) => r.operation === 'crossTeam.send');
   expect(sends).toHaveLength(2);
   expect(sends[0][0]).toEqual(sends[1][0]);
+});
+
+it.each(['capture', 'dispatch'] as const)(
+  'does not exhaust sends after repeated %s refusals proven not dispatched',
+  async (stage) => {
+    const f = fixture();
+    const getConnections = f.getConnections.getMockImplementation()!;
+    const invoke = f.invoke.getMockImplementation()!;
+    if (stage === 'capture') {
+      f.getConnections.mockRejectedValue(new Error('TEST unavailable before capture'));
+    } else {
+      f.invoke.mockImplementation((request) => request.operation === 'crossTeam.send'
+        ? Promise.resolve({ ok: false, code: 'unavailable', outcome: 'not-dispatched' })
+        : invoke(request));
+    }
+    for (let index = 0; index < 1024; index++) {
+      await expect(f.api.send({ ...f.request, messageId: 'TEST-refused-' + index })).rejects.toThrow();
+    }
+    f.getConnections.mockImplementation(getConnections);
+    f.invoke.mockImplementation(invoke);
+    await expect(f.api.send({ ...f.request, messageId: 'TEST-after-refusals' }))
+      .resolves.toMatchObject({ deliveredToInbox: true });
+    expect(f.getConnections).toHaveBeenCalledTimes(1025);
+    expect(f.legacy.send).not.toHaveBeenCalled();
+  }
+);
+
+it('bounds completed recovery history without imposing a lifetime send limit', async () => {
+  const f = fixture();
+  for (let index = 0; index < 1025; index++) {
+    await expect(f.api.send({ ...f.request, messageId: 'TEST-completed-' + index }))
+      .resolves.toMatchObject({ deliveredToInbox: true });
+  }
+  expect(f.getConnections).toHaveBeenCalledTimes(1025);
+  expect(f.invoke.mock.calls.filter(([request]) => request.operation === 'crossTeam.send'))
+    .toHaveLength(1025);
+});
+
+it('retains the exact unknown send while completed recovery history is evicted', async () => {
+  const f = fixture();
+  f.loseAck();
+  await expect(f.api.send(f.request)).rejects.toMatchObject({ outcome: 'unknown' });
+  const original = f.invoke.mock.calls.find(([request]) => request.operation === 'crossTeam.send')![0];
+  for (let index = 0; index < 1024; index++) {
+    await f.api.send({ ...f.request, messageId: 'TEST-other-completed-' + index });
+  }
+  await expect(f.api.send({ ...f.request, text: 'TEST changed input' }))
+    .rejects.toMatchObject({ code: 'conflict', outcome: 'not-dispatched' });
+  f.empty();
+  await expect(f.api.send(f.request)).resolves.toMatchObject({ deliveredToInbox: true });
+  const sends = f.invoke.mock.calls.filter(([request]) =>
+    request.operation === 'crossTeam.send' && request.commandId === f.request.messageId);
+  expect(sends.map(([request]) => request)).toEqual([original, original]);
+  expect(f.getConnections).toHaveBeenCalledTimes(1025);
+});
+
+it('keeps a lost acknowledgement uncertain when a later retry is refused before dispatch', async () => {
+  const f = fixture();
+  f.loseAck();
+  await expect(f.api.send(f.request)).rejects.toMatchObject({ outcome: 'unknown' });
+  const invoke = f.invoke.getMockImplementation()!;
+  f.invoke.mockImplementationOnce(async () => ({ ok: false, code: 'busy', outcome: 'not-dispatched' }));
+  await expect(f.api.send(f.request)).rejects.toMatchObject({ outcome: 'unknown' });
+  f.empty();
+  f.invoke.mockImplementation(invoke);
+  await expect(f.api.send(f.request)).resolves.toMatchObject({ deliveredToInbox: true });
+  expect(f.getConnections).toHaveBeenCalledOnce();
+});
+
+it('does not relabel an unknown dispatched intent as not dispatched after context retirement', async () => {
+  const f = fixture();
+  f.loseAck();
+  await expect(f.api.send(f.request)).rejects.toMatchObject({ outcome: 'unknown' });
+  f.changeScope();
+  await expect(f.api.send(f.request))
+    .rejects.toMatchObject({ code: 'context-changed', outcome: 'unknown' });
+  expect(f.getConnections).toHaveBeenCalledOnce();
+  expect(f.invoke.mock.calls.filter(([request]) => request.operation === 'crossTeam.send'))
+    .toHaveLength(1);
 });

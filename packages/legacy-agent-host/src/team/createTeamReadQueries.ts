@@ -1,5 +1,6 @@
 import { digest, safeSegment } from "./identity.js";
 import { TeamOwnerError } from "./contracts.js";
+import { pageOwnerTaskComment } from "./pageOwnerTaskComment.js";
 import type { TeamGrant, TeamMember } from "./contracts.js";
 import type { TeamBoardReadPolicy, TeamTaskInventoryFilters } from "./ports.js";
 
@@ -8,6 +9,7 @@ export function createTeamReadQueries(options: {
   reads: TeamBoardReadPolicy;
   fenced<T>(action: () => T): T;
   authority(): { grant: TeamGrant; members: readonly TeamMember[] };
+  commentPages: { principalId: string; key: string; teamName: string };
   getTeam(cursor?: string): unknown;
 }) {
   const identity = () => {
@@ -52,11 +54,15 @@ export function createTeamReadQueries(options: {
     getKanbanState: (settings?: { strict?: boolean }) => read(() => options.reads.getKanbanState(settings)),
     getReviewFlowSettings: () => read(() => options.reads.getReviewFlowSettings()),
     listReviewers: () => read(() => options.reads.listReviewers()),
-    getTaskComment: (taskId: string, commentId: string) =>
+    getTaskComment: (taskId: string, commentId: string, cursor?: string) =>
       read(() => {
         safeSegment(taskId);
         safeSegment(commentId);
-        return options.reads.getTaskComment(taskId, commentId);
+        return pageOwnerTaskComment({
+          ...options.commentPages, grant: identity().grant,
+          value: options.reads.getTaskComment(taskId, commentId),
+          ...(cursor === undefined ? {} : { cursor }),
+        });
       }),
     listTaskInventory: (filters: TeamTaskInventoryFilters) =>
       read(() => options.reads.listTaskInventory(filters)),

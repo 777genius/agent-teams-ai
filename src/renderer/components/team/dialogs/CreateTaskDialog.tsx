@@ -369,9 +369,7 @@ export const CreateTaskDialog = ({
             <div className="min-h-0 overflow-hidden">
               <div className="grid gap-4">
                 <div className="grid gap-2">
-                  <Label>
-                    {t('tasks.createTask.descriptionOptional')}
-                  </Label>
+                  <Label>{t('tasks.createTask.descriptionOptional')}</Label>
                   <TiptapEditor
                     content={descriptionDraft.value}
                     onChange={(value) => {
@@ -386,9 +384,7 @@ export const CreateTaskDialog = ({
                 </div>
 
                 <div className="grid gap-2">
-                  <Label htmlFor="task-prompt">
-                    {t('tasks.createTask.promptOptional')}
-                  </Label>
+                  <Label htmlFor="task-prompt">{t('tasks.createTask.promptOptional')}</Label>
                   <MentionableTextarea
                     id="task-prompt"
                     placeholder={t('tasks.createTask.promptPlaceholder')}
@@ -414,9 +410,7 @@ export const CreateTaskDialog = ({
 
                 {availableTasks.length > 0 ? (
                   <div className="grid gap-2">
-                    <Label>
-                      {t('tasks.createTask.blockedByOptional')}
-                    </Label>
+                    <Label>{t('tasks.createTask.blockedByOptional')}</Label>
                     <div className="overflow-hidden rounded-md border border-[var(--color-border)] bg-[var(--color-surface)]">
                       {availableTasks.length > 3 ? (
                         <div className="relative border-b border-[var(--color-border)] px-2 py-1.5">
@@ -488,9 +482,7 @@ export const CreateTaskDialog = ({
 
                 {availableTasks.length > 0 ? (
                   <div className="grid gap-2">
-                    <Label>
-                      {t('tasks.createTask.relatedOptional')}
-                    </Label>
+                    <Label>{t('tasks.createTask.relatedOptional')}</Label>
                     <div className="overflow-hidden rounded-md border border-[var(--color-border)] bg-[var(--color-surface)]">
                       {availableTasks.length > 3 ? (
                         <div className="relative border-b border-[var(--color-border)] px-2 py-1.5">

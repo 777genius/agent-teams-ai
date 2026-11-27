@@ -329,9 +329,7 @@ describe('applyElectronDevPathOverrides', () => {
           {
             setPath,
             getPath: (name: string) =>
-              name === 'userData' || name === 'sessionData'
-                ? regular
-                : path.join(regular, name),
+              name === 'userData' || name === 'sessionData' ? regular : path.join(regular, name),
           },
           { [AGENT_TEAMS_ELECTRON_USER_DATA_DIR_ENV]: alias }
         )

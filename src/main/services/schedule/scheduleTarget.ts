@@ -58,7 +58,9 @@ export interface ScheduleTargets {
 }
 
 export async function assertScheduleAdmission(
-  admit: ScheduleAdmissionCheck, teamName: string, change?: ScheduleFolderChange
+  admit: ScheduleAdmissionCheck,
+  teamName: string,
+  change?: ScheduleFolderChange
 ): Promise<void> {
   const refusal = admissionRefusal(await admit(teamName, change));
   if (refusal) throw new Error(refusal);

@@ -1,15 +1,10 @@
 import type { TaskHistoryEvent, TeamReviewState, TeamTaskStatus } from '@shared/types/team';
-const text = (value: unknown, empty = false): string => {
-  if (
-    typeof value !== 'string' ||
-    (!empty && !value) ||
-    value.length > 64 * 1024 ||
-    value.includes('\0')
-  )
+const text = (value: unknown, empty = false, max = 64 * 1024): string => {
+  if (typeof value !== 'string' || (!empty && !value) || value.length > max || value.includes('\0'))
     throw new Error('Invalid task history');
   return value;
 };
-function choice<T extends string>(value: unknown, allowed: readonly T[]): T {
+function choice<const T extends string>(value: unknown, allowed: readonly T[]): T {
   if (typeof value !== 'string' || !allowed.includes(value as T))
     throw new Error('Invalid task history');
   return value as T;
@@ -21,7 +16,7 @@ export function projectTaskHistory(value: unknown): TaskHistoryEvent[] {
   const status = (value: unknown) =>
     choice<TeamTaskStatus>(value, ['pending', 'in_progress', 'completed', 'deleted']);
   const review = (value: unknown) =>
-    choice<TeamReviewState>(value, ['none', 'review', 'needsFix', 'approved']);
+    choice<TeamReviewState>(value, ['none', 'review', 'needsFix', 'reviewed', 'approved']);
   return value.map((raw) => {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw))
       throw new Error('Invalid task history');
@@ -32,7 +27,9 @@ export function projectTaskHistory(value: unknown): TaskHistoryEvent[] {
       throw new Error('Invalid task history identity');
     ids.add(id);
     const base = { id, timestamp, ...(row.actor === undefined ? {} : { actor: text(row.actor) }) };
-    const note = row.note === undefined ? {} : { note: text(row.note, true) };
+    // Review input accepts the same 200,000-character note as task descriptions.
+    // Retain that text while preserving the existing aggregate history bound.
+    const note = row.note === undefined ? {} : { note: text(row.note, true, 200_000) };
     switch (row.type) {
       case 'task_created':
         return { ...base, type: 'task_created', status: status(row.status) };
@@ -53,6 +50,10 @@ export function projectTaskHistory(value: unknown): TaskHistoryEvent[] {
           to: choice(row.to, ['review']),
           ...note,
           ...(row.reviewer === undefined ? {} : { reviewer: text(row.reviewer) }),
+          ...(row.stage === undefined ? {} : { stage: choice(row.stage, ['lead_signoff']) }),
+          ...(row.afterReviewRequestId === undefined
+            ? {}
+            : { afterReviewRequestId: text(row.afterReviewRequestId) }),
         };
       case 'review_changes_requested':
         return {
@@ -69,6 +70,31 @@ export function projectTaskHistory(value: unknown): TaskHistoryEvent[] {
           from: review(row.from),
           to: choice(row.to, ['approved']),
           ...note,
+        };
+      case 'review_completed':
+        return {
+          ...base,
+          type: 'review_completed',
+          from: choice(row.from, ['review']),
+          to: choice(row.to, ['reviewed']),
+          reviewRequestId: text(row.reviewRequestId),
+          ...note,
+          ...(row.leadSignoffSkipped === undefined
+            ? {}
+            : {
+                leadSignoffSkipped: choice(row.leadSignoffSkipped, [
+                  'actor_is_lead',
+                  'work_by_lead',
+                  'no_lead',
+                ]),
+              }),
+        };
+      case 'human_approved':
+        return {
+          ...base,
+          type: 'human_approved',
+          from: review(row.from),
+          to: choice(row.to, ['approved']),
         };
       case 'review_disapproved':
         return {

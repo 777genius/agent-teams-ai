@@ -16,8 +16,7 @@ export function projectTeamMessagesPage(value: unknown): BackendTeamMessagesPage
     throw new Error('Invalid Host messages revision');
   if (!Array.isArray(source.messages) || source.messages.length > 100)
     throw new Error('Invalid Host messages page rows');
-  if (typeof source.hasMore !== 'boolean')
-    throw new Error('Invalid Host messages pagination');
+  if (typeof source.hasMore !== 'boolean') throw new Error('Invalid Host messages pagination');
   if (
     source.nextCursor !== null &&
     (typeof source.nextCursor !== 'string' ||
@@ -28,17 +27,27 @@ export function projectTeamMessagesPage(value: unknown): BackendTeamMessagesPage
     throw new Error('Inconsistent Host messages page');
   const parts = source.messageParts;
   if (parts !== undefined) {
-    if (!Array.isArray(parts) || parts.length !== source.messages.length ||
-        !Number.isSafeInteger(source.messageTotal) || (source.messageTotal as number) < 1 ||
-        (source.messageTotal as number) > 10_000_000)
+    if (
+      !Array.isArray(parts) ||
+      parts.length !== source.messages.length ||
+      !Number.isSafeInteger(source.messageTotal) ||
+      (source.messageTotal as number) < 1 ||
+      (source.messageTotal as number) > 10_000_000
+    )
       throw new Error('Invalid Host message fragments');
     for (const marker of parts) {
-      if (!marker || typeof marker !== 'object' ||
-          !Number.isSafeInteger(marker.index) || marker.index < 0 ||
-          marker.index >= (source.messageTotal as number) ||
-          !Number.isSafeInteger(marker.part) || marker.part < 0 ||
-          !Number.isSafeInteger(marker.total) || marker.total < 1 ||
-          marker.part >= marker.total)
+      if (
+        !marker ||
+        typeof marker !== 'object' ||
+        !Number.isSafeInteger(marker.index) ||
+        marker.index < 0 ||
+        marker.index >= (source.messageTotal as number) ||
+        !Number.isSafeInteger(marker.part) ||
+        marker.part < 0 ||
+        !Number.isSafeInteger(marker.total) ||
+        marker.total < 1 ||
+        marker.part >= marker.total
+      )
         throw new Error('Invalid Host message fragment');
     }
   } else if (source.messageTotal !== undefined) {
@@ -50,12 +59,16 @@ export function projectTeamMessagesPage(value: unknown): BackendTeamMessagesPage
     messages: source.messages.map(projectTeamMessage),
     nextCursor: source.nextCursor,
     hasMore: source.hasMore,
-    ...(source.conversation === undefined ? {} : {
-      conversation: projectTeamConversation(source.conversation),
-    }),
-    ...(parts === undefined ? {} : {
-      messageTotal: source.messageTotal as number,
-      messageParts: parts as { index: number; part: number; total: number }[],
-    }),
+    ...(source.conversation === undefined
+      ? {}
+      : {
+          conversation: projectTeamConversation(source.conversation),
+        }),
+    ...(parts === undefined
+      ? {}
+      : {
+          messageTotal: source.messageTotal as number,
+          messageParts: parts as { index: number; part: number; total: number }[],
+        }),
   };
 }

@@ -501,6 +501,12 @@ test('saved probe currentness joins only adjacent Team authority reads and reobs
       assert.notEqual(old.tokens[0], old.tokens[1]);
       assert.equal(new Set(joined.tokens).size, 1); assert.equal(joined.tokens.length, 4);
       for (const boundary of ['history', 'roster', 'source', 'recipe']) assert.ok(joined.outsideCalls.includes(boundary));
+      assert.equal(joined.outsideCalls.filter(value => value === 'source').length,
+        old.outsideCalls.filter(value => value === 'source').length,
+        'every fresh source selection remains observed on each currentness call');
+      assert.equal(old.outsideCalls.filter(value => value === 'recipe').length -
+        joined.outsideCalls.filter(value => value === 'recipe').length, f.team.definition.members.length,
+        'only the unused second full-roster compilation is removed');
       const later = measure(actual); assert.equal(later.value, true);
       assert.notEqual(later.tokens[0], joined.tokens[0], 'consecutive current calls never share an authority observation');
       for (const [index, boundary] of order.entries()) for (const inspect of [original, actual]) {

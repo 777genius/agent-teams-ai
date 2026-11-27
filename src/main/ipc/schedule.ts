@@ -71,7 +71,8 @@ function validateSmartFields(input: {
   reviewedSavedPrompt?: unknown;
 }): string | null {
   if (input.taskFirst !== undefined && input.taskFirst !== true) return 'Invalid taskFirst';
-  if (input.reviewedSavedPrompt !== undefined && input.reviewedSavedPrompt !== true) return 'Invalid reviewedSavedPrompt';
+  if (input.reviewedSavedPrompt !== undefined && input.reviewedSavedPrompt !== true)
+    return 'Invalid reviewedSavedPrompt';
   if (input.taskFirst && input.executionMode !== 'agent' && input.executionMode !== 'team') {
     return 'Task-first schedule requires agent or team executionMode';
   }
@@ -123,9 +124,16 @@ async function handleCreate(
   }
   const validationError = validateSmartFields(inp);
   if (validationError) return { success: false, error: validationError };
-  if (inp.reviewedSavedPrompt && !inp.taskFirst) return { success: false, error: 'Saved prompt review requires task-first schedule' };
-  return wrapScheduleHandler('create', async () => getService().createSchedule(inp,
-    isHostTeamSelectionKey(inp.teamName) ? await captureDesktopHostSchedule(event, inp.teamName) : undefined));
+  if (inp.reviewedSavedPrompt && !inp.taskFirst)
+    return { success: false, error: 'Saved prompt review requires task-first schedule' };
+  return wrapScheduleHandler('create', async () =>
+    getService().createSchedule(
+      inp,
+      isHostTeamSelectionKey(inp.teamName)
+        ? await captureDesktopHostSchedule(event, inp.teamName)
+        : undefined
+    )
+  );
 }
 
 async function handleUpdate(
@@ -146,8 +154,10 @@ async function handleUpdate(
   }
   return wrapScheduleHandler('update', async () => {
     const existing = await getService().getSchedule(id);
-    const admission = existing && isHostTeamSelectionKey(existing.teamName)
-      ? await captureDesktopHostSchedule(event, existing.teamName) : undefined;
+    const admission =
+      existing && isHostTeamSelectionKey(existing.teamName)
+        ? await captureDesktopHostSchedule(event, existing.teamName)
+        : undefined;
     return getService().updateSchedule(id, patch as UpdateSchedulePatch, admission);
   });
 }

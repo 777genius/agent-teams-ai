@@ -21,12 +21,23 @@ export async function captureHostScheduleTarget(
   const snapshot = await feature.discoverBindings(contextId, guard);
   assertBackendRequestGuard(guard);
   const binding = snapshot.bindings.find((row) => row.handle.handleId === handleId);
-  if (snapshot.state !== 'ready' || !binding?.ownerResourceRef || !binding.teamResourceRef ||
-    snapshot.unavailableOwners?.some(owner => owner.ownerResourceRef === binding.ownerResourceRef) ||
-    !feature.authorizeHandle(contextId, binding.handle))
+  if (
+    snapshot.state !== 'ready' ||
+    !binding?.ownerResourceRef ||
+    !binding.teamResourceRef ||
+    snapshot.unavailableOwners?.some(
+      (owner) => owner.ownerResourceRef === binding.ownerResourceRef
+    ) ||
+    !feature.authorizeHandle(contextId, binding.handle)
+  )
     throw new BackendRoutingError('forbidden');
-  return Object.freeze({ kind: 'host', contextId, handleId,
-    ownerResourceRef: binding.ownerResourceRef, teamResourceRef: binding.teamResourceRef });
+  return Object.freeze({
+    kind: 'host',
+    contextId,
+    handleId,
+    ownerResourceRef: binding.ownerResourceRef,
+    teamResourceRef: binding.teamResourceRef,
+  });
 }
 
 /** Each occurrence restores its persisted original binding independently of the foreground tab. */
@@ -36,33 +47,57 @@ export async function restoreHostScheduleTarget(
   original: HostScheduleTarget | undefined,
   ownerCurrent: () => boolean
 ) {
-  if (!original || original.kind !== 'host' || original.handleId !== parseHostTeamSelectionKey(selection) ||
+  if (
+    !original ||
+    original.kind !== 'host' ||
+    original.handleId !== parseHostTeamSelectionKey(selection) ||
     [original.contextId, original.ownerResourceRef, original.teamResourceRef].some(
-      (value) => typeof value !== 'string' || !value || value.length > 512 || value.includes('\0')))
+      (value) => typeof value !== 'string' || !value || value.length > 512 || value.includes('\0')
+    )
+  )
     throw new BackendRoutingError('invalid-binding');
   const target = structuredClone(original);
   const sameBinding = () => {
     if (!ownerCurrent()) return false;
     const snapshot = feature.listBindings(target.contextId);
-    return snapshot.state === 'ready' && snapshot.bindings.some((row) =>
-      row.handle.handleId === target.handleId && row.ownerResourceRef === target.ownerResourceRef &&
-      row.teamResourceRef === target.teamResourceRef) &&
-      feature.authorizeHandle(target.contextId, { handleId: target.handleId });
+    return (
+      snapshot.state === 'ready' &&
+      snapshot.bindings.some(
+        (row) =>
+          row.handle.handleId === target.handleId &&
+          row.ownerResourceRef === target.ownerResourceRef &&
+          row.teamResourceRef === target.teamResourceRef
+      ) &&
+      feature.authorizeHandle(target.contextId, { handleId: target.handleId })
+    );
   };
   const discovered = await feature.discoverBindings(target.contextId, { isCurrent: ownerCurrent });
-  if (discovered.unavailableOwners?.some(owner => owner.ownerResourceRef === target.ownerResourceRef))
+  if (
+    discovered.unavailableOwners?.some(
+      (owner) => owner.ownerResourceRef === target.ownerResourceRef
+    )
+  )
     throw new BackendRoutingError('unavailable');
   assertBackendRequestGuard({ isCurrent: sameBinding });
   return Object.freeze({
     target,
     isCurrent: sameBinding,
-    async invoke(request: Omit<BackendOperationRequest, 'handle'>, readinessTarget?: CapturedRuntimeReadinessTarget) {
-      return feature.facade.invoke({ ...request, handle: { handleId: target.handleId } },
-        { isCurrent: sameBinding }, undefined, readinessTarget);
+    async invoke(
+      request: Omit<BackendOperationRequest, 'handle'>,
+      readinessTarget?: CapturedRuntimeReadinessTarget
+    ) {
+      return feature.facade.invoke(
+        { ...request, handle: { handleId: target.handleId } },
+        { isCurrent: sameBinding },
+        undefined,
+        readinessTarget
+      );
     },
     prepareModels(request: CapturedTeamModelRequest) {
       assertBackendRequestGuard({ isCurrent: sameBinding });
-      return feature.prepareCapturedModels({ handleId: target.handleId }, request, { isCurrent: sameBinding });
+      return feature.prepareCapturedModels({ handleId: target.handleId }, request, {
+        isCurrent: sameBinding,
+      });
     },
   });
 }

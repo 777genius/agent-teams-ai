@@ -22,21 +22,39 @@ interface Source {
 }
 
 /** One existing-dialog source query. Loading/error never means proven absent owner settings. */
-export function useLaunchDialogSavedRequest(open: boolean, launch: boolean, teamName: string,
-  projectPermissionTeamName?: string | null) {
+export function useLaunchDialogSavedRequest(
+  open: boolean,
+  launch: boolean,
+  teamName: string,
+  projectPermissionTeamName?: string | null
+) {
   const retained = useRetainedLegacyLaunch();
   const contextId = useStore((state) => state.activeContextId);
   const switching = useStore((state) => state.isContextSwitching);
   const epoch = captureContextScopedRequestEpoch();
-  const scope = open && launch ? JSON.stringify([teamName, projectPermissionTeamName, contextId, switching, epoch, retained?.choice.scopeId]) : null;
+  const scope =
+    open && launch
+      ? JSON.stringify([
+          teamName,
+          projectPermissionTeamName,
+          contextId,
+          switching,
+          epoch,
+          retained?.choice.scopeId,
+        ])
+      : null;
   const lifetime = useRef({ scope: null as string | null, revision: 0 });
   if (lifetime.current.scope !== scope) {
     lifetime.current = { scope, revision: lifetime.current.revision + 1 };
   }
   const host = launch && isHostTeamSelectionKey(teamName);
   const identity = `${lifetime.current.revision}:${scope}`;
-  const key = host || retained ? identity : projectPermissionTeamName === undefined
-    ? teamName : JSON.stringify([teamName, projectPermissionTeamName]);
+  const key =
+    host || retained
+      ? identity
+      : projectPermissionTeamName === undefined
+        ? teamName
+        : JSON.stringify([teamName, projectPermissionTeamName]);
   const [source, setSource] = useState<Source>();
   const reset = useCallback(() => setSource(undefined), []);
 
@@ -52,10 +70,13 @@ export function useLaunchDialogSavedRequest(open: boolean, launch: boolean, team
       Promise.resolve().then(async () => {
         const [request, projectSkipPermissions] = await Promise.all([
           retained ? retained.read() : teamName ? api.teams.getSavedRequest(teamName) : null,
-          projectPermissionTeamName === undefined ? undefined
+          projectPermissionTeamName === undefined
+            ? undefined
             : projectPermissionTeamName && projectPermissionTeamName !== teamName
-              ? api.teams.getSavedRequest(projectPermissionTeamName)
-                .then((saved) => saved?.skipPermissions === true, () => false)
+              ? api.teams.getSavedRequest(projectPermissionTeamName).then(
+                  (saved) => saved?.skipPermissions === true,
+                  () => false
+                )
               : false,
         ]);
         return { request, projectSkipPermissions };

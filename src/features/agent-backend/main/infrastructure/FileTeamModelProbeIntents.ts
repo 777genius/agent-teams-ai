@@ -14,12 +14,16 @@ type Kind = 'preparation' | 'successor';
 
 // Atomic publication may unlink its temp hardlink during a concurrent read; that is not replacement.
 function sameRecordFile(before: BigIntStats, after: BigIntStats): boolean {
-  return after.isFile() && !after.isSymbolicLink() &&
-    after.dev === before.dev && after.ino === before.ino &&
-    after.size === before.size && after.mtimeNs === before.mtimeNs &&
-    (process.platform === 'win32' || (after.mode & 0o077n) === 0n);
+  return (
+    after.isFile() &&
+    !after.isSymbolicLink() &&
+    after.dev === before.dev &&
+    after.ino === before.ino &&
+    after.size === before.size &&
+    after.mtimeNs === before.mtimeNs &&
+    (process.platform === 'win32' || (after.mode & 0o077n) === 0n)
+  );
 }
-
 
 /** Immutable intent associations, not outcomes. No mutable head or replacement race. */
 export class FileTeamModelProbeIntents implements TeamModelProbeIntents {
@@ -60,8 +64,12 @@ export class FileTeamModelProbeIntents implements TeamModelProbeIntents {
     try {
       const before = await lstat(path, { bigint: true });
       observed = true;
-      if (!before.isFile() || before.isSymbolicLink() || before.size > 4096n ||
-          (process.platform !== 'win32' && (before.mode & 0o077n) !== 0n))
+      if (
+        !before.isFile() ||
+        before.isSymbolicLink() ||
+        before.size > 4096n ||
+        (process.platform !== 'win32' && (before.mode & 0o077n) !== 0n)
+      )
         throw new Error('Invalid model intent');
       const file = await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
       try {
@@ -76,8 +84,12 @@ export class FileTeamModelProbeIntents implements TeamModelProbeIntents {
         }
         const after = await file.stat({ bigint: true });
         const named = await lstat(path, { bigint: true });
-        if (length > 4096 || BigInt(length) !== before.size ||
-            !sameRecordFile(before, after) || !sameRecordFile(before, named))
+        if (
+          length > 4096 ||
+          BigInt(length) !== before.size ||
+          !sameRecordFile(before, after) ||
+          !sameRecordFile(before, named)
+        )
           throw new Error('Invalid model intent');
         const raw = JSON.parse(
           new TextDecoder('utf-8', { fatal: true }).decode(bytes.subarray(0, length))

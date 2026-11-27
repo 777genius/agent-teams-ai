@@ -1,4 +1,8 @@
-import { projectContextPrepareSchema, projectContextReadSchema, projectReadinessLocatorSchema } from '@agent-teams/legacy-agent-host/team-project-context/contracts';
+import {
+  projectContextPrepareSchema,
+  projectContextReadSchema,
+  projectReadinessLocatorSchema,
+} from '@agent-teams/legacy-agent-host/team-project-context/contracts';
 
 import {
   readMemberActionLookup,
@@ -90,10 +94,7 @@ function launchModelSelection(value: unknown): BackendLaunchModelSelection {
       throw new InvalidBackendOperation();
     const target = object(raw.target, ['kind', 'name', 'originalName']);
     if (target.kind !== 'lead' && target.kind !== 'member') throw new InvalidBackendOperation();
-    if (
-      target.kind === 'lead' &&
-      (target.name !== undefined || target.originalName !== undefined)
-    )
+    if (target.kind === 'lead' && (target.name !== undefined || target.originalName !== undefined))
       throw new InvalidBackendOperation();
     const workspace = raw.workspace === undefined ? undefined : text(raw.workspace, 8192);
     if (workspace !== undefined && (!workspace.startsWith('/') || /[\r\n]/u.test(workspace)))
@@ -128,14 +129,26 @@ function launchModelSelection(value: unknown): BackendLaunchModelSelection {
 export function parseLaunchModelPreparation(value: unknown): BackendLaunchModelPreparation {
   const source = object(value, ['preparationId', 'selections', 'projectContext']);
   const preparationId = text(source.preparationId);
-  if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/.test(preparationId) ||
-      !Array.isArray(source.selections) || !source.selections.length || source.selections.length > 256 ||
-      Buffer.byteLength(JSON.stringify(source)) > 256 * 1024) throw new InvalidBackendOperation();
-  const selections = source.selections.map(launchModelSelection);
-  if (new Set(selections.map(selection => JSON.stringify(selection))).size !== selections.length)
+  if (
+    !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/.test(preparationId) ||
+    !Array.isArray(source.selections) ||
+    !source.selections.length ||
+    source.selections.length > 256 ||
+    Buffer.byteLength(JSON.stringify(source)) > 256 * 1024
+  )
     throw new InvalidBackendOperation();
-  return { preparationId, selections, ...(source.projectContext === undefined ? {} : {
-    projectContext: projectReadinessLocatorSchema.parse(source.projectContext) }) };
+  const selections = source.selections.map(launchModelSelection);
+  if (new Set(selections.map((selection) => JSON.stringify(selection))).size !== selections.length)
+    throw new InvalidBackendOperation();
+  return {
+    preparationId,
+    selections,
+    ...(source.projectContext === undefined
+      ? {}
+      : {
+          projectContext: projectReadinessLocatorSchema.parse(source.projectContext),
+        }),
+  };
 }
 
 export function parseBackendTeamOperation(
@@ -143,9 +156,12 @@ export function parseBackendTeamOperation(
   value: unknown
 ): BackendOperationPayloads[keyof BackendOperationPayloads] {
   switch (operation) {
-    case 'team.project-context.read': return projectContextReadSchema.parse(value);
-    case 'team.project-context.prepare': return projectContextPrepareSchema.parse(value);
-    case 'team.project-context.launch-source.read': return projectReadinessLocatorSchema.parse(value);
+    case 'team.project-context.read':
+      return projectContextReadSchema.parse(value);
+    case 'team.project-context.prepare':
+      return projectContextPrepareSchema.parse(value);
+    case 'team.project-context.launch-source.read':
+      return projectReadinessLocatorSchema.parse(value);
     case 'team.review-flow.read':
     case 'team.lead.activity.read':
     case 'team.lead.context.read':
@@ -209,18 +225,36 @@ export function parseBackendTeamOperation(
     }
     case 'team.launch.capture': {
       const p = object(value, ['rosterCommandId', 'modelPreparation']);
-      return { rosterCommandId: text(p.rosterCommandId), ...(p.modelPreparation === undefined
-        ? {} : { modelPreparation: parseLaunchModelPreparation(p.modelPreparation) }) };
+      return {
+        rosterCommandId: text(p.rosterCommandId),
+        ...(p.modelPreparation === undefined
+          ? {}
+          : { modelPreparation: parseLaunchModelPreparation(p.modelPreparation) }),
+      };
     }
     case 'team.launch.start': {
-      const p = object(value, ['launchId', 'rosterRevision', 'configuration', 'initialPrompt', 'modelPreparation']);
-      if (p.initialPrompt !== undefined && p.initialPrompt !== null &&
-        (typeof p.initialPrompt !== 'string' || !p.initialPrompt.trim() || p.initialPrompt.includes('\0') || p.initialPrompt.length > 100_000))
+      const p = object(value, [
+        'launchId',
+        'rosterRevision',
+        'configuration',
+        'initialPrompt',
+        'modelPreparation',
+      ]);
+      if (
+        p.initialPrompt !== undefined &&
+        p.initialPrompt !== null &&
+        (typeof p.initialPrompt !== 'string' ||
+          !p.initialPrompt.trim() ||
+          p.initialPrompt.includes('\0') ||
+          p.initialPrompt.length > 100_000)
+      )
         throw new InvalidBackendOperation();
       return {
         launchId: text(p.launchId),
         rosterRevision: text(p.rosterRevision),
-        ...(p.modelPreparation === undefined ? {} : { modelPreparation: parseLaunchModelPreparation(p.modelPreparation) }),
+        ...(p.modelPreparation === undefined
+          ? {}
+          : { modelPreparation: parseLaunchModelPreparation(p.modelPreparation) }),
         ...(p.initialPrompt === undefined ? {} : { initialPrompt: p.initialPrompt }),
         ...(p.configuration === undefined
           ? {}

@@ -47,7 +47,8 @@ export function projectHostMemberAttachmentCapabilities(
     if (session.attachmentCapabilities?.nativeMedia) {
       product.nativeMediaTransport = structuredClone(session.attachmentCapabilities.nativeMedia);
     }
-    if (configured[0].role === 'lead') return { ...product, sessionCommands: session.sessionCommands ?? [] };
+    if (configured[0].role === 'lead')
+      return { ...product, sessionCommands: session.sessionCommands ?? [] };
     if (!session.attachmentCapabilities) return product;
     return {
       ...product,

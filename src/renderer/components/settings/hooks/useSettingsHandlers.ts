@@ -39,7 +39,9 @@ interface SettingsHandlers {
 
   // Notification handlers
   handleNotificationToggle: (key: keyof AppConfig['notifications'], value: boolean) => void;
-  handleDesktopDestinationsChange: (events: NonNullable<AppConfig['notifications']['desktopDisabledEvents']>) => void;
+  handleDesktopDestinationsChange: (
+    events: NonNullable<AppConfig['notifications']['desktopDisabledEvents']>
+  ) => void;
   handleTeamRuntimeRecoveryUpdate: (update: Partial<AppConfig['teamRuntimeRecovery']>) => void;
   handleStatusChangeStatusesUpdate: (statuses: string[]) => void;
   handleSnooze: (minutes: number) => Promise<void>;

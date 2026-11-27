@@ -46,7 +46,9 @@ export function captureLegacyNativeStopPublication(options: {
     proof: LegacyNativeStopRelease
   ): Promise<boolean>;
   unavailable?(): void;
-  onRefusal?(value: Readonly<LegacyNativeStopRefusal & { schemaVersion: 1; targetDigest: string }>): void;
+  onRefusal?(
+    value: Readonly<LegacyNativeStopRefusal & { schemaVersion: 1; targetDigest: string }>
+  ): void;
 }): LegacyNativeStopPublication | null {
   const {
     teamsBasePath,
@@ -62,14 +64,23 @@ export function captureLegacyNativeStopPublication(options: {
   const teamName = run.teamName,
     runId = run.runId;
   let observed = false;
-  const observer: LegacyNativeStopRefusalObserver | undefined = options.onRefusal ? (value) => {
-    if (observed) return;
-    observed = true;
-    try {
-      options.onRefusal?.(Object.freeze({ schemaVersion: 1,
-        targetDigest: nativeReleaseDigest({ teamName, runId }), ...value }));
-    } catch { /* Observability cannot replace the original Stop result. */ }
-  } : undefined;
+  const observer: LegacyNativeStopRefusalObserver | undefined = options.onRefusal
+    ? (value) => {
+        if (observed) return;
+        observed = true;
+        try {
+          options.onRefusal?.(
+            Object.freeze({
+              schemaVersion: 1,
+              targetDigest: nativeReleaseDigest({ teamName, runId }),
+              ...value,
+            })
+          );
+        } catch {
+          /* Observability cannot replace the original Stop result. */
+        }
+      }
+    : undefined;
   const refuse = (stage: LegacyNativeStopRefusal['stage'], failure?: { error: unknown }): false => {
     observeLegacyNativeStopRefusal(observer, stage, failure);
     return false;
@@ -150,9 +161,11 @@ export function captureLegacyNativeStopPublication(options: {
           stage = 'completion-team';
           if (authority.teamName !== teamName) return refuse(stage);
           stage = 'completion-freshness';
-          if (authority.freshness?.kind === 'launch'
+          if (
+            authority.freshness?.kind === 'launch'
               ? authority.freshness.runId !== runId
-              : authority.freshness?.kind !== 'stop' || authority.freshness.stoppedRunId !== runId)
+              : authority.freshness?.kind !== 'stop' || authority.freshness.stoppedRunId !== runId
+          )
             return refuse(stage);
           stage = 'completion-work-sync';
           if (sourceFence) assertSourceDrained();
@@ -191,7 +204,12 @@ export function captureTrackedLegacyNativeStopPublication(
   teamName: string,
   owners: Pick<
     Parameters<typeof captureLegacyNativeStopPublication>[0],
-    'beginStop' | 'publishStopped' | 'unavailable' | 'captureSourceFence' | 'isCurrentAttempt' | 'onRefusal'
+    | 'beginStop'
+    | 'publishStopped'
+    | 'unavailable'
+    | 'captureSourceFence'
+    | 'isCurrentAttempt'
+    | 'onRefusal'
   > & {
     getTeamsBasePath(): string;
     getTrackedRunId(teamName: string): string | null;

@@ -322,6 +322,8 @@ interface PartIndex {
   part: number;
   total: number;
   commentPart?: { index: number; part: number; total: number };
+  historyPart?: { index: number; part: number; total: number };
+  subjectPart?: { part: number; total: number };
 }
 function readPartIndexes(
   source: Record<string, unknown>,
@@ -357,10 +359,41 @@ function readPartIndexes(
       position >= count
     )
       throw new Error('Invalid snapshot part index');
-    if (part.commentPart !== undefined) {
-      if (partsKey !== 'taskParts' || position === 0)
+    if (part.subjectPart !== undefined) {
+      if (
+        partsKey !== 'taskParts' ||
+        position === 0 ||
+        part.commentPart !== undefined ||
+        part.historyPart !== undefined
+      )
+        throw new Error('Invalid Host subject fragment');
+      const subject = row(part.subjectPart);
+      if (
+        typeof subject.part !== 'number' ||
+        !Number.isSafeInteger(subject.part) ||
+        subject.part < 0 ||
+        typeof subject.total !== 'number' ||
+        !Number.isSafeInteger(subject.total) ||
+        subject.total < 2 ||
+        subject.part >= subject.total
+      )
+        throw new Error('Invalid Host subject fragment');
+      return {
+        index,
+        part: position,
+        total: count,
+        subjectPart: { part: subject.part, total: subject.total },
+      };
+    }
+    if (part.commentPart !== undefined || part.historyPart !== undefined) {
+      if (
+        partsKey !== 'taskParts' ||
+        position === 0 ||
+        (part.commentPart !== undefined && part.historyPart !== undefined)
+      )
         throw new Error('Invalid Host comment fragment');
-      const comment = row(part.commentPart);
+      const field = part.commentPart !== undefined ? 'commentPart' : 'historyPart';
+      const comment = row(part[field]);
       const { index: commentIndex, part: commentPosition, total: commentTotal } = comment;
       if (
         typeof commentIndex !== 'number' ||
@@ -379,7 +412,7 @@ function readPartIndexes(
         index,
         part: position,
         total: count,
-        commentPart: { index: commentIndex, part: commentPosition, total: commentTotal },
+        [field]: { index: commentIndex, part: commentPosition, total: commentTotal },
       };
     }
     return { index, part: position, total: count };

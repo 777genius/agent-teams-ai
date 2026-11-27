@@ -139,14 +139,13 @@ async function start(): Promise<void> {
     { NotificationManager },
     { ServiceContext },
     { ConfigManager },
-  ] =
-    await Promise.all([
-      import('@features/agent-backend/main'),
-      import('./services/infrastructure/HttpServer'),
-      import('./services/infrastructure/NotificationManager'),
-      import('./services/infrastructure/ServiceContext'),
-      import('./services/infrastructure/ConfigManager'),
-    ]);
+  ] = await Promise.all([
+    import('@features/agent-backend/main'),
+    import('./services/infrastructure/HttpServer'),
+    import('./services/infrastructure/NotificationManager'),
+    import('./services/infrastructure/ServiceContext'),
+    import('./services/infrastructure/ConfigManager'),
+  ]);
 
   const projectsDir = getProjectsBasePath();
   const todosDir = getTodosBasePath();
@@ -183,9 +182,13 @@ async function start(): Promise<void> {
   await internalStorageFeature.probeBackend();
   customTeamTemplatesFeature = createCustomTeamTemplatesFeature({
     backend: internalStorageFeature.customTeamTemplatesBackend,
-    snapshotReader: new OwnerRoutedTeamConfigurationSnapshotAdapter(() => captureHostTeamReads(
-      agentBackend ? { feature: agentBackend, contextId: localContext.id,
-        isCurrent: () => backendCurrent } : undefined)),
+    snapshotReader: new OwnerRoutedTeamConfigurationSnapshotAdapter(() =>
+      captureHostTeamReads(
+        agentBackend
+          ? { feature: agentBackend, contextId: localContext.id, isCurrent: () => backendCurrent }
+          : undefined
+      )
+    ),
   });
 
   // Create HTTP server

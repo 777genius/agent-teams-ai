@@ -22,8 +22,10 @@ interface State {
   memberSettingsCommandId?: string;
   memberSettingsCommitted?: boolean;
 }
-export function useStoppedTeamLaunchDialog(teamName: string,
-  project: { logicalTeamName?: string; retainedHistory?: boolean } = {}) {
+export function useStoppedTeamLaunchDialog(
+  teamName: string,
+  project: { logicalTeamName?: string; retainedHistory?: boolean } = {}
+) {
   const [launchDialogState, setLaunchDialogState] = useState<State>({
     open: false,
     mode: 'launch',
@@ -37,7 +39,13 @@ export function useStoppedTeamLaunchDialog(teamName: string,
   const openLaunchDialog = useCallback(
     (
       mode: TeamLaunchDialogMode,
-      settings?: Pick<State, 'memberSettingsDraft' | 'baselineMembers' | 'memberSettingsCommandId' | 'memberSettingsCommitted'>
+      settings?: Pick<
+        State,
+        | 'memberSettingsDraft'
+        | 'baselineMembers'
+        | 'memberSettingsCommandId'
+        | 'memberSettingsCommitted'
+      >
     ) => {
       if (project.retainedHistory && project.logicalTeamName) {
         useStore.getState().openTeamTab(project.logicalTeamName);

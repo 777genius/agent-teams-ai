@@ -12,9 +12,15 @@ import {
 import { type RuntimeProcessTableRow } from '@features/tmux-installer/main';
 import { applyAgentTeamsIdentityEnv } from '@main/services/identity/AgentTeamsIdentityStore';
 import { atomicWriteAsync } from '@main/utils/atomicWrite';
-import { killProcessTree, killProcessTreeAndWait, spawnCli, untrackCliProcess } from '@main/utils/childProcess';
 import {
-  execFileTextWithLinuxChildLaunch as execFileText, observeLinuxChildLaunchFailure,
+  killProcessTree,
+  killProcessTreeAndWait,
+  spawnCli,
+  untrackCliProcess,
+} from '@main/utils/childProcess';
+import {
+  execFileTextWithLinuxChildLaunch as execFileText,
+  observeLinuxChildLaunchFailure,
   remainingLinuxChildLaunchTime,
 } from '@main/utils/linuxChildLaunch';
 import { isLinuxChildLaunchFailure } from '@main/utils/linuxChildLaunchSelection';
@@ -643,7 +649,6 @@ async function listNativeProcessRows(
   return rows;
 }
 
-
 export class AgentTeamsMcpHttpServer {
   readonly appContext = createOpenCodeMcpAppContext(() =>
     this.preventFutureStarts ? null : this.getCurrentHandle()
@@ -1143,7 +1148,11 @@ export class AgentTeamsMcpHttpServer {
 
     try {
       await Promise.race([
-        waitForPort(MCP_HTTP_HOST, port, remainingLinuxChildLaunchTime(child, MCP_HTTP_READY_TIMEOUT_MS)),
+        waitForPort(
+          MCP_HTTP_HOST,
+          port,
+          remainingLinuxChildLaunchTime(child, MCP_HTTP_READY_TIMEOUT_MS)
+        ),
         startupFailure,
       ]);
       if (this.child !== child) {
@@ -1157,8 +1166,11 @@ export class AgentTeamsMcpHttpServer {
       }
       this.expectedStopChildren.add(child);
       if (isLinuxChildLaunchFailure(error)) {
-        try { await killProcessTreeAndWait(child, 'SIGKILL'); }
-        catch (cleanup) { throw new AggregateError([error, cleanup], 'MCP startup cleanup remains unknown'); }
+        try {
+          await killProcessTreeAndWait(child, 'SIGKILL');
+        } catch (cleanup) {
+          throw new AggregateError([error, cleanup], 'MCP startup cleanup remains unknown');
+        }
       } else killProcessTree(child, 'SIGKILL');
       throw error;
     }

@@ -82,7 +82,6 @@ import {
   buildTaskChangeRequestOptions,
   type TaskChangeRequestOptions,
 } from '@renderer/utils/taskChangeRequest';
-import { buildPendingRuntimeSummaryCopy } from '@renderer/utils/teamLaunchSummaryCopy';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { deriveTaskDisplayId, formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 import {
@@ -94,9 +93,7 @@ import {
   History,
   Network,
   Pencil,
-  Play,
   Plus,
-  Power,
   Square,
   Terminal,
   UserPlus,
@@ -104,9 +101,7 @@ import {
 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
-import {
-  buildChangeRuntimeLaunchState,
-} from './definitionEdit/changeRuntimeLaunch';
+import { buildChangeRuntimeLaunchState } from './definitionEdit/changeRuntimeLaunch';
 import { getDefinitionEditAccess } from './definitionEdit/definitionEditAccess';
 import {
   refreshAfterDefinitionEdit,
@@ -139,7 +134,13 @@ import {
   getSummaryKnownTeammateCount,
 } from './teamDetailData';
 import { resolvePinnedTeamActionTop } from './teamDetailLayout';
-import { AddMemberDialog, EditTeamDialog, ReviewDialog, TrashDialog } from './TeamDetailLazyDialogs';
+import {
+  AddMemberDialog,
+  EditTeamDialog,
+  ReviewDialog,
+  TrashDialog,
+} from './TeamDetailLazyDialogs';
+import { TeamOfflineStatusBanner } from './TeamOfflineStatusBanner';
 import { TeamStatusBadge } from './TeamStatusBadge';
 import { useTeamStopControl } from './useTeamStopControl';
 
@@ -419,74 +420,6 @@ const TEAM_PENDING_REPLY_REFRESH_DELAY_MS = 10_000;
 const EMPTY_SESSION_HISTORY: readonly string[] = [];
 const MEMBER_ROSTER_HYDRATION_RETRY_DELAY_MS = 1_200;
 const FLOATING_COMPOSER_SCROLL_RESERVE_BASE_PX = 200;
-
-const TeamOfflineStatusBanner = memo(function TeamOfflineStatusBanner({
-  teamName,
-  onLaunch,
-}: {
-  teamName: string;
-  onLaunch: () => void;
-}): React.JSX.Element {
-  const { t } = useAppTranslation('team');
-  const summary = useStore(
-    useShallow((s) => {
-      const team = s.teamByName[teamName];
-      if (!team) {
-        return null;
-      }
-
-      return {
-        memberCount: team.memberCount,
-        expectedMemberCount: team.expectedMemberCount,
-        confirmedCount: team.confirmedCount,
-        runtimeProcessPendingCount: team.runtimeProcessPendingCount,
-        teamLaunchState: team.teamLaunchState,
-        partialLaunchFailure: team.partialLaunchFailure,
-        missingMemberCount: team.missingMembers?.length ?? 0,
-      };
-    })
-  );
-  const message =
-    summary?.teamLaunchState === 'partial_pending'
-      ? summary.runtimeProcessPendingCount != null && summary.runtimeProcessPendingCount > 0
-        ? buildPendingRuntimeSummaryCopy({
-            confirmedCount: summary.confirmedCount,
-            expectedMemberCount: summary.expectedMemberCount,
-            memberCount: summary.memberCount,
-            runtimeProcessPendingCount: summary.runtimeProcessPendingCount,
-          })
-        : t('detail.offline.reconciling')
-      : summary?.partialLaunchFailure
-        ? summary.missingMemberCount > 0
-          ? t('detail.offline.partialMissing', {
-              missing: summary.missingMemberCount,
-              expected: summary.expectedMemberCount ?? summary.missingMemberCount,
-            })
-          : t('detail.offline.partialFailed')
-        : t('detail.offline.offline');
-  return (
-    <div
-      role="status"
-      className="relative mb-2.5 flex min-h-11 items-center gap-2.5 overflow-hidden rounded-md border border-amber-500/20 bg-amber-500/[0.055] py-2 pl-3 pr-2.5"
-    >
-      <span className="flex size-7 shrink-0 items-center justify-center rounded-md border border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-300">
-        <Power size={14} />
-      </span>
-      <span className="min-w-0 flex-1 text-xs font-medium text-[var(--color-text-secondary)]">
-        {message}
-      </span>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-7 shrink-0 gap-1.5 rounded-md border border-emerald-500/25 bg-emerald-500/10 px-2.5 text-xs font-medium text-emerald-700 hover:border-emerald-500/40 hover:bg-emerald-500/15 hover:text-emerald-700 dark:text-emerald-300 dark:hover:text-emerald-200"
-        onClick={onLaunch}
-      >
-        <Play size={12} />
-        {t('detail.actions.launch')}
-      </Button>
-    </div>
-  );
-});
 
 type LeadUpdatedKey = `lead${'Con'}${'text'}UpdatedAt`;
 type TeamMessagesPanelBridgeProps = Omit<
@@ -2076,11 +2009,18 @@ export const TeamDetailView = memo(function TeamDetailView({
           });
           return;
         }
-        await executeTeamRelaunch({ teamName: logicalTeamName, isTeamAlive: data?.isAlive === true,
-          request: toLogicalProjectLaunchRequest(request, logicalTeamName), members: nextMembers,
-          rosterReadOnly: true, rosterMetadata,
-          stopTeam: (name) => api.teams.stop(name), stopRun: api.teams.cancelProvisioning,
-          replaceMembers: (name, next) => api.teams.replaceMembers(name, next), launchTeam });
+        await executeTeamRelaunch({
+          teamName: logicalTeamName,
+          isTeamAlive: data?.isAlive === true,
+          request: toLogicalProjectLaunchRequest(request, logicalTeamName),
+          members: nextMembers,
+          rosterReadOnly: true,
+          rosterMetadata,
+          stopTeam: (name) => api.teams.stop(name),
+          stopRun: api.teams.cancelProvisioning,
+          replaceMembers: (name, next) => api.teams.replaceMembers(name, next),
+          launchTeam,
+        });
         return;
       }
       await executeTeamRelaunch({
@@ -2142,11 +2082,18 @@ export const TeamDetailView = memo(function TeamDetailView({
       definitionMembers?: ResolvedTeamMember[]
     ) => {
       setEditTarget(null);
-      const next = buildChangeRuntimeLaunchState({ logicalTeamName,
-        isAlive: data?.isAlive === true, isProvisioning: isTeamProvisioning,
-        memberSettingsDraft, baselineMembers: definitionMembers ?? membersWithLiveBranches });
-      openLaunchDialog(next.mode, { memberSettingsDraft: next.memberSettingsDraft,
-        baselineMembers: next.baselineMembers, memberSettingsCommandId: next.memberSettingsCommandId });
+      const next = buildChangeRuntimeLaunchState({
+        logicalTeamName,
+        isAlive: data?.isAlive === true,
+        isProvisioning: isTeamProvisioning,
+        memberSettingsDraft,
+        baselineMembers: definitionMembers ?? membersWithLiveBranches,
+      });
+      openLaunchDialog(next.mode, {
+        memberSettingsDraft: next.memberSettingsDraft,
+        baselineMembers: next.baselineMembers,
+        memberSettingsCommandId: next.memberSettingsCommandId,
+      });
     },
     [data?.isAlive, isTeamProvisioning, logicalTeamName, membersWithLiveBranches, openLaunchDialog]
   );
@@ -3712,12 +3659,17 @@ export const TeamDetailView = memo(function TeamDetailView({
             teamName={launchTarget?.teamName ?? logicalTeamName ?? teamName}
             projectPermissionTeamName={logicalTeamName ? teamName : undefined}
             rosterReadOnly={Boolean(logicalTeamName)}
-            members={launchTarget?.members ?? (
-              logicalTeamName && launchDialogState.memberSettingsDraft
+            members={
+              launchTarget?.members ??
+              (logicalTeamName && launchDialogState.memberSettingsDraft
                 ? (launchDialogState.baselineMembers ?? [])
-                : isDraftTeamView ? EMPTY_RESOLVED_MEMBERS : membersWithLiveBranches
-            )}
-            runtimeRunId={useStore.getState().currentProvisioningRunIdByTeam?.[logicalTeamName ?? teamName]}
+                : isDraftTeamView
+                  ? EMPTY_RESOLVED_MEMBERS
+                  : membersWithLiveBranches)
+            }
+            runtimeRunId={
+              useStore.getState().currentProvisioningRunIdByTeam?.[logicalTeamName ?? teamName]
+            }
             defaultProjectPath={launchTarget?.cwd ?? launchDialogDefaultProjectPath}
             provisioningError={provisioningError}
             clearProvisioningError={clearProvisioningError}
@@ -3725,7 +3677,8 @@ export const TeamDetailView = memo(function TeamDetailView({
             onClose={closeLaunchDialog}
             onLaunch={handleLaunchDialogSubmit}
             onRelaunch={handleRelaunchDialogSubmit}
-            memberSettingsDraft={launchDialogState.memberSettingsDraft} retainedLegacyLaunch={launchDialogState.retainedLegacyLaunch}
+            memberSettingsDraft={launchDialogState.memberSettingsDraft}
+            retainedLegacyLaunch={launchDialogState.retainedLegacyLaunch}
             validateMemberSettings={validateMemberSettingsRelaunch}
           />
         </Suspense>

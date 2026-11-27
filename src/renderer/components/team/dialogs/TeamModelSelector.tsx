@@ -162,6 +162,7 @@ export {
   getTeamProviderLabel,
 } from './teamModelSummary';
 
+import type { TeamModelSelectorProps } from './TeamModelSelector.types';
 import type { CliProviderStatus, TeamProviderId } from '@shared/types';
 
 export { getProviderScopedTeamModelLabel } from '@renderer/utils/teamModelCatalog';
@@ -869,32 +870,6 @@ const OpenCodeFilterLoadingSkeleton = (): React.JSX.Element => (
   </div>
 );
 
-export interface TeamModelSelectorProps {
-  providerId: TeamProviderId;
-  onProviderChange: (providerId: TeamProviderId) => void;
-  value: string;
-  onValueChange: (value: string) => void;
-  /** Automatic catalog changes never count as manual user edits. */
-  onNormalizedValueChange?: (value: string) => void;
-  preserveSelectedModel?: boolean;
-  limitContext?: boolean;
-  projectPath?: string | null;
-  id?: string;
-  disableGeminiOption?: boolean;
-  providerNoticeById?: Partial<Record<TeamProviderId, React.ReactNode>>;
-  providerDisabledReasonById?: Partial<Record<TeamProviderId, string | null | undefined>>;
-  providerDisabledBadgeLabelById?: Partial<Record<TeamProviderId, string | null | undefined>>;
-  providerReadyById?: Partial<Record<TeamProviderId, boolean>>;
-  modelAdvisoryReasonByValue?: Partial<Record<string, string | null | undefined>>;
-  modelIssueReasonByValue?: Partial<Record<string, string | null | undefined>>;
-  modelUnavailableReasonByValue?: Partial<Record<string, string | null | undefined>>;
-  onOpenProviderSettings?: (providerId: TeamProviderId) => void;
-  onManageProviders?: (providerId: TeamProviderId) => void;
-  onOpenCodeProviderScopedStatusChange?: Parameters<
-    typeof usePublishOpenCodeProviderScopedStatus
-  >[0];
-}
-
 export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   providerId,
   onProviderChange,
@@ -963,11 +938,22 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     'opencode',
     { projectPath: openCodeCatalogScopeKey || null }
   );
-  const { cliStatusLoading, cliProviderStatusLoading, cliProviderStatusScopeRevision,
-    invalidateCliProviderModelCatalog, fetchCliProviderStatus, openCodeRuntimeStatus,
-    openCodeRuntimeStatusLoading, openCodeRuntimeError, fetchOpenCodeRuntimeStatus,
-    codexRuntimeStatus, codexRuntimeStatusLoading, codexRuntimeError, fetchCodexRuntimeStatus,
-    installCodexRuntime } = useTeamModelSelectorRuntime(openCodeCatalogScopeKey);
+  const {
+    cliStatusLoading,
+    cliProviderStatusLoading,
+    cliProviderStatusScopeRevision,
+    invalidateCliProviderModelCatalog,
+    fetchCliProviderStatus,
+    openCodeRuntimeStatus,
+    openCodeRuntimeStatusLoading,
+    openCodeRuntimeError,
+    fetchOpenCodeRuntimeStatus,
+    codexRuntimeStatus,
+    codexRuntimeStatusLoading,
+    codexRuntimeError,
+    fetchCodexRuntimeStatus,
+    installCodexRuntime,
+  } = useTeamModelSelectorRuntime(openCodeCatalogScopeKey);
   const [codexRuntimeDialogOpen, setCodexRuntimeDialogOpen] = useState(false);
   const multimodelAvailable =
     multimodelEnabled || effectiveCliStatus?.flavor === 'agent_teams_orchestrator';
@@ -1557,7 +1543,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
               shouldRetainOpenCodeLocalCatalogModel(
                 option.value,
                 catalogModelById.get(option.value),
-                openCodeLocalModelOverlay.modelIds, runtimeProviderStatus?.catalogScope
+                openCodeLocalModelOverlay.modelIds,
+                runtimeProviderStatus?.catalogScope
               )
           )
         : unscopedRuntimeOptions;
@@ -1637,7 +1624,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
           !shouldRetainOpenCodeLocalCatalogModel(
             launchModel || catalogModelId,
             model,
-            openCodeLocalModelOverlay.modelIds, runtimeProviderStatus?.catalogScope
+            openCodeLocalModelOverlay.modelIds,
+            runtimeProviderStatus?.catalogScope
           )
         ) {
           continue;
@@ -1665,7 +1653,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     openCodeLocalProviderLookupAuthoritative,
     openCodeLocalModelOverlay.catalogModels,
     openCodeLocalModelOverlay.modelIds,
-    runtimeProviderStatus?.modelCatalog, runtimeProviderStatus?.catalogScope,
+    runtimeProviderStatus?.modelCatalog,
+    runtimeProviderStatus?.catalogScope,
   ]);
   const openCodeModelMetadata = useMemo<OpenCodeModelOptionMetadata[]>(() => {
     if (effectiveProviderId !== 'opencode') {
@@ -3601,3 +3590,5 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     </TooltipProvider>
   );
 };
+
+export type { TeamModelSelectorProps } from './TeamModelSelector.types';

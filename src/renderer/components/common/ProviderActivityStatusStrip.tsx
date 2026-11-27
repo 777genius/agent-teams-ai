@@ -135,53 +135,56 @@ function useProviderActivityDisplay({
     [sourceStatus?.providers]
   );
 
-  const readProviderStates = useCallback((now: number): ProviderActivityState[] => {
-    const visibleProviders = filterMainScreenCliProviders(renderCliStatus?.providers ?? []).filter(
-      (provider) => !providerIdSet || providerIdSet.has(provider.providerId)
-    );
+  const readProviderStates = useCallback(
+    (now: number): ProviderActivityState[] => {
+      const visibleProviders = filterMainScreenCliProviders(
+        renderCliStatus?.providers ?? []
+      ).filter((provider) => !providerIdSet || providerIdSet.has(provider.providerId));
 
-    return visibleProviders.map((globalProvider) => {
-      const overridden = providerStatusOverride?.providerId === globalProvider.providerId;
-      const provider = overridden ? providerStatusOverride : globalProvider;
-      const sourceProvider = sourceProviderMap.get(provider.providerId) ?? null;
-      const loading =
-        forcedLoadingProviderIdSet.has(provider.providerId) ||
-        isTeamProviderRuntimeStatusLoading(
-          provider.providerId,
+      return visibleProviders.map((globalProvider) => {
+        const overridden = providerStatusOverride?.providerId === globalProvider.providerId;
+        const provider = overridden ? providerStatusOverride : globalProvider;
+        const sourceProvider = sourceProviderMap.get(provider.providerId) ?? null;
+        const loading =
+          forcedLoadingProviderIdSet.has(provider.providerId) ||
+          isTeamProviderRuntimeStatusLoading(
+            provider.providerId,
+            provider,
+            !overridden && cliProviderStatusLoading[provider.providerId] === true,
+            openCodePreparationEvidence,
+            now
+          ) ||
+          (provider.providerId === 'codex' && codexSnapshotPending) ||
+          shouldMaskCodexNegativeBootstrapState(sourceProvider, provider, {
+            providerLoading: cliProviderStatusLoading[provider.providerId] === true,
+          });
+        const scopedOpenCodeReady =
+          provider.providerId === 'opencode' &&
+          hasSettledOpenCodeScopedPreparation(provider, openCodePreparationEvidence, now);
+
+        return {
           provider,
-          !overridden && cliProviderStatusLoading[provider.providerId] === true,
-          openCodePreparationEvidence,
-          now
-        ) ||
-        (provider.providerId === 'codex' && codexSnapshotPending) ||
-        shouldMaskCodexNegativeBootstrapState(sourceProvider, provider, {
-          providerLoading: cliProviderStatusLoading[provider.providerId] === true,
-        });
-      const scopedOpenCodeReady =
-        provider.providerId === 'opencode' &&
-        hasSettledOpenCodeScopedPreparation(provider, openCodePreparationEvidence, now);
-
-      return {
-        provider,
-        loading,
-        error:
-          !loading &&
-          !scopedOpenCodeReady &&
-          hasCapturedTeamReadiness?.(provider.providerId, now) !== true &&
-          !hasEffectiveProviderLaunchAuthority(provider, now),
-      };
-    });
-  }, [
-    cliProviderStatusLoading,
-    codexSnapshotPending,
-    forcedLoadingProviderIdSet,
-    hasCapturedTeamReadiness,
-    openCodePreparationEvidence,
-    providerIdSet,
-    renderCliStatus?.providers,
-    sourceProviderMap,
-    providerStatusOverride,
-  ]);
+          loading,
+          error:
+            !loading &&
+            !scopedOpenCodeReady &&
+            hasCapturedTeamReadiness?.(provider.providerId, now) !== true &&
+            !hasEffectiveProviderLaunchAuthority(provider, now),
+        };
+      });
+    },
+    [
+      cliProviderStatusLoading,
+      codexSnapshotPending,
+      forcedLoadingProviderIdSet,
+      hasCapturedTeamReadiness,
+      openCodePreparationEvidence,
+      providerIdSet,
+      renderCliStatus?.providers,
+      sourceProviderMap,
+      providerStatusOverride,
+    ]
+  );
   const [authorityNow] = useConservativeNow(readProviderStates);
   const providerStates = useMemo(
     () => readProviderStates(authorityNow),

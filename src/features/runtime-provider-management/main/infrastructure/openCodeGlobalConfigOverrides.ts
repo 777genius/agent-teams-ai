@@ -14,8 +14,7 @@ export function describeOpenCodeConfigReadFailure(
   scope: 'global' | 'project',
   action: 'read' | 'inspect' = 'read'
 ): string {
-  const code =
-    error && typeof error === 'object' ? (error as { code?: unknown }).code : undefined;
+  const code = error && typeof error === 'object' ? (error as { code?: unknown }).code : undefined;
   const target = scope === 'project' ? 'project OpenCode config' : 'global OpenCode config';
   if (code === 'EPERM' || code === 'EACCES') {
     const remedy =
@@ -54,7 +53,10 @@ interface OpenCodeConfigCapture {
   read(path: string): Promise<string>;
 }
 
-function captureCall<T>(capture: OpenCodeConfigCapture | undefined, work: () => Promise<T>): Promise<T> {
+function captureCall<T>(
+  capture: OpenCodeConfigCapture | undefined,
+  work: () => Promise<T>
+): Promise<T> {
   if (!capture) return work();
   return (async () => {
     capture.current();
@@ -104,7 +106,9 @@ export async function getOpenCodeGlobalConfigOverrideConflict(
   }
   if (
     configuredPath &&
-    !canonicalConfigPaths.has(await resolveComparableConfigPath(configuredPath, homePath, captureRead))
+    !canonicalConfigPaths.has(
+      await resolveComparableConfigPath(configuredPath, homePath, captureRead)
+    )
   ) {
     return new LocalProviderOperationError(
       'config-conflict',
@@ -230,13 +234,18 @@ function resolveEnvironmentConfigPath(value: string, homePath: string): string {
 }
 
 async function resolveComparableConfigPath(
-  value: string, homePath: string, captureRead?: OpenCodeConfigCapture
+  value: string,
+  homePath: string,
+  captureRead?: OpenCodeConfigCapture
 ): Promise<string> {
   let candidate = resolveEnvironmentConfigPath(value, homePath);
   const unresolvedSuffix: string[] = [];
   while (true) {
     try {
-      return path.join(await captureCall(captureRead, () => fs.realpath(candidate)), ...unresolvedSuffix);
+      return path.join(
+        await captureCall(captureRead, () => fs.realpath(candidate)),
+        ...unresolvedSuffix
+      );
     } catch (error) {
       captureRead?.current();
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
@@ -360,7 +369,9 @@ async function readOpenCodeGlobalConfigTarget(
     scope: 'global',
     configPath,
     raw: existingConfig
-      ? await (captureRead ? captureCall(captureRead, () => captureRead.read(configPath)) : fs.readFile(configPath, 'utf8'))
+      ? await (captureRead
+          ? captureCall(captureRead, () => captureRead.read(configPath))
+          : fs.readFile(configPath, 'utf8'))
       : null,
     mode: existingConfig?.mode,
   };
@@ -436,7 +447,9 @@ async function readOpenCodeProjectConfigTarget(
     projectPath: realProjectPath,
     configPath,
     raw: existingConfig
-      ? await (captureRead ? captureCall(captureRead, () => captureRead.read(configPath)) : fs.readFile(configPath, 'utf8'))
+      ? await (captureRead
+          ? captureCall(captureRead, () => captureRead.read(configPath))
+          : fs.readFile(configPath, 'utf8'))
       : null,
     mode: existingConfig?.mode,
   };

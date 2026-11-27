@@ -105,6 +105,119 @@ function fixture(t: TestContext, deferred = false) {
 }
 const value = (response: ReturnType<ReturnType<typeof createTeamMcpTools>['call']>) => response.structuredContent?.result;
 
+interface CommentPage {
+  kind: string;
+  taskId: string;
+  commentId: string;
+  revision: string;
+  part: number;
+  total: number;
+  chunk: string;
+  nextCursor: string | null;
+}
+
+test("task_get_comment losslessly pages accepted Unicode and escaped comments without read effects", (t) => {
+  const f = fixture(t);
+  const tools = createTeamMcpTools(f.owner.connect("alice"));
+  for (const [label, text] of [
+    ["CJK", "漢".repeat(90_000)],
+    ["escaped", "TEST \u0001\"\\😀".repeat(15_000)],
+  ] as const) {
+    const taskId = f.user.execute({
+      commandId: "TEST-comment-page-task-" + label,
+      operation: "task.create", payload: { subject: "Canonical " + label, owner: "alice" },
+    }).effects.taskId;
+    const commentId = f.user.execute({
+      commandId: "TEST-comment-page-value-" + label,
+      operation: "task.comment", payload: { taskId, text },
+    }).effects.commentId;
+    const canonical = f.policy.reads!.getTaskComment(taskId, commentId);
+    assert.ok(Buffer.byteLength(JSON.stringify(canonical)) > 256 * 1024);
+    const beforeCommands = f.commands();
+    const taskPath = join(f.root, "tasks", f.binding.teamName, taskId + ".json");
+    const beforeBytes = readFileSync(taskPath, "utf8");
+    const chunks: string[] = [];
+    let cursor: string | null = null;
+    let revision: string | undefined;
+    let total: number | undefined;
+    do {
+      const page = value(tools.call("task_get_comment", {
+        taskId: taskId.slice(0, 8), commentId: commentId.slice(0, 8),
+        ...(cursor === null ? {} : { cursor }),
+      })) as CommentPage;
+      assert.equal(page.kind, "task-comment-chunk");
+      assert.equal(page.taskId, taskId);
+      assert.equal(page.commentId, commentId);
+      assert.equal(page.part, chunks.length);
+      revision ??= page.revision;
+      total ??= page.total;
+      assert.equal(page.revision, revision);
+      assert.equal(page.total, total);
+      assert.ok(Buffer.byteLength(JSON.stringify(page)) < 256 * 1024);
+      chunks.push(page.chunk);
+      cursor = page.nextCursor;
+      assert.ok(chunks.length < 32);
+    } while (cursor);
+    assert.ok(chunks.length > 1);
+    assert.equal(chunks.length, total);
+    assert.deepEqual(JSON.parse(chunks.join("")), canonical);
+    assert.deepEqual(f.commands(), beforeCommands);
+    assert.equal(readFileSync(taskPath, "utf8"), beforeBytes);
+  }
+});
+
+test("task_get_comment keeps small reads and fences continuations to the original identity and authority", (t) => {
+  const f = fixture(t);
+  const tools = createTeamMcpTools(f.owner.connect("alice"));
+  const taskId = f.user.execute({
+    commandId: "TEST-comment-scope-task", operation: "task.create",
+    payload: { subject: "Comment cursor scope", owner: "alice" },
+  }).effects.taskId;
+  const createComment = (commandId: string, text: string, selectedTask = taskId) =>
+    f.user.execute({ commandId, operation: "task.comment", payload: { taskId: selectedTask, text } }).effects.commentId;
+  const smallId = createComment("TEST-comment-scope-small", "Original small comment");
+  const largeId = createComment("TEST-comment-scope-large", "界".repeat(90_000));
+  const otherId = createComment("TEST-comment-scope-other", "界".repeat(90_000));
+  const anotherTask = f.user.execute({
+    commandId: "TEST-comment-scope-another-task", operation: "task.create",
+    payload: { subject: "Other task", owner: "alice" },
+  }).effects.taskId;
+  const anotherComment = createComment("TEST-comment-scope-another-comment", "界".repeat(90_000), anotherTask);
+  const retainedCommentId = "TEST-retained:imported";
+  const { addTaskComment } = createRequire(import.meta.url)("agent-teams-controller/src/internal/taskStore.js") as {
+    addTaskComment(paths: Record<string, string>, taskId: string, text: string, options: { id: string; author: string }): unknown;
+  };
+  addTaskComment(createTeamController(f.root, f.binding.teamName).context.paths, taskId,
+    "Existing imported comment identity", { id: retainedCommentId, author: "user" });
+  assert.deepEqual(value(tools.call("task_get_comment", {
+    taskId: taskId.slice(0, 8), commentId: "TEST-retained",
+  })), f.policy.reads!.getTaskComment(taskId, retainedCommentId));
+  assert.deepEqual(value(tools.call("task_get_comment", {
+    taskId: taskId.slice(0, 8), commentId: smallId.slice(0, 8),
+  })), f.policy.reads!.getTaskComment(taskId, smallId));
+  const page = value(tools.call("task_get_comment", { taskId, commentId: largeId })) as CommentPage;
+  assert.ok(page.nextCursor);
+  const original = { taskId, commentId: largeId, cursor: page.nextCursor };
+  const held = (error: unknown) => error instanceof TeamOwnerError && error.code === "hold";
+  assert.throws(() => tools.call("task_get_comment", { ...original, cursor: "1." + "0".repeat(64) }), held);
+  assert.throws(() => createTeamMcpTools(f.user).call("task_get_comment", original), held);
+  assert.throws(() => tools.call("task_get_comment", { ...original, commentId: otherId }), held);
+  assert.throws(() => tools.call("task_get_comment", { ...original, taskId: anotherTask, commentId: anotherComment }), held);
+  assert.throws(() => tools.call("task_get_comment", { ...original, commentId: smallId }), held);
+  const taskPage = value(tools.call("task_get", { taskId })) as { nextCursor: string };
+  assert.throws(() => tools.call("task_get_comment", { ...original, cursor: taskPage.nextCursor }), held);
+  assert.throws(() => tools.call("task_get_comment", { ...original, cursor: "invalid" }));
+  f.user.execute({
+    commandId: "TEST-comment-scope-update", operation: "task.update",
+    payload: { taskId, subject: "Changed canonical comment context" },
+  });
+  assert.throws(() => tools.call("task_get_comment", original), held);
+  const current = value(tools.call("task_get_comment", { taskId, commentId: largeId })) as CommentPage;
+  f.user.revoke("alice");
+  assert.throws(() => tools.call("task_get_comment", { ...original, cursor: current.nextCursor }),
+    (error) => error instanceof TeamOwnerError && error.code === "forbidden");
+});
+
 test("bound canonical queues/comments/board reads survive reopen and produce no command or file effects", async (t) => {
   const f = fixture(t);
   const tools = createTeamMcpTools(f.owner.connect("alice"));

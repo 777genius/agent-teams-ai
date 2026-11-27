@@ -21,7 +21,9 @@ type RefreshContext = ReturnType<typeof useRuntimeProviderProjectContext> & {
   viewLoadRequestSeq: { current: number };
   setLoading: Dispatch<SetStateAction<boolean>>;
   setError: Dispatch<SetStateAction<string | null>>;
-  setErrorDiagnostics: Dispatch<SetStateAction<RuntimeProviderManagementErrorDiagnosticsDto | null>>;
+  setErrorDiagnostics: Dispatch<
+    SetStateAction<RuntimeProviderManagementErrorDiagnosticsDto | null>
+  >;
   setView: Dispatch<SetStateAction<RuntimeProviderManagementViewDto | null>>;
   setSelectedModelId: Dispatch<SetStateAction<string | null>>;
   setSelectedProviderId: Dispatch<SetStateAction<string | null>>;

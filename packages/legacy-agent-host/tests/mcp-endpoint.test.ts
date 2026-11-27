@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
 import { mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -8,6 +9,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 
 import { createFilesystemTeamOwner } from '../dist/adapters/team/createFilesystemTeamOwner.js';
+import { createTeamController } from '../dist/adapters/team/ControllerAdapter.js';
 import { startTeamMcpEndpoint, TEAM_MCP_CATALOG_DISPOSITION } from '../dist/mcp/index.js';
 
 import type { TeamMcpConnection, TeamMcpEndpoint } from '../dist/mcp/index.js';
@@ -140,6 +142,104 @@ async function receipt(client: Client, name: string, args: Record<string, unknow
   assert.ok(result.value && typeof result.value === 'object' && 'phase' in result.value);
   return { ...result, value: result.value as CommandReceipt };
 }
+
+test('HTTP MCP preserves lossless comment, task and board continuations and captured read methods', async (t) => {
+  const f = fixture(t);
+  const taskId = f.human.execute({
+    commandId: 'TEST-http-detail-task', operation: 'task.create',
+    payload: { subject: 'HTTP paged task', owner: 'alice' },
+  }).effects.taskId;
+  const commentId = f.human.execute({
+    commandId: 'TEST-http-detail-comment', operation: 'task.comment',
+    payload: { taskId, text: '漢'.repeat(90_000) },
+  }).effects.commentId;
+  const smallId = f.human.execute({
+    commandId: 'TEST-http-detail-small', operation: 'task.create',
+    payload: { subject: 'Small original task', owner: 'alice' },
+  }).effects.taskId;
+  const ids = Array.from({ length: 4_800 }, (_, index) => 'TEST-http-board-' + index);
+  const board = {
+    teamName: f.binding.teamName, reviewers: ['alice'],
+    tasks: Object.fromEntries(ids.map((id) => [id, {
+      column: 'approved', movedAt: '2026-11-09T10:00:00.000Z',
+    }])),
+    columnOrder: { approved: ids },
+  };
+  const require = createRequire(import.meta.url);
+  const { writeKanbanState } = require('agent-teams-controller/src/internal/kanbanStore.js') as {
+    writeKanbanState(paths: Record<string, string>, teamName: string, state: unknown): void;
+  };
+  writeKanbanState(createTeamController(f.root, f.binding.teamName).context.paths, f.binding.teamName, board);
+  const connection = {
+    ...f.alice, marker: 'captured-detail-owner',
+    readTaskPage(selected: string, cursor?: string) {
+      assert.equal(this.marker, 'captured-detail-owner');
+      return f.alice.readTaskPage(selected, cursor);
+    },
+    readKanbanPage(cursor?: string) {
+      assert.equal(this.marker, 'captured-detail-owner');
+      return f.alice.readKanbanPage(cursor);
+    },
+  };
+  const client = await connect(t, await f.endpoint('alice-session', f.delivery, connection));
+  const replaced = (): never => { throw new Error('Read method was not captured'); };
+  connection.readTaskPage = replaced;
+  connection.readKanbanPage = replaced;
+  const beforeCommands = f.commands();
+  const beforeBytes = f.taskBytes(taskId);
+  assert.deepEqual((await call(client, 'task_get', { taskId: smallId.slice(0, 8) })).value,
+    f.human.getTask(smallId));
+  for (const [name, args, kind, expected] of [
+    ['task_get', { taskId: taskId.slice(0, 8) }, 'task-detail-chunk', f.human.getTask(taskId)],
+    ['task_get_comment', { taskId: taskId.slice(0, 8), commentId: commentId.slice(0, 8) },
+      'task-comment-chunk', createTeamController(f.root, f.binding.teamName).taskBoard.getTaskComment(taskId, commentId)],
+  ] as const) {
+    const chunks: string[] = [];
+    let cursor: string | null = null;
+    let revision: string | undefined;
+    do {
+      const result = await call(client, name, { ...args, ...(cursor === null ? {} : { cursor }) });
+      assert.notEqual(result.response.isError, true);
+      const page = result.value as {
+        kind: string; taskId: string; commentId?: string; revision: string;
+        part: number; total: number; chunk: string; nextCursor: string | null;
+      };
+      assert.equal(page.kind, kind);
+      assert.equal(page.taskId, taskId);
+      if (name === 'task_get_comment') assert.equal(page.commentId, commentId);
+      assert.equal(page.part, chunks.length);
+      revision ??= page.revision;
+      assert.equal(page.revision, revision);
+      assert.ok(Buffer.byteLength(JSON.stringify(page)) < 256 * 1024);
+      chunks.push(page.chunk);
+      cursor = page.nextCursor;
+      assert.ok(chunks.length < 32);
+      if (cursor === null) assert.equal(chunks.length, page.total);
+    } while (cursor);
+    assert.ok(chunks.length > 1);
+    assert.deepEqual(JSON.parse(chunks.join('')), expected);
+  }
+  const combined = { tasks: {} as Record<string, unknown>, columnOrder: [] as string[] };
+  let cursor: string | null = null;
+  let pages = 0;
+  do {
+    const result = await call(client, 'kanban_get', cursor === null ? {} : { cursor });
+    assert.notEqual(result.response.isError, true);
+    const page = result.value as {
+      tasks: Record<string, unknown>; columnOrder: { approved?: string[] }; nextCursor: string | null;
+    };
+    assert.ok(Buffer.byteLength(JSON.stringify(page)) < 256 * 1024);
+    Object.assign(combined.tasks, page.tasks);
+    combined.columnOrder.push(...(page.columnOrder.approved ?? []));
+    cursor = page.nextCursor;
+    assert.ok(++pages < 32);
+  } while (cursor);
+  assert.ok(pages > 1);
+  assert.deepEqual(combined.tasks, board.tasks);
+  assert.deepEqual(combined.columnOrder, ids);
+  assert.deepEqual(f.commands(), beforeCommands);
+  assert.equal(f.taskBytes(taskId), beforeBytes);
+});
 
 async function post(
   endpoint: TeamMcpEndpoint,

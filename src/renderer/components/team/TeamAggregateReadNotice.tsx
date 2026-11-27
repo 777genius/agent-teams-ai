@@ -15,16 +15,23 @@ interface Props {
 
 /** Display-only metadata; navigation and Refresh keep their original owners. */
 export const TeamAggregateReadNotice = ({
-  surface, unavailable, error, loadedCount, loading, onRefresh, onOpenTeam,
+  surface,
+  unavailable,
+  error,
+  loadedCount,
+  loading,
+  onRefresh,
+  onOpenTeam,
 }: Props): React.JSX.Element | null => {
   const { t } = useAppTranslation('team');
   const stale = error !== null;
   if (!stale && unavailable.length === 0) return null;
   const teams = unavailable.filter((row) => row.kind === 'team');
   const ownerCount = unavailable.length - teams.length;
-  const title = surface === 'teams'
-    ? t(stale ? 'list.aggregate.staleTeams' : 'list.aggregate.partialTeams')
-    : t(stale ? 'list.aggregate.staleTasks' : 'list.aggregate.partialTasks');
+  const title =
+    surface === 'teams'
+      ? t(stale ? 'list.aggregate.staleTeams' : 'list.aggregate.partialTeams')
+      : t(stale ? 'list.aggregate.staleTasks' : 'list.aggregate.partialTasks');
   return (
     <section
       role="status"
@@ -43,8 +50,13 @@ export const TeamAggregateReadNotice = ({
         </Button>
       </div>
       <p className="mt-1">
-        {stale ? t('list.aggregate.staleDescription') : t(surface === 'teams'
-          ? 'list.aggregate.teamsDescription' : 'list.aggregate.tasksDescription')}
+        {stale
+          ? t('list.aggregate.staleDescription')
+          : t(
+              surface === 'teams'
+                ? 'list.aggregate.teamsDescription'
+                : 'list.aggregate.tasksDescription'
+            )}
       </p>
       <p className="mt-1">{t('list.aggregate.loadedCount', { count: loadedCount })}</p>
       {teams.length > 0 && (

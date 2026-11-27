@@ -56,8 +56,12 @@ export const ReviewFlowSection = (): React.JSX.Element => {
     () => buildUnreadableRows(teams, unreadableTeams),
     [teams, unreadableTeams]
   );
-  const selectedUnavailable = scope.kind === 'team' &&
-    isReviewFlowTeamUnavailable(teams.find((team) => team.teamName === scope.teamName) ?? { teamName: scope.teamName }, unavailable);
+  const selectedUnavailable =
+    scope.kind === 'team' &&
+    isReviewFlowTeamUnavailable(
+      teams.find((team) => team.teamName === scope.teamName) ?? { teamName: scope.teamName },
+      unavailable
+    );
   const availableTeams = teams.filter((team) => !isReviewFlowTeamUnavailable(team, unavailable));
   const policy = resolveScopePolicy(scope, defaults, overrides);
   const repair =
@@ -94,23 +98,32 @@ export const ReviewFlowSection = (): React.JSX.Element => {
           ) : null}
           {unavailable.length > 0 ? (
             <div role="alert" className="space-y-2" data-testid="review-flow-unavailable">
-              <p className="text-sm text-[var(--color-text-muted)]">{t('reviewFlow.unavailable', { count: unavailable.length })}</p>
-              <Button type="button" size="sm" variant="outline" onClick={() => void overview.load({ force: true })}>
+              <p className="text-sm text-[var(--color-text-muted)]">
+                {t('reviewFlow.unavailable', { count: unavailable.length })}
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => void overview.load({ force: true })}
+              >
                 {t('reviewFlow.retry')}
               </Button>
             </div>
           ) : null}
           <ReviewFlowScopePicker options={options} value={scopeValue} onChange={setScopeValue} />
-          {!selectedUnavailable ? <ReviewFlowPolicyEditor
-            scope={scope}
-            policy={policy}
-            defaults={defaults}
-            followingTeamCount={countFollowingDefault(availableTeams, overrides)}
-            repair={repair}
-            projects={scope.kind === 'team' ? overview.projectTeams[scope.teamName] : null}
-            onSave={handleSave}
-            testIdPrefix={TEST_ID_PREFIX}
-          /> : null}
+          {!selectedUnavailable ? (
+            <ReviewFlowPolicyEditor
+              scope={scope}
+              policy={policy}
+              defaults={defaults}
+              followingTeamCount={countFollowingDefault(availableTeams, overrides)}
+              repair={repair}
+              projects={scope.kind === 'team' ? overview.projectTeams[scope.teamName] : null}
+              onSave={handleSave}
+              testIdPrefix={TEST_ID_PREFIX}
+            />
+          ) : null}
           {scope.kind === 'default' ? (
             <>
               <ReviewFlowTeamList

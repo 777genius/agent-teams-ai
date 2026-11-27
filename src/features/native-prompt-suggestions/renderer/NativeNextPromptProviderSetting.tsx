@@ -19,13 +19,22 @@ interface Props {
 
 export function NativeNextPromptProviderSetting(props: Props): JSX.Element | null {
   if (props.providerId !== 'anthropic' && props.providerId !== 'codex') return null;
-  return <ProviderSetting key={props.providerId} providerId={props.providerId} disabled={props.disabled} />;
+  return (
+    <ProviderSetting
+      key={props.providerId}
+      providerId={props.providerId}
+      disabled={props.disabled}
+    />
+  );
 }
 
 function ProviderSetting({
   providerId,
   disabled = false,
-}: { readonly providerId: 'anthropic' | 'codex'; readonly disabled?: boolean }): JSX.Element {
+}: {
+  readonly providerId: 'anthropic' | 'codex';
+  readonly disabled?: boolean;
+}): JSX.Element {
   const { t } = useAppTranslation('settings');
   const updateConfig = useStore((state) => state.updateConfig);
   // Missing means the shipped default, which is on.

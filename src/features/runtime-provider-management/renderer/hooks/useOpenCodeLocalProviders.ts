@@ -179,7 +179,9 @@ export function useOpenCodeLocalProviders({
           Promise.allSettled(requests),
           typeof (management ?? api.runtimeProviderManagement).scanLocalProviders === 'function'
             ? Promise.allSettled([
-                (management ?? api.runtimeProviderManagement).scanLocalProviders({ runtimeId: 'opencode' }),
+                (management ?? api.runtimeProviderManagement).scanLocalProviders({
+                  runtimeId: 'opencode',
+                }),
               ]).then((results) => results[0] ?? null)
             : Promise.resolve(null),
         ]);

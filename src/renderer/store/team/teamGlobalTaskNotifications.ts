@@ -96,14 +96,18 @@ export function processGlobalTaskNotifications(params: ProcessGlobalTaskNotifica
 
   const notifyOnClarifications = appConfig?.notifications?.notifyOnClarifications ?? true;
   const oldTaskIndexes = buildTaskNotificationIndexes(oldTasks);
-  const recovered = newTasks.filter((task) =>
-    !oldTaskIndexes.oldTasksByTeam.has(task.teamName) &&
-    isTeamReadUnavailable(params.previouslyUnavailable ?? [], task)
+  const recovered = newTasks.filter(
+    (task) =>
+      !oldTaskIndexes.oldTasksByTeam.has(task.teamName) &&
+      isTeamReadUnavailable(params.previouslyUnavailable ?? [], task)
   );
   if (recovered.length) {
     // A resource's first accepted rows are history; new comments retain the context cutoff.
-    detectTaskCommentNotifications(oldTaskIndexes, recovered,
-      appConfig?.notifications?.notifyOnTaskComments ?? true);
+    detectTaskCommentNotifications(
+      oldTaskIndexes,
+      recovered,
+      appConfig?.notifications?.notifyOnTaskComments ?? true
+    );
     seedGlobalTaskNotificationState(recovered);
   }
 

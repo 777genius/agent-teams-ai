@@ -77,7 +77,12 @@ export function createHostTaskActivityApi(options: HostTaskActivityReadOptions) 
     const current = options.captureScope(),
       scope = await options.resolve(key, current);
     scope.assertCurrent();
-    return { backend: options.backend, handle: scope.handle, current, assertCurrent: scope.assertCurrent };
+    return {
+      backend: options.backend,
+      handle: scope.handle,
+      current,
+      assertCurrent: scope.assertCurrent,
+    };
   }
   async function read(key: string, taskId: string) {
     const scope = await selected(key),
@@ -111,7 +116,12 @@ export function createHostTaskActivityApi(options: HostTaskActivityReadOptions) 
   return {
     async getTaskActivity(key: string, taskId: string): Promise<HostTaskActivityView> {
       const value = await read(key, taskId);
-      const task = await options.readTask(key, taskId, value.scope.current, value.scope.assertCurrent);
+      const task = await options.readTask(
+        key,
+        taskId,
+        value.scope.current,
+        value.scope.assertCurrent
+      );
       value.scope.assertCurrent();
       if (!task || task.id !== taskId)
         throw new HostTeamOperationError('invalid-result', 'unknown');
@@ -119,14 +129,10 @@ export function createHostTaskActivityApi(options: HostTaskActivityReadOptions) 
         kind: 'host_task_activity',
         taskId,
         items: value.inputs.map((row) => row.summary),
-        ...(task.historyEvents === undefined
-          ? {}
-          : { historyEvents: task.historyEvents }),
+        ...(task.historyEvents === undefined ? {} : { historyEvents: task.historyEvents }),
         gaps: [
           ...value.gaps,
-          ...(task.historyEvents === undefined
-            ? ['Canonical task history is unavailable.']
-            : []),
+          ...(task.historyEvents === undefined ? ['Canonical task history is unavailable.'] : []),
         ],
       };
     },

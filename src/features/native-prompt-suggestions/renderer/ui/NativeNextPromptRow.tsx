@@ -26,7 +26,11 @@ export function NativeNextPromptRow({
       data-testid="native-next-prompt-row"
     >
       <Sparkles size={14} className="shrink-0 opacity-70" aria-hidden="true" />
-      <span aria-live="polite" aria-atomic="true" className={compact ? 'min-w-0 flex-1 truncate' : 'min-w-0 flex-1 line-clamp-2'}>
+      <span
+        aria-live="polite"
+        aria-atomic="true"
+        className={compact ? 'min-w-0 flex-1 truncate' : 'line-clamp-2 min-w-0 flex-1'}
+      >
         {text}
       </span>
       {!compact ? (

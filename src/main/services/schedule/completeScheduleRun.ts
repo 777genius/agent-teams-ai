@@ -28,8 +28,16 @@ export async function completeScheduleRun(
     ...(link?.executionTeamName ? { executionTeamName: link.executionTeamName } : {}),
   };
   await repository.saveRun(updatedRun);
-  const eventType = status === 'completed' || status === 'dispatched' || status === 'skipped'
-    ? 'run-completed'
-    : 'run-failed';
-  emit({ type: eventType, scheduleId: run.scheduleId, teamName: run.teamName, detail: error, runId: run.id, runStatus: status });
+  const eventType =
+    status === 'completed' || status === 'dispatched' || status === 'skipped'
+      ? 'run-completed'
+      : 'run-failed';
+  emit({
+    type: eventType,
+    scheduleId: run.scheduleId,
+    teamName: run.teamName,
+    detail: error,
+    runId: run.id,
+    runStatus: status,
+  });
 }

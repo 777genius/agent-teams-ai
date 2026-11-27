@@ -54,7 +54,7 @@ export function pageOwnerMessages(options: PageOptions): JsonValue {
   // Owner-bound cursors cannot be transferred to another principal, revision or filter.
   const signature = (offset: number) =>
     digest({ key: options.key, principalId: options.principalId, revision,
-      protocol: 'message-parts-v1', offset });
+      protocol: 'message-parts-v2', offset });
   const segments = messageSegments([...messages].reverse(), MESSAGE_BYTES);
   const fragmented = segments.length !== messages.length;
   let offset = 0;
@@ -85,6 +85,9 @@ export function pageOwnerMessages(options: PageOptions): JsonValue {
   let endedLargeMessage = false;
   const selected: typeof segments = [];
   for (; end < segments.length; end++) {
+    // The Desktop boundary caps physical rows, including continuation fragments.
+    // The signed cursor resumes a split record before any older logical message.
+    if (selected.length === 100) break;
     const segment = segments[end]!;
     if (segment.part.index !== previousIndex) {
       // Stop at a fragmented-message boundary; the next call finishes that

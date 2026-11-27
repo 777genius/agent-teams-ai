@@ -122,19 +122,19 @@ export class PrepareCustomTemplatePreviewUseCase {
     let state;
     try {
       state = this.deps.previewStore.issue({
-      sourceTeamName: read.snapshot.sourceTeamName,
-      ...(read.sourceAdmission ? { sourceAdmission: read.sourceAdmission } : {}),
-      templateId: this.deps.hasher.deriveTemplateId({
-        contentHash,
+        sourceTeamName: read.snapshot.sourceTeamName,
+        ...(read.sourceAdmission ? { sourceAdmission: read.sourceAdmission } : {}),
+        templateId: this.deps.hasher.deriveTemplateId({
+          contentHash,
+          nameKey: nameValidation.normalizedKey,
+          description: preview.preview.description ?? null,
+        }),
+        name: preview.preview.name,
         nameKey: nameValidation.normalizedKey,
-        description: preview.preview.description ?? null,
-      }),
-      name: preview.preview.name,
-      nameKey: nameValidation.normalizedKey,
-      ...(preview.preview.description ? { description: preview.preview.description } : {}),
-      canonicalContent: preview.preview.canonicalContent,
-      contentHash,
-    });
+        ...(preview.preview.description ? { description: preview.preview.description } : {}),
+        canonicalContent: preview.preview.canonicalContent,
+        contentHash,
+      });
     } catch (error) {
       if (error instanceof CustomTemplatePreviewCapacityError) {
         return { status: 'storageUnavailable' };

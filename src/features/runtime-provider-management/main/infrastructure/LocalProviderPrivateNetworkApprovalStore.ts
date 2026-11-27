@@ -40,7 +40,6 @@ export class JsonLocalProviderPrivateNetworkApprovalStore implements LocalProvid
     return approvals.some((candidate) => buildApprovalKey(candidate) === approvalKey);
   }
 
-
   /** Captures the original read-only source; never joins or advances the approval write chain. */
   capture() {
     const filePath = this.getFilePath();
@@ -52,20 +51,34 @@ export class JsonLocalProviderPrivateNetworkApprovalStore implements LocalProvid
       const requested = approvals.map(normalizeApproval);
       const captured = await read(filePath, APPROVAL_STORE_MAX_BYTES);
       let parsed: unknown;
-      try { parsed = captured.raw === null ? null : JSON.parse(captured.raw); } catch { parsed = null; }
+      try {
+        parsed = captured.raw === null ? null : JSON.parse(captured.raw);
+      } catch {
+        parsed = null;
+      }
       const allowed = new Set<string>();
       if (isRecord(parsed) && parsed.schemaVersion === 1 && Array.isArray(parsed.approvals)) {
         for (const candidate of parsed.approvals) {
-          if (isRecord(candidate) && typeof candidate.configPath === 'string' &&
-              typeof candidate.providerId === 'string' && typeof candidate.baseUrl === 'string')
-            allowed.add(buildApprovalKey({
-              configPath: candidate.configPath, providerId: candidate.providerId, baseUrl: candidate.baseUrl,
-            }));
+          if (
+            isRecord(candidate) &&
+            typeof candidate.configPath === 'string' &&
+            typeof candidate.providerId === 'string' &&
+            typeof candidate.baseUrl === 'string'
+          )
+            allowed.add(
+              buildApprovalKey({
+                configPath: candidate.configPath,
+                providerId: candidate.providerId,
+                baseUrl: candidate.baseUrl,
+              })
+            );
         }
       }
-      const unique = new Map(requested.map(approval => [buildApprovalKey(approval), approval]));
-      return { source: captured.source, approved: [...unique].flatMap(([key, approval]) =>
-        allowed.has(key) ? [approval] : []) };
+      const unique = new Map(requested.map((approval) => [buildApprovalKey(approval), approval]));
+      return {
+        source: captured.source,
+        approved: [...unique].flatMap(([key, approval]) => (allowed.has(key) ? [approval] : [])),
+      };
     };
   }
 

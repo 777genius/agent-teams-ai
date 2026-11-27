@@ -31,6 +31,10 @@ export interface BackendTeamSnapshot {
     total: number;
     /** Present only when an individual comment's text spans multiple task parts. */
     commentPart?: { index: number; part: number; total: number };
+    /** Present only when one original workflow note spans task parts. */
+    historyPart?: { index: number; part: number; total: number };
+    /** Large retained subjects are complete only after these ordered parts. */
+    subjectPart?: { part: number; total: number };
   }[];
   /** Message text parts remain private to paged reads until reassembled. */
   messageTotal?: number;

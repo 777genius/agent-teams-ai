@@ -13,7 +13,10 @@ export interface ScheduleRepository {
   getSchedulesByTeam(teamName: string): Promise<Schedule[]>;
   saveSchedule(schedule: Schedule, options?: { mustExist: true }): Promise<void>;
   /** Read, change and persist one existing row within the same metadata write fence. */
-  updateSchedule(id: string, update: (current: Schedule) => Schedule | null): Promise<Schedule | null>;
+  updateSchedule(
+    id: string,
+    update: (current: Schedule) => Schedule | null
+  ): Promise<Schedule | null>;
   deleteSchedule(id: string, onCommitted?: () => void | Promise<void>): Promise<void>;
 
   listRuns(scheduleId: string, opts?: { limit?: number; offset?: number }): Promise<ScheduleRun[]>;

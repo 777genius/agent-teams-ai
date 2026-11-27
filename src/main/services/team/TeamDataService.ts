@@ -87,7 +87,11 @@ import { TeamMetaStore } from './TeamMetaStore';
 import { applyDistinctRosterColors } from './teamRosterColors';
 import { TeamSentMessagesStore } from './TeamSentMessagesStore';
 import { mapLimitLocal } from './teamSnapshotReadConcurrency';
-import { getTeamTaskWorkflowColumn, isTeamTaskActivelyWorked, selectCurrentActiveTeamTask } from './teamTaskActiveState';
+import {
+  getTeamTaskWorkflowColumn,
+  isTeamTaskActivelyWorked,
+  selectCurrentActiveTeamTask,
+} from './teamTaskActiveState';
 import {
   buildTaskCommentNotificationText,
   isAcknowledgementOnlyTaskComment,
@@ -538,9 +542,11 @@ export class TeamDataService {
     if (!(context.currentMixed || isMixedOpenCodeSideLanePlan(nextPlan.plan))) {
       return;
     }
-    const isRunning = knownRunning ?? (await this.readProcesses(teamName).catch(() => [] as TeamProcess[])).some(
-      (process) => !process.stoppedAt
-    );
+    const isRunning =
+      knownRunning ??
+      (await this.readProcesses(teamName).catch(() => [] as TeamProcess[])).some(
+        (process) => !process.stoppedAt
+      );
     if (!isRunning) return;
     if (
       !isSupportedRunningMixedRosterMutation({
@@ -786,10 +792,12 @@ export class TeamDataService {
   private resolveReviewerFromHistory(
     task: TeamTask,
     kanbanTaskState?: KanbanState['tasks'][string],
-    reviewState: 'none' | 'review' | 'needsFix' | 'reviewed' | 'approved' = this.resolveTaskReviewState(
-      task,
-      kanbanTaskState
-    )
+    reviewState:
+      | 'none'
+      | 'review'
+      | 'needsFix'
+      | 'reviewed'
+      | 'approved' = this.resolveTaskReviewState(task, kanbanTaskState)
   ): string | null {
     if (reviewState !== 'review') {
       return null;
@@ -804,10 +812,12 @@ export class TeamDataService {
         if (event.type === 'review_requested' && event.reviewer) {
           return event.reviewer;
         }
-        if (event.type === 'review_approved' ||
+        if (
+          event.type === 'review_approved' ||
           event.type === 'review_completed' ||
           event.type === 'human_approved' ||
-          event.type === 'review_changes_requested') {
+          event.type === 'review_changes_requested'
+        ) {
           break;
         }
         if (
@@ -1004,7 +1014,8 @@ export class TeamDataService {
     const selection = resolveTeamRuntimeSelection(meta);
     const resolvedProviderId = selection.status === 'selected' ? selection.providerId : undefined;
     return {
-      teamName, projectContextMode: meta.projectContextMode,
+      teamName,
+      projectContextMode: meta.projectContextMode,
       displayName: meta.displayName,
       description: meta.description,
       color: meta.color,
@@ -1067,8 +1078,8 @@ export class TeamDataService {
   /** Source-backed attention selection, independent of the 500-row global task export. */
   async getUserAttentionTasks(teamName: string): Promise<readonly TeamTask[]> {
     const tasks = await this.readTasksForUiSnapshot(teamName);
-    return tasks.filter((task) =>
-      task.needsClarification === 'user' && task.status !== 'deleted' && !task.deletedAt
+    return tasks.filter(
+      (task) => task.needsClarification === 'user' && task.status !== 'deleted' && !task.deletedAt
     );
   }
 
@@ -2254,8 +2265,12 @@ export class TeamDataService {
   async startTaskByUser(
     teamName: string,
     taskId: string,
-    admission?: { expectedOwner: string; expectedRunId: string;
-      isCurrent: () => boolean; canStart: () => Promise<boolean> }
+    admission?: {
+      expectedOwner: string;
+      expectedRunId: string;
+      isCurrent: () => boolean;
+      canStart: () => Promise<boolean>;
+    }
   ): Promise<{ notifiedOwner: boolean }> {
     const tasks = await this.taskReader.getTasks(teamName);
     let task = tasks.find((t) => t.id === taskId);
@@ -2276,9 +2291,14 @@ export class TeamDataService {
       if (latestTask?.status !== 'pending' || latestTask.owner !== admission.expectedOwner) {
         throw new Error('Scheduled task start superseded');
       }
-      if ((board.listTasks() as TeamTask[]).some(
-        (other) => other.id !== taskId && other.owner === admission.expectedOwner && isTeamTaskActivelyWorked(other)
-      )) {
+      if (
+        (board.listTasks() as TeamTask[]).some(
+          (other) =>
+            other.id !== taskId &&
+            other.owner === admission.expectedOwner &&
+            isTeamTaskActivelyWorked(other)
+        )
+      ) {
         throw new Error('Scheduled recipient is already working');
       }
       task = latestTask; // Notify using the actual post-admission task contents.
@@ -2296,7 +2316,10 @@ export class TeamDataService {
   private async sendUserTaskStartNotification(teamName: string, task: TeamTask): Promise<boolean> {
     if (!task.owner) return false;
     try {
-      const result = await this.sendMessage(teamName, this.buildUserTaskStartNotification(teamName, task));
+      const result = await this.sendMessage(
+        teamName,
+        this.buildUserTaskStartNotification(teamName, task)
+      );
       return result.deliveredToInbox || result.deliveredViaStdin === true;
     } catch {
       // Preserve the started task for inspection; scheduled work must not retry blindly.
@@ -2524,9 +2547,12 @@ export class TeamDataService {
           recoverPending: true,
         });
       } catch (error) {
-        logger.warn(`[TeamDataService] Clarification answer notification pending for ${teamName}#${taskId}`, {
-          error: error instanceof Error ? error.message : String(error),
-        });
+        logger.warn(
+          `[TeamDataService] Clarification answer notification pending for ${teamName}#${taskId}`,
+          {
+            error: error instanceof Error ? error.message : String(error),
+          }
+        );
       }
     }
     const comment =
@@ -2874,8 +2900,11 @@ export class TeamDataService {
       }
       // Only explicit, persisted user answers receive durable handoff
       // forwarding. Ordinary user comments retain the old no-forward policy.
-      const isUserAnswer = author.toLowerCase() === 'user' &&
-        /^clarification-answer-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(comment.id);
+      const isUserAnswer =
+        author.toLowerCase() === 'user' &&
+        /^clarification-answer-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+          comment.id
+        );
       if (author.toLowerCase() === 'user' && !isUserAnswer) {
         this.logTaskCommentNotificationSkip(teamName, task, 'comment author is user', comment);
         continue;
@@ -2919,21 +2948,26 @@ export class TeamDataService {
         comment,
         // Send a user answer to the active owner, or to the lead if unassigned.
         // Ordinary teammate comments still route to the lead as before.
-        recipientName: isUserAnswer && owner && !this.isLeadOwner(owner, leadName)
-          ? owner : leadName,
+        recipientName:
+          isUserAnswer && owner && !this.isLeadOwner(owner, leadName) ? owner : leadName,
         isUserAnswer,
         leadName,
         leadSessionId,
         taskRef,
         text: buildTaskCommentNotificationText(task, comment, isUserAnswer),
-        summary: isUserAnswer ? `Answer on #${taskRef.displayId}` : `Comment on #${taskRef.displayId}`,
+        summary: isUserAnswer
+          ? `Answer on #${taskRef.displayId}`
+          : `Comment on #${taskRef.displayId}`,
       });
     }
 
     return out;
   }
 
-  private async getRecipientInboxMessageIds(teamName: string, recipientName: string): Promise<Set<string>> {
+  private async getRecipientInboxMessageIds(
+    teamName: string,
+    recipientName: string
+  ): Promise<Set<string>> {
     const rows = await this.inboxReader.getMessagesFor(teamName, recipientName);
     return new Set(
       rows.map((row) => row.messageId).filter((id): id is string => Boolean(id?.trim()))
@@ -3027,14 +3061,31 @@ export class TeamDataService {
       await this.taskCommentNotificationJournal.withEntries(teamName, (entries) => {
         let changed = false;
         const now = new Date().toISOString();
-        for (const task of scopedTasks) for (const notification of
-          this.getEligibleTaskCommentNotifications(teamName, task, leadName, leadSessionId)) {
-          if (notification.isUserAnswer || entries.some(entry => entry.key === notification.key)) continue;
-          entries.push({ key: notification.key, taskId: task.id, commentId: notification.comment.id,
-            author: notification.comment.author, commentCreatedAt: notification.comment.createdAt,
-            messageId: notification.messageId, state: 'seeded', createdAt: now, updatedAt: now });
-          changed = true;
-        }
+        for (const task of scopedTasks)
+          for (const notification of this.getEligibleTaskCommentNotifications(
+            teamName,
+            task,
+            leadName,
+            leadSessionId
+          )) {
+            if (
+              notification.isUserAnswer ||
+              entries.some((entry) => entry.key === notification.key)
+            )
+              continue;
+            entries.push({
+              key: notification.key,
+              taskId: task.id,
+              commentId: notification.comment.id,
+              author: notification.comment.author,
+              commentCreatedAt: notification.comment.createdAt,
+              messageId: notification.messageId,
+              state: 'seeded',
+              createdAt: now,
+              updatedAt: now,
+            });
+            changed = true;
+          }
         return { result: undefined, changed };
       });
     }
@@ -3051,8 +3102,10 @@ export class TeamDataService {
       // messageId is the authoritative proof of a successful delivery.
       for (const notification of notifications) {
         if (!inboxMessageIdsByRecipient.has(notification.recipientName)) {
-          inboxMessageIdsByRecipient.set(notification.recipientName,
-            await this.getRecipientInboxMessageIds(teamName, notification.recipientName));
+          inboxMessageIdsByRecipient.set(
+            notification.recipientName,
+            await this.getRecipientInboxMessageIds(teamName, notification.recipientName)
+          );
         }
       }
 
@@ -3060,117 +3113,136 @@ export class TeamDataService {
       // or an earlier send can fail before later pending entries are attempted.
       const claimedKeys = new Set<string>();
       try {
-        const pending = await this.taskCommentNotificationJournal.withEntries(teamName, (entries) => {
-          const toSend: EligibleTaskCommentNotification[] = [];
-          let changed = false;
-          const now = new Date().toISOString();
+        const pending = await this.taskCommentNotificationJournal.withEntries(
+          teamName,
+          (entries) => {
+            const toSend: EligibleTaskCommentNotification[] = [];
+            let changed = false;
+            const now = new Date().toISOString();
 
-          for (const notification of notifications) {
-            const existing = entries.find((entry) => entry.key === notification.key);
-            const claimKey = this.buildTaskCommentNotificationClaimKey(teamName, notification.key);
-            // Even on the very first journal initialization, an unforwarded
-            // committed user answer is actionable, not historical lead chatter.
-            const seedThisEntry = shouldSeedHistorical && !notification.isUserAnswer;
-            if (!existing) {
-              entries.push({
-                key: notification.key,
-                taskId: notification.task.id,
-                commentId: notification.comment.id,
-                author: notification.comment.author,
-                commentCreatedAt: notification.comment.createdAt,
-                messageId: notification.messageId,
-                state: seedThisEntry ? 'seeded' : 'pending_send',
-                createdAt: now,
-                updatedAt: now,
-              });
-              changed = true;
-              if (seedThisEntry) {
+            for (const notification of notifications) {
+              const existing = entries.find((entry) => entry.key === notification.key);
+              const claimKey = this.buildTaskCommentNotificationClaimKey(
+                teamName,
+                notification.key
+              );
+              // Even on the very first journal initialization, an unforwarded
+              // committed user answer is actionable, not historical lead chatter.
+              const seedThisEntry = shouldSeedHistorical && !notification.isUserAnswer;
+              if (!existing) {
+                entries.push({
+                  key: notification.key,
+                  taskId: notification.task.id,
+                  commentId: notification.comment.id,
+                  author: notification.comment.author,
+                  commentCreatedAt: notification.comment.createdAt,
+                  messageId: notification.messageId,
+                  state: seedThisEntry ? 'seeded' : 'pending_send',
+                  createdAt: now,
+                  updatedAt: now,
+                });
+                changed = true;
+                if (seedThisEntry) {
+                  logger.info(
+                    `[TeamDataService] Seeded historical task comment notification for ${teamName}#${notification.taskRef.displayId}:${notification.comment.id}`
+                  );
+                } else {
+                  logger.info(
+                    `[TeamDataService] Queued task comment notification for ${teamName}#${notification.taskRef.displayId}:${notification.comment.id}`
+                  );
+                  this.taskCommentNotificationInFlight.add(claimKey);
+                  claimedKeys.add(claimKey);
+                  toSend.push(notification);
+                }
+                continue;
+              }
+
+              if (existing.state === 'seeded' || existing.state === 'sent') continue;
+
+              const messageId = existing.messageId?.trim() || notification.messageId;
+              if (!existing.messageId) {
+                existing.messageId = messageId;
+                existing.updatedAt = now;
+                changed = true;
+              }
+
+              if (inboxMessageIdsByRecipient.get(notification.recipientName)?.has(messageId)) {
+                existing.state = 'sent';
+                existing.sentAt = existing.sentAt ?? now;
+                existing.updatedAt = now;
+                changed = true;
                 logger.info(
-                  `[TeamDataService] Seeded historical task comment notification for ${teamName}#${notification.taskRef.displayId}:${notification.comment.id}`
+                  `[TeamDataService] Comment notification already present in lead inbox for ${teamName}#${notification.taskRef.displayId}:${notification.comment.id}`
                 );
-              } else {
+                continue;
+              }
+
+              if (existing.state === 'pending_send') {
+                if (this.taskCommentNotificationInFlight.has(claimKey)) {
+                  logger.info(
+                    `[TeamDataService] Task comment notification already in flight for ${teamName}#${notification.taskRef.displayId}:${notification.comment.id}`
+                  );
+                  continue;
+                }
+                if (!recoverPending) {
+                  logger.info(
+                    `[TeamDataService] Pending task comment notification awaits recovery for ${teamName}#${notification.taskRef.displayId}:${notification.comment.id}`
+                  );
+                  continue;
+                }
+
+                existing.updatedAt = now;
+                changed = true;
                 logger.info(
-                  `[TeamDataService] Queued task comment notification for ${teamName}#${notification.taskRef.displayId}:${notification.comment.id}`
+                  `[TeamDataService] Recovering pending task comment notification for ${teamName}#${notification.taskRef.displayId}:${notification.comment.id}`
                 );
                 this.taskCommentNotificationInFlight.add(claimKey);
                 claimedKeys.add(claimKey);
-                toSend.push(notification);
+                toSend.push({ ...notification, messageId });
               }
-              continue;
             }
 
-            if (existing.state === 'seeded' || existing.state === 'sent') continue;
-
-            const messageId = existing.messageId?.trim() || notification.messageId;
-            if (!existing.messageId) {
-              existing.messageId = messageId;
-              existing.updatedAt = now;
-              changed = true;
-            }
-
-            if (inboxMessageIdsByRecipient.get(notification.recipientName)?.has(messageId)) {
-              existing.state = 'sent';
-              existing.sentAt = existing.sentAt ?? now;
-              existing.updatedAt = now;
-              changed = true;
-              logger.info(
-                `[TeamDataService] Comment notification already present in lead inbox for ${teamName}#${notification.taskRef.displayId}:${notification.comment.id}`
-              );
-              continue;
-            }
-
-            if (existing.state === 'pending_send') {
-              if (this.taskCommentNotificationInFlight.has(claimKey)) {
-                logger.info(
-                  `[TeamDataService] Task comment notification already in flight for ${teamName}#${notification.taskRef.displayId}:${notification.comment.id}`
-                );
-                continue;
-              }
-              if (!recoverPending) {
-                logger.info(
-                  `[TeamDataService] Pending task comment notification awaits recovery for ${teamName}#${notification.taskRef.displayId}:${notification.comment.id}`
-                );
-                continue;
-              }
-
-              existing.updatedAt = now;
-              changed = true;
-              logger.info(
-                `[TeamDataService] Recovering pending task comment notification for ${teamName}#${notification.taskRef.displayId}:${notification.comment.id}`
-              );
-              this.taskCommentNotificationInFlight.add(claimKey);
-              claimedKeys.add(claimKey);
-              toSend.push({ ...notification, messageId });
-            }
+            return { result: toSend, changed };
           }
-
-          return { result: toSend, changed };
-        });
+        );
 
         for (const notification of pending) {
-          const send = () => this.inboxWriter.sendMessage(teamName, {
-            member: notification.recipientName,
-            from: notification.comment.author,
-            text: notification.text,
-            summary: notification.summary,
-            commentId: notification.comment.id,
-            source: TASK_COMMENT_NOTIFICATION_SOURCE,
-            messageKind: 'task_comment_notification',
-            ...(notification.recipientName === notification.leadName &&
-              notification.leadSessionId ? { leadSessionId: notification.leadSessionId } : {}),
-            // Keep the primary task link and all exact cross-team mentions
-            // from the accepted user answer. The previous immediate notifier
-            // forwarded comment.taskRefs; replacing it must not drop them.
-            taskRefs: notification.isUserAnswer
-              ? [notification.taskRef, ...(notification.comment.taskRefs ?? [])].filter(
-                  (ref, index, refs) => refs.findIndex(
-                    (candidate) => candidate.teamName === ref.teamName &&
-                      candidate.taskId === ref.taskId
-                  ) === index
-                )
-              : [notification.taskRef],
-            messageId: notification.messageId,
-          }, { shouldStillWrite: () => { sourceAdmission?.assertCurrent(); return true; } });
+          const send = () =>
+            this.inboxWriter.sendMessage(
+              teamName,
+              {
+                member: notification.recipientName,
+                from: notification.comment.author,
+                text: notification.text,
+                summary: notification.summary,
+                commentId: notification.comment.id,
+                source: TASK_COMMENT_NOTIFICATION_SOURCE,
+                messageKind: 'task_comment_notification',
+                ...(notification.recipientName === notification.leadName &&
+                notification.leadSessionId
+                  ? { leadSessionId: notification.leadSessionId }
+                  : {}),
+                // Keep the primary task link and all exact cross-team mentions
+                // from the accepted user answer. The previous immediate notifier
+                // forwarded comment.taskRefs; replacing it must not drop them.
+                taskRefs: notification.isUserAnswer
+                  ? [notification.taskRef, ...(notification.comment.taskRefs ?? [])].filter(
+                      (ref, index, refs) =>
+                        refs.findIndex(
+                          (candidate) =>
+                            candidate.teamName === ref.teamName && candidate.taskId === ref.taskId
+                        ) === index
+                    )
+                  : [notification.taskRef],
+                messageId: notification.messageId,
+              },
+              {
+                shouldStillWrite: () => {
+                  sourceAdmission?.assertCurrent();
+                  return true;
+                },
+              }
+            );
           const delivery = sourceAdmission ? await sourceAdmission.publish(send) : await send();
           if (!delivery.deliveredToInbox) {
             // A failed/declined write is not evidence of delivery. Keep the
@@ -3385,10 +3457,14 @@ export class TeamDataService {
     options?: { claimOwnerOnCreate?: boolean }
   ): Promise<void> {
     return this.runConfigurationOperation(request.teamName, () =>
-      createDraftTeamConfig(request, {
-        teamMetaStore: this.teamMetaStore,
-        membersMetaStore: this.membersMetaStore,
-      }, options)
+      createDraftTeamConfig(
+        request,
+        {
+          teamMetaStore: this.teamMetaStore,
+          membersMetaStore: this.membersMetaStore,
+        },
+        options
+      )
     );
   }
 
@@ -3862,7 +3938,10 @@ export class TeamDataService {
   }
 
   /** `null` removes the team's override so it follows the default again. */
-  async setReviewFlowSettings(teamName: string, settings: ReviewFlowSettings | null): Promise<void> {
+  async setReviewFlowSettings(
+    teamName: string,
+    settings: ReviewFlowSettings | null
+  ): Promise<void> {
     this.getTaskBoard(teamName).setReviewFlowSettings(settings);
   }
 
@@ -3889,7 +3968,9 @@ export class TeamDataService {
       } else {
         const { leadName, leadSessionId } = await this.resolveLeadRuntimeContext(teamName);
         taskBoard.approveReviewFromUser(taskId, {
-          from: leadName, suppressTaskComment: true, 'notify-owner': true,
+          from: leadName,
+          suppressTaskComment: true,
+          'notify-owner': true,
           ...(leadSessionId ? { leadSessionId } : {}),
         });
       }

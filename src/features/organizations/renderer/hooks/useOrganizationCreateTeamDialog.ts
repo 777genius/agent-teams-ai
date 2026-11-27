@@ -105,27 +105,30 @@ export function useOrganizationCreateTeamDialog(): UseOrganizationCreateTeamDial
     [createTeam]
   );
 
-  const openCreationPage = useCallback(async (placement: OrganizationPlacementSelection) => {
-    const hasSavedDraft = await hasUnfinishedCreateTeamDraft();
-    const hasOpenEditor = useStore
-      .getState()
-      .getAllPaneTabs()
-      .some((tab) => tab.type === 'teams' && tab.teamsCreationPage);
-    if (hasOpenEditor || hasSavedDraft) {
-      const accepted = await confirm({
-        title: t('create.title.create'),
-        message: t('create.draft.replaceConfirmation', {
-          defaultValue: 'Creating this team will replace your unfinished draft. Continue?',
-        }),
-        confirmLabel: t('create.draft.replace', { defaultValue: 'Replace draft' }),
-        variant: 'danger',
-      });
-      if (!accepted) return;
-    }
-    const originTabId = useStore.getState().getActiveTab()?.id;
-    await resetCreateTeamDraft();
-    openTeamsCreationPage({ placement, originTabId }, true);
-  }, [openTeamsCreationPage, t]);
+  const openCreationPage = useCallback(
+    async (placement: OrganizationPlacementSelection) => {
+      const hasSavedDraft = await hasUnfinishedCreateTeamDraft();
+      const hasOpenEditor = useStore
+        .getState()
+        .getAllPaneTabs()
+        .some((tab) => tab.type === 'teams' && tab.teamsCreationPage);
+      if (hasOpenEditor || hasSavedDraft) {
+        const accepted = await confirm({
+          title: t('create.title.create'),
+          message: t('create.draft.replaceConfirmation', {
+            defaultValue: 'Creating this team will replace your unfinished draft. Continue?',
+          }),
+          confirmLabel: t('create.draft.replace', { defaultValue: 'Replace draft' }),
+          variant: 'danger',
+        });
+        if (!accepted) return;
+      }
+      const originTabId = useStore.getState().getActiveTab()?.id;
+      await resetCreateTeamDraft();
+      openTeamsCreationPage({ placement, originTabId }, true);
+    },
+    [openTeamsCreationPage, t]
+  );
 
   return {
     canCreate,

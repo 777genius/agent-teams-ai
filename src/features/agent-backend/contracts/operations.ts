@@ -71,6 +71,7 @@ import type {
   AttachmentUpload,
   AttachmentUploadResult,
 } from '@agent-teams/legacy-agent-host/attachments/contracts';
+import type { TaskSubmissionProof } from '@agent-teams/legacy-agent-host/team/command-proof';
 import type { TeamTaskWithKanban } from '@shared/types/team';
 import type { HostSubagentActivity } from '@shared/types/teamActivity';
 export type { BackendCheckpointAvailabilityReason, BackendMemberCheckpoints } from './checkpoints';
@@ -344,6 +345,8 @@ export type BackendTaskSubmissionCommand = {
 export interface BackendCommandReceipt {
   /** Strict projection of the actual original command; never a renderer-invented proof. */
   taskSubmission?: BackendTaskSubmissionCommand;
+  /** Original Host command digest; large text is restored only after exact proof checks. */
+  taskSubmissionProof?: TaskSubmissionProof;
   /** Main verified the exact original policy marker, emitted only without product effects. */
   taskSubmissionNoEffect?: true;
   commandId: string;

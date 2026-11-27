@@ -25,7 +25,10 @@ import {
   type TeamGroupChatsFeature,
 } from '@features/team-group-chats/main';
 import { registerTokenUsageHttp, type TokenUsageFeatureFacade } from '@features/token-usage/main';
-import { registerUserAttentionHttp, type UserAttentionFeatureFacade } from '@features/user-attention/main';
+import {
+  registerUserAttentionHttp,
+  type UserAttentionFeatureFacade,
+} from '@features/user-attention/main';
 import {
   registerWorkspaceTrustHttp,
   type WorkspaceTrustStatusFeatureFacade,

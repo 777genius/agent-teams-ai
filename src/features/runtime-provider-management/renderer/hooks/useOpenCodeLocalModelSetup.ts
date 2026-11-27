@@ -109,7 +109,16 @@ export function useOpenCodeLocalModelSetup({
         onReady(target.modelRoute);
       }
     },
-    [activeScopeKey, addingMessage, chooseProjectMessage, management, normalizedProjectPath, onConfigured, onReady, retained]
+    [
+      activeScopeKey,
+      addingMessage,
+      chooseProjectMessage,
+      management,
+      normalizedProjectPath,
+      onConfigured,
+      onReady,
+      retained,
+    ]
   );
 
   return { actionByRoute, addAndTest };

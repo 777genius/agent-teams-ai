@@ -116,7 +116,9 @@ export function createHostTeamLifecycle(backend: AgentBackendApi) {
       }));
     // An absent binding is not an original no-allocation proof. Release every
     // known generation, while retaining uncertainty for any unbound allocation.
-    const failures: unknown[] = launch.members.some(member => member.generation === null && !member.noAllocation)
+    const failures: unknown[] = launch.members.some(
+      (member) => member.generation === null && !member.noAllocation
+    )
       ? [new HostTeamOperationError('hold', 'unknown')]
       : [];
     for (const request of requests) {

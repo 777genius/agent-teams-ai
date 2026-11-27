@@ -129,24 +129,32 @@ describe('resolveOpenCodeQuickConnectGate', () => {
       nativeGeneration: 'v1',
       sourceRevision: 'a'.repeat(64),
     };
-    const gate = (status: OpenCodeRuntimeStatus) => resolveOpenCodeQuickConnectGate({
-      runtimeStatus: status,
-      runtimeStatusLoading: false,
-      provider: null,
-      cliStatusLoading: false,
-    });
+    const gate = (status: OpenCodeRuntimeStatus) =>
+      resolveOpenCodeQuickConnectGate({
+        runtimeStatus: status,
+        runtimeStatusLoading: false,
+        provider: null,
+        cliStatusLoading: false,
+      });
     expect(gate(captured)).toBe('ready');
     expect(gate({ installed: true, source: 'captured-host', state: 'ready' })).toBe('missing');
     expect(gate({ ...captured, source: 'path' })).toBe('missing');
     const revision = resolveOpenCodeQuickConnectRuntimeRevision({
-      gate: 'ready', runtimeStatus: captured,
+      gate: 'ready',
+      runtimeStatus: captured,
     });
-    expect(revision).not.toBe(resolveOpenCodeQuickConnectRuntimeRevision({
-      gate: 'ready', runtimeStatus: { ...captured, sourceRevision: 'b'.repeat(64) },
-    }));
-    expect(revision).not.toBe(resolveOpenCodeQuickConnectRuntimeRevision({
-      gate: 'ready', runtimeStatus: { ...captured, nativeGeneration: 'v2' },
-    }));
+    expect(revision).not.toBe(
+      resolveOpenCodeQuickConnectRuntimeRevision({
+        gate: 'ready',
+        runtimeStatus: { ...captured, sourceRevision: 'b'.repeat(64) },
+      })
+    );
+    expect(revision).not.toBe(
+      resolveOpenCodeQuickConnectRuntimeRevision({
+        gate: 'ready',
+        runtimeStatus: { ...captured, nativeGeneration: 'v2' },
+      })
+    );
   });
 
   it.each(['2.0.0', '2.0.32', 'opencode v2.0.32', '2.0.21', 'opencode v2.0.21', '2.0.26', '2.1.4'])(

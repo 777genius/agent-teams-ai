@@ -41,13 +41,19 @@ async function refreshConfiguration(sources: CapturedRuntimeSources) {
   if (recovered) current = await sources.current();
   const preferences = await sources.capturePreferences?.();
   const preferencesDigest = preferences && openCodeManagedPreferencesDigest(preferences);
-  if (current.configurationCurrent !== false &&
-      (!preferences || current.preferencesDigest === preferencesDigest)) return current;
+  if (
+    current.configurationCurrent !== false &&
+    (!preferences || current.preferencesDigest === preferencesDigest)
+  )
+    return current;
   const commandId = randomUUID();
   let result: RuntimeSourcePublication;
   try {
-    result = await sources.refreshConfiguration({ commandId, expectedRevision: current.revision,
-      ...(preferences ? { openCodePreferences: preferences } : {}) });
+    result = await sources.refreshConfiguration({
+      commandId,
+      expectedRevision: current.revision,
+      ...(preferences ? { openCodePreferences: preferences } : {}),
+    });
   } catch (error) {
     // Lookup only this original intent after lost ACK; never adopt a later available selection.
     const original = await sources.lookup(commandId);

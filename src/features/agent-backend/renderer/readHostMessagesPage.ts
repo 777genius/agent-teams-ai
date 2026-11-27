@@ -1,3 +1,5 @@
+import { assembleHostMessageParts } from '../core/application/assembleHostMessageParts';
+
 import { HostTeamOperationError } from './createHostTeamMutations';
 import { remapHostCrossTeamMessages } from './remapHostCrossTeamMessages';
 
@@ -14,27 +16,18 @@ function complete(parts: Map<number, { total: number; values: Map<number, Messag
 }
 
 function assemble(parts: Map<number, { total: number; values: Map<number, Message> }>): Message[] {
-  return [...parts.entries()].sort(([a], [b]) => b - a).map(([, group]) => {
-    const original = group.values.get(0);
-    if (!original || group.values.size !== group.total)
-      throw new Error('Incomplete Host message history');
-    let text = original.text;
-    for (let index = 1; index < group.total; index++) {
-      const part = group.values.get(index);
-      if (!part || part.from !== original.from || part.messageId !== original.messageId ||
-          part.timestamp !== original.timestamp || part.read !== original.read ||
-          part.source !== original.source || part.leadSessionId !== original.leadSessionId)
-        throw new Error('Mismatched Host message fragment');
-      text += part.text;
-    }
-    return { ...original, text };
-  });
+  return [...parts.entries()]
+    .sort(([a], [b]) => b - a)
+    .map(([, group]) => assembleHostMessageParts(group));
 }
 
 function historyNotice(page: BackendTeamMessagesPage) {
-  return page.conversation?.gaps.length ? {
-    historyWarning: 'Some agent replies are incomplete or unavailable. Showing the retained messages.',
-  } : {};
+  return page.conversation?.gaps.length
+    ? {
+        historyWarning:
+          'Some agent replies are incomplete or unavailable. Showing the retained messages.',
+      }
+    : {};
 }
 
 /** A message is published only after its original signed Owner parts are complete. */
@@ -68,14 +61,24 @@ export async function readHostMessagesPage(
     readFence();
     if (!result.ok) throw new HostTeamOperationError(result.code, result.outcome);
     const page = result.value;
-    if (!page || typeof page !== 'object' ||
-        !('nextCursor' in page) || !('messages' in page) ||
-        !('revision' in page) || !('teamName' in page) || !('hasMore' in page))
+    if (
+      !page ||
+      typeof page !== 'object' ||
+      !('nextCursor' in page) ||
+      !('messages' in page) ||
+      !('revision' in page) ||
+      !('teamName' in page) ||
+      !('hasMore' in page)
+    )
       throw new HostTeamOperationError('invalid-result', 'unknown');
-    if (first && (page.teamName !== first.teamName || page.revision !== first.revision ||
+    if (
+      first &&
+      (page.teamName !== first.teamName ||
+        page.revision !== first.revision ||
         page.messageTotal !== first.messageTotal ||
         Boolean(page.messageParts) !== Boolean(first.messageParts) ||
-        JSON.stringify(page.conversation) !== JSON.stringify(first.conversation)))
+        JSON.stringify(page.conversation) !== JSON.stringify(first.conversation))
+    )
       throw new Error('Host message history changed during paged read');
     first ??= page;
     if (!page.messageParts) {
@@ -92,8 +95,13 @@ export async function readHostMessagesPage(
       throw new Error('Invalid Host message parts');
     for (const [position, fragment] of page.messages.entries()) {
       const marker = page.messageParts[position];
-      if (!marker || marker.index >= page.messageTotal || marker.part >= marker.total ||
-          marker.part < 0 || marker.total < 1)
+      if (
+        !marker ||
+        marker.index >= page.messageTotal ||
+        marker.part >= marker.total ||
+        marker.part < 0 ||
+        marker.total < 1
+      )
         throw new Error('Invalid Host message part');
       let group = groups.get(marker.index);
       if (!group) {

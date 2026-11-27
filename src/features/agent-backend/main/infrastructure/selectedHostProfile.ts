@@ -66,18 +66,32 @@ export function captureHostProfile(profile: SelectedHostProfile): SelectedHostPr
 
 /** Same immutable source binding used by the replaceable client and its original physical owner. */
 export function capturedHostProfileDigest(profile: SelectedHostProfile): string {
-  const { env, startupTimeoutMs: _startup, requestTimeoutMs: _request,
-    writeTimeoutMs: _write, shutdownTimeoutMs: _shutdown, ...source } = profile;
-  return createHash('sha256').update(JSON.stringify({ ...source,
-    env: Object.entries(env).sort(([a], [b]) => a.localeCompare(b)) })).digest('hex');
+  const {
+    env,
+    startupTimeoutMs: _startup,
+    requestTimeoutMs: _request,
+    writeTimeoutMs: _write,
+    shutdownTimeoutMs: _shutdown,
+    ...source
+  } = profile;
+  return createHash('sha256')
+    .update(
+      JSON.stringify({ ...source, env: Object.entries(env).sort(([a], [b]) => a.localeCompare(b)) })
+    )
+    .digest('hex');
 }
 
-export function remainingHostStartup(profile: SelectedHostProfile, remaining?: () => number): number {
+export function remainingHostStartup(
+  profile: SelectedHostProfile,
+  remaining?: () => number
+): number {
   if (!remaining) return profile.startupTimeoutMs;
   try {
     const value = Math.floor(remaining());
     if (Number.isSafeInteger(value) && value > 0) return Math.min(profile.startupTimeoutMs, value);
-  } catch { /* The original recovery cutoff/currentness remains authoritative. */ }
+  } catch {
+    /* The original recovery cutoff/currentness remains authoritative. */
+  }
   throw new HostClientError('request-timeout', 'not-dispatched');
 }
 
@@ -106,7 +120,11 @@ export async function validateHostProfile(
       throw new HostClientError('invalid-profile', 'not-dispatched');
     }
     remainingHostStartup(profile, remaining);
-    const launch = await resolveElectronNodeLaunch(profile.nodeExecutable, ['--version'], 'generic');
+    const launch = await resolveElectronNodeLaunch(
+      profile.nodeExecutable,
+      ['--version'],
+      'generic'
+    );
     const version = await new Promise<string>((resolve, reject) => {
       execFileWithLinuxChildLaunch(
         launch.command,

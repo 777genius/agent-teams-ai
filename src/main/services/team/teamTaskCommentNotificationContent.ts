@@ -10,7 +10,10 @@ export function buildTaskCommentNotificationText(
   isUserAnswer = false
 ): string {
   return agentTeamsControllerModule.buildTaskCommentForwardNotificationText(
-    task, comment, isUserAnswer, formatTaskDisplayLabel(task)
+    task,
+    comment,
+    isUserAnswer,
+    formatTaskDisplayLabel(task)
   );
 }
 

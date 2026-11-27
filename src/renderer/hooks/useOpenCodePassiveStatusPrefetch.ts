@@ -1,6 +1,9 @@
 import { useEffect, useReducer, useRef } from 'react';
 
-import { useRetainedLegacyLaunch, useRetainedLegacyRuntimeStatus } from '@features/agent-backend/renderer';
+import {
+  useRetainedLegacyLaunch,
+  useRetainedLegacyRuntimeStatus,
+} from '@features/agent-backend/renderer';
 import { useStore } from '@renderer/store';
 import { getCliProviderStatusScopeKey } from '@renderer/store/slices/cliInstallerSlice';
 import { isTeamProviderModelCatalogFresh } from '@renderer/utils/teamModelAvailability';

@@ -37,30 +37,73 @@ export interface LegacyNativeStopRelease {
 }
 export interface CapturedLegacyNativeStop {
   /** Returns no proof until the exact original process owner confirmed exit. */
-  complete(assertWorkSyncDrained?: () => void, onRefusal?: LegacyNativeStopRefusalObserver): LegacyNativeStopRelease | null;
+  complete(
+    assertWorkSyncDrained?: () => void,
+    onRefusal?: LegacyNativeStopRefusalObserver
+  ): LegacyNativeStopRelease | null;
 }
 export interface LegacyNativeStopRefusal {
-  readonly stage: 'admission' | 'completion-admission' | 'completion-owner' | 'completion-fence' |
-    'completion-team' | 'completion-freshness' | 'completion-work-sync' | 'completion-proof' |
-    'proof-owner-before' | 'proof-work-sync-before' | 'proof-process-release' | 'proof-census' |
-    'proof-directory' | 'proof-owner-after' | 'proof-work-sync-after' | 'proof-assembly' | 'publication' |
-    'publication-work-sync' | 'publication-owner' | 'publication-fence';
-  readonly reason: 'rejected' | 'exception' | 'backup-identity' | 'native-record' | 'native-identity' |
-    'native-bounds' | 'native-artifact' | 'native-directory' | 'native-config' | 'native-lead' |
-    'native-member' | 'owner-changed' | 'work-sync-owner' | 'work-sync-drain' | 'work-sync-pending' |
-    'work-sync-inventory' | 'file-missing' | 'file-type' |
-    'file-access' | 'file-io' | 'invalid-json' | 'invalid-utf8';
+  readonly stage:
+    | 'admission'
+    | 'completion-admission'
+    | 'completion-owner'
+    | 'completion-fence'
+    | 'completion-team'
+    | 'completion-freshness'
+    | 'completion-work-sync'
+    | 'completion-proof'
+    | 'proof-owner-before'
+    | 'proof-work-sync-before'
+    | 'proof-process-release'
+    | 'proof-census'
+    | 'proof-directory'
+    | 'proof-owner-after'
+    | 'proof-work-sync-after'
+    | 'proof-assembly'
+    | 'publication'
+    | 'publication-work-sync'
+    | 'publication-owner'
+    | 'publication-fence';
+  readonly reason:
+    | 'rejected'
+    | 'exception'
+    | 'backup-identity'
+    | 'native-record'
+    | 'native-identity'
+    | 'native-bounds'
+    | 'native-artifact'
+    | 'native-directory'
+    | 'native-config'
+    | 'native-lead'
+    | 'native-member'
+    | 'owner-changed'
+    | 'work-sync-owner'
+    | 'work-sync-drain'
+    | 'work-sync-pending'
+    | 'work-sync-inventory'
+    | 'file-missing'
+    | 'file-type'
+    | 'file-access'
+    | 'file-io'
+    | 'invalid-json'
+    | 'invalid-utf8';
 }
 export type LegacyNativeStopRefusalObserver = (value: Readonly<LegacyNativeStopRefusal>) => void;
 const refusalReasons = new Map<string, LegacyNativeStopRefusal['reason']>([
-  ['Invalid native backup identity', 'backup-identity'], ['Native backup identity changed', 'backup-identity'],
+  ['Invalid native backup identity', 'backup-identity'],
+  ['Native backup identity changed', 'backup-identity'],
   ['Invalid native custody record', 'native-record'],
   ['Native inventory is not covered by the owned solo CLI', 'native-identity'],
-  ['Native run identity changed', 'native-identity'], ['Native custody nesting exceeds bound', 'native-bounds'],
-  ['Native Team census exceeds bound', 'native-bounds'], ['Unqualified native artifact inventory', 'native-artifact'],
-  ['Native Team directory changed', 'native-directory'], ['Native Team directory replaced', 'native-directory'],
-  ['Incomplete solo native inventory', 'native-config'], ['Unsupported native lead', 'native-lead'],
-  ['Uncovered native member', 'native-member'], ['WorkSync Stop owner is unavailable', 'work-sync-owner'],
+  ['Native run identity changed', 'native-identity'],
+  ['Native custody nesting exceeds bound', 'native-bounds'],
+  ['Native Team census exceeds bound', 'native-bounds'],
+  ['Unqualified native artifact inventory', 'native-artifact'],
+  ['Native Team directory changed', 'native-directory'],
+  ['Native Team directory replaced', 'native-directory'],
+  ['Incomplete solo native inventory', 'native-config'],
+  ['Unsupported native lead', 'native-lead'],
+  ['Uncovered native member', 'native-member'],
+  ['WorkSync Stop owner is unavailable', 'work-sync-owner'],
   ['Unqualified native WorkSync inventory', 'work-sync-inventory'],
   ['Invalid native WorkSync directory', 'work-sync-inventory'],
   ['Original native Stop owner changed', 'owner-changed'],
@@ -71,23 +114,40 @@ const refusalReasons = new Map<string, LegacyNativeStopRefusal['reason']>([
 ]);
 function refusalReason(error: unknown): LegacyNativeStopRefusal['reason'] {
   try {
-    const codeField = error && typeof error === 'object' ? Object.getOwnPropertyDescriptor(error, 'code') : undefined;
-    const messageField = error && typeof error === 'object' ? Object.getOwnPropertyDescriptor(error, 'message') : undefined;
+    const codeField =
+      error && typeof error === 'object'
+        ? Object.getOwnPropertyDescriptor(error, 'code')
+        : undefined;
+    const messageField =
+      error && typeof error === 'object'
+        ? Object.getOwnPropertyDescriptor(error, 'message')
+        : undefined;
     if ((codeField && !('value' in codeField)) || (messageField && !('value' in messageField)))
       return 'exception';
     const code = codeField?.value as unknown;
     switch (code) {
-      case 'ENOENT': return 'file-missing';
-      case 'ENOTDIR': case 'EISDIR': case 'ELOOP': return 'file-type';
-      case 'EACCES': case 'EPERM': return 'file-access';
-      case 'EIO': return 'file-io';
-      case 'ERR_ENCODING_INVALID_ENCODED_DATA': return 'invalid-utf8';
+      case 'ENOENT':
+        return 'file-missing';
+      case 'ENOTDIR':
+      case 'EISDIR':
+      case 'ELOOP':
+        return 'file-type';
+      case 'EACCES':
+      case 'EPERM':
+        return 'file-access';
+      case 'EIO':
+        return 'file-io';
+      case 'ERR_ENCODING_INVALID_ENCODED_DATA':
+        return 'invalid-utf8';
     }
     if (error instanceof SyntaxError) return 'invalid-json';
     const message: unknown = messageField?.value;
     return error instanceof Error && typeof message === 'string'
-      ? refusalReasons.get(message) ?? 'exception' : 'exception';
-  } catch { return 'exception'; }
+      ? (refusalReasons.get(message) ?? 'exception')
+      : 'exception';
+  } catch {
+    return 'exception';
+  }
 }
 /** Only already-observed outcomes; observers cannot change the original refusal. */
 export function observeLegacyNativeStopRefusal(
@@ -95,9 +155,14 @@ export function observeLegacyNativeStopRefusal(
   stage: LegacyNativeStopRefusal['stage'],
   failure?: { error: unknown }
 ): null {
-  if (observer) try {
-    observer(Object.freeze({ stage, reason: failure ? refusalReason(failure.error) : 'rejected' }));
-  } catch { /* Diagnostic failures carry no Stop authority. */ }
+  if (observer)
+    try {
+      observer(
+        Object.freeze({ stage, reason: failure ? refusalReason(failure.error) : 'rejected' })
+      );
+    } catch {
+      /* Diagnostic failures carry no Stop authority. */
+    }
   return null;
 }
 const capturedProofs = new WeakMap<LegacyNativeStopRelease, string>();
@@ -189,7 +254,8 @@ export function captureLegacyNativeStop(
             capturePendingWorkSync ? 'qualified' : 'absent'
           );
           stage = 'proof-directory';
-          if (!sameDirectory(original, census)) return observeLegacyNativeStopRefusal(onRefusal, stage);
+          if (!sameDirectory(original, census))
+            return observeLegacyNativeStopRefusal(onRefusal, stage);
           stage = 'proof-owner-after';
           if (!current()) return observeLegacyNativeStopRefusal(onRefusal, stage);
           stage = 'proof-work-sync-after';

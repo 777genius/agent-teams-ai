@@ -472,9 +472,10 @@ export class TeamOwner {
       readTaskPage: (taskId: string, cursor?: string) => this.store.fenced(() => {
         const grant = this.authorize(principalId, 'read');
         safeSegment(taskId);
+        const task = this.policy.taskBoard().getTask(taskId);
         return pageOwnerTaskDetail({
           principalId, grant, key: this.snapshotPageKey, teamName: this.binding.teamName,
-          taskId, task: json(this.policy.taskBoard().getTask(taskId)),
+          taskId: task.id, task: json(task),
           ...(cursor === undefined ? {} : { cursor }),
         });
       }),
@@ -495,6 +496,7 @@ export class TeamOwner {
         ? {
             readQueries: createTeamReadQueries({
               reads: this.policy.reads,
+              commentPages: { principalId, key: this.snapshotPageKey, teamName: this.binding.teamName },
               fenced: (action) => this.store.fenced(action),
               authority: () => ({
                 grant: this.authorize(principalId, 'read'),

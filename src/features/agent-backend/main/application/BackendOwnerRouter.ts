@@ -4,7 +4,10 @@ import { performance } from 'node:perf_hooks';
 
 import { crossTeamOwnerResourceRef } from '@agent-teams/legacy-agent-host/cross-team';
 
-import { readinessPreparationWire, readinessRemaining } from '../infrastructure/CapturedLocalModelReadiness';
+import {
+  readinessPreparationWire,
+  readinessRemaining,
+} from '../infrastructure/CapturedLocalModelReadiness';
 import { HostClientError } from '../infrastructure/selectedHostProfile';
 
 import {
@@ -18,12 +21,19 @@ import {
   ownerKey,
 } from './backendBinding';
 
-import type { BackendHostRecoveryRequest, BackendHostRecoveryResult } from '../../contracts/operations';
+import type {
+  BackendHostRecoveryRequest,
+  BackendHostRecoveryResult,
+} from '../../contracts/operations';
 import type {
   CapturedHostClient,
   CapturedHostShutdown,
 } from '../infrastructure/CapturedHostClient';
-import type { CapturedReadinessOrigin, CapturedRuntimeReadinessTarget, LocalModelReadinessContext } from '../infrastructure/CapturedLocalModelReadiness';
+import type {
+  CapturedReadinessOrigin,
+  CapturedRuntimeReadinessTarget,
+  LocalModelReadinessContext,
+} from '../infrastructure/CapturedLocalModelReadiness';
 import type {
   BackendHandle,
   BackendOwnerBinding,
@@ -35,7 +45,11 @@ import type {
 } from './backendBinding';
 import type { HostHandshake, JsonValue } from '@agent-teams/legacy-agent-host/contracts';
 import type { RetainedWindowsCustody } from '@agent-teams/legacy-agent-host/owned-process';
-import type { LiveRosterPrivateInput, LocalModelReadinessCapture, LocalModelReadinessTransfer } from '@agent-teams/legacy-agent-host/team-host';
+import type {
+  LiveRosterPrivateInput,
+  LocalModelReadinessCapture,
+  LocalModelReadinessTransfer,
+} from '@agent-teams/legacy-agent-host/team-host';
 
 interface RegisteredOwner {
   readonly binding: BackendOwnerBinding;
@@ -132,7 +146,9 @@ export class BackendOwnerRouter {
       throw new BackendRoutingError('binding-conflict');
     }
     this.owners.set(key, {
-      binding, client: owner.client, sealed: false,
+      binding,
+      client: owner.client,
+      sealed: false,
       ...(owner.nativeCustody ? { nativeCustody: owner.nativeCustody } : {}),
     });
   }
@@ -162,7 +178,6 @@ export class BackendOwnerRouter {
     return crossTeamOwnerResourceRef(registered.binding);
   }
 
-
   /** One explicit continuation; ordinary owner resolution remains sealed after loss. */
   async recover(
     request: BackendHostRecoveryRequest,
@@ -174,49 +189,84 @@ export class BackendOwnerRouter {
     assertBackendRequestGuard(guard);
     assertIdentity(request.commandId);
     assertIdentity(request.handle.handleId);
-    const key = ownerKey(source.owner), owner = this.owners.get(key);
-    if (!owner || owner.closing || owner.nativeCustody !== source.nativeCustody ||
-      !owner.nativeCustody || !source.isCurrent(owner.client))
+    const key = ownerKey(source.owner),
+      owner = this.owners.get(key);
+    if (
+      !owner ||
+      owner.closing ||
+      owner.nativeCustody !== source.nativeCustody ||
+      !owner.nativeCustody ||
+      !source.isCurrent(owner.client)
+    )
       throw new BackendRoutingError('hold');
     const scope = captureScope(source.scope);
     let state = owner.recovery;
-    if (request.operation === 'host.recovery.capture' &&
-      owner.client.recoveryState(source.nativeCustody) === 'ready') {
+    if (
+      request.operation === 'host.recovery.capture' &&
+      owner.client.recoveryState(source.nativeCustody) === 'ready'
+    ) {
       if (state?.flight && !state.finished) throw new BackendRoutingError('hold');
       const current = () => {
         this.requireAdmission();
         assertBackendRequestGuard(guard);
-        if (this.owners.get(key) !== owner || owner.closing ||
-          !source.isCurrent(owner.client) || owner.client.recoveryState(source.nativeCustody) !== 'ready')
+        if (
+          this.owners.get(key) !== owner ||
+          owner.closing ||
+          !source.isCurrent(owner.client) ||
+          owner.client.recoveryState(source.nativeCustody) !== 'ready'
+        )
           throw new BackendRoutingError('hold');
       };
       current();
       const binding = await this.readBinding(request.handle.handleId);
       current();
-      if (!binding || JSON.stringify(binding.owner) !== JSON.stringify(owner.binding) ||
-        JSON.stringify(binding.scope) !== JSON.stringify(scope))
+      if (
+        !binding ||
+        JSON.stringify(binding.owner) !== JSON.stringify(owner.binding) ||
+        JSON.stringify(binding.scope) !== JSON.stringify(scope)
+      )
         throw new BackendRoutingError('hold');
       await source.verify(current);
       current();
       return { phase: 'ready' };
     }
     if (request.operation === 'host.recovery.capture' && state?.commandId !== request.commandId) {
-      if (owner.client.recoveryState(source.nativeCustody) !== 'closed' ||
-        state && !(state.finished || state.failed && !state.flight ||
-          state.captured && !state.flight && state.cutoff <= performance.now()))
+      if (
+        owner.client.recoveryState(source.nativeCustody) !== 'closed' ||
+        (state &&
+          !(
+            state.finished ||
+            (state.failed && !state.flight) ||
+            (state.captured && !state.flight && state.cutoff <= performance.now())
+          ))
+      )
         throw new BackendRoutingError('hold');
       state = {
-        key, capability: randomUUID(), commandId: request.commandId,
-        handleId: request.handle.handleId, scope,
+        key,
+        capability: randomUUID(),
+        commandId: request.commandId,
+        handleId: request.handle.handleId,
+        scope,
         cutoff: performance.now() + owner.client.profile.startupTimeoutMs,
-        predecessor: owner.client, source, guard, owner,
-        captured: false, failed: false, finished: false,
+        predecessor: owner.client,
+        source,
+        guard,
+        owner,
+        captured: false,
+        failed: false,
+        finished: false,
       };
       owner.recovery = state;
     }
-    if (!state || state.handleId !== request.handle.handleId || state.commandId !== request.commandId ||
-      JSON.stringify(state.scope) !== JSON.stringify(scope) || state.failed ||
-      request.operation === 'host.recovery.start' && request.payload.capability !== state.capability)
+    if (
+      !state ||
+      state.handleId !== request.handle.handleId ||
+      state.commandId !== request.commandId ||
+      JSON.stringify(state.scope) !== JSON.stringify(scope) ||
+      state.failed ||
+      (request.operation === 'host.recovery.start' &&
+        request.payload.capability !== state.capability)
+    )
       throw new BackendRoutingError('hold');
     this.remainingRecovery(state, guard);
     if (request.operation === 'host.recovery.capture') {
@@ -233,8 +283,10 @@ export class BackendOwnerRouter {
     }
     const result = await state.flight;
     this.remainingRecovery(state, guard, 'unknown');
-    if (state.owner.client !== state.candidate ||
-      state.owner.client.recoveryState(state.source.nativeCustody) !== 'ready')
+    if (
+      state.owner.client !== state.candidate ||
+      state.owner.client.recoveryState(state.source.nativeCustody) !== 'ready'
+    )
       throw new BackendRoutingError('hold', 'unknown');
     return result;
   }
@@ -248,9 +300,13 @@ export class BackendOwnerRouter {
     assertBackendRequestGuard(state.guard, outcome);
     assertBackendRequestGuard(state.startGuard, outcome);
     assertBackendRequestGuard(guard, outcome);
-    if (this.owners.get(state.key) !== state.owner || state.owner.closing ||
-      state.owner.recovery !== state || state.owner.nativeCustody !== state.source.nativeCustody ||
-      !state.source.isCurrent(state.owner.client))
+    if (
+      this.owners.get(state.key) !== state.owner ||
+      state.owner.closing ||
+      state.owner.recovery !== state ||
+      state.owner.nativeCustody !== state.source.nativeCustody ||
+      !state.source.isCurrent(state.owner.client)
+    )
       throw new BackendRoutingError('hold', outcome);
     const remaining = Math.floor(state.cutoff - performance.now());
     if (remaining <= 0) throw new BackendRoutingError('hold', outcome);
@@ -262,13 +318,18 @@ export class BackendOwnerRouter {
       this.remainingRecovery(state);
       const binding = await this.readBinding(state.handleId);
       this.remainingRecovery(state);
-      if (!binding || JSON.stringify(binding.owner) !== JSON.stringify(state.owner.binding) ||
+      if (
+        !binding ||
+        JSON.stringify(binding.owner) !== JSON.stringify(state.owner.binding) ||
         JSON.stringify(binding.scope) !== JSON.stringify(state.scope) ||
         state.owner.client !== state.predecessor ||
-        state.predecessor.recoveryState(state.source.nativeCustody) !== 'closed')
+        state.predecessor.recoveryState(state.source.nativeCustody) !== 'closed'
+      )
         throw new BackendRoutingError('hold');
       state.binding = binding;
-      await state.source.verify(() => { this.remainingRecovery(state); });
+      await state.source.verify(() => {
+        this.remainingRecovery(state);
+      });
       this.remainingRecovery(state);
       if (state.predecessor.recoveryState(state.source.nativeCustody) !== 'closed')
         throw new BackendRoutingError('hold');
@@ -288,18 +349,26 @@ export class BackendOwnerRouter {
       remaining();
       const binding = await this.readBinding(state.handleId);
       remaining();
-      if (!binding || JSON.stringify(binding) !== JSON.stringify(state.binding) ||
+      if (
+        !binding ||
+        JSON.stringify(binding) !== JSON.stringify(state.binding) ||
         state.owner.client !== state.predecessor ||
-        state.predecessor.recoveryState(state.source.nativeCustody) !== 'closed')
+        state.predecessor.recoveryState(state.source.nativeCustody) !== 'closed'
+      )
         throw new BackendRoutingError('hold');
       const candidate = state.source.create(remaining);
-      if (candidate === state.predecessor ||
-        JSON.stringify(candidate.profile) !== JSON.stringify(state.predecessor.profile))
+      if (
+        candidate === state.predecessor ||
+        JSON.stringify(candidate.profile) !== JSON.stringify(state.predecessor.profile)
+      )
         throw new BackendRoutingError('hold');
       remaining();
       const successor: RegisteredOwner = {
-        binding: state.owner.binding, client: candidate, nativeCustody: state.source.nativeCustody,
-        sealed: true, recovery: state,
+        binding: state.owner.binding,
+        client: candidate,
+        nativeCustody: state.source.nativeCustody,
+        sealed: true,
+        recovery: state,
       };
       state.candidate = candidate;
       // Both maps change synchronously. Late catches retain their old RegisteredOwner object.
@@ -310,8 +379,10 @@ export class BackendOwnerRouter {
       remaining();
       const after = await this.readBinding(state.handleId);
       remaining();
-      if (JSON.stringify(after) !== JSON.stringify(state.binding) ||
-        candidate.recoveryState(state.source.nativeCustody) !== 'ready')
+      if (
+        JSON.stringify(after) !== JSON.stringify(state.binding) ||
+        candidate.recoveryState(state.source.nativeCustody) !== 'ready'
+      )
         throw new BackendRoutingError('hold', 'unknown');
       successor.sealed = false;
       return { phase: 'ready' };
@@ -372,40 +443,73 @@ export class BackendOwnerRouter {
     assertIdentity(command.method);
     const payload = captureBackendPayload(command.payload, command.method);
     const { commandId, method, control, guard } = command;
-    const readiness = command.localModelReadinessOrigin ? {
-      origin: structuredClone(command.localModelReadinessOrigin.origin),
-      budget: command.localModelReadinessOrigin.budget,
-    } : undefined;
-    const transfer = command.localModelReadinessTransfer ? structuredClone(command.localModelReadinessTransfer) : undefined;
-    const capture = command.localModelReadinessCapture ? structuredClone(command.localModelReadinessCapture) : undefined;
+    const readiness = command.localModelReadinessOrigin
+      ? {
+          origin: structuredClone(command.localModelReadinessOrigin.origin),
+          budget: command.localModelReadinessOrigin.budget,
+        }
+      : undefined;
+    const transfer = command.localModelReadinessTransfer
+      ? structuredClone(command.localModelReadinessTransfer)
+      : undefined;
+    const capture = command.localModelReadinessCapture
+      ? structuredClone(command.localModelReadinessCapture)
+      : undefined;
     const liveRoster = command.liveRoster ? structuredClone(command.liveRoster) : undefined;
     const budget = command.requestBudget ?? readiness?.budget;
-    if (readiness && !['team.launch.probe.start', 'team.launch.start', 'runtime.open',
-      'team.member.action.execute', 'team.roster.replace'].includes(method) ||
-      transfer && (method !== 'team.launch.capture' || !budget) ||
-      capture && method !== 'team.launch.configuration.read' ||
-      liveRoster && (liveRoster.phase === 'read' ? method !== 'team.roster.lookup'
-        : method !== 'team.roster.replace' || !budget) ||
-      readiness && liveRoster && liveRoster.phase !== 'continue')
+    if (
+      (readiness &&
+        ![
+          'team.launch.probe.start',
+          'team.launch.start',
+          'runtime.open',
+          'team.member.action.execute',
+          'team.roster.replace',
+        ].includes(method)) ||
+      (transfer && (method !== 'team.launch.capture' || !budget)) ||
+      (capture && method !== 'team.launch.configuration.read') ||
+      (liveRoster &&
+        (liveRoster.phase === 'read'
+          ? method !== 'team.roster.lookup'
+          : method !== 'team.roster.replace' || !budget)) ||
+      (readiness && liveRoster && liveRoster.phase !== 'continue')
+    )
       throw new BackendRoutingError('invalid-binding');
     const binding = await this.readBinding(handle.handleId);
     if (!binding) throw new BackendRoutingError('hold');
     // Recheck after every asynchronous boundary; shutdown cannot be bypassed by a late read.
     const owner = this.resolveOwner(binding);
     const remainingMs = budget ? readinessRemaining(budget) : undefined;
-    const origin = readiness ? { ...readinessPreparationWire(readiness), remainingMs: remainingMs! } : undefined;
-    const privateRoster = liveRoster?.phase === 'read' ? liveRoster : liveRoster
-      ? { ...liveRoster, remainingMs: remainingMs! } : undefined;
+    const origin = readiness
+      ? { ...readinessPreparationWire(readiness), remainingMs: remainingMs! }
+      : undefined;
+    const privateRoster =
+      liveRoster?.phase === 'read'
+        ? liveRoster
+        : liveRoster
+          ? { ...liveRoster, remainingMs: remainingMs! }
+          : undefined;
     // No await may separate this guard from the captured client's synchronous wire send.
     assertBackendRequestGuard(guard);
     try {
       const response = await owner.client.request(
         method,
-        { commandId, binding: binding as unknown as JsonValue, payload,
+        {
+          commandId,
+          binding: binding as unknown as JsonValue,
+          payload,
           ...(origin ? { localModelReadinessOrigin: origin as unknown as JsonValue } : {}),
-          ...(transfer ? { localModelReadinessTransfer: { ...transfer, remainingMs: remainingMs! } as unknown as JsonValue } : {}),
+          ...(transfer
+            ? {
+                localModelReadinessTransfer: {
+                  ...transfer,
+                  remainingMs: remainingMs!,
+                } as unknown as JsonValue,
+              }
+            : {}),
           ...(capture ? { localModelReadinessCapture: capture as unknown as JsonValue } : {}),
-          ...(privateRoster ? { liveRoster: privateRoster as unknown as JsonValue } : {}) },
+          ...(privateRoster ? { liveRoster: privateRoster as unknown as JsonValue } : {}),
+        },
         { control, ...(budget ? { remainingMs: budget.remainingMs.bind(budget) } : {}) }
       );
       assertBackendRequestGuard(guard, 'unknown');
@@ -522,7 +626,9 @@ export class BackendOwnerRouter {
       owner.sealed = true;
       owner.closing = true;
     }
-    return Promise.allSettled([...this.owners].map(([key, owner]) => this.disposeOwner(key, owner)));
+    return Promise.allSettled(
+      [...this.owners].map(([key, owner]) => this.disposeOwner(key, owner))
+    );
   }
 
   private async disposeOwner(key: string, owner: RegisteredOwner): Promise<CapturedHostShutdown> {
@@ -532,7 +638,8 @@ export class BackendOwnerRouter {
     const results = await Promise.allSettled([stopped, flight]);
     const original = results[0];
     const current = this.owners.get(key);
-    const successor = current && current.client !== client ? await current.client.shutdown() : undefined;
+    const successor =
+      current && current.client !== client ? await current.client.shutdown() : undefined;
     if (original.status === 'rejected') throw original.reason;
     return successor ?? original.value;
   }

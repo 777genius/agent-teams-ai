@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { useRetainedLegacyAccount, useRetainedLegacyLaunch } from '@features/agent-backend/renderer';
+import {
+  useRetainedLegacyAccount,
+  useRetainedLegacyLaunch,
+} from '@features/agent-backend/renderer';
 import { api, isElectronMode } from '@renderer/api';
 import { scheduleStartupIdleTask } from '@renderer/utils/startupIdleTask';
 
@@ -133,7 +136,8 @@ export function useCodexAccountSnapshot(options: {
   const [initialRefreshAttempted, setInitialRefreshAttempted] = useState(false);
   const [initialRateLimitsAttempted, setInitialRateLimitsAttempted] = useState(false);
   const enabled = electronMode && options.enabled && !retained;
-  const loginPending = snapshot?.login.status === 'pending' || snapshot?.login.status === 'starting';
+  const loginPending =
+    snapshot?.login.status === 'pending' || snapshot?.login.status === 'starting';
   const mayPollAccount = options.passivePollingEnabled !== false || loginPending || loading;
 
   useEffect(() => {
@@ -401,7 +405,8 @@ export function useCodexAccountSnapshot(options: {
     // Preserve the request across an already-running rate-limit/account read.
     // That read might have started before Providers reopened and seen old auth.
     if (
-      !wasActive && snapshot &&
+      !wasActive &&
+      snapshot &&
       lastUpdatedAtRef.current !== null &&
       Date.now() - lastUpdatedAtRef.current >= CODEX_VISIBLE_STANDARD_REFRESH_MS
     ) {
@@ -416,13 +421,22 @@ export function useCodexAccountSnapshot(options: {
     if (
       !initialRefreshAttempted ||
       (options.includeRateLimits === true && !initialRateLimitsAttemptedRef.current) ||
-      loading || rateLimitsLoading
-    ) return;
+      loading ||
+      rateLimitsLoading
+    )
+      return;
     pendingResumeRevalidation.current = false;
     void refresh({ includeRateLimits: options.includeRateLimits, silent: true });
   }, [
-    enabled, initialRefreshAttempted, loading, loginPending, rateLimitsLoading,
-    options.passivePollingEnabled, options.includeRateLimits, refresh, snapshot,
+    enabled,
+    initialRefreshAttempted,
+    loading,
+    loginPending,
+    rateLimitsLoading,
+    options.passivePollingEnabled,
+    options.includeRateLimits,
+    refresh,
+    snapshot,
   ]);
 
   useEffect(() => {
@@ -566,25 +580,43 @@ export function useCodexAccountSnapshot(options: {
     setError('Close Launch before changing the original runtime connection, then reopen it.');
     return false;
   }, []);
-  const { snapshot: originalSnapshot, loading: originalLoading, error: originalError, refresh: originalRefresh } = retainedAccount;
+  const {
+    snapshot: originalSnapshot,
+    loading: originalLoading,
+    error: originalError,
+    refresh: originalRefresh,
+  } = retainedAccount;
   return useMemo(
-    () => retained ? {
-      snapshot: originalSnapshot, loading: originalLoading, error: originalError ?? error,
-      refresh: originalRefresh, rateLimitsLoading: false,
-      startChatgptLogin: refuseOriginalAccountChange,
-      cancelChatgptLogin: refuseOriginalAccountChange, logout: refuseOriginalAccountChange,
-    } : ({
-      snapshot: effectiveSnapshot,
-      loading: effectiveLoading,
-      rateLimitsLoading: effectiveRateLimitsLoading,
-      error: effectiveError,
-      refresh,
-      startChatgptLogin: (mode) => runAction(() => api.startCodexChatgptLogin({ mode })),
-      cancelChatgptLogin: () => runAction(() => api.cancelCodexChatgptLogin()),
-      logout: () => runAction(() => api.logoutCodexAccount()),
-    }),
+    () =>
+      retained
+        ? {
+            snapshot: originalSnapshot,
+            loading: originalLoading,
+            error: originalError ?? error,
+            refresh: originalRefresh,
+            rateLimitsLoading: false,
+            startChatgptLogin: refuseOriginalAccountChange,
+            cancelChatgptLogin: refuseOriginalAccountChange,
+            logout: refuseOriginalAccountChange,
+          }
+        : {
+            snapshot: effectiveSnapshot,
+            loading: effectiveLoading,
+            rateLimitsLoading: effectiveRateLimitsLoading,
+            error: effectiveError,
+            refresh,
+            startChatgptLogin: (mode) => runAction(() => api.startCodexChatgptLogin({ mode })),
+            cancelChatgptLogin: () => runAction(() => api.cancelCodexChatgptLogin()),
+            logout: () => runAction(() => api.logoutCodexAccount()),
+          },
     [
-      retained, originalSnapshot, originalLoading, originalError, originalRefresh, error, refuseOriginalAccountChange,
+      retained,
+      originalSnapshot,
+      originalLoading,
+      originalError,
+      originalRefresh,
+      error,
+      refuseOriginalAccountChange,
       effectiveError,
       effectiveLoading,
       effectiveRateLimitsLoading,

@@ -4,7 +4,10 @@ import {
   isHostTeamSelectionKey,
   parseHostTeamRunId,
 } from '@features/agent-backend/contracts';
-import { hostMemberSpawnSnapshotCurrentness, hostProjectProgressOwners } from '@features/agent-backend/renderer';
+import {
+  hostMemberSpawnSnapshotCurrentness,
+  hostProjectProgressOwners,
+} from '@features/agent-backend/renderer';
 
 import { areMemberSpawnSnapshotsSemanticallyEqual } from './teamMemberSpawnSnapshotEquality';
 import { addIgnoredTeamRun, isTeamRunIgnored } from './teamProvisioningRunIdentity';
@@ -42,27 +45,55 @@ export function captureHostProvisioningStatusRead(
   if (!isHostTeamRunId(runId)) return () => true;
   const teamName = hostTeamSelectionKey(parseHostTeamRunId(runId).handleId);
   const original = get();
-  const owned = (state: ReturnType<typeof get>) => new Set([teamName,
-    ...Object.entries(state.currentProvisioningRunIdByTeam).filter(([, id]) => id === runId).map(([name]) => name),
-    ...Object.entries(state.currentRuntimeRunIdByTeam).filter(([, id]) => id === runId).map(([name]) => name)]);
+  const owned = (state: ReturnType<typeof get>) =>
+    new Set([
+      teamName,
+      ...Object.entries(state.currentProvisioningRunIdByTeam)
+        .filter(([, id]) => id === runId)
+        .map(([name]) => name),
+      ...Object.entries(state.currentRuntimeRunIdByTeam)
+        .filter(([, id]) => id === runId)
+        .map(([name]) => name),
+    ]);
   const originalOwners = owned(original);
-  const names = new Set([teamName, ...Object.keys(original.teamByName ?? {}),
-    ...Object.keys(original.currentProvisioningRunIdByTeam), ...Object.keys(original.currentRuntimeRunIdByTeam)]);
-  const captured = new Map([...names].filter(isHostTeamSelectionKey).map(name => [name, {
-    current: captureScopeCurrentness(name), provisioning: original.currentProvisioningRunIdByTeam[name],
-    runtime: original.currentRuntimeRunIdByTeam[name],
-  }]));
-  return progress => {
-    const next = get(), latestOwners = owned(next);
-    if (latestOwners.size !== originalOwners.size || [...latestOwners].some(name => !originalOwners.has(name))) return false;
+  const names = new Set([
+    teamName,
+    ...Object.keys(original.teamByName ?? {}),
+    ...Object.keys(original.currentProvisioningRunIdByTeam),
+    ...Object.keys(original.currentRuntimeRunIdByTeam),
+  ]);
+  const captured = new Map(
+    [...names].filter(isHostTeamSelectionKey).map((name) => [
+      name,
+      {
+        current: captureScopeCurrentness(name),
+        provisioning: original.currentProvisioningRunIdByTeam[name],
+        runtime: original.currentRuntimeRunIdByTeam[name],
+      },
+    ])
+  );
+  return (progress) => {
+    const next = get(),
+      latestOwners = owned(next);
+    if (
+      latestOwners.size !== originalOwners.size ||
+      [...latestOwners].some((name) => !originalOwners.has(name))
+    )
+      return false;
     const proved = progress ? hostProjectProgressOwners(progress) : undefined;
     if (proved === null) return false;
     const required = new Set([...originalOwners, ...(proved ?? [])]);
-    if (progress && progress.teamName !== teamName && !proved?.includes(progress.teamName)) return false;
+    if (progress && progress.teamName !== teamName && !proved?.includes(progress.teamName))
+      return false;
     for (const name of required) {
       const pin = captured.get(name);
-      if (!pin || !pin.current() || next.currentProvisioningRunIdByTeam[name] !== pin.provisioning ||
-        next.currentRuntimeRunIdByTeam[name] !== pin.runtime) return false;
+      if (
+        !pin ||
+        !pin.current() ||
+        next.currentProvisioningRunIdByTeam[name] !== pin.provisioning ||
+        next.currentRuntimeRunIdByTeam[name] !== pin.runtime
+      )
+        return false;
     }
     return true;
   };
@@ -116,7 +147,12 @@ export function resolveIncomingRuntimeRunAdoption(input: {
   return 'reject';
 }
 
-function isSameHostLaunchRevision(teamName: string, previous: string, next: string, verifiedProject = false): boolean {
+function isSameHostLaunchRevision(
+  teamName: string,
+  previous: string,
+  next: string,
+  verifiedProject = false
+): boolean {
   if (previous === next) return false;
   try {
     const before = parseHostTeamRunId(previous),
@@ -156,7 +192,14 @@ export function shouldAdoptSuccessorProvisioningRun(input: {
   }
 
   // Only a fresh captured snapshot can first move the same Host launch's runtime pin.
-  if (isSameHostLaunchRevision(input.teamName, previousRunId, nextRunId, input.verifiedHostProjectOwner))
+  if (
+    isSameHostLaunchRevision(
+      input.teamName,
+      previousRunId,
+      nextRunId,
+      input.verifiedHostProjectOwner
+    )
+  )
     return input.currentRuntimeRunId === nextRunId;
 
   const previousIsTerminal =

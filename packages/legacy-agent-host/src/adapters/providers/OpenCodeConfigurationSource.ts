@@ -14,7 +14,7 @@ import { getNodeValue, parseTree } from 'jsonc-parser';
 
 import { openCodeConfigurationReferenceSchema } from '../../composition/openCodeConfigurationReference.js';
 import { ManagementCommandError } from '../../management/commandRecords.js';
-import { managementDigest } from '../../management/identity.js';
+import { managementDigest, managementValuesEqual } from '../../management/identity.js';
 
 import type { Node as JsoncNode, ParseError } from 'jsonc-parser';
 import type { OpenCodeConfigurationReference } from '../../composition/openCodeConfigurationReference.js';
@@ -272,7 +272,7 @@ export function captureOpenCodeConfigurationSource(
     digest: fingerprint,
     isCurrent,
     /** Pure joins to the already captured documents; callers retain the original freshness checks. */
-    matchesConfiguration: (value: unknown) => managementDigest(value) === managementDigest(config),
+    matchesConfiguration: (value: unknown) => managementValuesEqual(value, config),
     selectedKeyOrigin: (providerId: string): OpenCodeConfigurationKeyOrigin | undefined => {
       if (!ownerCurrent()) changed();
       let origin: OpenCodeConfigurationKeyOrigin | undefined;
@@ -291,7 +291,7 @@ export function captureOpenCodeConfigurationSource(
       const provider = record(config.provider) ? config.provider[providerId] : undefined;
       const options = record(provider) && record(provider.options) ? provider.options : undefined;
       if (origin && (!options || !Object.hasOwn(options, 'apiKey') ||
-          managementDigest(origin.value) !== managementDigest(options.apiKey))) changed();
+          !managementValuesEqual(origin.value, options.apiKey))) changed();
       if (!ownerCurrent()) changed();
       return origin;
     },

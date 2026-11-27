@@ -83,6 +83,9 @@ export async function executeProjectMemberSettingsRelaunch(input: {
     }
     input.onMembersSaved?.();
   }
-  await input.launch(isHostTeamSelectionKey(logicalTeamName)
-    ? { ...input.request, savedRosterCommandId: commandId } : input.request);
+  await input.launch(
+    isHostTeamSelectionKey(logicalTeamName)
+      ? { ...input.request, savedRosterCommandId: commandId }
+      : input.request
+  );
 }

@@ -34,8 +34,8 @@ type Options = {
   assertRuntimeHistory?(): void;
 };
 
-/** Model-only compilation of saved choices; retained history requires its original offline proof. */
-function source(options: Options, precedingAuthority?: 'read' | 'control') {
+/** Fresh saved choices and every recipe digest; retained history still needs its original offline proof. */
+function observeSavedSource(options: Options, precedingAuthority?: 'read' | 'control') {
   const { profile, team } = options;
   const readAuthority = (inheritedNamespace?: true) => {
     options.assertCurrent();
@@ -68,10 +68,18 @@ function source(options: Options, precedingAuthority?: 'read' | 'control') {
     roster,
     options.sources ? { sources: options.sources } : {}
   );
-  const compiled = compileRuntimeCapture(profile, team, captured, 'model-preflight', options.sources);
   const sourceId = `${prefix}${runtimeDigest({ owner: profile.owner, authority, captured })}`;
   options.assertCurrent();
-  return { sourceId, captured, profiles: compiled.profiles };
+  return { sourceId, captured };
+}
+
+/** Compile an actual initial profile only after its complete fresh source observation. */
+function source(options: Options) {
+  const observed = observeSavedSource(options);
+  const compiled = compileRuntimeCapture(options.profile, options.team, observed.captured,
+    'model-preflight', options.sources);
+  options.assertCurrent();
+  return { ...observed, profiles: compiled.profiles };
 }
 
 export function readSavedTeamModelConfiguration(options: Options): JsonValue {
@@ -160,7 +168,10 @@ export function captureSavedTeamModelProbe(
   const current = () => {
     try {
       return (
-        source(options, action === 'start' ? 'control' : 'read').sourceId === saved.sourceId &&
+        // Currentness needs the complete fresh source identity, not another set
+        // of compiled profiles that it discards. This still resolves every
+        // original recipe and separately rechecks the selected draft below.
+        observeSavedSource(options, action === 'start' ? 'control' : 'read').sourceId === saved.sourceId &&
         runtimeDigest(recipe()) === selectionDigest
       );
     } catch {

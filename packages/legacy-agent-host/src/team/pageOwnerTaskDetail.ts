@@ -26,6 +26,23 @@ export function pageOwnerTaskDetail(options: {
   if (!source || typeof source !== 'object' || Array.isArray(source) ||
       (source as Record<string, JsonValue>).id !== options.taskId)
     throw new TeamOwnerError('hold');
+  return pageOwnerReadDetail({ ...options, value: source });
+}
+
+/** Shared lossless detail pages; the caller supplies canonical identities only
+ * after its current Owner read fence and policy have resolved the request.
+ */
+export function pageOwnerReadDetail(options: {
+  principalId: string;
+  grant: TeamGrant;
+  key: string;
+  teamName: string;
+  taskId: string;
+  commentId?: string;
+  value: JsonValue;
+  cursor?: string;
+}): JsonValue {
+  const source = options.value;
   const serialized = JSON.stringify(source);
   if (Buffer.byteLength(serialized) <= INLINE_BYTES) {
     if (options.cursor !== undefined) throw new TeamOwnerError('hold');
@@ -50,7 +67,8 @@ export function pageOwnerTaskDetail(options: {
   const signature = (offset: number) => digest({
     key: options.key, principalId: options.principalId, grant: options.grant,
     teamName: options.teamName, taskId: options.taskId, revision,
-    protocol: 'task-json-chunk-v1', offset,
+    ...(options.commentId === undefined ? {} : { commentId: options.commentId }),
+    protocol: options.commentId === undefined ? 'task-json-chunk-v1' : 'task-comment-json-chunk-v1', offset,
   });
   let offset = 0;
   if (options.cursor !== undefined) {
@@ -61,8 +79,9 @@ export function pageOwnerTaskDetail(options: {
       throw new TeamOwnerError('hold');
   }
   return json({
-    kind: 'task-detail-chunk',
+    kind: options.commentId === undefined ? 'task-detail-chunk' : 'task-comment-chunk',
     taskId: options.taskId,
+    ...(options.commentId === undefined ? {} : { commentId: options.commentId }),
     revision,
     part: offset,
     total: chunks.length,

@@ -143,7 +143,13 @@ export function rosterSavedSettings(value: unknown, strict: boolean): BackendSav
   const source = rosterRow(
     value,
     strict
-      ? ['runtimeSelectionVersion', 'projectContextMode', ...selections, ...strings.map(([key]) => key), ...booleans]
+      ? [
+          'runtimeSelectionVersion',
+          'projectContextMode',
+          ...selections,
+          ...strings.map(([key]) => key),
+          ...booleans,
+        ]
       : undefined
   );
   const cwd = rosterText(source.cwd, 8192);
@@ -157,7 +163,8 @@ export function rosterSavedSettings(value: unknown, strict: boolean): BackendSav
       true
     ),
   };
-  if (source.projectContextMode !== undefined) result.projectContextMode = choice(source.projectContextMode, ['shared', 'per_project']);
+  if (source.projectContextMode !== undefined)
+    result.projectContextMode = choice(source.projectContextMode, ['shared', 'per_project']);
   if (source.runtimeSelectionVersion !== undefined) {
     if (source.runtimeSelectionVersion !== 1) throw new Error('Invalid runtime selection version');
     result.runtimeSelectionVersion = 1;

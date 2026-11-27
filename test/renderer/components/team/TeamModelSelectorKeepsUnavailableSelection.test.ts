@@ -417,11 +417,17 @@ describe('TeamModelSelector keeps an unavailable saved selection', () => {
     installLoadModelsApi(async (input) => providerModelsResponse(input.providerId));
     const savedModel = 'claude-sonnet-4-6';
     const catalog = (models: string[]): CliProviderStatus => ({
-      providerId: 'anthropic', displayName: 'Claude', supported: true, authenticated: false,
-      authMethod: null, canLoginFromUi: false,
-      verificationState: 'unknown', statusCheckOutcome: 'model_only',
+      providerId: 'anthropic',
+      displayName: 'Claude',
+      supported: true,
+      authenticated: false,
+      authMethod: null,
+      canLoginFromUi: false,
+      verificationState: 'unknown',
+      statusCheckOutcome: 'model_only',
       capabilities: {
-        teamLaunch: false, oneShot: false,
+        teamLaunch: false,
+        oneShot: false,
         extensions: {
           plugins: { status: 'unsupported', ownership: 'shared' },
           mcp: { status: 'unsupported', ownership: 'shared' },

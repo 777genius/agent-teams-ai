@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef } from 'react';
 
-import { useRetainedLegacyLaunch, useRetainedLegacyRuntimeStatus } from '@features/agent-backend/renderer';
+import {
+  useRetainedLegacyLaunch,
+  useRetainedLegacyRuntimeStatus,
+} from '@features/agent-backend/renderer';
 import { api } from '@renderer/api';
 import { useStore } from '@renderer/store';
 import { getCliProviderStatusScopeKey } from '@renderer/store/slices/cliInstallerSlice';

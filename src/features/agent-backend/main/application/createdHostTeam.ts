@@ -43,8 +43,14 @@ function preparation(
     !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(preparationId)
   )
     throw new BackendRoutingError('invalid-binding');
-  const product = draft && typeof draft === 'object' && !Array.isArray(draft)
-    ? { ...draft, projectContextMode: (draft as { projectContextMode?: unknown }).projectContextMode ?? 'per_project' } : draft;
+  const product =
+    draft && typeof draft === 'object' && !Array.isArray(draft)
+      ? {
+          ...draft,
+          projectContextMode:
+            (draft as { projectContextMode?: unknown }).projectContextMode ?? 'per_project',
+        }
+      : draft;
   return { preparationId, draft: captureConfiguredHostTeamDraft(contextId, product) };
 }
 
@@ -61,11 +67,15 @@ export async function prepareCreatedHostTeam(options: {
   const signature = createdTeamSelectionSignature(options.draft as TeamCreateRequest);
   const current = () => assertBackendRequestGuard(options.guard);
   const deadline = performance.now() + 90_000;
-  const readiness = input.draft.savedSettings.providerId === 'opencode' ||
-    input.draft.members.some(row => row.memberSettings.providerId === 'opencode')
-    ? { remainingMs: () => deadline - performance.now() } : undefined;
-  const prepare = () => readiness
-    ? options.target.prepare('prepare', input, readiness) : options.target.prepare('prepare', input);
+  const readiness =
+    input.draft.savedSettings.providerId === 'opencode' ||
+    input.draft.members.some((row) => row.memberSettings.providerId === 'opencode')
+      ? { remainingMs: () => deadline - performance.now() }
+      : undefined;
+  const prepare = () =>
+    readiness
+      ? options.target.prepare('prepare', input, readiness)
+      : options.target.prepare('prepare', input);
   let active = false;
   try {
     current();
@@ -183,11 +193,16 @@ export async function createLaunchedHostTeam(options: {
   return {
     teamName: hostTeamSelectionKey(handleId),
     runId: hostTeamRunId(executionHandleId, result.launch.launchId, result.launch.rosterRevision),
-    ...(result.execution?.projectContext ? {
-      executionTeamName: hostTeamSelectionKey(executionHandleId),
-      projectContext: { logicalHandleId: result.execution.projectContext.logicalHandleId,
-        projectPath: result.execution.projectContext.projectPath, workContextId: result.execution.projectContext.workContextId },
-    } : {}),
+    ...(result.execution?.projectContext
+      ? {
+          executionTeamName: hostTeamSelectionKey(executionHandleId),
+          projectContext: {
+            logicalHandleId: result.execution.projectContext.logicalHandleId,
+            projectPath: result.execution.projectContext.projectPath,
+            workContextId: result.execution.projectContext.workContextId,
+          },
+        }
+      : {}),
     launchStatus: result.partialCreated ? 'unconfirmed' : 'started',
   };
 }

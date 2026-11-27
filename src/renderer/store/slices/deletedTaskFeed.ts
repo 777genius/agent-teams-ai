@@ -28,6 +28,7 @@ interface DeletedTaskFeedScope {
 
 interface InFlightRefresh {
   contextId: string;
+  contextEpoch: number;
   promise: Promise<void>;
 }
 
@@ -68,41 +69,56 @@ export const createDeletedTaskFeed: StateCreator<AppState, [], [], DeletedTaskFe
       };
       // Coalesce only same-context refreshes: a fan-out queued by the previous
       // context has no cancellation or timeout and would starve the visible one.
-      if (inFlightRefresh?.contextId === scope.contextId) {
+      if (
+        inFlightRefresh?.contextId === scope.contextId &&
+        inFlightRefresh.contextEpoch === scope.contextEpoch
+      ) {
         await inFlightRefresh.promise;
         if (generation !== fetchGeneration) return;
       }
+      const isCurrent = () =>
+        get().activeContextId === scope.contextId &&
+        isContextScopedRequestEpochCurrent(scope.contextEpoch);
       const run = (async () => {
+        if (!isCurrent()) return;
         // A visible logical team may own several verified, ready native histories.
         // List each physical store for deleted tasks; never infer aliases by prefix.
         const targets = get().teams.flatMap((team) => [
           { team, executionTeamName: team.teamName, projectPath: team.projectPath },
           ...(team.projectHistoryContexts ?? []).map(({ executionTeamName, projectPath }) => ({
-            team, executionTeamName, projectPath,
+            team,
+            executionTeamName,
+            projectPath,
           })),
         ]);
-        const settled = await Promise.allSettled(
-          targets.map(async ({ team, executionTeamName, projectPath }) => {
-            const tasks = await unwrapIpc<TeamTask[]>('team:getDeletedTasks', () =>
-              api.teams.getDeletedTasks(executionTeamName)
-            );
-            return projectTeamDeletedTasks(team, executionTeamName, projectPath, tasks);
+        const batches: GlobalTask[][] = [];
+        let nextTarget = 0;
+        // A captured Host allows 32 outstanding requests. Bound the aggregate
+        // before each selected Owner read and leave room for other UI activity.
+        await Promise.all(
+          Array.from({ length: Math.min(8, targets.length) }, async () => {
+            while (isCurrent()) {
+              const index = nextTarget++;
+              const target = targets[index];
+              if (!target) return;
+              const { team, executionTeamName, projectPath } = target;
+              try {
+                const tasks = await unwrapIpc<TeamTask[]>('team:getDeletedTasks', () =>
+                  api.teams.getDeletedTasks(executionTeamName)
+                );
+                batches[index] = projectTeamDeletedTasks(
+                  team,
+                  executionTeamName,
+                  projectPath,
+                  tasks
+                );
+              } catch (error) {
+                logger.error('Failed to fetch deleted tasks for one team:', error);
+              }
+            }
           })
         );
-        const batches: GlobalTask[][] = [];
-        for (const result of settled) {
-          if (result.status === 'fulfilled') {
-            batches.push(result.value);
-          } else {
-            logger.error('Failed to fetch deleted tasks for one team:', result.reason);
-          }
-        }
-        if (
-          get().activeContextId !== scope.contextId ||
-          !isContextScopedRequestEpochCurrent(scope.contextEpoch)
-        ) {
-          return;
-        }
+        if (!isCurrent()) return;
         set((state) => ({
           globalDeletedTasks: structurallySharePlainValue(state.globalDeletedTasks, batches.flat()),
         }));
@@ -112,7 +128,7 @@ export const createDeletedTaskFeed: StateCreator<AppState, [], [], DeletedTaskFe
           inFlightRefresh = null;
         }
       });
-      inFlightRefresh = { contextId: scope.contextId, promise: request };
+      inFlightRefresh = { ...scope, promise: request };
       await request;
     },
   };

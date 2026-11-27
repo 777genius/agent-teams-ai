@@ -16,7 +16,7 @@ export function getOrganizationNodeId(organizationId: string): string {
 export function organizationTeamIdentity(teamName: string, fallback = 'unknown-team'): string {
   // Percent-encoded opaque Host handles must not collide through punctuation normalization.
   return teamName.startsWith('host-team:')
-    ? `host-team:key:${Array.from(teamName, character => character.charCodeAt(0).toString(16).padStart(2, '0')).join('')}`
+    ? `host-team:key:${Array.from(teamName, (character) => character.charCodeAt(0).toString(16).padStart(2, '0')).join('')}`
     : normalizeOrganizationId(teamName, fallback);
 }
 

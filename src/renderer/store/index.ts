@@ -66,7 +66,10 @@ import {
   removeIgnoredTeamRunOwner,
 } from './team/teamProvisioningRunIdentity';
 import { scheduleAllToolApprovalSettingsSync } from './team/teamToolApprovalSettingsSync';
-import { getVisibleTeamNamesInAnyPane, subscribeVisiblePhysicalTeamChanges } from './team/teamViewVisibility';
+import {
+  getVisibleTeamNamesInAnyPane,
+  subscribeVisiblePhysicalTeamChanges,
+} from './team/teamViewVisibility';
 import { applyToolApprovalEvent } from './team/toolApprovalEvents';
 import { installCodexStartupStatusRevalidation } from './codexStartupStatusRevalidation';
 import { nextTeamAliveFromLeadActivity } from './leadActivityTeamAlive';
@@ -1593,7 +1596,10 @@ export function initializeNotificationListeners(): () => void {
               ...prev.currentRuntimeRunIdByTeam,
               [event.teamName]: event.runId ?? null,
             },
-            ignoredRuntimeRunIds: removeIgnoredTeamRunOwner(prev.ignoredRuntimeRunIds, event.teamName),
+            ignoredRuntimeRunIds: removeIgnoredTeamRunOwner(
+              prev.ignoredRuntimeRunIds,
+              event.teamName
+            ),
           }));
         }
       };

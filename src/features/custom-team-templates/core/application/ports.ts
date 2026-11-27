@@ -19,8 +19,12 @@ export interface CustomTeamTemplateSourceAdmission {
  * attributed to a single consistent state.
  */
 export type CustomTeamTemplateSnapshotReadOutcome =
-  | { status: 'available'; snapshot: CustomTemplateSourceTeamSnapshot; revision: string;
-      sourceAdmission?: CustomTeamTemplateSourceAdmission }
+  | {
+      status: 'available';
+      snapshot: CustomTemplateSourceTeamSnapshot;
+      revision: string;
+      sourceAdmission?: CustomTeamTemplateSourceAdmission;
+    }
   | { status: 'sourceUnavailable'; sourceTeamName: string }
   | { status: 'configurationChanged'; sourceTeamName: string };
 

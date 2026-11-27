@@ -8,12 +8,16 @@ export function useFileRestrictionNotice(
 ) {
   const [fileRestrictionError, setFileRestrictionError] = useState<string | null>(null);
   const timer = useRef(0);
-  const showFileRestrictionError = useCallback((reason?: string): void => {
-    setFileRestrictionError(reason ?? attachmentRestrictionReason ??
-      attachmentPayloadRestrictionReason ?? fallback);
-    window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => setFileRestrictionError(null), 4000);
-  }, [attachmentRestrictionReason, attachmentPayloadRestrictionReason, fallback]);
+  const showFileRestrictionError = useCallback(
+    (reason?: string): void => {
+      setFileRestrictionError(
+        reason ?? attachmentRestrictionReason ?? attachmentPayloadRestrictionReason ?? fallback
+      );
+      window.clearTimeout(timer.current);
+      timer.current = window.setTimeout(() => setFileRestrictionError(null), 4000);
+    },
+    [attachmentRestrictionReason, attachmentPayloadRestrictionReason, fallback]
+  );
   useEffect(() => {
     const ref = timer;
     return () => window.clearTimeout(ref.current);

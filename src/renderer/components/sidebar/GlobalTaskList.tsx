@@ -598,9 +598,15 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
   const teamCatalog = useStore((s) => s.teams);
   const sidebarTeams = useStore((s) => selectSidebarTeamsDerived(s.teams));
   const teamCatalogKey = useMemo(
-    () => teamCatalog.map((team) => [
-      team.teamName, ...(team.projectHistoryContexts ?? []).map((context) => context.executionTeamName),
-    ].join(':')).join('|'),
+    () =>
+      teamCatalog
+        .map((team) =>
+          [
+            team.teamName,
+            ...(team.projectHistoryContexts ?? []).map((context) => context.executionTeamName),
+          ].join(':')
+        )
+        .join('|'),
     [teamCatalog]
   );
   // Membership only: task add/remove invalidates the deleted feed, status churn must not.
@@ -981,9 +987,15 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
   return (
     <div className="flex size-full min-w-0 flex-col overflow-x-hidden">
       <TeamAggregateReadNotice
-        surface="tasks" unavailable={globalTasksUnavailable} error={globalTasksError}
-        loadedCount={globalTasks.length} loading={globalTasksLoading}
-        onRefresh={() => { void fetchAllTasks(); }} onOpenTeam={openTeamTab}
+        surface="tasks"
+        unavailable={globalTasksUnavailable}
+        error={globalTasksError}
+        loadedCount={globalTasks.length}
+        loading={globalTasksLoading}
+        onRefresh={() => {
+          void fetchAllTasks();
+        }}
+        onOpenTeam={openTeamTab}
       />
       {!hideHeader && (
         <div
@@ -1128,9 +1140,11 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
           <div className="flex items-center gap-1 px-2 py-1">
             <Pin className="size-3 text-text-muted" />
             <span className="text-[11px] text-text-muted">{t('tasksPanel.pinned')}</span>
-            {incomplete && <span className="text-[10px] text-text-muted">
-              {tTeam('list.aggregate.loadedCount', { count: pinnedTasks.length })}
-            </span>}
+            {incomplete && (
+              <span className="text-[10px] text-text-muted">
+                {tTeam('list.aggregate.loadedCount', { count: pinnedTasks.length })}
+              </span>
+            )}
           </div>
           <TaskRows
             contextId={contextId}
@@ -1170,9 +1184,11 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
           <div className="flex flex-col items-center gap-2 px-4 py-8 text-text-muted">
             <ListTodo className="size-8 opacity-40" />
             <span className="text-[12px]">
-              {incomplete ? tTeam('list.aggregate.emptyTasks') : searchQuery || selectedProjectPath
-                ? t('tasksPanel.empty.noMatchingTasks')
-                : t('tasksPanel.empty.noTasks')}
+              {incomplete
+                ? tTeam('list.aggregate.emptyTasks')
+                : searchQuery || selectedProjectPath
+                  ? t('tasksPanel.empty.noMatchingTasks')
+                  : t('tasksPanel.empty.noTasks')}
             </span>
           </div>
         )}
@@ -1205,49 +1221,54 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
               group.tasks.length
             );
             return (
-              <div key={group.projectKey} data-task-count-scope={incomplete ? 'loaded' : 'complete'}>
-                {incomplete && <p className="px-2 pt-1 text-[10px] text-text-muted">
-                  {tTeam('list.aggregate.loadedTasks')}
-                </p>}
-              <ProjectTaskGroup
-                projectKey={group.projectKey}
-                projectLabel={group.projectLabel}
-                taskCount={group.tasks.length}
-                isCollapsed={isProjectGroupCollapsed(group.projectKey)}
-                visibleCount={visibleCount}
-                noProjectGroupColor={noProjectGroupColor}
-                showMoreLabel={t('tasksPanel.showMore')}
-                showLessLabel={t('tasksPanel.showLess')}
-                isLight={isLight}
-                isPinned={taskLocalState.isProjectPinned(group.projectKey)}
-                onToggleGroup={handleToggleProjectGroup}
-                onVisibleCountChange={handleProjectGroupVisibleCountChange}
-                onToggleProjectPin={handleToggleProjectPin}
+              <div
+                key={group.projectKey}
+                data-task-count-scope={incomplete ? 'loaded' : 'complete'}
               >
-                <TaskRows
-                  contextId={contextId}
-                  tasks={group.tasks}
+                {incomplete && (
+                  <p className="px-2 pt-1 text-[10px] text-text-muted">
+                    {tTeam('list.aggregate.loadedTasks')}
+                  </p>
+                )}
+                <ProjectTaskGroup
+                  projectKey={group.projectKey}
+                  projectLabel={group.projectLabel}
+                  taskCount={group.tasks.length}
+                  isCollapsed={isProjectGroupCollapsed(group.projectKey)}
                   visibleCount={visibleCount}
-                  getTaskLocalPresentation={getTaskLocalPresentation}
-                  isNewTask={isNewTask}
-                  isTeamOffline={isTeamOffline}
+                  noProjectGroupColor={noProjectGroupColor}
+                  showMoreLabel={t('tasksPanel.showMore')}
+                  showLessLabel={t('tasksPanel.showLess')}
                   isLight={isLight}
-                  hideTeamName
-                  hideProjectName
-                  showTeamHeader={(projectTeamCountByKey.get(group.projectKey) ?? 0) > 1}
-                  formatTeamHeader={formatTeamHeader}
-                  renamingKey={renamingTaskKey}
-                  onTogglePin={handleToggleTaskPin}
-                  onToggleArchive={handleToggleTaskArchive}
-                  onMarkUnread={handleMarkTaskUnread}
-                  onRename={handleStartTaskRename}
-                  onDelete={handleDeleteTask}
-                  onRestore={handleRestoreTask}
-                  onRenameComplete={handleRenameComplete}
-                  onRenameCancel={handleRenameCancel}
-                  getOwnerColorName={getOwnerColorName}
-                />
-              </ProjectTaskGroup>
+                  isPinned={taskLocalState.isProjectPinned(group.projectKey)}
+                  onToggleGroup={handleToggleProjectGroup}
+                  onVisibleCountChange={handleProjectGroupVisibleCountChange}
+                  onToggleProjectPin={handleToggleProjectPin}
+                >
+                  <TaskRows
+                    contextId={contextId}
+                    tasks={group.tasks}
+                    visibleCount={visibleCount}
+                    getTaskLocalPresentation={getTaskLocalPresentation}
+                    isNewTask={isNewTask}
+                    isTeamOffline={isTeamOffline}
+                    isLight={isLight}
+                    hideTeamName
+                    hideProjectName
+                    showTeamHeader={(projectTeamCountByKey.get(group.projectKey) ?? 0) > 1}
+                    formatTeamHeader={formatTeamHeader}
+                    renamingKey={renamingTaskKey}
+                    onTogglePin={handleToggleTaskPin}
+                    onToggleArchive={handleToggleTaskArchive}
+                    onMarkUnread={handleMarkTaskUnread}
+                    onRename={handleStartTaskRename}
+                    onDelete={handleDeleteTask}
+                    onRestore={handleRestoreTask}
+                    onRenameComplete={handleRenameComplete}
+                    onRenameCancel={handleRenameCancel}
+                    getOwnerColorName={getOwnerColorName}
+                  />
+                </ProjectTaskGroup>
               </div>
             );
           })}
@@ -1272,7 +1293,9 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
                   )}
                   <span className="truncate">{dateCategoryLabels[category] ?? category}</span>
                   <span className="ml-auto shrink-0 text-[10px] font-normal text-text-muted">
-                    {incomplete ? tTeam('list.aggregate.loadedCount', { count: tasks.length }) : tasks.length}
+                    {incomplete
+                      ? tTeam('list.aggregate.loadedCount', { count: tasks.length })
+                      : tasks.length}
                   </span>
                 </button>
 

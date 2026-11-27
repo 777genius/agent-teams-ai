@@ -10,7 +10,12 @@ const MAX_SUGGESTION_BYTES = 512;
 const INVALID_CHARACTERS = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u;
 
 const SAME_ORIGIN_FIELDS = [
-  'ownerHandle', 'teamId', 'runId', 'memberId', 'generation', 'conversationRef',
+  'ownerHandle',
+  'teamId',
+  'runId',
+  'memberId',
+  'generation',
+  'conversationRef',
 ] as const satisfies readonly (keyof NativeNextPromptIdentity)[];
 
 function validIdentity(candidate: NativeNextPromptCandidate): boolean {
@@ -33,11 +38,14 @@ function validSuggestion(candidate: NativeNextPromptCandidate): boolean {
     typeof candidate.completedTurnRef === 'string' &&
     candidate.completedTurnRef.length > 0 &&
     candidate.completedTurnRef.length <= 256 &&
-    typeof candidate.messageId === 'string' && candidate.messageId.length > 0 &&
+    typeof candidate.messageId === 'string' &&
+    candidate.messageId.length > 0 &&
     candidate.messageId.length <= 256 &&
-    typeof candidate.inputId === 'string' && candidate.inputId.length > 0 &&
+    typeof candidate.inputId === 'string' &&
+    candidate.inputId.length > 0 &&
     candidate.inputId.length <= 256 &&
-    typeof candidate.memberName === 'string' && candidate.memberName.length > 0 &&
+    typeof candidate.memberName === 'string' &&
+    candidate.memberName.length > 0 &&
     candidate.memberName.length <= 128 &&
     candidate.conversationRef === `direct:${candidate.memberName.trim().toLowerCase()}` &&
     typeof candidate.text === 'string' &&
@@ -50,7 +58,7 @@ function validSuggestion(candidate: NativeNextPromptCandidate): boolean {
 /** No role/lead gating: every selected Claude or qualified Codex teammate may offer. */
 export function canDisplayNativeNextPrompt(
   candidate: NativeNextPromptCandidate | null | undefined,
-  context: NativeNextPromptViewContext,
+  context: NativeNextPromptViewContext
 ): boolean {
   if (
     !candidate ||
@@ -92,12 +100,14 @@ export function mayAcceptNativeNextPromptWithTab(input: {
   readonly metaKey: boolean;
   readonly hasActiveEditorKeyboardMenu: boolean;
 }): boolean {
-  return input.visible &&
+  return (
+    input.visible &&
     input.editorFocused &&
     !input.isComposing &&
     !input.shiftKey &&
     !input.ctrlKey &&
     !input.altKey &&
     !input.metaKey &&
-    !input.hasActiveEditorKeyboardMenu;
+    !input.hasActiveEditorKeyboardMenu
+  );
 }

@@ -58,24 +58,26 @@ export const RuntimeProviderManagementPanel = ({
   const runtimeRevision =
     nativeOpenCodeStatus?.state === 'ready' && nativeOpenCodeStatus.installed
       ? JSON.stringify([
-          'ready', nativeOpenCodeStatus.version ?? null, nativeOpenCodeStatus.binaryPath ?? null,
+          'ready',
+          nativeOpenCodeStatus.version ?? null,
+          nativeOpenCodeStatus.binaryPath ?? null,
           ...(nativeOpenCodeStatus.sourceRevision ? [nativeOpenCodeStatus.sourceRevision] : []),
           ...(nativeOpenCodeStatus.nativeGeneration ? [nativeOpenCodeStatus.nativeGeneration] : []),
         ])
-      : nativeOpenCodeStatus && !nativeOpenCodeStatus.installed &&
+      : nativeOpenCodeStatus &&
+          !nativeOpenCodeStatus.installed &&
           nativeOpenCodeStatus.state !== 'checking' &&
           nativeOpenCodeStatus.state !== 'downloading' &&
           nativeOpenCodeStatus.state !== 'installing'
         ? 'unavailable'
         : null;
-  const openCodeGeneration =
-    isCapturedOpenCodeV1Runtime(nativeOpenCodeStatus)
-      ? 'v1'
-      : nativeOpenCodeStatus?.installed &&
-          nativeOpenCodeStatus.version &&
-          isRecognizedOpenCodeRuntimeVersion(nativeOpenCodeStatus.version)
-        ? getOpenCodeGeneration(nativeOpenCodeStatus.version)
-        : null;
+  const openCodeGeneration = isCapturedOpenCodeV1Runtime(nativeOpenCodeStatus)
+    ? 'v1'
+    : nativeOpenCodeStatus?.installed &&
+        nativeOpenCodeStatus.version &&
+        isRecognizedOpenCodeRuntimeVersion(nativeOpenCodeStatus.version)
+      ? getOpenCodeGeneration(nativeOpenCodeStatus.version)
+      : null;
   useEffect(() => {
     if (!open) return;
     let active = true;

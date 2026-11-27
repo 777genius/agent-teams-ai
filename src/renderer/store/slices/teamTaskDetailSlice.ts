@@ -24,15 +24,8 @@ import {
   releaseTaskDetailOwner,
   retireTaskDetailSessionWork,
   setTaskDetailDeletionIntent,
-  type TaskDetailDeletionIntent,
   taskDetailDraftClarificationRequestId,
-  type TaskDetailEditPart,
-  type TaskDetailIdentity,
   taskDetailKey,
-  type TaskDetailReadEntry,
-  type TaskDetailReadScope,
-  type TaskDetailReadToken,
-  type TaskDetailSavePart,
   type TaskDetailSaveRevision,
   type TaskDetailSession,
   touchTaskDetailPart,
@@ -44,11 +37,7 @@ import { unwrapIpc } from '@renderer/utils/unwrapIpc';
 import { deriveTaskDisplayId } from '@shared/utils/taskIdentity';
 
 import { createTaskDetailActivationFeedbackActions } from '../team/taskDetailActivationFeedbackActions';
-import {
-  queueTaskDetailEditor,
-  type TaskDetailEditorIntent,
-  type TaskDetailEditorRequest,
-} from '../team/taskDetailEditorRoute';
+import { queueTaskDetailEditor } from '../team/taskDetailEditorRoute';
 import {
   captureTaskDetailReadScope,
   invalidateTeamSnapshotResource,
@@ -63,131 +52,9 @@ import {
 import { hasTaskDetailReadInterest } from '../team/taskDetailReadInterest';
 import { queueTaskDetailReview } from '../team/taskDetailReviewRoute';
 
-import type { TaskDetailReviewRequest } from '../team/taskDetailReviewRoute';
 import type { AppState } from '../types';
-import type { AddTaskCommentRequest, TeamTaskWithKanban } from '@shared/types';
+import type { TeamTaskDetailSlice } from './teamTaskDetailSlice.types';
 import type { StateCreator } from 'zustand';
-
-export interface TeamTaskDetailSlice {
-  taskDetailReviewActivationFailure: {
-    nonce: string;
-    identity: TaskDetailIdentity;
-    options: Pick<TaskDetailReviewRequest, 'filePath' | 'requestOptions'>;
-  } | null;
-  closeTaskDetailReviewActivationFailure: (nonce: string) => void;
-  retryTaskDetailReviewActivationFailure: (nonce: string) => boolean;
-  retryPendingTaskDetailReview: (nonce: string) => boolean;
-  closePendingTaskDetailReview: (nonce: string) => void;
-  openTaskDetailReview: (
-    identity: TaskDetailIdentity,
-    options: Pick<TaskDetailReviewRequest, 'filePath' | 'requestOptions'>
-  ) => boolean;
-  taskDetailEditorActivationFailure: {
-    nonce: string;
-    identity: TaskDetailIdentity;
-    intent: TaskDetailEditorIntent;
-  } | null;
-  pendingTaskDetailEditorRequest: TaskDetailEditorRequest | null;
-  setPendingTaskDetailEditorRequest: (request: TaskDetailEditorRequest | null) => void;
-  openTaskDetailEditor: (identity: TaskDetailIdentity, intent: TaskDetailEditorIntent) => boolean;
-  retryPendingTaskDetailEditor: (nonce: string) => boolean;
-  closePendingTaskDetailEditor: (nonce: string) => void;
-  closeTaskDetailEditorActivationFailure: (nonce: string) => void;
-  retryTaskDetailEditorActivationFailure: (nonce: string) => boolean;
-  taskDetailById: Record<string, TaskDetailReadEntry>;
-  taskDetailSessionById: Record<string, TaskDetailSession>;
-  setTaskDetailDeletionIntent: (
-    identity: TaskDetailIdentity,
-    intent: TaskDetailDeletionIntent,
-    requestScope: Omit<TaskDetailReadScope, 'teamName'>
-  ) => boolean;
-  taskDetailSurfaceInterests: Record<string, TaskDetailIdentity | null>;
-  ensureTaskDetail: (identity: TaskDetailIdentity) => Promise<void>;
-  setTaskDetailSurfaceInterest: (surfaceId: string, identity: TaskDetailIdentity | null) => void;
-  applyTaskDetailSnapshot: (
-    contextId: string,
-    teamName: string,
-    tasks: readonly TeamTaskWithKanban[],
-    snapshotToken: TaskDetailReadToken
-  ) => void;
-  invalidateTaskDetailSource: (identity?: TaskDetailIdentity) => void;
-  invalidateTaskDetailTeamSource: (contextId: string, teamName: string, taskId?: string) => void;
-  clearTaskDetailTeamWork: (contextId: string, teamName: string) => void;
-  retireTaskDetailSessionWork: (
-    scope?: Pick<TaskDetailIdentity, 'contextId' | 'teamName'>,
-    preservePendingAttachmentPreparation?: boolean
-  ) => void;
-  hydrateTaskDetailSessionDraft: (
-    identity: TaskDetailIdentity,
-    draft: {
-      text?: string;
-      commentChips?: TaskDetailSession['commentChips'];
-      answerClarificationRequestId?: string | null;
-    }
-  ) => void;
-  updateTaskDetailSession: (
-    identity: TaskDetailIdentity,
-    update: Partial<TaskDetailSession>
-  ) => void;
-  updateTaskDetailSessionPart: (
-    identity: TaskDetailIdentity,
-    part: TaskDetailEditPart,
-    value: TaskDetailSession[
-      | 'commentText'
-      | 'commentChips'
-      | 'pendingAttachments'
-      | 'reply'
-      | 'subjectDraft'
-      | 'descriptionDraft']
-  ) => void;
-  beginTaskDetailSubmitSession: (
-    identity: TaskDetailIdentity,
-    request?: AddTaskCommentRequest
-  ) => number;
-  completeTaskDetailSubmitSession: (identity: TaskDetailIdentity, revision: number) => void;
-  failTaskDetailSubmitSession: (
-    identity: TaskDetailIdentity,
-    revision: number,
-    error: string,
-    provenNoEffect?: boolean
-  ) => void;
-  beginTaskDetailSaveSession: (
-    identity: TaskDetailIdentity,
-    parts: readonly TaskDetailSavePart[]
-  ) => TaskDetailSaveRevision;
-  completeTaskDetailSaveSession: (
-    identity: TaskDetailIdentity,
-    revision: TaskDetailSaveRevision
-  ) => void;
-  failTaskDetailSaveSession: (
-    identity: TaskDetailIdentity,
-    revision: TaskDetailSaveRevision,
-    error: string
-  ) => void;
-  beginTaskDetailPendingAttachmentSession: (
-    identity: TaskDetailIdentity,
-    attachment: TaskDetailSession['pendingAttachments'][number]
-  ) => void;
-  completeTaskDetailPendingAttachmentSession: (
-    identity: TaskDetailIdentity,
-    id: string,
-    attachment: TaskDetailSession['pendingAttachments'][number]
-  ) => void;
-  ignoreTaskDetailPendingAttachmentSession: (identity: TaskDetailIdentity, id: string) => void;
-  claimTaskDetailOwner: (identity: TaskDetailIdentity, surfaceId: string) => void;
-  transferTaskDetailOwner: (
-    identity: TaskDetailIdentity,
-    fromSurfaceId: string,
-    toSurfaceId: string,
-    expectedOwnerRevision: number
-  ) => void;
-  releaseTaskDetailOwner: (
-    identity: TaskDetailIdentity,
-    surfaceId: string,
-    expectedOwnerRevision: number
-  ) => void;
-  openTaskDetailTab: (identity: TaskDetailIdentity) => OpenTaskDetailTabResult | null;
-}
 
 export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskDetailSlice> = (
   set,
@@ -543,7 +410,9 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
       if (part === 'description') next.descriptionDraft = String(value);
       if (part === 'commentText' || part === 'commentChips' || part === 'reply') {
         next.answerClarificationRequestId = taskDetailDraftClarificationRequestId(
-          next, state.taskDetailById[key]?.full);
+          next,
+          state.taskDetailById[key]?.full
+        );
       }
       return {
         taskDetailSessionById: { ...state.taskDetailSessionById, [key]: next },
@@ -645,14 +514,18 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
       const next = beginTaskDetailPendingAttachment(current, attachment);
       if (next === current) return state;
       if (next.answerClarificationRequestId === undefined) {
-        return { taskDetailSessionById: {
-          ...state.taskDetailSessionById,
-          [key]: {
-            ...next,
-            answerClarificationRequestId: taskDetailDraftClarificationRequestId(
-              next, state.taskDetailById[key]?.full),
+        return {
+          taskDetailSessionById: {
+            ...state.taskDetailSessionById,
+            [key]: {
+              ...next,
+              answerClarificationRequestId: taskDetailDraftClarificationRequestId(
+                next,
+                state.taskDetailById[key]?.full
+              ),
+            },
           },
-        } };
+        };
       }
       return { taskDetailSessionById: { ...state.taskDetailSessionById, [key]: next } };
     });
@@ -684,9 +557,12 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
           ...state.taskDetailSessionById,
           [key]: (() => {
             const next = ignoreTaskDetailPendingAttachment(current, id);
-            return next.commentText.trim() || next.commentChips.length ||
-              next.pendingAttachments.length || next.reply
-              ? next : { ...next, answerClarificationRequestId: undefined };
+            return next.commentText.trim() ||
+              next.commentChips.length ||
+              next.pendingAttachments.length ||
+              next.reply
+              ? next
+              : { ...next, answerClarificationRequestId: undefined };
           })(),
         },
       };
@@ -791,3 +667,5 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
     return confirmActivation(opened.id, true);
   },
 });
+
+export type { TeamTaskDetailSlice } from './teamTaskDetailSlice.types';

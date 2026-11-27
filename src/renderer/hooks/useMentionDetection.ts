@@ -1,4 +1,11 @@
-import { type Dispatch, type SetStateAction, useCallback, useEffect, useRef, useState } from 'react';
+import {
+  type Dispatch,
+  type SetStateAction,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 
 import { isImeComposing } from '@renderer/utils/imeComposition';
 import {

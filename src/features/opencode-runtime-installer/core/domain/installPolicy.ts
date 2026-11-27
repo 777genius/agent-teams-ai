@@ -14,7 +14,9 @@ export function requestedOpenCodeInstallVersion(
 ): string {
   if (generation !== 'v2' || target === 'captured-host') return 'latest';
   if (!qualifiedV2Version)
-    throw new Error('No compatible OpenCode V2 is qualified for this platform. Install V1 instead.');
+    throw new Error(
+      'No compatible OpenCode V2 is qualified for this platform. Install V1 instead.'
+    );
   return qualifiedV2Version;
 }
 

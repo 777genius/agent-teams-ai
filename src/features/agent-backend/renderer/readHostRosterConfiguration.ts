@@ -48,7 +48,5 @@ export function assertMatchingConfiguration(
 /** Only persisted, non-empty working directories may be used for Host project association. */
 export function savedProjectPath(configuration: BackendRosterConfiguration): string | undefined {
   const cwd = configuration.savedSettings?.cwd;
-  return typeof cwd === 'string' && cwd.trim().length > 0 && !cwd.includes('\0')
-    ? cwd
-    : undefined;
+  return typeof cwd === 'string' && cwd.trim().length > 0 && !cwd.includes('\0') ? cwd : undefined;
 }

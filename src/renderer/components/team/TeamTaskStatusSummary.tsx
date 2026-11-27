@@ -35,11 +35,12 @@ export const TeamTaskStatusSummary = ({
   countersClassName = 'flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] text-[var(--color-text-muted)]',
 }: Readonly<TeamTaskStatusSummaryProps>): React.JSX.Element | null => {
   const { t } = useAppTranslation('team');
-  if (unknown) return (
-    <div className={className} data-task-counts="unknown">
-      <span className={countersClassName}>{t('list.aggregate.unknownTasks')}</span>
-    </div>
-  );
+  if (unknown)
+    return (
+      <div className={className} data-task-counts="unknown">
+        <span className={countersClassName}>{t('list.aggregate.unknownTasks')}</span>
+      </div>
+    );
   const normalized = normalizeCounts(counts);
   const totalTasks = getTaskStatusTotal(normalized);
   const completedRatio = totalTasks > 0 ? normalized.completed / totalTasks : 0;

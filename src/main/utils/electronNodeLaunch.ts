@@ -2,7 +2,8 @@ import { isAbsolute, join } from 'node:path';
 
 import { hasSelectedLinuxChildLaunch } from './linuxChildLaunchSelection';
 import {
-  captureLinuxNodeExecArtifact, validateLinuxNodeExecArtifact,
+  captureLinuxNodeExecArtifact,
+  validateLinuxNodeExecArtifact,
 } from './linuxNodeExecArtifact';
 
 import type { LinuxNodeExecArtifact } from './linuxNodeExecArtifact';
@@ -20,8 +21,11 @@ export async function resolveElectronNodeLaunch(
 ): Promise<{ command: string; args: string[] }> {
   if (process.platform !== 'linux' || !process.versions.electron || process.type !== 'browser')
     return { command: nodeExecutable, args: [...args] };
-  if (!isAbsolute(nodeExecutable) || nodeExecutable.includes('\0') ||
-      args.some((arg) => arg.includes('\0')))
+  if (
+    !isAbsolute(nodeExecutable) ||
+    nodeExecutable.includes('\0') ||
+    args.some((arg) => arg.includes('\0'))
+  )
     throw new Error('Invalid selected Node launch');
   if (allocation === 'generic' && hasSelectedLinuxChildLaunch())
     return { command: nodeExecutable, args: [...args] };

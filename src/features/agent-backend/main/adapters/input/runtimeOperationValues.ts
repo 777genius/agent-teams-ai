@@ -26,16 +26,23 @@ export function parseBackendRuntimeOperation(
   switch (operation) {
     case 'runtime.read': {
       const p = object(value, ['memberId', 'expectedGeneration', 'nativePromptProof']);
-      const proof = p.nativePromptProof === undefined
-        ? undefined : object(p.nativePromptProof, ['inputId', 'operationRef']);
+      const proof =
+        p.nativePromptProof === undefined
+          ? undefined
+          : object(p.nativePromptProof, ['inputId', 'operationRef']);
       return {
         memberId: text(p.memberId),
         ...(p.expectedGeneration === undefined
-          ? {} : { expectedGeneration: text(p.expectedGeneration) }),
+          ? {}
+          : { expectedGeneration: text(p.expectedGeneration) }),
         ...(proof === undefined
-          ? {} : { nativePromptProof: {
-            inputId: text(proof.inputId), operationRef: text(proof.operationRef),
-          } }),
+          ? {}
+          : {
+              nativePromptProof: {
+                inputId: text(proof.inputId),
+                operationRef: text(proof.operationRef),
+              },
+            }),
       };
     }
     case 'runtime.open':

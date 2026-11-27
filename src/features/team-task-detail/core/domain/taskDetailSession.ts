@@ -13,11 +13,16 @@ export function taskDetailDraftClarificationRequestId(
   session: TaskDetailSession,
   task: Pick<TeamTask, 'needsClarification' | 'clarificationRequestId'> | null | undefined
 ): string | null | undefined {
-  const hasContent = Boolean(session.commentText.trim() || session.commentChips.length ||
-    session.pendingAttachments.length || session.reply);
+  const hasContent = Boolean(
+    session.commentText.trim() ||
+    session.commentChips.length ||
+    session.pendingAttachments.length ||
+    session.reply
+  );
   if (!hasContent) return undefined;
-  if (session.answerClarificationRequestId !== undefined) return session.answerClarificationRequestId;
-  return task?.needsClarification === 'user' ? task.clarificationRequestId ?? null : null;
+  if (session.answerClarificationRequestId !== undefined)
+    return session.answerClarificationRequestId;
+  return task?.needsClarification === 'user' ? (task.clarificationRequestId ?? null) : null;
 }
 
 const zeroPartRevisions = (): TaskDetailPartRevisions => ({
@@ -116,9 +121,10 @@ export function hydrateTaskDetailDraft(
     session.partRevisions.commentChips > 0 ||
     session.partRevisions.pendingAttachments > 0 ||
     session.partRevisions.reply > 0;
-  if (localCompositionStarted &&
-      (session.answerClarificationRequestId ?? null) !==
-        (draft.answerClarificationRequestId ?? null)) {
+  if (
+    localCompositionStarted &&
+    (session.answerClarificationRequestId ?? null) !== (draft.answerClarificationRequestId ?? null)
+  ) {
     return session;
   }
 
@@ -210,16 +216,18 @@ export function completeTaskDetailSubmit(
   const reply = clearParts.has('reply') ? null : session.reply;
   // A changed part can still end up empty (e.g. the user removed an attachment
   // while sending). Do not retain a consumed request ID on an empty composer.
-  const hasRemainingDraft = Boolean(commentText.trim() || commentChips.length ||
-    pendingAttachments.length || reply);
+  const hasRemainingDraft = Boolean(
+    commentText.trim() || commentChips.length || pendingAttachments.length || reply
+  );
   return {
     ...session,
     commentText,
     commentChips,
     pendingAttachments,
     reply,
-    answerClarificationRequestId:
-      hasRemainingDraft ? session.answerClarificationRequestId : undefined,
+    answerClarificationRequestId: hasRemainingDraft
+      ? session.answerClarificationRequestId
+      : undefined,
     partRevisions: nextPartRevisions,
     editRevision: session.editRevision + (clearParts.size > 0 ? 1 : 0),
     submittedPartRevisions: null,

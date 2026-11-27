@@ -52,7 +52,10 @@ function statusFixture() {
   const install = vi.fn();
   const invalidateStatusCache = vi.fn();
   initializeOpenCodeRuntimeHandlers({
-    getStatus, getReadinessStatus, install, invalidateStatusCache,
+    getStatus,
+    getReadinessStatus,
+    install,
+    invalidateStatusCache,
   } as unknown as OpenCodeRuntimeInstallerService);
   registerOpenCodeRuntimeHandlers({
     handle: (name: string, handler: (event: IpcMainInvokeEvent, mode?: unknown) => unknown) =>
@@ -96,13 +99,19 @@ function sourceFixture() {
   const sources: CapturedRuntimeSources = {
     current: vi.fn(async () => ({ ...summary })),
     retained: vi.fn(async () => []),
-    publish: vi.fn(async () => { throw new Error('TEST unexpected publication'); }),
-    refreshConfiguration: vi.fn(async () => { throw new Error('TEST unexpected refresh'); }),
+    publish: vi.fn(async () => {
+      throw new Error('TEST unexpected publication');
+    }),
+    refreshConfiguration: vi.fn(async () => {
+      throw new Error('TEST unexpected refresh');
+    }),
     recover: vi.fn(async () => null),
     lookup: vi.fn(async () => null),
   };
   const status: OpenCodeRuntimeStatus = {
-    ...ready, engineVersion: '2.1.4', sourceRevision: summary.revision,
+    ...ready,
+    engineVersion: '2.1.4',
+    sourceRevision: summary.revision,
   };
   const read = vi.fn(async () => status);
   selected.native = { readOpenCodeRuntimeStatus: read };
@@ -230,27 +239,43 @@ it('adds only qualified CLI maintenance beside the original selected engine', as
       { kind: 'missing', engineVersion: '2.1.4' },
     ],
     [
-      { installed: true, source: 'path', state: 'idle', version: '2.0.21',
-        compatibleV2Version: '2.1.4', v2Support: 'required', error: 'TEST missing support' },
+      {
+        installed: true,
+        source: 'path',
+        state: 'idle',
+        version: '2.0.21',
+        compatibleV2Version: '2.1.4',
+        v2Support: 'required',
+        error: 'TEST missing support',
+      },
       { kind: 'installed', cliVersion: '2.0.21', engineVersion: '2.1.4', support: 'required' },
     ],
     [
-      { installed: true, source: 'app-managed', state: 'ready', version: '2.3.0',
-        compatibleV2Version: '2.1.4', v2Support: 'ready' },
+      {
+        installed: true,
+        source: 'app-managed',
+        state: 'ready',
+        version: '2.3.0',
+        compatibleV2Version: '2.1.4',
+        v2Support: 'ready',
+      },
       { kind: 'installed', cliVersion: '2.3.0', engineVersion: '2.1.4', support: 'ready' },
     ],
   ];
   for (const [stock, maintenance] of cases) {
     f.getReadinessStatus.mockResolvedValueOnce(stock);
     await expect(f.invoke()).resolves.toEqual({
-      success: true, data: { ...s.status, v2Maintenance: maintenance },
+      success: true,
+      data: { ...s.status, v2Maintenance: maintenance },
     });
   }
   expect(s.read).toHaveBeenCalledTimes(3);
   expect(s.sources.current).toHaveBeenCalledTimes(6);
   expect(f.getReadinessStatus).toHaveBeenCalledTimes(3);
   expect(f.getReadinessStatus.mock.calls).toEqual([
-    ['captured-host'], ['captured-host'], ['captured-host'],
+    ['captured-host'],
+    ['captured-host'],
+    ['captured-host'],
   ]);
   expect(f.getStatus).not.toHaveBeenCalled();
   expect(f.install).not.toHaveBeenCalled();
@@ -263,14 +288,34 @@ it('keeps native readiness when optional discovery fails or does not prove a com
   const rejected: OpenCodeRuntimeStatus[] = [
     { installed: false, source: 'override', state: 'failed', error: 'TEST broken override' },
     { installed: false, source: 'path', state: 'failed', error: 'TEST failed version' },
-    { installed: false, source: 'missing', state: 'idle', ignoredOverride: {
-      binaryPath: '/TEST/missing-override', envName: 'TEST_OVERRIDE', version: null, reason: 'TEST missing',
-    } },
+    {
+      installed: false,
+      source: 'missing',
+      state: 'idle',
+      ignoredOverride: {
+        binaryPath: '/TEST/missing-override',
+        envName: 'TEST_OVERRIDE',
+        version: null,
+        reason: 'TEST missing',
+      },
+    },
     { installed: true, source: 'path', state: 'ready', version: '1.19.4' },
-    { installed: true, source: 'path', state: 'ready', version: '2.3.0',
-      compatibleV2Version: '2.9.9', v2Support: 'ready' },
-    { installed: true, source: 'path', state: 'failed', version: '2.0.21',
-      compatibleV2Version: '2.1.4', v2Support: 'ready' },
+    {
+      installed: true,
+      source: 'path',
+      state: 'ready',
+      version: '2.3.0',
+      compatibleV2Version: '2.9.9',
+      v2Support: 'ready',
+    },
+    {
+      installed: true,
+      source: 'path',
+      state: 'failed',
+      version: '2.0.21',
+      compatibleV2Version: '2.1.4',
+      v2Support: 'ready',
+    },
   ];
   for (const stock of rejected) {
     f.getReadinessStatus.mockResolvedValueOnce(stock);
@@ -288,9 +333,15 @@ it('never attaches maintenance to a replacement source or a changed original for
   vi.spyOn(console, 'error').mockImplementation(() => undefined);
   const f = statusFixture();
   const changes: [keyof SourceSummary, unknown][] = [
-    ['sourceId', 'd'.repeat(64)], ['revision', 'd'.repeat(64)], ['profileId', 'TEST replacement'],
-    ['configRevision', 'TEST replacement'], ['sourceKind', 'path'], ['nativeGeneration', 'v1'],
-    ['cliVersion', '2.0.21'], ['engineVersion', '2.9.9'], ['configurationCurrent', false],
+    ['sourceId', 'd'.repeat(64)],
+    ['revision', 'd'.repeat(64)],
+    ['profileId', 'TEST replacement'],
+    ['configRevision', 'TEST replacement'],
+    ['sourceKind', 'path'],
+    ['nativeGeneration', 'v1'],
+    ['cliVersion', '2.0.21'],
+    ['engineVersion', '2.9.9'],
+    ['configurationCurrent', false],
     ['preferencesDigest', 'd'.repeat(64)],
   ];
   for (const [field, value] of changes) {
@@ -370,19 +421,27 @@ describe('OpenCode runtime install IPC', () => {
     await expect(invoke({} as IpcMainInvokeEvent, { binaryPath: '/other' })).resolves.toMatchObject(
       { success: false }
     );
-    await expect(invoke({} as IpcMainInvokeEvent, {
-      generation: 'v2', target: 'captured-host',
-    })).resolves.toMatchObject({ success: false });
+    await expect(
+      invoke({} as IpcMainInvokeEvent, {
+        generation: 'v2',
+        target: 'captured-host',
+      })
+    ).resolves.toMatchObject({ success: false });
     expect(install).toHaveBeenCalledTimes(1);
   });
 
   it('uses Host acquisition policy only after Main captures the original runtime source', async () => {
     const f = statusFixture();
     const s = sourceFixture();
-    f.install.mockResolvedValue({ installed: false, source: 'missing', state: 'failed',
-      error: 'TEST native acquisition unavailable' });
+    f.install.mockResolvedValue({
+      installed: false,
+      source: 'missing',
+      state: 'failed',
+      error: 'TEST native acquisition unavailable',
+    });
     await expect(f.invokeInstall({ generation: 'v2' })).resolves.toMatchObject({
-      success: true, data: { state: 'failed', error: 'TEST native acquisition unavailable' },
+      success: true,
+      data: { state: 'failed', error: 'TEST native acquisition unavailable' },
     });
     expect(s.sources.current).toHaveBeenCalledExactlyOnceWith();
     expect(s.sources.recover).toHaveBeenCalledExactlyOnceWith();

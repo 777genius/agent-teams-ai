@@ -52,42 +52,39 @@ export function useTeamProvisioningPresentation(teamName: string): {
     }))
   );
 
-  const presentation = useMemo(
-    () => {
-      if (progress?.state === 'ready' && isTeamAlive === false) return null;
-      return applyLeadActivityToProvisioningPresentation(
-        buildTeamProvisioningPresentation({
-          progress,
-          members: teamMembers,
-          memberSpawnStatuses,
-          memberSpawnSnapshot,
-          memberRuntimeEntries: runtimeSnapshot?.members,
-          t,
+  const presentation = useMemo(() => {
+    if (progress?.state === 'ready' && isTeamAlive === false) return null;
+    return applyLeadActivityToProvisioningPresentation(
+      buildTeamProvisioningPresentation({
+        progress,
+        members: teamMembers,
+        memberSpawnStatuses,
+        memberSpawnSnapshot,
+        memberRuntimeEntries: runtimeSnapshot?.members,
+        t,
+      }),
+      {
+        leadActivity,
+        currentRuntimeRunId,
+        title: t('provisioning.presentation.panel.completingStartupChecks', {
+          defaultValue: 'Completing startup checks',
         }),
-        {
-          leadActivity,
-          currentRuntimeRunId,
-          title: t('provisioning.presentation.panel.completingStartupChecks', {
-            defaultValue: 'Completing startup checks',
-          }),
-          detail: t('provisioning.presentation.active.leadWorking', {
-            defaultValue: 'Lead is working while startup checks finish.',
-          }),
-        }
-      );
-    },
-    [
-      isTeamAlive,
-      memberSpawnSnapshot,
-      memberSpawnStatuses,
-      progress,
-      runtimeSnapshot?.members,
-      teamMembers,
-      leadActivity,
-      currentRuntimeRunId,
-      t,
-    ]
-  );
+        detail: t('provisioning.presentation.active.leadWorking', {
+          defaultValue: 'Lead is working while startup checks finish.',
+        }),
+      }
+    );
+  }, [
+    isTeamAlive,
+    memberSpawnSnapshot,
+    memberSpawnStatuses,
+    progress,
+    runtimeSnapshot?.members,
+    teamMembers,
+    leadActivity,
+    currentRuntimeRunId,
+    t,
+  ]);
   const memberDiagnostics = useMemo(
     () =>
       buildTeamMemberLaunchDiagnosticsPayloads({

@@ -1,7 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
-import { RetainedLegacyLaunchScope, useRetainedLegacyLaunch, useRetainedLegacyRuntimeStatus } from '@features/agent-backend/renderer';
+import {
+  RetainedLegacyLaunchScope,
+  useRetainedLegacyLaunch,
+  useRetainedLegacyRuntimeStatus,
+} from '@features/agent-backend/renderer';
 import {
   reconcileAnthropicRuntimeSelections,
   resolveAnthropicFastMode,
@@ -72,12 +76,7 @@ import { getAnthropicRuntimeDefaultLaunchModel } from '@shared/utils/providerDef
 import { supportsScheduleExecutionLimits } from '@shared/utils/scheduleLimits';
 import { isTeamProviderId, normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import { bindTeamProvisioningContext } from '@shared/utils/teamProvisioningContext';
-import {
-  AlertTriangle,
-  Check,
-  Info,
-  X,
-} from 'lucide-react';
+import { AlertTriangle, Check, Info, X } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { HistoricalPromptReview } from '../schedule/HistoricalPromptReview';
@@ -94,10 +93,9 @@ import { AdvancedCliSection } from './AdvancedCliSection';
 import { AnthropicFastModeSelector } from './AnthropicFastModeSelector';
 import { buildLaunchDialogSubmission } from './buildLaunchDialogSubmission';
 import { CodexFastModeSelector } from './CodexFastModeSelector';
-import { CodexReconnectPrompt, shouldShowCodexReconnectPrompt } from './CodexReconnectPrompt';
+import { shouldShowCodexReconnectPrompt } from './CodexReconnectPrompt';
 import { collectDialogMemberProviderIds } from './defaultModelSelection';
 import { EffortLevelSelector } from './EffortLevelSelector';
-import { ExperimentalLocalModelOverrideCheckbox } from './ExperimentalLocalModelOverride';
 import { resolveExperimentalLocalModelOverride } from './experimentalLocalModelOverrideState';
 import { HostTeamResumeSection } from './HostTeamResumeSection';
 import {
@@ -119,6 +117,7 @@ import {
   resolveMemberDraftRuntime,
   resolveResolvedMemberRuntime,
 } from './launchTeamDialogHelpers';
+import { LaunchTeamPreparationStatus } from './LaunchTeamPreparationStatus';
 import { LaunchTeamProjectSelector } from './LaunchTeamProjectSelector';
 import {
   clearInheritedMemberModelsUnavailableForProvider,
@@ -138,14 +137,12 @@ import {
 } from './projectPathOptions';
 import { loadProjectPathProjects, syntheticProjectFromPath } from './projectPathProjects';
 import { createLaunchGuard, useAuthorityGatedCliStatus } from './providerLaunchAuthority';
-import { ProviderLaunchAuthorityNotice } from './ProviderLaunchAuthorityNotice';
 import { isSameProviderPrepareAttempt } from './providerPrepareAttemptIdentity';
 import {
   mergeReusableProviderPrepareModelResults,
   type ProviderPrepareDiagnosticsModelResult,
 } from './providerPrepareDiagnostics';
 import { buildProviderPreparePlans, type ProviderPreparePlan } from './providerPreparePlans';
-import { ProviderPrepareReadyNotice } from './ProviderPrepareReadyNotice';
 import { buildProviderPrepareModelChecksSignature } from './providerPrepareRequestSignature';
 import { storeShortLivedProviderPrepareModelResults } from './providerPrepareShortLivedCache';
 import { getProvisioningModelIssue } from './provisioningModelIssues';
@@ -154,13 +151,10 @@ import { ProvisioningProviderRuntimeSettingsDialog } from './ProvisioningProvide
 import {
   deriveEffectiveProvisioningPrepareState,
   getPrimaryProvisioningFailureDetail,
-  getProvisioningFailureHint,
   getProvisioningProviderBackendSummary,
   getProvisioningProviderProgressMessage,
   getProvisioningProviderReadyById,
   type ProvisioningProviderCheck,
-  ProvisioningProviderStatusList,
-  shouldHideProvisioningProviderStatusList,
   updateProviderCheck,
 } from './ProvisioningProviderStatusList';
 import { readLaunchPrepareModelIssues } from './readLaunchPrepareModelIssues';
@@ -218,14 +212,19 @@ const LAUNCH_AUTHORITY_BLOCKER_ID = 'launch-team-launch-authority-blocker';
 export type { LaunchTeamDialogProps, TeamLaunchDialogMode } from './LaunchTeamDialog.types';
 
 export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Element => (
-  <RetainedLegacyLaunchScope choice={props.mode === 'schedule' ? undefined : props.retainedLegacyLaunch}>
+  <RetainedLegacyLaunchScope
+    choice={props.mode === 'schedule' ? undefined : props.retainedLegacyLaunch}
+  >
     <LaunchTeamDialogContent {...props} />
   </RetainedLegacyLaunchScope>
 );
 const LaunchTeamDialogContent = (props: LaunchTeamDialogProps): React.JSX.Element => {
   const { open, onClose } = props;
   const retained = useRetainedLegacyLaunch();
-  const originalStatus = useRetainedLegacyRuntimeStatus(retained?.choice.projectPath ?? (props.mode === 'schedule' ? null : props.defaultProjectPath), open);
+  const originalStatus = useRetainedLegacyRuntimeStatus(
+    retained?.choice.projectPath ?? (props.mode === 'schedule' ? null : props.defaultProjectPath),
+    open
+  );
   const { isLight } = useTheme();
   const { t } = useAppTranslation('team');
   const multimodelEnabled = useStore((s) => s.appConfig?.general?.multimodelEnabled ?? true);
@@ -237,7 +236,10 @@ const LaunchTeamDialogContent = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const storedCliStatusLoading = useStore((s) => s.cliStatusLoading);
   const cliStatusLoading = retained ? originalStatus.loading : storedCliStatusLoading;
   const storedProviderLoading = useStore((s) => s.cliProviderStatusLoading);
-  const cliProviderStatusLoading = useMemo(() => retained ? {} : storedProviderLoading, [retained, storedProviderLoading]);
+  const cliProviderStatusLoading = useMemo(
+    () => (retained ? {} : storedProviderLoading),
+    [retained, storedProviderLoading]
+  );
   const isLaunchMode = props.mode === 'launch' || props.mode === 'relaunch';
   const isRelaunch = props.mode === 'relaunch';
   const loadingCliStatus = useMemo(
@@ -278,7 +280,12 @@ const LaunchTeamDialogContent = (props: LaunchTeamDialogProps): React.JSX.Elemen
     props.mode === 'schedule' ? undefined : props.projectPermissionTeamName;
   const { projectScope, defaultProjectPath } = scheduleScope(props, teamByName[effectiveTeamName]);
   const [launchHydratedTeamName, setLaunchHydratedTeamName] = useState<string | null>(null);
-  const savedLaunchSource = useLaunchDialogSavedRequest(open, isLaunchMode, effectiveTeamName, projectPermissionTeamName);
+  const savedLaunchSource = useLaunchDialogSavedRequest(
+    open,
+    isLaunchMode,
+    effectiveTeamName,
+    projectPermissionTeamName
+  );
   const launchHydrationKey = savedLaunchSource.key;
   const ownerHydrationPending =
     savedLaunchSource.host &&
@@ -414,11 +421,23 @@ const LaunchTeamDialogContent = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const isTeamSchedule = isSchedule && scheduleExecutionMode === 'team';
   const isTaskFirstSchedule = isSchedule && (schedule?.taskFirst === true || !isEditing);
   const usesSavedTeamRuntime = isTeamSchedule || isTaskFirstSchedule;
-  const supportsScheduleLimits = supportsScheduleExecutionLimits(isHostTeamSelectionKey(effectiveTeamName), selectedProviderId);
-  const scheduleRuntimeEditedRef = useRef({ provider: false, model: false, effort: false, fastMode: false, skipPermissions: false });
+  const supportsScheduleLimits = supportsScheduleExecutionLimits(
+    isHostTeamSelectionKey(effectiveTeamName),
+    selectedProviderId
+  );
+  const scheduleRuntimeEditedRef = useRef({
+    provider: false,
+    model: false,
+    effort: false,
+    fastMode: false,
+    skipPermissions: false,
+  });
   const [savedPromptReview, setSavedPromptReview] = useSavedPromptReview({
-    open, enabled: isTaskFirstSchedule, teamName: effectiveTeamName,
-    scheduleId: schedule?.id, reviewed: schedule?.reviewedSavedPrompt === true,
+    open,
+    enabled: isTaskFirstSchedule,
+    teamName: effectiveTeamName,
+    scheduleId: schedule?.id,
+    reviewed: schedule?.reviewedSavedPrompt === true,
   });
   // A newly selected team must not inherit the former team's target member.
   useEffect(() => {
@@ -512,7 +531,10 @@ const LaunchTeamDialogContent = (props: LaunchTeamDialogProps): React.JSX.Elemen
       open && launchPreflightSelectionReady && requestedMemberProviders.includes('anthropic')
     );
   const openCodeCatalogEnabled = shouldLoadOpenCodeDialogCatalog(
-    open, isLaunchMode, multimodelEnabled, requestedMemberProviders
+    open,
+    isLaunchMode,
+    multimodelEnabled,
+    requestedMemberProviders
   );
   const {
     effectiveMemberDrafts,
@@ -706,15 +728,21 @@ const LaunchTeamDialogContent = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const markDisplayedProviderAsEdited = (): void => {
     if (isSchedule && isEditing) {
       markScheduleProviderSwitch(
-        scheduleRuntimeEditedRef.current, schedule?.launchConfig.providerId, selectedProviderId
+        scheduleRuntimeEditedRef.current,
+        schedule?.launchConfig.providerId,
+        selectedProviderId
       );
     }
   };
   const setSelectedProviderId = (value: TeamProviderId): void => {
     hydrationRef.current.dirty = true;
-    if (isSchedule) Object.assign(scheduleRuntimeEditedRef.current, {
-      provider: true, model: true, effort: true, fastMode: true,
-    });
+    if (isSchedule)
+      Object.assign(scheduleRuntimeEditedRef.current, {
+        provider: true,
+        model: true,
+        effort: true,
+        fastMode: true,
+      });
     setRuntimeSelectionUnresolved(false);
     const normalizedValue = isLaunchMode
       ? normalizeLeadProviderForMode(value, multimodelEnabled)
@@ -767,8 +795,10 @@ const LaunchTeamDialogContent = (props: LaunchTeamDialogProps): React.JSX.Elemen
   };
   const requireExplicitPermissionsForOtherProject = (path: string): void => {
     // Never carry auto-approval from an owned runtime into a different project.
-    if (projectPermissionTeamName !== undefined &&
-        normalizePath(path) !== normalizePath(defaultProjectPath ?? '')) {
+    if (
+      projectPermissionTeamName !== undefined &&
+      normalizePath(path) !== normalizePath(defaultProjectPath ?? '')
+    ) {
       setSkipPermissions(false);
     }
   };
@@ -851,7 +881,11 @@ const LaunchTeamDialogContent = (props: LaunchTeamDialogProps): React.JSX.Elemen
   useEffect(() => {
     if (!open || !isSchedule) return;
     scheduleRuntimeEditedRef.current = {
-      provider: false, model: false, effort: false, fastMode: false, skipPermissions: false,
+      provider: false,
+      model: false,
+      effort: false,
+      fastMode: false,
+      skipPermissions: false,
     };
     if (schedule) {
       // Edit mode — preserve the missing mode of existing schedules on Save.
@@ -1014,14 +1048,18 @@ const LaunchTeamDialogContent = (props: LaunchTeamDialogProps): React.JSX.Elemen
     setLimitContextRaw(launchPrefill.limitContext);
     const storedSkipPermissions = localStorage.getItem('team:lastSkipPermissions') !== 'false';
     setSkipPermissionsRaw(
-      savedLaunchSource.projectSkipPermissions ?? savedRequest?.skipPermissions ??
+      savedLaunchSource.projectSkipPermissions ??
+        savedRequest?.skipPermissions ??
         (isHostSavedRequest(savedRequest) ? true : storedSkipPermissions)
     );
     if (savedRequest && savedLaunchSource.host) {
       hydrateOwnerPrompt(savedRequest.prompt ?? '');
       hydrateAdvancedSettings(savedRequest);
-      setCustomCwd(projectPermissionTeamName !== undefined
-        ? (defaultProjectPath ?? savedRequest.cwd) : savedRequest.cwd);
+      setCustomCwd(
+        projectPermissionTeamName !== undefined
+          ? (defaultProjectPath ?? savedRequest.cwd)
+          : savedRequest.cwd
+      );
       setCwdMode('custom');
       preserveHydratedLocalOverride.current = true;
       setLocalOverrideHydration((revision) => revision + 1);
@@ -1492,36 +1530,33 @@ const LaunchTeamDialogContent = (props: LaunchTeamDialogProps): React.JSX.Elemen
     if (preserveHydratedLocalOverride.current) preserveHydratedLocalOverride.current = false;
     else setAllowExperimentalLocalModels(false);
   }, [effectiveCwd, selectedModelChecksByProviderSignature, localOverrideHydration]);
-  const shortLivedModelIssueReasons = useMemo(
-    () => {
-      void prepareChecks;
-      void selectedModelChecksByProviderSignature;
-      return readLaunchPrepareModelIssues({
-        context: { kind: 'team', teamName: effectiveTeamName },
-        isLaunchMode,
-        selectedMemberProviders,
-        runtimeBackendSummaryByProvider,
-        runtimeProviderStatusById,
-        selectedModelChecksByProvider,
-        cwd: effectiveCwd,
-        limitContext: effectiveAnthropicRuntimeLimitContext,
-        invalidationEpochByProviderId: prepareProviderInvalidationEpochById,
-      });
-    },
-    [
-      effectiveAnthropicRuntimeLimitContext,
-      effectiveCwd,
-      effectiveTeamName,
+  const shortLivedModelIssueReasons = useMemo(() => {
+    void prepareChecks;
+    void selectedModelChecksByProviderSignature;
+    return readLaunchPrepareModelIssues({
+      context: { kind: 'team', teamName: effectiveTeamName },
       isLaunchMode,
-      prepareChecks,
-      prepareProviderInvalidationEpochById,
+      selectedMemberProviders,
       runtimeBackendSummaryByProvider,
       runtimeProviderStatusById,
       selectedModelChecksByProvider,
-      selectedModelChecksByProviderSignature,
-      selectedMemberProviders,
-    ]
-  );
+      cwd: effectiveCwd,
+      limitContext: effectiveAnthropicRuntimeLimitContext,
+      invalidationEpochByProviderId: prepareProviderInvalidationEpochById,
+    });
+  }, [
+    effectiveAnthropicRuntimeLimitContext,
+    effectiveCwd,
+    effectiveTeamName,
+    isLaunchMode,
+    prepareChecks,
+    prepareProviderInvalidationEpochById,
+    runtimeBackendSummaryByProvider,
+    runtimeProviderStatusById,
+    selectedModelChecksByProvider,
+    selectedModelChecksByProviderSignature,
+    selectedMemberProviders,
+  ]);
 
   const capturedReadiness = useCapturedTeamLaunchReadiness({
     sourceRevision: hydrationSourceRevision.current,
@@ -1740,12 +1775,15 @@ const LaunchTeamDialogContent = (props: LaunchTeamDialogProps): React.JSX.Elemen
               providerId: plan.providerId,
               selectedModelIds: plan.selectedModelIds,
               selectedModelChecks: plan.selectedModelChecks,
-              prepareProvisioning: bindTeamProvisioningContext(retained?.prepareProvisioning ?? api.teams.prepareProvisioning, {
-                kind: 'team',
-                teamName: effectiveTeamName,
-                selectedModelChecks: plan.selectedModelChecks,
-                preparationId: plan.preparationId,
-              }),
+              prepareProvisioning: bindTeamProvisioningContext(
+                retained?.prepareProvisioning ?? api.teams.prepareProvisioning,
+                {
+                  kind: 'team',
+                  teamName: effectiveTeamName,
+                  selectedModelChecks: plan.selectedModelChecks,
+                  preparationId: plan.preparationId,
+                }
+              ),
               limitContext: effectiveAnthropicRuntimeLimitContext,
               cachedModelResultsById: plan.cachedModelResultsById,
               onModelProgress: ({ status, details }) => {
@@ -2045,7 +2083,8 @@ const LaunchTeamDialogContent = (props: LaunchTeamDialogProps): React.JSX.Elemen
   // Validation
 
   const validationErrors = validateScheduleForm({
-    isSchedule, usesSavedTeamRuntime: usesSavedTeamRuntime && !(projectScope && !isEditing),
+    isSchedule,
+    usesSavedTeamRuntime: usesSavedTeamRuntime && !(projectScope && !isEditing),
     mode: scheduleExecutionMode,
     targetMember: scheduleTargetMember,
     team: teamByName[effectiveTeamName],
@@ -2122,7 +2161,11 @@ const LaunchTeamDialogContent = (props: LaunchTeamDialogProps): React.JSX.Elemen
   }, [isLaunchMode, membersDrafts]);
 
   const provisioningError = isLaunchMode ? props.provisioningError : null;
-  const activeError = localError ?? (!isSchedule || isEditing || scheduleFormTouched ? validationErrors[0] : null) ?? (usesSavedTeamRuntime ? null : modelValidationError) ?? provisioningError;
+  const activeError =
+    localError ??
+    (!isSchedule || isEditing || scheduleFormTouched ? validationErrors[0] : null) ??
+    (usesSavedTeamRuntime ? null : modelValidationError) ??
+    provisioningError;
   const effectivePrepare = useMemo(
     () =>
       deriveEffectiveProvisioningPrepareState({
@@ -2300,18 +2343,26 @@ const LaunchTeamDialogContent = (props: LaunchTeamDialogProps): React.JSX.Elemen
         } else {
           // Whole-team schedules must use the saved team launch profile, never
           // a legacy one-shot cwd or unsaved renderer project selection.
-          const savedTeam = usesSavedTeamRuntime ? await api.teams.getSavedRequest(effectiveTeamName) : null;
+          const savedTeam = usesSavedTeamRuntime
+            ? await api.teams.getSavedRequest(effectiveTeamName)
+            : null;
           if (usesSavedTeamRuntime && (!savedTeam?.cwd?.trim() || !savedTeam.providerId)) {
             throw new Error(t('launch.schedule.teamPathMissing'));
           }
           const oldPrompt = savedTeam?.prompt?.trim() ?? '';
-          const reviewedSavedPrompt = Boolean(oldPrompt && (
-            schedule?.reviewedSavedPrompt === true ||
-            (savedPromptReview?.teamName === effectiveTeamName &&
-              savedPromptReview.prompt === oldPrompt && savedPromptReview.confirmed)
-          ));
+          const reviewedSavedPrompt = Boolean(
+            oldPrompt &&
+            (schedule?.reviewedSavedPrompt === true ||
+              (savedPromptReview?.teamName === effectiveTeamName &&
+                savedPromptReview.prompt === oldPrompt &&
+                savedPromptReview.confirmed))
+          );
           if (isTaskFirstSchedule && oldPrompt && !reviewedSavedPrompt) {
-            setSavedPromptReview({ teamName: effectiveTeamName, prompt: oldPrompt, confirmed: false });
+            setSavedPromptReview({
+              teamName: effectiveTeamName,
+              prompt: oldPrompt,
+              confirmed: false,
+            });
             return;
           }
           const parsedBudget = maxBudgetUsd ? parseFloat(maxBudgetUsd) : undefined;
@@ -2352,19 +2403,23 @@ const LaunchTeamDialogContent = (props: LaunchTeamDialogProps): React.JSX.Elemen
               providerBackendId: selectedProviderBackendId,
               model: scheduleModel,
               effort: scheduleEffort,
-              fastMode: selectedProviderId === 'anthropic' || selectedProviderId === 'codex'
-                ? selectedFastMode : undefined,
-              resolvedFastMode: selectedProviderId === 'anthropic'
-                ? (anthropicFastModeResolution?.resolvedFastMode ?? false)
-                : selectedProviderId === 'codex'
-                  ? (codexFastModeResolution?.resolvedFastMode ?? false)
+              fastMode:
+                selectedProviderId === 'anthropic' || selectedProviderId === 'codex'
+                  ? selectedFastMode
                   : undefined,
+              resolvedFastMode:
+                selectedProviderId === 'anthropic'
+                  ? (anthropicFastModeResolution?.resolvedFastMode ?? false)
+                  : selectedProviderId === 'codex'
+                    ? (codexFastModeResolution?.resolvedFastMode ?? false)
+                    : undefined,
               skipPermissions,
             },
           });
 
           if (!usesSavedTeamRuntime && !supportsScheduleLimits) {
-            launchConfig.allowedTools = []; launchConfig.disallowedTools = [];
+            launchConfig.allowedTools = [];
+            launchConfig.disallowedTools = [];
           }
 
           if (isEditing && schedule) {
@@ -2376,8 +2431,16 @@ const LaunchTeamDialogContent = (props: LaunchTeamDialogProps): React.JSX.Elemen
               cronExpression: cronExpression.trim(),
               timezone,
               warmUpMinutes: scheduleExecutionMode === 'legacy' ? warmUpMinutes : 0,
-              maxTurns: usesSavedTeamRuntime ? schedule.maxTurns : supportsScheduleLimits ? maxTurns : null,
-              maxBudgetUsd: usesSavedTeamRuntime ? schedule.maxBudgetUsd : supportsScheduleLimits ? parsedBudget ?? null : null,
+              maxTurns: usesSavedTeamRuntime
+                ? schedule.maxTurns
+                : supportsScheduleLimits
+                  ? maxTurns
+                  : null,
+              maxBudgetUsd: usesSavedTeamRuntime
+                ? schedule.maxBudgetUsd
+                : supportsScheduleLimits
+                  ? (parsedBudget ?? null)
+                  : null,
               launchConfig,
               ...(reviewedSavedPrompt && { reviewedSavedPrompt: true as const }),
             };
@@ -2394,7 +2457,8 @@ const LaunchTeamDialogContent = (props: LaunchTeamDialogProps): React.JSX.Elemen
               timezone,
               warmUpMinutes: scheduleExecutionMode === 'legacy' ? warmUpMinutes : 0,
               maxTurns: isTaskFirstSchedule ? 50 : supportsScheduleLimits ? maxTurns : undefined,
-              maxBudgetUsd: isTaskFirstSchedule || !supportsScheduleLimits ? undefined : parsedBudget,
+              maxBudgetUsd:
+                isTaskFirstSchedule || !supportsScheduleLimits ? undefined : parsedBudget,
               launchConfig,
             };
             await createSchedule(input);
@@ -2449,7 +2513,9 @@ const LaunchTeamDialogContent = (props: LaunchTeamDialogProps): React.JSX.Elemen
           hasDuplicateLaunchMemberNames ||
           prepareBlocksLaunch ||
           teammateRuntimeCompatibility.blocksSubmission
-        : isSubmitting || ((isEditing || scheduleFormTouched) && validationErrors.length > 0) || (!usesSavedTeamRuntime && !!modelValidationError));
+        : isSubmitting ||
+          ((isEditing || scheduleFormTouched) && validationErrors.length > 0) ||
+          (!usesSavedTeamRuntime && !!modelValidationError));
   const { dialogTitle, submitLabel, submittingLabel } = getLaunchDialogActionLabels(
     props.mode,
     isEditing,
@@ -2487,348 +2553,410 @@ const LaunchTeamDialogContent = (props: LaunchTeamDialogProps): React.JSX.Elemen
         }
       }}
     >
-      <OpenCodeSourceDirectoryProvider deferDiscovery enabled={open && isLaunchMode && multimodelEnabled} projectPath={effectiveCwd}>
-      <DialogContent
-        className={isSchedule ? 'max-h-[90vh] max-w-[52rem] overflow-y-auto' : 'max-w-[52rem]'}
+      <OpenCodeSourceDirectoryProvider
+        deferDiscovery
+        enabled={open && isLaunchMode && multimodelEnabled}
+        projectPath={effectiveCwd}
       >
-        <ScopedCatalogLoaders configuration={openCodeCatalogLoaderConfiguration} />
-        <DialogHeader>
-          <DialogTitle className="text-sm">{dialogTitle}</DialogTitle>
-          <DialogDescription className="text-xs">{dialogDescription}</DialogDescription>
-        </DialogHeader>
-        {isRelaunch ? (
-          <div
-            className="rounded-md border p-3 text-xs"
-            style={{
-              backgroundColor: 'var(--warning-bg)',
-              borderColor: 'var(--warning-border)',
-              color: 'var(--warning-text)',
-            }}
-          >
-            <div className="flex items-start gap-2">
-              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-              <div className="min-w-0 flex-1 space-y-1">
-                <p className="font-medium">{t('launch.relaunchWarning.title')}</p>
-                <p className="opacity-80">{t('launch.relaunchWarning.description')}</p>
-              </div>
-            </div>
-          </div>
-        ) : null}
-        <HostTeamResumeSection controls={resume.controls} />
-
-        {/* Launch-only: Conflict warning */}
-        {isLaunchMode && conflictingTeam && !conflictDismissed ? (
-          <div
-            className="rounded-md border p-3 text-xs"
-            style={{
-              backgroundColor: 'var(--warning-bg)',
-              borderColor: 'var(--warning-border)',
-              color: 'var(--warning-text)',
-            }}
-          >
-            <div className="flex items-start gap-2">
-              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-              <div className="min-w-0 flex-1 space-y-1">
-                <p className="font-medium">
-                  {t('launch.conflict.title', { team: conflictingTeam.displayName })}
-                </p>
-                <p className="opacity-80">{t('launch.conflict.description')}</p>
-                <p className="text-[11px] opacity-70">
-                  {t('launch.conflict.workingDirectory')}{' '}
-                  <span className="font-mono">{effectiveCwd}</span>
-                </p>
-              </div>
-              <button
-                type="button"
-                className="shrink-0 rounded p-0.5 opacity-60 transition-colors hover:opacity-100"
-                onClick={() => setConflictDismissed(true)}
-              >
-                <X className="size-3.5" />
-              </button>
-            </div>
-          </div>
-        ) : null}
-        <fieldset
-          disabled={ownerHydrationPending}
-          aria-busy={ownerHydrationPending}
-          className="space-y-4"
+        <DialogContent
+          className={isSchedule ? 'max-h-[90vh] max-w-[52rem] overflow-y-auto' : 'max-w-[52rem]'}
         >
-          {needsTeamSelector ? (
-            <div className="space-y-1.5">
-              <Label className="text-xs">{t('launch.schedule.team')}</Label>
-              <Combobox
-                options={teamOptions}
-                value={selectedTeamName}
-                onValueChange={(name) => { setSelectedTeamName(name); setScheduleFormTouched(true); setLocalError(null); }}
-                placeholder={t('launch.schedule.selectTeam')}
-                searchPlaceholder={t('launch.schedule.searchTeams')}
-                emptyMessage={
-                  teamOptions.length === 0
-                    ? t('launch.schedule.noTeams')
-                    : t('launch.schedule.noMatches')
-                }
-                disabled={teamOptions.length === 0}
-                renderOption={(option, isSelected) => {
-                  const colorName = option.meta?.color as string | undefined;
-                  const colorSet = colorName
-                    ? getTeamColorSet(colorName)
-                    : nameColorSet(option.label);
-                  return (
-                    <>
-                      {isSelected ? (
-                        <Check className="mr-2 size-3.5 shrink-0 text-[var(--color-text)]" />
-                      ) : (
-                        <span
-                          className="mr-2 size-3.5 shrink-0 rounded-full"
-                          style={{ backgroundColor: colorSet.text }}
-                        />
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
-                          {isSelected ? (
-                            <span
-                              className="size-2 shrink-0 rounded-full"
-                              style={{ backgroundColor: colorSet.text }}
-                            />
+          <ScopedCatalogLoaders configuration={openCodeCatalogLoaderConfiguration} />
+          <DialogHeader>
+            <DialogTitle className="text-sm">{dialogTitle}</DialogTitle>
+            <DialogDescription className="text-xs">{dialogDescription}</DialogDescription>
+          </DialogHeader>
+          {isRelaunch ? (
+            <div
+              className="rounded-md border p-3 text-xs"
+              style={{
+                backgroundColor: 'var(--warning-bg)',
+                borderColor: 'var(--warning-border)',
+                color: 'var(--warning-text)',
+              }}
+            >
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                <div className="min-w-0 flex-1 space-y-1">
+                  <p className="font-medium">{t('launch.relaunchWarning.title')}</p>
+                  <p className="opacity-80">{t('launch.relaunchWarning.description')}</p>
+                </div>
+              </div>
+            </div>
+          ) : null}
+          <HostTeamResumeSection controls={resume.controls} />
+
+          {/* Launch-only: Conflict warning */}
+          {isLaunchMode && conflictingTeam && !conflictDismissed ? (
+            <div
+              className="rounded-md border p-3 text-xs"
+              style={{
+                backgroundColor: 'var(--warning-bg)',
+                borderColor: 'var(--warning-border)',
+                color: 'var(--warning-text)',
+              }}
+            >
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                <div className="min-w-0 flex-1 space-y-1">
+                  <p className="font-medium">
+                    {t('launch.conflict.title', { team: conflictingTeam.displayName })}
+                  </p>
+                  <p className="opacity-80">{t('launch.conflict.description')}</p>
+                  <p className="text-[11px] opacity-70">
+                    {t('launch.conflict.workingDirectory')}{' '}
+                    <span className="font-mono">{effectiveCwd}</span>
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="shrink-0 rounded p-0.5 opacity-60 transition-colors hover:opacity-100"
+                  onClick={() => setConflictDismissed(true)}
+                >
+                  <X className="size-3.5" />
+                </button>
+              </div>
+            </div>
+          ) : null}
+          <fieldset
+            disabled={ownerHydrationPending}
+            aria-busy={ownerHydrationPending}
+            className="space-y-4"
+          >
+            {needsTeamSelector ? (
+              <div className="space-y-1.5">
+                <Label className="text-xs">{t('launch.schedule.team')}</Label>
+                <Combobox
+                  options={teamOptions}
+                  value={selectedTeamName}
+                  onValueChange={(name) => {
+                    setSelectedTeamName(name);
+                    setScheduleFormTouched(true);
+                    setLocalError(null);
+                  }}
+                  placeholder={t('launch.schedule.selectTeam')}
+                  searchPlaceholder={t('launch.schedule.searchTeams')}
+                  emptyMessage={
+                    teamOptions.length === 0
+                      ? t('launch.schedule.noTeams')
+                      : t('launch.schedule.noMatches')
+                  }
+                  disabled={teamOptions.length === 0}
+                  renderOption={(option, isSelected) => {
+                    const colorName = option.meta?.color as string | undefined;
+                    const colorSet = colorName
+                      ? getTeamColorSet(colorName)
+                      : nameColorSet(option.label);
+                    return (
+                      <>
+                        {isSelected ? (
+                          <Check className="mr-2 size-3.5 shrink-0 text-[var(--color-text)]" />
+                        ) : (
+                          <span
+                            className="mr-2 size-3.5 shrink-0 rounded-full"
+                            style={{ backgroundColor: colorSet.text }}
+                          />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            {isSelected ? (
+                              <span
+                                className="size-2 shrink-0 rounded-full"
+                                style={{ backgroundColor: colorSet.text }}
+                              />
+                            ) : null}
+                            <p className="truncate font-medium text-[var(--color-text)]">
+                              {option.label}
+                            </p>
+                          </div>
+                          {option.description ? (
+                            <p className="truncate text-[var(--color-text-muted)]">
+                              {option.description}
+                            </p>
                           ) : null}
-                          <p className="truncate font-medium text-[var(--color-text)]">
-                            {option.label}
+                        </div>
+                      </>
+                    );
+                  }}
+                />
+              </div>
+            ) : null}
+
+            {isSchedule ? (
+              <SmartScheduleFields
+                isLight={isLight}
+                expanded={schedExpanded}
+                onToggle={() => setSchedExpanded((value) => !value)}
+                mode={scheduleExecutionMode}
+                taskFirst={isTaskFirstSchedule}
+                onModeChange={(mode) => {
+                  setScheduleExecutionMode(mode);
+                  setScheduleFormTouched(true);
+                  setLocalError(null);
+                }}
+                targetMember={scheduleTargetMember}
+                onTargetMemberChange={(name) => {
+                  setScheduleTargetMember(name);
+                  setScheduleFormTouched(true);
+                  setLocalError(null);
+                }}
+                team={teamByName[effectiveTeamName]}
+                label={schedLabel}
+                onLabelChange={setSchedLabel}
+                cronExpression={cronExpression}
+                onCronExpressionChange={(expression) => {
+                  setCronExpression(expression);
+                  setScheduleFormTouched(true);
+                  setLocalError(null);
+                }}
+                timezone={timezone}
+                onTimezoneChange={(zone) => {
+                  setTimezone(zone);
+                  setScheduleFormTouched(true);
+                  setLocalError(null);
+                }}
+                warmUpMinutes={warmUpMinutes}
+                onWarmUpMinutesChange={setWarmUpMinutes}
+              />
+            ) : null}
+
+            {isTaskFirstSchedule && savedPromptReview?.teamName === effectiveTeamName ? (
+              <HistoricalPromptReview
+                prompt={savedPromptReview.prompt}
+                confirmed={savedPromptReview.confirmed}
+                onConfirmedChange={(confirmed) =>
+                  setSavedPromptReview((current) => current && { ...current, confirmed })
+                }
+              />
+            ) : null}
+
+            {!usesSavedTeamRuntime || (projectScope && !isEditing) ? (
+              <LaunchTeamProjectSelector
+                cwdMode={cwdMode}
+                onCwdModeChange={(mode) => {
+                  if (projectPermissionTeamName !== undefined && mode !== cwdMode)
+                    setSkipPermissions(false);
+                  setCwdMode(mode);
+                }}
+                selectedProjectPath={selectedProjectPath}
+                onSelectedProjectPathChange={(path) => {
+                  requireExplicitPermissionsForOtherProject(path);
+                  setSelectedProjectPath(path);
+                }}
+                customCwd={customCwd}
+                onCustomCwdChange={(path) => {
+                  requireExplicitPermissionsForOtherProject(path);
+                  setCustomCwd(path);
+                }}
+                markEdited={markLaunchEdited}
+                projects={projects}
+                projectsLoading={projectsLoading}
+                projectsError={projectsError}
+                onProjectsDropdownOpen={requestProjectListLoad}
+                customFolder={customProjectFolder}
+              />
+            ) : null}
+
+            {isLaunchMode ? (
+              <OptionalSettingsSection
+                title={
+                  isRelaunch
+                    ? t('launch.optionalSettings.relaunchTitle')
+                    : t('launch.optionalSettings.title')
+                }
+                description={
+                  isRelaunch
+                    ? t('launch.optionalSettings.relaunchDescription')
+                    : t('launch.optionalSettings.description')
+                }
+                summary={launchOptionalSummary}
+              >
+                <div className="space-y-4">
+                  {providerControlsReady && selectedProviderId === 'anthropic' ? (
+                    <div className="space-y-2">
+                      <AnthropicFastModeSelector
+                        value={selectedFastMode}
+                        onValueChange={setSelectedFastMode}
+                        providerFastModeDefault={anthropicProviderFastModeDefault}
+                        model={selectedModel}
+                        projectPath={effectiveCwd}
+                        limitContext={effectiveAnthropicRuntimeLimitContext}
+                        id="launch-fast-mode"
+                      />
+                      {anthropicRuntimeNotice ? (
+                        <div className="bg-amber-500/8 flex items-start gap-2 rounded-md border border-amber-500/25 px-3 py-2 text-[11px] leading-relaxed text-amber-200">
+                          <Info className="mt-0.5 size-3.5 shrink-0 text-amber-300" />
+                          <p>{anthropicRuntimeNotice}</p>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {providerControlsReady && selectedProviderId === 'codex' ? (
+                    <div className="space-y-2">
+                      <CodexFastModeSelector
+                        value={selectedFastMode}
+                        onValueChange={setSelectedFastMode}
+                        model={selectedModel}
+                        providerBackendId={resolveLaunchProviderBackendId(
+                          'codex',
+                          runtimeProviderStatusById.get('codex'),
+                          previousLaunchParams?.providerBackendId ?? savedLaunchProviderBackendId
+                        )}
+                        id="launch-fast-mode"
+                      />
+                      {anthropicRuntimeNotice ? (
+                        <div className="bg-amber-500/8 flex items-start gap-2 rounded-md border border-amber-500/25 px-3 py-2 text-[11px] leading-relaxed text-amber-200">
+                          <Info className="mt-0.5 size-3.5 shrink-0 text-amber-300" />
+                          <p>{anthropicRuntimeNotice}</p>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {props.rosterReadOnly && (
+                    <p className="text-xs text-text-muted">
+                      {t('launch.projectScopedRosterReadOnly')}
+                    </p>
+                  )}
+                  {providerControlsReady && !props.rosterReadOnly ? (
+                    <TeamRosterEditorSection
+                      runtimeSelectionUnresolved={runtimeSelectionUnresolved}
+                      members={membersDrafts}
+                      onMembersChange={setMembersDraftsFromUser}
+                      teamName={effectiveTeamName}
+                      gatewayBindings={gatewayBindings}
+                      validateMemberName={validateMemberNameInline}
+                      showWorkflow
+                      showJsonEditor
+                      draftKeyPrefix={`launchTeam:${effectiveTeamName}`}
+                      projectPath={effectiveCwd || null}
+                      taskSuggestions={taskSuggestions}
+                      teamSuggestions={teamMentionSuggestions}
+                      existingMembers={members}
+                      defaultProviderId={selectedProviderId}
+                      inheritedProviderId={selectedProviderId}
+                      inheritedModel={selectedModel}
+                      inheritedEffort={
+                        (selectedEffortForCurrentSelection as EffortLevel) || undefined
+                      }
+                      inheritModelSettingsByDefault
+                      lockProviderModel={runtimeSelectionUnresolved || syncModelsWithLead}
+                      forceInheritedModelSettings={runtimeSelectionUnresolved || syncModelsWithLead}
+                      teammatesInheritLeadModel={relaunchInheritedSync !== false}
+                      modelLockReason="This teammate is synced with the lead model. Turn off sync to set a custom provider, model, or effort."
+                      providerId={selectedProviderId}
+                      model={selectedModel}
+                      effort={(selectedEffortForCurrentSelection as EffortLevel) || undefined}
+                      limitContext={effectiveAnthropicRuntimeLimitContext}
+                      runtimeProviderStatusById={runtimeProviderStatusById}
+                      onOpenCodeProviderScopedStatusChange={
+                        handleOpenCodeProviderScopedStatusChange
+                      }
+                      onOpenProviderSettings={setProviderSettingsProviderId}
+                      providerReadyById={providerReadyById}
+                      onProviderChange={setSelectedProviderId}
+                      onModelChange={setSelectedModel}
+                      preserveSelectedModel
+                      onEffortChange={setSelectedEffort}
+                      onEffortAutoReset={autoResetSelectedEffort}
+                      onLimitContextChange={setLimitContext}
+                      syncModelsWithTeammates={syncModelsWithLead}
+                      onSyncModelsWithTeammatesChange={setSyncModelsWithLeadFromUser}
+                      showWorktreeIsolationControls
+                      teammateWorktreeDefault={teammateWorktreeDefault}
+                      worktreeIsolationDisabledReason={worktreeIsolationDisabledReason}
+                      onTeammateWorktreeDefaultChange={setTeammateWorktreeDefaultFromUser}
+                      leadWarningText={leadRuntimeWarningText}
+                      memberWarningById={combinedMemberRuntimeWarningById}
+                      memberErrorById={teammateRuntimeCompatibility.memberErrorById}
+                      memberInfoById={memberWorktreeContinuationInfoById}
+                      leadModelIssueText={leadModelIssueText}
+                      memberModelIssueById={memberModelIssueById}
+                      modelAdvisoryReasonByProvider={
+                        shortLivedModelIssueReasons.modelAdvisoryReasonByProvider
+                      }
+                      modelIssueReasonByProvider={
+                        shortLivedModelIssueReasons.modelIssueReasonByProvider
+                      }
+                      modelUnavailableReasonByProvider={
+                        shortLivedModelIssueReasons.modelUnavailableReasonByProvider
+                      }
+                      softDeleteMembers
+                      disableGeminiOption={isGeminiUiFrozen()}
+                      headerBottom={
+                        showRosterTeammateRuntimeCompatibility || hasSelectedWorktreeIsolation ? (
+                          <div className="space-y-2">
+                            {showRosterTeammateRuntimeCompatibility ? (
+                              <TeammateRuntimeCompatibilityNotice
+                                analysis={teammateRuntimeCompatibility}
+                                onOpenDashboard={() => {
+                                  closeDialog();
+                                  openDashboard();
+                                }}
+                              />
+                            ) : null}
+                            {hasSelectedWorktreeIsolation ? (
+                              <WorktreeGitReadinessBanner state={worktreeGitReadiness} />
+                            ) : null}
+                          </div>
+                        ) : null
+                      }
+                    />
+                  ) : null}
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="dialog-prompt">{t('launch.prompt.teamLeadOptional')}</Label>
+                    <MentionableTextarea
+                      id="dialog-prompt"
+                      className="min-h-[100px] text-xs"
+                      minRows={4}
+                      maxRows={12}
+                      value={promptDraft.value}
+                      onValueChange={promptDraft.setValue}
+                      suggestions={mentionSuggestions}
+                      projectPath={effectiveCwd || null}
+                      chips={chipDraft.chips}
+                      onChipRemove={chipDraft.removeChip}
+                      onFileChipInsert={chipDraft.addChip}
+                      placeholder={t('launch.prompt.teamLeadPlaceholder')}
+                      footerRight={
+                        promptDraft.isSaved ? (
+                          <span className="text-[10px] text-[var(--color-text-muted)]">
+                            {t('launch.prompt.saved')}
+                          </span>
+                        ) : null
+                      }
+                    />
+                  </div>
+
+                  <div>
+                    <SkipPermissionsCheckbox
+                      id="dialog-skip-permissions"
+                      checked={skipPermissions}
+                      onCheckedChange={setSkipPermissions}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    {providerChangeForcesFreshLeadContext ? (
+                      <div
+                        className="rounded-md border px-3 py-2 text-xs"
+                        style={{
+                          backgroundColor: 'var(--warning-bg)',
+                          borderColor: 'var(--warning-border)',
+                          color: 'var(--warning-text)',
+                        }}
+                      >
+                        <div className="flex items-start gap-2">
+                          <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                          <p>
+                            {t('launch.providerChanged', {
+                              from: getProviderLabel(previousProviderId!),
+                              to: getProviderLabel(selectedProviderId),
+                            })}
                           </p>
                         </div>
-                        {option.description ? (
-                          <p className="truncate text-[var(--color-text-muted)]">
-                            {option.description}
-                          </p>
-                        ) : null}
-                      </div>
-                    </>
-                  );
-                }}
-              />
-            </div>
-          ) : null}
-
-          {isSchedule ? (
-            <SmartScheduleFields
-              isLight={isLight}
-              expanded={schedExpanded}
-              onToggle={() => setSchedExpanded((value) => !value)}
-              mode={scheduleExecutionMode}
-              taskFirst={isTaskFirstSchedule}
-              onModeChange={(mode) => { setScheduleExecutionMode(mode); setScheduleFormTouched(true); setLocalError(null); }}
-              targetMember={scheduleTargetMember}
-              onTargetMemberChange={(name) => { setScheduleTargetMember(name); setScheduleFormTouched(true); setLocalError(null); }}
-              team={teamByName[effectiveTeamName]}
-              label={schedLabel}
-              onLabelChange={setSchedLabel}
-              cronExpression={cronExpression}
-              onCronExpressionChange={(expression) => { setCronExpression(expression); setScheduleFormTouched(true); setLocalError(null); }}
-              timezone={timezone}
-              onTimezoneChange={(zone) => { setTimezone(zone); setScheduleFormTouched(true); setLocalError(null); }}
-              warmUpMinutes={warmUpMinutes}
-              onWarmUpMinutesChange={setWarmUpMinutes}
-            />
-          ) : null}
-
-          {isTaskFirstSchedule && savedPromptReview?.teamName === effectiveTeamName ? (
-            <HistoricalPromptReview prompt={savedPromptReview.prompt} confirmed={savedPromptReview.confirmed}
-              onConfirmedChange={(confirmed) => setSavedPromptReview((current) => current && ({ ...current, confirmed }))} />
-          ) : null}
-
-          {!usesSavedTeamRuntime || (projectScope && !isEditing) ? <LaunchTeamProjectSelector
-            cwdMode={cwdMode}
-            onCwdModeChange={(mode) => {
-              if (projectPermissionTeamName !== undefined && mode !== cwdMode) setSkipPermissions(false);
-              setCwdMode(mode);
-            }}
-            selectedProjectPath={selectedProjectPath}
-            onSelectedProjectPathChange={(path) => {
-              requireExplicitPermissionsForOtherProject(path);
-              setSelectedProjectPath(path);
-            }}
-            customCwd={customCwd}
-            onCustomCwdChange={(path) => {
-              requireExplicitPermissionsForOtherProject(path);
-              setCustomCwd(path);
-            }}
-            markEdited={markLaunchEdited}
-            projects={projects} projectsLoading={projectsLoading} projectsError={projectsError}
-            onProjectsDropdownOpen={requestProjectListLoad} customFolder={customProjectFolder}
-          /> : null}
-
-          {isLaunchMode ? (
-            <OptionalSettingsSection
-              title={
-                isRelaunch
-                  ? t('launch.optionalSettings.relaunchTitle')
-                  : t('launch.optionalSettings.title')
-              }
-              description={
-                isRelaunch
-                  ? t('launch.optionalSettings.relaunchDescription')
-                  : t('launch.optionalSettings.description')
-              }
-              summary={launchOptionalSummary}
-            >
-              <div className="space-y-4">
-                {providerControlsReady && selectedProviderId === 'anthropic' ? (
-                  <div className="space-y-2">
-                    <AnthropicFastModeSelector
-                      value={selectedFastMode}
-                      onValueChange={setSelectedFastMode}
-                      providerFastModeDefault={anthropicProviderFastModeDefault}
-                      model={selectedModel}
-                      projectPath={effectiveCwd}
-                      limitContext={effectiveAnthropicRuntimeLimitContext}
-                      id="launch-fast-mode"
-                    />
-                    {anthropicRuntimeNotice ? (
-                      <div className="bg-amber-500/8 flex items-start gap-2 rounded-md border border-amber-500/25 px-3 py-2 text-[11px] leading-relaxed text-amber-200">
-                        <Info className="mt-0.5 size-3.5 shrink-0 text-amber-300" />
-                        <p>{anthropicRuntimeNotice}</p>
                       </div>
                     ) : null}
-                  </div>
-                ) : null}
-                {providerControlsReady && selectedProviderId === 'codex' ? (
-                  <div className="space-y-2">
-                    <CodexFastModeSelector
-                      value={selectedFastMode}
-                      onValueChange={setSelectedFastMode}
-                      model={selectedModel}
-                      providerBackendId={resolveLaunchProviderBackendId(
-                        'codex',
-                        runtimeProviderStatusById.get('codex'),
-                        previousLaunchParams?.providerBackendId ?? savedLaunchProviderBackendId
-                      )}
-                      id="launch-fast-mode"
-                    />
-                    {anthropicRuntimeNotice ? (
-                      <div className="bg-amber-500/8 flex items-start gap-2 rounded-md border border-amber-500/25 px-3 py-2 text-[11px] leading-relaxed text-amber-200">
-                        <Info className="mt-0.5 size-3.5 shrink-0 text-amber-300" />
-                        <p>{anthropicRuntimeNotice}</p>
-                      </div>
-                    ) : null}
-                  </div>
-                ) : null}
-                {props.rosterReadOnly && <p className="text-xs text-text-muted">{t('launch.projectScopedRosterReadOnly')}</p>}
-                {providerControlsReady && !props.rosterReadOnly ? <TeamRosterEditorSection
-                  runtimeSelectionUnresolved={runtimeSelectionUnresolved}
-                  members={membersDrafts}
-                  onMembersChange={setMembersDraftsFromUser}
-                  teamName={effectiveTeamName}
-                  gatewayBindings={gatewayBindings}
-                  validateMemberName={validateMemberNameInline}
-                  showWorkflow
-                  showJsonEditor
-                  draftKeyPrefix={`launchTeam:${effectiveTeamName}`}
-                  projectPath={effectiveCwd || null}
-                  taskSuggestions={taskSuggestions}
-                  teamSuggestions={teamMentionSuggestions}
-                  existingMembers={members}
-                  defaultProviderId={selectedProviderId}
-                  inheritedProviderId={selectedProviderId}
-                  inheritedModel={selectedModel}
-                  inheritedEffort={(selectedEffortForCurrentSelection as EffortLevel) || undefined}
-                  inheritModelSettingsByDefault
-                  lockProviderModel={runtimeSelectionUnresolved || syncModelsWithLead}
-                  forceInheritedModelSettings={runtimeSelectionUnresolved || syncModelsWithLead}
-                  teammatesInheritLeadModel={relaunchInheritedSync !== false}
-                  modelLockReason="This teammate is synced with the lead model. Turn off sync to set a custom provider, model, or effort."
-                  providerId={selectedProviderId}
-                  model={selectedModel}
-                  effort={(selectedEffortForCurrentSelection as EffortLevel) || undefined}
-                  limitContext={effectiveAnthropicRuntimeLimitContext}
-                  runtimeProviderStatusById={runtimeProviderStatusById}
-                  onOpenCodeProviderScopedStatusChange={handleOpenCodeProviderScopedStatusChange}
-                  onOpenProviderSettings={setProviderSettingsProviderId}
-                  providerReadyById={providerReadyById}
-                  onProviderChange={setSelectedProviderId}
-                  onModelChange={setSelectedModel}
-                  preserveSelectedModel
-                  onEffortChange={setSelectedEffort}
-                  onEffortAutoReset={autoResetSelectedEffort}
-                  onLimitContextChange={setLimitContext}
-                  syncModelsWithTeammates={syncModelsWithLead}
-                  onSyncModelsWithTeammatesChange={setSyncModelsWithLeadFromUser}
-                  showWorktreeIsolationControls
-                  teammateWorktreeDefault={teammateWorktreeDefault}
-                  worktreeIsolationDisabledReason={worktreeIsolationDisabledReason}
-                  onTeammateWorktreeDefaultChange={setTeammateWorktreeDefaultFromUser}
-                  leadWarningText={leadRuntimeWarningText}
-                  memberWarningById={combinedMemberRuntimeWarningById}
-                  memberErrorById={teammateRuntimeCompatibility.memberErrorById}
-                  memberInfoById={memberWorktreeContinuationInfoById}
-                  leadModelIssueText={leadModelIssueText}
-                  memberModelIssueById={memberModelIssueById}
-                  modelAdvisoryReasonByProvider={
-                    shortLivedModelIssueReasons.modelAdvisoryReasonByProvider
-                  }
-                  modelIssueReasonByProvider={
-                    shortLivedModelIssueReasons.modelIssueReasonByProvider
-                  }
-                  modelUnavailableReasonByProvider={
-                    shortLivedModelIssueReasons.modelUnavailableReasonByProvider
-                  }
-                  softDeleteMembers
-                  disableGeminiOption={isGeminiUiFrozen()}
-                  headerBottom={
-                    showRosterTeammateRuntimeCompatibility || hasSelectedWorktreeIsolation ? (
-                      <div className="space-y-2">
-                        {showRosterTeammateRuntimeCompatibility ? (
-                          <TeammateRuntimeCompatibilityNotice
-                            analysis={teammateRuntimeCompatibility}
-                            onOpenDashboard={() => {
-                              closeDialog();
-                              openDashboard();
-                            }}
-                          />
-                        ) : null}
-                        {hasSelectedWorktreeIsolation ? (
-                          <WorktreeGitReadinessBanner state={worktreeGitReadiness} />
-                        ) : null}
-                      </div>
-                    ) : null
-                  }
-                /> : null}
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="dialog-prompt">
-                    {t('launch.prompt.teamLeadOptional')}
-                  </Label>
-                  <MentionableTextarea
-                    id="dialog-prompt"
-                    className="min-h-[100px] text-xs"
-                    minRows={4}
-                    maxRows={12}
-                    value={promptDraft.value}
-                    onValueChange={promptDraft.setValue}
-                    suggestions={mentionSuggestions}
-                    projectPath={effectiveCwd || null}
-                    chips={chipDraft.chips}
-                    onChipRemove={chipDraft.removeChip}
-                    onFileChipInsert={chipDraft.addChip}
-                    placeholder={t('launch.prompt.teamLeadPlaceholder')}
-                    footerRight={
-                      promptDraft.isSaved ? (
-                        <span className="text-[10px] text-[var(--color-text-muted)]">
-                          {t('launch.prompt.saved')}
-                        </span>
-                      ) : null
-                    }
-                  />
-                </div>
-
-                <div>
-                  <SkipPermissionsCheckbox
-                    id="dialog-skip-permissions"
-                    checked={skipPermissions}
-                    onCheckedChange={setSkipPermissions}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  {providerChangeForcesFreshLeadContext ? (
                     <div
                       className="rounded-md border px-3 py-2 text-xs"
                       style={{
@@ -2838,370 +2966,236 @@ const LaunchTeamDialogContent = (props: LaunchTeamDialogProps): React.JSX.Elemen
                       }}
                     >
                       <div className="flex items-start gap-2">
-                        <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-                        <p>
-                          {t('launch.providerChanged', {
-                            from: getProviderLabel(previousProviderId!),
-                            to: getProviderLabel(selectedProviderId),
-                          })}
-                        </p>
+                        <Info className="mt-0.5 size-3.5 shrink-0" />
+                        <p>{t('launch.relaunchFreshSession')}</p>
                       </div>
                     </div>
-                  ) : null}
-                  <div
-                    className="rounded-md border px-3 py-2 text-xs"
-                    style={{
-                      backgroundColor: 'var(--warning-bg)',
-                      borderColor: 'var(--warning-border)',
-                      color: 'var(--warning-text)',
-                    }}
-                  >
-                    <div className="flex items-start gap-2">
-                      <Info className="mt-0.5 size-3.5 shrink-0" />
-                      <p>{t('launch.relaunchFreshSession')}</p>
-                    </div>
                   </div>
-                </div>
 
-                <AdvancedCliSection
-                  teamName={effectiveTeamName}
-                  internalArgs={internalArgs}
-                  worktreeEnabled={worktreeEnabled}
-                  onWorktreeEnabledChange={setWorktreeEnabled}
-                  worktreeName={worktreeName}
-                  onWorktreeNameChange={setWorktreeName}
-                  customArgs={customArgs}
-                  onCustomArgsChange={setCustomArgs}
-                />
-              </div>
-            </OptionalSettingsSection>
-          ) : (
-            <>
-              <div className="space-y-1.5">
-                <Label htmlFor="dialog-prompt">{t('launch.prompt.label')}</Label>
-                <MentionableTextarea
-                  id="dialog-prompt"
-                  className="min-h-[100px] text-xs"
-                  minRows={4}
-                  maxRows={12}
-                  value={promptDraft.value}
-                  onValueChange={(value) => { promptDraft.setValue(value); setScheduleFormTouched(true); setLocalError(null); }}
-                  suggestions={mentionSuggestions}
-                  projectPath={
-                    usesSavedTeamRuntime && !projectScope
-                      ? teamByName[effectiveTeamName]?.projectPath || schedule?.launchConfig.cwd || null
-                      : effectiveCwd || null
-                  }
-                  chips={chipDraft.chips}
-                  onChipRemove={chipDraft.removeChip}
-                  onFileChipInsert={chipDraft.addChip}
-                  placeholder={t('launch.prompt.schedulePlaceholder')}
-                  footerRight={
-                    promptDraft.isSaved ? (
-                      <span className="text-[10px] text-[var(--color-text-muted)]">
-                        {t('launch.prompt.saved')}
-                      </span>
-                    ) : null
-                  }
-                />
-              </div>
-              {!usesSavedTeamRuntime ? <div>
-                <TeamModelSelector
-                  providerId={selectedProviderId}
-                  onProviderChange={setSelectedProviderId}
-                  value={selectedModel}
-                  limitContext={effectiveAnthropicRuntimeLimitContext}
-                  onValueChange={setSelectedModel}
-                  onNormalizedValueChange={setSelectedModelRaw}
-                  projectPath={effectiveCwd || null}
-                  id="dialog-model"
-                  disableGeminiOption={isGeminiUiFrozen()}
-                  providerDisabledReasonById={{
-                    opencode: OPENCODE_ONE_SHOT_DISABLED_REASON,
-                  }}
-                  providerDisabledBadgeLabelById={{
-                    opencode: OPENCODE_ONE_SHOT_DISABLED_BADGE_LABEL,
-                  }}
-                />
-                <EffortLevelSelector
-                  value={selectedEffortForCurrentSelection}
-                  onValueChange={setSelectedEffort}
-                  onAutoReset={autoResetSelectedEffort}
-                  id="dialog-effort"
-                  providerId={selectedProviderId}
-                  model={selectedModel}
-                  projectPath={effectiveCwd}
-                  limitContext={effectiveAnthropicRuntimeLimitContext}
-                />
-                {selectedProviderId === 'anthropic' ? (
-                  <div className="mt-2">
-                    <AnthropicFastModeSelector
-                      value={selectedFastMode}
-                      onValueChange={setSelectedFastMode}
-                      providerFastModeDefault={anthropicProviderFastModeDefault}
+                  <AdvancedCliSection
+                    teamName={effectiveTeamName}
+                    internalArgs={internalArgs}
+                    worktreeEnabled={worktreeEnabled}
+                    onWorktreeEnabledChange={setWorktreeEnabled}
+                    worktreeName={worktreeName}
+                    onWorktreeNameChange={setWorktreeName}
+                    customArgs={customArgs}
+                    onCustomArgsChange={setCustomArgs}
+                  />
+                </div>
+              </OptionalSettingsSection>
+            ) : (
+              <>
+                <div className="space-y-1.5">
+                  <Label htmlFor="dialog-prompt">{t('launch.prompt.label')}</Label>
+                  <MentionableTextarea
+                    id="dialog-prompt"
+                    className="min-h-[100px] text-xs"
+                    minRows={4}
+                    maxRows={12}
+                    value={promptDraft.value}
+                    onValueChange={(value) => {
+                      promptDraft.setValue(value);
+                      setScheduleFormTouched(true);
+                      setLocalError(null);
+                    }}
+                    suggestions={mentionSuggestions}
+                    projectPath={
+                      usesSavedTeamRuntime && !projectScope
+                        ? teamByName[effectiveTeamName]?.projectPath ||
+                          schedule?.launchConfig.cwd ||
+                          null
+                        : effectiveCwd || null
+                    }
+                    chips={chipDraft.chips}
+                    onChipRemove={chipDraft.removeChip}
+                    onFileChipInsert={chipDraft.addChip}
+                    placeholder={t('launch.prompt.schedulePlaceholder')}
+                    footerRight={
+                      promptDraft.isSaved ? (
+                        <span className="text-[10px] text-[var(--color-text-muted)]">
+                          {t('launch.prompt.saved')}
+                        </span>
+                      ) : null
+                    }
+                  />
+                </div>
+                {!usesSavedTeamRuntime ? (
+                  <div>
+                    <TeamModelSelector
+                      providerId={selectedProviderId}
+                      onProviderChange={setSelectedProviderId}
+                      value={selectedModel}
+                      limitContext={effectiveAnthropicRuntimeLimitContext}
+                      onValueChange={setSelectedModel}
+                      onNormalizedValueChange={setSelectedModelRaw}
+                      projectPath={effectiveCwd || null}
+                      id="dialog-model"
+                      disableGeminiOption={isGeminiUiFrozen()}
+                      providerDisabledReasonById={{
+                        opencode: OPENCODE_ONE_SHOT_DISABLED_REASON,
+                      }}
+                      providerDisabledBadgeLabelById={{
+                        opencode: OPENCODE_ONE_SHOT_DISABLED_BADGE_LABEL,
+                      }}
+                    />
+                    <EffortLevelSelector
+                      value={selectedEffortForCurrentSelection}
+                      onValueChange={setSelectedEffort}
+                      onAutoReset={autoResetSelectedEffort}
+                      id="dialog-effort"
+                      providerId={selectedProviderId}
                       model={selectedModel}
                       projectPath={effectiveCwd}
                       limitContext={effectiveAnthropicRuntimeLimitContext}
-                      id="dialog-fast-mode"
                     />
-                    {anthropicRuntimeNotice ? (
-                      <div className="bg-amber-500/8 mt-2 rounded-md border border-amber-500/25 px-3 py-2 text-[11px] leading-relaxed text-amber-200">
-                        {anthropicRuntimeNotice}
+                    {selectedProviderId === 'anthropic' ? (
+                      <div className="mt-2">
+                        <AnthropicFastModeSelector
+                          value={selectedFastMode}
+                          onValueChange={setSelectedFastMode}
+                          providerFastModeDefault={anthropicProviderFastModeDefault}
+                          model={selectedModel}
+                          projectPath={effectiveCwd}
+                          limitContext={effectiveAnthropicRuntimeLimitContext}
+                          id="dialog-fast-mode"
+                        />
+                        {anthropicRuntimeNotice ? (
+                          <div className="bg-amber-500/8 mt-2 rounded-md border border-amber-500/25 px-3 py-2 text-[11px] leading-relaxed text-amber-200">
+                            {anthropicRuntimeNotice}
+                          </div>
+                        ) : null}
                       </div>
                     ) : null}
-                  </div>
-                ) : null}
-                {selectedProviderId === 'codex' ? (
-                  <div className="mt-2">
-                    <CodexFastModeSelector
-                      value={selectedFastMode}
-                      onValueChange={setSelectedFastMode}
-                      model={selectedModel}
-                      providerBackendId={resolveLaunchProviderBackendId(
-                        'codex',
-                        runtimeProviderStatusById.get('codex'),
-                        previousLaunchParams?.providerBackendId ?? savedLaunchProviderBackendId
-                      )}
-                      id="dialog-fast-mode"
-                    />
-                    {anthropicRuntimeNotice ? (
-                      <div className="bg-amber-500/8 mt-2 rounded-md border border-amber-500/25 px-3 py-2 text-[11px] leading-relaxed text-amber-200">
-                        {anthropicRuntimeNotice}
+                    {selectedProviderId === 'codex' ? (
+                      <div className="mt-2">
+                        <CodexFastModeSelector
+                          value={selectedFastMode}
+                          onValueChange={setSelectedFastMode}
+                          model={selectedModel}
+                          providerBackendId={resolveLaunchProviderBackendId(
+                            'codex',
+                            runtimeProviderStatusById.get('codex'),
+                            previousLaunchParams?.providerBackendId ?? savedLaunchProviderBackendId
+                          )}
+                          id="dialog-fast-mode"
+                        />
+                        {anthropicRuntimeNotice ? (
+                          <div className="bg-amber-500/8 mt-2 rounded-md border border-amber-500/25 px-3 py-2 text-[11px] leading-relaxed text-amber-200">
+                            {anthropicRuntimeNotice}
+                          </div>
+                        ) : null}
                       </div>
                     ) : null}
+                    <SkipPermissionsCheckbox
+                      id="dialog-skip-permissions"
+                      checked={skipPermissions}
+                      onCheckedChange={setSkipPermissions}
+                    />
                   </div>
                 ) : null}
-                <SkipPermissionsCheckbox
-                  id="dialog-skip-permissions"
-                  checked={skipPermissions}
-                  onCheckedChange={setSkipPermissions}
-                />
-              </div> : null}
-            </>
-          )}
+              </>
+            )}
 
-          {isSchedule && !usesSavedTeamRuntime ? (
-            <ScheduleExecutionLimits supported={supportsScheduleLimits} maxTurns={maxTurns}
-              maxBudgetUsd={maxBudgetUsd} onMaxTurns={setMaxTurns} onMaxBudgetUsd={setMaxBudgetUsd} />
-          ) : null}
-        </fieldset>
-        {/* Error display */}
-        {activeError ? (
-          <div className="flex items-start gap-2 rounded border border-red-500/40 bg-red-500/10 p-2 text-xs text-red-300">
-            <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-            <span>{describeMemberLaunchFailureReason(activeError, t)}</span>
-          </div>
-        ) : null}
-        <DialogFooter
-          className={
-            isLaunchMode
-              ? '-mx-6 -mb-6 -mt-4 border-t border-[var(--color-border)] bg-[var(--color-surface-sidebar)] px-6 pb-5 pt-4 sm:justify-between'
-              : '-mx-6 -mb-6 -mt-4 border-t border-[var(--color-border)] bg-[var(--color-surface-sidebar)] px-6 pb-5 pt-4'
-          }
-        >
-          {/* Launch-only: CLI warm-up status */}
-          {isLaunchMode ? (
-            <div className="min-w-0">
-              <ProviderActivityStatusStrip
-                cliStatus={effectiveCliStatus}
-                providerStatusOverride={effectiveCwd ? projectScopedOpenCodeStatus : null}
-                sourceCliStatus={loadingCliStatus}
-                cliStatusLoading={cliStatusLoading}
-                cliProviderStatusLoading={cliProviderStatusLoading}
-                multimodelEnabled={multimodelEnabled}
-                codexSnapshotPending={codexSnapshotPending}
-                hasCapturedTeamReadiness={capturedReadiness.permits}
-                openCodePreparationEvidence={openCodePreparationEvidence}
-                providerIds={selectedMemberProviders}
-                label="Selected providers"
-                layout="stacked"
-                forceLoadingProviderIds={optionalPreflight.getPendingProviderPreflightIds(
-                  prepareState,
-                  selectedMemberProviders,
-                  prepareChecks
-                )}
-                showReadyProviders
-                readyStatusText="Ready"
-                className="mb-2"
+            {isSchedule && !usesSavedTeamRuntime ? (
+              <ScheduleExecutionLimits
+                supported={supportsScheduleLimits}
+                maxTurns={maxTurns}
+                maxBudgetUsd={maxBudgetUsd}
+                onMaxTurns={setMaxTurns}
+                onMaxBudgetUsd={setMaxBudgetUsd}
               />
-              {presentedPrepareState === 'loading' ? (
-                <>
-                  <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
-                    <span className="inline-block size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                    <div>
-                      {effectivePrepare.message ?? t('launch.prepare.preparingEnvironment')}
-                      <p className="mt-0.5 flex items-center gap-1.5 text-[10px] text-[var(--color-text-muted)] opacity-70">
-                        <span>
-                          {t('launch.prepare.preflight', {
-                            action: isRelaunch
-                              ? t('launch.prepare.action.relaunch')
-                              : t('launch.prepare.action.launch'),
-                          })}
-                        </span>
-                      </p>
-                    </div>
-                  </div>
-                  <ProvisioningProviderStatusList
-                    checks={prepareChecks}
-                    className="mt-2"
-                    onOpenProviderSettings={setProviderSettingsProviderId}
-                  />
-                </>
-              ) : null}
-
-              {teammateRuntimeCompatibility.blocksSubmission &&
-              !teammateRuntimeCompatibility.checking ? (
-                <TeammateRuntimeCompatibilityNotice
-                  analysis={teammateRuntimeCompatibility}
-                  showMemberErrors
-                />
-              ) : null}
-
-              {presentedPrepareState === 'ready' &&
-              !teammateRuntimeCompatibility.blocksSubmission &&
-              !launchAuthorityBlocked ? (
-                <ProviderPrepareReadyNotice
-                  checks={prepareChecks}
-                  message={effectivePrepare.message}
-                  warnings={prepareWarnings}
-                  onOpenProviderSettings={setProviderSettingsProviderId}
-                />
-              ) : null}
-
-              {presentedPrepareState === 'ready' && launchAuthorityBlocked ? (
-                <ProviderLaunchAuthorityNotice
-                  id={LAUNCH_AUTHORITY_BLOCKER_ID}
-                  action={
-                    isRelaunch
-                      ? t('launch.prepare.action.relaunch')
-                      : t('launch.prepare.action.launch')
-                  }
-                  blockers={launchAuthorityBlockers}
-                  onOpenProviderSettings={setProviderSettingsProviderId}
-                />
-              ) : null}
-
-              {presentedPrepareState === 'failed' ? (
-                <div className="text-xs">
-                  <div className="flex items-start gap-2 text-red-700 dark:text-red-300">
-                    <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="font-medium">
-                        {t('launch.prepare.blocked', {
-                          action: isRelaunch
-                            ? t('launch.prepare.action.relaunch')
-                            : t('launch.prepare.action.launch'),
-                        })}
-                      </p>
-                      <p className="mt-0.5 text-red-700/80 dark:text-red-300/80">
-                        {effectivePrepare.message ?? t('launch.prepare.failed')}
-                      </p>
-                      <p className="mt-0.5 text-[10px] text-[var(--color-text-muted)] opacity-70">
-                        {t('launch.prepare.preflight', {
-                          action: isRelaunch
-                            ? t('launch.prepare.action.relaunch')
-                            : t('launch.prepare.action.launch'),
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                  {!shouldHideProvisioningProviderStatusList(
-                    prepareChecks,
-                    effectivePrepare.message
-                  ) ? (
-                    <ProvisioningProviderStatusList
-                      checks={prepareChecks}
-                      className="mt-2"
-                      suppressDetailsMatching={effectivePrepare.message}
-                      onOpenProviderSettings={setProviderSettingsProviderId}
-                    />
-                  ) : null}
-                  {prepareWarnings.length > 0 && prepareChecks.length === 0 ? (
-                    <div className="mt-1 space-y-0.5 pl-6">
-                      {prepareWarnings.map((warning, index) => (
-                        <p
-                          key={`${index}:${warning}`}
-                          className="text-[11px]"
-                          style={{ color: 'var(--warning-text)' }}
-                        >
-                          {warning}
-                        </p>
-                      ))}
-                    </div>
-                  ) : null}
-                  <div className="mt-1 flex items-center gap-2 pl-6">
-                    <p className="text-[11px] text-[var(--color-text-muted)]">
-                      {getProvisioningFailureHint(effectivePrepare.message, prepareChecks, t)}
-                    </p>
-                    {(effectivePrepare.message ?? '').toLowerCase().includes('spawn ') ||
-                    prepareChecks.some((check) =>
-                      check.details.some((detail) => detail.toLowerCase().includes('spawn '))
-                    ) ? (
-                      <button
-                        type="button"
-                        className="shrink-0 rounded bg-blue-600 px-2 py-0.5 text-[11px] font-medium text-white transition-colors hover:bg-blue-500"
-                        onClick={() => {
-                          closeDialog();
-                          openDashboard();
-                        }}
-                      >
-                        {t('launch.actions.goToDashboard')}
-                      </button>
-                    ) : null}
-                  </div>
-                  {experimentalLocalModelOverrideAvailable ? (
-                    <ExperimentalLocalModelOverrideCheckbox
-                      id="launch-experimental-local-model"
-                      checked={allowExperimentalLocalModels}
-                      onCheckedChange={(value) => {
-                        markLaunchEdited();
-                        setAllowExperimentalLocalModels(value);
-                      }}
-                      label={t('launch.prepare.experimentalLocalModelOverride')}
-                      hint={t('launch.prepare.experimentalLocalModelOverrideHint')}
-                    />
-                  ) : null}
-                  {showCodexReconnectPrompt ? (
-                    <div className="pl-6">
-                      <CodexReconnectPrompt
-                        authUrl={codexAccount.snapshot?.login.authUrl ?? null}
-                        userCode={codexAccount.snapshot?.login.userCode ?? null}
-                        reconnectBusy={codexAccount.loading}
-                        onReconnect={() => handleCodexReconnect('browser')}
-                        onDeviceCodeReconnect={() => handleCodexReconnect('device_code')}
-                      />
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
+            ) : null}
+          </fieldset>
+          {/* Error display */}
+          {activeError ? (
+            <div className="flex items-start gap-2 rounded border border-red-500/40 bg-red-500/10 p-2 text-xs text-red-300">
+              <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+              <span>{describeMemberLaunchFailureReason(activeError, t)}</span>
             </div>
           ) : null}
+          <DialogFooter
+            className={
+              isLaunchMode
+                ? '-mx-6 -mb-6 -mt-4 border-t border-[var(--color-border)] bg-[var(--color-surface-sidebar)] px-6 pb-5 pt-4 sm:justify-between'
+                : '-mx-6 -mb-6 -mt-4 border-t border-[var(--color-border)] bg-[var(--color-surface-sidebar)] px-6 pb-5 pt-4'
+            }
+          >
+            {/* Launch-only: CLI warm-up status */}
+            {isLaunchMode ? (
+              <div className="min-w-0">
+                <ProviderActivityStatusStrip
+                  cliStatus={effectiveCliStatus}
+                  providerStatusOverride={effectiveCwd ? projectScopedOpenCodeStatus : null}
+                  sourceCliStatus={loadingCliStatus}
+                  cliStatusLoading={cliStatusLoading}
+                  cliProviderStatusLoading={cliProviderStatusLoading}
+                  multimodelEnabled={multimodelEnabled}
+                  codexSnapshotPending={codexSnapshotPending}
+                  hasCapturedTeamReadiness={capturedReadiness.permits}
+                  openCodePreparationEvidence={openCodePreparationEvidence}
+                  providerIds={selectedMemberProviders}
+                  label="Selected providers"
+                  layout="stacked"
+                  forceLoadingProviderIds={optionalPreflight.getPendingProviderPreflightIds(
+                    prepareState,
+                    selectedMemberProviders,
+                    prepareChecks
+                  )}
+                  showReadyProviders
+                  readyStatusText="Ready"
+                  className="mb-2"
+                />
+                <LaunchTeamPreparationStatus
+                  t={t}
+                  presentedPrepareState={presentedPrepareState}
+                  effectivePrepare={effectivePrepare}
+                  isRelaunch={isRelaunch}
+                  prepareChecks={prepareChecks}
+                  prepareWarnings={prepareWarnings}
+                  setProviderSettingsProviderId={setProviderSettingsProviderId}
+                  teammateRuntimeCompatibility={teammateRuntimeCompatibility}
+                  launchAuthorityBlocked={launchAuthorityBlocked}
+                  launchAuthorityBlockers={launchAuthorityBlockers}
+                  experimentalLocalModelOverrideAvailable={experimentalLocalModelOverrideAvailable}
+                  allowExperimentalLocalModels={allowExperimentalLocalModels}
+                  markLaunchEdited={markLaunchEdited}
+                  setAllowExperimentalLocalModels={setAllowExperimentalLocalModels}
+                  showCodexReconnectPrompt={showCodexReconnectPrompt}
+                  codexAccount={codexAccount}
+                  handleCodexReconnect={handleCodexReconnect}
+                  closeDialog={closeDialog}
+                  openDashboard={openDashboard}
+                  launchAuthorityBlockerId={LAUNCH_AUTHORITY_BLOCKER_ID}
+                />
+              </div>
+            ) : null}
 
-          <WorkspaceTrustLaunchControl
-            status={workspaceTrustStatus}
-            isLaunchMode={isLaunchMode}
-            disabled={isDisabled || gatewayBindings.pending}
-            describedBy={
-              isLaunchMode &&
-              prepareState !== 'idle' &&
-              launchAuthorityBlocked &&
-              effectivePrepare.state === 'ready'
-                ? LAUNCH_AUTHORITY_BLOCKER_ID
-                : undefined
-            }
-            busy={isSubmitting || launchInFlight || (resume.selected && resume.controls.loading)}
-            submittingLabel={submittingLabel}
-            submitLabel={
-              resume.selected
-                ? resume.label
-                : canSkipPreflight()
-                  ? t('launch.actions.skipPreflightAndLaunch')
-                  : submitLabel
-            }
-            onClick={handleSubmit}
-          />
-        </DialogFooter>
-      </DialogContent>
+            <WorkspaceTrustLaunchControl
+              status={workspaceTrustStatus}
+              isLaunchMode={isLaunchMode}
+              disabled={isDisabled || gatewayBindings.pending}
+              describedBy={
+                isLaunchMode &&
+                prepareState !== 'idle' &&
+                launchAuthorityBlocked &&
+                effectivePrepare.state === 'ready'
+                  ? LAUNCH_AUTHORITY_BLOCKER_ID
+                  : undefined
+              }
+              busy={isSubmitting || launchInFlight || (resume.selected && resume.controls.loading)}
+              submittingLabel={submittingLabel}
+              submitLabel={
+                resume.selected
+                  ? resume.label
+                  : canSkipPreflight()
+                    ? t('launch.actions.skipPreflightAndLaunch')
+                    : submitLabel
+              }
+              onClick={handleSubmit}
+            />
+          </DialogFooter>
+        </DialogContent>
       </OpenCodeSourceDirectoryProvider>
       <ProvisioningProviderRuntimeSettingsDialog
         openProviderId={retained ? null : providerSettingsProviderId}

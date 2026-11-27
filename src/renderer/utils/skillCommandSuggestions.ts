@@ -10,9 +10,13 @@ import type { KnownSlashCommandDefinition } from '@shared/utils/slashCommands';
 export function buildCapturedSlashCommandSuggestions(
   commands: readonly { name: string; description: string }[] | undefined
 ): MentionSuggestion[] {
-  return (commands ?? []).map(command => ({
-    id: `command:${command.name}`, name: command.name, command: `/${command.name}`,
-    description: command.description, subtitle: command.description, type: 'command',
+  return (commands ?? []).map((command) => ({
+    id: `command:${command.name}`,
+    name: command.name,
+    command: `/${command.name}`,
+    description: command.description,
+    subtitle: command.description,
+    type: 'command',
   }));
 }
 

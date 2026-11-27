@@ -36,6 +36,16 @@ export function projectTaskSourceMessage(
   const hash = createHash('sha256')
     .update(JSON.stringify([teamName, source.id, source.sourceMessageId]))
     .digest('hex');
+  const fileReferenceIds = row.fileReferenceIds;
+  if (
+    fileReferenceIds !== undefined &&
+    (!Array.isArray(fileReferenceIds) ||
+      fileReferenceIds.length > 4096 ||
+      fileReferenceIds.some(
+        (id) => typeof id !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(id)
+      ))
+  )
+    throw new Error('Invalid source file reference identity');
   return {
     sourceMessageId: `im1:${source.id}:${hash}`,
     sourceMessage: {
@@ -46,6 +56,9 @@ export function projectTaskSourceMessage(
       ...(row.attachments === undefined
         ? {}
         : { attachments: projectAttachmentMetadata(row.attachments) }),
+      ...(fileReferenceIds === undefined
+        ? {}
+        : { fileReferenceIds: [...fileReferenceIds] as string[] }),
     },
   };
 }

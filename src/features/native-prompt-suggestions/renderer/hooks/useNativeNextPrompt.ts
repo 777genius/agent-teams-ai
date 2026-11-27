@@ -2,7 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api } from '@renderer/api';
 
-import { canDisplayNativeNextPrompt, mayAcceptNativeNextPromptWithTab } from '../../core/domain/policy';
+import {
+  canDisplayNativeNextPrompt,
+  mayAcceptNativeNextPromptWithTab,
+} from '../../core/domain/policy';
 
 import { verifyCurrentNativeSuggestion } from './verifyCurrentNativeSuggestion';
 
@@ -39,14 +42,19 @@ export function useNativeNextPrompt(input: {
   const invalidatedMessageIdRef = useRef<string | null>(null);
   // A send can precede its canonical inbox readback. Draft edits during
   // that interval must invalidate the NEW human message, not the old ID.
-  const pendingSendRef = useRef<{ previousMessageId: string | null; editCounter: number } | null>(null);
+  const pendingSendRef = useRef<{ previousMessageId: string | null; editCounter: number } | null>(
+    null
+  );
   const conversationRef = 'direct:' + input.recipient.trim().toLowerCase();
 
   // An in-flight read must never resume insertion after the editor unmounts.
-  useEffect(() => () => {
-    validationEpochRef.current++;
-    acceptingRef.current = false;
-  }, []);
+  useEffect(
+    () => () => {
+      validationEpochRef.current++;
+      acceptingRef.current = false;
+    },
+    []
+  );
 
   useEffect(() => {
     validationEpochRef.current++;
@@ -65,8 +73,11 @@ export function useNativeNextPrompt(input: {
     // the exact messageId becomes the latest.
     const pending = pendingSendRef.current;
     // A transient empty inbox is not proof of a new human message.
-    if (pending && input.latestDirectMessageId !== null &&
-        pending.previousMessageId !== input.latestDirectMessageId) {
+    if (
+      pending &&
+      input.latestDirectMessageId !== null &&
+      pending.previousMessageId !== input.latestDirectMessageId
+    ) {
       if (pending.editCounter !== input.localEditCounter) {
         invalidatedMessageIdRef.current = input.latestDirectMessageId;
         validationEpochRef.current++;
@@ -90,8 +101,7 @@ export function useNativeNextPrompt(input: {
       // so Stop/Restart cannot resurrect that visible row.
       validationEpochRef.current++;
       acceptingRef.current = false;
-      if (candidateRef.current)
-        dismissedOperationRef.current = candidateRef.current.operationRef;
+      if (candidateRef.current) dismissedOperationRef.current = candidateRef.current.operationRef;
       setCandidate(null);
       candidateEditCounterRef.current = null;
     }
@@ -106,7 +116,8 @@ export function useNativeNextPrompt(input: {
         value.messageId === undefined ||
         value.messageId === invalidatedMessageIdRef.current ||
         value.operationRef === dismissedOperationRef.current
-      ) return;
+      )
+        return;
       validationEpochRef.current++;
       acceptingRef.current = false;
       candidateEditCounterRef.current = latestInputRef.current.localEditCounter;
@@ -117,11 +128,17 @@ export function useNativeNextPrompt(input: {
 
   const visible = useMemo(() => {
     const pending = pendingSendRef.current;
-    if (!candidate || !input.memberId || !input.latestDirectMessageId ||
-        candidate.messageId === invalidatedMessageIdRef.current ||
-        (pending && pending.previousMessageId !== input.latestDirectMessageId &&
-          pending.editCounter !== input.localEditCounter) ||
-        candidateEditCounterRef.current !== input.localEditCounter) return false;
+    if (
+      !candidate ||
+      !input.memberId ||
+      !input.latestDirectMessageId ||
+      candidate.messageId === invalidatedMessageIdRef.current ||
+      (pending &&
+        pending.previousMessageId !== input.latestDirectMessageId &&
+        pending.editCounter !== input.localEditCounter) ||
+      candidateEditCounterRef.current !== input.localEditCounter
+    )
+      return false;
     return canDisplayNativeNextPrompt(candidate, {
       ownerHandle: input.teamName,
       teamId: candidate.teamId,
@@ -145,9 +162,19 @@ export function useNativeNextPrompt(input: {
       isEditingQueueOrRevision: input.editingQueueOrRevision,
       hasOpenMentionOrCommand: false, // An open menu requires nonempty text; editor owns key priority.
     });
-  }, [candidate, input.memberId, input.latestDirectMessageId, input.teamName, conversationRef,
-    input.editable, input.draftText, input.localEditCounter, input.hasAttachments, input.hasChips,
-    input.editingQueueOrRevision]);
+  }, [
+    candidate,
+    input.memberId,
+    input.latestDirectMessageId,
+    input.teamName,
+    conversationRef,
+    input.editable,
+    input.draftText,
+    input.localEditCounter,
+    input.hasAttachments,
+    input.hasChips,
+    input.editingQueueOrRevision,
+  ]);
 
   const dismiss = useCallback(() => {
     validationEpochRef.current++;
@@ -159,8 +186,14 @@ export function useNativeNextPrompt(input: {
 
   const insert = useCallback((): boolean => {
     const selectedEditCounter = candidateEditCounterRef.current;
-    if (!candidate || !visible || acceptingRef.current || selectedEditCounter === null ||
-        selectedEditCounter !== input.localEditCounter) return false;
+    if (
+      !candidate ||
+      !visible ||
+      acceptingRef.current ||
+      selectedEditCounter === null ||
+      selectedEditCounter !== input.localEditCounter
+    )
+      return false;
     const selected = candidate;
     const startingFocus = document.activeElement;
     const epoch = ++validationEpochRef.current;
@@ -168,7 +201,7 @@ export function useNativeNextPrompt(input: {
     // A read-only independent Runtime generation/input check precedes
     // every user-driven insertion; a stale candidate cannot edit the draft.
     void verifyCurrentNativeSuggestion(selected, api.agentBackend)
-      .then(current => {
+      .then((current) => {
         if (validationEpochRef.current !== epoch) return;
         acceptingRef.current = false;
         const now = latestInputRef.current;
@@ -178,8 +211,12 @@ export function useNativeNextPrompt(input: {
           now.memberId === selected.memberId &&
           now.recipient.trim().toLowerCase() === selected.memberName.trim().toLowerCase() &&
           now.latestDirectMessageId === selected.messageId &&
-          now.editable && now.localEditCounter === selectedEditCounter && now.draftText.length === 0 &&
-          !now.hasAttachments && !now.hasChips && !now.editingQueueOrRevision &&
+          now.editable &&
+          now.localEditCounter === selectedEditCounter &&
+          now.draftText.length === 0 &&
+          !now.hasAttachments &&
+          !now.hasChips &&
+          !now.editingQueueOrRevision &&
           invalidatedMessageIdRef.current !== selected.messageId &&
           dismissedOperationRef.current !== selected.operationRef;
         if (current && sameEditor) {
@@ -189,34 +226,42 @@ export function useNativeNextPrompt(input: {
         }
         dismissedOperationRef.current = selected.operationRef;
         candidateEditCounterRef.current = null;
-        setCandidate(previous =>
-          previous?.suggestionId === selected.suggestionId ? null : previous);
+        setCandidate((previous) =>
+          previous?.suggestionId === selected.suggestionId ? null : previous
+        );
       })
       .catch(() => {
         if (validationEpochRef.current !== epoch) return;
         acceptingRef.current = false;
         dismissedOperationRef.current = selected.operationRef;
         candidateEditCounterRef.current = null;
-        setCandidate(previous =>
-          previous?.suggestionId === selected.suggestionId ? null : previous);
+        setCandidate((previous) =>
+          previous?.suggestionId === selected.suggestionId ? null : previous
+        );
       });
     return true; // Only consumes Tab; the draft mutation awaits Runtime.
   }, [candidate, input.localEditCounter, visible]);
 
-  const onTab = useCallback((event: React.KeyboardEvent<HTMLTextAreaElement>): boolean =>
-    mayAcceptNativeNextPromptWithTab({
-      visible, editorFocused: event.currentTarget === document.activeElement,
-      isComposing: event.nativeEvent.isComposing, hasActiveEditorKeyboardMenu: false,
-      shiftKey: event.shiftKey, ctrlKey: event.ctrlKey,
-      altKey: event.altKey, metaKey: event.metaKey,
-    }) && insert(), [visible, insert]);
+  const onTab = useCallback(
+    (event: React.KeyboardEvent<HTMLTextAreaElement>): boolean =>
+      mayAcceptNativeNextPromptWithTab({
+        visible,
+        editorFocused: event.currentTarget === document.activeElement,
+        isComposing: event.nativeEvent.isComposing,
+        hasActiveEditorKeyboardMenu: false,
+        shiftKey: event.shiftKey,
+        ctrlKey: event.ctrlKey,
+        altKey: event.altKey,
+        metaKey: event.metaKey,
+      }) && insert(),
+    [visible, insert]
+  );
 
   /** Invalidate a displayed or pending old offer before an ordinary user send. */
   const invalidate = useCallback(() => {
     validationEpochRef.current++;
     acceptingRef.current = false;
-    if (input.latestDirectMessageId)
-      invalidatedMessageIdRef.current = input.latestDirectMessageId;
+    if (input.latestDirectMessageId) invalidatedMessageIdRef.current = input.latestDirectMessageId;
     if (candidate) dismissedOperationRef.current = candidate.operationRef;
     candidateEditCounterRef.current = null;
     setCandidate(null);
@@ -234,26 +279,47 @@ export function useNativeNextPrompt(input: {
   // including attachment/chip edits. Merely hiding a row while files are
   // attached would otherwise resurrect its stale offer when they are removed.
   const lastEditRef = useRef({
-    teamName: input.teamName, recipient: input.recipient,
-    memberId: input.memberId, messageId: input.latestDirectMessageId,
+    teamName: input.teamName,
+    recipient: input.recipient,
+    memberId: input.memberId,
+    messageId: input.latestDirectMessageId,
     counter: input.localEditCounter,
   });
   useEffect(() => {
     const previous = lastEditRef.current;
     lastEditRef.current = {
-      teamName: input.teamName, recipient: input.recipient,
-      memberId: input.memberId, messageId: input.latestDirectMessageId,
+      teamName: input.teamName,
+      recipient: input.recipient,
+      memberId: input.memberId,
+      messageId: input.latestDirectMessageId,
       counter: input.localEditCounter,
     };
     // Switching recipient or getting a NEW human DM is not an edit to
     // that new message. The identity-scoped subscription owns those resets.
-    if (previous.teamName === input.teamName &&
-        previous.recipient === input.recipient &&
-        previous.memberId === input.memberId &&
-        previous.messageId === input.latestDirectMessageId &&
-        previous.counter !== input.localEditCounter) invalidate();
-  }, [input.teamName, input.recipient, input.memberId,
-      input.latestDirectMessageId, input.localEditCounter, invalidate]);
+    if (
+      previous.teamName === input.teamName &&
+      previous.recipient === input.recipient &&
+      previous.memberId === input.memberId &&
+      previous.messageId === input.latestDirectMessageId &&
+      previous.counter !== input.localEditCounter
+    )
+      invalidate();
+  }, [
+    input.teamName,
+    input.recipient,
+    input.memberId,
+    input.latestDirectMessageId,
+    input.localEditCounter,
+    invalidate,
+  ]);
 
-  return { candidate: visible ? candidate : null, visible, insert, dismiss, onTab, invalidate, invalidateForSend };
+  return {
+    candidate: visible ? candidate : null,
+    visible,
+    insert,
+    dismiss,
+    onTab,
+    invalidate,
+    invalidateForSend,
+  };
 }

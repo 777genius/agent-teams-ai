@@ -215,7 +215,10 @@ export function createTeamMessagesProvenanceActions(ports: MessageActionPorts): 
             );
             const nextEntry: TeamMessagesCacheEntry = {
               ...current,
-              provenance: { head: page.messages, pages, requestScope,
+              provenance: {
+                head: page.messages,
+                pages,
+                requestScope,
                 ...(page.historyWarning ? { historyWarning: page.historyWarning } : {}),
               },
               historyReloadRequired:
@@ -399,7 +402,10 @@ export function createTeamMessagesProvenanceActions(ports: MessageActionPorts): 
                 ...state.teamMessagesByName,
                 [teamName]: {
                   ...liveEntry,
-                  provenance: { head, pages, requestScope,
+                  provenance: {
+                    head,
+                    pages,
+                    requestScope,
                     ...(historyWarning ? { historyWarning } : {}),
                   },
                   canonicalMessages: mergedCanonical,

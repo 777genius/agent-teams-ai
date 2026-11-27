@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { createFilesystemTeamOwner } from '@agent-teams/legacy-agent-host/team/filesystem';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { boundProductCommandReceipt } from '../../../packages/legacy-agent-host/dist/team/boundProductCommandReceipt.js';
 import { projectBackendResult } from '../../../src/features/agent-backend/main/adapters/output/projectBackendResult';
 
 import type { CommandReceipt } from '../../../packages/legacy-agent-host/src/team/contracts';
@@ -70,6 +71,45 @@ function project(value: unknown, request: BackendOperationRequest = lookup) {
 }
 
 describe('original Host message delivery projection', () => {
+  it('acknowledges a large accepted message and recovers its original delivery without repeating the effect', () => {
+    const owner = createFilesystemTeamOwner({
+      root: join(root, 'large-message'), binding,
+      members: [{ memberId: delivery.memberId, name: 'alice', role: 'member', delivery }],
+      grants: [{ principalId: 'TEST-human', memberName: 'user', permissions: ['read', 'message.write'] }],
+    });
+    const human = owner.connect('TEST-human');
+    const command = {
+      commandId: 'TEST-large-message', operation: 'message.send' as const,
+      payload: { to: 'alice', text: '界'.repeat(160_000), summary: '文'.repeat(140_000),
+        messageId: 'TEST-large-message' },
+    };
+    expect(Buffer.byteLength(JSON.stringify(command))).toBeGreaterThan(768 * 1024);
+    expect(Buffer.byteLength(JSON.stringify(command))).toBeLessThan(1024 * 1024 - 4096);
+    const receipt = human.execute(command);
+    expect(receipt.phase).toBe('completed');
+    const saved = structuredClone(receipt);
+    for (const operation of ['message.send', 'command.lookup'] as const) {
+      const response = boundProductCommandReceipt(
+        operation === 'command.lookup' ? human.lookup(command.commandId)! : receipt
+      );
+      expect(Buffer.byteLength(JSON.stringify({ ok: true, value: response }))).toBeLessThan(768 * 1024);
+      expect(project(response, { ...lookup, commandId: command.commandId, operation,
+        payload: operation === 'message.send' ? command.payload : {} })).toEqual({
+        ok: true, value: {
+          commandId: command.commandId, operation: 'message.send', phase: 'completed',
+          messageId: receipt.effects.messageId, deliveryId: receipt.effects.deliveryId,
+          ...(operation === 'command.lookup' ? { messageDelivery: {
+            memberId: delivery.memberId, generation: delivery.generation,
+            inputId: receipt.effects.deliveryId,
+          } } : {}),
+        },
+      });
+    }
+    expect(human.lookup(command.commandId)).toEqual(saved);
+    expect(saved.result).toMatchObject({ message: { text: command.payload.text, summary: command.payload.summary } });
+    expect(human.pendingDeliveries()).toHaveLength(1);
+  });
+
   it('projects only the original canonical recipient and input from a real persisted lookup', () => {
     const source = raw();
     source.privatePath = '/TEST/private/owner';

@@ -72,7 +72,8 @@ async function isValidGitMarker(root: string): Promise<boolean> {
     const config = await readTrimmedFileOrNull(path.join(gitDir, 'config'));
     const coreConfig = /(?:^|\n)\s*\[core\]\s*([^]*?)(?=\n\s*\[|$)/i.exec(config ?? '')?.[1];
     const rawWorktree = /(?:^|\n)\s*worktree\s*=\s*([^\r\n]+)/im
-      .exec(coreConfig ?? '')?.[1]?.trim();
+      .exec(coreConfig ?? '')?.[1]
+      ?.trim();
     if (!rawWorktree) return false;
     // Git quotes core.worktree paths containing '#' or ';'. Decode the
     // ordinary quoted-path escapes instead of treating quotes as path bytes.
@@ -164,9 +165,10 @@ export async function resolveWorkspaceTrustCanonicalGitRoot(gitRoot: string): Pr
     return normalizedGitRoot;
   }
 
-  const worktreeGitDir = path
-    .resolve(normalizedGitRoot, gitFileContent.slice('gitdir:'.length).trim())
-    ;
+  const worktreeGitDir = path.resolve(
+    normalizedGitRoot,
+    gitFileContent.slice('gitdir:'.length).trim()
+  );
   const commonDirRaw = await readTrimmedFileOrNull(path.join(worktreeGitDir, 'commondir'));
   if (!commonDirRaw) {
     return normalizedGitRoot;

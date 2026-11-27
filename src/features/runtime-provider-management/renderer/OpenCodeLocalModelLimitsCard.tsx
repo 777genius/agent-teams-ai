@@ -68,11 +68,14 @@ export const OpenCodeLocalModelLimitsCard = ({
     setErrorMessage(null);
     if (!normalizedProjectPath || !normalizedModel || !providerId) return;
 
-    void loadOpenCodeProjectModels({
-      projectPath: normalizedProjectPath,
-      providerId,
-      modelId: normalizedModel,
-    }, retained?.management.loadModels)
+    void loadOpenCodeProjectModels(
+      {
+        projectPath: normalizedProjectPath,
+        providerId,
+        modelId: normalizedModel,
+      },
+      retained?.management.loadModels
+    )
       .then((response) => {
         if (
           cancelled ||
@@ -162,7 +165,8 @@ export const OpenCodeLocalModelLimitsCard = ({
             : current
         );
         setSuccessMessage(t('openCodeLocalModelLimits.verified'));
-        if (!retained) invalidateOpenCodeProjectModels(normalizedProjectPath, suggestion.providerId);
+        if (!retained)
+          invalidateOpenCodeProjectModels(normalizedProjectPath, suggestion.providerId);
       } else {
         setErrorMessage(response.result.message);
       }

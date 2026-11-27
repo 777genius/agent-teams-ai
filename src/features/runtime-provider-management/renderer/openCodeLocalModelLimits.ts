@@ -74,17 +74,26 @@ export function invalidateOpenCodeProjectModels(projectPath: string, providerId:
   }
 }
 
-export function loadOpenCodeProjectModels(input: {
-  projectPath: string;
-  providerId: string;
-  modelId: string;
-  refresh?: boolean;
-}, scopedLoadModels?: typeof api.runtimeProviderManagement.loadModels): Promise<RuntimeProviderManagementModelsResponse> {
+export function loadOpenCodeProjectModels(
+  input: {
+    projectPath: string;
+    providerId: string;
+    modelId: string;
+    refresh?: boolean;
+  },
+  scopedLoadModels?: typeof api.runtimeProviderManagement.loadModels
+): Promise<RuntimeProviderManagementModelsResponse> {
   const projectPath = input.projectPath.trim();
   const providerId = input.providerId.trim();
   const modelId = input.modelId.trim();
-  if (scopedLoadModels) return scopedLoadModels({ runtimeId: 'opencode', providerId, projectPath,
-    query: modelId, limit: PROJECT_MODELS_LIMIT });
+  if (scopedLoadModels)
+    return scopedLoadModels({
+      runtimeId: 'opencode',
+      providerId,
+      projectPath,
+      query: modelId,
+      limit: PROJECT_MODELS_LIMIT,
+    });
   const cacheKey = getProjectModelsCacheKey(projectPath, providerId, modelId);
   if (input.refresh) {
     projectModelsCache.delete(cacheKey);

@@ -1,20 +1,25 @@
 // @vitest-environment node
 import { createHash } from 'node:crypto';
-import { mkdtempSync, realpathSync, rmSync } from 'node:fs';
+import { mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { createFilesystemTeamOwner } from '@agent-teams/legacy-agent-host/team/filesystem';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { boundProductCommandReceipt } from '../../../packages/legacy-agent-host/dist/team/boundProductCommandReceipt.js';
+
 import { HostTaskSubmissionRefusal } from '../../../src/features/agent-backend/contracts/taskSubmission';
 import { parseBackendOperation } from '../../../src/features/agent-backend/main/adapters/input/validateBackendOperation';
 import { projectBackendResult } from '../../../src/features/agent-backend/main/adapters/output/projectBackendResult';
+import { projectTeamSnapshot } from '../../../src/features/agent-backend/main/adapters/output/projectTeamSnapshot';
 import { createHostTeamMutations } from '../../../src/features/agent-backend/renderer/createHostTeamMutations';
+import { readHostPagedSnapshot } from '../../../src/features/agent-backend/renderer/readHostPagedSnapshot';
 import {
   __resetRetainedTaskSubmissionsForTests,
   acknowledgeHostTaskSubmission,
 } from '../../../src/features/agent-backend/renderer/retainedTaskSubmissions';
+import { TeamProductReadOrder } from '../../../src/features/agent-backend/renderer/TeamProductReadOrder';
 
 import type {
   AgentBackendApi,
@@ -26,7 +31,7 @@ const roots: string[] = [];
 beforeEach(__resetRetainedTaskSubmissionsForTests);
 afterEach(() => roots.splice(0).forEach((root) => rmSync(root, { recursive: true, force: true })));
 const identity = (commandId = 'TEST-comment') => ({ commandId, idempotencyKey: commandId });
-function fixture() {
+function fixture(bounded = false) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-task-submission-')));
   roots.push(root);
   const owner = createFilesystemTeamOwner({
@@ -46,6 +51,12 @@ function fixture() {
   });
   const taskId = seed.effects.taskId,
     handle = { handleId: 'TEST-original' };
+  const publicReceipts: unknown[] = [];
+  const publicReceipt = (receipt: ReturnType<typeof human.execute>) => {
+    const value = bounded ? boundProductCommandReceipt(receipt) : receipt;
+    publicReceipts.push(value);
+    return value;
+  };
   let current = true,
     drop = true;
   let intercept:
@@ -55,11 +66,13 @@ function fixture() {
     const request = parseBackendOperation(raw);
     const intercepted = intercept?.(request);
     if (intercepted) return intercepted;
-    if (request.operation === 'command.lookup')
+    if (request.operation === 'command.lookup') {
+      const found = human.lookup(request.commandId);
       return projectBackendResult(request, {
         ok: true,
-        value: human.lookup(request.commandId) ?? null,
+        value: found ? publicReceipt(found) : null,
       });
+    }
     if (request.operation !== 'task.comment' && request.operation !== 'task.create')
       throw new Error('Unexpected operation');
     const receipt = human.execute({
@@ -71,7 +84,7 @@ function fixture() {
       drop = false;
       throw new Error('TEST lost ACK after commit');
     }
-    return projectBackendResult(request, { ok: true, value: receipt });
+    return projectBackendResult(request, { ok: true, value: publicReceipt(receipt) });
   });
   const backend: AgentBackendApi = { invoke, getConnections: vi.fn() };
   const resolve = vi.fn(async () => ({ handle, teamName: 'test-team' }));
@@ -85,6 +98,7 @@ function fixture() {
     handle,
     invoke,
     resolve,
+    publicReceipts,
     adapter,
     setCurrent(value: boolean) {
       current = value;
@@ -551,4 +565,227 @@ it('does not classify generic rejected outcomes as finite absence proof', async 
   await expect(
     f.adapter().addTaskComment('host-team:TEST-original', f.taskId, { ...request, text: 'Changed' })
   ).rejects.toMatchObject({ code: 'submission-payload-conflict' });
+});
+
+it('acknowledges an accepted 140k CJK description without changing the durable task or receipt', async () => {
+  const f = fixture(true);
+  f.keepAck();
+  const description = '界'.repeat(140_000);
+  const created = await f.adapter().createTask('host-team:TEST-original', {
+    command: identity('TEST-cjk-create'), subject: 'TEST CJK', description,
+  });
+  expect(f.human.getTask(created.id).description).toBe(description);
+  const saved = f.human.lookup('TEST-cjk-create')!;
+  expect(saved.command.payload).toMatchObject({ description });
+  expect(saved.result).toMatchObject({ description });
+  expect(Buffer.byteLength(JSON.stringify(f.publicReceipts[0]))).toBeLessThan(768 * 1024);
+  expect(f.human.lookup('TEST-cjk-create')).toEqual(saved);
+});
+
+it.each([false, true])('recovers a command larger than the ACK budget with lost ACK=%s', async (lost) => {
+  const f = fixture(true);
+  if (!lost) f.keepAck();
+  const request = {
+    command: identity('TEST-large-create'), subject: '  TEST large command  ',
+    description: '界'.repeat(180_000), prompt: '文'.repeat(100_000),
+  };
+  expect(Buffer.byteLength(JSON.stringify(request))).toBeGreaterThan(768 * 1024);
+  expect(Buffer.byteLength(JSON.stringify(request))).toBeLessThan(1024 * 1024 - 4096);
+  if (lost) await expect(f.adapter().createTask('host-team:TEST-original', request))
+    .rejects.toMatchObject({ outcome: 'unknown' });
+  const created = await f.adapter().createTask('host-team:TEST-original', request);
+  expect(created.subject).toBe(request.subject.trim());
+  expect(f.human.getTask(created.id)).toMatchObject({ description: request.description, prompt: request.prompt });
+  expect(f.publicReceipts.at(-1)).toMatchObject({ taskSubmissionProof: { schemaVersion: 1 } });
+  expect(Buffer.byteLength(JSON.stringify(f.publicReceipts.at(-1)))).toBeLessThan(768 * 1024);
+  expect(f.human.listTasks()).toHaveLength(2);
+  expect(f.resolve).toHaveBeenCalledTimes(1);
+  expect(f.invoke.mock.calls.map(([r]) => r.operation)).toEqual(
+    lost ? ['task.create', 'command.lookup'] : ['task.create']
+  );
+});
+
+it.each([false, true])('restores exact large comment text from an original proof with lost ACK=%s', async (lost) => {
+  const f = fixture(true);
+  if (!lost) f.keepAck();
+  const request = { command: identity('TEST-large-comment'), text: 'TEST ' + '\u0001'.repeat(140_000) };
+  expect(Buffer.byteLength(JSON.stringify(request))).toBeLessThan(1024 * 1024 - 4096);
+  if (lost) await expect(f.adapter().addTaskComment('host-team:TEST-original', f.taskId, request))
+    .rejects.toMatchObject({ outcome: 'unknown' });
+  const comment = await f.adapter().addTaskComment('host-team:TEST-original', f.taskId, request);
+  expect(comment.text).toBe(request.text);
+  expect(f.human.getTask(f.taskId).comments).toHaveLength(1);
+  expect(f.publicReceipts.at(-1)).toMatchObject({ taskSubmissionProof: {
+    schemaVersion: 1, taskId: f.taskId, commentTextSha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+  } });
+  expect(Buffer.byteLength(JSON.stringify(f.publicReceipts.at(-1)))).toBeLessThan(768 * 1024);
+  expect(f.invoke.mock.calls.map(([r]) => r.operation)).toEqual(
+    lost ? ['task.comment', 'command.lookup'] : ['task.comment']
+  );
+});
+
+it.each([false, true])('keeps no-effect policy proof for oversized rejected input with lost ACK=%s', async (lost) => {
+  const f = fixture(true);
+  if (!lost) f.keepAck();
+  const request = {
+    command: identity('TEST-large-rejected'), subject: 'TEST invalid dependency',
+    description: '界'.repeat(180_000), prompt: '文'.repeat(100_000), blockedBy: ['TEST-missing'],
+  };
+  if (lost) await expect(f.adapter().createTask('host-team:TEST-original', request))
+    .rejects.toMatchObject({ outcome: 'unknown' });
+  await expect(f.adapter().createTask('host-team:TEST-original', request))
+    .rejects.toBeInstanceOf(HostTaskSubmissionRefusal);
+  expect(f.human.listTasks()).toHaveLength(1);
+  expect(f.human.lookup(request.command.commandId)).toMatchObject({
+    phase: 'rejected', result: { rejected: true, reason: 'policy' },
+  });
+  expect(Buffer.byteLength(JSON.stringify(f.publicReceipts.at(-1)))).toBeLessThan(768 * 1024);
+});
+
+it.each(['commandSha256', 'commentTextSha256', 'taskId', 'effect'] as const)(
+  'refuses a changed compact %s without submitting a second effect', async (field) => {
+    const f = fixture(true);
+    const request = { command: identity('TEST-large-tamper'), text: 'TEST ' + '\u0001'.repeat(140_000) };
+    await expect(f.adapter().addTaskComment('host-team:TEST-original', f.taskId, request))
+      .rejects.toMatchObject({ outcome: 'unknown' });
+    f.intercept((lookup) => {
+      if (lookup.operation !== 'command.lookup') return undefined;
+      const value = structuredClone(boundProductCommandReceipt(f.human.lookup(request.command.commandId)!)) as {
+        taskSubmissionProof: Record<string, unknown>; effects: { commentId: string };
+      };
+      if (field === 'effect') value.effects.commentId = 'TEST-wrong-effect';
+      else value.taskSubmissionProof[field] = field === 'taskId' ? 'TEST-wrong-task' : '0'.repeat(64);
+      return Promise.resolve().then(() => projectBackendResult(lookup, { ok: true, value }));
+    });
+    await expect(f.adapter().addTaskComment('host-team:TEST-original', f.taskId, request))
+      .rejects.toMatchObject({ outcome: 'unknown' });
+    expect(f.invoke.mock.calls.map(([r]) => r.operation)).toEqual(['task.comment', 'command.lookup']);
+    expect(f.human.getTask(f.taskId).comments).toHaveLength(1);
+  }
+);
+
+it('rechecks the original context after asynchronous compact proof verification', async () => {
+  const f = fixture(true);
+  const request = {
+    command: identity('TEST-large-context'), subject: 'TEST context',
+    description: '界'.repeat(180_000), prompt: '文'.repeat(100_000),
+  };
+  await expect(f.adapter().createTask('host-team:TEST-original', request))
+    .rejects.toMatchObject({ outcome: 'unknown' });
+  const originalDigest = crypto.subtle.digest.bind(crypto.subtle);
+  let restoreDigest: (() => void) | undefined;
+  f.intercept((lookup) => {
+    if (lookup.operation !== 'command.lookup') return undefined;
+    const value = boundProductCommandReceipt(f.human.lookup(request.command.commandId)!);
+    const spy = vi.spyOn(crypto.subtle, 'digest').mockImplementationOnce((algorithm, data) => {
+      f.setCurrent(false);
+      return originalDigest(algorithm, data);
+    });
+    restoreDigest = () => spy.mockRestore();
+    return Promise.resolve(projectBackendResult(lookup, { ok: true, value }));
+  });
+  try {
+    await expect(f.adapter().createTask('host-team:TEST-original', request))
+      .rejects.toMatchObject({ code: 'context-changed', outcome: 'unknown' });
+    expect(f.invoke.mock.calls.map(([r]) => r.operation)).toEqual(['task.create', 'command.lookup']);
+    expect(f.human.listTasks()).toHaveLength(2);
+  } finally { restoreDigest?.(); }
+});
+
+it.each(['event count', 'history text'] as const)(
+  'projects committed ACKs and lookups when retained %s exceeds Main limits below the wire budget',
+  async (limit) => {
+    const f = fixture(true);
+    const history = limit === 'event count'
+      ? Array.from({ length: 4097 }, (_, index) => ({
+          id: 'TEST-event-' + index, timestamp: '2026-01-01T00:00:00.000Z',
+          type: 'status_changed',
+          from: index % 2 === 0 ? 'in_progress' : 'pending',
+          to: index % 2 === 0 ? 'pending' : 'in_progress',
+        }))
+      : Array.from({ length: 3 }, (_, index) => ({
+          id: 'TEST-review-' + index, timestamp: '2026-01-01T00:00:00.000Z',
+          type: 'review_requested', from: 'none', to: 'review', note: 'x'.repeat(180_000),
+        }));
+    // Existing controller task files retain the complete imported history.
+    writeFileSync(join(f.root, 'tasks', 'test-team', f.taskId + '.json'), JSON.stringify({
+      ...f.human.getTask(f.taskId), historyEvents: history,
+    }));
+    const commands = [
+      { operation: 'task.update', payload: { taskId: f.taskId, subject: 'TEST updated' } },
+      { operation: 'task.comment', payload: { taskId: f.taskId, text: 'TEST single comment' } },
+      { operation: 'task.start', payload: { taskId: f.taskId, notification: 'user' } },
+    ] as const;
+    for (const command of commands) {
+      const commandId = 'TEST-retained-' + command.operation;
+      const request = parseBackendOperation({ handle: f.handle, commandId, ...command });
+      const receipt = f.human.execute({ commandId, ...command });
+      expect(receipt.phase).toBe('completed');
+      const original = JSON.stringify(receipt);
+      expect(Buffer.byteLength(JSON.stringify({ ok: true, value: receipt }))).toBeLessThan(768 * 1024);
+      expect(() => projectBackendResult(request, { ok: true, value: receipt }))
+        .toThrow('Oversized task history');
+
+      const bounded = boundProductCommandReceipt(receipt);
+      expect(JSON.stringify(bounded)).not.toContain('"historyEvents"');
+      const ack = projectBackendResult(request, { ok: true, value: bounded });
+      expect(ack).toMatchObject({ ok: true, value: {
+        commandId, phase: 'completed', operation: command.operation,
+        task: { id: f.taskId, subject: 'TEST updated',
+          status: command.operation === 'task.start' ? 'in_progress' : 'pending' },
+      } });
+      if (command.operation === 'task.comment')
+        expect(ack).toMatchObject({ value: { comment: { text: 'TEST single comment' } } });
+      if (command.operation === 'task.start')
+        expect(ack).toMatchObject({ value: { notifiedOwner: false } });
+      const lookup = parseBackendOperation({
+        handle: f.handle, commandId, operation: 'command.lookup', payload: {},
+      });
+      expect(projectBackendResult(lookup, {
+        ok: true, value: boundProductCommandReceipt(f.human.lookup(commandId)!),
+      })).toEqual(ack);
+      expect(JSON.stringify(receipt)).toBe(original);
+      expect(JSON.stringify(f.human.lookup(commandId))).toBe(original);
+    }
+
+    const canonical = f.human.getTask(f.taskId);
+    expect(canonical.historyEvents).toHaveLength(history.length + 1);
+    expect(canonical.comments).toHaveLength(1);
+    const pageSizes: number[] = [];
+    const invoke: AgentBackendApi['invoke'] = vi.fn(async (request) => {
+      if (request.operation !== 'team.snapshot') throw new Error('Unexpected fixture read');
+      const raw = f.human.readSnapshot(request.payload);
+      pageSizes.push(Buffer.byteLength(JSON.stringify(raw)));
+      return { ok: true, value: projectTeamSnapshot(raw) };
+    });
+    const complete = await readHostPagedSnapshot(
+      { invoke }, { handle: f.handle, label: 'TEST retained history', members: [] },
+      () => true, new TeamProductReadOrder()
+    );
+    complete.assertCurrent();
+    expect(complete.data.tasks[0]?.historyEvents).toEqual(canonical.historyEvents);
+    expect(pageSizes.length).toBeGreaterThan(1);
+    expect(pageSizes.every((size) => size <= 384 * 1024)).toBe(true);
+  }
+);
+
+it('keeps an in-budget retained history unchanged at Main’s event-count boundary', () => {
+  const f = fixture(true);
+  const history = Array.from({ length: 4096 }, (_, index) => ({
+    id: 'TEST-event-' + index, timestamp: '2026-01-01T00:00:00.000Z',
+    type: 'status_changed', from: 'pending', to: 'in_progress',
+  }));
+  writeFileSync(join(f.root, 'tasks', 'test-team', f.taskId + '.json'), JSON.stringify({
+    ...f.human.getTask(f.taskId), historyEvents: history,
+  }));
+  const command = {
+    commandId: 'TEST-boundary', operation: 'task.update' as const,
+    payload: { taskId: f.taskId, subject: 'TEST unchanged history' },
+  };
+  const receipt = f.human.execute(command);
+  const bounded = boundProductCommandReceipt(receipt);
+  expect(bounded).toEqual(receipt);
+  expect(projectBackendResult(parseBackendOperation({ handle: f.handle, ...command }), {
+    ok: true, value: bounded,
+  })).toMatchObject({ ok: true, value: { phase: 'completed', task: { historyEvents: history } } });
 });

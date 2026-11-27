@@ -5,8 +5,14 @@ export interface BackendTeamPosition {
   cursor: string;
 }
 export const backendTeamConversationGaps = [
-  'legacy-history', 'undated', 'retention', 'oversized', 'unattributed',
-  'storage', 'state-unpublished', 'unsupported',
+  'legacy-history',
+  'undated',
+  'retention',
+  'oversized',
+  'unattributed',
+  'storage',
+  'state-unpublished',
+  'unsupported',
 ] as const;
 /** Derived text invalidation only; never a Team product position or outcome. */
 export interface BackendTeamConversation {

@@ -57,7 +57,10 @@ import type {
 } from '@features/agent-backend/main';
 import type { ApplicationCommandRunner } from '@features/application-command-ledger';
 import type { CodexAccountAuthMode } from '@features/codex-account/contracts';
-import type { NativeNextPromptCandidate, NativeNextPromptProvider } from '@features/native-prompt-suggestions/contracts';
+import type {
+  NativeNextPromptCandidate,
+  NativeNextPromptProvider,
+} from '@features/native-prompt-suggestions/contracts';
 import type { RuntimeProviderOAuthProgressDto } from '@features/runtime-provider-management/contracts';
 import type {
   TeamCreateConfigResponse,

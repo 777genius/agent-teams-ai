@@ -27,7 +27,10 @@ export function createSchedulerService(
     | 'startTaskByUser'
     | 'hasActiveOwnedTask'
   >,
-  provisioning: Pick<TeamProvisioningService, 'launchTeam' | 'prepareForProvisioning' | 'hasTeamOperationInProgress'>,
+  provisioning: Pick<
+    TeamProvisioningService,
+    'launchTeam' | 'prepareForProvisioning' | 'hasTeamOperationInProgress'
+  >,
   host?: HostScheduleRuntimeFactory,
   targets?: ScheduleTargets
 ): SchedulerService {
@@ -63,14 +66,25 @@ export function createSchedulerService(
       }
     },
     startTaskByUser: (teamName, taskId, admission) =>
-      data.startTaskByUser(teamName, taskId, admission && { ...admission,
-        isCurrent: () => admission.isCurrent() &&
-          apis.runtime.getCurrentRunId(teamName) === admission.expectedRunId &&
-          apis.runtime.isTeamAlive(teamName) && !provisioning.hasTeamOperationInProgress(teamName),
-      }),
+      data.startTaskByUser(
+        teamName,
+        taskId,
+        admission && {
+          ...admission,
+          isCurrent: () =>
+            admission.isCurrent() &&
+            apis.runtime.getCurrentRunId(teamName) === admission.expectedRunId &&
+            apis.runtime.isTeamAlive(teamName) &&
+            !provisioning.hasTeamOperationInProgress(teamName),
+        }
+      ),
     attachMember: (teamName, memberName, expected) => {
-      if (expected && (apis.runtime.getCurrentRunId(teamName) !== expected.runId ||
-        !apis.runtime.isTeamAlive(teamName) || provisioning.hasTeamOperationInProgress(teamName)))
+      if (
+        expected &&
+        (apis.runtime.getCurrentRunId(teamName) !== expected.runId ||
+          !apis.runtime.isTeamAlive(teamName) ||
+          provisioning.hasTeamOperationInProgress(teamName))
+      )
         throw new Error('Scheduled recipient changed before attach');
       return apis.memberLifecycle.attachLiveRosterMember(teamName, memberName, {
         reason: 'member_added',
@@ -79,10 +93,15 @@ export function createSchedulerService(
     createTask: (teamName, request) => data.createTask(teamName, request),
     launchTeam: (request) => provisioning.launchTeam(request, () => undefined),
     runOneShot: (request) => executor.execute(request),
-    ...(targets ? {
-      resolveTarget: (schedule: import('@shared/types').Schedule) => targets.resolve(schedule),
-      launchProjectTeam: (schedule: import('@shared/types').Schedule, request: import('@shared/types').TeamLaunchRequest) => targets.launch(schedule, request),
-    } : {}),
+    ...(targets
+      ? {
+          resolveTarget: (schedule: import('@shared/types').Schedule) => targets.resolve(schedule),
+          launchProjectTeam: (
+            schedule: import('@shared/types').Schedule,
+            request: import('@shared/types').TeamLaunchRequest
+          ) => targets.launch(schedule, request),
+        }
+      : {}),
   });
 
   return new SchedulerService(
@@ -92,9 +111,15 @@ export function createSchedulerService(
       const result = await provisioning.prepareForProvisioning(cwd, { forceFresh: true });
       return { ready: result.ready, message: result.message };
     },
-    new SelectedScheduleDispatcher(dispatcher, async (scheduleId, runId) =>
-      (await repository.listRuns(scheduleId, { limit: 50 })).filter(run => run.id !== runId), host),
-    (teamName, change) => isHostTeamSelectionKey(teamName) ? Promise.resolve(true) :
-      targets?.admit(teamName, change) ?? Promise.resolve(true)
+    new SelectedScheduleDispatcher(
+      dispatcher,
+      async (scheduleId, runId) =>
+        (await repository.listRuns(scheduleId, { limit: 50 })).filter((run) => run.id !== runId),
+      host
+    ),
+    (teamName, change) =>
+      isHostTeamSelectionKey(teamName)
+        ? Promise.resolve(true)
+        : (targets?.admit(teamName, change) ?? Promise.resolve(true))
   );
 }

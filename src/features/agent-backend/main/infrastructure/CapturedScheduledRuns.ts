@@ -1,18 +1,35 @@
-import { scheduledRunInputSchema, scheduledRunSnapshotSchema } from '@agent-teams/legacy-agent-host/scheduled-runs';
+import {
+  scheduledRunInputSchema,
+  scheduledRunSnapshotSchema,
+} from '@agent-teams/legacy-agent-host/scheduled-runs';
 
 import { BackendRoutingError } from '../application/backendBinding';
 
 import type { JsonValue } from '@agent-teams/legacy-agent-host/contracts';
-import type { ScheduledRunInput, ScheduledRunSnapshot } from '@agent-teams/legacy-agent-host/scheduled-runs';
+import type {
+  ScheduledRunInput,
+  ScheduledRunSnapshot,
+} from '@agent-teams/legacy-agent-host/scheduled-runs';
 
 /** Private Main scheduler port. Lost replies only read the same original run; no implicit rerun. */
 export class CapturedScheduledRuns {
-  constructor(private readonly request: (operation: 'start' | 'read' | 'cancel',
-    runId: string, payload: JsonValue) => Promise<JsonValue>, private readonly scheduleId: string) {}
+  constructor(
+    private readonly request: (
+      operation: 'start' | 'read' | 'cancel',
+      runId: string,
+      payload: JsonValue
+    ) => Promise<JsonValue>,
+    private readonly scheduleId: string
+  ) {}
 
   private async call(operation: 'start' | 'read' | 'cancel', runId: string, payload: JsonValue) {
     const response = await this.request(operation, runId, payload);
-    if (!response || typeof response !== 'object' || Array.isArray(response) || response.ok !== true)
+    if (
+      !response ||
+      typeof response !== 'object' ||
+      Array.isArray(response) ||
+      response.ok !== true
+    )
       throw new BackendRoutingError('hold');
     if (response.value === null && operation === 'read') return null;
     const snapshot = scheduledRunSnapshotSchema.parse(response.value);

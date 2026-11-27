@@ -252,7 +252,10 @@ export function useOpenCodeConnectedModelCatalog(input: {
           errors: loadErrors,
         });
         if (recoveryFreshUntil) {
-          input.onCatalogRecovery?.({ projectPath: input.projectPath, freshUntil: recoveryFreshUntil });
+          input.onCatalogRecovery?.({
+            projectPath: input.projectPath,
+            freshUntil: recoveryFreshUntil,
+          });
         }
       }
     })()

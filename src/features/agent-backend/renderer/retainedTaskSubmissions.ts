@@ -1,6 +1,7 @@
 import { HostTaskSubmissionRefusal, HostTeamOperationError } from '../contracts/taskSubmission';
 
 import { projectHostTaskReceipt } from './projectHostTaskReceipt';
+import { restoreCompactTaskReceipt } from './restoreCompactTaskReceipt';
 
 import type { BackendHandle } from '../contracts';
 import type {
@@ -54,7 +55,10 @@ async function digest(value: unknown): Promise<string> {
   );
   return Array.from(new Uint8Array(bytes), (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
-function verifyTaskReceipt(record: Submission, receipt: BackendCommandReceipt): void {
+async function verifyTaskReceipt(
+  record: Submission,
+  receipt: BackendCommandReceipt
+): Promise<void> {
   const command = record.command;
   if (
     !command ||
@@ -62,8 +66,10 @@ function verifyTaskReceipt(record: Submission, receipt: BackendCommandReceipt): 
     receipt.operation !== command.operation
   )
     hold(command?.commandId ?? receipt.commandId, 'invalid-result');
-  if (canonicalTaskSubmission(receipt.taskSubmission) !== canonicalTaskSubmission(command))
+  if (receipt.taskSubmissionProof !== undefined) await restoreCompactTaskReceipt(receipt, command);
+  else if (canonicalTaskSubmission(receipt.taskSubmission) !== canonicalTaskSubmission(command))
     hold(command.commandId, 'invalid-correlation');
+  if (!record.current()) hold(command.commandId, 'context-changed');
   if (receipt.phase === 'rejected' && receipt.taskSubmissionNoEffect === true)
     throw new HostTaskSubmissionRefusal('policy', 'rejected', command.commandId);
   if (receipt.phase !== 'completed') hold(command.commandId);
@@ -138,7 +144,7 @@ export interface HostTaskSubmissionAttempt {
   effectStarted(): void;
   command(command: Command): void;
   attachments(metadata: NonNullable<Submission['attachmentMetadata']>): void;
-  received(receipt: BackendCommandReceipt): void;
+  received(receipt: BackendCommandReceipt): Promise<void>;
   refused(result: Extract<BackendOperationResult, { ok: false }>): Promise<void>;
 }
 export async function runRetainedHostTaskSubmission<T>(
@@ -163,7 +169,8 @@ export async function runRetainedHostTaskSubmission<T>(
         return hold(options.commandId, 'submission-payload-conflict');
       const receipt = await lookup(record, options.commandId);
       if (!receipt) return hold(options.commandId);
-      verifyTaskReceipt(record, receipt);
+      await verifyTaskReceipt(record, receipt);
+      if (!record.current()) return hold(options.commandId, 'context-changed');
       return recover(projectHostTaskReceipt(receipt, record.projection!));
     } catch (error) {
       if (
@@ -205,7 +212,7 @@ export async function runRetainedHostTaskSubmission<T>(
       original.attachmentMetadata = structuredClone(metadata);
     },
     received(receipt) {
-      verifyTaskReceipt(original, receipt);
+      return verifyTaskReceipt(original, receipt);
     },
     async refused(result) {
       // Only an initial finite facade refusal can ask the original authority to prove no admission.

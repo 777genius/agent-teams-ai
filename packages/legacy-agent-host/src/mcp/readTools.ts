@@ -71,9 +71,9 @@ export function createReadMcpTools(
     ),
     defineTool(
       "task_get_comment",
-      "Read one canonical comment and its Task context.",
-      z.strictObject({ taskId: id, commentId: id }),
-      ({ taskId, commentId }) => reads.getTaskComment(taskId, commentId),
+      "Read one canonical comment and its Task context. For large results, follow nextCursor and concatenate JSON chunks in part order, then parse the complete JSON.",
+      z.strictObject({ taskId: id, commentId: id, cursor: cursor.optional() }),
+      ({ taskId, commentId, cursor }) => reads.getTaskComment(taskId, commentId, cursor),
       false,
     ),
     defineTool(

@@ -17,8 +17,10 @@ export async function captureManagedProviderRuntimePreferences(
   const resolved = resolveManagedPreferences(saved.project, saved.global, null);
   return openCodeManagedPreferencesSchema.parse({
     defaultModelId: resolved.defaultModel,
-    modelLimitOverrides: Object.fromEntries(Object.entries(resolved.modelLimitOverrides).map(
-      ([modelId, { contextTokens, outputTokens }]) => [modelId, { contextTokens, outputTokens }]
-    )),
+    modelLimitOverrides: Object.fromEntries(
+      Object.entries(resolved.modelLimitOverrides).map(
+        ([modelId, { contextTokens, outputTokens }]) => [modelId, { contextTokens, outputTokens }]
+      )
+    ),
   });
 }

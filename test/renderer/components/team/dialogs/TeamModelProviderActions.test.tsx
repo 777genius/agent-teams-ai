@@ -131,6 +131,35 @@ afterEach(async () => {
 });
 
 describe('retained provider actions account admission', () => {
+  it('explains the retained Manage Providers restriction on keyboard focus without activating it', async () => {
+    const view = fixture();
+    await view.render(<Toolbar />);
+    const button = view.host.querySelector<HTMLButtonElement>(
+      '[data-testid="team-model-selector-manage-providers"]'
+    );
+    const trigger = button?.parentElement;
+    if (!button || !trigger) throw new Error('TEST Manage Providers control missing');
+    expect(button.disabled).toBe(true);
+    expect(button.hasAttribute('title')).toBe(false);
+    expect(trigger.tabIndex).toBe(0);
+
+    await act(async () => { trigger.focus(); });
+    expect(document.activeElement).toBe(trigger);
+    const descriptionId = trigger.getAttribute('aria-describedby');
+    expect(descriptionId).toBeTruthy();
+    expect(document.getElementById(descriptionId!)?.textContent)
+      .toBe('Close Launch before changing the original runtime connection.');
+
+    await act(async () => {
+      button.click();
+      trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      trigger.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+    });
+    expect(storeState.openSettingsTab).not.toHaveBeenCalled();
+    await act(async () => { trigger.blur(); });
+    expect(document.querySelector('[role="tooltip"]')).toBeNull();
+  });
+
   it.each(['anthropic', 'opencode'] as const)('does not read Codex account when the %s toolbar mounts', async providerId => {
     const view = fixture();
     await view.render(<Toolbar providerId={providerId} />);

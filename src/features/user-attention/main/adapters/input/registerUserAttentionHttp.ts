@@ -14,8 +14,11 @@ export function registerUserAttentionHttp(
     async (request, reply) => {
       const teamName = request.query.teamName;
       let selection: string | undefined;
-      try { selection = teamName === undefined ? undefined : validateAttentionTeamSelection(teamName); }
-      catch { return reply.code(400).send({ error: 'Invalid team name' }); }
+      try {
+        selection = teamName === undefined ? undefined : validateAttentionTeamSelection(teamName);
+      } catch {
+        return reply.code(400).send({ error: 'Invalid team name' });
+      }
       try {
         return await feature.getUserAttentionSnapshot(selection);
       } catch {

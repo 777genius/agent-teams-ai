@@ -17,7 +17,10 @@ import {
   isContextScopedRequestEpochCurrent,
 } from '@renderer/store/utils/contextScopedRequestEpoch';
 
-import { resolveTeamLaunchDefaultProjectPath, resolveTeamListProjectPermissionAlias } from '../teamProjectSelection';
+import {
+  resolveTeamLaunchDefaultProjectPath,
+  resolveTeamListProjectPermissionAlias,
+} from '../teamProjectSelection';
 
 import type { TeamLaunchDialogMode } from './LaunchTeamDialog.types';
 import type { MemberSettingsRelaunchDraft } from '@features/team-provisioning/renderer';
@@ -177,14 +180,18 @@ export async function loadExistingTeamLaunchDialog(
     if (!current()) throw new StoppedTeamLaunchHold('Team context changed. Reopen Launch.');
   };
   const qualify = async (target: {
-    teamName: string; mode: TeamLaunchDialogMode; members: ResolvedTeamMember[];
-    projectPath: string; retainedLegacyLaunch?: RetainedLegacyLaunchChoice;
+    teamName: string;
+    mode: TeamLaunchDialogMode;
+    members: ResolvedTeamMember[];
+    projectPath: string;
+    retainedLegacyLaunch?: RetainedLegacyLaunchChoice;
   }) => {
     check();
     const hintedMode = useStore.getState().teamByName[target.teamName]?.projectContextMode;
     let saved;
-    try { saved = await api.teams.getSavedRequest(target.teamName); }
-    catch (error) {
+    try {
+      saved = await api.teams.getSavedRequest(target.teamName);
+    } catch (error) {
       if (hintedMode === 'per_project' || isHostTeamSelectionKey(target.teamName)) throw error;
     }
     check();
@@ -193,16 +200,33 @@ export async function loadExistingTeamLaunchDialog(
     if (mode === 'per_project') {
       if (!saved || saved.teamName !== target.teamName)
         throw new StoppedTeamLaunchHold('Saved team configuration unavailable. Reopen Launch.');
-      target.members = saved.members.map((member) => ({ ...member, joinedAt: 0,
-        currentTaskId: null, taskCount: 0, messageCount: 0, lastActiveAt: null, status: 'idle' as const }));
+      target.members = saved.members.map((member) => ({
+        ...member,
+        joinedAt: 0,
+        currentTaskId: null,
+        taskCount: 0,
+        messageCount: 0,
+        lastActiveAt: null,
+        status: 'idle' as const,
+      }));
       try {
         const view = await api.teams.getProjectContextView(target.teamName, projectPath);
         check();
-        projectPermissionTeamName = resolveTeamListProjectPermissionAlias(target.teamName, projectPath, view);
-      } catch { check(); projectPermissionTeamName = null; }
+        projectPermissionTeamName = resolveTeamListProjectPermissionAlias(
+          target.teamName,
+          projectPath,
+          view
+        );
+      } catch {
+        check();
+        projectPermissionTeamName = null;
+      }
     }
-    return { ...target, projectPath: resolveTeamLaunchDefaultProjectPath(mode, projectPath, target.projectPath),
-      projectPermissionTeamName };
+    return {
+      ...target,
+      projectPath: resolveTeamLaunchDefaultProjectPath(mode, projectPath, target.projectPath),
+      projectPermissionTeamName,
+    };
   };
   try {
     let retainedLegacyLaunch: RetainedLegacyLaunchChoice | undefined;

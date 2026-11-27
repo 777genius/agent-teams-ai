@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
+import crypto, { createHash } from 'node:crypto';
 import fs, { fstatSync, linkSync, lstatSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { syncBuiltinESMExports } from 'node:module';
 import { tmpdir } from 'node:os';
@@ -50,6 +50,29 @@ function fixture(t: { after(cleanup: () => void): void }) {
   };
   return { root, home, project, xdg, input, write };
 }
+
+test('captured configuration and selected key joins compare private values without hashing credentials', (t) => {
+  const f = fixture(t);
+  f.write(join(f.project, 'opencode.json'), {
+    provider: { 'TEST-local': { options: { apiKey: 'TEST-original-key', baseURL: 'http://127.0.0.1:1' } } },
+  });
+  const captured = captureOpenCodeConfigurationSource(f.input), copy = captured.read();
+  const observe = t.mock.method(crypto, 'createHash', () => {
+    assert.fail('a synchronous private-value equality must not derive a credential fingerprint');
+  });
+  try {
+    syncBuiltinESMExports();
+    assert.equal(captured.matchesConfiguration(copy), true);
+    assert.equal(captured.selectedKeyOrigin('TEST-local')?.value, 'TEST-original-key');
+    const provider = copy.provider as Record<string, { options: Record<string, unknown> }>;
+    provider['TEST-local']!.options.apiKey = 'TEST-replaced-key';
+    assert.equal(captured.matchesConfiguration(copy), false, 'a different selected key still refuses the join');
+    assert.equal(captured.selectedKeyOrigin('TEST-local')?.value, 'TEST-original-key', 'the captured original remains isolated');
+  } finally {
+    observe.mock.restore();
+    syncBuiltinESMExports();
+  }
+});
 
 test('synchronous OpenCode configuration observation preserves clone isolation and closing freshness', (t) => {
   const f = fixture(t), path = join(f.project, 'opencode.json');

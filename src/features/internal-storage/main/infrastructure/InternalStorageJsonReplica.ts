@@ -99,7 +99,10 @@ export class InternalStorageJsonReplica<TSnapshot> {
       !this.isSnapshot(intent.snapshot, teamName) ||
       !isDeepStrictEqual(await this.readUnboundImport(teamName), previous)
     )
-      throw new InternalStorageFallbackUnsafeError(this.getPath(teamName), 'unbound import changed');
+      throw new InternalStorageFallbackUnsafeError(
+        this.getPath(teamName),
+        'unbound import changed'
+      );
     await this.write(teamName, {
       schemaVersion: 1,
       state: 'dirty',
@@ -114,7 +117,9 @@ export class InternalStorageJsonReplica<TSnapshot> {
   }
 
   /** Only this explicit intent reader exposes an unbound import; generic dirty readers stay unchanged. */
-  async readUnboundImport(teamName: string): Promise<InternalStorageUnboundImport<TSnapshot> | null> {
+  async readUnboundImport(
+    teamName: string
+  ): Promise<InternalStorageUnboundImport<TSnapshot> | null> {
     const envelope = await this.readEnvelope(teamName, false);
     return envelope ? this.decodeUnboundImport(teamName, envelope) : null;
   }
@@ -143,7 +148,10 @@ export class InternalStorageJsonReplica<TSnapshot> {
       typeof marker.expectedDigest !== 'string' ||
       !/^[a-f0-9]{64}$/.test(marker.expectedDigest)
     )
-      throw new InternalStorageFallbackUnsafeError(this.getPath(teamName), 'unbound import is invalid');
+      throw new InternalStorageFallbackUnsafeError(
+        this.getPath(teamName),
+        'unbound import is invalid'
+      );
     return {
       snapshot: envelope.snapshot,
       preimageDigest: marker.preimageDigest,
@@ -157,8 +165,15 @@ export class InternalStorageJsonReplica<TSnapshot> {
     intent: InternalStorageUnboundImport<TSnapshot>
   ): Promise<void> {
     if (!isDeepStrictEqual(await this.readUnboundImport(teamName), intent))
-      throw new InternalStorageFallbackUnsafeError(this.getPath(teamName), 'unbound import changed');
-    await this.write(teamName, { schemaVersion: 1, state: 'dirty', updatedAt: new Date().toISOString() });
+      throw new InternalStorageFallbackUnsafeError(
+        this.getPath(teamName),
+        'unbound import changed'
+      );
+    await this.write(teamName, {
+      schemaVersion: 1,
+      state: 'dirty',
+      updatedAt: new Date().toISOString(),
+    });
   }
 
   /** Evidence only. Dirty candidates never authorize fallback or establish primary continuity. */

@@ -22,6 +22,7 @@ import {
 import { bounded } from './desktop-proof-bounds.ts';
 import { connectCapturedDesktopApp } from './desktop-captured-app.ts';
 import { openOriginalCreateForm } from './desktop-create-config-ui-smoke.ts';
+import { selectOwnerRoutingSharedHistory } from './desktop-owner-routing-history-ui.ts';
 import {
   ownerRoutingJson as json,
   ownerRoutingRow as row,
@@ -503,6 +504,7 @@ export async function runDesktopOwnerRoutingContinuation(
             `document.querySelector('[data-testid="create-team-page"] #launch-team')?.getAttribute('data-state')==='unchecked'`,
             'original save-only retained'
           );
+          await selectOwnerRoutingSharedHistory(ui);
           const provider = '[data-testid="create-team-page"] button[aria-label*=" provider,"]';
           await ui.scrollTo(provider, 'original Anthropic model selector');
           if (
@@ -529,6 +531,7 @@ export async function runDesktopOwnerRoutingContinuation(
           publishedB = await json(join(directory, names[0]!));
           assert.equal(publishedB.phase, 'published');
           assert.equal(row(publishedB.record).teamName, teamB);
+          assert.equal(row(publishedB.record).projectContextMode, 'shared');
           const actual = row(row(publishedB.record).binding);
           const discovered = row(
             await cdp.evaluate('window.electronAPI.agentBackend.getConnections()')

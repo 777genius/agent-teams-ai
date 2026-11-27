@@ -78,8 +78,7 @@ export function HostBackendRetryAction({
   const contextId = useStore((state) => state.activeContextId);
   const switching = useStore((state) => state.isContextSwitching);
   const retained = useStore(
-    (state) =>
-      state.selectedTeamName === teamName && state.selectedTeamData?.teamName === teamName
+    (state) => state.selectedTeamName === teamName && state.selectedTeamData?.teamName === teamName
   );
   const error = useStore((state) =>
     state.selectedTeamName === teamName ? state.selectedTeamError : null

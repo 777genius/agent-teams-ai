@@ -1,4 +1,9 @@
-import { getOrgUnitNodeId, getRelationId, normalizeOrganizationId, organizationTeamIdentity } from './organizationIds';
+import {
+  getOrgUnitNodeId,
+  getRelationId,
+  normalizeOrganizationId,
+  organizationTeamIdentity,
+} from './organizationIds';
 
 import type {
   OrgRelationDefinitionModel,

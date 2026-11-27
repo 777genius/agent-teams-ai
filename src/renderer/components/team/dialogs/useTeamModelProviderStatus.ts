@@ -25,7 +25,8 @@ export function useTeamModelProviderStatus(
       state.cliStatus?.providers.find((provider) => provider.providerId === 'anthropic')
         ?.effectiveDefaultModel
   );
-  const scopesAnthropic = providerId === 'anthropic' && (!!retained || globalAnthropicDefault !== undefined);
+  const scopesAnthropic =
+    providerId === 'anthropic' && (!!retained || globalAnthropicDefault !== undefined);
   const cliStatus = useStore((state) => state.cliStatus);
   const hasScopedAnthropicStatus = useStore((state) =>
     Boolean(

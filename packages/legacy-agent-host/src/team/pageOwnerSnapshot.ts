@@ -16,7 +16,11 @@ const TASK_ARRAY_FIELDS = [
 ] as const;
 
 type CommentPart = { index: number; part: number; total: number };
-type TaskPart = { index: number; part: number; total: number; commentPart?: CommentPart };
+type SubjectPart = { part: number; total: number };
+type TaskPart = {
+  index: number; part: number; total: number;
+  commentPart?: CommentPart; historyPart?: CommentPart; subjectPart?: SubjectPart;
+};
 type Segment =
   | { kind: 'task'; value: JsonValue; part: TaskPart }
   | { kind: 'message'; value: JsonValue; part: TaskPart }
@@ -36,34 +40,52 @@ function taskSegments(tasks: JsonValue[], itemBudget: number): Segment[] {
     if (!value || typeof value !== 'object' || Array.isArray(value))
       throw new TeamOwnerError('hold');
     const task = value as Record<string, JsonValue>;
-    const { id, subject, status } = task;
-    if (typeof id !== 'string' || typeof subject !== 'string' || typeof status !== 'string')
+    const { id, subject: originalSubject, status } = task;
+    if (typeof id !== 'string' || typeof originalSubject !== 'string' || typeof status !== 'string')
       throw new TeamOwnerError('hold');
-    const base = { ...task };
-    const parts: { value: JsonValue; commentPart?: CommentPart }[] = [{ value: base }];
+    // A repeated title must not consume nearly the whole page and turn an
+    // otherwise bounded description/comment into more than 128 continuations.
+    const subjectBudget = Math.min(16 * 1024, Math.floor(
+      (itemBudget - Buffer.byteLength(JSON.stringify({ id, subject: '', status })) - 64) / 4
+    ));
+    const splitSubject = Buffer.byteLength(JSON.stringify(originalSubject)) - 2 > subjectBudget;
+    const subject = splitSubject ? '' : originalSubject;
+    const base: Record<string, JsonValue> = { ...task, subject };
+    const parts: {
+      value: JsonValue; commentPart?: CommentPart; historyPart?: CommentPart; subjectPart?: SubjectPart;
+    }[] = [{ value: base }];
+    if (splitSubject) {
+      const envelope = { id, subject: '', status };
+      const chunks = splitText(originalSubject, subjectBudget);
+      for (const [part, text] of chunks.entries())
+        parts.push({ value: { ...envelope, subject: text },
+          subjectPart: { part, total: chunks.length } });
+    }
     for (const field of TASK_ARRAY_FIELDS) {
       const items = task[field];
       if (!Array.isArray(items)) continue;
       base[field] = [];
       for (const [itemIndex, item] of items.entries()) {
         const fragment = { id, subject, status, [field]: [item] };
-        if (field !== 'comments' ||
+        if ((field !== 'comments' && field !== 'historyEvents') ||
             Buffer.byteLength(JSON.stringify(fragment)) + 64 <= itemBudget) {
           parts.push({ value: fragment });
           continue;
         }
-        // A single valid comment may exceed the MCP page budget. Retain its
-        // identity and metadata while splitting only the original text.
+        // A comment or review note can exceed one page. Keep its exact identity
+        // and metadata while splitting only its original text.
         if (!item || typeof item !== 'object' || Array.isArray(item))
           throw new TeamOwnerError('hold');
-        const comment = item as Record<string, JsonValue>;
-        if (typeof comment.text !== 'string') throw new TeamOwnerError('hold');
-        const envelope = { id, subject, status, comments: [{ ...comment, text: '' }] };
+        const itemRow = item as Record<string, JsonValue>;
+        const textField = field === 'comments' ? 'text' : 'note';
+        const itemText = itemRow[textField];
+        if (typeof itemText !== 'string') throw new TeamOwnerError('hold');
+        const envelope = { id, subject, status, [field]: [{ ...itemRow, [textField]: '' }] };
         const maxTextBytes = itemBudget - Buffer.byteLength(JSON.stringify(envelope)) - 64;
         if (maxTextBytes <= 0) throw new TeamOwnerError('hold');
         const chunks: string[] = [];
         let chunk = '', bytes = 0;
-        for (const character of comment.text) {
+        for (const character of itemText) {
           const size = Buffer.byteLength(JSON.stringify(character)) - 2;
           if (size > maxTextBytes) throw new TeamOwnerError('hold');
           if (bytes + size > maxTextBytes) {
@@ -77,8 +99,9 @@ function taskSegments(tasks: JsonValue[], itemBudget: number): Segment[] {
         chunks.push(chunk);
         for (const [part, text] of chunks.entries()) {
           parts.push({
-            value: { id, subject, status, comments: [{ ...comment, text }] },
-            commentPart: { index: itemIndex, part, total: chunks.length },
+            value: { id, subject, status, [field]: [{ ...itemRow, [textField]: text }] },
+            [field === 'comments' ? 'commentPart' : 'historyPart']:
+              { index: itemIndex, part, total: chunks.length },
           });
         }
       }
@@ -108,6 +131,22 @@ function taskSegments(tasks: JsonValue[], itemBudget: number): Segment[] {
       }
       if (chunk) parts.push({ value: { ...envelope, [field]: chunk } });
     }
+    const sourceMessage = task.sourceMessage;
+    if (sourceMessage && typeof sourceMessage === 'object' && !Array.isArray(sourceMessage)) {
+      const original = sourceMessage as Record<string, JsonValue>;
+      if (typeof task.sourceMessageId !== 'string' || typeof original.text !== 'string' ||
+          typeof original.from !== 'string' || typeof original.timestamp !== 'string')
+        throw new TeamOwnerError('hold');
+      // Source attachment provenance stays on the base. Continuations contain
+      // only original identity and text, projected by Main like the base.
+      base.sourceMessage = { ...original, text: '' };
+      const envelope = { id, subject, status, sourceMessageId: task.sourceMessageId,
+        sourceMessage: { from: original.from, timestamp: original.timestamp,
+          ...(original.source === undefined ? {} : { source: original.source }), text: '' } };
+      const maxTextBytes = itemBudget - Buffer.byteLength(JSON.stringify(envelope)) - 64;
+      if (original.text) for (const text of splitText(original.text, maxTextBytes))
+        parts.push({ value: { ...envelope, sourceMessage: { ...envelope.sourceMessage, text } } });
+    }
     // An unsupported oversized nested item still fails closed without data loss.
     if (parts.length === 1 || parts.some(({ value }) =>
       Buffer.byteLength(JSON.stringify(value)) + 64 > itemBudget
@@ -115,13 +154,34 @@ function taskSegments(tasks: JsonValue[], itemBudget: number): Segment[] {
     for (const [part, fragment] of parts.entries())
       segments.push({ kind: 'task', value: fragment.value,
         part: { index, part, total: parts.length,
-          ...(fragment.commentPart ? { commentPart: fragment.commentPart } : {}) } });
+          ...(fragment.commentPart ? { commentPart: fragment.commentPart } : {}),
+          ...(fragment.historyPart ? { historyPart: fragment.historyPart } : {}),
+          ...(fragment.subjectPart ? { subjectPart: fragment.subjectPart } : {}) } });
   }
   return segments;
 }
 
 
-/** Large accepted message text is split on Unicode codepoint boundaries. */
+function splitText(text: string, maxBytes: number): string[] {
+  if (maxBytes <= 0) throw new TeamOwnerError('hold');
+  const chunks: string[] = [];
+  let chunk = '', bytes = 0;
+  for (const character of text) {
+    const size = Buffer.byteLength(JSON.stringify(character)) - 2;
+    if (size > maxBytes) throw new TeamOwnerError('hold');
+    if (bytes + size > maxBytes) {
+      chunks.push(chunk);
+      chunk = '';
+      bytes = 0;
+    }
+    chunk += character;
+    bytes += size;
+  }
+  chunks.push(chunk);
+  return chunks;
+}
+
+/** Large accepted message text and summary share bounded Unicode-safe parts. */
 export function messageSegments(
   messages: JsonValue[],
   itemBudget: number
@@ -140,44 +200,41 @@ export function messageSegments(
         typeof original.timestamp !== 'string' ||
         typeof original.read !== 'boolean')
       throw new TeamOwnerError('hold');
-    const continuation = {
+    const hasSummary = typeof original.summary === 'string';
+    const continuation: Record<string, JsonValue> = {
       from: original.from, timestamp: original.timestamp, read: original.read,
       ...(typeof original.messageId === 'string' ? { messageId: original.messageId } : {}),
       ...(typeof original.source === 'string' ? { source: original.source } : {}),
       ...(typeof original.leadSessionId === 'string' ? { leadSessionId: original.leadSessionId } : {}),
+      ...(hasSummary ? { summary: '' } : {}),
       text: '',
     };
-    const first = { ...original, text: '' };
-    const overhead = Math.max(
-      Buffer.byteLength(JSON.stringify(first)),
-      Buffer.byteLength(JSON.stringify(continuation))
-    );
-    const maxTextBytes = itemBudget - overhead - 64;
-    if (maxTextBytes <= 0) throw new TeamOwnerError('hold');
-    const chunks: string[] = [];
-    let chunk = '', bytes = 0;
-    for (const character of original.text) {
-      const size = Buffer.byteLength(JSON.stringify(character)) - 2;
-      if (size > maxTextBytes) throw new TeamOwnerError('hold');
-      if (bytes + size > maxTextBytes) {
-        chunks.push(chunk);
-        chunk = '';
-        bytes = 0;
+    let fragment: Record<string, JsonValue> = {
+      ...original, text: '', ...(hasSummary ? { summary: '' } : {}),
+    };
+    const chunks: JsonValue[] = [];
+    const budget = itemBudget - 64;
+    let bytes = Buffer.byteLength(JSON.stringify(fragment));
+    if (bytes >= budget) throw new TeamOwnerError('hold');
+    for (const field of hasSummary ? ['text', 'summary'] as const : ['text'] as const) {
+      const text = original[field];
+      if (typeof text !== 'string') throw new TeamOwnerError('hold');
+      for (const character of text) {
+        const size = Buffer.byteLength(JSON.stringify(character)) - 2;
+        if (bytes + size > budget) {
+          chunks.push(fragment);
+          fragment = { ...continuation };
+          bytes = Buffer.byteLength(JSON.stringify(fragment));
+        }
+        if (bytes + size > budget) throw new TeamOwnerError('hold');
+        fragment[field] = (fragment[field] as string) + character;
+        bytes += size;
       }
-      chunk += character;
-      bytes += size;
     }
-    chunks.push(chunk);
-    for (const [part, text] of chunks.entries()) {
-      const fragment = part === 0 ? { ...first, text } : { ...continuation, text };
-      if (Buffer.byteLength(JSON.stringify(fragment)) + 64 > itemBudget)
-        throw new TeamOwnerError('hold');
-      segments.push({
-        kind: 'message',
-        value: fragment,
-        part: { index, part, total: chunks.length },
-      });
-    }
+    chunks.push(fragment);
+    for (const [part, value] of chunks.entries())
+      segments.push({ kind: 'message', value,
+        part: { index, part, total: chunks.length } });
   }
   return segments;
 }
@@ -269,6 +326,7 @@ export function pageOwnerSnapshot(options: {
       teamName: source.teamName,
       revision: source.revision,
       maxBytes,
+      protocol: 'product-parts-v2',
       offset,
     });
   let offset = 0;

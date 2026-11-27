@@ -1636,7 +1636,10 @@ function normalizeFallbackReviewState(value: unknown, status: string): string {
   if (status === 'in_progress' || status === 'deleted') return 'none';
   if (status === 'pending') return reviewState === 'needsFix' ? 'needsFix' : 'none';
   if (status === 'completed') {
-    return reviewState === 'review' || reviewState === 'approved' || reviewState === 'reviewed' || reviewState === 'needsFix'
+    return reviewState === 'review' ||
+      reviewState === 'approved' ||
+      reviewState === 'reviewed' ||
+      reviewState === 'needsFix'
       ? reviewState
       : 'none';
   }

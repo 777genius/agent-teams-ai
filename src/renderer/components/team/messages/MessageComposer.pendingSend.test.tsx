@@ -203,7 +203,8 @@ vi.mock('@renderer/components/team/messages/OpenCodeDeliveryWarning', () => ({
 }));
 
 vi.mock('@renderer/components/ui/MentionableTextarea', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@renderer/components/ui/MentionableTextarea')>();
+  const actual =
+    await importOriginal<typeof import('@renderer/components/ui/MentionableTextarea')>();
   const MockMentionableTextarea = React.forwardRef<
     HTMLTextAreaElement,
     {
@@ -1593,9 +1594,12 @@ describe('MessageComposer pending send lifecycle', () => {
       return React.createElement(MessageComposer, { ...props, members: active });
     };
     const captured: ResolvedTeamMember = { ...lead, runtimeOwner: 'captured-host' };
-    const ready: ResolvedTeamMember = { ...captured,
+    const ready: ResolvedTeamMember = {
+      ...captured,
       sessionCommands: [{ name: 'cost', description: 'Captured session token usage' }],
-      nativeInboxAttachmentsSupported: true, nativeInboxTextAttachmentsSupported: true };
+      nativeInboxAttachmentsSupported: true,
+      nativeInboxTextAttachmentsSupported: true,
+    };
     const { host, render, root, onSend } = renderComposer({ members: [lead] }, StableComposer);
     try {
       render({ members: [captured] });
@@ -1604,8 +1608,14 @@ describe('MessageComposer pending send lifecycle', () => {
       expect(observedMembers.at(-1)?.[0].nativeInboxAttachmentsSupported).toBe(true);
       expect(observedMembers.at(-1)?.[0].nativeInboxTextAttachmentsSupported).toBe(true);
       const originalMembers = observedMembers.at(-1);
-      render({ members: [{ ...ready, sessionCommands: ready.sessionCommands?.map(command => ({ ...command })) }] });
-      expect(observedMembers.at(-1), 'equal cloned capabilities retain stable members').toBe(originalMembers);
+      render({
+        members: [
+          { ...ready, sessionCommands: ready.sessionCommands?.map((command) => ({ ...command })) },
+        ],
+      });
+      expect(observedMembers.at(-1), 'equal cloned capabilities retain stable members').toBe(
+        originalMembers
+      );
       const textarea = host.querySelector('textarea');
       if (!(textarea instanceof HTMLTextAreaElement)) throw new Error('Message textarea not found');
       textarea.style.lineHeight = '20px';
@@ -1626,8 +1636,16 @@ describe('MessageComposer pending send lifecycle', () => {
         )
       ).toEqual(['/cost']);
 
-      render({ members: [{ ...ready, sessionCommands: [],
-        nativeInboxAttachmentsSupported: false, nativeInboxTextAttachmentsSupported: false }] });
+      render({
+        members: [
+          {
+            ...ready,
+            sessionCommands: [],
+            nativeInboxAttachmentsSupported: false,
+            nativeInboxTextAttachmentsSupported: false,
+          },
+        ],
+      });
       expect(host.querySelectorAll('[role="option"]')).toHaveLength(0);
       expect(observedMembers.at(-1)?.[0].nativeInboxAttachmentsSupported).toBe(false);
       expect(observedMembers.at(-1)?.[0].nativeInboxTextAttachmentsSupported).toBe(false);

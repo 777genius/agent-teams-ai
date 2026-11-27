@@ -120,16 +120,22 @@ export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort & { evaluate(
       previousSettings = key;
       return stableSettings === 3;
     }));
-    if (settings.expanded !== 'true') await ui.click(`[role="dialog"] button[aria-controls=${literal(settings.id)}]`, 'expand original saved launch settings');
-    const lead = '[role="dialog"] [data-role="lead-row"]';
     if (selected.projectDefinition) {
       assert.equal(chooseLow, false, 'a project Launch cannot edit the logical definition');
       await ui.waitRead(`(()=>{const rows=[...document.querySelectorAll('[role="dialog"] button[aria-controls]')]
         .filter(e=>e.getAttribute('aria-controls')===${literal(settings.id)});
-        return rows.length===1&&rows[0].textContent.includes('Provider: Codex')&&
-          rows[0].textContent.includes(${literal('Model: ' + selected.model)})&&
-          rows[0].textContent.includes(${literal('Effort: ' + selected.effort)})&&
-          !document.querySelector('${lead} #lead-effort')})()`, 'authored model and effort hydrate the original read-only project Launch');
+        if(rows.length!==1||rows[0].getAttribute('aria-expanded')!=='false')return false;
+        const chips=[...rows[0].querySelectorAll('span.truncate.rounded-md')].map(e=>e.textContent.trim());
+        return JSON.stringify(chips)===${literal(JSON.stringify(['Codex', selected.model, selected.effort]))}})()`,
+      'authored model and effort hydrate the original collapsed project Launch summary');
+    }
+    if (settings.expanded !== 'true') await ui.click(`[role="dialog"] button[aria-controls=${literal(settings.id)}]`, 'expand original saved launch settings');
+    const lead = '[role="dialog"] [data-role="lead-row"]';
+    if (selected.projectDefinition) {
+      await ui.waitRead(`(()=>{const rows=[...document.querySelectorAll('[role="dialog"] button[aria-controls]')]
+        .filter(e=>e.getAttribute('aria-controls')===${literal(settings.id)});
+        return rows.length===1&&rows[0].getAttribute('aria-expanded')==='true'&&
+          !document.querySelector('${lead} #lead-effort')})()`, 'original project Launch keeps its shared roster read-only');
     } else {
     // Launch shares the expandable lead row with Create. #dialog-effort belongs
     // to schedule mode; opening the original lead row does not change its choices.

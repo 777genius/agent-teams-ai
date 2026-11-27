@@ -2,7 +2,16 @@ import { useMemo } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { isElectronMode } from '@renderer/api';
-import { Bell, Cable, ClipboardCheck, Network, Palette, Plug, Settings, Wrench } from 'lucide-react';
+import {
+  Bell,
+  Cable,
+  ClipboardCheck,
+  Network,
+  Palette,
+  Plug,
+  Settings,
+  Wrench,
+} from 'lucide-react';
 
 import type { LucideIcon } from 'lucide-react';
 
@@ -43,7 +52,12 @@ const sections: SectionConfig[] = [
   { id: 'notifications', labelKey: 'tabs.notifications.label', icon: Bell },
   { id: 'reviewFlow', labelKey: 'tabs.reviewFlow.label', icon: ClipboardCheck, electronOnly: true },
   { id: 'providers', labelKey: 'runtimeProvider.tabs.providers', icon: Plug, electronOnly: true },
-  { id: 'gatewayProviders', labelKey: 'tabs.gatewayProviders.label', icon: Network, electronOnly: true },
+  {
+    id: 'gatewayProviders',
+    labelKey: 'tabs.gatewayProviders.label',
+    icon: Network,
+    electronOnly: true,
+  },
   {
     id: 'externalAgentConnection',
     labelKey: 'general.externalAgentConnection.title',

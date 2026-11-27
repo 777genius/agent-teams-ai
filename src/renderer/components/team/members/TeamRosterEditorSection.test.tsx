@@ -130,12 +130,21 @@ describe('TeamRosterEditorSection', () => {
     });
   });
 
-  it.each([undefined, true])('preserves explicit lead and teammate models only when requested (%s)', (preserveSelectedModel) => {
-    const { root } = renderTeamRosterEditorSection({ preserveSelectedModel });
-    expect(leadRowMockState.lastLeadProps?.preserveSelectedModel).toBe(preserveSelectedModel ?? false);
-    expect(leadRowMockState.lastMembersEditorProps?.preserveSelectedModel).toBe(preserveSelectedModel ?? false);
-    act(() => { root.unmount(); });
-  });
+  it.each([undefined, true])(
+    'preserves explicit lead and teammate models only when requested (%s)',
+    (preserveSelectedModel) => {
+      const { root } = renderTeamRosterEditorSection({ preserveSelectedModel });
+      expect(leadRowMockState.lastLeadProps?.preserveSelectedModel).toBe(
+        preserveSelectedModel ?? false
+      );
+      expect(leadRowMockState.lastMembersEditorProps?.preserveSelectedModel).toBe(
+        preserveSelectedModel ?? false
+      );
+      act(() => {
+        root.unmount();
+      });
+    }
+  );
 
   it('hides the Anthropic context control when teammates are synced to a non-Anthropic lead', () => {
     const { root } = renderTeamRosterEditorSection({

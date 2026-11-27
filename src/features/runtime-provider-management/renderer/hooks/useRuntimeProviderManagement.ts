@@ -11,7 +11,10 @@ import {
   supportsScopedDefaultModelInheritance,
 } from '../../core/domain';
 import { saveOpenCodeModelForNewTeams } from '../adapters/createTeamDefaultModelWriter';
-import { getRuntimeProviderDirectoryReadToken, observeRuntimeProviderDirectoryRevision } from '../runtimeProviderDirectoryCache';
+import {
+  getRuntimeProviderDirectoryReadToken,
+  observeRuntimeProviderDirectoryRevision,
+} from '../runtimeProviderDirectoryCache';
 import {
   projectBaseDefaultMutation,
   projectClearedDefaultMutation,
@@ -67,45 +70,21 @@ import { useRuntimeProviderProjectContext } from './useRuntimeProviderProjectCon
 
 import type { RuntimeProviderConnectionIntent } from '../../core/domain';
 import type {
+  RuntimeProviderModelPickerMode,
+  UseRuntimeProviderManagementOptions,
+} from './runtimeProviderManagementTypes';
+import type {
   RuntimeProviderConnectionDto,
   RuntimeProviderDefaultScopeDto,
   RuntimeProviderDirectoryEntryDto,
   RuntimeProviderDirectoryFilterDto,
   RuntimeProviderManagementErrorDiagnosticsDto,
-  RuntimeProviderManagementRuntimeId,
   RuntimeProviderManagementViewDto,
   RuntimeProviderModelDto,
   RuntimeProviderModelTestResultDto,
   RuntimeProviderOAuthProgressDto,
   RuntimeProviderSetupFormDto,
 } from '@features/runtime-provider-management/contracts';
-
-interface UseRuntimeProviderManagementOptions {
-  runtimeId: RuntimeProviderManagementRuntimeId;
-  enabled: boolean;
-  directoryPageSize?: number;
-  directorySummaryOnEnable?: boolean;
-  reuseCachedFullDirectory?: boolean;
-  runtimeRevision?: string | null;
-  loadViewOnEnable?: boolean;
-  preserveViewRequestOnDisable?: boolean;
-  searchDirectoryOnQueryChange?: boolean;
-  projectPath?: string | null;
-  connectionContextToken?: string;
-  initialProviderId?: string | null;
-  initialProviderAction?: RuntimeProviderConnectionIntent | 'select' | null;
-  bundledRuntimeVersion?: string;
-  onProviderChanged?: (
-    changeKind: RuntimeProviderChangeKind
-  ) => Promise<boolean | void> | boolean | void;
-}
-export type RuntimeProviderModelPickerMode = 'use' | 'runtime-default';
-export type RuntimeProviderChangeKind =
-  | 'connection'
-  | 'credential_removed'
-  | 'configuration'
-  | 'model_tested'
-  | 'oauth_cancelled';
 
 const MODEL_PAGE_SIZE = 250;
 const MODEL_SEARCH_DEBOUNCE_MS = 300;
@@ -2024,3 +2003,8 @@ export function useRuntimeProviderManagement(
     actions,
   ];
 }
+
+export type {
+  RuntimeProviderChangeKind,
+  RuntimeProviderModelPickerMode,
+} from './runtimeProviderManagementTypes';

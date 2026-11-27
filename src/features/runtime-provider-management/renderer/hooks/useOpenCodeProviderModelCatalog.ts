@@ -445,7 +445,13 @@ export function useOpenCodeProviderModelCatalog(input: {
   const management = retained?.management;
   const sourceProviderId = normalizeSourceProviderId(input.sourceProviderId);
   const projectPath = input.projectPath?.trim() || null;
-  const scopeKey = sourceProviderId ? JSON.stringify([projectPath, sourceProviderId, ...(retained ? [retained.choice.scopeId] : [])]) : null;
+  const scopeKey = sourceProviderId
+    ? JSON.stringify([
+        projectPath,
+        sourceProviderId,
+        ...(retained ? [retained.choice.scopeId] : []),
+      ])
+    : null;
   const requestSequenceRef = useRef(0);
   const requestGroupIdRef = useRef(`team-model-selector-catalog:${++nextRequestGroupNumber}`);
   const [refreshSequence, setRefreshSequence] = useState(0);
@@ -481,7 +487,9 @@ export function useOpenCodeProviderModelCatalog(input: {
       return;
     }
     const cancelModelLoad = isElectronMode()
-      ? (management ?? api.runtimeProviderManagement)?.cancelModelLoad?.bind(management ?? api.runtimeProviderManagement)
+      ? (management ?? api.runtimeProviderManagement)?.cancelModelLoad?.bind(
+          management ?? api.runtimeProviderManagement
+        )
       : undefined;
 
     setState((current) =>
@@ -507,7 +515,9 @@ export function useOpenCodeProviderModelCatalog(input: {
         sourceProviderId,
         projectPath,
         requestGroupId,
-        isCurrentRequest, true, (request) => (management ?? api.runtimeProviderManagement).loadModels(request)
+        isCurrentRequest,
+        true,
+        (request) => (management ?? api.runtimeProviderManagement).loadModels(request)
       );
       if (!isCurrentRequest()) return;
       setState({

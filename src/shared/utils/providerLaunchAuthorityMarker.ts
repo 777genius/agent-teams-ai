@@ -6,14 +6,30 @@ export const UNKNOWN_PROVIDER_LAUNCH_AUTHORITY_MARKER = '{"v":1,"state":"unknown
 const PROVIDERS = ['anthropic', 'codex', 'gemini', 'opencode'] as const;
 const CHECKS = ['checking', 'failed'] as const;
 const OUTCOMES = ['authoritative', 'pending', 'transient_error', 'model_only'] as const;
-const ERRORS = ['timeout', 'unavailable', 'runtime_missing', 'partial_response', 'project_missing'] as const;
+const ERRORS = [
+  'timeout',
+  'unavailable',
+  'runtime_missing',
+  'partial_response',
+  'project_missing',
+] as const;
 const VERIFICATION = ['verified', 'unknown', 'offline', 'error'] as const;
 const REFRESH = ['idle', 'loading', 'ready', 'error'] as const;
 const MODEL_CHECK = ['idle', 'verifying', 'verified'] as const;
 const CATALOG = ['ready', 'stale', 'degraded', 'unavailable'] as const;
 const ROW_KEYS = [
-  'provider', 'check', 'loading', 'supported', 'authenticated', 'teamLaunch',
-  'outcome', 'error', 'verification', 'refresh', 'modelCheck', 'catalog',
+  'provider',
+  'check',
+  'loading',
+  'supported',
+  'authenticated',
+  'teamLaunch',
+  'outcome',
+  'error',
+  'verification',
+  'refresh',
+  'modelCheck',
+  'catalog',
 ] as const;
 
 function refuse(): never {
@@ -43,7 +59,10 @@ function count(value: unknown): number {
 
 function exactKeys(value: unknown, keys: readonly string[]): void {
   const found = Reflect.ownKeys(object(value));
-  if (found.length !== keys.length || found.some((key) => typeof key !== 'string' || !keys.includes(key)))
+  if (
+    found.length !== keys.length ||
+    found.some((key) => typeof key !== 'string' || !keys.includes(key))
+  )
     refuse();
 }
 
@@ -66,7 +85,8 @@ function optionalFlag(value: unknown): boolean | null {
 }
 
 function canonical(rows: unknown): string {
-  const length = count(rows), seen = new Set<string>();
+  const length = count(rows),
+    seen = new Set<string>();
   const providers: Record<string, string | boolean | null>[] = [];
   for (let index = 0; index < length; index++) {
     const row = own(rows, String(index));
@@ -131,11 +151,17 @@ export function createProviderLaunchAuthorityMarker(
         supported: status === null ? null : flag(own(status, 'supported')),
         authenticated: status === null ? null : flag(own(status, 'authenticated')),
         teamLaunch: capabilities === null ? null : flag(own(capabilities, 'teamLaunch')),
-        outcome: status === null ? null : optionalChoice(own(status, 'statusCheckOutcome'), OUTCOMES),
+        outcome:
+          status === null ? null : optionalChoice(own(status, 'statusCheckOutcome'), OUTCOMES),
         error: status === null ? null : optionalChoice(own(status, 'statusCheckErrorCode'), ERRORS),
-        verification: status === null ? null : choice(own(status, 'verificationState'), VERIFICATION),
-        refresh: status === null ? null : optionalChoice(own(status, 'modelCatalogRefreshState'), REFRESH),
-        modelCheck: status === null ? null : optionalChoice(own(status, 'modelVerificationState'), MODEL_CHECK),
+        verification:
+          status === null ? null : choice(own(status, 'verificationState'), VERIFICATION),
+        refresh:
+          status === null ? null : optionalChoice(own(status, 'modelCatalogRefreshState'), REFRESH),
+        modelCheck:
+          status === null
+            ? null
+            : optionalChoice(own(status, 'modelVerificationState'), MODEL_CHECK),
         catalog: catalog == null ? null : choice(own(catalog, 'status'), CATALOG),
       });
     }
@@ -148,8 +174,12 @@ export function createProviderLaunchAuthorityMarker(
 /** Reject absent, malformed, noncanonical or oversized transport data without echoing it. */
 export function readProviderLaunchAuthorityMarker(value: unknown): string {
   try {
-    if (typeof value !== 'string' || value.length > PROVIDER_LAUNCH_AUTHORITY_MARKER_LIMIT ||
-      !/^[\x20-\x7e]+$/.test(value)) return UNKNOWN_PROVIDER_LAUNCH_AUTHORITY_MARKER;
+    if (
+      typeof value !== 'string' ||
+      value.length > PROVIDER_LAUNCH_AUTHORITY_MARKER_LIMIT ||
+      !/^[\x20-\x7e]+$/.test(value)
+    )
+      return UNKNOWN_PROVIDER_LAUNCH_AUTHORITY_MARKER;
     if (value === UNKNOWN_PROVIDER_LAUNCH_AUTHORITY_MARKER) return value;
     const parsed: unknown = JSON.parse(value);
     exactKeys(parsed, ['v', 'state', 'providers']);

@@ -1,12 +1,4 @@
-import {
-  memo,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Sheet, type SheetRef } from 'react-modal-sheet';
 
 import { ChatVisualizationPresentationProvider } from '@features/chat-visualizations/renderer';
@@ -107,10 +99,7 @@ import type { MessageRevisionTargetController } from './messageRevisionTarget';
 import type { MessagesFilterState } from './MessagesFilterPopover';
 import type { MessagesPanelProps } from './messagesPanelProps';
 import type { ComposerDraftAddress } from '@renderer/types/composerDraft';
-import type {
-  DiscardQueuedUserMessagesResult,
-  InboxMessage,
-} from '@shared/types';
+import type { DiscardQueuedUserMessagesResult, InboxMessage } from '@shared/types';
 
 const BOTTOM_SHEET_HEADER_HEIGHT = 40;
 const BOTTOM_SHEET_COLLAPSED_SNAP_INDEX = 1;
@@ -406,28 +395,33 @@ export const MessagesPanel = memo(function MessagesPanel({
     [navigationSurface, openChat, scope]
   );
 
-  const handleAttentionOpenChat = useCallback((target: typeof scope) => {
-    // Clear filters even when handleOpenChat skips an identical scope.
-    setMessagesSearchQuery('');
-    setMessagesFilter((current) => ({ ...current, from: new Set(), to: new Set() }));
-    // A floating composer has no thread surface. Expand the existing bottom sheet
-    // before navigating so the destination is actually visible to the user.
-    if (position === 'floating-composer') onPositionChange('sidebar');
-    if (position === 'bottom-sheet' &&
-        bottomSheetSnapIndex === BOTTOM_SHEET_COLLAPSED_SNAP_INDEX) {
-      setBottomSheetSnapIndex(BOTTOM_SHEET_COMPOSER_SNAP_INDEX);
-      bottomSheetRef.current?.snapTo(BOTTOM_SHEET_COMPOSER_SNAP_INDEX);
-    }
-    if (position === 'floating-composer') {
-      // Floating mode presents a synthetic team-feed scope; never shortcut based
-      // on that masked value when a different direct thread is actually selected.
-      revisionNavigationGenerationRef.current += 1;
-      openChat(target);
-    } else {
-      handleOpenChat(target);
-    }
-    setMessagesCollapsed(false);
-  }, [position, onPositionChange, bottomSheetSnapIndex, handleOpenChat, openChat]);
+  const handleAttentionOpenChat = useCallback(
+    (target: typeof scope) => {
+      // Clear filters even when handleOpenChat skips an identical scope.
+      setMessagesSearchQuery('');
+      setMessagesFilter((current) => ({ ...current, from: new Set(), to: new Set() }));
+      // A floating composer has no thread surface. Expand the existing bottom sheet
+      // before navigating so the destination is actually visible to the user.
+      if (position === 'floating-composer') onPositionChange('sidebar');
+      if (
+        position === 'bottom-sheet' &&
+        bottomSheetSnapIndex === BOTTOM_SHEET_COLLAPSED_SNAP_INDEX
+      ) {
+        setBottomSheetSnapIndex(BOTTOM_SHEET_COMPOSER_SNAP_INDEX);
+        bottomSheetRef.current?.snapTo(BOTTOM_SHEET_COMPOSER_SNAP_INDEX);
+      }
+      if (position === 'floating-composer') {
+        // Floating mode presents a synthetic team-feed scope; never shortcut based
+        // on that masked value when a different direct thread is actually selected.
+        revisionNavigationGenerationRef.current += 1;
+        openChat(target);
+      } else {
+        handleOpenChat(target);
+      }
+      setMessagesCollapsed(false);
+    },
+    [position, onPositionChange, bottomSheetSnapIndex, handleOpenChat, openChat]
+  );
 
   const handleExpandedChange = useCallback(
     (nextExpanded: boolean): void => {
@@ -767,7 +761,11 @@ export const MessagesPanel = memo(function MessagesPanel({
     },
   });
 
-  const { readSet, markAllRead, ready: readsReady } = useMessagesReadState(
+  const {
+    readSet,
+    markAllRead,
+    ready: readsReady,
+  } = useMessagesReadState(
     teamName,
     activeContextId,
     canonicalMessages,

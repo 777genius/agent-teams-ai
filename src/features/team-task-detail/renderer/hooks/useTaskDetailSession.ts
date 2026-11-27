@@ -31,6 +31,7 @@ import {
   isValidTaskDetailIdentity,
   taskDetailKey,
 } from '../../core/domain';
+import { readDataUrl } from '../adapters/readAttachmentDataUrl';
 import { taskDraftStorage } from '../adapters/taskDraftStorage';
 
 import type {
@@ -81,15 +82,6 @@ export interface TaskDetailSessionController {
   setDescriptionDraft: (value: string) => void;
   saveDescription: () => Promise<void>;
   openInTaskTab: () => boolean;
-}
-
-function readDataUrl(file: File): Promise<string | null> {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : null);
-    reader.onerror = () => resolve(null);
-    reader.readAsDataURL(file);
-  });
 }
 
 export function useTaskDetailSession({
@@ -163,7 +155,12 @@ export function useTaskDetailSession({
     clarificationPending: false,
   });
   if (localUi.key !== identityKey) {
-    setLocalUi({ key: identityKey, isSaved: false, attachmentError: null, clarificationPending: false });
+    setLocalUi({
+      key: identityKey,
+      isSaved: false,
+      attachmentError: null,
+      clarificationPending: false,
+    });
   }
   const isDraftSaved = localUi.key === identityKey && localUi.isSaved;
   const attachmentError = localUi.key === identityKey ? localUi.attachmentError : null;
@@ -278,38 +275,64 @@ export function useTaskDetailSession({
     const state = useStore.getState();
     const entry = state.taskDetailById[identityKey];
     const current = state.taskDetailSessionById[identityKey];
-    const team = state.teamDataCacheByName[identity.teamName] ??
+    const team =
+      state.teamDataCacheByName[identity.teamName] ??
       (state.selectedTeamName === identity.teamName ? state.selectedTeamData : null);
     if (
-      !isOriginCurrent() || currentTask?.id !== identity.taskId ||
-      current?.ownerSurfaceId !== surfaceId || current.ownerRevision !== session.ownerRevision ||
-      !entry?.full || taskDetailKey(entry.identity) !== identityKey || entry.phase !== 'ready' ||
-      entry.error !== null || entry.deletionIntent !== null || entry.refreshPending ||
-      entry.full.id !== identity.taskId || entry.full.deletedAt || entry.full.status === 'deleted' ||
-      !entry.full.needsClarification || team?.config.deletedAt ||
+      !isOriginCurrent() ||
+      currentTask?.id !== identity.taskId ||
+      current?.ownerSurfaceId !== surfaceId ||
+      current.ownerRevision !== session.ownerRevision ||
+      !entry?.full ||
+      taskDetailKey(entry.identity) !== identityKey ||
+      entry.phase !== 'ready' ||
+      entry.error !== null ||
+      entry.deletionIntent !== null ||
+      entry.refreshPending ||
+      entry.full.id !== identity.taskId ||
+      entry.full.deletedAt ||
+      entry.full.status === 'deleted' ||
+      !entry.full.needsClarification ||
+      team?.config.deletedAt ||
       state.teamManagementNoticeByTeam[identity.teamName]?.kind === 'trashed' ||
       state.teamByName[identity.teamName]?.deletedAt
-    ) return null;
-    if (entry.loading && (
-      !entry.fullToken || !isTaskDetailReadTokenForResource(entry.fullToken, identity) ||
-      !isSameTaskDetailReadScope(entry.fullToken.scope, scope)
-    )) return null;
+    )
+      return null;
+    if (
+      entry.loading &&
+      (!entry.fullToken ||
+        !isTaskDetailReadTokenForResource(entry.fullToken, identity) ||
+        !isSameTaskDetailReadScope(entry.fullToken.scope, scope))
+    )
+      return null;
     return { entry, task: entry.full };
-  }, [currentTask?.id, identity, identityKey, isOriginCurrent, scope, session.ownerRevision, surfaceId]);
+  }, [
+    currentTask?.id,
+    identity,
+    identityKey,
+    isOriginCurrent,
+    scope,
+    session.ownerRevision,
+    surfaceId,
+  ]);
 
   const resolveClarification = useCallback(() => {
-    if (clarification.current.origin !== clarificationOrigin || clarification.current.pending) return;
+    if (clarification.current.origin !== clarificationOrigin || clarification.current.pending)
+      return;
     const original = readClarification();
     if (!original) return;
     if (!original.entry.loading) {
       if (requireOwner())
-        void useStore.getState().setTaskNeedsClarification(identity.teamName, identity.taskId, null);
+        void useStore
+          .getState()
+          .setTaskNeedsClarification(identity.teamName, identity.taskId, null);
       return;
     }
     if (!original.entry.fullToken) return;
     const clarificationValue = original.task.needsClarification;
     let token: TaskDetailReadToken = {
-      ...original.entry.fullToken, scope: { ...original.entry.fullToken.scope },
+      ...original.entry.fullToken,
+      scope: { ...original.entry.fullToken.scope },
     };
     let successor = false;
     let unsubscribe = () => {};
@@ -319,7 +342,7 @@ export function useTaskDetailSession({
         if (clarification.current.pending !== intent) return;
         clarification.current.pending = null;
         unsubscribe();
-        setLocalUi(current =>
+        setLocalUi((current) =>
           current.key === identityKey ? { ...current, clarificationPending: false } : current
         );
       },
@@ -332,18 +355,27 @@ export function useTaskDetailSession({
         return;
       }
       const current = next.entry.fullToken;
-      if (!isTaskDetailReadTokenForResource(current, identity) ||
-          !isSameTaskDetailReadScope(current.scope, scope)) {
+      if (
+        !isTaskDetailReadTokenForResource(current, identity) ||
+        !isSameTaskDetailReadScope(current.scope, scope)
+      ) {
         intent.cancel();
         return;
       }
-      const same = current.resource === token.resource && current.key === token.key &&
-        current.sourceEpoch === token.sourceEpoch && current.serial === token.serial &&
+      const same =
+        current.resource === token.resource &&
+        current.key === token.key &&
+        current.sourceEpoch === token.sourceEpoch &&
+        current.serial === token.serial &&
         current.physicalStartOrder === token.physicalStartOrder &&
         isSameTaskDetailReadScope(current.scope, token.scope);
       if (!same) {
-        if (successor || current.serial <= token.serial || current.sourceEpoch < token.sourceEpoch ||
-            current.physicalStartOrder <= token.physicalStartOrder) {
+        if (
+          successor ||
+          current.serial <= token.serial ||
+          current.sourceEpoch < token.sourceEpoch ||
+          current.physicalStartOrder <= token.physicalStartOrder
+        ) {
           intent.cancel();
           return;
         }
@@ -355,42 +387,43 @@ export function useTaskDetailSession({
       const currentRead = isTaskDetailTokenCurrent(current, scope);
       intent.cancel();
       if (currentRead && clarification.current.origin === intent.origin && requireOwner())
-        void useStore.getState().setTaskNeedsClarification(identity.teamName, identity.taskId, null);
+        void useStore
+          .getState()
+          .setTaskNeedsClarification(identity.teamName, identity.taskId, null);
     };
     clarification.current.pending = intent;
-    setLocalUi(current =>
+    setLocalUi((current) =>
       current.key === identityKey ? { ...current, clarificationPending: true } : current
     );
     unsubscribe = useStore.subscribe(observe);
     observe();
   }, [clarificationOrigin, identity, identityKey, readClarification, requireOwner, scope]);
   const clarificationRead = readClarification();
-  const canResolveClarification = !(localUi.key === identityKey && localUi.clarificationPending) &&
-    clarificationRead !== null && (clarificationRead.entry.loading || requireOwner());
+  const canResolveClarification =
+    !(localUi.key === identityKey && localUi.clarificationPending) &&
+    clarificationRead !== null &&
+    (clarificationRead.entry.loading || requireOwner());
 
-  const persistDraft = useCallback(
-    () => {
-      const draft = useStore.getState().taskDetailSessionById[identityKey];
-      if (!draft) return;
-      setIsDraftSaved(false);
-      // Capture a COMPLETE same-revision snapshot. Persisting only one changed
-      // field could pair stale on-disk text with a new request identity if an
-      // earlier save failed. Never merge the generation with unrelated content.
-      void taskDraftStorage
-        .save(identity, {
-          text: draft.commentText,
-          commentChips: draft.commentChips,
-          answerClarificationRequestId: draft.answerClarificationRequestId ?? null,
-        })
-        .then(() => {
-          if (isOriginCurrent()) setIsDraftSaved(true);
-        })
-        .catch(() => {
-          if (isOriginCurrent()) setIsDraftSaved(false);
-        });
-    },
-    [identity, identityKey, isOriginCurrent, setIsDraftSaved]
-  );
+  const persistDraft = useCallback(() => {
+    const draft = useStore.getState().taskDetailSessionById[identityKey];
+    if (!draft) return;
+    setIsDraftSaved(false);
+    // Capture a COMPLETE same-revision snapshot. Persisting only one changed
+    // field could pair stale on-disk text with a new request identity if an
+    // earlier save failed. Never merge the generation with unrelated content.
+    void taskDraftStorage
+      .save(identity, {
+        text: draft.commentText,
+        commentChips: draft.commentChips,
+        answerClarificationRequestId: draft.answerClarificationRequestId ?? null,
+      })
+      .then(() => {
+        if (isOriginCurrent()) setIsDraftSaved(true);
+      })
+      .catch(() => {
+        if (isOriginCurrent()) setIsDraftSaved(false);
+      });
+  }, [identity, identityKey, isOriginCurrent, setIsDraftSaved]);
 
   const setCommentText = useCallback(
     (text: string) => {
@@ -545,12 +578,17 @@ export function useTaskDetailSession({
           : undefined;
       const activeTask = state.taskDetailById[identityKey]?.full;
       const boundCycle = current.answerClarificationRequestId;
-      const activeCycle = activeTask?.needsClarification === 'user'
-        ? activeTask.clarificationRequestId : undefined;
+      const activeCycle =
+        activeTask?.needsClarification === 'user' ? activeTask.clarificationRequestId : undefined;
       if (activeCycle && boundCycle !== activeCycle) {
         const revision = state.beginTaskDetailSubmitSession(identity);
-        useStore.getState().failTaskDetailSubmitSession(identity, revision,
-          'The clarification changed while this answer was drafted. Copy your text and start a fresh answer.');
+        useStore
+          .getState()
+          .failTaskDetailSubmitSession(
+            identity,
+            revision,
+            'The clarification changed while this answer was drafted. Copy your text and start a fresh answer.'
+          );
         return;
       }
       const answerClarificationRequestId = typeof boundCycle === 'string' ? boundCycle : undefined;

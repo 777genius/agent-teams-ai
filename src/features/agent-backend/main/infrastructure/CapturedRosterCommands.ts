@@ -19,9 +19,11 @@ import type { BackendRequestGuard } from '../application/backendBinding';
 
 type Replacement = Extract<BackendOperationRequest, { operation: 'team.roster.replace' }>;
 type Dispatch = (request: BackendOperationRequest) => Promise<BackendOperationResult>;
-type SettledRosterResult = { commandId: string; revision: string } | {
-  rejected: Extract<BackendOperationResult, { ok: false }> & { outcome: 'rejected' };
-};
+type SettledRosterResult =
+  | { commandId: string; revision: string }
+  | {
+      rejected: Extract<BackendOperationResult, { ok: false }> & { outcome: 'rejected' };
+    };
 const namespace = 'captured-team-roster';
 const uncertain = () => new BackendRoutingError('hold', 'unknown');
 const json = (value: unknown): ApplicationCommandJsonValue => JSON.parse(JSON.stringify(value));
@@ -123,9 +125,14 @@ export class CapturedRosterCommands {
       if (!result.ok) {
         // A confirmed domain rejection settles this original intent. The ledger's applied
         // reconciliation means its result is known; it does not assert a roster mutation.
-        if (result.outcome === 'rejected') return { rejected: {
-          ok: false as const, code: result.code, outcome: 'rejected' as const,
-        } };
+        if (result.outcome === 'rejected')
+          return {
+            rejected: {
+              ok: false as const,
+              code: result.code,
+              outcome: 'rejected' as const,
+            },
+          };
         throw new RosterRefusal(result);
       }
       const value = result.value;

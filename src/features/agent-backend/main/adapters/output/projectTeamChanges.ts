@@ -1,6 +1,10 @@
 import { backendTeamConversationGaps } from '../../../contracts/teamChanges';
 
-import type { BackendTeamChanges, BackendTeamConversation, BackendTeamPosition } from '../../../contracts/teamChanges';
+import type {
+  BackendTeamChanges,
+  BackendTeamConversation,
+  BackendTeamPosition,
+} from '../../../contracts/teamChanges';
 const uuid = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
 function row(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value))
@@ -25,14 +29,23 @@ export function projectTeamPosition(value: unknown): BackendTeamPosition {
 }
 export function projectTeamConversation(value: unknown): BackendTeamConversation {
   const source = row(value);
-  if (Object.keys(source).length !== 2 ||
-      typeof source.revision !== 'string' || !/^[a-f0-9]{64}$/.test(source.revision) ||
-      !Array.isArray(source.gaps) || source.gaps.length > backendTeamConversationGaps.length ||
-      new Set(source.gaps).size !== source.gaps.length ||
-      Array.from(source.gaps).some((gap) => !backendTeamConversationGaps.some((allowed) => allowed === gap)))
+  if (
+    Object.keys(source).length !== 2 ||
+    typeof source.revision !== 'string' ||
+    !/^[a-f0-9]{64}$/.test(source.revision) ||
+    !Array.isArray(source.gaps) ||
+    source.gaps.length > backendTeamConversationGaps.length ||
+    new Set(source.gaps).size !== source.gaps.length ||
+    Array.from(source.gaps).some(
+      (gap) => !backendTeamConversationGaps.some((allowed) => allowed === gap)
+    )
+  )
     throw new Error('Invalid Host conversation metadata');
   const gaps = source.gaps;
-  return { revision: source.revision, gaps: backendTeamConversationGaps.filter((gap) => gaps.includes(gap)) };
+  return {
+    revision: source.revision,
+    gaps: backendTeamConversationGaps.filter((gap) => gaps.includes(gap)),
+  };
 }
 export function projectTeamChanges(value: unknown): BackendTeamChanges {
   const source = row(value);
@@ -43,9 +56,12 @@ export function projectTeamChanges(value: unknown): BackendTeamChanges {
   )
     throw new Error('Oversized product feed');
   const position = projectTeamPosition(source);
-  const conversation = source.conversation === undefined ? {} : {
-    conversation: projectTeamConversation(source.conversation),
-  };
+  const conversation =
+    source.conversation === undefined
+      ? {}
+      : {
+          conversation: projectTeamConversation(source.conversation),
+        };
   let previous: number | undefined;
   const events = source.events.map((value) => {
     const event = row(value),

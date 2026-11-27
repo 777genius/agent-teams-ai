@@ -196,7 +196,8 @@ async function handleInvalidateStatus(
     if (mode === 'cache-only') {
       const native = getDesktopProviderStatusPort();
       const current = native ? captureDesktopStatusRequest(_event) : undefined;
-      if (native && !current?.()) throw new Error('Native runtime status request is not authorized');
+      if (native && !current?.())
+        throw new Error('Native runtime status request is not authorized');
       requireService().invalidateStatusCache();
       if (native && !current?.()) throw new Error('Native runtime status context changed');
       return { success: true, data: undefined };

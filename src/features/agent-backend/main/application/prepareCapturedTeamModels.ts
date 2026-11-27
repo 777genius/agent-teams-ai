@@ -41,7 +41,10 @@ const unavailable = (message: string): TeamProvisioningPrepareResult => ({
   ready: false,
   message,
 });
-export function capturedTeamModelProbeRootId(handle: BackendHandle, selection: BackendLaunchModelSelection): string {
+export function capturedTeamModelProbeRootId(
+  handle: BackendHandle,
+  selection: BackendLaunchModelSelection
+): string {
   // This is a single check of one captured launch selection, including across reload.
   // The Host's existing durable probe journal owns all outcomes. No second journal.
   return `team-preflight-${createHash('sha256')
@@ -61,7 +64,12 @@ function configurationFingerprint(view: ModelView): string {
 
 /** Existing dialog model preflight. Never allocates member sessions or reads fork/global defaults. */
 export async function prepareCapturedTeamModels(options: {
-  backend: { invoke(input: Parameters<AgentBackendApi['invoke']>[0], readiness?: LocalModelReadinessContext): ReturnType<AgentBackendApi['invoke']> };
+  backend: {
+    invoke(
+      input: Parameters<AgentBackendApi['invoke']>[0],
+      readiness?: LocalModelReadinessContext
+    ): ReturnType<AgentBackendApi['invoke']>;
+  };
   handle: BackendHandle;
   request: CapturedTeamModelRequest;
   isCurrent(): boolean;
@@ -86,7 +94,12 @@ export async function prepareCapturedTeamModels(options: {
     id: string,
     readiness?: LocalModelReadinessContext
   ) => {
-    const input = { handle, commandId: id, operation: `team.launch.probe.${action}` as const, payload: selection };
+    const input = {
+      handle,
+      commandId: id,
+      operation: `team.launch.probe.${action}` as const,
+      payload: selection,
+    };
     return readiness ? options.backend.invoke(input, readiness) : options.backend.invoke(input);
   };
   async function readConfiguration(): Promise<ModelView> {
@@ -298,7 +311,7 @@ export async function prepareCapturedTeamModels(options: {
       if (choice) represented.add(checkKey(choice));
       const desiredProvider = choice?.providerId ?? (saved && providerId(saved.provider));
       const model = draft
-        ? choice?.model ?? saved!.model
+        ? (choice?.model ?? saved!.model)
         : !choice || isDefaultProviderModelSelection(choice.model)
           ? saved!.model
           : choice.model;
@@ -389,13 +402,21 @@ export async function prepareCapturedTeamModels(options: {
       }
       if (!result.ok)
         return unavailable('The original Team model check is unavailable. It was not resubmitted.');
-      const member = view.members.find(row => row.memberId === selection.memberId);
-      const connected = selection.draft ? selection.draft.providerId === 'opencode' : member?.selected?.provider === 'opencode';
+      const member = view.members.find((row) => row.memberId === selection.memberId);
+      const connected = selection.draft
+        ? selection.draft.providerId === 'opencode'
+        : member?.selected?.provider === 'opencode';
       const preparationDeadline = connected ? Date.now() + 100000 : undefined;
       if (result.value === null) {
         // Current Host durable absence proves this exact intent has not been admitted.
-        result = await invoke('start', selection, id, preparationDeadline === undefined ? undefined
-          : { view, remainingMs: () => preparationDeadline - Date.now() });
+        result = await invoke(
+          'start',
+          selection,
+          id,
+          preparationDeadline === undefined
+            ? undefined
+            : { view, remainingMs: () => preparationDeadline - Date.now() }
+        );
       }
       const deadline = preparationDeadline ?? Date.now() + 100000;
       for (;;) {

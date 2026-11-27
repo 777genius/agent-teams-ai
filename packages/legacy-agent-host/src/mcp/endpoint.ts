@@ -128,6 +128,10 @@ export async function startTeamMcpEndpoint(
     lookup: options.connection.lookup.bind(options.connection),
     getTask: options.connection.getTask.bind(options.connection),
     listTasks: options.connection.listTasks.bind(options.connection),
+    ...(options.connection.readTaskPage
+      ? { readTaskPage: options.connection.readTaskPage.bind(options.connection) } : {}),
+    ...(options.connection.readKanbanPage
+      ? { readKanbanPage: options.connection.readKanbanPage.bind(options.connection) } : {}),
     ...(reads
       ? {
           readQueries: Object.freeze({
