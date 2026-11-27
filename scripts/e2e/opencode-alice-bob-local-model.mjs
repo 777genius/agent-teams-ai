@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// Real OpenCode Alice/Bob multi-lane peer read E2E. Only model HTTP is synthetic.
+// Real OpenCode Alice/Bob peer read E2E. Only model HTTP is synthetic.
 // Scope: inbox transport, two bound runtime sessions, four committed peer reads,
-// relaunch and Stop. This does not qualify a paid model or coding task quality.
+// and Stop. This does not qualify coding tasks, relaunch, or authenticated inference.
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
@@ -256,6 +256,8 @@ async function run() {
   phase = 'product-team-create';
   const request = {
     teamName, cwd: projectPath, providerId: 'opencode', model: 'llama.cpp/group-e2e',
+    // This protocol proof observes the fixed test-owned team root directly.
+    projectContextMode: 'shared',
     skipPermissions: true, syncModelsWithLead: false,
     prompt: 'Synthetic model HTTP boundary. Work only in the disposable project. Do not create tasks or edit files. Process explicit PEER_SEED, CHALLENGE and ACK messages through message_send.',
     members: ['alice', 'bob'].map(name => ({
