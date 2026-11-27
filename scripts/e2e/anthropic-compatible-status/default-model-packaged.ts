@@ -693,7 +693,20 @@ try {
     try {
       if (app && !appIdentity) await stopUnregisteredApp(app);
     } finally {
-      evidence.cleanup = await ledger.stop();
+      try {
+        evidence.cleanup = await ledger.stop();
+      } catch (error) {
+        // On Windows the spawned child handle remains an independent cleanup
+        // authority even when the CIM inventory cannot verify every PID.
+        if (app && appIdentity && process.platform === 'win32') {
+          try {
+            await stopUnregisteredApp(app);
+          } catch (handleError) {
+            evidence.appHandleCleanupError = redact(handleError);
+          }
+        }
+        throw error;
+      }
     }
     const events = await preflightEvents();
     await writeFile(

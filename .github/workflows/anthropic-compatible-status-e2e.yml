@@ -64,7 +64,7 @@ jobs:
           node-version-file: .node-version
           cache: pnpm
       - name: Verify process ownership regressions
-        run: node --test scripts/e2e/opencode-diagnostics/platform.test.mjs
+        run: node --test scripts/e2e/opencode-diagnostics/platform.test.mjs scripts/e2e/anthropic-compatible-status/packaged-default-processes.test.ts
       - uses: actions/setup-python@v6
         with:
           python-version: '3.11'

@@ -11,7 +11,7 @@ export interface ProcessIdentity {
   birth: string;
   executable?: string;
 }
-/** Startup inventory failure grants authority only over our own spawned handle. */
+/** Inventory failure grants fallback authority only over our own spawned handle. */
 export async function stopUnregisteredApp(child: ChildProcess) {
   if (!child.pid || child.exitCode !== null || child.signalCode !== null) return;
   const closed = new Promise<void>((resolve) => child.once('close', () => resolve()));
@@ -23,7 +23,7 @@ export async function stopUnregisteredApp(child: ChildProcess) {
       closed,
       new Promise<never>((_resolve, reject) => {
         timeout = setTimeout(
-          () => reject(new Error('Owned app handle did not close after startup inventory failure')),
+          () => reject(new Error('Owned app handle did not close after inventory failure')),
           10_000
         );
       }),
@@ -47,12 +47,21 @@ export class DefaultProcessLedger {
   }[] = [];
   private timer?: NodeJS.Timeout;
   private samplingError?: unknown;
+  private readonly readProcesses: (requiredPids?: number[]) => ProcessIdentity[];
+  private readonly killProcess: (pid: number, signal: NodeJS.Signals) => boolean;
+  constructor(
+    readProcesses: (requiredPids?: number[]) => ProcessIdentity[] = processes,
+    killProcess: (pid: number, signal: NodeJS.Signals) => boolean = process.kill
+  ) {
+    this.readProcesses = readProcesses;
+    this.killProcess = killProcess;
+  }
   private key(p: ProcessIdentity) {
     return `${p.pid}:${p.birth}`;
   }
   async register(child: ChildProcess) {
     for (let attempt = 0; attempt < 20; attempt++) {
-      const identity = (processes() as ProcessIdentity[]).find((p) => p.pid === child.pid);
+      const identity = this.readProcesses().find((p) => p.pid === child.pid);
       if (identity) {
         this.roots.push(identity);
         this.observed.set(this.key(identity), identity);
@@ -66,7 +75,10 @@ export class DefaultProcessLedger {
   }
   sample() {
     const requiredPids = [...new Set([...this.observed.values()].map((p) => p.pid))];
-    const snapshot = processes(requiredPids) as ProcessIdentity[];
+    return this.sampleObserved(requiredPids);
+  }
+  private sampleObserved(requiredPids: number[]) {
+    const snapshot = this.readProcesses(requiredPids);
     for (const root of [...this.roots, ...this.observed.values()]) {
       if (!snapshot.some((p) => this.key(p) === this.key(root))) continue;
       for (const p of ownedTree(snapshot, root) as ProcessIdentity[])
@@ -93,7 +105,7 @@ export class DefaultProcessLedger {
       }
       if (executable && executable.toLowerCase() === appExecutable.toLowerCase()) continue;
       // A process may have exited after the snapshot. Unknown live children fail closed.
-      if ((processes([identity.pid]) as ProcessIdentity[]).some((p) => this.key(p) === this.key(identity)))
+      if (this.readProcesses([identity.pid]).some((p) => this.key(p) === this.key(identity)))
         active.push({ ...identity, executable });
     }
     return active;
@@ -132,7 +144,7 @@ export class DefaultProcessLedger {
     });
     // Very short --version commands can exit before OS inventory sees them;
     // ChildProcess still supplies their exact PID, close event and exit status.
-    const identity = (processes() as ProcessIdentity[]).find((p) => p.pid === child.pid);
+    const identity = this.readProcesses().find((p) => p.pid === child.pid);
     if (identity) {
       this.roots.push(identity);
       this.observed.set(this.key(identity), identity);
@@ -158,38 +170,49 @@ export class DefaultProcessLedger {
   }
   async stop({ requireQuiet = false }: { requireQuiet?: boolean } = {}) {
     if (this.timer) clearInterval(this.timer);
-    let current = this.sample();
     if (requireQuiet) {
+      const current = this.sample();
       // Qualification may only observe natural retirement. Ordinary failure
       // cleanup below is never allowed to manufacture a successful final census.
       assert.equal(current.length, 0, 'Owned processes did not settle naturally');
       assert(!this.samplingError, `Process inventory failed: ${this.samplingError}`);
       return { remaining: current, observed: [...this.observed.values()], commands: this.commands };
     }
+    let current = this.cleanupSample();
     const rootKeys = new Set(this.roots.map((p) => this.key(p)));
     // First ask each owned app root to stop; descendants may then exit normally.
     for (const p of current.filter((p) => rootKeys.has(this.key(p)))) this.signal(p);
     for (let attempt = 0; attempt < 10 && current.length; attempt++) {
       await pause(300);
-      current = this.sample();
+      current = this.cleanupSample();
     }
     for (const p of current.reverse()) this.signal(p, 'SIGKILL');
     for (let attempt = 0; attempt < 20 && current.length; attempt++) {
       await pause(300);
-      current = this.sample();
+      current = this.cleanupSample();
     }
     assert.equal(current.length, 0, 'Owned packaged/runtime processes remain after cleanup');
     assert(!this.samplingError, `Process inventory failed: ${this.samplingError}`);
     return { remaining: current, observed: [...this.observed.values()], commands: this.commands };
   }
-  private signal(expected: ProcessIdentity, signal: NodeJS.Signals = 'SIGTERM') {
-    const current = (processes([expected.pid]) as ProcessIdentity[]).find((p) => p.pid === expected.pid);
-    if (!current) return;
-    sameIdentity(expected, current);
+  private cleanupSample() {
     try {
-      process.kill(expected.pid, signal);
+      return this.sample();
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error;
+      // A captured PID with an unreadable birth must fail qualification, but
+      // cannot prevent cleanup of other independently verified identities.
+      this.samplingError ??= error;
+      return this.sampleObserved([]);
+    }
+  }
+  private signal(expected: ProcessIdentity, signal: NodeJS.Signals = 'SIGTERM') {
+    try {
+      const current = this.readProcesses([expected.pid]).find((p) => p.pid === expected.pid);
+      if (!current) return;
+      sameIdentity(expected, current);
+      this.killProcess(expected.pid, signal);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ESRCH') this.samplingError ??= error;
     }
   }
 }
