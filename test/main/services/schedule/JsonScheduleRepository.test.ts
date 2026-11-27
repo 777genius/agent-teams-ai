@@ -1,4 +1,5 @@
 import { JsonScheduleRepository } from '@main/services/schedule/JsonScheduleRepository';
+import { withFileLock } from '@main/services/team/fileLock';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -268,6 +269,41 @@ describe('JsonScheduleRepository', () => {
 
       expect(await repo.getSchedule(first.id)).toBeNull();
       expect((await repo.getSchedule(second.id))?.status).toBe('paused');
+    });
+
+    it('cleans up only the original profile when its root changes during a queued deletion', async () => {
+      const originalDir = tempDir;
+      const nextDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'schedule-next-profile-'));
+      const schedule = makeSchedule();
+      try {
+        await repo.saveSchedule(schedule);
+        await repo.saveRun(makeRun());
+        await repo.saveRunLogs(schedule.id, 'run-1', 'original', '');
+        tempDir = nextDir;
+        await repo.saveSchedule(schedule);
+        await repo.saveRun(makeRun());
+        await repo.saveRunLogs(schedule.id, 'run-1', 'other', '');
+        tempDir = originalDir;
+
+        let deleting!: Promise<void>;
+        await withFileLock(path.join(originalDir, 'schedules.json'), async () => {
+          deleting = repo.deleteSchedule(schedule.id);
+          tempDir = nextDir;
+        });
+        await deleting;
+
+        expect(await repo.getSchedule(schedule.id)).toEqual(schedule);
+        expect(await repo.listRuns(schedule.id)).toHaveLength(1);
+        expect((await repo.getRunLogs(schedule.id, 'run-1')).stdout).toBe('other');
+
+        tempDir = originalDir;
+        expect(await repo.getSchedule(schedule.id)).toBeNull();
+        expect(await repo.listRuns(schedule.id)).toEqual([]);
+        expect((await repo.getRunLogs(schedule.id, 'run-1')).stdout).toBe('');
+      } finally {
+        tempDir = originalDir;
+        await fs.promises.rm(nextDir, { recursive: true, force: true });
+      }
     });
 
     it('handles concurrent saves without data loss', async () => {

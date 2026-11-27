@@ -91,10 +91,11 @@ export class JsonScheduleRepository implements ScheduleRepository {
       },
       { preventLiveOwnerTakeover: true }
     );
-    // Clean up runs and logs
-    const runsFile = this.runsFilePath(id);
+    // Clean up the same profile even if the configured root changed while waiting for the lock.
+    const basePath = path.dirname(filePath);
+    const runsFile = path.join(basePath, 'runs', `${id}.json`);
     await fs.promises.unlink(runsFile).catch(() => undefined);
-    const logsPath = this.logsDir(id);
+    const logsPath = path.join(basePath, 'logs', id);
     await fs.promises.rm(logsPath, { recursive: true, force: true }).catch(() => undefined);
   }
 
