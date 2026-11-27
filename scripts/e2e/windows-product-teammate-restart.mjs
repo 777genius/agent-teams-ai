@@ -112,13 +112,21 @@ prompt:'TEST project only. Never access other paths or install packages.',
 members:[{name:'worker',providerId:'anthropic',model:'claude-sonnet-4-6',role:'Test worker'}]};
 await client.evaluate('(()=>{window.__winTeam={done:false};window.electronAPI.teams.createTeam('+
 literal(request)+').then(v=>{window.__winTeam={done:true,value:v}},e=>{window.__winTeam={done:true,error:String(e)}});return true;})()');
-await until('actual createTeam IPC',()=>client.evaluate('(()=>{const x=window.__winTeam;if(!x?.done)return null;if(x.error)throw Error(x.error);return x.value;})()'),240000);
+const creation=await until('actual createTeam IPC',()=>client.evaluate('(()=>{const x=window.__winTeam;if(!x?.done)return null;if(x.error)throw Error(x.error);return x.value;})()'),240000);
+assert(typeof creation?.runId==='string'&&creation.runId.length>0,'No product createTeam runId');
 teamCreated=true;
+result.originalRunId=creation.runId;
 result.phase='real-member-ready';
 const snapshot=await until('live worker in runtime snapshot',async()=>{const x=await api('window.electronAPI.teams.getTeamAgentRuntime('+literal(team)+')');
-const m=x?.members?.worker;return m?.alive&&(m?.runtimePid||m?.pid)?x:false;},240000);
-workerPid=snapshot.members.worker.runtimePid||snapshot.members.worker.pid;
+const m=x?.members?.worker;
+return x?.runId===creation.runId&&m?.alive&&m?.runtimePid&&m.historicalBootstrapConfirmed?x:false;},240000);
+assert.equal(snapshot.runId,creation.runId,'Original runtime snapshot belongs to a different launch');
+assert.equal(snapshot.members.worker.backendType,'process','Original member must use direct process backend');
+assert.equal(snapshot.members.worker.providerId,'anthropic','Original member provider differs from request');
+assert.equal(snapshot.members.worker.runtimeModel,'claude-sonnet-4-6','Original member model differs from request');
+workerPid=snapshot.members.worker.runtimePid;
 assert(ownedAlive(workerPid,team),'Worker not bound to original test team');
+result.originalBootstrapConfirmed=true;
 result.realProductTeammateLaunch=true;result.initialWorkerPid=workerPid;
 // A persisted worker PID is not proof of an active tracked team run. The
 // product restart API explicitly requires getAliveRunId(teamName).
@@ -133,8 +141,10 @@ await client.evaluate('(()=>{window.__winRestart={done:false};window.electronAPI
 literal(team)+',"worker").then(v=>{window.__winRestart={done:true,value:v}},e=>{window.__winRestart={done:true,error:String(e)}});return true;})()');
 await until('manual restart IPC',()=>client.evaluate('(()=>{const x=window.__winRestart;if(!x?.done)return null;if(x.error)throw Error(x.error);return true;})()'),240000);
 const restarted=await until('new live direct worker PID',async()=>{const x=await api('window.electronAPI.teams.getTeamAgentRuntime('+literal(team)+')');
-const m=x?.members?.worker,p=m?.runtimePid||m?.pid;return m?.alive&&p&&p!==workerPid?x:false;},180000);
-workerPid=restarted.members.worker.runtimePid||restarted.members.worker.pid;
+const m=x?.members?.worker,p=m?.runtimePid;
+return x?.runId===creation.runId&&m?.alive&&m?.historicalBootstrapConfirmed&&p&&p!==workerPid?x:false;},180000);
+assert.equal(restarted.runId,creation.runId,'Restart changed the owning team run');
+workerPid=restarted.members.worker.runtimePid;
 assert.equal(restarted.members.worker.backendType,'process','Direct process restart not exercised');
 assert(ownedAlive(workerPid,team),'Original restarted worker unavailable');
 result.restartWorkerPid=workerPid;
