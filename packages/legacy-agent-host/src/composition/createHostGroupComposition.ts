@@ -126,10 +126,19 @@ export function createHostGroupComposition(options: {
         throw new TeamOwnerError('forbidden');
     };
     const service = () => commands(team, principal);
+    const pageKey = randomUUID();
     return {
-      list: () => {
+      async list(cursor) {
         guard();
-        return service().read('list', {}, { before: guard, inside: guard });
+        const rows = await service().read('list', {}, { before: guard, inside: guard });
+        guard();
+        return pageGroupCatalog({
+          rows: json(rows) as JsonValue[],
+          key: pageKey,
+          principalId: principal,
+          binding: teamBinding,
+          ...(cursor === undefined ? {} : { cursor }),
+        });
       },
       lookup: (commandId) => {
         guard();
