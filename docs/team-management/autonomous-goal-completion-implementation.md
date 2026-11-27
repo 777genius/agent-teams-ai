@@ -68,10 +68,10 @@ Each push contains a coherent bounded change with its focused evidence. Do not p
 
 ### P0 - Detailed plan and current parent
 
-- [ ] Preserve the exact parent changes and existing documentation history in this branch.
-- [ ] Publish this checklist and update the original plan's authorization/status and discovered source details.
-- [ ] Update the PR description to implementation scope, with Summary and Test plan. Do not fabricate CLA agreement or passing checks.
-- [ ] Verify the branch diff against current parent contains only intended plan/feature work.
+- [x] Preserve the exact parent changes and existing documentation history in this branch.
+- [x] Publish this checklist and update the original plan's authorization/status and discovered source details.
+- [x] Update the PR description to implementation scope, with Summary and Test plan. Do not fabricate CLA agreement or passing checks.
+- [x] Verify the P0 branch diff against current parent contains only the two intended Markdown documents.
 
 ### P1 - First real vertical slice: intake, source association, one continuation
 
@@ -171,7 +171,39 @@ Do not create the Cartesian product of providers, operating systems and every fa
 
 | Push | Source / actual verification | Status |
 | --- | --- | --- |
-| P0 | Source audit identified the nine concrete gaps above; three independent read-only implementation/test/UI audits. No implementation or product PASS claimed. | Prepared |
-| P1-P6 | Fill with actual commits, commands, counts, skips, findings and native limitations as work completes. | Pending |
+| P0 | Published as `0b682879656e6b07d1ed896b086fd259cbfc9f6d`, incorporating parent `f3bbca99f4e1ed07009f60338c3ffdf6f15a91ad`; remote diff contains the two planned Markdown documents. Three independent source/test/UI audits informed the checklist. | Published |
+| P1-P5 | Uncommitted implementation and focused test work was written locally. The walking-slice gate has not passed; no implementation push is claimed. The execution environment became unavailable during integrated compilation. | Blocked; unverified |
+| P6 | Integrated tests, independent final-diff review, current-head native/CI qualification and merge have not completed. | Pending |
 
 The original 2,000-3,700 production-line estimate remains provisional. Count the actual integrated diff after P1, including proven provenance/claim changes; explain a concrete invariant before expanding the envelope. A smaller complete implementation is preferable to optional adapters. The release decision rests on working user journeys and original evidence, not line count or a subjective reliability score.
+
+## 8. Execution checkpoint: environment unavailable (2026-11-27)
+
+This is a recovery checkpoint, not implementation evidence or a reduced acceptance gate. The published branch still contains documentation only. Product edits were not committed or pushed before the execution environment failed. Their local survival must be checked after restoration; the inaccessible checkout is not a remote backup.
+
+### Work written locally before the failure
+
+- Team-owned goal contracts, validation, intake/source metadata, one atomic debit-witness map, controls and final candidate/publication logic. Existing receipt fingerprints retain optional-field absence for old commands. A separate narrow goal proof preserves the original Delegate/Do boundary.
+- Runtime claim callback under the existing Runtime-to-Team fence, goal reconciliation through the existing Work Sync wake/pump, bounded CI wait reports and progress policy. Exact native ledger references are reused for productive progress and pre/post-settlement artifact fingerprints.
+- Async lead proposal captures one original input across the artifact read. Post-proposal artifact changes are intended to invalidate the candidate. An ordinary same-Team input's actual claim invalidates a finalizing candidate before committing the claim. These are written corrections, not yet verified invariants.
+- Direct-lead composer opt-in, immutable prepared-request recovery, bounded transport validation, goal status and explicit Stop/Resume/extension controls. Original Team Stop remains a Host-owned lifecycle operation. Successful send resets the next request's opt-in.
+- Disposable Host tests using actual Team/Runtime stores, NDJSON and HTTP MCP, with a controlled provider only at the vendor Session boundary. Additional focused claim, wait and isolation tests were authored.
+
+### Actual verification and limits
+
+The task-change-ledger build completed with Node 24.21.0 and TypeScript 7.0.2. An early Host build reported real TypeScript errors while integration was incomplete and emitted output; that output is not a passing current-source build. Corrections were written, including exact optional-field construction, raw MCP tool results and asynchronous proposal registration. Later Host compiler attempts were killed (exit 137 / signal 9); one measured attempt reached approximately 752 MiB maximum resident memory. The last attempt used the compiler's single-threaded/one-checker flags, but its result is unknown because the execution server disconnected. The platform then reported the execution environment unavailable, and its recovery attempt timed out.
+
+Some isolated UI/transport suites passed against the then-emitted Host output; these are partial local results and must be repeated after a clean current-source build. The original composer suite reached assertions and exposed a missing store field in the new test fixture; the fixture was corrected but its final run was not completed. No new Host runtime E2E assertion passed or failed: those suites were not run. Parse-only checks covered the initial fixture/Host/claim versions and the wait/isolation tests, not every final edit. No native provider, full Desktop, real-model or overnight pass is claimed.
+
+### Resume in this order
+
+1. Restore access and inspect the existing checkout before rebuilding or discarding anything: verify local HEAD, worktree diff and untracked files against published P0. Local P0 commit `8108546` had the same tree as remote P0, but different local ancestry. Preserve intended source changes; do not push the local snapshot's origin (it points to another local checkout). Confirm whether the interrupted controls-test file exists and is complete; its write outcome was unknown.
+2. Stop concurrent heavy test/build processes. Rebuild this checkout's ledger and Host with the pinned Node 24.21.0 and TypeScript 7.0.2. The compiler exposes `--singleThreaded --checkers 1`; record actual results, not a presumed memory workaround. Run the package's exact compiler command directly if the local pnpm wrapper unexpectedly performs installation. Do not modify shared dependencies or the lockfile to work around this environment failure.
+3. Resolve current compiler diagnostics first. Recheck the async `goals.propose` contract, raw MCP result formatting, `GoalProposal` artifact/authority fingerprints, `entries: () => entries.values()` completion-evidence supplier, exact optional fields and the factory's original runtime profile argument.
+4. Run the first real Host walking slice before any implementation publication. Then run the productive multi-turn, post-proposal file-change, unknown-submit, budget and claim suites. Validate the native evidence adapter against actual captured tool hooks; empty/partial evidence must not become proof of complete filesystem coverage.
+5. Finish the known G10 gap: retire an unclaimed task/review continuation when its exact canonical agenda key is no longer current. The shared `goalTaskObligationKey` was exported; the Team admission/retirement use was still pending. Preserve real task notification obligations and ordinary FIFO.
+6. Execute the authored G12 hung-submit scenario before changing the pump. At checkpoint the pump still awaited a hung native submit; bounded per-target isolation was not implemented. Add only the smallest change supported by that reproduction, retaining original physical fences and single-flight ownership. Author the planned initial-action-plus-two-recovery policy assertions.
+7. Complete the remaining G11/G13/G16 checks, including original-ID crash windows, elapsed deadline across clock rollback/sleep, Stop/finalization order, retention pressure and supported Resume lineage. A clock-rollback latch was not implemented at checkpoint. Review proposal replay bounds, accepted-result publication after restart, deleted required tasks, stale bindings and current-authority changes before marking these gates complete.
+8. Re-run UI suites, source/test type checks, focused formatting/lint and unchanged size/architecture/artifact guards. Recount actual production scope, update the estimate from concrete changes and complete independent integrated review. Then resume the P1-P6 push sequence and exact-head CI/native qualification. Merge only #1315 into its integration base after its real gates pass.
+
+The current blocker is an unavailable execution environment and unfinished verification. It is not a request for additional implementation or merge permission; that authorization already exists.
