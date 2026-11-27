@@ -147,10 +147,11 @@ export function unattributableWindowsProcessBirths(
   const originals = new Set(originalTree.map(row => row.pid + ':' + row.birth));
   const rootBirth = originalTree[0]?.birth;
   if (!rootBirth) return [...now];
+  const rootTicks = BigInt(rootBirth);
   function foreign(entry: WindowsProcessIdentity, seen: Set<number>): boolean {
     if (!entry.birth || originals.has(entry.pid + ':' + entry.birth) ||
         seen.has(entry.pid) || seen.size >= 512) return false;
-    if (BigInt(entry.birth) < BigInt(rootBirth)) return true;
+    if (BigInt(entry.birth) < rootTicks) return true;
     const original = baseline.get(entry.pid);
     const parent = original?.birth === entry.birth
       ? baseline.get(entry.parentPid) : live.get(entry.parentPid);
