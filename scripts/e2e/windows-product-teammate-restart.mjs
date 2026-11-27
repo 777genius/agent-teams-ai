@@ -12,7 +12,7 @@ import {fileURLToPath} from 'node:url';
 import {prepareNativeDesktopEnvironment} from './opencode-native-desktop-environment.ts';
 import {startGroupChatModelServer} from './group-chat-model-server.ts';
 import {CdpClient} from './comment-notification/cdp.mjs';
-import {processes, ownedTree, sameIdentity} from './opencode-diagnostics/platform.mjs';
+import {processes, ownedTree, sameIdentity, powershell} from './opencode-diagnostics/platform.mjs';
 assert.equal(process.platform,'win32','Native Windows runner required');
 const repo=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const f=await prepareNativeDesktopEnvironment();
@@ -95,6 +95,32 @@ const r=spawnSync('powershell.exe',['-NoProfile','-NonInteractive','-Command',ps
 {windowsHide:true,encoding:'utf8',timeout:15000,maxBuffer:16384});
 assert(!r.error&&r.status===0,'CIM failure; process state unknown');
 const x=r.stdout.trim();assert(x==='alive'||x==='gone');return x==='alive';}
+// A census that filters missing CreationDate is sufficient for positive
+// ownership, not for negative retirement proof. Query the original target
+// PIDs without that filter and refuse an unreadable target birth.
+function strictTargetCensus(identities){
+  const ids=identities.map(p=>p.pid);
+  assert(ids.length>0&&ids.every(pid=>Number.isSafeInteger(pid)&&pid>0));
+  const filter=ids.map(pid=>'ProcessId = '+pid).join(' OR ');
+  const rows=JSON.parse(powershell(
+    '$rows=@(Get-CimInstance Win32_Process -Filter "'+filter+'" -ErrorAction Stop | ForEach-Object {'+
+    ' [pscustomobject]@{pid=[int]$_.ProcessId; birth=$(if ($_.CreationDate) {$_.CreationDate.ToUniversalTime().ToString("o")} else {$null})} });'+
+    ' ConvertTo-Json -InputObject $rows -Compress'
+  ).replace(/^\uFEFF/,'').trim());
+  assert(Array.isArray(rows),'Native target census is not an array');
+  const seen=new Set();
+  for(const row of rows){
+    assert(row&&ids.includes(row.pid)&&!seen.has(row.pid)&&typeof row.birth==='string'&&
+      Number.isFinite(Date.parse(row.birth)),'Native target identity unavailable');
+    seen.add(row.pid);
+  }
+  return rows;
+}
+function originalBirthsRetired(identities){
+  const census=strictTargetCensus(identities);
+  return identities.every(expected=>!census.some(p=>
+    p.pid===expected.pid&&p.birth===expected.birth));
+}
 try{
 originalLauncherIdentity=await until('original cmd launcher native identity',async()=>{
   const observed=processes().find(p=>p.pid===app.pid);
@@ -159,9 +185,7 @@ assert(restartedWorkerIdentity?.birth,'Restarted worker native birth identity un
 result.restartWorkerPid=workerPid;
 // Command-line visibility can become unreadable while a Win32 process remains
 // live; only the original PID+birth disappearing from a full census proves retirement.
-const oldWorkerStillPresent=processes().some(p=>
-  p.pid===originalWorkerIdentity.pid&&p.birth===originalWorkerIdentity.birth);
-assert(!oldWorkerStillPresent,
+assert(originalBirthsRetired([originalWorkerIdentity]),
   'Original pre-restart worker birth survived replacement');
 result.originalWorkerRetiredDuringRestart=true;
 result.phase='real-tool-turn';
@@ -221,17 +245,15 @@ assert(Number.isFinite(Date.parse(proof.launchedAt)) &&
   'Tool lifetime too old to distinguish product Stop from tool timeout');
 assert(ownedAlive(workerPid,team),'Original worker died before product Stop');
 assert(ownedAlive(toolPid,psFile),'Original tool died naturally before product Stop');
+const stopCensus=strictTargetCensus([restartedWorkerIdentity,originalToolIdentity]);
+for(const identity of [restartedWorkerIdentity,originalToolIdentity])
+  sameIdentity(identity,stopCensus.find(p=>p.pid===identity.pid));
 result.workerAndToolAliveImmediatelyBeforeStop=true;
 await client.evaluate('(()=>{window.__winStop={done:false};window.electronAPI.teams.stop('+
 literal(team)+').then(v=>{window.__winStop={done:true,value:v}},e=>{window.__winStop={done:true,error:String(e)}});return true;})()');
 await until('Stop IPC',()=>client.evaluate('(()=>{const x=window.__winStop;if(!x?.done)return null;if(x.error)throw Error(x.error);return true;})()'),150000);
-await until('original worker and tool births retired',()=>{
-  const census=processes(); // CIM error is unknown, never a verified Stop.
-  return !census.some(p=>
-    p.pid===restartedWorkerIdentity.pid&&p.birth===restartedWorkerIdentity.birth) &&
-    !census.some(p=>
-      p.pid===originalToolIdentity.pid&&p.birth===originalToolIdentity.birth);
-},60000);
+await until('original worker and tool births retired',()=>
+  originalBirthsRetired([restartedWorkerIdentity,originalToolIdentity]),60000);
 result.originalWorkerAndToolRetired=true;
 result.originalBirthRetirement={
   workerPid:restartedWorkerIdentity.pid,workerBirth:restartedWorkerIdentity.birth,
