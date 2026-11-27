@@ -118,7 +118,9 @@ export async function proveNativeBudgetStop({client,api,wait,getProcess,ownedSti
       const nativeAlive=await ownedStillAlive(original);
       const toolAlive=await ownedStillAlive(held);
       const teamAlive=await api(`window.electronAPI.teams.processAlive(${JSON.stringify(nativeTeamName)})`);
-      return !nativeAlive&&!toolAlive&&!teamAlive
+      const aliveTeams=await api('window.electronAPI.teams.aliveList()');
+      return !nativeAlive&&!toolAlive&&teamAlive===false&&
+        Array.isArray(aliveTeams)&&!aliveTeams.includes(nativeTeamName)
         ? {memberPid:original.pid,memberBirth:original.creation,
            heldToolPid:held.pid,heldToolBirth:held.creation,heldToolRetired:true,
            used:metric.value,limit:metric.limit,

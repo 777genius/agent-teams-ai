@@ -173,13 +173,19 @@ async function getProcess(pid) {
   const script = "$ErrorActionPreference='Stop';" +
     "$p=Get-CimInstance Win32_Process -Filter 'ProcessId = " + pid + "' -ErrorAction Stop;" +
     "if(-not $p){Write-Output 'null';exit 0};" +
+    "if($null -eq $p.CreationDate){throw 'Win32 original process birth unavailable'};" +
     "@{pid=[int]$p.ProcessId;creation=([datetime]$p.CreationDate).ToUniversalTime().ToString('o',[System.Globalization.CultureInfo]::InvariantCulture);" +
     "command=[string]$p.CommandLine;parent=[int]$p.ParentProcessId}|ConvertTo-Json -Compress";
   const found = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], {
     encoding: 'utf8', windowsHide: true, timeout: 15_000,
   });
   if (found.status !== 0 || found.error) throw new Error('Win32 original process lookup failed');
-  return JSON.parse(found.stdout.trim());
+  const observed = JSON.parse(found.stdout.trim());
+  if (observed !== null) {
+    assert(observed && observed.pid === pid && typeof observed.creation === 'string' &&
+      Number.isFinite(Date.parse(observed.creation)), 'Win32 original process identity unavailable');
+  }
+  return observed;
 }
 
 async function ownedStillAlive(before) {
@@ -567,8 +573,13 @@ async function run() {
   await wait('both original teammate PIDs retired after product Stop', async () =>
     !(await ownedStillAlive(originalMember)) &&
       !(await ownedStillAlive(initialMember)), 30_000);
-  await wait('original active PowerShell tool PID retired after product Stop', async () =>
-    !(await ownedStillAlive(heldTool)), 30_000);
+  await wait('original active PowerShell tool retired and product IPC reports stopped', async () => {
+    const toolAlive = await ownedStillAlive(heldTool);
+    const teamAlive = await api(`window.electronAPI.teams.processAlive(${literal(teamName)})`);
+    const aliveTeams = await api('window.electronAPI.teams.aliveList()');
+    return !toolAlive && teamAlive === false && Array.isArray(aliveTeams) &&
+      !aliveTeams.includes(teamName);
+  }, 30_000);
   const focus = await mainInspector.evaluate('globalThis.__winProductFocus');
   assert(focus.pid > 0 && Number.isSafeInteger(focus.blur));
   assert.equal(focus.before, true, 'Electron window did not own focus before tools');

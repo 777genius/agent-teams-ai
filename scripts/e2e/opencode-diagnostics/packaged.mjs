@@ -534,6 +534,12 @@ export function packagedOrphanObservation(history, snapshot) {
 }
 
 export function packagedDrainSnapshot(identities, snapshot, listenerPids) {
+  assert(identities.every((entry) => Number.isSafeInteger(entry.pid) && entry.pid > 0 &&
+    typeof entry.birth === 'string' && Number.isFinite(Date.parse(entry.birth))),
+  'Invalid captured process identity');
+  assert(snapshot.every((current) => !identities.some((entry) => entry.pid === current.pid) ||
+    typeof current.birth === 'string' && Number.isFinite(Date.parse(current.birth))),
+  'Captured process birth unavailable');
   const ownedRemaining = identities.filter((entry) =>
     snapshot.some((current) => current.pid === entry.pid && current.birth === entry.birth)
   );

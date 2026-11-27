@@ -1659,12 +1659,12 @@ async function main() {
       };
       const platform = (await import(
         pathToFileURL(path.join(repo, 'scripts/e2e/opencode-diagnostics/platform.mjs')).href
-      )) as { processes(): Identity[]; listeners(): number[] };
+      )) as { processes(requiredPids?: number[]): Identity[]; listeners(): number[] };
       const drain = await waitFor(
         async () => {
           const value = packaged.packagedDrainSnapshot(
             identities,
-            platform.processes(),
+            platform.processes(identities.map((entry) => entry.pid)),
             platform.listeners()
           );
           return value.drained ? value : null;
