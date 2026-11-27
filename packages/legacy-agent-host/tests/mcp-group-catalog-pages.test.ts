@@ -65,9 +65,9 @@ test('native MCP catalog port accepts continuation without adding selectors or m
   }, execute: async () => { throw new Error('No effect'); }, lookup: () => undefined };
   const tool = createGroupMcpTools(port).find(row => row.definition.name === 'group_chat_list');
   assert.ok(tool);
-  assert.deepEqual(Object.keys(tool.definition.inputSchema.shape), ['cursor']);
-  const first = await tool.handler({}) as { nextCursor: string };
+  assert.deepEqual(tool.definition.inputSchema.required ?? [], []);
+  const first = await tool.invoke({}) as { nextCursor: string };
   assert.ok(first.nextCursor);
-  await tool.handler({ cursor: first.nextCursor });
+  await tool.invoke({ cursor: first.nextCursor });
   assert.deepEqual(calls, [undefined, first.nextCursor]);
 });

@@ -16,7 +16,7 @@ export function createGroupMcpTools(port: TeamMcpGroupPort | undefined): BoundTo
     define(
       'group_chat_list',
       'List authenticated Team group chats and recipients. Large catalogs return group-catalog-page: follow nextCursor and concatenate whole groups in order; restart if revision changes.',
-      z.strictObject({ cursor: z.string().regex(/^[1-9][0-9]{0,8}\\.[a-f0-9]{64}$/).optional() }),
+      z.strictObject({ cursor: z.string().regex(/^[1-9][0-9]{0,8}\.[a-f0-9]{64}$/).optional() }),
       ({ cursor }) => port.list(cursor),
       false
     ),
