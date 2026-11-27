@@ -64,3 +64,97 @@ test('a PID reused between sampling and signaling does not prevent cleanup of an
   await assert.rejects(ledger.stop(), /PID reused/);
   assert.deepEqual(signals, [other.pid]);
 });
+
+for (const lateRead of ['fallback', 'signal'] as const) {
+  test('failure cleanup stops after a late ' + lateRead + ' census and retains the first error', async (t) => {
+    let now = 0;
+    t.mock.method(Date, 'now', () => now);
+    const inventoryError = new Error('missing captured birth');
+    const reads: number[][] = [];
+    const signals: number[] = [];
+    const ledger = new DefaultProcessLedger(
+      (required = []) => {
+        reads.push([...required]);
+        if (required.includes(child.pid)) throw inventoryError;
+        if (
+          (lateRead === 'fallback' && required.length === 0) ||
+          (lateRead === 'signal' && required.length === 1)
+        ) {
+          now += 30_000;
+          if (lateRead === 'signal') throw new Error('later census failure');
+        }
+        return [root, other];
+      },
+      (pid) => {
+        signals.push(pid);
+        return true;
+      }
+    );
+    ledger.roots.push(root, other);
+    for (const identity of [root, child, other]) {
+      ledger.observed.set(String(identity.pid) + ':' + identity.birth, identity);
+    }
+    await assert.rejects(ledger.stop(), (error) => error === inventoryError);
+    assert.deepEqual(signals, []);
+    assert.deepEqual(
+      reads,
+      lateRead === 'fallback'
+        ? [[root.pid, child.pid, other.pid], []]
+        : [[root.pid, child.pid, other.pid], [], [root.pid]]
+    );
+  });
+}
+
+test('failure cleanup shares its deadline across progress and does not signal after a late read', async (t) => {
+  let now = 0;
+  t.mock.method(Date, 'now', () => now);
+  const inventoryError = new Error('missing captured birth');
+  const last = { ...other, pid: 45 };
+  let rows: ProcessIdentity[] = [root, other, last];
+  const reads: number[][] = [];
+  const signals: number[] = [];
+  const ledger = new DefaultProcessLedger(
+    (required = []) => {
+      reads.push([...required]);
+      if (required.includes(child.pid)) throw inventoryError;
+      if (required.length === 1) now += 6000;
+      return rows;
+    },
+    (pid) => {
+      signals.push(pid);
+      rows = rows.filter((row) => row.pid !== pid);
+      return true;
+    }
+  );
+  ledger.roots.push(root, other, last);
+  for (const identity of [root, child, other, last]) {
+    ledger.observed.set(String(identity.pid) + ':' + identity.birth, identity);
+  }
+  await assert.rejects(ledger.stop(), (error) => error === inventoryError);
+  assert.deepEqual(signals, [root.pid]);
+  assert.deepEqual(reads, [[root.pid, child.pid, other.pid, last.pid], [], [root.pid], [other.pid]]);
+});
+
+test('healthy cleanup does not activate the failure deadline', async (t) => {
+  let clockReads = 0;
+  t.mock.method(Date, 'now', () => {
+    clockReads++;
+    return 0;
+  });
+  let rows: ProcessIdentity[] = [root];
+  const signals: number[] = [];
+  const ledger = new DefaultProcessLedger(
+    () => rows,
+    (pid) => {
+      signals.push(pid);
+      rows = rows.filter((row) => row.pid !== pid);
+      return true;
+    }
+  );
+  ledger.roots.push(root);
+  ledger.observed.set(String(root.pid) + ':' + root.birth, root);
+  const result = await ledger.stop();
+  assert.deepEqual(result.remaining, []);
+  assert.deepEqual(signals, [root.pid]);
+  assert.equal(clockReads, 0);
+});

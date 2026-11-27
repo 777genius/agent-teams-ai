@@ -47,6 +47,7 @@ export class DefaultProcessLedger {
   }[] = [];
   private timer?: NodeJS.Timeout;
   private samplingError?: unknown;
+  private failureCleanupDeadline?: number;
   private readonly readProcesses: (requiredPids?: number[]) => ProcessIdentity[];
   private readonly killProcess: (pid: number, signal: NodeJS.Signals) => boolean;
   constructor(
@@ -183,36 +184,56 @@ export class DefaultProcessLedger {
     // First ask each owned app root to stop; descendants may then exit normally.
     for (const p of current.filter((p) => rootKeys.has(this.key(p)))) this.signal(p);
     for (let attempt = 0; attempt < 10 && current.length; attempt++) {
+      this.checkCleanupDeadline();
       await pause(300);
       current = this.cleanupSample();
     }
     for (const p of current.reverse()) this.signal(p, 'SIGKILL');
     for (let attempt = 0; attempt < 20 && current.length; attempt++) {
+      this.checkCleanupDeadline();
       await pause(300);
       current = this.cleanupSample();
     }
+    this.checkCleanupDeadline();
     assert.equal(current.length, 0, 'Owned packaged/runtime processes remain after cleanup');
     assert(!this.samplingError, `Process inventory failed: ${this.samplingError}`);
     return { remaining: current, observed: [...this.observed.values()], commands: this.commands };
   }
+  private checkCleanupDeadline() {
+    if (this.samplingError === undefined) return;
+    const now = Date.now();
+    // Start one failure-only budget; an in-flight Windows census is capped at 30s.
+    this.failureCleanupDeadline ??= now + 10_000;
+    if (now >= this.failureCleanupDeadline) throw this.samplingError;
+  }
   private cleanupSample() {
+    this.checkCleanupDeadline();
     try {
-      return this.sample();
-    } catch (error) {
-      // A captured PID with an unreadable birth must fail qualification, but
-      // cannot prevent cleanup of other independently verified identities.
-      this.samplingError ??= error;
-      return this.sampleObserved([]);
+      try {
+        return this.sample();
+      } catch (error) {
+        // A captured PID with an unreadable birth must fail qualification, but
+        // cannot prevent cleanup of other independently verified identities.
+        this.samplingError ??= error;
+        this.checkCleanupDeadline();
+        return this.sampleObserved([]);
+      }
+    } finally {
+      this.checkCleanupDeadline();
     }
   }
   private signal(expected: ProcessIdentity, signal: NodeJS.Signals = 'SIGTERM') {
+    this.checkCleanupDeadline();
     try {
       const current = this.readProcesses([expected.pid]).find((p) => p.pid === expected.pid);
+      this.checkCleanupDeadline();
       if (!current) return;
       sameIdentity(expected, current);
       this.killProcess(expected.pid, signal);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ESRCH') this.samplingError ??= error;
+    } finally {
+      this.checkCleanupDeadline();
     }
   }
 }
