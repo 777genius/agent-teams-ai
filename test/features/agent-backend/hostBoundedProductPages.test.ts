@@ -158,7 +158,7 @@ it.each([43_000, 48_000])('restores a native accepted %i-character subject with 
   });
   const original = JSON.stringify(reader.getTask(taskId));
   const sizes: number[] = [];
-  const invoke: AgentBackendApi['invoke'] = vi.fn(async (request) => {
+  const invoke: AgentBackendApi['invoke'] = vi.fn<AgentBackendApi['invoke']>(async (request) => {
     if (request.operation !== 'team.snapshot') throw new Error('Unexpected fixture operation');
     const raw = reader.readQueries!.getTeam(request.payload.cursor);
     sizes.push(bytes(raw));
@@ -208,10 +208,18 @@ it('retains legacy text-only fragments and rejects a new summary introduced afte
     text: 'first ', summary: 'original summary' };
   const { summary: _summary, ...continuation } = base;
   expect(assembleHostMessageParts({
-    total: 2, values: new Map([[0, base], [1, { ...continuation, text: 'second' }]]),
+    total: 2,
+    values: new Map<number, BackendTeamSnapshot['messages'][number]>([
+      [0, base],
+      [1, { ...continuation, text: 'second' }],
+    ]),
   })).toEqual({ ...base, text: 'first second' });
   expect(() => assembleHostMessageParts({
-    total: 2, values: new Map([[0, continuation], [1, { ...base, text: 'second' }]]),
+    total: 2,
+    values: new Map<number, BackendTeamSnapshot['messages'][number]>([
+      [0, continuation],
+      [1, { ...base, text: 'second' }],
+    ]),
   })).toThrow('summary');
 });
 
@@ -262,6 +270,11 @@ it.each([128 * 1024, 384 * 1024])('restores imported source messages and accepte
   expect(parseBackendOperation({ handle, commandId: 'TEST-note', operation: 'task.review',
     payload: { taskId: 'TEST-imported', action: 'request_changes', comment: note },
   })).toMatchObject({ payload: { comment: note } });
+  const historyEvents: JsonValue[] = [
+    { id: 'TEST-created', timestamp: '2026-11-20T11:00:00Z', type: 'task_created', status: 'pending' },
+    { id: 'TEST-review', timestamp: '2026-11-21T11:00:00Z', type: 'review_changes_requested',
+      actor: 'user', from: 'review', to: 'needsFix', note },
+  ];
   const retained = {
     id: 'TEST-imported', subject: 'Original imported task', status: 'completed',
     sourceMessageId: 'TEST-original-message',
@@ -269,11 +282,7 @@ it.each([128 * 1024, 384 * 1024])('restores imported source messages and accepte
       text: sourceText, attachments: [{ id: 'TEST-file', filename: 'source.txt',
         mimeType: 'text/plain', size: 3, filePath: '/private/original/source.txt' }],
       fileReferenceIds: ['TEST-file'] },
-    historyEvents: [
-      { id: 'TEST-created', timestamp: '2026-11-20T11:00:00Z', type: 'task_created', status: 'pending' },
-      { id: 'TEST-review', timestamp: '2026-11-21T11:00:00Z', type: 'review_changes_requested',
-        actor: 'user', from: 'review', to: 'needsFix', note },
-    ],
+    historyEvents,
   };
   const original = JSON.stringify(retained);
   const sizes: number[] = [];
@@ -318,7 +327,7 @@ it('keeps a complete subject when Main projects its final fragment with the same
     } },
   };
   let overlaidSubject = false;
-  const invoke: AgentBackendApi['invoke'] = vi.fn(async (request) => {
+  const invoke: AgentBackendApi['invoke'] = vi.fn<AgentBackendApi['invoke']>(async (request) => {
     if (request.operation !== 'team.snapshot') throw new Error('Unexpected fixture operation');
     const page = projectTeamSnapshot(pageOwnerSnapshot({ principalId: 'human', key: 'TEST-overlay',
       snapshot: source, maxBytes: 128 * 1024,

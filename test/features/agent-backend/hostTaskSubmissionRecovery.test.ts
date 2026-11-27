@@ -752,7 +752,7 @@ it.each(['event count', 'history text'] as const)(
     expect(canonical.historyEvents).toHaveLength(history.length + 1);
     expect(canonical.comments).toHaveLength(1);
     const pageSizes: number[] = [];
-    const invoke: AgentBackendApi['invoke'] = vi.fn(async (request) => {
+    const invoke: AgentBackendApi['invoke'] = vi.fn<AgentBackendApi['invoke']>(async (request) => {
       if (request.operation !== 'team.snapshot') throw new Error('Unexpected fixture read');
       const raw = f.human.readSnapshot(request.payload);
       pageSizes.push(Buffer.byteLength(JSON.stringify(raw)));

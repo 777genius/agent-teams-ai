@@ -93,8 +93,11 @@ describe('original Host message delivery projection', () => {
         operation === 'command.lookup' ? human.lookup(command.commandId)! : receipt
       );
       expect(Buffer.byteLength(JSON.stringify({ ok: true, value: response }))).toBeLessThan(768 * 1024);
-      expect(project(response, { ...lookup, commandId: command.commandId, operation,
-        payload: operation === 'message.send' ? command.payload : {} })).toEqual({
+      const request: BackendOperationRequest =
+        operation === 'message.send'
+          ? { ...lookup, commandId: command.commandId, operation, payload: command.payload }
+          : { ...lookup, commandId: command.commandId, operation, payload: {} };
+      expect(project(response, request)).toEqual({
         ok: true, value: {
           commandId: command.commandId, operation: 'message.send', phase: 'completed',
           messageId: receipt.effects.messageId, deliveryId: receipt.effects.deliveryId,

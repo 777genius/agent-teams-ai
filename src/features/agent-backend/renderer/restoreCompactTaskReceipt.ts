@@ -27,10 +27,10 @@ export async function restoreCompactTaskReceipt(
     !/^[a-f0-9]{64}$/.test(proof.commandSha256) ||
     !['completed', 'rejected'].includes(receipt.phase)
   )
-    invalid();
-  if ((await digest(command)) !== proof.commandSha256) invalid();
+    return invalid();
+  if ((await digest(command)) !== proof.commandSha256) return invalid();
   if (command.operation === 'task.create') {
-    if (proof.taskId !== undefined || proof.commentTextSha256 !== undefined) invalid();
+    if (proof.taskId !== undefined || proof.commentTextSha256 !== undefined) return invalid();
     if (proof.taskSubjectSha256 !== undefined) {
       const subject = 'subject' in command.payload ? command.payload.subject : undefined;
       if (
@@ -40,7 +40,7 @@ export async function restoreCompactTaskReceipt(
         typeof subject !== 'string' ||
         (await digest(subject.trim())) !== proof.taskSubjectSha256
       )
-        invalid();
+        return invalid();
       receipt.task.subject = subject.trim();
     }
   } else if (command.operation === 'task.comment') {
@@ -49,7 +49,7 @@ export async function restoreCompactTaskReceipt(
       proof.taskId !== command.payload.taskId ||
       proof.taskSubjectSha256 !== undefined
     )
-      invalid();
+      return invalid();
     if (proof.commentTextSha256 !== undefined) {
       const text = 'text' in command.payload ? command.payload.text : undefined;
       if (
@@ -59,8 +59,8 @@ export async function restoreCompactTaskReceipt(
         typeof text !== 'string' ||
         (await digest(text)) !== proof.commentTextSha256
       )
-        invalid();
+        return invalid();
       receipt.comment.text = text;
     }
-  } else invalid();
+  } else return invalid();
 }
