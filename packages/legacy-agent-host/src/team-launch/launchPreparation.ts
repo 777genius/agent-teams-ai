@@ -51,18 +51,19 @@ function matchesPreparationOrigin(
     }
     const restored = restorations.filter(row => runtimeDigest(row.member) === digest);
     if (restored.length > 1) return false;
-    // A restore must match its exact qualified retained descriptor, never merely
-    // the presence of a restore property on the current selection.
-    if (current.restore) return restored.length === 1;
-    if (restored.length) return false;
-    // A different descriptor claiming the same selected binding is not a root.
+    // Neither a fake root nor an apparent restore may borrow another retained
+    // selection that ends at the same binding with different descriptor bytes.
     const sameBinding = (binding: typeof current.binding) =>
       binding !== null && current.binding !== null &&
       runtimeDigest(binding) === runtimeDigest(current.binding);
     if (
       actions.some(row => !consumed.has(row) && sameBinding(row.selected.binding)) ||
-      restorations.some(row => sameBinding(row.member.binding))
+      restorations.some(row => sameBinding(row.member.binding) &&
+        runtimeDigest(row.member) !== digest)
     ) return false;
+    // An actual restore is an independently qualified historical boundary.
+    if (current.restore) return restored.length === 1;
+    if (restored.length) return false;
     return current.configurationDigest === prepared.configurationDigest;
   }
   return false;
