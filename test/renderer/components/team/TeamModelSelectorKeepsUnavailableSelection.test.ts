@@ -417,9 +417,18 @@ describe('TeamModelSelector keeps an unavailable saved selection', () => {
     installLoadModelsApi(async (input) => providerModelsResponse(input.providerId));
     const savedModel = 'claude-sonnet-4-6';
     const catalog = (models: string[]): CliProviderStatus => ({
-      providerId: 'anthropic', supported: true, authenticated: false,
+      providerId: 'anthropic', displayName: 'Claude', supported: true, authenticated: false,
+      authMethod: null, canLoginFromUi: false,
       verificationState: 'unknown', statusCheckOutcome: 'model_only',
-      capabilities: { teamLaunch: false, oneShot: false },
+      capabilities: {
+        teamLaunch: false, oneShot: false,
+        extensions: {
+          plugins: { status: 'unsupported', ownership: 'shared' },
+          mcp: { status: 'unsupported', ownership: 'shared' },
+          skills: { status: 'unsupported', ownership: 'shared' },
+          apiKeys: { status: 'unsupported', ownership: 'provider-scoped' },
+        },
+      },
       models, modelCatalogRefreshState: 'ready',
       modelCatalog: {
         schemaVersion: 1, providerId: 'anthropic', source: 'claude-sdk', status: 'ready',
@@ -433,7 +442,7 @@ describe('TeamModelSelector keeps an unavailable saved selection', () => {
         })),
         diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
       },
-    } as CliProviderStatus);
+    });
     let provider = catalog(['claude-opus-4-6']);
     storeState.cliStatus = { flavor: 'agent_teams_orchestrator', providers: [provider] };
     const onModelChange = vi.fn();
