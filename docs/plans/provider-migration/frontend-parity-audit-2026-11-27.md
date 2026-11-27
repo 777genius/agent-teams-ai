@@ -276,3 +276,53 @@ native Desktop qualification remain open. Original macOS Resume/Review and
 intermittent Quit investigations continue with their existing owner and original
 assertions. This batch does not merge #982, change provider pins, release or
 enable Host by default.
+
+## Continuation F: original project-launch attempt observation
+
+Source baseline: published `116a85de003f8588eed4c0b247edcf4eb677646d`.
+The original installer receipt (run `46031687475`, job `140616834073`,
+artifact `15224217747`) rejected pending attempt
+`d14ac75f-f381-4c97-acec-462e6f47f74a`. The current renderer creates an attempt
+with `crypto.randomUUID()` and uses it in
+`pending:<logical selection key>:<attempt>`. The Desktop project observer
+instead requires a positive integer, while its three positive test fixtures
+also use an integer. This is a confirmed observer-contract defect; that
+receipt does not establish a native provider launch failure.
+
+Publish this reviewed continuation before changing its implementation. The
+frontend owner edits only `scripts/legacy-agent-host/desktop-created-project-selection.ts`
+and its existing test file. Keep the existing production generator and all
+launch, roster, owner, project, publication and capture identity assertions.
+Do not alter polling, deadlines, cleanup or the native scenario.
+
+1. Replace the numeric suffix check with the canonical lowercase UUIDv4
+   shape produced by `crypto.randomUUID()`, including version and variant.
+2. Use generated UUIDs for the three positive pending fixtures and cover the
+   exact rejected original receipt value. No production imports or new loader
+   are needed in the plain Node test.
+3. Replace a pending attempt with a different valid UUID and require the
+   original-attempt identity error, so malformed-input rejection cannot hide
+   loss of the identity fence.
+4. Reject numeric, malformed, wrong-version, wrong-variant, noncanonical and
+   trailing-data/whitespace suffixes, the separate legacy startup-sweep value,
+   a foreign logical selection prefix, and a pending
+   ID presented as a published runtime ID. Preserve disappearance, rollback,
+   foreign execution/launch/roster and immutable-capture cases.
+5. Run the existing observer suite against a checked current Host build, the
+   canonical scripts typecheck and affected formatting checks. Independently
+   inspect the exact diff before publishing. The original installer journey
+   remains a separate required native result; the observer suite cannot stand
+   in for it.
+
+Estimate: 1-4 changed observer lines and 45-80 regression lines; complexity
+2/10, confidence 10/10, reliability target 9/10. No new abstraction, durable
+format, dependency or product API is introduced.
+
+Review: R1 traced the production attempt generator, both pending assignments,
+the observer and the original retained receipt. R2 independently checked the
+same source contract and required a different valid UUID in the replacement
+case. R3 independently confirmed that no production caller supplies a legitimate
+numeric attempt to this Host observer and that the separate legacy startup-sweep
+producer is filtered from its Host key. It required explicit whitespace
+negatives and retention of the identity and publication fences. All three
+reviews are reconciled; the plan is approved for implementation after publication.
