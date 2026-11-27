@@ -381,8 +381,12 @@ export async function readHostPagedSnapshot(
     if (page.nextCursor === undefined || page.nextCursor === null) {
       const completeKanban = kanbanState;
       if (!completeKanban) throw new Error('Missing Host Kanban state');
-      if (first.processTotal !== undefined && processes.length !== first.processTotal)
-        throw new Error('Incomplete Host process history');
+      if (first.processTotal !== undefined) {
+        if (processes.length !== first.processTotal)
+          throw new Error('Incomplete Host process history');
+        if (processes.length > 1024 || new Set(processes.map((row) => row.id)).size !== processes.length)
+          throw new Error('Invalid Host process history');
+      }
       const reconstructed = first.taskParts
         ? assembleTaskParts(taskParts, first.taskTotal ?? 0)
         : tasks;
