@@ -68,6 +68,8 @@ let addMemberIpcReceipt = null;
 let forceExitMember;
 let forceExitOwnedLauncher;
 let forceExitHeldTool;
+// Retain exact PID/birth evidence from budget-team processes for safe cleanup.
+const budgetOwnedProcesses = [];
 let forceExitPidEvidence = null;
 let hwndObserver;
 let hwndObserverSpawnError = null;
@@ -619,7 +621,8 @@ async function run() {
     userDataRoot: env.AGENT_TEAMS_ELECTRON_USER_DATA_DIR,
     request, foreignIdentity: forceExitMember,
     expected, heldToolPidPath, waitForOwnedPowerShellDescendant,
-    seed:budgetSeed,
+    seed:budgetSeed, budgetOwnedProcesses, findOriginalTeammateJobLauncher,
+    mainBirth,
   });
   assert(await ownedStillAlive(forceExitMember) && await ownedStillAlive(forceExitHeldTool),
     'Budget auto-stop retired the unrelated held-tool team');
@@ -786,6 +789,7 @@ try {
     { identity: forceExitMember, marker: teamName + '-force' },
     { identity: forceExitOwnedLauncher, marker: 'teammate.exe' },
     { identity: forceExitHeldTool, marker: 'powershell.exe' },
+    ...budgetOwnedProcesses,
   ]) {
     if (!identity) continue;
     try {

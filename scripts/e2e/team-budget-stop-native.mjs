@@ -41,7 +41,7 @@ export async function seedNativeBudgetStopLedger({root,userDataRoot,teamName}){
   return{teamName,runId,eventId,ledgerPath,amount:150};
 }
 
-export async function proveNativeBudgetStop({client,api,wait,getProcess,ownedStillAlive,root,userDataRoot,request,foreignIdentity,expected,heldToolPidPath,waitForOwnedPowerShellDescendant,seed}){
+export async function proveNativeBudgetStop({client,api,wait,getProcess,ownedStillAlive,root,userDataRoot,request,foreignIdentity,expected,heldToolPidPath,waitForOwnedPowerShellDescendant,seed,budgetOwnedProcesses,findOriginalTeammateJobLauncher,mainBirth}){
   const nativeTeamName = request.teamName + '-budget';
   assert(seed?.teamName===nativeTeamName && seed?.amount===150,
     'Budget test must use the pre-start, owned 150-token fixture');
@@ -74,6 +74,9 @@ export async function proveNativeBudgetStop({client,api,wait,getProcess,ownedSti
       const identity=await getProcess(pid);
       return identity?.creation&&identity.command.includes(nativeTeamName)?identity:false;
     },180000);
+    budgetOwnedProcesses.push({identity:original,marker:nativeTeamName});
+    const launcher=await findOriginalTeammateJobLauncher(original,mainBirth);
+    budgetOwnedProcesses.push({identity:launcher,marker:'teammate.exe'});
     assert(await ownedStillAlive(original),'Budget native worker exited before policy was configured');
     assert(await ownedStillAlive(foreignIdentity),'Unrelated baseline worker unavailable before budget stop');
     // Prove budget Stop retires a live descendant tool, not an idle worker
@@ -85,6 +88,7 @@ export async function proveNativeBudgetStop({client,api,wait,getProcess,ownedSti
       ${JSON.stringify({member:'alice',from:'user',text:'WIN_NATIVE_TOOL:'+holdKey})})`);
     const held=await waitForOwnedPowerShellDescendant(original.pid,
       'real held PowerShell descendant of budget-owned teammate',90000);
+    budgetOwnedProcesses.push({identity:held,marker:'powershell.exe'});
     assert(await ownedStillAlive(original) && await ownedStillAlive(held),
       'Original budget worker or held tool exited before policy Save');
     const settings=await api('window.electronAPI.tokenUsage.getBudgetSettings()');
