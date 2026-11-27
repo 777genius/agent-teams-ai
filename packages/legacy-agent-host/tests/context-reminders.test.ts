@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdtempSync, readFileSync, realpathSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -25,7 +25,8 @@ async function setup(
   t: TestContext,
   failRepresented = false,
   leadOnly = false,
-  failObserved = false
+  failObserved = false,
+  savedPrompt = 'TEST standing policy'
 ) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-m10-context-')));
   t.after(() => rmSync(root, { recursive: true, force: true }));
@@ -82,7 +83,7 @@ async function setup(
         permissions: ['read', 'task.write', 'message.write'],
       },
     ],
-    savedSettings: { cwd: root, prompt: 'TEST standing policy' },
+    savedSettings: { cwd: root, prompt: savedPrompt },
   };
   const owner = createFilesystemTeamOwner(options),
     human = owner.connect('human');
@@ -531,4 +532,62 @@ test('failed Team pending publication retains the exact technical epoch and hold
   assert.deepEqual(prepared?.epochIds, [record.contextEpochs![0]!.epochId]);
   assert.equal(f.state().contextEpochs![0]!.represented, undefined);
   assert.equal(f.session.submits.length, 0);
+});
+
+test('large completed task history cannot block the next original input after compaction', async (t) => {
+  const f = await setup(t);
+  const tasks = join(f.root, 'tasks', 'test-team');
+  mkdirSync(tasks, { recursive: true });
+  for (let index = 0; index < 257; index++) {
+    const id = `TEST-completed-${index}`;
+    writeFileSync(join(tasks, `${id}.json`), JSON.stringify({
+      id, subject: `TEST completed work ${index}`, status: 'completed', owner: 'alice',
+    }));
+  }
+  assert.equal(f.human.listTasks().length, 257);
+  await f.compact();
+  const intent = await f.admit('TEST-large-retained-board');
+  await f.runtime.dispatchNext(f.binding);
+  const input = f.runtime.readSession(f.binding).record!.inputs[0]!;
+  assert.equal(input.fingerprint, deliveryFingerprint(intent));
+  assert.equal(input.intent.content, intent.content);
+  assert.equal(f.session.submits.length, 1);
+  assert.ok(f.session.submits[0]!.content.endsWith(intent.content));
+  assert.match(input.preparation!.prefix, /read task_briefing/);
+  assert.match(input.preparation!.prefix, /omitted snapshot does not mean there are no tasks/);
+  for (const instruction of ['TEST current role', 'TEST current workflow', 'TEST standing policy'])
+    assert.ok(input.preparation!.prefix.includes(instruction));
+  assert.equal(f.human.listTasks().length, 257);
+  assert.ok(Buffer.byteLength(f.session.submits[0]!.content) <= 64 * 1024);
+});
+
+test('oversized UTF-8 board snapshot defers to the current lead queue without truncating standing rules', async (t) => {
+  const f = await setup(t, false, true);
+  const tasks = join(f.root, 'tasks', 'test-team');
+  mkdirSync(tasks, { recursive: true });
+  writeFileSync(join(tasks, 'TEST-large-subject.json'), JSON.stringify({
+    id: 'TEST-large-subject', subject: '作業'.repeat(12_000), status: 'pending', owner: 'alice',
+  }));
+  await f.compact();
+  const intent = await f.admit('TEST-large-utf8-board');
+  await f.runtime.dispatchNext(f.binding);
+  const input = f.runtime.readSession(f.binding).record!.inputs[0]!;
+  assert.match(input.preparation!.prefix, /read lead_briefing/);
+  assert.ok(input.preparation!.prefix.includes('TEST standing policy'));
+  assert.ok(f.session.submits[0]!.content.endsWith(intent.content));
+  assert.equal(f.human.listTasks()[0]!.subject, '作業'.repeat(12_000));
+  assert.ok(Buffer.byteLength(f.session.submits[0]!.content) <= 64 * 1024);
+});
+
+test('mandatory standing rules beyond the input budget remain unclaimed instead of being silently truncated', async (t) => {
+  const f = await setup(t, false, false, false, 'TEST must preserve all constraints\n' + 'x'.repeat(65_500));
+  await f.compact();
+  const intent = await f.admit('TEST-mandatory-rules-capacity');
+  await assert.rejects(f.runtime.dispatchNext(f.binding), /hold/);
+  const input = f.runtime.readSession(f.binding).record!.inputs[0]!;
+  assert.equal(input.phase, 'admitted');
+  assert.equal(input.preparation, undefined);
+  assert.equal(input.intent.content, intent.content);
+  assert.equal(f.session.submits.length, 0);
+  assert.equal(f.state().contextEpochs![0]!.candidate, undefined);
 });

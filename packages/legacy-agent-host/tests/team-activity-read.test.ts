@@ -6,9 +6,12 @@ import { join } from 'node:path';
 import { createFilesystemTeamOwner } from '../dist/adapters/team/createFilesystemTeamOwner.js';
 import { FileRuntimeStore } from '../dist/adapters/runtime/FileRuntimeStore.js';
 import { readTeamActivity, summarizeTeamActivity } from '../dist/composition/readTeamActivity.js';
+import { readEntryActivitySources, readRuntimeActivitySources } from '../dist/composition/runtimeActivitySources.js';
+import { captureHostCostCommand } from '../dist/team/hostCostCommand.js';
 import type { TeamActivityReadOptions } from '../dist/composition/readTeamActivity.js';
 import type { TeamGrant } from '../dist/team/contracts.js';
-import type { HostedTeam } from '../dist/composition/MemberEntry.js';
+import type { HostedTeam, MemberEntry } from '../dist/composition/MemberEntry.js';
+import type { RetainedNativeLaunch } from '../dist/composition/createRuntimeNativeMemberCreation.js';
 import type {
   RuntimeActivityEvent,
   RuntimeActivitySnapshot,
@@ -100,7 +103,7 @@ function fixture(t: TestContext) {
   const options: TeamActivityReadOptions = {
     team,
     principalId: 'human',
-    entries: [{ team, binding: intent.binding }],
+    entries: [{ team, binding: intent.binding, provider: 'claude' }],
     taskCause: (raw) => owner.readTaskInputCause('human', raw),
     assertCurrent() {},
     runtime: {
@@ -139,6 +142,124 @@ function fixture(t: TestContext) {
   };
   return { root, owner, connection, options, events, push, taskId, intent, record };
 }
+
+test('native last-request reports never become Codex totals, including an old persisted journal', t => {
+  const f = fixture(t);
+  f.push({ kind: 'usage', inputTokens: 10000, outputTokens: 100, cumulativeCostUsd: 0.02 });
+  f.push({ kind: 'usage', inputTokens: 20000, outputTokens: 200, cumulativeCostUsd: 0.05 });
+  f.push({ kind: 'text', messageRef: 'TEST-result', block: 0, text: 'answer', phase: 'complete' });
+  const verify = () => {
+    for (const provider of ['claude', 'codex', undefined] as const) {
+      f.options.entries = [{ team: f.options.team, binding: f.intent.binding,
+        ...(provider ? { provider } : {}) }];
+      const logs = readTeamActivity(f.options, { memberName: 'alice' });
+      const stats = summarizeTeamActivity('alice', logs, f.options.entries);
+      assert.equal(stats.observedMessages, 1);
+      assert.equal(stats.costUsd, 0.05, 'independent cumulative cost is retained');
+      if (provider === 'claude') {
+        assert.equal(stats.inputTokens, 20000);
+        assert.equal(stats.outputTokens, 200);
+        assert.deepEqual(stats.gaps, []);
+      } else {
+        assert.equal(stats.inputTokens, null);
+        assert.equal(stats.outputTokens, null);
+        assert.ok(stats.gaps.some(reason => reason.includes(provider === 'codex'
+          ? 'only the last request' : 'retained provider is unknown')));
+        if (provider === 'codex') {
+          const cost = captureHostCostCommand({ binding: normalizeBinding(f.intent.binding), stats, now: 1000 });
+          assert.equal(cost.partial, true);
+          assert.equal(cost.inputTokens, null);
+          assert.equal(cost.outputTokens, null);
+          assert.match(cost.text, /Input tokens reported: not reported/u);
+          assert.match(cost.text, /not a full session total/u);
+        }
+      }
+    }
+  };
+  verify();
+  const binding = normalizeBinding(f.intent.binding), key = runtimeDigest(binding);
+  const body = {
+    schemaVersion: 1 as const, binding, sequence: f.events.length,
+    writerIncarnation: 'TEST-incarnation', stateDigest: runtimeDigest(f.record),
+    events: f.events.map(event => ({ ...event, eventId: `${key}:${event.sequence}` })),
+  };
+  const store = new FileRuntimeStore(f.root);
+  store.fenced(binding, () => store.writeActivity({ ...body, digest: runtimeDigest(body) }));
+  const cold = new FileRuntimeStore(f.root);
+  const retained = cold.fenced(binding, () => cold.readActivity(binding));
+  assert.ok(retained);
+  f.events.splice(0, f.events.length, ...retained.events);
+  f.options.runtime.readCapturedSession = () => ({ record: f.record, attached: false });
+  verify();
+});
+
+test('original provider classification survives live replacements without borrowing the current provider', t => {
+  const f = fixture(t);
+  const entry = (provider: 'claude' | 'codex', generation: number): MemberEntry => {
+    const binding = normalizeBinding({ ...f.intent.binding, generation: String(generation) });
+    const common = {
+      cwd: f.root, environment: { HOME: f.root, CODEX_HOME: f.root },
+      executable: { path: f.root, sha256: 'a'.repeat(64) },
+      teamId: binding.teamId, memberId: binding.memberId, principalId: 'human',
+      sessionId: `TEST-session-${generation}`, generation, configRevision: 'TEST-revision',
+      model: 'TEST-model', accountBinding: 'TEST-account',
+      limits: { queuedInputs: 8, inputBytes: 4096, outputBytes: 4096,
+        outputEvents: 256, pendingInteractions: 8, timeoutMs: 1000 },
+    };
+    const profile: MemberEntry['profile'] = provider === 'codex'
+      ? { ...common, provider, protocolRevision: '0.169.0',
+        nativeOptions: { approvalPolicy: 'never', sandbox: 'read-only' } }
+      : { ...common, provider, nativeTools: [], autoAllowedTools: [], nativeOptions: {} };
+    return { binding, team: f.options.team, profile, baseProfile: profile,
+      delivery: { ...binding, teamName: f.options.team.definition.binding.teamName },
+      config: { tenantId: 'TEST-owner', projectId: 'TEST-project', sessionId: profile.sessionId,
+        generation, configRevision: profile.configRevision, requiredCapabilities: [] } };
+  };
+  const original = entry('claude', 1), codex = entry('codex', 2), current = entry('claude', 3);
+  const member = (value: MemberEntry) => ({
+    memberId: value.binding.memberId, binding: value.binding,
+    configurationDigest: runtimeDigest(value.profile), baseConfigurationDigest: runtimeDigest(value.baseProfile),
+    runtimeGeneration: value.profile.generation, configRevision: value.config.configRevision,
+    contextDigest: 'b'.repeat(64), skipped: false, timeoutMs: 1000,
+  });
+  // The launch owner has already validated these immutable source/target edges.
+  const launch = { readActivityLineage: () => ({
+    launchId: current.binding.runId, member: member(current), recordRequired: true,
+    restorations: [], actions: [], liveSelections: [
+      { source: member(original), member: member(codex), sourceRecordRequired: true },
+      { source: member(codex), member: member(current), sourceRecordRequired: true },
+    ],
+  }) } as unknown as RetainedNativeLaunch['launch'];
+  const launches = new Map([[runtimeDigest({ teamId: current.binding.teamId, launchId: current.binding.runId }),
+    { team: f.options.team, launch, entries: [current] }]]);
+  for (const entries of [[original, codex, current], [current, codex, original]]) {
+    const sources = readRuntimeActivitySources(entries, launches, current.binding.teamId);
+    const providers = new Map(sources.map(source => [source.binding.generation, source.provider]));
+    assert.deepEqual(Object.fromEntries(providers), { 1: 'claude', 2: 'codex', 3: 'claude' });
+    assert.equal(sources.length, 3, 'repeated lineage reads merge original providers once');
+    const log = readTeamActivity(f.options, { memberName: 'alice' })[0]!;
+    for (const value of entries) {
+      const stats = summarizeTeamActivity('alice', [{ ...log, generation: value.binding.generation,
+        sessionId: `host-activity-${runtimeDigest(value.binding)}`, events: [{
+          eventId: 'TEST-usage', sequence: 1, inputId: 'TEST-input',
+          data: { kind: 'usage', inputTokens: 17, outputTokens: 9, cumulativeCostUsd: 0.03 },
+        }], gaps: [] }], sources);
+      assert.equal(stats.inputTokens, value.profile.provider === 'codex' ? null : 17);
+      assert.equal(stats.outputTokens, value.profile.provider === 'codex' ? null : 9);
+      assert.equal(stats.costUsd, 0.03);
+    }
+  }
+  for (const value of [codex, current]) {
+    const currentSession = readEntryActivitySources(value, launches, true);
+    assert.equal(currentSession.length, 1, '/cost cannot borrow a replaced native session');
+    assert.equal(currentSession[0]!.provider, value.profile.provider);
+  }
+  const incomplete = readRuntimeActivitySources([current], launches, current.binding.teamId);
+  assert.equal(incomplete.find(source => source.binding.generation === '1')!.provider, undefined);
+  assert.equal(incomplete.find(source => source.binding.generation === '2')!.provider, undefined);
+  assert.equal(incomplete.find(source => source.binding.generation === '3')!.provider, 'claude');
+});
+
 test('actual normalized content/tool/usage/compaction facts remain scoped to original task after reassignment', (t) => {
   const f = fixture(t);
   f.push({ kind: 'text', messageRef: 'TEST-message', block: 0, text: 'first', phase: 'snapshot' });
@@ -181,7 +302,7 @@ test('actual normalized content/tool/usage/compaction facts remain scoped to ori
   assert.equal(logs[0]!.events.at(-1)!.data.kind, 'subagent');
   assert.equal(logs[0]!.startTime, null);
   assert.equal(logs[0]!.durationMs, null);
-  const stats = summarizeTeamActivity('alice', logs);
+  const stats = summarizeTeamActivity('alice', logs, f.options.entries);
   assert.equal(stats.observedMessages, 1);
   assert.deepEqual({ ...stats.toolUsage }, { Read: 1 });
   assert.equal(stats.inputTokens, 11);
@@ -194,7 +315,7 @@ test('actual normalized content/tool/usage/compaction facts remain scoped to ori
   const unchanged = readTeamActivity(f.options, { taskId: f.taskId });
   assert.deepEqual(unchanged, logs, 'internal schedule-log trimming does not enter Team Logs');
   const { computedAt: _originalClock, ...originalStats } = stats;
-  const { computedAt: _unchangedClock, ...unchangedStats } = summarizeTeamActivity('alice', unchanged);
+  const { computedAt: _unchangedClock, ...unchangedStats } = summarizeTeamActivity('alice', unchanged, f.options.entries);
   assert.deepEqual(unchangedStats, originalStats, 'retained Stats cost stays known');
   f.connection.revoke('human');
   assert.throws(() => readTeamActivity(f.options, { taskId: f.taskId }), { code: 'forbidden' });
@@ -270,13 +391,13 @@ test('cold thinking and member stderr retain their exact scope without changing 
   assert.deepEqual(memberLog.events.at(-1), { eventId: `${key}:7`, sequence: 7, data: stderr });
   assert.equal(memberLog.messageCount, log.messageCount);
   assert.equal(memberLog.lastOutputPreview, 'TEST answer');
-  const stats = summarizeTeamActivity('alice', logs);
+  const stats = summarizeTeamActivity('alice', logs, f.options.entries);
   assert.equal(stats.observedMessages, 2);
   assert.equal(stats.inputTokens, 3);
   assert.equal(stats.outputTokens, 2);
   assert.equal(stats.costUsd, 0.01);
   const { computedAt: _taskClock, ...taskStats } = stats;
-  const { computedAt: _memberClock, ...memberStats } = summarizeTeamActivity('alice', [memberLog]);
+  const { computedAt: _memberClock, ...memberStats } = summarizeTeamActivity('alice', [memberLog], f.options.entries);
   assert.deepEqual(memberStats, taskStats);
   // Even a malformed retained diagnostic cannot borrow a legitimate task input.
   f.push(stderr);
@@ -319,7 +440,7 @@ test('unknown usage stays unknown; foreign operation/input cannot borrow task sc
   const logs = readTeamActivity(f.options, { taskId: f.taskId });
   assert.equal(logs[0]!.events.length, 1);
   assert.ok(logs[0]!.gaps.includes('unattributed input'));
-  const stats = summarizeTeamActivity('alice', logs);
+  const stats = summarizeTeamActivity('alice', logs, f.options.entries);
   assert.equal(stats.inputTokens, null);
   assert.equal(stats.outputTokens, null);
   assert.equal(stats.costUsd, null);
@@ -405,7 +526,7 @@ test('retained thinking keeps original task and child identities without duplica
   ]);
   assert.equal(logs[0]!.messageCount, 2, 'output and thinking share a message; child messages stay separate');
   assert.equal(logs[0]!.lastOutputPreview, 'answer');
-  const stats = summarizeTeamActivity('alice', logs);
+  const stats = summarizeTeamActivity('alice', logs, f.options.entries);
   assert.equal(stats.observedMessages, 2);
   assert.equal(stats.inputTokens, null);
   assert.equal(stats.outputTokens, null);

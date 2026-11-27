@@ -5,6 +5,8 @@ import type { MemberEntry } from './MemberEntry.js';
 import type { RetainedNativeLaunch } from './createRuntimeNativeMemberCreation.js';
 
 export interface RuntimeActivitySource extends Pick<MemberEntry, 'binding' | 'team'> {
+  /** Original read-local provider identity; never infer it across a live recipe replacement. */
+  provider?: MemberEntry['profile']['provider'];
   /** Read-local native-session grouping. It is never persisted or returned in an activity DTO. */
   costScope?: string;
   /** Private original launch witness only; never persisted or used to grant access. */
@@ -23,7 +25,8 @@ export function readEntryActivitySources(
   const retained = launches.get(runtimeDigest({
     teamId: entry.binding.teamId, launchId: entry.binding.runId,
   }));
-  if (!retained) return [{ binding: entry.binding, team: entry.team, costScope: currentKey }];
+  if (!retained) return [{ binding: entry.binding, team: entry.team,
+    provider: entry.profile.provider, costScope: currentKey }];
   if (retained.team.definition.binding.backendId !== entry.binding.backendId ||
       retained.team.definition.binding.teamId !== entry.binding.teamId) fail();
   const selected = retained.launch.readActivityLineage(entry.binding.memberId);
@@ -41,14 +44,14 @@ export function readEntryActivitySources(
   if (selected.restorations.length > 64 || selected.actions.length > 64 || liveSelections.length > 64) fail();
   const required = new Set<string>(selected.recordRequired && selected.member.binding
     ? [runtimeDigest(selected.member.binding)] : []);
-  const predecessors = new Map<string, { source: RuntimeBinding; resume: boolean }>();
-  const add = (source: RuntimeBinding, target: RuntimeBinding, resume: boolean) => {
+  const predecessors = new Map<string, { source: RuntimeBinding; resume: boolean; sameProvider: boolean }>();
+  const add = (source: RuntimeBinding, target: RuntimeBinding, resume: boolean, sameProvider = true) => {
     source = normalizeBinding(source); target = normalizeBinding(target);
     if ((['backendId', 'teamId', 'runId', 'memberId'] as const).some(key =>
       source[key] !== entry.binding[key] || target[key] !== entry.binding[key])) fail();
     const key = runtimeDigest(target);
     if (key === runtimeDigest(source) || predecessors.has(key)) fail();
-    predecessors.set(key, { source, resume });
+    predecessors.set(key, { source, resume, sameProvider });
   };
   for (const row of selected.restorations) {
     if (row.member.memberId !== entry.binding.memberId) continue;
@@ -68,10 +71,11 @@ export function readEntryActivitySources(
   for (const row of liveSelections) {
     if (!row.member.binding) fail();
     if (!row.source.binding) continue; // Original unconfigured Skip has no historical Runtime.
-    add(row.source.binding, row.member.binding, false);
+    add(row.source.binding, row.member.binding, false, false);
     if (row.sourceRecordRequired) required.add(runtimeDigest(row.source.binding));
   }
-  const reverse = [{ binding: entry.binding, resumed: false }];
+  const reverse: { binding: RuntimeBinding; resumed: boolean; provider?: MemberEntry['profile']['provider'] }[] =
+    [{ binding: entry.binding, resumed: false, provider: entry.profile.provider }];
   const seen = new Set<string>([currentKey]);
   while (predecessors.has(runtimeDigest(reverse.at(-1)!.binding))) {
     const next = reverse.at(-1)!, edge = predecessors.get(runtimeDigest(next.binding))!;
@@ -79,12 +83,14 @@ export function readEntryActivitySources(
     const key = runtimeDigest(edge.source);
     if (seen.has(key) || reverse.length > 128) fail();
     seen.add(key); next.resumed = edge.resume;
-    reverse.push({ binding: edge.source, resumed: false });
+    reverse.push({ binding: edge.source, resumed: false,
+      ...(edge.sameProvider && next.provider ? { provider: next.provider } : {}) });
   }
   let scope = '';
-  return reverse.reverse().map(({ binding, resumed }) => {
+  return reverse.reverse().map(({ binding, resumed, provider }) => {
     if (!resumed) scope = runtimeDigest(binding);
     return { binding: structuredClone(binding), team: entry.team, costScope: scope,
+      ...(provider ? { provider } : {}),
       ...(required.has(runtimeDigest(binding)) ? { recordRequired: true } : {}) };
   });
 }
@@ -99,7 +105,10 @@ export function readRuntimeActivitySources(
   for (const entry of entries) for (const source of readEntryActivitySources(entry, launches)) {
     const key = runtimeDigest(source.binding), prior = sources.get(key);
     if (prior && prior.costScope !== source.costScope) fail();
-    sources.set(key, prior?.recordRequired ? { ...source, recordRequired: true } : source);
+    if (prior?.provider && source.provider && prior.provider !== source.provider) fail();
+    const provider = source.provider ?? prior?.provider;
+    sources.set(key, { ...source, ...(provider ? { provider } : {}),
+      ...(prior?.recordRequired ? { recordRequired: true } : {}) });
     if (sources.size > 256) fail();
   }
   return [...sources.values()];

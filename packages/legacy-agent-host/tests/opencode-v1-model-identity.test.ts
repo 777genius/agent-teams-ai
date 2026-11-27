@@ -126,7 +126,7 @@ test('V1 private preparation probes the exact native model through the ordinary 
   try {
     for (const [index, profile] of profiles.entries()) {
       const input = { profileId: profile.profileId, configRevision: profile.configRevision,
-        commandId: `TEST-private-${index}`, providerId, modelId: index === 0 ? nestedModel : 'auto', effort: 'high' };
+        commandId: `TEST-private-${index}`, providerId, modelId: index === 0 ? nestedModel : 'auto', effort: 'high' } satisfies ModelProbeInput;
       const original = structuredClone(input);
       const probe = owner.prepareTeamProbe(profile)(input, () => true);
       assert.equal(await probe.run(new AbortController().signal), true);
@@ -143,6 +143,7 @@ test('V1 private preparation probes the exact native model through the ordinary 
 test('only ambiguous private V1 probe identities change, preserving account resources and normal fallback', async t => {
   const f = fixture(t), storage = join(f.root, 'store'); mkdirSync(storage);
   const profile = teamModelProbeProfile(f.member);
+  assert.ok(profile.provider === 'opencode', 'the captured V1 member has an OpenCode probe profile');
   const oldKey = 'team-probe-' + runtimeDigest(f.member);
   const legacy = { ...profile, profileId: oldKey, configRevision: oldKey };
   const plainMember = { ...f.member, model: 'auto' };
@@ -195,14 +196,22 @@ test(`V1 private readiness refuses ${invalid} for capture and native Restart`, a
     current => ({ target: target(profiles.get(current.profileId)!), originCurrent: true }));
   const restart = () => {
     const reference = originalReference();
+    const binding = {
+      backendId: 'TEST-backend', teamId: 'TEST-team', runId: 'TEST-run',
+      memberId: f.member.memberId, generation: 'TEST-generation',
+    };
+    const consumerIdentity = {
+      memberId: f.member.memberId, actionId: saved.commandId,
+      actorDigest: runtimeDigest('TEST-actor'), inputDigest: saved.fingerprint,
+      binding, sourceAttemptId: 'TEST-attempt',
+      baseConfigurationDigest: runtimeDigest(f.member), configurationDigest: runtimeDigest(f.member),
+      configRevision: f.member.configRevision, cutoff: reference.expiresAt, groupCommandId: saved.commandId,
+    };
     return captureNativeRestartReadiness({ management,
-      entry: { profile: f.member, baseProfile: f.member, binding: {
-        backendId: 'TEST-backend', teamId: 'TEST-team', runId: 'TEST-run',
-        memberId: f.member.memberId, generation: 'TEST-generation',
-      } } as Parameters<typeof captureNativeRestartReadiness>[0]['entry'],
+      entry: { profile: f.member, baseProfile: f.member, binding } as Parameters<typeof captureNativeRestartReadiness>[0]['entry'],
       launch: { readModelReadinessSource: () => ({ reference,
-        consumer: { baseConfigurationDigest: runtimeDigest(f.member) },
-      }) } as Parameters<typeof captureNativeRestartReadiness>[0]['launch'], isCurrent: () => true,
+        consumer: { ...consumerIdentity, consumerId: runtimeDigest(consumerIdentity), disposition: 'consumed' },
+      }) }, isCurrent: () => true,
     });
   };
   try {
