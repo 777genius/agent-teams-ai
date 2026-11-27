@@ -7,6 +7,7 @@ import { SchedulerService } from '@main/services/schedule/SchedulerService';
 import { updateScheduleTimestamps } from '@main/services/schedule/updateScheduleTimestamps';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { ScheduleMutationQueue } from '@main/services/schedule/ScheduleMutationQueue';
 import type { Schedule } from '@shared/types';
 
 const paths = vi.hoisted(() => ({ directory: '' }));
@@ -18,8 +19,8 @@ interface BackgroundMetadata {
 }
 
 interface MetadataQueue {
-  writeMetadata(action: () => Promise<unknown>): Promise<unknown>;
-  writeSchedulesFile(schedules: Schedule[]): Promise<void>;
+  writeMetadata(action: (filePath: string) => Promise<unknown>): Promise<unknown>;
+  writeSchedulesFile(filePath: string, schedules: Schedule[]): Promise<void>;
 }
 
 interface AtomicScheduleUpdate {
@@ -32,20 +33,28 @@ function signal() {
   return { promise, resolve };
 }
 
-/** Hold one writer before queue admission, while other real metadata writes commit. */
+/** Hold one writer before admission, while other real schedule mutations commit. */
 async function beforeMetadataAdmission<T>(
   repository: JsonScheduleRepository,
   operation: () => Promise<T>,
-  interleave: () => Promise<void>
+  interleave: () => Promise<void>,
+  scheduleQueue?: ScheduleMutationQueue
 ): Promise<T> {
   const metadata = repository as unknown as MetadataQueue;
   const write = metadata.writeMetadata.bind(repository);
   const entered = signal(), release = signal();
-  const held = vi.spyOn(metadata, 'writeMetadata').mockImplementationOnce(async (action) => {
-    entered.resolve();
-    await release.promise;
-    return write(action);
-  });
+  const run = scheduleQueue?.run.bind(scheduleQueue);
+  const held = scheduleQueue && run
+    ? vi.spyOn(scheduleQueue, 'run').mockImplementationOnce(async <U>(id: string, action: () => Promise<U>) => {
+        entered.resolve();
+        await release.promise;
+        return run(id, action);
+      })
+    : vi.spyOn(metadata, 'writeMetadata').mockImplementationOnce(async (action) => {
+        entered.resolve();
+        await release.promise;
+        return write(action);
+      });
   const pending = operation();
   try {
     // A changed path that returns or rejects before admission fails immediately;
@@ -127,7 +136,8 @@ describe('scheduler metadata concurrency', () => {
           launchConfig: { prompt: 'TEST edited prompt', model: 'TEST-edited' },
         });
         expect((await repository.getSchedule(original.id))?.status).toBe('paused');
-      });
+      }, method === 'updateScheduleTimestamps' ? undefined :
+        (scheduler as unknown as { scheduleMutations: ScheduleMutationQueue }).scheduleMutations);
 
     const durable = await new JsonScheduleRepository().getSchedule(original.id);
     expect(durable).toMatchObject({
