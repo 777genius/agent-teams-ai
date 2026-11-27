@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { pageGroupCatalog } from '../dist/group-chats/pageGroupCatalog.js';
 import { createGroupMcpTools } from '../dist/mcp/groupChatTools.js';
+import { formatToolResult } from '../dist/mcp/toolDefinition.js';
 
 const options = { key: 'TEST-private-key', principalId: 'TEST-member', binding: 'TEST-bound-team' };
 const groups = Array.from({ length: 1100 }, (_, index) => ({
@@ -24,6 +25,7 @@ test('large catalog reconstructs every group in original order within native MCP
     };
     assert.equal(page.kind, 'group-catalog-page');
     assert.ok(Buffer.byteLength(JSON.stringify(page)) <= 240 * 1024);
+    assert.equal(formatToolResult(page, false).structuredContent?.result, page);
     assert.ok(page.groups.length > 0);
     assert.match(page.revision, /^[a-f0-9]{64}$/);
     received.push(...page.groups);
@@ -68,6 +70,7 @@ test('native MCP catalog port accepts continuation without adding selectors or m
   assert.deepEqual(tool.definition.inputSchema.required ?? [], []);
   const first = await tool.invoke({}) as { nextCursor: string };
   assert.ok(first.nextCursor);
+  assert.ok(formatToolResult(first, false).content.length);
   await tool.invoke({ cursor: first.nextCursor });
   assert.deepEqual(calls, [undefined, first.nextCursor]);
 });
