@@ -1,3 +1,4 @@
+import { modelSelectionSchema } from '@agent-teams/legacy-agent-host/team/contracts';
 import {
   projectContextPrepareSchema,
   projectContextReadSchema,
@@ -36,7 +37,11 @@ function launchConfiguration(value: unknown): BackendLaunchConfiguration {
       'context',
     ]);
     const result: BackendLaunchConfiguration['members'][number] = { memberId: text(row.memberId) };
-    if (row.model !== undefined) result.model = text(row.model);
+    if (row.model !== undefined) {
+      const model = modelSelectionSchema.safeParse(row.model);
+      if (!model.success) throw new InvalidBackendOperation();
+      result.model = model.data;
+    }
     if (row.effort !== undefined) {
       if (
         typeof row.effort !== 'string' ||

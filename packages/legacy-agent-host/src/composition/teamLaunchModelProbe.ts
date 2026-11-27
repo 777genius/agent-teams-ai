@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { modelSelectionSchema } from '../modelSelection.js';
 
 import { captureReadinessPreparation, originalReadinessSubset } from '../adapters/providers/OpenCodeReadinessOrigin.js';
 import type { LocalModelReadinessPreparation } from '../management/commandRecords.js';
@@ -30,7 +31,7 @@ export const teamModelProbeSelectionSchema = z
     launchId: id,
     rosterRevision: id,
     memberId: id,
-    model: id,
+    model: modelSelectionSchema,
     effort: z
       .enum(['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'ultra'])
       .optional(),

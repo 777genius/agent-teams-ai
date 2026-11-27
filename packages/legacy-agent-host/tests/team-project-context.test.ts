@@ -5,6 +5,27 @@ import { test } from 'node:test';
 import { projectTeamFixture, openProjectTeamFixture } from './projectTeamFixture.ts';
 import type { OwnerState } from '../dist/team/ownerState.js';
 
+test('a workspace-less definition restores cold without project history and launches only through an explicitly selected child', t => {
+  const f = projectTeamFixture(t), logical = f.create('TEST-workspace-less', 'per_project', { cwd: '' }).record;
+  const initial = f.contexts.read(f.target(logical), {});
+  assert.deepEqual(initial, { kind: 'team-project-context', histories: [], view: { mode: 'per_project', state: 'needs_project' } });
+  assert.throws(() => f.contexts.assertLaunchAllowed(f.target(logical)), { code: 'forbidden' });
+  f.close();
+  const cold = openProjectTeamFixture(f.root);
+  try {
+    assert.deepEqual(cold.contexts.read(cold.target(logical), {}), initial);
+    assert.equal(cold.registry.list(cold.contextId).teams.length, 1);
+    assert.equal(cold.target(logical).team.connection.readRoster().savedSettings!.cwd, '');
+    const prepared = cold.prepare(logical, 'TEST-select-project'), child = cold.child(logical);
+    assert.equal(prepared.prepared?.executionHandleId, child.binding.handleId);
+    assert.equal(child.projectContext?.projectPath, f.project);
+    assert.equal(cold.target(child).team.connection.readRoster().savedSettings!.cwd, f.project);
+    assert.equal(cold.target(logical).team.connection.readRoster().savedSettings!.cwd, '');
+    assert.doesNotThrow(() => cold.contexts.assertLaunchAllowed(cold.target(child)));
+    assert.equal(cold.registry.list(cold.contextId).teams.length, 2);
+  } finally { cold.close(); }
+});
+
 test('readonly project navigation never materializes a history or substitutes shared mode', t => {
   const f = projectTeamFixture(t), logical = f.create().record, target = f.target(logical);
   assert.deepEqual(f.contexts.read(target, {}), { kind: 'team-project-context', histories: [], view: { mode: 'per_project', state: 'needs_project' } });

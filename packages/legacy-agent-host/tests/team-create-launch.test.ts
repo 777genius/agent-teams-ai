@@ -618,6 +618,9 @@ test('draft preflight rejects unsupported intent and foreign context before Team
   try {
     for (const change of [
       (input: CreateTeamLaunchPreparationInput) => {
+        input.draft.savedSettings.cwd = '';
+      },
+      (input: CreateTeamLaunchPreparationInput) => {
         input.draft.contextId = 'foreign';
       },
       (input: CreateTeamLaunchPreparationInput) => {

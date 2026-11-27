@@ -516,11 +516,21 @@ test(
       if (management.provider !== 'opencode') throw Error('TEST expected OpenCode');
       assert.equal(management.variant, 'high');
       assert.deepEqual(management.nativeModel, { providerId: 'TEST-provider', modelId: model });
-      for (const modelId of [selectedModel, 'TEST-provider/' + selectedModel]) {
-        const probe = createOpenCodeV2ModelProbe(management, { ...f.input, modelId }, () => true);
-        assert.deepEqual(readdirSync(f.root), [], 'Default probe preparation allocates no child or namespace');
-        assert.equal(await probe.close(), true);
-      }
+      const coordinator = new ProviderManagementCoordinator([management], () => {}, f.root);
+      const before = readdirSync(f.root);
+      const nativeInput = { ...f.input, profileId: management.profileId,
+        configRevision: management.configRevision, modelId: selectedModel };
+      try {
+        const probes = [
+          coordinator.prepareTeamProbe(management)(nativeInput, () => true),
+          createOpenCodeV2ModelProbe(management,
+            { ...nativeInput, modelId: 'TEST-provider/' + selectedModel }, () => true),
+        ];
+        for (const probe of probes) {
+          assert.deepEqual(readdirSync(f.root), before, 'Default probe preparation allocates no child or namespace');
+          assert.equal(await probe.close(), true);
+        }
+      } finally { await coordinator.close(); }
       for (const modelId of ['', 'x'.repeat(257), 'TEST-provider/'])
         assert.throws(
           () => createOpenCodeV2ModelProbe(management, { ...f.input, modelId }, () => true),
@@ -528,7 +538,7 @@ test(
         );
       assert.equal(selected.model, model, 'native model identity remains unchanged');
       assert.deepEqual(management.nativeModel, { providerId: 'TEST-provider', modelId: model });
-      assert.deepEqual(readdirSync(f.root), [], 'accepted and rejected preparation leave no effects');
+      assert.deepEqual(readdirSync(f.root), before, 'accepted and rejected preparation leave no effects');
       const changed = applyTeamModelProbeSelection(f.profile, { ...input, effort: 'low' });
       if (changed.provider !== 'opencode') throw Error('TEST expected OpenCode');
       assert.equal(changed.nativeOptions.variant, 'low');

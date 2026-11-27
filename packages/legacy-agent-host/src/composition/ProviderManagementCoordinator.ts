@@ -21,6 +21,7 @@ import { ManagementResourceFence } from '../management/ManagementResourceFence.j
 import { OAuthOperationOwner } from '../management/OAuthOperationOwner.js';
 import { ModelProbeOwner } from '../management/ModelProbeOwner.js';
 import { prepareOpenCodeModelProbe } from './ProviderModelProbePreparation.js';
+import { assertOpenCodeV2NativeModel } from './openCodeV2ModelSelection.js';
 import type { OpenCodeV1Coordination } from '../adapters/providers/OpenCodeCoordinationProbe.js';
 import { OpenCodeV2ManagementHost } from '../adapters/providers/OpenCodeV2ManagementHost.js';
 import { createOpenCodeV2CredentialOperation } from '../adapters/providers/OpenCodeV2CredentialOperation.js';
@@ -287,9 +288,14 @@ export class ProviderManagementCoordinator {
     return (input, current, purpose, readinessOrigin) => {
       if (input.profileId !== profile.profileId || input.configRevision !== profile.configRevision)
         throw new ManagementCommandError('conflict');
+      let selected = input;
+      if (profile.provider === 'opencode' && profile.nativeGeneration === 'v2') {
+        assertOpenCodeV2NativeModel(profile, input);
+        selected = { ...input, modelId: `${input.providerId}/${input.modelId}` };
+      }
       // Recheck the complete admitted bytes before any sanctioned model/server overlay.
       this.admitTeamProbeProfile(profile);
-      return this.prepareProbe(input, current, purpose, this.selectProcess(profile, origin), readinessOrigin);
+      return this.prepareProbe(selected, current, purpose, this.selectProcess(profile, origin), readinessOrigin);
     };
   }
 

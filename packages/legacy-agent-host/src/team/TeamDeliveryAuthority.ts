@@ -222,6 +222,7 @@ export function createTeamDeliveryAuthority(options: {
             messageRecipientRole: receipt.messageRecipientRole,
             ...(receipt.crossTeam ? { crossTeam: receipt.crossTeam } : {}),
             ...(receipt.group ? { group: receipt.group } : {}),
+            ...(receipt.workSyncNudge ? { workSyncNudge: receipt.workSyncNudge } : {}),
           })
       )
         return false;

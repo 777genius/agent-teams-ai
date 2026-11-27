@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { modelSelectionSchema } from '../modelSelection.js';
 import { storedSkillCommandSchema } from '../skills/skillRecords.js';
 import { managementCommandIdentityShape as common } from './commandIdentity.js';
 import { storedExtensionCommandSchema } from '../extensions/extensionRecords.js';
@@ -223,7 +224,7 @@ export const storedModelProbeSchema = z
     readinessScope: modelReadinessProbeScopeSchema.optional(),
     nativeFileKeyWitness: openCodeV2NativeFileWitnessSchema.optional(),
     readinessRetired: z.literal(true).optional(),
-    modelId: id,
+    modelId: modelSelectionSchema,
     effort: z
       .enum(['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'ultra'])
       .optional(),

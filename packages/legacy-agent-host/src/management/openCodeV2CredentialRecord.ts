@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { modelSelectionSchema } from '../modelSelection.js';
 import { managementDigest } from './identity.js';
 
 const id = z.string().min(1).max(256);
@@ -15,7 +16,7 @@ export const openCodeV2CredentialProgressSchema = z.object({
   authDigest: hash.optional(),
   verification: z.object({
     commandId: id,
-    modelId: id,
+    modelId: modelSelectionSchema,
     ok: z.boolean().optional(),
   }).strict().optional(),
 }).strict().refine(value => {

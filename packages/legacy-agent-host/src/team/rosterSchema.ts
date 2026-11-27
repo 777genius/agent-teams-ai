@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { modelSelectionSchema } from '../modelSelection.js';
 import { digest } from './identity.js';
 import type { TeamMember } from './contracts.js';
 
@@ -23,7 +24,7 @@ export const memberSettingsSchema = z
     providerBackendId: z
       .enum(['auto', 'adapter', 'api', 'cli-sdk', 'codex-native', 'opencode-cli'])
       .optional(),
-    model: text(256).optional(),
+    model: z.string().trim().pipe(modelSelectionSchema).optional(),
     effort: z
       .enum(['minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'none', 'ultra'])
       .optional(),
@@ -56,7 +57,8 @@ const savedText = (max: number, nonempty = false) =>
 export const savedTeamSettingsSchema = z
   .object({
     runtimeSelectionVersion: z.literal(1).optional(),
-    cwd: savedText(8192, true),
+    // Saved definitions may await project selection; runtime captures require an absolute cwd.
+    cwd: z.union([z.literal(''), savedText(8192, true)]),
     projectContextMode: z.enum(['shared', 'per_project']).optional(),
     displayName: savedText(256).optional(),
     description: savedText(64 * 1024).optional(),
@@ -90,7 +92,7 @@ export const memberSettingsRelaunchSchema = z
     baseline: z
       .array(z.object({ memberName: name, expectedFingerprint: fingerprint }).strict())
       .max(256),
-    model: text(256).nullable(),
+    model: z.string().trim().pipe(modelSelectionSchema).nullable(),
     effort: memberSettingsSchema.shape.effort.unwrap().nullable(),
   })
   .strict();

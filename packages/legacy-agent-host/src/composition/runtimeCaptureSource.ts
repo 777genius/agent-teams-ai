@@ -43,7 +43,7 @@ export const runtimeCaptureSourceSchema = z
     mcpCaptureVersion: z.literal(1).optional(),
     mcpRecipeReferences: capturedRuntimeMcpReferencesSchema.optional(),
     recipeSources: z.array(runtimeSourceReferenceSchema.extend({ memberId: id }).strict()).min(1).max(256).optional(),
-    savedSettings: savedTeamSettingsSchema,
+    savedSettings: savedTeamSettingsSchema.refine(settings => isAbsolute(settings.cwd)),
     members: z
       .array(
         z
@@ -206,6 +206,7 @@ export function captureRuntimeSource(
   } = {}
 ): RuntimeCaptureSource {
   if (!roster.savedSettings) refuse('saved-configuration-unavailable');
+  if (!isAbsolute(roster.savedSettings.cwd)) refuse('workspace-invalid');
   const sourceReferences = context.sourceReferences ??
     captureRuntimeRecipeSources(profile, team, roster, context.sources);
   const selectedRecipes = recipes(

@@ -97,6 +97,7 @@ export class CodexManagementCoordinator {
       input.limits ||
       (input.effort !== undefined && input.effort !== profile.reasoningEffort) ||
       input.modelContext !== undefined ||
+      input.modelId.length > 256 ||
       /[\0\r\n]/u.test(input.modelId)
     )
       throw new ManagementCommandError('invalid');

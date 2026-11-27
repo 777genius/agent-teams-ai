@@ -1,5 +1,6 @@
 import { channel } from 'node:diagnostics_channel';
 import { z } from 'zod';
+import { modelSelectionSchema } from '../modelSelection.js';
 
 import { assertManagementTarget, ManagementCommandError, nativeLocalReadinessEvidenceSchema,
   modelReadinessProbeScopeSchema, modelReadinessReferenceSchema } from './commandRecords.js';
@@ -26,7 +27,7 @@ const identity = z.object({ commandId: id, profileId: id, configRevision: id }).
 const startSchema = identity
   .extend({
     providerId: id,
-    modelId: id,
+    modelId: modelSelectionSchema,
     limits: modelProbeLimitsSchema.optional(),
     effort: z
       .enum(['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'ultra'])

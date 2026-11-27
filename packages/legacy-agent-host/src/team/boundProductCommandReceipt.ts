@@ -56,7 +56,7 @@ function compactTask(value: JsonValue): JsonValue {
  * or a lookup, including when the original transport reply was lost.
  */
 function compactCommand(receipt: CommandReceipt, result: JsonValue | undefined): JsonValue {
-  const { hostCommand: _hostCommand, command, ...publicReceipt } = receipt;
+  const { hostCommand: _hostCommand, workSyncNudge: _workSyncNudge, command, ...publicReceipt } = receipt;
   const taskSubmissionProof: TaskSubmissionProof | undefined =
     command.operation === 'task.create' || command.operation === 'task.comment'
       ? {
@@ -139,7 +139,7 @@ function compactResult(receipt: CommandReceipt): JsonValue | undefined {
  * This never fabricates a success phase or a new product outcome.
  */
 export function boundProductCommandReceipt(receipt: CommandReceipt): JsonValue {
-  const { hostCommand: _hostCommand, ...publicReceipt } = receipt;
+  const { hostCommand: _hostCommand, workSyncNudge: _workSyncNudge, ...publicReceipt } = receipt;
   const full = json(publicReceipt);
   if (bytes(full) <= MAX_PRODUCT_RECEIPT_BYTES && !hasOversizedTaskHistory(receipt)) return full;
   if (receipt.phase !== 'completed' && receipt.phase !== 'rejected')

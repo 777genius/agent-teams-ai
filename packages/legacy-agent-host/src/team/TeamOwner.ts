@@ -465,8 +465,8 @@ export class TeamOwner {
       ...(conversation ? { conversation } : {}),
     });
     return Object.freeze({
-      execute: (command: TeamCommand, prepare?: Parameters<typeof executeTeamCommand>[5]) =>
-        this.execute(principalId, command, undefined, undefined, prepare),
+      execute: (command: TeamCommand, prepare?: Parameters<typeof executeTeamCommand>[5], nudge?: Parameters<typeof executeTeamCommand>[6]) =>
+        this.execute(principalId, command, undefined, undefined, prepare, nudge),
       lookup: (commandId: string, expected?: TeamCommand) => this.lookupCommand(principalId, commandId, expected),
       getTask: (taskId: string) => this.getTask(principalId, taskId),
       readTaskPage: (taskId: string, cursor?: string) => this.store.fenced(() => {
@@ -533,7 +533,8 @@ export class TeamOwner {
       if (teamCommandFingerprint({ binding: this.binding, principalId, command: expected,
         deliveryBinding: selection.deliveryBinding, taskRecipients: selection.taskRecipients,
         messageRecipientRole: selection.messageRecipientRole, taskStartLeadName: selection.taskStartLeadName,
-        ...(receipt.hostCommand ? { hostCommand: receipt.hostCommand } : {}) }) !== receipt.fingerprint)
+        ...(receipt.hostCommand ? { hostCommand: receipt.hostCommand } : {}),
+        ...(receipt.workSyncNudge ? { workSyncNudge: receipt.workSyncNudge } : {}) }) !== receipt.fingerprint)
         throw new TeamOwnerError('conflict');
       if (receipt.messageRecipientRole !== undefined && receipt.messageRecipientRole !== selection.messageRecipient?.role)
         throw new TeamOwnerError('hold');
@@ -770,7 +771,8 @@ export class TeamOwner {
     rawCommand: TeamCommand,
     crossTeam?: CapturedCrossTeamIntent,
     group?: CapturedGroupIntent,
-    prepareHostCost?: Parameters<typeof executeTeamCommand>[5]
+    prepareHostCost?: Parameters<typeof executeTeamCommand>[5],
+    prepareWorkSyncNudge?: Parameters<typeof executeTeamCommand>[6]
   ): CommandReceipt {
     return executeTeamCommand(
       {
@@ -789,7 +791,7 @@ export class TeamOwner {
       principalId,
       rawCommand,
       crossTeam,
-      group, prepareHostCost
+      group, prepareHostCost, prepareWorkSyncNudge
     );
   }
 }

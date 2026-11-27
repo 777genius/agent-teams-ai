@@ -4,7 +4,9 @@ import { test } from 'node:test';
 import {
   captureRuntimeSource,
   compileRuntimeCapture,
+  runtimeCaptureSourceSchema,
 } from '../dist/composition/runtimeCaptureSource.js';
+import { nativeMemberRuntimeCaptureSchema } from '../dist/composition/nativeMemberRuntimeCapture.js';
 import { resolveRuntimeRecipe } from '../dist/composition/runtimeRecipe.js';
 import { runtimeProfileSchema } from '../dist/composition/runtimeProfile.js';
 import { runtimeDigest } from '../dist/runtime/identity.js';
@@ -110,6 +112,27 @@ function fixture() {
 }
 const refusal = (code: string, reason: string) => (error: unknown) =>
   error instanceof TeamLaunchError && error.code === code && error.reason === reason;
+
+test('a saved definition without a workspace cannot read runtime sources until an explicit project is selected', () => {
+  const f = fixture(), runtime = f.profile.runtime;
+  let sourceReads = 0;
+  Object.defineProperty(f.profile, 'runtime', { configurable: true, get() {
+    sourceReads++;
+    throw new Error('TEST runtime source read before workspace admission');
+  } });
+  f.roster.savedSettings!.cwd = '';
+  assert.throws(f.capture, refusal('invalid', 'workspace-invalid'));
+  assert.equal(sourceReads, 0);
+  for (const schema of [runtimeCaptureSourceSchema.shape.savedSettings, nativeMemberRuntimeCaptureSchema.shape.savedSettings]) {
+    assert.equal(schema.safeParse({ cwd: '' }).success, false);
+    assert.equal(schema.safeParse({ cwd: '/TEST/explicit-project' }).success, true);
+  }
+  Object.defineProperty(f.profile, 'runtime', { configurable: true, value: runtime });
+  f.roster.savedSettings!.cwd = '/TEST/explicit-project';
+  const compiled = compileRuntimeCapture(f.profile, f.team, f.capture());
+  assert.equal(compiled.profiles.length, 2);
+  assert.ok(compiled.profiles.every(profile => profile.cwd === '/TEST/explicit-project'));
+});
 
 test('fresh roster member compiles only its explicit private provider template and binds target identities', () => {
   const f = fixture(),

@@ -166,6 +166,25 @@ function fixture(
   };
 }
 
+test('a qualified model with bounded native components survives cold probe replay without another model request', async (t) => {
+  const f = fixture(); t.after(f.cleanup);
+  const input = { ...start, providerId: 'p'.repeat(180), modelId: 'p'.repeat(180) + '/' + 'm'.repeat(160) };
+  f.owner.start(input);
+  f.result.resolve(true);
+  await until(() => f.owner.read(lookup)?.phase === 'completed');
+  const store = new FileManagementCommandStore(f.root);
+  const cold = new ModelProbeOwner({
+    store, fence: new ManagementResourceFence(store.list()), assertWriter: () => {},
+    select: () => ({ profileId: start.profileId, configRevision: start.configRevision,
+      selectionDigest: 'a'.repeat(64), resourceId: 'b'.repeat(64) }),
+    prepare: () => { throw new Error('Cold replay cannot issue another model request'); },
+  });
+  assert.equal(cold.read(lookup)?.modelId, input.modelId);
+  assert.equal(cold.start(input).modelId, input.modelId);
+  assert.equal(f.runs(), 1);
+  assert.throws(() => cold.start({ ...input, commandId: 'c'.repeat(257) }));
+});
+
 test('model probe claims before native work and returns original result without a second model request on replay', async (t) => {
   const f = fixture();
   t.after(f.cleanup);

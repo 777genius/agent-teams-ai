@@ -290,9 +290,8 @@ export function directoryEntry(provider: CatalogProvider): Dto.RuntimeProviderDi
 /** Catalog/credential presence is never an execution proof, including free models. */
 export function models(provider: CatalogProvider): Dto.RuntimeProviderModelDto[] {
   return provider.models.map((model) => ({
-    modelId: model.modelId.startsWith(`${provider.providerId}/`)
-      ? model.modelId
-      : `${provider.providerId}/${model.modelId}`,
+    // Host model IDs are native and may themselves start with the provider prefix.
+    modelId: `${provider.providerId}/${model.modelId}`,
     providerId: provider.providerId,
     displayName: model.displayName,
     sourceLabel: 'OpenCode',

@@ -1,3 +1,5 @@
+import { modelSelectionSchema } from '@agent-teams/legacy-agent-host/team/contracts';
+
 import type {
   BackendRosterReplacement,
   BackendRosterSettings,
@@ -36,6 +38,9 @@ function choice<const T extends string>(value: unknown, choices: readonly T[]): 
   if (!choices.includes(value as T)) throw new Error('Invalid roster choice');
   return value as T;
 }
+function rosterModel(value: unknown): string {
+  return modelSelectionSchema.parse(typeof value === 'string' ? value.trim() : value);
+}
 const settingsKeys = [
   'role',
   'workflow',
@@ -57,7 +62,7 @@ export function rosterSettings(value: unknown, strict: boolean): BackendRosterSe
     ['role', 256],
     ['workflow', 64 * 1024],
     ['cwd', 8192],
-    ['model', 256],
+
   ] as const) {
     if (source[key] !== undefined) {
       const text = rosterText(source[key], max).trim();
@@ -65,6 +70,7 @@ export function rosterSettings(value: unknown, strict: boolean): BackendRosterSe
       result[key] = text;
     }
   }
+  if (source.model !== undefined) result.model = rosterModel(source.model);
   if (source.isolation !== undefined) result.isolation = choice(source.isolation, ['worktree']);
   if (source.providerId !== undefined)
     result.providerId = choice(source.providerId, ['anthropic', 'codex', 'gemini', 'opencode']);
@@ -152,8 +158,8 @@ export function rosterSavedSettings(value: unknown, strict: boolean): BackendSav
         ]
       : undefined
   );
-  const cwd = rosterText(source.cwd, 8192);
-  if (!cwd.trim()) throw new Error('Invalid saved workspace');
+  const cwd = source.cwd === '' ? '' : rosterText(source.cwd, 8192);
+  if (cwd !== '' && !cwd.trim()) throw new Error('Invalid saved workspace');
   const result: BackendSavedTeamSettings = {
     cwd,
     ...rosterSettings(
@@ -243,8 +249,7 @@ function rosterMemberSettingsIntent(
   });
   if (new Set(baseline.map((row) => row.memberName)).size !== baseline.length)
     throw new Error('Duplicate member settings baseline');
-  const model = source.model === null ? null : rosterText(source.model).trim();
-  if (model !== null && !model) throw new Error('Invalid member settings model');
+  const model = source.model === null ? null : rosterModel(source.model);
   return {
     memberName: rosterName(source.memberName),
     targetKind: choice(source.targetKind, ['lead', 'member']),

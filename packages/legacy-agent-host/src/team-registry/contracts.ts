@@ -36,8 +36,9 @@ export const createTeamRegistryPayloadSchema = z
     if (new Set(names).size !== names.length)
       context.addIssue({ code: 'custom', message: 'Duplicate or reserved member name' });
     if (
-      !isAbsolute(value.savedSettings.cwd) ||
-      resolve(value.savedSettings.cwd) !== value.savedSettings.cwd
+      value.savedSettings.cwd !== '' &&
+      (!isAbsolute(value.savedSettings.cwd) ||
+        resolve(value.savedSettings.cwd) !== value.savedSettings.cwd)
     )
       context.addIssue({ code: 'custom', message: 'Expected a canonical absolute project path' });
     if (new TextEncoder().encode(JSON.stringify(value)).byteLength > 512 * 1024)

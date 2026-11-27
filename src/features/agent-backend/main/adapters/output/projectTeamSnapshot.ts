@@ -262,6 +262,20 @@ export function projectTeamMessage(value: unknown): BackendTeamSnapshot['message
     ...(source.actionMode === undefined
       ? {}
       : { actionMode: choice(source.actionMode, ['do', 'ask', 'delegate'] as const) }),
+    ...(source.messageKind === undefined
+      ? {}
+      : {
+          messageKind: choice(source.messageKind, [
+            'default',
+            'slash_command',
+            'slash_command_result',
+            'task_comment_notification',
+            'task_stall_remediation',
+            'member_work_sync_nudge',
+            'runtime_recovery_nudge',
+            'agent_error',
+          ] as const),
+        }),
     text: text(source.text),
     timestamp: text(source.timestamp),
     read: source.read,
