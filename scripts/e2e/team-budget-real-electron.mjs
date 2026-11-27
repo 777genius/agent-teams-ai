@@ -10,6 +10,9 @@ export async function checkBudgetDesktop({ cdp, first, artifactRoot, until, evid
     const pointExpression = `(() => {
       const element = ${expression};
       if (!element || element.matches(':disabled') || !element.getClientRects().length) return null;
+      // Usage panels and Radix dialogs can live inside nested scroll containers.
+      // Scrolling grants visibility, but only the subsequent hit-test grants a click.
+      element.scrollIntoView({ block: 'center', inline: 'center' });
       const box = element.getBoundingClientRect();
       const x = box.left + box.width / 2;
       const y = box.top + box.height / 2;
