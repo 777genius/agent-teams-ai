@@ -173,7 +173,9 @@ if(app?.pid&&app.exitCode===null&&app.signalCode===null){
     // Taskkill may report nonzero after raced child exit; keep the exact
     // failure in evidence and do not falsely certify tree retirement.
     result.cleanupUnconfirmed=true;
+    result.success=false;
   }
 }
-await model.close().catch(()=>{});await save();}
+await model.close().catch(()=>{});await save();
+if(result.cleanupUnconfirmed)throw Error('Owned development process tree cleanup unconfirmed');}
 console.log(JSON.stringify({success:result.success,phase:result.phase,realProductTeammateLaunch:result.realProductTeammateLaunch}));
