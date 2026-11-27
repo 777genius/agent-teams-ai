@@ -76,7 +76,7 @@ const app=spawn(process.env.ComSpec||'cmd.exe',['/d','/s','/c','pnpm dev:mcp --i
 {cwd:repo,env,windowsHide:true,detached:false,stdio:['ignore','pipe','pipe']});
 let logs='';
 for(const stream of [app.stdout,app.stderr])stream?.on('data',b=>{logs=(logs+b.toString()).slice(-28000);});
-let client,inspector,teamCreated=false,workerPid,toolPid;
+let client,inspector,teamCreated=false,workerPid,toolPid,originalLauncherIdentity;
 const team=f.teamName;
 const result={schemaVersion:1,kind:'real-windows-product-synthetic-model',
 team,realProductTeammateLaunch:false,realProviderInference:false,success:false,phase:'launch'};
@@ -96,6 +96,10 @@ const r=spawnSync('powershell.exe',['-NoProfile','-NonInteractive','-Command',ps
 assert(!r.error&&r.status===0,'CIM failure; process state unknown');
 const x=r.stdout.trim();assert(x==='alive'||x==='gone');return x==='alive';}
 try{
+originalLauncherIdentity=await until('original cmd launcher native identity',async()=>{
+  const observed=processes().find(p=>p.pid===app.pid);
+  return observed?.birth?observed:false;
+},30000);
 const url=await until('owned Main inspector',async()=>{const m=/Debugger listening on (ws:\/\/(?:127\.0\.0\.1|localhost):\d+\/[a-z0-9-]+)/i.exec(logs);
 return m&&m[1].includes(':'+port+'/')?m[1]:false;},150000);
 inspector=await CdpClient.connect(url);
@@ -226,7 +230,10 @@ try{client?.socket?.close();}catch{}try{inspector?.socket?.close();}catch{}
 // outer cmd.exe. Do not trust a reused PID when the original launcher has exited.
 if(app?.pid){
   const launcherKnownAlive=app.exitCode===null&&app.signalCode===null;
-  if(launcherKnownAlive){
+  const currentLauncher=processes().find(p=>p.pid===app.pid);
+  const launcherMatches=Boolean(launcherKnownAlive&&originalLauncherIdentity?.birth&&
+    currentLauncher?.birth===originalLauncherIdentity.birth);
+  if(launcherMatches){
     const cleanup=spawnSync('taskkill.exe',['/T','/F','/PID',String(app.pid)],
       {windowsHide:true,encoding:'utf8',timeout:30000,maxBuffer:65536});
     result.appTreeCleanup={
@@ -242,7 +249,7 @@ if(app?.pid){
   }else{
     // The launcher can exit while pnpm or Electron descendants survive.
     // A numeric PID is no longer sufficient authority for taskkill.
-    result.appTreeCleanup={exitCode:null,error:'original_launcher_exited_before_cleanup'};
+    result.appTreeCleanup={exitCode:null,error:'original_launcher_exited_or_identity_changed_before_cleanup'};
     result.cleanupUnconfirmed=true;
     result.success=false;
   }
