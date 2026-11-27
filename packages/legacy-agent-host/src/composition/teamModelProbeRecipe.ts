@@ -178,9 +178,8 @@ export function applyTeamModelProbeSelection(
   input: TeamModelProbeSelection
 ) {
   return applyLaunchConfiguration(recipe, {
-    // V2 Default is absence of an override, never a bare model selection.
-    ...(input.model === '__provider_default__' &&
-    recipe.provider === 'opencode' && recipe.nativeGeneration === 'v2'
+    // OpenCode Default preserves the private native pair without decoding it as an app alias.
+    ...(input.model === '__provider_default__' && recipe.provider === 'opencode'
       ? {}
       : { model: input.model === '__provider_default__' ? recipe.model : input.model }),
     // Preserve unchanged historical options; fresh embedded choices additionally

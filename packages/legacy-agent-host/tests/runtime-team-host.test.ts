@@ -5033,3 +5033,99 @@ test('source failure stdout preserves original refusal and emits only bounded ca
   const secondSink = exercise(evidence, original, 2);
   assert.equal(secondSink.writes, 2); assert.deepEqual(secondSink.lines, [observed.lines[0]]);
 });
+
+test('session history retains two separately started captured launches and original inputs through cold composition restart', async t => {
+  const f = await fixture(t, { independentProviders: true, changeProfile(value) {
+    value.teams[0]!.members = value.teams[0]!.members.slice(0, 1);
+    value.teams[0]!.members[0]!.role = 'lead';
+  } });
+  const before = await f.rpc('team.roster.read', {}) as { value: TeamRosterConfiguration };
+  const roster = await f.rpc('team.roster.replace', { expectedRevision: before.value.revision, members: [],
+    savedSettings: { cwd: f.root, providerId: 'anthropic', model: 'TEST-session-history-model',
+      effort: 'medium', fastMode: 'off', skipPermissions: false, limitContext: true,
+      prompt: 'TEST original session input' } }, { commandId: 'TEST-history-roster' }) as { ok: boolean };
+  assert.equal(roster.ok, true, JSON.stringify(roster));
+  const launched: { launchId: string; startedAt: number; response: string; tokens: number }[] = [];
+  for (let index = 0; index < 2; index++) {
+    const captured = await f.rpc('team.launch.capture', { rosterCommandId: 'TEST-history-roster' },
+      { commandId: 'TEST-history-capture-' + index }) as {
+        ok: boolean; value: { launch: { launchId: string; rosterRevision: string } } };
+    assert.equal(captured.ok, true, JSON.stringify(captured));
+    const launch = captured.value.launch;
+    assert.equal((await f.rpc('team.launch.start', { launchId: launch.launchId, rosterRevision: launch.rosterRevision },
+      { commandId: 'TEST-history-start-' + index }) as
+      { ok: boolean }).ok, true);
+    await eventually(() => f.opens() === index + 1 && f.session().submits.length === 1,
+      'the separately captured original prompt must reach the controlled provider');
+    const session = f.session(), context = f.contexts.at(-1)!;
+    const input = session.submits[0]!;
+    const source = { sessionRef: session.sessionRef, inputId: input.inputId, operationRef: input.operationRef };
+    const response = index === 0 ? 'TEST first retained response 🙂\n'.repeat(12000) : 'TEST second response';
+    const tokens = 17 + index;
+    session.emit({ ...source, kind: 'text', messageRef: 'TEST-history-response-' + index,
+      block: 0, phase: 'complete', text: response });
+    session.emit({ ...source, kind: 'usage', inputTokens: tokens, outputTokens: 9 + index });
+    session.finish(0);
+    await eventually(() => new FileRuntimeStore(f.root).fenced(context.endpoint.binding,
+      tx => tx.get()?.inputs[0]?.phase === 'terminal'), 'the original response and terminal must be durable');
+    const summary = await f.rpc('team.launch.read', { launchId: launch.launchId }) as {
+      value: { startedAtMs: number | null } };
+    assert.equal(typeof summary.value.startedAtMs, 'number');
+    launched.push({ launchId: launch.launchId, startedAt: summary.value.startedAtMs!, response, tokens });
+    const stopped = await f.rpc('runtime.stop', { memberId: 'alice-id',
+      expectedGeneration: context.endpoint.binding.generation }) as { ok: boolean };
+    assert.equal(stopped.ok, true, JSON.stringify(stopped));
+  }
+  assert.notEqual(launched[0]!.launchId, launched[1]!.launchId);
+  type History = { sessions: { id: string; startedAt: number; generations: number;
+    clock: string; window: { start: number; end: number | null } | null }[] };
+  type Page = { sessionId: string; nextCursor: string | null;
+    messages: { text: string; observedAt: string | null; phase?: string }[];
+    log: { events: { data: { kind: string; inputTokens?: number } }[] } | null };
+  const read = async <T,>(query: Record<string, unknown>): Promise<T> => {
+    const result = await f.rpc('team.activity.logs.read', query) as { ok: boolean; value: T };
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.ok(Buffer.byteLength(JSON.stringify(result.value)) <= 256 * 1024);
+    return result.value;
+  };
+  const initial = await read<History>({ scope: 'sessions' });
+  assert.equal(initial.sessions.length, 2, 'the never-opened configured recipe is not a session');
+  assert.deepEqual(initial.sessions.map(row => row.startedAt).sort((a, b) => a - b),
+    launched.map(row => row.startedAt).sort((a, b) => a - b));
+  assert.ok(initial.sessions.every(row => row.generations === 1 && row.clock === 'qualified'));
+  const sortedStarts = launched.map(row => row.startedAt).sort((a, b) => a - b);
+  assert.deepEqual([...initial.sessions].sort((a, b) => a.startedAt - b.startedAt).map(row => row.window),
+    [{ start: sortedStarts[0], end: sortedStarts[1] }, { start: sortedStarts[1], end: null }]);
+  const firstId = initial.sessions.find(row => row.startedAt === launched[0]!.startedAt)!.id;
+  const oldPage = await read<Page>({ scope: 'session', sessionId: firstId, stream: 'conversation' });
+  assert.ok(oldPage.nextCursor, 'original text over 256 KiB has a real continuation');
+  const opens = f.opens(), submissions = f.sessions.map(session => session.submits.length);
+  await f.restart();
+  const cold = await read<History>({ scope: 'sessions' });
+  assert.deepEqual(cold, initial, 'cold composition reconstructs both original launches from disk');
+  assert.deepEqual(await f.rpc('team.activity.logs.read', {
+    scope: 'session', sessionId: firstId, stream: 'conversation', cursor: oldPage.nextCursor,
+  }), { ok: false, code: 'hold', outcome: 'unknown' }, 'a cold owner rejects its prior volatile cursor');
+  for (const launch of launched) {
+    const sessionId = cold.sessions.find(row => row.startedAt === launch.startedAt)!.id;
+    assert.match(sessionId, /^host-session-[a-f0-9]{64}$/u);
+    const inputs = await read<Page>({ scope: 'session', sessionId, stream: 'inputs' });
+    assert.equal(inputs.messages.map(row => row.text).join(''), 'TEST original session input');
+    assert.ok(inputs.messages.every(row => row.observedAt === null && row.phase === 'terminal'));
+    const activity = await read<Page>({ scope: 'session', sessionId, stream: 'activity' });
+    assert.ok(activity.log!.events.some(event => event.data.kind === 'usage' && event.data.inputTokens === launch.tokens));
+    let cursor: string | undefined, text = '', pages = 0;
+    do {
+      const page = await read<Page>({ scope: 'session', sessionId, stream: 'conversation',
+        ...(cursor ? { cursor } : {}) });
+      text += page.messages.map(row => row.text).join('');
+      assert.ok(page.messages.every(row => row.observedAt !== null));
+      cursor = page.nextCursor ?? undefined;
+      assert.ok(++pages < 32);
+    } while (cursor);
+    assert.equal(text, launch.response, 'all original response parts remain available after cold restore');
+  }
+  assert.equal(f.opens(), opens, 'history reads never allocate a provider');
+  assert.deepEqual(f.sessions.map(session => session.submits.length), submissions,
+    'history reads never replay or synthesize inputs');
+});

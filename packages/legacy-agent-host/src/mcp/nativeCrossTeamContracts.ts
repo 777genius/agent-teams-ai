@@ -18,5 +18,5 @@ export interface TeamMcpCrossTeamPort {
     chainDepth?: number | undefined;
   }): Promise<BackendCrossTeamReceipt>;
   lookup(commandId: string): unknown;
-  getOutbox(input?: { teamName?: string | undefined }): Promise<BackendCrossTeamOutbox>;
+  getOutbox(input?: { teamName?: string | undefined; cursor?: string | undefined }): Promise<BackendCrossTeamOutbox>;
 }

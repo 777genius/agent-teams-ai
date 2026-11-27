@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from 'react';
 
+import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
 import { useAppTranslation } from '@features/localization/renderer';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useStore } from '@renderer/store';
@@ -18,10 +19,16 @@ import {
 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
+import { HostTeamSessionsSection } from './HostTeamSessionsSection';
+import { isHostTeamSession } from './teamSessionHistory';
+
+import type { TeamSessionView } from './teamSessionHistory';
 import type { Session } from '@renderer/types/data';
 
 interface TeamSessionsSectionProps {
-  sessions: Session[];
+  sessions: TeamSessionView[];
+  teamName?: string;
+  onRefresh?(): void;
   sessionsLoading: boolean;
   sessionsError: string | null;
   leadSessionId?: string;
@@ -31,6 +38,8 @@ interface TeamSessionsSectionProps {
 }
 
 export const TeamSessionsSection = ({
+  teamName,
+  onRefresh,
   sessions,
   sessionsLoading,
   sessionsError,
@@ -56,8 +65,9 @@ export const TeamSessionsSection = ({
 
   // Sort: lead session first, then by most recent
   const sortedSessions = useMemo(() => {
-    if (!leadSessionId) return sessions;
-    return [...sessions].sort((a, b) => {
+    const legacy = sessions.filter((row): row is Session => !isHostTeamSession(row));
+    if (!leadSessionId) return legacy;
+    return legacy.sort((a, b) => {
       if (a.id === leadSessionId) return -1;
       if (b.id === leadSessionId) return 1;
       return b.createdAt - a.createdAt;
@@ -80,6 +90,19 @@ export const TeamSessionsSection = ({
     },
     [projectId, openTab, selectSession]
   );
+
+  if (teamName && isHostTeamSelectionKey(teamName))
+    return (
+      <HostTeamSessionsSection
+        teamName={teamName}
+        sessions={sessions.filter(isHostTeamSession)}
+        sessionsLoading={sessionsLoading}
+        sessionsError={sessionsError}
+        selectedSessionId={selectedSessionId}
+        onSelectSession={onSelectSession}
+        onRefresh={onRefresh}
+      />
+    );
 
   if (!projectPath) {
     return (

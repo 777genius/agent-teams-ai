@@ -115,9 +115,9 @@ export function assembleTaskParts(
         )
           throw new Error('Invalid Host comment fragment');
         const comment = items[0] as Record<string, unknown> | undefined;
-        if (!comment || typeof comment[textField] !== 'string')
-          throw new Error('Invalid Host comment text');
+        if (!comment) throw new Error('Invalid Host comment text');
         const { [textField]: text, ...identity } = comment;
+        if (typeof text !== 'string') throw new Error('Invalid Host comment text');
         const metadata = JSON.stringify(identity);
         if (fragment.part === 0) {
           if (

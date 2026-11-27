@@ -4,17 +4,19 @@ import { useTeamGroupChats } from '@features/team-group-chats/renderer';
 import { useAttentionConversationNavigation } from '@features/user-attention/renderer';
 import { useStore } from '@renderer/store';
 
+import { isHostTeamSession, sessionsForTeam, teamSessionWindow } from '../teamSessionHistory';
+
 import { buildTaskGroupOptions, projectTeamTasks } from './teamTaskProjection';
 
+import type { TeamSessionView } from '../teamSessionHistory';
 import type { KanbanFilterState } from './KanbanFilterPopover';
-import type { Session } from '@renderer/types/data';
 import type { TeamViewSnapshot } from '@shared/types';
 import type { Dispatch, RefObject, SetStateAction } from 'react';
 
 export function useTeamTaskFilters(
   teamName: string,
   data: TeamViewSnapshot | null | undefined,
-  sessions: Session[],
+  sessions: TeamSessionView[],
   filter: KanbanFilterState,
   setFilter: Dispatch<SetStateAction<KanbanFilterState>>,
   clearSearch: Dispatch<SetStateAction<string>>,
@@ -43,22 +45,27 @@ export function useTeamTaskFilters(
   }, [setFilter]);
   useAttentionConversationNavigation(contextId, teamName, clearSession);
   const catalog = useTeamGroupChats(teamName, contextId, '');
-  const teamSessions = useMemo(() => {
-    const ids = new Set(data?.config.sessionHistory ?? []);
-    if (data?.config.leadSessionId) ids.add(data.config.leadSessionId);
-    return ids.size ? sessions.filter((session) => ids.has(session.id)) : sessions;
-  }, [sessions, data?.config.sessionHistory, data?.config.leadSessionId]);
+  const teamSessions = useMemo(
+    () =>
+      sessionsForTeam(
+        teamName,
+        { sessionHistory: data?.config.sessionHistory, leadSessionId: data?.config.leadSessionId },
+        sessions
+      ),
+    [teamName, sessions, data?.config.sessionHistory, data?.config.leadSessionId]
+  );
   useEffect(() => {
-    if (filter.sessionId && !teamSessions.some((session) => session.id === filter.sessionId))
+    const selected = teamSessions.find((session) => session.id === filter.sessionId);
+    if (
+      filter.sessionId &&
+      (!selected || (isHostTeamSession(selected) && selected.clock !== 'qualified'))
+    )
       setFilter((previous) => ({ ...previous, sessionId: null }));
   }, [filter.sessionId, teamSessions, setFilter]);
-  const timeWindow = useMemo(() => {
-    const sorted = [...teamSessions].sort((left, right) => left.createdAt - right.createdAt);
-    const index = sorted.findIndex((session) => session.id === filter.sessionId);
-    return index < 0
-      ? null
-      : { start: sorted[index].createdAt, end: sorted[index + 1]?.createdAt ?? Infinity };
-  }, [teamSessions, filter.sessionId]);
+  const timeWindow = useMemo(
+    () => teamSessionWindow(filter.sessionId, teamSessions),
+    [teamSessions, filter.sessionId]
+  );
   const filteredTasks = useMemo(
     () => (data ? projectTeamTasks(data.tasks, filter, timeWindow) : []),
     [data, filter, timeWindow]

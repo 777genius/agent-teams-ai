@@ -58,8 +58,9 @@ export async function preflightNativeMemberModel(options: {
   current();
   options.management.admitTeamProbeProfile(selected);
   const owner = options.management.probes;
-  const nativeV2 = selected.provider === 'opencode' && selected.nativeGeneration === 'v2';
-  const prepare = nativeV2 ? captureTeamProbePreparation(options.management, selected) : undefined;
+  const nativeOpenCode = selected.provider === 'opencode';
+  const nativeV2 = nativeOpenCode && selected.nativeGeneration === 'v2';
+  const prepare = nativeOpenCode ? captureTeamProbePreparation(options.management, selected) : undefined;
   if (nativeV2 && !prepare) throw new TeamLaunchError('hold', 'native-member-model-preflight');
   const retained = selected.provider === 'opencode' && owner.read(identity)
     ? owner.readRetainedProbe(identity.commandId, context) : undefined;

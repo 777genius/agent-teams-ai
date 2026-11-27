@@ -155,6 +155,13 @@ retain exact outcomes, the initial harness import failure and all remaining scop
 Structured, encoded and markdown task refs stay owner-qualified;
 unbound cross-team targets fail explicitly instead of entering legacy routing.
 
+Cross-team outbox reads keep the original small `{kind, rows}` response. Larger
+histories return whole-row pages with `revision` and a signed `nextCursor`, bound
+to the original source, current read authority and complete retained history.
+`readHostCrossTeamOutbox` collects only a complete, unchanged revision under the
+captured Desktop context before publishing the existing outbox list. The native
+`cross_team_get_outbox` tool accepts the same cursor; it never truncates retained text.
+
 The same decorator maps simple task create/update/non-null assignment/status/
 delete/restore/comment and basic text sends to existing finite commands. Simple
 CreateTaskDialog defaults (empty arrays and an unowned Task's `startImmediately:true/false`)
@@ -455,3 +462,28 @@ not qualify a historical donor frontend, real Claude/Codex execution, native ses
 adoption, Windows release or multi-member migration. Unit and transport tests cover
 scope replacement, cancellation, source/account races and stale settings; actual
 Desktop acceptance requires a successful artifact from the current commit.
+
+## Team session history
+
+`getHostTeamSessions` and `getHostTeamSessionPage` extend the existing
+`team.activity.logs.read` operation with opaque application launch identities.
+The Host reads original retained Runtime lineage and pages Inputs, Responses,
+and Activity/usage separately. Signed cursors bind the original Team, principal,
+grant revision, stream and source revision; a cold Host restart expires them.
+Inputs retain their original delivery state without exposing prepared context or
+inventing an author or timestamp. Missing launch clocks leave history readable
+and make the task-time filter unavailable. Renderer reads use the selected
+execution Team and discard late project/context responses. Empty or failed Host
+history never falls back to unrelated legacy sessions from the same project.
+
+## Failed-member recovery
+
+The existing failed-OpenCode Retry control uses Host member recovery for a Host
+Team and retains the legacy bulk operation for an original-runtime Team. Host
+recovery captures the displayed launch, roster, member, generation and failed
+attempt. A newly admitted retry cannot restart a newer attempt or a member that
+has already recovered. Already accepted commands retain their original intent
+and lookup behavior, including records written before the optional failure guard
+existed. An uncertain result stops the bulk action; it does not create a new
+command or claim that the selected replacement is ready. Ordinary manual Restart
+keeps its existing behavior and returns the shared typed restart result.

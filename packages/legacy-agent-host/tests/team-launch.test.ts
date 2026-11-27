@@ -11,6 +11,7 @@ import { FileRuntimeStore } from '../dist/adapters/runtime/FileRuntimeStore.js';
 import { RuntimeOwner } from '../dist/runtime/RuntimeOwner.js';
 import { runtimeDigest } from '../dist/runtime/identity.js';
 import { launchPreparationFingerprint } from '../dist/team-launch/launchPreparation.js';
+import { executeTeamLaunch } from '../dist/composition/executeTeamLaunch.js';
 import type { TeamLaunchDefinition, TeamLaunchRecord, NativeContextEvidence } from '../dist/team-launch/contracts.js';
 import type { RuntimeBinding } from '../dist/runtime/contracts.js';
 import type { Event, Input, Session } from '@agent-teams/provider-session-contracts';
@@ -92,6 +93,7 @@ async function setup(t: { after(fn: () => Promise<void>): void }, members = ['A'
     runtimeStore = new FileRuntimeStore(root),
     sessions = new Map<string, ControlledSession>(),
     opens = new Map<string, number>(),
+    openAttempts = new Map<string, number>(),
     observationReads = new Map<string, number>();
   const configured = new Set(members),
     observationFailure = new Set<string>(),
@@ -171,6 +173,7 @@ async function setup(t: { after(fn: () => Promise<void>): void }, members = ['A'
           };
         },
         open: async (id) => {
+          openAttempts.set(id, (openAttempts.get(id) ?? 0) + 1);
           if (!configured.has(id) || failBeforeRuntime.has(id))
             throw new Error('TEST preallocation unavailable');
           await runtime.openSession({
@@ -200,6 +203,7 @@ async function setup(t: { after(fn: () => Promise<void>): void }, members = ['A'
     runtimeStore,
     sessions,
     opens,
+    openAttempts,
     observationReads,
     configured,
     observationFailure,
@@ -585,6 +589,65 @@ test('whole expected roster persists before allocation; partial launch and scope
   assert.equal(f.opens.get('A'), 1);
   assert.equal(f.opens.get('B'), 1);
   assert.equal(f.opens.get('C'), 1);
+  launch.seal();
+});
+
+test('captured failed retry atomically refuses a replaced no-allocation attempt and replays the original receipt', async (t) => {
+  const f = await setup(t, ['A']);
+  f.failBeforeRuntime.add('A');
+  const { launch } = f.make();
+  launch.start('TEST-initial-failure');
+  await settle(launch);
+  const failedA = launch.read().members[0]!.attempt;
+  assert.equal(failedA.status, 'failed');
+  assert.equal(failedA.noAllocation, true);
+  const retryB = {
+    launchId: f.definition.launchId,
+    rosterRevision: f.definition.rosterRevision,
+    commandId: 'TEST-retry-B',
+    attemptId: 'TEST-attempt-B',
+    memberIds: ['A'],
+    expectedAttemptId: failedA.attemptId,
+  };
+  const { commandId, ...payload } = retryB;
+  const capturedRetry = (changes: Partial<typeof payload> = {}, originalCommandId = commandId) =>
+    executeTeamLaunch({ launch, entries: [], operation: 'retry', members: [],
+      commandId: originalCommandId, payload: { ...payload, ...changes } });
+  capturedRetry();
+  await settle(launch);
+  const failedB = launch.read().members[0]!.attempt;
+  assert.equal(failedB.attemptId, retryB.attemptId);
+  assert.equal(failedB.status, 'failed');
+  assert.equal(failedB.noAllocation, true);
+  const path = `launches/${runtimeDigest(f.definition.launchId)}.json`;
+  const before = JSON.stringify(f.store.read(path));
+  const starts = f.openAttempts.get('A');
+  assert.throws(() => capturedRetry({ attemptId: 'TEST-attempt-C' }, 'TEST-stale-retry-C'),
+    (error) => error instanceof TeamLaunchError && error.code === 'conflict' && error.reason === 'retry-attempt');
+  await settle(launch);
+  assert.equal(JSON.stringify(f.store.read(path)), before, 'stale A cannot journal C against failed B');
+  assert.equal(f.openAttempts.get('A'), starts, 'stale A cannot start another runtime attempt');
+  capturedRetry(); // Its original expected A is obsolete, but this is the same retained intent.
+  await settle(launch);
+  assert.equal(JSON.stringify(f.store.read(path)), before, 'original receipt bytes remain intact');
+  assert.equal(f.openAttempts.get('A'), starts, 'replay never starts again');
+  assert.throws(() => capturedRetry({ expectedAttemptId: retryB.attemptId }),
+    (error) => error instanceof TeamLaunchError && error.code === 'conflict');
+  const legacyRetry = {
+    launchId: f.definition.launchId,
+    rosterRevision: f.definition.rosterRevision,
+    commandId: 'TEST-legacy-retry',
+    attemptId: 'TEST-legacy-attempt',
+    memberIds: ['A'],
+  };
+  launch.retry(legacyRetry);
+  await settle(launch);
+  const record = f.store.read<TeamLaunchRecord>(path)!;
+  assert.equal(record.retries.find((retry) => retry.commandId === legacyRetry.commandId)!.fingerprint,
+    runtimeDigest({ ...legacyRetry, memberIds: [...legacyRetry.memberIds].sort() }),
+    'omission preserves the existing fingerprint bytes');
+  assert.throws(() => launch.retry({ ...retryB, commandId: 'TEST-many', attemptId: 'TEST-many', memberIds: ['A', 'B'] }),
+    (error) => error instanceof TeamLaunchError && error.code === 'conflict');
   launch.seal();
 });
 

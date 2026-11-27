@@ -222,17 +222,16 @@ import { TeamLoadingSkeleton } from './TeamLoadingSkeleton';
 import { setPendingRepliesForTeam, useTeamPendingReplies } from './teamPendingRepliesStore';
 import { isTeamProcessAlive } from './teamProcessLiveness';
 import { TeamProvisioningBanner } from './TeamProvisioningBanner';
-import { loadTeamSessionMetadata } from './teamSessionFetchGuards';
 import { TeamSessionsSection } from './TeamSessionsSection';
 import { useStableActiveMembers } from './useStableActiveMembers';
 import { useTeamAgentRuntimeWatcher } from './useTeamAgentRuntimeWatcher';
+import { useTeamSessionHistory } from './useTeamSessionHistory';
 
 import type { UsageLike } from './context-metric-alias';
 import type { KanbanFilterState } from './kanban/KanbanFilterPopover';
 import type { KanbanSortState } from './kanban/KanbanSortPopover';
 import type { SessionInjection } from './session-injection-types';
 import type { PendingRepliesUpdater } from './teamPendingRepliesStore';
-import type { Session } from '@renderer/types/data';
 import type { InlineChip } from '@renderer/types/inlineChip';
 import type {
   CreateTaskRequest,
@@ -417,7 +416,6 @@ interface TeamReviewDialogState {
   taskChangeRequestOptions?: TaskChangeRequestOptions;
 }
 const TEAM_PENDING_REPLY_REFRESH_DELAY_MS = 10_000;
-const EMPTY_SESSION_HISTORY: readonly string[] = [];
 const MEMBER_ROSTER_HYDRATION_RETRY_DELAY_MS = 1_200;
 const FLOATING_COMPOSER_SCROLL_RESERVE_BASE_PX = 200;
 
@@ -1296,9 +1294,6 @@ export const TeamDetailView = memo(function TeamDetailView({
     { teamName: string; displayName: string; projectPath: string }[]
   >([]);
   const launchDialogOpen = launchDialogState.open;
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [sessionsLoading, setSessionsLoading] = useState(false);
-  const [sessionsError, setSessionsError] = useState<string | null>(null);
   const [kanbanFilter, setKanbanFilter] = useState<KanbanFilterState>({
     sessionId: null,
     selectedOwners: new Set(),
@@ -1684,59 +1679,14 @@ export const TeamDetailView = memo(function TeamDetailView({
   );
 
   const leadSessionId = data?.config.leadSessionId ?? null;
-  const sessionHistorySource = data?.config.sessionHistory;
-  const sessionHistoryKey = useMemo(
-    () => (sessionHistorySource ?? EMPTY_SESSION_HISTORY).join('|'),
-    [sessionHistorySource]
-  );
-  const sessionHistoryCacheRef = useRef<{ key: string; value: readonly string[] }>({
-    key: '',
-    value: EMPTY_SESSION_HISTORY,
+  const { sessions, sessionsLoading, sessionsError, refreshSessions } = useTeamSessionHistory({
+    teamName,
+    projectId,
+    leadSessionId,
+    sessionHistory: data?.config.sessionHistory,
+    isActive: isThisTabActive,
+    runtimeAlive: data?.isAlive,
   });
-  const sessionHistory = useMemo(() => {
-    if (!sessionHistorySource || sessionHistorySource.length === 0) {
-      return EMPTY_SESSION_HISTORY;
-    }
-    const cached = sessionHistoryCacheRef.current;
-    if (cached.key === sessionHistoryKey) {
-      return cached.value;
-    }
-    const value = [...sessionHistorySource];
-    sessionHistoryCacheRef.current = { key: sessionHistoryKey, value };
-    return value;
-  }, [sessionHistoryKey, sessionHistorySource]);
-
-  useEffect(() => {
-    if (!isThisTabActive || !projectId) return;
-
-    let cancelled = false;
-    setSessionsLoading(true);
-    setSessionsError(null);
-
-    void (async () => {
-      try {
-        const result = await loadTeamSessionMetadata(api, projectId, {
-          leadSessionId,
-          sessionHistory,
-        });
-        if (!cancelled) {
-          setSessions(result);
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setSessionsError(e instanceof Error ? e.message : 'Failed to load sessions');
-        }
-      } finally {
-        if (!cancelled) {
-          setSessionsLoading(false);
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isThisTabActive, leadSessionId, projectId, sessionHistory]);
 
   // Live git branch tracking for the lead project and member worktrees
   const teamProjectPath = data?.config.projectPath?.trim() ?? null;
@@ -3191,6 +3141,8 @@ export const TeamDetailView = memo(function TeamDetailView({
                 defaultOpen={false}
               >
                 <TeamSessionsSection
+                  teamName={teamName}
+                  onRefresh={refreshSessions}
                   sessions={teamSessions}
                   sessionsLoading={sessionsLoading}
                   sessionsError={sessionsError}

@@ -69,7 +69,8 @@ export class Driver implements Session {
     return { logicallyClosed: true, cleanup: this.confirmed ? 'confirmed' : 'unknown' };
   };
 }
-export async function fixture(t: TestContext, openTarget = true) {
+export async function fixture(t: TestContext, openTarget = true,
+  readiness?: { now(): number; ready: Set<string> }) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-native-member-actions-')));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const binding = {
@@ -246,6 +247,7 @@ export async function fixture(t: TestContext, openTarget = true) {
     },
     store,
     hostIncarnation: 'TEST-host',
+    ...(readiness ? { now: readiness.now } : {}),
     authorized: (action, fn) => owner.withLaunchAuthority('profile-admin', action, fn),
     captureActor: () => ({ principalId: 'profile-admin', authorityRevision: 1 }),
     runtime: {
@@ -256,7 +258,13 @@ export async function fixture(t: TestContext, openTarget = true) {
         return {
           ...(s.record ? { record: s.record } : {}),
           attached: s.attached,
-          nativeReady: false,
+          nativeReady: readiness?.ready.has(memberId) ?? false,
+          ...(readiness?.ready.has(memberId) ? { context: {
+            kind: 'native-configuration' as const,
+            contextDigest: digest({ member: memberId }),
+            generation: e.binding.generation,
+            configRevision: e.config.configRevision,
+          } } : {}),
         };
       },
       async open(memberId, authority) {

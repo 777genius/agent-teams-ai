@@ -5,6 +5,7 @@ import { CascadeGuard } from '../cross-team/CascadeGuard.js';
 import { inferCrossTeamReplyMetadata } from '../cross-team/CrossTeamConversationPolicy.js';
 import { createHostCrossTeamCoordinator } from '../cross-team/HostCrossTeamCoordinator.js';
 import { crossTeamOutboxRecord } from '../cross-team/crossTeamRecords.js';
+import { pageCrossTeamOutbox } from '../cross-team/pageCrossTeamOutbox.js';
 import { TeamOwnerError } from '../team/contracts.js';
 import { digest } from '../team/identity.js';
 import { memberBinding } from '../team/DeliveryRecovery.js';
@@ -70,6 +71,7 @@ export function createHostCrossTeamComposition(options: {
   const authority = createCrossTeamPairAuthority(options),
     outbox = createHostCrossTeamOutbox(options.profile.owner.storageRoot);
   const cascade = new CascadeGuard();
+  const outboxPageKey = randomUUID();
   function select(binding: z.infer<typeof bindingSchema>): HostedTeam {
     options.assertCurrent();
     const team = options.teams.get(binding.scope.teamId);
@@ -154,20 +156,28 @@ export function createHostCrossTeamComposition(options: {
   async function history(
     source: HostedTeam,
     principalId: string,
-    guard: () => void
+    guard: () => void,
+    cursor?: string
   ): Promise<BackendCrossTeamOutbox> {
     guard();
+    const readIdentity = () => digest({
+      owner: authority.ownerFingerprint, principalId,
+      binding: source.definition.binding, scope: source.definition.scope,
+      authority: source.owner.crossTeamIdentity(principalId),
+    });
+    const originalAuthority = readIdentity();
     const receipts = source.owner.crossTeamCommands(principalId).history();
+    const byFingerprint = new Map<string, CapturedCrossTeamIntent | null>();
+    for (const receipt of receipts) {
+      const fingerprint = receipt.intent.authorityFingerprint;
+      byFingerprint.set(fingerprint, byFingerprint.has(fingerprint) ? null : receipt.intent);
+    }
     const rows = await outbox.read(source.definition.binding.teamName);
     guard();
-    return {
-      kind: 'cross-team-outbox',
-      rows: rows.map((row) => {
-        const matches = receipts.filter(
-          (receipt) => receipt.intent.authorityFingerprint === row.authorityFingerprint
-        );
-        if (matches.length !== 1) throw new TeamOwnerError('hold');
-        const intent = matches[0]!.intent;
+    if (readIdentity() !== originalAuthority) throw new TeamOwnerError('hold');
+    const projected = rows.map((row) => {
+        const intent = row.authorityFingerprint && byFingerprint.get(row.authorityFingerprint);
+        if (!intent) throw new TeamOwnerError('hold');
         if (digest(row) !== digest(crossTeamOutboxRecord(intent))) throw new TeamOwnerError('hold');
         authority.assertPair(intent);
         const { source: from, target: to } = intent.pair;
@@ -193,8 +203,12 @@ export function createHostCrossTeamComposition(options: {
             ? {}
             : { taskRefs: structuredClone(intent.request.taskRefs) }),
         };
-      }),
-    };
+      });
+    const page = pageCrossTeamOutbox({ key: outboxPageKey, authorityFingerprint: originalAuthority,
+      rows: projected, ...(cursor === undefined ? {} : { cursor }) });
+    guard();
+    if (readIdentity() !== originalAuthority) throw new TeamOwnerError('hold');
+    return page;
   }
   function lookup(
     source: HostedTeam,
@@ -231,11 +245,11 @@ export function createHostCrossTeamComposition(options: {
           const input = envelope.parse(raw),
             source = select(input.binding);
           if (operation === 'outbox.read') {
-            z.object({}).strict().parse(input.payload);
+            const query = z.object({ cursor: z.string().regex(/^[1-9][0-9]{0,8}\.[a-f0-9]{64}$/).optional() }).strict().parse(input.payload);
             return {
               ok: true,
               value: json(
-                await history(source, options.profile.principalId, options.assertCurrent)
+                await history(source, options.profile.principalId, options.assertCurrent, query.cursor)
               ),
             };
           }
@@ -411,7 +425,7 @@ export function createHostCrossTeamComposition(options: {
       },
       getOutbox(input) {
         hint(input?.teamName);
-        return history(canonical!, principalId, guard);
+        return history(canonical!, principalId, guard, input?.cursor);
       },
     };
   }

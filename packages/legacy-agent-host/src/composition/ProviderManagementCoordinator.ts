@@ -289,8 +289,9 @@ export class ProviderManagementCoordinator {
       if (input.profileId !== profile.profileId || input.configRevision !== profile.configRevision)
         throw new ManagementCommandError('conflict');
       let selected = input;
-      if (profile.provider === 'opencode' && profile.nativeGeneration === 'v2') {
-        assertOpenCodeV2NativeModel(profile, input);
+      if (profile.provider === 'opencode') {
+        if (profile.nativeGeneration === 'v2') assertOpenCodeV2NativeModel(profile, input);
+        // Every private Team input is a native ID; the public probe boundary decodes one prefix.
         selected = { ...input, modelId: `${input.providerId}/${input.modelId}` };
       }
       // Recheck the complete admitted bytes before any sanctioned model/server overlay.

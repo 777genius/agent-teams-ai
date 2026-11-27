@@ -34,7 +34,7 @@ import type { DesktopSourceMetadataLineage } from './desktop-opencode-metadata-l
 import { revealDesktopReply } from './desktop-reply-visibility.ts';
 import { createDesktopUiControls, desktopJsLiteral as literal } from './desktop-ui-controls.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
-import { captureDesktopProjectOracle, type DesktopProjectBindingCapture } from './desktop-created-project-selection.ts';
+import { captureDesktopProjectOracle, createDesktopProjectLaunchRead, type DesktopProjectBindingCapture } from './desktop-created-project-selection.ts';
 
 type Row = Record<string, unknown>;
 type Provider = 'claude' | 'codex' | 'opencode';
@@ -409,7 +409,11 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
     await ui.scrollTo('[role="dialog"] button', 'original Launch team control', 'Launch team');
     await ui.click('[role="dialog"] button', 'one original empty-prompt Launch', 'Launch team');
     await ui.waitRead('!document.querySelector("[role=dialog]")', 'original Launch closes', 90_000);
-    const projectSelection = await projectOracle.select(mixedDesktopTeamName); current();
+    const observed = await poll(createDesktopProjectLaunchRead(
+      () => projectOracle.observe(mixedDesktopTeamName),
+      selected => read(join(selected.executionRoot, '.host-owner/state.json'))
+    ), value => value !== undefined, 'one original native capture');
+    assert.ok(observed); const { selection: projectSelection, state: launched } = observed; current();
     assert.equal(projectSelection.logical.binding.handleId, handleId);
     const executionOwner = projectSelection.owner, executionHandleId = projectSelection.execution.binding.handleId;
     assert.equal(ownerDirectory, logicalDirectory); ownerDirectory = join(projectSelection.executionRoot, '.host-owner');
@@ -421,7 +425,6 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
       assert.deepEqual(logical.savedSettings, saved.savedSettings);
     };
     await assertLogicalDefinition();
-    const launched = await poll(owner, value => rows(value.runtimeCaptures ?? []).length === 1, 'one original native capture');
     const capture = rows(launched.runtimeCaptures)[0]!, launchId = text(capture.launchId);
     assert.deepEqual(launched.binding, executionOwner.binding);
     await projectSelection.assertRun(launchId); membership.captureExecution(executionOwner);

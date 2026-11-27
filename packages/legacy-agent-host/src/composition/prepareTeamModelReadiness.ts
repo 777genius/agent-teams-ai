@@ -18,7 +18,7 @@ import { managementDigest } from '../management/identity.js';
 import { runtimeDigest } from '../runtime/identity.js';
 import { assertOpenCodeV2NativeModel } from './openCodeV2ModelSelection.js';
 import { inspectInitialRuntimeModelAdmission } from './initialRuntimeModelAdmission.js';
-import { captureTeamProbePreparation } from './captureTeamProbePreparation.js';
+import { captureTeamProbePreparation, hasV1NativeModelProbeIdentity } from './captureTeamProbePreparation.js';
 import type { TeamProbeManagement } from './captureTeamProbePreparation.js';
 import type { RuntimeSourceProcessOrigin } from './runtimeSourceProcessOrigin.js';
 
@@ -77,8 +77,10 @@ function openCodeModelId(providerId: string, modelId: string): string {
 }
 function sameCapturedModel(profile: OpenCodeManagementProfile, providerId: string,
   actual: string, expected: string): boolean {
-  return profile.nativeGeneration === 'v2' ? actual === expected
-    : openCodeModelId(providerId, actual) === openCodeModelId(providerId, expected);
+  // Private producers persist profile.model unchanged. A pre-fix V1 probe could have
+  // tested the suffix despite retaining the nested native input, so it cannot qualify.
+  return actual === expected && (profile.nativeGeneration === 'v2' ||
+    !expected.startsWith(providerId + '/') || hasV1NativeModelProbeIdentity(profile));
 }
 
 /** The original URL classifier's loopback branch only; no DNS, metadata or network observation. */

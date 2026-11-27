@@ -7,7 +7,7 @@ import { TeamLaunchError } from '../team-launch/contracts.js';
 import { actualCaptureReadinessCommandId, modelReadinessMechanismDigest } from '../team-launch/launchReadiness.js';
 import { runtimeDigest } from '../runtime/identity.js';
 import { isNativeProfilePath } from './nativeProcessProfile.js';
-import { captureTeamProbePreparation } from './captureTeamProbePreparation.js';
+import { captureTeamProbePreparation, V1_NATIVE_MODEL_PROBE_PREFIX } from './captureTeamProbePreparation.js';
 import type { TeamProbeManagement } from './captureTeamProbePreparation.js';
 import {
   resolveTeamModelProbeRecipe,
@@ -76,7 +76,9 @@ export function teamModelProbeProfile(base: RuntimeMemberProfile): ProviderManag
     base.provider === 'opencode' && base.nativeGeneration === 'v2' ? modelProbeTimeoutMs : 30000);
   // Changed startup policy cannot reuse old profile bytes or retained evidence.
   // The original account resource fence remains independent of this identity.
-  const key = `team-probe-${runtimeDigest(timeoutMs > 30000
+  const keyPrefix = base.provider === 'opencode' && base.nativeGeneration !== 'v2' &&
+    base.model.startsWith(base.nativeOptions.providerId + '/') ? V1_NATIVE_MODEL_PROBE_PREFIX : 'team-probe-';
+  const key = `${keyPrefix}${runtimeDigest(timeoutMs > 30000
     ? { profile: base, startupPolicy: 'opencode-v2-probe-budget-v1' } : base)}`;
   const common = {
     profileId: key,

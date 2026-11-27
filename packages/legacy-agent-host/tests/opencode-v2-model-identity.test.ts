@@ -7,11 +7,14 @@ import { test } from 'node:test';
 import { FileManagementCommandStore } from '../dist/adapters/providers/FileManagementCommandStore.js';
 import { captureOpenCodeConfigurationSource } from '../dist/adapters/providers/OpenCodeConfigurationSource.js';
 import { openCodeV2NoToolConfig } from '../dist/adapters/providers/OpenCodeV2EmbeddedConfig.js';
+import { applyLaunchConfiguration } from '../dist/composition/launchConfiguration.js';
 import { selectOpenCodeV2ManagementModel } from '../dist/composition/openCodeV2ModelSelection.js';
 import { preflightNativeMemberModel } from '../dist/composition/preflightNativeMemberModel.js';
 import { captureOpenCodeProbeAccount, capturePreparedModelReference } from '../dist/composition/prepareTeamModelReadiness.js';
 import { ProviderManagementCoordinator } from '../dist/composition/ProviderManagementCoordinator.js';
 import { runtimeMemberProfileSchema } from '../dist/composition/runtimeProfile.js';
+import { compileRuntimeMemberProfile } from '../dist/composition/runtimeCaptureSource.js';
+import { applyTeamModelProbeSelection } from '../dist/composition/teamModelProbeRecipe.js';
 import { teamModelProbeProfile } from '../dist/composition/teamLaunchModelProbe.js';
 import { storedModelProbeSchema } from '../dist/management/commandRecords.js';
 import { ManagementResourceFence } from '../dist/management/ManagementResourceFence.js';
@@ -55,6 +58,41 @@ test('Settings alias selects auto even when the captured native model is provide
   assert.deepEqual(nested.nativeModel, { providerId, modelId: nativeModelId });
   assert.equal(nested.variant, 'high');
   assert.deepEqual(f.profile, before, 'selection cannot mutate the captured owner');
+});
+
+test('embedded V2 public model aliases agree across Settings, Team probe and saved Launch', t => {
+  const f = fixture(t), before = structuredClone(f.member);
+  for (const [alias, expectedModel] of [
+    [providerId + '/auto', 'auto'],
+    [providerId + '/' + nativeModelId, nativeModelId],
+  ] as const) {
+    const management = selectOpenCodeV2ManagementModel(f.profile, { providerId, modelId: alias });
+    const probe = applyTeamModelProbeSelection(f.member, {
+      launchId: 'TEST-launch', rosterRevision: 'TEST-roster', memberId: f.member.memberId,
+      model: alias,
+    });
+    const source = { commandId: 'TEST-command', configurationRevision: 'TEST-revision',
+      savedSettings: { cwd: f.root, providerId: 'opencode' as const, model: alias } };
+    for (const selected of [
+      applyLaunchConfiguration(f.member, { model: alias }), probe,
+      ...(['lead', 'member'] as const).map(role => compileRuntimeMemberProfile(f.member,
+        source, { memberId: f.member.memberId, role, settings: {} }, 'opencode', 'TEST-launch')),
+    ]) {
+      if (selected.provider !== 'opencode') throw Error('TEST expected OpenCode');
+      assert.equal(selected.nativeOptions.providerId, management.nativeModel!.providerId);
+      assert.equal(selected.model, expectedModel);
+      assert.equal(selected.model, management.nativeModel!.modelId,
+        'one public catalog selection must not change meaning between probe and Launch');
+      assert.equal(selected.nativeOptions.variant, expectedModel === nativeModelId ? 'high' : undefined);
+      assert.deepEqual(selected.executable, before.executable);
+      assert.deepEqual(selected.embedded, before.provider === 'opencode' ? before.embedded : undefined);
+    }
+  }
+  assert.equal(applyLaunchConfiguration(f.member, {}).model, nativeModelId,
+    'absence of a public override still preserves the captured native ID');
+  assert.throws(() => applyLaunchConfiguration(f.member, { model: 'auto' }),
+    { reason: 'launch-option-unsupported' }, 'bare public choices still lack provider identity');
+  assert.deepEqual(f.member, before, 'public selection cannot mutate the original private capture');
 });
 
 test('saved V2 Default keeps its exact native model through private preparation and account capture', async t => {

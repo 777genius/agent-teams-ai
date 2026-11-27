@@ -50,6 +50,7 @@ import { projectTeamActivityLogs, projectTeamActivityStats } from './projectTeam
 import { projectTeamChanges } from './projectTeamChanges';
 import { projectTeamLifecycle } from './projectTeamLifecycle';
 import { projectTeamMessagesPage } from './projectTeamMessagesPage';
+import { projectTeamSessionHistory } from './projectTeamSessionHistory';
 import { projectTeamSnapshot } from './projectTeamSnapshot';
 import { projectInteractionPreview, projectToolApprovalSettings } from './projectToolApproval';
 
@@ -396,7 +397,10 @@ export function projectBackendResult(
   if (request.operation === 'team.activity.logs.read')
     return {
       ok: true,
-      value: projectTeamActivityLogs(source.value, activityEvent, request.payload),
+      value:
+        'scope' in request.payload
+          ? projectTeamSessionHistory(source.value, request.payload, activityEvent)
+          : projectTeamActivityLogs(source.value, activityEvent, request.payload),
     };
   if (request.operation === 'team.activity.stats.read')
     return { ok: true, value: projectTeamActivityStats(source.value, request.payload.memberName) };

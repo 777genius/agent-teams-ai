@@ -19,8 +19,8 @@ export function createCrossTeamMcpTools(port: TeamMcpCrossTeamPort): BoundTool[]
       }), input => port.send(input)), asynchronous:true },
     defineTool('cross_team_list_targets', 'List captured Host resources eligible for cross-Team messaging. Use resourceRef as toTeam; display names never select authority.',
       z.strictObject({ teamName:name.optional(),excludeTeam:id.optional() }), input => port.listTargets(input), false),
-    { ...defineTool('cross_team_get_outbox', 'Read original sent cross-Team history for this captured source.',
-      z.strictObject({teamName:name.optional()}), input => port.getOutbox(input), false), asynchronous:true },
+    { ...defineTool('cross_team_get_outbox', 'Read original sent cross-Team history for this captured source. Large histories return revision and nextCursor; continue with that cursor and concatenate whole rows until nextCursor is null.',
+      z.strictObject({teamName:name.optional(), cursor:z.string().regex(/^[1-9][0-9]{0,8}\.[a-f0-9]{64}$/).optional()}), input => port.getOutbox(input), false), asynchronous:true },
     defineTool('cross_team_lookup', 'Read the exact original source command and original target outcome. This never sends a replacement.',
       z.strictObject({commandId:id}), ({commandId}) => port.lookup(commandId), false),
   ];

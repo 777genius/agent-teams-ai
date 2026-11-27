@@ -31,8 +31,9 @@ export function selectOpenCodeV2LaunchModel(
   const selected: NativeModel = { providerId: base.nativeOptions.providerId, modelId: base.model };
   if (input.model !== undefined) {
     const separator = input.model.indexOf('/');
-    // A known bare ID or provider containing '/' is ambiguous in the existing flattened UI contract.
-    if (separator < 1 || base.nativeOptions.providerId.includes('/') || input.model === base.model)
+    // Explicit app choices are qualified aliases even when their spelling matches
+    // the previous native ID. Private captures preserve that ID by omitting model.
+    if (separator < 1 || base.nativeOptions.providerId.includes('/'))
       throw new TeamLaunchError('invalid', 'launch-option-unsupported');
     selected.providerId = input.model.slice(0, separator);
     selected.modelId = input.model.slice(separator + 1);

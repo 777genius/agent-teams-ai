@@ -274,7 +274,7 @@ export function activityEvent(value: unknown): BackendActivityEvent {
   return {
     sequence: finite(source.sequence, true),
     eventId: activityText(source.eventId),
-    ...(source.observedAt === undefined ? {} : { observedAt: source.observedAt as string }),
+    ...(source.observedAt === undefined ? {} : { observedAt: source.observedAt }),
     ...(source.inputId === undefined ? {} : { inputId: activityText(source.inputId) }),
     data,
   };

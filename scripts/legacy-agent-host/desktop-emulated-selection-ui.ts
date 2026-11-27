@@ -13,7 +13,7 @@ import { readDesktopEmulatedCodexInstallerSettingsUi, runDesktopEmulatedCodexIns
 import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
 import { json, jsonDigest, record, rows } from './desktop-resume-records.ts';
 import { createDesktopUiControls, desktopJsLiteral as literal } from './desktop-ui-controls.ts';
-import { captureDesktopProjectOracle } from './desktop-created-project-selection.ts';
+import { captureDesktopProjectOracle, createDesktopProjectLaunchRead } from './desktop-created-project-selection.ts';
 import type { prepareDesktopEmulatedRuntimeFixture } from './desktop-emulated-runtime-fixture.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
 
@@ -160,14 +160,19 @@ export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort & { evaluate(
   const launch = async (selected: Team) => {
     await ui.click('[role="dialog"] button', 'launch original selection once', 'Launch team');
     await ui.waitRead(`!document.querySelector('[role="dialog"] #dialog-prompt')`, 'original Launch closes', 60_000);
-    const projectSelection = selected.projectDefinition ? await projectOracle.select(selected.name) : undefined;
+    const observed = selected.projectDefinition ? await poll(createDesktopProjectLaunchRead(
+      () => projectOracle.observe(selected.name),
+      selection => json(join(selection.executionRoot, '.host-owner/state.json'))
+    ), value => value !== undefined, 'one original Team launch capture') : undefined;
+    if (selected.projectDefinition) assert.ok(observed);
+    const projectSelection = observed?.selection;
     const execution = projectSelection ? team(projectSelection.execution.teamName, projectSelection.execution.binding.handleId,
       selected.model, selected.effort) : selected;
     if (projectSelection) {
       assert.deepEqual((await selected.owner()).runtimeCaptures ?? [], [], 'logical definition has no native capture');
       assert.equal(record((await execution.owner()).savedSettings).projectContextMode, 'shared');
     }
-    const owner = await poll(execution.owner, value => array(value.runtimeCaptures ?? []).length === 1, 'one original Team launch capture');
+    const owner = observed?.state ?? await poll(execution.owner, value => array(value.runtimeCaptures ?? []).length === 1, 'one original Team launch capture');
     const capture = array(owner.runtimeCaptures)[0]!;
     const launched = await json(join(execution.root, '.host-owner/launches', jsonDigest(capture.launchId) + '.json'));
     const definition = structuredClone(record(launched.definition)); assert.equal(definition.launchId, capture.launchId);

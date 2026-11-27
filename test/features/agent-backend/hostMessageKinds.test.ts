@@ -74,10 +74,12 @@ describe.each(Object.entries(readers))('Host %s message semantics', (_name, read
     expect(read([message])).toEqual([message]);
   });
 
-  it.each([null, true, 1, {}, [], '', 'unknown', 'task_comment_notification\0'])
-  ('rejects an invalid present kind: %j', (messageKind) => {
-    expect(() => read([{ ...message, messageKind }])).toThrow('Invalid snapshot');
-  });
+  it.each([null, true, 1, {}, [], '', 'unknown', 'task_comment_notification\0'])(
+    'rejects an invalid present kind: %j',
+    (messageKind) => {
+      expect(() => read([{ ...message, messageKind }])).toThrow('Invalid snapshot');
+    }
+  );
 });
 
 it('keeps the original clarification answer notice hidden after both Host reads', () => {
@@ -90,33 +92,43 @@ it('keeps the original clarification answer notice hidden after both Host reads'
       { memberId: 'TEST-lead', name: 'lead', role: 'lead' },
       { memberId: 'TEST-worker', name: 'worker', role: 'member' },
     ],
-    grants: [{
-      principalId: 'TEST-human', memberName: 'user',
-      permissions: ['read', 'task.write', 'message.write', 'admin'],
-    }, {
-      principalId: 'TEST-worker', memberName: 'worker',
-      permissions: ['read', 'message.write'],
-    }],
+    grants: [
+      {
+        principalId: 'TEST-human',
+        memberName: 'user',
+        permissions: ['read', 'task.write', 'message.write', 'admin'],
+      },
+      {
+        principalId: 'TEST-worker',
+        memberName: 'worker',
+        permissions: ['read', 'message.write'],
+      },
+    ],
   });
   const human = owner.connect('TEST-human');
   const taskId = human.execute({
-    commandId: 'TEST-create', operation: 'task.create',
+    commandId: 'TEST-create',
+    operation: 'task.create',
     payload: { subject: 'TEST decision', owner: 'worker', startImmediately: false },
   }).effects.taskId;
   human.execute({
-    commandId: 'TEST-question', operation: 'task.clarification',
+    commandId: 'TEST-question',
+    operation: 'task.clarification',
     payload: { taskId, value: 'user' },
   });
   const answer = human.execute({
-    commandId: 'TEST-answer', operation: 'task.comment',
+    commandId: 'TEST-answer',
+    operation: 'task.comment',
     payload: {
-      taskId, text: 'TEST accepted answer',
+      taskId,
+      text: 'TEST accepted answer',
       answerClarificationRequestId: String(human.getTask(taskId).clarificationRequestId),
     },
   });
   expect(answer.phase).toBe('completed');
   const visible = owner.connect('TEST-worker').execute({
-    commandId: 'TEST-visible', operation: 'message.send',
+    commandId: 'TEST-visible',
+    operation: 'message.send',
     payload: { to: 'user', text: 'TEST ordinary teammate reply' },
   });
   expect(visible.phase).toBe('completed');
@@ -129,8 +141,10 @@ it('keeps the original clarification answer notice hidden after both Host reads'
     const notice = messages.find((entry) => entry.commentId === answer.effects.commentId);
     expect(notice).toMatchObject({ messageKind: 'task_comment_notification' });
     const filtered = filterTeamMessages(messages, {
-      filter: { from: new Set(), to: new Set(), showNoise: true }, searchQuery: '',
-      includeAutomationEvents: true, includeMemberWorkSyncNudges: true,
+      filter: { from: new Set(), to: new Set(), showNoise: true },
+      searchQuery: '',
+      includeAutomationEvents: true,
+      includeMemberWorkSyncNudges: true,
     });
     expect(filtered.some((entry) => entry.commentId === answer.effects.commentId)).toBe(false);
     expect(filtered.some((entry) => entry.messageId === visible.effects.messageId)).toBe(true);

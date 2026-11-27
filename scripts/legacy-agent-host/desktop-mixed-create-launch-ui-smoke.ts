@@ -30,7 +30,7 @@ import { command } from './desktop-backend-observations.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { openOriginalCreateForm } from './desktop-create-config-ui-smoke.ts';
 import { mixedDesktopTeamName } from './desktop-mixed-native-fixture.ts';
-import { captureDesktopProjectOracle } from './desktop-created-project-selection.ts';
+import { captureDesktopProjectOracle, createDesktopProjectLaunchRead } from './desktop-created-project-selection.ts';
 import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
 import { revealDesktopReply } from './desktop-reply-visibility.ts';
 import { createDesktopUiControls } from './desktop-ui-controls.ts';
@@ -430,7 +430,12 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
     'original mixed Launch closes',
     90_000
   );
-  const projectSelection = await projectOracle.select(mixedDesktopTeamName);
+  const launched = await poll(createDesktopProjectLaunchRead(
+    () => projectOracle.observe(mixedDesktopTeamName),
+    selected => read(join(selected.executionRoot, '.host-owner/state.json'))
+  ), value => value !== undefined, 'exactly one fresh mixed capture');
+  assert.ok(launched);
+  const { selection: projectSelection, state } = launched;
   assert.equal(projectSelection.logical.binding.handleId, handleId);
   teamRoot = projectSelection.executionRoot;
   const definition = await read(join(logicalRoot, '.host-owner/state.json'));
@@ -439,11 +444,6 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
   assert.deepEqual(definition.runtimeCaptures ?? [], []);
   assert.equal(models.executionTeamName(), projectSelection.execution.teamName);
   proof.projectAssociation = projectSelection.bindingCapture;
-  const state = await poll(
-    ownerState,
-    (row) => Array.isArray(row.runtimeCaptures) && row.runtimeCaptures.length === 1,
-    'exactly one fresh mixed capture'
-  );
   const capture = record((state.runtimeCaptures as unknown[])[0]);
   assert.deepEqual(state.binding, projectSelection.owner.binding);
   await projectSelection.assertRun(capture.launchId);

@@ -76,10 +76,16 @@ function payload(
     case 'process.list':
     case 'process.pending.read':
     case 'crossTeam.lookup':
-    case 'crossTeam.outbox.read':
     case 'command.lookup':
       object(value, []);
       return {};
+    case 'crossTeam.outbox.read': {
+      const p = object(value, ['cursor']);
+      if (p.cursor === undefined) return {};
+      if (typeof p.cursor !== 'string' || !/^[1-9][0-9]{0,8}\.[a-f0-9]{64}$/.test(p.cursor))
+        throw new InvalidBackendOperation();
+      return { cursor: p.cursor };
+    }
     case 'tasks.list': {
       const p = object(value, ['deleted', 'cursor']);
       if (p.deleted !== undefined && p.deleted !== true) throw new InvalidBackendOperation();

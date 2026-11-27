@@ -278,6 +278,7 @@ export async function runDesktopOwnerRoutingContinuation(
               owner: { ownerId: prepared.bOwner.ownerId, revision: prepared.bOwner.revision },
               contextId: record.contextId,
               label: record.displayName || record.teamName,
+              ...(record.projectContextMode === undefined ? {} : { projectContextMode: record.projectContextMode }),
               members: record.members,
               scope: row(record.binding).scope,
             },

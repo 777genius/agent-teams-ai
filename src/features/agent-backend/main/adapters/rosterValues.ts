@@ -62,7 +62,6 @@ export function rosterSettings(value: unknown, strict: boolean): BackendRosterSe
     ['role', 256],
     ['workflow', 64 * 1024],
     ['cwd', 8192],
-
   ] as const) {
     if (source[key] !== undefined) {
       const text = rosterText(source[key], max).trim();

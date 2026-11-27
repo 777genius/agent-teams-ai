@@ -12,7 +12,7 @@ import {
 import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
 import { command, processTable } from './desktop-backend-observations.ts';
 import { readCreateDialogDiagnostics } from './desktop-create-diagnostics.ts';
-import { captureDesktopProjectOracle } from './desktop-created-project-selection.ts';
+import { captureDesktopProjectOracle, createDesktopProjectLaunchRead } from './desktop-created-project-selection.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
 import type { prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
 import type { startNativeTeamModel } from '../../packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts';
@@ -114,16 +114,16 @@ export async function runDesktopCreateUiSmoke(
     'original Create closes',
     90_000
   );
-  const selection = await projectOracle.select('test-created-native');
+  const launched = await poll(createDesktopProjectLaunchRead(
+    () => projectOracle.observe('test-created-native'),
+    selected => read(join(selected.executionRoot, '.host-owner/state.json'))
+  ), value => value !== undefined, 'one fresh created Team capture');
+  assert.ok(launched);
+  const { selection, state } = launched;
   const teamRoot = selection.executionRoot;
   const logical = await read(join(selection.logicalRoot, '.host-owner/state.json'));
   assert.equal(record(logical.savedSettings).projectContextMode, 'per_project');
   assert.deepEqual(logical.runtimeCaptures ?? [], [], 'logical definition never owns the native run');
-  const state = await poll(
-    () => read(join(teamRoot, '.host-owner/state.json')),
-    (row) => Array.isArray(row.runtimeCaptures) && row.runtimeCaptures.length === 1,
-    'one fresh created Team capture'
-  );
   const capture = record((state.runtimeCaptures as unknown[])[0]);
   const saved = record(state.savedSettings);
   assert.equal(saved.projectContextMode, 'shared');

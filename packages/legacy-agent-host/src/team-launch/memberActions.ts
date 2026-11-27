@@ -13,6 +13,7 @@ export interface MemberActionInput {
   memberId: string;
   expectedGeneration: string | null;
   action: 'restart' | 'skip';
+  expectedFailedAttemptId?: string;
 }
 export interface MemberActionActor {
   principalId: string;
@@ -122,6 +123,11 @@ export function validateMemberActions(record: ActionLaunchRecord): void {
     if (row.actor.inputAuthority !== undefined && !/^[a-f0-9]{64}$/.test(row.actor.inputAuthority))
       fail('member-action-actor');
     if (input.expectedGeneration !== null) id(input.expectedGeneration);
+    if (input.expectedFailedAttemptId !== undefined) {
+      id(input.expectedFailedAttemptId);
+      if (input.action !== 'restart' || input.expectedFailedAttemptId !== row.sourceAttemptId)
+        fail('member-action-failed-source');
+    }
     if (typeof row.noAllocation !== 'boolean' || (row.noAllocation && input.action !== 'skip'))
       fail('member-action-proof');
     id(row.sourceAttemptId);

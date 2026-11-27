@@ -156,7 +156,22 @@ function descriptor(value: unknown): DesktopBackendDescriptor {
     input.handles,
     512,
     (entry) => {
-      const handle = object(entry, ['handleId', 'owner', 'contextId', 'label', 'members', 'scope']);
+      const handle = object(entry, [
+        'handleId',
+        'owner',
+        'contextId',
+        'label',
+        'members',
+        'scope',
+        'projectContextMode',
+      ]);
+      const projectContextMode = handle.projectContextMode;
+      if (
+        projectContextMode !== undefined &&
+        projectContextMode !== 'shared' &&
+        projectContextMode !== 'per_project'
+      )
+        throw new BackendRoutingError('hold');
       const owner = ref(handle.owner);
       if (!ownerKeys.has(ownerKey(owner))) throw new BackendRoutingError('hold');
       const members = list(handle.members, 256, (entry) => {
@@ -170,6 +185,7 @@ function descriptor(value: unknown): DesktopBackendDescriptor {
         owner,
         contextId: id(handle.contextId),
         label: id(handle.label),
+        ...(projectContextMode === undefined ? {} : { projectContextMode }),
         members: Object.freeze(members),
         scope: captureScope(handle.scope),
       });

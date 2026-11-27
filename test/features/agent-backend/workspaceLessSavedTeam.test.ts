@@ -24,7 +24,12 @@ describe('saved definitions without a selected project', () => {
       savedSettings: settings,
       members: [
         { memberId: 'TEST-lead', name: 'team-lead', role: 'lead', settings: {} },
-        { memberId: 'TEST-worker', name: 'reviewer', role: 'member', settings: { role: 'Reviewer' } },
+        {
+          memberId: 'TEST-worker',
+          name: 'reviewer',
+          role: 'member',
+          settings: { role: 'Reviewer' },
+        },
       ],
       removedMembers: [],
     });

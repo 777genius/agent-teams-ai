@@ -71,6 +71,48 @@ test('actual native lead DO replaces only target generation using its own actor,
   );
 });
 
+test('failed-only admission rejects same-generation recovery, while an already prepared original remains replayable', async (t) => {
+  for (const admittedBeforeRecovery of [false, true]) {
+    let now = 1000;
+    const ready = new Set(['L', 'B']);
+    const f = await fixture(t, true, { now: () => now, ready });
+    f.launch.start('TEST-start-for-failure');
+    for (let step = 0; step < 4; step++) await tick();
+    now += 11000;
+    const failed = f.launch.read().members.find((member) => member.memberId === 'A')!;
+    assert.equal(failed.attempt.status, 'failed');
+    assert.equal(failed.attempt.noAllocation, false);
+    const request = f.request(`TEST-failed-only-${admittedBeforeRecovery}`);
+    const body = { ...request.body, expectedFailedAttemptId: failed.attempt.attemptId };
+    if (admittedBeforeRecovery) {
+      const prepared = await f.call('prepare', request.commandId, body);
+      assert.equal(field(prepared, 'stage'), 'prepared');
+      assert.equal(field(prepared, 'expectedFailedAttemptId'), failed.attempt.attemptId);
+    }
+    ready.add('A');
+    const recovered = f.launch.read().members.find((member) => member.memberId === 'A')!;
+    assert.equal(recovered.attempt.status, 'ready');
+    assert.equal(recovered.attempt.attemptId, failed.attempt.attemptId);
+    assert.equal(recovered.binding!.generation, failed.binding!.generation);
+    const path = `launches/${digest('TEST-run')}.json`;
+    const before = JSON.stringify(f.store.read(path));
+    if (!admittedBeforeRecovery) {
+      await assert.rejects(f.call('prepare', request.commandId, body), /conflict/);
+      assert.equal(JSON.stringify(f.store.read(path)), before);
+      assert.equal(f.drivers.get('A:1')!.closed, 0);
+      assert.deepEqual(f.opened, ['L:1', 'A:1', 'B:1']);
+      assert.equal(field(await f.call('prepare', 'TEST-manual-restart', request.body), 'stage'), 'prepared');
+    } else {
+      assert.equal(field(await f.call('prepare', request.commandId, body), 'stage'), 'prepared');
+      assert.equal(JSON.stringify(f.store.read(path)), before, 'replay preserves original input/fingerprint');
+      assert.equal(field(await f.call('execute', request.commandId, body), 'stage'), 'selected');
+      assert.equal(field(await f.call('execute', request.commandId, body), 'stage'), 'selected');
+      assert.equal(f.drivers.get('A:1')!.closed, 1);
+      assert.deepEqual(f.opened, ['L:1', 'A:1', 'B:1', 'A:2']);
+    }
+  }
+});
+
 test('DO changing to ASK during original cleanup leaves requested receipt and physical closure, never opens target or repeats Stop; original lookup is read-only', async (t) => {
   const f = await fixture(t),
     request = f.request('TEST-native-DO-ASK');

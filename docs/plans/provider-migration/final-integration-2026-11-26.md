@@ -9,6 +9,64 @@ Stage 2, default activation and paid-provider testing are outside this work.
 
 ## Current correction scope — 27 November 2026
 
+### Frontend parity and independent review follow-up
+
+The current integration closes concrete differences from the existing frontend:
+
+- Host Sessions now reads the selected Team's retained launches and generations,
+  with separate bounded Inputs, Responses and Activity/usage pages. Empty or
+  failed reads cannot substitute unrelated legacy project sessions. Task windows
+  require recorded launch clocks; a missing clock does not hide tasks.
+- Save-only Teams retain an explicitly empty cwd and their selected history mode.
+  Launch still requires its existing valid project and readiness admission.
+- Public OpenCode model aliases remain distinct from private native model IDs.
+  Default keeps the captured pair; an explicit alias selects the requested pair
+  even when its spelling equals the previous native ID. Private V1 readiness
+  must attest that same native model and reject earlier ambiguous evidence.
+- Message kinds and private work-sync nudges survive Host delivery and projection.
+  Cross-team outbox reads use bounded, lossless continuations through the real
+  HTTP/MCP and renderer paths, with authority and revision checks on every page.
+- Failed-member Retry uses the displayed Host attempt and existing member action
+  owner. Fresh admission rejects an obsolete generation/attempt and a member
+  already recovered within the same attempt. Previously admitted commands keep
+  their original fingerprint and replay result; ordinary Restart retains its
+  typed result and behavior. A partial bulk failure cannot silently restart
+  already recovered members again.
+- Project Launch observers retain the original submission and await its actual
+  registration within the existing budget. Passive Quit observation and Windows
+  failure-artifact preservation do not substitute for native lifecycle evidence.
+
+Independent reviews cover each scope and their shared model/readiness, action,
+history and projection boundaries. The finite Retry cohorts pass 39 Host tests
+and 127 Main/renderer tests; the final model identity, prepared-reference and
+source-origin cohorts pass 57 tests on verified fresh JavaScript. The separately
+completed Sessions, message, outbox and descriptor cohorts are recorded in the
+PR handoff with their exact source boundaries. Latest Host, root and scoped UI
+TypeScript attempts ended with exit 137 and no compiler diagnostic; they are not
+successful typechecks. The saved-probe suite also encountered SIGKILL, so its
+final full-file result remains unqualified. Native
+Windows crash, macOS Review/Resume/cold Quit, retained-runtime qualification and
+the unresolved CodeQL flow require their own original evidence. Keep #982 open
+and unmerged, preserve all existing gates, and publish one reviewed source batch.
+
+### Follow-up from the 6d0e468b CI evidence
+
+Complete the confirmed remaining failures in the existing branch: preserve an
+explicit saved history mode in private descriptor restoration; observe original
+project publication and run IDs within their existing capture budgets; correct
+the structural roster assertion to cover both current relaunch branches; bound
+retained cross-team outbox reads through Host, MCP and Desktop continuations; and
+fix the two exact typed-lint diagnostics. Independently assess the recurring
+credential-fingerprint CodeQL finding without changing persisted identity or
+suppressing rules. Review original V2 readiness and Dashboard timeout artifacts
+before making any further product correction. Preserve all native deadlines,
+custody, pins and assertions. No source change is justified by queued checks.
+
+Expected delta: 150–300 production lines plus 200–400 focused regression/harness
+lines. Complexity 6/10, expected reliability 8/10, pre-validation confidence 7/10.
+Use independent scope/source review, then actual finite regressions and pinned
+TS7 checks; publish reviewed batches promptly and retain the original E2E gates.
+
 Continue in the existing #982 branch. All four child PRs are already integrated;
 do not repeat their merges or merge #982 into main. The first continuation commit
 `8a825543` completes the existing Claude model fixture without a type assertion.

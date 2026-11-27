@@ -27,7 +27,7 @@ export function parseMemberAction(commandId: string, raw: unknown): MemberAction
   const row = raw as Record<string, unknown>;
   if (
     Object.keys(row).some(
-      (k) => !['launchId', 'rosterRevision', 'memberId', 'expectedGeneration', 'action'].includes(k)
+      (k) => !['launchId', 'rosterRevision', 'memberId', 'expectedGeneration', 'action', 'expectedFailedAttemptId'].includes(k)
     )
   )
     throw new RuntimeOwnerError('invalid');
@@ -43,6 +43,10 @@ export function parseMemberAction(commandId: string, raw: unknown): MemberAction
   )
     throw new RuntimeOwnerError('invalid');
   if (row.action !== 'restart' && row.action !== 'skip') throw new RuntimeOwnerError('invalid');
+  if (row.expectedFailedAttemptId !== undefined && (row.action !== 'restart' ||
+    typeof row.expectedFailedAttemptId !== 'string' || !row.expectedFailedAttemptId ||
+    row.expectedFailedAttemptId.length > 256 || row.expectedFailedAttemptId.includes('\0')))
+    throw new RuntimeOwnerError('invalid');
   return {
     commandId,
     launchId: row.launchId as string,
@@ -50,6 +54,7 @@ export function parseMemberAction(commandId: string, raw: unknown): MemberAction
     memberId: row.memberId as string,
     expectedGeneration: row.expectedGeneration as string | null,
     action: row.action,
+    ...(row.expectedFailedAttemptId === undefined ? {} : { expectedFailedAttemptId: row.expectedFailedAttemptId as string }),
   };
 }
 /** Exact current captured member only. The current wrapper is retained for existing launch callbacks. */
@@ -142,6 +147,22 @@ export function executeMemberAction(
   if (operation === 'prepare') {
     assertGrant();
     if (input.action === 'restart') options.assertNewWorkAllowed(entry);
+    if (input.expectedFailedAttemptId !== undefined) {
+      const prepareFailed = () => {
+        // The same control fence covers the fresh readiness observation and new admission.
+        const observed = launch.read(),
+          member = observed.members.find((candidate) => candidate.memberId === input.memberId);
+        if (observed.launchId !== input.launchId || observed.rosterRevision !== input.rosterRevision ||
+          !member || member.binding?.generation !== input.expectedGeneration ||
+          member.attempt.attemptId !== input.expectedFailedAttemptId ||
+          member.attempt.status !== 'failed' || member.attempt.noAllocation)
+          throw new RuntimeOwnerError('conflict');
+        return actions.prepare(input, selected).record;
+      };
+      return Promise.resolve(options.admission
+        ? options.admission.journalAuthority.authorized('control', prepareFailed)
+        : entry.team.owner.withLaunchAuthority(options.principalId, 'control', prepareFailed));
+    }
     return Promise.resolve(actions.prepare(input, selected).record);
   }
   const assertOriginal =

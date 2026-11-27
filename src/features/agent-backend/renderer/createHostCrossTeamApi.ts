@@ -1,5 +1,6 @@
 import { readHostProjectContext } from './createHostProjectContextApi';
 import { HostTeamOperationError } from './createHostTeamMutations';
+import { readHostCrossTeamOutbox } from './readHostCrossTeamOutbox';
 import { hostTeamSelectionKey, isHostTeamSelectionKey } from './hostTeamRouting';
 import {
   qualifyHostTaskReferenceTeam,
@@ -314,17 +315,9 @@ export function createHostCrossTeamApi(
       const current = captureScope();
       const rows = await connections(current);
       const source = selected(rows, teamName);
-      const result = await backend.invoke({
-        handle: source.handle,
-        commandId: crypto.randomUUID(),
-        operation: 'crossTeam.outbox.read',
-        payload: {},
-      });
+      const outbox = await readHostCrossTeamOutbox(backend, source.handle, current);
       assertCurrent(current);
-      if (!result.ok) throw new HostTeamOperationError(result.code, result.outcome);
-      if (!result.value || !('kind' in result.value) || result.value.kind !== 'cross-team-outbox')
-        throw new HostTeamOperationError('invalid-result', 'unknown');
-      return result.value.rows.map((row: BackendCrossTeamOutboxRow) => {
+      return outbox.map((row: BackendCrossTeamOutboxRow) => {
         const resolve = (handleId: string | undefined, resourceRef: string) => {
           const binding = rows.find((item) =>
             handleId !== undefined

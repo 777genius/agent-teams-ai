@@ -1208,7 +1208,13 @@ const electronAPI: ElectronAPI = {
         teamName
       );
     },
-    restartMember: async (teamName: string, memberName: string, expectedSecondary?: boolean) => {
+    restartMember: async (
+      teamName: string,
+      memberName: string,
+      expectedSecondary?: boolean,
+      captured?: unknown
+    ) => {
+      if (captured !== undefined) throw new Error('Captured Host retry requires the Host adapter');
       return parseTeamMemberRestartResult(
         await invokeIpcWithResult<unknown>(
           TEAM_RESTART_MEMBER,

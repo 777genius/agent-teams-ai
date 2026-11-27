@@ -44,6 +44,7 @@ export function readMemberActionView(
     launchId: action.input.launchId,
     memberId: action.input.memberId,
     action: action.input.action,
+    ...(action.input.expectedFailedAttemptId === undefined ? {} : { expectedFailedAttemptId: action.input.expectedFailedAttemptId }),
     rosterRevision: action.input.rosterRevision,
     allocation: action.noAllocation ? ('none' as const) : ('runtime' as const),
     sourceGeneration: action.source.binding?.generation ?? null,
