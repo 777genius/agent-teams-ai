@@ -192,6 +192,30 @@ describe('budget checks at execution time of queued runtime operations', () => {
     }
   );
 
+  it('rechecks budget before every retry lane even with no aggregate restart wait', async () => {
+    let exceeded = false;
+    const admit = vi.fn(async () => {
+      if (exceeded) throw new Error('TEAM_BUDGET_BLOCKED');
+    });
+    const service = createBudgetedService(admit);
+    const runner = Reflect.get(
+      service,
+      'memberLifecycleOperationRunner'
+    ) as TeamProvisioningMemberLifecycleOperationRunner;
+    const firstSpawn = vi.fn(async () => {
+      // A later candidate must not inherit the first lane's admission.
+      exceeded = true;
+    });
+    const secondSpawn = vi.fn(async () => undefined);
+    await runner.runMemberLifecycleOperation('alpha', 'alice', 'opencode_retry', firstSpawn);
+    await expect(
+      runner.runMemberLifecycleOperation('alpha', 'bob', 'opencode_retry', secondSpawn)
+    ).rejects.toThrow('TEAM_BUDGET_BLOCKED');
+    expect(firstSpawn).toHaveBeenCalledOnce();
+    expect(secondSpawn).not.toHaveBeenCalled();
+    expect(admit).toHaveBeenCalledTimes(2);
+  });
+
   it('does not start a member operation after Stop during aggregate admission', async () => {
     let release!: () => void;
     const gate = new Promise<void>((resolve) => {

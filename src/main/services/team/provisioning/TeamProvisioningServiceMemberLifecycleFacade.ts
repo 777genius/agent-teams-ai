@@ -304,16 +304,14 @@ export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamP
               kind !== 'primary_member_removed';
             const assertCurrent = this.captureRuntimeSpawnAdmissionFence(teamName);
             try {
-              const restartRunId = await this.waitForOpenCodeAggregatePrimaryRestart(
-                teamName,
-                memberName
-              );
+              await this.waitForOpenCodeAggregatePrimaryRestart(teamName, memberName);
               if (canSpawn) {
+                // The enclosing retry request was admitted only once. Each
+                // candidate can take time to reattach, and a concurrent Save
+                // may tighten the budget before the next candidate spawns.
                 assertCurrent();
-                if (restartRunId !== null) {
-                  await this.runtimeSpawnAdmission(teamName);
-                  assertCurrent();
-                }
+                await this.runtimeSpawnAdmission(teamName);
+                assertCurrent();
               }
               return await operation();
             } finally {
