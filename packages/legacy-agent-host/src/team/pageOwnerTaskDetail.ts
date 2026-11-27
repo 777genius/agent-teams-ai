@@ -10,6 +10,12 @@ const CURSOR = /^([1-9][0-9]{0,8})\.([a-f0-9]{64})$/;
 const INLINE_BYTES = 240 * 1024;
 const CHUNK_BYTES = 64 * 1024;
 
+export type OwnerBriefingScope = { authorityFingerprint: string } & (
+  | { kind: 'task'; memberName: string }
+  | { kind: 'lead' }
+  | { kind: 'member'; memberName: string; includeActiveProcesses: boolean }
+);
+
 /** Native MCP task_get keeps small original results and streams oversized
  * canonical JSON as signed, revision-bound, Unicode-safe text chunks.
  * No caller may select another Team, owner, root, or grant.
@@ -40,7 +46,11 @@ export function pageOwnerReadDetail(options: {
   teamName: string;
   value: JsonValue;
   cursor?: string;
-} & ({ taskId: string; commentId?: string } | { inventoryFilters: TeamTaskInventoryFilters })): JsonValue {
+} & (
+  | { taskId: string; commentId?: string }
+  | { inventoryFilters: TeamTaskInventoryFilters }
+  | { briefingScope: OwnerBriefingScope }
+)): JsonValue {
   const source = options.value;
   const serialized = JSON.stringify(source);
   if (Buffer.byteLength(serialized) <= INLINE_BYTES) {
@@ -63,8 +73,13 @@ export function pageOwnerReadDetail(options: {
     bytes += size;
   }
   if (chunk) chunks.push(chunk);
+  const briefing = 'briefingScope' in options;
   const inventory = 'inventoryFilters' in options;
-  const signature = (offset: number) => digest(inventory ? {
+  const signature = (offset: number) => digest(briefing ? {
+    key: options.key, principalId: options.principalId, grant: options.grant,
+    teamName: options.teamName, briefingScope: options.briefingScope, revision,
+    protocol: 'briefing-json-chunk-v1', offset,
+  } : inventory ? {
     key: options.key, principalId: options.principalId, grant: options.grant,
     teamName: options.teamName, inventoryFilters: options.inventoryFilters, revision,
     protocol: 'task-inventory-json-chunk-v1', offset,
@@ -83,7 +98,7 @@ export function pageOwnerReadDetail(options: {
       throw new TeamOwnerError('hold');
   }
   return json({
-    ...(inventory ? { kind: 'task-inventory-chunk' } : {
+    ...(briefing ? { kind: 'briefing-chunk' } : inventory ? { kind: 'task-inventory-chunk' } : {
       kind: options.commentId === undefined ? 'task-detail-chunk' : 'task-comment-chunk',
       taskId: options.taskId,
       ...(options.commentId === undefined ? {} : { commentId: options.commentId }),

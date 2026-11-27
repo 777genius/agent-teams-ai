@@ -313,3 +313,49 @@ The complete changed test file passed **318/318, zero failures or skips**.
 This changes one test line and no production code; complexity: **1/10**.
 Ordinary CI still needs to validate the new head. This local unit result does
 not qualify the Desktop/native journey that the earlier CI failure prevented.
+
+### Follow-up: lossless bounded MCP briefings
+
+A single actual Controller/Owner/MCP probe reproduced output-limit failures for
+already bounded previews: task briefing serialized to 271,605 bytes, member
+briefing to 301,834 bytes and lead briefing to 324,426 bytes, above the 262,144
+byte MCP limit. The accepted control character expands during JSON escaping.
+The probe confirmed the original input admission, repeatable canonical text and
+unchanged task/receipt files; it did not assume an unbounded history.
+
+The same three tools now opt into the existing signed lossless pager. Small
+answers retain their original string. Oversized answers reconstruct the complete
+canonical string, including every mandatory member instruction, by joining all
+chunks and parsing their JSON. The tool descriptions require all pages before
+applying the briefing. Raw Controller and existing Owner Promise<string>
+contracts remain unchanged; no new state owner, cache or source selector exists.
+
+The new cursor protocol binds the effective tool/member/process settings,
+current grant and roster fingerprint, principal, Team, Owner key and text
+revision. Options are captured before awaiting the canonical read, and paging
+runs only after the existing second authority fence. Changed authority or text
+cannot silently combine pages. Existing task/comment/inventory signatures are
+unchanged. Default process-list behavior is also unchanged; the file-effect
+assertions concern tasks and receipts, not every possible process-store file.
+
+Two canonical regression cases failed on the original built code. On the final
+integrated source, all nine new tests passed, including actual HTTP SDK
+continuation, exact full text, Unicode/escaping byte limits, stale/cross-scope
+cursors, mutable options, malformed policy and asynchronous authority changes.
+Six existing inventory tests, one raw lead/member parity case and one canonical
+read/reopen case also passed: **17 targeted tests, zero failures or skips**.
+The prerequisite ledger and Host production builds passed with Node 24.21.0 and
+native TypeScript 7.0.2. Strict typing of the five related test files passed with
+the original compiler options. Independent source/test review approved the
+final bytes, including the fixed-clock HTTP fixture and validated SDK result.
+
+The complete Host test typecheck exited 137, and an unfiltered read-cutover
+worker failed without an assertion trace. Neither result is reported as a pass;
+the successful isolated read case does not qualify that entire suite. Ordinary
+current-head CI remains required. The execution environment disconnected after
+the final checks; the exact tested blobs and evidence were retained for normal
+GitHub publication. No full Desktop/native qualification is claimed here.
+
+The production diff is **+94/-43 lines in three files** (all at most 141 lines);
+the new test file has **350 lines**. Complexity: **5/10**. This repairs bounded
+read availability while preserving the full payload, not total-token savings.

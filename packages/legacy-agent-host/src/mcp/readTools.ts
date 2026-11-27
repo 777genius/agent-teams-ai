@@ -27,16 +27,18 @@ export function createReadMcpTools(
   readKanbanPage?: (cursor?: string) => unknown,
 ): BoundTool[] {
   const empty = z.strictObject({});
+  const briefingPages = " Oversized results use briefing-chunk: read all pages with the same options and nextCursor, concatenate chunk strings in part order, then JSON.parse the complete JSON string to recover the full briefing. Apply the briefing and mandatory member rules only after all pages are read. If state changes invalidate a cursor, restart from the first page.";
   return [
     ...(reads.memberBriefing
       ? [
           {
             ...defineTool(
               'member_briefing',
-              'Read durable member rules and current canonical Task queue as this authenticated actor.',
-              z.strictObject({ includeActiveProcesses: z.boolean().optional() }),
-              ({ includeActiveProcesses }) =>
-                reads.memberBriefing!({ includeActiveProcesses: includeActiveProcesses !== false }),
+              'Read durable member rules and current canonical Task queue as this authenticated actor.' + briefingPages,
+              z.strictObject({ includeActiveProcesses: z.boolean().optional(), cursor: cursor.optional() }),
+              ({ includeActiveProcesses, cursor }) =>
+                reads.memberBriefing!({ includeActiveProcesses: includeActiveProcesses !== false },
+                  cursor === undefined ? {} : { cursor }),
               false
             ),
             asynchronous: true as const,
@@ -93,9 +95,9 @@ export function createReadMcpTools(
     {
       ...defineTool(
         "task_briefing",
-        "Read the canonical operational Task queue. memberName is a configured read target; omitted uses the captured actor.",
-        z.strictObject({ memberName: id.optional() }),
-        ({ memberName }) => reads.taskBriefing(memberName),
+        "Read the canonical operational Task queue. memberName is a configured read target; omitted uses the captured actor." + briefingPages,
+        z.strictObject({ memberName: id.optional(), cursor: cursor.optional() }),
+        ({ memberName, cursor }) => reads.taskBriefing(memberName, cursor === undefined ? {} : { cursor }),
         false,
       ),
       asynchronous: true,
@@ -103,9 +105,9 @@ export function createReadMcpTools(
     {
       ...defineTool(
         "lead_briefing",
-        "Read the canonical operational lead queue, not native context or transcript metrics.",
-        empty,
-        () => reads.leadBriefing(),
+        "Read the canonical operational lead queue, not native context or transcript metrics." + briefingPages,
+        z.strictObject({ cursor: cursor.optional() }),
+        ({ cursor }) => reads.leadBriefing(cursor === undefined ? {} : { cursor }),
         false,
       ),
       asynchronous: true,
