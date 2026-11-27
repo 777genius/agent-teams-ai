@@ -72,12 +72,14 @@ function fixture(timeoutMs = 30_000) {
 }
 
 test('real OAuth expiry closes original native capture without resurrecting deleted or changed journal', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
   for (const missing of [true, false]) {
-    const f = fixture(500); t.after(() => f.cleanup());
+    const f = fixture(); t.after(() => f.cleanup());
     await f.waiting();
     if (missing) unlinkSync(f.file());
     else f.store.write({ ...f.store.read(input.operationId)!, providerId: 'TEST-replacement' });
     const expected = missing ? null : f.bytes();
+    t.mock.timers.tick(30_000); // Trigger the real registered expiry callback deterministically.
     await until(() => f.closeCalls === 1);
     f.close.resolve(true);
     await assert.rejects(f.owner.close(), { code: 'held' });
