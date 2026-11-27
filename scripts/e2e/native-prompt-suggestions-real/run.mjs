@@ -34,7 +34,8 @@ if (flag('--help') || flag('-h')) {
     '  --rounds   max conversation turns per member before reporting "vendor silent" (default 6)',
     '  --no-build skip rebuilding the Host (default: rebuild so the proof matches the source)',
     '  --strict   treat inconclusive as failure (CI-like)',
-    'Env: REAL_CLAUDE_BIN, REAL_CODEX_BIN (>= 0.169.0), REAL_CLAUDE_MODEL, REAL_CODEX_MODEL, REAL_RECEIPT_DIR',
+    'Env: REAL_CLAUDE_BIN, REAL_CODEX_BIN, REAL_CLAUDE_MODEL, REAL_CODEX_MODEL, REAL_RECEIPT_DIR',
+    'Codex: suggestions require >= 0.169.0; autonomous-goal requires an existing qualified platform/version.',
   ].join('\n'));
   process.exit(0);
 }

@@ -2963,7 +2963,7 @@ async function selectionProjectNavigation(state: unknown) {
     const {assert,ui,hostTeamSelectionKey,literal,record,fixture,proof,projectOracle,join}=environment;
     ${actual}
     return openTeam;`) as (environment: Record<string, unknown>) => (selected: unknown) => Promise<void>;
-  const key = hostTeamSelectionKey('TEST-selection-B'), selector = `[data-team-name=${literal(key)}]`;
+  const key = hostTeamSelectionKey('TEST-selection-B'), selector = `[role="button"][data-team-name=${literal(key)}]`;
   const actions: string[] = [], values: boolean[] = [], failure = new Error('TEST original selection wait refused');
   const open = make({ assert, hostTeamSelectionKey, literal, record, join, fixture: { root: '/TEST-selection-navigation' },
     projectOracle: { identity: Object.freeze({ contextId: 'local', ownerResourceRef: 'TEST-original-owner',

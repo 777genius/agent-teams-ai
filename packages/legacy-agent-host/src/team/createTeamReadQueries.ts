@@ -3,8 +3,13 @@ import { TeamOwnerError } from "./contracts.js";
 import { pageOwnerTaskComment } from "./pageOwnerTaskComment.js";
 import { pageOwnerReadDetail } from "./pageOwnerTaskDetail.js";
 import { json } from "./TeamReviewCommands.js";
+import type { JsonValue } from "../contracts.js";
+import type { OwnerBriefingScope } from "./pageOwnerTaskDetail.js";
 import type { TeamGrant, TeamMember } from "./contracts.js";
 import type { TeamBoardReadPolicy, TeamTaskInventoryFilters } from "./ports.js";
+
+type BriefingPageOptions = { cursor?: string };
+type MemberBriefingSettings = { includeActiveProcesses: boolean };
 
 /** Read-only policy binding. No writer, native callback or path selector is exposed. */
 export function createTeamReadQueries(options: {
@@ -27,7 +32,18 @@ export function createTeamReadQueries(options: {
       identity();
       return action();
     });
-  const briefing = async (memberName?: string): Promise<string> => {
+  const finishBriefing = (
+    value: string, page: BriefingPageOptions | undefined, scope: OwnerBriefingScope, grant: TeamGrant,
+  ): JsonValue => {
+    if (page === undefined) return value;
+    if (typeof value !== "string") throw new TeamOwnerError("hold");
+    return pageOwnerReadDetail({
+      ...options.commentPages, grant, briefingScope: scope, value,
+      ...(page.cursor === undefined ? {} : { cursor: page.cursor }),
+    });
+  };
+  const briefing = async (memberName?: string, page?: BriefingPageOptions): Promise<JsonValue> => {
+    const capturedPage = page === undefined ? undefined : { ...page };
     const pending = options.fenced(() => {
       const original = identity();
       if (memberName === undefined) {
@@ -46,11 +62,53 @@ export function createTeamReadQueries(options: {
     });
     const value = await pending.value;
     return options.fenced(() => {
-      if (identity().fingerprint !== pending.fingerprint)
+      const current = identity();
+      if (current.fingerprint !== pending.fingerprint)
         throw new TeamOwnerError("forbidden");
-      return value;
+      return finishBriefing(value, capturedPage, {
+        ...(memberName === undefined ? { kind: "lead" } : { kind: "task", memberName }),
+        authorityFingerprint: current.fingerprint,
+      }, current.grant);
     });
   };
+  function taskBriefing(memberName?: string): Promise<string>;
+  function taskBriefing(memberName: string | undefined, page: BriefingPageOptions): Promise<JsonValue>;
+  function taskBriefing(memberName?: string, page?: BriefingPageOptions): Promise<JsonValue> {
+    const selected = read(() => memberName ?? identity().grant.memberName);
+    return briefing(selected, page);
+  }
+  function leadBriefing(): Promise<string>;
+  function leadBriefing(page: BriefingPageOptions): Promise<JsonValue>;
+  function leadBriefing(page?: BriefingPageOptions): Promise<JsonValue> {
+    return briefing(undefined, page);
+  }
+  function memberBriefing(settings: MemberBriefingSettings): Promise<string>;
+  function memberBriefing(settings: MemberBriefingSettings, page: BriefingPageOptions): Promise<JsonValue>;
+  async function memberBriefing(settings: MemberBriefingSettings, page?: BriefingPageOptions): Promise<JsonValue> {
+    const capturedPage = page === undefined ? undefined : { ...page };
+    const includeActiveProcesses = settings.includeActiveProcesses;
+    const pending = options.fenced(() => {
+      const original = identity();
+      const memberName = original.grant.memberName;
+      if (!original.members.some((member) => member.name === memberName))
+        throw new TeamOwnerError("forbidden");
+      return {
+        fingerprint: original.fingerprint, memberName,
+        value: options.reads.memberBriefing!(memberName, { includeActiveProcesses }),
+      };
+    });
+    const value = await pending.value;
+    return options.fenced(() => {
+      const current = identity();
+      if (current.fingerprint !== pending.fingerprint)
+        throw new TeamOwnerError("forbidden");
+      return finishBriefing(value, capturedPage, {
+        kind: "member", memberName: pending.memberName,
+        includeActiveProcesses,
+        authorityFingerprint: current.fingerprint,
+      }, current.grant);
+    });
+  }
   return Object.freeze({
     getTeam: (cursor?: string) => read(() => options.getTeam(cursor)),
     getKanbanState: (settings?: { strict?: boolean }) => read(() => options.reads.getKanbanState(settings)),
@@ -76,32 +134,8 @@ export function createTeamReadQueries(options: {
           ...(cursor === undefined ? {} : { cursor }),
         });
       }),
-    taskBriefing: (memberName?: string) => {
-      const selected = read(() => memberName ?? identity().grant.memberName);
-      return briefing(selected);
-    },
-    leadBriefing: () => briefing(),
-    ...(options.reads.memberBriefing
-      ? {
-          memberBriefing: async (settings: { includeActiveProcesses: boolean }) => {
-            const pending = options.fenced(() => {
-              const original = identity();
-              const memberName = original.grant.memberName;
-              if (!original.members.some((member) => member.name === memberName))
-                throw new TeamOwnerError('forbidden');
-              return {
-                fingerprint: original.fingerprint,
-                value: options.reads.memberBriefing!(memberName, settings),
-              };
-            });
-            const value = await pending.value;
-            return options.fenced(() => {
-              if (identity().fingerprint !== pending.fingerprint)
-                throw new TeamOwnerError('forbidden');
-              return value;
-            });
-          },
-        }
-      : {}),
+    taskBriefing,
+    leadBriefing,
+    ...(options.reads.memberBriefing ? { memberBriefing } : {}),
   });
 }
