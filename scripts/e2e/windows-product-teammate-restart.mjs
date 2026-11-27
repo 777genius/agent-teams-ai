@@ -12,6 +12,7 @@ import {fileURLToPath} from 'node:url';
 import {prepareNativeDesktopEnvironment} from './opencode-native-desktop-environment.ts';
 import {startGroupChatModelServer} from './group-chat-model-server.ts';
 import {CdpClient} from './comment-notification/cdp.mjs';
+import {processes, ownedTree, sameIdentity} from './opencode-diagnostics/platform.mjs';
 assert.equal(process.platform,'win32','Native Windows runner required');
 const repo=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const f=await prepareNativeDesktopEnvironment();
@@ -126,6 +127,8 @@ assert.equal(snapshot.members.worker.providerId,'anthropic','Original member pro
 assert.equal(snapshot.members.worker.runtimeModel,'claude-sonnet-4-6','Original member model differs from request');
 workerPid=snapshot.members.worker.runtimePid;
 assert(ownedAlive(workerPid,team),'Worker not bound to original test team');
+const originalWorkerIdentity=processes().find(p=>p.pid===workerPid);
+assert(originalWorkerIdentity?.birth,'Original native worker birth identity unavailable');
 result.originalBootstrapConfirmed=true;
 result.realProductTeammateLaunch=true;result.initialWorkerPid=workerPid;
 // A persisted worker PID is not proof of an active tracked team run. The
@@ -147,6 +150,8 @@ assert.equal(restarted.runId,creation.runId,'Restart changed the owning team run
 workerPid=restarted.members.worker.runtimePid;
 assert.equal(restarted.members.worker.backendType,'process','Direct process restart not exercised');
 assert(ownedAlive(workerPid,team),'Original restarted worker unavailable');
+const restartedWorkerIdentity=processes().find(p=>p.pid===workerPid);
+assert(restartedWorkerIdentity?.birth,'Restarted worker native birth identity unavailable');
 result.restartWorkerPid=workerPid;
 assert(!ownedAlive(result.initialWorkerPid,team),
   'Original pre-restart worker survived replacement; restart did not retire its owned PID');
@@ -177,6 +182,18 @@ assert.match(proof.git,/^git version /);
 assert.equal(proof.visible,false,'Visible Windows console window was created');
 assert.equal(toolRequests,1,'Unexpected synthetic-model tool dispatches');
 toolPid=proof.pid;assert(ownedAlive(toolPid,psFile),'Original tool process not alive');
+// A tool receipt proves subprocess execution, not which agent owned it.
+// Verify the exact worker birth still exists and the actual PowerShell PID
+// descends from it through a current, birth-ordered native process tree.
+const nativeSnapshot=processes();
+sameIdentity(restartedWorkerIdentity,nativeSnapshot.find(p=>p.pid===workerPid));
+const workerDescendants=ownedTree(nativeSnapshot,restartedWorkerIdentity);
+const originalToolIdentity=workerDescendants.find(p=>p.pid===toolPid);
+assert(originalToolIdentity?.birth,'PowerShell tool is not a birth-bound descendant of the restarted teammate');
+result.toolOwnedByRestartedWorker={
+  workerPid,workerBirth:restartedWorkerIdentity.birth,
+  toolPid,toolBirth:originalToolIdentity.birth
+};
 const focusAfter=await client.evaluate('document.hasFocus()');
 const nativeFocusAfter=await main(`(()=>{
 const req=typeof require==='function'?require:process.mainModule?.require?.bind(process.mainModule);
