@@ -148,9 +148,23 @@ assert(typeof creation?.runId==='string'&&creation.runId.length>0,'No product cr
 teamCreated=true;
 result.originalRunId=creation.runId;
 result.phase='real-member-ready';
-const snapshot=await until('live worker in runtime snapshot',async()=>{const x=await api('window.electronAPI.teams.getTeamAgentRuntime('+literal(team)+')');
+// A worker can bootstrap before provisioning promotes the owning run to ready.
+// Observe both public IPC surfaces within the existing launch deadline, not a fixed delay.
+const snapshot=await until('ready tracked team and live worker in runtime snapshot',async()=>{
+const progress=await api('window.electronAPI.teams.getProvisioningStatus('+literal(creation.runId)+')');
+assert.equal(progress?.runId,creation.runId,'Provisioning status belongs to a different launch');
+result.provisioningStateBeforeRestart=progress.state;
+assert(!['failed','cancelled','disconnected'].includes(progress.state),
+  'Original team provisioning ended before restart: '+progress.state);
+const x=await api('window.electronAPI.teams.getTeamAgentRuntime('+literal(team)+')');
 const m=x?.members?.worker;
-return x?.runId===creation.runId&&m?.alive&&m?.runtimePid&&m.historicalBootstrapConfirmed?x:false;},240000);
+if(x?.runId!==creation.runId||!m?.alive||!m?.runtimePid||!m.historicalBootstrapConfirmed)return false;
+result.teamRunAliveBeforeRestart=await api('window.electronAPI.teams.processAlive('+literal(team)+')');
+result.aliveTeamNamesBeforeRestart=await api('window.electronAPI.teams.aliveList()');
+assert(Array.isArray(result.aliveTeamNamesBeforeRestart),'Product active team inventory unreadable');
+return progress.state==='ready'&&result.teamRunAliveBeforeRestart===true&&
+  result.aliveTeamNamesBeforeRestart.includes(team)?x:false;
+},240000);
 assert.equal(snapshot.runId,creation.runId,'Original runtime snapshot belongs to a different launch');
 assert.equal(snapshot.members.worker.backendType,'process','Original member must use direct process backend');
 assert.equal(snapshot.members.worker.providerId,'anthropic','Original member provider differs from request');
