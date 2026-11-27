@@ -644,11 +644,15 @@ try {
     // this is an observation-only wait, never a test-side kill or exception.
     const productStopDrainDeadline = Date.now() + 45_000;
     let quietSince: number | null = null;
+    let drainConfirmed = false;
     let activeAfterStop = await ledger.runtimeQuiet(data.artifact.app.path);
     while (Date.now() < productStopDrainDeadline) {
       if (activeAfterStop.length === 0 && gateway.inFlight() === 0) {
         quietSince ??= Date.now();
-        if (Date.now() - quietSince >= 1_000) break;
+        if (Date.now() - quietSince >= 1_000) {
+          drainConfirmed = true;
+          break;
+        }
       } else {
         quietSince = null;
       }
@@ -656,6 +660,7 @@ try {
       activeAfterStop = await ledger.runtimeQuiet(data.artifact.app.path);
     }
     evidence.productStopNativeDrain = {
+      confirmed: drainConfirmed,
       active: activeAfterStop,
       quietDurationMs: quietSince === null ? 0 : Date.now() - quietSince,
     };
@@ -664,8 +669,8 @@ try {
       'Real product Stop must retire the original teammate and tools'
     );
     assert(
-      quietSince !== null && Date.now() - quietSince >= 1_000,
-      'Real product Stop must confirm stable native child retirement'
+      drainConfirmed && gateway.inFlight() === 0,
+      'Real product Stop must confirm stable native child retirement before deadline'
     );
   }
   scenarioComplete = true;
