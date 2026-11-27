@@ -85,7 +85,8 @@ export async function proveNativeBudgetStop({client,api,wait,getProcess,ownedSti
       ${JSON.stringify({member:'alice',from:'user',text:'WIN_NATIVE_TOOL:'+holdKey})})`);
     const held=await waitForOwnedPowerShellDescendant(original.pid,
       'real held PowerShell descendant of budget-owned teammate',90000);
-    assert(await ownedStillAlive(held),'Budget native tool exited before the budget update');
+    assert(await ownedStillAlive(original) && await ownedStillAlive(held),
+      'Original budget worker or held tool exited before policy Save');
     const settings=await api('window.electronAPI.tokenUsage.getBudgetSettings()');
     const {updatedAt,...existing}=settings;
     const saved=await api(`window.electronAPI.tokenUsage.updateBudgetSettings(${JSON.stringify({
@@ -99,8 +100,8 @@ export async function proveNativeBudgetStop({client,api,wait,getProcess,ownedSti
       }}
     })})`);
     assert(typeof saved.updatedAt==='string','Native budget settings CAS revision missing');
-    assert(await ownedStillAlive(original) && await ownedStillAlive(held),
-      'Native budget worker or held tool exited before over-budget evidence');
+    // Save itself publishes the over-budget status and may legitimately start
+    // async stop before the IPC returns. Only pre-Save liveness is required.
     // Reuse the already-serialized application ledger; never write to it
     // while the genuine Electron importers and budget observer are running.
     await api('window.electronAPI.tokenUsage.refreshSnapshot()');
