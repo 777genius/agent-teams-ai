@@ -52,7 +52,11 @@ export function createWorkSyncMcpTools(port: TeamMcpWorkSyncPort): BoundTool[] {
             ...(input.taskIds ? { taskIds: input.taskIds } : {}),
             ...(input.note !== undefined ? { note: input.note } : {}),
             ...(input.leaseTtlMs !== undefined ? { leaseTtlMs: input.leaseTtlMs } : {}),
-            ...(input.wait !== undefined ? { wait: input.wait } : {}),
+            ...(input.wait !== undefined ? { wait: {
+              kind: input.wait.kind, repository: input.wait.repository, runId: input.wait.runId,
+              expectedCommit: input.wait.expectedCommit, horizonAt: input.wait.horizonAt, status: input.wait.status,
+              ...(input.wait.taskId === undefined ? {} : { taskId: input.wait.taskId }),
+            } } : {}),
           })
       ),
       asynchronous: true,

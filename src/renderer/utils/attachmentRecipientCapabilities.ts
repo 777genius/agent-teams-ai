@@ -17,9 +17,11 @@ export function attachmentTargetForMember(member: ResolvedTeamMember, projectPat
   return {
     model: member.model,
     projectPath:
-      member.laneKind === 'secondary' && member.laneOwnerProviderId === 'opencode'
-        ? member.cwd?.trim() || projectPath
-        : projectPath || member.cwd?.trim() || null,
+      member.runtimeOwner === 'captured-host'
+        ? member.cwd?.trim() || null
+        : member.laneKind === 'secondary' && member.laneOwnerProviderId === 'opencode'
+          ? member.cwd?.trim() || projectPath
+          : projectPath || member.cwd?.trim() || null,
   };
 }
 

@@ -194,7 +194,8 @@ vi.mock('@renderer/api', () => ({
 }));
 
 vi.mock('@features/agent-backend/renderer', async () => ({
-  controlAutonomousGoal: (await import('@features/agent-backend/renderer/controlAutonomousGoal')).controlAutonomousGoal,
+  controlAutonomousGoal: (await import('@features/agent-backend/renderer/controlAutonomousGoal'))
+    .controlAutonomousGoal,
 }));
 
 vi.mock('@renderer/components/team/attachments/AttachmentPreviewList', () => ({
@@ -637,12 +638,73 @@ describe('MessageComposer pending send lifecycle', () => {
     vi.unstubAllGlobals();
   });
 
-  it.each(['fresh', 'restored'] as const)('captures the %s direct lead objective without replacing its request', async (kind) => {
+  it.each([
+    ['fresh', 'do', false],
+    ['restored', 'do', false],
+    ['restored', 'do', true],
+    ['restored', 'delegate', false],
+  ] as const)(
+    'captures the %s %s objective with teammates=%s without replacing its request',
+    async (kind, actionMode, teammates) => {
+      const key = 'host-team:TEST-goal';
+      storeHarness.state.goalTeamName = key;
+      storeHarness.state.goalAvailable = kind === 'fresh';
+      draftHarness.state.actionMode = actionMode;
+      draftHarness.state.autonomousGoal = { durationHours: 12, maxAttempts: 100 };
+      draftHarness.state.restoredOrigin =
+        kind === 'fresh'
+          ? undefined
+          : {
+              kind: 'unconfirmed-send',
+              attemptId: 'older-ui-attempt',
+              messageId: 'TEST-original-goal',
+              autonomousGoalRequest: {
+                kind: 'local',
+                teamName: key,
+                request: {
+                  member: 'lead',
+                  text: draftHarness.state.text,
+                  summary: 'original summary',
+                  actionMode,
+                  messageId: 'TEST-original-goal',
+                  autonomousGoal: { durationHours: 12, maxAttempts: 100 },
+                  taskRefs: [],
+                },
+              },
+            };
+      const lead = {
+        ...members[0]!,
+        name: 'lead',
+        role: 'lead',
+        agentType: 'team-lead',
+        runtimeOwner: 'captured-host' as const,
+      };
+      const { host, root, onSend } = renderComposer({
+        teamName: key,
+        lockedRecipient: 'lead',
+        members: teammates ? [lead, members[1]!] : [lead],
+      });
+      try {
+        expect(host.textContent).toContain('Continue until done');
+        await act(async () => getSendButton(host).click());
+        expect(onSend).toHaveBeenCalledTimes(1);
+        expect(onSend.mock.calls[0]?.[4]).toBe(actionMode);
+        if (kind === 'restored') {
+          expect(onSend.mock.calls[0]?.[6]).toBe('TEST-original-goal');
+          expect(onSend.mock.calls[0]?.[2]).toBe('original summary');
+        } else expect(onSend.mock.calls[0]?.[6]).toEqual(expect.any(String));
+        expect(onSend.mock.calls[0]?.[7]).toEqual({ durationHours: 12, maxAttempts: 100 });
+      } finally {
+        act(() => root.unmount());
+      }
+    }
+  );
+
+  it('keeps an unresolved original blocked when its continuation option is cleared', async () => {
     const key = 'host-team:TEST-goal';
     storeHarness.state.goalTeamName = key;
-    storeHarness.state.goalAvailable = kind === 'fresh';
-    draftHarness.state.autonomousGoal = { durationHours: 12, maxAttempts: 100 };
-    draftHarness.state.restoredOrigin = kind === 'fresh' ? undefined : {
+    storeHarness.state.goalAvailable = true;
+    draftHarness.state.restoredOrigin = {
       kind: 'unconfirmed-send',
       attemptId: 'older-ui-attempt',
       messageId: 'TEST-original-goal',
@@ -674,13 +736,11 @@ describe('MessageComposer pending send lifecycle', () => {
     });
     try {
       expect(host.textContent).toContain('Continue until done');
+      expect(host.textContent).toContain('Restore the unchanged original objective');
+      expect(getSendButton(host).disabled).toBe(true);
       await act(async () => getSendButton(host).click());
-      expect(onSend).toHaveBeenCalledTimes(1);
-      if (kind === 'restored') {
-        expect(onSend.mock.calls[0]?.[6]).toBe('TEST-original-goal');
-        expect(onSend.mock.calls[0]?.[2]).toBe('original summary');
-      } else expect(onSend.mock.calls[0]?.[6]).toEqual(expect.any(String));
-      expect(onSend.mock.calls[0]?.[7]).toEqual({ durationHours: 12, maxAttempts: 100 });
+      expect(draftHarness.methods.beginAttempt).not.toHaveBeenCalled();
+      expect(onSend).not.toHaveBeenCalled();
     } finally {
       act(() => root.unmount());
     }

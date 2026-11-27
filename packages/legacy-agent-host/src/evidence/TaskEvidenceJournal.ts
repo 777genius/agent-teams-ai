@@ -61,14 +61,15 @@ export class TaskEvidenceJournal {
     row: Record<string, unknown>,
     guard: () => void
   ): void {
+    const taskId = 'taskId' in binding ? binding.taskId : 'goalTaskId' in binding ? binding.goalTaskId : undefined;
     const directory =
-      'taskId' in binding
+      taskId !== undefined
         ? join(this.root, '.board-task-changes', kind)
         : join(this.root, '.board-task-changes', 'agents', segment(binding.binding.memberId));
     this.directory(directory, guard);
     const file = join(
       directory,
-      'taskId' in binding ? `${segment(binding.taskId)}.jsonl` : `${kind}.jsonl`
+      taskId !== undefined ? `${segment(taskId)}.jsonl` : `${kind}.jsonl`
     );
     guard();
     const handle = openSync(
@@ -100,10 +101,11 @@ export class TaskEvidenceJournal {
     }
   }
   private base(binding: RuntimeInputEvidenceBinding & { readonly toolUseId?: string }) {
+    const taskId = 'taskId' in binding ? binding.taskId : 'goalTaskId' in binding ? binding.goalTaskId : undefined;
     return {
       schemaVersion: 1,
-      ...('taskId' in binding
-        ? { taskId: binding.taskId, taskRef: binding.taskId, taskRefKind: 'canonical' }
+      ...(taskId !== undefined
+        ? { taskId, taskRef: taskId, taskRefKind: 'canonical' }
         : { artifactKind: 'agent-input', inputId: binding.inputId, messageId: binding.messageId }),
       phase: 'work',
       executionSeq: 0,

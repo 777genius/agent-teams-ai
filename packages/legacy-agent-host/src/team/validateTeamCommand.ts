@@ -190,7 +190,10 @@ export function validateTeamCommand(command: TeamCommand): void {
       validateTeamText(command.payload.text);
       break;
     case 'message.send':
-      if (command.payload.autonomousGoal !== undefined) validateGoalOptions(command.payload.autonomousGoal);
+      if (command.payload.autonomousGoal !== undefined) {
+        validateGoalOptions(command.payload.autonomousGoal);
+        if (command.payload.actionMode !== 'do' && command.payload.actionMode !== 'delegate') throw new TeamOwnerError('invalid');
+      }
       if (command.payload.attachments !== undefined)
         messageAttachmentReferencesSchema.parse(command.payload.attachments);
       validateRefs(command.payload.taskRefs);

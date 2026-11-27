@@ -257,7 +257,7 @@ export const AutonomousGoalStatusNotice = ({
     } catch (failure) {
       const refused = failure instanceof HostTeamOperationError && failure.outcome !== 'unknown';
       if (refused) original.current = null;
-      if (current())
+      if (current() || !refused)
         setError(
           refused
             ? 'The change could not be applied. Refresh the current status before trying again.'
@@ -383,7 +383,10 @@ export const ComposerExecutionControls = ({
   canDelegate: boolean;
   sending: boolean;
   goalEligible: boolean;
-  draft: Pick<UseComposerDraftResult, 'autonomousGoal' | 'setAutonomousGoal' | 'isLoaded'>;
+  draft: Pick<
+    UseComposerDraftResult,
+    'autonomousGoal' | 'setAutonomousGoal' | 'isLoaded' | 'snapshot'
+  >;
 }) => {
   return (
     <div className="flex flex-wrap items-center gap-1">
@@ -393,7 +396,9 @@ export const ComposerExecutionControls = ({
         showDelegate={canDelegate}
         disabled={sending}
       />
-      {goalEligible || draft.autonomousGoal ? (
+      {goalEligible ||
+      draft.autonomousGoal ||
+      draft.snapshot().restoredOrigin?.autonomousGoalRequest ? (
         <ContinueUntilDoneControl
           value={draft.autonomousGoal}
           onChange={draft.setAutonomousGoal}

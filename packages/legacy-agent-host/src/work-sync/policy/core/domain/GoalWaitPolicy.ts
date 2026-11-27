@@ -1,3 +1,5 @@
+import type { MemberWorkSyncMemberLike, MemberWorkSyncTaskLike } from './ActionableWorkAgenda.js';
+
 /** A read-only observation request, never an executable callback or proof that CI passed. */
 export interface GoalWaitReport {
   kind: 'ci';
@@ -28,4 +30,20 @@ export function goalWaitKey(wait: GoalWaitReport): string {
 
 export function goalWaitBackoffMs(observations: number): number {
   return (observations === 0 ? 5 : observations === 1 ? 15 : 30) * 60_000;
+}
+
+/** Scheduling and final claim use the same current owner for the original wait obligation. */
+export function resolveGoalWaitObserver(
+  wait: { taskIds: readonly string[]; observer: string },
+  tasks: readonly MemberWorkSyncTaskLike[],
+  members: readonly MemberWorkSyncMemberLike[]
+): string {
+  const current = members.filter(member => !member.removedAt);
+  const owners = [...wait.taskIds].sort().flatMap(id => {
+    const owner = tasks.find(task => task.id === id)?.owner;
+    return owner && current.some(member => member.name === owner) ? [owner] : [];
+  });
+  return owners.includes(wait.observer) ? wait.observer : owners[0] ??
+    (current.some(member => member.name === wait.observer) ? wait.observer :
+      current.find(member => member.agentType === 'team-lead')?.name ?? wait.observer);
 }

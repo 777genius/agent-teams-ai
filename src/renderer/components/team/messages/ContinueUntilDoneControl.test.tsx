@@ -17,7 +17,8 @@ const harness = vi.hoisted(() => ({
 }));
 vi.mock('@renderer/api', () => ({ api: { agentBackend: { invoke: harness.invoke } } }));
 vi.mock('@features/agent-backend/renderer', async () => ({
-  controlAutonomousGoal: (await import('@features/agent-backend/renderer/controlAutonomousGoal')).controlAutonomousGoal,
+  controlAutonomousGoal: (await import('@features/agent-backend/renderer/controlAutonomousGoal'))
+    .controlAutonomousGoal,
 }));
 vi.mock('@renderer/store', () => ({
   useStore: { getState: () => ({ ...harness.state, refreshTeamData: harness.refresh }) },
@@ -129,6 +130,32 @@ describe('original continuation controls', () => {
       await act(async () => button(host, 'Stop continuation').click());
       expect(harness.invoke).not.toHaveBeenCalled();
       expect(harness.refresh).not.toHaveBeenCalled();
+    } finally {
+      act(() => root.unmount());
+    }
+  });
+
+  it('keeps the original uncertain control recoverable when a context switch fails', async () => {
+    let reject!: (reason: Error) => void;
+    harness.invoke.mockImplementationOnce(
+      () =>
+        new Promise((_resolve, fail) => {
+          reject = fail;
+        })
+    );
+    const { host, root } = render();
+    try {
+      await act(async () => button(host, 'Stop continuation').click());
+      harness.state.isContextSwitching = true;
+      await act(async () => reject(new Error('Reply lost during context switch')));
+      harness.state.isContextSwitching = false;
+      expect(host.textContent).toContain('The change is not confirmed');
+      expect(button(host, 'Stop continuation').disabled).toBe(true);
+      await act(async () => button(host, 'Check original request').click());
+      expect(harness.invoke).toHaveBeenCalledTimes(2);
+      expect(harness.invoke.mock.calls[1]).toEqual(harness.invoke.mock.calls[0]);
+      expect(harness.refresh).toHaveBeenCalledTimes(1);
+      expect(host.querySelector('[role="alert"]')).toBeNull();
     } finally {
       act(() => root.unmount());
     }

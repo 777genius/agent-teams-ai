@@ -7,6 +7,7 @@ import { modelProbeLimitsSchema } from './modelLimits.js';
 import { runtimeSourceRefusalSchema } from './runtimeSourceVerification.js';
 import { openCodeV2CredentialProgressSchema } from './openCodeV2CredentialRecord.js';
 import { openCodeV2NativeFileWitnessSchema } from '../adapters/providers/OpenCodeV2SelectedFileKey.js';
+import { secretFingerprintKdfSchema } from './secretFingerprint.js';
 
 const id = z.string().min(1).max(256);
 const hash = z.string().regex(/^[a-f0-9]{64}$/);
@@ -15,6 +16,7 @@ export const storedCredentialCommandSchema = z
   .object({
     ...common,
     kind: z.enum(['credential.set', 'credential.forget', 'credential.refresh']),
+    fingerprintKdf: secretFingerprintKdfSchema.optional(),
     phase: z.enum(['claimed', 'completed', 'held']),
     finishedAtMs: z.number().int().positive().safe().optional(),
     refreshCompletedAtMs: z.number().int().positive().safe().optional(),
@@ -24,6 +26,7 @@ export const storedCredentialCommandSchema = z
   .strict()
   .refine(
     (value) =>
+      (value.fingerprintKdf === undefined || value.kind === 'credential.set') &&
       (value.phase === 'claimed'
         ? value.resourceHeld && value.finishedAtMs === undefined
         : value.phase !== 'completed' || !value.resourceHeld) &&

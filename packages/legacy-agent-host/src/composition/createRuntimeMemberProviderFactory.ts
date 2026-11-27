@@ -236,7 +236,8 @@ export function createRuntimeMemberProviderFactory(options: {
           entries: options.entries, ownerStorageRoot: options.storageRoot,
           ...(options.initialRuntimeMembers ? { initialRuntimeMembers: options.initialRuntimeMembers } : {}),
           isCurrent: selected => { try { options.assertCurrent(selected); return true; } catch { return false; } },
-          config: capturedConfig, assertCurrent: authority.assertCurrent });
+          config: capturedConfig, assertCurrent: authority.assertCurrent,
+          onProgress: () => options.onProgress(entry) });
         const groups = options.groups?.(entry, captureSource, authority.isCurrent);
         const crossTeam = options.crossTeam?.(entry, authority.isCurrent),
           workSync = options.workSync?.(entry, goalConnection.captureWorkSync, {

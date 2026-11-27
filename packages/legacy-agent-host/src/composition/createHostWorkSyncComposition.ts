@@ -69,7 +69,9 @@ export function createHostWorkSyncComposition(options: {
           source.assertCurrent();
           options.assertCurrent();
           identity.assertWorkAllowed();
-          if ('wait' in payload && payload.wait !== undefined) {
+          const commands = member.owner.workSyncCommands(source.team.principalId);
+          const original = commands.lookup(commandId);
+          if ('wait' in payload && payload.wait !== undefined && original?.phase !== 'completed') {
             const wait = payload.wait, goal = member.owner.goals.snapshot();
             if (!goalSource || !goal || !isGoalWaitReport(wait) ||
                 source.team.mode !== 'goal' || source.team.goal.goalId !== goal.goalId ||
@@ -92,9 +94,7 @@ export function createHostWorkSyncComposition(options: {
           }
           if ('forceNudge' in payload && payload.forceNudge && !member.delivery && !options.outbox)
             throw new McpToolFailure('unsupported');
-          return member.owner
-            .workSyncCommands(source.team.principalId)
-            .execute(commandId, operation, json(payload), source, async (original) => {
+          return commands.execute(commandId, operation, json(payload), source, async (original) => {
               let mutationOrdinal = 0;
               const assertCurrent = () => {
                 options.assertCurrent();

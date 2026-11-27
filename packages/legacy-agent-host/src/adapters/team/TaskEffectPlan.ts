@@ -15,6 +15,7 @@ import { digest, safeSegment } from '../../team/identity.js';
 import { createTeamPolicy } from './ControllerAdapter.js';
 import { TaskPolicyRejected } from '../../team/ports.js';
 import { prepareTaskClarificationAnswerNotification } from './TaskClarificationAnswerNotifier.js';
+import { prepareTaskEditNotification } from './TaskEditNotifier.js';
 
 import type { CommandReceipt } from '../../team/contracts.js';
 import type { JsonValue } from '../../contracts.js';
@@ -204,6 +205,7 @@ export class TaskEffectPlan implements TaskMutationPort {
       try {
         if (receipt.command.operation !== 'task.board.review-flow') board.getKanbanState({ strict: true });
         result = apply(board);
+        prepareTaskEditNotification(work, this.teamName, receipt, actor, result, this.reviewFlowDefaultsDirectory);
         prepareTaskClarificationAnswerNotification(work, this.teamName, receipt, actor, result, this.reviewFlowDefaultsDirectory);
         board.getKanbanState({ strict: true });
       } catch {
@@ -264,7 +266,16 @@ export class TaskEffectPlan implements TaskMutationPort {
         const identity = this.identity(join(this.root, path), true);
         if (identity) directories[path] = identity;
       }
-      const { notifications, removedMessageIds } = this.notifications(source, target);
+      const { notifications, removedMessageIds } = this.notifications(source, target, !!receipt.goal);
+      let reassignedTaskId: string | undefined;
+      if (receipt.goal && receipt.command.operation === 'task.assign') {
+        const task = board.getTask(receipt.command.payload.taskId);
+        const before = source[`tasks/${this.teamName}/${safeSegment(task.id)}.json`];
+        if (!before) throw new TeamOwnerError('hold');
+        const original = JSON.parse(before.bytes) as { owner?: unknown };
+        const owner = (value: unknown) => typeof value === 'string' ? value.trim().toLowerCase() : '';
+        if (owner(original.owner) !== owner(task.owner)) reassignedTaskId = task.id;
+      }
       const plan: Plan = {
         schemaVersion: 1,
         fingerprint: receipt.fingerprint,
@@ -273,6 +284,7 @@ export class TaskEffectPlan implements TaskMutationPort {
         taskHash,
         notifications,
         removedMessageIds,
+        ...(reassignedTaskId ? { reassignedTaskId } : {}),
         writes,
         directories,
         reviewFlowDefaults: defaultsSource,
@@ -289,7 +301,8 @@ export class TaskEffectPlan implements TaskMutationPort {
 
   private notifications(
     source: Record<string, SourceFile>,
-    target: Record<string, SourceFile>
+    target: Record<string, SourceFile>,
+    requireTask: boolean
   ): Pick<Plan, 'notifications' | 'removedMessageIds'> {
     const notifications: Plan['notifications'] = [];
     const removedMessageIds: string[] = [];
@@ -307,10 +320,20 @@ export class TaskEffectPlan implements TaskMutationPort {
           typeof row.text !== 'string'
         )
           throw new TeamOwnerError('hold');
+        const primary = Array.isArray(row.taskRefs) ? row.taskRefs[0] as unknown : undefined;
+        let taskId: string | undefined;
+        if (primary && typeof primary === 'object' && !Array.isArray(primary) &&
+            'taskId' in primary && typeof primary.taskId === 'string' &&
+            'teamName' in primary && primary.teamName === this.teamName) {
+          const task = target[`tasks/${this.teamName}/${safeSegment(primary.taskId)}.json`];
+          if (task && (JSON.parse(task.bytes) as { id?: unknown }).id === primary.taskId) taskId = primary.taskId;
+        }
+        if (requireTask && !taskId) throw new TeamOwnerError('hold');
         notifications.push({
           member: path.slice(path.lastIndexOf('/') + 1, -5),
           messageId: row.messageId,
           content: row.text,
+          ...(taskId ? { taskId } : {}),
         });
       }
       const remaining = new Set(after.map((row: Record<string, unknown>) => row.messageId));

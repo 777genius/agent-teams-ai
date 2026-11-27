@@ -18,6 +18,7 @@ export const taskInventorySchema = z.strictObject({
   relatedTo: id.optional(),
   blockedBy: id.optional(),
   limit: z.number().int().min(1).max(200).optional(),
+  cursor: cursor.optional(),
 });
 
 /** Current bound Team only. No tool argument selects owner, root, actor or Runtime. */
@@ -78,15 +79,15 @@ export function createReadMcpTools(
     ),
     defineTool(
       "task_list",
-      "Read compact canonical active inventory with conjunctive filters; use task_briefing for the working queue.",
+      "Read compact canonical active inventory (default 50, maximum 200) with conjunctive filters; use task_briefing for the working queue. Oversized results use task-inventory-chunk: follow nextCursor with the same filters and limit, concatenate chunk strings in part order, then parse the complete JSON array. The final page completes only this selected limit window.",
       taskInventorySchema,
-      (input) =>
+      ({ cursor, ...input }) =>
         reads.listTaskInventory({
           ...Object.fromEntries(
             Object.entries(input).filter(([, value]) => value !== undefined),
           ),
           limit: input.limit ?? 50,
-        }),
+        }, cursor),
       false,
     ),
     {

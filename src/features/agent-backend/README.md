@@ -180,6 +180,13 @@ to the original source, current read authority and complete retained history.
 captured Desktop context before publishing the existing outbox list. The native
 `cross_team_get_outbox` tool accepts the same cursor; it never truncates retained text.
 
+Queued-message confirmation reads return only exact message IDs. Large inventories
+use bounded pages signed for the original handle, current admin authority, member
+and full queue revision. The renderer collects the complete unchanged inventory
+before confirmation; retained message text and the existing ID-based discard stay
+with their original Team/Runtime authority. Messages arriving after confirmation
+are not added to the selected discard IDs.
+
 The same decorator maps simple task create/update/non-null assignment/status/
 delete/restore/comment and basic text sends to existing finite commands. Simple
 CreateTaskDialog defaults (empty arrays and an unowned Task's `startImmediately:true/false`)

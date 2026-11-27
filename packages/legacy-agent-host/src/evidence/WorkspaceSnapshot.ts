@@ -27,7 +27,7 @@ export async function validateEvidenceWorkspace(workspace: EvidenceWorkspace): P
   )
     throw new Error('workspace-changed');
 }
-async function image(root: string, file: string): Promise<FileImage> {
+export async function readEvidenceFileImage(root: string, file: string): Promise<FileImage> {
   if (!inside(root, file)) return { reason: 'outside-workspace' };
   let cursor = root;
   const parts = relative(root, file).split(sep);
@@ -120,7 +120,7 @@ export async function snapshotWorkspace(options: {
   let bytes = 0;
   for (const file of [...paths].slice(0, SNAPSHOT_LIMITS.files)) {
     options.guard();
-    const value = await image(options.workspace.path, file);
+    const value = await readEvidenceFileImage(options.workspace.path, file);
     options.guard();
     bytes += value.content?.length ?? 0;
     if (bytes > SNAPSHOT_LIMITS.totalBytes) {

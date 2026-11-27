@@ -221,6 +221,11 @@ export function projectHostMemberSpawnStatuses(
               launchState: 'runtime_pending_bootstrap',
             };
         }
+        const selected = configured.get(member.memberId)!.selected;
+        const runtimeModel =
+          selected?.provider === 'opencode' ? selected.qualifiedModel : selected?.model;
+        if (member.generation !== null && !member.noAllocation && runtimeModel !== undefined)
+          entry.runtimeModel = runtimeModel;
         return [configured.get(member.memberId)!.label, entry];
       })
   );

@@ -1,4 +1,5 @@
 import { JsonScheduleRepository } from '@main/services/schedule/JsonScheduleRepository';
+import { withFileLock } from '@main/services/team/fileLock';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -53,7 +54,10 @@ describe('JsonScheduleRepository', () => {
   let repo: JsonScheduleRepository;
 
   beforeEach(async () => {
-    tempDir = path.join(os.tmpdir(), `schedule-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    tempDir = path.join(
+      os.tmpdir(),
+      `schedule-test-${Date.now()}-${Math.random().toString(36).slice(2)}`
+    );
     await fs.promises.mkdir(tempDir, { recursive: true });
     repo = new JsonScheduleRepository();
   });
@@ -117,23 +121,36 @@ describe('JsonScheduleRepository', () => {
       await fs.promises.writeFile(path.join(logsDir, 'run-1.log'), 'stdout');
       await fs.promises.writeFile(path.join(logsDir, 'run-1.err'), 'stderr');
 
-      const metadata = repo as unknown as { writeSchedulesFile(rows: Schedule[]): Promise<void> };
+      const metadata = repo as unknown as {
+        writeSchedulesFile(filePath: string, rows: Schedule[]): Promise<void>;
+      };
       const write = metadata.writeSchedulesFile.bind(repo);
       let entered!: () => void;
-      const writing = new Promise<void>((resolve) => { entered = resolve; });
+      const writing = new Promise<void>((resolve) => {
+        entered = resolve;
+      });
       let releaseWrite!: () => void;
-      const heldWrite = new Promise<void>((resolve) => { releaseWrite = resolve; });
-      vi.spyOn(metadata, 'writeSchedulesFile').mockImplementationOnce(async (rows) => {
+      const heldWrite = new Promise<void>((resolve) => {
+        releaseWrite = resolve;
+      });
+      vi.spyOn(metadata, 'writeSchedulesFile').mockImplementationOnce(async (filePath, rows) => {
         entered();
         await heldWrite;
-        await write(rows);
+        await write(filePath, rows);
       });
-      const earlierUpdate = repo.saveSchedule({ ...schedule, label: 'TEST earlier update' }, { mustExist: true });
+      const earlierUpdate = repo.saveSchedule(
+        { ...schedule, label: 'TEST earlier update' },
+        { mustExist: true }
+      );
       await writing;
       let committed!: () => void;
-      const commit = new Promise<void>((resolve) => { committed = resolve; });
+      const commit = new Promise<void>((resolve) => {
+        committed = resolve;
+      });
       let releaseCleanup!: () => void;
-      const heldCleanup = new Promise<void>((resolve) => { releaseCleanup = resolve; });
+      const heldCleanup = new Promise<void>((resolve) => {
+        releaseCleanup = resolve;
+      });
       let observedCommit = false;
       const deletion = repo.deleteSchedule('sched-1', async () => {
         observedCommit = true;
@@ -150,7 +167,9 @@ describe('JsonScheduleRepository', () => {
       await commit;
 
       // A late finalizer cannot reinsert the deleted row, nor poison the next metadata write.
-      await expect(repo.saveSchedule(schedule, { mustExist: true })).rejects.toThrow('Schedule no longer exists');
+      await expect(repo.saveSchedule(schedule, { mustExist: true })).rejects.toThrow(
+        'Schedule no longer exists'
+      );
       const independent = makeSchedule({ id: 'TEST-independent' });
       await repo.saveSchedule(independent);
       expect(await repo.getSchedule(independent.id)).toEqual(independent);
@@ -161,6 +180,25 @@ describe('JsonScheduleRepository', () => {
       expect(await repo.listRuns('sched-1')).toEqual([]);
       // Logs dir cleaned up
       await expect(fs.promises.stat(logsDir)).rejects.toThrow();
+    });
+
+    it('preserves a committed deletion and releases the lock when native cleanup rejects', async () => {
+      const schedule = makeSchedule();
+      const run = makeRun();
+      await repo.saveSchedule(schedule);
+      await repo.saveRun(run);
+      const cleanupError = new Error('TEST native cleanup unconfirmed');
+      await expect(
+        repo.deleteSchedule(schedule.id, () => Promise.reject(cleanupError))
+      ).rejects.toBe(cleanupError);
+      expect(await repo.getSchedule(schedule.id)).toBeNull();
+      expect(await repo.listRuns(schedule.id)).toEqual([run]);
+      await expect(repo.saveSchedule(schedule, { mustExist: true })).rejects.toThrow(
+        'Schedule no longer exists'
+      );
+      const independent = makeSchedule({ id: 'TEST-after-rejected-cleanup' });
+      await repo.saveSchedule(independent);
+      expect(await repo.getSchedule(independent.id)).toEqual(independent);
     });
 
     it('returns null for non-existent schedule', async () => {
@@ -278,6 +316,86 @@ describe('JsonScheduleRepository', () => {
   // =========================================================================
 
   describe('edge cases', () => {
+    it('preserves concurrent saves from independent repository instances', async () => {
+      await Promise.all(
+        Array.from({ length: 5 }, (_, index) =>
+          new JsonScheduleRepository().saveSchedule(makeSchedule({ id: `TEST-instance-${index}` }))
+        )
+      );
+      expect((await repo.listSchedules()).map((schedule) => schedule.id).sort()).toEqual(
+        Array.from({ length: 5 }, (_, index) => `TEST-instance-${index}`)
+      );
+    });
+
+    it.each(['save', 'atomic update'] as const)(
+      'preserves a deletion while another instance uses %s for a different schedule',
+      async (mutation) => {
+        const first = makeSchedule({ id: 'TEST-delete' });
+        const second = makeSchedule({ id: 'TEST-update' });
+        await repo.saveSchedule(first);
+        await repo.saveSchedule(second);
+        const other = new JsonScheduleRepository();
+        await Promise.all([
+          repo.deleteSchedule(first.id),
+          mutation === 'save'
+            ? other.saveSchedule({ ...second, status: 'paused' })
+            : other.updateSchedule(second.id, (current) => ({ ...current, status: 'paused' })),
+        ]);
+        expect(await repo.getSchedule(first.id)).toBeNull();
+        expect((await repo.getSchedule(second.id))?.status).toBe('paused');
+      }
+    );
+
+    it('increments the current counter across independent atomic updaters', async () => {
+      const original = makeSchedule();
+      await repo.saveSchedule(original);
+      await Promise.all(
+        Array.from({ length: 5 }, () =>
+          new JsonScheduleRepository().updateSchedule(original.id, (current) => ({
+            ...current,
+            consecutiveFailures: current.consecutiveFailures + 1,
+          }))
+        )
+      );
+      expect((await repo.getSchedule(original.id))?.consecutiveFailures).toBe(5);
+    });
+
+    it('deletes metadata and cleans up only the original profile after waiting for another writer', async () => {
+      const originalDir = tempDir;
+      const nextDir = await fs.promises.mkdtemp(
+        path.join(os.tmpdir(), 'TEST-schedule-next-profile-')
+      );
+      const schedule = makeSchedule();
+      try {
+        await repo.saveSchedule(schedule);
+        await repo.saveRun(makeRun());
+        await repo.saveRunLogs(schedule.id, 'run-1', 'TEST original', '');
+        tempDir = nextDir;
+        await repo.saveSchedule(schedule);
+        await repo.saveRun(makeRun());
+        await repo.saveRunLogs(schedule.id, 'run-1', 'TEST other', '');
+        tempDir = originalDir;
+
+        let deleting!: Promise<void>;
+        await withFileLock(path.join(originalDir, 'schedules.json'), async () => {
+          deleting = repo.deleteSchedule(schedule.id);
+          tempDir = nextDir;
+        });
+        await deleting;
+
+        expect(await repo.getSchedule(schedule.id)).toEqual(schedule);
+        expect(await repo.listRuns(schedule.id)).toHaveLength(1);
+        expect((await repo.getRunLogs(schedule.id, 'run-1')).stdout).toBe('TEST other');
+        tempDir = originalDir;
+        expect(await repo.getSchedule(schedule.id)).toBeNull();
+        expect(await repo.listRuns(schedule.id)).toEqual([]);
+        expect((await repo.getRunLogs(schedule.id, 'run-1')).stdout).toBe('');
+      } finally {
+        tempDir = originalDir;
+        await fs.promises.rm(nextDir, { recursive: true, force: true });
+      }
+    });
+
     it('handles corrupted JSON gracefully', async () => {
       await fs.promises.mkdir(path.dirname(path.join(tempDir, 'schedules.json')), {
         recursive: true,
@@ -293,7 +411,9 @@ describe('JsonScheduleRepository', () => {
       await expect(repo.deleteSchedule('sched-1', onCommitted)).rejects.toThrow();
       await expect(repo.saveSchedule(makeSchedule())).rejects.toThrow();
       expect(onCommitted).not.toHaveBeenCalled();
-      expect(await fs.promises.readFile(path.join(tempDir, 'schedules.json'), 'utf8')).toBe('not valid json');
+      expect(await fs.promises.readFile(path.join(tempDir, 'schedules.json'), 'utf8')).toBe(
+        'not valid json'
+      );
       warnSpy.mockRestore();
     });
 
@@ -304,7 +424,7 @@ describe('JsonScheduleRepository', () => {
       await Promise.all(promises);
 
       const schedules = await repo.listSchedules();
-      expect(schedules.map(schedule => schedule.id).sort()).toEqual(
+      expect(schedules.map((schedule) => schedule.id).sort()).toEqual(
         Array.from({ length: 5 }, (_, i) => `sched-${i}`)
       );
     });

@@ -1,6 +1,6 @@
 const kanban = require('./kanban.js');
 const kanbanStore = require('./kanbanStore.js');
-const messages = require('./messages.js');
+const { sendTaskNotification } = require('./sendTaskNotification.js');
 const runtimeHelpers = require('./runtimeHelpers.js');
 const tasks = require('./tasks.js');
 const { withTeamBoardLock } = require('./boardLock.js');
@@ -128,7 +128,7 @@ function createReviewHumanActions({
     }
     if (!leadSignoff.isSelfNotice(context, result.actor)) {
       try {
-        messages.sendMessage(context, {
+        sendTaskNotification(context, result.task, {
           to: runtimeHelpers.inferLeadName(context.paths),
           from: result.actor,
           text: `AI review completed for task #${result.task.displayId || result.task.id}. The task is in Done${result.humanApproval ? ' awaiting human acceptance' : ''}.\n\n${result.note}`,

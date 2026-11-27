@@ -1,4 +1,5 @@
 const { wrapAgentBlock } = require('./agentBlocks.js');
+const { buildTaskRef, mergeTaskRefs } = require('./taskReferences.js');
 
 function buildTaskStartNotification(teamName, task, taskLabel, notification, leadName, toolProtocol = 'legacy') {
   const taskGet = toolProtocol === 'captured-team'
@@ -32,7 +33,7 @@ function buildTaskStartNotification(teamName, task, taskLabel, notification, lea
       member: task.owner,
       from: 'user',
       text: parts.join('\n'),
-      taskRefs: task.descriptionTaskRefs,
+      taskRefs: mergeTaskRefs(buildTaskRef({ teamName }, task), task.descriptionTaskRefs),
       summary: `Start working on ${taskLabel}`,
       source: 'system_notification',
     };
@@ -56,7 +57,7 @@ function buildTaskStartNotification(teamName, task, taskLabel, notification, lea
     member: task.owner,
     from: leadName,
     text: parts.join('\n'),
-    taskRefs: task.descriptionTaskRefs,
+    taskRefs: mergeTaskRefs(buildTaskRef({ teamName }, task), task.descriptionTaskRefs),
     summary: `Start working on ${taskLabel}`,
     source: 'system_notification',
   };

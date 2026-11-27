@@ -42,6 +42,7 @@ import type {
   ComposerDraftRepository,
   ComposerPersistenceStatus,
   ComposerWorkingRecord,
+  ComposerWorkingSummary,
   MessageRevisionContext,
   RestoreRecoveryResult,
 } from '@renderer/types/composerDraft';

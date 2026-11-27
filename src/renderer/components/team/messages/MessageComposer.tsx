@@ -63,12 +63,12 @@ import {
   preparedAutonomousGoalArgs,
   preparedCrossTeamReplyArgs,
 } from './composerSendUtils';
+import { renderMessageComposerStatusNotice } from './composerStatusNotice';
 import { runComposerSubmission } from './composerSubmission';
 import { AutonomousGoalStatusNotice, ComposerExecutionControls } from './ContinueUntilDoneControl';
 import { MessageComposerFooter, MessageComposerInput } from './MessageComposerInput';
 import { MessageComposerRecipientSelector } from './MessageComposerRecipientSelector';
 import { MessageComposerRevisionNotice } from './MessageComposerRevisionNotice';
-import { renderMessageComposerStatusNotice } from './composerStatusNotice';
 import { MessageComposerTeamSelector } from './MessageComposerTeamSelector';
 import { acquireRevisionOperation, releaseRevisionOperation } from './revisionOperationLease';
 import { TeamFeedMessageComposer } from './TeamFeedMessageComposer';
@@ -464,7 +464,7 @@ const MemberMessageComposer = ({
 
   useAutoDelegateActionMode({
     addressKey: draft.addressKey,
-    isLoaded: draftLoaded,
+    isLoaded: draftLoaded && !draft.snapshot().restoredOrigin?.autonomousGoalRequest,
     canDelegate,
     shouldAutoDelegate,
     actionMode,
@@ -536,7 +536,8 @@ const MemberMessageComposer = ({
       nativeCommand: !!standaloneSlashCommand,
     });
   const canSend =
-    (!draft.autonomousGoal || (goalEligible && goalOptionsValid)) &&
+    goalOptionsValid &&
+    (!draft.autonomousGoal || goalEligible) &&
     effectiveRecipient.length > 0 &&
     trimmed.length > 0 &&
     trimmed.length <= MAX_TEXT_LENGTH &&
@@ -577,7 +578,12 @@ const MemberMessageComposer = ({
     members,
     draft,
     onSend,
-    disabled: isContextSwitching || sending || isLaunchBlocking || !!draft.autonomousGoal,
+    disabled:
+      isContextSwitching ||
+      sending ||
+      isLaunchBlocking ||
+      !!draft.autonomousGoal ||
+      !!draft.snapshot().restoredOrigin?.autonomousGoalRequest,
     isCrossTeam,
   });
   const isCompactLayout = layout === 'compact';

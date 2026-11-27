@@ -135,6 +135,8 @@ export interface TaskNotification {
   member: string;
   messageId: string;
   content: string;
+  /** Exact canonical primary task reference; private evidence provenance, never helper authority. */
+  taskId?: string;
 }
 
 export interface PreparedTaskMutation {
@@ -142,6 +144,7 @@ export interface PreparedTaskMutation {
   taskHash: string;
   notifications: TaskNotification[];
   removedMessageIds: string[];
+  reassignedTaskId?: string;
 }
 
 export class TaskPolicyRejected extends Error {}

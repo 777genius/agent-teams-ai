@@ -1169,6 +1169,10 @@ export const TeamDetailView = memo(function TeamDetailView({
   isPaneFocused = false,
 }: TeamDetailViewProps): React.JSX.Element {
   const { t } = useAppTranslation('team');
+  const provisioningRuntimeTeamName =
+    logicalTeamName && isHostTeamSelectionKey(logicalTeamName) && isHostTeamSelectionKey(teamName)
+      ? teamName
+      : undefined;
   const { isLight } = useTheme();
   const teamStopControl = useTeamStopControl();
   const reviewLifecycleHostId = useId();
@@ -2660,7 +2664,10 @@ export const TeamDetailView = memo(function TeamDetailView({
       return (
         <div className="size-full overflow-auto p-6">
           <div ref={provisioningBannerRef}>
-            <TeamProvisioningBanner teamName={logicalTeamName ?? teamName} />
+            <TeamProvisioningBanner
+              teamName={logicalTeamName ?? teamName}
+              runtimeTeamName={provisioningRuntimeTeamName}
+            />
           </div>
           <div className="flex min-h-[calc(100vh-12rem)] items-center justify-center">
             <div className="max-w-md text-center">
@@ -2709,7 +2716,10 @@ export const TeamDetailView = memo(function TeamDetailView({
       return (
         <div className="size-full overflow-auto p-4">
           <div ref={provisioningBannerRef}>
-            <TeamProvisioningBanner teamName={logicalTeamName ?? teamName} />
+            <TeamProvisioningBanner
+              teamName={logicalTeamName ?? teamName}
+              runtimeTeamName={provisioningRuntimeTeamName}
+            />
           </div>
           <div className="flex flex-1 items-center justify-center p-6 text-sm text-[var(--color-text-muted)]">
             {t('detail.waitingForProvisioning')}
@@ -2974,7 +2984,10 @@ export const TeamDetailView = memo(function TeamDetailView({
               ) : null}
 
               <div ref={provisioningBannerRef}>
-                <TeamProvisioningBanner teamName={logicalTeamName ?? teamName} />
+                <TeamProvisioningBanner
+                  teamName={logicalTeamName ?? teamName}
+                  runtimeTeamName={provisioningRuntimeTeamName}
+                />
               </div>
 
               {data.warnings?.some((warning) => warning.toLowerCase().includes('kanban')) ? (

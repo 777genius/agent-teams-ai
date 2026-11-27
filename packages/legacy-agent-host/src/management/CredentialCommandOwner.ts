@@ -1,16 +1,19 @@
 import { z } from 'zod';
 
 import { assertManagementTarget, ManagementCommandError } from './commandRecords.js';
-import { managementDigest } from './identity.js';
+import { managementDigest, managementValuesEqual } from './identity.js';
 import { ManagementResourceFence } from './ManagementResourceFence.js';
 import { advanceOpenCodeV2Credential } from './openCodeV2CredentialRecord.js';
+import { deriveSecretFingerprint, SecretFingerprintError, secretFingerprintsEqual } from './secretFingerprint.js';
 import type { OpenCodeV2CredentialProgress } from './openCodeV2CredentialRecord.js';
+import type { SecretFingerprint, SecretFingerprintKdf } from './secretFingerprint.js';
 
 import type { ProviderCredentialReceipt } from './contracts.js';
 import type {
   ManagementCommandStore,
   ManagementTarget,
   StoredCredentialCommand,
+  StoredManagementCommand,
 } from './commandRecords.js';
 
 const id = z.string().min(1).max(256);
@@ -100,54 +103,51 @@ export class CredentialCommandOwner {
   }
 
   /** Retained control may compare the original secret fingerprint, but can never claim or mutate. */
-  resume(raw: unknown): CredentialCommandReceipt {
+  async resume(raw: unknown): Promise<CredentialCommandReceipt> {
     const command = credentialCommandSchema.parse(raw);
     this.options.assertCurrent();
-    const target = this.options.select(command.profileId, command.configRevision);
+    const target = { ...this.options.select(command.profileId, command.configRevision) };
     const original = this.options.store.read(command.commandId);
-    if (!original || original.kind !== command.kind || original.providerId !== command.providerId ||
-        original.fingerprint !== managementDigest(command)) throw new ManagementCommandError('conflict');
-    assertManagementTarget(original, target);
-    return this.receipt(original);
+    if (!original) throw new ManagementCommandError('conflict');
+    return this.replay(command, target, original);
   }
 
   async execute(raw: unknown): Promise<CredentialCommandReceipt> {
     const command = credentialCommandSchema.parse(raw);
     this.options.assertCurrent();
-    const target = this.options.select(command.profileId, command.configRevision);
-    const fingerprint = managementDigest(command);
+    const target = { ...this.options.select(command.profileId, command.configRevision) };
     const previous = this.options.store.read(command.commandId);
-    if (previous) {
-      if (
-        previous.kind !== 'credential.set' &&
-        previous.kind !== 'credential.forget' &&
-        previous.kind !== 'credential.refresh'
-      )
-        throw new ManagementCommandError('conflict');
-      assertManagementTarget(previous, target);
-      if (previous.fingerprint !== fingerprint) throw new ManagementCommandError('conflict');
-      return this.receipt(previous);
-    }
+    if (previous) return this.replay(command, target, previous);
     this.options.validate?.(command);
     this.fence.reserve(target.resourceId, command.commandId);
-    const saved: StoredCredentialCommand = {
-      schemaVersion: 1,
-      commandId: command.commandId,
-      profileId: target.profileId,
-      configRevision: target.configRevision,
-      kind: command.kind,
-      providerId: command.providerId,
-      selectionDigest: target.selectionDigest,
-      resourceId: target.resourceId,
-      fingerprint,
-      phase: 'claimed',
-      resourceHeld: true,
-    };
+    let saved: StoredCredentialCommand;
+    let claimWriteAttempted = false;
     try {
+      const proof = command.kind === 'credential.set'
+        ? await this.fingerprint(command)
+        : { fingerprint: managementDigest(command) };
+      this.options.assertCurrent();
+      assertManagementTarget(target, this.options.select(command.profileId, command.configRevision));
+      // Another namespace may have claimed this command ID during derivation.
+      if (this.options.store.read(command.commandId)) throw new ManagementCommandError('conflict');
+      saved = {
+        schemaVersion: 1,
+        commandId: command.commandId,
+        profileId: target.profileId,
+        configRevision: target.configRevision,
+        kind: command.kind,
+        providerId: command.providerId,
+        selectionDigest: target.selectionDigest,
+        resourceId: target.resourceId,
+        ...proof,
+        phase: 'claimed',
+        resourceHeld: true,
+      };
+      claimWriteAttempted = true;
       this.options.store.write(saved);
     } catch (error) {
-      // Durable before any native effect.
-      this.fence.release(target.resourceId, command.commandId, true);
+      // A write can commit its rename before throwing. Never release that uncertain claim.
+      this.fence.release(target.resourceId, command.commandId, !claimWriteAttempted);
       throw error;
     }
     let settled = false;
@@ -194,6 +194,53 @@ export class CredentialCommandOwner {
     } finally {
       this.fence.release(target.resourceId, command.commandId, settled);
     }
+  }
+
+  private async fingerprint(command: CredentialCommand, original?: SecretFingerprintKdf): Promise<SecretFingerprint> {
+    try {
+      return await deriveSecretFingerprint(command, original);
+    } catch (error) {
+      if (error instanceof SecretFingerprintError)
+        throw new ManagementCommandError(error.code === 'failed' ? 'held' : error.code);
+      throw error;
+    }
+  }
+
+  private async replay(
+    command: CredentialCommand,
+    target: CredentialTarget,
+    original: StoredManagementCommand
+  ): Promise<CredentialCommandReceipt> {
+    if (original.kind !== command.kind || original.providerId !== command.providerId)
+      throw new ManagementCommandError('conflict');
+    assertManagementTarget(original, target);
+    const identity = this.commandIdentity(original);
+    const fingerprint = identity.fingerprintKdf === undefined
+      ? managementDigest(command)
+      : (await this.fingerprint(command, identity.fingerprintKdf)).fingerprint;
+    this.options.assertCurrent();
+    assertManagementTarget(target, this.options.select(command.profileId, command.configRevision));
+    const latest = this.options.store.read(command.commandId);
+    if (!latest || latest.kind !== command.kind ||
+        !managementValuesEqual(identity, this.commandIdentity(latest)) ||
+        !secretFingerprintsEqual(identity.fingerprint, fingerprint))
+      throw new ManagementCommandError('conflict');
+    return this.receipt(latest);
+  }
+
+  private commandIdentity(saved: StoredCredentialCommand) {
+    return {
+      schemaVersion: saved.schemaVersion,
+      commandId: saved.commandId,
+      profileId: saved.profileId,
+      configRevision: saved.configRevision,
+      kind: saved.kind,
+      providerId: saved.providerId,
+      selectionDigest: saved.selectionDigest,
+      resourceId: saved.resourceId,
+      fingerprint: saved.fingerprint,
+      fingerprintKdf: saved.fingerprintKdf ? { ...saved.fingerprintKdf } : undefined,
+    };
   }
 
   /** Reuse never extends the original rotation window or crosses credential namespaces. */

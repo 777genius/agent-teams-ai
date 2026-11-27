@@ -53,7 +53,7 @@ export async function executeCapturedRuntimeControl(
     isSealed(): boolean;
     assertWriter(): void;
     kick(): void;
-    dispatchSettled(): Promise<void> | undefined;
+    dispatchSettled(binding: RuntimeBinding): Promise<void> | undefined;
     closeEndpoint(entry: MemberEntry): Promise<void>;
     rekey(previous: RuntimeBinding, entry: MemberEntry): void;
     projection(
@@ -260,10 +260,10 @@ export async function executeCapturedRuntimeControl(
   } else if (operation === 'read') record = options.runtime.readSession(entry.binding).record;
   else if (operation === 'dispatch') {
     options.kick();
-    await options.dispatchSettled();
+    await options.dispatchSettled(entry.binding);
     record = options.runtime.readSession(entry.binding).record;
   } else if (operation === 'stop') {
-    entry.team.owner.goals.stopForRuntime(options.principalId, entry.binding);
+    entry.team.owner.goals.stopForRuntime(entry.binding, assertAuthority!);
     if (entry.profile.provider === 'opencode') {
       const launch = options.retainedLaunches.get(runtimeDigest({ teamId, launchId: entry.binding.runId }))?.launch;
       launch?.retireModelReadiness(entry.profile.memberId);

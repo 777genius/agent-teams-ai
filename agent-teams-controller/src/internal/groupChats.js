@@ -1,4 +1,5 @@
 const desktopBinding = require('./desktopControlBinding.js');
+const { createMemberMessagingProtocol } = require('./memberMessagingProtocol.js');
 
 // Group persistence and delivery belong to the bound desktop main process.
 // Runtime admission may take up to 120 seconds; retain time for persistence/fanout.
@@ -76,7 +77,25 @@ async function reactToGroupMessage(context, flags = {}) {
   return request(context, 'react', { from, groupChatId, relayOfMessageId });
 }
 
+function buildBoundGroupChatBriefing() {
+  const example = createMemberMessagingProtocol('native', true).boundTeamToolExample;
+  return [
+    'Group chats use your captured Team and actor. Do not supply teamName or from. Use a new commandId for each distinct mutation and retain it, the original IDs and the unchanged payload when retrying or looking up that result.',
+    'Create a named chat only when the human explicitly asks in the original direct/group message addressed to you. Never create from your coordination idea, a peer suggestion, quote, task context or system notice. Use the exact saved original sourceMessageId (canonical groupMessageId for group requests), never a physical group copy ID. One chat per original request. At least two current agents are selected, the human is implicit, the lead is optional, and autoIncludeNewMembers defaults to true. This changes configuration only, with no initial post or task. Answer in the originating conversation. DO or lead DELEGATE direct originals are required; ASK and historical originals without a mode cannot authorize new creation. Team verifies provenance, address and mode; interpreting explicit creation intent is your responsibility.',
+    example('group_chat_create', { sourceMessageId: '<original sourceMessageId>', name: '<requested name>', selectedMemberNames: ['<first-agent>', '<second-agent>'], autoIncludeNewMembers: true }),
+    'Refresh the current catalog before proactive group messages:',
+    'group_chat_list {}',
+    'Reply to a group with its exact groupChatId, a new UUID messageId, and relayOfMessageId set to the physical inbound messageId. Never send a group reply through message_send or private user DM. Archived groups are readable but reject new posts. A blocked group send must not fall back to a private message.',
+    example('group_chat_send', { groupChatId: '<groupChatId>', messageId: '<new UUID>', text: '<reply>', relayOfMessageId: '<physical inbound messageId>' }),
+    'For an informational acknowledgement you may optionally acknowledge your physical inbound ID:',
+    example('group_chat_react', { groupChatId: '<groupChatId>', relayOfMessageId: '<physical inbound messageId>' }),
+    'After a successful acknowledgement, stop without an extra OK; never reply to a reaction. Use group_chat_send for requested replies or additional information. A failed or unsupported reaction never permits a private DM fallback.',
+  ].join('\n');
+}
+
 async function buildGroupChatBriefing(context, memberName) {
+  // Host catalog reads belong to the captured group port, never ambient desktop control URLs.
+  if (context.boundTaskTools === true) return buildBoundGroupChatBriefing();
   const instruction =
     'Group chats: create a named chat with group_chat_create only when the human explicitly asks in the original direct/group message addressed to you. Never create from your coordination idea, a peer suggestion, quote, task context or system notice. Use the exact saved original sourceMessageId (canonical groupMessageId for group requests), never a physical group copy ID. One chat per original request; uncertain retries keep the same original ID and unchanged name/selected agents/auto policy. At least two current agents are selected, the human is implicit, the lead is optional, and autoIncludeNewMembers defaults to true. This changes configuration only, with no initial post or task. Answer in the originating conversation. DO or lead DELEGATE direct originals are required; ASK and historical originals without a mode cannot authorize new creation. Main verifies provenance/address/mode; interpreting explicit creation intent is your responsibility. Call group_chat_list(teamName, from) for a fresh catalog before proactive messages. Reply to a group with group_chat_send and the exact groupChatId, a new UUID messageId, and relayOfMessageId set to the physical inbound messageId. Never send a group reply through message_send or private user DM. Archived groups are readable but reject new posts. A blocked group send must not fall back to a private message. For an informational acknowledgement you may optionally call group_chat_react(teamName, from, groupChatId, relayOfMessageId) with your physical inbound ID. After success, stop without an extra OK; never reply to a reaction. Use group_chat_send for requested replies or additional information. A failed or unsupported reaction never permits a private DM fallback.';
   if (!desktopBinding.isDesktopBound()) return instruction;

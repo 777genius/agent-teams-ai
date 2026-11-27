@@ -20,6 +20,7 @@ import {
   hasScheduledTeamTarget,
   HOST_SCHEDULE_UNSUPPORTED,
 } from './scheduledTeamTarget';
+import { ScheduleMutationQueue } from './ScheduleMutationQueue';
 import { SchedulerStopBarrier } from './SchedulerStopBarrier';
 import { SchedulerWarmUp, type WarmUpFn } from './SchedulerWarmUp';
 import {
@@ -45,24 +46,12 @@ import type {
 
 const logger = createLogger('Service:Scheduler');
 
-// =============================================================================
-// Constants
-// =============================================================================
-
 const EXECUTION_MAX_RETRIES = 2;
 const EXECUTION_RETRY_DELAY_MS = 90_000; // 90s between retries
-
-// =============================================================================
-// Types
-// =============================================================================
 
 type ChangeEmitter = (event: ScheduleChangeEvent) => void;
 
 export type { WarmUpFn } from './SchedulerWarmUp';
-
-// =============================================================================
-// SchedulerService
-// =============================================================================
 
 export class SchedulerService {
   private readonly warmUp: SchedulerWarmUp;
@@ -82,6 +71,7 @@ export class SchedulerService {
   private stopped = false;
   private lifecycleEpoch = 0;
   private readonly stopBarrier = new SchedulerStopBarrier();
+  private readonly scheduleMutations = new ScheduleMutationQueue();
 
   constructor(
     private readonly repository: ScheduleRepository,
@@ -104,24 +94,27 @@ export class SchedulerService {
     this.changeEmitter = emitter;
   }
 
-  // Lifecycle
-
   async start(): Promise<void> {
+    const generation = this.lifecycleEpoch;
     await this.stopBarrier.drainFinalizations();
+    if (generation !== this.lifecycleEpoch) return;
     logger.info(`Scheduler starting, basePath=${getSchedulesBasePath()}`);
 
     this.stopped = false;
 
     // Recovery: mark interrupted runs from previous session
     const { recoveredCount, unavailableScheduleIds } = await recoverInterruptedScheduleRuns(
-      this.repository
+      this.repository,
+      () => generation === this.lifecycleEpoch
     );
+    if (generation !== this.lifecycleEpoch) return;
     if (recoveredCount > 0) {
       logger.info(`Recovered ${recoveredCount} interrupted runs as failed_interrupted`);
     }
 
     // Load all schedules and create cron jobs for active ones
     const schedules = await this.repository.listSchedules();
+    if (generation !== this.lifecycleEpoch) return;
     let activeCount = 0;
 
     for (const schedule of schedules.filter(({ id }) => !unavailableScheduleIds.has(id))) {
@@ -171,7 +164,6 @@ export class SchedulerService {
     logger.info('Scheduler stopped');
   }
 
-  // CRUD
   async listSchedules(): Promise<Schedule[]> {
     return this.repository.listSchedules();
   }
@@ -188,6 +180,7 @@ export class SchedulerService {
     input: CreateScheduleInput,
     admission?: ScheduleTargetAdmission
   ): Promise<Schedule> {
+    const generation = this.lifecycleEpoch;
     await assertScheduleAdmission(this.allowTeamSchedule, input.teamName, {
       cwd: input.launchConfig.cwd,
     });
@@ -197,6 +190,7 @@ export class SchedulerService {
     const selected = { ...input, hostTarget: admission?.target };
     assertScheduledTeamTarget(selected, this.smartDispatcher?.supportsHost === true);
     await this.smartDispatcher?.assertCanSchedule(selected);
+    this.requireLifecycle(generation);
     if (input.taskFirst && input.executionMode !== 'agent' && input.executionMode !== 'team') {
       throw new Error('Task-first schedule requires agent or team executionMode');
     }
@@ -209,7 +203,8 @@ export class SchedulerService {
       job.stop();
       throw error;
     }
-    this.activateCronJob(schedule, job);
+    if (this.stopped || generation !== this.lifecycleEpoch) job.stop();
+    else this.activateCronJob(schedule, job);
     this.emitChange({
       type: 'schedule-updated',
       scheduleId: schedule.id,
@@ -225,69 +220,80 @@ export class SchedulerService {
     patch: UpdateSchedulePatch,
     admission?: ScheduleTargetAdmission
   ): Promise<Schedule> {
-    const existing = await this.repository.getSchedule(id);
-    if (!existing) throw new Error(`Schedule not found: ${id}`);
-    await assertScheduleAdmission(
-      this.allowTeamSchedule,
-      existing.teamName,
-      folderChange(existing, patch)
-    );
-    const hostTarget = admission?.target ?? existing.hostTarget;
-    assertScheduledTeamTarget(
-      { teamName: existing.teamName, hostTarget },
-      this.smartDispatcher?.supportsHost === true
-    );
-    if (patch.reviewedSavedPrompt && !existing.taskFirst)
-      throw new Error('Review requires task-first schedule');
-    const cronChanged = patch.cronExpression !== undefined || patch.timezone !== undefined;
-    const cronExpression = (patch.cronExpression ?? existing.cronExpression).trim();
-    const timezone = (patch.timezone ?? existing.timezone).trim();
-    if (cronChanged) getValidScheduleNextRuns(cronExpression, timezone);
-    const updated = buildUpdatedSchedule(
-      existing,
-      patch,
-      hostTarget,
-      cronChanged,
-      cronExpression,
-      timezone
-    );
-    await this.smartDispatcher?.assertCanSchedule(updated, folderChange(existing, patch));
+    const generation = this.lifecycleEpoch;
+    return this.scheduleMutations.run(id, async () => {
+      this.requireLifecycle(generation);
+      const existing = await this.repository.getSchedule(id);
+      if (!existing) throw new Error(`Schedule not found: ${id}`);
+      await assertScheduleAdmission(
+        this.allowTeamSchedule,
+        existing.teamName,
+        folderChange(existing, patch)
+      );
+      const hostTarget = admission?.target ?? existing.hostTarget;
+      assertScheduledTeamTarget(
+        { teamName: existing.teamName, hostTarget },
+        this.smartDispatcher?.supportsHost === true
+      );
+      if (patch.reviewedSavedPrompt && !existing.taskFirst)
+        throw new Error('Review requires task-first schedule');
+      const cronChanged = patch.cronExpression !== undefined || patch.timezone !== undefined;
+      const cronExpression = (patch.cronExpression ?? existing.cronExpression).trim();
+      const timezone = (patch.timezone ?? existing.timezone).trim();
+      if (cronChanged) getValidScheduleNextRuns(cronExpression, timezone);
+      const updated = buildUpdatedSchedule(
+        existing,
+        patch,
+        hostTarget,
+        cronChanged,
+        cronExpression,
+        timezone
+      );
+      await this.smartDispatcher?.assertCanSchedule(updated, folderChange(existing, patch));
+      this.requireLifecycle(generation);
 
-    // Reschedule cron job if expression or timezone changed
-    const reschedule =
-      Boolean(admission) ||
-      cronChanged ||
-      patch.warmUpMinutes !== undefined ||
-      patch.executionMode !== undefined;
-    if (reschedule && updated.status === 'active')
-      updated.nextRunAt = computeScheduleNextRunAt(updated) ?? undefined;
-    const nextJob = reschedule && updated.status === 'active' ? this.prepareCronJob(updated) : null;
-    try {
-      if (admission && !admission.isCurrent()) throw new Error('Scheduled team context changed');
-      await this.repository.saveSchedule(updated, { mustExist: true });
-    } catch (error) {
-      nextJob?.stop();
-      throw error;
-    }
-    if (reschedule) {
-      if (nextJob) this.activateCronJob(updated, nextJob);
-      else this.removeCronJob(id);
-    }
-    this.emitChange({
-      type: 'schedule-updated',
-      scheduleId: updated.id,
-      teamName: updated.teamName,
-      detail: 'updated',
+      // Reschedule cron job if expression or timezone changed
+      const reschedule =
+        Boolean(admission) ||
+        cronChanged ||
+        patch.warmUpMinutes !== undefined ||
+        patch.executionMode !== undefined;
+      if (reschedule && updated.status === 'active')
+        updated.nextRunAt = computeScheduleNextRunAt(updated) ?? undefined;
+      const nextJob =
+        reschedule && updated.status === 'active' ? this.prepareCronJob(updated) : null;
+      try {
+        if (admission && !admission.isCurrent()) throw new Error('Scheduled team context changed');
+        await this.repository.saveSchedule(updated, { mustExist: true });
+      } catch (error) {
+        nextJob?.stop();
+        throw error;
+      }
+      if (reschedule) {
+        if (this.stopped || generation !== this.lifecycleEpoch) nextJob?.stop();
+        else if (nextJob) this.activateCronJob(updated, nextJob);
+        else this.removeCronJob(id);
+      }
+      this.emitChange({
+        type: 'schedule-updated',
+        scheduleId: updated.id,
+        teamName: updated.teamName,
+        detail: 'updated',
+      });
+
+      return updated;
     });
-
-    return updated;
   }
 
   async deleteSchedule(id: string): Promise<void> {
+    const generation = this.lifecycleEpoch;
     const existing = await this.repository.getSchedule(id);
+    this.requireLifecycle(generation);
     if (!existing) throw new Error(`Schedule not found: ${id}`);
-    // Do not stop a live schedule unless the durable deletion succeeds.
+    // Commit atomically, then allow native cleanup without holding the schedule mutation queue.
+    // mustExist writes and atomic updates cannot resurrect the deleted row.
     await this.repository.deleteSchedule(id, async () => {
+      if (generation !== this.lifecycleEpoch) return;
       this.stopBarrier.cancelAdmissions(id);
       const activeRun = this.activeRuns.get(id);
       if (activeRun) this.executor.cancel(activeRun.id);
@@ -305,66 +311,76 @@ export class SchedulerService {
   }
 
   async pauseSchedule(id: string): Promise<void> {
-    const existing = await this.repository.getSchedule(id);
-    if (!existing) throw new Error(`Schedule not found: ${id}`);
+    const generation = this.lifecycleEpoch;
+    return this.scheduleMutations.run(id, async () => {
+      this.requireLifecycle(generation);
+      const existing = await this.repository.getSchedule(id);
+      this.requireLifecycle(generation);
+      if (!existing) throw new Error(`Schedule not found: ${id}`);
 
-    const updated: Schedule = {
-      ...existing,
-      status: 'paused',
-      updatedAt: new Date().toISOString(),
-    };
+      const updated: Schedule = {
+        ...existing,
+        status: 'paused',
+        updatedAt: new Date().toISOString(),
+      };
 
-    // Persistence errors must not leave an active record without a live job.
-    await this.repository.saveSchedule(updated, { mustExist: true });
-    this.cronJobs.get(id)?.pause();
-    this.warmUp.clear(id);
-    this.emitChange({
-      type: 'schedule-paused',
-      scheduleId: id,
-      teamName: existing.teamName,
+      // Persistence errors must not leave an active record without a live job.
+      await this.repository.saveSchedule(updated, { mustExist: true });
+      if (generation !== this.lifecycleEpoch) return;
+      this.cronJobs.get(id)?.pause();
+      this.warmUp.clear(id);
+      this.emitChange({
+        type: 'schedule-paused',
+        scheduleId: id,
+        teamName: existing.teamName,
+      });
+
+      logger.info(`Schedule paused: ${id}`);
     });
-
-    logger.info(`Schedule paused: ${id}`);
   }
 
   async resumeSchedule(id: string): Promise<void> {
-    const existing = await this.repository.getSchedule(id);
-    if (!existing) throw new Error(`Schedule not found: ${id}`);
+    const generation = this.lifecycleEpoch;
+    return this.scheduleMutations.run(id, async () => {
+      this.requireLifecycle(generation);
+      const existing = await this.repository.getSchedule(id);
+      if (!existing) throw new Error(`Schedule not found: ${id}`);
 
-    await assertScheduleAdmission(this.allowTeamSchedule, existing.teamName);
-    // A retained Host schedule cannot be armed against the legacy executor.
-    assertScheduledTeamTarget(existing, this.smartDispatcher?.supportsHost === true);
-    await this.smartDispatcher?.assertCanSchedule(existing);
+      await assertScheduleAdmission(this.allowTeamSchedule, existing.teamName);
+      // A retained Host schedule cannot be armed against the legacy executor.
+      assertScheduledTeamTarget(existing, this.smartDispatcher?.supportsHost === true);
+      await this.smartDispatcher?.assertCanSchedule(existing);
+      this.requireLifecycle(generation);
 
-    // A historic invalid schedule must be repaired before it can be resumed.
-    getValidScheduleNextRuns(existing.cronExpression, existing.timezone);
-    const updated: Schedule = {
-      ...existing,
-      status: 'active',
-      consecutiveFailures: 0,
-      updatedAt: new Date().toISOString(),
-    };
+      // A historic invalid schedule must be repaired before it can be resumed.
+      getValidScheduleNextRuns(existing.cronExpression, existing.timezone);
+      const updated: Schedule = {
+        ...existing,
+        status: 'active',
+        consecutiveFailures: 0,
+        updatedAt: new Date().toISOString(),
+      };
 
-    updated.nextRunAt = computeScheduleNextRunAt(updated) ?? undefined;
-    const job = this.prepareCronJob(updated);
-    try {
-      await this.repository.saveSchedule(updated, { mustExist: true });
-    } catch (error) {
-      job.stop();
-      throw error;
-    }
-    this.activateCronJob(updated, job);
-    this.emitChange({
-      type: 'schedule-updated',
-      scheduleId: id,
-      teamName: existing.teamName,
-      detail: 'resumed',
+      updated.nextRunAt = computeScheduleNextRunAt(updated) ?? undefined;
+      const job = this.prepareCronJob(updated);
+      try {
+        await this.repository.saveSchedule(updated, { mustExist: true });
+      } catch (error) {
+        job.stop();
+        throw error;
+      }
+      if (this.stopped || generation !== this.lifecycleEpoch) job.stop();
+      else this.activateCronJob(updated, job);
+      this.emitChange({
+        type: 'schedule-updated',
+        scheduleId: id,
+        teamName: existing.teamName,
+        detail: 'resumed',
+      });
+
+      logger.info(`Schedule resumed: ${id}`);
     });
-
-    logger.info(`Schedule resumed: ${id}`);
   }
-
-  // Run History
 
   async getRuns(
     scheduleId: string,
@@ -404,8 +420,6 @@ export class SchedulerService {
     await this.stop();
     await this.start();
   }
-
-  // Cron Job Management
 
   /** Prepare the replacement without touching the currently active cron timer. */
   private prepareCronJob(schedule: Schedule): Cron {
@@ -447,8 +461,6 @@ export class SchedulerService {
     }
     this.warmUp.clear(scheduleId);
   }
-
-  // Warm-Up Timer
 
   // Cron Tick → Execution
 
@@ -623,8 +635,8 @@ export class SchedulerService {
         if (this.activeRuns.get(scheduleId)?.id === run.id) this.releaseRunLocks(scheduleId);
         // A cancelled external dispatch cannot write after stop/fixture teardown.
         if (!finishFinalization) return;
-        await updateScheduleTimestamps(this.repository, schedule, (event) =>
-          this.emitChange(event)
+        await this.scheduleMutations.run(scheduleId, () =>
+          updateScheduleTimestamps(this.repository, schedule, (event) => this.emitChange(event))
         );
         await this.stopBarrier.withAdmission(scheduleId, async (isCurrent) => {
           const freshSchedule = await this.repository.getSchedule(scheduleId);
@@ -732,27 +744,27 @@ export class SchedulerService {
     );
   }
 
-  // Consecutive Failure Tracking
-
   private async resetConsecutiveFailures(schedule: Schedule): Promise<void> {
-    await this.repository.updateSchedule(schedule.id, (fresh) =>
-      fresh.consecutiveFailures === 0
-        ? null
-        : {
-            ...fresh,
-            consecutiveFailures: 0,
-            updatedAt: new Date().toISOString(),
-          }
+    await this.scheduleMutations.run(schedule.id, () =>
+      this.repository.updateSchedule(schedule.id, (fresh) =>
+        fresh.consecutiveFailures === 0
+          ? null
+          : {
+              ...fresh,
+              consecutiveFailures: 0,
+              updatedAt: new Date().toISOString(),
+            }
+      )
     );
   }
 
   private async incrementConsecutiveFailures(schedule: Schedule): Promise<void> {
-    const { updated, shouldAutoPause } = await recordConsecutiveScheduleFailure(
-      this.repository,
-      schedule.id
-    );
-
-    if (updated && shouldAutoPause) {
+    await this.scheduleMutations.run(schedule.id, async () => {
+      const { updated, shouldAutoPause } = await recordConsecutiveScheduleFailure(
+        this.repository,
+        schedule.id
+      );
+      if (!updated || !shouldAutoPause) return;
       this.cronJobs.get(schedule.id)?.pause();
       this.warmUp.clear(schedule.id);
       this.emitChange({
@@ -761,7 +773,7 @@ export class SchedulerService {
         teamName: schedule.teamName,
         detail: `auto-paused after ${updated.consecutiveFailures} consecutive failures`,
       });
-    }
+    });
   }
 
   private releaseRunLocks(scheduleId: string): void {
@@ -774,6 +786,10 @@ export class SchedulerService {
         break;
       }
     }
+  }
+
+  private requireLifecycle(generation: number): void {
+    if (generation !== this.lifecycleEpoch) throw new Error('Scheduler context changed');
   }
 
   private emitChange(event: ScheduleChangeEvent): void {

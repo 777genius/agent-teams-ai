@@ -568,6 +568,11 @@ export function createHostTeamMutations(options: {
         'actionMode',
       ]);
       const native = parseStandaloneSlashCommand(request.text);
+      if (
+        request.autonomousGoal !== undefined &&
+        ((request.actionMode !== 'do' && request.actionMode !== 'delegate') || native)
+      )
+        return unsupported();
       const files = attachments(request.attachments, 'message');
       if (native && files.length) return unsupported();
       const taskRefs = refs(request.taskRefs);

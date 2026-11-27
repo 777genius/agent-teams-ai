@@ -248,7 +248,7 @@ export interface TeamRuntimeDeliveryPort {
   /** Official Runtime proof fingerprint, shared by its persisted input and admission receipt. */
   fingerprintDelivery(intent: ImmutableDelivery): string;
   /** Optional existing Runtime cancellation capability, used for Task notification retraction. */
-  cancelDelivery?(intent: DeliveryIntent): Promise<DeliveryAdmission>;
+  cancelDelivery?(intent: DeliveryIntent, withAuthority?: (commit: () => void) => void): Promise<DeliveryAdmission>;
 }
 
 export interface DeliveryResumeResult {

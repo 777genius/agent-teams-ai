@@ -25,9 +25,10 @@ const row = (index: number): BackendCrossTeamOutboxRow => ({
 
 it('reconstructs all valid retained outbox pages without a new 128-page product limit', async () => {
   const expected = Array.from({ length: 130 }, (_, index) => row(index));
+  let nextIndex = 0;
   const invoke = vi.fn<AgentBackendApi['invoke']>(async (request) => {
     expect(request.operation).toBe('crossTeam.outbox.read');
-    const index = invoke.mock.calls.length - 1;
+    const index = nextIndex++;
     expect(request.payload).toEqual(index === 0 ? {} : { cursor: `${index}.${signature}` });
     return {
       ok: true,

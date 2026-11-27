@@ -20,6 +20,7 @@ export function createNativeGoalConnection(options: {
   isCurrent(entry: MemberEntry): boolean;
   readRuntime: RuntimeOwner['readCapturedSession'];
   assertCurrent(): void;
+  onProgress(): void;
 }) {
   const { entry } = options, owner = entry.team.owner, principalId = entry.profile.principalId;
   const ordinary = owner.connect(principalId);
@@ -40,11 +41,13 @@ export function createNativeGoalConnection(options: {
   };
   const execute: TeamMcpConnection['execute'] = (command, cost, nudge) => {
     options.assertCurrent();
-    const record = options.readRuntime(entry.binding).record;
-    const active = record?.inputs.filter(input => input.phase === 'claimed' || input.phase === 'consumed') ?? [];
-    if (active.length === 1 && owner.goals.association(active[0]!.intent))
-      return owner.executeGoalCommand(principalId, command, { source: captureGoal() });
-    return ordinary.execute(command, cost, nudge);
+    try {
+      const record = options.readRuntime(entry.binding).record;
+      const active = record?.inputs.filter(input => input.phase === 'claimed' || input.phase === 'consumed') ?? [];
+      if (active.length === 1 && owner.goals.association(active[0]!.intent))
+        return owner.executeGoalCommand(principalId, command, { source: captureGoal() });
+      return ordinary.execute(command, cost, nudge);
+    } finally { options.onProgress(); }
   };
   const goals: NonNullable<TeamMcpConnection['goals']> = {
     status: () => {

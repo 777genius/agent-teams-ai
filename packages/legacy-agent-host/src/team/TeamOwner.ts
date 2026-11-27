@@ -207,6 +207,7 @@ export class TeamOwner {
       invalidate: () => this.productChanges.invalidate(),
     });
     this.commandAccess.lifecycleContinuation.recover();
+    this.goals.resumeCommands();
   }
 
   assertExecutionAllowed(principalId: string): void {
@@ -314,6 +315,7 @@ export class TeamOwner {
 
   /** Trusted continuation of prepared Task facts and saved Host replies. */
   async resumeTaskCommands(runtime?: TeamRuntimeDeliveryPort) {
+    this.goals.resumeCommands();
     resumeHostCostCommands(this.store, receipt => this.execute(receipt.principalId, receipt.command));
     return this.taskRecovery.resume(runtime);
   }
@@ -328,7 +330,7 @@ export class TeamOwner {
       lookupEvidenceCause({
         store: this.store,
         recovery: this.taskRecovery,
-        raw,
+        raw, purpose: 'evidence',
         authorize: () => {
           this.authorize(principalId, 'read');
         },
@@ -671,6 +673,7 @@ export class TeamOwner {
         ? { runtimeNeverLaunched: true }
         : {}),
       members,
+      autonomousGoalAvailable: this.goals.canStart(),
       ...(state.autonomousGoal ? { autonomousGoal: this.goals.publicStatus(principalId) } : {}),
       tasks: this.policy.taskBoard().listTasks(),
       ...(this.policy.processes ? { processes: this.processCommands(principalId).list() } : {}),

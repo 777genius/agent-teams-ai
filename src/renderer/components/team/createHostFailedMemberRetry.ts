@@ -20,6 +20,7 @@ export type FailedOpenCodeRetryResult =
 /** Reuse member recovery, keeping one displayed Team/run and never reselecting between members. */
 export function createHostFailedMemberRetry(options: {
   teamName: string;
+  provisioningTeamName?: string;
   runId: string;
   contextId: string;
   memberNames: readonly string[];
@@ -36,25 +37,34 @@ export function createHostFailedMemberRetry(options: {
   restartMember: AppState['restartMember'];
 }): () => Promise<FailedOpenCodeRetryResult> {
   const { teamName, runId, contextId, restartMember, getState } = options;
+  const provisioningTeamName = options.provisioningTeamName ?? teamName;
   const names = [...options.memberNames];
   const failedSelections = structuredClone(options.failedSelections);
   const contextEpoch = captureContextScopedRequestEpoch();
-  const teamEpoch = captureTeamLocalStateEpoch(teamName);
+  const owners = [...new Set([teamName, provisioningTeamName])].map(
+    (name) => [name, captureTeamLocalStateEpoch(name)] as const
+  );
   const assertCurrent = () => {
     const state = getState();
     if (
       state.isContextSwitching ||
       state.activeContextId !== contextId ||
       !isContextScopedRequestEpochCurrent(contextEpoch) ||
-      !isTeamLocalStateEpochCurrent(teamName, teamEpoch) ||
-      state.currentRuntimeRunIdByTeam[teamName] !== runId ||
-      state.currentProvisioningRunIdByTeam[teamName] !== runId ||
-      isTeamRunIgnored(state.ignoredRuntimeRunIds, runId, teamName) ||
-      isTeamRunIgnored(state.ignoredProvisioningRunIds, runId, teamName)
+      state.currentProvisioningRunIdByTeam[provisioningTeamName] !== runId ||
+      (state.currentProvisioningRunIdByTeam[teamName] != null &&
+        state.currentProvisioningRunIdByTeam[teamName] !== runId) ||
+      owners.some(
+        ([name, epoch]) =>
+          !isTeamLocalStateEpochCurrent(name, epoch) ||
+          state.currentRuntimeRunIdByTeam[name] !== runId ||
+          isTeamRunIgnored(state.ignoredRuntimeRunIds, runId, name) ||
+          isTeamRunIgnored(state.ignoredProvisioningRunIds, runId, name)
+      )
     )
       throw new Error('Team launch changed. Refresh its status before retrying.');
   };
   return async () => {
+    parseHostTeamSelectionKey(provisioningTeamName);
     if (parseHostTeamRunId(runId).handleId !== parseHostTeamSelectionKey(teamName))
       throw new Error('The displayed launch does not belong to this Team.');
     assertCurrent();

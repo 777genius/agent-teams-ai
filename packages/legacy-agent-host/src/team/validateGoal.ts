@@ -47,6 +47,7 @@ export function validateGoalRecord(value: GoalRecord): void {
       !['active', 'finalizing', 'accepted', 'stopped'].includes(value.disposition) ||
       !Number.isFinite(Date.parse(value.startedAt)) || !Number.isFinite(Date.parse(value.deadlineAt)) ||
       Date.parse(value.deadlineAt) < Date.parse(value.startedAt) ||
+      (value.deadlineReached !== undefined && typeof value.deadlineReached !== 'boolean') ||
       !Number.isSafeInteger(value.attemptLimit) || value.attemptLimit < 1 || value.attemptLimit > 1000 ||
       !object(value.debits) || Object.keys(value.debits).length > value.attemptLimit ||
       (value.controls && (!object(value.controls) || Object.keys(value.controls).length > 256)) ||

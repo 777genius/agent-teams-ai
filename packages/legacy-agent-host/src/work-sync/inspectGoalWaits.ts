@@ -25,7 +25,7 @@ export function inspectGoalWaits(
   // Select a replacement operation by its original first receipt, not a late completion timestamp.
   // Thus an old commit's green result cannot displace a newer pending check for the same obligation.
   const current = new Map<string, { key: string; first: number }>();
-  const slots = (wait: GoalWaitReport) => `${wait.repository.toLowerCase()}:${wait.taskId ?? 'goal'}`;
+  const slots = (wait: GoalWaitReport) => JSON.stringify([wait.repository.toLowerCase(), wait.taskId ?? null]);
   for (const [key, rows] of grouped) {
     const first = Math.min(...rows.map(row => Date.parse(row.receipt.receivedAt)));
     for (const row of rows) {

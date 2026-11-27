@@ -24,9 +24,15 @@ export function createRuntimeWorkSyncWake(options: {
         if (teams.includes(entry.delivery.teamName) && options.isCurrent(entry)) {
           try {
             await options.settleGoal?.(entry);
+          } catch {
+            /* Goal recovery cannot suppress an already accepted ordinary Work Sync receipt. */
+          }
+          if (options.isSealed() || signal?.aborted) break;
+          if (!options.isCurrent(entry)) continue;
+          try {
             await entry.settleWorkSync?.();
           } catch {
-            /* Original receipt remains held by its own owner. */
+            /* Original ordinary receipt remains held by its own owner. */
           }
         }
       }

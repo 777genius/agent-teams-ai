@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -58,7 +58,7 @@ test('Desktop project publication may be pending without adopting a foreign or u
 
 test('Desktop run observation permits one pending attempt and publication of the same captured run', () => {
   const observe = createDesktopProjectRunObserver('TEST-logical', 'TEST-execution');
-  const pending = `pending:${hostTeamSelectionKey('TEST-logical')}:1`;
+  const pending = `pending:${hostTeamSelectionKey('TEST-logical')}:${randomUUID()}`;
   const run = hostTeamRunId('TEST-execution', 'TEST-launch', 'TEST-roster');
   assert.equal(observe({}, 'TEST-launch'), false);
   assert.equal(observe({ provisioning: pending }, 'TEST-launch'), false);
@@ -69,10 +69,48 @@ test('Desktop run observation permits one pending attempt and publication of the
   assert.throws(() => observe({ provisioning: run }, 'TEST-launch'));
 });
 
+test('Desktop run observation accepts the original installer UUIDv4 attempt', () => {
+  const observe = createDesktopProjectRunObserver('TEST-logical', 'TEST-execution');
+  const pending = `pending:${hostTeamSelectionKey('TEST-logical')}:d14ac75f-f381-4c97-acec-462e6f47f74a`;
+  const run = hostTeamRunId('TEST-execution', 'TEST-launch', 'TEST-roster');
+  assert.equal(observe({ provisioning: pending }, 'TEST-launch'), false);
+  assert.equal(observe({ runtime: run, provisioning: pending }, 'TEST-launch'), false);
+  assert.equal(observe({ runtime: run, provisioning: run }, 'TEST-launch'), true);
+});
+
+for (const [reason, suffix] of [
+  ['numeric', '1'],
+  ['empty', ''],
+  ['malformed', 'not-a-uuid'],
+  ['truncated', 'd14ac75f-f381-4c97-acec-462e6f47f74'],
+  ['wrong version', 'd14ac75f-f381-5c97-acec-462e6f47f74a'],
+  ['wrong variant', 'd14ac75f-f381-4c97-ccec-462e6f47f74a'],
+  ['uppercase', 'D14AC75F-F381-4C97-ACEC-462E6F47F74A'],
+  ['leading space', ' d14ac75f-f381-4c97-acec-462e6f47f74a'],
+  ['trailing space', 'd14ac75f-f381-4c97-acec-462e6f47f74a '],
+  ['trailing LF', 'd14ac75f-f381-4c97-acec-462e6f47f74a\n'],
+  ['trailing CR', 'd14ac75f-f381-4c97-acec-462e6f47f74a\r'],
+  ['trailing CRLF', 'd14ac75f-f381-4c97-acec-462e6f47f74a\r\n'],
+  ['trailing data', 'd14ac75f-f381-4c97-acec-462e6f47f74a-extra'],
+  ['legacy startup sweep', 'opencode-startup-sweep'],
+] as const) {
+  test(`Desktop run observation rejects a ${reason} pending suffix`, () => {
+    const observe = createDesktopProjectRunObserver('TEST-logical', 'TEST-execution');
+    assert.throws(() => observe({ provisioning: `pending:${hostTeamSelectionKey('TEST-logical')}:${suffix}` }, 'TEST-launch'));
+  });
+}
+
+test('Desktop run observation rejects a foreign logical attempt and a pending runtime ID', () => {
+  const attemptId = randomUUID();
+  const observe = createDesktopProjectRunObserver('TEST-logical', 'TEST-execution');
+  assert.throws(() => observe({ provisioning: `pending:${hostTeamSelectionKey('TEST-other')}:${attemptId}` }, 'TEST-launch'));
+  assert.throws(() => observe({ runtime: `pending:${hostTeamSelectionKey('TEST-logical')}:${attemptId}` }, 'TEST-launch'));
+});
+
 test('Desktop run observation rejects replacement or disappearance during partial publication', () => {
   const run = hostTeamRunId('TEST-execution', 'TEST-launch', 'TEST-roster');
   const replacement = hostTeamRunId('TEST-execution', 'TEST-launch', 'TEST-other-roster');
-  const pending = `pending:${hostTeamSelectionKey('TEST-logical')}:1`;
+  const pending = `pending:${hostTeamSelectionKey('TEST-logical')}:${randomUUID()}`;
   for (const changed of [{ runtime: replacement, provisioning: replacement }, { provisioning: pending }]) {
     const observe = createDesktopProjectRunObserver('TEST-logical', 'TEST-execution');
     assert.equal(observe({ runtime: run, provisioning: pending }, 'TEST-launch'), false);
@@ -80,7 +118,12 @@ test('Desktop run observation rejects replacement or disappearance during partia
   }
   const observe = createDesktopProjectRunObserver('TEST-logical', 'TEST-execution');
   assert.equal(observe({ provisioning: pending }, 'TEST-launch'), false);
-  assert.throws(() => observe({ provisioning: pending.slice(0, -1) + '2' }, 'TEST-launch'));
+  const replacementPending = `pending:${hostTeamSelectionKey('TEST-logical')}:${randomUUID()}`;
+  assert.notEqual(replacementPending, pending);
+  assert.throws(() => observe({ provisioning: replacementPending }, 'TEST-launch'), {
+    code: 'ERR_ASSERTION', message: /^same original pending launch attempt/,
+    actual: replacementPending, expected: pending,
+  });
   for (const foreign of [hostTeamRunId('TEST-other', 'TEST-launch', 'TEST-roster'),
     hostTeamRunId('TEST-execution', 'TEST-other-launch', 'TEST-roster')])
     assert.throws(() => createDesktopProjectRunObserver('TEST-logical', 'TEST-execution')({ runtime: foreign }, 'TEST-launch'));
@@ -99,7 +142,7 @@ test('Desktop launch read waits within its caller poll and pins the first publis
   assert.equal(await read(), undefined); assert.equal(reads, 0);
   published = true; assert.equal(await read(), undefined);
   state.runtimeCaptures = [{ launchId: 'TEST-launch', fingerprint: 'TEST-original' }];
-  pins.provisioning = `pending:${hostTeamSelectionKey('TEST-logical')}:1`;
+  pins.provisioning = `pending:${hostTeamSelectionKey('TEST-logical')}:${randomUUID()}`;
   assert.equal(await read(), undefined);
   pins.runtime = hostTeamRunId('TEST-execution', 'TEST-launch', 'TEST-roster');
   assert.equal(await read(), undefined);

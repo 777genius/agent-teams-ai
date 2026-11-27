@@ -68,7 +68,8 @@ export function buildPreparedSendRequest({
   taskRefs,
 }: BuildPreparedSendRequestOptions): ComposerPreparedRequest {
   if (selectedTeam && !lockedRecipient) {
-    if (autonomousGoal) throw new Error('Goal requires a direct lead message');
+    if (autonomousGoal || originalGoalRequest)
+      throw new Error('Goal requires a direct lead message');
     return {
       kind: 'cross-team',
       request: {
@@ -105,7 +106,7 @@ export function buildPreparedSendRequest({
       messageId: attemptId,
     },
   };
-  if (autonomousGoal && originalGoalRequest) {
+  if (originalGoalRequest) {
     if (!sameOriginalGoalRequest(originalGoalRequest, prepared))
       throw new Error('Restore the unchanged original request to check its delivery.');
     return structuredClone(originalGoalRequest);
@@ -204,7 +205,6 @@ export function isPreparedSendAllowed(
   if (JSON.stringify(capturedGoal) !== JSON.stringify(content.autonomousGoal)) return false;
   const original = restoredAutonomousGoalRequest(content, teamName, recipient ?? '');
   if (
-    content.autonomousGoal &&
     content.restoredOrigin?.autonomousGoalRequest &&
     (!original || JSON.stringify(original) !== JSON.stringify(request))
   )

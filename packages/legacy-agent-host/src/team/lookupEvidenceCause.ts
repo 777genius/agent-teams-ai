@@ -14,13 +14,23 @@ export interface MessageInputCause {
   readonly inputId: string;
   readonly binding: Readonly<RuntimeMemberBinding>;
 }
-export type ToolInputCause = TaskStartCause | MessageInputCause;
+/** Canonical task-notification evidence, without granting a new TaskStart/DO capability. */
+export interface GoalTaskInputCause {
+  readonly goalTaskCommandId: string;
+  readonly goalTaskId: string;
+  readonly messageId: string;
+  readonly deliveryId: string;
+  readonly inputId: string;
+  readonly binding: Readonly<RuntimeMemberBinding>;
+}
+export type ToolInputCause = TaskStartCause | MessageInputCause | GoalTaskInputCause;
 
 /** Runs under the existing Team fence; current outbox authority is checked before provenance. */
 export function lookupEvidenceCause(options: {
   store: TeamStore;
   recovery: TaskRecovery;
   raw: ImmutableDelivery;
+  purpose?: 'evidence';
   authorize(): void;
   deliveryAuthorized(intent: DeliveryIntent): boolean;
 }): ToolInputCause | null {
@@ -31,7 +41,7 @@ export function lookupEvidenceCause(options: {
   if (!intent) return null;
   if (
     intent.phase === 'not_admitted' ||
-    recovery.retracting(raw) ||
+    recovery.retracting(raw, options.purpose ?? 'delivery') ||
     digest(deliveryIdentity(raw)) !== digest(deliveryIdentity(intent)) ||
     !options.deliveryAuthorized(intent)
   )
@@ -39,7 +49,7 @@ export function lookupEvidenceCause(options: {
   const receipt = readProductCommand(store, intent.commandId);
   if (!receipt) throw new TeamOwnerError('hold');
   if (receipt.command.operation !== 'message.send')
-    return recovery.lookupTaskStartCause(intent, receipt);
+    return recovery.lookupTaskStartCause(intent, receipt) ?? recovery.lookupGoalTaskCause(intent, receipt);
   // deliveryAuthorized has proved canonical message bytes, actor grant revision and captured recipient.
   if (
     receipt.phase !== 'completed' ||

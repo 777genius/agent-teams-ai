@@ -205,7 +205,16 @@ export function createHostProjectRuntimeApi(options: {
         const launch = selected.state.launch.members.find(
           (row) => row.memberId === member.memberId
         );
-        if (!launch || Object.hasOwn(members, member.label))
+        const observed = configuration.launch.members.find(
+          (row) => row.memberId === member.memberId
+        );
+        if (
+          !launch ||
+          !observed ||
+          launch.generation !== observed.generation ||
+          launch.attemptId !== observed.attemptId ||
+          Object.hasOwn(members, member.label)
+        )
           throw new HostTeamOperationError('runtime-unavailable', 'not-dispatched');
         const runtime = selected.state.sessions.find(
           (row) => row.memberId === member.memberId && row.generation === launch.generation
@@ -223,7 +232,10 @@ export function createHostProjectRuntimeApi(options: {
                   member.selected.provider === 'claude'
                     ? ('anthropic' as const)
                     : member.selected.provider,
-                runtimeModel: member.selected.model,
+                runtimeModel:
+                  member.selected.provider === 'opencode'
+                    ? member.selected.qualifiedModel
+                    : member.selected.model,
                 cwd: member.selected.workspace,
               }
             : {}),

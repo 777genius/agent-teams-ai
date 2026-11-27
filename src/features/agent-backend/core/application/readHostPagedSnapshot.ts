@@ -289,6 +289,8 @@ export async function readHostPagedSnapshot(
         page.teamName !== first.teamName ||
         page.feed.streamId !== first.feed.streamId ||
         page.feed.sequence !== first.feed.sequence ||
+        page.autonomousGoalAvailable !== first.autonomousGoalAvailable ||
+        JSON.stringify(page.autonomousGoal) !== JSON.stringify(first.autonomousGoal) ||
         page.taskTotal !== first.taskTotal ||
         Boolean(page.taskParts) !== Boolean(first.taskParts) ||
         page.messageTotal !== first.messageTotal ||

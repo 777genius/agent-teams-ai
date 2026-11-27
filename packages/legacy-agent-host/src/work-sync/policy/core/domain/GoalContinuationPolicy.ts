@@ -22,6 +22,8 @@ export interface GoalWorkWait {
   attentionReason?: string;
 }
 export interface GoalWorkTask extends MemberWorkSyncTaskLike {
+  /** Derived from the effective canonical review flow; never copied into task storage. */
+  humanApprovalPending?: boolean;
   /** References already verified by the canonical task/artifact owner, never report text. */
   progressReferences: readonly string[];
 }
@@ -50,6 +52,14 @@ interface Obligation { key: string; references: readonly string[]; instruction: 
 /** Original continuation identity, shared with admission/retirement of queued task wakes. */
 export function goalTaskObligationKey(item: MemberWorkSyncActionableWorkItem, memberName: string): string {
   return `task:${item.taskId}:${item.kind}:${item.evidence.reviewCycleId ?? 'work'}:${memberName}`;
+}
+
+/** Claim-time validity is membership, independent of another obligation's recovery priority. */
+export function goalLeadObligationCurrent(input: GoalWorkDecisionInput, key: string): boolean {
+  if (input.role !== 'lead') return false;
+  const obligations: Obligation[] = [];
+  addLeadObligations(input, input.tasks.filter(task => input.requiredTaskIds.has(task.id)), obligations, input.waits);
+  return obligations.some(obligation => obligation.key === key);
 }
 
 /** Select one existing obligation. Ordinary Work Sync policy and all non-opted-in teams are unchanged. */
@@ -105,6 +115,8 @@ export function decideGoalContinuation(input: GoalWorkDecisionInput): GoalWorkDe
   if (exhausted) return { kind: 'attention', reason: exhausted };
   if (pendingWaits.length)
     return { kind: 'waiting', reason: `Waiting for ${pendingWaits.map(wait => wait.description).join('; ')}.` };
+  if (required.some(task => task.humanApprovalPending && isTeamTaskFinishedForDependency(task)))
+    return { kind: 'waiting', reason: 'Waiting for required human approval of completed work.' };
   if (required.some(task => !isTeamTaskFinishedForDependency(task)))
     return { kind: 'waiting', reason: 'Waiting for assigned work, review or clarification.' };
   return { kind: 'caught_up', reason: 'No actionable work for this member. Goal acceptance remains lead-owned.' };
@@ -146,7 +158,7 @@ function addLeadObligations(input: GoalWorkDecisionInput, required: GoalWorkTask
   if (!required.length && !waits.some(wait => wait.pending && wait.taskIds.length === 0) && !failedWaits.length)
     obligations.push({ key: `lead:${input.goalId}:plan`, references: input.progressReferences,
       instruction: 'Continue the accepted objective. Create only necessary tasks, or produce and verify the task-free result. Propose the final result when its criteria are met.' });
-  else if (required.length && required.every(task => !isTeamTaskDeleted(task) && isTeamTaskFinishedForDependency(task)) && !waits.some(wait => wait.pending || wait.attentionReason))
+  else if (required.length && required.every(task => !isTeamTaskDeleted(task) && !task.humanApprovalPending && isTeamTaskFinishedForDependency(task)) && !waits.some(wait => wait.pending || wait.attentionReason))
     obligations.push({ key: `lead:${input.goalId}:verify`,
       references: [...input.progressReferences, ...required.flatMap(task => [`completed:${task.id}`, ...task.progressReferences])],
       instruction: 'Verify the completed objective against its original criteria and current artifacts/checks. Use goal_propose to propose the final result; the Host waits for settled inputs before acceptance.' });

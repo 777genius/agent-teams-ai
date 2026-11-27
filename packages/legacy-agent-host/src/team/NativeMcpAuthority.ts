@@ -62,6 +62,7 @@ export function captureNativeMcpAuthority(options: {
   // Same original-input DO policy used by ordinary native helpers: accepted TaskStart,
   // or the original persisted message's explicit/default DO mode. Never a payload mode.
   if (!('taskId' in cause)) {
+    if (!('messageCommandId' in cause)) throw new TeamOwnerError('forbidden');
     const receipt = readProductCommand(options.store, cause.messageCommandId);
     if (
       receipt?.command.operation !== 'message.send' ||

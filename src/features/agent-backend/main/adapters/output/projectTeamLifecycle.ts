@@ -101,25 +101,48 @@ export function projectTeamLifecycle(
     return { kind: 'team_purge', commandId, transactionId, phase: source.phase };
   }
   if (operation === 'team.queue.read') {
-    const source = row(value, ['kind', 'member', 'messages']);
+    const source = row(value, ['kind', 'member', 'messages', 'revision', 'nextCursor']);
     if (
       source.kind !== 'queued_user_messages' ||
       !Array.isArray(source.messages) ||
       source.messages.length > 4096
     )
       throw new Error('Invalid queue snapshot');
+    const paged = Object.hasOwn(source, 'revision') || Object.hasOwn(source, 'nextCursor');
+    if (
+      paged &&
+      (typeof source.revision !== 'string' ||
+        !/^[a-f0-9]{64}$/.test(source.revision) ||
+        !(
+          source.nextCursor === null ||
+          (typeof source.nextCursor === 'string' &&
+            /^[1-9][0-9]{0,8}\.[a-f0-9]{64}$/.test(source.nextCursor))
+        ))
+    )
+      throw new Error('Invalid queue continuation');
+    const messages = source.messages.map((raw) => {
+      const message = row(raw, ['messageId', 'text', 'timestamp', 'summary']);
+      // Older Hosts may still return full rows; validate them without forwarding their text.
+      if (
+        Object.hasOwn(message, 'text') ||
+        Object.hasOwn(message, 'timestamp') ||
+        Object.hasOwn(message, 'summary')
+      ) {
+        text(message.text, 256 * 1024);
+        text(message.timestamp, 128);
+        if (message.summary !== undefined) text(message.summary, 256 * 1024);
+      }
+      return { messageId: id(message.messageId) };
+    });
+    if (new Set(messages.map((message) => message.messageId)).size !== messages.length)
+      throw new Error('Duplicate queue identity');
     return {
       kind: 'queued_user_messages',
       member: id(source.member),
-      messages: source.messages.map((raw) => {
-        const message = row(raw, ['messageId', 'text', 'timestamp', 'summary']);
-        return {
-          messageId: id(message.messageId),
-          text: text(message.text, 256 * 1024),
-          timestamp: text(message.timestamp, 128),
-          ...(message.summary === undefined ? {} : { summary: text(message.summary, 256 * 1024) }),
-        };
-      }),
+      messages,
+      ...(paged
+        ? { revision: source.revision as string, nextCursor: source.nextCursor as string | null }
+        : {}),
     };
   }
   const source = row(

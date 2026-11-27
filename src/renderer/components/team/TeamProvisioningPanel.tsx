@@ -14,6 +14,7 @@ import type { RetryFailedOpenCodeSecondaryLanesResult } from '@shared/types';
 
 export interface TeamProvisioningPanelProps {
   teamName: string;
+  runtimeTeamName?: string;
   surface?: 'raised' | 'flat';
   dismissible?: boolean;
   className?: string;
@@ -43,6 +44,7 @@ function formatOpenCodeSecondaryRetryResult(
 
 export const TeamProvisioningPanel = memo(function TeamProvisioningPanel({
   teamName,
+  runtimeTeamName,
   surface = 'flat',
   dismissible = false,
   className,
@@ -58,7 +60,8 @@ export const TeamProvisioningPanel = memo(function TeamProvisioningPanel({
     retryFailedOpenCodeTeammates,
     memberDiagnostics,
     runInstanceKey,
-  } = useTeamProvisioningPresentation(teamName);
+    diagnosticsTeamName,
+  } = useTeamProvisioningPresentation(teamName, runtimeTeamName);
   const [dismissed, setDismissed] = useState(false);
   const [retryAttempt, setRetryAttempt] = useState<{
     owner: string;
@@ -218,7 +221,7 @@ export const TeamProvisioningPanel = memo(function TeamProvisioningPanel({
       }
       loading={showRunningState}
       startedAt={presentation.progress.startedAt}
-      teamName={teamName}
+      teamName={diagnosticsTeamName}
       runId={presentation.progress.runId}
       pid={presentation.progress.pid}
       cliLogsTail={presentation.progress.cliLogsTail}

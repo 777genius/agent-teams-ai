@@ -404,6 +404,7 @@ describe('existing Launch dialog saved-request contract', () => {
   function productSnapshot(): BackendTeamSnapshot {
     return {
       teamName: 'team',
+      runtimeNeverLaunched: true,
       revision: 'a'.repeat(64),
       configurationRevision: 'b'.repeat(64),
       feed: { streamId: 'stream', sequence: 0, cursor: 'cursor' },

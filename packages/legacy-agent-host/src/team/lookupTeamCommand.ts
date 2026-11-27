@@ -28,6 +28,8 @@ export function lookupTeamCommand(options: {
     if (teamCommandFingerprint({ binding: options.binding, principalId, command: expected,
       deliveryBinding: selected.deliveryBinding, taskRecipients: selected.taskRecipients,
       messageRecipientRole: selected.messageRecipientRole, taskStartLeadName: selected.taskStartLeadName,
+      ...(receipt.crossTeam ? { crossTeam: receipt.crossTeam } : {}),
+      ...(receipt.group ? { group: receipt.group } : {}),
       ...(receipt.hostCommand ? { hostCommand: receipt.hostCommand } : {}),
       ...(receipt.workSyncNudge ? { workSyncNudge: receipt.workSyncNudge } : {}),
       ...(receipt.goal ? { goal: receipt.goal } : {}),

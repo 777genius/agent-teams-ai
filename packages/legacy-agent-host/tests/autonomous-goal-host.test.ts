@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
 
-import type { CommandReceipt } from '../dist/team/contracts.js';
+import type { CommandReceipt, DeliveryIntent } from '../dist/team/contracts.js';
+import { digest } from '../dist/team/identity.js';
 import type { GoalStatus } from '../dist/team/goalContracts.js';
 import { eventually, goalHost, success } from './fixtures/autonomous-goal-host.ts';
 
@@ -165,7 +166,7 @@ test('delegated goal continues the same task for more than two verified producti
     commandId: 'TEST-too-early', result: 'TEST incomplete work is not final',
   }), { error: { code: 'hold' } });
 
-  // The original assignment has no qualified capture cause. Its next goal message does.
+  // Continue the same scoped task across distinct original native inputs.
   f.session('worker').finish(0);
   await eventually(() => f.session('worker').submits.length === 2,
     'settled assigned work receives one automatic goal continuation');
@@ -348,4 +349,139 @@ test('a real captured write after proposal invalidates the candidate and require
   const page = success<{ messages: { messageId?: string }[] }>(await f.rpc('team.messages.page', {}));
   assert.equal(page.messages.filter(row => row.messageId === staleResultId).length, 0);
   assert.equal(page.messages.filter(row => row.messageId === f.goal()!.proposal!.resultMessageId).length, 1);
+});
+
+test('the first delegated task input contributes real evidence and a late write reopens the original candidate', async t => {
+  const f = await goalHost(t, { capture: true });
+  await f.open('lead');
+  await f.open('worker');
+  success(await f.rpc('team.execute', { operation: 'message.send', payload: { to: 'lead',
+    text: 'TEST complete the artifact from the original first assignment', actionMode: 'delegate',
+    autonomousGoal: { durationHours: 12, maxAttempts: 8 } } }, 'TEST-first-write-intake'));
+  await eventually(() => f.session().submits.length === 1, 'original lead input starts');
+  const task = await f.tool('lead', 'task_create', { commandId: 'TEST-first-write-task',
+    subject: 'TEST artifact written in the first assigned input', owner: 'worker' }) as CommandReceipt;
+  assert.equal(task.phase, 'completed');
+  const taskId = task.effects.taskId;
+  await eventually(() => f.session('worker').submits.length === 1, 'first assigned worker input starts');
+  assert.equal((await f.tool('worker', 'task_start', {
+    commandId: 'TEST-first-write-start', taskId,
+  }) as CommandReceipt).phase, 'completed');
+  await f.captureWrite('worker', 0, 'TEST original first-assignment artifact\n');
+  assert.equal((await f.tool('worker', 'task_complete', {
+    commandId: 'TEST-first-write-complete', taskId,
+  }) as CommandReceipt).phase, 'completed');
+  const boardNotices = f.teamStore.fenced(() => f.teamStore.list<DeliveryIntent>('outbox')
+    .filter(intent => intent.commandId === 'TEST-first-write-complete' && intent.binding.memberId === 'lead-id'));
+  assert.equal(boardNotices.length, 1, 'canonical board completion publishes one actual lead notification');
+  f.session().finish(0);
+  await eventually(() => f.session().submits.length === 2, 'lead consumes its already queued board-completion input');
+  assert.equal(f.session().submits[1]!.inputId, boardNotices[0]!.inputId);
+  const proposal = await f.tool('lead', 'goal_propose', {
+    commandId: 'TEST-first-write-proposal', result: 'TEST first artifact candidate',
+  }) as GoalStatus;
+  assert.equal(proposal.disposition, 'finalizing');
+  assert.notEqual(f.goal()!.proposal!.evidenceFingerprint, digest([]),
+    'first assignment capture is actually bound to its scoped task, not an empty evidence list');
+  const staleId = f.goal()!.proposal!.resultMessageId;
+  await f.captureWrite('worker', 0, 'TEST late first-assignment artifact change\n');
+  f.session('worker').finish(0);
+  f.session().finish(1);
+  await eventually(() => f.session().submits.length === 3,
+    'late first-assignment effect requires a fresh lead verification input');
+  assert.equal(f.goal()!.disposition, 'active');
+  assert.equal(f.goal()!.proposal, undefined);
+  assert.notEqual(f.goal()!.published, true);
+  assert.equal((await f.tool('lead', 'goal_propose', {
+    commandId: 'TEST-first-write-current', result: 'TEST verified the changed first-assignment file',
+  }) as GoalStatus).disposition, 'finalizing');
+  f.session().finish(2);
+  await eventually(() => f.goal()?.published === true, 'fresh original verification publishes once');
+  const page = success<{ messages: { messageId?: string }[] }>(await f.rpc('team.messages.page', {}));
+  assert.equal(page.messages.filter(row => row.messageId === staleId).length, 0);
+  assert.equal(page.messages.filter(row => row.messageId === f.goal()!.proposal!.resultMessageId).length, 1);
+});
+
+test('a direct change to an already captured artifact after proposal cannot hide behind an unchanged ledger hash', async t => {
+  const f = await goalHost(t, { capture: true });
+  await f.open('lead');
+  await f.open('worker');
+  success(await f.rpc('team.execute', { operation: 'message.send', payload: { to: 'lead',
+    text: 'TEST compare the actual current artifact at finalization', actionMode: 'do',
+    autonomousGoal: { durationHours: 12, maxAttempts: 8 } } }, 'TEST-direct-write-intake'));
+  await eventually(() => f.session().submits.length === 1, 'original intake starts');
+  const file = await f.captureWrite('lead', 0, 'TEST verified artifact before proposal\n');
+  assert.equal((await f.tool('lead', 'goal_propose', {
+    commandId: 'TEST-direct-write-first', result: 'TEST stale current-file candidate',
+  }) as GoalStatus).disposition, 'finalizing');
+  const staleId = f.goal()!.proposal!.resultMessageId;
+  writeFileSync(file, 'TEST actual bytes changed without a new capture event\n');
+  f.session().finish(0);
+  await eventually(() => f.session().submits.length === 2,
+    'bounded current-file read invalidates the stale candidate without a new ledger event');
+  assert.equal(f.goal()!.disposition, 'active');
+  assert.notEqual(f.goal()!.published, true);
+  assert.equal((await f.tool('lead', 'goal_propose', {
+    commandId: 'TEST-direct-write-current', result: 'TEST verified current file bytes',
+  }) as GoalStatus).disposition, 'finalizing');
+  f.session().finish(1);
+  await eventually(() => f.goal()?.published === true, 'fresh current-file verification may finish');
+  const page = success<{ messages: { messageId?: string }[] }>(await f.rpc('team.messages.page', {}));
+  assert.equal(page.messages.filter(row => row.messageId === staleId).length, 0);
+  assert.equal(page.messages.filter(row => row.messageId === f.goal()!.proposal!.resultMessageId).length, 1);
+});
+
+test('a known failed original keeps its effect and debit while separately authorized repair can complete the same task', async t => {
+  const f = await goalHost(t, { capture: true });
+  await f.open('lead');
+  await f.open('worker');
+  success(await f.rpc('team.execute', { operation: 'message.send', payload: { to: 'lead',
+    text: 'TEST finish the original scoped task after a known failed attempt', actionMode: 'delegate',
+    autonomousGoal: { durationHours: 12, maxAttempts: 12 } } }, 'TEST-known-failed-intake'));
+  await eventually(() => f.session().submits.length === 1, 'original lead receives the goal');
+  const task = await f.tool('lead', 'task_create', { commandId: 'TEST-known-failed-task',
+    subject: 'TEST repair the same scoped file', owner: 'worker' }) as CommandReceipt;
+  assert.equal(task.phase, 'completed');
+  const taskId = task.effects.taskId;
+  await eventually(() => f.session('worker').submits.length === 1, 'first original assignment starts');
+  assert.equal((await f.tool('worker', 'task_start', {
+    commandId: 'TEST-known-failed-start', taskId,
+  }) as CommandReceipt).phase, 'completed');
+  await f.captureWrite('worker', 0, 'TEST partial effect before a known failure\n');
+  const firstInputId = f.session('worker').submits[0]!.inputId;
+  const originalDebit = structuredClone(f.goal()!.debits[firstInputId]);
+  assert.ok(originalDebit);
+  f.session('worker').finish(0, 'failed');
+  await eventually(() => f.runtime('worker')?.inputs[0]?.terminal === 'failed',
+    'actual native failure is durably terminal rather than unknown');
+  assert.notEqual(f.goal()!.published, true);
+  const retry = success<CommandReceipt>(await f.rpc('team.execute', { operation: 'task.lifecycle',
+    payload: { taskId, action: 'pending' } }, 'TEST-known-failed-return-pending'));
+  assert.equal(retry.phase, 'completed', 'human returns the failed task to the canonical retry state');
+  const repair = success<CommandReceipt>(await f.rpc('team.execute', { operation: 'task.start',
+    payload: { taskId, notification: 'user' } }, 'TEST-known-failed-human-repair'));
+  assert.equal(repair.phase, 'completed', 'human authorizes a new original repair notification');
+  await eventually(() => f.session('worker').submits.length === 2,
+    'known failed history does not permanently block separately authorized repair');
+  assert.notEqual(f.session('worker').submits[1]!.inputId, firstInputId);
+  await f.captureWrite('worker', 1, 'TEST repaired and verified actual file\n');
+  assert.equal((await f.tool('worker', 'task_complete', {
+    commandId: 'TEST-known-failed-complete', taskId,
+  }) as CommandReceipt).phase, 'completed');
+  f.session('worker').finish(1);
+  await eventually(() => f.runtime('worker')?.inputs[1]?.terminal === 'succeeded', 'repair settles successfully');
+  const boardNotices = f.teamStore.fenced(() => f.teamStore.list<DeliveryIntent>('outbox')
+    .filter(intent => intent.commandId === 'TEST-known-failed-complete' && intent.binding.memberId === 'lead-id'));
+  assert.equal(boardNotices.length, 1);
+  f.session().finish(0);
+  await eventually(() => f.session().submits.length === 2, 'lead receives the actual original board-completion notification');
+  assert.equal(f.session().submits[1]!.inputId, boardNotices[0]!.inputId);
+  assert.equal((await f.tool('lead', 'goal_propose', {
+    commandId: 'TEST-known-failed-final', result: 'TEST repaired original task is verified',
+  }) as GoalStatus).disposition, 'finalizing');
+  f.session().finish(1);
+  await eventually(() => f.goal()?.published === true, 'known failed artifact history does not prevent a verified repair result');
+  assert.equal(f.runtime('worker')!.inputs[0]!.terminal, 'failed');
+  assert.deepEqual(f.goal()!.debits[firstInputId], originalDebit, 'failed charged attempt is neither removed nor refunded');
+  assert.equal(success<{ status: string }>(await f.rpc('team.task.get', { taskId })).status, 'completed');
 });

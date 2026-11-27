@@ -1,5 +1,5 @@
 const kanban = require('./kanban.js');
-const messages = require('./messages.js');
+const { sendTaskNotification } = require('./sendTaskNotification.js');
 const runtimeHelpers = require('./runtimeHelpers.js');
 const tasks = require('./tasks.js');
 const reviewStateHelpers = require('./reviewState.js');
@@ -124,7 +124,7 @@ function createLeadSignoff({
   function notifyLead(context, { task, event, leadSessionId }) {
     try {
       const reviewPolicy = kanban.getReviewFlowPolicy(context);
-      messages.sendMessage(context, {
+      sendTaskNotification(context, task, {
         to: event.reviewer,
         from: event.actor,
         text: buildReviewRequestMessage({

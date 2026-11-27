@@ -14,6 +14,7 @@ import { registerAgentBackendHttp } from '../../../src/features/agent-backend/ma
 import { registerAgentBackendIpc } from '../../../src/features/agent-backend/main/adapters/input/registerAgentBackendIpc';
 import { parseBackendOperation } from '../../../src/features/agent-backend/main/adapters/input/validateBackendOperation';
 import { controlAutonomousGoal } from '../../../src/features/agent-backend/renderer/controlAutonomousGoal';
+import { createHostTeamMutations } from '../../../src/features/agent-backend/renderer/createHostTeamMutations';
 import {
   buildPreparedSendRequest,
   isPreparedSendAllowed,
@@ -26,6 +27,7 @@ import type {
   BackendOperationRequest,
 } from '../../../src/features/agent-backend/contracts';
 import type { ResolvedTeamMember } from '../../../src/shared/types';
+import type { SendMessageRequest } from '../../../src/shared/types/team';
 import type { IpcMain, IpcMainInvokeEvent } from 'electron';
 
 const goal: AutonomousGoalStatus = {
@@ -47,6 +49,121 @@ const control = {
 } satisfies BackendOperationRequest;
 
 describe('bounded original goal transport', () => {
+  it('rejects non-string and unknown dispositions instead of coercing them into a valid status', () => {
+    for (const disposition of [['active'], {}, null, 1, 'unknown'])
+      expect(() => readAutonomousGoalStatus({ ...goal, disposition })).toThrow(
+        'Invalid goal disposition'
+      );
+  });
+
+  it.each(['ask', 'missing', 'slash'] as const)(
+    'rejects a %s goal before resolving or uploading attachments',
+    async (mode) => {
+      const invoke = vi.fn(),
+        resolve = vi.fn();
+      const mutations = createHostTeamMutations({
+        backend: { invoke, getConnections: vi.fn() },
+        resolve,
+        captureScope: () => () => true,
+      });
+      await expect(
+        mutations.sendMessage(teamName, {
+          member: 'lead',
+          text: mode === 'slash' ? '/compact' : 'Finish the report',
+          ...(mode === 'missing' ? {} : { actionMode: mode === 'ask' ? 'ask' : 'do' }),
+          autonomousGoal: { durationHours: 12, maxAttempts: 100 },
+          attachments: [
+            {
+              id: 'TEST-file',
+              filename: 'test.txt',
+              mimeType: 'text/plain',
+              size: 5,
+              data: 'VEVTVAo=',
+            },
+          ],
+        })
+      ).rejects.toMatchObject({ code: 'unsupported', outcome: 'not-dispatched' });
+      expect(resolve).not.toHaveBeenCalled();
+      expect(invoke).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each(['do', 'delegate'] as const)(
+    'uploads and sends the exact original valid %s goal',
+    async (actionMode) => {
+      const invoke = vi.fn(async (request: BackendOperationRequest) => {
+        if (request.operation === 'attachment.upload')
+          return {
+            ok: true as const,
+            value: {
+              nextOffset: null,
+              reference: {
+                artifactId: 'TEST-artifact',
+                digest: request.payload.digest,
+                byteLength: request.payload.attachment.size,
+                mimeType: request.payload.attachment.mimeType,
+              },
+            },
+          };
+        return {
+          ok: true as const,
+          value: {
+            commandId: request.commandId,
+            operation: 'message.send' as const,
+            phase: 'completed' as const,
+            messageId: request.commandId,
+          },
+        };
+      });
+      const mutations = createHostTeamMutations({
+        backend: { invoke, getConnections: vi.fn() },
+        resolve: async () => ({
+          handle,
+          teamName: 'TEST-canonical',
+          members: [{ name: 'lead', role: 'lead' }],
+        }),
+        captureScope: () => () => true,
+      });
+      const request: SendMessageRequest = {
+        member: 'lead',
+        text: 'Finish the report',
+        actionMode,
+        messageId: 'TEST-original-upload',
+        autonomousGoal: { durationHours: 12, maxAttempts: 100 },
+        attachments: [
+          {
+            id: 'TEST-file',
+            filename: 'test.txt',
+            mimeType: 'text/plain',
+            size: 5,
+            data: 'VEVTVAo=',
+          },
+        ],
+      };
+      await expect(mutations.sendMessage(teamName, request)).resolves.toEqual({
+        deliveredToInbox: true,
+        messageId: request.messageId,
+      });
+      expect(invoke.mock.calls.map(([value]) => value.operation)).toEqual([
+        'attachment.upload',
+        'message.send',
+      ]);
+      expect(invoke.mock.calls[1]?.[0]).toMatchObject({
+        handle,
+        commandId: request.messageId,
+        operation: 'message.send',
+        payload: {
+          to: 'lead',
+          text: request.text,
+          actionMode,
+          messageId: request.messageId,
+          autonomousGoal: request.autonomousGoal,
+          attachments: [expect.objectContaining({ artifactId: 'TEST-artifact' })],
+        },
+      });
+    }
+  );
+
   it('retains an explicit Do or Delegate goal on the original message and rejects Ask/native options', () => {
     const message = {
       handle,
@@ -203,6 +320,41 @@ describe('bounded original goal transport', () => {
       )
     ).toBe(false);
     expect(restoredAutonomousGoalRequest(content, 'another-team', 'lead')).toBeUndefined();
+    const cleared = { ...content, autonomousGoal: undefined };
+    const ordinary = buildPreparedSendRequest({
+      attemptId: 'TEST-new-ordinary',
+      teamName,
+      selectedTeam: null,
+      crossTeamRecipient: null,
+      localRecipient: 'lead',
+      text: 'Finish',
+      summary: 'Finish',
+      actionMode: 'do',
+      attachments: [],
+      taskRefs: [],
+    });
+    expect(isPreparedSendAllowed(cleared, ordinary, members, teamName, true, undefined, true)).toBe(
+      false
+    );
+    const changed = {
+      attemptId: 'TEST-new-id',
+      teamName,
+      selectedTeam: null,
+      crossTeamRecipient: null,
+      localRecipient: 'lead',
+      text: 'Finish',
+      summary: 'Finish',
+      actionMode: 'do' as const,
+      attachments: [],
+      taskRefs: [],
+      originalGoalRequest: original,
+    };
+    expect(() => buildPreparedSendRequest(changed)).toThrow(
+      'Restore the unchanged original request'
+    );
+    expect(() => buildPreparedSendRequest({ ...changed, selectedTeam: 'another-team' })).toThrow(
+      'Goal requires a direct lead message'
+    );
   });
 
   it('routes controls through the existing facade and projects no private authority', async () => {

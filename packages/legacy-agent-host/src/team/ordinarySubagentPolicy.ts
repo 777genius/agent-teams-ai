@@ -7,6 +7,7 @@ export function ordinarySubagentAllowed(options: Parameters<typeof lookupEvidenc
   const cause = lookupEvidenceCause(options);
   if (!cause) return false;
   if ('taskId' in cause) return true; // A canonical Task start is an accepted DO action.
+  if (!('messageCommandId' in cause)) return false;
   const receipt = readProductCommand(options.store, cause.messageCommandId);
   return receipt?.command.operation === 'message.send' && (receipt.command.payload.actionMode ?? 'do') === 'do';
 }

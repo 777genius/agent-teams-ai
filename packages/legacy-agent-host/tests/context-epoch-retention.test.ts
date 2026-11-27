@@ -203,6 +203,70 @@ test('bulk representation recovers partial archives and a lost state write only 
   assert.doesNotThrow(() => f.make().prepared('TEST-principal', binding, proof));
 });
 
+function partiallyArchived(t: TestContext) {
+  const f = setup(t);
+  f.fill(120, false);
+  const proof = f.candidate(120);
+  f.fail((name) => name === `context-epochs/${epoch(2).epochId}.json`);
+  assert.throws(() => f.make().prepared('TEST-principal', binding, proof), /TEST publication/);
+  f.fail();
+  return { ...f, proof };
+}
+
+test('partial archive replay rejects a changed authority revision in an unarchived linked candidate', (t) => {
+  const f = partiallyArchived(t), changed = f.state();
+  changed.contextEpochs![1]!.candidate!.authorityRevision++;
+  f.store.write('state.json', changed);
+  const archived = f.store.read(`context-epochs/${epoch(1).epochId}.json`);
+  assert.throws(() => f.make().prepared('TEST-principal', binding, f.proof), /hold/);
+  assert.throws(() => f.make().prepare('TEST-principal', f.request(121)), /hold/);
+  assert.deepEqual(f.state(), changed);
+  assert.deepEqual(f.store.read(`context-epochs/${epoch(1).epochId}.json`), archived);
+  assert.equal(f.store.read(`context-epochs/${epoch(2).epochId}.json`), undefined);
+});
+
+test('prepare-time archive recovery requires every linked epoch and preserves missing proof state', (t) => {
+  const f = partiallyArchived(t), changed = f.state();
+  changed.contextEpochs!.splice(1, 1);
+  f.store.write('state.json', changed);
+  assert.throws(() => f.make().prepare('TEST-principal', f.request(121)), /hold/);
+  assert.deepEqual(f.state(), changed);
+  assert.equal(f.store.read(`context-epochs/${epoch(2).epochId}.json`), undefined);
+});
+
+test('prepare-time archive recovery cannot replace current member authority with an old accepted proof', (t) => {
+  const f = partiallyArchived(t), changed = f.state();
+  changed.grants[0]!.revoked = true;
+  f.store.write('state.json', changed);
+  assert.throws(() => f.make().prepare('TEST-principal', f.request(121)), /forbidden/);
+  assert.deepEqual(f.state(), changed);
+  assert.equal(f.store.read(`context-epochs/${epoch(2).epochId}.json`), undefined);
+});
+
+test('prepare-time archive recovery cannot promote another logical member candidate', (t) => {
+  const f = setup(t);
+  f.fill(1, false);
+  const proof = f.candidate(1), changed = f.state(), row = changed.contextEpochs![0]!;
+  const other = { ...binding, memberId: 'TEST-bob' };
+  row.candidate!.binding = other;
+  const archived = { ...row, represented: { ...proof, bindingFingerprint: hash(JSON.stringify(other)) } };
+  f.store.write(`context-epochs/${row.epochId}.json`, archived);
+  f.store.write('state.json', changed);
+  assert.throws(() => f.make().prepare('TEST-principal', f.request(2)), /hold/);
+  assert.deepEqual(f.state(), changed);
+  assert.deepEqual(f.store.read(`context-epochs/${row.epochId}.json`), archived);
+});
+
+test('ordinary observation does not promote a malformed mixed pending and represented proof batch', (t) => {
+  const f = setup(t);
+  f.fill(2, false);
+  const proof = f.candidate(2), changed = f.state();
+  changed.contextEpochs![0]!.represented = proof;
+  f.store.write('state.json', changed);
+  assert.throws(() => f.make().observe('TEST-principal', binding, epoch(3)), /hold/);
+  assert.deepEqual(f.state(), changed);
+});
+
 test('corrupt or conflicting Team archive is not accepted as reset completion evidence', (t) => {
   const f = setup(t);
   f.fill(128);

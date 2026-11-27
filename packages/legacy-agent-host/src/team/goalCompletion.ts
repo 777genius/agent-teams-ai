@@ -13,14 +13,15 @@ export function goalTaskFingerprint(tasks: readonly TeamTask[]): string {
     reviewState: task.reviewState, reviewRequestId: task.reviewRequestId,
     reviewer: task.reviewer, kanbanColumn: task.kanbanColumn,
     needsClarification: task.needsClarification, clarificationRequestId: task.clarificationRequestId,
-    attachments: task.attachments, comments: task.comments,
+    attachments: task.attachments, comments: task.comments, historyEvents: task.historyEvents,
+    goalReviewFlow: task.goalReviewFlow, humanApprovalPending: task.humanApprovalPending,
   })).sort((a, b) => a.id.localeCompare(b.id)));
 }
 
 function incomplete(tasks: readonly TeamTask[]): boolean {
   return tasks.some(task => isTeamTaskDeleted(task) || task.status !== 'completed' ||
     getTeamTaskWorkflowColumn(task) === 'review' || isTeamTaskNeedsFixActionable(task) ||
-    Boolean(task.needsClarification));
+    Boolean(task.needsClarification) || task.humanApprovalPending === true);
 }
 
 export function proposeGoal(goal: GoalRecord, tasks: readonly TeamTask[], principalId: string,

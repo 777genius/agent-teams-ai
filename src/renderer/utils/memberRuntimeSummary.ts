@@ -139,51 +139,63 @@ export function resolveMemberRuntimeSummary(
   runtimeEntry?: TeamAgentRuntimeEntry,
   isTeamAlive?: boolean
 ): string | undefined {
-  // Captured members may inherit defaults only after Host configuration is resolved.
-  // An empty settings object represents inheritance; an absent one is unavailable.
-  if (member.runtimeOwner === 'captured-host' && member.configuredRuntimeSettings === undefined) {
+  const captured = member.runtimeOwner === 'captured-host';
+  // Host projections already resolve captured or saved-only inheritance. A newer
+  // launch draft or a model's spelling cannot replace their provider authority.
+  if (
+    captured &&
+    (member.configuredRuntimeSettings === undefined || member.providerId === undefined)
+  ) {
     return undefined;
   }
 
-  const leadLaunchParams = isLeadMember(member) ? launchParams : undefined;
+  const defaults = captured ? undefined : launchParams;
+  const leadLaunchParams = isLeadMember(member) ? defaults : undefined;
   const memberProviderBackendId = (member as ResolvedTeamMember & { providerBackendId?: string })
     .providerBackendId;
   const memberModel = member.model?.trim() || '';
-  const runtimeModel = spawnEntry?.runtimeModel?.trim() || runtimeEntry?.runtimeModel?.trim();
+  // Runtime/spawn polls are keyed by name and may still describe a prior member
+  // generation. The Host member's model/provider were projected together.
+  const runtimeModel = captured
+    ? undefined
+    : spawnEntry?.runtimeModel?.trim() || runtimeEntry?.runtimeModel?.trim();
+  if (captured && !memberModel) return undefined;
   const runtimeModelProvider = inferTeamProviderIdFromModel(runtimeModel);
-  const inferredMemberProvider = inferTeamProviderIdFromModel(memberModel) ?? runtimeModelProvider;
+  const inferredMemberProvider = captured
+    ? undefined
+    : (inferTeamProviderIdFromModel(memberModel) ?? runtimeModelProvider);
   const launchPending = isMemberLaunchPending(spawnEntry);
   const stalePrimaryLaneConflictsWithLaunch =
     !leadLaunchParams &&
     launchPending &&
-    launchParams?.providerId != null &&
+    defaults?.providerId != null &&
     member.laneKind === 'primary' &&
     member.laneOwnerProviderId != null &&
-    member.laneOwnerProviderId !== launchParams.providerId;
+    member.laneOwnerProviderId !== defaults.providerId;
   const authoritativeLaunchParams =
-    leadLaunchParams ?? (stalePrimaryLaneConflictsWithLaunch ? launchParams : undefined);
+    leadLaunchParams ?? (stalePrimaryLaneConflictsWithLaunch ? defaults : undefined);
   const configuredProvider: TeamProviderId =
     authoritativeLaunchParams?.providerId ??
     member.providerId ??
     inferredMemberProvider ??
-    launchParams?.providerId ??
+    defaults?.providerId ??
     'anthropic';
   const memberProviderForInheritance =
     authoritativeLaunchParams?.providerId ?? member.providerId ?? inferredMemberProvider;
   const inheritsLeadRuntimeDefaults =
     memberProviderForInheritance == null ||
-    launchParams?.providerId == null ||
-    memberProviderForInheritance === launchParams.providerId;
+    defaults?.providerId == null ||
+    memberProviderForInheritance === defaults.providerId;
   const configuredModel = authoritativeLaunchParams
     ? authoritativeLaunchParams.model?.trim() || ''
-    : memberModel || (inheritsLeadRuntimeDefaults ? launchParams?.model?.trim() || '' : '');
+    : memberModel || (inheritsLeadRuntimeDefaults ? defaults?.model?.trim() || '' : '');
   const configuredEffort = authoritativeLaunchParams
     ? authoritativeLaunchParams.effort
-    : (member.effort ?? (inheritsLeadRuntimeDefaults ? launchParams?.effort : undefined));
+    : (member.effort ?? (inheritsLeadRuntimeDefaults ? defaults?.effort : undefined));
   const configuredProviderBackendId = authoritativeLaunchParams
     ? authoritativeLaunchParams.providerBackendId
     : (memberProviderBackendId ??
-      (inheritsLeadRuntimeDefaults ? launchParams?.providerBackendId : undefined));
+      (inheritsLeadRuntimeDefaults ? defaults?.providerBackendId : undefined));
   const runtimeProviderId = runtimeModelProvider ?? runtimeEntry?.providerId;
   const runtimeModelConflictsWithAuthoritativeLaunch =
     launchPending &&

@@ -50,10 +50,7 @@ function fixture(t: TestContext) {
   ];
   syncBuiltinESMExports();
   t.after(() => { for (const mock of mocks) mock.mock.restore(); syncBuiltinESMExports(); });
-  const reading = (read: TeamStore['read']) => new FileTeamRuntimeBindings({
-    read, fenced: action => store.fenced(action), write: (file, value) => store.write(file, value),
-    list: directory => store.list(directory), productFingerprint: team => store.productFingerprint(team),
-  });
+  const reading = (read: TeamStore['read']) => new FileTeamRuntimeBindings({ read });
   return { store, row, name, path, text, binding, bindings, counts, reading,
     write: (value: string) => fs.writeFileSync(path, value), stringify };
 }

@@ -11,6 +11,7 @@ import type { CapturedReviewEvidence as PrivateEvidence } from '@agent-teams/tas
 import type { CommandReceipt, DeliveryIntent } from '../team/contracts.js';
 import type { RuntimeSessionRecord } from '../runtime/contracts.js';
 import { runtimeCaptureSourceSchema } from './runtimeCaptureSource.js';
+import { FileTeamRuntimeBindings } from '../adapters/team/FileTeamRuntimeBindings.js';
 import { validateRestoreJournal } from '../team-launch/validateRestoreJournal.js';
 import { validateLaunchPreparation } from '../team-launch/launchPreparation.js';
 import type { TeamLaunchRecord } from '../team-launch/contracts.js';
@@ -79,6 +80,12 @@ export function resolveCapturedReviewWorkspaces(options: {
     sources.set(file, { value: before.value, data });
     return data;
   };
+  const runtimeBindings = new FileTeamRuntimeBindings({
+    read<T>(name: string, decode?: (text: string) => T): T {
+      const value = read(join(ownerRoot, name));
+      return decode ? decode(JSON.stringify(value)) : value as T;
+    },
+  });
   const add = (path: string, identity: string) => {
     if (roots.has(path) && roots.get(path) !== identity) throw new Error('Conflicting historical workspace identities');
     if (roots.size >= 64 && !roots.has(path)) throw new Error('Captured review workspace limit');
@@ -96,9 +103,31 @@ export function resolveCapturedReviewWorkspaces(options: {
       // the only fallback; current saved cwd/member name never substitutes for it.
       const profiles = (options.initialRuntimeMembers ?? []).filter(profile =>
         profile.teamId === binding.teamId && profile.memberId === binding.memberId &&
-        profile.sessionId === runtime.config?.sessionId && profile.generation === runtime.config.generation &&
-        profile.configRevision === runtime.config.configRevision);
+        profile.sessionId === runtime.config?.sessionId);
       if (profiles.length !== 1 || profiles[0]!.cwd !== path) throw new Error('Original workspace source unavailable');
+      const profile = profiles[0]!;
+      if (profile.generation !== runtime.config!.generation || profile.configRevision !== runtime.config!.configRevision) {
+        // A real retained selection proves the successor's numeric generation and captured
+        // configuration. Never invent a newer initial profile or use a current saved path.
+        const launch = read(join(ownerRoot, 'launches', `${runtimeDigest(binding.runId)}.json`)) as unknown as TeamLaunchRecord;
+        if (launch.schemaVersion !== 1 || launch.definition?.launchId !== binding.runId ||
+            runtimeDigest(launch.definition) !== launch.fingerprint) throw new Error('Captured launch changed');
+        validateRestoreJournal(launch);
+        validateLaunchPreparation(launch);
+        const selected = runtimeBindings.current(binding);
+        if (!selected || selected.baseConfigurationDigest !== runtimeDigest(profile) ||
+            (runtimeDigest(selected.binding) !== runtimeDigest(binding) &&
+              !runtimeBindings.retained(selected.binding, binding)))
+          throw new Error('Original workspace successor is unavailable');
+        const witnesses = [...launch.definition.members, ...(launch.restorations ?? []).map(value => value.member),
+          ...(launch.memberActions ?? []).filter(value => value.phase === 'selected').flatMap(value => [value.source, value.selected])]
+          .filter(member => member.memberId === binding.memberId && member.binding &&
+            runtimeDigest(normalizeBinding(member.binding)) === runtimeDigest(binding));
+        if (!witnesses.length || witnesses.some(member =>
+            member.baseConfigurationDigest !== runtimeDigest(profile) ||
+            member.runtimeGeneration !== runtime.config!.generation || member.configRevision !== runtime.config!.configRevision))
+          throw new Error('Original workspace successor configuration changed');
+      }
       const known = team.definition.members.filter(member => member.memberId === binding.memberId);
       if (known.length !== 1) throw new Error('Original actor label unavailable');
       return known[0]!.name;
@@ -143,7 +172,7 @@ export function resolveCapturedReviewWorkspaces(options: {
     if (binding.backendId !== team.definition.binding.backendId || binding.teamId !== team.definition.binding.teamId ||
       binding.memberId !== event.actorId || event.toolUseId !== cause.toolUseId || event.sessionId !== cause.sessionRef)
       throw new Error('Foreign captured review binding');
-    if (origin.taskId ? cause.taskId !== origin.taskId || event.taskId !== origin.taskId : binding.memberId !== options.actorId)
+    if (origin.taskId ? (cause.taskId ?? cause.goalTaskId) !== origin.taskId || event.taskId !== origin.taskId : binding.memberId !== options.actorId)
       throw new Error('Captured review origin mismatch');
     const path = text(workspace.path), identity = text(workspace.identity);
     if (event.workspaceRoot !== path || !inside(path, event.filePath)) throw new Error('Captured review path mismatch');
@@ -170,10 +199,10 @@ export function resolveCapturedReviewWorkspaces(options: {
     const commandPath = teamCommandPath(outbox.commandId);
     const command = validateCommandEntry(read(join(ownerRoot, commandPath)) as unknown as CommandReceipt);
     if ('family' in command || command.phase !== 'completed' || command.commandId !== outbox.commandId ||
-      command.effects.messageId !== outbox.messageId || command.binding.backendId !== binding.backendId || command.binding.teamId !== binding.teamId)
+      command.binding.backendId !== binding.backendId || command.binding.teamId !== binding.teamId)
       throw new Error('Captured owner command mismatch');
     if (cause.taskId !== undefined) {
-      if (cause.taskStartCommandId !== command.commandId ||
+      if (cause.taskStartCommandId !== command.commandId || command.effects.messageId !== outbox.messageId ||
         !(command.command.operation === 'task.start' && command.command.payload.taskId === cause.taskId ||
           command.command.operation === 'task.create' && command.command.payload.startImmediately === true && command.effects.taskId === cause.taskId))
         throw new Error('Captured Task cause mismatch');
@@ -181,7 +210,26 @@ export function resolveCapturedReviewWorkspaces(options: {
       if (!Array.isArray(obligations.deliveries) || obligations.fingerprint !== command.fingerprint ||
         obligations.deliveries.filter(value => digest(deliveryIdentity(value as DeliveryIntent)) === digest(deliveryIdentity(outbox))).length !== 1)
         throw new Error('Captured Task notification mismatch');
-    } else if (command.command.operation !== 'message.send' || command.commandId !== cause.messageCommandId || command.effects.deliveryId !== outbox.deliveryId)
+    } else if (cause.goalTaskId !== undefined) {
+      if (!command.goal || !command.command.operation.startsWith('task.') || cause.goalTaskCommandId !== command.commandId)
+        throw new Error('Captured goal Task cause mismatch');
+      const plan = read(join(ownerRoot, 'task-plans', `${digest(command.commandId)}.json`));
+      if (plan.schemaVersion !== 1 || plan.commandId !== command.commandId || plan.fingerprint !== command.fingerprint ||
+          plan.taskHash !== command.taskHash || digest(plan.result) !== digest(command.result) || !Array.isArray(plan.notifications))
+        throw new Error('Captured goal Task plan mismatch');
+      const notifications = plan.notifications.map(row).filter(notification => notification.member === label &&
+        notification.messageId === outbox.messageId && notification.content === outbox.content &&
+        notification.taskId === cause.goalTaskId);
+      if (notifications.length !== 1) throw new Error('Captured goal Task notification mismatch');
+      const obligations = read(join(ownerRoot, commandPath.replace('commands/', 'task-obligations/')));
+      if (!Array.isArray(obligations.deliveries) || obligations.fingerprint !== command.fingerprint ||
+          obligations.deliveries.filter(value => {
+            const delivery = value as DeliveryIntent;
+            return digest(deliveryIdentity(delivery)) === digest(deliveryIdentity(outbox)) &&
+              delivery.principalId === outbox.principalId && delivery.authorityRevision === outbox.authorityRevision;
+          }).length !== 1) throw new Error('Captured goal Task obligation mismatch');
+    } else if (command.command.operation !== 'message.send' || command.commandId !== cause.messageCommandId ||
+      command.effects.deliveryId !== outbox.deliveryId || command.effects.messageId !== outbox.messageId)
       throw new Error('Captured message cause mismatch');
     add(path, identity);
   }

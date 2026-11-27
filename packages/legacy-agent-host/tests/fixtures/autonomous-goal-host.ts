@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PassThrough } from 'node:stream';
@@ -18,14 +18,14 @@ import type { Event, Input, Session } from '@agent-teams/provider-session-contra
 
 export type GoalMember = 'lead' | 'worker';
 
-export async function eventually(check: () => boolean, message: string): Promise<void> {
+export async function eventually(check: () => boolean, message: string | (() => string)): Promise<void> {
   // Observation timeout only: production pumps include durable filesystem writes.
   const deadline = performance.now() + 5000;
   while (performance.now() < deadline) {
     if (check()) return;
     await new Promise<void>(resolve => setImmediate(resolve));
   }
-  assert.fail(message);
+  assert.fail(typeof message === 'function' ? message() : message);
 }
 
 export function success<T>(result: unknown): T {
@@ -44,6 +44,7 @@ export class GoalSession implements Session {
   private ended = false;
   ready = false;
   sealed = false;
+  notifyProgress = true;
   submitAction: Session['submit'] | undefined;
   readonly sessionRef: string;
   private readonly progress: () => void;
@@ -67,7 +68,7 @@ export class GoalSession implements Session {
       if (event) {
         yield event;
         // The production provider invokes this after Runtime persisted the original event.
-        this.progress();
+        if (this.notifyProgress) this.progress();
       } else await new Promise<void>(resolve => { this.waiter = resolve; });
     }
   };
@@ -100,7 +101,7 @@ export class GoalSession implements Session {
   }
 }
 
-function profile(root: string, workspace: string): TeamHostProfile {
+function profile(root: string, workspace: string, workerWorkspace = workspace): TeamHostProfile {
   const binding = { backendId: 'TEST-goal-backend', teamId: 'TEST-goal-team', teamName: 'test-goal-team' };
   const members = ['lead', 'worker'] as const;
   return {
@@ -122,7 +123,7 @@ function profile(root: string, workspace: string): TeamHostProfile {
     runtime: { members: members.map(name => ({
       teamId: binding.teamId, memberId: `${name}-id`, principalId: `${name}-session`,
       provider: 'claude', sessionId: `TEST-${name}-session`, generation: 1,
-      configRevision: `TEST-${name}-config`, cwd: workspace, model: 'TEST-controlled-model',
+      configRevision: `TEST-${name}-config`, cwd: name === 'worker' ? workerWorkspace : workspace, model: 'TEST-controlled-model',
       accountBinding: `TEST-${name}-account`,
       environment: { HOME: root, PATH: '/TEST/no-native-execution', CLAUDE_CONFIG_DIR: root },
       executable: { path: '/TEST/nonexistent-no-execution', sha256: 'c'.repeat(64) },
@@ -134,10 +135,17 @@ function profile(root: string, workspace: string): TeamHostProfile {
 }
 
 /** Focused subset of the existing runtime-team-host fixture, with independent lead/member sessions. */
-export async function goalHost(t: TestContext, options: { capture?: boolean } = {}) {
+export async function goalHost(t: TestContext, options: {
+  capture?: boolean;
+  workerWorkspace?: 'nested' | 'disjoint';
+  solo?: boolean;
+} = {}) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-autonomous-goal-')));
   const workspace = join(root, 'workspace');
   mkdirSync(workspace);
+  const workerWorkspace = options.workerWorkspace === 'nested' ? join(workspace, 'nested') :
+    options.workerWorkspace === 'disjoint' ? join(root, 'worker-workspace') : workspace;
+  if (workerWorkspace !== workspace) mkdirSync(workerWorkspace);
   if (options.capture) {
     execFileSync('git', ['-c', 'core.fsmonitor=false', 'init', '-q'], {
       cwd: workspace,
@@ -145,7 +153,12 @@ export async function goalHost(t: TestContext, options: { capture?: boolean } = 
         GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1' },
     });
   }
-  const selected = profile(root, workspace);
+  const selected = profile(root, workspace, workerWorkspace);
+  if (options.solo) {
+    selected.teams[0]!.members = selected.teams[0]!.members.filter(member => member.role === 'lead');
+    selected.teams[0]!.grants = selected.teams[0]!.grants.filter(grant => grant.memberName !== 'worker');
+    selected.runtime!.members = selected.runtime!.members.filter(member => member.memberId === 'lead-id');
+  }
   let input = new PassThrough();
   let output = new PassThrough();
   const frames = new Map<number, { result?: unknown; error?: unknown }>();
@@ -162,6 +175,7 @@ export async function goalHost(t: TestContext, options: { capture?: boolean } = 
   output.on('data', receive);
   const contexts = new Map<GoalMember, MemberProviderContext>();
   const sessions = new Map<GoalMember, GoalSession>();
+  const restored: unknown[] = [];
   let opens = 0;
   const composition = {
     createProvider(context: MemberProviderContext): MemberProvider {
@@ -174,6 +188,8 @@ export async function goalHost(t: TestContext, options: { capture?: boolean } = 
       return {
         factory: { open: async () => {
           opens++;
+          if (context.request.checkpointRef)
+            restored.push(await context.readCheckpoint(context.request.checkpointRef, context.request));
           return { driver: session, capabilities: [...context.request.requiredCapabilities] };
         } },
         isReady: current,
@@ -204,8 +220,9 @@ export async function goalHost(t: TestContext, options: { capture?: boolean } = 
     assert.equal(frame.error, undefined, JSON.stringify(frame.error));
     return frame.result;
   };
-  const rpc = (method: string, payload: unknown, commandId = `TEST-command-${sequence + 1}`) =>
-    request(method, { commandId, binding, payload });
+  const rpc = (method: string, payload: unknown, commandId = `TEST-command-${sequence + 1}`,
+    liveRoster?: { phase: 'capture' | 'read'; remainingMs?: number }) =>
+    request(method, { commandId, binding, payload, ...(liveRoster ? { liveRoster } : {}) });
   await request('host.handshake', { protocolVersion: 1 });
   const runtimeStore = new FileRuntimeStore(root);
   const teamStore = new TeamOwnerStore(root, selected.teams[0]!.binding.teamName);
@@ -213,7 +230,7 @@ export async function goalHost(t: TestContext, options: { capture?: boolean } = 
     teamId: binding.scope.teamId, runId: binding.scope.runId, memberId: `${name}-id`, generation: '1' });
   let writes = 0;
   return {
-    root, workspace, selected, rpc, contexts, sessions,
+    root, workspace, workerWorkspace, selected, rpc, contexts, sessions, restored,
     runtimeStore,
     teamStore,
     goal: () => teamStore.fenced(() => teamStore.read<{ autonomousGoal?: GoalRecord }>('state.json')?.autonomousGoal),
@@ -247,12 +264,13 @@ export async function goalHost(t: TestContext, options: { capture?: boolean } = 
       const session = sessions.get(name)!;
       const original = session.submits[index]!;
       assert.ok(original);
-      await eventually(() => runtimeStore.fenced(runtimeBinding(name), tx =>
+      const context = contexts.get(name)!;
+      await eventually(() => runtimeStore.fenced(context.endpoint.binding, tx =>
         tx.get()?.inputs.find(input => input.intent.inputId === original.inputId)?.phase === 'consumed'),
       'capture starts only after the original input is durably consumed');
-      const capture = contexts.get(name)?.toolEvidence;
+      const capture = context.toolEvidence;
       assert.ok(capture?.observeBatch, 'production coordinator supplies the real tool capture port');
-      const file = join(workspace, `${name}-artifact.txt`);
+      const file = join(context.profile.cwd, `${name}-artifact.txt`);
       const request = { phase: 'before' as const, sessionRef: session.sessionRef,
         inputId: original.inputId, operationRef: original.operationRef,
         toolUseId: `TEST-file-write-${++writes}`, toolName: 'Write',
@@ -266,9 +284,21 @@ export async function goalHost(t: TestContext, options: { capture?: boolean } = 
       }] });
       return file;
     },
-    async restart() {
+    async restart(expectedHeldInbox?: 'lead') {
       const closed = await host.dispose();
-      assert.equal(closed.cleanup, 'completed');
+      if (expectedHeldInbox) {
+        // An abrupt publication loss leaves an unfinished inbox source. Backup
+        // must refuse that image; physical sessions still have to be released.
+        assert.equal(closed.cleanup, 'failed');
+        const manifest = JSON.parse(readFileSync(join(root, 'backups', 'teams',
+          selected.teams[0]!.binding.teamName, 'manifest.json'), 'utf8'));
+        assert.deepEqual(manifest.hostOwner.held, [`inboxes/${expectedHeldInbox}.json`]);
+        for (const name of ['lead', 'worker'] as const) {
+          const runtime = runtimeStore.fenced(runtimeBinding(name), tx => tx.get());
+          assert.equal(runtime?.phase, 'closed');
+          assert.equal(runtime.custody, 'released');
+        }
+      } else assert.equal(closed.cleanup, 'completed');
       input = new PassThrough(); output = new PassThrough(); tail = ''; frames.clear();
       output.on('data', receive);
       host = createTeamHost(selected, { input, output, limits: { disposeTimeoutMs: 30000 } }, composition);

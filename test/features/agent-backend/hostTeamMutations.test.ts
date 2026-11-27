@@ -130,41 +130,96 @@ function fixture() {
 
 describe('ordinary Host Team mutation adapters', () => {
   it('retains the original clarification cycle in the finite answer and refuses rebinding its command', async () => {
-    const f = fixture(), cycle = '11111111-1111-4111-8111-111111111111';
-    const request = { text: 'TEST original answer', answerClarificationRequestId: cycle,
-      command: { commandId: 'TEST-answer-intent', idempotencyKey: 'TEST-answer-intent' } };
+    const f = fixture(),
+      cycle = '11111111-1111-4111-8111-111111111111';
+    const request = {
+      text: 'TEST original answer',
+      answerClarificationRequestId: cycle,
+      command: { commandId: 'TEST-answer-intent', idempotencyKey: 'TEST-answer-intent' },
+    };
     await f.teams.addTaskComment(f.key, 'TEST-task', request);
-    const sent = f.invoke.mock.calls.map(([value]) => value).filter(value => value.operation === 'task.comment');
+    const sent = f.invoke.mock.calls
+      .map(([value]) => value)
+      .filter((value) => value.operation === 'task.comment');
     expect(sent).toHaveLength(1);
-    expect(parseBackendOperation(sent[0])).toMatchObject({ handle: { handleId: 'TEST-A' },
-      commandId: request.command.commandId, operation: 'task.comment',
-      payload: { taskId: 'TEST-task', text: request.text, answerClarificationRequestId: cycle } });
-    await expect(f.teams.addTaskComment(f.key, 'TEST-task', { ...request,
-      answerClarificationRequestId: '22222222-2222-4222-8222-222222222222' })).rejects.toThrow();
-    expect(f.invoke.mock.calls.filter(([value]) => value.operation === 'task.comment')).toHaveLength(1);
+    expect(parseBackendOperation(sent[0])).toMatchObject({
+      handle: { handleId: 'TEST-A' },
+      commandId: request.command.commandId,
+      operation: 'task.comment',
+      payload: { taskId: 'TEST-task', text: request.text, answerClarificationRequestId: cycle },
+    });
+    await expect(
+      f.teams.addTaskComment(f.key, 'TEST-task', {
+        ...request,
+        answerClarificationRequestId: '22222222-2222-4222-8222-222222222222',
+      })
+    ).rejects.toThrow();
+    expect(
+      f.invoke.mock.calls.filter(([value]) => value.operation === 'task.comment')
+    ).toHaveLength(1);
     expect(f.legacy.addTaskComment).not.toHaveBeenCalled();
     for (const invalid of ['', 'TEST-not-a-cycle', '11111111-1111-1111-8111-111111111111'])
-      expect(() => parseBackendOperation({ ...sent[0], payload: {
-        ...sent[0]!.payload, answerClarificationRequestId: invalid,
-      } })).toThrow();
+      expect(() =>
+        parseBackendOperation({
+          ...sent[0],
+          payload: {
+            ...sent[0]!.payload,
+            answerClarificationRequestId: invalid,
+          },
+        })
+      ).toThrow();
   });
 
   it('preserves the exact current clarification request on product snapshot projection', () => {
     const cycle = '11111111-1111-4111-8111-111111111111';
     const requestedAt = '2026-11-26T12:00:00.000Z';
-    const snapshot = projectTeamSnapshot({ teamName: 'TEST-team', revision: 'a'.repeat(64),
-      feed: { streamId: '33333333-3333-4333-8333-333333333333', sequence: 0,
-        cursor: '11111111-1111-4111-8111-111111111111' }, members: [], messages: [],
-      tasks: [{ id: 'TEST-task', subject: 'TEST question', status: 'pending',
-        needsClarification: 'user', clarificationRequestId: cycle, clarificationRequestedAt: requestedAt }],
-      kanbanState: { teamName: 'TEST-team', reviewers: [], tasks: {} } });
-    expect(snapshot.tasks[0]).toMatchObject({ needsClarification: 'user', clarificationRequestId: cycle,
-      clarificationRequestedAt: requestedAt });
-    expect(projectBackendResult({ handle: { handleId: 'TEST-A' }, commandId: 'TEST-read-question',
-      operation: 'task.get', payload: { taskId: 'TEST-task' } }, { ok: true, value: {
-      id: 'TEST-task', status: 'pending', needsClarification: 'user',
-      clarificationRequestId: cycle, clarificationRequestedAt: requestedAt,
-    } })).toMatchObject({ ok: true, value: { clarificationRequestedAt: requestedAt } });
+    const snapshot = projectTeamSnapshot({
+      teamName: 'TEST-team',
+      revision: 'a'.repeat(64),
+      feed: {
+        streamId: '33333333-3333-4333-8333-333333333333',
+        sequence: 0,
+        cursor: '11111111-1111-4111-8111-111111111111',
+      },
+      members: [],
+      messages: [],
+      tasks: [
+        {
+          id: 'TEST-task',
+          subject: 'TEST question',
+          status: 'pending',
+          needsClarification: 'user',
+          clarificationRequestId: cycle,
+          clarificationRequestedAt: requestedAt,
+        },
+      ],
+      kanbanState: { teamName: 'TEST-team', reviewers: [], tasks: {} },
+    });
+    expect(snapshot.tasks[0]).toMatchObject({
+      needsClarification: 'user',
+      clarificationRequestId: cycle,
+      clarificationRequestedAt: requestedAt,
+    });
+    expect(
+      projectBackendResult(
+        {
+          handle: { handleId: 'TEST-A' },
+          commandId: 'TEST-read-question',
+          operation: 'task.get',
+          payload: { taskId: 'TEST-task' },
+        },
+        {
+          ok: true,
+          value: {
+            id: 'TEST-task',
+            status: 'pending',
+            needsClarification: 'user',
+            clarificationRequestId: cycle,
+            clarificationRequestedAt: requestedAt,
+          },
+        }
+      )
+    ).toMatchObject({ ok: true, value: { clarificationRequestedAt: requestedAt } });
   });
 
   it('routes original processSend once to the exact lead from its captured snapshot and translates canonical TaskRefs', async () => {
@@ -539,7 +594,9 @@ describe('ordinary Host Team mutation adapters', () => {
         attachments: [{ id: 'attachment' } as never],
       })
     ).rejects.toMatchObject({ code: 'unsupported' });
-    expect(f.invoke.mock.calls.every(([request]) => request.operation === 'team.snapshot')).toBe(true);
+    expect(f.invoke.mock.calls.every(([request]) => request.operation === 'team.snapshot')).toBe(
+      true
+    );
   });
 
   it('keeps an explicit raw command on the original captured lead and prepared message ID', async () => {
@@ -548,14 +605,31 @@ describe('ordinary Host Team mutation adapters', () => {
     f.invoke.mockImplementation(async (request) => {
       const result = await invoke(request);
       return request.operation === 'team.snapshot' && 'revision' in result.value
-        ? { ...result, value: { ...result.value, members: [{ name: 'captured-lead', role: 'lead' as const }] } }
+        ? {
+            ...result,
+            value: { ...result.value, members: [{ name: 'captured-lead', role: 'lead' as const }] },
+          }
         : result;
     });
-    await f.teams.sendMessage(f.key, { member: 'captured-lead', text: '/compact TEST focus',
-      messageId: 'TEST-native-command', actionMode: 'do' });
-    const sent = f.invoke.mock.calls.map(([request]) => request).find(request => request.operation === 'message.send')!;
-    expect(sent).toMatchObject({ handle: { handleId: 'TEST-A' }, commandId: 'TEST-native-command',
-      payload: { to: 'captured-lead', text: '/compact TEST focus', messageId: 'TEST-native-command', nativeCommand: true } });
+    await f.teams.sendMessage(f.key, {
+      member: 'captured-lead',
+      text: '/compact TEST focus',
+      messageId: 'TEST-native-command',
+      actionMode: 'do',
+    });
+    const sent = f.invoke.mock.calls
+      .map(([request]) => request)
+      .find((request) => request.operation === 'message.send')!;
+    expect(sent).toMatchObject({
+      handle: { handleId: 'TEST-A' },
+      commandId: 'TEST-native-command',
+      payload: {
+        to: 'captured-lead',
+        text: '/compact TEST focus',
+        messageId: 'TEST-native-command',
+        nativeCommand: true,
+      },
+    });
     expect(f.legacy.sendMessage).not.toHaveBeenCalled();
   });
 

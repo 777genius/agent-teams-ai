@@ -56,6 +56,8 @@ export interface BackendLaunchConfigurationView {
           /** Canonical saved member settings decide whether an edited Team workspace applies. */
           workspaceInherited?: boolean;
           model: string;
+          /** Original OpenCode provider/model pair for presentation only; never a launch override. */
+          qualifiedModel?: string;
           capabilities: BackendLaunchOption[];
         } & Omit<BackendLaunchConfiguration['members'][number], 'memberId' | 'model'>)
       | null;

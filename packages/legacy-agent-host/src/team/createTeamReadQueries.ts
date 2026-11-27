@@ -1,6 +1,8 @@
 import { digest, safeSegment } from "./identity.js";
 import { TeamOwnerError } from "./contracts.js";
 import { pageOwnerTaskComment } from "./pageOwnerTaskComment.js";
+import { pageOwnerReadDetail } from "./pageOwnerTaskDetail.js";
+import { json } from "./TeamReviewCommands.js";
 import type { TeamGrant, TeamMember } from "./contracts.js";
 import type { TeamBoardReadPolicy, TeamTaskInventoryFilters } from "./ports.js";
 
@@ -64,8 +66,16 @@ export function createTeamReadQueries(options: {
           ...(cursor === undefined ? {} : { cursor }),
         });
       }),
-    listTaskInventory: (filters: TeamTaskInventoryFilters) =>
-      read(() => options.reads.listTaskInventory(filters)),
+    listTaskInventory: (filters: TeamTaskInventoryFilters, cursor?: string) =>
+      read(() => {
+        const value = options.reads.listTaskInventory(filters);
+        if (!Array.isArray(value)) throw new TeamOwnerError("hold");
+        return pageOwnerReadDetail({
+          ...options.commentPages, grant: identity().grant,
+          inventoryFilters: filters, value: json(value),
+          ...(cursor === undefined ? {} : { cursor }),
+        });
+      }),
     taskBriefing: (memberName?: string) => {
       const selected = read(() => memberName ?? identity().grant.memberName);
       return briefing(selected);

@@ -533,19 +533,25 @@ describe('captured Host runtime summaries', () => {
       expect(resolveMemberRuntimeSummary(member, leadSelection, spawnEntry)).toBeUndefined();
     });
 
-    it(`preserves resolved inheritance for a ${state} captured member`, () => {
+    it(`preserves explicitly projected inheritance for a ${state} captured member`, () => {
       const member = createMember({
         runtimeOwner: 'captured-host',
         configuredRuntimeSettings: {},
-        providerId: undefined,
-        model: undefined,
-        effort: undefined,
+        providerId: 'anthropic',
+        model: 'haiku',
+        effort: 'low',
       });
       const spawnEntry = state === 'pending' ? createSpawnEntry() : undefined;
 
       expect(resolveMemberRuntimeSummary(member, leadSelection, spawnEntry)).toBe(
         'Anthropic · Haiku 4.5 · Low'
       );
+    });
+
+    it(`keeps a ${state} captured selection unknown after its effective projection is unavailable`, () => {
+      const member = createMember({ runtimeOwner: 'captured-host', configuredRuntimeSettings: {},
+        providerId: undefined, model: undefined, effort: undefined });
+      expect(resolveMemberRuntimeSummary(member, leadSelection, state === 'pending' ? createSpawnEntry() : undefined)).toBeUndefined();
     });
   }
 

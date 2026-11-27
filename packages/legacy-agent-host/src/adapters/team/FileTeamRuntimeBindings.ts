@@ -28,7 +28,7 @@ interface ValidatedLaunch {
 /** Read-only projection of the one authoritative launch record, never a second registry. */
 export class FileTeamRuntimeBindings implements TeamRuntimeBindings {
   private validated: ValidatedLaunch | undefined;
-  constructor(private readonly store: TeamStore) {}
+  constructor(private readonly store: Pick<TeamStore, 'read'>) {}
 
   private read(initial: RuntimeMemberBinding): TeamLaunchRecord | undefined {
     const previous = this.validated;

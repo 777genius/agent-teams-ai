@@ -13,6 +13,9 @@ import { goalTaskFingerprint, proposeGoal, reconcileGoalCandidate } from './goal
 import type { GoalWorkSyncAuthorityProof } from '../work-sync/commandContracts.js';
 import type { WorkSyncCommandReceipt } from '../work-sync/commandContracts.js';
 import { inspectGoalWaits } from '../work-sync/inspectGoalWaits.js';
+import { goalContinuationCurrent } from './goalContinuationCurrent.js';
+
+const expired = (goal: GoalRecord) => goal.deadlineReached === true || Date.now() >= Date.parse(goal.deadlineAt);
 
 /** A bounded objective on the existing Team owner. No delivery queue or Runtime ownership. */
 export class TeamGoals {
@@ -30,11 +33,19 @@ export class TeamGoals {
     this.options.state();
     const state = this.options.store.read<OwnerState>('state.json');
     if (!state?.ready) throw new TeamOwnerError('hold');
-    if (state.autonomousGoal) validateGoalRecord(state.autonomousGoal);
+    if (state.autonomousGoal) {
+      validateGoalRecord(state.autonomousGoal);
+      if (!state.autonomousGoal.deadlineReached && expired(state.autonomousGoal)) {
+        state.autonomousGoal.deadlineReached = true;
+        this.options.store.write('state.json', state);
+        this.options.invalidate();
+      }
+    }
     return state;
   }
 
   private save(goal: GoalRecord): void {
+    if (Date.now() >= Date.parse(goal.deadlineAt)) goal.deadlineReached = true;
     validateGoalRecord(goal);
     this.options.store.write('state.json', { ...this.state(), autonomousGoal: goal });
     this.options.invalidate();
@@ -42,6 +53,30 @@ export class TeamGoals {
 
   snapshot(): GoalRecord | undefined {
     return this.options.store.fenced(() => structuredClone(this.state().autonomousGoal));
+  }
+
+  canStart(): boolean {
+    try {
+      return this.options.store.fenced(() => {
+        const goal = this.state().autonomousGoal;
+        return (!goal || goal.disposition === 'accepted' && goal.published === true) &&
+          !listProductCommandReceipts(this.options.store).some(receipt => receipt.goal?.kind === 'intake' &&
+            !['completed', 'rejected'].includes(receipt.phase));
+      });
+    } catch { return false; } // Unreadable original receipts close new goal admission, not ordinary reads.
+  }
+
+  /** Continue original message receipts after interrupted intake/result publication, never recapture. */
+  resumeCommands(): void {
+    let receipts: CommandReceipt[];
+    try { receipts = this.options.store.fenced(() => listProductCommandReceipts(this.options.store)); }
+    catch { return; } // Keep malformed originals held without preventing ordinary owner startup.
+    for (const receipt of receipts) {
+      if (!receipt.goal || receipt.command.operation !== 'message.send' ||
+          ['completed', 'rejected'].includes(receipt.phase)) continue;
+      try { this.options.execute(receipt.principalId, receipt.command); }
+      catch { /* Preserve the original command for later authenticated recovery. */ }
+    }
   }
 
   publicStatus(principalId: string): GoalStatus | undefined {
@@ -53,11 +88,10 @@ export class TeamGoals {
   }
 
   private status(goal: GoalRecord): GoalStatus {
-    const expired = Date.now() >= Date.parse(goal.deadlineAt);
+    const elapsed = expired(goal);
     const used = Object.keys(goal.debits).length;
-    const reason = goal.reason ?? (goal.disposition === 'active'
-      ? expired ? 'deadline-reached' : used >= goal.attemptLimit ? 'attempt-limit-reached' : undefined
-      : undefined);
+    const reason = goal.disposition === 'active' && elapsed ? 'deadline-reached' :
+      goal.disposition === 'active' && used >= goal.attemptLimit ? 'attempt-limit-reached' : goal.reason;
     return {
       goalId: goal.goalId, revision: goal.revision, disposition: goal.disposition,
       startedAt: goal.startedAt, deadlineAt: goal.deadlineAt,
@@ -65,7 +99,7 @@ export class TeamGoals {
       ...(reason ? { reason } : {}),
       ...(goal.disposition === 'accepted' && goal.proposal
         ? { resultMessageId: goal.proposal.resultMessageId, published: goal.published === true } : {}),
-      ...(goal.disposition === 'stopped' && !expired && used < goal.attemptLimit ? { canResume: true } : {}),
+      ...(goal.disposition === 'stopped' && !elapsed && used < goal.attemptLimit ? { canResume: true } : {}),
     };
   }
 
@@ -141,7 +175,7 @@ export class TeamGoals {
     if (command.operation === 'message.send' && command.payload.autonomousGoal) {
       validateGoalOptions(command.payload.autonomousGoal);
       if (grant.memberName !== 'user' || !grant.permissions.includes('admin') ||
-          command.payload.actionMode === 'ask' || command.payload.nativeCommand ||
+          (command.payload.actionMode !== 'do' && command.payload.actionMode !== 'delegate') || command.payload.nativeCommand ||
           !delivery || !preparation?.intake ||
           digest(memberBinding(preparation.intake.binding)) !== digest(memberBinding(delivery)) ||
           this.options.state().members.find(row => row.name === command.payload.to)?.role !== 'lead')
@@ -150,6 +184,7 @@ export class TeamGoals {
       const goalId = effectId('goal', this.options.state().binding.teamId, command.commandId);
       if (old && old.goalId !== goalId && !(old.disposition === 'accepted' && old.published))
         throw new TeamOwnerError('conflict');
+      if (!this.canStart()) throw new TeamOwnerError('hold');
       return { goalId, revision: 1, kind: 'intake' };
     }
     if (preparation?.result) {
@@ -214,8 +249,19 @@ export class TeamGoals {
       const goal = this.state().autonomousGoal;
       if (!goal) return [];
       const board = this.options.policy.taskBoard();
+      const kanban = board.getKanbanState({ strict: true }) as { reviewFlow?: string; tasks?: Record<string, { column?: string }> };
+      const flow = kanban.reviewFlow ?? 'agent_approval';
+      if (!['agent_approval', 'human_approval', 'lead_then_human'].includes(flow)) throw new TeamOwnerError('hold');
       const tasks = new Map([...board.listTasks(), ...board.listDeletedTasks()].map(task => [task.id, task]));
-      return [...this.taskIds(goal)].sort().map(id => structuredClone(tasks.get(id) ?? { id, status: 'missing' }));
+      return [...this.taskIds(goal)].sort().map(id => {
+        const task = structuredClone(tasks.get(id) ?? { id, status: 'missing' });
+        const column = kanban.tasks?.[id]?.column;
+        if (column) task.kanbanColumn = column;
+        task.goalReviewFlow = flow;
+        task.humanApprovalPending = flow !== 'agent_approval' &&
+          !(task.reviewState === 'approved' && task.kanbanColumn === 'approved');
+        return task;
+      });
     });
   }
 
@@ -236,6 +282,14 @@ export class TeamGoals {
             !ids.has(receipt.command.payload.taskId) || (taskId && receipt.command.payload.taskId !== taskId)) continue;
         if (receipt.command.operation === 'task.attachment.add') refs.push(digest(receipt.command.payload.attachment));
         if (receipt.command.operation === 'task.comment') for (const attachment of receipt.command.payload.attachments ?? []) refs.push(digest(attachment));
+      }
+      for (const task of this.scopedTasks()) {
+        if (taskId && task.id !== taskId || !Array.isArray(task.historyEvents)) continue;
+        for (const event of task.historyEvents) {
+          if (event && typeof event === 'object' && !Array.isArray(event) &&
+              ['review_completed', 'review_approved', 'human_approved', 'changes_requested'].includes(String(event.type)))
+            refs.push(digest({ taskId: task.id, event }));
+        }
       }
       return [...new Set(refs)].sort();
     });
@@ -263,7 +317,8 @@ export class TeamGoals {
       if (!goal || goal.goalId !== association.goalId || goal.revision !== association.revision) return false;
       // The original authenticated user submission isn't an automatic attempt.
       if (receipt.goal?.kind === 'intake') return goal.disposition === 'active';
-      if (goal.disposition !== 'active' || Date.now() >= Date.parse(goal.deadlineAt)) return false;
+      if (goal.disposition !== 'active' || expired(goal)) return false;
+      if (!this.continuationCurrent(receipt, goal)) return false;
       const witness = goal.debits[raw.inputId];
       if (witness) return witness.commandId === intent.commandId && digest(witness.binding) === digest(memberBinding(raw.binding));
       if (action === 'dispatch' || Object.keys(goal.debits).length >= goal.attemptLimit) return false;
@@ -290,7 +345,7 @@ export class TeamGoals {
   continue(next: GoalContinuation): CommandReceipt {
     return this.options.store.fenced(() => {
       const goal = this.state().autonomousGoal;
-      if (!goal || goal.disposition !== 'active' || Date.now() >= Date.parse(goal.deadlineAt))
+      if (!goal || goal.disposition !== 'active' || expired(goal))
         throw new TeamOwnerError('hold');
       const association = this.sourceAssociation(next.source);
       const member = this.options.state().members.find(row => row.memberId === next.target.memberId);
@@ -309,11 +364,12 @@ export class TeamGoals {
   }
 
   markAttention(reason?: string): void {
+    reason = reason?.slice(0, 512);
     this.options.store.fenced(() => {
       const goal = this.state().autonomousGoal;
       if (!goal || goal.reason === reason || goal.disposition === 'accepted' || goal.disposition === 'stopped') return;
       if (reason === undefined) delete goal.reason;
-      else goal.reason = reason.slice(0, 512);
+      else goal.reason = reason;
       this.save(goal);
     });
   }
@@ -332,11 +388,13 @@ export class TeamGoals {
         if (prior.fingerprint !== fingerprint) throw new TeamOwnerError('conflict');
         return structuredClone(prior.result);
       }
-      if (Object.keys(goal.controls ?? {}).length >= 256) throw new TeamOwnerError('hold');
+      const controlsUsed = Object.keys(goal.controls ?? {}).length;
+      if (controlsUsed >= 256 || controlsUsed >= 255 && control.action !== 'stop')
+        throw new TeamOwnerError('hold'); // Reserve the last original receipt for stopping automatic work.
       if (control.action === 'stop') {
         if (goal.disposition !== 'accepted') { goal.disposition = 'stopped'; goal.reason = 'stopped-by-user'; }
       } else if (control.action === 'resume') {
-        if (!ready || goal.disposition !== 'stopped' || Date.now() >= Date.parse(goal.deadlineAt) ||
+        if (!ready || goal.disposition !== 'stopped' || expired(goal) ||
             Object.keys(goal.debits).length >= goal.attemptLimit) throw new TeamOwnerError('hold');
         goal.disposition = 'active'; delete goal.reason; delete goal.proposal;
       } else {
@@ -345,6 +403,8 @@ export class TeamGoals {
         if (control.deadlineAt !== undefined) {
           if (Date.parse(control.deadlineAt) < Date.parse(goal.deadlineAt) ||
               Date.parse(control.deadlineAt) > Date.now() + 24 * 3600000) throw new TeamOwnerError('invalid');
+          if (Date.parse(control.deadlineAt) > Date.parse(goal.deadlineAt) && Date.parse(control.deadlineAt) > Date.now())
+            delete goal.deadlineReached;
           goal.deadlineAt = control.deadlineAt;
         }
         if (control.attemptLimit !== undefined) {
@@ -359,9 +419,9 @@ export class TeamGoals {
     });
   }
 
-  stopForRuntime(principalId: string, binding: RuntimeMemberBinding): void {
+  stopForRuntime(binding: RuntimeMemberBinding, assertAuthority: () => void): void {
     this.options.store.fenced(() => {
-      this.options.authorize(principalId, 'admin');
+      assertAuthority();
       const goal = this.state().autonomousGoal;
       if (!goal || !['active', 'finalizing'].includes(goal.disposition)) return;
       if (!this.options.state().members.some(row => row.delivery && digest(memberBinding(row.delivery)) === digest(memberBinding(binding))))
@@ -372,18 +432,23 @@ export class TeamGoals {
 
   async retireObsolete(runtime: TeamRuntimeDeliveryPort): Promise<void> {
     if (!runtime.cancelDelivery) return;
-    const obsolete = this.options.store.fenced(() => this.options.store.list<DeliveryIntent>('outbox')
-      .filter(intent => {
-        const association = this.association(intent), goal = this.state().autonomousGoal;
-        if (!association) return false;
-        return !goal || association.goalId !== goal.goalId || association.revision !== goal.revision ||
-          goal.disposition !== 'active' || Date.now() >= Date.parse(goal.deadlineAt) ||
-          (!goal.debits[intent.inputId] && Object.keys(goal.debits).length >= goal.attemptLimit);
-      })
-      .filter(intent => readProductCommand(this.options.store, intent.commandId)?.goal?.kind !== 'intake'));
-    for (const intent of obsolete) {
+    const obsolete = (intent: DeliveryIntent) => {
+      const association = this.association(intent), goal = this.state().autonomousGoal;
+      if (!association || readProductCommand(this.options.store, intent.commandId)?.goal?.kind === 'intake') return false;
+      return !goal || association.goalId !== goal.goalId || association.revision !== goal.revision ||
+        goal.disposition !== 'active' || expired(goal) ||
+        (!goal.debits[intent.inputId] && Object.keys(goal.debits).length >= goal.attemptLimit) ||
+        !this.continuationCurrent(readProductCommand(this.options.store, intent.commandId)!, goal);
+    };
+    const candidates = this.options.store.fenced(() => this.options.store.list<DeliveryIntent>('outbox').filter(obsolete));
+    for (const intent of candidates) {
       // Runtime owns claimed/unknown outcomes; cancellation never replays or erases them.
-      try { await runtime.cancelDelivery(intent); } catch { /* Retain original debt. */ }
+      try {
+        await runtime.cancelDelivery(intent, commit => this.options.store.fenced(() => {
+          if (!obsolete(intent)) throw new TeamOwnerError('hold');
+          commit();
+        }));
+      } catch { /* Retain original debt; a fresh Resume may have reopened this input. */ }
     }
   }
 
@@ -438,4 +503,12 @@ export class TeamGoals {
   }
 
   taskFingerprint(): string { return goalTaskFingerprint(this.scopedTasks()); }
+
+  private continuationCurrent(receipt: CommandReceipt, goal: GoalRecord): boolean {
+    if (!receipt.goal?.continuation) return true;
+    const board = this.options.policy.taskBoard();
+    return goalContinuationCurrent({ receipt, goal, state: this.options.state(), scoped: this.scopedTasks(),
+      allTasks: board.listTasks(), kanban: board.getKanbanState({ strict: true }), reports: this.workSyncReports(),
+      history: this.continuations(), nowMs: Date.now() });
+  }
 }

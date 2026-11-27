@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import {
   chmodSync,
   mkdirSync,
@@ -12,12 +13,17 @@ import {
   symlinkSync,
   writeFileSync,
 } from 'node:fs';
+import { syncBuiltinESMExports } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
+import type { TestContext } from 'node:test';
 
 import { FileManagementCommandStore } from '../dist/adapters/providers/FileManagementCommandStore.js';
 import { CredentialCommandOwner } from '../dist/management/CredentialCommandOwner.js';
+import { managementDigest } from '../dist/management/identity.js';
+import { deriveSecretFingerprint } from '../dist/management/secretFingerprint.js';
+import type { StoredManagementCommand } from '../dist/management/commandRecords.js';
 import type {
   CredentialCommand,
   CredentialCommandStore,
@@ -98,6 +104,169 @@ function fixture() {
   };
 }
 
+function controlledFingerprints(t: TestContext) {
+  const callbacks: ((error?: Error) => void)[] = [];
+  t.mock.method(crypto, 'scrypt', (...[input, salt, , , callback]: Parameters<typeof crypto.scrypt>) => {
+    assert.ok(Buffer.isBuffer(input) && Buffer.isBuffer(salt));
+    callbacks.push(error => callback(error ?? null, crypto.createHash('sha256').update(input).update(salt).digest()));
+  });
+  syncBuiltinESMExports();
+  t.after(() => { t.mock.restoreAll(); syncBuiltinESMExports(); });
+  return { finish(error?: Error) { const next = callbacks.shift(); assert.ok(next); next(error); } };
+}
+
+test('new one-character credential commands retain a salted fingerprint through cold replay without a parallel command digest', async t => {
+  const f = fixture(); t.after(f.cleanup);
+  const weak = { ...command, key: 'x' };
+  const first = await f.owner().execute(weak);
+  const saved = f.store.read(command.commandId);
+  assert.ok(saved?.kind === 'credential.set' && saved.fingerprintKdf?.version === 1);
+  assert.notEqual(saved.fingerprint, managementDigest(weak));
+  const path = f.files()[0]!, bytes = readFileSync(path);
+  assert.equal(bytes.includes(managementDigest(weak)), false);
+  const cold = f.owner();
+  assert.deepEqual(await cold.resume(weak), first);
+  assert.deepEqual(await cold.execute(weak), first);
+  await assert.rejects(cold.resume({ ...weak, key: 'y' }), { code: 'conflict' });
+  assert.deepEqual(readFileSync(path), bytes);
+  assert.equal('fingerprintKdf' in first, false);
+  assert.equal(f.count(), 1);
+});
+
+test('legacy credentials replay their original fingerprint and bytes without calling the new KDF', async t => {
+  const f = fixture(); t.after(f.cleanup);
+  f.store.write({ ...target, schemaVersion: 1, commandId: command.commandId,
+    providerId: command.providerId, kind: 'credential.set', fingerprint: managementDigest(command),
+    phase: 'completed', resourceHeld: false });
+  const path = f.files()[0]!, bytes = readFileSync(path);
+  t.mock.method(crypto, 'scrypt', () => { assert.fail('legacy replay does not derive a new witness'); });
+  syncBuiltinESMExports();
+  t.after(() => { t.mock.restoreAll(); syncBuiltinESMExports(); });
+  const cold = f.owner(), receipt = cold.lookup(lookup);
+  assert.deepEqual(await cold.execute(command), receipt);
+  assert.deepEqual(await cold.resume(command), receipt);
+  await assert.rejects(cold.resume({ ...command, key: 'TEST-other-key' }), { code: 'conflict' });
+  assert.deepEqual(readFileSync(path), bytes);
+  assert.equal(f.count(), 0);
+});
+
+test('same command ID claimed in another namespace during derivation cannot be overwritten or dispatched twice', async t => {
+  const f = fixture(); t.after(f.cleanup);
+  const crypto = controlledFingerprints(t);
+  let effects = 0;
+  const owner = new CredentialCommandOwner({ store: f.store, assertCurrent() {},
+    select(profileId, configRevision) { return { ...target, profileId, configRevision,
+      resourceId: profileId === target.profileId ? target.resourceId : 'd'.repeat(64) }; },
+    async perform() { effects++; return { ok: true, settled: true }; },
+  });
+  const first = owner.execute(command);
+  const other = owner.execute({ ...command, profileId: 'TEST-other-profile' });
+  crypto.finish();
+  assert.equal((await first).phase, 'completed');
+  const bytes = readFileSync(f.files()[0]!);
+  crypto.finish();
+  await assert.rejects(other, { code: 'conflict' });
+  assert.deepEqual(readFileSync(f.files()[0]!), bytes);
+  assert.equal(effects, 1);
+  assert.equal((await owner.execute({ ...lookup, commandId: 'TEST-other-forget',
+    profileId: 'TEST-other-profile', providerId: command.providerId, kind: 'credential.forget' })).phase, 'completed');
+  assert.equal(effects, 2, 'a preclaim conflict releases only its own transient namespace reservation');
+});
+
+test('revocation, target drift and crypto failure before claim leave no receipt or invented durable hold', async t => {
+  const crypto = controlledFingerprints(t);
+  for (const fault of ['revoked', 'target', 'crypto'] as const) {
+    const f = fixture(); t.after(f.cleanup);
+    let current = true, selected = { ...target }, effects = 0;
+    const owner = new CredentialCommandOwner({ store: f.store,
+      assertCurrent() { if (!current) throw new Error('TEST revoked'); }, select: () => selected,
+      async perform() { effects++; return { ok: true, settled: true }; },
+    });
+    const pending = owner.execute(command);
+    if (fault === 'revoked') current = false;
+    if (fault === 'target') selected.selectionDigest = 'c'.repeat(64);
+    crypto.finish(fault === 'crypto' ? new Error('TEST crypto failure') : undefined);
+    await assert.rejects(pending);
+    assert.deepEqual([...f.store.list()], []);
+    assert.equal(effects, 0);
+    current = true; selected = { ...target };
+    assert.equal((await owner.execute({ ...lookup, commandId: 'TEST-after-preclaim',
+      providerId: command.providerId, kind: 'credential.forget' })).phase, 'completed');
+  }
+});
+
+test('queue saturation rejects before claim and releases the credential namespace for a later intent', async t => {
+  const f = fixture(); t.after(f.cleanup);
+  const crypto = controlledFingerprints(t), owner = f.owner();
+  const pending = Array.from({ length: 9 }, (_, index) => deriveSecretFingerprint('TEST-fill-' + index));
+  await assert.rejects(owner.execute(command), { code: 'busy' });
+  assert.deepEqual([...f.store.list()], []);
+  assert.equal(f.count(), 0);
+  for (let index = 0; index < pending.length; index++) crypto.finish();
+  await Promise.all(pending);
+  assert.equal((await owner.execute({ ...lookup, commandId: 'TEST-after-saturation',
+    providerId: command.providerId, kind: 'credential.forget' })).phase, 'completed');
+});
+
+test('replay rereads completed progress after hashing and lookup/pending never enqueue crypto work', async t => {
+  const f = fixture(); t.after(f.cleanup);
+  const crypto = controlledFingerprints(t), entered = Promise.withResolvers<void>();
+  const native = Promise.withResolvers<{ ok: boolean; settled: boolean }>();
+  f.setEffect(() => { entered.resolve(); return native.promise; });
+  const owner = f.owner(), first = owner.execute(command);
+  crypto.finish(); await entered.promise;
+  const resumed = owner.resume(command);
+  assert.equal(owner.lookup(lookup)?.phase, 'held');
+  assert.equal(owner.pending({ profileId: command.profileId, configRevision: command.configRevision,
+    providerId: command.providerId })?.phase, 'held');
+  native.resolve({ ok: true, settled: true });
+  const completed = await first, bytes = readFileSync(f.files()[0]!);
+  crypto.finish();
+  assert.deepEqual(await resumed, completed);
+  assert.deepEqual(readFileSync(f.files()[0]!), bytes);
+  assert.equal(f.count(), 1);
+});
+
+test('execute replay and retained resume refuse identity or currentness changes across their await', async t => {
+  const crypto = controlledFingerprints(t);
+  for (const method of ['execute', 'resume'] as const) for (const fault of ['salt', 'fingerprint', 'target', 'revoked'] as const) {
+    const f = fixture(); t.after(f.cleanup);
+    const owner = f.owner(), first = owner.execute(command);
+    crypto.finish(); await first;
+    const resumed = owner[method](command);
+    const saved: StoredManagementCommand = f.store.read(command.commandId)!;
+    assert.equal(saved.kind, 'credential.set');
+    if (fault === 'salt' && saved.kind === 'credential.set')
+      f.store.write({ ...saved, fingerprintKdf: { version: 1, salt: 'f'.repeat(32) } });
+    if (fault === 'fingerprint') f.store.write({ ...saved, fingerprint: 'e'.repeat(64) });
+    if (fault === 'target') f.changeSelection();
+    if (fault === 'revoked') f.revoke();
+    const bytes = readFileSync(f.files()[0]!);
+    crypto.finish(); await assert.rejects(resumed);
+    assert.deepEqual(readFileSync(f.files()[0]!), bytes);
+    assert.equal(f.count(), 1);
+  }
+});
+
+test('claim write that commits then throws retains the live and cold namespace hold without rewriting or performing', async t => {
+  const f = fixture(); t.after(f.cleanup);
+  const storage: CredentialCommandStore = { read: id => f.store.read(id), list: () => f.store.list(),
+    write(record) { f.store.write(record); throw new Error('TEST directory fsync failed after rename'); } };
+  const owner = f.owner(storage);
+  await assert.rejects(owner.execute(command), /fsync failed after rename/);
+  const path = f.files()[0]!, bytes = readFileSync(path);
+  assert.equal(f.store.read(command.commandId)?.phase, 'claimed');
+  assert.equal(f.store.read(command.commandId)?.resourceHeld, true);
+  const next = { ...lookup, commandId: 'TEST-after-uncertain-write',
+    providerId: command.providerId, kind: 'credential.forget' };
+  await assert.rejects(owner.execute(next), { code: 'held' });
+  const cold = f.owner();
+  assert.equal((await cold.resume(command)).phase, 'held');
+  await assert.rejects(cold.execute(next), { code: 'held' });
+  assert.deepEqual(readFileSync(path), bytes);
+  assert.equal(f.count(), 0);
+});
+
 test('credential mutation persists before native action and replay/restart returns the receipt without secrets or redispatch', async (t) => {
   const f = fixture();
   t.after(f.cleanup);
@@ -135,14 +304,17 @@ test('one credential namespace serializes native writers; uncertain writer block
   const f = fixture();
   t.after(f.cleanup);
   let finish!: (result: { ok: boolean; settled: boolean }) => void;
+  const entered = Promise.withResolvers<void>();
   f.setEffect(
     () =>
       new Promise((done) => {
         finish = done;
+        entered.resolve();
       })
   );
   const owner = f.owner(),
     pending = owner.execute(command);
+  await entered.promise;
   assert.equal(f.count(), 1);
   const next = { ...command, commandId: 'TEST-next' };
   await assert.rejects(owner.execute(next), { code: 'busy' });
@@ -166,9 +338,9 @@ test('original pending credentials survive cold lookup without replay; only expl
     const cold = f.owner();
     assert.equal(first.phase, 'held');
     assert.deepEqual(cold.pending(pending), rejected ? null : first);
-    assert.deepEqual(cold.resume(command), first);
-    assert.throws(() => cold.resume({ ...command, key: 'TEST-changed-key' }), { code: 'conflict' });
-    assert.throws(() => cold.resume({ ...command, commandId: 'TEST-never-claimed' }), { code: 'conflict' });
+    assert.deepEqual(await cold.resume(command), first);
+    await assert.rejects(cold.resume({ ...command, key: 'TEST-changed-key' }), { code: 'conflict' });
+    await assert.rejects(cold.resume({ ...command, commandId: 'TEST-never-claimed' }), { code: 'conflict' });
     assert.equal(f.count(), 1);
     if (rejected) {
       f.setEffect(async () => ({ ok: true, settled: true }));
@@ -178,7 +350,7 @@ test('original pending credentials survive cold lookup without replay; only expl
     } else {
       f.changeSelection();
       assert.throws(() => cold.pending(pending), { code: 'conflict' });
-      assert.throws(() => cold.resume(command), { code: 'conflict' });
+      await assert.rejects(cold.resume(command), { code: 'conflict' });
       assert.equal(f.count(), 1);
     }
   }

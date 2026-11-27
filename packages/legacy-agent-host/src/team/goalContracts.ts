@@ -59,6 +59,8 @@ export interface GoalRecord extends GoalAssociation {
   rootMode: 'do' | 'delegate';
   startedAt: string;
   deadlineAt: string;
+  /** An observed expiry remains closed across wall-clock rollback until explicit extension. */
+  deadlineReached?: boolean;
   attemptLimit: number;
   disposition: 'active' | 'finalizing' | 'accepted' | 'stopped';
   /** Counter and original input witnesses share one atomic OwnerState publication. No refunds. */

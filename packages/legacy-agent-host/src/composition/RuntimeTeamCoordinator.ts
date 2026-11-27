@@ -85,6 +85,7 @@ export class RuntimeTeamCoordinator {
   private readonly evidenceWindows = new ToolEvidenceWindows();
   private readonly opening = new Set<Promise<unknown>>();
   private pumping: Promise<void> | undefined;
+  private readonly memberPasses = new Map<string, Promise<void>>();
   private readonly goalWorkSync: ReturnType<typeof createGoalWorkSync>;
   private readonly workSyncWake: ReturnType<typeof createRuntimeWorkSyncWake>;
   private dirty = false;
@@ -327,12 +328,14 @@ export class RuntimeTeamCoordinator {
       ...(options.profile.runtime?.members ? { initialRuntimeMembers: options.profile.runtime.members } : {}),
       delivery: () => this.deliveryPort(), isCurrent: entry => this.isCurrent(entry),
       isSealed: () => this.sealed, assertWriter: () => options.assertWriter(),
+      onProgress: () => this.kick(),
     });
     this.workSyncWake = createRuntimeWorkSyncWake({
       entries: this.entries,
       isCurrent: (entry) => this.isCurrent(entry),
       isSealed: () => this.sealed,
-      settleGoal: entry => this.goalWorkSync.settle(entry.team),
+      // Original publication can be held before there is any input for goal settlement to inspect.
+      settleGoal: entry => { this.kick(); return this.goalWorkSync.settle(entry.team); },
     });
     this.interactionControls = new HostInteractionControls({
       runtime: this.runtime,
@@ -585,6 +588,7 @@ export class RuntimeTeamCoordinator {
             launches: this.launches.values(), teams: this.options.teams.values(),
             entries: this.entries.values(), runtime: this.runtime, delivery: this.deliveryPort(),
             interactions: this.interactionControls, isSealed: () => this.sealed,
+            memberPasses: this.memberPasses, onProgress: () => this.kick(),
             available: teamId => this.captures.available(teamId),
             settleGoal: team => this.goalWorkSync.settle(team),
           });
@@ -656,7 +660,7 @@ export class RuntimeTeamCoordinator {
         isSealed: () => this.sealed,
         assertWriter: () => { this.options.assertWriter(); this.captures.assertAvailable(teamId); },
         kick: () => this.kick(),
-        dispatchSettled: () => this.pumping,
+        dispatchSettled: async binding => { await this.pumping; await this.memberPasses.get(this.key(binding)); },
         closeEndpoint: (entry) => this.closeEndpoint(entry),
         rekey: (before, current) => {
           this.entries.delete(this.key(before));
@@ -709,7 +713,7 @@ export class RuntimeTeamCoordinator {
     this.seal();
     await closeRuntimeEntries({
       runtime: this.runtime, entries: this.entries, opening: this.opening,
-      ...(this.pumping ? { pumping: this.pumping } : {}),
+      pumping: Promise.allSettled([...(this.pumping ? [this.pumping] : []), ...this.memberPasses.values()]).then(() => undefined),
       disposeWake: () => this.workSyncWake.dispose(),
       closeEndpoint: entry => this.closeEndpoint(entry),
       assertUnavailableReleased: () => this.captures.assertUnavailableReleased(),
@@ -751,8 +755,8 @@ export class RuntimeTeamCoordinator {
       lookupDelivery: (intent: Parameters<RuntimeOwner['lookupDelivery']>[0]) => {
         this.captures.assertAvailable(intent.binding.teamId); return this.runtime.lookupDelivery(intent);
       },
-      cancelDelivery: (intent: Parameters<RuntimeOwner['cancelDelivery']>[0]) => {
-        this.captures.assertAvailable(intent.binding.teamId); return this.runtime.cancelDelivery(intent);
+      cancelDelivery: (...args: Parameters<RuntimeOwner['cancelDelivery']>) => {
+        this.captures.assertAvailable(args[0].binding.teamId); return this.runtime.cancelDelivery(...args);
       },
     };
   }

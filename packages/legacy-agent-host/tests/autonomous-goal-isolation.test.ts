@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import type { CommandReceipt } from '../dist/team/contracts.js';
 import { eventually, goalHost, success } from './fixtures/autonomous-goal-host.ts';
 
 test('one unresolved native submit cannot block an eligible independent member input', async t => {
@@ -34,6 +35,9 @@ test('one unresolved native submit cannot block an eligible independent member i
     assert.equal(f.runtime('worker')!.inputs[0]!.phase, 'claimed', 'isolation never erases ambiguous custody');
     assert.equal(f.session('worker').submits.length, 1, 'hung original is not replayed');
     f.session().finish(1);
+    release?.();
+    assert.equal((await assignment as CommandReceipt).phase, 'completed', 'original assignment command succeeds');
+    assert.equal(success<CommandReceipt>(await independent).phase, 'completed', 'independent human command succeeds');
   } finally {
     release?.();
     const results = await Promise.allSettled([assignment, ...(independent ? [independent] : [])]);

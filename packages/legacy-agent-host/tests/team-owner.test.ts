@@ -176,6 +176,9 @@ for (const corruption of ['copied command', 'nested command ID', 'owner binding'
     writeFileSync(path, JSON.stringify(retained));
     const before = storedBytes(f.root);
     const restarted = createOwner(f.options).connect('human');
+    if (corruption === 'nested command ID' || corruption === 'payload fingerprint')
+      assert.equal(restarted.readSnapshot().autonomousGoalAvailable, false,
+        'unreadable receipt closes optional goal intake without breaking ordinary cold reads');
     assert.throws(() => restarted.lookup(command.commandId), expectCode('hold'));
     assert.throws(() => restarted.execute(command), expectCode(corruption === 'owner binding' ? 'conflict' : 'hold'));
     assert.deepEqual(storedBytes(f.root), before, 'lookup and refused replay preserve all original product/command bytes');

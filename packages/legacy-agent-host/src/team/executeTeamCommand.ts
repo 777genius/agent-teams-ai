@@ -147,7 +147,7 @@ export function executeTeamCommand(
       if (receipt.phase === 'completed' || receipt.phase === 'rejected') return receipt;
       if (
         command.operation !== 'message.send' &&
-        receipt.phase !== 'prepared' &&
+        (receipt.phase !== 'prepared' || (command.operation === 'task.update' && grant.memberName === 'user')) &&
         !options.taskRecovery.hasPlan(receipt) &&
         (receipt.taskPlanVersion !== 1 ||
           receipt.taskPreimage !== options.store.productFingerprint(options.binding.teamName))

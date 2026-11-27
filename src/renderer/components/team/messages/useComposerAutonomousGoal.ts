@@ -54,14 +54,13 @@ export function useComposerAutonomousGoal(
       goalOptionsValid = false;
     }
   }
-  if (content.restoredOrigin?.autonomousGoalRequest && draft.autonomousGoal && !original)
-    goalOptionsValid = false;
-  const goalRestrictionReason = !draft.autonomousGoal
-    ? null
-    : !goalOptionsValid
-      ? content.restoredOrigin?.autonomousGoalRequest
-        ? 'Restore the unchanged original objective to check its delivery.'
-        : 'Choose 1–24 hours and 1–1,000 automatic attempts.'
+  if (content.restoredOrigin?.autonomousGoalRequest && !original) goalOptionsValid = false;
+  const goalRestrictionReason = !goalOptionsValid
+    ? content.restoredOrigin?.autonomousGoalRequest
+      ? 'Restore the unchanged original objective to check its delivery.'
+      : 'Choose 1–24 hours and 1–1,000 automatic attempts.'
+    : !draft.autonomousGoal
+      ? null
       : !goalEligible
         ? draft.actionMode === 'ask'
           ? 'Choose Do or Delegate to continue until done.'

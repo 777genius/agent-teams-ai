@@ -96,7 +96,10 @@ export function readAutonomousGoalControl(value: unknown): AutonomousGoalControl
 /** Project a bounded public status. Private owner fields never cross the transport. */
 export function readAutonomousGoalStatus(value: unknown): AutonomousGoalStatus {
   const source = object(value);
-  if (!['active', 'finalizing', 'accepted', 'stopped'].includes(String(source.disposition)))
+  if (
+    typeof source.disposition !== 'string' ||
+    !['active', 'finalizing', 'accepted', 'stopped'].includes(source.disposition)
+  )
     throw new Error('Invalid goal disposition');
   for (const key of ['published', 'canResume'])
     if (source[key] !== undefined && typeof source[key] !== 'boolean')

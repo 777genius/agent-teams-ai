@@ -25,13 +25,52 @@ Host level (`packages/legacy-agent-host/tests/native-prompt-suggestions-real.rea
 Desktop level (`ui.ts`): in the real app, with physical CDP key events, `Tab` inserts the suggestion,
 `Escape` dismisses it, the `Insert` button inserts it, and **no suggestion ever sends a message**.
 
+## Autonomous goal canary
+
+The same disposable-process and credential-cleanup runner can execute the separate goal qualification:
+
+```bash
+pnpm test:real:suggestions -- --scenario autonomous-goal --vendor codex --preflight
+pnpm test:real:suggestions -- --scenario autonomous-goal --vendor codex --strict
+```
+
+Select one provider per invocation (`claude` or the captured Codex `0.169.0` executable) and run with
+the pinned Host Node `v24.21.0`. Preflight performs the existing binary, account-status and free-disk
+checks only. It exits `3`, or `1` with `--strict`, and never qualifies inference.
+
+`packages/legacy-agent-host/tests/autonomous-goal-real.real.ts` sends one actual human goal in Do
+mode to a real lead and worker. The worker must leave its task in progress after writing a draft,
+then finish the file on a genuine automatic continuation. The lead is instructed to verify the
+result and must propose the final answer. The harness independently checks the final JSON
+arithmetic and exact final publication, original Runtime input/operation identities, settled turns,
+canonical continuation receipts and passive-read attempt counts. A separate second objective
+exercises Stop during an actual worker input and rejects new automatic claims or final publication
+afterward. Each objective is bounded to one elapsed hour; the productive objective allows eight
+automatic attempts and the separate Stop objective allows four, twelve total in this invocation.
+The earlier failed qualification conservatively retains its original twelve-attempt allowance;
+its unknown effects are not refunded by a fresh TEST run.
+The canary has a fifteen-minute test timeout and a separate sixteen-minute outer process deadline;
+a stuck child is terminated as part of owned process-group cleanup. A nonzero test exit, signal,
+timeout or failed cleanup cannot produce a passing goal receipt.
+Failure receipts retain the original failing phase/reason separately from cleanup errors,
+bounded public Host/open facts and original Runtime/goal/debit records. A bounded redacted
+diagnostic log is saved beside the receipt before the runner removes its temporary tree.
+Missing observations or unavailable records do not establish zero provider effects or released custody.
+
+Receipts record source/dist/test/Node/binary hashes, actual provider and platform, and separate
+productive-success and Stop outcomes. This uses real inference; the ordinary controlled-provider
+tests and scripted native model servers are separate evidence. A short passing canary does not
+establish the plan's separate six-to-eight-hour unattended qualification, Desktop controls, Delegate
+mode or any provider/platform tuple that was not actually run. No goal-specific live result is
+claimed merely because this harness exists.
+
 ## Outcomes and exit codes
 
 | Exit | Meaning                                                                                               |
 | ---- | ----------------------------------------------------------------------------------------------------- |
-| 0    | **pass** - proven                                                                                     |
-| 1    | **fail** - the Host/app broke the contract, a process leaked, or the runner itself crashed            |
-| 3    | **inconclusive** - nothing to judge: quota/login/binary problem, or the vendor produced no suggestion |
+| 0    | **pass** - proven                                                                                      |
+| 1    | **fail** - the Host/app broke the contract, a process leaked, or the runner itself crashed              |
+| 3    | **inconclusive** - nothing to judge: quota/login/binary problem, or the vendor produced no suggestion    |
 
 Inconclusive is never green and never a regression. Add `--strict` to make it fail (Host runner).
 Receipts are written to `~/.cache/agent-teams-real-e2e/` (last 40 kept; UI also stores screenshots).
@@ -62,18 +101,18 @@ Receipts are written to `~/.cache/agent-teams-real-e2e/` (last 40 kept; UI also 
   drawn**, and the only trace is the warning "Saved launch settings are unavailable". The Desktop proof
   therefore refuses to run when `better-sqlite3` is not built for Electron
   (`pnpm install --ignore-scripts`; fix with `node scripts/postinstall-electron.cjs`).
-- `runtime.open` of a cold native session occasionally reports `open-unknown`; the runner retries once and
-  records every attempt (`openAttempts` in the receipt), so the flake rate stays visible.
+- `runtime.open` of a cold native session occasionally reports `open-unknown`; the suggestions runner retries once and
+  records every attempt (`openAttempts` in its receipt). The goal canary does not retry an unknown original open.
 
 ## Environment
 
 | Variable                                | Purpose                                                                        |
 | --------------------------------------- | ------------------------------------------------------------------------------ |
-| `REAL_CLAUDE_BIN`, `REAL_CODEX_BIN`     | executable override (default: first on `PATH`)                                 |
-| `REAL_CLAUDE_MODEL`, `REAL_CODEX_MODEL` | model override (defaults: `claude-sonnet-4-6`, your Codex `config.toml` model) |
-| `REAL_CLAUDE_NATURAL_SUGGESTIONS`       | `1` = do not force Claude's suggestion flag                                    |
+| `REAL_CLAUDE_BIN`, `REAL_CODEX_BIN`       | executable override (default: first on `PATH`)                                  |
+| `REAL_CLAUDE_MODEL`, `REAL_CODEX_MODEL`   | model override (defaults: `claude-sonnet-4-6`, your Codex `config.toml` model)    |
+| `REAL_CLAUDE_NATURAL_SUGGESTIONS`         | `1` = do not force Claude's suggestion flag                                     |
 | `REAL_RECEIPT_DIR`                      | receipts directory                                                             |
-| `PNPM_ENTRY`                            | Corepack `dist/pnpm.js` for the Desktop proof if not next to the running Node  |
+| `PNPM_ENTRY`                            | Corepack `dist/pnpm.js` for the Desktop proof if not next to the running Node    |
 
 Requirements: Node >= 24 (the Desktop proof needs exactly v24.21.0 on darwin-arm64), `pnpm install`
 done, >= 1.5 GiB free disk. The Desktop proof needs the app dependencies installed at the repo root with
@@ -83,4 +122,5 @@ their native modules built (a plain `pnpm install`, not `--ignore-scripts`).
 
 - The runner removes its work directory (credential copies) on exit and on SIGINT/SIGTERM/SIGHUP.
 - The original `~/.codex/auth.json` is never written; its hash is compared before/after.
-- Prompts are fixed, harmless trivia; nothing leaves your machine except the vendor calls themselves.
+- Suggestion prompts use harmless trivia. The goal canary writes small JSON files inside its disposable
+  workspace. Both use the selected vendor's existing account; neither performs a new login.

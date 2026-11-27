@@ -212,23 +212,66 @@ export function createHostProductLifecycleApi(options: {
     permanentlyDeleteTeam: (key: string) => lifecycle(key, 'purge'),
     async getQueuedUserMessages(key: string, member: string): Promise<QueuedUserMessagesSnapshot> {
       const original = await target(key);
-      const result = await options.backend.invoke({
-        handle: original.handle,
-        commandId: original.commandId,
-        operation: 'team.queue.read',
-        payload: { member },
-      });
-      check(original.current, original.commandId);
-      if (!result.ok) throw new HostTeamOperationError(result.code, result.outcome);
-      if (
-        !result.value ||
-        !('kind' in result.value) ||
-        result.value.kind !== 'queued_user_messages' ||
-        result.value.member !== member ||
-        !Array.isArray(result.value.messages)
-      )
-        throw new HostTeamOperationError('invalid-queue-view', 'unknown');
-      return { member: result.value.member, messages: structuredClone(result.value.messages) };
+      const messages: { messageId: string }[] = [],
+        ids = new Set<string>(),
+        cursors = new Set<string>();
+      let cursor: string | undefined, revision: string | undefined;
+      const invalid = () => new HostTeamOperationError('invalid-queue-view', 'unknown');
+      for (;;) {
+        check(original.current, original.commandId);
+        const result = await options.backend.invoke({
+          handle: original.handle,
+          commandId: original.commandId,
+          operation: 'team.queue.read',
+          payload: { member, ...(cursor === undefined ? {} : { cursor }) },
+        });
+        check(original.current, original.commandId);
+        if (!result.ok) throw new HostTeamOperationError(result.code, result.outcome);
+        if (
+          !result.value ||
+          !('kind' in result.value) ||
+          result.value.kind !== 'queued_user_messages' ||
+          result.value.member !== member ||
+          !Array.isArray(result.value.messages)
+        )
+          throw invalid();
+        const page = result.value;
+        if (messages.length + page.messages.length > 4096) throw invalid();
+        for (const message of page.messages) {
+          if (
+            !message ||
+            typeof message.messageId !== 'string' ||
+            !message.messageId.trim() ||
+            message.messageId.length > 256 ||
+            message.messageId.includes('\0') ||
+            ids.has(message.messageId)
+          )
+            throw invalid();
+          ids.add(message.messageId);
+          messages.push({ messageId: message.messageId });
+        }
+        const paged = Object.hasOwn(page, 'revision') || Object.hasOwn(page, 'nextCursor');
+        if (!paged) {
+          if (cursor !== undefined) throw invalid();
+          return { member, messages };
+        }
+        if (
+          page.messages.length === 0 ||
+          typeof page.revision !== 'string' ||
+          !/^[a-f0-9]{64}$/.test(page.revision) ||
+          (revision !== undefined && page.revision !== revision)
+        )
+          throw invalid();
+        revision = page.revision;
+        if (page.nextCursor === null) return { member, messages };
+        const nextCursor = page.nextCursor;
+        if (typeof nextCursor !== 'string') throw invalid();
+        const next = /^([1-9][0-9]{0,8})\.[a-f0-9]{64}$/.exec(nextCursor);
+        if (!next || Number(next[1]) !== messages.length || cursors.has(nextCursor))
+          throw invalid();
+        cursor = nextCursor;
+        cursors.add(cursor);
+      }
     },
     async discardQueuedUserMessages(
       key: string,
