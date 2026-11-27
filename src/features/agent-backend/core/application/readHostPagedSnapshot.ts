@@ -219,6 +219,7 @@ function assembleMessageParts(
 ): BackendTeamSnapshot['messages'] {
   if (groups.size !== messageTotal) throw new Error('Missing Host message pages');
   const messages: BackendTeamSnapshot['messages'] = [];
+  const processes: NonNullable<BackendTeamSnapshot['processes']> = [];
   for (let index = 0; index < messageTotal; index++) {
     const group = groups.get(index);
     if (!group || group.values.size !== group.total)
@@ -292,6 +293,8 @@ export async function readHostPagedSnapshot(
         page.taskTotal !== first.taskTotal ||
         Boolean(page.taskParts) !== Boolean(first.taskParts) ||
         page.messageTotal !== first.messageTotal ||
+        page.processTotal !== first.processTotal ||
+        (page.processes === undefined) !== (first.processes === undefined) ||
         Boolean(page.messageParts) !== Boolean(first.messageParts)
       )
         throw new Error('Host team changed during paged read');
@@ -348,6 +351,11 @@ export async function readHostPagedSnapshot(
     } else {
       messages.push(...page.messages);
     }
+    if (page.processTotal !== undefined) {
+      if (!page.processes || processes.length + page.processes.length > page.processTotal)
+        throw new Error('Invalid Host process page');
+      processes.push(...page.processes);
+    }
     // Page-local Kanban fragments are not a complete board. Reconstruct the
     // original ordered map and column arrays before exposing any product view.
     if (!kanbanState)
@@ -373,6 +381,8 @@ export async function readHostPagedSnapshot(
     if (page.nextCursor === undefined || page.nextCursor === null) {
       const completeKanban = kanbanState;
       if (!completeKanban) throw new Error('Missing Host Kanban state');
+      if (first.processTotal !== undefined && processes.length !== first.processTotal)
+        throw new Error('Incomplete Host process history');
       const reconstructed = first.taskParts
         ? assembleTaskParts(taskParts, first.taskTotal ?? 0)
         : tasks;
@@ -387,12 +397,14 @@ export async function readHostPagedSnapshot(
           ? assembleMessageParts(messageParts, first.messageTotal ?? 0)
           : messages,
         kanbanState: completeKanban,
+        ...(first.processTotal === undefined ? {} : { processes }),
       };
       delete data.nextCursor;
       delete data.taskTotal;
       delete data.taskParts;
       delete data.messageTotal;
       delete data.messageParts;
+      delete data.processTotal;
       readOrder.acceptSnapshot(handleId, data);
       return {
         data,

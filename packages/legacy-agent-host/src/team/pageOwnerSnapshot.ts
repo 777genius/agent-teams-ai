@@ -24,7 +24,7 @@ type TaskPart = {
 type Segment =
   | { kind: 'task'; value: JsonValue; part: TaskPart }
   | { kind: 'message'; value: JsonValue; part: TaskPart }
-  | { kind: 'reviewer'; value: JsonValue }
+  | { kind: 'process' | 'reviewer'; value: JsonValue }
   | { kind: 'kanban-task' | 'column-order'; key: string; value: JsonValue };
 
 /** Split retained array history into valid task records, not opaque unprojected JSON.
@@ -279,6 +279,10 @@ export function pageOwnerSnapshot(options: {
         return [name, values] as const;
       });
 
+  if (source.processes !== undefined && !Array.isArray(source.processes))
+    throw new TeamOwnerError('hold');
+  const processes = source.processes as JsonValue[] | undefined;
+
   const maxBytes = options.maxBytes ?? MAX_PAGE_BYTES;
   if (!Number.isSafeInteger(maxBytes) || maxBytes < 1024 || maxBytes > MAX_PAGE_BYTES)
     throw new TeamOwnerError('invalid');
@@ -287,6 +291,7 @@ export function pageOwnerSnapshot(options: {
     ...source,
     tasks: [] as JsonValue[],
     messages: [] as JsonValue[],
+    ...(processes === undefined ? {} : { processes: [] as JsonValue[] }),
     kanbanState: {
       ...board,
       tasks: {} as Record<string, JsonValue>,
@@ -310,6 +315,7 @@ export function pageOwnerSnapshot(options: {
   const segments: Segment[] = [
     ...taskItems,
     ...messageItems,
+    ...(processes ?? []).map((value) => ({ kind: 'process' as const, value })),
     ...Object.entries(board.tasks as Record<string, JsonValue>).map(([key, value]) => ({
       kind: 'kanban-task' as const, key, value,
     })),
@@ -347,6 +353,7 @@ export function pageOwnerSnapshot(options: {
       messageTotal: source.messages.length,
       messageParts: [] as TaskPart[],
     } : {}),
+    ...(processes === undefined ? {} : { processTotal: processes.length }),
   };
   let bytes = Buffer.byteLength(JSON.stringify(page));
   if (bytes > budget) throw new TeamOwnerError('hold');
@@ -374,6 +381,11 @@ export function pageOwnerSnapshot(options: {
         page.messages.push(segment.value);
         page.messageParts?.push(segment.part);
         break;
+      case 'process': {
+        if (!page.processes) throw new TeamOwnerError('hold');
+        page.processes.push(segment.value);
+        break;
+      }
       case 'kanban-task': page.kanbanState.tasks[segment.key] = segment.value; break;
       case 'reviewer': page.kanbanState.reviewers.push(segment.value); break;
       case 'column-order': {

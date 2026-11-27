@@ -461,6 +461,11 @@ export function projectTeamSnapshot(value: unknown): BackendTeamSnapshot {
     (typeof nextCursor !== 'string' || !/^[1-9][0-9]{0,8}\.[a-f0-9]{64}$/.test(nextCursor))
   )
     throw new Error('Invalid snapshot page cursor');
+  const processTotal = source.processTotal;
+  if (processTotal !== undefined &&
+      (!Number.isSafeInteger(processTotal) || (processTotal as number) < 0 ||
+       !Array.isArray(source.processes)))
+    throw new Error('Invalid Host process page');
   const configurationRevision = source.configurationRevision;
   if (
     configurationRevision !== undefined &&
@@ -476,6 +481,7 @@ export function projectTeamSnapshot(value: unknown): BackendTeamSnapshot {
     ...(nextCursor === undefined ? {} : { nextCursor }),
     ...projectTaskParts(source),
     ...projectMessageParts(source),
+    ...(processTotal === undefined ? {} : { processTotal: processTotal as number }),
     ...(source.runtimeNeverLaunched === true ? { runtimeNeverLaunched: true as const } : {}),
     ...(source.lifecycle === undefined
       ? {}
