@@ -37,10 +37,10 @@ await writeFile(psFile,[
 "Add-Type -TypeDefinition 'using System; using System.Runtime.InteropServices; public static class CProof { [DllImport(\"kernel32.dll\")] public static extern IntPtr GetConsoleWindow(); [DllImport(\"user32.dll\")] public static extern bool IsWindowVisible(IntPtr p); }'",
 '$h=[CProof]::GetConsoleWindow()',
 '$visible=$h -ne [IntPtr]::Zero -and [CProof]::IsWindowVisible($h)',
-'$proof=@{token='+quoted(token)+';pid=$PID;cmd=$cmd;git=$git;visible=$visible}',
+'$proof=@{token='+quoted(token)+';pid=$PID;cmd=$cmd;git=$git;visible=$visible;launchedAt=(Get-Date).ToUniversalTime().ToString("o")}',
 '[IO.File]::WriteAllText('+quoted(proofFile)+',($proof|ConvertTo-Json -Compress))',
 // Block well beyond the bounded Stop+retirement window; only product Stop may retire this tool.
-'Start-Sleep -Seconds 300'
+'while ($true) { Start-Sleep -Seconds 30 }'
 ].join('\r\n')+'\r\n');
 const command='powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "'+psFile.replaceAll('"','')+'"';
 let toolRequests=0;
@@ -53,7 +53,7 @@ toolsAvailable=names.slice(0,90);
 const bash=names.find(name=>/(?:^|[_-])bash$/i.test(name));
 if(!bash)return{id:'none_'+randomUUID().replaceAll('-',''),text:'NO_SHELL_TOOL'};
 if(toolRequests++===0)return{id:'toolu_'+randomUUID().replaceAll('-',''),name:bash,
-input:{command,description:'Isolated product Windows console verification',timeout:420000}};
+input:{command,description:'Isolated product Windows console verification',timeout:600000}};
 return{id:'done_'+randomUUID().replaceAll('-',''),text:'OWNED_TOOL_DISPATCHED'};
 });
 const env={...f.env,CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH:cli,
@@ -135,6 +135,9 @@ workerPid=restarted.members.worker.runtimePid||restarted.members.worker.pid;
 assert.equal(restarted.members.worker.backendType,'process','Direct process restart not exercised');
 assert(ownedAlive(workerPid,team),'Original restarted worker unavailable');
 result.restartWorkerPid=workerPid;
+assert(!ownedAlive(result.initialWorkerPid,team),
+  'Original pre-restart worker survived replacement; restart did not retire its owned PID');
+result.originalWorkerRetiredDuringRestart=true;
 result.phase='real-tool-turn';
 const focusBefore=await client.evaluate('document.hasFocus()');
 const nativeFocusBefore=await main('require("electron").BrowserWindow.getAllWindows().some(w=>w.isFocused())');
@@ -154,6 +157,11 @@ result.focus={focusBefore,nativeFocusBefore,focusAfter,nativeFocusAfter};
 result.tool=proof;result.realWindowsToolExecuted=true;
 await client.screenshot(path.join(out,'real-team.png'));
 result.phase='normal-product-stop';
+// The native tool has a 10-minute execution cap. Its age must leave enough
+// room for the entire 150s Stop IPC plus 60s retirement check, with margin.
+assert(Number.isFinite(Date.parse(proof.launchedAt)) &&
+  Date.now()-Date.parse(proof.launchedAt)<300000,
+  'Tool lifetime too old to distinguish product Stop from tool timeout');
 assert(ownedAlive(workerPid,team),'Original worker died before product Stop');
 assert(ownedAlive(toolPid,psFile),'Original tool died naturally before product Stop');
 result.workerAndToolAliveImmediatelyBeforeStop=true;
@@ -166,23 +174,41 @@ result.originalWorkerAndToolRetired=true;result.success=true;result.phase='produ
 finally{if(teamCreated&&client)await api('window.electronAPI.teams.stop('+literal(team)+')').catch(()=>{});
 try{client?.socket?.close();}catch{}try{inspector?.socket?.close();}catch{}
 // Kill the whole owned cmd -> pnpm -> Electron development tree, not only the
-// outer cmd.exe. Taskkill /T is necessary because inherited stdio pipes can
-// otherwise keep the test runner alive even after result.json is written.
-if(app?.pid&&app.exitCode===null&&app.signalCode===null){
-  const cleanup=spawnSync('taskkill.exe',['/T','/F','/PID',String(app.pid)],
-    {windowsHide:true,encoding:'utf8',timeout:30000,maxBuffer:65536});
-  result.appTreeCleanup={
-    exitCode:cleanup.status,
-    error:cleanup.error?String(cleanup.error):null,
-    output:String(cleanup.stdout||'').slice(-1000),
-    stderr:String(cleanup.stderr||'').slice(-1000)
-  };
-  if(cleanup.error||cleanup.status!==0){
-    // Taskkill may report nonzero after raced child exit; keep the exact
-    // failure in evidence and do not falsely certify tree retirement.
+// outer cmd.exe. Do not trust a reused PID when the original launcher has exited.
+if(app?.pid){
+  const launcherKnownAlive=app.exitCode===null&&app.signalCode===null;
+  if(launcherKnownAlive){
+    const cleanup=spawnSync('taskkill.exe',['/T','/F','/PID',String(app.pid)],
+      {windowsHide:true,encoding:'utf8',timeout:30000,maxBuffer:65536});
+    result.appTreeCleanup={
+      exitCode:cleanup.status,
+      error:cleanup.error?String(cleanup.error):null,
+      output:String(cleanup.stdout||'').slice(-1000),
+      stderr:String(cleanup.stderr||'').slice(-1000)
+    };
+    if(cleanup.error||cleanup.status!==0){
+      result.cleanupUnconfirmed=true;
+      result.success=false;
+    }
+  }else{
+    // The launcher can exit while pnpm or Electron descendants survive.
+    // A numeric PID is no longer sufficient authority for taskkill.
+    result.appTreeCleanup={exitCode:null,error:'original_launcher_exited_before_cleanup'};
     result.cleanupUnconfirmed=true;
     result.success=false;
   }
+  const pipeClosed=async(stream)=>{
+    if(!stream||stream.closed||stream.destroyed)return true;
+    return new Promise(resolve=>{
+      const done=(ok)=>{clearTimeout(timer);stream.off('close',closed);resolve(ok);};
+      const closed=()=>done(true);
+      const timer=setTimeout(()=>{stream.off('close',closed);resolve(false);},15000);
+      stream.once('close',closed);
+    });
+  };
+  const closed=await Promise.all([pipeClosed(app.stdout),pipeClosed(app.stderr)]);
+  result.appTreePipesClosed=closed.every(Boolean);
+  if(!result.appTreePipesClosed){result.cleanupUnconfirmed=true;result.success=false;}
 }
 await model.close().catch(()=>{});await save();
 if(result.cleanupUnconfirmed)throw Error('Owned development process tree cleanup unconfirmed');}
