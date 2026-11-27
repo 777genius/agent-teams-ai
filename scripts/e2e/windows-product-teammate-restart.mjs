@@ -38,7 +38,10 @@ await writeFile(psFile,[
 '$h=[CProof]::GetConsoleWindow()',
 '$visible=$h -ne [IntPtr]::Zero -and [CProof]::IsWindowVisible($h)',
 '$proof=@{token='+quoted(token)+';pid=$PID;cmd=$cmd;git=$git;visible=$visible;launchedAt=(Get-Date).ToUniversalTime().ToString("o")}',
-'[IO.File]::WriteAllText('+quoted(proofFile)+',($proof|ConvertTo-Json -Compress))',
+'$receiptTemp = '+quoted(proofFile+'.partial'),
+'[IO.File]::WriteAllText($receiptTemp,($proof|ConvertTo-Json -Compress))',
+// Publish only complete JSON; the reader polls for the final path.
+'[IO.File]::Move($receiptTemp,'+quoted(proofFile)+')',
 // Block well beyond the bounded Stop+retirement window; only product Stop may retire this tool.
 'while ($true) { Start-Sleep -Seconds 30 }'
 ].join('\r\n')+'\r\n');
