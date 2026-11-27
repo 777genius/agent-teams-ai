@@ -94,7 +94,9 @@ jobs:
       - uses: actions/checkout@v6
         with:
           repository: 777genius/agent_teams_orchestrator
-          ref: ${{ steps.sdk.outputs.sha }}
+          # Keep this reviewed source pin equal to runtime.lock.json; the receipt
+          # check below rejects drift before installing or running any SDK code.
+          ref: 275251d2b4d0d3258149040a3f5936ff50e1f686
           path: TEST-local-provider-sdk
           persist-credentials: false
       - uses: pnpm/action-setup@v6

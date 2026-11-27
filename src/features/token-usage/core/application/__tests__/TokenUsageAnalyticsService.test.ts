@@ -105,7 +105,12 @@ describe('TokenUsageAnalyticsService', () => {
       discovery: { discoverAppRuns: async () => [] },
       importers: [],
       clock: { now: () => new Date('2026-07-01T00:05:00.000Z') },
-      budgets: { getSettings: async () => ({}) },
+      budgets: {
+        getSettings: async () => ({}),
+        updateSettings: async () => {
+          throw new Error('Budget settings must not be updated when reading status');
+        },
+      },
       budgetTeamNameAliases: async (names) => {
         resolvedNames = [...names];
         return {
