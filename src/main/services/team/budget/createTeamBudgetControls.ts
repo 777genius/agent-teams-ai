@@ -79,20 +79,35 @@ export function createTeamBudgetAdmission(
     }
     const logicalTeam = owner?.logicalTeamName ?? teamName;
     const settings = await reader.getBudgetSettings();
-    const configuredAction = settings.teams?.[namedTeamId(logicalTeam)]?.onExceeded ?? 'notify';
+    const configured = settings.teams?.[namedTeamId(logicalTeam)];
+    const configuredAction = configured?.onExceeded ?? 'notify';
     if (configuredAction === 'notify') return;
-    // A status projection must not silently disable a policy that is present
-    // in authoritative settings. Unknown/missing target is not permission to launch.
-    const hasMatchingPolicy = (status: TokenUsageBudgetStatusDto): boolean =>
-      status.targets.some((target) =>
-        target.scope === 'team' &&
-        target.id === namedTeamId(logicalTeam) &&
-        target.onExceeded === configuredAction
+    // The status must reflect this exact settings revision and limits, not
+    // just the action: a lagging larger limit could silently permit a launch.
+    const hasMatchingPolicy = (status: TokenUsageBudgetStatusDto): boolean => {
+      if (status.settingsUpdatedAt !== settings.updatedAt) return false;
+      const target = status.targets.find(
+        (item) => item.scope === 'team' && item.id === namedTeamId(logicalTeam)
       );
+      if (!target || target.onExceeded !== configuredAction) return false;
+      const expectedLimits = [
+        { metric: 'tokens', limit: configured?.monthlyTokenLimit },
+        { metric: 'apiEquivalentCostUsd', limit: configured?.monthlyApiEquivalentCostLimitUsd },
+      ].filter((item) => item.limit !== undefined);
+      return target.metrics.length === expectedLimits.length &&
+        expectedLimits.every((item) =>
+          target.metrics.some(
+            (metric) => metric.metric === item.metric && metric.limit === item.limit
+          )
+        );
+    };
     let status = await reader.getBudgetStatus();
     // A known subtotal at the limit needs no expensive provider refresh.
     // The stop/launch decision is already conclusive even if other data is late.
-    if (hasMatchingPolicy(status) && evaluateTeamBudgetEnforcement(status, logicalTeam).state === 'exceeded') {
+    if (
+      hasMatchingPolicy(status) &&
+      evaluateTeamBudgetEnforcement(status, logicalTeam).state === 'exceeded'
+    ) {
       assertTeamBudgetLaunchAllowed(status, logicalTeam);
     }
     // Refresh first-use and rolled-over budgets once. No stale/unknown zero-spend assumption.

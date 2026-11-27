@@ -61,7 +61,10 @@ const budgetStatus = (input: {
   action?: TokenUsageBudgetExceededAction;
   used?: number;
   stale?: boolean;
+  limit?: number;
+  updatedAt?: string;
 }): TokenUsageBudgetStatusDto => ({
+  settingsUpdatedAt: input.updatedAt,
   period: {
     key: '2026-11',
     from: '2026-11-01T00:00:00Z',
@@ -85,9 +88,9 @@ const budgetStatus = (input: {
         {
           metric: 'tokens',
           value: input.used ?? 0,
-          limit: 100,
-          percent: input.used ?? 0,
-          remaining: 100 - (input.used ?? 0),
+          limit: input.limit ?? 100,
+          percent: ((input.used ?? 0) * 100) / (input.limit ?? 100),
+          remaining: (input.limit ?? 100) - (input.used ?? 0),
           incomplete: false,
         },
       ],
@@ -103,6 +106,9 @@ function setup(initial: {
   statusAction?: TokenUsageBudgetExceededAction;
   omitTarget?: boolean;
   repairOnRefresh?: boolean;
+  settingsRevision?: string;
+  statusRevision?: string;
+  statusLimit?: number;
 }) {
   let state = initial;
   let alive = true;
@@ -110,7 +116,14 @@ function setup(initial: {
     state = {
       ...state,
       stale: false,
-      ...(state.repairOnRefresh ? { omitTarget: false, statusAction: state.action } : {}),
+      ...(state.repairOnRefresh
+        ? {
+            omitTarget: false,
+            statusAction: state.action,
+            statusRevision: state.settingsRevision,
+            statusLimit: 100,
+          }
+        : {}),
     };
     return {};
   });
@@ -126,6 +139,7 @@ function setup(initial: {
   };
   const reader = {
     getBudgetSettings: async () => ({
+      ...(state.settingsRevision ? { updatedAt: state.settingsRevision } : {}),
       teams: {
         'team:alpha': {
           monthlyTokenLimit: 100,
@@ -136,7 +150,14 @@ function setup(initial: {
       },
     }),
     getBudgetStatus: async () => {
-      const status = budgetStatus({ ...state, action: state.statusAction ?? state.action });
+      const status = budgetStatus({
+        ...state,
+        action: state.statusAction ?? state.action,
+        updatedAt: state.statusRevision ?? (state.settingsRevision && !state.statusRevision
+          ? undefined
+          : state.settingsRevision),
+        limit: state.statusLimit,
+      });
       return state.omitTarget ? { ...status, targets: [] } : status;
     },
     refreshSnapshot: refresh,
@@ -192,6 +213,38 @@ describe('team budget composition - no live provider required', () => {
   it('fails closed when projected action disagrees with enforced settings', async () => {
     const { guard, refresh } = setup({ action: 'stop_team', statusAction: 'notify' });
     await expect(guard()).rejects.toThrow('TEAM_BUDGET_BLOCKED: Cannot verify active budget policy');
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it('refuses an older settings revision even if its policy action matches', async () => {
+    const { guard, refresh } = setup({
+      action: 'block_launch',
+      used: 50,
+      settingsRevision: '2026-11-27T12:01:00.000Z',
+      statusRevision: '2026-11-27T12:00:00.000Z',
+    });
+    await expect(guard()).rejects.toThrow('TEAM_BUDGET_BLOCKED: Cannot verify active budget policy');
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it('rejects an outdated higher limit even with matching policy action', async () => {
+    const { guard, refresh } = setup({
+      action: 'block_launch',
+      used: 150,
+      statusLimit: 200,
+    });
+    await expect(guard()).rejects.toThrow('TEAM_BUDGET_BLOCKED: Cannot verify active budget policy');
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it('rechecks a stricter limit after the status catches up', async () => {
+    const { guard, refresh } = setup({
+      action: 'block_launch',
+      used: 150,
+      statusLimit: 200,
+      repairOnRefresh: true,
+    });
+    await expect(guard()).rejects.toThrow('TEAM_BUDGET_BLOCKED: Cannot launch');
     expect(refresh).toHaveBeenCalledOnce();
   });
 
