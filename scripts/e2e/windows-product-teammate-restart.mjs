@@ -139,8 +139,22 @@ assert(!ownedAlive(result.initialWorkerPid,team),
   'Original pre-restart worker survived replacement; restart did not retire its owned PID');
 result.originalWorkerRetiredDuringRestart=true;
 result.phase='real-tool-turn';
+// The inspector runs in Main's global context, where bare require may be
+// undefined; use the entry-module fallback and focus only our own window.
+const nativeFocusBefore=await until('focused owned Electron window',async()=>main(`(()=>{
+const req=typeof require==='function'?require:process.mainModule?.require?.bind(process.mainModule);
+if(typeof req!=='function')throw Error('Electron Main module resolver unavailable');
+const win=req('electron').BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().startsWith('http://localhost:'));
+if(!win)throw Error('Owned Electron window missing');
+if(!win.isFocused())win.focus();
+if(!globalThis.__winRestartFocus){
+  globalThis.__winRestartFocus={blur:0};
+  win.on('blur',()=>{globalThis.__winRestartFocus.blur++;});
+}
+return win.isFocused();
+})()`),30000);
 const focusBefore=await client.evaluate('document.hasFocus()');
-const nativeFocusBefore=await main('require("electron").BrowserWindow.getAllWindows().some(w=>w.isFocused())');
+assert(nativeFocusBefore&&focusBefore,'Could not establish focused owned Electron window');
 await api('window.electronAPI.teams.sendMessage('+literal(team)+','+
 literal({member:'worker',from:'user',text:token+' Execute the current local TEST model shell command.'})+')');
 const proof=await until('original shell PID and tool receipt',async()=>{try{return JSON.parse(await readFile(proofFile,'utf8'));}
@@ -151,8 +165,13 @@ assert.equal(proof.visible,false,'Visible Windows console window was created');
 assert.equal(toolRequests,1,'Unexpected synthetic-model tool dispatches');
 toolPid=proof.pid;assert(ownedAlive(toolPid,psFile),'Original tool process not alive');
 const focusAfter=await client.evaluate('document.hasFocus()');
-const nativeFocusAfter=await main('require("electron").BrowserWindow.getAllWindows().some(w=>w.isFocused())');
-if(focusBefore&&nativeFocusBefore)assert(focusAfter&&nativeFocusAfter,'Electron lost focus');
+const nativeFocusAfter=await main(`(()=>{
+const req=typeof require==='function'?require:process.mainModule?.require?.bind(process.mainModule);
+if(typeof req!=='function')throw Error('Electron Main module resolver unavailable');
+const win=req('electron').BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().startsWith('http://localhost:'));
+return Boolean(win?.isFocused()&&globalThis.__winRestartFocus?.blur===0);
+})()`);
+assert(focusAfter&&nativeFocusAfter,'Owned Electron lost focus during real tool execution');
 result.focus={focusBefore,nativeFocusBefore,focusAfter,nativeFocusAfter};
 result.tool=proof;result.realWindowsToolExecuted=true;
 await client.screenshot(path.join(out,'real-team.png'));
