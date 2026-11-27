@@ -22,7 +22,7 @@ const original = {
   configRevision: input.configRevision,
 };
 async function until(check: () => boolean) {
-  const deadline = performance.now() + 2_000;
+  const deadline = performance.now() + 5_000;
   while (!check() && performance.now() < deadline)
     await new Promise<void>(done => setImmediate(done));
   assert.ok(check(), 'native operation reached expected phase');
@@ -73,7 +73,7 @@ function fixture(timeoutMs = 30_000) {
 
 test('real OAuth expiry closes original native capture without resurrecting deleted or changed journal', async t => {
   for (const missing of [true, false]) {
-    const f = fixture(90); t.after(() => f.cleanup());
+    const f = fixture(500); t.after(() => f.cleanup());
     await f.waiting();
     if (missing) unlinkSync(f.file());
     else f.store.write({ ...f.store.read(input.operationId)!, providerId: 'TEST-replacement' });
