@@ -133,6 +133,26 @@ describe('configValidation', () => {
     }
   });
 
+  it('accepts and deduplicates supported native desktop destination exclusions', () => {
+    const result = validateConfigUpdatePayload('notifications', {
+      desktopDisabledEvents: ['user_inbox', 'user_inbox', 'task_blocked'],
+    });
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      expect(result.data).toEqual({ desktopDisabledEvents: ['user_inbox', 'task_blocked'] });
+    }
+  });
+
+  it.each([
+    { desktopDisabledEvents: 'user_inbox' },
+    { desktopDisabledEvents: ['untrusted_event'] },
+    { desktopDisabledEvents: ['usage_budget_warning'] },
+    { desktopDisabledEvents: ['user_inbox', 123] },
+  ])('rejects unsafe desktop destination configuration %j', (update) => {
+    const result = validateConfigUpdatePayload('notifications', update);
+    expect(result.valid).toBe(false);
+  });
+
   it('rejects unknown notification keys', () => {
     const result = validateConfigUpdatePayload('notifications', { unknownField: true });
     expect(result.valid).toBe(false);

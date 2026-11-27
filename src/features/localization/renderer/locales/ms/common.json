@@ -952,5 +952,21 @@
       "unavailable": "News is available in the desktop app.",
       "state_unavailable": "Reading is available, but your progress cannot be saved right now. Automatic news is paused."
     }
+  },
+  "attention": {
+    "title": "Memerlukan perhatian anda",
+    "tab": "Perhatian",
+    "viewAll": "Lihat semua",
+    "refresh": "Muat semula status",
+    "loading": "Memuatkan…",
+    "loadFailed": "Gagal memuatkan status perhatian",
+    "retry": "Cuba lagi",
+    "partial": "Sesetengah pasukan gagal dimuatkan. Kiraan mungkin tidak lengkap.",
+    "nothing": "Tugasan yang menunggu keputusan anda dan sembang pasukan yang belum dibaca akan muncul di sini.",
+    "tasks": "Menunggu keputusan anda",
+    "chats": "Sembang belum dibaca",
+    "openTask": "Buka tugasan: {{subject}} dalam {{team}}",
+    "timeUnknown": "Masa tidak diketahui",
+    "teamAttention": "Perhatian"
   }
 }

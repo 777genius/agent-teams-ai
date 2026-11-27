@@ -6,6 +6,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const updateMemberSettings = vi.hoisted(() => vi.fn());
 const getSavedRequest = vi.hoisted(() => vi.fn());
 
+vi.mock('@renderer/components/team/definitionEdit/ProjectContextRecoveryNotice', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@renderer/components/team/definitionEdit/ProjectContextRecoveryNotice')>(),
+  ProjectContextRecoveryNotice: () => React.createElement('div', { 'data-testid': 'project-recovery' }, 'Open blocking project'),
+}));
+
 vi.mock('@renderer/api', () => ({ api: { teams: { updateMemberSettings, getSavedRequest } } }));
 vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({
@@ -392,6 +397,36 @@ describe('EditTeamMemberDialog', () => {
     await act(async () => saveButton().click());
     expect(onRefresh).toHaveBeenCalledOnce();
     expect(onClose).not.toHaveBeenCalled();
+    expect(host.textContent).toContain('editTeam.errors.saveFailed');
+  });
+
+  it.each(['project_unreconciled', 'project_running', 'target_conflict'] as const)('offers project recovery only for an unreconciled refusal, not %s', async (reason) => {
+    updateMemberSettings.mockResolvedValue(reason === 'target_conflict'
+      ? { outcome: 'target_conflict', memberName: 'alice', expectedFingerprint: 'old', actualFingerprint: 'new' }
+      : { outcome: 'refused', reason, memberName: 'alice', replayed: false });
+    act(() => render({ projectDefinition: true }));
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="editor"]')?.click());
+    await act(async () => saveButton().click());
+    expect(Boolean(host.querySelector('[data-testid="project-recovery"]'))).toBe(reason === 'project_unreconciled');
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('explains a refusal of the main process in the app language, from its code', async () => {
+    updateMemberSettings.mockResolvedValue({
+      outcome: 'refused',
+      reason: 'project_running',
+      memberName: 'alice',
+      message:
+        'This team is running in a project; stop it in every project before editing the team',
+      replayed: false,
+    });
+    act(() => render());
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="editor"]')?.click());
+    await act(async () => saveButton().click());
+    expect(onClose).not.toHaveBeenCalled();
+    expect(host.textContent).toContain('detail.tooltips.editUnavailableRunningProject');
+    // The English diagnostics of main are not shown.
+    expect(host.textContent).not.toContain('stop it in every project');
   });
 
   it('stays open and does not repeat refresh when refresh fails after a successful save', async () => {

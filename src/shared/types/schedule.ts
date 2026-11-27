@@ -89,6 +89,8 @@ export interface ScheduleRun {
   retryCount: number;
   /** Linked Task Board item, including when a newer occurrence is skipped. */
   linkedTaskId?: string;
+  /** Per-project teams: the project copy whose board holds the linked task. */
+  executionTeamName?: string;
   /** First ~500 chars of stdout for quick UI display */
   summary?: string;
 }
@@ -109,6 +111,9 @@ export interface ScheduleChangeEvent {
   scheduleId: string;
   teamName: string;
   detail?: string;
+  /** Final run identity/status for reliable, deduplicated notifications. */
+  runId?: string;
+  runStatus?: ScheduleRunStatus;
 }
 
 // =============================================================================

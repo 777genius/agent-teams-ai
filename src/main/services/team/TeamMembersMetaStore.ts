@@ -113,16 +113,17 @@ function buildActiveNameGuard(membersByName: Map<string, TeamMember>): (name: st
 }
 
 export class TeamMembersMetaStore {
-  private getMetaPath(teamName: string): string {
-    return path.join(getTeamsBasePath(), teamName, 'members.meta.json');
+  private getMetaPath(teamName: string, teamsBasePath?: string): string {
+    return path.join(teamsBasePath ?? getTeamsBasePath(), teamName, 'members.meta.json');
   }
 
   /** Management replacement requires every recognized member value to survive canonical read. */
   async getMeta(
     teamName: string,
-    options?: { requireCompleteMembers?: boolean }
+    options?: { requireCompleteMembers?: boolean; allowCliAutoSuffixArtifacts?: boolean },
+    teamsBasePath?: string
   ): Promise<TeamMembersMetaFile | null> {
-    const metaPath = this.getMetaPath(teamName);
+    const metaPath = this.getMetaPath(teamName, teamsBasePath);
     try {
       const stat = await fs.promises.stat(metaPath);
       if (!stat.isFile()) {
@@ -195,7 +196,9 @@ export class TeamMembersMetaStore {
     const keepName = buildActiveNameGuard(deduped);
     for (const name of allNames) {
       if (!keepName(name)) {
-        if (options?.requireCompleteMembers) return null;
+        // Strict template snapshots may ignore only verified CLI-generated
+        // suffix artifacts; every other malformed member still rejects above.
+        if (options?.requireCompleteMembers && !options.allowCliAutoSuffixArtifacts) return null;
         deduped.delete(name);
       }
     }

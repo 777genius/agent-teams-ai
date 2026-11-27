@@ -9,6 +9,7 @@ import { Readable } from 'node:stream';
 import { fileURLToPath } from 'node:url';
 
 import { formatGitHubReleaseDownloadError } from './lib/github-release-download-error.mjs';
+import { extractArchive as extractRuntimeArchive } from './lib/runtime-payload-cache.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, '..');
@@ -78,11 +79,12 @@ function parseArgs(argv) {
   return parsed;
 }
 
-function runOrThrow(command, args) {
+function runOrThrow(command, args, options = {}) {
   const result = spawnSync(command, args, {
     cwd: repoRoot,
     shell: false,
     stdio: 'inherit',
+    ...options,
   });
 
   if (result.error) {
@@ -229,26 +231,9 @@ function downloadReleaseAssetWithGh(lock, releaseTag, asset, destinationPath) {
 }
 
 function extractArchive(archivePath, extractDir, archiveKind) {
-  fs.mkdirSync(extractDir, { recursive: true });
-
-  if (archiveKind === 'tar.gz') {
-    runOrThrow('tar', ['-xzf', archivePath, '-C', extractDir]);
-    return;
-  }
-
-  if (archiveKind === 'zip') {
-    if (process.platform === 'win32') {
-      // Windows ships bsdtar with ZIP support. Avoid Expand-Archive, whose
-      // ZipFileExtensions overload can fail under the runner PowerShell host.
-      runOrThrow('tar.exe', ['-xf', archivePath, '-C', extractDir]);
-      return;
-    }
-
-    runOrThrow('unzip', ['-oq', archivePath, '-d', extractDir]);
-    return;
-  }
-
-  throw new Error(`Unsupported terminal-platform archive kind: ${archiveKind}`);
+  // Share the ZIP-entry-validated Windows reader with runtime staging.
+  // The legacy PowerShell archive API fails on hosted Windows runners before Electron E2E starts.
+  extractRuntimeArchive(archivePath, extractDir, archiveKind, runOrThrow);
 }
 
 function findRuntimePayloadDir(extractDir, asset) {

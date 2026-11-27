@@ -1,4 +1,6 @@
 import {
+  type MemberSettingsTarget,
+  TEAM_GET_MEMBER_SETTINGS_TARGET,
   TEAM_UPDATE_MEMBER_SETTINGS,
   type TeamMemberSettingsApi,
   type UpdateMemberSettingsResult,
@@ -10,5 +12,7 @@ export function createTeamMemberSettingsBridge(invoke: InvokeIpcWithResult): Tea
   return {
     updateMemberSettings: (request) =>
       invoke<UpdateMemberSettingsResult>(TEAM_UPDATE_MEMBER_SETTINGS, request),
+    getMemberSettingsTarget: (request) =>
+      invoke<MemberSettingsTarget | null>(TEAM_GET_MEMBER_SETTINGS_TARGET, request),
   };
 }

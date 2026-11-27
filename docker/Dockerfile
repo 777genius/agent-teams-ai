@@ -2,10 +2,10 @@
 # Agent Teams standalone Docker image
 #
 # Runs the HTTP server without Electron, serving the full UI over HTTP.
-# Mount your ~/.claude directory to make session data available.
+# Mount ~/.claude for sessions and /data/app-data to persist saved templates.
 #
 # Build:  docker build -t agent-teams-ai .
-# Run:    docker run -p 3456:3456 -v ~/.claude:/data/.claude:ro agent-teams-ai
+# Run:    docker run -p 3456:3456 -v ~/.claude:/data/.claude:ro -v agent-teams-app-data:/data/app-data agent-teams-ai
 # =============================================================================
 
 ARG NODE_VERSION=26.12.1
@@ -53,7 +53,7 @@ RUN apt-get update \
 # Lifecycle scripts stay disabled, so root preinstall/postinstall do not run.
 COPY . .
 RUN pnpm install --frozen-lockfile --prod --ignore-scripts \
-  && pnpm rebuild node-pty cpu-features ssh2
+  && pnpm rebuild node-pty cpu-features ssh2 better-sqlite3
 
 # =============================================================================
 # Production stage - minimal image with only runtime dependencies and built output
@@ -66,13 +66,16 @@ COPY --from=builder /app/agent-teams-controller ./agent-teams-controller
 
 # Copy built standalone server and renderer output
 COPY --from=builder /app/dist-standalone ./dist-standalone
+COPY --from=builder /app/dist-electron/main/internal-storage-worker.cjs ./dist-standalone/internal-storage-worker.cjs
+COPY --from=builder /app/dist-electron/main/chunks ./dist-standalone/chunks
 COPY --from=builder /app/out/renderer ./out/renderer
 
 # Create data directory for Claude session mount
-RUN mkdir -p /data/.claude
+RUN mkdir -p /data/.claude /data/app-data
 
 ENV NODE_ENV=production
 ENV CLAUDE_ROOT=/data/.claude
+ENV APP_DATA_DIR=/data/app-data
 ENV HOST=0.0.0.0
 ENV PORT=3456
 

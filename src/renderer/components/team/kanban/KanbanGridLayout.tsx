@@ -39,6 +39,7 @@ export interface KanbanGridColumn {
   count: number;
   icon?: React.ReactNode;
   accentColor: string;
+  headerAccessory?: React.ReactNode;
   content: React.ReactNode;
   showAddButton?: boolean;
   skeletonCards?: {
@@ -218,6 +219,7 @@ const LoadingKanbanGridLayout = ({
                 count={column.count}
                 icon={column.icon}
                 accentColor={column.accentColor}
+                headerAccessory={column.headerAccessory}
                 className="flex h-full min-h-0 animate-pulse flex-col"
                 headerClassName="shrink-0"
                 bodyClassName="min-h-0 max-h-none flex-1 overflow-hidden"
@@ -366,6 +368,7 @@ const LoadedKanbanGridLayout = ({
                 count={column.count}
                 icon={column.icon}
                 accentColor={column.accentColor}
+                headerAccessory={column.headerAccessory}
                 className="flex h-full min-h-0 flex-col"
                 headerClassName="shrink-0"
                 bodyClassName="kanban-grid-no-drag min-h-0 max-h-none flex-1"

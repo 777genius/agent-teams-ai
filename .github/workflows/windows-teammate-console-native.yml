@@ -1,0 +1,139 @@
+name: Windows teammate native console smoke
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - '.github/workflows/windows-teammate-console-native.yml'
+      - 'scripts/e2e/windows-teammate-console-native.mjs'
+      - 'scripts/e2e/windows-product-teammate-console.mjs'
+      - 'scripts/e2e/windows-product-console-hwnd.ps1'
+      - 'scripts/e2e/teams-create-page-desktop.mjs'
+      - 'src/main/utils/cliProcessDefaults.ts'
+      - 'src/main/utils/childProcess.ts'
+      - 'src/main/services/team/provisioning/TeamProvisioningMemberLifecycle.ts'
+      - 'src/main/services/team/provisioning/TeamProvisioningCreateDeterministicSpawnFlow.ts'
+      - 'src/main/services/team/provisioning/TeamProvisioningLaunchDeterministicSpawnFlow.ts'
+      - 'src/main/services/team/provisioning/TeamProvisioningAuthRetryRecovery.ts'
+      - 'src/main/services/team/provisioning/TeamProvisioningWindowsRuntimeLauncher.ts'
+      - 'tools/opencode-console-wrapper/OpenCodeConsoleWrapper.cs'
+      - 'tools/opencode-console-wrapper/WrapperNativeFixture.cs'
+      - 'scripts/stage-opencode-console-wrapper.mjs'
+      - 'src/features/token-usage/main/infrastructure/CliUsageImporters.ts'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/windows-teammate-console-native.yml'
+      - 'scripts/e2e/windows-teammate-console-native.mjs'
+      - 'scripts/e2e/windows-product-teammate-console.mjs'
+      - 'scripts/e2e/windows-product-console-hwnd.ps1'
+      - 'scripts/e2e/teams-create-page-desktop.mjs'
+      - 'src/main/utils/cliProcessDefaults.ts'
+      - 'src/main/utils/childProcess.ts'
+      - 'src/main/services/team/provisioning/TeamProvisioningMemberLifecycle.ts'
+      - 'src/main/services/team/provisioning/TeamProvisioningCreateDeterministicSpawnFlow.ts'
+      - 'src/main/services/team/provisioning/TeamProvisioningLaunchDeterministicSpawnFlow.ts'
+      - 'src/main/services/team/provisioning/TeamProvisioningAuthRetryRecovery.ts'
+      - 'src/main/services/team/provisioning/TeamProvisioningWindowsRuntimeLauncher.ts'
+      - 'tools/opencode-console-wrapper/OpenCodeConsoleWrapper.cs'
+      - 'tools/opencode-console-wrapper/WrapperNativeFixture.cs'
+      - 'scripts/stage-opencode-console-wrapper.mjs'
+      - 'src/features/token-usage/main/infrastructure/CliUsageImporters.ts'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'merge_group' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')) && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}
+
+jobs:
+  windows-native:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft != true
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+      - name: Run actual Windows teammate-shaped subprocess and tools
+        run: node scripts/e2e/windows-teammate-console-native.mjs
+      - name: Observe original process custody after simulated app force-kill
+        run: node scripts/e2e/windows-teammate-console-native.mjs --custody-probe
+      - name: Verify original Windows PID marker guard and native descendant tree cleanup
+        run: node scripts/e2e/windows-teammate-console-native.mjs --verify-owned-fixture-kill
+      - name: Preserve native subprocess receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-console-native-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: error
+          path: ${{ runner.temp }}/windows-console-native-*.json
+
+  windows-electron-console:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft != true
+    needs: windows-native
+    runs-on: windows-latest
+    timeout-minutes: 40
+    env:
+      AGENT_TEAMS_INSTALL_PROFILE: node-ci
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Install frozen dependencies for native Electron
+        run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Ensure Electron installed before GUI startup
+        run: node ./scripts/ensure-electron-install.cjs --strict
+      - name: Stage pinned terminal runtime before GUI startup
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node ./scripts/ensure-terminal-platform-runtime.mjs
+      - name: Probe real Electron Main OS console inheritance without a vendor
+        env:
+          TEAMS_CREATE_E2E_ARTIFACT_DIR: ${{ runner.temp }}/windows-console-electron
+        run: node scripts/e2e/teams-create-page-desktop.mjs --windows-console-only
+      - name: Stage pinned runtime for real product-initiated teammate
+        env:
+          GH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
+        run: node scripts/stage-runtime.mjs --platform win32-x64
+      - name: Stage Windows teammate-owned Job wrapper
+        run: node scripts/stage-opencode-console-wrapper.mjs --platform win32-x64 --require
+      - name: Qualify real teammate native handle and Job containment
+        shell: pwsh
+        run: |
+          $compiler = Join-Path $env:SystemRoot 'Microsoft.NET/Framework64/v4.0.30319/csc.exe'
+          $fixture = Join-Path $env:RUNNER_TEMP 'TEST-teammate-wrapper-native.exe'
+          $source = (Resolve-Path 'tools/opencode-console-wrapper/WrapperNativeFixture.cs').Path
+          & $compiler /nologo /target:exe /optimize "/out:$fixture" $source
+          if ($LASTEXITCODE -ne 0) { throw 'Native teammate wrapper fixture compilation failed' }
+          & $fixture (Resolve-Path 'resources/runtime/teammate-console/teammate.exe').Path
+          if ($LASTEXITCODE -ne 0) { throw 'Native teammate wrapper Job containment failed' }
+      - name: Verify actual Electron product teammate with synthetic localhost model
+        env:
+          WINDOWS_PRODUCT_CONSOLE_EVIDENCE: ${{ runner.temp }}/windows-product-console
+        run: |
+          node --check scripts/e2e/windows-product-teammate-console.mjs
+          node scripts/e2e/windows-product-teammate-console.mjs
+      - name: Preserve actual product teammate proof separately from fixture
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-product-teammate-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: ${{ runner.temp }}/windows-product-console/
+      - name: Preserve Electron GUI screenshot and console evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-console-electron-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: error
+          path: ${{ runner.temp }}/windows-console-electron/

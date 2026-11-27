@@ -6,6 +6,7 @@ const { createControllerContext } = require('./context.js');
 const { withFileLockSync } = require('./fileLock.js');
 const messageStore = require('./messageStore.js');
 const cascadeGuard = require('./cascadeGuard.js');
+const appRouting = require('./appRouting.js');
 const runtimeHelpers = require('./runtimeHelpers.js');
 const {
   formatCrossTeamText,
@@ -225,7 +226,8 @@ function findRecentDuplicate(outboxList, message, legacyToMember) {
   return null;
 }
 
-function sendCrossTeamMessage(context, flags) {
+/** Writes a message for the physical team `flags.toTeam` (already routed). */
+function deliverCrossTeamMessage(context, flags) {
   const fromTeam = context.teamName;
   const toTeam = typeof flags.toTeam === 'string' ? flags.toTeam.trim() : '';
   const rawFromMember = typeof flags.fromMember === 'string' ? flags.fromMember.trim() : '';
@@ -385,12 +387,59 @@ function sendCrossTeamMessage(context, flags) {
   return { messageId, deliveredToInbox: true };
 }
 
-function listCrossTeamTargets(context, flags) {
+/**
+ * The physical team a message to `toTeam` is written to. The app decides it,
+ * with the same rule as its own sends: a team that keeps a separate history per
+ * project receives through its copy for this team's project, and a refusal is
+ * passed on. Without a reachable app the name is kept, as before: the delivery
+ * then reports a name without a config of its own as unknown.
+ */
+async function routeCrossTeamTarget(context, toTeam) {
+  if (!TEAM_NAME_PATTERN.test(toTeam) || toTeam === context.teamName) return toTeam;
+  const recipient = await appRouting.getCrossTeamRecipient(context, toTeam);
+  if (recipient === null) return toTeam;
+  const routed =
+    recipient && typeof recipient.teamName === 'string' ? recipient.teamName.trim() : '';
+  if (!TEAM_NAME_PATTERN.test(routed)) {
+    throw new Error(`The app answered without a valid recipient team for ${toTeam}`);
+  }
+  return routed;
+}
+
+/**
+ * Sends a cross-team message: routes the target through the app, then writes it.
+ * Every consumer goes through here, so none can skip the rule. The result names
+ * the team that received it (`toTeam`).
+ */
+async function sendCrossTeamMessage(context, flags) {
+  const requested = typeof flags?.toTeam === 'string' ? flags.toTeam.trim() : '';
+  const toTeam = await routeCrossTeamTarget(context, requested);
+  return { ...deliverCrossTeamMessage(context, { ...flags, toTeam }), toTeam };
+}
+
+/**
+ * The app lists targets with project copies folded into their team. Without a
+ * reachable app the configured teams are scanned locally, which cannot tell a
+ * project copy from an ordinary team.
+ */
+async function listCrossTeamTargets(context, flags) {
   const excludeTeam =
     typeof flags === 'object' && flags && typeof flags.excludeTeam === 'string'
       ? flags.excludeTeam
       : context.teamName;
+  const fromApp = await appRouting.getCrossTeamTargets(context);
+  if (!Array.isArray(fromApp)) return listConfiguredTeams(context, excludeTeam);
+  return fromApp
+    .filter((target) => target && target.teamName !== excludeTeam)
+    .map((target) => ({
+      teamName: target.teamName,
+      displayName: target.displayName || target.teamName,
+      description: target.description || undefined,
+      ...(typeof target.isOnline === 'boolean' ? { isOnline: target.isOnline } : {}),
+    }));
+}
 
+function listConfiguredTeams(context, excludeTeam) {
   const teamsDir = path.dirname(context.paths.teamDir);
   let entries;
   try {

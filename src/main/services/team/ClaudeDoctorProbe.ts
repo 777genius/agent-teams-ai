@@ -24,7 +24,8 @@ try {
   // eslint-disable-next-line @typescript-eslint/no-require-imports -- node-pty is optional native addon
   nodePty = require('node-pty') as NodePtyModule;
 } catch {
-  // The doctor fallback is optional; importing its module is not a request to use it.
+  // Optional native addon is unavailable in non-Electron runners.
+  // The doctor probe simply returns no fallback candidates when called.
 }
 let warnedMissingNodePty = false;
 

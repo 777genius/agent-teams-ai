@@ -63,6 +63,39 @@ describe('deletedTaskFeed', () => {
     expect(store.getState().globalDeletedTasks.map((task) => task.id)).toEqual(['task-alpha']);
   });
 
+  it('includes verified project histories with native restoration identity and correct path', async () => {
+    const logical = {
+      ...team('builders'), displayName: 'Builders', projectPath: '/projects/default',
+      projectHistoryContexts: [
+        { executionTeamName: 'ptc-a', projectPath: '/projects/a' },
+        { executionTeamName: 'ptc-b', projectPath: '/projects/b' },
+      ],
+    };
+    getDeletedTasks.mockImplementation(async (name: string) => {
+      if (name === 'builders') return [deletedTask('shared')];
+      if (name === 'ptc-a' || name === 'ptc-b') return [deletedTask('1')];
+      return [];
+    });
+    const store = createFeedStore([logical]);
+
+    await store.getState().fetchAllDeletedTasks();
+
+    expect(getDeletedTasks.mock.calls.map((args: string[]) => args[0])).toEqual([
+      'builders', 'ptc-a', 'ptc-b',
+    ]);
+    expect(store.getState().globalDeletedTasks.map((task) => ({
+      teamName: task.teamName, teamDisplayName: task.teamDisplayName,
+      taskId: task.id, projectPath: task.projectPath,
+    }))).toEqual([
+      { teamName: 'builders', teamDisplayName: 'Builders', taskId: 'shared',
+        projectPath: '/projects/default' },
+      { teamName: 'ptc-a', teamDisplayName: 'Builders', taskId: '1',
+        projectPath: '/projects/a' },
+      { teamName: 'ptc-b', teamDisplayName: 'Builders', taskId: '1',
+        projectPath: '/projects/b' },
+    ]);
+  });
+
   it('drops deleted-task results when the context changes during the fetch', async () => {
     const deferred = createDeferred<TeamTask[]>();
     getDeletedTasks.mockImplementation(() => deferred.promise);

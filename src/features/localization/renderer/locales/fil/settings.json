@@ -322,6 +322,44 @@
     }
   },
   "notifications": {
+    "delivery": {
+      "eventLabels": {
+        "lead_inbox": "Team lead inbox message",
+        "user_inbox": "Message for you",
+        "task_clarification": "Clarification needed",
+        "task_status_change": "Task status changed",
+        "task_comment": "New task comment",
+        "task_created": "Task created",
+        "cross_team_message": "Cross-team message",
+        "team_launched": "Team launched",
+        "schedule_completed": "Scheduled run completed",
+        "usage_budget_warning": "Usage budget warning",
+        "task_review_requested": "Review requested",
+        "task_blocked": "Task blocked",
+        "all_tasks_completed": "All tasks completed",
+        "team_launch_incomplete": "Team launch needs attention",
+        "runtime_recovery": "Runtime recovery",
+        "schedule_failed": "Scheduled run failed",
+        "usage_budget_exceeded": "Usage budget exceeded"
+      },
+      "routingHint": "Choose destinations beside each notification type. Turning a type off disables it everywhere; Desktop is the default.",
+      "desktopOnly": "Desktop only",
+      "additionalEvents": "Additional delivery events",
+      "pausedDisabled": "Naka-pause ang awtomatikong pagpapadala: naka-off ang mga system notification. I-on ito para magpatuloy. Gumagana pa rin ang manual Test.",
+      "pausedSnoozed": "Automatic delivery is snoozed until {{time}}. Click Clear Snooze above to resume. Manual Test still works.",
+      "pausedSnoozedUnknown": "Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works.",
+      "agentGuide": "Hakbang-hakbang na gabay ng Agent Teams",
+      "exampleFormat": "Halimbawang format (hindi totoong credential):",
+      "officialGuide": "Opisyal na tagubilin ng provider",
+      "providerSetup": {
+        "telegram": "Gumawa ng bot gamit ang @BotFather (/newbot), magsimula ng chat at ilagay ang token at Chat ID o @pangalan_ng_channel.",
+        "discord": "Sa target na Discord channel, buksan ang Edit Channel → Integrations → Webhooks, gumawa ng webhook at kopyahin ang buong URL.",
+        "slack": "Gumawa ng Slack app, i-enable ang Incoming Webhooks, i-install ito sa workspace at kopyahin ang URL.",
+        "ms-teams": "Gamitin ang Teams Workflows → Send webhook alerts to a channel. Para sa custom trigger, piliin ang Anyone at panatilihing lihim ang URL.",
+        "google-chat": "Sa Google Chat space, piliin ang Apps & integrations → Add webhooks, gumawa ng webhook at kopyahin ang buong URL.",
+        "webhook": "Gumawa ng pampublikong HTTPS webhook (hal. sa n8n), kopyahin ang buong signed URL at subukan ito. Bawal ang mga lokal na URL."
+      }
+    },
     "recovery": {
       "title": "Automatic agent recovery",
       "transient": {
@@ -383,7 +421,7 @@
       "selectDuration": "Piliin ang tagal..."
     },
     "taskCompletion": {
-      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Gemini. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
+      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Cursor/Gemini/Qoder/Pi. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
       "installPlugin": "Agent Notifications",
       "title": "Agent Notifications"
     },

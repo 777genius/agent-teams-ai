@@ -15,6 +15,7 @@ import {
 import { readMemberWorkSyncTeamSnapshot } from './memberWorkSyncSnapshotWorkerOps';
 import {
   compareAndWriteMemberWorkSyncStatus,
+  deleteMemberWorkSyncStatusesMatching,
   writeMemberWorkSyncStatus,
 } from './memberWorkSyncStatusWorkerOps';
 
@@ -27,6 +28,7 @@ import type {
   MemberWorkSyncReportJournalOpResult,
   MemberWorkSyncStatusCompareAndWriteInput,
   MemberWorkSyncStatusCompareAndWriteResult,
+  MemberWorkSyncStatusDeleteTarget,
   MemberWorkSyncStatusRecord,
   MemberWorkSyncTeamSnapshotRecords,
 } from '../../../contracts/internalStorageContracts';
@@ -116,6 +118,10 @@ export function handleMemberWorkSyncOp(
       return ops.statusCompareAndWrite(p as MemberWorkSyncStatusCompareAndWriteInput);
     case 'mws.status.list':
       return ops.statusList((p as { teamName: string }).teamName);
+    case 'mws.status.deleteMatching': {
+      const typed = p as { teamName: string; targets: MemberWorkSyncStatusDeleteTarget[] };
+      return ops.statusDeleteMatching(typed.teamName, typed.targets);
+    }
     case 'mws.metricEvents.list':
       return ops.metricEventsList((p as { teamName: string }).teamName);
     case 'mws.reports.append':
@@ -223,6 +229,10 @@ export class MemberWorkSyncWorkerOps {
       .where(eq(memberWorkSyncStatus.teamName, teamName))
       .orderBy(asc(memberWorkSyncStatus.memberKey))
       .all();
+  }
+
+  statusDeleteMatching(teamName: string, targets: MemberWorkSyncStatusDeleteTarget[]): number {
+    return deleteMemberWorkSyncStatusesMatching(this.getOrm(), teamName, targets);
   }
 
   statusWrite(record: MemberWorkSyncStatusRecord, events: MemberWorkSyncMetricEventRecord[]): void {

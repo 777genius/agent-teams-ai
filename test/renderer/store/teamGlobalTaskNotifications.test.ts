@@ -204,6 +204,51 @@ describe('teamGlobalTaskNotifications', () => {
     ]);
   });
 
+  it('applies solo-only status notifications to verified physical project membership', () => {
+    const previous = createTask({ teamName: 'ptc-owned', status: 'pending' });
+    const changed = createTask({ teamName: 'ptc-owned', status: 'in_progress' });
+    const logical = {
+      ...teamSummary(0),
+      teamName: 'builders',
+      projectHistoryContexts: [
+        { executionTeamName: 'ptc-owned', projectPath: '/work/a', memberCount: 2 },
+      ],
+    };
+
+    processGlobalTaskNotifications({
+      oldTasks: [previous], newTasks: [changed],
+      appConfig: createConfig(), teamByName: { builders: logical },
+      isInitialFetch: false,
+    });
+    expect(sentNotifications()).toEqual([]);
+
+    // An owned ready context without a loaded physical summary is not proven solo.
+    processGlobalTaskNotifications({
+      oldTasks: [previous], newTasks: [changed],
+      appConfig: createConfig(),
+      teamByName: { builders: {
+        ...logical,
+        projectHistoryContexts: [{ executionTeamName: 'ptc-owned', projectPath: '/work/a' }],
+      } },
+      isInitialFetch: false,
+    });
+    expect(sentNotifications()).toEqual([]);
+
+    processGlobalTaskNotifications({
+      oldTasks: [previous], newTasks: [changed],
+      appConfig: createConfig(),
+      teamByName: { builders: {
+        ...logical,
+        projectHistoryContexts: [{ ...logical.projectHistoryContexts[0], memberCount: 0 }],
+      } },
+      isInitialFetch: false,
+    });
+    expect(sentNotifications()).toMatchObject([
+      { teamEventType: 'task_status_change',
+        target: { kind: 'task', teamName: 'ptc-owned', taskId: 'task-1' } },
+    ]);
+  });
+
   it('emits only actionable teammate comments and review requests', () => {
     processGlobalTaskNotifications({
       oldTasks: [createTask({ comments: [] })],

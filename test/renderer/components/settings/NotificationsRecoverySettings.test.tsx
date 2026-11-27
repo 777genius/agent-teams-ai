@@ -13,7 +13,11 @@ vi.mock('@features/localization/renderer', () => ({
 }));
 
 vi.mock('@renderer/api', () => ({
+  isElectronMode: () => true,
   api: {
+    notificationChannels: {
+      list: vi.fn(async () => []),
+    },
     config: {
       getClaudeRootInfo: vi.fn(),
       update: vi.fn(),
@@ -104,6 +108,7 @@ function makeSafeConfig(): SafeConfig & AppConfig {
     notifications: {
       enabled: false,
       soundEnabled: false,
+      desktopDisabledEvents: [],
       ignoredRegex: [],
       ignoredRepositories: [],
       snoozedUntil: null,
@@ -205,6 +210,7 @@ describe('NotificationsSection recovery settings', () => {
           ignoredRepositoryItems={[]}
           excludedRepositoryIds={[]}
           onNotificationToggle={vi.fn()}
+          onDesktopDestinationsChange={vi.fn()}
           onTeamRuntimeRecoveryUpdate={onTeamRuntimeRecoveryUpdate}
           onStatusChangeStatusesUpdate={vi.fn()}
           onSnooze={vi.fn()}

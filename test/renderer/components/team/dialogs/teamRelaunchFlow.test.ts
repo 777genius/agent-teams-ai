@@ -10,6 +10,7 @@ describe('executeTeamRelaunch', () => {
       const launchTeam = vi.fn();
       await expect(
         executeTeamRelaunch({
+          rosterReadOnly: false,
           teamName: 'test-team',
           isTeamAlive,
           request: { teamName: 'test-team', cwd: '/tmp/test-project' },
@@ -37,6 +38,7 @@ describe('executeTeamRelaunch', () => {
     const launchTeam = vi.fn();
     await expect(
       executeTeamRelaunch({
+        rosterReadOnly: false,
         teamName: 'test-team',
         isTeamAlive: true,
         request: { teamName: 'test-team', cwd: '/tmp/test-project' },
@@ -65,6 +67,7 @@ describe('executeTeamRelaunch', () => {
     });
 
     await executeTeamRelaunch({
+      rosterReadOnly: false,
       teamName: 'team-alpha',
       isTeamAlive: true,
       request: {
@@ -97,6 +100,7 @@ describe('executeTeamRelaunch', () => {
     });
 
     await executeTeamRelaunch({
+      rosterReadOnly: false,
       teamName: 'team-alpha',
       isTeamAlive: false,
       request: {
@@ -137,6 +141,7 @@ describe('executeTeamRelaunch', () => {
     ];
 
     await executeTeamRelaunch({
+      rosterReadOnly: false,
       teamName: 'team-alpha',
       isTeamAlive: true,
       request,
@@ -166,6 +171,7 @@ it('passes the target guard into persistence and does not launch after a write c
   const launchTeam = vi.fn();
   await expect(
     executeTeamRelaunch({
+      rosterReadOnly: false,
       teamName: 'test-team',
       isTeamAlive: true,
       request: { teamName: 'test-team', cwd: '/tmp/test-only' },
@@ -193,6 +199,7 @@ it.each([true, false])(
     });
     await expect(
       executeTeamRelaunch({
+        rosterReadOnly: false,
         teamName: 'test-only',
         isTeamAlive: false,
         request: { teamName: 'test-only', cwd: '/tmp/test-only' },
@@ -207,5 +214,34 @@ it.each([true, false])(
     ).rejects.toThrow(saved ? 'launch failed' : 'save failed');
     expect(onMembersSaved).toHaveBeenCalledTimes(saved ? 1 : 0);
     expect(launchTeam).toHaveBeenCalledTimes(saved ? 1 : 0);
+  }
+);
+
+it.each([false, true])(
+  'never saves the roster of a read-only (per-project) team, but still stops and relaunches (alive=%s)',
+  async (isTeamAlive) => {
+    const calls: string[] = [];
+    const onMembersSaved = vi.fn();
+    const replaceMembers = vi.fn(async () => {
+      calls.push('replace');
+    });
+    await executeTeamRelaunch({
+      teamName: 'builders',
+      isTeamAlive,
+      rosterReadOnly: true,
+      request: { teamName: 'builders', cwd: '/tmp/test-project' },
+      members: [{ name: 'mangled' }],
+      stopTeam: async () => {
+        calls.push('stop');
+      },
+      replaceMembers,
+      launchTeam: async () => {
+        calls.push('launch');
+      },
+      onMembersSaved,
+    });
+    expect(replaceMembers).not.toHaveBeenCalled();
+    expect(onMembersSaved).not.toHaveBeenCalled();
+    expect(calls).toEqual(isTeamAlive ? ['stop', 'launch'] : ['launch']);
   }
 );

@@ -182,7 +182,10 @@ function drawTaskPill(
   if (reviewColor !== 'transparent') {
     ctx.beginPath();
     ctx.roundRect(-halfW - 1, -halfH - 1, w + 2, h + 2, r + 1);
-    const reviewAlpha = node.reviewState === 'approved' ? 0.6 : 0.5 + 0.3 * Math.sin(time * 3);
+    const reviewAlpha =
+      node.reviewState === 'approved' || node.reviewState === 'reviewed'
+        ? 0.6
+        : 0.5 + 0.3 * Math.sin(time * 3);
     ctx.strokeStyle = hexWithAlpha(reviewColor, reviewAlpha);
     ctx.lineWidth = 1.5;
     ctx.stroke();

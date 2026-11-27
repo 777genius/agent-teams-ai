@@ -6,6 +6,7 @@ import type {
   TeamCreateRequest,
   TeamProviderId,
 } from '@shared/types';
+import type { ChildProcess } from 'node:child_process';
 
 export type LiveRosterAttachReason = 'member_added' | 'member_restored' | 'member_updated';
 export type DirectProcessMemberLaunchReason = 'manual_restart' | LiveRosterAttachReason;
@@ -33,6 +34,7 @@ export interface ProvisioningRun {
   teamName: string;
   request: TeamCreateRequest;
   spawnContext?: { claudePath?: string };
+  directMemberProcesses?: Set<ChildProcess>;
   detectedSessionId: string | null;
   memberMcpConfigPaths: string[];
   memberSpawnStatuses: Map<string, MemberSpawnStatusEntry>;

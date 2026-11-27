@@ -16,6 +16,10 @@
     "gatewayProviders": {
       "description": "Manage gateway endpoints for per-teammate model access.",
       "label": "Gateway providers"
+    },
+    "reviewFlow": {
+      "label": "Review flow",
+      "description": "Choose who gives final approval after AI review, for all teams or for individual ones."
     }
   },
   "view": {
@@ -340,16 +344,16 @@
       "title": "Startup"
     },
     "externalAgentConnection": {
-      "title": "External agent connection",
-      "description": "Local agents can create saved drafts through the app's MCP server. Connection readiness does not mean an external client is connected. Cloud agents need a local executor.",
-      "localOnly": "External connections are available in the local desktop app context only.",
+      "title": "AI connection",
+      "description": "Connect your agent to this app’s MCP tools and interface (CDP).",
+      "localOnly": "Switch to the local desktop app context to connect an agent.",
       "status": "MCP: {{mcp}}; control: {{control}}; renderer CDP: {{cdp}}",
       "retry": "Retry connection",
       "retrying": "Retrying...",
-      "cdpLabel": "Allow full renderer access (CDP)",
-      "cdpDescription": "Grants local processes full renderer access, including the preload API. The browser endpoint can see other app targets. Enabling and disabling require an app restart.",
+      "cdpLabel": "Allow interface access (CDP)",
+      "cdpDescription": "Optional. Local processes gain full access to the app interface and its exposed APIs; the browser endpoint can see other app targets. Enabling or disabling requires restarting the app.",
       "restartRequired": "Restart the app to apply the saved setting.",
-      "stillOpen": "Renderer access is still open until restart.",
+      "stillOpen": "Interface access is currently open. To close it, restart the app without debugging access.",
       "statuses": {
         "loading": "loading",
         "starting": "starting",
@@ -358,10 +362,94 @@
         "stopped": "stopped",
         "disabled": "disabled",
         "restart-required": "restart required"
-      }
+      },
+      "heading": "Connect AI to this app",
+      "connectButton": "Manage with AI",
+      "serverReady": "MCP server is ready",
+      "readyExplanation": "The app server is available. This does not confirm that an agent is connected.",
+      "serverUnavailable": "Connection unavailable",
+      "serverStarting": "Preparing the app connection…",
+      "waitExplanation": "Wait for the connection, or retry if it does not start.",
+      "disabledExplanation": "The MCP HTTP bridge is disabled by the CLAUDE_TEAM_OPENCODE_MCP_HTTP environment setting. Remove the disabling value and restart the app, then return here.",
+      "chooseClient": "Set up manually",
+      "otherClient": "Other MCP client",
+      "cliInstructions": "Run this command in a macOS/Linux terminal or Windows PowerShell where your agent is installed.",
+      "otherInstructions": "Add an MCP server using Streamable HTTP in your client and paste this address.",
+      "verifyInstructions": "Reload your agent’s MCP tools or start a new session, then ask it to call app_get_connection_info.",
+      "localExecutor": "The agent must run on this computer or use a local executor; a cloud-only agent cannot reach 127.0.0.1 directly.",
+      "mcpTrust": "Connect trusted agents only: they can use this app’s tools.",
+      "copyAddress": "Copy address",
+      "copyCommand": "Copy command",
+      "copied": "Copied. Complete the setup in your agent.",
+      "copyFailed": "Could not copy. Refresh the connection and try again.",
+      "copyUnavailable": "The app connection changed or became unavailable. Wait for the current connection and try again.",
+      "advanced": "Advanced: UI access and diagnostics",
+      "nextStep": "What happens next?",
+      "nextStepHelp": "Open Teams to give your agent a request or manage saved teams.",
+      "openTeams": "Open Teams",
+      "addressChanges": "If the address changes after a restart, remove the old server entry from your client, then register the new command or address shown here.",
+      "setupUnavailable": "The command or address will appear when the app connection is ready.",
+      "promptHeading": "With a prompt",
+      "promptHelp": "Send the prompt to your agent to connect both MCP and CDP. After verifying both, it can show a confirmation here.",
+      "copyPrompt": "Copy connection prompt",
+      "copyingPrompt": "Copying…",
+      "confirmationTitle": "Agent connected to this app",
+      "confirmationDescription": "{{agentName}} reached this app through MCP and requested this confirmation. The agent name is supplied by the client.",
+      "confirmationClose": "Done",
+      "dashboardLine1": "Connect AI",
+      "dashboardLine2": "to this app",
+      "chooseMethod": "Choose how to connect",
+      "promptCardHelp": "Send a ready-made request to your agent.",
+      "manualCardHelp": "Use a command or MCP address.",
+      "localExecutorShort": "Keep the app open. Cloud agents need a local executor.",
+      "cdpShortDescription": "Local processes get full access to the app interface and its exposed APIs.",
+      "cdpReady": "Interface access is ready. This does not confirm an agent is connected.",
+      "cdpEnableHint": "Enable this to connect both MCP and the interface. A regular app launch requires a restart.",
+      "cdpError": "Interface access is unavailable. Check diagnostics or restart the app.",
+      "cdpStarting": "Preparing interface access…",
+      "manualCdpHelp": "For CDP, use a compatible client and the renderer address in Advanced. The MCP registration command does not set up CDP.",
+      "confirmationBoth": "{{agentName}} reports it connected to both MCP and the interface (CDP). The app received this request through MCP; the client reports its name and CDP verification."
     }
   },
   "notifications": {
+    "delivery": {
+      "eventLabels": {
+        "lead_inbox": "Team lead inbox message",
+        "user_inbox": "Message for you",
+        "task_clarification": "Clarification needed",
+        "task_status_change": "Task status changed",
+        "task_comment": "New task comment",
+        "task_created": "Task created",
+        "cross_team_message": "Cross-team message",
+        "team_launched": "Team launched",
+        "schedule_completed": "Scheduled run completed",
+        "usage_budget_warning": "Usage budget warning",
+        "task_review_requested": "Review requested",
+        "task_blocked": "Task blocked",
+        "all_tasks_completed": "All tasks completed",
+        "team_launch_incomplete": "Team launch needs attention",
+        "runtime_recovery": "Runtime recovery",
+        "schedule_failed": "Scheduled run failed",
+        "usage_budget_exceeded": "Usage budget exceeded"
+      },
+      "routingHint": "Choose destinations beside each notification type. Turning a type off disables it everywhere; Desktop is the default.",
+      "desktopOnly": "Desktop only",
+      "additionalEvents": "Additional delivery events",
+      "pausedDisabled": "Automatic delivery is paused: Enable System Notifications is OFF. Enable system notifications to resume. Manual Test still works.",
+      "pausedSnoozed": "Automatic delivery is snoozed until {{time}}. Click Clear Snooze above to resume. Manual Test still works.",
+      "pausedSnoozedUnknown": "Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works.",
+      "agentGuide": "Agent Teams step-by-step guide",
+      "exampleFormat": "Example format (not a real credential):",
+      "officialGuide": "Official provider instructions",
+      "providerSetup": {
+        "telegram": "Create a bot with @BotFather (/newbot), start a chat with it, then enter the token and Chat ID or @channelname.",
+        "discord": "In the target Discord channel choose Edit Channel → Integrations → Webhooks, create a webhook and copy its complete URL.",
+        "slack": "Create a Slack app, enable Incoming Webhooks, install it to the workspace, then copy the generated URL.",
+        "ms-teams": "Use Teams Workflows → Send webhook alerts to a channel. For a custom trigger choose Anyone; keep the URL secret.",
+        "google-chat": "In the Google Chat space choose Apps & integrations → Add webhooks, create a webhook and copy the complete URL.",
+        "webhook": "Create a public HTTPS webhook (for example in n8n), copy the complete signed URL and test it. Local/private URLs are blocked."
+      }
+    },
     "recovery": {
       "title": "Automatic agent recovery",
       "transient": {
@@ -445,7 +533,7 @@
       "editorLink": "Configure thresholds in Usage / Budget"
     },
     "taskCompletion": {
-      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Gemini. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
+      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Cursor/Gemini/Qoder/Pi. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
       "installPlugin": "Agent Notifications",
       "title": "Agent Notifications"
     },

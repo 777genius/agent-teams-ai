@@ -187,6 +187,33 @@ describe('team change throttling', () => {
     vi.useRealTimers();
   });
 
+  it('rejects every ignored alias and removes only the restarted owner from shared tombstones', () => {
+    useStore.setState({
+      ignoredProvisioningRunIds: { 'run-old': ['builders', 'my-team'] },
+      ignoredRuntimeRunIds: { 'run-old': ['builders', 'my-team'], 'run-new': 'other-team' },
+    });
+
+    hoisted.onTeamChangeCb?.(
+      {},
+      { type: 'lead-activity', teamName: 'my-team', detail: 'active', runId: 'run-old' }
+    );
+    expect(useStore.getState().currentRuntimeRunIdByTeam['my-team']).toBeUndefined();
+
+    hoisted.onTeamChangeCb?.(
+      {},
+      { type: 'lead-activity', teamName: 'my-team', detail: 'active', runId: 'run-new' }
+    );
+    expect(useStore.getState().currentRuntimeRunIdByTeam['my-team']).toBe('run-new');
+    expect(useStore.getState().ignoredRuntimeRunIds['run-old']).toBe('builders');
+    expect(useStore.getState().ignoredRuntimeRunIds['run-new']).toBe('other-team');
+
+    hoisted.onTeamChangeCb?.(
+      {},
+      { type: 'lead-activity', teamName: 'my-team', detail: 'offline', runId: 'run-new' }
+    );
+    expect(useStore.getState().ignoredRuntimeRunIds['run-new']).toEqual(['other-team', 'my-team']);
+  });
+
   it('throttles both team list and detail refresh', async () => {
     const state = useStore.getState();
     const fetchTeamsSpy = vi.spyOn(state, 'fetchTeams');

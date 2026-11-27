@@ -1,7 +1,7 @@
 import * as runtimeProviderManagementMain from '@features/runtime-provider-management/main';
 import { createTeamProvisioningStatusFeature } from '@features/team-provisioning/main';
 import { readOpenCodeCurrentRuntimeStatus } from '@main/services/runtime/openCodeEffectiveRuntimeVersion';
-import { execCli, spawnCli } from '@main/utils/childProcess';
+import { execCli } from '@main/utils/childProcess';
 import { getAutoDetectedClaudeBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
@@ -193,6 +193,7 @@ import {
   type TeamProvisioningVerificationProbePorts,
   type TeamProvisioningVerificationProbeServiceHost,
 } from './TeamProvisioningVerificationProbePortsFactory';
+import { spawnWindowsTeamRuntimeCli } from './TeamProvisioningWindowsRuntimeLauncher';
 
 import type { TeamRuntimeLaunchInput, TeamRuntimeMemberLaunchEvidence } from '../runtime';
 import type { TeamProvisioningServiceCompositionDeps } from './TeamProvisioningServiceCompositionDeps';
@@ -600,7 +601,7 @@ export function createTeamProvisioningServiceComposition(
     randomUUID,
     nowIso,
     logger,
-    spawnCli,
+    spawnCli: spawnWindowsTeamRuntimeCli,
     updateProgress,
     setTimeout: (callback, ms) => setTimeout(callback, ms),
     killTeamProcessAndWait,
@@ -615,7 +616,7 @@ export function createTeamProvisioningServiceComposition(
       createTeamProvisioningCreateDeterministicSpawnFlowDepsFromService(
         host.deterministicCreateSpawn,
         {
-          spawnCli,
+          spawnCli: spawnWindowsTeamRuntimeCli,
           updateProgress,
           killTeamProcessAndWait,
         }
@@ -806,7 +807,6 @@ export function createTeamProvisioningServiceComposition(
     host.runtimeControl
   );
   assignCompositionPart(host.installTarget, 'openCodeRuntimeControlApi', openCodeRuntimeControlApi);
-
   return {
     configFacade,
     liveRuntimeMetadataPorts: runtimeProjection.liveRuntimeMetadataPorts,

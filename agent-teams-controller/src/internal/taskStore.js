@@ -7,6 +7,8 @@ const { getTeamBoardLockContext } = require('./boardLock.js');
 const reviewStateHelpers = require('./reviewState.js');
 const { normalizeCreationCommand } = require('./taskCreationCommand.js');
 const { normalizeTaskGroupChatId, applyTaskGroupChatUpdate } = require('./taskGroupAssociation.js');
+const { normalizeTaskRefs } = require('./taskReferences.js');
+const { prepareTaskComment, findExistingClarificationAnswer } = require('./taskCommentPolicy.js');
 
 const TASK_STATUSES = new Set(['pending', 'in_progress', 'completed', 'deleted']);
 const UUID_TASK_ID_PATTERN =
@@ -497,23 +499,6 @@ function parseRelationshipList(paths, value, options = {}) {
   return rawValues.map((entry) => resolveTaskRef(paths, entry, options));
 }
 
-function normalizeTaskRefs(taskRefs) {
-  if (!Array.isArray(taskRefs) || taskRefs.length === 0) {
-    return undefined;
-  }
-
-  const normalized = taskRefs
-    .filter((item) => item && typeof item === 'object')
-    .map((item) => ({
-      taskId: String(item.taskId || '').trim(),
-      displayId: String(item.displayId || '').trim(),
-      teamName: String(item.teamName || '').trim(),
-    }))
-    .filter((item) => item.taskId && item.displayId && item.teamName);
-
-  return normalized.length > 0 ? normalized : undefined;
-}
-
 function computeInitialStatus(paths, input, owner, blockedByIds) {
   const explicit = normalizeStatus(input.status);
   if (explicit) return explicit;
@@ -694,6 +679,8 @@ function createTask(paths, input = {}) {
       input.needsClarification === 'lead' || input.needsClarification === 'user'
         ? input.needsClarification
         : undefined,
+    clarificationRequestedAt: input.needsClarification === 'user' ? createdAt : undefined,
+    clarificationRequestId: input.needsClarification === 'user' ? crypto.randomUUID() : undefined,
     reviewState: normalizeTaskReviewState(input.reviewState),
     deletedAt:
       status === 'deleted' && typeof input.deletedAt === 'string' ? input.deletedAt : undefined,
@@ -949,51 +936,65 @@ function normalizeMemberName(value) {
 }
 
 function addTaskComment(paths, taskRef, text, options = {}) {
-  if (typeof text !== 'string' || !text.trim()) {
-    throw new Error('Missing comment text');
+  const { comment, answerRequestId } = prepareTaskComment(text, options, {
+    nowIso,
+    uuidPattern: UUID_TASK_ID_PATTERN,
+  });
+
+  if (answerRequestId) {
+    // Called under the controller's team-board lock. A stale answer must never
+    // clear a newer question, even if it was successfully recorded earlier.
+    const current = readTask(paths, taskRef, { includeDeleted: true });
+    const existing = findExistingClarificationAnswer(current, comment, answerRequestId);
+    if (existing) {
+      return { comment: existing, task: current, inserted: false, clarificationCleared: false };
+    }
   }
 
-  const comment = {
-    id: options.id || crypto.randomUUID(),
-    author:
-      typeof options.author === 'string' && options.author.trim() ? options.author.trim() : 'user',
-    text,
-    createdAt:
-      typeof options.createdAt === 'string' && options.createdAt.trim()
-        ? options.createdAt.trim()
-        : nowIso(),
-    type: options.type || 'regular',
-    ...(normalizeTaskRefs(options.taskRefs)
-      ? { taskRefs: normalizeTaskRefs(options.taskRefs) }
-      : {}),
-    ...(Array.isArray(options.attachments) && options.attachments.length > 0
-      ? { attachments: options.attachments }
-      : {}),
-  };
-
   let inserted = false;
+  let clarificationCleared = false;
   const task = updateTask(paths, taskRef, (currentTask) => {
     const comments = Array.isArray(currentTask.comments) ? currentTask.comments : [];
     if (comments.some((entry) => entry.id === comment.id)) {
       return currentTask;
     }
-
+    if (answerRequestId &&
+        (currentTask.needsClarification !== 'user' ||
+         currentTask.clarificationRequestId !== answerRequestId ||
+         currentTask.status === 'deleted' || currentTask.deletedAt)) {
+      throw new Error('Clarification request changed; reload the task before replying');
+    }
     currentTask.comments = comments.concat([comment]);
     inserted = true;
+    if (answerRequestId) {
+      delete currentTask.needsClarification;
+      delete currentTask.clarificationRequestedAt;
+      delete currentTask.clarificationRequestId;
+      clarificationCleared = true;
+    }
     return currentTask;
   });
 
-  return { comment, task, inserted, clarificationCleared: false };
+  return { comment, task, inserted, clarificationCleared };
 }
 
 function setNeedsClarification(paths, taskRef, value) {
   return updateTask(paths, taskRef, (task) => {
+    const wasAwaitingUser = task.needsClarification === 'user';
     if (value === null || value === 'clear') {
       delete task.needsClarification;
     } else if (value === 'lead' || value === 'user') {
       task.needsClarification = value;
     } else {
       throw new Error(`Invalid clarification value: ${String(value)}`);
+    }
+    if (value === 'user' && !wasAwaitingUser) {
+      task.clarificationRequestedAt = nowIso();
+      task.clarificationRequestId = crypto.randomUUID();
+    }
+    if (value !== 'user') {
+      delete task.clarificationRequestedAt;
+      delete task.clarificationRequestId;
     }
     return task;
   });

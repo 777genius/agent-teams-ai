@@ -10,7 +10,6 @@ import {
 } from '../opencode/delivery/OpenCodeRuntimeDeliveryPorts';
 import {
   createRuntimeDeliveryJournalStore,
-  type RuntimeDeliveryEnvelope,
   type RuntimeDeliveryJournalRecord,
 } from '../opencode/delivery/RuntimeDeliveryJournal';
 import {
@@ -51,6 +50,13 @@ import {
   recordOpenCodeRuntimeHeartbeat,
   recordOpenCodeRuntimeTaskEvent,
 } from './TeamProvisioningOpenCodeRuntimeCheckin';
+import {
+  canonicalizeRuntimeDeliveryCrossTeamIdentities,
+  readRuntimeDeliveryIdentitySources,
+  requireRuntimeDeliveryIdentitySources,
+  routeCrossTeamTargetInApp,
+  type RuntimeDeliveryIdentitySources,
+} from './TeamProvisioningRuntimeDeliveryIdentity';
 import {
   asRuntimeRecord,
   normalizeRuntimeIso,
@@ -484,7 +490,8 @@ export function createOpenCodeRuntimeDeliveryService(
               readMetaMembers ??
                 (async () => {
                   throw new Error('Cross-team member metadata reader is unavailable');
-                })
+                }),
+              routeCrossTeamTargetInApp
             ),
         }
       : undefined,
@@ -521,66 +528,6 @@ export function createOpenCodeRuntimeDeliveryService(
         ports.withTeamLock(candidateTeamName, operation),
     }
   );
-}
-
-export async function canonicalizeRuntimeDeliveryCrossTeamIdentities(
-  envelope: RuntimeDeliveryEnvelope,
-  readConfig: (teamName: string) => Promise<TeamConfig | null>,
-  readMetaMembers: (teamName: string) => Promise<readonly TeamMember[]>
-): Promise<RuntimeDeliveryEnvelope> {
-  const targetTeamName =
-    envelope.to !== 'user' && 'teamName' in envelope.to ? envelope.to.teamName : null;
-  const teamNames = [...new Set([envelope.teamName, ...(targetTeamName ? [targetTeamName] : [])])];
-  const identitySources = await readRuntimeDeliveryIdentitySources(
-    teamNames,
-    envelope.teamName,
-    readConfig,
-    readMetaMembers
-  );
-  const senderSources = requireRuntimeDeliveryIdentitySources(
-    identitySources,
-    envelope.teamName,
-    'sender'
-  );
-  const canonicalFromMemberName = resolveCrossTeamRecipientIdentity({
-    sources: senderSources,
-    rawToMember: envelope.fromMemberName,
-  }).memberName;
-
-  let canonicalTarget = envelope.to;
-  if (targetTeamName && envelope.to !== 'user' && 'teamName' in envelope.to) {
-    const targetSources = requireRuntimeDeliveryIdentitySources(
-      identitySources,
-      targetTeamName,
-      'target'
-    );
-    const canonicalMemberName = resolveCrossTeamRecipientIdentity({
-      sources: targetSources,
-      rawToMember: envelope.to.memberName,
-    }).memberName;
-    canonicalTarget = {
-      teamName: targetTeamName,
-      memberName: canonicalMemberName,
-    };
-  }
-
-  if (
-    canonicalFromMemberName === envelope.fromMemberName &&
-    (canonicalTarget === envelope.to ||
-      (canonicalTarget !== 'user' &&
-        envelope.to !== 'user' &&
-        'teamName' in canonicalTarget &&
-        'teamName' in envelope.to &&
-        canonicalTarget.teamName === envelope.to.teamName &&
-        canonicalTarget.memberName === envelope.to.memberName))
-  ) {
-    return envelope;
-  }
-  return {
-    ...envelope,
-    fromMemberName: canonicalFromMemberName,
-    to: canonicalTarget,
-  };
 }
 
 export async function canonicalizeRuntimeDeliveryJournalRecordIdentities(
@@ -636,46 +583,6 @@ export async function canonicalizeRuntimeDeliveryJournalRecordIdentities(
     destination: canonicalDestination,
     committedLocation: canonicalCommittedLocation,
   };
-}
-
-interface RuntimeDeliveryIdentitySources {
-  config: TeamConfig;
-  metaMembers: readonly TeamMember[];
-}
-
-async function readRuntimeDeliveryIdentitySources(
-  teamNames: readonly string[],
-  senderTeamName: string,
-  readConfig: (teamName: string) => Promise<TeamConfig | null>,
-  readMetaMembers: (teamName: string) => Promise<readonly TeamMember[]>
-): Promise<Map<string, RuntimeDeliveryIdentitySources>> {
-  const identitySources = new Map<string, RuntimeDeliveryIdentitySources>();
-  await Promise.all(
-    [...new Set(teamNames)].map(async (teamName) => {
-      const [config, metaMembers] = await Promise.all([
-        readConfig(teamName),
-        readMetaMembers(teamName),
-      ]);
-      if (!config || config.deletedAt) {
-        const identityKind = teamName === senderTeamName ? 'sender' : 'target';
-        throw new Error(`Cross-team ${identityKind} identity is unavailable: ${teamName}`);
-      }
-      identitySources.set(teamName, { config, metaMembers });
-    })
-  );
-  return identitySources;
-}
-
-function requireRuntimeDeliveryIdentitySources(
-  identitySources: ReadonlyMap<string, RuntimeDeliveryIdentitySources>,
-  teamName: string,
-  kind: 'sender' | 'target'
-): RuntimeDeliveryIdentitySources {
-  const sources = identitySources.get(teamName);
-  if (!sources) {
-    throw new Error(`Cross-team ${kind} identity is unavailable: ${teamName}`);
-  }
-  return sources;
 }
 
 function getRuntimeDeliveryDestinationTeamName(

@@ -2,6 +2,7 @@ const kanbanStore = require('./kanbanStore.js');
 const taskStore = require('./taskStore.js');
 const runtimeHelpers = require('./runtimeHelpers.js');
 const reviewStateHelpers = require('./reviewState.js');
+const leadSignoff = require('./agendaLeadSignoff.js');
 const { withTeamBoardLock } = require('./boardLock.js');
 
 const { buildTaskInventoryRow, INVENTORY_KANBAN_COLUMNS } = require('./taskInventoryRow.js');
@@ -201,7 +202,8 @@ function resolveCurrentCycleReviewer(task, roster, options = {}) {
       };
     }
 
-    if (event.type === 'review_approved' || event.type === 'review_changes_requested') {
+    if (event.type === 'review_approved' || event.type === 'review_completed' ||
+        event.type === 'human_approved' || event.type === 'review_changes_requested') {
       break;
     }
 
@@ -352,8 +354,10 @@ function buildAgendaItem(task, boardState) {
   const hasMissingOwner = !hasOwnerField;
   const hasInvalidOwner = hasOwnerField && !ownerActor;
   const reviewActor = reviewerResult.actor;
+  const cycleFields = leadSignoff.reviewCycleFields(task, reviewStateResult.state);
   const reviewActorIsInvalid = reviewStateResult.state === 'review' && !reviewActor;
-  const hasSelfReview = Boolean(ownerActor && reviewActor && areSameActors(ownerActor, reviewActor));
+  const hasSelfReview = Boolean(ownerActor && reviewActor && areSameActors(ownerActor, reviewActor)) &&
+    cycleFields.reviewStage !== 'lead_signoff';
 
   const brokenDependencyIds = [];
   const waitingDependencyIds = [];
@@ -482,6 +486,7 @@ function buildAgendaItem(task, boardState) {
     queueCategory,
     reasonCode,
     ...(normalizeName(task.owner) ? { owner: task.owner } : {}),
+    ...cycleFields,
     reviewer:
       reviewActor && reviewActor.kind === 'member'
         ? reviewActor.memberName
@@ -578,6 +583,7 @@ function buildAgendaSnapshot(paths, teamName, actor) {
             item.reasonCode === 'self_review_invalid'
         ).length,
         anomalies: boardState.anomalies.length,
+        leadSignoff: items.filter(leadSignoff.isLeadSignoffItem).length,
       },
     };
   });
@@ -801,10 +807,15 @@ function bucketLeadItems(items) {
     assign_reviewer: [],
     clarify_with_lead: [],
     repair_dependencies: [],
+    lead_signoff: [],
     lead_owned: [],
   };
 
   for (const item of items) {
+    if (leadSignoff.isLeadSignoffItem(item)) {
+      buckets.lead_signoff.push(item);
+      continue;
+    }
     if (item.nextAction === 'assign_owner') {
       buckets.assign_owner.push(item);
       continue;
@@ -847,6 +858,7 @@ function formatLeadBriefing(paths, teamName) {
     ['Needs owner assignment:', buckets.assign_owner],
     ['Needs reviewer assignment:', buckets.assign_reviewer],
     ['Needs clarification from lead:', buckets.clarify_with_lead],
+    ['Awaiting your sign-off:', buckets.lead_signoff],
     ['Dependency repair:', buckets.repair_dependencies],
     ['Lead-owned follow-up:', buckets.lead_owned],
     [
@@ -866,7 +878,7 @@ function formatLeadBriefing(paths, teamName) {
     lines.push('', title);
     const sectionItems = items.slice(0, MAX_LEAD_SECTION_ITEMS);
     for (const item of sectionItems) {
-      lines.push(formatAgendaLine(item));
+      lines.push(formatAgendaLine(item) + leadSignoff.leadSignoffLineSuffix(item));
     }
     appendOmittedLine(lines, title.replace(/:$/, ''), sectionItems.length, items.length);
   }
@@ -877,7 +889,7 @@ function formatLeadBriefing(paths, teamName) {
 
   lines.push(
     '',
-    `Counters: actionable=${snapshot.counters.actionable}, awareness=${snapshot.counters.awareness}, blocked=${snapshot.counters.blocked}, waitingOnUser=${snapshot.counters.waitingOnUser}, waitingOnLead=${snapshot.counters.waitingOnLead}, reviewNeeded=${snapshot.counters.reviewNeeded}, anomalies=${snapshot.counters.anomalies}`
+    `Counters: actionable=${snapshot.counters.actionable}, awareness=${snapshot.counters.awareness}, blocked=${snapshot.counters.blocked}, waitingOnUser=${snapshot.counters.waitingOnUser}, waitingOnLead=${snapshot.counters.waitingOnLead}, reviewNeeded=${snapshot.counters.reviewNeeded}, anomalies=${snapshot.counters.anomalies}, leadSignoff=${snapshot.counters.leadSignoff}`
   );
 
   return lines.join('\n');

@@ -12,9 +12,11 @@
  * can install mocks on `window.electronAPI` before the adapter resolves.
  */
 
+import { resolveHttpBaseUrl } from './httpBaseUrl';
 import { HttpAPIClient } from './httpClient';
+import { withTeamDefinitionEdits } from './teamDefinitionEdits';
 
-import type { ElectronAPI } from '@shared/types/api';
+import type { ElectronAPI, TeamsAPI } from '@shared/types/api';
 
 /**
  * Resolves the base URL for the HTTP API client.
@@ -24,12 +26,7 @@ import type { ElectronAPI } from '@shared/types/api';
  *   to avoid cross-origin issues (localhost vs 127.0.0.1)
  */
 function getHttpBaseUrl(): string {
-  const params = new URLSearchParams(window.location.search);
-  const explicitPort = params.get('port');
-  if (explicitPort) {
-    return `http://127.0.0.1:${parseInt(explicitPort, 10)}`;
-  }
-  return window.location.origin;
+  return resolveHttpBaseUrl(window.location.origin, window.location.search);
 }
 
 let httpClient: HttpAPIClient | null = null;
@@ -60,6 +57,8 @@ export const api: ElectronAPI = new Proxy({} as ElectronAPI, {
   get(_target, prop, receiver) {
     const impl = getImpl();
     const value = Reflect.get(impl, prop, receiver) as unknown;
+    if (prop === 'teams' && value && typeof value === 'object')
+      return withTeamDefinitionEdits(value as TeamsAPI);
     if (typeof value === 'function') {
       return (value as (...args: unknown[]) => unknown).bind(impl);
     }

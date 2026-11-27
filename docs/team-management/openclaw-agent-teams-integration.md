@@ -435,6 +435,7 @@ Arguments:
 ```json
 {
   "teamName": "openclaw-review",
+  "projectContextMode": "shared",
   "displayName": "OpenClaw Review",
   "description": "Team used by OpenClaw to cross-check complex work",
   "cwd": "/Users/belief/dev/projects/example-project",
@@ -469,6 +470,11 @@ Arguments:
 ```
 
 This creates a draft team config. It does not start the runtime.
+
+`projectContextMode` is required and fixed at creation:
+
+- `shared`: one history (tasks, chats, reviews) for every project folder. Use it for the flow in this document (`team_create` -> `team_launch` -> `task_*` / `message_send` / `review_*`): every MCP tool works with it.
+- `per_project`: separate tasks and chats for every project folder, the default of the app. `team_launch` takes the project in `cwd` (the first launch in a folder starts its history there), and the task, message, review and other board tools take the same folder in `projectPath`: they work on that project's history only, and refuse with a `code` (for example `PROJECT_REQUIRED` or `NO_PROJECT_HISTORY`) instead of guessing. See [per-project-team-targets.md](./per-project-team-targets.md#board-tools-over-mcp).
 
 Important:
 
@@ -544,7 +550,7 @@ Arguments:
 }
 ```
 
-`task_create` requires a configured team, so launch the team first.
+`task_create` requires a configured team, so launch the team first. For a team created with `projectContextMode: "per_project"`, add `"projectPath"` with the `cwd` the team was launched in; the same holds for every board tool (`task_*`, `message_send`, `review_*`, `kanban_*`, ...). A refusal starts with its code, for example `[PROJECT_REQUIRED]` or `[PROJECT_LAUNCH_INCOMPLETE]` (the launch in that folder failed: launch the team there again).
 
 This is the raw headless MCP payload. Headless calls do not receive the desktop UI's user
 defaults: `owner` by itself creates a `pending` task. If `createdBy`/`from` is also omitted,
@@ -688,6 +694,8 @@ BASE_URL="http://127.0.0.1:3456"
 | `GET`  | `/api/teams/:teamName/runtime`   | Get runtime state for one team    |
 | `GET`  | `/api/teams/provisioning/:runId` | Poll launch/provisioning status   |
 | `GET`  | `/api/teams/runtime/alive`       | List alive team runtime states    |
+
+A team of the per-project history mode has no process of its own: `stop`, `runtime` and `runtime/alive` act on its project contexts and answer with an additive `contexts[]`. See [per-project-team-targets.md](./per-project-team-targets.md) for the contract, including the non-additive change to the list.
 
 Advanced OpenCode runtime bridge endpoints:
 

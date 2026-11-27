@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { ProjectContextRecoveryNotice } from '@renderer/components/team/definitionEdit/ProjectContextRecoveryNotice';
 import { formatTeamModelSummary } from '@renderer/components/team/dialogs/teamModelSummary';
 import {
   createMemberDraftsFromInputs,
@@ -26,6 +27,7 @@ import {
   fingerprintResolvedMember,
   hasEditableMemberSettingsValueChanges,
 } from '../utils/memberSettingsPresentation';
+import { MEMBER_SETTINGS_REFUSAL_KEYS } from '../utils/memberSettingsRefusal';
 
 import type { MemberSettingsRelaunchDraft } from '../utils/memberSettingsRelaunch';
 import type { MemberDraft } from '@renderer/components/team/members/MembersEditorSection';
@@ -43,6 +45,7 @@ export interface EditTeamMemberDialogProps {
   member: ResolvedTeamMember;
   isTeamAlive: boolean;
   isTeamProvisioning: boolean;
+  projectDefinition?: boolean;
   isMixedTeam: boolean;
   leadProviderId?: TeamProviderId;
   leadProviderBackendId?: TeamProviderBackendId;
@@ -85,6 +88,7 @@ export const EditTeamMemberDialog = ({
   member,
   isTeamAlive,
   isTeamProvisioning,
+  projectDefinition = false,
   isMixedTeam,
   leadProviderId,
   leadProviderBackendId,
@@ -104,6 +108,7 @@ export const EditTeamMemberDialog = ({
   const teamSettingsFingerprint = savedLaunchSettings.fingerprint;
   const [draft, setDraft] = useState(() => createDraft(member, isLead));
   const [error, setError] = useState<string | null>(null);
+  const [projectContextRefused, setProjectContextRefused] = useState(false);
   const [acceptRefreshedTarget, setAcceptRefreshedTarget] = useState(false);
   const { saving, save, resetIdentity } = useUpdateMemberSettings();
   const incomingFingerprint = useMemo(() => fingerprintResolvedMember(member), [member]);
@@ -163,10 +168,12 @@ export const EditTeamMemberDialog = ({
     if (saving) return;
     resetIdentity();
     setError(null);
+    setProjectContextRefused(false);
     onClose();
   };
 
   const handleSave = async (): Promise<void> => {
+    setProjectContextRefused(false);
     if (!targetAvailable) return;
     if (incomingFingerprint !== fingerprint) {
       setError(t('editTeam.errors.settingsChanged'));
@@ -208,6 +215,12 @@ export const EditTeamMemberDialog = ({
       setError(t('editTeam.errors.saveFailed'));
       return;
     }
+    setProjectContextRefused(
+      (result.outcome === 'refused' && result.reason === 'project_unreconciled') ||
+        (projectDefinition &&
+          result.outcome === 'completed' &&
+          result.effect === 'recovery_required')
+    );
     const committedLeadRuntime =
       isLead &&
       result.outcome === 'completed' &&
@@ -236,6 +249,12 @@ export const EditTeamMemberDialog = ({
       setError(t('editTeam.errors.saveFailed'));
       return;
     }
+    if (result.outcome === 'refused') {
+      // Nothing was written; the main process said why with a code.
+      resetIdentity();
+      setError(t(MEMBER_SETTINGS_REFUSAL_KEYS[result.reason]));
+      return;
+    }
     if (result.outcome === 'target_conflict') {
       resetIdentity();
       setAcceptRefreshedTarget(true);
@@ -259,7 +278,13 @@ export const EditTeamMemberDialog = ({
       return;
     }
     if (result.effect === 'recovery_required') {
-      setError(t('editTeam.errors.saveFailed'));
+      setError(
+        t(
+          projectDefinition
+            ? 'detail.tooltips.editUnavailableRunningProject'
+            : 'editTeam.errors.saveFailed'
+        )
+      );
       return;
     }
     if (result.effect === 'lead_restart_rolled_back') {
@@ -350,6 +375,9 @@ export const EditTeamMemberDialog = ({
             {error ?? t('editTeam.errors.settingsChanged')}
           </p>
         ) : null}
+        {projectContextRefused && projectDefinition && (
+          <ProjectContextRecoveryNotice teamName={teamName} onNavigate={onClose} />
+        )}
         <DialogFooter>
           <Button variant="outline" disabled={saving} onClick={close}>
             {t('editTeam.actions.cancel')}

@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { isElectronMode } from '@renderer/api';
-import { Bell, Cable, Palette, Plug, Settings, Wrench } from 'lucide-react';
+import { Bell, Cable, ClipboardCheck, Palette, Plug, Settings, Wrench } from 'lucide-react';
 
 import type { LucideIcon } from 'lucide-react';
 
@@ -13,6 +13,7 @@ export type SettingsSection =
   | 'providers'
   | 'externalAgentConnection'
   | 'notifications'
+  | 'reviewFlow'
   | 'advanced';
 
 interface SettingsTabsProps {
@@ -28,6 +29,7 @@ interface SectionConfig {
     | 'runtimeProvider.tabs.providers'
     | 'tabs.general.label'
     | 'tabs.notifications.label'
+    | 'tabs.reviewFlow.label'
     | 'general.externalAgentConnection.title';
   icon: LucideIcon;
   electronOnly?: boolean;
@@ -37,6 +39,7 @@ const sections: SectionConfig[] = [
   { id: 'general', labelKey: 'tabs.general.label', icon: Settings },
   { id: 'appearance', labelKey: 'general.appearance.title', icon: Palette },
   { id: 'notifications', labelKey: 'tabs.notifications.label', icon: Bell },
+  { id: 'reviewFlow', labelKey: 'tabs.reviewFlow.label', icon: ClipboardCheck, electronOnly: true },
   { id: 'providers', labelKey: 'runtimeProvider.tabs.providers', icon: Plug, electronOnly: true },
   {
     id: 'externalAgentConnection',
