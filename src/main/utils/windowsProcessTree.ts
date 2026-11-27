@@ -127,7 +127,39 @@ export function extendObservedWindowsProcessTree(
   return observed;
 }
 
-/** Raced taskkill is a success only if every original birth identity retired. */
+
+/**
+ * A process can create a child which creates another child, then exit before
+ * any follow-up census. The surviving grandchild's parent PID was never seen.
+ * Do not mistake a missing original root for proof that its descendants are
+ * gone. A live process is provably unrelated only if it has an original,
+ * nonempty PID+birth in the baseline, or its currently alive, older parent
+ * recursively has that provenance. Unseen, recycled and missing parents are
+ * conservatively UNKNOWN. This is not a substitute for native Job containment.
+ */
+export function unattributableWindowsProcessBirths(
+  initial: readonly WindowsProcessIdentity[],
+  now: readonly WindowsProcessIdentity[],
+  originalTree: readonly WindowsProcessIdentity[]
+): WindowsProcessIdentity[] {
+  const baseline = new Map(initial.map(row => [row.pid, row]));
+  const live = new Map(now.map(row => [row.pid, row]));
+  const originals = new Set(originalTree.map(row => row.pid + ':' + row.birth));
+  function foreign(entry: WindowsProcessIdentity, seen: Set<number>): boolean {
+    if (!entry.birth || originals.has(entry.pid + ':' + entry.birth) ||
+        seen.has(entry.pid) || seen.size >= 512) return false;
+    const initialBirth = baseline.get(entry.pid)?.birth;
+    if (initialBirth && initialBirth === entry.birth) return true;
+    const parent = live.get(entry.parentPid);
+    if (!parent?.birth || BigInt(parent.birth) > BigInt(entry.birth)) return false;
+    const next = new Set(seen);
+    next.add(entry.pid);
+    return foreign(parent, next);
+  }
+  return now.filter(row => !foreign(row, new Set()));
+}
+
+/** Raced taskkill is a success only if all potentially owned births retired. */
 export function windowsProcessTreeRetired(
   originals: readonly WindowsProcessIdentity[], now: readonly WindowsProcessIdentity[]
 ): boolean {
@@ -154,14 +186,19 @@ export async function killWindowsProcessTreeAndWait(
 ): Promise<void> {
   if (!child.pid || child.exitCode !== null || child.signalCode !== null) return;
   let originals: WindowsProcessIdentity[] | null = null;
-  try { originals = captureWindowsProcessTree(await census(), child.pid); }
+  let initial: WindowsProcessIdentity[] | null = null;
+  try {
+    initial = await census();
+    originals = captureWindowsProcessTree(initial, child.pid);
+  }
   catch { /* An unreadable census cannot later qualify a failed taskkill. */ }
   if (child.exitCode !== null || child.signalCode !== null) {
     if (originals) {
       try {
         const now = await census();
         originals = extendObservedWindowsProcessTree(originals, now);
-        if (windowsProcessTreeRetired(originals, now)) return;
+        if (windowsProcessTreeRetired(originals, now) &&
+            unattributableWindowsProcessBirths(initial ?? [], now, originals).length === 0) return;
       } catch { /* Unknown original descendant state. */ }
     }
     throw new Error('Windows original root exited during census; descendants unconfirmed');
@@ -175,7 +212,8 @@ export async function killWindowsProcessTreeAndWait(
     try {
       const now = await census();
       observed = extendObservedWindowsProcessTree(observed, now);
-      return windowsProcessTreeRetired(observed, now);
+      return windowsProcessTreeRetired(observed, now) &&
+        unattributableWindowsProcessBirths(initial ?? [], now, observed).length === 0;
     } catch {
       censusTrusted = false;
       return false;

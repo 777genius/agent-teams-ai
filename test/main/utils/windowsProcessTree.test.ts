@@ -6,6 +6,7 @@ import { execFile } from 'child_process';
 import {
   captureWindowsProcessTree,
   extendObservedWindowsProcessTree,
+  unattributableWindowsProcessBirths,
   killWindowsProcessTreeAndWait,
   parseWindowsProcessCensus,
   windowsProcessTreeRetired,
@@ -71,6 +72,20 @@ describe('identity-bound original Win32 process census', () => {
     expect(windowsProcessTreeRetired(seen, [unrelated])).toBe(true);
   });
 
+  it('refuses an unobserved late grandchild and proves unrelated current parent ancestry', () => {
+    const foreign = { pid: 900, parentPid: unrelated.pid, birth: '638987654322000000' };
+    expect(unattributableWindowsProcessBirths(
+      [root, unrelated], [unrelated, grandchild], [root]
+    )).toEqual([grandchild]);
+    expect(unattributableWindowsProcessBirths(
+      [root, unrelated], [unrelated, foreign], [root]
+    )).toEqual([]);
+    const recycledParent = { ...unrelated, birth: '638987654322000001' };
+    expect(unattributableWindowsProcessBirths(
+      [root, unrelated], [recycledParent, foreign], [root]
+    ).some(row => row.pid === foreign.pid)).toBe(true);
+  });
+
   it('classifies only original births as alive, refusing surviving descendants', () => {
     expect(windowsProcessTreeRetired([root, tool, nested], [])).toBe(true);
     expect(windowsProcessTreeRetired([root, tool], [tool])).toBe(false);
@@ -82,7 +97,7 @@ describe('identity-bound original Win32 process census', () => {
   });
 
   it('accepts a raced, nonzero taskkill only after all original PIDs retire', async () => {
-    const {child,kill,commands,unread} = arrange([[root,tool,nested], [unrelated]], new Error('raced descendant'));
+    const {child,kill,commands,unread} = arrange([[root,tool,nested,unrelated], [unrelated]], new Error('raced descendant'));
     await expect(killWindowsProcessTreeAndWait(child)).resolves.toBeUndefined();
     expect(kill).not.toHaveBeenCalled();
     expect(commands.filter(c => /taskkill\.exe$/i.test(c))).toHaveLength(1);
@@ -90,7 +105,7 @@ describe('identity-bound original Win32 process census', () => {
   });
 
   it('uses handle fallback only if independently confirmed afterward', async () => {
-    const {child,kill} = arrange([[root,tool], [root,unrelated], [unrelated]], new Error('partial taskkill'));
+    const {child,kill} = arrange([[root,tool,unrelated], [root,unrelated], [unrelated]], new Error('partial taskkill'));
     await expect(killWindowsProcessTreeAndWait(child)).resolves.toBeUndefined();
     expect(kill).toHaveBeenCalledWith('SIGKILL');
   });
@@ -105,7 +120,7 @@ describe('identity-bound original Win32 process census', () => {
 
   it('accepts retirement of a late child only after observing its later disappearance', async () => {
     const {child,kill} = arrange([
-      [root], [late, unrelated], [unrelated],
+      [root,unrelated], [late, unrelated], [unrelated],
     ], new Error('raced descendant'));
     await expect(killWindowsProcessTreeAndWait(child)).resolves.toBeUndefined();
     expect(kill).toHaveBeenCalledWith('SIGKILL');
@@ -114,6 +129,14 @@ describe('identity-bound original Win32 process census', () => {
   it('does not turn a failed follow-up census into later verified retirement', async () => {
     const {child,kill} = arrange([
       [root], new Error('CIM became unavailable'), [unrelated],
+    ], new Error('raced descendant'));
+    await expect(killWindowsProcessTreeAndWait(child)).rejects.toThrow('remains unconfirmed');
+    expect(kill).toHaveBeenCalledWith('SIGKILL');
+  });
+
+  it('rejects a survivor whose intermediate parent was never observed', async () => {
+    const {child,kill} = arrange([
+      [root,unrelated], [grandchild,unrelated], [grandchild,unrelated],
     ], new Error('raced descendant'));
     await expect(killWindowsProcessTreeAndWait(child)).rejects.toThrow('remains unconfirmed');
     expect(kill).toHaveBeenCalledWith('SIGKILL');
