@@ -31,10 +31,11 @@ import {
   hostTeamSelectionKey,
   isHostTeamSelectionKey,
 } from './hostTeamRouting';
-import { projectHostMemberAttachmentCapabilities } from './projectHostMemberAttachmentCapabilities';
+import { projectHostRuntimeMembers } from './projectHostRuntimeMembers';
 import { projectHostSavedTeamRequest } from './projectHostSavedTeamRequest';
 import { projectHostTeamSummaries } from './projectHostTeamSummaries';
 import { projectHostTeamView as view } from './projectHostTeamView';
+import { readHostLaunchConfiguration } from './readHostLaunchConfiguration';
 import { readHostMessagesPage } from './readHostMessagesPage';
 import { HostTeamReadUnavailableError, readHostPagedSnapshot } from './readHostPagedSnapshot';
 import {
@@ -371,6 +372,8 @@ export function createHostTeamsApi(
       );
       try {
         const configuration = await readHostRosterConfiguration(backend, connection.handle);
+        current(check);
+        assertCurrent();
         assertMatchingConfiguration(snapshot, configuration);
         const saved = projectHostSavedTeamRequest(key, configuration);
         const visibleNames = new Set(snapshot.members.map((member) => member.name.toLowerCase()));
@@ -379,65 +382,31 @@ export function createHostTeamsApi(
           if (visibleNames.has(name)) throw new Error('Removed team member name conflict');
           visibleNames.add(name);
         }
-        const configuredMembers = [
-          ...configuration.members,
-          ...configuration.removedMembers.map((member) => ({
-            ...member,
-            role: 'member' as const,
-            settingsFingerprint: undefined,
-          })),
-        ];
-        const settings = configuredMembers.map((member) => ({
-          ...member.settings,
-          name: member.name,
-          hostMemberId: member.memberId,
-          configuredSettingsFingerprint: member.settingsFingerprint,
-          ...(member.role === 'lead' && saved
-            ? {
-                cwd: saved.cwd,
-                providerId: saved.providerId,
-                model: saved.model,
-                effort: saved.effort,
-                fastMode: saved.fastMode,
-                providerBackendId: saved.providerBackendId,
-              }
-            : {}),
-        }));
-        const withSettings = <T extends { name: string }>(member: T): T => {
-          const configured = settings.find((selected) => selected.name === member.name)!;
-          return {
-            ...member,
-            ...configured,
-            selectedFastMode: configured.fastMode,
-            configuredRuntimeSettings: {
-              providerId: configured.providerId,
-              providerBackendId: configured.providerBackendId,
-              model: configured.model,
-              effort: configured.effort,
-              fastMode: configured.fastMode,
-            },
-          };
-        };
-        result.config = { ...result.config, members: result.config.members?.map(withSettings) };
-        result.members = [
-          ...result.members,
-          ...configuration.removedMembers.map((member) => ({
-            name: member.name,
-            runtimeOwner: 'captured-host' as const,
-            role: 'member',
-            agentType: 'general-purpose',
-            removedAt: Date.parse(member.removedAt),
-            taskCount: snapshot.tasks.filter(
-              (task) => task.owner === member.name && task.status !== 'deleted'
-            ).length,
-            currentTaskId: null,
-          })),
-        ].map(withSettings);
-        result.members = projectHostMemberAttachmentCapabilities(
-          result.members,
+        const capture = state
+          ? await readHostLaunchConfiguration(
+              backend,
+              connection.handle,
+              state.launch.launchId
+            ).catch(() => null)
+          : null;
+        current(check);
+        assertCurrent();
+        const projected = projectHostRuntimeMembers({
+          result,
           configuration,
-          state
-        );
+          saved,
+          state,
+          capture,
+          neverLaunched:
+            snapshot.runtimeNeverLaunched === true && !snapshot.lifecycle?.cleanupPending,
+        });
+        result.config = { ...result.config, members: projected.configMembers };
+        result.members = projected.members;
+        if (projected.unavailable)
+          result.warnings = [
+            ...(result.warnings ?? []),
+            'Captured runtime settings are unavailable for some team members.',
+          ];
         if (saved) {
           result.config = {
             ...result.config,

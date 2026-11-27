@@ -146,9 +146,9 @@ function attachmentRuntime(f: ReturnType<typeof fixture>) {
   const launch: BackendLaunchSnapshot = {
     launchId: 'TEST-launch',
     rosterRevision: 'TEST-runtime-definition-digest',
-    status: 'ready',
+    status: 'partial',
     ready: 1,
-    expected: 1,
+    expected: 2,
     retryCapability: 'same-binding-no-allocation-only',
     members: [
       {
@@ -161,6 +161,17 @@ function attachmentRuntime(f: ReturnType<typeof fixture>) {
         controlAvailable: true,
         noAllocation: false,
         reason: 'context-applied',
+      },
+      {
+        memberId: configuration.members[0].memberId,
+        generation: null,
+        attemptId: 'TEST-lead-attempt',
+        status: 'not-started',
+        nativeReady: false,
+        usable: false,
+        controlAvailable: false,
+        noAllocation: true,
+        reason: 'not-started',
       },
     ],
   };
@@ -181,6 +192,13 @@ function attachmentRuntime(f: ReturnType<typeof fixture>) {
   vi.mocked(f.backend.invoke).mockImplementation(async (request) =>
     request.operation === 'team.launch.read'
       ? { ok: true, value: structuredClone(launch) }
+      : request.operation === 'team.launch.configuration.read'
+        ? { ok: true, value: {
+          launch: structuredClone(launch),
+          members: configuration.members.map((row) => ({ memberId: row.memberId, label: row.name, role: row.role,
+            selected: row === member ? { provider: member.settings.providerId === 'codex' ? 'codex' : 'claude',
+              model: member.settings.model ?? 'TEST-inherited-model', workspace: '/TEST', capabilities: ['model'] } : null })),
+        } }
       : request.operation === 'runtime.read'
         ? unknown
           ? { ok: false, code: 'unavailable', outcome: 'not-dispatched' }
@@ -373,6 +391,8 @@ describe('ordinary Host team read selection', () => {
 
   it('projects coherent removed roster history into the existing member UI and clears it after restoration', async () => {
     const f = fixture();
+    // This fixture edits a saved roster before any native capture exists.
+    f.snapshot.runtimeNeverLaunched = true;
     const configuration = savedDescription(f);
     const removedAt = '2026-10-24T07:25:51.476Z';
     const settings = { role: 'Developer', providerId: 'codex' as const, model: 'gpt-5.5' };
@@ -393,8 +413,9 @@ describe('ordinary Host team read selection', () => {
       removedAt: Date.parse(removedAt),
       agentType: 'general-purpose',
       role: 'Developer',
-      providerId: 'codex',
-      model: 'gpt-5.5',
+      providerId: undefined,
+      model: undefined,
+      configuredRuntimeSettings: { providerId: 'codex', model: 'gpt-5.5' },
       currentTaskId: null,
       taskCount: 1,
     });

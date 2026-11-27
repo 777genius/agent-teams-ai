@@ -205,3 +205,74 @@ must still be validated on the corrected source.
   adapted to serialization while keeping their durable-state assertions.
   Current-main unrelated updates and other agents' files remain outside this
   batch. The plan is approved for implementation; native qualification is open.
+
+## Implementation review and integration
+
+The reviewed plan was published first as `899b058f`, before production edits.
+Implementation then used separate provider/presentation, task-coordination and
+scheduler owners. Each source group received an independent review from another
+owner in addition to the coordinator's review.
+
+The parallel context/queue continuation subsequently published `ea4377f1` and
+merged current main as `28b95aa0`. This batch is reconciled on that exact source
+tree (`0b344cee69452ae7bc6c01f8e6822ac10a8f17ae`), preserving the context/queue
+fixes, updater changes, screenshots and both sets of scheduler tests. The
+incoming mutation queue is retained unchanged. No reserved macOS/provider
+readiness files were edited.
+
+Review found and corrected these additional cases within the planned paths:
+
+- Attachment declarations use the current captured workspace, even after the
+  saved workspace changes. An unknown captured workspace remains unknown.
+- Runtime and spawn presentation use OpenCode's qualified display model while
+  keeping its native selection unchanged. Runtime reads match the member
+  generation and attempt across the additional observation.
+- Captured member summaries use the provider/model/effort projected together;
+  a separate poll keyed by a reused name or a new launch draft cannot replace
+  them. Legacy summary behavior is retained.
+- Human task edits preserve short display references and use the canonical task
+  returned by the existing resolver. The notification retains the original
+  message identity, timestamp and live lead delivery, including crash recovery.
+- Scheduler Create/Edit/Resume/Pause/Delete and startup cannot continue against
+  a newer lifecycle after Stop or a profile change. Startup recovery checks the
+  same lifecycle; `saveRun` pins its original file before its internal await.
+  The race tests proved that an old recovery could otherwise replace another
+  profile's completed run. No native timeout or cancellation rule was weakened.
+
+The incoming queued-Resume test now expects the stale operation to be rejected
+with `Scheduler context changed`, while retaining the durable paused record,
+failure count and absence of a cron timer. This is the same behavior required
+by the reproduced profile-switch case. Both scheduler admission orderings remain
+tested: a user edit committed before background admission, and an edit queued
+behind an already admitted background write.
+
+## Verification record
+
+These are scoped results, not a declaration of complete PR qualification.
+
+| Check | Result |
+| --- | --- |
+| Provider/presentation affected suites | 206/206 passed across eight files; includes 11 built Host emission/Main/catalog cases and real React rerenders |
+| Final task/group/recovery cohort after the short-reference correction | 59/59 passed, no skips |
+| Existing controller coordination suites | 222/222 passed; ten unbound formatter comparisons remained byte-identical |
+| Reconciled scheduler unit/regression cohort | 108/108 passed; the other 33 Host/Smart-schedule and fixture cases passed in the preceding integrated run |
+| Integrated Host source build | Passed with pinned Node 24.21.0 and TypeScript 7.0.2 |
+| Strict Host task-test project using unchanged canonical compiler options | Passed after explicit fixture narrowing |
+| Strict scheduler/fixture project using unchanged root compiler options | Passed |
+| Source-size, provisioning architecture and runtime-artifact guards | Passed; SchedulerService is 798 lines and no limits were raised |
+| Touched TypeScript fast lint | Passed; scheduler retains two existing no-unsafe-finally warnings |
+
+The broad pre-integration Host run completed 1,893 passing tests, two skips and
+one failing newly added short-reference regression against the previous build.
+That defect was corrected and the final rebuilt 59-case task cohort passed.
+This does not convert the earlier broad run into an all-suite pass.
+
+Complete root typecheck, the broad backend test run and an attempted smaller
+backend batch were terminated by SIGKILL/exit 137; no successful full result is
+claimed. A separate unchanged preparation suite passed 51/51, and read-only
+inspection found no persistent polling loop; the cause of the larger process
+termination is not established by that isolated success. Full strict/CI and
+native Desktop qualification remain open. Original macOS Resume/Review and
+intermittent Quit investigations continue with their existing owner and original
+assertions. This batch does not merge #982, change provider pins, release or
+enable Host by default.

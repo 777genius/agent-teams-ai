@@ -1454,7 +1454,7 @@ describe('SchedulerService', () => {
     await service.stop();
   });
 
-  it('does not start a cron job for a resume queued behind a run when the scheduler stops', async () => {
+  it('rejects a resume queued behind a finalizing run after the scheduler stops', async () => {
     let finish!: () => void;
     const dispatcher = {
       assertCanSchedule: vi.fn(async () => undefined),
@@ -1496,16 +1496,28 @@ describe('SchedulerService', () => {
     await vi.advanceTimersByTimeAsync(10);
     expect(counterSaveHeld).toBe(true);
     let resumeSettled = false;
-    const resuming = service.resumeSchedule(schedule.id).then(() => { resumeSettled = true; });
+    const resuming = service.resumeSchedule(schedule.id).then(
+      () => {
+        resumeSettled = true;
+        return null;
+      },
+      (error: unknown) => {
+        resumeSettled = true;
+        return error;
+      }
+    );
     const stopping = service.stop();
     await vi.advanceTimersByTimeAsync(10);
     expect(resumeSettled).toBe(false);
     releaseCounterSave();
-    await resuming;
+    expect(await resuming).toMatchObject({ message: 'Scheduler context changed' });
     await stopping;
     await vi.advanceTimersByTimeAsync(100);
 
-    expect((await repo.getSchedule(schedule.id))?.status).toBe('active');
+    expect(await repo.getSchedule(schedule.id)).toMatchObject({
+      status: 'paused',
+      consecutiveFailures: 1,
+    });
     expect((service as unknown as { cronJobs: Map<string, unknown> }).cronJobs.size).toBe(0);
   });
 

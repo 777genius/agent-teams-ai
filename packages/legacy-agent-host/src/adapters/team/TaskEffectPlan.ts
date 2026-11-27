@@ -15,6 +15,7 @@ import { digest, safeSegment } from '../../team/identity.js';
 import { createTeamPolicy } from './ControllerAdapter.js';
 import { TaskPolicyRejected } from '../../team/ports.js';
 import { prepareTaskClarificationAnswerNotification } from './TaskClarificationAnswerNotifier.js';
+import { prepareTaskEditNotification } from './TaskEditNotifier.js';
 
 import type { CommandReceipt } from '../../team/contracts.js';
 import type { JsonValue } from '../../contracts.js';
@@ -204,6 +205,7 @@ export class TaskEffectPlan implements TaskMutationPort {
       try {
         if (receipt.command.operation !== 'task.board.review-flow') board.getKanbanState({ strict: true });
         result = apply(board);
+        prepareTaskEditNotification(work, this.teamName, receipt, actor, result, this.reviewFlowDefaultsDirectory);
         prepareTaskClarificationAnswerNotification(work, this.teamName, receipt, actor, result, this.reviewFlowDefaultsDirectory);
         board.getKanbanState({ strict: true });
       } catch {

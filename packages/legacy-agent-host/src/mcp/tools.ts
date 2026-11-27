@@ -62,6 +62,7 @@ export function createTeamMcpTools(connection: TeamMcpConnection) {
         ...command,
         subject: text,
         description: descriptionText.optional(),
+        groupChatId: z.string().uuid().optional(),
         owner: name.optional(),
         blockedBy: z.array(identifier).max(100).optional(),
         related: z.array(identifier).max(100).optional(),

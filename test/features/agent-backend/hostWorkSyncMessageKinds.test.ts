@@ -134,6 +134,7 @@ function fixture() {
     };
     const record: RuntimeSessionRecord = {
       schemaVersion: 1,
+      config: null,
       binding: source,
       profileId: 'TEST-profile',
       hostIncarnation: 'TEST-host',

@@ -14,9 +14,15 @@ function areResolvedMembersEqual(
     if (
       prevMember.name !== nextMember.name ||
       prevMember.runtimeOwner !== nextMember.runtimeOwner ||
+      prevMember.hostMemberId !== nextMember.hostMemberId ||
+      prevMember.configuredSettingsFingerprint !== nextMember.configuredSettingsFingerprint ||
       prevMember.nativeInboxAttachmentsSupported !== nextMember.nativeInboxAttachmentsSupported ||
       prevMember.nativeInboxTextAttachmentsSupported !==
         nextMember.nativeInboxTextAttachmentsSupported ||
+      !areNativeMediaTransportsEqual(
+        prevMember.nativeMediaTransport,
+        nextMember.nativeMediaTransport
+      ) ||
       !areSessionCommandsEqual(prevMember.sessionCommands, nextMember.sessionCommands) ||
       prevMember.agentId !== nextMember.agentId ||
       prevMember.joinedAt !== nextMember.joinedAt ||
@@ -56,6 +62,23 @@ function areResolvedMembersEqual(
     }
   }
   return true;
+}
+
+function areNativeMediaTransportsEqual(
+  prev: ResolvedTeamMember['nativeMediaTransport'],
+  next: ResolvedTeamMember['nativeMediaTransport']
+): boolean {
+  if (prev === next) return true;
+  if (!prev || !next) return false;
+  return (
+    prev.revision === next.revision &&
+    prev.maxBytes === next.maxBytes &&
+    prev.maxCount === next.maxCount &&
+    prev.maxTotalBytes === next.maxTotalBytes &&
+    prev.videos === next.videos &&
+    prev.mimeTypes.length === next.mimeTypes.length &&
+    prev.mimeTypes.every((mime, index) => mime === next.mimeTypes[index])
+  );
 }
 
 function areSessionCommandsEqual(

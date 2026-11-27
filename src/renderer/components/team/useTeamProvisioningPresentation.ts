@@ -116,7 +116,7 @@ export function useTeamProvisioningPresentation(teamName: string): {
     presentation,
     cancelProvisioning,
     retryFailedOpenCodeTeammates: isHostTeamSelectionKey(teamName)
-      ? presentation && restartMember
+      ? presentation && typeof restartMember === 'function'
         ? createHostFailedMemberRetry({
             teamName,
             runId: presentation.progress.runId,
