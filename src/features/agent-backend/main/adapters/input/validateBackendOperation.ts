@@ -9,6 +9,10 @@ import { isGroupUuid } from '@agent-teams/legacy-agent-host/group-chats/policy';
 import { taskAttachmentReadSchema } from '@agent-teams/legacy-agent-host/stopped-team-import';
 import { parseStandaloneSlashCommand } from '@shared/utils/slashCommands';
 
+import {
+  readAutonomousGoalControl,
+  readAutonomousGoalOptions,
+} from '../../../contracts/autonomousGoal';
 import { isProcessRef } from '../../../contracts/processes';
 
 import { InvalidBackendOperation, object, stringArray, text } from './backendOperationInput';
@@ -65,6 +69,8 @@ function payload(
   if (isBackendReviewOperation(operation)) return parseBackendReviewPayload(operation, value);
   if (operation.startsWith('group.')) return parseGroupPayload(operation, value);
   switch (operation) {
+    case 'goal.control':
+      return readAutonomousGoalControl(value);
     case 'host.recovery.start': {
       const p = object(value, ['capability']);
       const capability = text(p.capability, 36);
@@ -382,6 +388,7 @@ function payload(
     }
     case 'message.send': {
       const p = object(value, [
+        'autonomousGoal',
         'to',
         'text',
         'taskRefs',
@@ -392,6 +399,11 @@ function payload(
         'attachments',
       ]);
       const native = parseStandaloneSlashCommand(text(p.text, 200_000));
+      if (
+        p.autonomousGoal !== undefined &&
+        (native || !['do', 'delegate'].includes(String(p.actionMode)))
+      )
+        throw new InvalidBackendOperation();
       if (
         (p.nativeCommand !== undefined && p.nativeCommand !== true) ||
         Boolean(native) !== (p.nativeCommand === true) ||
@@ -408,6 +420,9 @@ function payload(
       return {
         to: text(p.to),
         text: text(p.text, 200_000),
+        ...(p.autonomousGoal === undefined
+          ? {}
+          : { autonomousGoal: readAutonomousGoalOptions(p.autonomousGoal) }),
         ...(native ? { nativeCommand: true as const } : {}),
         ...(p.attachments === undefined
           ? {}

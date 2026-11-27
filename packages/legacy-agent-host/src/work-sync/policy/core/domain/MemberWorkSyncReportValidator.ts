@@ -1,4 +1,5 @@
 import { isReservedMemberName, normalizeMemberName, sameMemberName } from './memberName.js';
+import { isGoalWaitReport } from './GoalWaitPolicy.js';
 
 import type {
   MemberWorkSyncAgenda,
@@ -97,9 +98,12 @@ export function validateMemberWorkSyncReport(input: {
   tokenValidation: MemberWorkSyncReportTokenValidation;
   /** Trusted receipt time, fixed across conditional retries; never taken from the model request. */
   leaseOriginIso?: string | undefined;
+  allowGoalWait?: boolean;
 }): MemberWorkSyncReportValidation {
   const memberName = normalizeMemberName(input.request.memberName);
   const activeMemberNames = new Set(input.activeMemberNames.map(normalizeMemberName));
+  if (input.request.wait !== undefined && (!input.allowGoalWait || !isGoalWaitReport(input.request.wait)))
+    return { ok: false, code: 'goal_wait_unavailable', message: 'A wait requires the original active goal input.' };
 
   if (!memberName || isReservedMemberName(memberName)) {
     return { ok: false, code: 'reserved_or_invalid_member', message: 'Invalid member identity.' };
@@ -165,6 +169,7 @@ export function validateMemberWorkSyncReport(input: {
 
   if (
     input.request.state === 'blocked' &&
+    !isGoalWaitReport(input.request.wait) &&
     !agendaHasBlockedEvidence(input.agenda, input.request.taskIds)
   ) {
     return {

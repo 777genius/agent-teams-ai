@@ -23,6 +23,7 @@ export interface BackendHandle {
 }
 
 export * from './attachments';
+export * from './autonomousGoal';
 export * from './connections';
 export * from './creation';
 export type * from './launch';

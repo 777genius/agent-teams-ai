@@ -319,6 +319,7 @@ export function createTeamHost(
         | 'getTask'
         | 'listTasks'
         | 'snapshot' | 'review-flow.read'
+        | 'goal.control'
         | 'messages.page'
         | 'activity.logs'
         | 'activity.stats'
@@ -352,6 +353,19 @@ export function createTeamHost(
             if (input.liveRoster.phase === 'continue') throw new TeamOwnerError('hold');
           }
           const connection = selected.connection;
+          if (operation === 'goal.control') {
+            const payload = z.strictObject({ goalId: id, expectedRevision: z.number().int().positive(),
+              action: z.enum(['stop', 'resume', 'extend']), deadlineAt: z.string().optional(),
+              attemptLimit: z.number().int().min(1).max(1000).optional() }).parse(input.payload);
+            const control = { commandId: input.commandId, goalId: payload.goalId,
+              expectedRevision: payload.expectedRevision, action: payload.action,
+              ...(payload.deadlineAt === undefined ? {} : { deadlineAt: payload.deadlineAt }),
+              ...(payload.attemptLimit === undefined ? {} : { attemptLimit: payload.attemptLimit }) };
+            const value = selected.owner.goals.control(profile.principalId, control,
+              payload.action === 'resume' && !!runtime?.goalReadyForResume(selected.definition.binding.teamId));
+            runtime?.kick();
+            return { ok: true, value: json(value) };
+          }
           if (operation === 'review-flow.read') {
             z.object({}).strict().parse(input.payload);
             return { ok: true, value: json(projects!.review.read(target)) };
@@ -395,7 +409,12 @@ export function createTeamHost(
           }
           if (operation === 'snapshot') {
             const query = z.object({ cursor: z.string().min(1).max(128).optional() }).strict().parse(input.payload);
-            return { ok: true, value: connection.readSnapshot(query.cursor ? { cursor: query.cursor } : {}) };
+            const snapshot = connection.readSnapshot(query.cursor ? { cursor: query.cursor } : {});
+            const goal = selected.owner.goals.publicStatus(profile.principalId);
+            return { ok: true, value: json({ ...(snapshot as object),
+              ...(goal ? { autonomousGoal: { ...goal, canResume: goal.canResume === true &&
+                !!runtime?.goalReadyForResume(selected.definition.binding.teamId) } } : {}),
+              autonomousGoalAvailable: runtime?.goalAvailable(selected.definition.binding.teamId) ?? false }) };
           }
           if (operation === 'messages.page')
             return {
@@ -462,7 +481,12 @@ export function createTeamHost(
             if (command.operation === 'task.board.review-flow') receipt = projects!.review.execute(target, command) ?? connection.execute(command);
             else {
               projects!.contexts.assertProductMutation(target);
-              receipt = connection.execute(command, prepareHostCost);
+              if (command.operation === 'message.send' && command.payload.autonomousGoal &&
+                  !connection.lookup(input.commandId, command)) {
+                if (!runtime) throw new TeamOwnerError('hold');
+                receipt = selected.owner.executeGoalCommand(profile.principalId, command,
+                  { intake: runtime.goalIntake(selected.definition.binding.teamId, command.payload.to) });
+              } else receipt = connection.execute(command, prepareHostCost);
             }
           } catch (error) {
             if (
@@ -571,6 +595,7 @@ export function createTeamHost(
         'team.project-context',
         'team.product-changes',
         'team.message',
+        'team.goal',
         'team.command-outcome',
         ...(registry ? ['team.registry'] : []),
         ...(imports ? ['team.import'] : []),
@@ -609,6 +634,7 @@ export function createTeamHost(
         'team.task.get': method('getTask'),
         'team.tasks.list': method('listTasks'),
         'team.snapshot': method('snapshot'),
+        'team.goal.control': method('goal.control'),
         'team.review-flow.read': method('review-flow.read'),
         'team.messages.page': method('messages.page'),
         'team.roster.read': method('roster.read'),

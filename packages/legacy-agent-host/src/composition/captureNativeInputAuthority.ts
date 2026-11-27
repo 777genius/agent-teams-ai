@@ -7,16 +7,25 @@ import type {
 } from '../runtime/contracts.js';
 import type { NativeMcpAuthorityProof } from '../team/NativeMcpAuthority.js';
 
-/** One admitted native call keeps its original input. Never recapture the next input after await. */
-export function captureNativeInputAuthority(options: {
+export interface OriginalNativeInputOptions<Proof extends { readonly fingerprint: string }> {
   binding: RuntimeBinding;
   profileId: string;
   hostIncarnation: string;
   config: NonNullable<RuntimeSessionRecord['config']>;
   readRuntime(): { record: RuntimeSessionRecord | undefined; attached: boolean };
-  captureTeam(intent: RuntimeDelivery): Readonly<NativeMcpAuthorityProof>;
+  captureTeam(intent: RuntimeDelivery): Readonly<Proof>;
   assertCurrent(): void;
-}) {
+}
+
+/** Existing DO-only helper authority; the goal WorkSync variant does not widen this type or policy. */
+export function captureNativeInputAuthority(options: OriginalNativeInputOptions<NativeMcpAuthorityProof>) {
+  return captureOriginalNativeInput(options);
+}
+
+/** One admitted native call keeps its original input. Never recapture the next input after await. */
+export function captureOriginalNativeInput<Proof extends { readonly fingerprint: string }>(
+  options: OriginalNativeInputOptions<Proof>
+) {
   const binding = Object.freeze(normalizeBinding(options.binding));
   const configHash = runtimeDigest(options.config);
   const openFingerprint = runtimeDigest({ profileId: options.profileId, config: options.config });

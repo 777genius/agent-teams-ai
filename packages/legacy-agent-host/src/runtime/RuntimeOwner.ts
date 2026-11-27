@@ -368,9 +368,21 @@ export class RuntimeOwner {
         priorProofs: record.inputs.flatMap(value => value.preparation ? [preparedInputProof(value.preparation)] : []),
       });
       if (selected) input.preparation = prepareRuntimeInput(binding, input, selected, this.maxBytes);
-      input.phase = 'claimed';
-      tx.put(record); // The only submit claim; exact native supplement is durable before handoff.
-      if (input.preparation) this.options.inputPrepared?.(binding, preparedInputProof(input.preparation));
+      let committed = false, claimOpen = true;
+      const commitClaim = () => {
+        if (!claimOpen || committed) throw new RuntimeOwnerError('hold');
+        committed = true;
+        input.phase = 'claimed';
+        tx.put(record); // The only submit claim; exact native supplement is durable before handoff.
+        if (input.preparation) this.options.inputPrepared?.(binding, preparedInputProof(input.preparation));
+      };
+      if (this.options.withDispatchAuthority) {
+        let result: unknown;
+        try { result = this.options.withDispatchAuthority(binding, input.intent, commitClaim); }
+        finally { claimOpen = false; }
+        if (result !== undefined) { void Promise.resolve(result).catch(() => {}); throw new RuntimeOwnerError('hold'); }
+        if (!committed) throw new RuntimeOwnerError('hold');
+      } else commitClaim();
       return { record, driver, input };
     });
     const input = claimed.input;

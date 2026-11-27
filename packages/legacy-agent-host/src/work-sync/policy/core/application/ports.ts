@@ -337,6 +337,8 @@ export interface MemberWorkSyncReviewPickupEscalationPort {
 }
 
 export interface MemberWorkSyncUseCaseDeps {
+  /** Trusted original goal-input composition only; public reports cannot enable this. */
+  goalWaitEnabled?: true;
   clock: MemberWorkSyncClockPort;
   hash: MemberWorkSyncHashPort;
   agendaSource: MemberWorkSyncAgendaSourcePort;

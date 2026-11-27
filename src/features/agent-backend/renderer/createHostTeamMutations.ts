@@ -1,5 +1,6 @@
 import { parseStandaloneSlashCommand } from '@shared/utils/slashCommands';
 
+import { readAutonomousGoalOptions } from '../contracts/autonomousGoal';
 import { HostTeamOperationError } from '../contracts/taskSubmission';
 
 import { projectHostTaskReceipt } from './projectHostTaskReceipt';
@@ -557,6 +558,7 @@ export function createHostTeamMutations(options: {
     async sendMessage(key: string, input: SendMessageRequest) {
       const request = structuredClone(input);
       object(request, [
+        'autonomousGoal',
         'member',
         'text',
         'taskRefs',
@@ -577,6 +579,9 @@ export function createHostTeamMutations(options: {
           payload: {
             to: request.member,
             text: request.text,
+            ...(request.autonomousGoal === undefined
+              ? {}
+              : { autonomousGoal: readAutonomousGoalOptions(request.autonomousGoal) }),
             ...(native ? { nativeCommand: true as const } : {}),
             ...(request.messageId === undefined ? {} : { messageId: request.messageId }),
             ...(request.summary === undefined ? {} : { summary: request.summary }),

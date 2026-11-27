@@ -121,6 +121,8 @@ export interface RuntimeOwnerOptions {
   ): boolean;
   /** Current mandatory dependency/bootstrap proof; absence safely holds work dispatch. */
   canDispatch?(binding: RuntimeBinding, intent: RuntimeDelivery): boolean;
+  /** Keeps the original Team authority fence around the synchronous Runtime claim; no async work. */
+  withDispatchAuthority?(binding: RuntimeBinding, intent: RuntimeDelivery, commitClaim: () => void): void;
   /** Synchronous private composition callbacks under the existing member fence; never await. */
   prepareInput?(binding: RuntimeBinding, request: InputPreparationRequest): { prefix: string; epochIds: readonly string[]; teamProof: string } | undefined;
   inputPrepared?(binding: RuntimeBinding, proof: PreparedInputProof): undefined;

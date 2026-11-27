@@ -1,5 +1,4 @@
 import type { CliProviderModelCatalogSource } from './cliInstaller';
-import type { KanbanState } from './kanbanReviewFlow';
 import type { NotificationTarget, TeamEventType } from './notifications';
 import type { OpenCodeStopHandshakeFailureFacts } from './openCodeStopHandshakeFailure';
 import type { TaskRef } from './teamBoardTask';
@@ -11,6 +10,7 @@ import type {
   NativeAttachmentDeliveryEnvelope,
   NativeMemberCapability,
 } from '@features/agent-attachments/contracts';
+import type { AutonomousGoalOptions } from '@features/agent-backend/contracts';
 import type { GroupChatEnvelope } from '@features/team-group-chats/contracts';
 import type { TeamManagementCommittedChange } from '@features/team-prompt-management/contracts';
 
@@ -39,6 +39,7 @@ export type {
   TeamMemberActivityMeta,
 } from './teamObservability';
 export type * from './teamProvisioning';
+export type { TeamViewSnapshot } from './teamView';
 export type {
   AttachmentFileData,
   AttachmentMediaType,
@@ -601,6 +602,7 @@ export interface InboxMessage extends GroupChatEnvelope {
 export type AgentActionMode = 'do' | 'ask' | 'delegate';
 
 export interface SendMessageRequest extends GroupChatEnvelope {
+  autonomousGoal?: AutonomousGoalOptions;
   member: string;
   text: string;
   taskRefs?: TaskRef[];
@@ -888,17 +890,6 @@ export interface TeamGetDataOptions {
    * Set false only for UI-first reads where branch labels can arrive through branch sync.
    */
   includeMemberBranches?: boolean;
-}
-
-export interface TeamViewSnapshot {
-  teamName: string;
-  config: TeamConfig;
-  tasks: TeamTaskWithKanban[];
-  members: TeamMemberSnapshot[];
-  kanbanState: KanbanState;
-  processes: TeamProcess[];
-  warnings?: string[];
-  isAlive?: boolean;
 }
 
 export type EffortLevel =

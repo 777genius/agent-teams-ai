@@ -1,3 +1,4 @@
+import type { AutonomousGoalOptions } from '@features/agent-backend/contracts';
 import type { InlineChip } from '@renderer/types/inlineChip';
 import type {
   AgentActionMode,
@@ -35,9 +36,12 @@ export interface ComposerRestoredOrigin {
   readonly kind: 'unconfirmed-send';
   readonly attemptId: string;
   readonly messageId?: string;
+  /** Exact original user request; an unknown goal may only replay this request. */
+  readonly autonomousGoalRequest?: Extract<ComposerPreparedRequest, { kind: 'local' }>;
 }
 
 export interface ComposerDraftContent {
+  readonly autonomousGoal?: AutonomousGoalOptions;
   readonly text: string;
   readonly chips: InlineChip[];
   readonly attachments: AttachmentPayload[];

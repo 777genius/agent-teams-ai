@@ -3,7 +3,7 @@ import type { CommandReceipt } from './contracts.js';
 
 /** Canonical original command identity, including its retained delivery and audience selection. */
 export function teamCommandFingerprint(input: Pick<CommandReceipt, 'binding' | 'principalId' | 'command'> & {
-  [Key in 'deliveryBinding' | 'taskRecipients' | 'messageRecipientRole' | 'taskStartLeadName' | 'crossTeam' | 'group' | 'hostCommand' | 'workSyncNudge']?: CommandReceipt[Key] | undefined;
+  [Key in 'deliveryBinding' | 'taskRecipients' | 'messageRecipientRole' | 'taskStartLeadName' | 'crossTeam' | 'group' | 'hostCommand' | 'workSyncNudge' | 'goal']?: CommandReceipt[Key] | undefined;
 }): string {
   return digest({
     binding: input.binding,
@@ -17,5 +17,6 @@ export function teamCommandFingerprint(input: Pick<CommandReceipt, 'binding' | '
     ...(input.group ? { group: input.group } : {}),
     ...(input.hostCommand ? { hostCommand: input.hostCommand } : {}),
     ...(input.workSyncNudge ? { workSyncNudge: input.workSyncNudge } : {}),
+    ...(input.goal ? { goal: input.goal } : {}),
   });
 }

@@ -12,6 +12,7 @@ import {
   readBackendAttachmentChunk,
   readBackendMessageAttachments,
 } from '../../../contracts/attachments';
+import { readAutonomousGoalStatus } from '../../../contracts/autonomousGoal';
 import { isBackendReviewOperation } from '../input/reviewValues';
 import { projectResumePreparation, resumeChoices } from '../resumeValues';
 
@@ -531,6 +532,11 @@ export function projectBackendResult(
     return { ok: true, value: readBackendAttachmentChunk(source.value, request.payload) };
   if (request.operation === 'team.review-flow.read')
     return { ok: true, value: projectReviewFlow(source.value) };
+  if (request.operation === 'goal.control') {
+    const value = readAutonomousGoalStatus(source.value);
+    if (value.goalId !== request.payload.goalId) throw new Error('Wrong goal result');
+    return { ok: true, value };
+  }
   if (request.operation === 'team.snapshot')
     return { ok: true, value: projectTeamSnapshot(source.value) };
   if (request.operation === 'team.messages.page')

@@ -155,6 +155,35 @@ describe('useComposerDraftAttempt working-event sync', () => {
     vi.unstubAllGlobals();
   });
 
+  it('captures goal limits once and clears the opt-in for the next message', async () => {
+    const fixture = createRepository();
+    const root = createRoot(document.createElement('div'));
+    let draft!: UseComposerDraftResult;
+    await act(async () => root.render(<Harness address={alice} repository={fixture.repository}
+      onValue={(value) => { draft = value; }} />));
+    try {
+      act(() => draft.setAutonomousGoal({ durationHours: 12, maxAttempts: 100 }));
+      await act(async () => {
+        await draft.beginAttempt('TEST-goal-intake', (snapshot) => ({
+          kind: 'local', teamName: alice.teamName,
+          request: { member: 'alice', text: snapshot.content.text,
+            autonomousGoal: snapshot.content.autonomousGoal, messageId: 'TEST-goal-intake' },
+        }));
+      });
+      expect(fixture.beginAttempt).toHaveBeenCalledWith(alice, 'old-revision', expect.objectContaining({
+        snapshot: expect.objectContaining({ content: expect.objectContaining({
+          autonomousGoal: { durationHours: 12, maxAttempts: 100 },
+        }) }),
+        preparedRequest: expect.objectContaining({ request: expect.objectContaining({
+          autonomousGoal: { durationHours: 12, maxAttempts: 100 }, messageId: 'TEST-goal-intake',
+        }) }),
+      }));
+      expect(draft.autonomousGoal).toBeUndefined();
+      expect(draft.text).toBe('');
+      expect(draft.snapshot()).not.toHaveProperty('autonomousGoal');
+    } finally { act(() => root.unmount()); }
+  });
+
   it('prepares and transports the same post-sync draft while an event load is pending', async () => {
     const fixture = createRepository();
     const root = createRoot(document.createElement('div'));

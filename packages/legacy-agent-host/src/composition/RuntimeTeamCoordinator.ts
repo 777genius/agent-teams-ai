@@ -1,3 +1,5 @@
+import { settleRuntimeTeamWork } from './settleRuntimeTeamWork.js';
+import { createGoalWorkSync } from './createGoalWorkSync.js';
 import { executeCapturedRuntimeControl } from './executeCapturedRuntimeControl.js';
 import { executeLiveRosterMembership } from './executeLiveRosterMembership.js';
 import type { LiveRosterOperation } from './executeLiveRosterMembership.js';
@@ -83,6 +85,7 @@ export class RuntimeTeamCoordinator {
   private readonly evidenceWindows = new ToolEvidenceWindows();
   private readonly opening = new Set<Promise<unknown>>();
   private pumping: Promise<void> | undefined;
+  private readonly goalWorkSync: ReturnType<typeof createGoalWorkSync>;
   private readonly workSyncWake: ReturnType<typeof createRuntimeWorkSyncWake>;
   private dirty = false;
   private sealed = false;
@@ -169,6 +172,7 @@ export class RuntimeTeamCoordinator {
         assertProviderAuthority: (entry, onCurrent) => this.assertProviderAuthority(entry, onCurrent),
         captureProcessOrigin: entry => captureMemberProcessOrigin(options.profile, entry, options.sources),
         storageRoot: options.profile.owner.storageRoot,
+        ...(options.profile.runtime?.members ? { initialRuntimeMembers: options.profile.runtime.members } : {}),
         profileId: options.profile.owner.profileId,
         principalId: options.profile.principalId,
         hostIncarnation: this.hostIncarnation,
@@ -270,6 +274,8 @@ export class RuntimeTeamCoordinator {
               )
             : undefined);
         if (!entry) return false;
+        if (intent && (action === 'admit' || action === 'dispatch') &&
+            !this.goalWorkSync.authorizeWorkspace(entry, intent)) return false;
         if (intent) return entry.team.owner.authorizeDeliveryIntent(intent, action) &&
           ((action !== 'admit' && action !== 'dispatch') || nativeSessionCommandAuthorized(entry, intent));
         return (
@@ -284,6 +290,11 @@ export class RuntimeTeamCoordinator {
           ((action === 'read' || action === 'control') &&
             entry.team.owner.authorizeRuntimeAccess(options.profile.principalId, binding, action))
         );
+      },
+      withDispatchAuthority: (binding, intent, claim) => {
+        const entry = this.entries.get(this.key(binding));
+        if (!entry) throw new RuntimeOwnerError('hold');
+        entry.team.owner.goals.withDispatchAuthority(intent, claim);
       },
       ...createTeamContextPreparation({
         entries: this.entries,
@@ -310,10 +321,18 @@ export class RuntimeTeamCoordinator {
       isCurrent: entry => this.isCurrent(entry),
       isSealed: () => this.sealed,
     });
+    this.goalWorkSync = createGoalWorkSync({
+      entries: this.entries, readRuntime: binding => this.runtime.readCapturedSession(binding),
+      ownerStorageRoot: options.profile.owner.storageRoot,
+      ...(options.profile.runtime?.members ? { initialRuntimeMembers: options.profile.runtime.members } : {}),
+      delivery: () => this.deliveryPort(), isCurrent: entry => this.isCurrent(entry),
+      isSealed: () => this.sealed, assertWriter: () => options.assertWriter(),
+    });
     this.workSyncWake = createRuntimeWorkSyncWake({
       entries: this.entries,
       isCurrent: (entry) => this.isCurrent(entry),
       isSealed: () => this.sealed,
+      settleGoal: entry => this.goalWorkSync.settle(entry.team),
     });
     this.interactionControls = new HostInteractionControls({
       runtime: this.runtime,
@@ -351,6 +370,10 @@ export class RuntimeTeamCoordinator {
     this.captures.assertAvailable(teamId);
     return isCurrentCapturedTeam(this.capturedTeams.get(teamId));
   }
+
+  goalIntake(teamId: string, recipientName: string) { return this.goalWorkSync.intake(teamId, recipientName); }
+  goalAvailable(teamId: string): boolean { return this.goalWorkSync.available(teamId); }
+  goalReadyForResume(teamId: string): boolean { return this.goalWorkSync.readyForResume(teamId); }
 
   readLaunchAdmission(teamId: string, launchId: string, commandId: string) {
     const selected = this.readRetainedLaunch(teamId, launchId);
@@ -558,41 +581,13 @@ export class RuntimeTeamCoordinator {
       .then(async () => {
         while (this.dirty && !this.sealed) {
           this.dirty = false;
-          for (const launch of this.launches.values()) {
-            try {
-              launch.refresh();
-            } catch {
-              /* Original roster/custody debt remains held. */
-            }
-          }
-          for (const team of this.options.teams.values()) {
-            if (this.sealed) break;
-            if (!this.captures.available(team.definition.binding.teamId)) continue;
-            try {
-              await team.owner.resumeTaskCommands(this.deliveryPort());
-              if (this.sealed) break;
-              await team.owner.resumeDeliveries(this.deliveryPort());
-            } catch {
-              /* Durable pending/held obligations remain with their original owner. */
-            }
-          }
-          await this.interactionControls.pump(this.entries.values());
-          for (const entry of this.entries.values()) {
-            if (this.sealed) break;
-            try {
-              publishNativeCommandOutput(entry, this.runtime);
-              const current = this.runtime.readSession(entry.binding);
-              if (
-                current.attached &&
-                current.record?.nativeReady &&
-                current.record.phase === 'allocated'
-              )
-                await this.runtime.dispatchNext(entry.binding);
-              await entry.settleWorkSync?.();
-            } catch {
-              /* A busy/held/revoked member never falls back to another runtime. */
-            }
-          }
+          await settleRuntimeTeamWork({
+            launches: this.launches.values(), teams: this.options.teams.values(),
+            entries: this.entries.values(), runtime: this.runtime, delivery: this.deliveryPort(),
+            interactions: this.interactionControls, isSealed: () => this.sealed,
+            available: teamId => this.captures.available(teamId),
+            settleGoal: team => this.goalWorkSync.settle(team),
+          });
         }
       })
       .finally(() => {

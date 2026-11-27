@@ -3,6 +3,7 @@ import type { CapturedCrossTeamReply, ComposerCrossTeamSend } from './capturedCr
 import type { ComposerDraftDestination } from './composerDraftDestination';
 import type { MessageRevisionTargetController } from './messageRevisionTarget';
 import type { ComposerDraftAddressRequest } from './useComposerDraftAddressRequest';
+import type { AutonomousGoalOptions } from '@features/agent-backend/contracts';
 import type { TeamGroupChatDTO } from '@features/team-group-chats/contracts';
 import type {
   ComposerDraftAddress,
@@ -52,7 +53,8 @@ export interface MemberMessageComposerProps {
     attachments?: AttachmentPayload[],
     actionMode?: ActionMode,
     taskRefs?: TaskRef[],
-    messageId?: string
+    messageId?: string,
+    autonomousGoal?: AutonomousGoalOptions
   ) => Promise<SendMessageResult>;
   onCrossTeamSend?: ComposerCrossTeamSend;
   onSubmitIntent?: () => void;

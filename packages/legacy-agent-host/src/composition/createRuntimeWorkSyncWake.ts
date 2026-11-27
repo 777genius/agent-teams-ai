@@ -5,6 +5,7 @@ export function createRuntimeWorkSyncWake(options: {
   entries: ReadonlyMap<string, MemberEntry>;
   isCurrent(entry: MemberEntry): boolean;
   isSealed(): boolean;
+  settleGoal?(entry: MemberEntry): Promise<void>;
 }) {
   const scheduler = new MemberWorkSyncNudgeDispatchScheduler({
     listLifecycleActiveTeamNames: async () =>
@@ -13,7 +14,7 @@ export function createRuntimeWorkSyncWake(options: {
         : [
             ...new Set(
               [...options.entries.values()]
-                .filter((entry) => entry.settleWorkSync && options.isCurrent(entry))
+                .filter((entry) => (entry.settleWorkSync || entry.team.owner.goals.snapshot()) && options.isCurrent(entry))
                 .map((entry) => entry.delivery.teamName)
             ),
           ],
@@ -22,6 +23,7 @@ export function createRuntimeWorkSyncWake(options: {
         if (options.isSealed() || signal?.aborted) break;
         if (teams.includes(entry.delivery.teamName) && options.isCurrent(entry)) {
           try {
+            await options.settleGoal?.(entry);
             await entry.settleWorkSync?.();
           } catch {
             /* Original receipt remains held by its own owner. */

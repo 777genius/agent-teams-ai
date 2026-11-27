@@ -1,5 +1,23 @@
 # Agent backend: captured Desktop connection
 
+## Bounded objective continuation
+
+The existing direct-lead composer can add `autonomousGoal: { durationHours, maxAttempts }`
+to its original `message.send`. This is an explicit human opt-in for an already ready
+Host team in Do or Delegate mode. The Host derives authority and objective identity;
+text, model output and renderer readiness never grant them. The optional metadata is
+absent from ordinary sends and stays on the immutable original request during recovery.
+
+`contracts/autonomousGoal.ts` validates bounded public options, controls and status.
+The existing IPC and HTTP operation facade routes `goal.control` to `team.goal.control`;
+`renderer/controlAutonomousGoal.ts` keeps the original control ID and displayed revision.
+Status and availability travel through the existing Team snapshot projection. The small
+composer controls allow Stop, eligible Resume and absolute limit extension, with no new
+launch, schedule, queue or backend connection. Ordinary Team Stop remains Host-owned.
+
+Focused coverage lives in `test/features/agent-backend/autonomousGoalTransport.test.ts`,
+the composer pending-send suite, draft recovery and `ContinueUntilDoneControl.test.tsx`.
+
 `main/index.ts` exposes the captured Node child client and its trusted profile.
 Create the client before awaiting `start()` so app shutdown can seal pending startup.
 `shutdown()` observes only that captured child; confirmed child exit makes no claim

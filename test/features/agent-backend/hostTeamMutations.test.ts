@@ -500,6 +500,30 @@ describe('ordinary Host Team mutation adapters', () => {
     ]);
     expect(f.legacy.sendMessage).not.toHaveBeenCalled();
   });
+  it('retains goal opt-in and original message identity through the captured Host mutation', async () => {
+    const f = fixture();
+    await f.teams.sendMessage(f.key, {
+      member: 'alice',
+      text: 'Finish the objective',
+      actionMode: 'do',
+      messageId: 'TEST-goal-intake',
+      autonomousGoal: { durationHours: 12, maxAttempts: 100 },
+    });
+    const requests = f.invoke.mock.calls
+      .map(([request]) => request)
+      .filter((request) => request.operation === 'message.send');
+    expect(requests).toHaveLength(1);
+    expect(requests[0]).toMatchObject({
+      handle: { handleId: 'TEST-A' },
+      commandId: 'TEST-goal-intake',
+      payload: {
+        messageId: 'TEST-goal-intake',
+        autonomousGoal: { durationHours: 12, maxAttempts: 100 },
+      },
+    });
+    expect(f.legacy.sendMessage).not.toHaveBeenCalled();
+  });
+
   it('rejects slash to an uncaptured lead and unsupported send extras without dispatching', async () => {
     const f = fixture();
     await expect(

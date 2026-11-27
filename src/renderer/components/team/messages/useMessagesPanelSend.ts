@@ -3,6 +3,7 @@ import { useCallback } from 'react';
 import { shouldClearPendingReplyForOpenCodeRuntimeDelivery } from '@renderer/utils/openCodeRuntimeDeliveryDiagnostics';
 
 import type { ActionMode } from './ActionModeSelector';
+import type { AutonomousGoalOptions } from '@features/agent-backend/contracts';
 import type {
   AttachmentPayload,
   CrossTeamSendRequest,
@@ -39,7 +40,8 @@ export function useMessagesPanelSend({
     attachments?: AttachmentPayload[],
     actionMode?: ActionMode,
     taskRefs?: TaskRef[],
-    messageId?: string
+    messageId?: string,
+    autonomousGoal?: AutonomousGoalOptions
   ) => Promise<SendMessageResult>;
   handleCrossTeamSend: (
     toTeam: string,
@@ -60,7 +62,8 @@ export function useMessagesPanelSend({
       attachments?: AttachmentPayload[],
       actionMode?: ActionMode,
       taskRefs?: TaskRef[],
-      messageId?: string
+      messageId?: string,
+      autonomousGoal?: AutonomousGoalOptions
     ): Promise<SendMessageResult> => {
       const sentAtMs = Date.now();
       onPendingReplyChange((previous) => ({ ...previous, [member]: sentAtMs }));
@@ -73,6 +76,7 @@ export function useMessagesPanelSend({
           actionMode,
           taskRefs,
           messageId,
+          ...(autonomousGoal ? { autonomousGoal } : {}),
         });
         if (shouldClearPendingReplyForOpenCodeRuntimeDelivery(result.runtimeDelivery)) {
           onPendingReplyChange((previous) => {

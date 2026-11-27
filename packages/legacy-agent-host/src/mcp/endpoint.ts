@@ -123,7 +123,9 @@ export async function startTeamMcpEndpoint(
   const nativeMemberCreation = options.connection.nativeMemberCreation;
   const nativeMemberActions = options.connection.nativeMemberActions;
   const workSync = options.connection.workSync;
+  const goals = options.connection.goals;
   const connection = Object.freeze({
+    ...(goals ? { goals: Object.freeze({ status: goals.status.bind(goals), propose: goals.propose.bind(goals) }) } : {}),
     execute: options.connection.execute.bind(options.connection),
     lookup: options.connection.lookup.bind(options.connection),
     getTask: options.connection.getTask.bind(options.connection),

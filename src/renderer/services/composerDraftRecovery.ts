@@ -1,3 +1,4 @@
+import { readAutonomousGoalOptions } from '@features/agent-backend/contracts';
 import { sameComposerDraftAddress } from '@renderer/utils/composerDraftIdentity';
 
 import type {
@@ -61,6 +62,31 @@ function isEditorContext(value: unknown): value is ComposerEditorContext {
 
 function isContent(value: unknown): value is ComposerDraftContent {
   if (!isObject(value)) return false;
+  if (value.autonomousGoal !== undefined) {
+    try {
+      readAutonomousGoalOptions(value.autonomousGoal);
+    } catch {
+      return false;
+    }
+  }
+  if (isObject(value.restoredOrigin) && value.restoredOrigin.autonomousGoalRequest !== undefined) {
+    const original = value.restoredOrigin.autonomousGoalRequest;
+    if (
+      !isObject(original) ||
+      original.kind !== 'local' ||
+      typeof original.teamName !== 'string' ||
+      !isObject(original.request) ||
+      typeof original.request.member !== 'string' ||
+      typeof original.request.text !== 'string' ||
+      typeof original.request.messageId !== 'string'
+    )
+      return false;
+    try {
+      readAutonomousGoalOptions(original.request.autonomousGoal);
+    } catch {
+      return false;
+    }
+  }
   return (
     typeof value.text === 'string' &&
     (value.actionMode === 'do' || value.actionMode === 'ask' || value.actionMode === 'delegate') &&
@@ -225,15 +251,39 @@ export function buildRestoredWorking(
     }
     editorContext = { kind: 'plain' };
   }
+  const originalGoalRequest =
+    source.snapshot.content.restoredOrigin?.autonomousGoalRequest ??
+    (source.preparedRequest?.kind === 'local' &&
+    source.preparedRequest.request.autonomousGoal !== undefined
+      ? source.preparedRequest
+      : undefined);
+  const unknown =
+    source.reason === 'pending-send' ||
+    source.reason === 'unconfirmed-send' ||
+    source.snapshot.content.restoredOrigin?.autonomousGoalRequest !== undefined;
+  if (
+    unknown &&
+    originalGoalRequest &&
+    source.address &&
+    !sameComposerDraftAddress(source.address, destination)
+  )
+    return {
+      kind: 'blocked',
+      error: 'Check the original objective in its original conversation before moving it.',
+    };
+  const originalMessageId =
+    originalGoalRequest?.request.messageId ??
+    (source.outcome?.kind !== 'not-sent' ? source.outcome?.messageId : undefined);
   const content: ComposerDraftContent = {
     ...source.snapshot.content,
-    ...(source.reason === 'pending-send' || source.reason === 'unconfirmed-send'
+    ...(unknown
       ? {
           restoredOrigin: {
             kind: 'unconfirmed-send' as const,
             attemptId: source.id,
-            ...(source.outcome?.kind !== 'not-sent' && source.outcome?.messageId
-              ? { messageId: source.outcome.messageId }
+            ...(originalMessageId ? { messageId: originalMessageId } : {}),
+            ...(originalGoalRequest
+              ? { autonomousGoalRequest: structuredClone(originalGoalRequest) }
               : {}),
           },
         }

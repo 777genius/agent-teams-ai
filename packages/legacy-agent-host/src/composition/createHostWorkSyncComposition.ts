@@ -16,16 +16,17 @@ import { MemberWorkSyncReporter } from '../work-sync/policy/core/application/Mem
 import { MemberWorkSyncTeamOperationGate } from '../work-sync/policy/core/application/MemberWorkSyncTeamOperationGate.js';
 import { createNativeMemberWorkSyncPersistence } from '../work-sync/storage/createNativeMemberWorkSyncPersistence.js';
 import { MemberWorkSyncWriteQueue } from '../work-sync/storage/MemberWorkSyncWriteQueue.js';
+import { goalWaitKey, isGoalWaitReport } from '../work-sync/policy/core/domain/GoalWaitPolicy.js';
 
 import type { JsonValue } from '../contracts.js';
 import type { TeamMcpWorkSyncPort } from '../mcp/workSyncContracts.js';
 import type { NativeWorkSyncMemberContext } from './nativeWorkSyncContext.js';
-import type { captureNativeInputAuthority } from './captureNativeInputAuthority.js';
+import type { WorkSyncInputAuthority } from '../work-sync/commandContracts.js';
 import type { MemberWorkSyncStatus } from '../work-sync/policy/contracts/index.js';
 import type { MemberWorkSyncOutboxStorePort } from '../work-sync/policy/core/application/ports.js';
 
 type LifecycleIdentity = Parameters<typeof createNativeMemberWorkSyncPersistence>[0]['identity'];
-type Original = ReturnType<typeof captureNativeInputAuthority>;
+type Original = WorkSyncInputAuthority;
 type Member = NativeWorkSyncMemberContext;
 
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
@@ -59,12 +60,36 @@ export function createHostWorkSyncComposition(options: {
         options.assertCurrent();
         const source = member.captureSource();
         source.assertCurrent();
+        const goalSource = source.team.mode === 'goal';
+        if (goalSource && 'forceNudge' in payload && payload.forceNudge)
+          throw new McpToolFailure('unsupported'); // Goal continuation has its own original charged intent.
         if (source.team.source.teamId !== member.teamId) throw new TeamOwnerError('forbidden');
         return gate.run(member.teamName, async () => {
           const identity = await options.identity(member.teamId, source.team.principalId);
           source.assertCurrent();
           options.assertCurrent();
           identity.assertWorkAllowed();
+          if ('wait' in payload && payload.wait !== undefined) {
+            const wait = payload.wait, goal = member.owner.goals.snapshot();
+            if (!goalSource || !goal || !isGoalWaitReport(wait) ||
+                source.team.mode !== 'goal' || source.team.goal.goalId !== goal.goalId ||
+                source.team.goal.revision !== goal.revision ||
+                Date.parse(wait.horizonAt) > Date.parse(goal.deadlineAt) ||
+                (wait.taskId && !member.owner.goals.scopedTasks().some(task => task.id === wait.taskId)))
+              throw new McpToolFailure('invalid');
+            let registered = false;
+            for (const prior of member.owner.goals.workSyncReports()) {
+              if (!prior.result || typeof prior.result !== 'object' || Array.isArray(prior.result) || prior.result.accepted !== true) continue;
+              const priorWait = prior.payload && typeof prior.payload === 'object' && !Array.isArray(prior.payload)
+                ? prior.payload.wait : undefined;
+              if (!isGoalWaitReport(priorWait) || goalWaitKey(priorWait) !== goalWaitKey(wait)) continue;
+              registered = true;
+              if (Date.parse(wait.horizonAt) > Date.parse(priorWait.horizonAt)) throw new McpToolFailure('invalid');
+            }
+            // A late observation retains its original fact; it cannot authorize another check.
+            if (!registered && wait.status === 'pending' && Date.parse(wait.horizonAt) <= Date.now())
+              throw new McpToolFailure('invalid');
+          }
           if ('forceNudge' in payload && payload.forceNudge && !member.delivery && !options.outbox)
             throw new McpToolFailure('unsupported');
           return member.owner
@@ -86,7 +111,7 @@ export function createHostWorkSyncComposition(options: {
                 assertCurrent,
                 createMutationId: () => hash(`${original.mutationId}:${++mutationOrdinal}`),
               });
-              const outboxStore =
+              const outboxStore = goalSource ? undefined :
                 options.outbox?.(member, source, identity) ??
                 (member.delivery
                   ? createNativeWorkSyncOutbox({
@@ -101,7 +126,8 @@ export function createHostWorkSyncComposition(options: {
               const now = () => new Date();
               const deps = {
                 ...persistence,
-                ...(member.delivery
+                ...(goalSource ? { goalWaitEnabled: true as const } : {}),
+                ...(member.delivery && source.team.mode === 'do'
                   ? createNativeWorkSyncMessagePorts({ member, team: source.team, assertCurrent })
                   : {}),
                 ...(outboxStore ? { outboxStore } : {}),
@@ -198,6 +224,7 @@ export function createHostWorkSyncComposition(options: {
             if (!pendingResult.current) throw new TeamOwnerError('hold');
             const pending = pendingResult.value;
             const originals = accepted.filter((original) => {
+              if (original.nativeInput.team.mode !== 'do') return false;
               const header = original.nativeInput.runtime;
               return (
                 pending.has(original.commandId) &&

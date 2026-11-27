@@ -2,14 +2,13 @@ import { TeamOwnerError } from '../team/contracts.js';
 import { deliveryFingerprint, normalizeBinding, runtimeDigest } from '../runtime/identity.js';
 
 import type { RuntimeDelivery, RuntimeSessionRecord } from '../runtime/contracts.js';
-import type { NativeMcpAuthorityProof } from '../team/NativeMcpAuthority.js';
-import type { WorkSyncCommandReceipt } from './commandContracts.js';
+import type { WorkSyncCommandReceipt, WorkSyncTeamProof } from './commandContracts.js';
 
 /** Accepted feature intent may outlive its input; it never borrows authority from whichever input runs next. */
 export function assertAcceptedNativeWorkSyncInput(options: {
   original: Readonly<WorkSyncCommandReceipt>;
   readRuntime(): { record: RuntimeSessionRecord | undefined; attached: boolean };
-  captureTeam(original: RuntimeDelivery): Readonly<NativeMcpAuthorityProof>;
+  captureTeam(original: RuntimeDelivery): Readonly<WorkSyncTeamProof>;
   assertCurrent(): void;
 }): void {
   options.assertCurrent();

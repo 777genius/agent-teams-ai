@@ -1,4 +1,10 @@
 import {
+  type AutonomousGoalOptions,
+  isHostTeamSelectionKey,
+  readAutonomousGoalOptions,
+} from '@features/agent-backend/contracts';
+import { serializeChipsWithText } from '@renderer/types/inlineChip';
+import {
   canMemberShowAttachmentControl,
   getMemberAttachmentUnavailableReason,
   type MemberAttachmentDeclarationLookup,
@@ -15,6 +21,7 @@ import type {
   AttachmentPayload,
   CrossTeamSendRequest,
   ResolvedTeamMember,
+  SendMessageRequest,
   TaskRef,
 } from '@shared/types';
 
@@ -39,6 +46,8 @@ interface BuildPreparedSendRequestOptions {
   summary: string;
   attachments: AttachmentPayload[];
   actionMode: AgentActionMode;
+  autonomousGoal?: AutonomousGoalOptions;
+  originalGoalRequest?: Extract<ComposerPreparedRequest, { kind: 'local' }>;
   taskRefs: TaskRef[];
 }
 
@@ -54,9 +63,12 @@ export function buildPreparedSendRequest({
   summary,
   attachments,
   actionMode,
+  autonomousGoal,
+  originalGoalRequest,
   taskRefs,
 }: BuildPreparedSendRequestOptions): ComposerPreparedRequest {
   if (selectedTeam && !lockedRecipient) {
+    if (autonomousGoal) throw new Error('Goal requires a direct lead message');
     return {
       kind: 'cross-team',
       request: {
@@ -79,11 +91,12 @@ export function buildPreparedSendRequest({
       },
     };
   }
-  return {
+  const prepared: Extract<ComposerPreparedRequest, { kind: 'local' }> = {
     kind: 'local',
     teamName,
     request: {
       member: localRecipient,
+      ...(autonomousGoal ? { autonomousGoal: { ...autonomousGoal } } : {}),
       text,
       summary,
       attachments: attachments.length ? attachments : undefined,
@@ -92,6 +105,59 @@ export function buildPreparedSendRequest({
       messageId: attemptId,
     },
   };
+  if (autonomousGoal && originalGoalRequest) {
+    if (!sameOriginalGoalRequest(originalGoalRequest, prepared))
+      throw new Error('Restore the unchanged original request to check its delivery.');
+    return structuredClone(originalGoalRequest);
+  }
+  return prepared;
+}
+
+function sameOriginalGoalRequest(
+  original: Extract<ComposerPreparedRequest, { kind: 'local' }>,
+  prepared: Extract<ComposerPreparedRequest, { kind: 'local' }>
+): boolean {
+  const source = original.request,
+    next = prepared.request;
+  return (
+    original.kind === 'local' &&
+    original.teamName === prepared.teamName &&
+    typeof source.messageId === 'string' &&
+    source.messageId.length > 0 &&
+    source.member === next.member &&
+    source.text === next.text &&
+    source.actionMode === next.actionMode &&
+    JSON.stringify(source.attachments ?? []) === JSON.stringify(next.attachments ?? []) &&
+    !!source.autonomousGoal &&
+    JSON.stringify(source.autonomousGoal) === JSON.stringify(next.autonomousGoal)
+  );
+}
+
+/** Unknown intake stays attached to its original payload, even after task suggestions change. */
+export function restoredAutonomousGoalRequest(
+  content: ComposerDraftContent,
+  teamName: string,
+  recipient: string
+): Extract<ComposerPreparedRequest, { kind: 'local' }> | undefined {
+  const original = content.restoredOrigin?.autonomousGoalRequest;
+  if (!original || !content.autonomousGoal) return undefined;
+  const text = serializeChipsWithText(
+    stripEncodedTaskReferenceMetadata(content.text).trim(),
+    content.chips
+  );
+  return sameOriginalGoalRequest(original, {
+    kind: 'local',
+    teamName,
+    request: {
+      member: recipient,
+      text,
+      actionMode: content.actionMode,
+      attachments: content.attachments,
+      autonomousGoal: content.autonomousGoal,
+    },
+  })
+    ? original
+    : undefined;
 }
 
 /** Forward metadata from the persisted original request, including after UI state is gone. */
@@ -126,13 +192,42 @@ export function isPreparedSendAllowed(
   members: readonly ResolvedTeamMember[],
   teamName: string,
   isTeamAlive?: boolean,
-  resolveDeclaration?: MemberAttachmentDeclarationLookup
+  resolveDeclaration?: MemberAttachmentDeclarationLookup,
+  autonomousGoalAvailable = false
 ): boolean {
   const crossTeam = request.kind === 'cross-team';
   const originTeam = crossTeam ? request.request.fromTeam : request.teamName;
   if (teamName !== originTeam) return false;
   const recipient = crossTeam ? null : request.request.member;
   const member = members.find((candidate) => candidate.name === recipient);
+  const capturedGoal = request.kind === 'local' ? request.request.autonomousGoal : undefined;
+  if (JSON.stringify(capturedGoal) !== JSON.stringify(content.autonomousGoal)) return false;
+  const original = restoredAutonomousGoalRequest(content, teamName, recipient ?? '');
+  if (
+    content.autonomousGoal &&
+    content.restoredOrigin?.autonomousGoalRequest &&
+    (!original || JSON.stringify(original) !== JSON.stringify(request))
+  )
+    return false;
+  if (content.autonomousGoal) {
+    try {
+      readAutonomousGoalOptions(content.autonomousGoal);
+    } catch {
+      return false;
+    }
+  }
+  if (
+    content.autonomousGoal &&
+    (crossTeam ||
+      !isHostTeamSelectionKey(teamName) ||
+      (!autonomousGoalAvailable && !original) ||
+      !member ||
+      !isLeadMember(member) ||
+      !isTeamAlive ||
+      content.actionMode === 'ask' ||
+      parseStandaloneSlashCommand(content.text.trim()))
+  )
+    return false;
   const canAttach =
     !crossTeam &&
     !!isTeamAlive &&
@@ -157,4 +252,11 @@ export function isPreparedSendAllowed(
       !!isTeamAlive &&
       content.attachments.length === 0)
   );
+}
+
+/** Preserve the legacy callback's argument count when no opt-in was captured. */
+export function preparedAutonomousGoalArgs(
+  request: SendMessageRequest
+): [] | [AutonomousGoalOptions] {
+  return request.autonomousGoal ? [request.autonomousGoal] : [];
 }

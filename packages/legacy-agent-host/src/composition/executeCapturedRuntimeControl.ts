@@ -263,6 +263,7 @@ export async function executeCapturedRuntimeControl(
     await options.dispatchSettled();
     record = options.runtime.readSession(entry.binding).record;
   } else if (operation === 'stop') {
+    entry.team.owner.goals.stopForRuntime(options.principalId, entry.binding);
     if (entry.profile.provider === 'opencode') {
       const launch = options.retainedLaunches.get(runtimeDigest({ teamId, launchId: entry.binding.runId }))?.launch;
       launch?.retireModelReadiness(entry.profile.memberId);

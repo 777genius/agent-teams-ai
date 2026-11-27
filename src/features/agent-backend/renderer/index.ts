@@ -7,6 +7,7 @@ export {
   type AgentBackendReviewWatchHttpPort,
   createAgentBackendReviewWatchHttpClient,
 } from './adapters/http/createAgentBackendReviewWatchHttpClient';
+export { controlAutonomousGoal } from './controlAutonomousGoal';
 export { createBoundHostReviewApi } from './createBoundHostReviewApi';
 export { createHostBackendRenderer } from './createHostBackendRenderer';
 export { createHostCrossTeamApi } from './createHostCrossTeamApi';

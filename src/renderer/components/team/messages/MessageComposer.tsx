@@ -10,10 +10,8 @@ import { AttachmentCatalogRefresh } from '@renderer/components/team/attachments/
 import { AttachmentPreviewList } from '@renderer/components/team/attachments/AttachmentPreviewList';
 import { DropZoneOverlay } from '@renderer/components/team/attachments/DropZoneOverlay';
 import { ComposerSurface } from '@renderer/components/team/composer/ComposerSurface';
-import { ActionModeSelector } from '@renderer/components/team/messages/ActionModeSelector';
 import { ComposerLockedRecipient } from '@renderer/components/team/messages/ComposerLockedRecipient';
 import { useTeamStartupCopy } from '@renderer/components/team/useTeamStartupCopy';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useAttachmentValidation } from '@renderer/hooks/useAttachmentValidation';
 import { useRecipientAttachmentDeclarations } from '@renderer/hooks/useRecipientAttachmentDeclarations';
@@ -31,7 +29,6 @@ import {
 import { serializeChipsWithText } from '@renderer/types/inlineChip';
 import {
   canMemberShowAttachmentControl,
-  getAttachmentInputAcceptForMember,
   getMemberAttachmentUnavailableReason,
   validateAttachmentPayloadsForMember,
 } from '@renderer/utils/attachmentRecipientCapabilities';
@@ -54,27 +51,30 @@ import {
   inferTeamProviderIdFromModel,
   normalizeOptionalTeamProviderId,
 } from '@shared/utils/teamProvider';
-import { Paperclip } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
+import { ComposerAttachmentButton } from './ComposerAttachmentButton';
 import { crossTeamDraftMeta, memberDraftPreviews } from './composerDraftPreviews';
 import {
   buildPreparedSendRequest,
   buildRevisionCorrectionText,
   createPendingSendId,
   isPreparedSendAllowed,
+  preparedAutonomousGoalArgs,
   preparedCrossTeamReplyArgs,
 } from './composerSendUtils';
 import { runComposerSubmission } from './composerSubmission';
+import { AutonomousGoalStatusNotice, ComposerExecutionControls } from './ContinueUntilDoneControl';
 import { MessageComposerFooter, MessageComposerInput } from './MessageComposerInput';
 import { MessageComposerRecipientSelector } from './MessageComposerRecipientSelector';
 import { MessageComposerRevisionNotice } from './MessageComposerRevisionNotice';
-import { MessageComposerStatusNotice } from './MessageComposerStatusNotice';
+import { renderMessageComposerStatusNotice } from './composerStatusNotice';
 import { MessageComposerTeamSelector } from './MessageComposerTeamSelector';
 import { acquireRevisionOperation, releaseRevisionOperation } from './revisionOperationLease';
 import { TeamFeedMessageComposer } from './TeamFeedMessageComposer';
 import { TextMessageComposer, type TextMessageComposerProps } from './TextMessageComposer';
 import { useAutoDelegateActionMode } from './useAutoDelegateActionMode';
+import { useComposerAutonomousGoal } from './useComposerAutonomousGoal';
 import { useComposerDraftAddressRequest } from './useComposerDraftAddressRequest';
 import { useComposerSubmissionFeedback } from './useComposerSubmissionFeedback';
 import { useComposerFocus, useComposerTextarea } from './useComposerTextarea';
@@ -501,7 +501,6 @@ const MemberMessageComposer = ({
     draft.attachments.length > 0 &&
     (!supportsAttachments || attachmentPayloadRestrictionReason != null);
   const activeRevision = draft.revisionContext;
-  const isRevisionActive = activeRevision !== null;
   const revisionOriginalValid =
     activeRevision == null ||
     revisableMessageId === undefined ||
@@ -529,7 +528,15 @@ const MemberMessageComposer = ({
               ? t('modelSelector.unavailableInRuntime')
               : null
     : null;
+  const { goalAvailable, goalStatus, goalEligible, goalOptionsValid, goalRestrictionReason } =
+    useComposerAutonomousGoal(teamName, draft, {
+      isLeadRecipient,
+      isCrossTeam,
+      isTeamAlive,
+      nativeCommand: !!standaloneSlashCommand,
+    });
   const canSend =
+    (!draft.autonomousGoal || (goalEligible && goalOptionsValid)) &&
     effectiveRecipient.length > 0 &&
     trimmed.length > 0 &&
     trimmed.length <= MAX_TEXT_LENGTH &&
@@ -539,7 +546,7 @@ const MemberMessageComposer = ({
     !isLaunchBlocking &&
     !attachmentsBlocked &&
     !slashCommandRestrictionReason &&
-    (!isRevisionActive || (!isCrossTeam && revisionRecipientMatches && revisionOriginalValid)) &&
+    (!activeRevision || (!isCrossTeam && revisionRecipientMatches && revisionOriginalValid)) &&
     (!isCrossTeam || onCrossTeamSend !== undefined);
   const currentSendEligibilityRef = useRef<
     (
@@ -549,7 +556,16 @@ const MemberMessageComposer = ({
     ) => boolean
   >(() => false);
   currentSendEligibilityRef.current = (content, request, editorContext) =>
-    isPreparedSendAllowed(content, request, members, teamName, isTeamAlive, resolveDeclaration) &&
+    isPreparedSendAllowed(
+      content,
+      request,
+      members,
+      teamName,
+      isTeamAlive,
+      resolveDeclaration,
+      goalAvailable
+    ) &&
+    (!content.autonomousGoal || editorContext.kind === 'plain') &&
     (editorContext.kind !== 'revision' ||
       ((activeRevision == null || editorContext.requestId === activeRevision.requestId) &&
         (revisableMessageId === undefined ||
@@ -561,7 +577,7 @@ const MemberMessageComposer = ({
     members,
     draft,
     onSend,
-    disabled: isContextSwitching || sending || isLaunchBlocking,
+    disabled: isContextSwitching || sending || isLaunchBlocking || !!draft.autonomousGoal,
     isCrossTeam,
   });
   const isCompactLayout = layout === 'compact';
@@ -636,6 +652,7 @@ const MemberMessageComposer = ({
             : serialized;
           const request = buildPreparedSendRequest({
             attemptId,
+            originalGoalRequest: content.restoredOrigin?.autonomousGoalRequest,
             teamName,
             selectedTeam,
             lockedRecipient,
@@ -648,6 +665,7 @@ const MemberMessageComposer = ({
               : syncedTrimmed,
             attachments: content.attachments,
             actionMode: content.actionMode,
+            ...(content.autonomousGoal ? { autonomousGoal: content.autonomousGoal } : {}),
             taskRefs: extractTaskRefsFromText(
               content.text,
               content.text.includes('#') ? getTaskSuggestionsForTeamNow(teamName) : taskSuggestions
@@ -689,7 +707,8 @@ const MemberMessageComposer = ({
               preparedRequest.request.attachments,
               preparedRequest.request.actionMode,
               preparedRequest.request.taskRefs,
-              preparedRequest.request.messageId
+              preparedRequest.request.messageId,
+              ...preparedAutonomousGoalArgs(preparedRequest.request)
             ),
     })
       .then((result) => {
@@ -833,27 +852,16 @@ const MemberMessageComposer = ({
         onStash={draft.stashWorking}
       />
     ) : null;
-  const hasStatusNotice = Boolean(
-    draft.readError ||
-    draft.persistenceStatus === 'memory-only' ||
-    draft.snapshot().restoredOrigin ||
-    slashCommandRestrictionReason ||
-    submissionFeedback.submissionError ||
-    submissionFeedback.sendWarning ||
-    submissionFeedback.deduplicated
-  );
-  const compactFooterNotice = hasStatusNotice ? (
-    <MessageComposerStatusNotice
-      readError={draft.readError}
-      persistenceStatus={draft.persistenceStatus}
-      restoredDeliveryUnknown={draft.snapshot().restoredOrigin != null}
-      restrictionReason={slashCommandRestrictionReason}
-      submissionError={submissionFeedback.submissionError}
-      sendWarning={submissionFeedback.sendWarning}
-      sendDebugDetails={submissionFeedback.sendDebugDetails}
-      deduplicated={submissionFeedback.deduplicated}
-    />
-  ) : null;
+  const compactFooterNotice = renderMessageComposerStatusNotice({
+    readError: draft.readError,
+    persistenceStatus: draft.persistenceStatus,
+    restoredDeliveryUnknown: draft.snapshot().restoredOrigin != null,
+    restrictionReason: goalRestrictionReason ?? slashCommandRestrictionReason,
+    submissionError: submissionFeedback.submissionError,
+    sendWarning: submissionFeedback.sendWarning,
+    sendDebugDetails: submissionFeedback.sendDebugDetails,
+    deduplicated: submissionFeedback.deduplicated,
+  });
   const shouldShowSavedIndicator = composerFocus.isTextareaFocused && draft.isSaved;
   const nonCompactFooterRight =
     compactFooterNotice || remaining < 200 || shouldShowSavedIndicator ? (
@@ -876,44 +884,22 @@ const MemberMessageComposer = ({
       onPaste={handlePasteWrapper}
     >
       <div>
+        {goalStatus && !isCrossTeam && isLeadRecipient ? (
+          <AutonomousGoalStatusNotice
+            key={goalStatus.goalId}
+            teamName={teamName}
+            goal={goalStatus}
+          />
+        ) : null}
         <div className="message-composer-flat-toolbar grid min-w-0 grid-cols-[32px_minmax(0,1fr)] items-center gap-2 pl-2">
-          <div className="flex size-8 items-center justify-center">
-            {showAttachmentControl ? (
-              <>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept={getAttachmentInputAcceptForMember(selectedMember)}
-                  multiple
-                  className="hidden"
-                  onChange={handleFileInputChange}
-                />
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      className={cn(
-                        'inline-flex size-8 shrink-0 items-center justify-center rounded-md transition-colors',
-                        canAttach
-                          ? 'text-[var(--color-text-secondary)] hover:bg-white/[0.035] hover:text-[var(--color-text)]'
-                          : 'text-[var(--color-text-muted)] opacity-40'
-                      )}
-                      disabled={!canAttach}
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      <Paperclip size={14} />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">
-                    {canAttach
-                      ? t('messageComposer.attachments.attachFiles')
-                      : (attachmentRestrictionReason ??
-                        t('messageComposer.attachments.unavailable'))}
-                  </TooltipContent>
-                </Tooltip>
-              </>
-            ) : null}
-          </div>
+          <ComposerAttachmentButton
+            visible={showAttachmentControl}
+            enabled={canAttach}
+            member={selectedMember}
+            reason={attachmentRestrictionReason}
+            inputRef={fileInputRef}
+            onChange={handleFileInputChange}
+          />
 
           <div className="flex min-w-0 items-stretch justify-end self-stretch">
             {lockedRecipient ? (
@@ -1093,11 +1079,13 @@ const MemberMessageComposer = ({
           showHint={!isCompactLayout && composerFocus.isComposerFocused}
           footerClassName={!isCompactLayout ? 'empty:flex' : undefined}
           cornerActionLeft={
-            <ActionModeSelector
-              value={actionMode}
-              onChange={setActionMode}
-              showDelegate={canDelegate}
-              disabled={sending}
+            <ComposerExecutionControls
+              actionMode={actionMode}
+              onModeChange={setActionMode}
+              canDelegate={canDelegate}
+              sending={sending}
+              goalEligible={goalEligible}
+              draft={draft}
             />
           }
           layout={layout}
