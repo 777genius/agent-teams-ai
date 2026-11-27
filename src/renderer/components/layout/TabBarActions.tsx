@@ -148,7 +148,7 @@ export const TabBarActions = (): React.JSX.Element => {
         <TooltipTrigger asChild>
           <button
             onClick={openNotificationsTab}
-            className="relative rounded-md p-2 text-info transition-colors hover:bg-surface-raised"
+            className="relative rounded-md p-2 text-text-muted transition-colors hover:bg-surface-raised hover:text-text"
             aria-label={t('notifications.title')}
           >
             <Bell className="size-4" />
