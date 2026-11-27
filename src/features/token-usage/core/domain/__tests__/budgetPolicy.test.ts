@@ -91,8 +91,16 @@ describe('Budget monthly projection', () => {
       policy: { enabled: true, nativeToasts: false },
     });
 
-    expect(status.options.some((option) => option.scope === 'team' && option.id === `team:${physicalName}`)).toBe(false);
-    expect(status.targets.some((target) => target.scope === 'team' && target.id === `team:${physicalName}`)).toBe(false);
+    expect(
+      status.options.some(
+        (option) => option.scope === 'team' && option.id === `team:${physicalName}`
+      )
+    ).toBe(false);
+    expect(
+      status.targets.some(
+        (target) => target.scope === 'team' && target.id === `team:${physicalName}`
+      )
+    ).toBe(false);
     expect(status.options.some((option) => option.scope === 'project')).toBe(true);
   });
 

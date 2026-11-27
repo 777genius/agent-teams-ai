@@ -58,10 +58,10 @@ export const AttentionInboxPanel = ({
   // One shared pure policy combines search and the full-page filters.
   // The compact Dashboard always shows the original unfiltered priority order.
   const applied = variant === 'full' ? filters : DEFAULT_ATTENTION_FILTERS;
-  const { tasks, chats } = useMemo(() =>
-    filterAttentionEntries(model, applied,
-      variant === 'full' ? searchQuery : '', now),
-  [model, applied, searchQuery, variant, now]);
+  const { tasks, chats } = useMemo(
+    () => filterAttentionEntries(model, applied, variant === 'full' ? searchQuery : '', now),
+    [model, applied, searchQuery, variant, now]
+  );
   const teams = useMemo(() => attentionTeamOptions(model), [model]);
   const filteredEmpty =
     variant === 'full' &&

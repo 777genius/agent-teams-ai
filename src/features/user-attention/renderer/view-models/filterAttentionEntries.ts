@@ -25,10 +25,12 @@ export interface AttentionTeamOption {
 }
 
 export function attentionFilterCount(filters: AttentionFilters): number {
-  return Number(filters.type !== 'all') +
+  return (
+    Number(filters.type !== 'all') +
     Number(filters.teamName !== null) +
     Number(filters.conversation !== 'all') +
-    Number(filters.waiting !== 'all');
+    Number(filters.waiting !== 'all')
+  );
 }
 
 type AttentionTeamIdentity = Pick<AttentionTaskCandidate, 'teamName' | 'logicalTeamName'>;
@@ -49,9 +51,9 @@ export function attentionTeamOptions(model: AttentionModel | null): AttentionTea
       });
     }
   }
-  return [...teams.values()].sort((a, b) =>
-    a.displayName.localeCompare(b.displayName) ||
-    a.teamName.localeCompare(b.teamName));
+  return [...teams.values()].sort(
+    (a, b) => a.displayName.localeCompare(b.displayName) || a.teamName.localeCompare(b.teamName)
+  );
 }
 
 export function filterAttentionEntries(
@@ -76,13 +78,29 @@ export function filterAttentionEntries(
   };
 
   return {
-    tasks: filters.type === 'chats' ? [] : (model?.tasks ?? []).filter((task) =>
-      teamMatches(task) && waitingMatches(task.requestedAt) &&
-      matches(task.subject, task.teamName, task.teamDisplayName, task.owner)),
-    chats: filters.type === 'tasks' ? [] : (model?.chats ?? []).filter((chat) =>
-      teamMatches(chat) &&
-      (filters.conversation === 'all' || chat.scope.kind === filters.conversation) &&
-      matches(chat.name, chat.teamName, chat.teamDisplayName,
-        chat.latestUnread.from, chat.latestUnread.text)),
+    tasks:
+      filters.type === 'chats'
+        ? []
+        : (model?.tasks ?? []).filter(
+            (task) =>
+              teamMatches(task) &&
+              waitingMatches(task.requestedAt) &&
+              matches(task.subject, task.teamName, task.teamDisplayName, task.owner)
+          ),
+    chats:
+      filters.type === 'tasks'
+        ? []
+        : (model?.chats ?? []).filter(
+            (chat) =>
+              teamMatches(chat) &&
+              (filters.conversation === 'all' || chat.scope.kind === filters.conversation) &&
+              matches(
+                chat.name,
+                chat.teamName,
+                chat.teamDisplayName,
+                chat.latestUnread.from,
+                chat.latestUnread.text
+              )
+          ),
   };
 }
