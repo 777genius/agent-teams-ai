@@ -244,6 +244,13 @@ describe('captured Host member spawn observations', () => {
     expect(snapshot.statuses.bob).toMatchObject({
       status: 'error',
       launchState: 'failed_to_start',
+      hostFailedMemberRetry: {
+        runId,
+        memberId: 'codex-id',
+        generation: 'TEST-generation',
+        attemptId: 'TEST-codex-id',
+        noAllocation: false,
+      },
       error: 'TEST-current-reason',
       hardFailureReason: 'TEST-current-reason',
     });
@@ -253,6 +260,7 @@ describe('captured Host member spawn observations', () => {
       skippedForLaunch: true,
       skipReason: 'launch-policy',
     });
+    expect(snapshot.statuses.carol!.hostFailedMemberRetry).toBeUndefined();
     expect(
       getLaunchJoinMilestonesFromMembers({
         members: joinMembers(f.view),
@@ -399,7 +407,6 @@ describe('captured Host member spawn observations', () => {
     }
   );
 });
-
 
 describe('current Host live-roster snapshot handoff', () => {
   const pin = (snapshot: MemberSpawnStatusesSnapshot): IncomingMemberSpawnProjectionState => ({

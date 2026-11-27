@@ -81,7 +81,6 @@ import type {
   KanbanColumnId,
   LeadActivitySnapshot,
   LeadContextUsageSnapshot,
-  MemberLogSummary,
   MemberSpawnStatusesSnapshot,
   ProjectBranchChangeEvent,
   QueuedUserMessagesSnapshot,
@@ -134,7 +133,7 @@ import type { TeamMessageDeliveryApi } from './teamMessageDelivery';
 import type { TerminalAPI } from './terminal';
 import type { TmuxAPI } from './tmux';
 import type { WaterfallData } from './visualization';
-import type { AgentBackendElectronApi } from '@features/agent-backend/contracts';
+import type { AgentBackendElectronApi, TeamSessionsApi } from '@features/agent-backend/contracts';
 import type { AnnouncementsApi } from '@features/announcements/contracts';
 import type { AppCloseCoordinationElectronApi } from '@features/app-close-coordination/contracts';
 import type {
@@ -453,7 +452,8 @@ export interface TeamsAPI
     TeamReadLegacyApi,
     TeamProjectContextViewApi,
     TeamMessageDeliveryApi,
-    TeamDefinitionEditApi {
+    TeamDefinitionEditApi,
+    TeamSessionsApi {
   definitionEdits?: TeamDefinitionEditsTransport;
   readRecovery?: TeamReadRecoveryApi;
   list: () => Promise<TeamAggregateReadResult<TeamSummary>>;
@@ -524,7 +524,6 @@ export interface TeamsAPI
   createConfigResult?: (
     request: TeamCreateConfigRequest
   ) => Promise<IpcResult<void | TeamCreateConfigResponse>>;
-  getMemberLogs: (teamName: string, memberName: string) => Promise<MemberLogSummary[]>;
   getTaskActivity: (
     teamName: string,
     taskId: string
@@ -580,7 +579,8 @@ export interface TeamsAPI
   restartMember: (
     teamName: string,
     memberName: string,
-    expectedSecondary?: boolean
+    expectedSecondary?: boolean,
+    captured?: import('./teamMemberRestart').CapturedHostFailedMemberRetry
   ) => Promise<TeamMemberRestartResult>;
   skipMemberForLaunch: (teamName: string, memberName: string) => Promise<void>;
   softDeleteTask: (teamName: string, taskId: string) => Promise<void>;

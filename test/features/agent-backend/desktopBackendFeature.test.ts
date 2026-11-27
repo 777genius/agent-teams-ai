@@ -326,6 +326,49 @@ it('leaves unconfigured mode empty and initializes configured handles without st
   expect(snapshot).not.toContain('nodeExecutable');
 });
 
+it.each(['shared', 'per_project'] as const)(
+  'preserves an explicit %s history mode when a retained handle is restored from its private descriptor',
+  async (projectContextMode) => {
+    const setup = await fixture();
+    const original = setup.descriptor.handles[1];
+    const selection = await selected({
+      ...setup.descriptor,
+      handles: [setup.descriptor.handles[0], { ...original, projectContextMode }],
+    });
+    const loaded = await loadDesktopBackendDescriptor(selection);
+    expect(loaded.handles).toHaveLength(2);
+    expect(loaded.handles[0]).not.toHaveProperty('projectContextMode');
+    expect(loaded.handles[1]).toEqual({ ...original, projectContextMode });
+    const desktop = feature({ descriptor: selection, bindingDirectory: setup.bindingDirectory });
+    await desktop.initialize();
+    expect(desktop.listBindings('context-B')).toMatchObject({
+      state: 'ready',
+      bindings: [{ handle: { handleId: 'opaque-B' }, projectContextMode }],
+    });
+    expect(desktop.listBindings('context-A').bindings[0]).not.toHaveProperty('projectContextMode');
+    expect(desktop.authorizeHandle('context-A', { handleId: 'opaque-B' })).toBe(false);
+    for (const owner of setup.descriptor.owners)
+      await expect(access(join(owner.storageRoot, 'started'))).rejects.toMatchObject({ code: 'ENOENT' });
+  }
+);
+
+it('rejects invalid retained history modes and injected project bindings in a private descriptor', async () => {
+  const setup = await fixture();
+  for (const extra of [
+    { projectContextMode: null },
+    { projectContextMode: 'TEST-invalid' },
+    { projectContextMode: 1 },
+    { projectContextMode: 'shared', projectContext: {
+      logicalHandleId: 'opaque-A', projectPath: '/TEST-foreign', workContextId: 'TEST-foreign',
+    } },
+  ]) {
+    await expect(loadDesktopBackendDescriptor(await selected({
+      ...setup.descriptor,
+      handles: [{ ...setup.descriptor.handles[0], ...extra }],
+    }))).rejects.toMatchObject({ code: 'hold' });
+  }
+});
+
 it('captures global and exact project provider scopes without Team handles or default-owner fallback', async () => {
   const setup = await fixture();
   const projectPath = await root();
@@ -640,8 +683,8 @@ it('uses two lazily captured subprocess hosts and captured context grants for fi
     ] as const) {
       expect(await desktop.facade.invoke({ ...probe, commandId,
         payload: { ...probe.payload, model } }, undefined,
-      { view, remainingMs: () => deadline - performance.now() })).toMatchObject({ ok: false });
-      expect(await readFile(join(workspace, 'probe-requests'), 'utf8')).toBe(dispatched);
+      { view, remainingMs: () => deadline - performance.now() }), commandId).toMatchObject({ ok: false });
+      expect(await readFile(join(workspace, 'probe-requests'), 'utf8'), commandId).toBe(dispatched);
     }
     const approvalCapture = vi.spyOn(JsonLocalProviderPrivateNetworkApprovalStore.prototype, 'capture');
     try {

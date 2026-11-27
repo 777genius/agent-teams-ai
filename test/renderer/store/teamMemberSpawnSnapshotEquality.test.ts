@@ -71,6 +71,38 @@ function createSnapshot(
 }
 
 describe('teamMemberSpawnSnapshotEquality', () => {
+  it('retains a changed Host failed generation, attempt, run or allocation when the visible error is unchanged', () => {
+    const capture = {
+      runId: 'host-run:TEST',
+      memberId: 'A',
+      generation: null,
+      attemptId: 'failed-A',
+      noAllocation: true,
+    };
+    const original = createStatusEntry({
+      status: 'error',
+      launchState: 'failed_to_start',
+      hostFailedMemberRetry: capture,
+    });
+    expect(areMemberSpawnStatusEntriesEqual(original, structuredClone(original))).toBe(true);
+    for (const changed of [
+      { runId: 'host-run:OTHER' },
+      { memberId: 'B' },
+      { generation: 'A1' },
+      { attemptId: 'failed-B' },
+      { noAllocation: false },
+    ]) {
+      expect(
+        areMemberSpawnStatusEntriesEqual(original, {
+          ...original,
+          hostFailedMemberRetry: { ...capture, ...changed },
+        })
+      ).toBe(false);
+    }
+    expect(
+      areMemberSpawnStatusEntriesEqual(original, { ...original, hostFailedMemberRetry: undefined })
+    ).toBe(false);
+  });
   it('compares launch summaries by visible counts', () => {
     expect(areLaunchSummaryCountsEqual(createSummary(), createSummary())).toBe(true);
     expect(
@@ -170,10 +202,7 @@ describe('teamMemberSpawnSnapshotEquality', () => {
 
   it('detects semantic snapshot changes', () => {
     expect(
-      areMemberSpawnSnapshotsSemanticallyEqual(
-        createSnapshot(),
-        createSnapshot({ runId: 'run-2' })
-      )
+      areMemberSpawnSnapshotsSemanticallyEqual(createSnapshot(), createSnapshot({ runId: 'run-2' }))
     ).toBe(false);
     expect(
       areMemberSpawnSnapshotsSemanticallyEqual(

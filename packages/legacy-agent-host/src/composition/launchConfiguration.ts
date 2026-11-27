@@ -76,14 +76,14 @@ export function applyLaunchConfiguration(
   if (selected.model !== undefined &&
       !(profile.provider === 'opencode' && profile.nativeGeneration === 'v2')) {
     const prefix = profile.provider === 'opencode' ? `${profile.nativeOptions.providerId}/` : null;
-    // App catalogs qualify OpenCode model IDs; private recipes may already contain
-    // bare IDs with slashes. Only the captured provider's exact prefix is removed.
+    // App selections are qualified aliases; private OpenCode defaults omit model.
+    // Native IDs may themselves contain slashes, so decode exactly one provider prefix.
     profile.model =
       prefix && selected.model.startsWith(prefix)
         ? selected.model.slice(prefix.length)
         : selected.model;
     if (profile.provider === 'opencode' && selected.model.includes('/') &&
-        !selected.model.startsWith(prefix!) && selected.model !== base.model) {
+        !selected.model.startsWith(prefix!)) {
       const separator = selected.model.indexOf('/');
       if (profile.nativeOptions.providerId.includes('/') || separator < 1)
         throw new TeamLaunchError('invalid', 'launch-option-unsupported');

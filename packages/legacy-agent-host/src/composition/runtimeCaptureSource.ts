@@ -43,7 +43,7 @@ export const runtimeCaptureSourceSchema = z
     mcpCaptureVersion: z.literal(1).optional(),
     mcpRecipeReferences: capturedRuntimeMcpReferencesSchema.optional(),
     recipeSources: z.array(runtimeSourceReferenceSchema.extend({ memberId: id }).strict()).min(1).max(256).optional(),
-    savedSettings: savedTeamSettingsSchema,
+    savedSettings: savedTeamSettingsSchema.refine(settings => isAbsolute(settings.cwd)),
     members: z
       .array(
         z
@@ -206,6 +206,7 @@ export function captureRuntimeSource(
   } = {}
 ): RuntimeCaptureSource {
   if (!roster.savedSettings) refuse('saved-configuration-unavailable');
+  if (!isAbsolute(roster.savedSettings.cwd)) refuse('workspace-invalid');
   const sourceReferences = context.sourceReferences ??
     captureRuntimeRecipeSources(profile, team, roster, context.sources);
   const selectedRecipes = recipes(
@@ -327,10 +328,9 @@ export function compileRuntimeMemberProfile(
         ? saved.fastMode
         : undefined;
   let compiled = applyLaunchConfiguration(base, {
-    // A V2 recipe already captures its native model. The fallback to base.model
-    // is not an explicit catalog selection and must not be passed as a bare ID.
-    ...(base.provider === 'opencode' && base.nativeGeneration === 'v2' &&
-        selectedModel === undefined ? {} : { model }),
+    // An OpenCode recipe already captures its native model. A private fallback
+    // is absence of an override, including native IDs containing provider prefixes.
+    ...(base.provider === 'opencode' && selectedModel === undefined ? {} : { model }),
     // Preserve the historical unchanged variant mapping. A changed embedded
     // selection is attested against its native catalog before session creation.
     ...(effort === undefined ||

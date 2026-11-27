@@ -56,6 +56,7 @@ import type {
   BackendRosterReceipt,
   BackendRosterReplacement,
 } from './roster';
+import type { BackendTeamSessionHistory, BackendTeamSessionPage } from './sessionHistory';
 import type { StoppedTeamImportApi } from './stoppedImport';
 import type { BackendTeamChanges } from './teamChanges';
 import type { BackendTeamLifecyclePayloads, BackendTeamLifecycleValue } from './teamLifecycle';
@@ -232,6 +233,7 @@ export interface BackendOperationPayloads
     rosterRevision: string;
     attemptId: string;
     memberIds: string[];
+    expectedAttemptId?: string;
   };
   'command.lookup': Record<string, never>;
   'host.recovery.capture': Record<string, never>;
@@ -525,6 +527,8 @@ export type BackendOperationResult =
         | BackendCrossTeamLookup
         | BackendTeamActivityLogs
         | BackendTeamActivityStats
+        | BackendTeamSessionHistory
+        | BackendTeamSessionPage
         | BackendLeadActivity
         | BackendLeadContext
         | BackendTeamSnapshot

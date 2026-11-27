@@ -8,6 +8,7 @@ import * as managementPreferences from '../../../src/features/runtime-provider-m
 import { createCapturedRuntimeProviderManagementClient } from '../../../src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderManagementClient';
 import { createRuntimeProviderManagementFeature } from '../../../src/features/runtime-provider-management/main/composition/createRuntimeProviderManagementFeature';
 import * as logging from '../../../src/shared/utils/logger';
+import { parseOpenCodeQualifiedModelRef } from '../../../src/shared/utils/opencodeModelRef';
 
 import type {
   CapturedProviderManagement,
@@ -169,6 +170,64 @@ it('maps native catalogs/models without private metadata or invented model execu
   for (const secret of ['TEST-secret', 'TEST-original', 'TEST-v1', 'targetId'])
     expect(JSON.stringify([configuredView, configuredModels])).not.toContain(secret);
 });
+
+it.each(['v1', 'v2'] as const)(
+  '%s keeps native model identities distinct when they contain the provider prefix',
+  async (generation) => {
+    const f = fixture(undefined, generation);
+    const nativeModels = ['auto', 'openrouter/auto', 'anthropic/claude'];
+    const nativeRequest = f.target.request.bind(f.target);
+    f.target.request = async (operation, payload) => {
+      const reply = await nativeRequest(operation, payload);
+      if (operation === 'catalog') {
+        const result = reply as {
+          ok: boolean;
+          value: {
+            providers: {
+              providerId: string;
+              defaultModelId: string;
+              modelCount: number;
+              models: JsonValue[];
+            }[];
+          };
+        };
+        const provider = result.value.providers[0]!;
+        provider.providerId = 'openrouter';
+        provider.defaultModelId = 'openrouter/auto';
+        provider.modelCount = nativeModels.length;
+        provider.models = nativeModels.map((modelId) => ({
+          modelId,
+          displayName: modelId,
+          contextTokens: 8192,
+          outputTokens: 1024,
+          free: false,
+        }));
+      }
+      return reply;
+    };
+
+    const result = await f.port.loadModels({ runtimeId: 'opencode', providerId: 'openrouter' });
+    expect(result.error).toBeUndefined();
+    const rows = result.models!.models;
+    expect(rows.map((model) => model.modelId)).toEqual([
+      'openrouter/auto',
+      'openrouter/openrouter/auto',
+      'openrouter/anthropic/claude',
+    ]);
+    expect(rows.map((model) => parseOpenCodeQualifiedModelRef(model.modelId)?.modelId)).toEqual(
+      nativeModels
+    );
+    for (const model of rows) {
+      expect(model).toMatchObject({
+        providerId: 'openrouter',
+        availability: 'untested',
+        default: false,
+        proofState: 'needs_probe',
+        requiresExecutionProof: true,
+      });
+    }
+  }
+);
 
 it('filters/paginates a directory and reports malformed responses as unavailable rather than empty ready', async () => {
   const f = fixture();

@@ -1,4 +1,6 @@
 import { captureOpenCodeProbeAccount, capturePreparedModelReference } from './prepareTeamModelReadiness.js';
+import { captureTeamProbePreparation } from './captureTeamProbePreparation.js';
+import type { TeamProbeManagement } from './captureTeamProbePreparation.js';
 import { modelReadinessMechanismDigest } from '../team-launch/launchReadiness.js';
 import type { ModelReadinessReference } from '../management/commandRecords.js';
 import { effectId } from '../team/identity.js';
@@ -14,7 +16,7 @@ import type {
 
 /** The existing one-off model owner remains the only probe journal/resource owner. */
 export async function preflightNativeMemberModel(options: {
-  management: Pick<ProviderManagementCoordinator, 'admitTeamProbeProfile' | 'probes' | 'readinessTarget'>;
+  management: TeamProbeManagement & Pick<ProviderManagementCoordinator, 'readinessTarget'>;
   profile: RuntimeMemberProfile;
   source: NativeMemberCreationAuthority;
   input: NativeMemberCreationInput;
@@ -56,6 +58,10 @@ export async function preflightNativeMemberModel(options: {
   current();
   options.management.admitTeamProbeProfile(selected);
   const owner = options.management.probes;
+  const nativeOpenCode = selected.provider === 'opencode';
+  const nativeV2 = nativeOpenCode && selected.nativeGeneration === 'v2';
+  const prepare = nativeOpenCode ? captureTeamProbePreparation(options.management, selected) : undefined;
+  if (nativeV2 && !prepare) throw new TeamLaunchError('hold', 'native-member-model-preflight');
   const retained = selected.provider === 'opencode' && owner.read(identity)
     ? owner.readRetainedProbe(identity.commandId, context) : undefined;
   const account = selected.provider === 'opencode'
@@ -83,7 +89,8 @@ export async function preflightNativeMemberModel(options: {
       workspace: selected.cwd, cutoff: retained?.readinessScope?.cutoff ?? admittedAt + (selected.modelProbeTimeoutMs ?? 90000),
       destinationKeys: [runtimeDigest({ launchId: options.source.team.source.runId, memberId: profile.memberId })],
       ...(account ? { accountDigest: account.digest } : {}),
-    } : undefined
+    } : undefined,
+    prepare
   );
   try {
     while (value.phase === 'running') {

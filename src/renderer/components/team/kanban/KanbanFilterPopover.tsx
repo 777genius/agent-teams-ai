@@ -13,11 +13,12 @@ import {
 } from '@renderer/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { displayMemberName } from '@renderer/utils/memberHelpers';
-import { formatSessionLabel } from '@renderer/utils/sessionTitleParser';
 import { Crown, Filter } from 'lucide-react';
 
+import { isHostTeamSession, teamSessionLabel } from '../teamSessionHistory';
+
+import type { TeamSessionView } from '../teamSessionHistory';
 import type { TaskGroupOption } from './teamTaskProjection';
-import type { Session } from '@renderer/types/data';
 import type { KanbanColumnId, ResolvedTeamMember } from '@shared/types';
 
 export const UNASSIGNED_OWNER = '__unassigned__';
@@ -41,7 +42,7 @@ export const KANBAN_COLUMNS = [
 
 interface KanbanFilterPopoverProps {
   filter: KanbanFilterState;
-  sessions: Session[];
+  sessions: TeamSessionView[];
   taskGroupOptions?: TaskGroupOption[];
   leadSessionId?: string;
   members: ResolvedTeamMember[];
@@ -171,11 +172,12 @@ export const KanbanFilterPopover = ({
               {sessions.map((session) => {
                 const isLead = session.id === leadSessionId;
                 const isSelected = filter.sessionId === session.id;
-                const label = formatSessionLabel(session.firstMessage) || session.id.slice(0, 8);
+                const label = teamSessionLabel(session);
                 return (
                   <button
                     key={session.id}
                     type="button"
+                    disabled={isHostTeamSession(session) && session.clock !== 'qualified'}
                     className={`flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-xs transition-colors ${
                       isSelected
                         ? 'bg-blue-500/15 text-blue-300'

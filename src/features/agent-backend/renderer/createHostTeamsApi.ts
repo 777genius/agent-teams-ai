@@ -747,6 +747,8 @@ export function createHostTeamsApi(
             if (property === 'cancelProvisioning') return provisioning.cancelProvisioning(args[0]);
           }
           if (!hasHostTeamDestination(property, args[0])) {
+            if (property === 'restartMember' && args[3] !== undefined)
+              throw new Error('Captured Host retry requires the original Host Team');
             if (typeof original !== 'function') throw new Error('Team operation unavailable');
             return Reflect.apply(original, legacy, args);
           }

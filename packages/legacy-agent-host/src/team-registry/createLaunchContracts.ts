@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { modelSelectionSchema } from '../modelSelection.js';
 import { createTeamRegistryPayloadSchema, teamRegistryReceiptSchema, teamRegistryRecordSchema } from './contracts.js';
 import type { TeamRegistryReceipt, TeamRegistryRecord } from './contracts.js';
 import type { TeamLaunchSummary } from '../team-launch/contracts.js';
@@ -11,7 +12,9 @@ const id = z
 export const createTeamLaunchPreparationInputSchema = z
   .object({
     preparationId: id,
-    draft: createTeamRegistryPayloadSchema,
+    draft: createTeamRegistryPayloadSchema.refine((value) => value.savedSettings.cwd !== '', {
+      message: 'A project must be selected before launch preparation',
+    }),
   })
   .strict();
 export const createTeamLaunchPreparationSnapshotSchema = z
@@ -25,7 +28,7 @@ export const createTeamLaunchPreparationSnapshotSchema = z
           .object({
             memberName: id,
             commandId: id,
-            model: id,
+            model: modelSelectionSchema,
             effort: z
               .enum(['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'ultra'])
               .optional(),

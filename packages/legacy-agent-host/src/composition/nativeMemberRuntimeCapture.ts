@@ -29,7 +29,7 @@ export const nativeMemberRuntimeCaptureSchema = z
     commandId: id,
     configurationRevision: hash,
     launchId: id,
-    savedSettings: savedTeamSettingsSchema,
+    savedSettings: savedTeamSettingsSchema.refine(settings => isAbsolute(settings.cwd)),
     leadProvider: z.enum(['anthropic', 'codex', 'opencode']),
     member: z
       .object({

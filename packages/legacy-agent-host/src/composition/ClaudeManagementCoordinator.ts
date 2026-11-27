@@ -85,7 +85,7 @@ export class ClaudeManagementCoordinator {
   prepareProbe(input: ModelProbeInput, isCurrent: () => boolean = () => true,
     createProcess = this.createProcess): NativeModelProbe {
     const profile = this.select(input.profileId, input.configRevision);
-    if (input.providerId !== 'anthropic' || input.limits || /[\0\r\n]/u.test(input.modelId))
+    if (input.providerId !== 'anthropic' || input.limits || input.modelId.length > 256 || /[\0\r\n]/u.test(input.modelId))
       throw new ManagementCommandError('invalid');
     const effort = input.effort;
     if (effort === 'none' || effort === 'minimal' || effort === 'ultra')

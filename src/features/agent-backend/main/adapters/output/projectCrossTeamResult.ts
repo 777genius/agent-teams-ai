@@ -67,7 +67,24 @@ export function projectCrossTeamResult(
   if (operation === 'crossTeam.outbox.read') {
     if (r.kind !== 'cross-team-outbox' || !Array.isArray(r.rows) || r.rows.length > 1000)
       throw new InvalidBackendOperation();
-    return { kind: 'cross-team-outbox', rows: r.rows.map(outboxRow) };
+    const result: BackendCrossTeamOutbox = {
+      kind: 'cross-team-outbox',
+      rows: r.rows.map(outboxRow),
+    };
+    if (r.revision !== undefined || r.nextCursor !== undefined) {
+      if (
+        typeof r.revision !== 'string' ||
+        !/^[a-f0-9]{64}$/.test(r.revision) ||
+        (r.nextCursor !== null &&
+          (typeof r.nextCursor !== 'string' ||
+            !/^[1-9][0-9]{0,8}\.[a-f0-9]{64}$/.test(r.nextCursor))) ||
+        result.rows.length === 0
+      )
+        throw new InvalidBackendOperation();
+      result.revision = r.revision;
+      result.nextCursor = r.nextCursor;
+    }
+    return result;
   }
   if (r.commandId !== commandId) throw new InvalidBackendOperation();
   if (operation === 'crossTeam.lookup') {

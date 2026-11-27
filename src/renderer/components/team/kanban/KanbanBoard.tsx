@@ -38,18 +38,13 @@ import { KanbanTaskCard } from './KanbanTaskCard';
 import { KanbanViewModeSwitch } from './KanbanViewModeSwitch';
 import { getTaskColumn } from './teamTaskProjection';
 
+import type { TeamSessionView } from '../teamSessionHistory';
 import type { KanbanFilterState } from './KanbanFilterPopover';
 import type { KanbanSortField, KanbanSortState } from './KanbanSortPopover';
 import type { KanbanViewMode } from './KanbanViewModeSwitch';
 import type { TaskGroupOption } from './teamTaskProjection';
 import type { DragEndEvent } from '@dnd-kit/core';
-import type { Session } from '@renderer/types/data';
-import type {
-  KanbanColumnId,
-  KanbanState,
-  ResolvedTeamMember,
-  TeamTask,
-} from '@shared/types';
+import type { KanbanColumnId, KanbanState, ResolvedTeamMember, TeamTask } from '@shared/types';
 
 const COLUMN_ACCENTS: Record<KanbanColumnId, { accentColor: string; icon: React.ReactNode }> = {
   todo: {
@@ -84,7 +79,7 @@ interface KanbanBoardProps {
   filter: KanbanFilterState;
   taskGroupOptions?: TaskGroupOption[];
   sort: KanbanSortState;
-  sessions: Session[];
+  sessions: TeamSessionView[];
   leadSessionId?: string;
   members: ResolvedTeamMember[];
   activeTaskLogActivity?: Record<string, true>;
@@ -683,7 +678,9 @@ export const KanbanBoard = memo(function KanbanBoard({
   const toolbarLeftWidth =
     viewMode === 'grid'
       ? (gridPrimaryColumnWidth ?? columnModeSearchWidth)
-      : viewMode === 'table' ? 320 : columnModeSearchWidth;
+      : viewMode === 'table'
+        ? 320
+        : columnModeSearchWidth;
 
   const clearScheduledScrollRestore = useCallback(() => {
     for (const timeoutId of scrollRestoreTimeoutsRef.current) {
@@ -744,24 +741,26 @@ export const KanbanBoard = memo(function KanbanBoard({
 
   const gridColumns = useMemo(
     () =>
-      viewMode !== 'grid' ? [] : visibleColumns.map((column) => {
-        const columnTasks = groupedOrdered.get(column.id) ?? [];
-        const accent = COLUMN_ACCENTS[column.id];
-        return {
-          id: column.id,
-          title: t(column.titleKey),
-          count: columnTasks.length,
-          icon: accent.icon,
-          accentColor: accent.accentColor,
-          headerAccessory: column.id === 'approved' ? approvalSettingsAccessory : undefined,
-          content: renderCards(column.id, columnTasks),
-          showAddButton: columnSupportsAddButton(column.id, onAddTask),
-          skeletonCards: renderableColumnTasks(column.id, columnTasks).map((task) => ({
-            key: task.id,
-            height: estimateGridSkeletonCardHeight(task, column.id, kanbanState, hasReviewers),
-          })),
-        };
-      }),
+      viewMode !== 'grid'
+        ? []
+        : visibleColumns.map((column) => {
+            const columnTasks = groupedOrdered.get(column.id) ?? [];
+            const accent = COLUMN_ACCENTS[column.id];
+            return {
+              id: column.id,
+              title: t(column.titleKey),
+              count: columnTasks.length,
+              icon: accent.icon,
+              accentColor: accent.accentColor,
+              headerAccessory: column.id === 'approved' ? approvalSettingsAccessory : undefined,
+              content: renderCards(column.id, columnTasks),
+              showAddButton: columnSupportsAddButton(column.id, onAddTask),
+              skeletonCards: renderableColumnTasks(column.id, columnTasks).map((task) => ({
+                key: task.id,
+                height: estimateGridSkeletonCardHeight(task, column.id, kanbanState, hasReviewers),
+              })),
+            };
+          }),
     [
       viewMode,
       visibleColumns,
@@ -863,7 +862,9 @@ export const KanbanBoard = memo(function KanbanBoard({
                     count={columnTasks.length}
                     icon={accent.icon}
                     accentColor={accent.accentColor}
-                    headerAccessory={column.id === 'approved' ? approvalSettingsAccessory : undefined}
+                    headerAccessory={
+                      column.id === 'approved' ? approvalSettingsAccessory : undefined
+                    }
                     bodyClassName="max-h-none overflow-visible"
                   >
                     {renderCards(column.id, columnTasks, true)}

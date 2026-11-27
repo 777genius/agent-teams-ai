@@ -32,6 +32,7 @@ export * from './retainedLegacyLaunch';
 export type * from './review';
 export * from './reviewWatch';
 export type * from './roster';
+export type * from './sessionHistory';
 export * from './stoppedImport';
 export { HostTaskSubmissionRefusal, HostTeamOperationError } from './taskSubmission';
 export { hostTeamRunId, isHostTeamRunId, parseHostTeamRunId } from './teamRunSelection';

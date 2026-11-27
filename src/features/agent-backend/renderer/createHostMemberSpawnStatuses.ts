@@ -185,6 +185,13 @@ export function projectHostMemberSpawnStatuses(
               ...base,
               status: 'error',
               launchState: 'failed_to_start',
+              hostFailedMemberRetry: {
+                runId: hostTeamRunId(handleId, launch.launchId, launch.rosterRevision),
+                memberId: member.memberId,
+                generation: member.generation,
+                attemptId: member.attemptId,
+                noAllocation: member.noAllocation,
+              },
               error: member.reason,
               hardFailureReason: member.reason,
             };

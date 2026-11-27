@@ -61,7 +61,10 @@ export function createNativeWorkSyncMessagePorts(options: {
           },
         };
         // TeamOwner remains the sole message/inbox/outbox writer and captures the actual native sender.
-        const receipt = connection.execute(command);
+        const receipt = connection.execute(command, undefined, () => {
+          assertCurrent();
+          return team;
+        });
         const result = receipt.result;
         assertCurrent();
         if (

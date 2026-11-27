@@ -17,7 +17,9 @@ import { TaskPolicyRejected } from './ports.js';
 import { validateTeamCommand } from './validateTeamCommand.js';
 import { teamCommandFingerprint } from './teamCommandFingerprint.js';
 import { validateHostCostCommand } from './hostCostCommand.js';
+import { captureWorkSyncNudge, validateWorkSyncNudge } from './workSyncNudge.js';
 import type { PrepareHostCost } from './hostCostCommand.js';
+import type { PrepareWorkSyncNudge } from './workSyncNudge.js';
 import type { CapturedGroupIntent } from '../group-chats/groupCommandRecords.js';
 import type { CapturedCrossTeamIntent } from '../cross-team/contracts.js';
 import type { OwnerState } from './ownerState.js';
@@ -44,7 +46,8 @@ export function executeTeamCommand(
   rawCommand: TeamCommand,
   crossTeam?: CapturedCrossTeamIntent,
   group?: CapturedGroupIntent,
-  prepareHostCost?: PrepareHostCost
+  prepareHostCost?: PrepareHostCost,
+  prepareWorkSyncNudge?: PrepareWorkSyncNudge
 ): CommandReceipt {
   validateTeamCommand(rawCommand);
   const command = structuredClone(rawCommand);
@@ -100,6 +103,12 @@ export function executeTeamCommand(
     } = captureCommandSelection(command, receipt, options.state().members, grant);
     const hostCommand = receipt?.hostCommand ??
       (!receipt && prepareHostCost ? structuredClone(prepareHostCost()) : undefined);
+    // A replay must retain the original absence of this marker, including pre-upgrade nudges.
+    const workSyncNudge = receipt ? receipt.workSyncNudge : prepareWorkSyncNudge
+      ? captureWorkSyncNudge(prepareWorkSyncNudge, command, grant, deliveryBinding) : undefined;
+    if (workSyncNudge && (hostCommand || crossTeam || group ||
+        command.operation !== 'message.send' || grant.memberName !== command.payload.to))
+      throw new TeamOwnerError('forbidden');
     if (hostCommand && (grant.memberName !== 'user' || crossTeam || group))
       throw new TeamOwnerError('forbidden');
     if (hostCommand && !['completed', 'rejected'].includes(receipt?.phase ?? 'prepared')) {
@@ -119,6 +128,7 @@ export function executeTeamCommand(
       ...(crossTeam ? { crossTeam } : {}),
       ...(group ? { group } : {}),
       ...(hostCommand ? { hostCommand } : {}),
+      ...(workSyncNudge ? { workSyncNudge } : {}),
     });
     if (receipt) {
       if (
@@ -170,6 +180,7 @@ export function executeTeamCommand(
         ...(crossTeam ? { crossTeam: structuredClone(crossTeam) } : {}),
         ...(group ? { group: structuredClone(group) } : {}),
         ...(hostCommand ? { hostCommand } : {}),
+        ...(workSyncNudge ? { workSyncNudge } : {}),
         ...(taskStartLeadName ? { taskStartLeadName } : {}),
         ...(messageRecipientRole ? { messageRecipientRole } : {}),
         effects: {
@@ -202,6 +213,7 @@ export function executeTeamCommand(
           : {}),
       };
       validateHostCostCommand(receipt);
+      validateWorkSyncNudge(receipt);
       options.store.write(location, receipt);
     }
     receipt.phase = 'applying';

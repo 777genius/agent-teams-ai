@@ -17,6 +17,7 @@ export function projectMemberActionResult(raw: unknown, request: BackendOperatio
     originalCommandId?: string;
     rosterRevision?: string;
     expectedGeneration?: string | null;
+    expectedFailedAttemptId?: string;
     action?: 'restart' | 'skip';
   };
   if (request.operation === 'team.member.actions.read') {
@@ -34,6 +35,7 @@ export function projectMemberActionResult(raw: unknown, request: BackendOperatio
     (request.operation !== 'team.member.action.lookup' &&
       (value.action !== expected.action ||
         value.sourceGeneration !== expected.expectedGeneration ||
+        value.expectedFailedAttemptId !== expected.expectedFailedAttemptId ||
         value.rosterRevision !== expected.rosterRevision))
   )
     throw new Error('Wrong original member action');

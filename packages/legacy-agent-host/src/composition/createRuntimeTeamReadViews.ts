@@ -1,4 +1,6 @@
+import { randomUUID } from 'node:crypto';
 import { RuntimeOwnerError } from '../runtime/contracts.js';
+import { readTeamSessionHistory } from './readTeamSessionHistory.js';
 import { readHostTeamActivity } from './readHostTeamActivity.js';
 import { readLeadObservation } from './readLeadObservation.js';
 import { readRuntimeActivitySources } from './runtimeActivitySources.js';
@@ -22,6 +24,7 @@ export function createRuntimeTeamReadViews(options: {
   isCurrent(entry: MemberEntry): boolean;
   isSealed(): boolean;
 }) {
+  const sessionHistoryPageKey = randomUUID();
   const assertCurrent = () => {
     options.assertWriter();
     if (options.isSealed()) throw new RuntimeOwnerError('hold');
@@ -54,10 +57,18 @@ export function createRuntimeTeamReadViews(options: {
     activity(teamId: string, kind: 'logs' | 'stats', raw: unknown) {
       options.assertAvailable(teamId);
       assertCurrent();
+      const team = options.teams.get(teamId);
+      const entries = readRuntimeActivitySources([...options.entries.values()], options.retainedLaunches, teamId);
+      if (kind === 'logs' && raw !== null && typeof raw === 'object' && !Array.isArray(raw) && 'scope' in raw) {
+        if (!team) throw new RuntimeOwnerError('invalid');
+        return readTeamSessionHistory({ team, principalId: options.principalId, entries,
+          launches: options.retainedLaunches, runtime: options.runtime,
+          pageKey: sessionHistoryPageKey, assertCurrent }, raw);
+      }
       return readHostTeamActivity({
-        team: options.teams.get(teamId),
+        team,
         principalId: options.principalId,
-        entries: readRuntimeActivitySources([...options.entries.values()], options.retainedLaunches, teamId),
+        entries,
         runtime: options.runtime,
         assertCurrent,
       }, kind, raw);

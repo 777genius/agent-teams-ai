@@ -1,3 +1,5 @@
+import { modelSelectionSchema } from '@agent-teams/legacy-agent-host/team/contracts';
+
 import { projectLaunchSnapshot } from './projectLaunchSnapshot';
 
 import type {
@@ -76,7 +78,7 @@ function projectMembers(
       throw new Error('Invalid launch capabilities');
     const options: NonNullable<BackendLaunchConfigurationView['members'][number]['selected']> = {
       provider: choice(selected.provider, ['claude', 'codex', 'opencode']),
-      model: text(selected.model),
+      model: modelSelectionSchema.parse(selected.model),
       workspace: text(selected.workspace, 8192),
       capabilities,
     };

@@ -1,3 +1,4 @@
+import { modelSelectionSchema } from '@agent-teams/legacy-agent-host/team/contracts';
 import {
   projectContextPrepareSchema,
   projectContextReadSchema,
@@ -36,7 +37,11 @@ function launchConfiguration(value: unknown): BackendLaunchConfiguration {
       'context',
     ]);
     const result: BackendLaunchConfiguration['members'][number] = { memberId: text(row.memberId) };
-    if (row.model !== undefined) result.model = text(row.model);
+    if (row.model !== undefined) {
+      const model = modelSelectionSchema.safeParse(row.model);
+      if (!model.success) throw new InvalidBackendOperation();
+      result.model = model.data;
+    }
     if (row.effort !== undefined) {
       if (
         typeof row.effort !== 'string' ||
@@ -174,6 +179,22 @@ export function parseBackendTeamOperation(
       return p.cursor === undefined ? {} : { cursor: text(p.cursor) };
     }
     case 'team.activity.logs.read': {
+      if (value !== null && typeof value === 'object' && 'scope' in value) {
+        const p = object(value, ['scope', 'sessionId', 'stream', 'cursor']);
+        if (p.scope === 'sessions' && Object.keys(p).length === 1) return { scope: 'sessions' };
+        if (
+          p.scope !== 'session' ||
+          !/^host-session-[a-f0-9]{64}$/u.test(text(p.sessionId)) ||
+          (p.stream !== 'activity' && p.stream !== 'conversation' && p.stream !== 'inputs')
+        )
+          throw new InvalidBackendOperation();
+        return {
+          scope: 'session',
+          sessionId: text(p.sessionId),
+          stream: p.stream,
+          ...(p.cursor === undefined ? {} : { cursor: text(p.cursor, 2048) }),
+        };
+      }
       const p = object(value, ['memberName', 'taskId']);
       if (Object.hasOwn(p, 'memberName') === Object.hasOwn(p, 'taskId'))
         throw new InvalidBackendOperation();
@@ -262,15 +283,28 @@ export function parseBackendTeamOperation(
       };
     }
     case 'team.launch.retry': {
-      const p = object(value, ['launchId', 'rosterRevision', 'attemptId', 'memberIds']);
+      const p = object(value, [
+        'launchId',
+        'rosterRevision',
+        'attemptId',
+        'memberIds',
+        'expectedAttemptId',
+      ]);
       const memberIds = stringArray(p.memberIds);
-      if (!memberIds.length || new Set(memberIds).size !== memberIds.length)
+      if (
+        !memberIds.length ||
+        new Set(memberIds).size !== memberIds.length ||
+        (p.expectedAttemptId !== undefined && memberIds.length !== 1)
+      )
         throw new InvalidBackendOperation();
       return {
         launchId: text(p.launchId),
         rosterRevision: text(p.rosterRevision),
         attemptId: text(p.attemptId),
         memberIds,
+        ...(p.expectedAttemptId === undefined
+          ? {}
+          : { expectedAttemptId: text(p.expectedAttemptId) }),
       };
     }
     case 'team.messages.page': {

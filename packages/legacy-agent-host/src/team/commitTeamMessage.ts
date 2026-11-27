@@ -3,6 +3,7 @@ import { TeamOwnerError } from './contracts.js';
 import { digest } from './identity.js';
 import { formatTeamMessage } from './formatTeamMessage.js';
 import { commitHostCostReply, validateHostCostCommand } from './hostCostCommand.js';
+import { validateWorkSyncNudge } from './workSyncNudge.js';
 
 import type { JsonValue } from '../contracts.js';
 import type { CommandReceipt, DeliveryIntent, TeamMember } from './contracts.js';
@@ -22,8 +23,10 @@ export function commitTeamMessage(
 ): JsonValue {
   if (receipt.command.operation !== 'message.send') throw new TeamOwnerError('invalid');
   validateHostCostCommand(receipt);
+  validateWorkSyncNudge(receipt);
   const payload = receipt.command.payload;
   const { to, text, taskRefs } = payload;
+  if (receipt.workSyncNudge && actor !== to) throw new TeamOwnerError('forbidden');
   const content = formatTeamMessage(
     payload,
     actor,
@@ -54,6 +57,7 @@ export function commitTeamMessage(
           timestamp: receipt.createdAt,
           messageId: receipt.effects.messageId,
           read: false,
+          ...(receipt.workSyncNudge ? { messageKind: 'member_work_sync_nudge' } : {}),
           ...(payload.attachments?.length
             ? {
                 attachments: attachments!.metadata(payload.attachments, {

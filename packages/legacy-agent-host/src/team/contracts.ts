@@ -2,6 +2,7 @@ import type { CapturedGroupIntent } from '../group-chats/groupCommandRecords.js'
 import type { AttachmentReference } from '../attachments/uploadContracts.js';
 import type { CapturedCrossTeamIntent } from '../cross-team/contracts.js';
 import type { JsonValue } from '../contracts.js';
+export { modelSelectionSchema } from '../modelSelection.js';
 export type {
   ReplaceTeamRoster,
   TeamRosterConfiguration,
@@ -174,6 +175,8 @@ export interface PreparedEffects {
 }
 
 export interface CommandReceipt {
+  /** Original trusted self-nudge classification; never accepted from public command input. */
+  workSyncNudge?: true;
   /** Private prepared Host output; never accepted in a public command or native delivery. */
   hostCommand?: import('./hostCostCommand.js').HostCostCommand;
   group?: CapturedGroupIntent;

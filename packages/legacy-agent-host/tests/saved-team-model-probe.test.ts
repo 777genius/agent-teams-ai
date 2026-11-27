@@ -1034,7 +1034,7 @@ test('Team probe read rejects completed evidence after physical config-directory
     const deferred = configuration.selectedFile; assert.ok(deferred);
     const request = { commandId: 'TEST-file-' + mode, profileId: management.profileId,
       configRevision: management.configRevision, providerId,
-      modelId: mode === 'initial' ? providerId + '/' + modelId : modelId, context: runtimeDigest({ mode }) };
+      modelId, context: runtimeDigest({ mode }) };
     const initialProfile = mode === 'initial' ? structuredClone(own.profile) : undefined;
     if (initialProfile) {
       const team = initialProfile.teams[0]!;
@@ -1242,8 +1242,8 @@ test('Team probe read rejects completed evidence after physical config-directory
           consumed.assertReadinessCredential(account.nativeCredentialScopeDigest!);
           captureNativeRestartReadiness({ management: manager, launch, entry, isCurrent: () => true }).assertCurrent();
           if (initialProfile) {
-            assert.equal(saved.modelId, providerId + '/' + member.model,
-              'the original qualified probe remains unchanged while the member model stays bare');
+            assert.equal(saved.modelId, member.model,
+              'the original native model is retained');
             for (const modelId of ['test-foreign/' + member.model, providerId + '/' + request.modelId]) {
               recordStore.write({ ...saved, modelId });
               try {

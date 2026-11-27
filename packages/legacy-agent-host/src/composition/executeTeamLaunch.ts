@@ -61,8 +61,9 @@ export function executeTeamLaunch(options: TeamLaunchExecution): JsonValue | Pro
   }
   if (operation === 'retry') {
     const input = scope
-      .extend({ attemptId: id, memberIds: z.array(id).min(1).max(256) })
+      .extend({ attemptId: id, memberIds: z.array(id).min(1).max(256), expectedAttemptId: id.optional() })
       .strict()
+      .refine((input) => input.expectedAttemptId === undefined || input.memberIds.length === 1)
       .parse(options.payload);
     return json(launch.retry({ ...input, commandId }));
   }

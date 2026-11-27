@@ -4,6 +4,7 @@ export interface BackendMemberActionRequest {
   memberId: string;
   expectedGeneration: string | null;
   action: 'restart' | 'skip';
+  expectedFailedAttemptId?: string;
 }
 export type BackendMemberObservation =
   | { availability: 'unavailable' | 'no-allocation' }
@@ -21,6 +22,7 @@ export interface BackendMemberActionView {
   rosterRevision: string;
   memberId: string;
   action: 'restart' | 'skip';
+  expectedFailedAttemptId?: string;
   allocation: 'none' | 'runtime';
   sourceGeneration: string | null;
   selectedGeneration: string | null;
@@ -81,14 +83,23 @@ export function readMemberActionRequest(value: unknown): BackendMemberActionRequ
     'memberId',
     'expectedGeneration',
     'action',
+    ...(hasFailedAttempt(value) ? ['expectedFailedAttemptId'] : []),
   ]);
-  return {
+  const row: BackendMemberActionRequest = {
     launchId: id(r.launchId),
     rosterRevision: id(r.rosterRevision),
     memberId: id(r.memberId),
     expectedGeneration: generation(r.expectedGeneration),
     action: oneOf(r.action, ['restart', 'skip']),
+    ...(hasFailedAttempt(r) ? { expectedFailedAttemptId: id(r.expectedFailedAttemptId) } : {}),
   };
+  if (row.expectedFailedAttemptId !== undefined && row.action !== 'restart') fail();
+  return row;
+}
+function hasFailedAttempt(value: unknown): boolean {
+  return (
+    value !== null && typeof value === 'object' && Object.hasOwn(value, 'expectedFailedAttemptId')
+  );
 }
 export function readMemberActionQuery(value: unknown): { launchId: string; memberId: string } {
   const r = object(value, ['launchId', 'memberId']);
@@ -146,6 +157,7 @@ export function readMemberActionView(value: unknown): BackendMemberActionView {
     'current',
     'source',
     'selected',
+    ...(hasFailedAttempt(value) ? ['expectedFailedAttemptId'] : []),
   ]);
   const row: BackendMemberActionView = {
     commandId: id(r.commandId),
@@ -153,6 +165,7 @@ export function readMemberActionView(value: unknown): BackendMemberActionView {
     rosterRevision: id(r.rosterRevision),
     memberId: id(r.memberId),
     action: oneOf(r.action, ['restart', 'skip']),
+    ...(hasFailedAttempt(r) ? { expectedFailedAttemptId: id(r.expectedFailedAttemptId) } : {}),
     allocation: oneOf(r.allocation, ['none', 'runtime']),
     sourceGeneration: generation(r.sourceGeneration),
     selectedGeneration: generation(r.selectedGeneration),
@@ -169,6 +182,7 @@ export function readMemberActionView(value: unknown): BackendMemberActionView {
     selected: r.selected === null ? null : observation(r.selected),
   };
   if (
+    (row.expectedFailedAttemptId !== undefined && row.action !== 'restart') ||
     (row.source.availability === 'no-allocation' && row.allocation !== 'none') ||
     (row.selected?.availability === 'no-allocation' && row.allocation !== 'none') ||
     (row.allocation === 'none' && row.action !== 'skip') ||

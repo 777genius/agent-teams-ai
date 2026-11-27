@@ -9,7 +9,8 @@ import { openProjectTeamFixture, projectTeamFixture } from '../../packages/legac
 import { storedTeamCreationSchema } from '../../packages/legacy-agent-host/dist/team-registry/state.js';
 import { effectId } from '../../packages/legacy-agent-host/dist/team/identity.js';
 import { hostTeamSelectionKey } from '../../src/features/agent-backend/contracts/teamSelection.ts';
-import { assertDesktopMembershipProjectBindings, createDesktopSelectedProjectReadPort, desktopProjectSelectionExpression, readDesktopProjectExecutionState, selectDesktopProjectExecution } from './desktop-created-project-selection.ts';
+import { hostTeamRunId } from '../../src/features/agent-backend/contracts/teamRunSelection.ts';
+import { assertDesktopMembershipProjectBindings, createDesktopProjectLaunchRead, createDesktopProjectRunObserver, createDesktopSelectedProjectReadPort, desktopProjectSelectionExpression, observeDesktopProjectExecution, readDesktopProjectExecutionState, selectDesktopProjectExecution } from './desktop-created-project-selection.ts';
 import { createDesktopUiControls } from './desktop-ui-controls.ts';
 import type { OwnerState } from '../../packages/legacy-agent-host/dist/team/ownerState.js';
 
@@ -37,6 +38,96 @@ test('Desktop original oracle selects exact owner/logical/workspace child throug
   assert.deepEqual(selected.logical, logical);
   assert.deepEqual(selected.execution, execution);
   assert.notEqual(selected.logical.teamName, selected.execution.teamName);
+});
+
+test('Desktop project publication may be pending without adopting a foreign or unavailable owner', t => {
+  const f = fixture(t);
+  const pendingRecords = f.records.filter(value => value.record.teamId !== f.execution.teamId);
+  const pendingDiscovery = { ...f.discovery, bindings: f.discovery.bindings.filter(value => value.handle.handleId !== f.execution.binding.handleId) };
+  assert.equal(observeDesktopProjectExecution(pendingRecords, f.expected, f.logical.teamName, pendingDiscovery), undefined);
+  assert.equal(observeDesktopProjectExecution(f.records, f.expected, f.logical.teamName, pendingDiscovery), undefined);
+  assert.throws(() => selectDesktopProjectExecution(f.records, f.expected, f.logical.teamName, pendingDiscovery));
+  const foreign = structuredClone(pendingDiscovery);
+  foreign.bindings.find(value => value.handle.handleId === f.logical.binding.handleId)!.ownerResourceRef = 'TEST-foreign';
+  assert.throws(() => observeDesktopProjectExecution(f.records, f.expected, f.logical.teamName, foreign));
+  assert.throws(() => observeDesktopProjectExecution(f.records, f.expected, f.logical.teamName,
+    { ...pendingDiscovery, unavailableOwners: [{ ownerResourceRef: f.expected.ownerResourceRef }] }));
+  assert.deepEqual(observeDesktopProjectExecution(f.records, f.expected, f.logical.teamName, f.discovery),
+    { logical: f.logical, execution: f.execution });
+});
+
+test('Desktop run observation permits one pending attempt and publication of the same captured run', () => {
+  const observe = createDesktopProjectRunObserver('TEST-logical', 'TEST-execution');
+  const pending = `pending:${hostTeamSelectionKey('TEST-logical')}:1`;
+  const run = hostTeamRunId('TEST-execution', 'TEST-launch', 'TEST-roster');
+  assert.equal(observe({}, 'TEST-launch'), false);
+  assert.equal(observe({ provisioning: pending }, 'TEST-launch'), false);
+  assert.equal(observe({ runtime: run, provisioning: pending }, 'TEST-launch'), false);
+  assert.equal(observe({ runtime: run, provisioning: run }, 'TEST-launch'), true);
+  assert.equal(observe({ runtime: run, provisioning: run }, 'TEST-launch'), true);
+  assert.throws(() => observe({ runtime: run, provisioning: pending }, 'TEST-launch'));
+  assert.throws(() => observe({ provisioning: run }, 'TEST-launch'));
+});
+
+test('Desktop run observation rejects replacement or disappearance during partial publication', () => {
+  const run = hostTeamRunId('TEST-execution', 'TEST-launch', 'TEST-roster');
+  const replacement = hostTeamRunId('TEST-execution', 'TEST-launch', 'TEST-other-roster');
+  const pending = `pending:${hostTeamSelectionKey('TEST-logical')}:1`;
+  for (const changed of [{ runtime: replacement, provisioning: replacement }, { provisioning: pending }]) {
+    const observe = createDesktopProjectRunObserver('TEST-logical', 'TEST-execution');
+    assert.equal(observe({ runtime: run, provisioning: pending }, 'TEST-launch'), false);
+    assert.throws(() => observe(changed, 'TEST-launch'));
+  }
+  const observe = createDesktopProjectRunObserver('TEST-logical', 'TEST-execution');
+  assert.equal(observe({ provisioning: pending }, 'TEST-launch'), false);
+  assert.throws(() => observe({ provisioning: pending.slice(0, -1) + '2' }, 'TEST-launch'));
+  for (const foreign of [hostTeamRunId('TEST-other', 'TEST-launch', 'TEST-roster'),
+    hostTeamRunId('TEST-execution', 'TEST-other-launch', 'TEST-roster')])
+    assert.throws(() => createDesktopProjectRunObserver('TEST-logical', 'TEST-execution')({ runtime: foreign }, 'TEST-launch'));
+});
+
+test('Desktop launch read waits within its caller poll and pins the first published selection and capture', async () => {
+  const binding = { backendId: 'TEST-host', teamId: 'TEST-execution', teamName: 'TEST-team' };
+  const state: Record<string, unknown> = { binding, runtimeCaptures: [] };
+  let published = false, observations = 0, reads = 0;
+  const pins: Record<string, unknown> = {};
+  const observer = createDesktopProjectRunObserver('TEST-logical', 'TEST-execution');
+  const selection = { owner: { binding, workspace: '/TEST-workspace' },
+    async assertCurrent() {}, async observeRun(launchId: unknown) { return observer(pins, launchId); } };
+  const read = createDesktopProjectLaunchRead(async () => { observations++; return published ? selection : undefined; },
+    async selected => { assert.equal(selected, selection); reads++; return structuredClone(state); });
+  assert.equal(await read(), undefined); assert.equal(reads, 0);
+  published = true; assert.equal(await read(), undefined);
+  state.runtimeCaptures = [{ launchId: 'TEST-launch', fingerprint: 'TEST-original' }];
+  pins.provisioning = `pending:${hostTeamSelectionKey('TEST-logical')}:1`;
+  assert.equal(await read(), undefined);
+  pins.runtime = hostTeamRunId('TEST-execution', 'TEST-launch', 'TEST-roster');
+  assert.equal(await read(), undefined);
+  pins.provisioning = pins.runtime;
+  assert.deepEqual(await read(), { selection, state });
+  assert.equal(observations, 2); assert.equal(reads, 4);
+});
+
+test('Desktop launch read refuses changed capture, owner or context without replacing the first selection', async () => {
+  const binding = { backendId: 'TEST-host', teamId: 'TEST-execution', teamName: 'TEST-team' };
+  for (const changed of [[], [{ launchId: 'TEST-replacement' }],
+    [{ launchId: 'TEST-launch', fingerprint: 'TEST-replacement' }], [{ launchId: 'TEST-launch' }, { launchId: 'TEST-second' }]]) {
+    const state: Record<string, unknown> = { binding, runtimeCaptures: [{ launchId: 'TEST-launch' }] };
+    const read = createDesktopProjectLaunchRead(async () => ({ owner: { binding, workspace: '/TEST-workspace' },
+      async assertCurrent() {}, async observeRun() { return false; } }), async () => structuredClone(state));
+    assert.equal(await read(), undefined);
+    state.runtimeCaptures = changed;
+    await assert.rejects(read);
+  }
+  let current = true;
+  const state: Record<string, unknown> = { binding, runtimeCaptures: [] };
+  const read = createDesktopProjectLaunchRead(async () => ({ owner: { binding, workspace: '/TEST-workspace' },
+    async assertCurrent() { assert.ok(current); }, async observeRun() { return false; } }), async () => structuredClone(state));
+  assert.equal(await read(), undefined);
+  state.binding = { ...binding, teamId: 'TEST-foreign' };
+  await assert.rejects(read);
+  state.binding = binding; current = false;
+  await assert.rejects(read);
 });
 
 function executionStateFixture(t: Parameters<typeof projectTeamFixture>[0]) {

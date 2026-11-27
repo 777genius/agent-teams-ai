@@ -17,6 +17,7 @@ export interface LaunchRetryInput {
   memberIds: string[];
   launchId: string;
   rosterRevision: string;
+  expectedAttemptId?: string;
 }
 export interface NativeLaunchRetryAuthority extends MemberActionAuthority {
   assertCurrent(): void;
@@ -45,9 +46,11 @@ export function retryLaunchMember(
 ): TeamLaunchSummary {
   id(input.commandId);
   id(input.attemptId);
+  if (input.expectedAttemptId !== undefined) id(input.expectedAttemptId);
   if (
     !input.memberIds.length ||
     input.memberIds.length > 256 ||
+    (input.expectedAttemptId !== undefined && input.memberIds.length !== 1) ||
     new Set(input.memberIds).size !== input.memberIds.length ||
     input.launchId !== journal.definition.launchId ||
     input.rosterRevision !== journal.definition.rosterRevision
@@ -83,6 +86,9 @@ export function retryLaunchMember(
         target = record.members.find((m) => m.memberId === memberId);
       if (!member || !target || member.currentAttemptId !== target.currentAttemptId)
         throw new TeamLaunchError('conflict', 'retry-member');
+      // Only new admissions compare the original failed attempt; retained commands replay above.
+      if (input.expectedAttemptId !== undefined && target.currentAttemptId !== input.expectedAttemptId)
+        throw new TeamLaunchError('conflict', 'retry-attempt');
       const attempt = journal.current(member);
       if (attempt.status !== 'failed' || !attempt.noAllocation)
         throw new TeamLaunchError('hold', 'generation-replacement-required');

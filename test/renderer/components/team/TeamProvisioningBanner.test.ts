@@ -1,6 +1,7 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
+import { hostTeamRunId, hostTeamSelectionKey } from '@features/agent-backend/contracts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const storeState = {
@@ -9,6 +10,13 @@ const storeState = {
   provisioningErrorByTeam: {} as Record<string, string>,
   clearProvisioningError: vi.fn(),
   retryFailedOpenCodeSecondaryLanes: vi.fn(),
+  restartMember: vi.fn(),
+  activeContextId: 'local',
+  isContextSwitching: false,
+  currentRuntimeRunIdByTeam: {} as Record<string, string>,
+  currentProvisioningRunIdByTeam: {} as Record<string, string>,
+  ignoredRuntimeRunIds: {},
+  ignoredProvisioningRunIds: {},
   selectedTeamName: 'northstar-core',
   selectedTeamData: {
     isAlive: undefined as boolean | undefined,
@@ -36,7 +44,10 @@ const storeState = {
 };
 
 vi.mock('@renderer/store', () => ({
-  useStore: (selector: (state: typeof storeState) => unknown) => selector(storeState),
+  useStore: Object.assign(
+    (selector: (state: typeof storeState) => unknown) => selector(storeState),
+    { getState: () => storeState }
+  ),
 }));
 
 vi.mock('@renderer/store/slices/teamSlice', async () => ({
@@ -102,6 +113,11 @@ describe('TeamProvisioningBanner launch-step alignment', () => {
   });
 
   beforeEach(() => {
+    storeState.activeContextId = 'local';
+    storeState.isContextSwitching = false;
+    storeState.currentRuntimeRunIdByTeam = {};
+    storeState.currentProvisioningRunIdByTeam = {};
+    storeState.restartMember.mockReset().mockResolvedValue(undefined);
     storeState.selectedTeamName = 'northstar-core';
     storeState.selectedTeamData.isAlive = undefined;
     storeState.provisioningErrorByTeam = {};
@@ -120,7 +136,7 @@ describe('TeamProvisioningBanner launch-step alignment', () => {
       cliLogsTail: '',
       assistantOutput: '',
     };
-    storeState.retryFailedOpenCodeSecondaryLanes.mockResolvedValue({
+    storeState.retryFailedOpenCodeSecondaryLanes.mockReset().mockResolvedValue({
       attempted: [],
       confirmed: [],
       pending: [],
@@ -565,10 +581,107 @@ describe('TeamProvisioningBanner launch-step alignment', () => {
     expect(host.textContent).toContain('Retry failed OpenCode teammates');
 
     await act(async () => {
+      const retry = [...host.querySelectorAll('button')].find((button) =>
+        button.textContent?.includes('Retry failed OpenCode teammates')
+      );
+      retry?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    expect(storeState.retryFailedOpenCodeSecondaryLanes).toHaveBeenCalledWith('northstar-core');
+    expect(storeState.restartMember).not.toHaveBeenCalled();
+
+    await act(async () => {
       root.unmount();
       await Promise.resolve();
     });
   });
+
+  it.each(['confirmed', 'late-context-change'] as const)(
+    'routes the existing Host Retry to captured member restart (%s), without legacy or duplicate admission',
+    async (outcome) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      const teamName = hostTeamSelectionKey('TEST-owner');
+      const runId = hostTeamRunId('TEST-owner', 'TEST-launch', 'TEST-roster');
+      const captured = {
+        runId,
+        memberId: 'A',
+        generation: 'A1',
+        attemptId: 'TEST-failed',
+        noAllocation: false,
+      };
+      storeState.selectedTeamName = teamName;
+      storeState.progress = { ...storeState.progress, teamName, runId };
+      storeState.currentRuntimeRunIdByTeam[teamName] = runId;
+      storeState.currentProvisioningRunIdByTeam[teamName] = runId;
+      storeState.teamDataCacheByName[teamName] = {
+        isAlive: true,
+        members: [
+          { name: 'team-lead', agentType: 'team-lead', runtimeOwner: 'captured-host' },
+          {
+            name: 'alice',
+            agentType: 'developer',
+            providerId: 'opencode',
+            runtimeOwner: 'captured-host',
+          },
+        ],
+      };
+      storeState.memberSpawnSnapshotsByTeam[teamName] = {
+        runId,
+        statuses: {
+          alice: {
+            status: 'error',
+            launchState: 'failed_to_start',
+            runtimeAlive: false,
+            hostFailedMemberRetry: captured,
+          },
+        },
+      };
+      let release!: () => void;
+      storeState.restartMember.mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            release = resolve;
+          })
+      );
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      await act(async () => {
+        root.render(React.createElement(TeamProvisioningPanel, { teamName }));
+      });
+      const retry = [...host.querySelectorAll('button')].find((button) =>
+        button.textContent?.includes('Retry failed OpenCode teammates')
+      );
+      expect(retry).toBeDefined();
+      await act(async () => {
+        retry!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        retry!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      });
+      expect(storeState.restartMember.mock.calls).toEqual([
+        [teamName, 'alice', undefined, captured],
+      ]);
+      expect(storeState.retryFailedOpenCodeSecondaryLanes).not.toHaveBeenCalled();
+      if (outcome === 'late-context-change') {
+        storeState.activeContextId = 'other-context';
+        await act(async () => {
+          root.render(React.createElement(TeamProvisioningPanel, { teamName }));
+        });
+      }
+      await act(async () => {
+        release();
+      });
+      if (outcome === 'confirmed') {
+        expect(host.textContent).toContain('Restart requested for 1 OpenCode teammate');
+      } else {
+        expect(host.textContent).not.toContain('Restart requested');
+        expect(host.textContent).not.toContain('Team launch changed');
+        expect(host.textContent).not.toContain('Retrying OpenCode...');
+      }
+      expect(storeState.restartMember).toHaveBeenCalledTimes(1);
+      await act(async () => {
+        root.unmount();
+      });
+    }
+  );
 
   it('uses info severity while runtimes are online but teammate contact is still pending', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);

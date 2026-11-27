@@ -12,6 +12,15 @@ interface NativeModel {
 const validId = (value: string) =>
   value.length > 0 && value.length <= 256 && !/[\x00-\x1f\x7f]/u.test(value);
 
+/** Private Team probes already captured a native pair; an alias cannot replace that identity. */
+export function assertOpenCodeV2NativeModel(base: OpenCodeManagementProfile, input: NativeModel): void {
+  if (base.nativeGeneration !== 'v2' || base.protocolRevision !== '2.1.4' || !base.embedded ||
+      !base.nativeModel || !validId(input.providerId) || !validId(input.modelId))
+    throw new ManagementCommandError('invalid');
+  if (input.providerId !== base.nativeModel.providerId || input.modelId !== base.nativeModel.modelId)
+    throw new ManagementCommandError('conflict');
+}
+
 /** Existing UI aliases are decoded once before allocation; native IDs stay structured afterwards. */
 export function selectOpenCodeV2LaunchModel(
   base: OpenCodeMemberProfile,
@@ -22,8 +31,9 @@ export function selectOpenCodeV2LaunchModel(
   const selected: NativeModel = { providerId: base.nativeOptions.providerId, modelId: base.model };
   if (input.model !== undefined) {
     const separator = input.model.indexOf('/');
-    // A known bare ID or provider containing '/' is ambiguous in the existing flattened UI contract.
-    if (separator < 1 || base.nativeOptions.providerId.includes('/') || input.model === base.model)
+    // Explicit app choices are qualified aliases even when their spelling matches
+    // the previous native ID. Private captures preserve that ID by omitting model.
+    if (separator < 1 || base.nativeOptions.providerId.includes('/'))
       throw new TeamLaunchError('invalid', 'launch-option-unsupported');
     selected.providerId = input.model.slice(0, separator);
     selected.modelId = input.model.slice(separator + 1);
@@ -55,12 +65,8 @@ export function selectOpenCodeV2ManagementModel(
   )
     throw new ManagementCommandError('invalid');
   const prefix = input.providerId + '/';
-  const modelId =
-    input.providerId === base.nativeModel.providerId && input.modelId === base.nativeModel.modelId
-      ? input.modelId
-      : input.modelId.startsWith(prefix)
-        ? input.modelId.slice(prefix.length)
-        : input.modelId;
+  // Public probes decode one qualified prefix. The private Team owner qualifies its native pair first.
+  const modelId = input.modelId.startsWith(prefix) ? input.modelId.slice(prefix.length) : input.modelId;
   if (!validId(modelId)) throw new ManagementCommandError('invalid');
   const profile = structuredClone(base);
   if (input.providerId !== base.nativeModel.providerId)

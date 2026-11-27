@@ -55,14 +55,18 @@ export const TeamProvisioningPanel = memo(function TeamProvisioningPanel({
   const {
     presentation,
     cancelProvisioning,
-    retryFailedOpenCodeSecondaryLanes,
+    retryFailedOpenCodeTeammates,
     memberDiagnostics,
     runInstanceKey,
   } = useTeamProvisioningPresentation(teamName);
   const [dismissed, setDismissed] = useState(false);
-  const [retryingOpenCode, setRetryingOpenCode] = useState(false);
-  const [openCodeRetryMessage, setOpenCodeRetryMessage] = useState<string | null>(null);
-  const [openCodeRetryError, setOpenCodeRetryError] = useState<string | null>(null);
+  const [retryAttempt, setRetryAttempt] = useState<{
+    owner: string;
+    pending: boolean;
+    message: string | null;
+    error: string | null;
+  } | null>(null);
+  const pendingRetryRef = useRef<{ owner: string } | null>(null);
   const [cancelAttempt, setCancelAttempt] = useState<{
     owner: string;
     pending: boolean;
@@ -74,17 +78,19 @@ export const TeamProvisioningPanel = memo(function TeamProvisioningPanel({
   useEffect(
     () => () => {
       pendingCancelRef.current = null;
+      pendingRetryRef.current = null;
     },
     []
   );
 
   useEffect(() => {
     setDismissed(false);
-    setRetryingOpenCode(false);
-    setOpenCodeRetryMessage(null);
-    setOpenCodeRetryError(null);
+    pendingRetryRef.current = null;
+    setRetryAttempt(null);
   }, [runInstanceKey]);
 
+  const currentRetry = retryAttempt?.owner === runInstanceKey ? retryAttempt : null;
+  const retryingOpenCode = currentRetry?.pending ?? false;
   const currentCancel =
     cancelAttempt?.owner === (runInstanceKey ?? undefined) ? cancelAttempt : null;
   const cancelError = currentCancel?.error ?? null;
@@ -138,13 +144,14 @@ export const TeamProvisioningPanel = memo(function TeamProvisioningPanel({
   const canRetryFailedOpenCode =
     !presentation.isActive &&
     presentation.retryableOpenCodeSecondaryFailedCount > 0 &&
-    Boolean(retryFailedOpenCodeSecondaryLanes);
+    Boolean(retryFailedOpenCodeTeammates) &&
+    Boolean(runInstanceKey);
 
   const retryOpenCodeAction = canRetryFailedOpenCode ? (
     <div className="flex flex-wrap items-center gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2">
       <p className="min-w-0 flex-1 text-xs text-[var(--step-warning-text)]">
-        {openCodeRetryError ??
-          openCodeRetryMessage ??
+        {currentRetry?.error ??
+          currentRetry?.message ??
           `${presentation.retryableOpenCodeSecondaryFailedCount} failed OpenCode teammate${
             presentation.retryableOpenCodeSecondaryFailedCount === 1 ? '' : 's'
           } can be retried.`}
@@ -155,21 +162,36 @@ export const TeamProvisioningPanel = memo(function TeamProvisioningPanel({
         className="h-7 shrink-0 border-amber-500/40 px-2 text-xs text-[var(--step-warning-text)] hover:bg-amber-500/10"
         disabled={retryingOpenCode}
         onClick={() => {
-          if (!retryFailedOpenCodeSecondaryLanes || retryingOpenCode) {
+          if (!retryFailedOpenCodeTeammates || !runInstanceKey || pendingRetryRef.current) {
             return;
           }
-          setRetryingOpenCode(true);
-          setOpenCodeRetryError(null);
-          setOpenCodeRetryMessage(null);
-          void retryFailedOpenCodeSecondaryLanes(teamName)
+          const attempt = { owner: runInstanceKey };
+          pendingRetryRef.current = attempt;
+          setRetryAttempt({ ...attempt, pending: true, message: null, error: null });
+          void retryFailedOpenCodeTeammates()
             .then((result) => {
-              setOpenCodeRetryMessage(formatOpenCodeSecondaryRetryResult(result));
+              if (pendingRetryRef.current !== attempt) return;
+              setRetryAttempt({
+                ...attempt,
+                pending: false,
+                message:
+                  'kind' in result
+                    ? `Restart requested for ${result.attempted.length} OpenCode teammate${result.attempted.length === 1 ? '' : 's'}. Follow their status for readiness.`
+                    : formatOpenCodeSecondaryRetryResult(result),
+                error: null,
+              });
             })
             .catch((error: unknown) => {
-              setOpenCodeRetryError(error instanceof Error ? error.message : String(error));
+              if (pendingRetryRef.current !== attempt) return;
+              setRetryAttempt({
+                ...attempt,
+                pending: false,
+                message: null,
+                error: error instanceof Error ? error.message : String(error),
+              });
             })
             .finally(() => {
-              setRetryingOpenCode(false);
+              if (pendingRetryRef.current === attempt) pendingRetryRef.current = null;
             });
         }}
       >

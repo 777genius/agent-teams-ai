@@ -16,8 +16,9 @@ import { ManagementCommandError } from '../management/commandRecords.js';
 import { nativeLocalReadinessPurpose } from '../management/ModelProbeOwner.js';
 import { managementDigest } from '../management/identity.js';
 import { runtimeDigest } from '../runtime/identity.js';
+import { assertOpenCodeV2NativeModel } from './openCodeV2ModelSelection.js';
 import { inspectInitialRuntimeModelAdmission } from './initialRuntimeModelAdmission.js';
-import { captureTeamProbePreparation } from './captureTeamProbePreparation.js';
+import { captureTeamProbePreparation, hasV1NativeModelProbeIdentity } from './captureTeamProbePreparation.js';
 import type { TeamProbeManagement } from './captureTeamProbePreparation.js';
 import type { RuntimeSourceProcessOrigin } from './runtimeSourceProcessOrigin.js';
 
@@ -74,6 +75,13 @@ function held(): never { throw new ManagementCommandError('held'); }
 function openCodeModelId(providerId: string, modelId: string): string {
   return modelId.startsWith(providerId + '/') ? modelId.slice(providerId.length + 1) : modelId;
 }
+function sameCapturedModel(profile: OpenCodeManagementProfile, providerId: string,
+  actual: string, expected: string): boolean {
+  // Private producers persist profile.model unchanged. A pre-fix V1 probe could have
+  // tested the suffix despite retaining the nested native input, so it cannot qualify.
+  return actual === expected && (profile.nativeGeneration === 'v2' ||
+    !expected.startsWith(providerId + '/') || hasV1NativeModelProbeIdentity(profile));
+}
 
 /** The original URL classifier's loopback branch only; no DNS, metadata or network observation. */
 function loopback(value: unknown): boolean {
@@ -122,6 +130,7 @@ function captureOpenCodeProbeAccountInspection(
     originCurrent: boolean; accountDigest: string;
   };
 } | undefined {
+  if (profile.nativeGeneration === 'v2') assertOpenCodeV2NativeModel(profile, input);
   // The original declaration is only a hint; the complete source observation below
   // must confirm it before grouping this private, synchronous, read-only inspection.
   const workspace = memberTarget && capturedOrigin?.workspaces.find(row => row.path === profile.cwd);
@@ -165,7 +174,8 @@ function captureOpenCodeProbeAccountInspection(
     : object(provider) && provider.npm === '@ai-sdk/openai-compatible' ? resolve(options.baseURL) : undefined;
   const configured = policy?.policy?.hasConfiguredApiKey ??
     (typeof configuredKey === 'string' && Boolean(configuredKey.trim()));
-  const modelId = openCodeModelId(input.providerId, input.modelId);
+  const modelId = profile.nativeGeneration === 'v2' ? input.modelId
+    : openCodeModelId(input.providerId, input.modelId);
   const configuration = profile.nativeGeneration === 'v2' && profile.embedded?.configurationSource
     ? captureOpenCodeV2Configuration(profile, { providerId: input.providerId, modelId }, ownerCurrent,
       'model', { source, config: raw }) : undefined;
@@ -200,7 +210,8 @@ function captureOpenCodeProbeAccountInspection(
       if (!current() || original.phase !== 'completed' || !original.ok || original.resourceHeld ||
           !original.context || original.profileId !== profile.profileId || original.configRevision !== profile.configRevision ||
           original.providerId !== input.providerId ||
-          (original.modelId !== input.modelId && `${input.providerId}/${original.modelId}` !== input.modelId) ||
+          (profile.nativeGeneration === 'v2' ? original.modelId !== input.modelId
+            : original.modelId !== input.modelId && `${input.providerId}/${original.modelId}` !== input.modelId) ||
           (original.purpose === undefined ? original.readinessScope?.kind !== 'native' :
             original.purpose !== nativeLocalReadinessPurpose || !original.readiness || original.readiness.context !== original.context ||
             original.readiness.selectionDigest !== original.selectionDigest ||
@@ -255,8 +266,7 @@ function readPreparedModelReference(options: Parameters<typeof capturePreparedMo
       profileId: original.profileId, configRevision: original.configRevision };
     if (candidate.provider !== 'opencode' || options.profile.provider !== 'opencode' || !options.isCurrent() ||
         original.providerId !== options.profile.nativeOptions.providerId ||
-        openCodeModelId(original.providerId, original.modelId) !==
-          openCodeModelId(original.providerId, options.profile.model) ||
+        !sameCapturedModel(candidate, original.providerId, original.modelId, options.profile.model) ||
         original.effort !== options.profile.nativeOptions.variant ||
         (options.kind !== 'native' && original.purpose !== nativeLocalReadinessPurpose) ||
         (original.purpose === undefined && original.readinessScope?.kind !== 'native') ||
@@ -500,7 +510,7 @@ export function captureNativeRestartReadiness(options: {
   const providerId = entry.profile.nativeOptions.providerId, model = entry.profile.model;
   const read = () => management.probes.readReadinessProvenance(reference, saved => {
     if (!options.isCurrent() || saved.providerId !== providerId ||
-        openCodeModelId(providerId, saved.modelId) !== openCodeModelId(providerId, model) ||
+        !sameCapturedModel(profile, providerId, saved.modelId, model) ||
         saved.effort !== profile.variant) held();
     const policy = saved.localModelReadinessOrigin
       ? captureOpenCodeReadinessOrigin(saved.localModelReadinessOrigin, profile, providerId, options.isCurrent)

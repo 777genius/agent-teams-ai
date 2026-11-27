@@ -54,6 +54,11 @@ export function areMemberSpawnStatusEntriesEqual(
   return (
     left.status === right.status &&
     left.launchState === right.launchState &&
+    left.hostFailedMemberRetry?.runId === right.hostFailedMemberRetry?.runId &&
+    left.hostFailedMemberRetry?.memberId === right.hostFailedMemberRetry?.memberId &&
+    left.hostFailedMemberRetry?.generation === right.hostFailedMemberRetry?.generation &&
+    left.hostFailedMemberRetry?.attemptId === right.hostFailedMemberRetry?.attemptId &&
+    left.hostFailedMemberRetry?.noAllocation === right.hostFailedMemberRetry?.noAllocation &&
     left.error === right.error &&
     left.hardFailureReason === right.hardFailureReason &&
     left.skippedForLaunch === right.skippedForLaunch &&

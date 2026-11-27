@@ -80,11 +80,14 @@ export interface BackendCrossTeamOperationPayloads {
   'crossTeam.send': BackendCrossTeamSend;
   /** Uses outer commandId unchanged and performs only current read authorization. */
   'crossTeam.lookup': Record<string, never>;
-  'crossTeam.outbox.read': Record<string, never>;
+  'crossTeam.outbox.read': { cursor?: string };
 }
 export interface BackendCrossTeamOutbox {
   kind: 'cross-team-outbox';
   rows: BackendCrossTeamOutboxRow[];
+  /** Present together only for a bounded continuation sequence. */
+  revision?: string;
+  nextCursor?: string | null;
 }
 
 /** Private Host selection. Both bindings arrive from Main's retained binding store. */

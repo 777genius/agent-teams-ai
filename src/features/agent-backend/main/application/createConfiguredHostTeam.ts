@@ -93,6 +93,8 @@ export async function createConfiguredHostTeam(options: {
     throw new BackendRoutingError('invalid-binding');
   const payload = captureConfiguredHostTeamDraft(options.contextId, {
     ...draft,
+    // Saved-only definitions may keep the legacy empty workspace until launch.
+    cwd: draft.cwd === undefined ? '' : draft.cwd,
     projectContextMode: draft.projectContextMode ?? 'per_project',
   });
   assertBackendRequestGuard(options.guard);

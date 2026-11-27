@@ -17,6 +17,7 @@ import type { TeamManagementCommittedChange } from '@features/team-prompt-manage
 export type * from './kanbanReviewFlow';
 export type * from './teamBoardTask';
 export type * from './teamLaunchDiagnostics';
+export type { RetryFailedOpenCodeSecondaryLanesResult } from './teamMemberRestart';
 export type { MessagesPage } from './teamMessages';
 export type {
   FileLineStats,
@@ -1116,14 +1117,6 @@ export interface MemberSpawnStatusesSnapshot {
   source?: 'live' | 'persisted' | 'merged';
 }
 
-export interface RetryFailedOpenCodeSecondaryLanesResult {
-  attempted: string[];
-  confirmed: string[];
-  pending: string[];
-  failed: { memberName: string; error: string }[];
-  skipped: { memberName: string; reason: string }[];
-}
-
 export type MemberSpawnLivenessSource = 'heartbeat' | 'process';
 
 export type TeamAgentRuntimeBackendType = 'lead' | 'tmux' | 'iterm2' | 'in-process' | 'process';
@@ -1251,6 +1244,8 @@ export interface ProjectBranchChangeEvent {
 export interface MemberSpawnStatusEntry {
   status: MemberSpawnStatus;
   launchState: MemberLaunchState;
+  /** Original failed Host selection, never inferred from a later runtime poll. */
+  hostFailedMemberRetry?: import('./teamMemberRestart').CapturedHostFailedMemberRetry;
   /** Error message when status === 'error'. */
   error?: string;
   /** Hard failure reason for failed_to_start. */

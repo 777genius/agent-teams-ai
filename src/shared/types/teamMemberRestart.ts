@@ -10,6 +10,23 @@ export type TeamMemberRestartResult =
   | { status: 'restarted' }
   | ({ status: 'failed_retained' | 'failed_restored'; error: string } & TeamMemberRestartRetention);
 
+/** Original failed Host observation; a retry may not select another member generation or attempt. */
+export interface CapturedHostFailedMemberRetry {
+  runId: string;
+  memberId: string;
+  generation: string | null;
+  attemptId: string;
+  noAllocation: boolean;
+}
+
+export interface RetryFailedOpenCodeSecondaryLanesResult {
+  attempted: string[];
+  confirmed: string[];
+  pending: string[];
+  failed: { memberName: string; error: string }[];
+  skipped: { memberName: string; reason: string }[];
+}
+
 /** Validate plain data before it crosses the Electron context bridge. */
 export function parseTeamMemberRestartResult(value: unknown): TeamMemberRestartResult {
   if (!value || typeof value !== 'object') throw new Error('Invalid member restart result');

@@ -97,7 +97,7 @@ export function createDesktopSelectedProjectReadPort(cdp: UiCdpPort,
 }
 
 /** Read-only original registry validation; none of these ports can create or attach a Team. */
-export function selectDesktopProjectRegistryExecution(records: StoredTeamCreation[],
+function observeDesktopProjectRegistryExecution(records: StoredTeamCreation[],
   expected: Pick<Expected, 'profile' | 'contextId' | 'projectPath'>, logicalName: string) {
   const refuse = (): never => { throw new Error('TEST read-only project oracle cannot write or attach'); };
   const profile = expected.profile;
@@ -120,28 +120,111 @@ export function selectDesktopProjectRegistryExecution(records: StoredTeamCreatio
     assert.equal(child.contextId, expected.contextId);
   }
   const selected = children.filter(value => value.projectContext!.projectPath === expected.projectPath);
-  assert.equal(selected.length, 1, 'one exact selected canonical workspace, never first child');
-  const execution = selected[0]!;
+  assert.ok(selected.length <= 1, 'at most one exact selected canonical workspace, never first child');
+  const execution = selected[0];
+  if (!execution) return { logical: structuredClone(logical), execution: undefined };
   assert.notEqual(execution.teamId, logical.teamId); assert.notEqual(execution.binding.handleId, logical.binding.handleId);
   assert.equal(execution.projectContextMode, 'shared');
   return { logical: structuredClone(logical), execution: structuredClone(execution) };
 }
 
-export function selectDesktopProjectExecution(records: StoredTeamCreation[], expected: Expected, logicalName: string, discovery: unknown) {
-  const { logical, execution } = selectDesktopProjectRegistryExecution(records, expected, logicalName);
+export function selectDesktopProjectRegistryExecution(records: StoredTeamCreation[],
+  expected: Pick<Expected, 'profile' | 'contextId' | 'projectPath'>, logicalName: string) {
+  const selected = observeDesktopProjectRegistryExecution(records, expected, logicalName);
+  assert.ok(selected.execution, 'one exact selected canonical workspace, never first child');
+  return { logical: selected.logical, execution: selected.execution };
+}
+
+/** Absence may be observed passively; a held, malformed or substituted source still refuses immediately. */
+export function observeDesktopProjectExecution(records: StoredTeamCreation[], expected: Expected, logicalName: string, discovery: unknown) {
+  const { logical, execution } = observeDesktopProjectRegistryExecution(records, expected, logicalName);
   const source = row(discovery); assert.equal(source.state, 'ready');
   const bindings = rows(source.bindings);
   const original = one(bindings, value => row(value.handle).handleId === logical.binding.handleId);
-  const child = one(bindings, value => row(value.handle).handleId === execution.binding.handleId);
   assert.equal(original.ownerResourceRef, expected.ownerResourceRef);
   assert.equal(original.projectContextMode, 'per_project'); assert.equal(original.projectContext, undefined);
+  assert.equal(rows(source.unavailableOwners ?? []).some(value => value.ownerResourceRef === expected.ownerResourceRef), false);
+  if (!execution) return undefined;
+  const children = bindings.filter(value => row(value.handle).handleId === execution.binding.handleId);
+  assert.ok(children.length <= 1, 'at most one original project binding');
+  const child = children[0];
+  if (!child) return undefined;
   assert.equal(child.ownerResourceRef, expected.ownerResourceRef);
+  assert.equal(child.projectContextMode, 'shared');
   assert.ok(typeof original.teamResourceRef === 'string' && typeof child.teamResourceRef === 'string');
   assert.notEqual(original.teamResourceRef, child.teamResourceRef);
   assert.deepEqual(child.projectContext, { logicalHandleId: logical.binding.handleId,
     projectPath: expected.projectPath, workContextId: execution.projectContext!.workContextId });
-  assert.equal(rows(source.unavailableOwners ?? []).some(value => value.ownerResourceRef === expected.ownerResourceRef), false);
   return { logical: structuredClone(logical), execution: structuredClone(execution) };
+}
+
+export function selectDesktopProjectExecution(records: StoredTeamCreation[], expected: Expected, logicalName: string, discovery: unknown) {
+  const selected = observeDesktopProjectExecution(records, expected, logicalName, discovery);
+  assert.ok(selected, 'one exact published project execution and binding');
+  return selected;
+}
+
+/** Only the first original pending attempt can precede publication of the exact captured run. */
+export function createDesktopProjectRunObserver(logicalHandleId: string, executionHandleId: string) {
+  const prefix = `pending:${hostTeamSelectionKey(logicalHandleId)}:`;
+  let pending: string | undefined, published: string | undefined;
+  const publishedFields = new Set<'runtime' | 'provisioning'>();
+  return (value: unknown, launchId: unknown): boolean => {
+    const pins = row(value);
+    let ready = true;
+    for (const field of ['runtime', 'provisioning'] as const) {
+      const id = pins[field];
+      if (id === undefined || id === null) { assert.equal(publishedFields.has(field), false, 'published field cannot disappear'); ready = false; continue; }
+      assert.equal(typeof id, 'string');
+      const runId = id as string;
+      if (field === 'provisioning' && runId.startsWith(prefix)) {
+        assert.match(runId.slice(prefix.length), /^[1-9]\d*$/);
+        assert.equal(publishedFields.has(field), false, 'published field cannot return to pending');
+        if (pending === undefined) pending = runId;
+        assert.equal(runId, pending, 'same original pending launch attempt');
+        ready = false; continue;
+      }
+      const run = parseHostTeamRunId(runId);
+      assert.equal(run.handleId, executionHandleId); assert.equal(run.launchId, launchId);
+      published ??= runId;
+      assert.equal(runId, published, 'same original published run');
+      publishedFields.add(field);
+    }
+    if (ready) {
+      assert.equal(pins.runtime, pins.provisioning, 'runtime and provisioning publish the same roster');
+      published = pins.runtime as string;
+    }
+    return ready;
+  };
+}
+
+/** The caller's existing poll observes one publication and capture; this port cannot launch or retry. */
+export function createDesktopProjectLaunchRead<T extends {
+  owner: DesktopProjectExecutionOwner;
+  assertCurrent(): Promise<void>;
+  observeRun(launchId: unknown): Promise<boolean>;
+}>(observe: () => Promise<T | undefined>, read: (selection: T) => Promise<Row>) {
+  let selected: T | undefined, originalCapture: Row | undefined;
+  return async () => {
+    selected ??= await observe();
+    if (!selected) return undefined;
+    await selected.assertCurrent();
+    const state = await read(selected);
+    assert.deepEqual(state.binding, selected.owner.binding, 'same original execution owner');
+    const captures = rows(state.runtimeCaptures ?? []);
+    assert.ok(captures.length <= 1, 'at most one original runtime capture');
+    if (captures.length === 0) {
+      assert.equal(originalCapture, undefined, 'original runtime capture cannot disappear');
+      return undefined;
+    }
+    const launchId = captures[0]!.launchId;
+    assert.ok(typeof launchId === 'string' && launchId.length > 0);
+    originalCapture ??= structuredClone(captures[0]!);
+    assert.deepEqual(captures[0], originalCapture, 'same original runtime capture');
+    if (!(await selected.observeRun(launchId))) return undefined;
+    await selected.assertCurrent();
+    return { selection: selected, state };
+  };
 }
 
 function projectOwnerJson(path: string, expectedSha256?: string): Row {
@@ -248,9 +331,10 @@ export async function captureDesktopProjectOracle(cdp: UiCdpPort,
       assert.equal(await cdp.evaluate(desktopProjectSelectionExpression(expected, logicalHandleId)), true,
         'original focused logical Team and canonical selected project');
     },
-    async select(logicalName: string) {
+    async observe(logicalName: string) {
       const source = await originalSources();
-      const selected = selectDesktopProjectExecution(source.records, expected, logicalName, source.discovery);
+      const selected = observeDesktopProjectExecution(source.records, expected, logicalName, source.discovery);
+      if (!selected) return undefined;
       const logicalRoot = join(profile.owner.storageRoot, 'teams', selected.logical.teamName);
       const executionRoot = join(profile.owner.storageRoot, 'teams', selected.execution.teamName);
       const bindings = rows(row(source.discovery).bindings);
@@ -264,6 +348,13 @@ export async function captureDesktopProjectOracle(cdp: UiCdpPort,
         executionHandleId: selected.execution.binding.handleId, original: Object.freeze(capturedBindings) });
       const owner: DesktopProjectExecutionOwner = Object.freeze({ binding: Object.freeze({ backendId: profile.owner.ownerId,
         teamId: selected.execution.teamId, teamName: selected.execution.teamName }), workspace: expected.projectPath });
+      const runPublished = createDesktopProjectRunObserver(selected.logical.binding.handleId, selected.execution.binding.handleId);
+      const observeRun = async (launchId: unknown) => {
+        const key = hostTeamSelectionKey(selected.logical.binding.handleId);
+        return runPublished(await cdp.evaluate(`(()=>{const s=window.__agentTeamsDevStore?.getState();return {
+          runtime:s?.currentRuntimeRunIdByTeam?.[${JSON.stringify(key)}],
+          provisioning:s?.currentProvisioningRunIdByTeam?.[${JSON.stringify(key)}]}})()`), launchId);
+      };
       return { ...selected, logicalRoot, executionRoot, owner, bindingCapture,
         taskRoot: join(profile.owner.storageRoot, 'tasks', selected.execution.teamName),
         async assertCurrent() {
@@ -271,19 +362,14 @@ export async function captureDesktopProjectOracle(cdp: UiCdpPort,
           assert.deepEqual(selectDesktopProjectExecution(fresh.records, expected, logicalName, fresh.discovery), selected,
             'original logical/project association stays immutable');
         },
-        async assertRun(launchId: unknown) {
-          const key = hostTeamSelectionKey(selected.logical.binding.handleId);
-          const pins = row(await cdp.evaluate(`(()=>{const s=window.__agentTeamsDevStore?.getState();return {
-            runtime:s?.currentRuntimeRunIdByTeam?.[${JSON.stringify(key)}],
-            provisioning:s?.currentProvisioningRunIdByTeam?.[${JSON.stringify(key)}]}})()`));
-          assert.ok(typeof pins.runtime === 'string' && typeof pins.provisioning === 'string');
-          for (const runId of [pins.runtime, pins.provisioning]) {
-            const run = parseHostTeamRunId(runId);
-            assert.equal(run.handleId, selected.execution.binding.handleId);
-            assert.equal(run.launchId, launchId);
-          }
-        },
+        observeRun,
+        async assertRun(launchId: unknown) { assert.equal(await observeRun(launchId), true, 'original captured run is published'); },
       };
+    },
+    async select(logicalName: string) {
+      const selected = await this.observe(logicalName);
+      assert.ok(selected, 'one exact published project execution and binding');
+      return selected;
     },
   };
 }

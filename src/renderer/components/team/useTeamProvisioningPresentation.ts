@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 
+import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
 import { useAppTranslation } from '@features/localization/renderer';
 import { useStore } from '@renderer/store';
 import {
@@ -7,21 +8,23 @@ import {
   selectTeamIsAliveForName,
   selectTeamMemberSnapshotsForName,
 } from '@renderer/store/slices/teamSlice';
+import { captureTeamLocalStateEpoch } from '@renderer/store/team/teamLocalStateEpoch';
+import { captureContextScopedRequestEpoch } from '@renderer/store/utils/contextScopedRequestEpoch';
 import { buildTeamMemberLaunchDiagnosticsPayloads } from '@renderer/utils/memberLaunchDiagnostics';
 import { applyLeadActivityToProvisioningPresentation } from '@renderer/utils/teamProvisioningLeadActivityPresentation';
 import { buildTeamProvisioningPresentation } from '@renderer/utils/teamProvisioningPresentation';
 import { useShallow } from 'zustand/react/shallow';
 
+import { createHostFailedMemberRetry } from './createHostFailedMemberRetry';
+
+import type { FailedOpenCodeRetryResult } from './createHostFailedMemberRetry';
 import type { MemberLaunchDiagnosticsPayload } from '@renderer/utils/memberLaunchDiagnostics';
 import type { TeamProvisioningPresentation } from '@renderer/utils/teamProvisioningPresentation';
-import type { RetryFailedOpenCodeSecondaryLanesResult } from '@shared/types';
 
 export function useTeamProvisioningPresentation(teamName: string): {
   presentation: TeamProvisioningPresentation | null;
   cancelProvisioning: ((runId: string) => Promise<void>) | null;
-  retryFailedOpenCodeSecondaryLanes:
-    | ((teamName: string) => Promise<RetryFailedOpenCodeSecondaryLanesResult>)
-    | null;
+  retryFailedOpenCodeTeammates: (() => Promise<FailedOpenCodeRetryResult>) | null;
   memberDiagnostics: MemberLaunchDiagnosticsPayload[];
   runInstanceKey: string | null;
 } {
@@ -31,6 +34,8 @@ export function useTeamProvisioningPresentation(teamName: string): {
     isTeamAlive,
     cancelProvisioning,
     retryFailedOpenCodeSecondaryLanes,
+    restartMember,
+    contextId,
     teamMembers,
     memberSpawnStatuses,
     memberSpawnSnapshot,
@@ -43,6 +48,8 @@ export function useTeamProvisioningPresentation(teamName: string): {
       isTeamAlive: selectTeamIsAliveForName(s, teamName),
       cancelProvisioning: s.cancelProvisioning,
       retryFailedOpenCodeSecondaryLanes: s.retryFailedOpenCodeSecondaryLanes,
+      restartMember: s.restartMember,
+      contextId: s.activeContextId,
       teamMembers: selectTeamMemberSnapshotsForName(s, teamName),
       memberSpawnStatuses: s.memberSpawnStatusesByTeam[teamName],
       memberSpawnSnapshot: s.memberSpawnSnapshotsByTeam[teamName],
@@ -108,8 +115,36 @@ export function useTeamProvisioningPresentation(teamName: string): {
   return {
     presentation,
     cancelProvisioning,
-    retryFailedOpenCodeSecondaryLanes: retryFailedOpenCodeSecondaryLanes ?? null,
+    retryFailedOpenCodeTeammates: isHostTeamSelectionKey(teamName)
+      ? presentation && restartMember
+        ? createHostFailedMemberRetry({
+            teamName,
+            runId: presentation.progress.runId,
+            contextId,
+            memberNames: presentation.retryableOpenCodeSecondaryFailedNames,
+            failedSelections: Object.fromEntries(
+              presentation.retryableOpenCodeSecondaryFailedNames.map((name) => [
+                name,
+                memberSpawnSnapshot?.statuses[name]?.hostFailedMemberRetry,
+              ])
+            ),
+            getState: useStore.getState,
+            restartMember,
+          })
+        : null
+      : retryFailedOpenCodeSecondaryLanes
+        ? () => retryFailedOpenCodeSecondaryLanes(teamName)
+        : null,
     memberDiagnostics,
-    runInstanceKey: progress ? `${teamName}:${progress.runId}:${progress.startedAt}` : null,
+    runInstanceKey: progress
+      ? JSON.stringify([
+          contextId,
+          captureContextScopedRequestEpoch(),
+          teamName,
+          captureTeamLocalStateEpoch(teamName),
+          progress.runId,
+          progress.startedAt,
+        ])
+      : null,
   };
 }

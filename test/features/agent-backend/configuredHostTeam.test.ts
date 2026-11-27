@@ -120,13 +120,18 @@ async function fixture() {
 }
 
 describe('existing Create-config to actual Host registry', () => {
-  it.each([undefined, 1] as const)(
-    'saves one captured product intent with runtime version %s, exposes only its canonical binding and reconstructs it cold',
-    async (runtimeSelectionVersion) => {
+  it.each(
+    ([undefined, 1] as const).flatMap((runtimeSelectionVersion) =>
+      [true, false].map((hasWorkspace) => ({ runtimeSelectionVersion, hasWorkspace }))
+    )
+  )(
+    'saves one captured product intent with runtime version $runtimeSelectionVersion and workspace $hasWorkspace, exposes only its canonical binding and reconstructs it cold',
+    async ({ runtimeSelectionVersion, hasWorkspace }) => {
       const f = await fixture(),
         first = f.feature();
       // Match CreateTeamDialog: this key is present even for an unversioned draft.
       f.request.runtimeSelectionVersion = runtimeSelectionVersion;
+      if (!hasWorkspace) delete f.request.cwd;
       const originalRequest = CapturedHostClient.prototype.request;
       let lost = false;
       const observed: string[] = [];
@@ -168,6 +173,7 @@ describe('existing Create-config to actual Host registry', () => {
         ok: true,
         value: {
           savedSettings: {
+            cwd: f.request.cwd ?? '',
             prompt: 'TEST prompt',
             skipPermissions: false,
             ...(runtimeSelectionVersion === undefined ? {} : { runtimeSelectionVersion }),
@@ -202,6 +208,14 @@ describe('existing Create-config to actual Host registry', () => {
       const cold = f.feature();
       expect((await cold.discoverBindings('local')).bindings).toEqual(bindings);
       expect(cold.authorizeHandle('local', handle)).toBe(true);
+      expect(
+        await cold.facade.invoke({
+          handle,
+          commandId: 'TEST-read-cold',
+          operation: 'team.roster.read',
+          payload: {},
+        })
+      ).toMatchObject({ ok: true, value: { savedSettings: { cwd: f.request.cwd ?? '' } } });
       expect(await readdir(join(f.root, 'store/teams'))).toEqual(['test-created']);
     }
   );

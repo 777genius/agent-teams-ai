@@ -1,4 +1,6 @@
 import { readMemberActions, readMemberActionView } from '../contracts/memberActions';
+import { parseHostTeamRunId } from '../contracts/teamRunSelection';
+import { parseHostTeamSelectionKey } from '../contracts/teamSelection';
 
 import { HostTeamOperationError } from './createHostTeamMutations';
 import { readHostLaunchConfiguration } from './readHostLaunchConfiguration';
@@ -9,6 +11,10 @@ import type {
   BackendMemberActionView,
 } from '../contracts/memberActions';
 import type { AgentBackendApi } from '../contracts/operations';
+import type {
+  CapturedHostFailedMemberRetry,
+  TeamMemberRestartResult,
+} from '@shared/types/teamMemberRestart';
 /** Existing member controls retain the original command through prepare, effect, reload and UNKNOWN. */
 export function createHostMemberActions(options: {
   backend: AgentBackendApi;
@@ -23,13 +29,22 @@ export function createHostMemberActions(options: {
     key: string,
     memberName: string,
     kind: 'restart' | 'skip',
-    expectedSecondary = false
+    expectedSecondary = false,
+    captured?: CapturedHostFailedMemberRetry
   ): Promise<void> {
     const candidateId = crypto.randomUUID(),
       retryAttemptId = crypto.randomUUID(),
       check = options.captureScope();
     if (expectedSecondary) throw new HostTeamOperationError('unsupported', 'not-dispatched');
     if (!check()) throw new HostTeamOperationError('forbidden', 'not-dispatched');
+    // Copy before the first await. This precondition can only restrict an existing Restart.
+    const expected = captured === undefined ? undefined : structuredClone(captured);
+    const failedRun = expected ? parseHostTeamRunId(expected.runId) : undefined;
+    if (
+      captured !== undefined &&
+      (!expected || kind !== 'restart' || failedRun?.handleId !== parseHostTeamSelectionKey(key))
+    )
+      throw new Error('Failed teammate selection changed. Refresh its status before retrying.');
     const target = await options.resolve(key, check),
       assertCurrent = () => {
         if (!check()) throw new HostTeamOperationError('forbidden', 'unknown');
@@ -44,6 +59,17 @@ export function createHostMemberActions(options: {
     const memberId = matches[0].memberId,
       member = config.launch.members.find((m) => m.memberId === memberId);
     if (!member) throw new HostTeamOperationError('conflict', 'not-dispatched');
+    if (
+      expected &&
+      (target.handle.handleId !== failedRun!.handleId ||
+        config.launch.launchId !== failedRun!.launchId ||
+        config.launch.rosterRevision !== failedRun!.rosterRevision ||
+        memberId !== expected.memberId ||
+        member.generation !== expected.generation ||
+        member.attemptId !== expected.attemptId ||
+        member.noAllocation !== expected.noAllocation)
+    )
+      throw new Error('Failed teammate selection changed. Refresh its status before retrying.');
     const read = await options.backend.invoke({
       handle: target.handle,
       commandId: crypto.randomUUID(),
@@ -62,6 +88,17 @@ export function createHostMemberActions(options: {
     const unfinished = state.actions
       .filter((a) => a.current && !['selected', 'refused'].includes(a.stage))
       .at(-1);
+    if (
+      expected &&
+      unfinished &&
+      (unfinished.sourceGeneration !== expected.generation ||
+        unfinished.rosterRevision !== failedRun!.rosterRevision ||
+        (unfinished.expectedFailedAttemptId !== undefined &&
+          unfinished.expectedFailedAttemptId !== expected.attemptId))
+    )
+      throw new Error('Failed teammate selection changed. Refresh its status before retrying.');
+    if (expected && !unfinished && member.status !== 'failed')
+      throw new Error('Failed teammate selection changed. Refresh its status before retrying.');
     if (unfinished && (unfinished.stage !== 'prepared' || unfinished.action !== kind))
       throw new HostTeamOperationError('hold', 'unknown', unfinished.commandId);
     const priorRetry = state.retries.find((r) => r.current);
@@ -84,6 +121,7 @@ export function createHostMemberActions(options: {
             rosterRevision: state.rosterRevision,
             attemptId: retryAttemptId,
             memberIds: [memberId],
+            ...(expected ? { expectedAttemptId: expected.attemptId } : {}),
           },
         });
         assertCurrent();
@@ -131,12 +169,16 @@ export function createHostMemberActions(options: {
     )
       throw new HostTeamOperationError('hold', 'unknown', last.commandId);
     const commandId = unfinished?.commandId ?? candidateId;
+    const expectedFailedAttemptId = unfinished
+      ? unfinished.expectedFailedAttemptId
+      : expected?.attemptId;
     const request: BackendMemberActionRequest = {
       launchId: state.launchId,
       rosterRevision: unfinished?.rosterRevision ?? state.rosterRevision,
       memberId,
       expectedGeneration: unfinished?.sourceGeneration ?? member.generation,
       action: kind,
+      ...(expectedFailedAttemptId === undefined ? {} : { expectedFailedAttemptId }),
     };
     const original = (raw: unknown): BackendMemberActionView => {
       const view = readMemberActionView(raw);
@@ -145,6 +187,7 @@ export function createHostMemberActions(options: {
         view.launchId !== request.launchId ||
         view.memberId !== memberId ||
         view.action !== kind ||
+        view.expectedFailedAttemptId !== request.expectedFailedAttemptId ||
         view.sourceGeneration !== request.expectedGeneration ||
         view.rosterRevision !== request.rosterRevision
       )
@@ -214,8 +257,15 @@ export function createHostMemberActions(options: {
       throw new HostTeamOperationError('hold', 'unknown', commandId);
   }
   return {
-    restartMember: (key: string, name: string, secondary?: boolean) =>
-      action(key, name, 'restart', secondary),
+    restartMember: async (
+      key: string,
+      name: string,
+      secondary?: boolean,
+      captured?: CapturedHostFailedMemberRetry
+    ): Promise<TeamMemberRestartResult> => {
+      await action(key, name, 'restart', secondary, captured);
+      return { status: 'restarted' };
+    },
     skipMemberForLaunch: (key: string, name: string) => action(key, name, 'skip'),
   };
 }
