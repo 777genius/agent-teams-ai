@@ -274,3 +274,25 @@ Production changes add **30** lines and remove **13** across three files; the
 new test file contains **262** lines. Complexity: **4/10**. This repairs the
 response-size failure; reading every page preserves the total selected payload
 and is not evidence of lower total token use or provider cost.
+
+### Follow-up: trustworthy CodeQL diagnostic source locations
+
+Review of concurrent commit `9b80b2f` found two reproducible diagnostic errors.
+The collector ignored an explicit `result.rule`, allowing contradictory rule
+references to look complete. Its indexed tracked-path allowlist also accepted
+committed symlinks and gitlinks as ordinary source files. An isolated real Git
+fixture reproduced both errors through the actual helper and CLI under valid
+checkout provenance; both new regressions failed on the published code.
+
+The collector now marks explicit unsupported rule references partial before
+selecting or omitting a result. Its allowlist comes from the committed tree and
+accepts only regular or executable blobs, preserving raw NUL-delimited paths.
+The two targeted regressions and all existing diagnostic tests passed:
+**26/26, zero failures or skips**, using pinned Node 24.21.0. Two independent
+reviews approved the exact diff. Production adds seven lines and removes one;
+tests add 71 lines and remove one. Complexity: **2/10**.
+
+This correction changes only diagnostic source validation. The existing CodeQL
+workflow and analysis gates are unchanged. The next ordinary analysis artifact
+still needs inspection; even a complete supported-subset report does not prove
+that it contains every path from the historical eight-flow alert.

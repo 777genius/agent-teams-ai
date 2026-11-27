@@ -78,6 +78,8 @@ export function collectPasswordHashLocations(sarif, { trackedPaths, workspace, p
       if (report.counts.results >= 10_000) { incomplete(); break; }
       report.counts.results++;
       if (!row(result)) { incomplete(); continue; }
+      // This bounded diagnostic resolves only direct driver-rule references.
+      if (result.rule !== undefined) { incomplete(); continue; }
       const indexedRule = Array.isArray(run.tool.driver.rules) && Number.isSafeInteger(result.ruleIndex) && result.ruleIndex >= 0
         ? run.tool.driver.rules?.[result.ruleIndex]?.id : undefined;
       if ((result.ruleId !== undefined && typeof result.ruleId !== 'string') ||
@@ -190,7 +192,11 @@ function main() {
   provenance.job = process.env.GITHUB_JOB;
   if (sha(process.env.CODEQL_PR_HEAD_SHA)) provenance.prHeadSha = process.env.CODEQL_PR_HEAD_SHA;
   const directory = process.env.CODEQL_SARIF_DIRECTORY;
-  const options = { trackedPaths: git('ls-files', '-z').split('\0').filter(Boolean), workspace, provenance };
+  const trackedPaths = git('ls-tree', '-r', '-z', '--full-tree', 'HEAD').split('\0').flatMap(entry => {
+    const match = /^(?:100644|100755) blob [a-f0-9]{40}\t([\s\S]+)$/.exec(entry);
+    return match ? [match[1]] : [];
+  });
+  const options = { trackedPaths, workspace, provenance };
   const report = readPasswordHashLocations(directory ? resolve(directory, 'javascript.sarif') : '', options);
   const bytes = JSON.stringify(report, null, 2) + '\n';
   if (Buffer.byteLength(bytes) > 1024 * 1024) throw new Error('Diagnostic size limit');

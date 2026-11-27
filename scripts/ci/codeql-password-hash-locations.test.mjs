@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, truncateSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, truncateSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -92,6 +92,25 @@ test('ambiguous rule/artifact/base references and invalid coordinates never beco
     const report = collect(source);
     assert.equal(report.status, 'partial');
     assert.doesNotMatch(JSON.stringify(report), /PRIVATE|unrelated/);
+  }
+});
+
+
+test('unsupported explicit result.rule references never become complete or complete-empty evidence', () => {
+  for (const legacyTarget of [true, false]) {
+    for (const reference of [
+      { id: ruleId, index: 0 }, { id: 'js/unrelated-rule' },
+      { index: 0, toolComponent: { index: 0 } }, {}, null, privateText, [],
+    ]) {
+      const source = fixture(), result = source.runs[0].results[0];
+      if (!legacyTarget) { result.ruleId = 'unrelated'; delete result.ruleIndex; }
+      result.rule = reference;
+      const report = collect(source);
+      assert.equal(report.status, 'partial');
+      assert.ok(report.counts.omitted > 0);
+      assert.deepEqual(report.results, []);
+      assert.doesNotMatch(JSON.stringify(report), /PRIVATE|unrelated/);
+    }
   }
 });
 
@@ -196,4 +215,55 @@ test('CLI binds the real Git checkout, refuses changed source and never overwrit
   const changed = run(); assert.equal(changed.status, 1);
   assert.doesNotMatch(changed.stderr, /PRIVATE/);
   assert.throws(() => readFileSync(output));
+});
+
+test('CLI accepts only committed regular blobs and marks symlink/gitlink coordinates partial', t => {
+  const root = mkdtempSync(join(tmpdir(), 'TEST-codeql-tree-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const directory = join(root, 'repo'), analysis = join(root, 'analysis'), temporary = join(root, 'temporary');
+  for (const path of [directory, analysis, temporary]) mkdirSync(path);
+  const git = (...args) => execFileSync('git', args, { cwd: directory, encoding: 'utf8' }).trim();
+  git('init', '--quiet', '--initial-branch=TEST');
+  const executable = 'with space\tname.ts';
+  writeFileSync(join(directory, 'regular.ts'), 'export const value = 1;\n');
+  writeFileSync(join(directory, executable), 'export const value = 2;\n');
+  chmodSync(join(directory, executable), 0o755);
+  writeFileSync(join(root, 'outside.ts'), privateText);
+  symlinkSync('../outside.ts', join(directory, 'linked.ts'), 'file');
+  git('add', 'regular.ts', executable, 'linked.ts');
+  git('update-index', '--chmod=+x', executable);
+  git('-c', 'user.name=TEST', '-c', 'user.email=TEST@example.invalid', 'commit', '--quiet', '-m', 'TEST source');
+  const first = git('rev-parse', 'HEAD');
+  mkdirSync(join(directory, 'submodule'));
+  git('update-index', '--add', '--cacheinfo', '160000', first, 'submodule');
+  git('-c', 'user.name=TEST', '-c', 'user.email=TEST@example.invalid', 'commit', '--quiet', '-m', 'TEST gitlink');
+  git('diff', '--quiet', 'HEAD', '--');
+  const tree = git('ls-tree', '-r', '-z', '--full-tree', 'HEAD');
+  assert.match(tree, /100644 blob [a-f0-9]{40}\tregular\.ts\0/);
+  assert.match(tree, /100755 blob [a-f0-9]{40}\twith space\tname\.ts\0/);
+  assert.match(tree, /120000 blob [a-f0-9]{40}\tlinked\.ts\0/);
+  assert.match(tree, /160000 commit [a-f0-9]{40}\tsubmodule\0/);
+  const source = fixture(), selected = source.runs[0].results[0];
+  const paths = ['regular.ts', executable, 'linked.ts', 'submodule'];
+  selected.locations = paths.map(path => location(encodeURI(path), 1));
+  selected.relatedLocations = [];
+  selected.codeFlows[0].threadFlows[0].locations = paths.map(path => ({
+    location: location(encodeURI(path), 1),
+  }));
+  writeFileSync(join(analysis, 'javascript.sarif'), JSON.stringify(source));
+  const output = join(temporary, 'codeql-password-hash-locations.json');
+  const result = spawnSync(process.execPath, [fileURLToPath(new URL('./codeql-password-hash-locations.mjs', import.meta.url))], {
+    cwd: directory, encoding: 'utf8', env: { ...process.env,
+      GITHUB_SHA: git('rev-parse', 'HEAD'), GITHUB_RUN_ID: '123', GITHUB_RUN_ATTEMPT: '1',
+      GITHUB_JOB: 'analyze', CODEQL_ANALYSIS_OUTCOME: 'success',
+      CODEQL_SARIF_DIRECTORY: analysis, CODEQL_FLOW_OUTPUT: output, RUNNER_TEMP: temporary,
+    },
+  });
+  assert.equal(result.status, 0, 'the CLI reaches projection under valid source provenance');
+  const report = JSON.parse(readFileSync(output, 'utf8'));
+  assert.equal(report.status, 'partial');
+  assert.ok(report.counts.omitted > 0);
+  assert.deepEqual([...new Set(report.results[0].locations.map(value => value.path))].sort(),
+    ['regular.ts', executable].sort());
+  assert.doesNotMatch(JSON.stringify(report) + result.stdout + result.stderr, /PRIVATE|linked\.ts|submodule|outside\.ts/);
 });
