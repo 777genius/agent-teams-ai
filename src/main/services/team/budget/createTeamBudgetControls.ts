@@ -79,15 +79,25 @@ export function createTeamBudgetAdmission(
     }
     const logicalTeam = owner?.logicalTeamName ?? teamName;
     const settings = await reader.getBudgetSettings();
-    if ((settings.teams?.[namedTeamId(logicalTeam)]?.onExceeded ?? 'notify') === 'notify') return;
+    const configuredAction = settings.teams?.[namedTeamId(logicalTeam)]?.onExceeded ?? 'notify';
+    if (configuredAction === 'notify') return;
+    // A status projection must not silently disable a policy that is present
+    // in authoritative settings. Unknown/missing target is not permission to launch.
+    const hasMatchingPolicy = (status: TokenUsageBudgetStatusDto): boolean =>
+      status.targets.some((target) =>
+        target.scope === 'team' &&
+        target.id === namedTeamId(logicalTeam) &&
+        target.onExceeded === configuredAction
+      );
     let status = await reader.getBudgetStatus();
     // A known subtotal at the limit needs no expensive provider refresh.
     // The stop/launch decision is already conclusive even if other data is late.
-    if (evaluateTeamBudgetEnforcement(status, logicalTeam).state === 'exceeded') {
+    if (hasMatchingPolicy(status) && evaluateTeamBudgetEnforcement(status, logicalTeam).state === 'exceeded') {
       assertTeamBudgetLaunchAllowed(status, logicalTeam);
     }
     // Refresh first-use and rolled-over budgets once. No stale/unknown zero-spend assumption.
     if (
+      !hasMatchingPolicy(status) ||
       status.stale ||
       status.degraded ||
       status.targets.some(
@@ -99,6 +109,11 @@ export function createTeamBudgetAdmission(
     ) {
       await reader.refreshSnapshot();
       status = await reader.getBudgetStatus();
+    }
+    if (!hasMatchingPolicy(status)) {
+      throw new Error(
+        `TEAM_BUDGET_BLOCKED: Cannot verify active budget policy for "${logicalTeam}"`
+      );
     }
     assertTeamBudgetLaunchAllowed(status, logicalTeam);
   };

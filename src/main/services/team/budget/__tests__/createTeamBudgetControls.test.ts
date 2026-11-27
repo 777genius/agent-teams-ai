@@ -100,11 +100,18 @@ function setup(initial: {
   used?: number;
   stale?: boolean;
   aliveName?: string;
+  statusAction?: TokenUsageBudgetExceededAction;
+  omitTarget?: boolean;
+  repairOnRefresh?: boolean;
 }) {
   let state = initial;
   let alive = true;
   const refresh = vi.fn(async () => {
-    state = { ...state, stale: false };
+    state = {
+      ...state,
+      stale: false,
+      ...(state.repairOnRefresh ? { omitTarget: false, statusAction: state.action } : {}),
+    };
     return {};
   });
   const stop = vi.fn(async () => {
@@ -128,7 +135,10 @@ function setup(initial: {
         },
       },
     }),
-    getBudgetStatus: async () => budgetStatus(state),
+    getBudgetStatus: async () => {
+      const status = budgetStatus({ ...state, action: state.statusAction ?? state.action });
+      return state.omitTarget ? { ...status, targets: [] } : status;
+    },
     refreshSnapshot: refresh,
   };
   const guard = createTeamBudgetAdmission(() => reader);
@@ -171,6 +181,26 @@ describe('team budget composition - no live provider required', () => {
     await expect(guard()).rejects.toThrow('TEAM_BUDGET_BLOCKED');
     expect(refresh).not.toHaveBeenCalled();
     expect(controls.notificationSettings.getSettings().enabled).toBe(false);
+  });
+
+  it('fails closed when configured enforcement has no matching projected target', async () => {
+    const { guard, refresh } = setup({ action: 'block_launch', omitTarget: true });
+    await expect(guard()).rejects.toThrow('TEAM_BUDGET_BLOCKED: Cannot verify active budget policy');
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it('fails closed when projected action disagrees with enforced settings', async () => {
+    const { guard, refresh } = setup({ action: 'stop_team', statusAction: 'notify' });
+    await expect(guard()).rejects.toThrow('TEAM_BUDGET_BLOCKED: Cannot verify active budget policy');
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it('permits a proven under-budget launch after refresh restores a missing target', async () => {
+    const { guard, refresh } = setup({
+      action: 'block_launch', omitTarget: true, repairOnRefresh: true,
+    });
+    await expect(guard()).resolves.toBeUndefined();
+    expect(refresh).toHaveBeenCalledOnce();
   });
 
   it('does not block legacy notification-only teams', async () => {
