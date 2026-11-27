@@ -3,9 +3,14 @@ import { test } from 'node:test';
 import { pageOwnerSnapshot } from '../dist/team/pageOwnerSnapshot.js';
 test('retained processes page by serialized bytes without losing or repeating history', () => {
   const processes = Array.from({ length: 100 }, (_, index) => ({
-    processId: 'TEST-process-' + index,
-    command: 'x'.repeat(4_096) + index,
-    status: 'stopped',
+    id: 'TEST-process-' + index,
+    pid: 1000 + index,
+    label: 'TEST-process',
+    registeredAt: '2026-11-28T00:00:00.000Z',
+    processRef: 'p1:TEST:' + index.toString(16).padStart(64, '0'),
+    observation: 'metadata-stopped',
+    canTerminate: false,
+    command: 'x'.repeat(4_096),
   }));
   const snapshot = {
     teamName: 'TEST-team', revision: 'a'.repeat(64), members: [],
