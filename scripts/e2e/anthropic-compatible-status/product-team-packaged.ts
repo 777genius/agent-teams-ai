@@ -8,7 +8,7 @@ import { pause, type PackagedDefaultCdp } from './packaged-default-cdp.ts';
 import { type DefaultProcessLedger, type ProcessIdentity } from './packaged-default-processes.ts';
 import { configuredDefault, probePrompt, type GatewayRequest } from './default-model-gateway.ts';
 // @ts-expect-error Existing native process inventory is a JavaScript utility.
-import { processes } from '../opencode-diagnostics/platform.mjs';
+import { powershell } from '../opencode-diagnostics/platform.mjs';
 
 interface ProductInput {
   cdp: PackagedDefaultCdp;
@@ -37,10 +37,25 @@ async function until<T>(label: string, read: () => Promise<T | null | false | un
   throw new Error('Product Windows E2E timeout: ' + label);
 }
 function alive(original: ProcessIdentity): boolean {
-  return (processes() as ProcessIdentity[]).some(
-    row => row.pid === original.pid && row.birth === original.birth);
+  assert(Number.isSafeInteger(original.pid) && original.pid > 0 &&
+    typeof original.birth === 'string' && Number.isFinite(Date.parse(original.birth)),
+  'Original worker identity unavailable');
+  // The shared census omits unreadable CreationDate rows. Query this captured
+  // PID directly so an unknown birth cannot be mistaken for retirement.
+  const rows: unknown = JSON.parse(powershell(
+    '$rows=@(Get-CimInstance Win32_Process -Filter "ProcessId = ' + original.pid +
+    '" -ErrorAction Stop | ForEach-Object { [pscustomobject]@{ pid=[int]$_.ProcessId; ' +
+    'birth=$(if ($null -eq $_.CreationDate) {$null} else {$_.CreationDate.ToUniversalTime().ToString("o")}) } }); ' +
+    'ConvertTo-Json -InputObject $rows -Compress'
+  ).replace(/^\uFEFF/, '').trim());
+  assert(Array.isArray(rows) && rows.length <= 1, 'Invalid original worker census');
+  if (rows.length === 0) return false;
+  const current = rows[0] as { pid?: unknown; birth?: unknown } | null;
+  assert(current && current.pid === original.pid && typeof current.birth === 'string' &&
+    Number.isFinite(Date.parse(current.birth)), 'Original worker birth unavailable');
+  return current.birth === original.birth;
 }
-async function ipc(cdp: PackagedDefaultCdp, expression: string, key: string) {
+async function ipc(cdp: PackagedDefaultCdp, expression: string, key: string, timeout = 180_000) {
   const literal = JSON.stringify(key);
   await cdp.evaluate('(() => { window[' + literal + ']={done:false};' +
     'Promise.resolve(' + expression + ').then(' +
@@ -52,7 +67,7 @@ async function ipc(cdp: PackagedDefaultCdp, expression: string, key: string) {
     if (!reply?.done) return null;
     if (reply.error) throw new Error('Product IPC failed: ' + reply.error.slice(0, 300));
     return { value: reply.value ?? null };
-  });
+  }, timeout);
 }
 
 export async function proveWindowsProductTeam(input: ProductInput) {
@@ -71,6 +86,9 @@ export async function proveWindowsProductTeam(input: ProductInput) {
   };
   try {
     const request = {
+      // Test a directly owned teammate under the requested team identity, not
+      // the per-project execution alias introduced for isolated new teams.
+      projectContextMode: 'shared' as const,
       teamName: name, cwd: project, providerId: 'anthropic',
       model: configuredDefault, skipPermissions: true, syncModelsWithLead: true,
       // The message nonce is intentionally absent from launch/lead prompts:
@@ -128,6 +146,21 @@ export async function proveWindowsProductTeam(input: ProductInput) {
     await until('original worker exited after real product Stop',
       async () => original && !alive(original) ? true : null, 45_000);
     report.originalWorkerRetiredAfterStop = true;
+    const stoppedStateDeadline = Date.now() + 15_000;
+    await until('product run marked stopped', async () => {
+      const remaining = stoppedStateDeadline - Date.now();
+      if (remaining <= 0) return null;
+      const response = await ipc(cdp,
+        'Promise.all([window.electronAPI.teams.processAlive(' + JSON.stringify(name) + '),' +
+        'window.electronAPI.teams.aliveList()]).then(([processAlive, aliveTeams]) => ({processAlive, aliveTeams}))',
+        '__windowsProductStoppedState', remaining);
+      const state = response.value as { processAlive?: unknown; aliveTeams?: unknown } | null;
+      report.productStoppedState = state;
+      assert(state && typeof state.processAlive === 'boolean' && Array.isArray(state.aliveTeams) &&
+        state.aliveTeams.every((team: unknown) => typeof team === 'string'), 'Invalid product stopped state');
+      if (Date.now() >= stoppedStateDeadline) return null;
+      return state.processAlive === false && !state.aliveTeams.includes(name) ? true : null;
+    }, 15_000);
     report.passed = true;
     return report;
   } finally {
@@ -135,8 +168,21 @@ export async function proveWindowsProductTeam(input: ProductInput) {
       await ipc(cdp, 'window.electronAPI.teams.stop(' + JSON.stringify(name) + ')',
         '__windowsProductStopOnFailure').catch(() => undefined);
     }
-    if (original) report.originalWorkerStillAliveAtEnd = alive(original);
+    let finalObservationError: unknown;
+    try {
+      if (original) {
+        report.originalWorkerStillAliveAtEnd = alive(original);
+        if (report.passed)
+          assert(report.originalWorkerStillAliveAtEnd === false, 'Original worker survived final Stop observation');
+      }
+    } catch (error) {
+      finalObservationError = error;
+      report.originalWorkerStillAliveAtEnd ??= null;
+      report.finalObservationError = String(error);
+      report.passed = false;
+    }
     await writeFile(path.join(evidenceRoot, 'windows-product-team-result.json'),
       JSON.stringify(report, null, 2) + '\n');
+    if (finalObservationError) throw finalObservationError;
   }
 }

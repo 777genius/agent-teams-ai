@@ -19,6 +19,10 @@ on:
       - src/main/services/runtime/providerRuntimeEnv.ts
       - src/main/utils/shellEnv.ts
       - src/main/services/team/provisioning/TeamProvisioningEnvBuilder.ts
+      - src/main/services/team/provisioning/TeamProvisioningRunProgress.ts
+      - src/main/utils/windowsProcessTree.ts
+      - test/main/utils/windowsProcessTree.test.ts
+      - src/main/services/team/provisioning/__tests__/TeamProvisioningRunProgress.test.ts
       - src/renderer/store/slices/cliInstallerSlice.ts
       - src/renderer/store/index.ts
       - src/renderer/components/team/dialogs/ProvisioningProviderRuntimeSettingsDialog.tsx
@@ -59,6 +63,8 @@ jobs:
         with:
           node-version-file: .node-version
           cache: pnpm
+      - name: Verify process ownership regressions
+        run: node --test scripts/e2e/opencode-diagnostics/platform.test.mjs scripts/e2e/anthropic-compatible-status/packaged-default-processes.test.ts
       - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
