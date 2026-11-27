@@ -207,9 +207,9 @@ async function setup() {
         },
         cost: {
           estimatedUsd: 0, billableUsd: 0, apiEquivalentUsd: 0,
-          source: 'provider', billingMode: 'api',
+          source: 'unknown', billingMode: 'unknown',
         },
-        usageSourceKind: 'sdk_exact',
+        usageSourceKind: 'log_parsed',
         occurredAt: usedAt, createdAt: usedAt,
       },
     },
