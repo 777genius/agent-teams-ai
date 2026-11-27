@@ -75,7 +75,7 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
     memberGatewayRuntimeSeams: MemberGatewayRuntimeSeams | null = null,
     private readonly budgetAdmission: (teamName: string) => Promise<void> = async () => undefined
   ) {
-    super(resolveOpenCodeInputDeclaration, memberGatewayRuntimeSeams);
+    super(budgetAdmission, resolveOpenCodeInputDeclaration, memberGatewayRuntimeSeams);
     this.initializeTeamProvisioningService(groupChats);
   }
 
@@ -87,10 +87,6 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
   }
 
   assertTeamBudgetAdmission(teamName: string): Promise<void> {
-    return this.budgetAdmission(teamName);
-  }
-
-  protected override assertRuntimeSpawnAllowed(teamName: string): Promise<void> {
     return this.budgetAdmission(teamName);
   }
 

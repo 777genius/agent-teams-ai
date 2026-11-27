@@ -2070,7 +2070,26 @@ describe(
       async (boundary) => {
         const teamName = `pure-opencode-budget-restart-${boundary}`;
         const adapter = new FakeOpenCodeRuntimeAdapter();
-        const svc = new TeamProvisioningService();
+        let exceeded = false;
+        const admit = vi.fn(async () => {
+          if (exceeded) throw new Error('TEAM_BUDGET_BLOCKED');
+        });
+        const svc = new TeamProvisioningService(
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          null,
+          admit
+        );
         svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
         await svc.createTeam(
           {
@@ -2096,15 +2115,7 @@ describe(
           },
           () => undefined
         );
-        let exceeded = false;
-        const admit = vi
-          .spyOn(
-            svc as unknown as { assertRuntimeSpawnAllowed(teamName: string): Promise<void> },
-            'assertRuntimeSpawnAllowed'
-          )
-          .mockImplementation(async () => {
-            if (exceeded) throw new Error('TEAM_BUDGET_BLOCKED');
-          });
+        admit.mockClear();
         const preflight: NonNullable<TeamLaunchRuntimeAdapter['preflightLocalModels']> =
           async () => {
             if (boundary === 'preflight') exceeded = true;
@@ -2138,13 +2149,13 @@ describe(
         try {
           await expect(svc.restartMember(teamName, 'tom')).rejects.toThrow('TEAM_BUDGET_BLOCKED');
           expect(exceeded).toBe(true);
+          expect(admit).toHaveBeenCalledWith(teamName);
           expect(primaryLaunchCount() - beforeLaunch).toBe(boundary === 'rollback' ? 1 : 0);
           if (boundary === 'preflight') {
             expect(adapter.stopInputs).toHaveLength(beforeStop);
             expect(svc.isTeamAlive(teamName)).toBe(true);
           }
         } finally {
-          admit.mockRestore();
           await svc.stopTeam(teamName);
           await waitForLaunchStateQueueIdle(svc, teamName);
         }

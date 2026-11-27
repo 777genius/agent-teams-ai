@@ -452,7 +452,7 @@ describe('TeamProvisioningOpenCodeAggregatePrimaryFacade', () => {
   it.each(['success', 'restored'] as const)(
     'wakes queued inboxes after primary restart readiness and both operation leases release: %s',
     async (outcome) => {
-      const facade = new TestOpenCodeAggregatePrimaryFacade();
+      const facade = new TestOpenCodeAggregatePrimaryFacade(async () => undefined);
       facade.productionLaunch = true;
       const run = createRun();
       const sibling = {
@@ -587,7 +587,7 @@ describe('TeamProvisioningOpenCodeAggregatePrimaryFacade', () => {
   it.each(['current', 'cancelled', 'double-failure', 'publication-replacement'] as const)(
     'returns only current correlated successor authority when secondary setup fails after successful primary relaunch: %s',
     async (scope) => {
-      const facade = new TestOpenCodeAggregatePrimaryFacade();
+      const facade = new TestOpenCodeAggregatePrimaryFacade(async () => undefined);
       facade.productionLaunch = true;
       facade.secondarySetupError = new Error('secondary worktree setup failed');
       const run = createRun();
@@ -656,7 +656,7 @@ describe('TeamProvisioningOpenCodeAggregatePrimaryFacade', () => {
   it.each(['current', 'cancelled', 'replaced', 'publication', 'disconnected'] as const)(
     'correlates final persistence failure only while the successful successor primary is still owned: %s',
     async (scope) => {
-      const facade = new TestOpenCodeAggregatePrimaryFacade();
+      const facade = new TestOpenCodeAggregatePrimaryFacade(async () => undefined);
       facade.productionLaunch = true;
       const failureMessage =
         scope === 'publication' ? 'ready notification failed' : 'final snapshot persistence failed';
@@ -722,7 +722,7 @@ describe('TeamProvisioningOpenCodeAggregatePrimaryFacade', () => {
   it.each([0, 1, 2])(
     'uses fresh incarnations with materialized sessions; failed launches=%s',
     async (failedLaunches) => {
-      const facade = new TestOpenCodeAggregatePrimaryFacade();
+      const facade = new TestOpenCodeAggregatePrimaryFacade(async () => undefined);
       facade.productionLaunch = true;
       const run = createRun();
       const originalRunId = run.runId;
@@ -856,7 +856,7 @@ describe('TeamProvisioningOpenCodeAggregatePrimaryFacade', () => {
   );
 
   it('allocates a fresh primary incarnation after confirmed stop even when launch fails before returning evidence', async () => {
-    const facade = new TestOpenCodeAggregatePrimaryFacade();
+    const facade = new TestOpenCodeAggregatePrimaryFacade(async () => undefined);
     // No fabricated successful launch result: the launch boundary throws before
     // returning evidence, as a stopped-session refusal does in production.
     const stop = vi.fn(async (input: TeamRuntimeStopInput) => ({
@@ -890,7 +890,7 @@ describe('TeamProvisioningOpenCodeAggregatePrimaryFacade', () => {
   });
 
   it('retains failed candidate authority when launch throws before a capability is persisted', async () => {
-    const facade = new TestOpenCodeAggregatePrimaryFacade();
+    const facade = new TestOpenCodeAggregatePrimaryFacade(async () => undefined);
     facade.productionLaunch = true;
     const run = createRun();
     const oldRunId = run.runId;
@@ -956,7 +956,7 @@ describe('TeamProvisioningOpenCodeAggregatePrimaryFacade', () => {
   });
 
   it('does not launch a fresh incarnation when Stop cancels a pending primary restart', async () => {
-    const facade = new TestOpenCodeAggregatePrimaryFacade();
+    const facade = new TestOpenCodeAggregatePrimaryFacade(async () => undefined);
     const enteredStop = createDeferred();
     const releaseStop = createDeferred();
     facade.initialStop = async () => {
@@ -984,7 +984,7 @@ describe('TeamProvisioningOpenCodeAggregatePrimaryFacade', () => {
 
   it('rejects stale secondary retry intent without stopping primary or healthy siblings', async () => {
     const stop = vi.fn();
-    const facade = new TestOpenCodeAggregatePrimaryFacade();
+    const facade = new TestOpenCodeAggregatePrimaryFacade(async () => undefined);
     facade.setRuntimeAdapterRegistry(
       new TeamRuntimeAdapterRegistry([
         { providerId: 'opencode', stop } as unknown as TeamLaunchRuntimeAdapter,
@@ -1005,14 +1005,14 @@ describe('TeamProvisioningOpenCodeAggregatePrimaryFacade', () => {
   });
 
   it('keeps aggregate primary restart ownership visible to shutdown coordination', () => {
-    const facade = new TestOpenCodeAggregatePrimaryFacade();
+    const facade = new TestOpenCodeAggregatePrimaryFacade(async () => undefined);
     facade.trackAggregatePrimaryRestartForShutdown('Restart-Team');
 
     expect(facade.getShutdownTrackedTeamNames()).toEqual(['Restart-Team']);
   });
 
   it('keeps runtime adapter stop ownership visible to shutdown coordination', () => {
-    const facade = new TestOpenCodeAggregatePrimaryFacade();
+    const facade = new TestOpenCodeAggregatePrimaryFacade(async () => undefined);
     facade.trackRuntimeAdapterStopForShutdown('Stopping-Team');
 
     expect(facade.getShutdownTrackedTeamNames()).toEqual(['Stopping-Team']);
@@ -1031,7 +1031,7 @@ describe('TeamProvisioningOpenCodeAggregatePrimaryFacade', () => {
       providerId: 'opencode',
       stop,
     } as unknown as TeamLaunchRuntimeAdapter;
-    const facade = new TestOpenCodeAggregatePrimaryFacade();
+    const facade = new TestOpenCodeAggregatePrimaryFacade(async () => undefined);
     facade.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
     const run = createRun();

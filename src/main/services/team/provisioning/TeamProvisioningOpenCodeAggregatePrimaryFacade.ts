@@ -242,8 +242,9 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     memberName: string;
     run: ProvisioningRun;
     restartLease: OpenCodeAggregatePrimaryRestartLease;
+    admit: () => Promise<void>;
   }): Promise<void> {
-    const { teamName, memberName, run, restartLease } = params;
+    const { teamName, memberName, run, restartLease, admit } = params;
     const normalizedMemberName = memberName.trim().toLowerCase();
     const primaryMember = run.effectiveMembers.find(
       (member) => member.name.trim().toLowerCase() === normalizedMemberName
@@ -349,7 +350,6 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     };
     const advancePrimaryIncarnation = (): void =>
       advanceOpenCodePrimaryIncarnation(run, restartLease, incarnationPorts);
-    const admit = () => this.assertRuntimeSpawnAllowed(teamName);
     const assertSpawnAllowed = () =>
       assertUnstartedOpenCodePrimaryAdmission(run, admit, assertRestartCurrent);
     await admit();
@@ -602,7 +602,7 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     memberName: string,
     expectedSecondary?: boolean
   ): Promise<void> {
-    return this.runAfterInFlightSpawnOperation(teamName, async () => {
+    return this.runAfterInFlightSpawnOperation(teamName, async (admit) => {
       const activeRestart = this.openCodeAggregatePrimaryRestartByTeam.get(
         teamName.trim().toLowerCase()
       );
@@ -623,7 +623,6 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
           expectedSecondary
         );
       }
-
       const restart = this.beginOpenCodeAggregatePrimaryRestart(
         teamName,
         memberName,
@@ -631,7 +630,7 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       );
       try {
         await Promise.all(restart.lease.precedingLifecycleOperations);
-        await this.assertRuntimeSpawnAllowed(teamName);
+        await admit();
         if (restart.lease.cancelRequested)
           throw getCancelledAggregateRestartError(teamName, memberName);
         if (candidate.run) {
@@ -645,6 +644,7 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
                 memberName,
                 run: candidate.run!,
                 restartLease: restart.lease,
+                admit,
               })
           );
         } else {

@@ -150,9 +150,11 @@ function preserveProvisioningRemovalTombstones(store: TeamMembersMetaStore): Tea
 
 /** Owns lifecycle host construction and launch-preparation adaptation. */
 export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamProvisioningServiceRuntimeStateFacade {
-  /** Narrow, optional runtime-start seam; the production service injects budget admission. */
-  protected assertRuntimeSpawnAllowed(_teamName: string): Promise<void> {
-    return Promise.resolve();
+  constructor(
+    private readonly runtimeSpawnAdmission: (teamName: string) => Promise<void>,
+    ...args: ConstructorParameters<typeof TeamProvisioningServiceRuntimeStateFacade>
+  ) {
+    super(...args);
   }
 
   protected runAfterInFlightTeamOperation<T>(
@@ -180,14 +182,15 @@ export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamP
 
   protected runAfterInFlightSpawnOperation<T>(
     teamName: string,
-    operation: () => Promise<T>
+    operation: (admit: () => Promise<void>) => Promise<T>
   ): Promise<T> {
     const assertCurrent = this.captureRuntimeSpawnAdmissionFence(teamName);
+    const admit = () => this.runtimeSpawnAdmission(teamName);
     return this.runAfterInFlightTeamOperation(teamName, async () => {
       assertCurrent();
-      await this.assertRuntimeSpawnAllowed(teamName);
+      await admit();
       assertCurrent();
-      return operation();
+      return operation(admit);
     });
   }
 
@@ -308,7 +311,7 @@ export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamP
               if (canSpawn) {
                 assertCurrent();
                 if (restartRunId !== null) {
-                  await this.assertRuntimeSpawnAllowed(teamName);
+                  await this.runtimeSpawnAdmission(teamName);
                   assertCurrent();
                 }
               }
