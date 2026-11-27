@@ -113,3 +113,27 @@ test('late native OAuth completion cannot overwrite an externally replaced recei
   await assert.rejects(f.owner.close(), { code: 'held' });
   assert.equal(f.bytes(), bytes);
 });
+
+test('OAuth cancel closes its original native capture when its durable receipt disappeared', async t => {
+  const f = fixture(); t.after(() => f.cleanup());
+  await f.waiting();
+  unlinkSync(f.file());
+  await assert.rejects(f.owner.cancel(original), { code: 'conflict' });
+  await until(() => f.closeCalls === 1);
+  f.close.resolve(true);
+  await assert.rejects(f.owner.close(), { code: 'held' });
+  assert.equal(f.store.read(input.operationId), undefined);
+  assert.equal(f.completeCalls, 0);
+});
+
+test('OAuth final cleanup does not resurrect a receipt removed while native close is pending', async t => {
+  const f = fixture(); t.after(() => f.cleanup());
+  await f.waiting();
+  const cancelled = f.owner.cancel(original);
+  await until(() => f.closeCalls === 1);
+  unlinkSync(f.file());
+  f.close.resolve(true);
+  assert.equal((await cancelled).phase, 'held');
+  await assert.rejects(f.owner.close(), { code: 'held' });
+  assert.equal(f.store.read(input.operationId), undefined);
+});
