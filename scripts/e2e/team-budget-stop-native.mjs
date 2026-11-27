@@ -2,10 +2,10 @@
 // verified PID/birth retirement; only usage telemetry is synthetic and local.
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
-import {mkdir,readFile,rename,writeFile} from 'node:fs/promises';
+import {mkdir,readFile,rename,rm,writeFile} from 'node:fs/promises';
 import path from 'node:path';
 
-export async function proveNativeBudgetStop({client,api,wait,getProcess,ownedStillAlive,root,userDataRoot,request,foreignIdentity}){
+export async function proveNativeBudgetStop({client,api,wait,getProcess,ownedStillAlive,root,userDataRoot,request,foreignIdentity,expected,heldToolPidPath,waitForOwnedPowerShellDescendant}){
   const nativeTeamName = request.teamName + '-budget';
   const userData = path.resolve(userDataRoot);
   const fixtureRoot = path.resolve(root);
@@ -38,6 +38,16 @@ export async function proveNativeBudgetStop({client,api,wait,getProcess,ownedSti
     },180000);
     assert(await ownedStillAlive(original),'Budget native worker exited before policy was configured');
     assert(await ownedStillAlive(foreignIdentity),'Unrelated baseline worker unavailable before budget stop');
+    // Prove budget Stop retires a live descendant tool, not an idle worker
+    // which might independently exit before the budget publication arrives.
+    await rm(heldToolPidPath,{force:true});
+    const holdToken=randomUUID(),holdKey='hold:'+holdToken;
+    expected.set(holdKey,'WIN_BUDGET_HOLD_'+holdToken);
+    await api(`window.electronAPI.teams.sendMessage(${JSON.stringify(nativeTeamName)},
+      ${JSON.stringify({member:'alice',from:'user',text:'WIN_NATIVE_TOOL:'+holdKey})})`);
+    const held=await waitForOwnedPowerShellDescendant(original.pid,
+      'real held PowerShell descendant of budget-owned teammate',90000);
+    assert(await ownedStillAlive(held),'Budget native tool exited before the budget update');
     const settings=await api('window.electronAPI.tokenUsage.getBudgetSettings()');
     const {updatedAt,...existing}=settings;
     const saved=await api(`window.electronAPI.tokenUsage.updateBudgetSettings(${JSON.stringify({
@@ -51,7 +61,8 @@ export async function proveNativeBudgetStop({client,api,wait,getProcess,ownedSti
       }}
     })})`);
     assert(typeof saved.updatedAt==='string','Native budget settings CAS revision missing');
-    assert(await ownedStillAlive(original),'Native worker exited before over-budget evidence');
+    assert(await ownedStillAlive(original) && await ownedStillAlive(held),
+      'Native budget worker or held tool exited before over-budget evidence');
     const ledgerPath=path.join(userData,'data','token-usage','ledger.json');
     await mkdir(path.dirname(ledgerPath),{recursive:true});
     const previous=await readFile(ledgerPath,'utf8').then(JSON.parse).catch(e=>{
@@ -85,10 +96,13 @@ export async function proveNativeBudgetStop({client,api,wait,getProcess,ownedSti
       const metric=target?.metrics?.find(x=>x.metric==='tokens');
       if(target?.onExceeded!=='stop_team'||metric?.limit!==100||metric?.value!==150)return false;
       const nativeAlive=await ownedStillAlive(original);
+      const toolAlive=await ownedStillAlive(held);
       const teamAlive=await api(`window.electronAPI.teams.processAlive(${JSON.stringify(nativeTeamName)})`);
-      return !nativeAlive&&!teamAlive
-        ? {memberPid:original.pid,memberBirth:original.creation,used:metric.value,
-           limit:metric.limit,settingsRevision:saved.updatedAt,ownedRuntimeStopped:true}
+      return !nativeAlive&&!toolAlive&&!teamAlive
+        ? {memberPid:original.pid,memberBirth:original.creation,
+           heldToolPid:held.pid,heldToolBirth:held.creation,heldToolRetired:true,
+           used:metric.value,limit:metric.limit,
+           settingsRevision:saved.updatedAt,ownedRuntimeStopped:true}
         : false;
     },180000);
     assert(await ownedStillAlive(foreignIdentity),

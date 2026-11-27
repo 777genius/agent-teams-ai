@@ -614,6 +614,7 @@ async function run() {
     client, api, wait, getProcess, ownedStillAlive, root,
     userDataRoot: env.AGENT_TEAMS_ELECTRON_USER_DATA_DIR,
     request, foreignIdentity: forceExitMember,
+    expected, heldToolPidPath, waitForOwnedPowerShellDescendant,
   });
   assert(await ownedStillAlive(forceExitMember) && await ownedStillAlive(forceExitHeldTool),
     'Budget auto-stop retired the unrelated held-tool team');
