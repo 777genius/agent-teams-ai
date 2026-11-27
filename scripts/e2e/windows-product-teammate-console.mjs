@@ -596,17 +596,6 @@ async function run() {
     'Owned Windows Job launcher retired before forced Electron Main shutdown');
   assert(await ownedStillAlive(forceExitMember),
     'Forced-exit teammate had already retired before Electron Main was killed');
-  // This third native team has its own physical worker. A known monthly budget
-  // overage must automatically stop that worker but NOT the still-live forced-exit team.
-  phase = 'real-native-budget-auto-stop';
-  const nativeBudgetStop = await proveNativeBudgetStop({
-    client, api, wait, getProcess, ownedStillAlive, root,
-    userDataRoot: env.AGENT_TEAMS_ELECTRON_USER_DATA_DIR,
-    request, foreignIdentity: forceExitMember,
-  });
-  assert(await ownedStillAlive(forceExitMember),
-    'Unrelated forced-exit native teammate died during budget stop');
-  phase = 'forced-actual-electron-main-exit';
   // Qualify the actual Electron force-exit path with a live native tool
   // descendant too; the separate app-shaped fixture is not product proof.
   await rm(heldToolPidPath, { force: true });
@@ -618,6 +607,17 @@ async function run() {
     'original live PowerShell descendant before Electron Main force-exit', 90_000);
   assert(await ownedStillAlive(forceExitHeldTool),
     'Forced-exit tool descendant had already retired before Electron Main was killed');
+  // A native held tool keeps the unrelated forced-exit teammate active while
+  // the separate owned budget team is automatically stopped by real product IPC.
+  phase = 'real-native-budget-auto-stop';
+  const nativeBudgetStop = await proveNativeBudgetStop({
+    client, api, wait, getProcess, ownedStillAlive, root,
+    userDataRoot: env.AGENT_TEAMS_ELECTRON_USER_DATA_DIR,
+    request, foreignIdentity: forceExitMember,
+  });
+  assert(await ownedStillAlive(forceExitMember) && await ownedStillAlive(forceExitHeldTool),
+    'Budget auto-stop retired the unrelated held-tool team');
+  phase = 'forced-actual-electron-main-exit';
   const liveMain = await getProcess(mainBirth.pid);
   assert(liveMain?.creation === mainBirth.creation &&
     liveMain.command.toLowerCase().includes('electron.exe'),
