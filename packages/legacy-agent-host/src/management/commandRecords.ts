@@ -62,6 +62,7 @@ export const storedOAuthCommandSchema = z
     completionMethod: z.enum(['auto', 'code']).nullable(),
     completionCommandId: id.optional(),
     completionFingerprint: hash.optional(),
+    completionFingerprintKdf: secretFingerprintKdfSchema.optional(),
     sequence: z.number().int().min(1),
     expiresAt: z.number().int().positive(),
     reason: z.enum(['cancelled', 'expired', 'native-rejected', 'native-outcome-unknown', 'owner-changed']).optional(),
@@ -75,6 +76,9 @@ export const storedOAuthCommandSchema = z
     if (value.reason === 'native-rejected' && !['cancelling', 'failed', 'held'].includes(value.phase))
       return false;
     if ((value.completionCommandId === undefined) !== (value.completionFingerprint === undefined))
+      return false;
+    if (value.completionFingerprintKdf !== undefined &&
+        (value.completionMethod !== 'code' || !value.completionCommandId || !value.completionFingerprint))
       return false;
     if (
       ['completing', 'completed'].includes(value.phase) &&

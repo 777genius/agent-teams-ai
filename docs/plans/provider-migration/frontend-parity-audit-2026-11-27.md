@@ -947,3 +947,75 @@ First reproduce the reported30k CJK failure against the original built code usin
 Potential test homes: new tests/team-input-admission.test.ts; existing runtime-owner.test.ts, task-notification-parity.test.ts, member-attachment-delivery.test.ts, runtime-cross-team-binding.test.ts, group-chats.test.ts, context-reminders.test.ts; existing Main cross-team projection tests for50k round trip. Extend shared fixtures narrowly instead of duplicating large setup.
 
 Ownership: G1b management files remain provider-owned; I renderer files and external Mac's savedTeamModelProbe.ts/teamRoster.ts/TeamLaunchOwner.ts are excluded. Context preparation is touched only to correct this byte calculation. No currently active external owner of createTeamContextPreparation.ts has been confirmed; perform a fresh source/branch collision check before editing rather than inventing an additional approval dependency. No merge to main, release, default activation, native acceptance claim or immutable receipt rewriting.
+
+### P1 read-only namespace refinement
+
+Independent source review found that the reused TeamOwnerStore constructor
+creates missing namespace ancestors, even though attachment metadata/resolve
+only read completed original artifacts. A preflight must not recreate an
+original namespace that disappeared after capture.
+
+Add only a backward-compatible optional third constructor argument,
+{ createNamespace?: boolean }, to adapters/team/TeamOwnerStore.ts.
+When createNamespace is false, its existing ENOENT branch throws the existing
+TeamOwnerError('hold') before mkdirSync. Existing constructors keep their
+current default creation and symlink/directory checks. The extracted
+projectMemberInput passes false; no alternate filesystem reader, cache,
+MemberEntry state or new storage owner is introduced.
+
+This adds one production path to P1: 32 total, approximately three lines beyond
+the reviewed scope. Both independent R2 and R3 source reviews approved the
+change. Before editing that source, reproduce the missing-namespace creation
+through the actual existing constructor/projection boundary. Keep regressions
+for a removed .host-owner directory and a removed Team ancestor, checking that
+neither is recreated, plus an ordinary-constructor creation control and exact
+existing attachment resolution. Test roots remain isolated TEST fixtures.
+
+Fresh cross-team byte overflows use the existing invalid/rejected result before
+source publication. The shared retained-intent validator keeps its conservative
+hold behavior; no arbitrary identity/authority exception is relabeled. An exact
+public-row boundary regression may exercise the pure fit helper when the
+stricter private-intent envelope makes that particular public-only overflow
+unreachable through the real Host.
+
+### G1b retained replay projection refinement
+
+Retained completion replay projects the latest validated durable original.
+A private snapshot option preserves the existing live read/cancel presentation;
+only replay bypasses that in-memory preference. A retired pending operation has
+the existing held/unknown presentation, even while live read still reports its
+ongoing cancellation. Replay performs no native operation or journal write.
+Initial missing/corrupt receipt reads fence only a known active entry with the
+same supplied operation/profile/configuration identity; a wrong caller selector
+cannot retire an unrelated operation. The common completion-currentness guard
+rereads the original receipt before deadline cleanup for explicit completion,
+post-KDF publication and the browser observer. These narrow refinements passed
+independent R2/R3 source reviews; final execution evidence follows below.
+
+### G1b implementation verification
+
+The final OAuth change preserves one native conversation and the original
+operation/namespace throughout asynchronous code fingerprint preparation,
+browser completion, cancellation and cold replay. New explicit-code claims use
+the already reviewed bounded scrypt implementation and a retained versioned
+salt; legacy and native null-code claims keep their original comparison rules.
+The new regressions reproduced uncertain initial/completion writes and receipt
+replacement before cleanup, including the combined deadline cases, before the
+corresponding fixes.
+
+An execution-environment restart removed the temporary checkout. The five files
+were reconstructed over exact published base
+`1e64ea3221a6a943baebf329662ffc04fd7f7a00`, independently reread in full, and tested
+again. The canonical checked Host build passed. Strict checking of the eight
+focused test files passed. All eight related runtime suites passed: **98 tests,
+zero failures or skips**, including real bounded scrypt, original filesystem
+journals and the late-cleanup regressions. The source-size and whitespace guards
+passed. No earlier result was substituted for these reconstructed bytes.
+
+Actual scope is two production files, 169 added and 39 removed lines, and three
+test files, 358 added and 20 removed lines. The extra receipt-conflict/deadline
+and replay-projection checks account for growth beyond the first estimate.
+Independent R2 and R3 approved the final full source. This qualifies the OAuth
+correction; current-commit CI, native application qualification and the separate
+credential-derived witness/CodeQL investigation remain required. No generic
+journal migration, alert suppression, main merge or default activation occurred.

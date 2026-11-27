@@ -1,7 +1,9 @@
 import { z } from 'zod';
 
 import { assertManagementTarget, ManagementCommandError } from './commandRecords.js';
-import { managementDigest } from './identity.js';
+import { managementDigest, managementValuesEqual } from './identity.js';
+import { deriveSecretFingerprint, SecretFingerprintError, secretFingerprintsEqual } from './secretFingerprint.js';
+import type { SecretFingerprintKdf } from './secretFingerprint.js';
 
 import type {
   ManagementCommandStore,
@@ -24,6 +26,8 @@ type OAuthStart = z.infer<typeof startSchema>;
 const completeSchema = identity
   .extend({ commandId: id, code: z.string().trim().min(1).max(16384).optional() })
   .strict();
+type OAuthComplete = z.infer<typeof completeSchema>;
+type CompletionInput = { commandId: string; code: string | null };
 
 /** Captured native conversation. prepare() does not allocate; close seals even pending allocation. */
 export interface OAuthNativeConversation {
@@ -51,6 +55,13 @@ interface ActiveOAuth {
   authorization?: ProviderOAuthAuthorization;
   timer?: NodeJS.Timeout;
   closing?: Promise<void>;
+  pendingCompletion?: {
+    input: CompletionInput;
+    result: Promise<ProviderOAuthSnapshot>;
+    settled: Promise<void>;
+  };
+  completionPublicationUnknown?: true;
+  receiptConflict?: true;
   retired: boolean;
 }
 
@@ -86,6 +97,7 @@ export class OAuthOperationOwner {
     this.options.fence.reserve(target.resourceId, input.operationId);
     let native: OAuthNativeConversation;
     let entry: ActiveOAuth;
+    let claimWriteAttempted = false;
     try {
       native = this.options.prepare(input); // Construction only, no native allocation.
       if (
@@ -108,11 +120,12 @@ export class OAuthOperationOwner {
         sequence: 1,
         expiresAt: Date.now() + native.timeoutMs,
       };
+      claimWriteAttempted = true;
       this.options.store.write(saved);
       entry = { saved, native, abort: new AbortController(), retired: false };
       this.active.set(input.operationId, entry);
     } catch (error) {
-      this.options.fence.release(target.resourceId, input.operationId, true);
+      this.options.fence.release(target.resourceId, input.operationId, !claimWriteAttempted);
       throw error;
     }
     entry.timer = setTimeout(() => {
@@ -148,39 +161,149 @@ export class OAuthOperationOwner {
     return entry.authorization ? { ...entry.authorization } : null;
   }
 
-  complete(raw: unknown): ProviderOAuthSnapshot {
-    const input = completeSchema.parse(raw);
-    this.assertAdmission();
-    const saved = this.readOriginal(input);
-    if (!saved) throw new ManagementCommandError('invalid');
-    const fingerprint = managementDigest({ commandId: input.commandId, code: input.code ?? null });
-    if (saved.completionCommandId) {
-      if (
-        saved.completionCommandId !== input.commandId ||
-        saved.completionFingerprint !== fingerprint
-      )
-        throw new ManagementCommandError('conflict');
-      return this.snapshot(saved);
-    }
-    const entry = this.active.get(input.operationId);
-    if (!entry || entry.retired) return this.snapshot(saved);
-    this.assertBound(entry);
-    if (
-      !['waiting-for-code', 'waiting-for-browser'].includes(entry.saved.phase) ||
-      (entry.saved.completionMethod === 'code') !== (input.code !== undefined)
-    )
-      throw new ManagementCommandError('invalid');
+  complete(raw: unknown): Promise<ProviderOAuthSnapshot> {
     try {
-      this.publish(entry, 'completing', {
-        completionCommandId: input.commandId,
-        completionFingerprint: fingerprint,
-      });
+      const input = completeSchema.parse(raw);
+      this.assertAdmission();
+      const entry = this.active.get(input.operationId);
+      const captured = entry && entry.saved.profileId === input.profileId &&
+        entry.saved.configRevision === input.configRevision ? entry : undefined;
+      const closeChanged = captured !== undefined && !captured.retired && !captured.saved.completionCommandId;
+      let saved: StoredOAuthCommand | undefined;
+      try { saved = this.readOriginal(input); }
+      catch (error) { this.fenceChangedReceipt(captured, closeChanged); throw error; }
+      if (!saved) {
+        this.fenceChangedReceipt(captured, closeChanged);
+        throw new ManagementCommandError(captured ? 'conflict' : 'invalid');
+      }
+      if (saved.completionCommandId) return this.replayCompletion(input, saved);
+      if (!entry || entry.retired) return Promise.resolve(this.snapshot(saved));
+      this.assertCompletionCurrent(entry);
+      if (!['waiting-for-code', 'waiting-for-browser'].includes(entry.saved.phase) ||
+          (entry.saved.completionMethod === 'code') !== (input.code !== undefined))
+        throw new ManagementCommandError('invalid');
+      const value = { commandId: input.commandId, code: input.code ?? null };
+      if (entry.pendingCompletion) {
+        if (!managementValuesEqual(entry.pendingCompletion.input, value))
+          throw new ManagementCommandError('conflict');
+        return entry.pendingCompletion.result;
+      }
+      if (input.code === undefined) {
+        this.publishCompletion(entry, input.commandId, { fingerprint: managementDigest(value) });
+        void this.finish(entry, undefined);
+        return Promise.resolve(this.snapshot(entry.saved));
+      }
+      const result = Promise.withResolvers<ProviderOAuthSnapshot>();
+      const settled = Promise.withResolvers<void>();
+      const pending = { input: value, result: result.promise, settled: settled.promise };
+      entry.pendingCompletion = pending;
+      const clear = () => { if (entry.pendingCompletion === pending) delete entry.pendingCompletion; };
+      void this.prepareCompletion(entry, input, saved).then(
+        snapshot => { clear(); result.resolve(snapshot); settled.resolve(); },
+        error => { clear(); result.reject(error); settled.resolve(); },
+      );
+      return pending.result;
     } catch (error) {
+      return Promise.reject(error);
+    }
+  }
+
+  private async fingerprint(input: OAuthComplete, original?: SecretFingerprintKdf) {
+    try {
+      return await deriveSecretFingerprint({ commandId: input.commandId, code: input.code ?? null }, original);
+    } catch (error) {
+      if (error instanceof SecretFingerprintError)
+        throw new ManagementCommandError(error.code === 'failed' ? 'held' : error.code);
+      throw error;
+    }
+  }
+
+  private completionIdentity(saved: StoredOAuthCommand) {
+    const { phase: _phase, sequence: _sequence, reason: _reason, resourceHeld: _held, ...original } = saved;
+    return structuredClone(original);
+  }
+
+  private async replayCompletion(input: OAuthComplete, saved: StoredOAuthCommand): Promise<ProviderOAuthSnapshot> {
+    const original = this.completionIdentity(saved);
+    if (original.completionCommandId !== input.commandId || !original.completionFingerprint)
+      throw new ManagementCommandError('conflict');
+    const active = this.active.get(saved.commandId);
+    const same = active && managementValuesEqual(original, this.completionIdentity(active.saved));
+    if (active && !active.retired && !same) {
+      this.fenceChangedReceipt(active, false);
+      throw new ManagementCommandError('conflict');
+    }
+    const captured = same ? active : undefined;
+    const fingerprint = original.completionFingerprintKdf === undefined
+      ? managementDigest({ commandId: input.commandId, code: input.code ?? null })
+      : (await this.fingerprint(input, original.completionFingerprintKdf)).fingerprint;
+    this.assertAdmission();
+    let latest: StoredOAuthCommand | undefined;
+    try { latest = this.readOriginal(input); }
+    catch (error) { this.fenceChangedReceipt(captured, false); throw error; }
+    if (!latest || !managementValuesEqual(original, this.completionIdentity(latest))) {
+      this.fenceChangedReceipt(captured, false);
+      throw new ManagementCommandError('conflict');
+    }
+    if (!secretFingerprintsEqual(original.completionFingerprint, fingerprint))
+      throw new ManagementCommandError('conflict');
+    return this.snapshot(latest, false);
+  }
+
+  private async prepareCompletion(
+    entry: ActiveOAuth, input: OAuthComplete, saved: StoredOAuthCommand
+  ): Promise<ProviderOAuthSnapshot> {
+    const original = structuredClone(saved);
+    const proof = await this.fingerprint(input);
+    this.assertBound(entry);
+    if (!managementValuesEqual(original, entry.saved)) {
+      this.fenceChangedReceipt(entry, true);
+      throw new ManagementCommandError('conflict');
+    }
+    this.assertCompletionCurrent(entry);
+    this.publishCompletion(entry, input.commandId, proof);
+    void this.finish(entry, input.code);
+    return this.snapshot(entry.saved);
+  }
+
+  private assertCompletionCurrent(entry: ActiveOAuth): void {
+    this.assertBound(entry);
+    let latest: StoredOAuthCommand | undefined;
+    try { latest = this.readOriginal({ operationId: entry.saved.commandId,
+      profileId: entry.saved.profileId, configRevision: entry.saved.configRevision }); }
+    catch (error) { this.fenceChangedReceipt(entry, true); throw error; }
+    if (!latest || !managementValuesEqual(entry.saved, latest)) {
+      this.fenceChangedReceipt(entry, true);
+      throw new ManagementCommandError('conflict');
+    }
+    if (Date.now() >= entry.saved.expiresAt) {
+      void this.stop(entry, 'expired');
+      throw new ManagementCommandError('held');
+    }
+  }
+
+  private fenceChangedReceipt(entry: ActiveOAuth | undefined, close: boolean): void {
+    if (!entry || this.active.get(entry.saved.commandId) !== entry) return;
+    entry.receiptConflict = true;
+    if (close) void this.stop(entry, 'native-outcome-unknown');
+  }
+
+  private publishCompletion(
+    entry: ActiveOAuth, commandId: string,
+    proof: { fingerprint: string; fingerprintKdf?: SecretFingerprintKdf }
+  ): void {
+    this.assertBound(entry);
+    const next: StoredOAuthCommand = { ...entry.saved, phase: 'completing', sequence: entry.saved.sequence + 1,
+      completionCommandId: commandId, completionFingerprint: proof.fingerprint,
+      ...(proof.fingerprintKdf ? { completionFingerprintKdf: proof.fingerprintKdf } : {}) };
+    try { this.options.store.write(next); }
+    catch (error) {
+      entry.completionPublicationUnknown = true;
       void this.stop(entry, 'native-outcome-unknown');
       throw error;
     }
-    void this.finish(entry, input.code);
-    return this.snapshot(entry.saved);
+    entry.saved = next;
+    this.emit(entry);
   }
 
   async cancel(raw: unknown): Promise<ProviderOAuthSnapshot> {
@@ -219,7 +342,7 @@ export class OAuthOperationOwner {
 
   private assertBound(entry: ActiveOAuth): void {
     this.assertAdmission();
-    if (entry.retired || this.active.get(entry.saved.commandId) !== entry)
+    if (entry.retired || entry.receiptConflict || this.active.get(entry.saved.commandId) !== entry)
       throw new ManagementCommandError('held');
     assertManagementTarget(
       entry.saved,
@@ -239,10 +362,11 @@ export class OAuthOperationOwner {
     return saved;
   }
 
-  private snapshot(saved: StoredOAuthCommand): ProviderOAuthSnapshot {
-    const current = this.active.get(saved.commandId)?.saved ?? saved;
+  private snapshot(saved: StoredOAuthCommand, preferLive = true): ProviderOAuthSnapshot {
+    const active = this.active.get(saved.commandId);
+    const current = (preferLive ? active?.saved : undefined) ?? saved;
     const unavailable =
-      !this.active.has(saved.commandId) &&
+      (!active || !preferLive && active.retired) &&
       !['completed', 'cancelled', 'failed', 'held'].includes(current.phase);
     return {
       operationId: current.commandId,
@@ -335,7 +459,11 @@ export class OAuthOperationOwner {
   private async observeNativeCompletion(entry: ActiveOAuth): Promise<void> {
     try {
       const ok = await entry.native.nativeCompletion;
-      this.assertBound(entry);
+      this.assertCompletionCurrent(entry);
+      while (entry.pendingCompletion) {
+        await entry.pendingCompletion.settled;
+        this.assertCompletionCurrent(entry);
+      }
       // An explicit code submission owns its original completion command and native outcome.
       if (entry.saved.completionCommandId) return;
       if (!ok) {
@@ -345,10 +473,7 @@ export class OAuthOperationOwner {
       }
       if (!['waiting-for-code', 'waiting-for-browser'].includes(entry.saved.phase)) return;
       const commandId = `native:${managementDigest({ operationId: entry.saved.commandId })}`;
-      this.publish(entry, 'completing', {
-        completionCommandId: commandId,
-        completionFingerprint: managementDigest({ commandId, code: null }),
-      });
+      this.publishCompletion(entry, commandId, { fingerprint: managementDigest({ commandId, code: null }) });
       await this.finish(entry, undefined);
     } catch {
       if (!entry.retired) await this.stop(entry, 'native-outcome-unknown');
@@ -384,6 +509,7 @@ export class OAuthOperationOwner {
       } catch {
         /* Retain unknown writer custody. */
       }
+      if (entry.completionPublicationUnknown || entry.receiptConflict) clean = false;
       entry.saved.phase = !clean ? 'held'
         : reason === 'native-rejected' ? 'failed'
           : reason === 'cancelled' || reason === 'expired' ? 'cancelled' : 'held';
@@ -391,7 +517,7 @@ export class OAuthOperationOwner {
       entry.saved.sequence++;
       try {
         this.options.assertWriter();
-        this.options.store.write(entry.saved);
+        if (!entry.completionPublicationUnknown && !entry.receiptConflict) this.options.store.write(entry.saved);
       } catch {
         clean = false;
         entry.saved.phase = 'held';
@@ -409,7 +535,7 @@ export class OAuthOperationOwner {
     entry.saved.resourceHeld = true;
     try {
       this.options.assertWriter();
-      this.options.store.write(entry.saved);
+      if (!entry.completionPublicationUnknown && !entry.receiptConflict) this.options.store.write(entry.saved);
     } catch {
       /* Cleanup still mandatory. */
     }
