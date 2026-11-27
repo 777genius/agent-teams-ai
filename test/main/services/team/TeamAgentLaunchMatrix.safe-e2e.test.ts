@@ -2158,6 +2158,19 @@ describe(
         } finally {
           await svc.stopTeam(teamName);
           await waitForLaunchStateQueueIdle(svc, teamName);
+          if (boundary === 'rollback') {
+            // Rollback failure diagnostics are written asynchronously. Confirm the final
+            // atomic pointer before afterEach removes the isolated team directory.
+            await vi.waitFor(async () => {
+              const latest = JSON.parse(
+                await fs.readFile(
+                  path.join(getTeamsBasePath(), teamName, 'launch-failure-artifacts', 'latest.json'),
+                  'utf8'
+                )
+              ) as { teamName?: string };
+              expect(latest.teamName).toBe(teamName);
+            }, { timeout: 10_000 });
+          }
         }
       }
     );
