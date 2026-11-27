@@ -94,12 +94,14 @@ export function createTeamBudgetAdmission(
         { metric: 'tokens', limit: configured?.monthlyTokenLimit },
         { metric: 'apiEquivalentCostUsd', limit: configured?.monthlyApiEquivalentCostLimitUsd },
       ].filter((item) => item.limit !== undefined);
-      return target.metrics.length === expectedLimits.length &&
+      return (
+        target.metrics.length === expectedLimits.length &&
         expectedLimits.every((item) =>
           target.metrics.some(
             (metric) => metric.metric === item.metric && metric.limit === item.limit
           )
-        );
+        )
+      );
     };
     let status = await reader.getBudgetStatus();
     // A known subtotal at the limit needs no expensive provider refresh.

@@ -154,9 +154,9 @@ function setup(initial: {
       const status = budgetStatus({
         ...state,
         action: state.statusAction ?? state.action,
-        updatedAt: state.statusRevision ?? (state.settingsRevision && !state.statusRevision
-          ? undefined
-          : state.settingsRevision),
+        updatedAt:
+          state.statusRevision ??
+          (state.settingsRevision && !state.statusRevision ? undefined : state.settingsRevision),
         limit: state.statusLimit,
       });
       // Simulate an independent CAS Save after status projection but before
@@ -216,13 +216,17 @@ describe('team budget composition - no live provider required', () => {
 
   it('fails closed when configured enforcement has no matching projected target', async () => {
     const { guard, refresh } = setup({ action: 'block_launch', omitTarget: true });
-    await expect(guard()).rejects.toThrow('TEAM_BUDGET_BLOCKED: Cannot verify active budget policy');
+    await expect(guard()).rejects.toThrow(
+      'TEAM_BUDGET_BLOCKED: Cannot verify active budget policy'
+    );
     expect(refresh).toHaveBeenCalledOnce();
   });
 
   it('fails closed when projected action disagrees with enforced settings', async () => {
     const { guard, refresh } = setup({ action: 'stop_team', statusAction: 'notify' });
-    await expect(guard()).rejects.toThrow('TEAM_BUDGET_BLOCKED: Cannot verify active budget policy');
+    await expect(guard()).rejects.toThrow(
+      'TEAM_BUDGET_BLOCKED: Cannot verify active budget policy'
+    );
     expect(refresh).toHaveBeenCalledOnce();
   });
 
@@ -233,7 +237,9 @@ describe('team budget composition - no live provider required', () => {
       settingsRevision: '2026-11-27T12:01:00.000Z',
       statusRevision: '2026-11-27T12:00:00.000Z',
     });
-    await expect(guard()).rejects.toThrow('TEAM_BUDGET_BLOCKED: Cannot verify active budget policy');
+    await expect(guard()).rejects.toThrow(
+      'TEAM_BUDGET_BLOCKED: Cannot verify active budget policy'
+    );
     expect(refresh).toHaveBeenCalledOnce();
   });
 
@@ -243,7 +249,9 @@ describe('team budget composition - no live provider required', () => {
       used: 150,
       statusLimit: 200,
     });
-    await expect(guard()).rejects.toThrow('TEAM_BUDGET_BLOCKED: Cannot verify active budget policy');
+    await expect(guard()).rejects.toThrow(
+      'TEAM_BUDGET_BLOCKED: Cannot verify active budget policy'
+    );
     expect(refresh).toHaveBeenCalledOnce();
   });
 
@@ -274,7 +282,9 @@ describe('team budget composition - no live provider required', () => {
 
   it('permits a proven under-budget launch after refresh restores a missing target', async () => {
     const { guard, refresh } = setup({
-      action: 'block_launch', omitTarget: true, repairOnRefresh: true,
+      action: 'block_launch',
+      omitTarget: true,
+      repairOnRefresh: true,
     });
     await expect(guard()).resolves.toBeUndefined();
     expect(refresh).toHaveBeenCalledOnce();
