@@ -13,6 +13,8 @@ import { randomUUID } from 'crypto';
 
 import { computeScheduleNextRunAt } from './computeScheduleNextRunAt';
 import { recoverInterruptedScheduleRuns } from './recoverInterruptedScheduleRuns';
+import { recordScheduleFailure, resetScheduleFailureCount } from './scheduleFailureCount';
+import { ScheduleMutationQueue } from './ScheduleMutationQueue';
 import { SchedulerStopBarrier } from './SchedulerStopBarrier';
 import { admissionRefusal, folderChange, type ScheduleAdmissionCheck } from './scheduleTarget';
 import { updateScheduleTimestamps } from './updateScheduleTimestamps';
@@ -70,6 +72,7 @@ export class SchedulerService {
   // CWD exclusion lock: cwd → schedule ID (prevents two schedule runs on same dir)
   private cwdLock = new Map<string, string>();
 
+  private scheduleMutations = new ScheduleMutationQueue();
   // Flag to prevent retry timers from firing after stop()
   private stopped = false;
   private lifecycleEpoch = 0;
@@ -224,7 +227,11 @@ export class SchedulerService {
     return schedule;
   }
 
-  async updateSchedule(id: string, patch: UpdateSchedulePatch): Promise<Schedule> {
+  updateSchedule(id: string, patch: UpdateSchedulePatch): Promise<Schedule> {
+    return this.scheduleMutations.run(id, () => this.applyScheduleUpdate(id, patch));
+  }
+
+  private async applyScheduleUpdate(id: string, patch: UpdateSchedulePatch): Promise<Schedule> {
     const existing = await this.repository.getSchedule(id);
     if (!existing) throw new Error(`Schedule not found: ${id}`);
     await this.assertSchedulableTeam(existing.teamName, folderChange(existing, patch));
@@ -262,7 +269,8 @@ export class SchedulerService {
       throw error;
     }
     if (reschedule) {
-      if (nextJob) this.activateCronJob(updated, nextJob);
+      if (nextJob && this.stopped) nextJob.stop();
+      else if (nextJob) this.activateCronJob(updated, nextJob);
       else this.removeCronJob(id);
     }
     this.emitChange({
@@ -275,7 +283,11 @@ export class SchedulerService {
     return updated;
   }
 
-  async deleteSchedule(id: string): Promise<void> {
+  deleteSchedule(id: string): Promise<void> {
+    return this.scheduleMutations.run(id, () => this.applyScheduleDelete(id));
+  }
+
+  private async applyScheduleDelete(id: string): Promise<void> {
     const existing = await this.repository.getSchedule(id);
     if (!existing) throw new Error(`Schedule not found: ${id}`);
     // Do not stop a live schedule unless the durable deletion succeeds.
@@ -293,7 +305,11 @@ export class SchedulerService {
     logger.info(`Schedule deleted: ${id}`);
   }
 
-  async pauseSchedule(id: string): Promise<void> {
+  pauseSchedule(id: string): Promise<void> {
+    return this.scheduleMutations.run(id, () => this.applySchedulePause(id));
+  }
+
+  private async applySchedulePause(id: string): Promise<void> {
     const existing = await this.repository.getSchedule(id);
     if (!existing) throw new Error(`Schedule not found: ${id}`);
 
@@ -316,7 +332,11 @@ export class SchedulerService {
     logger.info(`Schedule paused: ${id}`);
   }
 
-  async resumeSchedule(id: string): Promise<void> {
+  resumeSchedule(id: string): Promise<void> {
+    return this.scheduleMutations.run(id, () => this.applyScheduleResume(id));
+  }
+
+  private async applyScheduleResume(id: string): Promise<void> {
     const existing = await this.repository.getSchedule(id);
     if (!existing) throw new Error(`Schedule not found: ${id}`);
     await this.assertSchedulableTeam(existing.teamName);
@@ -338,7 +358,8 @@ export class SchedulerService {
       job.stop();
       throw error;
     }
-    this.activateCronJob(updated, job);
+    if (this.stopped) job.stop();
+    else this.activateCronJob(updated, job);
     this.emitChange({
       type: 'schedule-updated',
       scheduleId: id,
@@ -672,8 +693,8 @@ export class SchedulerService {
         if (this.activeRuns.get(scheduleId)?.id === run.id) this.releaseRunLocks(scheduleId);
         // A cancelled external dispatch cannot write after stop/fixture teardown.
         if (!finishFinalization) return;
-        await updateScheduleTimestamps(this.repository, schedule, (event) =>
-          this.emitChange(event)
+        await this.scheduleMutations.run(scheduleId, () =>
+          updateScheduleTimestamps(this.repository, schedule, (event) => this.emitChange(event))
         );
         const freshSchedule = await this.repository.getSchedule(scheduleId);
         if (!this.stopped && freshSchedule?.status === 'active') this.scheduleWarmUp(freshSchedule);
@@ -785,44 +806,25 @@ export class SchedulerService {
   // Consecutive Failure Tracking
   // ===========================================================================
 
-  private async resetConsecutiveFailures(schedule: Schedule): Promise<void> {
-    if (schedule.consecutiveFailures === 0) return;
-
-    const updated: Schedule = {
-      ...schedule,
-      consecutiveFailures: 0,
-      updatedAt: new Date().toISOString(),
-    };
-    await this.repository.saveSchedule(updated);
+  private resetConsecutiveFailures(schedule: Schedule): Promise<void> {
+    return this.scheduleMutations.run(schedule.id, () =>
+      resetScheduleFailureCount(this.repository, schedule.id)
+    );
   }
 
-  private async incrementConsecutiveFailures(schedule: Schedule): Promise<void> {
-    const newCount = schedule.consecutiveFailures + 1;
-    const shouldAutoPause = newCount >= schedule.maxConsecutiveFailures;
-
-    const updated: Schedule = {
-      ...schedule,
-      consecutiveFailures: newCount,
-      status: shouldAutoPause ? 'paused' : schedule.status,
-      updatedAt: new Date().toISOString(),
-    };
-
-    if (shouldAutoPause) {
-      logger.warn(`[${schedule.id}] Auto-pausing after ${newCount} consecutive failures`);
-    }
-
-    await this.repository.saveSchedule(updated);
-
-    if (shouldAutoPause) {
+  private incrementConsecutiveFailures(schedule: Schedule): Promise<void> {
+    return this.scheduleMutations.run(schedule.id, async () => {
+      const autoPausedAt = await recordScheduleFailure(this.repository, schedule.id);
+      if (autoPausedAt === null) return;
       this.cronJobs.get(schedule.id)?.pause();
       this.clearWarmUpTimer(schedule.id);
       this.emitChange({
         type: 'schedule-paused',
         scheduleId: schedule.id,
         teamName: schedule.teamName,
-        detail: `auto-paused after ${newCount} consecutive failures`,
+        detail: `auto-paused after ${autoPausedAt} consecutive failures`,
       });
-    }
+    });
   }
 
   private releaseRunLocks(scheduleId: string): void {

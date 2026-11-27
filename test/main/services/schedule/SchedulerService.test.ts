@@ -1235,4 +1235,212 @@ describe('SchedulerService', () => {
     await service.stop();
   });
 
+  it('keeps a pause made while a smart run was executing when that run then fails', async () => {
+    let finish!: () => void;
+    const dispatcher = {
+      dispatch: vi.fn(
+        () =>
+          new Promise((_, reject) => {
+            finish = () => reject(new Error('delivery unknown'));
+          })
+      ),
+    };
+    const service = new SchedulerService(repo, executor as any, warmUpFn, dispatcher as never);
+    const schedule = await service.createSchedule({
+      teamName: 'my-team',
+      executionMode: 'team',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      launchConfig: { cwd: '/tmp/project', prompt: 'check PRs' },
+    });
+    await service.triggerNow(schedule.id);
+    await vi.advanceTimersByTimeAsync(50);
+    await service.pauseSchedule(schedule.id);
+    expect((await repo.getSchedule(schedule.id))?.status).toBe('paused');
+    finish();
+    await vi.advanceTimersByTimeAsync(100);
+    const saved = await repo.getSchedule(schedule.id);
+    expect(saved?.status).toBe('paused');
+    expect(saved?.consecutiveFailures).toBe(1);
+    await service.stop();
+  });
+
+  it('keeps an edit made while a smart run was executing when that run then fails', async () => {
+    let finish!: () => void;
+    const dispatcher = {
+      dispatch: vi.fn(
+        () =>
+          new Promise((_, reject) => {
+            finish = () => reject(new Error('delivery unknown'));
+          })
+      ),
+    };
+    const service = new SchedulerService(repo, executor as any, warmUpFn, dispatcher as never);
+    const schedule = await service.createSchedule({
+      teamName: 'my-team',
+      executionMode: 'team',
+      label: 'before',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      launchConfig: { cwd: '/tmp/project', prompt: 'check PRs' },
+    });
+    await service.triggerNow(schedule.id);
+    await vi.advanceTimersByTimeAsync(50);
+    await service.updateSchedule(schedule.id, { label: 'after', cronExpression: '0 10 * * *' });
+    finish();
+    await vi.advanceTimersByTimeAsync(100);
+    const saved = await repo.getSchedule(schedule.id);
+    expect(saved?.label).toBe('after');
+    expect(saved?.cronExpression).toBe('0 10 * * *');
+    expect(saved?.consecutiveFailures).toBe(1);
+    await service.stop();
+  });
+
+  it('keeps a pause made while a run was executing when that run then succeeds', async () => {
+    let finish!: () => void;
+    executor.execute.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finish = () =>
+            resolve({ exitCode: 0, stdout: '', stderr: '', summary: 'ok', durationMs: 5 });
+        })
+    );
+    const schedule = makeSchedule({ consecutiveFailures: 2 });
+    await repo.saveSchedule(schedule);
+    const service = createService();
+    await service.triggerNow(schedule.id);
+    await vi.advanceTimersByTimeAsync(50);
+    await service.pauseSchedule(schedule.id);
+    finish();
+    await vi.advanceTimersByTimeAsync(100);
+    const saved = await repo.getSchedule(schedule.id);
+    expect(saved?.status).toBe('paused');
+    expect(saved?.consecutiveFailures).toBe(0);
+    await service.stop();
+  });
+
+  it('does not save a deleted schedule again when its smart run then fails', async () => {
+    let finish!: () => void;
+    const dispatcher = {
+      dispatch: vi.fn(
+        () =>
+          new Promise((_, reject) => {
+            finish = () => reject(new Error('delivery unknown'));
+          })
+      ),
+    };
+    const service = new SchedulerService(repo, executor as any, warmUpFn, dispatcher as never);
+    const schedule = await service.createSchedule({
+      teamName: 'my-team',
+      executionMode: 'team',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      launchConfig: { cwd: '/tmp/project', prompt: 'check PRs' },
+    });
+    await service.triggerNow(schedule.id);
+    await vi.advanceTimersByTimeAsync(50);
+    await service.deleteSchedule(schedule.id);
+    finish();
+    await vi.advanceTimersByTimeAsync(100);
+    expect(await repo.getSchedule(schedule.id)).toBeNull();
+    await service.stop();
+  });
+
+  it('does not start a cron job for a resume queued behind a run when the scheduler stops', async () => {
+    let finish!: () => void;
+    const dispatcher = {
+      dispatch: vi.fn(
+        () =>
+          new Promise((_, reject) => {
+            finish = () => reject(new Error('delivery unknown'));
+          })
+      ),
+    };
+    const service = new SchedulerService(repo, executor as any, warmUpFn, dispatcher as never);
+    const schedule = await service.createSchedule({
+      teamName: 'my-team',
+      executionMode: 'team',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      launchConfig: { cwd: '/tmp/project', prompt: 'check PRs' },
+    });
+    await service.triggerNow(schedule.id);
+    await vi.advanceTimersByTimeAsync(50);
+    await service.pauseSchedule(schedule.id);
+
+    // Hold the run's failure-counter save so the resume waits behind it.
+    const save = vi.mocked(repo.saveSchedule).getMockImplementation()!;
+    let releaseCounterSave!: () => void;
+    const counterSaveGate = new Promise<void>((resolve) => (releaseCounterSave = resolve));
+    let counterSaveHeld = false;
+    vi.mocked(repo.saveSchedule).mockImplementation(async (saved) => {
+      if (!counterSaveHeld && saved.consecutiveFailures === 1) {
+        counterSaveHeld = true;
+        await counterSaveGate;
+      }
+      return save(saved);
+    });
+
+    finish();
+    await vi.advanceTimersByTimeAsync(10);
+    expect(counterSaveHeld).toBe(true);
+    const resuming = service.resumeSchedule(schedule.id);
+    const stopping = service.stop();
+    releaseCounterSave();
+    await resuming;
+    await stopping;
+    await vi.advanceTimersByTimeAsync(100);
+
+    expect((await repo.getSchedule(schedule.id))?.status).toBe('active');
+    expect((service as unknown as { cronJobs: Map<string, unknown> }).cronJobs.size).toBe(0);
+  });
+
+  it('keeps a pause that lands between the failure counter read and its save', async () => {
+    let finish!: () => void;
+    const dispatcher = {
+      dispatch: vi.fn(
+        () =>
+          new Promise((_, reject) => {
+            finish = () => reject(new Error('delivery unknown'));
+          })
+      ),
+    };
+    const service = new SchedulerService(repo, executor as any, warmUpFn, dispatcher as never);
+    const schedule = await service.createSchedule({
+      teamName: 'my-team',
+      executionMode: 'team',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      launchConfig: { cwd: '/tmp/project', prompt: 'check PRs' },
+    });
+    await service.triggerNow(schedule.id);
+    await vi.advanceTimersByTimeAsync(50);
+
+    // Hold the run's failure-counter save after it has read the schedule.
+    const save = vi.mocked(repo.saveSchedule).getMockImplementation()!;
+    let releaseCounterSave!: () => void;
+    const counterSaveGate = new Promise<void>((resolve) => (releaseCounterSave = resolve));
+    let counterSaveHeld = false;
+    vi.mocked(repo.saveSchedule).mockImplementation(async (saved) => {
+      if (!counterSaveHeld && saved.consecutiveFailures === 1) {
+        counterSaveHeld = true;
+        await counterSaveGate;
+      }
+      return save(saved);
+    });
+
+    finish();
+    await vi.advanceTimersByTimeAsync(10);
+    expect(counterSaveHeld).toBe(true);
+    const pausing = service.pauseSchedule(schedule.id);
+    await vi.advanceTimersByTimeAsync(10);
+    releaseCounterSave();
+    await pausing;
+    await vi.advanceTimersByTimeAsync(100);
+
+    const saved = await repo.getSchedule(schedule.id);
+    expect(saved?.status).toBe('paused');
+    expect(saved?.consecutiveFailures).toBe(1);
+    await service.stop();
+  });
 });
