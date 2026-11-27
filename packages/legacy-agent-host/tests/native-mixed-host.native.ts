@@ -34,6 +34,8 @@ import { readdir } from 'node:fs/promises';
 import { captureInitialRuntimeModelAdmission, type InitialRuntimeModelAction } from '../dist/composition/initialRuntimeModelAdmission.js';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 
+import { runNativeAutonomousGoalProof, type NativeGoalSource } from './fixtures/native-autonomous-goal/proof.ts';
+
 const digest = (bytes: string) => createHash('sha256').update(bytes).digest('hex');
 
 // This scripts inference only. All tools, MCP, sessions and workspace effects run
@@ -41,6 +43,8 @@ const digest = (bytes: string) => createHash('sha256').update(bytes).digest('hex
 const exerciseCrossTeam = process.env.LEGACY_NATIVE_MIXED_CROSS_TEAM_GO === '1';
 const exerciseRestore = process.env.LEGACY_NATIVE_MIXED_RESTORE_GO === '1';
 const exercisePeers = process.env.LEGACY_NATIVE_MIXED_PEERS_GO === '1';
+const exerciseGoals = process.env.LEGACY_NATIVE_MIXED_GOALS_GO === '1';
+let nativeGoalSource: NativeGoalSource | undefined;
 test(
   exercisePeers
     ? 'mixed native providers exchange all six peer routes after selected restore'
@@ -1006,5 +1010,20 @@ stream_max_retries = 0
       undefined,
       'original H3 native inputs changed; inspect retained receipt'
     );
+    if (exerciseGoals) {
+      assert.ok(exerciseRestore && !exercisePeers && !exerciseCrossTeam,
+        'the goal extension uses only the selected original native restore lane');
+      nativeGoalSource = { root, node, entry, profile: structuredClone(profile), initialLaunch,
+        modelUrls: { claude: claudeModel.url, codex: codexModel.url, opencode: openCodeModel.url },
+        providerArchive, artifacts: { source, dist, entry: await fileHash(entry), providerSha256, executables },
+        codexNativeInputs };
+    }
   }
 );
+
+
+test('native goals complete and Stop on Claude/Codex/OpenCode V1 leads in Do and Delegate',
+  { skip: !exerciseGoals, timeout: 720_000 }, async t => {
+    assert.ok(nativeGoalSource, 'the unchanged original native mixed baseline must pass first');
+    await runNativeAutonomousGoalProof(nativeGoalSource, message => t.diagnostic(message), t.signal);
+  });

@@ -2,7 +2,7 @@
 
 **Implementation authorization (2026-11-27):** the user has now requested implementation, end-to-end tests, review fixes and eventual merge of #1315 into its integration base. Follow the detailed [commit and push checklist](autonomous-goal-completion-implementation.md). Earlier documentation-only authorization statements below are historical; the technical scope and acceptance requirements remain in force. Parent #982's merge into main, release and default activation remain outside this task. Preserve both allowed Do and Delegate lead intake; goal provenance must not broaden Delegate/Ask into native DO helper authority. Current paired native lead text is already visible; only authoritative goal acceptance requires the final publication receipt.
 
-**Status:** implementation and qualification in progress. The design received twenty-four self-review passes in four batches; implementation review findings have dedicated regressions. The published WIP is `5bb406aaf0cfaf5eacff86b952b024a227454efa`; current-source evidence and remaining gates are recorded in the implementation checklist. No final native, overnight, CI or merge PASS is implied. **Parent:** [#982](https://github.com/777genius/agent-teams-ai/pull/982), initially inspected at `dee94bf14ddbe81143ed2c3c9029a74e66158e1e`; source rechecked at `f3bbca99f4e1ed07009f60338c3ffdf6f15a91ad` (2026-11-27). This is a follow-up, not an amendment to the migration acceptance or authorization to merge/activate it. **Target:** a team with a lead and teammates can finish an explicitly accepted user objective unattended while its supported desktop/Host execution environment is running.
+**Status:** implementation and qualification in progress. The design received twenty-four self-review passes in four batches; implementation review findings have dedicated regressions. The published recovery checkpoint is `d7afbdfc3576e9fd3b3ebf2a66dab2c44785d5d1`; this follow-up includes the reviewed native test matrix and parent `cc3f1b5bf7adbc49d6ac611dd5ebce81522e6abd`. Current-source evidence and remaining gates are recorded in the implementation checklist. No final native, overnight, CI or merge PASS is implied. **Parent:** [#982](https://github.com/777genius/agent-teams-ai/pull/982), initially inspected at `dee94bf14ddbe81143ed2c3c9029a74e66158e1e`; subsequent deltas through `cc3f1b5` were reviewed before integration. This is a follow-up, not an amendment to the migration acceptance or authorization to merge/activate it. **Target:** a team with a lead and teammates can finish an explicitly accepted user objective unattended while its supported desktop/Host execution environment is running.
 
 ## 1. Practical first release and scope
 
@@ -185,11 +185,11 @@ Qualification order: focused deterministic rules and real owner/store integratio
 
 ## 11. Implementation start gates
 
-- [ ] Read #982's current source and parent acceptance/ownership handoff; verify parity, exact Host paths and provider capability before coding.
+- [x] Read #982's current source and parent acceptance/ownership handoff; verify parity, exact Host paths and provider capability before coding. Later parent deltas through `cc3f1b5` were separately reviewed and incorporated.
 - [ ] Prove one disposable walking slice: actual lead submission -> goal-bound delegated task -> native terminal input -> one authorized continuation -> valid result after quiescence. Trace the original receipt and task association, current owner/claim fence and debit; record failing invariant and smallest correction. Reuse existing wait/report/control routes before expanding.
-- [ ] Confirm one conservative attempt counter and existing receipt recovery, exact final claim fencing, budget defaults and allowed observation/check policy without granting additional tools or credentials.
+- [x] Confirm one conservative attempt counter and existing receipt recovery, exact final claim fencing, budget defaults and allowed observation/check policy without granting additional tools or credentials. Current real-owner regressions cover original debit, claim, deadline and Stop boundaries.
 - [ ] Implement slices in the existing draft, normal focused checks and independent review; push completed bounded changes, then run required E2E on final source.
-- [ ] Resolve parent integration and retarget only after approved parent merge; no default activation or release here.
+- [ ] Complete current-parent integration and merge #1315 into `feat/provider-migration-stage-1` after its own gates pass, as now authorized. Do not merge #982 into main, retarget this work to main, activate by default or release.
 
 ## 12. Design self-review history (four batches of six passes)
 

@@ -14,7 +14,11 @@ export function createRuntimeWorkSyncWake(options: {
         : [
             ...new Set(
               [...options.entries.values()]
-                .filter((entry) => (entry.settleWorkSync || entry.team.owner.goals.snapshot()) && options.isCurrent(entry))
+                .filter((entry) => {
+                  try {
+                    return options.isCurrent(entry) && Boolean(entry.settleWorkSync || entry.team.owner.goals.snapshot());
+                  } catch { return false; } // One unavailable original cannot suppress another team's wake.
+                })
                 .map((entry) => entry.delivery.teamName)
             ),
           ],

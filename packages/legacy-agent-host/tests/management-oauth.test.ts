@@ -1,15 +1,19 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync } from 'node:fs';
+import crypto from 'node:crypto';
+import { mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, unlinkSync } from 'node:fs';
+import { syncBuiltinESMExports } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { test } from 'node:test';
+import { test, type TestContext } from 'node:test';
 
 import { FileManagementCommandStore } from '../dist/adapters/providers/FileManagementCommandStore.js';
 import { CredentialCommandOwner } from '../dist/management/CredentialCommandOwner.js';
 import { ManagementResourceFence } from '../dist/management/ManagementResourceFence.js';
 import { OAuthOperationOwner } from '../dist/management/OAuthOperationOwner.js';
+import { managementDigest } from '../dist/management/identity.js';
+import { deriveSecretFingerprint } from '../dist/management/secretFingerprint.js';
 
-import type { ManagementCommandStore, ManagementTarget } from '../src/management/commandRecords.ts';
+import type { ManagementCommandStore, ManagementTarget, StoredOAuthCommand } from '../src/management/commandRecords.ts';
 import type { ProviderOAuthSnapshot } from '../src/management/contracts.ts';
 import type { OAuthNativeConversation } from '../src/management/OAuthOperationOwner.ts';
 
@@ -21,8 +25,8 @@ function deferred<T>() {
   return { promise, resolve };
 }
 async function until(check: () => boolean): Promise<void> {
-  const deadline = Date.now() + 2000;
-  while (!check() && Date.now() < deadline) await new Promise<void>((done) => setImmediate(done));
+  const deadline = performance.now() + 2000;
+  while (!check() && performance.now() < deadline) await new Promise<void>((done) => setImmediate(done));
   assert.ok(check(), 'the original operation reaches its expected durable state');
 }
 const initial = {
@@ -50,6 +54,8 @@ function fixture(
     closeFails?: boolean;
     blockClose?: boolean;
     confirmedRejection?: boolean;
+    browser?: boolean;
+    beforePrepare?(): void;
     store?: (base: ManagementCommandStore) => ManagementCommandStore;
   } = {}
 ) {
@@ -69,6 +75,7 @@ function fixture(
     authorize: ReturnType<typeof deferred<Authorization>>;
     complete: ReturnType<typeof deferred<boolean>>;
     close: ReturnType<typeof deferred<boolean>>;
+    browser: ReturnType<typeof deferred<boolean>>;
     authorizeCalls: number;
     completeCalls: number;
     closeCalls: number;
@@ -84,10 +91,12 @@ function fixture(
     return { ...target };
   };
   const prepare = (input: { operationId: string }) => {
+    options.beforePrepare?.();
     const native = {
       authorize: deferred<Authorization>(),
       complete: deferred<boolean>(),
       close: deferred<boolean>(),
+      browser: deferred<boolean>(),
       authorizeCalls: 0,
       completeCalls: 0,
       closeCalls: 0,
@@ -96,7 +105,8 @@ function fixture(
     conversations.push(native);
     return {
       timeoutMs: options.timeoutMs ?? 30_000,
-      ...(options.confirmedRejection ? { nativeCompletion: Promise.resolve(false), nativeRejectionConfirmed: true } : {}),
+      ...(options.confirmedRejection ? { nativeCompletion: Promise.resolve(false), nativeRejectionConfirmed: true }
+        : options.browser ? { nativeCompletion: native.browser.promise } : {}),
       async authorize() {
         assert.equal(base.read(input.operationId)?.phase, 'authorizing');
         native.authorizeCalls++;
@@ -160,6 +170,7 @@ function fixture(
       extraOwners.push(recovered);
       return recovered;
     },
+    files: () => readdirSync(join(root, 'management-commands')).map(name => join(root, 'management-commands', name)),
     serialized: () =>
       readdirSync(join(root, 'management-commands'))
         .map((name) => readFileSync(join(root, 'management-commands', name), 'utf8'))
@@ -171,6 +182,294 @@ function fixture(
     },
   };
 }
+
+function controlledFingerprints(t: TestContext) {
+  const callbacks: ((error?: Error) => void)[] = [];
+  let started = 0;
+  t.mock.method(crypto, 'scrypt', (...[input, salt, , , callback]: Parameters<typeof crypto.scrypt>) => {
+    assert.ok(Buffer.isBuffer(input) && Buffer.isBuffer(salt)); started++;
+    callbacks.push(error => callback(error ?? null, crypto.createHash('sha256').update(input).update(salt).digest()));
+  });
+  syncBuiltinESMExports();
+  t.after(() => { t.mock.restoreAll(); syncBuiltinESMExports(); });
+  return { started: () => started, finish(error?: Error) { const next = callbacks.shift(); assert.ok(next); next(error); } };
+}
+async function waiting(f: ReturnType<typeof fixture>) {
+  f.owner.start(initial);
+  const native = f.conversations[0]!;
+  native.authorize.resolve(authorization);
+  await until(() => f.owner.read(lookup)?.phase === 'waiting-for-code');
+  return native;
+}
+function original(f: ReturnType<typeof fixture>): StoredOAuthCommand {
+  const saved = f.base.read(initial.operationId);
+  assert.ok(saved?.kind === 'oauth');
+  return saved;
+}
+
+test('one-character OAuth code gets a private salted fingerprint and cold replay preserves bytes after expiry and target drift', async t => {
+  const f = fixture(); t.after(() => f.cleanup());
+  const native = await waiting(f), input = { ...lookup, commandId: 'TEST-salted', code: ' x ' };
+  await f.owner.complete(input);
+  const saved = original(f);
+  assert.equal(saved.completionFingerprintKdf?.version, 1);
+  const canonical = { commandId: input.commandId, code: 'x' };
+  assert.equal(saved.completionFingerprint, (await deriveSecretFingerprint(canonical, saved.completionFingerprintKdf)).fingerprint);
+  assert.equal(f.serialized().includes(managementDigest(canonical)), false);
+  assert.equal(native.code, 'x');
+  native.complete.resolve(true);
+  await until(() => f.owner.read(lookup)?.phase === 'completed');
+  const bytes = f.serialized();
+  f.changeTarget(); const cold = f.restart();
+  t.mock.timers.enable({ apis: ['Date'], now: saved.expiresAt + 1 });
+  assert.equal((await cold.complete({ ...input, code: 'x' })).phase, 'completed');
+  await assert.rejects(cold.complete({ ...input, code: 'y' }), { code: 'conflict' });
+  await assert.rejects(cold.complete({ ...input, commandId: 'TEST-other' }), { code: 'conflict' });
+  assert.equal(f.serialized(), bytes);
+  assert.equal(native.completeCalls, 1);
+  assert.equal(JSON.stringify(f.events).includes('completionFingerprint'), false);
+});
+
+test('legacy pasted-code and code-capable native null-code completions retain their original algorithm and bytes', async t => {
+  for (const browser of [false, true]) {
+    const f = fixture({ browser }); t.after(() => f.cleanup());
+    const native = await waiting(f);
+    let commandId = 'TEST-legacy', code: string | undefined = 'TEST-old-code';
+    if (browser) {
+      native.browser.resolve(true); await until(() => native.completeCalls === 1);
+      native.complete.resolve(true); await until(() => f.owner.read(lookup)?.phase === 'completed');
+      commandId = original(f).completionCommandId!; code = undefined;
+    } else f.base.write({ ...original(f), phase: 'completed', resourceHeld: false,
+      completionCommandId: commandId, completionFingerprint: managementDigest({ commandId, code }) });
+    assert.equal(original(f).completionMethod, 'code');
+    assert.equal(original(f).completionFingerprintKdf, undefined);
+    const bytes = f.serialized(), cold = f.restart();
+    const mocked = t.mock.method(crypto, 'scrypt', () => { assert.fail('marker-less replay must not derive'); });
+    syncBuiltinESMExports();
+    try {
+      assert.equal((await cold.complete({ ...lookup, commandId, ...(code ? { code } : {}) })).phase, 'completed');
+      await assert.rejects(cold.complete({ ...lookup, commandId, code: 'TEST-changed' }), { code: 'conflict' });
+      assert.equal(f.serialized(), bytes);
+      assert.equal(native.completeCalls, browser ? 1 : 0);
+    } finally { mocked.mock.restore(); syncBuiltinESMExports(); }
+  }
+});
+
+test('identical in-flight code joins once and browser completion cannot replace its original claim', async t => {
+  const controlled = controlledFingerprints(t), f = fixture({ browser: true });
+  t.after(() => f.cleanup()); const native = await waiting(f);
+  const input = { ...lookup, commandId: 'TEST-code', code: 'TEST-paste' };
+  const first = f.owner.complete(input), duplicate = f.owner.complete(input);
+  assert.equal(first, duplicate);
+  await assert.rejects(f.owner.complete({ ...input, code: 'TEST-changed' }), { code: 'conflict' });
+  await assert.rejects(f.owner.complete({ ...input, commandId: 'TEST-other' }), { code: 'conflict' });
+  native.browser.resolve(true); await Promise.resolve();
+  assert.equal(native.completeCalls, 0); assert.equal(controlled.started(), 1);
+  controlled.finish();
+  assert.deepEqual(await first, await duplicate);
+  assert.equal(original(f).completionCommandId, input.commandId);
+  assert.equal(native.completeCalls, 1);
+  native.complete.resolve(true); await until(() => f.owner.read(lookup)?.phase === 'completed');
+});
+
+test('failed A allows B before the browser observer continues and B retains the only native completion', async t => {
+  const controlled = controlledFingerprints(t), f = fixture({ browser: true });
+  t.after(() => f.cleanup()); const native = await waiting(f);
+  const first = f.owner.complete({ ...lookup, commandId: 'TEST-A', code: 'TEST-A-code' });
+  let second: Promise<ProviderOAuthSnapshot> | undefined;
+  const retry = first.catch(error => {
+    assert.equal(error.code, 'held');
+    second = f.owner.complete({ ...lookup, commandId: 'TEST-B', code: 'TEST-B-code' });
+  });
+  native.browser.resolve(true); await Promise.resolve();
+  controlled.finish(new Error('TEST failed A')); await retry;
+  assert.ok(second); assert.equal(controlled.started(), 2);
+  assert.equal(native.completeCalls, 0);
+  controlled.finish(); await second;
+  assert.equal(original(f).completionCommandId, 'TEST-B');
+  assert.equal(native.code, 'TEST-B-code'); assert.equal(native.completeCalls, 1);
+  native.complete.resolve(true); await until(() => f.owner.read(lookup)?.phase === 'completed');
+});
+
+test('busy or failed code preparation leaves the original browser outcome and namespace intact', async t => {
+  const controlled = controlledFingerprints(t);
+  for (const busy of [false, true]) for (const ok of [false, true]) {
+    const f = fixture({ browser: true }); t.after(() => f.cleanup());
+    const native = await waiting(f);
+    const fillers = busy ? Array.from({ length: 9 }, (_, index) => deriveSecretFingerprint('TEST-fill-' + index)) : [];
+    const rejected = assert.rejects(f.owner.complete({ ...lookup, commandId: 'TEST-rejected-code', code: 'TEST-code' }),
+      { code: busy ? 'busy' : 'held' });
+    await assert.rejects(f.credentials.execute({ commandId: 'TEST-no-early-release', profileId: initial.profileId,
+      configRevision: initial.configRevision, providerId: initial.providerId, kind: 'credential.forget' }), { code: 'busy' });
+    native.browser.resolve(ok); await Promise.resolve();
+    if (!busy) controlled.finish(new Error('TEST code derivation failed'));
+    await rejected;
+    if (ok) {
+      await until(() => native.completeCalls === 1);
+      assert.match(original(f).completionCommandId!, /^native:/);
+      assert.equal(original(f).completionFingerprintKdf, undefined);
+      assert.equal(native.code, undefined);
+      native.complete.resolve(true); await until(() => f.owner.read(lookup)?.phase === 'completed');
+    } else {
+      await until(() => native.closeCalls === 1);
+      assert.equal(native.completeCalls, 0);
+    }
+    for (let index = 0; index < fillers.length; index++) controlled.finish();
+    await Promise.all(fillers);
+  }
+});
+
+test('cancel and close clean before crypto settles while seal immediately fences and aborts', async t => {
+  const controlled = controlledFingerprints(t);
+  for (const action of ['cancel', 'close', 'seal'] as const) {
+    const f = fixture(); t.after(() => f.cleanup()); const native = await waiting(f);
+    const rejected = assert.rejects(f.owner.complete({ ...lookup, commandId: 'TEST-late-code', code: 'TEST-code' }), { code: 'held' });
+    if (action === 'cancel') await f.owner.cancel(lookup);
+    else {
+      if (action === 'seal') { f.owner.seal(); assert.equal(native.closeCalls, 0); }
+      await f.owner.close();
+    }
+    assert.equal(native.closeCalls, 1);
+    const path = f.files()[0]!, bytes = readFileSync(path);
+    if (action === 'cancel') f.owner.start({ ...initial, operationId: 'TEST-next-flow' });
+    controlled.finish(); await rejected;
+    assert.deepEqual(readFileSync(path), bytes);
+    assert.equal(native.completeCalls, 0);
+    if (action === 'cancel') assert.equal(f.conversations[1]?.completeCalls, 0);
+  }
+});
+
+test('original deadline, writer and target are rechecked after crypto even before the expiry timer runs', async t => {
+  const controlled = controlledFingerprints(t);
+  t.mock.timers.enable({ apis: ['Date'], now: 100_000 });
+  for (const fault of ['expired', 'writer', 'target'] as const) {
+    t.mock.timers.setTime(100_000);
+    const f = fixture(); t.after(() => f.cleanup()); const native = await waiting(f);
+    const rejected = assert.rejects(f.owner.complete({ ...lookup, commandId: 'TEST-stale-code', code: 'TEST-code' }));
+    const bytes = f.serialized();
+    if (fault === 'expired') t.mock.timers.setTime(original(f).expiresAt);
+    if (fault === 'writer') f.revoke();
+    if (fault === 'target') f.changeTarget();
+    controlled.finish(); await rejected;
+    assert.equal(native.completeCalls, 0);
+    if (fault === 'expired') {
+      await until(() => native.closeCalls === 1);
+      assert.equal(original(f).reason, 'expired');
+    } else assert.equal(f.serialized(), bytes);
+  }
+});
+
+test('initial explicit and browser completion preserve an already-changed receipt before expiry cleanup', async t => {
+  t.mock.timers.enable({ apis: ['Date'], now: 100_000 });
+  for (const browser of [false, true]) for (const missing of [false, true]) {
+    t.mock.timers.setTime(100_000);
+    const f = fixture({ browser }); t.after(() => f.cleanup()); const native = await waiting(f);
+    const expiresAt = original(f).expiresAt;
+    if (missing) unlinkSync(f.files()[0]!);
+    else f.base.write({ ...original(f), providerId: 'TEST-replaced-provider' });
+    const bytes = f.serialized();
+    t.mock.timers.setTime(expiresAt);
+    const error = browser ? undefined : await f.owner.complete({ ...lookup, commandId: 'TEST-expired-code', code: 'TEST-code' })
+      .then(() => undefined, failure => failure);
+    if (browser) native.browser.resolve(true);
+    await until(() => native.closeCalls === 1);
+    await f.owner.close().catch(() => undefined);
+    assert.equal(f.serialized(), bytes, 'deadline cleanup cannot overwrite or resurrect the original receipt');
+    assert.equal(native.completeCalls, 0);
+    if (!browser) assert.equal(error?.code, 'conflict');
+  }
+});
+
+test('a missing or replaced receipt after derivation stays untouched through original native cleanup', async t => {
+  const controlled = controlledFingerprints(t);
+  t.mock.timers.enable({ apis: ['Date'], now: 100_000 });
+  for (const missing of [false, true]) for (const expired of [false, true]) {
+    t.mock.timers.setTime(100_000);
+    const f = fixture(); t.after(() => f.cleanup()); const native = await waiting(f);
+    const expiresAt = original(f).expiresAt;
+    const rejected = assert.rejects(f.owner.complete({ ...lookup, commandId: 'TEST-stale-receipt', code: 'TEST-code' }), { code: 'conflict' });
+    if (missing) unlinkSync(f.files()[0]!);
+    else f.base.write({ ...original(f), providerId: 'TEST-replaced-provider' });
+    const bytes = f.serialized();
+    if (expired) t.mock.timers.setTime(expiresAt);
+    controlled.finish(); await rejected;
+    await until(() => native.closeCalls === 1);
+    await assert.rejects(f.owner.close(), { code: 'held' });
+    assert.equal(f.serialized(), bytes);
+    assert.equal(native.completeCalls, 0);
+    assert.equal(f.base.read(initial.operationId) === undefined, missing);
+  }
+});
+
+test('retained replay returns advanced progress and fences changed receipts without itself performing cleanup', async t => {
+  const controlled = controlledFingerprints(t);
+  for (const change of ['progress', 'missing', 'salt'] as const) {
+    const f = fixture(); t.after(() => f.cleanup()); const native = await waiting(f);
+    const input = { ...lookup, commandId: 'TEST-replay', code: 'TEST-code' };
+    const first = f.owner.complete(input); controlled.finish(); await first;
+    const replay = f.owner.complete(input);
+    const rejected = change === 'progress' ? undefined : assert.rejects(replay, { code: 'conflict' });
+    if (change === 'progress') {
+      native.complete.resolve(true); await until(() => f.owner.read(lookup)?.phase === 'completed');
+    } else if (change === 'missing') unlinkSync(f.files()[0]!);
+    else f.base.write({ ...original(f), completionFingerprintKdf: { version: 1, salt: 'f'.repeat(32) } });
+    const bytes = f.serialized();
+    controlled.finish();
+    if (change === 'progress') assert.equal((await replay).phase, 'completed');
+    else {
+      await rejected;
+      assert.equal(native.closeCalls, 0, 'retained replay performs no native cleanup');
+      await assert.rejects(f.owner.close(), { code: 'held' });
+      assert.equal(native.closeCalls, 1);
+      native.complete.resolve(true); await Promise.resolve();
+    }
+    assert.equal(f.serialized(), bytes);
+    assert.equal(native.completeCalls, 1, 'only the original published completion was dispatched');
+  }
+});
+
+test('replay fences an already-replaced live receipt before a late native result can overwrite it', async t => {
+  const f = fixture(); t.after(() => f.cleanup()); const native = await waiting(f);
+  const input = { ...lookup, commandId: 'TEST-existing-drift', code: 'TEST-code' };
+  await f.owner.complete(input);
+  f.base.write({ ...original(f), selectionDigest: 'c'.repeat(64) });
+  const bytes = f.serialized();
+  const refused = await f.owner.complete(input).then(() => false, error => {
+    assert.equal(error.code, 'conflict'); return true;
+  });
+  assert.equal(native.closeCalls, 0, 'replay itself cannot close the original native conversation');
+  native.complete.resolve(true);
+  await new Promise<void>(done => setImmediate(done));
+  await f.owner.close().catch(() => undefined);
+  assert.equal(f.serialized(), bytes, 'late finish and cleanup cannot overwrite the already-changed receipt');
+  assert.equal(refused, true);
+  assert.equal(native.completeCalls, 1);
+});
+
+test('completion write that commits then throws preserves its ID and descriptor through live and cold cleanup', async t => {
+  const controlled = controlledFingerprints(t), failure = new Error('TEST completion fsync after rename');
+  const f = fixture({ blockClose: true, store: base => ({ read: id => base.read(id), list: () => base.list(),
+    write(record) { base.write(record); if (record.phase === 'completing') throw failure; } }) });
+  t.after(() => f.cleanup()); const native = await waiting(f);
+  const input = { ...lookup, commandId: 'TEST-unknown-publication', code: 'TEST-code' };
+  const rejected = assert.rejects(f.owner.complete(input), error => error === failure);
+  controlled.finish(); await rejected; await until(() => native.closeCalls === 1);
+  const retained = f.owner.complete(input); controlled.finish();
+  assert.equal((await retained).phase, 'held', 'a retired uncertain publication still matches its committed original');
+  assert.equal(f.owner.read(lookup)?.phase, 'cancelling');
+  native.close.resolve(true); await until(() => f.owner.read(lookup)?.phase === 'held');
+  assert.equal(original(f).completionCommandId, input.commandId);
+  assert.equal(original(f).completionFingerprintKdf?.version, 1);
+  assert.equal(original(f).phase, 'completing');
+  const bytes = f.serialized();
+  assert.throws(() => f.owner.start({ ...initial, operationId: 'TEST-live-next' }), { code: 'held' });
+  const cold = f.restart();
+  assert.throws(() => cold.start({ ...initial, operationId: 'TEST-cold-next' }), { code: 'held' });
+  const replay = cold.complete(input); controlled.finish();
+  assert.equal((await replay).phase, 'held');
+  assert.equal(f.serialized(), bytes);
+  assert.equal(native.completeCalls, 0);
+});
 
 test('code OAuth admits once, persists before callback, publishes safe ordered progress and never journals auth material', async (t) => {
   const f = fixture();
@@ -190,11 +489,12 @@ test('code OAuth admits once, persists before callback, publishes safe ordered p
     instructions: authorization.instructions,
   });
   const complete = { ...lookup, commandId: 'TEST-code-submit', code: 'TEST-private-code' };
-  assert.equal(f.owner.complete(complete).phase, 'completing');
+  assert.equal((await f.owner.complete(complete)).phase, 'completing');
   assert.equal(native.code, complete.code);
-  assert.equal(f.owner.complete(complete).phase, 'completing');
+  assert.equal((await f.owner.complete(complete)).phase, 'completing');
   assert.equal(native.completeCalls, 1);
-  assert.throws(() => f.owner.complete({ ...complete, code: 'TEST-different' }), {
+  await assert.rejects(f.owner.complete({ ...complete, commandId: 'TEST-wrong-completion-id' }), { code: 'conflict' });
+  await assert.rejects(f.owner.complete({ ...complete, code: 'TEST-different' }), {
     code: 'conflict',
   });
   native.complete.resolve(true);
@@ -227,12 +527,12 @@ test('automatic OAuth has the same bound callback identity and rejects an inject
   const native = f.conversations[0]!;
   native.authorize.resolve({ ...authorization, completionMethod: 'auto' });
   await until(() => f.owner.read(lookup)?.phase === 'waiting-for-browser');
-  assert.throws(
-    () => f.owner.complete({ ...lookup, commandId: 'TEST-auto', code: 'TEST-unexpected' }),
+  await assert.rejects(
+    f.owner.complete({ ...lookup, commandId: 'TEST-auto', code: 'TEST-unexpected' }),
     { code: 'invalid' }
   );
   assert.equal(native.completeCalls, 0);
-  f.owner.complete({ ...lookup, commandId: 'TEST-auto' });
+  await f.owner.complete({ ...lookup, commandId: 'TEST-auto' });
   assert.equal(native.code, undefined);
   native.complete.resolve(true);
   await until(() => f.owner.read(lookup)?.phase === 'completed');
@@ -284,7 +584,7 @@ test('cancel during callback closes the original target and a late success canno
   const old = f.conversations[0]!;
   old.authorize.resolve(authorization);
   await until(() => f.owner.read(lookup)?.phase === 'waiting-for-code');
-  f.owner.complete({ ...lookup, commandId: 'TEST-code', code: 'TEST-code' });
+  await f.owner.complete({ ...lookup, commandId: 'TEST-code', code: 'TEST-code' });
   f.changeTarget();
   assert.equal((await f.owner.cancel(lookup)).phase, 'cancelled');
   assert.equal(old.closeCalls, 1);
@@ -376,7 +676,7 @@ test('completion admission loss stops the original flow without submitting a cod
   const native = f.conversations[0]!;
   native.authorize.resolve(authorization);
   await until(() => f.owner.read(lookup)?.phase === 'waiting-for-code');
-  assert.throws(() =>
+  await assert.rejects(
     f.owner.complete({ ...lookup, commandId: 'TEST-code', code: 'TEST-sensitive-code' })
   );
   await until(() => f.owner.read(lookup)?.phase === 'held');
@@ -412,7 +712,24 @@ test('revoked writer cannot publish late OAuth progress or overwrite its origina
   assert.equal(f.base.read(initial.operationId)?.phase, 'authorizing');
 });
 
-test('failed initial publication never starts authorization or reserves a native writer indefinitely', async (t) => {
+test('initial OAuth write that commits then throws keeps live and cold custody without authorizing or rewriting', async (t) => {
+  const failure = new Error('TEST initial fsync failure after rename');
+  const f = fixture({ store: base => ({ read: id => base.read(id), list: () => base.list(),
+    write(record) { base.write(record); throw failure; } }) });
+  t.after(() => f.cleanup());
+  assert.throws(() => f.owner.start(initial), error => error === failure);
+  const bytes = f.serialized();
+  assert.equal(f.base.read(initial.operationId)?.phase, 'authorizing');
+  assert.equal(f.base.read(initial.operationId)?.resourceHeld, true);
+  assert.equal(f.conversations[0]?.authorizeCalls, 0);
+  assert.throws(() => f.owner.start({ ...initial, operationId: 'TEST-live-next' }), { code: 'held' });
+  const cold = f.restart();
+  assert.throws(() => cold.start({ ...initial, operationId: 'TEST-cold-next' }), { code: 'held' });
+  assert.equal(f.serialized(), bytes);
+  assert.equal(f.conversations.length, 1);
+});
+
+test('attempted initial publication failure retains custody even without a visible receipt', async (t) => {
   const f = fixture({
     store: (base) => ({
       read: (id) => base.read(id),
@@ -427,15 +744,27 @@ test('failed initial publication never starts authorization or reserves a native
   assert.throws(() => f.owner.start(initial));
   assert.equal(f.conversations[0]?.authorizeCalls, 0);
   assert.equal(f.base.read(initial.operationId), undefined);
-  await f.credentials.execute({
+  await assert.rejects(f.credentials.execute({
     commandId: 'TEST-set',
     profileId: initial.profileId,
     configRevision: initial.configRevision,
     providerId: initial.providerId,
     kind: 'credential.set',
     key: 'TEST-key',
-  });
-  assert.equal(f.countWrites(), 1);
+  }), { code: 'held' });
+  assert.equal(f.countWrites(), 0);
+});
+
+test('construction failure before an initial write keeps the same live namespace retryable', async t => {
+  let fail = true;
+  const f = fixture({ beforePrepare() { if (fail) throw new Error('TEST prepare before claim'); } });
+  t.after(() => f.cleanup());
+  assert.throws(() => f.owner.start(initial), /prepare before claim/);
+  assert.equal(f.base.read(initial.operationId), undefined);
+  assert.equal(f.conversations.length, 0);
+  fail = false;
+  assert.equal(f.owner.start({ ...initial, operationId: 'TEST-after-prepare' }).phase, 'authorizing');
+  assert.equal(f.conversations[0]?.authorizeCalls, 1);
 });
 
 test('unsafe authorization URLs never leave the captured flow and cause confirmed cleanup', async (t) => {

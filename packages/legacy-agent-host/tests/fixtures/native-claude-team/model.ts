@@ -1,3 +1,4 @@
+import type { NativeGoalScript } from '../native-autonomous-goal/model.ts';
 import { mixedSemanticText } from '../native-mixed-task-notifications.ts';
 import type {
   MixedTaskNoticeReader,
@@ -154,6 +155,7 @@ function emitResponse(
 
 export async function startNativeTeamModel(
   options: {
+    autonomousGoal?: NativeGoalScript;
     chatAttachments?: boolean;
     pdfAttachment?: boolean;
     groupChats?: boolean;
@@ -190,6 +192,8 @@ export async function startNativeTeamModel(
     memberName?: 'alice' | 'team-lead';
   } = {}
 ) {
+  if (options.autonomousGoal) assert.deepEqual(Object.keys(options), ['autonomousGoal'],
+    'one explicitly selected finite native goal oracle');
   if (options.nativeNextPromptUi) assert.ok(options.requireVisibleReply && options.uiGeneratedMessageIds &&
     !options.groupChats && !options.chatAttachments && !options.mixedGroups && !options.peerMessaging,
     'one isolated original native suggestion UI oracle');
@@ -530,6 +534,20 @@ export async function startNativeTeamModel(
           memberBlock,
           typeof body.model === 'string' ? body.model : undefined
         );
+        return;
+      }
+      if (options.autonomousGoal) {
+        assert.ok(JSON.stringify(body.system).includes(CONTEXT_MARKER));
+        assert.equal(body.model, 'claude-opus-4-6');
+        assert.equal(record(body.output_config).effort, 'medium');
+        const next = options.autonomousGoal.respond('claude', body);
+        const action = next.action;
+        const name = action && (action.name === 'Bash' ? 'Bash' : 'mcp__team__' + action.name);
+        if (name) assert.ok(tools.includes(name), 'actual Claude goal tool is advertised');
+        if (next.release) await next.release;
+        emitResponse(response, ++sequence, action
+          ? { type: 'tool_use', id: next.id, name, input: action.input }
+          : { type: 'text', text: next.text }, String(body.model));
         return;
       }
       if (options.allowModelProbes && tools.length === 0 && unexpectedNoToolsRequests.length < 2) {

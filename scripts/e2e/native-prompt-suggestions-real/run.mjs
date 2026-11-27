@@ -68,7 +68,7 @@ if (!existsSync(join(hostPackage, 'node_modules'))) {
 const receiptDir = process.env.REAL_RECEIPT_DIR ?? join(homedir(), '.cache/agent-teams-real-e2e');
 mkdirSync(receiptDir, { recursive: true, mode: 0o700 });
 const stamp = new Date().toISOString().replace(/[:.]/gu, '-');
-// Everything holding credential copies lives under one directory that this runner always removes.
+// Keep credential copies private; an unconfirmed goal Host close retains this owned tree.
 const work = mkdtempSync(join(tmpdir(), 'agent-teams-real-e2e-'));
 const children = [];
 const alive = (child) => child.exitCode === null && child.signalCode === null;
@@ -84,6 +84,8 @@ const removeWork = () =>
   rmSync(work, { recursive: true, force: true, maxRetries: 10, retryDelay: 300 });
 let cleaning;
 let interrupted = false;
+let goalRun;
+let goalWorkRemoved = false;
 // Stop the original test/Host group before deleting its temporary credential
 // copies. Native providers may have detached scopes: only Host cleanup proves
 // those released, and an unconfirmed Host close must remain a failing receipt.
@@ -99,6 +101,11 @@ const cleanup = () =>
 for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'])
   process.on(signal, () => {
     interrupted = true;
+    if (scenario === 'autonomous-goal') {
+      console.error('\n' + signal + ': requesting original Host cleanup within the existing wall deadline...');
+      goalRun?.requestStop(signal);
+      return;
+    }
     console.error('\n' + signal + ': stopping real runs and removing credential copies...');
     cleanup().then(
       () => process.exit(130),
@@ -111,7 +118,10 @@ for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'])
 // Synchronous last resort (an exception path); the async cleanup above is the normal one.
 process.on('exit', () => {
   if (scenario === 'autonomous-goal') {
-    for (const child of children) signalGroup(child, 'SIGKILL');
+    // No numeric-PGID adoption after the captured leader exits. Detached native
+    // custody is never inferred from this group, even on an exception path.
+    goalRun?.killCapturedGroup();
+    return;
   }
   try {
     removeWork();
@@ -138,13 +148,81 @@ if (!flag('--no-build')) {
   console.log('ok');
 }
 
+// Run the goal's node:test file directly in its captured leader. Node's --test
+// launcher installs a termination handler that would cut short Host disposal,
+// even with --test-isolation=none. Ordinary suggestions keep their launcher.
+const goalWallMs = 960_000;
+const goalCleanupMs = scenario === 'autonomous-goal'
+  ? (await import('../../../packages/legacy-agent-host/dist/contracts.js')).TEAM_HOST_DISPOSE_TIMEOUT_MS + 2_000 + 12_000
+  : 0;
+const observeGoalChild = (child) => {
+  const start = performance.now();
+  let cleanupAt, stopReason, spawnError, groupRetired = false, killed = false;
+  child.once('error', error => { spawnError = error.message; });
+  const groupState = () => {
+    if (groupRetired || !child.pid) return 'absent';
+    try { process.kill(-child.pid, 0); return 'present'; }
+    catch (error) {
+      if (error.code === 'ESRCH') { groupRetired = true; return 'absent'; }
+      return 'unknown';
+    }
+  };
+  const requestStop = (reason) => {
+    if (cleanupAt !== undefined) return;
+    cleanupAt = performance.now();
+    stopReason = reason;
+    // Only the original test leader receives TERM; it owns the Host's EOF and
+    // full captured disposal budget. Repeated signals cannot shorten that budget.
+    if (!spawnError && alive(child)) child.kill('SIGTERM');
+  };
+  const killCapturedGroup = () => {
+    if (killed || spawnError || !alive(child) || groupState() !== 'present') return;
+    killed = true;
+    signalGroup(child, 'SIGKILL');
+  };
+  const settled = (async () => {
+    let observedGroup;
+    for (;;) {
+      const now = performance.now();
+      if (cleanupAt === undefined && now >= start + goalWallMs - goalCleanupMs)
+        requestStop('outer-deadline');
+      observedGroup = groupState();
+      if (spawnError || !alive(child)) {
+        // A leader exit is not proof that its attached Host has exited.
+        cleanupAt ??= now;
+        if (observedGroup === 'absent') break;
+      }
+      const until = Math.min(start + goalWallMs, cleanupAt === undefined
+        ? start + goalWallMs - goalCleanupMs : cleanupAt + goalCleanupMs);
+      if (now >= until) {
+        killCapturedGroup();
+        observedGroup = groupState();
+        break;
+      }
+      await sleep(Math.max(1, Math.min(100, until - now)));
+    }
+    // On an unknown hard-boundary outcome, retaining this handle must not extend
+    // the wall budget. A late private receipt cannot overwrite the public FAIL.
+    child.unref();
+    return { code: child.exitCode, signal: child.signalCode, spawnError,
+      deadlineExpired: stopReason === 'outer-deadline', stopReason,
+      processGroupObservedAbsent: observedGroup === 'absent', hardKillRequested: killed,
+      originalLeaderExitObserved: !!spawnError || !alive(child) };
+  })();
+  return { requestStop, killCapturedGroup, settled };
+};
+if (interrupted) {
+  removeWork();
+  process.exit(130);
+}
 const runs = vendors.map((vendor) => {
   const receipt = join(receiptDir, stamp + '-' + (scenario === 'autonomous-goal' ? 'autonomous-goal-' : '') + vendor + '.json');
+  const childReceipt = scenario === 'autonomous-goal' ? join(work, vendor + '.receipt.json') : receipt;
   const logPath = join(work, vendor + '.log');
   const fd = openSync(logPath, 'a', 0o600);
   const child = spawn(
     process.execPath,
-    ['--test', '--test-reporter=spec', scenario === 'autonomous-goal'
+    [...(scenario === 'autonomous-goal' ? [] : ['--test']), '--test-reporter=spec', scenario === 'autonomous-goal'
       ? 'tests/autonomous-goal-real.real.ts' : 'tests/native-prompt-suggestions-real.real.ts'],
     {
       cwd: hostPackage,
@@ -155,7 +233,7 @@ const runs = vendors.map((vendor) => {
         ...process.env,
         REAL_VENDOR_GO: '1',
         REAL_VENDOR: vendor,
-        REAL_RECEIPT: receipt,
+        REAL_RECEIPT: childReceipt,
         REAL_WORK_DIR: work,
         ...(scenario === 'autonomous-goal' ? { REAL_GOAL_GO: '1',
           ...(flag('--preflight') ? { REAL_GOAL_PREFLIGHT_ONLY: '1' } : {}) } : {}),
@@ -166,20 +244,13 @@ const runs = vendors.map((vendor) => {
   closeSync(fd);
   children.push(child);
   console.log('started ' + vendor + ' (pid ' + child.pid + ')');
-  let deadlineExpired = false;
-  let forcedKill;
-  // The outer deadline also covers a stuck RPC, test teardown or an unhandled native child.
-  const deadline = scenario === 'autonomous-goal' ? setTimeout(() => {
-    deadlineExpired = true;
-    signalGroup(child, 'SIGTERM');
-    forcedKill = setTimeout(() => signalGroup(child, 'SIGKILL'), 10_000);
-  }, 960_000) : undefined;
+  if (scenario === 'autonomous-goal') {
+    goalRun = observeGoalChild(child);
+    return goalRun.settled.then(result => ({ vendor, ...result, receipt, childReceipt, logPath }));
+  }
   return new Promise((done) => {
-    const finish = (code, signal, spawnError) => {
-      clearTimeout(deadline);
-      clearTimeout(forcedKill);
-      done({ vendor, code, signal, spawnError, deadlineExpired, receipt, logPath });
-    };
+    const finish = (code, signal, spawnError) => done({ vendor, code, signal, spawnError,
+      receipt, childReceipt, logPath });
     child.once('error', (error) => finish(null, null, error.message));
     child.once('exit', (code, signal) => finish(code, signal));
   });
@@ -187,15 +258,16 @@ const runs = vendors.map((vendor) => {
 
 const results = await Promise.all(runs);
 // A signal already started the shutdown (which exits 130); do not report half-killed runs as results.
-if (interrupted) await new Promise(() => {});
+if (interrupted && scenario !== 'autonomous-goal') await new Promise(() => {});
 const writeReceipt = (path, data) => writeFileSync(path, JSON.stringify(data, null, 2) + '\n', { mode: 0o600 });
 const sanitizeLog = scenario === 'autonomous-goal'
   ? (await import('../../../packages/legacy-agent-host/dist/diagnostics/runtimeDiagnosticText.js')).sanitizeRuntimeDiagnosticText
   : undefined;
-const rows = results.map(({ vendor, code, signal, spawnError, deadlineExpired, receipt, logPath }) => {
+const rows = results.map(({ vendor, code, signal, spawnError, deadlineExpired, stopReason,
+  processGroupObservedAbsent, hardKillRequested, originalLeaderExitObserved, receipt, childReceipt, logPath }) => {
   let data;
   try {
-    data = JSON.parse(readFileSync(receipt, 'utf8'));
+    data = JSON.parse(readFileSync(childReceipt, 'utf8'));
   } catch {
     data = { status: 'fail', reason: 'no receipt written (exit ' + code + ')' };
   }
@@ -215,26 +287,45 @@ const rows = results.map(({ vendor, code, signal, spawnError, deadlineExpired, r
     } catch { data.diagnosticLogUnavailable = true; }
     data.childExitCode = code;
     data.childSignal = signal;
-    data.outerDeadlineMs = 960_000;
-    if (deadlineExpired || code !== 0 || signal || spawnError) {
+    Object.assign(data, { outerDeadlineMs: goalWallMs, hostCleanupAllowanceMs: goalCleanupMs,
+      processGroupObservedAbsent, originalLeaderExitObserved, hardKillRequested, stopReason });
+    if (deadlineExpired || interrupted || code !== 0 || signal || spawnError) {
       if (data.reason) data.testReason = data.reason;
       Object.assign(data, { status: 'fail', reason: deadlineExpired
         ? 'The outer autonomous-goal process deadline expired; original native cleanup was required.'
-        : 'The autonomous-goal test process did not exit successfully.' });
+        : interrupted ? 'The autonomous-goal run was interrupted; original Host cleanup was required.'
+          : 'The autonomous-goal test process did not exit successfully.' });
+    }
+    if (data.hostCleanupConfirmed !== true || !processGroupObservedAbsent) {
+      data.testReason ??= data.reason;
+      data.status = 'fail';
+      data.runnerCleanupReason = data.hostCleanupConfirmed !== true
+        ? 'Original Host cleanup is unconfirmed; detached native custody remains unknown.'
+        : 'The original test process group was not observed absent within the cleanup budget.';
+      data.reason ??= data.runnerCleanupReason;
     }
     writeReceipt(receipt, data);
   }
   return { vendor, data, receipt, logPath };
 });
-// A goal PASS is printed only after owned process-group and credential-copy cleanup completes.
+// Only the original Host receipt proves native cleanup. Group absence separately
+// protects the attached test scope; neither one substitutes for the other.
 if (scenario === 'autonomous-goal') {
-  try {
-    await cleanup();
-  } catch {
-    for (const row of rows) {
-      Object.assign(row.data, { status: 'fail', reason: 'The runner could not confirm owned canary cleanup.' });
-      writeReceipt(row.receipt, row.data);
+  const removable = rows.every(row => row.data.hostCleanupConfirmed === true &&
+    row.data.processGroupObservedAbsent === true);
+  if (removable) {
+    try { removeWork(); goalWorkRemoved = true; }
+    catch { /* The failing cleanup fact is recorded below. */ }
+  }
+  for (const row of rows) {
+    row.data.privateWorkRemoved = goalWorkRemoved;
+    if (!goalWorkRemoved) {
+      row.data.status = 'fail';
+      row.data.runnerCleanupReason ??= 'Private TEST work was retained because cleanup is unconfirmed.';
+      row.data.reason ??= row.data.runnerCleanupReason;
+      row.data.retainedPrivateWork = work;
     }
+    writeReceipt(row.receipt, row.data);
   }
 }
 
@@ -267,6 +358,7 @@ for (const name of old) rmSync(join(receiptDir, name), { force: true });
 
 const statuses = rows.map((row) => row.data.status);
 if (scenario !== 'autonomous-goal') await cleanup();
+if (interrupted) process.exit(130);
 if (statuses.includes('fail')) process.exit(1);
 if (statuses.includes('inconclusive')) process.exit(flag('--strict') ? 1 : 3);
 process.exit(0);

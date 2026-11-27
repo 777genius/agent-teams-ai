@@ -1,3 +1,4 @@
+import type { NativeGoalScript } from '../native-autonomous-goal/model.ts';
 import { mixedNativeText, mixedSemanticText } from '../native-mixed-task-notifications.ts';
 import type {
   MixedTaskNoticeReader,
@@ -58,6 +59,7 @@ export type LiveMembershipModelPhase = 'idle' | 'add' | 'add-ready' | 'remove' |
 
 export async function startOpenCodeModel(
   options: {
+    autonomousGoal?: NativeGoalScript;
     nativeGeneration?: 'v2';
     coordinationProof?: true;
     localReadinessProof?: true;
@@ -83,6 +85,8 @@ export async function startOpenCodeModel(
     selectedConfiguration?: { scope: string };
   } = {}
 ) {
+  if (options.autonomousGoal) assert.deepEqual(Object.keys(options), ['autonomousGoal'],
+    'one explicitly selected finite native goal oracle');
   assert.ok(!(options.peerMessaging && options.captureFileUpdate));
   if (options.liveMembershipPhase) assert.ok(options.allowModelProbes && options.uiGeneratedMessageIds &&
     options.principalId && !options.coordinationProof && !options.localReadinessProof && !options.sharedSessionProbe &&
@@ -336,6 +340,30 @@ export async function startOpenCodeModel(
             : {}),
         });
         replyOpenCodeModelProbe(response, body, probes.length);
+        return;
+      }
+      if (options.autonomousGoal) {
+        assert.ok(JSON.stringify(messages.filter(item => item.role === 'system')).includes(CONTEXT_MARKER));
+        assert.equal(body.model, 'TEST-model');
+        const next = options.autonomousGoal.respond('opencode', body);
+        const action = next.action;
+        const name = action && (action.name === 'bash' ? 'bash' : 'team_' + action.name);
+        const advertised = (Array.isArray(body.tools) ? body.tools : []).map(record)
+          .map(tool => String(record(tool.function).name));
+        if (name) assert.ok(advertised.includes(name), 'actual OpenCode V1 goal tool is advertised');
+        const delta = action
+          ? { role: 'assistant', tool_calls: [{ index: 0, id: next.id, type: 'function',
+            function: { name, arguments: JSON.stringify(action.input) } }] }
+          : { role: 'assistant', content: next.text };
+        const event = (value: Record<string, unknown>, finish: string | null) => ({
+          id: next.id + '-response', object: 'chat.completion.chunk', created: 1700000000,
+          model: 'TEST-model', choices: [{ index: 0, delta: value, finish_reason: finish }],
+        });
+        if (next.release) await next.release;
+        response.writeHead(200, { 'content-type': 'text/event-stream' });
+        response.write('data: ' + JSON.stringify(event(delta, null)) + '\n\n');
+        response.write('data: ' + JSON.stringify(event({}, action ? 'tool_calls' : 'stop')) + '\n\n');
+        response.end('data: [DONE]\n\n');
         return;
       }
       assert.equal(settingsProbe, undefined, 'no business input during Settings verification');

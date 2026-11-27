@@ -106,7 +106,7 @@ test('derived V1 owners finish original reads and preserve pending OAuth before 
     await assert.rejects(owner.catalog(a), /busy/, 'metadata cannot race the active command close/release gap');
     assert.equal(runs.length, count);
     assert.equal(closed.has(original), false);
-    owner.oauth.complete({ ...a, operationId: 'TEST-original-code', commandId: 'TEST-submit', code: 'TEST-code' });
+    await owner.oauth.complete({ ...a, operationId: 'TEST-original-code', commandId: 'TEST-submit', code: 'TEST-code' });
     await waitPhase('TEST-original-code', 'completed');
     assert.equal(runs.at(-1), original);
     assert.equal(callbacks, 1);
@@ -117,7 +117,7 @@ test('derived V1 owners finish original reads and preserve pending OAuth before 
     await waitPhase('TEST-cancel-code', 'waiting-for-code');
     const cancelled = runs.at(-1)!;
     gate = Promise.withResolvers<void>(); entered = Promise.withResolvers<void>();
-    owner.oauth.complete({ ...a, operationId: 'TEST-cancel-code', commandId: 'TEST-cancel-submit', code: 'TEST-code' });
+    await owner.oauth.complete({ ...a, operationId: 'TEST-cancel-code', commandId: 'TEST-cancel-submit', code: 'TEST-code' });
     await entered.promise;
     const afterCancel = owner.catalog(b);
     assert.equal((await owner.oauth.cancel({ ...a, operationId: 'TEST-cancel-code' })).phase, 'cancelled');

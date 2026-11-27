@@ -947,3 +947,179 @@ First reproduce the reported30k CJK failure against the original built code usin
 Potential test homes: new tests/team-input-admission.test.ts; existing runtime-owner.test.ts, task-notification-parity.test.ts, member-attachment-delivery.test.ts, runtime-cross-team-binding.test.ts, group-chats.test.ts, context-reminders.test.ts; existing Main cross-team projection tests for50k round trip. Extend shared fixtures narrowly instead of duplicating large setup.
 
 Ownership: G1b management files remain provider-owned; I renderer files and external Mac's savedTeamModelProbe.ts/teamRoster.ts/TeamLaunchOwner.ts are excluded. Context preparation is touched only to correct this byte calculation. No currently active external owner of createTeamContextPreparation.ts has been confirmed; perform a fresh source/branch collision check before editing rather than inventing an additional approval dependency. No merge to main, release, default activation, native acceptance claim or immutable receipt rewriting.
+
+### P1 read-only namespace refinement
+
+Independent source review found that the reused TeamOwnerStore constructor
+creates missing namespace ancestors, even though attachment metadata/resolve
+only read completed original artifacts. A preflight must not recreate an
+original namespace that disappeared after capture.
+
+Add only a backward-compatible optional third constructor argument,
+{ createNamespace?: boolean }, to adapters/team/TeamOwnerStore.ts.
+When createNamespace is false, its existing ENOENT branch throws the existing
+TeamOwnerError('hold') before mkdirSync. Existing constructors keep their
+current default creation and symlink/directory checks. The extracted
+projectMemberInput passes false; no alternate filesystem reader, cache,
+MemberEntry state or new storage owner is introduced.
+
+This adds one production path to P1: 32 total, approximately three lines beyond
+the reviewed scope. Both independent R2 and R3 source reviews approved the
+change. Before editing that source, reproduce the missing-namespace creation
+through the actual existing constructor/projection boundary. Keep regressions
+for a removed .host-owner directory and a removed Team ancestor, checking that
+neither is recreated, plus an ordinary-constructor creation control and exact
+existing attachment resolution. Test roots remain isolated TEST fixtures.
+
+Fresh cross-team byte overflows use the existing invalid/rejected result before
+source publication. The shared retained-intent validator keeps its conservative
+hold behavior; no arbitrary identity/authority exception is relabeled. An exact
+public-row boundary regression may exercise the pure fit helper when the
+stricter private-intent envelope makes that particular public-only overflow
+unreachable through the real Host.
+
+### G1b retained replay projection refinement
+
+Retained completion replay projects the latest validated durable original.
+A private snapshot option preserves the existing live read/cancel presentation;
+only replay bypasses that in-memory preference. A retired pending operation has
+the existing held/unknown presentation, even while live read still reports its
+ongoing cancellation. Replay performs no native operation or journal write.
+Initial missing/corrupt receipt reads fence only a known active entry with the
+same supplied operation/profile/configuration identity; a wrong caller selector
+cannot retire an unrelated operation. The common completion-currentness guard
+rereads the original receipt before deadline cleanup for explicit completion,
+post-KDF publication and the browser observer. These narrow refinements passed
+independent R2/R3 source reviews; final execution evidence follows below.
+
+### G1b implementation verification
+
+The final OAuth change preserves one native conversation and the original
+operation/namespace throughout asynchronous code fingerprint preparation,
+browser completion, cancellation and cold replay. New explicit-code claims use
+the already reviewed bounded scrypt implementation and a retained versioned
+salt; legacy and native null-code claims keep their original comparison rules.
+The new regressions reproduced uncertain initial/completion writes and receipt
+replacement before cleanup, including the combined deadline cases, before the
+corresponding fixes.
+
+An execution-environment restart removed the temporary checkout. The five files
+were reconstructed over exact published base
+`1e64ea3221a6a943baebf329662ffc04fd7f7a00`, independently reread in full, and tested
+again. The canonical checked Host build passed. Strict checking of the eight
+focused test files passed. All eight related runtime suites passed: **98 tests,
+zero failures or skips**, including real bounded scrypt, original filesystem
+journals and the late-cleanup regressions. The source-size and whitespace guards
+passed. No earlier result was substituted for these reconstructed bytes.
+
+Actual scope is two production files, 169 added and 39 removed lines, and three
+test files, 358 added and 20 removed lines. The extra receipt-conflict/deadline
+and replay-projection checks account for growth beyond the first estimate.
+Independent R2 and R3 approved the final full source. This qualifies the OAuth
+correction; current-commit CI, native application qualification and the separate
+credential-derived witness/CodeQL investigation remain required. No generic
+journal migration, alert suppression, main merge or default activation occurred.
+
+## Continuation P1b: configured launch Restart retains its original preparation
+
+Status: R1a approved by root R2 and provider R3; read-only design. No production edits. Root must publish this independently reviewed continuation before implementation.
+
+### Confirmed failure and source chain
+
+The first integrated P1 checked Host build passed. The new real Host fixture then passed initial configured Unicode delivery and profile refusal controls, but the configured Restart control failed: the 10-test cohort is 9 PASS / 1 FAIL, not fully green.
+
+The finite diagnostic uses the existing `runtime-team-host.test.ts` fixture and controlled Session boundary. A fresh launch prepares model `TEST-P1-selected`, dispatches and settles the original CJK and emoji inputs, then issues the same authorized member Restart prepare/execute command. Prepare succeeds. Execute closes the original Session and writes the selected successor. It then returns `hold/unknown` before allocating the successor.
+
+The actual journal has `memberActions[-1].phase = selected`, generation 2, and the new attempt `not-started`. Re-running the unchanged `validateLaunchPreparation` against those exact retained bytes yields `TeamLaunchError(hold, launch-preparation-corrupt)`. Original configured digest and successor digest differ because generation is part of the captured profile.
+
+Evidence:
+
+- `/tmp/TEST-pr982-P1-core-green.log`: first combined 9/10 cohort.
+- `/tmp/TEST-pr982-P1-rekey-diagnostic.log`: exact failing operation and TEST journal.
+- `/workspace/scratch/4f1e38400727/TEST-pr982-P1b-configured-restart-red.json`: durable local checkpoint of the journal, log, and exact relevant source/test files.
+- Temporary journal-dump lines have been removed from the test; the strict failing assertion remains.
+
+The relevant original path is:
+
+1. `composition/executeMemberAction.ts` clones the captured profile, increments its generation, derives the successor binding, and records its new configuration digest. The original base digest, selected options, config revision, and context stay tied to the source.
+2. `composition/transitionRuntimeMember.ts` proves original closure, publishes the selected action, installs the exact successor, and calls `launch.startMember`.
+3. `team-launch/TeamLaunchOwner.ts` loads and validates the record before claiming the successor attempt.
+4. `team-launch/validateLaunchRecord.ts` validates restore/action history, then the original preparation.
+5. `team-launch/launchPreparation.ts` currently requires the current non-restore selected configuration digest to equal the original prepared digest. That equality is valid for the original generation; it is false after an authorized Restart.
+
+These production files were unchanged by P1 except the unrelated Runtime/composition input admission wiring. The defect is independent of the new byte predicate.
+
+### Required invariant
+
+The original preparation remains immutable. Its command ID, option payload, source roster revision, fingerprint, configuration digest, base digest, and config revision are never rewritten to describe a later generation.
+
+A current member may use that original preparation only when its own descriptor is either the original prepared member or an exact successor reachable through the retained, validated action/restore history. A later unrelated member, pending action, merely equal name, fabricated restore property, or changed source digest cannot authorize it.
+
+The existing whole-journal validators continue to own action shape, action fingerprints, actor identities, source/selected binding scope, unique edges, cycle rejection, generation progression, checkpoint-specific proof, current selection, and publication phase. This change adds only the missing preparation-origin projection. It does not create a new journal or weaken those existing validators.
+
+### Minimal implementation
+
+Change only the private validation logic in `team-launch/launchPreparation.ts`. Retain the original option schema checks, preparation fingerprint, start-command identity, current selected base digest/config revision checks, and the exact selected Skip descriptor proof. The one redundant complete-chain call inside the preparation-only Skip branch is removed for the confirmed historical-segment case below; complete graph validation remains with the unchanged owning validators.
+
+Replace only the failing current-generation digest comparison with a small bounded private helper:
+
+- Begin with the exact current `ExpectedLaunchMember` descriptor already selected for this prepared member. Every inspected member must retain this original prepared member ID, base digest, and config revision.
+- Before accepting an apparent original digest, follow any exact retained `phase === selected` action for this member whose **entire selected descriptor digest** equals the descriptor currently being inspected. Require exactly one such edge and use its entire original source descriptor as the next value. Both Restart and Skip edges are covered.
+- Walk at most the existing action count; track consumed records. Refuse ambiguous/cyclic predecessors. Never select by name or accept the mere presence of an action.
+- If no exact action matches, allow an existing qualified Restore boundary only when the **entire descriptor** equals an original `record.restorations[].member`, including its complete restore proof. A source merely containing `restore` is insufficient. Existing full restore validation remains mandatory.
+- If an unconsumed selected action or retained restoration ends at the same binding but has a different descriptor, refuse. This prevents a forged intermediate source from borrowing the original prepared digest and terminating the walk early. Consumed Skip edges at the same binding are excluded from this mismatch check; a repeated exact descriptor still refuses as a cycle.
+- Only at the actual original root, with no incoming retained selection to skip, accept the original prepared configuration digest. Otherwise refuse.
+
+This preserves the current behavior for ordinary preparations and existing direct Restore while allowing the configuration-preserving generation transition that Restart already publishes. No native effect, allocation ordering, custody rule, deadline, retry policy, or action byte is changed.
+
+#### Full validation and live history
+
+Do not add a recursive call to the full chain validator from the new origin projection. The production owning load already calls `validateRestoreJournal` before preparation, and that validator calls `validateMemberSelectionChain` for retained actions/live history.
+
+This matters for the existing live-membership path: `liveRosterValidationRecord` validates the complete live history, then `validateLiveLaunchPreparation` projects the **historical prepared segment** into a temporary definition before calling `validateLaunchPreparation`. Revalidating the entire final selection chain against that historical temporary definition would incorrectly refuse legitimate history. The pure exact-descriptor backwards projection can operate on that segment; the unchanged complete record still passes the owning full journal validators before any effect.
+
+The reachable historical Skip case is also confirmed: a configured non-lead can Restart, Skip, be removed, and be restored through live membership while another lead remains active. `executeMemberAction` preserves the original descriptor with skipped=true; the live writer copies it into the original Remove/Restore source and later publishes a fresh descriptor. The original complete live/action/restore validators accept that graph, but the preparation-only Skip branch re-runs the final graph against the projected historical definition and refuses it. Keep its exact selected Skip atom proof and remove only that redundant whole-chain call. The owning complete validator still validates the actual final graph before effects.
+
+A finite diagnostic built this graph through the real `createLaunchMemberActions` and `createLiveRosterLaunch` writers, starting from the exact saved Restart journal: both `validateLiveRosterLaunch` and `validateRestoreJournal` PASS, original preparation stays unchanged, and `validateLiveLaunchPreparation` returns `hold/launch-preparation-corrupt`. Artifact: `/workspace/scratch/4f1e38400727/TEST-pr982-P1b-live-skip-red.json`; reproduction script: `/tmp/TEST-pr982-P1b-live-skip-diagnostic.mjs`. This is source-contract evidence with controlled journals, not native qualification.
+
+The helper itself is not a replacement for complete record validation. Tests asserting malformed history refusal must use the actual owning load wrapper `liveRosterValidationRecord(record)` -> `validateLaunchRecord(validatedRecord, fingerprint, memberCount)` as well as the focused helpers, not treat the preparation-only helper as an authority boundary.
+
+### Scope and ownership
+
+| File | Change |
+| --- | --- |
+| `packages/legacy-agent-host/src/team-launch/launchPreparation.ts` | One private preparation-origin helper and one comparison call |
+| `packages/legacy-agent-host/tests/runtime-team-host.test.ts` | Keep the existing failing configured Restart assertion; extend exact successor/read/replay controls as needed |
+| `packages/legacy-agent-host/tests/launch-preparation.test.ts` (new) | Focused full-journal valid/invalid lineage fixtures and immutable-byte controls |
+
+Estimated additional production: 25–50 lines, one file currently 129 lines; no source cap relaxation. Estimated tests: 140–220 lines including reusable finite full-record fixtures and the Host continuation controls. If exact source proof requires another production path, stop and obtain a reviewed/published amendment before editing it.
+
+Reserved external files remain read-only: `TeamLaunchOwner.ts`, `teamRoster.ts`, and `savedTeamModelProbe.ts`. No main merge, release, default activation, native acceptance rerun, or historical receipt rewrite.
+
+### Meaningful regression gates
+
+Before production change, add finite failing tests against the current checked dist:
+
+1. The existing real configured Host Restart failure remains strict: original closes once, selected generation is exact, successor opens once and accepts the next original 50k CJK input. Keep completed original input replay effect-free and reject old-generation control.
+2. A valid two-Restart chain retains the original preparation unchanged and remains readable through the full journal validator. A Skip at the end must preserve its own action proof.
+3. Valid configured Restore -> Restart and Restart -> Restore history remains readable; the restore endpoint must be the exact original retained restoration descriptor. Include the reachable historical prepared segment ending in Skip and followed by live Remove/Restore as a compatibility control, using the complete owning validation path.
+4. Missing selected edge, pending/refused edge used as a substitute, wrong-member/foreign-binding predecessor, changed original configuration/base/revision, duplicate/branch/cycle history, an intermediate source forged to equal the original digest despite a different incoming descriptor, and fabricated unmatched `restore` metadata remain held. Tests must preserve otherwise-valid fingerprints when appropriate so the missing origin join, rather than a trivial corrupted checksum, is what refuses the forged path.
+5. The original preparation object and its fingerprint are byte-identical before/after validation, successful Restart, replay, and cold read. Cold reads/replays allocate nothing and never resend the old Unicode inputs.
+
+After the narrow fix:
+
+- Root-owned checked Host build.
+- New focused full-journal suite plus existing `team-launch.test.ts` and `native-member-actions.test.ts` controls.
+- All ten P1 Runtime/cold/Host tests; then the existing full `runtime-team-host.test.ts` cohort once root grants that test gate.
+- Scoped strict compilation, changed-file lint, and existing source-size guard under root's sequential memory slot.
+- Record exact results and distinguish controlled Session evidence from original native Desktop qualification.
+
+### Review questions
+
+R2/root and R3/provider should challenge:
+
+- Can the helper accidentally accept a fabricated source.restore without an exact retained restoration atom?
+- Does full descriptor equality preserve current field order and identity across selected action and cold JSON reads?
+- Is validation of the historical live segment kept separate from validation of the complete final graph without skipping either?
+- Can any existing direct prepare/read caller reach effects without the complete journal validation that the helper relies on?
+- Are ordinary original preparation, repeated Restart, Restore composition, final Skip, cold replay, and malformed foreign chains all represented without changing deadlines or assertions?

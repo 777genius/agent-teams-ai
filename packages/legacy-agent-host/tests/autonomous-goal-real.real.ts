@@ -56,7 +56,7 @@ const objective = (prefix: 'success' | 'stop') => [
 ].join('\n');
 
 test('REAL autonomous goal: productive lead/member completion and a separate original Stop boundary',
-  { timeout: 900_000 }, async t => {
+  { timeout: 960_000 }, async t => {
   assert.equal(process.env.REAL_GOAL_GO, '1', 'use the explicit autonomous-goal scenario in the existing real runner');
   const vendor = process.env.REAL_VENDOR as RealVendor | undefined;
   assert.ok(vendor === 'claude' || vendor === 'codex');
@@ -72,6 +72,28 @@ test('REAL autonomous goal: productive lead/member completion and a separate ori
   let authSource: string | undefined;
   let authBefore: string | undefined;
   let capturedProfile: TeamHostProfile | undefined;
+  let closing: Promise<void> | undefined;
+  let shutdownSignal: string | undefined;
+  const closeHost = () => {
+    if (!host) return Promise.resolve();
+    return closing ??= host.close();
+  };
+  const assertRunning = () => {
+    assert.equal(shutdownSignal, undefined, 'Canary interrupted: ' + shutdownSignal);
+  };
+  const requestShutdown = (signal: string) => {
+    shutdownSignal ??= signal;
+    receipt.interruptedBy = shutdownSignal;
+    // The runner signals this original test leader. No new Host is allocated,
+    // and the same original close promise is awaited by finally below.
+    void closeHost().catch(() => {});
+  };
+  const onTerm = () => requestShutdown('SIGTERM');
+  const onInt = () => requestShutdown('SIGINT');
+  const onAbort = () => requestShutdown('test-aborted');
+  process.on('SIGTERM', onTerm);
+  process.on('SIGINT', onInt);
+  t.signal.addEventListener('abort', onAbort, { once: true });
   let phase = 'source-capture';
   const diagnostic: string[] = [];
   let diagnosticBytes = 0;
@@ -95,13 +117,11 @@ test('REAL autonomous goal: productive lead/member completion and a separate ori
       dependencyLockSha256: await fileHash(join(repo, 'pnpm-lock.yaml')),
       nodeVersion: process.version, platform: process.platform + '-' + process.arch };
     await assertFreeDisk();
+    assertRunning();
     phase = 'provider-discovery';
-    const target = await discoverTarget(vendor);
+    const target = await discoverTarget(vendor, 'autonomous-goal');
     Object.assign(receipt, { binary: target.binary, binarySha256: target.sha256,
       version: target.version, model: target.model });
-    if (vendor === 'codex' && target.version !== '0.169.0')
-      throw new Inconclusive('app-not-built', 'Captured Codex protocol is 0.169.0; selected binary is ' +
-        target.version + '. Select the qualified executable.');
     if (process.env.REAL_GOAL_PREFLIGHT_ONLY === '1') {
       Object.assign(receipt, { status: 'inconclusive', reasonCode: 'preflight-only',
         reason: 'Binary, account and disk preflight only; no model inference or goal qualification ran.' });
@@ -116,6 +136,7 @@ test('REAL autonomous goal: productive lead/member completion and a separate ori
     await run('git', ['-c', 'core.fsmonitor=false', '-c', 'init.templateDir=', 'init', '-q', workspace], {
       env: { PATH: '/usr/bin:/bin', HOME: root, GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1' },
     });
+    assertRunning();
     phase = 'profile-build';
     const built = await buildRealHostProfile(target, root, members);
     const profile = JSON.parse(await readFile(built.profilePath, 'utf8')) as TeamHostProfile;
@@ -144,6 +165,7 @@ test('REAL autonomous goal: productive lead/member completion and a separate ori
     const serialized = JSON.stringify(profile);
     await writeFile(built.profilePath, serialized, { mode: 0o600 });
     receipt.profileSha256 = digest(serialized);
+    assertRunning();
     host = startHost({ node: built.node, entry: built.entry, root, profile: built.profilePath,
       profileHash: digest(serialized), onDiagnostic: chunk => {
         const remaining = 65536 - diagnosticBytes;
@@ -152,6 +174,7 @@ test('REAL autonomous goal: productive lead/member completion and a separate ori
       } });
     const { envelope } = built;
     const rpc = async <T>(method: string, payload: unknown, commandId?: string): Promise<T> => {
+      assertRunning();
       receipt.lastRequest = { method, commandId };
       return value<T>(await host!.rpc(method, envelope(payload, commandId)), method);
     };
@@ -274,7 +297,7 @@ test('REAL autonomous goal: productive lead/member completion and a separate ori
       await rpc('runtime.stop', { memberId: member.memberId, expectedGeneration: '1' });
     }
     phase = 'host-close';
-    await host.close(); host = undefined;
+    await closeHost(); host = undefined;
     phase = 'retained-receipt-check';
     const store = new FileRuntimeStore(built.owner.storageRoot);
     receipt.runtimeInputs = members.map(member => {
@@ -293,6 +316,7 @@ test('REAL autonomous goal: productive lead/member completion and a separate ori
     receipt.continuations = continuation.map(command => ({ commandId: command.commandId,
       inputId: command.effects.deliveryId, source: command.goal!.source, target: command.deliveryBinding?.memberId }));
     receipt.observations = observations;
+    assertRunning();
     receipt.status = 'pass';
   } catch (error) {
     receipt.failurePhase = phase;
@@ -304,11 +328,15 @@ test('REAL autonomous goal: productive lead/member completion and a separate ori
     receipt.hostBeforeCleanup = hostFacts();
     const cleanupErrors: { phase: string; message: string }[] = [];
     let cleanupConfirmed = !host;
-    try { await host?.close(); cleanupConfirmed = true; }
+    try { await closeHost(); cleanupConfirmed = true; }
     catch (error) {
       cleanupErrors.push({ phase: 'host-close', message: safeError(error) });
       receipt.status = 'fail';
       receipt.reason ??= 'Original Host did not confirm provider cleanup.';
+    }
+    if (shutdownSignal) {
+      receipt.status = 'fail';
+      receipt.reason ??= 'Canary interrupted: ' + shutdownSignal;
     }
     receipt.hostAfterCleanup = hostFacts();
     receipt.hostCleanupConfirmed = cleanupConfirmed;
@@ -385,8 +413,14 @@ test('REAL autonomous goal: productive lead/member completion and a separate ori
     }
     if (cleanupErrors.length) receipt.cleanupErrors = cleanupErrors;
     receipt.durationMs = Date.now() - startedAt;
-    await mkdir(dirname(receiptPath), { recursive: true, mode: 0o700 });
-    await writeFile(receiptPath, JSON.stringify(receipt, null, 2) + '\n', { mode: 0o600 });
+    try {
+      await mkdir(dirname(receiptPath), { recursive: true, mode: 0o700 });
+      await writeFile(receiptPath, JSON.stringify(receipt, null, 2) + '\n', { mode: 0o600 });
+    } finally {
+      process.off('SIGTERM', onTerm);
+      process.off('SIGINT', onInt);
+      t.signal.removeEventListener('abort', onAbort);
+    }
   }
   t.diagnostic(JSON.stringify(receipt));
   if (receipt.status === 'inconclusive') t.skip(String(receipt.reason));

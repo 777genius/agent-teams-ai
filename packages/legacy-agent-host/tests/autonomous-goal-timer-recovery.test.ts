@@ -63,6 +63,11 @@ for (const boundary of ['goal-state', 'intake-outbox', 'continuation-outbox'] as
       assert.deepEqual(recovered[0]!.effects, original[0]!.effects);
       assert.equal(f.session().submits.at(-1)!.inputId, inputId);
       assert.deepEqual(Object.keys(f.goal()!.debits), charged ? [inputId] : []);
+      const rootReceipt = f.teamStore.fenced(() => f.teamStore.list<CommandReceipt>('commands'))
+        .find(row => row.commandId === commandId)!;
+      assert.equal(f.goal()!.startedAt, rootReceipt.createdAt);
+      assert.equal(f.goal()!.deadlineAt,
+        new Date(Date.parse(rootReceipt.createdAt) + 12 * 3_600_000).toISOString());
       t.mock.timers.tick(60_000);
       for (let turn = 0; turn < 3; turn++) await new Promise<void>(resolve => setImmediate(resolve));
       assert.equal(f.session().submits.length, charged ? 2 : 1, 'a later timer cannot resubmit the active original');

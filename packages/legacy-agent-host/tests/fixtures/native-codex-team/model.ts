@@ -1,3 +1,4 @@
+import type { NativeGoalScript } from '../native-autonomous-goal/model.ts';
 import { mixedNativeText, mixedSemanticText } from '../native-mixed-task-notifications.ts';
 import type {
   MixedTaskNoticeReader,
@@ -116,6 +117,7 @@ export interface CaptureFileUpdateScenario {
 }
 export async function startCodexModel(
   options: {
+    autonomousGoal?: NativeGoalScript;
     candidate169?: { selectedModel(): string; nativeSuggestions?: boolean };
     sourceSelection?: true;
     nativeMessageImage?: boolean;
@@ -132,6 +134,8 @@ export async function startCodexModel(
     requestEvidenceDirectory?: () => string;
   } = {}
 ) {
+  if (options.autonomousGoal) assert.deepEqual(Object.keys(options), ['autonomousGoal'],
+    'one explicitly selected finite native goal oracle');
   assert.ok(!(options.peerMessaging && options.captureFileUpdate), 'one bounded fixture scenario');
   if (options.candidate169) assert.deepEqual(Object.keys(options), ['candidate169'], 'one explicit candidate scenario');
   if (options.memberName || options.uiGeneratedMessageIds || options.captureHistoryMarkers || options.sourceSelection)
@@ -288,6 +292,33 @@ export async function startCodexModel(
         response.end(
           events.map((event) => `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`).join('')
         );
+        return;
+      }
+      if (options.autonomousGoal) {
+        assert.ok(JSON.stringify([body.instructions,
+          input.filter(item => item.role === 'developer' || item.role === 'system')]).includes(CONTEXT_MARKER));
+        assert.equal(body.model, 'mock-model');
+        const next = options.autonomousGoal.respond('codex', body);
+        const action = next.action;
+        const chosen = action && flattenTools(body.tools).find(tool => action.name === 'exec_command'
+          ? tool.name === action.name
+          : (tool.name === action.name && tool.namespace?.includes('team')) || tool.name.endsWith('__' + action.name));
+        if (action) assert.ok(chosen, 'actual Codex goal tool is advertised');
+        const output: RecordValue = action
+          ? { type: 'function_call', call_id: next.id, name: chosen!.name,
+            ...(chosen!.namespace ? { namespace: chosen!.namespace } : {}), arguments: JSON.stringify(action.input) }
+          : { type: 'message', role: 'assistant', id: next.id,
+            content: [{ type: 'output_text', text: next.text }] };
+        const id = next.id + '-response';
+        const events = [
+          { type: 'response.created', response: { id } },
+          { type: 'response.output_item.done', item: output },
+          { type: 'response.completed', response: { id, usage: { input_tokens: 10,
+            input_tokens_details: null, output_tokens: 10, output_tokens_details: null, total_tokens: 20 } } },
+        ];
+        if (next.release) await next.release;
+        response.writeHead(200, { 'content-type': 'text/event-stream' });
+        response.end(events.map(event => 'event: ' + event.type + '\ndata: ' + JSON.stringify(event) + '\n\n').join(''));
         return;
       }
       if (options.mixedTaskNotifications)

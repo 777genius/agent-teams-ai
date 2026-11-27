@@ -109,3 +109,22 @@ test('ordinary fallback rechecks the original grant after asynchronous goal sett
   try { await wake.runOnce(); assert.equal(ordinary, 0); }
   finally { await wake.dispose(); }
 });
+
+for (const current of [true, false]) {
+  test(`a ${current ? 'failed' : 'retired'} goal discovery cannot suppress another Team ordinary wake`, async () => {
+    const calls: string[] = [];
+    const unavailable = { delivery: { teamName: 'TEST-unavailable-goal-team' }, team: { owner: { goals: {
+      snapshot() { calls.push('unavailable-read'); throw new Error('TEST retained goal state is unreadable'); },
+    } } } } as unknown as MemberEntry;
+    const healthy = { delivery: { teamName: 'TEST-healthy-ordinary-team' }, async settleWorkSync() {
+      calls.push('ordinary'); return { held: [] };
+    } } as unknown as MemberEntry;
+    const wake = createRuntimeWorkSyncWake({ entries: new Map([['TEST-unavailable', unavailable], ['TEST-healthy', healthy]]),
+      isCurrent: entry => entry !== unavailable || current, isSealed: () => false,
+    });
+    try {
+      await wake.runOnce();
+      assert.deepEqual(calls, current ? ['unavailable-read', 'ordinary'] : ['ordinary']);
+    } finally { await wake.dispose(); }
+  });
+}
