@@ -637,9 +637,35 @@ try {
       cdp, ledger, appIdentity, gatewayRequests: gateway.requests,
       project: data.project, evidenceRoot, marker: productMarker,
     });
+    // Stop proves the original worker's PID+birth retired. Separately require
+    // app-owned native children to drain, including asynchronous diagnostic
+    // PowerShell processes started by Electron during the Stop IPC. A single
+    // immediately-after-Stop census can catch such a still-exiting process;
+    // this is an observation-only wait, never a test-side kill or exception.
+    const productStopDrainDeadline = Date.now() + 45_000;
+    let quietSince: number | null = null;
+    let activeAfterStop = await ledger.runtimeQuiet(data.artifact.app.path);
+    while (Date.now() < productStopDrainDeadline) {
+      if (activeAfterStop.length === 0 && gateway.inFlight() === 0) {
+        quietSince ??= Date.now();
+        if (Date.now() - quietSince >= 1_000) break;
+      } else {
+        quietSince = null;
+      }
+      await pause(300);
+      activeAfterStop = await ledger.runtimeQuiet(data.artifact.app.path);
+    }
+    evidence.productStopNativeDrain = {
+      active: activeAfterStop,
+      quietDurationMs: quietSince === null ? 0 : Date.now() - quietSince,
+    };
     assert.deepEqual(
-      await ledger.runtimeQuiet(data.artifact.app.path), [],
+      activeAfterStop, [],
       'Real product Stop must retire the original teammate and tools'
+    );
+    assert(
+      quietSince !== null && Date.now() - quietSince >= 1_000,
+      'Real product Stop must confirm stable native child retirement'
     );
   }
   scenarioComplete = true;
