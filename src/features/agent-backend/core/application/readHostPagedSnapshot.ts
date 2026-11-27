@@ -219,7 +219,6 @@ function assembleMessageParts(
 ): BackendTeamSnapshot['messages'] {
   if (groups.size !== messageTotal) throw new Error('Missing Host message pages');
   const messages: BackendTeamSnapshot['messages'] = [];
-  const processes: NonNullable<BackendTeamSnapshot['processes']> = [];
   for (let index = 0; index < messageTotal; index++) {
     const group = groups.get(index);
     if (!group || group.values.size !== group.total)
@@ -258,6 +257,7 @@ export async function readHostPagedSnapshot(
   const tasks: BackendTeamSnapshot['tasks'] = [];
   const taskParts = new Map<number, TaskGroup>();
   const messages: BackendTeamSnapshot['messages'] = [];
+  const processes: NonNullable<BackendTeamSnapshot['processes']> = [];
   const messageParts = new Map<number, { total: number; values: Map<number, Message> }>();
   let kanbanState: BackendTeamSnapshot['kanbanState'] | undefined;
   const seen = new Set<string>();
