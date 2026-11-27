@@ -117,6 +117,14 @@ const m=x?.members?.worker;return m?.alive&&(m?.runtimePid||m?.pid)?x:false;},24
 workerPid=snapshot.members.worker.runtimePid||snapshot.members.worker.pid;
 assert(ownedAlive(workerPid,team),'Worker not bound to original test team');
 result.realProductTeammateLaunch=true;result.initialWorkerPid=workerPid;
+// A persisted worker PID is not proof of an active tracked team run. The
+// product restart API explicitly requires getAliveRunId(teamName).
+result.teamRunAliveBeforeRestart=await api('window.electronAPI.teams.processAlive('+literal(team)+')');
+result.aliveTeamNamesBeforeRestart=await api('window.electronAPI.teams.aliveList()');
+assert.equal(result.teamRunAliveBeforeRestart,true,
+  'Worker is alive but the product no longer tracks an active run; manual restart is unsafe');
+assert(result.aliveTeamNamesBeforeRestart.includes(team),
+  'Team is absent from product active-run inventory before manual restart');
 result.phase='real-manual-restart';
 await client.evaluate('(()=>{window.__winRestart={done:false};window.electronAPI.teams.restartMember('+
 literal(team)+',"worker").then(v=>{window.__winRestart={done:true,value:v}},e=>{window.__winRestart={done:true,error:String(e)}});return true;})()');
