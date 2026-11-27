@@ -5,7 +5,7 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - '.github/workflows/windows-product-teammate-console-e2e.yml'
-      - 'scripts/e2e/windows-product-teammate-console.mjs'
+      - 'scripts/e2e/windows-product-teammate-restart.mjs'
   workflow_dispatch:
 permissions:
   contents: read
@@ -37,10 +37,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: node scripts/ensure-terminal-platform-runtime.mjs
+      - name: Validate native teammate restart script syntax
+        run: node --check scripts/e2e/windows-product-teammate-restart.mjs
       - name: Native product IPC teammate restart and shell tools against loopback model
         env:
           WINDOWS_PRODUCT_CONSOLE_EVIDENCE: ${{ runner.temp }}/windows-product-console-e2e
-        run: node scripts/e2e/windows-product-teammate-console.mjs
+        run: node scripts/e2e/windows-product-teammate-restart.mjs
       - name: Upload product proof (failure is not accepted)
         if: always()
         uses: actions/upload-artifact@v4

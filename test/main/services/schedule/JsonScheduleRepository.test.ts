@@ -1,4 +1,5 @@
 import { JsonScheduleRepository } from '@main/services/schedule/JsonScheduleRepository';
+import { withFileLock } from '@main/services/team/fileLock';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -254,6 +255,57 @@ describe('JsonScheduleRepository', () => {
       warnSpy.mockRestore();
     });
 
+    it('preserves a deletion while another repository instance updates a different schedule', async () => {
+      const first = makeSchedule({ id: 'first' });
+      const second = makeSchedule({ id: 'second' });
+      await repo.saveSchedule(first);
+      await repo.saveSchedule(second);
+
+      const other = new JsonScheduleRepository();
+      await Promise.all([
+        repo.deleteSchedule(first.id),
+        other.saveSchedule({ ...second, status: 'paused' }),
+      ]);
+
+      expect(await repo.getSchedule(first.id)).toBeNull();
+      expect((await repo.getSchedule(second.id))?.status).toBe('paused');
+    });
+
+    it('cleans up only the original profile when its root changes during a queued deletion', async () => {
+      const originalDir = tempDir;
+      const nextDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'schedule-next-profile-'));
+      const schedule = makeSchedule();
+      try {
+        await repo.saveSchedule(schedule);
+        await repo.saveRun(makeRun());
+        await repo.saveRunLogs(schedule.id, 'run-1', 'original', '');
+        tempDir = nextDir;
+        await repo.saveSchedule(schedule);
+        await repo.saveRun(makeRun());
+        await repo.saveRunLogs(schedule.id, 'run-1', 'other', '');
+        tempDir = originalDir;
+
+        let deleting!: Promise<void>;
+        await withFileLock(path.join(originalDir, 'schedules.json'), async () => {
+          deleting = repo.deleteSchedule(schedule.id);
+          tempDir = nextDir;
+        });
+        await deleting;
+
+        expect(await repo.getSchedule(schedule.id)).toEqual(schedule);
+        expect(await repo.listRuns(schedule.id)).toHaveLength(1);
+        expect((await repo.getRunLogs(schedule.id, 'run-1')).stdout).toBe('other');
+
+        tempDir = originalDir;
+        expect(await repo.getSchedule(schedule.id)).toBeNull();
+        expect(await repo.listRuns(schedule.id)).toEqual([]);
+        expect((await repo.getRunLogs(schedule.id, 'run-1')).stdout).toBe('');
+      } finally {
+        tempDir = originalDir;
+        await fs.promises.rm(nextDir, { recursive: true, force: true });
+      }
+    });
+
     it('handles concurrent saves without data loss', async () => {
       const promises = Array.from({ length: 5 }, (_, i) =>
         repo.saveSchedule(makeSchedule({ id: `sched-${i}` }))
@@ -261,8 +313,13 @@ describe('JsonScheduleRepository', () => {
       await Promise.all(promises);
 
       const schedules = await repo.listSchedules();
-      // At least some should be saved (atomic writes prevent corruption)
-      expect(schedules.length).toBeGreaterThan(0);
+      expect(schedules.map((schedule) => schedule.id).sort()).toEqual([
+        'sched-0',
+        'sched-1',
+        'sched-2',
+        'sched-3',
+        'sched-4',
+      ]);
     });
   });
 });

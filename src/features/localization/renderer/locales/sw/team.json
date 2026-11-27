@@ -260,7 +260,10 @@
       "settingsSavedMembersFailed": "Mipangilio ya timu ilihifadhiwa, lakini mabadiliko ya mwanachama yameshindwa: {{message}}",
       "settingsSavedRefreshFailed": "Mipangilio ya timu ilihifadhiwa, lakini imeshindwa kuonyesha upya mwonekano wa hivi karibuni: {{message}}",
       "teamNameEmpty": "Jina la timu haliwezi kuwa tupu",
-      "unsupportedMixedPrimaryMutation": "Uhariri wa moja kwa moja kwa wenzako wa timu wanaomilikiwa na msingi katika timu mchanganyiko za OpenCode bado hauungwi mkono. Simamisha timu, hariri orodha, kisha uzindue tena. Walioathiriwa: {{names}}"
+      "unsupportedMixedPrimaryMutation": "Uhariri wa moja kwa moja kwa wenzako wa timu wanaomilikiwa na msingi katika timu mchanganyiko za OpenCode bado hauungwi mkono. Simamisha timu, hariri orodha, kisha uzindue tena. Walioathiriwa: {{names}}",
+      "refusedProjectCopy": "Hii ni nakala ya mradi ya timu. Badilisha mipangilio yake kwenye timu yenyewe.",
+      "refusedProjectUnreconciled": "Mradi mmoja wa timu hii bado unaandaliwa, au uzinduzi wake wa mwisho ulikatizwa. Zindua timu tena katika mradi huo, kisha uihariri.",
+      "refusedTeamUnreadable": "Mipangilio iliyohifadhiwa ya timu hii haiwezi kusomwa, kwa hivyo hakuna kilichobadilishwa."
     },
     "fields": {
       "colorOptional": "Rangi (hiari)",
@@ -417,6 +420,11 @@
       "member_other": "wanachama",
       "title": "Timu bado haijazinduliwa"
     },
+    "editDefinition": {
+      "loadFailed": "Imeshindwa kupakia mipangilio ya timu",
+      "notFound": "Mipangilio ya timu haikupatikana",
+      "memberNotFound": "Mwanachama huyu hayupo tena kwenye mipangilio ya timu. Fungua timu tena ili kuona wanachama wa sasa."
+    },
     "stopFailed": {
       "title": "Imeshindikana kusimamisha timu",
       "message": "Timu bado inaendelea. Angalia hali yake kisha ubofye Simamisha tena."
@@ -458,6 +466,7 @@
       "deleteTeam": "Futa timu",
       "editTeam": "Hariri timu",
       "editUnavailableProvisioning": "Hariri timu haipatikani wakati ugavi bado unaendelea",
+      "editUnavailableRunningProject": "Simamisha timu hii katika kila mradi ili uihariri",
       "openBuiltInEditor": "Fungua mradi katika kihariri kilichojengwa ndani",
       "openTeamGraph": "Fungua grafu ya timu",
       "stopTeam": "Simamisha timu",
@@ -2328,7 +2337,8 @@
       "failed": {
         "memberFailedToStart": "{{name}} ameshindwa kuanza",
         "teammatesFailedToStart": "wenzako {{count}} wa timu wameshindwa kuanza",
-        "teammatesFailedRatio": "wenzako {{count}}/{{total}} wa timu wameshindwa kuanza"
+        "teammatesFailedRatio": "wenzako {{count}}/{{total}} wa timu wameshindwa kuanza",
+        "manualPermissionUnsupported": "Njia hii ya kuanzisha hairuhusu idhini ya zana kwa mkono. Chagua njia inayoruhusu idhini, kisha ujaribu tena."
       },
       "skipped": {
         "memberSkipped": "{{name}} ameruka kwa uzinduzi huu",
@@ -3070,5 +3080,246 @@
       "leadInstructions": "Lead instructions changed",
       "members": "Members changed"
     }
+  },
+  "customTemplates": {
+    "actions": {
+      "myTemplates": "My Templates",
+      "recheck": "Re-check outcome",
+      "retry": "Retry",
+      "save": "Save template",
+      "saveAsTemplate": "Save as Template",
+      "templates": "Templates",
+      "addMember": "Add member",
+      "removeMember": "Remove member",
+      "duplicate": "Duplicate",
+      "edit": "Edit",
+      "delete": "Delete",
+      "copyToMyTemplates": "Copy to My Templates",
+      "export": "Export"
+    },
+    "createFromTemplate": {
+      "builtinGroup": "Built-in templates",
+      "customGroup": "My templates",
+      "description": "Apply a built-in or saved custom template to prefill the team prompt and members. You can still edit everything before creating the team.",
+      "membersCount_few": "{{count}} members",
+      "membersCount_many": "{{count}} members",
+      "membersCount_one": "{{count}} member",
+      "membersCount_other": "{{count}} members",
+      "noneHint": "Create a blank team with the usual settings.",
+      "noneLabel": "No template",
+      "readOnlySource": "Built-in template (read-only source)",
+      "sourceCustom": "Custom template (read-only source)",
+      "staleWarning": "The selected custom template no longer exists. The form keeps the previously applied values — choose another template to replace them, or continue with the current values.",
+      "title": "Start from a template (optional)"
+    },
+    "errors": {
+      "issues": {
+        "invalidContent": "The team content cannot be saved as a template.",
+        "previewTokenExpired": "This preview expired. Review the refreshed preview before saving.",
+        "previewTokenInvalid": "This preview is no longer valid. Review the refreshed preview before saving.",
+        "templateDescriptionTooLong": "The description is too long.",
+        "templateNameInvalidCharacters": "The template name contains unsupported characters.",
+        "templateNameRequired": "A template name is required.",
+        "templateNameTooLong": "The template name is too long.",
+        "duplicateMemberName": "A member with this name already exists.",
+        "memberNameInvalid": "Member name is invalid.",
+        "memberNameRequired": "Member name is required.",
+        "memberRoleTooLong": "Member role is too long.",
+        "memberWorkflowTooLong": "Member workflow is too long.",
+        "teamPromptInvalidType": "The team prompt must be a text value.",
+        "teamPromptTooLong": "Team prompt is too long.",
+        "tooManyMembers": "Too many members.",
+        "unexpectedProperty": "The file contains an unexpected property “{{property}}”."
+      },
+      "nameConflict": "A template with this name already exists. Change the name — existing templates are never overwritten.",
+      "requestFailed": "The request failed. Try again.",
+      "rosterUnreadable": "Team member information could not be read, so this team cannot be saved as a template.",
+      "saveOutcomeUnknown": "The save request failed, so its outcome is unknown. Re-check before saving again.",
+      "sourceUnavailable": "This team's saved configuration is no longer available.",
+      "storageUnavailable": "The template library is unavailable. Nothing was saved.",
+      "storageUnavailableRecheck": "The template library is unavailable, so the outcome could not be checked.",
+      "storageUnavailableSave": "The template library refused the write. Nothing was saved — you can try again.",
+      "templateIdConflict": "A different stored template already owns this identity. Nothing was overwritten.",
+      "builtinNotFound": "Built-in template not found.",
+      "notFound": "Template not found.",
+      "sourceNotFound": "Source template not found.",
+      "sourceUnreadable": "Source template could not be read.",
+      "unreadableRecord": "This stored template could not be read. Reload the library before editing it again."
+    },
+    "library": {
+      "builtInDescription": "Ready-made team setups with roles and responsibilities.",
+      "createdAt": "Saved {{date}}",
+      "description": "Browse ready-made team setups and your saved templates.",
+      "empty": "No saved templates yet",
+      "emptyDescription": "Open a team and choose Save as Template to create one.",
+      "loadFailed": "The template library could not be loaded.",
+      "loading": "Loading templates…",
+      "memberNames": "Members: {{names}}",
+      "noDescription": "No description",
+      "noMembers": "Prompt-only template — no members recorded",
+      "storageUnavailable": "The template library is unavailable right now.",
+      "tabs": {
+        "builtIn": "Built-in",
+        "myTemplates": "My Templates"
+      },
+      "title": "Templates",
+      "unreadableRecords_few": "{{count}} stored templates could not be read and are missing from this list.",
+      "unreadableRecords_many": "{{count}} stored templates could not be read and are missing from this list.",
+      "unreadableRecords_one": "{{count}} stored template could not be read and is missing from this list.",
+      "unreadableRecords_other": "{{count}} stored templates could not be read and are missing from this list."
+    },
+    "preview": {
+      "membersEmpty": "No members recorded — a prompt-only template",
+      "membersLabel": "Members",
+      "prompt": "Team prompt",
+      "promptEmpty": "No team prompt recorded — this template keeps an empty prompt",
+      "roleLabel": "Role",
+      "roleMissing": "No role",
+      "sourceTeam": "Source team",
+      "title": "Template preview",
+      "warningsLabel": "Preview warnings",
+      "workflowLabel": "Workflow",
+      "workflowMissing": "No workflow"
+    },
+    "save": {
+      "description": "Review exactly what will be saved. Only the name and description can be changed.",
+      "descriptionLabel": "Description",
+      "nameFieldLabel": "Template name",
+      "title": "Save as Template"
+    },
+    "states": {
+      "loading": "Loading…",
+      "notSaved": "Confirmed: this template was not saved. You can save it again.",
+      "preparing": "Preparing preview…",
+      "previewExpired": "This preview is no longer valid. Review the refreshed preview before saving.",
+      "rechecking": "Re-checking the save outcome…",
+      "saved": "Template saved",
+      "savedAlready": "This template was already saved.",
+      "savedBody": "“{{name}}” is now in My Templates.",
+      "saving": "Saving…",
+      "stalePreview": "The saved team configuration changed since this preview. Review the refreshed preview, then save again.",
+      "unresolvedBody": "The save could not be confirmed, so nothing was retried automatically. Re-check the original save before trying again.",
+      "unresolvedDeleteBody": "The deletion could not be confirmed, so nothing was retried automatically. Check My Templates before trying again — the template may already be gone.",
+      "unresolvedMutationBody": "The change could not be confirmed, so nothing was retried automatically. Check My Templates before trying again — the change may already have been applied.",
+      "unresolvedTitle": "Outcome not confirmed",
+      "unresolvedImportBody": "The import could not be confirmed, so nothing was retried automatically. Check My Templates before trying again — the template may already have been imported."
+    },
+    "warnings": {
+      "emptyRoster": "The roster was read successfully and is empty. A prompt-only template is valid.",
+      "missingMemberRole": "{{member}} has no recorded role.",
+      "missingMemberWorkflow": "{{member}} has no recorded workflow.",
+      "missingTeamPrompt": "The team has no prompt; the saved template keeps an empty prompt.",
+      "noRecordedRoster": "No roster was recorded for this team. A prompt-only template is valid.",
+      "removedMembersExcluded_few": "{{count}} removed team members were excluded.",
+      "removedMembersExcluded_many": "{{count}} removed team members were excluded.",
+      "removedMembersExcluded_one": "{{count}} removed team member was excluded.",
+      "removedMembersExcluded_other": "{{count}} removed team members were excluded."
+    },
+    "copyBuiltin": {
+      "action": "Copy to My Templates",
+      "copying": "Copying…",
+      "description": "Create an independent copy of a built-in template in My Templates.",
+      "membersCount_few": "{{count}} members",
+      "membersCount_many": "{{count}} members",
+      "membersCount_one": "{{count}} member",
+      "membersCount_other": "{{count}} members",
+      "nameFieldLabel": "Template name",
+      "readOnlySource": "Built-in template (read-only source)",
+      "selectTemplate": "Select a template",
+      "title": "Copy built-in template"
+    },
+    "delete": {
+      "confirm": "Delete this template?",
+      "conflictBody": "This template changed since you opened it. Reload and try again.",
+      "conflictTitle": "Template changed",
+      "deleting": "Deleting…",
+      "description": "Delete this saved template. This cannot be undone.",
+      "title": "Delete template"
+    },
+    "duplicate": {
+      "action": "Duplicate",
+      "defaultName": "{{name}} (copy)",
+      "description": "Create an independent copy of this template.",
+      "duplicating": "Duplicating…",
+      "nameFieldLabel": "Template name",
+      "title": "Duplicate template"
+    },
+    "import": {
+      "title": "Import Template",
+      "description": "Import a portable team template from a JSON file.",
+      "action": "Import Template",
+      "importing": "Importing…",
+      "success": "Import successful",
+      "successBody": "The template has been imported into My Templates.",
+      "selectFileLabel": "Select JSON file",
+      "fileHint": "Choose a .json file exported from Agent Teams.",
+      "platformBrowser": "Browser file import",
+      "platformElectron": "Native file picker",
+      "platformUnavailable": "File import is not available in this environment.",
+      "renameNameFieldLabel": "Template name",
+      "nameConflictTitle": "Template already exists",
+      "nameConflictBody": "A template named “{{name}}” already exists. Choose a different name to import as a new template.",
+      "confirmImport": "Confirm import",
+      "errors": {
+        "invalidJson": "The file is not valid JSON.",
+        "invalidEncoding": "The file is not valid UTF-8.",
+        "fileTooLarge": "The file is too large to import.",
+        "fileReadFailed": "The file could not be read.",
+        "filePickerFailed": "The file picker could not be opened.",
+        "fileChanged": "The file changed while it was being read.",
+        "transportFailed": "The import request could not be completed. Try again.",
+        "unsupportedFormat": "The file format is not supported.",
+        "unsupportedVersion": "The template schema version is not supported.",
+        "validationFailed": "The template content failed validation.",
+        "storageUnavailable": "The template library is unavailable. Nothing was imported."
+      }
+    },
+    "export": {
+      "title": "Export Template",
+      "description": "Export “{{name}}” as a portable JSON file.",
+      "action": "Export",
+      "exporting": "Exporting…",
+      "success": "Export successful",
+      "successBody": "“{{name}}” has been exported as a JSON file.",
+      "errors": {
+        "downloadFailed": "The download could not be started. Try again.",
+        "transportFailed": "The export request could not be completed. Try again.",
+        "filePickerFailed": "The file picker could not be opened.",
+        "fileWriteFailed": "The file could not be written. Try again.",
+        "invalidRequest": "The export request was invalid."
+      }
+    },
+    "edit": {
+      "conflictBody": "This template changed since you opened it. Reload and try again.",
+      "conflictOverwrite": "Overwrite with your changes",
+      "conflictReload": "Reload latest version",
+      "conflictTitle": "Template changed",
+      "description": "Edit this saved template.",
+      "descriptionLabel": "Description",
+      "memberHeader": "Members",
+      "memberNameLabel": "Member name",
+      "memberNamePlaceholder": "Member name",
+      "memberRoleLabel": "Role",
+      "memberRolePlaceholder": "Role",
+      "membersEmpty": "No members recorded.",
+      "membersLabel": "Members",
+      "memberWorkflowLabel": "Workflow",
+      "memberWorkflowPlaceholder": "Workflow",
+      "nameFieldLabel": "Template name",
+      "promptLabel": "Team prompt",
+      "promptPlaceholder": "Team prompt",
+      "save": "Save changes",
+      "saved": "Template saved",
+      "savedBody": "“{{name}}” was updated.",
+      "saving": "Saving…",
+      "title": "Edit template"
+    }
+  },
+  "projectContextView": {
+    "incomplete": "Uanzishaji wa timu katika mradi “{{project}}” haukukamilika. Jaribu kuanzisha tena.",
+    "unknown": "Haijathibitishwa kuwa utekelezaji wa awali katika mradi “{{project}}” umesimama. Angalia hali yake kabla ya kuanzisha tena.",
+    "retryLaunch": "Jaribu kuanzisha tena",
+    "recoveryProject": "Angalia uanzishaji ambao haujakamilika katika mradi “{{project}}” kabla ya kuhariri timu hii.",
+    "openProject": "Fungua mradi"
   }
 }

@@ -1,3 +1,4 @@
+import { MAX_TEAM_DEFINITION_TEXT_LENGTH } from '@shared/constants/teamLimits';
 import { parseNumericSuffixName, validateTeamMemberNameFormat } from '@shared/utils/teamMemberName';
 
 import type { TeamManagementTarget, TeamManagementUpdate } from '../contracts';
@@ -25,7 +26,7 @@ function object(value: unknown, keys: string[], label: string): Record<string, u
   return result;
 }
 function string(value: unknown, label: string, required = false): string {
-  if (typeof value !== 'string' || value.length > 200_000)
+  if (typeof value !== 'string' || value.length > MAX_TEAM_DEFINITION_TEXT_LENGTH)
     invalid(`${label} must be a bounded string`);
   const result = value.trim();
   if (required && !result) invalid(`${label} cannot be empty`);

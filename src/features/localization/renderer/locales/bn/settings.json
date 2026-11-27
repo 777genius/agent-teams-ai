@@ -322,6 +322,44 @@
     }
   },
   "notifications": {
+    "delivery": {
+      "eventLabels": {
+        "lead_inbox": "Team lead inbox message",
+        "user_inbox": "Message for you",
+        "task_clarification": "Clarification needed",
+        "task_status_change": "Task status changed",
+        "task_comment": "New task comment",
+        "task_created": "Task created",
+        "cross_team_message": "Cross-team message",
+        "team_launched": "Team launched",
+        "schedule_completed": "Scheduled run completed",
+        "usage_budget_warning": "Usage budget warning",
+        "task_review_requested": "Review requested",
+        "task_blocked": "Task blocked",
+        "all_tasks_completed": "All tasks completed",
+        "team_launch_incomplete": "Team launch needs attention",
+        "runtime_recovery": "Runtime recovery",
+        "schedule_failed": "Scheduled run failed",
+        "usage_budget_exceeded": "Usage budget exceeded"
+      },
+      "routingHint": "Choose destinations beside each notification type. Turning a type off disables it everywhere; Desktop is the default.",
+      "desktopOnly": "Desktop only",
+      "additionalEvents": "Additional delivery events",
+      "pausedDisabled": "স্বয়ংক্রিয় ডেলিভারি বন্ধ আছে: সিস্টেম নোটিফিকেশন নিষ্ক্রিয়। চালু করলে ডেলিভারি আবার শুরু হবে। ম্যানুয়াল টেস্ট এখনও কাজ করে।",
+      "pausedSnoozed": "Automatic delivery is snoozed until {{time}}. Click Clear Snooze above to resume. Manual Test still works.",
+      "pausedSnoozedUnknown": "Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works.",
+      "agentGuide": "Agent Teams ধাপে ধাপে সেটআপ নির্দেশিকা",
+      "exampleFormat": "ফরম্যাটের উদাহরণ (আসল শংসাপত্র নয়):",
+      "officialGuide": "প্রদানকারীর অফিসিয়াল নির্দেশনা",
+      "providerSetup": {
+        "telegram": "@BotFather-এ /newbot দিয়ে বট তৈরি করুন, চ্যাট শুরু করুন, তারপর টোকেন এবং Chat ID বা @চ্যানেল_নাম লিখুন।",
+        "discord": "নির্দিষ্ট Discord চ্যানেলে Edit Channel → Integrations → Webhooks খুলে ওয়েবহুক তৈরি করুন এবং সম্পূর্ণ URL কপি করুন।",
+        "slack": "Slack অ্যাপ তৈরি করুন, Incoming Webhooks চালু করে ওয়ার্কস্পেসে ইনস্টল করুন এবং URL কপি করুন।",
+        "ms-teams": "Teams Workflows → Send webhook alerts to a channel ব্যবহার করুন। নিজস্ব ট্রিগারের জন্য Anyone বেছে নিন এবং URL গোপন রাখুন।",
+        "google-chat": "Google Chat স্পেসে Apps & integrations → Add webhooks থেকে ওয়েবহুক তৈরি করে সম্পূর্ণ URL কপি করুন।",
+        "webhook": "একটি সর্বজনীন HTTPS ওয়েবহুক (যেমন n8n) তৈরি করুন, সম্পূর্ণ স্বাক্ষরিত URL কপি করুন এবং পরীক্ষা করুন। লোকাল URL নিষিদ্ধ।"
+      }
+    },
     "recovery": {
       "title": "Automatic agent recovery",
       "transient": {
@@ -383,7 +421,7 @@
       "selectDuration": "সময়কাল নির্বাচন করুন..."
     },
     "taskCompletion": {
-      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Gemini. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
+      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Cursor/Gemini/Qoder/Pi. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
       "installPlugin": "Agent Notifications",
       "title": "Agent Notifications"
     },

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAppTranslation } from '@features/localization/renderer';
 import { useDirectMessageQueue } from '@features/manual-message-queue/renderer';
 import { normalizeConversationParticipant } from '@features/team-direct-chats/renderer';
+import { useProjectCopyOwnerName } from '@features/team-project-context/renderer';
 import { api } from '@renderer/api';
 import { AttachmentCatalogRefresh } from '@renderer/components/team/attachments/AttachmentCatalogRefresh';
 import { AttachmentPreviewList } from '@renderer/components/team/attachments/AttachmentPreviewList';
@@ -264,10 +265,12 @@ const MemberMessageComposer = ({
     void refreshAliveTeams();
   }, [fetchCrossTeamTargets, refreshAliveTeams, teamSelectorOpen]);
 
-  // Always filter out current team on the UI side (store is global, shared across tabs)
+  // Always filter out current team on the UI side (store is global, shared across tabs);
+  // a project copy also hides the per-project team it belongs to.
+  const ownTeam = useProjectCopyOwnerName(teamName);
   const crossTeamTargets = useMemo(
-    () => allCrossTeamTargets.filter((t) => t.teamName !== teamName),
-    [allCrossTeamTargets, teamName]
+    () => allCrossTeamTargets.filter((t) => t.teamName !== teamName && t.teamName !== ownTeam),
+    [allCrossTeamTargets, ownTeam, teamName]
   );
   const sortedCrossTeamTargets = useMemo(
     () =>

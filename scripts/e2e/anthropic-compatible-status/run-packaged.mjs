@@ -23,6 +23,7 @@ import {
   processes,
   sameIdentity,
 } from '../opencode-diagnostics/platform.mjs';
+import { clickNativeControl } from './native-click.ts';
 
 const { executable } = packagedArguments(process.argv.slice(2));
 const root = await mkdtemp(path.join(os.tmpdir(), 'anthropic-compatible-status-state-'));
@@ -104,28 +105,11 @@ class Cdp {
     throw new Error(`Timed out: ${label}`);
   }
   async click(selector) {
-    const point = await this.wait(
-      `(() => {
-      const e = document.querySelector(${JSON.stringify(selector)});
-      if (!e || e.disabled) return null;
-      e.scrollIntoView({block:'center'});
-      const r=e.getBoundingClientRect();
-      return r.width && r.height ? {x:r.left+r.width/2,y:r.top+r.height/2} : null;
-    })()`,
+    await clickNativeControl(
+      this,
+      `document.querySelector(${JSON.stringify(selector)})`,
       `clickable ${selector}`
     );
-    await this.send('Input.dispatchMouseEvent', {
-      type: 'mousePressed',
-      button: 'left',
-      clickCount: 1,
-      ...point,
-    });
-    await this.send('Input.dispatchMouseEvent', {
-      type: 'mouseReleased',
-      button: 'left',
-      clickCount: 1,
-      ...point,
-    });
   }
   async fill(selector, value) {
     await this.wait(
@@ -164,32 +148,17 @@ class Cdp {
     );
   }
   async clickText(text, scope = 'document') {
-    const point = await this.wait(
+    await clickNativeControl(
+      this,
       `(() => {
       const root = ${scope};
-      const e = [...root.querySelectorAll('button')].find(b => {
+      return [...root.querySelectorAll('button')].find(b => {
         const r = b.getBoundingClientRect();
         return b.textContent.trim() === ${JSON.stringify(text)} && !b.disabled && r.width > 0 && r.height > 0;
       });
-      if (!e) return null;
-      e.scrollIntoView({block:'center'});
-      const r=e.getBoundingClientRect();
-      return r.width && r.height ? {x:r.left+r.width/2,y:r.top+r.height/2} : null;
     })()`,
       `button ${text}`
     );
-    await this.send('Input.dispatchMouseEvent', {
-      type: 'mousePressed',
-      button: 'left',
-      clickCount: 1,
-      ...point,
-    });
-    await this.send('Input.dispatchMouseEvent', {
-      type: 'mouseReleased',
-      button: 'left',
-      clickCount: 1,
-      ...point,
-    });
   }
   async probe(name, expression, timeout = 120000) {
     const slot = `__issue684_${name}`;

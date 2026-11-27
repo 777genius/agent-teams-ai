@@ -61,6 +61,24 @@ describe('HistoricalBoardMcpRawProbe', () => {
     expect(result.hitCount).toBe(1);
   });
 
+  it('detects a bare review_complete tool name when no prefixed tools appear', async () => {
+    tempDir = await mkdtemp(path.join(tmpdir(), 'historical-board-review-complete-'));
+    const filePath = path.join(tempDir, 'review-complete.jsonl');
+    await writeFile(
+      filePath,
+      JSON.stringify({
+        name: 'review_complete',
+        input: { taskId: 'abcd1234', expectedReviewRequestId: 'request-1' },
+      }) + '\n',
+      'utf8'
+    );
+
+    const result = await new HistoricalBoardMcpRawProbe().findCandidateFiles({
+      task: makeTask(), transcriptFiles: [filePath],
+    });
+    expect(result.filePaths).toEqual([filePath]);
+  });
+
   it('matches canonical task ids as well as display ids', async () => {
     tempDir = await mkdtemp(path.join(tmpdir(), 'historical-board-raw-probe-'));
     const hitFile = path.join(tempDir, 'hit-canonical.jsonl');

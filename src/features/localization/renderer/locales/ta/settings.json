@@ -337,6 +337,44 @@
     }
   },
   "notifications": {
+    "delivery": {
+      "eventLabels": {
+        "lead_inbox": "Team lead inbox message",
+        "user_inbox": "Message for you",
+        "task_clarification": "Clarification needed",
+        "task_status_change": "Task status changed",
+        "task_comment": "New task comment",
+        "task_created": "Task created",
+        "cross_team_message": "Cross-team message",
+        "team_launched": "Team launched",
+        "schedule_completed": "Scheduled run completed",
+        "usage_budget_warning": "Usage budget warning",
+        "task_review_requested": "Review requested",
+        "task_blocked": "Task blocked",
+        "all_tasks_completed": "All tasks completed",
+        "team_launch_incomplete": "Team launch needs attention",
+        "runtime_recovery": "Runtime recovery",
+        "schedule_failed": "Scheduled run failed",
+        "usage_budget_exceeded": "Usage budget exceeded"
+      },
+      "routingHint": "Choose destinations beside each notification type. Turning a type off disables it everywhere; Desktop is the default.",
+      "desktopOnly": "Desktop only",
+      "additionalEvents": "Additional delivery events",
+      "pausedDisabled": "தானியங்கு அனுப்புதல் இடைநிறுத்தப்பட்டது: கணினி அறிவிப்புகள் முடக்கப்பட்டுள்ளன. தொடர அவற்றை இயக்கவும். கைமுறை சோதனை இன்னும் கிடைக்கிறது.",
+      "pausedSnoozed": "Automatic delivery is snoozed until {{time}}. Click Clear Snooze above to resume. Manual Test still works.",
+      "pausedSnoozedUnknown": "Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works.",
+      "agentGuide": "Agent Teams படிப்படியான அமைவு வழிகாட்டி",
+      "exampleFormat": "வடிவமைப்பு எடுத்துக்காட்டு (உண்மையான சான்றுகள் அல்ல):",
+      "officialGuide": "வழங்குநரின் அதிகாரப்பூர்வ வழிமுறைகள்",
+      "providerSetup": {
+        "telegram": "@BotFather இல் /newbot மூலம் bot உருவாக்கி அரட்டையைத் தொடங்கவும்; token மற்றும் Chat ID அல்லது @சேனல்_பெயரை உள்ளிடவும்.",
+        "discord": "Discord சேனலில் Edit Channel → Integrations → Webhooks திறந்து webhook உருவாக்கி முழு URL-ஐ நகலெடுக்கவும்.",
+        "slack": "Slack செயலியை உருவாக்கி Incoming Webhooks-ஐ இயக்கி workspace-இல் நிறுவி URL-ஐ நகலெடுக்கவும்.",
+        "ms-teams": "Teams Workflows → Send webhook alerts to a channel பயன்படுத்தவும். தனிப்பயன் trigger-க்கு Anyone தேர்வு செய்து URL-ஐ ரகசியமாக வைக்கவும்.",
+        "google-chat": "Google Chat இடத்தில் Apps & integrations → Add webhooks மூலம் webhook உருவாக்கி முழு URL-ஐ நகலெடுக்கவும்.",
+        "webhook": "பொது HTTPS வெப்ஹுக் (எ.கா. n8n-இல்) உருவாக்கி, முழு கையொப்பமிட்ட URL-ஐ நகலெடுத்து சோதிக்கவும். உள்ளக URL-கள் தடுக்கப்படும்."
+      }
+    },
     "recovery": {
       "title": "Automatic agent recovery",
       "transient": {
@@ -398,7 +436,7 @@
       "selectDuration": "கால அளவைத் தேர்ந்தெடு..."
     },
     "taskCompletion": {
-      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Gemini. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
+      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Cursor/Gemini/Qoder/Pi. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
       "installPlugin": "Agent Notifications",
       "title": "Agent Notifications"
     },

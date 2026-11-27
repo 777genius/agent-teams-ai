@@ -74,6 +74,9 @@ export class TeamTaskWriter {
         blockedBy: task.blockedBy ?? [],
         related: task.related ?? [],
         createdAt,
+        clarificationRequestedAt:
+          task.needsClarification === 'user' ? (task.clarificationRequestedAt ?? createdAt) : undefined,
+        clarificationRequestId: task.needsClarification === 'user' ? randomUUID() : undefined,
         workIntervals:
           task.status === 'in_progress'
             ? // Start the first work interval on creation when task starts immediately.
@@ -529,10 +532,18 @@ export class TeamTaskWriter {
       }
 
       const task = JSON.parse(raw) as Record<string, unknown>;
+      const wasAwaitingUser = task.needsClarification === 'user';
       if (value) {
         task.needsClarification = value;
       } else {
         delete task.needsClarification;
+      }
+      if (value === 'user' && !wasAwaitingUser) {
+        task.clarificationRequestedAt = new Date().toISOString();
+        task.clarificationRequestId = randomUUID();
+      } else if (value !== 'user') {
+        delete task.clarificationRequestedAt;
+        delete task.clarificationRequestId;
       }
       await atomicWriteAsync(taskPath, JSON.stringify(task, null, 2));
     });

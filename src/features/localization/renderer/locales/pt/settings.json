@@ -322,6 +322,44 @@
     }
   },
   "notifications": {
+    "delivery": {
+      "eventLabels": {
+        "lead_inbox": "Team lead inbox message",
+        "user_inbox": "Message for you",
+        "task_clarification": "Clarification needed",
+        "task_status_change": "Task status changed",
+        "task_comment": "New task comment",
+        "task_created": "Task created",
+        "cross_team_message": "Cross-team message",
+        "team_launched": "Team launched",
+        "schedule_completed": "Scheduled run completed",
+        "usage_budget_warning": "Usage budget warning",
+        "task_review_requested": "Review requested",
+        "task_blocked": "Task blocked",
+        "all_tasks_completed": "All tasks completed",
+        "team_launch_incomplete": "Team launch needs attention",
+        "runtime_recovery": "Runtime recovery",
+        "schedule_failed": "Scheduled run failed",
+        "usage_budget_exceeded": "Usage budget exceeded"
+      },
+      "routingHint": "Choose destinations beside each notification type. Turning a type off disables it everywhere; Desktop is the default.",
+      "desktopOnly": "Desktop only",
+      "additionalEvents": "Additional delivery events",
+      "pausedDisabled": "Entrega automática em pausa: as notificações do sistema estão desativadas. Ative-as para retomar. O teste manual continua disponível.",
+      "pausedSnoozed": "Automatic delivery is snoozed until {{time}}. Click Clear Snooze above to resume. Manual Test still works.",
+      "pausedSnoozedUnknown": "Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works.",
+      "agentGuide": "Guia passo a passo do Agent Teams",
+      "exampleFormat": "Exemplo de formato (credenciais fictícias):",
+      "officialGuide": "Instruções oficiais do provedor",
+      "providerSetup": {
+        "telegram": "Crie um bot com @BotFather (/newbot), inicie uma conversa e informe o token e o ID do chat ou @nome_do_canal.",
+        "discord": "No canal do Discord, abra Editar canal → Integrações → Webhooks, crie um e copie o URL completo.",
+        "slack": "Crie um aplicativo Slack, ative Incoming Webhooks, instale-o no workspace e copie o URL.",
+        "ms-teams": "Use Teams Workflows → Send webhook alerts to a channel. Para um gatilho próprio, escolha Anyone e mantenha o URL em segredo.",
+        "google-chat": "No espaço do Google Chat, abra Apps e integrações → Adicionar webhooks, crie um e copie o URL completo.",
+        "webhook": "Crie um webhook HTTPS público (por exemplo, no n8n), copie o URL assinado completo e teste-o. URLs locais são bloqueadas."
+      }
+    },
     "recovery": {
       "title": "Automatic agent recovery",
       "transient": {
@@ -383,7 +421,7 @@
       "selectDuration": "Selecionar duração..."
     },
     "taskCompletion": {
-      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Gemini. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
+      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Cursor/Gemini/Qoder/Pi. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
       "installPlugin": "Agent Notifications",
       "title": "Agent Notifications"
     },

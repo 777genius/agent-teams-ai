@@ -1,6 +1,7 @@
 import { memo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { TeamDisplayLabel } from '@features/team-project-context/renderer';
 import { api } from '@renderer/api';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { ParticipantAvatar } from '@renderer/components/team/ParticipantAvatar';
@@ -366,9 +367,8 @@ export const PendingRepliesBlock = memo(function PendingRepliesBlock({
                     color: colors.text,
                     border: `1px solid ${colors.border}40`,
                   }}
-                  title={entry.teamName}
                 >
-                  {entry.teamName}
+                  <TeamDisplayLabel teamName={entry.teamName} />
                 </span>
                 <span className="text-[10px]" style={{ color: CARD_ICON_MUTED }}>
                   {t('activity.pendingReplies.externalTeam')}

@@ -5,6 +5,14 @@
  * Each route file mirrors the corresponding IPC handler.
  */
 import {
+  type CustomTeamTemplatesFeature,
+  registerCustomTeamTemplatesHttp,
+} from '@features/custom-team-templates/main';
+import {
+  type NotificationChannelsFeatureFacade,
+  registerNotificationChannelsHttp,
+} from '@features/notification-channels/main';
+import {
   type OrganizationsFeatureFacade,
   registerOrganizationsHttp,
 } from '@features/organizations/main';
@@ -17,6 +25,7 @@ import {
   type TeamGroupChatsFeature,
 } from '@features/team-group-chats/main';
 import { registerTokenUsageHttp, type TokenUsageFeatureFacade } from '@features/token-usage/main';
+import { registerUserAttentionHttp, type UserAttentionFeatureFacade } from '@features/user-attention/main';
 import {
   registerWorkspaceTrustHttp,
   type WorkspaceTrustStatusFeatureFacade,
@@ -24,6 +33,7 @@ import {
 import { createLogger } from '@shared/utils/logger';
 
 import { registerConfigRoutes } from './config';
+import { registerCrossTeamRoutes } from './crossTeam';
 import { registerEventRoutes } from './events';
 import { registerNotificationRoutes } from './notifications';
 import { registerProjectRoutes } from './projects';
@@ -49,8 +59,11 @@ import type {
   TeamHttpDataApi,
   TeamHttpHandlerApis,
 } from '../services/team/contracts/TeamProvisioningApis';
+import type { CrossTeamHttpApi } from './crossTeam';
+import type { ProjectContextHttpHooks } from './teams/projectContextHttp';
 import type { DesktopExternalAgentConnection } from '@features/external-agent-connection/main';
 import type { MemberWorkSyncFeatureFacade } from '@features/member-work-sync/main';
+import type { ProjectTeamLaunch } from '@features/team-project-context/main';
 import type { TeamPromptManagement } from '@features/team-prompt-management/main';
 import type { FastifyInstance } from 'fastify';
 
@@ -63,7 +76,10 @@ export interface HttpServices {
   chunkBuilder: ChunkBuilder;
   dataCache: DataCache;
   recentProjectsFeature?: RecentProjectsFeatureFacade;
+  userAttentionFeature?: UserAttentionFeatureFacade;
+  notificationChannelsFeature?: NotificationChannelsFeatureFacade;
   teamGroupChatsFeature?: TeamGroupChatsFeature;
+  customTeamTemplatesFeature?: CustomTeamTemplatesFeature;
   organizationsFeature?: OrganizationsFeatureFacade;
   tokenUsageFeature?: TokenUsageFeatureFacade;
   memberWorkSyncFeature?: MemberWorkSyncFeatureFacade;
@@ -76,6 +92,12 @@ export interface HttpServices {
   teamApis?: TeamHttpHandlerApis;
   teamDataApi?: TeamHttpDataApi;
   teamPromptManagement?: TeamPromptManagement;
+  /** Cross-team routing for the controller's MCP tools. */
+  crossTeam?: CrossTeamHttpApi;
+  /** How routes read project contexts; production leaves it unset. */
+  projectContext?: ProjectContextHttpHooks;
+  /** Launches a team with separate history per project; one instance per request. */
+  projectTeamLaunch?: () => ProjectTeamLaunch;
 }
 
 export function registerHttpRoutes(
@@ -86,6 +108,8 @@ export function registerHttpRoutes(
   services.externalAgentConnection?.registerHttp(app);
   if (services.teamGroupChatsFeature)
     registerTeamGroupChatsHttp(app, services.teamGroupChatsFeature);
+  if (services.customTeamTemplatesFeature)
+    registerCustomTeamTemplatesHttp(app, services.customTeamTemplatesFeature);
   registerProjectRoutes(app, services);
   registerSessionRoutes(app, services);
   registerSearchRoutes(app, services);
@@ -93,7 +117,11 @@ export function registerHttpRoutes(
   if (services.teamDataApi || services.teamApis) {
     registerTeamRoutes(app, services);
   }
+  if (services.crossTeam) registerCrossTeamRoutes(app, services.crossTeam);
   registerNotificationRoutes(app);
+  if (services.notificationChannelsFeature) {
+    registerNotificationChannelsHttp(app, services.notificationChannelsFeature);
+  }
   registerConfigRoutes(app, services.externalAgentConnection?.updateRoot);
   registerValidationRoutes(app);
   registerUtilityRoutes(app);
@@ -106,6 +134,9 @@ export function registerHttpRoutes(
   registerUpdaterRoutes(app, services);
   if (services.recentProjectsFeature) {
     registerRecentProjectsHttp(app, services.recentProjectsFeature);
+  }
+  if (services.userAttentionFeature) {
+    registerUserAttentionHttp(app, services.userAttentionFeature);
   }
   if (services.organizationsFeature) {
     registerOrganizationsHttp(app, services.organizationsFeature);

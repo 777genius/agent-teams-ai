@@ -234,6 +234,20 @@ export function persistAndScheduleToolApprovalSettingsSync(
   scheduleToolApprovalSettingsSync(teamName ?? '__global__', settings);
 }
 
+/**
+ * Before starting a native runtime, wait until its physical-team approval
+ * policy has reached main. A queued older auto-allow write must not win the race.
+ */
+export async function persistAndAwaitToolApprovalSettingsSync(
+  teamName: string,
+  settings: ToolApprovalSettings
+): Promise<void> {
+  saveToolApprovalSettingsForTeam(teamName, settings);
+  const synchronizer = getDefaultSynchronizer();
+  const revision = synchronizer.schedule(teamName, settings);
+  await synchronizer.waitForAcknowledgement(teamName, revision);
+}
+
 export function resetToolApprovalSettingsSync(): void {
   defaultSynchronizer?.dispose();
   defaultSynchronizer = null;

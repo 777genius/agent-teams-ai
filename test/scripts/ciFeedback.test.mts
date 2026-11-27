@@ -265,6 +265,27 @@ test('draft transitions receive fast feedback; every ready transition receives f
   }
 });
 
+test('non-qualifying draft label changes stay fast; ready and ci:full changes remain full', () => {
+  for (const action of ['labeled', 'unlabeled']) {
+    for (const labelName of ['documentation', 'ci:github-hosted']) {
+      const draftEvent = { ...prEvent(action, true), label: { name: labelName } };
+      assert.equal(selectFeedbackMode('pull_request', draftEvent), 'fast');
+      assert.equal(
+        selectFeedbackMode('pull_request', { ...draftEvent, pull_request: prEvent(action, false).pull_request }),
+        'full'
+      );
+    }
+    assert.equal(
+      selectFeedbackMode('pull_request', { ...prEvent(action, true), label: { name: 'ci:full' } }),
+      'full'
+    );
+    assert.equal(selectFeedbackMode('pull_request', prEvent(action, true)), 'full');
+    assert.equal(
+      selectFeedbackMode('pull_request', { ...prEvent(action, true), label: { name: 7 } }),
+      'full'
+    );
+  }
+});
 test('unknown, contradictory and malformed lifecycle input fails closed', () => {
   for (const event of [
     null,

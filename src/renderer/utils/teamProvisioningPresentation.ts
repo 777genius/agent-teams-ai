@@ -10,6 +10,8 @@ import {
   isBootstrapConfirmedProvisionedButNotAliveFailure,
 } from '@shared/utils/teamLaunchFailureReason';
 
+import { describeKnownLaunchFailureReason } from './memberLaunchFailureReasonText';
+
 import type {
   MemberSpawnStatusEntry,
   MemberSpawnStatusesSnapshot,
@@ -1015,6 +1017,8 @@ export function buildTeamProvisioningPresentation({
   });
 
   if (isFailed) {
+    const launchFailedKey = 'provisioning.presentation.panel.launchFailed';
+    const failedTitle = translateProvisioning(t, launchFailedKey, 'Launch failed');
     return {
       progress,
       isActive: false,
@@ -1033,19 +1037,15 @@ export function buildTeamProvisioningPresentation({
       remainingJoinCount,
       retryableOpenCodeSecondaryFailedCount,
       retryableOpenCodeSecondaryFailedNames,
-      panelTitle: translateProvisioning(
-        t,
-        'provisioning.presentation.panel.launchFailed',
-        'Launch failed'
-      ),
-      panelMessage: progress.error ?? failedSpawnPanelMessage ?? genericFailedSpawnPanelMessage,
+      panelTitle: failedTitle,
+      panelMessage:
+        describeKnownLaunchFailureReason(progress.error ?? progress.message, t) ??
+        progress.error ??
+        failedSpawnPanelMessage ??
+        genericFailedSpawnPanelMessage,
       panelTone: 'error',
       defaultLiveOutputOpen: true,
-      compactTitle: translateProvisioning(
-        t,
-        'provisioning.presentation.panel.launchFailed',
-        'Launch failed'
-      ),
+      compactTitle: failedTitle,
       compactDetail: progress.message ?? null,
       compactTone: 'error',
     };

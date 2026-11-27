@@ -1,3 +1,4 @@
+import { parseNewTeamProjectContextMode } from '@features/team-project-context/core';
 import {
   validateTeammateName,
   validateTeamName,
@@ -33,6 +34,29 @@ const PROVIDER_BACKEND_ERROR =
 
 export class TeamRequestValidationError extends Error {
   readonly name = 'TeamRequestValidationError';
+  /** A stable reason a client can act on, when the message alone is not enough. */
+  constructor(
+    message: string,
+    readonly code?: string
+  ) {
+    super(message);
+  }
+}
+
+/**
+ * HTTP and MCP create require the history mode until their board tools and
+ * trash work for a team with separate history per project. The value itself is
+ * parsed by `parseCreateTeamRequest`, like for the app.
+ */
+export function requireExplicitProjectContextMode(body: unknown): void {
+  const payload = body && typeof body === 'object' ? (body as Record<string, unknown>) : {};
+  if (payload.projectContextMode === undefined) {
+    throw new TeamRequestValidationError(
+      'projectContextMode is required: "shared" (one history for every project folder) or ' +
+        '"per_project" (separate tasks and chats for every project folder)',
+      'PROJECT_CONTEXT_MODE_REQUIRED'
+    );
+  }
 }
 
 /** Reject ambiguous launch requests before admission can replay persisted work. */
@@ -155,7 +179,8 @@ export function assertOptionalEffort(
   value: unknown,
   providerId: TeamLaunchRequest['providerId']
 ): EffortLevel | undefined {
-  if (value == null) {
+  // An empty value is no explicit effort, for HTTP as for the app.
+  if (value == null || value === '') {
     return undefined;
   }
 
@@ -169,7 +194,7 @@ export function assertOptionalEffort(
 }
 
 export function assertOptionalFastMode(value: unknown): TeamFastMode | undefined {
-  if (value == null) {
+  if (value == null || value === '') {
     return undefined;
   }
 
@@ -281,7 +306,15 @@ export function parseCreateMembers(
   });
 }
 
-export function parseLaunchRequest(teamName: string, body: unknown): TeamLaunchRequest {
+/**
+ * `savedProviderId` is the provider the team has saved: an explicit effort is
+ * checked against it when the request names no provider (the launch inherits it).
+ */
+export function parseLaunchRequest(
+  teamName: string,
+  body: unknown,
+  savedProviderId?: TeamLaunchRequest['providerId']
+): TeamLaunchRequest {
   const payload = body && typeof body === 'object' ? (body as Record<string, unknown>) : {};
   const bootstrapError = validateBootstrapOnlyLaunchRequest(payload);
   if (bootstrapError) throw new TeamRequestValidationError(bootstrapError);
@@ -289,7 +322,7 @@ export function parseLaunchRequest(teamName: string, body: unknown): TeamLaunchR
   const prompt = assertOptionalString(payload.prompt, 'prompt');
   const providerBackendId = parseLaunchProviderBackendId(providerId, payload.providerBackendId);
   const model = assertOptionalString(payload.model, 'model');
-  const effort = assertOptionalEffort(payload.effort, providerId ?? 'anthropic');
+  const effort = assertOptionalEffort(payload.effort, providerId ?? savedProviderId ?? 'anthropic');
   const fastMode = assertOptionalFastMode(payload.fastMode);
   const limitContext = assertOptionalBoolean(payload.limitContext, 'limitContext');
   const clearContext = assertOptionalBoolean(payload.clearContext, 'clearContext');
@@ -369,8 +402,15 @@ export function parseCreateTeamRequest(body: unknown): TeamCreateConfigRequest {
   const worktree = assertOptionalString(payload.worktree, 'worktree');
   const extraCliArgs = assertOptionalExtraCliArgs(payload.extraCliArgs);
 
+  let projectContextMode: TeamCreateConfigRequest['projectContextMode'];
+  try {
+    projectContextMode = parseNewTeamProjectContextMode(payload.projectContextMode);
+  } catch {
+    throw new TeamRequestValidationError('projectContextMode must be shared or per_project');
+  }
   const request: TeamCreateConfigRequest = {
     teamName,
+    projectContextMode,
     runtimeSelectionVersion,
     members: parseCreateMembers(payload.members, providerId ?? 'anthropic'),
     ...(displayName ? { displayName } : {}),
@@ -491,6 +531,9 @@ export function parseDraftLaunchCreateRequest(
 
   return {
     teamName,
+    // An HTTP draft is an existing persisted team, never a new create request.
+    // Missing legacy mode remains shared and overrides cannot silently migrate it.
+    projectContextMode: savedRequest.projectContextMode ?? 'shared',
     runtimeSelectionVersion: normalizeRuntimeSelectionVersion(savedRequest.runtimeSelectionVersion),
     displayName: savedRequest.displayName,
     description: savedRequest.description,

@@ -44,6 +44,7 @@ export const COLORS = {
   reviewNone: 'transparent',
   reviewPending: '#f59e0b',
   reviewNeedsFix: '#ef4444',
+  reviewReviewed: '#38bdf8',
   reviewApproved: '#22c55e',
 
   // Edge type colors
@@ -135,13 +136,15 @@ export function getTaskStatusColor(
 // ─── Review State Color Resolver ────────────────────────────────────────────
 
 export function getReviewStateColor(
-  state: 'none' | 'review' | 'needsFix' | 'approved' | undefined,
+  state: 'none' | 'review' | 'needsFix' | 'reviewed' | 'approved' | undefined,
 ): string {
   switch (state) {
     case 'review':
       return COLORS.reviewPending;
     case 'needsFix':
       return COLORS.reviewNeedsFix;
+    case 'reviewed':
+      return COLORS.reviewReviewed;
     case 'approved':
       return COLORS.reviewApproved;
     default:

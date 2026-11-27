@@ -7,6 +7,10 @@ import { TooltipProvider } from '@renderer/components/ui/tooltip';
 import { useStore } from '@renderer/store';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('@features/user-attention/renderer', () => ({
+  useAttentionInbox: () => ({ model: null, loading: false, error: null, refresh: vi.fn() }),
+}));
+
 vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({ t: (key: string) => key }),
 }));

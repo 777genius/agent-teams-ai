@@ -322,6 +322,44 @@
     }
   },
   "notifications": {
+    "delivery": {
+      "eventLabels": {
+        "lead_inbox": "Team lead inbox message",
+        "user_inbox": "Message for you",
+        "task_clarification": "Clarification needed",
+        "task_status_change": "Task status changed",
+        "task_comment": "New task comment",
+        "task_created": "Task created",
+        "cross_team_message": "Cross-team message",
+        "team_launched": "Team launched",
+        "schedule_completed": "Scheduled run completed",
+        "usage_budget_warning": "Usage budget warning",
+        "task_review_requested": "Review requested",
+        "task_blocked": "Task blocked",
+        "all_tasks_completed": "All tasks completed",
+        "team_launch_incomplete": "Team launch needs attention",
+        "runtime_recovery": "Runtime recovery",
+        "schedule_failed": "Scheduled run failed",
+        "usage_budget_exceeded": "Usage budget exceeded"
+      },
+      "routingHint": "Choose destinations beside each notification type. Turning a type off disables it everywhere; Desktop is the default.",
+      "desktopOnly": "Desktop only",
+      "additionalEvents": "Additional delivery events",
+      "pausedDisabled": "หยุดส่งอัตโนมัติชั่วคราว: ปิดการแจ้งเตือนของระบบอยู่ เปิดการแจ้งเตือนเพื่อกลับมาส่งต่อได้ การทดสอบด้วยตนเองยังใช้ได้",
+      "pausedSnoozed": "Automatic delivery is snoozed until {{time}}. Click Clear Snooze above to resume. Manual Test still works.",
+      "pausedSnoozedUnknown": "Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works.",
+      "agentGuide": "คู่มือตั้งค่า Agent Teams ทีละขั้นตอน",
+      "exampleFormat": "ตัวอย่างรูปแบบ (ไม่ใช่ข้อมูลรับรองจริง):",
+      "officialGuide": "คำแนะนำอย่างเป็นทางการของผู้ให้บริการ",
+      "providerSetup": {
+        "telegram": "สร้างบอตด้วย @BotFather (/newbot) เริ่มแชต แล้วกรอกโทเคนและ Chat ID หรือ @ชื่อช่อง",
+        "discord": "ในช่อง Discord ปลายทาง เปิด Edit Channel → Integrations → Webhooks สร้างเว็บฮุกและคัดลอก URL ทั้งหมด",
+        "slack": "สร้างแอป Slack เปิด Incoming Webhooks ติดตั้งในเวิร์กสเปซ แล้วคัดลอก URL",
+        "ms-teams": "ใช้ Teams Workflows → Send webhook alerts to a channel สำหรับทริกเกอร์ที่สร้างเองให้เลือก Anyone และเก็บ URL เป็นความลับ",
+        "google-chat": "ในพื้นที่ Google Chat เลือก Apps & integrations → Add webhooks สร้างเว็บฮุกแล้วคัดลอก URL ทั้งหมด",
+        "webhook": "สร้าง HTTPS webhook สาธารณะ (เช่น ใน n8n) คัดลอก URL ที่ลงลายเซ็นครบถ้วนแล้วทดสอบ URL ภายในถูกบล็อก"
+      }
+    },
     "recovery": {
       "title": "Automatic agent recovery",
       "transient": {
@@ -383,7 +421,7 @@
       "selectDuration": "เลือกระยะเวลา..."
     },
     "taskCompletion": {
-      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Gemini. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
+      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Cursor/Gemini/Qoder/Pi. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
       "installPlugin": "Agent Notifications",
       "title": "Agent Notifications"
     },

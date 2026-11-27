@@ -356,3 +356,20 @@
   opacity: 1;
   pointer-events: auto;
 }
+
+/* Keep an agent's attachments inside the same bubble as their message. */
+[data-chat-appearance='wide-chat']
+  .wide-chat-message[data-message-presentation='ordinary-agent']:has(
+    > [data-activity-message-footer='attachments']
+  )
+  > .wide-chat-message-body {
+  border-radius: 0;
+}
+
+[data-chat-appearance='wide-chat']
+  .wide-chat-message[data-message-presentation='ordinary-agent']
+  > [data-activity-message-footer='attachments'] {
+  display: flow-root;
+  background: var(--wide-chat-bubble-bg);
+  border-radius: 0 0 14px 14px;
+}

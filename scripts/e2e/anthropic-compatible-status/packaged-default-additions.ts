@@ -33,7 +33,7 @@ async function regularFileIdentity(root: string, relative: string): Promise<File
   };
 }
 
-/** Reject every bundled-only file except the exact production-built Windows wrapper. */
+/** Reject bundled-only files except the two exact production-built Windows wrappers. */
 export async function qualifyPackagedRuntimeAdditions(
   original: ReadonlyMap<string, string>,
   bundled: ReadonlyMap<string, string>,
@@ -41,19 +41,24 @@ export async function qualifyPackagedRuntimeAdditions(
   runtimeRoot: string,
   targetPlatform: NodeJS.Platform
 ) {
-  const { OPENCODE_CONSOLE_WRAPPER_PATH } = (
+  const { OPENCODE_CONSOLE_WRAPPER_PATH, TEAMMATE_CONSOLE_WRAPPER_PATH } = (
     createRequire(import.meta.url)('../../electron-builder/afterPack.cjs') as {
-      _internal: { OPENCODE_CONSOLE_WRAPPER_PATH: string };
+      _internal: {
+        OPENCODE_CONSOLE_WRAPPER_PATH: string;
+        TEAMMATE_CONSOLE_WRAPPER_PATH: string;
+      };
     }
   )._internal;
-  const wrapper = path.posix.relative('resources/runtime', OPENCODE_CONSOLE_WRAPPER_PATH);
-  assert(wrapper && !wrapper.startsWith('../') && !path.posix.isAbsolute(wrapper));
+  const wrappers = [OPENCODE_CONSOLE_WRAPPER_PATH, TEAMMATE_CONSOLE_WRAPPER_PATH]
+    .map((file) => path.posix.relative('resources/runtime', file));
+  for (const wrapper of wrappers)
+    assert(wrapper && !wrapper.startsWith('../') && !path.posix.isAbsolute(wrapper));
   const additions: { file: string; staged: FileIdentity; bundled: FileIdentity }[] = [];
   for (const [file, digest] of bundled) {
     // Archive-owned paths have already passed the original strict digest comparison.
     if (original.has(file)) continue;
     assert(
-      targetPlatform === 'win32' && file === wrapper,
+      targetPlatform === 'win32' && wrappers.includes(file),
       `Unexpected file in packaged runtime: ${file}`
     );
     const stagedRoot = await realpath(path.join(repoRoot, 'resources/runtime'));
@@ -68,7 +73,9 @@ export async function qualifyPackagedRuntimeAdditions(
     );
     additions.push({ file, staged, bundled: physical });
   }
-  if (targetPlatform === 'win32')
-    assert(bundled.has(wrapper), `Required Windows runtime wrapper missing: ${wrapper}`);
+  if (targetPlatform === 'win32') {
+    for (const wrapper of wrappers)
+      assert(bundled.has(wrapper), `Required Windows runtime wrapper missing: ${wrapper}`);
+  }
   return additions;
 }

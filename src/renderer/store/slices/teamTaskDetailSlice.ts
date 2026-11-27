@@ -118,7 +118,11 @@ export interface TeamTaskDetailSlice {
   ) => void;
   hydrateTaskDetailSessionDraft: (
     identity: TaskDetailIdentity,
-    draft: { text?: string; commentChips?: TaskDetailSession['commentChips'] }
+    draft: {
+      text?: string;
+      commentChips?: TaskDetailSession['commentChips'];
+      answerClarificationRequestId?: string | null;
+    }
   ) => void;
   updateTaskDetailSession: (
     identity: TaskDetailIdentity,
@@ -532,6 +536,19 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
       if (part === 'reply') next.reply = value as TaskDetailSession['reply'];
       if (part === 'subject') next.subjectDraft = String(value);
       if (part === 'description') next.descriptionDraft = String(value);
+      // Capture the active clarification when this draft FIRST acquires content.
+      // Later task snapshots cannot silently rebind an unsent answer to a new
+      // question. Clearing the draft releases the binding for a fresh answer.
+      if (part === 'commentText' || part === 'commentChips' || part === 'reply') {
+        const hasContent = Boolean(next.commentText.trim() || next.commentChips.length ||
+          next.pendingAttachments.length || next.reply);
+        if (!hasContent) next.answerClarificationRequestId = undefined;
+        else if (next.answerClarificationRequestId === undefined) {
+          const task = state.taskDetailById[key]?.full;
+          next.answerClarificationRequestId = task?.needsClarification === 'user'
+            ? task.clarificationRequestId ?? null : null;
+        }
+      }
       return {
         taskDetailSessionById: { ...state.taskDetailSessionById, [key]: next },
       };
@@ -627,15 +644,23 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
   beginTaskDetailPendingAttachmentSession: (rawIdentity, attachment) => {
     const identity = normalizeTaskDetailIdentity(rawIdentity);
     const key = taskDetailKey(identity);
-    set((state) => ({
-      taskDetailSessionById: {
-        ...state.taskDetailSessionById,
-        [key]: beginTaskDetailPendingAttachment(
-          state.taskDetailSessionById[key] ?? EMPTY_TASK_DETAIL_SESSION,
-          attachment
-        ),
-      },
-    }));
+    set((state) => {
+      const current = state.taskDetailSessionById[key] ?? EMPTY_TASK_DETAIL_SESSION;
+      const next = beginTaskDetailPendingAttachment(current, attachment);
+      if (next === current) return state;
+      if (next.answerClarificationRequestId === undefined) {
+        const task = state.taskDetailById[key]?.full;
+        return { taskDetailSessionById: {
+          ...state.taskDetailSessionById,
+          [key]: {
+            ...next,
+            answerClarificationRequestId: task?.needsClarification === 'user'
+              ? task.clarificationRequestId ?? null : null,
+          },
+        } };
+      }
+      return { taskDetailSessionById: { ...state.taskDetailSessionById, [key]: next } };
+    });
   },
 
   completeTaskDetailPendingAttachmentSession: (rawIdentity, id, attachment) => {
@@ -662,7 +687,12 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
       return {
         taskDetailSessionById: {
           ...state.taskDetailSessionById,
-          [key]: ignoreTaskDetailPendingAttachment(current, id),
+          [key]: (() => {
+            const next = ignoreTaskDetailPendingAttachment(current, id);
+            return next.commentText.trim() || next.commentChips.length ||
+              next.pendingAttachments.length || next.reply
+              ? next : { ...next, answerClarificationRequestId: undefined };
+          })(),
         },
       };
     });

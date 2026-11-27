@@ -3641,6 +3641,80 @@ controller.messages.sendMessage({
     expect(fs.readFileSync(processesPath, 'utf8')).toBe(original);
   });
 
+  it('keeps the code and outcome of an incomplete stop on the error', async () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const outcome = { team: 'my-team', complete: false, contexts: [{ executionTeamName: 'ptc-a' }] };
+    const server = await startControlServer(async ({ method, url }) => {
+      if (method === 'POST' && url === '/api/teams/my-team/stop') {
+        return {
+          statusCode: 409,
+          body: {
+            error: 'Stop of team "my-team" did not complete: /p/a (ptc-a): still running after the stop',
+            code: 'LOGICAL_STOP_INCOMPLETE',
+            outcome,
+          },
+        };
+      }
+      return { statusCode: 404, body: { error: `Unhandled ${method} ${url}` } };
+    });
+
+    try {
+      const failure = await controller.runtime
+        .stopTeam({ controlUrl: server.baseUrl })
+        .then(
+          () => null,
+          (error) => error
+        );
+      expect(failure).toBeInstanceOf(Error);
+      expect(failure.message).toContain('did not complete');
+      expect(failure.code).toBe('LOGICAL_STOP_INCOMPLETE');
+      expect(failure.outcome).toEqual(outcome);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('does not ask another address to stop a team after a stop request timed out', async () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    let releaseSlow = () => {};
+    const slowCalls = [];
+    const otherCalls = [];
+    const slow = await startControlServer(async ({ method, url }) => {
+      slowCalls.push(`${method} ${url}`);
+      await new Promise((resolve) => {
+        releaseSlow = resolve;
+      });
+      return { body: { teamName: 'my-team', isAlive: false, runId: null, progress: null } };
+    });
+    const other = await startControlServer(async ({ method, url }) => {
+      otherCalls.push(`${method} ${url}`);
+      return { body: { teamName: 'my-team', isAlive: false, runId: null, progress: null } };
+    });
+    const previousEnv = process.env.CLAUDE_TEAM_CONTROL_URL;
+    process.env.CLAUDE_TEAM_CONTROL_URL = other.baseUrl;
+
+    try {
+      await expect(
+        controller.runtime.stopTeam({
+          controlUrl: slow.baseUrl,
+          stopRequestTimeoutMs: 1000,
+          waitForStop: false,
+        })
+      ).rejects.toThrow(/Timed out calling team control API/);
+      // The first server may still be stopping: a second stop elsewhere would compete with it.
+      expect(slowCalls).toEqual(['POST /api/teams/my-team/stop']);
+      expect(otherCalls).toEqual([]);
+    } finally {
+      if (previousEnv === undefined) delete process.env.CLAUDE_TEAM_CONTROL_URL;
+      else process.env.CLAUDE_TEAM_CONTROL_URL = previousEnv;
+      releaseSlow();
+      await slow.close();
+      await other.close();
+    }
+  });
+
   it('task_add_comment succeeds even when owner notification write fails', () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });

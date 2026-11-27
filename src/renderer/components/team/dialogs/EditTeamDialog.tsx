@@ -3,6 +3,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useGatewayMemberBindings } from '@features/gateway-provider/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
+import { isProjectContextRecoveryError } from '@renderer/components/team/definitionEdit/projectContextRecoveryError';
+import { ProjectContextRecoveryNotice } from '@renderer/components/team/definitionEdit/ProjectContextRecoveryNotice';
 import { MemberDraftRow } from '@renderer/components/team/members/MemberDraftRow';
 import {
   buildMembersFromDrafts,
@@ -33,6 +35,7 @@ import {
   buildMemberColorMap,
   displayMemberName,
 } from '@renderer/utils/memberHelpers';
+import { MAX_TEAM_DEFINITION_TEXT_LENGTH } from '@shared/constants/teamLimits';
 import { parseNumericSuffixName } from '@shared/utils/teamMemberName';
 import { Loader2 } from 'lucide-react';
 
@@ -63,6 +66,11 @@ interface EditTeamDialogProps {
   currentName: string;
   currentDescription: string;
   currentColor: string;
+  /**
+   * Saved lead instructions. Only a team whose definition holds them (a team
+   * with separate history per project) passes it; without it the field is hidden.
+   */
+  currentLeadPrompt?: string;
   currentMembers: ResolvedTeamMember[];
   leadMember?: ResolvedTeamMember | null;
   resolvedMemberColorMap?: ReadonlyMap<string, string>;
@@ -89,11 +97,13 @@ function deriveTeammateWorktreeDefault(members: readonly ResolvedTeamMember[]): 
 
 function useEditTeamErrorReset(
   setError: (value: string | null) => void,
-  setSaveOutcomeError: (value: string | null) => void
+  setSaveOutcomeError: (value: string | null) => void,
+  setProjectContextRefused: (value: boolean) => void
 ): () => void {
   return () => {
     setError(null);
     setSaveOutcomeError(null);
+    setProjectContextRefused(false);
   };
 }
 
@@ -152,6 +162,7 @@ export const EditTeamDialog = ({
   currentName,
   currentDescription,
   currentColor,
+  currentLeadPrompt,
   currentMembers,
   leadMember = null,
   resolvedMemberColorMap,
@@ -167,6 +178,7 @@ export const EditTeamDialog = ({
   const [name, setName] = useState(currentName);
   const [description, setDescription] = useState(currentDescription);
   const [color, setColor] = useState(currentColor);
+  const [leadPrompt, setLeadPrompt] = useState(currentLeadPrompt ?? '');
   const [members, setMembers] = useState(() => membersToDrafts(currentMembers));
   const [teammateWorktreeDefault, setTeammateWorktreeDefault] = useState(() =>
     deriveTeammateWorktreeDefault(currentMembers)
@@ -178,6 +190,7 @@ export const EditTeamDialog = ({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveOutcomeError, setSaveOutcomeError] = useState<string | null>(null);
+  const [projectContextRefused, setProjectContextRefused] = useState(false);
   const wasOpenRef = useRef(false);
   const initializedTeamNameRef = useRef<string | null>(null);
   const baselineSourceSnapshotRef = useRef<string | null>(null);
@@ -188,7 +201,11 @@ export const EditTeamDialog = ({
     enabled: open && Boolean(projectPath?.trim()),
     projectPath,
   });
-  const clearTransientErrors = useEditTeamErrorReset(setError, setSaveOutcomeError);
+  const clearTransientErrors = useEditTeamErrorReset(
+    setError,
+    setSaveOutcomeError,
+    setProjectContextRefused
+  );
   const effectiveResolvedMemberColorMap = useMemo(
     () => resolvedMemberColorMap ?? buildMemberColorMap(currentMembers),
     [currentMembers, resolvedMemberColorMap]
@@ -216,10 +233,12 @@ export const EditTeamDialog = ({
         setName(currentName);
         setDescription(currentDescription);
         setColor(currentColor);
+        setLeadPrompt(currentLeadPrompt ?? '');
         setMembers(membersToDrafts(currentMembers));
         setTeammateWorktreeDefault(deriveTeammateWorktreeDefault(currentMembers));
         setError(null);
         setSaveOutcomeError(null);
+        setProjectContextRefused(false);
         initializedTeamNameRef.current = teamName;
         baselineSourceSnapshotRef.current = buildEditTeamSourceSnapshot({
           name: currentName,
@@ -246,8 +265,18 @@ export const EditTeamDialog = ({
       pendingCommittedSourceSnapshotRef.current = null;
     }
     wasOpenRef.current = open;
-  }, [open, teamName, currentName, currentDescription, currentColor, currentMembers]);
+  }, [
+    open,
+    teamName,
+    currentName,
+    currentDescription,
+    currentColor,
+    currentLeadPrompt,
+    currentMembers,
+  ]);
 
+  const leadPromptChanged =
+    currentLeadPrompt !== undefined && leadPrompt.trim() !== currentLeadPrompt.trim();
   const builtMembers = useMemo(() => buildMembersFromDrafts(members), [members]);
   const invalidMemberNamesError = useMemo(
     () =>
@@ -375,6 +404,7 @@ export const EditTeamDialog = ({
 
   const handleSave = (): void => {
     if (gatewayBindings.pending) return;
+    setProjectContextRefused(false);
     if (!name.trim()) {
       setError(t('editTeam.errors.teamNameEmpty'));
       return;
@@ -439,6 +469,8 @@ export const EditTeamDialog = ({
           name: name.trim(),
           description: description.trim(),
           color,
+          // Only a changed prompt is written, so a prompt edited elsewhere is never overwritten.
+          ...(leadPromptChanged ? { prompt: leadPrompt.trim() } : {}),
         });
         configSaved = true;
         if (hasMemberRosterChanges) {
@@ -478,6 +510,7 @@ export const EditTeamDialog = ({
         await Promise.resolve(onSaved());
         onClose();
       } catch (e) {
+        setProjectContextRefused(isProjectContextRecoveryError(e));
         const message = e instanceof Error ? e.message : t('editTeam.errors.saveFailed');
         if (membersSaved) {
           setSaveOutcomeError(t('editTeam.errors.changesSavedRefreshFailed', { message }));
@@ -526,10 +559,7 @@ export const EditTeamDialog = ({
 
         <div className="space-y-3">
           <div>
-            <label
-              htmlFor="edit-team-name"
-              className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]"
-            >
+            <label htmlFor="edit-team-name" className="mb-1 block text-xs font-medium text-text">
               {t('editTeam.fields.name')}
             </label>
             <input
@@ -550,7 +580,7 @@ export const EditTeamDialog = ({
           <div>
             <label
               htmlFor="edit-team-description"
-              className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]"
+              className="mb-1 block text-xs font-medium text-text"
             >
               {t('editTeam.fields.description')}
             </label>
@@ -566,6 +596,35 @@ export const EditTeamDialog = ({
               placeholder={t('editTeam.placeholders.description')}
             />
           </div>
+          {currentLeadPrompt !== undefined ? (
+            <div>
+              <label
+                htmlFor="edit-team-lead-prompt"
+                className="mb-1 block text-xs font-medium text-text"
+              >
+                {t('editTeam.fields.leadPrompt')}
+              </label>
+              <textarea
+                id="edit-team-lead-prompt"
+                value={leadPrompt}
+                onChange={(e) => {
+                  clearTransientErrors();
+                  setLeadPrompt(e.target.value);
+                }}
+                rows={4}
+                maxLength={MAX_TEAM_DEFINITION_TEXT_LENGTH}
+                aria-describedby="edit-team-lead-prompt-hint"
+                className="w-full resize-none rounded-md border border-[var(--color-border)] bg-[var(--color-form-control-bg)] px-3 py-1.5 text-sm text-[var(--color-text)] outline-none focus:border-[var(--color-border-emphasis)]"
+                placeholder={t('editTeam.placeholders.leadPrompt')}
+              />
+              <p
+                id="edit-team-lead-prompt-hint"
+                className="mt-1 text-xs text-[var(--color-text-muted)]"
+              >
+                {t('editTeam.leadPromptHint')}
+              </p>
+            </div>
+          ) : null}
           <div>
             <MembersEditorSection
               members={members}
@@ -609,7 +668,7 @@ export const EditTeamDialog = ({
                       lockedModelAction={{
                         label: t('editTeam.teamLead.changeRuntime'),
                         description: t('editTeam.teamLead.changeRuntimeDescription'),
-                        onClick: onChangeLeadRuntime,
+                        onClick: () => onChangeLeadRuntime(),
                         disabled: isTeamProvisioning,
                       }}
                     />
@@ -662,7 +721,7 @@ export const EditTeamDialog = ({
           ) : null}
           <div>
             {/* eslint-disable-next-line jsx-a11y/label-has-associated-control -- Color picker is a group of buttons, not a single input */}
-            <label className="label-optional mb-1 block text-xs font-medium">
+            <label className="mb-1 block text-xs font-medium text-text">
               {t('editTeam.fields.colorOptional')}
             </label>
             <div className="flex flex-wrap gap-2">
@@ -703,6 +762,9 @@ export const EditTeamDialog = ({
           )}
         </div>
 
+        {projectContextRefused && (
+          <ProjectContextRecoveryNotice teamName={teamName} onNavigate={onClose} />
+        )}
         <DialogFooter>
           <Button variant="outline" size="sm" onClick={onClose} disabled={saving}>
             {t('editTeam.actions.cancel')}

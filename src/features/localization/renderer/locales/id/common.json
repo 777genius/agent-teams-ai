@@ -952,5 +952,21 @@
       "unavailable": "News is available in the desktop app.",
       "state_unavailable": "Reading is available, but your progress cannot be saved right now. Automatic news is paused."
     }
+  },
+  "attention": {
+    "title": "Perlu perhatian Anda",
+    "tab": "Perhatian",
+    "viewAll": "Lihat semua",
+    "refresh": "Segarkan status perhatian",
+    "loading": "Memuat…",
+    "loadFailed": "Gagal memuat status perhatian",
+    "retry": "Coba lagi",
+    "partial": "Sebagian tim gagal dimuat. Jumlah mungkin tidak lengkap.",
+    "nothing": "Tugas yang menunggu keputusan Anda dan obrolan tim yang belum dibaca akan muncul di sini.",
+    "tasks": "Menunggu keputusan Anda",
+    "chats": "Chat belum dibaca",
+    "openTask": "Buka tugas: {{subject}} di {{team}}",
+    "timeUnknown": "Waktu tidak diketahui",
+    "teamAttention": "Perhatian"
   }
 }

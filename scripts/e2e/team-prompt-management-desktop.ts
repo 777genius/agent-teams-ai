@@ -942,6 +942,8 @@ try {
         const created = await call('team_create', {
           teamName,
           cwd: project,
+          // HTTP/MCP trash works for shared teams; the history mode is required.
+          projectContextMode: 'shared',
           runtimeSelectionVersion: 1,
           expectedContext: info.context,
           prompt: 'Coordinate only this disposable test.',

@@ -219,6 +219,69 @@ describe('agent-teams-mcp stdio e2e', () => {
     }
   });
 
+  it.each([
+    {
+      code: 'RESTART_REQUIRED',
+      error: 'Stop the team, edit the roster, then relaunch.',
+      outcome: undefined,
+    },
+    {
+      code: 'TEAM_MUTATION_UNCERTAIN',
+      error: 'The edit may be partially applied. Read the team before retrying.',
+      outcome: { state: 'partial', configurationRevision: 'revision-after-partial-edit' },
+    },
+  ])('preserves $code and its outcome through the MCP stdio serializer', async (refusal) => {
+    const context = {
+      appInstanceId: 'sandbox-live-edit-refusal',
+      dataRootFingerprint: 'sandbox-root',
+      connectionGeneration: 1,
+    };
+    const teamName = 'sandbox-edit-refusal';
+    const payload = {
+      expectedContext: context,
+      expectedRevision: 'revision-before-edit',
+      members: [{ name: 'alice', role: 'Reviewer' }],
+    };
+    const requests: Array<{ method?: string; url?: string; body?: unknown }> = [];
+    const control = await startControlServer((request) => {
+      requests.push(request);
+      return { statusCode: 409, body: refusal };
+    });
+    const client = new McpStdIoClient(
+      serverPath,
+      workspaceRoot,
+      ['--transport', 'stdio', '--tool-profile', 'management'],
+      {
+        AGENT_TEAMS_BOUND_CONTROL_URL: control.baseUrl,
+        AGENT_TEAMS_BOUND_CONTEXT_JSON: JSON.stringify(context),
+        AGENT_TEAMS_MCP_CLAUDE_DIR: claudeDir,
+      }
+    );
+    try {
+      await client.initialize();
+      const response = await client.callTool('team_update', { teamName, ...payload });
+      expect(response).toEqual({
+        jsonrpc: '2.0',
+        id: 3,
+        result: {
+          content: [{ type: 'text', text: `[${refusal.code}] ${refusal.error}` }],
+          isError: true,
+          structuredContent: {
+            code: refusal.code,
+            ...(refusal.outcome ? { outcome: refusal.outcome } : {}),
+          },
+        },
+      });
+      expect(requests).toEqual([
+        { method: 'POST', url: `/api/teams/${teamName}/update`, body: payload },
+      ]);
+      expect(await client.endInput()).toBe(0);
+    } finally {
+      await client.close();
+      await control.close();
+    }
+  });
+
   it.each(['task_complete', 'task_set_status'])(
     'issue-618 enforces dependencies and delivers one unblock notice via %s over stdio',
     async (completionTool) => {
@@ -348,6 +411,7 @@ describe('agent-teams-mcp stdio e2e', () => {
       expect(toolNames).toContain('task_briefing');
       expect(toolNames).toContain('member_briefing');
       expect(toolNames).toContain('review_approve');
+      expect(toolNames).toContain('review_complete');
       expect(toolNames).toContain('lead_briefing');
       expect(taskListTool?.description).toContain(
         'Use it to browse, filter, and drill into inventory, not as a primary working queue.'
@@ -1958,6 +2022,183 @@ describe('agent-teams-mcp stdio e2e', () => {
         blockedBy: [dependencyTask.id],
         status: 'pending',
       });
+    } finally {
+      await client.close();
+    }
+  });
+
+  it('enforces cycle-bound human_approval flow through real stdio MCP', async () => {
+    const teamName = 'stdio-human-only-team';
+    await writeTeamConfig(claudeDir, teamName);
+    await writeFile(
+      path.join(claudeDir, 'teams', teamName, 'kanban-state.json'),
+      JSON.stringify({ teamName, reviewers: ['bob'], tasks: {}, reviewFlow: 'human_approval', reviewFlowPrompt: 'Run the e2e suite first.' })
+    );
+    const client = new McpStdIoClient(serverPath, workspaceRoot);
+    const context = { claudeDir, teamName };
+    const errorText = (response: unknown): string => {
+      const value = response as {
+        error?: { message?: string };
+        result?: { content?: Array<{ text?: string }> };
+      };
+      return value.error?.message ?? value.result?.content?.[0]?.text ?? '';
+    };
+    try {
+      await client.initialize();
+      const listed = (await client.listTools()) as {
+        result?: { tools?: Array<{ name: string }> };
+      };
+      expect(listed.result?.tools?.map((tool) => tool.name)).toContain('review_complete');
+      const task = parseJsonToolResult((await client.callTool(
+        'task_create', { ...context, subject: 'Human review MCP E2E', owner: 'alice' }, 210
+      ) as { result: unknown }).result);
+      await client.callTool('task_complete', { ...context, taskId: task.id, actor: 'alice' }, 211);
+      await client.callTool('review_request', {
+        ...context, taskId: task.id, from: 'team-lead', reviewer: 'bob',
+      }, 212);
+      const persisted = JSON.parse(await readFile(
+        path.join(claudeDir, 'tasks', teamName, `${task.id}.json`), 'utf8'
+      ));
+      const cycle = persisted.historyEvents.find(
+        (event: { type: string }) => event.type === 'review_requested'
+      ).id as string;
+      const started = parseJsonToolResult((await client.callTool(
+        'review_start', { ...context, taskId: task.id, from: 'bob' }, 213
+      ) as { result: unknown }).result);
+      expect(started.reviewRequestId).toBe(cycle);
+
+      for (const actor of ['bob', 'user']) {
+        const rejected = await client.callTool(
+          'review_approve', { ...context, taskId: task.id, from: actor }, 214
+        );
+        expect(errorText(rejected)).toContain('Human approval required');
+      }
+      const bypass = await client.callTool(
+        'kanban_set_column', { ...context, taskId: task.id, column: 'approved' }, 215
+      );
+      expect(errorText(bypass)).toContain('must already be approved');
+      const staleRejection = await client.callTool('review_request_changes', {
+        ...context, taskId: task.id, from: 'bob', comment: 'Stale changes',
+        expectedReviewRequestId: 'stale',
+      }, 221);
+      expect(errorText(staleRejection)).toContain('Stale review request');
+      const missingTokenRejection = await client.callTool('review_request_changes', {
+        ...context, taskId: task.id, from: 'bob', comment: 'Missing token',
+      }, 222);
+      expect(errorText(missingTokenRejection)).toContain('Stale review request');
+      const stale = await client.callTool('review_complete', {
+        ...context, taskId: task.id, from: 'bob', expectedReviewRequestId: 'stale',
+      }, 216);
+      expect(errorText(stale)).toContain('Stale review request');
+
+      const completed = parseJsonToolResult((await client.callTool('review_complete', {
+        ...context, taskId: task.id, from: 'bob', expectedReviewRequestId: cycle,
+      }, 217) as { result: unknown }).result);
+      expect(completed).toMatchObject({
+        ok: true, column: 'done', reviewState: 'reviewed', alreadyCompleted: false,
+      });
+      const duplicate = parseJsonToolResult((await client.callTool('review_complete', {
+        ...context, taskId: task.id, from: 'bob', expectedReviewRequestId: cycle,
+      }, 218) as { result: unknown }).result);
+      expect(duplicate.alreadyCompleted).toBe(true);
+      const observed = parseJsonToolResult((await client.callTool(
+        'task_get', { ...context, taskId: task.id }, 219
+      ) as { result: unknown }).result);
+      expect(observed.reviewState).toBe('reviewed');
+      const kanban = parseJsonToolResult((await client.callTool(
+        'kanban_get', context, 220
+      ) as { result: unknown }).result);
+      expect(kanban.tasks[task.id]).toBeUndefined();
+      expect(kanban.reviewFlow).toBe('human_approval');
+      expect(kanban.reviewFlowPrompt).toBe('Run the e2e suite first.');
+    } finally {
+      await client.close();
+    }
+  });
+
+  it('enforces human_approval that comes only from the global default file over stdio', async () => {
+    const teamName = 'stdio-default-flow-team';
+    await writeTeamConfig(claudeDir, teamName);
+    await writeFile(
+      path.join(claudeDir, 'review-flow-defaults.json'),
+      JSON.stringify({ reviewFlow: 'human_approval', reviewFlowPrompt: 'Default: check migrations.' })
+    );
+    const client = new McpStdIoClient(serverPath, workspaceRoot);
+    const context = { claudeDir, teamName };
+
+    try {
+      await client.initialize();
+      const kanban = parseJsonToolResult((await client.callTool(
+        'kanban_get', context, 230
+      ) as { result: unknown }).result);
+      expect(kanban.reviewFlow).toBe('human_approval');
+      expect(kanban.reviewFlowPrompt).toBe('Default: check migrations.');
+      expect(kanban.reviewFlowSource).toBe('default');
+
+      const task = parseJsonToolResult((await client.callTool(
+        'task_create', { ...context, subject: 'Default governed task', owner: 'alice' }, 231
+      ) as { result: unknown }).result);
+      await client.callTool('task_complete', { ...context, taskId: task.id, actor: 'alice' }, 232);
+      await client.callTool('review_request', {
+        ...context, taskId: task.id, from: 'team-lead', reviewer: 'bob',
+      }, 233);
+      const rejected = await client.callTool(
+        'review_approve', { ...context, taskId: task.id, from: 'bob' }, 234
+      );
+      expect(JSON.stringify(rejected)).toMatch(/Human approval required/);
+    } finally {
+      await client.close();
+    }
+  });
+
+  it('hands a completed review to the Lead sign-off stage over stdio (lead_then_human)', async () => {
+    const teamName = 'stdio-lead-signoff-team';
+    await writeTeamConfig(claudeDir, teamName);
+    await writeFile(
+      path.join(claudeDir, 'review-flow-defaults.json'),
+      JSON.stringify({ reviewFlow: 'lead_then_human' })
+    );
+    const client = new McpStdIoClient(serverPath, workspaceRoot);
+    const context = { claudeDir, teamName };
+    const call = async (name: string, args: Record<string, unknown>, id: number) =>
+      (await client.callTool(name, { ...context, ...args }, id)) as { result: unknown };
+
+    try {
+      await client.initialize();
+      const task = parseJsonToolResult((await call('task_create', { subject: 'Sign-off E2E', owner: 'alice' }, 240)).result);
+      await call('task_complete', { taskId: task.id, actor: 'alice' }, 241);
+      await call('review_request', { taskId: task.id, from: 'team-lead', reviewer: 'bob' }, 242);
+      const started = parseJsonToolResult((await call('review_start', { taskId: task.id, from: 'bob' }, 243)).result);
+
+      const handoff = parseJsonToolResult((await call('review_complete', {
+        taskId: task.id, from: 'bob', expectedReviewRequestId: started.reviewRequestId,
+      }, 244)).result);
+      expect(handoff).toMatchObject({
+        stage: 'lead_signoff', handedOffTo: 'team-lead', column: 'review', reviewState: 'review',
+      });
+      expect(handoff.reviewRequestId).toBe(started.reviewRequestId);
+      expect(handoff.leadSignoffRequestId).not.toBe(started.reviewRequestId);
+
+      const bobAgain = await call('review_complete', {
+        taskId: task.id, from: 'bob', expectedReviewRequestId: handoff.leadSignoffRequestId,
+      }, 245);
+      const bobNoActor = await call('review_complete', {
+        taskId: task.id, expectedReviewRequestId: handoff.leadSignoffRequestId,
+      }, 2450);
+      expect(JSON.stringify(bobNoActor)).toMatch(/requires an explicit \\"from\\"/);
+      expect(JSON.stringify(bobAgain)).toMatch(/assigned to reviewer team-lead/);
+
+      const briefing = (await call('lead_briefing', {}, 246)).result as { content?: Array<{ text?: string }> };
+      const text = briefing.content?.[0]?.text ?? '';
+      expect(text).toContain('Awaiting your sign-off:');
+      expect(text).toContain(`expectedReviewRequestId="${handoff.leadSignoffRequestId}"`);
+
+      const signed = parseJsonToolResult((await call('review_complete', {
+        taskId: task.id, from: 'team-lead', expectedReviewRequestId: handoff.leadSignoffRequestId,
+      }, 247)).result);
+      expect(signed).toMatchObject({ column: 'done', reviewState: 'reviewed' });
+      const approve = await call('review_approve', { taskId: task.id, from: 'team-lead' }, 248);
+      expect(JSON.stringify(approve)).toMatch(/Human approval required/);
     } finally {
       await client.close();
     }

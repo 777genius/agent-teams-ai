@@ -1,9 +1,11 @@
-const REVIEW_STATES = new Set(['none', 'review', 'needsFix', 'approved']);
+const REVIEW_STATES = new Set(['none', 'review', 'needsFix', 'reviewed', 'approved']);
 const REVIEW_COLUMNS = new Set(['review', 'approved']);
 const REVIEW_LIFECYCLE_EVENTS = new Set([
   'review_requested',
   'review_changes_requested',
   'review_approved',
+  'review_completed',
+  'human_approved',
   'review_started',
 ]);
 const REVIEW_RESET_STATUSES = new Set(['in_progress', 'deleted']);
@@ -101,7 +103,7 @@ function getEffectiveReviewState(task, kanbanEntry) {
     }
 
     if (status === 'completed') {
-      return normalized === 'review' || normalized === 'approved'
+      return normalized === 'review' || normalized === 'reviewed' || normalized === 'approved'
         ? { state: normalized, source }
         : { state: 'none', source: `${source}_completed_reset` };
     }
@@ -128,11 +130,45 @@ function getEffectiveReviewState(task, kanbanEntry) {
   };
 }
 
+/**
+ * The open review request of the current cycle: the latest review_requested event that no
+ * decision, rework or reset has closed yet. Null when no cycle is open.
+ */
+function getCurrentReviewRequest(task) {
+  const events = Array.isArray(task && task.historyEvents) ? task.historyEvents : [];
+  for (let index = events.length - 1; index >= 0; index -= 1) {
+    const event = events[index];
+    if (!event || typeof event !== 'object') continue;
+    if (event.type === 'review_requested') return event;
+    if (
+      event.type === 'review_changes_requested' ||
+      event.type === 'review_approved' ||
+      event.type === 'review_completed' ||
+      event.type === 'human_approved' ||
+      event.type === 'task_created' ||
+      (event.type === 'status_changed' &&
+        (event.to === 'in_progress' || event.to === 'pending' || event.to === 'deleted'))
+    ) {
+      return null;
+    }
+  }
+  return null;
+}
+
+/** 'lead_signoff' for the Lead stage, 'reviewer' for a normal cycle, null when none is open. */
+function getCurrentReviewStage(task) {
+  const request = getCurrentReviewRequest(task);
+  if (!request) return null;
+  return request.stage === 'lead_signoff' ? 'lead_signoff' : 'reviewer';
+}
+
 module.exports = {
   REVIEW_COLUMNS,
   REVIEW_LIFECYCLE_EVENTS,
   REVIEW_RESET_STATUSES,
   REVIEW_STATES,
+  getCurrentReviewRequest,
+  getCurrentReviewStage,
   getEffectiveReviewState,
   getReviewStateFromHistory,
   normalizeReviewState,

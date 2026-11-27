@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import { useTeamGroupChats } from '@features/team-group-chats/renderer';
+import { useAttentionConversationNavigation } from '@features/user-attention/renderer';
 import { useStore } from '@renderer/store';
 
 import { buildTaskGroupOptions, projectTeamTasks } from './teamTaskProjection';
@@ -33,6 +34,14 @@ export function useTeamTaskFilters(
       clearSearch('');
     }
   }, [identity, setFilter, clearSearch]);
+  // Messenger shares this session window with the board. Clear it at its owner
+  // when Attention opens a conversation, without changing other board filters.
+  const clearSession = useCallback(() => {
+    setFilter((previous) =>
+      previous.sessionId === null ? previous : { ...previous, sessionId: null }
+    );
+  }, [setFilter]);
+  useAttentionConversationNavigation(contextId, teamName, clearSession);
   const catalog = useTeamGroupChats(teamName, contextId, '');
   const teamSessions = useMemo(() => {
     const ids = new Set(data?.config.sessionHistory ?? []);

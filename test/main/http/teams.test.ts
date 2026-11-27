@@ -230,6 +230,7 @@ describe('HTTP team runtime routes', () => {
         url: '/api/teams',
         payload: {
           teamName: 'new-team',
+          projectContextMode: 'per_project',
           displayName: 'New Team',
           members: [
             {
@@ -253,10 +254,11 @@ describe('HTTP team runtime routes', () => {
       });
       expect(createResponse.statusCode).toBe(201);
       expect(createResponse.json()).toEqual({
-        teamName: 'new-team', draft: true, runtimeSelection: 'selected',
+        teamName: 'new-team', draft: true, projectContextMode: 'per_project', runtimeSelection: 'selected',
       });
       expect(createTeamConfig).toHaveBeenCalledWith({
         teamName: 'new-team',
+        projectContextMode: 'per_project',
         displayName: 'New Team',
         members: [
           {
@@ -280,6 +282,48 @@ describe('HTTP team runtime routes', () => {
         limitContext: true,
       });
       expect(resumeTeam).toHaveBeenCalledWith('new-team');
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('requires the history mode on HTTP create instead of choosing one silently', async () => {
+    const { app, createTeamConfig } = await createApp();
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams',
+        payload: { teamName: 'no-mode-team', cwd: '/Users/test/project', members: [] },
+      });
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toMatchObject({
+        code: 'PROJECT_CONTEXT_MODE_REQUIRED',
+        error: expect.stringContaining('"shared"'),
+      });
+      expect(createTeamConfig).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('keeps an explicitly chosen shared history mode on HTTP create', async () => {
+    const { app, createTeamConfig } = await createApp();
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams',
+        payload: {
+          teamName: 'http-shared-team',
+          cwd: '/Users/test/project',
+          members: [],
+          projectContextMode: 'shared',
+        },
+      });
+      expect(response.statusCode).toBe(201);
+      expect(response.json()).toMatchObject({ projectContextMode: 'shared' });
+      expect(createTeamConfig).toHaveBeenCalledWith(
+        expect.objectContaining({ teamName: 'http-shared-team', projectContextMode: 'shared' })
+      );
     } finally {
       await app.close();
     }
@@ -546,6 +590,7 @@ describe('HTTP team runtime routes', () => {
         url: '/api/teams',
         payload: {
           teamName: 'default-anthropic-effort-team',
+          projectContextMode: 'per_project',
           members: [{ name: 'builder' }],
           cwd: '/Users/test/project',
           effort: 'max',
@@ -555,6 +600,7 @@ describe('HTTP team runtime routes', () => {
       expect(response.statusCode).toBe(201);
       expect(createTeamConfig).toHaveBeenCalledWith({
         teamName: 'default-anthropic-effort-team',
+        projectContextMode: 'per_project',
         members: [{ name: 'builder' }],
         cwd: '/Users/test/project',
         effort: 'max',
@@ -573,6 +619,7 @@ describe('HTTP team runtime routes', () => {
         url: '/api/teams',
         payload: {
           teamName: 'inherited-backend-team',
+          projectContextMode: 'per_project',
           members: [{ name: 'builder', providerBackendId: 'codex-native', effort: 'xhigh' }],
           cwd: '/Users/test/project',
           providerId: 'codex',
@@ -583,6 +630,7 @@ describe('HTTP team runtime routes', () => {
       expect(response.statusCode).toBe(201);
       expect(createTeamConfig).toHaveBeenCalledWith({
         teamName: 'inherited-backend-team',
+        projectContextMode: 'per_project',
         members: [{ name: 'builder', providerBackendId: 'codex-native', effort: 'xhigh' }],
         cwd: '/Users/test/project',
         providerId: 'codex',
@@ -725,6 +773,7 @@ describe('HTTP team runtime routes', () => {
       expect(createTeam).toHaveBeenCalledWith(
         {
           teamName: 'draft-team',
+          projectContextMode: 'shared',
           displayName: 'Draft Team',
           description: 'Saved draft',
           color: '#3366ff',

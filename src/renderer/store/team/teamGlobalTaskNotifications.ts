@@ -242,6 +242,17 @@ function detectStatusChangeNotifications(
   if (statuses.length === 0) return;
 
   const onlySolo = config?.notifications?.statusChangeOnlySolo ?? true;
+  const nonSoloTeamNames = new Set<string>();
+  if (onlySolo) {
+    for (const team of Object.values(teamByName)) {
+      if (team.memberCount > 0) nonSoloTeamNames.add(team.teamName);
+      // Verified physical histories are deliberately absent from teamByName.
+      // Unknown membership is not proof that a physical team is solo.
+      for (const context of team.projectHistoryContexts ?? []) {
+        if (context.memberCount !== 0) nonSoloTeamNames.add(context.executionTeamName);
+      }
+    }
+  }
 
   for (const task of newTasks) {
     const oldTask = oldTaskIndexes.firstOldTaskByKey.get(getTaskNotificationKey(task));
@@ -257,10 +268,7 @@ function detectStatusChangeNotifications(
     const statusChanged = oldTask.status !== task.status;
     if (!statusChanged && !becameApproved && !becameReview && !becameNeedsFix) continue;
 
-    if (onlySolo) {
-      const team = teamByName[task.teamName];
-      if (team && team.memberCount > 0) continue;
-    }
+    if (onlySolo && nonSoloTeamNames.has(task.teamName)) continue;
 
     const effectiveStatus = becameApproved
       ? 'approved'

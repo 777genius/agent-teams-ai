@@ -1,6 +1,7 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
+import { requestAttentionChatNavigation } from '@features/user-attention/renderer/hooks/conversationAttentionNavigation';
 import { MessagesPanel } from '@renderer/components/team/messages/MessagesPanel';
 import {
   buildRevisionNoticeText,
@@ -67,6 +68,7 @@ const storeState = {
 };
 
 const readHookState = {
+  ready: true,
   readSet: new Set<string>(),
   markRead: vi.fn(),
   markAllRead: vi.fn(),
@@ -460,6 +462,99 @@ describe('MessagesPanel idle summary invariants', () => {
     sidebarUiState.bottomSheetSnapIndex = 2;
     sidebarUiState.conversationSurface = 'thread';
     sidebarUiState.conversationScope = { kind: 'team-feed' };
+  });
+
+  it('applies pending Attention navigation after restoring collapsed sidebar state', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    sidebarUiState.conversationSurface = 'list';
+    sidebarUiState.messagesCollapsed = true;
+    sidebarUiState.messagesSearchQuery = 'previous thread search';
+    const teamName = 'attention-project-history-fixture';
+    const contextId = storeState.activeContextId;
+    const target = { kind: 'direct' as const, participant: 'alice' };
+    requestAttentionChatNavigation({ contextId, teamName, scope: target });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    vi.mocked(setTeamMessagesSidebarUiState).mockClear();
+    try {
+      await act(async () => {
+        root.render(
+          React.createElement(MessagesPanel, {
+            teamName,
+            position: 'sidebar',
+            onPositionChange: vi.fn(),
+            members: [],
+            tasks: [],
+            timeWindow: null,
+            pendingRepliesByMember: {},
+            onPendingReplyChange: vi.fn(),
+          })
+        );
+      });
+      expect(setTeamMessagesSidebarUiState).toHaveBeenLastCalledWith(
+        JSON.stringify([contextId, teamName]),
+        expect.objectContaining({
+          conversationSurface: 'thread',
+          conversationScope: target,
+          messagesCollapsed: false,
+          messagesSearchQuery: '',
+        })
+      );
+    } finally {
+      await act(async () => root.unmount());
+    }
+  });
+
+  it('clears stale Messenger search and participant filters when Attention reopens the selected thread', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    sidebarUiState.conversationSurface = 'thread';
+    sidebarUiState.conversationScope = { kind: 'direct', participant: 'alice' };
+    sidebarUiState.messagesSearchQuery = 'search hiding the unread message';
+    sidebarUiState.messagesFilter = { from: new Set(['bob']), to: new Set(['other']), showNoise: true };
+    sidebarUiState.messagesCollapsed = true;
+    const teamName = 'attention-already-open-direct-fixture';
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    vi.mocked(setTeamMessagesSidebarUiState).mockClear();
+    try {
+      await act(async () => {
+        root.render(
+          React.createElement(MessagesPanel, {
+            teamName,
+            position: 'sidebar',
+            onPositionChange: vi.fn(),
+            members: [],
+            tasks: [],
+            timeWindow: null,
+            pendingRepliesByMember: {},
+            onPendingReplyChange: vi.fn(),
+          })
+        );
+      });
+      await act(async () => {
+        requestAttentionChatNavigation({
+          contextId: storeState.activeContextId,
+          teamName,
+          scope: { kind: 'direct', participant: 'alice' },
+        });
+      });
+      expect(setTeamMessagesSidebarUiState).toHaveBeenLastCalledWith(
+        JSON.stringify([storeState.activeContextId, teamName]),
+        expect.objectContaining({
+          conversationSurface: 'thread',
+          conversationScope: { kind: 'direct', participant: 'alice' },
+          messagesCollapsed: false,
+          messagesSearchQuery: '',
+          messagesFilter: { from: new Set(), to: new Set(), showNoise: true },
+        })
+      );
+    } finally {
+      await act(async () => root.unmount());
+    }
   });
 
   it('keeps a selectable cross-team draft out of the local feed fallback', async () => {

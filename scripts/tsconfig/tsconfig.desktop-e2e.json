@@ -24,6 +24,7 @@
     "../../scripts/e2e/task-folders/**/*.ts",
     "../../scripts/e2e/external-agent-connection-desktop.ts",
     "../../scripts/e2e/team-prompt-management-desktop.ts",
+    "../../scripts/e2e/custom-template-import-export-desktop.ts",
     "../../src/types/**/*.d.ts",
     "../../scripts/e2e/external-agent-shared-root.ts",
     "../../scripts/e2e/opencode-status-recovery/**/*.mts",

@@ -9,6 +9,10 @@ import {
   handleApplicationCommandLedgerOp,
 } from './applicationCommandLedgerWorkerOps';
 import {
+  CustomTeamTemplateWorkerOps,
+  handleCustomTeamTemplateOp,
+} from './customTeamTemplatesWorkerOps';
+import {
   INTERNAL_STORAGE_SCHEMA_VERSION,
   readSchemaVersion,
   runInternalStorageMigrations,
@@ -40,6 +44,7 @@ type SqliteDatabase = InstanceType<typeof DatabaseConstructor>;
 const INSERT_CHUNK_SIZE = 400;
 
 const INTEGRITY_CHECK_ERROR_PREFIX = 'integrity_check failed';
+const CUSTOM_TEMPLATE_RECOVERY_MARKER_SUFFIX = '.custom-template-recovery-pending';
 
 /**
  * Only confirmed corruption may trigger the backup-and-recreate path;
@@ -82,6 +87,10 @@ export class InternalStorageWorkerCore {
     () => this.open().orm
   );
   private readonly memberWorkSyncOps = new MemberWorkSyncWorkerOps(() => this.open().orm);
+  private readonly customTeamTemplateOps = new CustomTeamTemplateWorkerOps(
+    () => this.open().orm,
+    () => this.options.now?.() ?? new Date()
+  );
 
   constructor(private readonly options: InternalStorageWorkerCoreOptions) {}
 
@@ -126,6 +135,16 @@ export class InternalStorageWorkerCore {
         }
         if (typeof op === 'string' && op.startsWith('mws.')) {
           return handleMemberWorkSyncOp(this.memberWorkSyncOps, op, payload);
+        }
+        if (typeof op === 'string' && op.startsWith('customTemplate.')) {
+          const state = this.open();
+          // Journals may recover from JSON archives. Saved templates have no
+          // fallback: a recreated database must never masquerade as an empty library.
+          // The marker survives worker/app restarts until data is restored.
+          if (state.integrity === 'recovered' || fs.existsSync(this.templateRecoveryMarkerPath())) {
+            throw new Error('Custom templates unavailable: review the SQLite corruption archive and resolve template recovery before continuing');
+          }
+          return handleCustomTeamTemplateOp(this.customTeamTemplateOps, op, payload);
         }
         throw new Error(`Unknown internal-storage op: ${String(op)}`);
       }
@@ -265,7 +284,9 @@ export class InternalStorageWorkerCore {
         throw initialError;
       }
       // A corrupt database is backed up (never deleted) and recreated; the
-      // journals can be re-imported from *.pre-sqlite JSON archives.
+      // journals can be re-imported from *.pre-sqlite JSON archives. Templates
+      // have no JSON copy, so fence their operations *before* moving the file.
+      this.markTemplateRecoveryPending();
       this.backupCorruptDatabaseFiles();
       integrity = 'recovered';
       try {
@@ -310,6 +331,24 @@ export class InternalStorageWorkerCore {
         // preserve the original error
       }
       throw error;
+    }
+  }
+
+  private templateRecoveryMarkerPath(): string {
+    return `${this.options.databasePath}${CUSTOM_TEMPLATE_RECOVERY_MARKER_SUFFIX}`;
+  }
+
+  /** Durable fail-closed marker: recovery must not silently replace saved templates with []. */
+  private markTemplateRecoveryPending(): void {
+    try {
+      fs.writeFileSync(
+        this.templateRecoveryMarkerPath(),
+        'SQLite corruption recovery preserved the original database in a .corrupt-* archive. Restore or explicitly reconcile custom templates before clearing this marker.\n',
+        { flag: 'wx', mode: 0o600 }
+      );
+    } catch (error) {
+      // A previous interrupted recovery may already have created the marker.
+      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
     }
   }
 

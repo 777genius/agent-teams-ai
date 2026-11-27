@@ -1,7 +1,40 @@
 const STORAGE_PREFIX = 'team-messages-read:';
 const BACKFILL_PREFIX = 'team-messages-read-backfill:';
 
+/** Keep the default local workspace's existing keys; never reuse them in other roots. */
+export function getTeamMessageReadContextScope(
+  contextId: string,
+  localRoot?: { defaultPath: string; resolvedPath: string }
+): string {
+  if (contextId !== 'local') return contextId;
+  if (!localRoot?.resolvedPath || !localRoot.defaultPath) {
+    throw new Error('Local message read root is unavailable');
+  }
+  return localRoot.resolvedPath === localRoot.defaultPath
+    ? contextId
+    : JSON.stringify(['local-root', localRoot.resolvedPath]);
+}
+
+export function getTeamMessageReadStorageKey(
+  teamName: string,
+  contextScope: string,
+  kind: 'direct' | 'group' = 'direct'
+): string {
+  // Existing unscoped data has no provenance. Do not copy it to a remote
+  // context or custom local root, even when teams and message IDs match.
+  if (kind === 'direct' && contextScope === 'local') return teamName;
+  return JSON.stringify([kind, contextScope, teamName]);
+}
+
 const listeners = new Set<() => void>();
+
+/** Cross-window read updates must notify Messenger and Attention consistently. */
+function onReadStorageEvent(event: StorageEvent): void {
+  if (event.key === null || event.key.startsWith(STORAGE_PREFIX) ||
+      event.key.startsWith(BACKFILL_PREFIX)) {
+    notifyReadStore();
+  }
+}
 let snapshotVersion = 0;
 const snapshotCache = new Map<string, { version: number; set: Set<string> }>();
 
@@ -14,9 +47,18 @@ function notifyReadStore(): void {
 }
 
 export function subscribeTeamMessageReadStore(listener: () => void): () => void {
+  if (listeners.size === 0) {
+    // Another window may have updated localStorage while nobody subscribed.
+    snapshotVersion += 1;
+    snapshotCache.clear();
+    if (typeof window !== 'undefined') window.addEventListener('storage', onReadStorageEvent);
+  }
   listeners.add(listener);
   return () => {
     listeners.delete(listener);
+    if (listeners.size === 0 && typeof window !== 'undefined') {
+      window.removeEventListener('storage', onReadStorageEvent);
+    }
   };
 }
 

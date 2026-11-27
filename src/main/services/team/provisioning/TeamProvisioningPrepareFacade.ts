@@ -71,6 +71,7 @@ export interface TeamProvisioningPrepareFacadePorts {
     teamName: string;
     memberName: string;
     baseCwd: string;
+    existingCwd?: string;
   }): Promise<{ worktreePath: string }>;
   providerProbeCache?: ProviderProbeCachePort;
   execCli?: TeamProvisioningPrepareCoordinatorPorts['execCli'];
