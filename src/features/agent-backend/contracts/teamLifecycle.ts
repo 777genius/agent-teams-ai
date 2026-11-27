@@ -26,7 +26,9 @@ export interface BackendTeamPurgeReceipt {
 export interface BackendQueuedUserMessages {
   kind: 'queued_user_messages';
   member: string;
-  messages: QueuedUserMessageSummary[];
+  messages: Pick<QueuedUserMessageSummary, 'messageId'>[];
+  revision?: string;
+  nextCursor?: string | null;
 }
 export type BackendQueuedDiscardReceipt = { kind: 'queued_discard'; commandId: string } & (
   | { phase: 'prepared' }
@@ -38,7 +40,7 @@ export interface BackendTeamLifecyclePayloads {
   'team.lifecycle.lookup': { expected: BackendTeamLifecycleRequest };
   'team.lifecycle.purge': { expectedRevision: string };
   'team.lifecycle.purge.lookup': { expected: { expectedRevision: string } };
-  'team.queue.read': { member: string };
+  'team.queue.read': { member: string; cursor?: string };
   'team.queue.discard': { member: string; messageIds: string[] };
   'team.queue.lookup': { expected: { member: string; messageIds: string[] } };
 }

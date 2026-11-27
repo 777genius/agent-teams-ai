@@ -1,6 +1,8 @@
 import { z } from 'zod';
+import { randomUUID } from 'node:crypto';
 import { TeamOwnerError } from '../team/contracts.js';
 import { digest } from '../team/identity.js';
+import { pageQueuedUserMessages } from '../team/pageQueuedUserMessages.js';
 import type { HostMethod } from '../index.js';
 import type { JsonValue } from '../contracts.js';
 import type { HostedTeam } from './MemberEntry.js';
@@ -26,6 +28,7 @@ export function createTeamLifecycleMethods(options: {
   delivery(): TeamRuntimeDeliveryPort;
 }) {
   const methods: Record<string, HostMethod> = {};
+  const queuePageKey = randomUUID();
   methods['team.lifecycle.retired.read'] = { lane: 'control', async handle(raw): Promise<JsonValue> {
     try {
       options.assertCurrent();
@@ -71,9 +74,20 @@ export function createTeamLifecycleMethods(options: {
               value = options.projects.lookup(target, input.commandId, payload.expected); break;
             }
             case 'queue.read': {
-              const payload = z.object({ member: id }).strict().parse(input.payload);
+              const payload = z.object({ member: id, cursor: id.optional() }).strict().parse(input.payload);
+              const authority = () => {
+                options.assertCurrent();
+                return digest({ binding: input.binding, principalId: options.profile.principalId, member: payload.member,
+                  revision: selected.owner.withLaunchAuthority(options.profile.principalId, 'control', revision => revision) });
+              };
+              const originalAuthority = authority();
               const queue = selected.owner.queuedMessages(options.profile.principalId, options.delivery());
-              value = { kind: 'queued_user_messages', ...await queue.list(payload.member) }; break;
+              const snapshot = await queue.list(payload.member);
+              if (authority() !== originalAuthority || snapshot.member !== payload.member) throw new TeamOwnerError('hold');
+              value = pageQueuedUserMessages({ key: queuePageKey, authorityFingerprint: originalAuthority, snapshot,
+                ...(payload.cursor === undefined ? {} : { cursor: payload.cursor }) });
+              if (authority() !== originalAuthority) throw new TeamOwnerError('hold');
+              break;
             }
             case 'queue.discard': {
               const payload = discard.parse(input.payload); effect = true;

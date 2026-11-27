@@ -126,7 +126,7 @@ export class TeamContextReminders {
       const member = this.member(state, request.binding);
       const rows = structuredClone(state.contextEpochs ?? []);
       this.validate(rows);
-      let changed = false;
+      let changed = this.recoverArchivedPreparations(rows, request.binding);
       for (const proof of request.priorProofs)
         changed = this.represent(rows, request.binding, proof, { recoverArchived: true }) || changed;
       for (const epoch of request.epochs) {
@@ -266,6 +266,30 @@ export class TeamContextReminders {
     });
   }
 
+  private recoverArchivedPreparations(rows: TeamContextEpoch[], binding: RuntimeMemberBinding): boolean {
+    const sameMember = (value: RuntimeMemberBinding) =>
+      value.backendId === binding.backendId && value.teamId === binding.teamId &&
+      value.memberId === binding.memberId;
+    let changed = false;
+    for (const row of rows) {
+      if (row.represented || !sameMember(row.binding)) continue;
+      const archived = this.archivedEpoch(row.epochId);
+      if (!archived) continue;
+      const proof = archived.represented!;
+      if (!sameMember(archived.candidate!.binding)) throw new TeamOwnerError('hold');
+      // The archive durably records the original Runtime acknowledgement, not
+      // native consumption. Recover its entire unchanged batch before replacing
+      // any candidate, including when the current member has a new generation.
+      for (const id of proof.epochIds) {
+        const linked = this.findEpoch(rows, id, proof);
+        if (!linked?.candidate || !sameMember(linked.binding) || !sameMember(linked.candidate.binding))
+          throw new TeamOwnerError('hold');
+      }
+      changed = this.represent(rows, archived.candidate!.binding, proof, { recoverArchived: true }) || changed;
+    }
+    return changed;
+  }
+
   private represent(
     rows: TeamContextEpoch[],
     binding: RuntimeMemberBinding,
@@ -290,6 +314,7 @@ export class TeamContextReminders {
     )
       throw new TeamOwnerError('hold');
     let changed = false;
+    let candidateFingerprint: string | undefined;
     for (const id of selectedEpochId === undefined ? proof.epochIds : [selectedEpochId]) {
       const row = checkArchives
         ? this.findEpoch(rows, id, options.recoverArchived ? proof : undefined)
@@ -305,9 +330,14 @@ export class TeamContextReminders {
         row.candidate.prefixHash !== proof.prefixHash
       )
         throw new TeamOwnerError('hold');
+      const candidate = digest(row.candidate);
+      if (candidateFingerprint !== undefined && candidateFingerprint !== candidate)
+        throw new TeamOwnerError('hold');
+      candidateFingerprint = candidate;
       if (row.represented && digest(row.represented) !== digest(proof))
         throw new TeamOwnerError('hold');
       if (!row.represented) {
+        if (!options.recoverArchived) throw new TeamOwnerError('hold');
         row.represented = structuredClone(proof);
         changed = true;
       }

@@ -386,7 +386,7 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
   if (provider === 'codex') {
     const inputsBeforeCost = structuredClone((await session()).inputs), turnsBeforeCost = (await effects()).filter(row => row.event === 'input').length;
     const stats = await readStats();
-    assert.equal(stats.inputTokens, array(inputsBeforeCost).length * 120); assert.equal(stats.outputTokens, array(inputsBeforeCost).length * 7);
+    assert.equal(stats.inputTokens, null); assert.equal(stats.outputTokens, null); assert.ok(Array.isArray(stats.gaps) && stats.gaps.includes('Codex token totals are unavailable; retained reports describe only the last request.'));
     const beforeCost = new Set((await commandRows()).map(row => row.commandId));
     await sendDesktopNativeCommandFromComposer(cdp, ui, 'cost', '', catalog => { assert.deepEqual(catalog, ['/cost']); proof.catalog = catalog; });
     const costRows = await poll(commandRows, values => values.some(row => !beforeCost.has(row.commandId) && record(record(row.command).payload).text === '/cost' && row.phase === 'completed'), 'one original local /cost receipt');

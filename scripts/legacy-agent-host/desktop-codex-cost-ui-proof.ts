@@ -89,23 +89,21 @@ export async function runDesktopCodexCostUiProof(
     afterResume ? 'TEST-codex-cost-stats-resumed' : 'TEST-codex-cost-stats', { memberName: 'alice' });
   const stats = record(record(statsRead.value).stats);
   assert.equal(stats.generations, afterResume ? 2 : 1);
-  if (retained) {
-    const activity = await json(join(root, 'hoststore/runtime-events', bindingKey + '.json'));
-    const { digest, ...body } = activity;
-    assert.equal(runtimeDigest(body), digest); assert.deepEqual(activity.binding, binding);
-    assert.ok(Array.isArray(activity.events) && activity.events.length <= 256);
-    const input = record(beforeInputs[0]);
-    const usage = activity.events.map(record).filter(event => record(event.data).kind === 'usage' &&
-      event.inputId === record(input.intent).inputId && event.operationRef === input.operationRef).at(-1);
-    assert.ok(usage, 'resumed input has its own actual native usage snapshot');
-    const units = record(usage.data), previous = record(retained.stats);
-    for (const field of ['inputTokens', 'outputTokens']) {
-      assert.ok(typeof units[field] === 'number' && Number.isSafeInteger(units[field]) && Number(units[field]) > 0);
-      assert.equal(stats[field], Number(previous[field]) + Number(units[field]),
-        'Stats includes original and resumed input once: ' + field);
-    }
-    proof.currentInputUsage = units;
+  const activity = await json(join(root, 'hoststore/runtime-events', bindingKey + '.json'));
+  const { digest, ...body } = activity;
+  assert.equal(runtimeDigest(body), digest); assert.deepEqual(activity.binding, binding);
+  assert.ok(Array.isArray(activity.events) && activity.events.length <= 256);
+  const input = record(beforeInputs[0]);
+  const usage = activity.events.map(record).filter(event => record(event.data).kind === 'usage' &&
+    event.inputId === record(input.intent).inputId && event.operationRef === input.operationRef).at(-1);
+  assert.ok(usage, 'this input has its own actual native usage snapshot');
+  const units = record(usage.data);
+  for (const field of ['inputTokens', 'outputTokens']) {
+    assert.ok(typeof units[field] === 'number' && Number.isSafeInteger(units[field]) && Number(units[field]) > 0);
+    assert.equal(stats[field], null, 'last-request snapshots cannot establish a total: ' + field);
+    if (retained) assert.equal(record(retained.stats)[field], null);
   }
+  proof.currentInputUsage = units;
   const commandDirectory = join(root, 'hoststore/teams/test-desktop-backend/.host-owner/commands');
   const beforeCommands = new Set((await rows(commandDirectory)).map(row => row.commandId));
   const probesBefore = model.probes.length;
@@ -183,6 +181,7 @@ export async function verifyDesktopCodexCostAfterColdResume(cdp: UiCdpPort, opti
   assert.equal(stats.generations, 2);
   for (const field of ['inputTokens', 'outputTokens'])
     assert.equal(stats[field], record(proof.stats)[field], 'cold Resume retains original usage: ' + field);
+  assert.ok(Array.isArray(stats.gaps) && stats.gaps.includes('Codex token totals are unavailable; retained reports describe only the last request.'));
   proof.coldStats = stats;
   const retained = await readNativeHostCostProof({
     teamRoot: join(root, 'hoststore/teams/test-desktop-backend'), commandId: String(original.commandId),

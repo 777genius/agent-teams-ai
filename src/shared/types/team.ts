@@ -729,7 +729,7 @@ export interface QueuedUserMessageSummary {
 }
 export interface QueuedUserMessagesSnapshot {
   member: string;
-  messages: QueuedUserMessageSummary[];
+  messages: (QueuedUserMessageSummary | Pick<QueuedUserMessageSummary, 'messageId'>)[];
 }
 
 export interface DiscardQueuedUserMessagesResult {
