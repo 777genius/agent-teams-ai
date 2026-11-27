@@ -109,6 +109,7 @@ function setup(initial: {
   settingsRevision?: string;
   statusRevision?: string;
   statusLimit?: number;
+  changePolicyDuringStatusRead?: boolean;
 }) {
   let state = initial;
   let alive = true;
@@ -158,6 +159,15 @@ function setup(initial: {
           : state.settingsRevision),
         limit: state.statusLimit,
       });
+      // Simulate an independent CAS Save after status projection but before
+      // the admission guard can approve a launch.
+      if (state.changePolicyDuringStatusRead) {
+        state = {
+          ...state,
+          changePolicyDuringStatusRead: false,
+          settingsRevision: '2026-11-27T12:02:00.000Z',
+        };
+      }
       return state.omitTarget ? { ...status, targets: [] } : status;
     },
     refreshSnapshot: refresh,
@@ -246,6 +256,20 @@ describe('team budget composition - no live provider required', () => {
     });
     await expect(guard()).rejects.toThrow('TEAM_BUDGET_BLOCKED: Cannot launch');
     expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it('fails closed if a concurrent Save changes the policy during admission', async () => {
+    const { guard, refresh } = setup({
+      action: 'block_launch',
+      used: 20,
+      settingsRevision: '2026-11-27T12:01:00.000Z',
+      statusRevision: '2026-11-27T12:01:00.000Z',
+      changePolicyDuringStatusRead: true,
+    });
+    await expect(guard()).rejects.toThrow(
+      'TEAM_BUDGET_BLOCKED: Budget policy changed during launch admission'
+    );
+    expect(refresh).not.toHaveBeenCalled();
   });
 
   it('permits a proven under-budget launch after refresh restores a missing target', async () => {

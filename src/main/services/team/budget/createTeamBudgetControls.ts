@@ -131,6 +131,22 @@ export function createTeamBudgetAdmission(
       );
     }
     assertTeamBudgetLaunchAllowed(status, logicalTeam);
+    // A concurrent budget Save can tighten the policy while this admission
+    // awaits the status read or its single bounded refresh. Such a launch
+    // must never be approved against the superseded policy snapshot.
+    const latestSettings = await reader.getBudgetSettings();
+    const latestPolicy = latestSettings.teams?.[namedTeamId(logicalTeam)];
+    if (
+      latestSettings.updatedAt !== settings.updatedAt ||
+      latestPolicy?.onExceeded !== configured?.onExceeded ||
+      latestPolicy?.monthlyTokenLimit !== configured?.monthlyTokenLimit ||
+      latestPolicy?.monthlyApiEquivalentCostLimitUsd !==
+        configured?.monthlyApiEquivalentCostLimitUsd
+    ) {
+      throw new Error(
+        `TEAM_BUDGET_BLOCKED: Budget policy changed during launch admission for "${logicalTeam}"`
+      );
+    }
   };
 }
 
