@@ -39,7 +39,8 @@ await writeFile(psFile,[
 '$visible=$h -ne [IntPtr]::Zero -and [CProof]::IsWindowVisible($h)',
 '$proof=@{token='+quoted(token)+';pid=$PID;cmd=$cmd;git=$git;visible=$visible}',
 '[IO.File]::WriteAllText('+quoted(proofFile)+',($proof|ConvertTo-Json -Compress))',
-'Start-Sleep -Seconds 35'
+// Block well beyond the bounded Stop+retirement window; only product Stop may retire this tool.
+'Start-Sleep -Seconds 300'
 ].join('\r\n')+'\r\n');
 const command='powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "'+psFile.replaceAll('"','')+'"';
 let toolRequests=0;
@@ -52,7 +53,7 @@ toolsAvailable=names.slice(0,90);
 const bash=names.find(name=>/(?:^|[_-])bash$/i.test(name));
 if(!bash)return{id:'none_'+randomUUID().replaceAll('-',''),text:'NO_SHELL_TOOL'};
 if(toolRequests++===0)return{id:'toolu_'+randomUUID().replaceAll('-',''),name:bash,
-input:{command,description:'Isolated product Windows console verification',timeout:90000}};
+input:{command,description:'Isolated product Windows console verification',timeout:420000}};
 return{id:'done_'+randomUUID().replaceAll('-',''),text:'OWNED_TOOL_DISPATCHED'};
 });
 const env={...f.env,CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH:cli,
@@ -145,14 +146,34 @@ result.focus={focusBefore,nativeFocusBefore,focusAfter,nativeFocusAfter};
 result.tool=proof;result.realWindowsToolExecuted=true;
 await client.screenshot(path.join(out,'real-team.png'));
 result.phase='normal-product-stop';
+assert(ownedAlive(workerPid,team),'Original worker died before product Stop');
+assert(ownedAlive(toolPid,psFile),'Original tool died naturally before product Stop');
+result.workerAndToolAliveImmediatelyBeforeStop=true;
 await client.evaluate('(()=>{window.__winStop={done:false};window.electronAPI.teams.stop('+
 literal(team)+').then(v=>{window.__winStop={done:true,value:v}},e=>{window.__winStop={done:true,error:String(e)}});return true;})()');
 await until('Stop IPC',()=>client.evaluate('(()=>{const x=window.__winStop;if(!x?.done)return null;if(x.error)throw Error(x.error);return true;})()'),150000);
 await until('original worker and tool retired',()=>!ownedAlive(workerPid,team)&&!ownedAlive(toolPid,psFile),60000);
 result.originalWorkerAndToolRetired=true;result.success=true;result.phase='product-local-model-qualified';
 }catch(e){result.error=String(e).slice(0,1500);result.toolNames=toolsAvailable;result.toolRequests=toolRequests;throw e;}
-finally{await save();if(teamCreated&&client)await api('window.electronAPI.teams.stop('+literal(team)+')').catch(()=>{});
+finally{if(teamCreated&&client)await api('window.electronAPI.teams.stop('+literal(team)+')').catch(()=>{});
 try{client?.socket?.close();}catch{}try{inspector?.socket?.close();}catch{}
-if(app?.pid&&app.exitCode===null&&app.signalCode===null)app.kill('SIGKILL');
-await model.close().catch(()=>{});}
+// Kill the whole owned cmd -> pnpm -> Electron development tree, not only the
+// outer cmd.exe. Taskkill /T is necessary because inherited stdio pipes can
+// otherwise keep the test runner alive even after result.json is written.
+if(app?.pid&&app.exitCode===null&&app.signalCode===null){
+  const cleanup=spawnSync('taskkill.exe',['/T','/F','/PID',String(app.pid)],
+    {windowsHide:true,encoding:'utf8',timeout:30000,maxBuffer:65536});
+  result.appTreeCleanup={
+    exitCode:cleanup.status,
+    error:cleanup.error?String(cleanup.error):null,
+    output:String(cleanup.stdout||'').slice(-1000),
+    stderr:String(cleanup.stderr||'').slice(-1000)
+  };
+  if(cleanup.error||cleanup.status!==0){
+    // Taskkill may report nonzero after raced child exit; keep the exact
+    // failure in evidence and do not falsely certify tree retirement.
+    result.cleanupUnconfirmed=true;
+  }
+}
+await model.close().catch(()=>{});await save();}
 console.log(JSON.stringify({success:result.success,phase:result.phase,realProductTeammateLaunch:result.realProductTeammateLaunch}));
