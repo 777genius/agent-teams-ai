@@ -71,6 +71,9 @@ export async function proveWindowsProductTeam(input: ProductInput) {
   };
   try {
     const request = {
+      // Test a directly owned teammate under the requested team identity, not
+      // the per-project execution alias introduced for isolated new teams.
+      projectContextMode: 'shared' as const,
       teamName: name, cwd: project, providerId: 'anthropic',
       model: configuredDefault, skipPermissions: true, syncModelsWithLead: true,
       // The message nonce is intentionally absent from launch/lead prompts:
