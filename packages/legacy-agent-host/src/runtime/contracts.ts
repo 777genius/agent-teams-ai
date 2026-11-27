@@ -49,6 +49,9 @@ export interface RuntimeInput {
   terminal?: 'succeeded' | 'failed' | 'cancelled';
   /** Exact native context supplement; original Team intent/fingerprint never changes. */
   preparation?: RuntimeInputPreparation;
+  /** Technical reset evidence retired from the pending window into its original
+   * durable preparation. Not part of the delivery/preparation fingerprints. */
+  representedContextEpochs?: RuntimeContextEpoch[];
 }
 
 export interface RuntimeInteraction {

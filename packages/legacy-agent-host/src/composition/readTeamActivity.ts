@@ -218,6 +218,10 @@ export function summarizeTeamActivity(
   const usage = new Map<string, Record<string, JsonValue>>(),
     costs = new Map<string, number>();
   const gaps = new Set(logs.flatMap((log) => log.gaps));
+  const tokenGaps = new Set<string>();
+  const providers = new Map(sources.map(source => [
+    `host-activity-${runtimeDigest(source.binding)}`, source.provider,
+  ]));
   const scopes = new Map(
     sources.map((source) => [
       `host-activity-${runtimeDigest(source.binding)}`,
@@ -243,6 +247,13 @@ export function summarizeTeamActivity(
       if (data.kind === 'compaction') compactions.add(`${scope}:${String(data.sourceRef)}`);
       if (data.kind === 'gap') gaps.add(String(data.reason));
       if (data.kind === 'usage') {
+        // The pinned Codex SPI retains only native `last`, without request identity or `total`.
+        // This applies equally to old journal rows; adding/replacing them cannot recover totals.
+        const provider = providers.get(scope);
+        if (provider === 'codex')
+          tokenGaps.add('Codex token totals are unavailable; retained reports describe only the last request.');
+        else if (provider === undefined)
+          tokenGaps.add('Token totals are unavailable because the retained provider is unknown.');
         if (event.inputId) usage.set(`${scope}:${event.inputId}`, data);
         else {
           unattributedUsage = true;
@@ -259,6 +270,7 @@ export function summarizeTeamActivity(
   const toolUsage: Record<string, number> = Object.create(null) as Record<string, number>;
   for (const name of tools.values()) toolUsage[name] = (toolUsage[name] ?? 0) + 1;
   const tokens = (field: string) =>
+    tokenGaps.size === 0 &&
     !unattributedUsage &&
     usage.size &&
     [...usage.values()].every((value) => typeof value[field] === 'number')
@@ -269,6 +281,12 @@ export function summarizeTeamActivity(
     gaps.add(
       'Cumulative cost across resumed generations is not qualified for this captured runtime.'
     );
+  // Token report semantics do not invalidate independently reported cumulative cost.
+  const costUsd =
+    !unqualifiedContinuation && gaps.size === 0 && generations > 0 && costs.size === generations
+      ? [...costs.values()].reduce((sum, cost) => sum + cost, 0)
+      : null;
+  for (const reason of tokenGaps) gaps.add(reason);
   return {
     kind: 'host_activity_stats' as const,
     memberName,
@@ -279,10 +297,7 @@ export function summarizeTeamActivity(
     compactions: compactions.size,
     inputTokens: tokens('inputTokens'),
     outputTokens: tokens('outputTokens'),
-    costUsd:
-      !unqualifiedContinuation && gaps.size === 0 && generations > 0 && costs.size === generations
-        ? [...costs.values()].reduce((sum, cost) => sum + cost, 0)
-        : null,
+    costUsd,
     gaps: [...gaps],
     computedAt: new Date().toISOString(),
   };

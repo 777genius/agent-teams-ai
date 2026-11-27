@@ -81,7 +81,9 @@ export function prepareNativeSessionCommand(
         throw new TeamOwnerError('hold');
     };
     assertCurrent();
-    const activityEntries = options.activityEntries?.(entry) ?? [entry];
+    const activityEntries = options.activityEntries?.(entry) ?? [{
+      binding: entry.binding, team: entry.team, provider: entry.profile.provider,
+    }];
     const logs = readTeamActivity({
       team: options.team, principalId: options.principalId, entries: activityEntries,
       runtime: options.runtime, taskCause: () => null, assertCurrent,

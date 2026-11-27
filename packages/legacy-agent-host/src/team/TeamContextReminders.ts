@@ -94,7 +94,7 @@ export class TeamContextReminders {
       this.validate(rows);
       const expected = { ...structuredClone(epoch), binding: structuredClone(binding) };
       this.validate([expected]);
-      const previous = rows.find((row) => row.epochId === epoch.epochId);
+      const previous = this.findEpoch(rows, epoch.epochId);
       if (previous) {
         if (
           digest({ ...previous, candidate: undefined, represented: undefined }) !== digest(expected)
@@ -102,6 +102,7 @@ export class TeamContextReminders {
           throw new TeamOwnerError('hold');
         return;
       }
+      this.retireRepresented(rows);
       if (!hash(epoch.epochId) || rows.length >= 128) throw new TeamOwnerError('hold');
       rows.push(expected);
       this.write(state, rows);
@@ -127,7 +128,7 @@ export class TeamContextReminders {
       this.validate(rows);
       let changed = false;
       for (const proof of request.priorProofs)
-        changed = this.represent(rows, request.binding, proof) || changed;
+        changed = this.represent(rows, request.binding, proof, { recoverArchived: true }) || changed;
       for (const epoch of request.epochs) {
         if (
           !hash(epoch.epochId) ||
@@ -136,7 +137,7 @@ export class TeamContextReminders {
           epoch.sourceRef.length > 1024
         )
           throw new TeamOwnerError('hold');
-        const existing = rows.find((row) => row.epochId === epoch.epochId);
+        const existing = this.findEpoch(rows, epoch.epochId);
         if (existing) {
           if (
             digest({ ...existing, candidate: undefined, represented: undefined }) !==
@@ -144,6 +145,7 @@ export class TeamContextReminders {
           )
             throw new TeamOwnerError('hold');
         } else {
+          this.retireRepresented(rows);
           if (rows.length >= 128) throw new TeamOwnerError('hold');
           rows.push({ ...structuredClone(epoch), binding: structuredClone(request.binding) });
           changed = true;
@@ -166,13 +168,13 @@ export class TeamContextReminders {
         .filter(
           (task) => !task.id.startsWith('_internal') && !task.deletedAt && task.status !== 'deleted'
         );
-      if (tasks.length > 256 || state.members.length > 256) throw new TeamOwnerError('hold');
+      if (state.members.length > 256) throw new TeamOwnerError('hold');
       const roster = state.members.map((row) => ({
         name: row.name,
         role: row.role,
         ...(row.settings?.role ? { description: row.settings.role } : {}),
       }));
-      const board = tasks
+      const board = tasks.length <= 256 ? tasks
         .map((task) => ({
           id: task.id,
           status: task.status,
@@ -180,9 +182,13 @@ export class TeamContextReminders {
           subject: task.subject ?? '',
           blockedBy: task.blockedBy ?? [],
         }))
-        .sort((a, b) => a.id.localeCompare(b.id));
+        .sort((a, b) => a.id.localeCompare(b.id)) : undefined;
       const epochIds = pending.map((row) => row.epochId);
-      const prefix =
+      const boardRead =
+        `The retained board does not fit this reminder. Before choosing task work, read ${member.role === 'lead' ? 'lead_briefing' : 'task_briefing'} using the exposed tool schema; use task_get for a task's full details. An omitted snapshot does not mean there are no tasks.`;
+      const rosterRead =
+        'The current roster does not fit this reminder. Read the members in the first team_get response before choosing another teammate. Use only names in that current roster.';
+      const buildPrefix = (rosterText: string, boardText: string) =>
         agentBlocks.wrapAgentBlock(
           [
             'Internal standing context restored after provider context compaction. Apply it before processing the original input below; this is not a separate work request.',
@@ -201,17 +207,24 @@ export class TeamContextReminders {
             state.savedSettings?.prompt
               ? `Standing user instructions:\n${state.savedSettings.prompt}`
               : '',
-            `Current roster:\n${JSON.stringify(roster)}`,
-            `Current task board:\n${JSON.stringify(board)}`,
+            `Current roster:\n${rosterText}`,
+            `Current task board:\n${boardText}`,
             'This block is internal context. Preserve ordinary user-facing message visibility and follow the original input below; do not send a separate reminder acknowledgement.',
           ]
             .filter(Boolean)
             .join('\n\n')
         ) + '\n\n';
+      // Board/roster snapshots are advisory views with existing read tools. Keep
+      // all standing instructions intact, and make every omitted view explicit.
+      // Ordinary reminders keep their exact original bytes and proof identity.
+      let prefix = buildPrefix(JSON.stringify(roster), board ? JSON.stringify(board) : boardRead);
+      const budget = Math.min(request.maxPrefixBytes, 64 * 1024);
+      if (Buffer.byteLength(prefix) > budget) prefix = buildPrefix(JSON.stringify(roster), boardRead);
+      if (Buffer.byteLength(prefix) > budget) prefix = buildPrefix(rosterRead, boardRead);
       if (
         !Number.isSafeInteger(request.maxPrefixBytes) ||
         request.maxPrefixBytes < 0 ||
-        Buffer.byteLength(prefix) > Math.min(request.maxPrefixBytes, 64 * 1024)
+        Buffer.byteLength(prefix) > budget
       )
         throw new TeamOwnerError('hold');
       const teamProof = digest({
@@ -249,22 +262,26 @@ export class TeamContextReminders {
       this.member(state, binding);
       const rows = structuredClone(state.contextEpochs ?? []);
       this.validate(rows);
-      if (this.represent(rows, binding, proof)) this.write(state, rows);
+      if (this.represent(rows, binding, proof, { recoverArchived: true })) this.write(state, rows);
     });
   }
 
   private represent(
     rows: TeamContextEpoch[],
     binding: RuntimeMemberBinding,
-    proof: ContextPreparationProof
+    proof: ContextPreparationProof,
+    options: { checkArchives?: boolean; selectedEpochId?: string; recoverArchived?: boolean } = {}
   ): boolean {
+    const { checkArchives = true, selectedEpochId } = options;
     if (
       proof.bindingFingerprint !== textHash(JSON.stringify(memberBinding(binding))) ||
       proof.schemaVersion !== 1 ||
       !Array.isArray(proof.epochIds) ||
       !proof.epochIds.length ||
       proof.epochIds.length > 128 ||
+      proof.epochIds.some((id) => !hash(id)) ||
       new Set(proof.epochIds).size !== proof.epochIds.length ||
+      (selectedEpochId !== undefined && !proof.epochIds.includes(selectedEpochId)) ||
       !hash(proof.teamProof) ||
       !hash(proof.prefixHash) ||
       !hash(proof.nativePayloadHash) ||
@@ -273,8 +290,10 @@ export class TeamContextReminders {
     )
       throw new TeamOwnerError('hold');
     let changed = false;
-    for (const id of proof.epochIds) {
-      const row = rows.find((value) => value.epochId === id);
+    for (const id of selectedEpochId === undefined ? proof.epochIds : [selectedEpochId]) {
+      const row = checkArchives
+        ? this.findEpoch(rows, id, options.recoverArchived ? proof : undefined)
+        : rows.find((value) => value.epochId === id);
       if (
         !row ||
         !row.candidate ||
@@ -310,7 +329,46 @@ export class TeamContextReminders {
       throw new TeamOwnerError('forbidden');
     return member;
   }
-  private validate(rows: TeamContextEpoch[]): void {
+  private archivedEpoch(id: string): TeamContextEpoch | undefined {
+    if (!hash(id)) throw new TeamOwnerError('hold');
+    const row = this.options.store.read<TeamContextEpoch>(`context-epochs/${id}.json`);
+    if (row === undefined) return undefined;
+    if (!row || row.epochId !== id || !row.represented) throw new TeamOwnerError('hold');
+    // Validate the complete original candidate/proof before using an archive as
+    // deduplication evidence. No archive can stand in for a pending reset.
+    this.validate([row], false);
+    return row;
+  }
+  private findEpoch(
+    rows: TeamContextEpoch[],
+    id: string,
+    replay?: ContextPreparationProof
+  ): TeamContextEpoch | undefined {
+    const active = rows.find((row) => row.epochId === id);
+    const archived = this.archivedEpoch(id);
+    if (
+      active && archived && digest(active) !== digest(archived) &&
+      // A lost state publication may leave only the original candidate active.
+      // Only its exact Runtime proof can complete that archived phase change.
+      (!replay || active.represented || digest({ ...active, represented: replay }) !== digest(archived))
+    )
+      throw new TeamOwnerError('hold');
+    return active ?? archived;
+  }
+  private retireRepresented(rows: TeamContextEpoch[], bytePressure = false): void {
+    if (rows.length < 128 && !bytePressure) return;
+    for (const row of rows) {
+      if (!row.represented) continue;
+      const original = this.archivedEpoch(row.epochId);
+      if (original && digest(original) !== digest(row)) throw new TeamOwnerError('hold');
+      if (!original) this.options.store.write(`context-epochs/${row.epochId}.json`, row);
+    }
+    // Exact immutable archives are durable first. A failed subsequent state
+    // write leaves harmless identical copies, reconciled by findEpoch on retry.
+    const pending = rows.filter((row) => !row.represented);
+    rows.splice(0, rows.length, ...pending);
+  }
+  private validate(rows: TeamContextEpoch[], checkArchives = true): void {
     if (
       !Array.isArray(rows) ||
       rows.length > 128 ||
@@ -354,13 +412,21 @@ export class TeamContextReminders {
         throw new TeamOwnerError('hold');
     }
     for (const row of rows)
-      if (row.represented) this.represent(rows, row.candidate!.binding, row.represented);
+      if (row.represented)
+        this.represent(
+          rows,
+          row.candidate!.binding,
+          row.represented,
+          { checkArchives, ...(!checkArchives ? { selectedEpochId: row.epochId } : {}) }
+        );
   }
   private write(state: OwnerState, rows: TeamContextEpoch[]): void {
     const stored = this.options.store.read<OwnerState>('state.json');
     if (!stored || digest(stored.binding) !== digest(state.binding))
       throw new TeamOwnerError('hold');
     const next: OwnerState = { ...stored, contextEpochs: rows };
+    if (Buffer.byteLength(JSON.stringify(next)) > 1024 * 1024)
+      this.retireRepresented(rows, true);
     if (Buffer.byteLength(JSON.stringify(next)) > 1024 * 1024) throw new TeamOwnerError('hold');
     this.options.store.write('state.json', next);
   }

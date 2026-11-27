@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { readTeamSessionHistory } from '../dist/composition/readTeamSessionHistory.js';
 import { deliveryFingerprint, runtimeDigest } from '../dist/runtime/identity.js';
+import { prepareRuntimeInput } from '../dist/runtime/inputPreparation.js';
 import { RuntimeOwnerError } from '../dist/runtime/contracts.js';
 import type { TeamSessionHistoryReadOptions, TeamSessionHistorySummary } from '../dist/composition/readTeamSessionHistory.js';
 import type { RuntimeBinding, RuntimeSessionRecord } from '../dist/runtime/contracts.js';
@@ -168,7 +169,11 @@ test('original inputs survive missing activity attribution without invented auth
   const input = record.inputs[0]!;
   input.intent.content = 'Human original prompt 🙂\n'.repeat(20000);
   input.fingerprint = deliveryFingerprint(input.intent);
-  input.preparation = { prefix: 'TEST private prepared supplement must not leak' } as typeof input.preparation;
+  const prefix = 'TEST private prepared supplement must not leak';
+  input.preparation = prepareRuntimeInput(record.binding, input, {
+    epochIds: [runtimeDigest('TEST-context-epoch')], prefix,
+    teamProof: runtimeDigest('TEST-context-proof'),
+  }, Buffer.byteLength(prefix + input.intent.content));
   const id = f.history().sessions[0]!.id, pages = drain(f, id, 'inputs');
   assert.ok(pages.length > 1);
   const parts = pages.flatMap(page => page.messages);

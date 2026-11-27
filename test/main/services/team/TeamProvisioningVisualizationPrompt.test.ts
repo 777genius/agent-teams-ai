@@ -62,4 +62,53 @@ describe('chat visualization startup contract', () => {
     expect(compact.endsWith(protocols.buildChatVisualizationRefreshInstruction())).toBe(true);
     expect(compact).not.toContain('AVAILABLE DISPLAY LIBRARY SPEC');
   });
+
+  it('marks omitted operating rules and task tails and requires their post-readiness retrieval', () => {
+    const text = buildChatVisualizationBriefing(
+      'Workflow: '.repeat(4000) + '\nTask briefing: REQUIRED_TASK_TAIL',
+      6000
+    );
+
+    expect(text.length).toBeLessThanOrEqual(6000);
+    expect(text).not.toContain('REQUIRED_TASK_TAIL');
+    expect(text).toContain('[truncated startup briefing]');
+    expect(text).toContain('before acting on real work, call member_briefing once');
+    expect(text).toContain('task_briefing as the current working queue');
+    expect(text).toContain('do not start work or send messages');
+    expect(text).toContain('Do not use these reads to prove launch readiness');
+    expect(text.endsWith(protocols.buildChatVisualizationRefreshInstruction())).toBe(true);
+  });
+
+  it('preserves retrieval requirements when a compact field was already truncated', () => {
+    const text = buildChatVisualizationBriefing(
+      'Role: partial role\n[truncated native bootstrap context]\nStartup rules: wait.',
+      18000
+    );
+
+    expect(text).toContain('[truncated startup briefing]');
+    expect(text).toContain('complete current role, workflow and operating rules');
+    expect(text).toContain('Startup rules: wait.');
+  });
+
+  it('does not mark the briefing incomplete when the complete refresh form fits exactly', () => {
+    const briefing = 'Complete task context';
+    const refresh = protocols.buildChatVisualizationRefreshInstruction();
+    const text = buildChatVisualizationBriefing(briefing, briefing.length + refresh.length + 2);
+
+    expect(text).toBe(`${briefing}\n\n${refresh}`);
+    expect(text).not.toContain('[truncated startup briefing]');
+  });
+
+  it('never cuts a UTF-16 surrogate pair at the available briefing boundary', () => {
+    for (const budget of [6000, 6001, 6002]) {
+      const text = buildChatVisualizationBriefing('Workflow: ' + '🧩'.repeat(10000), budget);
+      expect(text.length).toBeLessThanOrEqual(budget);
+      expect(text.isWellFormed()).toBe(true);
+      expect(text).toContain('[truncated startup briefing]');
+    }
+  });
+
+  it('rejects a budget that cannot retain complete recovery instructions', () => {
+    expect(() => buildChatVisualizationBriefing('Required context', 16)).toThrow(/budget/i);
+  });
 });

@@ -73,13 +73,35 @@ export function recordContextEpoch(
       : { inputId: event.inputId, operationRef: event.operationRef! }),
   };
   const epochs = (record.contextEpochs ??= []);
-  const existing = epochs.find((value) => value.epochId === epoch.epochId);
+  const existing = epochs.find((value) => value.epochId === epoch.epochId) ??
+    record.inputs.flatMap((input) => input.representedContextEpochs ?? [])
+      .find((value) => value.epochId === epoch.epochId);
   if (existing) {
     if (runtimeDigest(existing) !== runtimeDigest(epoch)) hold();
     return;
   }
-  if (epochs.length >= 128) hold();
-  epochs.push(epoch);
+  if (epochs.length >= 128) retireRepresentedContextEpochs(record);
+  if (record.contextEpochs!.length >= 128) hold();
+  record.contextEpochs!.push(epoch);
+}
+
+/** Only durable preparations retire technical reset evidence. Unknown handoff
+ * still stays claimed/unknown; retirement never proves native consumption. */
+function retireRepresentedContextEpochs(record: RuntimeSessionRecord): void {
+  const pending: RuntimeContextEpoch[] = [];
+  for (const epoch of record.contextEpochs ?? []) {
+    const input = record.inputs.find((value) => value.preparation?.epochIds.includes(epoch.epochId));
+    if (!input) {
+      pending.push(epoch);
+      continue;
+    }
+    validatePreparedInput(record.binding, input);
+    const represented = (input.representedContextEpochs ??= []);
+    if (represented.length >= 128 || represented.some((value) => value.epochId === epoch.epochId))
+      hold();
+    represented.push(structuredClone(epoch));
+  }
+  record.contextEpochs = pending;
 }
 export function preparedInputProof(value: RuntimeInputPreparation): PreparedInputProof {
   const { prefix: _prefix, ...proof } = value;
@@ -132,7 +154,7 @@ export function validateContextEpochs(record: RuntimeSessionRecord): void {
   const epochs = record.contextEpochs ?? [];
   if (!Array.isArray(epochs) || epochs.length > 128) hold();
   const seen = new Set<string>();
-  for (const epoch of epochs) {
+  const validateEpoch = (epoch: RuntimeContextEpoch): void => {
     if (
       !epoch ||
       !id(epoch.sessionRef) ||
@@ -156,9 +178,18 @@ export function validateContextEpochs(record: RuntimeSessionRecord): void {
     )
       hold();
     seen.add(epoch.epochId);
-  }
+  };
+  for (const epoch of epochs) validateEpoch(epoch);
   for (const input of record.inputs) {
     validatePreparedInput(record.binding, input);
+    if (input.representedContextEpochs !== undefined) {
+      if (!Array.isArray(input.representedContextEpochs) ||
+          input.representedContextEpochs.length > 128 || !input.preparation) hold();
+      for (const epoch of input.representedContextEpochs) {
+        validateEpoch(epoch);
+        if (!input.preparation!.epochIds.includes(epoch.epochId)) hold();
+      }
+    }
     // Team may represent a pending business reminder in a later captured generation.
     // The exact native preparation remains bound to THIS immutable input and binding.
   }

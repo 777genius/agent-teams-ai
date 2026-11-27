@@ -2606,8 +2606,9 @@ test(
     assert.equal(replies().length, 2);
     assert.equal(replies()[1]!.from, 'alice');
     assert.equal(replies()[1]!.summary, '/cost');
-    assert.match(replies()[1]!.text, /Input tokens reported: 17/u);
-    assert.match(replies()[1]!.text, /Output tokens reported: 9/u);
+    assert.match(replies()[1]!.text, /Input tokens reported: not reported/u);
+    assert.match(replies()[1]!.text, /Output tokens reported: not reported/u);
+    assert.match(replies()[1]!.text, /not a full session total/u);
     assert.doesNotMatch(replies()[1]!.text, /\$|API duration/u);
     assert.deepEqual(await f.rpc('team.execute', reportedCommand, { commandId: 'TEST-cost-reported' }), reported);
     assert.deepEqual(await f.rpc('team.lookup', {}, { commandId: 'TEST-cost-reported' }), reported);
@@ -2666,8 +2667,9 @@ test(
     const resumedCost = { ...cost, payload: { ...cost.payload, messageId: 'TEST-cost-resumed' } };
     assert.equal((await f.rpc('team.execute', resumedCost,
       { commandId: 'TEST-cost-resumed' }) as { ok: boolean }).ok, true);
-    assert.match(replies().at(-1)!.text, /Input tokens reported: 24/u);
-    assert.match(replies().at(-1)!.text, /Output tokens reported: 12/u);
+    assert.match(replies().at(-1)!.text, /Input tokens reported: not reported/u);
+    assert.match(replies().at(-1)!.text, /Output tokens reported: not reported/u);
+    assert.match(replies().at(-1)!.text, /not a full session total/u);
     assert.deepEqual(replies().slice(0, 2), JSON.parse(bytes), 'old cost outputs keep their captured units');
     assert.deepEqual(await f.rpc('team.lookup', {}, { commandId: 'TEST-cost-reported' }), reported);
     assert.equal(f.session().submits.length, 1, '/cost adds no resumed native input');
@@ -2708,11 +2710,12 @@ test(
       'fresh native session cost cannot borrow prior Resume-segment tokens');
     assert.equal(f.session().submits.length, 0, 'new-session cost is Host-only');
     const historical = await f.rpc('team.activity.stats.read', { memberName: 'alice' }) as {
-      ok: boolean; value: { stats: { generations: number; inputTokens: number; outputTokens: number } };
+      ok: boolean; value: { stats: { generations: number; inputTokens: number | null; outputTokens: number | null; gaps: string[] } };
     };
     assert.equal(historical.ok, true, JSON.stringify(historical));
     assert.equal(historical.value.stats.generations, 3, 'Stats retains opened empty Restart and both Resume generations');
-    assert.equal(historical.value.stats.inputTokens, 24); assert.equal(historical.value.stats.outputTokens, 12);
+    assert.equal(historical.value.stats.inputTokens, null); assert.equal(historical.value.stats.outputTokens, null);
+    assert.ok(historical.value.stats.gaps.some(reason => reason.includes('only the last request')));
     const publicBytes = warmFrames + JSON.stringify(f.frames);
     for (const secret of [
       'PRIVATE-environment-token',
