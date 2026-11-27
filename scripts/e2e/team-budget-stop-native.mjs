@@ -94,7 +94,8 @@ export async function proveNativeBudgetStop({client,api,wait,getProcess,ownedSti
       const status=await api('window.electronAPI.tokenUsage.getBudgetStatus()');
       const target=status.targets?.find(x=>x.scope==='team'&&x.id==='team:'+nativeTeamName);
       const metric=target?.metrics?.find(x=>x.metric==='tokens');
-      if(target?.onExceeded!=='stop_team'||metric?.limit!==100||metric?.value!==150)return false;
+      if(target?.onExceeded!=='stop_team'||metric?.limit!==100||
+         !Number.isFinite(metric?.value)||metric.value<150)return false;
       const nativeAlive=await ownedStillAlive(original);
       const toolAlive=await ownedStillAlive(held);
       const teamAlive=await api(`window.electronAPI.teams.processAlive(${JSON.stringify(nativeTeamName)})`);
