@@ -15,14 +15,14 @@ sizes. Scores are out of 10; higher complexity means more difficult, while highe
 confidence/reliability means stronger evidence. Reliability is a target until
 the validation below is complete.
 
-| Existing defect | Minimal correction | Production / tests | Complexity | Confidence | Reliability target |
-| --- | --- | ---: | ---: | ---: | ---: |
-| A large task board blocks the next input after compaction | Replace only oversized advisory board/roster snapshots with existing canonical read instructions; keep mandatory rules intact | 80–160 / 160–240 | 5 | 8 | 9 |
-| The 128 retained context epochs become a lifetime limit | Retire only represented epochs, preserving exact durable proofs and duplicate/conflict detection | 180–300 / 220–320 | 7 | 8 | 9 |
-| Bootstrap clipping can lose both operating context and its truncation warning | Reserve an indivisible recovery instruction within the existing budget and retrieve complete context only after readiness | 80–130 / 100–180 | 4 | 9 | 9 |
-| Raw Codex usage counts cached input twice | Normalize raw inclusive input separately from canonical disjoint input; preserve stable ledger identities | 25–45 / 100–180 | 3 | 9 | 9 |
-| Host statistics present Codex's last usage slice as a complete aggregate | Mark unavailable aggregates explicitly using captured source identity, including retained historical events | 35–55 / 120–180 | 5 | 8 | 9 |
-| An oversized Codex log looks like an empty, successfully refreshed source | Use the existing degraded-refresh path and preserve the last successful usage timestamp and ledger | 10–20 / 30–60 | 3 | 9 | 9 |
+| Existing defect                                                               | Minimal correction                                                                                                            | Production / tests | Complexity | Confidence | Reliability target |
+| ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | -----------------: | ---------: | ---------: | -----------------: |
+| A large task board blocks the next input after compaction                     | Replace only oversized advisory board/roster snapshots with existing canonical read instructions; keep mandatory rules intact |   80–160 / 160–240 |          5 |          8 |                  9 |
+| The 128 retained context epochs become a lifetime limit                       | Retire only represented epochs, preserving exact durable proofs and duplicate/conflict detection                              |  180–300 / 220–320 |          7 |          8 |                  9 |
+| Bootstrap clipping can lose both operating context and its truncation warning | Reserve an indivisible recovery instruction within the existing budget and retrieve complete context only after readiness     |   80–130 / 100–180 |          4 |          9 |                  9 |
+| Raw Codex usage counts cached input twice                                     | Normalize raw inclusive input separately from canonical disjoint input; preserve stable ledger identities                     |    25–45 / 100–180 |          3 |          9 |                  9 |
+| Host statistics present Codex's last usage slice as a complete aggregate      | Mark unavailable aggregates explicitly using captured source identity, including retained historical events                   |    35–55 / 120–180 |          5 |          8 |                  9 |
+| An oversized Codex log looks like an empty, successfully refreshed source     | Use the existing degraded-refresh path and preserve the last successful usage timestamp and ledger                            |      10–20 / 30–60 |          3 |          9 |                  9 |
 
 ## Invariants
 
@@ -87,8 +87,8 @@ passing without corresponding evidence.
 
 ## Results
 
-Implemented without public API, provider pin, dependency or compiler-option
-changes. Independent reviews covered the context-retirement protocol, bootstrap
+The initial correction kept public APIs, provider pins, dependencies and compiler
+options unchanged. Independent reviews covered the context-retirement protocol, bootstrap
 recovery instructions and Codex accounting/provider lineage. Root review also
 found and corrected the 120/128-epoch single-proof byte-pressure failure and
 removed unnecessary roster-history pagination from the recovery instruction.
@@ -111,13 +111,123 @@ test-file workers that failed without assertion diagnostics. A serial TAP
 recheck passed all 16 group-chat tests; the Team-snapshot worker was terminated
 with `SIGKILL`. This is not a successful full-suite qualification.
 
-The complete root typecheck, complete Host test typecheck and type-aware lint
-were terminated with exit 137 / `SIGKILL` in this environment. An earlier Host
+The complete root typecheck and type-aware lint were terminated with exit 137 /
+`SIGKILL` in this environment. The first complete Host test typecheck was also
+terminated, but a subsequent full Host test typecheck passed after restoring the
+exact reviewed source and correcting the cost-proof fixture's inferred row type.
+An earlier Host
 test typecheck did produce actionable diagnostics: the new fixture lacked
 `teamName`, and existing OpenCode/session-history fixtures had invalid types.
 Those fixtures were corrected using complete values and actual discriminants,
 without suppressions or relaxed compiler settings; the affected-file typecheck
 then passed. Temporary validation configs were removed.
+
+## Follow-up correctness review
+
+The next pass starts at published head
+`f3bbca99f4e1ed07009f60338c3ffdf6f15a91ad` and remains inside PR #982.
+
+### Interrupted context publication across Restart
+
+A partial archive publication can leave candidate-only Team rows after Runtime
+has durably claimed the original proof. A fresh Restart generation does not
+carry that original proof in its new request. Overwriting the old candidate
+would strand the successor before its ordinary input could proceed.
+
+Preparation now reconciles archived preparations before replacing candidates.
+Recovery verifies the original logical backend/team/member identity, the whole
+proof epoch set, the complete candidate digest including authority revision, and
+the original binding. Ordinary observation/validation still cannot promote an
+unrepresented candidate. Pending, mixed, corrupt or mismatched batches hold.
+The immutable input and exact original Runtime proof remain authoritative; no
+new submit or model turn is introduced.
+
+The focused context cohort passed **33/33** tests. Coverage includes real Team
+and Runtime owners with filesystem stores, injected partial publication, a new
+Restart generation, 129 compactions followed by ordinary dispatch, replay with
+no additional submit, and revoked/mixed/missing-proof negative cases. This is
+controlled-provider evidence, not genuine vendor qualification.
+
+The production correction changes 31 lines and removes one; regression coverage
+adds 303 lines. Estimated implementation complexity: **6/10**.
+
+### Bounded queued-message confirmation
+
+Review reproduced a P1 failure in the existing `team.queue.read`: 30 accepted
+messages of 40,000 ASCII characters produced a response over the 1 MiB Host
+limit and closed the transport with `priority_overflow` before Discard Queued
+confirmation. This read's current consumer needs message identities and count;
+message text is already displayed through the existing activity feed.
+
+The existing operation now returns an identity inventory and accepts an optional
+cursor. Canonical queue rows remain untouched. Larger inventories use whole-ID
+pages bounded to 240 KiB, with the existing 4096-ID overall limit. Continuations
+bind the captured full owner/scope/handle, principal, member, current admin grant
+revision, full queue snapshot revision, and current Host composition. Current
+authority is rechecked across the asynchronous queue read.
+
+The renderer assembles all pages at the originally captured target before
+returning the inventory for confirmation. Duplicate identities, changed
+revision/member, malformed or repeated continuations, empty paged responses,
+and context changes fail without returning a partial confirmation list. Plain
+empty queues and validated legacy full-row responses remain compatible. The
+existing atomic discard operation still receives exactly the confirmed IDs;
+new arrivals survive it. No new MCP tool or user feature is added.
+
+The targeted Host regressions passed **10/10**, including the real transport
+overflow, later-arrival discard boundary, authority changes during lookup,
+cursor scope/key changes, and valid native text under 64 KiB whose escaped JSON
+row exceeds 240 KiB. They also check no queue/Runtime writes or native opens on
+read. The renderer/lifecycle cohort passed **19/19** tests, and the existing
+confirmation UI/preload cohort passed **14/14**, including an identity-only
+inventory through the rendered confirmation and exact-ID discard path.
+Independent review found and closed the empty-final-page validation gap.
+Production logic adds 181 lines and removes 34; regression tests add 454 lines
+and remove one. Estimated implementation complexity: **5/10**.
+
+### Cost-proof alignment and main integration
+
+The existing native/desktop cost proofs now require an explicit incomplete
+Codex aggregate with the exact missing-totals explanation while still requiring
+positive retained raw usage, original input/operation identity, journal digest,
+and replay without additional native effects. No assertion treats a fabricated
+zero or a last-request slice as a trustworthy cumulative total.
+
+The PR's merge conflicts with main prevented normal pull-request CI from
+starting on the published head. The prepared integration uses main
+`2dbc3e27b9c2ae66b15bdaf81c87bee108f02f2f`. The main-only merge candidate tree is
+`0f876825bd174192a709ffa69e36382c29b11048`. Main's shared schedule-file lock and
+per-schedule mutation queue are combined with the PR's captured Host authority,
+atomic metadata updates and original run ownership. Durable deletion and its
+admission fence remain inside the file transaction; native cleanup stays
+outside metadata locks so reentrant cleanup cannot deadlock or resurrect a
+deleted schedule. The reviewed schedule cohort passed **108 tests in 7 suites**.
+These are compatibility resolutions for existing main changes, not new product
+features authored in this pass. The PR itself remains open and unmerged.
+
+Additional protocol checks passed: **22/22** actual HTTP MCP tests and the real
+stdio MCP child-process visualization protocol test. Bootstrap/importer/ledger/
+analytics regressions passed **54/54**. Exact source blobs were checked after
+executor recovery. Successful local checks do not replace current-head CI.
+
+### Remaining qualification
+
+The full root compiler still requires CI: two local attempts were killed with
+exit 137, including a bounded attempt. Compiler options and assertions were not
+relaxed. The complete Host test typecheck and canonical Host build do pass.
+The full Host test compiler caught an overly widened optional-field type in the
+new queue fixture; using its concrete definition with `satisfies` corrected the
+fixture without a cast or suppression. Both its 10 runtime regressions and the
+complete Host test typecheck passed after that correction.
+The complete legacy Host script typecheck also passed with the pinned compiler,
+including the updated desktop cost-proof scripts.
+
+The existing CodeQL alert 628 remains open. Its successful analysis job and
+failing HIGH security check are different results; no suppression, dismissal,
+credential digest replacement or identity migration is included. The original
+eight source-flow details and the relevant private-storage boundary remain to
+be qualified. Native desktop/provider results must be obtained from their real
+qualification jobs, not inferred from these local fixtures.
 
 Full CI and native desktop/provider E2E qualification remain required before
 declaring the entire PR ready to merge. No successful result is inferred from a

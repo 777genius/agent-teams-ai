@@ -33,8 +33,13 @@ export function parseTeamLifecyclePayload(operation: string, value: unknown) {
       return purge(value);
     case 'team.lifecycle.purge.lookup':
       return { expected: purge(object(value, ['expected']).expected) };
-    case 'team.queue.read':
-      return { member: text(object(value, ['member']).member) };
+    case 'team.queue.read': {
+      const source = object(value, ['member', 'cursor']);
+      const cursor = source.cursor === undefined ? undefined : text(source.cursor);
+      if (cursor !== undefined && !/^[1-9][0-9]{0,8}\.[a-f0-9]{64}$/.test(cursor))
+        throw new InvalidBackendOperation();
+      return { member: text(source.member), ...(cursor === undefined ? {} : { cursor }) };
+    }
     case 'team.queue.discard':
       return discard(value);
     case 'team.queue.lookup':
