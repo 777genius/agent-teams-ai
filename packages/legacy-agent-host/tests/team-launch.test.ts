@@ -613,7 +613,16 @@ test('captured failed retry atomically refuses a replaced no-allocation attempt 
   const capturedRetry = (changes: Partial<typeof payload> = {}, originalCommandId = commandId) =>
     executeTeamLaunch({ launch, entries: [], operation: 'retry', members: [],
       commandId: originalCommandId, payload: { ...payload, ...changes } });
-  capturedRetry();
+  // Retain the original composition's field order for a command admitted before
+  // the optional-field normalization; replay must recognize those exact bytes.
+  launch.retry({
+    launchId: retryB.launchId,
+    rosterRevision: retryB.rosterRevision,
+    attemptId: retryB.attemptId,
+    memberIds: retryB.memberIds,
+    expectedAttemptId: retryB.expectedAttemptId,
+    commandId,
+  });
   await settle(launch);
   const failedB = launch.read().members[0]!.attempt;
   assert.equal(failedB.attemptId, retryB.attemptId);
@@ -636,9 +645,9 @@ test('captured failed retry atomically refuses a replaced no-allocation attempt 
   const legacyRetry = {
     launchId: f.definition.launchId,
     rosterRevision: f.definition.rosterRevision,
-    commandId: 'TEST-legacy-retry',
     attemptId: 'TEST-legacy-attempt',
     memberIds: ['A'],
+    commandId: 'TEST-legacy-retry',
   };
   launch.retry(legacyRetry);
   await settle(launch);
@@ -646,6 +655,11 @@ test('captured failed retry atomically refuses a replaced no-allocation attempt 
   assert.equal(record.retries.find((retry) => retry.commandId === legacyRetry.commandId)!.fingerprint,
     runtimeDigest({ ...legacyRetry, memberIds: [...legacyRetry.memberIds].sort() }),
     'omission preserves the existing fingerprint bytes');
+  const { commandId: legacyCommandId, ...legacyPayload } = legacyRetry;
+  executeTeamLaunch({ launch, entries: [], operation: 'retry', members: [],
+    commandId: legacyCommandId, payload: legacyPayload });
+  await settle(launch);
+  assert.deepEqual(f.store.read(path), record, 'an original unguarded receipt also replays unchanged');
   assert.throws(() => launch.retry({ ...retryB, commandId: 'TEST-many', attemptId: 'TEST-many', memberIds: ['A', 'B'] }),
     (error) => error instanceof TeamLaunchError && error.code === 'conflict');
   launch.seal();
