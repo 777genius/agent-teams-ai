@@ -132,10 +132,10 @@ export function extendObservedWindowsProcessTree(
  * A process can create a child which creates another child, then exit before
  * any follow-up census. The surviving grandchild's parent PID was never seen.
  * Do not mistake a missing original root for proof that its descendants are
- * gone. A live process is provably unrelated only if it has an original,
- * nonempty PID+birth in the baseline, or its currently alive, older parent
- * recursively has that provenance. Unseen, recycled and missing parents are
- * conservatively UNKNOWN. This is not a substitute for native Job containment.
+ * gone. A process predating the original root cannot be its descendant.
+ * A younger process needs a verified older parent chain in the baseline
+ * (for unchanged births) or the current census. Baseline membership alone
+ * does not establish ancestry. Unknown parents remain unconfirmed.
  */
 export function unattributableWindowsProcessBirths(
   initial: readonly WindowsProcessIdentity[],
@@ -145,12 +145,15 @@ export function unattributableWindowsProcessBirths(
   const baseline = new Map(initial.map(row => [row.pid, row]));
   const live = new Map(now.map(row => [row.pid, row]));
   const originals = new Set(originalTree.map(row => row.pid + ':' + row.birth));
+  const rootBirth = originalTree[0]?.birth;
+  if (!rootBirth) return [...now];
   function foreign(entry: WindowsProcessIdentity, seen: Set<number>): boolean {
     if (!entry.birth || originals.has(entry.pid + ':' + entry.birth) ||
         seen.has(entry.pid) || seen.size >= 512) return false;
-    const initialBirth = baseline.get(entry.pid)?.birth;
-    if (initialBirth && initialBirth === entry.birth) return true;
-    const parent = live.get(entry.parentPid);
+    if (BigInt(entry.birth) < BigInt(rootBirth)) return true;
+    const original = baseline.get(entry.pid);
+    const parent = original?.birth === entry.birth
+      ? baseline.get(entry.parentPid) : live.get(entry.parentPid);
     if (!parent?.birth || BigInt(parent.birth) > BigInt(entry.birth)) return false;
     const next = new Set(seen);
     next.add(entry.pid);

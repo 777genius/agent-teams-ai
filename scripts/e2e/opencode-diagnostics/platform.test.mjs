@@ -47,11 +47,15 @@ test('captured PID census rejects unknown birth without rejecting unrelated syst
     assert.throws(() => parseWindowsProcesses(
       JSON.stringify([system, { ...known, birth }]), [42]), /Invalid OS process birth identity/);
   }
-  assert.deepEqual(parseWindowsProcesses('[]', Array(500).fill(42)), []);
+  const history = Array.from({ length: 501 }, (_, index) => index + 1);
+  assert.deepEqual(parseWindowsProcesses('[]', history), []);
+  assert.throws(() => parseWindowsProcesses(
+    JSON.stringify([{ pid: 501, parent: 1, birth: null }]), history
+  ), /Invalid OS process birth identity/);
 });
-test('captured PID census validates bounded positive integers before an OS read', () => {
+test('captured PID census validates positive integers before an OS read', () => {
   for (const requiredPids of [null, {}, '42', [0], [-1], [1.5], [Number.MAX_SAFE_INTEGER + 1],
-    ['42; exit 0'], Array(501).fill(42)]) {
+    ['42; exit 0']]) {
     assert.throws(() => processes(requiredPids), /Invalid required process PIDs/);
     assert.throws(() => parseWindowsProcesses('[]', requiredPids), /Invalid required process PIDs/);
   }

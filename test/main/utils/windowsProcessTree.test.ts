@@ -17,7 +17,7 @@ const root: WindowsProcessIdentity = { pid: 401, parentPid: 100, birth: '6389876
 const tool: WindowsProcessIdentity = { pid: 402, parentPid: 401, birth: '638987654321001000' };
 const nested: WindowsProcessIdentity = { pid: 403, parentPid: 402, birth: '638987654321002000' };
 const stale: WindowsProcessIdentity = { pid: 404, parentPid: 401, birth: '638000000000000000' };
-const unrelated: WindowsProcessIdentity = { pid: 800, parentPid: 1, birth: '638987654321099999' };
+const unrelated: WindowsProcessIdentity = { pid: 800, parentPid: 1, birth: '638987654320999999' };
 const late: WindowsProcessIdentity = { pid: 450, parentPid: 401, birth: '638987654321003000' };
 const grandchild: WindowsProcessIdentity = { pid: 451, parentPid: 450, birth: '638987654321004000' };
 const execMock = vi.mocked(execFile);
@@ -84,6 +84,17 @@ describe('identity-bound original Win32 process census', () => {
     expect(unattributableWindowsProcessBirths(
       [root, unrelated], [recycledParent, foreign], [root]
     ).some(row => row.pid === foreign.pid)).toBe(true);
+  });
+
+  it('does not trust a younger baseline orphan without proven ancestry', async () => {
+    const foreign = { pid: 900, parentPid: unrelated.pid, birth: '638987654322000000' };
+    expect(unattributableWindowsProcessBirths(
+      [root, grandchild, unrelated, foreign], [grandchild, foreign], [root]
+    )).toEqual([grandchild]);
+    const { child } = arrange([
+      [root, grandchild, unrelated], [grandchild, unrelated], [grandchild, unrelated],
+    ], new Error('raced descendant'));
+    await expect(killWindowsProcessTreeAndWait(child)).rejects.toThrow('remains unconfirmed');
   });
 
   it('classifies only original births as alive, refusing surviving descendants', () => {

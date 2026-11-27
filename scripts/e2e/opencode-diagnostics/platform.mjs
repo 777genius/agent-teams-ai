@@ -22,13 +22,14 @@ export function powershell(script) {
 }
 function assertRequiredProcessPids(requiredPids) {
   assert(
-    Array.isArray(requiredPids) && requiredPids.length <= 500 &&
+    Array.isArray(requiredPids) &&
       requiredPids.every((pid) => Number.isSafeInteger(pid) && pid > 0),
     'Invalid required process PIDs'
   );
 }
 export function parseWindowsProcesses(output, requiredPids) {
   if (requiredPids !== undefined) assertRequiredProcessPids(requiredPids);
+  const required = new Set(requiredPids);
   const parsed = JSON.parse(output.replace(/^\uFEFF/, '').trim() || '[]');
   return (Array.isArray(parsed) ? parsed : [parsed]).flatMap((p) => {
     assert(
@@ -38,7 +39,7 @@ export function parseWindowsProcesses(output, requiredPids) {
     const validBirth = typeof p.birth === 'string' && Number.isFinite(Date.parse(p.birth));
     // Unrelated Windows system processes can legitimately hide their birth.
     // A previously captured PID must remain visible and fail closed instead.
-    if (requiredPids !== undefined && !validBirth && !requiredPids.includes(p.pid)) return [];
+    if (requiredPids !== undefined && !validBirth && !required.has(p.pid)) return [];
     assert(validBirth, 'Invalid OS process birth identity');
     return [{
       pid: p.pid,
