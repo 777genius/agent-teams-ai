@@ -16,7 +16,7 @@ export async function checkBudgetDesktop({ cdp, first, artifactRoot, until, evid
   const panel = `Array.from(document.querySelectorAll(
     '.token-usage-dashboard section.usage-detail-panel'
   )).find(section => section.querySelector('button[role="combobox"]') &&
-    section.querySelector('button.w-full'))`;
+    section.querySelector('button.w-full:not([role="combobox"])'))`;
   await until(() => cdp.evaluate(`(() => {
     const section = ${panel};
     const trigger = section?.querySelector('button[role="combobox"]');
@@ -38,7 +38,7 @@ export async function checkBudgetDesktop({ cdp, first, artifactRoot, until, evid
   })()`), 'selected budget scope retained by real renderer');
   const opened = await cdp.evaluate(`(() => {
     const section = ${panel};
-    const edit = section?.querySelector('button.w-full');
+    const edit = section?.querySelector('button.w-full:not([role="combobox"])');
     if (!edit || edit.disabled) return false;
     edit.click();
     return true;
@@ -81,12 +81,14 @@ export async function checkBudgetDesktop({ cdp, first, artifactRoot, until, evid
     return true;
   })()`);
   assert(savedClick, 'Budget save button unavailable in real editor');
-  const settings = await until(async () => {
+  await until(async () => {
     const value = await cdp.evaluate('window.electronAPI.tokenUsage.getBudgetSettings()');
     const team = value?.teams?.['team:' + first];
     return team?.monthlyTokenLimit === 100 && team?.onExceeded === 'block_launch'
       ? value : false;
   }, 'durable team budget through real IPC', 45_000);
+  // This harness's until() resolves void on success, not the predicate value.
+  const settings = await cdp.evaluate('window.electronAPI.tokenUsage.getBudgetSettings()');
   assert(settings.updatedAt, 'Saved budget CAS revision unavailable');
   await until(async () => {
     const status = await cdp.evaluate('window.electronAPI.tokenUsage.getBudgetStatus()');
