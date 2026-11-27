@@ -103,8 +103,7 @@ test('OAuth cancel cannot replace durable record changed while native close is p
 test('late native OAuth completion cannot overwrite an externally replaced receipt', async t => {
   const f = fixture(); t.after(() => f.cleanup());
   await f.waiting();
-  await f.owner.complete({ ...original, commandId: 'TEST-complete', code: undefined })
-    .catch(() => undefined);
+  await f.owner.complete({ ...original, commandId: 'TEST-complete', code: 'TEST-code' });
   await until(() => f.completeCalls === 1);
   f.store.write({ ...f.store.read(input.operationId)!, providerId: 'TEST-replaced-native' });
   const bytes = f.bytes();
