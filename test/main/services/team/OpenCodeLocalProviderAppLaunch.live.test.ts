@@ -946,6 +946,8 @@ describe('OpenCode local provider fixture', () => {
       console.warn(rejected);
       console.warn(foreign);
       console.warn(malformed);
+      console.warn(`${warning}\n`);
+      console.warn(warning, new Error('cleanup failed'));
       const restartWarnings = warn.mock.calls.slice(start);
       console.warn(warning);
 
@@ -956,6 +958,8 @@ describe('OpenCode local provider fixture', () => {
         [rejected],
         [foreign],
         [malformed],
+        [`${warning}\n`],
+        [warning, expect.any(Error)],
         [warning],
       ]);
       expect(info).toHaveBeenCalledExactlyOnceWith(
@@ -2054,6 +2058,7 @@ function retainVerifiedRestartStopTiming(
     const rendered = call.map((part) => String(part)).join(' ');
     if (
       rendered.startsWith(prefix) &&
+      rendered.endsWith('(stopped=true)') &&
       /^\d+ms \(stopped=true\)$/.test(rendered.slice(prefix.length))
     ) {
       console.info(`[OpenCodeLocalProviderAppLaunch.live] verified restart stop: ${rendered}`);
