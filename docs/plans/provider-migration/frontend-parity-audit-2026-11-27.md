@@ -550,3 +550,56 @@ of early failure diagnostics. R3 additionally traced the diagnostic action
 and confirmed the navigation/retry distinction above. The independent final
 review approved this exact written plan. Implementation is approved after
 publication.
+
+## Continuation J: retain exact password-hash flow locations
+
+The existing CodeQL review reports eight `apiKey` paths into
+`managementDigest`, but its current connector interface exposes neither the
+scan analysis nor annotation details. The previous successful analysis has
+no downloadable result artifact. Its original log confirms generated SARIF.
+Use the next ordinary analysis's existing output to retain just the source
+locations needed to review this known finding. Do not change queries,
+permissions, analysis arguments, runtime versions, concurrency or deadlines,
+and do not dispatch or rerun a workflow.
+
+Add an ID to the existing analyze step. In its JavaScript/TypeScript lane,
+project `sarif-output` into one explicitly named diagnostic JSON file using a
+small `scripts/ci` helper. Upload only that file with the existing repository
+`actions/upload-artifact@v4` convention and a short retention period. Never
+upload raw SARIF, source snippets, messages, properties, database directories
+or unrelated findings. This diagnostic does not replace the CodeQL result or
+decide that the security issue is fixed.
+
+Keep only `js/insufficient-password-hash` results, resolving a rule index
+against that run's rules and rejecting a conflicting explicit ID. Resolve
+location references, then accept only relative paths present in `git ls-files`;
+exclude absolute paths, URLs, traversal and untracked files.
+Decode URI escapes before checking traversal, reject query/fragment and drive
+paths, and require every index/base reference to resolve unambiguously within
+the checked-out repository. Unresolved selected-rule locations make the report
+partial. Keep bounded
+positive integer line/column values and result/code-flow/thread-flow/location
+indices. Include actual checked-out Git commit/tree and workflow run/job/
+matrix provenance; a PR head, when available, is separate from the analyzed
+merge checkout.
+
+Bound input bytes, files, result/flow/location counts and output bytes. Missing,
+malformed, truncated or rejected required metadata must be explicitly
+unavailable or partial, with structural counters. It must never look like a
+complete empty result or successful security review. Do not print parser
+exceptions containing input text. The optional diagnostic leaves existing
+analysis success/failure semantics intact; inspect its completeness separately.
+
+Scope: the existing CodeQL workflow, one focused JavaScript helper and its
+Node tests. Estimate 80-140 helper lines, 20-30 workflow lines and 80-140 test
+lines; complexity 3/10, confidence 9/10, reliability target 9/10. Test an actual
+nested SARIF flow shape, rule-index resolution and conflicts, unrelated rules,
+unsafe/untracked paths, malformed/truncated input, size/count bounds and
+omission of planted secret text. No new dependency or generic SARIF framework.
+
+R1 checked the official analyze output contract and the unavailable existing
+artifact paths. R2 approved the metadata-only boundary and required explicit
+partial status, source provenance and rule/reference validation. R3 approved
+the exact plan with the decoded-path/reference guards and explicit partial
+status above. Reviews are reconciled; implementation is approved after
+publication.
