@@ -775,3 +775,175 @@ current-profile reselection. R2 reviewed the written plan and uncertain-write
 rules independently. R3 required the repeated current-token check and its
 A-to-B regression; R2 approved that refinement and the initial-claim addendum.
 The reviews are reconciled; implement only after this plan is published.
+
+### G1b original-receipt conflict refinement
+
+Independent implementation review found that merely refusing a changed original
+receipt does not prevent later cleanup from writing the old in-memory snapshot.
+Keep a separate private `receiptConflict` fence; it is not an uncertain-write
+flag. If fresh completion preparation observes a missing or replaced original,
+fence that entry, close its original native conversation, skip subsequent journal
+writes and retain custody. An immutable-identity mismatch observed by retained
+replay fences only the non-retired original live entry, without native action
+from replay itself. Later native completion or cleanup must not overwrite the
+observed bytes. Validate the caller's original completion ID first; an incorrect
+ID or code against a coherent receipt must not fence a legitimate operation.
+A retired entry with uncertain publication keeps its existing handling.
+
+After asynchronous preparation, check the original writer/entry without side
+effects, then reread and compare the original receipt, then check the original
+deadline, and only then publish, with no await in this sequence. This order
+prevents deadline cleanup from replacing a receipt that changed while crypto was
+pending. Regressions must inspect bytes after native completion, close and
+cleanup, including missing/replaced receipts combined with expiry before the
+timer callback. The initially source-confirmed start write-then-throw and live
+replay mismatch now also have real failing filesystem regressions before their
+fixes. Final passing evidence is recorded after the implementation checks.
+
+## Continuation P1: bounded Runtime input admission before product publication
+
+Status: reviewed before implementation. R1d reconciles the author review, root R2 and independent frontend R3. Source audit: fe4a80669d1f5976f5396b0805458f57823bfefe; the integration base is now 3e78bf6f332f66975fc39305fcc44d898cc25efd, preserving concurrent G1/I/J, task-inventory paging and CodeQL diagnostic validation. The incoming seven files do not overlap this production manifest. No P1 production changes or P1 tests have run; this publication records the implementation contract, not a readiness claim.
+
+### 1. Confirmed defect and existing bounds
+
+The current Team accepts message text by JavaScript string length (up to 1,000,000 units), formats it, writes an inbox row and a pending outbox, then marks the Team command completed. Runtime lookup/admission later rejects UTF-8 content above its default 64 KiB. Thus 30,000 CJK characters (90,000 UTF-8 bytes) can become a permanently held delivery after product effects.
+
+Sources: team/validateTeamCommand.ts:13–15; team/executeTeamCommand.ts:94–217,219–267; team/commitTeamMessage.ts:30–37,75–95,105–123; runtime/RuntimeOwner.ts:58–59,276–303; runtime/runtimeDelivery.ts; team/DeliveryRecovery.ts.
+
+| Boundary | Current evidence | Decision |
+|---|---|---|
+| Frontend message/comment length | src/shared/constants/teamLimits.ts: MAX_TEXT_LENGTH=50,000 JS units; MessageComposer uses trimmed .length | Keep this contract, including Unicode. |
+| Common captured Runtime profile | composition/runtimeProfile.ts:37–54 permits inputBytes up to 8 MiB | Reuse this existing upper bound for the generic Host envelope; do not invent 512 KiB. |
+| OpenCode | runtimeProfile.ts:165–173 caps inputBytes at 256 KiB; pinned old-provider-implementations@56afd245.../v2-input-validation.ts:28 enforces final UTF-8 text <=256 KiB | Preserve exact captured bound and pinned transport. |
+| Runtime queue | 128 admitted/active inputs by default; old 64 KiB each implies at most 8 MiB original text | Preserve count128 and explicitly enforce aggregate8MiB when Host raises its per-input envelope. |
+| Runtime state | FileRuntimeStore.ts:206–215,284–286:16 MiB serialized state with512KiB settlement reserve | Do not increase either limit. |
+| Public command receipt | boundProductCommandReceipt.ts:10:768KiB projection | Keep; this is not a native-delivery budget. |
+| Attachments | Existing refs/count, message batch20MiB, and provider-specific media budgets remain separate | Do not count binary/base64 media as text or increase media budgets. |
+| Cross-team frontend parity | Five Host/Main input/output/MCP checks currently use48,000 units although the shared composer allows50,000; private intent JSON is capped96KiB | Align all five with one50,000 contract constant and use the existing240KiB envelope as the private intent cap, plus an independent exact public-row fit check before publication. |
+| Cross-team readback | Existing page240KiB; MCP result256KiB; whole rows only | Preserve both output caps and cursor protocol; use the same paged wrapper and +256 continuation reserve to prove a new row fits. |
+
+There is no production app literal default inputBytes to raise. readTeamHostProfile parses the pinned private profile; resolveRuntimeRecipe clones its exact seed/template, and all provider adapters forward profile.limits unchanged. The8192/65536 literals found by local rg are finite TEST fixture/profile writers. A new parity regression supplies an explicit capable profile; retained profiles and original qualification fixture limits must not be rewritten.
+
+### 2. Small shared policy and original identity
+
+Reuse existing contracts rather than introduce another owner or facade:
+
+- Add a private synchronous TeamInputPreflight function type in existing team/ports.ts. Its argument is Pick<ImmutableDelivery, 'binding' | 'content' | 'attachments'>. Return true/false for the known content-byte fit only; stale identity, missing original material, or authority errors retain their existing exceptions. This distinction lets fresh task size failure become TaskPolicyRejected without converting an uncertain failure into a false rejection.
+- TeamOwner retains this one readonly callback; createFilesystemTeamOwner forwards it; TeamHost injects its existing runtime closure. A standalone composition without the Host callback retains the existing64KiB technical default.
+- RuntimeTeamCoordinator resolves the exact captured MemberEntry by binding/run/member/generation, asserts the original writer/current capture, and calls one focused input projection helper. No display-name lookup, selected-team fallback, native open, Runtime mutation, await, new persistence, queue, or cache.
+- Keep the generic RuntimeOwner default compatible. The Team Host composition explicitly uses the shared common8MiB envelope and8MiB aggregate queued-text cap. Honor min(common maximum, entry.profile.limits.inputBytes) for each captured receiver. The OpenCode schema remains256KiB.
+- RuntimeOwner uses the SAME readonly predicate through a small optional fresh-input hook in its existing options. Invoke it only AFTER findRuntimeInput confirms there is no existing input and BEFORE queue/state writes. Do not put content validation inside authorize('admit'), which runs before identity lookup and would incorrectly re-resolve attachments for an already-admitted replay. Current authority checks still run as today. Read/lookup/fingerprint/cancellation of retained intent must not acquire a new current-profile content restriction; original receipts remain inspectable and cancellable.
+- Extract the coordinator's existing deliveryPort boilerplate into one small function so its799-line source can shrink before adding this delegation. TeamOwner is797lines; the readonly callback/type/assignment wiring must fit <=800. Do not raise any size baseline or add exceptions.
+
+The callback validates the immutable original intent, not a reformatted replacement. It never changes a fingerprint, receipt identifier, generation, native session selector, or captured profile.
+
+### 3. Publication boundaries
+
+#### Ordinary, rich and native messages
+
+For a genuinely new command, derive exactly the same actor, recipient role, effect messageId and cross/group context as commitTeamMessage, call formatTeamMessage, and validate the projected native content before executeTeamCommand's first receipt write at217. Skip native-budget validation for a human inbox-only recipient or Host-owned /cost response.
+
+Keep the completed/rejected replay branch before new preflight. commitTeamMessage also validates an original continuation before its inbox write, but a retained uncertain receipt stays held on failure; it is never retroactively labeled not applied. A retained90kB intent may recover unchanged if its original captured provider supports it after the generic64KiB bottleneck is removed.
+
+#### Tasks, mentions, edits and clarification
+
+TaskEffectPlan already runs canonical Task policy in a detached snapshot. This is the right source of exact notification bytes, including task starts, edits, comments/mentions and clarification answers.
+
+Extend the existing TaskMutationPort.prepare with a synchronous notification-validation callback. After target snapshot creation at230, derive all notifications currently calculated at269 and validate every recipient with a captured native binding before any stage-file write at247 or durable plan write at285. Validate the whole batch first; an overflowing later recipient must not leave earlier notifications applied.
+
+TaskRecovery supplies the captured taskRecipients bindings. A fresh known size failure raises existing TaskPolicyRejected, so the existing product-preimage check produces a rejected command with unchanged board, inboxes and outboxes. Other exceptions retain hold semantics. Loaded original plans get a hold-only validation before task obligations, retraction proof/outbox changes and mutations.publish. Do not reconstruct or rewrite original plan bytes.
+
+Offline members without a native target still receive the existing product-only behavior; arbitrary long non-notifying task fields are not reduced to a message byte limit.
+
+#### Cross-team
+
+The new intent must pass exact crossTeamInboundText and captured target policy before TeamCrossTeamCommands writes the source receipt, before cascade.record, target.receive, sender copy or source outbox append.
+
+The existing96KiB serialized-intent cap also blocks plain50k CJK; changing character checks alone is insufficient. Reuse a shared240KiB byte budget, derived from the existing unchanged page envelope, for the private intent. Separately extract the exact public outbox-row projector from createHostCrossTeamComposition into existing crossTeamRecords, preserving field values/order and bytes. Before first source write, measure both JSON.stringify(intent) and the projected row within the SAME empty paged wrapper plus the existing +256 continuation reserve. The row must remain readable as a one-row page after history grows. Do not infer public row size from raw text or private intent size.
+
+Keep page240KiB, MCP256KiB, row-count bound, cursor signing/protocol and revision/fingerprint serialization unchanged. Plain50k CJK plus ordinary metadata fits; a combined payload with maximal refs/summary or pathological JSON escaping in the body (for example, 50k non-NUL control or unpaired-surrogate units) may still refuse before any effect. No truncation or split-row protocol is introduced.
+
+The new row-fit gate applies only when creating a fresh original source intent. Completed lookup/replay does not rebuild or recapture it. The larger structural read bound accepts prior96KiB records without altering their bytes; existing incomplete96KiB originals retain their authoritative continuation. Existing cursors for unchanged rows must still work byte-for-byte. Do not run a new current-profile or per-command content policy merely to read old history.
+
+Important authority constraint: existing target.assertOriginal calls CrossTeamPairAuthority.assertTarget -> assertSource, which REQUIRES the source receipt. It cannot run before source publication. Add a narrowly separate readonly target preflight which compares authority.target(...) with the captured target and checks content. Call it inside createOriginalIntent. Do not weaken assertSource/assertOriginal or treat a successful preflight as delivery authority. The existing authoritative continuation checks remain.
+
+#### Group fanout
+
+Group envelopes currently serialize the complete physical message (including text) and then append the raw text. A50k-unit CJK body is therefore about300kB. Preserve those exact bytes/fingerprints: capable Claude/Codex profiles can accept this; OpenCode256KiB must refuse the whole send before publication.
+
+Reuse existing private GroupChatRun/HostGroupRun with a readonly captured inputBytes bound, supplied for Host runs by readGroupRuntime. For provider='host', absence, a non-safe-integer, non-positive value or value above the common bound must refuse with no fallback. Capture the full original entry.profile digest privately and compare it in isCurrent; today's runKey covers binding/config/sessionRef but would miss an in-place limits change. Keep runKey and all persisted fingerprints byte-identical. Inside createTeamGroupChatsFeature, build the canonical row and every exact physical row with one reused constructor (same timestamp, physical ID, recipient name, runKey and metadata). Validate EVERY Host receiver's groupInboundText before default registry save and canonical human inbox save, and before any fanout. Recheck existing currentness as today.
+
+Change groupInboundText's parameter to Pick<CapturedGroupIntent,'message'> if necessary; formatting stays byte-identical. This route needs no new GroupCommands/createGroupCommandAccess/createTeamCommandAccess plumbing. Do not add a new wire rejected phase: existing private prepared/held source receipt behavior remains, while the caller gets the original failure and no canonical row, default group creation or partial fanout is published.
+
+### 4. Exact attachment and context order
+
+Existing order is:
+
+Team format -> immutable Runtime original -> optional Runtime context prefix -> claimed-input attachment decoration -> provider submit.
+
+createMemberAttachmentPort.ts:95–125 performs a second text transformation: unsupported/native-ineligible file attachments become an agent block containing exact filename, saved artifact path, size and digest. Measuring only raw message text, attachment metadata length, or the number of refs is insufficient.
+
+Extract only this existing side-effect-free batch route/projection into composition/projectMemberInput.ts. Reuse the existing getMessageAttachmentRoute, strict UTF-8 decision, owned artifact metadata and bytes, decorateFileReferences and wrapAgentBlock. Validate the complete original owner/purpose batch. The actual claimed-input wrapper retains all existing phase, binding, inputId, operationRef, attached-session and Team delivery-authority checks.
+
+Use the same projection for fresh Team preflight and for context budgeting. Add original attachment refs to the private transient InputPreparationRequest; do not persist another representation.
+
+createTeamContextPreparation must compute:
+
+maxPrefixBytes = min(64KiB, min(common8MiB, captured inputBytes) - byteLength(projected original content)).
+
+It must validate projected original content even when there is no pending epoch. Existing TeamContextReminders already honors the offered budget: it may omit advisory board/roster snapshots according to its current policy, then refuses if mandatory instructions do not fit, before writing preparation/claim or submitting to native.
+
+No fixed192KiB original-content cap and no unconditional64KiB reservation are needed. A fixed reservation would unnecessarily reduce capable-provider parity and break small explicit profiles. Do not invent a future prefix at command admission. New context epochs/instructions can arrive after a command is queued; they are checked at the existing pre-claim preparation boundary. That existing safety hold is distinct from knowingly accepting an input that cannot fit its selected provider. Do not claim this patch guarantees that every future context condition can be anticipated.
+
+Keep the current prefix+raw nativePayloadHash/preparation proof semantics. Attachment projection remains later and separately tied to original refs. Native slash commands retain byte zero and skip the context prefix as today. No original text, standing instruction, task reference or attachment content is truncated.
+
+### 5. Queue and recovery semantics
+
+Add a validated optional maxQueuedInputBytes to RuntimeOwnerOptions. The Team Host sets8MiB explicitly. Count only admitted/active original text under the same member fence as the existing128-count check. Reject additional admission with existing busy before tx.put when either budget would be exceeded. Existing input identity lookup precedes these capacity checks so a full queue cannot break replay. Terminal/rejected inputs release this active-text budget; persisted history remains governed by the unchanged FileRuntimeStore ceiling/reserve.
+
+Update the private prepared-input read validator's current256KiB ceiling to the same existing common8MiB bound, or newly valid capable-provider proofs would fail on cold read. Per-captured-provider checks still enforce smaller limits; this does not change OpenCode's transport.
+
+Transient queue saturation continues through existing delivery recovery. A permanently too-large NEW command refuses before product effects. Existing partial/unknown records remain held; no automatic rewriting, truncation, resend with a new ID, or fabricated not-admitted result.
+
+### 6. Minimum production manifest
+
+All paths below are relative to packages/legacy-agent-host/src unless shown as src/features.
+
+| Files | Purpose |
+|---|---|
+| runtime/contracts.ts; runtime/runtimeDelivery.ts | Shared technical bounds, optional queued-byte setting, pure fallback byte predicate. |
+| runtime/RuntimeOwner.ts; runtime/inputPreparation.ts | Aggregate admission; transient attachment refs; cold prepared-input bound. |
+| composition/runtimeProfile.ts | Reuse common8MiB constant; preserve OpenCode256KiB. |
+| composition/RuntimeTeamCoordinator.ts; new composition/runtimeDeliveryPort.ts | Captured-entry delegation and small extraction of unchanged existing delivery-port behavior. |
+| composition/TeamHost.ts; team/ports.ts; team/TeamOwner.ts; adapters/team/createFilesystemTeamOwner.ts | One clean synchronous preflight callback and task preparation callback. |
+| team/executeTeamCommand.ts; team/commitTeamMessage.ts | Exact new-message preflight and conservative original continuation guard. |
+| team/TaskRecovery.ts; adapters/team/TaskEffectPlan.ts | Validate whole notification batch before staged/durable/product effects. |
+| new composition/projectMemberInput.ts; composition/createMemberAttachmentPort.ts; composition/createTeamContextPreparation.ts | Reuse exact file-reference projection and correct prefix remaining bytes. |
+| cross-team/HostCrossTeamCoordinator.ts; composition/createHostCrossTeamComposition.ts; cross-team/crossTeamRecords.ts; cross-team/pageCrossTeamOutbox.ts | Pre-source readonly target check, byte-identical shared public-row projection and exact admission/readback fit proof without weakening durable source authority. |
+| composition/readGroupRuntime.ts; group-chats/createTeamGroupChatsFeature.ts; group-chats/groupDelivery.ts | Captured group receiver budget and pre-publication whole-fanout validation, unchanged formatting. |
+| cross-team/contracts.ts; cross-team/validateCrossTeamIntent.ts; mcp/crossTeamTools.ts | Single cross-team50k contract constant for Host/MCP. |
+| src/features/agent-backend/contracts/crossTeam.ts; src/features/agent-backend/main/adapters/input/crossTeamValues.ts; src/features/agent-backend/main/adapters/output/projectCrossTeamResult.ts | Public contract re-export; Main accepts and reads back complete50k messages. |
+
+Total:31production files, two new focused helper files. Most existing files need1–15lines of wiring or checks. Estimate360–520added/changed production lines, including100–140moved lines; no new state owner/framework/schema migration. The four publication owners explain the file spread. If an implementation needs additional production paths or changes any public identity/receipt semantics, stop for another plan review.
+
+Tests: approximately650–900lines across6–9focused files using existing real filesystem/Host fixtures, not a second fake policy implementation. Complexity7.5/10; source-design confidence8/10 before finite reproduction.
+
+### 7. Verification gates
+
+First reproduce the reported30k CJK failure against the original built code using a new TEST-only capable profile and controlled provider. Then make focused regressions fail before production edits and pass after the change.
+
+- Direct messages: ASCII, Cyrillic, CJK and emoji;30k CJK and50k JS-unit edges; exact byte-for-byte provider content once, not merely a completed Team receipt.
+- Final formatted boundary±1 with action mode, summary, task refs and reply context. A fitting raw body with oversized envelope must refuse before initial receipt/inbox/outbox.
+- Explicit smaller profile, changed generation and changed captured profile must refuse without choosing another receiver. Human inbox and Host /cost controls remain unchanged.
+- Real TaskEffectPlan update title, task start, mention/comment and clarification-answer overflow: unchanged task/version/order/inboxes; zero task plan/stage, outbox or retraction effect. Test a later overflowing recipient to exclude partial batch publication; loaded partial originals retain hold.
+- Attachment native vs saved-file routes; Unicode/escaped filename/path; strict UTF-8 route; exact decorated boundary; same refs after reopen. Binary budgets remain unchanged.
+- Pending context plus file-reference overhead: the offered prefix budget uses actual projected bytes, no native submit occurs if mandatory context cannot fit, proof/hash bytes remain unchanged, slash command byte zero is preserved.
+- Cross-team: source receipt/outbox, cascade, target receipt/inbox and sender copy unchanged on overflow;50,000units accepted/read back on a capable profile,50,001refused; exact private-intent and public-row paged-wrapper boundary±1; maximal combined metadata and a pathological JSON-escaped body refuse before effects. A near-limit new row remains whole and readable after another row forces pagination; original replay never duplicates. An original cursor over unchanged old rows must yield the same page, with identical old revision/fingerprint/cursor bytes.
+- Group:50k CJK accepted unchanged on a capable Claude/Codex profile; same payload refuses before canonical/default-group/fanout effects on OpenCode256KiB; one insufficient receiver means zero partial publication. Missing/invalid Host bound and changed profile with unchanged binding/config/runKey also publish nothing.
+- Queue:128 count and8MiB aggregate independently enforced; exact replay at full capacity succeeds; settled input frees active bytes. No state/reserve increase.
+- Legacy completed replay bytes unchanged; original90k intent can recover unchanged when the original provider supports it; genuinely oversized/partial originals stay held and remain inspectable/cancellable. Cold read accepts legitimate new >256KiB capable-provider preparation.
+- Existing message/Task/cross/group/attachment/context suites, canonical Host build/typecheck, source-size guard and relevant lint. No native CI dispatch/rerun or new deadline relaxation is authorized by this plan.
+
+Potential test homes: new tests/team-input-admission.test.ts; existing runtime-owner.test.ts, task-notification-parity.test.ts, member-attachment-delivery.test.ts, runtime-cross-team-binding.test.ts, group-chats.test.ts, context-reminders.test.ts; existing Main cross-team projection tests for50k round trip. Extend shared fixtures narrowly instead of duplicating large setup.
+
+Ownership: G1b management files remain provider-owned; I renderer files and external Mac's savedTeamModelProbe.ts/teamRoster.ts/TeamLaunchOwner.ts are excluded. Context preparation is touched only to correct this byte calculation. No currently active external owner of createTeamContextPreparation.ts has been confirmed; perform a fresh source/branch collision check before editing rather than inventing an additional approval dependency. No merge to main, release, default activation, native acceptance claim or immutable receipt rewriting.
