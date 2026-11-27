@@ -82,7 +82,7 @@ export class JsonScheduleRepository implements ScheduleRepository {
       return { cleanup: onCommitted?.(), basePath: path.dirname(filePath) };
     });
     await cleanup;
-    // Clean up the captured profile even if the configured root changed during the write.
+    // Cleanup belongs to the profile whose metadata was deleted, even after a root change.
     const runsFile = path.join(basePath, 'runs', `${id}.json`);
     await fs.promises.unlink(runsFile).catch(() => undefined);
     const logsPath = path.join(basePath, 'logs', id);
@@ -127,6 +127,7 @@ export class JsonScheduleRepository implements ScheduleRepository {
   }
 
   async saveRun(run: ScheduleRun): Promise<void> {
+    const filePath = this.runsFilePath(run.scheduleId);
     const runs = await this.readRunsFile(run.scheduleId);
     const idx = runs.findIndex((r) => r.id === run.id);
     if (idx >= 0) {
@@ -136,7 +137,7 @@ export class JsonScheduleRepository implements ScheduleRepository {
     }
     // Enforce max limit
     const trimmed = runs.slice(0, MAX_RUNS_PER_SCHEDULE);
-    await this.writeRunsFile(run.scheduleId, trimmed);
+    await atomicWriteAsync(filePath, JSON.stringify(trimmed, null, 2));
   }
 
   async pruneOldRuns(scheduleId: string, keepCount: number): Promise<number> {

@@ -1,4 +1,5 @@
 import { modelSelectionSchema } from '@agent-teams/legacy-agent-host/team/contracts';
+import { parseOpenCodeQualifiedModelRef } from '@shared/utils/opencodeModelRef';
 
 import { projectLaunchSnapshot } from './projectLaunchSnapshot';
 
@@ -82,6 +83,19 @@ function projectMembers(
       workspace: text(selected.workspace, 8192),
       capabilities,
     };
+    if (selected.qualifiedModel !== undefined) {
+      const qualified = modelSelectionSchema.parse(selected.qualifiedModel);
+      const pair = parseOpenCodeQualifiedModelRef(qualified);
+      if (
+        options.provider !== 'opencode' ||
+        !pair ||
+        pair.modelId !== options.model ||
+        qualified !== qualified.trim() ||
+        !qualified.split('/').every(Boolean)
+      )
+        throw new Error('Invalid qualified launch model');
+      options.qualifiedModel = qualified;
+    }
     if (selected.workspaceInherited !== undefined) {
       if (typeof selected.workspaceInherited !== 'boolean')
         throw new Error('Invalid workspace source');

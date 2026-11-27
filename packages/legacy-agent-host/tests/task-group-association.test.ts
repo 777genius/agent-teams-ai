@@ -12,6 +12,7 @@ import { DEFAULT_TEAM_GROUP_CHAT_ID } from '../dist/group-chats/contracts.js';
 import { TeamOwner } from '../dist/team/TeamOwner.js';
 import { TeamOwnerError } from '../dist/team/contracts.js';
 import { teamCommandPath } from '../dist/team/commandEntries.js';
+import { createTeamMcpTools } from '../dist/mcp/tools.js';
 
 import type { FilesystemTeamOwnerOptions } from '../dist/adapters/team/createFilesystemTeamOwner.js';
 import type { TeamCommand } from '../dist/team/contracts.js';
@@ -61,6 +62,7 @@ function fixture(t: TestContext) {
     grants: [
       { principalId: 'admin', memberName: 'user', permissions: ['read', 'message.write', 'admin'] },
       { principalId: 'writer', memberName: 'user', permissions: ['read', 'task.write'] },
+      { principalId: 'alice', memberName: 'alice', permissions: ['read', 'task.write'] },
     ],
   };
   const owner = createFilesystemTeamOwner(options);
@@ -146,6 +148,25 @@ test('same-Team group link survives canonical create, receipt, lookup, snapshot 
   const reopened = createFilesystemTeamOwner(f.options).connect('writer');
   assert.deepEqual(reopened.execute(command), receipt);
   assert.equal(reopened.getTask(receipt.effects.taskId).groupChatId, groupId);
+});
+
+test('bound task_create forwards group context through existing owner authority and original replay', async (t) => {
+  const f = fixture(t);
+  await f.addGroup();
+  const tools = createTeamMcpTools(f.owner.connect('alice'));
+  const input = { commandId: 'TEST-mcp-group-task', subject: 'TEST linked MCP task', groupChatId: groupId };
+  const result = tools.call('task_create', input);
+  assert.notEqual(result.isError, true);
+  const receipt = f.owner.connect('alice').lookup(input.commandId)!;
+  assert.equal(f.persisted(receipt.effects.taskId).groupChatId, groupId);
+  await f.archive();
+  assert.deepEqual(tools.call('task_create', input), result, 'Original admission survives archive');
+  for (const target of [groupId, foreignId]) {
+    const commandId = `TEST-mcp-rejected-${target}`;
+    assert.throws(() => tools.call('task_create', { ...input, commandId, groupChatId: target }), code('invalid'));
+    assert.equal(f.owner.connect('alice').lookup(commandId), undefined);
+  }
+  assert.equal(f.writer.listTasks().length, 1);
 });
 
 test('missing, foreign and unmaterialized default groups reject before prepared receipt', (t) => {

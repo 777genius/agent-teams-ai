@@ -7,7 +7,7 @@ const kanbanStore = require('./kanbanStore.js');
 const agenda = require('./agenda.js');
 const { withTeamBoardLock } = require('./boardLock.js');
 const { wrapAgentBlock } = require('./agentBlocks.js');
-const { buildCommentNotificationMessage } = require('./taskCommentNotification.js');
+const { buildCommentNotificationMessage, buildDependencyStartInstructions } = require('./taskCommentNotification.js');
 const { buildTaskRef, mergeTaskRefs } = require('./taskReferences.js');
 const { findRecentDuplicateTask } = require('./taskCreationDeduplication.js');
 const { isTaskOpen } = require('./taskLifecycle.js');
@@ -486,12 +486,7 @@ function notifyUnblockedOwners(context, resolvedTask, options = {}) {
       if (allResolved) {
         lines.push(
           ``,
-          wrapAgentBlock(
-            `All dependencies for this task are now resolved.\n` +
-              `If you are idle, start working on it now:\n` +
-              `1. Check the full context: task_get { teamName: "${context.teamName}", taskId: "${blockedTask.id}" }\n` +
-              `2. Start the task: task_start { teamName: "${context.teamName}", taskId: "${blockedTask.id}", actor: "${blockedTask.owner}" }`
-          )
+          buildDependencyStartInstructions(context, blockedTask)
         );
       }
 

@@ -7,15 +7,18 @@ import type { ScheduleRun } from '@shared/types';
 const logger = createLogger('Service:SchedulerRecovery');
 
 export async function recoverInterruptedScheduleRuns(
-  repository: ScheduleRepository
+  repository: ScheduleRepository,
+  isCurrent: () => boolean = () => true
 ): Promise<{ recoveredCount: number; unavailableScheduleIds: ReadonlySet<string> }> {
   const schedules = await repository.listSchedules();
   const unavailableScheduleIds = new Set<string>();
   let recoveredCount = 0;
   for (const schedule of schedules) {
+    if (!isCurrent()) break;
     try {
       const runs = await repository.listRuns(schedule.id, { limit: 5 });
       for (const run of runs) {
+        if (!isCurrent()) break;
         if (
           run.status === 'warming_up' ||
           run.status === 'warm' ||

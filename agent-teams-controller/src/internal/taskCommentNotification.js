@@ -1,4 +1,5 @@
 const { extractAgentBlockContents, stripAgentBlocks, wrapAgentBlock } = require('./agentBlocks.js');
+const { createMemberMessagingProtocol } = require('./memberMessagingProtocol.js');
 
 /**
  * The inbox message a task comment turns into.
@@ -30,10 +31,14 @@ function quoteMarkdown(text) {
 
 function buildCommentNotificationMessage(context, task, comment) {
   const taskLabel = `#${task.displayId || task.id}`;
+  const reply = context.boundTaskTools === true
+    ? createMemberMessagingProtocol('native', true).boundTeamToolExample('task_add_comment', {
+        taskId: task.id, text: '<your reply>',
+      })
+    : `{ teamName: "${context.teamName}", taskId: "${task.id}", text: "<your reply>", from: "<your-name>" }`;
   const agentInstructions = [
     ...extractAgentBlockContents(comment.text),
-    `Reply to this comment using MCP tool task_add_comment:
-{ teamName: "${context.teamName}", taskId: "${task.id}", text: "<your reply>", from: "<your-name>" }`,
+    `Reply to this comment using MCP tool task_add_comment:\n${reply}`,
   ];
   return [
     `**Comment on task ${taskLabel}** _${task.subject}_`,
@@ -42,6 +47,23 @@ function buildCommentNotificationMessage(context, task, comment) {
     ``,
     wrapAgentBlock(agentInstructions.join('\n\n')),
   ].join('\n');
+}
+
+/** The dependency comment is also forwarded as a task wakeup; both use the same tool mode. */
+function buildDependencyStartInstructions(context, task) {
+  const bound = context.boundTaskTools === true;
+  const taskGet = bound
+    ? `task_get ${JSON.stringify({ taskId: task.id })}`
+    : `task_get { teamName: "${context.teamName}", taskId: "${task.id}" }`;
+  const taskStart = bound
+    ? createMemberMessagingProtocol('native', true).boundTeamToolExample('task_start', { taskId: task.id })
+    : `task_start { teamName: "${context.teamName}", taskId: "${task.id}", actor: "${task.owner}" }`;
+  return wrapAgentBlock(
+    `All dependencies for this task are now resolved.\n` +
+      `If you are idle, start working on it now:\n` +
+      `1. Check the full context: ${taskGet}\n` +
+      `2. Start the task: ${taskStart}`
+  );
 }
 
 /** Shared wording for the durable Main and captured Host comment handoff. */
@@ -69,6 +91,7 @@ function buildTaskCommentForwardNotificationText(task, comment, isUserAnswer = f
 
 module.exports = {
   buildCommentNotificationMessage,
+  buildDependencyStartInstructions,
   buildTaskCommentForwardNotificationText,
   quoteMarkdown,
 };

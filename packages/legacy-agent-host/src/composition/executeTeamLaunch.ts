@@ -153,11 +153,19 @@ export function selectedLaunchConfiguration(
       : profile.provider === 'opencode'
         ? profile.nativeOptions.variant
         : undefined;
+  // Native model IDs may contain slashes or repeat the provider prefix. Keep
+  // the private selection untouched and qualify the original pair for display.
+  const qualifiedModel = profile.provider === 'opencode' &&
+    /^[a-z0-9._-]+$/i.test(profile.nativeOptions.providerId) &&
+    !/\s/u.test(profile.model) && profile.model.split('/').every(Boolean)
+      ? `${profile.nativeOptions.providerId}/${profile.model}`
+      : undefined;
   return {
     provider: profile.provider,
     workspace: profile.cwd,
     ...(workspaceInherited === undefined ? {} : { workspaceInherited }),
     model: profile.model,
+    ...(qualifiedModel === undefined ? {} : { qualifiedModel }),
     capabilities:
       profile.provider === 'claude'
         ? ['model', 'effort', 'fastMode', 'permissions', 'context']
