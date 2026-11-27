@@ -70,6 +70,28 @@ jobs:
           config-file: ./.github/codeql/codeql-config.yml
 
       - name: Perform CodeQL Analysis
+        id: analyze
         uses: github/codeql-action/analyze@v4
         with:
           category: /language:${{ matrix.language }}
+
+      - name: Collect password-hash source locations (diagnostic)
+        id: flow_locations
+        if: ${{ always() && matrix.language == 'javascript-typescript' }}
+        continue-on-error: true
+        env:
+          CODEQL_SARIF_DIRECTORY: ${{ steps.analyze.outputs.sarif-output }}
+          CODEQL_ANALYSIS_OUTCOME: ${{ steps.analyze.outcome }}
+          CODEQL_FLOW_OUTPUT: ${{ runner.temp }}/codeql-password-hash-locations.json
+          CODEQL_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/ci/codeql-password-hash-locations.mjs
+
+      - name: Retain password-hash source locations (diagnostic)
+        if: ${{ always() && matrix.language == 'javascript-typescript' && steps.flow_locations.outcome == 'success' }}
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: codeql-password-hash-locations-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/codeql-password-hash-locations.json
+          if-no-files-found: warn
+          retention-days: 3

@@ -1,6 +1,10 @@
 import { useMemo } from 'react';
 
-import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
+import {
+  isHostTeamSelectionKey,
+  parseHostTeamRunId,
+  parseHostTeamSelectionKey,
+} from '@features/agent-backend/contracts';
 import { useAppTranslation } from '@features/localization/renderer';
 import { useStore } from '@renderer/store';
 import {
@@ -21,14 +25,23 @@ import type { FailedOpenCodeRetryResult } from './createHostFailedMemberRetry';
 import type { MemberLaunchDiagnosticsPayload } from '@renderer/utils/memberLaunchDiagnostics';
 import type { TeamProvisioningPresentation } from '@renderer/utils/teamProvisioningPresentation';
 
-export function useTeamProvisioningPresentation(teamName: string): {
+export function useTeamProvisioningPresentation(
+  teamName: string,
+  runtimeTeamName = teamName
+): {
   presentation: TeamProvisioningPresentation | null;
   cancelProvisioning: ((runId: string) => Promise<void>) | null;
   retryFailedOpenCodeTeammates: (() => Promise<FailedOpenCodeRetryResult>) | null;
   memberDiagnostics: MemberLaunchDiagnosticsPayload[];
   runInstanceKey: string | null;
+  diagnosticsTeamName: string;
 } {
   const { t } = useAppTranslation('team');
+  const splitHost =
+    teamName !== runtimeTeamName &&
+    isHostTeamSelectionKey(teamName) &&
+    isHostTeamSelectionKey(runtimeTeamName);
+  const executionTeamName = splitHost ? runtimeTeamName : teamName;
   const {
     progress,
     isTeamAlive,
@@ -42,25 +55,63 @@ export function useTeamProvisioningPresentation(teamName: string): {
     runtimeSnapshot,
     leadActivity,
     currentRuntimeRunId,
+    runtimeCurrent,
   } = useStore(
-    useShallow((s) => ({
-      progress: getCurrentProvisioningProgressForTeam(s, teamName),
-      isTeamAlive: selectTeamIsAliveForName(s, teamName),
-      cancelProvisioning: s.cancelProvisioning,
-      retryFailedOpenCodeSecondaryLanes: s.retryFailedOpenCodeSecondaryLanes,
-      restartMember: s.restartMember,
-      contextId: s.activeContextId,
-      teamMembers: selectTeamMemberSnapshotsForName(s, teamName),
-      memberSpawnStatuses: s.memberSpawnStatusesByTeam[teamName],
-      memberSpawnSnapshot: s.memberSpawnSnapshotsByTeam[teamName],
-      runtimeSnapshot: s.teamAgentRuntimeByTeam?.[teamName],
-      leadActivity: s.leadActivityByTeam?.[teamName],
-      currentRuntimeRunId: s.currentRuntimeRunIdByTeam?.[teamName],
-    }))
+    useShallow((s) => {
+      let progress = getCurrentProvisioningProgressForTeam(s, teamName);
+      if (splitHost) {
+        try {
+          if (
+            !progress ||
+            progress.teamName !== teamName ||
+            parseHostTeamRunId(progress.runId).handleId !==
+              parseHostTeamSelectionKey(executionTeamName)
+          )
+            progress = null;
+        } catch {
+          progress = null;
+        }
+      }
+      const currentRuntimeRunId = s.currentRuntimeRunIdByTeam?.[executionTeamName];
+      const runtimeCurrent =
+        !splitHost || Boolean(progress && currentRuntimeRunId === progress.runId);
+      const spawn = s.memberSpawnSnapshotsByTeam[teamName];
+      const spawnCurrent = !splitHost || Boolean(progress && spawn?.runId === progress.runId);
+      const runtime = s.teamAgentRuntimeByTeam?.[executionTeamName];
+      const runtimeSnapshot =
+        runtimeCurrent &&
+        (!splitHost ||
+          (runtime?.teamName === executionTeamName && runtime.runId === progress?.runId))
+          ? runtime
+          : undefined;
+      return {
+        progress,
+        runtimeCurrent,
+        isTeamAlive: selectTeamIsAliveForName(s, runtimeCurrent ? executionTeamName : undefined),
+        cancelProvisioning: s.cancelProvisioning,
+        retryFailedOpenCodeSecondaryLanes: s.retryFailedOpenCodeSecondaryLanes,
+        restartMember: s.restartMember,
+        contextId: s.activeContextId,
+        teamMembers: selectTeamMemberSnapshotsForName(
+          s,
+          runtimeCurrent ? executionTeamName : undefined
+        ),
+        memberSpawnStatuses: spawnCurrent
+          ? splitHost
+            ? spawn?.statuses
+            : s.memberSpawnStatusesByTeam[teamName]
+          : undefined,
+        memberSpawnSnapshot: spawnCurrent ? spawn : undefined,
+        runtimeSnapshot,
+        leadActivity:
+          !splitHost || runtimeSnapshot ? s.leadActivityByTeam?.[executionTeamName] : undefined,
+        currentRuntimeRunId: runtimeCurrent ? currentRuntimeRunId : undefined,
+      };
+    })
   );
 
   const presentation = useMemo(() => {
-    if (progress?.state === 'ready' && isTeamAlive === false) return null;
+    if (progress?.state === 'ready' && (!runtimeCurrent || isTeamAlive === false)) return null;
     return applyLeadActivityToProvisioningPresentation(
       buildTeamProvisioningPresentation({
         progress,
@@ -83,6 +134,7 @@ export function useTeamProvisioningPresentation(teamName: string): {
     );
   }, [
     isTeamAlive,
+    runtimeCurrent,
     memberSpawnSnapshot,
     memberSpawnStatuses,
     progress,
@@ -95,8 +147,10 @@ export function useTeamProvisioningPresentation(teamName: string): {
   const memberDiagnostics = useMemo(
     () =>
       buildTeamMemberLaunchDiagnosticsPayloads({
-        teamName,
-        runId: runtimeSnapshot?.runId ?? memberSpawnSnapshot?.runId ?? progress?.runId,
+        teamName: executionTeamName,
+        runId: splitHost
+          ? progress?.runId
+          : (runtimeSnapshot?.runId ?? memberSpawnSnapshot?.runId ?? progress?.runId),
         members: teamMembers,
         memberSpawnStatuses,
         memberSpawnSnapshot,
@@ -108,17 +162,20 @@ export function useTeamProvisioningPresentation(teamName: string): {
       progress?.runId,
       runtimeSnapshot,
       teamMembers,
-      teamName,
+      executionTeamName,
+      splitHost,
     ]
   );
 
   return {
     presentation,
+    diagnosticsTeamName: executionTeamName,
     cancelProvisioning,
     retryFailedOpenCodeTeammates: isHostTeamSelectionKey(teamName)
-      ? presentation && typeof restartMember === 'function'
+      ? presentation && runtimeCurrent && typeof restartMember === 'function'
         ? createHostFailedMemberRetry({
-            teamName,
+            teamName: executionTeamName,
+            provisioningTeamName: teamName,
             runId: presentation.progress.runId,
             contextId,
             memberNames: presentation.retryableOpenCodeSecondaryFailedNames,
@@ -142,6 +199,8 @@ export function useTeamProvisioningPresentation(teamName: string): {
           captureContextScopedRequestEpoch(),
           teamName,
           captureTeamLocalStateEpoch(teamName),
+          executionTeamName,
+          captureTeamLocalStateEpoch(executionTeamName),
           progress.runId,
           progress.startedAt,
         ])

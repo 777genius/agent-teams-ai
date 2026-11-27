@@ -603,3 +603,175 @@ partial status, source provenance and rule/reference validation. R3 approved
 the exact plan with the decoded-path/reference guards and explicit partial
 status above. Reviews are reconciled; implementation is approved after
 publication.
+
+### G1, I and J implementation verification
+
+The G1 and I plans were published in `208353d1c084ad3ef87d7e342f76b9b4746fd2a3`
+and the J plan in `fe4a80669d1f5976f5396b0805458f57823bfefe`, before their
+respective implementations. Root source review and independent final review
+approved the resulting changes. J review additionally found and corrected
+explicit null indexed URI/base handling, malformed optional related locations
+and invalid shared indices bypassing the visited-location count.
+
+- G1: the checked Host production build and a strict scoped compile inheriting
+  the Host test compiler options passed. Seven relevant suites passed **72/72**
+  tests with no skips, covering real scrypt, bounded admission, original command
+  replay, cross-resource claims, cancellation/currentness and an uncertain
+  journal write. The original canonical digest remains unchanged for legacy
+  records. The helper is 94 lines; production changes add 180 and remove 36
+  lines across four files. Other credential/configuration witnesses and OAuth
+  completion remain separate work; this is not closure of the full CodeQL
+  finding.
+- I: **118/118** tests passed across seven suites using real React/Zustand
+  rerenders and the retry harness. These include the physical diagnostic API
+  request, logical-offline/physical-live banner, early failure, stale project
+  and runtime data, stop/recovery, navigation and both retry owners' fences.
+  Fast lint passed with three existing `TeamDetailView` hook warnings, and
+  formatting, source-size and provisioning architecture checks passed. The
+  five production files add 127 and remove 34 lines, within the planned
+  104-176 changed-line range; `TeamDetailView` remains 3,653 lines under its
+  frozen 3,688-line cap. Regression coverage is larger than estimated because
+  the diagnostic action and same-mount retry completion needed actual component
+  tests. Native membership acceptance still requires its original run.
+- J: **24/24** Node tests passed with no skips. Planted private text is excluded;
+  unsafe or ambiguous references, failed analysis, bounds and missing input
+  cannot become complete evidence. The CLI tests use an isolated TEST Git
+  repository to verify source identity, dirty-source refusal and exclusive
+  output creation. A parsed YAML comparison confirmed that removing the two
+  diagnostic steps and the analyze step ID reproduces the original workflow
+  exactly. The helper is 208 lines and tests 199 lines, above the initial
+  estimate to keep bounded file reads, indexed references and provenance
+  explicit; no framework or dependency was added. Actual analysis findings
+  await the next ordinary CodeQL result and artifact.
+
+The pinned Node 24.21.0 and existing TypeScript 7 compiler were used. Full root
+type checking, the full Host test type check and the renderer scoped strict
+check were terminated with exit 137 by local memory pressure; they are **not
+passes**. The checked Host build used resource settings only
+(`GOMAXPROCS=2`, `GOMEMLIMIT=600MiB`, `GOGC=50`), without changing compiler
+options or dependencies. Current GitHub checks are still pending/queued.
+F/F.1 additionally have 30 observer tests, 78 existing selection controls and
+the canonical scripts type check passing; none replaces the original native
+selection or membership E2E evidence. The existing PR remains open and the
+remaining provider and recovery review continues.
+
+After an execution-environment restart removed the temporary checkout, the
+exact published `fe4a806` commit/tree was fetched again. All five I production
+blob hashes matched the prior review. The restored Host build, G1 **72/72**,
+I **118/118**, J **24/24**, the three architecture/artifact guards and the
+CodeQL workflow semantic comparison passed again. Full canonical root type
+checking was retried with the pinned compiler and still exited **137** without
+type diagnostics; it remains unverified and is not replaced by these passes.
+
+## Continuation G1b: OAuth completion identity and uncertain claims
+
+The original OAuth completion stores a fast digest of the parsed
+`{commandId, code: input.code ?? null}`. Pasted codes can be low entropy.
+The existing transport already awaits the action, so the owner can prepare a
+strong fingerprint asynchronously without a public protocol change. Limit
+production changes to `OAuthOperationOwner.ts` and `commandRecords.ts`,
+reusing the G1 helper unchanged.
+
+Add a private optional `completionFingerprintKdf` using G1's strict version-1
+schema. Require an original completion ID/fingerprint and
+`completionMethod === 'code'` when present. New explicit pasted-code claims
+derive with a fresh descriptor. Keep the exact canonical input and trimming.
+Native/browser `code: null` completions remain secret-free SHA. Marker-less
+legacy records retain their original comparison and bytes. On replay choose
+the algorithm from the stored descriptor, never from completionMethod: a
+code-capable native browser flow can legitimately have a marker-less null-code
+completion.
+
+### Admission and cancellation ordering
+
+Before the first KDF await, reserve one pending preparation on the same
+`ActiveOAuth` entry: exact parsed command ID/code, a shared result promise and
+an always-settled signal. Identical private input joins the original result;
+different input conflicts. Do not persist the pending object or create another
+fast digest of the code. On every outcome clear only that pending token before
+resolving its always-settled signal. This does not add a namespace fence or
+release the running OAuth reservation on KDF busy/failure.
+
+The browser observer waits for preparation settlement, without letting a
+preclaim rejection enter its existing catch-to-stop path. After each settlement
+it checks the *current* pending token again. If A fails and B starts before the
+observer continues, it must wait for B. Recheck the same entry and original
+deadline at each boundary; there is no await between the final no-pending/
+currentness/deadline checks and a native completion claim. An explicitly
+published completion keeps its original ID even if the browser result is
+already available.
+
+For a new live completion, after KDF recheck the current writer, seal, same
+active entry and original target, and the original expiresAt even if the timer
+has not executed. Reread the same operation, checking captured immutable
+identity and its original waiting state with no completion claim. Missing,
+replaced or already-claimed data refuses without overwrite or native effect.
+Publish synchronously, then finish on the same native conversation. Do not
+extend the deadline or reselect a native owner.
+
+Cancel, expiry and close fence and close the original native conversation;
+seal fences and aborts immediately as before. None waits for KDF. A late result
+cannot publish, dispatch or affect the next operation in that namespace.
+
+### Retained replay and uncertain publication
+
+Before replay derivation, copy immutable operation/completion identity:
+schema/kind, operation ID, profile/config/provider, start fingerprint,
+selection/resource, method, original expiry, completion method, original
+completion ID/fingerprint and descriptor. After derivation assert the current
+writer and reread using the supplied original operation/profile/config.
+Compare that immutable identity; allow phase, sequence, reason and held status
+to advance and return the latest original snapshot. Preserve cold/terminal
+replay after expiry and after a change to the currently selected profile:
+replay must not call select/assertBound. It performs no native action,
+migration or journal write.
+
+A real isolated FileManagementCommandStore reproduction already confirmed that
+completion write can rename successfully and then throw. Existing cleanup
+rewrites the old entry.saved, removing the just-durable completion ID.
+Add a narrow uncertain-completion-publication flag only when that completion
+write was attempted and threw. Fence, abort and close the original native
+conversation, but skip all later journal writes for that uncertain entry and
+retain its namespace hold even if native close succeeds. Preserve the exact
+original durable bytes. Prewrite KDF/currentness failures do not set this flag.
+Do not change generic publish ordering or unrelated authorization transitions.
+
+The initial start claim has the same source-confirmed release boundary:
+its catch currently releases the live namespace even when the initial write
+may have committed. Add a local claimWriteAttempted flag, set immediately
+before the initial store.write. Failures before the attempt release the
+transient reservation; an attempted-write exception retains the hold and
+rethrows the original error. Never authorize or rewrite an uncertain initial
+receipt. Before implementing this part, reproduce it with the actual isolated
+file store, then retain a failing live/cold regression. This initial-claim
+case has source evidence so far, not a completed runtime reproduction.
+
+### Verification and scope
+
+Use the existing OAuth/store suites and update the two direct complete callers
+in opencode-management tests to await preparation. Cover real scrypt with a
+one-character TEST code; trimming; fresh/stable descriptor; no fast parallel
+digest; cold byte-preserving replay; changed ID/code; invalid descriptor; and
+legacy/native null-code receipts, including completionMethod code.
+
+Hold crypto deterministically to check identical joins, conflicting inputs,
+browser success/failure, busy/failed preparation, the A-failure/B-admission
+race, cancellation, expiry before the timer callback, seal/close, writer and
+target changes, missing/replaced receipts and latest progress on replay.
+Cleanup must precede crypto settlement and late callbacks must have no effect.
+For completion write-then-throw verify actual native close, zero native
+complete, unchanged disk bytes/ID/descriptor, and live/cold namespace holds.
+For initial write-then-throw verify zero authorize, unchanged bytes and both
+holds; a prepare failure before writing must remain retryable. Run existing
+authorization, namespace serialization, rejection, expiry and shutdown tests.
+
+Estimate 120-180 changed production lines in two files and 210-310 regression
+lines. Complexity 6/10, design confidence 8.5/10, reliability target 9/10 pending
+implementation, independent source review and tests. Start fields and other
+credential-derived witnesses remain separate review work.
+
+R1 approved the narrow owner/schema scope and required cold replay without
+current-profile reselection. R2 reviewed the written plan and uncertain-write
+rules independently. R3 required the repeated current-token check and its
+A-to-B regression; R2 approved that refinement and the initial-claim addendum.
+The reviews are reconciled; implement only after this plan is published.

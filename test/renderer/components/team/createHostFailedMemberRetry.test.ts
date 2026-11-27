@@ -152,3 +152,102 @@ it('keeps a copied failed generation and refuses to invent a missing source obse
   await expect(retry()).rejects.toThrow('Failed teammate status is unavailable');
   expect(f.restartMember).not.toHaveBeenCalled();
 });
+
+function projectFixture() {
+  const f = fixture();
+  const provisioningTeamName = hostTeamSelectionKey('TEST-logical-owner');
+  f.state.currentRuntimeRunIdByTeam[provisioningTeamName] = runId;
+  f.state.currentProvisioningRunIdByTeam[provisioningTeamName] = runId;
+  delete f.state.currentProvisioningRunIdByTeam[teamName];
+  const retry = createHostFailedMemberRetry({
+    teamName,
+    provisioningTeamName,
+    runId,
+    contextId: f.state.activeContextId,
+    memberNames: f.names,
+    failedSelections: f.failedSelections,
+    getState: () => f.state,
+    restartMember: f.restartMember,
+  });
+  return { ...f, provisioningTeamName, retry };
+}
+
+it.each(['absent', 'same'] as const)(
+  'retries the captured physical project with a logical progress owner and %s physical progress pin',
+  async (pin) => {
+    const f = projectFixture();
+    if (pin === 'same') f.state.currentProvisioningRunIdByTeam[teamName] = runId;
+    await expect(f.retry()).resolves.toEqual({ kind: 'host', attempted: ['Alice', 'Bob'] });
+    expect(f.restartMember.mock.calls).toEqual([
+      [teamName, 'Alice', undefined, f.failedSelections.Alice],
+      [teamName, 'Bob', undefined, f.failedSelections.Bob],
+    ]);
+  }
+);
+
+for (const timing of ['before', 'between'] as const) {
+  it.each([
+    'logical-runtime',
+    'logical-progress',
+    'physical-runtime',
+    'physical-progress',
+    'logical-epoch',
+    'physical-epoch',
+    'logical-ignored-runtime',
+    'logical-ignored-progress',
+    'physical-ignored-runtime',
+    'physical-ignored-progress',
+    'context',
+  ] as const)(
+    'refuses project retry after %s changes ' + timing + ' member actions',
+    async (change) => {
+      const f = projectFixture();
+      const revoke = () => {
+        const logical = f.provisioningTeamName;
+        if (change === 'logical-runtime')
+          f.state.currentRuntimeRunIdByTeam[logical] = 'new-project-run';
+        if (change === 'logical-progress')
+          f.state.currentProvisioningRunIdByTeam[logical] = 'new-project-run';
+        if (change === 'physical-runtime')
+          f.state.currentRuntimeRunIdByTeam[teamName] = 'new-runtime';
+        if (change === 'physical-progress')
+          f.state.currentProvisioningRunIdByTeam[teamName] = 'pending:new-attempt';
+        if (change === 'logical-epoch') invalidateTeamLocalStateEpoch(logical);
+        if (change === 'physical-epoch') invalidateTeamLocalStateEpoch(teamName);
+        if (change === 'logical-ignored-runtime') f.state.ignoredRuntimeRunIds[runId] = logical;
+        if (change === 'logical-ignored-progress')
+          f.state.ignoredProvisioningRunIds[runId] = logical;
+        if (change === 'physical-ignored-runtime') f.state.ignoredRuntimeRunIds[runId] = teamName;
+        if (change === 'physical-ignored-progress')
+          f.state.ignoredProvisioningRunIds[runId] = teamName;
+        if (change === 'context') invalidateContextScopedRequestEpoch();
+      };
+      if (timing === 'before') revoke();
+      else f.restartMember.mockImplementationOnce(async () => revoke());
+      await expect(f.retry()).rejects.toThrow('Team launch changed');
+      expect(f.restartMember.mock.calls).toEqual(
+        timing === 'before' ? [] : [[teamName, 'Alice', undefined, f.failedSelections.Alice]]
+      );
+    }
+  );
+}
+
+it('keeps an admitted project batch bound to its original target after navigation alone', async () => {
+  const f = projectFixture();
+  const navigation = { selectedTeamName: teamName };
+  const retry = createHostFailedMemberRetry({
+    teamName,
+    provisioningTeamName: f.provisioningTeamName,
+    runId,
+    contextId: 'local',
+    memberNames: f.names,
+    failedSelections: f.failedSelections,
+    getState: () => ({ ...f.state, ...navigation }),
+    restartMember: f.restartMember,
+  });
+  f.restartMember.mockImplementationOnce(async () => {
+    navigation.selectedTeamName = hostTeamSelectionKey('TEST-project-b');
+  });
+  await expect(retry()).resolves.toEqual({ kind: 'host', attempted: ['Alice', 'Bob'] });
+  expect(f.restartMember.mock.calls.map((call) => call[0])).toEqual([teamName, teamName]);
+});
