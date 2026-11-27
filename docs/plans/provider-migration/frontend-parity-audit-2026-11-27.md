@@ -366,3 +366,187 @@ contracts and that duplicate genuine cards must still be refused. R3 confirmed
 the semantic card role and the two-to-one DOM diagnostic while retaining the
 native-evidence limitation. Reviews are reconciled; implementation is approved
 after this plan is published.
+
+## Continuation G1: protect new credential-command fingerprints
+
+The existing credential command journal retains a fast SHA-256 fingerprint
+of the canonical command, including `credential.set.key`. The accepted key
+can be one character. Disclosure of that private receipt therefore provides
+a cheap offline guess check for a weak key even though the plaintext key is
+omitted. This is a confirmed source-level issue. The unresolved CodeQL #628
+discussion also covers other derived credential witnesses; G1 does not claim
+to close all its flows or erase historical records.
+
+Keep generic `managementDigest` and all existing identity bytes unchanged.
+Reuse its canonical serializer by exporting that existing function. Add one
+narrow `management/secretFingerprint.ts` helper for asynchronous scrypt and a
+strict, fixed-version salt descriptor. New `credential.set` records receive
+`fingerprintKdf: { version: 1, salt: <32 lowercase hex characters> }` alongside
+their existing 32-byte hexadecimal fingerprint. The salt is 16 random bytes.
+Use `N=32768`, `r=8`, `p=3`, `maxmem=64 MiB` and 32 output bytes. These are an
+[OWASP-listed scrypt tradeoff](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html#scrypt)
+supported by the pinned [Node crypto API](https://nodejs.org/download/release/v24.21.0/docs/api/crypto.html#cryptoscryptpassword-salt-keylen-options-callback).
+No dependency or runtime pin changes are needed.
+
+The helper permits one active derivation, at most eight waiting requests and
+at most 8 MiB of retained canonical input buffers. Reject saturation before
+claim or native effect. Do not derive in polling, lookup, pending reads or
+readiness currentness checks, retain a synchronous fallback, or persist a
+parallel fast fingerprint of the secret. Compare derived digests with the
+existing fixed-size input validated before constant-time equality.
+Keep this helper a leaf: it may use crypto, the descriptor schema and existing
+canonical serializer, but must not import `commandRecords` back. The owner
+maps helper saturation/validation errors to its existing command errors.
+
+### Preserve original command and namespace ownership
+
+1. For a new set, parse and validate the command, check current owner/target,
+   and read the original command ID. Reserve the existing native namespace
+   fence before asynchronous derivation.
+2. After derivation, check current owner and exact target again, then reread
+   the command ID before writing. Another resource may have claimed the same
+   ID during the await. Refuse that conflict without replacing its record or
+   dispatching a second native effect. Reread, claim and write have no await
+   between them. The durable claim still precedes `perform`.
+3. Failures strictly before the first claim-write attempt release only this
+   operation's transient reservation as settled. A revoked context or
+   saturated queue must not leave an invented durable hold. Once the claim
+   write is attempted, an exception may follow an already committed rename:
+   retain the namespace hold, do not perform, and do not rewrite that unknown
+   receipt. This also fixes the existing initial-write catch that could admit
+   another command in the live owner despite a durable held claim. Preserve
+   the subsequent native settlement behavior.
+4. Replay and retained resume select the algorithm and salt only from the
+   original validated record. After awaiting the derivation, recheck current
+   owner/target and reread the record. Its immutable fields, salt and
+   fingerprint must match; phase and native progress may have advanced.
+   Return that latest original receipt without writing or performing again.
+5. A record without the descriptor uses its exact existing legacy algorithm
+   for comparison only. Do not migrate, rewrite, downgrade or retry an
+   ambiguous receipt. Unknown/malformed descriptors fail closed. The optional
+   descriptor is valid only on `credential.set` and stays private.
+6. `resume` becomes asynchronous internally; the existing transport handler
+   already accepts its Promise. Update direct tests/call sites accordingly.
+   Forget, refresh, OAuth and the generic identity algorithm retain their
+   current behavior in this slice.
+
+Expected source files: `management/identity.ts`,
+`management/secretFingerprint.ts`, `management/commandRecords.ts`, and
+`management/CredentialCommandOwner.ts`. Reuse the existing credential,
+identity and command-store suites; add focused helper regressions. Cover a
+one-character synthetic key, absence of the old fast fingerprint in a new
+receipt, salt stability through cold replay, changed-secret conflicts,
+cross-resource same-ID races, context revocation during derivation, queue
+saturation, corrupt/unknown descriptors, read-only lookup and byte-preserving
+legacy replay. Simulate a claim write that commits then throws: no native
+effect, the next same-resource command is held, and cold recovery retains the
+original bytes. No real provider credential or native provider process is
+needed. Run checked Host build, affected strict tests and existing suites.
+
+Estimate: 220-320 changed production lines and 240-360 regression lines;
+complexity 6/10, confidence 9/10, reliability target 9/10. R1 traced the
+durable command and native-effect order. R2 identified the new asynchronous
+same-command-ID race and required the second read and exact retained-record
+comparison above. R3 additionally reproduced the existing write-then-throw
+fence defect and required the publication boundary and regression above.
+R3 approved the revised exact plan, leaf-module boundary, fixed schema and
+active-plus-queued resource accounting. All reviews are reconciled;
+implementation is approved after publication.
+Remaining auth/config/file witnesses and OAuth completion
+are separate follow-up slices; private storage alone is not their remediation.
+
+## Continuation I: show and recover the exact project execution
+
+`ProjectScopedTeamDetailView` already passes the selected physical execution
+and its logical Team separately into `TeamDetailView`. All three provisioning
+banners discard the physical identity. The hook then reads activity from the
+logical definition, which correctly has no running agents, and hides ready
+progress. A finite reproduction using the actual hook and data selectors
+confirmed that logical-offline plus exact-child-online yields no presentation.
+The original membership receipt stopped at its unchanged ready-banner wait;
+the source defect is confirmed, while historical causality and native
+acceptance require the original journey.
+
+Pass an optional `runtimeTeamName` through the existing Banner, Panel and hook.
+The three `TeamDetailView` call sites supply it only for the Host logical and
+physical pair already checked by the parent project context. Default it to
+`teamName`, preserving existing shared and legacy behavior. Do not discover a
+child from the selected global Team, its name, liveness or registry order.
+
+### Keep progress ownership distinct from runtime evidence
+
+- Logical `teamName` continues to own progress, errors, error clearing,
+  dismissal and the original same-run spawn snapshot.
+- In the split Host path, require the progress Team to be that logical owner,
+  parse its published run safely, and match its execution handle to the
+  explicit physical key. Foreign, malformed and synthetic pending progress
+  must not throw in React or become another project's success. Logical-only
+  pending presentation remains unchanged.
+- Physical activity and product members require the physical current-runtime
+  pointer to equal this run. Runtime entries additionally require their own
+  snapshot Team and run to match. A newer pointer does not validate an old
+  snapshot. Accept logical spawn statuses only with the same-run snapshot.
+- Hide ready progress when the physical run is not current or that execution
+  is explicitly offline. Keep matching assembling and failed/no-allocation
+  progress visible before physical hydration, without borrowing old runtime
+  data. Member diagnostic payloads identify the same physical Team and run.
+  The progress block's Team key also invokes `getLaunchFailureDiagnostics`;
+  it is not merely a label. Return a resolved diagnostic Team from the hook
+  and pass that validated physical key with the exact run to the block.
+  Existing backend family/run validation remains authoritative.
+- Preserve the captured run used by Cancel. Include both Team identities and
+  local epochs, the context epoch and original run/start identity in the
+  presentation instance key, so a new project does not inherit old dismiss or
+  retry-completion state.
+
+The transient `hostProjectProgressOwners` request proof is not a persistent
+render authority: a later poll can invalidate its read token while duplicate
+progress keeps the old object. Use the verified parent identity and exact
+current run boundaries above, without adding another registry/read layer.
+
+### Adapt the existing failed-member retry
+
+Extend `createHostFailedMemberRetry` with an optional logical
+`provisioningTeamName`, defaulting to its existing `teamName`. Keep the latter
+as the fixed physical dispatch target. Require the logical provisioning and
+runtime pointers plus the physical runtime pointer to equal the captured run.
+A physical provisioning pointer may be absent or equal; a different nonempty
+pointer refuses the action. Check both Team epochs and ignored-run sets, the
+context identity/epoch, and the copied failed member generation/attempt before
+the first operation, between members and after every await. Dispatch the
+existing `restartMember` for the captured physical Team, never another child.
+
+A new project launch invalidates the old logical run pointers and must stop
+an old retry. Ordinary navigation alone does not select a new dispatch target;
+an already admitted batch remains bound to its original run, and its completion
+must not appear in the new presentation. Do not use a global selected-Team
+check that breaks an independently open background pane.
+
+### Scope and verification
+
+Source scope is the three existing components, `useTeamProvisioningPresentation`
+and `createHostFailedMemberRetry`. Expected changes: 104-176 production lines
+and 180-300 regression lines. `TeamDetailView` has 3,640 lines with an existing
+3,688-line cap; keep within it without changing the baseline. Complexity 4/10,
+confidence 9.5/10, reliability target 9/10.
+
+Use actual React rerenders and the existing retry harness. Cover logical
+offline/physical live, absent child provisioning pointer, stop and recovery on
+the same mount, project B progress while viewing A, a matching pointer with a
+stale runtime snapshot, wrong-run spawn status, failed/no-allocation before
+hydration, malformed pending input, legacy/shared behavior and stale callback
+state. Retry cases must include both owners' pins/epochs/ignored sets, context
+changes and a new launch between member actions, while keeping the original
+generation/attempt and physical target. Verify that Copy diagnostics requests
+the physical Team/run, navigation alone never retargets the old batch, and
+an old completion cannot appear after the Panel moves to another execution.
+Run affected strict typing, lint and
+the source-size guard. Keep the native membership deadline and its following
+session/process assertions unchanged.
+
+R1 traced the actual component/store chain and reproduced the missing banner.
+R2 independently required the runtime snapshot's own identity and preservation
+of early failure diagnostics. R3 additionally traced the diagnostic action
+and confirmed the navigation/retry distinction above. The independent final
+review approved this exact written plan. Implementation is approved after
+publication.
