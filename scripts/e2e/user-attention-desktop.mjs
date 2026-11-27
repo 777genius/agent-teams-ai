@@ -180,6 +180,40 @@ async function setup() {
     notifications: { enabled: false, soundEnabled: false },
   });
   await mkdir(path.join(claude, 'projects'), { recursive: true });
+  // Genuine Electron IPC and budget projection over a deterministic, private
+  // usage ledger. The spending sample is synthetic; no provider is contacted.
+  // The manual_import run is not deleted by automatic native-run discovery.
+  const usageRunId = 'attention-budget-' + first;
+  const usedAt = nowIso();
+  await json(path.join(envRoot.AGENT_TEAMS_ELECTRON_USER_DATA_DIR,
+    'data', 'token-usage', 'ledger.json'), {
+    schemaVersion: 1,
+    runs: {
+      [usageRunId]: {
+        appRunId: usageRunId, teamName: first, runtimeKind: 'anthropic',
+        startedAt: usedAt, endedAt: usedAt, status: 'completed',
+        source: 'manual_import', sources: [],
+      },
+    },
+    events: {
+      [usageRunId + '-event']: {
+        id: usageRunId + '-event', appRunId: usageRunId,
+        teamName: first, runtimeKind: 'anthropic',
+        tokens: {
+          inputTokens: 140, outputTokens: 10, cacheCreationTokens: 0,
+          cacheReadTokens: 0, reasoningTokens: 0, audioTokens: 0, imageTokens: 0,
+          totalTokens: 150,
+        },
+        cost: {
+          estimatedUsd: 0, billableUsd: 0, apiEquivalentUsd: 0,
+          source: 'provider', billingMode: 'api',
+        },
+        usageSourceKind: 'sdk_exact',
+        occurredAt: usedAt, createdAt: usedAt,
+      },
+    },
+    sourceStates: {},
+  });
   return env;
 }
 async function startDesktop(env) {
@@ -892,9 +926,9 @@ async function checkBudgetDesktop() {
   const current = await cdp.evaluate('window.electronAPI.tokenUsage.getBudgetStatus()');
   const team = current.targets.find(target => target.scope === 'team' &&
     target.id === 'team:' + first);
-  const unknown = current.stale || current.degraded || !team?.metrics?.length ||
-    team.metrics.some(metric => metric.value === null || metric.incomplete);
-  assert(unknown, 'Isolated budget E2E fixture unexpectedly has fully verified spending');
+  const actualTokens = team?.metrics.find(metric => metric.metric === 'tokens')?.value;
+  assert.equal(actualTokens, 150,
+    'Real IPC budget projection did not attribute the isolated ledger to this team');
   const launch = await cdp.evaluate(`(async () => {
     try {
       const result = await window.electronAPI.teams.launchTeam({
@@ -911,7 +945,7 @@ async function checkBudgetDesktop() {
   })()`);
   assert.match(JSON.stringify(launch), /TEAM_BUDGET_BLOCKED/,
     'Product launch bypassed uncertain team-budget policy');
-  evidence.checks.push('real product launch IPC rejects unknown metering before native spawn');
+  evidence.checks.push('real product launch IPC blocks exceeded team tokens before native spawn');
 }
 async function cleanup() {
   await cdp?.close().catch(() => {});
