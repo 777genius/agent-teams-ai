@@ -4,6 +4,28 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 
 export async function checkBudgetDesktop({ cdp, first, artifactRoot, until, evidence }) {
+  // A synthetic .click() does not exercise Radix Select's real pointer path.
+  // Reuse the same CDP mouse events / hit-test guard as Attention's working E2E.
+  const clickAt = async (expression, label) => {
+    const pointExpression = `(() => {
+      const element = ${expression};
+      if (!element || element.matches(':disabled') || !element.getClientRects().length) return null;
+      const box = element.getBoundingClientRect();
+      const x = box.left + box.width / 2;
+      const y = box.top + box.height / 2;
+      const hit = document.elementFromPoint(x, y);
+      return hit && element.contains(hit) ? { x, y } : null;
+    })()`;
+    await until(() => cdp.evaluate(pointExpression), label + ' actionable', 30_000);
+    const point = await cdp.evaluate(pointExpression);
+    assert(point, label + ' pointer point unavailable');
+    await cdp.send('Input.dispatchMouseEvent', {
+      type: 'mousePressed', x: point.x, y: point.y, button: 'left', clickCount: 1,
+    });
+    await cdp.send('Input.dispatchMouseEvent', {
+      type: 'mouseReleased', x: point.x, y: point.y, button: 'left', clickCount: 1,
+    });
+  };
   // This is the actual product renderer and IPC in the same owned Electron
   // profile as Attention, not a mocked React or HTTP/unit fixture.
   await cdp.evaluate('window.__agentTeamsDevStore.getState().openTeamsTab()');
@@ -17,70 +39,45 @@ export async function checkBudgetDesktop({ cdp, first, artifactRoot, until, evid
     '.token-usage-dashboard section.usage-detail-panel'
   )).find(section => section.querySelector('button[role="combobox"]') &&
     section.querySelector('button.w-full:not([role="combobox"])'))`;
-  await until(() => cdp.evaluate(`(() => {
-    const section = ${panel};
-    const trigger = section?.querySelector('button[role="combobox"]');
-    if (!trigger || trigger.disabled) return false;
-    trigger.click();
-    return true;
-  })()`), 'real budget scope picker is ready', 60_000);
-  await until(() => cdp.evaluate(`(() => {
-    const option = Array.from(document.querySelectorAll('[role="option"]'))
-      .find(element => element.textContent?.includes(${JSON.stringify(first)}));
-    if (!option) return false;
-    option.click();
-    return true;
-  })()`), 'select original team budget scope', 30_000);
+  await clickAt(`${panel}?.querySelector('button[role="combobox"]')`,
+    'real budget scope picker');
+  await clickAt(
+    `Array.from(document.querySelectorAll('[role="option"]'))
+      .find(element => element.textContent?.includes(${JSON.stringify(first)}))`,
+    'select original team budget scope'
+  );
   await until(() => cdp.evaluate(`(() => {
     const section = ${panel};
     return section?.querySelector('button[role="combobox"]')?.textContent
       ?.includes(${JSON.stringify(first)}) || false;
   })()`), 'selected budget scope retained by real renderer');
-  const opened = await cdp.evaluate(`(() => {
-    const section = ${panel};
-    const edit = section?.querySelector('button.w-full:not([role="combobox"])');
-    if (!edit || edit.disabled) return false;
-    edit.click();
-    return true;
-  })()`);
-  assert(opened, 'Real budget editor button unavailable');
+  await clickAt(`${panel}?.querySelector('button.w-full:not([role="combobox"])')`,
+    'open real budget editor');
   await cdp.waitFor(
     'document.querySelector(\'[role="dialog"] input[inputmode="decimal"]\')',
     'real budget editor input'
   );
-  const changed = await cdp.evaluate(`(() => {
-    const dialog = document.querySelector('[role="dialog"]');
-    const input = dialog?.querySelector('input[inputmode="decimal"]');
-    if (!input) return false;
-    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
-    if (!setter) return false;
-    setter.call(input, '100');
-    input.dispatchEvent(new Event('input', {bubbles:true}));
-    return true;
-  })()`);
-  assert(changed, 'Cannot enter token limit through real budget editor');
-  const policyOpened = await cdp.evaluate(`(() => {
-    const triggers = Array.from(document.querySelectorAll('[role="dialog"] button[role="combobox"]'));
-    if (triggers.length < 2) return false;
-    triggers[1].click();
-    return true;
-  })()`);
-  assert(policyOpened, 'Team enforcement selector is missing');
-  await until(() => cdp.evaluate(`(() => {
-    const options = Array.from(document.querySelectorAll('[role="option"]'));
-    if (options.length !== 3) return false;
-    options[1].click();
-    return true;
-  })()`), 'choose block_launch in actual budget editor');
-  const savedClick = await cdp.evaluate(`(() => {
-    const dialog = document.querySelector('[role="dialog"]');
-    const buttons = Array.from(dialog?.querySelectorAll('button') ?? []);
-    const save = buttons.at(-1);
-    if (!save || save.disabled) return false;
-    save.click();
-    return true;
-  })()`);
-  assert(savedClick, 'Budget save button unavailable in real editor');
+  await clickAt(`document.querySelector('[role="dialog"] input[inputmode="decimal"]')`,
+    'focus real budget token limit input');
+  await cdp.send('Input.insertText', { text: '100' });
+  await until(() => cdp.evaluate(
+    `document.querySelector('[role="dialog"] input[inputmode="decimal"]')?.value === "100"`
+  ), 'real budget token limit entered');
+  await clickAt(
+    `Array.from(document.querySelectorAll('[role="dialog"] button[role="combobox"]'))[1]`,
+    'open real team enforcement selector'
+  );
+  await until(() => cdp.evaluate(
+    `document.querySelectorAll('[role="option"]').length === 3`
+  ), 'all three real enforcement choices available');
+  await clickAt(
+    `Array.from(document.querySelectorAll('[role="option"]'))[1]`,
+    'choose block_launch in real budget editor'
+  );
+  await clickAt(
+    `Array.from(document.querySelectorAll('[role="dialog"] button')).at(-1)`,
+    'save real budget editor'
+  );
   await until(async () => {
     const value = await cdp.evaluate('window.electronAPI.tokenUsage.getBudgetSettings()');
     const team = value?.teams?.['team:' + first];
