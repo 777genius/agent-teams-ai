@@ -84,6 +84,8 @@ export function validateCrossTeamIntent(intent: CapturedCrossTeamIntent): void {
   if (
     Buffer.byteLength(JSON.stringify(intent), 'utf8') > 96 * 1024 ||
     !schema.safeParse(intent).success ||
+    intent.request.conversationId.includes('\0') ||
+    intent.request.replyToConversationId?.includes('\0') ||
     intent.commandId !== intent.request.messageId ||
     intent.pair.source.teamId === intent.pair.target.teamId ||
     intent.pair.source.resourceRef === intent.pair.target.resourceRef ||

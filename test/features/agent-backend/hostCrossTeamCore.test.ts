@@ -213,6 +213,21 @@ function fixture() {
 }
 
 describe('original source cross-Team command authority', () => {
+  it.each(['conversationId', 'replyToConversationId'] as const)(
+    'rejects NUL in %s before recording a cross-Team command or delivery',
+    async (field) => {
+      const f = fixture();
+      const request = { ...f.request, [field]: 'TEST-thread\u0000id' };
+      await expect(
+        f.coordinator().send(request.messageId, digest(request), request)
+      ).rejects.toMatchObject({ code: 'hold' });
+      expect(f.source().lookup(request.messageId)).toBeUndefined();
+      expect(f.inbox('beta')).toEqual([]);
+      expect(f.teams().get('beta')!.connect('human').pendingDeliveries()).toEqual([]);
+      expect(await f.outbox.read('alpha')).toEqual([]);
+    }
+  );
+
   it('persists original pair before a real target inbox effect and rejects changed target after missing source outbox', async () => {
     const f = fixture();
     await expect(
