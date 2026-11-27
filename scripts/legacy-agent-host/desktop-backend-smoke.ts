@@ -15,7 +15,7 @@ import type { DesktopOwnerRoutingContinuation } from './desktop-owner-routing-ui
 import { verifyNativeProcessReadbackSource } from './desktop-native-process-readback.ts';
 import { connectCapturedDesktopApp, captureDesktopRendererFailure, restartCapturedDesktopApp, observePackedAppRelaunch, verifyCapturedDesktopBinding, cleanupCapturedDesktopApp } from './desktop-captured-app.ts';
 import type { DesktopCdpPort as CdpPort, DesktopCdpLibrary as CdpLibrary } from './desktop-captured-app.ts';
-import { observeDesktopStartup, requestObservedDesktopClose } from './startup-passive-observer.ts';
+import { observeDesktopStartup, requestObservedDesktopClose, requestDesktopQuitWithObservation } from './startup-passive-observer.ts';
 import { runDesktopNativeExtensionsUiSmoke } from './desktop-native-extensions-ui-smoke.ts';
 import { isSkillsMetadataRefusal, verifyDesktopSkillsFixture } from './desktop-skills-fixture.ts';
 import { readCapturedCandidateElectron } from './candidate-electron.ts';
@@ -623,7 +623,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
       object(evidence.packedAppRelaunch).nativeInputObservations = { before: inputsBefore, after: conversationModel?.observations.length };
       assert.equal(conversationModel?.observations.length, inputsBefore, 'app relaunch cannot send another native input');
       assert.deepEqual(conversationModel?.failures, []);
-    } else await cdp.evaluate('window.electronAPI.windowControls.close()').catch(() => undefined);
+    } else await requestDesktopQuitWithObservation(cdp, evidence);
     const deadline = Date.now() + 20_000;
     while (Date.now() < deadline && processTable().some((row) => row.pid === hostPid)) await tick();
     assert.equal(

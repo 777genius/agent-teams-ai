@@ -12,6 +12,24 @@ const phases: readonly Phase[] = ['profile-validation-start', 'profile-validatio
   'child-captured', 'ready', 'request-admitted', 'response-accepted', 'request-timeout'];
 const row = (v: unknown): Row => v && typeof v === 'object' && !Array.isArray(v) ? v as Row : {};
 
+/** Preserve the existing single Quit call and its outcome without changing its budget. */
+export async function requestDesktopQuitWithObservation(
+  cdp: Pick<UiCdpPort, 'evaluate'>, evidence: Row,
+): Promise<void> {
+  const observation: Row = { attempted: true, startedAtMs: Date.now(), reply: 'pending' };
+  evidence.originalRequestedQuitReply = observation;
+  // Synchronous throws still propagate; only the original promise rejection is consumed.
+  await cdp.evaluate('window.electronAPI.windowControls.close()').then(
+    () => { observation.reply = 'acknowledged'; },
+    (error: unknown) => {
+      observation.reply = 'rejected';
+      const message = error instanceof Error ? error.message : '';
+      observation.reason = ['CDP command timed out: Runtime.evaluate', 'CDP connection closed',
+        'Renderer evaluation failed'].includes(message) ? message : 'unclassified';
+    },
+  ).finally(() => { observation.finishedAtMs = Date.now(); });
+}
+
 /** One guarded public close attempt; reuse the existing failure-close observation bounds. */
 export async function requestObservedDesktopClose(
   cdp: UiCdpPort,
