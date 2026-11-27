@@ -57,6 +57,12 @@ export interface MemberWorkSyncStatusRecord {
 }
 
 /** Internal worker contract; expected JSON is the exact stored payload, not a normalized DTO. */
+/** Exact stored status rows authorized for a compare-and-delete transaction. */
+export type MemberWorkSyncStatusDeleteTarget = Pick<
+  MemberWorkSyncStatusRecord,
+  'teamName' | 'memberKey' | 'statusJson'
+>;
+
 export interface MemberWorkSyncStatusCompareAndWriteInput {
   expectedStatusJson: string | null;
   record: MemberWorkSyncStatusRecord;

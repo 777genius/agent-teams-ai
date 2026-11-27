@@ -80,10 +80,9 @@ export abstract class TeamProvisioningStopCleanupCompatibilityFacade<
   protected readonly cleanedStoppedTeamOpenCodeRuntimeLanes = new Set<string>();
   protected readonly cleanupRunPorts!: TeamProvisioningCleanupPorts<TRun>;
 
-  private readonly liveRosterMutationLockContext = new AsyncLocalStorage<{
-    teamKey: string;
-    token: symbol;
-  }>();
+  private readonly liveRosterMutationLockContext = new AsyncLocalStorage<
+    ReadonlyMap<string, symbol>
+  >();
   private readonly activeLiveRosterMutationTokens = new Map<string, symbol>();
   private stopFlowBoundaryValue: TeamProvisioningStopFlowBoundary | null = null;
   private openCodeStoppedLaneCleanupBoundary: TeamProvisioningOpenCodeStoppedLaneCleanupBoundary | null =
@@ -173,7 +172,9 @@ export abstract class TeamProvisioningStopCleanupCompatibilityFacade<
       const token = Symbol(`live-roster-mutation:${teamKey}`);
       this.activeLiveRosterMutationTokens.set(teamKey, token);
       try {
-        await this.liveRosterMutationLockContext.run({ teamKey, token }, mutation);
+        const owned = new Map(this.liveRosterMutationLockContext.getStore());
+        owned.set(teamKey, token);
+        await this.liveRosterMutationLockContext.run(owned, mutation);
       } finally {
         if (this.activeLiveRosterMutationTokens.get(teamKey) === token) {
           this.activeLiveRosterMutationTokens.delete(teamKey);
@@ -185,10 +186,8 @@ export abstract class TeamProvisioningStopCleanupCompatibilityFacade<
   protected isLiveRosterMutationLockHeld(teamName: string): boolean {
     const context = this.liveRosterMutationLockContext.getStore();
     const teamKey = teamName.trim().toLowerCase();
-    return (
-      context?.teamKey === teamKey &&
-      this.activeLiveRosterMutationTokens.get(teamKey) === context.token
-    );
+    const token = context?.get(teamKey);
+    return token !== undefined && this.activeLiveRosterMutationTokens.get(teamKey) === token;
   }
 
   protected getStopTeamGeneration(teamName: string): number {

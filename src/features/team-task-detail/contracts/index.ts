@@ -49,6 +49,8 @@ export interface PendingAttachment {
 
 export interface TaskDetailSession {
   commentText: string;
+  /** Clarification cycle captured when the user began this draft. Null means ordinary comment. */
+  answerClarificationRequestId?: string | null;
   commentChips: InlineChip[];
   pendingAttachments: PendingAttachment[];
   reply: TaskDetailReplyDraft | null;

@@ -5,4 +5,11 @@ export {
   isDesktopMcpControlAvailable,
   isDesktopMcpEnvironmentBound,
 } from './core/application/desktopMcpEnvironment';
-export { buildExternalAgentPrompt } from './core/domain/connectionPrompt';
+export {
+  buildExternalAgentPrompt,
+  buildMcpRegistrationCommand,
+} from './core/domain/connectionPrompt';
+export {
+  buildConnectionSetupPrompt,
+  hasReadyRendererAccess,
+} from './core/domain/connectionSetupPrompt';

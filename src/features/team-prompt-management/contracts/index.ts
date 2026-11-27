@@ -20,6 +20,8 @@ export interface TeamManagementResult {
   configurationRevision: string;
   changed: boolean;
   change?: TeamManagementCommittedChange;
+  /** Whether the edit affects the current run or only a later launch. */
+  application?: 'saved' | 'live' | 'next_launch';
 }
 export interface TeamManagementTarget {
   teamName: string;

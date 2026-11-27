@@ -92,7 +92,7 @@ Object.assign(environment, {
   XDG_DATA_HOME: path.join(home, '.local/share'),
   XDG_CACHE_HOME: path.join(home, '.cache'),
   XDG_STATE_HOME: path.join(home, '.local/state'),
-  CLAUDE_TEAM_OPENCODE_MCP_HTTP: '0',
+  AGENT_TEAMS_MCP_HTTP: '0',
   AGENT_TEAMS_ORG_DEMO: '0',
   NODE_BINARY: process.execPath,
   pnpm_config_verify_deps_before_run: 'false',

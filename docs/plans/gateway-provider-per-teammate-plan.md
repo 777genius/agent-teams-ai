@@ -1,7 +1,7 @@
 # План: Gateway-провайдер с выбором и учётом на каждого тиммейта
 
 **Статус:** v9 — замечания ревью PR 942 закрыты: approval snapshot в usage source и durable неполнота при правке секрета; реализация начинается с §8
-**Тестовый стенд:** локальный [agent-teams-ai/sub2api](https://github.com/agent-teams-ai/sub2api)
+**Тестовый стенд:** локальный [agent-teams-ai/sub2api-standalone](https://github.com/agent-teams-ai/sub2api-standalone) (с 2026-11-21 вместо старого форка `agent-teams-ai/sub2api`, который архивируется; история `main` та же)
 
 ## 1. Цель
 
@@ -569,7 +569,7 @@ HTTP без `model_stats` не снимает ошибку. Успешный я�
 
 ## 8. Сценарии на локальном sub2api
 
-Стенд: [agent-teams-ai/sub2api](https://github.com/agent-teams-ai/sub2api),
+Стенд: [agent-teams-ai/sub2api-standalone](https://github.com/agent-teams-ai/sub2api-standalone),
 `deploy/docker-compose.local.yml` (Postgres + Redis + sub2api), `TZ=UTC`.
 Фиксируем проверенный SHA стенда. Команды и приложения запускаем только на
 новом sandbox/test-проекте, не на рабочих проектах пользователя.

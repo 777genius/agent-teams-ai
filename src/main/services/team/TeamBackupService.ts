@@ -2,6 +2,7 @@ import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
+import { backupProjectTeamDefinitionSafely, recoverMissingProjectTeamDefinitions } from '@features/team-project-context/main';
 import {
   atomicWriteAsync,
   atomicWriteSync,
@@ -169,6 +170,7 @@ export class TeamBackupService {
     await this.permanentDeletion.initialize();
     await this.reconcileResurrectedTeams();
     await this.workSyncRestore.restoreIfNeeded(onProgress);
+    await recoverMissingProjectTeamDefinitions();
     if (this.isShuttingDown) throw new Error('Backup startup interrupted by shutdown');
     void this.pruneStaleBackups().catch((err: unknown) =>
       logger.warn(`[Backup] prune failed: ${String(err)}`)
@@ -382,7 +384,6 @@ export class TeamBackupService {
     );
     return next;
   }
-
   private async runPeriodicBackup(): Promise<void> {
     if (this.isShuttingDown || !this.initialized || this.periodicBackupActive) return;
     this.periodicBackupActive = true;
@@ -402,11 +403,10 @@ export class TeamBackupService {
       this.periodicBackupActive = false;
     }
   }
-
   private async doBackupTeam(teamName: string): Promise<void> {
     const gen = this.backupGeneration;
     if (!(await this.ownership.isManagedByThisProfile(teamName))) return;
-    if (!(await this.isConfigReady(teamName))) return;
+    if (!(await this.isConfigReady(teamName))) return backupProjectTeamDefinitionSafely(teamName);
     if (await this.permanentDeletion.isPermanentDeletionFenced(teamName)) return;
 
     const { files: sourceFiles, hasErrors } = await this.enumerateTeamFilesWithErrors(teamName);

@@ -165,7 +165,7 @@ async function startApp(fixture) {
     XDG_STATE_HOME: fixture.xdgStateHome,
     XDG_RUNTIME_DIR: fixture.xdgRuntimeDir,
     SHELL: '/bin/sh',
-    CLAUDE_TEAM_OPENCODE_MCP_HTTP: '0',
+    AGENT_TEAMS_MCP_HTTP: '0',
     NODE_BINARY: await realpath(process.execPath),
     AGENT_TEAMS_DISABLE_SOURCEMAPS: '1',
     pnpm_config_verify_deps_before_run: 'false',

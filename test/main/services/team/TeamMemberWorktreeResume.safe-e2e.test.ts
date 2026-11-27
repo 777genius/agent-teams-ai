@@ -117,4 +117,44 @@ describe('managed worktree resume through runtime workspace preflight', () => {
     expect(await fs.readFile(path.join(worktreePath, 'notes.txt'), 'utf8')).toBe('keep me\n');
     expect(await git(repoPath, 'status', '--porcelain')).toBe('');
   });
+
+  it('validates persisted workspace identity through runtime preflight and preserves reuse', async () => {
+    const manager = new TeamMemberWorktreeManager();
+    const coordinator = new TeamProvisioningPrepareCoordinator(
+      createDefaultTeamProvisioningPrepareCoordinatorPorts({
+        ensureMemberWorktree: (input) => manager.ensureMemberWorktree(input),
+        execCli: async () => {
+          throw new Error('Provider execution is forbidden');
+        },
+        resolveClaudeBinaryPath: async () => {
+          throw new Error('Provider discovery is forbidden');
+        },
+      })
+    );
+    const resolve = (cwd?: string) =>
+      coordinator.resolveOpenCodeMemberWorkspacesForRuntime({
+        teamName: 'preflight-test',
+        baseCwd: repoPath,
+        leadProviderId: 'codex',
+        members: [
+          { name: 'bob', providerId: 'opencode', isolation: 'worktree', ...(cwd ? { cwd } : {}) },
+        ],
+      });
+    // An existing directory is not proof of an isolated checkout.
+    await expect(resolve(repoPath)).rejects.toThrow('not a separate checkout root');
+    expect((await git(repoPath, 'worktree', 'list', '--porcelain')).match(/^worktree /gm)).toHaveLength(
+      1
+    );
+
+    const first = (await resolve())[0]!.cwd!;
+    await git(first, 'switch', '-c', 'recovery-branch');
+    await fs.writeFile(path.join(first, 'resume.txt'), 'keep\n');
+    const restored = (await resolve(first))[0]!;
+    expect(restored.cwd).toBe(first);
+    expect(await git(first, 'branch', '--show-current')).toBe('recovery-branch');
+    expect(await fs.readFile(path.join(first, 'resume.txt'), 'utf8')).toBe('keep\n');
+    expect((await git(repoPath, 'worktree', 'list', '--porcelain')).match(/^worktree /gm)).toHaveLength(
+      2
+    );
+  });
 });

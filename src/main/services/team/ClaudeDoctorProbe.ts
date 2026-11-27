@@ -24,7 +24,8 @@ try {
   // eslint-disable-next-line @typescript-eslint/no-require-imports -- node-pty is optional native addon
   nodePty = require('node-pty') as NodePtyModule;
 } catch {
-  logger.warn('node-pty not available - doctor fallback disabled');
+  // Optional native addon is unavailable in non-Electron runners.
+  // The doctor probe simply returns no fallback candidates when called.
 }
 
 function stripAnsiSequences(value: string): string {

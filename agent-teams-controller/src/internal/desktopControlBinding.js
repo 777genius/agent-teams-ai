@@ -95,6 +95,13 @@ function boundRequestOptions(baseUrl) {
   return { headers: binding.headers, redirect: 'error' };
 }
 
+function assertConnectionExpectation(flags) {
+  const expected = assertConnectionContext(flags.expectedContext);
+  if (binding && Object.keys(expected).some((key) => expected[key] !== binding.context[key])) {
+    throw mismatch('expectedContext differs from desktop binding');
+  }
+}
+
 function assertManagementExpectation(flags) {
   const expected = assertConnectionContext(flags.expectedContext);
   if (binding && Object.keys(expected).some((key) => expected[key] !== binding.context[key])) {
@@ -119,6 +126,7 @@ module.exports = {
   boundControlBaseUrls,
   boundRequestOptions,
   assertDraftExpectation,
+  assertConnectionExpectation,
   assertManagementExpectation,
   isDesktopBound: () => binding !== null,
 };

@@ -219,6 +219,31 @@ describe('team effort options', () => {
     );
   });
 
+  it('shows the configured Codex effort without selecting an explicit override', () => {
+    const providerStatus = createProviderStatus('codex', {
+      id: 'gpt-6.1-sol',
+      launchModel: 'gpt-6.1-sol',
+      displayName: '6.1 Sol',
+      hidden: false,
+      supportedReasoningEfforts: ['low', 'medium', 'high', 'xhigh'],
+      defaultReasoningEffort: 'low',
+      inputModalities: ['text'],
+      supportsPersonality: false,
+      isDefault: true,
+      upgrade: false,
+      source: 'app-server',
+    });
+    providerStatus.modelCatalog!.configuredReasoningEffort = 'xhigh';
+    const params = { providerId: 'codex' as const, model: 'gpt-6.1-sol', providerStatus };
+    expect(getTeamEffortOptions(params)[0]).toEqual({ value: '', label: 'Default (XHigh)' });
+    expect(getAvailableTeamEffortValue({ ...params, value: '' })).toBe('');
+    expect(getTeamEffortSelectorPresentation(params).helperText).toContain(
+      'isolated configuration'
+    );
+    providerStatus.modelCatalog!.configuredReasoningEffort = null;
+    expect(getTeamEffortOptions(params)[0]).toEqual({ value: '', label: 'Default (Low)' });
+  });
+
   it('keeps Anthropic aliases conservative when the resolved runtime model does not support effort', () => {
     const providerStatus = createProviderStatus('anthropic', {
       id: 'opus[1m]',

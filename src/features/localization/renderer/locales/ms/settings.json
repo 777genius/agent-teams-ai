@@ -322,6 +322,44 @@
     }
   },
   "notifications": {
+    "delivery": {
+      "eventLabels": {
+        "lead_inbox": "Team lead inbox message",
+        "user_inbox": "Message for you",
+        "task_clarification": "Clarification needed",
+        "task_status_change": "Task status changed",
+        "task_comment": "New task comment",
+        "task_created": "Task created",
+        "cross_team_message": "Cross-team message",
+        "team_launched": "Team launched",
+        "schedule_completed": "Scheduled run completed",
+        "usage_budget_warning": "Usage budget warning",
+        "task_review_requested": "Review requested",
+        "task_blocked": "Task blocked",
+        "all_tasks_completed": "All tasks completed",
+        "team_launch_incomplete": "Team launch needs attention",
+        "runtime_recovery": "Runtime recovery",
+        "schedule_failed": "Scheduled run failed",
+        "usage_budget_exceeded": "Usage budget exceeded"
+      },
+      "routingHint": "Choose destinations beside each notification type. Turning a type off disables it everywhere; Desktop is the default.",
+      "desktopOnly": "Desktop only",
+      "additionalEvents": "Additional delivery events",
+      "pausedDisabled": "Penghantaran automatik dijeda: pemberitahuan sistem dimatikan. Hidupkannya untuk menyambung. Ujian manual masih tersedia.",
+      "pausedSnoozed": "Automatic delivery is snoozed until {{time}}. Click Clear Snooze above to resume. Manual Test still works.",
+      "pausedSnoozedUnknown": "Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works.",
+      "agentGuide": "Panduan langkah demi langkah Agent Teams",
+      "exampleFormat": "Contoh format (bukan kelayakan sebenar):",
+      "officialGuide": "Arahan rasmi penyedia",
+      "providerSetup": {
+        "telegram": "Cipta bot melalui @BotFather (/newbot), mulakan sembang, kemudian masukkan token dan Chat ID atau @namasaluran.",
+        "discord": "Dalam saluran Discord sasaran, buka Edit Channel → Integrations → Webhooks, cipta webhook dan salin URL penuh.",
+        "slack": "Cipta aplikasi Slack, dayakan Incoming Webhooks, pasang ke ruang kerja dan salin URL.",
+        "ms-teams": "Gunakan Teams Workflows → Send webhook alerts to a channel. Untuk pencetus tersuai, pilih Anyone dan rahsiakan URL.",
+        "google-chat": "Dalam ruang Google Chat, pilih Apps & integrations → Add webhooks, cipta webhook dan salin URL penuh.",
+        "webhook": "Cipta webhook HTTPS awam (contohnya dalam n8n), salin URL bertandatangan penuh dan ujinya. URL setempat disekat."
+      }
+    },
     "recovery": {
       "title": "Automatic agent recovery",
       "transient": {
@@ -383,7 +421,7 @@
       "selectDuration": "Pilih tempoh..."
     },
     "taskCompletion": {
-      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Gemini. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
+      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Cursor/Gemini/Qoder/Pi. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
       "installPlugin": "Agent Notifications",
       "title": "Agent Notifications"
     },

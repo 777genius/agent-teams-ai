@@ -1,10 +1,13 @@
 const kanban = require('./kanban.js');
+const { createReviewHumanActions } = require('./reviewHumanActions.js');
+const { createLeadSignoff } = require('./reviewLeadSignoff.js');
 const messages = require('./messages.js');
 const runtimeHelpers = require('./runtimeHelpers.js');
 const reviewStateHelpers = require('./reviewState.js');
 const tasks = require('./tasks.js');
 const { withTeamBoardLock } = require('./boardLock.js');
-const { wrapAgentBlock } = require('./agentBlocks.js');
+const reviewFlow = require('./reviewFlow.js');
+const { buildReviewRequestMessage } = require('./reviewRequestMessage.js');
 
 function warnNonCritical(message, error) {
   if (typeof console === 'undefined' || typeof console.warn !== 'function') {
@@ -42,6 +45,20 @@ function getEffectiveReviewState(context, task) {
   return reviewStateHelpers.getEffectiveReviewState(task, kanbanEntry).state;
 }
 
+function getLatestReviewRequestEvent(task) {
+  const events = Array.isArray(task.historyEvents) ? task.historyEvents : [];
+  for (let i = events.length - 1; i >= 0; i -= 1) {
+    const event = events[i];
+    if (event.type === 'review_requested') return event;
+    if (
+      event.type === 'task_created' ||
+      (event.type === 'status_changed' &&
+        (event.to === 'in_progress' || event.to === 'pending' || event.to === 'deleted'))
+    ) return null;
+  }
+  return null;
+}
+
 function getLatestReviewRequestedReviewer(task) {
   const events = Array.isArray(task.historyEvents) ? task.historyEvents : [];
   for (let i = events.length - 1; i >= 0; i--) {
@@ -52,6 +69,8 @@ function getLatestReviewRequestedReviewer(task) {
     if (
       e.type === 'review_changes_requested' ||
       e.type === 'review_approved' ||
+      e.type === 'review_completed' ||
+      e.type === 'human_approved' ||
       (e.type === 'status_changed' &&
         (e.to === 'in_progress' || e.to === 'pending' || e.to === 'deleted')) ||
       e.type === 'task_created'
@@ -193,6 +212,8 @@ function getLatestReviewStartedActor(task) {
     if (
       e.type === 'review_changes_requested' ||
       e.type === 'review_approved' ||
+      e.type === 'review_completed' ||
+      e.type === 'human_approved' ||
       (e.type === 'status_changed' &&
         (e.to === 'in_progress' || e.to === 'pending' || e.to === 'deleted')) ||
       e.type === 'task_created'
@@ -255,6 +276,8 @@ function getLatestReviewLifecycleEvent(task) {
       e.type === 'review_requested' ||
       e.type === 'review_changes_requested' ||
       e.type === 'review_approved' ||
+      e.type === 'review_completed' ||
+      e.type === 'human_approved' ||
       e.type === 'review_started'
     ) {
       return e;
@@ -340,7 +363,8 @@ function startReview(context, taskId, flags = {}) {
           return t;
         });
       }
-      return { ok: true, taskId: task.id, displayId: task.displayId, column: 'review' };
+      return { ok: true, taskId: task.id, displayId: task.displayId, column: 'review',
+        reviewRequestId: getLatestReviewRequestEvent(task)?.id ?? null };
     }
 
     assertReviewTransitionAllowed(context, task, 'starting review');
@@ -361,7 +385,8 @@ function startReview(context, taskId, flags = {}) {
         t.reviewState = 'review';
         return t;
       });
-      return { ok: true, taskId: task.id, displayId: task.displayId, column: 'review' };
+      return { ok: true, taskId: task.id, displayId: task.displayId, column: 'review',
+        reviewRequestId: getLatestReviewRequestEvent(task)?.id ?? null };
     } catch (error) {
       try {
         kanban.clearKanban(context, task.id, { transition: 'rollback' });
@@ -377,7 +402,7 @@ function startReview(context, taskId, flags = {}) {
 }
 
 function requestReview(context, taskId, flags = {}) {
-  const { task, reviewer, from, leadSessionId } = withTeamBoardLock(context.paths, () => {
+  const { task, reviewer, from, leadSessionId, reviewRequestId, humanApproval, reviewFlowPrompt } = withTeamBoardLock(context.paths, () => {
     const currentTask = tasks.getTask(context, taskId);
     if (currentTask.status !== 'completed') {
       throw new Error(
@@ -424,11 +449,15 @@ function requestReview(context, taskId, flags = {}) {
       throw error;
     }
 
+    const reviewPolicy = kanban.getReviewFlowPolicy(context);
     return {
       task: tasks.getTask(context, currentTask.id),
       reviewer: nextReviewer,
       from: nextFrom,
       leadSessionId: resolveLeadSessionId(context, flags),
+      reviewRequestId: getLatestReviewRequestEvent(tasks.getTask(context, currentTask.id))?.id,
+      humanApproval: reviewFlow.isHumanApproval(reviewPolicy),
+      reviewFlowPrompt: reviewPolicy.reviewFlowPrompt,
     };
   });
 
@@ -440,18 +469,9 @@ function requestReview(context, taskId, flags = {}) {
     messages.sendMessage(context, {
       to: reviewer,
       from,
-      text:
-        `**Please review** task #${task.displayId || task.id}\n\n` +
-        wrapAgentBlock(
-          `This request is for the CURRENT review cycle. If you reviewed this task earlier, do not treat this message as a duplicate while the task is still in review; prior approvals become stale after later work.\n\n` +
-            `Before declaring it duplicate, call task_get and check the current reviewState/status. If it is still in review for you, continue with the review tools below.\n\n` +
-            `FIRST call review_start to signal you are beginning the review:\n` +
-            `{ teamName: "${context.teamName}", taskId: "${task.id}", from: "<your-name>" }\n\n` +
-            `When approved, use MCP tool review_approve:\n` +
-            `{ teamName: "${context.teamName}", taskId: "${task.id}", from: "<your-name>", note?: "<optional note>", notifyOwner: true }\n\n` +
-            `If changes are needed, use MCP tool review_request_changes:\n` +
-            `{ teamName: "${context.teamName}", taskId: "${task.id}", from: "<your-name>", comment: "..." }`
-        ),
+      text: buildReviewRequestMessage({
+        teamName: context.teamName, task, reviewRequestId, humanApproval, reviewFlowPrompt,
+      }),
       summary: `Review request for #${task.displayId || task.id}`,
       source: 'system_notification',
       ...(leadSessionId ? { leadSessionId } : {}),
@@ -463,9 +483,27 @@ function requestReview(context, taskId, flags = {}) {
   return task;
 }
 
+
+const leadSignoff = createLeadSignoff({
+  isLeadActor, resolveActorIdentityKey, getLatestReviewRequestEvent, closeReviewIntervals, warnNonCritical,
+});
+const { completeReview, approveAsHuman } = createReviewHumanActions({
+  leadSignoff,
+  getLatestReviewRequestEvent,
+  getEffectiveReviewState,
+  assertReviewTransitionAllowed,
+  getReviewDecisionActor,
+  closeReviewIntervals,
+  resolveLeadSessionId,
+  warnNonCritical,
+});
 function approveReview(context, taskId, flags = {}) {
   const result = withTeamBoardLock(context.paths, () => {
     const currentTask = tasks.getTask(context, taskId);
+    if (kanban.isHumanApprovalFlow(context)) {
+      throw new Error('Human approval required: reviewer must use review_complete');
+    }
+    leadSignoff.assertExplicitActor(context, currentTask, flags, 'review_approve');
     const nextFrom = getReviewDecisionActor(context, currentTask, flags, 'approve review');
     const nextNote =
       typeof flags.note === 'string' && flags.note.trim() ? flags.note.trim() : 'Approved';
@@ -570,63 +608,118 @@ function approveReview(context, taskId, flags = {}) {
 }
 
 function requestChanges(context, taskId, flags = {}) {
-  const { task, from, comment, leadSessionId } = withTeamBoardLock(context.paths, () => {
+  return requestChangesWithAuthority(context, taskId, flags, false);
+}
+
+// Trusted desktop user path. No MCP/CLI/public HTTP tool exposes this method.
+function requestChangesAsHuman(context, taskId, flags = {}) {
+  return requestChangesWithAuthority(context, taskId, flags, true);
+}
+
+function requestChangesWithAuthority(context, taskId, flags, fromHuman) {
+  const { task, from, comment, leadSessionId, decisionId } = withTeamBoardLock(context.paths, () => {
     const currentTask = tasks.getTask(context, taskId);
     if (!currentTask.owner) {
       throw new Error(`No owner found for task ${String(taskId)}`);
     }
 
-    const nextFrom = getReviewDecisionActor(context, currentTask, flags, 'request changes');
-    const nextComment =
-      typeof flags.comment === 'string' && flags.comment.trim()
+    const currentReviewState = getEffectiveReviewState(context, currentTask);
+    const latestDecision = [...(currentTask.historyEvents || [])].reverse().find(
+      (event) => [
+        'review_requested', 'review_changes_requested', 'review_completed',
+        'review_approved', 'human_approved',
+      ].includes(event.type)
+    );
+    const recoveringHumanRejection = fromHuman &&
+      currentReviewState === 'needsFix' &&
+      (currentTask.status === 'completed' || currentTask.status === 'pending') &&
+      latestDecision?.type === 'review_changes_requested' &&
+      latestDecision.actor === 'user';
+    if (fromHuman) {
+      if (!recoveringHumanRejection && (currentTask.status !== 'completed' ||
+          (currentReviewState !== 'review' && currentReviewState !== 'reviewed'))) {
+        throw new Error('Human rejection requires active Review or reviewed Done');
+      }
+    } else if (kanban.isHumanApprovalFlow(context)) {
+      const expectedId = typeof flags.expectedReviewRequestId === 'string'
+        ? flags.expectedReviewRequestId.trim() : '';
+      const currentId = getLatestReviewRequestEvent(currentTask)?.id;
+      if (!expectedId || expectedId !== currentId) {
+        throw new Error('Stale review request: review_request_changes requires current expectedReviewRequestId');
+      }
+    }
+    if (!fromHuman) leadSignoff.assertExplicitActor(context, currentTask, flags, 'review_request_changes');
+    const nextFrom = fromHuman
+      ? 'user'
+      : getReviewDecisionActor(context, currentTask, flags, 'request changes');
+    const nextComment = recoveringHumanRejection
+      ? latestDecision.note || 'Reviewer requested changes.'
+      : typeof flags.comment === 'string' && flags.comment.trim()
         ? flags.comment.trim()
         : 'Reviewer requested changes.';
-    const prevReviewState = assertReviewTransitionAllowed(
-      context,
-      currentTask,
-      'requesting changes'
-    );
-    const timestamp = new Date().toISOString();
-
-    tasks.updateTask(context, currentTask.id, (t) => {
-      closeReviewIntervals(t, timestamp);
-      t.historyEvents = tasks.appendHistoryEvent(t.historyEvents, {
-        type: 'review_changes_requested',
-        from: prevReviewState,
-        to: 'needsFix',
-        ...(nextComment ? { note: nextComment } : {}),
-        actor: nextFrom,
-        timestamp,
+    const prevReviewState = fromHuman
+      ? currentReviewState
+      : assertReviewTransitionAllowed(context, currentTask, 'requesting changes');
+    let decisionId = recoveringHumanRejection ? latestDecision.id : null;
+    if (!recoveringHumanRejection) {
+      const timestamp = new Date().toISOString();
+      tasks.updateTask(context, currentTask.id, (t) => {
+        closeReviewIntervals(t, timestamp);
+        t.historyEvents = tasks.appendHistoryEvent(t.historyEvents, {
+          type: 'review_changes_requested',
+          from: prevReviewState,
+          to: 'needsFix',
+          ...(nextComment ? { note: nextComment } : {}),
+          actor: nextFrom,
+          timestamp,
+        });
+        t.reviewState = 'needsFix';
+        return t;
       });
-      t.reviewState = 'needsFix';
-      return t;
-    });
+      if (fromHuman) {
+        decisionId = [...(tasks.getTask(context, currentTask.id).historyEvents || [])]
+          .reverse().find((event) =>
+            event.type === 'review_changes_requested' && event.actor === 'user'
+          )?.id;
+      }
+    }
 
     kanban.clearKanban(context, currentTask.id, {
       nextReviewState: 'needsFix',
       transition: 'request_changes',
     });
-    tasks.setTaskStatus(context, currentTask.id, 'pending', nextFrom, {
-      trustedInternalWrite: true,
-    });
-    tasks.addTaskComment(context, currentTask.id, {
-      text: nextComment,
-      from: nextFrom,
-      type: 'review_request',
-      ...(Array.isArray(flags.taskRefs) ? { taskRefs: flags.taskRefs } : {}),
-      notifyOwner: false,
-    });
+    if (currentTask.status !== 'pending') {
+      tasks.setTaskStatus(context, currentTask.id, 'pending', nextFrom, {
+        trustedInternalWrite: true,
+      });
+    }
+    if (fromHuman && !decisionId) {
+      throw new Error('Cannot resume human rejection without its recorded event ID');
+    }
+    const commentId = fromHuman ? `human-review-changes-${decisionId}` : null;
+    const existingComments = tasks.getTask(context, currentTask.id).comments || [];
+    if (!commentId || !existingComments.some((entry) => entry.id === commentId)) {
+      tasks.addTaskComment(context, currentTask.id, {
+        ...(commentId ? { id: commentId } : {}),
+        text: nextComment,
+        from: fromHuman ? runtimeHelpers.inferLeadName(context.paths) : nextFrom,
+        type: 'review_request',
+        ...(Array.isArray(flags.taskRefs) ? { taskRefs: flags.taskRefs } : {}),
+        notifyOwner: false,
+      });
+    }
 
     return {
       task: tasks.getTask(context, currentTask.id),
       from: nextFrom,
       comment: nextComment,
+      decisionId,
       leadSessionId: resolveLeadSessionId(context, flags),
     };
   });
 
   try {
-    messages.sendMessage(context, {
+    (fromHuman ? messages.sendTrustedMessage : messages.sendMessage)(context, {
       to: task.owner,
       from,
       text:
@@ -634,6 +727,7 @@ function requestChanges(context, taskId, flags = {}) {
         'The task has been moved back to pending. When you are ready to resume, review the task context, start it explicitly, implement the fixes, mark it completed, and request review again.',
       ...(Array.isArray(flags.taskRefs) ? { taskRefs: flags.taskRefs } : {}),
       summary: `Fix request for #${task.displayId || task.id}`,
+      ...(fromHuman && decisionId ? { messageId: decisionId } : {}),
       source: 'system_notification',
       ...(leadSessionId ? { leadSessionId } : {}),
     });
@@ -646,7 +740,10 @@ function requestChanges(context, taskId, flags = {}) {
 
 module.exports = {
   approveReview,
+  approveAsHuman,
+  completeReview,
   requestReview,
   requestChanges,
+  requestChangesAsHuman,
   startReview,
 };

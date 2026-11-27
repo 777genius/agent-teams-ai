@@ -148,7 +148,7 @@ async function start(f: Awaited<ReturnType<typeof fixture>>) {
       NODE_BINARY: await realpath(process.execPath),
       CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: f.runtime,
       CLAUDE_TERMINAL_DAEMON_BINARY: f.runtime,
-      CLAUDE_TEAM_OPENCODE_MCP_HTTP: '0',
+      AGENT_TEAMS_MCP_HTTP: '0',
       SHELL: '/bin/sh',
       AGENT_TEAMS_DISABLE_SOURCEMAPS: '1',
       pnpm_config_verify_deps_before_run: 'false',

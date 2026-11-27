@@ -21,6 +21,7 @@ const TASK_STALL_MARKER_TOOL_NAMES = new Set<string>([
   'review_start',
   'review_request',
   'review_approve',
+  'review_complete',
   'review_request_changes',
 ]);
 
@@ -309,6 +310,7 @@ function buildActionCategory(
     case 'review_start':
     case 'review_request':
     case 'review_approve':
+    case 'review_complete':
     case 'review_request_changes':
       return 'review';
     case 'task_set_owner':

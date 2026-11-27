@@ -322,6 +322,44 @@
     }
   },
   "notifications": {
+    "delivery": {
+      "eventLabels": {
+        "lead_inbox": "Team lead inbox message",
+        "user_inbox": "Message for you",
+        "task_clarification": "Clarification needed",
+        "task_status_change": "Task status changed",
+        "task_comment": "New task comment",
+        "task_created": "Task created",
+        "cross_team_message": "Cross-team message",
+        "team_launched": "Team launched",
+        "schedule_completed": "Scheduled run completed",
+        "usage_budget_warning": "Usage budget warning",
+        "task_review_requested": "Review requested",
+        "task_blocked": "Task blocked",
+        "all_tasks_completed": "All tasks completed",
+        "team_launch_incomplete": "Team launch needs attention",
+        "runtime_recovery": "Runtime recovery",
+        "schedule_failed": "Scheduled run failed",
+        "usage_budget_exceeded": "Usage budget exceeded"
+      },
+      "routingHint": "Choose destinations beside each notification type. Turning a type off disables it everywhere; Desktop is the default.",
+      "desktopOnly": "Desktop only",
+      "additionalEvents": "Additional delivery events",
+      "pausedDisabled": "自动投递已暂停：系统通知已关闭。开启系统通知即可恢复自动投递；手动测试仍可使用。",
+      "pausedSnoozed": "Automatic delivery is snoozed until {{time}}. Click Clear Snooze above to resume. Manual Test still works.",
+      "pausedSnoozedUnknown": "Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works.",
+      "agentGuide": "Agent Teams 分步设置指南",
+      "exampleFormat": "格式示例（非真实凭据）：",
+      "officialGuide": "服务商官方说明",
+      "providerSetup": {
+        "telegram": "通过 @BotFather（/newbot）创建机器人，开始与机器人聊天，然后填写令牌和 Chat ID 或 @频道名。",
+        "discord": "在目标 Discord 频道中打开“编辑频道 → 集成 → Webhooks”，创建 Webhook 并复制完整 URL。",
+        "slack": "创建 Slack 应用，启用 Incoming Webhooks，安装到工作区并复制生成的 URL。",
+        "ms-teams": "使用 Teams Workflows → Send webhook alerts to a channel。自定义触发器请选择 Anyone，并妥善保管 URL。",
+        "google-chat": "在 Google Chat 聊天室中选择“应用和集成 → 添加 Webhooks”，创建后复制完整 URL。",
+        "webhook": "创建公开的 HTTPS Webhook（例如在 n8n 中），复制完整的签名 URL 并测试。局域网 URL 不允许使用。"
+      }
+    },
     "recovery": {
       "title": "Automatic agent recovery",
       "transient": {
@@ -383,7 +421,7 @@
       "selectDuration": "选择持续时间…"
     },
     "taskCompletion": {
-      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Gemini. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
+      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Cursor/Gemini/Qoder/Pi. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
       "installPlugin": "Agent Notifications",
       "title": "Agent Notifications"
     },

@@ -20,12 +20,14 @@ export const TASK_LOG_MARKER_TOOL_NAMES = new Set<string>([
   'review_start',
   'review_request',
   'review_approve',
+  'review_complete',
   'review_request_changes',
 ]);
 
 export const TERMINAL_TASK_MARKER_TOOL_NAMES = new Set<string>([
   'task_complete',
   'review_approve',
+  'review_complete',
   'review_request_changes',
 ]);
 

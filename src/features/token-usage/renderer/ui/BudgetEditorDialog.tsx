@@ -187,7 +187,7 @@ export const BudgetEditorDialog = ({
         )}
         <div className="grid grid-cols-2 gap-3">
           {(['tokens', 'usd'] as const).map((name) => (
-            <label key={name} className="space-y-1 text-xs text-text-secondary">
+            <label key={name} className="space-y-1 text-xs text-text">
               {t(`tokenUsage.budgets.${name === 'tokens' ? 'tokenLimit' : 'costLimit'}`)}
               <Input
                 disabled={busy}

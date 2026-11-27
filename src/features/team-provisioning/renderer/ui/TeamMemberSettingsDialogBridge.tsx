@@ -13,6 +13,7 @@ interface TeamMemberSettingsDialogBridgeProps {
   members: readonly ResolvedTeamMember[];
   isTeamAlive: boolean;
   isTeamProvisioning: boolean;
+  projectDefinition?: boolean;
   projectPath?: string | null;
   onClose: () => void;
   onRefresh: (settings?: {
@@ -28,6 +29,7 @@ export const TeamMemberSettingsDialogBridge = ({
   members,
   isTeamAlive,
   isTeamProvisioning,
+  projectDefinition,
   projectPath,
   onClose,
   onRefresh,
@@ -59,6 +61,7 @@ export const TeamMemberSettingsDialogBridge = ({
       member={member}
       isTeamAlive={isTeamAlive}
       isTeamProvisioning={isTeamProvisioning}
+      projectDefinition={projectDefinition}
       isMixedTeam={providerIds.size > 1}
       leadProviderId={lead?.providerId}
       leadProviderBackendId={lead?.providerBackendId}

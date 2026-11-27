@@ -25,6 +25,7 @@ import type {
   TeamManagementTarget,
 } from '../contracts';
 import type { AppConnectionContext } from '@features/external-agent-connection/contracts';
+import type { TeamKind } from '@features/team-project-context/contracts';
 import type {
   ReplaceMembersRequest,
   TeamChangeEvent,
@@ -36,11 +37,41 @@ import type {
   TeamViewSnapshot,
 } from '@shared/types';
 
+/**
+ * The per-project (logical) team definition has one editor in the app; external
+ * writers use it through these rules instead of writing around it.
+ */
+export type TeamDefinitionEdit =
+  | { kind: 'metadata'; updates: { name?: string; description?: string; color?: string } }
+  | { kind: 'leadInstructions'; prompt: string }
+  | { kind: 'members'; request: ReplaceMembersRequest };
+
+export interface TeamProjectDefinitionPort {
+  /** Rejects when the kind of an existing team cannot be determined (fail closed). */
+  classify(teamName: string): Promise<TeamKind>;
+  /**
+   * Rejects unsafe project ownership or a pending partial edit. Adapters without
+   * applyEdit remain stopped-only. Called inside the logical-team operation lock.
+   */
+  assertEditable(logicalTeamName: string): Promise<void>;
+  /** After the definition was saved: refresh the stopped project copies (best effort). */
+  refreshCopies(logicalTeamName: string): Promise<void>;
+  /** The shared desktop/native edit operation; absent adapters remain stopped-only. */
+  applyEdit?(
+    teamName: string,
+    edit: TeamDefinitionEdit,
+    persistDefinition: () => Promise<void>,
+    assertCurrentRevision: () => Promise<void>
+  ): Promise<NonNullable<TeamManagementResult['application']>>;
+}
+
 export interface TeamPromptManagementPorts {
   run<T>(teamName: string, operation: () => Promise<T>): Promise<T>;
   withExpectedContext<T>(expected: AppConnectionContext, operation: () => Promise<T>): Promise<T>;
   getContext(): Promise<AppConnectionContext>;
   getRuntimeState(teamName: string): Promise<TeamRuntimeState>;
+  /** Required: a missing wiring must not be able to bypass the per-project rules. */
+  projectDefinition: TeamProjectDefinitionPort;
   getSavedRequest(teamName: string): Promise<TeamCreateRequest | null>;
   getTeamData(teamName: string): Promise<TeamViewSnapshot>;
   createTeamConfig(request: TeamCreateConfigRequest): Promise<void>;
@@ -264,10 +295,41 @@ export class TeamPromptManagement {
     });
   }
 
+  /**
+   * The same classification every definition writer uses. Fail closed: if the
+   * kind of an existing team cannot be determined it is not proof of an
+   * ordinary team, so nothing is written.
+   */
+  private async classify(teamName: string): Promise<TeamKind> {
+    try {
+      return await this.ports.projectDefinition.classify(teamName);
+    } catch {
+      throw new TeamManagementError(
+        'TEAM_METADATA_UNREADABLE',
+        'Team metadata is unreadable; fix the team in the app before editing it'
+      );
+    }
+  }
+
   private async admit(
     target: TeamManagementTarget,
-    allowTrashed: boolean
-  ): Promise<ConfigurationSnapshot> {
+    allowTrashed: boolean,
+    purpose: 'edit' | 'trash'
+  ): Promise<{ snapshot: ConfigurationSnapshot; kind: TeamKind }> {
+    // The configuration read refuses a team that does not exist or whose saved
+    // metadata is malformed, each with its specific code; only then is the team
+    // classified, and a classification that fails also rejects. A project copy is
+    // refused first, so an agent never has to stop a copy only to learn that it
+    // cannot be edited at all.
+    const snapshot = await this.read(target.teamName);
+    const kind = await this.classify(target.teamName);
+    if (kind === 'alias')
+      throw new TeamManagementError(
+        'PROJECT_COPY_NOT_EDITABLE',
+        purpose === 'trash'
+          ? 'This is a project copy of a team and cannot be trashed on its own. Teams with separate history per project are trashed in the app'
+          : 'This is a project copy of a team. Edit the team itself; its copies are updated from it'
+      );
     const runtime = await this.ports.getRuntimeState(target.teamName);
     if (
       runtime.progress &&
@@ -277,17 +339,27 @@ export class TeamPromptManagement {
         'TEAM_PROVISIONING',
         'Wait for provisioning to finish before changing configuration'
       );
-    if (runtime.isAlive)
+    if (runtime.isAlive && (purpose !== 'edit' || !this.ports.projectDefinition.applyEdit))
       throw new TeamManagementError(
         'TEAM_ACTIVE',
         'Stop the team in the app before changing configuration'
       );
-    const snapshot = await this.read(target.teamName);
+    if (kind === 'logical') {
+      // Trashing needs the permanent-deletion lifecycle fence of the app.
+      if (purpose === 'trash')
+        throw new TeamManagementError(
+          'PROJECT_TEAM_DESKTOP_ONLY',
+          'Teams with separate history per project are trashed in the app'
+        );
+      // A live-capable adapter admits one ready run; legacy adapters require all
+      // projects stopped. Both reject a pending edit before even a no-op can succeed.
+      await this.ports.projectDefinition.assertEditable(target.teamName);
+    }
     if (snapshot.configurationRevision !== target.expectedRevision)
       throw new TeamManagementError('TEAM_REVISION_MISMATCH', 'Get the team again before editing');
     if (!allowTrashed && snapshot.deletedAt)
       throw new TeamManagementError('TEAM_TRASHED', 'Restore the team in the app before editing');
-    return snapshot;
+    return { snapshot, kind };
   }
 
   private emit(teamName: string, change: TeamManagementCommittedChange): void {
@@ -332,8 +404,10 @@ export class TeamPromptManagement {
     operation: () => Promise<void>,
     verify: (readback: ConfigurationSnapshot) => boolean
   ): Promise<ConfigurationSnapshot> {
+    let operationCompleted = false;
     try {
       await operation();
+      operationCompleted = true;
       const readback = await this.read(teamName);
       if (!verify(readback))
         throw new Error('Committed configuration does not match the requested edit');
@@ -341,6 +415,18 @@ export class TeamPromptManagement {
     } catch (error) {
       if (error instanceof TeamMetadataTooLargeError)
         throw new TeamManagementError(error.code, error.message, error.statusCode);
+      // A live mutation can save the definition before its runtime effect fails.
+      // Matching saved settings alone must never turn that partial result into success.
+      if (!operationCompleted && error instanceof TeamManagementError) {
+        if (error.outcome) {
+          try {
+            error.outcome.configurationRevision = (await this.read(teamName)).configurationRevision;
+          } catch {
+            /* Keep the uncertain outcome when readback is unavailable. */
+          }
+        }
+        throw error;
+      }
       let readback: ConfigurationSnapshot | null = null;
       try {
         readback = await this.read(teamName);
@@ -364,10 +450,27 @@ export class TeamPromptManagement {
     const target = parseTeamManagementRequest(teamName, body, true);
     return this.ports.withExpectedContext(target.expectedContext, () =>
       this.ports.run(teamName, async () => {
-        const snapshot = await this.admit(target, false);
+        const { snapshot, kind } = await this.admit(target, false, 'edit');
         let committed = snapshot;
         const changedFields: TeamManagementCommittedChange['changedFields'] = [];
         let roster: TeamManagementCommittedChange['roster'];
+        let application: TeamManagementResult['application'];
+        const apply = async (edit: TeamDefinitionEdit, persist: () => Promise<void>) => {
+          if (this.ports.projectDefinition.applyEdit)
+            application = await this.ports.projectDefinition.applyEdit(
+              teamName,
+              edit,
+              persist,
+              async () => {
+                if ((await this.fingerprint(teamName)).revision !== target.expectedRevision)
+                  throw new TeamManagementError(
+                    'TEAM_REVISION_MISMATCH',
+                    'Get the team again before editing'
+                  );
+              }
+            );
+          else await persist();
+        };
         if (target.metadata) {
           const patch = target.metadata;
           for (const key of Object.keys(patch) as (keyof typeof patch)[]) {
@@ -383,19 +486,34 @@ export class TeamPromptManagement {
           if (changedFields.length)
             committed = await this.writeAndVerify(
               teamName,
-              async () => {
-                if (snapshot.config)
-                  await this.ports.updateConfig(teamName, {
-                    ...(patch.displayName !== undefined ? { name: patch.displayName } : {}),
-                    ...(patch.description !== undefined ? { description: patch.description } : {}),
-                    ...(patch.color !== undefined ? { color: patch.color } : {}),
-                  });
-                else
-                  await this.metaStore.updateMeta(teamName, (meta) => {
-                    if (!meta) throw new Error('Saved configuration disappeared');
-                    return { ...meta, ...patch };
-                  });
-              },
+              () =>
+                apply(
+                  {
+                    kind: 'metadata',
+                    updates: {
+                      ...(patch.displayName !== undefined ? { name: patch.displayName } : {}),
+                      ...(patch.description !== undefined
+                        ? { description: patch.description }
+                        : {}),
+                      ...(patch.color !== undefined ? { color: patch.color } : {}),
+                    },
+                  },
+                  async () => {
+                    if (snapshot.config)
+                      await this.ports.updateConfig(teamName, {
+                        ...(patch.displayName !== undefined ? { name: patch.displayName } : {}),
+                        ...(patch.description !== undefined
+                          ? { description: patch.description }
+                          : {}),
+                        ...(patch.color !== undefined ? { color: patch.color } : {}),
+                      });
+                    else
+                      await this.metaStore.updateMeta(teamName, (meta) => {
+                        if (!meta) throw new Error('Saved configuration disappeared');
+                        return { ...meta, ...patch };
+                      });
+                  }
+                ),
               (readback) =>
                 Object.keys(patch).every((key) => {
                   const field = key as keyof typeof patch;
@@ -420,10 +538,12 @@ export class TeamPromptManagement {
             committed = await this.writeAndVerify(
               teamName,
               () =>
-                this.metaStore.updateMeta(teamName, (meta) => {
-                  if (!meta) throw new Error('Saved configuration disappeared');
-                  return { ...meta, prompt: target.leadInstructions };
-                }),
+                apply({ kind: 'leadInstructions', prompt: target.leadInstructions! }, () =>
+                  this.metaStore.updateMeta(teamName, (meta) => {
+                    if (!meta) throw new Error('Saved configuration disappeared');
+                    return { ...meta, prompt: target.leadInstructions };
+                  })
+                ),
               (readback) => (readback.meta?.prompt ?? '') === target.leadInstructions
             );
           }
@@ -474,14 +594,25 @@ export class TeamPromptManagement {
             };
             committed = await this.writeAndVerify(
               teamName,
-              () => this.ports.replaceMembers(teamName, { members: merged }),
+              () =>
+                apply({ kind: 'members', request: { members: merged } }, () =>
+                  this.ports.replaceMembers(teamName, { members: merged })
+                ),
               (readback) =>
                 JSON.stringify(rosterShape(activeTeammates(readback.members))) ===
                 JSON.stringify(rosterShape(target.members!))
             );
           }
         }
-        return this.finish(
+        if (kind === 'logical' && changedFields.length && !this.ports.projectDefinition.applyEdit) {
+          try {
+            await this.ports.projectDefinition.refreshCopies(teamName);
+          } catch {
+            // The definition is already saved and is the authority; a launch
+            // projects it onto a copy that could not be refreshed now.
+          }
+        }
+        const result = await this.finish(
           teamName,
           target.expectedContext,
           'edited',
@@ -489,6 +620,7 @@ export class TeamPromptManagement {
           roster,
           committed
         );
+        return application ? { ...result, application } : result;
       })
     );
   }
@@ -497,7 +629,7 @@ export class TeamPromptManagement {
     const target = parseTeamManagementRequest(teamName, body, false);
     return this.ports.withExpectedContext(target.expectedContext, () =>
       this.ports.run(teamName, async () => {
-        const snapshot = await this.admit(target, true);
+        const { snapshot } = await this.admit(target, true, 'trash');
         if (snapshot.deletedAt)
           return this.finish(teamName, target.expectedContext, 'trashed', [], undefined, snapshot);
         const committed = await this.writeAndVerify(

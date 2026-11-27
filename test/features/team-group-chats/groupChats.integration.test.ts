@@ -1099,6 +1099,13 @@ describe('group chat main authority and durable identity', () => {
     } finally { await app.close(); }
   });
 
+  // The test spawns the real MCP server eight times in a row. A request that gets no
+  // answer must fail the test itself (MCP_RESPONSE_TIMEOUT_MS) well before the runner
+  // cuts it (MCP_TRANSPORT_TEST_TIMEOUT_MS): a test cut by the runner keeps running
+  // into the next tests and into the fixture that afterEach already removed.
+  const MCP_RESPONSE_TIMEOUT_MS = 20_000;
+  const MCP_TRANSPORT_TEST_TIMEOUT_MS = 90_000;
+
   it('runs bounded IPC/controller/MCP transport with native/OpenCode destinations beside DM (processor boundary is synthetic)', async () => {
     // No capability rows or provider process are fabricated. Runtime admission and
     // model processing are injected transport ports, not live-runtime evidence.
@@ -1153,7 +1160,7 @@ describe('group chat main authority and durable identity', () => {
           AGENT_TEAMS_MCP_CLAUDE_DIR: claudeDir,
           AGENT_TEAMS_BOUND_CONTROL_URL: app.listeningOrigin,
           AGENT_TEAMS_BOUND_CONTEXT_JSON: JSON.stringify(context),
-        });
+        }, { responseTimeoutMs: MCP_RESPONSE_TIMEOUT_MS });
       try {
         await client.initialize();
         const discovery = await client.listTools() as { result: { tools: { name: string }[] } };
@@ -1259,7 +1266,7 @@ describe('group chat main authority and durable identity', () => {
       await app.close();
       state.root = originalRoot;
     }
-  });
+  }, MCP_TRANSPORT_TEST_TIMEOUT_MS);
 
   it('validates group reply correlation', async () => {
     await create();

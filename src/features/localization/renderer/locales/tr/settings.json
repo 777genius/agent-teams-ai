@@ -322,6 +322,44 @@
     }
   },
   "notifications": {
+    "delivery": {
+      "eventLabels": {
+        "lead_inbox": "Team lead inbox message",
+        "user_inbox": "Message for you",
+        "task_clarification": "Clarification needed",
+        "task_status_change": "Task status changed",
+        "task_comment": "New task comment",
+        "task_created": "Task created",
+        "cross_team_message": "Cross-team message",
+        "team_launched": "Team launched",
+        "schedule_completed": "Scheduled run completed",
+        "usage_budget_warning": "Usage budget warning",
+        "task_review_requested": "Review requested",
+        "task_blocked": "Task blocked",
+        "all_tasks_completed": "All tasks completed",
+        "team_launch_incomplete": "Team launch needs attention",
+        "runtime_recovery": "Runtime recovery",
+        "schedule_failed": "Scheduled run failed",
+        "usage_budget_exceeded": "Usage budget exceeded"
+      },
+      "routingHint": "Choose destinations beside each notification type. Turning a type off disables it everywhere; Desktop is the default.",
+      "desktopOnly": "Desktop only",
+      "additionalEvents": "Additional delivery events",
+      "pausedDisabled": "Otomatik gönderim duraklatıldı: sistem bildirimleri kapalı. Devam etmek için etkinleştirin. Manuel test kullanılabilir.",
+      "pausedSnoozed": "Automatic delivery is snoozed until {{time}}. Click Clear Snooze above to resume. Manual Test still works.",
+      "pausedSnoozedUnknown": "Automatic delivery is snoozed. Click Clear Snooze above to resume. Manual Test still works.",
+      "agentGuide": "Agent Teams adım adım kurulum rehberi",
+      "exampleFormat": "Biçim örneği (gerçek kimlik bilgileri değil):",
+      "officialGuide": "Sağlayıcının resmi yönergeleri",
+      "providerSetup": {
+        "telegram": "@BotFather üzerinden /newbot ile bot oluşturun, sohbeti başlatın, ardından token ve Chat ID veya @kanal_adı girin.",
+        "discord": "Discord kanalında Kanalı Düzenle → Entegrasyonlar → Webhooks bölümünden webhook oluşturup tam URL'yi kopyalayın.",
+        "slack": "Slack uygulaması oluşturun, Incoming Webhooks'u etkinleştirip çalışma alanına yükleyin ve URL'yi kopyalayın.",
+        "ms-teams": "Teams Workflows → Send webhook alerts to a channel kullanın. Özel tetikleyicide Anyone seçin; URL'yi gizli tutun.",
+        "google-chat": "Google Chat alanında Uygulamalar ve entegrasyonlar → Webhook ekle bölümünden webhook oluşturup tam URL'yi kopyalayın.",
+        "webhook": "Herkese açık bir HTTPS webhook'u (ör. n8n'de) oluşturun, imzalı URL'nin tamamını kopyalayıp test edin. Yerel URL'ler engellenir."
+      }
+    },
     "recovery": {
       "title": "Automatic agent recovery",
       "transient": {
@@ -383,7 +421,7 @@
       "selectDuration": "Süre seç..."
     },
     "taskCompletion": {
-      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Gemini. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
+      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Cursor/Gemini/Qoder/Pi. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
       "installPlugin": "Agent Notifications",
       "title": "Agent Notifications"
     },

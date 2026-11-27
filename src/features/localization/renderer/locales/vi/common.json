@@ -952,5 +952,21 @@
       "unavailable": "News is available in the desktop app.",
       "state_unavailable": "Reading is available, but your progress cannot be saved right now. Automatic news is paused."
     }
+  },
+  "attention": {
+    "title": "Cần bạn chú ý",
+    "tab": "Cần chú ý",
+    "viewAll": "Xem tất cả",
+    "refresh": "Làm mới trạng thái",
+    "loading": "Đang tải…",
+    "loadFailed": "Không thể tải trạng thái",
+    "retry": "Thử lại",
+    "partial": "Không thể tải một số nhóm. Số liệu có thể chưa đầy đủ.",
+    "nothing": "Các tác vụ đang chờ quyết định của bạn và cuộc trò chuyện nhóm chưa đọc sẽ xuất hiện ở đây.",
+    "tasks": "Đang chờ quyết định của bạn",
+    "chats": "Cuộc trò chuyện chưa đọc",
+    "openTask": "Mở tác vụ: {{subject}} trong {{team}}",
+    "timeUnknown": "Không rõ thời gian",
+    "teamAttention": "Cần chú ý"
   }
 }

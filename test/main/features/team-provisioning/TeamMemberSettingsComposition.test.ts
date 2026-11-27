@@ -90,6 +90,46 @@ describe('createTeamMemberSettingsFeature', () => {
     expect(commandRunner.run).toHaveBeenCalledTimes(2);
   });
 
+  it('uses process-local idempotency when internal storage fell back to JSON for the session', async () => {
+    let current = snapshot('old');
+    const applyTarget = vi.fn<MemberSettingsRepositoryPort['applyTarget']>(async (input) => {
+      current = { ...current, settings: input.settings };
+      return { outcome: 'applied', snapshot: current, rollbackToken: null };
+    });
+    // The SQLite ledger is not usable in this session: starting a command there would fail.
+    const commandRunner = { run: vi.fn() } as unknown as ApplicationCommandRunner;
+    const attachLiveRosterMember = vi.fn(async () => undefined);
+    const feature = createTeamMemberSettingsFeature({
+      repository: {
+        findTarget: async () => current,
+        classifyMissingTarget: async () => 'member_not_found',
+        applyTarget,
+        restoreTarget: async () => true,
+      },
+      commandRunner,
+      isDurableStorageAvailable: async () => false,
+      mutationSource: { runLiveRosterMutation: async (_team, operation) => operation() },
+      lifecycleSource: { attachLiveRosterMember, isTeamAlive: () => true },
+    });
+    const request: UpdateMemberSettingsRequest = {
+      commandId: 'command-json',
+      idempotencyKey: 'idem-json',
+      teamName: 'team-a',
+      memberName: 'alice',
+      expectedFingerprint: createMemberSettingsFingerprint(current),
+      targetKind: 'member',
+      settings: { ...current.settings, role: 'new' },
+    };
+
+    const first = await feature.updateMemberSettings(request);
+    const replay = await feature.updateMemberSettings(request);
+
+    expect(first).toMatchObject({ outcome: 'completed', replayed: false });
+    expect(replay).toEqual({ ...first, replayed: true });
+    expect(commandRunner.run).not.toHaveBeenCalled();
+    expect(applyTarget).toHaveBeenCalledOnce();
+  });
+
   it('marks a process-local duplicate as replayed without a second lifecycle effect', async () => {
     let current = snapshot('old');
     const applyTarget = vi.fn<MemberSettingsRepositoryPort['applyTarget']>(async (input) => {

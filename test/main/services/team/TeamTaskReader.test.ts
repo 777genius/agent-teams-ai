@@ -294,4 +294,26 @@ describe('TeamTaskReader', () => {
     expect(fullAfterProjection[0]?.comments?.[0]?.text).toBe(fullComment);
     expect(readFileSpy).toHaveBeenCalledTimes(3);
   });
+
+  it('reads many task files in parallel batches, keeps order and skips unreadable files', async () => {
+    await setupTasksRoot();
+    for (let i = 1; i <= 70; i++) {
+      await writeTaskFile('atlas-hq', {
+        id: String(i),
+        subject: `Task ${i}`,
+        status: 'pending',
+        createdAt: '2026-05-02T12:00:00.000Z',
+      });
+    }
+    const brokenPath = path.join(tmpDir!, 'tasks', 'atlas-hq', '40.json');
+    await fsp.writeFile(brokenPath, '{ not json', 'utf8');
+
+    const reader = new TeamTaskReader();
+    const tasks = await reader.getTasksProjectionSnapshot('atlas-hq');
+
+    expect(tasks).toHaveLength(69);
+    expect(tasks.map((task) => task.id)).toEqual(
+      Array.from({ length: 70 }, (_, i) => String(i + 1)).filter((id) => id !== '40')
+    );
+  });
 });

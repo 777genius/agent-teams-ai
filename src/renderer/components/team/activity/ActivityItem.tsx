@@ -103,6 +103,7 @@ import { ActivitySenderBadge, renderGroupRecipientBadge } from './ActivitySender
 import { renderInlineBoldSummary } from './ActivityTaskSummary';
 import { formatActivityTimestamp } from './activityTimestamp';
 import { BootstrapAcknowledgementRow, BootstrapSystemRow } from './BootstrapActivityRows';
+import { CrossTeamTeamBadge } from './CrossTeamTeamBadge';
 import { ReplyQuoteBlock } from './ReplyQuoteBlock';
 import {
   getTimelineCardBorderRadius,
@@ -155,44 +156,6 @@ function parseIdlePeerSummaryRoute(summary: string): { recipient: string | null;
   const body = match[2]?.trim() || trimmed;
   return { recipient, body };
 }
-
-const CrossTeamTeamBadge = ({
-  teamName,
-  onClick,
-}: {
-  teamName: string;
-  onClick?: (teamName: string) => void;
-}): React.JSX.Element => {
-  if (onClick) {
-    return (
-      <button
-        type="button"
-        className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium tracking-wide"
-        style={{
-          backgroundColor: 'rgba(168, 85, 247, 0.15)',
-          color: '#c084fc',
-          cursor: 'pointer',
-          border: 'none',
-          padding: '1px 6px',
-        }}
-        onClick={(e) => {
-          e.stopPropagation();
-          onClick(teamName);
-        }}
-      >
-        {teamName}
-      </button>
-    );
-  }
-  return (
-    <span
-      className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium tracking-wide"
-      style={{ backgroundColor: 'rgba(168, 85, 247, 0.15)', color: '#c084fc' }}
-    >
-      {teamName}
-    </span>
-  );
-};
 
 interface ActivityItemProps {
   message: InboxMessage;

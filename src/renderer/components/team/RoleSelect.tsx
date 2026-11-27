@@ -3,6 +3,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { useAppTranslation } from '@features/localization/renderer';
 import { Combobox } from '@renderer/components/ui/combobox';
 import { Input } from '@renderer/components/ui/input';
+import { Textarea } from '@renderer/components/ui/textarea';
 import {
   CUSTOM_ROLE,
   isForbiddenTeamRole,
@@ -29,6 +30,9 @@ const ROLE_ICONS: Record<string, LucideIcon> = {
 const CUSTOM_ICON = Pencil;
 
 interface RoleSelectProps {
+  id?: string;
+  'aria-invalid'?: boolean;
+  'aria-describedby'?: string;
   /** Current role selection value (preset role name, CUSTOM_ROLE, or NO_ROLE). */
   value: string;
   /** Called when the user picks a preset role, NO_ROLE, or CUSTOM_ROLE. */
@@ -46,6 +50,7 @@ interface RoleSelectProps {
   /** Validate custom role on change and return error or null. */
   onCustomRoleValidate?: (role: string) => string | null;
   disabled?: boolean;
+  multilineCustomRole?: boolean;
 }
 
 // eslint-disable-next-line sonarjs/function-return-type -- option renderer returns mixed node structure
@@ -72,6 +77,9 @@ const renderRoleOption = (option: ComboboxOption, isSelected: boolean): React.Re
 };
 
 export const RoleSelect = ({
+  id,
+  'aria-invalid': ariaInvalid,
+  'aria-describedby': ariaDescribedBy,
   value,
   onValueChange,
   customRole = '',
@@ -81,6 +89,7 @@ export const RoleSelect = ({
   customRoleError: externalError,
   onCustomRoleValidate,
   disabled,
+  multilineCustomRole = false,
 }: RoleSelectProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const roleOptions = useMemo<ComboboxOption[]>(
@@ -96,6 +105,11 @@ export const RoleSelect = ({
   );
   const [internalError, setInternalError] = useState<string | null>(null);
   const error = externalError ?? internalError;
+  const generatedId = React.useId();
+  const customRoleId = id ? `${id}-custom` : `custom-role-${generatedId}`;
+  const customRoleErrorId = `${customRoleId}-error`;
+  const customRoleDescribedBy =
+    [ariaDescribedBy, error ? customRoleErrorId : null].filter(Boolean).join(' ') || undefined;
 
   const handleValueChange = useCallback(
     (newValue: string) => {
@@ -108,7 +122,7 @@ export const RoleSelect = ({
   );
 
   const handleCustomChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       const val = e.target.value;
       onCustomRoleChange?.(val);
 
@@ -126,7 +140,7 @@ export const RoleSelect = ({
   const selectedLabel = useMemo(() => {
     const opt = roleOptions.find((o) => o.value === value);
     return opt?.label;
-  }, [value]);
+  }, [roleOptions, value]);
 
   const renderTriggerLabel = useCallback((option: ComboboxOption) => {
     const Icon =
@@ -146,6 +160,9 @@ export const RoleSelect = ({
   return (
     <div className="space-y-1">
       <Combobox
+        id={id}
+        aria-invalid={ariaInvalid}
+        aria-describedby={ariaDescribedBy}
         options={roleOptions}
         value={value}
         onValueChange={handleValueChange}
@@ -159,14 +176,37 @@ export const RoleSelect = ({
       />
       {value === CUSTOM_ROLE && onCustomRoleChange ? (
         <div>
-          <Input
-            className={inputClassName ?? 'h-8 text-xs'}
-            value={customRole}
-            onChange={handleCustomChange}
-            placeholder={t('members.roleSelect.customRolePlaceholder')}
-            autoFocus
-          />
-          {error ? <span className="mt-0.5 block text-[10px] text-red-400">{error}</span> : null}
+          {multilineCustomRole ? (
+            <Textarea
+              id={customRoleId}
+              aria-label={t('members.roleSelect.customRolePlaceholder')}
+              aria-invalid={ariaInvalid || Boolean(error) || undefined}
+              aria-describedby={customRoleDescribedBy}
+              className={inputClassName ?? 'text-xs'}
+              value={customRole}
+              onChange={handleCustomChange}
+              placeholder={t('members.roleSelect.customRolePlaceholder')}
+              disabled={disabled}
+            />
+          ) : (
+            <Input
+              id={customRoleId}
+              aria-label={t('members.roleSelect.customRolePlaceholder')}
+              aria-invalid={ariaInvalid || Boolean(error) || undefined}
+              aria-describedby={customRoleDescribedBy}
+              className={inputClassName ?? 'h-8 text-xs'}
+              value={customRole}
+              onChange={handleCustomChange}
+              placeholder={t('members.roleSelect.customRolePlaceholder')}
+              disabled={disabled}
+              autoFocus
+            />
+          )}
+          {error ? (
+            <span id={customRoleErrorId} className="mt-0.5 block text-[10px] text-red-400">
+              {error}
+            </span>
+          ) : null}
         </div>
       ) : null}
     </div>

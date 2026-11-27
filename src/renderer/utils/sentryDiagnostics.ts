@@ -4,6 +4,7 @@ const TAB_TYPES: Record<Tab['type'], true> = {
   session: true,
   dashboard: true,
   notifications: true,
+  attention: true,
   settings: true,
   teams: true,
   organizations: true,

@@ -16,17 +16,29 @@
 // runtime which is unavailable in standalone (pure Node.js) mode. Standalone
 // error tracking can be added later with @sentry/node if needed.
 
+import { join } from 'node:path';
+
+import {
+  createCustomTeamTemplatesFeature,
+  type CustomTeamTemplatesFeature,
+} from '@features/custom-team-templates/main';
+import { createInternalStorageFeature } from '@features/internal-storage/main';
+import { createNotificationChannelsFeature } from '@features/notification-channels/main';
 import { createRecentProjectsFeature } from '@features/recent-projects/main';
 import { createWorkspaceTrustFeatures } from '@features/workspace-trust/main';
 import { createLogger } from '@shared/utils/logger';
 
+import { ApiKeyService } from './services/extensions/apikeys/ApiKeyService';
 import { LocalFileSystemProvider } from './services/infrastructure/LocalFileSystemProvider';
 import {
+  getAppDataBasePath,
+  getAppDataPath,
   getAutoDetectedClaudeBasePath,
   getClaudeBasePath,
   getHomeDir,
   getProjectsBasePath,
   getTodosBasePath,
+  setAppDataBasePath,
   setClaudeBasePathOverride,
 } from './utils/pathDecoder';
 
@@ -46,6 +58,7 @@ const logger = createLogger('Standalone');
 const HOST = process.env.HOST ?? '0.0.0.0';
 const PORT = parseInt(process.env.PORT ?? '3456', 10);
 const CLAUDE_ROOT = process.env.CLAUDE_ROOT;
+const APP_DATA_DIR = process.env.APP_DATA_DIR;
 
 // Default CORS to allow all in standalone mode (Docker isolation replaces CORS)
 if (!process.env.CORS_ORIGIN) {
@@ -92,6 +105,8 @@ const sshConnectionManagerStub = {
 let localContext: ServiceContext;
 let notificationManager: NotificationManager;
 let httpServer: HttpServer;
+let internalStorageFeature: ReturnType<typeof createInternalStorageFeature> | undefined;
+let customTeamTemplatesFeature: CustomTeamTemplatesFeature | undefined;
 
 // =============================================================================
 // Lifecycle
@@ -106,12 +121,19 @@ async function start(): Promise<void> {
     logger.info(`Using CLAUDE_ROOT: ${CLAUDE_ROOT}`);
   }
 
+  if (APP_DATA_DIR) {
+    setAppDataBasePath(APP_DATA_DIR);
+    logger.info(`Using APP_DATA_DIR: ${APP_DATA_DIR}`);
+  }
+
   // Import services after applying CLAUDE_ROOT so ConfigManager picks up the correct base path.
-  const [{ HttpServer }, { NotificationManager }, { ServiceContext }] = await Promise.all([
-    import('./services/infrastructure/HttpServer'),
-    import('./services/infrastructure/NotificationManager'),
-    import('./services/infrastructure/ServiceContext'),
-  ]);
+  const [{ HttpServer }, { NotificationManager }, { ServiceContext }, { ConfigManager }] =
+    await Promise.all([
+      import('./services/infrastructure/HttpServer'),
+      import('./services/infrastructure/NotificationManager'),
+      import('./services/infrastructure/ServiceContext'),
+      import('./services/infrastructure/ConfigManager'),
+    ]);
 
   const projectsDir = getProjectsBasePath();
   const todosDir = getTodosBasePath();
@@ -133,6 +155,23 @@ async function start(): Promise<void> {
   notificationManager = NotificationManager.getInstance();
   localContext.fileWatcher.setNotificationManager(notificationManager);
 
+  const userDataPath = getAppDataBasePath();
+  const notificationChannelsFeature = createNotificationChannelsFeature({
+    storePath: join(getAppDataPath(), 'notification-channels.json'),
+    apiKeys: new ApiKeyService(join(getAppDataPath(), 'notification-channel-credentials')),
+    canDeliver: () => {
+      const settings = ConfigManager.getInstance().getConfig().notifications;
+      return (
+        settings.enabled && (settings.snoozedUntil == null || settings.snoozedUntil <= Date.now())
+      );
+    },
+  });
+  internalStorageFeature = createInternalStorageFeature({ userDataPath });
+  await internalStorageFeature.probeBackend();
+  customTeamTemplatesFeature = createCustomTeamTemplatesFeature({
+    backend: internalStorageFeature.customTeamTemplatesBackend,
+  });
+
   // Create HTTP server
   httpServer = new HttpServer();
   const recentProjectsFeature = createRecentProjectsFeature({
@@ -153,6 +192,11 @@ async function start(): Promise<void> {
   notificationManager.on('notification-new', (notification: unknown) => {
     httpServer.broadcast('notification:new', notification);
   });
+  notificationManager.on('notification-delivery', (notification: unknown) => {
+    void notificationChannelsFeature
+      .dispatch(notification as Parameters<typeof notificationChannelsFeature.dispatch>[0])
+      .catch(() => logger.warn('External notification delivery skipped.'));
+  });
   notificationManager.on('notification-updated', (data: unknown) => {
     httpServer.broadcast('notification:updated', data);
   });
@@ -168,6 +212,8 @@ async function start(): Promise<void> {
     chunkBuilder: localContext.chunkBuilder,
     dataCache: localContext.dataCache,
     recentProjectsFeature,
+    notificationChannelsFeature,
+    customTeamTemplatesFeature,
     workspaceTrust: createWorkspaceTrustFeatures({
       getClaudeConfigDir: getClaudeBasePath,
       getAutoDetectedClaudeConfigDir: getAutoDetectedClaudeBasePath,
@@ -192,6 +238,9 @@ async function shutdown(): Promise<void> {
   if (httpServer?.isRunning()) {
     await httpServer.stop();
   }
+
+  customTeamTemplatesFeature?.dispose();
+  await internalStorageFeature?.dispose();
 
   if (localContext) {
     localContext.dispose();

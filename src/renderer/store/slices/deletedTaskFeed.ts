@@ -40,15 +40,18 @@ export const createDeletedTaskFeed: StateCreator<AppState, [], [], DeletedTaskFe
 
   const projectTeamDeletedTasks = (
     team: AppState['teams'][number],
+    executionTeamName: string,
+    fallbackProjectPath: string | undefined,
     tasks: TeamTask[]
   ): GlobalTask[] =>
     tasks.map(
       (task): GlobalTask => ({
         ...task,
-        teamName: team.teamName,
+        // Keep native identity for restore and for overlapping numeric task IDs.
+        teamName: executionTeamName,
         teamDisplayName: team.displayName,
         teamDeleted: team.deletedAt ? true : undefined,
-        projectPath: task.projectPath ?? team.projectPath,
+        projectPath: task.projectPath ?? fallbackProjectPath,
       })
     );
 
@@ -70,12 +73,20 @@ export const createDeletedTaskFeed: StateCreator<AppState, [], [], DeletedTaskFe
         if (generation !== fetchGeneration) return;
       }
       const run = (async () => {
+        // A visible logical team may own several verified, ready native histories.
+        // List each physical store for deleted tasks; never infer aliases by prefix.
+        const targets = get().teams.flatMap((team) => [
+          { team, executionTeamName: team.teamName, projectPath: team.projectPath },
+          ...(team.projectHistoryContexts ?? []).map(({ executionTeamName, projectPath }) => ({
+            team, executionTeamName, projectPath,
+          })),
+        ]);
         const settled = await Promise.allSettled(
-          get().teams.map(async (team) => {
+          targets.map(async ({ team, executionTeamName, projectPath }) => {
             const tasks = await unwrapIpc<TeamTask[]>('team:getDeletedTasks', () =>
-              api.teams.getDeletedTasks(team.teamName)
+              api.teams.getDeletedTasks(executionTeamName)
             );
-            return projectTeamDeletedTasks(team, tasks);
+            return projectTeamDeletedTasks(team, executionTeamName, projectPath, tasks);
           })
         );
         const batches: GlobalTask[][] = [];
