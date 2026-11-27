@@ -514,28 +514,28 @@ async function checkDesktop() {
     if (!button) throw new Error('Expected task answer deep link');
     button.click();
   })()`);
-  await cdp.waitFor(
-    'Array.from(document.querySelectorAll("textarea[id^=task-comment-input-]")).some((node) => node.getClientRects().length > 0)',
-    'task-scoped answer editor');
+  // Wait for task-detail ownership before typing through Chromium's real input path.
+  const answerField = `document.querySelector('[role="dialog"] textarea[id^="task-comment-input-"]')`;
+  const answerButton = `${answerField}?.closest('.message-composer-flat-layout')?.querySelector('button.message-composer-send-button')`;
+  await cdp.waitFor(`(() => {
+    const field = ${answerField};
+    return field && field.getClientRects().length > 0 && !field.disabled && !field.readOnly;
+  })()`, 'writable task-scoped answer editor');
   await cdp.evaluate(`(() => {
-    const field = [...document.querySelectorAll('textarea[id^="task-comment-input-"]')]
-      .find((node) => node.getClientRects().length > 0);
-    if (!field) throw new Error('Task answer editor unavailable');
-    const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
-    setter.call(field, 'Use PostgreSQL for this task');
-    field.dispatchEvent(new Event('input', { bubbles: true }));
+    const field = ${answerField};
+    field.focus();
+    if (document.activeElement !== field) throw new Error('Task answer editor not focused');
   })()`);
-  await cdp.waitFor(`(() => [...document.querySelectorAll('button.message-composer-send-button')]
-    .some((button) => button.getClientRects().length > 0 && !button.disabled &&
-      button.textContent.toLowerCase().includes('comment')))()`,
-    'task answer submit enabled');
-  await cdp.evaluate(`(() => {
-    const button = [...document.querySelectorAll('button.message-composer-send-button')]
-      .find((row) => row.getClientRects().length > 0 && !row.disabled &&
-        row.textContent.toLowerCase().includes('comment'));
-    if (!button) throw new Error('Task answer submit missing');
-    button.click();
-  })()`);
+  await cdp.send('Input.insertText', { text: 'Use PostgreSQL for this task' });
+  await cdp.waitFor(`(() => {
+    const button = ${answerButton};
+    return ${answerField}?.value === 'Use PostgreSQL for this task' &&
+      window.__agentTeamsDevStore.getState().taskDetailSessionById[${JSON.stringify(JSON.stringify(['local', first, '2']))}]?.commentText === 'Use PostgreSQL for this task' &&
+      button && button.getClientRects().length > 0 && !button.disabled;
+  })()`, 'task answer draft accepted and submit enabled');
+  await cdp.evaluate(`(() => { const button = ${answerButton};
+    if (!button || button.disabled || !button.getClientRects().length) throw new Error('Task answer submit missing');
+    button.click(); })()`);
   await until(async () => {
     const task = await cdp.evaluate(
       `window.electronAPI.teams.getTask(${JSON.stringify(first)}, '2')`);
