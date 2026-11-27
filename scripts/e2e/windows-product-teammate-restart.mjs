@@ -103,7 +103,7 @@ return t?CdpClient.connect(t.webSocketDebuggerUrl):false;}catch{return false;}},
 await client.send('Page.enable');
 await until('app startup',async()=>api('window.electronAPI?.startup?.getStatus().then(s=>s.ready)').catch(()=>false));
 result.phase='create-real-team';
-const request={teamName:team,cwd:f.projectPath,providerId:'anthropic',model:'claude-sonnet-4-6',
+const request={projectContextMode:'shared',teamName:team,cwd:f.projectPath,providerId:'anthropic',model:'claude-sonnet-4-6',
 skipPermissions:true,syncModelsWithLead:false,
 prompt:'TEST project only. Never access other paths or install packages.',
 members:[{name:'worker',providerId:'anthropic',model:'claude-sonnet-4-6',role:'Test worker'}]};
