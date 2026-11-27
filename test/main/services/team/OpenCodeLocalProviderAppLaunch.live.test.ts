@@ -408,12 +408,15 @@ liveDescribe('OpenCode local provider app launch live e2e', () => {
       },
       10_000
     );
+    const restartWarn = vi.mocked(console.warn);
+    const restartWarningStart = restartWarn.mock.calls.length;
     await runLiveCaseStage(
       owned,
       'recovered local teammate restart',
       () => harness.svc.restartMember(teamName, 'bob'),
       360_000
     );
+    const restartWarnings = restartWarn.mock.calls.slice(restartWarningStart);
     await waitForLiveCase(
       owned,
       'prove recovered runtime and lane',
@@ -502,6 +505,9 @@ liveDescribe('OpenCode local provider app launch live e2e', () => {
         }),
       180_000
     );
+    if (cases.active === owned) {
+      retainVerifiedRestartStopTiming(teamName, restartWarn, restartWarnings);
+    }
     clearBenignSlowConfigReadWarnings();
   }, 720_000);
 });
@@ -921,6 +927,42 @@ describe('OpenCode local provider fixture', () => {
     } finally {
       warn.mockClear();
       error.mockClear();
+      info.mockRestore();
+    }
+  });
+
+  it('retains only successful owned stop timing captured during a verified restart', () => {
+    const teamName = 'TEST-restart-stop';
+    const warning = `[Service:TeamProvisioning] [${teamName}] Slow OpenCode stop: primary lane stop took 10613ms (stopped=true)`;
+    const warn = vi.mocked(console.warn);
+    const info = vi.spyOn(console, 'info').mockImplementation(() => undefined);
+    const rejected = warning.replace('stopped=true', 'stopped=false');
+    const foreign = warning.replace(teamName, 'TEST-foreign');
+    const malformed = `${warning} cleanup_unknown`;
+    try {
+      console.warn(warning);
+      const start = warn.mock.calls.length;
+      console.warn(warning);
+      console.warn(rejected);
+      console.warn(foreign);
+      console.warn(malformed);
+      const restartWarnings = warn.mock.calls.slice(start);
+      console.warn(warning);
+
+      retainVerifiedRestartStopTiming(teamName, warn, restartWarnings);
+
+      expect(warn.mock.calls).toEqual([
+        [warning],
+        [rejected],
+        [foreign],
+        [malformed],
+        [warning],
+      ]);
+      expect(info).toHaveBeenCalledExactlyOnceWith(
+        `[OpenCodeLocalProviderAppLaunch.live] verified restart stop: ${warning}`
+      );
+    } finally {
+      warn.mockClear();
       info.mockRestore();
     }
   });
@@ -1994,6 +2036,29 @@ function clearExpectedLocalServerOutageErrors(port: number): void {
     })
   ) {
     error.mockClear();
+  }
+}
+
+/** Called only after the restart, fresh delivery and final strict lane cleanup all pass. */
+function retainVerifiedRestartStopTiming(
+  teamName: string,
+  warn: typeof console.warn,
+  restartWarnings: readonly unknown[][]
+): void {
+  if (console.warn !== warn || !vi.isMockFunction(warn)) return;
+  const calls = vi.mocked(warn).mock.calls;
+  const prefix = `[Service:TeamProvisioning] [${teamName}] Slow OpenCode stop: primary lane stop took `;
+  for (let index = calls.length - 1; index >= 0; index -= 1) {
+    const call = calls[index];
+    if (!restartWarnings.includes(call)) continue;
+    const rendered = call.map((part) => String(part)).join(' ');
+    if (
+      rendered.startsWith(prefix) &&
+      /^\d+ms \(stopped=true\)$/.test(rendered.slice(prefix.length))
+    ) {
+      console.info(`[OpenCodeLocalProviderAppLaunch.live] verified restart stop: ${rendered}`);
+      calls.splice(index, 1);
+    }
   }
 }
 
