@@ -230,8 +230,10 @@ try{client?.socket?.close();}catch{}try{inspector?.socket?.close();}catch{}
 // outer cmd.exe. Do not trust a reused PID when the original launcher has exited.
 if(app?.pid){
   const launcherKnownAlive=app.exitCode===null&&app.signalCode===null;
-  const currentLauncher=processes().find(p=>p.pid===app.pid);
-  const launcherMatches=Boolean(launcherKnownAlive&&originalLauncherIdentity?.birth&&
+  let currentLauncher=null,launcherCensusError=null;
+  try{currentLauncher=processes().find(p=>p.pid===app.pid)??null;}
+  catch(e){launcherCensusError=String(e);}
+  const launcherMatches=Boolean(!launcherCensusError&&launcherKnownAlive&&originalLauncherIdentity?.birth&&
     currentLauncher?.birth===originalLauncherIdentity.birth);
   if(launcherMatches){
     const cleanup=spawnSync('taskkill.exe',['/T','/F','/PID',String(app.pid)],
@@ -249,7 +251,7 @@ if(app?.pid){
   }else{
     // The launcher can exit while pnpm or Electron descendants survive.
     // A numeric PID is no longer sufficient authority for taskkill.
-    result.appTreeCleanup={exitCode:null,error:'original_launcher_exited_or_identity_changed_before_cleanup'};
+    result.appTreeCleanup={exitCode:null,error:launcherCensusError??'original_launcher_exited_or_identity_changed_before_cleanup'};
     result.cleanupUnconfirmed=true;
     result.success=false;
   }
