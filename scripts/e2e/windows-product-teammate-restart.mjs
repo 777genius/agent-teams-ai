@@ -157,8 +157,12 @@ assert(ownedAlive(workerPid,team),'Original restarted worker unavailable');
 const restartedWorkerIdentity=processes().find(p=>p.pid===workerPid);
 assert(restartedWorkerIdentity?.birth,'Restarted worker native birth identity unavailable');
 result.restartWorkerPid=workerPid;
-assert(!ownedAlive(result.initialWorkerPid,team),
-  'Original pre-restart worker survived replacement; restart did not retire its owned PID');
+// Command-line visibility can become unreadable while a Win32 process remains
+// live; only the original PID+birth disappearing from a full census proves retirement.
+const oldWorkerStillPresent=processes().some(p=>
+  p.pid===originalWorkerIdentity.pid&&p.birth===originalWorkerIdentity.birth);
+assert(!oldWorkerStillPresent,
+  'Original pre-restart worker birth survived replacement');
 result.originalWorkerRetiredDuringRestart=true;
 result.phase='real-tool-turn';
 // The inspector runs in Main's global context, where bare require may be
@@ -221,8 +225,18 @@ result.workerAndToolAliveImmediatelyBeforeStop=true;
 await client.evaluate('(()=>{window.__winStop={done:false};window.electronAPI.teams.stop('+
 literal(team)+').then(v=>{window.__winStop={done:true,value:v}},e=>{window.__winStop={done:true,error:String(e)}});return true;})()');
 await until('Stop IPC',()=>client.evaluate('(()=>{const x=window.__winStop;if(!x?.done)return null;if(x.error)throw Error(x.error);return true;})()'),150000);
-await until('original worker and tool retired',()=>!ownedAlive(workerPid,team)&&!ownedAlive(toolPid,psFile),60000);
-result.originalWorkerAndToolRetired=true;result.success=true;result.phase='product-local-model-qualified';
+await until('original worker and tool births retired',()=>{
+  const census=processes(); // CIM error is unknown, never a verified Stop.
+  return !census.some(p=>
+    p.pid===restartedWorkerIdentity.pid&&p.birth===restartedWorkerIdentity.birth) &&
+    !census.some(p=>
+      p.pid===originalToolIdentity.pid&&p.birth===originalToolIdentity.birth);
+},60000);
+result.originalWorkerAndToolRetired=true;
+result.originalBirthRetirement={
+  workerPid:restartedWorkerIdentity.pid,workerBirth:restartedWorkerIdentity.birth,
+  toolPid:originalToolIdentity.pid,toolBirth:originalToolIdentity.birth
+};result.success=true;result.phase='product-local-model-qualified';
 }catch(e){result.error=String(e).slice(0,1500);result.toolNames=toolsAvailable;result.toolRequests=toolRequests;throw e;}
 finally{if(teamCreated&&client)await api('window.electronAPI.teams.stop('+literal(team)+')').catch(()=>{});
 try{client?.socket?.close();}catch{}try{inspector?.socket?.close();}catch{}
