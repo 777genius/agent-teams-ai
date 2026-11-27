@@ -178,7 +178,7 @@ export function createDesktopProjectRunObserver(logicalHandleId: string, executi
       assert.equal(typeof id, 'string');
       const runId = id as string;
       if (field === 'provisioning' && runId.startsWith(prefix)) {
-        assert.match(runId.slice(prefix.length), /^[1-9]\d*$/);
+        assert.match(runId.slice(prefix.length), /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/);
         assert.equal(publishedFields.has(field), false, 'published field cannot return to pending');
         if (pending === undefined) pending = runId;
         assert.equal(runId, pending, 'same original pending launch attempt');

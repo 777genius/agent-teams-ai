@@ -326,3 +326,43 @@ numeric attempt to this Host observer and that the separate legacy startup-sweep
 producer is filtered from its Host key. It required explicit whitespace
 negatives and retention of the identity and publication fences. All three
 reviews are reconciled; the plan is approved for implementation after publication.
+
+F was published before implementation as `f9aa8ef1`. The new regressions failed
+against the original numeric validator, then all 30 observer cases passed after
+the one-line correction. The canonical `typecheck:legacy-host-scripts` passed
+with the pinned Node/compiler and unchanged options. Root reviewed the exact
+diff, including the assertion that a different valid UUID fails on original
+attempt identity. This is scoped evidence, not native installer acceptance.
+
+### F.1. Reopen the original Team card while project tabs remain mounted
+
+The existing `desktop-emulated-selection-ui.ts` `openTeam` lookup uses only
+`data-team-name=<captured logical key>`. A per-project detail wrapper has the
+same attribute, and `PaneContent` deliberately retains inactive Team tabs in
+the DOM. The original `scrollTo` helper requires exactly one match before its
+visibility check. Therefore a visible Team card and retained hidden detail
+wrapper make that lookup ambiguous. A diagnostic using the existing DOM
+implementation returned two original-selector matches and one card-role match.
+All six relevant source files match the original Selection receipt's recorded
+digests. This supports the source defect; the historical timeout's exact cause
+remains an inference because its artifact did not retain the relevant DOM
+attributes.
+
+After this plan is published, change only the existing selector to
+`[role="button"][data-team-name=<captured logical key>]`, as already used by
+the membership journey. `ActiveTeamCard` supplies that semantic role; detail
+wrappers do not. Keep the exact captured key, uniqueness requirement, owner
+and project fences, focused-tab assertion, physical click and original
+deadline. Do not add a first-match, display-name or visibility fallback, alter
+the shared controls, or change production UI. Reuse the existing controls
+regressions and canonical scripts typecheck; a new helper or a test that only
+duplicates this selector is unnecessary. The original native Selection journey
+must still pass separately.
+
+Estimate: one changed script line, no production UI or test additions;
+complexity 1/10, confidence 9/10, reliability target 9/10. R1 traced the retained
+tab, card and unique-target lookup. R2 independently confirmed those source
+contracts and that duplicate genuine cards must still be refused. R3 confirmed
+the semantic card role and the two-to-one DOM diagnostic while retaining the
+native-evidence limitation. Reviews are reconciled; implementation is approved
+after this plan is published.
