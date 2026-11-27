@@ -4,6 +4,7 @@ import { json } from './TeamReviewCommands.js';
 
 import type { JsonValue } from '../contracts.js';
 import type { TeamGrant } from './contracts.js';
+import type { TeamTaskInventoryFilters } from './ports.js';
 
 const CURSOR = /^([1-9][0-9]{0,8})\.([a-f0-9]{64})$/;
 const INLINE_BYTES = 240 * 1024;
@@ -29,7 +30,7 @@ export function pageOwnerTaskDetail(options: {
   return pageOwnerReadDetail({ ...options, value: source });
 }
 
-/** Shared lossless detail pages; the caller supplies canonical identities only
+/** Shared lossless read pages; the caller supplies canonical identities only
  * after its current Owner read fence and policy have resolved the request.
  */
 export function pageOwnerReadDetail(options: {
@@ -37,11 +38,9 @@ export function pageOwnerReadDetail(options: {
   grant: TeamGrant;
   key: string;
   teamName: string;
-  taskId: string;
-  commentId?: string;
   value: JsonValue;
   cursor?: string;
-}): JsonValue {
+} & ({ taskId: string; commentId?: string } | { inventoryFilters: TeamTaskInventoryFilters })): JsonValue {
   const source = options.value;
   const serialized = JSON.stringify(source);
   if (Buffer.byteLength(serialized) <= INLINE_BYTES) {
@@ -64,7 +63,12 @@ export function pageOwnerReadDetail(options: {
     bytes += size;
   }
   if (chunk) chunks.push(chunk);
-  const signature = (offset: number) => digest({
+  const inventory = 'inventoryFilters' in options;
+  const signature = (offset: number) => digest(inventory ? {
+    key: options.key, principalId: options.principalId, grant: options.grant,
+    teamName: options.teamName, inventoryFilters: options.inventoryFilters, revision,
+    protocol: 'task-inventory-json-chunk-v1', offset,
+  } : {
     key: options.key, principalId: options.principalId, grant: options.grant,
     teamName: options.teamName, taskId: options.taskId, revision,
     ...(options.commentId === undefined ? {} : { commentId: options.commentId }),
@@ -79,9 +83,11 @@ export function pageOwnerReadDetail(options: {
       throw new TeamOwnerError('hold');
   }
   return json({
-    kind: options.commentId === undefined ? 'task-detail-chunk' : 'task-comment-chunk',
-    taskId: options.taskId,
-    ...(options.commentId === undefined ? {} : { commentId: options.commentId }),
+    ...(inventory ? { kind: 'task-inventory-chunk' } : {
+      kind: options.commentId === undefined ? 'task-detail-chunk' : 'task-comment-chunk',
+      taskId: options.taskId,
+      ...(options.commentId === undefined ? {} : { commentId: options.commentId }),
+    }),
     revision,
     part: offset,
     total: chunks.length,

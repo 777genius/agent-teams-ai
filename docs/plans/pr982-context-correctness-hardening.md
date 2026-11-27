@@ -232,3 +232,45 @@ qualification jobs, not inferred from these local fixtures.
 Full CI and native desktop/provider E2E qualification remain required before
 declaring the entire PR ready to merge. No successful result is inferred from a
 terminated compiler, test worker or native flow that was not executed.
+
+### Follow-up: bounded native task inventory reads
+
+The new P1 review on `task_list` was reproduced on the exact published
+`fe4a80669d1f5976f5396b0805458f57823bfefe` source. Creating 150 canonical tasks
+with mutual relationships made the default 50-row inventory exceed 256 KiB.
+The actual MCP call failed with `MCP operation output-limit`. A row-count limit
+also cannot bound JSON-escaped scalar text independently of relationships.
+
+The existing tool now uses the shared lossless read pager for oversized selected
+inventories. Small results keep their original JSON array. Larger results use
+the existing 64 KiB escaped-text chunk budget, preserving every selected row,
+relationship and its order. The original filters and default/max limits remain
+unchanged; the final continuation ends the selected limit window. The tool
+description explains how to retain the same filters and reconstruct the array.
+
+Inventory cursors have a separate protocol and bind the original query, full
+current grant, principal, Team, Owner key and selected-result revision. The
+cursor never enters the canonical controller filters. Existing task/comment
+cursor signatures and envelopes remain unchanged. Invalid inventory shapes,
+changed authority, stale results and cross-query or cross-kind cursors fail
+closed through the existing Owner read boundary.
+
+Two independent source reviews found no blocking issue. The original red
+scenario passed after the fix. Six new regressions passed, including real
+150-task windows, 200 rows with JSON escaping and Unicode, a single oversized
+row, exact reconstruction, byte limits and unchanged task/command files.
+The existing read-cutover suite passed 9/9 and the existing HTTP SDK continuation
+scenario passed 1/1: **16 focused tests, zero failures or skips**. Canonical Host
+build and the complete Host test typecheck passed with Node 24.21.0 and the
+pinned native compiler. Source-size and whitespace checks passed.
+
+The fix was integrated over concurrent published commit
+`9b80b2fb5958c35f4c5ef7233ed21e6bd5179342` without overlapping its files. Its exact
+base tree was verified, and the combined Host build and complete Host test
+typecheck passed again. The unchanged MCP source blobs retain the focused
+runtime evidence above; ordinary current-head CI remains required.
+
+Production changes add **30** lines and remove **13** across three files; the
+new test file contains **262** lines. Complexity: **4/10**. This repairs the
+response-size failure; reading every page preserves the total selected payload
+and is not evidence of lower total token use or provider cost.
