@@ -1,5 +1,6 @@
 import {
   createTeamRegistryPayloadSchema,
+  teamRegistryListResponseSchema,
   teamRegistryListSchema,
   teamRegistryReceiptSchema,
 } from '@agent-teams/legacy-agent-host/team-registry/contracts';
@@ -16,6 +17,7 @@ import {
   assertBackendRequestGuard,
   BackendRoutingError,
   captureBackendPayload,
+  captureOwnerBinding,
 } from '../application/backendBinding';
 
 import { type CapturedHostClient, observeCapturedHostStartup } from './CapturedHostClient';
@@ -30,6 +32,7 @@ import type { JsonValue } from '@agent-teams/legacy-agent-host/contracts';
 import type { LocalModelReadinessCapture } from '@agent-teams/legacy-agent-host/team-host';
 import type {
   CreateTeamRegistryPayload,
+  TeamRegistryList,
   TeamRegistryReceipt,
 } from '@agent-teams/legacy-agent-host/team-registry/contracts';
 
@@ -61,6 +64,8 @@ export class CapturedTeamRegistry {
     readiness?: CapturedReadinessOrigin,
     allocation?: { capture?: LocalModelReadinessCapture; budget?: LocalModelReadinessContext }
   ) {
+    const owner = captureOwnerBinding(this.options.owner);
+    const client = this.options.client;
     const captured = captureBackendPayload(payload);
     const origin = readiness
       ? { ...readiness, origin: structuredClone(readiness.origin) }
@@ -83,10 +88,10 @@ export class CapturedTeamRegistry {
     const remaining = budget ? readinessRemaining(budget) : undefined;
     this.current(guard);
     if (method === 'team.registry.list') observeCapturedHostStartup('read-start', 'registry-list');
-    const result = await this.options.client.request(
+    const result = await client.request(
       method,
       {
-        owner: this.options.owner as unknown as JsonValue,
+        owner: owner as unknown as JsonValue,
         commandId,
         payload: captured,
         ...(wire ? { localModelReadinessOrigin: wire as unknown as JsonValue } : {}),
@@ -143,9 +148,96 @@ export class CapturedTeamRegistry {
   }
 
   async list(contextId: string, guard?: BackendRequestGuard) {
-    return teamRegistryListSchema.parse(
-      await this.request('team.registry.list', crypto.randomUUID(), { contextId }, guard)
-    );
+    const owner = JSON.stringify(captureOwnerBinding(this.options.owner));
+    const client = this.options.client;
+    const original: BackendRequestGuard = {
+      isCurrent: () => {
+        assertBackendRequestGuard(guard);
+        return (
+          this.options.client === client &&
+          JSON.stringify(captureOwnerBinding(this.options.owner)) === owner
+        );
+      },
+    };
+    this.current(original);
+    const commandId = crypto.randomUUID();
+    const result: TeamRegistryList = { teams: [], held: [] };
+    const ids = new Set<string>(),
+      handles = new Set<string>(),
+      names = new Set<string>();
+    const cursors = new Set<string>();
+    let cursor: string | undefined, revision: string | undefined;
+    let totalTeams = 0,
+      totalHeld = 0;
+    const refuse = () => {
+      throw new BackendRoutingError('hold');
+    };
+    for (let page = 0; page < 256; page++) {
+      const value = teamRegistryListResponseSchema.parse(
+        await this.request(
+          'team.registry.list',
+          commandId,
+          { contextId, ...(cursor === undefined ? {} : { cursor }) },
+          original
+        )
+      );
+      this.current(original, 'unknown');
+      const paged = 'kind' in value;
+      if (!paged && page !== 0) refuse();
+      if (paged) {
+        if (page === 0) {
+          revision = value.revision;
+          totalTeams = value.totalTeams;
+          totalHeld = value.totalHeld;
+        } else if (
+          revision !== value.revision ||
+          totalTeams !== value.totalTeams ||
+          totalHeld !== value.totalHeld
+        )
+          refuse();
+        if (result.held.length && value.teams.length) refuse();
+      } else {
+        totalTeams = value.teams.length;
+        totalHeld = value.held.length;
+      }
+      if (totalTeams + totalHeld > 256) refuse();
+      for (const row of [...value.teams, ...value.held.map((entry) => entry.record)]) {
+        const name = row.teamName.toLowerCase();
+        if (
+          row.contextId !== contextId ||
+          ids.has(row.teamId) ||
+          handles.has(row.binding.handleId) ||
+          names.has(name)
+        )
+          refuse();
+        ids.add(row.teamId);
+        handles.add(row.binding.handleId);
+        names.add(name);
+      }
+      result.teams.push(...value.teams);
+      result.held.push(...value.held);
+      if (
+        result.teams.length > totalTeams ||
+        result.held.length > totalHeld ||
+        (result.held.length > 0 && result.teams.length !== totalTeams)
+      )
+        refuse();
+      const next = paged ? value.nextCursor : null;
+      if (next === null) {
+        if (result.teams.length !== totalTeams || result.held.length !== totalHeld) refuse();
+        this.current(original, 'unknown');
+        return teamRegistryListSchema.parse(result);
+      }
+      if (
+        ids.size >= totalTeams + totalHeld ||
+        cursors.has(next) ||
+        Number(next.split('.')[0]) !== ids.size
+      )
+        refuse();
+      cursors.add(next);
+      cursor = next;
+    }
+    return refuse();
   }
 
   async create(

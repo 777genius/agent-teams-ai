@@ -1,5 +1,10 @@
 import { z } from 'zod';
-import { createTeamRegistryPayloadSchema } from '../team-registry/contracts.js';
+import { randomBytes } from 'node:crypto';
+import {
+  createTeamRegistryPayloadSchema,
+  teamRegistryCursorSchema,
+} from '../team-registry/contracts.js';
+import { pageTeamRegistryCatalog } from '../team-registry/pageTeamRegistryCatalog.js';
 import type { TeamRegistry } from '../team-registry/TeamRegistry.js';
 import { TeamLaunchError } from '../team-launch/contracts.js';
 import { TeamOwnerError } from '../team/contracts.js';
@@ -29,7 +34,14 @@ export function createTeamCreationMethods(options: {
   select(raw: unknown, method: string): CreationSelection;
 }): Record<string, HostMethod> {
   const methods: Record<string, HostMethod> = {};
-  for (const operation of ['prepare', 'probe.read', 'probe.cancel', 'capture', 'submit', 'lookup'] as const) {
+  for (const operation of [
+    'prepare',
+    'probe.read',
+    'probe.cancel',
+    'capture',
+    'submit',
+    'lookup',
+  ] as const) {
     methods[`team.creation.${operation}`] = {
       lane:
         operation === 'probe.read' || operation === 'probe.cancel' || operation === 'lookup'
@@ -37,24 +49,30 @@ export function createTeamCreationMethods(options: {
           : 'work',
       async handle(raw): Promise<JsonValue> {
         try {
-          const { coordinator, commandId, payload, localModelReadinessOrigin,
-            localModelReadinessRemainingMs, localModelReadinessCapture } = options.select(raw, `team.creation.${operation}`);
+          const {
+            coordinator,
+            commandId,
+            payload,
+            localModelReadinessOrigin,
+            localModelReadinessRemainingMs,
+            localModelReadinessCapture,
+          } = options.select(raw, `team.creation.${operation}`);
           const value =
             operation === 'submit'
               ? await coordinator.submit(commandId, payload, localModelReadinessCapture)
               : operation === 'capture'
                 ? await coordinator.capture(commandId, payload, localModelReadinessRemainingMs ?? 0)
-              : operation === 'lookup'
-                ? coordinator.lookup(commandId, payload)
-                : await coordinator.prepare(
-                    operation === 'prepare'
-                      ? 'start'
-                      : operation === 'probe.read'
-                        ? 'read'
-                        : 'cancel',
-                    payload,
-                    localModelReadinessOrigin
-                  );
+                : operation === 'lookup'
+                  ? coordinator.lookup(commandId, payload)
+                  : await coordinator.prepare(
+                      operation === 'prepare'
+                        ? 'start'
+                        : operation === 'probe.read'
+                          ? 'read'
+                          : 'cancel',
+                      payload,
+                      localModelReadinessOrigin
+                    );
           return { ok: true, value: json(value) };
         } catch (error) {
           const code =
@@ -90,6 +108,7 @@ export function createTeamRegistryMethods(options: {
   };
 }): Record<string, HostMethod> {
   const id = z.string().min(1).max(256);
+  const pageKey = randomBytes(32).toString('hex');
   const methods: Record<string, HostMethod> = {};
   for (const operation of ['create', 'lookup', 'list'] as const) {
     methods[`team.registry.${operation}`] = {
@@ -106,8 +125,16 @@ export function createTeamRegistryMethods(options: {
               .parse(rawPayload);
             value = registry.lookup(commandId, payload.contextId, payload.expected);
           } else {
-            const payload = z.object({ contextId: id }).strict().parse(rawPayload);
-            value = registry.list(payload.contextId);
+            const payload = z
+              .object({ contextId: id, cursor: teamRegistryCursorSchema.optional() })
+              .strict()
+              .parse(rawPayload);
+            value = pageTeamRegistryCatalog({
+              catalog: registry.list(payload.contextId),
+              key: pageKey,
+              contextId: payload.contextId,
+              ...(payload.cursor === undefined ? {} : { cursor: payload.cursor }),
+            });
           }
           return { ok: true, value: json(value) };
         } catch (error) {

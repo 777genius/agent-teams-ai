@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "baseHead": "533d955b28493cf9549a4e6b88684852df835628",
+  "candidate": "Registry paging and actual HTTP unregister verification; exact source hashes below",
+  "status": "PASS",
+  "scope": "Main IPC facade / actual Host / TEST HTTP process only; no Electron controls, vendor OAuth, real account or model proof",
+  "testFile": "test/features/runtime-provider-management/capturedManagement.safe-e2e.test.ts",
+  "command": "NODE_OPTIONS=--max-old-space-size=256 pnpm --config.verify-deps-before-run=false exec vitest run test/features/runtime-provider-management/capturedManagement.safe-e2e.test.ts --pool=forks --maxWorkers=1 --minWorkers=1 --no-file-parallelism --reporter=verbose",
+  "result": {
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "testDurationMs": 6807,
+    "totalDurationSeconds": 11.78,
+    "exitCode": 0
+  },
+  "toolchain": {
+    "node": "24.21.0",
+    "typescript": "7.0.2",
+    "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c"
+  },
+  "canonicalHostBuild": {
+    "status": "PASS",
+    "includes": "task-change-ledger prebuild",
+    "logSha256": "d6efa218a38b23ad8285a933ae787d9bcd6d542c54df4d1e1c3e04bf0f5e0789"
+  },
+  "hostEntrySha256": "4e1841072540175636a776082693780021827ce56d0b5c2aa11f9e8511d132ba",
+  "fixtureSourceSha256": "ab59330054c01a929bc3c7e0e3afe00081068efe19b58cd0865d8efd2786bff2",
+  "sourceHashes": {
+    "src/features/runtime-provider-management/core/domain/managedProviderPreferences.ts": "16ba054b21ec20d58c672bf1e5b28e9cacb7c1a846da721d4a9869db13009fa1",
+    "src/features/runtime-provider-management/main/infrastructure/FileManagedProviderPreferences.ts": "458753e693d6f69f0db661886dddec1a6c68806e1e156efd0c0f5c7de424bd3b",
+    "src/features/runtime-provider-management/main/adapters/output/capturedManagementPreferences.ts": "32fa7f106d94bea044cf9a4db3df7056c4e626312ec079e18409e1056af9ef23",
+    "src/features/runtime-provider-management/main/adapters/output/CapturedModelProbe.ts": "5dc24fc1c915fdedf26fca9b081c7a2d23648d23f30233b0ed203a91c75e8bac",
+    "packages/legacy-agent-host/tests/fixtures/native-host.ts": "a7a3fb47fa680bb9c6193657437b860c58526a2fb87f6e5d2327a865c90f10fb",
+    "src/features/runtime-provider-management/main/adapters/output/CapturedProviderOAuth.ts": "0596ccddb655faa0a7df52538f0f1aff72ccd0bf2b7e857a3f72e82a7e179c4d",
+    "src/features/runtime-provider-management/main/infrastructure/runtimeProviderOAuthPresentation.ts": "94c21f1e941ee99b33ee27d7118bc6b66be0a747d048d382e84454be63649711",
+    "src/features/runtime-provider-management/main/infrastructure/runtimeProviderModelTestBoundary.ts": "5ec640f9ede35745a5f0cd41cb1913d284bc4072803915a8fef0d035849ee757",
+    "src/features/runtime-provider-management/main/infrastructure/FileProviderOAuthIntentStore.ts": "6b729c44f08135c2e0cb1b637b1f231845bc5d841356702e2a38206aaf064f21",
+    "src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderManagementClient.ts": "432ac48086869a0cc31a7f741aac5b83bb965fee45b1f5baadcf37ef0c07fd64",
+    "src/features/runtime-provider-management/main/adapters/output/capturedManagementCatalog.ts": "428339cec3ecc8b1d229f72e58e3217b13b80641d47a94350ac5f1d3c37bdf53",
+    "src/features/runtime-provider-management/main/composition/createRuntimeProviderManagementFeature.ts": "c00cbde468308d94fd9ebae79f97d2a22d58bb1f72d00ecdc8f348a8c4778bb2",
+    "src/features/runtime-provider-management/main/adapters/input/registerRuntimeProviderManagementIpc.ts": "36c5cc932cc37817aa050a30203f408ebffa57af8b098b7ea824738ad229d01f",
+    "src/features/agent-backend/main/composition/DesktopBackendFeature.ts": "ab21bca32b106e4fa21ecbb01b8acb8528c2d4ec5e2209c1ddb012e60758fce5",
+    "src/features/agent-backend/main/infrastructure/CapturedProviderManagement.ts": "1e8dfc2bbbdd0a4995a70bdb7d446253d1b4ee08cb5e0c54e1e4c9dec393c26e",
+    "src/features/agent-backend/main/infrastructure/CapturedHostClient.ts": "f93e8b9703ee6f28939be0710e76914d5f634477ddba10fba2816a3d01f37e87",
+    "src/features/agent-backend/main/infrastructure/loadDesktopBackendDescriptor.ts": "c36bcaec948dc6614635dfe82ac1d94723324fb62b5e7a7ac2abb3690288084a",
+    "src/main/ipc/agentBackend.ts": "30231e19b4ee28dfc217acbc940acfff5974606db779dd3f188ad00534ef7ca1",
+    "src/main/ipc/cliInstaller.ts": "f2656ad2e23a09fe7b1d60bb2fb06c930033187658dbec3eced13af61a40c154",
+    "src/main/services/infrastructure/CliInstallerService.ts": "6625499c3e294be40f0d33484470c0d78faf40028a51e7ca8e162795f7753b34",
+    "src/main/index.ts": "8b95a8c991c32b720c45f7207eb8565fcceef3dc1fad72e6578d4a3f7412a078",
+    "src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderStatusClient.ts": "606098a4895f1715ea58677cfff11337790d5bbcf1be3fcdf3efcdf171b59aab",
+    "src/features/runtime-provider-management/core/application/RuntimeProviderStatusPort.ts": "faf51faa0191e98f6c5b54e715f1c344336b8f732af93da3cb0900a9336ce8b6",
+    "src/shared/utils/providerStatusAuthority.ts": "67241d584fdbef940ad2a0ef7eb459eb85af618bd907710d42c005821c2fa4fa",
+    "src/renderer/store/slices/cliInstallerStatusReconciliation.ts": "e4d462b2670212e38a45efc17b05b0de3de14c5cd6a02da1ec16eebb649f4d95",
+    "src/renderer/utils/teamEffortOptions.ts": "408acb4474ecd5f6f6f32e7f5242af982e98615fed8f416f206c27dfd5b7258d",
+    "src/shared/utils/effortLevels.ts": "cdb3c4acdcea1b8042a06af878243531ca861a7d5901e78234083a8694ed9e83",
+    "test/features/runtime-provider-management/capturedManagement.safe-e2e.test.ts": "3fd201f8a5349abc85f4b9bc90a89cf6d9e6ef05379d8ccee5a659599c6ea801"
+  },
+  "candidateSourceHashes": {
+    "packages/legacy-agent-host/src/composition/createTeamCreationMethods.ts": "b4f12b69e0b440cd1104d7250cfe6b6f865d38fddf804174b104263539f9a280",
+    "packages/legacy-agent-host/src/team-registry/contracts.ts": "8101eed646e147eb5afb7312a03341fca127437584f242729f837787d1b24c0f",
+    "packages/legacy-agent-host/src/team-registry/pageTeamRegistryCatalog.ts": "cb2253755545185f536620248370a3a04a7d6632693699539bf76896d322de81",
+    "src/features/agent-backend/main/infrastructure/CapturedTeamRegistry.ts": "587e80708117f9b897e7e2a25086deefc7f4e907b5b4c3916d5dce1d4b00e918",
+    "packages/legacy-agent-host/tests/mcp-process-catalog-http.test.ts": "ee6c44099e6d41ffc6d25c421bdc6a40b08abf0bfc47ae4c0dea231681a3109a",
+    "packages/legacy-agent-host/tests/host-team-registry-pages.test.ts": "993a9e88ef345a045bcd97134db797f8e26e1ffca83d078e45d1a18bbbe7fd9a",
+    "test/features/agent-backend/hostTeamRegistryPages.test.ts": "b462543a66b46dd372946541d208c9084b4a1f5d03c16376c7cd0da5092de2a8"
+  },
+  "hostTrees": {
+    "sourceSha256": "1269d9dcdc453662423c9b2fd2c4659c71e07027d952dac6c153bb028c4db25a",
+    "distSha256": "36d79d4546f538dd5d10a89a44fd6a38cc02774b38f6bd9ff01212c1aca8d9ec"
+  },
+  "nativeProcessCount": 18,
+  "nativePidsAbsent": true,
+  "shutdowns": 2,
+  "eventCount": 46,
+  "processManagementCohort": {
+    "passed": 103,
+    "failed": 0,
+    "skipped": 0,
+    "durationMs": 23615.34119,
+    "exitCode": 0,
+    "checkedHostOutput": true
+  },
+  "priorAttempt": {
+    "status": "NO_VERDICT",
+    "exit": "SIGKILL",
+    "heapMiB": 384,
+    "cause": "not established"
+  },
+  "observedRun": {
+    "heapMiB": 256,
+    "peakSampledAggregateRSSKiB": 1157112,
+    "resourceSamples": 14
+  },
+  "localEvidence": {
+    "TEST-pr982-533d-desktop-management-receipt.json": {
+      "bytes": 8988,
+      "sha256": "23fc94ec23b6113140598ad7fdd454e55e0e235c6dd8218514229c02f3bc064e"
+    },
+    "TEST-pr982-533d-management-safe-e2e.log": {
+      "bytes": 778,
+      "sha256": "e7332cc03dfc0a45d41024cd860df081336d79af0cdd0d9b74648a9bfe6d0e1d"
+    },
+    "TEST-pr982-533d-management-resources.ndjson": {
+      "bytes": 6250,
+      "sha256": "ed1775fd003d7151bfccf4f1ff84bc55feb807a219096cad70861fb0a43a8e65"
+    },
+    "TEST-pr982-533d-management-sigkill.log": {
+      "bytes": 652,
+      "sha256": "a06e858008231b028cb9754b659dfde72d8904267e9d625290095f1ffa081d2d"
+    },
+    "TEST-pr982-533d-checked-http-management.log": {
+      "bytes": 12657,
+      "sha256": "70956a22501f6b2d290768861300342364f293fac4d4593985a4a25fd879fa5c"
+    }
+  }
+}

@@ -1,6 +1,6 @@
 # PR 982 — Desktop Team registry catalog pagination
 
-Reviewed plan, 2026-11-28. R1 frontend_parity, R2 root and coordination_audit, R3 provider_team_parity approved the source-derived plan. No production edits or tests yet. Publish this plan before implementation.
+Reviewed plan, 2026-11-28. R1 frontend_parity, R2 root and coordination_audit, R3 provider_team_parity approved the source-derived plan. At plan approval, no production edits or tests had been made. The plan was published in `533d955b28493cf9549a4e6b88684852df835628` before implementation; execution evidence follows below.
 
 ## Problem and preserved authority
 
@@ -58,7 +58,7 @@ The collector accepts a legacy value only as the first and complete response; ap
 
 Use a 256-page maximum: every successful page contains at least one original row and the existing combined catalog cap is 256. A 128-page limit would reject a legal catalog of 256 individually large records. This is a new endpoint-local finite bound, not a change to any existing process/group limit.
 
-Return a fully parsed `{teams,held}` only after all totals and final currentness checks pass. On any error, discard the partial local result. Desktop then follows its existing owner-unavailable behavior; no newly read partial handles are registered. Previously known handles and the existing handling of held entries remain unchanged. Held receipts must all survive assembly even though discovery registers only published Team records.
+Return a fully parsed `{teams,held}` only after all totals and final currentness checks pass. On any error, discard the partial local result. Desktop then preserves its existing discovery failure behavior: continuation drift throws `BackendRoutingError('hold')`, while transport/unavailable handling keeps its existing separate mapping. No newly read partial handles are registered. Previously known handles and the existing handling of held entries remain unchanged. Held receipts must all survive assembly even though discovery registers only published Team records.
 
 ## Exact source manifest
 
@@ -90,4 +90,42 @@ Retain existing `team-registry.test.ts`, stopped-import RPC, backendConnectionDi
 
 Expected source change approximately 170–240 lines across 4 paths (one new helper), focused tests approximately 400–600 lines across 2 new files. Moderate implementation complexity: two ordered arrays and original-owner fencing are the only endpoint-specific parts. No new durable state, authority, resource cap or row transformation. Source-level confidence is high; actual boundary proof, strict typing and regression results are required before publication.
 
-R1 prepared by frontend_parity. Root independently approved the exact plan after checking the combined 256 bound, publication barrier, legal large-row budget and incremental allocation. Coordination_audit completed R2 and provider_team_parity completed R3 after reading the plan and current source; both approved. Their clarifications are incorporated: validate the first legacy response as well, do not claim handle uniqueness is already a TeamRegistry invariant, and retain no full encoded-row cache. These are source-level approvals only. Plan publication, finite behavioral RED/GREEN, build and strict typing remain pending.
+R1 prepared by frontend_parity. Root independently approved the exact plan after checking the combined 256 bound, publication barrier, legal large-row budget and incremental allocation. Coordination_audit completed R2 and provider_team_parity completed R3 after reading the plan and current source; both approved. Their clarifications are incorporated: validate the first legacy response as well, do not claim handle uniqueness is already a TeamRegistry invariant, and retain no full encoded-row cache. Those were source-level approvals. The execution record below reports the subsequent behavioral and compiler results separately.
+
+## Executed validation — 2026-11-28
+
+Implementation stayed within the four production paths and two new test paths. Source R2 by root and coordination_audit and R3 by provider_team_parity approved the actual candidate before standard formatting. Final production change is 233 net lines; the new tests are 482 and 462 lines. Every changed file remains below the unchanged 800-line limit. No registry journal, storage contract, owner, provider, native deadline or transport cap changed.
+
+The first behavioral RED ran before production edits using the original handler imports and real TeamRegistry/FileTeamRegistryStore/namespace admission. Both ordinary and review-v1 HostOutput checks failed at the intended 1 MiB frame assertion. That baseline used the explicitly source-bound 0ebe runtime emit because earlier canonical build attempts had exited 137; it was not a typecheck or canonical build PASS. The corrected candidate subsequently completed the normal checked Host build successfully.
+
+The final distinct behavioral scope is 16 Host tests and 73 Main tests (30 new + 20 existing create/diagnostics + 23 existing DesktopBackendFeature), all passing with zero skips. The final 8-test Host repeat and earlier 30-test Main repeat are not added to those counts. The actual Test Host process and real CapturedHostClient/DesktopBackendFeature paths prove complete registration and refusal without a partial prefix; they do not qualify Electron UI, vendor runtimes or real provider accounts.
+
+The first Main run passed 28 cases and failed the two new Feature fixtures during setup: their private descriptor file had the default mode instead of required 0600. The fixture now writes 0600 and explicitly asserts ready state before discovery. Those failures are not product regression evidence. Strict fixture checks also required an explicit real HostHandlerContext and typeof-based cursor narrowing; those changes added no casts, suppression or relaxed assertions. Final reruns include those corrections.
+
+| Check | Actual result | Log file (under `/tmp`) | SHA256 |
+| --- | --- | --- | --- |
+| Original Host RED | 2 failed / 2; both actual HostOutput overflow assertions | `pr982-registry-host-red.log` | `0462bb245507bac4a9f48f865483bf8368e431b1f76b784c9859edd39e689a40` |
+| Canonical checked Host build | PASS, exit 0; includes task-change-ledger prebuild | `pr982-registry-host-build.log` | `d6efa218a38b23ad8285a933ae787d9bcd6d542c54df4d1e1c3e04bf0f5e0789` |
+| Host registry and existing controls | 16 passed, 0 skipped; 3.49 s | `pr982-registry-host-green.log` | `c222c5bc48faabdbc7a0ac1f67ade07d19eb57ec8cd7289a84e70b1cf353ae3d` |
+| Final new Host fixture | 8 passed, 0 skipped; 1.71 s; included in the 16 above | `pr982-registry-host-final.log` | `40f60ccd7e56420505dea40a4333da21a007d1d186da83f8d79319f27fbc35bb` |
+| Final new Main fixture | 30 passed, 0 skipped; 7.67 s | `pr982-registry-main-final.log` | `c9fe985a00709e5a5934628f4a536274e1916b6b9142faa395fd0a13bc6a0fb9` |
+| Existing Main create and diagnostics | 20 passed, 0 skipped | `pr982-registry-main-controls.log` | `55c5aaf090a1224e8587e9c7cd4c1de1bad2c980392bf94f0634cb775f1dae0b` |
+| Existing DesktopBackendFeature | 23 passed, 0 skipped | `pr982-registry-desktop-controls.log` | `7cc9206fb9dc48358fdb4441b80d885bed0458f52f0123c124ed7e7307f237ba` |
+| Strict Host tests | PASS, exit 0; 3 fixtures, unchanged inherited tsconfig.test options | `pr982-registry-host-types-v3.log` | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+| Strict Main source/tests | PASS, exit 0; 5 entry files plus original ambient declarations | `pr982-registry-main-types.log` | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+| Fast lint, 6 changed code paths | PASS, exit 0 | `pr982-registry-lint.log` | `8ffced8d83629e456197bc8271fa5dfca3595b8f63201e547f465fcb10dc92c8` |
+| Final standard Prettier check | PASS, exit 0 | `pr982-registry-format-check.log` | `17aa973d3f004560237d9a95171210b0671deff23d61628eecf7322ff5938f20` |
+| Source-size guard | PASS; 5,550 production files, 139 frozen exceptions, unchanged 800-line cap | `pr982-registry-size-guard.log` | `2758facd8e2c3d931caa5dd6d8716135b3791293f685f4ea173de5d8e1818c08` |
+
+The exact scoped compiler projects are `/tmp/pr982-registry-host-types.json` and `/tmp/pr982-registry-main-types.json`. They inherit the original strict settings; the only override is explicit dependency type roots for the temporary config location. Standard formatter, fast lint and source-size checks were scoped/run normally; `git diff --check` also passed.
+
+| Final code path | Lines | SHA256 |
+| --- | --- | --- |
+| `packages/legacy-agent-host/src/team-registry/contracts.ts` | 139 | `8101eed646e147eb5afb7312a03341fca127437584f242729f837787d1b24c0f` |
+| `packages/legacy-agent-host/src/team-registry/pageTeamRegistryCatalog.ts` | 77 | `cb2253755545185f536620248370a3a04a7d6632693699539bf76896d322de81` |
+| `packages/legacy-agent-host/src/composition/createTeamCreationMethods.ts` | 153 | `b4f12b69e0b440cd1104d7250cfe6b6f865d38fddf804174b104263539f9a280` |
+| `src/features/agent-backend/main/infrastructure/CapturedTeamRegistry.ts` | 331 | `587e80708117f9b897e7e2a25086deefc7f4e907b5b4c3916d5dce1d4b00e918` |
+| `packages/legacy-agent-host/tests/host-team-registry-pages.test.ts` | 482 | `993a9e88ef345a045bcd97134db797f8e26e1ffca83d078e45d1a18bbbe7fd9a` |
+| `test/features/agent-backend/hostTeamRegistryPages.test.ts` | 462 | `b462543a66b46dd372946541d208c9084b4a1f5d03c16376c7cd0da5092de2a8` |
+
+The full six-file recovery checkpoint, exact scoped configs and complete logs (including failed setup/type attempts) are retained in `/workspace/scratch/4f1e38400727/TEST-pr982-registry-catalog-recovery.json`. The execution record intentionally distinguishes the source-only reviews, actual behavioral runs and checked compiler results.
