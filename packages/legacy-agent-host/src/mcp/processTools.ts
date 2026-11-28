@@ -1,4 +1,6 @@
+import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
+import { pageProcessCatalog } from '../process/pageProcessCatalog.js';
 import { projectProcessReceipt } from '../process/projectProcessViews.js';
 import { McpToolFailure } from './contracts.js';
 import { defineTool as define } from './toolDefinition.js';
@@ -21,6 +23,7 @@ export function createProcessMcpTools(
     Object.fromEntries(Object.entries(value).filter(([, field]) => field !== undefined)) as {
       [K in keyof T]: Exclude<T[K], undefined>;
     };
+  const pageKey = randomUUID();
   return [
     define(
       'process_register',
@@ -38,9 +41,13 @@ export function createProcessMcpTools(
     ),
     define(
       'process_list',
-      'Read registered services and stopped history; native observations never prove teammate readiness.',
-      z.strictObject({}),
-      () => process.list(),
+      'Read registered services and stopped history. Large catalogs return process-catalog-page; follow nextCursor and concatenate whole processes in order. Restart if the source revision changes.',
+      z.strictObject({ cursor: z.string().regex(/^[1-9][0-9]{0,8}\.[a-f0-9]{64}$/).optional() }),
+      async ({ cursor }) => pageProcessCatalog({
+        rows: await process.list(),
+        key: pageKey,
+        ...(cursor === undefined ? {} : { cursor }),
+      }),
       false
     ),
     ...(['stop', 'unregister'] as const).map((operation) =>

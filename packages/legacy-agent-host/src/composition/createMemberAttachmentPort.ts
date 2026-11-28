@@ -1,24 +1,15 @@
 import { createHash } from 'node:crypto';
-import { createRequire } from 'node:module';
-import {
-  decorateFileReferences,
-  getMessageAttachmentRoute,
-  isStrictUtf8,
-} from '../attachments/portable.js';
 import type { Input } from '@agent-teams/provider-session-contracts';
 import { AttachmentArtifactStore } from '../attachments/AttachmentArtifactStore.js';
 import { TeamOwnerStore } from '../adapters/team/TeamOwnerStore.js';
 import { resolveAgentAttachmentCapability } from '../attachments/capabilities.js';
 import { AGENT_IMAGE_MIME_TYPES, NATIVE_IMAGE_MIME_TYPES, NATIVE_VIDEO_MIME_TYPES } from '../attachments/mimeTypes.js';
 import { TeamOwnerError } from '../team/contracts.js';
+import { projectMemberInput } from './projectMemberInput.js';
 import type { MemberProviderContext } from '../adapters/providers/MemberProvider.js';
 import type { MemberEntry } from './MemberEntry.js';
 import type { RuntimeOwner } from '../runtime/RuntimeOwner.js';
 
-const require = createRequire(import.meta.url);
-const { agentBlocks } = require('agent-teams-controller') as {
-  agentBlocks: { wrapAgentBlock(text: string): string };
-};
 const fingerprint = (input: Input) =>
   createHash('sha256')
     .update(
@@ -89,41 +80,11 @@ export function createMemberAttachmentPort(options: {
       !entry.team.owner.authorizeDeliveryIntent(claimed.intent)
     )
       throw new TeamOwnerError('hold');
-    const refs = input.attachments ?? [];
-    if (!refs.length) return input;
-    // Verify the entire original owner/purpose batch before projecting either transport.
-    const metadata = store.metadata(refs, { kind: 'message', member: target.name });
-    const native: NonNullable<Input['attachments']>[number][] = [];
-    const references: { filename: string; filePath: string; size: number; sha256: string }[] = [];
-    refs.forEach((reference, index) => {
-      const artifact = store.resolve(reference);
-      const route = getMessageAttachmentRoute(
-        {
-          providerId: entry.profile.provider === 'claude' ? 'anthropic' : entry.profile.provider,
-          isLeadRecipient: target.role === 'lead',
-          // Current D Codex SPI supports image refs only, never native text file input.
-          nativeInboxTextAttachmentsSupported: false,
-          ...(entry.profile.provider === 'opencode' && entry.profile.nativeGeneration === 'v2'
-            ? { nativeMediaTransport: 'opencode-2.1.4-native-media-v1' as const } : {}),
-        },
-        reference.mimeType,
-        reference.mimeType !== 'text/plain' || isStrictUtf8(artifact.bytes)
-      );
-      if (route === 'native') native.push(reference);
-      else
-        references.push({
-          filename: metadata[index]!.filename,
-          filePath: artifact.nativePath,
-          size: reference.byteLength,
-          sha256: reference.digest,
-        });
-    });
-    options.assertCurrent();
+    const projected = projectMemberInput({ ...options, input });
     return {
       inputId: input.inputId,
       operationRef: input.operationRef,
-      content: decorateFileReferences(input.content, references, agentBlocks.wrapAgentBlock),
-      ...(native.length ? { attachments: native } : {}),
+      ...projected,
     };
   }
   const port: NonNullable<MemberProviderContext['attachments']> = {

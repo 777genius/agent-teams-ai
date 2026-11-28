@@ -1,3 +1,5 @@
+import { MAX_CROSS_TEAM_TEXT_LENGTH } from '../../../contracts/crossTeam';
+
 import { InvalidBackendOperation, object, text } from './validateBackendOperation';
 
 import type { BackendCrossTeamSend, CrossTeamReference } from '../../../contracts/crossTeam';
@@ -22,7 +24,7 @@ export function parseCrossTeamSend(value: unknown): BackendCrossTeamSend {
   const result: BackendCrossTeamSend = {
     target: { handleId: text(target.handleId) },
     fromMember: text(p.fromMember, 128),
-    text: text(p.text, 48_000),
+    text: text(p.text, MAX_CROSS_TEAM_TEXT_LENGTH),
     messageId: text(p.messageId),
   };
   for (const key of [

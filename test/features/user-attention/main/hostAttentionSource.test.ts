@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import Fastify from 'fastify';
@@ -140,4 +140,66 @@ it('rejects context revocation before publishing an HTTP result', async () => {
     expect(response.statusCode).toBe(503);
     expect(response.body).not.toContain('TEST-handle');
   } finally { await app.close(); }
+});
+
+
+function seedRetainedGroups(f: ReturnType<typeof capturedHostTeamReadsFixture>,
+  team: ReturnType<ReturnType<typeof capturedHostTeamReadsFixture>['addTeam']>) {
+  const groups = Array.from({ length: 1100 }, (_, index) => ({
+    id: index.toString(16).padStart(8, '0') + '-0000-4000-8000-000000000001',
+    name: 'TEST attention group ' + index + ' ' + 'x'.repeat(65),
+    createdAt: '2026-11-28T00:00:00.000Z',
+    membership: { kind: 'fixed', memberNames: ['team-lead', 'alice'] },
+    archivedAt: index % 2 ? '2026-11-28T01:00:00.000Z' : null,
+  }));
+  const registry = join(f.root, 'teams', team.binding.teamName, 'group-chats.json');
+  const bytes = JSON.stringify({ version: 1, groups });
+  writeFileSync(registry, bytes);
+  const chosen = groups.at(-1)!;
+  const path = join(f.root, 'teams', team.binding.teamName, 'inboxes');
+  mkdirSync(path, { recursive: true });
+  writeFileSync(join(path, 'user.json'), JSON.stringify([{
+    messageId: 'TEST-attention-group-physical', groupMessageId: 'TEST-attention-group-physical',
+    groupChatId: chosen.id, groupChatProtocolVersion: 1,
+    from: 'alice', to: 'user', text: '@user TEST group reply', read: false,
+    timestamp: '2026-11-28T00:00:00.000Z',
+    groupRecipientNames: ['team-lead', 'alice'],
+    groupRecipientRunKeys: { 'team-lead': 'TEST-lead-run', alice: 'TEST-alice-run' },
+  }]));
+  return { groups, chosen, registry, bytes };
+}
+
+it('preserves full original group names and unread identity beyond the first Host catalog page', async () => {
+  const { f, feature, legacy } = fixture(), team = f.addTeam();
+  const { chosen, registry, bytes } = seedRetainedGroups(f, team);
+  const result = await feature.getUserAttentionSnapshot(team.key);
+  expect(result.complete).toBe(true);
+  expect(result.teams[0]?.groupNames?.[chosen.id]).toBe(chosen.name);
+  expect(result.teams[0]?.messages.some(message =>
+    message.messageId === 'TEST-attention-group-physical' &&
+    message.groupChatId === chosen.id
+  )).toBe(true);
+  expect(f.router.request.mock.calls.filter(([, request]) =>
+    request.method === 'team.group.list').length).toBeGreaterThan(1);
+  expect(readFileSync(registry, 'utf8')).toBe(bytes);
+  expect(legacy.getMessageFeed).not.toHaveBeenCalled();
+});
+
+it('refuses changed group catalog and revoked Host context without a partial name map', async () => {
+  for (const mode of ['revision', 'scope'] as const) {
+    const { f } = fixture(), team = f.addTeam();
+    const saved = seedRetainedGroups(f, team);
+    const captured = await f.capture();
+    if (!captured) throw new Error('Missing original captured TEST Owner');
+    let pages = 0;
+    f.afterRead(method => {
+      if (method !== 'team.group.list' || ++pages !== 1) return;
+      if (mode === 'scope') f.revokeContext();
+      else writeFileSync(saved.registry, JSON.stringify({
+        version: 1, groups: saved.groups.slice(0, -1),
+      }));
+    });
+    await expect(captured.groupNames(team.key)).rejects.toThrow();
+    expect(pages).toBeGreaterThanOrEqual(1);
+  }
 });

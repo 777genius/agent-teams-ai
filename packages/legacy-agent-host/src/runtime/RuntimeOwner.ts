@@ -52,12 +52,14 @@ export class RuntimeOwner {
   private readonly activity: RuntimeActivityCoordinator;
   private readonly maxQueued: number;
   private readonly maxBytes: number;
+  private readonly maxQueuedBytes: number | undefined;
   private readonly maxInteractions: number;
   private readonly interactionTtl: number;
 
   constructor(private readonly options: RuntimeOwnerOptions) {
     this.maxQueued = options.maxQueuedInputs ?? 128;
     this.maxBytes = options.maxInputBytes ?? 64 * 1024;
+    this.maxQueuedBytes = options.maxQueuedInputBytes;
     this.maxInteractions = options.maxPendingInteractions ?? 32;
     this.interactionTtl = options.interactionTtlMs ?? 300_000;
     if (
@@ -65,7 +67,8 @@ export class RuntimeOwner {
       !options.hostIncarnation ||
       [this.maxQueued, this.maxBytes, this.maxInteractions, this.interactionTtl].some(
         (value) => !Number.isSafeInteger(value) || value <= 0
-      )
+      ) || (this.maxQueuedBytes !== undefined &&
+        (!Number.isSafeInteger(this.maxQueuedBytes) || this.maxQueuedBytes <= 0))
     )
       throw new RuntimeOwnerError('invalid');
     this.activity = new RuntimeActivityCoordinator(options);
@@ -277,14 +280,19 @@ export class RuntimeOwner {
   async admitDelivery(raw: RuntimeDelivery): Promise<RuntimeAdmission> {
     const intent = normalizeRuntimeDelivery(raw, this.maxBytes);
     return this.activity.fenced(intent.binding, (tx) => {
-      this.authorize(intent.binding, 'admit', intent);
+      this.authorize(intent.binding, 'admit', intent, () => tx.siblings());
       const record = tx.get() ?? this.empty(intent.binding);
       const existing = findRuntimeInput(record, intent);
       if (existing) return runtimeAdmission(existing);
       if (record.sealed) return { inputId: intent.inputId, outcome: 'not_admitted' };
+      if (this.options.inputPreflight && !this.options.inputPreflight(intent))
+        throw new RuntimeOwnerError('invalid');
+      const queued = record.inputs.filter(input => input.phase === 'admitted' || active(input));
       if (
-        record.inputs.filter((input) => input.phase === 'admitted' || active(input)).length >=
-        this.maxQueued
+        queued.length >= this.maxQueued ||
+        (this.maxQueuedBytes !== undefined &&
+          queued.reduce((bytes, input) => bytes + Buffer.byteLength(input.intent.content), 0) +
+            Buffer.byteLength(intent.content) > this.maxQueuedBytes)
       ) {
         throw new RuntimeOwnerError('busy');
       }
@@ -336,11 +344,11 @@ export class RuntimeOwner {
     const claimed = this.activity.fenced(binding, (tx) => {
       const record = this.record(tx);
       const next = record.inputs.find((item) => item.phase === 'admitted');
-      if (!this.options.authorize(normalizeBinding(binding), 'dispatch', next?.intent)) {
+      if (!this.options.authorize(normalizeBinding(binding), 'dispatch', next?.intent, () => tx.siblings())) {
         for (const input of record.inputs) {
           if (
             input.phase === 'admitted' &&
-            !this.options.authorize(normalizeBinding(binding), 'dispatch', input.intent)
+            !this.options.authorize(normalizeBinding(binding), 'dispatch', input.intent, () => tx.siblings())
           )
             input.phase = 'rejected';
         }
@@ -364,6 +372,7 @@ export class RuntimeOwner {
       const selected = this.options.prepareInput?.(binding, {
         sessionRef: record.sessionRef!, inputId: input.intent.inputId, operationRef: input.operationRef,
         intentFingerprint: input.fingerprint, originalContent: input.intent.content, originalContentBytes: Buffer.byteLength(input.intent.content), epochs: structuredClone(record.contextEpochs ?? []),
+        ...(input.intent.attachments?.length ? { attachments: structuredClone(input.intent.attachments) } : {}),
         priorProofs: record.inputs.flatMap(value => value.preparation ? [preparedInputProof(value.preparation)] : []),
       });
       if (selected) input.preparation = prepareRuntimeInput(binding, input, selected, this.maxBytes);
@@ -746,9 +755,10 @@ export class RuntimeOwner {
   private authorize(
     binding: RuntimeBinding,
     action: 'read' | 'admit' | 'dispatch' | 'control',
-    intent?: RuntimeDelivery
+    intent?: RuntimeDelivery,
+    readMemberHistory?: () => readonly RuntimeSessionRecord[]
   ): void {
-    if (!this.options.authorize(normalizeBinding(binding), action, intent))
+    if (!this.options.authorize(normalizeBinding(binding), action, intent, readMemberHistory))
       throw new RuntimeOwnerError('forbidden');
   }
   private ownedDriver(record: RuntimeSessionRecord): Session {

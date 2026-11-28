@@ -779,3 +779,4 @@ test('one valid Unicode comment larger than either Owner page remains lossless a
   }
   assert.equal(JSON.stringify(snapshot), original);
 });
+

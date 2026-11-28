@@ -57,9 +57,12 @@ export function createGoalWorkSync(options: {
     return teamEntries(teamId)[0]!.team.owner.goals.canStart();
   }
 
-  function authorizeWorkspace(entry: MemberEntry, intent: ImmutableDelivery): boolean {
+  function authorizeWorkspace(entry: MemberEntry, intent: ImmutableDelivery,
+    readMemberHistory?: () => readonly RuntimeSessionRecord[]): boolean {
     if (!entry.team.owner.goals.association(intent)) return true;
     try {
+      const goal = entry.team.owner.goals.snapshot();
+      if (!goal || !readMemberHistory || !originalGoalLead(entry, goal, readMemberHistory)) return false;
       assertGoalWorkspaceIsolation(entry.binding.teamId, options.entries.values(), options.isCurrent, options.readRuntime);
       return true;
     } catch { return false; }
@@ -78,7 +81,23 @@ export function createGoalWorkSync(options: {
   function readyForResume(teamId: string): boolean {
     if (!runtimeReady(teamId)) return false;
     const entries = teamEntries(teamId), goal = entries[0]?.team.owner.goals.snapshot();
-    return !!goal && entries.every(entry => entry.binding.runId === goal.rootBinding.runId);
+    return !!goal && entries.every(entry => entry.binding.runId === goal.rootBinding.runId) &&
+      entries.some(entry => entry.binding.memberId === goal.rootBinding.memberId && originalGoalLead(entry, goal));
+  }
+
+  function originalGoalLead(entry: MemberEntry, goal: GoalRecord,
+    readMemberHistory?: () => readonly RuntimeSessionRecord[]): boolean {
+    if (entry.binding.memberId !== goal.rootBinding.memberId) return true;
+    if (runtimeDigest(normalizeBinding(entry.binding)) ===
+        runtimeDigest(normalizeBinding(goal.rootBinding))) return true;
+    try {
+      const history = readMemberHistory?.();
+      const record = history ? history.find(row => runtimeDigest(normalizeBinding(row.binding)) ===
+        runtimeDigest(normalizeBinding(entry.binding))) : options.readRuntime(entry.binding).record;
+      for (const original of restoredMemberRecords(entry, record, goal.rootPrincipalId, history))
+        if (runtimeDigest(normalizeBinding(original.binding)) === runtimeDigest(normalizeBinding(goal.rootBinding))) return true;
+    } catch { /* Missing or unproven restore ancestry keeps automatic work unavailable. */ }
+    return false;
   }
 
   function records(team: HostedTeam, goal: GoalRecord): RuntimeSessionRecord[] {
@@ -91,30 +110,38 @@ export function createGoalWorkSync(options: {
       });
   }
 
-  /** A real restore retains original settled work; it never replays an older input into its successor. */
-  function settledMemberSource(entry: MemberEntry, record: RuntimeSessionRecord,
-    principalId: string, matching: (input: RuntimeInput) => boolean): RuntimeInput | undefined {
+  /** Walk proved Restore ancestry; callers stop as soon as their required original is found. */
+  function* restoredMemberRecords(entry: MemberEntry, record: RuntimeSessionRecord | undefined,
+    principalId: string, history?: readonly RuntimeSessionRecord[]): Generator<RuntimeSessionRecord, void> {
     const seen = new Set<string>();
     let selected = record;
-    for (;;) {
+    while (selected) {
       const key = runtimeDigest(normalizeBinding(selected.binding));
       if (seen.has(key)) throw new TeamOwnerError('hold');
       seen.add(key);
+      yield selected;
+      const restored = selected.restoredFrom;
+      if (!restored) return;
+      const originalBinding = normalizeBinding(restored.sourceBinding);
+      if (selected.config?.checkpointRef !== restored.reference ||
+          runtimeDigest({ ...originalBinding, generation: entry.binding.generation }) !== runtimeDigest(normalizeBinding(entry.binding)) ||
+          !entry.team.owner.authorizeRuntimeAccess(principalId, originalBinding, 'read')) throw new TeamOwnerError('hold');
+      const original = history ? history.find(row => runtimeDigest(normalizeBinding(row.binding)) ===
+        runtimeDigest(originalBinding)) : options.readRuntime(originalBinding).record;
+      if (!original || original.phase !== 'closed' || original.custody !== 'released' ||
+          runtimeDigest(normalizeBinding(original.binding)) !== runtimeDigest(originalBinding)) throw new TeamOwnerError('hold');
+      selected = original;
+    }
+  }
+
+  function settledMemberSource(entry: MemberEntry, record: RuntimeSessionRecord,
+    principalId: string, matching: (input: RuntimeInput) => boolean): RuntimeInput | undefined {
+    for (const selected of restoredMemberRecords(entry, record, principalId)) {
       const inputs = selected.inputs.filter(matching), latest = inputs.at(-1);
       if (inputs.some(input => ['admitted', 'claimed', 'consumed', 'unknown'].includes(input.phase)) ||
           latest?.phase === 'terminal' && latest.terminal !== 'succeeded') throw new TeamOwnerError('hold');
       const source = [...inputs].reverse().find(input => input.phase === 'terminal' && input.terminal === 'succeeded');
       if (source) return source;
-      const restored = selected.restoredFrom;
-      if (!restored) return undefined;
-      const originalBinding = normalizeBinding(restored.sourceBinding);
-      if (selected.config?.checkpointRef !== restored.reference ||
-          runtimeDigest({ ...originalBinding, generation: entry.binding.generation }) !== runtimeDigest(normalizeBinding(entry.binding)) ||
-          !entry.team.owner.authorizeRuntimeAccess(principalId, originalBinding, 'read')) throw new TeamOwnerError('hold');
-      const original = options.readRuntime(originalBinding).record;
-      if (!original || original.phase !== 'closed' || original.custody !== 'released' ||
-          runtimeDigest(normalizeBinding(original.binding)) !== runtimeDigest(originalBinding)) throw new TeamOwnerError('hold');
-      selected = original;
     }
   }
 
@@ -178,6 +205,9 @@ export function createGoalWorkSync(options: {
         if (!ready(entry)) throw new RuntimeOwnerError('hold');
         record = options.readRuntime(entry.binding).record!;
       } catch { attention ??= 'A required member is not ready. Use its existing runtime controls.'; continue; }
+      if (!originalGoalLead(entry, goal)) {
+        attention ??= 'Automatic work needs the original lead or its validated Restore successor.'; continue;
+      }
       if (record.inputs.some(input => input.phase === 'unknown') ||
           record.interactions.some(interaction => interaction.phase === 'unknown')) {
         attention ??= 'An input or approval outcome is unknown. Resolve its original runtime evidence before continuing.'; continue;
@@ -209,7 +239,7 @@ export function createGoalWorkSync(options: {
       };
       const readDecisionInput = (evidence: readonly string[] = []): GoalWorkDecisionInput | undefined => {
         assertCurrent();
-        if (!ready(entry)) return undefined;
+        if (!ready(entry) || !originalGoalLead(entry, goal!)) return undefined;
         // Runtime is read outside the Team fence; no await separates this projection from its decision.
         currentRecords = records(team, goal!);
         const latest = currentRecords.find(row => runtimeDigest(normalizeBinding(row.binding)) ===

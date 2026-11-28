@@ -53,6 +53,63 @@ test('an exhausted obligation keeps attention while another assigned obligation 
   assert.match(result.attentionReason!, /two recovery attempts/u);
 });
 
+for (const removedMember of ['absent', 'marked-removed'] as const) {
+  test(`a removed assigned reviewer (${removedMember}) yields lead coordination until review is reassigned`, () => {
+    const selected = input();
+    selected.memberName = 'lead'; selected.role = 'lead';
+    const task = selected.tasks[0]!;
+    task.status = 'completed'; task.reviewState = 'review'; task.kanbanColumn = 'review';
+    task.historyEvents = [{ id: 'TEST-review-request-1', type: 'review_requested',
+      actor: 'worker', reviewer: 'reviewer', timestamp: '2026-11-27T11:59:00.000Z' }];
+    selected.members.push({ name: 'reviewer', agentType: 'general-purpose' });
+    selected.reviewers[task.id] = 'reviewer';
+    const coordinateKey = `lead:${selected.goalId}:coordinate`;
+    const reviewerWork = () => decideGoalContinuation({ ...selected, memberName: 'reviewer', role: 'member' });
+    const workerWork = () => decideGoalContinuation({ ...selected, memberName: 'worker', role: 'member' });
+
+    assert.equal(decideGoalContinuation(selected).kind, 'waiting');
+    assert.equal(workerWork().kind, 'waiting', 'completed work is still waiting for the required review');
+    const assigned = reviewerWork();
+    assert.equal(assigned.kind, 'continue');
+    if (assigned.kind !== 'continue') assert.fail();
+    assert.match(assigned.obligationKey, /^task:TEST-task:review:/u);
+    assert.equal(goalLeadObligationCurrent(selected, coordinateKey), false);
+
+    // Canonical roster removal leaves the completed task and review assignment intact.
+    if (removedMember === 'absent') selected.members = selected.members.filter(member => member.name !== 'reviewer');
+    else selected.members.find(member => member.name === 'reviewer')!.removedAt = '2026-11-27T12:00:00.000Z';
+    assert.equal(reviewerWork().kind, 'attention', 'a removed actor gains no new review work');
+    assert.equal(workerWork().kind, 'waiting', 'the implementation owner cannot bypass the review');
+    const coordination = decideGoalContinuation(selected);
+    assert.equal(coordination.kind, 'continue');
+    if (coordination.kind !== 'continue') assert.fail();
+    assert.equal(coordination.obligationKey, coordinateKey);
+    assert.equal(coordination.reason, 'productive');
+    assert.equal(goalLeadObligationCurrent(selected, coordinateKey), true,
+      'the shared claim-time predicate keeps the queued coordination eligible');
+    assert.equal(selected.reviewers[task.id], 'reviewer', 'the policy itself cannot mutate the canonical assignment');
+    assert.equal(task.reviewState, 'review');
+
+    task.needsClarification = 'user';
+    assert.equal(decideGoalContinuation(selected).kind, 'waiting', 'required user clarification remains a pause');
+    assert.equal(goalLeadObligationCurrent(selected, coordinateKey), false);
+    task.needsClarification = null;
+
+    // A new canonical review_request can select the lead, who is not this task's owner.
+    selected.reviewers[task.id] = 'lead';
+    task.historyEvents.push({ id: 'TEST-review-request-2', type: 'review_requested',
+      actor: 'lead', reviewer: 'lead', timestamp: '2026-11-27T12:00:01.000Z' });
+    assert.equal(goalLeadObligationCurrent(selected, coordinateKey), false,
+      'stale queued coordination must stop being eligible once an active reviewer is assigned');
+    const reassigned = decideGoalContinuation(selected);
+    assert.equal(reassigned.kind, 'continue');
+    if (reassigned.kind !== 'continue') assert.fail();
+    assert.match(reassigned.obligationKey, /^task:TEST-task:review:/u);
+    assert.notEqual(reassigned.obligationKey, assigned.obligationKey, 'the new canonical review cycle has its own work');
+    assert.equal(workerWork().kind, 'waiting');
+  });
+}
+
 for (const kind of ['coordinate', 'external-result'] as const) {
   test(`an exhausted lead task does not invalidate its independent ${kind} obligation`, () => {
     const selected = input(), history: GoalWorkHistory[] = [];

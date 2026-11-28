@@ -359,3 +359,169 @@ GitHub publication. No full Desktop/native qualification is claimed here.
 The production diff is **+94/-43 lines in three files** (all at most 141 lines);
 the new test file has **350 lines**. Complexity: **5/10**. This repairs bounded
 read availability while preserving the full payload, not total-token savings.
+
+### Follow-up: OAuth cleanup progress after an uncertain write
+
+Independent validation of the published cleanup owner (`8d602a2` blob, retained
+through `3bea61b`) reproduced the unchanged management test's lost-ack failure:
+live reads reported `held` while the original native close was still pending,
+instead of the existing `cancelling` projection. The terminal failure path also
+reused the previous sequence. Main's OAuth consumer accepts progress only when
+the sequence advances, so a final phase change could be invisible.
+
+The correction changes only two assignments in `stop`: retain the live
+`cancelling` snapshot during cleanup and derive a failed terminal projection
+from the already incremented final snapshot. The complete durable-original
+comparisons, sticky publication/conflict flags, mandatory original close,
+cancellation refusal and stored receipt semantics stay intact. An unconfirmed
+live projection is never used for another write after its uncertainty flag.
+
+Four new cases in the existing filesystem cleanup suite failed on the published
+owner: write-before-commit and write-after-commit failures at both cancellation
+publications. They check exact retained bytes, one native close, pending live
+custody, ordered progress, and the appropriate cold fence. A final released
+receipt committed after confirmed native close is available on cold reopen
+even when the live acknowledgement was lost; the other three cases retain
+cold custody. No extra write is invented to erase that distinction.
+
+The final focused management cohort passed **65/65, zero failures or skips**,
+including the unchanged lost-ack test and all five original cleanup tests.
+The prerequisite ledger and Host production builds passed with pinned
+Node 24.21.0 / native TypeScript 7.0.2. Independent source/test review approved
+the exact minimal delta. Strict typing of the five associated Host test files
+passed with the original compiler options. Production: **+2/-4 lines**; existing test expansion:
+**+66/-6 lines**. Complexity: **2/10**. The separate OAuth handoff/selector
+supplement and ordinary current-head CI remain independent outstanding work;
+this small correction does not claim to qualify them.
+
+### Follow-up: actual process-page consumption and prepared launch lineage
+
+The original process consumer placed its accumulator in the unrelated message
+assembler. An actual empty `processTotal: 0` read reproduced
+`ReferenceError: processes is not defined`. The same one-declaration correction
+was published independently in `9dd5a43`; its final source bytes were verified
+identical to the locally tested correction. No duplicate source fix was added.
+
+Five additional cases extend the published consumer test instead of adding a
+second fixture. They run the real Host pager through the real projection and
+collector at 128 KiB and 384 KiB with Unicode/control escaping, verify complete
+order and byte limits before one final snapshot publication, distinguish
+1024/1025 rows across individually valid pages, and retain the historical
+complete process array repeated on old pages. All **9/9 combined cases passed**
+with pinned Node 24.21.0 / Vitest 3.2.6. Added test lines: **70**; production
+unchanged in this follow-up. Complexity: **3/10**, primarily integration tests.
+The scoped consumer typecheck also passed with unchanged root compiler options.
+
+The published prepared-origin validator also passed **48 existing related
+launch/member-action/restore tests**. Two added cases exercise qualified
+Restore -> Restart -> Skip and the actual owning
+`liveRosterValidationRecord` -> `validateLaunchRecord` path after prepared
+Restart -> Skip -> live Remove/Restore. They preserve all historical bytes,
+validate cold clones and reject unmatched restore descriptors or forged
+prepared origins. The final lineage file passed **5/5 cases**; this overlaps
+three cases in the earlier 48-test cohort. Independent review corrected a
+negative-fixture alias so it cannot pass merely because it corrupts another
+action's fingerprint. Added test lines: **79**; no launch production changes.
+Complexity: **3/10**. These TEST-only checks do not qualify real native/macOS
+execution or the complete root compiler and CI gates.
+
+### Follow-up: group catalog composition and verification defects
+
+The published native pager at `936237a` had two missing imports in its real
+composition. Pinned Host compilation reproduced both TS2304 diagnostics, and
+the unchanged captured native-port test failed with `randomUUID is not defined`.
+Adding the two imports restored the build. The same imports were then published
+independently by the `829fbfb` integration; their fix was retained rather than
+duplicated. Complexity: **1/10**; no extra group production delta in this batch.
+
+The helper tests alone did not exercise the actual composition's nonce and
+captured authority. One **55-line** extension to the existing group suite uses
+350 valid retained groups, the canonical registry parser, original reader,
+actual captured port and unchanged MCP formatter. Every Unicode/escaped row
+reconstructs in order; another port, a stale generation and a revoked grant
+reject the continuation without writes. The full group cohort passed **21/21**.
+After the concurrent Desktop paging integration, all **7 selected group read
+integration cases** passed again, including this case and the new canonical
+Owner fixture. These cohorts overlap. Independent review approved the test and
+the port/endpoint lifetime. Complexity of this added integration case: **3/10**.
+
+Two newly published group fixtures also required corrections. The canonical
+Owner fixture had a real TS2322: a union result was passed directly to a JSON
+pager. A pure existing JSON projection and array assertion fixed its boundary
+without a cast or changed expectations (**+3/-1 lines**); its runtime case
+passed. The frame fixture checked six writes before Node delivered the queued
+Writable callbacks, seeing only one. It now yields one event-loop turn before
+checking every frame, preserving the actual frame limit and the old oversized
+response's `priority_overflow` refusal. Its `unknown[]` cast also caused TS2345;
+actual JSON shape assertions replace it. That **+7/-2-line** fixture correction
+passed its runtime case. No output queue, timer or transport budget changed.
+Both fixture corrections are **1/10** complexity; independent review approved
+their complete final diffs and original RED/GREEN evidence.
+
+The final **9-file strict Host test check passed** with original compiler
+options. Host production compilation at `829fbfb` also passed; the subsequent
+`a6a3b0a` group additions change tests only. Desktop group paging
+passed **9 cases** across its existing API suite and updated catalog suite,
+including four thousand groups through the real Main facade/projection and
+complete renderer assembly. The published Desktop fixture also read an unknown
+JSON response without an object guard (TS18047/TS2339). A **+3/-3-line**, **1/10**
+test-only correction validates the envelope before keeping its original
+success and byte assertions. Strict typing of all three affected consumer test
+files passed with the original root options and the existing tracked controller
+ambient declarations; no substitute declarations or suppressions were added.
+The later integrated verification, including native process catalog paging,
+is recorded below.
+These are focused TEST-only checks; full current
+CI and genuine native/macOS acceptance remain separate gates. No default
+activation, provider/runtime pin, release or main-branch change is included.
+
+### Reconciliation with the published P1/G1c and attention integration
+
+The final publication lease found `f248ea2` before any branch update and
+prevented overwriting three concurrently changed files. The old minimal OAuth
+candidate was therefore not published. The new **606-line** Owner, blob
+`16cb276644d6f3f3bf895f0603857027371cccc2`, already contains both progress
+corrections and adds original-receipt/deadline checks around native handoffs.
+It was retained byte-for-byte. Its independent source review passed, including
+the immutable last-confirmed predecessor, refusal of a second cleanup write
+after the first failure, pure authorization reads and foreign-selector refusal.
+The concurrent canonical group fixture's JSON-boundary correction was also
+retained; the alternative local type fix was omitted. The extra captured-port
+regression merged cleanly with the new group admission cases.
+
+On the exact published `0ad1688` production tree, with these supplemental
+tests, the checked Host build and unchanged source-size guard passed. A finite
+Runtime/Team/context/group/process cohort passed **222/222**, zero skipped, in
+67.15 seconds. It includes actual admission before product writes, attachment
+formatting, retained context epochs, cold/recovery controls, both process
+catalog tests and the additional group/lineage cases. The current eight-file
+management cohort passed **125/125**, zero skipped, in 8.99 seconds: the new
+G1c cases, unchanged lost-ack control and all four additional blocked-close
+progress cases passed together. These are named related cohorts, not the
+entire Host or Desktop suite.
+
+The new shared group-name reader also exposed two fixture errors. Repeating
+the first page reused its group IDs, so the supposed repeated-cursor case
+actually stopped at duplicate-ID validation. It now obtains the real next
+page and changes only its cursor; the duplicate-ID case remains separately
+asserted (**+6/-1 lines**). The new attention fixture lacked the existing
+mandatory `@user` mention, so its message was correctly filtered before any
+group-name read. Adding that mention makes the intended beyond-page-one name
+check reachable without changing message IDs, read flags or assertions
+(**+1/-1 line**). Both original failures were reproduced; the final six-file
+consumer coverage passed **35 cases**. Both corrections are **1/10** complexity.
+
+Strict typing identified two more issues in the new process HTTP fixture:
+an optional port cast and unvalidated SDK result union. The fixture now has
+an explicit non-null port type and uses `CallToolResultSchema.parse`, preserving
+the authenticated endpoint, canonical rows and complete page assertions
+(**+5/-4 lines**, complexity **1/10**). Its actual SDK/HTTP case passed again.
+The final scoped Host typecheck of **16 changed test files** and the consumer
+typecheck of **six test files plus the original controller declarations** both
+passed with unchanged compiler options and pinned Node 24.21.0 / TypeScript
+7.0.2. Independent reviews approved all final fixture diffs.
+
+The resulting supplemental patch changes tests and this evidence document.
+It preserves the concurrently published production fixes. Required current-head
+CI, CodeQL analysis and separately owned genuine native/macOS qualification
+remain outstanding; queued or superseded workflows are not passing evidence.

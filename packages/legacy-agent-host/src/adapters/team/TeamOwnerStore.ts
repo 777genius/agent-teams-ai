@@ -26,7 +26,8 @@ export class TeamOwnerStore implements TeamStore {
 
   constructor(
     readonly root: string,
-    teamName: string
+    teamName: string,
+    options: { createNamespace?: boolean } = {}
   ) {
     if (!isAbsolute(root) || resolve(root) !== root) throw new TeamOwnerError('invalid');
     // Trusted composition chooses the namespace. Never follow a symlink into ambient data.
@@ -40,6 +41,7 @@ export class TeamOwnerStore implements TeamStore {
         if (stat.isSymbolicLink() || !stat.isDirectory()) throw new TeamOwnerError('invalid');
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+        if (options.createNamespace === false) throw new TeamOwnerError('hold');
         mkdirSync(part);
       }
     }

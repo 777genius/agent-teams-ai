@@ -4,7 +4,7 @@ import { groupMutationSchema } from '../group-chats/operations.js';
 import type { BoundTool } from './toolDefinition.js';
 import type { GroupMutation } from '../group-chats/operations.js';
 export interface TeamMcpGroupPort {
-  list(): Promise<unknown>;
+  list(cursor?: string): Promise<unknown>;
   execute(commandId: string, request: GroupMutation): Promise<unknown>;
   lookup(commandId: string): unknown;
 }
@@ -15,9 +15,9 @@ export function createGroupMcpTools(port: TeamMcpGroupPort | undefined): BoundTo
   return [
     define(
       'group_chat_list',
-      'List the authenticated Team group chats and current recipients.',
-      z.strictObject({}),
-      () => port.list(),
+      'List authenticated Team group chats and recipients. Large catalogs return group-catalog-page: follow nextCursor and concatenate whole groups in order; restart if revision changes.',
+      z.strictObject({ cursor: z.string().regex(/^[1-9][0-9]{0,8}\.[a-f0-9]{64}$/).optional() }),
+      ({ cursor }) => port.list(cursor),
       false
     ),
     define(

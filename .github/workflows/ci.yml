@@ -2729,6 +2729,8 @@ jobs:
             assert.equal(row.stop.automaticAttemptsUnchanged, true); assert.equal(row.stop.nativeRequestsUnchanged, true);
             assert.ok(row.stop.originalInputs.length > 0 &&
               row.stop.originalInputs.every(input => ['claimed', 'consumed'].includes(input.phase) && input.operationRef));
+            if (row.leadProvider === 'claude' && row.actionMode === 'delegate')
+              assert.deepEqual(row.stop.originalInputs.map(input => input.actor).sort(), ['alice', 'bob', 'carol']);
             assert.equal(row.coldReadback.status, 'PASS'); assert.equal(row.coldReadback.noNativeReplay, true);
             assert.ok(row.modelFailures.length === 3 && row.modelFailures.every(failures => failures.length === 0));
           }

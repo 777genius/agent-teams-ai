@@ -1,8 +1,9 @@
 import {
   readGroupCommand,
-  readGroupList,
   readGroupReaction,
 } from '@agent-teams/legacy-agent-host/group-chats/public-values';
+
+import { readHostGroupCatalog } from '../core/application/readHostGroupCatalog';
 
 import { HostTeamOperationError } from './createHostTeamMutations';
 import { hostTeamSelectionKey, isHostTeamSelectionKey } from './hostTeamRouting';
@@ -129,8 +130,14 @@ export function createHostGroupChatsApi(
   return {
     async list(request) {
       if (!isHostTeamSelectionKey(request.teamName)) return legacy.list(request);
-      return readGroupList(
-        (await invoke(request.teamName, { operation: 'group.list', payload: {} })).value
+      const scope = captureScope();
+      return readHostGroupCatalog(
+        async (cursor) => (await invoke(request.teamName, {
+          operation: 'group.list', payload: cursor === undefined ? {} : { cursor },
+        })).value,
+        () => {
+          if (!scope()) throw new Error('Host group context changed');
+        }
       );
     },
     async create(request) {

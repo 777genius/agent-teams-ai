@@ -291,7 +291,7 @@ export function nativeGoalScript(options: NativeGoalScenario) {
           });
         else reply = finish();
       } else if (options.actor === options.lead && source.rootInput) {
-        const workers = state.stop ? options.workers.slice(0, 1) : options.workers;
+        const workers = options.workers;
         const worker = workers[state.step - 1];
         if (worker)
           reply = tool('task_create', {
@@ -299,7 +299,7 @@ export function nativeGoalScript(options: NativeGoalScenario) {
             owner: worker,
             subject: 'TEST native goal ' + source.goalId + ' artifact for ' + worker,
             description: nativeGoalObjective(state.stop),
-            ...(state.created?.length ? { blockedBy: [state.created.at(-1)] } : {}),
+            ...(!state.stop && state.created?.length ? { blockedBy: [state.created.at(-1)] } : {}),
           });
         else reply = finish(state.stop);
       } else if (state.step === 1)

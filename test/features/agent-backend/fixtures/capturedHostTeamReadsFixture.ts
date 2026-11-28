@@ -1,4 +1,6 @@
+import { randomUUID } from 'node:crypto';
 import { mkdtempSync, realpathSync, rmSync } from 'node:fs';
+import { pageGroupCatalog } from '../../../../packages/legacy-agent-host/src/group-chats/pageGroupCatalog';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -24,6 +26,7 @@ export function capturedHostTeamReadsFixture() {
   let current = true;
   let snapshot: BackendConnectionSnapshot = { state: 'ready', bindings: [] };
   let afterRead: ((method: string) => void) | undefined;
+  const groupPageKey = randomUUID();
   const router = {
     lookup: vi.fn<BackendOwnerRouter['lookup']>(),
     request: vi.fn<BackendOwnerRouter['request']>(async (handle, request) => {
@@ -44,10 +47,18 @@ export function capturedHostTeamReadsFixture() {
             deletedAt: state.deletedAt, cleanupPending: state.cleanupPending };
           break;
         }
-        case 'team.group.list':
-          value = await team.owner.groupCommands('human', { getRun: async () => null })
+        case 'team.group.list': {
+          const original = await team.owner.groupCommands('human', { getRun: async () => null })
             .read('list', {}, { before() {}, inside() {} });
+          value = pageGroupCatalog({
+            rows: JSON.parse(JSON.stringify(original)) as JsonValue[],
+            key: groupPageKey,
+            principalId: 'human',
+            binding: handle.handleId,
+            ...(payload.cursor === undefined ? {} : { cursor: String(payload.cursor) }),
+          });
           break;
+        }
         default:
           throw new Error('Unexpected TEST request ' + request.method);
       }

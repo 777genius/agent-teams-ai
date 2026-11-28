@@ -60,7 +60,7 @@ interface ActiveOAuth {
     result: Promise<ProviderOAuthSnapshot>;
     settled: Promise<void>;
   };
-  completionPublicationUnknown?: true;
+  publicationUnknown?: true;
   receiptConflict?: true;
   retired: boolean;
 }
@@ -148,9 +148,11 @@ export class OAuthOperationOwner {
   authorization(raw: unknown): ProviderOAuthAuthorization | null {
     const input = identity.parse(raw);
     this.assertAdmission();
+    const entry = this.active.get(input.operationId);
+    if (entry && (entry.saved.profileId !== input.profileId ||
+        entry.saved.configRevision !== input.configRevision)) throw new ManagementCommandError('conflict');
     const saved = this.readOriginal(input);
     if (!saved) return null;
-    const entry = this.active.get(saved.commandId);
     if (
       !entry ||
       entry.retired ||
@@ -158,6 +160,8 @@ export class OAuthOperationOwner {
     )
       return null;
     this.assertBound(entry);
+    this.assertStoredOriginal(entry);
+    if (Date.now() >= entry.saved.expiresAt) throw new ManagementCommandError('held');
     return entry.authorization ? { ...entry.authorization } : null;
   }
 
@@ -168,6 +172,7 @@ export class OAuthOperationOwner {
       const entry = this.active.get(input.operationId);
       const captured = entry && entry.saved.profileId === input.profileId &&
         entry.saved.configRevision === input.configRevision ? entry : undefined;
+      if (entry && !captured) throw new ManagementCommandError('conflict');
       const closeChanged = captured !== undefined && !captured.retired && !captured.saved.completionCommandId;
       let saved: StoredOAuthCommand | undefined;
       try { saved = this.readOriginal(input); }
@@ -266,16 +271,34 @@ export class OAuthOperationOwner {
     return this.snapshot(entry.saved);
   }
 
-  private assertCompletionCurrent(entry: ActiveOAuth): void {
-    this.assertBound(entry);
-    let latest: StoredOAuthCommand | undefined;
-    try { latest = this.readOriginal({ operationId: entry.saved.commandId,
-      profileId: entry.saved.profileId, configRevision: entry.saved.configRevision }); }
-    catch (error) { this.fenceChangedReceipt(entry, true); throw error; }
-    if (!latest || !managementValuesEqual(entry.saved, latest)) {
-      this.fenceChangedReceipt(entry, true);
+  /** Pure original-record gate, also usable after seal while cleanup owns the capture. */
+  private assertStoredOriginal(entry: ActiveOAuth, expected = entry.saved): void {
+    this.options.assertWriter();
+    if (this.active.get(expected.commandId) !== entry || entry.receiptConflict || entry.publicationUnknown)
+      throw new ManagementCommandError('held');
+    let stored;
+    try {
+      stored = this.options.store.read(expected.commandId);
+    } catch (error) {
+      entry.receiptConflict = true;
+      throw error;
+    }
+    if (stored?.kind !== 'oauth' || !managementValuesEqual(stored, expected)) {
+      entry.receiptConflict = true;
       throw new ManagementCommandError('conflict');
     }
+  }
+
+  private writeOriginal(entry: ActiveOAuth, expected: StoredOAuthCommand, next: StoredOAuthCommand): void {
+    this.assertStoredOriginal(entry, expected);
+    try { this.options.store.write(next); }
+    catch (error) { entry.publicationUnknown = true; throw error; }
+  }
+
+  private assertCompletionCurrent(entry: ActiveOAuth): void {
+    this.assertBound(entry);
+    try { this.assertStoredOriginal(entry); }
+    catch (error) { void this.stop(entry, 'native-outcome-unknown'); throw error; }
     if (Date.now() >= entry.saved.expiresAt) {
       void this.stop(entry, 'expired');
       throw new ManagementCommandError('held');
@@ -296,9 +319,8 @@ export class OAuthOperationOwner {
     const next: StoredOAuthCommand = { ...entry.saved, phase: 'completing', sequence: entry.saved.sequence + 1,
       completionCommandId: commandId, completionFingerprint: proof.fingerprint,
       ...(proof.fingerprintKdf ? { completionFingerprintKdf: proof.fingerprintKdf } : {}) };
-    try { this.options.store.write(next); }
+    try { this.writeOriginal(entry, entry.saved, next); }
     catch (error) {
-      entry.completionPublicationUnknown = true;
       void this.stop(entry, 'native-outcome-unknown');
       throw error;
     }
@@ -309,11 +331,23 @@ export class OAuthOperationOwner {
   async cancel(raw: unknown): Promise<ProviderOAuthSnapshot> {
     const input = identity.parse(raw);
     this.assertAdmission();
-    const saved = this.readOriginal(input);
-    if (!saved) throw new ManagementCommandError('invalid');
     const entry = this.active.get(input.operationId);
+    const captured = entry && entry.saved.profileId === input.profileId &&
+      entry.saved.configRevision === input.configRevision ? entry : undefined;
+    if (entry && !captured) throw new ManagementCommandError('conflict');
+    let saved: StoredOAuthCommand | undefined;
+    try { saved = this.readOriginal(input); }
+    catch (error) { this.fenceChangedReceipt(captured, true); throw error; }
+    if (!saved) {
+      this.fenceChangedReceipt(captured, true);
+      throw new ManagementCommandError(captured ? 'conflict' : 'invalid');
+    }
+    if (captured && !managementValuesEqual(captured.saved, saved)) {
+      this.fenceChangedReceipt(captured, true);
+      throw new ManagementCommandError('conflict');
+    }
     if (!entry) return this.snapshot(saved);
-    // Close the original capture even if its namespace/config changed; never select a replacement.
+    // Close only the original capture; never reselect a replacement after conflict.
     await this.stop(entry, 'cancelled');
     return this.snapshot(entry.saved);
   }
@@ -342,7 +376,7 @@ export class OAuthOperationOwner {
 
   private assertBound(entry: ActiveOAuth): void {
     this.assertAdmission();
-    if (entry.retired || entry.receiptConflict || this.active.get(entry.saved.commandId) !== entry)
+    if (entry.retired || entry.receiptConflict || entry.publicationUnknown || this.active.get(entry.saved.commandId) !== entry)
       throw new ManagementCommandError('held');
     assertManagementTarget(
       entry.saved,
@@ -403,7 +437,12 @@ export class OAuthOperationOwner {
   ): void {
     this.assertBound(entry);
     const next = { ...entry.saved, ...patch, phase, sequence: entry.saved.sequence + 1 };
-    this.options.store.write(next);
+    try {
+      this.writeOriginal(entry, entry.saved, next);
+    } catch (error) {
+      void this.stop(entry, 'native-outcome-unknown');
+      throw error;
+    }
     entry.saved = next;
     this.emit(entry);
   }
@@ -413,9 +452,9 @@ export class OAuthOperationOwner {
     fields: Record<string, string> | undefined
   ): Promise<void> {
     try {
-      this.assertBound(entry);
+      this.assertCompletionCurrent(entry);
       const result = await entry.native.authorize(fields, entry.abort.signal);
-      this.assertBound(entry);
+      this.assertCompletionCurrent(entry);
       const url = new URL(result.authorizationUrl);
       if (
         url.username ||
@@ -482,9 +521,9 @@ export class OAuthOperationOwner {
 
   private async finish(entry: ActiveOAuth, code: string | undefined): Promise<void> {
     try {
-      this.assertBound(entry);
+      this.assertCompletionCurrent(entry);
       const ok = await entry.native.complete(code, entry.abort.signal);
-      this.assertBound(entry);
+      this.assertCompletionCurrent(entry);
       if (!ok) {
         await this.stop(entry, 'native-outcome-unknown');
         return;
@@ -501,6 +540,7 @@ export class OAuthOperationOwner {
     reason: NonNullable<StoredOAuthCommand['reason']>
   ): Promise<void> {
     if (entry.closing) return entry.closing;
+    let expected = structuredClone(entry.saved), publicationAllowed = true;
     entry.retired = true; // Fence before abort/await; late native replies cannot publish.
     entry.closing = Promise.resolve().then(async () => {
       let clean = false;
@@ -509,19 +549,25 @@ export class OAuthOperationOwner {
       } catch {
         /* Retain unknown writer custody. */
       }
-      if (entry.completionPublicationUnknown || entry.receiptConflict) clean = false;
-      entry.saved.phase = !clean ? 'held'
-        : reason === 'native-rejected' ? 'failed'
-          : reason === 'cancelled' || reason === 'expired' ? 'cancelled' : 'held';
-      entry.saved.resourceHeld = !clean;
-      entry.saved.sequence++;
-      try {
-        this.options.assertWriter();
-        if (!entry.completionPublicationUnknown && !entry.receiptConflict) this.options.store.write(entry.saved);
-      } catch {
-        clean = false;
-        entry.saved.phase = 'held';
-        entry.saved.resourceHeld = true;
+      if (!publicationAllowed || entry.publicationUnknown || entry.receiptConflict) clean = false;
+      const final: StoredOAuthCommand = {
+        ...entry.saved,
+        phase: !clean ? 'held'
+          : reason === 'native-rejected' ? 'failed'
+            : reason === 'cancelled' || reason === 'expired' ? 'cancelled' : 'held',
+        resourceHeld: !clean,
+        sequence: entry.saved.sequence + 1,
+      };
+      if (publicationAllowed) {
+        try {
+          this.writeOriginal(entry, expected, final);
+          entry.saved = final;
+        } catch {
+          clean = false;
+        }
+      }
+      if (!clean) {
+        entry.saved = { ...final, phase: 'held', resourceHeld: true };
       }
       this.emit(entry);
       this.retire(entry, clean);
@@ -529,16 +575,22 @@ export class OAuthOperationOwner {
     entry.abort.abort();
     delete entry.authorization;
     if (entry.timer) clearTimeout(entry.timer);
-    entry.saved.phase = 'cancelling';
-    entry.saved.reason = reason;
-    entry.saved.sequence++;
-    entry.saved.resourceHeld = true;
+
+    const cancelling: StoredOAuthCommand = {
+      ...entry.saved,
+      phase: 'cancelling',
+      reason,
+      sequence: entry.saved.sequence + 1,
+      resourceHeld: true,
+    };
     try {
-      this.options.assertWriter();
-      if (!entry.completionPublicationUnknown && !entry.receiptConflict) this.options.store.write(entry.saved);
+      this.writeOriginal(entry, expected, cancelling);
+      expected = cancelling;
     } catch {
-      /* Cleanup still mandatory. */
+      publicationAllowed = false;
     }
+    // Live cleanup progress is separate from the last confirmed durable predecessor.
+    entry.saved = cancelling;
     this.emit(entry);
     return entry.closing;
   }

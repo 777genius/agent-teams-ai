@@ -1123,3 +1123,7 @@ R2/root and R3/provider should challenge:
 - Is validation of the historical live segment kept separate from validation of the complete final graph without skipping either?
 - Can any existing direct prepare/read caller reach effects without the complete journal validation that the helper relies on?
 - Are ordinary original preparation, repeated Restart, Restore composition, final Skip, cold replay, and malformed foreign chains all represented without changing deadlines or assertions?
+
+## Integrated P1/P1b and OAuth continuation
+
+The reviewed P1 implementation, canonical concurrent P1b implementation, G1c fixes, exact execution evidence and remaining gates are recorded in [the integration checkpoint](parity-integration-checkpoint.md). The G1c supplement was published before production in `d3db042`; the next reviewed source plan is [G1d OAuth start identity and cancellation](oauth-start-fingerprint-plan.md). These records preserve concurrent work and do not claim native qualification, a release or a merge to main.

@@ -178,6 +178,9 @@ function fixture() {
           };
         };
         return {
+          preflight() {
+            owner.withLaunchAuthority('human', 'read', () => {});
+          },
           assertOriginal() {
             owner.withLaunchAuthority('human', 'read', () => {});
           },

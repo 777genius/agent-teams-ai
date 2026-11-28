@@ -33,7 +33,12 @@ function fixture(run: (request: BackendOperationRequest) => Promise<BackendOpera
     resolve = vi.fn(async () => ({ handle })),
     invalidateReads = vi.fn();
   const api = createHostProductLifecycleApi({
-    backend: { invoke } as AgentBackendApi,
+    backend: {
+      invoke,
+      getConnections: vi.fn<AgentBackendApi['getConnections']>(async () => {
+        throw new Error('Unexpected connection read');
+      }),
+    } satisfies AgentBackendApi,
     captureScope: () => () => current,
     resolve,
     invalidateReads,

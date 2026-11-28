@@ -21,6 +21,7 @@ import { assembleTaskParts, readHostPagedSnapshot } from '../../../src/features/
 import { TeamProductReadOrder } from '../../../src/features/agent-backend/renderer/TeamProductReadOrder';
 
 import type { JsonValue } from '../../../packages/legacy-agent-host/src/contracts';
+import type { TeamInputPreflight } from '../../../packages/legacy-agent-host/src/team/ports';
 import type { BackendConnectionSnapshot } from '../../../src/features/agent-backend/contracts/connections';
 import type { AgentBackendApi } from '../../../src/features/agent-backend/contracts/operations';
 import type { BackendTeamSnapshot } from '../../../src/features/agent-backend/contracts/teamSnapshot';
@@ -49,12 +50,16 @@ const snapshot = (tasks: JsonValue[] = [], messages: JsonValue[] = []) => ({
   kanbanState: { teamName, tasks: {}, reviewers: [] },
 });
 
-function fixture() {
+function fixture(inputBytes?: number) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-bounded-product-fields-')));
   roots.push(root);
   const binding = { backendId: 'TEST-backend', teamId: 'TEST-team', teamName };
   const owner = createFilesystemTeamOwner({
     root, binding,
+    ...(inputBytes === undefined ? {} : {
+      inputPreflight: (input: Parameters<TeamInputPreflight>[0]) =>
+        Buffer.byteLength(input.content, 'utf8') <= inputBytes,
+    }),
     members: [{
       memberId: 'alice', name: 'alice', role: 'lead',
       delivery: { ...binding, runId: 'TEST-run', memberId: 'alice', generation: 'TEST-generation' },
@@ -65,7 +70,8 @@ function fixture() {
 }
 
 it('keeps an accepted Unicode summary lossless through Owner snapshots and Desktop message history', async () => {
-  const { reader } = fixture();
+  // This large-message paging fixture explicitly supplies its capable captured input budget.
+  const { reader } = fixture(8 * 1024 * 1024);
   const summary = '漢'.repeat(140_000);
   const parsed = parseBackendOperation({
     handle, commandId: 'TEST-large-summary', operation: 'message.send',

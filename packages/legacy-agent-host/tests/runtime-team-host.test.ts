@@ -5132,3 +5132,124 @@ test('session history retains two separately started captured launches and origi
   assert.deepEqual(f.sessions.map(session => session.submits.length), submissions,
     'history reads never replay or synthesize inputs');
 });
+
+
+test('P1 Host uses captured input bytes for Unicode through selected configuration and an authorized rekey', async t => {
+  const f = await fixture(t, { independentProviders: true,
+    changeProfile(value) { value.runtime!.members[0]!.limits.inputBytes = 8 * 1024 * 1024; } });
+  const store = new FileRuntimeStore(f.root);
+  const read = await f.rpc('team.launch.read', {}) as { value: { launchId: string; rosterRevision: string } };
+  const firstText = '界'.repeat(30_000);
+  const firstCommand = { operation: 'message.send', payload: { to: 'alice', text: firstText } };
+  const first = await f.rpc('team.execute', firstCommand, { commandId: 'TEST-P1-before-start' }) as {
+    ok: boolean; value: CommandReceipt };
+  assert.equal(first.ok, true); assert.equal(first.value.phase, 'completed');
+  const started = await f.rpc('team.launch.start', {
+    launchId: read.value.launchId, rosterRevision: read.value.rosterRevision,
+    configuration: { members: [{ memberId: 'alice-id', model: 'TEST-P1-selected' }] },
+  }, { commandId: 'TEST-P1-configured-start' }) as { ok: boolean };
+  assert.equal(started.ok, true, JSON.stringify(started));
+  const journal = new TeamOwnerStore(f.root, 'test-runtime-host');
+  const preparationBytes = () => JSON.stringify(journal.fenced(() => journal.read<TeamLaunchRecord>(
+    `launches/${runtimeDigest(read.value.launchId)}.json`))!.preparation);
+  const originalPreparation = preparationBytes();
+  const verify = async (binding: RuntimeBinding, session: ControlledSession, index: number, text: string) => {
+    await eventually(() => session.submits.length === index + 1, 'original Unicode reaches the controlled provider once');
+    const submitted = session.submits[index]!;
+    const original = store.fenced(binding, tx => tx.get()!.inputs.find(value => value.intent.inputId === submitted.inputId)!);
+    assert.equal(original.intent.content, text);
+    assert.equal(submitted.content, (original.preparation?.prefix ?? '') + text);
+    session.finish(index);
+    await eventually(() => store.fenced(binding, tx => tx.get()!.inputs.find(
+      value => value.intent.inputId === submitted.inputId)?.terminal === 'succeeded'), 'original Unicode settles');
+  };
+  await verify(f.runtimeBinding, f.session(), 0, firstText);
+  assert.equal(f.contexts[0]!.profile.model, 'TEST-P1-selected');
+  const secondText = '😀'.repeat(25_000);
+  assert.equal((await f.rpc('team.execute', { operation: 'message.send',
+    payload: { to: 'alice', text: secondText } }, { commandId: 'TEST-P1-emoji' }) as { ok: boolean }).ok, true);
+  await verify(f.runtimeBinding, f.session(), 1, secondText);
+
+  const launch = await f.rpc('team.launch.read', {}) as { value: { launchId: string; rosterRevision: string } };
+  const restart = { launchId: launch.value.launchId, rosterRevision: launch.value.rosterRevision,
+    memberId: 'alice-id', expectedGeneration: f.runtimeBinding.generation, action: 'restart' };
+  for (const operation of ['prepare', 'execute']) {
+    const result = await f.rpc('team.member.action.' + operation, restart,
+      { commandId: 'TEST-P1-rekey' }) as { ok: boolean };
+    assert.equal(result.ok, true, `${operation}: ${JSON.stringify(result)}`);
+  }
+  await eventually(() => f.opens() === 2, 'only the authorized successor is opened');
+  const current = normalizeBinding(f.contexts.at(-1)!.endpoint.binding);
+  assert.notEqual(current.generation, f.runtimeBinding.generation);
+  const stale = await f.rpc('runtime.stop', { memberId: 'alice-id',
+    expectedGeneration: f.runtimeBinding.generation }) as { ok: boolean };
+  assert.equal(stale.ok, false, 'old generation cannot control the successor');
+  const thirdText = '界'.repeat(50_000);
+  assert.equal((await f.rpc('team.execute', { operation: 'message.send',
+    payload: { to: 'alice', text: thirdText } }, { commandId: 'TEST-P1-after-rekey' }) as { ok: boolean }).ok, true);
+  await verify(current, f.session(), 0, thirdText);
+  assert.deepEqual(await f.rpc('team.execute', firstCommand, { commandId: 'TEST-P1-before-start' }), first,
+    'completed old binding replay does not perform a new current-profile preflight');
+  assert.equal(f.session().submits.length, 1); assert.equal(f.opens(), 2);
+  assert.equal(preparationBytes(), originalPreparation, 'Restart preserves the original prepared options and fingerprint');
+  await f.restart();
+  const coldLaunch = await f.rpc('team.launch.read', {}) as { ok: boolean };
+  assert.equal(coldLaunch.ok, true, JSON.stringify(coldLaunch));
+  const coldAction = await f.rpc('team.member.action.lookup', { launchId: read.value.launchId,
+    memberId: 'alice-id', originalCommandId: 'TEST-P1-rekey' }) as {
+      ok: boolean; value: { stage: string; selectedGeneration: string } };
+  assert.equal(coldAction.ok, true, JSON.stringify(coldAction));
+  assert.equal(coldAction.value.stage, 'selected');
+  assert.equal(coldAction.value.selectedGeneration, current.generation);
+  assert.equal(preparationBytes(), originalPreparation);
+  assert.deepEqual(await f.rpc('team.execute', firstCommand, { commandId: 'TEST-P1-before-start' }), first);
+  assert.equal(f.opens(), 2, 'cold reads and original replay do not allocate a provider');
+  assert.deepEqual(f.sessions.map(session => session.submits.length), [2, 1], 'cold replay resends no original input');
+});
+
+test('P1 Host rejects a known captured-provider overflow before Team or Runtime publication', async t => {
+  const f = await fixture(t);
+  const owner = new TeamOwnerStore(f.root, 'test-runtime-host');
+  const before = owner.fenced(() => ({
+    product: owner.productFingerprint('test-runtime-host'), outbox: owner.list('outbox'),
+  }));
+  const result = await f.rpc('team.execute', { operation: 'message.send',
+    payload: { to: 'alice', text: '界'.repeat(30_000) } }, { commandId: 'TEST-P1-small-profile' }) as {
+      ok: boolean; code?: string };
+  assert.equal(result.ok, false); assert.equal(result.code, 'invalid');
+  assert.deepEqual(await f.rpc('team.lookup', {}, { commandId: 'TEST-P1-small-profile' }), { ok: true, value: null });
+  assert.deepEqual(owner.fenced(() => ({
+    product: owner.productFingerprint('test-runtime-host'), outbox: owner.list('outbox'),
+  })), before);
+  assert.equal(new FileRuntimeStore(f.root).fenced(f.runtimeBinding, tx => tx.get()), undefined);
+  assert.equal(f.opens(), 0); assert.equal(f.contexts.length, 0);
+});
+
+test('P1 Host refuses mutable captured profile limits or generation before publishing a new command', async t => {
+  for (const change of ['limits', 'generation'] as const) {
+    const f = await fixture(t);
+    assert.equal((await f.rpc('runtime.open', { memberId: 'alice-id' }) as { ok: boolean }).ok, true);
+    const captured = f.contexts[0]!.profile;
+    const originalLimit = captured.limits.inputBytes, originalGeneration = captured.generation;
+    const owner = new TeamOwnerStore(f.root, 'test-runtime-host');
+    const before = owner.fenced(() => ({
+      product: owner.productFingerprint('test-runtime-host'), outbox: owner.list('outbox'),
+    }));
+    if (change === 'limits') captured.limits.inputBytes++; else captured.generation++;
+    try {
+      const result = await f.rpc('team.execute', { operation: 'message.send',
+        payload: { to: 'alice', text: 'TEST small text fits either budget' } },
+      { commandId: 'TEST-P1-profile-drift' }) as { ok: boolean; code?: string };
+      assert.equal(result.ok, false); assert.equal(result.code, 'hold');
+      assert.deepEqual(await f.rpc('team.lookup', {}, { commandId: 'TEST-P1-profile-drift' }), { ok: true, value: null });
+      assert.deepEqual(owner.fenced(() => ({
+        product: owner.productFingerprint('test-runtime-host'), outbox: owner.list('outbox'),
+      })), before);
+      assert.equal(f.session().submits.length, 0);
+      assert.equal(new FileRuntimeStore(f.root).fenced(f.runtimeBinding, tx => tx.get()!.inputs.length), 0);
+    } finally {
+      captured.limits.inputBytes = originalLimit;
+      captured.generation = originalGeneration;
+    }
+  }
+});

@@ -50,6 +50,8 @@ export interface BackendTeamSnapshot {
   feed: BackendTeamPosition;
   members: { name: string; role: 'lead' | 'member' }[];
   tasks: TeamTaskWithKanban[];
+  /** Original retained-process count for bounded complete-row pages. */
+  processTotal?: number;
   processes?: BackendProcess[];
   messages: (InboxMessage & {
     crossTeamOrigin?: Pick<

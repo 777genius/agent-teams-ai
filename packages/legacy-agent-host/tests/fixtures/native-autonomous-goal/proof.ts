@@ -537,7 +537,7 @@ async function runCase(
 
     phase = 'stop-original-inputs';
     const stopIntake = await intake(true);
-    const stopActors = mode === 'do' ? [lead] : [lead, workers[0]!];
+    const stopActors = mode === 'do' ? [lead] : [lead, ...workers];
     await wait(
       'Stop must observe the original in-flight native response',
       () => stopActors.every((actor) => scripts[actor].heldInputIds().length === 1),

@@ -21,6 +21,7 @@ import {
   readNativeGoalToolValue,
 } from './fixtures/native-autonomous-goal/model.ts';
 import type {
+  NativeGoalActor,
   NativeGoalInput,
   NativeGoalProvider,
 } from './fixtures/native-autonomous-goal/model.ts';
@@ -110,7 +111,8 @@ async function fixture(
   provider: NativeGoalProvider,
   stop = false,
   delegate = false,
-  worker = false
+  worker = false,
+  workers?: NativeGoalActor[]
 ) {
   const actor = actors[provider];
   let current: NativeGoalInput = {
@@ -126,7 +128,7 @@ async function fixture(
     lead: worker ? (actor === 'alice' ? 'bob' : 'alice') : actor,
     mode: delegate ? 'delegate' : 'do',
     workspace: '/TEST-native-goal-unit/workspace',
-    workers: [worker ? actor : actor === 'bob' ? 'carol' : 'bob'],
+    workers: workers ?? [worker ? actor : actor === 'bob' ? 'carol' : 'bob'],
     current: () => current,
   });
   const model =
@@ -381,6 +383,144 @@ for (const provider of ['claude', 'codex', 'opencode'] as const) {
     }
   );
 }
+
+test('native delegated Stop holds both Codex and OpenCode teammates and releases only original responses', async () => {
+  const team: { provider: NativeGoalProvider; f: Awaited<ReturnType<typeof fixture>> }[] = [];
+  const pending: Promise<Answer>[] = [];
+  try {
+    for (const provider of ['claude', 'codex', 'opencode'] as const)
+      team.push({
+        provider,
+        f: await fixture(
+          provider,
+          true,
+          true,
+          provider !== 'claude',
+          provider === 'claude' ? ['bob', 'carol'] : undefined
+        ),
+      });
+    const lead = team[0]!.f;
+    const status = tool(await lead.next(), 'goal_status');
+    lead.result(status, lead.status());
+    for (const { provider, f } of team.slice(1)) {
+      const before = lead.script.observations.length;
+      const response = lead.next();
+      pending.push(response);
+      await held(() => lead.script.observations.length > before);
+      assert.deepEqual(
+        lead.script.heldInputIds(),
+        [],
+        'the lead creates both original worker tasks before holding its own response'
+      );
+      const create = tool(await response, 'task_create');
+      const actor = actors[provider];
+      assert.equal(create.input.owner, actor);
+      assert.equal(
+        create.input.blockedBy,
+        undefined,
+        'both Stop tasks must start independently before either held response settles'
+      );
+      const task = {
+        id: 'TEST-stop-task-' + actor,
+        subject: create.input.subject,
+        owner: actor,
+        status: 'pending',
+      };
+      lead.result(create, {
+        phase: 'completed',
+        principalId: 'alice-session',
+        effects: { taskId: task.id },
+      });
+      f.nextInput('TEST-stop-input-' + actor, 'TEST original task assignment ' + task.id);
+      const read = tool(await f.next(), 'goal_status');
+      f.result(read, f.status());
+      const list = tool(await f.next(), 'task_list');
+      assert.equal(list.input.owner, actor);
+      f.result(list, [task]);
+      const start = tool(await f.next(), 'task_start');
+      assert.equal(start.input.taskId, task.id);
+      const receipt = {
+        phase: 'completed',
+        principalId: actor + '-session',
+        effects: { taskId: task.id },
+      };
+      f.result(start, receipt);
+      const write = tool(await f.next(), provider === 'codex' ? 'exec_command' : 'bash');
+      assert.match(
+        String(write.input.command ?? write.input.cmd),
+        new RegExp('stop-' + actor + '-draft\\.txt', 'u')
+      );
+      f.result(write, 'TEST_NATIVE_GOAL_FILE_OK', true);
+      const comment = tool(await f.next(), 'task_add_comment');
+      assert.equal(comment.input.taskId, task.id);
+      f.result(comment, receipt);
+    }
+    const originals = team.map(({ f }) => ({
+      inputId: f.current().inputId,
+      operationRef: f.current().operationRef,
+    }));
+    const returned = new Set<string>();
+    const responses = team.map(({ provider, f }) => {
+      const response = f.next().then((answer) => {
+        returned.add(actors[provider]);
+        return answer;
+      });
+      pending.push(response);
+      return response;
+    });
+    await held(() =>
+      team.every(
+        ({ f }, index) =>
+          f.script.heldInputIds().length === 1 &&
+          f.script.heldInputIds()[0] === originals[index]!.inputId
+      )
+    );
+    assert.equal(returned.size, 0, 'all three original responses are held before Stop');
+    const counts = team.map(({ f }) => f.script.observations.length);
+    for (const { f } of team) f.stop();
+    for (const index of [1, 2, 0]) {
+      const { provider, f } = team[index]!;
+      f.script.releaseHeld();
+      assert.ok('text' in (await responses[index]!));
+      assert.deepEqual(f.script.heldInputIds(), []);
+      assert.equal(f.current().inputId, originals[index]!.inputId);
+      assert.equal(f.current().operationRef, originals[index]!.operationRef);
+      if (index === 1) {
+        assert.deepEqual([...returned], ['bob']);
+        for (const other of [0, 2])
+          assert.deepEqual(
+            team[other]!.f.script.heldInputIds(),
+            [originals[other]!.inputId],
+            'releasing Codex cannot release the lead or OpenCode original response'
+          );
+      }
+      assert.throws(
+        () => f.script.respond(provider, bodyFor(provider, f.messages)),
+        /after explicit Stop/u
+      );
+      assert.throws(() => f.script.releaseHeld(), /exactly once/u);
+      assert.deepEqual(f.model.failures, []);
+    }
+    assert.deepEqual([...returned].sort(), ['alice', 'bob', 'carol']);
+    assert.deepEqual(
+      team.map(({ f }) => f.script.observations.length),
+      counts,
+      'Stop settlement adds no model request or replacement input'
+    );
+    for (let index = 0; index < team.length; index++)
+      assert.ok(
+        team[index]!.f.script.observations.every(
+          (row) =>
+            row.inputId === originals[index]!.inputId &&
+            row.operationRef === originals[index]!.operationRef
+        )
+      );
+  } finally {
+    for (const { f } of team) if (f.script.heldInputIds().length) f.script.releaseHeld();
+    await Promise.allSettled(pending);
+    await Promise.all(team.map(({ f }) => f.model.close()));
+  }
+});
 
 test('native delegated goal reads only current-goal tasks, preserving the prior accepted goal inventory', async () => {
   const f = await fixture('claude', false, true);

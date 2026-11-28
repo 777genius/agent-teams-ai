@@ -23,6 +23,7 @@ import type {
   PreparedTaskMutation,
   TaskBoardPolicy,
   TaskMutationPort,
+  TaskNotification,
   TeamStore,
 } from '../../team/ports.js';
 
@@ -178,7 +179,8 @@ export class TaskEffectPlan implements TaskMutationPort {
   prepare(
     receipt: CommandReceipt,
     actor: string,
-    apply: (board: TaskBoardPolicy) => JsonValue
+    apply: (board: TaskBoardPolicy) => JsonValue,
+    validateNotifications?: (notifications: readonly TaskNotification[]) => void
   ): PreparedTaskMutation {
     const previous = this.readPlan(receipt);
     if (previous) return previous;
@@ -228,6 +230,8 @@ export class TaskEffectPlan implements TaskMutationPort {
           : board.getTask(taskId)
       );
       const target = this.scan(work);
+      const { notifications, removedMessageIds } = this.notifications(source, target, !!receipt.goal);
+      validateNotifications?.(notifications);
       for (const path of Object.keys(source)) if (!target[path]) throw new TeamOwnerError('hold');
       if (digest(this.scan(this.root)) !== digest(source)) throw new TeamOwnerError('hold');
       this.checkDefaults(defaultsSource);
@@ -266,7 +270,6 @@ export class TaskEffectPlan implements TaskMutationPort {
         const identity = this.identity(join(this.root, path), true);
         if (identity) directories[path] = identity;
       }
-      const { notifications, removedMessageIds } = this.notifications(source, target, !!receipt.goal);
       let reassignedTaskId: string | undefined;
       if (receipt.goal && receipt.command.operation === 'task.assign') {
         const task = board.getTask(receipt.command.payload.taskId);

@@ -114,6 +114,7 @@ function selectRun(target = physical, runId = run) {
     statuses: {
       alice: {
         status: 'online',
+        updatedAt: timestamp,
         launchState: 'confirmed_alive',
         bootstrapConfirmed: true,
         runtimeAlive: true,
@@ -268,6 +269,7 @@ it('rejects wrong-run logical spawn details and keeps the physical roster', asyn
     statuses: {
       'TEST-stale-spawn': {
         status: 'error',
+        updatedAt: timestamp,
         launchState: 'failed_to_start',
         error: 'TEST-foreign-failure',
       },
@@ -290,6 +292,7 @@ it.each(['assembling', 'failed'] as const)(
     state.teamAgentRuntimeByTeam[physical].members.alice.runtimeModel = 'TEST-unconfirmed-runtime';
     state.memberSpawnSnapshotsByTeam[logical].statuses.alice = {
       status: 'error',
+      updatedAt: timestamp,
       launchState: 'failed_to_start',
       runtimeAlive: false,
       error: 'TEST-no-allocation',
@@ -319,6 +322,7 @@ it('does not attach an old retry completion to a newly viewed project', async ()
   };
   state.memberSpawnSnapshotsByTeam[logical].statuses.alice = {
     status: 'error',
+    updatedAt: timestamp,
     launchState: 'failed_to_start',
     runtimeAlive: false,
     hostFailedMemberRetry: captured,

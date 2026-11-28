@@ -1,7 +1,7 @@
 import { runtimeDigest } from '../runtime/identity.js';
 import { TeamLaunchError } from './contracts.js';
 import type { LaunchPreparation, TeamLaunchRecord, TeamLaunchOptions } from './contracts.js';
-import { memberActionBlocksSelection, validateMemberSelectionChain } from './memberActions.js';
+import { memberActionBlocksSelection } from './memberActions.js';
 
 const identity = (value: unknown): value is string =>
   typeof value === 'string' && value.length > 0 && value.length <= 256 && !value.includes('\0');
@@ -16,6 +16,57 @@ export function launchPreparationFingerprint(
     sourceRosterRevision: input.sourceRosterRevision,
     members: input.members.map(({ memberId, configuration }) => ({ memberId, configuration })),
   });
+}
+
+/** Project a selected generation back to its immutable prepared origin.
+ * The owning launch validator has already validated the complete selection graph.
+ * Do not revalidate the final live graph against a historical preparation projection.
+ */
+function matchesPreparationOrigin(
+  record: TeamLaunchRecord,
+  selected: TeamLaunchRecord['definition']['members'][number],
+  prepared: LaunchPreparation['members'][number]
+): boolean {
+  const actions = (record.memberActions ?? [])
+    .filter(row => row.phase === 'selected' && row.input.memberId === prepared.memberId);
+  const restorations = (record.restorations ?? [])
+    .filter(row => row.member.memberId === prepared.memberId);
+  const consumed = new Set<(typeof actions)[number]>();
+  let current = selected;
+  for (let step = 0; step <= actions.length; step++) {
+    if (
+      current.memberId !== prepared.memberId ||
+      current.baseConfigurationDigest !== prepared.baseConfigurationDigest ||
+      current.configRevision !== prepared.configRevision
+    ) return false;
+    const digest = runtimeDigest(current);
+    const predecessors = actions.filter(row => runtimeDigest(row.selected) === digest);
+    if (predecessors.length > 1) return false;
+    if (predecessors.length === 1) {
+      const edge = predecessors[0]!;
+      if (consumed.has(edge)) return false;
+      consumed.add(edge);
+      current = edge.source;
+      continue;
+    }
+    const restored = restorations.filter(row => runtimeDigest(row.member) === digest);
+    if (restored.length > 1) return false;
+    // Neither a fake root nor an apparent restore may borrow another retained
+    // selection that ends at the same binding with different descriptor bytes.
+    const sameBinding = (binding: typeof current.binding) =>
+      binding !== null && current.binding !== null &&
+      runtimeDigest(binding) === runtimeDigest(current.binding);
+    if (
+      actions.some(row => !consumed.has(row) && sameBinding(row.selected.binding)) ||
+      restorations.some(row => sameBinding(row.member.binding) &&
+        runtimeDigest(row.member) !== digest)
+    ) return false;
+    // An actual restore is an independently qualified historical boundary.
+    if (current.restore) return restored.length === 1;
+    if (restored.length) return false;
+    return current.configurationDigest === prepared.configurationDigest;
+  }
+  return false;
 }
 
 export function validateLaunchPreparation(record: TeamLaunchRecord): void {
@@ -36,7 +87,6 @@ export function validateLaunchPreparation(record: TeamLaunchRecord): void {
     for (const member of input.members) {
       const selected = record.definition.members.find((item) => item.memberId === member.memberId);
       if (selected?.skipped) {
-        validateMemberSelectionChain(record);
         if (!(record.memberActions ?? []).some(action =>
           action.phase === 'selected' && action.input.action === 'skip' &&
           action.input.memberId === member.memberId &&
@@ -54,7 +104,7 @@ export function validateLaunchPreparation(record: TeamLaunchRecord): void {
         !selected?.binding ||
         selected.configRevision !== member.configRevision ||
         selected.baseConfigurationDigest !== member.baseConfigurationDigest ||
-        (!selected.restore && selected.configurationDigest !== member.configurationDigest)
+        !matchesPreparationOrigin(record, selected, member)
       )
         throw new Error();
     }

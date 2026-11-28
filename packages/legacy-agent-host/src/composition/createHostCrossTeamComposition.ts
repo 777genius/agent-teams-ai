@@ -4,8 +4,11 @@ import { createHostCrossTeamOutbox } from '../adapters/cross-team/createHostCros
 import { CascadeGuard } from '../cross-team/CascadeGuard.js';
 import { inferCrossTeamReplyMetadata } from '../cross-team/CrossTeamConversationPolicy.js';
 import { createHostCrossTeamCoordinator } from '../cross-team/HostCrossTeamCoordinator.js';
-import { crossTeamOutboxRecord } from '../cross-team/crossTeamRecords.js';
+import { crossTeamOutboxRecord, crossTeamPublicOutboxRow } from '../cross-team/crossTeamRecords.js';
+import { MAX_CROSS_TEAM_TEXT_LENGTH } from '../cross-team/contracts.js';
+import { crossTeamInboundText } from '../cross-team/crossTeamInbound.js';
 import { pageCrossTeamOutbox } from '../cross-team/pageCrossTeamOutbox.js';
+import { runtimeInputFits } from '../runtime/runtimeDelivery.js';
 import { TeamOwnerError } from '../team/contracts.js';
 import { digest } from '../team/identity.js';
 import { memberBinding } from '../team/DeliveryRecovery.js';
@@ -13,6 +16,7 @@ import { teamRegistryScopeSchema } from '../team-registry/contracts.js';
 import { createCrossTeamPairAuthority } from './CrossTeamPairAuthority.js';
 import type { HostedTeam } from './MemberEntry.js';
 import type { TeamHostProfile } from './TeamHost.js';
+import type { TeamInputPreflight } from '../team/ports.js';
 import type { HostMethod } from '../index.js';
 import type { JsonValue } from '../contracts.js';
 import type { CommandReceipt, ImmutableDelivery, RuntimeMemberBinding } from '../team/contracts.js';
@@ -40,7 +44,7 @@ const sendSchema = z
     target: z.object({ handleId: id }).strict(),
     fromMember: id,
     toMember: id.optional(),
-    text: z.string().min(1).max(48_000),
+    text: z.string().min(1).max(MAX_CROSS_TEAM_TEXT_LENGTH),
     messageId: id,
     conversationId: id.optional(),
     replyToConversationId: id.optional(),
@@ -64,6 +68,7 @@ export function createHostCrossTeamComposition(options: {
   teams: ReadonlyMap<string, HostedTeam>;
   assertCurrent(): void;
   activeInputs(binding: RuntimeMemberBinding): readonly ImmutableDelivery[];
+  inputPreflight?: TeamInputPreflight;
   resolveTarget?(source: HostedTeam, requested: HostedTeam, sourceHandle?: string,
     targetHandle?: string, visibleOnly?: boolean): { team: HostedTeam; handleId?: string };
   assertPair?(source: HostedTeam, target: HostedTeam): void;
@@ -97,6 +102,18 @@ export function createHostCrossTeamComposition(options: {
       };
     };
     return {
+      preflight(intent: CapturedCrossTeamIntent) {
+        authority.assertPair(intent);
+        options.assertPair?.(authority.selected(intent.pair.source), team);
+        if (digest(authority.target(team, original.principalId, original.recipient.name,
+          original.handleId)) !== digest(original)) throw new TeamOwnerError('hold');
+        const input = {
+          binding: memberBinding({ ...team.definition.binding, ...original.recipient }),
+          content: crossTeamInboundText(intent),
+        };
+        if (!(options.inputPreflight?.(input) ?? runtimeInputFits(input.content)))
+          throw new TeamOwnerError('invalid');
+      },
       lookup: (commandId: string) => project(connection.lookup(commandId)),
       receive: (intent: CapturedCrossTeamIntent) =>
         project(team.owner.receiveCrossTeam(original.principalId, intent))!,
@@ -180,29 +197,7 @@ export function createHostCrossTeamComposition(options: {
         if (!intent) throw new TeamOwnerError('hold');
         if (digest(row) !== digest(crossTeamOutboxRecord(intent))) throw new TeamOwnerError('hold');
         authority.assertPair(intent);
-        const { source: from, target: to } = intent.pair;
-        return {
-          messageId: intent.request.messageId,
-          fromTeamResourceRef: from.teamResourceRef,
-          toTeamResourceRef: to.teamResourceRef,
-          ...(from.handleId === undefined ? {} : { fromHandleId: from.handleId }),
-          ...(to.handleId === undefined ? {} : { toHandleId: to.handleId }),
-          fromTeamName: from.teamName,
-          toTeamName: to.teamName,
-          fromMember: from.actor,
-          toMember: to.recipient.name,
-          conversationId: intent.request.conversationId,
-          text: intent.request.text,
-          timestamp: intent.timestamp,
-          chainDepth: intent.request.chainDepth ?? 0,
-          ...(intent.request.replyToConversationId === undefined
-            ? {}
-            : { replyToConversationId: intent.request.replyToConversationId }),
-          ...(intent.request.summary === undefined ? {} : { summary: intent.request.summary }),
-          ...(intent.request.taskRefs === undefined
-            ? {}
-            : { taskRefs: structuredClone(intent.request.taskRefs) }),
-        };
+        return crossTeamPublicOutboxRow(intent);
       });
     const page = pageCrossTeamOutbox({ key: outboxPageKey, authorityFingerprint: originalAuthority,
       rows: projected, ...(cursor === undefined ? {} : { cursor }) });

@@ -31,6 +31,18 @@ for (const scenario of [
     const goal = f.goal()!;
     success(await f.rpc('team.goal.control', { goalId: goal.goalId, expectedRevision: goal.revision,
       action: 'stop' }, 'TEST-stop-before-checkpoint'));
+    if (scenario.priorContinuation) {
+      const stopped = f.goal()!;
+      const snapshot = success<{ autonomousGoal: GoalStatus }>(await f.rpc('team.snapshot', {}));
+      assert.equal(snapshot.autonomousGoal.canResume, true, 'the original active input does not block Resume');
+      success(await f.rpc('team.goal.control', { goalId: stopped.goalId, expectedRevision: stopped.revision,
+        action: 'resume' }, 'TEST-resume-active-original'));
+      assert.equal(f.goal()!.disposition, 'active');
+      assert.deepEqual(f.goal()!.debits, stopped.debits);
+      assert.equal(originalSession.submits.length, originalCount, 'Resume never duplicates the active original');
+      success(await f.rpc('team.goal.control', { goalId: stopped.goalId, expectedRevision: stopped.revision,
+        action: 'stop' }, 'TEST-stop-active-original-again'));
+    }
     originalSession.finish(originalCount - 1);
     await eventually(() => f.runtime('lead')!.inputs.at(-1)?.terminal === 'succeeded',
       'the original native turn settles before checkpoint publication');
@@ -61,6 +73,18 @@ for (const scenario of [
     assert.equal(successorBinding.generation, restored.generation);
     assert.equal(Object.keys(f.goal()!.debits).length, scenario.priorContinuation ? 2 : 1);
     assert.ok(f.goal()!.debits[f.session().submits[0]!.inputId]);
+    if (scenario.priorContinuation) {
+      const active = f.goal()!;
+      success(await f.rpc('team.goal.control', { goalId: active.goalId, expectedRevision: active.revision,
+        action: 'stop' }, 'TEST-stop-active-successor'));
+      const snapshot = success<{ autonomousGoal: GoalStatus }>(await f.rpc('team.snapshot', {}));
+      assert.equal(snapshot.autonomousGoal.canResume, true, 'the validated successor may resume with its input active');
+      success(await f.rpc('team.goal.control', { goalId: active.goalId, expectedRevision: active.revision,
+        action: 'resume' }, 'TEST-resume-active-successor'));
+      assert.equal(f.goal()!.disposition, 'active');
+      assert.deepEqual(f.goal()!.debits, active.debits);
+      assert.equal(f.session().submits.length, 1, 'Resume never duplicates the active successor input');
+    }
     if (scenario.successorWrites)
       await f.captureWrite('lead', 0, 'TEST updated artifact from the genuine successor\n');
     const proposal = await f.tool('lead', 'goal_propose', {

@@ -17,6 +17,7 @@ import { MemberWorkSyncTeamOperationGate } from '../work-sync/policy/core/applic
 import { createNativeMemberWorkSyncPersistence } from '../work-sync/storage/createNativeMemberWorkSyncPersistence.js';
 import { MemberWorkSyncWriteQueue } from '../work-sync/storage/MemberWorkSyncWriteQueue.js';
 import { goalWaitKey, isGoalWaitReport } from '../work-sync/policy/core/domain/GoalWaitPolicy.js';
+import { assertGoalWaitSupersession } from '../work-sync/inspectGoalWaits.js';
 
 import type { JsonValue } from '../contracts.js';
 import type { TeamMcpWorkSyncPort } from '../mcp/workSyncContracts.js';
@@ -71,7 +72,8 @@ export function createHostWorkSyncComposition(options: {
           identity.assertWorkAllowed();
           const commands = member.owner.workSyncCommands(source.team.principalId);
           const original = commands.lookup(commandId);
-          if ('wait' in payload && payload.wait !== undefined && original?.phase !== 'completed') {
+          const assertWait = () => {
+            if (!('wait' in payload) || payload.wait === undefined || original?.phase === 'completed') return;
             const wait = payload.wait, goal = member.owner.goals.snapshot();
             if (!goalSource || !goal || !isGoalWaitReport(wait) ||
                 source.team.mode !== 'goal' || source.team.goal.goalId !== goal.goalId ||
@@ -79,8 +81,10 @@ export function createHostWorkSyncComposition(options: {
                 Date.parse(wait.horizonAt) > Date.parse(goal.deadlineAt) ||
                 (wait.taskId && !member.owner.goals.scopedTasks().some(task => task.id === wait.taskId)))
               throw new McpToolFailure('invalid');
+            const reports = member.owner.goals.workSyncReports();
+            assertGoalWaitSupersession(wait, reports, source.team, goal.deadlineAt);
             let registered = false;
-            for (const prior of member.owner.goals.workSyncReports()) {
+            for (const prior of reports) {
               if (!prior.result || typeof prior.result !== 'object' || Array.isArray(prior.result) || prior.result.accepted !== true) continue;
               const priorWait = prior.payload && typeof prior.payload === 'object' && !Array.isArray(prior.payload)
                 ? prior.payload.wait : undefined;
@@ -91,14 +95,20 @@ export function createHostWorkSyncComposition(options: {
             // A late observation retains its original fact; it cannot authorize another check.
             if (!registered && wait.status === 'pending' && Date.parse(wait.horizonAt) <= Date.now())
               throw new McpToolFailure('invalid');
-          }
+          };
+          assertWait();
+          const checkedSource = 'wait' in payload && payload.wait?.supersedes && original?.phase !== 'completed'
+            ? { ...source,
+                assertCurrent: () => { source.assertCurrent(); assertWait(); },
+                assertTeamCurrent: () => { source.assertTeamCurrent(); assertWait(); },
+              } : source;
           if ('forceNudge' in payload && payload.forceNudge && !member.delivery && !options.outbox)
             throw new McpToolFailure('unsupported');
-          return commands.execute(commandId, operation, json(payload), source, async (original) => {
+          return commands.execute(commandId, operation, json(payload), checkedSource, async (original) => {
               let mutationOrdinal = 0;
               const assertCurrent = () => {
                 options.assertCurrent();
-                source.assertCurrent();
+                checkedSource.assertCurrent();
                 identity.assertWorkAllowed();
               };
               const persistence = createNativeMemberWorkSyncPersistence({

@@ -25,7 +25,10 @@ import {
 import { mockOwnerMessagesPage } from './hostMessagesPageFixture';
 
 import type { BackendConnectionSnapshot } from '../../../src/features/agent-backend/contracts/connections';
-import type { BackendLaunchSnapshot } from '../../../src/features/agent-backend/contracts/launch';
+import type {
+  BackendLaunchConfigurationView,
+  BackendLaunchSnapshot,
+} from '../../../src/features/agent-backend/contracts/launch';
 import type { AgentBackendApi } from '../../../src/features/agent-backend/contracts/operations';
 import type { BackendRuntimeSnapshot } from '../../../src/features/agent-backend/contracts/operations';
 import type { BackendRosterConfiguration } from '../../../src/features/agent-backend/contracts/roster';
@@ -195,9 +198,22 @@ function attachmentRuntime(f: ReturnType<typeof fixture>) {
       : request.operation === 'team.launch.configuration.read'
         ? { ok: true, value: {
           launch: structuredClone(launch),
-          members: configuration.members.map((row) => ({ memberId: row.memberId, label: row.name, role: row.role,
-            selected: row === member ? { provider: member.settings.providerId === 'codex' ? 'codex' : 'claude',
-              model: member.settings.model ?? 'TEST-inherited-model', workspace: '/TEST', capabilities: ['model'] } : null })),
+          members: configuration.members.map(
+            (row): BackendLaunchConfigurationView['members'][number] => ({
+              memberId: row.memberId,
+              label: row.name,
+              role: row.role,
+              selected:
+                row === member
+                  ? {
+                      provider: member.settings.providerId === 'codex' ? 'codex' : 'claude',
+                      model: member.settings.model ?? 'TEST-inherited-model',
+                      workspace: '/TEST',
+                      capabilities: ['model'],
+                    }
+                  : null,
+            })
+          ),
         } }
       : request.operation === 'runtime.read'
         ? unknown

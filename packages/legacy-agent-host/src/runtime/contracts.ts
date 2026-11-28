@@ -10,6 +10,9 @@ import type { InputPreparationRequest, PreparedInputProof, RuntimeContextEpoch, 
 import type { RuntimeConversationMarker, RuntimeEventStorage } from './activityContracts.js';
 import type { CheckpointAttempt, CheckpointStorage } from './checkpointContracts.js';
 
+/** Existing common provider-profile input ceiling; individual captured providers may be smaller. */
+export const MAX_RUNTIME_INPUT_BYTES = 8 * 1024 * 1024;
+
 export interface RuntimeBinding {
   backendId: string;
   teamId: string;
@@ -113,12 +116,15 @@ export interface RuntimeOwnerOptions {
   };
   profileId: string;
   hostIncarnation: string;
-  /** Trusted synchronous authority check under the member fence, including lookup disclosure. */
+  /** Synchronous authority under the member fence; optional history is read only within that same fence. */
   authorize(
     binding: RuntimeBinding,
     action: 'read' | 'admit' | 'dispatch' | 'control',
-    intent?: RuntimeDelivery
+    intent?: RuntimeDelivery,
+    readMemberHistory?: () => readonly RuntimeSessionRecord[]
   ): boolean;
+  /** Fresh immutable input only, after original lookup and before admission writes; never await. */
+  inputPreflight?(intent: RuntimeDelivery): boolean;
   /** Current mandatory dependency/bootstrap proof; absence safely holds work dispatch. */
   canDispatch?(binding: RuntimeBinding, intent: RuntimeDelivery): boolean;
   /** Keeps the original Team authority fence around the synchronous Runtime claim; no async work. */
@@ -128,6 +134,8 @@ export interface RuntimeOwnerOptions {
   inputPrepared?(binding: RuntimeBinding, proof: PreparedInputProof): undefined;
   contextObserved?(binding: RuntimeBinding, epoch: RuntimeContextEpoch): undefined;
   maxQueuedInputs?: number;
+  /** Aggregate UTF-8 bytes of admitted/active original content, independent of retained history. */
+  maxQueuedInputBytes?: number;
   maxInputBytes?: number;
   maxPendingInteractions?: number;
   interactionTtlMs?: number;

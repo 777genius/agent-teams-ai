@@ -9,19 +9,28 @@ export interface GoalWaitReport {
   taskId?: string;
   horizonAt: string;
   status: 'pending' | 'succeeded' | 'failed' | 'cancelled';
+  /** Explicit agent-reported replacement in this same repository/task scope, never CI control. */
+  supersedes?: { runId: string; expectedCommit: string };
 }
 
 export function isGoalWaitReport(value: unknown): value is GoalWaitReport {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const wait = value as Record<string, unknown>;
-  return Object.keys(wait).every(key => ['kind', 'repository', 'runId', 'expectedCommit', 'taskId', 'horizonAt', 'status'].includes(key)) &&
+  const previous = wait.supersedes;
+  if (previous !== undefined && (!previous || typeof previous !== 'object' || Array.isArray(previous))) return false;
+  const prior = previous as Record<string, unknown> | undefined;
+  return Object.keys(wait).every(key => ['kind', 'repository', 'runId', 'expectedCommit', 'taskId', 'horizonAt', 'status', 'supersedes'].includes(key)) &&
     wait.kind === 'ci' && typeof wait.repository === 'string' && wait.repository.length <= 256 &&
     /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(wait.repository) &&
     typeof wait.runId === 'string' && /^[0-9]{1,24}$/.test(wait.runId) &&
     typeof wait.expectedCommit === 'string' && /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(wait.expectedCommit) &&
     (wait.taskId === undefined || typeof wait.taskId === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(wait.taskId)) &&
     typeof wait.horizonAt === 'string' && wait.horizonAt.length <= 64 && Number.isFinite(Date.parse(wait.horizonAt)) &&
-    typeof wait.status === 'string' && ['pending', 'succeeded', 'failed', 'cancelled'].includes(wait.status);
+    typeof wait.status === 'string' && ['pending', 'succeeded', 'failed', 'cancelled'].includes(wait.status) &&
+    (prior === undefined || Object.keys(prior).every(key => ['runId', 'expectedCommit'].includes(key)) &&
+      typeof prior.runId === 'string' && /^[0-9]{1,24}$/.test(prior.runId) &&
+      typeof prior.expectedCommit === 'string' && /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(prior.expectedCommit) &&
+      (prior.runId !== wait.runId || prior.expectedCommit !== wait.expectedCommit));
 }
 
 export function goalWaitKey(wait: GoalWaitReport): string {

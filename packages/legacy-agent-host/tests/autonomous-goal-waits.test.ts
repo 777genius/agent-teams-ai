@@ -79,7 +79,7 @@ test('shared exact CI wait permits independent work, charges one due observer, i
   assert.match(f.session('worker').submits[2]!.content, /1001/u);
   assert.match(f.session('worker').submits[2]!.content, new RegExp('a'.repeat(40), 'u'));
 
-  // A new exact check replaces this task's observation; a late old result cannot release it.
+  // A different run remains independent; a late old result cannot release the newer wait.
   const newer = { ...wait, runId: '1002', expectedCommit: 'b'.repeat(40) };
   await report('worker', newer);
   t.mock.timers.tick(1);

@@ -51,6 +51,7 @@ import type { HostServer, HostServerOptions } from '../index.js';
 import type { JsonValue } from '../contracts.js';
 import type { ProviderOAuthSnapshot } from '../management/contracts.js';
 import type { TeamCommand } from '../team/contracts.js';
+import type { TeamInputPreflight } from '../team/ports.js';
 import type { HostedTeam } from './RuntimeTeamCoordinator.js';
 import type { MemberProvider, MemberProviderContext } from '../adapters/providers/MemberProvider.js';
 import type { ScheduledRunProvider, ScheduledRunProviderContext } from '../adapters/providers/ScheduledRunProvider.js';
@@ -109,11 +110,16 @@ export function createTeamHost(
       ...(processCustody ? { processCustody } : {}),
       ...(retainedWindowsLaunch ? { retainedWindowsLaunch } : {}),
       ...(composition?.createScheduledProvider ? { createProvider: composition.createScheduledProvider } : {}) });
+    const inputPreflight: TeamInputPreflight = input => {
+      if (!runtime) throw new TeamOwnerError('hold');
+      return runtime.preflightInput(input);
+    };
     const crossTeam = createHostCrossTeamComposition({
       profile,
       teams,
       assertCurrent,
       activeInputs: (binding) => runtime?.crossTeamActiveInputs(binding) ?? [],
+      inputPreflight,
       resolveTarget: (...args) => {
         if (!projects) throw new TeamOwnerError('hold');
         return projects.contexts.resolveCrossTeamTarget(...args);
@@ -180,6 +186,7 @@ export function createTeamHost(
         ...(composition?.reviewFlowDefaultsDirectory ? { reviewFlowDefaultsDirectory: composition.reviewFlowDefaultsDirectory } : {}),
         binding: definition.binding,
         crossTeamSourceAuthority: crossTeam.sourceAuthorized,
+        inputPreflight,
         ...(definition.savedSettings === undefined
           ? {}
           : { savedSettings: definition.savedSettings }),

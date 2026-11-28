@@ -7,6 +7,7 @@ import type { TestContext } from 'node:test';
 
 import { FileRuntimeStore } from '../dist/adapters/runtime/FileRuntimeStore.js';
 import { TeamOwnerStore } from '../dist/adapters/team/TeamOwnerStore.js';
+import { createRuntimeDeliveryPort } from '../dist/composition/runtimeDeliveryPort.js';
 import { RuntimeOwner } from '../dist/runtime/RuntimeOwner.js';
 import { RuntimeOwnerError } from '../dist/runtime/contracts.js';
 import type { RuntimeBinding, RuntimeDelivery, RuntimeOwnerOptions } from '../dist/runtime/contracts.js';
@@ -106,4 +107,33 @@ test('a duplicate callback invocation cannot submit and retains its first irreve
   await assert.rejects(f.runtime.dispatchNext(f.binding), RuntimeOwnerError);
   assert.equal(f.record().inputs[0]!.operationRef, original.operationRef);
   assert.equal(f.session.submits.length, 0, 'ambiguous claimed input is never replayed');
+});
+
+test('the composition delivery port preserves the original cancellation authority before changing an input', async t => {
+  const f = await fixture(t, (_binding, _intent, commitClaim) => commitClaim());
+  const team = new TeamOwnerStore(f.root, 'TEST-team');
+  let availabilityChecks = 0;
+  const port = createRuntimeDeliveryPort(f.runtime, binding => {
+    assert.deepEqual(binding, f.binding);
+    availabilityChecks++;
+  });
+  const original = structuredClone(f.record().inputs[0]!);
+  let authorityChecks = 0;
+  await assert.rejects(port.cancelDelivery(f.intent, () => team.fenced(() => {
+    authorityChecks++;
+    throw new RuntimeOwnerError('hold');
+  })), RuntimeOwnerError);
+  assert.equal(authorityChecks, 1, 'the port must forward the original synchronous Team check');
+  assert.deepEqual(f.record().inputs, [original], 'a stale retirement cannot cancel a current input');
+  assert.equal(f.session.submits.length, 0);
+
+  const cancelled = await port.cancelDelivery(f.intent, commit => team.fenced(() => {
+    authorityChecks++;
+    commit();
+  }));
+  assert.equal(cancelled.outcome, 'not_admitted');
+  assert.equal(authorityChecks, 2);
+  assert.equal(availabilityChecks, 2);
+  assert.deepEqual(f.record().inputs, [{ ...original, phase: 'cancelled' }]);
+  assert.equal(f.session.submits.length, 0);
 });

@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { RuntimeOwnerError } from './contracts.js';
+import { MAX_RUNTIME_INPUT_BYTES, RuntimeOwnerError } from './contracts.js';
 import { deliveryFingerprint, normalizeBinding, runtimeDigest } from './identity.js';
 import type { RuntimeBinding, RuntimeInput, RuntimeSessionRecord } from './contracts.js';
 
@@ -33,6 +33,8 @@ export interface InputPreparationRequest {
   originalContentBytes: number;
   /** Original immutable input; composition may preserve native command syntax without a prefix. */
   originalContent: string;
+  /** Original refs only; composition projects attachment text without changing the durable intent. */
+  attachments?: RuntimeInput['intent']['attachments'];
   epochs: readonly RuntimeContextEpoch[];
   priorProofs: readonly PreparedInputProof[];
 }
@@ -147,7 +149,7 @@ export function validatePreparedInput(binding: RuntimeBinding, input: RuntimeInp
   const value = input.preparation;
   if (!value) return;
   if (input.phase === 'admitted') hold();
-  const expected = prepareRuntimeInput(binding, input, value, 256 * 1024);
+  const expected = prepareRuntimeInput(binding, input, value, MAX_RUNTIME_INPUT_BYTES);
   if (runtimeDigest(expected) !== runtimeDigest(value)) hold();
 }
 export function validateContextEpochs(record: RuntimeSessionRecord): void {

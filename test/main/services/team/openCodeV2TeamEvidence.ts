@@ -78,7 +78,7 @@ function args(value: unknown): Invocation['args'] {
 function sameArgs(left: Invocation['args'], right: Invocation['args']): boolean {
   return fields.every((key) => left[key] === right[key]);
 }
-function isTeamTool(name: string, operation: 'task_complete' | 'message_send'): boolean {
+function isTeamTool(name: string, operation: 'task_complete' | 'task_add_comment' | 'message_send'): boolean {
   return [
     operation,
     `agent-teams.${operation}`,
@@ -307,6 +307,38 @@ export function hasV2TaskCompletion(
         call.args.teamName === state.binding.teamName &&
         call.args.taskId === taskId &&
         call.args.actor === state.binding.memberName
+    )
+  );
+}
+
+/** Task comments are meaningful proof only when the bound member invoked the tool
+ * and the same comment is present on the durable task. Actor labels alone can be forged. */
+export function hasV2TaskComment(
+  evidence: V2TeamInvocationEvidence,
+  expected: { taskId: string; text: string },
+  actualTask: unknown
+): boolean {
+  const state = retained.get(evidence),
+    taskId = own(expected, 'taskId'),
+    text = own(expected, 'text');
+  return (
+    !!state &&
+    exactString(taskId) &&
+    exactString(text) &&
+    own(actualTask, 'id') === taskId &&
+    own(actualTask, 'owner') === state.binding.memberName &&
+    list(own(actualTask, 'comments'), 1024)?.some(
+      (comment) =>
+        own(comment, 'author') === state.binding.memberName &&
+        own(comment, 'text') === text
+    ) === true &&
+    state.invocations.some(
+      (call) =>
+        isTeamTool(call.name, 'task_add_comment') &&
+        call.args.teamName === state.binding.teamName &&
+        call.args.taskId === taskId &&
+        call.args.from === state.binding.memberName &&
+        call.args.text === text
     )
   );
 }

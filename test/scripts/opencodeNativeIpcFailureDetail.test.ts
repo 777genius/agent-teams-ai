@@ -9,6 +9,7 @@ import { compileFunction, constants, runInNewContext } from 'node:vm';
 import ts from 'typescript';
 import { describe, expect, it, vi } from 'vitest';
 
+import { readReadinessProbeReceipts } from '../../scripts/e2e/opencode-diagnostics/readiness-probe-receipt';
 import { projectIpcCausalFailure, safeIpcFailureDetail } from '../../scripts/e2e/opencode-native-desktop-host';
 import { electronTeamPort, nativeCommandMatch } from '../../scripts/e2e/opencode-native-team-port';
 import { serializedFunction } from '../../scripts/e2e/release-updater/serialized-function.mts';
@@ -567,9 +568,9 @@ it.each([
   ].join('\n');
   const compiled = ts.transpileModule(declarations, { compilerOptions }).outputText;
   const snapshot = compileFunction(`${compiled}\nreturn ${functionName};`,
-    ['process', 'path', 'realpath', 'lstat', 'open', 'opendir', 'Buffer', 'assert'], {
+    ['process', 'path', 'realpath', 'lstat', 'open', 'opendir', 'Buffer', 'assert', 'readReadinessProbeReceipts'], {
       importModuleDynamically: constants.USE_MAIN_CONTEXT_DEFAULT_LOADER,
-    })(process, path, realpath, lstat, fs.open, fs.opendir, Buffer, assert) as (...args: unknown[]) => Promise<{ diagnostics: { catalog: unknown }[] }>;
+    })(process, path, realpath, lstat, fs.open, fs.opendir, Buffer, assert, readReadinessProbeReceipts) as (...args: unknown[]) => Promise<{ diagnostics: { catalog: unknown }[] }>;
   const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'TEST-oc-catalog-')));
   const dataRoot = path.join(root, 'runtime-data');
   const previousRoot = process.env.CLAUDE_MULTIMODEL_DATA_HOME;

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { defineTool } from './toolDefinition.js';
+import { MAX_CROSS_TEAM_TEXT_LENGTH } from '../cross-team/contracts.js';
 import type { BoundTool } from './toolDefinition.js';
 import type { TeamMcpCrossTeamPort } from './nativeCrossTeamContracts.js';
 
@@ -12,7 +13,7 @@ export function createCrossTeamMcpTools(port: TeamMcpCrossTeamPort): BoundTool[]
   return [
     { ...defineTool('cross_team_send',
       'Send to an opaque toTeam resourceRef returned by cross_team_list_targets. Source actor is captured. After uncertainty use cross_team_lookup with the original commandId.',
-      z.strictObject({ ...source, commandId:id, toTeam:id, text:z.string().min(1).max(48_000),
+      z.strictObject({ ...source, commandId:id, toTeam:id, text:z.string().min(1).max(MAX_CROSS_TEAM_TEXT_LENGTH),
         summary:z.string().max(4_000).optional(),conversationId:id.optional(),replyToConversationId:id.optional(),
         taskRefs:z.array(z.strictObject({taskId:id,displayId:id,teamName:name})).max(100).optional(),
         chainDepth:z.number().int().min(0).max(4).optional(),

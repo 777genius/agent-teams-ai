@@ -34,7 +34,9 @@ function fixture() {
       },
     ])
   );
-  const restartMember = vi.fn(async () => {});
+  const restartMember = vi.fn<Parameters<typeof createHostFailedMemberRetry>[0]['restartMember']>(
+    async () => {}
+  );
   const retry = createHostFailedMemberRetry({
     teamName,
     runId,

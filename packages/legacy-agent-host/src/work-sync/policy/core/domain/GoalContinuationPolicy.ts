@@ -145,7 +145,7 @@ function addLeadObligations(input: GoalWorkDecisionInput, required: GoalWorkTask
   const coordination = required.filter(task => isTeamTaskDeleted(task) ||
     (!isTeamTaskFinishedForDependency(task) && task.needsClarification !== 'user' &&
       (!task.owner || !members.has(task.owner) ||
-        (getTeamTaskWorkflowColumn(task) === 'review' && !input.reviewers[task.id]))));
+        (getTeamTaskWorkflowColumn(task) === 'review' && !members.has(input.reviewers[task.id] ?? '')))));
   const failedWaits = waits.filter(wait => !wait.pending && wait.attentionReason);
   if (failedWaits.length) obligations.push({ key: `lead:${input.goalId}:external-result`,
     references: failedWaits.map(wait => wait.key), instruction:

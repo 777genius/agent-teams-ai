@@ -1,6 +1,7 @@
 import { settledRuntimeAdmission } from './settledRuntimeAdmission.js';
 import { listProductCommandReceipts, readProductCommand } from './commandEntries.js';
 import { TeamOwnerError } from './contracts.js';
+import { TaskPolicyRejected } from './ports.js';
 import { isUserTaskStartIntent } from './taskStartIntent.js';
 import { classifyProof, deliveryIdentity, memberBinding } from './DeliveryRecovery.js';
 import { deliveryFingerprint } from '../runtime/identity.js';
@@ -22,6 +23,8 @@ import type {
   PreparedTaskMutation,
   TaskBoardPolicy,
   TaskMutationPort,
+  TeamInputPreflight,
+  TaskNotification,
   TeamStore,
 } from './ports.js';
 
@@ -46,7 +49,8 @@ export class TaskRecovery {
     private readonly store: TeamStore,
     private readonly mutations: TaskMutationPort,
     private readonly current: (receipt: CommandReceipt) => boolean,
-    private readonly finish: (receipt: CommandReceipt) => void
+    private readonly finish: (receipt: CommandReceipt) => void,
+    private readonly inputPreflight: TeamInputPreflight
   ) {}
 
   private key(receipt: CommandReceipt): string {
@@ -63,6 +67,27 @@ export class TaskRecovery {
     return !!this.mutations.load(receipt);
   }
 
+  private preflightNotifications(
+    receipt: CommandReceipt, notifications: readonly TaskNotification[], fresh = false
+  ): void {
+    if (!receipt.taskRecipients) throw new TeamOwnerError('hold');
+    for (const notification of notifications) {
+      const recipient = receipt.taskRecipients.find((entry) => entry.name === notification.member);
+      if (!recipient?.delivery) continue;
+      if (!this.inputPreflight({ binding: recipient.delivery, content: notification.content })) {
+        if (fresh) throw new TaskPolicyRejected();
+        throw new TeamOwnerError('hold');
+      }
+    }
+  }
+
+  private validatePlan(receipt: CommandReceipt): void {
+    const plan = this.mutations.load(receipt);
+    if (!plan) return;
+    this.mutations.validate(receipt);
+    this.preflightNotifications(receipt, plan.notifications);
+  }
+
   commit(
     receipt: CommandReceipt,
     actor: string,
@@ -70,7 +95,9 @@ export class TaskRecovery {
     apply: (board: TaskBoardPolicy) => JsonValue
   ): PreparedTaskMutation {
     if (!this.current(receipt)) throw new TeamOwnerError('hold');
-    const plan = this.mutations.load(receipt) ?? this.mutations.prepare(receipt, actor, apply);
+    const plan = this.mutations.load(receipt) ?? this.mutations.prepare(receipt, actor, apply,
+      (notifications) => this.preflightNotifications(receipt, notifications, true));
+    this.preflightNotifications(receipt, plan.notifications);
     let obligations = this.obligations(receipt);
     if (!obligations) {
       if (receipt.authorityRevision === undefined || !receipt.taskRecipients)
@@ -325,7 +352,7 @@ export class TaskRecovery {
         return false;
       }
       if (!matches || !this.current(receipt)) return false;
-      if (this.hasPlan(receipt)) this.mutations.validate(receipt);
+      this.validatePlan(receipt);
       return true;
     });
   }
@@ -355,25 +382,34 @@ export class TaskRecovery {
       try {
         const captured = this.store.fenced(() => {
           if (!this.current(receipt)) throw new TeamOwnerError('hold');
-          if (this.hasPlan(receipt)) this.mutations.validate(receipt);
+          this.validatePlan(receipt);
           return this.obligations(receipt);
+        });
+        const assertRetractionCurrent = () => this.store.fenced(() => {
+          if (!this.current(receipt)) throw new TeamOwnerError('hold');
+          this.validatePlan(receipt);
+          const current = this.obligations(receipt);
+          if (!current || digest(current) !== digest(captured)) throw new TeamOwnerError('hold');
         });
         for (const retraction of captured?.retractions ?? []) {
           if (this.provenRetraction(retraction)) continue;
           if (!runtime) throw new TeamOwnerError('hold');
           // Both calls stay outside Team's lock; Runtime uses the trusted synchronous authority callback.
+          assertRetractionCurrent();
           let response = await runtime.lookupDelivery(structuredClone(retraction.intent));
           let proof = classifyProof(retraction.intent, response, runtime);
           const settled = (): boolean =>
             proof === 'not_admitted' || (proof === 'admitted' && settledRuntimeAdmission(response));
           if (!settled()) {
             if (!runtime.cancelDelivery) throw new TeamOwnerError('hold');
+            assertRetractionCurrent();
             response = await runtime.cancelDelivery(structuredClone(retraction.intent));
             proof = classifyProof(retraction.intent, response, runtime);
           }
           if (!settled()) throw new TeamOwnerError('hold');
           this.store.fenced(() => {
             if (!this.current(receipt)) throw new TeamOwnerError('hold');
+            this.validatePlan(receipt);
             const current = this.obligations(receipt);
             if (!current || digest(current) !== digest(captured)) throw new TeamOwnerError('hold');
             const target = current.retractions.find(

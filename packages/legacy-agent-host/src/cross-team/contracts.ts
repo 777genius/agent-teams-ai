@@ -1,4 +1,7 @@
 import type { TaskRef } from '../team/contracts.js';
+export const MAX_CROSS_TEAM_TEXT_LENGTH = 50_000;
+/** Whole-row history retains the existing bounded MCP page envelope. */
+export const MAX_CROSS_TEAM_ENVELOPE_BYTES = 240 * 1024;
 export interface CrossTeamMessage {
   /** Optional Host-only hash of immutable pair, principals and grant revisions. */
   authorityFingerprint?: string;

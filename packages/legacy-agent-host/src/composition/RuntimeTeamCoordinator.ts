@@ -56,8 +56,10 @@ import { randomUUID } from 'node:crypto';
 
 import { FileRuntimeStore } from '../adapters/runtime/FileRuntimeStore.js';
 import { RuntimeOwner } from '../runtime/RuntimeOwner.js';
-import { RuntimeOwnerError } from '../runtime/contracts.js';
-import { deliveryFingerprint, normalizeBinding, runtimeDigest } from '../runtime/identity.js';
+import { MAX_RUNTIME_INPUT_BYTES, RuntimeOwnerError } from '../runtime/contracts.js';
+import { createRuntimeDeliveryPort, preflightMemberInput } from './runtimeDeliveryPort.js';
+import type { TeamInputPreflight } from '../team/ports.js';
+import { normalizeBinding, runtimeDigest } from '../runtime/identity.js';
 
 import type { TeamHostProfile } from './TeamHost.js';
 import type { JsonValue } from '../contracts.js';
@@ -163,6 +165,8 @@ export class RuntimeTeamCoordinator {
       throw new RuntimeOwnerError('invalid');
     this.runtime = new RuntimeOwner({
       store,
+      maxInputBytes: MAX_RUNTIME_INPUT_BYTES, maxQueuedInputBytes: MAX_RUNTIME_INPUT_BYTES,
+      inputPreflight: input => this.preflightInput(input),
       checkpoints: store,
       events: store,
       profileId: options.profile.owner.profileId,
@@ -262,7 +266,7 @@ export class RuntimeTeamCoordinator {
           return { ok: false, code: 'unavailable' };
         return entry.provider?.checkpointBeforeClose?.(sessionRef);
       },
-      authorize: (binding, action, intent) => {
+      authorize: (binding, action, intent, readMemberHistory) => {
         options.assertWriter();
         const entry =
           this.entries.get(this.key(binding)) ??
@@ -276,7 +280,7 @@ export class RuntimeTeamCoordinator {
             : undefined);
         if (!entry) return false;
         if (intent && (action === 'admit' || action === 'dispatch') &&
-            !this.goalWorkSync.authorizeWorkspace(entry, intent)) return false;
+            !this.goalWorkSync.authorizeWorkspace(entry, intent, readMemberHistory)) return false;
         if (intent) return entry.team.owner.authorizeDeliveryIntent(intent, action) &&
           ((action !== 'admit' && action !== 'dispatch') || nativeSessionCommandAuthorized(entry, intent));
         return (
@@ -299,6 +303,7 @@ export class RuntimeTeamCoordinator {
       },
       ...createTeamContextPreparation({
         entries: this.entries,
+        storageRoot: options.profile.owner.storageRoot,
         principalId: options.profile.principalId,
         assertCurrent: (entry) => this.assertCurrent(entry),
       }),
@@ -746,19 +751,14 @@ export class RuntimeTeamCoordinator {
       closeEndpoint: (entry) => this.closeEndpoint(entry),
     });
   }
+  preflightInput(input: Parameters<TeamInputPreflight>[0]): boolean {
+    const entry = this.entries.get(this.key(input.binding));
+    if (!entry) throw new RuntimeOwnerError('forbidden');
+    return preflightMemberInput({ entry, storageRoot: this.options.profile.owner.storageRoot,
+      input, assertCurrent: () => this.assertCurrent(entry, false) });
+  }
   private deliveryPort() {
-    return {
-      fingerprintDelivery: deliveryFingerprint,
-      admitDelivery: (intent: Parameters<RuntimeOwner['admitDelivery']>[0]) => {
-        this.captures.assertAvailable(intent.binding.teamId); return this.runtime.admitDelivery(intent);
-      },
-      lookupDelivery: (intent: Parameters<RuntimeOwner['lookupDelivery']>[0]) => {
-        this.captures.assertAvailable(intent.binding.teamId); return this.runtime.lookupDelivery(intent);
-      },
-      cancelDelivery: (...args: Parameters<RuntimeOwner['cancelDelivery']>) => {
-        this.captures.assertAvailable(args[0].binding.teamId); return this.runtime.cancelDelivery(...args);
-      },
-    };
+    return createRuntimeDeliveryPort(this.runtime, binding => this.captures.assertAvailable(binding.teamId));
   }
   private key(binding: RuntimeBinding): string {
     return runtimeDigest(normalizeBinding(binding));
@@ -771,13 +771,13 @@ export class RuntimeTeamCoordinator {
       return false;
     }
   }
-  private assertCurrent(entry: MemberEntry): void {
+  private assertCurrent(entry: MemberEntry, requireLiveEndpoint = true): void {
     this.options.assertWriter();
     this.captures.assertAvailable(entry.binding.teamId);
     assertCapturedRosterCurrent(entry.team, entry.profile.principalId);
     if (
       this.sealed ||
-      (entry.endpointExpiresAtMs !== undefined && Date.now() >= entry.endpointExpiresAtMs) ||
+      (requireLiveEndpoint && entry.endpointExpiresAtMs !== undefined && Date.now() >= entry.endpointExpiresAtMs) ||
       !entry.team.owner.authorizeMemberBinding(entry.binding, 'dispatch')
     )
       throw new RuntimeOwnerError('forbidden');

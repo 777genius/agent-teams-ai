@@ -1,5 +1,7 @@
 import type { DeliveryBinding } from '../team/contracts.js';
 import { runtimeDigest } from '../runtime/identity.js';
+import { MAX_RUNTIME_INPUT_BYTES } from '../runtime/contracts.js';
+import { isCapturedMemberInputProfile } from './projectMemberInput.js';
 import type { RuntimeOwner } from '../runtime/RuntimeOwner.js';
 import type { MemberEntry } from './MemberEntry.js';
 import type { HostGroupRun } from '../group-chats/GroupCommands.js';
@@ -17,7 +19,11 @@ export function readGroupRuntime(options: {
   current(entry: MemberEntry): boolean;
 }): HostGroupRun | null {
   const entry = options.entry;
-  if (!entry || !options.current(entry)) return null;
+  if (!entry || !options.current(entry) || !isCapturedMemberInputProfile(entry)) return null;
+  const inputBytes = entry.profile.limits.inputBytes;
+  if (!Number.isSafeInteger(inputBytes) || inputBytes <= 0 || inputBytes > MAX_RUNTIME_INPUT_BYTES)
+    return null;
+  const profileDigest = runtimeDigest(entry.profile);
   const catalog = entry.endpoint?.getCatalogReceipt?.();
   if (
     !catalog ||
@@ -41,10 +47,12 @@ export function readGroupRuntime(options: {
   return {
     provider: 'host',
     runKey,
+    inputBytes,
     binding: structuredClone(entry.delivery),
     protocolVersion: 1,
     groupReactionProtocolVersion: 1,
-    isCurrent: async () => readGroupRuntime(options)?.runKey === runKey,
+    isCurrent: async () => runtimeDigest(entry.profile) === profileDigest &&
+      readGroupRuntime(options)?.runKey === runKey,
   };
 }
 

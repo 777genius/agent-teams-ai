@@ -16,6 +16,7 @@ import { sanitizeRuntimeDiagnosticText } from '../dist/diagnostics/runtimeDiagno
 import { fileHash, startHost, tick, treeHash } from './fixtures/native-host.ts';
 import { Inconclusive, assertFreeDisk, classifyVendorFailure, discoverTarget } from './fixtures/real-vendor/discovery.ts';
 import { buildRealHostProfile, digest } from './fixtures/real-vendor/host-profile.ts';
+import { goalRuntimeDiagnostics, goalTransportEnvironment } from './fixtures/real-vendor/goal-diagnostics.ts';
 import type { RealVendor } from './fixtures/real-vendor/discovery.ts';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import type { CommandReceipt } from '../dist/team/contracts.js';
@@ -72,6 +73,7 @@ test('REAL autonomous goal: productive lead/member completion and a separate ori
   let authSource: string | undefined;
   let authBefore: string | undefined;
   let capturedProfile: TeamHostProfile | undefined;
+  let transportEnvironment: Record<string, string> = {};
   let closing: Promise<void> | undefined;
   let shutdownSignal: string | undefined;
   const closeHost = () => {
@@ -141,8 +143,11 @@ test('REAL autonomous goal: productive lead/member completion and a separate ori
     const built = await buildRealHostProfile(target, root, members);
     const profile = JSON.parse(await readFile(built.profilePath, 'utf8')) as TeamHostProfile;
     profile.promptSuggestions = { enabled: false };
+    transportEnvironment = goalTransportEnvironment(process.env);
+    receipt.nativeTransportEnvironmentKeys = Object.keys(transportEnvironment);
     for (const member of profile.runtime!.members) {
       member.cwd = workspace;
+      member.environment = { ...member.environment, ...transportEnvironment };
       member.limits = { ...member.limits, queuedInputs: 8, inputBytes: 65536, timeoutMs: 120_000 };
       const instructions = [
         'You are the ' + (member.memberId === 'lead-id' ? 'lead' : 'worker') + ' in a bounded real TEST team.',
@@ -358,12 +363,17 @@ test('REAL autonomous goal: productive lead/member completion and a separate ori
           receipt.originalRuntimeRecords = members.map(member => {
             const binding = { backendId: selected.owner.ownerId, teamId: selected.teams[0]!.scope.teamId,
               runId: selected.teams[0]!.scope.runId, memberId: member.memberId, generation: '1' };
-            const original = store.fenced(binding, tx => tx.get());
-            return { binding, present: !!original, ...(original ? { phase: original.phase,
-              custody: original.custody, nativeReady: original.nativeReady, sealed: original.sealed,
-              inputCount: original.inputs.length, inputsTruncated: original.inputs.length > 128,
-              inputs: original.inputs.slice(0, 128).map(input => ({ inputId: input.intent.inputId,
-                operationRef: input.operationRef, phase: input.phase, terminal: input.terminal })) } : {}) };
+            return store.fenced(binding, tx => {
+              const original = tx.get();
+              let diagnostics: unknown;
+              try { diagnostics = goalRuntimeDiagnostics(store.readActivity(binding), Object.values(transportEnvironment)); }
+              catch (error) { diagnostics = { status: 'unavailable', reason: safeError(error) }; }
+              return { binding, present: !!original, diagnostics, ...(original ? { phase: original.phase,
+                custody: original.custody, nativeReady: original.nativeReady, sealed: original.sealed,
+                inputCount: original.inputs.length, inputsTruncated: original.inputs.length > 128,
+                inputs: original.inputs.slice(0, 128).map(input => ({ inputId: input.intent.inputId,
+                  operationRef: input.operationRef, phase: input.phase, terminal: input.terminal })) } : {}) };
+            });
           });
         }
       } catch (error) { receipt.originalRuntimeRecords = { status: 'unavailable', reason: safeError(error) }; }

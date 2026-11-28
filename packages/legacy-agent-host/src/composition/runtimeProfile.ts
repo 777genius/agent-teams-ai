@@ -2,6 +2,7 @@ import { captureCodexConfiguredMcpCatalog } from '@agent-teams/provider-implemen
 import type { CodexConfiguredMcpCatalog } from '@agent-teams/provider-implementations/codex';
 import { capturedMcpSourceSchema } from '../mcp-catalog/capturedSource.js';
 import { z } from 'zod';
+import { MAX_RUNTIME_INPUT_BYTES } from '../runtime/contracts.js';
 
 import { nativeProcessProfileSchema, nativeProfilePathSchema } from './nativeProcessProfile.js';
 import { hasUntrustedOpenCodeBinaryOverride } from './openCodeV2Environment.js';
@@ -41,7 +42,7 @@ const common = nativeProcessProfileSchema.extend({
         .number()
         .int()
         .min(1)
-        .max(8 * 1024 * 1024),
+        .max(MAX_RUNTIME_INPUT_BYTES),
       outputBytes: z
         .number()
         .int()

@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+import { pageGroupCatalog } from '../group-chats/pageGroupCatalog.js';
 import { z } from 'zod';
 import { TeamOwnerError } from '../team/contracts.js';
 import { digest } from '../team/identity.js';
@@ -38,6 +40,7 @@ export function createHostGroupComposition(options: {
       getRun: (memberName) => options.getRun(team.definition.binding.teamId, memberName),
       afterDelivery: options.kick,
     });
+  const desktopCatalogKey = randomUUID();
   const methods: Record<string, HostMethod> = {};
   for (const operation of [
     'list',
@@ -75,7 +78,18 @@ export function createHostGroupComposition(options: {
               : operation === 'list' || operation === 'reaction.read'
                 ? await service.read(operation, payload, guard)
                 : await service.execute(input.commandId, { ...payload, operation }, guard);
-          return { ok: true, value: json(value) };
+          const result = operation === 'list'
+            ? pageGroupCatalog({
+                rows: json(value) as JsonValue[],
+                key: desktopCatalogKey,
+                principalId: options.profile.principalId,
+                binding: digest(input.binding),
+                ...('cursor' in payload && payload.cursor !== undefined
+                  ? { cursor: payload.cursor as string } : {}),
+              })
+            : value;
+          options.assertCurrent();
+          return { ok: true, value: json(result) };
         } catch (error) {
           const code =
             error instanceof TeamOwnerError
@@ -126,10 +140,19 @@ export function createHostGroupComposition(options: {
         throw new TeamOwnerError('forbidden');
     };
     const service = () => commands(team, principal);
+    const pageKey = randomUUID();
     return {
-      list: () => {
+      async list(cursor) {
         guard();
-        return service().read('list', {}, { before: guard, inside: guard });
+        const rows = await service().read('list', {}, { before: guard, inside: guard });
+        guard();
+        return pageGroupCatalog({
+          rows: json(rows) as JsonValue[],
+          key: pageKey,
+          principalId: principal,
+          binding: teamBinding,
+          ...(cursor === undefined ? {} : { cursor }),
+        });
       },
       lookup: (commandId) => {
         guard();

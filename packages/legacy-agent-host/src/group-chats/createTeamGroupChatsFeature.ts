@@ -12,6 +12,8 @@ import {
 } from './model.js';
 import { createGroupCreation } from './createGroupCreation.js';
 import { createGroupReactions } from './createGroupReactions.js';
+import { groupInboundText } from './groupDelivery.js';
+import { MAX_RUNTIME_INPUT_BYTES } from '../runtime/contracts.js';
 import type { GroupChatStorage } from './storage.js';
 
 import type {
@@ -33,6 +35,8 @@ export interface GroupChatRun {
   protocolVersion: 1;
   groupReactionProtocolVersion?: 1;
   provider: 'native' | 'lead' | 'opencode' | 'host';
+  /** Host-only captured provider bound; legacy providers keep their existing admission. */
+  readonly inputBytes?: number;
   /** Local-only currency check for an admitted live owner; never launches a provider. */
   isCurrent?: () => Promise<boolean>;
 }
@@ -319,6 +323,7 @@ export function createTeamGroupChatsFeature(
           );
           const failure = admissions.find((admission) => admission.status === 'rejected');
           if (failure?.status === 'rejected') throw failure.reason;
+          const physicalMessages = new Map<string, InboxMessage & { messageId: string; to: string }>();
           const canonical = await ports.configurationOperation(request.teamName, () =>
             storage.withRegistry(request.teamName, async (groups, save) => {
               const { existing, group } = resolveSendGroup(groups, request.groupChatId, from);
@@ -373,10 +378,6 @@ export function createTeamGroupChatsFeature(
                     'Reply does not reference a physical inbound for this sender'
                   );
               }
-              if (!existing) {
-                groups.push(group);
-                await save();
-              }
               const message: InboxMessage = {
                 ...immutable,
                 groupChatId: request.groupChatId,
@@ -393,6 +394,28 @@ export function createTeamGroupChatsFeature(
                   recipients.map((name) => [name, runs.get(name)!.runKey])
                 ),
               };
+              for (const memberName of recipients) {
+                const run = runs.get(memberName)!;
+                const physical = {
+                  ...message,
+                  messageId: `${request.messageId}:g:${createHash('sha256').update(memberName).digest('hex').slice(0, 24)}`,
+                  to: memberName,
+                  groupRunKey: run.runKey,
+                };
+                if (run.provider === 'host') {
+                  const limit = run.inputBytes;
+                  if (typeof limit !== 'number' || !Number.isSafeInteger(limit) ||
+                      limit <= 0 || limit > MAX_RUNTIME_INPUT_BYTES)
+                    throw new GroupChatError('recipient-unavailable', `Input limit unavailable for ${memberName}`);
+                  if (Buffer.byteLength(groupInboundText({ message: physical }), 'utf8') > limit)
+                    throw new GroupChatError('invalid-input', `Message exceeds the input limit for ${memberName}`);
+                }
+                physicalMessages.set(memberName, physical);
+              }
+              if (!existing) {
+                groups.push(group);
+                await save();
+              }
               await storage.withInbox(request.teamName, 'user', async (rows, save) => {
                 rows.push(message);
                 await save();
@@ -404,7 +427,8 @@ export function createTeamGroupChatsFeature(
           const recipients = canonical.groupRecipientNames!;
           const attempts = await Promise.allSettled(
             recipients.map(async (memberName): Promise<GroupDeliveryRecipient> => {
-              const physicalMessageId = `${request.messageId}:g:${createHash('sha256').update(memberName).digest('hex').slice(0, 24)}`;
+              const physical = physicalMessages.get(memberName)!;
+              const physicalMessageId = physical.messageId;
               const run = runs.get(memberName)!;
               const shouldStillWrite = async () =>
                 (await ports.roster(request.teamName)).includes(memberName) &&
@@ -421,12 +445,6 @@ export function createTeamGroupChatsFeature(
                     status: 'skipped',
                     reason: 'Runtime or membership changed',
                   };
-                const physical = {
-                  ...canonical,
-                  messageId: physicalMessageId,
-                  to: memberName,
-                  groupRunKey: run.runKey,
-                };
                 const status = await ports.deliver(request.teamName, physical, run, shouldStillWrite);
                 return { memberName, physicalMessageId, status };
               } catch (error) {
