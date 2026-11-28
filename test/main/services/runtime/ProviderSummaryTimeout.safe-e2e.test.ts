@@ -119,7 +119,9 @@ describe('Provider summary timeout subprocess integration', () => {
           capabilities: { teamLaunch: false },
         });
         expect(status.statusCheckErrorCode).toBeUndefined();
-        expect(Number(status.detailMessage)).toBeGreaterThanOrEqual(8000);
+        // Date.now and libuv timers use different clocks; tolerate sub-tick rounding
+        // while still proving the real subprocess ran for approximately 8 seconds.
+        expect(Number(status.detailMessage)).toBeGreaterThanOrEqual(7990);
         const calls = (await readFile(path.join(sandbox, 'calls.jsonl'), 'utf8'))
           .trim()
           .split('\n')

@@ -27,6 +27,7 @@ try {
   // Optional native addon is unavailable in non-Electron runners.
   // The doctor probe simply returns no fallback candidates when called.
 }
+let warnedMissingNodePty = false;
 
 function stripAnsiSequences(value: string): string {
   return value
@@ -93,6 +94,10 @@ export function extractDoctorInvokedCandidates(output: string): string[] {
 
 async function captureDoctorOutput(commandName: string): Promise<string | null> {
   if (!nodePty) {
+    if (!warnedMissingNodePty) {
+      warnedMissingNodePty = true;
+      logger.warn('node-pty not available - doctor fallback disabled');
+    }
     return null;
   }
 

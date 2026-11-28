@@ -11,6 +11,7 @@ import {
   hasV2CommandInvocationWithOuterMarker,
   hasV2Message,
   hasV2TaskCompletion,
+  hasV2TaskComment,
   readV2TeamInvocationEvidence,
 } from './openCodeV2TeamEvidence';
 
@@ -243,6 +244,46 @@ describe('V2 composite team evidence', () => {
     const value = fixture();
     assistant(value).toolCalls[2].toolName = 'untrusted.agent-teams.task_complete';
     expect(checkTask(value)).toBe(false);
+  });
+
+  it('rejects forged lead task comments and requires Alice-bound tool and durable row', () => {
+    const actual = {
+      ...task,
+      comments: [{ author: 'alice', text: 'LEAD_ASSIGNED:TEST-marker' }],
+    };
+    const expected = { taskId: task.id, text: actual.comments[0].text };
+    const value = fixture();
+    const current = assistant(value);
+    const commentCall = structuredClone(current.toolCalls[2]);
+    commentCall.toolName = 'agent-teams.task_add_comment';
+    commentCall.input = {
+      teamName: binding.teamName, taskId: task.id, from: 'alice', text: expected.text,
+    };
+    commentCall.source.index = 3;
+    current.toolCalls.push(commentCall);
+    const evidence = read(value);
+    expect(hasV2TaskComment(evidence, expected, actual)).toBe(true);
+    expect(hasV2TaskComment(read(fixture()), expected, actual)).toBe(false);
+    for (const other of [
+      { ...actual, comments: [{ author: 'team-lead', text: expected.text }] },
+      { ...actual, comments: [{ author: 'alice', text: 'wrong' }] },
+      { ...actual, owner: 'bob' },
+      { ...actual, id: 'other' },
+    ]) {
+      expect(hasV2TaskComment(evidence, expected, other)).toBe(false);
+    }
+    for (const [key, replacement] of [
+      ['teamName', 'other'],
+      ['taskId', 'other'],
+      ['from', 'team-lead'],
+      ['text', 'forged'],
+    ]) {
+      const changed = fixture();
+      const forged = structuredClone(commentCall);
+      forged.input[key] = replacement;
+      assistant(changed).toolCalls.push(forged);
+      expect(hasV2TaskComment(read(changed), expected, actual)).toBe(false);
+    }
   });
 
   it('requires the actual inbox sender/recipient/exact nonce, not invocation metadata alone', () => {

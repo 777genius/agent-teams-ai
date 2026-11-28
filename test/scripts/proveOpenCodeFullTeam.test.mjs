@@ -10,6 +10,9 @@ import { allocateSmokeOwnedRoot, assertOwnedSmokeEnvironment, preflightOpenCodeF
   TEST_PROJECT_MARKER_CONTENT, writeSmokeOwnership } from '../../scripts/prove-opencode-full-team.mjs';
 
 import { runMixedTeamSmoke } from '../../scripts/prove-opencode-mixed-team.mjs';
+import { admitGenuineFreeModel, assertGenuineFreeAdmissionFresh, GENUINE_FREE_CATALOG,
+  GENUINE_FREE_MODEL, genuineFreeProjectConfig, preflightGenuineFreeNative,
+  validateGenuineFreeCatalog } from '../../scripts/lib/opencode-full-free-admission.mjs';
 
 // FULL V2 cases come from the pinned runtime's qualification records, never literals here.
 const pinnedRecords = Object.entries(JSON.parse(fs.readFileSync(new URL('../../runtime.lock.json', import.meta.url), 'utf8')).opencodeV2.qualified)
@@ -63,6 +66,8 @@ for (const prefix of ['opencode-full-team-', 'opencode-mixed-team-']) {
 function passingProof() {
   return {
     status: 'passed', cleanupConfirmed: true, model: 'selected/model',
+    leadAssignedTask: { id: 'lead-created-task', createdBy: 'team-lead', owner: 'alice', completed: true, ownerCommentConfirmed: true },
+    peerSettlement: { settled: true, unavailable: false, checks: [0, 1, 2, 3].map(index => ({ messageId: `peer-${index}`, inboxRead: true, readCommitted: true })) },
     finalStopConfirmed: true, initialStopConfirmed: true, independentAssertionsPassed: true,
     runId: 'initial-run', initialSessions: { alice: 'session-a', bob: 'session-b' },
     tasks: ['alice', 'bob'].map((owner) => ({ owner, id: `initial-${owner}`, status: 'completed' })),
@@ -234,7 +239,7 @@ test('isolates auth/home/config and retains cleanup-confirmed proof after succes
         assert.equal(path.basename(args[args.indexOf('--config') + 1]), 'vitest.opencode-proof.config.ts');
         assert.equal(options.env.OPENCODE_E2E_FULL_TEAM, '1');
         assert.equal(options.stdio, 'pipe');
-        assert.equal(options.timeout, 30 * 60_000);
+        assert.equal(options.timeout, 40 * 60_000);
         fs.writeFileSync(
           path.join(options.env.OPENCODE_E2E_PROOF_DIRECTORY, 'proof.json'),
           JSON.stringify(passingProof())
@@ -249,6 +254,184 @@ test('isolates auth/home/config and retains cleanup-confirmed proof after succes
   } finally {
     cleanup(input);
     fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+function freeCatalog() {
+  return { object: 'list', data: [{ id: 'big-pickle', owned_by: 'opencode', type: 'chat',
+    capabilities: { tools: { supported: true }, reasoning: { supported: true } },
+    cost: { text: { input: { price: 0, cache: { read: 0, write: 0 } }, output: { price: 0 } } } }] };
+}
+
+test('genuine-free admission rejects absent, paid and unrecognized raw price dimensions', () => {
+  assert.deepEqual(validateGenuineFreeCatalog(freeCatalog()), freeCatalog().data[0].cost);
+  for (const mutate of [
+    catalog => { catalog.data = []; },
+    catalog => { catalog.data.push(structuredClone(catalog.data[0])); },
+    catalog => { catalog.data[0].owned_by = 'other'; },
+    catalog => { catalog.data[0].capabilities.tools.supported = false; },
+    catalog => { delete catalog.data[0].cost; },
+    catalog => { delete catalog.data[0].cost.text.input.cache; },
+    catalog => { catalog.data[0].cost.text.input.price = 0.01; },
+    catalog => { catalog.data[0].cost.text.output.price = 1; },
+    catalog => { catalog.data[0].cost.text.input.cache.read = 1; },
+    catalog => { catalog.data[0].cost.text.input.cache.write = 1; },
+    catalog => { catalog.data[0].cost.text.output.price = '0'; },
+    catalog => { catalog.data[0].cost.reasoning = { price: 0 }; },
+    catalog => { catalog.data[0].cost.multipliers = []; },
+    catalog => { catalog.data[0].cost.text.output.tiers = [{ price: 0 }]; },
+  ]) {
+    const catalog = freeCatalog(); mutate(catalog);
+    assert.throws(() => validateGenuineFreeCatalog(catalog), /Genuine-free admission failed/);
+  }
+});
+
+test('genuine-free requires native pinned ELF, exact inventory and effective model/step restrictions', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'free-native-TEST-'));
+  const binary = path.join(root, 'synthetic-native');
+  fs.writeFileSync(binary, Buffer.from([0x7f, 0x45, 0x4c, 0x46]));
+  const input = { projectPath: root, env: { OPENCODE_E2E_MODEL: GENUINE_FREE_MODEL,
+    CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH: binary, XDG_DATA_HOME: root } };
+  const calls = [];
+  const run = async (change = {}) => preflightGenuineFreeNative(input, { spawn: (command, args, options) => {
+    calls.push(args); assert.equal(command, binary); assert.equal(options.cwd, root);
+    assert.equal(options.env, input.env); assert.equal(options.timeout, 90_000);
+    return { status: 0, stdout: args[0] === '--version' ? change.version ?? '1.18.31\n'
+      : args[0] === 'models' ? change.inventory ?? `${GENUINE_FREE_MODEL}\n`
+      : JSON.stringify(change.config ?? genuineFreeProjectConfig()) };
+  } });
+  try {
+    const evidence = await run();
+    assert.equal(evidence.model, GENUINE_FREE_MODEL); assert.equal(evidence.nativeVersion, '1.18.31');
+    assert.match(evidence.binarySha256, /^[a-f0-9]{64}$/);
+    assert.deepEqual(calls, [['--version'], ['models', 'opencode', '--refresh'], ['debug', 'config']]);
+    for (const version of ['2.1.4\n', '1.18.32\n', '1.18.31\n\n', '1.18.31-rc.1\n'])
+      await assert.rejects(run({ version }), /native-version/);
+    await assert.rejects(run({ inventory: `${GENUINE_FREE_MODEL}\nopencode/paid-model\n` }), /native-inventory/);
+    for (const mutate of [
+      config => { config.small_model = 'opencode/paid-model'; },
+      config => { config.provider.opencode.options = { apiKey: 'synthetic-must-be-rejected' }; },
+      config => { config.enabled_providers.push('other'); },
+      config => { delete config.agent.teammate.steps; },
+      config => { config.agent.build.steps = 999; },
+    ]) {
+      const config = genuineFreeProjectConfig(); mutate(config);
+      await assert.rejects(run({ config }), /native-(config|agent-bounds)/);
+    }
+    fs.mkdirSync(path.join(root, 'opencode'));
+    fs.writeFileSync(path.join(root, 'opencode/auth.json'), '{}');
+    await assert.rejects(run(), /auth-present/);
+    fs.rmSync(path.join(root, 'opencode'), { recursive: true });
+    fs.writeFileSync(binary, '#!/usr/bin/env node\n');
+    await assert.rejects(run(), /native-elf/);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('genuine-free public catalog request has no auth, no redirects and bounded fresh receipt', async () => {
+  const evidence = { model: GENUINE_FREE_MODEL, nativeVersion: '1.18.31', binarySha256: 'synthetic-test-hash' };
+  const request = async (url, options) => {
+    assert.equal(url, GENUINE_FREE_CATALOG);
+    assert.deepEqual(options.headers, { Accept: 'application/json', 'Cache-Control': 'no-cache' });
+    assert.equal(options.credentials, 'omit'); assert.equal(options.redirect, 'error');
+    assert.equal(options.cache, 'no-store'); assert.ok(options.signal instanceof AbortSignal);
+    return new Response(JSON.stringify(freeCatalog()));
+  };
+  const receipt = await admitGenuineFreeModel(evidence, { fetch: request });
+  assertGenuineFreeAdmissionFresh(receipt);
+  assert.match(receipt.catalogSha256, /^[a-f0-9]{64}$/);
+  assert.throws(() => assertGenuineFreeAdmissionFresh(receipt, Date.parse(receipt.spawnAdmissionExpiresAt)), /expired/);
+  for (const response of [
+    new Response('{}', { status: 403 }),
+    new Response('not-json'), new Response('{}'),
+    new Response('{}', { headers: { 'content-length': String(3 * 1024 * 1024) } }),
+    new Response(' '.repeat(2 * 1024 * 1024 + 1)),
+  ]) await assert.rejects(admitGenuineFreeModel(evidence, { fetch: async () => response }));
+  let now = 0;
+  await assert.rejects(admitGenuineFreeModel(evidence, { fetch: request,
+    now: () => { now += 60_001; return now; } }), /catalog-stale/);
+});
+
+test('free mode rejects auth, custom config and a different model before any credential access', async () => {
+  const { root, env } = fixture();
+  const freeEnv = { ...env, OPENCODE_E2E_AUTH_MODE: 'genuine-free', OPENCODE_E2E_MODEL: GENUINE_FREE_MODEL };
+  delete freeEnv.OPENCODE_E2E_TEST_AUTH_PATH;
+  try {
+    for (const override of [
+      { OPENCODE_E2E_TEST_AUTH_PATH: '/must-not-read/auth.json' },
+      { OPENCODE_E2E_TEST_PROJECT_CONFIG_PATH: '/must-not-read/config.json' },
+      { OPENCODE_E2E_MODEL: 'opencode/paid-model' }, { OPENCODE_E2E_AUTH_MODE: 'unknown-mode' },
+    ]) await assert.rejects(runFullTeamSmoke({ sourceEnv: { ...freeEnv, ...override },
+      vitestEntryPath: path.join(root, 'vitest.mjs'), log() {},
+      freeNativePreflight: () => assert.fail('must not start native preflight'),
+      preflight: () => assert.fail('must not start managed preflight'),
+      spawn: () => assert.fail('must not submit inference'),
+    }));
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('free mode strips ambient auth and admits only after passive preflight; FULL cleanup gates remain', async () => {
+  for (const complete of [true, false]) {
+    const { root, env } = fixture();
+    delete env.OPENCODE_E2E_TEST_AUTH_PATH;
+    let input;
+    const calls = [];
+    try {
+      const execution = runFullTeamSmoke({
+        sourceEnv: { ...env, OPENCODE_E2E_AUTH_MODE: 'genuine-free', OPENCODE_E2E_MODEL: GENUINE_FREE_MODEL,
+          HOME: '/must-not-use-home', OPENCODE_API_KEY: 'must-not-inherit', OPENAI_API_KEY: 'must-not-inherit',
+          OPENCODE_CONFIG_CONTENT: '{"provider":{"opencode":{"options":{"apiKey":"must-not-inherit"}}}}' },
+        vitestEntryPath: path.join(root, 'vitest.mjs'), log() {},
+        freeNativePreflight: value => {
+          input = value; calls.push('native');
+          assertOwnedSmokeEnvironment(value.env, 'FULL');
+          for (const key of ['OPENCODE_API_KEY', 'OPENAI_API_KEY', 'OPENCODE_CONFIG_CONTENT', 'OPENCODE_E2E_AUTH_MODE'])
+            assert.equal(value.env[key], undefined);
+          assert.equal(fs.existsSync(path.join(value.env.XDG_DATA_HOME, 'opencode/auth.json')), false);
+          assert.deepEqual(JSON.parse(fs.readFileSync(path.join(value.projectPath, 'opencode.json'))), genuineFreeProjectConfig());
+          return { model: GENUINE_FREE_MODEL, nativeVersion: '1.18.31' };
+        },
+        preflight: () => { calls.push('managed'); return { ok: true }; },
+        freePriceAdmission: async evidence => {
+          calls.push('price');
+          return admitGenuineFreeModel(evidence, { fetch: async () => new Response(JSON.stringify(freeCatalog())) });
+        },
+        spawn: (_command, _args, options) => {
+          calls.push('inference'); assert.deepEqual(calls, ['native', 'managed', 'price', 'inference']);
+          assert.equal(options.timeout, 40 * 60_000);
+          assert.ok(fs.existsSync(path.join(options.env.OPENCODE_E2E_PROOF_DIRECTORY, 'free-admission.json')));
+          const proof = { ...passingProof(), model: GENUINE_FREE_MODEL };
+          if (!complete) proof.finalStopConfirmed = false;
+          fs.writeFileSync(path.join(options.env.OPENCODE_E2E_PROOF_DIRECTORY, 'proof.json'), JSON.stringify(proof));
+          return { status: 0 };
+        },
+      });
+      if (complete) assert.equal(await execution, 0);
+      else await assert.rejects(execution, /complete cleanup-confirmed proof/);
+      assert.equal(fs.existsSync(input.projectPath), !complete);
+    } finally { cleanup(input); fs.rmSync(root, { recursive: true, force: true }); }
+  }
+});
+
+test('a rejected or expired final free admission never submits inference or deletes owned state', async () => {
+  for (const expired of [false, true]) {
+    const { root, env } = fixture();
+    delete env.OPENCODE_E2E_TEST_AUTH_PATH;
+    let input;
+    try {
+      await assert.rejects(runFullTeamSmoke({
+        sourceEnv: { ...env, OPENCODE_E2E_AUTH_MODE: 'genuine-free', OPENCODE_E2E_MODEL: GENUINE_FREE_MODEL },
+        vitestEntryPath: path.join(root, 'vitest.mjs'), log() {},
+        freeNativePreflight: value => { input = value; return { model: GENUINE_FREE_MODEL }; },
+        preflight: () => ({ ok: true }),
+        freePriceAdmission: () => {
+          if (!expired) throw new Error('Price confirmation failed');
+          return { mode: 'genuine-free', model: GENUINE_FREE_MODEL,
+            admittedAt: new Date(0).toISOString(), spawnAdmissionExpiresAt: new Date(60_000).toISOString() };
+        },
+        spawn: () => assert.fail('Unqualified price must never submit inference'),
+      }), expired ? /admission-expired/ : /Price confirmation failed/);
+      assert.ok(fs.existsSync(input.projectPath));
+    } finally { cleanup(input); fs.rmSync(root, { recursive: true, force: true }); }
   }
 });
 
@@ -363,6 +546,11 @@ test('incomplete full proof cannot authorize state deletion', async () => {
   try {
     for (const mutate of [
       (proof) => { delete proof.finalStopConfirmed; },
+      (proof) => { delete proof.leadAssignedTask; },
+      (proof) => { proof.leadAssignedTask.createdBy = 'user'; },
+      (proof) => { delete proof.peerSettlement; },
+      (proof) => { proof.peerSettlement.checks[0].readCommitted = false; },
+      (proof) => { proof.peerSettlement.checks[1] = proof.peerSettlement.checks[0]; },
       (proof) => { delete proof.independentAssertionsPassed; },
       (proof) => { proof.tasks[1] = proof.tasks[0]; },
       (proof) => { proof.initialSessions.bob = proof.initialSessions.alice; },

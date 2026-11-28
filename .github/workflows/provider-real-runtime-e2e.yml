@@ -6,6 +6,11 @@ on:
     branches: [main]
     paths:
       - 'scripts/e2e/provider-real-runtime-*.ts'
+      - 'scripts/e2e/opencode-alice-bob-local-model.mjs'
+      - 'scripts/prove-opencode-full-team.mjs'
+      - 'scripts/lib/opencode-full-free-admission.mjs'
+      - 'test/scripts/proveOpenCodeFullTeam.test.mjs'
+      - 'test/main/services/team/OpenCodeFullTeamCollaboration.live.test.ts'
       - 'scripts/e2e/opencode-diagnostics/startup-resources.mjs'
       - 'scripts/e2e/opencode-diagnostics/startup-resources.test.mjs'
       - 'scripts/e2e/opencode-diagnostics/run.mjs'
@@ -27,6 +32,11 @@ on:
     types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
     paths:
       - 'scripts/e2e/provider-real-runtime-*.ts'
+      - 'scripts/e2e/opencode-alice-bob-local-model.mjs'
+      - 'scripts/prove-opencode-full-team.mjs'
+      - 'scripts/lib/opencode-full-free-admission.mjs'
+      - 'test/scripts/proveOpenCodeFullTeam.test.mjs'
+      - 'test/main/services/team/OpenCodeFullTeamCollaboration.live.test.ts'
       - 'scripts/e2e/opencode-diagnostics/startup-resources.mjs'
       - 'scripts/e2e/opencode-diagnostics/startup-resources.test.mjs'
       - 'scripts/e2e/opencode-diagnostics/run.mjs'
@@ -55,6 +65,61 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}
 
 jobs:
+  genuine-free-full:
+    # A skipped job is not FULL qualification. PRs opt in before synchronize;
+    # main pushes retain independent postmerge proof with the same genuine model.
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.draft != true && contains(github.event.pull_request.labels.*.name, 'e2e:opencode-full-free'))
+    name: OpenCode genuine-free FULL (linux-x64)
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubuntu-latest' }}
+    # The existing FULL child keeps its 40-minute work/cleanup/startup bound.
+    # Reserve setup, passive preflight and artifact time outside that child.
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+      - name: Verify FULL wrapper admission and cleanup guards offline
+        run: node --test test/scripts/proveOpenCodeFullTeam.test.mjs
+      - name: Install pinned genuine V1 in private runner scratch
+        shell: bash
+        run: |
+          umask 077
+          FREE_OPENCODE_PREFIX="$(mktemp -d "$RUNNER_TEMP/full-free-opencode-v1-XXXXXX")"
+          export FREE_OPENCODE_PREFIX
+          node -e "const fs = require('node:fs'); const path = require('node:path'); fs.writeFileSync(path.join(process.env.FREE_OPENCODE_PREFIX, 'package.json'), JSON.stringify({name:'agent-teams-test-opencode',private:true,version:'1.0.0',allowScripts:{'opencode-ai@1.18.31':true}}));"
+          npm install --prefix "$FREE_OPENCODE_PREFIX" --no-audit --no-fund opencode-ai@1.18.31
+          node -e "const fs = require('node:fs'); const path = require('node:path'); const root = path.join(process.env.FREE_OPENCODE_PREFIX, 'node_modules/opencode-linux-x64'); const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')); if (pkg.version !== '1.18.31') throw Error('Wrong native V1 package'); const binary = path.join(root, 'bin/opencode'); if (!fs.statSync(binary, {throwIfNoEntry:false})?.isFile()) throw Error('Native V1 missing'); fs.appendFileSync(process.env.GITHUB_ENV, 'CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH=' + binary + String.fromCharCode(10));"
+      - name: Stage verified published runtime archive
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/stage-runtime.mjs
+      - name: Verify and select pinned runtime
+        run: |
+          node scripts/ci/verify-staged-runtime-version.mjs
+          node -e "const fs = require('node:fs'); const path = require('node:path'); const lock = JSON.parse(fs.readFileSync('runtime.lock.json', 'utf8')); fs.appendFileSync(process.env.GITHUB_ENV, 'CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH=' + path.resolve('resources/runtime', lock.assets['linux-x64'].binaryName) + String.fromCharCode(10));"
+      - name: Install FULL test dependencies
+        run: node scripts/ci/install-dependencies-with-retry.mjs
+      - name: Prove genuine free lead, Alice, Bob, relaunch and owned Stop
+        env:
+          TMPDIR: ${{ runner.temp }}
+          OPENCODE_E2E: '1'
+          OPENCODE_E2E_FULL_TEAM: '1'
+          OPENCODE_E2E_AUTH_MODE: genuine-free
+          OPENCODE_E2E_MODEL: opencode/big-pickle
+        run: node scripts/prove-opencode-full-team.mjs
+      - name: Preserve sanitized FULL proof and admission-time prices
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: opencode-genuine-free-full-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: ${{ runner.temp }}/opencode-full-team-proof-*/
+
   real-runtime:
     if: github.event_name != 'pull_request' || github.event.pull_request.draft != true
     name: pinned CLI metadata (${{ matrix.platform }})
@@ -107,6 +172,17 @@ jobs:
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
       - name: Build isolated Host before Electron startup
         run: pnpm --filter @agent-teams/legacy-agent-host build
+      # Keep the Windows desktop preflight identical to the passing 3-OS
+      # native Teams Create harness. Do not make CDP readiness wait for a
+      # cold Electron install or terminal-platform runtime publication.
+      - name: Ensure Electron installed before Windows UI startup
+        if: runner.os == 'Windows'
+        run: node ./scripts/ensure-electron-install.cjs --strict
+      - name: Stage pinned terminal platform runtime on Windows
+        if: runner.os == 'Windows'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node ./scripts/ensure-terminal-platform-runtime.mjs
       - name: Verify isolated desktop harness guardrails
         run: node --test scripts/e2e/opencode-diagnostics/platform.test.mjs
       - name: Verify real pinned runtime through Linux Electron IPC and UI
@@ -118,6 +194,23 @@ jobs:
         run: |
           node scripts/e2e/opencode-diagnostics/run.mjs --real-runtime
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      # Model decisions are local/deterministic, while OpenCode, team IPC,
+      # physical inboxes and delivery-ledger read commits are genuine.
+      - name: Real OpenCode Alice/Bob peer delivery with localhost model
+        if: runner.os == 'Linux'
+        env:
+          OPENCODE_PEER_E2E_EVIDENCE: ${{ runner.temp }}/opencode-peer-local-model
+        run: |
+          node --check scripts/e2e/opencode-alice-bob-local-model.mjs
+          xvfb-run -a node scripts/e2e/opencode-alice-bob-local-model.mjs
+      - name: Preserve Alice/Bob original peer/read receipts
+        if: always() && runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: opencode-alice-bob-local-model-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: ${{ runner.temp }}/opencode-peer-local-model/
       - name: Preserve sanitized real Electron connection evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -131,6 +224,15 @@ jobs:
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/real-connection.png
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/cold-dashboard.json
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/cold-dashboard.png
+      - name: Preserve isolated desktop startup log after failed E2E
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: real-runtime-startup-log-${{ matrix.platform }}-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          # The disposable fixture strips inherited provider credentials.
+          path: ${{ runner.temp }}/opencode-diagnostics-e2e-*/desktop.log
       - name: Preserve owned startup resource samples
         if: always()
         uses: actions/upload-artifact@v4
