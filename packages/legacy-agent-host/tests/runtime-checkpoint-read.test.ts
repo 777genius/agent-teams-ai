@@ -14,7 +14,12 @@ import type {
 } from '../dist/runtime/checkpointContracts.js';
 import type { RuntimeSessionRecord } from '../dist/runtime/contracts.js';
 
-function fixture() {
+function fixture(
+  opaque: CheckpointPayload['opaque'] = {
+    nativePath: '/TEST/MISSING/native-backing',
+    token: 'TEST-private-token',
+  }
+) {
   const binding = {
     backendId: 'TEST-backend',
     teamId: 'TEST-team',
@@ -51,7 +56,7 @@ function fixture() {
     sourceSessionRef: 'TEST-native-private',
     historyDigest: historyDigest(record),
     completedOperations: [],
-    opaque: { nativePath: '/TEST/MISSING/native-backing', token: 'TEST-private-token' },
+    opaque,
   };
   let payload: CheckpointPayload = { ...body, digest: checkpointPayloadDigest(body) };
   record.checkpoints = [
@@ -100,6 +105,7 @@ function fixture() {
   };
   return {
     binding,
+    reference,
     config,
     record,
     options,
@@ -153,6 +159,69 @@ test('cold read lists exact published refs without native access/writes and keep
   assert.equal(f.reads(), 1);
 });
 
+test('authorized Runtime read preserves a complete Host envelope and requires one original opening target', async () => {
+  const checkpoint = {
+    version: 1,
+    engine: 'opencode-v2',
+    nativeSessionId: 'ses_TESToriginal',
+    compatibility: 'a'.repeat(64),
+  };
+  const opaque = {
+    kind: 'opencode-v2-file-checkpoint',
+    version: 1,
+    checkpoint,
+    nativeFileKeyWitness: 'TEST-owner-opaque-evidence',
+  };
+  const f = fixture(opaque),
+    request = { ...f.config, generation: 2, checkpointRef: f.reference };
+  const owner = new CheckpointCoordinator(f.options);
+  await assert.rejects(owner.readCheckpoint(f.reference, request), { code: 'hold' });
+  const opening: Partial<RuntimeSessionRecord> = {
+    phase: 'opening',
+    custody: 'unknown',
+    hostIncarnation: 'TEST-new-host',
+    config: request,
+    restoredFrom: { reference: f.reference, sourceBinding: f.binding },
+  };
+  f.addSibling(opening);
+  assert.deepEqual(await owner.readCheckpoint(f.reference, request), opaque);
+  const detached = await owner.readCheckpoint(f.reference, request);
+  assert.ok(detached && typeof detached === 'object' && 'nativeFileKeyWitness' in detached);
+  detached.nativeFileKeyWitness = 'TEST-local-copy-only';
+  assert.deepEqual(await owner.readCheckpoint(f.reference, request), opaque);
+  f.addSibling({ ...opening, binding: { ...f.binding, generation: 'TEST-second-opening' } });
+  await assert.rejects(owner.readCheckpoint(f.reference, request), { code: 'hold' });
+});
+
+test('plain legacy opaque bytes remain available only through the original released custody and request', async () => {
+  const opaque = {
+    version: 1,
+    engine: 'opencode-v2',
+    nativeSessionId: 'ses_TESTlegacy',
+    compatibility: 'b'.repeat(64),
+  };
+  const f = fixture(opaque),
+    request = { ...f.config, generation: 2, checkpointRef: f.reference };
+  f.addSibling({
+    phase: 'opening',
+    custody: 'unknown',
+    hostIncarnation: 'TEST-new-host',
+    config: request,
+    restoredFrom: { reference: f.reference, sourceBinding: f.binding },
+  });
+  const owner = new CheckpointCoordinator(f.options);
+  assert.equal(
+    JSON.stringify(await owner.readCheckpoint(f.reference, request)),
+    JSON.stringify(opaque)
+  );
+  await assert.rejects(
+    owner.readCheckpoint(f.reference, { ...request, sessionId: 'TEST-foreign' }),
+    { code: 'conflict' }
+  );
+  f.record.custody = 'unknown';
+  await assert.rejects(owner.readCheckpoint(f.reference, request), { code: 'hold' });
+});
+
 test('missing/corrupt private payload never offers eligible history or private error text', () => {
   for (const mutate of [
     (f: ReturnType<typeof fixture>) => f.missing(),
@@ -179,7 +248,11 @@ test('custody, later uncertain input, changed config/profile and sibling debt re
     [
       'history-changed',
       (f) => {
-          f.record.control = { inputId: 'TEST-input', operationRef: 'TEST-operation', phase: 'unknown' };
+        f.record.control = {
+          inputId: 'TEST-input',
+          operationRef: 'TEST-operation',
+          phase: 'unknown',
+        };
       },
     ],
     [

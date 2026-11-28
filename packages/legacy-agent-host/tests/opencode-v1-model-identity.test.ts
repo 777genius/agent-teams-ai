@@ -211,16 +211,16 @@ test(`V1 private readiness refuses ${invalid} for capture and native Restart`, a
       entry: { profile: f.member, baseProfile: f.member, binding } as Parameters<typeof captureNativeRestartReadiness>[0]['entry'],
       launch: { readModelReadinessSource: () => ({ reference,
         consumer: { ...consumerIdentity, consumerId: runtimeDigest(consumerIdentity), disposition: 'consumed' },
-      }) }, isCurrent: () => true,
+      }) }, isCurrent: () => true, cutoff: Date.now() + 10_000,
     });
   };
   try {
-    assert.equal(capture().commandId, saved.commandId, 'new nested proof remains usable');
-    assert.equal(restart().reference.commandId, saved.commandId);
+    assert.equal((await capture()).reference.commandId, saved.commandId, 'new nested proof remains usable');
+    assert.equal((await restart()).reference.commandId, saved.commandId);
     store.write(invalid === 'other-native-model' ? { ...saved, modelId: 'auto' }
       : { ...saved, ...target(legacy) });
-    assert.throws(capture, { code: 'held' });
-    assert.throws(restart, { code: 'held' });
+    await assert.rejects(capture, { code: 'held' });
+    await assert.rejects(restart, { code: 'held' });
     assert.equal([...store.list()].length, 1, 'refusal cannot allocate or migrate another receipt');
   } finally { await probes.close(); }
 });

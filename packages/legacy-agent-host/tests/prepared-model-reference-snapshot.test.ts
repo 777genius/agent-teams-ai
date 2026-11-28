@@ -78,7 +78,7 @@ test('one prepared reference reads one original receipt and keeps candidate chec
   });
   syncBuiltinESMExports();
   t.after(() => { t.mock.restoreAll(); syncBuiltinESMExports(); });
-  const original = f.capture();
+  const original = await f.capture();
   t.diagnostic(JSON.stringify({ receiptReads: reads, physicalTeamTokens: publications,
     sourceChecks: f.checkTokens.length, heldSourceChecks: f.checkTokens.filter(value => value !== undefined).length }));
   assert.equal(reads, 1, 'ModelProbeOwner supplies this invocation\'s sole fresh qualified snapshot');
@@ -90,7 +90,7 @@ test('one prepared reference reads one original receipt and keeps candidate chec
   const token = f.checkTokens[0];
   await Promise.resolve();
   f.checkTokens.length = 0;
-  assert.deepEqual(f.capture(), original);
+  assert.deepEqual(await f.capture(), original);
   assert.equal(reads, 2, 'the next invocation reopens and validates the original receipt');
   assert.equal(publications, 4);
   assert.notEqual(f.checkTokens[0], token, 'no lock authority is retained across an await');
@@ -98,18 +98,18 @@ test('one prepared reference reads one original receipt and keeps candidate chec
 
 test('a later cancelled or retired original probe refuses instead of using the prior reference', async t => {
   const f = await prepared(t);
-  const original = f.capture();
+  const original = await f.capture();
   for (const changed of [
     { ...f.saved, phase: 'cancelled' as const, ok: false },
     { ...f.saved, readinessRetired: true as const },
   ]) {
     await Promise.resolve();
     f.records.write(changed);
-    assert.throws(f.capture, { code: 'held' });
+    await assert.rejects(f.capture, { code: 'held' });
     assert.equal(fs.existsSync(f.lock), false);
   }
   f.records.write(f.saved);
-  assert.deepEqual(f.capture(), original);
+  assert.deepEqual(await f.capture(), original);
 });
 
 test('single-snapshot candidate validation preserves provider, model, effort, purpose, scope and mechanism refusals', async t => {
@@ -122,18 +122,18 @@ test('single-snapshot candidate validation preserves provider, model, effort, pu
   ];
   for (const changed of changes) {
     f.records.write({ ...f.saved, ...changed });
-    assert.throws(f.capture, { code: 'held' });
+    await assert.rejects(f.capture, { code: 'held' });
     assert.equal(fs.existsSync(f.lock), false);
   }
   f.records.write(f.saved);
-  assert.throws(() => capturePreparedModelReference({ ...f.options, context: runtimeDigest('TEST-other-context') }), { code: 'conflict' });
-  assert.throws(() => capturePreparedModelReference({ ...f.options, isCurrent: () => false }), { code: 'held' });
+  await assert.rejects(() => capturePreparedModelReference({ ...f.options, context: runtimeDigest('TEST-other-context') }), { code: 'conflict' });
+  await assert.rejects(() => capturePreparedModelReference({ ...f.options, isCurrent: () => false }), { code: 'held' });
 });
 
 test('grant revocation during the same snapshot read still refuses before its result escapes', async t => {
   const f = await prepared(t);
   f.effect(() => f.human.revoke('profile-admin'));
-  assert.throws(f.capture, { code: 'forbidden' });
+  await assert.rejects(f.capture, { code: 'forbidden' });
   assert.equal(fs.existsSync(f.lock), false);
 });
 
@@ -141,7 +141,7 @@ test('a namespace change inside the same snapshot read still refuses', { skip: p
   const f = await prepared(t), path = join(f.root, 'teams', f.entry.team.definition.binding.teamName, 'TEST-changed-link');
   f.effect(() => fs.symlinkSync(f.root, path, 'dir'));
   try {
-    assert.throws(f.capture, { code: 'hold' });
+    await assert.rejects(f.capture, { code: 'hold' });
     assert.equal(fs.existsSync(f.lock), false);
   } finally { fs.rmSync(path, { force: true }); }
 });
@@ -154,17 +154,17 @@ test('the original expiry gates run after the existing account fence final autho
     f.current();
     if (++checks === 2) t.mock.timers.setTime(f.saved.expiresAt);
   } });
-  assert.throws(() => capturePreparedModelReference({ ...f.options, withAccountRead }), { code: 'held' });
+  await assert.rejects(() => capturePreparedModelReference({ ...f.options, withAccountRead }), { code: 'held' });
   assert.equal(checks, 2, 'unchanged prelude and final authority both complete before expiry refusal');
   assert.equal(fs.existsSync(f.lock), false);
   const next = { ...f.saved, expiresAt: f.saved.expiresAt + 10_000,
     readinessScope: { ...f.saved.readinessScope!, cutoff: f.saved.expiresAt } };
   f.records.write(next);
-  assert.throws(f.capture, { code: 'held' }, 'scope cutoff independently rejects a late observation');
+  await assert.rejects(f.capture, { code: 'held' }, 'scope cutoff independently rejects a late observation');
 });
 
 test('the original consumer refuses a changed reference even when its fresh probe remains otherwise ready', async t => {
-  const f = await prepared(t), reference = f.capture(), entry = f.entry;
+  const f = await prepared(t), reference = (await f.capture()).reference, entry = f.entry;
   const launch = new TeamLaunchOwner({ definition: { launchId: 'TEST-snapshot-consumer', rosterRevision: 'TEST-roster',
     members: [{ memberId: entry.profile.memberId, binding: entry.binding, configurationDigest: runtimeDigest(entry.profile),
       baseConfigurationDigest: runtimeDigest(entry.baseProfile), runtimeGeneration: entry.profile.generation,

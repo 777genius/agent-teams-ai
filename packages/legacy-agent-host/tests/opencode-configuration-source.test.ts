@@ -20,6 +20,7 @@ import { captureOpenCodeV2SessionCredential } from '../dist/adapters/providers/O
 import { OpenCodeV2CredentialScope } from '../dist/adapters/providers/OpenCodeV2CredentialScope.js';
 import { AcceptedOpenCodeV2FileKey, DeferredOpenCodeV2FileKey, createOpenCodeV2FileMaterialization,
   openCodeV2NativeFileWitnessSchema, openCodeV2SelectedSourceReference, selectedFilePaths,
+  originalOpenCodeV2FilePolicy,
 } from '../dist/adapters/providers/OpenCodeV2SelectedFileKey.js';
 import type { OpenCodeManagementProfile } from '../dist/management/profile.js';
 import {
@@ -354,27 +355,34 @@ test('captured OpenCode config keeps donor precedence and stores only original s
       () => original.isCurrent(), undefined, deferred), { code: 'held' });
     assert.throws(() => captureOpenCodeV2SessionCredential({ ...manualProfile, accountBinding: 'TEST-foreign' },
       selection.providerId, original.isCurrent, undefined, deferred), { code: 'held' });
-    const materializer = createOpenCodeV2FileMaterialization(deferred.descriptor, () => assert.equal(ownerCurrent, true));
+    const policy = originalOpenCodeV2FilePolicy(deferred, 'fresh'); assert.ok(policy);
+    const password = Buffer.alloc(32, 7).toString('base64url');
+    const request = { method: 'POST' as const, deadline: Date.now() + 5000 };
+    const materializer = createOpenCodeV2FileMaterialization(deferred.descriptor, () => assert.equal(ownerCurrent, true), policy);
     const paths = selectedFilePaths(deferred.descriptor);
     const value = paths.map(path => materializer.readFileString(path).trim()).join('');
     assert.equal(materializer.materializedKey(value), value);
     const issuer = { nonce: 'd'.repeat(64), pid: process.pid, integrationId: selection.providerId,
       reference: openCodeV2SelectedSourceReference(deferred.descriptor, 'd'.repeat(64), selection.providerId, 'fresh') };
-    const encoded = materializer.issue(value, issuer), accepted = AcceptedOpenCodeV2FileKey.accept(deferred, encoded, issuer, () => true);
+    await materializer.prepareIssue(value, issuer, request, password);
+    const live = materializer.issue(value, issuer), accepted = AcceptedOpenCodeV2FileKey.accept(deferred, live, issuer,
+      () => true, { policy, password, request }), encoded = accepted.encoded;
+    assert.equal(openCodeV2NativeFileWitnessSchema.safeParse(live).success, false, 'live MAC and issuer are not a durable witness');
     assert.equal(openCodeV2NativeFileWitnessSchema.safeParse(encoded).success, true);
     assert.equal(AcceptedOpenCodeV2FileKey.matches({ ...accepted }, deferred), false);
     assert.equal(AcceptedOpenCodeV2FileKey.matches(accepted, deferred), true);
     assert.equal(JSON.stringify(JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8'))).includes(JSON.stringify(value)), false);
     assert.equal(accepted.filesCurrent(), true);
-    assert.throws(() => AcceptedOpenCodeV2FileKey.accept(deferred, encoded, { ...issuer, nonce: 'e'.repeat(64) }, () => true));
-    assert.throws(() => AcceptedOpenCodeV2FileKey.accept(deferred, encoded, issuer, () => false));
+    assert.throws(() => AcceptedOpenCodeV2FileKey.accept(deferred, live, { ...issuer, nonce: 'e'.repeat(64) }, () => true,
+      { policy, password, request }));
+    assert.throws(() => AcceptedOpenCodeV2FileKey.accept(deferred, live, issuer, () => false, { policy, password, request }));
     let retainedChecks = 0;
-    assert.equal(AcceptedOpenCodeV2FileKey.retained(deferred, encoded, () => { retainedChecks++; }).scopeDigest, accepted.scopeDigest);
-    assert.equal(retainedChecks, 2);
-    assert.throws(() => AcceptedOpenCodeV2FileKey.retained(deferred, encoded, () => { throw Error('TEST unreleased original probe'); }));
+    assert.equal((await AcceptedOpenCodeV2FileKey.retained(deferred, encoded, () => { retainedChecks++; })).scopeDigest, accepted.scopeDigest);
+    assert.equal(retainedChecks, 3);
+    await assert.rejects(AcceptedOpenCodeV2FileKey.retained(deferred, encoded, () => { throw Error('TEST unreleased original probe'); }));
     const cold = captureOpenCodeV2Configuration(manualProfile, selection, () => true);
     assert.ok(cold.selectedFile); assert.equal(cold.selectedFile.descriptor.digest, deferred.descriptor.digest);
-    assert.equal(AcceptedOpenCodeV2FileKey.retained(cold.selectedFile, encoded, () => {}).scopeDigest, accepted.scopeDigest);
+    assert.equal((await AcceptedOpenCodeV2FileKey.retained(cold.selectedFile, encoded, () => {})).scopeDigest, accepted.scopeDigest);
     for (const invalid of ['', encoded + '=', 'a'.repeat(65537), Buffer.from(JSON.stringify({ ...JSON.parse(
       Buffer.from(encoded, 'base64url').toString('utf8')), extra: true })).toString('base64url')])
       assert.equal(openCodeV2NativeFileWitnessSchema.safeParse(invalid).success, false);
@@ -385,7 +393,7 @@ test('captured OpenCode config keeps donor precedence and stores only original s
     writeFileSync(mode === 'home' ? second : mode === 'relative' || mode === 'environment' ? third : first,
       'TEST-changed-private-key', { mode: 0o600 });
     assert.equal(accepted.filesCurrent(), false, 'same spelling cannot borrow changed file bytes or identity');
-    assert.throws(() => AcceptedOpenCodeV2FileKey.retained(deferred, encoded, () => {}));
+    await assert.rejects(AcceptedOpenCodeV2FileKey.retained(deferred, encoded, () => {}));
   }
   for (const mode of ['missing', 'empty', 'oversize', 'utf8', 'directory', 'env-file', 'malformed']) {
     const v = fixture(t), leaf = join(v.project, 'opencode.jsonc'), dataRoot = join(v.root, 'data'), file = join(v.root, 'manual.key');
@@ -404,7 +412,8 @@ test('captured OpenCode config keeps donor precedence and stores only original s
     }
     const deferred = captureOpenCodeV2Configuration(manualProfile, selection, () => true).selectedFile;
     assert.ok(deferred, 'file contents are not read by parent capture');
-    const materializer = createOpenCodeV2FileMaterialization(deferred.descriptor, () => {});
+    const policy = originalOpenCodeV2FilePolicy(deferred, 'fresh'); assert.ok(policy);
+    const materializer = createOpenCodeV2FileMaterialization(deferred.descriptor, () => {}, policy);
     if (mode === 'empty') {
       const value = materializer.readFileString(selectedFilePaths(deferred.descriptor)[0]!).trim();
       assert.throws(() => materializer.materializedKey(value));

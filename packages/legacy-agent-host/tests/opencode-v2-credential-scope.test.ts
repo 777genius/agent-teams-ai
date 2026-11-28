@@ -13,7 +13,7 @@ import { captureOpenCodeConfigurationSource } from '../dist/adapters/providers/O
 import { captureOpenCodeV2Configuration } from '../dist/adapters/providers/OpenCodeV2CapturedConfiguration.js';
 import { bindOpenCodeV2ConfigurationKey, OpenCodeV2CredentialScope } from '../dist/adapters/providers/OpenCodeV2CredentialScope.js';
 import { AcceptedOpenCodeV2FileKey, createOpenCodeV2FileMaterialization,
-  openCodeV2SelectedSourceReference, selectedFilePaths,
+  openCodeV2SelectedSourceReference, selectedFilePaths, originalOpenCodeV2FilePolicy,
 } from '../dist/adapters/providers/OpenCodeV2SelectedFileKey.js';
 import { OpenCodeV2ManagementHost } from '../dist/adapters/providers/OpenCodeV2ManagementHost.js';
 import { openCodeManagementProfileSchema } from '../dist/management/profile.js';
@@ -306,15 +306,18 @@ test('V2 key publication survives a fresh scope, preserves foreign credentials a
     const selection = { providerId: 'TEST-provider', modelId: 'TEST-model' };
     const configuration = captureOpenCodeV2Configuration(profile, selection, () => true), source = configuration.selectedFile;
     assert.ok(source); assert.equal(configuration.key, undefined);
+    const policy = originalOpenCodeV2FilePolicy(source, 'fresh'); assert.ok(policy);
+    const manualPassword = Buffer.alloc(32, 9).toString('base64url');
     const requests: string[] = [], failures: unknown[] = [];
     let coldRead = false, connected = false, materializations = 0;
     const issuer = (restoring: boolean) => ({ nonce: 'c'.repeat(64), pid: process.pid, integrationId: selection.providerId,
       reference: openCodeV2SelectedSourceReference(source.descriptor, 'c'.repeat(64), selection.providerId, restoring ? 'restore' : 'fresh') });
-    const issue = () => {
+    const issue = async (deadline: number) => {
       materializations++;
-      const materializer = createOpenCodeV2FileMaterialization(source.descriptor, () => {});
+      const materializer = createOpenCodeV2FileMaterialization(source.descriptor, () => {}, policy);
       const key = materializer.readFileString(selectedFilePaths(source.descriptor)[0]!).trim();
       assert.equal(materializer.materializedKey(key), coldRead && mode === 'cold-file' ? effectiveKey + '-changed' : effectiveKey);
+      await materializer.prepareIssue(key, issuer(coldRead), { method: coldRead ? 'GET' : 'POST', deadline }, manualPassword);
       return materializer.issue(key, issuer(coldRead));
     };
     assert.equal(materializations, 0, 'captured manual configuration cannot materialize in F before its native request');
@@ -324,7 +327,7 @@ test('V2 key publication survives a fresh scope, preserves foreign credentials a
         const url = new URL(request.url!, 'http://127.0.0.1');
         requests.push(request.method + ' ' + url.pathname);
         assert.deepEqual([...url.searchParams], [['location[directory]', cwd]]);
-        assert.equal(request.headers.authorization, 'Basic ' + Buffer.from('opencode:TEST-server-password').toString('base64'));
+        assert.equal(request.headers.authorization, 'Basic ' + Buffer.from('opencode:' + manualPassword).toString('base64'));
         const chunks: Buffer[] = []; let bytes = 0;
         for await (const chunk of request) { const next = Buffer.from(chunk); bytes += next.length;
           assert.ok(bytes <= 1024); chunks.push(next); }
@@ -339,7 +342,7 @@ test('V2 key publication survives a fresh scope, preserves foreign credentials a
           assert.equal(selected.selectedSource.reference, issuer(false).reference);
           assert.ok(selected.selectedSource.deadline > Date.now());
           assert.equal(body.includes(effectiveKey), false);
-          const witness = issue(); connected = true;
+          const witness = await issue(selected.selectedSource.deadline); connected = true;
           if (mode === 'lost-ack') { response.destroy(); return; }
           response.writeHead(200, { 'content-type': 'application/json' });
           response.end(JSON.stringify({ schemaVersion: 1,
@@ -363,7 +366,8 @@ test('V2 key publication survives a fresh scope, preserves foreign credentials a
         if (coldRead && url.pathname === '/api/integration/TEST-provider') {
           assert.equal(request.headers['x-agent-teams-selected-source'], 'v1:' + issuer(true).reference);
           assert.ok(Number(request.headers['x-agent-teams-selected-source-deadline']) > Date.now());
-          response.end(JSON.stringify({ schemaVersion: 1, sourceReference: issuer(true).reference, witness: issue(), integration }));
+          response.end(JSON.stringify({ schemaVersion: 1, sourceReference: issuer(true).reference,
+            witness: await issue(Number(request.headers['x-agent-teams-selected-source-deadline'])), integration }));
         } else response.end(JSON.stringify(integration));
       })().catch(error => { failures.push(error); if (!response.headersSent) response.writeHead(500); response.end(); });
     });
@@ -374,7 +378,7 @@ test('V2 key publication survives a fresh scope, preserves foreign credentials a
     try {
       const address = server.address(); assert.ok(address && typeof address !== 'string');
       const transport = { endpoint: 'http://127.0.0.1:' + address.port, directory: cwd, version: '2.1.4' as const,
-        signal: t.signal, deadline: Date.now() + 5000, readPassword: () => 'TEST-server-password' };
+        signal: t.signal, deadline: Date.now() + 5000, readPassword: () => manualPassword };
       owner = createOpenCodeV2OwnedSessionClient({ ...transport, nativeSessionId: 'ses_TEST' });
       const prepared = captureOpenCodeV2SessionCredential(profile, selection.providerId, configuration.isCurrent, undefined, source);
       assert.equal(prepared.isAbsent(), false, 'original selected file never grants absent-credential reuse');
@@ -382,9 +386,10 @@ test('V2 key publication survives a fresh scope, preserves foreign credentials a
       const originalBinding: Binding = id => {
         assert.equal(id, selection.providerId);
         const expected = issuer(false);
-        return { reference: expected.reference, acceptProof: proof => {
+        return { reference: expected.reference, acceptProof: (proof, request) => {
           assert.equal(proof.sourceReference, expected.reference);
-          return AcceptedOpenCodeV2FileKey.accept(source, proof.witness, expected, configuration.isCurrent);
+          return AcceptedOpenCodeV2FileKey.accept(source, proof.witness, expected, configuration.isCurrent,
+            { policy, password: manualPassword, request });
         } };
       };
       const original = prepared.prepare(transport, owner, undefined, originalBinding);
@@ -415,11 +420,13 @@ test('V2 key publication survives a fresh scope, preserves foreign credentials a
         coldRead = true; // Only after the original complete preparation passed its ten-request oracle.
         const result = cold.prepare(transport, owner, restored, id => {
           assert.equal(id, selection.providerId); const expected = issuer(true);
-          return { reference: expected.reference, acceptProof: proof => AcceptedOpenCodeV2FileKey.accept(
-            coldSource, proof.witness, expected, coldConfiguration.isCurrent) };
+          const originalProof = prepared.fileProof(); assert.ok(originalProof);
+          return { reference: expected.reference, acceptProof: (proof, request) => AcceptedOpenCodeV2FileKey.accept(
+            coldSource, proof.witness, expected, coldConfiguration.isCurrent,
+            { policy: originalProof.originalPolicy(), password: manualPassword, request }) };
         });
         if (mode === 'valid') assert.deepEqual(await result, witness);
-        else await assert.rejects(result, { code: 'held' });
+        else await assert.rejects(result, { code: mode === 'cold-file' ? 'native_source_proof_refused' : 'held' });
         assert.deepEqual(requests, [...selectionCalls, keyRead, 'POST /api/integration/TEST-provider/connect/key', keyRead,
           ...selectionCalls, keyRead]);
         assert.equal(requests.length, 18); assert.equal(requests.filter(row => row.startsWith('POST ')).length, 1);

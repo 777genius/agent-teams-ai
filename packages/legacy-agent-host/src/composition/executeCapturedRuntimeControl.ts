@@ -2,9 +2,11 @@ import { z } from 'zod';
 import { RuntimeOwnerError } from '../runtime/contracts.js';
 import { runtimeDigest } from '../runtime/identity.js';
 import { attachMemberModelReadiness, captureActionModelReadiness,
-  capturePreparedModelReference, inspectMemberModelReadiness } from './prepareTeamModelReadiness.js';
+  capturePreparedModelReference, inspectMemberModelReadiness, prepareMemberModelReadiness,
+  assertMemberModelReadinessFileHandoffsAvailable, assertPreparedMemberModelReadiness,
+  installMemberModelReadinessFileKey, settleMemberModelReadinessFileHandoff } from './prepareTeamModelReadiness.js';
 import { attachInitialRuntimeModelAdmission } from './initialRuntimeModelAdmission.js';
-import type { LocalModelReadinessAction } from './prepareTeamModelReadiness.js';
+import type { LocalModelReadinessAction, PreparedModelReadinessReference } from './prepareTeamModelReadiness.js';
 import type { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
 import { assertRuntimeWorktree } from './runtimeWorktreeCapture.js';
 import { captureRuntimeControlAuthority } from './runtimeControlAuthority.js';
@@ -199,6 +201,8 @@ export async function executeCapturedRuntimeControl(
     const retained = options.retainedLaunches.get(runtimeDigest({ teamId, launchId: entry.binding.runId }));
     const launch = retained?.launch ?? options.launches.get(teamId)!;
     let preparation: ReturnType<typeof captureActionModelReadiness> | undefined;
+    let prepared: PreparedModelReadinessReference | undefined;
+    const isCurrent = () => { try { assertAuthority?.(); return true; } catch { return false; } };
     let actorDigest: string | undefined;
     if (entry.profile.provider === 'opencode') {
       if (!retained || retained.team.owner !== entry.team.owner ||
@@ -213,15 +217,22 @@ export async function executeCapturedRuntimeControl(
           revision => ({ principalId: options.principalId, revision })));
         if (!readiness && entry.initialModelAdmission && !entry.selection) {
           if (!commandId) throw new RuntimeOwnerError('hold');
-          attachInitialRuntimeModelAdmission({ launch, entries: [entry], method: 'runtime.open',
+          const initial = await attachInitialRuntimeModelAdmission({ launch, entries: [entry], method: 'runtime.open',
             teamId, commandId, payload: raw, actorDigest, hostIncarnation: options.hostIncarnation,
             captureReference: capturePreparedModelReference,
             ...(options.modelReadiness ? { management: options.modelReadiness } : {}), assertCurrent: assertAuthority });
+          prepared = initial.get(entry.profile.memberId);
         }
         let qualified = false;
         try {
+          prepared ??= await prepareMemberModelReadiness({ launch, entry, isCurrent,
+            ...(options.modelReadiness ? { management: options.modelReadiness } : {}),
+            withAccountRead: captureTeamAccountRead({ entry, principalId: options.principalId,
+              assertCurrent: assertAuthority }) });
+          assertAuthority();
           const selected = inspectMemberModelReadiness({ ...(options.modelReadiness ? { management: options.modelReadiness } : {}),
             launch, entry, hostIncarnation: options.hostIncarnation, assertCurrent: assertAuthority,
+            ...(prepared?.fileKey ? { fileKey: prepared.fileKey } : {}),
             withAccountRead: captureTeamAccountRead({ entry, principalId: options.principalId,
               assertCurrent: assertAuthority }) });
           const reference = selected.reference;
@@ -239,6 +250,7 @@ export async function executeCapturedRuntimeControl(
             targets: [{ entry, profile: entry.profile, binding: entry.binding }], commandId,
             ...(options.captureProcessOrigin ? { captureProcessOrigin: options.captureProcessOrigin } : {}),
             payload: raw, actorDigest, readiness, assertCurrent: assertAuthority });
+          prepared = undefined;
         }
       }
     }
@@ -247,14 +259,37 @@ export async function executeCapturedRuntimeControl(
     if (!entry.team.owner.authorizeMemberBinding(entry.binding, 'admit'))
       throw new RuntimeOwnerError('forbidden');
     if (preparation) {
-      const reference = (await preparation.prepare()).get(entry.profile.memberId);
+      prepared = (await preparation.prepare()).get(entry.profile.memberId);
       assertAuthority?.();
-      if (!reference) throw new RuntimeOwnerError('hold');
-      attachMemberModelReadiness({ launch, entry, reference, commandId: commandId!, actorDigest: actorDigest!,
-        inputDigest: preparation.inputDigest, cutoff: preparation.cutoff });
+      if (!prepared) throw new RuntimeOwnerError('hold');
     }
-    const opening = launch.startMember(entry.profile.memberId, assertAuthority);
-    if (opening) await opening;
+    if (prepared) {
+      if (!options.modelReadiness) throw new RuntimeOwnerError('hold');
+      assertMemberModelReadinessFileHandoffsAvailable([entry]);
+      assertPreparedMemberModelReadiness({ management: options.modelReadiness, profile: entry.profile,
+        prepared, isCurrent, ...(assertAuthority ? { withAccountRead: captureTeamAccountRead({
+          entry, principalId: options.principalId, assertCurrent: assertAuthority }) } : {}) });
+      if (preparation) attachMemberModelReadiness({ launch, entry, reference: prepared.reference,
+        commandId: commandId!, actorDigest: actorDigest!, inputDigest: preparation.inputDigest, cutoff: preparation.cutoff });
+      else {
+        const original = launch.readModelReadiness({ binding: entry.binding,
+          configRevision: entry.profile.configRevision, configurationDigest: runtimeDigest(entry.profile) });
+        if (runtimeDigest(original.reference ?? null) !== runtimeDigest(prepared.reference))
+          throw new RuntimeOwnerError('hold');
+      }
+    }
+    const attempt = prepared?.fileKey ? launch.readModelReadiness({ binding: entry.binding,
+      configRevision: entry.profile.configRevision, configurationDigest: runtimeDigest(entry.profile) }).attempt : undefined;
+    const handoff = prepared?.fileKey && attempt ? installMemberModelReadinessFileKey({ launch, entry, prepared,
+      expectedAttemptId: attempt.attemptId, hostIncarnation: options.hostIncarnation,
+      assertCurrent: () => { assertAuthority?.(); } }) : undefined;
+    try {
+      const opening = launch.startMember(entry.profile.memberId, assertAuthority);
+      if (opening) await opening;
+    } finally {
+      settleMemberModelReadinessFileHandoff({ launch, entry, handoff, hostIncarnation: options.hostIncarnation,
+        assertCurrent: () => { assertAuthority?.(); } });
+    }
     record = options.runtime.readSession(entry.binding).record;
     options.kick();
   } else if (operation === 'read') record = options.runtime.readSession(entry.binding).record;

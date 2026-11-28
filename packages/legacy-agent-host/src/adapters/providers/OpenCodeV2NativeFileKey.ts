@@ -1,7 +1,7 @@
 import { homedir } from 'node:os';
 import { pathToFileURL } from 'node:url';
 import { createOpenCodeV2FileMaterialization, openCodeV2SelectedSourceReference,
-  parseOpenCodeV2SelectedFileDescriptor } from './OpenCodeV2SelectedFileKey.js';
+  parseOpenCodeV2FilePolicy, parseOpenCodeV2SelectedFileDescriptor } from './OpenCodeV2SelectedFileKey.js';
 import type { OpenCodeV2SelectedFileMode } from './OpenCodeV2SelectedFileKey.js';
 import type { VerifiedOpenCodeV2EmbeddedGraph } from './OpenCodeV2EmbeddedGraph.js';
 
@@ -25,6 +25,7 @@ interface EffectModule {
   Effect: {
     sync<A>(action: () => A): EffectValue;
     try<A>(action: { try(): A; catch(error: unknown): Error }): EffectValue;
+    tryPromise<A>(action: { try(signal: AbortSignal): PromiseLike<A>; catch(error: unknown): Error }): EffectValue;
     flatMap<A>(effect: EffectValue, action: (value: A) => EffectValue): EffectValue;
     provideService(effect: EffectValue, tag: unknown, service: unknown): EffectValue;
     catch(effect: EffectValue, action: (error: unknown) => EffectValue): EffectValue;
@@ -52,11 +53,13 @@ const integration = (value: string) => /^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/u.te
 /** A finite transform in the original native server, retaining its request fiber, Scope and handler. */
 export async function createOpenCodeV2NativeFileTransform(input: {
   descriptor: unknown; mode: OpenCodeV2SelectedFileMode; nonce: string; password: string;
+  policy?: unknown;
   graph: VerifiedOpenCodeV2EmbeddedGraph; signal: AbortSignal;
 }): Promise<(app: EffectValue) => EffectValue> {
   const source = parseOpenCodeV2SelectedFileDescriptor(input.descriptor), modules = input.graph.selectedFileModules;
   if (!modules || !['fresh', 'restore', 'catalog'].includes(input.mode) || !hash(input.nonce) ||
       !/^[A-Za-z0-9_-]{43}$/u.test(input.password) || source.cwd !== process.cwd() || source.home !== homedir()) return held();
+  const policy = parseOpenCodeV2FilePolicy(input.policy, input.mode);
   input.signal.throwIfAborted();
   const [{ Effect, Option }, http, fs, variable, auth] = await Promise.all([
     import(pathToFileURL(input.graph.effectPath).href) as Promise<EffectModule>,
@@ -66,12 +69,15 @@ export async function createOpenCodeV2NativeFileTransform(input: {
     import(pathToFileURL(modules.authorizationPath).href) as Promise<AuthModule>,
   ]);
   input.signal.throwIfAborted();
-  if (typeof Effect.try !== 'function' || typeof Effect.flatMap !== 'function' || typeof Effect.provideService !== 'function' ||
+  if (typeof Effect.try !== 'function' || typeof Effect.tryPromise !== 'function' ||
+      typeof Effect.flatMap !== 'function' || typeof Effect.provideService !== 'function' ||
       typeof Effect.catch !== 'function' || typeof Option.some !== 'function' || !fs.FSUtil?.Service ||
       typeof variable.ConfigVariable?.substitute !== 'function' || typeof auth.authorizedRequest !== 'function' ||
       typeof auth.unauthorizedResponse !== 'function' || !http.HttpServerRequest?.MaxBodySize ||
       typeof http.HttpServerRequest.fromWeb !== 'function' || typeof http.HttpServerResponse?.jsonUnsafe !== 'function') return held();
   const attempt = { spent: false, imported: false };
+  type Prepared = Awaited<ReturnType<ReturnType<typeof createOpenCodeV2FileMaterialization>['prepareIssue']>>;
+  let originalPreparation: Promise<Prepared> | undefined;
   const safely = <A>(work: () => A) => Effect.try({ try: work, catch: () => new Error('OpenCode V2 selected native source refused') });
   const refused = () => http.HttpServerResponse.jsonUnsafe({ _tag: 'InvalidRequestError',
     message: 'Selected credential source unavailable' }, { status: 400 });
@@ -122,7 +128,11 @@ export async function createOpenCodeV2NativeFileTransform(input: {
       ...(original === undefined ? {} : { integration: original }) }, { status: 200, headers, cookies: response.cookies });
   }
   function materialize(app: EffectValue, request: NativeRequest, selected: { id: string; reference: string }, deadline: number) {
-    const check = () => checkRequest(request, deadline), capture = createOpenCodeV2FileMaterialization(source, check);
+    if (!policy) return held();
+    let interrupted: AbortSignal | undefined;
+    const check = () => { interrupted?.throwIfAborted(); checkRequest(request, deadline); };
+    const capture = createOpenCodeV2FileMaterialization(source, check, policy);
+    const issuer = { nonce: input.nonce, pid: process.pid, integrationId: selected.id, reference: selected.reference };
     const environment = Object.fromEntries(source.environment.map(row => [row.name, row.value ?? '']));
     const parse = variable.ConfigVariable.substitute({
       ...(source.origin.kind === 'file' ? { type: 'path', path: source.origin.path }
@@ -137,25 +147,42 @@ export async function createOpenCodeV2NativeFileTransform(input: {
       if (!object(decoded) || Object.keys(decoded).length !== 1 || !Object.hasOwn(decoded, 'apiKey')) return held();
       const key = capture.materializedKey(decoded.apiKey);
       return { key, request: request.method === 'POST' ? requestBody(request, key) : request };
-    }), captured => Effect.flatMap<NativeResponse>(Effect.provideService(app, http.HttpServerRequest.HttpServerRequest,
-      captured.request), response => safely(() => {
+    }), captured => Effect.flatMap(Effect.tryPromise({
+      async try(signal) {
+        interrupted = signal; check();
+        const original = originalPreparation;
+        if (original) {
+          const previous = await original; check();
+          await capture.prepareIssue(captured.key, issuer, {
+            method: request.method === 'POST' ? 'POST' : 'GET', deadline,
+          }, input.password, previous);
+        } else {
+          // Install before the first await; a concurrent GET joins the same original preparation.
+          const prepared = capture.prepareIssue(captured.key, issuer, {
+            method: request.method === 'POST' ? 'POST' : 'GET', deadline,
+          }, input.password);
+          originalPreparation = prepared;
+          await prepared;
+        }
+        check();
+      },
+      catch: () => new Error('OpenCode V2 selected native source refused'),
+    }), () => Effect.flatMap(safely(() => { check(); return captured.request; }), originalRequest =>
+      Effect.flatMap<NativeResponse>(Effect.provideService(app, http.HttpServerRequest.HttpServerRequest,
+      originalRequest), response => safely(() => {
       check();
       if (request.method === 'POST') {
         if (response.status !== 204 || response.body._tag !== 'Empty') return response;
         attempt.imported = true;
-        return wrap(response, selected.reference, capture.issue(captured.key, {
-          nonce: input.nonce, pid: process.pid, integrationId: selected.id, reference: selected.reference,
-        }));
+        return wrap(response, selected.reference, capture.issue(captured.key, issuer));
       }
       if (response.status !== 200) return response;
       if (response.body._tag !== 'Uint8Array' || !response.body.body || response.body.body.byteLength > 8 * 1024 * 1024 ||
           !response.body.contentType?.includes('json')) return held();
       const original: unknown = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(response.body.body));
       if (!object(original)) return held();
-      return wrap(response, selected.reference, capture.issue(captured.key, {
-        nonce: input.nonce, pid: process.pid, integrationId: selected.id, reference: selected.reference,
-      }), original);
-    }))));
+      return wrap(response, selected.reference, capture.issue(captured.key, issuer), original);
+    }))))));
   }
   return app => Effect.flatMap<NativeRequest>(http.HttpServerRequest.HttpServerRequest, request => {
     const privateRead = request.headers['x-agent-teams-selected-source'] !== undefined ||

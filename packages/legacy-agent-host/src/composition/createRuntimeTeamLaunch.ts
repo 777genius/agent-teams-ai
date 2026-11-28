@@ -5,7 +5,8 @@ import { RuntimeOwnerError } from '../runtime/contracts.js';
 import { runtimeDigest } from '../runtime/identity.js';
 import type { MemberEntry, HostedTeam } from './MemberEntry.js';
 import type { RuntimeOwner } from '../runtime/RuntimeOwner.js';
-import { inspectMemberModelReadiness } from './prepareTeamModelReadiness.js';
+import { inspectMemberModelReadiness, readMemberModelReadinessFileKey,
+  settleMemberModelReadinessFileHandoff } from './prepareTeamModelReadiness.js';
 import type { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
 import { restoreNativeRuntimeEntries } from './restoreNativeRuntimeEntries.js';
 import { restoreLiveRosterRuntimeEntries } from './captureLiveRosterMember.js';
@@ -66,8 +67,11 @@ export function createRuntimeTeamLaunch(options: {
           options.assertWriter();
           if (options.isSealed() || !options.isCurrent(entry)) throw new RuntimeOwnerError('hold');
         };
+        const fileKey = readMemberModelReadinessFileKey({ launch, entry,
+          hostIncarnation: options.hostIncarnation, assertCurrent });
         inspectMemberModelReadiness({ ...(options.modelReadiness ? { management: options.modelReadiness } : {}),
           launch, entry, hostIncarnation: options.hostIncarnation, assertCurrent,
+          ...(fileKey ? { fileKey } : {}),
           withAccountRead: captureTeamAccountRead({ entry, principalId: options.principalId, assertCurrent }) });
       },
       captureAuthority(memberId) {
@@ -135,7 +139,19 @@ export function createRuntimeTeamLaunch(options: {
         );
       },
     },
-    onProgress: options.onProgress,
+    onProgress() {
+      try {
+        const original = entries.map(entry => ({ entry, handoff: entry.modelReadinessFileHandoff }));
+        for (const { entry, handoff } of original) settleMemberModelReadinessFileHandoff({
+          launch, entry, handoff, hostIncarnation: options.hostIncarnation,
+          assertCurrent() {
+            options.assertWriter();
+            if (options.isSealed() || !options.isCurrent(entry)) throw new RuntimeOwnerError('hold');
+          },
+        });
+      } catch { /* Cleanup cannot suppress the original progress callback. */ }
+      finally { options.onProgress(); }
+    },
   });
   return launch;
 }

@@ -25,6 +25,8 @@ export interface MemberEntry {
   selection?: import('../team/ports.js').TeamRuntimeSelection;
   liveRosterCapture?: LiveRuntimeCapture;
   initialModelAdmission?: import('./initialRuntimeModelAdmission.js').InitialRuntimeMemberAdmission;
+  /** One original scheduled opening; never serialized or shared with another invocation. */
+  modelReadinessFileHandoff?: import('./prepareTeamModelReadiness.js').MemberModelReadinessFileHandoff;
   team: HostedTeam;
   delivery: DeliveryBinding;
   binding: RuntimeBinding;

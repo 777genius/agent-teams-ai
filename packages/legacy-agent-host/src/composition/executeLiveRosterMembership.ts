@@ -14,7 +14,10 @@ import { runtimeCaptureSourceSchema } from './runtimeCaptureSource.js';
 import { teamModelProbeProfile } from './teamLaunchModelProbe.js';
 import { captureLiveRosterProcessOrigin } from './captureRuntimeProcessOrigin.js';
 import { closeRuntimeMember } from './transitionRuntimeMember.js';
-import { attachMemberModelReadiness, prepareTeamModelReadiness } from './prepareTeamModelReadiness.js';
+import { attachMemberModelReadiness, prepareTeamModelReadiness, assertMemberModelReadinessFileHandoffsAvailable,
+  assertPreparedMemberModelReadiness, installMemberModelReadinessFileKey,
+  settleMemberModelReadinessFileHandoff } from './prepareTeamModelReadiness.js';
+import type { PreparedModelReadinessReference } from './prepareTeamModelReadiness.js';
 import { envelopeSchema } from './teamHostEnvelope.js';
 import { z } from 'zod';
 import type { RuntimeOwner } from '../runtime/RuntimeOwner.js';
@@ -23,7 +26,7 @@ import type { TeamLiveRosterMembership, LiveRosterOriginal, LiveRosterPrivateInp
   LiveRosterResponse, LiveRosterReceipt, LiveRosterPreview } from '../team/liveRosterMembership.js';
 import type { ExpectedLaunchMember } from '../team-launch/contracts.js';
 import type { createLiveRosterLaunch, LiveLaunchIntent } from '../team-launch/liveRosterMembership.js';
-import type { LocalModelReadinessPreparation, ModelReadinessReference } from '../management/commandRecords.js';
+import type { LocalModelReadinessPreparation } from '../management/commandRecords.js';
 import type { HostedTeam, MemberEntry } from './MemberEntry.js';
 import type { TeamHostProfile } from './TeamHost.js';
 import type { RuntimeRecipeSources } from './runtimeSourceContracts.js';
@@ -87,7 +90,7 @@ interface Flight {
   captured?: Captured;
   entry?: MemberEntry;
   probe?: { commandId: string; context: string };
-  reference?: ModelReadinessReference;
+  prepared?: PreparedModelReadinessReference;
   closed: Map<string, Promise<boolean>>;
   readinessCleanup: Map<string, Promise<void>>;
 }
@@ -319,7 +322,7 @@ async function prepareModel(options: LiveRosterExecutionOptions, flight: Flight,
     captured.capture, captured.profile, options.sources);
   // Publish the exact group identity in this first flight before its original ModelProbeOwner call.
   flight.probe = { commandId, context };
-  flight.reference = await prepareTeamModelReadiness({ management, profile: captured.profile,
+  flight.prepared = await prepareTeamModelReadiness({ management, profile: captured.profile,
     commandId, context, cutoff,
     ...(processOrigin ? { processOrigin } : {}),
     scope: { schemaVersion: 1, kind: 'team', teamBindingDigest: runtimeDigest(flight.team.definition.binding),
@@ -358,9 +361,13 @@ async function continueFirst(options: LiveRosterExecutionOptions, flight: Flight
     entry.liveRosterCapture = structuredClone(captured.capture);
     flight.entry = entry;
     if (options.entries.has(runtimeDigest(entry.binding))) return held();
+    assertMemberModelReadinessFileHandoffsAvailable([entry]);
     if (captured.profile.provider === 'opencode') {
-      if (!flight.reference) return held();
-      attachMemberModelReadiness({ launch: flight.retained.launch, entry, reference: flight.reference,
+      if (!flight.prepared || !options.modelReadiness) return held();
+      assertPreparedMemberModelReadiness({ management: options.modelReadiness, profile: captured.profile,
+        prepared: flight.prepared, isCurrent: () => { try { assertFlight(options, flight, true); return true; }
+          catch { return false; } } });
+      attachMemberModelReadiness({ launch: flight.retained.launch, entry, reference: flight.prepared.reference,
         commandId: flight.input.commandId,
         actorDigest: runtimeDigest({ principalId: flight.original.principalId, revision: flight.original.authorityRevision }),
         inputDigest: flight.requestDigest, cutoff: flight.cutoff,
@@ -371,9 +378,22 @@ async function continueFirst(options: LiveRosterExecutionOptions, flight: Flight
     const previous = flight.retained.entries.findIndex(row => row.profile.memberId === entry.profile.memberId);
     if (previous < 0) flight.retained.entries.push(entry); else flight.retained.entries[previous] = entry;
     assertFlight(options, flight, true);
-    flight.openingInvoked = true;
-    const opening = flight.retained.launch.startMember(entry.profile.memberId,
-      () => assertFlight(options, flight, true), flight.input.commandId);
+    const attempt = flight.prepared?.fileKey ? flight.retained.launch.readModelReadiness({
+      binding: entry.binding, configRevision: entry.profile.configRevision,
+      configurationDigest: runtimeDigest(entry.profile) }).attempt : undefined;
+    const handoff = flight.prepared?.fileKey && attempt ? installMemberModelReadinessFileKey({
+      launch: flight.retained.launch, entry, prepared: flight.prepared,
+      expectedAttemptId: attempt.attemptId, hostIncarnation: options.hostIncarnation,
+      assertCurrent: () => assertFlight(options, flight, true) }) : undefined;
+    let opening: ReturnType<typeof flight.retained.launch.startMember>;
+    try {
+      flight.openingInvoked = true;
+      opening = flight.retained.launch.startMember(entry.profile.memberId,
+        () => assertFlight(options, flight, true), flight.input.commandId);
+    } finally {
+      settleMemberModelReadinessFileHandoff({ launch: flight.retained.launch, entry, handoff,
+        hostIncarnation: options.hostIncarnation, assertCurrent: () => assertFlight(options, flight, true) });
+    }
     if (!opening) return held();
     await opening;
     assertFlight(options, flight, true);
@@ -386,6 +406,7 @@ async function continueFirst(options: LiveRosterExecutionOptions, flight: Flight
     const result = flight.owner.complete(flight.original);
     options.onProgress(); return result;
   } catch (error) { return rejectReleased(options, flight, error); }
+  finally { delete flight.prepared; }
 }
 
 async function captureFirst(options: LiveRosterExecutionOptions, flight: Flight): Promise<LiveRosterResponse> {

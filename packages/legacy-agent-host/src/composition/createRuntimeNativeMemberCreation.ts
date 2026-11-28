@@ -1,5 +1,6 @@
-import { attachMemberModelReadiness } from './prepareTeamModelReadiness.js';
-import type { ModelReadinessReference } from '../management/commandRecords.js';
+import { attachMemberModelReadiness, assertMemberModelReadinessFileHandoffsAvailable,
+  installMemberModelReadinessFileKey, settleMemberModelReadinessFileHandoff } from './prepareTeamModelReadiness.js';
+import type { PreparedModelReadinessReference } from './prepareTeamModelReadiness.js';
 import { createHash } from 'node:crypto';
 import { TeamOwnerStore } from '../adapters/team/TeamOwnerStore.js';
 import { TeamOwnerError } from '../team/contracts.js';
@@ -36,13 +37,17 @@ export interface RetainedNativeLaunch {
   launch: TeamLaunchOwner;
   entries: MemberEntry[];
 }
+export interface PreparedNativeMemberModel {
+  readonly prepared: PreparedModelReadinessReference;
+  assertCurrent(): void;
+}
 export type NativeMemberModelPreflight = (options: {
   profile: RuntimeMemberProfile;
   source: NativeMemberCreationAuthority;
   input: NativeMemberCreationInput;
   teamBindingDigest: string;
   assertCurrent(): void;
-}) => Promise<ModelReadinessReference | void>;
+}) => Promise<PreparedNativeMemberModel | void>;
 
 /** Composition callback only; the host's existing management owner retains all one-off probe resources. */
 export function createRuntimeNativeMemberCreation(options: {
@@ -184,11 +189,14 @@ export function createRuntimeNativeMemberCreation(options: {
             teamBindingDigest: runtimeDigest(team.definition.binding),
           });
           guard();
+          const prepared = readiness ? readiness.prepared : undefined;
+          assertMemberModelReadinessFileHandoffsAvailable([captured.entry!]);
           if (captured.profile.provider === 'opencode') {
             if (!readiness) throw new TeamOwnerError('hold');
-            attachMemberModelReadiness({ launch: retained.launch, entry: captured.entry!, reference: readiness,
+            readiness.assertCurrent();
+            attachMemberModelReadiness({ launch: retained.launch, entry: captured.entry!, reference: readiness.prepared.reference,
               commandId: captured.input.commandId, actorDigest: captured.source.fingerprint,
-              inputDigest: runtimeDigest(captured.input), cutoff: readiness.expiresAt,
+              inputDigest: runtimeDigest(captured.input), cutoff: readiness.prepared.reference.expiresAt,
               authorized: operation => owner.withConfigured(captured.source, captured.input, operation) });
           }
           const key = runtimeDigest(captured.entry!.binding);
@@ -196,13 +204,21 @@ export function createRuntimeNativeMemberCreation(options: {
           // The launch callbacks close over this SAME array. Existing peer entries never change.
           options.entries.set(key, captured.entry!);
           retained.entries.push(captured.entry!);
-          await options.trackOpening(
-            retained.launch.startMember(
-              captured.entry!.profile.memberId,
-              guard,
-              captured.input.commandId
-            ) ?? Promise.resolve()
-          );
+          const entry = captured.entry!;
+          const attempt = prepared?.fileKey ? retained.launch.readModelReadiness({
+            binding: entry.binding, configRevision: entry.profile.configRevision,
+            configurationDigest: runtimeDigest(entry.profile) }).attempt : undefined;
+          const handoff = prepared?.fileKey && attempt
+            ? installMemberModelReadinessFileKey({ launch: retained.launch, entry, prepared,
+              expectedAttemptId: attempt.attemptId, hostIncarnation: attempt.hostIncarnation,
+              assertCurrent: guard }) : undefined;
+          try {
+            await options.trackOpening(retained.launch.startMember(entry.profile.memberId,
+              guard, captured.input.commandId) ?? Promise.resolve());
+          } finally {
+            if (attempt) settleMemberModelReadinessFileHandoff({ launch: retained.launch, entry, handoff,
+              hostIncarnation: attempt.hostIncarnation, assertCurrent: guard });
+          }
           guard();
           const observed = options.runtime.readCapturedSession(captured.entry!.binding);
           if (!observed.attached || observed.record?.phase !== 'allocated')

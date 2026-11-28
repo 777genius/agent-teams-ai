@@ -64,7 +64,8 @@ export function captureOpenCodeV2SessionCredential(
     if (selectedFile && !source) return held();
     const acceptProof = (proof: Parameters<NativeFileBinding['acceptProof']>[0]): undefined => {
       if (!source) return held();
-      fileProof = source.acceptProof(proof);
+      fileProof = source.acceptProof(proof, { method: restored ? 'GET' : 'POST', deadline: config.deadline,
+        ...(restored?.credential?.scopeDigest === undefined ? {} : { originalScopeDigest: restored.credential.scopeDigest }) });
       return undefined;
     };
     const key = createOpenCodeV2CredentialClient({ ...config, version: '2.1.4', integrationId });

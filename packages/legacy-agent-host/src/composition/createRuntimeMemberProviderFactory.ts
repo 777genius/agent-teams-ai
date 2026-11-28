@@ -41,7 +41,10 @@ import type { MemberEntry } from './MemberEntry.js';
 import type { ProcessCustody } from './processCustody.js';
 import type { HostWindowsLaunch } from '../owned-process/HostWindowsLaunch.js';
 import type { RuntimeSourceProcessOrigin } from './runtimeSourceProcessOrigin.js';
-import { consumeMemberModelReadiness } from './prepareTeamModelReadiness.js';
+import {
+  consumeMemberModelReadiness,
+  takeMemberModelReadinessFileKey,
+} from './prepareTeamModelReadiness.js';
 import type { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
 import type { TeamLaunchOwner } from '../team-launch/TeamLaunchOwner.js';
 import type { CapturedProviderCurrent } from '../team/TeamOwner.js';
@@ -88,7 +91,10 @@ export function createRuntimeMemberProviderFactory(options: {
   assertWriter(): void;
   beforeTeamAuthority?(entry: MemberEntry): void;
   assertCurrent(entry: MemberEntry): void;
-  assertProviderAuthority?(entry: MemberEntry, onCurrent?: CapturedProviderCurrent): 'current' | 'roster-not-applicable';
+  assertProviderAuthority?(
+    entry: MemberEntry,
+    onCurrent?: CapturedProviderCurrent
+  ): 'current' | 'roster-not-applicable';
   captureInteractions(entry: MemberEntry): void;
   readRuntime: RuntimeOwner['readCapturedSession'];
   readCheckpoint: RuntimeOwner['readCheckpoint'];
@@ -103,7 +109,9 @@ export function createRuntimeMemberProviderFactory(options: {
   return {
     open: async (request, assertAllocation) => {
       const observeOpen = createRuntimeOpenDiagnostic({
-        profileId: options.profileId, configuration: request, source: 'factory',
+        profileId: options.profileId,
+        configuration: request,
+        source: 'factory',
       });
       let openPhase: RuntimeOpenPhase = 'selection';
       try {
@@ -123,9 +131,12 @@ export function createRuntimeMemberProviderFactory(options: {
         // A selected V2 member must never fall through to the legacy V1 provider.
         // The owned embedded engine is selected by trusted composition only.
         // Other V2 execution surfaces still require an explicitly injected owner.
-        if (entry.profile.provider === 'opencode' &&
-            entry.profile.nativeGeneration === 'v2' && !options.createProvider &&
-            !(entry.profile.protocolRevision === '2.1.4' && entry.profile.embedded))
+        if (
+          entry.profile.provider === 'opencode' &&
+          entry.profile.nativeGeneration === 'v2' &&
+          !options.createProvider &&
+          !(entry.profile.protocolRevision === '2.1.4' && entry.profile.embedded)
+        )
           throw new RuntimeOwnerError('hold');
         openPhase = 'authority';
         const authority = captureMemberProviderAuthority({
@@ -136,13 +147,29 @@ export function createRuntimeMemberProviderFactory(options: {
           assertAllocation,
           assertWriter: options.assertWriter,
           ...(options.assertProviderAuthority
-            ? { assertProviderAuthority: (onCurrent?: CapturedProviderCurrent) => onCurrent
-              ? options.assertProviderAuthority!(entry, onCurrent) : options.assertProviderAuthority!(entry) } : {}),
+            ? {
+                assertProviderAuthority: (onCurrent?: CapturedProviderCurrent) =>
+                  onCurrent
+                    ? options.assertProviderAuthority!(entry, onCurrent)
+                    : options.assertProviderAuthority!(entry),
+              }
+            : {}),
           ...(beforeTeamAuthority ? { beforeTeamAuthority: () => beforeTeamAuthority(entry) } : {}),
           assertCurrent: () => options.assertCurrent(entry),
           readRuntime: () => options.readRuntime(entry.binding),
         });
         authority.assertCurrent();
+        const readinessLaunch =
+          entry.profile.provider === 'opencode' ? options.readinessLaunch?.(entry) : undefined;
+        const readinessFileKey = readinessLaunch
+          ? takeMemberModelReadinessFileKey({
+              launch: readinessLaunch,
+              entry,
+              config,
+              hostIncarnation: options.hostIncarnation,
+              assertCurrent: authority.assertCurrent,
+            })
+          : undefined;
         openPhase = 'worktree';
         await assertRuntimeWorktree(entry);
         openPhase = 'authority';
@@ -151,25 +178,37 @@ export function createRuntimeMemberProviderFactory(options: {
         openPhase = 'model-readiness';
         const readiness = (() => {
           if (entry.profile.provider !== 'opencode') return undefined;
-          const launch = options.readinessLaunch?.(entry);
+          const launch = readinessLaunch;
           if (!launch) throw new RuntimeOwnerError('hold');
-          const team = entry.team, owner = team.owner;
+          const team = entry.team,
+            owner = team.owner;
           const assertCaptured = () => {
-            if (entry.team !== team || team.owner !== owner) throw new RuntimeOwnerError('forbidden');
+            if (entry.team !== team || team.owner !== owner)
+              throw new RuntimeOwnerError('forbidden');
           };
           const authorityTiming: ModelReadinessAuthorityTiming = {};
           const defaultAllocation = readDefaultFreshAllocationContinuation(assertAllocation, entry);
           const assertCurrent = () => {
             assertCaptured();
-            let active = true, invoked = false;
+            let active = true,
+              invoked = false;
             let allocationMs: number | undefined;
             const endProvider = beginModelReadinessAuthorityTiming(authorityTiming, 'provider');
-            const onCurrent: CapturedProviderCurrent | undefined = defaultAllocation ? (owner, binding) => {
-              if (!active || invoked) throw new RuntimeOwnerError('forbidden');
-              invoked = true;
-              const endAllocation = beginModelReadinessAuthorityTiming(authorityTiming, 'allocation');
-              try { defaultAllocation(owner, binding); } finally { allocationMs = endAllocation?.(); }
-            } : undefined;
+            const onCurrent: CapturedProviderCurrent | undefined = defaultAllocation
+              ? (owner, binding) => {
+                  if (!active || invoked) throw new RuntimeOwnerError('forbidden');
+                  invoked = true;
+                  const endAllocation = beginModelReadinessAuthorityTiming(
+                    authorityTiming,
+                    'allocation'
+                  );
+                  try {
+                    defaultAllocation(owner, binding);
+                  } finally {
+                    allocationMs = endAllocation?.();
+                  }
+                }
+              : undefined;
             try {
               if (onCurrent) authority.assertCurrent(onCurrent);
               else authority.assertCurrent();
@@ -180,32 +219,50 @@ export function createRuntimeMemberProviderFactory(options: {
               else endProvider?.();
             }
             if (!invoked) {
-              const endAllocation = beginModelReadinessAuthorityTiming(authorityTiming, 'allocation');
-              try { assertAllocation(); } finally { endAllocation?.(); }
+              const endAllocation = beginModelReadinessAuthorityTiming(
+                authorityTiming,
+                'allocation'
+              );
+              try {
+                assertAllocation();
+              } finally {
+                endAllocation?.();
+              }
             }
             assertCaptured();
           };
           // Generic allocation may read a separate Launch store; only the nominal default guard joins Team.
-          return consumeMemberModelReadiness({ ...(options.modelReadiness ? { management: options.modelReadiness } : {}),
-            launch, entry, hostIncarnation: options.hostIncarnation, assertCurrent, authorityTiming });
+          return consumeMemberModelReadiness({
+            ...(options.modelReadiness ? { management: options.modelReadiness } : {}),
+            launch,
+            entry,
+            hostIncarnation: options.hostIncarnation,
+            assertCurrent,
+            authorityTiming,
+            ...(readinessFileKey ? { fileKey: readinessFileKey } : {}),
+          });
         })();
         const setupCurrent = () => {
           try {
             // canAllocate closes its authority check immediately before this synchronous read.
             const state = options.readRuntime(entry.binding);
             if (state.record?.phase === 'opening' && !state.attached) {
-              try { readiness?.assertCurrent(); }
-              catch (error) {
+              try {
+                readiness?.assertCurrent();
+              } catch (error) {
                 observeOpen('model-readiness', error);
                 return false;
               }
             }
             return true;
-          } catch { return false; }
+          } catch {
+            return false;
+          }
         };
         const canAllocate = () => authority.canAllocate() && setupCurrent();
         openPhase = 'bindings';
-        entry.endpointExpiresAtMs = Date.now() + (entry.profile.mcpLifetimeMs ?? 24 * 60 * 60 * 1000);
+        entry.endpointExpiresAtMs =
+          Date.now() + (entry.profile.mcpLifetimeMs ?? 24 * 60 * 60 * 1000);
         // Input capture always belongs to this immutable target, never the lead that created it.
         const binding = structuredClone(entry.binding),
           delivery = structuredClone(entry.delivery),
@@ -233,7 +290,8 @@ export function createRuntimeMemberProviderFactory(options: {
           workSync = options.workSync?.(entry, captureSource, {
             principalId,
             readRuntime: () => options.readRuntime(binding),
-            captureTeam: (raw) => owner.captureNativeMcpAuthority(principalId, delivery, raw, false),
+            captureTeam: (raw) =>
+              owner.captureNativeMcpAuthority(principalId, delivery, raw, false),
             assertCurrent: authority.assertCurrent,
             settleDeliveries: async () => {
               authority.assertCurrent();
@@ -254,9 +312,12 @@ export function createRuntimeMemberProviderFactory(options: {
           process: createMemberProcessMcpPort({
             entry,
             ...(options.processCustody ? { native: options.processCustody } : {}),
-            ...((entry.profile.provider !== 'opencode' || entry.profile.nativeGeneration !== 'v2') &&
-                entry.profile.windowsBroker?.capability === 'service-scopes-v1' && options.retainedWindowsLaunch
-              ? { windows: options.retainedWindowsLaunch.registeredProcesses } : {}),
+            ...((entry.profile.provider !== 'opencode' ||
+              entry.profile.nativeGeneration !== 'v2') &&
+            entry.profile.windowsBroker?.capability === 'service-scopes-v1' &&
+            options.retainedWindowsLaunch
+              ? { windows: options.retainedWindowsLaunch.registeredProcesses }
+              : {}),
             assertCurrent: authority.assertCurrent,
             assertAllocatedCurrent: authority.assertAllocatedCurrent,
             captureSource,
@@ -331,9 +392,11 @@ export function createRuntimeMemberProviderFactory(options: {
             endpoint,
             connection,
             ...(options.processCustody ? { processCustody: options.processCustody } : {}),
-            ...((entry.profile.provider !== 'opencode' || entry.profile.nativeGeneration !== 'v2') &&
-                options.retainedWindowsLaunch
-              ? { retainedWindowsLaunch: options.retainedWindowsLaunch } : {}),
+            ...((entry.profile.provider !== 'opencode' ||
+              entry.profile.nativeGeneration !== 'v2') &&
+            options.retainedWindowsLaunch
+              ? { retainedWindowsLaunch: options.retainedWindowsLaunch }
+              : {}),
             instructions: memberInitialInstructions(
               selected.name,
               selected.role,
@@ -347,23 +410,41 @@ export function createRuntimeMemberProviderFactory(options: {
             isCurrent: authority.isCurrent,
             canAllocate: readiness ? canAllocate : authority.canAllocate,
             ...(readiness?.kind === 'preparation' && readiness.assertReadinessCredential
-              ? { assertReadinessCredential: readiness.assertReadinessCredential } : {}),
+              ? { assertReadinessCredential: readiness.assertReadinessCredential }
+              : {}),
+            ...(readinessFileKey ? { readinessFileKey: readinessFileKey.proof } : {}),
             canCaptureRegisteredProcess: authority.isCurrent,
             readCheckpoint: options.readCheckpoint,
-            ...(observeProcessOutput && entry.profile.provider !== 'opencode' ? {
-              observeProcessOutput: (observation) => {
-                try {
-                  assertProcessSource();
-                  observeProcessOutput(binding, capturedConfig, observation, assertProcessSource);
-                } catch { /* Diagnostics cannot change the original process outcome. */ }
-              },
-            } : {}),
-            ...(entry.profile.provider === 'claude' && request.checkpointRef !== undefined ? {
-              readCheckpointSource: createClaudeCheckpointSource({
-                entry, request, profileId: options.profileId, hostIncarnation: options.hostIncarnation,
-                readRuntime: options.readRuntime, assertCurrent: authority.assertCurrent, assertAllocation,
-              }),
-            } : {}),
+            ...(observeProcessOutput && entry.profile.provider !== 'opencode'
+              ? {
+                  observeProcessOutput: (observation) => {
+                    try {
+                      assertProcessSource();
+                      observeProcessOutput(
+                        binding,
+                        capturedConfig,
+                        observation,
+                        assertProcessSource
+                      );
+                    } catch {
+                      /* Diagnostics cannot change the original process outcome. */
+                    }
+                  },
+                }
+              : {}),
+            ...(entry.profile.provider === 'claude' && request.checkpointRef !== undefined
+              ? {
+                  readCheckpointSource: createClaudeCheckpointSource({
+                    entry,
+                    request,
+                    profileId: options.profileId,
+                    hostIncarnation: options.hostIncarnation,
+                    readRuntime: options.readRuntime,
+                    assertCurrent: authority.assertCurrent,
+                    assertAllocation,
+                  }),
+                }
+              : {}),
             onProgress: () => {
               // Native SDK push may precede the Runtime result's durable settlement.
               // Recheck once through this existing feed callback, without polling.
