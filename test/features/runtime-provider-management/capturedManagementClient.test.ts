@@ -14,6 +14,7 @@ import type {
   CapturedProviderManagement,
   ProviderManagementOperation,
 } from '../../../src/features/agent-backend/main';
+import type { ProviderOAuthIntent } from '../../../src/features/runtime-provider-management/main/infrastructure/FileProviderOAuthIntentStore';
 import type { JsonValue } from '@agent-teams/legacy-agent-host/contracts';
 
 const binding = { profileId: 'TEST-original', configRevision: 'TEST-v1' };
@@ -965,5 +966,147 @@ it('contains throwing diagnostic sinks and observer creation without changing th
   } finally {
     removeThrowingSink?.();
     observation.restore();
+  }
+});
+
+it.each(['capture', 'catalog'] as const)(
+  'cancels the original OAuth caller during %s before any journal or native start',
+  async stage => {
+    let entered = false;
+    const released = Promise.withResolvers<void>();
+    const intents = new Map<string, ProviderOAuthIntent>();
+    const calls: ProviderManagementOperation[] = [];
+    let phase: 'waiting-for-browser' | 'completed' | 'cancelled' = 'waiting-for-browser';
+    let sequence = 1;
+    const expiresAt = Date.now() + 60_000;
+    const target: CapturedProviderManagement = {
+      ...binding, targetId: 'a'.repeat(64), isCurrent: () => true,
+      async request(operation, payload): Promise<JsonValue> {
+        calls.push(operation);
+        if (operation === 'catalog') {
+          if (stage === 'catalog') { entered = true; await released.promise; }
+          return { ok: true, value: { ...binding, runtime: { generation: 'v1' },
+            providers: [{ providerId: 'TEST-provider', displayName: 'TEST provider',
+              source: 'api', connected: phase === 'completed', configured: false,
+              defaultModelId: null, modelCount: 0, models: [], authMethods: ['oauth'],
+              authOptions: [{ methodIndex: 0, type: 'oauth', label: 'TEST browser',
+                supported: true, prompts: [] }] }] } };
+        }
+        if (operation === 'oauth.authorization') return { ok: true, value: {
+          authorizationUrl: 'https://TEST.invalid/oauth', instructions: 'TEST sign in',
+        } };
+        if (operation === 'oauth.complete') { phase = 'completed'; sequence++; }
+        else if (operation === 'oauth.cancel') { phase = 'cancelled'; sequence++; }
+        else if (operation !== 'oauth.start' && operation !== 'oauth.read')
+          throw new Error('Unexpected TEST OAuth operation');
+        return { ok: true, value: { ...binding, operationId: String(payload.operationId),
+          providerId: 'TEST-provider', methodIndex: 0, phase,
+          completionMethod: 'auto', sequence, expiresAt } };
+      },
+    };
+    const capture = vi.fn(async () => {
+      if (stage === 'capture') { entered = true; await released.promise; }
+      return target;
+    });
+    const restore = vi.fn(async (targetId: string) => {
+      expect(targetId).toBe(target.targetId); return target;
+    });
+    const openExternal = vi.fn(async () => {});
+    const port = createCapturedRuntimeProviderManagementClient({ capture, oauth: {
+      intents: {
+        read: async operationId => intents.get(operationId) ?? null,
+        create: async intent => {
+          if (intents.has(intent.operationId)) return false;
+          intents.set(intent.operationId, structuredClone(intent)); return true;
+        },
+      },
+      restore, openExternal,
+    } });
+    const input = { runtimeId: 'opencode' as const, providerId: 'TEST-provider',
+      method: 'oauth' as const, authMethodIndex: 0, authOptionId: 'oauth:0',
+      oauthOperationId: 'TEST-pending-caller-operation', projectPath: '/TEST/project' };
+    const pending = port.connectProvider(input);
+    try {
+      await vi.waitFor(() => expect(entered).toBe(true), { timeout: 2_000 });
+      const cancelled = await port.cancelOAuth({ operationId: input.oauthOperationId });
+      released.resolve();
+      const outcome = await pending;
+      expect(cancelled).toEqual({ ok: true });
+      expect(outcome.error).toBeDefined();
+      expect(intents.size).toBe(0);
+      expect(calls.filter(operation => operation.startsWith('oauth.'))).toEqual([]);
+      expect(calls.filter(operation => operation === 'catalog'))
+        .toHaveLength(stage === 'catalog' ? 1 : 0);
+      expect(capture).toHaveBeenCalledTimes(1);
+      expect(restore).not.toHaveBeenCalled();
+      expect(openExternal).not.toHaveBeenCalled();
+    } finally {
+      released.resolve();
+      await pending;
+    }
+  }
+);
+
+it('captures the original OAuth caller context before a blocked Main journal read', async () => {
+  let foreground = 'a';
+  let entered = false;
+    const released = Promise.withResolvers<void>();
+  const captures: string[] = [], calls: { target: string; operation: ProviderManagementOperation }[] = [];
+  const intents = new Map<string, ProviderOAuthIntent>();
+  let firstRead = true;
+  const create = vi.fn(async (intent: ProviderOAuthIntent) => {
+    intents.set(intent.operationId, structuredClone(intent)); return true;
+  });
+  const openExternal = vi.fn(async () => {});
+  const port = createCapturedRuntimeProviderManagementClient({
+    capture: async () => {
+      const original = foreground;
+      captures.push(original);
+      return { ...binding, targetId: original.repeat(64), isCurrent: () => foreground === original,
+        async request(operation, payload): Promise<JsonValue> {
+          calls.push({ target: original, operation });
+          if (operation === 'catalog') return { ok: true, value: { ...binding,
+            providers: [{ providerId: 'TEST-provider', displayName: 'TEST provider',
+              source: 'api', connected: false, configured: false, defaultModelId: null,
+              modelCount: 0, models: [], authMethods: ['oauth'],
+              authOptions: [{ methodIndex: 0, type: 'oauth', label: 'TEST browser',
+                supported: true, prompts: [] }] }] } };
+          if (operation !== 'oauth.start') throw new Error('Unexpected TEST native effect');
+          return { ok: true, value: { ...binding, operationId: String(payload.operationId),
+            providerId: 'TEST-provider', methodIndex: 0, phase: 'completed',
+            completionMethod: 'auto', sequence: 1, expiresAt: Date.now() + 60_000 } };
+        },
+      };
+    },
+    oauth: {
+      intents: {
+        async read(operationId) {
+          if (firstRead) { firstRead = false; entered = true; await released.promise; }
+          return intents.get(operationId) ?? null;
+        },
+        create,
+      },
+      restore: async () => { throw new Error('No original intent may be restored'); },
+      openExternal,
+    },
+  });
+  const pending = port.connectProvider({ runtimeId: 'opencode', providerId: 'TEST-provider',
+    method: 'oauth', authMethodIndex: 0, authOptionId: 'oauth:0',
+    oauthOperationId: 'TEST-original-context-before-journal', projectPath: '/TEST/project' });
+  try {
+    await vi.waitFor(() => expect(entered).toBe(true), { timeout: 2_000 });
+    foreground = 'b';
+    released.resolve();
+    const result = await pending;
+    expect(captures).toEqual(['a']);
+    expect(result.error).toBeDefined();
+    expect(create).not.toHaveBeenCalled();
+    expect(intents.size).toBe(0);
+    expect(calls.filter(call => call.target === 'b' || call.operation.startsWith('oauth.')))
+      .toEqual([]);
+    expect(openExternal).not.toHaveBeenCalled();
+  } finally {
+    released.resolve();
+    await pending;
   }
 });

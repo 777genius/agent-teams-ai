@@ -3,6 +3,8 @@ import { z } from 'zod';
 
 import { canonicalManagementValue } from './identity.js';
 
+export { canonicalManagementValue } from './identity.js';
+
 export const secretFingerprintKdfSchema = z.object({
   version: z.literal(1),
   salt: z.string().regex(/^[a-f0-9]{32}$/),

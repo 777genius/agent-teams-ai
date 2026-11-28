@@ -432,24 +432,33 @@ export function createCapturedRuntimeProviderManagementClient(
         });
       if (captured.method !== 'oauth' || !oauth || !captured.oauthOperationId) return unsupported();
       try {
-        const target = await capture(captured);
-        const provider = selected(await catalog(target, captured.providerId), captured.providerId);
-        const option = provider.authOptions?.find(
-          (option) => option.methodIndex === captured.authMethodIndex && option.type === 'oauth'
-        );
-        if (
-          !option?.supported ||
-          (captured.authOptionId != null && captured.authOptionId !== `oauth:${option.methodIndex}`)
-        )
-          return unsupported();
-        await oauth.connect(target, {
-          operationId: captured.oauthOperationId,
-          providerId: captured.providerId,
-          methodIndex: option.methodIndex,
-          authOptionId: captured.authOptionId ?? `oauth:${option.methodIndex}`,
-          displayName: provider.displayName,
-          ...(captured.metadata ? { fields: captured.metadata } : {}),
+        const operationId = captured.oauthOperationId;
+        const target = await oauth.connectPrepared(captured, async (assertCurrent) => {
+          assertCurrent();
+          const original = await capture(captured);
+          assertCurrent();
+          const catalogValue = await catalog(original, captured.providerId);
+          assertCurrent();
+          const provider = selected(catalogValue, captured.providerId);
+          const option = provider.authOptions?.find(
+            (option) => option.methodIndex === captured.authMethodIndex && option.type === 'oauth'
+          );
+          if (!option?.supported ||
+              (captured.authOptionId != null && captured.authOptionId !== `oauth:${option.methodIndex}`))
+            return null;
+          return {
+            target: original,
+            input: {
+              operationId,
+              providerId: captured.providerId,
+              methodIndex: option.methodIndex,
+              authOptionId: captured.authOptionId ?? `oauth:${option.methodIndex}`,
+              displayName: provider.displayName,
+              ...(captured.metadata ? { fields: captured.metadata } : {}),
+            },
+          };
         });
+        if (!target) return unsupported();
         return {
           schemaVersion: 1,
           runtimeId: 'opencode',

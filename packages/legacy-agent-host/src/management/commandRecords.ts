@@ -47,6 +47,7 @@ export const storedOAuthCommandSchema = z
   .object({
     ...common,
     kind: z.literal('oauth'),
+    fingerprintKdf: secretFingerprintKdfSchema.optional(),
     methodIndex: z.number().int().min(0).max(10000),
     phase: z.enum([
       'authorizing',

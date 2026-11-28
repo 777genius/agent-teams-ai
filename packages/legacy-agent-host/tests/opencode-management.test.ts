@@ -99,7 +99,7 @@ test('derived V1 owners finish original reads and preserve pending OAuth before 
     assert.ok(closed.has(runs[0]!));
     assert.notEqual(runs[0], runs[1]);
 
-    owner.oauth.start({ ...a, operationId: 'TEST-original-code', providerId: 'TEST-oauth', methodIndex: 0 });
+    await owner.oauth.start({ ...a, operationId: 'TEST-original-code', providerId: 'TEST-oauth', methodIndex: 0 });
     await waitPhase('TEST-original-code', 'waiting-for-code');
     const original = runs.at(-1)!, count = runs.length;
     await assert.rejects(owner.catalog(b), /busy/, 'the occupied old namespace is protected even when B has another auth root');
@@ -113,7 +113,7 @@ test('derived V1 owners finish original reads and preserve pending OAuth before 
     await owner.catalog(b);
     assert.ok(closed.has(original));
 
-    owner.oauth.start({ ...a, operationId: 'TEST-cancel-code', providerId: 'TEST-oauth', methodIndex: 0 });
+    await owner.oauth.start({ ...a, operationId: 'TEST-cancel-code', providerId: 'TEST-oauth', methodIndex: 0 });
     await waitPhase('TEST-cancel-code', 'waiting-for-code');
     const cancelled = runs.at(-1)!;
     gate = Promise.withResolvers<void>(); entered = Promise.withResolvers<void>();

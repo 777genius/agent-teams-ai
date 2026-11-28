@@ -1,5 +1,7 @@
 // @vitest-environment node
-import { mkdtemp, readdir, readFile } from 'node:fs/promises';
+import crypto, { createHash, scryptSync } from 'node:crypto';
+import { mkdtemp, readdir, readFile, rm, unlink, writeFile } from 'node:fs/promises';
+import { syncBuiltinESMExports } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -18,6 +20,7 @@ import type {
   ProviderManagementOperation,
 } from '../../../src/features/agent-backend/main';
 import type { RuntimeProviderOAuthProgressDto } from '../../../src/features/runtime-provider-management/contracts';
+import type { ProviderOAuthIntent, ProviderOAuthIntentStore } from '../../../src/features/runtime-provider-management/main/infrastructure/FileProviderOAuthIntentStore';
 import type { JsonValue } from '@agent-teams/legacy-agent-host/contracts';
 import type { ProviderOAuthSnapshot } from '@agent-teams/legacy-agent-host/management/contracts';
 
@@ -476,6 +479,455 @@ it.each(['before-read', 'after-read'] as const)(
       ]);
     } finally {
       clock.mockRestore();
+    }
+  }
+);
+
+function originalStartSalt(value: unknown): string {
+  if (!value || typeof value !== 'object' || Array.isArray(value) ||
+      !('fingerprintKdf' in value)) throw new Error('Expected private start descriptor');
+  const descriptor = value.fingerprintKdf;
+  if (!descriptor || typeof descriptor !== 'object' || Array.isArray(descriptor) ||
+      !('version' in descriptor) || descriptor.version !== 1 ||
+      !('salt' in descriptor) || typeof descriptor.salt !== 'string')
+    throw new Error('Invalid private start descriptor');
+  expect(Object.keys(descriptor).sort()).toEqual(['salt', 'version']);
+  expect(descriptor.salt).toMatch(/^[a-f0-9]{32}$/);
+  return descriptor.salt;
+}
+
+it.each(['one-character', 'empty'] as const)(
+  'stores a versioned private OAuth start fingerprint for %s fields and replays its original',
+  async kind => {
+    const f = await fixture('auto');
+    const fields: Record<string, string> = kind === 'empty' ? {} : { client_secret: '!' };
+    const input = { ...f.input, fields }, original = structuredClone(input);
+    try {
+      const pending = f.oauth.connect(f.target, input);
+      if (kind === 'one-character') fields.client_secret = 'TEST-mutated-after-call';
+      await pending;
+      const saved = await f.store.read(input.operationId);
+      if (!saved) throw new Error('Expected original Main intent');
+      const salt = originalStartSalt(saved);
+      expect(Object.isFrozen(saved)).toBe(true);
+      expect(Object.isFrozen('fingerprintKdf' in saved ? saved.fingerprintKdf : null)).toBe(true);
+      const preimage = JSON.stringify([f.target.targetId, original.providerId,
+        original.methodIndex, original.authOptionId,
+        Object.entries(original.fields).sort(([left], [right]) => left.localeCompare(right))]);
+      const legacy = createHash('sha256').update(preimage).digest('hex');
+      expect(saved.fingerprint).toBe(scryptSync(preimage, Buffer.from(salt, 'hex'), 32,
+        { N: 32768, r: 8, p: 3, maxmem: 64 * 1024 * 1024 }).toString('hex'));
+      expect(saved.fingerprint).not.toBe(legacy);
+      const path = join(f.directory, (await readdir(f.directory))[0]!);
+      const bytes = await readFile(path, 'utf8');
+      expect(bytes).not.toContain(legacy);
+      expect(bytes).not.toContain('"client_secret"');
+      expect(bytes).not.toContain('"!"');
+      expect(bytes).not.toContain('TEST-mutated-after-call');
+      expect(f.calls.find(call => call.operation === 'oauth.start')?.payload.fields)
+        .toEqual(original.fields);
+      f.stale();
+      const clock = vi.spyOn(Date, 'now').mockReturnValue(f.expiresAt + 1);
+      try { await new CapturedProviderOAuth(f.deps).connect(f.target, original); }
+      finally { clock.mockRestore(); }
+      expect(await readFile(path, 'utf8')).toBe(bytes);
+      expect(f.calls.filter(call => call.operation === 'oauth.start')).toHaveLength(1);
+      expect(f.calls.filter(call => call.operation === 'oauth.complete')).toHaveLength(1);
+      expect(f.openExternal).toHaveBeenCalledTimes(1);
+    } finally { await rm(f.directory, { recursive: true, force: true }); }
+  }
+);
+
+it('retains the exact markerless Main start vector on cold completed replay after context and expiry drift', async () => {
+  const f = await fixture('auto');
+  const preimage = JSON.stringify(['a'.repeat(64), 'TEST-provider', 2, 'oauth:2',
+    [['plan', 'TEST-private-field']]]);
+  const legacy = { schemaVersion: 1 as const, operationId: f.input.operationId,
+    targetId: f.target.targetId, providerId: f.input.providerId, methodIndex: 2,
+    authOptionId: 'oauth:2', displayName: f.input.displayName,
+    fingerprint: createHash('sha256').update(preimage).digest('hex') };
+  try {
+    expect(await f.store.create(legacy)).toBe(true);
+    const path = join(f.directory, (await readdir(f.directory))[0]!);
+    const bytes = await readFile(path, 'utf8');
+    f.target.request = async (operation, payload) => {
+      f.calls.push({ operation, payload });
+      expect(operation).toBe('oauth.read');
+      return { ok: true, value: { operationId: f.input.operationId,
+        profileId: f.target.profileId, configRevision: f.target.configRevision,
+        providerId: f.input.providerId, methodIndex: 2, phase: 'completed',
+        completionMethod: 'auto', sequence: 17, expiresAt: f.expiresAt } };
+    };
+    f.stale();
+    const current = vi.spyOn(f.target, 'isCurrent');
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(f.expiresAt + 1);
+    try {
+      await new CapturedProviderOAuth(f.deps).connect(f.target, f.input);
+      expect(current).not.toHaveBeenCalled();
+    } finally { current.mockRestore(); clock.mockRestore(); }
+    expect(await readFile(path, 'utf8')).toBe(bytes);
+    expect(await f.store.read(f.input.operationId)).toEqual(legacy);
+    expect(f.calls.map(call => call.operation)).toEqual(['oauth.read']);
+    expect(f.openExternal).not.toHaveBeenCalled();
+  } finally { await rm(f.directory, { recursive: true, force: true }); }
+});
+
+it.each([false, true])(
+  'reconciles the first atomic Main intent descriptor across two owners: changed fields=%s',
+  async changed => {
+    const f = await fixture('auto');
+    const originalRead = Promise.withResolvers<void>(), bothCreates = Promise.withResolvers<void>();
+    const nativeCompleted = Promise.withResolvers<void>();
+    let reads = 0;
+    const candidates: ProviderOAuthIntent[] = [];
+    const request = f.target.request.bind(f.target);
+    f.target.request = async (operation, payload) => {
+      const response = await request(operation, payload);
+      if (operation === 'oauth.complete') nativeCompleted.resolve();
+      return response;
+    };
+    const intents: ProviderOAuthIntentStore = {
+      async read(operationId) {
+        const saved = await f.store.read(operationId);
+        if (reads++ < 2) {
+          if (reads === 2) originalRead.resolve();
+          await originalRead.promise;
+        }
+        return saved;
+      },
+      async create(intent) {
+        candidates.push(structuredClone(intent));
+        if (candidates.length === 2) bothCreates.resolve();
+        await bothCreates.promise;
+        const created = await f.store.create(intent);
+        // The losing reader observes a completed original, not an in-progress native reply.
+        if (!created) await nativeCompleted.promise;
+        return created;
+      },
+    };
+    const inputs = [structuredClone(f.input), { ...f.input,
+      fields: changed ? { plan: 'TEST-different-field' } : { ...f.input.fields } }];
+    const pending = inputs.map(input =>
+      new CapturedProviderOAuth({ ...f.deps, intents }).connect(f.target, input));
+    const settled = Promise.allSettled(pending);
+    try {
+      await vi.waitFor(() => expect(candidates).toHaveLength(2), { timeout: 2_000 });
+      const outcomes = await settled;
+      expect(outcomes.filter(result => result.status === 'fulfilled'))
+        .toHaveLength(changed ? 1 : 2);
+      expect(outcomes.filter(result => result.status === 'rejected'))
+        .toHaveLength(changed ? 1 : 0);
+      expect(candidates).toHaveLength(2);
+      expect(originalStartSalt(candidates[0])).not.toBe(originalStartSalt(candidates[1]));
+      const saved = await f.store.read(f.input.operationId);
+      if (!saved) throw new Error('Expected winning Main intent');
+      expect(candidates.filter(candidate => candidate.fingerprint === saved.fingerprint))
+        .toHaveLength(1);
+      const starts = f.calls.filter(call => call.operation === 'oauth.start');
+      expect(starts).toHaveLength(1);
+      if (changed) {
+        const winner = outcomes.findIndex(result => result.status === 'fulfilled');
+        expect(starts[0]!.payload.fields).toEqual(inputs[winner]!.fields);
+      }
+      expect(f.calls.filter(call => call.operation === 'oauth.complete')).toHaveLength(1);
+      expect(f.calls.filter(call => call.operation === 'oauth.cancel')).toEqual([]);
+      expect(f.openExternal).toHaveBeenCalledTimes(1);
+      const bytes = await readFile(join(f.directory, (await readdir(f.directory))[0]!), 'utf8');
+      expect(JSON.parse(bytes)).toEqual(saved);
+    } finally {
+      originalRead.resolve(); bothCreates.resolve(); nativeCompleted.resolve();
+      await Promise.allSettled(pending);
+      await rm(f.directory, { recursive: true, force: true });
+    }
+  }
+);
+
+it('keeps an uncertain committed Main intent undispatched and cold re-entry read-only', async () => {
+  const f = await fixture('auto');
+  f.target.request = async (operation, payload) => {
+    f.calls.push({ operation, payload });
+    expect(operation).toBe('oauth.read');
+    return { ok: true, value: null };
+  };
+  const owner = new CapturedProviderOAuth({ ...f.deps, intents: {
+    read: operationId => f.store.read(operationId),
+    async create(intent) {
+      expect(await f.store.create(intent)).toBe(true);
+      throw new Error('TEST original intent committed before acknowledgement failed');
+    },
+  } });
+  try {
+    await expect(owner.connect(f.target, f.input)).rejects.toThrow();
+    expect(f.calls).toEqual([]);
+    expect(f.openExternal).not.toHaveBeenCalled();
+    originalStartSalt(await f.store.read(f.input.operationId));
+    const path = join(f.directory, (await readdir(f.directory))[0]!);
+    const bytes = await readFile(path, 'utf8');
+    await expect(new CapturedProviderOAuth(f.deps).connect(f.target, f.input)).rejects.toThrow();
+    expect(f.calls.map(call => call.operation)).toEqual(['oauth.read']);
+    expect(await readFile(path, 'utf8')).toBe(bytes);
+    expect(f.openExternal).not.toHaveBeenCalled();
+  } finally { await rm(f.directory, { recursive: true, force: true }); }
+});
+
+it.each(['removed', 'replaced'] as const)(
+  'refuses a %s original Main intent after its captured replay read without fresh dispatch',
+  async change => {
+    const f = await fixture('auto');
+    try {
+      await f.oauth.connect(f.target, f.input);
+      const path = join(f.directory, (await readdir(f.directory))[0]!);
+      let first = true, retained = '';
+      const intents: ProviderOAuthIntentStore = {
+        async read(operationId) {
+          const saved = await f.store.read(operationId);
+          if (first) {
+            if (!saved) throw new Error('Expected original Main replay record');
+            first = false;
+            if (change === 'removed') await unlink(path);
+            else {
+              retained = JSON.stringify({ ...saved, displayName: 'TEST-replaced-display' }) + '\n';
+              await writeFile(path, retained, { mode: 0o600 });
+            }
+          }
+          return saved;
+        },
+        create: async () => { throw new Error('Replay cannot create another original'); },
+      };
+      const before = f.calls.length;
+      await expect(new CapturedProviderOAuth({ ...f.deps, intents })
+        .connect(f.target, f.input)).rejects.toThrow();
+      expect(f.calls.slice(before)).toEqual([]);
+      if (change === 'removed') expect(await f.store.read(f.input.operationId)).toBeNull();
+      else expect(await readFile(path, 'utf8')).toBe(retained);
+      expect(f.openExternal).toHaveBeenCalledTimes(1);
+    } finally { await rm(f.directory, { recursive: true, force: true }); }
+  }
+);
+
+it('rejects malformed or unsupported stored Main start descriptors', async () => {
+  const f = await fixture('auto');
+  try {
+    await f.oauth.connect(f.target, f.input);
+    const saved = await f.store.read(f.input.operationId);
+    if (!saved) throw new Error('Expected valid original before descriptor corruption');
+    const path = join(f.directory, (await readdir(f.directory))[0]!);
+    for (const descriptor of [
+      { version: 2, salt: 'a'.repeat(32) },
+      { version: 1, salt: 'A'.repeat(32) },
+      { version: 1, salt: 'a'.repeat(30) },
+      { version: 1, salt: 'a'.repeat(32), N: 32768 },
+    ]) {
+      await writeFile(path, JSON.stringify({ ...saved, fingerprintKdf: descriptor }) + '\n',
+        { mode: 0o600 });
+      await expect(f.store.read(f.input.operationId)).rejects.toThrow();
+    }
+  } finally { await rm(f.directory, { recursive: true, force: true }); }
+});
+
+
+function controlledStartCrypto() {
+  const callbacks: ((error?: Error) => void)[] = [];
+  let started = 0;
+  const mock = vi.spyOn(crypto, 'scrypt').mockImplementation(
+    (...[input, salt, length, options, callback]: Parameters<typeof crypto.scrypt>) => {
+      if (!Buffer.isBuffer(input) || !Buffer.isBuffer(salt))
+        throw new Error('Expected bounded crypto input buffers');
+      expect(length).toBe(32);
+      expect(options).toEqual({ N: 32768, r: 8, p: 3, maxmem: 64 * 1024 * 1024 });
+      started++;
+      // Only callback scheduling is controlled here; real scrypt bytes are checked above.
+      callbacks.push(error => callback(error ?? null,
+        createHash('sha256').update(input).update(salt).digest()));
+    }
+  );
+  syncBuiltinESMExports();
+  return {
+    started: () => started,
+    finish(error?: Error) {
+      const callback = callbacks.shift();
+      if (!callback) throw new Error('No pending TEST crypto callback');
+      callback(error);
+    },
+    restore() {
+      while (callbacks.length) callbacks.shift()!(new Error('TEST crypto cleanup'));
+      mock.mockRestore();
+      syncBuiltinESMExports();
+    },
+  };
+}
+
+it('joins exact pending Main starts, rejects different fields, and cancels without waiting for crypto', async () => {
+  const f = await fixture('auto'), controlled = controlledStartCrypto();
+  const create = vi.spyOn(f.store, 'create');
+  const originals = Promise.allSettled([
+    f.oauth.connect(f.target, f.input),
+    f.oauth.connect(f.target, { ...f.input, fields: { ...f.input.fields } }),
+  ]);
+  const pending: Promise<unknown>[] = [originals];
+  try {
+    await vi.waitFor(() => expect(controlled.started()).toBe(1), { timeout: 2_000 });
+    await expect(f.oauth.connect(f.target, { ...f.input, fields: { plan: 'TEST-different' } }))
+      .rejects.toThrow('OAuth intent conflict');
+    let cancelled = false;
+    const cancellation = f.oauth.cancel({ operationId: f.input.operationId })
+      .then(value => { cancelled = true; return value; });
+    pending.push(cancellation);
+    await vi.waitFor(() => expect(cancelled).toBe(true), { timeout: 2_000 });
+    expect(await cancellation).toEqual({ ok: true });
+    expect(controlled.started()).toBe(1);
+    expect(create).not.toHaveBeenCalled();
+    expect(f.calls).toEqual([]);
+    expect(f.openExternal).not.toHaveBeenCalled();
+    controlled.finish();
+    expect((await originals).map(result => result.status)).toEqual(['rejected', 'rejected']);
+    const retry = Promise.allSettled([f.oauth.connect(f.target, f.input)]);
+    pending.push(retry);
+    await vi.waitFor(() => expect(controlled.started()).toBe(2), { timeout: 2_000 });
+    controlled.finish();
+    expect((await retry)[0]!.status).toBe('fulfilled');
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(f.calls.filter(call => call.operation === 'oauth.start')).toHaveLength(1);
+    expect(f.calls.filter(call => call.operation === 'oauth.complete')).toHaveLength(1);
+    expect(f.calls.filter(call => call.operation === 'oauth.cancel')).toEqual([]);
+    expect(f.openExternal).toHaveBeenCalledTimes(1);
+  } finally {
+    controlled.restore();
+    await Promise.all(pending);
+    create.mockRestore();
+    await rm(f.directory, { recursive: true, force: true });
+  }
+});
+
+it('rejects failed Main crypto without a fast fallback and releases the settled admission', async () => {
+  const f = await fixture('auto'), controlled = controlledStartCrypto();
+  const create = vi.spyOn(f.store, 'create');
+  const first = Promise.allSettled([f.oauth.connect(f.target, f.input)]);
+  const pending: Promise<unknown>[] = [first];
+  try {
+    await vi.waitFor(() => expect(controlled.started()).toBe(1), { timeout: 2_000 });
+    controlled.finish(new Error('TEST crypto failed'));
+    expect((await first)[0]!.status).toBe('rejected');
+    expect(create).not.toHaveBeenCalled();
+    expect(f.calls).toEqual([]);
+    expect(await f.store.read(f.input.operationId)).toBeNull();
+    const retry = Promise.allSettled([f.oauth.connect(f.target, f.input)]);
+    pending.push(retry);
+    await vi.waitFor(() => expect(controlled.started()).toBe(2), { timeout: 2_000 });
+    controlled.finish();
+    expect((await retry)[0]!.status).toBe('fulfilled');
+    originalStartSalt(await f.store.read(f.input.operationId));
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(f.calls.filter(call => call.operation === 'oauth.start')).toHaveLength(1);
+  } finally {
+    controlled.restore();
+    await Promise.all(pending);
+    create.mockRestore();
+    await rm(f.directory, { recursive: true, force: true });
+  }
+});
+
+it('rechecks the original Main context after crypto before creating any intent', async () => {
+  const f = await fixture('auto'), controlled = controlledStartCrypto();
+  const create = vi.spyOn(f.store, 'create');
+  const pending = Promise.allSettled([f.oauth.connect(f.target, f.input)]);
+  try {
+    await vi.waitFor(() => expect(controlled.started()).toBe(1), { timeout: 2_000 });
+    f.stale();
+    controlled.finish();
+    expect((await pending)[0]!.status).toBe('rejected');
+    expect(create).not.toHaveBeenCalled();
+    expect(await f.store.read(f.input.operationId)).toBeNull();
+    expect(f.calls).toEqual([]);
+    expect(f.openExternal).not.toHaveBeenCalled();
+    expect(f.deps.restore).not.toHaveBeenCalled();
+  } finally {
+    controlled.restore();
+    await pending;
+    create.mockRestore();
+    await rm(f.directory, { recursive: true, force: true });
+  }
+});
+
+it('refuses a full shared crypto queue without creating or dispatching a Main start', async () => {
+  const f = await fixture('auto'), controlled = controlledStartCrypto();
+  const create = vi.spyOn(f.store, 'create');
+  const pending: Promise<unknown>[] = [];
+  try {
+    const { deriveSecretFingerprint } =
+      await import('@agent-teams/legacy-agent-host/management/secret-fingerprint');
+    const queued = Promise.allSettled(Array.from({ length: 9 }, (_, index) =>
+      deriveSecretFingerprint({ value: 'TEST-queued-' + index })));
+    pending.push(queued);
+    expect(controlled.started()).toBe(1);
+    await expect(f.oauth.connect(f.target, f.input)).rejects.toThrow('Secret fingerprint busy');
+    expect(create).not.toHaveBeenCalled();
+    expect(f.calls).toEqual([]);
+    expect(f.openExternal).not.toHaveBeenCalled();
+    expect(await f.store.read(f.input.operationId)).toBeNull();
+    for (let index = 0; index < 9; index++) controlled.finish();
+    expect((await queued).every(result => result.status === 'fulfilled')).toBe(true);
+    const retry = Promise.allSettled([f.oauth.connect(f.target, f.input)]);
+    pending.push(retry);
+    await vi.waitFor(() => expect(controlled.started()).toBe(10), { timeout: 2_000 });
+    controlled.finish();
+    expect((await retry)[0]!.status).toBe('fulfilled');
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(f.calls.filter(call => call.operation === 'oauth.start')).toHaveLength(1);
+  } finally {
+    controlled.restore();
+    await Promise.all(pending);
+    create.mockRestore();
+    await rm(f.directory, { recursive: true, force: true });
+  }
+});
+
+it.each(['before-commit', 'after-commit'] as const)(
+  'cancels an original Main create during %s I/O without dispatching native OAuth',
+  async stage => {
+    const f = await fixture('auto'), released = Promise.withResolvers<void>();
+    let entered = false, committedBytes = '';
+    let candidate: ProviderOAuthIntent | undefined;
+    const owner = new CapturedProviderOAuth({ ...f.deps, intents: {
+      read: operationId => f.store.read(operationId),
+      async create(intent) {
+        candidate = structuredClone(intent);
+        if (stage === 'before-commit') { entered = true; await released.promise; }
+        const created = await f.store.create(intent);
+        committedBytes = await readFile(join(f.directory, (await readdir(f.directory))[0]!), 'utf8');
+        if (stage === 'after-commit') { entered = true; await released.promise; }
+        return created;
+      },
+    } });
+    const pending = Promise.allSettled([owner.connect(f.target, f.input)]);
+    let cancellation: ReturnType<CapturedProviderOAuth['cancel']> | undefined;
+    try {
+      await vi.waitFor(() => expect(entered).toBe(true), { timeout: 2_000 });
+      expect(await f.store.read(f.input.operationId))
+        .toEqual(stage === 'before-commit' ? null : candidate);
+      let settled = false;
+      cancellation = owner.cancel({ operationId: f.input.operationId })
+        .then(value => { settled = true; return value; });
+      await new Promise<void>(resolve => setImmediate(resolve));
+      expect(settled).toBe(false);
+      expect(f.calls).toEqual([]);
+      expect(f.openExternal).not.toHaveBeenCalled();
+      released.resolve();
+      expect(await cancellation).toEqual({ ok: true });
+      expect((await pending)[0]!.status).toBe('rejected');
+      if (!candidate) throw new Error('Expected original captured create candidate');
+      originalStartSalt(candidate);
+      expect(await f.store.read(f.input.operationId)).toEqual(candidate);
+      expect(await readFile(join(f.directory, (await readdir(f.directory))[0]!), 'utf8'))
+        .toBe(committedBytes);
+      expect(f.calls).toEqual([]);
+      expect(f.openExternal).not.toHaveBeenCalled();
+      expect(f.deps.restore).not.toHaveBeenCalled();
+    } finally {
+      released.resolve();
+      await pending;
+      await cancellation;
+      await rm(f.directory, { recursive: true, force: true });
     }
   }
 );

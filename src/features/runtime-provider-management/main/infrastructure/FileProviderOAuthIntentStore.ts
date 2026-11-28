@@ -3,6 +3,10 @@ import { constants } from 'node:fs';
 import { open } from 'node:fs/promises';
 import { isAbsolute, join } from 'node:path';
 
+import {
+  type SecretFingerprintKdf,
+  secretFingerprintKdfSchema,
+} from '@agent-teams/legacy-agent-host/management/secret-fingerprint';
 import { atomicCreateAsync } from '@main/utils/atomicWrite';
 
 export interface ProviderOAuthIntent {
@@ -15,6 +19,7 @@ export interface ProviderOAuthIntent {
   authOptionId: string;
   displayName: string;
   fingerprint: string;
+  fingerprintKdf?: SecretFingerprintKdf;
 }
 export interface ProviderOAuthIntentStore {
   read(operationId: string): Promise<ProviderOAuthIntent | null>;
@@ -57,11 +62,18 @@ function capture(value: unknown): ProviderOAuthIntent {
           'authOptionId',
           'displayName',
           'fingerprint',
+          'fingerprintKdf',
         ].includes(key)
     )
   )
     throw new Error('OAuth intent unavailable');
-  return Object.freeze({ ...record }) as unknown as ProviderOAuthIntent;
+  const fingerprintKdf = record.fingerprintKdf === undefined
+    ? undefined
+    : Object.freeze(secretFingerprintKdfSchema.parse(record.fingerprintKdf));
+  return Object.freeze({
+    ...record,
+    ...(fingerprintKdf === undefined ? {} : { fingerprintKdf }),
+  }) as unknown as ProviderOAuthIntent;
 }
 
 /** Immutable original routing only. Fields, codes, credentials and browser URLs are never stored. */

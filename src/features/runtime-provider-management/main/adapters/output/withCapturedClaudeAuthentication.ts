@@ -288,16 +288,27 @@ export function withCapturedClaudeAuthentication(
       try {
         if (!captured.connectionContextToken)
           throw new Error('Original Claude sign-in form is unavailable');
-        const selected = await target(captured, scope);
-        if (!(await read(selected, scope)).canLogin) return unsupported();
-        await oauth.connect(selected, {
-          runtimeId: 'claude',
-          operationId: captured.oauthOperationId,
-          providerId: 'anthropic',
-          methodIndex: 0,
-          authOptionId: 'oauth:0',
-          displayName: 'Claude',
+        const operationId = captured.oauthOperationId;
+        const selected = await oauth.connectPrepared(captured, async (assertCurrent) => {
+          assertCurrent();
+          const original = await target(captured, scope);
+          assertCurrent();
+          const status = await read(original, scope);
+          assertCurrent();
+          if (!status.canLogin) return null;
+          return {
+            target: original,
+            input: {
+              runtimeId: 'claude',
+              operationId,
+              providerId: 'anthropic',
+              methodIndex: 0,
+              authOptionId: 'oauth:0',
+              displayName: 'Claude',
+            },
+          };
         });
+        if (!selected) return unsupported();
         return await connection(selected, scope);
       } catch {
         return unavailable();
