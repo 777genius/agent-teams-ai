@@ -2735,7 +2735,7 @@ jobs:
             assert.ok(row.modelFailures.length === 3 && row.modelFailures.every(failures => failures.length === 0));
           }
           const { fileHash } = await import('./packages/legacy-agent-host/tests/fixtures/native-host.ts');
-          assert.equal(Object.keys(goals.helpers).length, 5);
+          assert.equal(Object.keys(goals.helpers).length, 6);
           for (const [helper, sha256] of Object.entries(goals.helpers))
             assert.equal(await fileHash(helper), sha256, 'exact native goal test helper: ' + helper);
           writeFileSync(join(process.env.RUNNER_TEMP, 'stage1-native-restore-inputs.json'), JSON.stringify({

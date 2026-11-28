@@ -5,7 +5,8 @@ import { NativeExtensionCoordinator } from '../extensions/NativeExtensionCoordin
 import { ClaudeAuthenticationCoordinator } from './ClaudeAuthenticationCoordinator.js';
 import { CodexManagementCoordinator } from './CodexManagementCoordinator.js';
 import { ClaudeManagementCoordinator } from './ClaudeManagementCoordinator.js';
-import { managementDigest } from '../management/identity.js';
+import { managementDigest, managementValuesEqual } from '../management/identity.js';
+import { matchesOpenCodeV2AuthWitness } from '../management/openCodeV2AuthWitness.js';
 import { z } from 'zod';
 import { realpathSync, statSync } from 'node:fs';
 
@@ -26,6 +27,7 @@ import type { OpenCodeV1Coordination } from '../adapters/providers/OpenCodeCoord
 import { OpenCodeV2ManagementHost } from '../adapters/providers/OpenCodeV2ManagementHost.js';
 import { createOpenCodeV2CredentialOperation } from '../adapters/providers/OpenCodeV2CredentialOperation.js';
 import { OpenCodeV2CredentialScope } from '../adapters/providers/OpenCodeV2CredentialScope.js';
+import type { CapturedOpenCodeV2Key } from '../adapters/providers/OpenCodeV2CredentialScope.js';
 import { createOpenCodeCatalogDiagnostic } from '../adapters/providers/createClaudeCloseDiagnostic.js';
 
 import type { ProviderManagementCatalog, ProviderOAuthSnapshot } from '../management/contracts.js';
@@ -135,7 +137,7 @@ export class ProviderManagementCoordinator {
       fence,
       assertCurrent: () => this.assertCurrent(),
       select: (profileId, configRevision) => this.target(profileId, configRevision),
-      validate: (command) => {
+      validate: async (command) => {
         if (this.claude.has(command.profileId)) {
           if (command.providerId !== 'anthropic' || command.kind !== 'credential.forget')
             throw new ManagementCommandError('invalid');
@@ -151,12 +153,13 @@ export class ProviderManagementCoordinator {
               throw new ManagementCommandError('conflict');
             new OpenCodeV2CredentialScope(selected, command.providerId, () => {
               try { this.assertCurrent(); return true; } catch { return false; }
-            }).prepare(command.key, this.replaceableV2Auth(selected, command.providerId));
+            }).prepare(command.key, await this.replaceableV2Auth(selected, command.providerId));
           }
         } else if (command.providerId !== 'codex' || command.kind === 'credential.set')
           throw new ManagementCommandError('invalid');
       },
-      perform: (command, target, progress) => this.performCredential(command, target, progress),
+      perform: (command, target, progress, assertOriginal) =>
+        this.performCredential(command, target, progress, assertOriginal),
     });
     this.oauth = new OAuthOperationOwner({
       store,
@@ -385,7 +388,8 @@ export class ProviderManagementCoordinator {
   private async performCredential(
     command: CredentialCommand,
     target: CredentialTarget,
-    progress: CredentialProgressWriter
+    progress: CredentialProgressWriter,
+    assertOriginal: () => void,
   ): Promise<{ ok: boolean; settled: boolean; rejected?: boolean }> {
     if (this.claude.has(command.profileId)) return this.claudeAuth.forget(command, target);
     if (!this.profiles.has(command.profileId)) {
@@ -405,11 +409,14 @@ export class ProviderManagementCoordinator {
       const current = () => {
         try {
           this.assertCurrent();
+          assertOriginal();
           assertManagementTarget(target, this.credentialTarget(this.select(command.profileId, command.configRevision)));
           return true;
         } catch { return false; }
       };
-      const replaceAuthDigest = this.replaceableV2Auth(profile, command.providerId, command.commandId);
+      if (!current()) throw new ManagementCommandError('held');
+      const replaceAuthDigest = await this.replaceableV2Auth(profile, command.providerId, command.commandId);
+      if (!current()) throw new ManagementCommandError('held');
       const operation = createOpenCodeV2CredentialOperation(profile, command, progress, current, {
         ...(this.processCustody ? { processCustody: this.processCustody } : {}),
         ...(replaceAuthDigest ? { replaceAuthDigest } : {}),
@@ -465,39 +472,63 @@ export class ProviderManagementCoordinator {
   }
 
   /** Private authorization from this owner's rejected publication, never a caller-supplied overwrite flag. */
-  private replaceableV2Auth(profile: OpenCodeManagementProfile, providerId: string, currentCommandId?: string): string | undefined {
+  private async replaceableV2Auth(profile: OpenCodeManagementProfile, providerId: string, currentCommandId?: string): Promise<string | undefined> {
     this.assertCurrent();
     const target = this.credentialTarget(profile);
-    let latest: StoredCredentialCommand | undefined;
-    for (const row of this.store.list()) {
-      if ((row.kind !== 'credential.set' && row.kind !== 'credential.forget' && row.kind !== 'credential.refresh') ||
-          row.providerId !== providerId || row.resourceId !== target.resourceId || row.commandId === currentCommandId) continue;
-      const original = this.profiles.get(row.profileId);
-      if (!original || original.configRevision !== row.configRevision) throw new ManagementCommandError('held');
-      assertManagementTarget(row, this.credentialTarget(original));
-      // A source revision cannot turn an unknown original intent into a new Connect, even with the same key.
-      if (row.resourceHeld || row.phase !== 'completed' && row.terminalRejection !== true)
-        throw new ManagementCommandError('conflict');
-      // A confirmed rejection before publication changes neither key nor the previous publication's authority.
-      if (row.phase !== 'completed' && !row.openCodeV2?.authDigest) continue;
-      if (row.finishedAtMs === undefined) throw new ManagementCommandError('held');
-      if (latest?.finishedAtMs === row.finishedAtMs) throw new ManagementCommandError('held');
-      if (!latest || row.finishedAtMs > latest.finishedAtMs!) latest = row;
-    }
+    const selectLatest = () => {
+      this.assertCurrent();
+      assertManagementTarget(target, this.credentialTarget(this.select(profile.profileId, profile.configRevision)));
+      let latest: StoredCredentialCommand | undefined;
+      for (const row of this.store.list()) {
+        if ((row.kind !== 'credential.set' && row.kind !== 'credential.forget' && row.kind !== 'credential.refresh') ||
+            row.providerId !== providerId || row.resourceId !== target.resourceId || row.commandId === currentCommandId) continue;
+        const original = this.profiles.get(row.profileId);
+        if (!original || original.configRevision !== row.configRevision) throw new ManagementCommandError('held');
+        assertManagementTarget(row, this.credentialTarget(original));
+        // A source revision cannot turn an unknown original intent into a new Connect, even with the same key.
+        if (row.resourceHeld || row.phase !== 'completed' && row.terminalRejection !== true)
+          throw new ManagementCommandError('conflict');
+        // A confirmed rejection before publication changes neither key nor the previous publication's authority.
+        if (row.phase !== 'completed' && !row.openCodeV2?.authDigest) continue;
+        if (row.finishedAtMs === undefined) throw new ManagementCommandError('held');
+        if (latest?.finishedAtMs === row.finishedAtMs) throw new ManagementCommandError('held');
+        if (!latest || row.finishedAtMs > latest.finishedAtMs!) latest = row;
+      }
+      return latest === undefined ? undefined : structuredClone(latest);
+    };
+    const latest = selectLatest();
     if (latest?.kind !== 'credential.set' || latest.terminalRejection !== true || latest.resourceHeld ||
         latest.openCodeV2?.phase !== 'probe-completed' || latest.openCodeV2.verification?.ok !== false ||
         this.profiles.get(latest.profileId)?.nativeGeneration !== 'v2') return undefined;
     const auth = new OpenCodeV2CredentialScope(profile, providerId, () => {
       this.assertCurrent(); return true;
     }).capture();
-    // The existing digest binds account/provider, both captured roots, auth directories and the selected key.
-    return auth.present && auth.digest === latest.openCodeV2.authDigest ? auth.digest : undefined;
+    if (!auth.present) return undefined;
+    const matches = await matchesOpenCodeV2AuthWitness(auth.digest, latest.openCodeV2);
+    const current = selectLatest(), original = this.store.read(latest.commandId);
+    if (!current || !original || !managementValuesEqual(latest, current) ||
+        !managementValuesEqual(latest, original) || !auth.isCurrent()) throw new ManagementCommandError('held');
+    return matches ? auth.digest : undefined;
   }
 
-  private connectedV2(profile: OpenCodeManagementProfile, providerId: string, authDigest: string): boolean {
-    const { latest, pending } = this.v2CredentialState(profile, providerId);
-    return !pending && latest?.phase === 'completed' && latest.openCodeV2?.phase === 'probe-completed' &&
-      latest.openCodeV2.verification?.ok === true && latest.openCodeV2.authDigest === authDigest;
+  private async connectedV2(profile: OpenCodeManagementProfile, providerId: string, source: CapturedOpenCodeV2Key) {
+    const target = this.credentialTarget(profile);
+    const state = structuredClone(this.v2CredentialState(profile, providerId));
+    const assertCurrent = () => {
+      this.assertCurrent();
+      assertManagementTarget(target, this.credentialTarget(this.select(profile.profileId, profile.configRevision)));
+      if (!source.isCurrent() || !managementValuesEqual(state, this.v2CredentialState(profile, providerId)))
+        throw new ManagementCommandError('held');
+      if (state.latest && !managementValuesEqual(state.latest, this.store.read(state.latest.commandId) ?? null))
+        throw new ManagementCommandError('held');
+    };
+    assertCurrent();
+    const { latest, pending } = state;
+    const connected = source.present && !pending && latest?.phase === 'completed' &&
+      latest.openCodeV2?.phase === 'probe-completed' && latest.openCodeV2.verification?.ok === true &&
+      await matchesOpenCodeV2AuthWitness(source.digest, latest.openCodeV2);
+    assertCurrent();
+    return { connected, assertCurrent };
   }
 
   private async retireHost(profileId: string, host: OpenCodeManagementHost): Promise<boolean> {
@@ -683,7 +714,7 @@ export class ProviderManagementCoordinator {
         } catch { return false; }
       }, this.processCustody, {
         ...(selectedProvider ? { catalogProviderId: selectedProvider } : {}),
-        connected: (providerId, authDigest) => this.connectedV2(profile, providerId, authDigest),
+        connected: (providerId, source) => this.connectedV2(profile, providerId, source),
       });
       this.v2Hosts.set(profile.profileId, host);
     }

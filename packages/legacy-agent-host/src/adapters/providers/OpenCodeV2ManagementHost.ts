@@ -16,6 +16,7 @@ import { createOpenCodeV2EmbeddedServer } from './OpenCodeV2EmbeddedServer.js';
 import { isConfiguredAuthless } from './openCodeConfiguredAuthless.js';
 import { captureOpenCodeV2SessionCredential } from './OpenCodeV2SessionCredential.js';
 import { OpenCodeV2CredentialScope } from './OpenCodeV2CredentialScope.js';
+import type { CapturedOpenCodeV2Key } from './OpenCodeV2CredentialScope.js';
 import { captureOpenCodeV2Configuration } from './OpenCodeV2CapturedConfiguration.js';
 import { createOpenCodeMetadataDiagnostic, metadataFailureReasons } from './createClaudeCloseDiagnostic.js';
 import type { MetadataReadStage } from './createClaudeCloseDiagnostic.js';
@@ -46,6 +47,7 @@ type NativeClient = ReturnType<typeof createOpenCodeV2OwnedSessionClient>;
 type KeyClient = ReturnType<typeof createOpenCodeV2CredentialClient>;
 export interface OpenCodeV2KeyOperation {
   readonly integrationId: string;
+  assertCurrent(): void;
   read: KeyClient['read'];
   connectKey: KeyClient['connectKey'];
   rollbackOwnedKey: KeyClient['rollbackOwnedKey'];
@@ -82,7 +84,9 @@ export class OpenCodeV2ManagementHost {
       retainedCommandId?: string;
       catalogProviderId?: string;
       configurationProviderId?: string;
-      connected?(providerId: string, authDigest: string): boolean;
+      connected?(providerId: string, source: CapturedOpenCodeV2Key): Promise<{
+        connected: boolean; assertCurrent(): void;
+      }>;
     } = {},
   ) {
     const selected = openCodeManagementProfileSchema.safeParse(raw);
@@ -138,9 +142,9 @@ export class OpenCodeV2ManagementHost {
         this.catalogCredential?.isAbsent() === true));
   }
 
-  private assertCurrent(signal: AbortSignal): void {
+  private assertCurrent(signal: AbortSignal, deadline?: number): void {
     signal.throwIfAborted();
-    if (!this.current()) held();
+    if (!this.current() || deadline !== undefined && Date.now() >= deadline) held();
   }
 
   private async namespace(root: string): Promise<string> {
@@ -227,6 +231,7 @@ export class OpenCodeV2ManagementHost {
       const { client, config, ready } = await this.nativeClient(signal, deadline);
       const selected = this.profile.nativeModel!;
       let result: ProviderManagementCatalog | undefined, failure: unknown, failed = false;
+      const proofGuards: (() => void)[] = [];
       try {
         stage = 'identity';
         const identity = await client.identity();
@@ -249,21 +254,36 @@ export class OpenCodeV2ManagementHost {
           catalog = await client.readDirectory();
         }
         stage = 'current';
-        this.assertCurrent(signal);
+        this.assertCurrent(signal, deadline);
         stage = 'projection';
         const providers = new Map(catalog.providers.map(row => [row.id, row]));
         const integrations = new Map(catalog.integrations.map(row => [row.id, row]));
         const ids = new Set([...providers.keys(), ...integrations.keys()]);
         const sources = new Set(new OpenCodeV2CredentialScope(this.profile, selected.providerId,
           () => this.current()).providerIds());
+        const visibleIds = [...ids].filter(id => (providerId === undefined || providerId === id) &&
+          !['kimi-for-coding', 'kiro', 'cursor-acp'].includes(id) &&
+          (!['exa', 'tavily'].includes(id) || providers.get(id)?.integrationId));
+        const captured = new Map<string, CapturedOpenCodeV2Key>(), connected = new Map<string, boolean>();
+        for (const id of visibleIds) {
+          this.assertCurrent(signal, deadline);
+          if (!sources.has(id)) continue;
+          const source = new OpenCodeV2CredentialScope(this.profile, id, () => this.current()).capture();
+          captured.set(id, source);
+          proofGuards.push(() => { if (!source.isCurrent()) held(); });
+          if (!this.options.connected) continue;
+          const proof = await this.options.connected(id, source);
+          this.assertCurrent(signal, deadline);
+          proof.assertCurrent();
+          proofGuards.push(() => proof.assertCurrent());
+          connected.set(id, proof.connected);
+        }
         result = {
           profileId: this.profile.profileId, configRevision: this.profile.configRevision,
           runtime: { generation: 'v2', version: identity.version },
           configuredDefaultModelId: catalog.defaultModel
             ? catalog.defaultModel.providerId + '/' + catalog.defaultModel.modelId : null,
-          providers: [...ids].filter(id => (providerId === undefined || providerId === id) &&
-            !['kimi-for-coding', 'kiro', 'cursor-acp'].includes(id) &&
-            (!['exa', 'tavily'].includes(id) || providers.get(id)?.integrationId)).map(id => {
+          providers: visibleIds.map(id => {
             const provider = providers.get(id);
             const integration = integrations.get(provider?.integrationId === undefined ? id : provider.integrationId);
             const models = catalog.models.filter(model => model.providerId === id && model.enabled);
@@ -273,13 +293,12 @@ export class OpenCodeV2ManagementHost {
                 .includes(String(configuration.package)) ? '@ai-sdk/openai-compatible' : undefined,
               options: configuration.settings,
             });
-            const source = sources.has(id) ? new OpenCodeV2CredentialScope(this.profile, id,
-              () => this.current()).capture() : undefined;
+            const source = captured.get(id);
             return {
               providerId: id, displayName: integration?.name ?? provider?.name ?? id,
               source: source ? 'api' as const : configuration ? 'config' as const : null,
               // Passive directory does not import keys or infer authentication from inventory.
-              connected: !!source && this.options.connected?.(id, source.digest) === true,
+              connected: connected.get(id) === true,
               configured: source !== undefined || configuration !== undefined, configuredAuthless,
               defaultModelId: catalog.defaultModel?.providerId === id ? catalog.defaultModel.modelId : null,
               modelCount: models.length,
@@ -300,7 +319,9 @@ export class OpenCodeV2ManagementHost {
       }
       if (failed) throw failure;
       stage = 'result-current';
-      this.assertCurrent(signal);
+      this.assertCurrent(signal, deadline);
+      for (const assertCurrent of proofGuards) assertCurrent();
+      this.assertCurrent(signal, deadline);
       return result!;
     } catch (error) { observeFailure(error); throw error; }
   }
@@ -327,8 +348,9 @@ export class OpenCodeV2ManagementHost {
   keyOperation<T>(providerId: string, operation: (native: OpenCodeV2KeyOperation) => Promise<T>): Promise<T> {
     if (!this.options.retainedCommandId) return Promise.reject(new OpenCodeManagementError('invalid-profile'));
     return this.tracked(async () => {
+      const deadline = Date.now() + this.profile.timeoutMs;
       const signal = AbortSignal.any([this.abort.signal, AbortSignal.timeout(this.profile.timeoutMs)]);
-      const { client, config, ready } = await this.nativeClient(signal, Date.now() + this.profile.timeoutMs);
+      const { client, config, ready } = await this.nativeClient(signal, deadline);
       let key: KeyClient | undefined, result: T | undefined, failure: unknown, failed = false;
       try {
         const identity = await client.identity();
@@ -342,7 +364,8 @@ export class OpenCodeV2ManagementHost {
           : provider.integrationId;
         if (!integrationId) return held();
         key = createOpenCodeV2CredentialClient({ ...config, integrationId });
-        result = await operation({ integrationId, read: key.read, connectKey: key.connectKey,
+        result = await operation({ integrationId, assertCurrent: () => this.assertCurrent(signal, deadline),
+          read: key.read, connectKey: key.connectKey,
           rollbackOwnedKey: key.rollbackOwnedKey, readCatalog: async () => {
             let catalog = await client.readCatalog(providerId);
             while (!catalog.models.some(model => model.enabled) && !signal.aborted) {
@@ -351,13 +374,14 @@ export class OpenCodeV2ManagementHost {
             }
             return catalog;
           } });
-        this.assertCurrent(signal);
+        this.assertCurrent(signal, deadline);
       } catch (error) { failed = true; failure = error; }
       for (const wire of [key, client]) {
         try { await wire?.dispose(); }
         catch (error) { this.cleanupUnknown = true; if (!failed) { failed = true; failure = error; } }
       }
       if (failed) throw failure;
+      this.assertCurrent(signal, deadline);
       return result!;
     });
   }

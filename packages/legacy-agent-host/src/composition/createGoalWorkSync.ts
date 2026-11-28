@@ -59,7 +59,7 @@ export function createGoalWorkSync(options: {
 
   function authorizeWorkspace(entry: MemberEntry, intent: ImmutableDelivery,
     readMemberHistory?: () => readonly RuntimeSessionRecord[]): boolean {
-    if (!entry.team.owner.goals.association(intent)) return true;
+    if (!entry.team.owner.goals.association(intent) || entry.team.owner.goals.humanTaskStart(intent)) return true;
     try {
       const goal = entry.team.owner.goals.snapshot();
       if (!goal || !readMemberHistory || !originalGoalLead(entry, goal, readMemberHistory)) return false;
@@ -100,8 +100,8 @@ export function createGoalWorkSync(options: {
     return false;
   }
 
-  function records(team: HostedTeam, goal: GoalRecord): RuntimeSessionRecord[] {
-    const bindings = [goal.rootBinding, ...Object.values(goal.debits).map(row => row.binding),
+  function records(team: HostedTeam): RuntimeSessionRecord[] {
+    const bindings = [...team.owner.goals.inputBindings().values(),
       ...teamEntries(team.definition.binding.teamId).map(entry => entry.binding)];
     return [...new Map(bindings.map(binding => [runtimeDigest(normalizeBinding(binding)), binding])).values()]
       .flatMap(binding => {
@@ -159,7 +159,7 @@ export function createGoalWorkSync(options: {
     try { assertGoalWorkspaceIsolation(team.definition.binding.teamId, options.entries.values(), options.isCurrent, options.readRuntime); }
     catch { goals.markAttention('Automatic work requires a separate workspace from other active teams.'); return; }
     const originalGoal = goal;
-    let currentRecords = records(team, goal);
+    let currentRecords = records(team);
     const history = goals.continuations();
     let waits = inspectGoalWaits(goals.workSyncReports(), history, goal.deadlineAt);
     const unresolvedInteraction = currentRecords.some(record => record.interactions.some(interaction =>
@@ -183,7 +183,7 @@ export function createGoalWorkSync(options: {
                 current.revision !== candidate.revision || current.proposal?.commandId !== candidate.proposal!.commandId)
               throw new TeamOwnerError('hold');
           } });
-        currentRecords = records(team, candidate);
+        currentRecords = records(team);
         waits = inspectGoalWaits(goals.workSyncReports(), goals.continuations(), candidate.deadlineAt);
         goals.reconcileCandidate(currentRecords, waits.some(wait => wait.pending),
           waits.find(wait => !wait.pending && wait.attentionReason)?.attentionReason, artifactFingerprint);
@@ -241,7 +241,7 @@ export function createGoalWorkSync(options: {
         assertCurrent();
         if (!ready(entry) || !originalGoalLead(entry, goal!)) return undefined;
         // Runtime is read outside the Team fence; no await separates this projection from its decision.
-        currentRecords = records(team, goal!);
+        currentRecords = records(team);
         const latest = currentRecords.find(row => runtimeDigest(normalizeBinding(row.binding)) ===
           runtimeDigest(normalizeBinding(entry.binding)));
         if (!latest || latest.inputs.some(input => ['admitted', 'claimed', 'consumed', 'unknown'].includes(input.phase)) ||

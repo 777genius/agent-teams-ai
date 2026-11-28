@@ -349,6 +349,7 @@ export class ModelProbeOwner {
     if (prepared && Date.now() >= prepared.anchor.expiresAt) throw new ManagementCommandError('held');
     this.options.fence.reserve(target.resourceId, input.commandId);
     let entry: ActiveProbe;
+    let claimWriteAttempted = false;
     try {
       // Trusted composition may bind one operation's private process origin.
       // Replay and failed resource admission never capture a new native owner.
@@ -383,11 +384,13 @@ export class ModelProbeOwner {
             privateScope?.cutoff ?? Infinity)
           : (purpose ? admittedAt : Date.now()) + native.timeoutMs,
       };
+      claimWriteAttempted = true;
       this.options.store.write(saved);
       entry = { saved, native, abort: new AbortController(), retired: false, isCurrent };
       this.active.set(input.commandId, entry);
     } catch (error) {
-      this.options.fence.release(target.resourceId, input.commandId, true);
+      // A write exception can follow durable publication of the original claim.
+      this.options.fence.release(target.resourceId, input.commandId, !claimWriteAttempted);
       throw error;
     }
     entry.timer = setTimeout(() => {

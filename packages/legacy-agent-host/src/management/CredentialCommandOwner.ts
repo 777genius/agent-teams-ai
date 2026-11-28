@@ -58,9 +58,10 @@ export class CredentialCommandOwner {
         command: CredentialCommand,
         target: CredentialTarget,
         progress: CredentialProgressWriter,
+        assertOriginal: () => void,
       ): Promise<{ ok: boolean; settled: boolean; rejected?: boolean }>;
       fence?: ManagementResourceFence;
-      validate?(command: CredentialCommand): void;
+      validate?(command: CredentialCommand): void | Promise<void>;
     }
   ) {
     this.fence = options.fence ?? new ManagementResourceFence(options.store.list());
@@ -118,7 +119,11 @@ export class CredentialCommandOwner {
     const target = { ...this.options.select(command.profileId, command.configRevision) };
     const previous = this.options.store.read(command.commandId);
     if (previous) return this.replay(command, target, previous);
-    this.options.validate?.(command);
+    const validation = this.options.validate?.(command);
+    if (validation) await validation;
+    this.options.assertCurrent();
+    assertManagementTarget(target, this.options.select(command.profileId, command.configRevision));
+    if (this.options.store.read(command.commandId)) throw new ManagementCommandError('conflict');
     this.fence.reserve(target.resourceId, command.commandId);
     let saved: StoredCredentialCommand;
     let claimWriteAttempted = false;
@@ -150,49 +155,58 @@ export class CredentialCommandOwner {
       this.fence.release(target.resourceId, command.commandId, !claimWriteAttempted);
       throw error;
     }
-    let settled = false;
+    let settled = false, publicationUnknown = false;
+    // saved remains the last acknowledged original. Uncertainty cannot be healed by a catch write.
+    const assertOriginal = () => {
+      if (publicationUnknown) throw new ManagementCommandError('held');
+      try {
+        this.options.assertCurrent();
+        assertManagementTarget(saved, this.options.select(command.profileId, command.configRevision));
+        const original = this.options.store.read(command.commandId);
+        if (!original || !managementValuesEqual(saved, original)) throw new ManagementCommandError('conflict');
+      } catch (error) { publicationUnknown = true; throw error; }
+    };
+    const publish = (next: StoredCredentialCommand) => {
+      assertOriginal();
+      try { this.options.store.write(next); }
+      catch (error) { publicationUnknown = true; throw error; }
+      saved = next;
+    };
     try {
-      this.options.assertCurrent();
-      assertManagementTarget(saved, this.options.select(command.profileId, command.configRevision));
+      assertOriginal();
       const reused = this.reusableRefresh(command, target);
       const result = reused
         ? { ok: true, settled: true }
         : await this.options.perform(command, target, (progress) => {
-          this.options.assertCurrent();
-          assertManagementTarget(saved, this.options.select(command.profileId, command.configRevision));
+          assertOriginal();
           const next = advanceOpenCodeV2Credential(saved.openCodeV2, progress);
           if (command.kind !== 'credential.set' || !next) throw new ManagementCommandError('conflict');
-          saved.openCodeV2 = next;
-          this.options.store.write(saved);
-        });
+          publish({ ...saved, openCodeV2: next });
+        }, assertOriginal);
       settled = result.settled;
-      this.options.assertCurrent();
-      assertManagementTarget(saved, this.options.select(command.profileId, command.configRevision));
-      saved.phase = result.ok && settled ? 'completed' : 'held';
-      saved.resourceHeld = !settled;
+      assertOriginal();
       const completedAt = Date.now();
-      saved.finishedAtMs = this.finishTime(target.resourceId);
+      const next: StoredCredentialCommand = { ...saved, phase: result.ok && settled ? 'completed' : 'held',
+        resourceHeld: !settled, finishedAtMs: this.finishTime(target.resourceId) };
       if (!result.ok && settled && 'rejected' in result && result.rejected === true)
-        saved.terminalRejection = true;
-      if (saved.phase === 'completed' && command.kind === 'credential.refresh')
-        saved.refreshCompletedAtMs = reused?.refreshCompletedAtMs ?? completedAt;
-      this.options.store.write(saved);
+        next.terminalRejection = true;
+      if (next.phase === 'completed' && command.kind === 'credential.refresh')
+        next.refreshCompletedAtMs = reused?.refreshCompletedAtMs ?? completedAt;
+      publish(next);
       return this.receipt(saved);
     } catch {
       // A lost response/publication is UNKNOWN. Never replay the mutation under a new process.
-      saved.phase = 'held';
-      delete saved.refreshCompletedAtMs;
-      delete saved.terminalRejection;
-      saved.resourceHeld = !settled;
+      const held: StoredCredentialCommand = { ...saved, phase: 'held', resourceHeld: !settled };
+      delete held.refreshCompletedAtMs;
+      delete held.terminalRejection;
       try {
-        this.options.assertCurrent();
-        this.options.store.write(saved);
+        publish(held);
       } catch {
         settled = false;
       }
-      return this.receipt(saved);
+      return this.receipt(held);
     } finally {
-      this.fence.release(target.resourceId, command.commandId, settled);
+      this.fence.release(target.resourceId, command.commandId, settled && !publicationUnknown);
     }
   }
 

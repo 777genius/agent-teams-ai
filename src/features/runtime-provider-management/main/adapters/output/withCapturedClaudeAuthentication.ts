@@ -306,6 +306,7 @@ export function withCapturedClaudeAuthentication(
               authOptionId: 'oauth:0',
               displayName: 'Claude',
             },
+            assertCurrent: () => assertScope(scope),
           };
         });
         if (!selected) return unsupported();

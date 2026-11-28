@@ -44,6 +44,21 @@ const canonical = {
   groupRecipientNames: ['lead', 'alice'],
   groupRecipientRunKeys: { lead: 'TEST-lead', alice: 'TEST-alice' },
 };
+const nextGroup = {
+  ...group,
+  id: '10000000-0000-4000-8000-000000000002',
+  name: 'Original next group',
+};
+const catalogCursor = '1.' + 'b'.repeat(64);
+function catalogPage(groups: (typeof group)[], nextCursor: string | null, total = 2) {
+  return {
+    kind: 'group-catalog-page' as const,
+    groups,
+    total,
+    revision: 'a'.repeat(64),
+    nextCursor,
+  };
+}
 function fixture() {
   const snapshot: BackendTeamSnapshot = {
     teamName: 'canonical-team',
@@ -66,11 +81,13 @@ function fixture() {
       state: 'ready',
       bindings: [{ handle: { handleId: 'TEST-opaque' }, label: 'Team', members: [] }],
     }),
-    invoke: vi.fn<AgentBackendApi['invoke']>().mockImplementation(async (request) =>
-      request.operation === 'team.messages.page'
-        ? mockOwnerMessagesPage(snapshot, request.payload)
-        : { ok: true, value: snapshot }
-    ),
+    invoke: vi
+      .fn<AgentBackendApi['invoke']>()
+      .mockImplementation(async (request) =>
+        request.operation === 'team.messages.page'
+          ? mockOwnerMessagesPage(snapshot, request.payload)
+          : { ok: true, value: snapshot }
+      ),
   };
   const legacy: TeamGroupChatsAPI = {
     list: vi.fn(),
@@ -180,6 +197,90 @@ it('context changes during group-send preparation prevent mutation dispatch', as
   expect(vi.mocked(f.backend.invoke).mock.calls.map(([request]) => request.operation)).toEqual([
     'team.snapshot',
   ]);
+});
+
+it('assembles every original group page before returning a renderer catalog', async () => {
+  const f = fixture();
+  const invoke = vi.mocked(f.backend.invoke);
+  invoke
+    .mockResolvedValueOnce({ ok: true, value: catalogPage([group], catalogCursor) })
+    .mockResolvedValueOnce({ ok: true, value: catalogPage([nextGroup], null) });
+  const api = createHostGroupChatsApi(f.legacy, f.backend, () => () => true);
+  await expect(api.list({ teamName: key })).resolves.toEqual([group, nextGroup]);
+  expect(
+    invoke.mock.calls.map(([request]) => ({ handle: request.handle, payload: request.payload }))
+  ).toEqual([
+    { handle: { handleId: 'TEST-opaque' }, payload: {} },
+    { handle: { handleId: 'TEST-opaque' }, payload: { cursor: catalogCursor } },
+  ]);
+  expect(f.legacy.list).not.toHaveBeenCalled();
+});
+
+it.each([{ rows: [] }, { rows: [group] }])(
+  'preserves an ordinary small renderer group catalog %#',
+  async ({ rows }) => {
+    const f = fixture();
+    vi.mocked(f.backend.invoke).mockResolvedValue({ ok: true, value: rows });
+    const api = createHostGroupChatsApi(f.legacy, f.backend, () => () => true);
+    await expect(api.list({ teamName: key })).resolves.toEqual(rows);
+    expect(f.backend.invoke).toHaveBeenCalledOnce();
+  }
+);
+
+it.each([
+  'revision',
+  'total',
+  'duplicate',
+  'cursor',
+  'mixed',
+  'incomplete',
+  'empty',
+  'malformed',
+  'length',
+  'context',
+] as const)('refuses %s drift without returning a partial renderer group catalog', async (mode) => {
+  const f = fixture();
+  let current = true;
+  const total = mode === 'cursor' || mode === 'incomplete' ? 3 : 2;
+  const first = catalogPage([group], catalogCursor, total);
+  const second = catalogPage([nextGroup], null, total);
+  if (mode === 'revision') second.revision = 'c'.repeat(64);
+  if (mode === 'total') second.total = 3;
+  if (mode === 'duplicate') second.groups = [group];
+  if (mode === 'cursor') second.nextCursor = catalogCursor;
+  if (mode === 'empty') second.groups = [];
+  if (mode === 'malformed') second.nextCursor = 'invalid';
+  if (mode === 'length') second.groups.push({ ...nextGroup, id: post });
+  const invoke = vi.mocked(f.backend.invoke);
+  invoke.mockResolvedValueOnce({ ok: true, value: first }).mockImplementationOnce(async () => {
+    if (mode === 'context') current = false;
+    return { ok: true, value: mode === 'mixed' ? [nextGroup] : second };
+  });
+  const api = createHostGroupChatsApi(f.legacy, f.backend, () => () => current);
+  await expect(api.list({ teamName: key })).rejects.toThrow();
+  expect(invoke).toHaveBeenCalledTimes(2);
+  expect(f.legacy.list).not.toHaveBeenCalled();
+});
+
+it('keeps the existing renderer catalog continuation budget finite', async () => {
+  const f = fixture();
+  let page = 0;
+  vi.mocked(f.backend.invoke).mockImplementation(async () => {
+    const index = ++page;
+    return {
+      ok: true,
+      value: catalogPage(
+        [{ ...group, id: index.toString(16).padStart(8, '0') + '-0000-4000-8000-000000000001' }],
+        index + '.' + 'b'.repeat(64),
+        10000
+      ),
+    };
+  });
+  const api = createHostGroupChatsApi(f.legacy, f.backend, () => () => true);
+  await expect(api.list({ teamName: key })).rejects.toThrow(
+    'Host group catalog exceeded page limit'
+  );
+  expect(f.backend.invoke).toHaveBeenCalledTimes(128);
 });
 it('snapshot/history preserve validated group envelopes, expose only logical group rows and bind cursors to group scope', async () => {
   const f = fixture();

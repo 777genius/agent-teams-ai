@@ -20,6 +20,7 @@ import { captureCodexNativeInputs } from '../codex-native-closure.ts';
 import { startNativeTeamModel } from '../native-claude-team/model.ts';
 import { startCodexModel } from '../native-codex-team/model.ts';
 import { startOpenCodeModel } from '../native-opencode-team/model.ts';
+import { captureGoalStopWitness, goalStopInputsSettled } from '../real-vendor/goal-stop-oracle.ts';
 import {
   goalRow,
   nativeGoalArtifact,
@@ -561,6 +562,7 @@ async function runCase(
       assert.ok(input && active(input.phase));
       return { actor, inputId, operationRef: input.operationRef, phase: input.phase };
     });
+    const stopWitness = captureGoalStopWitness(actors.map(runtime));
     const stopId = 'TEST-goal-stop-control-' + suffix;
     const stopCommand = {
       goalId: stoppedBefore.goalId,
@@ -573,6 +575,7 @@ async function runCase(
     const inferenceCount = actors.map((actor) => scripts[actor].observations.length);
     for (const actor of stopActors) scripts[actor].releaseHeld();
     await wait('only original inputs may settle after Stop', async () => {
+      const originalsSettled = goalStopInputsSettled(stopWitness, actors.map(runtime));
       const current = await publicGoal();
       assert.ok(current);
       assert.equal(current.disposition, 'stopped');
@@ -591,7 +594,7 @@ async function runCase(
         actors.map((actor) => scripts[actor].observations.length),
         inferenceCount
       );
-      return exactHeld.every((original) =>
+      return originalsSettled && exactHeld.every((original) =>
         runtime(original.actor).inputs.some(
           (input) =>
             input.intent.inputId === original.inputId &&
@@ -620,6 +623,7 @@ async function runCase(
       originalIntake: stopIntake.receipt,
       originalControl: stopped,
       originalInputs: exactHeld,
+      runtimeWitness: stopWitness,
       nativeRequestsUnchanged: true,
       automaticAttemptsUnchanged: true,
       noFinalPublication: true,
@@ -634,6 +638,7 @@ async function runCase(
       );
       assert.equal(closed.custody, 'released');
     }
+    assert.equal(goalStopInputsSettled(stopWitness, actors.map(runtime)), true);
     await host.close();
     hosts.push(host.facts());
     host = undefined;
@@ -663,6 +668,7 @@ async function runCase(
       assert.equal(view.attached, false);
       assert.equal(runtime(actor).custody, 'released');
     }
+    assert.equal(goalStopInputsSettled(stopWitness, actors.map(runtime)), true);
     assert.deepEqual(
       actors.map((actor) => scripts[actor].observations.length),
       inferenceCount
@@ -770,6 +776,7 @@ export async function runNativeAutonomousGoalProof(
           join(import.meta.dirname, '../native-claude-team/model.ts'),
           join(import.meta.dirname, '../native-codex-team/model.ts'),
           join(import.meta.dirname, '../native-opencode-team/model.ts'),
+          join(import.meta.dirname, '../real-vendor/goal-stop-oracle.ts'),
         ].map(async (path) => [path.slice(repo.length + 1), await fileHash(path)])
       )
     );

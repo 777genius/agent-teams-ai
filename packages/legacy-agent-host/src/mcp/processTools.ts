@@ -55,7 +55,7 @@ export function createProcessMcpTools(
         `process_${operation}`,
         operation === 'stop'
           ? 'Mark existing process metadata stopped by ID or PID. This never sends an OS signal.'
-          : 'Remove registry metadata only; PID removes its complete registered history. This never sends an OS signal.',
+          : 'Remove registry metadata only; PID removes its complete registered history. Completed responses are bounded command acknowledgements; read the complete current catalog with process_list and follow nextCursor. This never sends an OS signal.',
         z.strictObject({ ...command, id: identifier.optional(), pid: pid.optional() }),
         async ({ commandId, id, pid }) => {
           const selected = selector.safeParse(present({ id, pid }));
@@ -72,7 +72,7 @@ export function createProcessMcpTools(
     ),
     define(
       'process_lookup',
-      'Look up the original process command under current authority; no native replay.',
+      'Look up the original process command under current authority; no native replay. Completed unregister receipts are bounded acknowledgements; read the current catalog with process_list and follow nextCursor.',
       z.strictObject(command),
       async ({ commandId }) => projectProcessReceipt(await process.lookup(commandId)),
       false

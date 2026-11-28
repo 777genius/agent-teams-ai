@@ -33,8 +33,7 @@ export async function captureGoalCompletionEvidence(options: {
     const root = options.team.connection.lookup(goal.rootCommandId);
     if (!root || root.goal?.goalId !== goal.goalId || !root.effects.deliveryId)
       throw new TeamOwnerError('hold');
-    const expected = new Map([[root.effects.deliveryId, goal.rootBinding],
-      ...Object.entries(goal.debits).map(([id, debit]) => [id, debit.binding] as const)]);
+    const expected = options.team.owner.goals.inputBindings();
     const seen = new Set<string>();
     const originals = new Set<string>();
     const groups: { entry: GoalEvidenceMember; sources: GoalInputSource[] }[] = [];
@@ -84,7 +83,7 @@ export async function captureGoalCompletionEvidence(options: {
         throw new TeamOwnerError('hold');
     }
     return { groups, witness: digest({ goalId: goal.goalId, revision: goal.revision,
-      disposition: goal.disposition, rootCommandId: goal.rootCommandId, debits: goal.debits,
+      disposition: goal.disposition, rootCommandId: goal.rootCommandId, debits: goal.debits, inputs: [...expected],
       sources: groups.map(group => ({ sources: group.sources, config: group.entry.config,
         workspace: capturedWorkspaceIdentity(group.entry.profile.cwd) })) }) };
   };

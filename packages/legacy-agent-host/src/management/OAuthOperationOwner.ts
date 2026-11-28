@@ -184,6 +184,7 @@ export class OAuthOperationOwner {
       try {
         if (this.options.store.read(input.operationId)) throw new ManagementCommandError('conflict');
       } catch (error) { pending.receiptConflict = true; throw error; }
+      this.assertPendingStart(pending);
       const saved: StoredOAuthCommand = {
         schemaVersion: 1, ...target, commandId: input.operationId, kind: 'oauth',
         providerId: input.providerId, methodIndex: input.methodIndex, ...proof,
@@ -192,6 +193,7 @@ export class OAuthOperationOwner {
       };
       pending.claimWriteAttempted = true;
       this.options.store.write(saved);
+      this.assertPendingStart(pending);
       const entry: ActiveOAuth = { saved, native, abort: pending.abort, retired: false };
       pending.transferred = true;
       pending.resourceHeld = false;

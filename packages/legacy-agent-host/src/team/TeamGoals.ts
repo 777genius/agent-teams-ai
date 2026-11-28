@@ -25,6 +25,7 @@ export class TeamGoals {
     state(): OwnerState;
     authorize(principalId: string, permission: TeamGrant['permissions'][number]): TeamGrant;
     authorizeDelivery(raw: ImmutableDelivery, action: 'read' | 'admit' | 'dispatch' | 'control'): boolean;
+    humanTaskStart(intent: DeliveryIntent, receipt: CommandReceipt): boolean;
     execute: ExecuteGoalCommand;
     invalidate(): void;
   }) {}
@@ -125,6 +126,36 @@ export class TeamGoals {
       if (!origin || receipt.phase === 'rejected') return undefined;
       validateGoalOrigin(origin);
       return { goalId: origin.goalId, revision: origin.revision };
+    });
+  }
+
+  /** Original human authority is distinct from the retained Goal evidence association. */
+  humanTaskStart(raw: ImmutableDelivery): boolean {
+    return this.options.store.fenced(() => {
+      if (!this.association(raw)) return false;
+      const intent = this.options.store.read<DeliveryIntent>(`outbox/${raw.deliveryId}.json`)!;
+      return this.options.humanTaskStart(intent, readProductCommand(this.options.store, intent.commandId)!);
+    });
+  }
+
+  /** Derive required originals without charging or forgetting separately authorized human work. */
+  inputBindings(): ReadonlyMap<string, RuntimeMemberBinding> {
+    return this.options.store.fenced(() => {
+      const goal = this.state().autonomousGoal;
+      if (!goal) return new Map();
+      const root = readProductCommand(this.options.store, goal.rootCommandId);
+      if (!root || root.goal?.goalId !== goal.goalId || root.goal.revision !== goal.revision || !root.effects.deliveryId)
+        throw new TeamOwnerError('hold');
+      const inputs = new Map([[root.effects.deliveryId, memberBinding(goal.rootBinding)],
+        ...Object.entries(goal.debits).map(([id, debit]) => [id, memberBinding(debit.binding)] as const)]);
+      for (const intent of this.options.store.list<DeliveryIntent>('outbox')) {
+        const association = this.association(intent);
+        if (association?.goalId !== goal.goalId || association.revision !== goal.revision || !this.humanTaskStart(intent)) continue;
+        const previous = inputs.get(intent.inputId), binding = memberBinding(intent.binding);
+        if (previous && digest(previous) !== digest(binding)) throw new TeamOwnerError('hold');
+        inputs.set(intent.inputId, binding);
+      }
+      return new Map([...inputs].sort(([a], [b]) => a.localeCompare(b)));
     });
   }
 
@@ -311,6 +342,7 @@ export class TeamGoals {
     return this.options.store.fenced(() => {
       const association = this.association(raw);
       if (!association) return true;
+      if (this.humanTaskStart(raw)) return true;
       const intent = this.options.store.read<DeliveryIntent>(`outbox/${raw.deliveryId}.json`)!;
       const receipt = readProductCommand(this.options.store, intent.commandId)!;
       const goal = this.state().autonomousGoal;
@@ -334,7 +366,7 @@ export class TeamGoals {
         throw new TeamOwnerError('forbidden');
       const goal = this.state().autonomousGoal;
       // Ordinary human work still runs; its actual claim invalidates a candidate atomically.
-      if (goal?.disposition === 'finalizing' && !this.association(raw)) {
+      if (goal?.disposition === 'finalizing' && (!this.association(raw) || this.humanTaskStart(raw))) {
         goal.disposition = 'active'; delete goal.proposal; goal.reason = 'verification-changed';
         this.save(goal);
       }
@@ -434,7 +466,7 @@ export class TeamGoals {
     if (!runtime.cancelDelivery) return;
     const obsolete = (intent: DeliveryIntent) => {
       const association = this.association(intent), goal = this.state().autonomousGoal;
-      if (!association || readProductCommand(this.options.store, intent.commandId)?.goal?.kind === 'intake') return false;
+      if (!association || this.humanTaskStart(intent) || readProductCommand(this.options.store, intent.commandId)?.goal?.kind === 'intake') return false;
       return !goal || association.goalId !== goal.goalId || association.revision !== goal.revision ||
         goal.disposition !== 'active' || expired(goal) ||
         (!goal.debits[intent.inputId] && Object.keys(goal.debits).length >= goal.attemptLimit) ||
@@ -482,9 +514,8 @@ export class TeamGoals {
       if (!goal || !['finalizing', 'accepted'].includes(goal.disposition)) return;
       const tasks = this.scopedTasks();
       const inputs = records.flatMap(record => record.inputs.filter(input => this.association(input.intent)?.goalId === goal.goalId));
-      const root = readProductCommand(this.options.store, goal.rootCommandId);
-      const expected = [root?.effects.deliveryId, ...Object.keys(goal.debits)];
-      const missing = expected.some(id => !id || !inputs.some(input => input.intent.inputId === id));
+      const expected = this.inputBindings();
+      const missing = [...expected.keys()].some(id => !inputs.some(input => input.intent.inputId === id));
       if (goal.proposal) {
         const grant = this.options.authorize(goal.proposal.principalId, 'task.write');
         if (goal.disposition === 'finalizing' && (grant.revision ?? 1) !== goal.proposal.authorityRevision)

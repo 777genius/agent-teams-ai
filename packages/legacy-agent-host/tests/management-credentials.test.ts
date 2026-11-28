@@ -356,7 +356,7 @@ test('original pending credentials survive cold lookup without replay; only expl
   }
 });
 
-test('publication loss never resubmits a completed native effect; a confirmed settled writer permits a separate later intent', async (t) => {
+test('publication loss never resubmits a completed native effect or releases its uncertain original claim', async (t) => {
   const f = fixture();
   t.after(f.cleanup);
   const failing: CredentialCommandStore = {
@@ -372,16 +372,16 @@ test('publication loss never resubmits a completed native effect; a confirmed se
   const restarted = f.owner();
   assert.deepEqual(await restarted.execute(command), receipt);
   assert.equal(f.count(), 1);
-  assert.equal(f.store.read(command.commandId)?.resourceHeld, false);
-  const forgotten = await restarted.execute({
+  assert.equal(f.store.read(command.commandId)?.phase, 'claimed');
+  assert.equal(f.store.read(command.commandId)?.resourceHeld, true);
+  await assert.rejects(restarted.execute({
     commandId: 'TEST-forget',
     profileId: command.profileId,
     configRevision: command.configRevision,
     providerId: command.providerId,
     kind: 'credential.forget',
-  });
-  assert.equal(forgotten.phase, 'completed');
-  assert.equal(f.count(), 2);
+  }), { code: 'held' });
+  assert.equal(f.count(), 1);
 });
 
 test('late native reply after writer revocation does not publish over the retained claim', async (t) => {
@@ -498,3 +498,169 @@ test('refresh reuse is durable across aliases/restarts, never extends rotation a
   await owner().execute(refresh('TEST-independent', 'TEST-other-namespace'));
   assert.equal(effects, 5);
 });
+
+test('asynchronous validation settles before a credential claim or native effect', { timeout: 10_000 }, async t => {
+  const f = fixture(); t.after(f.cleanup);
+  const entered = Promise.withResolvers<void>(), release = Promise.withResolvers<void>();
+  t.after(() => release.resolve());
+  let effects = 0;
+  const owner = new CredentialCommandOwner({
+    store: f.store, select: () => target, assertCurrent() {},
+    async validate() { entered.resolve(); await release.promise; },
+    async perform() { effects++; return { ok: true, settled: true }; },
+  });
+  const running = owner.execute({ ...lookup, providerId: command.providerId, kind: 'credential.forget' });
+  try {
+    await entered.promise;
+    assert.equal(f.store.read(command.commandId), undefined, 'validation must not race durable admission');
+    assert.equal(effects, 0);
+    release.resolve();
+    assert.equal((await running).phase, 'completed');
+    assert.equal(effects, 1);
+  } finally { release.resolve(); await running.catch(() => {}); }
+});
+
+for (const change of ['writer', 'target', 'original-id'] as const) {
+  test(`validation rechecks the original ${change} before reserve and claim`, { timeout: 10_000 }, async t => {
+    const f = fixture(); t.after(f.cleanup);
+    const entered = Promise.withResolvers<void>(), release = Promise.withResolvers<void>();
+    t.after(() => release.resolve());
+    let current = true, selected = { ...target }, effects = 0;
+    const owner = new CredentialCommandOwner({
+      store: f.store, select: () => selected,
+      assertCurrent() { if (!current) throw new Error('TEST revoked during validation'); },
+      async validate() { entered.resolve(); await release.promise; },
+      async perform() { effects++; return { ok: true, settled: true }; },
+    });
+    const input = { ...lookup, providerId: command.providerId, kind: 'credential.forget' as const };
+    const running = owner.execute(input);
+    const observed = running.then(value => ({ value }), error => ({ error }));
+    try {
+      await entered.promise;
+      if (change === 'writer') current = false;
+      if (change === 'target') selected = { ...target, selectionDigest: 'd'.repeat(64) };
+      if (change === 'original-id') f.store.write({ ...target, schemaVersion: 1,
+        commandId: command.commandId, providerId: command.providerId, kind: 'credential.forget',
+        fingerprint: 'e'.repeat(64), phase: 'completed', resourceHeld: false });
+      const original = change === 'original-id' ? readFileSync(f.files()[0]!) : undefined;
+      release.resolve();
+      const result = await observed;
+      assert.ok('error' in result, 'stale validation must not become a successful admission');
+      assert.equal(effects, 0);
+      if (original) assert.deepEqual(readFileSync(f.files()[0]!), original);
+      else assert.equal(f.store.read(command.commandId), undefined);
+    } finally { release.resolve(); await observed; }
+  });
+}
+
+for (const change of ['replacement', 'deletion', 'corruption'] as const) {
+  for (const outcome of ['success', 'failure'] as const) {
+    test(`credential ${outcome} cannot overwrite original ${change} after its native await`, { timeout: 10_000 }, async t => {
+      const f = fixture(); t.after(f.cleanup);
+      const entered = Promise.withResolvers<void>(), release = Promise.withResolvers<void>();
+      t.after(() => release.resolve());
+      let effects = 0;
+      const owner = new CredentialCommandOwner({
+        store: f.store, select: () => target, assertCurrent() {},
+        async perform() {
+          effects++; entered.resolve(); await release.promise;
+          if (outcome === 'failure') throw new Error('TEST native result unavailable');
+          return { ok: true, settled: true };
+        },
+      });
+      const input = { ...lookup, providerId: command.providerId, kind: 'credential.forget' as const };
+      const running = owner.execute(input);
+      try {
+        await entered.promise;
+        const path = f.files()[0]!, saved = f.store.read(command.commandId);
+        assert.ok(saved?.kind === 'credential.forget');
+        if (change === 'replacement') f.store.write({ ...saved, fingerprint: 'f'.repeat(64) });
+        if (change === 'deletion') rmSync(path);
+        if (change === 'corruption') writeFileSync(path, '{"TEST-invalid-original":true}', { mode: 0o600 });
+        const original = change === 'deletion' ? undefined : readFileSync(path);
+        release.resolve();
+        assert.equal((await running).phase, 'held');
+        if (original) assert.deepEqual(readFileSync(path), original, 'terminal and catch both preserve the changed original');
+        else assert.throws(() => readFileSync(path), { code: 'ENOENT' });
+        await assert.rejects(owner.execute({ ...input, commandId: 'TEST-after-uncertain-original' }), { code: 'held' });
+        assert.equal(effects, 1, 'unknown publication cannot release its namespace for another native effect');
+      } finally { release.resolve(); await running.catch(() => {}); }
+    });
+  }
+}
+
+for (const acknowledgement of ['before-commit', 'after-commit'] as const) {
+  test(`terminal write ${acknowledgement} failure retains the exact original and live reservation`, { timeout: 10_000 }, async t => {
+    const f = fixture(); t.after(f.cleanup);
+    let original: Buffer | undefined, effects = 0, writes = 0;
+    const storage: CredentialCommandStore = {
+      read: id => f.store.read(id), list: () => f.store.list(),
+      write(record) {
+        writes++;
+        if (record.phase === 'completed') {
+          if (acknowledgement === 'after-commit') f.store.write(record);
+          original = readFileSync(f.files()[0]!);
+          throw new Error('TEST original terminal acknowledgement lost');
+        }
+        f.store.write(record);
+      },
+    };
+    const owner = new CredentialCommandOwner({
+      store: storage, select: () => target, assertCurrent() {},
+      async perform() { effects++; return { ok: true, settled: true }; },
+    });
+    const input = { ...lookup, providerId: command.providerId, kind: 'credential.forget' as const };
+    assert.equal((await owner.execute(input)).phase, 'held');
+    assert.ok(original);
+    assert.deepEqual(readFileSync(f.files()[0]!), original, 'catch never publishes over a lost acknowledgement');
+    assert.equal(writes, 2, 'one original claim and one terminal attempt only');
+    await assert.rejects(owner.execute({ ...input, commandId: 'TEST-after-lost-ack' }), { code: 'held' });
+    assert.equal(effects, 1);
+    const cold = new CredentialCommandOwner({ store: f.store, select: () => target, assertCurrent() {},
+      async perform() { assert.fail('cold original replay cannot resubmit the native mutation'); } });
+    assert.equal((await cold.resume(input)).phase, acknowledgement === 'after-commit' ? 'completed' : 'held');
+    assert.deepEqual(readFileSync(f.files()[0]!), original);
+  });
+}
+
+for (const acknowledgement of ['before-commit', 'after-commit'] as const) {
+  test(`progress write ${acknowledgement} failure cannot be repaired by a later clean native reply`, { timeout: 10_000 }, async t => {
+    const f = fixture(); t.after(f.cleanup);
+    let original: Buffer | undefined, writes = 0, effects = 0;
+    const storage: CredentialCommandStore = {
+      read: id => f.store.read(id), list: () => f.store.list(),
+      write(record) {
+        writes++;
+        if (record.kind === 'credential.set' && record.openCodeV2?.phase === 'key-connected') {
+          if (acknowledgement === 'after-commit') f.store.write(record);
+          original = readFileSync(f.files()[0]!);
+          throw new Error('TEST progress acknowledgement lost');
+        }
+        f.store.write(record);
+      },
+    };
+    const owner = new CredentialCommandOwner({
+      store: storage, select: () => target, assertCurrent() {},
+      async perform(_command, _target, progress) {
+        effects++;
+        const intent = { phase: 'key-intent' as const, integrationId: 'TEST-original-integration',
+          nativeNamespace: 'c'.repeat(64), beforeAuthDigest: 'd'.repeat(64),
+          authWitnessKdf: { version: 1 as const, salt: 'e'.repeat(32) } };
+        try {
+          progress(intent);
+          progress({ ...intent, phase: 'key-connected', credentialId: 'cred_TEST' });
+        } catch { return { ok: false, settled: true }; }
+        assert.fail('TEST progress write must lose its acknowledgement');
+      },
+    });
+    const result = await owner.execute(command);
+    assert.equal(result.phase, 'held');
+    assert.equal('reason' in result, false, 'publication uncertainty is not a confirmed verification rejection');
+    assert.ok(original);
+    assert.deepEqual(readFileSync(f.files()[0]!), original);
+    assert.equal(writes, 3, 'claim, first protected intent and uncertain original progress only');
+    await assert.rejects(owner.execute({ ...lookup, commandId: 'TEST-after-uncertain-progress',
+      providerId: command.providerId, kind: 'credential.forget' }), { code: 'held' });
+    assert.equal(effects, 1);
+  });
+}

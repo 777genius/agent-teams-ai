@@ -355,20 +355,24 @@ export function createHostTeamsApi(
       const state = await lifecycle.read(connection, check);
       current(check);
       assertCurrent();
-      const processes = await readHostProcessCatalog(async (cursor) => {
-        const page = await backend.invoke({
-          handle: { ...handle },
-          commandId: crypto.randomUUID(),
-          operation: 'process.list',
-          payload: cursor === undefined ? {} : { cursor },
-        });
-        if (!page.ok) throw new Error(`Host process read ${page.code}`);
-        return page.value;
-      }, () => {
-        current(check);
-        assertCurrent();
-        if (connection.handle.handleId !== handle.handleId) throw new Error('Host process selection changed');
-      });
+      const processes = await readHostProcessCatalog(
+        async (cursor) => {
+          const page = await backend.invoke({
+            handle: { ...handle },
+            commandId: crypto.randomUUID(),
+            operation: 'process.list',
+            payload: cursor === undefined ? {} : { cursor },
+          });
+          if (!page.ok) throw new Error(`Host process read ${page.code}`);
+          return page.value;
+        },
+        () => {
+          current(check);
+          assertCurrent();
+          if (connection.handle.handleId !== handle.handleId)
+            throw new Error('Host process selection changed');
+        }
+      );
       const result = view(
         { ...snapshot, processes },
         connection,

@@ -1315,3 +1315,57 @@ test('G1d an already-replaced live START identity is fenced before derivation wi
   assert.equal(f.serialized(), bytes); assert.equal(native.completeCalls, 0);
   assert.equal(f.conversations.length, 1);
 });
+
+for (const boundary of ['read', 'write'] as const) {
+  for (const fault of ['writer', 'target', 'seal', 'expired'] as const) {
+    test(`G1d initial claim ${boundary} rechecks ${fault} before native handoff`, async (t) => {
+      const controlled = controlledFingerprints(t);
+      t.mock.timers.enable({ apis: ['Date'], now: 100_000 });
+      let invalidate: (() => void) | undefined;
+      let writes = 0;
+      const crossBoundary = () => {
+        const action = invalidate;
+        invalidate = undefined;
+        action?.();
+      };
+      const f = fixture({
+        store: (base) => ({
+          list: () => base.list(),
+          read(id) {
+            const record = base.read(id);
+            if (boundary === 'read') crossBoundary();
+            return record;
+          },
+          write(record) {
+            base.write(record);
+            writes++;
+            if (boundary === 'write') crossBoundary();
+          },
+        }),
+      });
+      t.after(() => f.cleanup());
+      const started = f.owner.start(initial);
+      const rejected = assert.rejects(started);
+      assert.equal(controlled.started(), 1);
+      invalidate = fault === 'writer' ? f.revoke
+        : fault === 'target' ? f.changeTarget
+          : fault === 'seal' ? () => f.owner.seal()
+            : () => t.mock.timers.setTime(130_000);
+      controlled.finish();
+      await bounded(rejected, 'the original claim rejects after its admission changed');
+      assert.equal(f.conversations[0]!.authorizeCalls, 0);
+      assert.equal(f.conversations[0]!.closeCalls, 1);
+      assert.deepEqual(f.events, []);
+      if (boundary === 'read') {
+        assert.equal(writes, 0);
+        assert.equal(f.base.read(initial.operationId), undefined);
+        assert.doesNotThrow(() => f.fence.assertAvailable('b'.repeat(64)));
+      } else {
+        assert.equal(writes, 1, 'cleanup does not rewrite the uncertain original claim');
+        assert.equal(f.base.read(initial.operationId)?.phase, 'authorizing');
+        assert.equal(f.base.read(initial.operationId)?.resourceHeld, true);
+        assert.throws(() => f.fence.assertAvailable('b'.repeat(64)), { code: 'held' });
+      }
+    });
+  }
+}

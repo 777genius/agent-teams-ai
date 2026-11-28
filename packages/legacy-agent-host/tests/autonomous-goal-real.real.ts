@@ -17,6 +17,8 @@ import { fileHash, startHost, tick, treeHash } from './fixtures/native-host.ts';
 import { Inconclusive, assertFreeDisk, classifyVendorFailure, discoverTarget } from './fixtures/real-vendor/discovery.ts';
 import { buildRealHostProfile, digest } from './fixtures/real-vendor/host-profile.ts';
 import { goalRuntimeDiagnostics, goalTransportEnvironment } from './fixtures/real-vendor/goal-diagnostics.ts';
+import { captureGoalStopWitness, goalStopInputsSettled } from './fixtures/real-vendor/goal-stop-oracle.ts';
+import type { GoalStopWitness } from './fixtures/real-vendor/goal-stop-oracle.ts';
 import type { RealVendor } from './fixtures/real-vendor/discovery.ts';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import type { CommandReceipt } from '../dist/team/contracts.js';
@@ -178,6 +180,17 @@ test('REAL autonomous goal: productive lead/member completion and a separate ori
         diagnosticBytes += chunk.length;
       } });
     const { envelope } = built;
+    const runtimeStore = new FileRuntimeStore(built.owner.storageRoot);
+    const readOriginalRuntime = () => members.map(member => {
+      const binding = { backendId: built.owner.ownerId, teamId: built.scope.teamId,
+        runId: built.scope.runId, memberId: member.memberId, generation: '1' };
+      return runtimeStore.fenced(binding, tx => {
+        const original = tx.get();
+        assert.ok(original, 'the exact original Runtime record remains available');
+        assert.deepEqual(original.binding, binding);
+        return original;
+      });
+    });
     const rpc = async <T>(method: string, payload: unknown, commandId?: string): Promise<T> => {
       assertRunning();
       receipt.lastRequest = { method, commandId };
@@ -271,32 +284,37 @@ test('REAL autonomous goal: productive lead/member completion and a separate ori
     } }, 'TEST-real-goal-stop');
     phase = 'stop-active-observation';
     let stopViews = finalRuntime;
+    let stopWitness: GoalStopWitness[] | undefined;
     await waitFor(async () => {
       stopViews = await readRuntime();
-      return stopViews.get('worker')!.inputs.some(input => !previousWorkerIds.has(input.inputId) &&
+      const activeWorker = stopViews.get('worker')!.inputs.find(input => !previousWorkerIds.has(input.inputId) &&
         ['claimed', 'consumed'].includes(input.phase));
+      if (!activeWorker) return false;
+      const originals = readOriginalRuntime();
+      if (!originals.find(record => record.binding.memberId === 'worker-id')!.inputs.some(input =>
+        input.intent.inputId === activeWorker.inputId && ['claimed', 'consumed'].includes(input.phase))) return false;
+      stopWitness = captureGoalStopWitness(originals);
+      return true;
     }, 120_000, 'No actual active worker input was observed for the separate Stop case.');
+    assert.ok(stopWitness);
     const atStop = await goal();
     assert.ok(atStop && atStop.goalId !== completed.goalId);
     phase = 'stop-control';
     const stopped = await rpc<GoalStatus>('team.goal.control', { goalId: atStop.goalId,
       expectedRevision: atStop.revision, action: 'stop' }, 'TEST-real-goal-stop-control');
     assert.equal(stopped.disposition, 'stopped');
-    const startedIds = new Map([...stopViews].map(([name, view]) => [name, new Set(view.inputs
-      .filter(input => ['claimed', 'consumed', 'terminal'].includes(input.phase)).map(input => input.inputId))]));
     phase = 'stop-settlement';
     await waitFor(async () => {
-      const views = await readRuntime(), current = await goal();
+      await readRuntime();
+      const current = await goal();
       assert.ok(current);
       assert.equal(current.disposition, 'stopped');
       assert.equal(current.attemptsUsed, stopped.attemptsUsed);
       assert.notEqual(current.published, true);
-      for (const [name, view] of views) for (const input of view.inputs)
-        assert.ok(startedIds.get(name)!.has(input.inputId) || ['admitted', 'cancelled', 'rejected', 'not-sent'].includes(input.phase),
-          'Stop cannot claim either a new input or an originally admitted but unclaimed input');
-      return [...views.values()].every(view => view.inputs.every(input => !['claimed', 'consumed'].includes(input.phase)));
+      return goalStopInputsSettled(stopWitness!, readOriginalRuntime());
     }, 120_000, 'Original native input did not settle after Stop; this is not a success receipt.');
-    receipt.stop = { status: 'pass', goal: await goal(), automaticAttemptsUnchanged: true, noFinalPublication: true };
+    receipt.stop = { status: 'pass', goal: await goal(), originalInputs: stopWitness,
+      automaticAttemptsUnchanged: true, noFinalPublication: true };
     for (const member of members) {
       phase = 'runtime.stop:' + member.name;
       await rpc('runtime.stop', { memberId: member.memberId, expectedGeneration: '1' });
@@ -304,13 +322,11 @@ test('REAL autonomous goal: productive lead/member completion and a separate ori
     phase = 'host-close';
     await closeHost(); host = undefined;
     phase = 'retained-receipt-check';
-    const store = new FileRuntimeStore(built.owner.storageRoot);
-    receipt.runtimeInputs = members.map(member => {
-      const binding = { backendId: built.owner.ownerId, teamId: built.scope.teamId,
-        runId: built.scope.runId, memberId: member.memberId, generation: '1' };
-      const original = store.fenced(binding, tx => tx.get());
-      assert.ok(original && original.custody === 'released');
-      return { binding, inputs: original.inputs.map(input => ({ inputId: input.intent.inputId,
+    const retained = readOriginalRuntime();
+    assert.equal(goalStopInputsSettled(stopWitness, retained), true);
+    receipt.runtimeInputs = retained.map(original => {
+      assert.equal(original.custody, 'released');
+      return { binding: original.binding, inputs: original.inputs.map(input => ({ inputId: input.intent.inputId,
         operationRef: input.operationRef, fingerprint: input.fingerprint, phase: input.phase, terminal: input.terminal })) };
     });
     const teamStore = new TeamOwnerStore(built.owner.storageRoot, profile.teams[0]!.binding.teamName);

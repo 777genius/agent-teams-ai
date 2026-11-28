@@ -205,6 +205,7 @@ export class TeamOwner {
     this.goals = new TeamGoals({ store: this.store, policy: this.policy, state: () => this.state(),
       authorize: (principal, permission) => this.authorize(principal, permission),
       authorizeDelivery: (raw, action) => this.deliveryAuthority.authorizeIntent(raw, action),
+      humanTaskStart: (intent, receipt) => !!this.taskRecovery.lookupTaskStartCause(intent, receipt, 'historical'),
       execute: (principal, command, preparation) => this.execute(principal, command, undefined, undefined, undefined, undefined, preparation),
       invalidate: () => this.productChanges.invalidate(),
     });
