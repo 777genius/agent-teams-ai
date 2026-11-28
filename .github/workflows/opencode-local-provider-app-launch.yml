@@ -131,11 +131,12 @@ jobs:
       - name: Install frozen SDK source dependencies
         working-directory: TEST-local-provider-sdk
         run: bun install --frozen-lockfile --linker hoisted --backend=copyfile
-      - name: Install application dependencies and build controller and MCP
+      - name: Install application dependencies and build controller, MCP and Host
         run: |
           node scripts/ci/install-dependencies-with-retry.mjs
           pnpm --filter agent-teams-controller build
           pnpm --filter agent-teams-mcp build
+          pnpm --filter @agent-teams/legacy-agent-host build
       - name: Verify local provider fixture formatting and regressions
         run: |
           set -euo pipefail

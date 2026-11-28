@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { createFilesystemTeamOwner } from '@agent-teams/legacy-agent-host/team/filesystem';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { runtimeInputFits } from '../../../packages/legacy-agent-host/dist/runtime/runtimeDelivery.js';
 import { boundProductCommandReceipt } from '../../../packages/legacy-agent-host/dist/team/boundProductCommandReceipt.js';
 import { projectBackendResult } from '../../../src/features/agent-backend/main/adapters/output/projectBackendResult';
 
@@ -74,6 +75,7 @@ describe('original Host message delivery projection', () => {
   it('acknowledges a large accepted message and recovers its original delivery without repeating the effect', () => {
     const owner = createFilesystemTeamOwner({
       root: join(root, 'large-message'), binding,
+      inputPreflight: ({ content }) => runtimeInputFits(content, 1024 * 1024),
       members: [{ memberId: delivery.memberId, name: 'alice', role: 'member', delivery }],
       grants: [{ principalId: 'TEST-human', memberName: 'user', permissions: ['read', 'message.write'] }],
     });

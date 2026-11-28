@@ -89,7 +89,10 @@ it('member_briefing reuses canonical durable formatter and working queue for act
   }).effects.taskId;
   const tools = createTeamMcpTools(f.owner.connect('native-connection'));
   const tool = tools.list().find((t) => t.name === 'member_briefing')!;
-  expect(tool.inputSchema.properties).toEqual({ includeActiveProcesses: expect.any(Object) });
+  expect(tool.inputSchema.properties).toEqual({
+    includeActiveProcesses: expect.any(Object),
+    cursor: { type: 'string', pattern: '^[1-9][0-9]{0,8}\\.[a-f0-9]{64}$' },
+  });
   const taskPath = join(f.root, 'tasks', f.binding.teamName, task + '.json');
   const before = readFileSync(taskPath, 'utf8');
   const commands = join(f.root, 'teams', f.binding.teamName, '.host-owner', 'commands');

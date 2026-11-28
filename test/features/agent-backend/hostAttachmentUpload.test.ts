@@ -664,16 +664,18 @@ describe('selected Team attachment publication', () => {
       payload: { to: 'captain', text: 'Inspect', attachments: [reference] },
     });
     const intent = f.connection.pendingDeliveries()[0]!;
+    const baseProfile = {
+      provider: 'claude',
+      model: 'claude-haiku-4-5',
+      principalId: 'TEST-human',
+      configRevision: 'TEST-revision',
+    };
     const entry = {
       team: f.hosted,
       binding: f.delivery,
       delivery: f.delivery,
-      profile: {
-        provider: 'claude',
-        model: 'claude-haiku-4-5',
-        principalId: 'TEST-human',
-        configRevision: 'TEST-revision',
-      },
+      profile: structuredClone(baseProfile),
+      baseProfile,
     } as unknown as MemberEntry;
     const operationRef = 'TEST-operation';
     const record = {
@@ -718,6 +720,16 @@ describe('selected Team attachment publication', () => {
     expect((await port.resolve(request, signal))?.bytes).toEqual(Buffer.from('TEST native bytes'));
     expect(await port.resolve({ ...request, inputId: 'TEST-other-input' }, signal)).toBeUndefined();
     expect(await port.resolve({ ...request, fingerprint: 'f'.repeat(64) }, signal)).toBeUndefined();
+    const { port: changedProfile } = createMemberAttachmentPort({
+      entry: {
+        ...entry,
+        profile: { ...entry.profile, configRevision: 'TEST-unselected-revision' },
+      },
+      storageRoot: f.root,
+      assertCurrent() {},
+      readRuntime: () => ({ record, attached: true }),
+    });
+    await expect(changedProfile.resolve(request, signal)).rejects.toMatchObject({ code: 'hold' });
     const teammate = {
       ...entry,
       team: {
