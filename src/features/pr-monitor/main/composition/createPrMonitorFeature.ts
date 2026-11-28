@@ -10,7 +10,6 @@ import { githubCredentialStore } from '../infrastructure/githubCredentialStore';
 import { githubLoginConfiguration } from '../infrastructure/githubLoginConfiguration';
 
 import { createGitHubAccounts } from './githubAccounts';
-
 import { createGitHubReaders } from './githubReaders';
 
 import type {

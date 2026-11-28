@@ -1,5 +1,6 @@
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const fixture = vi.hoisted(() => ({
@@ -232,5 +233,29 @@ describe('project polling', () => {
     expect(latest.snapshot).toBeNull();
     expect(latest.selectedNumber).toBeUndefined();
     expect(latest.error?.kind).toBe('sign_in_required');
+  });
+  it('refreshes the loaded page range without losing later selection or pagination', async () => {
+    fixture.api.list.mockImplementation(async ({ page = 1 }: { page?: number }) => ({
+      ok: true,
+      value: {
+        items: page === 1 ? [summary(1), summary(2)] : [summary(page + 1)],
+        nextPage: page < 3 ? page + 1 : null,
+        fetchedAt: '2026-11-28T16:00:00Z',
+      },
+    }));
+    await act(async () => root.render(<Probe />));
+    await act(async () => latest.loadMore());
+    await act(async () => latest.select(summary(3)));
+    expect(latest.items.map((item) => item.number)).toEqual([1, 2, 3]);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30_000);
+    });
+    expect(latest.items.map((item) => item.number)).toEqual([1, 2, 3]);
+    expect(latest.selectedNumber).toBe(3);
+    expect(latest.snapshot?.pullRequest.number).toBe(3);
+    expect(latest.nextPage).toBe(3);
+    await act(async () => latest.loadMore());
+    expect(latest.items.map((item) => item.number)).toEqual([1, 2, 3, 4]);
+    expect(latest.nextPage).toBeNull();
   });
 });

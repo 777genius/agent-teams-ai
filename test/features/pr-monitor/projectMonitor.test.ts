@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { isMonitorRequest } from '../../../src/features/pr-monitor/contracts';
 import { createProjectMonitor } from '../../../src/features/pr-monitor/core/application/projectMonitor';
 
+import type { ProjectMonitorDependencies } from '../../../src/features/pr-monitor/core/application/projectMonitor';
 import type {
   PullRequestPage,
   PullRequestReader,
@@ -26,14 +27,14 @@ function fixture() {
   const hasNativeAccount = vi.fn(() => true);
   const createReader = vi.fn(() => ({ list, get }));
   const isCurrent = vi.fn(async () => true);
+  const connectAccount = vi.fn<ProjectMonitorDependencies['connectAccount']>(async () =>
+    hasNativeAccount()
+      ? { ok: true, value: { kind: 'cli', createReader, isCurrent } }
+      : { ok: false, error: { kind: 'sign_in_required', message: 'Sign in.', retryAt: null } }
+  );
   return {
-    feature: createProjectMonitor({
-      projects,
-      connectAccount: async () =>
-        hasNativeAccount()
-          ? { ok: true, value: { kind: 'cli', createReader, isCurrent } }
-          : { ok: false, error: { kind: 'sign_in_required', message: 'Sign in.', retryAt: null } },
-    }),
+    feature: createProjectMonitor({ projects, connectAccount }),
+    connectAccount,
     list,
     get,
     projects,
@@ -218,6 +219,67 @@ describe('project account boundary', () => {
     f.feature.dispose();
     expect((await f.feature.list(request)).ok).toBe(false);
   });
+  it.each(['disconnect', 'reset', 'dispose'] as const)(
+    'aborts pending account authentication on %s and rejects its late result',
+    async (action) => {
+      const f = fixture();
+      let finish!: () => void;
+      let signal!: AbortSignal;
+      const waiting = new Promise<void>((resolve) => {
+        finish = resolve;
+      });
+      f.connectAccount.mockImplementationOnce(async (pendingSignal) => {
+        signal = pendingSignal;
+        await waiting;
+        return {
+          ok: true,
+          value: { kind: 'cli', createReader: f.createReader, isCurrent: f.isCurrent },
+        };
+      });
+      const pending = f.feature.connect(request);
+      await vi.waitFor(() => expect(f.connectAccount).toHaveBeenCalledOnce());
+      if (action === 'disconnect') await f.feature.disconnect(request);
+      else f.feature[action]();
+      expect(signal.aborted).toBe(true);
+      finish();
+      expect((await pending).ok).toBe(false);
+      expect(await f.feature.describe(request)).toMatchObject({ value: { connected: false } });
+    }
+  );
+  it.each(['same', 'different'] as const)(
+    'scopes overlapping connects to the %s repository',
+    async (mode) => {
+      const f = fixture();
+      f.projects.resolve.mockImplementation(async (input = request) => ({
+        ok: true,
+        value: {
+          repository: { ...repository, repo: input.projectId },
+          scope: f.projects.currentScope(),
+        },
+      }));
+      let finish!: () => void;
+      let signal!: AbortSignal;
+      const waiting = new Promise<void>((resolve) => {
+        finish = resolve;
+      });
+      f.connectAccount.mockImplementationOnce(async (pendingSignal) => {
+        signal = pendingSignal;
+        await waiting;
+        return {
+          ok: true,
+          value: { kind: 'cli', createReader: f.createReader, isCurrent: f.isCurrent },
+        };
+      });
+      const first = f.feature.connect(request);
+      await vi.waitFor(() => expect(f.connectAccount).toHaveBeenCalledOnce());
+      const other = mode === 'same' ? request : { ...request, projectId: 'TEST-other' };
+      expect((await f.feature.connect(other)).ok).toBe(true);
+      expect(signal.aborted).toBe(mode === 'same');
+      finish();
+      expect((await first).ok).toBe(mode === 'different');
+      expect(await f.feature.describe(other)).toMatchObject({ value: { connected: true } });
+    }
+  );
   it.each([
     null,
     { ...request, operation: 'get', number: -1 },

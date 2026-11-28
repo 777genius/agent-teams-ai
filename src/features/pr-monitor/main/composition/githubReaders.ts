@@ -1,5 +1,5 @@
 import { assemblyFor, declareModule, input } from '@get-modular/assembly';
-import { GitHubHost, githubGroup, githubModule } from '@pr-monitor/github/module';
+import { githubGroup, GitHubHost, githubModule } from '@pr-monitor/github/module';
 
 import type { PullRequestReader } from '@pr-monitor/core';
 import type { GitHubTransport } from '@pr-monitor/github';

@@ -58,6 +58,7 @@ export function useProjectPullRequests(projectId: string, active: boolean) {
     scope,
     generation: 0,
     detail: 0,
+    loadedPages: 1,
     consentBusy: false,
     selected: undefined as number | undefined,
     error: null as MonitorError | null,
@@ -72,6 +73,7 @@ export function useProjectPullRequests(projectId: string, active: boolean) {
       if (controller.scope !== scope) return true;
       controller.generation++;
       controller.detail++;
+      controller.loadedPages = 1;
       controller.selected = undefined;
       controller.error = { ...error, retryAt: null };
       setSelectedNumber(undefined);
@@ -96,6 +98,7 @@ export function useProjectPullRequests(projectId: string, active: boolean) {
             scope,
             generation: 0,
             detail: 0,
+            loadedPages: 1,
             consentBusy: false,
             selected: undefined as number | undefined,
             error: null as MonitorError | null,
@@ -153,14 +156,28 @@ export function useProjectPullRequests(projectId: string, active: boolean) {
           patch({ items: [], nextPage: null, snapshot: null, loadingDetail: false });
           return;
         }
-        const result = await api.prMonitor.list({ contextId, projectId });
-        if (!currentRefresh()) return;
-        if (!result.ok) {
-          error = result.error;
-          invalidateAuthority(error);
-          return;
+        const items: PullRequestSummary[] = [];
+        let nextPage: number | null = 1;
+        let refreshedPages = 0;
+        // Refresh only the range the user already loaded; never collapse later pages.
+        for (let page = 1; page <= controller.loadedPages && nextPage !== null; page++) {
+          const result = await api.prMonitor.list({
+            contextId,
+            projectId,
+            ...(page === 1 ? {} : { page }),
+          });
+          if (!currentRefresh()) return;
+          if (!result.ok) {
+            error = result.error;
+            invalidateAuthority(error);
+            return;
+          }
+          items.push(...result.value.items);
+          nextPage = result.value.nextPage;
+          refreshedPages = page;
         }
-        patch({ items: result.value.items, nextPage: result.value.nextPage });
+        controller.loadedPages = refreshedPages;
+        patch({ items: [...new Map(items.map((item) => [item.number, item])).values()], nextPage });
         if (controller.selected !== undefined) {
           const detail = ++controller.detail;
           ownedDetail = detail;
@@ -260,6 +277,7 @@ export function useProjectPullRequests(projectId: string, active: boolean) {
     controller.consentBusy = true;
     controller.generation++;
     controller.detail++;
+    controller.loadedPages = 1;
     setState((value) => ({ ...value, loading: true, loadingDetail: false }));
     try {
       const result = await api.prMonitor[enabled ? 'connect' : 'disconnect'](request);
@@ -296,9 +314,10 @@ export function useProjectPullRequests(projectId: string, active: boolean) {
       return;
     const controller = control.current;
     const generation = controller.generation;
+    const page = current.nextPage;
     setState((value) => ({ ...value, loading: true }));
     try {
-      const result = await api.prMonitor.list({ ...request, page: current.nextPage });
+      const result = await api.prMonitor.list({ ...request, page });
       if (
         control.current !== controller ||
         generation !== controller.generation ||
@@ -306,6 +325,7 @@ export function useProjectPullRequests(projectId: string, active: boolean) {
       )
         return;
       if (!result.ok && invalidateAuthority(result.error)) return;
+      if (result.ok) controller.loadedPages = page;
       controller.error = result.ok ? null : result.error;
       setState((value) => ({
         ...value,
@@ -341,6 +361,7 @@ export function useProjectPullRequests(projectId: string, active: boolean) {
       if (controller.scope !== scope) return;
       controller.generation++;
       controller.detail++;
+      controller.loadedPages = 1;
       controller.error = null;
       controller.selected = undefined;
       setSelectedNumber(undefined);

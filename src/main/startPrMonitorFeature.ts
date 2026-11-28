@@ -1,10 +1,11 @@
 import { join } from 'node:path';
-import { ApiKeyService } from '@main/services/extensions/apikeys/ApiKeyService';
+
 import {
   createPrMonitorFeature,
-  registerPrMonitorIpc,
   isTrustedRenderer,
+  registerPrMonitorIpc,
 } from '@features/pr-monitor/main';
+import { ApiKeyService } from '@main/services/extensions/apikeys/ApiKeyService';
 import { ipcMain } from 'electron';
 
 import type { ServiceContext } from '@main/services';

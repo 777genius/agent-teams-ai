@@ -66,9 +66,9 @@ describe('private repository transport boundary', () => {
     await app.close();
   });
   it('accepts only the intended Electron top-level frame, and disposes all handlers', async () => {
-    const handlers = new Map<string, (...args: any[]) => unknown>();
+    const handlers = new Map<string, (...args: unknown[]) => unknown>();
     const ipc = {
-      handle: (name: string, handler: (...args: any[]) => unknown) => handlers.set(name, handler),
+      handle: (name: string, handler: (...args: unknown[]) => unknown) => handlers.set(name, handler),
       removeHandler: vi.fn((name: string) => handlers.delete(name)),
     };
     const instance = feature();

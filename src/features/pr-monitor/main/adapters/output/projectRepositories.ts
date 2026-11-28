@@ -1,5 +1,5 @@
-import { parseGitHubRemote } from '@pr-monitor/github';
 import { gitIdentityResolver } from '@main/services/parsing/GitIdentityResolver';
+import { parseGitHubRemote } from '@pr-monitor/github';
 
 import { monitorFailure } from '../../../contracts';
 

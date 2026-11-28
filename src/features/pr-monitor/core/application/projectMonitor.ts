@@ -25,7 +25,7 @@ export interface ProjectMonitorDependencies {
   readonly login?: RepositoryStatus['login'];
 }
 
-/** Host policy only: project membership and explicit use of the local CLI account. */
+/** Host policy only: project membership and explicit use of a native GitHub account. */
 export function createProjectMonitor(deps: ProjectMonitorDependencies) {
   interface Lease {
     readonly abort: AbortController;
@@ -33,10 +33,11 @@ export function createProjectMonitor(deps: ProjectMonitorDependencies) {
     reader?: Promise<PullRequestReader>;
   }
   const grants = new Map<string, Lease>();
+  const pendingConnections = new Map<string, AbortController>();
   let grantedScope: object | undefined;
-  let generation = 0;
   const reset = () => {
-    generation++;
+    for (const connection of pendingConnections.values()) connection.abort();
+    pendingConnections.clear();
     for (const lease of grants.values()) lease.abort.abort();
     grants.clear();
     grantedScope = undefined;
@@ -77,21 +78,31 @@ export function createProjectMonitor(deps: ProjectMonitorDependencies) {
   ): Promise<MonitorResult<RepositoryStatus>> {
     const result = await repository(request);
     if (!result.ok) return result;
-    const revision = ++generation;
     const repoKey = key(result.value.repository);
     const scope = result.value.scope;
+    pendingConnections.get(repoKey)?.abort();
+    pendingConnections.delete(repoKey);
     grants.get(repoKey)?.abort.abort();
     grants.delete(repoKey);
     if (enabled) {
-      const connected = await deps.connectAccount(AbortSignal.timeout(30_000));
-      if (
-        deps.projects.currentScope() !== scope ||
-        grantedScope !== scope ||
-        generation !== revision
-      )
-        return changed();
-      if (!connected.ok) return connected;
-      grants.set(repoKey, { abort: new AbortController(), account: connected.value });
+      const connection = new AbortController();
+      const connectSignal = AbortSignal.any([connection.signal, AbortSignal.timeout(30_000)]);
+      pendingConnections.set(repoKey, connection);
+      try {
+        const connected = await deps.connectAccount(connectSignal);
+        if (
+          deps.projects.currentScope() !== scope ||
+          grantedScope !== scope ||
+          pendingConnections.get(repoKey) !== connection ||
+          connectSignal.aborted
+        )
+          return changed();
+        if (!connected.ok) return connected;
+        grants.set(repoKey, { abort: new AbortController(), account: connected.value });
+      } finally {
+        connection.abort();
+        if (pendingConnections.get(repoKey) === connection) pendingConnections.delete(repoKey);
+      }
     }
     return describe(request);
   }

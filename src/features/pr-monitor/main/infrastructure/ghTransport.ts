@@ -1,7 +1,7 @@
-import { isGitHubReadPath } from '@pr-monitor/github';
 import { execCli } from '@main/utils/childProcess';
 import { buildMergedCliPath } from '@main/utils/cliPathMerge';
 import { findFirstRuntimePathBinaryCandidate } from '@main/utils/runtimePathBinaryResolver';
+import { isGitHubReadPath } from '@pr-monitor/github';
 
 import type { RepositoryKey } from '@pr-monitor/core';
 import type { GitHubResponse, GitHubTransport } from '@pr-monitor/github';

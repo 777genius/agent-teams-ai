@@ -1,5 +1,6 @@
 import { PullRequestList, PullRequestTimeline } from '@pr-monitor/react';
 import { Button } from '@renderer/components/ui/button';
+
 import { GitHubLoginPanel } from './GitHubLoginPanel';
 
 import type { DeviceLogin, MonitorError, RepositoryStatus } from '../../contracts';
