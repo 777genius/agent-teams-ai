@@ -1,4 +1,7 @@
-import { readGroupCatalogValue, readGroupList } from '@agent-teams/legacy-agent-host/group-chats/public-values';
+import {
+  readGroupCatalogValue,
+  readGroupList,
+} from '@agent-teams/legacy-agent-host/group-chats/public-values';
 
 import type { TeamGroupChatDTO } from '@agent-teams/legacy-agent-host/group-chats/contracts';
 
