@@ -19,6 +19,7 @@ import type {
   BackendCrossTeamReceipt,
 } from './crossTeam';
 import type { BackendGroupPayloads, BackendGroupValue } from './groupChats';
+import type { GroupSendRefusalCode } from '@agent-teams/legacy-agent-host/group-chats/contracts';
 import type { BackendHandle } from './index';
 import type {
   BackendLaunchConfiguration,
@@ -574,7 +575,8 @@ export type BackendOperationResult =
         | 'hold'
         | 'busy'
         | 'unavailable'
-        | 'shutting-down';
+        | 'shutting-down'
+        | GroupSendRefusalCode;
       outcome: 'not-dispatched' | 'rejected' | 'unknown';
     };
 

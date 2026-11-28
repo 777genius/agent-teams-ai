@@ -3,6 +3,8 @@ import {
   readGroupReaction,
 } from '@agent-teams/legacy-agent-host/group-chats/public-values';
 
+import { isGroupSendRefusalCode } from '@agent-teams/legacy-agent-host/group-chats/contracts';
+
 import { readHostGroupCatalog } from '../core/application/readHostGroupCatalog';
 
 import { HostTeamOperationError } from './createHostTeamMutations';
@@ -92,6 +94,7 @@ export function createHostGroupChatsApi(
       };
     }
     let result: BackendOperationResult;
+    let lookedUp = false;
     try {
       result = await backend.invoke(request);
     } catch {
@@ -99,6 +102,7 @@ export function createHostGroupChatsApi(
       if (['group.list', 'group.reaction.read', 'group.lookup'].includes(operation))
         throw new HostTeamOperationError('transport-unavailable', 'unknown', commandId);
       // Lookup the original receipt only. No mutation retry or replacement command is issued.
+      lookedUp = true;
       result = await backend.invoke({
         handle: selected.handle,
         commandId,
@@ -107,7 +111,12 @@ export function createHostGroupChatsApi(
       });
     }
     check(true);
-    if (!result.ok) throw new HostTeamOperationError(result.code, result.outcome, commandId);
+    if (!result.ok) {
+      if (isGroupSendRefusalCode(result.code) &&
+          (operation !== 'group.send' || lookedUp || result.outcome !== 'rejected'))
+        throw new HostTeamOperationError('hold', 'unknown', commandId);
+      throw new HostTeamOperationError(result.code, result.outcome, commandId);
+    }
     return { value: result.value, commandId };
   }
   async function mutation(

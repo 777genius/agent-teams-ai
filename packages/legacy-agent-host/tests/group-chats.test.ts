@@ -51,6 +51,7 @@ import type { GroupCommandReceipt } from '../dist/group-chats/groupCommandRecord
 import type { GroupMessage } from '../dist/group-chats/message.js';
 import type { ImmutableDelivery } from '../dist/team/contracts.js';
 import type { GroupChatStorage } from '../dist/group-chats/storage.js';
+import { GroupChatError } from '../dist/group-chats/model.js';
 import type { GroupChat } from '../dist/group-chats/model.js';
 const id = '10000000-0000-4000-8000-000000000001';
 const postId = '20000000-0000-4000-8000-000000000001';
@@ -1365,4 +1366,77 @@ test('queued human group and direct inputs retain independent cancellation and r
   const retained = f.store.fenced(() => f.store.read<ImmutableDelivery>(outboxPath)!);
   assert.equal(retained.content, groupIntent.content);
   assert.equal(opens, 0);
+});
+
+
+test('desktop group send forwards only proven no-effect refusal and preserves an uncertain saved post', async (t) => {
+  const f = fixture(t);
+  await f.human.execute('TEST-create', f.create, guard);
+  const team: HostedTeam = {
+    owner: f.owner, connection: f.owner.connect('human'),
+    definition: {
+      binding: f.binding, members: f.options.members, grants: f.options.grants,
+      scope: { projectId: 'TEST-project', workspaceId: 'TEST-workspace',
+        teamId: f.binding.teamId, runId: 'TEST-run', memberId: 'human', generation: '1' },
+    },
+  };
+  const owner = {
+    ownerId: f.binding.backendId, revision: 'TEST-revision', storageRoot: f.root,
+    profileId: 'TEST-profile', protocolVersion: 1 as const, buildId: 'TEST-build',
+    nodeSha256: 'd'.repeat(64), hostEntrySha256: 'e'.repeat(64),
+  };
+  const inboxPath = join(f.root, 'teams', f.binding.teamName, 'inboxes', 'user.json');
+  const canonical = () => existsSync(inboxPath) ? f.inbox('user') : [];
+  let unavailable = false, failAfterPublication = false;
+  const uncertainId = '40000000-0000-4000-8000-000000000001';
+  const composition = createHostGroupComposition({
+    profile: { owner, principalId: 'human' }, teams: new Map([[f.binding.teamId, team]]),
+    assertCurrent() {
+      if (failAfterPublication && canonical().some(row => row.messageId === uncertainId))
+        throw new GroupChatError('invalid-recipient', 'TEST failure after publication');
+    },
+    getRun: async (_team, name) => unavailable && name === 'alice' ? null : f.runtime.getRun(name),
+    kick() {},
+  });
+  const send = (commandId: string, messageId: string, recipientName: string, text = 'TEST draft') =>
+    composition.methods['team.group.send']!.handle({
+      commandId, binding: { schemaVersion: 1, handleId: 'TEST-handle', owner, scope: team.definition.scope },
+      payload: { groupChatId: id, messageId, recipientName, text },
+    }, { requestId: commandId, signal: new AbortController().signal });
+  const before = canonical(), pending = f.owner.connect('human').pendingDeliveries();
+  const refusal = async (commandId: string, result: unknown, code: string) => {
+    assert.deepEqual(await result, { ok: false, code, outcome: 'rejected' });
+    const receipt = f.store.fenced(() => f.store.read<GroupCommandReceipt>(teamCommandPath(commandId))!);
+    assert.equal(receipt.phase, 'held');
+    assert.equal(receipt.publication, 'not-requested');
+    assert.deepEqual(receipt.deliveries, []);
+    assert.deepEqual(canonical(), before);
+    assert.deepEqual(f.owner.connect('human').pendingDeliveries(), pending);
+  };
+  await refusal('TEST-removed-recipient', send('TEST-removed-recipient', postId, 'removed'), 'invalid-recipient');
+  unavailable = true;
+  await refusal('TEST-unavailable-recipient', send('TEST-unavailable-recipient', postId, 'alice'), 'recipient-unavailable');
+  unavailable = false;
+  await f.human.execute('TEST-archive', { operation: 'archive', groupChatId: id, archived: true }, guard);
+  await refusal('TEST-archived-send', send('TEST-archived-send', postId, 'alice'), 'archived');
+  await f.human.execute('TEST-unarchive', { operation: 'archive', groupChatId: id, archived: false }, guard);
+  await refusal('TEST-oversize-send', send('TEST-oversize-send', postId, 'alice', '界'.repeat(30_000)), 'invalid-input');
+  assert.deepEqual(await send('TEST-corrected-send', replyId, 'alice'), {
+    ok: true, value: f.human.lookup('TEST-corrected-send'),
+  });
+  assert.deepEqual(canonical().map(row => row.messageId), [replyId]);
+  failAfterPublication = true;
+  assert.deepEqual(await send('TEST-uncertain-send', uncertainId, 'alice'), {
+    ok: false, code: 'hold', outcome: 'unknown',
+  });
+  failAfterPublication = false;
+  const saved = f.store.fenced(() => f.store.read<GroupCommandReceipt>(teamCommandPath('TEST-uncertain-send'))!);
+  assert.equal(saved.publication, 'requested');
+  assert.equal(saved.phase, 'held');
+  assert.deepEqual(canonical().map(row => row.messageId), [replyId, uncertainId]);
+  const after = canonical();
+  assert.deepEqual(await send('TEST-uncertain-send', uncertainId, 'alice'), {
+    ok: true, value: f.human.lookup('TEST-uncertain-send'),
+  });
+  assert.deepEqual(canonical(), after);
 });

@@ -6,6 +6,7 @@ import { AcceptedOpenCodeV2FileKey } from './OpenCodeV2SelectedFileKey.js';
 import { closeCoordinationByDeadline } from './OpenCodeCoordinationEndpoint.js';
 import { ManagementCommandError, nativeLocalReadinessEvidenceSchema } from '../../management/commandRecords.js';
 import { managementDigest } from '../../management/identity.js';
+import { resolveOpenCodeEnvironment } from './resolveOpenCodeEnvironment.js';
 
 import type { NativeCoordinationObservation } from './OpenCodeCoordinationProbe.js';
 import type { ModelProbeInput, NativeModelProbe } from '../../management/ModelProbeOwner.js';
@@ -95,16 +96,8 @@ export function createOpenCodeLocalModelReadiness(
   const candidate = providers[input.providerId];
   const configured = object(candidate) ? candidate : undefined;
   const options = configured && object(configured.options) ? configured.options : {};
-  const resolveString = (value: unknown): unknown => {
-    if (typeof value !== 'string') return value;
-    if (value.includes('{file:')) invalid();
-    return value.replace(/\{env:([A-Za-z_][A-Za-z0-9_]*)\}|\$\{([A-Za-z_][A-Za-z0-9_]*)\}/gu,
-      (_match: string, braced: string | undefined, shell: string | undefined) => {
-        const selected = profile.environment[braced ?? shell!];
-        if (selected === undefined || selected.includes('\0')) return invalid();
-        return selected;
-      });
-  };
+  const resolveString = (value: unknown): unknown =>
+    resolveOpenCodeEnvironment(value, profile.environment, 256 * 1024, invalid);
   const compatible = configured?.npm === '@ai-sdk/openai-compatible';
   const selectedUrl = policyOrigin ? baseUrl(policyOrigin.policy?.baseUrl)
     : compatible ? baseUrl(resolveString(options.baseURL)) : undefined;

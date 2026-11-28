@@ -48,6 +48,16 @@ export interface GroupChatSendRequest {
   relayOfMessageId?: string;
 }
 
+/** Finite human-send errors which may release the original draft only with no-effect proof. */
+const groupSendRefusalCodes = [
+  'invalid-input', 'invalid-recipient', 'reserved-group', 'archived',
+  'minimum-members', 'not-member', 'recipient-unavailable', 'invalid-relay', 'not-found',
+] as const;
+export type GroupSendRefusalCode = (typeof groupSendRefusalCodes)[number];
+export function isGroupSendRefusalCode(value: unknown): value is GroupSendRefusalCode {
+  return typeof value === 'string' && groupSendRefusalCodes.some(code => code === value);
+}
+
 export type GroupDeliveryStatus = 'queued' | 'accepted' | 'failed' | 'unknown' | 'skipped';
 
 export interface GroupDeliveryRecipient {
