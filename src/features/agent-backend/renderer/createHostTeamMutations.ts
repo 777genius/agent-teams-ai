@@ -150,7 +150,15 @@ export function createHostTeamMutations(options: {
       const source = payload[field] as TaskRef[] | undefined;
       source?.forEach((ref) => collect(ref.teamName));
     }
-    const target = await options.resolve(key, current, [...referenceTeams]);
+    let target: Awaited<ReturnType<typeof options.resolve>>;
+    try {
+      target = await options.resolve(key, current, [...referenceTeams]);
+    } catch (error) {
+      // This read-only lookup precedes capture, upload and mutation. Only a
+      // retained Task attempt with current authority may release its intent.
+      if (!attempt || !current() || error instanceof HostTeamOperationError) throw error;
+      throw new HostTeamOperationError('owner-unavailable', 'not-dispatched', command.commandId);
+    }
     if (
       payload.nativeCommand === true &&
       target.members?.filter((member) => member.name === payload.to && member.role === 'lead')
