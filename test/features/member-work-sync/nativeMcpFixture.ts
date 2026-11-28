@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, realpathSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { acquireProfileWriterLease } from '../../../packages/legacy-agent-host/src/adapters/profile/ProfileWriterLease.js';
 export interface TestCleanup {
   after(callback: () => void): void;
 }
@@ -18,7 +19,11 @@ import type {
 
 export function nativeMcpFixture(t: TestCleanup, role: 'lead' | 'member' = 'lead') {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-native-mcp-authority-')));
-  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const writer = acquireProfileWriterLease(root);
+  t.after(() => {
+    writer.release();
+    rmSync(root, { recursive: true, force: true });
+  });
   const binding = { backendId: 'TEST-backend', teamId: 'TEST-team', teamName: 'test-native-mcp' };
   const source = {
     backendId: binding.backendId,
@@ -108,7 +113,8 @@ export function nativeMcpFixture(t: TestCleanup, role: 'lead' | 'member' = 'lead
     readRuntime: () => ({ record, attached }),
     captureTeam: (raw: RuntimeDelivery) =>
       owner.captureNativeMcpAuthority('native-connection', source, raw, true),
-    assertCurrent() {},
+    // TeamHost owns the profile writer; each command separately captures its native input.
+    assertCurrent: () => writer.assertCurrent(),
   };
   return {
     root,
@@ -118,6 +124,7 @@ export function nativeMcpFixture(t: TestCleanup, role: 'lead' | 'member' = 'lead
     source,
     input,
     options,
+    revokeWriter: () => writer.release(),
     get record() {
       return record;
     },
