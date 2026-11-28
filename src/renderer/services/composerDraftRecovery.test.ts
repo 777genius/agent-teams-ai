@@ -91,8 +91,43 @@ describe('buildRestoredWorking', () => {
           ...original.snapshot,
           content: {
             ...original.snapshot.content,
-            autonomousGoal: { durationHours: 12, maxAttempts: -1 },
+            restoredOrigin: {
+              kind: 'unconfirmed-send',
+              attemptId: original.id,
+              autonomousGoalRequest: {
+                kind: 'local',
+                teamName: alice.teamName,
+                request: {
+                  member: 'alice',
+                  text: 'message',
+                  messageId: 'TEST-original',
+                  actionMode: 'do',
+                  autonomousGoal: { durationHours: 12, maxAttempts: -1 },
+                },
+              },
+            },
           },
+        },
+      })
+    ).toBe(false);
+  });
+
+  it.each([
+    null,
+    {},
+    { durationHours: '12', maxAttempts: 100 },
+    { durationHours: 12, maxAttempts: null },
+    { durationHours: Number.NaN, maxAttempts: 100 },
+    { durationHours: 12, maxAttempts: Number.POSITIVE_INFINITY },
+    { durationHours: 12, maxAttempts: 100, extra: true },
+  ])('rejects malformed editable goal options %#', (autonomousGoal) => {
+    const original = recovery('displaced-draft');
+    expect(
+      isComposerRecoveryRecord({
+        ...original,
+        snapshot: {
+          ...original.snapshot,
+          content: { ...original.snapshot.content, autonomousGoal },
         },
       })
     ).toBe(false);

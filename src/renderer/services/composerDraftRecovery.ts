@@ -63,11 +63,17 @@ function isEditorContext(value: unknown): value is ComposerEditorContext {
 function isContent(value: unknown): value is ComposerDraftContent {
   if (!isObject(value)) return false;
   if (value.autonomousGoal !== undefined) {
-    try {
-      readAutonomousGoalOptions(value.autonomousGoal);
-    } catch {
+    // Drafts retain numeric edits; execution limits are checked when submitting.
+    const goal = value.autonomousGoal;
+    if (
+      !isObject(goal) ||
+      Object.keys(goal).some((key) => !['durationHours', 'maxAttempts'].includes(key)) ||
+      typeof goal.durationHours !== 'number' ||
+      !Number.isFinite(goal.durationHours) ||
+      typeof goal.maxAttempts !== 'number' ||
+      !Number.isFinite(goal.maxAttempts)
+    )
       return false;
-    }
   }
   if (isObject(value.restoredOrigin) && value.restoredOrigin.autonomousGoalRequest !== undefined) {
     const original = value.restoredOrigin.autonomousGoalRequest;

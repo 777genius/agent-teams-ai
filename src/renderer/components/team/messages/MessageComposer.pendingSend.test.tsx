@@ -700,6 +700,49 @@ describe('MessageComposer pending send lifecycle', () => {
     }
   );
 
+  it.each([
+    { durationHours: 0, maxAttempts: 100 },
+    { durationHours: 12, maxAttempts: 0 },
+    { durationHours: 1.5, maxAttempts: 100 },
+    { durationHours: 12, maxAttempts: 1.5 },
+    { durationHours: 25, maxAttempts: 100 },
+    { durationHours: 12, maxAttempts: 1001 },
+  ])('requires valid Goal limits before submitting an editable draft: %j', async (options) => {
+    const key = 'host-team:TEST-goal';
+    storeHarness.state.goalTeamName = key;
+    storeHarness.state.goalAvailable = true;
+    draftHarness.state.actionMode = 'do';
+    draftHarness.state.autonomousGoal = options;
+    const lead = {
+      ...members[0]!,
+      name: 'lead',
+      role: 'lead',
+      agentType: 'team-lead',
+      runtimeOwner: 'captured-host' as const,
+    };
+    const { host, root, onSend, render } = renderComposer({
+      teamName: key,
+      lockedRecipient: 'lead',
+      members: [lead],
+    });
+    try {
+      expect(host.textContent).toContain('Choose 1–24 hours and 1–1,000 automatic attempts.');
+      expect(getSendButton(host).disabled).toBe(true);
+      await act(async () => getSendButton(host).click());
+      expect(draftHarness.methods.beginAttempt).not.toHaveBeenCalled();
+      expect(onSend).not.toHaveBeenCalled();
+
+      draftHarness.state.autonomousGoal = { durationHours: 12, maxAttempts: 100 };
+      render();
+      expect(getSendButton(host).disabled).toBe(false);
+      await act(async () => getSendButton(host).click());
+      expect(onSend).toHaveBeenCalledTimes(1);
+      expect(onSend.mock.calls[0]?.[7]).toEqual({ durationHours: 12, maxAttempts: 100 });
+    } finally {
+      act(() => root.unmount());
+    }
+  });
+
   it('keeps an unresolved original blocked when its continuation option is cleared', async () => {
     const key = 'host-team:TEST-goal';
     storeHarness.state.goalTeamName = key;
