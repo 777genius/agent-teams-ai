@@ -239,3 +239,30 @@ test('new compact replay rejects malformed counts, changed token and unknown mar
   }
   assert.deepEqual(projectNativeWorkSyncResult({ operation: 'status', value: wire(result), identity }), result);
 });
+
+
+test('versioned compact status with a report token cannot lose its required follow-up', () => {
+  const original = object(wire(prescribed(status(3, '任'.repeat(30_000)))));
+  const result = object(projectNativeWorkSyncResult({ operation: 'status', value: wire(original), identity }));
+  const removeCall = (value: Record<string, unknown>) => {
+    const copy = { ...value };
+    for (const key of ['statusOnlyIncomplete', 'nextRequiredAction', 'nextRequiredToolCall', 'reportScope']) delete copy[key];
+    return wire(copy);
+  };
+  assert.throws(() => projectNativeWorkSyncResult({ operation: 'status', value: removeCall(result), identity }), /hold/);
+  assert.throws(() => projectNativeWorkSyncResult({ operation: 'status', value: removeCall(original), identity }), /hold/);
+  assert.deepEqual(projectNativeWorkSyncResult({ operation: 'status', value: wire(result), identity }), result);
+});
+
+test('tokenless compact status and compact report with a token need no prescribed follow-up', () => {
+  const original = status(3, '任'.repeat(30_000));
+  const tokenless = { ...original, reportToken: undefined, reportTokenExpiresAt: undefined };
+  const reply = projectNativeWorkSyncResult({ operation: 'status', value: wire(tokenless), identity });
+  assert.equal(Object.hasOwn(object(reply), 'nextRequiredToolCall'), false);
+  assert.deepEqual(projectNativeWorkSyncResult({ operation: 'status', value: reply, identity }), reply);
+  const report = projectNativeWorkSyncResult({ operation: 'report', identity, value: wire({
+    accepted: true, code: 'accepted', message: 'Member work sync report accepted.', status: original,
+  }) });
+  assert.equal(object(object(report).status).reportToken, original.reportToken);
+  assert.deepEqual(projectNativeWorkSyncResult({ operation: 'report', value: report, identity }), report);
+});
