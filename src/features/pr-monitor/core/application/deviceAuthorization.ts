@@ -21,6 +21,9 @@ export interface DeviceIssuer {
   identity(accessToken: string, signal: AbortSignal): Promise<string>;
 }
 
+/** Terminal authority loss is distinct from a retryable network or storage failure. */
+export class GitHubAuthorizationError extends Error {}
+
 const object = (value: unknown): Record<string, unknown> =>
   value && typeof value === 'object' && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -49,9 +52,16 @@ export function createDeviceAuthorization(options: {
     interval: number;
     busy: boolean;
   } | null = null;
+  let refreshEpoch: object = {};
+  let replacement: {
+    previous: OAuthCredential;
+    credential: Omit<OAuthCredential, 'accountId'>;
+  } | null = null;
   const cancel = () => {
     pending?.abort.abort();
     pending = null;
+    refreshEpoch = {};
+    replacement = null;
   };
   const missing = () =>
     monitorFailure(
@@ -59,18 +69,16 @@ export function createDeviceAuthorization(options: {
       'GitHub sign-in is not configured in this build. Use a signed-in GitHub CLI account.'
     );
 
-  async function credential(value: unknown, signal: AbortSignal): Promise<OAuthCredential> {
+  function parseCredential(value: unknown): Omit<OAuthCredential, 'accountId'> {
     const record = object(value);
     if (
       !boundedString(record.access_token, 4096) ||
       record.token_type !== 'bearer' ||
       !options.configuration
     )
-      throw new Error('Invalid sign-in response.');
-    const accountId = await options.issuer.identity(record.access_token, signal);
+      throw new GitHubAuthorizationError('Invalid sign-in response.');
     return {
       accessToken: record.access_token,
-      accountId,
       clientId: options.configuration.clientId,
       ...(boundedString(record.refresh_token, 4096) ? { refreshToken: record.refresh_token } : {}),
       ...(record.expires_in !== undefined
@@ -80,6 +88,13 @@ export function createDeviceAuthorization(options: {
         ? { refreshExpiresAt: options.now() + seconds(record.refresh_token_expires_in, 1) * 1000 }
         : {}),
     };
+  }
+
+  async function credential(value: unknown, signal: AbortSignal): Promise<OAuthCredential> {
+    const parsed = parseCredential(value);
+    const accountId = await options.issuer.identity(parsed.accessToken, signal);
+    signal.throwIfAborted();
+    return { ...parsed, accountId };
   }
   return {
     cancel,
@@ -205,24 +220,63 @@ export function createDeviceAuthorization(options: {
       }
     },
     async refresh(previous: OAuthCredential, signal: AbortSignal): Promise<OAuthCredential> {
+      const epoch = refreshEpoch;
+      const current = () => {
+        signal.throwIfAborted();
+        if (epoch !== refreshEpoch) throw new Error('GitHub disconnected.');
+      };
       if (
         !options.configuration ||
-        !previous.refreshToken ||
-        (previous.refreshExpiresAt !== undefined && previous.refreshExpiresAt <= options.now())
+        previous.clientId !== options.configuration.clientId ||
+        !previous.refreshToken
       )
-        throw new Error('Sign in again.');
-      const response = await options.issuer.exchange(
-        {
-          client_id: options.configuration.clientId,
-          refresh_token: previous.refreshToken,
-          grant_type: 'refresh_token',
-        },
-        signal
-      );
-      const next = await credential(response, signal);
-      if (next.accountId !== previous.accountId) throw new Error('GitHub account changed.');
-      await options.save(next, signal);
-      return next;
+        throw new GitHubAuthorizationError('Sign in again.');
+      current();
+      if (
+        replacement?.previous.refreshToken !== previous.refreshToken ||
+        replacement.previous.accountId !== previous.accountId ||
+        replacement.previous.clientId !== previous.clientId
+      ) {
+        if (previous.refreshExpiresAt !== undefined && previous.refreshExpiresAt <= options.now())
+          throw new GitHubAuthorizationError('Sign in again.');
+        const response = object(
+          await options.issuer.exchange(
+            {
+              client_id: options.configuration.clientId,
+              refresh_token: previous.refreshToken,
+              grant_type: 'refresh_token',
+            },
+            signal
+          )
+        );
+        current();
+        if (response.error) {
+          if (response.error === 'server_error' || response.error === 'temporarily_unavailable')
+            throw new Error('GitHub is temporarily unavailable.');
+          throw new GitHubAuthorizationError('Sign in again.');
+        }
+        const next = parseCredential(response);
+        if (!next.refreshToken) throw new GitHubAuthorizationError('Invalid refresh response.');
+        // GitHub has already retired the previous pair. Retain this candidate privately
+        // through transient verification/storage failures; no reader can use it yet.
+        replacement = { previous, credential: next };
+      }
+      const candidate = replacement;
+      try {
+        const accountId = await options.issuer.identity(candidate.credential.accessToken, signal);
+        current();
+        if (accountId !== previous.accountId)
+          throw new GitHubAuthorizationError('GitHub account changed.');
+        const next = { ...candidate.credential, accountId };
+        await options.save(next, signal);
+        current();
+        if (replacement === candidate) replacement = null;
+        return next;
+      } catch (error) {
+        if (error instanceof GitHubAuthorizationError && replacement === candidate)
+          replacement = null;
+        throw error;
+      }
     },
   };
 }

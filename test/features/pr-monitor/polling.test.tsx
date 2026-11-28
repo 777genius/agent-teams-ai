@@ -6,7 +6,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const fixture = vi.hoisted(() => ({
   contextId: 'local',
   epoch: 1,
-  api: { describe: vi.fn(), list: vi.fn(), get: vi.fn(), connect: vi.fn(), disconnect: vi.fn() },
+  api: {
+    describe: vi.fn(),
+    list: vi.fn(),
+    get: vi.fn(),
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+    signOut: vi.fn(),
+    beginLogin: vi.fn(),
+    cancelLogin: vi.fn(),
+  },
 }));
 vi.mock('@renderer/api', () => ({ api: { prMonitor: fixture.api } }));
 vi.mock('@renderer/store', () => ({
@@ -18,12 +27,13 @@ vi.mock('@renderer/store/utils/contextScopedRequestEpoch', () => ({
   subscribeContextScopedRequestEpoch: () => () => undefined,
 }));
 
+import { useGitHubLogin } from '../../../src/features/pr-monitor/renderer/hooks/useGitHubLogin';
 import {
   nextPollDelay,
   useProjectPullRequests,
 } from '../../../src/features/pr-monitor/renderer/hooks/useProjectPullRequests';
 
-import type { MonitorResult } from '../../../src/features/pr-monitor/contracts';
+import type { DeviceLogin, MonitorResult } from '../../../src/features/pr-monitor/contracts';
 import type { PullRequestSnapshot, PullRequestSummary } from '@pr-monitor/core';
 
 const repo = { provider: 'github' as const, owner: 'TEST', repo: 'fixture' };
@@ -219,6 +229,108 @@ describe('project polling', () => {
     expect(latest.error).toBeNull();
     expect(fixture.api.list).toHaveBeenCalledTimes(1);
   });
+  it.each([false, true])(
+    'clears an inactive monitor on global sign-out, including failed vault deletion (%s)',
+    async (deletionFails) => {
+      let first!: ReturnType<typeof useProjectPullRequests>;
+      let second!: ReturnType<typeof useProjectPullRequests>;
+      let login!: ReturnType<typeof useGitHubLogin>;
+      function Monitors({ secondActive = true }: { secondActive?: boolean }) {
+        first = useProjectPullRequests('TEST-A', true);
+        second = useProjectPullRequests('TEST-B', secondActive);
+        login = useGitHubLogin('TEST-A', true, first.connectionChanged);
+        return null;
+      }
+      await act(async () => root.render(<Monitors />));
+      await act(async () => {
+        await first.select(summary(1));
+        await second.select(summary(2));
+      });
+      await act(async () => root.render(<Monitors secondActive={false} />));
+      expect(second.snapshot?.pullRequest.number).toBe(2);
+      expect(second.items).toHaveLength(2);
+      fixture.api.signOut.mockImplementationOnce(async () => {
+        fixture.api.describe.mockResolvedValue({
+          ok: true,
+          value: { repository: repo, connected: false },
+        });
+        if (deletionFails)
+          throw new Error('TEST vault deletion failed after authority was retired');
+        return { ok: true, value: null };
+      });
+      await act(async () => login.signOut());
+      for (const monitor of [first, second]) {
+        expect(monitor.items).toEqual([]);
+        expect(monitor.snapshot).toBeNull();
+        expect(monitor.selectedNumber).toBeUndefined();
+      }
+      expect(second.repository).toBeNull();
+    }
+  );
+  it.each(['rejected', 'stale-project', 'stale-sign-out'] as const)(
+    'clears another inactive monitor when an account change settles with %s',
+    async (outcome) => {
+      let first!: ReturnType<typeof useProjectPullRequests>;
+      let second!: ReturnType<typeof useProjectPullRequests>;
+      let login!: ReturnType<typeof useGitHubLogin>;
+      function Monitors({
+        firstProject = 'TEST-A',
+        secondActive = true,
+      }: {
+        firstProject?: string;
+        secondActive?: boolean;
+      }) {
+        first = useProjectPullRequests(firstProject, true);
+        second = useProjectPullRequests('TEST-B', secondActive);
+        login = useGitHubLogin(firstProject, true, first.connectionChanged);
+        return null;
+      }
+      await act(async () => root.render(<Monitors />));
+      await act(async () => second.select(summary(2)));
+      await act(async () => root.render(<Monitors secondActive={false} />));
+      let resolve!: (value: MonitorResult<DeviceLogin | null>) => void;
+      let reject!: (error: Error) => void;
+      const operation = outcome === 'stale-sign-out' ? 'signOut' : 'beginLogin';
+      fixture.api[operation].mockImplementationOnce(
+        () =>
+          new Promise((done, fail) => {
+            resolve = done;
+            reject = fail;
+          })
+      );
+      fixture.api.cancelLogin.mockResolvedValue({ ok: true, value: null });
+      let pending!: Promise<void>;
+      await act(async () => {
+        pending = operation === 'signOut' ? login.signOut() : login.begin();
+      });
+      fixture.api.describe.mockResolvedValue({
+        ok: true,
+        value: { repository: repo, connected: false },
+      });
+      if (outcome !== 'rejected')
+        await act(async () => root.render(<Monitors firstProject="TEST-C" secondActive={false} />));
+      expect(second.snapshot?.pullRequest.number).toBe(2);
+      await act(async () => {
+        if (outcome === 'rejected') reject(new Error('TEST IPC failure after account retirement'));
+        else if (outcome === 'stale-sign-out') resolve({ ok: true, value: null });
+        else
+          resolve({
+            ok: true,
+            value: {
+              attemptId: 'TEST-attempt',
+              userCode: 'TEST-CODE',
+              verificationUri: 'https://github.com/login/device',
+              expiresAt: new Date(Date.now() + 60_000).toISOString(),
+              intervalMs: 5000,
+            },
+          });
+        await pending;
+      });
+      expect(second.items).toEqual([]);
+      expect(second.snapshot).toBeNull();
+      expect(second.selectedNumber).toBeUndefined();
+    }
+  );
   it('clears previous-account observations immediately after authority is revoked', async () => {
     await act(async () => root.render(<Probe />));
     await act(async () => latest.select(summary(1)));

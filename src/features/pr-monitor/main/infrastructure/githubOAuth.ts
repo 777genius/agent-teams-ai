@@ -1,27 +1,32 @@
+import { GitHubAuthorizationError } from '../../core/application/deviceAuthorization';
+
 import type { DeviceIssuer } from '../../core/application/deviceAuthorization';
 
 async function json(response: Response): Promise<unknown> {
   if (!response.ok || !response.body) {
-    await response.body?.cancel();
+    await response.body?.cancel().catch(() => undefined);
+    if (response.status === 401) throw new GitHubAuthorizationError('GitHub sign-in expired.');
     throw new Error('GitHub sign-in failed.');
   }
   const reader = response.body.getReader();
   const decoder = new TextDecoder('utf-8', { fatal: true });
   let text = '';
   let bytes = 0;
+  let ended = false;
   try {
     for (;;) {
       const chunk = await reader.read();
-      if (chunk.done) break;
-      bytes += chunk.value.byteLength;
-      if (bytes > 64 * 1024) {
-        await reader.cancel();
-        throw new Error('Invalid sign-in response.');
+      if (chunk.done) {
+        ended = true;
+        break;
       }
+      bytes += chunk.value.byteLength;
+      if (bytes > 64 * 1024) throw new Error('Invalid sign-in response.');
       text += decoder.decode(chunk.value, { stream: true });
     }
     return JSON.parse(text + decoder.decode()) as unknown;
   } finally {
+    if (!ended) await reader.cancel().catch(() => undefined);
     reader.releaseLock();
   }
 }

@@ -124,6 +124,10 @@ export function useGitHubLogin(projectId: string, active: boolean, onConnected: 
           },
           busy: false,
         });
+    } finally {
+      // Main may already have retired the previous account before IPC fails
+      // or this tab changes project. Other mounted monitors must still clear.
+      refresh.current();
     }
   }
   async function signOut() {
@@ -132,7 +136,6 @@ export function useGitHubLogin(projectId: string, active: boolean, onConnected: 
       const result = await api.prMonitor.signOut({ contextId, projectId });
       if (current.current !== scope) return;
       setState({ scope, login: null, error: result.ok ? null : result.error, busy: false });
-      refresh.current();
     } catch {
       if (current.current === scope) {
         setState({
@@ -141,8 +144,9 @@ export function useGitHubLogin(projectId: string, active: boolean, onConnected: 
           error: { kind: 'unknown', message: 'Could not sign out. Try again.', retryAt: null },
           busy: false,
         });
-        refresh.current();
       }
+    } finally {
+      refresh.current();
     }
   }
   return {

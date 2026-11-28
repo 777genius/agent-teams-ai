@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   createDeviceAuthorization,
   type DeviceIssuer,
+  GitHubAuthorizationError,
 } from '../../../src/features/pr-monitor/core/application/deviceAuthorization';
 
 const configuration = {
@@ -183,4 +184,74 @@ describe('backendless GitHub device authorization', () => {
     );
     expect(f.save).toHaveBeenCalledTimes(1);
   });
+  it.each(['identity', 'storage'] as const)(
+    'retains a rotated pair privately across a transient %s failure',
+    async (stage) => {
+      const f = fixture();
+      f.issuer.exchange.mockResolvedValue(access);
+      const previous = {
+        accessToken: 'TEST_OLD',
+        refreshToken: 'TEST_REFRESH',
+        clientId: configuration.clientId,
+        accountId: '123',
+      };
+      const failing = stage === 'identity' ? f.issuer.identity : f.save;
+      failing.mockRejectedValueOnce(new Error('TEST_TRANSIENT'));
+      await expect(f.flow.refresh(previous, new AbortController().signal)).rejects.toThrow(
+        'TEST_TRANSIENT'
+      );
+      const next = await f.flow.refresh(previous, new AbortController().signal);
+      expect(next.accessToken).toBe(access.access_token);
+      expect(f.issuer.exchange).toHaveBeenCalledOnce();
+      expect(f.issuer.identity).toHaveBeenNthCalledWith(
+        2,
+        access.access_token,
+        expect.any(AbortSignal)
+      );
+      expect(f.save).toHaveBeenLastCalledWith(next, expect.any(AbortSignal));
+    }
+  );
+  it('does not activate a retained replacement after its authority is cancelled', async () => {
+    const f = fixture();
+    f.issuer.exchange.mockResolvedValue(access);
+    let finish!: (accountId: string) => void;
+    f.issuer.identity.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        })
+    );
+    const pending = f.flow.refresh(
+      {
+        accessToken: 'TEST_OLD',
+        refreshToken: 'TEST_REFRESH',
+        clientId: configuration.clientId,
+        accountId: '123',
+      },
+      new AbortController().signal
+    );
+    await vi.waitFor(() => expect(f.issuer.identity).toHaveBeenCalledOnce());
+    f.flow.cancel();
+    finish('123');
+    await expect(pending).rejects.toThrow('disconnected');
+    expect(f.save).not.toHaveBeenCalled();
+  });
+  it.each(['expired', 'rejected'] as const)(
+    'distinguishes %s refresh authority from transient failure',
+    async (reason) => {
+      const f = fixture();
+      f.issuer.exchange.mockResolvedValue({ error: 'bad_refresh_token' });
+      const previous = {
+        accessToken: 'TEST_OLD',
+        refreshToken: 'TEST_REFRESH',
+        clientId: configuration.clientId,
+        accountId: '123',
+        ...(reason === 'expired' ? { refreshExpiresAt: 0 } : {}),
+      };
+      await expect(f.flow.refresh(previous, new AbortController().signal)).rejects.toBeInstanceOf(
+        GitHubAuthorizationError
+      );
+      expect(f.save).not.toHaveBeenCalled();
+    }
+  );
 });

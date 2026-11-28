@@ -42,69 +42,86 @@ export function createProjectMonitor(deps: ProjectMonitorDependencies) {
     grants.clear();
     grantedScope = undefined;
   };
-  const key = (repository: RepositoryKey): string =>
-    `${repository.owner.toLowerCase()}/${repository.repo.toLowerCase()}`;
+  const key = (request: ProjectRequest, repository: RepositoryKey): string =>
+    JSON.stringify([
+      request.projectId,
+      repository.owner.toLowerCase(),
+      repository.repo.toLowerCase(),
+    ]);
   const changed = () =>
     monitorFailure('invalid_request', 'The project context changed. Open Pull Requests again.');
 
-  async function repository(request: ProjectRequest) {
+  function currentScope() {
     const scope = deps.projects.currentScope();
     if (grantedScope !== scope) {
       reset();
       grantedScope = scope;
     }
+    return scope;
+  }
+
+  async function repository(request: ProjectRequest) {
+    const scope = currentScope();
     const result = await deps.projects.resolve(request);
-    if (deps.projects.currentScope() !== scope) return changed();
+    if (deps.projects.currentScope() !== scope || (result.ok && result.value.scope !== scope))
+      return changed();
     return result;
+  }
+
+  function status(
+    request: ProjectRequest,
+    repository: RepositoryKey
+  ): MonitorResult<RepositoryStatus> {
+    const lease = grants.get(key(request, repository));
+    return {
+      ok: true,
+      value: {
+        repository,
+        connected: lease !== undefined,
+        accountKind: lease?.account.kind,
+        login: deps.login,
+      },
+    };
   }
 
   async function describe(request: ProjectRequest): Promise<MonitorResult<RepositoryStatus>> {
     const result = await repository(request);
-    if (!result.ok) return result;
-    return {
-      ok: true,
-      value: {
-        repository: result.value.repository,
-        connected: grants.has(key(result.value.repository)),
-        accountKind: grants.get(key(result.value.repository))?.account.kind,
-        login: deps.login,
-      },
-    };
+    return result.ok ? status(request, result.value.repository) : result;
   }
 
   async function consent(
     request: ProjectRequest,
     enabled: boolean
   ): Promise<MonitorResult<RepositoryStatus>> {
-    const result = await repository(request);
-    if (!result.ok) return result;
-    const repoKey = key(result.value.repository);
-    const scope = result.value.scope;
-    pendingConnections.get(repoKey)?.abort();
-    pendingConnections.delete(repoKey);
-    grants.get(repoKey)?.abort.abort();
-    grants.delete(repoKey);
-    if (enabled) {
-      const connection = new AbortController();
-      const connectSignal = AbortSignal.any([connection.signal, AbortSignal.timeout(30_000)]);
-      pendingConnections.set(repoKey, connection);
-      try {
+    const scope = currentScope();
+    const intentKey = JSON.stringify([request.contextId, request.projectId]);
+    const connection = new AbortController();
+    pendingConnections.get(intentKey)?.abort();
+    pendingConnections.set(intentKey, connection);
+    const connectSignal = AbortSignal.any([connection.signal, AbortSignal.timeout(30_000)]);
+    const current = () =>
+      deps.projects.currentScope() === scope &&
+      grantedScope === scope &&
+      pendingConnections.get(intentKey) === connection &&
+      !connectSignal.aborted;
+    try {
+      const result = await repository(request);
+      if (!current()) return changed();
+      if (!result.ok) return result;
+      const repoKey = key(request, result.value.repository);
+      grants.get(repoKey)?.abort.abort();
+      grants.delete(repoKey);
+      if (enabled) {
         const connected = await deps.connectAccount(connectSignal);
-        if (
-          deps.projects.currentScope() !== scope ||
-          grantedScope !== scope ||
-          pendingConnections.get(repoKey) !== connection ||
-          connectSignal.aborted
-        )
-          return changed();
+        if (!current()) return changed();
         if (!connected.ok) return connected;
         grants.set(repoKey, { abort: new AbortController(), account: connected.value });
-      } finally {
-        connection.abort();
-        if (pendingConnections.get(repoKey) === connection) pendingConnections.delete(repoKey);
       }
+      return status(request, result.value.repository);
+    } finally {
+      connection.abort();
+      if (pendingConnections.get(intentKey) === connection) pendingConnections.delete(intentKey);
     }
-    return describe(request);
   }
 
   function accessLost(response: MonitorResult<PullRequestPage | PullRequestSnapshot>): boolean {
@@ -130,7 +147,8 @@ export function createProjectMonitor(deps: ProjectMonitorDependencies) {
     const result = await repository(request);
     if (!result.ok) return result;
     const { scope, repository: repo } = result.value;
-    const lease = grants.get(key(repo));
+    const repoKey = key(request, repo);
+    const lease = grants.get(repoKey);
     if (!lease)
       return monitorFailure(
         'consent_required',
@@ -138,14 +156,12 @@ export function createProjectMonitor(deps: ProjectMonitorDependencies) {
       );
     const combined = signal ? AbortSignal.any([signal, lease.abort.signal]) : lease.abort.signal;
     const current = () =>
-      !combined.aborted &&
-      deps.projects.currentScope() === scope &&
-      grants.get(key(repo)) === lease;
+      !combined.aborted && deps.projects.currentScope() === scope && grants.get(repoKey) === lease;
     const initialAccount = await lease.account.isCurrent(combined);
     if (!current()) return changed();
     if (!initialAccount) {
       lease.abort.abort();
-      grants.delete(key(repo));
+      grants.delete(repoKey);
       return monitorFailure(
         'sign_in_required',
         'The GitHub account changed or expired. Connect GitHub again.'
@@ -160,7 +176,7 @@ export function createProjectMonitor(deps: ProjectMonitorDependencies) {
     if (!current()) return changed();
     if (!finalAccount || accessLost(response)) {
       lease.abort.abort();
-      grants.delete(key(repo));
+      grants.delete(repoKey);
       return monitorFailure(
         'sign_in_required',
         'GitHub access changed or expired. Check repository access, then connect GitHub again.'

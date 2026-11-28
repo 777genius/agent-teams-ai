@@ -8,20 +8,22 @@ appendFileSync(
   process.env.PR_MONITOR_E2E_AUDIT,
   JSON.stringify({ args, phase: state.phase }) + '\n'
 );
-if (args[0] === 'auth' && args[1] === 'status') {
-  process.stdout.write(
-    JSON.stringify({
-      hosts: {
-        'github.com': [
-          {
-            active: true,
-            state: state.cliAuthenticated === false ? 'error' : 'success',
-            login: 'TEST-user',
-          },
-        ],
-      },
-    })
-  );
+if (args[0] === 'api' && args[5] === '/user') {
+  assert.deepEqual(args, [
+    'api',
+    '--hostname',
+    'github.com',
+    '--method',
+    'GET',
+    '/user',
+    '--jq',
+    '{login: .login}',
+  ]);
+  if (state.cliAuthenticated === false) {
+    process.stderr.write('TEST authentication required');
+    process.exit(1);
+  }
+  process.stdout.write(JSON.stringify({ login: 'TEST-user' }));
   process.exit(0);
 }
 assert.deepEqual(args.slice(0, 6), [

@@ -7,7 +7,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { githubCredentialStore } from '../../../src/features/pr-monitor/main/infrastructure/githubCredentialStore';
 
-const storage = vi.hoisted(() => ({ available: true, fail: false }));
+const storage = vi.hoisted(() => ({ available: true, fail: false, writeFail: false }));
+vi.mock('@main/utils/atomicWrite', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@main/utils/atomicWrite')>();
+  return {
+    ...original,
+    atomicWriteAsync: async (...args: Parameters<typeof original.atomicWriteAsync>) => {
+      if (storage.writeFail) throw new Error('TEST_ATOMIC_WRITE_FAILED');
+      return original.atomicWriteAsync(...args);
+    },
+  };
+});
 vi.mock('electron', () => ({
   safeStorage: {
     isEncryptionAvailable: () => storage.available,
@@ -22,6 +32,7 @@ vi.mock('electron', () => ({
 beforeEach(() => {
   storage.available = true;
   storage.fail = false;
+  storage.writeFail = false;
 });
 const owned: string[] = [];
 afterEach(async () => {
@@ -78,9 +89,69 @@ describe('isolated GitHub credential custody', () => {
     storage.available = false;
     await expect(vault.readValueById(saved.id)).rejects.toThrow('unavailable');
   });
-  it('removes the replacement if cancellation arrives while the previous entry is deleted', async () => {
+  it('replaces one authoritative record atomically and preserves it when a write fails', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'pr-monitor-vault-replace-TEST-'));
+    owned.push(root);
+    const vault = new ApiKeyService(root, { requireSecureBackend: true });
+    const store = githubCredentialStore(vault);
+    const previous = { accessToken: 'TEST_OLD', clientId: 'TEST_CLIENT', accountId: '123' };
+    await store.save(previous);
+    const [{ id }] = await vault.list();
+    storage.writeFail = true;
+    await expect(
+      store.save({ ...previous, accessToken: 'TEST_FAILED', accountId: '456' })
+    ).rejects.toThrow('TEST_ATOMIC_WRITE_FAILED');
+    expect(await store.read()).toEqual(previous);
+    expect(
+      await githubCredentialStore(new ApiKeyService(root, { requireSecureBackend: true })).read()
+    ).toEqual(previous);
+    storage.writeFail = false;
+    const next = { ...previous, accessToken: 'TEST_RETRIED', accountId: '789' };
+    const removal = vi
+      .spyOn(vault, 'delete')
+      .mockRejectedValue(new Error('TEST_OLD_DELETE_FAILED'));
+    await store.save(next);
+    expect(removal).not.toHaveBeenCalled();
+    expect(await vault.list()).toMatchObject([{ id }]);
+    expect(
+      await githubCredentialStore(new ApiKeyService(root, { requireSecureBackend: true })).read()
+    ).toEqual(next);
+    expect(JSON.parse(await fs.readFile(path.join(root, 'api-keys.json'), 'utf8'))).toHaveLength(1);
+  });
+  it('rejects ambiguous legacy records until a successful retry leaves only its credential', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'pr-monitor-vault-duplicate-TEST-'));
+    owned.push(root);
+    const vault = new ApiKeyService(root, { requireSecureBackend: true });
+    const credential = { accessToken: 'TEST_OLD', clientId: 'TEST_CLIENT', accountId: '123' };
+    const entry = {
+      name: 'TEST',
+      envVarName: 'PR_MONITOR_GITHUB_DEVICE_LOGIN',
+      scope: 'user' as const,
+      value: JSON.stringify(credential),
+    };
+    await vault.save(entry);
+    await vault.save({ ...entry, value: JSON.stringify({ ...credential, accountId: '456' }) });
+    const store = githubCredentialStore(vault);
+    await expect(store.read()).rejects.toThrow('ambiguous');
+    const removal = vi
+      .spyOn(vault, 'delete')
+      .mockRejectedValueOnce(new Error('TEST_DELETE_FAILED'));
+    const next = { ...credential, accountId: '789' };
+    await expect(store.save(next)).rejects.toThrow('TEST_DELETE_FAILED');
+    await expect(store.read()).rejects.toThrow('ambiguous');
+    await store.save(next);
+    expect(removal).toHaveBeenCalledTimes(2);
+    expect(await vault.list()).toHaveLength(1);
+    expect(
+      await githubCredentialStore(new ApiKeyService(root, { requireSecureBackend: true })).read()
+    ).toEqual(next);
+  });
+  it('stops before replacement if cancellation arrives during duplicate cleanup', async () => {
     const abort = new AbortController();
-    const keys = [{ id: 'old', envVarName: 'PR_MONITOR_GITHUB_DEVICE_LOGIN' }];
+    const keys = [
+      { id: 'old', envVarName: 'PR_MONITOR_GITHUB_DEVICE_LOGIN' },
+      { id: 'duplicate', envVarName: 'PR_MONITOR_GITHUB_DEVICE_LOGIN' },
+    ];
     let finish!: () => void;
     const vault = {
       list: vi.fn(async () => [...keys]),
@@ -92,7 +163,7 @@ describe('isolated GitHub credential custody', () => {
         return saved;
       }),
       delete: vi.fn(async (id: string) => {
-        if (id === 'old')
+        if (id === 'duplicate')
           await new Promise<void>((resolve) => {
             finish = resolve;
           });
@@ -107,11 +178,12 @@ describe('isolated GitHub credential custody', () => {
       { accessToken: 'TEST', clientId: 'TEST_CLIENT', accountId: '123' },
       abort.signal
     );
-    await vi.waitFor(() => expect(vault.delete).toHaveBeenCalledWith('old'));
+    await vi.waitFor(() => expect(vault.delete).toHaveBeenCalledWith('duplicate'));
     abort.abort();
     finish();
     await expect(pending).rejects.toThrow('cancelled');
-    expect(keys).toEqual([]);
+    expect(keys).toEqual([{ id: 'old', envVarName: 'PR_MONITOR_GITHUB_DEVICE_LOGIN' }]);
+    expect(vault.save).not.toHaveBeenCalled();
   });
   it('serializes sign-out behind a cancelled pending credential write', async () => {
     const abort = new AbortController();

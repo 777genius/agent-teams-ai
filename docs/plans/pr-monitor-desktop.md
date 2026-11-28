@@ -28,17 +28,24 @@ Git identity resolver for that known worktree. The renderer cannot submit a path
 provider URL, shell command, token or arbitrary repository. Non-local contexts
 and non-GitHub remotes fail with a safe, actionable result.
 
-Connect GitHub checks `gh auth status --hostname github.com --active --json hosts`.
-It parses the active account state, since JSON output alone is not proof of
-successful authentication. A valid signed-in CLI account is preferred. The
+Connect GitHub reads the active credential's authenticated identity with
+`gh api --hostname github.com --method GET /user --jq '{login: .login}'`.
+The adapter requires a successful command and validates the bounded JSON login;
+an absent, malformed or failed response is never accepted as an account. The API
+command is already available in GitHub CLI 2.80, before `auth status --json` was
+introduced in 2.81. A valid signed-in CLI account is preferred. The
 adapter uses existing CLI discovery, PATH and bounded subprocess helpers;
 credentials remain with GitHub CLI. Identity is checked before and after each
 list/detail operation. Switching CLI accounts invalidates the repository grant
 and discards the result, including a revocation during the final identity check.
 
-Repository grants last for the process and own an abort controller and a fresh
-reader. Disconnect, context replacement, sign-out and a new login abort previous
-work. Readers and ETags never move to a new grant/account. Get Modular owns
+Grants are keyed by project ID and repository within the admitted context, so
+another worktree or changed remote requires its own consent. Consent intent is
+captured before asynchronous project resolution: a later disconnect retires a
+pending connect, while independent projects can connect concurrently. Grants
+last for the process and own an abort controller and a fresh reader. Disconnect,
+context replacement, sign-out and a new login abort previous work. Readers and
+ETags never move to a new grant/account. Get Modular owns
 construction; the application owns active account, cancellation and refresh.
 All provider operations are reads. The library's shared path validator owns the
 endpoint grammar; the CLI adapter also binds it to the authorized repository and
@@ -52,7 +59,10 @@ client secret is required. Main requests the code, bounds polling and handles
 pending, slower polling, denial, expiration and cancellation. Only the public
 verification code, URL and expiry cross IPC. Device, access and refresh tokens
 stay in main. Every new/refreshed token is checked against GitHub user identity
-before being retained; an identity change fails closed.
+before activation or persistence; an identity change fails closed. Because a
+successful refresh invalidates the preceding token pair, the replacement stays
+private in main while a transient identity/storage failure is retried. Terminal
+refresh rejection retires the account and exposes the sign-in action again.
 
 Configure the public client ID with `AGENT_TEAMS_GITHUB_CLIENT_ID` and set
 `AGENT_TEAMS_GITHUB_APP_KIND=github-app`. The dedicated App must enable Device
@@ -72,15 +82,22 @@ The token vault reuses `ApiKeyService` through a dedicated main-only instance in
 renderer-accessible. It opts into a strict secure-backend policy: missing/locked
 system keychain, encryption failure or insecure persisted record is rejected.
 The existing local fallback policy remains unchanged for unrelated callers.
-Serialized writes and post-await cancellation checks remove a new credential if
-login was canceled during replacement. Sign out and Forget saved sign-in erase
-the saved connection; Disconnect revokes that repository's process-local grant.
+Serialized replacement updates one record through the vault's atomic write;
+failed writes preserve the preceding record and cache. Ambiguous legacy records
+are never selected automatically. Post-await cancellation checks remove a new
+credential if login was canceled during replacement. Sign out and Forget saved
+sign-in retire device access before deletion; a failed deletion cannot reload
+that credential in the same process. The user can retry deletion or complete an
+explicit new sign-in, and independent CLI access remains available. Disconnect
+revokes that project's process-local repository grant.
 
 Official protocol references:
 
 - [GitHub App device authorization](https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/authenticating-with-a-github-app-on-behalf-of-a-user)
 - [OAuth App device authorization](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps)
-- [GitHub CLI account status](https://cli.github.com/manual/gh_auth_status)
+- [GitHub CLI authenticated API](https://cli.github.com/manual/gh_api)
+- [GitHub CLI 2.80 API command source](https://github.com/cli/cli/blob/v2.80.0/pkg/cmd/api/api.go)
+- [GitHub CLI 2.81 JSON status introduction](https://github.com/cli/cli/releases/tag/v2.81.0)
 
 ## Process and UI boundaries
 

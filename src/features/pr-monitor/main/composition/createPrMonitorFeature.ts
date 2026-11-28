@@ -56,7 +56,9 @@ export function createPrMonitorFeature(
     },
   });
   let loginOwner: { scope: object; projectId: string; attemptId: string } | null = null;
+  let loginGeneration: object = {};
   const reset = () => {
+    loginGeneration = {};
     loginOwner = null;
     accounts.flow.cancel();
     feature.reset();
@@ -92,9 +94,10 @@ export function createPrMonitorFeature(
         }
         if (request.operation === 'begin') {
           reset();
+          const generation = loginGeneration;
           const result = await accounts.beginLogin();
-          if (projects.currentScope() !== scope) {
-            reset();
+          if (loginGeneration !== generation || projects.currentScope() !== scope) {
+            if (loginGeneration === generation) reset();
             return monitorFailure('aborted', 'The project context changed.');
           }
           if (result.ok)

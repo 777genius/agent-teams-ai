@@ -78,6 +78,50 @@ describe('project account boundary', () => {
     expect(await f.feature.describe(request)).toMatchObject({ value: { connected: false } });
     expect((await f.feature.list(request)).ok).toBe(false);
   });
+  it('requires separate consent for two projects with the same repository', async () => {
+    const f = fixture();
+    const other = { ...request, projectId: 'TEST-other-worktree' };
+    await f.feature.connect(request);
+    expect(await f.feature.describe(other)).toMatchObject({ value: { connected: false } });
+    expect(await f.feature.list(other)).toMatchObject({ error: { kind: 'consent_required' } });
+    await f.feature.connect(other);
+    await f.feature.disconnect(request);
+    expect(await f.feature.list(other)).toEqual({ ok: true, value: page });
+  });
+  it('does not reuse a project grant after its repository remote changes', async () => {
+    const f = fixture();
+    await f.feature.connect(request);
+    f.projects.resolve.mockResolvedValue({
+      ok: true,
+      value: { repository: { ...repository, repo: 'another' }, scope: f.projects.currentScope() },
+    });
+    expect(await f.feature.describe(request)).toMatchObject({ value: { connected: false } });
+    expect(await f.feature.list(request)).toMatchObject({ error: { kind: 'consent_required' } });
+  });
+  it.each([false, true])(
+    'captures connect intent before repository resolution (later disconnect: %s)',
+    async (disconnect) => {
+      const f = fixture();
+      let finish!: () => void;
+      const waiting = new Promise<void>((resolve) => {
+        finish = resolve;
+      });
+      f.projects.resolve.mockImplementationOnce(async () => {
+        const scope = f.projects.currentScope();
+        await waiting;
+        return { ok: true, value: { repository, scope } };
+      });
+      const pending = f.feature.connect(request);
+      await vi.waitFor(() => expect(f.projects.resolve).toHaveBeenCalledOnce());
+      if (disconnect) await f.feature.disconnect(request);
+      finish();
+      expect((await pending).ok).toBe(!disconnect);
+      expect(f.connectAccount).toHaveBeenCalledTimes(disconnect ? 0 : 1);
+      expect(await f.feature.describe(request)).toMatchObject({
+        value: { connected: !disconnect },
+      });
+    }
+  );
   it('rejects an in-flight result after disconnect and reconnect', async () => {
     const f = fixture();
     let finish!: (result: ReaderResult<PullRequestPage>) => void;

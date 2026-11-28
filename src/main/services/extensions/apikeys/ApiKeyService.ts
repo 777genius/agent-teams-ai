@@ -94,7 +94,7 @@ export class ApiKeyService {
       throw new Error('Project-scoped API keys require a project path');
     }
 
-    const keys = await this.readStore();
+    const keys = [...(await this.readStore())];
     const now = new Date().toISOString();
     const { method, value } = this.encrypt(request.value);
 

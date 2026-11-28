@@ -15,14 +15,16 @@ export function githubCredentialStore(
     return result;
   }
   const marker = 'PR_MONITOR_GITHUB_DEVICE_LOGIN';
-  const entry = async () => (await vault.list()).find((item) => item.envVarName === marker);
+  const entries = async () => (await vault.list()).filter((item) => item.envVarName === marker);
   return {
     async available() {
       return (await vault.getStorageStatus()).encryptionMethod === 'os-keychain';
     },
     async read(): Promise<OAuthCredential | null> {
       await writes;
-      const saved = await entry();
+      const records = await entries();
+      if (records.length > 1) throw new Error('Stored GitHub sign-in is ambiguous. Sign in again.');
+      const [saved] = records;
       if (!saved) return null;
       const raw = await vault.readValueById(saved.id);
       if (!raw) return null;
@@ -49,18 +51,19 @@ export function githubCredentialStore(
     save(credential: OAuthCredential, signal?: AbortSignal) {
       return serialize(async () => {
         if (signal?.aborted) throw new Error('Sign-in cancelled.');
-        const previous = await entry();
+        const [previous, ...duplicates] = await entries();
+        if (signal?.aborted) throw new Error('Sign-in cancelled.');
+        for (const duplicate of duplicates) {
+          await vault.delete(duplicate.id);
+          if (signal?.aborted) throw new Error('Sign-in cancelled.');
+        }
         const saved = await vault.save({
+          id: previous?.id,
           name: 'GitHub for Pull Requests',
           envVarName: marker,
           value: JSON.stringify(credential),
           scope: 'user',
         });
-        if (signal?.aborted) {
-          await vault.delete(saved.id);
-          throw new Error('Sign-in cancelled.');
-        }
-        if (previous) await vault.delete(previous.id);
         if (signal?.aborted) {
           await vault.delete(saved.id);
           throw new Error('Sign-in cancelled.');

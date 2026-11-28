@@ -860,7 +860,7 @@ packages:
     engines: {node: '>=24.22.3 <25 || >=26.11.1 <27'}
 
   '@pr-monitor/react@file:vendor/pr-monitor/pr-monitor-react-0.1.0.tgz':
-    resolution: {integrity: sha512-2rjAVNkenyF4bYiG/0wog1XlZW438SMY6e2bOtt05tSVf2OUrZwV6IjCtWLkFZ5WJ7DckAHmfludtOaO70ZJJQ==, tarball: file:vendor/pr-monitor/pr-monitor-react-0.1.0.tgz}
+    resolution: {integrity: sha512-t8dPNbGYMU8uIvkM2Mf6h2INrt5B9MbcgOrolQbl3dHozfsiOU4W16R51PBoX2x/MZwFq9PZ8DSjGlhGhC5OjQ==, tarball: file:vendor/pr-monitor/pr-monitor-react-0.1.0.tgz}
     version: 0.1.0
     engines: {node: '>=24.22.3 <25 || >=26.11.1 <27'}
     peerDependencies:

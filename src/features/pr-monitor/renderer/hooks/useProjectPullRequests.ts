@@ -7,6 +7,12 @@ import {
   subscribeContextScopedRequestEpoch,
 } from '@renderer/store/utils/contextScopedRequestEpoch';
 
+import {
+  capturePrMonitorAuthorityEpoch,
+  invalidatePrMonitorAuthority,
+  subscribePrMonitorAuthorityEpoch,
+} from './authorityEpoch';
+
 import type { MonitorError, RepositoryStatus } from '../../contracts';
 import type { PullRequestSnapshot, PullRequestSummary } from '@pr-monitor/core';
 
@@ -51,7 +57,18 @@ export function useProjectPullRequests(projectId: string, active: boolean) {
     captureContextScopedRequestEpoch,
     captureContextScopedRequestEpoch
   );
-  const scope = `${contextId}\0${projectId}\0${epoch}`;
+  const authorityEpoch = useSyncExternalStore(
+    subscribePrMonitorAuthorityEpoch,
+    capturePrMonitorAuthorityEpoch,
+    capturePrMonitorAuthorityEpoch
+  );
+  const currentEpoch = useCallback(
+    () =>
+      captureContextScopedRequestEpoch() === epoch &&
+      capturePrMonitorAuthorityEpoch() === authorityEpoch,
+    [epoch, authorityEpoch]
+  );
+  const scope = `${contextId}\0${projectId}\0${epoch}\0${authorityEpoch}`;
   const [state, setState] = useState(() => initial(scope));
   const [selectedNumber, setSelectedNumber] = useState<number | undefined>();
   const control = useRef({
@@ -114,8 +131,7 @@ export function useProjectPullRequests(projectId: string, active: boolean) {
     let refreshAgain = false;
     let failures = 0;
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const valid = () =>
-      !stopped && control.current === controller && captureContextScopedRequestEpoch() === epoch;
+    const valid = () => !stopped && control.current === controller && currentEpoch();
     const update = (patch: Partial<ViewState>) => {
       if (valid())
         setState((value) => ({ ...(value.scope === scope ? value : initial(scope)), ...patch }));
@@ -228,7 +244,7 @@ export function useProjectPullRequests(projectId: string, active: boolean) {
       document.removeEventListener('visibilitychange', visibility);
       refreshRef.current = () => undefined;
     };
-  }, [active, contextId, epoch, invalidateAuthority, projectId, scope]);
+  }, [active, contextId, currentEpoch, invalidateAuthority, projectId, scope]);
 
   const select = useCallback(
     async (pullRequest: PullRequestSummary) => {
@@ -249,11 +265,7 @@ export function useProjectPullRequests(projectId: string, active: boolean) {
           projectId,
           number: pullRequest.number,
         });
-        if (
-          control.current !== controller ||
-          detail !== controller.detail ||
-          captureContextScopedRequestEpoch() !== epoch
-        )
+        if (control.current !== controller || detail !== controller.detail || !currentEpoch())
           return;
         if (!result.ok && invalidateAuthority(result.error)) return;
         controller.error = result.ok ? null : result.error;
@@ -268,7 +280,7 @@ export function useProjectPullRequests(projectId: string, active: boolean) {
           setState((value) => ({ ...value, loadingDetail: false, error: safeError }));
       }
     },
-    [active, contextId, epoch, invalidateAuthority, projectId, scope]
+    [active, contextId, currentEpoch, invalidateAuthority, projectId, scope]
   );
 
   async function consent(enabled: boolean) {
@@ -281,7 +293,7 @@ export function useProjectPullRequests(projectId: string, active: boolean) {
     setState((value) => ({ ...value, loading: true, loadingDetail: false }));
     try {
       const result = await api.prMonitor[enabled ? 'connect' : 'disconnect'](request);
-      if (control.current !== controller || captureContextScopedRequestEpoch() !== epoch) return;
+      if (control.current !== controller || !currentEpoch()) return;
       controller.consentBusy = false;
       setState((value) => ({
         ...value,
@@ -299,7 +311,7 @@ export function useProjectPullRequests(projectId: string, active: boolean) {
       if (result.ok && enabled) refreshRef.current();
     } catch {
       controller.consentBusy = false;
-      if (control.current === controller && captureContextScopedRequestEpoch() === epoch)
+      if (control.current === controller && currentEpoch())
         setState((value) => ({ ...value, loading: false, error: safeError }));
     }
   }
@@ -318,11 +330,7 @@ export function useProjectPullRequests(projectId: string, active: boolean) {
     setState((value) => ({ ...value, loading: true }));
     try {
       const result = await api.prMonitor.list({ ...request, page });
-      if (
-        control.current !== controller ||
-        generation !== controller.generation ||
-        captureContextScopedRequestEpoch() !== epoch
-      )
+      if (control.current !== controller || generation !== controller.generation || !currentEpoch())
         return;
       if (!result.ok && invalidateAuthority(result.error)) return;
       if (result.ok) controller.loadedPages = page;
@@ -356,17 +364,6 @@ export function useProjectPullRequests(projectId: string, active: boolean) {
     connect: () => consent(true),
     disconnect: () => consent(false),
     refresh: () => refreshRef.current(),
-    connectionChanged: () => {
-      const controller = control.current;
-      if (controller.scope !== scope) return;
-      controller.generation++;
-      controller.detail++;
-      controller.loadedPages = 1;
-      controller.error = null;
-      controller.selected = undefined;
-      setSelectedNumber(undefined);
-      setState(initial(scope));
-      refreshRef.current();
-    },
+    connectionChanged: invalidatePrMonitorAuthority,
   };
 }
