@@ -30,11 +30,21 @@ test('real authenticated HTTP MCP process_list reconstructs oversized retained m
     root, binding,
     members: [{ memberId: 'TEST-lead', name: 'lead', role: 'lead' },
       { memberId: 'TEST-member', name: 'alice', role: 'member', delivery }],
-    grants: [{ principalId: 'alice', memberName: 'alice', permissions: ['read'] }],
+    grants: [{ principalId: 'alice', memberName: 'alice',
+      permissions: ['read', 'process.write'] }],
   });
+  const registrar = owner.processCommands('alice', { registrar: () => delivery });
+  for (const [index, row] of rows.entries()) {
+    assert.equal(registrar.register('TEST-register-' + index, {
+      pid: row.pid, label: row.label, command: row.command,
+    }).phase, 'completed');
+  }
+  const expected = owner.processCommands('alice').list();
+  assert.equal(expected.length, rows.length);
+  assert.ok(Buffer.byteLength(JSON.stringify(expected)) > 256 * 1024);
   let reads = 0;
   const native = {
-    list: () => { reads++; return structuredClone(rows); },
+    list: () => { reads++; return owner.processCommands('alice').list(); },
     register: async () => { throw new Error('Unexpected native register'); },
     metadata: async () => { throw new Error('Unexpected metadata effect'); },
     lookup: () => null,
@@ -74,5 +84,5 @@ test('real authenticated HTTP MCP process_list reconstructs oversized retained m
   } while (cursor);
   assert.ok(count > 1);
   assert.equal(reads, count, 'every continuation uses original authenticated process port');
-  assert.deepEqual(collected, rows);
+  assert.deepEqual(collected, expected);
 });
