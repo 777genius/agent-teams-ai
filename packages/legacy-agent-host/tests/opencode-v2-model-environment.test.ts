@@ -212,3 +212,66 @@ test('the per-selection proof does not impose a new cumulative catalogue policy'
   assert.ok(Buffer.byteLength(JSON.stringify(actual)) <= limit);
   assert.equal(JSON.stringify(config), before);
 });
+
+test('one selection shares its non-key budget across provider and nested model values', () => {
+  const prefix = 'https://example.test/';
+  const providerChunk = prefix + 'p'.repeat(chunk.length - prefix.length);
+  const later = 'TEST after all retained chunks';
+  assert.equal(Buffer.byteLength(providerChunk), 64 * 1024);
+
+  const exercise = (modelChunks: number) => {
+    let providerReads = 0, modelReads = 0, laterReads = 0;
+    const settingsCount = Math.ceil(modelChunks / 2);
+    const bodyCount = modelChunks - settingsCount;
+    const env = {
+      get TEST_PROVIDER() { providerReads++; return providerChunk; },
+      get TEST_MODEL() { modelReads++; return chunk; },
+      get TEST_LATER() { laterReads++; return later; },
+    };
+    const model = {
+      settings: { custom: Array.from({ length: settingsCount }, () => '{env:TEST_MODEL}') },
+      body: {
+        nested: Array.from({ length: bodyCount }, () => '{env:TEST_MODEL}'),
+        late: '{env:TEST_LATER}',
+      },
+    };
+    const config = { provider: { [providerId]: {
+      options: { baseURL: '{env:TEST_PROVIDER}' },
+      models: { [modelId]: model },
+    } } };
+    const before = JSON.stringify(config);
+    return {
+      run: () => selection.selectOpenCodeV2ProviderConfiguration(
+        config, { providerId, modelId }, env
+      ).configuration,
+      counts: () => ({ providerReads, modelReads, laterReads }),
+      unchanged: () => assert.equal(JSON.stringify(config), before),
+      expected: {
+        settings: { baseURL: providerChunk },
+        models: { [modelId]: {
+          settings: { custom: Array.from({ length: settingsCount }, () => chunk) },
+          body: {
+            nested: Array.from({ length: bodyCount }, () => chunk),
+            late: later,
+          },
+        } },
+      },
+    };
+  };
+
+  for (const modelChunks of [1, 2]) {
+    const fitting = exercise(modelChunks), actual = fitting.run();
+    assert.ok(actual);
+    assert.deepEqual(actual, fitting.expected);
+    assert.ok(Buffer.byteLength(JSON.stringify(actual)) <= limit);
+    assert.deepEqual(fitting.counts(), { providerReads: 1, modelReads: modelChunks, laterReads: 1 });
+    fitting.unchanged();
+  }
+
+  const excessiveSelection = exercise(8);
+  assert.throws(() => excessiveSelection.run(), invalid);
+  assert.deepEqual(excessiveSelection.counts(), {
+    providerReads: 1, modelReads: 8, laterReads: 0,
+  }, 'the ninth 64 KiB chunk exhausts one shared selection budget before the later value');
+  excessiveSelection.unchanged();
+});

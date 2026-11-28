@@ -471,6 +471,8 @@ jobs:
           test/renderer/utils/reviewKey.test.ts
           test/main/services/team/TeamLogSourceTracker.test.ts
           test/main/services/team/stallMonitor/TeamTaskLogFreshnessReader.test.ts
+          test/features/runtime-provider-management/fileProviderOAuthIntentStore.test.ts
+          test/features/runtime-provider-management/capturedProviderOAuth.test.ts
 
       - name: Test startup cleanup deadline and late-response lifecycle
         if: steps.windows.outputs.reuse != 'true'

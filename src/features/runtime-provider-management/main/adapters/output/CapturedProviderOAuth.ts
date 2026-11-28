@@ -44,11 +44,11 @@ interface OAuthConnectInput {
   authOptionId: string;
   fields?: Record<string, string>;
 }
-type PreparedOAuth = {
+interface PreparedOAuth {
   target: CapturedProviderManagement;
   input: OAuthConnectInput;
   assertCurrent?(): void;
-};
+}
 type PreparedOAuthOutcome = { value: PreparedOAuth | null } | { error: unknown };
 interface PendingOAuth {
   operationId: string;
@@ -142,7 +142,8 @@ export class CapturedProviderOAuth {
       );
       const pending = this.active.get(captured.operationId);
       if (!pending || pending.result !== result) throw new Error('OAuth operation replaced');
-      return (pending.directResult ??= result.then(() => undefined));
+      pending.directResult ??= result.then(() => undefined);
+      return pending.directResult;
     } catch (error) {
       return Promise.reject(error);
     }
@@ -192,15 +193,13 @@ export class CapturedProviderOAuth {
     this.active.set(operationId, pending);
     // Capture the caller's original context now, before the journal read can yield.
     // Observe early preparation failures while original discovery is still pending.
-    let preparation: Promise<PreparedOAuthOutcome>;
-    try {
-      preparation = Promise.resolve(prepare(() => this.assertPending(pending))).then(
-        (value) => ({ value }),
-        (error: unknown) => ({ error })
-      );
-    } catch (error) {
-      preparation = Promise.resolve({ error });
-    }
+    const preparation: Promise<PreparedOAuthOutcome> = (async () => {
+      try {
+        return { value: await prepare(() => this.assertPending(pending)) };
+      } catch (error) {
+        return { error };
+      }
+    })();
     const retire = () => {
       if (this.active.get(operationId) === pending) this.active.delete(operationId);
     };
@@ -326,7 +325,8 @@ export class CapturedProviderOAuth {
       });
       pending.candidate = intent;
       pending.createAttempted = true;
-      const created = await (pending.creation = this.deps.intents.create(intent));
+      pending.creation = this.deps.intents.create(intent);
+      const created = await pending.creation;
       this.assertPending(pending);
       if (!created) {
         const winner = captureIntent(await this.deps.intents.read(intent.operationId));

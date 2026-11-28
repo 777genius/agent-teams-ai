@@ -92,19 +92,30 @@ export const snapshotHeaderSchema = z
       context.addIssue({ code: 'custom', message: 'Source roster identity conflict' });
   });
 export type SnapshotHeader = z.infer<typeof snapshotHeaderSchema>;
-export interface SnapshotFile {
+type SnapshotFileBase = {
   category: ImportCategory;
   path: string;
-  sha256: string;
   size: number;
+};
+type LegacySnapshotFile = SnapshotFileBase & {
   disposition: 'product' | 'archive' | 'excluded';
+  sha256: string;
   base64?: string;
-}
-export interface StoppedTeamSnapshot {
-  schemaVersion: 1;
+};
+type CopiedSnapshotFile = SnapshotFileBase & {
+  disposition: 'product' | 'archive';
+  sha256: string;
+  base64: string;
+};
+type ExcludedSnapshotFile = SnapshotFileBase & {
+  disposition: 'excluded';
+  sha256?: never;
+  base64?: never;
+};
+export type SnapshotFile = LegacySnapshotFile | CopiedSnapshotFile | ExcludedSnapshotFile;
+interface SnapshotCommon {
   header: SnapshotHeader;
   roots: { category: ImportCategory; exists: boolean; identity: string }[];
-  files: SnapshotFile[];
   blobs: {
     originalPath: string;
     category: 'attachments' | 'task-attachments';
@@ -118,6 +129,11 @@ export interface StoppedTeamSnapshot {
   }[];
   digest: string;
 }
+export type StoppedTeamSnapshot = SnapshotCommon &
+  (
+    | { schemaVersion: 1; files: LegacySnapshotFile[] }
+    | { schemaVersion: 2; files: (CopiedSnapshotFile | ExcludedSnapshotFile)[] }
+  );
 /** Private, trusted source boundary. Desktop must actually wire its existing operation fence/census. */
 export interface StoppedTeamSource {
   roots: readonly { category: ImportCategory; path: string }[];

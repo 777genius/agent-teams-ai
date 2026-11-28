@@ -149,7 +149,7 @@ describe('CodexJsonlUsageImporter', () => {
       const events = await importer.importUsage([runWithLogPath(logPath)]);
 
       expect(events).toHaveLength(1);
-      const event = events[0]!;
+      const event = events[0];
       expect(event.tokens).toEqual({
         inputTokens: 200,
         outputTokens: 100,
