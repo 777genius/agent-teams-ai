@@ -59,8 +59,9 @@ it('Main validates and Desktop assembles 4000 real-shape groups without a priori
     expect(request.method).toBe('team.group.list');
     expect(request.control).toBe(true);
   }
-  const first = f.router.request.mock.results[0]?.value;
-  const response = await first;
+  const first = f.router.request.mock.results[0];
+  if (!first || first.type !== 'return') throw new Error('Missing original Host response');
+  const response = await first.value;
   expect(response.ok).toBe(true);
   if (response.ok) {
     expect(Buffer.byteLength(JSON.stringify(response.value))).toBeLessThanOrEqual(240 * 1024);
@@ -90,7 +91,6 @@ it('old single-array group replies remain accepted without new selection or muta
   expect(await f.api.list({ teamName: key })).toEqual(original.slice(0, 2));
   expect(f.router.request).toHaveBeenCalledTimes(1);
 });
-
 
 it('refuses duplicate rows across pages and an incomplete terminal catalog', async () => {
   for (const fault of ['duplicate', 'incomplete'] as const) {
