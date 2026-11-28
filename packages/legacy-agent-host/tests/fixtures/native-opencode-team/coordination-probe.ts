@@ -54,12 +54,14 @@ export function captureNativeCoordinationFixture(profile: TeamHostProfile,
   const variant = member.nativeOptions.variant;
   assert.ok(variant === undefined || variant === 'high');
   assert.equal(variant, member.nativeGeneration === 'v2' ? 'high' : undefined);
+  assert.equal(member.model.startsWith(member.nativeOptions.providerId + '/'), false,
+    'direct TEST coordination uses a native model without a public alias prefix');
   const context = managementDigest({ owner: profile.owner, member, selected, limits });
   const input: ModelProbeInput = {
     commandId: 'TEST-native-coordination-' + context,
     profileId: selected.profileId, configRevision: selected.configRevision,
     context, providerId: member.nativeOptions.providerId,
-    modelId: member.nativeOptions.providerId + '/' + member.model,
+    modelId: member.model,
     ...(variant ? { effort: variant } : {}),
     ...(limits ? { limits } : {}),
   };
@@ -131,6 +133,8 @@ export function captureNativeCoordinationFixture(profile: TeamHostProfile,
         const saved = store.read(input.commandId);
         assert.ok(saved?.kind === 'model.probe');
         assert.equal(saved.purpose, nativeLocalReadinessPurpose); assert.equal(saved.context, context);
+        assert.equal(saved.providerId, member.nativeOptions.providerId);
+        assert.equal(saved.modelId, member.model); assert.equal(saved.effort, variant);
         assert.equal(saved.phase, 'completed'); assert.equal(saved.ok, true); assert.equal(saved.resourceHeld, false);
         assert.equal(saved.expiresAt, deadline);
         assert.deepEqual(saved.readinessScope, scope);
