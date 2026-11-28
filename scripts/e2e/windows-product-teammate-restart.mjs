@@ -175,6 +175,17 @@ const originalWorkerIdentity=processes().find(p=>p.pid===workerPid);
 assert(originalWorkerIdentity?.birth,'Original native worker birth identity unavailable');
 result.originalBootstrapConfirmed=true;
 result.realProductTeammateLaunch=true;result.initialWorkerPid=workerPid;
+// Preserve the public runtime evidence before the actual restart IPC. No raw
+// process command lines or model data are included in the proof.
+result.restartRuntimeEvidence={
+  pid:snapshot.members.worker.pid??null,
+  runtimePid:workerPid,
+  pidSource:snapshot.members.worker.pidSource??null,
+  backendType:snapshot.members.worker.backendType,
+  livenessKind:snapshot.members.worker.livenessKind??null,
+  restartable:snapshot.members.worker.restartable??null,
+  birth:originalWorkerIdentity.birth
+};
 // A persisted worker PID is not proof of an active tracked team run. The
 // product restart API explicitly requires getAliveRunId(teamName).
 result.teamRunAliveBeforeRestart=await api('window.electronAPI.teams.processAlive('+literal(team)+')');
