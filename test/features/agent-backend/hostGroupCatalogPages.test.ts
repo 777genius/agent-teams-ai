@@ -90,3 +90,35 @@ it('old single-array group replies remain accepted without new selection or muta
   expect(await f.api.list({ teamName: key })).toEqual(original.slice(0, 2));
   expect(f.router.request).toHaveBeenCalledTimes(1);
 });
+
+
+it('refuses duplicate rows across pages and an incomplete terminal catalog', async () => {
+  for (const fault of ['duplicate', 'incomplete'] as const) {
+    const f = fixture();
+    f.router.request.mockImplementation(async (_handle, input) => {
+      const next = input.payload && typeof input.payload === 'object' && 'cursor' in input.payload
+        ? input.payload.cursor as string : undefined;
+      const page = pageGroupCatalog({
+        rows: original, key: cursorKey, principalId: 'TEST-principal',
+        binding: 'TEST-owner-binding',
+        ...(next === undefined ? {} : { cursor: next }),
+      });
+      if (!Array.isArray(page) && page && typeof page === 'object') {
+        if (fault === 'incomplete') {
+          return { ok: true, value: { ...page, nextCursor: null } };
+        }
+        if (next !== undefined && 'groups' in page && Array.isArray(page.groups)) {
+          return { ok: true, value: {
+            ...page,
+            groups: [{ ...page.groups[0] as object, id: original[0]!.id }, ...page.groups.slice(1)],
+          } };
+        }
+      }
+      return { ok: true, value: page };
+    });
+    await expect(f.api.list({ teamName: key })).rejects.toThrow(
+      fault === 'duplicate' ? 'Duplicate Host group' : 'Incomplete Host group catalog'
+    );
+    expect(f.legacy.list).not.toHaveBeenCalled();
+  }
+});
