@@ -7,6 +7,8 @@ import { join } from 'node:path';
 import { createFilesystemTeamOwner } from '@agent-teams/legacy-agent-host/team/filesystem';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { TeamOwnerStore } from '../../../packages/legacy-agent-host/dist/adapters/team/TeamOwnerStore.js';
+import { AttachmentArtifactStore } from '../../../packages/legacy-agent-host/dist/attachments/AttachmentArtifactStore.js';
 import { boundProductCommandReceipt } from '../../../packages/legacy-agent-host/dist/team/boundProductCommandReceipt.js';
 
 import { HostTaskSubmissionRefusal } from '../../../src/features/agent-backend/contracts/taskSubmission';
@@ -111,6 +113,95 @@ function fixture(bounded = false) {
     },
   };
 }
+it.each([false, true])(
+  'releases a failed original owner read before Create and permits correction=%s',
+  async (corrected) => {
+    const f = fixture();
+    f.keepAck();
+    const request = {
+      command: identity('TEST-create-discovery'),
+      subject: 'TEST original',
+    };
+    f.resolve.mockRejectedValueOnce(new Error('Host teams unavailable'));
+    await expect(f.adapter().createTask('host-team:TEST-original', request)).rejects.toMatchObject({
+      name: 'HostTaskSubmissionRefusal',
+      code: 'owner-unavailable',
+      outcome: 'not-dispatched',
+      commandId: request.command.commandId,
+    });
+    expect(f.invoke).not.toHaveBeenCalled();
+    expect(f.human.listTasks()).toHaveLength(1);
+    expect(f.human.lookup(request.command.commandId)).toBeUndefined();
+
+    const next = corrected ? { ...request, subject: 'TEST corrected' } : request;
+    const task = await f.adapter().createTask('host-team:TEST-original', next);
+    expect(task.subject).toBe(next.subject);
+    expect(f.human.getTask(task.id).subject).toBe(next.subject);
+    expect(f.human.listTasks()).toHaveLength(2);
+    expect(f.resolve).toHaveBeenCalledTimes(2);
+    expect(f.invoke.mock.calls.map(([r]) => r.operation)).toEqual(['task.create']);
+    expect(f.human.lookup(request.command.commandId)).toMatchObject({
+      commandId: request.command.commandId,
+      phase: 'completed',
+    });
+  }
+);
+
+it('releases discovery refusal before attachment upload but retains the original comment after lost ACK', async () => {
+  const f = fixture();
+  const binding = { backendId: 'TEST-backend', teamId: 'TEST-team', teamName: 'test-team' };
+  const store = new TeamOwnerStore(f.root, binding.teamName);
+  const artifacts = new AttachmentArtifactStore(f.root, binding, store);
+  f.intercept((operation) =>
+    operation.operation === 'attachment.upload'
+      ? Promise.resolve(
+          projectBackendResult(operation, {
+            ok: true,
+            value: store.fenced(() => artifacts.upload(operation.payload)),
+          })
+        )
+      : undefined
+  );
+  const bytes = 'TEST attachment';
+  const request = {
+    command: identity('TEST-comment-discovery'),
+    text: 'TEST original comment',
+    attachments: [
+      { id: 'TEST-file', filename: 'small.txt', mimeType: 'text/plain', base64Data: btoa(bytes) },
+    ],
+  };
+  f.resolve.mockRejectedValueOnce(new Error('Host teams unavailable'));
+  await expect(
+    f.adapter().addTaskComment('host-team:TEST-original', f.taskId, request)
+  ).rejects.toMatchObject({
+    name: 'HostTaskSubmissionRefusal',
+    code: 'owner-unavailable',
+    outcome: 'not-dispatched',
+    commandId: request.command.commandId,
+  });
+  expect(f.invoke).not.toHaveBeenCalled();
+  expect(f.human.lookup(request.command.commandId)).toBeUndefined();
+  expect(f.human.getTask(f.taskId).comments ?? []).toHaveLength(0);
+  await expect(
+    f.adapter().addTaskComment('host-team:TEST-original', f.taskId, request)
+  ).rejects.toMatchObject({ outcome: 'unknown' });
+  const original = f.human.lookup(request.command.commandId)!;
+  expect(original.phase).toBe('completed');
+  const recovered = await f.adapter().addTaskComment('host-team:TEST-original', f.taskId, request);
+  expect(recovered).toMatchObject({
+    text: request.text,
+    attachments: [{ id: 'TEST-file', filename: 'small.txt', mimeType: 'text/plain', size: bytes.length }],
+  });
+  expect(f.human.lookup(request.command.commandId)).toEqual(original);
+  expect(f.human.getTask(f.taskId).comments).toHaveLength(1);
+  expect(f.resolve).toHaveBeenCalledTimes(2);
+  expect(f.invoke.mock.calls.map(([r]) => r.operation)).toEqual([
+    'attachment.upload',
+    'task.comment',
+    'command.lookup',
+  ]);
+});
+
 it('recovers a real filesystem comment after lost ACK by one original lookup, without second command/effect/resolve', async () => {
   const f = fixture(),
     request = { text: 'TEST original', command: identity() };

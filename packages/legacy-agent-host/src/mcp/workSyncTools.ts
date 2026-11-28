@@ -17,7 +17,7 @@ export function createWorkSyncMcpTools(port: TeamMcpWorkSyncPort): BoundTool[] {
     {
       ...defineTool(
         'member_work_sync_status',
-        'Read and reconcile your current actionable-work agenda. Follow nextRequiredToolCall before going idle.',
+        'Read and reconcile your current actionable-work agenda. Large results explicitly omit details; use task_briefing and task_get for the full current work. Follow nextRequiredToolCall before going idle.',
         z.strictObject({ commandId, forceNudge: z.boolean().optional() }),
         ({ commandId, forceNudge }) =>
           port.status(commandId, forceNudge === undefined ? {} : { forceNudge })
@@ -27,7 +27,7 @@ export function createWorkSyncMcpTools(port: TeamMcpWorkSyncPort): BoundTool[] {
     {
       ...defineTool(
         'member_work_sync_report',
-        'Report your work-sync state for the original agenda/token. This does not complete or approve Tasks. The lead or original observer may use wait.supersedes to explicitly replace one failed/cancelled check in the same task scope; it never cancels CI or authorizes rerun. Keep its original horizon.',
+        'Report your work-sync state for the original agenda/token. This does not complete or approve Tasks. Large results explicitly omit details; use task_briefing and task_get for the full current work. The lead or original observer may use wait.supersedes to explicitly replace one failed/cancelled check in the same task scope; it never cancels CI or authorizes rerun. Keep its original horizon.',
         z.strictObject({
           commandId,
           state: z.enum(['still_working', 'blocked', 'caught_up']),

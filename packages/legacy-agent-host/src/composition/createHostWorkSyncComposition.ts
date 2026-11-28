@@ -18,6 +18,7 @@ import { createNativeMemberWorkSyncPersistence } from '../work-sync/storage/crea
 import { MemberWorkSyncWriteQueue } from '../work-sync/storage/MemberWorkSyncWriteQueue.js';
 import { goalWaitKey, isGoalWaitReport } from '../work-sync/policy/core/domain/GoalWaitPolicy.js';
 import { assertGoalWaitSupersession } from '../work-sync/inspectGoalWaits.js';
+import { projectNativeWorkSyncResult } from '../work-sync/projectNativeWorkSyncResult.js';
 
 import type { JsonValue } from '../contracts.js';
 import type { TeamMcpWorkSyncPort } from '../mcp/workSyncContracts.js';
@@ -104,13 +105,15 @@ export function createHostWorkSyncComposition(options: {
               } : source;
           if ('forceNudge' in payload && payload.forceNudge && !member.delivery && !options.outbox)
             throw new McpToolFailure('unsupported');
-          return commands.execute(commandId, operation, json(payload), checkedSource, async (original) => {
+          const assertCurrent = () => {
+            options.assertCurrent();
+            checkedSource.assertCurrent();
+            identity.assertWorkAllowed();
+          };
+          const responseIdentity = { teamName: member.teamName, memberName: source.team.memberName,
+            incarnation: source.team.source.teamId };
+          const result = await commands.execute(commandId, operation, json(payload), checkedSource, async (original) => {
               let mutationOrdinal = 0;
-              const assertCurrent = () => {
-                options.assertCurrent();
-                checkedSource.assertCurrent();
-                identity.assertWorkAllowed();
-              };
               const persistence = createNativeMemberWorkSyncPersistence({
                 teamsBasePath: options.teamsBasePath,
                 teamName: member.teamName,
@@ -170,7 +173,8 @@ export function createHostWorkSyncComposition(options: {
                   ...payload,
                 });
                 assertCurrent();
-                return json(requiredReport(commandId, status));
+                return projectNativeWorkSyncResult({ operation, value: json(requiredReport(commandId, status)),
+                  identity: responseIdentity, original });
               }
               if (!('state' in payload)) throw new TeamOwnerError('invalid');
               const result = await new MemberWorkSyncReporter(deps).execute(
@@ -178,8 +182,10 @@ export function createHostWorkSyncComposition(options: {
                 { receivedAt: original.receivedAt }
               );
               assertCurrent();
-              return json(result);
+              return projectNativeWorkSyncResult({ operation, value: json(result), identity: responseIdentity, original });
             });
+          assertCurrent();
+          return projectNativeWorkSyncResult({ operation, value: result, identity: responseIdentity });
         });
       }
       return {
@@ -291,6 +297,7 @@ function requiredReport(commandId: string, status: MemberWorkSyncStatus) {
     statusOnlyIncomplete: true,
     nextRequiredAction:
       'Call member_work_sync_report in this same turn using nextRequiredToolCall.arguments before going idle.',
+    ...(status.agenda.items.length > 200 ? { reportScope: 'The report covers the entire original agenda; taskIds is omitted.' } : {}),
     nextRequiredToolCall: {
       tool: 'member_work_sync_report',
       arguments: {
@@ -298,7 +305,7 @@ function requiredReport(commandId: string, status: MemberWorkSyncStatus) {
         state: status.agenda.items.length ? 'still_working' : 'caught_up',
         agendaFingerprint: status.agenda.fingerprint,
         reportToken: status.reportToken,
-        taskIds: status.agenda.items.map((item) => item.taskId),
+        ...(status.agenda.items.length <= 200 ? { taskIds: status.agenda.items.map((item) => item.taskId) } : {}),
       },
     },
   };
