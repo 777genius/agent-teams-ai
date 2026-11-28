@@ -27,6 +27,7 @@ export interface PrimaryOwnedMemberRestartLiveRuntimeMetadata {
   alive?: boolean;
   backendType?: string;
   pid?: number;
+  metricsPid?: number;
 }
 
 export interface PreparePrimaryOwnedMemberRestartRuntimeInput {
@@ -99,7 +100,8 @@ export function createNodePreparePrimaryOwnedMemberRestartRuntimeUseCase(): Prep
 }
 
 export function createPreparePrimaryOwnedMemberRestartRuntimeUseCase(
-  ports: PreparePrimaryOwnedMemberRestartRuntimeUseCasePorts
+  ports: PreparePrimaryOwnedMemberRestartRuntimeUseCasePorts,
+  platform: NodeJS.Platform = process.platform
 ): PreparePrimaryOwnedMemberRestartRuntimeUseCase {
   return async (input) => {
     const targetMemberName = input.memberName.trim();
@@ -139,6 +141,25 @@ export function createPreparePrimaryOwnedMemberRestartRuntimeUseCase(
         continue;
       }
       if (metadata.alive) {
+        const nativePid = metadata.metricsPid;
+        // The Windows snapshot can have a telemetry PID but no actionable PID.
+        // Verify the exact native command anew; never kill based on telemetry alone.
+        if (
+          platform === 'win32' &&
+          metadata.backendType?.trim().toLowerCase() === 'process' &&
+          typeof nativePid === 'number' &&
+          Number.isSafeInteger(nativePid) &&
+          nativePid > 0
+        ) {
+          const command = ports.readProcessCommandByPid(nativePid) ?? '';
+          if (
+            commandArgEquals(command, '--team-name', input.teamName) &&
+            commandArgEquals(command, '--agent-id', `${candidateName}@${input.teamName}`)
+          ) {
+            livePids.add(nativePid);
+            continue;
+          }
+        }
         hasAliveRuntimeWithoutPid = true;
       }
     }
