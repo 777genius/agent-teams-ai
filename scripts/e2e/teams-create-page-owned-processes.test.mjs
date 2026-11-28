@@ -320,6 +320,96 @@ test('ordinary non-opted-in click adds no store read/listener or diagnostic fiel
   assert.equal(h.calls.filter(row => row.method === 'Runtime.evaluate').length, 5);
 });
 
+test('template click re-observes a pre-press obstruction and dispatches once at the final visible point', async () => {
+  const h = taskTabHarness(`
+    c.hitReads = 0;
+    document.querySelector = () => button;
+    document.elementFromPoint = () => ++c.hitReads === 2 ? foreign : button;
+    button.getBoundingClientRect = () => {
+      c.rectangles++;
+      return { left: c.hitReads >= 2 ? 30 : 10, top: 20, width: 80, height: 20 };
+    };
+  `);
+  await h.client.click("document.querySelector('[data-testid=create-team-page] [data-testid=open-create-template-picker]')");
+  assert.equal(h.control.hitReads, 4);
+  assert.equal(h.control.scrolls, 1);
+  assert.deepEqual(h.calls.filter(row => row.method === 'Input.dispatchMouseEvent').map(row => ({ ...row.params })), [
+    { type: 'mousePressed', x: 70, y: 30, button: 'left', clickCount: 1 },
+    { type: 'mouseReleased', x: 70, y: 30, button: 'left', clickCount: 1 },
+  ]);
+  assert.equal(h.control.stateReads, 0); assert.equal(h.control.registrations, 0);
+  assert.equal(h.control.extraClicks, 0); assert.equal(h.control.focuses, 0);
+});
+
+test('repeated pre-press obstruction consumes the original click deadline without input', async () => {
+  const h = taskTabHarness('c.hitReads = 0; document.elementFromPoint = () => ++c.hitReads % 2 ? button : foreign;');
+  const evaluate = h.client.evaluate.bind(h.client), waitFor = h.client.waitFor.bind(h.client), waits = [];
+  h.client.evaluate = async expression => {
+    const result = await evaluate(expression); h.inputClock.now += 5000; return result;
+  };
+  h.client.waitFor = async (expression, label, timeoutMs) => {
+    waits.push(timeoutMs); return waitFor(expression, label, timeoutMs);
+  };
+  await assert.rejects(h.client.click(buttonExpression), /E2E click target deadline/);
+  assert.deepEqual(waits, [30_000, 20_000, 10_000]);
+  assert.equal(h.inputClock.now, 30_000);
+  assert.equal(h.control.hitReads, 4);
+  assert.equal(h.calls.filter(row => row.method === 'Input.dispatchMouseEvent').length, 0);
+});
+
+test('pre-press recovery never retries an issued mouse press', async () => {
+  const failure = new Error('TEST original press transport failure after recovery');
+  const h = taskTabHarness('c.hitReads = 0; document.elementFromPoint = () => ++c.hitReads === 2 ? foreign : button;', failure);
+  await assert.rejects(h.client.click(buttonExpression), error => error === failure);
+  assert.equal(h.control.hitReads, 4);
+  assert.deepEqual(h.calls.filter(row => row.method === 'Input.dispatchMouseEvent').map(row => row.params.type), ['mousePressed']);
+});
+
+test('ordinary click refuses malformed falsy final CDP replies without re-observation or input', async () => {
+  for (const value of [undefined, false, 0, '']) {
+    const h = taskTabHarness(), send = h.client.send.bind(h.client), waitFor = h.client.waitFor.bind(h.client);
+    let finalReads = 0;
+    const waits = [];
+    h.client.waitFor = async (expression, label, timeoutMs) => {
+      waits.push(label); return waitFor(expression, label, timeoutMs);
+    };
+    h.client.send = async (method, params, timeoutMs) => {
+      const response = await send(method, params, timeoutMs);
+      if (method === 'Runtime.evaluate' && params.expression.includes('const hit = document.elementFromPoint') &&
+          !params.expression.startsWith('Boolean(') && ++finalReads === 1) {
+        // The real DOM expression completed; only its first final CDP reply is malformed.
+        return { ...response, result: value === undefined ? {} : { value } };
+      }
+      return response;
+    };
+    await assert.rejects(h.client.click(buttonExpression), /Missing\/disabled\/hidden E2E click target/);
+    assert.equal(finalReads, 1); assert.equal(waits.length, 2);
+    assert.equal(h.control.scrolls, 1); assert.equal(h.control.rectangles, 2);
+    assert.equal(h.calls.filter(row => row.method === 'Input.dispatchMouseEvent').length, 0);
+  }
+});
+
+test('ordinary click refuses a recovered ready sample at or after its original cutoff', async () => {
+  for (const elapsed of [30_000, 30_001]) {
+    const h = taskTabHarness('c.hitReads = 0; document.elementFromPoint = () => ++c.hitReads === 2 ? foreign : button;');
+    const evaluate = h.client.evaluate.bind(h.client);
+    let recoveredSamples = 0;
+    h.client.evaluate = async (expression, timeoutMs) => {
+      const result = await evaluate(expression, timeoutMs);
+      if (expression.includes('const hit = document.elementFromPoint') &&
+          !expression.startsWith('Boolean(') && h.control.hitReads === 4) {
+        assert.ok(result && result.x === 50 && result.y === 30);
+        recoveredSamples++; h.inputClock.now = elapsed;
+      }
+      return result;
+    };
+    await assert.rejects(h.client.click(buttonExpression), /E2E click target deadline/);
+    assert.equal(recoveredSamples, 1); assert.equal(h.control.hitReads, 4);
+    assert.equal(h.inputClock.now, elapsed); assert.equal(h.control.scrolls, 1);
+    assert.equal(h.calls.filter(row => row.method === 'Input.dispatchMouseEvent').length, 0);
+  }
+});
+
 test('settled task-tab click installs one observer only in the final sample within its original deadline', async () => {
   const h = taskTabHarness(), evaluate = h.client.evaluate.bind(h.client);
   const observations = [], waits = [], waitFor = h.client.waitFor.bind(h.client);

@@ -37,11 +37,42 @@ interface CodeModeWitness {
   firstIdentityMismatch?: ProcessFact;
 }
 
+/** Candidate executable matches from one existing process read; never member-role authority. */
+function codexPreassertDiagnostic(hostPid: number, roots: readonly ProcessFact[],
+  rows: readonly ProcessFact[], helperPath: string) {
+  const project = (row: ProcessFact, executableRole: 'codex' | 'code-mode-host') => {
+    const { pid, parentPid, groupId, birth } = row;
+    for (const value of [pid, parentPid, groupId])
+      assert.ok(Number.isSafeInteger(value) && value > 0);
+    assert.ok(typeof birth === 'string' && birth.length > 0 && birth.length <= 64 &&
+      Buffer.byteLength(birth, 'utf8') <= 64);
+    for (const value of birth)
+      assert.ok(value.charCodeAt(0) >= 0x20 && value.charCodeAt(0) !== 0x7f);
+    return { pid, parentPid, groupId, birth, executableRole };
+  };
+  // processFacts already caps its read at 2 MiB and 20,000 rows. Reuse that table.
+  const rootPids = new Set(roots.map(row => row.pid));
+  const helpers: ReturnType<typeof project>[] = [];
+  let helperCount = 0;
+  for (const row of rows) {
+    if (row.command !== helperPath || !rootPids.has(row.parentPid)) continue;
+    helperCount++;
+    if (helpers.length < 32) helpers.push(project(row, 'code-mode-host'));
+  }
+  return {
+    schemaVersion: 1, diagnosticOnly: true, hostPid,
+    rootCount: roots.length, helperCount,
+    rootsTruncated: roots.length > 16, helpersTruncated: helperCount > 32,
+    roots: roots.slice(0, 16).map(row => project(row, 'codex')), helpers,
+  };
+}
+
 /** Read-only original child witness; no process control, ownership or numeric signal authority. */
 export async function captureCodexCodeModeProcess(
   hostPid: number,
   nativeInputs: readonly { path: string; sha256: string }[],
-  read: () => ProcessFact[] = processFacts
+  read: () => ProcessFact[] = processFacts,
+  observe?: (diagnostic: unknown) => void
 ): Promise<CodeModeWitness> {
   assert.ok(Number.isSafeInteger(hostPid) && hostPid > 0);
   assert.equal(nativeInputs.length, 2);
@@ -53,6 +84,12 @@ export async function captureCodexCodeModeProcess(
   }
   const rows = read();
   const roots = rows.filter(row => row.parentPid === hostPid && row.command === codex!.path);
+  if (observe) {
+    try {
+      const diagnostic = codexPreassertDiagnostic(hostPid, roots, rows, helper!.path);
+      if (Buffer.byteLength(JSON.stringify(diagnostic), 'utf8') <= 16 * 1024) observe(diagnostic);
+    } catch { /* Diagnostics cannot replace the original result or assertion. */ }
+  }
   assert.equal(roots.length, 1, 'one selected original live Codex root');
   const helpers = rows.filter(row => row.parentPid === roots[0]!.pid && row.command === helper!.path);
   assert.equal(helpers.length, 1, 'actual original code-mode helper must be observed before Stop');

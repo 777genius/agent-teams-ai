@@ -707,9 +707,15 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   }
   const children = nativeObservation?.runtime ?? processTable().filter(row => row.ppid === hostPid);
   assert.ok(children.length >= 1, 'actual native child present before Stop');
+  let codeModeDiagnostic: unknown;
   if (codex) proof.codeModeHost = { status: 'capture-attempted' };
-  const helper = codex ? await captureCodexCodeModeProcess(hostPid, codex.nativeInputs) : undefined;
-  if (helper) proof.codeModeHost = helper;
+  const helper = codex ? await captureCodexCodeModeProcess(hostPid, codex.nativeInputs, undefined,
+    diagnostic => {
+      codeModeDiagnostic = diagnostic;
+      proof.codeModeHost = { status: 'capture-attempted', diagnostic };
+    }) : undefined;
+  if (helper) proof.codeModeHost = Object.assign(helper,
+    codeModeDiagnostic === undefined ? {} : { diagnostic: codeModeDiagnostic });
   if (codex) proof.runtimeMcpEndpointSha256 = await codexRuntimeEndpointHash(fixture, options.capturedGroup());
   await ui.scrollTo('button[aria-label="Stop"]', 'visible original Stop control');
   await ui.click('button[aria-label="Stop"]', 'original Stop once', 'Stop');

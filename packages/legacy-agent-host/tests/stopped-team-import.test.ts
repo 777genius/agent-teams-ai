@@ -1022,6 +1022,30 @@ test('strict fresh snapshot metadata rejects alternate verifiers and malformed c
   }
 });
 
+test('V2 root identity rejects a digest-valid array before staging or import', async (t) => {
+  const f = fixture(t);
+  const snapshot = await exportStoppedTeam(f.source);
+  assert.equal(snapshot.schemaVersion, 2);
+  const raw = structuredClone(snapshot) as unknown as Record<string, unknown>;
+  const roots = raw.roots as Record<string, unknown>[];
+  assert.equal(typeof roots[0]!.identity, 'string');
+  roots[0]!.identity = [roots[0]!.identity];
+  const { digest: _previous, ...body } = raw;
+  raw.digest = digest(body);
+  const malformed = raw as unknown as typeof snapshot;
+  const request = requestFor(malformed);
+  const snapshots = new FileStoppedSnapshotResolver({
+    ...f.options,
+    assertCurrent: f.options.assertWriter,
+  });
+  assert.throws(() => validateStoppedSnapshot(malformed), { code: 'hold' });
+  assert.throws(() => snapshots.stage(request, malformed), { code: 'hold' });
+  assert.throws(() => f.importer.import('TEST-v2-array-root-identity', request, malformed), {
+    code: 'hold',
+  });
+  assert.deepEqual(readdirSync(f.destination), []);
+});
+
 // Genuine V1 capture: pristine 617b15d65e3d1e40d94ee3470eb5fc8399836b68, Node 24.21.0.
 // Original source removed before capture output; exact exported JSON SHA256 3a85867873246991dd7de7c4f63edb3e81730c4682643626c3d77dac2d4ed106.
 const stoppedSnapshotV1Original = {

@@ -515,3 +515,46 @@ test('duplicate retained cancellation joins one original close and acknowledges 
   f.fence.reserve(target.resourceId, 'TEST-next-probe');
   f.fence.release(target.resourceId, 'TEST-next-probe', true);
 });
+
+for (const clean of [true, false]) {
+  test(`retained cancellation retry preserves original debt after native close ${clean ? 'confirmed' : 'unconfirmed'}`, async (t) => {
+    const f = fixture(t);
+    f.owner.startNativeReadiness(input, () => true);
+    const cancellation = cancellationFailure(
+      f.owner.cancelRetained(input.commandId, input.context)
+    );
+    await f.closeStarted.promise;
+    const retired = f.read();
+    assert.equal(retired.readinessRetired, true);
+    f.base.write({ ...retired, phase: 'held', resourceHeld: false, ok: false });
+    const retained = f.bytes();
+    f.result.resolve(true);
+    f.closed.resolve(clean);
+    assertFailureCode(await cancellation, 'held');
+    assert.deepEqual(f.bytes(), retained, 'the first refusal preserves the released replacement');
+    const counts = f.counts();
+    assert.deepEqual(counts, { ownWrites: 2, runs: 1, closes: 1, evidenceReads: 0 });
+    assert.equal(f.aborts(), 1);
+
+    const retry = cancellationFailure(f.owner.cancelRetained(input.commandId, input.context));
+    assertFailureCode(await retry, 'held');
+    assert.deepEqual(
+      f.bytes(),
+      retained,
+      'known original debt cannot retire a replacement on retry'
+    );
+    assert.deepEqual(
+      f.counts(),
+      counts,
+      'retry performs no further receipt write or native operation'
+    );
+    assert.equal(f.aborts(), 1);
+    await assertHeldOriginal(f);
+    assert.deepEqual(f.bytes(), retained);
+    assert.deepEqual(
+      f.counts(),
+      counts,
+      'held shutdown does not re-close the removed original entry'
+    );
+  });
+}

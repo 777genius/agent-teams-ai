@@ -280,6 +280,7 @@ export class ModelProbeOwner {
     const command = id.parse(commandId),
       entry = this.active.get(command);
     if (entry && entry.saved.context !== context) throw new ManagementCommandError('conflict');
+    if (this.debt.has(command)) throw new ManagementCommandError('held');
     let retired: StoredModelProbe;
     try {
       if (entry) this.assertOriginal(entry);

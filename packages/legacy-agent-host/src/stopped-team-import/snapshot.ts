@@ -472,7 +472,10 @@ function validateV2Shape(raw: Extract<StoppedTeamSnapshot, { schemaVersion: 2 }>
     raw.roots.length !== importCategories.length
   )
     hold();
-  for (const root of raw.roots) onlySnapshotFields(root, ['category', 'exists', 'identity']);
+  for (const root of raw.roots) {
+    onlySnapshotFields(root, ['category', 'exists', 'identity']);
+    if (typeof root.identity !== 'string') hold();
+  }
   for (const value of raw.files) {
     const file = snapshotRecord(value);
     onlySnapshotFields(
