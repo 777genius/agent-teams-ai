@@ -39,12 +39,13 @@ test('real authenticated HTTP MCP process_list reconstructs oversized retained m
       pid: row.pid, label: row.label, command: row.command,
     }).phase, 'completed');
   }
-  const expected = owner.processCommands('alice').list();
+  const originalPort = owner.processCommands('alice');
+  const expected = originalPort.list();
   assert.equal(expected.length, rows.length);
   assert.ok(Buffer.byteLength(JSON.stringify(expected)) > 256 * 1024);
   let reads = 0;
   const native = {
-    list: () => { reads++; return owner.processCommands('alice').list(); },
+    list: () => { reads++; return originalPort.list(); },
     register: async () => { throw new Error('Unexpected native register'); },
     metadata: async () => { throw new Error('Unexpected metadata effect'); },
     lookup: () => null,
