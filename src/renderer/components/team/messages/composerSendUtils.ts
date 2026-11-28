@@ -25,6 +25,9 @@ import type {
   TaskRef,
 } from '@shared/types';
 
+/** Expected policy refusal before a Goal-related send attempt is saved. */
+export class GoalRequestPreparationRefusal extends Error {}
+
 let pendingSendIdCounter = 0;
 
 export function createPendingSendId(): string {
@@ -69,7 +72,7 @@ export function buildPreparedSendRequest({
 }: BuildPreparedSendRequestOptions): ComposerPreparedRequest {
   if (selectedTeam && !lockedRecipient) {
     if (autonomousGoal || originalGoalRequest)
-      throw new Error('Goal requires a direct lead message');
+      throw new GoalRequestPreparationRefusal('Goal requires a direct lead message');
     return {
       kind: 'cross-team',
       request: {
@@ -108,7 +111,9 @@ export function buildPreparedSendRequest({
   };
   if (originalGoalRequest) {
     if (!sameOriginalGoalRequest(originalGoalRequest, prepared))
-      throw new Error('Restore the unchanged original request to check its delivery.');
+      throw new GoalRequestPreparationRefusal(
+        'Restore the unchanged original request to check its delivery.'
+      );
     return structuredClone(originalGoalRequest);
   }
   return prepared;

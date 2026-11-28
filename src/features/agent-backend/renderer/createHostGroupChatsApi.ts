@@ -112,8 +112,10 @@ export function createHostGroupChatsApi(
     }
     check(true);
     if (!result.ok) {
-      if (isGroupSendRefusalCode(result.code) &&
-          (operation !== 'group.send' || lookedUp || result.outcome !== 'rejected'))
+      if (
+        isGroupSendRefusalCode(result.code) &&
+        (operation !== 'group.send' || lookedUp || result.outcome !== 'rejected')
+      )
         throw new HostTeamOperationError('hold', 'unknown', commandId);
       throw new HostTeamOperationError(result.code, result.outcome, commandId);
     }
