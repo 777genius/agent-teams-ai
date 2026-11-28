@@ -5,6 +5,9 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import type { TestContext } from 'node:test';
 import { createFilesystemTeamOwner } from '../dist/adapters/team/createFilesystemTeamOwner.js';
+import { TeamOwnerStore } from '../dist/adapters/team/TeamOwnerStore.js';
+import { teamCommandPath } from '../dist/team/commandEntries.js';
+import type { WorkSyncCommandReceipt } from '../dist/work-sync/commandContracts.js';
 import { captureNativeInputAuthority } from '../dist/composition/captureNativeInputAuthority.js';
 import { deliveryFingerprint, runtimeDigest } from '../dist/runtime/identity.js';
 import type { RuntimeDelivery, RuntimeSessionRecord } from '../dist/runtime/contracts.js';
@@ -106,6 +109,8 @@ function fixture(t: TestContext, role: 'lead' | 'member' = 'lead') {
   return {
     owner,
     human,
+    root,
+    binding,
     source,
     input,
     options,
@@ -303,4 +308,40 @@ test('post-await replacement input leaves original running receipt held without 
   );
   assert.equal(calls, 1);
   assert.deepEqual(commands.lookup('TEST-held-work-sync'), original);
+});
+
+test('fresh WorkSync original reserves complete receipt bytes before the first command write', async (t) => {
+  const f = fixture(t);
+  const authority = captureNativeInputAuthority(f.options);
+  const commands = f.owner.workSyncCommands('native-connection');
+  let effects = 0;
+  await assert.rejects(commands.execute('TEST-work-sync-capacity', 'report',
+    { note: 'x'.repeat(450_000) }, authority, async () => {
+      effects++; return { accepted: true };
+    }), /hold/);
+  assert.equal(effects, 0);
+  assert.equal(commands.lookup('TEST-work-sync-capacity'), undefined);
+});
+
+test('same fingerprint but replaced running header cannot borrow its original completion proof', async (t) => {
+  const f = fixture(t);
+  const authority = captureNativeInputAuthority(f.options);
+  const commands = f.owner.workSyncCommands('native-connection');
+  const store = new TeamOwnerStore(f.root, f.binding.teamName);
+  const id = 'TEST-work-sync-replaced-header';
+  let effects = 0;
+  const effect = async () => {
+    effects++;
+    store.fenced(() => {
+      const path = teamCommandPath(id);
+      const original = store.read<WorkSyncCommandReceipt>(path)!;
+      store.write(path, { ...original, mutationId: 'TEST-other-mutation' });
+    });
+    return { accepted: true };
+  };
+  await assert.rejects(commands.execute(id, 'status', {}, authority, effect), /hold/);
+  assert.equal(commands.lookup(id)?.phase, 'running');
+  assert.equal(commands.lookup(id)?.mutationId, 'TEST-other-mutation');
+  await assert.rejects(commands.execute(id, 'status', {}, authority, effect), /hold/);
+  assert.equal(effects, 1);
 });

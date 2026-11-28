@@ -16,7 +16,7 @@ import { MemberWorkSyncReporter } from '../work-sync/policy/core/application/Mem
 import { MemberWorkSyncTeamOperationGate } from '../work-sync/policy/core/application/MemberWorkSyncTeamOperationGate.js';
 import { createNativeMemberWorkSyncPersistence } from '../work-sync/storage/createNativeMemberWorkSyncPersistence.js';
 import { MemberWorkSyncWriteQueue } from '../work-sync/storage/MemberWorkSyncWriteQueue.js';
-import { projectNativeWorkSyncResult } from '../work-sync/projectNativeWorkSyncResult.js';
+import { assertNativeWorkSyncStatusBudget, projectNativeWorkSyncResult, workSyncResultBudget } from '../work-sync/projectNativeWorkSyncResult.js';
 
 import type { JsonValue } from '../contracts.js';
 import type { TeamMcpWorkSyncPort } from '../mcp/workSyncContracts.js';
@@ -131,6 +131,32 @@ export function createHostWorkSyncComposition(options: {
                 },
               };
               const request = { teamName: member.teamName, memberName: source.team.memberName };
+              const budget = workSyncResultBudget(original);
+              const check = (status: MemberWorkSyncStatus | null) =>
+                assertNativeWorkSyncStatusBudget({ operation, status, identity: responseIdentity, budget });
+              // Wrap the same port: statusStore.read closes over this object.
+              const mutations = persistence.statusMutations;
+              const readSnapshot = mutations.readSnapshot.bind(mutations);
+              const compareAndWrite = mutations.compareAndWrite.bind(mutations);
+              mutations.readSnapshot = async (input) => {
+                assertCurrent();
+                const result = await readSnapshot(input);
+                assertCurrent();
+                if (result.ok) check(result.snapshot.status);
+                return result;
+              };
+              mutations.compareAndWrite = async (input) => {
+                assertCurrent();
+                check(input.nextStatus);
+                const result = await compareAndWrite(input);
+                assertCurrent();
+                if (result.committed === false && result.reason === 'conflict')
+                  check(result.current.status);
+                return result;
+              };
+              // No reconciler/report/audit/token/outbox effect precedes this read.
+              const initial = await mutations.readSnapshot(request);
+              if (!initial.ok) throw new TeamOwnerError('hold');
               if (operation === 'status') {
                 const status = await new MemberWorkSyncReconciler(deps).execute({
                   ...request,

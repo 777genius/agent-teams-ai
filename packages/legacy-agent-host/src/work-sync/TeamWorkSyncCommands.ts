@@ -1,12 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { TeamOwnerError } from '../team/contracts.js';
-import { digest } from '../team/identity.js';
+import { digest, stableJson } from '../team/identity.js';
 import {
   listTeamCommandEntries,
   teamCommandPath,
   validateCommandEntry,
 } from '../team/commandEntries.js';
 import { workSyncCommandFingerprint, validateWorkSyncCommandReceipt } from './commandContracts.js';
+import { assertWorkSyncReceiptCapacity, workSyncResultBudget } from './projectNativeWorkSyncResult.js';
 import type { WorkSyncCommandReceipt } from './commandContracts.js';
 import type { JsonValue } from '../contracts.js';
 import type { TeamBinding } from '../team/contracts.js';
@@ -99,6 +100,7 @@ export function createTeamWorkSyncCommands(options: {
           mutationId: randomUUID(),
           phase: 'prepared',
         };
+        assertWorkSyncReceiptCapacity(prepared);
         options.store.write(teamCommandPath(commandId), prepared);
         const running = { ...prepared, phase: 'running' as const };
         options.store.write(teamCommandPath(commandId), running);
@@ -108,7 +110,8 @@ export function createTeamWorkSyncCommands(options: {
       // Running/held receipts never automatically invoke the effect again after a lost response.
       {
         authority.assertCurrent();
-        const result = await effect(Object.freeze(structuredClone(receipt)));
+        const original = structuredClone(receipt);
+        const result = await effect(Object.freeze(structuredClone(original)));
         authority.assertCurrent();
         return options.store.fenced(() => {
           authority.assertTeamCurrent();
@@ -118,8 +121,10 @@ export function createTeamWorkSyncCommands(options: {
           if (
             !current ||
             current.phase !== 'running' ||
-            current.fingerprint !== receipt.fingerprint
+            stableJson(current) !== stableJson(original)
           )
+            throw new TeamOwnerError('hold');
+          if (Buffer.byteLength(JSON.stringify(result)) > workSyncResultBudget(original))
             throw new TeamOwnerError('hold');
           const completed = { ...current, phase: 'completed' as const, result };
           validateWorkSyncCommandReceipt(completed);

@@ -390,6 +390,26 @@ it.each([3, 6])(
   'keeps %i large assigned tasks canonical through actual HTTP WorkSync status, report and replay',
   async (count) => {
     const f = await fixture();
+    const historicalLineage = 'L'.repeat(250_000);
+    const historicalLatch = { stoppedAt: f.status.evaluatedAt,
+      reason: '界'.repeat(100_000), controlRevision: 7 };
+    const initial = await f.persistence.statusMutations.readSnapshot(f.status);
+    if (!initial.ok) throw new Error('TEST original status authority unavailable');
+    const seeded = await f.persistence.statusMutations.compareAndWrite({
+      teamName: f.binding.teamName, memberName: 'alice',
+      incarnation: initial.snapshot.incarnation, expectedToken: initial.snapshot.token,
+      mutationId: 'TEST-historical-stopped-status',
+      nextStatus: { ...f.status, recoveryHealth: {
+        schemaVersion: 1, episodes: [], autoResumeStopLatch: historicalLatch, controlRevision: 7,
+      } },
+    });
+    if (seeded.committed !== true) throw new Error('TEST original status not seeded');
+    // This disposable historical fixture predates the current UUID lineage
+    // producer; the existing canonical decoder accepts its retained identity.
+    const historicalPath = f.paths.getMemberStatusPath(f.binding.teamName, 'alice');
+    const historical = JSON.parse(await readFile(historicalPath, 'utf8'));
+    historical.status.statusRevision.lineageId = historicalLineage;
+    await writeFile(historicalPath, JSON.stringify(historical));
     const expected = new Map<string, string>();
     for (let index = 0; index < count; index++) {
       const subject = '界'.repeat(29_990) + ' TEST ' + index;
@@ -463,6 +483,8 @@ it.each([3, 6])(
         const saved = JSON.parse(raw).status as MemberWorkSyncStatus;
         expect(new Map(saved.agenda.items.map((item) => [item.taskId, item.subject]))).toEqual(expected);
         expect(saved.agenda.items).toHaveLength(count);
+        expect(saved.statusRevision?.lineageId).toBe(historicalLineage);
+        expect(saved.recoveryHealth?.autoResumeStopLatch).toEqual(historicalLatch);
         expect(Buffer.byteLength(JSON.stringify(saved), 'utf8')).toBeGreaterThan(
           count === 6 ? 512 * 1024 : 256 * 1024
         );
@@ -487,6 +509,13 @@ it.each([3, 6])(
         nextRequiredToolCall: { tool: 'member_work_sync_report' },
       });
       expect(status.agenda).not.toHaveProperty('items');
+      expect(status).not.toHaveProperty('statusRevision');
+      expect(status).not.toHaveProperty('pendingReportReceipt');
+      expect(status.recoveryHealth).toMatchObject({
+        autoResumeStopped: true, controlRevision: 7,
+        autoResumeStopLatch: { stoppedAt: historicalLatch.stoppedAt, controlRevision: 7 },
+      });
+      expect(status.recoveryHealth.autoResumeStopLatch).not.toHaveProperty('reason');
       const args = status.nextRequiredToolCall.arguments as {
         commandId: string; state: string; agendaFingerprint: string; reportToken: string;
       };
@@ -503,6 +532,10 @@ it.each([3, 6])(
         accepted: true,
         status: { detailsOmitted: true, agenda: { fingerprint: args.agendaFingerprint, totalItems: count } },
       });
+      expect(report.status.recoveryHealth).toMatchObject({
+        autoResumeStopped: true, controlRevision: 7,
+      });
+      expect(report.status).not.toHaveProperty('pendingReportReceipt');
       const reportReceipt = assertReceipt(args.commandId, report);
       const after = await assertCanonical();
       expect(after.saved.lastAcceptedReport ?? after.saved.report).toMatchObject({
@@ -533,6 +566,65 @@ it.each([3, 6])(
     }
   }
 );
+
+it('refuses an unrepresentable historical accepted fingerprint before canonical status or report effects', async () => {
+  const f = await fixture();
+  const initial = await f.persistence.statusMutations.readSnapshot(f.status);
+  if (!initial.ok) throw new Error('TEST original status authority unavailable');
+  const seeded = await f.persistence.statusMutations.compareAndWrite({
+    teamName: f.binding.teamName, memberName: 'alice',
+    incarnation: initial.snapshot.incarnation, expectedToken: initial.snapshot.token,
+    mutationId: 'TEST-historical-accepted-report',
+    nextStatus: {
+      ...f.status,
+      report: {
+        teamName: f.binding.teamName, memberName: 'alice',
+        state: 'still_working', agendaFingerprint: 'x'.repeat(125_000),
+        reportedAt: f.status.evaluatedAt, accepted: true, source: 'test',
+      },
+    },
+  });
+  if (seeded.committed !== true) throw new Error('TEST original status not seeded');
+  const path = f.paths.getMemberStatusPath(f.binding.teamName, 'alice');
+  const metricsPath = f.paths.getMetricsIndexPath(f.binding.teamName);
+  const journalPath = f.paths.getMemberReportsPath(f.binding.teamName, 'alice');
+  const tokenPath = f.paths.getReportTokenSecretPath(f.binding.teamName);
+  const before = await readFile(path, 'utf8');
+  const metrics = await readFile(metricsPath, 'utf8');
+  await expect(readFile(journalPath)).rejects.toMatchObject({ code: 'ENOENT' });
+  await expect(readFile(tokenPath)).rejects.toMatchObject({ code: 'ENOENT' });
+  const feature = createHostWorkSyncComposition({
+    teamsBasePath: join(f.root, 'teams'),
+    identity: async () => f.identity,
+    assertCurrent: f.authority.assertCurrent,
+  });
+  try {
+    const port = feature.member({
+      teamId: f.binding.teamId, teamName: f.binding.teamName, owner: f.owner,
+      providerId: 'anthropic',
+      sourceRevision: runtimeDigest({ binding: f.source, configuration: f.record.config }),
+      captureSource: () => captureNativeInputAuthority(f.options),
+    });
+    const commandId = 'TEST-historical-scalar-refusal';
+    await expect(port.status(commandId, {})).rejects.toThrow(/hold/);
+    const commands = f.owner.workSyncCommands('native-connection');
+    const retained = commands.lookup(commandId);
+    expect(retained?.phase).toBe('running');
+    expect(retained?.result).toBeUndefined();
+    await expect(port.status(commandId, {})).rejects.toThrow(/hold/);
+    expect(commands.lookup(commandId)).toEqual(retained);
+    await expect(port.report('TEST-historical-report-refusal', {
+      state: 'still_working', agendaFingerprint: 'TEST-invalid', reportToken: 'TEST-invalid',
+    })).rejects.toThrow(/hold/);
+    expect(commands.lookup('TEST-historical-report-refusal')?.phase).toBe('running');
+    expect(await readFile(path, 'utf8')).toBe(before);
+    expect(await readFile(metricsPath, 'utf8')).toBe(metrics);
+    await expect(readFile(journalPath)).rejects.toMatchObject({ code: 'ENOENT' });
+    await expect(readFile(tokenPath)).rejects.toMatchObject({ code: 'ENOENT' });
+  } finally {
+    await feature.close();
+  }
+});
 
 it('settles the original accepted WorkSync outbox through the sole Team message writer only after the original input is terminal', async () => {
   const startedAt = Date.now();

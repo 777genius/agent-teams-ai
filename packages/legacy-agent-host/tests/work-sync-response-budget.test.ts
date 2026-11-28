@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { projectNativeWorkSyncResult } from '../dist/work-sync/projectNativeWorkSyncResult.js';
+import { assertNativeWorkSyncStatusBudget, projectNativeWorkSyncResult } from '../dist/work-sync/projectNativeWorkSyncResult.js';
 
 import type { JsonValue } from '../dist/contracts.js';
 import type { MemberWorkSyncStatus } from '../dist/work-sync/policy/contracts/index.js';
@@ -175,4 +175,67 @@ test('oversized malformed identity or required report call holds rather than inv
     } }),
     identity,
   }));
+});
+
+test('compact acknowledgement omits huge private CAS lineage and keeps stopped recovery facts', () => {
+  const original = status(3, '任'.repeat(30_000));
+  original.statusRevision = { incarnation: identity.incarnation, lineageId: 'L'.repeat(250_000),
+    sequence: 1, nonce: 'TEST-original-nonce' };
+  original.recoveryHealth = {
+    schemaVersion: 1, episodes: [], controlRevision: 7,
+    autoResumeStopLatch: { stoppedAt: now, reason: '任'.repeat(100_000), controlRevision: 7 },
+  };
+  assert.doesNotThrow(() => assertNativeWorkSyncStatusBudget({
+    operation: 'status', status: original, identity, budget: 96 * 1024,
+  }));
+  const source = wire(prescribed(original)), before = wire(source);
+  const result = projectNativeWorkSyncResult({ operation: 'status', value: source, identity });
+  const projected = object(result);
+  assert.equal(Object.hasOwn(projected, 'statusRevision'), false);
+  assert.equal(Object.hasOwn(projected, 'pendingReportReceipt'), false);
+  assert.deepEqual(projected.recoveryHealth, { schemaVersion: 1, autoResumeStopped: true,
+    controlRevision: 7, autoResumeStopLatch: { stoppedAt: now, controlRevision: 7 }, detailsOmitted: true });
+  assert.deepEqual(object(projected.agenda).byKind, { work: 3, review: 0, clarification: 0, blocked_dependency: 0 });
+  assert.deepEqual(projectNativeWorkSyncResult({ operation: 'status', value: result, identity }), result);
+  assert.deepEqual(source, before);
+});
+
+test('pre-effect essential envelope reserves duplicated historical accepted report and token growth only once', () => {
+  const original = status(1);
+  original.report = {
+    teamName: identity.teamName, memberName: identity.memberName, state: 'still_working',
+    agendaFingerprint: 'x'.repeat(125_000), reportedAt: now, accepted: true, source: 'test',
+  };
+  assert.throws(() => assertNativeWorkSyncStatusBudget({
+    operation: 'status', status: original, identity, budget: 240 * 1024,
+  }));
+  const small = structuredClone(original);
+  small.report!.agendaFingerprint = 'x'.repeat(43_344);
+  small.reportToken = 'x';
+  const budget = 100_000;
+  const check = (value: MemberWorkSyncStatus) => assertNativeWorkSyncStatusBudget({
+    operation: 'status', status: value, identity, budget,
+  });
+  assert.doesNotThrow(() => check(small));
+  const transitioned = { ...small, reportToken: 'x'.repeat(635), lastAcceptedReport: small.report };
+  assert.doesNotThrow(() => check(transitioned));
+  small.report!.agendaFingerprint += 'x';
+  assert.throws(() => check(small));
+});
+
+test('new compact replay rejects malformed counts, changed token and unknown marker without altering originals', () => {
+  const result = object(projectNativeWorkSyncResult({
+    operation: 'status', value: wire(prescribed(status(3, '任'.repeat(30_000)))), identity,
+  }));
+  for (const patch of [
+    { agenda: { ...object(result.agenda), totalItems: 0 } },
+    { workSyncProjection: { version: 2, kind: 'compact' } },
+    { reportToken: 'TEST-other-token' },
+    { statusRevision: { lineageId: 'TEST-private' } },
+  ]) {
+    assert.throws(() => projectNativeWorkSyncResult({
+      operation: 'status', value: wire({ ...result, ...patch }), identity,
+    }));
+  }
+  assert.deepEqual(projectNativeWorkSyncResult({ operation: 'status', value: wire(result), identity }), result);
 });
