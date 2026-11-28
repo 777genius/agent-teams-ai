@@ -10,10 +10,15 @@ const id = z
 const segment = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/);
 
 /** Only Host project-context composition can issue this relation. It is never accepted in a Create DTO. */
-export const teamProjectContextRelationSchema = z.object({
-  logicalTeamId: segment, logicalHandleId: id, workContextId: id,
-  projectKey: z.string().regex(/^[a-f0-9]{64}$/), projectPath: z.string().min(1).max(8192),
-}).strict();
+export const teamProjectContextRelationSchema = z
+  .object({
+    logicalTeamId: segment,
+    logicalHandleId: id,
+    workContextId: id,
+    projectKey: z.string().regex(/^[a-f0-9]{64}$/),
+    projectPath: z.string().min(1).max(8192),
+  })
+  .strict();
 export type TeamProjectContextRelation = z.infer<typeof teamProjectContextRelationSchema>;
 
 /** Product intent only. Context authority and the principal come from trusted composition. */
@@ -96,7 +101,39 @@ export const teamRegistryListSchema = z
   })
   .strict();
 
+/** Read-only Desktop transport; journal records and the legacy small response stay unchanged. */
+export const teamRegistryCursorSchema = z
+  .string()
+  .refine((value) => /^[1-9][0-9]{0,8}\.[a-f0-9]{64}$/.exec(value)?.[0] === value);
+export const teamRegistryPageSchema = z
+  .object({
+    kind: z.literal('team-registry-page'),
+    teams: z.array(teamRegistryRecordSchema).max(256),
+    held: z.array(teamRegistryReceiptSchema).max(256),
+    totalTeams: z.number().int().min(0).max(256),
+    totalHeld: z.number().int().min(0).max(256),
+    revision: z
+      .string()
+      .length(64)
+      .regex(/^[a-f0-9]{64}$/),
+    nextCursor: teamRegistryCursorSchema.nullable(),
+  })
+  .strict()
+  .refine(
+    (value) =>
+      value.totalTeams + value.totalHeld > 0 &&
+      value.totalTeams + value.totalHeld <= 256 &&
+      value.teams.length + value.held.length > 0 &&
+      value.teams.length <= value.totalTeams &&
+      value.held.length <= value.totalHeld
+  );
+export const teamRegistryListResponseSchema = z.union([
+  teamRegistryListSchema,
+  teamRegistryPageSchema,
+]);
+
 export type CreateTeamRegistryPayload = z.infer<typeof createTeamRegistryPayloadSchema>;
 export type TeamRegistryRecord = z.infer<typeof teamRegistryRecordSchema>;
 export type TeamRegistryReceipt = z.infer<typeof teamRegistryReceiptSchema>;
 export type TeamRegistryList = z.infer<typeof teamRegistryListSchema>;
+export type TeamRegistryPage = z.infer<typeof teamRegistryPageSchema>;
