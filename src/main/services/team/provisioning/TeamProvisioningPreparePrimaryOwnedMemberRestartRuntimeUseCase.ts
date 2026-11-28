@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process';
+import { win32 } from 'node:path';
 
 import {
   killTmuxPaneForCurrentPlatformSync,
@@ -8,6 +9,7 @@ import {
 } from '@features/tmux-installer/main';
 import { isProcessAlive } from '@main/utils/processHealth';
 import { killProcessByPid } from '@main/utils/processKill';
+import { processProbeDiagnostic } from '@main/utils/processProbeDiagnostics';
 import { createLogger } from '@shared/utils/logger';
 
 import { commandArgEquals } from '../TeamRuntimeLivenessResolver';
@@ -97,22 +99,41 @@ function readRestartProcessCommandByPid(pid: number): string | null {
     '[Console]::OutputEncoding = [System.Text.Encoding]::UTF8',
     `(Get-CimInstance Win32_Process -Filter 'ProcessId = ${pid}' -ErrorAction Stop).CommandLine`,
   ].join('; ');
+  // Use the same native executable and bounded probe budget as the Windows
+  // product evidence collector; the Electron sandbox PATH may differ.
+  const powershell = win32.join(
+    process.env.SystemRoot || 'C:\\Windows',
+    'System32',
+    'WindowsPowerShell',
+    'v1.0',
+    'powershell.exe'
+  );
+  const timeoutMs = 15_000;
+  const startedAt = performance.now();
+  let command: string;
   try {
-    return (
-      execFileSync(
-        'powershell.exe',
-        [
-          '-NoProfile',
-          '-NonInteractive',
-          '-EncodedCommand',
-          Buffer.from(script, 'utf16le').toString('base64'),
-        ],
-        { encoding: 'utf8', timeout: 10_000, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] }
-      ).trim() || null
-    );
-  } catch {
-    return null;
+    command = execFileSync(
+      powershell,
+      [
+        '-NoProfile',
+        '-NonInteractive',
+        '-EncodedCommand',
+        Buffer.from(script, 'utf16le').toString('base64'),
+      ],
+      { encoding: 'utf8', timeout: timeoutMs, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] }
+    ).trim();
+  } catch (error) {
+    // Never copy native stdout/stderr or the command itself into the error.
+    throw new Error(processProbeDiagnostic(
+      'windows_restart_pid_command', startedAt, timeoutMs, 'probe failed', error
+    ));
   }
+  if (!command) {
+    throw new Error(processProbeDiagnostic(
+      'windows_restart_pid_command', startedAt, timeoutMs, 'empty native command'
+    ));
+  }
+  return command;
 }
 
 export function createNodePreparePrimaryOwnedMemberRestartRuntimeUseCase(): PreparePrimaryOwnedMemberRestartRuntimeUseCase {
