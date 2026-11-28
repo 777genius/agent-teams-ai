@@ -28,7 +28,8 @@ test('real authenticated HTTP MCP process_list reconstructs oversized retained m
   const delivery = { ...binding, runId: 'TEST-run', memberId: 'TEST-member', generation: '1' };
   const owner = createFilesystemTeamOwner({
     root, binding,
-    members: [{ memberId: 'TEST-member', name: 'alice', role: 'member', delivery }],
+    members: [{ memberId: 'TEST-lead', name: 'lead', role: 'lead' },
+      { memberId: 'TEST-member', name: 'alice', role: 'member', delivery }],
     grants: [{ principalId: 'alice', memberName: 'alice', permissions: ['read'] }],
   });
   let reads = 0;
