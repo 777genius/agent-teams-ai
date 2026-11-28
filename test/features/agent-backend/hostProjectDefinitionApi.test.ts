@@ -433,20 +433,24 @@ describe('Host project definition boundary', () => {
       // recapturing another Team or invoking a second roster mutation.
       const before = vi.mocked(f.backend.invoke).mock.calls.length;
       expect(await f.teams.updateMemberSettings(originalRequest!)).toEqual({
-        ...originalResult!, replayed: true,
+        ...originalResult!,
+        replayed: true,
       });
       expect(vi.mocked(f.backend.invoke)).toHaveBeenCalledTimes(before);
-      await expect(f.teams.updateMemberSettings({
-        ...originalRequest!, expectedFingerprint: 'f'.repeat(64),
-      })).rejects.toThrow('intent-conflict');
+      await expect(
+        f.teams.updateMemberSettings({
+          ...originalRequest!,
+          expectedFingerprint: 'f'.repeat(64),
+        })
+      ).rejects.toThrow('intent-conflict');
       expect(vi.mocked(f.backend.invoke)).toHaveBeenCalledTimes(before);
 
       if (outcome === 'target_conflict') {
         // A terminal refusal cannot poison unrelated future valid saves.
-        expect(await f.teams.updateMemberSettings(settingsRequest('TEST-after-1026-refusals')))
-          .toMatchObject({ outcome: 'completed' });
+        expect(
+          await f.teams.updateMemberSettings(settingsRequest('TEST-after-1026-refusals'))
+        ).toMatchObject({ outcome: 'completed' });
       }
     }
   );
-
 });
