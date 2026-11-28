@@ -12,6 +12,7 @@ import { ProviderManagementCoordinator } from '../dist/composition/ProviderManag
 import { CredentialCommandOwner } from '../dist/management/CredentialCommandOwner.js';
 import { managementDigest } from '../dist/management/identity.js';
 import { openCodeManagementProfileSchema } from '../dist/management/profile.js';
+import { deriveSecretFingerprint } from '../dist/management/secretFingerprint.js';
 
 function testProfile(root: string) {
   return openCodeManagementProfileSchema.parse({
@@ -27,12 +28,13 @@ function testProfile(root: string) {
   });
 }
 
-test('only the same account rejected publication admits corrected Connect across source revisions', async t => {
+test('new and legacy rejected publications admit corrected Connect only across the same account source revisions', { timeout: 30_000 }, async t => {
   let admissions = 0;
   t.mock.method(OpenCodeV2ManagementHost.prototype, 'keyOperation', async () => {
     admissions++;
     throw new Error('TEST ends at original native admission; no native connection is simulated');
   });
+  for (const encoding of ['protected', 'legacy'] as const)
   for (const scenario of ['same-account', 'account-changed', 'home-changed', 'key-changed', 'later-success', 'unknown'] as const) {
     const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-v2-key-revision-')));
     const profile = testProfile(root), store = new FileManagementCommandStore(root);
@@ -42,7 +44,7 @@ test('only the same account rejected publication admits corrected Connect across
     }));
     const target = { profileId: profile.profileId, configRevision: profile.configRevision,
       selectionDigest: managementDigest({ profile, directories }), resourceId: managementDigest(directories.XDG_DATA_HOME) };
-    let accepted = false;
+    let accepted = false, beforeDigest = '', afterDigest = '';
     // Controlled native progress goes through the real command owner, validator, private auth publication and journal.
     const originalOwner = new CredentialCommandOwner({ store, assertCurrent() {},
       select: () => target,
@@ -50,12 +52,16 @@ test('only the same account rejected publication admits corrected Connect across
         if (command.kind !== 'credential.set') throw new Error('TEST only sets its own key');
         const scope = new OpenCodeV2CredentialScope(profile, command.providerId, () => true);
         const publication = scope.prepare(command.key);
+        beforeDigest = publication.before.digest;
+        const before = await deriveSecretFingerprint({ kind: 'opencode-v2-auth-witness-v1', digest: beforeDigest });
         const base = { integrationId: 'TEST-integration', nativeNamespace: managementDigest({ profile, commandId: command.commandId }),
-          beforeAuthDigest: publication.before.digest };
+          beforeAuthDigest: before.fingerprint, authWitnessKdf: before.fingerprintKdf };
         progress({ ...base, phase: 'key-intent' });
         const connected = { ...base, credentialId: 'cred_TEST' };
         progress({ ...connected, phase: 'key-connected' });
-        const published = { ...connected, authDigest: publication.publish().digest };
+        afterDigest = publication.publish().digest;
+        const after = await deriveSecretFingerprint({ kind: 'opencode-v2-auth-witness-v1', digest: afterDigest }, before.fingerprintKdf);
+        const published = { ...connected, authDigest: after.fingerprint };
         progress({ ...published, phase: 'key-published' });
         const verification = { commandId: 'TEST-verify-' + command.commandId, modelId: 'TEST-provider/TEST-model' };
         progress({ ...published, phase: 'probe-intent', verification });
@@ -66,6 +72,15 @@ test('only the same account rejected publication admits corrected Connect across
     const originalCommand = { profileId: profile.profileId, configRevision: profile.configRevision,
       providerId: 'TEST-provider', commandId: 'TEST-rejected', kind: 'credential.set' as const, key: 'TEST-rejected-key' };
     const originalReceipt = await originalOwner.execute(originalCommand);
+    if (encoding === 'legacy') {
+      // Seed a pre-upgrade original. Fresh publication above must use the new format;
+      // cold recovery below may only read these exact markerless auth-witness bytes.
+      const record = store.read(originalCommand.commandId);
+      assert.ok(record?.kind === 'credential.set' && record.openCodeV2?.phase === 'probe-completed');
+      const legacy = { ...record.openCodeV2, beforeAuthDigest: beforeDigest, authDigest: afterDigest };
+      delete legacy.authWitnessKdf;
+      store.write({ ...record, openCodeV2: legacy });
+    }
     const originalRecord = store.read(originalCommand.commandId);
     const selected = { ...profile, profileId: 'runtime-source:' + 'c'.repeat(64), configRevision: 'c'.repeat(64) };
     if (scenario === 'account-changed') selected.accountBinding = 'TEST-other-account';

@@ -7,6 +7,7 @@ import { test } from 'node:test';
 
 import { FileManagementCommandStore } from '../dist/adapters/providers/FileManagementCommandStore.js';
 import { managementDigest } from '../dist/management/identity.js';
+import { advanceOpenCodeV2Credential, openCodeV2CredentialProgressSchema } from '../dist/management/openCodeV2CredentialRecord.js';
 
 import type { StoredManagementCommand, StoredRuntimeSourceCommand } from '../dist/management/commandRecords.js';
 
@@ -18,6 +19,9 @@ const receipt: StoredRuntimeSourceCommand = { schemaVersion: 1, kind: 'runtime.s
 const identity = { schemaVersion: 1 as const, commandId: 'TEST-kind-routing', profileId: 'TEST-profile',
   configRevision: 'TEST-config', providerId: 'codex', fingerprint: 'a'.repeat(64),
   selectionDigest: 'b'.repeat(64), resourceId: 'c'.repeat(64), resourceHeld: true };
+const authProgress = { phase: 'key-intent' as const, integrationId: 'TEST-original-integration',
+  nativeNamespace: 'd'.repeat(64), beforeAuthDigest: 'e'.repeat(64) };
+const authWitnessKdf = { version: 1 as const, salt: 'a'.repeat(32) };
 const commandCases: { valid: StoredManagementCommand; invalid: Record<string, unknown>[] }[] = [
   { valid: { ...identity, kind: 'skill.mutation', phase: 'claimed', targetId: 'd'.repeat(64),
       intentDigest: 'e'.repeat(64), action: 'upsert', scope: 'user', rootKind: 'codex' },
@@ -36,6 +40,13 @@ const commandCases: { valid: StoredManagementCommand; invalid: Record<string, un
       { fingerprintKdf: { version: 1, salt: 'a'.repeat(31) } },
       { fingerprintKdf: { version: 1, salt: 'a'.repeat(32), N: 2 } },
       { fingerprintKdf: { salt: 'a'.repeat(32) } }, { fingerprintKdf: null }] },
+  { valid: { ...identity, kind: 'credential.set', phase: 'claimed', openCodeV2: authProgress },
+    invalid: [{ openCodeV2: { ...authProgress, phase: 'key-published' } }] },
+  { valid: { ...identity, kind: 'credential.set', phase: 'claimed',
+      openCodeV2: { ...authProgress, authWitnessKdf } },
+    invalid: [null, { version: 2, salt: 'a'.repeat(32) }, { version: 1, salt: 'A'.repeat(32) },
+      { version: 1, salt: 'a'.repeat(31) }, { version: 1, salt: 'a'.repeat(32), N: 2 },
+      { salt: 'a'.repeat(32) }].map(authWitnessKdf => ({ openCodeV2: { ...authProgress, authWitnessKdf } })) },
   { valid: { ...identity, kind: 'oauth', phase: 'authorizing', methodIndex: 0,
       completionMethod: 'auto', sequence: 1, expiresAt: 1000 },
     invalid: [{ resourceHeld: false }, { phase: 'completed' }, { phase: 'failed', resourceHeld: false },
@@ -75,6 +86,33 @@ const commandCases: { valid: StoredManagementCommand; invalid: Record<string, un
   { valid: receipt, invalid: [{ resourceHeld: true }, { phase: 'verifying' }, { phase: 'verified' },
       { reason: 'source-changed' }] },
 ];
+
+test('fresh OpenCode progress requires a protected witness while legacy originals remain readable', () => {
+  assert.deepEqual(openCodeV2CredentialProgressSchema.parse(authProgress), authProgress);
+  assert.equal(advanceOpenCodeV2Credential(undefined, authProgress), undefined);
+  const legacyNext = { ...authProgress, phase: 'key-connected' as const, credentialId: 'cred_TEST' };
+  assert.equal(advanceOpenCodeV2Credential(authProgress, legacyNext), undefined, 'legacy is read-only');
+  assert.equal(advanceOpenCodeV2Credential(authProgress, { ...legacyNext, authWitnessKdf }), undefined,
+    'an original legacy operation cannot acquire a new witness during progress');
+});
+
+test('OpenCode progress keeps one original descriptor and immutable before and after witnesses', () => {
+  const intent = { ...authProgress, authWitnessKdf };
+  assert.deepEqual(advanceOpenCodeV2Credential(undefined, intent), intent);
+  const connected = { ...intent, phase: 'key-connected' as const, credentialId: 'cred_TEST' };
+  assert.deepEqual(advanceOpenCodeV2Credential(intent, connected), connected);
+  assert.equal(advanceOpenCodeV2Credential(intent, { ...connected,
+    authWitnessKdf: { ...authWitnessKdf, salt: 'b'.repeat(32) } }), undefined);
+  assert.equal(advanceOpenCodeV2Credential(intent, { ...authProgress,
+    phase: 'key-connected', credentialId: 'cred_TEST' }), undefined, 'descriptor cannot disappear');
+  assert.equal(advanceOpenCodeV2Credential(intent, { ...connected, beforeAuthDigest: 'f'.repeat(64) }), undefined);
+  const published = { ...connected, phase: 'key-published' as const, authDigest: '1'.repeat(64) };
+  assert.deepEqual(advanceOpenCodeV2Credential(connected, published), published);
+  const probe = { ...published, phase: 'probe-intent' as const,
+    verification: { commandId: 'TEST-original-verification', modelId: 'TEST-provider/TEST-model' } };
+  assert.deepEqual(advanceOpenCodeV2Credential(published, probe), probe);
+  assert.equal(advanceOpenCodeV2Credential(published, { ...probe, authDigest: '2'.repeat(64) }), undefined);
+});
 
 for (const { valid, invalid } of commandCases) {
   test('management journal preserves closed fields and state refinements for ' + valid.kind, () => {

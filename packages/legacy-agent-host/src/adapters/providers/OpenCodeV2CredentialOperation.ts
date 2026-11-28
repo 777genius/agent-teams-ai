@@ -1,5 +1,6 @@
 import { ManagementCommandError } from '../../management/commandRecords.js';
 import { managementDigest } from '../../management/identity.js';
+import { deriveOpenCodeV2AuthWitness } from '../../management/openCodeV2AuthWitness.js';
 import { selectOpenCodeV2ManagementModel } from '../../composition/openCodeV2ModelSelection.js';
 import { OpenCodeV2CredentialScope } from './OpenCodeV2CredentialScope.js';
 import { OpenCodeV2ManagementHost, openCodeV2KeyNamespace } from './OpenCodeV2ManagementHost.js';
@@ -48,14 +49,18 @@ export function createOpenCodeV2CredentialOperation(
     let ok = false, rejected = false;
     try {
       check();
+      const beforeWitness = await deriveOpenCodeV2AuthWitness(auth.digest);
+      check();
       let saved: OpenCodeV2CredentialProgress | undefined;
       const selectedModel = await host.keyOperation(command.providerId, async native => {
         check();
         const before = await native.read();
+        native.assertCurrent();
         check();
         if (!before.plainKey || before.connections.length) { rejected = true; return held(); }
         saved = { phase: 'key-intent', integrationId: native.integrationId,
-          nativeNamespace: openCodeV2KeyNamespace(profile, command.commandId), beforeAuthDigest: auth.digest };
+          nativeNamespace: openCodeV2KeyNamespace(profile, command.commandId),
+          beforeAuthDigest: beforeWitness.fingerprint, authWitnessKdf: beforeWitness.fingerprintKdf };
         progress(saved);
         const connected = await native.connectKey(command.key);
         check();
@@ -67,7 +72,10 @@ export function createOpenCodeV2CredentialOperation(
           try { await native.rollbackOwnedKey(); } catch { cleanupUnknown = true; }
           throw error;
         }
-        saved = { ...saved, phase: 'key-published', authDigest: auth.digest };
+        const afterWitness = await deriveOpenCodeV2AuthWitness(auth.digest, beforeWitness.fingerprintKdf);
+        native.assertCurrent();
+        check();
+        saved = { ...saved, phase: 'key-published', authDigest: afterWitness.fingerprint };
         progress(saved);
         const catalog = await native.readCatalog();
         check();
