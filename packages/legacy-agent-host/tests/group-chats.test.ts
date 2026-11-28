@@ -38,6 +38,8 @@ import { test } from 'node:test';
 import type { TestContext } from 'node:test';
 import { createFilesystemTeamOwner } from '../dist/adapters/team/createFilesystemTeamOwner.js';
 import { TeamOwnerStore } from '../dist/adapters/team/TeamOwnerStore.js';
+import { FileRuntimeStore } from '../dist/adapters/runtime/FileRuntimeStore.js';
+import { RuntimeOwner } from '../dist/runtime/RuntimeOwner.js';
 import { OwnerBackupResourceAccess } from '../dist/adapters/lifecycle/OwnerBackupResourceAccess.js';
 import { createTeamMcpTools } from '../dist/mcp/tools.js';
 import { formatToolResult } from '../dist/mcp/toolDefinition.js';
@@ -1284,4 +1286,83 @@ test('Host group refuses profile drift before capture without default-group or c
   assert.equal(targetPreflights, 0, 'no individual target may be attempted after a stale profile');
   assert.equal(outcome[0]!.status, 'rejected');
   assert.equal(readGroupRuntime(original), null);
+});
+
+// Exercise the original physical group delivery through the same queue and
+// Runtime cancellation path as a direct message, without opening a driver.
+test('queued human group and direct inputs retain independent cancellation and replay', async (t) => {
+  const f = fixture(t);
+  await f.human.execute('TEST-create', f.create, guard);
+  const originalGroup = await f.human.execute('TEST-send', f.send, guard);
+  const groupMessageId = f.inbox('alice')[0]!.messageId!;
+  const peerBefore = f.inbox('lead');
+  const canonicalBefore = f.inbox('user');
+  const direct = f.owner.connect('human').execute({
+    commandId: 'TEST-direct-queue',
+    operation: 'message.send',
+    payload: { to: 'alice', text: 'Independent direct input' },
+  });
+  const directMessageId = direct.effects.messageId;
+  const pending = f.owner.connect('human').pendingDeliveries();
+  const groupIntent = pending.find((intent) => intent.messageId === groupMessageId)!;
+  assert.ok(groupIntent.content.includes('Group context:'));
+  let opens = 0;
+  const runtime = new RuntimeOwner({
+    store: new FileRuntimeStore(f.root),
+    profileId: 'TEST-profile',
+    hostIncarnation: 'TEST-incarnation',
+    driverFactory: {
+      async open() {
+        opens++;
+        throw new Error('Queue operations must not allocate native work');
+      },
+    },
+    authorize: (target, action, input) =>
+      input
+        ? f.owner.authorizeDeliveryIntent(input, action)
+        : f.owner.authorizeMemberBinding(target, action),
+    canDispatch: () => false,
+  });
+  const queue = f.owner.queuedMessages('human', {
+    fingerprintDelivery: runtime.fingerprintDelivery.bind(runtime),
+    admitDelivery: runtime.admitDelivery.bind(runtime),
+    lookupDelivery: runtime.lookupDelivery.bind(runtime),
+    cancelDelivery: runtime.cancelDelivery.bind(runtime),
+  });
+  const listedIds = async () =>
+    (await queue.list('alice')).messages.map((message) => message.messageId).sort();
+  assert.deepEqual(await listedIds(), [directMessageId, groupMessageId].sort());
+  const outboxPath = `outbox/${groupIntent.deliveryId}.json`;
+  f.store.fenced(() => {
+    f.store.write(outboxPath, { ...groupIntent, content: 'Changed group input' });
+  });
+  await assert.rejects(queue.list('alice'), /hold/);
+  f.store.fenced(() => f.store.write(outboxPath, groupIntent));
+  const dmDiscard = await queue.discard({
+    commandId: 'TEST-discard-dm',
+    member: 'alice',
+    messageIds: [directMessageId],
+  });
+  assert.deepEqual(dmDiscard.discardedMessageIds, [directMessageId]);
+  assert.equal(dmDiscard.remainingQueued, 1);
+  assert.deepEqual(await listedIds(), [groupMessageId]);
+  const groupDiscardInput = {
+    commandId: 'TEST-discard-group',
+    member: 'alice',
+    messageIds: [groupMessageId],
+  };
+  const groupDiscard = await queue.discard(groupDiscardInput);
+  assert.deepEqual(groupDiscard.discardedMessageIds, [groupMessageId]);
+  assert.equal(groupDiscard.remainingQueued, 0);
+  assert.deepEqual(groupDiscard.targets[0]!.intent, groupIntent);
+  assert.equal(groupDiscard.targets[0]!.fingerprint, runtime.fingerprintDelivery(groupIntent));
+  assert.deepEqual(await queue.discard(groupDiscardInput), groupDiscard);
+  assert.deepEqual(await f.human.execute('TEST-send', f.send, guard), originalGroup);
+  assert.deepEqual(await listedIds(), []);
+  assert.deepEqual(f.inbox('alice'), []);
+  assert.deepEqual(f.inbox('lead'), peerBefore);
+  assert.deepEqual(f.inbox('user'), canonicalBefore);
+  const retained = f.store.fenced(() => f.store.read<ImmutableDelivery>(outboxPath)!);
+  assert.equal(retained.content, groupIntent.content);
+  assert.equal(opens, 0);
 });
