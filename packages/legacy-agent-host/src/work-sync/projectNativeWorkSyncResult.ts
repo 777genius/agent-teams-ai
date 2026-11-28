@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { TeamOwnerError } from '../team/contracts.js';
 import { validateWorkSyncCommandReceipt } from './commandContracts.js';
 import { decodeMemberWorkSyncStoredStatus } from './storage/decodeMemberWorkSyncStoredStatus.js';
@@ -19,6 +20,18 @@ const held = (): never => { throw new TeamOwnerError('hold'); };
 function pick(value: object, names: readonly string[]): Record<string, unknown> {
   const source = value as Record<string, unknown>;
   return Object.fromEntries(names.filter(name => source[name] !== undefined).map(name => [name, source[name]]));
+}
+
+/** A prescribed STATUS call must be usable for this authenticated original command. */
+function assertOriginalCall(value: JsonValue, commandId: string): void {
+  if (!object(value) || !object(value.nextRequiredToolCall) ||
+      value.nextRequiredToolCall.tool !== 'member_work_sync_report') return;
+  const input = value.nextRequiredToolCall.arguments;
+  if (!object(input) ||
+      input.commandId !== 'work-sync-report:' + createHash('sha256').update(commandId).digest('hex') ||
+      typeof input.reportToken !== 'string' || input.reportToken.length < 1 || input.reportToken.length > 4096 ||
+      typeof input.agendaFingerprint !== 'string' || input.agendaFingerprint.length < 1 ||
+      input.agendaFingerprint.length > 256) return held();
 }
 
 /** Exact complete-receipt framing, including every original header and payload field. */
@@ -246,6 +259,7 @@ function compactStatus(value: Record<string, unknown>, status: MemberWorkSyncSta
 /** Pure wire/receipt projection; canonical policy state, tokens and command replay remain authoritative. */
 export function projectNativeWorkSyncResult(options: {
   operation: WorkSyncCommandReceipt['operation'];
+  commandId: string;
   value: JsonValue;
   identity: { teamName: string; memberName: string; incarnation: string };
   original?: Readonly<WorkSyncCommandReceipt>;
@@ -256,6 +270,9 @@ export function projectNativeWorkSyncResult(options: {
     try { return decodeMemberWorkSyncStoredStatus(value, options.identity); } catch { return held(); }
   };
   let value = options.value;
+  if (options.original !== undefined && options.original.commandId !== options.commandId) return held();
+  // Check before full-fit and compact replay returns. REPORT tokens are retained scalars, not suggested input.
+  if (options.operation === 'status') assertOriginalCall(value, options.commandId);
   // Older already-completed compact receipts have no version marker and retain
   // their original replay behavior. New versioned variants are checked strictly.
   if (object(value)) {

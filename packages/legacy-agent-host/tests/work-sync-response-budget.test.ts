@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { test } from 'node:test';
 
 import { assertNativeWorkSyncStatusBudget, projectNativeWorkSyncResult } from '../dist/work-sync/projectNativeWorkSyncResult.js';
@@ -7,6 +8,8 @@ import type { JsonValue } from '../dist/contracts.js';
 import type { MemberWorkSyncStatus } from '../dist/work-sync/policy/contracts/index.js';
 
 const now = '2026-11-28T10:00:00.000Z';
+const commandId = 'TEST-original-work-sync-command';
+const reportCommandId = 'work-sync-report:' + createHash('sha256').update(commandId).digest('hex');
 const identity = { teamName: 'TEST-team', memberName: 'alice', incarnation: 'TEST-team-id' };
 
 function status(count: number, subject = 'TEST work'): MemberWorkSyncStatus {
@@ -47,7 +50,7 @@ function prescribed(value: MemberWorkSyncStatus) {
     nextRequiredToolCall: {
       tool: 'member_work_sync_report',
       arguments: {
-        commandId: 'TEST-report-command',
+        commandId: reportCommandId,
         state: 'still_working',
         agendaFingerprint: value.agenda.fingerprint,
         reportToken: value.reportToken,
@@ -68,7 +71,7 @@ function object(value: unknown): Record<string, unknown> {
 
 test('small work-sync status preserves the full existing result and exact report arguments', () => {
   const original = wire(prescribed(status(2)));
-  const result = projectNativeWorkSyncResult({
+  const result = projectNativeWorkSyncResult({ commandId,
     operation: 'status',
     value: original,
     identity,
@@ -84,7 +87,7 @@ test('three accepted CJK task subjects stay in canonical input but yield bounded
   const original = wire(prescribed(status(3, '任'.repeat(30_000))));
   assert.ok(Buffer.byteLength(JSON.stringify(original)) > 256 * 1024);
   const before = wire(original);
-  const result = projectNativeWorkSyncResult({
+  const result = projectNativeWorkSyncResult({ commandId,
     operation: 'status',
     value: original,
     identity,
@@ -111,7 +114,7 @@ test('three accepted CJK task subjects stay in canonical input but yield bounded
 test('six CJK subjects no longer force a too-large completed command result', () => {
   const original = wire(prescribed(status(6, '任'.repeat(30_000))));
   assert.ok(Buffer.byteLength(JSON.stringify(original)) > 512 * 1024);
-  const result = projectNativeWorkSyncResult({
+  const result = projectNativeWorkSyncResult({ commandId,
     operation: 'status',
     value: original,
     identity,
@@ -129,7 +132,7 @@ test('report preserves its accepted outcome while omitting oversized nested stat
     message: 'Member work sync report accepted.',
     status: value,
   });
-  const result = projectNativeWorkSyncResult({
+  const result = projectNativeWorkSyncResult({ commandId,
     operation: 'report',
     value: original,
     identity,
@@ -145,7 +148,7 @@ test('report preserves its accepted outcome while omitting oversized nested stat
 
 test('over 200 item prescription omits optional IDs without changing full-agenda authority', () => {
   const original = wire(prescribed(status(201)));
-  const result = projectNativeWorkSyncResult({
+  const result = projectNativeWorkSyncResult({ commandId,
     operation: 'status',
     value: original,
     identity,
@@ -161,16 +164,16 @@ test('over 200 item prescription omits optional IDs without changing full-agenda
 
 test('oversized malformed identity or required report call holds rather than inventing success', () => {
   const valid = object(wire(prescribed(status(3, '任'.repeat(30_000)))));
-  assert.throws(() => projectNativeWorkSyncResult({
+  assert.throws(() => projectNativeWorkSyncResult({ commandId,
     operation: 'status',
     value: wire({ ...valid, teamName: 'foreign-team' }),
     identity,
   }));
-  assert.throws(() => projectNativeWorkSyncResult({
+  assert.throws(() => projectNativeWorkSyncResult({ commandId,
     operation: 'status',
     value: wire({ ...valid, nextRequiredToolCall: {
       tool: 'member_work_sync_report',
-      arguments: { commandId: 'TEST-report-command', state: 'caught_up',
+      arguments: { commandId: reportCommandId, state: 'caught_up',
         agendaFingerprint: 'incorrect', reportToken: 'incorrect' },
     } }),
     identity,
@@ -189,14 +192,14 @@ test('compact acknowledgement omits huge private CAS lineage and keeps stopped r
     operation: 'status', status: original, identity, budget: 96 * 1024,
   }));
   const source = wire(prescribed(original)), before = wire(source);
-  const result = projectNativeWorkSyncResult({ operation: 'status', value: source, identity });
+  const result = projectNativeWorkSyncResult({ commandId, operation: 'status', value: source, identity });
   const projected = object(result);
   assert.equal(Object.hasOwn(projected, 'statusRevision'), false);
   assert.equal(Object.hasOwn(projected, 'pendingReportReceipt'), false);
   assert.deepEqual(projected.recoveryHealth, { schemaVersion: 1, autoResumeStopped: true,
     controlRevision: 7, autoResumeStopLatch: { stoppedAt: now, controlRevision: 7 }, detailsOmitted: true });
   assert.deepEqual(object(projected.agenda).byKind, { work: 3, review: 0, clarification: 0, blocked_dependency: 0 });
-  assert.deepEqual(projectNativeWorkSyncResult({ operation: 'status', value: result, identity }), result);
+  assert.deepEqual(projectNativeWorkSyncResult({ commandId, operation: 'status', value: result, identity }), result);
   assert.deepEqual(source, before);
 });
 
@@ -224,7 +227,7 @@ test('pre-effect essential envelope reserves duplicated historical accepted repo
 });
 
 test('new compact replay rejects malformed counts, changed token and unknown marker without altering originals', () => {
-  const result = object(projectNativeWorkSyncResult({
+  const result = object(projectNativeWorkSyncResult({ commandId,
     operation: 'status', value: wire(prescribed(status(3, '任'.repeat(30_000)))), identity,
   }));
   for (const patch of [
@@ -233,36 +236,97 @@ test('new compact replay rejects malformed counts, changed token and unknown mar
     { reportToken: 'TEST-other-token' },
     { statusRevision: { lineageId: 'TEST-private' } },
   ]) {
-    assert.throws(() => projectNativeWorkSyncResult({
+    assert.throws(() => projectNativeWorkSyncResult({ commandId,
       operation: 'status', value: wire({ ...result, ...patch }), identity,
     }));
   }
-  assert.deepEqual(projectNativeWorkSyncResult({ operation: 'status', value: wire(result), identity }), result);
+  assert.deepEqual(projectNativeWorkSyncResult({ commandId, operation: 'status', value: wire(result), identity }), result);
 });
 
 
 test('versioned compact status with a report token cannot lose its required follow-up', () => {
   const original = object(wire(prescribed(status(3, '任'.repeat(30_000)))));
-  const result = object(projectNativeWorkSyncResult({ operation: 'status', value: wire(original), identity }));
+  const result = object(projectNativeWorkSyncResult({ commandId, operation: 'status', value: wire(original), identity }));
   const removeCall = (value: Record<string, unknown>) => {
     const copy = { ...value };
     for (const key of ['statusOnlyIncomplete', 'nextRequiredAction', 'nextRequiredToolCall', 'reportScope']) delete copy[key];
     return wire(copy);
   };
-  assert.throws(() => projectNativeWorkSyncResult({ operation: 'status', value: removeCall(result), identity }), /hold/);
-  assert.throws(() => projectNativeWorkSyncResult({ operation: 'status', value: removeCall(original), identity }), /hold/);
-  assert.deepEqual(projectNativeWorkSyncResult({ operation: 'status', value: wire(result), identity }), result);
+  assert.throws(() => projectNativeWorkSyncResult({ commandId, operation: 'status', value: removeCall(result), identity }), /hold/);
+  assert.throws(() => projectNativeWorkSyncResult({ commandId, operation: 'status', value: removeCall(original), identity }), /hold/);
+  assert.deepEqual(projectNativeWorkSyncResult({ commandId, operation: 'status', value: wire(result), identity }), result);
 });
 
 test('tokenless compact status and compact report with a token need no prescribed follow-up', () => {
   const original = status(3, '任'.repeat(30_000));
   const tokenless = { ...original, reportToken: undefined, reportTokenExpiresAt: undefined };
-  const reply = projectNativeWorkSyncResult({ operation: 'status', value: wire(tokenless), identity });
+  const reply = projectNativeWorkSyncResult({ commandId, operation: 'status', value: wire(tokenless), identity });
   assert.equal(Object.hasOwn(object(reply), 'nextRequiredToolCall'), false);
-  assert.deepEqual(projectNativeWorkSyncResult({ operation: 'status', value: reply, identity }), reply);
-  const report = projectNativeWorkSyncResult({ operation: 'report', identity, value: wire({
+  assert.deepEqual(projectNativeWorkSyncResult({ commandId, operation: 'status', value: reply, identity }), reply);
+  const report = projectNativeWorkSyncResult({ commandId, operation: 'report', identity, value: wire({
     accepted: true, code: 'accepted', message: 'Member work sync report accepted.', status: original,
   }) });
   assert.equal(object(object(report).status).reportToken, original.reportToken);
-  assert.deepEqual(projectNativeWorkSyncResult({ operation: 'report', value: report, identity }), report);
+  assert.deepEqual(projectNativeWorkSyncResult({ commandId, operation: 'report', value: report, identity }), report);
 });
+
+test('compact replay refuses a report command derived from another original status command', () => {
+  const value = projectNativeWorkSyncResult({ commandId, operation: 'status',
+    value: wire(prescribed(status(3, '任'.repeat(30_000)))), identity });
+  assert.equal(object(value).detailsOmitted, true);
+  const changed = object(wire(value));
+  const args = object(object(changed.nextRequiredToolCall).arguments);
+  assert.equal(args.commandId, reportCommandId);
+  args.commandId = 'work-sync-report:' + createHash('sha256')
+    .update('TEST-another-original-command').digest('hex');
+  const attempted = wire(changed);
+  const before = JSON.stringify(attempted);
+  assert.throws(() => projectNativeWorkSyncResult({
+    commandId, operation: 'status', value: attempted, identity,
+  }), /hold/);
+  assert.equal(JSON.stringify(attempted), before);
+  assert.deepEqual(projectNativeWorkSyncResult({ commandId, operation: 'status', value, identity }), value);
+});
+
+for (const representation of ['full', 'compact'] as const) {
+  for (const field of ['reportToken', 'agendaFingerprint'] as const) {
+    test(representation + ' status enforces the prescribed ' + field + ' input limit', () => {
+      const canonical = status(representation === 'compact' ? 3 : 1,
+        representation === 'compact' ? '任'.repeat(30_000) : 'TEST small work');
+      const value = projectNativeWorkSyncResult({
+        commandId, operation: 'status', value: wire(prescribed(canonical)), identity,
+      });
+      assert.equal(object(value).detailsOmitted === true, representation === 'compact');
+      const setField = (target: Record<string, unknown>, text: string) => {
+        object(object(target.nextRequiredToolCall).arguments)[field] = text;
+        if (field === 'reportToken') target.reportToken = text;
+        else object(target.agenda).fingerprint = text;
+      };
+      // Projector-contract vectors: synthetic tokens are not presented as valid HMAC proofs.
+      const limit = field === 'reportToken' ? 4096 : 256;
+      const maximum = object(wire(value));
+      setField(maximum, 'x'.repeat(limit));
+      assert.ok(Buffer.byteLength(JSON.stringify(maximum)) <= 240 * 1024);
+      assert.deepEqual(projectNativeWorkSyncResult({
+        commandId, operation: 'status', value: wire(maximum), identity,
+      }), maximum);
+      const excessive = object(wire(maximum));
+      setField(excessive, 'x'.repeat(limit + 1));
+      const attempted = wire(excessive);
+      const before = JSON.stringify(attempted);
+      assert.throws(() => projectNativeWorkSyncResult({
+        commandId, operation: 'status', value: attempted, identity,
+      }), /hold/);
+      assert.equal(JSON.stringify(attempted), before);
+      if (representation === 'compact' && field === 'reportToken') {
+        // A retained REPORT token is a scalar; no follow-up tool call is prescribed.
+        const report = object(projectNativeWorkSyncResult({ commandId, operation: 'report',
+          value: wire({ accepted: true, code: 'accepted', message: 'TEST retained report',
+            status: { ...canonical, reportToken: 'x'.repeat(limit + 1) } }), identity }));
+        assert.equal(report.accepted, true);
+        assert.equal(object(report.status).reportToken, 'x'.repeat(limit + 1));
+        assert.equal(Object.hasOwn(object(report.status), 'nextRequiredToolCall'), false);
+      }
+    });
+  }
+}

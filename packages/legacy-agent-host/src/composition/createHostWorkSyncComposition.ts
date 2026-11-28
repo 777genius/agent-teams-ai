@@ -163,7 +163,7 @@ export function createHostWorkSyncComposition(options: {
                   ...payload,
                 });
                 assertCurrent();
-                return projectNativeWorkSyncResult({ operation, value: json(requiredReport(commandId, status)),
+                return projectNativeWorkSyncResult({ operation, commandId, value: json(requiredReport(commandId, status)),
                   identity: responseIdentity, original });
               }
               if (!('state' in payload)) throw new TeamOwnerError('invalid');
@@ -172,10 +172,10 @@ export function createHostWorkSyncComposition(options: {
                 { receivedAt: original.receivedAt }
               );
               assertCurrent();
-              return projectNativeWorkSyncResult({ operation, value: json(result), identity: responseIdentity, original });
+              return projectNativeWorkSyncResult({ operation, commandId, value: json(result), identity: responseIdentity, original });
             });
           assertCurrent();
-          return projectNativeWorkSyncResult({ operation, value: result, identity: responseIdentity });
+          return projectNativeWorkSyncResult({ operation, commandId, value: result, identity: responseIdentity });
         });
       }
       return {
