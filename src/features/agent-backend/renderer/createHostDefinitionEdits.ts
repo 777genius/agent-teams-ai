@@ -78,6 +78,9 @@ export function createHostDefinitionEdits(options: Options) {
       committing?: Promise<UpdateMemberSettingsResult>;
     }
   >();
+  // A terminal result needs only its exact replay identity, never the captured
+  // owner/roster promise. Keep the 1024-entry cap for unresolved operations.
+  const terminal = new Map<string, { signature: string; result: UpdateMemberSettingsResult }>();
   async function capture(
     key: string,
     current: () => boolean,
@@ -196,8 +199,13 @@ export function createHostDefinitionEdits(options: Options) {
         !['lead', 'member'].includes(request.targetKind)
       )
         refuse();
-      const signature = JSON.stringify(request),
-        existing = saved.get(request.commandId);
+      const signature = JSON.stringify(request);
+      const completed = terminal.get(request.commandId);
+      if (completed) {
+        if (completed.signature !== signature) refuse('intent-conflict');
+        return { ...completed.result, replayed: true };
+      }
+      const existing = saved.get(request.commandId);
       if (existing && existing.signature !== signature) refuse('intent-conflict');
       // Reserve before any await: overlapping calls can never replace the captured owner or baseline.
       const intent: NonNullable<ReturnType<typeof saved.get>> = existing ?? {
@@ -321,6 +329,10 @@ export function createHostDefinitionEdits(options: Options) {
       })();
       try {
         intent.result = await intent.committing;
+        // Free the heavy captured owner/configuration only after a terminal
+        // outcome. Preserve exact same-command replay and conflict semantics.
+        terminal.set(request.commandId, { signature, result: { ...intent.result } });
+        saved.delete(request.commandId);
         return intent.result;
       } finally {
         delete intent.committing;
