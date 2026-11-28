@@ -664,7 +664,7 @@ describe('selected Team attachment publication', () => {
       payload: { to: 'captain', text: 'Inspect', attachments: [reference] },
     });
     const intent = f.connection.pendingDeliveries()[0]!;
-    const baseProfile = {
+    const profile = {
       provider: 'claude',
       model: 'claude-haiku-4-5',
       principalId: 'TEST-human',
@@ -674,8 +674,8 @@ describe('selected Team attachment publication', () => {
       team: f.hosted,
       binding: f.delivery,
       delivery: f.delivery,
-      profile: structuredClone(baseProfile),
-      baseProfile,
+      baseProfile: profile,
+      profile: structuredClone(profile),
     } as unknown as MemberEntry;
     const operationRef = 'TEST-operation';
     const record = {

@@ -383,3 +383,17 @@ The follow-up uses seven existing files, with no new file or production abstract
 8. After current checks, genuine productive/Stop evidence, original cleanup and final review pass, perform the already-authorized ordinary merge of #1315 into `feat/provider-migration-stage-1`, read back its actual merge/tree/target and verify applicable merged-commit checks. #982/main and release remain outside this delivery.
 
 The notification correction has an isolated pure-helper check: executing the inspected CommonJS helpers reproduced the failing current digest, restored both unchanged frozen default hashes and preserved both captured-team outputs byte-for-byte. SHA-256 was checked against the empty/abc known vectors and the actual CI digest. This is limited formatter evidence, not a Node/Vitest, native or new-source CI PASS. The other repairs have source review only while the executor is unavailable. No new genuine-model input was started for this follow-up.
+
+### Target advance before the reviewed follow-up is published
+
+The actual target advanced from d4b1 to `a37ae337bb2a8939e5970dbb79a9a81730d7835f` during the final source review. Its two commits change exactly four of the already reviewed repair paths. Inspect this real overlap before moving the PR ref; the source candidate `293b5c1` has not been published or executed.
+
+The parent's readiness blob `180fd11f` and briefing-schema blob `e1b52c81` are identical to the reviewed candidate. Retain them exactly. Adopt the parent's complete large-ACK fixture blob `5ad14a76`, including its extra assertion that the original full receipt exceeds 768 KiB before both compact projections. Its bounded 1 MiB input callback and every original identity/lookup/single-effect assertion remain intact.
+
+For the attachment fixture, retain the parent's `profile` variable and `baseProfile: profile`; create the current profile with `structuredClone(profile)` and retain the reviewed unselected-profile refusal against the same original claimed request. This preserves both sides' assertions and distinct original/current snapshots. No production guard changes are needed.
+
+Assemble the integration commit with ordered parents `293b5c1` and `a37ae337`. Its only differences from the reviewed 293b tree are the two resolved fixture files and this log appendix; all production files remain byte-identical. Read back the exact tree, parent list and diff before the expected-head publication from d90. This publishes the source repair and target integration together, without an intermediate source update.
+
+Against the actual a37 target, the expected feature scope decreases to **157 paths**, **99 production paths**, and **3,896 added / 368 removed production lines**. The readiness and cursor fixes and the complete large-ACK repair are now inherited from the parent; the workflow prerequisite, notification compatibility and extra attachment invariant remain in this PR. Confirm these figures with the unchanged production classifier before publication. The earlier seven-file review remains the exact repair record relative to d90, not an assertion that all those files remain unique to the feature.
+
+The new integration is source-reviewed only. Fresh current-head CI, Desktop/native/genuine evidence and the final ordinary merge/merged checks remain mandatory under the preceding sequence. No executor, native/model request, attempt-limit change or workflow control is added by this integration.
